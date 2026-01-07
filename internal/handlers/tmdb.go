@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 
@@ -9,13 +10,21 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// TMDbClient defines the interface for TMDb API operations
+type TMDbClient interface {
+	SearchMovies(ctx context.Context, query string, page int) (*tmdb.SearchResultMovies, error)
+	GetMovieDetails(ctx context.Context, movieID int) (*tmdb.MovieDetails, error)
+	SearchTVShows(ctx context.Context, query string, page int) (*tmdb.SearchResultTVShows, error)
+	GetTVShowDetails(ctx context.Context, tvID int) (*tmdb.TVShowDetails, error)
+}
+
 // TMDbHandler holds the TMDb client for handling requests
 type TMDbHandler struct {
-	client *tmdb.Client
+	client TMDbClient
 }
 
 // NewTMDbHandler creates a new TMDb handler
-func NewTMDbHandler(client *tmdb.Client) *TMDbHandler {
+func NewTMDbHandler(client TMDbClient) *TMDbHandler {
 	return &TMDbHandler{
 		client: client,
 	}
