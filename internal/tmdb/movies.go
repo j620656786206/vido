@@ -33,3 +33,23 @@ func (c *Client) SearchMovies(ctx context.Context, query string, page int) (*Sea
 
 	return &result, nil
 }
+
+// GetMovieDetails retrieves complete movie information for a specific movie ID
+// The results will be in the language specified by the client (e.g., zh-TW)
+func (c *Client) GetMovieDetails(ctx context.Context, movieID int) (*MovieDetails, error) {
+	// Validate input
+	if movieID <= 0 {
+		return nil, NewBadRequestError("movie ID must be greater than 0")
+	}
+
+	// Build endpoint path
+	endpoint := fmt.Sprintf("/movie/%d", movieID)
+
+	// Make API request (no additional query parameters needed)
+	var result MovieDetails
+	if err := c.Get(ctx, endpoint, nil, &result); err != nil {
+		return nil, fmt.Errorf("failed to get movie details: %w", err)
+	}
+
+	return &result, nil
+}
