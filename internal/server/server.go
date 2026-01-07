@@ -8,15 +8,17 @@ import (
 
 	"github.com/alexyu/vido/internal/config"
 	"github.com/alexyu/vido/internal/middleware"
+	"github.com/alexyu/vido/internal/tmdb"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
 )
 
 // Server represents the HTTP server
 type Server struct {
-	config *config.Config
-	router *gin.Engine
-	server *http.Server
+	config     *config.Config
+	router     *gin.Engine
+	server     *http.Server
+	tmdbClient *tmdb.Client
 }
 
 // New creates a new Server instance
@@ -50,10 +52,14 @@ func New(cfg *config.Config) *Server {
 		MaxHeaderBytes: 1 << 20, // 1 MB
 	}
 
+	// Initialize TMDb client
+	tmdbClient := tmdb.NewClient(cfg)
+
 	s := &Server{
-		config: cfg,
-		router: router,
-		server: httpServer,
+		config:     cfg,
+		router:     router,
+		server:     httpServer,
+		tmdbClient: tmdbClient,
 	}
 
 	// Setup routes
