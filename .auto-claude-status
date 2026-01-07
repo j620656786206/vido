@@ -1,25 +1,25 @@
 {
   "active": true,
-  "spec": "002-go-backend-with-gin-framework",
+  "spec": "005-tmdb-metadata-provider-with-zh-tw-support",
   "state": "building",
   "subtasks": {
-    "completed": 15,
-    "total": 16,
+    "completed": 0,
+    "total": 0,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "Testing & Documentation",
+    "current": "Configuration & Foundation",
     "id": null,
-    "total": 3
+    "total": 2
   },
   "workers": {
     "active": 0,
     "max": 1
   },
   "session": {
-    "number": 17,
-    "started_at": "2026-01-07T18:03:20.116492"
+    "number": 2,
+    "started_at": "2026-01-07T19:36:58.468676"
   },
-  "last_update": "2026-01-07T19:02:52.821671"
+  "last_update": "2026-01-07T19:40:33.328687"
 }
