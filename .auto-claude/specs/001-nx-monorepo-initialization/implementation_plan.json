@@ -94,7 +94,7 @@
           "id": "2.3",
           "title": "Add TanStack Router and Query",
           "description": "Install and configure TanStack Router for routing and TanStack Query for data fetching",
-          "status": "pending",
+          "status": "completed",
           "acceptance_criteria": [
             "@tanstack/react-router installed",
             "@tanstack/react-query installed",
@@ -104,7 +104,9 @@
           "estimated_minutes": 15,
           "dependencies": [
             "2.1"
-          ]
+          ],
+          "notes": "Successfully installed and configured TanStack Router v1.145.7 and TanStack Query v5.90.16. Created basic router setup with root route (__root.tsx) and index route (index.tsx) in apps/web/src/routes/. Configured QueryClientProvider in main.tsx with sensible defaults (5min stale time, 1 retry). Created route tree configuration (routeTree.gen.ts) and router setup (router.tsx). Verified all acceptance criteria: build succeeds, dev server starts correctly on port 4200, router and query providers properly integrated. All acceptance criteria met.",
+          "updated_at": "2026-01-07T05:59:14.175396+00:00"
         }
       ]
     },
@@ -118,7 +120,7 @@
           "id": "3.1",
           "title": "Create Go app structure under apps/api",
           "description": "Set up Go module and directory structure for Gin-based API",
-          "status": "pending",
+          "status": "completed",
           "acceptance_criteria": [
             "apps/api directory exists",
             "go.mod initialized",
@@ -128,13 +130,15 @@
           "estimated_minutes": 10,
           "dependencies": [
             "1.2"
-          ]
+          ],
+          "notes": "Successfully created Go backend app structure under apps/api. Initialized go.mod with module github.com/vido/api and Go 1.23. Added Gin framework v1.10.0 and CORS middleware v1.7.2 as dependencies. Created cmd/api/main.go as the entry point with basic placeholder implementation. Created internal/ directory for private application packages (handlers, services, models to be added in subsequent subtasks). Added comprehensive README.md documenting the project structure and technology stack. All acceptance criteria met: apps/api directory exists, go.mod initialized, cmd/api/main.go entry point created, and internal/ directory for private packages created.",
+          "updated_at": "2026-01-07T06:01:29.650205+00:00"
         },
         {
           "id": "3.2",
           "title": "Configure Gin server with basic routes",
           "description": "Set up Gin HTTP server with health check endpoint",
-          "status": "pending",
+          "status": "completed",
           "acceptance_criteria": [
             "Gin framework installed",
             "Health check endpoint (/health)",
@@ -144,7 +148,9 @@
           "estimated_minutes": 15,
           "dependencies": [
             "3.1"
-          ]
+          ],
+          "notes": "Successfully configured Gin HTTP server with health check endpoint. Created internal/handlers/health.go with HealthCheck handler that returns JSON response with status and service name. Updated cmd/api/main.go to set up Gin router with CORS middleware (configured for http://localhost:4200), registered /health endpoint, and made port configurable via PORT environment variable (defaults to 3000). Gin framework and CORS middleware were already installed in go.mod from subtask 3.1. Server uses gin.ReleaseMode by default and supports GIN_MODE environment variable for development mode. All acceptance criteria met: Gin framework installed, health check endpoint at /health, CORS middleware configured with proper origins/methods/headers, and server starts on configurable port.",
+          "updated_at": "2026-01-07T06:04:11.049303+00:00"
         },
         {
           "id": "3.3",
@@ -307,5 +313,5 @@
     "Shared TypeScript types library created",
     "Basic build and dev commands work via nx run"
   ],
-  "last_updated": "2026-01-07T05:55:28.657757+00:00"
+  "last_updated": "2026-01-07T06:04:11.049317+00:00"
 }
