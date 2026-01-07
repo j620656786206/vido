@@ -10,6 +10,17 @@ Vido is organized as an Nx monorepo that includes:
 - **Backend**: Go REST API with Gin framework, structured logging, error handling, CORS middleware, and automatic OpenAPI/Swagger documentation
 - **Shared Libraries**: TypeScript type definitions shared between frontend and backend
 
+## Backend Features
+
+- **Gin Framework**: Fast HTTP framework with routing, middleware support, and JSON handling
+- **Structured Logging**: JSON-formatted logs using zerolog with request ID tracking
+- **Error Handling**: Consistent error response format with panic recovery
+- **CORS Middleware**: Configurable cross-origin resource sharing
+- **OpenAPI Documentation**: Auto-generated from code annotations with Swagger UI
+- **Configuration Management**: Environment-based configuration with sensible defaults
+- **Graceful Shutdown**: Proper signal handling and graceful server shutdown
+- **Hot Reload**: Automatic recompilation on file changes using Air
+
 ## Prerequisites
 
 Before getting started, ensure you have the following installed:
@@ -74,6 +85,9 @@ vido/
 │       │   ├── middleware/  # HTTP middleware
 │       │   └── server/   # HTTP server and routes
 │       ├── scripts/      # Utility scripts
+│       │   ├── install-swag.sh     # Install swag CLI tool
+│       │   ├── install-air.sh      # Install Air hot reload tool
+│       │   └── generate-openapi.sh # Regenerate OpenAPI spec
 │       ├── docs/         # Generated OpenAPI documentation
 │       ├── api/          # OpenAPI spec
 │       ├── .env.example  # Example environment configuration
@@ -170,6 +184,12 @@ nx test web
 
 # Test API server
 cd apps/api && make test
+
+# Run tests with coverage
+cd apps/api && go test -cover ./...
+
+# Run tests for a specific package
+cd apps/api && go test -v ./internal/config
 
 # Run all tests
 nx run-many -t test
@@ -333,16 +353,9 @@ Configuration is managed through environment variables in `apps/api/.env`. See `
 | `CORS_ORIGINS` | `*` | Allowed CORS origins (comma-separated) |
 | `API_VERSION` | `v1` | API version |
 
-## Backend Features
+## Error Handling
 
-### Gin Framework
-Fast HTTP framework with routing, middleware support, and JSON handling.
-
-### Structured Logging
-JSON-formatted logs using zerolog with request ID tracking for better observability.
-
-### Error Handling
-Consistent error response format with panic recovery:
+The server includes custom error types with consistent JSON responses:
 
 ```go
 // Validation error (400)
@@ -372,13 +385,11 @@ All errors return a consistent format:
 }
 ```
 
-### CORS Middleware
-Configurable cross-origin resource sharing through environment variables.
+## OpenAPI/Swagger Documentation
 
-### OpenAPI/Swagger Documentation
 The API documentation is automatically generated from code annotations using [swaggo](https://github.com/swaggo/swag).
 
-#### Regenerating the Spec
+### Regenerating the Spec
 
 After modifying endpoint annotations:
 
@@ -391,14 +402,11 @@ This will:
 2. Generate `docs/swagger.json` and `docs/swagger.yaml`
 3. Copy the spec to `api/openapi.json` for SDK generation
 
-#### Viewing Documentation
+### Viewing Documentation
 
 With the server running, visit:
 - Swagger UI: `http://localhost:8080/swagger/index.html`
 - Raw JSON spec: `http://localhost:8080/swagger/doc.json`
-
-### Graceful Shutdown
-Proper signal handling and graceful server shutdown.
 
 ## API Endpoints
 
