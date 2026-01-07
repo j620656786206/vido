@@ -1,0 +1,116 @@
+basePath: /api/v1
+definitions:
+  middleware.ErrorDetail:
+    properties:
+      code:
+        example: VALIDATION_ERROR
+        type: string
+      message:
+        example: Invalid email format
+        type: string
+    type: object
+  middleware.ErrorResponse:
+    properties:
+      error:
+        $ref: '#/definitions/middleware.ErrorDetail'
+    type: object
+  server.ErrorExampleResponse:
+    properties:
+      message:
+        example: Use ?type=validation|notfound|internal|unauthorized|forbidden|panic
+          to test error handling
+        type: string
+    type: object
+  server.HealthResponse:
+    properties:
+      status:
+        example: ok
+        type: string
+      timestamp:
+        example: "2024-01-07T10:30:00Z"
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: A high-performance Go backend API server built with Gin framework,
+    featuring structured logging, error handling, and comprehensive middleware support.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Vido API
+  version: "1.0"
+paths:
+  /api/v1/error-example:
+    get:
+      description: Test endpoint to demonstrate different error types and the error
+        handling middleware
+      parameters:
+      - description: Error type to trigger
+        enum:
+        - validation
+        - notfound
+        - internal
+        - unauthorized
+        - forbidden
+        - panic
+        in: query
+        name: type
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/server.ErrorExampleResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      summary: Demonstrate error handling
+      tags:
+      - examples
+  /health:
+    get:
+      description: Returns the health status of the API server
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/server.HealthResponse'
+      summary: Check API health status
+      tags:
+      - health
+schemes:
+- http
+- https
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
