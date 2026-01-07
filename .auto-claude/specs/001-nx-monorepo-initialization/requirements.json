@@ -1,0 +1,4 @@
+{
+  "task_description": "# Nx Monorepo Initialization\n\nSet up Nx monorepo with proper workspace structure for Go backend and React frontend. Configure shared TypeScript types, OpenAPI SDK generation, and build pipelines.\n\n## Rationale\nNx provides a robust monorepo structure that enables code sharing between frontend and backend, consistent build tooling, and scalable project organization essential for a unified media management tool.\n\n## User Stories\n- As a developer, I want a well-organized monorepo so that I can efficiently develop both frontend and backend\n\n## Acceptance Criteria\n- [ ] Nx workspace initialized with apps/ and libs/ directories\n- [ ] Go backend app scaffolded under apps/api\n- [ ] React frontend app scaffolded under apps/web\n- [ ] Shared TypeScript types library created\n- [ ] Basic build and dev commands work via nx run\n",
+  "workflow_type": "feature"
+}

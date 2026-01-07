@@ -1,0 +1,275 @@
+{
+  "feature": "Nx Monorepo Initialization",
+  "description": "Set up Nx monorepo with proper workspace structure for Go backend and React frontend. Configure shared TypeScript types, OpenAPI SDK generation, and build pipelines.",
+  "created_at": "2026-01-07T05:34:24.927Z",
+  "updated_at": "2026-01-07T05:45:00.000Z",
+  "status": "in_progress",
+  "planStatus": "ready",
+  "phases": [
+    {
+      "id": "phase-1",
+      "name": "Nx Workspace Initialization",
+      "description": "Initialize the Nx workspace with proper directory structure and base configuration",
+      "order": 1,
+      "subtasks": [
+        {
+          "id": "1.1",
+          "title": "Initialize Nx workspace",
+          "description": "Create new Nx workspace with npm preset, configure apps/ and libs/ directories structure",
+          "status": "completed",
+          "acceptance_criteria": [
+            "nx.json exists with proper configuration",
+            "package.json with nx dependencies",
+            "apps/ directory created",
+            "libs/ directory created",
+            "tsconfig.base.json configured"
+          ],
+          "estimated_minutes": 10,
+          "dependencies": [],
+          "notes": "Successfully created Nx workspace v22.3.3 with npm preset. Configured apps/ and libs/ directory structure with .gitkeep files. Created nx.json, package.json with nx dependencies (@nx/js, nx), and tsconfig.base.json with proper base configuration. All acceptance criteria met.",
+          "updated_at": "2026-01-07T05:41:19.160318+00:00"
+        },
+        {
+          "id": "1.2",
+          "title": "Configure workspace settings",
+          "description": "Set up workspace-level TypeScript, ESLint, and Prettier configurations",
+          "status": "pending",
+          "acceptance_criteria": [
+            ".prettierrc configured",
+            ".eslintrc.json configured for workspace",
+            "tsconfig.base.json with path aliases"
+          ],
+          "estimated_minutes": 10,
+          "dependencies": ["1.1"]
+        }
+      ]
+    },
+    {
+      "id": "phase-2",
+      "name": "React Frontend App Setup",
+      "description": "Scaffold the React frontend application with TanStack Router and Tailwind CSS",
+      "order": 2,
+      "subtasks": [
+        {
+          "id": "2.1",
+          "title": "Create React app under apps/web",
+          "description": "Generate React application with Vite bundler using Nx generators",
+          "status": "pending",
+          "acceptance_criteria": [
+            "apps/web directory exists",
+            "React app with Vite configuration",
+            "project.json with build/serve/test targets",
+            "nx serve web works"
+          ],
+          "estimated_minutes": 15,
+          "dependencies": ["1.2"]
+        },
+        {
+          "id": "2.2",
+          "title": "Configure Tailwind CSS",
+          "description": "Add Tailwind CSS to the React app with proper PostCSS configuration",
+          "status": "pending",
+          "acceptance_criteria": [
+            "tailwind.config.js exists in apps/web",
+            "postcss.config.js configured",
+            "Tailwind directives in global CSS",
+            "Tailwind styles apply correctly"
+          ],
+          "estimated_minutes": 10,
+          "dependencies": ["2.1"]
+        },
+        {
+          "id": "2.3",
+          "title": "Add TanStack Router and Query",
+          "description": "Install and configure TanStack Router for routing and TanStack Query for data fetching",
+          "status": "pending",
+          "acceptance_criteria": [
+            "@tanstack/react-router installed",
+            "@tanstack/react-query installed",
+            "Basic router setup with root route",
+            "QueryClientProvider configured"
+          ],
+          "estimated_minutes": 15,
+          "dependencies": ["2.1"]
+        }
+      ]
+    },
+    {
+      "id": "phase-3",
+      "name": "Go Backend App Setup",
+      "description": "Scaffold the Go backend application with Gin framework",
+      "order": 3,
+      "subtasks": [
+        {
+          "id": "3.1",
+          "title": "Create Go app structure under apps/api",
+          "description": "Set up Go module and directory structure for Gin-based API",
+          "status": "pending",
+          "acceptance_criteria": [
+            "apps/api directory exists",
+            "go.mod initialized",
+            "cmd/api/main.go entry point",
+            "internal/ directory for private packages"
+          ],
+          "estimated_minutes": 10,
+          "dependencies": ["1.2"]
+        },
+        {
+          "id": "3.2",
+          "title": "Configure Gin server with basic routes",
+          "description": "Set up Gin HTTP server with health check endpoint",
+          "status": "pending",
+          "acceptance_criteria": [
+            "Gin framework installed",
+            "Health check endpoint (/health)",
+            "CORS middleware configured",
+            "Server starts on configurable port"
+          ],
+          "estimated_minutes": 15,
+          "dependencies": ["3.1"]
+        },
+        {
+          "id": "3.3",
+          "title": "Create Nx targets for Go app",
+          "description": "Configure project.json with build, serve, and test targets for the Go application",
+          "status": "pending",
+          "acceptance_criteria": [
+            "apps/api/project.json exists",
+            "nx build api works (go build)",
+            "nx serve api works (go run)",
+            "nx test api works (go test)"
+          ],
+          "estimated_minutes": 15,
+          "dependencies": ["3.2"]
+        }
+      ]
+    },
+    {
+      "id": "phase-4",
+      "name": "Shared TypeScript Types Library",
+      "description": "Create shared TypeScript library for types used across frontend and generated from backend",
+      "order": 4,
+      "subtasks": [
+        {
+          "id": "4.1",
+          "title": "Create shared-types library",
+          "description": "Generate TypeScript library under libs/shared-types for shared type definitions",
+          "status": "pending",
+          "acceptance_criteria": [
+            "libs/shared-types directory exists",
+            "project.json with build target",
+            "tsconfig.json configured",
+            "Exportable from @vido/shared-types"
+          ],
+          "estimated_minutes": 10,
+          "dependencies": ["1.2"]
+        },
+        {
+          "id": "4.2",
+          "title": "Define core data models",
+          "description": "Create TypeScript interfaces for Movie, Series, and API response types",
+          "status": "pending",
+          "acceptance_criteria": [
+            "Movie interface defined",
+            "Series interface defined",
+            "ApiResponse generic type",
+            "Types exported from index.ts"
+          ],
+          "estimated_minutes": 15,
+          "dependencies": ["4.1"]
+        },
+        {
+          "id": "4.3",
+          "title": "Configure path aliases",
+          "description": "Set up TypeScript path aliases so apps can import from @vido/shared-types",
+          "status": "pending",
+          "acceptance_criteria": [
+            "tsconfig.base.json has @vido/shared-types path",
+            "apps/web can import shared types",
+            "No TypeScript errors on import"
+          ],
+          "estimated_minutes": 10,
+          "dependencies": ["4.2"]
+        }
+      ]
+    },
+    {
+      "id": "phase-5",
+      "name": "Build Pipeline and Verification",
+      "description": "Ensure all build commands work and verify the complete setup",
+      "order": 5,
+      "subtasks": [
+        {
+          "id": "5.1",
+          "title": "Test nx build commands",
+          "description": "Verify that nx build works for all projects (web, api, shared-types)",
+          "status": "pending",
+          "acceptance_criteria": [
+            "nx build web succeeds",
+            "nx build api succeeds",
+            "nx build shared-types succeeds",
+            "Build outputs in expected locations"
+          ],
+          "estimated_minutes": 10,
+          "dependencies": ["2.3", "3.3", "4.3"]
+        },
+        {
+          "id": "5.2",
+          "title": "Test nx serve/dev commands",
+          "description": "Verify that development servers start correctly for both apps",
+          "status": "pending",
+          "acceptance_criteria": [
+            "nx serve web starts Vite dev server",
+            "nx serve api starts Go server",
+            "Both can run concurrently",
+            "Hot reload works for web app"
+          ],
+          "estimated_minutes": 10,
+          "dependencies": ["5.1"]
+        },
+        {
+          "id": "5.3",
+          "title": "Create init.sh setup script",
+          "description": "Create environment setup script for new developers",
+          "status": "pending",
+          "acceptance_criteria": [
+            "init.sh checks Node.js version",
+            "init.sh checks Go installation",
+            "init.sh runs npm install",
+            "init.sh runs go mod download"
+          ],
+          "estimated_minutes": 10,
+          "dependencies": ["5.1"]
+        },
+        {
+          "id": "5.4",
+          "title": "Update README with setup instructions",
+          "description": "Document project setup and available commands",
+          "status": "pending",
+          "acceptance_criteria": [
+            "README has prerequisites listed",
+            "README has setup instructions",
+            "README lists available nx commands",
+            "README explains project structure"
+          ],
+          "estimated_minutes": 10,
+          "dependencies": ["5.3"]
+        }
+      ]
+    }
+  ],
+  "qa_signoff": {
+    "status": "pending",
+    "tests_passed": [],
+    "issues": []
+  },
+  "total_estimated_minutes": 165,
+  "acceptance_criteria_summary": [
+    "Nx workspace initialized with apps/ and libs/ directories",
+    "Go backend app scaffolded under apps/api",
+    "React frontend app scaffolded under apps/web",
+    "Shared TypeScript types library created",
+    "Basic build and dev commands work via nx run"
+  ],
+  "last_updated": "2026-01-07T05:41:19.160354+00:00"
+}
