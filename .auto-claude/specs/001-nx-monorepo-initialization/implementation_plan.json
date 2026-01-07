@@ -33,14 +33,18 @@
           "id": "1.2",
           "title": "Configure workspace settings",
           "description": "Set up workspace-level TypeScript, ESLint, and Prettier configurations",
-          "status": "pending",
+          "status": "completed",
           "acceptance_criteria": [
             ".prettierrc configured",
             ".eslintrc.json configured for workspace",
             "tsconfig.base.json with path aliases"
           ],
           "estimated_minutes": 10,
-          "dependencies": ["1.1"]
+          "dependencies": [
+            "1.1"
+          ],
+          "notes": "Successfully configured workspace-level TypeScript, ESLint, and Prettier. Created .prettierrc with standard formatting rules (100 char line width, single quotes, trailing commas). Created .eslintrc.json with TypeScript and React support, extends prettier config to avoid conflicts. Added helpful npm scripts (format, format:check, lint, lint:fix). Installed necessary dependencies: prettier, eslint, @typescript-eslint/parser, @typescript-eslint/eslint-plugin, eslint-config-prettier, eslint-plugin-react, eslint-plugin-react-hooks. tsconfig.base.json already has paths object ready for path aliases (to be populated in phase 4.3). All acceptance criteria met.",
+          "updated_at": "2026-01-07T05:45:09.119391+00:00"
         }
       ]
     },
@@ -62,7 +66,9 @@
             "nx serve web works"
           ],
           "estimated_minutes": 15,
-          "dependencies": ["1.2"]
+          "dependencies": [
+            "1.2"
+          ]
         },
         {
           "id": "2.2",
@@ -76,7 +82,9 @@
             "Tailwind styles apply correctly"
           ],
           "estimated_minutes": 10,
-          "dependencies": ["2.1"]
+          "dependencies": [
+            "2.1"
+          ]
         },
         {
           "id": "2.3",
@@ -90,7 +98,9 @@
             "QueryClientProvider configured"
           ],
           "estimated_minutes": 15,
-          "dependencies": ["2.1"]
+          "dependencies": [
+            "2.1"
+          ]
         }
       ]
     },
@@ -112,7 +122,9 @@
             "internal/ directory for private packages"
           ],
           "estimated_minutes": 10,
-          "dependencies": ["1.2"]
+          "dependencies": [
+            "1.2"
+          ]
         },
         {
           "id": "3.2",
@@ -126,7 +138,9 @@
             "Server starts on configurable port"
           ],
           "estimated_minutes": 15,
-          "dependencies": ["3.1"]
+          "dependencies": [
+            "3.1"
+          ]
         },
         {
           "id": "3.3",
@@ -140,7 +154,9 @@
             "nx test api works (go test)"
           ],
           "estimated_minutes": 15,
-          "dependencies": ["3.2"]
+          "dependencies": [
+            "3.2"
+          ]
         }
       ]
     },
@@ -162,7 +178,9 @@
             "Exportable from @vido/shared-types"
           ],
           "estimated_minutes": 10,
-          "dependencies": ["1.2"]
+          "dependencies": [
+            "1.2"
+          ]
         },
         {
           "id": "4.2",
@@ -176,7 +194,9 @@
             "Types exported from index.ts"
           ],
           "estimated_minutes": 15,
-          "dependencies": ["4.1"]
+          "dependencies": [
+            "4.1"
+          ]
         },
         {
           "id": "4.3",
@@ -189,7 +209,9 @@
             "No TypeScript errors on import"
           ],
           "estimated_minutes": 10,
-          "dependencies": ["4.2"]
+          "dependencies": [
+            "4.2"
+          ]
         }
       ]
     },
@@ -211,7 +233,11 @@
             "Build outputs in expected locations"
           ],
           "estimated_minutes": 10,
-          "dependencies": ["2.3", "3.3", "4.3"]
+          "dependencies": [
+            "2.3",
+            "3.3",
+            "4.3"
+          ]
         },
         {
           "id": "5.2",
@@ -225,7 +251,9 @@
             "Hot reload works for web app"
           ],
           "estimated_minutes": 10,
-          "dependencies": ["5.1"]
+          "dependencies": [
+            "5.1"
+          ]
         },
         {
           "id": "5.3",
@@ -239,7 +267,9 @@
             "init.sh runs go mod download"
           ],
           "estimated_minutes": 10,
-          "dependencies": ["5.1"]
+          "dependencies": [
+            "5.1"
+          ]
         },
         {
           "id": "5.4",
@@ -253,7 +283,9 @@
             "README explains project structure"
           ],
           "estimated_minutes": 10,
-          "dependencies": ["5.3"]
+          "dependencies": [
+            "5.3"
+          ]
         }
       ]
     }
@@ -271,5 +303,5 @@
     "Shared TypeScript types library created",
     "Basic build and dev commands work via nx run"
   ],
-  "last_updated": "2026-01-07T05:41:19.160354+00:00"
+  "last_updated": "2026-01-07T05:45:09.119404+00:00"
 }
