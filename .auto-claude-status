@@ -1,25 +1,25 @@
 {
   "active": true,
-  "spec": "005-tmdb-metadata-provider-with-zh-tw-support",
+  "spec": "004-sqlite-database-with-wal-mode",
   "state": "building",
   "subtasks": {
-    "completed": 15,
-    "total": 16,
+    "completed": 16,
+    "total": 17,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "Documentation & Polish",
+    "current": "Integration and Testing",
     "id": null,
-    "total": 2
+    "total": 4
   },
   "workers": {
     "active": 0,
     "max": 1
   },
   "session": {
-    "number": 216,
-    "started_at": "2026-01-07T20:02:20.196501"
+    "number": 211,
+    "started_at": "2026-01-07T20:02:34.035524"
   },
   "last_update": "2026-01-07T22:49:02.852813"
 }

@@ -5,6 +5,7 @@ go 1.23
 require (
 	github.com/gin-contrib/cors v1.7.2
 	github.com/gin-gonic/gin v1.10.0
+	modernc.org/sqlite v1.29.5
 )
 
 require (
