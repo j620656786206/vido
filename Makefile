@@ -1,16 +1,18 @@
-.PHONY: help build run dev test swagger lint clean tidy
+.PHONY: help build run dev test test-coverage test-race swagger lint clean tidy
 
 # Default target
 help:
 	@echo "Available targets:"
-	@echo "  make build      - Build the API binary"
-	@echo "  make run        - Run the API server"
-	@echo "  make dev        - Start Air hot reload server"
-	@echo "  make test       - Run tests"
-	@echo "  make swagger    - Regenerate OpenAPI specification"
-	@echo "  make lint       - Run linter (golangci-lint)"
-	@echo "  make tidy       - Update go.mod and go.sum"
-	@echo "  make clean      - Clean build artifacts"
+	@echo "  make build         - Build the API binary"
+	@echo "  make run           - Run the API server"
+	@echo "  make dev           - Start Air hot reload server"
+	@echo "  make test          - Run tests"
+	@echo "  make test-coverage - Run tests with coverage report"
+	@echo "  make test-race     - Run tests with race detector"
+	@echo "  make swagger       - Regenerate OpenAPI specification"
+	@echo "  make lint          - Run linter (golangci-lint)"
+	@echo "  make tidy          - Update go.mod and go.sum"
+	@echo "  make clean         - Clean build artifacts"
 
 # Update go.mod and go.sum
 tidy:
@@ -44,6 +46,21 @@ dev:
 test:
 	@echo "Running tests..."
 	@go test -v ./...
+
+# Run tests with coverage
+test-coverage:
+	@echo "Running tests with coverage..."
+	@go test -coverprofile=coverage.out ./...
+	@echo ""
+	@echo "=== Coverage Summary ==="
+	@go tool cover -func=coverage.out | tail -1
+	@echo ""
+	@echo "For detailed coverage report, run: go tool cover -html=coverage.out"
+
+# Run tests with race detector
+test-race:
+	@echo "Running tests with race detector..."
+	@go test -race -v ./...
 
 # Regenerate OpenAPI specification
 swagger:

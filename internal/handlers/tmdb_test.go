@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"github.com/alexyu/vido/internal/middleware"
@@ -190,20 +191,18 @@ func TestSearchMoviesHandler(t *testing.T) {
 			c, _ := gin.CreateTestContext(w)
 
 			// Build URL with query parameters
-			url := "/api/v1/movies/search"
+			reqURL := "/api/v1/movies/search"
 			if tt.queryParam != "" || tt.pageParam != "" {
-				url += "?"
+				params := url.Values{}
 				if tt.queryParam != "" {
-					url += "query=" + tt.queryParam
+					params.Add("query", tt.queryParam)
 				}
 				if tt.pageParam != "" {
-					if tt.queryParam != "" {
-						url += "&"
-					}
-					url += "page=" + tt.pageParam
+					params.Add("page", tt.pageParam)
 				}
+				reqURL += "?" + params.Encode()
 			}
-			c.Request = httptest.NewRequest("GET", url, nil)
+			c.Request = httptest.NewRequest("GET", reqURL, nil)
 
 			// Call handler
 			handler.SearchMovies(c)
@@ -556,20 +555,18 @@ func TestSearchTVShowsHandler(t *testing.T) {
 			c, _ := gin.CreateTestContext(w)
 
 			// Build URL with query parameters
-			url := "/api/v1/tv/search"
+			reqURL := "/api/v1/tv/search"
 			if tt.queryParam != "" || tt.pageParam != "" {
-				url += "?"
+				params := url.Values{}
 				if tt.queryParam != "" {
-					url += "query=" + tt.queryParam
+					params.Add("query", tt.queryParam)
 				}
 				if tt.pageParam != "" {
-					if tt.queryParam != "" {
-						url += "&"
-					}
-					url += "page=" + tt.pageParam
+					params.Add("page", tt.pageParam)
 				}
+				reqURL += "?" + params.Encode()
 			}
-			c.Request = httptest.NewRequest("GET", url, nil)
+			c.Request = httptest.NewRequest("GET", reqURL, nil)
 
 			// Call handler
 			handler.SearchTVShows(c)

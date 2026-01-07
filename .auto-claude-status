@@ -3,23 +3,23 @@
   "spec": "005-tmdb-metadata-provider-with-zh-tw-support",
   "state": "building",
   "subtasks": {
-    "completed": 4,
+    "completed": 15,
     "total": 16,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "TMDb Client Implementation",
+    "current": "Documentation & Polish",
     "id": null,
-    "total": 4
+    "total": 2
   },
   "workers": {
     "active": 0,
     "max": 1
   },
   "session": {
-    "number": 205,
+    "number": 216,
     "started_at": "2026-01-07T20:02:20.196501"
   },
-  "last_update": "2026-01-07T22:04:10.355373"
+  "last_update": "2026-01-07T22:49:02.852813"
 }
