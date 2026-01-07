@@ -34,6 +34,14 @@ func TestLoad(t *testing.T) {
 		if cfg.APIVersion != "v1" {
 			t.Errorf("expected default API version v1, got %s", cfg.APIVersion)
 		}
+
+		if cfg.TMDbDefaultLanguage != "zh-TW" {
+			t.Errorf("expected default TMDb language zh-TW, got %s", cfg.TMDbDefaultLanguage)
+		}
+
+		if cfg.TMDbAPIKey != "" {
+			t.Errorf("expected empty TMDb API key by default, got %s", cfg.TMDbAPIKey)
+		}
 	})
 
 	t.Run("loads configuration from environment variables", func(t *testing.T) {
@@ -166,4 +174,84 @@ func TestGetAddress(t *testing.T) {
 	if addr != ":8080" {
 		t.Errorf("expected address :8080, got %s", addr)
 	}
+}
+
+func TestTMDbConfiguration(t *testing.T) {
+	t.Run("loads TMDB_API_KEY from environment", func(t *testing.T) {
+		os.Clearenv()
+		os.Setenv("TMDB_API_KEY", "test-api-key-123")
+		defer os.Clearenv()
+
+		cfg, err := Load()
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+
+		if cfg.TMDbAPIKey != "test-api-key-123" {
+			t.Errorf("expected TMDb API key 'test-api-key-123', got %s", cfg.TMDbAPIKey)
+		}
+	})
+
+	t.Run("verifies default language is zh-TW", func(t *testing.T) {
+		os.Clearenv()
+		defer os.Clearenv()
+
+		cfg, err := Load()
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+
+		if cfg.TMDbDefaultLanguage != "zh-TW" {
+			t.Errorf("expected default TMDb language 'zh-TW', got %s", cfg.TMDbDefaultLanguage)
+		}
+	})
+
+	t.Run("verifies custom language can be set", func(t *testing.T) {
+		os.Clearenv()
+		os.Setenv("TMDB_DEFAULT_LANGUAGE", "en-US")
+		defer os.Clearenv()
+
+		cfg, err := Load()
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+
+		if cfg.TMDbDefaultLanguage != "en-US" {
+			t.Errorf("expected TMDb language 'en-US', got %s", cfg.TMDbDefaultLanguage)
+		}
+	})
+
+	t.Run("loads both TMDB_API_KEY and custom language", func(t *testing.T) {
+		os.Clearenv()
+		os.Setenv("TMDB_API_KEY", "another-test-key")
+		os.Setenv("TMDB_DEFAULT_LANGUAGE", "ja-JP")
+		defer os.Clearenv()
+
+		cfg, err := Load()
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+
+		if cfg.TMDbAPIKey != "another-test-key" {
+			t.Errorf("expected TMDb API key 'another-test-key', got %s", cfg.TMDbAPIKey)
+		}
+
+		if cfg.TMDbDefaultLanguage != "ja-JP" {
+			t.Errorf("expected TMDb language 'ja-JP', got %s", cfg.TMDbDefaultLanguage)
+		}
+	})
+
+	t.Run("API key is empty when not set", func(t *testing.T) {
+		os.Clearenv()
+		defer os.Clearenv()
+
+		cfg, err := Load()
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+
+		if cfg.TMDbAPIKey != "" {
+			t.Errorf("expected empty TMDb API key, got %s", cfg.TMDbAPIKey)
+		}
+	})
 }

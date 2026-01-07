@@ -21,6 +21,10 @@ type Config struct {
 
 	// API configuration
 	APIVersion string `envconfig:"API_VERSION" default:"v1"`
+
+	// TMDb configuration
+	TMDbAPIKey         string `envconfig:"TMDB_API_KEY"`
+	TMDbDefaultLanguage string `envconfig:"TMDB_DEFAULT_LANGUAGE" default:"zh-TW"`
 }
 
 // Load reads configuration from environment variables with defaults
@@ -74,6 +78,16 @@ func Load() (*Config, error) {
 		cfg.APIVersion = apiVersion
 	} else {
 		cfg.APIVersion = "v1"
+	}
+
+	// TMDb API Key
+	cfg.TMDbAPIKey = os.Getenv("TMDB_API_KEY")
+
+	// TMDb Default Language
+	if tmdbLang := os.Getenv("TMDB_DEFAULT_LANGUAGE"); tmdbLang != "" {
+		cfg.TMDbDefaultLanguage = tmdbLang
+	} else {
+		cfg.TMDbDefaultLanguage = "zh-TW"
 	}
 
 	return cfg, nil

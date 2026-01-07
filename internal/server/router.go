@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/alexyu/vido/internal/handlers"
 	"github.com/alexyu/vido/internal/middleware"
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
@@ -18,12 +19,22 @@ func (s *Server) setupRoutes() {
 	// Health check endpoint - no prefix
 	s.router.GET("/health", s.healthCheck)
 
+	// Initialize handlers
+	tmdbHandler := handlers.NewTMDbHandler(s.tmdbClient)
+
 	// API v1 route group
 	v1 := s.router.Group("/api/v1")
 	{
 		// Example endpoints demonstrating error handling
 		v1.GET("/error-example", s.errorExample)
-		// Future API endpoints will be added here
+
+		// TMDb movie endpoints
+		v1.GET("/movies/search", tmdbHandler.SearchMovies)
+		v1.GET("/movies/:id", tmdbHandler.GetMovieDetails)
+
+		// TMDb TV show endpoints
+		v1.GET("/tv/search", tmdbHandler.SearchTVShows)
+		v1.GET("/tv/:id", tmdbHandler.GetTVShowDetails)
 	}
 }
 

@@ -30,6 +30,394 @@ definitions:
         example: "2024-01-07T10:30:00Z"
         type: string
     type: object
+  tmdb.Country:
+    properties:
+      iso_3166_1:
+        example: US
+        type: string
+      name:
+        example: United States of America
+        type: string
+    type: object
+  tmdb.Creator:
+    properties:
+      credit_id:
+        example: 52542286760ee313280006ce
+        type: string
+      gender:
+        example: 2
+        type: integer
+      id:
+        example: 66633
+        type: integer
+      name:
+        example: Vince Gilligan
+        type: string
+      profile_path:
+        type: string
+    type: object
+  tmdb.Genre:
+    properties:
+      id:
+        example: 18
+        type: integer
+      name:
+        example: Drama
+        type: string
+    type: object
+  tmdb.Language:
+    properties:
+      english_name:
+        example: English
+        type: string
+      iso_639_1:
+        example: en
+        type: string
+      name:
+        example: English
+        type: string
+    type: object
+  tmdb.Movie:
+    properties:
+      adult:
+        example: false
+        type: boolean
+      backdrop_path:
+        example: /fCayJrkfRaCRCTh8GqN30f8oyQF.jpg
+        type: string
+      genre_ids:
+        example:
+        - 18
+        - 53
+        items:
+          type: integer
+        type: array
+      id:
+        example: 550
+        type: integer
+      original_language:
+        example: en
+        type: string
+      original_title:
+        example: Fight Club
+        type: string
+      overview:
+        example: A ticking-time-bomb insomniac and a slippery soap salesman channel
+          primal male aggression into a shocking new form of therapy.
+        type: string
+      popularity:
+        example: 61.416
+        type: number
+      poster_path:
+        example: /pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg
+        type: string
+      release_date:
+        example: "1999-10-15"
+        type: string
+      title:
+        example: Fight Club
+        type: string
+      video:
+        example: false
+        type: boolean
+      vote_average:
+        example: 8.4
+        type: number
+      vote_count:
+        example: 26280
+        type: integer
+    type: object
+  tmdb.MovieDetails:
+    properties:
+      adult:
+        example: false
+        type: boolean
+      backdrop_path:
+        example: /fCayJrkfRaCRCTh8GqN30f8oyQF.jpg
+        type: string
+      budget:
+        example: 63000000
+        type: integer
+      genre_ids:
+        example:
+        - 18
+        - 53
+        items:
+          type: integer
+        type: array
+      genres:
+        items:
+          $ref: '#/definitions/tmdb.Genre'
+        type: array
+      homepage:
+        type: string
+      id:
+        example: 550
+        type: integer
+      imdb_id:
+        example: tt0137523
+        type: string
+      original_language:
+        example: en
+        type: string
+      original_title:
+        example: Fight Club
+        type: string
+      overview:
+        example: A ticking-time-bomb insomniac and a slippery soap salesman channel
+          primal male aggression into a shocking new form of therapy.
+        type: string
+      popularity:
+        example: 61.416
+        type: number
+      poster_path:
+        example: /pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg
+        type: string
+      production_countries:
+        items:
+          $ref: '#/definitions/tmdb.Country'
+        type: array
+      release_date:
+        example: "1999-10-15"
+        type: string
+      revenue:
+        example: 100853753
+        type: integer
+      runtime:
+        example: 139
+        type: integer
+      spoken_languages:
+        items:
+          $ref: '#/definitions/tmdb.Language'
+        type: array
+      status:
+        example: Released
+        type: string
+      tagline:
+        example: Mischief. Mayhem. Soap.
+        type: string
+      title:
+        example: Fight Club
+        type: string
+      video:
+        example: false
+        type: boolean
+      vote_average:
+        example: 8.4
+        type: number
+      vote_count:
+        example: 26280
+        type: integer
+    type: object
+  tmdb.SearchResultMovies:
+    properties:
+      page:
+        example: 1
+        type: integer
+      results:
+        items:
+          $ref: '#/definitions/tmdb.Movie'
+        type: array
+      total_pages:
+        example: 500
+        type: integer
+      total_results:
+        example: 10000
+        type: integer
+    type: object
+  tmdb.SearchResultTVShows:
+    properties:
+      page:
+        example: 1
+        type: integer
+      results:
+        items:
+          $ref: '#/definitions/tmdb.TVShow'
+        type: array
+      total_pages:
+        example: 500
+        type: integer
+      total_results:
+        example: 10000
+        type: integer
+    type: object
+  tmdb.Season:
+    properties:
+      air_date:
+        example: "2008-01-20"
+        type: string
+      episode_count:
+        example: 7
+        type: integer
+      id:
+        example: 3572
+        type: integer
+      name:
+        example: Season 1
+        type: string
+      overview:
+        example: High school chemistry teacher Walter White's life is suddenly transformed
+          by a dire medical diagnosis.
+        type: string
+      poster_path:
+        example: /1BP4xYv9ZG4ZVHkL7ocOziBbSYH.jpg
+        type: string
+      season_number:
+        example: 1
+        type: integer
+    type: object
+  tmdb.TVShow:
+    properties:
+      backdrop_path:
+        example: /tsRy63Mu5cu8etL1X7ZLyf7UP1M.jpg
+        type: string
+      first_air_date:
+        example: "2008-01-20"
+        type: string
+      genre_ids:
+        example:
+        - 18
+        - 80
+        items:
+          type: integer
+        type: array
+      id:
+        example: 1396
+        type: integer
+      name:
+        example: Breaking Bad
+        type: string
+      origin_country:
+        example:
+        - US
+        items:
+          type: string
+        type: array
+      original_language:
+        example: en
+        type: string
+      original_name:
+        example: Breaking Bad
+        type: string
+      overview:
+        example: When Walter White, a New Mexico chemistry teacher, is diagnosed with
+          Stage III cancer and given a prognosis of only two years left to live.
+        type: string
+      popularity:
+        example: 369.594
+        type: number
+      poster_path:
+        example: /ggFHVNu6YYI5L9pCfOacjizRGt.jpg
+        type: string
+      vote_average:
+        example: 8.9
+        type: number
+      vote_count:
+        example: 12345
+        type: integer
+    type: object
+  tmdb.TVShowDetails:
+    properties:
+      backdrop_path:
+        example: /tsRy63Mu5cu8etL1X7ZLyf7UP1M.jpg
+        type: string
+      created_by:
+        items:
+          $ref: '#/definitions/tmdb.Creator'
+        type: array
+      episode_run_time:
+        example:
+        - 45
+        - 47
+        items:
+          type: integer
+        type: array
+      first_air_date:
+        example: "2008-01-20"
+        type: string
+      genre_ids:
+        example:
+        - 18
+        - 80
+        items:
+          type: integer
+        type: array
+      genres:
+        items:
+          $ref: '#/definitions/tmdb.Genre'
+        type: array
+      homepage:
+        type: string
+      id:
+        example: 1396
+        type: integer
+      in_production:
+        example: false
+        type: boolean
+      languages:
+        example:
+        - en
+        items:
+          type: string
+        type: array
+      last_air_date:
+        example: "2013-09-29"
+        type: string
+      name:
+        example: Breaking Bad
+        type: string
+      number_of_episodes:
+        example: 62
+        type: integer
+      number_of_seasons:
+        example: 5
+        type: integer
+      origin_country:
+        example:
+        - US
+        items:
+          type: string
+        type: array
+      original_language:
+        example: en
+        type: string
+      original_name:
+        example: Breaking Bad
+        type: string
+      overview:
+        example: When Walter White, a New Mexico chemistry teacher, is diagnosed with
+          Stage III cancer and given a prognosis of only two years left to live.
+        type: string
+      popularity:
+        example: 369.594
+        type: number
+      poster_path:
+        example: /ggFHVNu6YYI5L9pCfOacjizRGt.jpg
+        type: string
+      production_countries:
+        items:
+          $ref: '#/definitions/tmdb.Country'
+        type: array
+      seasons:
+        items:
+          $ref: '#/definitions/tmdb.Season'
+        type: array
+      status:
+        example: Ended
+        type: string
+      tagline:
+        example: Change the equation.
+        type: string
+      type:
+        example: Scripted
+        type: string
+      vote_average:
+        example: 8.9
+        type: number
+      vote_count:
+        example: 12345
+        type: integer
+    type: object
 host: localhost:8080
 info:
   contact:
@@ -91,6 +479,148 @@ paths:
       summary: Demonstrate error handling
       tags:
       - examples
+  /api/v1/movies/{id}:
+    get:
+      description: Get detailed information for a specific movie by ID with zh-TW
+        localization
+      parameters:
+      - description: Movie ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/tmdb.MovieDetails'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      summary: Get movie details
+      tags:
+      - movies
+  /api/v1/movies/search:
+    get:
+      description: Search for movies by title with zh-TW localization
+      parameters:
+      - description: Search query
+        in: query
+        name: query
+        required: true
+        type: string
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/tmdb.SearchResultMovies'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      summary: Search for movies
+      tags:
+      - movies
+  /api/v1/tv/{id}:
+    get:
+      description: Get detailed information for a specific TV show by ID with zh-TW
+        localization
+      parameters:
+      - description: TV show ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/tmdb.TVShowDetails'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      summary: Get TV show details
+      tags:
+      - tv
+  /api/v1/tv/search:
+    get:
+      description: Search for TV shows by name with zh-TW localization
+      parameters:
+      - description: Search query
+        in: query
+        name: query
+        required: true
+        type: string
+      - description: 'Page number (default: 1)'
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/tmdb.SearchResultTVShows'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/middleware.ErrorResponse'
+      summary: Search for TV shows
+      tags:
+      - tv
   /health:
     get:
       description: Returns the health status of the API server
