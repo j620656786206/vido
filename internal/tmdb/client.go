@@ -93,12 +93,8 @@ func (c *Client) doRequest(ctx context.Context, method, endpoint string, queryPa
 
 	// Check for HTTP errors
 	if resp.StatusCode != http.StatusOK {
-		// Try to parse TMDb error response
-		var errorResp ErrorResponse
-		if err := json.Unmarshal(body, &errorResp); err == nil {
-			return nil, fmt.Errorf("TMDb API error (status %d): %s", resp.StatusCode, errorResp.StatusMessage)
-		}
-		return nil, fmt.Errorf("TMDb API error: status %d", resp.StatusCode)
+		// Parse TMDb error response and return appropriate AppError
+		return nil, ParseAPIError(resp.StatusCode, body)
 	}
 
 	return body, nil
