@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>vido 色彩主題視覺化工具</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif;
+            line-height: 1.6;
+            transition: all 0.3s ease;
+        }
+
+        /* Theme Variables */
+        .theme-midnight-blue {
+            --bg-primary: hsl(222, 47%, 11%);
+            --bg-secondary: hsl(217, 33%, 17%);
+            --bg-tertiary: hsl(215, 28%, 23%);
+            --accent-primary: hsl(217, 91%, 60%);
+            --accent-hover: hsl(217, 91%, 70%);
+            --success: hsl(142, 76%, 36%);
+            --error: hsl(0, 84%, 60%);
+            --warning: hsl(38, 92%, 50%);
+            --text-primary: hsl(0, 0%, 95%);
+            --text-secondary: hsl(0, 0%, 70%);
+            --text-muted: hsl(0, 0%, 50%);
+        }
+
+        .theme-cinematic-dark {
+            --bg-primary: hsl(0, 0%, 8%);
+            --bg-secondary: hsl(0, 0%, 12%);
+            --bg-tertiary: hsl(0, 0%, 18%);
+            --accent-primary: hsl(39, 100%, 50%);
+            --accent-hover: hsl(39, 100%, 60%);
+            --success: hsl(142, 76%, 36%);
+            --error: hsl(0, 84%, 60%);
+            --warning: hsl(38, 92%, 50%);
+            --text-primary: hsl(0, 0%, 98%);
+            --text-secondary: hsl(0, 0%, 75%);
+            --text-muted: hsl(0, 0%, 55%);
+        }
+
+        .theme-warm-slate {
+            --bg-primary: hsl(210, 11%, 15%);
+            --bg-secondary: hsl(210, 11%, 20%);
+            --bg-tertiary: hsl(210, 11%, 25%);
+            --accent-primary: hsl(24, 95%, 53%);
+            --accent-hover: hsl(24, 95%, 63%);
+            --success: hsl(142, 76%, 36%);
+            --error: hsl(0, 84%, 60%);
+            --warning: hsl(38, 92%, 50%);
+            --text-primary: hsl(30, 10%, 92%);
+            --text-secondary: hsl(30, 8%, 72%);
+            --text-muted: hsl(30, 6%, 52%);
+        }
+
+        .theme-deep-purple {
+            --bg-primary: hsl(260, 40%, 12%);
+            --bg-secondary: hsl(260, 35%, 18%);
+            --bg-tertiary: hsl(260, 30%, 24%);
+            --accent-primary: hsl(280, 85%, 65%);
+            --accent-hover: hsl(280, 85%, 75%);
+            --success: hsl(142, 76%, 36%);
+            --error: hsl(0, 84%, 60%);
+            --warning: hsl(38, 92%, 50%);
+            --text-primary: hsl(280, 10%, 95%);
+            --text-secondary: hsl(280, 8%, 72%);
+            --text-muted: hsl(280, 6%, 52%);
+        }
+
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            padding: 2rem 0 3rem;
+            border-bottom: 1px solid var(--bg-tertiary);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .theme-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0 3rem;
+        }
+
+        .theme-button {
+            background: var(--bg-secondary);
+            border: 2px solid var(--bg-tertiary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .theme-button:hover {
+            border-color: var(--accent-primary);
+            transform: translateY(-2px);
+        }
+
+        .theme-button.active {
+            border-color: var(--accent-primary);
+            background: var(--bg-tertiary);
+        }
+
+        .theme-name {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .theme-description {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .theme-colors {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .color-swatch {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .section {
+            margin: 3rem 0;
+        }
+
+        .section-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--accent-primary);
+        }
+
+        /* UI Components Demo */
+        .component-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .component-card {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+
+        .component-label {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1rem;
+        }
+
+        /* Buttons */
+        .button {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            border: none;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin: 0.5rem 0.5rem 0.5rem 0;
+            font-family: 'Noto Sans TC', sans-serif;
+        }
+
+        .button-primary {
+            background: var(--accent-primary);
+            color: white;
+        }
+
+        .button-primary:hover {
+            background: var(--accent-hover);
+            transform: translateY(-1px);
+        }
+
+        .button-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .button-secondary:hover {
+            background: var(--bg-primary);
+        }
+
+        .button-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .button-error {
+            background: var(--error);
+            color: white;
+        }
+
+        /* Poster Cards */
+        .poster-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+
+        .poster-card {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .poster-card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+
+        .poster-image {
+            aspect-ratio: 2 / 3;
+            background: linear-gradient(135deg, var(--bg-tertiary), var(--accent-primary));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+        }
+
+        .poster-info {
+            padding: 0.75rem;
+        }
+
+        .poster-title {
+            font-weight: 700;
+            font-size: 0.875rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .poster-meta {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        /* Progress Card */
+        .progress-card {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid var(--bg-tertiary);
+        }
+
+        .progress-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .progress-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--accent-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .progress-text {
+            flex: 1;
+        }
+
+        .progress-title {
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .progress-subtitle {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .progress-bar-container {
+            background: var(--bg-tertiary);
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: var(--accent-primary);
+            transition: width 0.3s ease;
+        }
+
+        .progress-percentage {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        /* Status Badges */
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            margin: 0.25rem;
+        }
+
+        .badge-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .badge-error {
+            background: var(--error);
+            color: white;
+        }
+
+        .badge-warning {
+            background: var(--warning);
+            color: var(--bg-primary);
+        }
+
+        .badge-info {
+            background: var(--accent-primary);
+            color: white;
+        }
+
+        /* Typography Scale */
+        .typography-sample {
+            margin: 1rem 0;
+        }
+
+        .typography-sample h1 {
+            font-size: 2rem;
+        }
+
+        .typography-sample h2 {
+            font-size: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .typography-sample h3 {
+            font-size: 1.25rem;
+            margin-top: 1rem;
+        }
+
+        .typography-sample p {
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+        }
+
+        /* Color Palette Display */
+        .color-palette {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+
+        .color-item {
+            text-align: center;
+        }
+
+        .color-box {
+            height: 80px;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .color-label {
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .color-value {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body class="theme-midnight-blue">
+    <div class="container">
+        <header>
+            <h1>🎨 vido 色彩主題視覺化</h1>
+            <p class="subtitle">為你的媒體管理工具選擇完美的視覺風格</p>
+        </header>
+
+        <section class="section">
+            <h2 class="section-title">選擇主題</h2>
+            <div class="theme-selector">
+                <div class="theme-button active" onclick="setTheme('midnight-blue')">
+                    <div class="theme-name">Midnight Blue 午夜藍</div>
+                    <div class="theme-description">專業、可信賴、科技感 - 企業級媒體應用標準</div>
+                    <div class="theme-colors">
+                        <div class="color-swatch" style="background: hsl(222, 47%, 11%)"></div>
+                        <div class="color-swatch" style="background: hsl(217, 91%, 60%)"></div>
+                        <div class="color-swatch" style="background: hsl(142, 76%, 36%)"></div>
+                        <div class="color-swatch" style="background: hsl(0, 84%, 60%)"></div>
+                    </div>
+                </div>
+                <div class="theme-button" onclick="setTheme('cinematic-dark')">
+                    <div class="theme-name">Cinematic Dark 電影院黑</div>
+                    <div class="theme-description">沈浸、優雅、專注內容 - 如同電影院的觀影體驗</div>
+                    <div class="theme-colors">
+                        <div class="color-swatch" style="background: hsl(0, 0%, 8%)"></div>
+                        <div class="color-swatch" style="background: hsl(39, 100%, 50%)"></div>
+                        <div class="color-swatch" style="background: hsl(142, 76%, 36%)"></div>
+                        <div class="color-swatch" style="background: hsl(0, 84%, 60%)"></div>
+                    </div>
+                </div>
+                <div class="theme-button" onclick="setTheme('warm-slate')">
+                    <div class="theme-name">Warm Slate 溫暖灰</div>
+                    <div class="theme-description">舒適、親和、長時間使用友善 - 減少眼睛疲勞</div>
+                    <div class="theme-colors">
+                        <div class="color-swatch" style="background: hsl(210, 11%, 15%)"></div>
+                        <div class="color-swatch" style="background: hsl(24, 95%, 53%)"></div>
+                        <div class="color-swatch" style="background: hsl(142, 76%, 36%)"></div>
+                        <div class="color-swatch" style="background: hsl(0, 84%, 60%)"></div>
+                    </div>
+                </div>
+                <div class="theme-button" onclick="setTheme('deep-purple')">
+                    <div class="theme-name">Deep Purple 深紫羅蘭</div>
+                    <div class="theme-description">創新、AI 感、獨特 - 突顯 AI 智能解析特色</div>
+                    <div class="theme-colors">
+                        <div class="color-swatch" style="background: hsl(260, 40%, 12%)"></div>
+                        <div class="color-swatch" style="background: hsl(280, 85%, 65%)"></div>
+                        <div class="color-swatch" style="background: hsl(142, 76%, 36%)"></div>
+                        <div class="color-swatch" style="background: hsl(0, 84%, 60%)"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">媒體庫海報網格 (核心視覺)</h2>
+            <div class="poster-grid">
+                <div class="poster-card">
+                    <div class="poster-image">🎬</div>
+                    <div class="poster-info">
+                        <div class="poster-title">鬼滅之刃</div>
+                        <div class="poster-meta">2019 · 動畫</div>
+                    </div>
+                </div>
+                <div class="poster-card">
+                    <div class="poster-image">🎭</div>
+                    <div class="poster-info">
+                        <div class="poster-title">台北物語</div>
+                        <div class="poster-meta">2022 · 劇情</div>
+                    </div>
+                </div>
+                <div class="poster-card">
+                    <div class="poster-image">⚔️</div>
+                    <div class="poster-info">
+                        <div class="poster-title">魔戒</div>
+                        <div class="poster-meta">2001 · 奇幻</div>
+                    </div>
+                </div>
+                <div class="poster-card">
+                    <div class="poster-image">🌸</div>
+                    <div class="poster-info">
+                        <div class="poster-title">你的名字</div>
+                        <div class="poster-meta">2016 · 動畫</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">AI 解析進度 (核心體驗)</h2>
+            <div class="component-grid">
+                <div class="progress-card">
+                    <div class="progress-header">
+                        <div class="progress-icon">📝</div>
+                        <div class="progress-text">
+                            <div class="progress-title">正在解析檔名...</div>
+                            <div class="progress-subtitle">偵測到: 鬼滅之刃 第 26 話</div>
+                        </div>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar" style="width: 33%"></div>
+                    </div>
+                    <div class="progress-percentage">33% 完成</div>
+                </div>
+                <div class="progress-card">
+                    <div class="progress-header">
+                        <div class="progress-icon">🔍</div>
+                        <div class="progress-text">
+                            <div class="progress-title">搜尋 TMDb 資料庫...</div>
+                            <div class="progress-subtitle">TMDb: 搜尋中...</div>
+                        </div>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar" style="width: 66%"></div>
+                    </div>
+                    <div class="progress-percentage">66% 完成</div>
+                </div>
+                <div class="progress-card">
+                    <div class="progress-header">
+                        <div class="progress-icon" style="background: var(--success)">✓</div>
+                        <div class="progress-text">
+                            <div class="progress-title">解析完成!</div>
+                            <div class="progress-subtitle">你的媒體庫已更新</div>
+                        </div>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar" style="width: 100%"></div>
+                    </div>
+                    <div class="progress-percentage">100% 完成</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">按鈕與互動元素</h2>
+            <div class="component-card">
+                <div class="component-label">按鈕狀態</div>
+                <button class="button button-primary">解析檔案</button>
+                <button class="button button-secondary">取消</button>
+                <button class="button button-success">✓ 成功</button>
+                <button class="button button-error">✗ 失敗</button>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">狀態徽章</h2>
+            <div class="component-card">
+                <div class="component-label">解析狀態指示</div>
+                <span class="badge badge-success">✓ 解析成功</span>
+                <span class="badge badge-error">✗ 解析失敗</span>
+                <span class="badge badge-warning">⏳ 處理中</span>
+                <span class="badge badge-info">來源: TMDb</span>
+                <span class="badge badge-info">來源: Douban</span>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">字體層級 (繁體中文優化)</h2>
+            <div class="component-card typography-sample">
+                <h1>標題 H1 - vido 媒體管理工具</h1>
+                <h2>標題 H2 - 媒體庫管理</h2>
+                <h3>標題 H3 - 最近新增</h3>
+                <p>內文段落 - 這是使用 Noto Sans TC 字體優化的繁體中文文字,確保長時間閱讀的舒適度。字體大小為 1rem,行高 1.6,提供良好的可讀性。</p>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">完整色彩配色表</h2>
+            <div class="color-palette">
+                <div class="color-item">
+                    <div class="color-box" style="background: var(--bg-primary)"></div>
+                    <div class="color-label">主要背景</div>
+                    <div class="color-value" id="color-bg-primary"></div>
+                </div>
+                <div class="color-item">
+                    <div class="color-box" style="background: var(--bg-secondary)"></div>
+                    <div class="color-label">次要背景</div>
+                    <div class="color-value" id="color-bg-secondary"></div>
+                </div>
+                <div class="color-item">
+                    <div class="color-box" style="background: var(--bg-tertiary)"></div>
+                    <div class="color-label">三級背景</div>
+                    <div class="color-value" id="color-bg-tertiary"></div>
+                </div>
+                <div class="color-item">
+                    <div class="color-box" style="background: var(--accent-primary)"></div>
+                    <div class="color-label">品牌主色</div>
+                    <div class="color-value" id="color-accent"></div>
+                </div>
+                <div class="color-item">
+                    <div class="color-box" style="background: var(--success)"></div>
+                    <div class="color-label">成功</div>
+                    <div class="color-value" id="color-success"></div>
+                </div>
+                <div class="color-item">
+                    <div class="color-box" style="background: var(--error)"></div>
+                    <div class="color-label">錯誤</div>
+                    <div class="color-value" id="color-error"></div>
+                </div>
+                <div class="color-item">
+                    <div class="color-box" style="background: var(--warning)"></div>
+                    <div class="color-label">警告</div>
+                    <div class="color-value" id="color-warning"></div>
+                </div>
+                <div class="color-item">
+                    <div class="color-box" style="background: var(--text-primary)"></div>
+                    <div class="color-label">主要文字</div>
+                    <div class="color-value" id="color-text-primary"></div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const themes = {
+            'midnight-blue': {
+                bgPrimary: 'hsl(222, 47%, 11%)',
+                bgSecondary: 'hsl(217, 33%, 17%)',
+                bgTertiary: 'hsl(215, 28%, 23%)',
+                accent: 'hsl(217, 91%, 60%)',
+                success: 'hsl(142, 76%, 36%)',
+                error: 'hsl(0, 84%, 60%)',
+                warning: 'hsl(38, 92%, 50%)',
+                textPrimary: 'hsl(0, 0%, 95%)'
+            },
+            'cinematic-dark': {
+                bgPrimary: 'hsl(0, 0%, 8%)',
+                bgSecondary: 'hsl(0, 0%, 12%)',
+                bgTertiary: 'hsl(0, 0%, 18%)',
+                accent: 'hsl(39, 100%, 50%)',
+                success: 'hsl(142, 76%, 36%)',
+                error: 'hsl(0, 84%, 60%)',
+                warning: 'hsl(38, 92%, 50%)',
+                textPrimary: 'hsl(0, 0%, 98%)'
+            },
+            'warm-slate': {
+                bgPrimary: 'hsl(210, 11%, 15%)',
+                bgSecondary: 'hsl(210, 11%, 20%)',
+                bgTertiary: 'hsl(210, 11%, 25%)',
+                accent: 'hsl(24, 95%, 53%)',
+                success: 'hsl(142, 76%, 36%)',
+                error: 'hsl(0, 84%, 60%)',
+                warning: 'hsl(38, 92%, 50%)',
+                textPrimary: 'hsl(30, 10%, 92%)'
+            },
+            'deep-purple': {
+                bgPrimary: 'hsl(260, 40%, 12%)',
+                bgSecondary: 'hsl(260, 35%, 18%)',
+                bgTertiary: 'hsl(260, 30%, 24%)',
+                accent: 'hsl(280, 85%, 65%)',
+                success: 'hsl(142, 76%, 36%)',
+                error: 'hsl(0, 84%, 60%)',
+                warning: 'hsl(38, 92%, 50%)',
+                textPrimary: 'hsl(280, 10%, 95%)'
+            }
+        };
+
+        function setTheme(themeName) {
+            // Remove all theme classes
+            document.body.classList.remove('theme-midnight-blue', 'theme-cinematic-dark', 'theme-warm-slate', 'theme-deep-purple');
+
+            // Add selected theme class
+            document.body.classList.add(`theme-${themeName}`);
+
+            // Update active state
+            document.querySelectorAll('.theme-button').forEach(btn => btn.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+
+            // Update color values
+            const theme = themes[themeName];
+            document.getElementById('color-bg-primary').textContent = theme.bgPrimary;
+            document.getElementById('color-bg-secondary').textContent = theme.bgSecondary;
+            document.getElementById('color-bg-tertiary').textContent = theme.bgTertiary;
+            document.getElementById('color-accent').textContent = theme.accent;
+            document.getElementById('color-success').textContent = theme.success;
+            document.getElementById('color-error').textContent = theme.error;
+            document.getElementById('color-warning').textContent = theme.warning;
+            document.getElementById('color-text-primary').textContent = theme.textPrimary;
+        }
+
+        // Initialize with default theme
+        window.onload = function() {
+            setTheme('midnight-blue');
+        };
+    </script>
+</body>
+</html>
