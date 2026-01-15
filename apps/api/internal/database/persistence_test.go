@@ -41,7 +41,7 @@ func TestDatabasePersistenceAcrossRestarts(t *testing.T) {
 		ID:               "series-persist-1",
 		Title:            "Persistence Test Series",
 		OriginalTitle:    sql.NullString{String: "Original Series Title", Valid: true},
-		FirstAirDate:     sql.NullString{String: "2024-01-01", Valid: true},
+		FirstAirDate:     "2024-01-01",
 		LastAirDate:      sql.NullString{String: "2024-12-31", Valid: true},
 		Genres:           []string{"Sci-Fi", "Thriller"},
 		Rating:           sql.NullFloat64{Float64: 9.0, Valid: true},
@@ -52,7 +52,7 @@ func TestDatabasePersistenceAcrossRestarts(t *testing.T) {
 		OriginalLanguage: sql.NullString{String: "en", Valid: true},
 		IMDbID:           sql.NullString{String: "tt7654321", Valid: true},
 		TMDbID:           sql.NullInt64{Int64: 54321, Valid: true},
-		InProduction:     false,
+		InProduction:     sql.NullBool{Bool: false, Valid: true},
 	}
 
 	testSettingKey := "test_persistence_setting"
@@ -129,7 +129,12 @@ func TestDatabasePersistenceAcrossRestarts(t *testing.T) {
 		}
 
 		// Write test setting
-		if err := settingsRepo.Set(ctx, testSettingKey, testSettingValue, "string"); err != nil {
+		testSetting := &models.Setting{
+			Key:   testSettingKey,
+			Value: testSettingValue,
+			Type:  "string",
+		}
+		if err := settingsRepo.Set(ctx, testSetting); err != nil {
 			db.Close()
 			t.Fatalf("Failed to set test setting: %v", err)
 		}
@@ -337,10 +342,10 @@ func TestWALModePersistence(t *testing.T) {
 		db.Close()
 		t.Fatalf("Failed to get sync mode: %v", err)
 	}
-	expectedSyncMode := "2" // FULL = 2
-	if syncMode != expectedSyncMode {
+	// FULL mode can be returned as "2" or "FULL" depending on SQLite driver
+	if syncMode != "2" && syncMode != "FULL" {
 		db.Close()
-		t.Errorf("Expected sync mode %s, got %s", expectedSyncMode, syncMode)
+		t.Errorf("Expected sync mode 2 or FULL, got %s", syncMode)
 	}
 
 	// Close database

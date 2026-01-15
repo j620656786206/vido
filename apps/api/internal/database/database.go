@@ -63,7 +63,12 @@ func (db *DB) connect() error {
 	return nil
 }
 
-// configureSQLite applies SQLite-specific PRAGMA settings
+// configureSQLite applies SQLite-specific PRAGMA settings.
+// When WALEnabled is true, configures Write-Ahead Logging (WAL) mode which provides:
+// - Concurrent read performance: Multiple readers can access the database while a writer is active
+// - Better write performance: Writes are appended to a WAL file instead of modifying the main database
+// - Crash recovery: WAL provides better crash recovery guarantees
+// - Reduced disk I/O: Changes are batched in the WAL before being checkpointed to the main database
 func (db *DB) configureSQLite() error {
 	pragmas := []string{
 		fmt.Sprintf("PRAGMA busy_timeout = %d", db.config.BusyTimeout.Milliseconds()),

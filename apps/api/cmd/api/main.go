@@ -2,8 +2,7 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -16,6 +15,7 @@ import (
 	"github.com/vido/api/internal/database/migrations"
 	"github.com/vido/api/internal/handlers"
 	"github.com/vido/api/internal/repository"
+	"github.com/vido/api/internal/services"
 
 	// Import migrations to register them via init()
 	_ "github.com/vido/api/internal/database/migrations"
@@ -25,7 +25,8 @@ func main() {
 	// Load configuration
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("Failed to load configuration: %v", err)
+		slog.Error("Failed to load configuration", "error", err)
+		os.Exit(1)
 	}
 
 	// Set Gin mode based on environment
@@ -36,37 +37,42 @@ func main() {
 	}
 
 	// Initialize database
-	log.Printf("Initializing database at %s", cfg.Database.Path)
+	slog.Info("Initializing database", "path", cfg.Database.Path)
 	db, err := database.Initialize(cfg.Database)
 	if err != nil {
-		log.Fatalf("Failed to initialize database: %v", err)
+		slog.Error("Failed to initialize database", "error", err)
+		os.Exit(1)
 	}
 	defer db.Close()
-	log.Printf("Database initialized successfully with WAL mode: %v", cfg.Database.WALEnabled)
+	slog.Info("Database initialized successfully", "wal_mode", cfg.Database.WALEnabled)
 
 	// Run database migrations
-	log.Printf("Running database migrations...")
+	slog.Info("Running database migrations...")
 	migrationRunner, err := migrations.NewRunner(db.Conn())
 	if err != nil {
-		log.Fatalf("Failed to create migration runner: %v", err)
+		slog.Error("Failed to create migration runner", "error", err)
+		os.Exit(1)
 	}
 
 	// Register all migrations from global registry
 	allMigrations := migrations.GetAll()
 	if err := migrationRunner.RegisterAll(allMigrations); err != nil {
-		log.Fatalf("Failed to register migrations: %v", err)
+		slog.Error("Failed to register migrations", "error", err)
+		os.Exit(1)
 	}
 
 	// Apply pending migrations
 	ctx := context.Background()
 	if err := migrationRunner.Up(ctx); err != nil {
-		log.Fatalf("Failed to run migrations: %v", err)
+		slog.Error("Failed to run migrations", "error", err)
+		os.Exit(1)
 	}
 
 	// Check migration status
 	status, err := migrationRunner.Status(ctx)
 	if err != nil {
-		log.Fatalf("Failed to get migration status: %v", err)
+		slog.Error("Failed to get migration status", "error", err)
+		os.Exit(1)
 	}
 	appliedCount := 0
 	for _, s := range status {
@@ -74,18 +80,25 @@ func main() {
 			appliedCount++
 		}
 	}
-	log.Printf("Database migrations completed: %d/%d applied", appliedCount, len(status))
+	slog.Info("Database migrations completed", "applied", appliedCount, "total", len(status))
 
-	// Initialize repositories
-	movieRepo := repository.NewMovieRepository(db.Conn())
-	seriesRepo := repository.NewSeriesRepository(db.Conn())
-	settingsRepo := repository.NewSettingsRepository(db.Conn())
+	// Initialize repositories via factory (enables future database migration)
+	repos := repository.NewRepositoriesWithCache(db.Conn())
+	slog.Info("Repositories initialized via factory")
 
-	// Log repository initialization (repositories will be injected into handlers later)
-	_ = movieRepo
-	_ = seriesRepo
-	_ = settingsRepo
-	log.Printf("Repositories initialized successfully")
+	// Initialize services with injected repository interfaces
+	// This layered architecture enables testing with mock repositories
+	movieService := services.NewMovieService(repos.Movies)
+	seriesService := services.NewSeriesService(repos.Series)
+	settingsService := services.NewSettingsService(repos.Settings)
+	slog.Info("Services initialized with repository injection")
+
+	// Initialize handlers with injected service interfaces
+	// Following Handler → Service → Repository → Database architecture
+	movieHandler := handlers.NewMovieHandler(movieService)
+	seriesHandler := handlers.NewSeriesHandler(seriesService)
+	settingsHandler := handlers.NewSettingsHandler(settingsService)
+	slog.Info("Handlers initialized with service injection")
 
 	// Create Gin router
 	router := gin.Default()
@@ -100,9 +113,18 @@ func main() {
 	// Register routes
 	router.GET("/health", handlers.HealthCheckHandler(db))
 
+	// API v1 routes with handler → service → repository architecture
+	apiV1 := router.Group("/api/v1")
+	{
+		movieHandler.RegisterRoutes(apiV1)
+		seriesHandler.RegisterRoutes(apiV1)
+		settingsHandler.RegisterRoutes(apiV1)
+	}
+	slog.Info("API routes registered", "prefix", "/api/v1")
+
 	// Start server in a goroutine for graceful shutdown
 	addr := cfg.GetAddress()
-	log.Printf("Starting Vido API server on %s", addr)
+	slog.Info("Starting Vido API server", "address", addr)
 
 	// Set up graceful shutdown
 	quit := make(chan os.Signal, 1)
@@ -111,24 +133,25 @@ func main() {
 	// Run server in goroutine
 	go func() {
 		if err := router.Run(addr); err != nil {
-			log.Fatalf("Failed to start server: %v", err)
+			slog.Error("Failed to start server", "error", err)
+			os.Exit(1)
 		}
 	}()
 
 	// Wait for interrupt signal
 	<-quit
-	log.Println("Shutting down server...")
+	slog.Info("Shutting down server...")
 
 	// Give ongoing requests time to finish
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	// Close database connection
-	log.Println("Closing database connection...")
+	slog.Info("Closing database connection...")
 	if err := db.Close(); err != nil {
-		log.Printf("Error closing database: %v", err)
+		slog.Error("Error closing database", "error", err)
 	}
 
 	<-shutdownCtx.Done()
-	log.Println("Server stopped gracefully")
+	slog.Info("Server stopped gracefully")
 }
