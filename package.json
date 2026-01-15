@@ -6,7 +6,13 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:codegen": "playwright codegen",
+    "test:e2e:report": "playwright show-report"
   },
   "private": true,
   "devDependencies": {
@@ -15,10 +21,12 @@
     "@nx/vite": "^22.3.3",
     "@nx/vitest": "22.3.3",
     "@nx/web": "22.3.3",
+    "@playwright/test": "^1.57.0",
     "@swc-node/register": "~1.9.1",
     "@swc/core": "~1.5.7",
     "@swc/helpers": "~0.5.11",
     "@tailwindcss/postcss": "^4.1.18",
+    "@tanstack/router-plugin": "^1.150.0",
     "@testing-library/dom": "10.4.0",
     "@testing-library/react": "16.3.0",
     "@types/node": "20.19.9",
