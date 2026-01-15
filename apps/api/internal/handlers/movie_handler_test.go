@@ -274,6 +274,77 @@ func TestMovieHandler_Create(t *testing.T) {
 	}
 }
 
+func TestMovieHandler_Update(t *testing.T) {
+	tests := []struct {
+		name           string
+		movieID        string
+		requestBody    interface{}
+		setupMock      func(*MockMovieService)
+		expectedStatus int
+	}{
+		{
+			name:    "success",
+			movieID: "movie-123",
+			requestBody: UpdateMovieRequest{
+				Title: "Updated Movie",
+			},
+			setupMock: func(m *MockMovieService) {
+				m.On("GetByID", mock.Anything, "movie-123").Return(
+					&models.Movie{ID: "movie-123", Title: "Original Movie", ReleaseDate: "2024-01-01"},
+					nil,
+				)
+				m.On("Update", mock.Anything, mock.AnythingOfType("*models.Movie")).Return(nil)
+			},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:    "not found",
+			movieID: "nonexistent",
+			requestBody: UpdateMovieRequest{
+				Title: "Updated Movie",
+			},
+			setupMock: func(m *MockMovieService) {
+				m.On("GetByID", mock.Anything, "nonexistent").Return(nil, errors.New("not found"))
+			},
+			expectedStatus: http.StatusNotFound,
+		},
+		{
+			name:    "service error on update",
+			movieID: "movie-456",
+			requestBody: UpdateMovieRequest{
+				Title: "Updated Movie",
+			},
+			setupMock: func(m *MockMovieService) {
+				m.On("GetByID", mock.Anything, "movie-456").Return(
+					&models.Movie{ID: "movie-456", Title: "Original Movie", ReleaseDate: "2024-01-01"},
+					nil,
+				)
+				m.On("Update", mock.Anything, mock.AnythingOfType("*models.Movie")).Return(errors.New("database error"))
+			},
+			expectedStatus: http.StatusInternalServerError,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockService := new(MockMovieService)
+			tt.setupMock(mockService)
+
+			handler := NewMovieHandler(mockService)
+			router := setupTestRouter(handler)
+
+			body, _ := json.Marshal(tt.requestBody)
+			req, _ := http.NewRequest(http.MethodPut, "/api/v1/movies/"+tt.movieID, bytes.NewBuffer(body))
+			req.Header.Set("Content-Type", "application/json")
+			resp := httptest.NewRecorder()
+			router.ServeHTTP(resp, req)
+
+			assert.Equal(t, tt.expectedStatus, resp.Code)
+			mockService.AssertExpectations(t)
+		})
+	}
+}
+
 func TestMovieHandler_Delete(t *testing.T) {
 	tests := []struct {
 		name           string
