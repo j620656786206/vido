@@ -1,0 +1,79 @@
+# ==============================================================================
+# Vido - Production Docker Compose Override
+# ==============================================================================
+# Production-specific configuration overrides for the Vido application.
+#
+# Usage:
+#   docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Features:
+#   - Resource limits to prevent runaway processes
+#   - Production-optimized logging
+#   - Restart policies
+#   - Security hardening
+# ==============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # Vido API - Production overrides
+  # ---------------------------------------------------------------------------
+  vido-api:
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 128M
+
+    # Production logging configuration
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+        labels: "service,environment"
+
+    # Security: Read-only root filesystem
+    read_only: true
+    # Required tmpfs for runtime files
+    tmpfs:
+      - /tmp:size=64M,mode=1777
+
+    # Production environment
+    environment:
+      - ENV=production
+      # Disable debug mode
+      - GIN_MODE=release
+
+  # ---------------------------------------------------------------------------
+  # Vido Web - Production overrides
+  # ---------------------------------------------------------------------------
+  vido-web:
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 64M
+
+    # Production logging configuration
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service,environment"
+
+    # Security: Read-only root filesystem
+    read_only: true
+    # Required tmpfs for nginx runtime files
+    tmpfs:
+      - /var/cache/nginx:size=64M
+      - /var/run:size=16M
+      - /tmp:size=32M

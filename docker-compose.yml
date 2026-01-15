@@ -1,0 +1,103 @@
+# ==============================================================================
+# Vido - Docker Compose Configuration
+# ==============================================================================
+# Orchestrates the Vido application stack for local development and production.
+#
+# Quick Start:
+#   docker-compose up -d
+#
+# Access:
+#   - Web UI: http://localhost:8080
+#   - API: http://localhost:8080/api/v1
+#   - Health: http://localhost:8080/api-health
+#
+# Volumes:
+#   - vido-data: Database and cache files
+#   - vido-backups: Backup files
+#   - Media folder: Your media library (read-only)
+#
+# Environment Variables:
+#   - MEDIA_PATH: Path to your media library (default: ./media)
+#   - See .env.example for all available options
+# ==============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # Vido API - Backend service
+  # ---------------------------------------------------------------------------
+  vido-api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    container_name: vido-api
+    restart: unless-stopped
+    networks:
+      - vido-network
+    volumes:
+      # Persistent data storage
+      - vido-data:/vido-data
+      # Backup storage
+      - vido-backups:/vido-backups
+      # Media library (read-only for security)
+      - ${MEDIA_PATH:-./media}:/media:ro
+    environment:
+      # Server configuration
+      - PORT=8080
+      - ENV=${ENV:-production}
+      # Database configuration
+      - DB_PATH=/vido-data/vido.db
+      - DB_WAL_ENABLED=${DB_WAL_ENABLED:-true}
+      # TMDb configuration (optional)
+      - TMDB_API_KEY=${TMDB_API_KEY:-}
+      - TMDB_DEFAULT_LANGUAGE=${TMDB_DEFAULT_LANGUAGE:-zh-TW}
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    # Expose port for direct API access (useful for debugging)
+    # Comment out in production if using reverse proxy
+    ports:
+      - "${API_PORT:-8081}:8080"
+
+  # ---------------------------------------------------------------------------
+  # Vido Web - Frontend service
+  # ---------------------------------------------------------------------------
+  vido-web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: vido-web
+    restart: unless-stopped
+    networks:
+      - vido-network
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    depends_on:
+      vido-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost/nginx-health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+# -----------------------------------------------------------------------------
+# Networks
+# -----------------------------------------------------------------------------
+networks:
+  vido-network:
+    driver: bridge
+
+# -----------------------------------------------------------------------------
+# Volumes
+# -----------------------------------------------------------------------------
+volumes:
+  # Database and cache storage
+  vido-data:
+    driver: local
+  # Backup storage
+  vido-backups:
+    driver: local
