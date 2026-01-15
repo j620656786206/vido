@@ -12,10 +12,17 @@
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:debug": "playwright test --debug",
     "test:e2e:codegen": "playwright codegen",
-    "test:e2e:report": "playwright show-report"
+    "test:e2e:report": "playwright show-report",
+    "test:api": "playwright test --grep @api",
+    "test:api:movies": "playwright test tests/e2e/movies.api.spec.ts",
+    "test:api:series": "playwright test tests/e2e/series.api.spec.ts",
+    "test:api:settings": "playwright test tests/e2e/settings.api.spec.ts",
+    "test:api:health": "playwright test tests/e2e/health.api.spec.ts",
+    "test:smoke": "playwright test --grep @smoke"
   },
   "private": true,
   "devDependencies": {
+    "@faker-js/faker": "^9.7.0",
     "@nx/js": "22.3.3",
     "@nx/react": "^22.3.3",
     "@nx/vite": "^22.3.3",

@@ -8,7 +8,7 @@
  * @see tests/support/fixtures/index.ts for fixture wrapper
  */
 
-import type { APIRequestContext } from '@playwright/test';
+import type { APIRequestContext, APIResponse } from '@playwright/test';
 
 // =============================================================================
 // Configuration
@@ -30,17 +30,75 @@ export interface ApiResponse<T> {
   };
 }
 
-export interface Movie {
-  id: string;
-  tmdb_id: number;
-  title: string;
-  original_title: string;
-  overview: string;
-  release_date: string;
-  poster_path: string;
-  backdrop_path: string;
+export interface PaginatedResponse<T> {
+  items: T[];
+  page: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
 }
 
+export interface Movie {
+  id: string;
+  tmdbId?: number;
+  title: string;
+  originalTitle?: string;
+  overview?: string;
+  releaseDate: string;
+  posterPath?: string;
+  backdropPath?: string;
+  genres?: string[];
+  rating?: number;
+  runtime?: number;
+  status?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Series {
+  id: string;
+  tmdbId?: number;
+  title: string;
+  originalTitle?: string;
+  overview?: string;
+  firstAirDate: string;
+  lastAirDate?: string;
+  posterPath?: string;
+  backdropPath?: string;
+  genres?: string[];
+  rating?: number;
+  numberOfSeasons?: number;
+  numberOfEpisodes?: number;
+  status?: string;
+  inProduction?: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Setting {
+  key: string;
+  value: string;
+  type: 'string' | 'int' | 'bool';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface HealthResponse {
+  status: 'healthy' | 'degraded' | 'unhealthy';
+  service: string;
+  database?: {
+    status: string;
+    latency: number;
+    walEnabled: boolean;
+    walMode: string;
+    syncMode: string;
+    openConnections: number;
+    idleConnections: number;
+    error?: string;
+  };
+}
+
+// Legacy types for backwards compatibility
 export interface SearchResult {
   results: Movie[];
   total_results: number;
@@ -53,30 +111,36 @@ export interface SearchResult {
 // =============================================================================
 
 export interface ApiHelpers {
-  /**
-   * Search for movies by query
-   */
-  searchMovies: (query: string) => Promise<ApiResponse<SearchResult>>;
-
-  /**
-   * Get movie details by ID
-   */
+  // Movies
+  listMovies: (params?: { page?: number; pageSize?: number }) => Promise<ApiResponse<PaginatedResponse<Movie>>>;
+  searchMovies: (query: string, params?: { page?: number; pageSize?: number }) => Promise<ApiResponse<PaginatedResponse<Movie>>>;
   getMovie: (id: string) => Promise<ApiResponse<Movie>>;
+  createMovie: (data: Partial<Movie>) => Promise<ApiResponse<Movie>>;
+  updateMovie: (id: string, data: Partial<Movie>) => Promise<ApiResponse<Movie>>;
+  deleteMovie: (id: string) => Promise<APIResponse>;
 
-  /**
-   * Health check endpoint
-   */
-  healthCheck: () => Promise<{ status: string }>;
+  // Series
+  listSeries: (params?: { page?: number; pageSize?: number }) => Promise<ApiResponse<PaginatedResponse<Series>>>;
+  searchSeries: (query: string, params?: { page?: number; pageSize?: number }) => Promise<ApiResponse<PaginatedResponse<Series>>>;
+  getSeries: (id: string) => Promise<ApiResponse<Series>>;
+  createSeries: (data: Partial<Series>) => Promise<ApiResponse<Series>>;
+  updateSeries: (id: string, data: Partial<Series>) => Promise<ApiResponse<Series>>;
+  deleteSeries: (id: string) => Promise<APIResponse>;
 
-  /**
-   * Generic GET request
-   */
+  // Settings
+  listSettings: () => Promise<ApiResponse<Setting[]>>;
+  getSetting: (key: string) => Promise<ApiResponse<Setting>>;
+  setSetting: (key: string, value: string | number | boolean, type: 'string' | 'int' | 'bool') => Promise<ApiResponse<Setting>>;
+  deleteSetting: (key: string) => Promise<APIResponse>;
+
+  // Health
+  healthCheck: () => Promise<HealthResponse>;
+
+  // Generic helpers
   get: <T>(endpoint: string) => Promise<ApiResponse<T>>;
-
-  /**
-   * Generic POST request
-   */
   post: <T>(endpoint: string, data?: unknown) => Promise<ApiResponse<T>>;
+  put: <T>(endpoint: string, data?: unknown) => Promise<ApiResponse<T>>;
+  delete: (endpoint: string) => Promise<APIResponse>;
 }
 
 /**
@@ -98,21 +162,90 @@ export function apiHelpers(request: APIRequestContext): ApiHelpers {
     return response.json();
   };
 
+  const put = async <T>(endpoint: string, data?: unknown): Promise<ApiResponse<T>> => {
+    const response = await request.put(`${API_BASE_URL}${endpoint}`, {
+      data,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    return response.json();
+  };
+
+  const del = async (endpoint: string): Promise<APIResponse> => {
+    return request.delete(`${API_BASE_URL}${endpoint}`);
+  };
+
+  const buildQueryString = (params?: Record<string, unknown>): string => {
+    if (!params) return '';
+    const searchParams = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== null) {
+        searchParams.append(key, String(value));
+      }
+    }
+    const qs = searchParams.toString();
+    return qs ? `?${qs}` : '';
+  };
+
   return {
-    searchMovies: async (query: string) => {
-      return get<SearchResult>(`/movies/search?q=${encodeURIComponent(query)}`);
+    // Movies
+    listMovies: async (params) => {
+      const qs = buildQueryString({ page: params?.page, page_size: params?.pageSize });
+      return get<PaginatedResponse<Movie>>(`/movies${qs}`);
     },
 
-    getMovie: async (id: string) => {
-      return get<Movie>(`/movies/${id}`);
+    searchMovies: async (query, params) => {
+      const qs = buildQueryString({ q: query, page: params?.page, page_size: params?.pageSize });
+      return get<PaginatedResponse<Movie>>(`/movies/search${qs}`);
     },
 
+    getMovie: async (id) => get<Movie>(`/movies/${id}`),
+
+    createMovie: async (data) => post<Movie>('/movies', data),
+
+    updateMovie: async (id, data) => put<Movie>(`/movies/${id}`, data),
+
+    deleteMovie: async (id) => del(`/movies/${id}`),
+
+    // Series
+    listSeries: async (params) => {
+      const qs = buildQueryString({ page: params?.page, page_size: params?.pageSize });
+      return get<PaginatedResponse<Series>>(`/series${qs}`);
+    },
+
+    searchSeries: async (query, params) => {
+      const qs = buildQueryString({ q: query, page: params?.page, page_size: params?.pageSize });
+      return get<PaginatedResponse<Series>>(`/series/search${qs}`);
+    },
+
+    getSeries: async (id) => get<Series>(`/series/${id}`),
+
+    createSeries: async (data) => post<Series>('/series', data),
+
+    updateSeries: async (id, data) => put<Series>(`/series/${id}`, data),
+
+    deleteSeries: async (id) => del(`/series/${id}`),
+
+    // Settings
+    listSettings: async () => get<Setting[]>('/settings'),
+
+    getSetting: async (key) => get<Setting>(`/settings/${key}`),
+
+    setSetting: async (key, value, type) => post<Setting>('/settings', { key, value, type }),
+
+    deleteSetting: async (key) => del(`/settings/${key}`),
+
+    // Health
     healthCheck: async () => {
       const response = await request.get(`${API_BASE_URL.replace('/api/v1', '')}/health`);
       return response.json();
     },
 
+    // Generic helpers
     get,
     post,
+    put,
+    delete: del,
   };
 }
