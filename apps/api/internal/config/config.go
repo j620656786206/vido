@@ -24,7 +24,7 @@ func Load() (*Config, error) {
 	if port := os.Getenv("PORT"); port != "" {
 		cfg.Port = port
 	} else {
-		cfg.Port = "3000"
+		cfg.Port = "8080"
 	}
 
 	// Environment
