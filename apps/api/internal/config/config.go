@@ -2,37 +2,90 @@ package config
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"strconv"
+	"strings"
 )
+
+// ConfigSource indicates where a configuration value came from
+type ConfigSource int
+
+const (
+	// SourceDefault indicates the value is the default
+	SourceDefault ConfigSource = iota
+	// SourceEnvVar indicates the value came from an environment variable
+	SourceEnvVar
+	// SourceConfigFile indicates the value came from a config file
+	SourceConfigFile
+)
+
+// String returns a human-readable representation of the config source
+func (s ConfigSource) String() string {
+	switch s {
+	case SourceEnvVar:
+		return "env"
+	case SourceConfigFile:
+		return "file"
+	default:
+		return "default"
+	}
+}
 
 // Config holds all application configuration
 type Config struct {
 	// Server configuration
-	Port string
-	Env  string
+	Port     string
+	Env      string
+	LogLevel string
+
+	// CORS configuration
+	CORSOrigins []string
+
+	// Paths
+	DataDir   string
+	MediaDirs []string
+
+	// API Keys (optional)
+	TMDbAPIKey    string
+	GeminiAPIKey  string
+	EncryptionKey string
 
 	// Database configuration
 	Database *DatabaseConfig
+
+	// Source tracking - maps config key to its source
+	Sources map[string]ConfigSource
 }
 
 // Load reads configuration from environment variables with defaults
 func Load() (*Config, error) {
-	cfg := &Config{}
-
-	// Port
-	if port := os.Getenv("PORT"); port != "" {
-		cfg.Port = port
-	} else {
-		cfg.Port = "8080"
+	cfg := &Config{
+		Sources: make(map[string]ConfigSource),
 	}
+
+	// Port - VIDO_PORT takes precedence over PORT for backward compatibility
+	cfg.Port = cfg.loadWithFallback("VIDO_PORT", "PORT", "8080")
 
 	// Environment
-	if env := os.Getenv("ENV"); env != "" {
-		cfg.Env = env
-	} else {
-		cfg.Env = "development"
-	}
+	cfg.Env = cfg.loadString("ENV", "development")
+
+	// Log level
+	cfg.LogLevel = cfg.loadString("VIDO_LOG_LEVEL", "info")
+
+	// CORS origins
+	cfg.CORSOrigins = cfg.loadStringSlice("VIDO_CORS_ORIGINS", "*")
+
+	// Data directory
+	cfg.DataDir = cfg.loadString("VIDO_DATA_DIR", "/vido-data")
+
+	// Media directories (comma-separated)
+	cfg.MediaDirs = cfg.loadStringSlice("VIDO_MEDIA_DIRS", "/media")
+
+	// API Keys (optional - empty string is valid default)
+	cfg.TMDbAPIKey = cfg.loadString("TMDB_API_KEY", "")
+	cfg.GeminiAPIKey = cfg.loadString("GEMINI_API_KEY", "")
+	cfg.EncryptionKey = cfg.loadString("ENCRYPTION_KEY", "")
 
 	// Load database configuration
 	dbCfg, err := LoadDatabaseConfig()
@@ -42,6 +95,105 @@ func Load() (*Config, error) {
 	cfg.Database = dbCfg
 
 	return cfg, nil
+}
+
+// loadString loads a string value from env or uses default, tracking source
+func (c *Config) loadString(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		c.Sources[key] = SourceEnvVar
+		return value
+	}
+	c.Sources[key] = SourceDefault
+	return defaultValue
+}
+
+// loadWithFallback loads from primary env var, falls back to secondary, then default
+func (c *Config) loadWithFallback(primary, fallback, defaultValue string) string {
+	// Check primary first
+	if value := os.Getenv(primary); value != "" {
+		c.Sources[primary] = SourceEnvVar
+		return value
+	}
+	// Check fallback
+	if fallback != "" {
+		if value := os.Getenv(fallback); value != "" {
+			c.Sources[primary] = SourceEnvVar // Track under primary key
+			return value
+		}
+	}
+	// Use default
+	c.Sources[primary] = SourceDefault
+	return defaultValue
+}
+
+// loadStringSlice loads a comma-separated string slice from env or uses default
+func (c *Config) loadStringSlice(key, defaultValue string) []string {
+	value := os.Getenv(key)
+	if value != "" {
+		c.Sources[key] = SourceEnvVar
+	} else {
+		c.Sources[key] = SourceDefault
+		value = defaultValue
+	}
+	return parseStringSlice(value)
+}
+
+// parseStringSlice parses a comma-separated string into a slice
+func parseStringSlice(value string) []string {
+	parts := strings.Split(value, ",")
+	result := make([]string, 0, len(parts))
+	for _, p := range parts {
+		trimmed := strings.TrimSpace(p)
+		if trimmed != "" {
+			result = append(result, trimmed)
+		}
+	}
+	return result
+}
+
+// getEnvStringSliceOrDefault returns a string slice from env var or default
+// This is a standalone helper function for use outside Config struct
+func getEnvStringSliceOrDefault(key string, defaultValue string) []string {
+	value := os.Getenv(key)
+	if value == "" {
+		value = defaultValue
+	}
+	return parseStringSlice(value)
+}
+
+// LogConfigSources logs which source each configuration value came from
+func (c *Config) LogConfigSources() {
+	slog.Info("Configuration loaded",
+		"VIDO_PORT", c.Port,
+		"VIDO_PORT_source", c.Sources["VIDO_PORT"].String(),
+		"ENV", c.Env,
+		"ENV_source", c.Sources["ENV"].String(),
+		"VIDO_LOG_LEVEL", c.LogLevel,
+		"VIDO_LOG_LEVEL_source", c.Sources["VIDO_LOG_LEVEL"].String(),
+		"VIDO_DATA_DIR", c.DataDir,
+		"VIDO_DATA_DIR_source", c.Sources["VIDO_DATA_DIR"].String(),
+		"VIDO_MEDIA_DIRS", strings.Join(c.MediaDirs, ","),
+		"VIDO_MEDIA_DIRS_source", c.Sources["VIDO_MEDIA_DIRS"].String(),
+		"VIDO_CORS_ORIGINS", strings.Join(c.CORSOrigins, ","),
+		"VIDO_CORS_ORIGINS_source", c.Sources["VIDO_CORS_ORIGINS"].String(),
+		"TMDB_API_KEY", maskSecret(c.TMDbAPIKey),
+		"TMDB_API_KEY_source", c.Sources["TMDB_API_KEY"].String(),
+		"GEMINI_API_KEY", maskSecret(c.GeminiAPIKey),
+		"GEMINI_API_KEY_source", c.Sources["GEMINI_API_KEY"].String(),
+		"ENCRYPTION_KEY", maskSecret(c.EncryptionKey),
+		"ENCRYPTION_KEY_source", c.Sources["ENCRYPTION_KEY"].String(),
+	)
+}
+
+// maskSecret masks sensitive values for safe logging
+func maskSecret(s string) string {
+	if s == "" {
+		return "(not set)"
+	}
+	if len(s) <= 8 {
+		return "****"
+	}
+	return s[:4] + "****" + s[len(s)-4:]
 }
 
 // IsDevelopment returns true if running in development mode
