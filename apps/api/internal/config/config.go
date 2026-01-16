@@ -51,6 +51,11 @@ type Config struct {
 	GeminiAPIKey  string
 	EncryptionKey string
 
+	// TMDb configuration
+	TMDbDefaultLanguage   string
+	TMDbFallbackLanguages []string
+	TMDbCacheTTLHours     int
+
 	// Database configuration
 	Database *DatabaseConfig
 
@@ -86,6 +91,11 @@ func Load() (*Config, error) {
 	cfg.TMDbAPIKey = cfg.loadString("TMDB_API_KEY", "")
 	cfg.GeminiAPIKey = cfg.loadString("GEMINI_API_KEY", "")
 	cfg.EncryptionKey = cfg.loadString("ENCRYPTION_KEY", "")
+
+	// TMDb configuration (Story 2.1)
+	cfg.TMDbDefaultLanguage = cfg.loadString("TMDB_DEFAULT_LANGUAGE", "zh-TW")
+	cfg.TMDbFallbackLanguages = cfg.loadStringSlice("TMDB_FALLBACK_LANGUAGES", "zh-TW,zh-CN,en")
+	cfg.TMDbCacheTTLHours = cfg.loadInt("TMDB_CACHE_TTL_HOURS", 24)
 
 	// Load database configuration
 	dbCfg, err := LoadDatabaseConfig()
@@ -138,6 +148,28 @@ func (c *Config) loadStringSlice(key, defaultValue string) []string {
 	return parseStringSlice(value)
 }
 
+// loadInt loads an integer value from env or uses default, tracking source
+// If the env var is set but cannot be parsed, it logs a warning and uses the default
+func (c *Config) loadInt(key string, defaultValue int) int {
+	if value := os.Getenv(key); value != "" {
+		intVal, err := strconv.Atoi(value)
+		if err != nil {
+			slog.Warn("Invalid integer value for environment variable, using default",
+				"key", key,
+				"value", value,
+				"default", defaultValue,
+				"error", err.Error(),
+			)
+			c.Sources[key] = SourceDefault
+			return defaultValue
+		}
+		c.Sources[key] = SourceEnvVar
+		return intVal
+	}
+	c.Sources[key] = SourceDefault
+	return defaultValue
+}
+
 // parseStringSlice parses a comma-separated string into a slice
 func parseStringSlice(value string) []string {
 	parts := strings.Split(value, ",")
@@ -182,6 +214,12 @@ func (c *Config) LogConfigSources() {
 		"GEMINI_API_KEY_source", c.Sources["GEMINI_API_KEY"].String(),
 		"ENCRYPTION_KEY", maskSecret(c.EncryptionKey),
 		"ENCRYPTION_KEY_source", c.Sources["ENCRYPTION_KEY"].String(),
+		"TMDB_DEFAULT_LANGUAGE", c.TMDbDefaultLanguage,
+		"TMDB_DEFAULT_LANGUAGE_source", c.Sources["TMDB_DEFAULT_LANGUAGE"].String(),
+		"TMDB_FALLBACK_LANGUAGES", strings.Join(c.TMDbFallbackLanguages, ","),
+		"TMDB_FALLBACK_LANGUAGES_source", c.Sources["TMDB_FALLBACK_LANGUAGES"].String(),
+		"TMDB_CACHE_TTL_HOURS", c.TMDbCacheTTLHours,
+		"TMDB_CACHE_TTL_HOURS_source", c.Sources["TMDB_CACHE_TTL_HOURS"].String(),
 	)
 }
 

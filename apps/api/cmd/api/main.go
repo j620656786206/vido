@@ -18,6 +18,9 @@ import (
 	"github.com/vido/api/internal/secrets"
 	"github.com/vido/api/internal/services"
 
+	// Media config is loaded during service initialization
+	// and validates directories from VIDO_MEDIA_DIRS env var
+
 	// Import migrations to register them via init()
 	_ "github.com/vido/api/internal/database/migrations"
 )
@@ -110,6 +113,16 @@ func main() {
 	movieService := services.NewMovieService(repos.Movies)
 	seriesService := services.NewSeriesService(repos.Series)
 	settingsService := services.NewSettingsServiceWithSecrets(repos.Settings, secretsService)
+	mediaService := services.NewMediaService()
+
+	// Initialize TMDb service with cache integration (Story 2.1)
+	tmdbService := services.NewTMDbService(services.TMDbConfig{
+		APIKey:            cfg.TMDbAPIKey,
+		DefaultLanguage:   cfg.TMDbDefaultLanguage,
+		FallbackLanguages: cfg.TMDbFallbackLanguages,
+		CacheTTLHours:     cfg.TMDbCacheTTLHours,
+	}, repos.Cache)
+
 	slog.Info("Services initialized with repository injection")
 
 	// Initialize handlers with injected service interfaces
@@ -117,6 +130,8 @@ func main() {
 	movieHandler := handlers.NewMovieHandler(movieService)
 	seriesHandler := handlers.NewSeriesHandler(seriesService)
 	settingsHandler := handlers.NewSettingsHandler(settingsService)
+	mediaHandler := handlers.NewMediaHandler(mediaService)
+	tmdbHandler := handlers.NewTMDbHandler(tmdbService)
 	slog.Info("Handlers initialized with service injection")
 
 	// Create Gin router
@@ -139,6 +154,8 @@ func main() {
 		movieHandler.RegisterRoutes(apiV1)
 		seriesHandler.RegisterRoutes(apiV1)
 		settingsHandler.RegisterRoutes(apiV1)
+		mediaHandler.RegisterRoutes(apiV1)
+		tmdbHandler.RegisterRoutes(apiV1)
 	}
 	slog.Info("API routes registered", "prefix", "/api/v1")
 

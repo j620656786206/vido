@@ -588,6 +588,81 @@ func TestMaskSecret(t *testing.T) {
 	}
 }
 
+// =============================================================================
+// Task 7: Test loadInt behavior (added during code review)
+// =============================================================================
+
+func TestLoadInt_ValidValue(t *testing.T) {
+	// Save and restore environment
+	originalEnv := os.Environ()
+	defer func() {
+		os.Clearenv()
+		for _, e := range originalEnv {
+			pair := splitEnvPair(e)
+			if len(pair) == 2 {
+				os.Setenv(pair[0], pair[1])
+			}
+		}
+	}()
+	os.Clearenv()
+
+	// Set a valid integer value
+	os.Setenv("TEST_INT_VAR", "42")
+
+	cfg := &Config{Sources: make(map[string]ConfigSource)}
+	result := cfg.loadInt("TEST_INT_VAR", 10)
+
+	assert.Equal(t, 42, result)
+	assert.Equal(t, SourceEnvVar, cfg.Sources["TEST_INT_VAR"])
+}
+
+func TestLoadInt_InvalidValue_UsesDefault(t *testing.T) {
+	// Save and restore environment
+	originalEnv := os.Environ()
+	defer func() {
+		os.Clearenv()
+		for _, e := range originalEnv {
+			pair := splitEnvPair(e)
+			if len(pair) == 2 {
+				os.Setenv(pair[0], pair[1])
+			}
+		}
+	}()
+	os.Clearenv()
+
+	// Set an invalid (non-numeric) value
+	os.Setenv("TEST_INT_VAR", "not-a-number")
+
+	cfg := &Config{Sources: make(map[string]ConfigSource)}
+	result := cfg.loadInt("TEST_INT_VAR", 99)
+
+	// Should use default value when parsing fails
+	assert.Equal(t, 99, result)
+	assert.Equal(t, SourceDefault, cfg.Sources["TEST_INT_VAR"])
+}
+
+func TestLoadInt_EmptyValue_UsesDefault(t *testing.T) {
+	// Save and restore environment
+	originalEnv := os.Environ()
+	defer func() {
+		os.Clearenv()
+		for _, e := range originalEnv {
+			pair := splitEnvPair(e)
+			if len(pair) == 2 {
+				os.Setenv(pair[0], pair[1])
+			}
+		}
+	}()
+	os.Clearenv()
+
+	// Don't set the variable at all
+	cfg := &Config{Sources: make(map[string]ConfigSource)}
+	result := cfg.loadInt("TEST_INT_VAR", 77)
+
+	assert.Equal(t, 77, result)
+	assert.Equal(t, SourceDefault, cfg.Sources["TEST_INT_VAR"])
+}
+
 // Helper function to split environment variable pair
 func splitEnvPair(e string) []string {
 	for i := 0; i < len(e); i++ {
