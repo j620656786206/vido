@@ -4,28 +4,18 @@ import (
 	"log/slog"
 
 	"github.com/gin-gonic/gin"
-	"github.com/vido/api/internal/media"
+	"github.com/vido/api/internal/services"
 )
 
-// MediaServiceInterface defines the contract for media directory operations.
-// This interface enables testing handlers with mock services.
-type MediaServiceInterface interface {
-	GetConfig() *media.MediaConfig
-	GetConfiguredDirectories() []media.MediaDirectory
-	GetAccessibleDirectories() []media.MediaDirectory
-	RefreshDirectoryStatus() *media.MediaConfig
-	IsSearchOnlyMode() bool
-}
-
 // MediaHandler handles HTTP requests for media directory configuration.
-// It uses MediaServiceInterface for business logic, following the
+// It uses services.MediaServiceInterface for business logic, following the
 // Handler -> Service architecture (no repository needed as config is from env).
 type MediaHandler struct {
-	service MediaServiceInterface
+	service services.MediaServiceInterface
 }
 
 // NewMediaHandler creates a new MediaHandler with the given service.
-func NewMediaHandler(service MediaServiceInterface) *MediaHandler {
+func NewMediaHandler(service services.MediaServiceInterface) *MediaHandler {
 	return &MediaHandler{
 		service: service,
 	}

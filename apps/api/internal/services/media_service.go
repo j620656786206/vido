@@ -25,17 +25,20 @@ type MediaServiceInterface interface {
 // MediaService provides business logic for media directory operations.
 // It caches the directory validation results and provides thread-safe access.
 type MediaService struct {
+	dirs   []string // Original directory paths for refresh operations
 	config *media.MediaConfig
 	mu     sync.RWMutex
 }
 
-// NewMediaService creates a new MediaService and loads the initial configuration.
+// NewMediaService creates a new MediaService with the given media directories.
 // It validates all configured directories and logs their status.
-func NewMediaService() *MediaService {
-	config := media.LoadMediaConfig()
+// The dirs parameter should come from config.MediaDirs (Story 1.3 integration).
+func NewMediaService(dirs []string) *MediaService {
+	config := media.LoadMediaConfig(dirs)
 	media.LogMediaConfigStatus(config)
 
 	return &MediaService{
+		dirs:   dirs,
 		config: config,
 	}
 }
@@ -68,7 +71,7 @@ func (s *MediaService) RefreshDirectoryStatus() *media.MediaConfig {
 	defer s.mu.Unlock()
 
 	slog.Info("Refreshing media directory status")
-	s.config = media.LoadMediaConfig()
+	s.config = media.LoadMediaConfig(s.dirs)
 	media.LogMediaConfigStatus(s.config)
 
 	return s.config

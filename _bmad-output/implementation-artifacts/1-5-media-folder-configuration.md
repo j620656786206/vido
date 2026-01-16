@@ -1,6 +1,6 @@
 # Story 1.5: Media Folder Configuration
 
-Status: review
+Status: done
 
 ## Story
 
@@ -568,7 +568,35 @@ Claude Opus 4.5 (claude-opus-4-5-20251101)
 **Modified Files:**
 - `apps/api/cmd/api/main.go` - Added MediaService and MediaHandler initialization
 
+## Senior Developer Review (AI)
+
+### Review Date: 2026-01-16
+### Reviewer: Claude Opus 4.5 (Amelia - Dev Agent)
+### Outcome: APPROVED (with fixes applied)
+
+### Issues Found and Fixed:
+
+| # | Severity | Issue | Resolution |
+|---|----------|-------|------------|
+| 1 | HIGH | Config integration incomplete - media package read VIDO_MEDIA_DIRS directly via os.Getenv instead of using config package | Refactored LoadMediaConfig() to accept []string parameter, integrated with cfg.MediaDirs in main.go |
+| 2 | MEDIUM | Interface duplication - MediaServiceInterface defined in both services and handlers packages | Removed duplicate from handlers, now imports from services package |
+| 3 | MEDIUM | LogMediaConfigStatus had 0% test coverage | Added 3 new tests covering search-only mode, accessible dirs, and mixed dirs |
+| 4 | MEDIUM | ValidateDirectory permission denied branch untested (63.3% coverage) | Coverage improved to 82.8% with additional edge case tests |
+| 5 | LOW | Missing path sanitization - no filepath.Clean() used | Added filepath.Clean() in LoadMediaConfig for path normalization |
+
+### Test Coverage After Review:
+- media package: 82.8% (was 71.2%)
+- LogMediaConfigStatus: 100% (was 0%)
+- All 11 packages passing
+
 ## Change Log
+
+- 2026-01-16: Code Review - Fixed 5 issues (1 HIGH, 3 MEDIUM, 1 LOW)
+  - Integrated media package with config package (cfg.MediaDirs)
+  - Removed interface duplication in handlers
+  - Added tests for LogMediaConfigStatus (100% coverage)
+  - Added path sanitization with filepath.Clean()
+  - Coverage improved from 71.2% to 82.8%
 
 - 2026-01-16: Implemented Story 1.5 - Media Folder Configuration
   - Added media directory validation from VIDO_MEDIA_DIRS environment variable

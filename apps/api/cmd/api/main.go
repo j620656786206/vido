@@ -113,7 +113,7 @@ func main() {
 	movieService := services.NewMovieService(repos.Movies)
 	seriesService := services.NewSeriesService(repos.Series)
 	settingsService := services.NewSettingsServiceWithSecrets(repos.Settings, secretsService)
-	mediaService := services.NewMediaService()
+	mediaService := services.NewMediaService(cfg.MediaDirs)
 
 	// Initialize TMDb service with cache integration (Story 2.1)
 	tmdbService := services.NewTMDbService(services.TMDbConfig{

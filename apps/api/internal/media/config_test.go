@@ -1,6 +1,8 @@
 package media
 
 import (
+	"bytes"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"testing"
@@ -22,9 +24,7 @@ func TestLoadMediaConfig_ValidDirectories(t *testing.T) {
 	require.NoError(t, err)
 	f2.Close()
 
-	t.Setenv("VIDO_MEDIA_DIRS", dir1+","+dir2)
-
-	config := LoadMediaConfig()
+	config := LoadMediaConfig([]string{dir1, dir2})
 
 	assert.Equal(t, 2, config.TotalCount)
 	assert.Equal(t, 2, config.ValidCount)
@@ -40,9 +40,7 @@ func TestLoadMediaConfig_MixedValidity(t *testing.T) {
 	validDir := t.TempDir()
 	invalidDir := "/nonexistent/path/for/testing"
 
-	t.Setenv("VIDO_MEDIA_DIRS", validDir+","+invalidDir)
-
-	config := LoadMediaConfig()
+	config := LoadMediaConfig([]string{validDir, invalidDir})
 
 	assert.Equal(t, 2, config.TotalCount)
 	assert.Equal(t, 1, config.ValidCount)
@@ -55,10 +53,16 @@ func TestLoadMediaConfig_MixedValidity(t *testing.T) {
 }
 
 func TestLoadMediaConfig_NoDirectories(t *testing.T) {
-	os.Unsetenv("VIDO_MEDIA_DIRS")
-	t.Setenv("VIDO_MEDIA_DIRS", "")
+	config := LoadMediaConfig([]string{})
 
-	config := LoadMediaConfig()
+	assert.Equal(t, 0, config.TotalCount)
+	assert.Equal(t, 0, config.ValidCount)
+	assert.True(t, config.SearchOnlyMode)
+	assert.Len(t, config.Directories, 0)
+}
+
+func TestLoadMediaConfig_NilDirectories(t *testing.T) {
+	config := LoadMediaConfig(nil)
 
 	assert.Equal(t, 0, config.TotalCount)
 	assert.Equal(t, 0, config.ValidCount)
@@ -67,36 +71,45 @@ func TestLoadMediaConfig_NoDirectories(t *testing.T) {
 }
 
 func TestLoadMediaConfig_AllInvalidDirectories(t *testing.T) {
-	t.Setenv("VIDO_MEDIA_DIRS", "/nonexistent/path1,/nonexistent/path2")
-
-	config := LoadMediaConfig()
+	config := LoadMediaConfig([]string{"/nonexistent/path1", "/nonexistent/path2"})
 
 	assert.Equal(t, 2, config.TotalCount)
 	assert.Equal(t, 0, config.ValidCount)
 	assert.True(t, config.SearchOnlyMode, "Should be search-only mode with no valid dirs")
 }
 
-func TestLoadMediaConfig_WhitespaceHandling(t *testing.T) {
+func TestLoadMediaConfig_EmptyStringsFiltered(t *testing.T) {
 	dir1 := t.TempDir()
 	dir2 := t.TempDir()
 
-	// Test with extra whitespace
-	t.Setenv("VIDO_MEDIA_DIRS", "  "+dir1+"  ,  "+dir2+"  ,  ,  ")
-
-	config := LoadMediaConfig()
+	// Test with empty strings in the slice
+	config := LoadMediaConfig([]string{dir1, "", dir2, ""})
 
 	// Empty entries should be filtered out
 	assert.Equal(t, 2, config.TotalCount)
 	assert.Equal(t, 2, config.ValidCount)
 }
 
+func TestLoadMediaConfig_PathSanitization(t *testing.T) {
+	// Create a temp directory
+	dir := t.TempDir()
+
+	// Test that paths are sanitized with filepath.Clean
+	// Pass path with extra slashes and dot segments
+	dirtyPath := dir + "/./subdir/../"
+	config := LoadMediaConfig([]string{dirtyPath})
+
+	assert.Equal(t, 1, config.TotalCount)
+	assert.Equal(t, 1, config.ValidCount)
+	// Path should be cleaned
+	assert.Equal(t, filepath.Clean(dirtyPath), config.Directories[0].Path)
+}
+
 func TestMediaConfig_GetAccessibleDirectories(t *testing.T) {
 	validDir := t.TempDir()
 	invalidDir := "/nonexistent/path/for/testing"
 
-	t.Setenv("VIDO_MEDIA_DIRS", validDir+","+invalidDir)
-
-	config := LoadMediaConfig()
+	config := LoadMediaConfig([]string{validDir, invalidDir})
 	accessible := config.GetAccessibleDirectories()
 
 	assert.Len(t, accessible, 1)
@@ -183,9 +196,7 @@ func TestMediaConfig_GracefulDegradation(t *testing.T) {
 	validDir := t.TempDir()
 
 	// Mix of valid and invalid paths
-	t.Setenv("VIDO_MEDIA_DIRS", validDir+",/invalid1,/invalid2")
-
-	config := LoadMediaConfig()
+	config := LoadMediaConfig([]string{validDir, "/invalid1", "/invalid2"})
 
 	// Should have 1 valid directory out of 3 total
 	assert.Equal(t, 3, config.TotalCount)
@@ -196,4 +207,88 @@ func TestMediaConfig_GracefulDegradation(t *testing.T) {
 	accessible := config.GetAccessibleDirectories()
 	assert.Len(t, accessible, 1)
 	assert.Equal(t, validDir, accessible[0].Path)
+}
+
+// Issue #3 fix: Test LogMediaConfigStatus
+func TestLogMediaConfigStatus_SearchOnlyMode(t *testing.T) {
+	// Capture log output
+	var buf bytes.Buffer
+	logger := slog.New(slog.NewTextHandler(&buf, nil))
+	slog.SetDefault(logger)
+
+	config := &MediaConfig{
+		Directories:    []MediaDirectory{},
+		ValidCount:     0,
+		TotalCount:     0,
+		SearchOnlyMode: true,
+	}
+
+	LogMediaConfigStatus(config)
+
+	logOutput := buf.String()
+	assert.Contains(t, logOutput, "search-only mode")
+	assert.Contains(t, logOutput, "no accessible media directories configured")
+}
+
+func TestLogMediaConfigStatus_WithAccessibleDirectories(t *testing.T) {
+	// Capture log output
+	var buf bytes.Buffer
+	logger := slog.New(slog.NewTextHandler(&buf, nil))
+	slog.SetDefault(logger)
+
+	config := &MediaConfig{
+		Directories: []MediaDirectory{
+			{
+				Path:      "/media/movies",
+				Type:      "movies",
+				Status:    StatusAccessible,
+				FileCount: 100,
+			},
+		},
+		ValidCount:     1,
+		TotalCount:     1,
+		SearchOnlyMode: false,
+	}
+
+	LogMediaConfigStatus(config)
+
+	logOutput := buf.String()
+	assert.Contains(t, logOutput, "Media directories loaded")
+	assert.Contains(t, logOutput, "Media directory accessible")
+	assert.Contains(t, logOutput, "/media/movies")
+}
+
+func TestLogMediaConfigStatus_WithMixedDirectories(t *testing.T) {
+	// Capture log output
+	var buf bytes.Buffer
+	logger := slog.New(slog.NewTextHandler(&buf, nil))
+	slog.SetDefault(logger)
+
+	config := &MediaConfig{
+		Directories: []MediaDirectory{
+			{
+				Path:      "/media/movies",
+				Type:      "movies",
+				Status:    StatusAccessible,
+				FileCount: 100,
+			},
+			{
+				Path:   "/media/tv",
+				Type:   "tv",
+				Status: StatusNotFound,
+				Error:  "directory does not exist",
+			},
+		},
+		ValidCount:     1,
+		TotalCount:     2,
+		SearchOnlyMode: false,
+	}
+
+	LogMediaConfigStatus(config)
+
+	logOutput := buf.String()
+	assert.Contains(t, logOutput, "Media directories loaded")
+	assert.Contains(t, logOutput, "Media directory accessible")
+	assert.Contains(t, logOutput, "Media directory unavailable")
+	assert.Contains(t, logOutput, "/media/tv")
 }

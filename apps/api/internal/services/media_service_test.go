@@ -1,7 +1,6 @@
 package services
 
 import (
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,9 +9,8 @@ import (
 
 func TestNewMediaService_WithValidDirectories(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("VIDO_MEDIA_DIRS", dir)
 
-	service := NewMediaService()
+	service := NewMediaService([]string{dir})
 
 	assert.NotNil(t, service)
 	config := service.GetConfig()
@@ -22,21 +20,25 @@ func TestNewMediaService_WithValidDirectories(t *testing.T) {
 }
 
 func TestNewMediaService_SearchOnlyMode(t *testing.T) {
-	os.Unsetenv("VIDO_MEDIA_DIRS")
-	t.Setenv("VIDO_MEDIA_DIRS", "")
-
-	service := NewMediaService()
+	service := NewMediaService([]string{})
 
 	assert.NotNil(t, service)
 	assert.True(t, service.IsSearchOnlyMode())
 }
 
+func TestNewMediaService_NilDirectories(t *testing.T) {
+	service := NewMediaService(nil)
+
+	assert.NotNil(t, service)
+	assert.True(t, service.IsSearchOnlyMode())
+	assert.Equal(t, 0, service.GetConfig().TotalCount)
+}
+
 func TestMediaService_GetConfiguredDirectories(t *testing.T) {
 	dir1 := t.TempDir()
 	dir2 := t.TempDir()
-	t.Setenv("VIDO_MEDIA_DIRS", dir1+","+dir2)
 
-	service := NewMediaService()
+	service := NewMediaService([]string{dir1, dir2})
 	dirs := service.GetConfiguredDirectories()
 
 	assert.Len(t, dirs, 2)
@@ -45,9 +47,8 @@ func TestMediaService_GetConfiguredDirectories(t *testing.T) {
 func TestMediaService_GetAccessibleDirectories(t *testing.T) {
 	validDir := t.TempDir()
 	invalidDir := "/nonexistent/path/for/testing"
-	t.Setenv("VIDO_MEDIA_DIRS", validDir+","+invalidDir)
 
-	service := NewMediaService()
+	service := NewMediaService([]string{validDir, invalidDir})
 	dirs := service.GetAccessibleDirectories()
 
 	assert.Len(t, dirs, 1)
@@ -57,9 +58,8 @@ func TestMediaService_GetAccessibleDirectories(t *testing.T) {
 
 func TestMediaService_RefreshDirectoryStatus(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("VIDO_MEDIA_DIRS", dir)
 
-	service := NewMediaService()
+	service := NewMediaService([]string{dir})
 
 	// Initial check
 	config := service.GetConfig()
@@ -71,27 +71,23 @@ func TestMediaService_RefreshDirectoryStatus(t *testing.T) {
 }
 
 func TestMediaService_IsSearchOnlyMode_True(t *testing.T) {
-	t.Setenv("VIDO_MEDIA_DIRS", "/nonexistent1,/nonexistent2")
-
-	service := NewMediaService()
+	service := NewMediaService([]string{"/nonexistent1", "/nonexistent2"})
 
 	assert.True(t, service.IsSearchOnlyMode())
 }
 
 func TestMediaService_IsSearchOnlyMode_False(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("VIDO_MEDIA_DIRS", dir)
 
-	service := NewMediaService()
+	service := NewMediaService([]string{dir})
 
 	assert.False(t, service.IsSearchOnlyMode())
 }
 
 func TestMediaService_ThreadSafety(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("VIDO_MEDIA_DIRS", dir)
 
-	service := NewMediaService()
+	service := NewMediaService([]string{dir})
 
 	// Run concurrent operations to test thread safety
 	done := make(chan bool, 10)
@@ -111,4 +107,15 @@ func TestMediaService_ThreadSafety(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		<-done
 	}
+}
+
+func TestMediaService_StoresDirsForRefresh(t *testing.T) {
+	dir := t.TempDir()
+
+	service := NewMediaService([]string{dir})
+
+	// Verify dirs are stored for refresh
+	assert.NotNil(t, service.dirs)
+	assert.Len(t, service.dirs, 1)
+	assert.Equal(t, dir, service.dirs[0])
 }

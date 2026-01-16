@@ -2,8 +2,7 @@ package media
 
 import (
 	"log/slog"
-	"os"
-	"strings"
+	"path/filepath"
 )
 
 // MediaDirectoryStatus indicates the accessibility status of a media directory
@@ -37,12 +36,12 @@ type MediaConfig struct {
 	SearchOnlyMode bool             `json:"search_only_mode"`
 }
 
-// LoadMediaConfig loads and validates media directories from VIDO_MEDIA_DIRS environment variable.
+// LoadMediaConfig validates the provided media directories and returns a MediaConfig.
 // It returns a MediaConfig with all configured directories and their validation status.
-// If no directories are configured, SearchOnlyMode is set to true.
-func LoadMediaConfig() *MediaConfig {
-	rawDirs := os.Getenv("VIDO_MEDIA_DIRS")
-	if rawDirs == "" {
+// If no directories are provided or all are empty, SearchOnlyMode is set to true.
+// This function integrates with the config package (Story 1.3) by accepting pre-parsed directories.
+func LoadMediaConfig(dirs []string) *MediaConfig {
+	if len(dirs) == 0 {
 		slog.Info("No media directories configured, running in search-only mode",
 			"recommendation", "Set VIDO_MEDIA_DIRS to enable library features")
 		return &MediaConfig{
@@ -51,20 +50,21 @@ func LoadMediaConfig() *MediaConfig {
 		}
 	}
 
-	paths := strings.Split(rawDirs, ",")
 	config := &MediaConfig{
-		Directories: make([]MediaDirectory, 0, len(paths)),
+		Directories: make([]MediaDirectory, 0, len(dirs)),
 		TotalCount:  0,
 	}
 
-	for _, p := range paths {
-		path := strings.TrimSpace(p)
+	for _, path := range dirs {
 		if path == "" {
 			continue
 		}
 
+		// Sanitize path to prevent traversal issues (Issue #5 fix)
+		cleanPath := filepath.Clean(path)
+
 		config.TotalCount++
-		dir := ValidateDirectory(path)
+		dir := ValidateDirectory(cleanPath)
 		config.Directories = append(config.Directories, dir)
 
 		if dir.Status == StatusAccessible {

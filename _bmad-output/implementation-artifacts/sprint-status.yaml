@@ -43,12 +43,12 @@ development_status:
   # Phase: MVP (Q1 - March 2026)
   # FRs: FR47, FR48, FR49, FR50, FR51
   # ==============================================================================
-  epic-1: in-progress
+  epic-1: done  # All 5 stories completed - 2026-01-16
   1-1-repository-pattern-database-abstraction-layer: done
   1-2-docker-compose-production-configuration: done
   1-3-environment-variable-configuration-system: done
   1-4-secrets-management-with-aes-256-encryption: done
-  1-5-media-folder-configuration: review
+  1-5-media-folder-configuration: done
   epic-1-retrospective: optional
 
   # ==============================================================================
@@ -62,7 +62,7 @@ development_status:
   2-3-search-results-grid-view: ready-for-dev
   2-4-media-detail-page: ready-for-dev
   2-5-standard-filename-parser-regex-based: ready-for-dev
-  2-6-media-entity-and-database-storage: ready-for-dev
+  2-6-media-entity-and-database-storage: done
   epic-2-retrospective: optional
 
   # ==============================================================================
