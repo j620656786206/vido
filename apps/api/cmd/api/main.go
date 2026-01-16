@@ -15,6 +15,7 @@ import (
 	"github.com/vido/api/internal/database/migrations"
 	"github.com/vido/api/internal/handlers"
 	"github.com/vido/api/internal/repository"
+	"github.com/vido/api/internal/secrets"
 	"github.com/vido/api/internal/services"
 
 	// Import migrations to register them via init()
@@ -28,6 +29,15 @@ func main() {
 		slog.Error("Failed to load configuration", "error", err)
 		os.Exit(1)
 	}
+
+	// Validate configuration (fail fast)
+	if err := cfg.Validate(); err != nil {
+		slog.Error("Configuration validation failed", "error", err)
+		os.Exit(1)
+	}
+
+	// Log configuration sources
+	cfg.LogConfigSources()
 
 	// Set Gin mode based on environment
 	if cfg.IsDevelopment() {
@@ -86,11 +96,20 @@ func main() {
 	repos := repository.NewRepositoriesWithCache(db.Conn())
 	slog.Info("Repositories initialized via factory")
 
+	// Initialize secrets service for encrypted API key storage
+	// Uses ENCRYPTION_KEY env var or falls back to machine ID
+	secretsService, err := secrets.NewSecretsServiceWithKeyDerivation(repos.Secrets)
+	if err != nil {
+		slog.Error("Failed to initialize secrets service", "error", err)
+		os.Exit(1)
+	}
+	slog.Info("Secrets service initialized")
+
 	// Initialize services with injected repository interfaces
 	// This layered architecture enables testing with mock repositories
 	movieService := services.NewMovieService(repos.Movies)
 	seriesService := services.NewSeriesService(repos.Series)
-	settingsService := services.NewSettingsService(repos.Settings)
+	settingsService := services.NewSettingsServiceWithSecrets(repos.Settings, secretsService)
 	slog.Info("Services initialized with repository injection")
 
 	// Initialize handlers with injected service interfaces
@@ -103,12 +122,13 @@ func main() {
 	// Create Gin router
 	router := gin.Default()
 
-	// Configure CORS middleware
+	// Configure CORS middleware using config values
 	corsConfig := cors.DefaultConfig()
-	corsConfig.AllowOrigins = []string{"http://localhost:4200"} // React app default port
+	corsConfig.AllowOrigins = cfg.CORSOrigins
 	corsConfig.AllowMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
 	corsConfig.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization"}
 	router.Use(cors.New(corsConfig))
+	slog.Info("CORS configured", "origins", cfg.CORSOrigins)
 
 	// Register routes
 	router.GET("/health", handlers.HealthCheckHandler(db))
