@@ -129,6 +129,25 @@ type CacheRepositoryInterface interface {
 	ClearByType(ctx context.Context, cacheType string) (int64, error)
 }
 
+// SecretsRepositoryInterface defines the contract for encrypted secrets data access.
+// This interface provides storage for secrets encrypted with AES-256-GCM.
+type SecretsRepositoryInterface interface {
+	// Set creates or updates an encrypted secret (upsert by name)
+	Set(ctx context.Context, name string, encryptedValue string) error
+
+	// Get retrieves an encrypted secret by name
+	Get(ctx context.Context, name string) (string, error)
+
+	// Delete removes a secret by name
+	Delete(ctx context.Context, name string) error
+
+	// Exists checks if a secret with the given name exists
+	Exists(ctx context.Context, name string) (bool, error)
+
+	// List returns all secret names (not values)
+	List(ctx context.Context) ([]string, error)
+}
+
 // Compile-time interface verification
 // These assertions ensure that concrete types implement their respective interfaces.
 // If any of these fail to compile, it means the implementation is missing required methods.
@@ -137,4 +156,5 @@ var (
 	_ SeriesRepositoryInterface   = (*SeriesRepository)(nil)
 	_ SettingsRepositoryInterface = (*SettingsRepository)(nil)
 	_ CacheRepositoryInterface    = (*CacheRepository)(nil)
+	_ SecretsRepositoryInterface  = (*SecretsRepository)(nil)
 )

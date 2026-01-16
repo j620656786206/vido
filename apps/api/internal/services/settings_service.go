@@ -7,19 +7,33 @@ import (
 
 	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/repository"
+	"github.com/vido/api/internal/secrets"
 )
 
 // SettingsService provides business logic for application settings.
 // It uses SettingsRepositoryInterface for data access, enabling
 // testing with mock implementations and future database migrations.
+// API keys are stored encrypted using the SecretsService.
 type SettingsService struct {
-	repo repository.SettingsRepositoryInterface
+	repo           repository.SettingsRepositoryInterface
+	secretsService secrets.SecretsServiceInterface
 }
 
 // NewSettingsService creates a new SettingsService with the given repository.
+// If secretsService is nil, API key functionality will not be available.
 func NewSettingsService(repo repository.SettingsRepositoryInterface) *SettingsService {
 	return &SettingsService{
-		repo: repo,
+		repo:           repo,
+		secretsService: nil,
+	}
+}
+
+// NewSettingsServiceWithSecrets creates a new SettingsService with secrets support.
+// This enables encrypted storage for API keys.
+func NewSettingsServiceWithSecrets(repo repository.SettingsRepositoryInterface, secretsSvc secrets.SecretsServiceInterface) *SettingsService {
+	return &SettingsService{
+		repo:           repo,
+		secretsService: secretsSvc,
 	}
 }
 
@@ -200,4 +214,104 @@ func (s *SettingsService) GetBoolWithDefault(ctx context.Context, key string, de
 		return defaultValue
 	}
 	return value
+}
+
+// SetAPIKey stores an API key with encryption.
+// The key is encrypted using AES-256-GCM before storage.
+// Requires secrets service to be configured.
+func (s *SettingsService) SetAPIKey(ctx context.Context, name, value string) error {
+	if s.secretsService == nil {
+		return fmt.Errorf("secrets service not configured: cannot store API keys securely")
+	}
+
+	if name == "" {
+		return fmt.Errorf("API key name cannot be empty")
+	}
+
+	slog.Info("Storing API key",
+		"name", name,
+		"value", secrets.MaskSecret(value),
+	)
+
+	if err := s.secretsService.Store(ctx, name, value); err != nil {
+		slog.Error("Failed to store API key",
+			"error", err,
+			"name", name,
+		)
+		return fmt.Errorf("failed to store API key: %w", err)
+	}
+
+	return nil
+}
+
+// GetAPIKey retrieves and decrypts an API key.
+// Returns the plaintext API key value.
+// Requires secrets service to be configured.
+func (s *SettingsService) GetAPIKey(ctx context.Context, name string) (string, error) {
+	if s.secretsService == nil {
+		return "", fmt.Errorf("secrets service not configured: cannot retrieve API keys")
+	}
+
+	if name == "" {
+		return "", fmt.Errorf("API key name cannot be empty")
+	}
+
+	value, err := s.secretsService.Retrieve(ctx, name)
+	if err != nil {
+		slog.Error("Failed to retrieve API key",
+			"error", err,
+			"name", name,
+		)
+		return "", fmt.Errorf("failed to retrieve API key: %w", err)
+	}
+
+	return value, nil
+}
+
+// DeleteAPIKey removes an API key from encrypted storage.
+// Requires secrets service to be configured.
+func (s *SettingsService) DeleteAPIKey(ctx context.Context, name string) error {
+	if s.secretsService == nil {
+		return fmt.Errorf("secrets service not configured: cannot delete API keys")
+	}
+
+	if name == "" {
+		return fmt.Errorf("API key name cannot be empty")
+	}
+
+	slog.Info("Deleting API key", "name", name)
+
+	if err := s.secretsService.Delete(ctx, name); err != nil {
+		slog.Error("Failed to delete API key",
+			"error", err,
+			"name", name,
+		)
+		return fmt.Errorf("failed to delete API key: %w", err)
+	}
+
+	return nil
+}
+
+// HasAPIKey checks if an API key exists in encrypted storage.
+// Requires secrets service to be configured.
+func (s *SettingsService) HasAPIKey(ctx context.Context, name string) (bool, error) {
+	if s.secretsService == nil {
+		return false, fmt.Errorf("secrets service not configured: cannot check API keys")
+	}
+
+	if name == "" {
+		return false, fmt.Errorf("API key name cannot be empty")
+	}
+
+	return s.secretsService.Exists(ctx, name)
+}
+
+// ListAPIKeys returns the names of all stored API keys (not the values).
+// Requires secrets service to be configured.
+func (s *SettingsService) ListAPIKeys(ctx context.Context) ([]string, error) {
+	if s.secretsService == nil {
+		return nil, fmt.Errorf("secrets service not configured: cannot list API keys")
+	}
+
+	return s.secretsService.List(ctx)
 }
