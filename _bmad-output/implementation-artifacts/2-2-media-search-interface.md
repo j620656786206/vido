@@ -1,6 +1,6 @@
 # Story 2.2: Media Search Interface
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -37,61 +37,61 @@ So that **I can quickly find the content I'm looking for**.
 ## Tasks / Subtasks
 
 ### Task 1: Create Search Route (AC: #1)
-- [ ] 1.1 Create `apps/web/src/routes/search.tsx` with TanStack Router
-- [ ] 1.2 Set up route with search query parameter `?q=`
-- [ ] 1.3 Add route to navigation (if sidebar exists) or make it the default landing page
-- [ ] 1.4 Configure route-level code splitting
+- [x] 1.1 Create `apps/web/src/routes/search.tsx` with TanStack Router
+- [x] 1.2 Set up route with search query parameter `?q=`
+- [x] 1.3 Add route to navigation (if sidebar exists) or make it the default landing page
+- [x] 1.4 Configure route-level code splitting
 
 ### Task 2: Create SearchBar Component (AC: #1, #3, #4)
-- [ ] 2.1 Create `apps/web/src/components/search/SearchBar.tsx`
-- [ ] 2.2 Implement controlled input with debounce (300ms) for performance
-- [ ] 2.3 Support both Traditional Chinese and English input
-- [ ] 2.4 Add search icon and clear button
-- [ ] 2.5 Implement minimum 2-character validation before search
-- [ ] 2.6 Style with Tailwind CSS following UX design specs
+- [x] 2.1 Create `apps/web/src/components/search/SearchBar.tsx`
+- [x] 2.2 Implement controlled input with debounce (300ms) for performance
+- [x] 2.3 Support both Traditional Chinese and English input
+- [x] 2.4 Add search icon and clear button
+- [x] 2.5 Implement minimum 2-character validation before search
+- [x] 2.6 Style with Tailwind CSS following UX design specs
 
 ### Task 3: Create TMDb Service Client (AC: #1, #5)
-- [ ] 3.1 Create `apps/web/src/services/tmdb.ts` API client
-- [ ] 3.2 Implement `searchMovies(query: string, page?: number)` function
-- [ ] 3.3 Implement `searchTVShows(query: string, page?: number)` function
-- [ ] 3.4 Define TypeScript types for TMDb API responses
-- [ ] 3.5 Configure axios/fetch with base URL from environment
+- [x] 3.1 Create `apps/web/src/services/tmdb.ts` API client
+- [x] 3.2 Implement `searchMovies(query: string, page?: number)` function
+- [x] 3.3 Implement `searchTVShows(query: string, page?: number)` function
+- [x] 3.4 Define TypeScript types for TMDb API responses
+- [x] 3.5 Configure axios/fetch with base URL from environment
 
 ### Task 4: Create Search Query Hook with TanStack Query (AC: #1, #2, #5)
-- [ ] 4.1 Create `apps/web/src/hooks/useSearchMedia.ts`
-- [ ] 4.2 Implement `useSearchMovies` hook with TanStack Query
-- [ ] 4.3 Implement `useSearchTVShows` hook with TanStack Query
-- [ ] 4.4 Configure staleTime (5 minutes) and cacheTime (30 minutes)
-- [ ] 4.5 Handle loading, error, and success states
-- [ ] 4.6 Implement query key factory pattern
+- [x] 4.1 Create `apps/web/src/hooks/useSearchMedia.ts`
+- [x] 4.2 Implement `useSearchMovies` hook with TanStack Query
+- [x] 4.3 Implement `useSearchTVShows` hook with TanStack Query
+- [x] 4.4 Configure staleTime (5 minutes) and cacheTime (30 minutes)
+- [x] 4.5 Handle loading, error, and success states
+- [x] 4.6 Implement query key factory pattern
 
 ### Task 5: Create SearchResults Component (AC: #1, #2, #3, #4)
-- [ ] 5.1 Create `apps/web/src/components/search/SearchResults.tsx`
-- [ ] 5.2 Display results in temporary list view (grid in Story 2.3)
-- [ ] 5.3 Show poster thumbnail, zh-TW title (primary), original title (secondary)
-- [ ] 5.4 Display year and media type badge (Movie/TV)
-- [ ] 5.5 Handle empty state ("No results found")
-- [ ] 5.6 Handle loading state with skeleton placeholders
+- [x] 5.1 Create `apps/web/src/components/search/SearchResults.tsx`
+- [x] 5.2 Display results in temporary list view (grid in Story 2.3)
+- [x] 5.3 Show poster thumbnail, zh-TW title (primary), original title (secondary)
+- [x] 5.4 Display year and media type badge (Movie/TV)
+- [x] 5.5 Handle empty state ("No results found")
+- [x] 5.6 Handle loading state with skeleton placeholders
 
 ### Task 6: Implement Pagination (AC: #2)
-- [ ] 6.1 Create `apps/web/src/components/ui/Pagination.tsx`
-- [ ] 6.2 Display page numbers with current page highlighted
-- [ ] 6.3 Add Previous/Next navigation buttons
-- [ ] 6.4 Update URL query param on page change (`?q=query&page=2`)
-- [ ] 6.5 Handle edge cases (first page, last page)
+- [x] 6.1 Create `apps/web/src/components/ui/Pagination.tsx`
+- [x] 6.2 Display page numbers with current page highlighted
+- [x] 6.3 Add Previous/Next navigation buttons
+- [x] 6.4 Update URL query param on page change (`?q=query&page=2`)
+- [x] 6.5 Handle edge cases (first page, last page)
 
 ### Task 7: Create Media Type Tabs (AC: #1)
-- [ ] 7.1 Create tabs for "All" | "Movies" | "TV Shows"
-- [ ] 7.2 Filter results based on selected tab
-- [ ] 7.3 Persist tab selection in URL (`?q=query&type=movie`)
-- [ ] 7.4 Show result count per type
+- [x] 7.1 Create tabs for "All" | "Movies" | "TV Shows"
+- [x] 7.2 Filter results based on selected tab
+- [x] 7.3 Persist tab selection in URL (`?q=query&type=movie`)
+- [x] 7.4 Show result count per type
 
 ### Task 8: Write Tests (AC: #1, #2, #3, #4, #5)
-- [ ] 8.1 Write unit tests for SearchBar component
-- [ ] 8.2 Write unit tests for useSearchMedia hooks with mock responses
-- [ ] 8.3 Write unit tests for SearchResults component
-- [ ] 8.4 Write unit tests for Pagination component
-- [ ] 8.5 Write integration test for search flow
+- [x] 8.1 Write unit tests for SearchBar component
+- [x] 8.2 Write unit tests for useSearchMedia hooks with mock responses
+- [x] 8.3 Write unit tests for SearchResults component
+- [x] 8.4 Write unit tests for Pagination component
+- [x] 8.5 Write integration test for search flow
 
 ## Dev Notes
 
@@ -529,11 +529,51 @@ apps/web/src/
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.5 (claude-opus-4-5-20251101)
 
 ### Debug Log References
 
+N/A - All tests passing (67/67)
+
 ### Completion Notes List
 
+- Implemented complete media search interface with TanStack Router and Query
+- 94.96% test coverage achieved
+- All acceptance criteria met:
+  - AC #1: Search with minimum 2 chars, results show poster/title/year/type
+  - AC #2: Pagination for results exceeding 20 items
+  - AC #3: Traditional Chinese titles displayed prominently
+  - AC #4: English search returns zh-TW metadata when available
+  - AC #5: Loading states with skeleton placeholders
+- Added dependencies: use-debounce, lucide-react, clsx, tailwind-merge, @testing-library/jest-dom
+
 ### File List
+
+#### New Files
+| File | Purpose |
+|------|---------|
+| `apps/web/src/routes/search.tsx` | Search route with URL params |
+| `apps/web/src/routes/-search.spec.tsx` | Search route tests |
+| `apps/web/src/components/search/SearchBar.tsx` | Debounced search input |
+| `apps/web/src/components/search/SearchBar.spec.tsx` | SearchBar tests |
+| `apps/web/src/components/search/SearchResults.tsx` | Results display with filtering |
+| `apps/web/src/components/search/SearchResults.spec.tsx` | SearchResults tests |
+| `apps/web/src/components/search/SearchResultSkeleton.tsx` | Loading skeleton |
+| `apps/web/src/components/search/MediaTypeTabs.tsx` | Type filter tabs |
+| `apps/web/src/components/search/MediaTypeTabs.spec.tsx` | MediaTypeTabs tests |
+| `apps/web/src/components/ui/Pagination.tsx` | Pagination component |
+| `apps/web/src/components/ui/Pagination.spec.tsx` | Pagination tests |
+| `apps/web/src/services/tmdb.ts` | TMDb API client |
+| `apps/web/src/services/tmdb.spec.ts` | TMDb service tests |
+| `apps/web/src/hooks/useSearchMedia.ts` | TanStack Query hooks |
+| `apps/web/src/hooks/useSearchMedia.spec.tsx` | Hook tests |
+| `apps/web/src/types/tmdb.ts` | TypeScript types for TMDb |
+| `apps/web/src/lib/utils.ts` | cn() utility for Tailwind |
+| `apps/web/src/test-setup.ts` | Vitest setup file |
+
+#### Modified Files
+| File | Changes |
+|------|---------|
+| `apps/web/vite.config.mts` | Added setupFiles for vitest |
+| `apps/web/package.json` | Added dependencies |
 
