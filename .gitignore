@@ -26,6 +26,7 @@ bin/
 
 # Go compiled binaries (without extension)
 apps/api/api
+apps/api/main
 apps/*/api
 
 # IDEs and editors
