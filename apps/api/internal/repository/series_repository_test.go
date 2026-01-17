@@ -655,3 +655,424 @@ func TestSeriesInProduction(t *testing.T) {
 		t.Error("Expected InProduction to be true")
 	}
 }
+
+// TestSeriesUpsertCreate verifies upsert creates new series when TMDb ID not found
+func TestSeriesUpsertCreate(t *testing.T) {
+	db := setupSeriesTestDB(t)
+	defer db.Close()
+
+	repo := NewSeriesRepository(db)
+	ctx := context.Background()
+
+	series := &models.Series{
+		ID:           "series-1",
+		Title:        "New Series",
+		FirstAirDate: "2023-01-01",
+		Genres:       []string{"Drama"},
+		TMDbID:       sql.NullInt64{Int64: 99999, Valid: true},
+	}
+
+	err := repo.Upsert(ctx, series)
+	if err != nil {
+		t.Fatalf("Failed to upsert series: %v", err)
+	}
+
+	// Verify series was created
+	found, err := repo.FindByTMDbID(ctx, 99999)
+	if err != nil {
+		t.Fatalf("Failed to find series: %v", err)
+	}
+
+	if found.Title != "New Series" {
+		t.Errorf("Expected title 'New Series', got '%s'", found.Title)
+	}
+}
+
+// TestSeriesUpsertUpdate verifies upsert updates existing series by TMDb ID
+func TestSeriesUpsertUpdate(t *testing.T) {
+	db := setupSeriesTestDB(t)
+	defer db.Close()
+
+	repo := NewSeriesRepository(db)
+	ctx := context.Background()
+
+	// Create initial series
+	series := &models.Series{
+		ID:               "series-1",
+		Title:            "Original Title",
+		FirstAirDate:     "2023-01-01",
+		Genres:           []string{"Drama"},
+		TMDbID:           sql.NullInt64{Int64: 12345, Valid: true},
+		NumberOfSeasons:  sql.NullInt64{Int64: 2, Valid: true},
+		NumberOfEpisodes: sql.NullInt64{Int64: 20, Valid: true},
+	}
+
+	err := repo.Create(ctx, series)
+	if err != nil {
+		t.Fatalf("Failed to create series: %v", err)
+	}
+
+	// Upsert with same TMDb ID but different data
+	updatedSeries := &models.Series{
+		ID:               "series-new",
+		Title:            "Updated Title",
+		FirstAirDate:     "2023-01-01",
+		Genres:           []string{"Drama", "Thriller"},
+		TMDbID:           sql.NullInt64{Int64: 12345, Valid: true},
+		NumberOfSeasons:  sql.NullInt64{Int64: 3, Valid: true},
+		NumberOfEpisodes: sql.NullInt64{Int64: 30, Valid: true},
+	}
+
+	err = repo.Upsert(ctx, updatedSeries)
+	if err != nil {
+		t.Fatalf("Failed to upsert series: %v", err)
+	}
+
+	// Verify series was updated with original ID
+	found, err := repo.FindByTMDbID(ctx, 12345)
+	if err != nil {
+		t.Fatalf("Failed to find series: %v", err)
+	}
+
+	if found.ID != "series-1" {
+		t.Errorf("Expected ID 'series-1', got '%s'", found.ID)
+	}
+	if found.Title != "Updated Title" {
+		t.Errorf("Expected title 'Updated Title', got '%s'", found.Title)
+	}
+	if found.NumberOfSeasons.Int64 != 3 {
+		t.Errorf("Expected 3 seasons, got %d", found.NumberOfSeasons.Int64)
+	}
+}
+
+// TestSeriesUpsertNoTMDbID verifies upsert creates when no TMDb ID is provided
+func TestSeriesUpsertNoTMDbID(t *testing.T) {
+	db := setupSeriesTestDB(t)
+	defer db.Close()
+
+	repo := NewSeriesRepository(db)
+	ctx := context.Background()
+
+	series := &models.Series{
+		ID:           "series-1",
+		Title:        "Series Without TMDb",
+		FirstAirDate: "2023-01-01",
+		Genres:       []string{"Drama"},
+		// No TMDb ID set
+	}
+
+	err := repo.Upsert(ctx, series)
+	if err != nil {
+		t.Fatalf("Failed to upsert series: %v", err)
+	}
+
+	// Verify series was created
+	found, err := repo.FindByID(ctx, "series-1")
+	if err != nil {
+		t.Fatalf("Failed to find series: %v", err)
+	}
+
+	if found.Title != "Series Without TMDb" {
+		t.Errorf("Expected title 'Series Without TMDb', got '%s'", found.Title)
+	}
+}
+
+// TestSeriesUpsertNil verifies nil series rejection
+func TestSeriesUpsertNil(t *testing.T) {
+	db := setupSeriesTestDB(t)
+	defer db.Close()
+
+	repo := NewSeriesRepository(db)
+	ctx := context.Background()
+
+	err := repo.Upsert(ctx, nil)
+	if err == nil {
+		t.Fatal("Expected error for nil series, got nil")
+	}
+}
+
+// TestSeriesFindByTMDbIDNotFound verifies error for non-existent TMDb ID
+func TestSeriesFindByTMDbIDNotFound(t *testing.T) {
+	db := setupSeriesTestDB(t)
+	defer db.Close()
+
+	repo := NewSeriesRepository(db)
+	ctx := context.Background()
+
+	_, err := repo.FindByTMDbID(ctx, 99999)
+	if err == nil {
+		t.Fatal("Expected error for non-existent TMDb ID, got nil")
+	}
+}
+
+// TestSeriesFindByIMDbIDNotFound verifies error for non-existent IMDb ID
+func TestSeriesFindByIMDbIDNotFound(t *testing.T) {
+	db := setupSeriesTestDB(t)
+	defer db.Close()
+
+	repo := NewSeriesRepository(db)
+	ctx := context.Background()
+
+	_, err := repo.FindByIMDbID(ctx, "tt9999999")
+	if err == nil {
+		t.Fatal("Expected error for non-existent IMDb ID, got nil")
+	}
+}
+
+// TestSeriesEmptyGenres verifies empty genres handling
+func TestSeriesEmptyGenres(t *testing.T) {
+	db := setupSeriesTestDB(t)
+	defer db.Close()
+
+	repo := NewSeriesRepository(db)
+	ctx := context.Background()
+
+	// Create series with no genres
+	series := &models.Series{
+		ID:           "series-1",
+		Title:        "Test Series",
+		FirstAirDate: "2020-01-01",
+		Genres:       []string{},
+	}
+
+	err := repo.Create(ctx, series)
+	if err != nil {
+		t.Fatalf("Failed to create series: %v", err)
+	}
+
+	// Retrieve and verify genres
+	found, err := repo.FindByID(ctx, "series-1")
+	if err != nil {
+		t.Fatalf("Failed to find series: %v", err)
+	}
+
+	if found.Genres == nil {
+		t.Error("Expected empty slice for genres, got nil")
+	}
+	if len(found.Genres) != 0 {
+		t.Errorf("Expected 0 genres, got %d", len(found.Genres))
+	}
+}
+
+// setupSeriesTestDBWithFTS creates an in-memory database with series table and FTS5 virtual table
+func setupSeriesTestDBWithFTS(t *testing.T) *sql.DB {
+	db := setupSeriesTestDB(t)
+
+	// Create FTS5 virtual table for full-text search
+	_, err := db.Exec(`
+		CREATE VIRTUAL TABLE series_fts USING fts5(
+			title,
+			original_title,
+			overview,
+			content='series',
+			content_rowid='rowid'
+		)
+	`)
+	if err != nil {
+		t.Fatalf("Failed to create FTS5 table: %v", err)
+	}
+
+	// Create triggers to keep FTS in sync
+	_, err = db.Exec(`
+		CREATE TRIGGER series_ai AFTER INSERT ON series BEGIN
+			INSERT INTO series_fts(rowid, title, original_title, overview)
+			VALUES (new.rowid, new.title, new.original_title, new.overview);
+		END
+	`)
+	if err != nil {
+		t.Fatalf("Failed to create FTS insert trigger: %v", err)
+	}
+
+	_, err = db.Exec(`
+		CREATE TRIGGER series_ad AFTER DELETE ON series BEGIN
+			INSERT INTO series_fts(series_fts, rowid, title, original_title, overview)
+			VALUES ('delete', old.rowid, old.title, old.original_title, old.overview);
+		END
+	`)
+	if err != nil {
+		t.Fatalf("Failed to create FTS delete trigger: %v", err)
+	}
+
+	_, err = db.Exec(`
+		CREATE TRIGGER series_au AFTER UPDATE ON series BEGIN
+			INSERT INTO series_fts(series_fts, rowid, title, original_title, overview)
+			VALUES ('delete', old.rowid, old.title, old.original_title, old.overview);
+			INSERT INTO series_fts(rowid, title, original_title, overview)
+			VALUES (new.rowid, new.title, new.original_title, new.overview);
+		END
+	`)
+	if err != nil {
+		t.Fatalf("Failed to create FTS update trigger: %v", err)
+	}
+
+	return db
+}
+
+// TestSeriesFullTextSearchEmptyQuery verifies empty query falls back to List
+func TestSeriesFullTextSearchEmptyQuery(t *testing.T) {
+	db := setupSeriesTestDBWithFTS(t)
+	defer db.Close()
+
+	repo := NewSeriesRepository(db)
+	ctx := context.Background()
+
+	// Create some series
+	seriesList := []*models.Series{
+		{ID: "series-1", Title: "Breaking Bad", FirstAirDate: "2008-01-20", Genres: []string{"Drama"}},
+		{ID: "series-2", Title: "Game of Thrones", FirstAirDate: "2011-04-17", Genres: []string{"Fantasy"}},
+	}
+
+	for _, s := range seriesList {
+		err := repo.Create(ctx, s)
+		if err != nil {
+			t.Fatalf("Failed to create series: %v", err)
+		}
+	}
+
+	// Empty query should fall back to List
+	params := NewListParams()
+	result, pagination, err := repo.FullTextSearch(ctx, "", params)
+	if err != nil {
+		t.Fatalf("Failed to search series: %v", err)
+	}
+
+	if len(result) != 2 {
+		t.Errorf("Expected 2 series, got %d", len(result))
+	}
+	if pagination.TotalResults != 2 {
+		t.Errorf("Expected total results 2, got %d", pagination.TotalResults)
+	}
+}
+
+// TestSeriesFullTextSearchByTitle verifies FTS search by title
+func TestSeriesFullTextSearchByTitle(t *testing.T) {
+	db := setupSeriesTestDBWithFTS(t)
+	defer db.Close()
+
+	repo := NewSeriesRepository(db)
+	ctx := context.Background()
+
+	// Create series
+	seriesList := []*models.Series{
+		{
+			ID:           "series-1",
+			Title:        "The Walking Dead",
+			FirstAirDate: "2010-10-31",
+			Genres:       []string{"Horror"},
+			Overview:     sql.NullString{String: "Sheriff's deputy awakens from a coma to find a zombie apocalypse.", Valid: true},
+		},
+		{
+			ID:           "series-2",
+			Title:        "Fear the Walking Dead",
+			FirstAirDate: "2015-08-23",
+			Genres:       []string{"Horror"},
+			Overview:     sql.NullString{String: "A prequel to The Walking Dead.", Valid: true},
+		},
+		{
+			ID:           "series-3",
+			Title:        "Breaking Bad",
+			FirstAirDate: "2008-01-20",
+			Genres:       []string{"Drama"},
+			Overview:     sql.NullString{String: "A chemistry teacher turns to cooking meth.", Valid: true},
+		},
+	}
+
+	for _, s := range seriesList {
+		err := repo.Create(ctx, s)
+		if err != nil {
+			t.Fatalf("Failed to create series: %v", err)
+		}
+	}
+
+	// Search for "Walking Dead"
+	params := NewListParams()
+	result, pagination, err := repo.FullTextSearch(ctx, "Walking Dead", params)
+	if err != nil {
+		t.Fatalf("Failed to search series: %v", err)
+	}
+
+	if len(result) != 2 {
+		t.Errorf("Expected 2 series matching 'Walking Dead', got %d", len(result))
+	}
+	if pagination.TotalResults != 2 {
+		t.Errorf("Expected total results 2, got %d", pagination.TotalResults)
+	}
+}
+
+// TestSeriesFullTextSearchWithPagination verifies FTS pagination
+func TestSeriesFullTextSearchWithPagination(t *testing.T) {
+	db := setupSeriesTestDBWithFTS(t)
+	defer db.Close()
+
+	repo := NewSeriesRepository(db)
+	ctx := context.Background()
+
+	// Create 5 series with "Drama" in title
+	for i := 1; i <= 5; i++ {
+		series := &models.Series{
+			ID:           "series-" + string(rune('0'+i)),
+			Title:        "Drama Series " + string(rune('0'+i)),
+			FirstAirDate: "2020-01-01",
+			Genres:       []string{"Drama"},
+		}
+		err := repo.Create(ctx, series)
+		if err != nil {
+			t.Fatalf("Failed to create series: %v", err)
+		}
+	}
+
+	// Search with pagination
+	params := NewListParams()
+	params.Page = 1
+	params.PageSize = 2
+
+	result, pagination, err := repo.FullTextSearch(ctx, "Drama", params)
+	if err != nil {
+		t.Fatalf("Failed to search series: %v", err)
+	}
+
+	if len(result) != 2 {
+		t.Errorf("Expected 2 series on page 1, got %d", len(result))
+	}
+	if pagination.TotalResults != 5 {
+		t.Errorf("Expected total results 5, got %d", pagination.TotalResults)
+	}
+	if pagination.TotalPages != 3 {
+		t.Errorf("Expected 3 total pages, got %d", pagination.TotalPages)
+	}
+}
+
+// TestSeriesFullTextSearchNoResults verifies empty results handling
+func TestSeriesFullTextSearchNoResults(t *testing.T) {
+	db := setupSeriesTestDBWithFTS(t)
+	defer db.Close()
+
+	repo := NewSeriesRepository(db)
+	ctx := context.Background()
+
+	// Create a series
+	series := &models.Series{
+		ID:           "series-1",
+		Title:        "Breaking Bad",
+		FirstAirDate: "2008-01-20",
+		Genres:       []string{"Drama"},
+	}
+	err := repo.Create(ctx, series)
+	if err != nil {
+		t.Fatalf("Failed to create series: %v", err)
+	}
+
+	// Search for non-existent term
+	params := NewListParams()
+	result, pagination, err := repo.FullTextSearch(ctx, "NonExistentTerm", params)
+	if err != nil {
+		t.Fatalf("Failed to search series: %v", err)
+	}
+
+	if len(result) != 0 {
+		t.Errorf("Expected 0 series, got %d", len(result))
+	}
+	if pagination.TotalResults != 0 {
+		t.Errorf("Expected total results 0, got %d", pagination.TotalResults)
+	}
+}

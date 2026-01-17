@@ -663,6 +663,286 @@ func TestLoadInt_EmptyValue_UsesDefault(t *testing.T) {
 	assert.Equal(t, SourceDefault, cfg.Sources["TEST_INT_VAR"])
 }
 
+// =============================================================================
+// Test IsDevelopment and IsProduction helpers
+// =============================================================================
+
+func TestIsDevelopment(t *testing.T) {
+	tests := []struct {
+		name     string
+		env      string
+		expected bool
+	}{
+		{name: "development returns true", env: "development", expected: true},
+		{name: "dev returns true", env: "dev", expected: true},
+		{name: "production returns false", env: "production", expected: false},
+		{name: "prod returns false", env: "prod", expected: false},
+		{name: "empty returns false", env: "", expected: false},
+		{name: "staging returns false", env: "staging", expected: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &Config{Env: tt.env}
+			assert.Equal(t, tt.expected, cfg.IsDevelopment())
+		})
+	}
+}
+
+func TestIsProduction(t *testing.T) {
+	tests := []struct {
+		name     string
+		env      string
+		expected bool
+	}{
+		{name: "production returns true", env: "production", expected: true},
+		{name: "prod returns true", env: "prod", expected: true},
+		{name: "development returns false", env: "development", expected: false},
+		{name: "dev returns false", env: "dev", expected: false},
+		{name: "empty returns false", env: "", expected: false},
+		{name: "staging returns false", env: "staging", expected: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &Config{Env: tt.env}
+			assert.Equal(t, tt.expected, cfg.IsProduction())
+		})
+	}
+}
+
+// =============================================================================
+// Test GetPort and GetAddress helpers
+// =============================================================================
+
+func TestGetPort(t *testing.T) {
+	tests := []struct {
+		name      string
+		port      string
+		expected  int
+		expectErr bool
+	}{
+		{name: "valid port 8080", port: "8080", expected: 8080, expectErr: false},
+		{name: "valid port 3000", port: "3000", expected: 3000, expectErr: false},
+		{name: "valid port 1", port: "1", expected: 1, expectErr: false},
+		{name: "invalid port string", port: "invalid", expected: 0, expectErr: true},
+		{name: "empty port string", port: "", expected: 0, expectErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &Config{Port: tt.port}
+			result, err := cfg.GetPort()
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expected, result)
+			}
+		})
+	}
+}
+
+func TestGetAddress(t *testing.T) {
+	tests := []struct {
+		name     string
+		port     string
+		expected string
+	}{
+		{name: "port 8080", port: "8080", expected: ":8080"},
+		{name: "port 3000", port: "3000", expected: ":3000"},
+		{name: "port 80", port: "80", expected: ":80"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &Config{Port: tt.port}
+			assert.Equal(t, tt.expected, cfg.GetAddress())
+		})
+	}
+}
+
+// =============================================================================
+// Test LogConfigSources (verify it doesn't panic)
+// =============================================================================
+
+// =============================================================================
+// Test DatabaseConfig methods
+// =============================================================================
+
+func TestGetDatabaseDir(t *testing.T) {
+	tests := []struct {
+		name     string
+		path     string
+		expected string
+	}{
+		{
+			name:     "absolute path with directory",
+			path:     "/data/vido/app.db",
+			expected: "/data/vido",
+		},
+		{
+			name:     "relative path with directory",
+			path:     "./data/vido.db",
+			expected: "data",
+		},
+		{
+			name:     "just filename",
+			path:     "vido.db",
+			expected: ".",
+		},
+		{
+			name:     "deep nested path",
+			path:     "/home/user/.local/share/vido/database.db",
+			expected: "/home/user/.local/share/vido",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &DatabaseConfig{Path: tt.path}
+			assert.Equal(t, tt.expected, cfg.GetDatabaseDir())
+		})
+	}
+}
+
+func TestGetConnectionString(t *testing.T) {
+	tests := []struct {
+		name       string
+		path       string
+		walEnabled bool
+		expected   string
+	}{
+		{
+			name:       "WAL enabled",
+			path:       "/data/vido.db",
+			walEnabled: true,
+			expected:   "file:/data/vido.db?cache=shared&mode=rwc",
+		},
+		{
+			name:       "WAL disabled",
+			path:       "/data/vido.db",
+			walEnabled: false,
+			expected:   "file:/data/vido.db?cache=shared&mode=rwc",
+		},
+		{
+			name:       "relative path",
+			path:       "./data/test.db",
+			walEnabled: true,
+			expected:   "file:./data/test.db?cache=shared&mode=rwc",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &DatabaseConfig{
+				Path:       tt.path,
+				WALEnabled: tt.walEnabled,
+			}
+			assert.Equal(t, tt.expected, cfg.GetConnectionString())
+		})
+	}
+}
+
+// =============================================================================
+// Test ValidateMediaDirs
+// =============================================================================
+
+func TestValidateMediaDirs(t *testing.T) {
+	t.Run("valid directories", func(t *testing.T) {
+		dir1 := t.TempDir()
+		dir2 := t.TempDir()
+
+		cfg := &Config{
+			MediaDirs: []string{dir1, dir2},
+		}
+
+		err := cfg.ValidateMediaDirs()
+		assert.NoError(t, err)
+	})
+
+	t.Run("empty media dirs list", func(t *testing.T) {
+		cfg := &Config{
+			MediaDirs: []string{},
+		}
+
+		err := cfg.ValidateMediaDirs()
+		assert.NoError(t, err)
+	})
+
+	t.Run("non-existent directory", func(t *testing.T) {
+		cfg := &Config{
+			MediaDirs: []string{"/non/existent/path/xyz123"},
+		}
+
+		err := cfg.ValidateMediaDirs()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "does not exist")
+	})
+
+	t.Run("path is file not directory", func(t *testing.T) {
+		tempDir := t.TempDir()
+		tempFile := tempDir + "/testfile.txt"
+		os.WriteFile(tempFile, []byte("test"), 0644)
+
+		cfg := &Config{
+			MediaDirs: []string{tempFile},
+		}
+
+		err := cfg.ValidateMediaDirs()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "is not a directory")
+	})
+
+	t.Run("mixed valid and invalid directories", func(t *testing.T) {
+		validDir := t.TempDir()
+
+		cfg := &Config{
+			MediaDirs: []string{validDir, "/non/existent/path"},
+		}
+
+		err := cfg.ValidateMediaDirs()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "does not exist")
+	})
+}
+
+func TestLogConfigSources(t *testing.T) {
+	cfg := &Config{
+		Port:                  "8080",
+		Env:                   "development",
+		LogLevel:              "info",
+		DataDir:               "/data",
+		MediaDirs:             []string{"/media1", "/media2"},
+		CORSOrigins:           []string{"*"},
+		TMDbAPIKey:            "test-tmdb-key-12345",
+		GeminiAPIKey:          "",
+		EncryptionKey:         "short",
+		TMDbDefaultLanguage:   "zh-TW",
+		TMDbFallbackLanguages: []string{"zh-TW", "en"},
+		TMDbCacheTTLHours:     24,
+		Sources: map[string]ConfigSource{
+			"VIDO_PORT":               SourceEnvVar,
+			"ENV":                     SourceDefault,
+			"VIDO_LOG_LEVEL":          SourceDefault,
+			"VIDO_DATA_DIR":           SourceEnvVar,
+			"VIDO_MEDIA_DIRS":         SourceEnvVar,
+			"VIDO_CORS_ORIGINS":       SourceDefault,
+			"TMDB_API_KEY":            SourceEnvVar,
+			"GEMINI_API_KEY":          SourceDefault,
+			"ENCRYPTION_KEY":          SourceEnvVar,
+			"TMDB_DEFAULT_LANGUAGE":   SourceDefault,
+			"TMDB_FALLBACK_LANGUAGES": SourceDefault,
+			"TMDB_CACHE_TTL_HOURS":    SourceDefault,
+		},
+	}
+
+	// Test that LogConfigSources doesn't panic
+	assert.NotPanics(t, func() {
+		cfg.LogConfigSources()
+	})
+}
+
 // Helper function to split environment variable pair
 func splitEnvPair(e string) []string {
 	for i := 0; i < len(e); i++ {

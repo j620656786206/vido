@@ -216,3 +216,90 @@ func TestNetwork(t *testing.T) {
 	assert.Equal(t, "HBO", network.Name)
 	assert.Equal(t, "US", network.OriginCountry)
 }
+
+func TestSeries_GenresJSON(t *testing.T) {
+	t.Run("with genres", func(t *testing.T) {
+		series := &Series{
+			Genres: []string{"Drama", "Thriller", "Mystery"},
+		}
+
+		json, err := series.GenresJSON()
+		require.NoError(t, err)
+		assert.Equal(t, `["Drama","Thriller","Mystery"]`, json)
+	})
+
+	t.Run("with empty genres", func(t *testing.T) {
+		series := &Series{
+			Genres: []string{},
+		}
+
+		json, err := series.GenresJSON()
+		require.NoError(t, err)
+		assert.Equal(t, `[]`, json)
+	})
+
+	t.Run("with nil genres", func(t *testing.T) {
+		series := &Series{
+			Genres: nil,
+		}
+
+		json, err := series.GenresJSON()
+		require.NoError(t, err)
+		assert.Equal(t, `[]`, json)
+		// Verify nil was converted to empty slice
+		assert.NotNil(t, series.Genres)
+	})
+}
+
+func TestSeries_ScanGenres_EdgeCases(t *testing.T) {
+	t.Run("invalid JSON string", func(t *testing.T) {
+		series := &Series{}
+		err := series.ScanGenres("invalid-json")
+		assert.Error(t, err)
+		assert.Empty(t, series.Genres)
+	})
+
+	t.Run("valid JSON as bytes", func(t *testing.T) {
+		series := &Series{}
+		err := series.ScanGenres([]byte(`["Action", "Comedy"]`))
+		require.NoError(t, err)
+		assert.Equal(t, []string{"Action", "Comedy"}, series.Genres)
+	})
+
+	t.Run("unsupported type", func(t *testing.T) {
+		series := &Series{}
+		err := series.ScanGenres(12345)
+		require.NoError(t, err)
+		assert.Empty(t, series.Genres)
+	})
+}
+
+func TestSeries_SetCredits_Nil(t *testing.T) {
+	series := &Series{}
+	err := series.SetCredits(nil)
+	require.NoError(t, err)
+	assert.False(t, series.CreditsJSON.Valid)
+}
+
+func TestSeries_GetCredits_InvalidJSON(t *testing.T) {
+	series := &Series{
+		CreditsJSON: sql.NullString{String: "not-valid-json", Valid: true},
+	}
+	_, err := series.GetCredits()
+	assert.Error(t, err)
+}
+
+func TestSeries_SetNetworks_Nil(t *testing.T) {
+	series := &Series{}
+	err := series.SetNetworks(nil)
+	require.NoError(t, err)
+	assert.False(t, series.NetworksJSON.Valid)
+}
+
+func TestSeries_GetNetworks_InvalidJSON(t *testing.T) {
+	series := &Series{
+		NetworksJSON: sql.NullString{String: "not-valid-json", Valid: true},
+	}
+	_, err := series.GetNetworks()
+	assert.Error(t, err)
+}

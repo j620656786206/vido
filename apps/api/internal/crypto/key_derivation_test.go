@@ -150,3 +150,43 @@ func TestDeriveKeyFromString_DifferentInputs(t *testing.T) {
 	// Different inputs should produce different keys
 	assert.NotEqual(t, key1, key2)
 }
+
+func TestGetFallbackMachineID(t *testing.T) {
+	id, err := getFallbackMachineID()
+	require.NoError(t, err)
+
+	// Should return a non-empty string (SHA256 hash)
+	assert.NotEmpty(t, id)
+	// SHA256 hex string is 64 characters
+	assert.Len(t, id, 64)
+}
+
+func TestGetFallbackMachineID_Deterministic(t *testing.T) {
+	id1, err := getFallbackMachineID()
+	require.NoError(t, err)
+
+	id2, err := getFallbackMachineID()
+	require.NoError(t, err)
+
+	// Same hostname should produce same ID
+	assert.Equal(t, id1, id2)
+}
+
+func TestGetMachineID(t *testing.T) {
+	id, err := getMachineID()
+	require.NoError(t, err)
+
+	// Should return a non-empty string
+	assert.NotEmpty(t, id)
+}
+
+func TestGetMachineID_Deterministic(t *testing.T) {
+	id1, err := getMachineID()
+	require.NoError(t, err)
+
+	id2, err := getMachineID()
+	require.NoError(t, err)
+
+	// Same machine should produce same ID
+	assert.Equal(t, id1, id2)
+}

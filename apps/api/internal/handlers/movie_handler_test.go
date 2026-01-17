@@ -413,6 +413,16 @@ func TestMovieHandler_Search(t *testing.T) {
 			setupMock:      func(m *MockMovieService) {},
 			expectedStatus: http.StatusBadRequest,
 		},
+		{
+			name:  "service error",
+			query: "test",
+			setupMock: func(m *MockMovieService) {
+				m.On("SearchByTitle", mock.Anything, "test", mock.AnythingOfType("repository.ListParams")).Return(
+					nil, nil, errors.New("database error"),
+				)
+			},
+			expectedStatus: http.StatusInternalServerError,
+		},
 	}
 
 	for _, tt := range tests {
@@ -435,4 +445,106 @@ func TestMovieHandler_Search(t *testing.T) {
 			mockService.AssertExpectations(t)
 		})
 	}
+}
+
+func TestMovieHandler_CreateWithAllOptionalFields(t *testing.T) {
+	mockService := new(MockMovieService)
+	mockService.On("Create", mock.Anything, mock.AnythingOfType("*models.Movie")).Return(nil)
+
+	handler := NewMovieHandler(mockService)
+	router := setupTestRouter(handler)
+
+	// Create request with all optional fields
+	requestBody := CreateMovieRequest{
+		Title:         "Full Movie",
+		OriginalTitle: "Original Full Movie",
+		ReleaseDate:   "2024-06-15",
+		Genres:        []string{"Action", "Drama"},
+		Overview:      "A complete movie description",
+		PosterPath:    "/posters/movie.jpg",
+		TMDbID:        12345,
+		IMDbID:        "tt1234567",
+	}
+
+	body, _ := json.Marshal(requestBody)
+	req, _ := http.NewRequest(http.MethodPost, "/api/v1/movies", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusCreated, resp.Code)
+	mockService.AssertExpectations(t)
+}
+
+func TestMovieHandler_UpdateWithAllOptionalFields(t *testing.T) {
+	mockService := new(MockMovieService)
+	mockService.On("GetByID", mock.Anything, "movie-123").Return(
+		&models.Movie{ID: "movie-123", Title: "Original Movie", ReleaseDate: "2024-01-01"},
+		nil,
+	)
+	mockService.On("Update", mock.Anything, mock.AnythingOfType("*models.Movie")).Return(nil)
+
+	handler := NewMovieHandler(mockService)
+	router := setupTestRouter(handler)
+
+	// Update request with all optional fields
+	requestBody := UpdateMovieRequest{
+		Title:         "Updated Movie",
+		OriginalTitle: "Original Updated Movie",
+		ReleaseDate:   "2024-07-20",
+		Genres:        []string{"Comedy", "Romance"},
+		Overview:      "Updated movie description",
+		PosterPath:    "/posters/updated.jpg",
+		Rating:        8.5,
+		Runtime:       120,
+		Status:        "Released",
+	}
+
+	body, _ := json.Marshal(requestBody)
+	req, _ := http.NewRequest(http.MethodPut, "/api/v1/movies/movie-123", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+	mockService.AssertExpectations(t)
+}
+
+func TestMovieHandler_UpdateInvalidJSON(t *testing.T) {
+	mockService := new(MockMovieService)
+	mockService.On("GetByID", mock.Anything, "movie-123").Return(
+		&models.Movie{ID: "movie-123", Title: "Original Movie", ReleaseDate: "2024-01-01"},
+		nil,
+	)
+
+	handler := NewMovieHandler(mockService)
+	router := setupTestRouter(handler)
+
+	// Invalid JSON body
+	req, _ := http.NewRequest(http.MethodPut, "/api/v1/movies/movie-123", bytes.NewBufferString("invalid json"))
+	req.Header.Set("Content-Type", "application/json")
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusBadRequest, resp.Code)
+}
+
+func TestMovieHandler_ListWithPaginationParams(t *testing.T) {
+	mockService := new(MockMovieService)
+	mockService.On("List", mock.Anything, mock.AnythingOfType("repository.ListParams")).Return(
+		[]models.Movie{{ID: "1", Title: "Movie 1", ReleaseDate: "2024-01-01"}},
+		&repository.PaginationResult{Page: 2, PageSize: 10, TotalResults: 15, TotalPages: 2},
+		nil,
+	)
+
+	handler := NewMovieHandler(mockService)
+	router := setupTestRouter(handler)
+
+	// Request with pagination params
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/movies?page=2&pageSize=10", nil)
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+	mockService.AssertExpectations(t)
 }

@@ -445,3 +445,91 @@ func TestSeriesHandler_Search(t *testing.T) {
 		})
 	}
 }
+
+func TestSeriesHandler_CreateWithAllOptionalFields(t *testing.T) {
+	mockService := new(MockSeriesService)
+	mockService.On("Create", mock.Anything, mock.AnythingOfType("*models.Series")).Return(nil)
+
+	handler := NewSeriesHandler(mockService)
+	router := setupSeriesTestRouter(handler)
+
+	// Create request with all optional fields
+	requestBody := CreateSeriesRequest{
+		Title:            "Full Series",
+		OriginalTitle:    "Original Full Series",
+		FirstAirDate:     "2024-01-15",
+		Genres:           []string{"Drama", "Thriller"},
+		Overview:         "A complete series description",
+		PosterPath:       "/posters/series.jpg",
+		NumberOfSeasons:  3,
+		NumberOfEpisodes: 30,
+		TMDbID:           12345,
+		IMDbID:           "tt1234567",
+	}
+
+	body, _ := json.Marshal(requestBody)
+	req, _ := http.NewRequest(http.MethodPost, "/api/v1/series", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusCreated, resp.Code)
+	mockService.AssertExpectations(t)
+}
+
+func TestSeriesHandler_UpdateWithAllOptionalFields(t *testing.T) {
+	mockService := new(MockSeriesService)
+	mockService.On("GetByID", mock.Anything, "series-123").Return(
+		&models.Series{ID: "series-123", Title: "Original Series", FirstAirDate: "2024-01-01"},
+		nil,
+	)
+	mockService.On("Update", mock.Anything, mock.AnythingOfType("*models.Series")).Return(nil)
+
+	handler := NewSeriesHandler(mockService)
+	router := setupSeriesTestRouter(handler)
+
+	// Update request with all optional fields
+	inProd := true
+	requestBody := UpdateSeriesRequest{
+		Title:            "Updated Series",
+		OriginalTitle:    "Original Updated Series",
+		FirstAirDate:     "2024-02-20",
+		LastAirDate:      "2024-12-20",
+		Genres:           []string{"Comedy", "Romance"},
+		Overview:         "Updated series description",
+		PosterPath:       "/posters/updated.jpg",
+		Rating:           8.5,
+		NumberOfSeasons:  5,
+		NumberOfEpisodes: 50,
+		Status:           "Returning Series",
+		InProduction:     &inProd,
+	}
+
+	body, _ := json.Marshal(requestBody)
+	req, _ := http.NewRequest(http.MethodPut, "/api/v1/series/series-123", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+	mockService.AssertExpectations(t)
+}
+
+func TestSeriesHandler_UpdateInvalidJSON(t *testing.T) {
+	mockService := new(MockSeriesService)
+	mockService.On("GetByID", mock.Anything, "series-123").Return(
+		&models.Series{ID: "series-123", Title: "Original Series", FirstAirDate: "2024-01-01"},
+		nil,
+	)
+
+	handler := NewSeriesHandler(mockService)
+	router := setupSeriesTestRouter(handler)
+
+	// Invalid JSON body
+	req, _ := http.NewRequest(http.MethodPut, "/api/v1/series/series-123", bytes.NewBufferString("invalid json"))
+	req.Header.Set("Content-Type", "application/json")
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusBadRequest, resp.Code)
+}

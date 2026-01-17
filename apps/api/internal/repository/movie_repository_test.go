@@ -641,3 +641,434 @@ func TestMovieEmptyGenres(t *testing.T) {
 		t.Errorf("Expected 0 genres, got %d", len(found.Genres))
 	}
 }
+
+// TestMovieUpsertCreate verifies upsert creates new movie when TMDb ID not found
+func TestMovieUpsertCreate(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	movie := &models.Movie{
+		ID:          "movie-1",
+		Title:       "New Movie",
+		ReleaseDate: "2023-01-01",
+		Genres:      []string{"Action"},
+		TMDbID:      sql.NullInt64{Int64: 99999, Valid: true},
+	}
+
+	err := repo.Upsert(ctx, movie)
+	if err != nil {
+		t.Fatalf("Failed to upsert movie: %v", err)
+	}
+
+	// Verify movie was created
+	found, err := repo.FindByTMDbID(ctx, 99999)
+	if err != nil {
+		t.Fatalf("Failed to find movie: %v", err)
+	}
+
+	if found.Title != "New Movie" {
+		t.Errorf("Expected title 'New Movie', got '%s'", found.Title)
+	}
+}
+
+// TestMovieUpsertUpdate verifies upsert updates existing movie by TMDb ID
+func TestMovieUpsertUpdate(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	// Create initial movie
+	movie := &models.Movie{
+		ID:          "movie-1",
+		Title:       "Original Title",
+		ReleaseDate: "2023-01-01",
+		Genres:      []string{"Action"},
+		TMDbID:      sql.NullInt64{Int64: 12345, Valid: true},
+	}
+
+	err := repo.Create(ctx, movie)
+	if err != nil {
+		t.Fatalf("Failed to create movie: %v", err)
+	}
+
+	// Upsert with same TMDb ID but different data
+	updatedMovie := &models.Movie{
+		ID:          "movie-new",
+		Title:       "Updated Title",
+		ReleaseDate: "2023-06-01",
+		Genres:      []string{"Action", "Thriller"},
+		TMDbID:      sql.NullInt64{Int64: 12345, Valid: true},
+	}
+
+	err = repo.Upsert(ctx, updatedMovie)
+	if err != nil {
+		t.Fatalf("Failed to upsert movie: %v", err)
+	}
+
+	// Verify movie was updated with original ID
+	found, err := repo.FindByTMDbID(ctx, 12345)
+	if err != nil {
+		t.Fatalf("Failed to find movie: %v", err)
+	}
+
+	if found.ID != "movie-1" {
+		t.Errorf("Expected ID 'movie-1', got '%s'", found.ID)
+	}
+	if found.Title != "Updated Title" {
+		t.Errorf("Expected title 'Updated Title', got '%s'", found.Title)
+	}
+}
+
+// TestMovieUpsertNoTMDbID verifies upsert creates when no TMDb ID is provided
+func TestMovieUpsertNoTMDbID(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	movie := &models.Movie{
+		ID:          "movie-1",
+		Title:       "Movie Without TMDb",
+		ReleaseDate: "2023-01-01",
+		Genres:      []string{"Drama"},
+		// No TMDb ID set
+	}
+
+	err := repo.Upsert(ctx, movie)
+	if err != nil {
+		t.Fatalf("Failed to upsert movie: %v", err)
+	}
+
+	// Verify movie was created
+	found, err := repo.FindByID(ctx, "movie-1")
+	if err != nil {
+		t.Fatalf("Failed to find movie: %v", err)
+	}
+
+	if found.Title != "Movie Without TMDb" {
+		t.Errorf("Expected title 'Movie Without TMDb', got '%s'", found.Title)
+	}
+}
+
+// TestMovieUpsertNil verifies nil movie rejection
+func TestMovieUpsertNil(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	err := repo.Upsert(ctx, nil)
+	if err == nil {
+		t.Fatal("Expected error for nil movie, got nil")
+	}
+}
+
+// TestMovieFindByTMDbIDNotFound verifies error for non-existent TMDb ID
+func TestMovieFindByTMDbIDNotFound(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	_, err := repo.FindByTMDbID(ctx, 99999)
+	if err == nil {
+		t.Fatal("Expected error for non-existent TMDb ID, got nil")
+	}
+}
+
+// TestMovieFindByIMDbIDNotFound verifies error for non-existent IMDb ID
+func TestMovieFindByIMDbIDNotFound(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	_, err := repo.FindByIMDbID(ctx, "tt9999999")
+	if err == nil {
+		t.Fatal("Expected error for non-existent IMDb ID, got nil")
+	}
+}
+
+// setupTestDBWithFTS creates an in-memory database with movies table and FTS5 virtual table
+func setupTestDBWithFTS(t *testing.T) *sql.DB {
+	db := setupTestDB(t)
+
+	// Create FTS5 virtual table for full-text search
+	_, err := db.Exec(`
+		CREATE VIRTUAL TABLE movies_fts USING fts5(
+			title,
+			original_title,
+			overview,
+			content='movies',
+			content_rowid='rowid'
+		)
+	`)
+	if err != nil {
+		t.Fatalf("Failed to create FTS5 table: %v", err)
+	}
+
+	// Create triggers to keep FTS in sync
+	_, err = db.Exec(`
+		CREATE TRIGGER movies_ai AFTER INSERT ON movies BEGIN
+			INSERT INTO movies_fts(rowid, title, original_title, overview)
+			VALUES (new.rowid, new.title, new.original_title, new.overview);
+		END
+	`)
+	if err != nil {
+		t.Fatalf("Failed to create FTS insert trigger: %v", err)
+	}
+
+	_, err = db.Exec(`
+		CREATE TRIGGER movies_ad AFTER DELETE ON movies BEGIN
+			INSERT INTO movies_fts(movies_fts, rowid, title, original_title, overview)
+			VALUES ('delete', old.rowid, old.title, old.original_title, old.overview);
+		END
+	`)
+	if err != nil {
+		t.Fatalf("Failed to create FTS delete trigger: %v", err)
+	}
+
+	_, err = db.Exec(`
+		CREATE TRIGGER movies_au AFTER UPDATE ON movies BEGIN
+			INSERT INTO movies_fts(movies_fts, rowid, title, original_title, overview)
+			VALUES ('delete', old.rowid, old.title, old.original_title, old.overview);
+			INSERT INTO movies_fts(rowid, title, original_title, overview)
+			VALUES (new.rowid, new.title, new.original_title, new.overview);
+		END
+	`)
+	if err != nil {
+		t.Fatalf("Failed to create FTS update trigger: %v", err)
+	}
+
+	return db
+}
+
+// TestMovieFullTextSearchEmptyQuery verifies empty query falls back to List
+func TestMovieFullTextSearchEmptyQuery(t *testing.T) {
+	db := setupTestDBWithFTS(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	// Create some movies
+	movies := []*models.Movie{
+		{ID: "movie-1", Title: "The Matrix", ReleaseDate: "1999-03-31", Genres: []string{"Action"}},
+		{ID: "movie-2", Title: "Inception", ReleaseDate: "2010-07-16", Genres: []string{"Sci-Fi"}},
+	}
+
+	for _, m := range movies {
+		err := repo.Create(ctx, m)
+		if err != nil {
+			t.Fatalf("Failed to create movie: %v", err)
+		}
+	}
+
+	// Empty query should fall back to List
+	params := NewListParams()
+	result, pagination, err := repo.FullTextSearch(ctx, "", params)
+	if err != nil {
+		t.Fatalf("Failed to search movies: %v", err)
+	}
+
+	if len(result) != 2 {
+		t.Errorf("Expected 2 movies, got %d", len(result))
+	}
+	if pagination.TotalResults != 2 {
+		t.Errorf("Expected total results 2, got %d", pagination.TotalResults)
+	}
+}
+
+// TestMovieFullTextSearchByTitle verifies FTS search by title
+func TestMovieFullTextSearchByTitle(t *testing.T) {
+	db := setupTestDBWithFTS(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	// Create movies
+	movies := []*models.Movie{
+		{
+			ID:          "movie-1",
+			Title:       "The Matrix",
+			ReleaseDate: "1999-03-31",
+			Genres:      []string{"Action"},
+			Overview:    sql.NullString{String: "A computer hacker discovers reality is a simulation.", Valid: true},
+		},
+		{
+			ID:          "movie-2",
+			Title:       "Matrix Reloaded",
+			ReleaseDate: "2003-05-15",
+			Genres:      []string{"Action"},
+			Overview:    sql.NullString{String: "Neo continues his fight against the machines.", Valid: true},
+		},
+		{
+			ID:          "movie-3",
+			Title:       "Inception",
+			ReleaseDate: "2010-07-16",
+			Genres:      []string{"Sci-Fi"},
+			Overview:    sql.NullString{String: "A thief who steals corporate secrets through dream-sharing.", Valid: true},
+		},
+	}
+
+	for _, m := range movies {
+		err := repo.Create(ctx, m)
+		if err != nil {
+			t.Fatalf("Failed to create movie: %v", err)
+		}
+	}
+
+	// Search for "Matrix"
+	params := NewListParams()
+	result, pagination, err := repo.FullTextSearch(ctx, "Matrix", params)
+	if err != nil {
+		t.Fatalf("Failed to search movies: %v", err)
+	}
+
+	if len(result) != 2 {
+		t.Errorf("Expected 2 movies matching 'Matrix', got %d", len(result))
+	}
+	if pagination.TotalResults != 2 {
+		t.Errorf("Expected total results 2, got %d", pagination.TotalResults)
+	}
+}
+
+// TestMovieFullTextSearchByOverview verifies FTS search by overview content
+func TestMovieFullTextSearchByOverview(t *testing.T) {
+	db := setupTestDBWithFTS(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	// Create movies
+	movies := []*models.Movie{
+		{
+			ID:          "movie-1",
+			Title:       "The Matrix",
+			ReleaseDate: "1999-03-31",
+			Genres:      []string{"Action"},
+			Overview:    sql.NullString{String: "A computer simulation discovers reality.", Valid: true},
+		},
+		{
+			ID:          "movie-2",
+			Title:       "Dark City",
+			ReleaseDate: "1998-02-27",
+			Genres:      []string{"Thriller"},
+			Overview:    sql.NullString{String: "A man wakes up in a strange simulation world.", Valid: true},
+		},
+		{
+			ID:          "movie-3",
+			Title:       "Inception",
+			ReleaseDate: "2010-07-16",
+			Genres:      []string{"Sci-Fi"},
+			Overview:    sql.NullString{String: "A thief who steals corporate secrets through dreams.", Valid: true},
+		},
+	}
+
+	for _, m := range movies {
+		err := repo.Create(ctx, m)
+		if err != nil {
+			t.Fatalf("Failed to create movie: %v", err)
+		}
+	}
+
+	// Search for "simulation" - should match overview content
+	params := NewListParams()
+	result, _, err := repo.FullTextSearch(ctx, "simulation", params)
+	if err != nil {
+		t.Fatalf("Failed to search movies: %v", err)
+	}
+
+	if len(result) != 2 {
+		t.Errorf("Expected 2 movies matching 'simulation' in overview, got %d", len(result))
+	}
+}
+
+// TestMovieFullTextSearchWithPagination verifies FTS pagination
+func TestMovieFullTextSearchWithPagination(t *testing.T) {
+	db := setupTestDBWithFTS(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	// Create 5 movies with "Action" in title
+	for i := 1; i <= 5; i++ {
+		movie := &models.Movie{
+			ID:          "movie-" + string(rune('0'+i)),
+			Title:       "Action Movie " + string(rune('0'+i)),
+			ReleaseDate: "2020-01-01",
+			Genres:      []string{"Action"},
+		}
+		err := repo.Create(ctx, movie)
+		if err != nil {
+			t.Fatalf("Failed to create movie: %v", err)
+		}
+	}
+
+	// Search with pagination
+	params := NewListParams()
+	params.Page = 1
+	params.PageSize = 2
+
+	result, pagination, err := repo.FullTextSearch(ctx, "Action", params)
+	if err != nil {
+		t.Fatalf("Failed to search movies: %v", err)
+	}
+
+	if len(result) != 2 {
+		t.Errorf("Expected 2 movies on page 1, got %d", len(result))
+	}
+	if pagination.TotalResults != 5 {
+		t.Errorf("Expected total results 5, got %d", pagination.TotalResults)
+	}
+	if pagination.TotalPages != 3 {
+		t.Errorf("Expected 3 total pages, got %d", pagination.TotalPages)
+	}
+}
+
+// TestMovieFullTextSearchNoResults verifies empty results handling
+func TestMovieFullTextSearchNoResults(t *testing.T) {
+	db := setupTestDBWithFTS(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	// Create a movie
+	movie := &models.Movie{
+		ID:          "movie-1",
+		Title:       "The Matrix",
+		ReleaseDate: "1999-03-31",
+		Genres:      []string{"Action"},
+	}
+	err := repo.Create(ctx, movie)
+	if err != nil {
+		t.Fatalf("Failed to create movie: %v", err)
+	}
+
+	// Search for non-existent term
+	params := NewListParams()
+	result, pagination, err := repo.FullTextSearch(ctx, "NonExistentTerm", params)
+	if err != nil {
+		t.Fatalf("Failed to search movies: %v", err)
+	}
+
+	if len(result) != 0 {
+		t.Errorf("Expected 0 movies, got %d", len(result))
+	}
+	if pagination.TotalResults != 0 {
+		t.Errorf("Expected total results 0, got %d", pagination.TotalResults)
+	}
+}
