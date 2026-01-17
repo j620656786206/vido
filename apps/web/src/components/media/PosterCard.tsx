@@ -93,7 +93,7 @@ export function PosterCard({
             data-testid="poster-fallback"
             className="flex h-full w-full items-center justify-center bg-gray-700"
           >
-            <span className="text-4xl text-gray-500">🎬</span>
+            <span role="img" aria-label="無海報圖片" className="text-4xl text-gray-500">🎬</span>
           </div>
         )}
 

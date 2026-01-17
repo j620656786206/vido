@@ -132,8 +132,8 @@ describe('MediaGrid', () => {
       const grid = screen.getByTestId('media-grid');
       // Mobile: 2 columns
       expect(grid).toHaveClass('grid-cols-2');
-      // Tablet: auto-fill with 160px min
-      expect(grid).toHaveClass('sm:grid-cols-[repeat(auto-fill,minmax(160px,1fr))]');
+      // Tablet (768px+): auto-fill with 160px min
+      expect(grid).toHaveClass('md:grid-cols-[repeat(auto-fill,minmax(160px,1fr))]');
       // Desktop: auto-fill with 200px min
       expect(grid).toHaveClass('lg:grid-cols-[repeat(auto-fill,minmax(200px,1fr))]');
     });
@@ -143,8 +143,8 @@ describe('MediaGrid', () => {
       const grid = screen.getByTestId('media-grid');
       // Mobile: 12px gap (gap-3)
       expect(grid).toHaveClass('gap-3');
-      // Tablet/Desktop: 16px gap (sm:gap-4)
-      expect(grid).toHaveClass('sm:gap-4');
+      // Tablet/Desktop: 16px gap (md:gap-4)
+      expect(grid).toHaveClass('md:gap-4');
     });
   });
 
@@ -163,6 +163,43 @@ describe('MediaGrid', () => {
 
       const links = container.querySelectorAll('a');
       expect(links).toHaveLength(2);
+    });
+  });
+
+  describe('Unified Items Prop', () => {
+    it('renders items in provided order when items prop is used', () => {
+      const items = [
+        { item: mockTVShows[0], mediaType: 'tv' as const },
+        { item: mockMovies[0], mediaType: 'movie' as const },
+        { item: mockMovies[1], mediaType: 'movie' as const },
+      ];
+
+      render(<MediaGrid items={items} />);
+
+      const links = screen.getAllByRole('link');
+      expect(links).toHaveLength(3);
+      // First item should be TV show
+      expect(screen.getByText('咒術迴戰')).toBeInTheDocument();
+      // Then movies
+      expect(screen.getByText('鬼滅之刃')).toBeInTheDocument();
+      expect(screen.getByText('進擊的巨人')).toBeInTheDocument();
+    });
+
+    it('prefers items prop over movies/tvShows when both provided', () => {
+      const items = [
+        { item: mockMovies[0], mediaType: 'movie' as const },
+      ];
+
+      render(<MediaGrid items={items} movies={mockMovies} tvShows={mockTVShows} />);
+
+      // Should only show items from items prop
+      const links = screen.getAllByRole('link');
+      expect(links).toHaveLength(1);
+    });
+
+    it('shows empty state when items is empty array', () => {
+      render(<MediaGrid items={[]} />);
+      expect(screen.getByText('沒有找到結果')).toBeInTheDocument();
     });
   });
 });

@@ -1,4 +1,4 @@
-import { MediaGrid } from '../media/MediaGrid';
+import { MediaGrid, type MediaItem } from '../media/MediaGrid';
 import { Pagination } from '../ui/Pagination';
 import type { Movie, TVShow, MovieSearchResponse, TVShowSearchResponse } from '../../types/tmdb';
 
@@ -25,21 +25,21 @@ export function SearchResults({
   const movieResults = (type === 'all' || type === 'movie') ? (movies?.results || []) : [];
   const tvResults = (type === 'all' || type === 'tv') ? (tvShows?.results || []) : [];
 
-  // Sort combined results by popularity for 'all' type
+  // For 'all' type, create unified sorted array to preserve interleaved order
+  let sortedItems: MediaItem[] | undefined;
   let sortedMovies = movieResults;
   let sortedTvShows = tvResults;
 
   if (type === 'all') {
-    // Create combined array for sorting
-    const combined: Array<{ item: Movie | TVShow; mediaType: 'movie' | 'tv' }> = [
-      ...movieResults.map((item) => ({ item, mediaType: 'movie' as const })),
-      ...tvResults.map((item) => ({ item, mediaType: 'tv' as const })),
+    // Create combined array for sorting - preserves interleaved order
+    sortedItems = [
+      ...movieResults.map((item): MediaItem => ({ item, mediaType: 'movie' })),
+      ...tvResults.map((item): MediaItem => ({ item, mediaType: 'tv' })),
     ];
-    combined.sort((a, b) => b.item.vote_count - a.item.vote_count);
-
-    // Separate back into movies and tv shows while preserving sort order
-    sortedMovies = combined.filter(c => c.mediaType === 'movie').map(c => c.item as Movie);
-    sortedTvShows = combined.filter(c => c.mediaType === 'tv').map(c => c.item as TVShow);
+    sortedItems.sort((a, b) => b.item.vote_count - a.item.vote_count);
+    // Clear individual arrays since we're using unified items
+    sortedMovies = [];
+    sortedTvShows = [];
   }
 
   // Calculate totals
@@ -58,7 +58,9 @@ export function SearchResults({
     totalPages = Math.max(movies?.total_pages || 1, tvShows?.total_pages || 1);
   }
 
-  const hasResults = sortedMovies.length > 0 || sortedTvShows.length > 0;
+  const hasResults = sortedItems
+    ? sortedItems.length > 0
+    : sortedMovies.length > 0 || sortedTvShows.length > 0;
 
   return (
     <div className={className}>
@@ -71,6 +73,7 @@ export function SearchResults({
 
       {/* Grid results */}
       <MediaGrid
+        items={sortedItems}
         movies={sortedMovies}
         tvShows={sortedTvShows}
         isLoading={isLoading}
