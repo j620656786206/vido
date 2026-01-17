@@ -1,6 +1,6 @@
 # Story 2.4: Media Detail Page
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -46,70 +46,70 @@ So that **I can learn more before adding it to my library**.
 ## Tasks / Subtasks
 
 ### Task 1: Create Media Detail Route (AC: #1, #2, #3)
-- [ ] 1.1 Create `apps/web/src/routes/media/$type.$id.tsx` with TanStack Router
-- [ ] 1.2 Validate `$type` parameter (movie | tv)
-- [ ] 1.3 Implement route loader for prefetching data
-- [ ] 1.4 Handle invalid routes with 404 page
+- [x] 1.1 Create `apps/web/src/routes/media/$type.$id.tsx` with TanStack Router
+- [x] 1.2 Validate `$type` parameter (movie | tv)
+- [x] 1.3 Implement route loader for prefetching data
+- [x] 1.4 Handle invalid routes with 404 page
 
 ### Task 2: Create TMDb Detail API Hooks (AC: #1, #2)
-- [ ] 2.1 Add `getMovieDetails(id: number)` to TMDb service
-- [ ] 2.2 Add `getTVShowDetails(id: number)` to TMDb service
-- [ ] 2.3 Add `getMovieCredits(id: number)` for cast/director
-- [ ] 2.4 Add `getTVShowCredits(id: number)` for cast/creator
-- [ ] 2.5 Create `useMovieDetails` TanStack Query hook
-- [ ] 2.6 Create `useTVShowDetails` TanStack Query hook
-- [ ] 2.7 Create `useMediaCredits` hook for cast information
+- [x] 2.1 Add `getMovieDetails(id: number)` to TMDb service
+- [x] 2.2 Add `getTVShowDetails(id: number)` to TMDb service
+- [x] 2.3 Add `getMovieCredits(id: number)` for cast/director
+- [x] 2.4 Add `getTVShowCredits(id: number)` for cast/creator
+- [x] 2.5 Create `useMovieDetails` TanStack Query hook
+- [x] 2.6 Create `useTVShowDetails` TanStack Query hook
+- [x] 2.7 Create `useMediaCredits` hook for cast information
 
 ### Task 3: Create SidePanel Component (AC: #4)
-- [ ] 3.1 Create `apps/web/src/components/ui/SidePanel.tsx`
-- [ ] 3.2 Implement slide-in animation from right (300ms)
-- [ ] 3.3 Set width to 400-500px on desktop
-- [ ] 3.4 Add close button and click-outside-to-close
-- [ ] 3.5 Add keyboard support (Escape to close)
-- [ ] 3.6 Implement backdrop overlay with blur
+- [x] 3.1 Create `apps/web/src/components/ui/SidePanel.tsx`
+- [x] 3.2 Implement slide-in animation from right (300ms)
+- [x] 3.3 Set width to 400-500px on desktop
+- [x] 3.4 Add close button and click-outside-to-close
+- [x] 3.5 Add keyboard support (Escape to close)
+- [x] 3.6 Implement backdrop overlay with blur
 
 ### Task 4: Create MediaDetailPanel Component (AC: #1, #2, #3)
-- [ ] 4.1 Create `apps/web/src/components/media/MediaDetailPanel.tsx`
-- [ ] 4.2 Display high-resolution poster (w500 size)
-- [ ] 4.3 Display backdrop image as header (if available)
-- [ ] 4.4 Show title (zh-TW) and original title
-- [ ] 4.5 Display year, runtime, and rating
-- [ ] 4.6 Show genre tags as chips
-- [ ] 4.7 Display plot overview (zh-TW)
-- [ ] 4.8 Add loading skeleton state
+- [x] 4.1 Create `apps/web/src/components/media/MediaDetailPanel.tsx`
+- [x] 4.2 Display high-resolution poster (w500 size)
+- [x] 4.3 Display backdrop image as header (if available)
+- [x] 4.4 Show title (zh-TW) and original title
+- [x] 4.5 Display year, runtime, and rating
+- [x] 4.6 Show genre tags as chips
+- [x] 4.7 Display plot overview (zh-TW)
+- [x] 4.8 Add loading skeleton state
 
 ### Task 5: Create Credits Section (AC: #1, #2)
-- [ ] 5.1 Create `apps/web/src/components/media/CreditsSection.tsx`
-- [ ] 5.2 Display director (for movies) or created by (for TV)
-- [ ] 5.3 Show top 6 cast members with profile pictures
-- [ ] 5.4 Display character names under actor names
-- [ ] 5.5 Handle missing profile images gracefully
+- [x] 5.1 Create `apps/web/src/components/media/CreditsSection.tsx`
+- [x] 5.2 Display director (for movies) or created by (for TV)
+- [x] 5.3 Show top 6 cast members with profile pictures
+- [x] 5.4 Display character names under actor names
+- [x] 5.5 Handle missing profile images gracefully
 
 ### Task 6: Create TV Show Specific Section (AC: #2)
-- [ ] 6.1 Create `apps/web/src/components/media/TVShowInfo.tsx`
-- [ ] 6.2 Display number of seasons and episodes
-- [ ] 6.3 Show first air date and last air date
-- [ ] 6.4 Display status (Ended, Returning, etc.)
-- [ ] 6.5 Show networks/streaming platforms
+- [x] 6.1 Create `apps/web/src/components/media/TVShowInfo.tsx`
+- [x] 6.2 Display number of seasons and episodes
+- [x] 6.3 Show first air date and last air date
+- [x] 6.4 Display status (Ended, Returning, etc.)
+- [x] 6.5 Show networks/streaming platforms
 
 ### Task 7: Implement Mobile View (AC: #5)
-- [ ] 7.1 Create full-screen modal variant for mobile
-- [ ] 7.2 Adjust layout for narrow screens
-- [ ] 7.3 Use single-column layout
-- [ ] 7.4 Ensure touch-friendly interactions
+- [x] 7.1 Create full-screen modal variant for mobile
+- [x] 7.2 Adjust layout for narrow screens
+- [x] 7.3 Use single-column layout
+- [x] 7.4 Ensure touch-friendly interactions
 
 ### Task 8: Add TypeScript Types (AC: #1, #2)
-- [ ] 8.1 Add `MovieDetails` type to `types/tmdb.ts`
-- [ ] 8.2 Add `TVShowDetails` type to `types/tmdb.ts`
-- [ ] 8.3 Add `Credits` type with cast and crew
-- [ ] 8.4 Add `CastMember` and `CrewMember` types
+- [x] 8.1 Add `MovieDetails` type to `types/tmdb.ts`
+- [x] 8.2 Add `TVShowDetails` type to `types/tmdb.ts`
+- [x] 8.3 Add `Credits` type with cast and crew
+- [x] 8.4 Add `CastMember` and `CrewMember` types
 
 ### Task 9: Write Tests (AC: #1, #2, #3, #4, #5)
-- [ ] 9.1 Write unit tests for MediaDetailPanel
-- [ ] 9.2 Write unit tests for SidePanel animations
-- [ ] 9.3 Write unit tests for CreditsSection
-- [ ] 9.4 Write hook tests with mock API responses
-- [ ] 9.5 Test responsive behavior (desktop vs mobile)
+- [x] 9.1 Write unit tests for MediaDetailPanel
+- [x] 9.2 Write unit tests for SidePanel animations
+- [x] 9.3 Write unit tests for CreditsSection
+- [x] 9.4 Write hook tests with mock API responses
+- [x] 9.5 Test responsive behavior (desktop vs mobile)
 
 ## Dev Notes
 
@@ -683,11 +683,38 @@ apps/web/src/
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.5 (claude-opus-4-5-20251101)
 
 ### Debug Log References
 
+None
+
 ### Completion Notes List
 
+- Implemented media detail route at `/media/$type/$id` with TanStack Router
+- Added route validation for type (movie/tv) and numeric ID
+- Created SidePanel component with slide-in animation, backdrop blur, and keyboard support (Escape to close)
+- Implemented MediaDetailPanel with poster, backdrop, title, genres, rating, and overview display
+- Created CreditsSection for director/creator and top 6 cast members with profile images
+- Implemented TVShowInfo for TV-specific details (seasons, episodes, status, networks)
+- Added all required TypeScript types for MovieDetails, TVShowDetails, Credits, CastMember, CrewMember
+- Created TanStack Query hooks (useMovieDetails, useTVShowDetails, useMovieCredits, useTVShowCredits)
+- Mobile view handled via SidePanel's responsive width (full-width on mobile, 450px on desktop)
+- All 214 tests passing including 67 new tests for this story
+
 ### File List
+
+- apps/web/src/routes/media/$type.$id.tsx (NEW)
+- apps/web/src/components/ui/SidePanel.tsx (NEW)
+- apps/web/src/components/ui/SidePanel.spec.tsx (NEW)
+- apps/web/src/components/media/MediaDetailPanel.tsx (NEW)
+- apps/web/src/components/media/MediaDetailPanel.spec.tsx (NEW)
+- apps/web/src/components/media/CreditsSection.tsx (NEW)
+- apps/web/src/components/media/CreditsSection.spec.tsx (NEW)
+- apps/web/src/components/media/TVShowInfo.tsx (NEW)
+- apps/web/src/components/media/TVShowInfo.spec.tsx (NEW)
+- apps/web/src/hooks/useMediaDetails.ts (NEW)
+- apps/web/src/hooks/useMediaDetails.spec.tsx (NEW)
+- apps/web/src/types/tmdb.ts (MODIFIED - added detail types)
+- apps/web/src/services/tmdb.ts (MODIFIED - added credits methods)
 

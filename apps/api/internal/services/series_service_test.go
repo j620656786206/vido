@@ -72,6 +72,19 @@ func (m *MockSeriesRepository) SearchByTitle(ctx context.Context, title string, 
 	return args.Get(0).([]models.Series), args.Get(1).(*repository.PaginationResult), args.Error(2)
 }
 
+func (m *MockSeriesRepository) FullTextSearch(ctx context.Context, query string, params repository.ListParams) ([]models.Series, *repository.PaginationResult, error) {
+	args := m.Called(ctx, query, params)
+	if args.Get(0) == nil {
+		return nil, nil, args.Error(2)
+	}
+	return args.Get(0).([]models.Series), args.Get(1).(*repository.PaginationResult), args.Error(2)
+}
+
+func (m *MockSeriesRepository) Upsert(ctx context.Context, series *models.Series) error {
+	args := m.Called(ctx, series)
+	return args.Error(0)
+}
+
 // Verify mock implements interface
 var _ repository.SeriesRepositoryInterface = (*MockSeriesRepository)(nil)
 

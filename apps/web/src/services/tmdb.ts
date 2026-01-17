@@ -4,6 +4,9 @@ import type {
   MovieSearchResponse,
   TVShowSearchResponse,
   ApiResponse,
+  MovieDetails,
+  TVShowDetails,
+  Credits,
 } from '../types/tmdb';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
@@ -56,12 +59,20 @@ export const tmdbService = {
     return fetchApi<TVShowSearchResponse>(`/tmdb/search/tv?${params}`);
   },
 
-  async getMovieDetails(movieId: number): Promise<Movie> {
-    return fetchApi<Movie>(`/tmdb/movies/${movieId}`);
+  async getMovieDetails(movieId: number): Promise<MovieDetails> {
+    return fetchApi<MovieDetails>(`/tmdb/movies/${movieId}`);
   },
 
-  async getTVShowDetails(tvId: number): Promise<TVShow> {
-    return fetchApi<TVShow>(`/tmdb/tv/${tvId}`);
+  async getTVShowDetails(tvId: number): Promise<TVShowDetails> {
+    return fetchApi<TVShowDetails>(`/tmdb/tv/${tvId}`);
+  },
+
+  async getMovieCredits(movieId: number): Promise<Credits> {
+    return fetchApi<Credits>(`/tmdb/movies/${movieId}/credits`);
+  },
+
+  async getTVShowCredits(tvId: number): Promise<Credits> {
+    return fetchApi<Credits>(`/tmdb/tv/${tvId}/credits`);
   },
 };
 

@@ -58,9 +58,9 @@ development_status:
   # ==============================================================================
   epic-2: in-progress
   2-1-tmdb-api-integration-with-zh-tw-priority: done
-  2-2-media-search-interface: review
-  2-3-search-results-grid-view: ready-for-dev
-  2-4-media-detail-page: ready-for-dev
+  2-2-media-search-interface: done
+  2-3-search-results-grid-view: review
+  2-4-media-detail-page: review
   2-5-standard-filename-parser-regex-based: ready-for-dev
   2-6-media-entity-and-database-storage: done
   epic-2-retrospective: optional

@@ -443,3 +443,116 @@ func (r *SeriesRepository) SearchByTitle(ctx context.Context, title string, para
 
 	return r.List(ctx, params)
 }
+
+// FullTextSearch performs FTS5 search across title, original_title, and overview
+func (r *SeriesRepository) FullTextSearch(ctx context.Context, query string, params ListParams) ([]models.Series, *PaginationResult, error) {
+	params.Validate()
+
+	if query == "" {
+		return r.List(ctx, params)
+	}
+
+	// Get total count for FTS results
+	countQuery := `
+		SELECT COUNT(*)
+		FROM series s
+		JOIN series_fts ON series_fts.rowid = s.rowid
+		WHERE series_fts MATCH ?
+	`
+	var totalResults int
+	err := r.db.QueryRowContext(ctx, countQuery, query).Scan(&totalResults)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to count FTS results: %w", err)
+	}
+
+	// FTS5 search query - join with series table to get full data
+	ftsQuery := `
+		SELECT
+			s.id, s.title, s.original_title, s.first_air_date, s.last_air_date, s.genres, s.rating,
+			s.overview, s.poster_path, s.backdrop_path, s.number_of_seasons, s.number_of_episodes,
+			s.status, s.original_language, s.imdb_id, s.tmdb_id, s.in_production, s.created_at, s.updated_at
+		FROM series s
+		JOIN series_fts ON series_fts.rowid = s.rowid
+		WHERE series_fts MATCH ?
+		ORDER BY rank
+		LIMIT ? OFFSET ?
+	`
+
+	rows, err := r.db.QueryContext(ctx, ftsQuery, query, params.Limit(), params.Offset())
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to execute FTS search: %w", err)
+	}
+	defer rows.Close()
+
+	seriesList := []models.Series{}
+	for rows.Next() {
+		s := models.Series{}
+		var genresJSON string
+
+		err := rows.Scan(
+			&s.ID,
+			&s.Title,
+			&s.OriginalTitle,
+			&s.FirstAirDate,
+			&s.LastAirDate,
+			&genresJSON,
+			&s.Rating,
+			&s.Overview,
+			&s.PosterPath,
+			&s.BackdropPath,
+			&s.NumberOfSeasons,
+			&s.NumberOfEpisodes,
+			&s.Status,
+			&s.OriginalLanguage,
+			&s.IMDbID,
+			&s.TMDbID,
+			&s.InProduction,
+			&s.CreatedAt,
+			&s.UpdatedAt,
+		)
+
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to scan FTS series: %w", err)
+		}
+
+		if err := s.ScanGenres(genresJSON); err != nil {
+			return nil, nil, fmt.Errorf("failed to parse genres: %w", err)
+		}
+
+		seriesList = append(seriesList, s)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, nil, fmt.Errorf("error iterating FTS series: %w", err)
+	}
+
+	pagination := NewPaginationResult(params, totalResults)
+	return seriesList, pagination, nil
+}
+
+// Upsert creates or updates a series based on TMDb ID
+func (r *SeriesRepository) Upsert(ctx context.Context, series *models.Series) error {
+	if series == nil {
+		return fmt.Errorf("series cannot be nil")
+	}
+
+	// If no TMDb ID, just create
+	if !series.TMDbID.Valid {
+		return r.Create(ctx, series)
+	}
+
+	// Check if series with this TMDb ID already exists
+	existing, err := r.FindByTMDbID(ctx, series.TMDbID.Int64)
+	if err != nil {
+		// If not found, create new series
+		if err.Error() == fmt.Sprintf("series with tmdb_id %d not found", series.TMDbID.Int64) {
+			return r.Create(ctx, series)
+		}
+		return fmt.Errorf("failed to check existing series: %w", err)
+	}
+
+	// Series exists - update with existing ID
+	series.ID = existing.ID
+	series.CreatedAt = existing.CreatedAt
+	return r.Update(ctx, series)
+}

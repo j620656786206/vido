@@ -72,6 +72,19 @@ func (m *MockMovieRepository) SearchByTitle(ctx context.Context, title string, p
 	return args.Get(0).([]models.Movie), args.Get(1).(*repository.PaginationResult), args.Error(2)
 }
 
+func (m *MockMovieRepository) FullTextSearch(ctx context.Context, query string, params repository.ListParams) ([]models.Movie, *repository.PaginationResult, error) {
+	args := m.Called(ctx, query, params)
+	if args.Get(0) == nil {
+		return nil, nil, args.Error(2)
+	}
+	return args.Get(0).([]models.Movie), args.Get(1).(*repository.PaginationResult), args.Error(2)
+}
+
+func (m *MockMovieRepository) Upsert(ctx context.Context, movie *models.Movie) error {
+	args := m.Called(ctx, movie)
+	return args.Error(0)
+}
+
 // Verify mock implements interface
 var _ repository.MovieRepositoryInterface = (*MockMovieRepository)(nil)
 

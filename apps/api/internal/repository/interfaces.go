@@ -33,6 +33,14 @@ type MovieRepositoryInterface interface {
 
 	// SearchByTitle searches for movies by title with pagination
 	SearchByTitle(ctx context.Context, title string, params ListParams) ([]models.Movie, *PaginationResult, error)
+
+	// FullTextSearch performs FTS5 search across title, original_title, and overview
+	// Returns movies matching the query with pagination
+	FullTextSearch(ctx context.Context, query string, params ListParams) ([]models.Movie, *PaginationResult, error)
+
+	// Upsert creates or updates a movie based on TMDb ID
+	// If a movie with the same TMDb ID exists, it updates the existing record
+	Upsert(ctx context.Context, movie *models.Movie) error
 }
 
 // SeriesRepositoryInterface defines the contract for TV series data access operations.
@@ -61,6 +69,41 @@ type SeriesRepositoryInterface interface {
 
 	// SearchByTitle searches for series by title with pagination
 	SearchByTitle(ctx context.Context, title string, params ListParams) ([]models.Series, *PaginationResult, error)
+
+	// FullTextSearch performs FTS5 search across title, original_title, and overview
+	// Returns series matching the query with pagination
+	FullTextSearch(ctx context.Context, query string, params ListParams) ([]models.Series, *PaginationResult, error)
+
+	// Upsert creates or updates a series based on TMDb ID
+	// If a series with the same TMDb ID exists, it updates the existing record
+	Upsert(ctx context.Context, series *models.Series) error
+}
+
+// EpisodeRepositoryInterface defines the contract for episode data access operations.
+type EpisodeRepositoryInterface interface {
+	// Create inserts a new episode into the database
+	Create(ctx context.Context, episode *models.Episode) error
+
+	// FindByID retrieves an episode by its primary key
+	FindByID(ctx context.Context, id string) (*models.Episode, error)
+
+	// FindBySeriesID retrieves all episodes for a series
+	FindBySeriesID(ctx context.Context, seriesID string) ([]models.Episode, error)
+
+	// FindBySeasonNumber retrieves all episodes for a specific season of a series
+	FindBySeasonNumber(ctx context.Context, seriesID string, seasonNumber int) ([]models.Episode, error)
+
+	// FindBySeriesSeasonEpisode retrieves an episode by series ID, season, and episode number
+	FindBySeriesSeasonEpisode(ctx context.Context, seriesID string, season, episode int) (*models.Episode, error)
+
+	// Update modifies an existing episode in the database
+	Update(ctx context.Context, episode *models.Episode) error
+
+	// Delete removes an episode from the database by ID
+	Delete(ctx context.Context, id string) error
+
+	// Upsert creates or updates an episode based on series_id, season_number, episode_number
+	Upsert(ctx context.Context, episode *models.Episode) error
 }
 
 // SettingsRepositoryInterface defines the contract for application settings data access.
@@ -154,6 +197,7 @@ type SecretsRepositoryInterface interface {
 var (
 	_ MovieRepositoryInterface    = (*MovieRepository)(nil)
 	_ SeriesRepositoryInterface   = (*SeriesRepository)(nil)
+	_ EpisodeRepositoryInterface  = (*EpisodeRepository)(nil)
 	_ SettingsRepositoryInterface = (*SettingsRepository)(nil)
 	_ CacheRepositoryInterface    = (*CacheRepository)(nil)
 	_ SecretsRepositoryInterface  = (*SecretsRepository)(nil)
