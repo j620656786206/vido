@@ -176,6 +176,15 @@ Display:  toLocaleDateString('zh-TW') → "2024年1月15日"
 ❌ /api/movie (singular)
 ```
 
+### Rule 11: Interface Location
+```
+✅ Define interfaces in services package (e.g., services.MovieServiceInterface)
+✅ Handlers import and use interfaces from services package
+✅ Repository interfaces in repository package (e.g., repository.MovieRepositoryInterface)
+❌ Never duplicate interface definitions across packages
+❌ Never define service interfaces in handlers package
+```
+
 ---
 
 ## 🏗️ Project Structure
@@ -450,16 +459,58 @@ describe('MovieCard', () => {
 
 Before committing code, verify:
 
+**Code Location & Architecture:**
 - [ ] All new code is in `/apps/api` (backend) or `/apps/web` (frontend)
 - [ ] No code added to deprecated `/cmd` or root `/internal`
+- [ ] Handler → Service → Repository layering respected
+- [ ] Interfaces defined in correct package (Rule 11)
+
+**Code Quality:**
 - [ ] Logging uses `slog` (NOT zerolog, fmt.Println, or log.Print)
 - [ ] API responses use `ApiResponse<T>` wrapper format
 - [ ] Error codes follow `{SOURCE}_{ERROR_TYPE}` pattern
 - [ ] Dates are ISO 8601 strings in JSON
 - [ ] Naming conventions followed (see tables above)
+
+**Testing (Definition of Done):**
+- [ ] `go test ./...` passes with no failures
+- [ ] Services test coverage ≥ 80%
+- [ ] Handlers test coverage ≥ 70%
 - [ ] Tests co-located with source files (`*_test.go`, `*.spec.tsx`)
-- [ ] Handler → Service → Repository layering respected
+
+**Integration (Definition of Done):**
+- [ ] New Services/Handlers wired up in `main.go`
+- [ ] No binary files or sensitive data staged
 - [ ] TanStack Query used for server state (NOT Zustand)
+
+---
+
+## 🤝 Team Agreements (Epic 1 Retrospective)
+
+**Established: 2026-01-17**
+
+These agreements were established during Epic 1 retrospective to improve development quality:
+
+### Agreement 1: 標記完成 = 驗證完成
+> "Marking a task complete means it has been **verified**, not just implemented."
+
+- Before marking a task `[x]`, run the code and confirm it works
+- Don't rely solely on Code Review to catch unfinished work
+- If unsure, test it manually before marking complete
+
+### Agreement 2: 左移品質檢查
+> "Shift quality checks LEFT - catch issues during implementation, not review."
+
+- Run `go test -cover` during implementation, not just before commit
+- Check coverage targets (Services ≥80%, Handlers ≥70%) while coding
+- Code Review should focus on architecture and design, not basic issues
+
+### Agreement 3: project-context.md 是聖經
+> "This file is the single source of truth. Read it before implementing."
+
+- All Rules (1-11) must be followed
+- When in doubt, check this file first
+- Update this file when new patterns are established
 
 ---
 
