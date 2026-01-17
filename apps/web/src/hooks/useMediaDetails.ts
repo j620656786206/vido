@@ -63,25 +63,3 @@ export function useTVShowCredits(id: number) {
   });
 }
 
-/**
- * Combined hook to fetch media credits based on type
- * @param type - 'movie' or 'tv'
- * @param id - TMDb ID
- */
-export function useMediaCredits(type: 'movie' | 'tv', id: number) {
-  const movieCredits = useMovieCredits(id);
-  const tvCredits = useTVShowCredits(id);
-
-  if (type === 'movie') {
-    return {
-      ...movieCredits,
-      // Disable TV query when type is movie
-      data: movieCredits.data,
-    };
-  }
-
-  return {
-    ...tvCredits,
-    data: tvCredits.data,
-  };
-}

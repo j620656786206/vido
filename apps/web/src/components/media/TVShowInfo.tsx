@@ -27,15 +27,14 @@ export function TVShowInfo({ show, className }: TVShowInfoProps) {
   // Format date for Traditional Chinese
   const formatDate = (dateStr: string | null | undefined): string => {
     if (!dateStr) return '未知';
-    try {
-      return new Date(dateStr).toLocaleDateString('zh-TW', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      });
-    } catch {
-      return dateStr;
-    }
+    const date = new Date(dateStr);
+    // Check for Invalid Date
+    if (isNaN(date.getTime())) return dateStr;
+    return date.toLocaleDateString('zh-TW', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
   };
 
   return (

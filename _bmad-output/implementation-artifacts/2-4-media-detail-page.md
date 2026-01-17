@@ -1,6 +1,6 @@
 # Story 2.4: Media Detail Page
 
-Status: review
+Status: done
 
 ## Story
 
@@ -700,20 +700,29 @@ None
 - Added all required TypeScript types for MovieDetails, TVShowDetails, Credits, CastMember, CrewMember
 - Created TanStack Query hooks (useMovieDetails, useTVShowDetails, useMovieCredits, useTVShowCredits)
 - Mobile view handled via SidePanel's responsive width (full-width on mobile, 450px on desktop)
-- All 214 tests passing including 67 new tests for this story
+- All 234 tests passing including 87 tests for this story
+
+### Code Review Fixes (2026-01-17)
+
+- Added route integration tests (`$type.$id.spec.tsx`) covering API integration, SidePanel integration, and responsive behavior
+- Added tests for responsive behavior (Task 9.5) verifying `w-full` and `sm:w-[450px]` classes
+- Fixed TVShowInfo date formatting: replaced try-catch with Invalid Date check for better coverage
+- Added tests for null and invalid date handling in TVShowInfo
+- Removed unused `useMediaCredits` hook (dead code that made unnecessary API calls)
 
 ### File List
 
 - apps/web/src/routes/media/$type.$id.tsx (NEW)
+- apps/web/src/routes/media/$type.$id.spec.tsx (NEW - Code Review)
 - apps/web/src/components/ui/SidePanel.tsx (NEW)
 - apps/web/src/components/ui/SidePanel.spec.tsx (NEW)
 - apps/web/src/components/media/MediaDetailPanel.tsx (NEW)
 - apps/web/src/components/media/MediaDetailPanel.spec.tsx (NEW)
 - apps/web/src/components/media/CreditsSection.tsx (NEW)
 - apps/web/src/components/media/CreditsSection.spec.tsx (NEW)
-- apps/web/src/components/media/TVShowInfo.tsx (NEW)
-- apps/web/src/components/media/TVShowInfo.spec.tsx (NEW)
-- apps/web/src/hooks/useMediaDetails.ts (NEW)
+- apps/web/src/components/media/TVShowInfo.tsx (NEW, MODIFIED - Code Review)
+- apps/web/src/components/media/TVShowInfo.spec.tsx (NEW, MODIFIED - Code Review)
+- apps/web/src/hooks/useMediaDetails.ts (NEW, MODIFIED - Code Review: removed unused hook)
 - apps/web/src/hooks/useMediaDetails.spec.tsx (NEW)
 - apps/web/src/types/tmdb.ts (MODIFIED - added detail types)
 - apps/web/src/services/tmdb.ts (MODIFIED - added credits methods)

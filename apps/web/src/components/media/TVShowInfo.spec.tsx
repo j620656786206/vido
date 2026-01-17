@@ -94,6 +94,18 @@ describe('TVShowInfo', () => {
       render(<TVShowInfo show={showNoLastDate} />);
       expect(screen.queryByTestId('last-air-date')).not.toBeInTheDocument();
     });
+
+    it('should show "未知" when first_air_date is null', () => {
+      const showNullDate = { ...mockTVShow, first_air_date: null as unknown as string };
+      render(<TVShowInfo show={showNullDate} />);
+      expect(screen.getByTestId('first-air-date')).toHaveTextContent('未知');
+    });
+
+    it('should return raw date string when date is invalid', () => {
+      const showInvalidDate = { ...mockTVShow, first_air_date: 'not-a-valid-date' };
+      render(<TVShowInfo show={showInvalidDate} />);
+      expect(screen.getByTestId('first-air-date')).toHaveTextContent('not-a-valid-date');
+    });
   });
 
   describe('Networks', () => {
