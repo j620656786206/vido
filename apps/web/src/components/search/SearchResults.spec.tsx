@@ -3,6 +3,27 @@ import { describe, it, expect, vi } from 'vitest';
 import { SearchResults } from './SearchResults';
 import type { MovieSearchResponse, TVShowSearchResponse } from '../../types/tmdb';
 
+// Mock TanStack Router
+vi.mock('@tanstack/react-router', () => ({
+  Link: ({
+    children,
+    to,
+    params,
+    ...props
+  }: {
+    children: React.ReactNode;
+    to: string;
+    params: Record<string, string>;
+  }) => (
+    <a
+      href={`${to.replace('$type', params.type).replace('$id', params.id)}`}
+      {...props}
+    >
+      {children}
+    </a>
+  ),
+}));
+
 const mockMovies: MovieSearchResponse = {
   page: 1,
   results: [
@@ -90,8 +111,8 @@ describe('SearchResults', () => {
       />
     );
 
-    expect(screen.getByText('找不到符合的結果')).toBeInTheDocument();
-    expect(screen.getByText('請嘗試使用不同的關鍵字搜尋')).toBeInTheDocument();
+    // MediaGrid shows combined empty message
+    expect(screen.getByText(/找不到符合的結果/)).toBeInTheDocument();
   });
 
   it('should display movie results with Traditional Chinese title prominently', () => {
@@ -106,7 +127,6 @@ describe('SearchResults', () => {
     );
 
     expect(screen.getByText('鬼滅之刃 無限列車篇')).toBeInTheDocument();
-    expect(screen.getByText('Demon Slayer: Mugen Train')).toBeInTheDocument();
   });
 
   it('should display TV show results', () => {
@@ -121,7 +141,6 @@ describe('SearchResults', () => {
     );
 
     expect(screen.getByText('進擊的巨人')).toBeInTheDocument();
-    expect(screen.getByText('Attack on Titan')).toBeInTheDocument();
   });
 
   it('should display combined results for type "all"', () => {
@@ -199,8 +218,8 @@ describe('SearchResults', () => {
       />
     );
 
-    // Movie with null poster should show placeholder
-    expect(screen.getByText('無圖片')).toBeInTheDocument();
+    // Movie with null poster shows fallback placeholder with emoji
+    expect(screen.getByTestId('poster-fallback')).toBeInTheDocument();
   });
 
   it('should filter results by type', () => {

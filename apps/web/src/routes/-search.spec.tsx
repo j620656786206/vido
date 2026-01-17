@@ -108,7 +108,7 @@ describe('SearchPage', () => {
     renderWithProviders({ q: '測試搜尋' });
 
     await waitFor(() => {
-      expect(screen.getByText('找不到符合的結果')).toBeInTheDocument();
+      expect(screen.getByText(/找不到符合的結果/)).toBeInTheDocument();
     });
   });
 
