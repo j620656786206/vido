@@ -36,14 +36,21 @@ npm run test:e2e:codegen
 tests/
 ├── e2e/                          # Test files
 │   ├── home.spec.ts              # Home page tests
-│   ├── search.spec.ts            # Movie search tests
-│   └── api.spec.ts               # API tests (no browser)
+│   ├── search.spec.ts            # Media search E2E tests
+│   ├── media-detail.spec.ts      # Media detail page E2E tests
+│   ├── api.spec.ts               # General API tests
+│   ├── health.api.spec.ts        # Health check API tests
+│   ├── movies.api.spec.ts        # Movies CRUD API tests
+│   ├── series.api.spec.ts        # TV Series CRUD API tests
+│   ├── parser.api.spec.ts        # Filename Parser API tests
+│   └── settings.api.spec.ts      # Settings API tests
 │
 ├── support/                      # Test infrastructure
 │   ├── fixtures/                 # Playwright fixtures
 │   │   ├── index.ts              # Main fixture exports
 │   │   └── factories/            # Test data factories
-│   │       └── movie-factory.ts  # Movie data generator
+│   │       ├── movie-factory.ts  # Movie data generator
+│   │       └── parser-factory.ts # Parser test data generator
 │   │
 │   ├── helpers/                  # Utility functions
 │   │   └── api-helpers.ts        # API request helpers
@@ -117,6 +124,40 @@ npx playwright test --grep-invert @slow
 
 # Run API tests only
 npx playwright test --grep @api
+```
+
+## Priority Tags
+
+All tests use priority tags for selective execution based on risk level:
+
+| Tag | Description | When to Run |
+|-----|-------------|-------------|
+| `[P0]` | Critical paths, must always work | Every commit |
+| `[P1]` | High priority, important features | PR to main |
+| `[P2]` | Medium priority, edge cases | Nightly builds |
+| `[P3]` | Low priority, nice-to-have | On-demand |
+
+### Running by Priority
+
+```bash
+# Run critical tests only (P0)
+npx playwright test --grep '\[P0\]'
+
+# Run P0 + P1 tests (pre-merge)
+npx playwright test --grep '\[P0\]|\[P1\]'
+
+# Run all except low priority
+npx playwright test --grep-invert '\[P3\]'
+```
+
+### Priority Tagging Convention
+
+Include priority in test name:
+
+```typescript
+test('[P0] should login with valid credentials', async ({ page }) => { ... });
+test('[P1] should display error for invalid input', async ({ page }) => { ... });
+test('[P2] should handle edge case scenario', async ({ page }) => { ... });
 ```
 
 ## Debugging
