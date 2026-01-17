@@ -123,6 +123,9 @@ func main() {
 		CacheTTLHours:     cfg.TMDbCacheTTLHours,
 	}, repos.Cache)
 
+	// Initialize parser service (Story 2.5)
+	parserService := services.NewParserService()
+
 	slog.Info("Services initialized with repository injection")
 
 	// Initialize handlers with injected service interfaces
@@ -132,6 +135,7 @@ func main() {
 	settingsHandler := handlers.NewSettingsHandler(settingsService)
 	mediaHandler := handlers.NewMediaHandler(mediaService)
 	tmdbHandler := handlers.NewTMDbHandler(tmdbService)
+	parserHandler := handlers.NewParserHandler(parserService)
 	slog.Info("Handlers initialized with service injection")
 
 	// Create Gin router
@@ -156,6 +160,7 @@ func main() {
 		settingsHandler.RegisterRoutes(apiV1)
 		mediaHandler.RegisterRoutes(apiV1)
 		tmdbHandler.RegisterRoutes(apiV1)
+		parserHandler.RegisterRoutes(apiV1)
 	}
 	slog.Info("API routes registered", "prefix", "/api/v1")
 

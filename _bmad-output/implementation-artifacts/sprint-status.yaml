@@ -56,12 +56,12 @@ development_status:
   # Phase: MVP (Q1 - March 2026)
   # FRs: FR1, FR2, FR3, FR4, FR11, FR12, FR13, FR14
   # ==============================================================================
-  epic-2: in-progress
+  epic-2: done  # All 6 stories completed - 2026-01-17
   2-1-tmdb-api-integration-with-zh-tw-priority: done
   2-2-media-search-interface: done
-  2-3-search-results-grid-view: review
-  2-4-media-detail-page: review
-  2-5-standard-filename-parser-regex-based: ready-for-dev
+  2-3-search-results-grid-view: done
+  2-4-media-detail-page: done
+  2-5-standard-filename-parser-regex-based: done
   2-6-media-entity-and-database-storage: done
   epic-2-retrospective: optional
 
