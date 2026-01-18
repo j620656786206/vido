@@ -75,7 +75,7 @@ development_status:
   3-2-ai-fansub-filename-parsing: ready-for-dev  # Story created 2026-01-18
   3-3-multi-source-metadata-fallback-chain: ready-for-dev  # Story created 2026-01-18
   3-4-douban-web-scraper: ready-for-dev  # Story created 2026-01-18
-  3-5-wikipedia-metadata-fallback: backlog
+  3-5-wikipedia-metadata-fallback: ready-for-dev  # Story created 2026-01-18
   3-6-ai-search-keyword-generation: backlog
   3-7-manual-metadata-search-and-selection: backlog
   3-8-metadata-editor: backlog
