@@ -71,7 +71,7 @@ development_status:
   # FRs: FR15-FR26
   # ==============================================================================
   epic-3: in-progress  # Started 2026-01-18
-  3-1-ai-provider-abstraction-layer: ready-for-dev  # Story created 2026-01-18
+  3-1-ai-provider-abstraction-layer: done  # Completed 2026-01-18
   3-2-ai-fansub-filename-parsing: ready-for-dev  # Story created 2026-01-18
   3-3-multi-source-metadata-fallback-chain: ready-for-dev  # Story created 2026-01-18
   3-4-douban-web-scraper: ready-for-dev  # Story created 2026-01-18

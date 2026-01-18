@@ -517,14 +517,44 @@ func TestAPIKeyHelpers(t *testing.T) {
 		assert.False(t, cfg.HasEncryptionKey())
 	})
 
+	t.Run("HasClaudeKey returns true when set", func(t *testing.T) {
+		cfg := &Config{ClaudeAPIKey: "test-claude-key"}
+		assert.True(t, cfg.HasClaudeKey())
+	})
+
+	t.Run("HasClaudeKey returns false when empty", func(t *testing.T) {
+		cfg := &Config{ClaudeAPIKey: ""}
+		assert.False(t, cfg.HasClaudeKey())
+	})
+
 	t.Run("HasAIProvider returns true when Gemini key is set", func(t *testing.T) {
 		cfg := &Config{GeminiAPIKey: "test-key"}
+		assert.True(t, cfg.HasAIProvider())
+	})
+
+	t.Run("HasAIProvider returns true when Claude key is set", func(t *testing.T) {
+		cfg := &Config{ClaudeAPIKey: "test-claude-key"}
+		assert.True(t, cfg.HasAIProvider())
+	})
+
+	t.Run("HasAIProvider returns true when both keys are set", func(t *testing.T) {
+		cfg := &Config{GeminiAPIKey: "test-key", ClaudeAPIKey: "test-claude-key"}
 		assert.True(t, cfg.HasAIProvider())
 	})
 
 	t.Run("HasAIProvider returns false when no AI keys set", func(t *testing.T) {
 		cfg := &Config{}
 		assert.False(t, cfg.HasAIProvider())
+	})
+
+	t.Run("GetAIProvider returns configured provider", func(t *testing.T) {
+		cfg := &Config{AIProvider: "claude"}
+		assert.Equal(t, "claude", cfg.GetAIProvider())
+	})
+
+	t.Run("GetClaudeAPIKey returns the key", func(t *testing.T) {
+		cfg := &Config{ClaudeAPIKey: "my-claude-key"}
+		assert.Equal(t, "my-claude-key", cfg.GetClaudeAPIKey())
 	})
 
 	t.Run("GetTMDbAPIKey returns the key", func(t *testing.T) {

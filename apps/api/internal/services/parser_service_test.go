@@ -1,12 +1,40 @@
 package services
 
 import (
+	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/vido/api/internal/ai"
 	"github.com/vido/api/internal/parser"
 )
+
+// mockAIService implements AIServiceInterface for testing.
+type mockAIService struct {
+	parseFunc    func(ctx context.Context, filename string) (*ai.ParseResponse, error)
+	isConfigured bool
+	parseCalled  bool
+}
+
+func (m *mockAIService) ParseFilename(ctx context.Context, filename string) (*ai.ParseResponse, error) {
+	m.parseCalled = true
+	if m.parseFunc != nil {
+		return m.parseFunc(ctx, filename)
+	}
+	return &ai.ParseResponse{
+		Title:     "Default AI Title",
+		MediaType: "movie",
+	}, nil
+}
+
+func (m *mockAIService) ClearCache(ctx context.Context) (int64, error)        { return 0, nil }
+func (m *mockAIService) ClearExpiredCache(ctx context.Context) (int64, error) { return 0, nil }
+func (m *mockAIService) GetCacheStats(ctx context.Context) (*ai.CacheStats, error) {
+	return &ai.CacheStats{}, nil
+}
+func (m *mockAIService) IsConfigured() bool { return m.isConfigured }
 
 func TestParserService_ParseFilename_Movie(t *testing.T) {
 	service := NewParserService()
@@ -152,4 +180,130 @@ func TestParserService_ParseBatch(t *testing.T) {
 
 func TestParserService_ImplementsInterface(t *testing.T) {
 	var _ ParserServiceInterface = (*ParserService)(nil)
+}
+
+func TestParserServiceWithAI_DelegatesToAI_WhenRegexFails(t *testing.T) {
+	aiService := &mockAIService{
+		isConfigured: true,
+		parseFunc: func(ctx context.Context, filename string) (*ai.ParseResponse, error) {
+			return &ai.ParseResponse{
+				Title:       "Kimetsu no Yaiba",
+				Season:      1,
+				Episode:     26,
+				MediaType:   "tv",
+				Quality:     "1080p",
+				FansubGroup: "Leopard-Raws",
+				Confidence:  0.92,
+			}, nil
+		},
+	}
+	service := NewParserServiceWithAI(aiService)
+
+	// This filename can't be parsed by regex
+	filename := "[Leopard-Raws] Kimetsu no Yaiba - 26 (BD 1920x1080).mkv"
+	result := service.ParseFilename(filename)
+
+	require.NotNil(t, result)
+	assert.True(t, aiService.parseCalled)
+	assert.Equal(t, parser.ParseStatusSuccess, result.Status)
+	assert.Equal(t, parser.MediaTypeTVShow, result.MediaType)
+	assert.Equal(t, "Kimetsu no Yaiba", result.Title)
+	assert.Equal(t, 1, result.Season)
+	assert.Equal(t, 26, result.Episode)
+	assert.Equal(t, 92, result.Confidence)
+}
+
+func TestParserServiceWithAI_SkipsAI_WhenRegexSucceeds(t *testing.T) {
+	aiService := &mockAIService{isConfigured: true}
+	service := NewParserServiceWithAI(aiService)
+
+	// This filename CAN be parsed by regex
+	filename := "Breaking.Bad.S01E05.720p.BluRay.mkv"
+	result := service.ParseFilename(filename)
+
+	require.NotNil(t, result)
+	assert.False(t, aiService.parseCalled) // AI should NOT be called
+	assert.Equal(t, parser.ParseStatusSuccess, result.Status)
+	assert.Equal(t, parser.MediaTypeTVShow, result.MediaType)
+	assert.Equal(t, "Breaking Bad", result.Title)
+}
+
+func TestParserServiceWithAI_ReturnsNeedsAI_WhenAIFails(t *testing.T) {
+	aiService := &mockAIService{
+		isConfigured: true,
+		parseFunc: func(ctx context.Context, filename string) (*ai.ParseResponse, error) {
+			return nil, errors.New("AI provider error")
+		},
+	}
+	service := NewParserServiceWithAI(aiService)
+
+	filename := "[Leopard-Raws] Kimetsu no Yaiba - 26.mkv"
+	result := service.ParseFilename(filename)
+
+	require.NotNil(t, result)
+	assert.True(t, aiService.parseCalled)
+	assert.Equal(t, parser.ParseStatusNeedsAI, result.Status)
+	assert.Contains(t, result.ErrorMessage, "AI parsing failed")
+}
+
+func TestParserServiceWithAI_ReturnsNeedsAI_WhenAINotConfigured(t *testing.T) {
+	aiService := &mockAIService{isConfigured: false}
+	service := NewParserServiceWithAI(aiService)
+
+	filename := "[Leopard-Raws] Kimetsu no Yaiba - 26.mkv"
+	result := service.ParseFilename(filename)
+
+	require.NotNil(t, result)
+	assert.False(t, aiService.parseCalled) // AI should NOT be called when not configured
+	assert.Equal(t, parser.ParseStatusNeedsAI, result.Status)
+}
+
+func TestParserServiceWithAI_HandlesMovieFromAI(t *testing.T) {
+	aiService := &mockAIService{
+		isConfigured: true,
+		parseFunc: func(ctx context.Context, filename string) (*ai.ParseResponse, error) {
+			return &ai.ParseResponse{
+				Title:      "My Movie Title",
+				Year:       2023,
+				MediaType:  "movie",
+				Quality:    "1080p",
+				Confidence: 0.88,
+			}, nil
+		},
+	}
+	service := NewParserServiceWithAI(aiService)
+
+	filename := "some weird movie filename.mkv"
+	result := service.ParseFilename(filename)
+
+	require.NotNil(t, result)
+	assert.Equal(t, parser.ParseStatusSuccess, result.Status)
+	assert.Equal(t, parser.MediaTypeMovie, result.MediaType)
+	assert.Equal(t, "My Movie Title", result.Title)
+	assert.Equal(t, 2023, result.Year)
+	assert.Equal(t, 88, result.Confidence)
+}
+
+func TestParserServiceWithAI_WithContext(t *testing.T) {
+	aiService := &mockAIService{
+		isConfigured: true,
+		parseFunc: func(ctx context.Context, filename string) (*ai.ParseResponse, error) {
+			// Verify context is passed through
+			if ctx == nil {
+				t.Error("context should not be nil")
+			}
+			return &ai.ParseResponse{
+				Title:     "Context Test",
+				MediaType: "movie",
+			}, nil
+		},
+	}
+	service := NewParserServiceWithAI(aiService)
+
+	ctx := context.Background()
+	filename := "unparseable.mkv"
+	result := service.ParseFilenameWithContext(ctx, filename)
+
+	require.NotNil(t, result)
+	assert.Equal(t, parser.ParseStatusSuccess, result.Status)
 }

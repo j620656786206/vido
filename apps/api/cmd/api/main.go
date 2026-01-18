@@ -126,6 +126,18 @@ func main() {
 	// Initialize parser service (Story 2.5)
 	parserService := services.NewParserService()
 
+	// Initialize AI service for AI-powered filename parsing (Story 3.1)
+	aiService, err := services.NewAIService(cfg, db.Conn())
+	if err != nil {
+		slog.Error("Failed to initialize AI service", "error", err)
+		os.Exit(1)
+	}
+	if aiService != nil {
+		slog.Info("AI service initialized", "provider", aiService.GetProviderName())
+	} else {
+		slog.Info("AI service not configured - AI parsing disabled")
+	}
+
 	slog.Info("Services initialized with repository injection")
 
 	// Initialize handlers with injected service interfaces

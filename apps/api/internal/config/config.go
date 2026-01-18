@@ -49,7 +49,11 @@ type Config struct {
 	// API Keys (optional)
 	TMDbAPIKey    string
 	GeminiAPIKey  string
+	ClaudeAPIKey  string
 	EncryptionKey string
+
+	// AI Provider configuration (Story 3.1)
+	AIProvider string // "gemini" or "claude"
 
 	// TMDb configuration
 	TMDbDefaultLanguage   string
@@ -90,7 +94,11 @@ func Load() (*Config, error) {
 	// API Keys (optional - empty string is valid default)
 	cfg.TMDbAPIKey = cfg.loadString("TMDB_API_KEY", "")
 	cfg.GeminiAPIKey = cfg.loadString("GEMINI_API_KEY", "")
+	cfg.ClaudeAPIKey = cfg.loadString("CLAUDE_API_KEY", "")
 	cfg.EncryptionKey = cfg.loadString("ENCRYPTION_KEY", "")
+
+	// AI Provider configuration (Story 3.1) - defaults to "gemini" if not set
+	cfg.AIProvider = cfg.loadString("AI_PROVIDER", "gemini")
 
 	// TMDb configuration (Story 2.1)
 	cfg.TMDbDefaultLanguage = cfg.loadString("TMDB_DEFAULT_LANGUAGE", "zh-TW")
@@ -212,6 +220,10 @@ func (c *Config) LogConfigSources() {
 		"TMDB_API_KEY_source", c.Sources["TMDB_API_KEY"].String(),
 		"GEMINI_API_KEY", maskSecret(c.GeminiAPIKey),
 		"GEMINI_API_KEY_source", c.Sources["GEMINI_API_KEY"].String(),
+		"CLAUDE_API_KEY", maskSecret(c.ClaudeAPIKey),
+		"CLAUDE_API_KEY_source", c.Sources["CLAUDE_API_KEY"].String(),
+		"AI_PROVIDER", c.AIProvider,
+		"AI_PROVIDER_source", c.Sources["AI_PROVIDER"].String(),
 		"ENCRYPTION_KEY", maskSecret(c.EncryptionKey),
 		"ENCRYPTION_KEY_source", c.Sources["ENCRYPTION_KEY"].String(),
 		"TMDB_DEFAULT_LANGUAGE", c.TMDbDefaultLanguage,
