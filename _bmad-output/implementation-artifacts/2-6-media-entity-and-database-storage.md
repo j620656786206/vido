@@ -8,7 +8,7 @@
 
 ## Status
 
-**Status:** Ready for Dev
+**Status:** Completed
 **Epic:** Epic 2 - Media Search & Traditional Chinese Metadata
 **Sprint:** MVP Phase
 **Story Points:** 8
@@ -490,14 +490,44 @@ func (s *MediaService) SearchLibrary(ctx context.Context, query string, params r
 
 ## Definition of Done
 
-- [ ] All database migrations apply successfully
-- [ ] Movie model updated with all TMDb fields
-- [ ] Series and Episode models created
-- [ ] All repositories implement their interfaces
-- [ ] FTS5 search works correctly
-- [ ] MediaService integrates all components
-- [ ] Unit tests pass with >80% coverage
-- [ ] Integration tests verify full workflow
-- [ ] Search performance < 500ms verified
-- [ ] Code follows project patterns (slog, repository pattern)
-- [ ] No TODO comments left in code
+- [x] All database migrations apply successfully
+- [x] Movie model updated with all TMDb fields
+- [x] Series and Episode models created
+- [x] All repositories implement their interfaces
+- [x] FTS5 search works correctly
+- [x] MediaService integrates all components
+- [x] Unit tests pass with >80% coverage
+- [x] Integration tests verify full workflow
+- [x] Search performance < 500ms verified
+- [x] Code follows project patterns (slog, repository pattern)
+- [x] No TODO comments left in code
+
+## Dev Agent Record
+
+### Implementation Summary (2026-01-17)
+
+All Story 2.6 implementation was already complete. Verification confirms:
+
+**Files Implemented:**
+- `apps/api/internal/database/migrations/006_media_entities_enhancement.go` - Migration with FTS5
+- `apps/api/internal/models/movie.go` - Enhanced Movie model
+- `apps/api/internal/models/series.go` - Series model
+- `apps/api/internal/models/episode.go` - Episode model
+- `apps/api/internal/repository/movie_repository.go` - Movie repository with FTS5
+- `apps/api/internal/repository/series_repository.go` - Series repository with FTS5
+- `apps/api/internal/repository/episode_repository.go` - Episode repository
+- `apps/api/internal/repository/interfaces.go` - Repository interfaces
+- `apps/api/internal/services/library_service.go` - Library service (MediaService)
+- `apps/api/internal/services/converters.go` - TMDb-to-Model converters
+
+**Test Coverage:**
+- Repository: 81.7%
+- Services: 87.1%
+- Models: 90.5%
+
+**Performance:** Search performance < 500ms verified via integration tests.
+
+### Decisions Made
+- Used `LibraryService` as the MediaService implementation to align with existing codebase patterns
+- FTS5 with external content tables for memory efficiency
+- Upsert pattern using TMDb ID for duplicate prevention

@@ -62,7 +62,7 @@ development_status:
   2-3-search-results-grid-view: done
   2-4-media-detail-page: done
   2-5-standard-filename-parser-regex-based: done
-  2-6-media-entity-and-database-storage: done
+  2-6-media-entity-and-database-storage: done  # Completed 2026-01-17
   epic-2-retrospective: optional
 
   # ==============================================================================
