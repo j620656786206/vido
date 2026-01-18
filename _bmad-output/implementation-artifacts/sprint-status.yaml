@@ -80,9 +80,9 @@ development_status:
   3-7-manual-metadata-search-and-selection: ready-for-dev  # Story created 2026-01-18
   3-8-metadata-editor: ready-for-dev  # Story created 2026-01-18
   3-9-filename-mapping-learning-system: ready-for-dev  # Story created 2026-01-18
-  3-10-parse-status-indicators: backlog
-  3-11-auto-retry-mechanism: backlog
-  3-12-graceful-degradation: backlog
+  3-10-parse-status-indicators: ready-for-dev  # Story created 2026-01-18
+  3-11-auto-retry-mechanism: ready-for-dev  # Story created 2026-01-18
+  3-12-graceful-degradation: ready-for-dev  # Story created 2026-01-18
   epic-3-retrospective: optional
 
   # ==============================================================================
