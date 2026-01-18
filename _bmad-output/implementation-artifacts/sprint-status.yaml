@@ -72,7 +72,7 @@ development_status:
   # ==============================================================================
   epic-3: in-progress  # Started 2026-01-18
   3-1-ai-provider-abstraction-layer: ready-for-dev  # Story created 2026-01-18
-  3-2-ai-fansub-filename-parsing: backlog
+  3-2-ai-fansub-filename-parsing: ready-for-dev  # Story created 2026-01-18
   3-3-multi-source-metadata-fallback-chain: backlog
   3-4-douban-web-scraper: backlog
   3-5-wikipedia-metadata-fallback: backlog
