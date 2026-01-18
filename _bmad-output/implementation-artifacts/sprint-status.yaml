@@ -78,7 +78,7 @@ development_status:
   3-5-wikipedia-metadata-fallback: ready-for-dev  # Story created 2026-01-18
   3-6-ai-search-keyword-generation: ready-for-dev  # Story created 2026-01-18
   3-7-manual-metadata-search-and-selection: ready-for-dev  # Story created 2026-01-18
-  3-8-metadata-editor: backlog
+  3-8-metadata-editor: ready-for-dev  # Story created 2026-01-18
   3-9-filename-mapping-learning-system: backlog
   3-10-parse-status-indicators: backlog
   3-11-auto-retry-mechanism: backlog
