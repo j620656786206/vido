@@ -123,9 +123,6 @@ func main() {
 		CacheTTLHours:     cfg.TMDbCacheTTLHours,
 	}, repos.Cache)
 
-	// Initialize parser service (Story 2.5)
-	parserService := services.NewParserService()
-
 	// Initialize AI service for AI-powered filename parsing (Story 3.1)
 	aiService, err := services.NewAIService(cfg, db.Conn())
 	if err != nil {
@@ -137,6 +134,9 @@ func main() {
 	} else {
 		slog.Info("AI service not configured - AI parsing disabled")
 	}
+
+	// Initialize parser service with optional AI integration (Story 2.5, updated Story 3.1)
+	parserService := services.NewParserServiceWithAI(aiService)
 
 	slog.Info("Services initialized with repository injection")
 

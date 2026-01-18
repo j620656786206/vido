@@ -1,6 +1,6 @@
 # Story 3.1: AI Provider Abstraction Layer
 
-Status: complete
+Status: done
 
 ## Story
 
@@ -277,7 +277,9 @@ N/A
 
 **New Files Created:**
 - `/apps/api/internal/ai/types.go` - Common types (ParseRequest, ParseResponse, errors)
+- `/apps/api/internal/ai/types_test.go` - Types unit tests
 - `/apps/api/internal/ai/provider.go` - AIProvider interface
+- `/apps/api/internal/ai/provider_test.go` - Provider interface tests
 - `/apps/api/internal/ai/gemini.go` - Gemini provider implementation
 - `/apps/api/internal/ai/gemini_test.go` - Gemini provider tests
 - `/apps/api/internal/ai/claude.go` - Claude provider implementation
@@ -292,7 +294,40 @@ N/A
 
 **Modified Files:**
 - `/apps/api/internal/config/config.go` - Added ClaudeAPIKey, AIProvider fields
+- `/apps/api/internal/config/config_test.go` - Config tests updated
 - `/apps/api/internal/config/api_keys.go` - Added GetClaudeAPIKey(), GetAIProvider()
 - `/apps/api/internal/services/parser_service.go` - AI integration
 - `/apps/api/internal/services/parser_service_test.go` - AI integration tests
-- `/apps/api/cmd/api/main.go` - Wired up AI service
+- `/apps/api/cmd/api/main.go` - Wired up AI service with parser integration
+
+### Senior Developer Review (AI)
+
+**Reviewer:** Claude Opus 4.5 (Dev Agent)
+**Date:** 2026-01-18
+**Outcome:** Changes Requested → Fixed
+
+**Issues Found:**
+
+1. **CRITICAL - AI Service Not Wired to Parser (FIXED)**
+   - `main.go:127` used `NewParserService()` instead of `NewParserServiceWithAI(aiService)`
+   - Impact: AI parsing was non-functional even when configured
+   - Fix: Changed to `NewParserServiceWithAI(aiService)` for proper integration
+
+2. **MEDIUM - File List Incomplete (FIXED)**
+   - Missing test files: `provider_test.go`, `types_test.go`, `config_test.go`
+   - Fix: Added missing files to File List
+
+3. **LOW - Cosmetic issues noted but not fixed:**
+   - Expired cache cleanup logs error in test (test artifact, not production issue)
+   - Gemini API key in URL query param (follows API spec, acceptable)
+
+**Verification:**
+- Build compiles successfully
+- All tests pass (ai package, services package)
+
+### Change Log
+
+| Date | Change | Author |
+|------|--------|--------|
+| 2026-01-18 | Initial implementation | Claude Opus 4.5 |
+| 2026-01-18 | Code review: Fixed AI-parser wiring in main.go, updated File List | Claude Opus 4.5 (Dev Agent) |
