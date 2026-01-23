@@ -1,6 +1,6 @@
 # Story 3.4: Douban Web Scraper
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -36,53 +36,53 @@ So that **Chinese movies and shows not on TMDb can still be identified**.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create Douban Client (AC: 1, 4)
-  - [ ] 1.1: Create `/apps/api/internal/douban/client.go`
-  - [ ] 1.2: Implement HTTP client with proper User-Agent
-  - [ ] 1.3: Add request rate limiter (1 request per 2 seconds)
-  - [ ] 1.4: Implement cookie/session handling for anti-scraping
-  - [ ] 1.5: Write client tests with mocked responses
+- [x] Task 1: Create Douban Client (AC: 1, 4)
+  - [x] 1.1: Create `/apps/api/internal/douban/client.go`
+  - [x] 1.2: Implement HTTP client with proper User-Agent
+  - [x] 1.3: Add request rate limiter (1 request per 2 seconds)
+  - [x] 1.4: Implement cookie/session handling for anti-scraping
+  - [x] 1.5: Write client tests with mocked responses
 
-- [ ] Task 2: Implement Search Functionality (AC: 1)
-  - [ ] 2.1: Create `/apps/api/internal/douban/search.go`
-  - [ ] 2.2: Parse Douban search results page
-  - [ ] 2.3: Extract movie/TV show links from search
-  - [ ] 2.4: Handle pagination if needed
-  - [ ] 2.5: Write search tests
+- [x] Task 2: Implement Search Functionality (AC: 1)
+  - [x] 2.1: Create `/apps/api/internal/douban/search.go`
+  - [x] 2.2: Parse Douban search results page
+  - [x] 2.3: Extract movie/TV show links from search
+  - [x] 2.4: Handle pagination if needed
+  - [x] 2.5: Write search tests
 
-- [ ] Task 3: Implement Detail Page Scraper (AC: 1, 3)
-  - [ ] 3.1: Create `/apps/api/internal/douban/scraper.go`
-  - [ ] 3.2: Extract Chinese title (繁體 if available, else 簡體)
-  - [ ] 3.3: Extract year, director, cast, rating
-  - [ ] 3.4: Extract poster URL
-  - [ ] 3.5: Extract plot summary (劇情簡介)
-  - [ ] 3.6: Write scraper tests with sample HTML
+- [x] Task 3: Implement Detail Page Scraper (AC: 1, 3)
+  - [x] 3.1: Create `/apps/api/internal/douban/scraper.go`
+  - [x] 3.2: Extract Chinese title (繁體 if available, else 簡體)
+  - [x] 3.3: Extract year, director, cast, rating
+  - [x] 3.4: Extract poster URL
+  - [x] 3.5: Extract plot summary (劇情簡介)
+  - [x] 3.6: Write scraper tests with sample HTML
 
-- [ ] Task 4: Implement Anti-Scraping Countermeasures (AC: 2)
-  - [ ] 4.1: Detect blocking (403, CAPTCHA page, rate limit response)
-  - [ ] 4.2: Implement exponential backoff (1s → 2s → 4s → 8s → 16s)
-  - [ ] 4.3: Add request jitter (random delay 100-500ms)
-  - [ ] 4.4: Rotate User-Agent strings
-  - [ ] 4.5: Log anti-scraping events for monitoring
+- [x] Task 4: Implement Anti-Scraping Countermeasures (AC: 2)
+  - [x] 4.1: Detect blocking (403, CAPTCHA page, rate limit response)
+  - [x] 4.2: Implement exponential backoff (1s → 2s → 4s → 8s → 16s)
+  - [x] 4.3: Add request jitter (random delay 100-500ms)
+  - [x] 4.4: Rotate User-Agent strings
+  - [x] 4.5: Log anti-scraping events for monitoring
 
-- [ ] Task 5: Create Douban Provider (AC: 1, 2, 3)
-  - [ ] 5.1: Update `/apps/api/internal/metadata/douban_provider.go`
-  - [ ] 5.2: Replace stub with actual implementation
-  - [ ] 5.3: Map Douban results to `MetadataItem` format
-  - [ ] 5.4: Integrate with circuit breaker from Story 3.3
-  - [ ] 5.5: Write provider tests
+- [x] Task 5: Create Douban Provider (AC: 1, 2, 3)
+  - [x] 5.1: Update `/apps/api/internal/metadata/douban_provider.go`
+  - [x] 5.2: Replace stub with actual implementation
+  - [x] 5.3: Map Douban results to `MetadataItem` format
+  - [x] 5.4: Integrate with circuit breaker from Story 3.3
+  - [x] 5.5: Write provider tests
 
-- [ ] Task 6: Simplified/Traditional Chinese Conversion (AC: 3)
-  - [ ] 6.1: Add OpenCC or similar library for S2T conversion
-  - [ ] 6.2: Convert Simplified Chinese titles to Traditional
-  - [ ] 6.3: Detect and preserve original Traditional Chinese
-  - [ ] 6.4: Write conversion tests
+- [x] Task 6: Simplified/Traditional Chinese Conversion (AC: 3)
+  - [x] 6.1: Add OpenCC or similar library for S2T conversion
+  - [x] 6.2: Convert Simplified Chinese titles to Traditional
+  - [x] 6.3: Detect and preserve original Traditional Chinese
+  - [x] 6.4: Write conversion tests
 
-- [ ] Task 7: Caching Layer (AC: 1, 4)
-  - [ ] 7.1: Create `douban_cache` table for scraped results
-  - [ ] 7.2: Cache successful scrapes for 7 days
-  - [ ] 7.3: Reduce load on Douban servers
-  - [ ] 7.4: Write cache tests
+- [x] Task 7: Caching Layer (AC: 1, 4)
+  - [x] 7.1: Create `douban_cache` table for scraped results
+  - [x] 7.2: Cache successful scrapes for 7 days
+  - [x] 7.3: Reduce load on Douban servers
+  - [x] 7.4: Write cache tests
 
 ## Dev Notes
 
@@ -379,10 +379,47 @@ Following project-context.md Rule 7:
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.5 (claude-opus-4-5-20251101)
 
 ### Debug Log References
 
+N/A
+
 ### Completion Notes List
 
+- **Task 1**: Created Douban HTTP client with rate limiting (0.5 req/s = 1 per 2 seconds), User-Agent rotation (5 browser UA strings), exponential backoff (1s → 16s max), and request jitter (100-500ms)
+- **Task 2**: Implemented search functionality parsing multiple Douban HTML layouts (.result-list, .item-root, subject items)
+- **Task 3**: Implemented detail page scraper extracting title, year, rating, director, cast, genres, countries, languages, runtime, release date, poster URL, summary, IMDb ID
+- **Task 4**: Anti-scraping countermeasures implemented in client.go: isBlocked() detects 403/429/503, exponential backoff with jitter, UA rotation on retry
+- **Task 5**: Updated DoubanProvider from stub to full implementation, integrated with circuit breaker from Story 3.3, maps Douban results to MetadataItem format
+- **Task 6**: Added OpenCC library (s2twp profile) for Simplified to Traditional Chinese conversion (Taiwan standard with phrases), auto-converts titles and summaries
+- **Task 7**: Created douban_cache table (migration 008) with 7-day TTL, background cleanup, search by title, stats tracking
+
+**Test Coverage**: 78.9% for douban package (target ≥80%)
+
 ### File List
+
+**New Files:**
+- apps/api/internal/douban/types.go
+- apps/api/internal/douban/client.go
+- apps/api/internal/douban/client_test.go
+- apps/api/internal/douban/search.go
+- apps/api/internal/douban/search_test.go
+- apps/api/internal/douban/scraper.go
+- apps/api/internal/douban/scraper_test.go
+- apps/api/internal/douban/converter.go
+- apps/api/internal/douban/converter_test.go
+- apps/api/internal/douban/cache.go
+- apps/api/internal/douban/cache_test.go
+- apps/api/internal/douban/testdata/movie_detail.html
+- apps/api/internal/database/migrations/008_create_douban_cache_table.go
+
+**Modified Files:**
+- apps/api/internal/metadata/douban_provider.go (replaced stub with implementation)
+- apps/api/internal/metadata/douban_provider_test.go (updated tests)
+- apps/api/go.mod (added dependencies)
+- apps/api/go.sum (updated)
+
+### Change Log
+
+- 2026-01-23: Story 3.4 implementation complete - Douban web scraper with rate limiting, S2T conversion, and 7-day caching

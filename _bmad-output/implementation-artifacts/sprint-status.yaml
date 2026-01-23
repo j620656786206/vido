@@ -74,7 +74,7 @@ development_status:
   3-1-ai-provider-abstraction-layer: done  # Completed 2026-01-18
   3-2-ai-fansub-filename-parsing: done  # Code review completed 2026-01-23
   3-3-multi-source-metadata-fallback-chain: done  # Code review completed 2026-01-23
-  3-4-douban-web-scraper: ready-for-dev  # Story created 2026-01-18
+  3-4-douban-web-scraper: review  # Ready for review 2026-01-23
   3-5-wikipedia-metadata-fallback: ready-for-dev  # Story created 2026-01-18
   3-6-ai-search-keyword-generation: ready-for-dev  # Story created 2026-01-18
   3-7-manual-metadata-search-and-selection: ready-for-dev  # Story created 2026-01-18
