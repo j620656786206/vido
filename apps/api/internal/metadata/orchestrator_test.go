@@ -579,3 +579,265 @@ func TestFallbackStatus_AllFailed(t *testing.T) {
 		})
 	}
 }
+
+// [P1] Tests TV media type flows through orchestrator fallback chain correctly
+func TestOrchestrator_Search_TVMediaType_Fallback(t *testing.T) {
+	orch := NewOrchestrator(OrchestratorConfig{
+		FallbackDelay: 10 * time.Millisecond,
+	})
+
+	// TMDb returns no results for TV search
+	provider1 := &MockProvider{
+		name:      "tmdb",
+		source:    models.MetadataSourceTMDb,
+		available: true,
+		status:    ProviderStatusAvailable,
+		searchFunc: func(ctx context.Context, req *SearchRequest) (*SearchResult, error) {
+			assert.Equal(t, MediaTypeTV, req.MediaType)
+			return &SearchResult{Items: []MetadataItem{}, TotalCount: 0, Source: models.MetadataSourceTMDb}, nil
+		},
+	}
+
+	expectedResult := &SearchResult{
+		Items: []MetadataItem{
+			{ID: "1", Title: "Test TV Show", MediaType: MediaTypeTV},
+		},
+		Source:     models.MetadataSourceDouban,
+		TotalCount: 1,
+	}
+
+	// Douban succeeds for TV search
+	provider2 := &MockProvider{
+		name:      "douban",
+		source:    models.MetadataSourceDouban,
+		available: true,
+		status:    ProviderStatusAvailable,
+		searchFunc: func(ctx context.Context, req *SearchRequest) (*SearchResult, error) {
+			assert.Equal(t, MediaTypeTV, req.MediaType)
+			return expectedResult, nil
+		},
+	}
+
+	orch.RegisterProvider(provider1)
+	orch.RegisterProvider(provider2)
+
+	result, status := orch.Search(context.Background(), &SearchRequest{
+		Query:     "Test TV Show",
+		MediaType: MediaTypeTV,
+	})
+
+	require.NotNil(t, result)
+	assert.Equal(t, models.MetadataSourceDouban, result.Source)
+	assert.Equal(t, MediaTypeTV, result.Items[0].MediaType)
+
+	require.NotNil(t, status)
+	assert.Len(t, status.Attempts, 2)
+	assert.False(t, status.Attempts[0].Success) // TMDb no results
+	assert.True(t, status.Attempts[1].Success)  // Douban succeeds
+}
+
+// [P1] Tests year filter is passed through orchestrator correctly
+func TestOrchestrator_Search_WithYearFilter(t *testing.T) {
+	orch := NewOrchestrator(OrchestratorConfig{
+		FallbackDelay: 10 * time.Millisecond,
+	})
+
+	capturedYear := 0
+	provider := &MockProvider{
+		name:      "tmdb",
+		source:    models.MetadataSourceTMDb,
+		available: true,
+		status:    ProviderStatusAvailable,
+		searchFunc: func(ctx context.Context, req *SearchRequest) (*SearchResult, error) {
+			capturedYear = req.Year
+			return &SearchResult{
+				Items:      []MetadataItem{{ID: "1", Title: "Test Movie", Year: 2024}},
+				Source:     models.MetadataSourceTMDb,
+				TotalCount: 1,
+			}, nil
+		},
+	}
+
+	orch.RegisterProvider(provider)
+
+	orch.Search(context.Background(), &SearchRequest{
+		Query:     "Test",
+		MediaType: MediaTypeMovie,
+		Year:      2024,
+	})
+
+	assert.Equal(t, 2024, capturedYear)
+}
+
+// [P2] Tests pagination parameter is passed through orchestrator
+func TestOrchestrator_Search_WithPagination(t *testing.T) {
+	orch := NewOrchestrator(OrchestratorConfig{
+		FallbackDelay: 10 * time.Millisecond,
+	})
+
+	capturedPage := 0
+	provider := &MockProvider{
+		name:      "tmdb",
+		source:    models.MetadataSourceTMDb,
+		available: true,
+		status:    ProviderStatusAvailable,
+		searchFunc: func(ctx context.Context, req *SearchRequest) (*SearchResult, error) {
+			capturedPage = req.Page
+			return &SearchResult{
+				Items:      []MetadataItem{{ID: "1", Title: "Test Movie"}},
+				Source:     models.MetadataSourceTMDb,
+				TotalCount: 100,
+				Page:       req.Page,
+			}, nil
+		},
+	}
+
+	orch.RegisterProvider(provider)
+
+	result, _ := orch.Search(context.Background(), &SearchRequest{
+		Query:     "Test",
+		MediaType: MediaTypeMovie,
+		Page:      3,
+	})
+
+	assert.Equal(t, 3, capturedPage)
+	assert.Equal(t, 3, result.Page)
+}
+
+// [P2] Tests language parameter is passed through orchestrator
+func TestOrchestrator_Search_WithLanguage(t *testing.T) {
+	orch := NewOrchestrator(OrchestratorConfig{
+		FallbackDelay: 10 * time.Millisecond,
+	})
+
+	capturedLang := ""
+	provider := &MockProvider{
+		name:      "tmdb",
+		source:    models.MetadataSourceTMDb,
+		available: true,
+		status:    ProviderStatusAvailable,
+		searchFunc: func(ctx context.Context, req *SearchRequest) (*SearchResult, error) {
+			capturedLang = req.Language
+			return &SearchResult{
+				Items:      []MetadataItem{{ID: "1", Title: "測試電影"}},
+				Source:     models.MetadataSourceTMDb,
+				TotalCount: 1,
+			}, nil
+		},
+	}
+
+	orch.RegisterProvider(provider)
+
+	orch.Search(context.Background(), &SearchRequest{
+		Query:     "測試",
+		MediaType: MediaTypeMovie,
+		Language:  "zh-TW",
+	})
+
+	assert.Equal(t, "zh-TW", capturedLang)
+}
+
+// [P2] Tests concurrent searches don't interfere with each other
+func TestOrchestrator_Search_Concurrent(t *testing.T) {
+	orch := NewOrchestrator(OrchestratorConfig{
+		FallbackDelay: 10 * time.Millisecond,
+	})
+
+	provider := &MockProvider{
+		name:      "tmdb",
+		source:    models.MetadataSourceTMDb,
+		available: true,
+		status:    ProviderStatusAvailable,
+		searchFunc: func(ctx context.Context, req *SearchRequest) (*SearchResult, error) {
+			// Simulate some processing time
+			time.Sleep(5 * time.Millisecond)
+			return &SearchResult{
+				Items:      []MetadataItem{{ID: "1", Title: req.Query}},
+				Source:     models.MetadataSourceTMDb,
+				TotalCount: 1,
+			}, nil
+		},
+	}
+
+	orch.RegisterProvider(provider)
+
+	// Launch 10 concurrent searches
+	var wg sync.WaitGroup
+	results := make(chan *SearchResult, 10)
+	errors := make(chan error, 10)
+
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func(query string) {
+			defer wg.Done()
+			result, _ := orch.Search(context.Background(), &SearchRequest{
+				Query:     query,
+				MediaType: MediaTypeMovie,
+			})
+			if result != nil {
+				results <- result
+			} else {
+				errors <- nil
+			}
+		}(t.Name() + string(rune('A'+i)))
+	}
+
+	wg.Wait()
+	close(results)
+	close(errors)
+
+	// Verify all searches completed
+	count := 0
+	for range results {
+		count++
+	}
+	assert.Equal(t, 10, count, "All concurrent searches should complete successfully")
+}
+
+// [P1] Tests circuit breaker metrics are tracked correctly
+func TestOrchestrator_CircuitBreaker_MetricsTracking(t *testing.T) {
+	orch := NewOrchestrator(OrchestratorConfig{
+		FallbackDelay:        10 * time.Millisecond,
+		EnableCircuitBreaker: true,
+		CircuitBreakerConfig: CircuitBreakerConfig{
+			FailureThreshold: 3,
+			Timeout:          time.Hour,
+		},
+	})
+
+	failureCount := 0
+	provider := &MockProvider{
+		name:      "tmdb",
+		source:    models.MetadataSourceTMDb,
+		available: true,
+		status:    ProviderStatusAvailable,
+		searchFunc: func(ctx context.Context, req *SearchRequest) (*SearchResult, error) {
+			failureCount++
+			return nil, errors.New("simulated failure")
+		},
+	}
+
+	orch.RegisterProvider(provider)
+
+	// Trigger failures up to threshold
+	for i := 0; i < 3; i++ {
+		orch.Search(context.Background(), &SearchRequest{
+			Query:     "Test",
+			MediaType: MediaTypeMovie,
+		})
+	}
+
+	assert.Equal(t, 3, failureCount)
+
+	// After circuit opens, provider should not be called
+	_, status := orch.Search(context.Background(), &SearchRequest{
+		Query:     "Test",
+		MediaType: MediaTypeMovie,
+	})
+
+	// Still 3 - circuit breaker prevented the call
+	assert.Equal(t, 3, failureCount)
+	require.NotNil(t, status)
+	assert.True(t, status.Attempts[0].Skipped)
+	assert.Equal(t, "circuit breaker open", status.Attempts[0].SkipReason)
+}

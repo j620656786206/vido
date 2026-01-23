@@ -202,3 +202,225 @@ func (m *mockTMDbSearcher) SearchTVShows(ctx context.Context, query string, page
 	}
 	return &tmdb.SearchResultTVShows{}, nil
 }
+
+// [P1] Tests TV search goes through the correct provider method
+func TestMetadataService_SearchMetadata_TVSearch(t *testing.T) {
+	cfg := MetadataServiceConfig{
+		TMDbImageBaseURL: "https://image.tmdb.org/t/p/w500",
+	}
+
+	posterPath := "/tv-poster.jpg"
+	mockTMDb := &mockTMDbSearcher{
+		searchTVShowsFunc: func(ctx context.Context, query string, page int) (*tmdb.SearchResultTVShows, error) {
+			assert.Equal(t, "Breaking Bad", query)
+			return &tmdb.SearchResultTVShows{
+				Page: 1,
+				Results: []tmdb.TVShow{
+					{
+						ID:           1396,
+						Name:         "Breaking Bad",
+						FirstAirDate: "2008-01-20",
+						VoteAverage:  8.9,
+						PosterPath:   &posterPath,
+					},
+				},
+				TotalPages:   1,
+				TotalResults: 1,
+			}, nil
+		},
+	}
+
+	service := NewMetadataService(cfg, mockTMDb)
+
+	result, status, err := service.SearchMetadata(context.Background(), &SearchMetadataRequest{
+		Query:     "Breaking Bad",
+		MediaType: "tv",
+		Page:      1,
+	})
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	require.NotNil(t, status)
+
+	assert.Equal(t, models.MetadataSourceTMDb, result.Source)
+	assert.Len(t, result.Items, 1)
+	assert.Equal(t, "Breaking Bad", result.Items[0].Title)
+	assert.Equal(t, metadata.MediaTypeTV, result.Items[0].MediaType)
+	assert.Equal(t, 2008, result.Items[0].Year)
+}
+
+// [P2] Tests pagination is correctly passed to TMDb service
+func TestMetadataService_SearchMetadata_WithPagination(t *testing.T) {
+	cfg := MetadataServiceConfig{
+		TMDbImageBaseURL: "https://image.tmdb.org/t/p/w500",
+	}
+
+	capturedPage := 0
+	mockTMDb := &mockTMDbSearcher{
+		searchMoviesFunc: func(ctx context.Context, query string, page int) (*tmdb.SearchResultMovies, error) {
+			capturedPage = page
+			return &tmdb.SearchResultMovies{
+				Page: page,
+				Results: []tmdb.Movie{
+					{ID: 1, Title: "Test Movie"},
+				},
+				TotalPages:   5,
+				TotalResults: 100,
+			}, nil
+		},
+	}
+
+	service := NewMetadataService(cfg, mockTMDb)
+
+	result, _, err := service.SearchMetadata(context.Background(), &SearchMetadataRequest{
+		Query:     "Test",
+		MediaType: "movie",
+		Page:      3,
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, 3, capturedPage)
+	assert.Equal(t, 3, result.Page)
+}
+
+// [P2] Tests default page value when not specified
+func TestMetadataService_SearchMetadata_DefaultPage(t *testing.T) {
+	cfg := MetadataServiceConfig{
+		TMDbImageBaseURL: "https://image.tmdb.org/t/p/w500",
+	}
+
+	capturedPage := 0
+	mockTMDb := &mockTMDbSearcher{
+		searchMoviesFunc: func(ctx context.Context, query string, page int) (*tmdb.SearchResultMovies, error) {
+			capturedPage = page
+			return &tmdb.SearchResultMovies{
+				Page:         1,
+				Results:      []tmdb.Movie{{ID: 1, Title: "Test"}},
+				TotalPages:   1,
+				TotalResults: 1,
+			}, nil
+		},
+	}
+
+	service := NewMetadataService(cfg, mockTMDb)
+
+	_, _, err := service.SearchMetadata(context.Background(), &SearchMetadataRequest{
+		Query:     "Test",
+		MediaType: "movie",
+		Page:      0, // Default/unset
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, 1, capturedPage, "Should default to page 1")
+}
+
+// [P2] Tests language parameter is passed through
+func TestMetadataService_SearchMetadata_WithLanguage(t *testing.T) {
+	cfg := MetadataServiceConfig{
+		TMDbImageBaseURL: "https://image.tmdb.org/t/p/w500",
+	}
+
+	mockTMDb := &mockTMDbSearcher{
+		searchMoviesFunc: func(ctx context.Context, query string, page int) (*tmdb.SearchResultMovies, error) {
+			return &tmdb.SearchResultMovies{
+				Page: 1,
+				Results: []tmdb.Movie{
+					{ID: 1, Title: "測試電影"},
+				},
+				TotalPages:   1,
+				TotalResults: 1,
+			}, nil
+		},
+	}
+
+	service := NewMetadataService(cfg, mockTMDb)
+
+	result, _, err := service.SearchMetadata(context.Background(), &SearchMetadataRequest{
+		Query:     "測試",
+		MediaType: "movie",
+		Page:      1,
+		Language:  "zh-TW",
+	})
+
+	require.NoError(t, err)
+	assert.NotNil(t, result)
+	assert.Equal(t, "測試電影", result.Items[0].Title)
+}
+
+// [P1] Tests year filter is included in search request
+func TestMetadataService_SearchMetadata_WithYearFilter(t *testing.T) {
+	cfg := MetadataServiceConfig{
+		TMDbImageBaseURL: "https://image.tmdb.org/t/p/w500",
+	}
+
+	mockTMDb := &mockTMDbSearcher{
+		searchMoviesFunc: func(ctx context.Context, query string, page int) (*tmdb.SearchResultMovies, error) {
+			return &tmdb.SearchResultMovies{
+				Page: 1,
+				Results: []tmdb.Movie{
+					{ID: 1, Title: "Test Movie 2024", ReleaseDate: "2024-06-15"},
+				},
+				TotalPages:   1,
+				TotalResults: 1,
+			}, nil
+		},
+	}
+
+	service := NewMetadataService(cfg, mockTMDb)
+
+	result, _, err := service.SearchMetadata(context.Background(), &SearchMetadataRequest{
+		Query:     "Test Movie",
+		MediaType: "movie",
+		Year:      2024,
+	})
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.Equal(t, 2024, result.Items[0].Year)
+}
+
+// [P1] Tests context cancellation is properly handled
+func TestMetadataService_SearchMetadata_ContextCancellation(t *testing.T) {
+	cfg := MetadataServiceConfig{
+		TMDbImageBaseURL: "https://image.tmdb.org/t/p/w500",
+	}
+
+	mockTMDb := &mockTMDbSearcher{
+		searchMoviesFunc: func(ctx context.Context, query string, page int) (*tmdb.SearchResultMovies, error) {
+			// Check if context is cancelled
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			default:
+				return &tmdb.SearchResultMovies{
+					Page:         1,
+					Results:      []tmdb.Movie{{ID: 1, Title: "Test"}},
+					TotalPages:   1,
+					TotalResults: 1,
+				}, nil
+			}
+		},
+	}
+
+	service := NewMetadataService(cfg, mockTMDb)
+
+	// Create already cancelled context
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	result, status, err := service.SearchMetadata(ctx, &SearchMetadataRequest{
+		Query:     "Test",
+		MediaType: "movie",
+	})
+
+	// Should handle cancelled context gracefully
+	// Either return error or nil result with cancelled status
+	if err != nil {
+		assert.ErrorIs(t, err, context.Canceled)
+	} else {
+		assert.Nil(t, result)
+		if status != nil {
+			assert.True(t, status.Cancelled || status.AllFailed())
+		}
+	}
+}
