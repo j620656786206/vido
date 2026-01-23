@@ -13,9 +13,11 @@ import (
 
 // mockAIService implements AIServiceInterface for testing.
 type mockAIService struct {
-	parseFunc    func(ctx context.Context, filename string) (*ai.ParseResponse, error)
-	isConfigured bool
-	parseCalled  bool
+	parseFunc       func(ctx context.Context, filename string) (*ai.ParseResponse, error)
+	parseFansubFunc func(ctx context.Context, filename string) (*ai.ParseResponse, error)
+	isConfigured    bool
+	parseCalled     bool
+	fansubCalled    bool
 }
 
 func (m *mockAIService) ParseFilename(ctx context.Context, filename string) (*ai.ParseResponse, error) {
@@ -29,12 +31,29 @@ func (m *mockAIService) ParseFilename(ctx context.Context, filename string) (*ai
 	}, nil
 }
 
+func (m *mockAIService) ParseFansubFilename(ctx context.Context, filename string) (*ai.ParseResponse, error) {
+	m.fansubCalled = true
+	if m.parseFansubFunc != nil {
+		return m.parseFansubFunc(ctx, filename)
+	}
+	// Default to using parseFunc if parseFansubFunc not set
+	if m.parseFunc != nil {
+		return m.parseFunc(ctx, filename)
+	}
+	return &ai.ParseResponse{
+		Title:       "Default Fansub Title",
+		MediaType:   "tv",
+		FansubGroup: "DefaultGroup",
+	}, nil
+}
+
 func (m *mockAIService) ClearCache(ctx context.Context) (int64, error)        { return 0, nil }
 func (m *mockAIService) ClearExpiredCache(ctx context.Context) (int64, error) { return 0, nil }
 func (m *mockAIService) GetCacheStats(ctx context.Context) (*ai.CacheStats, error) {
 	return &ai.CacheStats{}, nil
 }
-func (m *mockAIService) IsConfigured() bool { return m.isConfigured }
+func (m *mockAIService) IsConfigured() bool    { return m.isConfigured }
+func (m *mockAIService) GetProviderName() string { return "mock" }
 
 func TestParserService_ParseFilename_Movie(t *testing.T) {
 	service := NewParserService()
@@ -185,7 +204,7 @@ func TestParserService_ImplementsInterface(t *testing.T) {
 func TestParserServiceWithAI_DelegatesToAI_WhenRegexFails(t *testing.T) {
 	aiService := &mockAIService{
 		isConfigured: true,
-		parseFunc: func(ctx context.Context, filename string) (*ai.ParseResponse, error) {
+		parseFansubFunc: func(ctx context.Context, filename string) (*ai.ParseResponse, error) {
 			return &ai.ParseResponse{
 				Title:       "Kimetsu no Yaiba",
 				Season:      1,
@@ -199,12 +218,12 @@ func TestParserServiceWithAI_DelegatesToAI_WhenRegexFails(t *testing.T) {
 	}
 	service := NewParserServiceWithAI(aiService)
 
-	// This filename can't be parsed by regex
+	// This filename is detected as fansub and can't be parsed by regex
 	filename := "[Leopard-Raws] Kimetsu no Yaiba - 26 (BD 1920x1080).mkv"
 	result := service.ParseFilename(filename)
 
 	require.NotNil(t, result)
-	assert.True(t, aiService.parseCalled)
+	assert.True(t, aiService.fansubCalled, "fansub AI should be called for fansub filenames")
 	assert.Equal(t, parser.ParseStatusSuccess, result.Status)
 	assert.Equal(t, parser.MediaTypeTVShow, result.MediaType)
 	assert.Equal(t, "Kimetsu no Yaiba", result.Title)
@@ -231,19 +250,20 @@ func TestParserServiceWithAI_SkipsAI_WhenRegexSucceeds(t *testing.T) {
 func TestParserServiceWithAI_ReturnsNeedsAI_WhenAIFails(t *testing.T) {
 	aiService := &mockAIService{
 		isConfigured: true,
-		parseFunc: func(ctx context.Context, filename string) (*ai.ParseResponse, error) {
+		parseFansubFunc: func(ctx context.Context, filename string) (*ai.ParseResponse, error) {
 			return nil, errors.New("AI provider error")
 		},
 	}
 	service := NewParserServiceWithAI(aiService)
 
+	// Fansub filename - will use fansub parser
 	filename := "[Leopard-Raws] Kimetsu no Yaiba - 26.mkv"
 	result := service.ParseFilename(filename)
 
 	require.NotNil(t, result)
-	assert.True(t, aiService.parseCalled)
+	assert.True(t, aiService.fansubCalled, "fansub AI should be called for fansub filenames")
 	assert.Equal(t, parser.ParseStatusNeedsAI, result.Status)
-	assert.Contains(t, result.ErrorMessage, "AI parsing failed")
+	assert.Contains(t, result.ErrorMessage, "AI fansub parsing failed")
 }
 
 func TestParserServiceWithAI_ReturnsNeedsAI_WhenAINotConfigured(t *testing.T) {
@@ -306,4 +326,117 @@ func TestParserServiceWithAI_WithContext(t *testing.T) {
 
 	require.NotNil(t, result)
 	assert.Equal(t, parser.ParseStatusSuccess, result.Status)
+}
+
+func TestNormalizeQuality(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"1080p", "1080p"},  // Already standard, lowercase
+		{"1080P", "1080p"},  // Already standard, normalize to lowercase
+		{"1920x1080", "1080p"},
+		{"720p", "720p"},
+		{"720P", "720p"},
+		{"1280x720", "720p"},
+		{"4K", "2160p"},
+		{"2160p", "2160p"},
+		{"UHD", "2160p"},
+		{"480p", "480p"},
+		{"", ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			result := normalizeQuality(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestNormalizeSource(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"BD", "BD"},
+		{"BluRay", "BD"},
+		{"Blu-ray", "BD"},
+		{"WEB-DL", "WEB"},
+		{"WEB", "WEB"},
+		{"HDTV", "TV"},
+		{"TV", "TV"},
+		{"DVDRip", "DVD"},
+		{"", ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			result := normalizeSource(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestNormalizeCodec(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"x264", "x264"},
+		{"H.264", "x264"},
+		{"AVC", "x264"},
+		{"x265", "x265"},
+		{"HEVC", "x265"},
+		{"H.265", "x265"},
+		{"AV1", "AV1"},
+		{"VP9", "VP9"},
+		{"AAC", "AAC"},
+		{"FLAC", "FLAC"},
+		{"DTS", "DTS"},
+		{"", ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			result := normalizeCodec(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestParserServiceWithAI_FansubMetadata(t *testing.T) {
+	aiService := &mockAIService{
+		isConfigured: true,
+		parseFansubFunc: func(ctx context.Context, filename string) (*ai.ParseResponse, error) {
+			return &ai.ParseResponse{
+				Title:       "我的英雄學院",
+				Season:      1,
+				Episode:     1,
+				MediaType:   "tv",
+				Quality:     "1920x1080",
+				Source:      "Blu-ray",
+				Codec:       "H.264",
+				FansubGroup: "幻櫻字幕組",
+				Language:    "Traditional Chinese",
+				Confidence:  0.95,
+			}, nil
+		},
+	}
+	service := NewParserServiceWithAI(aiService)
+
+	filename := "【幻櫻字幕組】我的英雄學院 第01話 1080P【繁體】.mp4"
+	result := service.ParseFilename(filename)
+
+	require.NotNil(t, result)
+	assert.Equal(t, parser.ParseStatusSuccess, result.Status)
+	assert.Equal(t, "我的英雄學院", result.Title)
+	assert.Equal(t, "幻櫻字幕組", result.ReleaseGroup)
+	assert.Equal(t, "Traditional Chinese", result.Language)
+	assert.Equal(t, "1080p", result.Quality) // Normalized from 1920x1080
+	assert.Equal(t, "BD", result.Source)     // Normalized from Blu-ray
+	assert.Equal(t, "x264", result.VideoCodec) // Normalized from H.264
+	assert.Equal(t, parser.MetadataSourceAIFansub, result.MetadataSource)
+	assert.True(t, result.ParseDurationMs >= 0)
+	assert.Equal(t, "mock", result.AIProvider) // Verify AIProvider is set
 }

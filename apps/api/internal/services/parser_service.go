@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/vido/api/internal/ai"
@@ -58,6 +59,14 @@ func (s *ParserService) ParseFilename(filename string) *parser.ParseResult {
 func (s *ParserService) ParseFilenameWithContext(ctx context.Context, filename string) *parser.ParseResult {
 	start := time.Now()
 
+	// Check if this looks like a fansub filename
+	fansubDetection := ai.DetectFansub(filename)
+
+	// If fansub detected with high confidence, skip regex and go straight to AI fansub parser
+	if fansubDetection.IsFansub && fansubDetection.Confidence >= 0.6 {
+		return s.parseWithFansubAI(ctx, filename, fansubDetection, start)
+	}
+
 	// Try TV show pattern first (more specific patterns)
 	if s.tvParser.CanParse(filename) {
 		result := s.tvParser.Parse(filename)
@@ -89,9 +98,14 @@ func (s *ParserService) ParseFilenameWithContext(ctx context.Context, filename s
 		}
 	}
 
-	// Regex failed - try AI parsing if configured
+	// Regex failed - check if it's a fansub with lower confidence
+	if fansubDetection.IsFansub {
+		return s.parseWithFansubAI(ctx, filename, fansubDetection, start)
+	}
+
+	// Try generic AI parsing if configured
 	if s.aiService != nil && s.aiService.IsConfigured() {
-		slog.Info("Regex parsing failed, delegating to AI",
+		slog.Info("Regex parsing failed, delegating to generic AI",
 			"filename", filename,
 			"duration_ms", time.Since(start).Milliseconds(),
 		)
@@ -114,7 +128,7 @@ func (s *ParserService) ParseFilenameWithContext(ctx context.Context, filename s
 		}
 
 		// Convert AI response to ParseResult
-		return convertAIResponseToParseResult(filename, aiResult, start)
+		return convertAIResponseToParseResult(filename, aiResult, "ai", s.aiService.GetProviderName(), start)
 	}
 
 	// No AI configured - flag for manual review
@@ -132,13 +146,71 @@ func (s *ParserService) ParseFilenameWithContext(ctx context.Context, filename s
 	}
 }
 
+// parseWithFansubAI handles fansub filename parsing using the specialized AI fansub parser.
+func (s *ParserService) parseWithFansubAI(ctx context.Context, filename string, detection *ai.FansubDetectionResult, start time.Time) *parser.ParseResult {
+	if s.aiService == nil || !s.aiService.IsConfigured() {
+		slog.Info("Fansub detected but AI not configured",
+			"filename", filename,
+			"bracket_type", detection.BracketType,
+			"group_name", detection.GroupName,
+			"duration_ms", time.Since(start).Milliseconds(),
+		)
+		return &parser.ParseResult{
+			OriginalFilename: filename,
+			Status:           parser.ParseStatusNeedsAI,
+			MediaType:        parser.MediaTypeUnknown,
+			ReleaseGroup:     detection.GroupName,
+			Confidence:       0,
+			ErrorMessage:     "Fansub filename detected, AI required for parsing",
+		}
+	}
+
+	slog.Info("Fansub detected, using specialized AI parser",
+		"filename", filename,
+		"bracket_type", detection.BracketType,
+		"group_name", detection.GroupName,
+		"detection_confidence", detection.Confidence,
+		"duration_ms", time.Since(start).Milliseconds(),
+	)
+
+	aiResult, err := s.aiService.ParseFansubFilename(ctx, filename)
+	if err != nil {
+		slog.Warn("AI fansub parsing failed",
+			"filename", filename,
+			"error", err,
+			"duration_ms", time.Since(start).Milliseconds(),
+		)
+		return &parser.ParseResult{
+			OriginalFilename: filename,
+			Status:           parser.ParseStatusNeedsAI,
+			MediaType:        parser.MediaTypeUnknown,
+			ReleaseGroup:     detection.GroupName,
+			Confidence:       0,
+			ErrorMessage:     "AI fansub parsing failed: " + err.Error(),
+		}
+	}
+
+	// Convert AI response to ParseResult with fansub source
+	return convertAIResponseToParseResult(filename, aiResult, "ai_fansub", s.aiService.GetProviderName(), start)
+}
+
 // convertAIResponseToParseResult converts an AI parsing response to ParseResult.
-func convertAIResponseToParseResult(filename string, aiResponse *ai.ParseResponse, start time.Time) *parser.ParseResult {
+// The source parameter indicates the AI parsing method used ("ai" or "ai_fansub").
+// The providerName parameter identifies which AI provider was used.
+func convertAIResponseToParseResult(filename string, aiResponse *ai.ParseResponse, source string, providerName string, start time.Time) *parser.ParseResult {
+	duration := time.Since(start)
+
 	mediaType := parser.MediaTypeUnknown
 	if aiResponse.MediaType == "movie" {
 		mediaType = parser.MediaTypeMovie
 	} else if aiResponse.MediaType == "tv" {
 		mediaType = parser.MediaTypeTVShow
+	}
+
+	// Determine metadata source
+	metadataSource := parser.MetadataSourceAI
+	if source == "ai_fansub" {
+		metadataSource = parser.MetadataSourceAIFansub
 	}
 
 	result := &parser.ParseResult{
@@ -149,17 +221,26 @@ func convertAIResponseToParseResult(filename string, aiResponse *ai.ParseRespons
 		Year:             aiResponse.Year,
 		Season:           aiResponse.Season,
 		Episode:          aiResponse.Episode,
-		Quality:          aiResponse.Quality,
+		Quality:          normalizeQuality(aiResponse.Quality),
+		Source:           normalizeSource(aiResponse.Source),
+		VideoCodec:       normalizeCodec(aiResponse.Codec),
 		ReleaseGroup:     aiResponse.FansubGroup,
+		Language:         aiResponse.Language,
 		Confidence:       int(aiResponse.Confidence * 100),
+		MetadataSource:   metadataSource,
+		ParseDurationMs:  duration.Milliseconds(),
+		AIProvider:       providerName,
 	}
 
 	slog.Info("Parsed with AI",
 		"filename", filename,
 		"title", result.Title,
 		"media_type", result.MediaType,
+		"source_method", source,
+		"fansub_group", result.ReleaseGroup,
+		"language", result.Language,
 		"confidence", result.Confidence,
-		"duration_ms", time.Since(start).Milliseconds(),
+		"duration_ms", duration.Milliseconds(),
 	)
 
 	return result
@@ -212,4 +293,84 @@ func calculateConfidence(result *parser.ParseResult) int {
 	}
 
 	return confidence
+}
+
+// normalizeQuality converts various quality representations to standard values.
+// Handles formats like "1080p", "1920x1080", "4K", "2160p", etc.
+// Returns lowercase standard format (e.g., "1080p", "720p", "2160p").
+func normalizeQuality(quality string) string {
+	if quality == "" {
+		return ""
+	}
+
+	quality = strings.ToLower(quality)
+
+	// Handle dimension formats like "1920x1080" and various quality representations
+	switch {
+	case strings.Contains(quality, "2160") || strings.Contains(quality, "4k") || strings.Contains(quality, "uhd"):
+		return "2160p"
+	case strings.Contains(quality, "1920") || strings.Contains(quality, "1080"):
+		return "1080p"
+	case strings.Contains(quality, "1280") || strings.Contains(quality, "720"):
+		return "720p"
+	case strings.Contains(quality, "480"):
+		return "480p"
+	case strings.Contains(quality, "360"):
+		return "360p"
+	default:
+		// Return lowercase for consistency
+		return quality
+	}
+}
+
+// normalizeSource converts various source representations to standard values.
+// Handles formats like "BD", "Blu-ray", "BluRay", "WEB-DL", etc.
+func normalizeSource(source string) string {
+	if source == "" {
+		return ""
+	}
+
+	source = strings.ToLower(source)
+
+	switch {
+	case strings.Contains(source, "bd") || strings.Contains(source, "blu"):
+		return "BD"
+	case strings.Contains(source, "web"):
+		return "WEB"
+	case strings.Contains(source, "hdtv") || strings.Contains(source, "tv"):
+		return "TV"
+	case strings.Contains(source, "dvd"):
+		return "DVD"
+	default:
+		return strings.ToUpper(source)
+	}
+}
+
+// normalizeCodec converts various codec representations to standard values.
+// Handles formats like "x264", "h.264", "x265", "HEVC", etc.
+func normalizeCodec(codec string) string {
+	if codec == "" {
+		return ""
+	}
+
+	codec = strings.ToLower(codec)
+
+	switch {
+	case strings.Contains(codec, "x265") || strings.Contains(codec, "hevc") || strings.Contains(codec, "h.265") || strings.Contains(codec, "h265"):
+		return "x265"
+	case strings.Contains(codec, "x264") || strings.Contains(codec, "avc") || strings.Contains(codec, "h.264") || strings.Contains(codec, "h264"):
+		return "x264"
+	case strings.Contains(codec, "av1"):
+		return "AV1"
+	case strings.Contains(codec, "vp9"):
+		return "VP9"
+	case strings.Contains(codec, "aac"):
+		return "AAC"
+	case strings.Contains(codec, "flac"):
+		return "FLAC"
+	case strings.Contains(codec, "dts"):
+		return "DTS"
+	default:
+		return strings.ToUpper(codec)
+	}
 }

@@ -9,11 +9,27 @@ type ParseStatus string
 const (
 	// ParseStatusSuccess indicates the filename was successfully parsed.
 	ParseStatusSuccess ParseStatus = "success"
+	// ParseStatusParsing indicates parsing is currently in progress (for async/UI updates).
+	ParseStatusParsing ParseStatus = "parsing"
 	// ParseStatusNeedsAI indicates the filename could not be parsed with
 	// standard patterns and requires AI-powered parsing.
 	ParseStatusNeedsAI ParseStatus = "needs_ai"
 	// ParseStatusFailed indicates the parsing operation failed completely.
 	ParseStatusFailed ParseStatus = "failed"
+)
+
+// MetadataSource indicates the method used to parse the filename.
+type MetadataSource string
+
+const (
+	// MetadataSourceRegex indicates metadata was extracted using regex patterns.
+	MetadataSourceRegex MetadataSource = "regex"
+	// MetadataSourceAI indicates metadata was extracted using generic AI parsing.
+	MetadataSourceAI MetadataSource = "ai"
+	// MetadataSourceAIFansub indicates metadata was extracted using specialized AI fansub parser.
+	MetadataSourceAIFansub MetadataSource = "ai_fansub"
+	// MetadataSourceManual indicates metadata was manually entered.
+	MetadataSourceManual MetadataSource = "manual"
 )
 
 // MediaType represents the type of media identified from the filename.
@@ -64,11 +80,23 @@ type ParseResult struct {
 	// ReleaseGroup is the group that released the file (e.g., "SPARKS", "YTS").
 	ReleaseGroup string `json:"release_group,omitempty"`
 
+	// Language indicates subtitle/audio language if detected.
+	Language string `json:"language,omitempty"`
+
 	// Confidence is a score from 0-100 indicating parsing reliability.
 	Confidence int `json:"confidence"`
 
 	// ErrorMessage contains details if parsing failed.
 	ErrorMessage string `json:"error_message,omitempty"`
+
+	// MetadataSource indicates which method was used to parse the filename.
+	MetadataSource MetadataSource `json:"metadata_source,omitempty"`
+
+	// ParseDurationMs is the time taken to parse the filename in milliseconds.
+	ParseDurationMs int64 `json:"parse_duration_ms,omitempty"`
+
+	// AIProvider is the AI provider used if metadata was extracted via AI.
+	AIProvider string `json:"ai_provider,omitempty"`
 }
 
 // Parser defines the interface for filename parsers.

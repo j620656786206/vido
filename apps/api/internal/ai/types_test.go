@@ -94,3 +94,52 @@ func TestErrorConstants(t *testing.T) {
 	assert.Contains(t, ErrAIProviderError.Error(), "AI_PROVIDER_ERROR")
 	assert.Contains(t, ErrAINotConfigured.Error(), "AI_NOT_CONFIGURED")
 }
+
+func TestCleanJSONResponse(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "plain JSON - no change",
+			input:    `{"title": "Test", "media_type": "movie"}`,
+			expected: `{"title": "Test", "media_type": "movie"}`,
+		},
+		{
+			name:     "JSON with json code block",
+			input:    "```json\n{\"title\": \"Test\"}\n```",
+			expected: `{"title": "Test"}`,
+		},
+		{
+			name:     "JSON with plain code block",
+			input:    "```\n{\"title\": \"Test\"}\n```",
+			expected: `{"title": "Test"}`,
+		},
+		{
+			name:     "JSON with code block and whitespace",
+			input:    "  ```json\n  {\"title\": \"Test\"}\n  ```  ",
+			expected: `{"title": "Test"}`,
+		},
+		{
+			name: "multiline JSON in code block",
+			input: "```json\n{\n  \"title\": \"Test\",\n  \"year\": 2023\n}\n```",
+			expected: `{
+  "title": "Test",
+  "year": 2023
+}`,
+		},
+		{
+			name:     "already clean - with leading/trailing whitespace",
+			input:    "  {\"title\": \"Test\"}  ",
+			expected: `{"title": "Test"}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := CleanJSONResponse(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}

@@ -11,6 +11,7 @@ import (
 func TestParseStatus_Constants(t *testing.T) {
 	// Verify all expected status constants exist
 	assert.Equal(t, ParseStatus("success"), ParseStatusSuccess)
+	assert.Equal(t, ParseStatus("parsing"), ParseStatusParsing)
 	assert.Equal(t, ParseStatus("needs_ai"), ParseStatusNeedsAI)
 	assert.Equal(t, ParseStatus("failed"), ParseStatusFailed)
 }
@@ -150,4 +151,89 @@ func (m *mockParser) Parse(filename string) *ParseResult {
 
 func (m *mockParser) CanParse(filename string) bool {
 	return true
+}
+
+func TestMetadataSource_Constants(t *testing.T) {
+	// Verify all expected metadata source constants exist
+	assert.Equal(t, MetadataSource("regex"), MetadataSourceRegex)
+	assert.Equal(t, MetadataSource("ai"), MetadataSourceAI)
+	assert.Equal(t, MetadataSource("ai_fansub"), MetadataSourceAIFansub)
+	assert.Equal(t, MetadataSource("manual"), MetadataSourceManual)
+}
+
+func TestParseResult_NewFansubFields(t *testing.T) {
+	// Test new fields added for fansub parsing (Story 3.2)
+	result := &ParseResult{
+		OriginalFilename: "【幻櫻字幕組】我的英雄學院 第01話 1080P.mp4",
+		Status:           ParseStatusSuccess,
+		MediaType:        MediaTypeTVShow,
+		Title:            "我的英雄學院",
+		Season:           1,
+		Episode:          1,
+		Quality:          "1080p",
+		ReleaseGroup:     "幻櫻字幕組",
+		Language:         "Traditional Chinese",
+		MetadataSource:   MetadataSourceAIFansub,
+		ParseDurationMs:  250,
+		AIProvider:       "gemini",
+		Confidence:       92,
+	}
+
+	// Verify all new fields
+	assert.Equal(t, "Traditional Chinese", result.Language)
+	assert.Equal(t, MetadataSourceAIFansub, result.MetadataSource)
+	assert.Equal(t, int64(250), result.ParseDurationMs)
+	assert.Equal(t, "gemini", result.AIProvider)
+}
+
+func TestParseResult_ParsingStatus(t *testing.T) {
+	// Test the new parsing status for in-progress operations
+	result := &ParseResult{
+		OriginalFilename: "test.mkv",
+		Status:           ParseStatusParsing,
+		MediaType:        MediaTypeUnknown,
+		Confidence:       0,
+	}
+
+	assert.Equal(t, ParseStatusParsing, result.Status)
+}
+
+func TestParseResult_JSONSerialization_NewFields(t *testing.T) {
+	result := &ParseResult{
+		OriginalFilename: "[SubsPlease] Anime - 01.mkv",
+		Status:           ParseStatusSuccess,
+		MediaType:        MediaTypeTVShow,
+		Title:            "Anime",
+		Season:           1,
+		Episode:          1,
+		Quality:          "1080p",
+		ReleaseGroup:     "SubsPlease",
+		Language:         "Japanese",
+		MetadataSource:   MetadataSourceAIFansub,
+		ParseDurationMs:  150,
+		AIProvider:       "claude",
+		Confidence:       88,
+	}
+
+	// Test serialization includes new fields
+	jsonBytes, err := json.Marshal(result)
+	require.NoError(t, err)
+
+	jsonStr := string(jsonBytes)
+
+	// New fields should be present
+	assert.Contains(t, jsonStr, `"language":"Japanese"`)
+	assert.Contains(t, jsonStr, `"metadata_source":"ai_fansub"`)
+	assert.Contains(t, jsonStr, `"parse_duration_ms":150`)
+	assert.Contains(t, jsonStr, `"ai_provider":"claude"`)
+
+	// Test deserialization
+	var decoded ParseResult
+	err = json.Unmarshal(jsonBytes, &decoded)
+	require.NoError(t, err)
+
+	assert.Equal(t, result.Language, decoded.Language)
+	assert.Equal(t, result.MetadataSource, decoded.MetadataSource)
+	assert.Equal(t, result.ParseDurationMs, decoded.ParseDurationMs)
+	assert.Equal(t, result.AIProvider, decoded.AIProvider)
 }

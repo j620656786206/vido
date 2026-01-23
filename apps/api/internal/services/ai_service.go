@@ -4,9 +4,16 @@ import (
 	"context"
 	"database/sql"
 	"log/slog"
+	"time"
 
 	"github.com/vido/api/internal/ai"
+	"github.com/vido/api/internal/ai/prompts"
 	"github.com/vido/api/internal/config"
+)
+
+const (
+	// FansubParsingTimeout is the maximum time for fansub AI parsing (NFR-P14).
+	FansubParsingTimeout = 10 * time.Second
 )
 
 // AIServiceInterface defines the contract for AI parsing services.
@@ -14,6 +21,11 @@ type AIServiceInterface interface {
 	// ParseFilename sends a filename to AI for parsing.
 	// Uses cache-first strategy with 30-day TTL.
 	ParseFilename(ctx context.Context, filename string) (*ai.ParseResponse, error)
+
+	// ParseFansubFilename parses a fansub filename using a specialized prompt.
+	// Optimized for Japanese and Chinese fansub naming conventions.
+	// Uses cache-first strategy with 30-day TTL.
+	ParseFansubFilename(ctx context.Context, filename string) (*ai.ParseResponse, error)
 
 	// ClearCache removes all cached AI parsing results.
 	ClearCache(ctx context.Context) (int64, error)
@@ -26,6 +38,9 @@ type AIServiceInterface interface {
 
 	// IsConfigured returns true if an AI provider is configured.
 	IsConfigured() bool
+
+	// GetProviderName returns the name of the configured AI provider.
+	GetProviderName() string
 }
 
 // AIService orchestrates AI parsing with caching.
@@ -116,6 +131,99 @@ func (s *AIService) ParseFilename(ctx context.Context, filename string) (*ai.Par
 		)
 		// Don't fail the request if caching fails
 	}
+
+	return response, nil
+}
+
+// ParseFansubFilename parses a fansub filename using a specialized prompt.
+// Optimized for Japanese and Chinese fansub naming conventions.
+// Enforces 10-second timeout per NFR-P14.
+func (s *AIService) ParseFansubFilename(ctx context.Context, filename string) (*ai.ParseResponse, error) {
+	start := time.Now()
+
+	if s.provider == nil {
+		return nil, ai.ErrAINotConfigured
+	}
+
+	// Use fansub-specific cache key prefix to avoid collisions
+	cacheKey := "fansub:" + filename
+
+	// Check cache first
+	cached, err := s.cache.Get(ctx, cacheKey)
+	if err != nil {
+		slog.Warn("Cache lookup failed for fansub parsing, proceeding with AI",
+			"error", err,
+			"filename", filename,
+			"duration_ms", time.Since(start).Milliseconds(),
+		)
+		// Continue to AI parsing
+	} else if cached != nil {
+		slog.Debug("Cache hit for fansub AI parsing",
+			"filename", filename,
+			"title", cached.Title,
+			"duration_ms", time.Since(start).Milliseconds(),
+		)
+		return cached, nil
+	}
+
+	// Apply 10-second timeout for fansub parsing (NFR-P14)
+	ctx, cancel := context.WithTimeout(ctx, FansubParsingTimeout)
+	defer cancel()
+
+	// Build fansub-specific prompt
+	fansubPrompt := prompts.BuildFansubPrompt(filename)
+
+	// Parse with AI using specialized prompt
+	req := &ai.ParseRequest{
+		Filename: filename,
+		Prompt:   fansubPrompt,
+	}
+
+	slog.Debug("Starting fansub AI parsing",
+		"filename", filename,
+		"timeout_seconds", FansubParsingTimeout.Seconds(),
+	)
+
+	response, err := s.provider.Parse(ctx, req)
+	if err != nil {
+		duration := time.Since(start)
+		slog.Error("AI fansub parsing failed",
+			"error", err,
+			"filename", filename,
+			"duration_ms", duration.Milliseconds(),
+			"timeout_exceeded", ctx.Err() == context.DeadlineExceeded,
+		)
+		return nil, err
+	}
+
+	duration := time.Since(start)
+
+	// Validate response confidence
+	if response.Confidence < 0.3 {
+		slog.Warn("Low confidence fansub parsing result",
+			"filename", filename,
+			"confidence", response.Confidence,
+			"title", response.Title,
+			"duration_ms", duration.Milliseconds(),
+		)
+	}
+
+	// Cache the result with fansub prefix
+	if err := s.cache.Set(ctx, cacheKey, s.provider.Name(), "fansub", response); err != nil {
+		slog.Warn("Failed to cache fansub AI response",
+			"error", err,
+			"filename", filename,
+		)
+		// Don't fail the request if caching fails
+	}
+
+	slog.Info("Fansub filename parsed successfully",
+		"filename", filename,
+		"title", response.Title,
+		"fansub_group", response.FansubGroup,
+		"confidence", response.Confidence,
+		"duration_ms", duration.Milliseconds(),
+	)
 
 	return response, nil
 }

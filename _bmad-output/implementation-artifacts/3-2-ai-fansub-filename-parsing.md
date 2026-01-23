@@ -1,6 +1,6 @@
 # Story 3.2: AI Fansub Filename Parsing
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -43,50 +43,50 @@ So that **files like `[Leopard-Raws] Show - 01 (BD 1080p).mkv` are correctly ide
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Design AI Prompt for Fansub Parsing (AC: 1, 2)
-  - [ ] 1.1: Create prompt template for extracting structured data from fansub filenames
-  - [ ] 1.2: Include examples of common fansub naming patterns (Japanese, Chinese, English)
-  - [ ] 1.3: Define JSON output schema for AI response
-  - [ ] 1.4: Test prompt with various fansub naming conventions
-  - [ ] 1.5: Store prompt in `/apps/api/internal/ai/prompts/fansub_parser.go`
+- [x] Task 1: Design AI Prompt for Fansub Parsing (AC: 1, 2)
+  - [x] 1.1: Create prompt template for extracting structured data from fansub filenames
+  - [x] 1.2: Include examples of common fansub naming patterns (Japanese, Chinese, English)
+  - [x] 1.3: Define JSON output schema for AI response
+  - [x] 1.4: Test prompt with various fansub naming conventions
+  - [x] 1.5: Store prompt in `/apps/api/internal/ai/prompts/fansub_parser.go`
 
-- [ ] Task 2: Extend AI Service with Fansub Parsing (AC: 1, 2, 4)
-  - [ ] 2.1: Add `ParseFansubFilename()` method to AIService interface
-  - [ ] 2.2: Implement fansub-specific parsing logic using AI provider
-  - [ ] 2.3: Map AI response to existing `parser.ParseResult` struct
-  - [ ] 2.4: Handle edge cases (partial extraction, low confidence)
-  - [ ] 2.5: Write unit tests with mocked AI responses
+- [x] Task 2: Extend AI Service with Fansub Parsing (AC: 1, 2, 4)
+  - [x] 2.1: Add `ParseFansubFilename()` method to AIService interface
+  - [x] 2.2: Implement fansub-specific parsing logic using AI provider
+  - [x] 2.3: Map AI response to existing `parser.ParseResult` struct
+  - [x] 2.4: Handle edge cases (partial extraction, low confidence)
+  - [x] 2.5: Write unit tests with mocked AI responses
 
-- [ ] Task 3: Create Fansub Pattern Recognition (AC: 1, 2)
-  - [ ] 3.1: Create `/apps/api/internal/ai/fansub_detector.go`
-  - [ ] 3.2: Implement `IsFansubFilename()` to detect fansub patterns
-  - [ ] 3.3: Recognize common fansub group brackets: `[]`, `【】`, `「」`
-  - [ ] 3.4: Write detection tests
+- [x] Task 3: Create Fansub Pattern Recognition (AC: 1, 2)
+  - [x] 3.1: Create `/apps/api/internal/ai/fansub_detector.go`
+  - [x] 3.2: Implement `IsFansubFilename()` to detect fansub patterns
+  - [x] 3.3: Recognize common fansub group brackets: `[]`, `【】`, `「」`
+  - [x] 3.4: Write detection tests
 
-- [ ] Task 4: Integrate with Parser Service (AC: 4)
-  - [ ] 4.1: Update `ParserService` to accept optional `AIService` dependency
-  - [ ] 4.2: When `ParseStatusNeedsAI`, call AI service if available
-  - [ ] 4.3: Update parse status to `success` or `failed` based on AI result
-  - [ ] 4.4: Store metadata source as "ai" when AI parsing succeeds
-  - [ ] 4.5: Write integration tests
+- [x] Task 4: Integrate with Parser Service (AC: 4)
+  - [x] 4.1: Update `ParserService` to accept optional `AIService` dependency
+  - [x] 4.2: When `ParseStatusNeedsAI`, call AI service if available
+  - [x] 4.3: Update parse status to `success` or `failed` based on AI result
+  - [x] 4.4: Store metadata source as "ai" when AI parsing succeeds
+  - [x] 4.5: Write integration tests
 
-- [ ] Task 5: Implement Performance Optimization (AC: 3)
-  - [ ] 5.1: Add context timeout of 10 seconds (NFR-P14)
-  - [ ] 5.2: Implement early termination if AI takes too long
-  - [ ] 5.3: Return partial results if available before timeout
-  - [ ] 5.4: Add performance logging with slog
+- [x] Task 5: Implement Performance Optimization (AC: 3)
+  - [x] 5.1: Add context timeout of 10 seconds (NFR-P14)
+  - [x] 5.2: Implement early termination if AI takes too long
+  - [ ] 5.3: Return partial results if available before timeout *(deferred - requires streaming API support)*
+  - [x] 5.4: Add performance logging with slog
 
-- [ ] Task 6: Add Parse Status Tracking (AC: 3)
-  - [ ] 6.1: Add `ParseStatusParsing` status for in-progress parsing
-  - [ ] 6.2: Emit parsing progress events (for future WebSocket/SSE)
-  - [ ] 6.3: Store parsing attempt metadata (start time, provider used)
+- [x] Task 6: Add Parse Status Tracking (AC: 3)
+  - [x] 6.1: Add `ParseStatusParsing` status for in-progress parsing
+  - [ ] 6.2: Emit parsing progress events *(deferred - requires WebSocket/SSE implementation)*
+  - [x] 6.3: Store parsing attempt metadata (duration, provider used via AIProvider field)
 
-- [ ] Task 7: Handle Fansub-Specific Metadata (AC: 1, 2)
-  - [ ] 7.1: Extract fansub group name (store but don't use for search)
-  - [ ] 7.2: Extract language/subtitle indicators (繁體, 簡體, etc.)
-  - [ ] 7.3: Extract video source (BD, WEB, TV, etc.)
-  - [ ] 7.4: Extract codec information (x264, x265, HEVC, etc.)
-  - [ ] 7.5: Map extracted quality to standard values (1080p, 720p, 4K)
+- [x] Task 7: Handle Fansub-Specific Metadata (AC: 1, 2)
+  - [x] 7.1: Extract fansub group name (store but don't use for search)
+  - [x] 7.2: Extract language/subtitle indicators (繁體, 簡體, etc.)
+  - [x] 7.3: Extract video source (BD, WEB, TV, etc.)
+  - [x] 7.4: Extract codec information (x264, x265, HEVC, etc.)
+  - [x] 7.5: Map extracted quality to standard values (1080p, 720p, 4K)
 
 ## Dev Notes
 
@@ -312,10 +312,81 @@ CLAUDE_API_KEY=your-key
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.5 (claude-opus-4-5-20251101)
 
 ### Debug Log References
 
+- All tests passing: `go test ./internal/... -v`
+
 ### Completion Notes List
 
+1. Created specialized fansub prompt template with comprehensive examples for Japanese and Chinese naming conventions
+2. Implemented `ParseFansubFilename()` method with 10-second timeout per NFR-P14
+3. Created fansub detector with confidence scoring for bracket patterns, Chinese episode notation, and known groups
+4. Integrated fansub detection into ParserService - automatically routes to specialized AI parser when fansub patterns detected
+5. Added `ParseStatusParsing` and `MetadataSource` types for tracking parse progress and source
+6. Implemented normalize functions for quality, source, and codec values
+7. Extended `ParseResult` with new fields: `Language`, `MetadataSource`, `ParseDurationMs`, `AIProvider`
+8. Separate cache keys for fansub parsing (`fansub:` prefix) to avoid collisions with generic AI parsing
+
 ### File List
+
+**Created:**
+- `apps/api/internal/ai/prompts/fansub_parser.go` - Fansub prompt template and examples
+- `apps/api/internal/ai/prompts/fansub_parser_test.go` - Prompt tests
+- `apps/api/internal/ai/fansub_detector.go` - Fansub pattern detection
+- `apps/api/internal/ai/fansub_detector_test.go` - Detector tests
+
+**Modified:**
+- `apps/api/internal/ai/types.go` - Added TitleRomanized, Source, Codec, Language fields to ParseResponse; Added CleanJSONResponse helper
+- `apps/api/internal/services/ai_service.go` - Added ParseFansubFilename() method with 10s timeout; Added GetProviderName() to interface
+- `apps/api/internal/services/ai_service_test.go` - Added fansub parsing tests
+- `apps/api/internal/services/parser_service.go` - Integrated fansub detection and AI routing; Added AIProvider field population
+- `apps/api/internal/services/parser_service_test.go` - Added integration tests, normalize tests, and AIProvider verification
+- `apps/api/internal/parser/types.go` - Added ParseStatusParsing, MetadataSource, and new ParseResult fields
+- `apps/api/internal/parser/types_test.go` - Added new type tests
+
+## Senior Developer Review (AI)
+
+**Review Date:** 2026-01-23
+**Reviewer:** Claude Opus 4.5 (Amelia - Dev Agent)
+
+### Review Outcome: APPROVED with notes
+
+### Issues Found and Fixed
+
+| # | Severity | Issue | Resolution |
+|---|----------|-------|------------|
+| 1 | HIGH | Task 6.2 marked complete but event emission not implemented | Updated task status to deferred - requires WebSocket/SSE infrastructure |
+| 2 | MEDIUM | AIProvider field never populated in ParseResult | Fixed: Added GetProviderName() to interface and populate AIProvider |
+| 3 | MEDIUM | Task 5.3 partial results not implemented | Updated task status to deferred - requires streaming API support |
+| 4 | MEDIUM | Timeout error message referenced 15s instead of 10s | Fixed: Made error message generic |
+| 5 | MEDIUM | No markdown code block stripping for AI responses | Fixed: Added CleanJSONResponse() helper function with tests |
+| 6 | MEDIUM | Regex compiled on every containsEpisodeDashPattern call | Fixed: Pre-compiled to package-level pattern |
+
+### Acceptance Criteria Validation
+
+| AC | Status | Notes |
+|----|--------|-------|
+| AC1 | PASS | Japanese fansub parsing working with comprehensive tests |
+| AC2 | PASS | Chinese fansub parsing working with fullwidth bracket support |
+| AC3 | PARTIAL | 10s timeout implemented; progress events deferred to future WebSocket story |
+| AC4 | PASS | Integration with ParserService complete, automatic AI delegation working |
+
+### Code Quality Notes
+
+**Strengths:**
+- Comprehensive test coverage for all new functionality
+- Well-designed confidence scoring system in fansub detector
+- Proper separation of concerns (detector, prompts, service)
+- Cache separation with `fansub:` prefix prevents key collisions
+
+**Deferred Items (require architectural changes):**
+- Task 5.3: Partial results require streaming API - current provider.Parse is blocking
+- Task 6.2: Progress events require WebSocket/SSE transport layer
+
+### Change Log
+
+| Date | Change | Author |
+|------|--------|--------|
+| 2026-01-23 | Code review fixes: AIProvider, regex pre-compile, CleanJSONResponse, error messages | Claude Opus 4.5 |
