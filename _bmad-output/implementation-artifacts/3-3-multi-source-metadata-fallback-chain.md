@@ -1,6 +1,6 @@
 # Story 3.3: Multi-Source Metadata Fallback Chain
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -42,58 +42,58 @@ So that **I always get metadata even when one source fails**.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create Metadata Provider Interface (AC: 1, 2, 4)
-  - [ ] 1.1: Create `/apps/api/internal/metadata/provider.go` with `MetadataProvider` interface
-  - [ ] 1.2: Define common `SearchRequest` and `SearchResult` types
-  - [ ] 1.3: Create `ProviderStatus` enum (available, unavailable, rate_limited)
-  - [ ] 1.4: Write interface tests
+- [x] Task 1: Create Metadata Provider Interface (AC: 1, 2, 4)
+  - [x] 1.1: Create `/apps/api/internal/metadata/provider.go` with `MetadataProvider` interface
+  - [x] 1.2: Define common `SearchRequest` and `SearchResult` types
+  - [x] 1.3: Create `ProviderStatus` enum (available, unavailable, rate_limited)
+  - [x] 1.4: Write interface tests
 
-- [ ] Task 2: Implement Circuit Breaker (AC: 5)
-  - [ ] 2.1: Create `/apps/api/internal/metadata/circuit_breaker.go`
-  - [ ] 2.2: Implement states: Closed (normal), Open (failing), Half-Open (testing)
-  - [ ] 2.3: Configure thresholds: 5 failures to open, 30s timeout to half-open
-  - [ ] 2.4: Add metrics for circuit state changes
-  - [ ] 2.5: Write circuit breaker tests
+- [x] Task 2: Implement Circuit Breaker (AC: 5)
+  - [x] 2.1: Create `/apps/api/internal/metadata/circuit_breaker.go`
+  - [x] 2.2: Implement states: Closed (normal), Open (failing), Half-Open (testing)
+  - [x] 2.3: Configure thresholds: 5 failures to open, 30s timeout to half-open
+  - [x] 2.4: Add metrics for circuit state changes
+  - [x] 2.5: Write circuit breaker tests
 
-- [ ] Task 3: Create Fallback Chain Orchestrator (AC: 1, 2, 3, 4)
-  - [ ] 3.1: Create `/apps/api/internal/metadata/orchestrator.go`
-  - [ ] 3.2: Implement ordered provider chain: TMDb → Douban → Wikipedia → Manual
-  - [ ] 3.3: Add <1 second timeout between fallbacks (NFR-R3)
-  - [ ] 3.4: Emit progress events for each source attempt
-  - [ ] 3.5: Return first successful result with source indication
-  - [ ] 3.6: Write orchestrator tests
+- [x] Task 3: Create Fallback Chain Orchestrator (AC: 1, 2, 3, 4)
+  - [x] 3.1: Create `/apps/api/internal/metadata/orchestrator.go`
+  - [x] 3.2: Implement ordered provider chain: TMDb → Douban → Wikipedia → Manual
+  - [x] 3.3: Add <1 second timeout between fallbacks (NFR-R3)
+  - [x] 3.4: Emit progress events for each source attempt
+  - [x] 3.5: Return first successful result with source indication
+  - [x] 3.6: Write orchestrator tests
 
-- [ ] Task 4: Adapt TMDb Service as Provider (AC: 1, 4)
-  - [ ] 4.1: Create `/apps/api/internal/metadata/tmdb_provider.go`
-  - [ ] 4.2: Wrap existing `TMDbService` to implement `MetadataProvider`
-  - [ ] 4.3: Map TMDb responses to common `SearchResult` format
-  - [ ] 4.4: Write adapter tests
+- [x] Task 4: Adapt TMDb Service as Provider (AC: 1, 4)
+  - [x] 4.1: Create `/apps/api/internal/metadata/tmdb_provider.go`
+  - [x] 4.2: Wrap existing `TMDbService` to implement `MetadataProvider`
+  - [x] 4.3: Map TMDb responses to common `SearchResult` format
+  - [x] 4.4: Write adapter tests
 
-- [ ] Task 5: Create Douban Provider Stub (AC: 2, 4)
-  - [ ] 5.1: Create `/apps/api/internal/metadata/douban_provider.go`
-  - [ ] 5.2: Implement `MetadataProvider` interface (stub for now)
-  - [ ] 5.3: Return "not implemented" until Story 3.4
-  - [ ] 5.4: Add configuration for enable/disable
+- [x] Task 5: Create Douban Provider Stub (AC: 2, 4)
+  - [x] 5.1: Create `/apps/api/internal/metadata/douban_provider.go`
+  - [x] 5.2: Implement `MetadataProvider` interface (stub for now)
+  - [x] 5.3: Return "not implemented" until Story 3.4
+  - [x] 5.4: Add configuration for enable/disable
 
-- [ ] Task 6: Create Wikipedia Provider Stub (AC: 2, 4)
-  - [ ] 6.1: Create `/apps/api/internal/metadata/wikipedia_provider.go`
-  - [ ] 6.2: Implement `MetadataProvider` interface (stub for now)
-  - [ ] 6.3: Return "not implemented" until Story 3.5
-  - [ ] 6.4: Add rate limiter for 1 req/s (NFR-I14)
+- [x] Task 6: Create Wikipedia Provider Stub (AC: 2, 4)
+  - [x] 6.1: Create `/apps/api/internal/metadata/wikipedia_provider.go`
+  - [x] 6.2: Implement `MetadataProvider` interface (stub for now)
+  - [x] 6.3: Return "not implemented" until Story 3.5
+  - [x] 6.4: Add rate limiter for 1 req/s (NFR-I14)
 
-- [ ] Task 7: Create Metadata Service (AC: 1, 2, 3, 4, 5)
-  - [ ] 7.1: Create `/apps/api/internal/services/metadata_service.go`
-  - [ ] 7.2: Define `MetadataServiceInterface` in services package
-  - [ ] 7.3: Inject orchestrator with configured providers
-  - [ ] 7.4: Implement `SearchMetadata()` method
-  - [ ] 7.5: Wire up in `main.go`
-  - [ ] 7.6: Write service tests
+- [x] Task 7: Create Metadata Service (AC: 1, 2, 3, 4, 5)
+  - [x] 7.1: Create `/apps/api/internal/services/metadata_service.go`
+  - [x] 7.2: Define `MetadataServiceInterface` in services package
+  - [x] 7.3: Inject orchestrator with configured providers
+  - [x] 7.4: Implement `SearchMetadata()` method
+  - [x] 7.5: Wire up in `main.go`
+  - [x] 7.6: Write service tests
 
-- [ ] Task 8: Update API Endpoints (AC: 3, 4)
-  - [ ] 8.1: Create `/api/v1/metadata/search` endpoint
-  - [ ] 8.2: Return fallback status in response
-  - [ ] 8.3: Include source indication in results
-  - [ ] 8.4: Write handler tests
+- [x] Task 8: Update API Endpoints (AC: 3, 4)
+  - [x] 8.1: Create `/api/v1/metadata/search` endpoint
+  - [x] 8.2: Return fallback status in response
+  - [x] 8.3: Include source indication in results
+  - [x] 8.4: Write handler tests
 
 ## Dev Notes
 
@@ -391,10 +391,43 @@ Following project-context.md Rule 7:
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+claude-opus-4-5-20251101
 
 ### Debug Log References
 
+- Fixed import cycle between `metadata` and `services` packages by defining `TMDbSearcher` interface directly in metadata package
+- Fixed circuit breaker test race conditions by using channels instead of slice appends for callback verification
+- Added JSON tags to `FallbackStatus` and `SourceAttempt` structs for proper API response serialization
+
 ### Completion Notes List
 
+1. **Task 1-3**: Created core metadata abstraction layer with provider interface, circuit breaker pattern (with configurable thresholds), and fallback chain orchestrator with <1s delay enforcement
+2. **Task 4**: Adapted existing TMDb service as first provider in the chain, converting responses to common format
+3. **Task 5-6**: Created Douban and Wikipedia provider stubs returning "not implemented" errors - ready for Stories 3.4 and 3.5
+4. **Task 7**: Created MetadataService that wires orchestrator with all providers, supports enable/disable config per provider
+5. **Task 8**: Created MetadataHandler with `/api/v1/metadata/search` and `/api/v1/metadata/providers` endpoints, wired up in main.go
+6. Added configuration options: `ENABLE_DOUBAN`, `ENABLE_WIKIPEDIA`, `ENABLE_CIRCUIT_BREAKER`, `FALLBACK_DELAY_MS`, `CIRCUIT_BREAKER_FAILURE_THRESHOLD`, `CIRCUIT_BREAKER_TIMEOUT_SECONDS`
+
 ### File List
+
+**New Files Created:**
+- `apps/api/internal/metadata/provider.go` - MetadataProvider interface, SearchRequest, SearchResult, MetadataItem types
+- `apps/api/internal/metadata/provider_test.go` - Interface and type tests
+- `apps/api/internal/metadata/circuit_breaker.go` - Circuit breaker implementation with 3 states
+- `apps/api/internal/metadata/circuit_breaker_test.go` - Circuit breaker state transition tests
+- `apps/api/internal/metadata/orchestrator.go` - Fallback chain orchestrator with FallbackStatus tracking
+- `apps/api/internal/metadata/orchestrator_test.go` - Orchestrator tests including timeout and cancellation
+- `apps/api/internal/metadata/tmdb_provider.go` - TMDb adapter implementing MetadataProvider
+- `apps/api/internal/metadata/tmdb_provider_test.go` - TMDb provider tests
+- `apps/api/internal/metadata/douban_provider.go` - Douban stub provider
+- `apps/api/internal/metadata/douban_provider_test.go` - Douban provider tests
+- `apps/api/internal/metadata/wikipedia_provider.go` - Wikipedia stub provider with rate limiter
+- `apps/api/internal/metadata/wikipedia_provider_test.go` - Wikipedia provider tests
+- `apps/api/internal/services/metadata_service.go` - MetadataServiceInterface and implementation
+- `apps/api/internal/services/metadata_service_test.go` - Service tests
+- `apps/api/internal/handlers/metadata_handler.go` - HTTP handlers for metadata endpoints
+- `apps/api/internal/handlers/metadata_handler_test.go` - Handler tests
+
+**Modified Files:**
+- `apps/api/internal/config/config.go` - Added metadata fallback chain configuration fields and loadBool helper
+- `apps/api/cmd/api/main.go` - Wired up MetadataService and MetadataHandler

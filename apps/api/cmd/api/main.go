@@ -138,6 +138,17 @@ func main() {
 	// Initialize parser service with optional AI integration (Story 2.5, updated Story 3.1)
 	parserService := services.NewParserServiceWithAI(aiService)
 
+	// Initialize metadata service with multi-source fallback chain (Story 3.3)
+	metadataService := services.NewMetadataService(services.MetadataServiceConfig{
+		TMDbImageBaseURL:               "https://image.tmdb.org/t/p/w500",
+		EnableDouban:                   cfg.EnableDouban,
+		EnableWikipedia:                cfg.EnableWikipedia,
+		EnableCircuitBreaker:           cfg.EnableCircuitBreaker,
+		FallbackDelayMs:                cfg.FallbackDelayMs,
+		CircuitBreakerFailureThreshold: cfg.CircuitBreakerFailureThreshold,
+		CircuitBreakerTimeoutSeconds:   cfg.CircuitBreakerTimeoutSeconds,
+	}, tmdbService)
+
 	slog.Info("Services initialized with repository injection")
 
 	// Initialize handlers with injected service interfaces
@@ -148,6 +159,7 @@ func main() {
 	mediaHandler := handlers.NewMediaHandler(mediaService)
 	tmdbHandler := handlers.NewTMDbHandler(tmdbService)
 	parserHandler := handlers.NewParserHandler(parserService)
+	metadataHandler := handlers.NewMetadataHandler(metadataService)
 	slog.Info("Handlers initialized with service injection")
 
 	// Create Gin router
@@ -173,6 +185,7 @@ func main() {
 		mediaHandler.RegisterRoutes(apiV1)
 		tmdbHandler.RegisterRoutes(apiV1)
 		parserHandler.RegisterRoutes(apiV1)
+		metadataHandler.RegisterRoutes(apiV1)
 	}
 	slog.Info("API routes registered", "prefix", "/api/v1")
 

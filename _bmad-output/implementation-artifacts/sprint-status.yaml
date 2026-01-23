@@ -73,7 +73,7 @@ development_status:
   epic-3: in-progress  # Started 2026-01-18
   3-1-ai-provider-abstraction-layer: done  # Completed 2026-01-18
   3-2-ai-fansub-filename-parsing: done  # Code review completed 2026-01-23
-  3-3-multi-source-metadata-fallback-chain: ready-for-dev  # Story created 2026-01-18
+  3-3-multi-source-metadata-fallback-chain: review  # Ready for review 2026-01-23
   3-4-douban-web-scraper: ready-for-dev  # Story created 2026-01-18
   3-5-wikipedia-metadata-fallback: ready-for-dev  # Story created 2026-01-18
   3-6-ai-search-keyword-generation: ready-for-dev  # Story created 2026-01-18

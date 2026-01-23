@@ -60,6 +60,14 @@ type Config struct {
 	TMDbFallbackLanguages []string
 	TMDbCacheTTLHours     int
 
+	// Metadata fallback chain configuration (Story 3.3)
+	EnableDouban                   bool
+	EnableWikipedia                bool
+	EnableCircuitBreaker           bool
+	FallbackDelayMs                int
+	CircuitBreakerFailureThreshold int
+	CircuitBreakerTimeoutSeconds   int
+
 	// Database configuration
 	Database *DatabaseConfig
 
@@ -104,6 +112,15 @@ func Load() (*Config, error) {
 	cfg.TMDbDefaultLanguage = cfg.loadString("TMDB_DEFAULT_LANGUAGE", "zh-TW")
 	cfg.TMDbFallbackLanguages = cfg.loadStringSlice("TMDB_FALLBACK_LANGUAGES", "zh-TW,zh-CN,en")
 	cfg.TMDbCacheTTLHours = cfg.loadInt("TMDB_CACHE_TTL_HOURS", 24)
+
+	// Metadata fallback chain configuration (Story 3.3)
+	// Providers enabled by default for future implementation
+	cfg.EnableDouban = cfg.loadBool("ENABLE_DOUBAN", false)
+	cfg.EnableWikipedia = cfg.loadBool("ENABLE_WIKIPEDIA", false)
+	cfg.EnableCircuitBreaker = cfg.loadBool("ENABLE_CIRCUIT_BREAKER", true)
+	cfg.FallbackDelayMs = cfg.loadInt("FALLBACK_DELAY_MS", 100)
+	cfg.CircuitBreakerFailureThreshold = cfg.loadInt("CIRCUIT_BREAKER_FAILURE_THRESHOLD", 5)
+	cfg.CircuitBreakerTimeoutSeconds = cfg.loadInt("CIRCUIT_BREAKER_TIMEOUT_SECONDS", 30)
 
 	// Load database configuration
 	dbCfg, err := LoadDatabaseConfig()
@@ -154,6 +171,18 @@ func (c *Config) loadStringSlice(key, defaultValue string) []string {
 		value = defaultValue
 	}
 	return parseStringSlice(value)
+}
+
+// loadBool loads a boolean value from env or uses default, tracking source
+// Accepts "true", "1", "yes" as true; "false", "0", "no" as false (case-insensitive)
+func (c *Config) loadBool(key string, defaultValue bool) bool {
+	if value := os.Getenv(key); value != "" {
+		c.Sources[key] = SourceEnvVar
+		lower := strings.ToLower(value)
+		return lower == "true" || lower == "1" || lower == "yes"
+	}
+	c.Sources[key] = SourceDefault
+	return defaultValue
 }
 
 // loadInt loads an integer value from env or uses default, tracking source
