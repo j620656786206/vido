@@ -240,4 +240,8 @@ const (
 	ErrCodeUnavailable = "METADATA_UNAVAILABLE"
 	// ErrCodeInvalidRequest indicates the request was invalid
 	ErrCodeInvalidRequest = "METADATA_INVALID_REQUEST"
+	// ErrCodeAllFailed indicates all metadata sources failed with errors
+	ErrCodeAllFailed = "METADATA_ALL_FAILED"
+	// ErrCodeCircuitOpen indicates all providers have open circuit breakers
+	ErrCodeCircuitOpen = "METADATA_CIRCUIT_OPEN"
 )

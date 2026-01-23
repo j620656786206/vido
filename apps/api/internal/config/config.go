@@ -261,6 +261,19 @@ func (c *Config) LogConfigSources() {
 		"TMDB_FALLBACK_LANGUAGES_source", c.Sources["TMDB_FALLBACK_LANGUAGES"].String(),
 		"TMDB_CACHE_TTL_HOURS", c.TMDbCacheTTLHours,
 		"TMDB_CACHE_TTL_HOURS_source", c.Sources["TMDB_CACHE_TTL_HOURS"].String(),
+		// Metadata fallback chain configuration (Story 3.3)
+		"ENABLE_DOUBAN", c.EnableDouban,
+		"ENABLE_DOUBAN_source", c.Sources["ENABLE_DOUBAN"].String(),
+		"ENABLE_WIKIPEDIA", c.EnableWikipedia,
+		"ENABLE_WIKIPEDIA_source", c.Sources["ENABLE_WIKIPEDIA"].String(),
+		"ENABLE_CIRCUIT_BREAKER", c.EnableCircuitBreaker,
+		"ENABLE_CIRCUIT_BREAKER_source", c.Sources["ENABLE_CIRCUIT_BREAKER"].String(),
+		"FALLBACK_DELAY_MS", c.FallbackDelayMs,
+		"FALLBACK_DELAY_MS_source", c.Sources["FALLBACK_DELAY_MS"].String(),
+		"CIRCUIT_BREAKER_FAILURE_THRESHOLD", c.CircuitBreakerFailureThreshold,
+		"CIRCUIT_BREAKER_FAILURE_THRESHOLD_source", c.Sources["CIRCUIT_BREAKER_FAILURE_THRESHOLD"].String(),
+		"CIRCUIT_BREAKER_TIMEOUT_SECONDS", c.CircuitBreakerTimeoutSeconds,
+		"CIRCUIT_BREAKER_TIMEOUT_SECONDS_source", c.Sources["CIRCUIT_BREAKER_TIMEOUT_SECONDS"].String(),
 	)
 }
 

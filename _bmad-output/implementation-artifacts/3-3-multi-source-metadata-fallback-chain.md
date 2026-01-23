@@ -1,6 +1,6 @@
 # Story 3.3: Multi-Source Metadata Fallback Chain
 
-Status: review
+Status: done
 
 ## Story
 
@@ -94,6 +94,10 @@ So that **I always get metadata even when one source fails**.
   - [x] 8.2: Return fallback status in response
   - [x] 8.3: Include source indication in results
   - [x] 8.4: Write handler tests
+
+### Review Follow-ups (AI)
+
+- [ ] [AI-Review][LOW] TMDb provider does not pass Year filter to TMDb API (requires TMDbSearcher interface change) [tmdb_provider.go:132]
 
 ## Dev Notes
 
@@ -429,5 +433,12 @@ claude-opus-4-5-20251101
 - `apps/api/internal/handlers/metadata_handler_test.go` - Handler tests
 
 **Modified Files:**
-- `apps/api/internal/config/config.go` - Added metadata fallback chain configuration fields and loadBool helper
+- `apps/api/internal/config/config.go` - Added metadata fallback chain configuration fields, loadBool helper, and config logging
 - `apps/api/cmd/api/main.go` - Wired up MetadataService and MetadataHandler
+
+### Change Log
+
+| Date | Author | Change |
+|------|--------|--------|
+| 2026-01-23 | Code Review (claude-opus-4-5) | Added missing error codes `METADATA_ALL_FAILED` and `METADATA_CIRCUIT_OPEN` to provider.go |
+| 2026-01-23 | Code Review (claude-opus-4-5) | Added metadata fallback chain config values to LogConfigSources() in config.go |
