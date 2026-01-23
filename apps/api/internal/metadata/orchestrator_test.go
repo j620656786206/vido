@@ -841,3 +841,162 @@ func TestOrchestrator_CircuitBreaker_MetricsTracking(t *testing.T) {
 	assert.True(t, status.Attempts[0].Skipped)
 	assert.Equal(t, "circuit breaker open", status.Attempts[0].SkipReason)
 }
+
+// [P2] Tests GetCircuitBreakerState for existing provider
+func TestOrchestrator_GetCircuitBreakerState_Exists(t *testing.T) {
+	orch := NewOrchestrator(OrchestratorConfig{
+		EnableCircuitBreaker: true,
+		CircuitBreakerConfig: CircuitBreakerConfig{
+			FailureThreshold: 5,
+		},
+	})
+
+	provider := &MockProvider{
+		name:      "tmdb",
+		source:    models.MetadataSourceTMDb,
+		available: true,
+		status:    ProviderStatusAvailable,
+	}
+
+	orch.RegisterProvider(provider)
+
+	// GIVEN: A registered provider with circuit breaker enabled
+	// WHEN: Getting the circuit breaker state
+	state, exists := orch.GetCircuitBreakerState("tmdb")
+
+	// THEN: State should be closed and exists should be true
+	assert.True(t, exists)
+	assert.Equal(t, CircuitStateClosed, state)
+}
+
+// [P2] Tests GetCircuitBreakerState for non-existing provider
+func TestOrchestrator_GetCircuitBreakerState_NotExists(t *testing.T) {
+	orch := NewOrchestrator(OrchestratorConfig{
+		EnableCircuitBreaker: true,
+	})
+
+	// GIVEN: No providers registered
+	// WHEN: Getting the circuit breaker state for a non-existing provider
+	state, exists := orch.GetCircuitBreakerState("nonexistent")
+
+	// THEN: Should return closed state and exists should be false
+	assert.False(t, exists)
+	assert.Equal(t, CircuitStateClosed, state)
+}
+
+// [P2] Tests GetCircuitBreakerState without circuit breaker enabled
+func TestOrchestrator_GetCircuitBreakerState_Disabled(t *testing.T) {
+	orch := NewOrchestrator(OrchestratorConfig{
+		EnableCircuitBreaker: false,
+	})
+
+	provider := &MockProvider{
+		name:      "tmdb",
+		source:    models.MetadataSourceTMDb,
+		available: true,
+		status:    ProviderStatusAvailable,
+	}
+
+	orch.RegisterProvider(provider)
+
+	// GIVEN: Circuit breaker is disabled
+	// WHEN: Getting the circuit breaker state
+	state, exists := orch.GetCircuitBreakerState("tmdb")
+
+	// THEN: Should return false for exists (no circuit breaker created)
+	assert.False(t, exists)
+	assert.Equal(t, CircuitStateClosed, state)
+}
+
+// [P2] Tests ResetCircuitBreaker for existing provider
+func TestOrchestrator_ResetCircuitBreaker_Exists(t *testing.T) {
+	orch := NewOrchestrator(OrchestratorConfig{
+		EnableCircuitBreaker: true,
+		CircuitBreakerConfig: CircuitBreakerConfig{
+			FailureThreshold: 1,
+			Timeout:          time.Hour,
+		},
+	})
+
+	provider := &MockProvider{
+		name:      "tmdb",
+		source:    models.MetadataSourceTMDb,
+		available: true,
+		status:    ProviderStatusAvailable,
+		searchFunc: func(ctx context.Context, req *SearchRequest) (*SearchResult, error) {
+			return nil, errors.New("simulated failure")
+		},
+	}
+
+	orch.RegisterProvider(provider)
+
+	// GIVEN: Provider circuit breaker is open
+	orch.Search(context.Background(), &SearchRequest{
+		Query:     "Test",
+		MediaType: MediaTypeMovie,
+	})
+	state, _ := orch.GetCircuitBreakerState("tmdb")
+	assert.Equal(t, CircuitStateOpen, state)
+
+	// WHEN: Resetting the circuit breaker
+	orch.ResetCircuitBreaker("tmdb")
+
+	// THEN: Circuit breaker should be closed
+	state, _ = orch.GetCircuitBreakerState("tmdb")
+	assert.Equal(t, CircuitStateClosed, state)
+}
+
+// [P2] Tests ResetCircuitBreaker for non-existing provider (no-op)
+func TestOrchestrator_ResetCircuitBreaker_NotExists(t *testing.T) {
+	orch := NewOrchestrator(OrchestratorConfig{
+		EnableCircuitBreaker: true,
+	})
+
+	// GIVEN: No providers registered
+	// WHEN: Resetting a non-existing circuit breaker
+	// THEN: Should not panic, just no-op
+	assert.NotPanics(t, func() {
+		orch.ResetCircuitBreaker("nonexistent")
+	})
+}
+
+// [P2] Tests sourceDisplayName for unknown source
+func TestSourceDisplayName_Unknown(t *testing.T) {
+	// GIVEN: An unknown metadata source
+	source := models.MetadataSource("custom_source")
+
+	// WHEN: Getting display name
+	name := sourceDisplayName(source)
+
+	// THEN: Should return the source string as-is
+	assert.Equal(t, "custom_source", name)
+}
+
+// [P2] Tests AllFailed with cancelled status
+func TestFallbackStatus_AllFailed_Cancelled(t *testing.T) {
+	// GIVEN: A cancelled status with no attempts
+	status := &FallbackStatus{
+		Cancelled: true,
+		Attempts:  []SourceAttempt{},
+	}
+
+	// WHEN: Checking if all failed
+	result := status.AllFailed()
+
+	// THEN: Should return true (no successes)
+	assert.True(t, result)
+}
+
+// [P2] Tests AllFailed with empty attempts
+func TestFallbackStatus_AllFailed_Empty(t *testing.T) {
+	// GIVEN: Empty attempts
+	status := &FallbackStatus{
+		Attempts: []SourceAttempt{},
+	}
+
+	// WHEN: Checking if all failed
+	result := status.AllFailed()
+
+	// THEN: Should return true (no successes possible)
+	assert.True(t, result)
+}

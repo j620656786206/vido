@@ -307,3 +307,99 @@ func TestMediaType_IsValid(t *testing.T) {
 		})
 	}
 }
+
+// [P2] Tests ProviderError.Unwrap returns the underlying error
+func TestProviderError_Unwrap(t *testing.T) {
+	// GIVEN: A ProviderError wrapping another error
+	underlyingErr := assert.AnError
+	providerErr := NewProviderError(
+		"TMDb",
+		models.MetadataSourceTMDb,
+		ErrCodeUnavailable,
+		"API call failed",
+		underlyingErr,
+	)
+
+	// WHEN: Unwrapping the error
+	unwrapped := providerErr.Unwrap()
+
+	// THEN: Should return the underlying error
+	assert.Equal(t, underlyingErr, unwrapped)
+}
+
+// [P2] Tests ProviderError.Unwrap returns nil when no underlying error
+func TestProviderError_Unwrap_Nil(t *testing.T) {
+	// GIVEN: A ProviderError without underlying error
+	providerErr := NewProviderError(
+		"TMDb",
+		models.MetadataSourceTMDb,
+		ErrCodeUnavailable,
+		"API unavailable",
+		nil,
+	)
+
+	// WHEN: Unwrapping the error
+	unwrapped := providerErr.Unwrap()
+
+	// THEN: Should return nil
+	assert.Nil(t, unwrapped)
+}
+
+// [P2] Tests ProviderError.Error with underlying error
+func TestProviderError_Error_WithUnderlying(t *testing.T) {
+	// GIVEN: A ProviderError with underlying error
+	underlyingErr := assert.AnError
+	providerErr := NewProviderError(
+		"TMDb",
+		models.MetadataSourceTMDb,
+		ErrCodeUnavailable,
+		"API call failed",
+		underlyingErr,
+	)
+
+	// WHEN: Getting error string
+	errStr := providerErr.Error()
+
+	// THEN: Should include provider name, message, and underlying error
+	assert.Contains(t, errStr, "TMDb")
+	assert.Contains(t, errStr, "API call failed")
+	assert.Contains(t, errStr, underlyingErr.Error())
+}
+
+// [P2] Tests ProviderError.Error without underlying error
+func TestProviderError_Error_WithoutUnderlying(t *testing.T) {
+	// GIVEN: A ProviderError without underlying error
+	providerErr := NewProviderError(
+		"Douban",
+		models.MetadataSourceDouban,
+		ErrCodeUnavailable,
+		"Not implemented",
+		nil,
+	)
+
+	// WHEN: Getting error string
+	errStr := providerErr.Error()
+
+	// THEN: Should include provider name and message only
+	assert.Equal(t, "Douban: Not implemented", errStr)
+}
+
+// [P2] Tests NewProviderError creates correct error
+func TestNewProviderError(t *testing.T) {
+	// GIVEN: Error details
+	provider := "Wikipedia"
+	source := models.MetadataSourceWikipedia
+	code := ErrCodeRateLimited
+	message := "Rate limit exceeded"
+	underlyingErr := assert.AnError
+
+	// WHEN: Creating a ProviderError
+	providerErr := NewProviderError(provider, source, code, message, underlyingErr)
+
+	// THEN: All fields should be set correctly
+	assert.Equal(t, provider, providerErr.Provider)
+	assert.Equal(t, source, providerErr.Source)
+	assert.Equal(t, code, providerErr.Code)
+	assert.Equal(t, message, providerErr.Message)
+	assert.Equal(t, underlyingErr, providerErr.Err)
+}

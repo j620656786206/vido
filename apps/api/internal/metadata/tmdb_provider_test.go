@@ -295,3 +295,138 @@ func TestBuildImageURL(t *testing.T) {
 func strPtr(s string) *string {
 	return &s
 }
+
+// [P2] Tests TV search error handling
+func TestTMDbProvider_Search_TVShows_Error(t *testing.T) {
+	// GIVEN: A service that returns an error for TV search
+	service := &mockTMDbSearcher{
+		searchTVShowsFunc: func(ctx context.Context, query string, page int) (*tmdb.SearchResultTVShows, error) {
+			return nil, errors.New("TV API error")
+		},
+	}
+
+	provider := NewTMDbProvider(service, TMDbProviderConfig{})
+
+	// WHEN: Searching for TV shows
+	result, err := provider.Search(context.Background(), &SearchRequest{
+		Query:     "Test TV Show",
+		MediaType: MediaTypeTV,
+	})
+
+	// THEN: Should return error and nil result
+	assert.Error(t, err)
+	assert.Nil(t, result)
+	assert.Contains(t, err.Error(), "failed to search TV shows")
+}
+
+// [P2] Tests TV search with empty results
+func TestTMDbProvider_Search_TVShows_EmptyResults(t *testing.T) {
+	// GIVEN: A service that returns empty TV results
+	service := &mockTMDbSearcher{
+		searchTVShowsFunc: func(ctx context.Context, query string, page int) (*tmdb.SearchResultTVShows, error) {
+			return &tmdb.SearchResultTVShows{
+				Page:         1,
+				Results:      []tmdb.TVShow{},
+				TotalPages:   0,
+				TotalResults: 0,
+			}, nil
+		},
+	}
+
+	provider := NewTMDbProvider(service, TMDbProviderConfig{})
+
+	// WHEN: Searching for a non-existent TV show
+	result, err := provider.Search(context.Background(), &SearchRequest{
+		Query:     "NonexistentTVShow12345",
+		MediaType: MediaTypeTV,
+	})
+
+	// THEN: Should return empty result without error
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.Equal(t, 0, result.TotalCount)
+	assert.Empty(t, result.Items)
+}
+
+// [P2] Tests page defaults to 1 when 0 is provided
+func TestTMDbProvider_Search_DefaultPage(t *testing.T) {
+	// GIVEN: A service that captures the page parameter
+	capturedPage := 0
+	service := &mockTMDbSearcher{
+		searchMoviesFunc: func(ctx context.Context, query string, page int) (*tmdb.SearchResultMovies, error) {
+			capturedPage = page
+			return &tmdb.SearchResultMovies{
+				Page:         1,
+				Results:      []tmdb.Movie{{ID: 1, Title: "Test"}},
+				TotalPages:   1,
+				TotalResults: 1,
+			}, nil
+		},
+	}
+
+	provider := NewTMDbProvider(service, TMDbProviderConfig{})
+
+	// WHEN: Searching with page 0
+	_, err := provider.Search(context.Background(), &SearchRequest{
+		Query:     "Test",
+		MediaType: MediaTypeMovie,
+		Page:      0,
+	})
+
+	// THEN: Page should default to 1
+	require.NoError(t, err)
+	assert.Equal(t, 1, capturedPage)
+}
+
+// [P2] Tests search with year filter (year is in request but not used by TMDb directly)
+func TestTMDbProvider_Search_WithYear(t *testing.T) {
+	// GIVEN: A service that returns movies from different years
+	service := &mockTMDbSearcher{
+		searchMoviesFunc: func(ctx context.Context, query string, page int) (*tmdb.SearchResultMovies, error) {
+			return &tmdb.SearchResultMovies{
+				Page: 1,
+				Results: []tmdb.Movie{
+					{ID: 1, Title: "Test 2024", ReleaseDate: "2024-06-15"},
+				},
+				TotalPages:   1,
+				TotalResults: 1,
+			}, nil
+		},
+	}
+
+	provider := NewTMDbProvider(service, TMDbProviderConfig{})
+
+	// WHEN: Searching with year filter
+	result, err := provider.Search(context.Background(), &SearchRequest{
+		Query:     "Test",
+		MediaType: MediaTypeMovie,
+		Year:      2024,
+	})
+
+	// THEN: Should return result (year filtering may happen at service level)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.Len(t, result.Items, 1)
+	assert.Equal(t, 2024, result.Items[0].Year)
+}
+
+// [P2] Tests extractYear with partial date formats
+func TestExtractYear_EdgeCases(t *testing.T) {
+	tests := []struct {
+		name     string
+		date     string
+		expected int
+	}{
+		{"short year", "24", 0},
+		{"only year with separator", "2024-", 0},
+		{"year month only", "2024-06", 0},
+		{"spaces", " 2024-06-15 ", 0},
+		{"invalid month", "2024-13-15", 2024}, // Still extracts year
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, extractYear(tt.date))
+		})
+	}
+}
