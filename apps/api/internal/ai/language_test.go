@@ -122,3 +122,64 @@ func TestIsSimplifiedChinese(t *testing.T) {
 		})
 	}
 }
+
+// [P2] Tests DetectLanguage with empty string returns Unknown
+func TestDetectLanguage_EmptyString(t *testing.T) {
+	// GIVEN: An empty string
+	text := ""
+
+	// WHEN: Detecting language
+	result := DetectLanguage(text)
+
+	// THEN: Should return Unknown
+	assert.Equal(t, LanguageUnknown, result)
+}
+
+// [P2] Tests DetectLanguage with only numbers
+func TestDetectLanguage_NumbersOnly(t *testing.T) {
+	// GIVEN: A string with only numbers
+	text := "12345"
+
+	// WHEN: Detecting language
+	result := DetectLanguage(text)
+
+	// THEN: Should return Unknown (no recognizable language characters)
+	assert.Equal(t, LanguageUnknown, result)
+}
+
+// [P2] Tests DetectLanguage with mixed numbers and spaces
+func TestDetectLanguage_NumbersAndSpaces(t *testing.T) {
+	// GIVEN: A string with numbers and spaces only
+	text := "2024 01 15"
+
+	// WHEN: Detecting language
+	result := DetectLanguage(text)
+
+	// THEN: Should return Unknown
+	assert.Equal(t, LanguageUnknown, result)
+}
+
+// [P2] Tests DetectLanguage with punctuation only
+func TestDetectLanguage_PunctuationOnly(t *testing.T) {
+	// GIVEN: A string with only punctuation
+	text := "!@#$%^&*()"
+
+	// WHEN: Detecting language
+	result := DetectLanguage(text)
+
+	// THEN: Should return Unknown
+	assert.Equal(t, LanguageUnknown, result)
+}
+
+// [P2] Tests isLatin with extended Latin characters
+func TestIsLatin_ExtendedCharacters(t *testing.T) {
+	// GIVEN: Extended Latin characters (beyond ASCII)
+	// Note: isLatin only accepts characters < 0x0100
+
+	// WHEN/THEN: Check basic Latin is accepted
+	assert.True(t, isLatin('A'))
+	assert.True(t, isLatin('z'))
+
+	// Extended Latin (>= 0x0100) should not be considered Latin by this function
+	assert.False(t, isLatin('Ā')) // Latin Extended-A (0x0100)
+}

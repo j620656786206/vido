@@ -1205,6 +1205,218 @@ func TestKeywordAttempt_Fields(t *testing.T) {
 	assert.True(t, attempt.Success)
 }
 
+// [P1] Tests context cancellation during keyword retry phase
+func TestOrchestrator_Search_KeywordRetry_ContextCancellation(t *testing.T) {
+	orch := NewOrchestrator(OrchestratorConfig{
+		FallbackDelay: 10 * time.Millisecond,
+	})
+
+	// Provider always returns no results
+	provider := &MockProvider{
+		name:      "tmdb",
+		source:    models.MetadataSourceTMDb,
+		available: true,
+		status:    ProviderStatusAvailable,
+		searchFunc: func(ctx context.Context, req *SearchRequest) (*SearchResult, error) {
+			// Simulate slow search during keyword retry
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-time.After(50 * time.Millisecond):
+				return &SearchResult{Items: []MetadataItem{}, TotalCount: 0, Source: models.MetadataSourceTMDb}, nil
+			}
+		},
+	}
+
+	generator := &MockKeywordGenerator{
+		generateFunc: func(ctx context.Context, title string) (*KeywordVariants, error) {
+			return &KeywordVariants{
+				Original: title,
+				English:  "Test English",
+				Romaji:   "Test Romaji",
+				SimplifiedChinese: "测试",
+			}, nil
+		},
+	}
+
+	orch.RegisterProvider(provider)
+	orch.SetKeywordGenerator(generator)
+
+	// GIVEN: A context that will be cancelled during keyword retry
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+
+	// WHEN: Searching with a title that triggers keyword retry
+	result, status := orch.Search(ctx, &SearchRequest{
+		Query:     "テスト",
+		MediaType: MediaTypeMovie,
+	})
+
+	// THEN: Should return nil result with cancelled status
+	assert.Nil(t, result)
+	require.NotNil(t, status)
+	assert.True(t, status.Cancelled)
+}
+
+// [P2] Tests sourceDisplayName for Manual source
+func TestSourceDisplayName_Manual(t *testing.T) {
+	// GIVEN: A Manual metadata source
+	source := models.MetadataSourceManual
+
+	// WHEN: Getting display name
+	name := sourceDisplayName(source)
+
+	// THEN: Should return "Manual"
+	assert.Equal(t, "Manual", name)
+}
+
+// [P2] Tests StatusString with Manual source in attempts
+func TestFallbackStatus_StatusString_WithManual(t *testing.T) {
+	// GIVEN: A fallback status with Manual source attempt
+	status := &FallbackStatus{
+		Attempts: []SourceAttempt{
+			{Source: models.MetadataSourceTMDb, Success: false},
+			{Source: models.MetadataSourceManual, Success: true},
+		},
+	}
+
+	// WHEN: Getting status string
+	result := status.StatusString()
+
+	// THEN: Should include Manual with success symbol
+	assert.Equal(t, "TMDb ❌ → Manual ✓", result)
+}
+
+// [P2] Tests NewOrchestrator clamps FallbackDelay >= 1s to 900ms
+func TestNewOrchestrator_FallbackDelayClamp(t *testing.T) {
+	// GIVEN: A config with FallbackDelay >= 1 second
+	config := OrchestratorConfig{
+		FallbackDelay: 2 * time.Second,
+	}
+
+	// WHEN: Creating orchestrator
+	orch := NewOrchestrator(config)
+
+	// THEN: FallbackDelay should be clamped to 900ms (per NFR-R3)
+	assert.Equal(t, 900*time.Millisecond, orch.config.FallbackDelay)
+}
+
+// [P2] Tests NewOrchestrator applies default FallbackDelay when zero
+func TestNewOrchestrator_DefaultFallbackDelay(t *testing.T) {
+	// GIVEN: A config with zero FallbackDelay
+	config := OrchestratorConfig{
+		FallbackDelay: 0,
+	}
+
+	// WHEN: Creating orchestrator
+	orch := NewOrchestrator(config)
+
+	// THEN: FallbackDelay should default to 100ms
+	assert.Equal(t, 100*time.Millisecond, orch.config.FallbackDelay)
+}
+
+// [P2] Tests KeywordVariants.GetPrioritizedList in metadata package
+func TestMetadataKeywordVariants_GetPrioritizedList(t *testing.T) {
+	// GIVEN: KeywordVariants in metadata package
+	variants := KeywordVariants{
+		Original:           "鬼滅之刃",
+		English:            "Demon Slayer",
+		Romaji:             "Kimetsu no Yaiba",
+		SimplifiedChinese:  "鬼灭之刃",
+		TraditionalChinese: "鬼滅之刃", // Same as original, should be excluded
+		AlternativeSpellings: []string{"DS", "Kimetsu"},
+		CommonAliases:      []string{"鬼滅"},
+	}
+
+	// WHEN: Getting prioritized list
+	result := variants.GetPrioritizedList()
+
+	// THEN: Should return keywords in priority order excluding original
+	expected := []string{
+		"Demon Slayer",
+		"Kimetsu no Yaiba",
+		"鬼灭之刃",
+		"DS",
+		"Kimetsu",
+		"鬼滅",
+	}
+	assert.Equal(t, expected, result)
+}
+
+// [P2] Tests KeywordVariants.GetPrioritizedList with empty variants
+func TestMetadataKeywordVariants_GetPrioritizedList_Empty(t *testing.T) {
+	// GIVEN: Empty KeywordVariants
+	variants := KeywordVariants{
+		Original: "Test",
+	}
+
+	// WHEN: Getting prioritized list
+	result := variants.GetPrioritizedList()
+
+	// THEN: Should return nil (no alternatives)
+	assert.Nil(t, result)
+}
+
+// [P2] Tests keyword retry with multiple providers
+func TestOrchestrator_Search_KeywordRetry_MultipleProviders(t *testing.T) {
+	orch := NewOrchestrator(OrchestratorConfig{
+		FallbackDelay: 10 * time.Millisecond,
+	})
+
+	// First provider always fails
+	provider1 := &MockProvider{
+		name:      "tmdb",
+		source:    models.MetadataSourceTMDb,
+		available: true,
+		status:    ProviderStatusAvailable,
+		searchFunc: func(ctx context.Context, req *SearchRequest) (*SearchResult, error) {
+			return &SearchResult{Items: []MetadataItem{}, TotalCount: 0, Source: models.MetadataSourceTMDb}, nil
+		},
+	}
+
+	// Second provider succeeds on English keyword
+	provider2 := &MockProvider{
+		name:      "douban",
+		source:    models.MetadataSourceDouban,
+		available: true,
+		status:    ProviderStatusAvailable,
+		searchFunc: func(ctx context.Context, req *SearchRequest) (*SearchResult, error) {
+			if req.Query == "Demon Slayer" {
+				return &SearchResult{
+					Items:      []MetadataItem{{ID: "1", Title: "Demon Slayer"}},
+					Source:     models.MetadataSourceDouban,
+					TotalCount: 1,
+				}, nil
+			}
+			return &SearchResult{Items: []MetadataItem{}, TotalCount: 0, Source: models.MetadataSourceDouban}, nil
+		},
+	}
+
+	generator := &MockKeywordGenerator{
+		generateFunc: func(ctx context.Context, title string) (*KeywordVariants, error) {
+			return &KeywordVariants{
+				Original: title,
+				English:  "Demon Slayer",
+			}, nil
+		},
+	}
+
+	orch.RegisterProvider(provider1)
+	orch.RegisterProvider(provider2)
+	orch.SetKeywordGenerator(generator)
+
+	// WHEN: Searching with Chinese title
+	result, status := orch.Search(context.Background(), &SearchRequest{
+		Query:     "鬼滅之刃",
+		MediaType: MediaTypeMovie,
+	})
+
+	// THEN: Should find result via second provider with alternative keyword
+	require.NotNil(t, result)
+	assert.Equal(t, models.MetadataSourceDouban, result.Source)
+	assert.Equal(t, "Demon Slayer", status.SuccessfulKeyword)
+}
+
 // MockKeywordGenerator implements KeywordGenerator for testing
 type MockKeywordGenerator struct {
 	generateFunc func(ctx context.Context, title string) (*KeywordVariants, error)

@@ -144,3 +144,95 @@ func TestKeywordService_ConvertToMetadataVariants(t *testing.T) {
 	assert.Equal(t, aiVariants.AlternativeSpellings, metaVariants.AlternativeSpellings)
 	assert.Equal(t, aiVariants.CommonAliases, metaVariants.CommonAliases)
 }
+
+// [P1] Tests GenerateKeywords returns ErrAINotConfigured when AI service is nil
+func TestKeywordService_GenerateKeywords_NilAIService(t *testing.T) {
+	// GIVEN: A keyword service with nil AI service
+	service := NewKeywordService(nil)
+	ctx := context.Background()
+
+	// WHEN: Generating keywords
+	result, err := service.GenerateKeywords(ctx, "Test Title")
+
+	// THEN: Should return ErrAINotConfigured error
+	assert.Nil(t, result)
+	assert.Error(t, err)
+	assert.Equal(t, ai.ErrAINotConfigured, err)
+}
+
+// [P2] Tests convertToMetadataVariants handles nil input
+func TestKeywordService_ConvertToMetadataVariants_Nil(t *testing.T) {
+	// GIVEN: A nil KeywordVariants input
+	var aiVariants *ai.KeywordVariants = nil
+
+	// WHEN: Converting to metadata variants
+	result := convertToMetadataVariants(aiVariants)
+
+	// THEN: Should return nil without panic
+	assert.Nil(t, result)
+}
+
+// [P2] Tests convertToMetadataVariants handles empty slices
+func TestKeywordService_ConvertToMetadataVariants_EmptySlices(t *testing.T) {
+	// GIVEN: KeywordVariants with empty slices
+	aiVariants := &ai.KeywordVariants{
+		Original:             "Test",
+		English:              "Test English",
+		AlternativeSpellings: []string{},
+		CommonAliases:        []string{},
+	}
+
+	// WHEN: Converting to metadata variants
+	metaVariants := convertToMetadataVariants(aiVariants)
+
+	// THEN: Should preserve empty slices
+	assert.NotNil(t, metaVariants)
+	assert.Equal(t, "Test", metaVariants.Original)
+	assert.Equal(t, "Test English", metaVariants.English)
+	assert.Empty(t, metaVariants.AlternativeSpellings)
+	assert.Empty(t, metaVariants.CommonAliases)
+}
+
+// [P2] Tests GenerateKeywords passes correct language to AI service
+func TestKeywordService_GenerateKeywords_LanguageDetection(t *testing.T) {
+	// GIVEN: A mock AI service that captures the language parameter
+	var capturedLanguage string
+	aiService := &mockAIServiceForKeywords{
+		generateFunc: func(ctx context.Context, title, language string) (*ai.KeywordVariants, error) {
+			capturedLanguage = language
+			return &ai.KeywordVariants{Original: title}, nil
+		},
+	}
+
+	service := NewKeywordService(aiService)
+	ctx := context.Background()
+
+	// WHEN: Generating keywords for a Traditional Chinese title
+	_, err := service.GenerateKeywords(ctx, "鬼滅之刃")
+
+	// THEN: Should detect and pass Traditional Chinese language
+	require.NoError(t, err)
+	assert.Equal(t, "Traditional Chinese", capturedLanguage)
+}
+
+// [P2] Tests GenerateKeywords with Japanese title
+func TestKeywordService_GenerateKeywords_JapaneseTitle(t *testing.T) {
+	// GIVEN: A mock AI service that captures the language parameter
+	var capturedLanguage string
+	aiService := &mockAIServiceForKeywords{
+		generateFunc: func(ctx context.Context, title, language string) (*ai.KeywordVariants, error) {
+			capturedLanguage = language
+			return &ai.KeywordVariants{Original: title, Romaji: "tesuto"}, nil
+		},
+	}
+
+	service := NewKeywordService(aiService)
+	ctx := context.Background()
+
+	// WHEN: Generating keywords for a Japanese title (with hiragana)
+	_, err := service.GenerateKeywords(ctx, "テスト")
+
+	// THEN: Should detect and pass Japanese language
+	require.NoError(t, err)
+	assert.Equal(t, "Japanese", capturedLanguage)
+}

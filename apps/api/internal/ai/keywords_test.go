@@ -187,3 +187,84 @@ func TestKeywordVariantsFromJSON_MarkdownWrapped(t *testing.T) {
 	assert.Equal(t, "Test", variants.Original)
 	assert.Equal(t, "Test English", variants.English)
 }
+
+// [P1] Tests ToJSON serialization produces valid JSON output
+func TestKeywordVariants_ToJSON_Success(t *testing.T) {
+	// GIVEN: A KeywordVariants with all fields populated
+	variants := KeywordVariants{
+		Original:             "鬼滅之刃",
+		SimplifiedChinese:    "鬼灭之刃",
+		TraditionalChinese:   "鬼滅之刃",
+		English:              "Demon Slayer",
+		Romaji:               "Kimetsu no Yaiba",
+		Pinyin:               "gui mie zhi ren",
+		AlternativeSpellings: []string{"Demon Slayer: Kimetsu no Yaiba"},
+		CommonAliases:        []string{"鬼滅", "DS"},
+	}
+
+	// WHEN: Serializing to JSON
+	jsonStr, err := variants.ToJSON()
+
+	// THEN: Should produce valid JSON without error
+	require.NoError(t, err)
+	assert.NotEmpty(t, jsonStr)
+
+	// AND: JSON should be parseable back to KeywordVariants
+	parsed, parseErr := KeywordVariantsFromJSON(jsonStr)
+	require.NoError(t, parseErr)
+	assert.Equal(t, variants.Original, parsed.Original)
+	assert.Equal(t, variants.English, parsed.English)
+	assert.Equal(t, variants.Romaji, parsed.Romaji)
+	assert.Equal(t, variants.AlternativeSpellings, parsed.AlternativeSpellings)
+	assert.Equal(t, variants.CommonAliases, parsed.CommonAliases)
+}
+
+// [P2] Tests ToJSON with minimal fields
+func TestKeywordVariants_ToJSON_MinimalFields(t *testing.T) {
+	// GIVEN: A KeywordVariants with only original field
+	variants := KeywordVariants{
+		Original: "Test",
+	}
+
+	// WHEN: Serializing to JSON
+	jsonStr, err := variants.ToJSON()
+
+	// THEN: Should produce valid JSON
+	require.NoError(t, err)
+	assert.Contains(t, jsonStr, `"original":"Test"`)
+}
+
+// [P2] Tests GetPrioritizedList with nil slices
+func TestKeywordVariants_GetPrioritizedList_NilSlices(t *testing.T) {
+	// GIVEN: A KeywordVariants with nil slices
+	variants := KeywordVariants{
+		Original:             "Test",
+		English:              "Test English",
+		AlternativeSpellings: nil,
+		CommonAliases:        nil,
+	}
+
+	// WHEN: Getting prioritized list
+	result := variants.GetPrioritizedList()
+
+	// THEN: Should return list without panic
+	assert.Equal(t, []string{"Test English"}, result)
+}
+
+// [P2] Tests GetPrioritizedList with empty slices
+func TestKeywordVariants_GetPrioritizedList_EmptySlices(t *testing.T) {
+	// GIVEN: A KeywordVariants with empty slices
+	variants := KeywordVariants{
+		Original:             "Test",
+		English:              "Test English",
+		Romaji:               "Tesuto",
+		AlternativeSpellings: []string{},
+		CommonAliases:        []string{},
+	}
+
+	// WHEN: Getting prioritized list
+	result := variants.GetPrioritizedList()
+
+	// THEN: Should return only non-empty fields
+	assert.Equal(t, []string{"Test English", "Tesuto"}, result)
+}
