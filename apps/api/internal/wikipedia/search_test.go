@@ -1,6 +1,8 @@
 package wikipedia
 
 import (
+	"context"
+	"log/slog"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -321,4 +323,262 @@ func TestSearchOptions(t *testing.T) {
 		assert.Equal(t, 2021, opts.Year)
 		assert.False(t, opts.PreferTraditionalChinese)
 	})
+}
+
+func TestNewSearcher(t *testing.T) {
+	t.Run("creates searcher with nil logger", func(t *testing.T) {
+		config := DefaultConfig()
+		client := NewClient(config, nil)
+		searcher := NewSearcher(client, nil)
+
+		assert.NotNil(t, searcher)
+		assert.NotNil(t, searcher.client)
+		assert.NotNil(t, searcher.logger)
+	})
+
+	t.Run("creates searcher with provided logger", func(t *testing.T) {
+		config := DefaultConfig()
+		client := NewClient(config, nil)
+		logger := slog.Default()
+		searcher := NewSearcher(client, logger)
+
+		assert.NotNil(t, searcher)
+		assert.Equal(t, logger, searcher.logger)
+	})
+}
+
+func TestSearcher_calculateConfidence(t *testing.T) {
+	searcher := &Searcher{}
+
+	tests := []struct {
+		name        string
+		query       string
+		result      SearchResult
+		opts        SearchOptions
+		minScore    float64
+		maxScore    float64
+	}{
+		{
+			name:  "exact normalized match",
+			query: "寄生上流",
+			result: SearchResult{
+				Title:   "寄生上流",
+				Snippet: "韓國電影",
+			},
+			opts:     DefaultSearchOptions(),
+			minScore: 0.95,
+			maxScore: 1.01,
+		},
+		{
+			name:  "title contains query",
+			query: "寄生上流",
+			result: SearchResult{
+				Title:   "寄生上流 (電影)",
+				Snippet: "韓國電影",
+			},
+			opts:     DefaultSearchOptions(),
+			minScore: 0.75,
+			maxScore: 0.85,
+		},
+		{
+			name:  "query contains title",
+			query: "寄生上流 電影 2019",
+			result: SearchResult{
+				Title:   "寄生上流",
+				Snippet: "韓國電影",
+			},
+			opts:     DefaultSearchOptions(),
+			minScore: 0.70,
+			maxScore: 0.80,
+		},
+		{
+			name:  "snippet contains query",
+			query: "奉俊昊",
+			result: SearchResult{
+				Title:   "寄生上流",
+				Snippet: "奉俊昊執導的電影",
+			},
+			opts:     DefaultSearchOptions(),
+			minScore: 0.45,
+			maxScore: 0.55,
+		},
+		{
+			name:  "fuzzy match - low overlap",
+			query: "完全不同查詢",
+			result: SearchResult{
+				Title:   "寄生上流",
+				Snippet: "韓國電影",
+			},
+			opts:     DefaultSearchOptions(),
+			minScore: 0.0,
+			maxScore: 0.3,
+		},
+		{
+			name:  "media type boost for movie",
+			query: "寄生上流",
+			result: SearchResult{
+				Title:   "寄生上流 相關 電影",
+				Snippet: "相關內容",
+			},
+			opts: SearchOptions{
+				Limit:     5,
+				MediaType: MediaTypeMovie,
+			},
+			minScore: 0.75,
+			maxScore: 0.95,
+		},
+		{
+			name:  "year boost when year in snippet",
+			query: "寄生上流",
+			result: SearchResult{
+				Title:   "寄生上流 相關",
+				Snippet: "2019年韓國電影",
+			},
+			opts: SearchOptions{
+				Limit: 5,
+				Year:  2019,
+			},
+			minScore: 0.75,
+			maxScore: 0.90,
+		},
+		{
+			name:  "combined boosts should cap at 1.0",
+			query: "寄生上流",
+			result: SearchResult{
+				Title:   "寄生上流 電影",
+				Snippet: "2019年韓國電影作品",
+			},
+			opts: SearchOptions{
+				Limit:     5,
+				MediaType: MediaTypeMovie,
+				Year:      2019,
+			},
+			minScore: 0.80,
+			maxScore: 1.01,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			queryLower := normalizeText(tt.query)
+			queryNormalized := normalizeText(tt.query)
+			score := searcher.calculateConfidence(queryLower, queryNormalized, tt.result, tt.opts)
+			assert.GreaterOrEqual(t, score, tt.minScore, "score should be >= minScore")
+			assert.LessOrEqual(t, score, tt.maxScore, "score should be <= maxScore")
+		})
+	}
+}
+
+func TestSearcher_Search(t *testing.T) {
+	config := DefaultConfig()
+	client := NewClient(config, nil)
+	searcher := NewSearcher(client, nil)
+	ctx := context.Background()
+
+	t.Run("returns error when client is disabled", func(t *testing.T) {
+		client.SetEnabled(false)
+		defer client.SetEnabled(true)
+
+		opts := DefaultSearchOptions()
+		_, err := searcher.Search(ctx, "test query", opts)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "disabled")
+	})
+
+	t.Run("handles zero limit", func(t *testing.T) {
+		// With disabled client, this should fail at client level
+		// but the limit normalization should happen first
+		client.SetEnabled(false)
+		defer client.SetEnabled(true)
+
+		opts := SearchOptions{Limit: 0}
+		_, err := searcher.Search(ctx, "test", opts)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles negative limit", func(t *testing.T) {
+		client.SetEnabled(false)
+		defer client.SetEnabled(true)
+
+		opts := SearchOptions{Limit: -5}
+		_, err := searcher.Search(ctx, "test", opts)
+
+		assert.Error(t, err)
+	})
+
+	t.Run("handles limit over 10", func(t *testing.T) {
+		client.SetEnabled(false)
+		defer client.SetEnabled(true)
+
+		opts := SearchOptions{Limit: 20}
+		_, err := searcher.Search(ctx, "test", opts)
+
+		assert.Error(t, err)
+	})
+}
+
+func TestSearcher_SearchByTitle(t *testing.T) {
+	config := DefaultConfig()
+	client := NewClient(config, nil)
+	searcher := NewSearcher(client, nil)
+	ctx := context.Background()
+
+	t.Run("returns error when client is disabled", func(t *testing.T) {
+		client.SetEnabled(false)
+		defer client.SetEnabled(true)
+
+		_, err := searcher.SearchByTitle(ctx, "寄生上流", MediaTypeMovie)
+
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "disabled")
+	})
+}
+
+func TestContainsMediaTypeIndicator_EdgeCases(t *testing.T) {
+	tests := []struct {
+		name      string
+		title     string
+		mediaType MediaType
+		expected  bool
+	}{
+		{
+			name:      "empty media type",
+			title:     "寄生上流 (電影)",
+			mediaType: "",
+			expected:  false,
+		},
+		{
+			name:      "unknown media type",
+			title:     "寄生上流 (電影)",
+			mediaType: MediaType("unknown"),
+			expected:  false,
+		},
+		{
+			name:      "tv series keyword",
+			title:     "魷魚遊戲 tv series",
+			mediaType: MediaTypeTV,
+			expected:  true,
+		},
+		{
+			name:      "anime in chinese",
+			title:     "鬼滅之刃 動漫版",
+			mediaType: MediaTypeAnime,
+			expected:  true,
+		},
+		{
+			name:      "movie keyword lowercase",
+			title:     "some movie title",
+			mediaType: MediaTypeMovie,
+			expected:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := containsMediaTypeIndicator(tt.title, tt.mediaType)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
 }

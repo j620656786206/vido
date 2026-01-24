@@ -1,6 +1,8 @@
 package wikipedia
 
 import (
+	"context"
+	"log/slog"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -277,4 +279,199 @@ func TestNoImagePlaceholder(t *testing.T) {
 	t.Run("placeholder message is correct", func(t *testing.T) {
 		assert.Equal(t, "No poster available from Wikipedia", NoImagePlaceholder)
 	})
+}
+
+func TestNewImageExtractor(t *testing.T) {
+	t.Run("creates extractor with nil logger", func(t *testing.T) {
+		config := DefaultConfig()
+		client := NewClient(config, nil)
+		extractor := NewImageExtractor(client, nil)
+
+		assert.NotNil(t, extractor)
+		assert.NotNil(t, extractor.client)
+		assert.NotNil(t, extractor.logger)
+	})
+
+	t.Run("creates extractor with provided logger", func(t *testing.T) {
+		config := DefaultConfig()
+		client := NewClient(config, nil)
+		logger := slog.Default()
+		extractor := NewImageExtractor(client, logger)
+
+		assert.NotNil(t, extractor)
+		assert.Equal(t, logger, extractor.logger)
+	})
+}
+
+func TestImageExtractor_ExtractFromInfobox(t *testing.T) {
+	config := DefaultConfig()
+	client := NewClient(config, nil)
+	extractor := NewImageExtractor(client, nil)
+	ctx := context.Background()
+
+	t.Run("returns placeholder for nil infobox", func(t *testing.T) {
+		result := extractor.ExtractFromInfobox(ctx, nil)
+
+		assert.NotNil(t, result)
+		assert.False(t, result.HasImage)
+		assert.Equal(t, NoImagePlaceholder, result.PlaceholderReason)
+		assert.Empty(t, result.URL)
+	})
+
+	t.Run("returns placeholder for empty image field", func(t *testing.T) {
+		infobox := &InfoboxData{
+			Name:     "Test Movie",
+			Director: "Test Director",
+			Image:    "",
+		}
+
+		result := extractor.ExtractFromInfobox(ctx, infobox)
+
+		assert.False(t, result.HasImage)
+		assert.Equal(t, NoImagePlaceholder, result.PlaceholderReason)
+	})
+
+	t.Run("returns placeholder for whitespace-only image", func(t *testing.T) {
+		infobox := &InfoboxData{
+			Name:  "Test Movie",
+			Image: "   ",
+		}
+
+		result := extractor.ExtractFromInfobox(ctx, infobox)
+
+		assert.False(t, result.HasImage)
+		assert.Equal(t, NoImagePlaceholder, result.PlaceholderReason)
+	})
+
+	t.Run("handles image with File prefix", func(t *testing.T) {
+		// This will fail to get image info since no mock server,
+		// but validates the path through the client call
+		infobox := &InfoboxData{
+			Name:  "Test Movie",
+			Image: "File:Test.jpg",
+		}
+
+		result := extractor.ExtractFromInfobox(ctx, infobox)
+
+		// Should fail due to disabled client or network error
+		assert.False(t, result.HasImage)
+		assert.Equal(t, "Test.jpg", result.Filename)
+	})
+}
+
+func TestImageExtractor_ExtractFromPage(t *testing.T) {
+	config := DefaultConfig()
+	client := NewClient(config, nil)
+	extractor := NewImageExtractor(client, nil)
+	ctx := context.Background()
+
+	t.Run("returns placeholder for nil content", func(t *testing.T) {
+		result := extractor.ExtractFromPage(ctx, nil)
+
+		assert.NotNil(t, result)
+		assert.False(t, result.HasImage)
+		assert.Equal(t, NoImagePlaceholder, result.PlaceholderReason)
+	})
+
+	t.Run("returns placeholder for empty wikitext", func(t *testing.T) {
+		content := &PageContent{
+			PageID:   12345,
+			Title:    "Test Page",
+			Wikitext: "",
+		}
+
+		result := extractor.ExtractFromPage(ctx, content)
+
+		assert.False(t, result.HasImage)
+		assert.Equal(t, NoImagePlaceholder, result.PlaceholderReason)
+	})
+
+	t.Run("returns placeholder when no image found in wikitext", func(t *testing.T) {
+		content := &PageContent{
+			PageID: 12345,
+			Title:  "Test Page",
+			Wikitext: `{{Infobox film
+| name = Test
+| director = Someone
+}}
+Just text without any images.`,
+		}
+
+		result := extractor.ExtractFromPage(ctx, content)
+
+		assert.False(t, result.HasImage)
+		assert.Equal(t, NoImagePlaceholder, result.PlaceholderReason)
+	})
+
+	t.Run("finds image in wikitext and attempts to fetch", func(t *testing.T) {
+		content := &PageContent{
+			PageID: 12345,
+			Title:  "Test Page",
+			Wikitext: `{{Infobox film
+| name = Test
+| image = Poster.jpg
+}}`,
+		}
+
+		result := extractor.ExtractFromPage(ctx, content)
+
+		// Should find the image but fail to get URL (no mock server)
+		assert.False(t, result.HasImage)
+		assert.Equal(t, "Poster.jpg", result.Filename)
+	})
+}
+
+func TestExtractAllFilenamesFromWikitext(t *testing.T) {
+	tests := []struct {
+		name     string
+		wikitext string
+		expected []string
+	}{
+		{
+			name:     "single File link",
+			wikitext: "[[File:Test.jpg]]",
+			expected: []string{"Test.jpg"},
+		},
+		{
+			name:     "multiple File links",
+			wikitext: "[[File:First.jpg]] text [[File:Second.png]]",
+			expected: []string{"First.jpg", "Second.png"},
+		},
+		{
+			name:     "Image link",
+			wikitext: "[[Image:Logo.svg]]",
+			expected: []string{"Logo.svg"},
+		},
+		{
+			name:     "with parameters",
+			wikitext: "[[File:Poster.jpg|300px|thumb]]",
+			expected: []string{"Poster.jpg"},
+		},
+		{
+			name:     "lowercase prefix",
+			wikitext: "[[file:test.jpg]]",
+			expected: []string{"test.jpg"},
+		},
+		{
+			name:     "no file links",
+			wikitext: "Just some text without links",
+			expected: []string{},
+		},
+		{
+			name:     "mixed content",
+			wikitext: "Text [[File:A.jpg|thumb]] more [[Image:B.png]] end",
+			expected: []string{"A.jpg", "B.png"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := extractAllFilenamesFromWikitext(tt.wikitext)
+			if len(tt.expected) == 0 {
+				assert.Empty(t, result)
+			} else {
+				assert.Equal(t, tt.expected, result)
+			}
+		})
+	}
 }

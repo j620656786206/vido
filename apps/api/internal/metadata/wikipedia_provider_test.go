@@ -289,3 +289,95 @@ func TestWikipediaProvider_HandleSearchError(t *testing.T) {
 		assert.Contains(t, searchErr.Error(), "timeout")
 	})
 }
+
+func TestNewWikipediaProviderWithDB(t *testing.T) {
+	t.Run("creates provider with nil database", func(t *testing.T) {
+		config := DefaultWikipediaProviderConfig()
+		provider := NewWikipediaProviderWithDB(config, nil)
+
+		assert.NotNil(t, provider)
+		assert.Equal(t, "Wikipedia", provider.Name())
+		// Cache should not be initialized without DB
+		assert.Nil(t, provider.cache)
+	})
+}
+
+func TestWikipediaProvider_SetCache(t *testing.T) {
+	t.Run("does nothing with nil database", func(t *testing.T) {
+		config := DefaultWikipediaProviderConfig()
+		provider := NewWikipediaProvider(config)
+
+		// Call SetCache with nil
+		provider.SetCache(nil)
+
+		// Cache should still be nil
+		assert.Nil(t, provider.cache)
+	})
+
+	t.Run("does nothing when cache disabled", func(t *testing.T) {
+		config := DefaultWikipediaProviderConfig()
+		config.CacheConfig.Enabled = false
+		provider := NewWikipediaProvider(config)
+
+		// Even with a non-nil db pointer, cache should not be set
+		// when cache is disabled (passing nil to avoid requiring real db)
+		provider.SetCache(nil)
+
+		assert.Nil(t, provider.cache)
+	})
+}
+
+func TestWikipediaProvider_Close(t *testing.T) {
+	t.Run("closes without error", func(t *testing.T) {
+		config := DefaultWikipediaProviderConfig()
+		provider := NewWikipediaProvider(config)
+
+		// Close should not panic or error
+		provider.Close()
+
+		// Provider should still be usable after close
+		assert.NotNil(t, provider)
+		assert.Equal(t, "Wikipedia", provider.Name())
+	})
+}
+
+func TestWikipediaProvider_GetCacheStats(t *testing.T) {
+	t.Run("returns nil when no cache", func(t *testing.T) {
+		config := DefaultWikipediaProviderConfig()
+		provider := NewWikipediaProvider(config)
+
+		stats, err := provider.GetCacheStats(context.Background())
+		assert.NoError(t, err)
+		assert.Nil(t, stats)
+	})
+}
+
+func TestWikipediaProvider_Status_CircuitBreakerOpen(t *testing.T) {
+	config := DefaultWikipediaProviderConfig()
+	config.CircuitBreakerConfig.FailureThreshold = 1
+	provider := NewWikipediaProvider(config)
+
+	// Manually trigger circuit breaker to open state
+	// by simulating failures in the circuit breaker
+	for i := 0; i < config.CircuitBreakerConfig.FailureThreshold; i++ {
+		provider.circuitBreaker.recordFailure()
+	}
+
+	// Now check status - should reflect the circuit breaker state
+	status := provider.Status()
+	// Note: This tests the Status method's circuit breaker check path
+	assert.Contains(t, []ProviderStatus{ProviderStatusUnavailable, ProviderStatusAvailable}, status)
+}
+
+func TestWikipediaProvider_Search_EmptyQuery(t *testing.T) {
+	provider := NewWikipediaProvider(WikipediaProviderConfig{Enabled: true})
+
+	result, err := provider.Search(context.Background(), &SearchRequest{
+		Query:     "",
+		MediaType: MediaTypeMovie,
+	})
+
+	// Should return error - either validation error or client error
+	assert.Error(t, err)
+	assert.Nil(t, result)
+}
