@@ -1,6 +1,6 @@
 # Story 3.5: Wikipedia Metadata Fallback
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -36,55 +36,55 @@ So that **even rare titles can have basic metadata**.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create Wikipedia Client (AC: 4)
-  - [ ] 1.1: Create `/apps/api/internal/wikipedia/client.go`
-  - [ ] 1.2: Implement MediaWiki API client
-  - [ ] 1.3: Set proper User-Agent header (NFR-I13)
-  - [ ] 1.4: Add rate limiter (1 req/s) (NFR-I14)
-  - [ ] 1.5: Write client tests
+- [x] Task 1: Create Wikipedia Client (AC: 4)
+  - [x] 1.1: Create `/apps/api/internal/wikipedia/client.go`
+  - [x] 1.2: Implement MediaWiki API client
+  - [x] 1.3: Set proper User-Agent header (NFR-I13)
+  - [x] 1.4: Add rate limiter (1 req/s) (NFR-I14)
+  - [x] 1.5: Write client tests
 
-- [ ] Task 2: Implement Search Functionality (AC: 1)
-  - [ ] 2.1: Create `/apps/api/internal/wikipedia/search.go`
-  - [ ] 2.2: Use MediaWiki API `action=query&list=search`
-  - [ ] 2.3: Search zh.wikipedia.org for Traditional Chinese articles
-  - [ ] 2.4: Handle search result ranking
-  - [ ] 2.5: Write search tests
+- [x] Task 2: Implement Search Functionality (AC: 1)
+  - [x] 2.1: Create `/apps/api/internal/wikipedia/search.go`
+  - [x] 2.2: Use MediaWiki API `action=query&list=search`
+  - [x] 2.3: Search zh.wikipedia.org for Traditional Chinese articles
+  - [x] 2.4: Handle search result ranking
+  - [x] 2.5: Write search tests
 
-- [ ] Task 3: Implement Infobox Parser (AC: 2)
-  - [ ] 3.1: Create `/apps/api/internal/wikipedia/infobox.go`
-  - [ ] 3.2: Parse `{{Infobox film}}` template
-  - [ ] 3.3: Parse `{{Infobox television}}` template
-  - [ ] 3.4: Parse `{{Infobox animanga/Header}}` template
-  - [ ] 3.5: Handle Chinese Infobox variations (電影資訊框, 電視節目資訊框)
-  - [ ] 3.6: Extract: title, director, cast, year, genre
-  - [ ] 3.7: Write parser tests with sample wikitext
+- [x] Task 3: Implement Infobox Parser (AC: 2)
+  - [x] 3.1: Create `/apps/api/internal/wikipedia/infobox.go`
+  - [x] 3.2: Parse `{{Infobox film}}` template
+  - [x] 3.3: Parse `{{Infobox television}}` template
+  - [x] 3.4: Parse `{{Infobox animanga/Header}}` template
+  - [x] 3.5: Handle Chinese Infobox variations (電影資訊框, 電視節目資訊框)
+  - [x] 3.6: Extract: title, director, cast, year, genre
+  - [x] 3.7: Write parser tests with sample wikitext
 
-- [ ] Task 4: Implement Content Extraction (AC: 2)
-  - [ ] 4.1: Create `/apps/api/internal/wikipedia/content.go`
-  - [ ] 4.2: Use MediaWiki API `action=parse` for page content
-  - [ ] 4.3: Extract plain text summary (first paragraph)
-  - [ ] 4.4: Handle wiki markup cleanup
-  - [ ] 4.5: Write content extraction tests
+- [x] Task 4: Implement Content Extraction (AC: 2)
+  - [x] 4.1: Create `/apps/api/internal/wikipedia/content.go`
+  - [x] 4.2: Use MediaWiki API `action=parse` for page content
+  - [x] 4.3: Extract plain text summary (first paragraph)
+  - [x] 4.4: Handle wiki markup cleanup
+  - [x] 4.5: Write content extraction tests
 
-- [ ] Task 5: Handle Image Extraction (AC: 3)
-  - [ ] 5.1: Check for poster/cover image in Infobox
-  - [ ] 5.2: Use `action=query&prop=images` to get image list
-  - [ ] 5.3: Use `action=query&prop=imageinfo` to get image URL
-  - [ ] 5.4: Return placeholder indicator when no image found
-  - [ ] 5.5: Write image extraction tests
+- [x] Task 5: Handle Image Extraction (AC: 3)
+  - [x] 5.1: Check for poster/cover image in Infobox
+  - [x] 5.2: Use `action=query&prop=images` to get image list
+  - [x] 5.3: Use `action=query&prop=imageinfo` to get image URL
+  - [x] 5.4: Return placeholder indicator when no image found
+  - [x] 5.5: Write image extraction tests
 
-- [ ] Task 6: Create Wikipedia Provider (AC: 1, 2, 3, 4)
-  - [ ] 6.1: Update `/apps/api/internal/metadata/wikipedia_provider.go`
-  - [ ] 6.2: Replace stub with actual implementation
-  - [ ] 6.3: Map Wikipedia data to `MetadataItem` format
-  - [ ] 6.4: Integrate with circuit breaker from Story 3.3
-  - [ ] 6.5: Write provider tests
+- [x] Task 6: Create Wikipedia Provider (AC: 1, 2, 3, 4)
+  - [x] 6.1: Update `/apps/api/internal/metadata/wikipedia_provider.go`
+  - [x] 6.2: Replace stub with actual implementation
+  - [x] 6.3: Map Wikipedia data to `MetadataItem` format
+  - [x] 6.4: Integrate with circuit breaker from Story 3.3
+  - [x] 6.5: Write provider tests
 
-- [ ] Task 7: Caching Layer (AC: 4)
-  - [ ] 7.1: Create `wikipedia_cache` table
-  - [ ] 7.2: Cache successful fetches for 7 days
-  - [ ] 7.3: Reduce API calls to Wikipedia
-  - [ ] 7.4: Write cache tests
+- [x] Task 7: Caching Layer (AC: 4)
+  - [x] 7.1: Create `wikipedia_cache` table
+  - [x] 7.2: Cache successful fetches for 7 days
+  - [x] 7.3: Reduce API calls to Wikipedia
+  - [x] 7.4: Write cache tests
 
 ## Dev Notes
 
@@ -403,10 +403,43 @@ Vido/1.0 (https://github.com/vido; alexyu@example.com) Go-http-client/1.1
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.5 (claude-opus-4-5-20251101)
 
 ### Debug Log References
 
+N/A
+
 ### Completion Notes List
 
+1. Implemented full WikipediaProvider replacing the stub from Story 3.3
+2. MediaWiki API client with proper User-Agent (NFR-I13) and rate limiting (NFR-I14)
+3. Advanced search with ranking and confidence scoring
+4. Infobox parsing supports: film, television, animanga templates (English and Chinese)
+5. Wiki markup cleanup: removes [[links]], {{templates}}, HTML tags, bold/italic
+6. Image extraction from Infobox and wikitext with placeholder handling
+7. 7-day cache for Wikipedia results
+8. Database migration 009_create_wikipedia_cache_table.go
+9. Circuit breaker integration for fault tolerance
+10. Test coverage: wikipedia package 76.8%, metadata package tests all passing
+
 ### File List
+
+**New Files Created:**
+- `/apps/api/internal/wikipedia/types.go` - Types, config, error codes
+- `/apps/api/internal/wikipedia/client.go` - MediaWiki API client
+- `/apps/api/internal/wikipedia/client_test.go`
+- `/apps/api/internal/wikipedia/search.go` - Search with ranking
+- `/apps/api/internal/wikipedia/search_test.go`
+- `/apps/api/internal/wikipedia/infobox.go` - Infobox parser
+- `/apps/api/internal/wikipedia/infobox_test.go`
+- `/apps/api/internal/wikipedia/content.go` - Content extraction
+- `/apps/api/internal/wikipedia/content_test.go`
+- `/apps/api/internal/wikipedia/image.go` - Image extraction
+- `/apps/api/internal/wikipedia/image_test.go`
+- `/apps/api/internal/metadata/wikipedia_cache.go` - Cache implementation
+- `/apps/api/internal/metadata/wikipedia_cache_test.go`
+- `/apps/api/internal/database/migrations/009_create_wikipedia_cache_table.go`
+
+**Modified Files:**
+- `/apps/api/internal/metadata/wikipedia_provider.go` - Replaced stub with full implementation
+- `/apps/api/internal/metadata/wikipedia_provider_test.go` - Updated tests for full implementation
