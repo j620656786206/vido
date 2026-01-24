@@ -172,10 +172,15 @@ func (p *DoubanProvider) Search(ctx context.Context, req *SearchRequest) (*Searc
 		// Check if this is a blocking error
 		var blockedErr *douban.BlockedError
 		if errors.As(err, &blockedErr) {
+			// Distinguish between rate limiting (429) and other blocking
+			errCode := douban.ErrCodeBlocked
+			if blockedErr.StatusCode == 429 {
+				errCode = douban.ErrCodeRateLimited
+			}
 			return nil, NewProviderError(
 				p.Name(),
 				p.Source(),
-				douban.ErrCodeBlocked,
+				errCode,
 				"Douban blocked the request: "+blockedErr.Reason,
 				err,
 			)
@@ -193,11 +198,35 @@ func (p *DoubanProvider) Search(ctx context.Context, req *SearchRequest) (*Searc
 			}, nil
 		}
 
+		// Check for parse errors
+		var parseErr *douban.ParseError
+		if errors.As(err, &parseErr) {
+			return nil, NewProviderError(
+				p.Name(),
+				p.Source(),
+				douban.ErrCodeParseError,
+				"Douban parse error: "+parseErr.Error(),
+				err,
+			)
+		}
+
+		// Check for context timeout/deadline
+		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
+			return nil, NewProviderError(
+				p.Name(),
+				p.Source(),
+				douban.ErrCodeTimeout,
+				"Douban request timeout",
+				err,
+			)
+		}
+
+		// Generic error fallback
 		return nil, NewProviderError(
 			p.Name(),
 			p.Source(),
 			ErrCodeUnavailable,
-			"Douban search failed",
+			"Douban search failed: "+err.Error(),
 			err,
 		)
 	}

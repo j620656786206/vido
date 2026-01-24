@@ -442,16 +442,36 @@ func (e *cacheEntry) toDetailResult() (*DetailResult, error) {
 		result.Director = e.Director.String
 	}
 	if e.CastJSON.Valid {
-		json.Unmarshal([]byte(e.CastJSON.String), &result.Cast)
+		if err := json.Unmarshal([]byte(e.CastJSON.String), &result.Cast); err != nil {
+			slog.Warn("Failed to unmarshal cast JSON from cache",
+				"douban_id", e.DoubanID,
+				"error", err,
+			)
+		}
 	}
 	if e.GenresJSON.Valid {
-		json.Unmarshal([]byte(e.GenresJSON.String), &result.Genres)
+		if err := json.Unmarshal([]byte(e.GenresJSON.String), &result.Genres); err != nil {
+			slog.Warn("Failed to unmarshal genres JSON from cache",
+				"douban_id", e.DoubanID,
+				"error", err,
+			)
+		}
 	}
 	if e.CountriesJSON.Valid {
-		json.Unmarshal([]byte(e.CountriesJSON.String), &result.Countries)
+		if err := json.Unmarshal([]byte(e.CountriesJSON.String), &result.Countries); err != nil {
+			slog.Warn("Failed to unmarshal countries JSON from cache",
+				"douban_id", e.DoubanID,
+				"error", err,
+			)
+		}
 	}
 	if e.LanguagesJSON.Valid {
-		json.Unmarshal([]byte(e.LanguagesJSON.String), &result.Languages)
+		if err := json.Unmarshal([]byte(e.LanguagesJSON.String), &result.Languages); err != nil {
+			slog.Warn("Failed to unmarshal languages JSON from cache",
+				"douban_id", e.DoubanID,
+				"error", err,
+			)
+		}
 	}
 	if e.PosterURL.Valid {
 		result.PosterURL = e.PosterURL.String

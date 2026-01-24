@@ -15,7 +15,18 @@ import (
 	"golang.org/x/time/rate"
 )
 
-// Client is a Douban web scraper client with rate limiting and anti-scraping measures
+// Client is a Douban web scraper client with rate limiting and anti-scraping measures.
+//
+// robots.txt Compliance Note:
+// This client intentionally does not implement dynamic robots.txt checking because:
+// 1. This is a personal-use metadata fetching tool, not a commercial crawler
+// 2. We implement strict rate limiting (1 req/2s) which is more conservative than most robots.txt rules
+// 3. We only fetch public movie/TV metadata pages, not user data or restricted content
+// 4. Caching (7-day TTL) significantly reduces request volume
+// 5. Circuit breaker prevents overloading when anti-scraping is detected
+//
+// If you need to use this for commercial purposes, implement robots.txt checking
+// using a library like "github.com/temoto/robotstxt".
 type Client struct {
 	httpClient  *http.Client
 	rateLimiter *rate.Limiter
@@ -28,8 +39,12 @@ type Client struct {
 	uaMu       sync.Mutex
 
 	// Metrics for monitoring
-	metrics *ClientMetrics
+	metrics   *ClientMetrics
 	metricsMu sync.RWMutex
+
+	// Enabled state with mutex protection
+	enabled   bool
+	enabledMu sync.RWMutex
 }
 
 // ClientMetrics tracks scraper performance and issues
@@ -101,6 +116,7 @@ func NewClient(config ClientConfig, logger *slog.Logger) *Client {
 		userAgents:  defaultUserAgents,
 		uaIndex:     0,
 		metrics:     &ClientMetrics{},
+		enabled:     config.Enabled,
 	}
 }
 
@@ -317,12 +333,16 @@ func (c *Client) GetMetrics() ClientMetrics {
 	return *c.metrics
 }
 
-// IsEnabled returns whether the client is enabled
+// IsEnabled returns whether the client is enabled (thread-safe)
 func (c *Client) IsEnabled() bool {
-	return c.config.Enabled
+	c.enabledMu.RLock()
+	defer c.enabledMu.RUnlock()
+	return c.enabled
 }
 
-// SetEnabled enables or disables the client
+// SetEnabled enables or disables the client (thread-safe)
 func (c *Client) SetEnabled(enabled bool) {
-	c.config.Enabled = enabled
+	c.enabledMu.Lock()
+	defer c.enabledMu.Unlock()
+	c.enabled = enabled
 }
