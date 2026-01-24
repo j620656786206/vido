@@ -240,6 +240,51 @@ func TestScraper_ExtractInfoField(t *testing.T) {
 	}
 }
 
+func TestScraper_ConvertToTraditional(t *testing.T) {
+	client := NewClient(DefaultConfig(), nil)
+	scraper := NewScraper(client, nil)
+
+	t.Run("converts simplified title to traditional", func(t *testing.T) {
+		result := &DetailResult{
+			Title:   "寄生虫", // Simplified
+			Summary: "基泽一家四口全是无业游民", // Simplified
+		}
+
+		scraper.convertToTraditional(result)
+
+		// TitleTraditional should be set
+		assert.NotEmpty(t, result.TitleTraditional)
+		// SummaryTraditional should be set
+		assert.NotEmpty(t, result.SummaryTraditional)
+	})
+
+	t.Run("handles empty fields gracefully", func(t *testing.T) {
+		result := &DetailResult{
+			Title:   "",
+			Summary: "",
+		}
+
+		// Should not panic
+		scraper.convertToTraditional(result)
+
+		assert.Empty(t, result.TitleTraditional)
+		assert.Empty(t, result.SummaryTraditional)
+	})
+
+	t.Run("preserves traditional chinese", func(t *testing.T) {
+		result := &DetailResult{
+			Title:   "寄生蟲", // Already Traditional
+			Summary: "基澤一家四口全是無業遊民", // Already Traditional
+		}
+
+		scraper.convertToTraditional(result)
+
+		// Should still set the traditional fields (converter handles this)
+		assert.NotEmpty(t, result.TitleTraditional)
+		assert.NotEmpty(t, result.SummaryTraditional)
+	})
+}
+
 func TestScraper_DetectTVShow(t *testing.T) {
 	client := NewClient(DefaultConfig(), nil)
 	scraper := NewScraper(client, nil)

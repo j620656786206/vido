@@ -425,3 +425,62 @@ func TestDefaultCacheConfig(t *testing.T) {
 	assert.Equal(t, 1*time.Hour, config.CleanupInterval)
 	assert.True(t, config.Enabled)
 }
+
+func TestCache_CleanupLoop(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	// Use a very short cleanup interval for testing
+	config := CacheConfig{
+		DefaultTTL:      100 * time.Millisecond,
+		CleanupInterval: 50 * time.Millisecond, // Very short for test
+		Enabled:         true,
+	}
+	cache := NewCache(db, config, nil)
+
+	ctx := context.Background()
+
+	// Insert an entry that will expire in the past (already expired)
+	_, err := db.Exec(`
+		INSERT INTO douban_cache (id, douban_id, title, media_type, scraped_at, expires_at)
+		VALUES ('test-id', 'to-expire', 'Expiring Movie', 'movie', datetime('now'), datetime('now', '-1 second'))
+	`)
+	require.NoError(t, err)
+
+	// Verify entry exists
+	var count int
+	err = db.QueryRow("SELECT COUNT(*) FROM douban_cache WHERE douban_id = 'to-expire'").Scan(&count)
+	require.NoError(t, err)
+	assert.Equal(t, 1, count)
+
+	// Wait for cleanup loop to run (should trigger within ~100ms)
+	time.Sleep(150 * time.Millisecond)
+
+	// Close cache to stop cleanup loop
+	cache.Close()
+
+	// Verify entry was cleaned up
+	err = db.QueryRow("SELECT COUNT(*) FROM douban_cache WHERE douban_id = 'to-expire'").Scan(&count)
+	require.NoError(t, err)
+	assert.Equal(t, 0, count, "expired entry should have been cleaned up by background loop")
+
+	_ = ctx // ctx used for future assertions if needed
+}
+
+func TestCache_CleanupLoop_Stop(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	config := CacheConfig{
+		DefaultTTL:      1 * time.Hour,
+		CleanupInterval: 10 * time.Millisecond,
+		Enabled:         true,
+	}
+	cache := NewCache(db, config, nil)
+
+	// Close should stop the cleanup goroutine gracefully
+	cache.Close()
+
+	// If we reach here without hanging, the test passes
+	// The cleanup goroutine should have stopped
+}

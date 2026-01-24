@@ -277,6 +277,59 @@ func TestSearcher_SearchByID(t *testing.T) {
 	})
 }
 
+func TestSearcher_ParseSubjectItem(t *testing.T) {
+	t.Run("parses subject item layout", func(t *testing.T) {
+		// This tests the third alternative search layout (parseSubjectItem)
+		// The HTML must NOT have .result-list or .item-root to trigger this branch
+		searchHTML := `<!DOCTYPE html>
+<html>
+<body>
+<div class="sc-bZQynM">
+  <a href="https://movie.douban.com/subject/1292052/">
+    <span class="title-class">肖申克的救赎</span>
+  </a>
+</div>
+<div data-testid="subject-item">
+  <a href="https://movie.douban.com/subject/1291546/">
+    <div class="title-wrapper">霸王别姬</div>
+  </a>
+</div>
+</body>
+</html>`
+
+		config := DefaultConfig()
+		client := NewClient(config, nil)
+		searcher := NewSearcher(client, nil)
+
+		results, err := searcher.parseSearchResults(searchHTML)
+
+		require.NoError(t, err)
+		require.Len(t, results, 2)
+		assert.Equal(t, "1292052", results[0].ID)
+		assert.Equal(t, "1291546", results[1].ID)
+	})
+
+	t.Run("handles subject item without link", func(t *testing.T) {
+		searchHTML := `<!DOCTYPE html>
+<html>
+<body>
+<div class="sc-bZQynM">
+  <span>No link here</span>
+</div>
+</body>
+</html>`
+
+		config := DefaultConfig()
+		client := NewClient(config, nil)
+		searcher := NewSearcher(client, nil)
+
+		results, err := searcher.parseSearchResults(searchHTML)
+
+		require.NoError(t, err)
+		assert.Len(t, results, 0)
+	})
+}
+
 func TestSearcher_ParseSearchResults_Complex(t *testing.T) {
 	t.Run("handles malformed HTML gracefully", func(t *testing.T) {
 		malformedHTML := `<html><body>
