@@ -1,6 +1,6 @@
 # Story 3.6: AI Search Keyword Generation
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -40,46 +40,46 @@ So that **hard-to-find titles can be located through different search terms**.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Design AI Prompt for Keyword Generation (AC: 1, 3)
-  - [ ] 1.1: Create prompt template for generating alternative search terms
-  - [ ] 1.2: Include examples for various languages (Chinese, Japanese, Korean, English)
-  - [ ] 1.3: Define JSON output schema for keyword variants
-  - [ ] 1.4: Store prompt in `/apps/api/internal/ai/prompts/keyword_generator.go`
-  - [ ] 1.5: Write prompt tests
+- [x] Task 1: Design AI Prompt for Keyword Generation (AC: 1, 3)
+  - [x] 1.1: Create prompt template for generating alternative search terms
+  - [x] 1.2: Include examples for various languages (Chinese, Japanese, Korean, English)
+  - [x] 1.3: Define JSON output schema for keyword variants
+  - [x] 1.4: Store prompt in `/apps/api/internal/ai/prompts/keyword_generator.go`
+  - [x] 1.5: Write prompt tests
 
-- [ ] Task 2: Extend AI Service with Keyword Generation (AC: 1, 4)
-  - [ ] 2.1: Add `GenerateKeywords()` method to AIService interface
-  - [ ] 2.2: Implement keyword generation using AI provider
-  - [ ] 2.3: Parse AI response to `KeywordVariants` struct
-  - [ ] 2.4: Leverage existing 30-day cache from Story 3.1
-  - [ ] 2.5: Write unit tests with mocked AI responses
+- [x] Task 2: Extend AI Service with Keyword Generation (AC: 1, 4)
+  - [x] 2.1: Add `GenerateKeywords()` method to AIService interface
+  - [x] 2.2: Implement keyword generation using AI provider
+  - [x] 2.3: Parse AI response to `KeywordVariants` struct
+  - [x] 2.4: Leverage existing 30-day cache from Story 3.1
+  - [x] 2.5: Write unit tests with mocked AI responses
 
-- [ ] Task 3: Create Keyword Variants Types (AC: 1, 2)
-  - [ ] 3.1: Create `/apps/api/internal/ai/keywords.go`
-  - [ ] 3.2: Define `KeywordVariants` struct
-  - [ ] 3.3: Define priority order for keyword retry
-  - [ ] 3.4: Write type tests
+- [x] Task 3: Create Keyword Variants Types (AC: 1, 2)
+  - [x] 3.1: Create `/apps/api/internal/ai/keywords.go`
+  - [x] 3.2: Define `KeywordVariants` struct
+  - [x] 3.3: Define priority order for keyword retry
+  - [x] 3.4: Write type tests
 
-- [ ] Task 4: Integrate with Fallback Orchestrator (AC: 2)
-  - [ ] 4.1: Update orchestrator to accept AI keyword generator
-  - [ ] 4.2: Add "AI keyword retry" phase after primary sources fail
-  - [ ] 4.3: Iterate through keyword variants with each provider
-  - [ ] 4.4: Stop on first successful match
-  - [ ] 4.5: Write integration tests
+- [x] Task 4: Integrate with Fallback Orchestrator (AC: 2)
+  - [x] 4.1: Update orchestrator to accept AI keyword generator
+  - [x] 4.2: Add "AI keyword retry" phase after primary sources fail
+  - [x] 4.3: Iterate through keyword variants with each provider
+  - [x] 4.4: Stop on first successful match
+  - [x] 4.5: Write integration tests
 
-- [ ] Task 5: Create Keyword Generation Service (AC: 1, 2, 3, 4)
-  - [ ] 5.1: Create `/apps/api/internal/services/keyword_service.go`
-  - [ ] 5.2: Define `KeywordServiceInterface` in services package
-  - [ ] 5.3: Implement `GetAlternativeKeywords()` method
-  - [ ] 5.4: Wire up in `main.go`
-  - [ ] 5.5: Write service tests
+- [x] Task 5: Create Keyword Generation Service (AC: 1, 2, 3, 4)
+  - [x] 5.1: Create `/apps/api/internal/services/keyword_service.go`
+  - [x] 5.2: Define `KeywordServiceInterface` in services package
+  - [x] 5.3: Implement `GetAlternativeKeywords()` method
+  - [x] 5.4: Wire up in `main.go`
+  - [x] 5.5: Write service tests
 
-- [ ] Task 6: Language Detection and Conversion (AC: 1, 3)
-  - [ ] 6.1: Detect source language (Chinese, Japanese, Korean, English)
-  - [ ] 6.2: Generate Simplified ↔ Traditional Chinese variants
-  - [ ] 6.3: Generate romaji for Japanese titles
-  - [ ] 6.4: Generate common English translations
-  - [ ] 6.5: Write conversion tests
+- [x] Task 6: Language Detection and Conversion (AC: 1, 3)
+  - [x] 6.1: Detect source language (Chinese, Japanese, Korean, English)
+  - [x] 6.2: Generate Simplified ↔ Traditional Chinese variants
+  - [x] 6.3: Generate romaji for Japanese titles
+  - [x] 6.4: Generate common English translations
+  - [x] 6.5: Write conversion tests
 
 ## Dev Notes
 
@@ -395,10 +395,43 @@ Following project-context.md Rule 7:
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.5 (claude-opus-4-5-20251101)
 
 ### Debug Log References
 
+N/A - All tests pass, no errors encountered.
+
 ### Completion Notes List
 
+1. **Task 1**: Created comprehensive AI prompt template in `keyword_generator.go` with examples for Chinese, Japanese, Korean, and English titles.
+
+2. **Task 2**: Extended `AIServiceInterface` with `GenerateKeywords()` method. Uses existing 30-day cache with `keywords:` prefix for cache keys.
+
+3. **Task 3**: Created `KeywordVariants` type in `keywords.go` with `GetPrioritizedList()` method that returns keywords in optimal search order: English > Romaji > Simplified Chinese > Traditional Chinese > Alternative Spellings > Aliases.
+
+4. **Task 4**: Integrated keyword retry phase into orchestrator's `Search()` method. After all primary providers fail, orchestrator calls `KeywordGenerator.GenerateKeywords()` and retries with each variant until success.
+
+5. **Task 5**: Created `KeywordService` that wraps AIService and implements `metadata.KeywordGenerator` interface. Wired up in `main.go` to automatically enable AI keyword retry when AI service is configured.
+
+6. **Task 6**: Implemented language detection using Unicode character ranges (hiragana/katakana for Japanese, hangul for Korean, CJK ideographs for Chinese). Simplified/Traditional Chinese detection uses character frequency analysis.
+
 ### File List
+
+**New Files:**
+- `apps/api/internal/ai/prompts/keyword_generator.go` - AI prompt template
+- `apps/api/internal/ai/prompts/keyword_generator_test.go` - Prompt tests
+- `apps/api/internal/ai/keywords.go` - KeywordVariants type
+- `apps/api/internal/ai/keywords_test.go` - KeywordVariants tests
+- `apps/api/internal/ai/language.go` - Language detection utilities
+- `apps/api/internal/ai/language_test.go` - Language detection tests
+- `apps/api/internal/services/keyword_service.go` - Keyword generation service
+- `apps/api/internal/services/keyword_service_test.go` - Service tests
+
+**Modified Files:**
+- `apps/api/internal/services/ai_service.go` - Added `GenerateKeywords()` method
+- `apps/api/internal/services/ai_service_test.go` - Added GenerateKeywords tests
+- `apps/api/internal/services/parser_service_test.go` - Updated mock to implement new interface
+- `apps/api/internal/metadata/orchestrator.go` - Added AI keyword retry phase
+- `apps/api/internal/metadata/orchestrator_test.go` - Added keyword retry tests
+- `apps/api/internal/services/metadata_service.go` - Added `SetKeywordGenerator()` method
+- `apps/api/cmd/api/main.go` - Wired up KeywordService

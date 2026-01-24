@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"log/slog"
 	"time"
 
@@ -14,6 +15,8 @@ import (
 const (
 	// FansubParsingTimeout is the maximum time for fansub AI parsing (NFR-P14).
 	FansubParsingTimeout = 10 * time.Second
+	// KeywordGenerationTimeout is the maximum time for keyword generation.
+	KeywordGenerationTimeout = 10 * time.Second
 )
 
 // AIServiceInterface defines the contract for AI parsing services.
@@ -26,6 +29,11 @@ type AIServiceInterface interface {
 	// Optimized for Japanese and Chinese fansub naming conventions.
 	// Uses cache-first strategy with 30-day TTL.
 	ParseFansubFilename(ctx context.Context, filename string) (*ai.ParseResponse, error)
+
+	// GenerateKeywords generates alternative search keywords for a media title.
+	// Uses AI to create language variants (English, Chinese, romaji) and aliases.
+	// Uses cache-first strategy with 30-day TTL.
+	GenerateKeywords(ctx context.Context, title, language string) (*ai.KeywordVariants, error)
 
 	// ClearCache removes all cached AI parsing results.
 	ClearCache(ctx context.Context) (int64, error)
@@ -226,6 +234,115 @@ func (s *AIService) ParseFansubFilename(ctx context.Context, filename string) (*
 	)
 
 	return response, nil
+}
+
+// GenerateKeywords generates alternative search keywords for a media title.
+// Uses AI to create language variants (English, Chinese, romaji) and aliases.
+// Uses cache-first strategy with 30-day TTL.
+func (s *AIService) GenerateKeywords(ctx context.Context, title, language string) (*ai.KeywordVariants, error) {
+	start := time.Now()
+
+	if s.provider == nil {
+		return nil, ai.ErrAINotConfigured
+	}
+
+	// Validate title
+	if title == "" {
+		return nil, errors.New("title is required for keyword generation")
+	}
+
+	// Use keyword-specific cache key prefix to avoid collisions
+	cacheKey := "keywords:" + title
+
+	// Check cache first
+	cached, err := s.cache.Get(ctx, cacheKey)
+	if err != nil {
+		slog.Warn("Cache lookup failed for keyword generation, proceeding with AI",
+			"error", err,
+			"title", title,
+			"duration_ms", time.Since(start).Milliseconds(),
+		)
+		// Continue to AI generation
+	} else if cached != nil {
+		slog.Debug("Cache hit for keyword generation",
+			"title", title,
+			"duration_ms", time.Since(start).Milliseconds(),
+		)
+		// Parse the cached RawResponse as KeywordVariants
+		variants, err := ai.KeywordVariantsFromJSON(cached.RawResponse)
+		if err != nil {
+			slog.Warn("Failed to parse cached keyword variants, regenerating",
+				"error", err,
+				"title", title,
+			)
+			// Continue to AI generation
+		} else {
+			return variants, nil
+		}
+	}
+
+	// Apply timeout for keyword generation
+	ctx, cancel := context.WithTimeout(ctx, KeywordGenerationTimeout)
+	defer cancel()
+
+	// Build keyword generation prompt
+	keywordPrompt := prompts.BuildKeywordPrompt(title, language)
+
+	// Generate with AI using keyword prompt
+	req := &ai.ParseRequest{
+		Filename: title, // Using Filename field for the title
+		Prompt:   keywordPrompt,
+	}
+
+	slog.Debug("Starting keyword generation",
+		"title", title,
+		"language", language,
+		"timeout_seconds", KeywordGenerationTimeout.Seconds(),
+	)
+
+	response, err := s.provider.Parse(ctx, req)
+	if err != nil {
+		duration := time.Since(start)
+		slog.Error("AI keyword generation failed",
+			"error", err,
+			"title", title,
+			"duration_ms", duration.Milliseconds(),
+			"timeout_exceeded", ctx.Err() == context.DeadlineExceeded,
+		)
+		return nil, err
+	}
+
+	duration := time.Since(start)
+
+	// Parse the AI response as KeywordVariants
+	variants, err := ai.KeywordVariantsFromJSON(response.RawResponse)
+	if err != nil {
+		slog.Error("Failed to parse keyword variants from AI response",
+			"error", err,
+			"title", title,
+			"raw_response", response.RawResponse,
+		)
+		return nil, err
+	}
+
+	// Cache the result with keyword prefix
+	// Store the response for caching (with RawResponse containing the keyword JSON)
+	if err := s.cache.Set(ctx, cacheKey, s.provider.Name(), "keywords", response); err != nil {
+		slog.Warn("Failed to cache keyword generation response",
+			"error", err,
+			"title", title,
+		)
+		// Don't fail the request if caching fails
+	}
+
+	slog.Info("Keywords generated successfully",
+		"title", title,
+		"language", language,
+		"keyword_count", variants.Count(),
+		"duration_ms", duration.Milliseconds(),
+	)
+
+	return variants, nil
 }
 
 // ClearCache removes all cached AI parsing results.

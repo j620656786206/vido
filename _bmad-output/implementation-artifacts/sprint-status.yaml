@@ -76,7 +76,7 @@ development_status:
   3-3-multi-source-metadata-fallback-chain: done  # Code review completed 2026-01-23
   3-4-douban-web-scraper: done  # Code review completed 2026-01-24
   3-5-wikipedia-metadata-fallback: done  # Completed 2026-01-24
-  3-6-ai-search-keyword-generation: ready-for-dev  # Story created 2026-01-18
+  3-6-ai-search-keyword-generation: done  # Completed 2026-01-24
   3-7-manual-metadata-search-and-selection: ready-for-dev  # Story created 2026-01-18
   3-8-metadata-editor: ready-for-dev  # Story created 2026-01-18
   3-9-filename-mapping-learning-system: ready-for-dev  # Story created 2026-01-18

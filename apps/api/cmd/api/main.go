@@ -149,6 +149,13 @@ func main() {
 		CircuitBreakerTimeoutSeconds:   cfg.CircuitBreakerTimeoutSeconds,
 	}, tmdbService)
 
+	// Initialize keyword service and wire to metadata service (Story 3.6)
+	if aiService != nil {
+		keywordService := services.NewKeywordService(aiService)
+		metadataService.SetKeywordGenerator(keywordService)
+		slog.Info("AI keyword retry phase enabled for metadata search")
+	}
+
 	slog.Info("Services initialized with repository injection")
 
 	// Initialize handlers with injected service interfaces

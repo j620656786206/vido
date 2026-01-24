@@ -187,3 +187,9 @@ func (s *MetadataService) GetProviders() []ProviderInfo {
 
 	return infos
 }
+
+// SetKeywordGenerator sets the AI keyword generator for retry phase (Story 3.6)
+func (s *MetadataService) SetKeywordGenerator(generator metadata.KeywordGenerator) {
+	s.orchestrator.SetKeywordGenerator(generator)
+	slog.Info("AI keyword generator configured for metadata search")
+}

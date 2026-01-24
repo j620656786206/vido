@@ -1000,3 +1000,219 @@ func TestFallbackStatus_AllFailed_Empty(t *testing.T) {
 	// THEN: Should return true (no successes possible)
 	assert.True(t, result)
 }
+
+// Tests for AI Keyword Retry Phase (Story 3.6)
+
+func TestOrchestrator_SetKeywordGenerator(t *testing.T) {
+	orch := NewOrchestrator(OrchestratorConfig{})
+
+	generator := &MockKeywordGenerator{
+		generateFunc: func(ctx context.Context, title string) (*KeywordVariants, error) {
+			return &KeywordVariants{
+				Original: title,
+				English:  "Test English",
+			}, nil
+		},
+	}
+
+	orch.SetKeywordGenerator(generator)
+
+	assert.NotNil(t, orch.keywordGenerator)
+}
+
+func TestOrchestrator_Search_WithKeywordRetry_Success(t *testing.T) {
+	orch := NewOrchestrator(OrchestratorConfig{
+		FallbackDelay: 10 * time.Millisecond,
+	})
+
+	// TMDb fails with original query
+	searchCount := 0
+	provider := &MockProvider{
+		name:      "tmdb",
+		source:    models.MetadataSourceTMDb,
+		available: true,
+		status:    ProviderStatusAvailable,
+		searchFunc: func(ctx context.Context, req *SearchRequest) (*SearchResult, error) {
+			searchCount++
+			// Fail for original Chinese title, succeed for English
+			if req.Query == "鬼滅之刃" {
+				return &SearchResult{Items: []MetadataItem{}, TotalCount: 0, Source: models.MetadataSourceTMDb}, nil
+			}
+			if req.Query == "Demon Slayer" {
+				return &SearchResult{
+					Items:      []MetadataItem{{ID: "123", Title: "Demon Slayer"}},
+					Source:     models.MetadataSourceTMDb,
+					TotalCount: 1,
+				}, nil
+			}
+			return &SearchResult{Items: []MetadataItem{}, TotalCount: 0, Source: models.MetadataSourceTMDb}, nil
+		},
+	}
+
+	generator := &MockKeywordGenerator{
+		generateFunc: func(ctx context.Context, title string) (*KeywordVariants, error) {
+			return &KeywordVariants{
+				Original: title,
+				English:  "Demon Slayer",
+				Romaji:   "Kimetsu no Yaiba",
+			}, nil
+		},
+	}
+
+	orch.RegisterProvider(provider)
+	orch.SetKeywordGenerator(generator)
+
+	result, status := orch.Search(context.Background(), &SearchRequest{
+		Query:     "鬼滅之刃",
+		MediaType: MediaTypeMovie,
+	})
+
+	require.NotNil(t, result)
+	assert.Equal(t, "Demon Slayer", result.Items[0].Title)
+
+	require.NotNil(t, status)
+	// Should have keyword attempts in status
+	assert.NotEmpty(t, status.KeywordAttempts)
+	assert.Equal(t, "Demon Slayer", status.SuccessfulKeyword)
+}
+
+func TestOrchestrator_Search_WithKeywordRetry_AllFail(t *testing.T) {
+	orch := NewOrchestrator(OrchestratorConfig{
+		FallbackDelay: 10 * time.Millisecond,
+	})
+
+	// Provider always fails
+	provider := &MockProvider{
+		name:      "tmdb",
+		source:    models.MetadataSourceTMDb,
+		available: true,
+		status:    ProviderStatusAvailable,
+		searchFunc: func(ctx context.Context, req *SearchRequest) (*SearchResult, error) {
+			return &SearchResult{Items: []MetadataItem{}, TotalCount: 0, Source: models.MetadataSourceTMDb}, nil
+		},
+	}
+
+	generator := &MockKeywordGenerator{
+		generateFunc: func(ctx context.Context, title string) (*KeywordVariants, error) {
+			return &KeywordVariants{
+				Original: title,
+				English:  "Test English",
+				Romaji:   "Test Romaji",
+			}, nil
+		},
+	}
+
+	orch.RegisterProvider(provider)
+	orch.SetKeywordGenerator(generator)
+
+	result, status := orch.Search(context.Background(), &SearchRequest{
+		Query:     "テスト",
+		MediaType: MediaTypeMovie,
+	})
+
+	assert.Nil(t, result)
+
+	require.NotNil(t, status)
+	assert.True(t, status.AllFailed())
+	// Should have tried all keyword variants
+	assert.NotEmpty(t, status.KeywordAttempts)
+	assert.Empty(t, status.SuccessfulKeyword)
+}
+
+func TestOrchestrator_Search_WithKeywordRetry_GeneratorError(t *testing.T) {
+	orch := NewOrchestrator(OrchestratorConfig{
+		FallbackDelay: 10 * time.Millisecond,
+	})
+
+	provider := &MockProvider{
+		name:      "tmdb",
+		source:    models.MetadataSourceTMDb,
+		available: true,
+		status:    ProviderStatusAvailable,
+		searchFunc: func(ctx context.Context, req *SearchRequest) (*SearchResult, error) {
+			return &SearchResult{Items: []MetadataItem{}, TotalCount: 0, Source: models.MetadataSourceTMDb}, nil
+		},
+	}
+
+	generator := &MockKeywordGenerator{
+		generateFunc: func(ctx context.Context, title string) (*KeywordVariants, error) {
+			return nil, errors.New("AI generation failed")
+		},
+	}
+
+	orch.RegisterProvider(provider)
+	orch.SetKeywordGenerator(generator)
+
+	result, status := orch.Search(context.Background(), &SearchRequest{
+		Query:     "Test",
+		MediaType: MediaTypeMovie,
+	})
+
+	// Should return nil but not crash
+	assert.Nil(t, result)
+	require.NotNil(t, status)
+	// No keyword attempts since generator failed
+	assert.Empty(t, status.KeywordAttempts)
+}
+
+func TestOrchestrator_Search_NoKeywordRetryIfFirstSucceeds(t *testing.T) {
+	orch := NewOrchestrator(OrchestratorConfig{
+		FallbackDelay: 10 * time.Millisecond,
+	})
+
+	provider := &MockProvider{
+		name:      "tmdb",
+		source:    models.MetadataSourceTMDb,
+		available: true,
+		status:    ProviderStatusAvailable,
+		searchFunc: func(ctx context.Context, req *SearchRequest) (*SearchResult, error) {
+			return &SearchResult{
+				Items:      []MetadataItem{{ID: "1", Title: "Test"}},
+				Source:     models.MetadataSourceTMDb,
+				TotalCount: 1,
+			}, nil
+		},
+	}
+
+	generatorCalled := false
+	generator := &MockKeywordGenerator{
+		generateFunc: func(ctx context.Context, title string) (*KeywordVariants, error) {
+			generatorCalled = true
+			return &KeywordVariants{Original: title}, nil
+		},
+	}
+
+	orch.RegisterProvider(provider)
+	orch.SetKeywordGenerator(generator)
+
+	result, status := orch.Search(context.Background(), &SearchRequest{
+		Query:     "Test",
+		MediaType: MediaTypeMovie,
+	})
+
+	require.NotNil(t, result)
+	assert.False(t, generatorCalled, "Keyword generator should not be called if first search succeeds")
+	assert.Empty(t, status.KeywordAttempts)
+}
+
+func TestKeywordAttempt_Fields(t *testing.T) {
+	attempt := KeywordAttempt{
+		Keyword: "Test Keyword",
+		Success: true,
+	}
+
+	assert.Equal(t, "Test Keyword", attempt.Keyword)
+	assert.True(t, attempt.Success)
+}
+
+// MockKeywordGenerator implements KeywordGenerator for testing
+type MockKeywordGenerator struct {
+	generateFunc func(ctx context.Context, title string) (*KeywordVariants, error)
+}
+
+func (m *MockKeywordGenerator) GenerateKeywords(ctx context.Context, title string) (*KeywordVariants, error) {
+	if m.generateFunc != nil {
+		return m.generateFunc(ctx, title)
+	}
+	return &KeywordVariants{Original: title}, nil
+}

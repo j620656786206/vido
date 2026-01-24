@@ -603,3 +603,207 @@ func TestFansubParsingTimeout_Constant(t *testing.T) {
 	// Verify the timeout constant matches NFR-P14 requirement
 	assert.Equal(t, 10*time.Second, FansubParsingTimeout, "Fansub parsing timeout should be 10 seconds per NFR-P14")
 }
+
+// Tests for GenerateKeywords (Story 3.6)
+
+func TestAIService_GenerateKeywords_Success(t *testing.T) {
+	db := setupTestAIDB(t)
+	defer db.Close()
+
+	// Mock provider that returns keyword generation response
+	provider := &mockProvider{
+		name: ai.ProviderGemini,
+		parseFunc: func(ctx context.Context, req *ai.ParseRequest) (*ai.ParseResponse, error) {
+			// Return a response with RawResponse containing keyword JSON
+			return &ai.ParseResponse{
+				Title:     "鬼滅之刃",
+				MediaType: "tv",
+				RawResponse: `{
+					"original": "鬼滅之刃",
+					"simplified_chinese": "鬼灭之刃",
+					"traditional_chinese": "鬼滅之刃",
+					"english": "Demon Slayer",
+					"romaji": "Kimetsu no Yaiba",
+					"alternative_spellings": ["Demon Slayer: Kimetsu no Yaiba"],
+					"common_aliases": ["鬼滅"]
+				}`,
+			}, nil
+		},
+	}
+	cache := ai.NewCache(db)
+	service := NewAIServiceWithProvider(provider, cache)
+
+	ctx := context.Background()
+
+	result, err := service.GenerateKeywords(ctx, "鬼滅之刃", "Traditional Chinese")
+
+	require.NoError(t, err)
+	assert.Equal(t, "鬼滅之刃", result.Original)
+	assert.Equal(t, "鬼灭之刃", result.SimplifiedChinese)
+	assert.Equal(t, "Demon Slayer", result.English)
+	assert.Equal(t, "Kimetsu no Yaiba", result.Romaji)
+	assert.Len(t, result.AlternativeSpellings, 1)
+	assert.Len(t, result.CommonAliases, 1)
+}
+
+func TestAIService_GenerateKeywords_CacheHit(t *testing.T) {
+	db := setupTestAIDB(t)
+	defer db.Close()
+
+	cachedKeywords := &ai.KeywordVariants{
+		Original:          "Test",
+		English:           "Test English",
+		SimplifiedChinese: "测试",
+	}
+
+	// Serialize to response for cache
+	cachedResponse := &ai.ParseResponse{
+		Title:       "Test",
+		MediaType:   "tv",
+		RawResponse: `{"original":"Test","english":"Test English","simplified_chinese":"测试"}`,
+	}
+
+	provider := &mockProvider{name: ai.ProviderGemini}
+	cache := ai.NewCache(db)
+	service := NewAIServiceWithProvider(provider, cache)
+
+	ctx := context.Background()
+	title := "Test"
+
+	// Pre-populate cache with keyword prefix
+	cacheKey := "keywords:" + title
+	err := cache.Set(ctx, cacheKey, ai.ProviderGemini, "keywords", cachedResponse)
+	require.NoError(t, err)
+
+	// Generate should hit cache
+	result, err := service.GenerateKeywords(ctx, title, "English")
+
+	require.NoError(t, err)
+	assert.Equal(t, cachedKeywords.Original, result.Original)
+	assert.Equal(t, cachedKeywords.English, result.English)
+	assert.False(t, provider.parseCalled) // Should not call provider
+}
+
+func TestAIService_GenerateKeywords_CachesResult(t *testing.T) {
+	db := setupTestAIDB(t)
+	defer db.Close()
+
+	callCount := 0
+	provider := &mockProvider{
+		name: ai.ProviderGemini,
+		parseFunc: func(ctx context.Context, req *ai.ParseRequest) (*ai.ParseResponse, error) {
+			callCount++
+			return &ai.ParseResponse{
+				Title:     "Test",
+				MediaType: "tv",
+				RawResponse: `{
+					"original": "Test",
+					"english": "Test Movie"
+				}`,
+			}, nil
+		},
+	}
+	cache := ai.NewCache(db)
+	service := NewAIServiceWithProvider(provider, cache)
+
+	ctx := context.Background()
+	title := "Test"
+
+	// First call - should call AI and cache
+	_, err := service.GenerateKeywords(ctx, title, "English")
+	require.NoError(t, err)
+	assert.Equal(t, 1, callCount)
+
+	// Create new service with same cache
+	provider2 := &mockProvider{name: ai.ProviderGemini}
+	service2 := NewAIServiceWithProvider(provider2, cache)
+
+	// Second call - should hit cache
+	result, err := service2.GenerateKeywords(ctx, title, "English")
+	require.NoError(t, err)
+	assert.Equal(t, "Test Movie", result.English)
+	assert.False(t, provider2.parseCalled) // Should hit cache
+}
+
+func TestAIService_GenerateKeywords_NotConfigured(t *testing.T) {
+	service := &AIService{
+		provider: nil,
+	}
+
+	_, err := service.GenerateKeywords(context.Background(), "Test", "English")
+
+	assert.ErrorIs(t, err, ai.ErrAINotConfigured)
+}
+
+func TestAIService_GenerateKeywords_ProviderError(t *testing.T) {
+	db := setupTestAIDB(t)
+	defer db.Close()
+
+	expectedErr := errors.New("AI provider error")
+	provider := &mockProvider{
+		name: ai.ProviderGemini,
+		parseFunc: func(ctx context.Context, req *ai.ParseRequest) (*ai.ParseResponse, error) {
+			return nil, expectedErr
+		},
+	}
+	cache := ai.NewCache(db)
+	service := NewAIServiceWithProvider(provider, cache)
+
+	ctx := context.Background()
+
+	_, err := service.GenerateKeywords(ctx, "Test", "English")
+
+	assert.Error(t, err)
+	assert.Equal(t, expectedErr, err)
+}
+
+func TestAIService_GenerateKeywords_EmptyTitle(t *testing.T) {
+	db := setupTestAIDB(t)
+	defer db.Close()
+
+	provider := &mockProvider{name: ai.ProviderGemini}
+	cache := ai.NewCache(db)
+	service := NewAIServiceWithProvider(provider, cache)
+
+	ctx := context.Background()
+
+	_, err := service.GenerateKeywords(ctx, "", "English")
+
+	assert.Error(t, err)
+	assert.False(t, provider.parseCalled)
+}
+
+func TestAIService_GenerateKeywords_UsesKeywordPrompt(t *testing.T) {
+	db := setupTestAIDB(t)
+	defer db.Close()
+
+	var capturedPrompt string
+	provider := &mockProvider{
+		name: ai.ProviderGemini,
+		parseFunc: func(ctx context.Context, req *ai.ParseRequest) (*ai.ParseResponse, error) {
+			capturedPrompt = req.Prompt
+			return &ai.ParseResponse{
+				Title:       "Test",
+				MediaType:   "tv",
+				RawResponse: `{"original":"Test","english":"Test English"}`,
+			}, nil
+		},
+	}
+	cache := ai.NewCache(db)
+	service := NewAIServiceWithProvider(provider, cache)
+
+	ctx := context.Background()
+
+	_, err := service.GenerateKeywords(ctx, "鬼滅之刃", "Traditional Chinese")
+
+	require.NoError(t, err)
+	// Verify keyword generation prompt was used
+	assert.Contains(t, capturedPrompt, "keyword generator")
+	assert.Contains(t, capturedPrompt, "鬼滅之刃")
+	assert.Contains(t, capturedPrompt, "Traditional Chinese")
+}
+
+func TestKeywordGenerationTimeout_Constant(t *testing.T) {
+	// Keyword generation should use same 10-second timeout
+	assert.Equal(t, 10*time.Second, KeywordGenerationTimeout, "Keyword generation timeout should be 10 seconds")
+}

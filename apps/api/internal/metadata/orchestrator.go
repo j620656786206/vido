@@ -36,6 +36,14 @@ type SourceAttempt struct {
 	Duration time.Duration `json:"duration"`
 }
 
+// KeywordAttempt represents a single keyword retry attempt
+type KeywordAttempt struct {
+	// Keyword is the alternative keyword that was tried
+	Keyword string `json:"keyword"`
+	// Success indicates if the attempt found results
+	Success bool `json:"success"`
+}
+
 // FallbackStatus represents the status of a fallback chain execution
 type FallbackStatus struct {
 	// Attempts contains all provider attempts in order
@@ -44,6 +52,10 @@ type FallbackStatus struct {
 	TotalDuration time.Duration `json:"totalDuration"`
 	// Cancelled indicates if the search was cancelled
 	Cancelled bool `json:"cancelled,omitempty"`
+	// KeywordAttempts contains the AI-generated keyword retry attempts (Story 3.6)
+	KeywordAttempts []KeywordAttempt `json:"keywordAttempts,omitempty"`
+	// SuccessfulKeyword is the keyword that succeeded (if any)
+	SuccessfulKeyword string `json:"successfulKeyword,omitempty"`
 }
 
 // AllFailed returns true if all attempts failed or were skipped
@@ -105,6 +117,52 @@ func sourceDisplayName(source models.MetadataSource) string {
 	}
 }
 
+// KeywordVariants holds alternative search terms for a media title.
+// This is a local copy to avoid circular imports with the ai package.
+type KeywordVariants struct {
+	Original             string   `json:"original"`
+	SimplifiedChinese    string   `json:"simplified_chinese,omitempty"`
+	TraditionalChinese   string   `json:"traditional_chinese,omitempty"`
+	English              string   `json:"english,omitempty"`
+	Romaji               string   `json:"romaji,omitempty"`
+	Pinyin               string   `json:"pinyin,omitempty"`
+	AlternativeSpellings []string `json:"alternative_spellings,omitempty"`
+	CommonAliases        []string `json:"common_aliases,omitempty"`
+}
+
+// GetPrioritizedList returns keywords in search priority order.
+func (k *KeywordVariants) GetPrioritizedList() []string {
+	seen := make(map[string]bool)
+	var keywords []string
+
+	add := func(keyword string) {
+		if keyword != "" && keyword != k.Original && !seen[keyword] {
+			seen[keyword] = true
+			keywords = append(keywords, keyword)
+		}
+	}
+
+	add(k.English)
+	add(k.Romaji)
+	add(k.SimplifiedChinese)
+	add(k.TraditionalChinese)
+
+	for _, spelling := range k.AlternativeSpellings {
+		add(spelling)
+	}
+
+	for _, alias := range k.CommonAliases {
+		add(alias)
+	}
+
+	return keywords
+}
+
+// KeywordGenerator generates alternative search keywords using AI.
+type KeywordGenerator interface {
+	GenerateKeywords(ctx context.Context, title string) (*KeywordVariants, error)
+}
+
 // ProgressCallback is called for each provider attempt
 type ProgressCallback func(attempt SourceAttempt)
 
@@ -124,10 +182,11 @@ func WithProgressCallback(cb ProgressCallback) SearchOption {
 
 // Orchestrator manages the fallback chain of metadata providers
 type Orchestrator struct {
-	config          OrchestratorConfig
-	providers       []MetadataProvider
-	circuitBreakers map[string]*CircuitBreaker
-	mu              sync.RWMutex
+	config           OrchestratorConfig
+	providers        []MetadataProvider
+	circuitBreakers  map[string]*CircuitBreaker
+	keywordGenerator KeywordGenerator
+	mu               sync.RWMutex
 }
 
 // NewOrchestrator creates a new orchestrator
@@ -183,6 +242,13 @@ func (o *Orchestrator) Providers() []MetadataProvider {
 	result := make([]MetadataProvider, len(o.providers))
 	copy(result, o.providers)
 	return result
+}
+
+// SetKeywordGenerator sets the AI keyword generator for the retry phase (Story 3.6)
+func (o *Orchestrator) SetKeywordGenerator(generator KeywordGenerator) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	o.keywordGenerator = generator
 }
 
 // Search executes the fallback chain and returns the first successful result
@@ -269,10 +335,75 @@ func (o *Orchestrator) Search(ctx context.Context, req *SearchRequest, opts ...S
 		}
 	}
 
+	// Story 3.6: AI Keyword Retry Phase
+	// If all providers failed, try AI-generated alternative keywords
+	o.mu.RLock()
+	keywordGen := o.keywordGenerator
+	o.mu.RUnlock()
+
+	if keywordGen != nil {
+		slog.Debug("Starting AI keyword retry phase",
+			"original_query", req.Query,
+		)
+
+		variants, err := keywordGen.GenerateKeywords(ctx, req.Query)
+		if err != nil {
+			slog.Warn("AI keyword generation failed",
+				"error", err,
+				"query", req.Query,
+			)
+		} else if variants != nil {
+			keywords := variants.GetPrioritizedList()
+			for _, keyword := range keywords {
+				// Check context cancellation
+				select {
+				case <-ctx.Done():
+					status.Cancelled = true
+					status.TotalDuration = time.Since(startTime)
+					return nil, status
+				default:
+				}
+
+				// Record keyword attempt
+				keywordAttempt := KeywordAttempt{Keyword: keyword}
+
+				// Try all providers with the alternative keyword
+				altReq := &SearchRequest{
+					Query:     keyword,
+					Year:      req.Year,
+					MediaType: req.MediaType,
+					Language:  req.Language,
+					Page:      req.Page,
+				}
+
+				for _, provider := range providers {
+					result, err := o.executeSearchWithCircuitBreaker(ctx, provider, altReq)
+					if err == nil && result != nil && result.HasResults() {
+						keywordAttempt.Success = true
+						status.KeywordAttempts = append(status.KeywordAttempts, keywordAttempt)
+						status.SuccessfulKeyword = keyword
+						status.TotalDuration = time.Since(startTime)
+
+						slog.Info("Metadata search successful with alternative keyword",
+							"original_query", req.Query,
+							"successful_keyword", keyword,
+							"provider", provider.Name(),
+							"duration", status.TotalDuration,
+						)
+						return result, status
+					}
+				}
+
+				status.KeywordAttempts = append(status.KeywordAttempts, keywordAttempt)
+			}
+		}
+	}
+
 	status.TotalDuration = time.Since(startTime)
 	slog.Warn("All metadata providers failed",
 		"query", req.Query,
 		"attempts", len(status.Attempts),
+		"keyword_attempts", len(status.KeywordAttempts),
 		"duration", status.TotalDuration,
 	)
 

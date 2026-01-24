@@ -47,12 +47,18 @@ func (m *mockAIService) ParseFansubFilename(ctx context.Context, filename string
 	}, nil
 }
 
+func (m *mockAIService) GenerateKeywords(ctx context.Context, title, language string) (*ai.KeywordVariants, error) {
+	return &ai.KeywordVariants{
+		Original: title,
+		English:  "Default English",
+	}, nil
+}
 func (m *mockAIService) ClearCache(ctx context.Context) (int64, error)        { return 0, nil }
 func (m *mockAIService) ClearExpiredCache(ctx context.Context) (int64, error) { return 0, nil }
 func (m *mockAIService) GetCacheStats(ctx context.Context) (*ai.CacheStats, error) {
 	return &ai.CacheStats{}, nil
 }
-func (m *mockAIService) IsConfigured() bool    { return m.isConfigured }
+func (m *mockAIService) IsConfigured() bool      { return m.isConfigured }
 func (m *mockAIService) GetProviderName() string { return "mock" }
 
 func TestParserService_ParseFilename_Movie(t *testing.T) {
