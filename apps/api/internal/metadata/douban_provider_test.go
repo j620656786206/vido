@@ -2,6 +2,7 @@ package metadata
 
 import (
 	"context"
+	"database/sql"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -11,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/vido/api/internal/douban"
 	"github.com/vido/api/internal/models"
+	_ "modernc.org/sqlite"
 )
 
 func TestNewDoubanProvider(t *testing.T) {
@@ -225,4 +227,113 @@ func TestDefaultDoubanProviderConfig(t *testing.T) {
 	assert.Equal(t, 3, config.CircuitBreakerConfig.FailureThreshold)
 	assert.Equal(t, 2, config.CircuitBreakerConfig.SuccessThreshold)
 	assert.Equal(t, 60*time.Second, config.CircuitBreakerConfig.Timeout)
+	assert.Equal(t, 7*24*time.Hour, config.CacheConfig.DefaultTTL)
+	assert.True(t, config.CacheConfig.Enabled)
+}
+
+func setupTestDB(t *testing.T) *sql.DB {
+	db, err := sql.Open("sqlite", ":memory:")
+	require.NoError(t, err)
+
+	// Create the douban_cache table
+	_, err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS douban_cache (
+			id TEXT PRIMARY KEY,
+			douban_id TEXT UNIQUE NOT NULL,
+			title TEXT NOT NULL,
+			title_traditional TEXT,
+			original_title TEXT,
+			year INTEGER,
+			rating REAL,
+			rating_count INTEGER,
+			director TEXT,
+			cast_json TEXT,
+			genres_json TEXT,
+			countries_json TEXT,
+			languages_json TEXT,
+			poster_url TEXT,
+			summary TEXT,
+			summary_traditional TEXT,
+			media_type TEXT DEFAULT 'movie',
+			runtime INTEGER,
+			episodes INTEGER,
+			release_date TEXT,
+			imdb_id TEXT,
+			scraped_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			expires_at TIMESTAMP NOT NULL
+		);
+		CREATE INDEX IF NOT EXISTS idx_douban_cache_douban_id ON douban_cache(douban_id);
+	`)
+	require.NoError(t, err)
+
+	return db
+}
+
+func TestNewDoubanProviderWithDB(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	config := DefaultDoubanProviderConfig()
+	provider := NewDoubanProviderWithDB(config, db)
+	defer provider.Close()
+
+	assert.NotNil(t, provider)
+	assert.NotNil(t, provider.cache)
+}
+
+func TestDoubanProvider_SetCache(t *testing.T) {
+	config := DefaultDoubanProviderConfig()
+	provider := NewDoubanProvider(config)
+
+	// Initially no cache
+	assert.Nil(t, provider.cache)
+
+	// Set cache
+	db := setupTestDB(t)
+	defer db.Close()
+	provider.SetCache(db)
+
+	assert.NotNil(t, provider.cache)
+	provider.Close()
+}
+
+func TestDoubanProvider_GetCacheStats(t *testing.T) {
+	t.Run("returns nil when cache is disabled", func(t *testing.T) {
+		config := DefaultDoubanProviderConfig()
+		provider := NewDoubanProvider(config)
+		defer provider.Close()
+
+		stats, err := provider.GetCacheStats(context.Background())
+		require.NoError(t, err)
+		assert.Nil(t, stats)
+	})
+
+	t.Run("returns stats when cache is enabled", func(t *testing.T) {
+		db := setupTestDB(t)
+		defer db.Close()
+
+		config := DefaultDoubanProviderConfig()
+		provider := NewDoubanProviderWithDB(config, db)
+		defer provider.Close()
+
+		stats, err := provider.GetCacheStats(context.Background())
+		require.NoError(t, err)
+		require.NotNil(t, stats)
+		assert.Equal(t, 0, stats.TotalEntries)
+		assert.Equal(t, 7*24*time.Hour, stats.TTL)
+	})
+}
+
+func TestDoubanProvider_Close(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	config := DefaultDoubanProviderConfig()
+	provider := NewDoubanProviderWithDB(config, db)
+
+	// Should not panic
+	provider.Close()
+
+	// Calling close multiple times should be safe
+	provider.Close()
 }

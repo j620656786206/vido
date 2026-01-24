@@ -39,6 +39,7 @@ type Cache struct {
 
 	stopCleanup chan struct{}
 	wg          sync.WaitGroup
+	closeOnce   sync.Once
 }
 
 // NewCache creates a new Douban cache
@@ -64,9 +65,12 @@ func NewCache(db *sql.DB, config CacheConfig, logger *slog.Logger) *Cache {
 }
 
 // Close stops the background cleanup goroutine
+// Safe to call multiple times
 func (c *Cache) Close() {
-	close(c.stopCleanup)
-	c.wg.Wait()
+	c.closeOnce.Do(func() {
+		close(c.stopCleanup)
+		c.wg.Wait()
+	})
 }
 
 // cleanupLoop periodically removes expired cache entries

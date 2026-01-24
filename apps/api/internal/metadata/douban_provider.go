@@ -2,6 +2,7 @@ package metadata
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"log/slog"
 	"sync"
@@ -19,6 +20,8 @@ type DoubanProviderConfig struct {
 	ClientConfig douban.ClientConfig
 	// CircuitBreakerConfig holds configuration for the circuit breaker
 	CircuitBreakerConfig CircuitBreakerConfig
+	// CacheConfig holds configuration for the result cache
+	CacheConfig douban.CacheConfig
 }
 
 // DefaultDoubanProviderConfig returns a default configuration for the Douban provider
@@ -27,10 +30,11 @@ func DefaultDoubanProviderConfig() DoubanProviderConfig {
 		Enabled:      true,
 		ClientConfig: douban.DefaultConfig(),
 		CircuitBreakerConfig: CircuitBreakerConfig{
-			FailureThreshold: 3,              // Open after 3 failures (more sensitive for scraping)
-			SuccessThreshold: 2,              // Close after 2 successes
+			FailureThreshold: 3,                // Open after 3 failures (more sensitive for scraping)
+			SuccessThreshold: 2,                // Close after 2 successes
 			Timeout:          60 * time.Second, // Longer timeout for anti-scraping recovery
 		},
+		CacheConfig: douban.DefaultCacheConfig(),
 	}
 }
 
@@ -40,6 +44,7 @@ type DoubanProvider struct {
 	client         *douban.Client
 	searcher       *douban.Searcher
 	scraper        *douban.Scraper
+	cache          *douban.Cache
 	circuitBreaker *CircuitBreaker
 	logger         *slog.Logger
 
@@ -49,11 +54,16 @@ type DoubanProvider struct {
 
 // NewDoubanProvider creates a new Douban provider
 func NewDoubanProvider(config DoubanProviderConfig) *DoubanProvider {
-	return NewDoubanProviderWithLogger(config, nil)
+	return NewDoubanProviderWithLogger(config, nil, nil)
 }
 
-// NewDoubanProviderWithLogger creates a new Douban provider with a custom logger
-func NewDoubanProviderWithLogger(config DoubanProviderConfig, logger *slog.Logger) *DoubanProvider {
+// NewDoubanProviderWithDB creates a new Douban provider with database connection for caching
+func NewDoubanProviderWithDB(config DoubanProviderConfig, db *sql.DB) *DoubanProvider {
+	return NewDoubanProviderWithLogger(config, nil, db)
+}
+
+// NewDoubanProviderWithLogger creates a new Douban provider with a custom logger and optional database
+func NewDoubanProviderWithLogger(config DoubanProviderConfig, logger *slog.Logger, db *sql.DB) *DoubanProvider {
 	if logger == nil {
 		logger = slog.Default()
 	}
@@ -64,14 +74,40 @@ func NewDoubanProviderWithLogger(config DoubanProviderConfig, logger *slog.Logge
 	// Create the circuit breaker
 	cb := NewCircuitBreaker("douban", config.CircuitBreakerConfig)
 
+	// Create cache if database connection is provided
+	var cache *douban.Cache
+	if db != nil && config.CacheConfig.Enabled {
+		cache = douban.NewCache(db, config.CacheConfig, logger)
+		logger.Info("Douban cache enabled",
+			"ttl", config.CacheConfig.DefaultTTL,
+			"cleanup_interval", config.CacheConfig.CleanupInterval,
+		)
+	}
+
 	return &DoubanProvider{
 		config:         config,
 		client:         client,
 		searcher:       douban.NewSearcher(client, logger),
 		scraper:        douban.NewScraper(client, logger),
+		cache:          cache,
 		circuitBreaker: cb,
 		logger:         logger,
 		enabled:        config.Enabled,
+	}
+}
+
+// SetCache sets the cache for the provider (useful for deferred initialization)
+func (p *DoubanProvider) SetCache(db *sql.DB) {
+	if db != nil && p.config.CacheConfig.Enabled {
+		p.cache = douban.NewCache(db, p.config.CacheConfig, p.logger)
+		p.logger.Info("Douban cache initialized")
+	}
+}
+
+// Close closes the provider and releases resources
+func (p *DoubanProvider) Close() {
+	if p.cache != nil {
+		p.cache.Close()
 	}
 }
 
@@ -239,6 +275,26 @@ func (p *DoubanProvider) Search(ctx context.Context, req *SearchRequest) (*Searc
 		}
 
 		var detail *douban.DetailResult
+
+		// Check cache first (Task 7.2: Cache successful scrapes for 7 days)
+		if p.cache != nil {
+			cached, cacheErr := p.cache.Get(ctx, sr.ID)
+			if cacheErr != nil {
+				p.logger.Warn("Cache lookup failed",
+					"id", sr.ID,
+					"error", cacheErr,
+				)
+			} else if cached != nil {
+				p.logger.Debug("Cache hit for Douban detail",
+					"id", sr.ID,
+					"title", cached.Title,
+				)
+				items = append(items, p.convertToMetadataItem(cached))
+				continue
+			}
+		}
+
+		// Cache miss - scrape from Douban
 		err := p.circuitBreaker.Execute(func() error {
 			var scrapeErr error
 			detail, scrapeErr = p.scraper.ScrapeDetail(ctx, sr.ID)
@@ -252,6 +308,16 @@ func (p *DoubanProvider) Search(ctx context.Context, req *SearchRequest) (*Searc
 			)
 			// Continue with next result instead of failing completely
 			continue
+		}
+
+		// Store in cache (Task 7.3: Reduce load on Douban servers)
+		if p.cache != nil && detail != nil {
+			if cacheErr := p.cache.Set(ctx, detail); cacheErr != nil {
+				p.logger.Warn("Failed to cache Douban detail",
+					"id", sr.ID,
+					"error", cacheErr,
+				)
+			}
 		}
 
 		items = append(items, p.convertToMetadataItem(detail))
@@ -315,6 +381,14 @@ func (p *DoubanProvider) ResetCircuitBreaker() {
 // GetClientMetrics returns the HTTP client metrics
 func (p *DoubanProvider) GetClientMetrics() douban.ClientMetrics {
 	return p.client.GetMetrics()
+}
+
+// GetCacheStats returns the cache statistics (nil if cache is not enabled)
+func (p *DoubanProvider) GetCacheStats(ctx context.Context) (*douban.CacheStats, error) {
+	if p.cache == nil {
+		return nil, nil
+	}
+	return p.cache.Stats(ctx)
 }
 
 // Compile-time interface verification

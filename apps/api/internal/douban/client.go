@@ -1,6 +1,7 @@
 package douban
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"io"
@@ -15,18 +16,14 @@ import (
 	"golang.org/x/time/rate"
 )
 
-// Client is a Douban web scraper client with rate limiting and anti-scraping measures.
+// Client is a Douban web scraper client with rate limiting, robots.txt compliance,
+// and anti-scraping measures.
 //
-// robots.txt Compliance Note:
-// This client intentionally does not implement dynamic robots.txt checking because:
-// 1. This is a personal-use metadata fetching tool, not a commercial crawler
-// 2. We implement strict rate limiting (1 req/2s) which is more conservative than most robots.txt rules
-// 3. We only fetch public movie/TV metadata pages, not user data or restricted content
-// 4. Caching (7-day TTL) significantly reduces request volume
-// 5. Circuit breaker prevents overloading when anti-scraping is detected
-//
-// If you need to use this for commercial purposes, implement robots.txt checking
-// using a library like "github.com/temoto/robotstxt".
+// robots.txt Compliance (AC4):
+// - Fetches and parses robots.txt on first request
+// - Respects Disallow directives for our User-Agent
+// - Falls back to allowing requests if robots.txt cannot be fetched
+// - Caches robots.txt rules for 24 hours
 type Client struct {
 	httpClient  *http.Client
 	rateLimiter *rate.Limiter
@@ -45,6 +42,18 @@ type Client struct {
 	// Enabled state with mutex protection
 	enabled   bool
 	enabledMu sync.RWMutex
+
+	// robots.txt compliance
+	robotsRules     *robotsRules
+	robotsChecked   bool
+	robotsMu        sync.RWMutex
+	robotsFetchedAt time.Time
+}
+
+// robotsRules holds parsed robots.txt rules
+type robotsRules struct {
+	disallowedPaths []string
+	crawlDelay      time.Duration
 }
 
 // ClientMetrics tracks scraper performance and issues
@@ -142,6 +151,19 @@ func (c *Client) addJitter(d time.Duration) time.Duration {
 
 // doRequest performs an HTTP request with rate limiting and retries
 func (c *Client) doRequest(ctx context.Context, req *http.Request) (*http.Response, error) {
+	// Check robots.txt compliance (AC4)
+	if err := c.checkRobotsTxt(ctx); err != nil {
+		c.logger.Warn("Failed to check robots.txt", "error", err)
+		// Continue anyway - we don't want to fail if robots.txt check fails
+	}
+
+	// Verify the path is allowed by robots.txt
+	if !c.isPathAllowed(req.URL.String()) {
+		return nil, &BlockedError{
+			Reason: "path disallowed by robots.txt: " + req.URL.Path,
+		}
+	}
+
 	// Wait for rate limiter
 	if err := c.rateLimiter.Wait(ctx); err != nil {
 		return nil, fmt.Errorf("rate limiter: %w", err)
@@ -345,4 +367,161 @@ func (c *Client) SetEnabled(enabled bool) {
 	c.enabledMu.Lock()
 	defer c.enabledMu.Unlock()
 	c.enabled = enabled
+}
+
+// checkRobotsTxt fetches and parses robots.txt if not already done
+// This is called before each request to ensure compliance with AC4
+func (c *Client) checkRobotsTxt(ctx context.Context) error {
+	c.robotsMu.RLock()
+	checked := c.robotsChecked
+	fetchedAt := c.robotsFetchedAt
+	c.robotsMu.RUnlock()
+
+	// Re-fetch if older than 24 hours
+	if checked && time.Since(fetchedAt) < 24*time.Hour {
+		return nil
+	}
+
+	c.robotsMu.Lock()
+	defer c.robotsMu.Unlock()
+
+	// Double-check after acquiring write lock
+	if c.robotsChecked && time.Since(c.robotsFetchedAt) < 24*time.Hour {
+		return nil
+	}
+
+	c.logger.Info("Fetching robots.txt for compliance check")
+
+	// Create a simple HTTP client for robots.txt (no rate limiting needed)
+	robotsClient := &http.Client{Timeout: 10 * time.Second}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://movie.douban.com/robots.txt", nil)
+	if err != nil {
+		c.logger.Warn("Failed to create robots.txt request", "error", err)
+		c.robotsChecked = true
+		c.robotsFetchedAt = time.Now()
+		c.robotsRules = nil // Allow all if we can't fetch
+		return nil
+	}
+
+	req.Header.Set("User-Agent", "VidoBot/1.0 (metadata fetcher)")
+
+	resp, err := robotsClient.Do(req)
+	if err != nil {
+		c.logger.Warn("Failed to fetch robots.txt", "error", err)
+		c.robotsChecked = true
+		c.robotsFetchedAt = time.Now()
+		c.robotsRules = nil // Allow all if we can't fetch
+		return nil
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		c.logger.Info("robots.txt not available", "status", resp.StatusCode)
+		c.robotsChecked = true
+		c.robotsFetchedAt = time.Now()
+		c.robotsRules = nil // Allow all if not found
+		return nil
+	}
+
+	rules := c.parseRobotsTxt(resp.Body)
+	c.robotsRules = rules
+	c.robotsChecked = true
+	c.robotsFetchedAt = time.Now()
+
+	c.logger.Info("robots.txt parsed",
+		"disallowed_paths", len(rules.disallowedPaths),
+		"crawl_delay", rules.crawlDelay,
+	)
+
+	return nil
+}
+
+// parseRobotsTxt parses robots.txt content
+func (c *Client) parseRobotsTxt(body io.Reader) *robotsRules {
+	rules := &robotsRules{
+		disallowedPaths: make([]string, 0),
+	}
+
+	scanner := bufio.NewScanner(body)
+	inOurSection := false
+	inDefaultSection := false
+
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+
+		// Skip empty lines and comments
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		// Check for User-agent directive
+		if strings.HasPrefix(strings.ToLower(line), "user-agent:") {
+			agent := strings.TrimSpace(strings.TrimPrefix(strings.ToLower(line), "user-agent:"))
+			// Check if this applies to us (* or our specific agent)
+			inDefaultSection = agent == "*"
+			inOurSection = agent == "*" || strings.Contains(agent, "bot") || strings.Contains(agent, "crawler")
+			continue
+		}
+
+		// Only process rules if we're in a relevant section
+		if !inOurSection && !inDefaultSection {
+			continue
+		}
+
+		// Check for Disallow directive
+		if strings.HasPrefix(strings.ToLower(line), "disallow:") {
+			path := strings.TrimSpace(strings.TrimPrefix(line, "Disallow:"))
+			path = strings.TrimSpace(strings.TrimPrefix(path, "disallow:"))
+			if path != "" {
+				rules.disallowedPaths = append(rules.disallowedPaths, path)
+			}
+			continue
+		}
+
+		// Check for Crawl-delay directive
+		if strings.HasPrefix(strings.ToLower(line), "crawl-delay:") {
+			delayStr := strings.TrimSpace(strings.TrimPrefix(strings.ToLower(line), "crawl-delay:"))
+			if delay, err := time.ParseDuration(delayStr + "s"); err == nil {
+				rules.crawlDelay = delay
+			}
+		}
+	}
+
+	return rules
+}
+
+// isPathAllowed checks if a path is allowed by robots.txt
+func (c *Client) isPathAllowed(urlStr string) bool {
+	c.robotsMu.RLock()
+	rules := c.robotsRules
+	c.robotsMu.RUnlock()
+
+	// If no rules, allow all
+	if rules == nil {
+		return true
+	}
+
+	// Parse the URL to get the path
+	parsed, err := url.Parse(urlStr)
+	if err != nil {
+		return true // Allow if we can't parse
+	}
+
+	path := parsed.Path
+	if path == "" {
+		path = "/"
+	}
+
+	// Check against disallowed paths
+	for _, disallowed := range rules.disallowedPaths {
+		if strings.HasPrefix(path, disallowed) {
+			c.logger.Warn("Path disallowed by robots.txt",
+				"path", path,
+				"disallowed", disallowed,
+			)
+			return false
+		}
+	}
+
+	return true
 }

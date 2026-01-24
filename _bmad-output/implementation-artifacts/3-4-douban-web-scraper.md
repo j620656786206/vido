@@ -393,9 +393,15 @@ N/A
 - **Task 4**: Anti-scraping countermeasures implemented in client.go: isBlocked() detects 403/429/503, exponential backoff with jitter, UA rotation on retry
 - **Task 5**: Updated DoubanProvider from stub to full implementation, integrated with circuit breaker from Story 3.3, maps Douban results to MetadataItem format
 - **Task 6**: Added OpenCC library (s2twp profile) for Simplified to Traditional Chinese conversion (Taiwan standard with phrases), auto-converts titles and summaries
-- **Task 7**: Created douban_cache table (migration 008) with 7-day TTL, background cleanup, search by title, stats tracking
+- **Task 7**: Created douban_cache table (migration 008) with 7-day TTL, background cleanup, search by title, stats tracking. Cache integrated into DoubanProvider with cache lookup before scraping and storage after successful scrape.
 
-**Test Coverage**: 78.9% for douban package (target ≥80%)
+**Code Review Fixes (2026-01-24)**:
+- Added cache integration into DoubanProvider (was orphaned, now wired up)
+- Added robots.txt compliance check to HTTP client (AC4 requirement)
+- Added search_results.html test fixture
+- Fixed Cache.Close() to be safe for multiple calls
+
+**Test Coverage**: 82.9% for douban package (target ≥80%)
 
 ### File List
 
@@ -412,6 +418,7 @@ N/A
 - apps/api/internal/douban/cache.go
 - apps/api/internal/douban/cache_test.go
 - apps/api/internal/douban/testdata/movie_detail.html
+- apps/api/internal/douban/testdata/search_results.html
 - apps/api/internal/database/migrations/008_create_douban_cache_table.go
 
 **Modified Files:**
@@ -422,4 +429,5 @@ N/A
 
 ### Change Log
 
+- 2026-01-24: Code review fixes - Cache integration into DoubanProvider, robots.txt compliance, additional test fixtures
 - 2026-01-23: Story 3.4 implementation complete - Douban web scraper with rate limiting, S2T conversion, and 7-day caching
