@@ -333,6 +333,56 @@ func TestContentExtractor_TruncateSummary(t *testing.T) {
 
 		assert.Contains(t, result, "...")
 	})
+
+	// Additional edge case tests
+	t.Run("empty string returns empty", func(t *testing.T) {
+		result := extractor.TruncateSummary("", 100)
+		assert.Equal(t, "", result)
+	})
+
+	t.Run("exact length returns unchanged", func(t *testing.T) {
+		text := "Exactly10!" // 10 characters
+		result := extractor.TruncateSummary(text, 10)
+		assert.Equal(t, "Exactly10!", result)
+	})
+
+	t.Run("single character under limit", func(t *testing.T) {
+		result := extractor.TruncateSummary("A", 100)
+		assert.Equal(t, "A", result)
+	})
+
+	t.Run("handles chinese exclamation mark", func(t *testing.T) {
+		text := "這是一個測試！這是另一個測試。"
+		result := extractor.TruncateSummary(text, 8)
+		// Should truncate at ! (index 7)
+		assert.Equal(t, "這是一個測試！", result)
+	})
+
+	t.Run("handles chinese question mark", func(t *testing.T) {
+		text := "這是問題嗎？這是答案。"
+		result := extractor.TruncateSummary(text, 7)
+		// Should truncate at fullwidth ？ (index 5, included in result)
+		assert.Equal(t, "這是問題嗎？", result)
+	})
+
+	t.Run("multi-byte truncation preserves valid UTF-8", func(t *testing.T) {
+		text := "日本語テスト文字列です。"
+		result := extractor.TruncateSummary(text, 5)
+		// Result should be valid UTF-8
+		assert.NotEmpty(t, result)
+		// Should not have broken characters
+		for _, r := range result {
+			assert.True(t, r != 0xFFFD, "Should not contain replacement character")
+		}
+	})
+
+	t.Run("very short max length", func(t *testing.T) {
+		text := "Hello World"
+		result := extractor.TruncateSummary(text, 3)
+		// Should return something with ellipsis or truncated
+		assert.NotEmpty(t, result)
+		assert.True(t, len([]rune(result)) <= 6, "Result should be reasonably short")
+	})
 }
 
 func TestContentExtractor_cleanFormatting(t *testing.T) {

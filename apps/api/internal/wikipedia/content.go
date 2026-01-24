@@ -275,10 +275,12 @@ func (e *ContentExtractor) TruncateSummary(summary string, maxLength int) string
 
 	truncated := runes[:maxLength]
 
-	// Try to find a sentence end
+	// Try to find a sentence end (handles both ASCII and fullwidth punctuation)
 	for i := len(truncated) - 1; i >= len(truncated)-50 && i >= 0; i-- {
-		if truncated[i] == '。' || truncated[i] == '.' ||
-			truncated[i] == '！' || truncated[i] == '?' {
+		r := truncated[i]
+		if r == '。' || r == '.' || // Period
+			r == '！' || r == '!' || // Exclamation (fullwidth and ASCII)
+			r == '？' || r == '?' { // Question (fullwidth and ASCII)
 			return string(truncated[:i+1])
 		}
 	}

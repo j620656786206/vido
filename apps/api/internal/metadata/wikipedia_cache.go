@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/vido/api/internal/wikipedia"
 )
 
 // WikipediaCacheTTL is the default time-to-live for Wikipedia cache entries (7 days per story requirements)
@@ -259,10 +260,25 @@ func newWikipediaCacheEntry(query string, item *MetadataItem) (*wikipediaCacheEn
 	if item.Year > 0 {
 		entry.Year = sql.NullInt64{Int64: int64(item.Year), Valid: true}
 	}
-	// Extract director from RawData if available
+	// Extract director and cast from RawData infobox if available
 	if rawData, ok := item.RawData.(map[string]interface{}); ok {
-		if infobox, ok := rawData["infobox"]; ok && infobox != nil {
-			// Director would be in infobox data
+		if infoboxRaw, ok := rawData["infobox"]; ok && infoboxRaw != nil {
+			// Type assert to *wikipedia.InfoboxData
+			if infobox, ok := infoboxRaw.(*wikipedia.InfoboxData); ok {
+				// Extract director (or creator for TV shows)
+				director := infobox.Director
+				if director == "" {
+					director = infobox.Creator
+				}
+				if director != "" {
+					entry.Director = sql.NullString{String: director, Valid: true}
+				}
+				// Extract cast/starring
+				if len(infobox.Starring) > 0 {
+					castJSON, _ := json.Marshal(infobox.Starring)
+					entry.CastJSON = sql.NullString{String: string(castJSON), Valid: true}
+				}
+			}
 		}
 	}
 	if len(item.Genres) > 0 {

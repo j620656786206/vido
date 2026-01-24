@@ -124,15 +124,17 @@ func DefaultConfig() ClientConfig {
 	}
 }
 
-// MediaType represents the type of media
+// MediaType represents the type of media.
+// Note: In the WikipediaProvider, MediaTypeAnime is mapped to metadata.MediaTypeTV
+// since anime series are treated as TV content in the metadata system.
 type MediaType string
 
 const (
-	// MediaTypeMovie represents a movie
+	// MediaTypeMovie represents a movie/film
 	MediaTypeMovie MediaType = "movie"
 	// MediaTypeTV represents a TV show/series
 	MediaTypeTV MediaType = "tv"
-	// MediaTypeAnime represents an anime
+	// MediaTypeAnime represents an anime (mapped to MediaTypeTV in provider)
 	MediaTypeAnime MediaType = "anime"
 )
 

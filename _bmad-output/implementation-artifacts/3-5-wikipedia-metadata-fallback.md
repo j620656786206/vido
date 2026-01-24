@@ -420,7 +420,7 @@ N/A
 7. 7-day cache for Wikipedia results
 8. Database migration 009_create_wikipedia_cache_table.go
 9. Circuit breaker integration for fault tolerance
-10. Test coverage: wikipedia package 76.8%, metadata package tests all passing
+10. Test coverage: wikipedia package 84.7%, metadata package 80.5% (both exceed ≥80% target)
 
 ### File List
 
@@ -443,3 +443,21 @@ N/A
 **Modified Files:**
 - `/apps/api/internal/metadata/wikipedia_provider.go` - Replaced stub with full implementation
 - `/apps/api/internal/metadata/wikipedia_provider_test.go` - Updated tests for full implementation
+
+### Code Review Fixes (2026-01-24)
+
+**Reviewer:** Claude Opus 4.5 (Amelia - Dev Agent)
+
+**Issues Fixed:**
+1. Cache now properly extracts and stores Director field from InfoboxData
+2. Cache now properly extracts and stores Cast/Starring field from InfoboxData
+3. Added TruncateSummary edge case tests (empty string, exact length, multi-byte chars)
+4. Updated coverage notes to reflect actual 84.7%/80.5% coverage
+5. Added MediaType mapping documentation (anime → TV)
+6. Fixed TruncateSummary to handle fullwidth punctuation (！？) for Traditional Chinese
+
+**Files Modified in Review:**
+- `/apps/api/internal/metadata/wikipedia_cache.go` - Added Director/Cast extraction from InfoboxData
+- `/apps/api/internal/wikipedia/content.go` - Added fullwidth punctuation support in TruncateSummary
+- `/apps/api/internal/wikipedia/content_test.go` - Added edge case tests for TruncateSummary
+- `/apps/api/internal/wikipedia/types.go` - Added MediaType mapping documentation
