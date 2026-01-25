@@ -1,0 +1,18 @@
+# Ignore git worktrees
+.worktrees/
+
+# Build artifacts
+dist/
+build/
+coverage/
+
+# Test outputs
+test-results/
+playwright-report/
+
+# Package manager
+node_modules/
+
+# BMAD Framework output
+_bmad/
+_bmad-output/

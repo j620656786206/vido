@@ -118,7 +118,7 @@ export default defineConfig({
     : [
         // Backend (Go) - must start first
         {
-          command: 'go run ./apps/api/cmd/api',
+          command: 'cd apps/api && go run ./cmd/api',
           url: 'http://localhost:8080/health',
           reuseExistingServer: true,
           timeout: 120 * 1000,
