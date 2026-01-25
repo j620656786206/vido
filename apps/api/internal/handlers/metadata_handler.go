@@ -271,6 +271,178 @@ func (h *MetadataHandler) ApplyMetadata(c *gin.Context) {
 	SuccessResponse(c, result)
 }
 
+// UpdateMetadataRequestBody represents the request body for updating metadata (Story 3.8 - AC2)
+type UpdateMetadataRequestBody struct {
+	MediaType    string   `json:"mediaType"`
+	Title        string   `json:"title"`
+	TitleEnglish string   `json:"titleEnglish,omitempty"`
+	Year         int      `json:"year"`
+	Genres       []string `json:"genres,omitempty"`
+	Director     string   `json:"director,omitempty"`
+	Cast         []string `json:"cast,omitempty"`
+	Overview     string   `json:"overview,omitempty"`
+	PosterURL    string   `json:"posterUrl,omitempty"`
+}
+
+// UpdateMetadata handles PUT /api/v1/media/{id}/metadata (Story 3.8 - AC2)
+// Allows users to manually edit all metadata fields for a media item
+// @Summary Update media metadata
+// @Description Manually update metadata for a movie or series (AC2)
+// @Tags metadata
+// @Accept json
+// @Produce json
+// @Param id path string true "Media ID"
+// @Param request body UpdateMetadataRequestBody true "Update metadata request"
+// @Success 200 {object} APIResponse{data=services.UpdateMetadataResponse}
+// @Failure 400 {object} APIResponse{error=APIError}
+// @Failure 404 {object} APIResponse{error=APIError}
+// @Failure 500 {object} APIResponse{error=APIError}
+// @Router /api/v1/media/{id}/metadata [put]
+func (h *MetadataHandler) UpdateMetadata(c *gin.Context) {
+	mediaID := c.Param("id")
+	if mediaID == "" {
+		ErrorResponse(c, http.StatusBadRequest, "METADATA_UPDATE_INVALID_REQUEST",
+			"Media ID is required",
+			"Please provide a valid media ID in the URL path")
+		return
+	}
+
+	var req UpdateMetadataRequestBody
+	if err := c.ShouldBindJSON(&req); err != nil {
+		ErrorResponse(c, http.StatusBadRequest, "METADATA_UPDATE_INVALID_REQUEST",
+			"Invalid request body",
+			"Please provide a valid JSON request")
+		return
+	}
+
+	// Apply default media type
+	if req.MediaType == "" {
+		req.MediaType = "movie"
+	}
+
+	serviceReq := &services.UpdateMetadataRequest{
+		ID:           mediaID,
+		MediaType:    req.MediaType,
+		Title:        req.Title,
+		TitleEnglish: req.TitleEnglish,
+		Year:         req.Year,
+		Genres:       req.Genres,
+		Director:     req.Director,
+		Cast:         req.Cast,
+		Overview:     req.Overview,
+		PosterURL:    req.PosterURL,
+	}
+
+	result, err := h.service.UpdateMetadata(c.Request.Context(), serviceReq)
+	if err != nil {
+		if err == services.ErrUpdateMetadataTitleRequired || err == services.ErrUpdateMetadataYearRequired {
+			ErrorResponse(c, http.StatusBadRequest, "VALIDATION_REQUIRED_FIELD",
+				err.Error(),
+				"Please provide all required fields (title, year)")
+			return
+		}
+		if err == services.ErrUpdateMetadataNotFound {
+			ErrorResponse(c, http.StatusNotFound, "METADATA_UPDATE_NOT_FOUND",
+				"Media item not found",
+				"Please verify the media ID is correct")
+			return
+		}
+		ErrorResponse(c, http.StatusInternalServerError, "METADATA_UPDATE_FAILED",
+			err.Error(),
+			"Please try again later")
+		return
+	}
+
+	SuccessResponse(c, result)
+}
+
+// UploadPoster handles POST /api/v1/media/{id}/poster (Story 3.8 - AC3)
+// Allows users to upload a custom poster image for a media item
+// @Summary Upload custom poster
+// @Description Upload a custom poster image for a movie or series (AC3)
+// @Tags metadata
+// @Accept multipart/form-data
+// @Produce json
+// @Param id path string true "Media ID"
+// @Param mediaType query string false "Media type: movie or series" default(movie)
+// @Param file formData file true "Poster image file (jpg, png, webp, max 5MB)"
+// @Success 200 {object} APIResponse{data=services.UploadPosterResponse}
+// @Failure 400 {object} APIResponse{error=APIError}
+// @Failure 404 {object} APIResponse{error=APIError}
+// @Failure 500 {object} APIResponse{error=APIError}
+// @Router /api/v1/media/{id}/poster [post]
+func (h *MetadataHandler) UploadPoster(c *gin.Context) {
+	mediaID := c.Param("id")
+	if mediaID == "" {
+		ErrorResponse(c, http.StatusBadRequest, "POSTER_UPLOAD_INVALID_REQUEST",
+			"Media ID is required",
+			"Please provide a valid media ID in the URL path")
+		return
+	}
+
+	mediaType := c.DefaultQuery("mediaType", "movie")
+
+	// Get the uploaded file
+	file, header, err := c.Request.FormFile("file")
+	if err != nil {
+		ErrorResponse(c, http.StatusBadRequest, "POSTER_UPLOAD_INVALID_REQUEST",
+			"File is required",
+			"Please upload an image file (jpg, png, or webp)")
+		return
+	}
+	defer file.Close()
+
+	// Read file data
+	fileData := make([]byte, header.Size)
+	_, err = file.Read(fileData)
+	if err != nil {
+		ErrorResponse(c, http.StatusInternalServerError, "POSTER_UPLOAD_FAILED",
+			"Failed to read file",
+			"Please try again")
+		return
+	}
+
+	// Detect content type from file header
+	contentType := http.DetectContentType(fileData)
+
+	serviceReq := &services.UploadPosterRequest{
+		MediaID:     mediaID,
+		MediaType:   mediaType,
+		FileData:    fileData,
+		FileName:    header.Filename,
+		ContentType: contentType,
+		FileSize:    header.Size,
+	}
+
+	result, err := h.service.UploadPoster(c.Request.Context(), serviceReq)
+	if err != nil {
+		if err == services.ErrPosterInvalidFormat {
+			ErrorResponse(c, http.StatusBadRequest, "POSTER_INVALID_FORMAT",
+				err.Error(),
+				"Please upload a jpg, png, or webp image")
+			return
+		}
+		if err == services.ErrPosterTooLarge {
+			ErrorResponse(c, http.StatusBadRequest, "POSTER_TOO_LARGE",
+				err.Error(),
+				"Please upload an image smaller than 5MB")
+			return
+		}
+		if err == services.ErrUploadPosterNotFound {
+			ErrorResponse(c, http.StatusNotFound, "POSTER_UPLOAD_NOT_FOUND",
+				"Media item not found",
+				"Please verify the media ID is correct")
+			return
+		}
+		ErrorResponse(c, http.StatusInternalServerError, "POSTER_UPLOAD_FAILED",
+			err.Error(),
+			"Please try again later")
+		return
+	}
+
+	SuccessResponse(c, result)
+}
+
 // RegisterRoutes registers all metadata routes on the given router group
 func (h *MetadataHandler) RegisterRoutes(rg *gin.RouterGroup) {
 	metadataGroup := rg.Group("/metadata")
@@ -279,5 +451,12 @@ func (h *MetadataHandler) RegisterRoutes(rg *gin.RouterGroup) {
 		metadataGroup.GET("/providers", h.GetProviders)
 		metadataGroup.POST("/manual-search", h.ManualSearch) // Story 3.7
 		metadataGroup.POST("/apply", h.ApplyMetadata)        // Story 3.7 - AC3
+	}
+
+	// Media-centric routes for metadata editing (Story 3.8)
+	mediaGroup := rg.Group("/media")
+	{
+		mediaGroup.PUT("/:id/metadata", h.UpdateMetadata)  // Story 3.8 - AC2
+		mediaGroup.POST("/:id/poster", h.UploadPoster)     // Story 3.8 - AC3
 	}
 }

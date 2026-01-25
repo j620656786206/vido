@@ -1,8 +1,10 @@
 package handlers
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -22,6 +24,8 @@ type mockMetadataService struct {
 	getProvidersFunc    func() []services.ProviderInfo
 	manualSearchFunc    func(ctx context.Context, req *services.ManualSearchRequest) (*services.ManualSearchResponse, error)
 	applyMetadataFunc   func(ctx context.Context, req *services.ApplyMetadataRequest) (*services.ApplyMetadataResponse, error)
+	updateMetadataFunc  func(ctx context.Context, req *services.UpdateMetadataRequest) (*services.UpdateMetadataResponse, error)
+	uploadPosterFunc    func(ctx context.Context, req *services.UploadPosterRequest) (*services.UploadPosterResponse, error)
 }
 
 func (m *mockMetadataService) SearchMetadata(ctx context.Context, req *services.SearchMetadataRequest) (*metadata.SearchResult, *metadata.FallbackStatus, error) {
@@ -48,6 +52,20 @@ func (m *mockMetadataService) ManualSearch(ctx context.Context, req *services.Ma
 func (m *mockMetadataService) ApplyMetadata(ctx context.Context, req *services.ApplyMetadataRequest) (*services.ApplyMetadataResponse, error) {
 	if m.applyMetadataFunc != nil {
 		return m.applyMetadataFunc(ctx, req)
+	}
+	return nil, nil
+}
+
+func (m *mockMetadataService) UpdateMetadata(ctx context.Context, req *services.UpdateMetadataRequest) (*services.UpdateMetadataResponse, error) {
+	if m.updateMetadataFunc != nil {
+		return m.updateMetadataFunc(ctx, req)
+	}
+	return nil, nil
+}
+
+func (m *mockMetadataService) UploadPoster(ctx context.Context, req *services.UploadPosterRequest) (*services.UploadPosterResponse, error) {
+	if m.uploadPosterFunc != nil {
+		return m.uploadPosterFunc(ctx, req)
 	}
 	return nil, nil
 }
@@ -1153,4 +1171,579 @@ func TestMetadataHandler_ApplyMetadata_SeriesSuccess(t *testing.T) {
 	assert.True(t, response["success"].(bool))
 	data := response["data"].(map[string]interface{})
 	assert.Equal(t, "series", data["mediaType"])
+}
+
+// =============================================================================
+// Update Metadata Handler Tests (Story 3.8 - AC2)
+// =============================================================================
+
+// [P1] Tests update metadata success for movie (AC2)
+func TestMetadataHandler_UpdateMetadata_MovieSuccess(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	expectedResponse := &services.UpdateMetadataResponse{
+		ID:             "test-movie-id",
+		Title:          "鬼滅之刃",
+		MetadataSource: models.MetadataSourceManual,
+		UpdatedAt:      "2026-01-25T12:00:00Z",
+	}
+
+	service := &mockMetadataService{
+		updateMetadataFunc: func(ctx context.Context, req *services.UpdateMetadataRequest) (*services.UpdateMetadataResponse, error) {
+			assert.Equal(t, "test-movie-id", req.ID)
+			assert.Equal(t, "movie", req.MediaType)
+			assert.Equal(t, "鬼滅之刃", req.Title)
+			assert.Equal(t, "Demon Slayer", req.TitleEnglish)
+			assert.Equal(t, 2019, req.Year)
+			assert.Contains(t, req.Genres, "動作")
+			assert.Equal(t, "外崎春雄", req.Director)
+			assert.Contains(t, req.Cast, "花江夏樹")
+			return expectedResponse, nil
+		},
+	}
+
+	handler := NewMetadataHandler(service)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Params = gin.Params{{Key: "id", Value: "test-movie-id"}}
+	body := `{
+		"mediaType": "movie",
+		"title": "鬼滅之刃",
+		"titleEnglish": "Demon Slayer",
+		"year": 2019,
+		"genres": ["動作", "奇幻", "冒險"],
+		"director": "外崎春雄",
+		"cast": ["花江夏樹", "鬼頭明里", "下野紘"],
+		"overview": "大正時代的日本，善良的少年炭治郎..."
+	}`
+	c.Request = httptest.NewRequest("PUT", "/api/v1/media/test-movie-id/metadata", strings.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	handler.UpdateMetadata(c)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var response map[string]interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+
+	assert.True(t, response["success"].(bool))
+	data := response["data"].(map[string]interface{})
+	assert.Equal(t, "test-movie-id", data["id"])
+	assert.Equal(t, "鬼滅之刃", data["title"])
+	assert.Equal(t, "manual", data["metadataSource"])
+}
+
+// [P1] Tests update metadata missing title returns error (AC4)
+func TestMetadataHandler_UpdateMetadata_MissingTitle(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	service := &mockMetadataService{
+		updateMetadataFunc: func(ctx context.Context, req *services.UpdateMetadataRequest) (*services.UpdateMetadataResponse, error) {
+			return nil, services.ErrUpdateMetadataTitleRequired
+		},
+	}
+	handler := NewMetadataHandler(service)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Params = gin.Params{{Key: "id", Value: "test-id"}}
+	body := `{
+		"mediaType": "movie",
+		"year": 2019
+	}`
+	c.Request = httptest.NewRequest("PUT", "/api/v1/media/test-id/metadata", strings.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	handler.UpdateMetadata(c)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	var response map[string]interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+
+	assert.False(t, response["success"].(bool))
+	errData := response["error"].(map[string]interface{})
+	assert.Equal(t, "VALIDATION_REQUIRED_FIELD", errData["code"])
+}
+
+// [P1] Tests update metadata missing year returns error (AC4)
+func TestMetadataHandler_UpdateMetadata_MissingYear(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	service := &mockMetadataService{
+		updateMetadataFunc: func(ctx context.Context, req *services.UpdateMetadataRequest) (*services.UpdateMetadataResponse, error) {
+			return nil, services.ErrUpdateMetadataYearRequired
+		},
+	}
+	handler := NewMetadataHandler(service)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Params = gin.Params{{Key: "id", Value: "test-id"}}
+	body := `{
+		"mediaType": "movie",
+		"title": "Test Movie"
+	}`
+	c.Request = httptest.NewRequest("PUT", "/api/v1/media/test-id/metadata", strings.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	handler.UpdateMetadata(c)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	var response map[string]interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+
+	assert.False(t, response["success"].(bool))
+	errData := response["error"].(map[string]interface{})
+	assert.Equal(t, "VALIDATION_REQUIRED_FIELD", errData["code"])
+}
+
+// [P1] Tests update metadata invalid JSON returns error
+func TestMetadataHandler_UpdateMetadata_InvalidJSON(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	service := &mockMetadataService{}
+	handler := NewMetadataHandler(service)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Params = gin.Params{{Key: "id", Value: "test-id"}}
+	body := `{invalid json}`
+	c.Request = httptest.NewRequest("PUT", "/api/v1/media/test-id/metadata", strings.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	handler.UpdateMetadata(c)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	var response map[string]interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+
+	assert.False(t, response["success"].(bool))
+}
+
+// [P1] Tests update metadata media not found
+func TestMetadataHandler_UpdateMetadata_MediaNotFound(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	service := &mockMetadataService{
+		updateMetadataFunc: func(ctx context.Context, req *services.UpdateMetadataRequest) (*services.UpdateMetadataResponse, error) {
+			return nil, services.ErrUpdateMetadataNotFound
+		},
+	}
+
+	handler := NewMetadataHandler(service)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Params = gin.Params{{Key: "id", Value: "nonexistent-id"}}
+	body := `{
+		"mediaType": "movie",
+		"title": "Test",
+		"year": 2020
+	}`
+	c.Request = httptest.NewRequest("PUT", "/api/v1/media/nonexistent-id/metadata", strings.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	handler.UpdateMetadata(c)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+
+	var response map[string]interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+
+	assert.False(t, response["success"].(bool))
+	errData := response["error"].(map[string]interface{})
+	assert.Equal(t, "METADATA_UPDATE_NOT_FOUND", errData["code"])
+}
+
+// [P2] Tests update metadata for series
+func TestMetadataHandler_UpdateMetadata_SeriesSuccess(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	expectedResponse := &services.UpdateMetadataResponse{
+		ID:             "test-series-id",
+		Title:          "Breaking Bad",
+		MetadataSource: models.MetadataSourceManual,
+		UpdatedAt:      "2026-01-25T12:00:00Z",
+	}
+
+	service := &mockMetadataService{
+		updateMetadataFunc: func(ctx context.Context, req *services.UpdateMetadataRequest) (*services.UpdateMetadataResponse, error) {
+			assert.Equal(t, "test-series-id", req.ID)
+			assert.Equal(t, "series", req.MediaType)
+			return expectedResponse, nil
+		},
+	}
+
+	handler := NewMetadataHandler(service)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Params = gin.Params{{Key: "id", Value: "test-series-id"}}
+	body := `{
+		"mediaType": "series",
+		"title": "Breaking Bad",
+		"year": 2008
+	}`
+	c.Request = httptest.NewRequest("PUT", "/api/v1/media/test-series-id/metadata", strings.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	handler.UpdateMetadata(c)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var response map[string]interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+
+	assert.True(t, response["success"].(bool))
+}
+
+// [P2] Tests update metadata with poster URL
+func TestMetadataHandler_UpdateMetadata_WithPosterURL(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	capturedPosterURL := ""
+	service := &mockMetadataService{
+		updateMetadataFunc: func(ctx context.Context, req *services.UpdateMetadataRequest) (*services.UpdateMetadataResponse, error) {
+			capturedPosterURL = req.PosterURL
+			return &services.UpdateMetadataResponse{
+				ID:             req.ID,
+				Title:          req.Title,
+				MetadataSource: models.MetadataSourceManual,
+				UpdatedAt:      "2026-01-25T12:00:00Z",
+			}, nil
+		},
+	}
+
+	handler := NewMetadataHandler(service)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Params = gin.Params{{Key: "id", Value: "test-id"}}
+	body := `{
+		"mediaType": "movie",
+		"title": "Test Movie",
+		"year": 2020,
+		"posterUrl": "https://example.com/poster.jpg"
+	}`
+	c.Request = httptest.NewRequest("PUT", "/api/v1/media/test-id/metadata", strings.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	handler.UpdateMetadata(c)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "https://example.com/poster.jpg", capturedPosterURL)
+}
+
+// [P1] Tests update metadata route registration
+func TestMetadataHandler_RegisterRoutes_IncludesUpdateMetadata(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	service := &mockMetadataService{}
+	handler := NewMetadataHandler(service)
+
+	router := gin.New()
+	rg := router.Group("/api/v1")
+	handler.RegisterRoutes(rg)
+
+	routes := router.Routes()
+
+	foundUpdateMetadata := false
+	for _, route := range routes {
+		if route.Method == "PUT" && route.Path == "/api/v1/media/:id/metadata" {
+			foundUpdateMetadata = true
+			break
+		}
+	}
+
+	assert.True(t, foundUpdateMetadata, "PUT /api/v1/media/:id/metadata route should be registered")
+}
+
+// [P2] Tests update metadata defaults media type to movie
+func TestMetadataHandler_UpdateMetadata_DefaultsToMovie(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	capturedMediaType := ""
+	service := &mockMetadataService{
+		updateMetadataFunc: func(ctx context.Context, req *services.UpdateMetadataRequest) (*services.UpdateMetadataResponse, error) {
+			capturedMediaType = req.MediaType
+			return &services.UpdateMetadataResponse{
+				ID:             req.ID,
+				Title:          req.Title,
+				MetadataSource: models.MetadataSourceManual,
+				UpdatedAt:      "2026-01-25T12:00:00Z",
+			}, nil
+		},
+	}
+
+	handler := NewMetadataHandler(service)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Params = gin.Params{{Key: "id", Value: "test-id"}}
+	// No mediaType specified
+	body := `{
+		"title": "Test Movie",
+		"year": 2020
+	}`
+	c.Request = httptest.NewRequest("PUT", "/api/v1/media/test-id/metadata", strings.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	handler.UpdateMetadata(c)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "movie", capturedMediaType)
+}
+
+// =============================================================================
+// Upload Poster Handler Tests (Story 3.8 - AC3)
+// =============================================================================
+
+// [P1] Tests upload poster success (AC3)
+func TestMetadataHandler_UploadPoster_Success(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	expectedResponse := &services.UploadPosterResponse{
+		PosterURL:    "/posters/test-movie-id.webp",
+		ThumbnailURL: "/posters/test-movie-id-thumb.webp",
+	}
+
+	service := &mockMetadataService{
+		uploadPosterFunc: func(ctx context.Context, req *services.UploadPosterRequest) (*services.UploadPosterResponse, error) {
+			assert.Equal(t, "test-movie-id", req.MediaID)
+			assert.Equal(t, "movie", req.MediaType)
+			assert.Equal(t, "image/jpeg", req.ContentType)
+			assert.NotEmpty(t, req.FileData)
+			return expectedResponse, nil
+		},
+	}
+
+	handler := NewMetadataHandler(service)
+
+	// Create a multipart form with a fake image
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, _ := writer.CreateFormFile("file", "poster.jpg")
+	// Write a minimal valid JPEG header
+	part.Write([]byte{0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46})
+	writer.Close()
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Params = gin.Params{{Key: "id", Value: "test-movie-id"}}
+	c.Request = httptest.NewRequest("POST", "/api/v1/media/test-movie-id/poster?mediaType=movie", body)
+	c.Request.Header.Set("Content-Type", writer.FormDataContentType())
+
+	handler.UploadPoster(c)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var response map[string]interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+
+	assert.True(t, response["success"].(bool))
+	data := response["data"].(map[string]interface{})
+	assert.Equal(t, "/posters/test-movie-id.webp", data["posterUrl"])
+	assert.Equal(t, "/posters/test-movie-id-thumb.webp", data["thumbnailUrl"])
+}
+
+// [P1] Tests upload poster missing file returns error
+func TestMetadataHandler_UploadPoster_MissingFile(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	service := &mockMetadataService{}
+	handler := NewMetadataHandler(service)
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	writer.Close()
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Params = gin.Params{{Key: "id", Value: "test-id"}}
+	c.Request = httptest.NewRequest("POST", "/api/v1/media/test-id/poster", body)
+	c.Request.Header.Set("Content-Type", writer.FormDataContentType())
+
+	handler.UploadPoster(c)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	var response map[string]interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+
+	assert.False(t, response["success"].(bool))
+	errData := response["error"].(map[string]interface{})
+	assert.Equal(t, "POSTER_UPLOAD_INVALID_REQUEST", errData["code"])
+}
+
+// [P1] Tests upload poster invalid file type returns error (AC3)
+func TestMetadataHandler_UploadPoster_InvalidFileType(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	service := &mockMetadataService{
+		uploadPosterFunc: func(ctx context.Context, req *services.UploadPosterRequest) (*services.UploadPosterResponse, error) {
+			return nil, services.ErrPosterInvalidFormat
+		},
+	}
+
+	handler := NewMetadataHandler(service)
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, _ := writer.CreateFormFile("file", "poster.gif")
+	part.Write([]byte("GIF89a")) // GIF header
+	writer.Close()
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Params = gin.Params{{Key: "id", Value: "test-id"}}
+	c.Request = httptest.NewRequest("POST", "/api/v1/media/test-id/poster", body)
+	c.Request.Header.Set("Content-Type", writer.FormDataContentType())
+
+	handler.UploadPoster(c)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	var response map[string]interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+
+	assert.False(t, response["success"].(bool))
+	errData := response["error"].(map[string]interface{})
+	assert.Equal(t, "POSTER_INVALID_FORMAT", errData["code"])
+}
+
+// [P1] Tests upload poster file too large returns error (AC3)
+func TestMetadataHandler_UploadPoster_FileTooLarge(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	service := &mockMetadataService{
+		uploadPosterFunc: func(ctx context.Context, req *services.UploadPosterRequest) (*services.UploadPosterResponse, error) {
+			return nil, services.ErrPosterTooLarge
+		},
+	}
+
+	handler := NewMetadataHandler(service)
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, _ := writer.CreateFormFile("file", "poster.jpg")
+	// Write a fake large file
+	part.Write(make([]byte, 1024)) // 1KB for testing
+	writer.Close()
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Params = gin.Params{{Key: "id", Value: "test-id"}}
+	c.Request = httptest.NewRequest("POST", "/api/v1/media/test-id/poster", body)
+	c.Request.Header.Set("Content-Type", writer.FormDataContentType())
+
+	handler.UploadPoster(c)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	var response map[string]interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+
+	assert.False(t, response["success"].(bool))
+	errData := response["error"].(map[string]interface{})
+	assert.Equal(t, "POSTER_TOO_LARGE", errData["code"])
+}
+
+// [P1] Tests upload poster media not found
+func TestMetadataHandler_UploadPoster_MediaNotFound(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	service := &mockMetadataService{
+		uploadPosterFunc: func(ctx context.Context, req *services.UploadPosterRequest) (*services.UploadPosterResponse, error) {
+			return nil, services.ErrUploadPosterNotFound
+		},
+	}
+
+	handler := NewMetadataHandler(service)
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, _ := writer.CreateFormFile("file", "poster.jpg")
+	part.Write([]byte{0xFF, 0xD8, 0xFF, 0xE0})
+	writer.Close()
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Params = gin.Params{{Key: "id", Value: "nonexistent-id"}}
+	c.Request = httptest.NewRequest("POST", "/api/v1/media/nonexistent-id/poster", body)
+	c.Request.Header.Set("Content-Type", writer.FormDataContentType())
+
+	handler.UploadPoster(c)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+// [P1] Tests upload poster route registration
+func TestMetadataHandler_RegisterRoutes_IncludesUploadPoster(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	service := &mockMetadataService{}
+	handler := NewMetadataHandler(service)
+
+	router := gin.New()
+	rg := router.Group("/api/v1")
+	handler.RegisterRoutes(rg)
+
+	routes := router.Routes()
+
+	foundUploadPoster := false
+	for _, route := range routes {
+		if route.Method == "POST" && route.Path == "/api/v1/media/:id/poster" {
+			foundUploadPoster = true
+			break
+		}
+	}
+
+	assert.True(t, foundUploadPoster, "POST /api/v1/media/:id/poster route should be registered")
+}
+
+// [P2] Tests upload poster for series
+func TestMetadataHandler_UploadPoster_SeriesSuccess(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	service := &mockMetadataService{
+		uploadPosterFunc: func(ctx context.Context, req *services.UploadPosterRequest) (*services.UploadPosterResponse, error) {
+			assert.Equal(t, "series", req.MediaType)
+			return &services.UploadPosterResponse{
+				PosterURL:    "/posters/test-series-id.webp",
+				ThumbnailURL: "/posters/test-series-id-thumb.webp",
+			}, nil
+		},
+	}
+
+	handler := NewMetadataHandler(service)
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, _ := writer.CreateFormFile("file", "poster.jpg")
+	part.Write([]byte{0xFF, 0xD8, 0xFF, 0xE0})
+	writer.Close()
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Params = gin.Params{{Key: "id", Value: "test-series-id"}}
+	c.Request = httptest.NewRequest("POST", "/api/v1/media/test-series-id/poster?mediaType=series", body)
+	c.Request.Header.Set("Content-Type", writer.FormDataContentType())
+
+	handler.UploadPoster(c)
+
+	assert.Equal(t, http.StatusOK, w.Code)
 }

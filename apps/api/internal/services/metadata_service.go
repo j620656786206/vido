@@ -175,6 +175,110 @@ var (
 	ErrApplyMetadataFailed               = errors.New("failed to apply metadata")
 )
 
+// UpdateMetadataRequest represents a request to manually update metadata (Story 3.8)
+type UpdateMetadataRequest struct {
+	ID           string   `json:"id"`
+	MediaType    string   `json:"mediaType"`    // "movie" or "series"
+	Title        string   `json:"title"`        // Required: Chinese title
+	TitleEnglish string   `json:"titleEnglish"` // Optional: English title
+	Year         int      `json:"year"`         // Required
+	Genres       []string `json:"genres"`
+	Director     string   `json:"director"`
+	Cast         []string `json:"cast"`
+	Overview     string   `json:"overview"`
+	PosterURL    string   `json:"posterUrl"` // Optional: URL for poster
+}
+
+// Validate validates the update metadata request
+func (r *UpdateMetadataRequest) Validate() error {
+	if r.ID == "" {
+		return ErrUpdateMetadataIDRequired
+	}
+	if r.Title == "" {
+		return ErrUpdateMetadataTitleRequired
+	}
+	if r.Year == 0 {
+		return ErrUpdateMetadataYearRequired
+	}
+	// Default media type to movie
+	if r.MediaType == "" {
+		r.MediaType = "movie"
+	}
+	return nil
+}
+
+// UpdateMetadataResponse represents the response from updating metadata
+type UpdateMetadataResponse struct {
+	ID             string               `json:"id"`
+	Title          string               `json:"title"`
+	MetadataSource models.MetadataSource `json:"metadataSource"`
+	UpdatedAt      string               `json:"updatedAt"`
+}
+
+// Update metadata errors
+var (
+	ErrUpdateMetadataIDRequired    = errors.New("id is required")
+	ErrUpdateMetadataTitleRequired = errors.New("title is required")
+	ErrUpdateMetadataYearRequired  = errors.New("year is required")
+	ErrUpdateMetadataNotFound      = errors.New("media item not found")
+	ErrUpdateMetadataFailed        = errors.New("failed to update metadata")
+)
+
+// UploadPosterRequest represents a request to upload a poster image (Story 3.8 - AC3)
+type UploadPosterRequest struct {
+	MediaID     string `json:"mediaId"`
+	MediaType   string `json:"mediaType"` // "movie" or "series"
+	FileData    []byte `json:"-"`         // Binary image data
+	FileName    string `json:"fileName"`
+	ContentType string `json:"contentType"`
+	FileSize    int64  `json:"fileSize"`
+}
+
+// Validate validates the upload poster request
+func (r *UploadPosterRequest) Validate() error {
+	if r.MediaID == "" {
+		return ErrUploadPosterMediaIDRequired
+	}
+	if len(r.FileData) == 0 {
+		return ErrUploadPosterFileRequired
+	}
+	// Validate file type
+	validTypes := map[string]bool{
+		"image/jpeg": true,
+		"image/png":  true,
+		"image/webp": true,
+	}
+	if !validTypes[r.ContentType] {
+		return ErrPosterInvalidFormat
+	}
+	// Validate file size (max 5MB)
+	const maxFileSize = 5 * 1024 * 1024
+	if r.FileSize > maxFileSize {
+		return ErrPosterTooLarge
+	}
+	// Default media type to movie
+	if r.MediaType == "" {
+		r.MediaType = "movie"
+	}
+	return nil
+}
+
+// UploadPosterResponse represents the response from uploading a poster
+type UploadPosterResponse struct {
+	PosterURL    string `json:"posterUrl"`
+	ThumbnailURL string `json:"thumbnailUrl"`
+}
+
+// Upload poster errors
+var (
+	ErrUploadPosterMediaIDRequired = errors.New("mediaId is required")
+	ErrUploadPosterFileRequired    = errors.New("file is required")
+	ErrPosterInvalidFormat         = errors.New("invalid image format: must be jpg, png, or webp")
+	ErrPosterTooLarge              = errors.New("file too large: maximum size is 5MB")
+	ErrUploadPosterNotFound        = errors.New("media item not found")
+	ErrUploadPosterFailed          = errors.New("failed to upload poster")
+)
+
 // MetadataServiceInterface defines the contract for metadata operations
 type MetadataServiceInterface interface {
 	// SearchMetadata searches for metadata using the fallback chain
@@ -185,6 +289,10 @@ type MetadataServiceInterface interface {
 	ManualSearch(ctx context.Context, req *ManualSearchRequest) (*ManualSearchResponse, error)
 	// ApplyMetadata applies selected metadata to a media item (Story 3.7 - AC3)
 	ApplyMetadata(ctx context.Context, req *ApplyMetadataRequest) (*ApplyMetadataResponse, error)
+	// UpdateMetadata manually updates metadata for a media item (Story 3.8 - AC2)
+	UpdateMetadata(ctx context.Context, req *UpdateMetadataRequest) (*UpdateMetadataResponse, error)
+	// UploadPoster uploads a custom poster image for a media item (Story 3.8 - AC3)
+	UploadPoster(ctx context.Context, req *UploadPosterRequest) (*UploadPosterResponse, error)
 }
 
 // MediaUpdater is an interface for updating media metadata
@@ -193,12 +301,27 @@ type MediaUpdater interface {
 	GetByID(ctx context.Context, id string) (title string, exists bool, err error)
 }
 
+// MetadataEditor is an interface for full metadata editing (Story 3.8)
+type MetadataEditor interface {
+	UpdateMetadata(ctx context.Context, req *UpdateMetadataRequest) (*UpdateMetadataResponse, error)
+	Exists(ctx context.Context, id string) (bool, error)
+}
+
+// PosterUploader is an interface for poster image upload (Story 3.8 - AC3)
+type PosterUploader interface {
+	UploadPoster(ctx context.Context, req *UploadPosterRequest) (*UploadPosterResponse, error)
+	Exists(ctx context.Context, id string) (bool, error)
+}
+
 // MetadataService implements MetadataServiceInterface
 type MetadataService struct {
-	orchestrator  *metadata.Orchestrator
-	tmdbProvider  *metadata.TMDbProvider
-	movieUpdater  MediaUpdater
-	seriesUpdater MediaUpdater
+	orchestrator     *metadata.Orchestrator
+	tmdbProvider     *metadata.TMDbProvider
+	movieUpdater     MediaUpdater
+	seriesUpdater    MediaUpdater
+	movieEditor      MetadataEditor
+	seriesEditor     MetadataEditor
+	posterUploader   PosterUploader
 }
 
 // Compile-time interface verification
@@ -519,4 +642,142 @@ func (s *MetadataService) ApplyMetadata(ctx context.Context, req *ApplyMetadataR
 		Title:     title,
 		Source:    source,
 	}, nil
+}
+
+// SetMetadataEditors sets the metadata editors for movies and series (Story 3.8)
+// This allows the service to perform full metadata updates
+func (s *MetadataService) SetMetadataEditors(movieEditor, seriesEditor MetadataEditor) {
+	s.movieEditor = movieEditor
+	s.seriesEditor = seriesEditor
+	slog.Info("Metadata editors configured for metadata service")
+}
+
+// UpdateMetadata manually updates metadata for a media item (Story 3.8 - AC2)
+// This method:
+// - Validates required fields (title, year)
+// - Updates all provided metadata fields
+// - Sets metadata source to "manual"
+// - Returns the updated metadata
+func (s *MetadataService) UpdateMetadata(ctx context.Context, req *UpdateMetadataRequest) (*UpdateMetadataResponse, error) {
+	if err := req.Validate(); err != nil {
+		return nil, err
+	}
+
+	// Get the appropriate editor based on media type
+	var editor MetadataEditor
+	switch req.MediaType {
+	case "series":
+		editor = s.seriesEditor
+	default:
+		// Default to movie
+		editor = s.movieEditor
+	}
+
+	if editor != nil {
+		// Check if media exists
+		exists, err := editor.Exists(ctx, req.ID)
+		if err != nil {
+			slog.Error("Failed to check if media exists",
+				"media_id", req.ID,
+				"media_type", req.MediaType,
+				"error", err,
+			)
+			return nil, ErrUpdateMetadataFailed
+		}
+		if !exists {
+			slog.Debug("Media not found for update",
+				"media_id", req.ID,
+				"media_type", req.MediaType,
+			)
+			return nil, ErrUpdateMetadataNotFound
+		}
+
+		// Perform the update
+		result, err := editor.UpdateMetadata(ctx, req)
+		if err != nil {
+			slog.Error("Failed to update metadata",
+				"media_id", req.ID,
+				"media_type", req.MediaType,
+				"error", err,
+			)
+			return nil, ErrUpdateMetadataFailed
+		}
+
+		slog.Info("Metadata updated successfully",
+			"media_id", req.ID,
+			"media_type", req.MediaType,
+			"title", req.Title,
+		)
+
+		return result, nil
+	}
+
+	// If no editor is configured, return error
+	slog.Warn("No metadata editor configured",
+		"media_id", req.ID,
+		"media_type", req.MediaType,
+	)
+	return nil, ErrUpdateMetadataFailed
+}
+
+// SetPosterUploader sets the poster uploader for the metadata service (Story 3.8 - AC3)
+func (s *MetadataService) SetPosterUploader(uploader PosterUploader) {
+	s.posterUploader = uploader
+	slog.Info("Poster uploader configured for metadata service")
+}
+
+// UploadPoster uploads a custom poster image for a media item (Story 3.8 - AC3)
+// This method:
+// - Validates file type (jpg, png, webp)
+// - Validates file size (max 5MB)
+// - Processes and stores the image
+// - Returns the poster URL and thumbnail URL
+func (s *MetadataService) UploadPoster(ctx context.Context, req *UploadPosterRequest) (*UploadPosterResponse, error) {
+	if err := req.Validate(); err != nil {
+		return nil, err
+	}
+
+	if s.posterUploader == nil {
+		slog.Warn("No poster uploader configured",
+			"media_id", req.MediaID,
+			"media_type", req.MediaType,
+		)
+		return nil, ErrUploadPosterFailed
+	}
+
+	// Check if media exists
+	exists, err := s.posterUploader.Exists(ctx, req.MediaID)
+	if err != nil {
+		slog.Error("Failed to check if media exists",
+			"media_id", req.MediaID,
+			"error", err,
+		)
+		return nil, ErrUploadPosterFailed
+	}
+	if !exists {
+		slog.Debug("Media not found for poster upload",
+			"media_id", req.MediaID,
+			"media_type", req.MediaType,
+		)
+		return nil, ErrUploadPosterNotFound
+	}
+
+	// Perform the upload
+	result, err := s.posterUploader.UploadPoster(ctx, req)
+	if err != nil {
+		slog.Error("Failed to upload poster",
+			"media_id", req.MediaID,
+			"media_type", req.MediaType,
+			"error", err,
+		)
+		return nil, err
+	}
+
+	slog.Info("Poster uploaded successfully",
+		"media_id", req.MediaID,
+		"media_type", req.MediaType,
+		"poster_url", result.PosterURL,
+	)
+
+	return result, nil
 }

@@ -50,6 +50,33 @@ export interface ApplyMetadataResponse {
   source: string;
 }
 
+// Types for update metadata (Story 3.8 - AC2)
+export interface UpdateMetadataParams {
+  id: string;
+  mediaType: 'movie' | 'series';
+  title: string;
+  titleEnglish?: string;
+  year: number;
+  genres?: string[];
+  director?: string;
+  cast?: string[];
+  overview?: string;
+  posterUrl?: string;
+}
+
+export interface UpdateMetadataResponse {
+  id: string;
+  title: string;
+  metadataSource: string;
+  updatedAt: string;
+}
+
+// Types for poster upload (Story 3.8 - AC3)
+export interface UploadPosterResponse {
+  posterUrl: string;
+  thumbnailUrl: string;
+}
+
 // API response wrapper
 interface ApiResponse<T> {
   success: boolean;
@@ -107,6 +134,44 @@ export const metadataService = {
       method: 'POST',
       body: JSON.stringify(params),
     });
+  },
+
+  /**
+   * Update metadata for a media item (Story 3.8 - AC2)
+   */
+  async updateMetadata(params: UpdateMetadataParams): Promise<UpdateMetadataResponse> {
+    return fetchApi<UpdateMetadataResponse>(`/media/${params.id}/metadata`, {
+      method: 'PUT',
+      body: JSON.stringify(params),
+    });
+  },
+
+  /**
+   * Upload a poster image for a media item (Story 3.8 - AC3)
+   */
+  async uploadPoster(mediaId: string, mediaType: 'movie' | 'series', file: File): Promise<UploadPosterResponse> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('mediaType', mediaType);
+
+    const response = await fetch(`${API_BASE_URL}/media/${mediaId}/poster`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        errorData.error?.message || `Upload failed: ${response.status}`
+      );
+    }
+
+    const data = await response.json();
+    if (!data.success) {
+      throw new Error(data.error?.message || 'Upload failed');
+    }
+
+    return data.data as UploadPosterResponse;
   },
 };
 
