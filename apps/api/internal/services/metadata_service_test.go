@@ -424,3 +424,525 @@ func TestMetadataService_SearchMetadata_ContextCancellation(t *testing.T) {
 		}
 	}
 }
+
+// =============================================================================
+// Manual Search Tests (Story 3.7)
+// =============================================================================
+
+// [P1] Tests ManualSearchRequest validation - missing query
+func TestManualSearchRequest_Validate_MissingQuery(t *testing.T) {
+	req := &ManualSearchRequest{
+		Query:     "",
+		MediaType: "movie",
+		Source:    "tmdb",
+	}
+
+	err := req.Validate()
+	assert.Error(t, err)
+	assert.Equal(t, ErrManualSearchQueryRequired, err)
+}
+
+// [P1] Tests ManualSearchRequest validation - invalid source
+func TestManualSearchRequest_Validate_InvalidSource(t *testing.T) {
+	req := &ManualSearchRequest{
+		Query:     "Test",
+		MediaType: "movie",
+		Source:    "invalid",
+	}
+
+	err := req.Validate()
+	assert.Error(t, err)
+	assert.Equal(t, ErrManualSearchInvalidSource, err)
+}
+
+// [P1] Tests ManualSearchRequest validation - valid request with defaults
+func TestManualSearchRequest_Validate_Defaults(t *testing.T) {
+	req := &ManualSearchRequest{
+		Query: "Test",
+	}
+
+	err := req.Validate()
+	assert.NoError(t, err)
+	assert.Equal(t, "movie", req.MediaType)
+	assert.Equal(t, "all", req.Source)
+}
+
+// [P1] Tests ManualSearchRequest validation - all valid sources
+func TestManualSearchRequest_Validate_ValidSources(t *testing.T) {
+	validSources := []string{"tmdb", "douban", "wikipedia", "all"}
+
+	for _, source := range validSources {
+		t.Run(source, func(t *testing.T) {
+			req := &ManualSearchRequest{
+				Query:  "Test",
+				Source: source,
+			}
+
+			err := req.Validate()
+			assert.NoError(t, err)
+		})
+	}
+}
+
+// [P1] Tests ManualSearch with specific TMDb source
+func TestMetadataService_ManualSearch_TMDbSource(t *testing.T) {
+	cfg := MetadataServiceConfig{
+		TMDbImageBaseURL: "https://image.tmdb.org/t/p/w500",
+	}
+
+	mockTMDb := &mockTMDbSearcher{
+		searchMoviesFunc: func(ctx context.Context, query string, page int) (*tmdb.SearchResultMovies, error) {
+			return &tmdb.SearchResultMovies{
+				Page: 1,
+				Results: []tmdb.Movie{
+					{
+						ID:          550,
+						Title:       "Fight Club",
+						ReleaseDate: "1999-10-15",
+						VoteAverage: 8.4,
+					},
+				},
+				TotalPages:   1,
+				TotalResults: 1,
+			}, nil
+		},
+	}
+
+	service := NewMetadataService(cfg, mockTMDb)
+
+	result, err := service.ManualSearch(context.Background(), &ManualSearchRequest{
+		Query:     "Fight Club",
+		MediaType: "movie",
+		Source:    "tmdb",
+	})
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+
+	assert.Equal(t, 1, result.TotalCount)
+	assert.Len(t, result.Results, 1)
+	assert.Contains(t, result.SearchedSources, "tmdb")
+	assert.Equal(t, models.MetadataSourceTMDb, result.Results[0].Source)
+	assert.Equal(t, "Fight Club", result.Results[0].Title)
+}
+
+// [P1] Tests ManualSearch with all sources (AC4)
+func TestMetadataService_ManualSearch_AllSources(t *testing.T) {
+	cfg := MetadataServiceConfig{
+		TMDbImageBaseURL: "https://image.tmdb.org/t/p/w500",
+		EnableDouban:     true,
+		EnableWikipedia:  true,
+	}
+
+	mockTMDb := &mockTMDbSearcher{
+		searchMoviesFunc: func(ctx context.Context, query string, page int) (*tmdb.SearchResultMovies, error) {
+			return &tmdb.SearchResultMovies{
+				Page: 1,
+				Results: []tmdb.Movie{
+					{
+						ID:          550,
+						Title:       "Fight Club",
+						ReleaseDate: "1999-10-15",
+						VoteAverage: 8.4,
+					},
+				},
+				TotalPages:   1,
+				TotalResults: 1,
+			}, nil
+		},
+	}
+
+	service := NewMetadataService(cfg, mockTMDb)
+
+	result, err := service.ManualSearch(context.Background(), &ManualSearchRequest{
+		Query:     "Fight Club",
+		MediaType: "movie",
+		Source:    "all",
+	})
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+
+	// Should have searched all sources
+	assert.Contains(t, result.SearchedSources, "tmdb")
+	assert.Contains(t, result.SearchedSources, "douban")
+	assert.Contains(t, result.SearchedSources, "wikipedia")
+	// TMDb should return results, others may not
+	assert.GreaterOrEqual(t, result.TotalCount, 1)
+}
+
+// [P1] Tests ManualSearch invalid source error
+func TestMetadataService_ManualSearch_InvalidSource(t *testing.T) {
+	cfg := MetadataServiceConfig{}
+	mockTMDb := &mockTMDbSearcher{}
+	service := NewMetadataService(cfg, mockTMDb)
+
+	result, err := service.ManualSearch(context.Background(), &ManualSearchRequest{
+		Query:     "Test",
+		MediaType: "movie",
+		Source:    "invalid",
+	})
+
+	assert.Error(t, err)
+	assert.Nil(t, result)
+	assert.Equal(t, ErrManualSearchInvalidSource, err)
+}
+
+// [P2] Tests ManualSearch with year filter
+func TestMetadataService_ManualSearch_WithYearFilter(t *testing.T) {
+	cfg := MetadataServiceConfig{
+		TMDbImageBaseURL: "https://image.tmdb.org/t/p/w500",
+	}
+
+	mockTMDb := &mockTMDbSearcher{
+		searchMoviesFunc: func(ctx context.Context, query string, page int) (*tmdb.SearchResultMovies, error) {
+			return &tmdb.SearchResultMovies{
+				Page: 1,
+				Results: []tmdb.Movie{
+					{
+						ID:          550,
+						Title:       "Test Movie 1999",
+						ReleaseDate: "1999-06-15",
+						VoteAverage: 8.4,
+					},
+				},
+				TotalPages:   1,
+				TotalResults: 1,
+			}, nil
+		},
+	}
+
+	service := NewMetadataService(cfg, mockTMDb)
+
+	result, err := service.ManualSearch(context.Background(), &ManualSearchRequest{
+		Query:     "Test",
+		MediaType: "movie",
+		Year:      1999,
+		Source:    "tmdb",
+	})
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.Equal(t, 1999, result.Results[0].Year)
+}
+
+// [P2] Tests ManualSearch with TV media type
+func TestMetadataService_ManualSearch_TVMediaType(t *testing.T) {
+	cfg := MetadataServiceConfig{
+		TMDbImageBaseURL: "https://image.tmdb.org/t/p/w500",
+	}
+
+	posterPath := "/tv-poster.jpg"
+	mockTMDb := &mockTMDbSearcher{
+		searchTVShowsFunc: func(ctx context.Context, query string, page int) (*tmdb.SearchResultTVShows, error) {
+			return &tmdb.SearchResultTVShows{
+				Page: 1,
+				Results: []tmdb.TVShow{
+					{
+						ID:           1396,
+						Name:         "Breaking Bad",
+						FirstAirDate: "2008-01-20",
+						VoteAverage:  8.9,
+						PosterPath:   &posterPath,
+					},
+				},
+				TotalPages:   1,
+				TotalResults: 1,
+			}, nil
+		},
+	}
+
+	service := NewMetadataService(cfg, mockTMDb)
+
+	result, err := service.ManualSearch(context.Background(), &ManualSearchRequest{
+		Query:     "Breaking Bad",
+		MediaType: "tv",
+		Source:    "tmdb",
+	})
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.Equal(t, "tv", result.Results[0].MediaType)
+}
+
+// [P2] Tests ManualSearch result ID format includes source prefix
+func TestMetadataService_ManualSearch_ResultIDFormat(t *testing.T) {
+	cfg := MetadataServiceConfig{
+		TMDbImageBaseURL: "https://image.tmdb.org/t/p/w500",
+	}
+
+	mockTMDb := &mockTMDbSearcher{
+		searchMoviesFunc: func(ctx context.Context, query string, page int) (*tmdb.SearchResultMovies, error) {
+			return &tmdb.SearchResultMovies{
+				Page: 1,
+				Results: []tmdb.Movie{
+					{
+						ID:    550,
+						Title: "Test",
+					},
+				},
+				TotalPages:   1,
+				TotalResults: 1,
+			}, nil
+		},
+	}
+
+	service := NewMetadataService(cfg, mockTMDb)
+
+	result, err := service.ManualSearch(context.Background(), &ManualSearchRequest{
+		Query:     "Test",
+		MediaType: "movie",
+		Source:    "tmdb",
+	})
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	// ID should be formatted as "source-originalID"
+	assert.Equal(t, "tmdb-550", result.Results[0].ID)
+}
+
+// [P2] Tests ManualSearch no results returns empty list
+func TestMetadataService_ManualSearch_NoResults(t *testing.T) {
+	cfg := MetadataServiceConfig{
+		TMDbImageBaseURL: "https://image.tmdb.org/t/p/w500",
+	}
+
+	mockTMDb := &mockTMDbSearcher{
+		searchMoviesFunc: func(ctx context.Context, query string, page int) (*tmdb.SearchResultMovies, error) {
+			return &tmdb.SearchResultMovies{
+				Page:         1,
+				Results:      []tmdb.Movie{},
+				TotalPages:   0,
+				TotalResults: 0,
+			}, nil
+		},
+	}
+
+	service := NewMetadataService(cfg, mockTMDb)
+
+	result, err := service.ManualSearch(context.Background(), &ManualSearchRequest{
+		Query:     "Nonexistent Movie 12345",
+		MediaType: "movie",
+		Source:    "tmdb",
+	})
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.Empty(t, result.Results)
+	assert.Equal(t, 0, result.TotalCount)
+}
+
+// =============================================================================
+// Apply Metadata Tests (Story 3.7 - AC3)
+// =============================================================================
+
+// mockMediaUpdater implements MediaUpdater for testing
+type mockMediaUpdater struct {
+	updateMetadataSourceFunc func(ctx context.Context, mediaID string, source models.MetadataSource) error
+	getByIDFunc              func(ctx context.Context, id string) (title string, exists bool, err error)
+}
+
+func (m *mockMediaUpdater) UpdateMetadataSource(ctx context.Context, mediaID string, source models.MetadataSource) error {
+	if m.updateMetadataSourceFunc != nil {
+		return m.updateMetadataSourceFunc(ctx, mediaID, source)
+	}
+	return nil
+}
+
+func (m *mockMediaUpdater) GetByID(ctx context.Context, id string) (title string, exists bool, err error) {
+	if m.getByIDFunc != nil {
+		return m.getByIDFunc(ctx, id)
+	}
+	return "Test Title", true, nil
+}
+
+// [P1] Tests ApplyMetadataRequest validation - missing mediaId
+func TestApplyMetadataRequest_Validate_MissingMediaId(t *testing.T) {
+	req := &ApplyMetadataRequest{
+		MediaID: "",
+		SelectedItem: SelectedMetadataItem{
+			ID:     "tmdb-550",
+			Source: "tmdb",
+		},
+	}
+
+	err := req.Validate()
+	assert.Error(t, err)
+	assert.Equal(t, ErrApplyMetadataMediaIDRequired, err)
+}
+
+// [P1] Tests ApplyMetadataRequest validation - missing selectedItem id
+func TestApplyMetadataRequest_Validate_MissingSelectedItemId(t *testing.T) {
+	req := &ApplyMetadataRequest{
+		MediaID: "test-id",
+		SelectedItem: SelectedMetadataItem{
+			ID:     "",
+			Source: "tmdb",
+		},
+	}
+
+	err := req.Validate()
+	assert.Error(t, err)
+	assert.Equal(t, ErrApplyMetadataSelectedItemRequired, err)
+}
+
+// [P1] Tests ApplyMetadataRequest validation - missing selectedItem source
+func TestApplyMetadataRequest_Validate_MissingSelectedItemSource(t *testing.T) {
+	req := &ApplyMetadataRequest{
+		MediaID: "test-id",
+		SelectedItem: SelectedMetadataItem{
+			ID:     "tmdb-550",
+			Source: "",
+		},
+	}
+
+	err := req.Validate()
+	assert.Error(t, err)
+	assert.Equal(t, ErrApplyMetadataSelectedItemRequired, err)
+}
+
+// [P1] Tests ApplyMetadataRequest validation - valid request defaults mediaType
+func TestApplyMetadataRequest_Validate_DefaultsMediaType(t *testing.T) {
+	req := &ApplyMetadataRequest{
+		MediaID: "test-id",
+		SelectedItem: SelectedMetadataItem{
+			ID:     "tmdb-550",
+			Source: "tmdb",
+		},
+	}
+
+	err := req.Validate()
+	assert.NoError(t, err)
+	assert.Equal(t, "movie", req.MediaType)
+}
+
+// [P1] Tests ApplyMetadata with mock updater
+func TestMetadataService_ApplyMetadata_Success(t *testing.T) {
+	cfg := MetadataServiceConfig{}
+	mockTMDb := &mockTMDbSearcher{}
+	service := NewMetadataService(cfg, mockTMDb)
+
+	mockUpdater := &mockMediaUpdater{
+		getByIDFunc: func(ctx context.Context, id string) (string, bool, error) {
+			return "Fight Club", true, nil
+		},
+		updateMetadataSourceFunc: func(ctx context.Context, mediaID string, source models.MetadataSource) error {
+			assert.Equal(t, "test-id", mediaID)
+			assert.Equal(t, models.MetadataSourceTMDb, source)
+			return nil
+		},
+	}
+	service.SetMediaUpdaters(mockUpdater, mockUpdater)
+
+	result, err := service.ApplyMetadata(context.Background(), &ApplyMetadataRequest{
+		MediaID:   "test-id",
+		MediaType: "movie",
+		SelectedItem: SelectedMetadataItem{
+			ID:     "tmdb-550",
+			Source: "tmdb",
+		},
+	})
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.True(t, result.Success)
+	assert.Equal(t, "test-id", result.MediaID)
+	assert.Equal(t, "Fight Club", result.Title)
+	assert.Equal(t, models.MetadataSourceTMDb, result.Source)
+}
+
+// [P1] Tests ApplyMetadata media not found
+func TestMetadataService_ApplyMetadata_NotFound(t *testing.T) {
+	cfg := MetadataServiceConfig{}
+	mockTMDb := &mockTMDbSearcher{}
+	service := NewMetadataService(cfg, mockTMDb)
+
+	mockUpdater := &mockMediaUpdater{
+		getByIDFunc: func(ctx context.Context, id string) (string, bool, error) {
+			return "", false, nil
+		},
+	}
+	service.SetMediaUpdaters(mockUpdater, mockUpdater)
+
+	result, err := service.ApplyMetadata(context.Background(), &ApplyMetadataRequest{
+		MediaID:   "nonexistent-id",
+		MediaType: "movie",
+		SelectedItem: SelectedMetadataItem{
+			ID:     "tmdb-550",
+			Source: "tmdb",
+		},
+	})
+
+	assert.Error(t, err)
+	assert.Equal(t, ErrApplyMetadataNotFound, err)
+	assert.Nil(t, result)
+}
+
+// [P1] Tests ApplyMetadata validation error
+func TestMetadataService_ApplyMetadata_ValidationError(t *testing.T) {
+	cfg := MetadataServiceConfig{}
+	mockTMDb := &mockTMDbSearcher{}
+	service := NewMetadataService(cfg, mockTMDb)
+
+	result, err := service.ApplyMetadata(context.Background(), &ApplyMetadataRequest{
+		MediaID: "", // Missing required field
+		SelectedItem: SelectedMetadataItem{
+			ID:     "tmdb-550",
+			Source: "tmdb",
+		},
+	})
+
+	assert.Error(t, err)
+	assert.Equal(t, ErrApplyMetadataMediaIDRequired, err)
+	assert.Nil(t, result)
+}
+
+// [P2] Tests ApplyMetadata with learnPattern flag
+func TestMetadataService_ApplyMetadata_WithLearnPattern(t *testing.T) {
+	cfg := MetadataServiceConfig{}
+	mockTMDb := &mockTMDbSearcher{}
+	service := NewMetadataService(cfg, mockTMDb)
+
+	mockUpdater := &mockMediaUpdater{
+		getByIDFunc: func(ctx context.Context, id string) (string, bool, error) {
+			return "Test Movie", true, nil
+		},
+	}
+	service.SetMediaUpdaters(mockUpdater, mockUpdater)
+
+	result, err := service.ApplyMetadata(context.Background(), &ApplyMetadataRequest{
+		MediaID:   "test-id",
+		MediaType: "movie",
+		SelectedItem: SelectedMetadataItem{
+			ID:     "tmdb-550",
+			Source: "tmdb",
+		},
+		LearnPattern: true,
+	})
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.True(t, result.Success)
+}
+
+// [P2] Tests ApplyMetadata without updater configured
+func TestMetadataService_ApplyMetadata_NoUpdater(t *testing.T) {
+	cfg := MetadataServiceConfig{}
+	mockTMDb := &mockTMDbSearcher{}
+	service := NewMetadataService(cfg, mockTMDb)
+	// No updater configured
+
+	result, err := service.ApplyMetadata(context.Background(), &ApplyMetadataRequest{
+		MediaID:   "test-id",
+		MediaType: "movie",
+		SelectedItem: SelectedMetadataItem{
+			ID:     "tmdb-550",
+			Source: "tmdb",
+		},
+	})
+
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.True(t, result.Success)
+	assert.Equal(t, "Unknown", result.Title) // Placeholder when no updater
+}
