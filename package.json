@@ -22,7 +22,11 @@
     "test:e2e:metadata": "playwright test tests/e2e/metadata-editor.spec.ts",
     "test:story:3-7": "playwright test --grep @story-3-7",
     "test:story:3-8": "playwright test --grep @story-3-8",
-    "test:smoke": "playwright test --grep @smoke"
+    "test:smoke": "playwright test --grep @smoke",
+    "test:burn-in": "bash scripts/burn-in.sh",
+    "test:burn-in:strict": "bash scripts/burn-in.sh 20",
+    "test:changed": "bash scripts/test-changed.sh",
+    "test:ci-local": "bash scripts/ci-local.sh"
   },
   "private": true,
   "devDependencies": {
