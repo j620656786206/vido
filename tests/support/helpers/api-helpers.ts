@@ -154,6 +154,34 @@ export interface ApplyMetadataResponse {
 }
 
 // =============================================================================
+// Metadata Editor Types (Story 3-8)
+// =============================================================================
+
+export interface UpdateMetadataRequest {
+  mediaType?: 'movie' | 'series';
+  title: string;
+  titleEnglish?: string;
+  year: number;
+  genres?: string[];
+  director?: string;
+  cast?: string[];
+  overview?: string;
+  posterUrl?: string;
+}
+
+export interface UpdateMetadataResponse {
+  id: string;
+  title: string;
+  metadataSource: string;
+  updatedAt: string;
+}
+
+export interface UploadPosterResponse {
+  posterUrl: string;
+  thumbnailUrl: string;
+}
+
+// =============================================================================
 // API Helper Functions
 // =============================================================================
 
@@ -183,6 +211,10 @@ export interface ApiHelpers {
   // Metadata (Story 3-7)
   manualSearch: (request: ManualSearchRequest) => Promise<ApiResponse<ManualSearchResponse>>;
   applyMetadata: (request: ApplyMetadataRequest) => Promise<ApiResponse<ApplyMetadataResponse>>;
+
+  // Metadata Editor (Story 3-8)
+  updateMetadata: (id: string, request: UpdateMetadataRequest) => Promise<ApiResponse<UpdateMetadataResponse>>;
+  uploadPoster: (id: string, file: Buffer, filename: string, mediaType?: string) => Promise<ApiResponse<UploadPosterResponse>>;
 
   // Health
   healthCheck: () => Promise<HealthResponse>;
@@ -293,6 +325,31 @@ export function apiHelpers(request: APIRequestContext): ApiHelpers {
 
     applyMetadata: async (applyRequest) =>
       post<ApplyMetadataResponse>('/metadata/apply', applyRequest),
+
+    // Metadata Editor (Story 3-8)
+    updateMetadata: async (id, updateRequest) =>
+      put<UpdateMetadataResponse>(`/media/${id}/metadata`, updateRequest),
+
+    uploadPoster: async (id, file, filename, mediaType = 'movie') => {
+      const mimeType = filename.endsWith('.png')
+        ? 'image/png'
+        : filename.endsWith('.webp')
+          ? 'image/webp'
+          : 'image/jpeg';
+      const response = await request.post(
+        `${API_BASE_URL}/media/${id}/poster?mediaType=${mediaType}`,
+        {
+          multipart: {
+            file: {
+              name: filename,
+              mimeType,
+              buffer: file,
+            },
+          },
+        }
+      );
+      return response.json();
+    },
 
     // Health
     healthCheck: async () => {

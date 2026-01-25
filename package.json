@@ -18,6 +18,10 @@
     "test:api:series": "playwright test tests/e2e/series.api.spec.ts",
     "test:api:settings": "playwright test tests/e2e/settings.api.spec.ts",
     "test:api:health": "playwright test tests/e2e/health.api.spec.ts",
+    "test:api:metadata": "playwright test tests/e2e/metadata-editor.api.spec.ts",
+    "test:e2e:metadata": "playwright test tests/e2e/metadata-editor.spec.ts",
+    "test:story:3-7": "playwright test --grep @story-3-7",
+    "test:story:3-8": "playwright test --grep @story-3-8",
     "test:smoke": "playwright test --grep @smoke"
   },
   "private": true,

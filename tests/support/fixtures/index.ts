@@ -10,7 +10,7 @@
  * @see https://playwright.dev/docs/test-fixtures
  */
 
-import { test as base, mergeTests, expect } from '@playwright/test';
+import { test as base, expect } from '@playwright/test';
 import { apiHelpers, type ApiHelpers } from '../helpers/api-helpers';
 
 // =============================================================================
@@ -26,18 +26,7 @@ type TestFixtures = {
 };
 
 // =============================================================================
-// API Fixture
-// =============================================================================
-
-const apiFixture = base.extend<TestFixtures>({
-  api: async ({ request }, use) => {
-    const helpers = apiHelpers(request);
-    await use(helpers);
-  },
-});
-
-// =============================================================================
-// Merged Test Export
+// Extended Test with Fixtures
 // =============================================================================
 
 /**
@@ -48,7 +37,12 @@ const apiFixture = base.extend<TestFixtures>({
  * - request: Playwright APIRequestContext
  * - api: Custom API helpers for Vido backend
  */
-export const test = mergeTests(base, apiFixture);
+export const test = base.extend<TestFixtures>({
+  api: async ({ request }, use) => {
+    const helpers = apiHelpers(request);
+    await use(helpers);
+  },
+});
 
 export { expect };
 
