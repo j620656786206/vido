@@ -9,7 +9,8 @@
 
 import { test, expect } from '../support/fixtures';
 
-const API_BASE_URL = process.env.API_URL || 'http://localhost:8080';
+// Health endpoint is at root, not under /api/v1
+const API_BASE_URL = 'http://localhost:8080';
 
 test.describe('Health API @api @smoke', () => {
   test('[P0] should return healthy status when API is running', async ({ request }) => {
