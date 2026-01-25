@@ -91,6 +91,9 @@ jobs:
         working-directory: apps/api
         run: go build -o ../../bin/api ./cmd/api
 
+      - name: Create data directory
+        run: mkdir -p ${{ github.workspace }}/vido-data
+
       - name: Start Go backend
         run: |
           ./bin/api &
@@ -102,6 +105,9 @@ jobs:
             fi
             sleep 1
           done
+        env:
+          VIDO_DATA_DIR: ${{ github.workspace }}/vido-data
+          VIDO_PORT: 8080
 
       - name: Run E2E tests (shard ${{ matrix.shard }}/4)
         run: npx playwright test --shard=${{ matrix.shard }}/4 --project=chromium
