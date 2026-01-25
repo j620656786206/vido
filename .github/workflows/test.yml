@@ -81,6 +81,9 @@ jobs:
           node-version-file: '.nvmrc'
           cache: 'npm'
 
+      - name: Install pnpm
+        run: npm install -g pnpm
+
       - name: Install Node dependencies
         run: npm ci
 
