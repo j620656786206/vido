@@ -26,6 +26,9 @@ vendor/
 _bmad/
 _bmad-output/
 
+# Claude Code settings
+.claude/
+
 # Worktrees
 .worktrees/
 
