@@ -112,24 +112,23 @@ export default defineConfig({
   ],
 
   // Web server configuration
-  webServer: [
-    // Backend (Go) - must start first
-    ...(process.env.CI
-      ? [] // CI starts backend separately
-      : [
-          {
-            command: 'go run ./apps/api/cmd/api',
-            url: 'http://localhost:8080/health',
-            reuseExistingServer: true,
-            timeout: 120 * 1000,
-          },
-        ]),
-    // Frontend (Nx + Vite)
-    {
-      command: 'npx nx serve web',
-      url: 'http://localhost:4200',
-      reuseExistingServer: !process.env.CI,
-      timeout: 120 * 1000,
-    },
-  ],
+  // In CI, both backend and frontend are started separately before Playwright runs
+  webServer: process.env.CI
+    ? [] // CI starts both servers separately
+    : [
+        // Backend (Go) - must start first
+        {
+          command: 'go run ./apps/api/cmd/api',
+          url: 'http://localhost:8080/health',
+          reuseExistingServer: true,
+          timeout: 120 * 1000,
+        },
+        // Frontend (Nx + Vite)
+        {
+          command: 'npx nx serve web',
+          url: 'http://localhost:4200',
+          reuseExistingServer: true,
+          timeout: 120 * 1000,
+        },
+      ],
 });

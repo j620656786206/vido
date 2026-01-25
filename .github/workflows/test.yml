@@ -94,6 +94,11 @@ jobs:
         working-directory: apps/api
         run: go build -o ../../bin/api ./cmd/api
 
+      - name: Build frontend
+        run: npx nx build web --configuration=production
+        env:
+          NODE_ENV: production
+
       - name: Create data directory
         run: mkdir -p ${{ github.workspace }}/vido-data
 
@@ -111,6 +116,18 @@ jobs:
         env:
           VIDO_DATA_DIR: ${{ github.workspace }}/vido-data
           VIDO_PORT: 8080
+
+      - name: Start frontend (preview mode)
+        run: |
+          npx vite preview --port 4200 --host localhost dist/apps/web &
+          echo "Waiting for frontend to be ready..."
+          for i in {1..30}; do
+            if curl -s http://localhost:4200 > /dev/null 2>&1; then
+              echo "Frontend is ready!"
+              break
+            fi
+            sleep 1
+          done
 
       - name: Run E2E tests (shard ${{ matrix.shard }}/4)
         run: npx playwright test --shard=${{ matrix.shard }}/4 --project=chromium
