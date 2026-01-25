@@ -1,6 +1,6 @@
 # Story 3.8: Metadata Editor
 
-Status: dev-complete
+Status: review
 
 ## Story
 
@@ -502,3 +502,10 @@ Claude Opus 4.5 (claude-opus-4-5-20251101)
 - `apps/web/src/components/metadata-editor/PosterUploader.tsx` - Poster upload with drag-drop
 - `apps/web/src/components/metadata-editor/PosterUploader.spec.tsx` - PosterUploader tests (13 tests)
 - `apps/web/src/routes/media/$type.$id.tsx` - Media detail page with Edit button integration
+
+## Change Log
+
+| Date | Change | Author |
+|------|--------|--------|
+| 2026-01-25 | Story implementation complete - all 8 tasks done, 42 frontend + all backend tests pass | Claude Opus 4.5 |
+| 2026-01-25 | Status updated to review | Claude Opus 4.5 |

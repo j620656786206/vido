@@ -78,7 +78,7 @@ development_status:
   3-5-wikipedia-metadata-fallback: done  # Completed 2026-01-24
   3-6-ai-search-keyword-generation: done  # Completed 2026-01-24
   3-7-manual-metadata-search-and-selection: done  # Completed 2026-01-25
-  3-8-metadata-editor: ready-for-dev  # Story created 2026-01-18
+  3-8-metadata-editor: review  # Dev complete 2026-01-25
   3-9-filename-mapping-learning-system: ready-for-dev  # Story created 2026-01-18
   3-10-parse-status-indicators: ready-for-dev  # Story created 2026-01-18
   3-11-auto-retry-mechanism: ready-for-dev  # Story created 2026-01-18
