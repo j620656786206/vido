@@ -113,6 +113,17 @@ export default defineConfig({
 
   // Web server configuration
   webServer: [
+    // Backend (Go) - must start first
+    ...(process.env.CI
+      ? [] // CI starts backend separately
+      : [
+          {
+            command: 'go run ./apps/api/cmd/api',
+            url: 'http://localhost:8080/health',
+            reuseExistingServer: true,
+            timeout: 120 * 1000,
+          },
+        ]),
     // Frontend (Nx + Vite)
     {
       command: 'npx nx serve web',
@@ -120,12 +131,5 @@ export default defineConfig({
       reuseExistingServer: !process.env.CI,
       timeout: 120 * 1000,
     },
-    // Backend (Go) - uncomment when ready
-    // {
-    //   command: 'go run ./apps/api/cmd/api',
-    //   url: 'http://localhost:8080/health',
-    //   reuseExistingServer: !process.env.CI,
-    //   timeout: 120 * 1000,
-    // },
   ],
 });
