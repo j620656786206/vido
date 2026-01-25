@@ -28,6 +28,8 @@ _bmad-output/
 
 # Claude Code settings
 .claude/
+.claude_settings.json
+.mcp.json
 
 # Worktrees
 .worktrees/
