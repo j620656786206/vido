@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/vido/api/internal/ai"
 	"github.com/vido/api/internal/models"
 )
 
@@ -56,6 +57,8 @@ type FallbackStatus struct {
 	KeywordAttempts []KeywordAttempt `json:"keywordAttempts,omitempty"`
 	// SuccessfulKeyword is the keyword that succeeded (if any)
 	SuccessfulKeyword string `json:"successfulKeyword,omitempty"`
+	// KeywordError captures keyword-related errors (Story 3.6)
+	KeywordError error `json:"-"`
 }
 
 // AllFailed returns true if all attempts failed or were skipped
@@ -352,49 +355,61 @@ func (o *Orchestrator) Search(ctx context.Context, req *SearchRequest, opts ...S
 				"error", err,
 				"query", req.Query,
 			)
+			status.KeywordError = ai.ErrKeywordGenerationFailed
 		} else if variants != nil {
 			keywords := variants.GetPrioritizedList()
-			for _, keyword := range keywords {
-				// Check context cancellation
-				select {
-				case <-ctx.Done():
-					status.Cancelled = true
-					status.TotalDuration = time.Since(startTime)
-					return nil, status
-				default:
-				}
-
-				// Record keyword attempt
-				keywordAttempt := KeywordAttempt{Keyword: keyword}
-
-				// Try all providers with the alternative keyword
-				altReq := &SearchRequest{
-					Query:     keyword,
-					Year:      req.Year,
-					MediaType: req.MediaType,
-					Language:  req.Language,
-					Page:      req.Page,
-				}
-
-				for _, provider := range providers {
-					result, err := o.executeSearchWithCircuitBreaker(ctx, provider, altReq)
-					if err == nil && result != nil && result.HasResults() {
-						keywordAttempt.Success = true
-						status.KeywordAttempts = append(status.KeywordAttempts, keywordAttempt)
-						status.SuccessfulKeyword = keyword
+			if len(keywords) == 0 {
+				slog.Warn("No alternative keywords generated",
+					"query", req.Query,
+				)
+				status.KeywordError = ai.ErrKeywordNoAlternatives
+			} else {
+				for _, keyword := range keywords {
+					// Check context cancellation
+					select {
+					case <-ctx.Done():
+						status.Cancelled = true
 						status.TotalDuration = time.Since(startTime)
-
-						slog.Info("Metadata search successful with alternative keyword",
-							"original_query", req.Query,
-							"successful_keyword", keyword,
-							"provider", provider.Name(),
-							"duration", status.TotalDuration,
-						)
-						return result, status
+						return nil, status
+					default:
 					}
-				}
 
-				status.KeywordAttempts = append(status.KeywordAttempts, keywordAttempt)
+					// Record keyword attempt
+					keywordAttempt := KeywordAttempt{Keyword: keyword}
+
+					// Try all providers with the alternative keyword
+					altReq := &SearchRequest{
+						Query:     keyword,
+						Year:      req.Year,
+						MediaType: req.MediaType,
+						Language:  req.Language,
+						Page:      req.Page,
+					}
+
+					for _, provider := range providers {
+						result, err := o.executeSearchWithCircuitBreaker(ctx, provider, altReq)
+						if err == nil && result != nil && result.HasResults() {
+							keywordAttempt.Success = true
+							status.KeywordAttempts = append(status.KeywordAttempts, keywordAttempt)
+							status.SuccessfulKeyword = keyword
+							status.TotalDuration = time.Since(startTime)
+
+							slog.Info("Metadata search successful with alternative keyword",
+								"original_query", req.Query,
+								"successful_keyword", keyword,
+								"provider", provider.Name(),
+								"duration", status.TotalDuration,
+							)
+							return result, status
+						}
+					}
+
+					status.KeywordAttempts = append(status.KeywordAttempts, keywordAttempt)
+				}
+				// If we tried all keywords and none succeeded
+				if len(status.KeywordAttempts) > 0 && status.SuccessfulKeyword == "" {
+					status.KeywordError = ai.ErrKeywordAllFailed
+				}
 			}
 		}
 	}
@@ -536,4 +551,64 @@ func (o *Orchestrator) ResetCircuitBreaker(providerName string) {
 	if exists {
 		cb.Reset()
 	}
+}
+
+// SearchSource searches a specific metadata source directly (Story 3.7)
+// Unlike Search which uses the fallback chain, this method:
+// - Searches only the specified source
+// - Does not fall back to other sources
+// - Returns nil if source not found or unavailable
+func (o *Orchestrator) SearchSource(ctx context.Context, req *SearchRequest, source models.MetadataSource) (*SearchResult, error) {
+	o.mu.RLock()
+	providers := make([]MetadataProvider, len(o.providers))
+	copy(providers, o.providers)
+	o.mu.RUnlock()
+
+	// Find the provider for the requested source
+	var targetProvider MetadataProvider
+	for _, p := range providers {
+		if p.Source() == source {
+			targetProvider = p
+			break
+		}
+	}
+
+	if targetProvider == nil {
+		slog.Debug("Source provider not registered",
+			"source", source,
+		)
+		return nil, nil
+	}
+
+	if !targetProvider.IsAvailable() {
+		slog.Debug("Source provider unavailable",
+			"source", source,
+		)
+		return nil, nil
+	}
+
+	// Check circuit breaker
+	if o.config.EnableCircuitBreaker {
+		o.mu.RLock()
+		cb, exists := o.circuitBreakers[targetProvider.Name()]
+		o.mu.RUnlock()
+
+		if exists && cb.State() == CircuitStateOpen {
+			slog.Debug("Source provider circuit breaker open",
+				"source", source,
+			)
+			return nil, ErrCircuitOpen
+		}
+	}
+
+	result, err := o.executeSearchWithCircuitBreaker(ctx, targetProvider, req)
+	if err != nil {
+		slog.Debug("Source search failed",
+			"source", source,
+			"error", err,
+		)
+		return nil, err
+	}
+
+	return result, nil
 }

@@ -93,6 +93,11 @@ func TestErrorConstants(t *testing.T) {
 	assert.Contains(t, ErrAIInvalidResponse.Error(), "AI_INVALID_RESPONSE")
 	assert.Contains(t, ErrAIProviderError.Error(), "AI_PROVIDER_ERROR")
 	assert.Contains(t, ErrAINotConfigured.Error(), "AI_NOT_CONFIGURED")
+
+	// Verify keyword generation error codes (Story 3.6)
+	assert.Contains(t, ErrKeywordGenerationFailed.Error(), "KEYWORD_GENERATION_FAILED")
+	assert.Contains(t, ErrKeywordNoAlternatives.Error(), "KEYWORD_NO_ALTERNATIVES")
+	assert.Contains(t, ErrKeywordAllFailed.Error(), "KEYWORD_ALL_FAILED")
 }
 
 func TestCleanJSONResponse(t *testing.T) {

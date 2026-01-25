@@ -15,6 +15,11 @@ var (
 	ErrAIInvalidResponse = errors.New("AI_INVALID_RESPONSE: Cannot parse AI response")
 	ErrAIProviderError   = errors.New("AI_PROVIDER_ERROR: Provider returned an error")
 	ErrAINotConfigured   = errors.New("AI_NOT_CONFIGURED: No AI provider configured")
+
+	// Keyword generation error codes (Story 3.6)
+	ErrKeywordGenerationFailed = errors.New("KEYWORD_GENERATION_FAILED: AI failed to generate keywords")
+	ErrKeywordNoAlternatives   = errors.New("KEYWORD_NO_ALTERNATIVES: No alternative keywords generated")
+	ErrKeywordAllFailed        = errors.New("KEYWORD_ALL_FAILED: All keyword variants failed to find results")
 )
 
 // ParseRequest contains the input for AI parsing operations.

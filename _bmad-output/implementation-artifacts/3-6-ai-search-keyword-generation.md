@@ -431,7 +431,31 @@ N/A - All tests pass, no errors encountered.
 - `apps/api/internal/services/ai_service.go` - Added `GenerateKeywords()` method
 - `apps/api/internal/services/ai_service_test.go` - Added GenerateKeywords tests
 - `apps/api/internal/services/parser_service_test.go` - Updated mock to implement new interface
-- `apps/api/internal/metadata/orchestrator.go` - Added AI keyword retry phase
-- `apps/api/internal/metadata/orchestrator_test.go` - Added keyword retry tests
+- `apps/api/internal/metadata/orchestrator.go` - Added AI keyword retry phase, KeywordError field
+- `apps/api/internal/metadata/orchestrator_test.go` - Added keyword retry tests, error code tests
 - `apps/api/internal/services/metadata_service.go` - Added `SetKeywordGenerator()` method
 - `apps/api/cmd/api/main.go` - Wired up KeywordService
+- `apps/api/internal/ai/types.go` - Added keyword error codes (Code Review Fix)
+- `apps/api/internal/ai/types_test.go` - Added keyword error codes tests (Code Review Fix)
+
+### Code Review Fixes (2026-01-24)
+
+**Issue:** Missing error codes per project-context.md Rule 7
+**Severity:** MEDIUM
+
+**Fix Applied:**
+1. Added error codes to `apps/api/internal/ai/types.go`:
+   - `ErrKeywordGenerationFailed` - AI failed to generate keywords
+   - `ErrKeywordNoAlternatives` - No alternative keywords generated
+   - `ErrKeywordAllFailed` - All keyword variants failed to find results
+
+2. Added `KeywordError` field to `FallbackStatus` in orchestrator.go
+
+3. Updated orchestrator keyword retry logic to set appropriate errors:
+   - Sets `ErrKeywordGenerationFailed` when AI generation fails
+   - Sets `ErrKeywordNoAlternatives` when GetPrioritizedList() is empty
+   - Sets `ErrKeywordAllFailed` when all keywords tried but none succeeded
+
+4. Added tests for new error codes in:
+   - `types_test.go` - Verifies error code format
+   - `orchestrator_test.go` - Tests error assignment in all scenarios

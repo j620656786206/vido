@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/vido/api/internal/ai"
 	"github.com/vido/api/internal/models"
 )
 
@@ -1117,6 +1118,8 @@ func TestOrchestrator_Search_WithKeywordRetry_AllFail(t *testing.T) {
 	// Should have tried all keyword variants
 	assert.NotEmpty(t, status.KeywordAttempts)
 	assert.Empty(t, status.SuccessfulKeyword)
+	// Should have KeywordError set to ErrKeywordAllFailed
+	assert.ErrorIs(t, status.KeywordError, ai.ErrKeywordAllFailed)
 }
 
 func TestOrchestrator_Search_WithKeywordRetry_GeneratorError(t *testing.T) {
@@ -1153,6 +1156,8 @@ func TestOrchestrator_Search_WithKeywordRetry_GeneratorError(t *testing.T) {
 	require.NotNil(t, status)
 	// No keyword attempts since generator failed
 	assert.Empty(t, status.KeywordAttempts)
+	// Should have KeywordError set to ErrKeywordGenerationFailed
+	assert.ErrorIs(t, status.KeywordError, ai.ErrKeywordGenerationFailed)
 }
 
 func TestOrchestrator_Search_NoKeywordRetryIfFirstSucceeds(t *testing.T) {
@@ -1203,6 +1208,47 @@ func TestKeywordAttempt_Fields(t *testing.T) {
 
 	assert.Equal(t, "Test Keyword", attempt.Keyword)
 	assert.True(t, attempt.Success)
+}
+
+// [P1] Tests ErrKeywordNoAlternatives when generator returns empty keywords
+func TestOrchestrator_Search_WithKeywordRetry_NoAlternatives(t *testing.T) {
+	orch := NewOrchestrator(OrchestratorConfig{
+		FallbackDelay: 10 * time.Millisecond,
+	})
+
+	provider := &MockProvider{
+		name:      "tmdb",
+		source:    models.MetadataSourceTMDb,
+		available: true,
+		status:    ProviderStatusAvailable,
+		searchFunc: func(ctx context.Context, req *SearchRequest) (*SearchResult, error) {
+			return &SearchResult{Items: []MetadataItem{}, TotalCount: 0, Source: models.MetadataSourceTMDb}, nil
+		},
+	}
+
+	// Generator returns variants with no alternatives (only original)
+	generator := &MockKeywordGenerator{
+		generateFunc: func(ctx context.Context, title string) (*KeywordVariants, error) {
+			return &KeywordVariants{
+				Original: title,
+				// No English, Romaji, etc. - empty prioritized list
+			}, nil
+		},
+	}
+
+	orch.RegisterProvider(provider)
+	orch.SetKeywordGenerator(generator)
+
+	result, status := orch.Search(context.Background(), &SearchRequest{
+		Query:     "Test",
+		MediaType: MediaTypeMovie,
+	})
+
+	assert.Nil(t, result)
+	require.NotNil(t, status)
+	assert.Empty(t, status.KeywordAttempts)
+	// Should have KeywordError set to ErrKeywordNoAlternatives
+	assert.ErrorIs(t, status.KeywordError, ai.ErrKeywordNoAlternatives)
 }
 
 // [P1] Tests context cancellation during keyword retry phase
