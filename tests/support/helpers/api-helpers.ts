@@ -107,6 +107,53 @@ export interface SearchResult {
 }
 
 // =============================================================================
+// Metadata Types (Story 3-7)
+// =============================================================================
+
+export interface ManualSearchRequest {
+  query: string;
+  mediaType?: 'movie' | 'tv';
+  year?: number;
+  source?: 'all' | 'tmdb' | 'douban' | 'wikipedia';
+}
+
+export interface ManualSearchResultItem {
+  id: string;
+  source: 'tmdb' | 'douban' | 'wikipedia';
+  title: string;
+  titleZhTW?: string;
+  year: number;
+  mediaType: 'movie' | 'tv';
+  overview?: string;
+  posterUrl?: string;
+  rating?: number;
+}
+
+export interface ManualSearchResponse {
+  results: ManualSearchResultItem[];
+  totalCount: number;
+  searchedSources: string[];
+}
+
+export interface ApplyMetadataRequest {
+  mediaId: string;
+  mediaType: 'movie' | 'series';
+  selectedItem: {
+    id: string;
+    source: string;
+  };
+  learnPattern?: boolean;
+}
+
+export interface ApplyMetadataResponse {
+  success: boolean;
+  mediaId: string;
+  mediaType: string;
+  title: string;
+  source: string;
+}
+
+// =============================================================================
 // API Helper Functions
 // =============================================================================
 
@@ -132,6 +179,10 @@ export interface ApiHelpers {
   getSetting: (key: string) => Promise<ApiResponse<Setting>>;
   setSetting: (key: string, value: string | number | boolean, type: 'string' | 'int' | 'bool') => Promise<ApiResponse<Setting>>;
   deleteSetting: (key: string) => Promise<APIResponse>;
+
+  // Metadata (Story 3-7)
+  manualSearch: (request: ManualSearchRequest) => Promise<ApiResponse<ManualSearchResponse>>;
+  applyMetadata: (request: ApplyMetadataRequest) => Promise<ApiResponse<ApplyMetadataResponse>>;
 
   // Health
   healthCheck: () => Promise<HealthResponse>;
@@ -235,6 +286,13 @@ export function apiHelpers(request: APIRequestContext): ApiHelpers {
     setSetting: async (key, value, type) => post<Setting>('/settings', { key, value, type }),
 
     deleteSetting: async (key) => del(`/settings/${key}`),
+
+    // Metadata (Story 3-7)
+    manualSearch: async (searchRequest) =>
+      post<ManualSearchResponse>('/metadata/manual-search', searchRequest),
+
+    applyMetadata: async (applyRequest) =>
+      post<ApplyMetadataResponse>('/metadata/apply', applyRequest),
 
     // Health
     healthCheck: async () => {
