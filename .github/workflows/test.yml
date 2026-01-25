@@ -121,7 +121,7 @@ jobs:
 
       - name: Start frontend (preview mode)
         run: |
-          npx vite preview --port 4200 --host localhost dist/apps/web &
+          npx serve dist/apps/web -l 4200 &
           echo "Waiting for frontend to be ready..."
           for i in {1..30}; do
             if curl -s http://localhost:4200 > /dev/null 2>&1; then
