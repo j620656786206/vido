@@ -122,6 +122,10 @@ export default defineConfig({
           url: 'http://localhost:8080/health',
           reuseExistingServer: true,
           timeout: 120 * 1000,
+          env: {
+            VIDO_DATA_DIR: './vido-data',
+            VIDO_PORT: '8080',
+          },
         },
         // Frontend (Nx + Vite)
         {
