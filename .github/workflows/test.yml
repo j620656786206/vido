@@ -3,11 +3,10 @@
 # Date: 2026-01-25
 #
 # Pipeline stages:
-# 1. install-dependencies: Cache npm + Playwright browsers
-# 2. lint: Code quality checks (ESLint + Prettier)
-# 3. test-changed-specs: Burn-in on changed test files (10 iterations)
-# 4. test-e2e-sharded: Parallel E2E tests (4 shards)
-# 5. merge-test-results: Aggregate HTML reports
+# 1. lint: Code quality checks (ESLint + Prettier)
+# 2. test-changed-specs: Burn-in on changed test files (PR only)
+# 3. test-e2e-sharded: Parallel E2E tests (4 shards)
+# 4. merge-test-results: Aggregate HTML reports
 
 name: E2E Tests
 
@@ -29,15 +28,14 @@ on:
         default: false
 
 env:
-  NODE_VERSION_FILE: '.nvmrc'
   CI: true
 
 jobs:
   # =============================================================================
-  # Stage 1: Install & Cache Dependencies
+  # Stage 1: Lint (Code Quality)
   # =============================================================================
-  install-dependencies:
-    name: Install & Cache Dependencies
+  lint:
+    name: Lint & Format Check
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -47,54 +45,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version-file: ${{ env.NODE_VERSION_FILE }}
+          node-version-file: '.nvmrc'
           cache: 'npm'
-
-      - name: Cache node modules
-        uses: actions/cache@v4
-        id: npm-cache
-        with:
-          path: |
-            ~/.npm
-            node_modules
-            ~/.cache/ms-playwright
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
 
       - name: Install dependencies
-        if: steps.npm-cache.outputs.cache-hit != 'true'
-        run: npm ci --prefer-offline --no-audit
-
-      - name: Install Playwright browsers
-        if: steps.npm-cache.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps chromium firefox webkit
-
-  # =============================================================================
-  # Stage 2: Lint (Code Quality)
-  # =============================================================================
-  lint:
-    name: Lint & Format Check
-    needs: install-dependencies
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version-file: ${{ env.NODE_VERSION_FILE }}
-          cache: 'npm'
-
-      - name: Restore dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.npm
-            node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+        run: npm ci
 
       - name: Run ESLint
         run: npm run lint
@@ -103,11 +58,10 @@ jobs:
         run: npm run format:check
 
   # =============================================================================
-  # Stage 3: Burn-In on Changed Specs (Flaky Test Detection)
+  # Stage 2: Burn-In on Changed Specs (Flaky Test Detection) - PR Only
   # =============================================================================
   test-changed-specs:
     name: Burn-In Changed Specs
-    needs: install-dependencies
     runs-on: ubuntu-latest
     timeout-minutes: 20
     if: github.event_name == 'pull_request'
@@ -115,22 +69,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Full history for accurate diff
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version-file: ${{ env.NODE_VERSION_FILE }}
+          node-version-file: '.nvmrc'
           cache: 'npm'
 
-      - name: Restore dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.npm
-            node_modules
-            ~/.cache/ms-playwright
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
 
       - name: Detect changed test files
         id: changed-tests
@@ -174,15 +125,15 @@ jobs:
           retention-days: 7
 
   # =============================================================================
-  # Stage 4: E2E Tests (Parallel Shards)
+  # Stage 3: E2E Tests (Parallel Shards)
   # =============================================================================
   test-e2e-sharded:
     name: E2E Tests (Shard ${{ matrix.shard }}/4)
-    needs: [install-dependencies, lint]
+    needs: lint
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
-      fail-fast: false # Run all shards even if one fails
+      fail-fast: false
       matrix:
         shard: [1, 2, 3, 4]
     steps:
@@ -192,17 +143,14 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version-file: ${{ env.NODE_VERSION_FILE }}
+          node-version-file: '.nvmrc'
           cache: 'npm'
 
-      - name: Restore dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.npm
-            node_modules
-            ~/.cache/ms-playwright
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
 
       - name: Run E2E tests (shard ${{ matrix.shard }}/4)
         run: npx playwright test --shard=${{ matrix.shard }}/4 --project=chromium
@@ -221,17 +169,8 @@ jobs:
             playwright-report/
           retention-days: 30
 
-      - name: Upload JUnit report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: junit-results-shard-${{ matrix.shard }}
-          path: test-results/junit.xml
-          retention-days: 30
-          if-no-files-found: ignore
-
   # =============================================================================
-  # Stage 5: Merge Test Results & Generate Report
+  # Stage 4: Merge Test Results & Generate Report
   # =============================================================================
   merge-test-results:
     name: Merge Test Results
@@ -245,11 +184,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version-file: ${{ env.NODE_VERSION_FILE }}
+          node-version-file: '.nvmrc'
           cache: 'npm'
 
-      - name: Install Playwright (for merge-reports)
-        run: npm ci --prefer-offline --no-audit
+      - name: Install dependencies
+        run: npm ci
 
       - name: Download all shard results
         uses: actions/download-artifact@v4
@@ -259,8 +198,7 @@ jobs:
           merge-multiple: true
 
       - name: Merge HTML reports
-        run: |
-          npx playwright merge-reports --reporter=html ./all-results/
+        run: npx playwright merge-reports --reporter=html ./all-results/
         continue-on-error: true
 
       - name: Upload merged report
@@ -290,7 +228,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci --prefer-offline --no-audit
+        run: npm ci
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
