@@ -80,10 +80,7 @@ export function PosterCard({
             loading="lazy"
             onLoad={() => setImageLoaded(true)}
             onError={() => setImageError(true)}
-            className={cn(
-              'h-full w-full object-cover',
-              imageLoaded ? 'opacity-100' : 'opacity-0'
-            )}
+            className={cn('h-full w-full object-cover', imageLoaded ? 'opacity-100' : 'opacity-0')}
           />
         )}
 
@@ -93,7 +90,9 @@ export function PosterCard({
             data-testid="poster-fallback"
             className="flex h-full w-full items-center justify-center bg-gray-700"
           >
-            <span role="img" aria-label="無海報圖片" className="text-4xl text-gray-500">🎬</span>
+            <span role="img" aria-label="無海報圖片" className="text-4xl text-gray-500">
+              🎬
+            </span>
           </div>
         )}
 

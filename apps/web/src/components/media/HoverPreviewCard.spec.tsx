@@ -6,7 +6,8 @@ describe('HoverPreviewCard', () => {
   const defaultProps = {
     title: '鬼滅之刃',
     originalTitle: 'Demon Slayer',
-    overview: '在大正時代的日本，炭治郎是一個善良的賣炭少年，與家人過著平凡而幸福的生活。某天，他下山賣炭回家後，發現家人全被鬼殺害，唯一存活的妹妹禰豆子也變成了鬼。',
+    overview:
+      '在大正時代的日本，炭治郎是一個善良的賣炭少年，與家人過著平凡而幸福的生活。某天，他下山賣炭回家後，發現家人全被鬼殺害，唯一存活的妹妹禰豆子也變成了鬼。',
     genreIds: [16, 28, 14],
   };
 
@@ -17,16 +18,12 @@ describe('HoverPreviewCard', () => {
     });
 
     it('does not show original title when same as title', () => {
-      render(
-        <HoverPreviewCard {...defaultProps} originalTitle="鬼滅之刃" />
-      );
+      render(<HoverPreviewCard {...defaultProps} originalTitle="鬼滅之刃" />);
       expect(screen.queryByText('鬼滅之刃')).not.toBeInTheDocument();
     });
 
     it('does not show original title when undefined', () => {
-      render(
-        <HoverPreviewCard {...defaultProps} originalTitle={undefined} />
-      );
+      render(<HoverPreviewCard {...defaultProps} originalTitle={undefined} />);
       // Only the genres and overview should be visible
       expect(screen.queryByTestId('original-title')).not.toBeInTheDocument();
     });

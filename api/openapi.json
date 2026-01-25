@@ -1,912 +1,857 @@
 {
-    "schemes": [
-        "http",
-        "https"
-    ],
-    "swagger": "2.0",
-    "info": {
-        "description": "A high-performance Go backend API server built with Gin framework, featuring structured logging, error handling, and comprehensive middleware support.",
-        "title": "Vido API",
-        "termsOfService": "http://swagger.io/terms/",
-        "contact": {
-            "name": "API Support",
-            "url": "http://www.swagger.io/support",
-            "email": "support@swagger.io"
-        },
-        "license": {
-            "name": "Apache 2.0",
-            "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
-        },
-        "version": "1.0"
+  "schemes": ["http", "https"],
+  "swagger": "2.0",
+  "info": {
+    "description": "A high-performance Go backend API server built with Gin framework, featuring structured logging, error handling, and comprehensive middleware support.",
+    "title": "Vido API",
+    "termsOfService": "http://swagger.io/terms/",
+    "contact": {
+      "name": "API Support",
+      "url": "http://www.swagger.io/support",
+      "email": "support@swagger.io"
     },
-    "host": "localhost:8080",
-    "basePath": "/api/v1",
-    "paths": {
-        "/api/v1/error-example": {
-            "get": {
-                "description": "Test endpoint to demonstrate different error types and the error handling middleware",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "examples"
-                ],
-                "summary": "Demonstrate error handling",
-                "parameters": [
-                    {
-                        "enum": [
-                            "validation",
-                            "notfound",
-                            "internal",
-                            "unauthorized",
-                            "forbidden",
-                            "panic"
-                        ],
-                        "type": "string",
-                        "description": "Error type to trigger",
-                        "name": "type",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/server.ErrorExampleResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/middleware.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/middleware.ErrorResponse"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "$ref": "#/definitions/middleware.ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/middleware.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/middleware.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/movies/search": {
-            "get": {
-                "description": "Search for movies by title with zh-TW localization",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "movies"
-                ],
-                "summary": "Search for movies",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Search query",
-                        "name": "query",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Page number (default: 1)",
-                        "name": "page",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/tmdb.SearchResultMovies"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/middleware.ErrorResponse"
-                        }
-                    },
-                    "429": {
-                        "description": "Too Many Requests",
-                        "schema": {
-                            "$ref": "#/definitions/middleware.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/middleware.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/movies/{id}": {
-            "get": {
-                "description": "Get detailed information for a specific movie by ID with zh-TW localization",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "movies"
-                ],
-                "summary": "Get movie details",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Movie ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/tmdb.MovieDetails"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/middleware.ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/middleware.ErrorResponse"
-                        }
-                    },
-                    "429": {
-                        "description": "Too Many Requests",
-                        "schema": {
-                            "$ref": "#/definitions/middleware.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/middleware.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/tv/search": {
-            "get": {
-                "description": "Search for TV shows by name with zh-TW localization",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "tv"
-                ],
-                "summary": "Search for TV shows",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Search query",
-                        "name": "query",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Page number (default: 1)",
-                        "name": "page",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/tmdb.SearchResultTVShows"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/middleware.ErrorResponse"
-                        }
-                    },
-                    "429": {
-                        "description": "Too Many Requests",
-                        "schema": {
-                            "$ref": "#/definitions/middleware.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/middleware.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/v1/tv/{id}": {
-            "get": {
-                "description": "Get detailed information for a specific TV show by ID with zh-TW localization",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "tv"
-                ],
-                "summary": "Get TV show details",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "TV show ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/tmdb.TVShowDetails"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/middleware.ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/middleware.ErrorResponse"
-                        }
-                    },
-                    "429": {
-                        "description": "Too Many Requests",
-                        "schema": {
-                            "$ref": "#/definitions/middleware.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/middleware.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/health": {
-            "get": {
-                "description": "Returns the health status of the API server",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "health"
-                ],
-                "summary": "Check API health status",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/server.HealthResponse"
-                        }
-                    }
-                }
-            }
-        }
+    "license": {
+      "name": "Apache 2.0",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
     },
-    "definitions": {
-        "middleware.ErrorDetail": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "string",
-                    "example": "VALIDATION_ERROR"
-                },
-                "message": {
-                    "type": "string",
-                    "example": "Invalid email format"
-                }
+    "version": "1.0"
+  },
+  "host": "localhost:8080",
+  "basePath": "/api/v1",
+  "paths": {
+    "/api/v1/error-example": {
+      "get": {
+        "description": "Test endpoint to demonstrate different error types and the error handling middleware",
+        "produces": ["application/json"],
+        "tags": ["examples"],
+        "summary": "Demonstrate error handling",
+        "parameters": [
+          {
+            "enum": ["validation", "notfound", "internal", "unauthorized", "forbidden", "panic"],
+            "type": "string",
+            "description": "Error type to trigger",
+            "name": "type",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/server.ErrorExampleResponse"
             }
-        },
-        "middleware.ErrorResponse": {
-            "type": "object",
-            "properties": {
-                "error": {
-                    "$ref": "#/definitions/middleware.ErrorDetail"
-                }
+          },
+          "400": {
+            "description": "Bad Request",
+            "schema": {
+              "$ref": "#/definitions/middleware.ErrorResponse"
             }
-        },
-        "server.ErrorExampleResponse": {
-            "type": "object",
-            "properties": {
-                "message": {
-                    "type": "string",
-                    "example": "Use ?type=validation|notfound|internal|unauthorized|forbidden|panic to test error handling"
-                }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "schema": {
+              "$ref": "#/definitions/middleware.ErrorResponse"
             }
-        },
-        "server.HealthResponse": {
-            "type": "object",
-            "properties": {
-                "status": {
-                    "type": "string",
-                    "example": "ok"
-                },
-                "timestamp": {
-                    "type": "string",
-                    "example": "2024-01-07T10:30:00Z"
-                }
+          },
+          "403": {
+            "description": "Forbidden",
+            "schema": {
+              "$ref": "#/definitions/middleware.ErrorResponse"
             }
-        },
-        "tmdb.Country": {
-            "type": "object",
-            "properties": {
-                "iso_3166_1": {
-                    "type": "string",
-                    "example": "US"
-                },
-                "name": {
-                    "type": "string",
-                    "example": "United States of America"
-                }
+          },
+          "404": {
+            "description": "Not Found",
+            "schema": {
+              "$ref": "#/definitions/middleware.ErrorResponse"
             }
-        },
-        "tmdb.Creator": {
-            "type": "object",
-            "properties": {
-                "credit_id": {
-                    "type": "string",
-                    "example": "52542286760ee313280006ce"
-                },
-                "gender": {
-                    "type": "integer",
-                    "example": 2
-                },
-                "id": {
-                    "type": "integer",
-                    "example": 66633
-                },
-                "name": {
-                    "type": "string",
-                    "example": "Vince Gilligan"
-                },
-                "profile_path": {
-                    "type": "string"
-                }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "schema": {
+              "$ref": "#/definitions/middleware.ErrorResponse"
             }
-        },
-        "tmdb.Genre": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "integer",
-                    "example": 18
-                },
-                "name": {
-                    "type": "string",
-                    "example": "Drama"
-                }
-            }
-        },
-        "tmdb.Language": {
-            "type": "object",
-            "properties": {
-                "english_name": {
-                    "type": "string",
-                    "example": "English"
-                },
-                "iso_639_1": {
-                    "type": "string",
-                    "example": "en"
-                },
-                "name": {
-                    "type": "string",
-                    "example": "English"
-                }
-            }
-        },
-        "tmdb.Movie": {
-            "type": "object",
-            "properties": {
-                "adult": {
-                    "type": "boolean",
-                    "example": false
-                },
-                "backdrop_path": {
-                    "type": "string",
-                    "example": "/fCayJrkfRaCRCTh8GqN30f8oyQF.jpg"
-                },
-                "genre_ids": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    },
-                    "example": [
-                        18,
-                        53
-                    ]
-                },
-                "id": {
-                    "type": "integer",
-                    "example": 550
-                },
-                "original_language": {
-                    "type": "string",
-                    "example": "en"
-                },
-                "original_title": {
-                    "type": "string",
-                    "example": "Fight Club"
-                },
-                "overview": {
-                    "type": "string",
-                    "example": "A ticking-time-bomb insomniac and a slippery soap salesman channel primal male aggression into a shocking new form of therapy."
-                },
-                "popularity": {
-                    "type": "number",
-                    "example": 61.416
-                },
-                "poster_path": {
-                    "type": "string",
-                    "example": "/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg"
-                },
-                "release_date": {
-                    "type": "string",
-                    "example": "1999-10-15"
-                },
-                "title": {
-                    "type": "string",
-                    "example": "Fight Club"
-                },
-                "video": {
-                    "type": "boolean",
-                    "example": false
-                },
-                "vote_average": {
-                    "type": "number",
-                    "example": 8.4
-                },
-                "vote_count": {
-                    "type": "integer",
-                    "example": 26280
-                }
-            }
-        },
-        "tmdb.MovieDetails": {
-            "type": "object",
-            "properties": {
-                "adult": {
-                    "type": "boolean",
-                    "example": false
-                },
-                "backdrop_path": {
-                    "type": "string",
-                    "example": "/fCayJrkfRaCRCTh8GqN30f8oyQF.jpg"
-                },
-                "budget": {
-                    "type": "integer",
-                    "example": 63000000
-                },
-                "genre_ids": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    },
-                    "example": [
-                        18,
-                        53
-                    ]
-                },
-                "genres": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/tmdb.Genre"
-                    }
-                },
-                "homepage": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer",
-                    "example": 550
-                },
-                "imdb_id": {
-                    "type": "string",
-                    "example": "tt0137523"
-                },
-                "original_language": {
-                    "type": "string",
-                    "example": "en"
-                },
-                "original_title": {
-                    "type": "string",
-                    "example": "Fight Club"
-                },
-                "overview": {
-                    "type": "string",
-                    "example": "A ticking-time-bomb insomniac and a slippery soap salesman channel primal male aggression into a shocking new form of therapy."
-                },
-                "popularity": {
-                    "type": "number",
-                    "example": 61.416
-                },
-                "poster_path": {
-                    "type": "string",
-                    "example": "/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg"
-                },
-                "production_countries": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/tmdb.Country"
-                    }
-                },
-                "release_date": {
-                    "type": "string",
-                    "example": "1999-10-15"
-                },
-                "revenue": {
-                    "type": "integer",
-                    "example": 100853753
-                },
-                "runtime": {
-                    "type": "integer",
-                    "example": 139
-                },
-                "spoken_languages": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/tmdb.Language"
-                    }
-                },
-                "status": {
-                    "type": "string",
-                    "example": "Released"
-                },
-                "tagline": {
-                    "type": "string",
-                    "example": "Mischief. Mayhem. Soap."
-                },
-                "title": {
-                    "type": "string",
-                    "example": "Fight Club"
-                },
-                "video": {
-                    "type": "boolean",
-                    "example": false
-                },
-                "vote_average": {
-                    "type": "number",
-                    "example": 8.4
-                },
-                "vote_count": {
-                    "type": "integer",
-                    "example": 26280
-                }
-            }
-        },
-        "tmdb.SearchResultMovies": {
-            "type": "object",
-            "properties": {
-                "page": {
-                    "type": "integer",
-                    "example": 1
-                },
-                "results": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/tmdb.Movie"
-                    }
-                },
-                "total_pages": {
-                    "type": "integer",
-                    "example": 500
-                },
-                "total_results": {
-                    "type": "integer",
-                    "example": 10000
-                }
-            }
-        },
-        "tmdb.SearchResultTVShows": {
-            "type": "object",
-            "properties": {
-                "page": {
-                    "type": "integer",
-                    "example": 1
-                },
-                "results": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/tmdb.TVShow"
-                    }
-                },
-                "total_pages": {
-                    "type": "integer",
-                    "example": 500
-                },
-                "total_results": {
-                    "type": "integer",
-                    "example": 10000
-                }
-            }
-        },
-        "tmdb.Season": {
-            "type": "object",
-            "properties": {
-                "air_date": {
-                    "type": "string",
-                    "example": "2008-01-20"
-                },
-                "episode_count": {
-                    "type": "integer",
-                    "example": 7
-                },
-                "id": {
-                    "type": "integer",
-                    "example": 3572
-                },
-                "name": {
-                    "type": "string",
-                    "example": "Season 1"
-                },
-                "overview": {
-                    "type": "string",
-                    "example": "High school chemistry teacher Walter White's life is suddenly transformed by a dire medical diagnosis."
-                },
-                "poster_path": {
-                    "type": "string",
-                    "example": "/1BP4xYv9ZG4ZVHkL7ocOziBbSYH.jpg"
-                },
-                "season_number": {
-                    "type": "integer",
-                    "example": 1
-                }
-            }
-        },
-        "tmdb.TVShow": {
-            "type": "object",
-            "properties": {
-                "backdrop_path": {
-                    "type": "string",
-                    "example": "/tsRy63Mu5cu8etL1X7ZLyf7UP1M.jpg"
-                },
-                "first_air_date": {
-                    "type": "string",
-                    "example": "2008-01-20"
-                },
-                "genre_ids": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    },
-                    "example": [
-                        18,
-                        80
-                    ]
-                },
-                "id": {
-                    "type": "integer",
-                    "example": 1396
-                },
-                "name": {
-                    "type": "string",
-                    "example": "Breaking Bad"
-                },
-                "origin_country": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    },
-                    "example": [
-                        "US"
-                    ]
-                },
-                "original_language": {
-                    "type": "string",
-                    "example": "en"
-                },
-                "original_name": {
-                    "type": "string",
-                    "example": "Breaking Bad"
-                },
-                "overview": {
-                    "type": "string",
-                    "example": "When Walter White, a New Mexico chemistry teacher, is diagnosed with Stage III cancer and given a prognosis of only two years left to live."
-                },
-                "popularity": {
-                    "type": "number",
-                    "example": 369.594
-                },
-                "poster_path": {
-                    "type": "string",
-                    "example": "/ggFHVNu6YYI5L9pCfOacjizRGt.jpg"
-                },
-                "vote_average": {
-                    "type": "number",
-                    "example": 8.9
-                },
-                "vote_count": {
-                    "type": "integer",
-                    "example": 12345
-                }
-            }
-        },
-        "tmdb.TVShowDetails": {
-            "type": "object",
-            "properties": {
-                "backdrop_path": {
-                    "type": "string",
-                    "example": "/tsRy63Mu5cu8etL1X7ZLyf7UP1M.jpg"
-                },
-                "created_by": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/tmdb.Creator"
-                    }
-                },
-                "episode_run_time": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    },
-                    "example": [
-                        45,
-                        47
-                    ]
-                },
-                "first_air_date": {
-                    "type": "string",
-                    "example": "2008-01-20"
-                },
-                "genre_ids": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    },
-                    "example": [
-                        18,
-                        80
-                    ]
-                },
-                "genres": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/tmdb.Genre"
-                    }
-                },
-                "homepage": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer",
-                    "example": 1396
-                },
-                "in_production": {
-                    "type": "boolean",
-                    "example": false
-                },
-                "languages": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    },
-                    "example": [
-                        "en"
-                    ]
-                },
-                "last_air_date": {
-                    "type": "string",
-                    "example": "2013-09-29"
-                },
-                "name": {
-                    "type": "string",
-                    "example": "Breaking Bad"
-                },
-                "number_of_episodes": {
-                    "type": "integer",
-                    "example": 62
-                },
-                "number_of_seasons": {
-                    "type": "integer",
-                    "example": 5
-                },
-                "origin_country": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    },
-                    "example": [
-                        "US"
-                    ]
-                },
-                "original_language": {
-                    "type": "string",
-                    "example": "en"
-                },
-                "original_name": {
-                    "type": "string",
-                    "example": "Breaking Bad"
-                },
-                "overview": {
-                    "type": "string",
-                    "example": "When Walter White, a New Mexico chemistry teacher, is diagnosed with Stage III cancer and given a prognosis of only two years left to live."
-                },
-                "popularity": {
-                    "type": "number",
-                    "example": 369.594
-                },
-                "poster_path": {
-                    "type": "string",
-                    "example": "/ggFHVNu6YYI5L9pCfOacjizRGt.jpg"
-                },
-                "production_countries": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/tmdb.Country"
-                    }
-                },
-                "seasons": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/tmdb.Season"
-                    }
-                },
-                "status": {
-                    "type": "string",
-                    "example": "Ended"
-                },
-                "tagline": {
-                    "type": "string",
-                    "example": "Change the equation."
-                },
-                "type": {
-                    "type": "string",
-                    "example": "Scripted"
-                },
-                "vote_average": {
-                    "type": "number",
-                    "example": 8.9
-                },
-                "vote_count": {
-                    "type": "integer",
-                    "example": 12345
-                }
-            }
+          }
         }
+      }
     },
-    "securityDefinitions": {
-        "BearerAuth": {
-            "description": "Type \"Bearer\" followed by a space and JWT token.",
-            "type": "apiKey",
-            "name": "Authorization",
-            "in": "header"
+    "/api/v1/movies/search": {
+      "get": {
+        "description": "Search for movies by title with zh-TW localization",
+        "produces": ["application/json"],
+        "tags": ["movies"],
+        "summary": "Search for movies",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Search query",
+            "name": "query",
+            "in": "query",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "description": "Page number (default: 1)",
+            "name": "page",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/tmdb.SearchResultMovies"
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "schema": {
+              "$ref": "#/definitions/middleware.ErrorResponse"
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "schema": {
+              "$ref": "#/definitions/middleware.ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "schema": {
+              "$ref": "#/definitions/middleware.ErrorResponse"
+            }
+          }
         }
+      }
+    },
+    "/api/v1/movies/{id}": {
+      "get": {
+        "description": "Get detailed information for a specific movie by ID with zh-TW localization",
+        "produces": ["application/json"],
+        "tags": ["movies"],
+        "summary": "Get movie details",
+        "parameters": [
+          {
+            "type": "integer",
+            "description": "Movie ID",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/tmdb.MovieDetails"
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "schema": {
+              "$ref": "#/definitions/middleware.ErrorResponse"
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "schema": {
+              "$ref": "#/definitions/middleware.ErrorResponse"
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "schema": {
+              "$ref": "#/definitions/middleware.ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "schema": {
+              "$ref": "#/definitions/middleware.ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tv/search": {
+      "get": {
+        "description": "Search for TV shows by name with zh-TW localization",
+        "produces": ["application/json"],
+        "tags": ["tv"],
+        "summary": "Search for TV shows",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "Search query",
+            "name": "query",
+            "in": "query",
+            "required": true
+          },
+          {
+            "type": "integer",
+            "description": "Page number (default: 1)",
+            "name": "page",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/tmdb.SearchResultTVShows"
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "schema": {
+              "$ref": "#/definitions/middleware.ErrorResponse"
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "schema": {
+              "$ref": "#/definitions/middleware.ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "schema": {
+              "$ref": "#/definitions/middleware.ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tv/{id}": {
+      "get": {
+        "description": "Get detailed information for a specific TV show by ID with zh-TW localization",
+        "produces": ["application/json"],
+        "tags": ["tv"],
+        "summary": "Get TV show details",
+        "parameters": [
+          {
+            "type": "integer",
+            "description": "TV show ID",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/tmdb.TVShowDetails"
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "schema": {
+              "$ref": "#/definitions/middleware.ErrorResponse"
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "schema": {
+              "$ref": "#/definitions/middleware.ErrorResponse"
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "schema": {
+              "$ref": "#/definitions/middleware.ErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "schema": {
+              "$ref": "#/definitions/middleware.ErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "description": "Returns the health status of the API server",
+        "produces": ["application/json"],
+        "tags": ["health"],
+        "summary": "Check API health status",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/server.HealthResponse"
+            }
+          }
+        }
+      }
     }
+  },
+  "definitions": {
+    "middleware.ErrorDetail": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "example": "VALIDATION_ERROR"
+        },
+        "message": {
+          "type": "string",
+          "example": "Invalid email format"
+        }
+      }
+    },
+    "middleware.ErrorResponse": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "$ref": "#/definitions/middleware.ErrorDetail"
+        }
+      }
+    },
+    "server.ErrorExampleResponse": {
+      "type": "object",
+      "properties": {
+        "message": {
+          "type": "string",
+          "example": "Use ?type=validation|notfound|internal|unauthorized|forbidden|panic to test error handling"
+        }
+      }
+    },
+    "server.HealthResponse": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "example": "ok"
+        },
+        "timestamp": {
+          "type": "string",
+          "example": "2024-01-07T10:30:00Z"
+        }
+      }
+    },
+    "tmdb.Country": {
+      "type": "object",
+      "properties": {
+        "iso_3166_1": {
+          "type": "string",
+          "example": "US"
+        },
+        "name": {
+          "type": "string",
+          "example": "United States of America"
+        }
+      }
+    },
+    "tmdb.Creator": {
+      "type": "object",
+      "properties": {
+        "credit_id": {
+          "type": "string",
+          "example": "52542286760ee313280006ce"
+        },
+        "gender": {
+          "type": "integer",
+          "example": 2
+        },
+        "id": {
+          "type": "integer",
+          "example": 66633
+        },
+        "name": {
+          "type": "string",
+          "example": "Vince Gilligan"
+        },
+        "profile_path": {
+          "type": "string"
+        }
+      }
+    },
+    "tmdb.Genre": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "example": 18
+        },
+        "name": {
+          "type": "string",
+          "example": "Drama"
+        }
+      }
+    },
+    "tmdb.Language": {
+      "type": "object",
+      "properties": {
+        "english_name": {
+          "type": "string",
+          "example": "English"
+        },
+        "iso_639_1": {
+          "type": "string",
+          "example": "en"
+        },
+        "name": {
+          "type": "string",
+          "example": "English"
+        }
+      }
+    },
+    "tmdb.Movie": {
+      "type": "object",
+      "properties": {
+        "adult": {
+          "type": "boolean",
+          "example": false
+        },
+        "backdrop_path": {
+          "type": "string",
+          "example": "/fCayJrkfRaCRCTh8GqN30f8oyQF.jpg"
+        },
+        "genre_ids": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "example": [18, 53]
+        },
+        "id": {
+          "type": "integer",
+          "example": 550
+        },
+        "original_language": {
+          "type": "string",
+          "example": "en"
+        },
+        "original_title": {
+          "type": "string",
+          "example": "Fight Club"
+        },
+        "overview": {
+          "type": "string",
+          "example": "A ticking-time-bomb insomniac and a slippery soap salesman channel primal male aggression into a shocking new form of therapy."
+        },
+        "popularity": {
+          "type": "number",
+          "example": 61.416
+        },
+        "poster_path": {
+          "type": "string",
+          "example": "/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg"
+        },
+        "release_date": {
+          "type": "string",
+          "example": "1999-10-15"
+        },
+        "title": {
+          "type": "string",
+          "example": "Fight Club"
+        },
+        "video": {
+          "type": "boolean",
+          "example": false
+        },
+        "vote_average": {
+          "type": "number",
+          "example": 8.4
+        },
+        "vote_count": {
+          "type": "integer",
+          "example": 26280
+        }
+      }
+    },
+    "tmdb.MovieDetails": {
+      "type": "object",
+      "properties": {
+        "adult": {
+          "type": "boolean",
+          "example": false
+        },
+        "backdrop_path": {
+          "type": "string",
+          "example": "/fCayJrkfRaCRCTh8GqN30f8oyQF.jpg"
+        },
+        "budget": {
+          "type": "integer",
+          "example": 63000000
+        },
+        "genre_ids": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "example": [18, 53]
+        },
+        "genres": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/tmdb.Genre"
+          }
+        },
+        "homepage": {
+          "type": "string"
+        },
+        "id": {
+          "type": "integer",
+          "example": 550
+        },
+        "imdb_id": {
+          "type": "string",
+          "example": "tt0137523"
+        },
+        "original_language": {
+          "type": "string",
+          "example": "en"
+        },
+        "original_title": {
+          "type": "string",
+          "example": "Fight Club"
+        },
+        "overview": {
+          "type": "string",
+          "example": "A ticking-time-bomb insomniac and a slippery soap salesman channel primal male aggression into a shocking new form of therapy."
+        },
+        "popularity": {
+          "type": "number",
+          "example": 61.416
+        },
+        "poster_path": {
+          "type": "string",
+          "example": "/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg"
+        },
+        "production_countries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/tmdb.Country"
+          }
+        },
+        "release_date": {
+          "type": "string",
+          "example": "1999-10-15"
+        },
+        "revenue": {
+          "type": "integer",
+          "example": 100853753
+        },
+        "runtime": {
+          "type": "integer",
+          "example": 139
+        },
+        "spoken_languages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/tmdb.Language"
+          }
+        },
+        "status": {
+          "type": "string",
+          "example": "Released"
+        },
+        "tagline": {
+          "type": "string",
+          "example": "Mischief. Mayhem. Soap."
+        },
+        "title": {
+          "type": "string",
+          "example": "Fight Club"
+        },
+        "video": {
+          "type": "boolean",
+          "example": false
+        },
+        "vote_average": {
+          "type": "number",
+          "example": 8.4
+        },
+        "vote_count": {
+          "type": "integer",
+          "example": 26280
+        }
+      }
+    },
+    "tmdb.SearchResultMovies": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "type": "integer",
+          "example": 1
+        },
+        "results": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/tmdb.Movie"
+          }
+        },
+        "total_pages": {
+          "type": "integer",
+          "example": 500
+        },
+        "total_results": {
+          "type": "integer",
+          "example": 10000
+        }
+      }
+    },
+    "tmdb.SearchResultTVShows": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "type": "integer",
+          "example": 1
+        },
+        "results": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/tmdb.TVShow"
+          }
+        },
+        "total_pages": {
+          "type": "integer",
+          "example": 500
+        },
+        "total_results": {
+          "type": "integer",
+          "example": 10000
+        }
+      }
+    },
+    "tmdb.Season": {
+      "type": "object",
+      "properties": {
+        "air_date": {
+          "type": "string",
+          "example": "2008-01-20"
+        },
+        "episode_count": {
+          "type": "integer",
+          "example": 7
+        },
+        "id": {
+          "type": "integer",
+          "example": 3572
+        },
+        "name": {
+          "type": "string",
+          "example": "Season 1"
+        },
+        "overview": {
+          "type": "string",
+          "example": "High school chemistry teacher Walter White's life is suddenly transformed by a dire medical diagnosis."
+        },
+        "poster_path": {
+          "type": "string",
+          "example": "/1BP4xYv9ZG4ZVHkL7ocOziBbSYH.jpg"
+        },
+        "season_number": {
+          "type": "integer",
+          "example": 1
+        }
+      }
+    },
+    "tmdb.TVShow": {
+      "type": "object",
+      "properties": {
+        "backdrop_path": {
+          "type": "string",
+          "example": "/tsRy63Mu5cu8etL1X7ZLyf7UP1M.jpg"
+        },
+        "first_air_date": {
+          "type": "string",
+          "example": "2008-01-20"
+        },
+        "genre_ids": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "example": [18, 80]
+        },
+        "id": {
+          "type": "integer",
+          "example": 1396
+        },
+        "name": {
+          "type": "string",
+          "example": "Breaking Bad"
+        },
+        "origin_country": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "example": ["US"]
+        },
+        "original_language": {
+          "type": "string",
+          "example": "en"
+        },
+        "original_name": {
+          "type": "string",
+          "example": "Breaking Bad"
+        },
+        "overview": {
+          "type": "string",
+          "example": "When Walter White, a New Mexico chemistry teacher, is diagnosed with Stage III cancer and given a prognosis of only two years left to live."
+        },
+        "popularity": {
+          "type": "number",
+          "example": 369.594
+        },
+        "poster_path": {
+          "type": "string",
+          "example": "/ggFHVNu6YYI5L9pCfOacjizRGt.jpg"
+        },
+        "vote_average": {
+          "type": "number",
+          "example": 8.9
+        },
+        "vote_count": {
+          "type": "integer",
+          "example": 12345
+        }
+      }
+    },
+    "tmdb.TVShowDetails": {
+      "type": "object",
+      "properties": {
+        "backdrop_path": {
+          "type": "string",
+          "example": "/tsRy63Mu5cu8etL1X7ZLyf7UP1M.jpg"
+        },
+        "created_by": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/tmdb.Creator"
+          }
+        },
+        "episode_run_time": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "example": [45, 47]
+        },
+        "first_air_date": {
+          "type": "string",
+          "example": "2008-01-20"
+        },
+        "genre_ids": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "example": [18, 80]
+        },
+        "genres": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/tmdb.Genre"
+          }
+        },
+        "homepage": {
+          "type": "string"
+        },
+        "id": {
+          "type": "integer",
+          "example": 1396
+        },
+        "in_production": {
+          "type": "boolean",
+          "example": false
+        },
+        "languages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "example": ["en"]
+        },
+        "last_air_date": {
+          "type": "string",
+          "example": "2013-09-29"
+        },
+        "name": {
+          "type": "string",
+          "example": "Breaking Bad"
+        },
+        "number_of_episodes": {
+          "type": "integer",
+          "example": 62
+        },
+        "number_of_seasons": {
+          "type": "integer",
+          "example": 5
+        },
+        "origin_country": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "example": ["US"]
+        },
+        "original_language": {
+          "type": "string",
+          "example": "en"
+        },
+        "original_name": {
+          "type": "string",
+          "example": "Breaking Bad"
+        },
+        "overview": {
+          "type": "string",
+          "example": "When Walter White, a New Mexico chemistry teacher, is diagnosed with Stage III cancer and given a prognosis of only two years left to live."
+        },
+        "popularity": {
+          "type": "number",
+          "example": 369.594
+        },
+        "poster_path": {
+          "type": "string",
+          "example": "/ggFHVNu6YYI5L9pCfOacjizRGt.jpg"
+        },
+        "production_countries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/tmdb.Country"
+          }
+        },
+        "seasons": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/tmdb.Season"
+          }
+        },
+        "status": {
+          "type": "string",
+          "example": "Ended"
+        },
+        "tagline": {
+          "type": "string",
+          "example": "Change the equation."
+        },
+        "type": {
+          "type": "string",
+          "example": "Scripted"
+        },
+        "vote_average": {
+          "type": "number",
+          "example": 8.9
+        },
+        "vote_count": {
+          "type": "integer",
+          "example": 12345
+        }
+      }
+    }
+  },
+  "securityDefinitions": {
+    "BearerAuth": {
+      "description": "Type \"Bearer\" followed by a space and JWT token.",
+      "type": "apiKey",
+      "name": "Authorization",
+      "in": "header"
+    }
+  }
 }

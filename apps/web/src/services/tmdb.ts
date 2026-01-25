@@ -15,10 +15,7 @@ const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p';
 
 export type ImageSize = 'w92' | 'w154' | 'w185' | 'w342' | 'w500' | 'w780' | 'original';
 
-export function getImageUrl(
-  path: string | null,
-  size: ImageSize = 'w342'
-): string | null {
+export function getImageUrl(path: string | null, size: ImageSize = 'w342'): string | null {
   if (!path) return null;
   return `${TMDB_IMAGE_BASE}/${size}${path}`;
 }
@@ -28,9 +25,7 @@ async function fetchApi<T>(endpoint: string): Promise<T> {
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(
-      errorData.error?.message || `API request failed: ${response.status}`
-    );
+    throw new Error(errorData.error?.message || `API request failed: ${response.status}`);
   }
 
   const data: ApiResponse<T> = await response.json();

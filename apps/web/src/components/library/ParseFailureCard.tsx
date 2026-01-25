@@ -39,17 +39,11 @@ export interface ParseFailureCardProps {
  * Provides a "Manual Search" button to allow the user to find and apply metadata.
  * Implements UX-4: Failure handling friendliness
  */
-export function ParseFailureCard({
-  file,
-  onMetadataApplied,
-  className,
-}: ParseFailureCardProps) {
+export function ParseFailureCard({ file, onMetadataApplied, className }: ParseFailureCardProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   // Use parsed title or extract from filename
-  const initialQuery =
-    file.parsedInfo?.title ||
-    extractTitleFromFilename(file.filename);
+  const initialQuery = file.parsedInfo?.title || extractTitleFromFilename(file.filename);
 
   const handleSuccess = () => {
     setIsDialogOpen(false);
@@ -85,30 +79,21 @@ export function ParseFailureCard({
         {/* Content */}
         <div className="flex-1 p-3">
           {/* Filename/Title */}
-          <h3
-            className="text-sm font-medium text-white line-clamp-2 mb-1"
-            title={file.filename}
-          >
+          <h3 className="text-sm font-medium text-white line-clamp-2 mb-1" title={file.filename}>
             {file.parsedInfo?.title || file.filename}
           </h3>
 
           {/* Parsed info if available */}
           {file.parsedInfo && (
             <div className="flex items-center gap-2 text-xs text-slate-400 mb-2">
-              {file.parsedInfo.year && (
-                <span>{file.parsedInfo.year}</span>
-              )}
+              {file.parsedInfo.year && <span>{file.parsedInfo.year}</span>}
               {file.parsedInfo.mediaType && (
                 <span className="capitalize">
                   {file.parsedInfo.mediaType === 'tv' ? '影集' : '電影'}
                 </span>
               )}
-              {file.parsedInfo.season && (
-                <span>S{file.parsedInfo.season}</span>
-              )}
-              {file.parsedInfo.episode && (
-                <span>E{file.parsedInfo.episode}</span>
-              )}
+              {file.parsedInfo.season && <span>S{file.parsedInfo.season}</span>}
+              {file.parsedInfo.episode && <span>E{file.parsedInfo.episode}</span>}
             </div>
           )}
 
@@ -122,9 +107,7 @@ export function ParseFailureCard({
             )}
 
           {/* UX-4: Guidance message */}
-          <p className="text-xs text-slate-400 mb-3">
-            自動識別失敗，請手動搜尋正確的 Metadata
-          </p>
+          <p className="text-xs text-slate-400 mb-3">自動識別失敗，請手動搜尋正確的 Metadata</p>
 
           {/* Manual Search button (AC1: Manual Search Dialog) */}
           <button

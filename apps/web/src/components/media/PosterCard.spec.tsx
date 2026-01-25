@@ -14,10 +14,7 @@ vi.mock('@tanstack/react-router', () => ({
     to: string;
     params: Record<string, string>;
   }) => (
-    <a
-      href={`${to.replace('$type', params.type).replace('$id', params.id)}`}
-      {...props}
-    >
+    <a href={`${to.replace('$type', params.type).replace('$id', params.id)}`} {...props}>
       {children}
     </a>
   ),
@@ -89,10 +86,7 @@ describe('PosterCard', () => {
     it('constructs correct TMDb image URL', () => {
       render(<PosterCard {...defaultProps} />);
       const img = screen.getByRole('img', { name: '鬼滅之刃' });
-      expect(img).toHaveAttribute(
-        'src',
-        'https://image.tmdb.org/t/p/w342/test-poster.jpg'
-      );
+      expect(img).toHaveAttribute('src', 'https://image.tmdb.org/t/p/w342/test-poster.jpg');
     });
 
     it('includes srcSet for responsive images', () => {
@@ -184,11 +178,7 @@ describe('PosterCard', () => {
   describe('Hover Interaction', () => {
     it('shows HoverPreviewCard on mouse enter', () => {
       render(
-        <PosterCard
-          {...defaultProps}
-          overview="這是一部關於鬼殺隊的動畫"
-          genreIds={[16, 28]}
-        />
+        <PosterCard {...defaultProps} overview="這是一部關於鬼殺隊的動畫" genreIds={[16, 28]} />
       );
       const link = screen.getByRole('link');
 
@@ -204,11 +194,7 @@ describe('PosterCard', () => {
 
     it('hides HoverPreviewCard on mouse leave', () => {
       render(
-        <PosterCard
-          {...defaultProps}
-          overview="這是一部關於鬼殺隊的動畫"
-          genreIds={[16, 28]}
-        />
+        <PosterCard {...defaultProps} overview="這是一部關於鬼殺隊的動畫" genreIds={[16, 28]} />
       );
       const link = screen.getByRole('link');
 
@@ -223,11 +209,7 @@ describe('PosterCard', () => {
 
     it('displays overview in hover preview', () => {
       render(
-        <PosterCard
-          {...defaultProps}
-          overview="這是一部關於鬼殺隊的動畫"
-          genreIds={[16, 28]}
-        />
+        <PosterCard {...defaultProps} overview="這是一部關於鬼殺隊的動畫" genreIds={[16, 28]} />
       );
       const link = screen.getByRole('link');
 
@@ -237,13 +219,7 @@ describe('PosterCard', () => {
     });
 
     it('displays genres in hover preview', () => {
-      render(
-        <PosterCard
-          {...defaultProps}
-          overview="Test overview"
-          genreIds={[16, 28]}
-        />
-      );
+      render(<PosterCard {...defaultProps} overview="Test overview" genreIds={[16, 28]} />);
       const link = screen.getByRole('link');
 
       fireEvent.mouseEnter(link);

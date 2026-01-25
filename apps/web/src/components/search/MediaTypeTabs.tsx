@@ -24,8 +24,7 @@ export function MediaTypeTabs({
   className,
 }: MediaTypeTabsProps) {
   const totalCount =
-    (movieCount !== undefined ? movieCount : 0) +
-    (tvCount !== undefined ? tvCount : 0);
+    (movieCount !== undefined ? movieCount : 0) + (tvCount !== undefined ? tvCount : 0);
 
   const tabs: TabConfig[] = [
     { type: 'all', label: '全部', count: totalCount || undefined },
@@ -34,11 +33,7 @@ export function MediaTypeTabs({
   ];
 
   return (
-    <div
-      className={cn('flex space-x-2', className)}
-      role="tablist"
-      aria-label="媒體類型篩選"
-    >
+    <div className={cn('flex space-x-2', className)} role="tablist" aria-label="媒體類型篩選">
       {tabs.map((tab) => {
         const isActive = activeType === tab.type;
         return (
@@ -61,9 +56,7 @@ export function MediaTypeTabs({
               <span
                 className={cn(
                   'ml-2 px-2 py-0.5 text-xs rounded-full',
-                  isActive
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-slate-700 text-slate-300'
+                  isActive ? 'bg-blue-500 text-white' : 'bg-slate-700 text-slate-300'
                 )}
               >
                 {tab.count}

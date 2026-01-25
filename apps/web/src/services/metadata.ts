@@ -88,10 +88,7 @@ interface ApiResponse<T> {
   };
 }
 
-async function fetchApi<T>(
-  endpoint: string,
-  options?: RequestInit
-): Promise<T> {
+async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     headers: {
       'Content-Type': 'application/json',
@@ -101,9 +98,7 @@ async function fetchApi<T>(
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(
-      errorData.error?.message || `API request failed: ${response.status}`
-    );
+    throw new Error(errorData.error?.message || `API request failed: ${response.status}`);
   }
 
   const data: ApiResponse<T> = await response.json();
@@ -149,7 +144,11 @@ export const metadataService = {
   /**
    * Upload a poster image for a media item (Story 3.8 - AC3)
    */
-  async uploadPoster(mediaId: string, mediaType: 'movie' | 'series', file: File): Promise<UploadPosterResponse> {
+  async uploadPoster(
+    mediaId: string,
+    mediaType: 'movie' | 'series',
+    file: File
+  ): Promise<UploadPosterResponse> {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('mediaType', mediaType);
@@ -161,9 +160,7 @@ export const metadataService = {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(
-        errorData.error?.message || `Upload failed: ${response.status}`
-      );
+      throw new Error(errorData.error?.message || `Upload failed: ${response.status}`);
     }
 
     const data = await response.json();

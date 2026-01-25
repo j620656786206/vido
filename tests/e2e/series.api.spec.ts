@@ -218,7 +218,9 @@ test.describe('Series API - CRUD Operations @api @series', () => {
     createdSeriesId = created.data.id;
 
     // WHEN: Searching for series by title
-    const response = await request.get(`${API_BASE_URL}/series/search?q=${encodeURIComponent(uniqueTitle)}`);
+    const response = await request.get(
+      `${API_BASE_URL}/series/search?q=${encodeURIComponent(uniqueTitle)}`
+    );
 
     // THEN: Should return matching series
     expect(response.status()).toBe(200);
@@ -244,7 +246,9 @@ test.describe('Series API - CRUD Operations @api @series', () => {
     expect(body.error.code).toBe('VALIDATION_REQUIRED_FIELD');
   });
 
-  test('[P2] GET /series/search - should return empty results for no matches', async ({ request }) => {
+  test('[P2] GET /series/search - should return empty results for no matches', async ({
+    request,
+  }) => {
     // GIVEN: A search query that matches nothing
 
     // WHEN: Searching for non-existent series

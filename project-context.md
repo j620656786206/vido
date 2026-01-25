@@ -28,6 +28,7 @@
 **Consolidation Plan (5 Phases):**
 
 **Phase 1: Backend Consolidation** (⭐ CURRENT PRIORITY)
+
 - **Step 1.1:** Migrate TMDb client: `/internal/tmdb/` → `/apps/api/internal/tmdb/` (update to use slog)
 - **Step 1.2:** Migrate Swagger: `/cmd/api/main.go` → `/apps/api/main.go` + `/apps/api/docs/`
 - **Step 1.3:** Migrate middleware: `/internal/middleware/` → `/apps/api/internal/middleware/`
@@ -43,32 +44,38 @@ See `_bmad-output/planning-artifacts/architecture.md` Section "Consolidation & R
 ## 🎯 Core Architectural Decisions (MANDATORY)
 
 ### 1. CSS Framework: Tailwind CSS v3.x
+
 - **Use:** Utility-first classes for all styling
 - **Config:** `/apps/web/tailwind.config.js`
 - **Why:** Bundle size optimization, design system consistency
 
 ### 2. Testing Infrastructure
+
 - **Backend:** Go testing + testify (coverage >80%)
 - **Frontend:** Vitest + React Testing Library (coverage >70%)
 - **Pattern:** Co-located tests (`*_test.go`, `*.spec.tsx`)
 
 ### 3. Authentication: JWT Stateless
+
 - **Library:** `golang-jwt/jwt` v5.x
 - **Storage:** httpOnly cookies
 - **Expiration:** 24 hours
 - **Password Hashing:** bcrypt (cost factor 12)
 
 ### 4. Caching: Tiered (Memory + SQLite)
+
 - **Tier 1:** In-memory (bigcache/ristretto) for hot data
 - **Tier 2:** SQLite `cache_entries` table for persistent cache
 - **TTL:** TMDb 24h, AI parsing 30d, images permanent
 
 ### 5. Background Tasks: Worker Pool
+
 - **Implementation:** Goroutines + channels (NO external queue)
 - **Workers:** 3-5 goroutines
 - **Retry:** Exponential backoff (1s → 2s → 4s → 8s)
 
 ### 6. Error Handling: slog + Unified AppError
+
 - **Logging:** Go `log/slog` (NOT zerolog, NOT fmt.Println)
 - **Errors:** Custom `AppError` type with error codes
 - **Format:** Structured JSON logs with sensitive data filtering
@@ -78,12 +85,14 @@ See `_bmad-output/planning-artifacts/architecture.md` Section "Consolidation & R
 ## 📋 MANDATORY Rules (ALL Agents MUST Follow)
 
 ### Rule 1: Single Backend Location
+
 ```
 ✅ ALL backend code → /apps/api
 ❌ NEVER add code to /cmd or root /internal (deprecated)
 ```
 
 ### Rule 2: Logging with slog ONLY
+
 ```go
 // ✅ CORRECT
 slog.Info("Fetching movie", "movie_id", id)
@@ -95,6 +104,7 @@ fmt.Println("Error:", err)
 ```
 
 ### Rule 3: API Response Format
+
 ```json
 // ✅ Success
 {
@@ -114,12 +124,14 @@ fmt.Println("Error:", err)
 ```
 
 ### Rule 4: Layered Architecture
+
 ```
 ✅ Handler → Service → Repository → Database
 ❌ Handler → Repository (FORBIDDEN - skip service layer)
 ```
 
 ### Rule 5: TanStack Query for Server State
+
 ```typescript
 // ✅ CORRECT - Use TanStack Query for API data
 const { data: movie } = useQuery({
@@ -128,10 +140,11 @@ const { data: movie } = useQuery({
 });
 
 // ❌ WRONG - Never use Zustand for server data
-const movie = useMovieStore(state => state.movie);
+const movie = useMovieStore((state) => state.movie);
 ```
 
 ### Rule 6: Naming Conventions
+
 ```
 Database:   snake_case plural (movies, users)
 API Paths:  /api/v1/{resource} (plural: /api/v1/movies)
@@ -143,6 +156,7 @@ JSON Fields: snake_case (release_date, tmdb_id)
 ```
 
 ### Rule 7: Error Codes System
+
 ```
 Format: {SOURCE}_{ERROR_TYPE}
 
@@ -154,6 +168,7 @@ VALIDATION_REQUIRED_FIELD, VALIDATION_INVALID_FORMAT
 ```
 
 ### Rule 8: Date/Time Format
+
 ```
 API:      ISO 8601 with timezone → "2024-01-15T14:30:00Z"
 Database: TIMESTAMP (created_at, updated_at)
@@ -162,6 +177,7 @@ Display:  toLocaleDateString('zh-TW') → "2024年1月15日"
 ```
 
 ### Rule 9: Test Co-location
+
 ```
 ✅ Backend: movie_handler.go → movie_handler_test.go (same dir)
 ✅ Frontend: MovieCard.tsx → MovieCard.spec.tsx (same dir)
@@ -169,6 +185,7 @@ Display:  toLocaleDateString('zh-TW') → "2024年1月15日"
 ```
 
 ### Rule 10: API Versioning
+
 ```
 ✅ /api/v1/movies
 ✅ /api/v1/auth/login
@@ -177,6 +194,7 @@ Display:  toLocaleDateString('zh-TW') → "2024年1月15日"
 ```
 
 ### Rule 11: Interface Location
+
 ```
 ✅ Define interfaces in services package (e.g., services.MovieServiceInterface)
 ✅ Handlers import and use interfaces from services package
@@ -243,44 +261,44 @@ vido/
 
 ### Database (SQLite)
 
-| Element | Pattern | Example | ❌ Anti-pattern |
-|---------|---------|---------|----------------|
-| Tables | snake_case plural | `movies`, `users` | `Movies`, `movie` |
-| Columns | snake_case | `tmdb_id`, `created_at` | `tmdbId`, `createdAt` |
-| Primary Key | `id` | `id TEXT PRIMARY KEY` | `movie_id` |
-| Foreign Key | `{table}_id` | `user_id`, `movie_id` | `fk_user`, `userId` |
-| Indexes | `idx_{table}_{column}` | `idx_movies_tmdb_id` | `movies_tmdb_index` |
-| Migrations | `{seq}_{desc}.sql` | `001_create_movies_table.sql` | `create-movies.sql` |
+| Element     | Pattern                | Example                       | ❌ Anti-pattern       |
+| ----------- | ---------------------- | ----------------------------- | --------------------- |
+| Tables      | snake_case plural      | `movies`, `users`             | `Movies`, `movie`     |
+| Columns     | snake_case             | `tmdb_id`, `created_at`       | `tmdbId`, `createdAt` |
+| Primary Key | `id`                   | `id TEXT PRIMARY KEY`         | `movie_id`            |
+| Foreign Key | `{table}_id`           | `user_id`, `movie_id`         | `fk_user`, `userId`   |
+| Indexes     | `idx_{table}_{column}` | `idx_movies_tmdb_id`          | `movies_tmdb_index`   |
+| Migrations  | `{seq}_{desc}.sql`     | `001_create_movies_table.sql` | `create-movies.sql`   |
 
 ### Backend (Go)
 
-| Element | Pattern | Example | ❌ Anti-pattern |
-|---------|---------|---------|----------------|
-| Packages | lowercase singular | `tmdb`, `parser`, `cache` | `tmdb_client`, `Middleware` |
-| Structs | PascalCase | `Movie`, `TMDbClient` | `movie`, `tmdbClient` |
-| Interfaces | PascalCase | `Repository`, `Cache` | `IRepository` |
-| Functions | PascalCase/camelCase | `GetMovieByID`, `parseFilename` | `get_movie_by_id` |
-| Files | snake_case.go | `tmdb_client.go` | `TMDbClient.go` |
+| Element    | Pattern              | Example                         | ❌ Anti-pattern             |
+| ---------- | -------------------- | ------------------------------- | --------------------------- |
+| Packages   | lowercase singular   | `tmdb`, `parser`, `cache`       | `tmdb_client`, `Middleware` |
+| Structs    | PascalCase           | `Movie`, `TMDbClient`           | `movie`, `tmdbClient`       |
+| Interfaces | PascalCase           | `Repository`, `Cache`           | `IRepository`               |
+| Functions  | PascalCase/camelCase | `GetMovieByID`, `parseFilename` | `get_movie_by_id`           |
+| Files      | snake_case.go        | `tmdb_client.go`                | `TMDbClient.go`             |
 
 ### Frontend (TypeScript/React)
 
-| Element | Pattern | Example | ❌ Anti-pattern |
-|---------|---------|---------|----------------|
-| Components | PascalCase | `SearchBar`, `MovieCard` | `searchBar`, `search-bar` |
-| Component Files | PascalCase.tsx | `SearchBar.tsx` | `search-bar.tsx` |
-| Hooks | use + camelCase | `useSearch`, `useAuth` | `UseSearch`, `searchHook` |
-| Hook Files | use{Name}.ts | `useSearch.ts` | `search.hook.ts` |
-| Types/Interfaces | PascalCase | `Movie`, `ApiResponse<T>` | `IMovie`, `movieType` |
-| Constants | SCREAMING_SNAKE | `API_BASE_URL`, `MAX_RETRIES` | `apiBaseUrl` |
+| Element          | Pattern         | Example                       | ❌ Anti-pattern           |
+| ---------------- | --------------- | ----------------------------- | ------------------------- |
+| Components       | PascalCase      | `SearchBar`, `MovieCard`      | `searchBar`, `search-bar` |
+| Component Files  | PascalCase.tsx  | `SearchBar.tsx`               | `search-bar.tsx`          |
+| Hooks            | use + camelCase | `useSearch`, `useAuth`        | `UseSearch`, `searchHook` |
+| Hook Files       | use{Name}.ts    | `useSearch.ts`                | `search.hook.ts`          |
+| Types/Interfaces | PascalCase      | `Movie`, `ApiResponse<T>`     | `IMovie`, `movieType`     |
+| Constants        | SCREAMING_SNAKE | `API_BASE_URL`, `MAX_RETRIES` | `apiBaseUrl`              |
 
 ### API Endpoints
 
-| Element | Pattern | Example | ❌ Anti-pattern |
-|---------|---------|---------|----------------|
-| Paths | /api/v{version}/{resource} | `/api/v1/movies` | `/movie`, `/getMovies` |
-| Methods | RESTful | `GET`, `POST`, `PUT`, `DELETE` | `POST /api/v1/movies/update` |
-| Params | {param_name} | `/api/v1/movies/{id}` | `/api/v1/movies/:id` |
-| Query | snake_case | `?sort_by=release_date` | `?sortBy=releaseDate` |
+| Element | Pattern                    | Example                        | ❌ Anti-pattern              |
+| ------- | -------------------------- | ------------------------------ | ---------------------------- |
+| Paths   | /api/v{version}/{resource} | `/api/v1/movies`               | `/movie`, `/getMovies`       |
+| Methods | RESTful                    | `GET`, `POST`, `PUT`, `DELETE` | `POST /api/v1/movies/update` |
+| Params  | {param_name}               | `/api/v1/movies/{id}`          | `/api/v1/movies/:id`         |
+| Query   | snake_case                 | `?sort_by=release_date`        | `?sortBy=releaseDate`        |
 
 ---
 
@@ -380,7 +398,9 @@ interface AuthState {
 export const useAuthStore = create<AuthState>((set) => ({
   isAuthenticated: false,
   user: null,
-  login: async (credentials) => { /* ... */ },
+  login: async (credentials) => {
+    /* ... */
+  },
   logout: () => set({ isAuthenticated: false, user: null }),
 }));
 ```
@@ -460,12 +480,14 @@ describe('MovieCard', () => {
 Before committing code, verify:
 
 **Code Location & Architecture:**
+
 - [ ] All new code is in `/apps/api` (backend) or `/apps/web` (frontend)
 - [ ] No code added to deprecated `/cmd` or root `/internal`
 - [ ] Handler → Service → Repository layering respected
 - [ ] Interfaces defined in correct package (Rule 11)
 
 **Code Quality:**
+
 - [ ] Logging uses `slog` (NOT zerolog, fmt.Println, or log.Print)
 - [ ] API responses use `ApiResponse<T>` wrapper format
 - [ ] Error codes follow `{SOURCE}_{ERROR_TYPE}` pattern
@@ -473,12 +495,14 @@ Before committing code, verify:
 - [ ] Naming conventions followed (see tables above)
 
 **Testing (Definition of Done):**
+
 - [ ] `go test ./...` passes with no failures
 - [ ] Services test coverage ≥ 80%
 - [ ] Handlers test coverage ≥ 70%
 - [ ] Tests co-located with source files (`*_test.go`, `*.spec.tsx`)
 
 **Integration (Definition of Done):**
+
 - [ ] New Services/Handlers wired up in `main.go`
 - [ ] No binary files or sensitive data staged
 - [ ] TanStack Query used for server state (NOT Zustand)
@@ -492,6 +516,7 @@ Before committing code, verify:
 These agreements were established during Epic 1 retrospective to improve development quality:
 
 ### Agreement 1: 標記完成 = 驗證完成
+
 > "Marking a task complete means it has been **verified**, not just implemented."
 
 - Before marking a task `[x]`, run the code and confirm it works
@@ -499,6 +524,7 @@ These agreements were established during Epic 1 retrospective to improve develop
 - If unsure, test it manually before marking complete
 
 ### Agreement 2: 左移品質檢查
+
 > "Shift quality checks LEFT - catch issues during implementation, not review."
 
 - Run `go test -cover` during implementation, not just before commit
@@ -506,6 +532,7 @@ These agreements were established during Epic 1 retrospective to improve develop
 - Code Review should focus on architecture and design, not basic issues
 
 ### Agreement 3: project-context.md 是聖經
+
 > "This file is the single source of truth. Read it before implementing."
 
 - All Rules (1-11) must be followed
@@ -518,33 +545,35 @@ These agreements were established during Epic 1 retrospective to improve develop
 
 ### When to use what?
 
-| Use Case | Technology/Pattern |
-|----------|-------------------|
-| Backend HTTP framework | Gin |
-| Backend logging | `log/slog` (NOT zerolog) |
-| Backend testing | Go testing + testify |
-| Backend ORM | **None** - Use repository pattern with `database/sql` |
-| Database | SQLite with WAL mode |
-| API documentation | Swaggo (OpenAPI/Swagger) |
-| Frontend framework | React 19 + TypeScript |
-| Frontend routing | TanStack Router |
-| Server state | TanStack Query v5 |
-| Client state (UI only) | Zustand |
-| Frontend styling | Tailwind CSS v3.x |
-| Frontend testing | Vitest + React Testing Library |
-| Build tool (frontend) | Vite |
-| Monorepo | Nx |
+| Use Case               | Technology/Pattern                                    |
+| ---------------------- | ----------------------------------------------------- |
+| Backend HTTP framework | Gin                                                   |
+| Backend logging        | `log/slog` (NOT zerolog)                              |
+| Backend testing        | Go testing + testify                                  |
+| Backend ORM            | **None** - Use repository pattern with `database/sql` |
+| Database               | SQLite with WAL mode                                  |
+| API documentation      | Swaggo (OpenAPI/Swagger)                              |
+| Frontend framework     | React 19 + TypeScript                                 |
+| Frontend routing       | TanStack Router                                       |
+| Server state           | TanStack Query v5                                     |
+| Client state (UI only) | Zustand                                               |
+| Frontend styling       | Tailwind CSS v3.x                                     |
+| Frontend testing       | Vitest + React Testing Library                        |
+| Build tool (frontend)  | Vite                                                  |
+| Monorepo               | Nx                                                    |
 
 ---
 
 ## 🔗 Complete Documentation
 
 **For full details, see:**
+
 - **Architecture Decisions:** `_bmad-output/planning-artifacts/architecture.md`
 - **PRD:** `_bmad-output/planning-artifacts/prd.md`
 - **UX Design:** `_bmad-output/planning-artifacts/ux-design-specification.md`
 
 **Key Sections in architecture.md:**
+
 - Core Architectural Decisions (Step 4)
 - Implementation Patterns & Consistency Rules (Step 5)
 - Current Implementation Analysis (Brownfield Assessment)
@@ -557,11 +586,13 @@ These agreements were established during Epic 1 retrospective to improve develop
 **Validation Status:** COMPLETE (2026-01-12)
 
 The complete architecture has been validated for:
+
 - ✅ **Coherence:** All 6 architectural decisions work together without conflicts
 - ✅ **Coverage:** All 94 functional requirements are architecturally supported
 - ✅ **Readiness:** 47 implementation patterns ensure AI agent consistency
 
 **Key Deliverables:**
+
 - 6 architectural decisions documented with versions and rationale
 - 47 implementation patterns preventing AI agent conflicts (see architecture.md)
 - 400+ files/directories defined in complete project structure

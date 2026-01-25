@@ -35,9 +35,7 @@ function createTestQueryClient() {
 
 function renderWithProviders(ui: React.ReactElement) {
   const queryClient = createTestQueryClient();
-  return render(
-    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
-  );
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
 }
 
 describe('ManualSearchDialog', () => {
@@ -60,18 +58,14 @@ describe('ManualSearchDialog', () => {
   });
 
   it('renders with initial query pre-filled', () => {
-    renderWithProviders(
-      <ManualSearchDialog {...defaultProps} initialQuery="Demon Slayer" />
-    );
+    renderWithProviders(<ManualSearchDialog {...defaultProps} initialQuery="Demon Slayer" />);
     const input = screen.getByPlaceholderText(/輸入電影或影集名稱/);
     expect(input).toHaveValue('Demon Slayer');
   });
 
   it('calls onClose when close button is clicked', async () => {
     const onClose = vi.fn();
-    renderWithProviders(
-      <ManualSearchDialog {...defaultProps} onClose={onClose} />
-    );
+    renderWithProviders(<ManualSearchDialog {...defaultProps} onClose={onClose} />);
 
     const closeButton = screen.getByLabelText('關閉');
     await userEvent.click(closeButton);
@@ -81,9 +75,7 @@ describe('ManualSearchDialog', () => {
 
   it('calls onClose when Escape key is pressed', async () => {
     const onClose = vi.fn();
-    renderWithProviders(
-      <ManualSearchDialog {...defaultProps} onClose={onClose} />
-    );
+    renderWithProviders(<ManualSearchDialog {...defaultProps} onClose={onClose} />);
 
     fireEvent.keyDown(document, { key: 'Escape' });
 
@@ -115,16 +107,16 @@ describe('ManualSearchDialog', () => {
       ],
     };
 
-    renderWithProviders(
-      <ManualSearchDialog {...defaultProps} fallbackStatus={fallbackStatus} />
-    );
+    renderWithProviders(<ManualSearchDialog {...defaultProps} fallbackStatus={fallbackStatus} />);
 
     expect(screen.getByText(/已嘗試的來源/)).toBeInTheDocument();
     // Use getAllByText and check that FallbackStatusDisplay rendered the badges
     const tmdbElements = screen.getAllByText('TMDb');
     expect(tmdbElements.length).toBeGreaterThanOrEqual(1);
     // The badge with bg-red-500/20 class is from FallbackStatusDisplay
-    const tmdbBadge = tmdbElements.find(el => el.closest('span')?.classList.contains('bg-red-500/20'));
+    const tmdbBadge = tmdbElements.find((el) =>
+      el.closest('span')?.classList.contains('bg-red-500/20')
+    );
     expect(tmdbBadge).toBeDefined();
   });
 

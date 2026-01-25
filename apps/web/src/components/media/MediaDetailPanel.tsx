@@ -13,12 +13,7 @@ export interface MediaDetailPanelProps {
  * MediaDetailPanel - Displays detailed information about a movie or TV show
  * AC #1, #2, #3: Full details display with loading skeleton
  */
-export function MediaDetailPanel({
-  type,
-  details,
-  credits,
-  isLoading,
-}: MediaDetailPanelProps) {
+export function MediaDetailPanel({ type, details, credits, isLoading }: MediaDetailPanelProps) {
   // Task 4.8: Loading skeleton state
   if (isLoading || !details) {
     return <MediaDetailSkeleton />;
@@ -33,9 +28,7 @@ export function MediaDetailPanel({
   const originalTitle = isMovie ? movie!.original_title : tvShow!.original_name;
 
   // Task 4.5: Year, runtime, rating
-  const year = isMovie
-    ? movie!.release_date?.slice(0, 4)
-    : tvShow!.first_air_date?.slice(0, 4);
+  const year = isMovie ? movie!.release_date?.slice(0, 4) : tvShow!.first_air_date?.slice(0, 4);
   const runtime = isMovie ? movie!.runtime : tvShow!.episode_run_time?.[0];
 
   // Task 4.2: High-resolution poster (w500 size)
@@ -51,12 +44,7 @@ export function MediaDetailPanel({
       {/* Task 4.3: Backdrop header */}
       {backdropUrl && (
         <div className="relative h-48 w-full">
-          <img
-            src={backdropUrl}
-            alt=""
-            className="h-full w-full object-cover"
-            loading="lazy"
-          />
+          <img src={backdropUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
           <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent" />
         </div>
       )}
@@ -88,9 +76,7 @@ export function MediaDetailPanel({
             {/* Task 4.5: Year, runtime, rating */}
             <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-gray-300">
               {year && <span data-testid="detail-year">{year}</span>}
-              {runtime && runtime > 0 && (
-                <span data-testid="detail-runtime">{runtime} 分鐘</span>
-              )}
+              {runtime && runtime > 0 && <span data-testid="detail-runtime">{runtime} 分鐘</span>}
               {details.vote_average > 0 && (
                 <span
                   className="flex items-center gap-1 text-yellow-400"
@@ -118,10 +104,7 @@ export function MediaDetailPanel({
         {/* Task 4.7: Plot overview (zh-TW) */}
         <div className="mt-6">
           <h3 className="mb-2 text-sm font-semibold text-gray-400">劇情簡介</h3>
-          <p
-            className="text-sm leading-relaxed text-gray-300"
-            data-testid="detail-overview"
-          >
+          <p className="text-sm leading-relaxed text-gray-300" data-testid="detail-overview">
             {details.overview || '暫無簡介'}
           </p>
         </div>

@@ -21,12 +21,7 @@ describe('CastEditor', () => {
   });
 
   it('renders cast members', () => {
-    render(
-      <CastEditor
-        {...defaultProps}
-        cast={['演員一', '演員二', '演員三']}
-      />
-    );
+    render(<CastEditor {...defaultProps} cast={['演員一', '演員二', '演員三']} />);
 
     expect(screen.getByText('演員一')).toBeTruthy();
     expect(screen.getByText('演員二')).toBeTruthy();
@@ -70,13 +65,7 @@ describe('CastEditor', () => {
 
   it('does not add duplicate', async () => {
     const onAdd = vi.fn();
-    render(
-      <CastEditor
-        {...defaultProps}
-        onAdd={onAdd}
-        cast={['已存在']}
-      />
-    );
+    render(<CastEditor {...defaultProps} onAdd={onAdd} cast={['已存在']} />);
 
     const input = screen.getByTestId('cast-input');
     await userEvent.type(input, '已存在{enter}');
@@ -86,13 +75,7 @@ describe('CastEditor', () => {
 
   it('removes cast member on X click', async () => {
     const onRemove = vi.fn();
-    render(
-      <CastEditor
-        {...defaultProps}
-        onRemove={onRemove}
-        cast={['演員一']}
-      />
-    );
+    render(<CastEditor {...defaultProps} onRemove={onRemove} cast={['演員一']} />);
 
     const removeButton = screen.getByLabelText('移除 演員一');
     await userEvent.click(removeButton);
@@ -101,12 +84,7 @@ describe('CastEditor', () => {
   });
 
   it('renders custom placeholder', () => {
-    render(
-      <CastEditor
-        {...defaultProps}
-        placeholder="輸入名字"
-      />
-    );
+    render(<CastEditor {...defaultProps} placeholder="輸入名字" />);
 
     expect(screen.getByPlaceholderText('輸入名字')).toBeTruthy();
   });

@@ -209,7 +209,9 @@ test.describe('Metadata Editor Validation @e2e @metadata-editor', () => {
 
     // THEN: Error should be cleared (on blur or next validation)
     await titleInput.blur();
-    await expect(page.getByText(/標題為必填|Title is required/i)).not.toBeVisible({ timeout: 2000 });
+    await expect(page.getByText(/標題為必填|Title is required/i)).not.toBeVisible({
+      timeout: 2000,
+    });
   });
 });
 
@@ -319,9 +321,11 @@ test.describe('Save Metadata @e2e @metadata-editor', () => {
       const saveButton = page.getByRole('button', { name: /儲存|Save/i });
 
       // Create a promise to check for loading state
-      const loadingPromise = page.waitForSelector('button:has-text("儲存中"), button:has-text("Saving")', {
-        timeout: 2000,
-      }).catch(() => null);
+      const loadingPromise = page
+        .waitForSelector('button:has-text("儲存中"), button:has-text("Saving")', {
+          timeout: 2000,
+        })
+        .catch(() => null);
 
       await saveButton.click();
 
@@ -509,7 +513,7 @@ test.describe('Poster Upload @e2e @metadata-editor', () => {
 
       // WHEN: User selects a file (via file chooser)
       const fileInput = page.locator('input[type="file"]');
-      if (await fileInput.count() > 0) {
+      if ((await fileInput.count()) > 0) {
         // Create a minimal PNG file for testing
         // In real test, use a test fixture file
         // This verifies the file input is accessible
@@ -529,7 +533,10 @@ test.describe('Poster Upload @e2e @metadata-editor', () => {
 // =============================================================================
 
 test.describe('Metadata Editor Complete Flow @e2e @metadata-editor', () => {
-  test('[P0] should complete full edit workflow: open -> edit -> save -> verify', async ({ page, api }) => {
+  test('[P0] should complete full edit workflow: open -> edit -> save -> verify', async ({
+    page,
+    api,
+  }) => {
     // Create a test movie
     const originalTitle = `完整流程測試 ${Date.now()}`;
     const testMovie = await api.createMovie({

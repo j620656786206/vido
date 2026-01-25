@@ -25,13 +25,13 @@ func main() {
 
 All configuration is loaded from environment variables with sensible defaults:
 
-| Variable | Description | Default | Example |
-|----------|-------------|---------|---------|
-| `PORT` | Server port | `8080` | `8080` |
-| `ENV` | Environment mode | `development` | `production`, `staging`, `development` |
+| Variable       | Description                     | Default                 | Example                                       |
+| -------------- | ------------------------------- | ----------------------- | --------------------------------------------- |
+| `PORT`         | Server port                     | `8080`                  | `8080`                                        |
+| `ENV`          | Environment mode                | `development`           | `production`, `staging`, `development`        |
 | `CORS_ORIGINS` | Comma-separated allowed origins | `http://localhost:3000` | `https://example.com,https://app.example.com` |
-| `LOG_LEVEL` | Logging level | `info` | `debug`, `info`, `warn`, `error` |
-| `API_VERSION` | API version prefix | `v1` | `v1`, `v2` |
+| `LOG_LEVEL`    | Logging level                   | `info`                  | `debug`, `info`, `warn`, `error`              |
+| `API_VERSION`  | API version prefix              | `v1`                    | `v1`, `v2`                                    |
 
 ## Environment Files
 

@@ -33,9 +33,7 @@ describe('FallbackStatusDisplay', () => {
 
   it('shows success indicator for successful sources', () => {
     const status: FallbackStatus = {
-      attempts: [
-        { source: 'tmdb', success: true },
-      ],
+      attempts: [{ source: 'tmdb', success: true }],
     };
 
     render(<FallbackStatusDisplay status={status} />);
@@ -47,9 +45,7 @@ describe('FallbackStatusDisplay', () => {
 
   it('shows failure indicator for failed sources', () => {
     const status: FallbackStatus = {
-      attempts: [
-        { source: 'tmdb', success: false },
-      ],
+      attempts: [{ source: 'tmdb', success: false }],
     };
 
     render(<FallbackStatusDisplay status={status} />);
@@ -60,9 +56,7 @@ describe('FallbackStatusDisplay', () => {
 
   it('shows skipped indicator for skipped sources', () => {
     const status: FallbackStatus = {
-      attempts: [
-        { source: 'douban', success: false, skipped: true, skipReason: 'circuit open' },
-      ],
+      attempts: [{ source: 'douban', success: false, skipped: true, skipReason: 'circuit open' }],
     };
 
     render(<FallbackStatusDisplay status={status} />);
@@ -81,9 +75,7 @@ describe('FallbackStatusDisplay', () => {
 
     render(<FallbackStatusDisplay status={status} />);
 
-    expect(
-      screen.getByText(/所有自動來源都無法找到匹配/)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/所有自動來源都無法找到匹配/)).toBeInTheDocument();
   });
 
   it('does not show guidance when at least one succeeded', () => {
@@ -96,16 +88,12 @@ describe('FallbackStatusDisplay', () => {
 
     render(<FallbackStatusDisplay status={status} />);
 
-    expect(
-      screen.queryByText(/所有自動來源都無法找到匹配/)
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/所有自動來源都無法找到匹配/)).not.toBeInTheDocument();
   });
 
   it('shows cancelled message when search was cancelled', () => {
     const status: FallbackStatus = {
-      attempts: [
-        { source: 'tmdb', success: false },
-      ],
+      attempts: [{ source: 'tmdb', success: false }],
       cancelled: true,
     };
 

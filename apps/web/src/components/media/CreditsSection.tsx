@@ -13,12 +13,7 @@ export interface CreditsSectionProps {
  * CreditsSection - Displays cast and crew information
  * AC #1, #2: Director/creator and cast display
  */
-export function CreditsSection({
-  director,
-  cast,
-  createdBy,
-  className,
-}: CreditsSectionProps) {
+export function CreditsSection({ director, cast, createdBy, className }: CreditsSectionProps) {
   // Task 5.3: Show top 6 cast members
   const displayCast = cast?.slice(0, 6) || [];
 
@@ -59,10 +54,7 @@ export function CreditsSection({
       {displayCast.length > 0 && (
         <div>
           <h3 className="mb-3 text-sm font-semibold text-gray-400">演員陣容</h3>
-          <div
-            className="grid grid-cols-3 gap-3"
-            data-testid="cast-grid"
-          >
+          <div className="grid grid-cols-3 gap-3" data-testid="cast-grid">
             {displayCast.map((member) => (
               <CreditPerson
                 key={member.id}
@@ -96,12 +88,7 @@ function CreditPerson({ name, subtitle, profilePath }: CreditPersonProps) {
       {/* Profile image or fallback */}
       <div className="mb-2 h-16 w-16 overflow-hidden rounded-full bg-slate-700">
         {profileUrl ? (
-          <img
-            src={profileUrl}
-            alt={name}
-            className="h-full w-full object-cover"
-            loading="lazy"
-          />
+          <img src={profileUrl} alt={name} className="h-full w-full object-cover" loading="lazy" />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-2xl text-slate-500">
             👤

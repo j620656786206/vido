@@ -76,9 +76,7 @@ const mockCredits: Credits = {
     { id: 1, name: '演員一', character: '角色一', profile_path: null, order: 0 },
     { id: 2, name: '演員二', character: '角色二', profile_path: null, order: 1 },
   ],
-  crew: [
-    { id: 3, name: '導演名', job: 'Director', department: 'Directing', profile_path: null },
-  ],
+  crew: [{ id: 3, name: '導演名', job: 'Director', department: 'Directing', profile_path: null }],
 };
 
 function createQueryClient() {
@@ -117,9 +115,7 @@ function TestMediaDetailRoute({
   const isLoading = details.isLoading || credits.isLoading;
 
   // Find director from movie credits
-  const director = isMovie
-    ? credits.data?.crew?.find((c) => c.job === 'Director')
-    : undefined;
+  const director = isMovie ? credits.data?.crew?.find((c) => c.job === 'Director') : undefined;
 
   // Get TV show data if available
   const tvShowData = !isMovie ? (details.data as TVShowDetails | undefined) : undefined;
@@ -156,9 +152,7 @@ function TestMediaDetailRoute({
 
 function renderWithQuery(ui: React.ReactElement) {
   const queryClient = createQueryClient();
-  return render(
-    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
-  );
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
 }
 
 describe('Media Detail Route', () => {

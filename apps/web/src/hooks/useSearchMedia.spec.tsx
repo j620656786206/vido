@@ -97,9 +97,7 @@ describe('useSearchMovies', () => {
   });
 
   it('should handle errors', async () => {
-    vi.mocked(tmdbModule.tmdbService.searchMovies).mockRejectedValueOnce(
-      new Error('API error')
-    );
+    vi.mocked(tmdbModule.tmdbService.searchMovies).mockRejectedValueOnce(new Error('API error'));
 
     const { result } = renderHook(() => useSearchMovies('test query'), {
       wrapper: createWrapper(),

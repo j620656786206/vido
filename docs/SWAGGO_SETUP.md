@@ -32,6 +32,7 @@ go mod download
 ```
 
 This will download:
+
 - `github.com/swaggo/gin-swagger` - Gin middleware for serving Swagger UI
 - `github.com/swaggo/files` - Static file handler for Swagger UI assets
 - `github.com/swaggo/swag` - Core swag library for annotation parsing
@@ -67,6 +68,7 @@ swag init -g cmd/api/main.go -o docs
 ```
 
 This will create:
+
 - `docs/swagger.json` - OpenAPI 2.0 specification in JSON format
 - `docs/swagger.yaml` - OpenAPI 2.0 specification in YAML format
 - `docs/docs.go` - Go package for embedding the spec

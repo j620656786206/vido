@@ -36,9 +36,7 @@ function createTestQueryClient() {
 
 function renderWithProviders(ui: React.ReactElement) {
   const queryClient = createTestQueryClient();
-  return render(
-    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
-  );
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
 }
 
 describe('MetadataEditorDialog', () => {
@@ -92,9 +90,7 @@ describe('MetadataEditorDialog', () => {
 
   it('calls onClose when close button is clicked', async () => {
     const onClose = vi.fn();
-    renderWithProviders(
-      <MetadataEditorDialog {...defaultProps} onClose={onClose} />
-    );
+    renderWithProviders(<MetadataEditorDialog {...defaultProps} onClose={onClose} />);
 
     const closeButton = screen.getByLabelText('關閉');
     await userEvent.click(closeButton);
@@ -104,9 +100,7 @@ describe('MetadataEditorDialog', () => {
 
   it('calls onClose when cancel button is clicked', async () => {
     const onClose = vi.fn();
-    renderWithProviders(
-      <MetadataEditorDialog {...defaultProps} onClose={onClose} />
-    );
+    renderWithProviders(<MetadataEditorDialog {...defaultProps} onClose={onClose} />);
 
     const cancelButton = screen.getByRole('button', { name: '取消' });
     await userEvent.click(cancelButton);
@@ -116,9 +110,7 @@ describe('MetadataEditorDialog', () => {
 
   it('calls onClose when Escape key is pressed', async () => {
     const onClose = vi.fn();
-    renderWithProviders(
-      <MetadataEditorDialog {...defaultProps} onClose={onClose} />
-    );
+    renderWithProviders(<MetadataEditorDialog {...defaultProps} onClose={onClose} />);
 
     fireEvent.keyDown(document, { key: 'Escape' });
 
@@ -197,11 +189,7 @@ describe('MetadataEditorDialog', () => {
     const onSuccess = vi.fn();
     const onClose = vi.fn();
     renderWithProviders(
-      <MetadataEditorDialog
-        {...defaultProps}
-        onSuccess={onSuccess}
-        onClose={onClose}
-      />
+      <MetadataEditorDialog {...defaultProps} onSuccess={onSuccess} onClose={onClose} />
     );
 
     // Modify the title

@@ -187,16 +187,28 @@ export interface UploadPosterResponse {
 
 export interface ApiHelpers {
   // Movies
-  listMovies: (params?: { page?: number; pageSize?: number }) => Promise<ApiResponse<PaginatedResponse<Movie>>>;
-  searchMovies: (query: string, params?: { page?: number; pageSize?: number }) => Promise<ApiResponse<PaginatedResponse<Movie>>>;
+  listMovies: (params?: {
+    page?: number;
+    pageSize?: number;
+  }) => Promise<ApiResponse<PaginatedResponse<Movie>>>;
+  searchMovies: (
+    query: string,
+    params?: { page?: number; pageSize?: number }
+  ) => Promise<ApiResponse<PaginatedResponse<Movie>>>;
   getMovie: (id: string) => Promise<ApiResponse<Movie>>;
   createMovie: (data: Partial<Movie>) => Promise<ApiResponse<Movie>>;
   updateMovie: (id: string, data: Partial<Movie>) => Promise<ApiResponse<Movie>>;
   deleteMovie: (id: string) => Promise<APIResponse>;
 
   // Series
-  listSeries: (params?: { page?: number; pageSize?: number }) => Promise<ApiResponse<PaginatedResponse<Series>>>;
-  searchSeries: (query: string, params?: { page?: number; pageSize?: number }) => Promise<ApiResponse<PaginatedResponse<Series>>>;
+  listSeries: (params?: {
+    page?: number;
+    pageSize?: number;
+  }) => Promise<ApiResponse<PaginatedResponse<Series>>>;
+  searchSeries: (
+    query: string,
+    params?: { page?: number; pageSize?: number }
+  ) => Promise<ApiResponse<PaginatedResponse<Series>>>;
   getSeries: (id: string) => Promise<ApiResponse<Series>>;
   createSeries: (data: Partial<Series>) => Promise<ApiResponse<Series>>;
   updateSeries: (id: string, data: Partial<Series>) => Promise<ApiResponse<Series>>;
@@ -205,7 +217,11 @@ export interface ApiHelpers {
   // Settings
   listSettings: () => Promise<ApiResponse<Setting[]>>;
   getSetting: (key: string) => Promise<ApiResponse<Setting>>;
-  setSetting: (key: string, value: string | number | boolean, type: 'string' | 'int' | 'bool') => Promise<ApiResponse<Setting>>;
+  setSetting: (
+    key: string,
+    value: string | number | boolean,
+    type: 'string' | 'int' | 'bool'
+  ) => Promise<ApiResponse<Setting>>;
   deleteSetting: (key: string) => Promise<APIResponse>;
 
   // Metadata (Story 3-7)
@@ -213,8 +229,16 @@ export interface ApiHelpers {
   applyMetadata: (request: ApplyMetadataRequest) => Promise<ApiResponse<ApplyMetadataResponse>>;
 
   // Metadata Editor (Story 3-8)
-  updateMetadata: (id: string, request: UpdateMetadataRequest) => Promise<ApiResponse<UpdateMetadataResponse>>;
-  uploadPoster: (id: string, file: Buffer, filename: string, mediaType?: string) => Promise<ApiResponse<UploadPosterResponse>>;
+  updateMetadata: (
+    id: string,
+    request: UpdateMetadataRequest
+  ) => Promise<ApiResponse<UpdateMetadataResponse>>;
+  uploadPoster: (
+    id: string,
+    file: Buffer,
+    filename: string,
+    mediaType?: string
+  ) => Promise<ApiResponse<UploadPosterResponse>>;
 
   // Health
   healthCheck: () => Promise<HealthResponse>;

@@ -51,7 +51,7 @@ services:
       - TMDB_API_KEY=${TMDB_API_KEY:-}
       - TMDB_DEFAULT_LANGUAGE=${TMDB_DEFAULT_LANGUAGE:-zh-TW}
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
+      test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:8080/health']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -59,7 +59,7 @@ services:
     # Expose port for direct API access (useful for debugging)
     # Comment out in production if using reverse proxy
     ports:
-      - "${API_PORT:-8081}:8080"
+      - '${API_PORT:-8081}:8080'
 
   # ---------------------------------------------------------------------------
   # Vido Web - Frontend service
@@ -73,12 +73,12 @@ services:
     networks:
       - vido-network
     ports:
-      - "${WEB_PORT:-8080}:80"
+      - '${WEB_PORT:-8080}:80'
     depends_on:
       vido-api:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost/nginx-health"]
+      test: ['CMD', 'wget', '-q', '--spider', 'http://localhost/nginx-health']
       interval: 30s
       timeout: 10s
       retries: 3

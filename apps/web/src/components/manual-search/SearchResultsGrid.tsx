@@ -41,13 +41,9 @@ function EmptyState({ searchedSources }: { searchedSources?: string[] }) {
     <div className="flex flex-col items-center justify-center py-12 text-center">
       <Search className="h-12 w-12 text-slate-500 mb-4" />
       <h3 className="text-lg font-medium text-white mb-2">找不到結果</h3>
-      <p className="text-slate-400 max-w-md">
-        試試其他關鍵字或選擇不同的來源
-      </p>
+      <p className="text-slate-400 max-w-md">試試其他關鍵字或選擇不同的來源</p>
       {searchedSources && searchedSources.length > 0 && (
-        <p className="text-slate-500 text-sm mt-2">
-          已搜尋：{searchedSources.join(', ')}
-        </p>
+        <p className="text-slate-500 text-sm mt-2">已搜尋：{searchedSources.join(', ')}</p>
       )}
     </div>
   );
@@ -61,9 +57,7 @@ function InitialState() {
     <div className="flex flex-col items-center justify-center py-12 text-center">
       <Search className="h-12 w-12 text-slate-500 mb-4" />
       <h3 className="text-lg font-medium text-white mb-2">搜尋 Metadata</h3>
-      <p className="text-slate-400">
-        輸入至少 2 個字元開始搜尋
-      </p>
+      <p className="text-slate-400">輸入至少 2 個字元開始搜尋</p>
     </div>
   );
 }

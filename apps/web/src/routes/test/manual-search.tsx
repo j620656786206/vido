@@ -64,9 +64,7 @@ const MOCK_FILES: LocalMediaFile[] = [
     },
     metadataStatus: 'failed',
     fallbackStatus: {
-      attempts: [
-        { source: 'tmdb', success: false },
-      ],
+      attempts: [{ source: 'tmdb', success: false }],
       totalDuration: 1500,
     },
   },
@@ -92,7 +90,12 @@ const MOCK_FILES: LocalMediaFile[] = [
       attempts: [
         { source: 'tmdb', success: false },
         { source: 'douban', success: false },
-        { source: 'wikipedia', success: false, skipped: true, skipReason: 'No Wikipedia provider configured' },
+        {
+          source: 'wikipedia',
+          success: false,
+          skipped: true,
+          skipReason: 'No Wikipedia provider configured',
+        },
       ],
       totalDuration: 3200,
     },
@@ -126,12 +129,10 @@ function TestManualSearchPage() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-white mb-2">
-            E2E Test: Manual Search Flow
-          </h1>
+          <h1 className="text-2xl font-bold text-white mb-2">E2E Test: Manual Search Flow</h1>
           <p className="text-slate-400">
-            This page provides test fixtures for E2E testing of Story 3-7
-            (Manual Metadata Search and Selection)
+            This page provides test fixtures for E2E testing of Story 3-7 (Manual Metadata Search
+            and Selection)
           </p>
           <div className="mt-4 flex gap-4 text-sm">
             <span className="text-amber-400" data-testid="pending-count">
@@ -147,10 +148,18 @@ function TestManualSearchPage() {
         <div className="bg-slate-800/50 rounded-lg p-4 mb-8 text-sm">
           <h2 className="text-white font-medium mb-2">Test Scenarios:</h2>
           <ul className="text-slate-400 space-y-1 list-disc list-inside">
-            <li><code>test-movie-001</code>: Movie with parsed info (Fight Club 1999)</li>
-            <li><code>test-series-001</code>: TV Show with parsed info (Breaking Bad S01E01)</li>
-            <li><code>test-unknown-001</code>: File with no parsed info</li>
-            <li><code>test-anime-001</code>: Anime with partial parse (Demon Slayer)</li>
+            <li>
+              <code>test-movie-001</code>: Movie with parsed info (Fight Club 1999)
+            </li>
+            <li>
+              <code>test-series-001</code>: TV Show with parsed info (Breaking Bad S01E01)
+            </li>
+            <li>
+              <code>test-unknown-001</code>: File with no parsed info
+            </li>
+            <li>
+              <code>test-anime-001</code>: Anime with partial parse (Demon Slayer)
+            </li>
           </ul>
         </div>
 
@@ -170,9 +179,7 @@ function TestManualSearchPage() {
           </div>
         ) : (
           <div className="text-center py-12" data-testid="all-applied-message">
-            <p className="text-green-400 text-lg font-medium">
-              All metadata applied successfully!
-            </p>
+            <p className="text-green-400 text-lg font-medium">All metadata applied successfully!</p>
             <button
               onClick={() => setAppliedItems([])}
               className="mt-4 px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors"

@@ -46,12 +46,7 @@ function getPageNumbers(currentPage: number, totalPages: number): (number | 'ell
   return pages;
 }
 
-export function Pagination({
-  currentPage,
-  totalPages,
-  onPageChange,
-  className,
-}: PaginationProps) {
+export function Pagination({ currentPage, totalPages, onPageChange, className }: PaginationProps) {
   if (totalPages <= 1) {
     return null;
   }

@@ -40,9 +40,7 @@ export function CastEditor({
 
   return (
     <div>
-      <label className="block text-sm font-medium text-slate-300 mb-1">
-        {label}
-      </label>
+      <label className="block text-sm font-medium text-slate-300 mb-1">{label}</label>
       <div className="flex flex-wrap gap-2 mb-2" data-testid="cast-list">
         {cast.map((actor) => (
           <span

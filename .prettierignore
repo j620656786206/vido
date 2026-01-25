@@ -21,3 +21,14 @@ out
 # Go specific
 vendor/
 *.sum
+
+# BMAD Framework
+_bmad/
+_bmad-output/
+
+# Worktrees
+.worktrees/
+
+# Test outputs
+test-results/
+playwright-report/

@@ -114,7 +114,9 @@ test.describe('Parser API - Single Parse @api @parser', () => {
     expect(body.data.year).toBe(2010);
   });
 
-  test('[P1] POST /parser/parse - should parse TV show with multiple episodes', async ({ request }) => {
+  test('[P1] POST /parser/parse - should parse TV show with multiple episodes', async ({
+    request,
+  }) => {
     // GIVEN: A TV show filename with episode range
     const filename = sampleFilenames.tvMultiEpisode;
 

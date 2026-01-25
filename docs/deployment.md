@@ -42,18 +42,18 @@ cp .env.example .env
 
 #### Essential Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `WEB_PORT` | `8080` | Port for web interface |
-| `MEDIA_PATH` | `./media` | Path to your media library |
-| `TMDB_API_KEY` | (none) | TMDb API key for metadata |
+| Variable       | Default   | Description                |
+| -------------- | --------- | -------------------------- |
+| `WEB_PORT`     | `8080`    | Port for web interface     |
+| `MEDIA_PATH`   | `./media` | Path to your media library |
+| `TMDB_API_KEY` | (none)    | TMDb API key for metadata  |
 
 #### Database Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DB_PATH` | `/vido-data/vido.db` | Database file path (inside container) |
-| `DB_WAL_ENABLED` | `true` | Enable WAL mode |
+| Variable         | Default              | Description                           |
+| ---------------- | -------------------- | ------------------------------------- |
+| `DB_PATH`        | `/vido-data/vido.db` | Database file path (inside container) |
+| `DB_WAL_ENABLED` | `true`               | Enable WAL mode                       |
 
 ### Media Library Setup
 
@@ -124,10 +124,10 @@ docker-compose up -d
 
 Vido uses Docker volumes for persistent storage:
 
-| Volume | Purpose | Container Path |
-|--------|---------|---------------|
-| `vido-data` | Database, cache | `/vido-data` |
-| `vido-backups` | Backup files | `/vido-backups` |
+| Volume         | Purpose         | Container Path  |
+| -------------- | --------------- | --------------- |
+| `vido-data`    | Database, cache | `/vido-data`    |
+| `vido-backups` | Backup files    | `/vido-backups` |
 
 ### Backup Data
 
@@ -265,11 +265,11 @@ Before deploying to production:
 
 ## Resource Requirements
 
-| Environment | CPU | Memory | Storage |
-|-------------|-----|--------|---------|
-| Minimum | 1 core | 512MB | 1GB |
-| Recommended | 2 cores | 1GB | 5GB |
-| Production | 2+ cores | 2GB | 10GB+ |
+| Environment | CPU      | Memory | Storage |
+| ----------- | -------- | ------ | ------- |
+| Minimum     | 1 core   | 512MB  | 1GB     |
+| Recommended | 2 cores  | 1GB    | 5GB     |
+| Production  | 2+ cores | 2GB    | 10GB+   |
 
 ## Support
 

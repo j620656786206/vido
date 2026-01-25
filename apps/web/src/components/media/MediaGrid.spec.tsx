@@ -15,10 +15,7 @@ vi.mock('@tanstack/react-router', () => ({
     to: string;
     params: Record<string, string>;
   }) => (
-    <a
-      href={`${to.replace('$type', params.type).replace('$id', params.id)}`}
-      {...props}
-    >
+    <a href={`${to.replace('$type', params.type).replace('$id', params.id)}`} {...props}>
       {children}
     </a>
   ),
@@ -114,9 +111,7 @@ describe('MediaGrid', () => {
     });
 
     it('shows custom empty message', () => {
-      render(
-        <MediaGrid movies={[]} tvShows={[]} emptyMessage="找不到符合的媒體" />
-      );
+      render(<MediaGrid movies={[]} tvShows={[]} emptyMessage="找不到符合的媒體" />);
       expect(screen.getByText('找不到符合的媒體')).toBeInTheDocument();
     });
 
@@ -157,9 +152,7 @@ describe('MediaGrid', () => {
       };
 
       // This should not cause any console warnings about duplicate keys
-      const { container } = render(
-        <MediaGrid movies={[movieWithSameId]} tvShows={mockTVShows} />
-      );
+      const { container } = render(<MediaGrid movies={[movieWithSameId]} tvShows={mockTVShows} />);
 
       const links = container.querySelectorAll('a');
       expect(links).toHaveLength(2);
@@ -186,9 +179,7 @@ describe('MediaGrid', () => {
     });
 
     it('prefers items prop over movies/tvShows when both provided', () => {
-      const items = [
-        { item: mockMovies[0], mediaType: 'movie' as const },
-      ];
+      const items = [{ item: mockMovies[0], mediaType: 'movie' as const }];
 
       render(<MediaGrid items={items} movies={mockMovies} tvShows={mockTVShows} />);
 

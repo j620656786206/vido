@@ -1,6 +1,12 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { createMemoryHistory, RouterProvider, createRootRoute, createRoute, createRouter } from '@tanstack/react-router';
+import {
+  createMemoryHistory,
+  RouterProvider,
+  createRootRoute,
+  createRoute,
+  createRouter,
+} from '@tanstack/react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // Import the route component for testing
@@ -22,7 +28,7 @@ vi.mock('../services/tmdb', () => ({
       total_results: 0,
     }),
   },
-  getImageUrl: vi.fn((path) => path ? `https://image.tmdb.org/t/p/w342${path}` : null),
+  getImageUrl: vi.fn((path) => (path ? `https://image.tmdb.org/t/p/w342${path}` : null)),
 }));
 
 // Create a test router setup
@@ -41,7 +47,9 @@ function createTestRouter(initialSearch = {}) {
   const router = createRouter({
     routeTree,
     history: createMemoryHistory({
-      initialEntries: [`/search?${new URLSearchParams(initialSearch as Record<string, string>).toString()}`],
+      initialEntries: [
+        `/search?${new URLSearchParams(initialSearch as Record<string, string>).toString()}`,
+      ],
     }),
   });
 

@@ -27,12 +27,7 @@ describe('GenreSelector', () => {
   });
 
   it('highlights selected genres', () => {
-    render(
-      <GenreSelector
-        {...defaultProps}
-        selectedGenres={['action', 'drama']}
-      />
-    );
+    render(<GenreSelector {...defaultProps} selectedGenres={['action', 'drama']} />);
 
     const actionButton = screen.getByRole('button', { name: '動作' });
     const dramaButton = screen.getByRole('button', { name: '劇情' });
@@ -53,12 +48,7 @@ describe('GenreSelector', () => {
   });
 
   it('sets aria-pressed attribute correctly', () => {
-    render(
-      <GenreSelector
-        {...defaultProps}
-        selectedGenres={['action']}
-      />
-    );
+    render(<GenreSelector {...defaultProps} selectedGenres={['action']} />);
 
     const actionButton = screen.getByRole('button', { name: '動作' });
     const comedyButton = screen.getByRole('button', { name: '喜劇' });

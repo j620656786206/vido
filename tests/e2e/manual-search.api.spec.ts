@@ -35,7 +35,9 @@ test.describe('Manual Search API @api @metadata', () => {
     expect(response.data!.searchedSources).toContain('tmdb');
   });
 
-  test('[P1] POST /metadata/manual-search - should search specific source (TMDb)', async ({ api }) => {
+  test('[P1] POST /metadata/manual-search - should search specific source (TMDb)', async ({
+    api,
+  }) => {
     // GIVEN: A search request for TMDb only
     const searchRequest = {
       query: 'Fight Club',
@@ -97,7 +99,9 @@ test.describe('Manual Search API @api @metadata', () => {
     expect(response.data).toBeDefined();
   });
 
-  test('[P2] POST /metadata/manual-search - should return empty results for non-existent query', async ({ api }) => {
+  test('[P2] POST /metadata/manual-search - should return empty results for non-existent query', async ({
+    api,
+  }) => {
     // GIVEN: A search request for non-existent content
     const searchRequest = {
       query: 'xyznonexistentmovie99999abcdef',
@@ -115,7 +119,9 @@ test.describe('Manual Search API @api @metadata', () => {
     expect(response.data!.totalCount).toBe(0);
   });
 
-  test('[P1] POST /metadata/manual-search - should return error for missing query', async ({ api }) => {
+  test('[P1] POST /metadata/manual-search - should return error for missing query', async ({
+    api,
+  }) => {
     // GIVEN: A search request without query
     const searchRequest = {
       query: '',
@@ -132,7 +138,9 @@ test.describe('Manual Search API @api @metadata', () => {
     expect(response.error!.code).toBe('MANUAL_SEARCH_INVALID_REQUEST');
   });
 
-  test('[P2] POST /metadata/manual-search - should default to movie media type', async ({ api }) => {
+  test('[P2] POST /metadata/manual-search - should default to movie media type', async ({
+    api,
+  }) => {
     // GIVEN: A search request without mediaType
     const searchRequest = {
       query: 'Inception',
@@ -164,7 +172,9 @@ test.describe('Manual Search API @api @metadata', () => {
     expect(response.data!.searchedSources.length).toBeGreaterThanOrEqual(1);
   });
 
-  test('[P1] POST /metadata/manual-search - should include source indicator in results (AC4)', async ({ api }) => {
+  test('[P1] POST /metadata/manual-search - should include source indicator in results (AC4)', async ({
+    api,
+  }) => {
     // GIVEN: A search request
     const searchRequest = {
       query: 'Inception',
@@ -185,7 +195,9 @@ test.describe('Manual Search API @api @metadata', () => {
     }
   });
 
-  test('[P1] POST /metadata/manual-search - results should include required fields (AC2)', async ({ api }) => {
+  test('[P1] POST /metadata/manual-search - results should include required fields (AC2)', async ({
+    api,
+  }) => {
     // GIVEN: A search request that should return results
     const searchRequest = {
       query: 'Inception',
@@ -281,7 +293,9 @@ test.describe('Apply Metadata API @api @metadata', () => {
     expect(response.error!.code).toBe('APPLY_METADATA_INVALID_REQUEST');
   });
 
-  test('[P1] POST /metadata/apply - should return error for non-existent media', async ({ api }) => {
+  test('[P1] POST /metadata/apply - should return error for non-existent media', async ({
+    api,
+  }) => {
     // GIVEN: A request for non-existent media
     const applyRequest = {
       mediaId: 'nonexistent-media-id-12345',
@@ -301,7 +315,9 @@ test.describe('Apply Metadata API @api @metadata', () => {
     expect(response.error!.code).toBe('APPLY_METADATA_NOT_FOUND');
   });
 
-  test.skip('[P2] POST /metadata/apply - should accept learnPattern flag for Story 3.9', async ({ api }) => {
+  test.skip('[P2] POST /metadata/apply - should accept learnPattern flag for Story 3.9', async ({
+    api,
+  }) => {
     // GIVEN: A valid apply request with learnPattern flag
     // Note: This test requires a movie to exist in the database
     // Skip until we have proper test data seeding

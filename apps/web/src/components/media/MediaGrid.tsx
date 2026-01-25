@@ -41,9 +41,7 @@ export function MediaGrid({
   }
 
   // Use unified items if provided, otherwise fall back to separate arrays
-  const hasResults = items
-    ? items.length > 0
-    : movies.length > 0 || tvShows.length > 0;
+  const hasResults = items ? items.length > 0 : movies.length > 0 || tvShows.length > 0;
 
   if (!hasResults) {
     return (

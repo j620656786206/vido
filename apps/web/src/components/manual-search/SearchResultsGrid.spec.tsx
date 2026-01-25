@@ -57,11 +57,7 @@ describe('SearchResultsGrid', () => {
 
   it('renders empty state when no results found', () => {
     render(
-      <SearchResultsGrid
-        {...defaultProps}
-        results={[]}
-        searchedSources={['tmdb', 'douban']}
-      />
+      <SearchResultsGrid {...defaultProps} results={[]} searchedSources={['tmdb', 'douban']} />
     );
 
     expect(screen.getByText('找不到結果')).toBeInTheDocument();

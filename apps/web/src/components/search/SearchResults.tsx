@@ -22,8 +22,8 @@ export function SearchResults({
   className,
 }: SearchResultsProps) {
   // Filter results based on type
-  const movieResults = (type === 'all' || type === 'movie') ? (movies?.results || []) : [];
-  const tvResults = (type === 'all' || type === 'tv') ? (tvShows?.results || []) : [];
+  const movieResults = type === 'all' || type === 'movie' ? movies?.results || [] : [];
+  const tvResults = type === 'all' || type === 'tv' ? tvShows?.results || [] : [];
 
   // For 'all' type, create unified sorted array to preserve interleaved order
   let sortedItems: MediaItem[] | undefined;
@@ -66,9 +66,7 @@ export function SearchResults({
     <div className={className}>
       {/* Results count */}
       {!isLoading && hasResults && (
-        <div className="mb-4 text-sm text-slate-400">
-          找到 {totalResults} 個結果
-        </div>
+        <div className="mb-4 text-sm text-slate-400">找到 {totalResults} 個結果</div>
       )}
 
       {/* Grid results */}

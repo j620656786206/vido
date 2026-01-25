@@ -21,14 +21,14 @@ npm run test:e2e:codegen
 
 ## Available Scripts
 
-| Script | Description |
-|--------|-------------|
-| `npm run test:e2e` | Run all E2E tests (headless) |
-| `npm run test:e2e:ui` | Open Playwright UI mode |
-| `npm run test:e2e:headed` | Run tests with visible browser |
-| `npm run test:e2e:debug` | Run tests in debug mode |
-| `npm run test:e2e:codegen` | Open test recorder |
-| `npm run test:e2e:report` | View HTML test report |
+| Script                     | Description                    |
+| -------------------------- | ------------------------------ |
+| `npm run test:e2e`         | Run all E2E tests (headless)   |
+| `npm run test:e2e:ui`      | Open Playwright UI mode        |
+| `npm run test:e2e:headed`  | Run tests with visible browser |
+| `npm run test:e2e:debug`   | Run tests in debug mode        |
+| `npm run test:e2e:codegen` | Open test recorder             |
+| `npm run test:e2e:report`  | View HTML test report          |
 
 ## Project Structure
 
@@ -130,12 +130,12 @@ npx playwright test --grep @api
 
 All tests use priority tags for selective execution based on risk level:
 
-| Tag | Description | When to Run |
-|-----|-------------|-------------|
-| `[P0]` | Critical paths, must always work | Every commit |
-| `[P1]` | High priority, important features | PR to main |
-| `[P2]` | Medium priority, edge cases | Nightly builds |
-| `[P3]` | Low priority, nice-to-have | On-demand |
+| Tag    | Description                       | When to Run    |
+| ------ | --------------------------------- | -------------- |
+| `[P0]` | Critical paths, must always work  | Every commit   |
+| `[P1]` | High priority, important features | PR to main     |
+| `[P2]` | Medium priority, edge cases       | Nightly builds |
+| `[P3]` | Low priority, nice-to-have        | On-demand      |
 
 ### Running by Priority
 
@@ -196,20 +196,20 @@ npm run test:e2e:codegen http://localhost:5173
 
 Set in `.env` or environment:
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `TEST_ENV` | `local` | Environment: local, staging, production |
-| `BASE_URL` | `http://localhost:5173` | Frontend URL |
-| `API_URL` | `http://localhost:8080/api/v1` | Backend API URL |
+| Variable   | Default                        | Description                             |
+| ---------- | ------------------------------ | --------------------------------------- |
+| `TEST_ENV` | `local`                        | Environment: local, staging, production |
+| `BASE_URL` | `http://localhost:5173`        | Frontend URL                            |
+| `API_URL`  | `http://localhost:8080/api/v1` | Backend API URL                         |
 
 ### Timeout Standards
 
-| Type | Duration | Use Case |
-|------|----------|----------|
-| Action | 15s | click, fill, etc. |
-| Navigation | 30s | page.goto, reload |
-| Expect | 10s | all assertions |
-| Test | 60s | entire test |
+| Type       | Duration | Use Case          |
+| ---------- | -------- | ----------------- |
+| Action     | 15s      | click, fill, etc. |
+| Navigation | 30s      | page.goto, reload |
+| Expect     | 10s      | all assertions    |
+| Test       | 60s      | entire test       |
 
 ### Browser Projects
 

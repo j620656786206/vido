@@ -29,12 +29,7 @@ describe('PosterUploader', () => {
   });
 
   it('renders current poster as preview', () => {
-    render(
-      <PosterUploader
-        {...defaultProps}
-        currentPoster="https://example.com/poster.jpg"
-      />
-    );
+    render(<PosterUploader {...defaultProps} currentPoster="https://example.com/poster.jpg" />);
 
     const preview = screen.getByAltText('Poster preview');
     expect(preview).toBeTruthy();
@@ -48,12 +43,7 @@ describe('PosterUploader', () => {
   });
 
   it('shows error message', () => {
-    render(
-      <PosterUploader
-        {...defaultProps}
-        error="上傳失敗"
-      />
-    );
+    render(<PosterUploader {...defaultProps} error="上傳失敗" />);
 
     expect(screen.getByText('上傳失敗')).toBeTruthy();
   });
@@ -134,12 +124,7 @@ describe('PosterUploader', () => {
   });
 
   it('clears preview on X click', async () => {
-    render(
-      <PosterUploader
-        {...defaultProps}
-        currentPoster="https://example.com/poster.jpg"
-      />
-    );
+    render(<PosterUploader {...defaultProps} currentPoster="https://example.com/poster.jpg" />);
 
     await userEvent.click(screen.getByLabelText('清除預覽'));
 

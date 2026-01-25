@@ -208,7 +208,9 @@ test.describe('Settings API - CRUD Operations @api @settings', () => {
     expect(body.data.key).toBe(settingKey);
   });
 
-  test('[P2] GET /settings/:key - should return 404 for non-existent setting', async ({ request }) => {
+  test('[P2] GET /settings/:key - should return 404 for non-existent setting', async ({
+    request,
+  }) => {
     // GIVEN: A non-existent setting key
     const fakeKey = 'non_existent_setting_key_12345';
 

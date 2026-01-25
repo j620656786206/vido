@@ -17,6 +17,7 @@ Run the installation script:
 ```
 
 This script will:
+
 - Check for Go installation
 - Install Air CLI via `go install`
 - Verify the installation
@@ -115,6 +116,7 @@ Press `Ctrl+C` to stop Air and the running application.
 **Problem**: `bash: air: command not found`
 
 **Solution**:
+
 1. Verify installation: `go install github.com/cosmtrek/air@latest`
 2. Check PATH: `echo $PATH | grep "$(go env GOPATH)/bin"`
 3. If not in PATH, add it:
@@ -127,6 +129,7 @@ Press `Ctrl+C` to stop Air and the running application.
 **Problem**: Air shows build errors and doesn't restart
 
 **Solution**:
+
 1. Check `build-errors.log` in the project root
 2. Fix the compilation errors in your code
 3. Air will automatically retry the build on next save
@@ -136,6 +139,7 @@ Press `Ctrl+C` to stop Air and the running application.
 **Problem**: `bind: address already in use`
 
 **Solution**:
+
 1. Stop any other instances of the API server
 2. Find and kill the process using the port:
    ```bash
@@ -148,6 +152,7 @@ Press `Ctrl+C` to stop Air and the running application.
 **Problem**: Saving files doesn't trigger rebuild
 
 **Solution**:
+
 1. Verify you're editing files with `.go` extension
 2. Check that the file isn't in an excluded directory
 3. Ensure the file isn't matching `exclude_regex` patterns

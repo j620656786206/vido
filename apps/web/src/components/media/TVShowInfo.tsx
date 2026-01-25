@@ -9,11 +9,11 @@ export interface TVShowInfoProps {
 // Task 6.4: Status translations for Traditional Chinese
 const TV_STATUS_MAP: Record<string, string> = {
   'Returning Series': '回歸中',
-  'Ended': '已完結',
-  'Canceled': '已取消',
+  Ended: '已完結',
+  Canceled: '已取消',
   'In Production': '製作中',
-  'Planned': '計畫中',
-  'Pilot': '試播中',
+  Planned: '計畫中',
+  Pilot: '試播中',
 };
 
 /**
@@ -43,36 +43,16 @@ export function TVShowInfo({ show, className }: TVShowInfoProps) {
 
       <div className="space-y-2 text-sm">
         {/* Task 6.2: Number of seasons and episodes */}
-        <InfoRow
-          label="季數"
-          value={`${show.number_of_seasons} 季`}
-          testId="seasons-count"
-        />
-        <InfoRow
-          label="集數"
-          value={`${show.number_of_episodes} 集`}
-          testId="episodes-count"
-        />
+        <InfoRow label="季數" value={`${show.number_of_seasons} 季`} testId="seasons-count" />
+        <InfoRow label="集數" value={`${show.number_of_episodes} 集`} testId="episodes-count" />
 
         {/* Task 6.4: Status */}
-        <InfoRow
-          label="狀態"
-          value={statusText}
-          testId="show-status"
-        />
+        <InfoRow label="狀態" value={statusText} testId="show-status" />
 
         {/* Task 6.3: First air date and last air date */}
-        <InfoRow
-          label="首播日期"
-          value={formatDate(show.first_air_date)}
-          testId="first-air-date"
-        />
+        <InfoRow label="首播日期" value={formatDate(show.first_air_date)} testId="first-air-date" />
         {show.last_air_date && (
-          <InfoRow
-            label="最新集數"
-            value={formatDate(show.last_air_date)}
-            testId="last-air-date"
-          />
+          <InfoRow label="最新集數" value={formatDate(show.last_air_date)} testId="last-air-date" />
         )}
 
         {/* Task 6.5: Networks/streaming platforms */}
@@ -85,13 +65,7 @@ export function TVShowInfo({ show, className }: TVShowInfoProps) {
         )}
 
         {/* Show type (Scripted, Documentary, etc.) */}
-        {show.type && (
-          <InfoRow
-            label="類型"
-            value={show.type}
-            testId="show-type"
-          />
-        )}
+        {show.type && <InfoRow label="類型" value={show.type} testId="show-type" />}
       </div>
     </div>
   );

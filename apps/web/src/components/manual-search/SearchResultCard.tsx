@@ -21,11 +21,7 @@ const SOURCE_COLORS: Record<string, string> = {
   wikipedia: 'bg-blue-600',
 };
 
-export function SearchResultCard({
-  item,
-  isSelected,
-  onSelect,
-}: SearchResultCardProps) {
+export function SearchResultCard({ item, isSelected, onSelect }: SearchResultCardProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [showOverview, setShowOverview] = useState(false);
@@ -66,10 +62,7 @@ export function SearchResultCard({
             loading="lazy"
             onLoad={() => setImageLoaded(true)}
             onError={() => setImageError(true)}
-            className={cn(
-              'h-full w-full object-cover',
-              imageLoaded ? 'opacity-100' : 'opacity-0'
-            )}
+            className={cn('h-full w-full object-cover', imageLoaded ? 'opacity-100' : 'opacity-0')}
           />
         )}
 
@@ -113,25 +106,19 @@ export function SearchResultCard({
         {/* Hover overlay with overview */}
         {showOverview && item.overview && (
           <div className="absolute inset-0 bg-black/80 p-3 overflow-y-auto">
-            <p className="text-xs text-slate-300 line-clamp-[10]">
-              {item.overview}
-            </p>
+            <p className="text-xs text-slate-300 line-clamp-[10]">{item.overview}</p>
           </div>
         )}
       </div>
 
       {/* Title and year */}
       <div className="mt-2 px-1">
-        <h3 className="truncate text-sm font-medium text-white">
-          {item.titleZhTW || item.title}
-        </h3>
+        <h3 className="truncate text-sm font-medium text-white">{item.titleZhTW || item.title}</h3>
         {item.titleZhTW && item.titleZhTW !== item.title && (
           <p className="truncate text-xs text-slate-400">{item.title}</p>
         )}
         <div className="flex items-center gap-2 mt-1">
-          {item.year && (
-            <span className="text-xs text-slate-500">{item.year}</span>
-          )}
+          {item.year && <span className="text-xs text-slate-500">{item.year}</span>}
           <span className="text-xs text-slate-600">
             {item.mediaType === 'movie' ? '電影' : '影集'}
           </span>

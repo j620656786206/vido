@@ -15,10 +15,7 @@ import { useUpdateMetadata } from '../../hooks/useMetadataEditor';
 const metadataSchema = z.object({
   title: z.string().min(1, '標題為必填'),
   titleEnglish: z.string().optional(),
-  year: z
-    .number()
-    .min(1900, '年份必須大於 1900')
-    .max(2100, '年份必須小於 2100'),
+  year: z.number().min(1900, '年份必須大於 1900').max(2100, '年份必須小於 2100'),
   genres: z.array(z.string()),
   director: z.string().optional(),
   cast: z.array(z.string()),
@@ -263,16 +260,12 @@ export function MetadataEditorDialog({
               )}
               placeholder="輸入中文標題"
             />
-            {errors.title && (
-              <p className="mt-1 text-sm text-red-400">{errors.title.message}</p>
-            )}
+            {errors.title && <p className="mt-1 text-sm text-red-400">{errors.title.message}</p>}
           </div>
 
           {/* Title (English) */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">
-              標題（英文）
-            </label>
+            <label className="block text-sm font-medium text-slate-300 mb-1">標題（英文）</label>
             <input
               type="text"
               {...register('titleEnglish')}
@@ -307,16 +300,12 @@ export function MetadataEditorDialog({
               min={1900}
               max={2100}
             />
-            {errors.year && (
-              <p className="mt-1 text-sm text-red-400">{errors.year.message}</p>
-            )}
+            {errors.year && <p className="mt-1 text-sm text-red-400">{errors.year.message}</p>}
           </div>
 
           {/* Genres */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              類型
-            </label>
+            <label className="block text-sm font-medium text-slate-300 mb-2">類型</label>
             <div className="flex flex-wrap gap-2">
               {GENRE_OPTIONS.map((genre) => (
                 <button
@@ -338,9 +327,7 @@ export function MetadataEditorDialog({
 
           {/* Director */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">
-              導演
-            </label>
+            <label className="block text-sm font-medium text-slate-300 mb-1">導演</label>
             <input
               type="text"
               {...register('director')}
@@ -357,9 +344,7 @@ export function MetadataEditorDialog({
 
           {/* Cast */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">
-              演員
-            </label>
+            <label className="block text-sm font-medium text-slate-300 mb-1">演員</label>
             <div className="flex flex-wrap gap-2 mb-2">
               {castList?.map((actor) => (
                 <span
@@ -400,9 +385,7 @@ export function MetadataEditorDialog({
 
           {/* Overview */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">
-              簡介
-            </label>
+            <label className="block text-sm font-medium text-slate-300 mb-1">簡介</label>
             <textarea
               {...register('overview')}
               rows={4}
@@ -419,9 +402,7 @@ export function MetadataEditorDialog({
 
           {/* Poster URL */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">
-              海報圖片網址
-            </label>
+            <label className="block text-sm font-medium text-slate-300 mb-1">海報圖片網址</label>
             <input
               type="text"
               {...register('posterUrl')}
@@ -440,9 +421,7 @@ export function MetadataEditorDialog({
         {/* Footer */}
         <div className="flex items-center justify-between border-t border-slate-700 px-6 py-4">
           {updateMutation.error && (
-            <p className="text-sm text-red-400">
-              更新失敗：{updateMutation.error.message}
-            </p>
+            <p className="text-sm text-red-400">更新失敗：{updateMutation.error.message}</p>
           )}
           <div className="flex gap-3 ml-auto">
             <button

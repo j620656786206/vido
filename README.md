@@ -44,6 +44,7 @@ Run the initialization script to check prerequisites and install all dependencie
 ```
 
 This script will:
+
 - Verify Node.js and Go versions
 - Install npm dependencies
 - Download Go module dependencies
@@ -216,6 +217,7 @@ npm run format:check
 ### Working on the Frontend
 
 1. Start the development server:
+
    ```bash
    nx serve web
    ```
@@ -230,6 +232,7 @@ npm run format:check
 ### Working on the Backend
 
 1. Start the API server with hot reload:
+
    ```bash
    cd apps/api && make dev
    ```
@@ -249,6 +252,7 @@ cd apps/api && make dev
 ```
 
 Air will:
+
 - Automatically rebuild your application when `.go` files change
 - Restart the server with the new binary
 - Display color-coded build and runtime logs
@@ -257,6 +261,7 @@ Air will:
 Configuration is in `apps/api/.air.toml`. See `apps/api/docs/AIR_SETUP.md` for detailed documentation.
 
 **Quick workflow:**
+
 1. Run `make dev` in `apps/api` once
 2. Edit any `.go` file and save
 3. Air automatically rebuilds and restarts
@@ -269,6 +274,7 @@ Configuration is in `apps/api/.air.toml`. See `apps/api/docs/AIR_SETUP.md` for d
 2. Export from `libs/shared-types/src/index.ts`
 
 3. Build the library:
+
    ```bash
    nx build shared-types
    ```
@@ -307,6 +313,7 @@ cd apps/api && make swagger
 ## Technology Stack
 
 ### Frontend (apps/web)
+
 - **Framework**: React 19
 - **Build Tool**: Vite 7
 - **Routing**: TanStack Router 1.x
@@ -315,6 +322,7 @@ cd apps/api && make swagger
 - **Testing**: Vitest
 
 ### Backend (apps/api)
+
 - **Language**: Go 1.23
 - **Framework**: Gin
 - **Structured Logging**: zerolog with request ID tracking
@@ -325,9 +333,11 @@ cd apps/api && make swagger
 - **Configuration**: Environment-based with sensible defaults
 
 ### Shared Libraries
+
 - **shared-types**: TypeScript type definitions shared across the monorepo
 
 ### Build System
+
 - **Monorepo Tool**: Nx 22.x
 - **Package Manager**: npm with workspaces
 
@@ -345,13 +355,13 @@ To change ports:
 
 Configuration is managed through environment variables in `apps/api/.env`. See `apps/api/.env.example` for available options:
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PORT` | `8080` | Server port |
-| `ENV` | `development` | Environment (development, production) |
-| `LOG_LEVEL` | `info` | Log level (debug, info, warn, error) |
-| `CORS_ORIGINS` | `*` | Allowed CORS origins (comma-separated) |
-| `API_VERSION` | `v1` | API version |
+| Variable       | Default       | Description                            |
+| -------------- | ------------- | -------------------------------------- |
+| `PORT`         | `8080`        | Server port                            |
+| `ENV`          | `development` | Environment (development, production)  |
+| `LOG_LEVEL`    | `info`        | Log level (debug, info, warn, error)   |
+| `CORS_ORIGINS` | `*`           | Allowed CORS origins (comma-separated) |
+| `API_VERSION`  | `v1`          | API version                            |
 
 ## Error Handling
 
@@ -398,6 +408,7 @@ cd apps/api && make swagger
 ```
 
 This will:
+
 1. Run `swag init` to regenerate the spec from code annotations
 2. Generate `docs/swagger.json` and `docs/swagger.yaml`
 3. Copy the spec to `api/openapi.json` for SDK generation
@@ -405,6 +416,7 @@ This will:
 ### Viewing Documentation
 
 With the server running, visit:
+
 - Swagger UI: `http://localhost:8080/swagger/index.html`
 - Raw JSON spec: `http://localhost:8080/swagger/doc.json`
 
@@ -419,6 +431,7 @@ GET /health
 Returns the health status of the API server.
 
 **Response:**
+
 ```json
 {
   "status": "ok",
@@ -437,11 +450,13 @@ Interactive Swagger UI for exploring and testing the API.
 ## Additional Resources
 
 ### Nx Documentation
+
 - Nx Official Docs: https://nx.dev
 - Nx Commands: https://nx.dev/nx-api/nx/documents/run
 - Nx Plugins: https://nx.dev/plugin-features
 
 ### Framework Documentation
+
 - React: https://react.dev
 - Vite: https://vite.dev
 - TanStack Router: https://tanstack.com/router
@@ -454,6 +469,7 @@ Interactive Swagger UI for exploring and testing the API.
 ## Troubleshooting
 
 ### Node.js version issues
+
 ```bash
 # Check your Node.js version
 node --version
@@ -463,6 +479,7 @@ nvm use
 ```
 
 ### Go dependency issues
+
 ```bash
 # Clean and reinstall Go dependencies
 cd apps/api
@@ -471,12 +488,14 @@ go mod download
 ```
 
 ### Nx cache issues
+
 ```bash
 # Clear Nx cache
 nx reset
 ```
 
 ### Port already in use
+
 ```bash
 # Kill process using port 4200 (web)
 lsof -ti:4200 | xargs kill -9

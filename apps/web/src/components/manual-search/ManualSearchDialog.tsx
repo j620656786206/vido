@@ -196,9 +196,7 @@ export function ManualSearchDialog({
         </div>
 
         {/* Fallback Status Display (UX-4) */}
-        {fallbackStatus && (
-          <FallbackStatusDisplay status={fallbackStatus} />
-        )}
+        {fallbackStatus && <FallbackStatusDisplay status={fallbackStatus} />}
 
         {/* Search Controls */}
         <div className="px-6 py-4 space-y-4 border-b border-slate-800">
@@ -343,16 +341,12 @@ export function ManualSearchDialog({
                     'flex items-center gap-2'
                   )}
                 >
-                  {applyMetadata.isPending && (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  )}
+                  {applyMetadata.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
                   確認套用
                 </button>
               </div>
               {applyMetadata.error && (
-                <p className="mt-4 text-sm text-red-400">
-                  套用失敗：{applyMetadata.error.message}
-                </p>
+                <p className="mt-4 text-sm text-red-400">套用失敗：{applyMetadata.error.message}</p>
               )}
             </div>
           </div>

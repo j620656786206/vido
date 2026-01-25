@@ -5,9 +5,7 @@ import { MediaTypeTabs } from './MediaTypeTabs';
 describe('MediaTypeTabs', () => {
   it('should render all three tabs', () => {
     const onTypeChange = vi.fn();
-    render(
-      <MediaTypeTabs activeType="all" onTypeChange={onTypeChange} />
-    );
+    render(<MediaTypeTabs activeType="all" onTypeChange={onTypeChange} />);
 
     expect(screen.getByText('全部')).toBeInTheDocument();
     expect(screen.getByText('電影')).toBeInTheDocument();
@@ -16,9 +14,7 @@ describe('MediaTypeTabs', () => {
 
   it('should highlight the active tab', () => {
     const onTypeChange = vi.fn();
-    render(
-      <MediaTypeTabs activeType="movie" onTypeChange={onTypeChange} />
-    );
+    render(<MediaTypeTabs activeType="movie" onTypeChange={onTypeChange} />);
 
     const movieTab = screen.getByRole('tab', { name: /電影/ });
     expect(movieTab).toHaveAttribute('aria-selected', 'true');
@@ -27,9 +23,7 @@ describe('MediaTypeTabs', () => {
 
   it('should call onTypeChange when clicking a tab', () => {
     const onTypeChange = vi.fn();
-    render(
-      <MediaTypeTabs activeType="all" onTypeChange={onTypeChange} />
-    );
+    render(<MediaTypeTabs activeType="all" onTypeChange={onTypeChange} />);
 
     fireEvent.click(screen.getByText('電影'));
     expect(onTypeChange).toHaveBeenCalledWith('movie');
@@ -38,12 +32,7 @@ describe('MediaTypeTabs', () => {
   it('should show result counts when provided', () => {
     const onTypeChange = vi.fn();
     render(
-      <MediaTypeTabs
-        activeType="all"
-        onTypeChange={onTypeChange}
-        movieCount={50}
-        tvCount={30}
-      />
+      <MediaTypeTabs activeType="all" onTypeChange={onTypeChange} movieCount={50} tvCount={30} />
     );
 
     expect(screen.getByText('80')).toBeInTheDocument(); // Total
@@ -53,9 +42,7 @@ describe('MediaTypeTabs', () => {
 
   it('should not show count badges when counts are undefined', () => {
     const onTypeChange = vi.fn();
-    render(
-      <MediaTypeTabs activeType="all" onTypeChange={onTypeChange} />
-    );
+    render(<MediaTypeTabs activeType="all" onTypeChange={onTypeChange} />);
 
     // Should only have the label text, no count badges
     const tabs = screen.getAllByRole('tab');
@@ -66,30 +53,17 @@ describe('MediaTypeTabs', () => {
 
   it('should have accessible labels', () => {
     const onTypeChange = vi.fn();
-    render(
-      <MediaTypeTabs activeType="all" onTypeChange={onTypeChange} />
-    );
+    render(<MediaTypeTabs activeType="all" onTypeChange={onTypeChange} />);
 
     expect(screen.getByLabelText('媒體類型篩選')).toBeInTheDocument();
   });
 
   it('should set correct aria-selected for each tab', () => {
     const onTypeChange = vi.fn();
-    render(
-      <MediaTypeTabs activeType="tv" onTypeChange={onTypeChange} />
-    );
+    render(<MediaTypeTabs activeType="tv" onTypeChange={onTypeChange} />);
 
-    expect(screen.getByRole('tab', { name: /全部/ })).toHaveAttribute(
-      'aria-selected',
-      'false'
-    );
-    expect(screen.getByRole('tab', { name: /電影/ })).toHaveAttribute(
-      'aria-selected',
-      'false'
-    );
-    expect(screen.getByRole('tab', { name: /影集/ })).toHaveAttribute(
-      'aria-selected',
-      'true'
-    );
+    expect(screen.getByRole('tab', { name: /全部/ })).toHaveAttribute('aria-selected', 'false');
+    expect(screen.getByRole('tab', { name: /電影/ })).toHaveAttribute('aria-selected', 'false');
+    expect(screen.getByRole('tab', { name: /影集/ })).toHaveAttribute('aria-selected', 'true');
   });
 });

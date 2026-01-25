@@ -15,10 +15,7 @@ vi.mock('@tanstack/react-router', () => ({
     to: string;
     params: Record<string, string>;
   }) => (
-    <a
-      href={`${to.replace('$type', params.type).replace('$id', params.id)}`}
-      {...props}
-    >
+    <a href={`${to.replace('$type', params.type).replace('$id', params.id)}`} {...props}>
       {children}
     </a>
   ),
@@ -85,14 +82,7 @@ const mockMoviesWithPagination: MovieSearchResponse = {
 
 describe('SearchResults', () => {
   it('should show loading skeleton when isLoading is true', () => {
-    render(
-      <SearchResults
-        isLoading={true}
-        type="all"
-        currentPage={1}
-        onPageChange={() => {}}
-      />
-    );
+    render(<SearchResults isLoading={true} type="all" currentPage={1} onPageChange={() => {}} />);
 
     // Should have skeleton elements
     const skeletons = document.querySelectorAll('.animate-pulse');

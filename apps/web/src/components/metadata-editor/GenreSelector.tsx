@@ -47,9 +47,7 @@ export function GenreSelector({
 }: GenreSelectorProps) {
   return (
     <div>
-      <label className="block text-sm font-medium text-slate-300 mb-2">
-        {label}
-      </label>
+      <label className="block text-sm font-medium text-slate-300 mb-2">{label}</label>
       <div className="flex flex-wrap gap-2" data-testid="genre-selector">
         {options.map((genre) => (
           <button

@@ -42,7 +42,7 @@ describe('CreditsSection', () => {
     it('should render director profile image', () => {
       render(<CreditsSection director={mockDirector} />);
       const images = screen.getAllByRole('img');
-      expect(images.some(img => img.getAttribute('src')?.includes('/director.jpg'))).toBe(true);
+      expect(images.some((img) => img.getAttribute('src')?.includes('/director.jpg'))).toBe(true);
     });
   });
 
@@ -92,7 +92,7 @@ describe('CreditsSection', () => {
     it('should render profile images for cast with profile_path', () => {
       render(<CreditsSection cast={[mockCast[0]]} />);
       const images = screen.getAllByRole('img');
-      expect(images.some(img => img.getAttribute('src')?.includes('/actor1.jpg'))).toBe(true);
+      expect(images.some((img) => img.getAttribute('src')?.includes('/actor1.jpg'))).toBe(true);
     });
   });
 

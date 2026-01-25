@@ -23,9 +23,7 @@ describe('Pagination', () => {
 
   it('should render all pages when totalPages <= 7', () => {
     const onPageChange = vi.fn();
-    render(
-      <Pagination currentPage={1} totalPages={5} onPageChange={onPageChange} />
-    );
+    render(<Pagination currentPage={1} totalPages={5} onPageChange={onPageChange} />);
 
     for (let i = 1; i <= 5; i++) {
       expect(screen.getByLabelText(`第 ${i} 頁`)).toBeInTheDocument();
@@ -34,9 +32,7 @@ describe('Pagination', () => {
 
   it('should highlight current page', () => {
     const onPageChange = vi.fn();
-    render(
-      <Pagination currentPage={3} totalPages={5} onPageChange={onPageChange} />
-    );
+    render(<Pagination currentPage={3} totalPages={5} onPageChange={onPageChange} />);
 
     const currentPageButton = screen.getByLabelText('第 3 頁');
     expect(currentPageButton).toHaveAttribute('aria-current', 'page');
@@ -45,9 +41,7 @@ describe('Pagination', () => {
 
   it('should call onPageChange when clicking page number', () => {
     const onPageChange = vi.fn();
-    render(
-      <Pagination currentPage={1} totalPages={5} onPageChange={onPageChange} />
-    );
+    render(<Pagination currentPage={1} totalPages={5} onPageChange={onPageChange} />);
 
     fireEvent.click(screen.getByLabelText('第 3 頁'));
     expect(onPageChange).toHaveBeenCalledWith(3);
@@ -55,9 +49,7 @@ describe('Pagination', () => {
 
   it('should disable previous button on first page', () => {
     const onPageChange = vi.fn();
-    render(
-      <Pagination currentPage={1} totalPages={5} onPageChange={onPageChange} />
-    );
+    render(<Pagination currentPage={1} totalPages={5} onPageChange={onPageChange} />);
 
     const prevButton = screen.getByLabelText('上一頁');
     expect(prevButton).toBeDisabled();
@@ -65,9 +57,7 @@ describe('Pagination', () => {
 
   it('should disable next button on last page', () => {
     const onPageChange = vi.fn();
-    render(
-      <Pagination currentPage={5} totalPages={5} onPageChange={onPageChange} />
-    );
+    render(<Pagination currentPage={5} totalPages={5} onPageChange={onPageChange} />);
 
     const nextButton = screen.getByLabelText('下一頁');
     expect(nextButton).toBeDisabled();
@@ -75,9 +65,7 @@ describe('Pagination', () => {
 
   it('should call onPageChange with previous page when clicking previous', () => {
     const onPageChange = vi.fn();
-    render(
-      <Pagination currentPage={3} totalPages={5} onPageChange={onPageChange} />
-    );
+    render(<Pagination currentPage={3} totalPages={5} onPageChange={onPageChange} />);
 
     fireEvent.click(screen.getByLabelText('上一頁'));
     expect(onPageChange).toHaveBeenCalledWith(2);
@@ -85,9 +73,7 @@ describe('Pagination', () => {
 
   it('should call onPageChange with next page when clicking next', () => {
     const onPageChange = vi.fn();
-    render(
-      <Pagination currentPage={3} totalPages={5} onPageChange={onPageChange} />
-    );
+    render(<Pagination currentPage={3} totalPages={5} onPageChange={onPageChange} />);
 
     fireEvent.click(screen.getByLabelText('下一頁'));
     expect(onPageChange).toHaveBeenCalledWith(4);
@@ -95,9 +81,7 @@ describe('Pagination', () => {
 
   it('should show ellipsis for large page counts', () => {
     const onPageChange = vi.fn();
-    render(
-      <Pagination currentPage={5} totalPages={10} onPageChange={onPageChange} />
-    );
+    render(<Pagination currentPage={5} totalPages={10} onPageChange={onPageChange} />);
 
     // Should show: 1 ... 4 5 6 ... 10
     expect(screen.getByLabelText('第 1 頁')).toBeInTheDocument();
@@ -110,9 +94,7 @@ describe('Pagination', () => {
 
   it('should have accessible navigation label', () => {
     const onPageChange = vi.fn();
-    render(
-      <Pagination currentPage={1} totalPages={5} onPageChange={onPageChange} />
-    );
+    render(<Pagination currentPage={1} totalPages={5} onPageChange={onPageChange} />);
 
     expect(screen.getByLabelText('分頁導航')).toBeInTheDocument();
   });

@@ -31,10 +31,7 @@ export function HoverPreviewCard({
       {genres.length > 0 && (
         <div data-testid="genres-container" className="mb-2 flex flex-wrap gap-1">
           {genres.map((genre) => (
-            <span
-              key={genre}
-              className="rounded bg-gray-700 px-2 py-0.5 text-xs text-gray-300"
-            >
+            <span key={genre} className="rounded bg-gray-700 px-2 py-0.5 text-xs text-gray-300">
               {genre}
             </span>
           ))}

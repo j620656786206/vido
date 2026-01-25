@@ -45,7 +45,9 @@ describe('tmdbService', () => {
       const result = await tmdbService.searchMovies('鬼滅之刃');
 
       expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('/tmdb/search/movies?query=%E9%AC%BC%E6%BB%85%E4%B9%8B%E5%88%83&page=1')
+        expect.stringContaining(
+          '/tmdb/search/movies?query=%E9%AC%BC%E6%BB%85%E4%B9%8B%E5%88%83&page=1'
+        )
       );
       expect(result.results).toHaveLength(1);
       expect(result.results[0].title).toBe('鬼滅之刃');
@@ -69,9 +71,7 @@ describe('tmdbService', () => {
 
       await tmdbService.searchMovies('test', 2);
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('page=2')
-      );
+      expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('page=2'));
     });
 
     it('should throw error on API failure', async () => {
@@ -85,9 +85,7 @@ describe('tmdbService', () => {
           }),
       });
 
-      await expect(tmdbService.searchMovies('test')).rejects.toThrow(
-        'Internal server error'
-      );
+      await expect(tmdbService.searchMovies('test')).rejects.toThrow('Internal server error');
     });
 
     it('should throw error on unsuccessful response', async () => {
@@ -100,9 +98,7 @@ describe('tmdbService', () => {
           }),
       });
 
-      await expect(tmdbService.searchMovies('test')).rejects.toThrow(
-        'Invalid query'
-      );
+      await expect(tmdbService.searchMovies('test')).rejects.toThrow('Invalid query');
     });
   });
 
@@ -138,9 +134,7 @@ describe('tmdbService', () => {
 
       const result = await tmdbService.searchTVShows('進擊的巨人');
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('/tmdb/search/tv?')
-      );
+      expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/tmdb/search/tv?'));
       expect(result.results).toHaveLength(1);
       expect(result.results[0].name).toBe('進擊的巨人');
     });

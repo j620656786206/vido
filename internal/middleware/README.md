@@ -24,21 +24,25 @@ All errors are returned in a consistent JSON format:
 The package provides several built-in error constructors:
 
 - **ValidationError** (400 Bad Request): For invalid input
+
   ```go
   middleware.NewValidationError("Invalid email format")
   ```
 
 - **NotFoundError** (404 Not Found): For missing resources
+
   ```go
   middleware.NewNotFoundError("User not found")
   ```
 
 - **UnauthorizedError** (401 Unauthorized): For authentication failures
+
   ```go
   middleware.NewUnauthorizedError("Authentication required")
   ```
 
 - **ForbiddenError** (403 Forbidden): For authorization failures
+
   ```go
   middleware.NewForbiddenError("Access denied")
   ```
@@ -81,6 +85,7 @@ router.Use(middleware.Recovery(cfg))
 ### Error Logging
 
 Errors are automatically logged with:
+
 - Request ID
 - Request path and method
 - Error details

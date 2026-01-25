@@ -57,9 +57,7 @@ function SearchPage() {
 
         {/* Minimum character message */}
         {query && query.length > 0 && query.length < 2 && (
-          <div className="text-slate-400">
-            請輸入至少 2 個字元進行搜尋
-          </div>
+          <div className="text-slate-400">請輸入至少 2 個字元進行搜尋</div>
         )}
 
         {/* Media type tabs and search results */}

@@ -34,9 +34,7 @@ function createTestQueryClient() {
 
 function renderWithProviders(ui: React.ReactElement) {
   const queryClient = createTestQueryClient();
-  return render(
-    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
-  );
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
 }
 
 const mockFile: LocalMediaFile = {
@@ -117,9 +115,7 @@ describe('ParseFailureCard', () => {
   it('shows guidance message (UX-4)', () => {
     renderWithProviders(<ParseFailureCard file={mockFile} />);
 
-    expect(
-      screen.getByText(/自動識別失敗，請手動搜尋正確的 Metadata/)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/自動識別失敗，請手動搜尋正確的 Metadata/)).toBeInTheDocument();
   });
 
   it('shows manual search button (AC1)', () => {
@@ -173,9 +169,7 @@ describe('ParseFailureCard', () => {
     const onMetadataApplied = vi.fn();
     const user = userEvent.setup();
 
-    renderWithProviders(
-      <ParseFailureCard file={mockFile} onMetadataApplied={onMetadataApplied} />
-    );
+    renderWithProviders(<ParseFailureCard file={mockFile} onMetadataApplied={onMetadataApplied} />);
 
     // Open dialog
     await user.click(screen.getByTestId('manual-search-button'));

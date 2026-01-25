@@ -14,13 +14,7 @@ export interface SidePanelProps {
  * SidePanel Component - Spotify-style slide-in panel from the right
  * AC #4: Desktop side panel (400-500px width)
  */
-export function SidePanel({
-  isOpen,
-  onClose,
-  children,
-  title,
-  className,
-}: SidePanelProps) {
+export function SidePanel({ isOpen, onClose, children, title, className }: SidePanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
 
   // Task 3.5: Close on Escape key
@@ -93,10 +87,7 @@ export function SidePanel({
         {/* Header with close button */}
         <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
           {title && (
-            <h2
-              id="side-panel-title"
-              className="text-lg font-semibold text-white"
-            >
+            <h2 id="side-panel-title" className="text-lg font-semibold text-white">
               {title}
             </h2>
           )}
@@ -119,9 +110,7 @@ export function SidePanel({
         </div>
 
         {/* Scrollable content area */}
-        <div className="h-[calc(100%-56px)] overflow-y-auto">
-          {children}
-        </div>
+        <div className="h-[calc(100%-56px)] overflow-y-auto">{children}</div>
       </div>
     </div>
   );

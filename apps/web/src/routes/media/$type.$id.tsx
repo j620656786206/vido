@@ -91,9 +91,7 @@ function MediaDetailRoute() {
   };
 
   // Find director from movie credits
-  const director = isMovie
-    ? credits.data?.crew?.find((c) => c.job === 'Director')
-    : undefined;
+  const director = isMovie ? credits.data?.crew?.find((c) => c.job === 'Director') : undefined;
 
   // Get TV show data if available
   const tvShowData = !isMovie ? (details.data as TVShowDetails | undefined) : undefined;

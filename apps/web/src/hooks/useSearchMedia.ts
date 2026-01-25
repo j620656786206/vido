@@ -7,8 +7,7 @@ export const tmdbKeys = {
   searches: () => [...tmdbKeys.all, 'search'] as const,
   searchMovies: (query: string, page: number) =>
     [...tmdbKeys.searches(), 'movies', query, page] as const,
-  searchTV: (query: string, page: number) =>
-    [...tmdbKeys.searches(), 'tv', query, page] as const,
+  searchTV: (query: string, page: number) => [...tmdbKeys.searches(), 'tv', query, page] as const,
 };
 
 export function useSearchMovies(query: string, page = 1) {

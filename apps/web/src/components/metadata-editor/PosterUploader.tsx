@@ -111,9 +111,7 @@ export function PosterUploader({
 
   return (
     <div className="space-y-2">
-      <label className="block text-sm font-medium text-slate-300">
-        海報圖片
-      </label>
+      <label className="block text-sm font-medium text-slate-300">海報圖片</label>
 
       {/* Method Toggle */}
       <div className="flex rounded-lg bg-slate-800 p-1 w-fit">
@@ -122,9 +120,7 @@ export function PosterUploader({
           onClick={() => setUploadMethod('file')}
           className={cn(
             'px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-1.5',
-            uploadMethod === 'file'
-              ? 'bg-blue-600 text-white'
-              : 'text-slate-400 hover:text-white'
+            uploadMethod === 'file' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
           )}
         >
           <Upload className="h-4 w-4" />
@@ -135,9 +131,7 @@ export function PosterUploader({
           onClick={() => setUploadMethod('url')}
           className={cn(
             'px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-1.5',
-            uploadMethod === 'url'
-              ? 'bg-blue-600 text-white'
-              : 'text-slate-400 hover:text-white'
+            uploadMethod === 'url' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
           )}
         >
           <Link className="h-4 w-4" />
@@ -175,11 +169,7 @@ export function PosterUploader({
             </div>
           ) : preview ? (
             <div className="relative inline-block">
-              <img
-                src={preview}
-                alt="Poster preview"
-                className="max-h-48 mx-auto rounded"
-              />
+              <img src={preview} alt="Poster preview" className="max-h-48 mx-auto rounded" />
               <button
                 type="button"
                 onClick={(e) => {
@@ -196,9 +186,7 @@ export function PosterUploader({
             <div className="flex flex-col items-center gap-2 text-slate-400">
               <Image className="h-10 w-10" />
               <p>拖放圖片或點擊選擇檔案</p>
-              <p className="text-xs text-slate-500">
-                支援 JPG、PNG、WebP，最大 5MB
-              </p>
+              <p className="text-xs text-slate-500">支援 JPG、PNG、WebP，最大 5MB</p>
             </div>
           )}
         </div>

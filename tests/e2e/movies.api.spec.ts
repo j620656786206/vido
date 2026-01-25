@@ -227,7 +227,9 @@ test.describe('Movies API - CRUD Operations @api @movies', () => {
     createdMovieId = created.data.id;
 
     // WHEN: Searching for movies by title
-    const response = await request.get(`${API_BASE_URL}/movies/search?q=${encodeURIComponent(uniqueTitle)}`);
+    const response = await request.get(
+      `${API_BASE_URL}/movies/search?q=${encodeURIComponent(uniqueTitle)}`
+    );
 
     // THEN: Should return matching movies
     expect(response.status()).toBe(200);
@@ -253,7 +255,9 @@ test.describe('Movies API - CRUD Operations @api @movies', () => {
     expect(body.error.code).toBe('VALIDATION_REQUIRED_FIELD');
   });
 
-  test('[P2] GET /movies/search - should return empty results for no matches', async ({ request }) => {
+  test('[P2] GET /movies/search - should return empty results for no matches', async ({
+    request,
+  }) => {
     // GIVEN: A search query that matches nothing
 
     // WHEN: Searching for non-existent movie
@@ -338,7 +342,9 @@ test.describe('Movies API - CRUD Operations @api @movies', () => {
     createdMovieId = '';
   });
 
-  test('[P2] DELETE /movies/:id - should handle non-existent movie gracefully', async ({ request }) => {
+  test('[P2] DELETE /movies/:id - should handle non-existent movie gracefully', async ({
+    request,
+  }) => {
     // GIVEN: A non-existent movie ID
     const fakeId = 'non-existent-movie-delete';
 

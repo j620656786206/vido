@@ -27,7 +27,7 @@ definitions:
         example: ok
         type: string
       timestamp:
-        example: "2024-01-07T10:30:00Z"
+        example: '2024-01-07T10:30:00Z'
         type: string
     type: object
   tmdb.Country:
@@ -87,8 +87,8 @@ definitions:
         type: string
       genre_ids:
         example:
-        - 18
-        - 53
+          - 18
+          - 53
         items:
           type: integer
         type: array
@@ -112,7 +112,7 @@ definitions:
         example: /pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg
         type: string
       release_date:
-        example: "1999-10-15"
+        example: '1999-10-15'
         type: string
       title:
         example: Fight Club
@@ -140,8 +140,8 @@ definitions:
         type: integer
       genre_ids:
         example:
-        - 18
-        - 53
+          - 18
+          - 53
         items:
           type: integer
         type: array
@@ -178,7 +178,7 @@ definitions:
           $ref: '#/definitions/tmdb.Country'
         type: array
       release_date:
-        example: "1999-10-15"
+        example: '1999-10-15'
         type: string
       revenue:
         example: 100853753
@@ -244,7 +244,7 @@ definitions:
   tmdb.Season:
     properties:
       air_date:
-        example: "2008-01-20"
+        example: '2008-01-20'
         type: string
       episode_count:
         example: 7
@@ -272,12 +272,12 @@ definitions:
         example: /tsRy63Mu5cu8etL1X7ZLyf7UP1M.jpg
         type: string
       first_air_date:
-        example: "2008-01-20"
+        example: '2008-01-20'
         type: string
       genre_ids:
         example:
-        - 18
-        - 80
+          - 18
+          - 80
         items:
           type: integer
         type: array
@@ -289,7 +289,7 @@ definitions:
         type: string
       origin_country:
         example:
-        - US
+          - US
         items:
           type: string
         type: array
@@ -327,18 +327,18 @@ definitions:
         type: array
       episode_run_time:
         example:
-        - 45
-        - 47
+          - 45
+          - 47
         items:
           type: integer
         type: array
       first_air_date:
-        example: "2008-01-20"
+        example: '2008-01-20'
         type: string
       genre_ids:
         example:
-        - 18
-        - 80
+          - 18
+          - 80
         items:
           type: integer
         type: array
@@ -356,12 +356,12 @@ definitions:
         type: boolean
       languages:
         example:
-        - en
+          - en
         items:
           type: string
         type: array
       last_air_date:
-        example: "2013-09-29"
+        example: '2013-09-29'
         type: string
       name:
         example: Breaking Bad
@@ -374,7 +374,7 @@ definitions:
         type: integer
       origin_country:
         example:
-        - US
+          - US
         items:
           type: string
         type: array
@@ -431,216 +431,216 @@ info:
     url: http://www.apache.org/licenses/LICENSE-2.0.html
   termsOfService: http://swagger.io/terms/
   title: Vido API
-  version: "1.0"
+  version: '1.0'
 paths:
   /api/v1/error-example:
     get:
       description: Test endpoint to demonstrate different error types and the error
         handling middleware
       parameters:
-      - description: Error type to trigger
-        enum:
-        - validation
-        - notfound
-        - internal
-        - unauthorized
-        - forbidden
-        - panic
-        in: query
-        name: type
-        type: string
+        - description: Error type to trigger
+          enum:
+            - validation
+            - notfound
+            - internal
+            - unauthorized
+            - forbidden
+            - panic
+          in: query
+          name: type
+          type: string
       produces:
-      - application/json
+        - application/json
       responses:
-        "200":
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/server.ErrorExampleResponse'
-        "400":
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/middleware.ErrorResponse'
-        "401":
+        '401':
           description: Unauthorized
           schema:
             $ref: '#/definitions/middleware.ErrorResponse'
-        "403":
+        '403':
           description: Forbidden
           schema:
             $ref: '#/definitions/middleware.ErrorResponse'
-        "404":
+        '404':
           description: Not Found
           schema:
             $ref: '#/definitions/middleware.ErrorResponse'
-        "500":
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/middleware.ErrorResponse'
       summary: Demonstrate error handling
       tags:
-      - examples
+        - examples
   /api/v1/movies/{id}:
     get:
       description: Get detailed information for a specific movie by ID with zh-TW
         localization
       parameters:
-      - description: Movie ID
-        in: path
-        name: id
-        required: true
-        type: integer
+        - description: Movie ID
+          in: path
+          name: id
+          required: true
+          type: integer
       produces:
-      - application/json
+        - application/json
       responses:
-        "200":
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/tmdb.MovieDetails'
-        "400":
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/middleware.ErrorResponse'
-        "404":
+        '404':
           description: Not Found
           schema:
             $ref: '#/definitions/middleware.ErrorResponse'
-        "429":
+        '429':
           description: Too Many Requests
           schema:
             $ref: '#/definitions/middleware.ErrorResponse'
-        "500":
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/middleware.ErrorResponse'
       summary: Get movie details
       tags:
-      - movies
+        - movies
   /api/v1/movies/search:
     get:
       description: Search for movies by title with zh-TW localization
       parameters:
-      - description: Search query
-        in: query
-        name: query
-        required: true
-        type: string
-      - description: 'Page number (default: 1)'
-        in: query
-        name: page
-        type: integer
+        - description: Search query
+          in: query
+          name: query
+          required: true
+          type: string
+        - description: 'Page number (default: 1)'
+          in: query
+          name: page
+          type: integer
       produces:
-      - application/json
+        - application/json
       responses:
-        "200":
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/tmdb.SearchResultMovies'
-        "400":
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/middleware.ErrorResponse'
-        "429":
+        '429':
           description: Too Many Requests
           schema:
             $ref: '#/definitions/middleware.ErrorResponse'
-        "500":
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/middleware.ErrorResponse'
       summary: Search for movies
       tags:
-      - movies
+        - movies
   /api/v1/tv/{id}:
     get:
       description: Get detailed information for a specific TV show by ID with zh-TW
         localization
       parameters:
-      - description: TV show ID
-        in: path
-        name: id
-        required: true
-        type: integer
+        - description: TV show ID
+          in: path
+          name: id
+          required: true
+          type: integer
       produces:
-      - application/json
+        - application/json
       responses:
-        "200":
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/tmdb.TVShowDetails'
-        "400":
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/middleware.ErrorResponse'
-        "404":
+        '404':
           description: Not Found
           schema:
             $ref: '#/definitions/middleware.ErrorResponse'
-        "429":
+        '429':
           description: Too Many Requests
           schema:
             $ref: '#/definitions/middleware.ErrorResponse'
-        "500":
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/middleware.ErrorResponse'
       summary: Get TV show details
       tags:
-      - tv
+        - tv
   /api/v1/tv/search:
     get:
       description: Search for TV shows by name with zh-TW localization
       parameters:
-      - description: Search query
-        in: query
-        name: query
-        required: true
-        type: string
-      - description: 'Page number (default: 1)'
-        in: query
-        name: page
-        type: integer
+        - description: Search query
+          in: query
+          name: query
+          required: true
+          type: string
+        - description: 'Page number (default: 1)'
+          in: query
+          name: page
+          type: integer
       produces:
-      - application/json
+        - application/json
       responses:
-        "200":
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/tmdb.SearchResultTVShows'
-        "400":
+        '400':
           description: Bad Request
           schema:
             $ref: '#/definitions/middleware.ErrorResponse'
-        "429":
+        '429':
           description: Too Many Requests
           schema:
             $ref: '#/definitions/middleware.ErrorResponse'
-        "500":
+        '500':
           description: Internal Server Error
           schema:
             $ref: '#/definitions/middleware.ErrorResponse'
       summary: Search for TV shows
       tags:
-      - tv
+        - tv
   /health:
     get:
       description: Returns the health status of the API server
       produces:
-      - application/json
+        - application/json
       responses:
-        "200":
+        '200':
           description: OK
           schema:
             $ref: '#/definitions/server.HealthResponse'
       summary: Check API health status
       tags:
-      - health
+        - health
 schemes:
-- http
-- https
+  - http
+  - https
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer" followed by a space and JWT token.
     in: header
     name: Authorization
     type: apiKey
-swagger: "2.0"
+swagger: '2.0'
