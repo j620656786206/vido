@@ -22,6 +22,7 @@ apps/api/
 ## Development
 
 The API server will be configured with:
+
 - Gin HTTP server
 - CORS middleware
 - Health check endpoints
