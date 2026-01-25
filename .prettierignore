@@ -22,6 +22,9 @@ out
 vendor/
 *.sum
 
+# Lockfiles
+pnpm-lock.yaml
+
 # BMAD Framework
 _bmad/
 _bmad-output/
