@@ -40,3 +40,6 @@ _bmad-output/
 # Test outputs
 test-results/
 playwright-report/
+
+# Auto-generated files
+**/routeTree.gen.ts
