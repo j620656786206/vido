@@ -28,7 +28,9 @@ import * as path from 'path';
 // Test Data
 // =============================================================================
 
-const TEST_MOVIE_SEARCH = 'Inception';
+// Use well-known TMDB movie IDs to avoid dependency on search functionality
+// Inception (2010) - TMDB ID: 27205
+const TEST_MOVIE_ID = '27205';
 const TEST_MOVIE_TITLE_REGEX = /Inception|全面啟動/i;
 
 // =============================================================================
@@ -36,15 +38,9 @@ const TEST_MOVIE_TITLE_REGEX = /Inception|全面啟動/i;
 // =============================================================================
 
 async function navigateToMovieDetail(page: import('@playwright/test').Page) {
-  // Search for a movie and navigate to its detail page
-  await page.goto('/search?q=' + TEST_MOVIE_SEARCH + '&type=movie');
-  await page.waitForLoadState('networkidle');
-
-  const firstCard = page.locator('[data-testid="poster-card"]').first();
-  await expect(firstCard).toBeVisible({ timeout: 15000 });
-  await firstCard.click();
-
-  await expect(page).toHaveURL(/\/media\/movie\/\d+/);
+  // Navigate directly to a known movie detail page
+  // This avoids dependency on TMDB search API which requires API key
+  await page.goto(`/media/movie/${TEST_MOVIE_ID}`);
   await page.waitForLoadState('networkidle');
 }
 
