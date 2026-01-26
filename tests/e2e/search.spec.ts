@@ -32,12 +32,12 @@ test.describe('Media Search - Input @e2e @search', () => {
 
     // THEN: Search bar should be visible
     await expect(page.getByRole('heading', { name: /搜尋媒體/i })).toBeVisible();
-    await expect(page.getByPlaceholder(/搜尋電影或電視劇/i)).toBeVisible();
+    await expect(page.getByPlaceholder(/搜尋電影或影集/i)).toBeVisible();
   });
 
   test('[P0] should search for movies and display results', async ({ page }) => {
     // GIVEN: User is on search page
-    const searchInput = page.getByPlaceholder(/搜尋電影或電視劇/i);
+    const searchInput = page.getByPlaceholder(/搜尋電影或影集/i);
 
     // WHEN: User enters search query and submits
     await searchInput.fill('Inception');
@@ -49,12 +49,13 @@ test.describe('Media Search - Input @e2e @search', () => {
   });
 
   test('[P1] should show minimum character message for short queries', async ({ page }) => {
-    // GIVEN: User is on search page
-    const searchInput = page.getByPlaceholder(/搜尋電影或電視劇/i);
+    // GIVEN: User navigates to search page with a single character query
+    // Note: The SearchBar component only triggers search when query length >= 2
+    // So we test by navigating directly to the URL with a short query
 
-    // WHEN: User enters single character
-    await searchInput.fill('a');
-    await searchInput.press('Enter');
+    // WHEN: Page loads with single character query
+    await page.goto('/search?q=a');
+    await page.waitForLoadState('networkidle');
 
     // THEN: Should show minimum character message
     await expect(page.getByText(/至少 2 個字元/i)).toBeVisible();
@@ -62,7 +63,7 @@ test.describe('Media Search - Input @e2e @search', () => {
 
   test('[P1] should search with Chinese characters', async ({ page }) => {
     // GIVEN: User is on search page
-    const searchInput = page.getByPlaceholder(/搜尋電影或電視劇/i);
+    const searchInput = page.getByPlaceholder(/搜尋電影或影集/i);
 
     // WHEN: User searches with Chinese
     await searchInput.fill('全面啟動');
@@ -80,7 +81,7 @@ test.describe('Media Search - Input @e2e @search', () => {
     // WHEN: Page loads with query parameter
 
     // THEN: Search input should contain the query
-    const searchInput = page.getByPlaceholder(/搜尋電影或電視劇/i);
+    const searchInput = page.getByPlaceholder(/搜尋電影或影集/i);
     await expect(searchInput).toHaveValue('Matrix');
   });
 });
@@ -100,7 +101,7 @@ test.describe('Media Search - Type Filters @e2e @search', () => {
     // GIVEN: Search results are displayed
 
     // WHEN: User clicks on movie filter tab
-    await page.getByRole('button', { name: /電影/i }).click();
+    await page.getByRole('tab', { name: /電影/i }).click();
 
     // THEN: URL should update with type parameter
     await expect(page).toHaveURL(/type=movie/);
@@ -110,7 +111,7 @@ test.describe('Media Search - Type Filters @e2e @search', () => {
     // GIVEN: Search results are displayed
 
     // WHEN: User clicks on TV filter tab
-    await page.getByRole('button', { name: /電視劇/i }).click();
+    await page.getByRole('tab', { name: /影集/i }).click();
 
     // THEN: URL should update with type parameter
     await expect(page).toHaveURL(/type=tv/);
@@ -124,8 +125,8 @@ test.describe('Media Search - Type Filters @e2e @search', () => {
     // WHEN: No type filter is selected
 
     // THEN: All tab should be active (default)
-    const allTab = page.getByRole('button', { name: /全部/i });
-    await expect(allTab).toHaveAttribute('data-state', 'active');
+    const allTab = page.getByRole('tab', { name: /全部/i });
+    await expect(allTab).toHaveAttribute('aria-selected', 'true');
   });
 
   test('[P2] should show result counts in tabs', async ({ page }) => {
@@ -135,8 +136,8 @@ test.describe('Media Search - Type Filters @e2e @search', () => {
 
     // THEN: Tabs should show result counts (if any results exist)
     // Note: Count display depends on actual search results
-    await expect(page.getByRole('button', { name: /電影/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /電視劇/i })).toBeVisible();
+    await expect(page.getByRole('tab', { name: /電影/i })).toBeVisible();
+    await expect(page.getByRole('tab', { name: /影集/i })).toBeVisible();
   });
 });
 
@@ -163,7 +164,7 @@ test.describe('Media Search - Results Display @e2e @search', () => {
     await page.goto('/search');
 
     // WHEN: User initiates search
-    const searchInput = page.getByPlaceholder(/搜尋電影或電視劇/i);
+    const searchInput = page.getByPlaceholder(/搜尋電影或影集/i);
     await searchInput.fill('Interstellar');
 
     // Then press enter and immediately check for loading
@@ -263,7 +264,7 @@ test.describe('Media Search - Edge Cases @e2e @search', () => {
     await page.goto('/search');
 
     // WHEN: User searches with special characters
-    const searchInput = page.getByPlaceholder(/搜尋電影或電視劇/i);
+    const searchInput = page.getByPlaceholder(/搜尋電影或影集/i);
     await searchInput.fill('Batman: The Dark Knight');
     await searchInput.press('Enter');
 
@@ -278,7 +279,7 @@ test.describe('Media Search - Edge Cases @e2e @search', () => {
     await page.goto('/search');
 
     // WHEN: User types rapidly
-    const searchInput = page.getByPlaceholder(/搜尋電影或電視劇/i);
+    const searchInput = page.getByPlaceholder(/搜尋電影或影集/i);
     await searchInput.pressSequentially('Inception', { delay: 50 });
     await searchInput.press('Enter');
 

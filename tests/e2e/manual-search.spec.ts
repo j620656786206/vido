@@ -36,14 +36,14 @@ test.describe('Manual Search Dialog @e2e @manual-search', () => {
     await page.waitForLoadState('networkidle');
 
     // THEN: Search input should be available
-    const searchInput = page.getByPlaceholder(/搜尋電影或電視劇/i);
+    const searchInput = page.getByPlaceholder(/搜尋電影或影集/i);
     await expect(searchInput).toBeVisible();
   });
 
   test('[P1] should search with custom query and display results (AC1)', async ({ page }) => {
     // GIVEN: User is on search page
     await page.goto('/search');
-    const searchInput = page.getByPlaceholder(/搜尋電影或電視劇/i);
+    const searchInput = page.getByPlaceholder(/搜尋電影或影集/i);
 
     // WHEN: User enters a custom search query
     await searchInput.fill('Demon Slayer');
@@ -66,7 +66,7 @@ test.describe('Manual Search Dialog @e2e @manual-search', () => {
     await page.waitForLoadState('networkidle');
 
     // WHEN: User clicks on movie filter
-    const movieTab = page.getByRole('button', { name: /電影/i });
+    const movieTab = page.getByRole('tab', { name: /電影/i });
     await movieTab.click();
 
     // THEN: URL should include movie type filter
@@ -79,7 +79,7 @@ test.describe('Manual Search Dialog @e2e @manual-search', () => {
     await page.waitForLoadState('networkidle');
 
     // WHEN: User clicks on TV filter
-    const tvTab = page.getByRole('button', { name: /電視劇/i });
+    const tvTab = page.getByRole('tab', { name: /影集/i });
     await tvTab.click();
 
     // THEN: URL should include TV type filter
@@ -89,7 +89,7 @@ test.describe('Manual Search Dialog @e2e @manual-search', () => {
   test('[P1] should display Chinese title search results', async ({ page }) => {
     // GIVEN: User is on search page
     await page.goto('/search');
-    const searchInput = page.getByPlaceholder(/搜尋電影或電視劇/i);
+    const searchInput = page.getByPlaceholder(/搜尋電影或影集/i);
 
     // WHEN: User searches with Chinese characters
     await searchInput.fill('鬼滅之刃');
@@ -173,7 +173,7 @@ test.describe('Search Results Display @e2e @manual-search', () => {
     await page.waitForLoadState('networkidle');
 
     // THEN: Should show search prompt or empty state
-    const searchInput = page.getByPlaceholder(/搜尋電影或電視劇/i);
+    const searchInput = page.getByPlaceholder(/搜尋電影或影集/i);
     await expect(searchInput).toBeVisible();
   });
 });
@@ -419,7 +419,7 @@ test.describe('Manual Search Edge Cases @e2e @manual-search', () => {
   test('[P2] should handle special characters in search query', async ({ page }) => {
     // GIVEN: User is on search page
     await page.goto('/search');
-    const searchInput = page.getByPlaceholder(/搜尋電影或電視劇/i);
+    const searchInput = page.getByPlaceholder(/搜尋電影或影集/i);
 
     // WHEN: User searches with special characters
     await searchInput.fill('Batman: The Dark Knight');
@@ -433,7 +433,7 @@ test.describe('Manual Search Edge Cases @e2e @manual-search', () => {
   test('[P2] should debounce rapid typing', async ({ page }) => {
     // GIVEN: User is on search page
     await page.goto('/search');
-    const searchInput = page.getByPlaceholder(/搜尋電影或電視劇/i);
+    const searchInput = page.getByPlaceholder(/搜尋電影或影集/i);
 
     // WHEN: User types rapidly
     await searchInput.pressSequentially('Inception', { delay: 30 });
@@ -447,7 +447,7 @@ test.describe('Manual Search Edge Cases @e2e @manual-search', () => {
   test('[P2] should show loading state during search', async ({ page }) => {
     // GIVEN: User is on search page
     await page.goto('/search');
-    const searchInput = page.getByPlaceholder(/搜尋電影或電視劇/i);
+    const searchInput = page.getByPlaceholder(/搜尋電影或影集/i);
 
     // WHEN: User initiates search
     await searchInput.fill('Interstellar');
