@@ -8,97 +8,97 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from './routes/__root';
-import { Route as SearchRouteImport } from './routes/search';
-import { Route as IndexRouteImport } from './routes/index';
-import { Route as TestManualSearchRouteImport } from './routes/test/manual-search';
-import { Route as MediaTypeIdRouteImport } from './routes/media/$type.$id';
+import { Route as rootRouteImport } from './routes/__root'
+import { Route as SearchRouteImport } from './routes/search'
+import { Route as IndexRouteImport } from './routes/index'
+import { Route as TestManualSearchRouteImport } from './routes/test/manual-search'
+import { Route as MediaTypeIdRouteImport } from './routes/media/$type.$id'
 
 const SearchRoute = SearchRouteImport.update({
   id: '/search',
   path: '/search',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const TestManualSearchRoute = TestManualSearchRouteImport.update({
   id: '/test/manual-search',
   path: '/test/manual-search',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 const MediaTypeIdRoute = MediaTypeIdRouteImport.update({
   id: '/media/$type/$id',
   path: '/media/$type/$id',
   getParentRoute: () => rootRouteImport,
-} as any);
+} as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute;
-  '/search': typeof SearchRoute;
-  '/test/manual-search': typeof TestManualSearchRoute;
-  '/media/$type/$id': typeof MediaTypeIdRoute;
+  '/': typeof IndexRoute
+  '/search': typeof SearchRoute
+  '/test/manual-search': typeof TestManualSearchRoute
+  '/media/$type/$id': typeof MediaTypeIdRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute;
-  '/search': typeof SearchRoute;
-  '/test/manual-search': typeof TestManualSearchRoute;
-  '/media/$type/$id': typeof MediaTypeIdRoute;
+  '/': typeof IndexRoute
+  '/search': typeof SearchRoute
+  '/test/manual-search': typeof TestManualSearchRoute
+  '/media/$type/$id': typeof MediaTypeIdRoute
 }
 export interface FileRoutesById {
-  __root__: typeof rootRouteImport;
-  '/': typeof IndexRoute;
-  '/search': typeof SearchRoute;
-  '/test/manual-search': typeof TestManualSearchRoute;
-  '/media/$type/$id': typeof MediaTypeIdRoute;
+  __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
+  '/search': typeof SearchRoute
+  '/test/manual-search': typeof TestManualSearchRoute
+  '/media/$type/$id': typeof MediaTypeIdRoute
 }
 export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath;
-  fullPaths: '/' | '/search' | '/test/manual-search' | '/media/$type/$id';
-  fileRoutesByTo: FileRoutesByTo;
-  to: '/' | '/search' | '/test/manual-search' | '/media/$type/$id';
-  id: '__root__' | '/' | '/search' | '/test/manual-search' | '/media/$type/$id';
-  fileRoutesById: FileRoutesById;
+  fileRoutesByFullPath: FileRoutesByFullPath
+  fullPaths: '/' | '/search' | '/test/manual-search' | '/media/$type/$id'
+  fileRoutesByTo: FileRoutesByTo
+  to: '/' | '/search' | '/test/manual-search' | '/media/$type/$id'
+  id: '__root__' | '/' | '/search' | '/test/manual-search' | '/media/$type/$id'
+  fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute;
-  SearchRoute: typeof SearchRoute;
-  TestManualSearchRoute: typeof TestManualSearchRoute;
-  MediaTypeIdRoute: typeof MediaTypeIdRoute;
+  IndexRoute: typeof IndexRoute
+  SearchRoute: typeof SearchRoute
+  TestManualSearchRoute: typeof TestManualSearchRoute
+  MediaTypeIdRoute: typeof MediaTypeIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
     '/search': {
-      id: '/search';
-      path: '/search';
-      fullPath: '/search';
-      preLoaderRoute: typeof SearchRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof SearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
-      id: '/';
-      path: '/';
-      fullPath: '/';
-      preLoaderRoute: typeof IndexRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/test/manual-search': {
-      id: '/test/manual-search';
-      path: '/test/manual-search';
-      fullPath: '/test/manual-search';
-      preLoaderRoute: typeof TestManualSearchRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/test/manual-search'
+      path: '/test/manual-search'
+      fullPath: '/test/manual-search'
+      preLoaderRoute: typeof TestManualSearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/media/$type/$id': {
-      id: '/media/$type/$id';
-      path: '/media/$type/$id';
-      fullPath: '/media/$type/$id';
-      preLoaderRoute: typeof MediaTypeIdRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
+      id: '/media/$type/$id'
+      path: '/media/$type/$id'
+      fullPath: '/media/$type/$id'
+      preLoaderRoute: typeof MediaTypeIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -107,7 +107,7 @@ const rootRouteChildren: RootRouteChildren = {
   SearchRoute: SearchRoute,
   TestManualSearchRoute: TestManualSearchRoute,
   MediaTypeIdRoute: MediaTypeIdRoute,
-};
+}
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
-  ._addFileTypes<FileRouteTypes>();
+  ._addFileTypes<FileRouteTypes>()

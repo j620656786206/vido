@@ -99,17 +99,13 @@ jobs:
           if-no-files-found: ignore
 
   # =============================================================================
-  # Stage 3: E2E Tests (Parallel Shards with Go Backend)
+  # Stage 3a: Build (Single build, shared with all shards)
   # =============================================================================
-  test-e2e-sharded:
-    name: E2E Tests (Shard ${{ matrix.shard }}/4)
+  build:
+    name: Build Frontend & Backend
     needs: [lint, test-unit]
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3, 4]
+    timeout-minutes: 15
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -134,9 +130,6 @@ jobs:
       - name: Install Node dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
-
       - name: Build Go backend
         working-directory: apps/api
         run: go build -o ../../bin/api ./cmd/api
@@ -145,6 +138,56 @@ jobs:
         run: npx nx build web --configuration=production
         env:
           NODE_ENV: production
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: |
+            bin/api
+            dist/apps/web
+          retention-days: 1
+
+  # =============================================================================
+  # Stage 3b: E2E Tests (Parallel Shards, download pre-built artifacts)
+  # =============================================================================
+  test-e2e-sharded:
+    name: E2E Tests (Shard ${{ matrix.shard }}/4)
+    needs: [build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+
+      - name: Install Node dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+
+      - name: Make backend executable
+        run: chmod +x bin/api
 
       - name: Create data directory
         run: mkdir -p ${{ github.workspace }}/vido-data
