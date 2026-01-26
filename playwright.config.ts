@@ -1,5 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
 import path from 'path';
+import * as dotenv from 'dotenv';
+
+// Load environment variables from .env file
+dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 /**
  * Playwright Configuration for Vido
@@ -125,6 +129,7 @@ export default defineConfig({
           env: {
             VIDO_DATA_DIR: './vido-data',
             VIDO_PORT: '8080',
+            TMDB_API_KEY: process.env.TMDB_API_KEY || '',
           },
         },
         // Frontend (Nx + Vite)

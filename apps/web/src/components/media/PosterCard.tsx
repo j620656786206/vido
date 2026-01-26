@@ -43,6 +43,7 @@ export function PosterCard({
     <Link
       to="/media/$type/$id"
       params={{ type, id: String(id) }}
+      data-testid="poster-card"
       className={cn(
         'group relative block rounded-lg',
         'focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500',

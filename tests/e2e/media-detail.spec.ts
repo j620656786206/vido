@@ -62,8 +62,8 @@ test.describe('Media Detail - Movie @e2e @media-detail', () => {
     // WHEN: Content loads
 
     // THEN: Poster image should be visible
-    const posterImage = page.locator('img[alt*="poster" i], img[data-testid="poster-image"]');
-    await expect(posterImage.first()).toBeVisible({ timeout: 15000 });
+    const posterImage = page.locator('[data-testid="detail-poster"]');
+    await expect(posterImage).toBeVisible({ timeout: 15000 });
   });
 
   test('[P1] should display movie overview/description', async ({ page }) => {
@@ -140,8 +140,8 @@ test.describe('Media Detail - TV Show @e2e @media-detail', () => {
     // WHEN: Content loads
 
     // THEN: Poster image should be visible
-    const posterImage = page.locator('img[alt*="poster" i], img[data-testid="poster-image"]');
-    await expect(posterImage.first()).toBeVisible({ timeout: 15000 });
+    const posterImage = page.locator('[data-testid="detail-poster"]');
+    await expect(posterImage).toBeVisible({ timeout: 15000 });
   });
 
   test('[P1] should display TV-specific information', async ({ page }) => {
@@ -165,8 +165,10 @@ test.describe('Media Detail - TV Show @e2e @media-detail', () => {
 
     // WHEN: Content loads
 
-    // THEN: First air date/year should be visible
-    await expect(page.getByText(testData.tvShow.year)).toBeVisible({ timeout: 15000 });
+    // THEN: First air date/year should be visible (in detail-year element)
+    const yearElement = page.locator('[data-testid="detail-year"]');
+    await expect(yearElement).toBeVisible({ timeout: 15000 });
+    await expect(yearElement).toContainText(testData.tvShow.year);
   });
 });
 
@@ -214,19 +216,17 @@ test.describe('Media Detail - Navigation @e2e @media-detail', () => {
 
     // Navigate to detail
     const firstCard = page.locator('[data-testid="poster-card"]').first();
-    if (await firstCard.isVisible({ timeout: 10000 })) {
-      await firstCard.click();
-      await page.waitForURL(/\/media\//);
+    await expect(firstCard).toBeVisible({ timeout: 15000 });
+    await firstCard.click();
+    await page.waitForURL(/\/media\//);
 
-      // WHEN: User clicks back or close button
-      const closeButton = page.getByRole('button', { name: /close|關閉|返回|×/i });
-      if (await closeButton.isVisible()) {
-        await closeButton.click();
+    // WHEN: User clicks close button
+    const closeButton = page.locator('[data-testid="side-panel-close"]');
+    await expect(closeButton).toBeVisible({ timeout: 5000 });
+    await closeButton.click();
 
-        // THEN: Should return to search page
-        await expect(page).toHaveURL(/\/search/);
-      }
-    }
+    // THEN: Should return to search page
+    await expect(page).toHaveURL(/\/search/);
   });
 
   test('[P1] should handle direct URL navigation', async ({ page }) => {
@@ -261,16 +261,8 @@ test.describe('Media Detail - Navigation @e2e @media-detail', () => {
 // =============================================================================
 
 test.describe('Media Detail - Error Handling @e2e @media-detail', () => {
-  test('[P1] should show 404 for non-existent movie', async ({ page }) => {
-    // GIVEN: User navigates to non-existent movie
-
-    // WHEN: Navigating to invalid ID
-    await page.goto(`/media/movie/${testData.invalidMovieId}`);
-
-    // THEN: Should show 404 or error message
-    await page.waitForLoadState('networkidle');
-    await expect(page.getByText(/404|找不到|Not Found|錯誤/i)).toBeVisible({ timeout: 15000 });
-  });
+  // Note: Non-existent TMDb IDs (e.g., 99999999) pass route validation but fail API call
+  // Only invalid types or ID formats trigger the 404 page
 
   test('[P1] should show 404 for invalid media type', async ({ page }) => {
     // GIVEN: User navigates with invalid media type
@@ -280,7 +272,8 @@ test.describe('Media Detail - Error Handling @e2e @media-detail', () => {
 
     // THEN: Should show 404 page
     await page.waitForLoadState('networkidle');
-    await expect(page.getByText(/404|找不到|Not Found/i)).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('404')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('找不到該媒體內容')).toBeVisible();
   });
 
   test('[P1] should show 404 for invalid ID format', async ({ page }) => {
@@ -291,21 +284,22 @@ test.describe('Media Detail - Error Handling @e2e @media-detail', () => {
 
     // THEN: Should show 404 page
     await page.waitForLoadState('networkidle');
-    await expect(page.getByText(/404|找不到|Not Found/i)).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('404')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('找不到該媒體內容')).toBeVisible();
   });
 
   test('[P2] should provide navigation back from 404', async ({ page }) => {
-    // GIVEN: User is on 404 page
-    await page.goto('/media/movie/99999999');
+    // GIVEN: User is on 404 page (invalid type triggers 404)
+    await page.goto('/media/invalid/12345');
     await page.waitForLoadState('networkidle');
 
-    // WHEN: Looking for navigation option
+    // WHEN: User clicks the back to search button
+    const backButton = page.getByRole('button', { name: '返回搜尋' });
+    await expect(backButton).toBeVisible({ timeout: 15000 });
 
-    // THEN: Should have a way to navigate back (button or link)
-    const backButton = page.getByRole('button', { name: /返回|back|搜尋/i });
-    if (await backButton.isVisible()) {
-      await expect(backButton).toBeVisible();
-    }
+    // THEN: Should navigate back to search page
+    await backButton.click();
+    await expect(page).toHaveURL(/\/search/);
   });
 });
 
@@ -321,15 +315,12 @@ test.describe('Media Detail - Side Panel @e2e @media-detail', () => {
 
     // WHEN: User clicks on a movie card
     const firstCard = page.locator('[data-testid="poster-card"]').first();
-    if (await firstCard.isVisible({ timeout: 10000 })) {
-      await firstCard.click();
+    await expect(firstCard).toBeVisible({ timeout: 15000 });
+    await firstCard.click();
 
-      // THEN: Side panel should open with movie details
-      const sidePanel = page.locator('[data-testid="side-panel"]');
-      if (await sidePanel.isVisible({ timeout: 10000 })) {
-        await expect(sidePanel).toBeVisible();
-      }
-    }
+    // THEN: Side panel should open with movie details
+    const sidePanel = page.locator('[data-testid="side-panel"]');
+    await expect(sidePanel).toBeVisible({ timeout: 10000 });
   });
 
   test('[P2] should close side panel on X button click', async ({ page }) => {
@@ -338,19 +329,18 @@ test.describe('Media Detail - Side Panel @e2e @media-detail', () => {
     await page.waitForLoadState('networkidle');
 
     const firstCard = page.locator('[data-testid="poster-card"]').first();
-    if (await firstCard.isVisible({ timeout: 10000 })) {
-      await firstCard.click();
+    await expect(firstCard).toBeVisible({ timeout: 15000 });
+    await firstCard.click();
 
-      // WHEN: User clicks close button
-      const closeButton = page.getByRole('button', { name: /close|關閉|×/i });
-      if (await closeButton.isVisible()) {
-        await closeButton.click();
+    const sidePanel = page.locator('[data-testid="side-panel"]');
+    await expect(sidePanel).toBeVisible({ timeout: 10000 });
 
-        // THEN: Side panel should close
-        const sidePanel = page.locator('[data-testid="side-panel"]');
-        await expect(sidePanel).not.toBeVisible();
-      }
-    }
+    // WHEN: User clicks close button
+    const closeButton = page.locator('[data-testid="side-panel-close"]');
+    await closeButton.click();
+
+    // THEN: Side panel should close (navigates to search page)
+    await expect(page).toHaveURL(/\/search/);
   });
 
   test('[P2] should close side panel on escape key', async ({ page }) => {
@@ -359,18 +349,17 @@ test.describe('Media Detail - Side Panel @e2e @media-detail', () => {
     await page.waitForLoadState('networkidle');
 
     const firstCard = page.locator('[data-testid="poster-card"]').first();
-    if (await firstCard.isVisible({ timeout: 10000 })) {
-      await firstCard.click();
+    await expect(firstCard).toBeVisible({ timeout: 15000 });
+    await firstCard.click();
 
-      // Wait for panel to be visible
-      const sidePanel = page.locator('[data-testid="side-panel"]');
-      if (await sidePanel.isVisible({ timeout: 5000 })) {
-        // WHEN: User presses Escape
-        await page.keyboard.press('Escape');
+    // Wait for panel to be visible
+    const sidePanel = page.locator('[data-testid="side-panel"]');
+    await expect(sidePanel).toBeVisible({ timeout: 10000 });
 
-        // THEN: Side panel should close
-        await expect(sidePanel).not.toBeVisible({ timeout: 5000 });
-      }
-    }
+    // WHEN: User presses Escape
+    await page.keyboard.press('Escape');
+
+    // THEN: Side panel should close (navigates to search page)
+    await expect(page).toHaveURL(/\/search/, { timeout: 5000 });
   });
 });

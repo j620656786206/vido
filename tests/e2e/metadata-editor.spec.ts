@@ -413,17 +413,16 @@ test.describe('Cast Editor @e2e @metadata-editor', () => {
       await editButton.click();
       await expect(page.getByTestId('metadata-editor-dialog')).toBeVisible();
 
-      // WHEN: User adds a cast member
-      const castEditor = page.locator('[data-testid="cast-editor"]');
-      if (await castEditor.isVisible()) {
-        const addButton = castEditor.getByRole('button', { name: /新增|Add/i });
-        if (await addButton.isVisible()) {
-          await addButton.click();
-        }
-      }
+      // WHEN: User interacts with cast input
+      const castInput = page.locator('[data-testid="cast-input"]');
+      if (await castInput.isVisible()) {
+        await castInput.fill('測試演員');
+        await castInput.press('Enter');
 
-      // THEN: New cast member input should appear
-      // Implementation depends on UI
+        // THEN: Cast member should appear in the list
+        const castList = page.locator('[data-testid="cast-list"]');
+        await expect(castList.getByText('測試演員')).toBeVisible();
+      }
     } finally {
       await api.deleteMovie(movieId);
     }
@@ -464,11 +463,11 @@ test.describe('Poster Upload @e2e @metadata-editor', () => {
     await expect(page.getByTestId('metadata-editor-dialog')).toBeVisible();
 
     // WHEN: Viewing the poster upload section
-    const posterUploader = page.locator('[data-testid="poster-uploader"]');
+    const posterDropzone = page.locator('[data-testid="poster-dropzone"]');
 
     // THEN: Drag-drop zone should be visible
-    if (await posterUploader.isVisible()) {
-      await expect(page.getByText(/拖放|Drag|Drop/i)).toBeVisible();
+    if (await posterDropzone.isVisible()) {
+      await expect(page.getByText(/拖放|Drag|Drop|點擊/i)).toBeVisible();
     }
   });
 
