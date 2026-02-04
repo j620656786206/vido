@@ -13,6 +13,7 @@ type Repositories struct {
 	Settings SettingsRepositoryInterface
 	Cache    CacheRepositoryInterface
 	Secrets  SecretsRepositoryInterface
+	Learning *LearningRepository
 }
 
 // NewRepositories creates all repository implementations for the given database connection.
@@ -29,8 +30,9 @@ func NewRepositories(db *sql.DB) *Repositories {
 		Series:   NewSeriesRepository(db),
 		Settings: NewSettingsRepository(db),
 		// Cache will be initialized after CacheRepository implementation in Task 4
-		Cache:   nil,
-		Secrets: NewSecretsRepository(db),
+		Cache:    nil,
+		Secrets:  NewSecretsRepository(db),
+		Learning: NewLearningRepository(db),
 	}
 }
 
@@ -49,5 +51,6 @@ func NewRepositoriesWithCache(db *sql.DB) *Repositories {
 		Settings: NewSettingsRepository(db),
 		Cache:    NewCacheRepository(db),
 		Secrets:  NewSecretsRepository(db),
+		Learning: NewLearningRepository(db),
 	}
 }

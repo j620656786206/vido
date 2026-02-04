@@ -135,8 +135,12 @@ func main() {
 		slog.Info("AI service not configured - AI parsing disabled")
 	}
 
-	// Initialize parser service with optional AI integration (Story 2.5, updated Story 3.1)
-	parserService := services.NewParserServiceWithAI(aiService)
+	// Initialize learning service for filename pattern learning (Story 3.9)
+	learningService := services.NewLearningService(repos.Learning)
+	slog.Info("Learning service initialized")
+
+	// Initialize parser service with AI and learning integration (Story 2.5, 3.1, 3.9)
+	parserService := services.NewParserServiceWithLearning(aiService, learningService)
 
 	// Initialize metadata service with multi-source fallback chain (Story 3.3)
 	metadataService := services.NewMetadataService(services.MetadataServiceConfig{
@@ -167,6 +171,7 @@ func main() {
 	tmdbHandler := handlers.NewTMDbHandler(tmdbService)
 	parserHandler := handlers.NewParserHandler(parserService)
 	metadataHandler := handlers.NewMetadataHandler(metadataService)
+	learningHandler := handlers.NewLearningHandler(learningService)
 	slog.Info("Handlers initialized with service injection")
 
 	// Create Gin router
@@ -193,6 +198,7 @@ func main() {
 		tmdbHandler.RegisterRoutes(apiV1)
 		parserHandler.RegisterRoutes(apiV1)
 		metadataHandler.RegisterRoutes(apiV1)
+		learningHandler.RegisterRoutes(apiV1)
 	}
 	slog.Info("API routes registered", "prefix", "/api/v1")
 

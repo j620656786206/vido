@@ -23,11 +23,13 @@ type ParserServiceInterface interface {
 }
 
 // ParserService orchestrates filename parsing using movie and TV parsers.
-// It optionally integrates with AI parsing when regex fails.
+// It optionally integrates with AI parsing when regex fails, and can check
+// learned patterns for previously corrected filenames.
 type ParserService struct {
-	movieParser *parser.MovieParser
-	tvParser    *parser.TVParser
-	aiService   AIServiceInterface
+	movieParser     *parser.MovieParser
+	tvParser        *parser.TVParser
+	aiService       AIServiceInterface
+	learningService LearningServiceInterface
 }
 
 // NewParserService creates a new ParserService with default parsers.
@@ -47,6 +49,16 @@ func NewParserServiceWithAI(aiService AIServiceInterface) *ParserService {
 	}
 }
 
+// NewParserServiceWithLearning creates a new ParserService with AI and learning integration.
+func NewParserServiceWithLearning(aiService AIServiceInterface, learningService LearningServiceInterface) *ParserService {
+	return &ParserService{
+		movieParser:     parser.NewMovieParser(),
+		tvParser:        parser.NewTVParser(),
+		aiService:       aiService,
+		learningService: learningService,
+	}
+}
+
 // ParseFilename attempts to parse a filename and extract metadata.
 // It tries TV show patterns first (more specific), then movie patterns.
 // If neither works and AI is configured, it delegates to AI parsing.
@@ -58,6 +70,17 @@ func (s *ParserService) ParseFilename(filename string) *parser.ParseResult {
 // ParseFilenameWithContext parses a filename with context support for AI timeout.
 func (s *ParserService) ParseFilenameWithContext(ctx context.Context, filename string) *parser.ParseResult {
 	start := time.Now()
+
+	// 1. Check learned patterns first (highest priority)
+	if s.learningService != nil {
+		result, err := s.parseWithLearnedPattern(ctx, filename, start)
+		if err != nil {
+			slog.Warn("Error checking learned patterns", "error", err, "filename", filename)
+			// Continue with other parsing methods
+		} else if result != nil {
+			return result
+		}
+	}
 
 	// Check if this looks like a fansub filename
 	fansubDetection := ai.DetectFansub(filename)
@@ -373,4 +396,64 @@ func normalizeCodec(codec string) string {
 	default:
 		return strings.ToUpper(codec)
 	}
+}
+
+// parseWithLearnedPattern checks if a learned pattern matches the filename.
+// Returns the parse result if a match is found with sufficient confidence.
+func (s *ParserService) parseWithLearnedPattern(ctx context.Context, filename string, start time.Time) (*parser.ParseResult, error) {
+	match, err := s.learningService.FindMatchingPattern(ctx, filename)
+	if err != nil {
+		return nil, err
+	}
+
+	if match == nil {
+		return nil, nil
+	}
+
+	// Require minimum confidence for learned pattern match
+	if match.Confidence < 0.8 {
+		slog.Debug("Learned pattern match below threshold",
+			"filename", filename,
+			"patternId", match.Pattern.ID,
+			"confidence", match.Confidence,
+		)
+		return nil, nil
+	}
+
+	slog.Info("Applied learned pattern",
+		"filename", filename,
+		"patternId", match.Pattern.ID,
+		"pattern", match.Pattern.Pattern,
+		"confidence", match.Confidence,
+		"matchType", match.MatchType,
+		"duration_ms", time.Since(start).Milliseconds(),
+	)
+
+	// Increment use count for the pattern
+	if err := s.learningService.ApplyPattern(ctx, match.Pattern.ID); err != nil {
+		slog.Warn("Failed to increment pattern use count", "error", err, "patternId", match.Pattern.ID)
+		// Continue anyway - this is not critical
+	}
+
+	// Determine media type from the pattern
+	mediaType := parser.MediaTypeUnknown
+	if match.Pattern.MetadataType == "movie" {
+		mediaType = parser.MediaTypeMovie
+	} else if match.Pattern.MetadataType == "series" {
+		mediaType = parser.MediaTypeTVShow
+	}
+
+	return &parser.ParseResult{
+		OriginalFilename:  filename,
+		Status:            parser.ParseStatusSuccess,
+		MediaType:         mediaType,
+		Title:             match.Pattern.TitlePattern,
+		ReleaseGroup:      match.Pattern.FansubGroup,
+		Confidence:        int(match.Confidence * 100),
+		MetadataSource:    parser.MetadataSourceLearned,
+		ParseDurationMs:   time.Since(start).Milliseconds(),
+		LearnedPatternID:  match.Pattern.ID,
+		LearnedTmdbID:     match.Pattern.TmdbID,
+		LearnedMetadataID: match.Pattern.MetadataID,
+	}, nil
 }

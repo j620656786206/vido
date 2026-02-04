@@ -1,6 +1,6 @@
 # Story 3.9: Filename Mapping Learning System
 
-Status: ready-for-dev
+Status: completed
 
 ## Story
 
@@ -36,75 +36,75 @@ So that **similar filenames are automatically matched in the future**.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create Filename Mappings Table (AC: 1)
-  - [ ] 1.1: Create database migration for `filename_mappings` table
-  - [ ] 1.2: Define columns: id, pattern, pattern_type, metadata_id, source, created_at
-  - [ ] 1.3: Add indexes for pattern lookup
-  - [ ] 1.4: Write migration tests
+- [x] Task 1: Create Filename Mappings Table (AC: 1)
+  - [x] 1.1: Create database migration for `filename_mappings` table
+  - [x] 1.2: Define columns: id, pattern, pattern_type, metadata_id, source, created_at
+  - [x] 1.3: Add indexes for pattern lookup
+  - [x] 1.4: Write migration tests
 
-- [ ] Task 2: Create Pattern Extraction Logic (AC: 1, 4)
-  - [ ] 2.1: Create `/apps/api/internal/learning/pattern.go`
-  - [ ] 2.2: Extract fansub group pattern: `[GroupName]`
-  - [ ] 2.3: Extract title pattern (normalize episode/season)
-  - [ ] 2.4: Generate regex pattern from filename
-  - [ ] 2.5: Write pattern extraction tests
+- [x] Task 2: Create Pattern Extraction Logic (AC: 1, 4)
+  - [x] 2.1: Create `/apps/api/internal/learning/pattern.go`
+  - [x] 2.2: Extract fansub group pattern: `[GroupName]`
+  - [x] 2.3: Extract title pattern (normalize episode/season)
+  - [x] 2.4: Generate regex pattern from filename
+  - [x] 2.5: Write pattern extraction tests
 
-- [ ] Task 3: Create Pattern Matching Engine (AC: 2, 4)
-  - [ ] 3.1: Create `/apps/api/internal/learning/matcher.go`
-  - [ ] 3.2: Implement exact match lookup
-  - [ ] 3.3: Implement fuzzy matching with Levenshtein distance
-  - [ ] 3.4: Implement regex pattern matching
-  - [ ] 3.5: Return match confidence score
-  - [ ] 3.6: Write matcher tests
+- [x] Task 3: Create Pattern Matching Engine (AC: 2, 4)
+  - [x] 3.1: Create `/apps/api/internal/learning/matcher.go`
+  - [x] 3.2: Implement exact match lookup
+  - [x] 3.3: Implement fuzzy matching with Levenshtein distance
+  - [x] 3.4: Implement regex pattern matching
+  - [x] 3.5: Return match confidence score
+  - [x] 3.6: Write matcher tests
 
-- [ ] Task 4: Create Learning Repository (AC: 1, 3)
-  - [ ] 4.1: Create `/apps/api/internal/repository/learning_repository.go`
-  - [ ] 4.2: Implement `Save()` for new patterns
-  - [ ] 4.3: Implement `FindByPattern()` for lookup
-  - [ ] 4.4: Implement `List()` for management UI
-  - [ ] 4.5: Implement `Delete()` for removal
-  - [ ] 4.6: Write repository tests
+- [x] Task 4: Create Learning Repository (AC: 1, 3)
+  - [x] 4.1: Create `/apps/api/internal/repository/learning_repository.go`
+  - [x] 4.2: Implement `Save()` for new patterns
+  - [x] 4.3: Implement `FindByPattern()` for lookup
+  - [x] 4.4: Implement `List()` for management UI
+  - [x] 4.5: Implement `Delete()` for removal
+  - [x] 4.6: Write repository tests
 
-- [ ] Task 5: Create Learning Service (AC: 1, 2, 3)
-  - [ ] 5.1: Create `/apps/api/internal/services/learning_service.go`
-  - [ ] 5.2: Define `LearningServiceInterface`
-  - [ ] 5.3: Implement `LearnFromCorrection()` method
-  - [ ] 5.4: Implement `FindMatchingPattern()` method
-  - [ ] 5.5: Implement `GetPatternStats()` for UI display
-  - [ ] 5.6: Write service tests
+- [x] Task 5: Create Learning Service (AC: 1, 2, 3)
+  - [x] 5.1: Create `/apps/api/internal/services/learning_service.go`
+  - [x] 5.2: Define `LearningServiceInterface`
+  - [x] 5.3: Implement `LearnFromCorrection()` method
+  - [x] 5.4: Implement `FindMatchingPattern()` method
+  - [x] 5.5: Implement `GetPatternStats()` for UI display
+  - [x] 5.6: Write service tests
 
-- [ ] Task 6: Integrate with Parser (AC: 2)
-  - [ ] 6.1: Update parser service to check learned patterns first
-  - [ ] 6.2: If pattern matches, skip AI/metadata search
-  - [ ] 6.3: Set metadata source to "learned"
-  - [ ] 6.4: Emit "pattern applied" event for UI feedback
-  - [ ] 6.5: Write integration tests
+- [x] Task 6: Integrate with Parser (AC: 2)
+  - [x] 6.1: Update parser service to check learned patterns first
+  - [x] 6.2: If pattern matches, skip AI/metadata search
+  - [x] 6.3: Set metadata source to "learned"
+  - [x] 6.4: Emit "pattern applied" event for UI feedback
+  - [x] 6.5: Write integration tests
 
-- [ ] Task 7: Create Learn Pattern API (AC: 1)
-  - [ ] 7.1: Create `POST /api/v1/learning/patterns` endpoint
-  - [ ] 7.2: Accept filename, metadata ID, and confirmation
-  - [ ] 7.3: Extract and store pattern
-  - [ ] 7.4: Write handler tests
+- [x] Task 7: Create Learn Pattern API (AC: 1)
+  - [x] 7.1: Create `POST /api/v1/learning/patterns` endpoint
+  - [x] 7.2: Accept filename, metadata ID, and confirmation
+  - [x] 7.3: Extract and store pattern
+  - [x] 7.4: Write handler tests
 
-- [ ] Task 8: Create Patterns Management API (AC: 3)
-  - [ ] 8.1: Create `GET /api/v1/learning/patterns` endpoint
-  - [ ] 8.2: Create `DELETE /api/v1/learning/patterns/{id}` endpoint
-  - [ ] 8.3: Include pattern stats in response
-  - [ ] 8.4: Write handler tests
+- [x] Task 8: Create Patterns Management API (AC: 3)
+  - [x] 8.1: Create `GET /api/v1/learning/patterns` endpoint
+  - [x] 8.2: Create `DELETE /api/v1/learning/patterns/{id}` endpoint
+  - [x] 8.3: Include pattern stats in response
+  - [x] 8.4: Write handler tests
 
-- [ ] Task 9: Create Learn Pattern UI (AC: 1, 2)
-  - [ ] 9.1: Create `LearnPatternPrompt.tsx` component
-  - [ ] 9.2: Show after manual metadata selection
-  - [ ] 9.3: Display extracted pattern preview
-  - [ ] 9.4: Add confirm/skip buttons
-  - [ ] 9.5: Show success toast with UX-5 feedback
+- [x] Task 9: Create Learn Pattern UI (AC: 1, 2)
+  - [x] 9.1: Create `LearnPatternPrompt.tsx` component
+  - [x] 9.2: Show after manual metadata selection
+  - [x] 9.3: Display extracted pattern preview
+  - [x] 9.4: Add confirm/skip buttons
+  - [x] 9.5: Show success toast with UX-5 feedback
 
-- [ ] Task 10: Create Patterns Management UI (AC: 3)
-  - [ ] 10.1: Create `LearnedPatternsSettings.tsx` component
-  - [ ] 10.2: Display pattern list with metadata preview
-  - [ ] 10.3: Add delete button for each pattern
-  - [ ] 10.4: Show "已記住 N 個自訂規則" count
-  - [ ] 10.5: Write component tests
+- [x] Task 10: Create Patterns Management UI (AC: 3)
+  - [x] 10.1: Create `LearnedPatternsSettings.tsx` component
+  - [x] 10.2: Display pattern list with metadata preview
+  - [x] 10.3: Add delete button for each pattern
+  - [x] 10.4: Show "已記住 N 個自訂規則" count
+  - [x] 10.5: Write component tests
 
 ## Dev Notes
 
@@ -471,10 +471,48 @@ Following project-context.md Rule 7:
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.5 (claude-opus-4-5-20251101)
 
 ### Debug Log References
 
 ### Completion Notes List
 
+- Implemented complete filename mapping learning system following TDD approach
+- Created database migration for `filename_mappings` table with proper indexes
+- Implemented pattern extraction for fansub and standard filename formats
+- Pattern matching engine supports 4-tier matching: exact → fansub+title → regex → fuzzy (Levenshtein)
+- Learning repository implements full CRUD operations with use count tracking
+- Learning service orchestrates pattern learning and matching
+- Parser service integration checks learned patterns first with 0.8 confidence threshold
+- REST API endpoints: POST/GET/DELETE patterns, GET stats
+- Frontend components: LearnPatternPrompt, PatternAppliedToast, LearnedPatternsSettings
+- All acceptance criteria (AC1-AC4) are satisfied
+- UX-5 feedback implemented: "✓ 已套用你之前的設定"
+
 ### File List
+
+**Backend (apps/api):**
+- `internal/database/migrations/010_create_filename_mappings_table.go` - Database migration
+- `internal/learning/pattern.go` - Pattern extraction logic
+- `internal/learning/pattern_test.go` - Pattern extraction tests
+- `internal/learning/matcher.go` - Pattern matching engine
+- `internal/learning/matcher_test.go` - Matcher tests
+- `internal/repository/learning_repository.go` - Data access layer
+- `internal/repository/learning_repository_test.go` - Repository tests
+- `internal/repository/registry.go` - Updated with Learning repository
+- `internal/services/learning_service.go` - Business logic
+- `internal/services/learning_service_test.go` - Service tests
+- `internal/services/parser_service.go` - Updated with learning integration
+- `internal/services/parser_service_test.go` - Updated tests
+- `internal/handlers/learning_handler.go` - REST API handlers
+- `internal/handlers/learning_handler_test.go` - Handler tests
+- `internal/parser/types.go` - Added MetadataSourceLearned and learned fields
+- `cmd/api/main.go` - Updated with learning service wiring
+
+**Frontend (apps/web/src):**
+- `services/learning.ts` - Learning API client
+- `components/learning/LearnPatternPrompt.tsx` - Learn pattern prompt component
+- `components/learning/LearnPatternPrompt.spec.tsx` - Component tests
+- `components/learning/LearnedPatternsSettings.tsx` - Settings component
+- `components/learning/LearnedPatternsSettings.spec.tsx` - Component tests
+- `components/learning/index.ts` - Module exports

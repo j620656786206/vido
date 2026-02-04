@@ -30,6 +30,8 @@ const (
 	MetadataSourceAIFansub MetadataSource = "ai_fansub"
 	// MetadataSourceManual indicates metadata was manually entered.
 	MetadataSourceManual MetadataSource = "manual"
+	// MetadataSourceLearned indicates metadata was applied from a learned pattern.
+	MetadataSourceLearned MetadataSource = "learned"
 )
 
 // MediaType represents the type of media identified from the filename.
@@ -97,6 +99,15 @@ type ParseResult struct {
 
 	// AIProvider is the AI provider used if metadata was extracted via AI.
 	AIProvider string `json:"ai_provider,omitempty"`
+
+	// LearnedPatternID is the ID of the learned pattern that matched (if MetadataSource is "learned").
+	LearnedPatternID string `json:"learned_pattern_id,omitempty"`
+
+	// LearnedTmdbID is the TMDb ID from the learned pattern.
+	LearnedTmdbID int `json:"learned_tmdb_id,omitempty"`
+
+	// LearnedMetadataID is the metadata ID (movie/series) from the learned pattern.
+	LearnedMetadataID string `json:"learned_metadata_id,omitempty"`
 }
 
 // Parser defines the interface for filename parsers.

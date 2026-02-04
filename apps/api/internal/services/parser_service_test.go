@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/vido/api/internal/ai"
+	"github.com/vido/api/internal/learning"
 	"github.com/vido/api/internal/parser"
 )
 
@@ -445,4 +446,156 @@ func TestParserServiceWithAI_FansubMetadata(t *testing.T) {
 	assert.Equal(t, parser.MetadataSourceAIFansub, result.MetadataSource)
 	assert.True(t, result.ParseDurationMs >= 0)
 	assert.Equal(t, "mock", result.AIProvider) // Verify AIProvider is set
+}
+
+// mockLearningService implements LearningServiceInterface for testing
+type mockLearningService struct {
+	findMatchFunc  func(ctx context.Context, filename string) (*learning.MatchResult, error)
+	applyFunc      func(ctx context.Context, id string) error
+	applyCalled    bool
+	appliedPattern string
+}
+
+func (m *mockLearningService) LearnFromCorrection(ctx context.Context, req LearnFromCorrectionRequest) (*learning.FilenameMapping, error) {
+	return nil, nil
+}
+
+func (m *mockLearningService) FindMatchingPattern(ctx context.Context, filename string) (*learning.MatchResult, error) {
+	if m.findMatchFunc != nil {
+		return m.findMatchFunc(ctx, filename)
+	}
+	return nil, nil
+}
+
+func (m *mockLearningService) GetPatternStats(ctx context.Context) (*PatternStats, error) {
+	return &PatternStats{}, nil
+}
+
+func (m *mockLearningService) ListPatterns(ctx context.Context) ([]*learning.FilenameMapping, error) {
+	return nil, nil
+}
+
+func (m *mockLearningService) DeletePattern(ctx context.Context, id string) error {
+	return nil
+}
+
+func (m *mockLearningService) ApplyPattern(ctx context.Context, id string) error {
+	m.applyCalled = true
+	m.appliedPattern = id
+	if m.applyFunc != nil {
+		return m.applyFunc(ctx, id)
+	}
+	return nil
+}
+
+func TestParserServiceWithLearning_UsesLearnedPattern(t *testing.T) {
+	learningService := &mockLearningService{
+		findMatchFunc: func(ctx context.Context, filename string) (*learning.MatchResult, error) {
+			return &learning.MatchResult{
+				Pattern: &learning.FilenameMapping{
+					ID:           "pattern-123",
+					Pattern:      "[Leopard-Raws] Kimetsu no Yaiba",
+					PatternType:  "fansub",
+					FansubGroup:  "Leopard-Raws",
+					TitlePattern: "Kimetsu no Yaiba",
+					MetadataType: "series",
+					MetadataID:   "series-456",
+					TmdbID:       85937,
+				},
+				Confidence: 0.95,
+				MatchType:  "pattern",
+			}, nil
+		},
+	}
+
+	service := NewParserServiceWithLearning(nil, learningService)
+	result := service.ParseFilename("[Leopard-Raws] Kimetsu no Yaiba - 27 [1080p].mkv")
+
+	require.NotNil(t, result)
+	assert.Equal(t, parser.ParseStatusSuccess, result.Status)
+	assert.Equal(t, parser.MetadataSourceLearned, result.MetadataSource)
+	assert.Equal(t, "Kimetsu no Yaiba", result.Title)
+	assert.Equal(t, "Leopard-Raws", result.ReleaseGroup)
+	assert.Equal(t, "pattern-123", result.LearnedPatternID)
+	assert.Equal(t, 85937, result.LearnedTmdbID)
+	assert.Equal(t, "series-456", result.LearnedMetadataID)
+	assert.Equal(t, parser.MediaTypeTVShow, result.MediaType)
+	assert.True(t, learningService.applyCalled, "ApplyPattern should be called to increment use count")
+	assert.Equal(t, "pattern-123", learningService.appliedPattern)
+}
+
+func TestParserServiceWithLearning_FallsBackToRegex_WhenNoLearnedPattern(t *testing.T) {
+	learningService := &mockLearningService{
+		findMatchFunc: func(ctx context.Context, filename string) (*learning.MatchResult, error) {
+			return nil, nil // No match
+		},
+	}
+
+	service := NewParserServiceWithLearning(nil, learningService)
+	result := service.ParseFilename("The.Matrix.1999.1080p.BluRay.mkv")
+
+	require.NotNil(t, result)
+	assert.Equal(t, parser.ParseStatusSuccess, result.Status)
+	assert.NotEqual(t, parser.MetadataSourceLearned, result.MetadataSource)
+	assert.Equal(t, "The Matrix", result.Title)
+}
+
+func TestParserServiceWithLearning_FallsBackToAI_WhenNoLearnedPattern(t *testing.T) {
+	learningService := &mockLearningService{
+		findMatchFunc: func(ctx context.Context, filename string) (*learning.MatchResult, error) {
+			return nil, nil // No match
+		},
+	}
+
+	aiService := &mockAIService{
+		isConfigured: true,
+		parseFunc: func(ctx context.Context, filename string) (*ai.ParseResponse, error) {
+			return &ai.ParseResponse{
+				Title:       "AI Parsed Title",
+				MediaType:   "tv",
+				FansubGroup: "TestGroup",
+			}, nil
+		},
+	}
+
+	service := NewParserServiceWithLearning(aiService, learningService)
+	result := service.ParseFilename("[TestGroup] Unknown Anime - 01.mkv")
+
+	require.NotNil(t, result)
+	// AI should be called when no learned pattern matches (either generic or fansub)
+	assert.True(t, aiService.parseCalled || aiService.fansubCalled, "AI should be called when no learned pattern matches")
+}
+
+func TestParserServiceWithLearning_IgnoresLowConfidenceMatch(t *testing.T) {
+	learningService := &mockLearningService{
+		findMatchFunc: func(ctx context.Context, filename string) (*learning.MatchResult, error) {
+			return &learning.MatchResult{
+				Pattern: &learning.FilenameMapping{
+					ID:           "pattern-123",
+					TitlePattern: "Some Title",
+				},
+				Confidence: 0.5, // Below 0.8 threshold
+				MatchType:  "fuzzy",
+			}, nil
+		},
+	}
+
+	aiService := &mockAIService{
+		isConfigured: true,
+		parseFansubFunc: func(ctx context.Context, filename string) (*ai.ParseResponse, error) {
+			return &ai.ParseResponse{
+				Title:       "AI Parsed Title",
+				MediaType:   "tv",
+				FansubGroup: "TestGroup",
+			}, nil
+		},
+	}
+
+	service := NewParserServiceWithLearning(aiService, learningService)
+	result := service.ParseFilename("[TestGroup] Unknown Anime - 01.mkv")
+
+	require.NotNil(t, result)
+	// Should NOT use learned pattern due to low confidence
+	assert.NotEqual(t, parser.MetadataSourceLearned, result.MetadataSource)
+	assert.False(t, learningService.applyCalled, "ApplyPattern should not be called for low confidence match")
 }
