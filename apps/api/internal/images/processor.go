@@ -224,12 +224,12 @@ func (p *ImageProcessor) saveAsPNG(img image.Image, path string) (int64, error) 
 
 // GetPosterURL returns the URL path for a poster
 func (p *ImageProcessor) GetPosterURL(mediaID string) string {
-	return fmt.Sprintf("/posters/%s.webp", mediaID)
+	return fmt.Sprintf("/posters/%s.jpg", mediaID)
 }
 
 // GetThumbnailURL returns the URL path for a thumbnail
 func (p *ImageProcessor) GetThumbnailURL(mediaID string) string {
-	return fmt.Sprintf("/posters/%s-thumb.webp", mediaID)
+	return fmt.Sprintf("/posters/%s-thumb.jpg", mediaID)
 }
 
 // GetPosterPath returns the full file path for a poster

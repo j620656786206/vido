@@ -6,6 +6,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"time"
@@ -109,6 +110,29 @@ func (s *MetadataEditService) updateMovieMetadata(ctx context.Context, req *Upda
 		movie.Genres = req.Genres
 	}
 
+	// Update director and cast (AC1: Edit Form with All Fields)
+	if req.Director != "" || len(req.Cast) > 0 {
+		credits := &models.Credits{}
+		// Add director as crew member
+		if req.Director != "" {
+			credits.Crew = []models.CrewMember{
+				{Name: req.Director, Job: "Director", Department: "Directing"},
+			}
+		}
+		// Add cast members
+		if len(req.Cast) > 0 {
+			for i, name := range req.Cast {
+				credits.Cast = append(credits.Cast, models.CastMember{
+					Name:  name,
+					Order: i,
+				})
+			}
+		}
+		if err := movie.SetCredits(credits); err != nil {
+			s.logger.Warn("Failed to set credits", "error", err)
+		}
+	}
+
 	// Update overview
 	if req.Overview != "" {
 		movie.Overview = sql.NullString{String: req.Overview, Valid: true}
@@ -173,6 +197,29 @@ func (s *MetadataEditService) updateSeriesMetadata(ctx context.Context, req *Upd
 	// Update genres
 	if len(req.Genres) > 0 {
 		series.Genres = req.Genres
+	}
+
+	// Update director and cast (AC1: Edit Form with All Fields)
+	if req.Director != "" || len(req.Cast) > 0 {
+		credits := &models.Credits{}
+		// Add director as crew member
+		if req.Director != "" {
+			credits.Crew = []models.CrewMember{
+				{Name: req.Director, Job: "Director", Department: "Directing"},
+			}
+		}
+		// Add cast members
+		if len(req.Cast) > 0 {
+			for i, name := range req.Cast {
+				credits.Cast = append(credits.Cast, models.CastMember{
+					Name:  name,
+					Order: i,
+				})
+			}
+		}
+		if err := series.SetCredits(credits); err != nil {
+			s.logger.Warn("Failed to set credits", "error", err)
+		}
 	}
 
 	// Update overview
@@ -304,16 +351,15 @@ func (s *MetadataEditService) FetchPosterFromURL(ctx context.Context, mediaID, m
 		return nil, ErrPosterInvalidFormat
 	}
 
-	// Check content length
-	if resp.ContentLength > 5*1024*1024 {
-		return nil, ErrPosterTooLarge
-	}
-
-	// Read the body
-	data := make([]byte, resp.ContentLength)
-	_, err = resp.Body.Read(data)
+	// Read the body using io.ReadAll for proper handling of chunked encoding
+	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read image data: %w", err)
+	}
+
+	// Check content length after reading (handles chunked encoding)
+	if int64(len(data)) > 5*1024*1024 {
+		return nil, ErrPosterTooLarge
 	}
 
 	// Process as upload

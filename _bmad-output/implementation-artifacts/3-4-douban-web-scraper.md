@@ -1,6 +1,6 @@
 # Story 3.4: Douban Web Scraper
 
-Status: review
+Status: done
 
 ## Story
 
@@ -431,3 +431,4 @@ N/A
 
 - 2026-01-24: Code review fixes - Cache integration into DoubanProvider, robots.txt compliance, additional test fixtures
 - 2026-01-23: Story 3.4 implementation complete - Douban web scraper with rate limiting, S2T conversion, and 7-day caching
+- 2026-02-04: Status updated to done - all issues from code review resolved (LOW issues noted: robots.txt parsing could be more robust)

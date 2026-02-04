@@ -408,3 +408,89 @@ func TestBytesReader_Read(t *testing.T) {
 	assert.Equal(t, 0, n)
 	assert.Error(t, err) // io.EOF
 }
+
+func TestMetadataEditService_UpdateMetadata_WithDirectorAndCast(t *testing.T) {
+	movieRepo := newMockMovieRepo()
+	movieRepo.movies["movie-1"] = &models.Movie{
+		ID:          "movie-1",
+		Title:       "Test Movie",
+		ReleaseDate: "2020-01-01",
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+	}
+	seriesRepo := newMockSeriesRepo()
+
+	service := NewMetadataEditService(movieRepo, seriesRepo, nil)
+
+	req := &UpdateMetadataRequest{
+		ID:        "movie-1",
+		MediaType: "movie",
+		Title:     "Updated Movie",
+		Year:      2021,
+		Director:  "Christopher Nolan",
+		Cast:      []string{"Leonardo DiCaprio", "Joseph Gordon-Levitt", "Ellen Page"},
+	}
+
+	result, err := service.UpdateMetadata(context.Background(), req)
+
+	require.NoError(t, err)
+	assert.NotNil(t, result)
+
+	// Verify director and cast were saved
+	updatedMovie := movieRepo.movies["movie-1"]
+	credits, err := updatedMovie.GetCredits()
+	require.NoError(t, err)
+
+	// Verify director
+	require.Len(t, credits.Crew, 1)
+	assert.Equal(t, "Christopher Nolan", credits.Crew[0].Name)
+	assert.Equal(t, "Director", credits.Crew[0].Job)
+
+	// Verify cast
+	require.Len(t, credits.Cast, 3)
+	assert.Equal(t, "Leonardo DiCaprio", credits.Cast[0].Name)
+	assert.Equal(t, "Joseph Gordon-Levitt", credits.Cast[1].Name)
+	assert.Equal(t, "Ellen Page", credits.Cast[2].Name)
+}
+
+func TestMetadataEditService_UpdateSeriesMetadata_WithDirectorAndCast(t *testing.T) {
+	movieRepo := newMockMovieRepo()
+	seriesRepo := newMockSeriesRepo()
+	seriesRepo.series["series-1"] = &models.Series{
+		ID:           "series-1",
+		Title:        "Test Series",
+		FirstAirDate: "2020-01-01",
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
+	}
+
+	service := NewMetadataEditService(movieRepo, seriesRepo, nil)
+
+	req := &UpdateMetadataRequest{
+		ID:        "series-1",
+		MediaType: "series",
+		Title:     "Updated Series",
+		Year:      2021,
+		Director:  "Vince Gilligan",
+		Cast:      []string{"Bryan Cranston", "Aaron Paul"},
+	}
+
+	result, err := service.UpdateMetadata(context.Background(), req)
+
+	require.NoError(t, err)
+	assert.NotNil(t, result)
+
+	// Verify director and cast were saved
+	updatedSeries := seriesRepo.series["series-1"]
+	credits, err := updatedSeries.GetCredits()
+	require.NoError(t, err)
+
+	// Verify director
+	require.Len(t, credits.Crew, 1)
+	assert.Equal(t, "Vince Gilligan", credits.Crew[0].Name)
+
+	// Verify cast
+	require.Len(t, credits.Cast, 2)
+	assert.Equal(t, "Bryan Cranston", credits.Cast[0].Name)
+	assert.Equal(t, "Aaron Paul", credits.Cast[1].Name)
+}

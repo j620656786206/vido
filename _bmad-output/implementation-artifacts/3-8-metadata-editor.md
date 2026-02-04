@@ -1,6 +1,6 @@
 # Story 3.8: Metadata Editor
 
-Status: review
+Status: done
 
 ## Story
 
@@ -509,3 +509,5 @@ Claude Opus 4.5 (claude-opus-4-5-20251101)
 |------|--------|--------|
 | 2026-01-25 | Story implementation complete - all 8 tasks done, 42 frontend + all backend tests pass | Claude Opus 4.5 |
 | 2026-01-25 | Status updated to review | Claude Opus 4.5 |
+| 2026-02-04 | Code review fixes: Director/Cast fields now saved via Credits JSON, FetchPosterFromURL uses io.ReadAll, URL functions return .jpg extension, images package coverage increased to 81.9% | Claude Opus 4.5 |
+| 2026-02-04 | Status updated to done - all HIGH/MEDIUM issues resolved | Claude Opus 4.5 |

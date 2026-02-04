@@ -225,7 +225,7 @@ func TestImageProcessor_GetPosterURL(t *testing.T) {
 
 	url := processor.GetPosterURL("test-movie-id")
 
-	assert.Equal(t, "/posters/test-movie-id.webp", url)
+	assert.Equal(t, "/posters/test-movie-id.jpg", url)
 }
 
 func TestImageProcessor_GetThumbnailURL(t *testing.T) {
@@ -235,7 +235,118 @@ func TestImageProcessor_GetThumbnailURL(t *testing.T) {
 
 	url := processor.GetThumbnailURL("test-movie-id")
 
-	assert.Equal(t, "/posters/test-movie-id-thumb.webp", url)
+	assert.Equal(t, "/posters/test-movie-id-thumb.jpg", url)
+}
+
+func TestImageProcessor_GetPosterPath(t *testing.T) {
+	tmpDir := t.TempDir()
+	processor, err := NewImageProcessor(tmpDir)
+	require.NoError(t, err)
+
+	path := processor.GetPosterPath("test-movie-id")
+
+	assert.Equal(t, filepath.Join(tmpDir, "test-movie-id.jpg"), path)
+}
+
+func TestImageProcessor_GetThumbnailPath(t *testing.T) {
+	tmpDir := t.TempDir()
+	processor, err := NewImageProcessor(tmpDir)
+	require.NoError(t, err)
+
+	path := processor.GetThumbnailPath("test-movie-id")
+
+	assert.Equal(t, filepath.Join(tmpDir, "test-movie-id-thumb.jpg"), path)
+}
+
+func TestImageProcessor_DeletePoster_Success(t *testing.T) {
+	tmpDir := t.TempDir()
+	processor, err := NewImageProcessor(tmpDir)
+	require.NoError(t, err)
+
+	// Create test files
+	jpegData := createTestJPEG(t, 400, 600)
+	result, err := processor.ProcessPoster(bytes.NewReader(jpegData), "test-delete")
+	require.NoError(t, err)
+	assert.FileExists(t, result.PosterPath)
+	assert.FileExists(t, result.ThumbnailPath)
+
+	// Delete the poster
+	err = processor.DeletePoster("test-delete")
+	require.NoError(t, err)
+
+	// Verify files are deleted
+	assert.NoFileExists(t, result.PosterPath)
+	assert.NoFileExists(t, result.ThumbnailPath)
+}
+
+func TestImageProcessor_DeletePoster_NotFound(t *testing.T) {
+	tmpDir := t.TempDir()
+	processor, err := NewImageProcessor(tmpDir)
+	require.NoError(t, err)
+
+	// Deleting non-existent files should not error
+	err = processor.DeletePoster("non-existent-id")
+	assert.NoError(t, err)
+}
+
+func TestImageProcessor_SaveAsPNG(t *testing.T) {
+	tmpDir := t.TempDir()
+	processor, err := NewImageProcessor(tmpDir)
+	require.NoError(t, err)
+
+	// Create a test image
+	img := image.NewRGBA(image.Rect(0, 0, 100, 100))
+	for y := 0; y < 100; y++ {
+		for x := 0; x < 100; x++ {
+			img.Set(x, y, color.RGBA{R: 128, G: 128, B: 128, A: 255})
+		}
+	}
+
+	path := filepath.Join(tmpDir, "test.png")
+	size, err := processor.saveAsPNG(img, path)
+
+	require.NoError(t, err)
+	assert.Greater(t, size, int64(0))
+	assert.FileExists(t, path)
+}
+
+func TestImageProcessor_ResizeAndCrop_Tall(t *testing.T) {
+	tmpDir := t.TempDir()
+	processor, err := NewImageProcessor(tmpDir)
+	require.NoError(t, err)
+
+	// Create a very tall image (should crop vertically)
+	tallImage := createTestJPEG(t, 200, 800)
+
+	result, err := processor.ProcessPoster(bytes.NewReader(tallImage), "test-tall")
+
+	require.NoError(t, err)
+	assert.NotNil(t, result)
+
+	// Verify dimensions are correct after crop
+	posterFile, err := os.Open(result.PosterPath)
+	require.NoError(t, err)
+	defer posterFile.Close()
+
+	posterImg, _, err := image.Decode(posterFile)
+	require.NoError(t, err)
+	bounds := posterImg.Bounds()
+	assert.Equal(t, PosterWidth, bounds.Dx())
+	assert.Equal(t, PosterHeight, bounds.Dy())
+}
+
+func TestImageProcessor_EmptyRead(t *testing.T) {
+	tmpDir := t.TempDir()
+	processor, err := NewImageProcessor(tmpDir)
+	require.NoError(t, err)
+
+	// Empty data
+	emptyData := []byte{}
+
+	result, err := processor.ProcessPoster(bytes.NewReader(emptyData), "test-empty")
+
+	assert.Error(t, err)
+	assert.Nil(t, result)
 }
 
 func TestImageProcessor_MaintainsAspectRatio(t *testing.T) {
