@@ -322,9 +322,7 @@ test.describe('Learning API - List & Stats @api @learning @story-3-9', () => {
     expect(typeof body.data.totalCount).toBe('number');
   });
 
-  test('[P1] GET /learning/stats - should return pattern statistics (AC3)', async ({
-    request,
-  }) => {
+  test('[P1] GET /learning/stats - should return pattern statistics (AC3)', async ({ request }) => {
     // GIVEN: At least one pattern exists
     const patternRequest = createLearnPatternRequest({
       filename: '[Stats-Test] Stats Anime - 01.mkv',
@@ -380,9 +378,7 @@ test.describe('Learning API - Delete Pattern @api @learning @story-3-9', () => {
     const listRes = await request.get(`${API_BASE_URL}/learning/patterns`);
     const listBody = await listRes.json();
     const patterns = listBody.data.patterns ?? [];
-    const found = patterns.find(
-      (p: { id: string }) => p.id === patternId
-    );
+    const found = patterns.find((p: { id: string }) => p.id === patternId);
     expect(found).toBeUndefined();
   });
 
@@ -438,9 +434,7 @@ test.describe('Learning API - CRUD Lifecycle @api @learning @story-3-9', () => {
     // THEN: Created pattern should appear in the list
     expect(listRes.status()).toBe(200);
     const listBody = await listRes.json();
-    const foundPattern = listBody.data.patterns.find(
-      (p: { id: string }) => p.id === patternId
-    );
+    const foundPattern = listBody.data.patterns.find((p: { id: string }) => p.id === patternId);
     expect(foundPattern).toBeDefined();
     expect(foundPattern.metadata_id).toBe('series-lifecycle-001');
 
@@ -467,9 +461,7 @@ test.describe('Learning API - CRUD Lifecycle @api @learning @story-3-9', () => {
     // THEN: Pattern should no longer be in the list
     const verifyBody = await verifyRes.json();
     const remainingPatterns = verifyBody.data.patterns ?? [];
-    const deletedPattern = remainingPatterns.find(
-      (p: { id: string }) => p.id === patternId
-    );
+    const deletedPattern = remainingPatterns.find((p: { id: string }) => p.id === patternId);
     expect(deletedPattern).toBeUndefined();
   });
 });

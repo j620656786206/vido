@@ -130,9 +130,7 @@ describe('LearnPatternPrompt', () => {
   it('shows loading state when confirming', async () => {
     const user = userEvent.setup();
     // Make the promise never resolve to keep loading state
-    vi.mocked(learningService.learnPattern).mockImplementation(
-      () => new Promise(() => {})
-    );
+    vi.mocked(learningService.learnPattern).mockImplementation(() => new Promise(() => {}));
 
     render(<LearnPatternPrompt {...defaultProps} />);
 

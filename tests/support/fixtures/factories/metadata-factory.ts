@@ -230,8 +230,7 @@ export const presetUpdateRequests = {
     genres: ['動作', '科幻', '冒險'],
     director: 'Christopher Nolan',
     cast: ['Leonardo DiCaprio', 'Joseph Gordon-Levitt', 'Elliot Page'],
-    overview:
-      '多姆科布是一名經驗豐富的盜夢者，他能潛入別人的夢境中，竊取他們最珍貴的秘密。',
+    overview: '多姆科布是一名經驗豐富的盜夢者，他能潛入別人的夢境中，竊取他們最珍貴的秘密。',
   }),
 
   seriesUpdate: createUpdateMetadataRequest({

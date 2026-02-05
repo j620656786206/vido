@@ -17,11 +17,7 @@ export function LearnedPatternsSettings({ onError }: LearnedPatternsSettingsProp
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const {
-    data: response,
-    isLoading,
-    error: fetchError,
-  } = useLearningPatterns();
+  const { data: response, isLoading, error: fetchError } = useLearningPatterns();
 
   const deletePatternMutation = useDeletePattern();
 
@@ -50,10 +46,7 @@ export function LearnedPatternsSettings({ onError }: LearnedPatternsSettingsProp
 
   if (isLoading) {
     return (
-      <div
-        className="flex items-center justify-center py-8"
-        data-testid="patterns-loading"
-      >
+      <div className="flex items-center justify-center py-8" data-testid="patterns-loading">
         <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
       </div>
     );
@@ -67,10 +60,7 @@ export function LearnedPatternsSettings({ onError }: LearnedPatternsSettingsProp
           <Lightbulb className="h-5 w-5 text-amber-400" />
           <h3 className="text-lg font-medium text-white">自訂規則</h3>
         </div>
-        <span
-          className="text-sm text-slate-400"
-          data-testid="patterns-count"
-        >
+        <span className="text-sm text-slate-400" data-testid="patterns-count">
           已記住 {stats?.totalPatterns ?? patterns.length} 個自訂規則
         </span>
       </div>
@@ -84,8 +74,8 @@ export function LearnedPatternsSettings({ onError }: LearnedPatternsSettingsProp
           <span>共套用 {stats.totalApplied} 次</span>
           {stats.mostUsedPattern && (
             <span className="ml-2">
-              · 最常使用：<span className="text-amber-400">{stats.mostUsedPattern}</span>
-              {' '}({stats.mostUsedCount} 次)
+              · 最常使用：<span className="text-amber-400">{stats.mostUsedPattern}</span> (
+              {stats.mostUsedCount} 次)
             </span>
           )}
         </div>
@@ -121,9 +111,7 @@ export function LearnedPatternsSettings({ onError }: LearnedPatternsSettingsProp
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="font-mono text-sm text-white truncate">
-                      {pattern.pattern}
-                    </span>
+                    <span className="font-mono text-sm text-white truncate">{pattern.pattern}</span>
                     <span
                       className={cn(
                         'px-1.5 py-0.5 rounded text-xs',
@@ -138,7 +126,8 @@ export function LearnedPatternsSettings({ onError }: LearnedPatternsSettingsProp
                     </span>
                   </div>
                   <div className="mt-1 text-xs text-slate-500">
-                    {pattern.metadataType === 'series' ? '影集' : '電影'} · 套用 {pattern.useCount} 次
+                    {pattern.metadataType === 'series' ? '影集' : '電影'} · 套用 {pattern.useCount}{' '}
+                    次
                   </div>
                 </div>
                 <ChevronRight

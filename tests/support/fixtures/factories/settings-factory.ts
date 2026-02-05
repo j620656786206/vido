@@ -66,7 +66,10 @@ export function createSettingData(overrides: PartialSettingData = {}): SettingDa
  * @example
  * const settings = createSettingsList(5);
  */
-export function createSettingsList(count: number, overrides: PartialSettingData = {}): SettingData[] {
+export function createSettingsList(
+  count: number,
+  overrides: PartialSettingData = {}
+): SettingData[] {
   return Array.from({ length: count }, () => createSettingData(overrides));
 }
 

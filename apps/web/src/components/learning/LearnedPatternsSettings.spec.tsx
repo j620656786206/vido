@@ -70,9 +70,7 @@ describe('LearnedPatternsSettings', () => {
   });
 
   it('shows loading state initially', () => {
-    vi.mocked(learningService.listPatterns).mockImplementation(
-      () => new Promise(() => {})
-    );
+    vi.mocked(learningService.listPatterns).mockImplementation(() => new Promise(() => {}));
 
     render(<LearnedPatternsSettings />, { wrapper: createWrapper() });
 
@@ -89,9 +87,7 @@ describe('LearnedPatternsSettings', () => {
     render(<LearnedPatternsSettings />, { wrapper: createWrapper() });
 
     await waitFor(() => {
-      expect(screen.getByTestId('patterns-count')).toHaveTextContent(
-        '已記住 2 個自訂規則'
-      );
+      expect(screen.getByTestId('patterns-count')).toHaveTextContent('已記住 2 個自訂規則');
     });
   });
 
