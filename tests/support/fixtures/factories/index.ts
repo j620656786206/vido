@@ -73,3 +73,16 @@ export {
   type PartialManualSearchResultItem,
   type PartialUpdateMetadataRequest,
 } from './metadata-factory';
+
+// Learning Factory
+export {
+  createLearnPatternRequest,
+  createMoviePatternRequest,
+  resetLearningFactory,
+  presetPatternRequests,
+  type CreatePatternRequestData,
+  type LearnedPatternData,
+  type PatternStatsData,
+  type PatternListResponseData,
+  type PartialCreatePatternRequest,
+} from './learning-factory';

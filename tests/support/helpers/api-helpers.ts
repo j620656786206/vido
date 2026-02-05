@@ -182,6 +182,46 @@ export interface UploadPosterResponse {
 }
 
 // =============================================================================
+// Learning Types (Story 3-9)
+// =============================================================================
+
+export interface CreatePatternRequest {
+  filename: string;
+  metadataId: string;
+  metadataType: 'movie' | 'series';
+  tmdbId?: number;
+}
+
+export interface LearnedPattern {
+  id: string;
+  pattern: string;
+  pattern_type: string;
+  pattern_regex?: string;
+  fansub_group?: string;
+  title_pattern?: string;
+  metadata_type: string;
+  metadata_id: string;
+  tmdb_id?: number;
+  confidence: number;
+  use_count: number;
+  created_at: string;
+  last_used_at?: string;
+}
+
+export interface PatternStats {
+  totalPatterns: number;
+  totalApplied: number;
+  mostUsedPattern?: string;
+  mostUsedCount?: number;
+}
+
+export interface PatternListResponse {
+  patterns: LearnedPattern[];
+  totalCount: number;
+  stats?: PatternStats;
+}
+
+// =============================================================================
 // API Helper Functions
 // =============================================================================
 
@@ -239,6 +279,12 @@ export interface ApiHelpers {
     filename: string,
     mediaType?: string
   ) => Promise<ApiResponse<UploadPosterResponse>>;
+
+  // Learning (Story 3-9)
+  createPattern: (request: CreatePatternRequest) => Promise<ApiResponse<LearnedPattern>>;
+  listPatterns: () => Promise<ApiResponse<PatternListResponse>>;
+  deletePattern: (id: string) => Promise<APIResponse>;
+  getPatternStats: () => Promise<ApiResponse<PatternStats>>;
 
   // Health
   healthCheck: () => Promise<HealthResponse>;
@@ -374,6 +420,16 @@ export function apiHelpers(request: APIRequestContext): ApiHelpers {
       );
       return response.json();
     },
+
+    // Learning (Story 3-9)
+    createPattern: async (patternRequest) =>
+      post<LearnedPattern>('/learning/patterns', patternRequest),
+
+    listPatterns: async () => get<PatternListResponse>('/learning/patterns'),
+
+    deletePattern: async (id) => del(`/learning/patterns/${id}`),
+
+    getPatternStats: async () => get<PatternStats>('/learning/stats'),
 
     // Health
     healthCheck: async () => {
