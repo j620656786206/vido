@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/vido/api/internal/database"
 	"github.com/vido/api/internal/database/migrations"
 	"github.com/vido/api/internal/handlers"
+	"github.com/vido/api/internal/images"
 	"github.com/vido/api/internal/repository"
 	"github.com/vido/api/internal/secrets"
 	"github.com/vido/api/internal/services"
@@ -140,7 +142,14 @@ func main() {
 	slog.Info("Learning service initialized")
 
 	// Initialize parser service with AI and learning integration (Story 2.5, 3.1, 3.9)
-	parserService := services.NewParserServiceWithLearning(aiService, learningService)
+	// Note: must use a typed nil interface to avoid Go's nil interface gotcha.
+	// A nil *AIService assigned to AIServiceInterface creates a non-nil interface
+	// (has type but nil value), causing panics on method calls.
+	var parserAI services.AIServiceInterface
+	if aiService != nil {
+		parserAI = aiService
+	}
+	parserService := services.NewParserServiceWithLearning(parserAI, learningService)
 
 	// Initialize metadata service with multi-source fallback chain (Story 3.3)
 	metadataService := services.NewMetadataService(services.MetadataServiceConfig{
@@ -152,6 +161,18 @@ func main() {
 		CircuitBreakerFailureThreshold: cfg.CircuitBreakerFailureThreshold,
 		CircuitBreakerTimeoutSeconds:   cfg.CircuitBreakerTimeoutSeconds,
 	}, tmdbService)
+
+	// Initialize metadata editor service for manual editing (Story 3.8)
+	posterDir := filepath.Join(cfg.DataDir, "posters")
+	imageProcessor, err := images.NewImageProcessor(posterDir)
+	if err != nil {
+		slog.Error("Failed to initialize image processor", "error", err)
+		os.Exit(1)
+	}
+	editService := services.NewMetadataEditService(repos.Movies, repos.Series, imageProcessor)
+	metadataService.SetMetadataEditors(editService, editService)
+	metadataService.SetPosterUploader(editService)
+	slog.Info("Metadata editor initialized", "poster_dir", posterDir)
 
 	// Initialize keyword service and wire to metadata service (Story 3.6)
 	if aiService != nil {

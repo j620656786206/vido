@@ -25,23 +25,27 @@ import { faker } from '@faker-js/faker';
 import * as path from 'path';
 
 // =============================================================================
-// Test Data
-// =============================================================================
-
-// Use well-known TMDB movie IDs to avoid dependency on search functionality
-// Inception (2010) - TMDB ID: 27205
-const TEST_MOVIE_ID = '27205';
-const TEST_MOVIE_TITLE_REGEX = /Inception|全面啟動/i;
-
-// =============================================================================
 // Helper Functions
 // =============================================================================
 
-async function navigateToMovieDetail(page: import('@playwright/test').Page) {
-  // Navigate directly to a known movie detail page
-  // This avoids dependency on TMDB search API which requires API key
-  await page.goto(`/media/movie/${TEST_MOVIE_ID}`);
+/**
+ * Create a test movie via API and navigate to its detail page.
+ * Returns the movie ID for cleanup.
+ */
+async function createAndNavigateToMovie(
+  page: import('@playwright/test').Page,
+  api: import('../support/helpers/api-helpers').ApiHelpers
+): Promise<string> {
+  const testMovie = await api.createMovie({
+    title: `E2E 測試電影 ${Date.now()}`,
+    releaseDate: '2010-07-16',
+    genres: ['動作', '科幻'],
+    overview: '這是一部用於 E2E 測試的電影。',
+  });
+  const movieId = testMovie.data!.id;
+  await page.goto(`/media/movie/${movieId}`);
   await page.waitForLoadState('networkidle');
+  return movieId;
 }
 
 // =============================================================================
@@ -49,9 +53,18 @@ async function navigateToMovieDetail(page: import('@playwright/test').Page) {
 // =============================================================================
 
 test.describe('Metadata Editor Dialog @e2e @metadata-editor', () => {
-  test('[P0] should open edit dialog from media detail page (AC1)', async ({ page }) => {
+  let testMovieId: string;
+
+  test.afterEach(async ({ api }) => {
+    if (testMovieId) {
+      await api.deleteMovie(testMovieId);
+      testMovieId = '';
+    }
+  });
+
+  test('[P0] should open edit dialog from media detail page (AC1)', async ({ page, api }) => {
     // GIVEN: User is on a movie detail page
-    await navigateToMovieDetail(page);
+    testMovieId = await createAndNavigateToMovie(page, api);
 
     // WHEN: User clicks "Edit Metadata" button
     const editButton = page.getByRole('button', { name: /編輯|Edit/i });
@@ -63,9 +76,9 @@ test.describe('Metadata Editor Dialog @e2e @metadata-editor', () => {
     await expect(page.getByText(/編輯媒體資訊|Edit Metadata/i)).toBeVisible();
   });
 
-  test('[P0] should display all editable fields in dialog (AC1)', async ({ page }) => {
+  test('[P0] should display all editable fields in dialog (AC1)', async ({ page, api }) => {
     // GIVEN: User is on a movie detail page
-    await navigateToMovieDetail(page);
+    testMovieId = await createAndNavigateToMovie(page, api);
 
     // WHEN: User opens edit dialog
     const editButton = page.getByRole('button', { name: /編輯|Edit/i });
@@ -95,9 +108,9 @@ test.describe('Metadata Editor Dialog @e2e @metadata-editor', () => {
     await expect(page.getByText(/海報|Poster/i)).toBeVisible();
   });
 
-  test('[P1] should pre-populate form with current metadata', async ({ page }) => {
+  test('[P1] should pre-populate form with current metadata', async ({ page, api }) => {
     // GIVEN: User is on a movie detail page
-    await navigateToMovieDetail(page);
+    testMovieId = await createAndNavigateToMovie(page, api);
 
     // Get the current title from the page
     const titleElement = page.locator('h1').first();
@@ -113,9 +126,9 @@ test.describe('Metadata Editor Dialog @e2e @metadata-editor', () => {
     await expect(titleInput).toHaveValue(new RegExp(currentTitle?.slice(0, 10) || '.+'));
   });
 
-  test('[P1] should close dialog on cancel button click', async ({ page }) => {
+  test('[P1] should close dialog on cancel button click', async ({ page, api }) => {
     // GIVEN: Edit dialog is open
-    await navigateToMovieDetail(page);
+    testMovieId = await createAndNavigateToMovie(page, api);
     const editButton = page.getByRole('button', { name: /編輯|Edit/i });
     await editButton.click();
     await expect(page.getByTestId('metadata-editor-dialog')).toBeVisible();
@@ -128,9 +141,9 @@ test.describe('Metadata Editor Dialog @e2e @metadata-editor', () => {
     await expect(page.getByTestId('metadata-editor-dialog')).not.toBeVisible();
   });
 
-  test('[P1] should close dialog on escape key', async ({ page }) => {
+  test('[P1] should close dialog on escape key', async ({ page, api }) => {
     // GIVEN: Edit dialog is open
-    await navigateToMovieDetail(page);
+    testMovieId = await createAndNavigateToMovie(page, api);
     const editButton = page.getByRole('button', { name: /編輯|Edit/i });
     await editButton.click();
     await expect(page.getByTestId('metadata-editor-dialog')).toBeVisible();
@@ -148,9 +161,18 @@ test.describe('Metadata Editor Dialog @e2e @metadata-editor', () => {
 // =============================================================================
 
 test.describe('Metadata Editor Validation @e2e @metadata-editor', () => {
-  test('[P1] should show validation error for empty title (AC4)', async ({ page }) => {
+  let testMovieId: string;
+
+  test.afterEach(async ({ api }) => {
+    if (testMovieId) {
+      await api.deleteMovie(testMovieId);
+      testMovieId = '';
+    }
+  });
+
+  test('[P1] should show validation error for empty title (AC4)', async ({ page, api }) => {
     // GIVEN: Edit dialog is open
-    await navigateToMovieDetail(page);
+    testMovieId = await createAndNavigateToMovie(page, api);
     const editButton = page.getByRole('button', { name: /編輯|Edit/i });
     await editButton.click();
     await expect(page.getByTestId('metadata-editor-dialog')).toBeVisible();
@@ -166,9 +188,9 @@ test.describe('Metadata Editor Validation @e2e @metadata-editor', () => {
     await expect(page.getByText(/標題為必填|Title is required/i)).toBeVisible();
   });
 
-  test('[P1] should show validation error for invalid year (AC4)', async ({ page }) => {
+  test('[P1] should show validation error for invalid year (AC4)', async ({ page, api }) => {
     // GIVEN: Edit dialog is open
-    await navigateToMovieDetail(page);
+    testMovieId = await createAndNavigateToMovie(page, api);
     const editButton = page.getByRole('button', { name: /編輯|Edit/i });
     await editButton.click();
     await expect(page.getByTestId('metadata-editor-dialog')).toBeVisible();
@@ -185,9 +207,9 @@ test.describe('Metadata Editor Validation @e2e @metadata-editor', () => {
     await expect(page.getByText(/年份|Year/i)).toBeVisible();
   });
 
-  test('[P2] should clear validation errors when field is corrected', async ({ page }) => {
+  test('[P2] should clear validation errors when field is corrected', async ({ page, api }) => {
     // GIVEN: Validation error is shown
-    await navigateToMovieDetail(page);
+    testMovieId = await createAndNavigateToMovie(page, api);
     const editButton = page.getByRole('button', { name: /編輯|Edit/i });
     await editButton.click();
 
@@ -339,9 +361,18 @@ test.describe('Save Metadata @e2e @metadata-editor', () => {
 // =============================================================================
 
 test.describe('Genre Selector @e2e @metadata-editor', () => {
-  test('[P1] should display genre options', async ({ page }) => {
+  let testMovieId: string;
+
+  test.afterEach(async ({ api }) => {
+    if (testMovieId) {
+      await api.deleteMovie(testMovieId);
+      testMovieId = '';
+    }
+  });
+
+  test('[P1] should display genre options', async ({ page, api }) => {
     // GIVEN: Edit dialog is open
-    await navigateToMovieDetail(page);
+    testMovieId = await createAndNavigateToMovie(page, api);
     const editButton = page.getByRole('button', { name: /編輯|Edit/i });
     await editButton.click();
     await expect(page.getByTestId('metadata-editor-dialog')).toBeVisible();
@@ -360,9 +391,9 @@ test.describe('Genre Selector @e2e @metadata-editor', () => {
     }
   });
 
-  test('[P2] should allow selecting multiple genres', async ({ page }) => {
+  test('[P2] should allow selecting multiple genres', async ({ page, api }) => {
     // GIVEN: Edit dialog is open
-    await navigateToMovieDetail(page);
+    testMovieId = await createAndNavigateToMovie(page, api);
     const editButton = page.getByRole('button', { name: /編輯|Edit/i });
     await editButton.click();
     await expect(page.getByTestId('metadata-editor-dialog')).toBeVisible();
@@ -385,15 +416,18 @@ test.describe('Genre Selector @e2e @metadata-editor', () => {
 // =============================================================================
 
 test.describe('Cast Editor @e2e @metadata-editor', () => {
-  test('[P1] should display cast input', async ({ page }) => {
+  test('[P1] should display cast input', async ({ page, api }) => {
     // GIVEN: Edit dialog is open
-    await navigateToMovieDetail(page);
+    const movieId = await createAndNavigateToMovie(page, api);
     const editButton = page.getByRole('button', { name: /編輯|Edit/i });
     await editButton.click();
     await expect(page.getByTestId('metadata-editor-dialog')).toBeVisible();
 
     // THEN: Cast editor should be visible
     await expect(page.getByText(/演員|Cast/i)).toBeVisible();
+
+    // Cleanup
+    await api.deleteMovie(movieId);
   });
 
   test('[P2] should allow adding cast members', async ({ page, api }) => {
@@ -434,9 +468,18 @@ test.describe('Cast Editor @e2e @metadata-editor', () => {
 // =============================================================================
 
 test.describe('Poster Upload @e2e @metadata-editor', () => {
-  test('[P1] should display poster upload area (AC3)', async ({ page }) => {
+  let sharedMovieId: string;
+
+  test.afterEach(async ({ api }) => {
+    if (sharedMovieId) {
+      await api.deleteMovie(sharedMovieId);
+      sharedMovieId = '';
+    }
+  });
+
+  test('[P1] should display poster upload area (AC3)', async ({ page, api }) => {
     // GIVEN: Edit dialog is open
-    await navigateToMovieDetail(page);
+    sharedMovieId = await createAndNavigateToMovie(page, api);
     const editButton = page.getByRole('button', { name: /編輯|Edit/i });
     await editButton.click();
     await expect(page.getByTestId('metadata-editor-dialog')).toBeVisible();
@@ -455,9 +498,9 @@ test.describe('Poster Upload @e2e @metadata-editor', () => {
     expect(hasUploadOption || hasUrlOption).toBe(true);
   });
 
-  test('[P1] should show drag-drop zone for file upload (AC3)', async ({ page }) => {
+  test('[P1] should show drag-drop zone for file upload (AC3)', async ({ page, api }) => {
     // GIVEN: Edit dialog is open
-    await navigateToMovieDetail(page);
+    sharedMovieId = await createAndNavigateToMovie(page, api);
     const editButton = page.getByRole('button', { name: /編輯|Edit/i });
     await editButton.click();
     await expect(page.getByTestId('metadata-editor-dialog')).toBeVisible();
@@ -471,9 +514,9 @@ test.describe('Poster Upload @e2e @metadata-editor', () => {
     }
   });
 
-  test('[P2] should allow URL input for poster (AC3)', async ({ page }) => {
+  test('[P2] should allow URL input for poster (AC3)', async ({ page, api }) => {
     // GIVEN: Edit dialog is open
-    await navigateToMovieDetail(page);
+    sharedMovieId = await createAndNavigateToMovie(page, api);
     const editButton = page.getByRole('button', { name: /編輯|Edit/i });
     await editButton.click();
     await expect(page.getByTestId('metadata-editor-dialog')).toBeVisible();

@@ -24,17 +24,17 @@ export interface CreatePatternRequestData {
 export interface LearnedPatternData {
   id: string;
   pattern: string;
-  pattern_type: string;
-  pattern_regex?: string;
-  fansub_group?: string;
-  title_pattern?: string;
-  metadata_type: string;
-  metadata_id: string;
-  tmdb_id?: number;
+  patternType: string;
+  patternRegex?: string;
+  fansubGroup?: string;
+  titlePattern?: string;
+  metadataType: string;
+  metadataId: string;
+  tmdbId?: number;
   confidence: number;
-  use_count: number;
-  created_at: string;
-  last_used_at?: string;
+  useCount: number;
+  createdAt: string;
+  lastUsedAt?: string;
 }
 
 export interface PatternStatsData {

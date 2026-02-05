@@ -309,7 +309,9 @@ test.describe('Apply Metadata Complete Flow @e2e @manual-search @story-3-7', () 
     // THEN: Results should be visible (may take time due to API call)
     // Note: This test depends on actual API response
     const resultsGrid = page.locator('[data-testid="search-results-grid"]');
-    await expect(resultsGrid.or(page.getByText(/搜尋失敗|沒有找到|Fight Club/i))).toBeVisible({
+    await expect(
+      resultsGrid.or(page.getByText(/搜尋失敗|沒有找到|Fight Club/i).first())
+    ).toBeVisible({
       timeout: 15000,
     });
   });
@@ -377,7 +379,7 @@ test.describe('Apply Metadata Complete Flow @e2e @manual-search @story-3-7', () 
     await expect(page.getByTestId('manual-search-dialog')).toBeVisible();
 
     // WHEN: User clicks on backdrop (outside dialog)
-    await page.locator('.fixed.inset-0.z-50').click({ position: { x: 10, y: 10 } });
+    await page.mouse.click(5, 5);
 
     // THEN: Dialog should close
     await expect(page.getByTestId('manual-search-dialog')).not.toBeVisible();

@@ -62,13 +62,13 @@ test.describe('Learning API - Create Pattern @api @learning @story-3-9', () => {
     expect(body.data).toBeDefined();
     expect(body.data.id).toBeTruthy();
     expect(body.data.pattern).toBeTruthy();
-    expect(body.data.metadata_type).toBe('series');
-    expect(body.data.metadata_id).toBe(patternRequest.metadataId);
-    expect(body.data.fansub_group).toBe('SubsPlease');
-    expect(body.data.title_pattern).toBeTruthy();
-    expect(body.data.pattern_type).toBe('fansub');
+    expect(body.data.metadataType).toBe('series');
+    expect(body.data.metadataId).toBe(patternRequest.metadataId);
+    expect(body.data.fansubGroup).toBe('SubsPlease');
+    expect(body.data.titlePattern).toBeTruthy();
+    expect(body.data.patternType).toBe('fansub');
     expect(body.data.confidence).toBe(1.0);
-    expect(body.data.use_count).toBe(0);
+    expect(body.data.useCount).toBe(0);
 
     createdPatternIds.push(body.data.id);
   });
@@ -92,8 +92,8 @@ test.describe('Learning API - Create Pattern @api @learning @story-3-9', () => {
 
     const body = await response.json();
     expect(body.success).toBe(true);
-    expect(body.data.metadata_type).toBe('movie');
-    expect(body.data.title_pattern).toBeTruthy();
+    expect(body.data.metadataType).toBe('movie');
+    expect(body.data.titlePattern).toBeTruthy();
 
     createdPatternIds.push(body.data.id);
   });
@@ -117,9 +117,9 @@ test.describe('Learning API - Create Pattern @api @learning @story-3-9', () => {
     expect(response.status()).toBe(201);
 
     const body = await response.json();
-    expect(body.data.fansub_group).toBe('Leopard-Raws');
-    expect(body.data.title_pattern).toContain('Kimetsu no Yaiba');
-    expect(body.data.pattern_regex).toBeTruthy();
+    expect(body.data.fansubGroup).toBe('Leopard-Raws');
+    expect(body.data.titlePattern).toContain('Kimetsu no Yaiba');
+    expect(body.data.patternRegex).toBeTruthy();
 
     createdPatternIds.push(body.data.id);
   });
@@ -436,7 +436,7 @@ test.describe('Learning API - CRUD Lifecycle @api @learning @story-3-9', () => {
     const listBody = await listRes.json();
     const foundPattern = listBody.data.patterns.find((p: { id: string }) => p.id === patternId);
     expect(foundPattern).toBeDefined();
-    expect(foundPattern.metadata_id).toBe('series-lifecycle-001');
+    expect(foundPattern.metadataId).toBe('series-lifecycle-001');
 
     // === STATS ===
     // WHEN: Getting stats
