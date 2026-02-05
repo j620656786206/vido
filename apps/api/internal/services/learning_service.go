@@ -6,14 +6,16 @@ import (
 	"log/slog"
 
 	"github.com/vido/api/internal/learning"
+	"github.com/vido/api/internal/models"
+	"github.com/vido/api/internal/repository"
 )
 
 // LearningServiceInterface defines the interface for the learning service
 type LearningServiceInterface interface {
-	LearnFromCorrection(ctx context.Context, req LearnFromCorrectionRequest) (*learning.FilenameMapping, error)
+	LearnFromCorrection(ctx context.Context, req LearnFromCorrectionRequest) (*models.FilenameMapping, error)
 	FindMatchingPattern(ctx context.Context, filename string) (*learning.MatchResult, error)
 	GetPatternStats(ctx context.Context) (*PatternStats, error)
-	ListPatterns(ctx context.Context) ([]*learning.FilenameMapping, error)
+	ListPatterns(ctx context.Context) ([]*models.FilenameMapping, error)
 	DeletePattern(ctx context.Context, id string) error
 	ApplyPattern(ctx context.Context, id string) error
 }
@@ -36,13 +38,13 @@ type PatternStats struct {
 
 // LearningService provides business logic for filename pattern learning
 type LearningService struct {
-	repo      learning.LearningRepositoryInterface
+	repo      repository.LearningRepositoryInterface
 	extractor *learning.PatternExtractor
 	matcher   *learning.PatternMatcher
 }
 
 // NewLearningService creates a new LearningService
-func NewLearningService(repo learning.LearningRepositoryInterface) *LearningService {
+func NewLearningService(repo repository.LearningRepositoryInterface) *LearningService {
 	return &LearningService{
 		repo:      repo,
 		extractor: learning.NewPatternExtractor(),
@@ -51,7 +53,7 @@ func NewLearningService(repo learning.LearningRepositoryInterface) *LearningServ
 }
 
 // LearnFromCorrection learns a new pattern from a user's manual correction
-func (s *LearningService) LearnFromCorrection(ctx context.Context, req LearnFromCorrectionRequest) (*learning.FilenameMapping, error) {
+func (s *LearningService) LearnFromCorrection(ctx context.Context, req LearnFromCorrectionRequest) (*models.FilenameMapping, error) {
 	if req.Filename == "" {
 		return nil, fmt.Errorf("filename cannot be empty")
 	}
@@ -145,7 +147,7 @@ func (s *LearningService) GetPatternStats(ctx context.Context) (*PatternStats, e
 		TotalPatterns: len(patterns),
 	}
 
-	var mostUsed *learning.FilenameMapping
+	var mostUsed *models.FilenameMapping
 	for _, p := range patterns {
 		stats.TotalApplied += p.UseCount
 		if mostUsed == nil || p.UseCount > mostUsed.UseCount {
@@ -162,7 +164,7 @@ func (s *LearningService) GetPatternStats(ctx context.Context) (*PatternStats, e
 }
 
 // ListPatterns returns all learned patterns
-func (s *LearningService) ListPatterns(ctx context.Context) ([]*learning.FilenameMapping, error) {
+func (s *LearningService) ListPatterns(ctx context.Context) ([]*models.FilenameMapping, error) {
 	patterns, err := s.repo.ListAll(ctx)
 	if err != nil {
 		slog.Error("Failed to list patterns", "error", err)
@@ -205,7 +207,7 @@ func (s *LearningService) ApplyPattern(ctx context.Context, id string) error {
 }
 
 // GetPatternByID retrieves a pattern by its ID
-func (s *LearningService) GetPatternByID(ctx context.Context, id string) (*learning.FilenameMapping, error) {
+func (s *LearningService) GetPatternByID(ctx context.Context, id string) (*models.FilenameMapping, error) {
 	if id == "" {
 		return nil, fmt.Errorf("pattern id cannot be empty")
 	}

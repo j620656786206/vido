@@ -12,18 +12,19 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/vido/api/internal/learning"
+	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/services"
 )
 
 // MockLearningService implements services.LearningServiceInterface for testing
 type MockLearningService struct {
-	learnResult      *learning.FilenameMapping
+	learnResult      *models.FilenameMapping
 	learnErr         error
 	findMatchResult  *learning.MatchResult
 	findMatchErr     error
 	statsResult      *services.PatternStats
 	statsErr         error
-	listResult       []*learning.FilenameMapping
+	listResult       []*models.FilenameMapping
 	listErr          error
 	deleteErr        error
 	applyErr         error
@@ -39,7 +40,7 @@ type MockLearningService struct {
 	applyID       string
 }
 
-func (m *MockLearningService) LearnFromCorrection(ctx context.Context, req services.LearnFromCorrectionRequest) (*learning.FilenameMapping, error) {
+func (m *MockLearningService) LearnFromCorrection(ctx context.Context, req services.LearnFromCorrectionRequest) (*models.FilenameMapping, error) {
 	m.learnCalled = true
 	m.learnReq = req
 	return m.learnResult, m.learnErr
@@ -55,7 +56,7 @@ func (m *MockLearningService) GetPatternStats(ctx context.Context) (*services.Pa
 	return m.statsResult, m.statsErr
 }
 
-func (m *MockLearningService) ListPatterns(ctx context.Context) ([]*learning.FilenameMapping, error) {
+func (m *MockLearningService) ListPatterns(ctx context.Context) ([]*models.FilenameMapping, error) {
 	return m.listResult, m.listErr
 }
 
@@ -86,7 +87,7 @@ func TestLearningHandler_Create(t *testing.T) {
 	tests := []struct {
 		name           string
 		requestBody    interface{}
-		mockResult     *learning.FilenameMapping
+		mockResult     *models.FilenameMapping
 		mockErr        error
 		expectedStatus int
 		expectedError  bool
@@ -100,7 +101,7 @@ func TestLearningHandler_Create(t *testing.T) {
 				"metadataType": "series",
 				"tmdbId":       85937,
 			},
-			mockResult: &learning.FilenameMapping{
+			mockResult: &models.FilenameMapping{
 				ID:           "pattern-456",
 				Pattern:      "[Leopard-Raws] Kimetsu no Yaiba",
 				FansubGroup:  "Leopard-Raws",
@@ -208,7 +209,7 @@ func TestLearningHandler_Create(t *testing.T) {
 func TestLearningHandler_List(t *testing.T) {
 	tests := []struct {
 		name           string
-		mockPatterns   []*learning.FilenameMapping
+		mockPatterns   []*models.FilenameMapping
 		mockStats      *services.PatternStats
 		mockErr        error
 		statsErr       error
@@ -217,7 +218,7 @@ func TestLearningHandler_List(t *testing.T) {
 	}{
 		{
 			name: "successful list with patterns",
-			mockPatterns: []*learning.FilenameMapping{
+			mockPatterns: []*models.FilenameMapping{
 				{
 					ID:           "pattern-1",
 					Pattern:      "[Leopard-Raws] Kimetsu no Yaiba",
@@ -241,7 +242,7 @@ func TestLearningHandler_List(t *testing.T) {
 		},
 		{
 			name:         "empty patterns list",
-			mockPatterns: []*learning.FilenameMapping{},
+			mockPatterns: []*models.FilenameMapping{},
 			mockStats: &services.PatternStats{
 				TotalPatterns: 0,
 				TotalApplied:  0,
@@ -256,7 +257,7 @@ func TestLearningHandler_List(t *testing.T) {
 		},
 		{
 			name: "stats error falls back gracefully",
-			mockPatterns: []*learning.FilenameMapping{
+			mockPatterns: []*models.FilenameMapping{
 				{ID: "pattern-1", Pattern: "Test"},
 			},
 			statsErr:       errors.New("stats error"),

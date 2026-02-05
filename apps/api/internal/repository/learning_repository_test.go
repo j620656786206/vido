@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/vido/api/internal/learning"
+	"github.com/vido/api/internal/models"
 	_ "modernc.org/sqlite"
 )
 
@@ -51,7 +51,7 @@ func TestLearningRepository_Save(t *testing.T) {
 	repo := NewLearningRepository(db)
 	ctx := context.Background()
 
-	mapping := &learning.FilenameMapping{
+	mapping := &models.FilenameMapping{
 		ID:           "test-1",
 		Pattern:      "[Leopard-Raws] Kimetsu no Yaiba",
 		PatternType:  "fansub",

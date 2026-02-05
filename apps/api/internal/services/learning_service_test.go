@@ -7,20 +7,20 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/vido/api/internal/learning"
+	"github.com/vido/api/internal/models"
 )
 
 // MockLearningRepository implements learning.LearningRepositoryInterface for testing
 type MockLearningRepository struct {
-	mappings []*learning.FilenameMapping
+	mappings []*models.FilenameMapping
 }
 
-func (m *MockLearningRepository) Save(ctx context.Context, mapping *learning.FilenameMapping) error {
+func (m *MockLearningRepository) Save(ctx context.Context, mapping *models.FilenameMapping) error {
 	m.mappings = append(m.mappings, mapping)
 	return nil
 }
 
-func (m *MockLearningRepository) FindByID(ctx context.Context, id string) (*learning.FilenameMapping, error) {
+func (m *MockLearningRepository) FindByID(ctx context.Context, id string) (*models.FilenameMapping, error) {
 	for _, mapping := range m.mappings {
 		if mapping.ID == id {
 			return mapping, nil
@@ -29,7 +29,7 @@ func (m *MockLearningRepository) FindByID(ctx context.Context, id string) (*lear
 	return nil, nil
 }
 
-func (m *MockLearningRepository) FindByExactPattern(ctx context.Context, pattern string) (*learning.FilenameMapping, error) {
+func (m *MockLearningRepository) FindByExactPattern(ctx context.Context, pattern string) (*models.FilenameMapping, error) {
 	for _, mapping := range m.mappings {
 		if mapping.Pattern == pattern {
 			return mapping, nil
@@ -38,8 +38,8 @@ func (m *MockLearningRepository) FindByExactPattern(ctx context.Context, pattern
 	return nil, nil
 }
 
-func (m *MockLearningRepository) FindByFansubAndTitle(ctx context.Context, fansubGroup, titlePattern string) ([]*learning.FilenameMapping, error) {
-	var results []*learning.FilenameMapping
+func (m *MockLearningRepository) FindByFansubAndTitle(ctx context.Context, fansubGroup, titlePattern string) ([]*models.FilenameMapping, error) {
+	var results []*models.FilenameMapping
 	for _, mapping := range m.mappings {
 		if mapping.FansubGroup == fansubGroup && mapping.TitlePattern == titlePattern {
 			results = append(results, mapping)
@@ -48,8 +48,8 @@ func (m *MockLearningRepository) FindByFansubAndTitle(ctx context.Context, fansu
 	return results, nil
 }
 
-func (m *MockLearningRepository) ListWithRegex(ctx context.Context) ([]*learning.FilenameMapping, error) {
-	var results []*learning.FilenameMapping
+func (m *MockLearningRepository) ListWithRegex(ctx context.Context) ([]*models.FilenameMapping, error) {
+	var results []*models.FilenameMapping
 	for _, mapping := range m.mappings {
 		if mapping.PatternRegex != "" {
 			results = append(results, mapping)
@@ -58,7 +58,7 @@ func (m *MockLearningRepository) ListWithRegex(ctx context.Context) ([]*learning
 	return results, nil
 }
 
-func (m *MockLearningRepository) ListAll(ctx context.Context) ([]*learning.FilenameMapping, error) {
+func (m *MockLearningRepository) ListAll(ctx context.Context) ([]*models.FilenameMapping, error) {
 	return m.mappings, nil
 }
 
@@ -88,7 +88,7 @@ func (m *MockLearningRepository) Count(ctx context.Context) (int, error) {
 	return len(m.mappings), nil
 }
 
-func (m *MockLearningRepository) Update(ctx context.Context, mapping *learning.FilenameMapping) error {
+func (m *MockLearningRepository) Update(ctx context.Context, mapping *models.FilenameMapping) error {
 	for i, existing := range m.mappings {
 		if existing.ID == mapping.ID {
 			m.mappings[i] = mapping
@@ -128,7 +128,7 @@ func TestLearningService_LearnFromCorrection(t *testing.T) {
 
 func TestLearningService_FindMatchingPattern(t *testing.T) {
 	repo := &MockLearningRepository{
-		mappings: []*learning.FilenameMapping{
+		mappings: []*models.FilenameMapping{
 			{
 				ID:           "1",
 				Pattern:      "[Leopard-Raws] Kimetsu no Yaiba",
@@ -157,7 +157,7 @@ func TestLearningService_FindMatchingPattern(t *testing.T) {
 
 func TestLearningService_GetPatternStats(t *testing.T) {
 	repo := &MockLearningRepository{
-		mappings: []*learning.FilenameMapping{
+		mappings: []*models.FilenameMapping{
 			{ID: "1", Pattern: "Pattern 1", UseCount: 10},
 			{ID: "2", Pattern: "Pattern 2", UseCount: 5},
 			{ID: "3", Pattern: "Pattern 3", UseCount: 20},
@@ -177,7 +177,7 @@ func TestLearningService_GetPatternStats(t *testing.T) {
 
 func TestLearningService_ListPatterns(t *testing.T) {
 	repo := &MockLearningRepository{
-		mappings: []*learning.FilenameMapping{
+		mappings: []*models.FilenameMapping{
 			{ID: "1", Pattern: "Pattern 1"},
 			{ID: "2", Pattern: "Pattern 2"},
 		},
@@ -193,7 +193,7 @@ func TestLearningService_ListPatterns(t *testing.T) {
 
 func TestLearningService_DeletePattern(t *testing.T) {
 	repo := &MockLearningRepository{
-		mappings: []*learning.FilenameMapping{
+		mappings: []*models.FilenameMapping{
 			{ID: "1", Pattern: "Pattern 1"},
 		},
 	}
@@ -211,7 +211,7 @@ func TestLearningService_DeletePattern(t *testing.T) {
 
 func TestLearningService_ApplyPattern(t *testing.T) {
 	repo := &MockLearningRepository{
-		mappings: []*learning.FilenameMapping{
+		mappings: []*models.FilenameMapping{
 			{
 				ID:           "1",
 				Pattern:      "[Leopard-Raws] Kimetsu no Yaiba",
@@ -236,7 +236,7 @@ func TestLearningService_ApplyPattern(t *testing.T) {
 
 func TestLearningService_LearnFromCorrection_DuplicatePrevented(t *testing.T) {
 	repo := &MockLearningRepository{
-		mappings: []*learning.FilenameMapping{
+		mappings: []*models.FilenameMapping{
 			{
 				ID:           "existing",
 				Pattern:      "[Leopard-Raws] Kimetsu no Yaiba",

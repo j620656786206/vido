@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/vido/api/internal/ai"
 	"github.com/vido/api/internal/learning"
+	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/parser"
 )
 
@@ -456,7 +457,7 @@ type mockLearningService struct {
 	appliedPattern string
 }
 
-func (m *mockLearningService) LearnFromCorrection(ctx context.Context, req LearnFromCorrectionRequest) (*learning.FilenameMapping, error) {
+func (m *mockLearningService) LearnFromCorrection(ctx context.Context, req LearnFromCorrectionRequest) (*models.FilenameMapping, error) {
 	return nil, nil
 }
 
@@ -471,7 +472,7 @@ func (m *mockLearningService) GetPatternStats(ctx context.Context) (*PatternStat
 	return &PatternStats{}, nil
 }
 
-func (m *mockLearningService) ListPatterns(ctx context.Context) ([]*learning.FilenameMapping, error) {
+func (m *mockLearningService) ListPatterns(ctx context.Context) ([]*models.FilenameMapping, error) {
 	return nil, nil
 }
 
@@ -492,7 +493,7 @@ func TestParserServiceWithLearning_UsesLearnedPattern(t *testing.T) {
 	learningService := &mockLearningService{
 		findMatchFunc: func(ctx context.Context, filename string) (*learning.MatchResult, error) {
 			return &learning.MatchResult{
-				Pattern: &learning.FilenameMapping{
+				Pattern: &models.FilenameMapping{
 					ID:           "pattern-123",
 					Pattern:      "[Leopard-Raws] Kimetsu no Yaiba",
 					PatternType:  "fansub",
@@ -570,7 +571,7 @@ func TestParserServiceWithLearning_IgnoresLowConfidenceMatch(t *testing.T) {
 	learningService := &mockLearningService{
 		findMatchFunc: func(ctx context.Context, filename string) (*learning.MatchResult, error) {
 			return &learning.MatchResult{
-				Pattern: &learning.FilenameMapping{
+				Pattern: &models.FilenameMapping{
 					ID:           "pattern-123",
 					TitlePattern: "Some Title",
 				},

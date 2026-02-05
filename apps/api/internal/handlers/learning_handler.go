@@ -1,34 +1,23 @@
 package handlers
 
 import (
-	"context"
 	"log/slog"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/vido/api/internal/learning"
+	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/services"
 )
 
-// LearningServiceInterface defines the contract for learning service operations.
-// This interface enables testing handlers with mock services.
-type LearningServiceInterface interface {
-	LearnFromCorrection(ctx context.Context, req services.LearnFromCorrectionRequest) (*learning.FilenameMapping, error)
-	FindMatchingPattern(ctx context.Context, filename string) (*learning.MatchResult, error)
-	GetPatternStats(ctx context.Context) (*services.PatternStats, error)
-	ListPatterns(ctx context.Context) ([]*learning.FilenameMapping, error)
-	DeletePattern(ctx context.Context, id string) error
-	ApplyPattern(ctx context.Context, id string) error
-}
-
 // LearningHandler handles HTTP requests for filename pattern learning.
-// It uses LearningServiceInterface for business logic, following the
+// It uses services.LearningServiceInterface for business logic, following the
 // Handler → Service → Repository → Database architecture.
 type LearningHandler struct {
-	service LearningServiceInterface
+	service services.LearningServiceInterface
 }
 
 // NewLearningHandler creates a new LearningHandler with the given service.
-func NewLearningHandler(service LearningServiceInterface) *LearningHandler {
+func NewLearningHandler(service services.LearningServiceInterface) *LearningHandler {
 	return &LearningHandler{
 		service: service,
 	}
@@ -44,7 +33,7 @@ type CreatePatternRequest struct {
 
 // PatternListResponse represents the response for listing patterns
 type PatternListResponse struct {
-	Patterns   []*learning.FilenameMapping `json:"patterns"`
+	Patterns   []*models.FilenameMapping `json:"patterns"`
 	TotalCount int                         `json:"totalCount"`
 	Stats      *services.PatternStats      `json:"stats,omitempty"`
 }
@@ -73,8 +62,10 @@ func (h *LearningHandler) Create(c *gin.Context) {
 
 	pattern, err := h.service.LearnFromCorrection(c.Request.Context(), serviceReq)
 	if err != nil {
-		slog.Error("Failed to learn pattern", "error", err)
-		InternalServerError(c, "Failed to learn pattern")
+		slog.Error("Failed to learn pattern", "error", err, "filename", req.Filename)
+		ErrorResponse(c, http.StatusInternalServerError, "LEARNING_SAVE_FAILED",
+			"無法學習此規則",
+			"請稍後再試，或檢查檔案名稱格式。")
 		return
 	}
 
@@ -94,7 +85,9 @@ func (h *LearningHandler) List(c *gin.Context) {
 	patterns, err := h.service.ListPatterns(ctx)
 	if err != nil {
 		slog.Error("Failed to list patterns", "error", err)
-		InternalServerError(c, "Failed to retrieve patterns")
+		ErrorResponse(c, http.StatusInternalServerError, "LEARNING_QUERY_FAILED",
+			"無法取得學習規則清單",
+			"請稍後再試。")
 		return
 	}
 
@@ -127,7 +120,9 @@ func (h *LearningHandler) Delete(c *gin.Context) {
 
 	if err := h.service.DeletePattern(c.Request.Context(), id); err != nil {
 		slog.Error("Failed to delete pattern", "error", err, "patternId", id)
-		InternalServerError(c, "Failed to delete pattern")
+		ErrorResponse(c, http.StatusInternalServerError, "LEARNING_DELETE_FAILED",
+			"無法刪除此規則",
+			"請確認規則 ID 是否正確，或稍後再試。")
 		return
 	}
 
@@ -140,7 +135,9 @@ func (h *LearningHandler) GetStats(c *gin.Context) {
 	stats, err := h.service.GetPatternStats(c.Request.Context())
 	if err != nil {
 		slog.Error("Failed to get pattern stats", "error", err)
-		InternalServerError(c, "Failed to retrieve pattern statistics")
+		ErrorResponse(c, http.StatusInternalServerError, "LEARNING_QUERY_FAILED",
+			"無法取得學習統計資訊",
+			"請稍後再試。")
 		return
 	}
 

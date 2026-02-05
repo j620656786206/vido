@@ -6,19 +6,20 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/vido/api/internal/models"
 )
 
 // MockLearningRepository implements LearningRepositoryInterface for testing
 type MockLearningRepository struct {
-	mappings []*FilenameMapping
+	mappings []*models.FilenameMapping
 }
 
-func (m *MockLearningRepository) Save(ctx context.Context, mapping *FilenameMapping) error {
+func (m *MockLearningRepository) Save(ctx context.Context, mapping *models.FilenameMapping) error {
 	m.mappings = append(m.mappings, mapping)
 	return nil
 }
 
-func (m *MockLearningRepository) FindByID(ctx context.Context, id string) (*FilenameMapping, error) {
+func (m *MockLearningRepository) FindByID(ctx context.Context, id string) (*models.FilenameMapping, error) {
 	for _, mapping := range m.mappings {
 		if mapping.ID == id {
 			return mapping, nil
@@ -27,7 +28,7 @@ func (m *MockLearningRepository) FindByID(ctx context.Context, id string) (*File
 	return nil, nil
 }
 
-func (m *MockLearningRepository) FindByExactPattern(ctx context.Context, pattern string) (*FilenameMapping, error) {
+func (m *MockLearningRepository) FindByExactPattern(ctx context.Context, pattern string) (*models.FilenameMapping, error) {
 	for _, mapping := range m.mappings {
 		if mapping.Pattern == pattern {
 			return mapping, nil
@@ -36,8 +37,8 @@ func (m *MockLearningRepository) FindByExactPattern(ctx context.Context, pattern
 	return nil, nil
 }
 
-func (m *MockLearningRepository) FindByFansubAndTitle(ctx context.Context, fansubGroup, titlePattern string) ([]*FilenameMapping, error) {
-	var results []*FilenameMapping
+func (m *MockLearningRepository) FindByFansubAndTitle(ctx context.Context, fansubGroup, titlePattern string) ([]*models.FilenameMapping, error) {
+	var results []*models.FilenameMapping
 	for _, mapping := range m.mappings {
 		if mapping.FansubGroup == fansubGroup && mapping.TitlePattern == titlePattern {
 			results = append(results, mapping)
@@ -46,8 +47,8 @@ func (m *MockLearningRepository) FindByFansubAndTitle(ctx context.Context, fansu
 	return results, nil
 }
 
-func (m *MockLearningRepository) ListWithRegex(ctx context.Context) ([]*FilenameMapping, error) {
-	var results []*FilenameMapping
+func (m *MockLearningRepository) ListWithRegex(ctx context.Context) ([]*models.FilenameMapping, error) {
+	var results []*models.FilenameMapping
 	for _, mapping := range m.mappings {
 		if mapping.PatternRegex != "" {
 			results = append(results, mapping)
@@ -56,7 +57,7 @@ func (m *MockLearningRepository) ListWithRegex(ctx context.Context) ([]*Filename
 	return results, nil
 }
 
-func (m *MockLearningRepository) ListAll(ctx context.Context) ([]*FilenameMapping, error) {
+func (m *MockLearningRepository) ListAll(ctx context.Context) ([]*models.FilenameMapping, error) {
 	return m.mappings, nil
 }
 
@@ -80,13 +81,23 @@ func (m *MockLearningRepository) IncrementUseCount(ctx context.Context, id strin
 	return nil
 }
 
+func (m *MockLearningRepository) Update(ctx context.Context, mapping *models.FilenameMapping) error {
+	for i, existing := range m.mappings {
+		if existing.ID == mapping.ID {
+			m.mappings[i] = mapping
+			return nil
+		}
+	}
+	return nil
+}
+
 func (m *MockLearningRepository) Count(ctx context.Context) (int, error) {
 	return len(m.mappings), nil
 }
 
 func TestPatternMatcher_FindMatch_ExactMatch(t *testing.T) {
 	repo := &MockLearningRepository{
-		mappings: []*FilenameMapping{
+		mappings: []*models.FilenameMapping{
 			{
 				ID:           "1",
 				Pattern:      "[Leopard-Raws] Kimetsu no Yaiba - 26 (BD 1920x1080 x264 FLAC).mkv",
@@ -113,7 +124,7 @@ func TestPatternMatcher_FindMatch_ExactMatch(t *testing.T) {
 
 func TestPatternMatcher_FindMatch_FansubTitleMatch(t *testing.T) {
 	repo := &MockLearningRepository{
-		mappings: []*FilenameMapping{
+		mappings: []*models.FilenameMapping{
 			{
 				ID:           "1",
 				Pattern:      "[Leopard-Raws] Kimetsu no Yaiba",
@@ -142,7 +153,7 @@ func TestPatternMatcher_FindMatch_FansubTitleMatch(t *testing.T) {
 
 func TestPatternMatcher_FindMatch_RegexMatch(t *testing.T) {
 	repo := &MockLearningRepository{
-		mappings: []*FilenameMapping{
+		mappings: []*models.FilenameMapping{
 			{
 				ID:           "1",
 				Pattern:      "[Leopard-Raws] Kimetsu no Yaiba",
@@ -170,7 +181,7 @@ func TestPatternMatcher_FindMatch_RegexMatch(t *testing.T) {
 
 func TestPatternMatcher_FindMatch_FuzzyMatch(t *testing.T) {
 	repo := &MockLearningRepository{
-		mappings: []*FilenameMapping{
+		mappings: []*models.FilenameMapping{
 			{
 				ID:           "1",
 				Pattern:      "Breaking Bad",
@@ -197,7 +208,7 @@ func TestPatternMatcher_FindMatch_FuzzyMatch(t *testing.T) {
 
 func TestPatternMatcher_FindMatch_NoMatch(t *testing.T) {
 	repo := &MockLearningRepository{
-		mappings: []*FilenameMapping{
+		mappings: []*models.FilenameMapping{
 			{
 				ID:           "1",
 				Pattern:      "[Leopard-Raws] Kimetsu no Yaiba",
@@ -218,7 +229,7 @@ func TestPatternMatcher_FindMatch_NoMatch(t *testing.T) {
 
 func TestPatternMatcher_FindMatch_PrioritizesExactOverFuzzy(t *testing.T) {
 	repo := &MockLearningRepository{
-		mappings: []*FilenameMapping{
+		mappings: []*models.FilenameMapping{
 			{
 				ID:           "1",
 				Pattern:      "[SubsPlease] Frieren - Beyond Journey's End - 01.mkv",
@@ -275,7 +286,7 @@ func TestFuzzyMatch(t *testing.T) {
 
 func TestMatchResult_String(t *testing.T) {
 	result := &MatchResult{
-		Pattern: &FilenameMapping{
+		Pattern: &models.FilenameMapping{
 			ID:           "1",
 			TitlePattern: "Test Title",
 		},

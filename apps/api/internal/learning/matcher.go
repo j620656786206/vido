@@ -8,24 +8,13 @@ import (
 	"strings"
 
 	"github.com/agnivade/levenshtein"
+	"github.com/vido/api/internal/models"
+	"github.com/vido/api/internal/repository"
 )
-
-// LearningRepositoryInterface defines the interface for learning pattern storage
-type LearningRepositoryInterface interface {
-	Save(ctx context.Context, mapping *FilenameMapping) error
-	FindByID(ctx context.Context, id string) (*FilenameMapping, error)
-	FindByExactPattern(ctx context.Context, pattern string) (*FilenameMapping, error)
-	FindByFansubAndTitle(ctx context.Context, fansubGroup, titlePattern string) ([]*FilenameMapping, error)
-	ListWithRegex(ctx context.Context) ([]*FilenameMapping, error)
-	ListAll(ctx context.Context) ([]*FilenameMapping, error)
-	Delete(ctx context.Context, id string) error
-	IncrementUseCount(ctx context.Context, id string) error
-	Count(ctx context.Context) (int, error)
-}
 
 // MatchResult represents the result of a pattern match
 type MatchResult struct {
-	Pattern    *FilenameMapping
+	Pattern    *models.FilenameMapping
 	Confidence float64
 	MatchType  string // "exact", "pattern", "regex", "fuzzy"
 }
@@ -41,13 +30,13 @@ func (r *MatchResult) String() string {
 
 // PatternMatcher finds matching patterns for new files
 type PatternMatcher struct {
-	repo      LearningRepositoryInterface
+	repo      repository.LearningRepositoryInterface
 	extractor *PatternExtractor
 	logger    *slog.Logger
 }
 
 // NewPatternMatcher creates a new pattern matcher
-func NewPatternMatcher(repo LearningRepositoryInterface) *PatternMatcher {
+func NewPatternMatcher(repo repository.LearningRepositoryInterface) *PatternMatcher {
 	return &PatternMatcher{
 		repo:      repo,
 		extractor: NewPatternExtractor(),
@@ -110,7 +99,7 @@ func (m *PatternMatcher) FindMatch(ctx context.Context, filename string) (*Match
 	if extracted.TitlePattern != "" {
 		patterns, err := m.repo.ListAll(ctx)
 		if err == nil {
-			var bestMatch *FilenameMapping
+			var bestMatch *models.FilenameMapping
 			var bestSimilarity float64
 
 			for _, p := range patterns {

@@ -13,7 +13,7 @@ type Repositories struct {
 	Settings SettingsRepositoryInterface
 	Cache    CacheRepositoryInterface
 	Secrets  SecretsRepositoryInterface
-	Learning *LearningRepository
+	Learning LearningRepositoryInterface
 }
 
 // NewRepositories creates all repository implementations for the given database connection.

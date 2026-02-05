@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/vido/api/internal/learning"
+	"github.com/vido/api/internal/models"
 )
 
 // LearningRepository provides data access operations for filename pattern mappings
@@ -22,7 +22,7 @@ func NewLearningRepository(db *sql.DB) *LearningRepository {
 }
 
 // Save inserts a new filename mapping into the database
-func (r *LearningRepository) Save(ctx context.Context, mapping *learning.FilenameMapping) error {
+func (r *LearningRepository) Save(ctx context.Context, mapping *models.FilenameMapping) error {
 	if mapping == nil {
 		return fmt.Errorf("mapping cannot be nil")
 	}
@@ -59,7 +59,7 @@ func (r *LearningRepository) Save(ctx context.Context, mapping *learning.Filenam
 }
 
 // FindByID retrieves a mapping by its primary key
-func (r *LearningRepository) FindByID(ctx context.Context, id string) (*learning.FilenameMapping, error) {
+func (r *LearningRepository) FindByID(ctx context.Context, id string) (*models.FilenameMapping, error) {
 	query := `
 		SELECT
 			id, pattern, pattern_type, pattern_regex, fansub_group,
@@ -69,7 +69,7 @@ func (r *LearningRepository) FindByID(ctx context.Context, id string) (*learning
 		WHERE id = ?
 	`
 
-	mapping := &learning.FilenameMapping{}
+	mapping := &models.FilenameMapping{}
 	var patternRegex, fansubGroup, titlePattern sql.NullString
 	var tmdbID sql.NullInt64
 	var lastUsedAt sql.NullTime
@@ -112,7 +112,7 @@ func (r *LearningRepository) FindByID(ctx context.Context, id string) (*learning
 }
 
 // FindByExactPattern retrieves a mapping by exact pattern match
-func (r *LearningRepository) FindByExactPattern(ctx context.Context, pattern string) (*learning.FilenameMapping, error) {
+func (r *LearningRepository) FindByExactPattern(ctx context.Context, pattern string) (*models.FilenameMapping, error) {
 	query := `
 		SELECT
 			id, pattern, pattern_type, pattern_regex, fansub_group,
@@ -122,7 +122,7 @@ func (r *LearningRepository) FindByExactPattern(ctx context.Context, pattern str
 		WHERE pattern = ?
 	`
 
-	mapping := &learning.FilenameMapping{}
+	mapping := &models.FilenameMapping{}
 	var patternRegex, fansubGroup, titlePattern sql.NullString
 	var tmdbID sql.NullInt64
 	var lastUsedAt sql.NullTime
@@ -165,7 +165,7 @@ func (r *LearningRepository) FindByExactPattern(ctx context.Context, pattern str
 }
 
 // FindByFansubAndTitle retrieves mappings by fansub group and title pattern
-func (r *LearningRepository) FindByFansubAndTitle(ctx context.Context, fansubGroup, titlePattern string) ([]*learning.FilenameMapping, error) {
+func (r *LearningRepository) FindByFansubAndTitle(ctx context.Context, fansubGroup, titlePattern string) ([]*models.FilenameMapping, error) {
 	query := `
 		SELECT
 			id, pattern, pattern_type, pattern_regex, fansub_group,
@@ -185,7 +185,7 @@ func (r *LearningRepository) FindByFansubAndTitle(ctx context.Context, fansubGro
 }
 
 // ListWithRegex retrieves all mappings that have a regex pattern
-func (r *LearningRepository) ListWithRegex(ctx context.Context) ([]*learning.FilenameMapping, error) {
+func (r *LearningRepository) ListWithRegex(ctx context.Context) ([]*models.FilenameMapping, error) {
 	query := `
 		SELECT
 			id, pattern, pattern_type, pattern_regex, fansub_group,
@@ -205,7 +205,7 @@ func (r *LearningRepository) ListWithRegex(ctx context.Context) ([]*learning.Fil
 }
 
 // ListAll retrieves all filename mappings
-func (r *LearningRepository) ListAll(ctx context.Context) ([]*learning.FilenameMapping, error) {
+func (r *LearningRepository) ListAll(ctx context.Context) ([]*models.FilenameMapping, error) {
 	query := `
 		SELECT
 			id, pattern, pattern_type, pattern_regex, fansub_group,
@@ -284,7 +284,7 @@ func (r *LearningRepository) Count(ctx context.Context) (int, error) {
 }
 
 // Update modifies an existing filename mapping
-func (r *LearningRepository) Update(ctx context.Context, mapping *learning.FilenameMapping) error {
+func (r *LearningRepository) Update(ctx context.Context, mapping *models.FilenameMapping) error {
 	if mapping == nil {
 		return fmt.Errorf("mapping cannot be nil")
 	}
@@ -360,11 +360,11 @@ func nullTime(t *time.Time) sql.NullTime {
 	return sql.NullTime{Time: *t, Valid: true}
 }
 
-func scanMappings(rows *sql.Rows) ([]*learning.FilenameMapping, error) {
-	var mappings []*learning.FilenameMapping
+func scanMappings(rows *sql.Rows) ([]*models.FilenameMapping, error) {
+	var mappings []*models.FilenameMapping
 
 	for rows.Next() {
-		mapping := &learning.FilenameMapping{}
+		mapping := &models.FilenameMapping{}
 		var patternRegex, fansubGroup, titlePattern sql.NullString
 		var tmdbID sql.NullInt64
 		var lastUsedAt sql.NullTime

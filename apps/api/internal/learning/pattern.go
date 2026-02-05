@@ -7,24 +7,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/vido/api/internal/models"
 )
-
-// FilenameMapping represents a learned filename pattern mapping
-type FilenameMapping struct {
-	ID           string    `json:"id"`
-	Pattern      string    `json:"pattern"`
-	PatternType  string    `json:"pattern_type"` // "exact", "regex", "fuzzy", "fansub", "standard"
-	PatternRegex string    `json:"pattern_regex,omitempty"`
-	FansubGroup  string    `json:"fansub_group,omitempty"`
-	TitlePattern string    `json:"title_pattern,omitempty"`
-	MetadataType string    `json:"metadata_type"` // "movie" or "series"
-	MetadataID   string    `json:"metadata_id"`
-	TmdbID       int       `json:"tmdb_id,omitempty"`
-	Confidence   float64   `json:"confidence"`
-	UseCount     int       `json:"use_count"`
-	CreatedAt    time.Time `json:"created_at"`
-	LastUsedAt   *time.Time `json:"last_used_at,omitempty"`
-}
 
 // ExtractedPattern represents the result of extracting a pattern from a filename
 type ExtractedPattern struct {
@@ -276,7 +260,7 @@ func (p *ExtractedPattern) MatchesFilename(filename string) bool {
 }
 
 // ToFilenameMapping converts an extracted pattern to a FilenameMapping for storage
-func (p *ExtractedPattern) ToFilenameMapping(metadataID, metadataType string, tmdbID int) *FilenameMapping {
+func (p *ExtractedPattern) ToFilenameMapping(metadataID, metadataType string, tmdbID int) *models.FilenameMapping {
 	// Build the pattern string for display
 	var patternStr string
 	if p.FansubGroup != "" {
@@ -285,7 +269,7 @@ func (p *ExtractedPattern) ToFilenameMapping(metadataID, metadataType string, tm
 		patternStr = p.TitlePattern
 	}
 
-	return &FilenameMapping{
+	return &models.FilenameMapping{
 		ID:           uuid.New().String(),
 		Pattern:      patternStr,
 		PatternType:  p.PatternType,

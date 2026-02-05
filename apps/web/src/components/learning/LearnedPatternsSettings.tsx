@@ -4,52 +4,39 @@
  * Shows "已記住 N 個自訂規則" count per spec
  */
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Trash2, Lightbulb, ChevronRight, Loader2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { learningService, type LearnedPattern, type PatternStats } from '../../services/learning';
+import { useLearningPatterns, useDeletePattern } from '../../hooks/useLearning';
 
 export interface LearnedPatternsSettingsProps {
   onError?: (error: Error) => void;
 }
 
 export function LearnedPatternsSettings({ onError }: LearnedPatternsSettingsProps) {
-  const [patterns, setPatterns] = useState<LearnedPattern[]>([]);
-  const [stats, setStats] = useState<PatternStats | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // Fetch patterns on mount
-  useEffect(() => {
-    fetchPatterns();
-  }, []);
+  const {
+    data: response,
+    isLoading,
+    error: fetchError,
+  } = useLearningPatterns();
 
-  const fetchPatterns = async () => {
-    setIsLoading(true);
-    try {
-      const response = await learningService.listPatterns();
-      setPatterns(response.patterns || []);
-      setStats(response.stats || null);
-    } catch (error) {
-      onError?.(error as Error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const deletePatternMutation = useDeletePattern();
+
+  // Report fetch error
+  if (fetchError) {
+    onError?.(fetchError);
+  }
+
+  const patterns = response?.patterns ?? [];
+  const stats = response?.stats ?? null;
 
   const handleDelete = async (id: string) => {
     setDeletingId(id);
     try {
-      await learningService.deletePattern(id);
-      setPatterns(patterns.filter((p) => p.id !== id));
-      // Update stats count
-      if (stats) {
-        setStats({
-          ...stats,
-          totalPatterns: stats.totalPatterns - 1,
-        });
-      }
+      await deletePatternMutation.mutateAsync(id);
     } catch (error) {
       onError?.(error as Error);
     } finally {

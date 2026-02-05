@@ -191,6 +191,20 @@ type SecretsRepositoryInterface interface {
 	List(ctx context.Context) ([]string, error)
 }
 
+// LearningRepositoryInterface defines the contract for learning pattern storage
+type LearningRepositoryInterface interface {
+	Save(ctx context.Context, mapping *models.FilenameMapping) error
+	FindByID(ctx context.Context, id string) (*models.FilenameMapping, error)
+	FindByExactPattern(ctx context.Context, pattern string) (*models.FilenameMapping, error)
+	FindByFansubAndTitle(ctx context.Context, fansubGroup, titlePattern string) ([]*models.FilenameMapping, error)
+	ListWithRegex(ctx context.Context) ([]*models.FilenameMapping, error)
+	ListAll(ctx context.Context) ([]*models.FilenameMapping, error)
+	Update(ctx context.Context, mapping *models.FilenameMapping) error
+	Delete(ctx context.Context, id string) error
+	IncrementUseCount(ctx context.Context, id string) error
+	Count(ctx context.Context) (int, error)
+}
+
 // Compile-time interface verification
 // These assertions ensure that concrete types implement their respective interfaces.
 // If any of these fail to compile, it means the implementation is missing required methods.
@@ -201,4 +215,5 @@ var (
 	_ SettingsRepositoryInterface = (*SettingsRepository)(nil)
 	_ CacheRepositoryInterface    = (*CacheRepository)(nil)
 	_ SecretsRepositoryInterface  = (*SecretsRepository)(nil)
+	_ LearningRepositoryInterface = (*LearningRepository)(nil)
 )
