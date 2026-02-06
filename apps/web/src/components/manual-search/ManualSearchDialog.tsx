@@ -148,7 +148,9 @@ export function ManualSearchDialog({
   }, [isOpen, handleKeyDown]);
 
   const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
+    // Close when clicking on backdrop (not inside the dialog)
+    const target = e.target as HTMLElement;
+    if (!target.closest('[data-testid="manual-search-dialog"]')) {
       onClose();
     }
   };
@@ -163,8 +165,12 @@ export function ManualSearchDialog({
       aria-modal="true"
       aria-labelledby="manual-search-title"
     >
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      {/* Backdrop - clicking this closes the dialog */}
+      <div
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        data-testid="dialog-backdrop"
+        onClick={onClose}
+      />
 
       {/* Dialog */}
       <div

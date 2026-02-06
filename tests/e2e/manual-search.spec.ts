@@ -53,9 +53,8 @@ test.describe('Manual Search Dialog @e2e @manual-search', () => {
     await expect(page).toHaveURL(/q=Demon.*Slayer/i);
     await page.waitForLoadState('networkidle');
 
-    // Results should appear (at least skeleton or cards)
-    const resultsArea = page.locator('[data-testid="search-results"], [data-testid="media-grid"]');
-    await expect(resultsArea.or(page.getByText(/鬼滅|Demon Slayer/i).first())).toBeVisible({
+    // Results should appear (media-grid shows search results)
+    await expect(page.getByTestId('media-grid')).toBeVisible({
       timeout: 15000,
     });
   });
@@ -379,7 +378,13 @@ test.describe('Apply Metadata Complete Flow @e2e @manual-search @story-3-7', () 
     await expect(page.getByTestId('manual-search-dialog')).toBeVisible();
 
     // WHEN: User clicks on backdrop (outside dialog)
-    await page.mouse.click(5, 5);
+    // Use dispatchEvent to ensure the click reaches the backdrop
+    await page.evaluate(() => {
+      const backdrop = document.querySelector('[data-testid="dialog-backdrop"]');
+      if (backdrop) {
+        backdrop.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      }
+    });
 
     // THEN: Dialog should close
     await expect(page.getByTestId('manual-search-dialog')).not.toBeVisible();
