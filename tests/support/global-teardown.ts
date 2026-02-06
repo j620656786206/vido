@@ -118,10 +118,9 @@ function findOrphanedTestProcesses(session: TestSession): number[] {
 
   try {
     // Find Go backend processes started by this session
-    const goProcs = execSync(
-      `pgrep -f "go run.*cmd/api" 2>/dev/null || true`,
-      { encoding: 'utf-8' }
-    )
+    const goProcs = execSync(`pgrep -f "go run.*cmd/api" 2>/dev/null || true`, {
+      encoding: 'utf-8',
+    })
       .trim()
       .split('\n')
       .filter((line) => line.trim())
@@ -129,10 +128,9 @@ function findOrphanedTestProcesses(session: TestSession): number[] {
       .filter((pid) => !isNaN(pid));
 
     // Find Vite dev server processes
-    const viteProcs = execSync(
-      `pgrep -f "vite.*serve|nx.*serve.*web" 2>/dev/null || true`,
-      { encoding: 'utf-8' }
-    )
+    const viteProcs = execSync(`pgrep -f "vite.*serve|nx.*serve.*web" 2>/dev/null || true`, {
+      encoding: 'utf-8',
+    })
       .trim()
       .split('\n')
       .filter((line) => line.trim())
