@@ -216,6 +216,7 @@ func TestParseProgress_IsComplete(t *testing.T) {
 		expected bool
 	}{
 		{"pending", ParseStatusPending, false},
+		{"parsing", ParseStatusParsing, false},
 		{"success", ParseStatusSuccess, true},
 		{"failed", ParseStatusFailed, true},
 		{"needs_ai", ParseStatusNeedsAI, false},

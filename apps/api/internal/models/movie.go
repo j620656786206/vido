@@ -11,6 +11,7 @@ type ParseStatus string
 
 const (
 	ParseStatusPending ParseStatus = "pending"
+	ParseStatusParsing ParseStatus = "parsing"
 	ParseStatusSuccess ParseStatus = "success"
 	ParseStatusNeedsAI ParseStatus = "needs_ai"
 	ParseStatusFailed  ParseStatus = "failed"

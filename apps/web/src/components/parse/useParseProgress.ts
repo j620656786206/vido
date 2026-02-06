@@ -39,6 +39,8 @@ export interface UseParseProgressOptions {
   autoReconnect?: boolean;
   /** Reconnection delay in ms (default: 3000) */
   reconnectDelay?: number;
+  /** Maximum reconnection attempts (default: 5, 0 for unlimited) */
+  maxReconnectAttempts?: number;
 }
 
 export interface UseParseProgressResult {
@@ -76,6 +78,7 @@ export function useParseProgress(
     onError,
     autoReconnect = true,
     reconnectDelay = 3000,
+    maxReconnectAttempts = 5,
   } = options;
 
   const [progress, setProgress] = useState<ParseProgress | null>(null);
@@ -88,6 +91,7 @@ export function useParseProgress(
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isManuallyDisconnectedRef = useRef(false);
   const connectRef = useRef<(() => void) | null>(null);
+  const reconnectAttemptsRef = useRef(0);
 
   // Initialize default progress
   const initializeProgress = useCallback(
@@ -272,6 +276,7 @@ export function useParseProgress(
       setIsConnected(true);
       setIsReconnecting(false);
       setError(null);
+      reconnectAttemptsRef.current = 0; // Reset on successful connection
     };
 
     // Handle errors
@@ -284,15 +289,22 @@ export function useParseProgress(
       eventSource.close();
       eventSourceRef.current = null;
 
-      // Attempt reconnection if enabled and not manually disconnected
-      if (autoReconnect && !isManuallyDisconnectedRef.current) {
+      // Attempt reconnection if enabled, not manually disconnected, and within retry limit
+      const withinRetryLimit = maxReconnectAttempts === 0 || reconnectAttemptsRef.current < maxReconnectAttempts;
+      if (autoReconnect && !isManuallyDisconnectedRef.current && withinRetryLimit) {
+        reconnectAttemptsRef.current++;
         setIsReconnecting(true);
         reconnectTimeoutRef.current = setTimeout(() => {
           connectRef.current?.();
         }, reconnectDelay);
+      } else if (!withinRetryLimit) {
+        setIsReconnecting(false);
+        const maxRetriesErr = new Error(`SSE connection failed after ${maxReconnectAttempts} attempts`);
+        setError(maxRetriesErr);
+        onError?.(maxRetriesErr);
       }
     };
-  }, [taskId, handleEvent, onError, autoReconnect, reconnectDelay]);
+  }, [taskId, handleEvent, onError, autoReconnect, reconnectDelay, maxReconnectAttempts]);
 
   // Store connect function in ref for recursive reconnection
   useEffect(() => {
@@ -321,6 +333,7 @@ export function useParseProgress(
   const reconnect = useCallback(() => {
     disconnect();
     isManuallyDisconnectedRef.current = false;
+    reconnectAttemptsRef.current = 0; // Reset attempts on manual reconnect
     connect();
   }, [connect, disconnect]);
 

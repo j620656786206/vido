@@ -4,7 +4,7 @@
  */
 
 // Parse status enum matching backend
-export type ParseStatus = 'pending' | 'success' | 'needs_ai' | 'failed';
+export type ParseStatus = 'pending' | 'parsing' | 'success' | 'needs_ai' | 'failed';
 
 // Step status enum matching backend
 export type StepStatus = 'pending' | 'in_progress' | 'success' | 'failed' | 'skipped';
@@ -111,6 +111,7 @@ export const STANDARD_PARSE_STEPS: ParseStep[] = [
 // Status display configuration
 export const STATUS_CONFIG: Record<ParseStatus, { label: string; color: string; icon: string }> = {
   pending: { label: '等待中', color: 'text-muted-foreground', icon: 'clock' },
+  parsing: { label: '解析中', color: 'text-blue-500', icon: 'loader-2' },
   success: { label: '已完成', color: 'text-green-500', icon: 'check-circle' },
   needs_ai: { label: '需要處理', color: 'text-yellow-500', icon: 'alert-triangle' },
   failed: { label: '失敗', color: 'text-red-500', icon: 'x-circle' },

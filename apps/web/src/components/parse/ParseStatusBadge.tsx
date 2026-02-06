@@ -37,6 +37,13 @@ const STATUS_CONFIG: Record<
     bgColor: 'bg-slate-500/10',
     label: '等待中',
   },
+  parsing: {
+    icon: Loader2,
+    color: 'text-blue-500',
+    bgColor: 'bg-blue-500/10',
+    label: '解析中',
+    animate: true,
+  },
   success: {
     icon: CheckCircle,
     color: 'text-green-500',

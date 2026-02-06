@@ -1,6 +1,6 @@
 # Story 3.10: Parse Status Indicators
 
-Status: review
+Status: done
 
 ## Story
 
@@ -678,6 +678,23 @@ Claude Opus 4.5 (claude-opus-4-5-20251101)
 - Frontend: React components with useParseProgress hook
 - 448 frontend tests passing, all backend tests passing
 - Follows project patterns: zh-tw labels, Tailwind styling, lucide-react icons
+
+### Code Review Fixes (2026-02-06)
+
+**Reviewer:** Claude Opus 4.5 (Amelia Dev Agent)
+
+**Issues Fixed:**
+1. [HIGH] Added `parsing` status to `ParseStatus` enum in both backend (`movie.go`) and frontend (`types.ts`)
+2. [HIGH] Fixed `StartStep` method to set status to `ParseStatusParsing` instead of `ParseStatusPending`
+3. [HIGH] Added `parsing` config to `ParseStatusBadge.tsx` with spinner animation
+4. [MEDIUM] Fixed `ErrorDetailsPanel.tsx` to display filename instead of ignoring the parameter
+5. [MEDIUM] Added `maxReconnectAttempts` option to `useParseProgress` hook (default: 5 retries)
+6. [MEDIUM] Added TTL cleanup mechanism to `ParseProgressHandler` with 30-minute expiry and 5-minute cleanup cycle
+
+**Additional Changes:**
+- Added `Close()` method to `ParseProgressHandler` for graceful shutdown
+- Added `NewParseProgressHandlerWithTTL()` constructor for custom TTL configuration
+- Updated `IsComplete` test to include `parsing` status case
 
 ### File List
 

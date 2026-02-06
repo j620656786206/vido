@@ -16,17 +16,78 @@ import (
 
 // ParseProgressHandler handles parse progress SSE streaming
 type ParseProgressHandler struct {
-	emitter   events.EventEmitter
-	mu        sync.RWMutex
-	progress  map[string]*models.ParseProgress
+	emitter        events.EventEmitter
+	mu             sync.RWMutex
+	progress       map[string]*models.ParseProgress
+	progressTTL    time.Duration
+	cleanupTicker  *time.Ticker
+	cleanupDone    chan struct{}
 }
 
 // NewParseProgressHandler creates a new ParseProgressHandler
 func NewParseProgressHandler(emitter events.EventEmitter) *ParseProgressHandler {
-	return &ParseProgressHandler{
-		emitter:  emitter,
-		progress: make(map[string]*models.ParseProgress),
+	return NewParseProgressHandlerWithTTL(emitter, 30*time.Minute)
+}
+
+// NewParseProgressHandlerWithTTL creates a new ParseProgressHandler with custom TTL
+func NewParseProgressHandlerWithTTL(emitter events.EventEmitter, ttl time.Duration) *ParseProgressHandler {
+	h := &ParseProgressHandler{
+		emitter:       emitter,
+		progress:      make(map[string]*models.ParseProgress),
+		progressTTL:   ttl,
+		cleanupTicker: time.NewTicker(5 * time.Minute),
+		cleanupDone:   make(chan struct{}),
 	}
+
+	// Start background cleanup goroutine
+	go h.cleanupLoop()
+
+	return h
+}
+
+// cleanupLoop periodically removes expired progress entries
+func (h *ParseProgressHandler) cleanupLoop() {
+	for {
+		select {
+		case <-h.cleanupTicker.C:
+			h.cleanupExpiredProgress()
+		case <-h.cleanupDone:
+			h.cleanupTicker.Stop()
+			return
+		}
+	}
+}
+
+// cleanupExpiredProgress removes progress entries older than TTL
+func (h *ParseProgressHandler) cleanupExpiredProgress() {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	now := time.Now()
+	expiredCount := 0
+
+	for taskID, progress := range h.progress {
+		var expiryTime time.Time
+		if progress.CompletedAt != nil {
+			expiryTime = progress.CompletedAt.Add(h.progressTTL)
+		} else {
+			expiryTime = progress.StartedAt.Add(h.progressTTL)
+		}
+
+		if now.After(expiryTime) {
+			delete(h.progress, taskID)
+			expiredCount++
+		}
+	}
+
+	if expiredCount > 0 {
+		slog.Debug("Cleaned up expired parse progress entries", "count", expiredCount)
+	}
+}
+
+// Close stops the cleanup goroutine
+func (h *ParseProgressHandler) Close() {
+	close(h.cleanupDone)
 }
 
 // RegisterRoutes registers the parse progress routes

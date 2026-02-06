@@ -84,10 +84,7 @@ func (p *ParseProgress) StartStep(stepIndex int) {
 	p.Steps[stepIndex].Status = StepInProgress
 	p.Steps[stepIndex].StartedAt = &now
 	p.CurrentStep = stepIndex
-	p.Status = ParseStatusPending
-	if stepIndex == 0 {
-		p.Status = ParseStatusPending
-	}
+	p.Status = ParseStatusParsing
 	p.updatePercentage()
 }
 

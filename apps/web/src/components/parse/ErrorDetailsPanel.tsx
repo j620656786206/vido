@@ -29,7 +29,7 @@ export interface ErrorDetailsPanelProps {
  */
 export function ErrorDetailsPanel({
   steps,
-  filename: _filename,
+  filename,
   onManualSearch,
   onEditFilename,
   onSkip,
@@ -42,6 +42,12 @@ export function ErrorDetailsPanel({
 
   return (
     <div className={cn('space-y-4', className)} data-testid="error-details-panel">
+      {/* Filename display */}
+      {filename && (
+        <div className="text-sm text-slate-400 truncate" title={filename}>
+          檔案：{filename}
+        </div>
+      )}
       {/* Failed Steps Summary */}
       {failedSteps.length > 0 && (
         <div className="bg-red-500/10 rounded-lg p-3 space-y-2">
