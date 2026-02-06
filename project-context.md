@@ -4,7 +4,7 @@
 
 **Full Documentation:** See `_bmad-output/planning-artifacts/architecture.md` for complete architectural decisions and patterns.
 
-**Last Updated:** 2026-01-12
+**Last Updated:** 2026-02-06
 **Architecture Status:** ✅ Validated and Ready for Implementation (5,463 lines, 8 steps completed)
 
 ---
@@ -472,6 +472,35 @@ describe('MovieCard', () => {
   });
 });
 ```
+
+---
+
+## 🧹 Test Process Cleanup
+
+### Session-Aware Process Management
+
+E2E tests (Playwright) automatically start Go backend and Vite dev server. To prevent orphaned processes from consuming CPU after tests crash or complete:
+
+**Automatic Cleanup (Built-in):**
+- `globalSetup` creates a session-specific tracking file
+- `globalTeardown` cleans up only processes from the current session
+- Safe for multiple Claude Code sessions running tests in parallel
+
+**Manual Cleanup Commands:**
+```bash
+# List orphaned test processes
+pnpm run test:cleanup
+
+# Force kill ALL test processes (use with caution)
+pnpm run test:cleanup:all
+```
+
+**Session Files Location:** `node_modules/.cache/vido-test-sessions/`
+
+**What Gets Cleaned Up:**
+- Go backend (`go run ./cmd/api`)
+- Vite dev server (`nx serve web`)
+- Processes on ports 8080, 4200
 
 ---
 
