@@ -85,7 +85,6 @@ function NotificationToast({ notification, onDismiss }: NotificationToastProps) 
     setTimeout(() => onDismiss(notification.id), 300);
   };
 
-  const Icon = getIconForType(notification.type);
   const colors = getColorsForType(notification.type);
 
   return (
@@ -102,7 +101,7 @@ function NotificationToast({ notification, onDismiss }: NotificationToastProps) 
       role="status"
     >
       <div className="flex items-start gap-3">
-        <Icon className={cn('h-5 w-5 flex-shrink-0 mt-0.5', colors.icon)} />
+        <NotificationIcon type={notification.type} className={cn('h-5 w-5 flex-shrink-0 mt-0.5', colors.icon)} />
         <div className="flex-1 min-w-0">
           <p className={cn('font-medium text-sm', colors.text)}>
             {notification.message}
@@ -125,16 +124,21 @@ function NotificationToast({ notification, onDismiss }: NotificationToastProps) 
   );
 }
 
-function getIconForType(type: NotificationType) {
+interface NotificationIconProps {
+  type: NotificationType;
+  className?: string;
+}
+
+function NotificationIcon({ type, className }: NotificationIconProps) {
   switch (type) {
     case 'success':
-      return CheckCircle2;
+      return <CheckCircle2 className={className} />;
     case 'error':
-      return XCircle;
+      return <XCircle className={className} />;
     case 'warning':
-      return AlertTriangle;
+      return <AlertTriangle className={className} />;
     default:
-      return CheckCircle2;
+      return <CheckCircle2 className={className} />;
   }
 }
 

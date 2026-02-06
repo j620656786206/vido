@@ -22,7 +22,7 @@ const API_BASE_URL = process.env.API_URL || 'http://localhost:8080/api/v1';
 // Types
 // =============================================================================
 
-interface ParseProgress {
+interface _ParseProgress {
   taskId: string;
   filename: string;
   status: 'pending' | 'parsing' | 'success' | 'needs_ai' | 'failed';
@@ -223,7 +223,7 @@ test.describe('Parse Progress API - SSE Streaming @api @parse-progress @sse @sto
 
       const cacheControl = response.headers()['cache-control'];
       expect(cacheControl).toContain('no-cache');
-    } catch (error) {
+    } catch {
       // Timeout is expected for SSE endpoint that waits for events
       // The test passes if we got here without other errors
     } finally {
@@ -256,7 +256,7 @@ test.describe('Parse Progress API - SSE Streaming @api @parse-progress @sse @sto
         expect(data.taskId).toBe(taskId);
         expect(data.message).toContain('Connected');
       }
-    } catch (error) {
+    } catch {
       // If timeout, that's acceptable - SSE connections stay open
       // We just verify the connection was established
     }
@@ -277,7 +277,6 @@ test.describe('Parse Progress API - SSE Streaming @api @parse-progress @sse @sto
 
     // THEN: All connections should be established (or timeout gracefully)
     // We're testing that multiple connections don't cause errors
-    const successCount = connections.filter((r) => r.status === 'fulfilled').length;
     const rejectedCount = connections.filter((r) => r.status === 'rejected').length;
 
     // At least some connections should be fulfilled (even if they timeout waiting for events)

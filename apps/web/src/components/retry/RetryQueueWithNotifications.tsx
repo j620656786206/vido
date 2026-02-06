@@ -24,8 +24,8 @@ export interface RetryQueueWithNotificationsProps extends RetryQueuePanelProps {
  */
 export function RetryQueueWithNotifications({
   className,
-  onRetrySuccess,
-  onRetryExhausted,
+  onRetrySuccess: _onRetrySuccess,
+  onRetryExhausted: _onRetryExhausted,
 }: RetryQueueWithNotificationsProps) {
   const {
     notifications,
