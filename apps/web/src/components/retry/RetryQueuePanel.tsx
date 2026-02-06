@@ -82,10 +82,7 @@ export function RetryQueuePanel({ className }: RetryQueuePanelProps) {
 
       {/* Empty state */}
       {items.length === 0 && (
-        <div
-          className="py-8 text-center text-slate-400"
-          data-testid="retry-queue-empty"
-        >
+        <div className="py-8 text-center text-slate-400" data-testid="retry-queue-empty">
           <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-green-500" />
           <p>目前沒有待重試項目</p>
         </div>
@@ -155,9 +152,7 @@ function RetryItemCard({
 
       {/* Error message if present */}
       {item.lastError && (
-        <div className="text-xs text-red-400 bg-red-500/10 rounded px-2 py-1">
-          {item.lastError}
-        </div>
+        <div className="text-xs text-red-400 bg-red-500/10 rounded px-2 py-1">{item.lastError}</div>
       )}
 
       {/* Action buttons */}
@@ -193,11 +188,7 @@ function RetryItemCard({
           )}
           data-testid={`cancel-retry-${item.id}`}
         >
-          {isCanceling ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <X className="h-4 w-4" />
-          )}
+          {isCanceling ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
           取消
         </button>
       </div>

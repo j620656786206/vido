@@ -32,10 +32,7 @@ export function RetryQueueSection({ className, detailed = false }: RetryQueueSec
 
   return (
     <div
-      className={cn(
-        'border-t border-slate-700 pt-3 mt-3',
-        className
-      )}
+      className={cn('border-t border-slate-700 pt-3 mt-3', className)}
       data-testid="retry-queue-section"
     >
       {/* Header */}
@@ -74,9 +71,7 @@ export function RetryQueueSection({ className, detailed = false }: RetryQueueSec
           </div>
         ))}
         {!detailed && items.length > 2 && (
-          <div className="text-xs text-slate-500 text-center">
-            還有 {items.length - 2} 項...
-          </div>
+          <div className="text-xs text-slate-500 text-center">還有 {items.length - 2} 項...</div>
         )}
       </div>
 

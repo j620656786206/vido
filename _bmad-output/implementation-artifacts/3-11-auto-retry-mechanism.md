@@ -1,6 +1,6 @@
 # Story 3.11: Auto-Retry Mechanism
 
-Status: review
+Status: done
 
 ## Story
 

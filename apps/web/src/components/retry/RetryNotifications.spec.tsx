@@ -17,9 +17,7 @@ describe('RetryNotifications', () => {
 
   it('renders nothing when no notifications', () => {
     const onDismiss = vi.fn();
-    const { container } = render(
-      <RetryNotifications notifications={[]} onDismiss={onDismiss} />
-    );
+    const { container } = render(<RetryNotifications notifications={[]} onDismiss={onDismiss} />);
 
     expect(container).toBeEmptyDOMElement();
   });
@@ -59,9 +57,7 @@ describe('RetryNotifications', () => {
 
   it('calls onDismiss when close button clicked', async () => {
     const onDismiss = vi.fn();
-    const notifications = [
-      { id: 'n1', type: 'success' as const, message: 'Success' },
-    ];
+    const notifications = [{ id: 'n1', type: 'success' as const, message: 'Success' }];
 
     render(<RetryNotifications notifications={notifications} onDismiss={onDismiss} />);
 
@@ -113,9 +109,7 @@ describe('RetryNotifications', () => {
 
   it('applies custom className', () => {
     const onDismiss = vi.fn();
-    const notifications = [
-      { id: 'n1', type: 'success' as const, message: 'Success' },
-    ];
+    const notifications = [{ id: 'n1', type: 'success' as const, message: 'Success' }];
 
     render(
       <RetryNotifications

@@ -27,12 +27,8 @@ export function RetryQueueWithNotifications({
   onRetrySuccess: _onRetrySuccess,
   onRetryExhausted: _onRetryExhausted,
 }: RetryQueueWithNotificationsProps) {
-  const {
-    notifications,
-    dismissNotification,
-    showRetryTriggered,
-    showRetryCancelled,
-  } = useRetryNotifications();
+  const { notifications, dismissNotification, showRetryTriggered, showRetryCancelled } =
+    useRetryNotifications();
 
   const { data } = usePendingRetries();
   const prevItemsRef = useRef<RetryItem[]>([]);
@@ -78,10 +74,7 @@ export function RetryQueueWithNotifications({
   return (
     <>
       <RetryQueuePanel className={className} />
-      <RetryNotifications
-        notifications={notifications}
-        onDismiss={dismissNotification}
-      />
+      <RetryNotifications notifications={notifications} onDismiss={dismissNotification} />
     </>
   );
 }

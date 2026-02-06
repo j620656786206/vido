@@ -39,10 +39,7 @@ export function RetryNotifications({
 
   return (
     <div
-      className={cn(
-        'fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm',
-        className
-      )}
+      className={cn('fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm', className)}
       data-testid="retry-notifications"
       role="log"
       aria-live="polite"
@@ -93,23 +90,20 @@ function NotificationToast({ notification, onDismiss }: NotificationToastProps) 
         'rounded-lg border shadow-lg p-3 transition-all duration-300',
         colors.bg,
         colors.border,
-        isVisible
-          ? 'opacity-100 translate-x-0'
-          : 'opacity-0 translate-x-4'
+        isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-4'
       )}
       data-testid={`notification-${notification.id}`}
       role="status"
     >
       <div className="flex items-start gap-3">
-        <NotificationIcon type={notification.type} className={cn('h-5 w-5 flex-shrink-0 mt-0.5', colors.icon)} />
+        <NotificationIcon
+          type={notification.type}
+          className={cn('h-5 w-5 flex-shrink-0 mt-0.5', colors.icon)}
+        />
         <div className="flex-1 min-w-0">
-          <p className={cn('font-medium text-sm', colors.text)}>
-            {notification.message}
-          </p>
+          <p className={cn('font-medium text-sm', colors.text)}>{notification.message}</p>
           {notification.description && (
-            <p className="text-xs text-slate-400 mt-0.5">
-              {notification.description}
-            </p>
+            <p className="text-xs text-slate-400 mt-0.5">{notification.description}</p>
           )}
         </div>
         <button
@@ -188,10 +182,7 @@ export function useRetryNotifications() {
     duration?: number
   ) => {
     const id = `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    setNotifications((prev) => [
-      ...prev,
-      { id, type, message, description, duration },
-    ]);
+    setNotifications((prev) => [...prev, { id, type, message, description, duration }]);
     return id;
   };
 
@@ -204,12 +195,7 @@ export function useRetryNotifications() {
   };
 
   const showRetryExhausted = (taskId: string) => {
-    addNotification(
-      'warning',
-      '重試次數已用盡',
-      `任務 ${taskId} 需要手動處理`,
-      8000
-    );
+    addNotification('warning', '重試次數已用盡', `任務 ${taskId} 需要手動處理`, 8000);
   };
 
   const showRetryCancelled = () => {

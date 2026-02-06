@@ -102,9 +102,7 @@ function parseSSEEvents(text: string): SSEEvent[] {
 function isSSEFormat(text: string): boolean {
   const trimmed = text.trim();
   return (
-    trimmed.includes('event:') ||
-    trimmed.includes('data:') ||
-    trimmed.startsWith(':') // SSE comment
+    trimmed.includes('event:') || trimmed.includes('data:') || trimmed.startsWith(':') // SSE comment
   );
 }
 
