@@ -46,13 +46,13 @@ Manage TTS providers (Piper TTS, Piper, macOS Say) - switch between providers, v
 
 ## Provider Comparison
 
-| Feature | Piper TTS | Piper | macOS Say |
-|---------|------------|-------|-----------|
-| Quality | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ |
-| Cost | Free tier + $5-22/mo | Free forever | Free (built-in) |
-| Offline | No | Yes | Yes |
-| Platform | All | WSL/Linux only | macOS only |
-| Setup | API key required | Auto-downloads | Zero setup |
+| Feature  | Piper TTS            | Piper          | macOS Say       |
+| -------- | -------------------- | -------------- | --------------- |
+| Quality  | ⭐⭐⭐⭐⭐           | ⭐⭐⭐⭐       | ⭐⭐⭐⭐        |
+| Cost     | Free tier + $5-22/mo | Free forever   | Free (built-in) |
+| Offline  | No                   | Yes            | Yes             |
+| Platform | All                  | WSL/Linux only | macOS only      |
+| Setup    | API key required     | Auto-downloads | Zero setup      |
 
 **macOS Say** is automatically detected and recommended on macOS systems. It uses the native `say` command with voices like Samantha, Alex, Daniel, and many more. Perfect for Mac users who want free, offline TTS with zero configuration.
 

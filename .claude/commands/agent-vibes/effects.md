@@ -16,6 +16,7 @@ Configure voice effects for TTS output. Effects can be applied globally, to spec
 ## Available Effects
 
 ### Reverb
+
 Adds room/space ambiance to the voice.
 
 ```
@@ -27,16 +28,19 @@ Adds room/space ambiance to the voice.
 ```
 
 ### Echo (coming soon)
+
 ```
 /agent-vibes:effects echo off|light|medium|heavy
 ```
 
 ### Pitch (coming soon)
+
 ```
 /agent-vibes:effects pitch normal|low|high|deep|chipmunk
 ```
 
 ### EQ (coming soon)
+
 ```
 /agent-vibes:effects eq flat|warm|bright|radio|telephone
 ```
@@ -77,13 +81,13 @@ By default, effects apply to the `default` config (used when no agent specified)
 
 ## Effect Levels Reference
 
-| Effect | Level | Sox Command | Description |
-|--------|-------|-------------|-------------|
-| reverb | off | (none) | Dry voice |
-| reverb | light | reverb 20 50 50 | Small room |
-| reverb | medium | reverb 40 50 70 | Conference room |
-| reverb | heavy | reverb 70 50 100 | Large hall |
-| reverb | cathedral | reverb 90 30 100 | Epic space |
+| Effect | Level     | Sox Command      | Description     |
+| ------ | --------- | ---------------- | --------------- |
+| reverb | off       | (none)           | Dry voice       |
+| reverb | light     | reverb 20 50 50  | Small room      |
+| reverb | medium    | reverb 40 50 70  | Conference room |
+| reverb | heavy     | reverb 70 50 100 | Large hall      |
+| reverb | cathedral | reverb 90 30 100 | Epic space      |
 
 ## Requirements
 

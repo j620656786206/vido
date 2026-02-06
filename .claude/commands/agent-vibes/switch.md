@@ -62,6 +62,7 @@ If user provides a voice name or number:
    - Execute: !bash .claude/hooks/voice-manager.sh switch $ARGUMENTS
 
 If no arguments provided:
+
 - Show the voice list based on active provider (as described in Step 2)
 - Inform user: "To switch voices, use `/agent-vibes:switch <number>` or `/agent-vibes:switch <name>`"
 
