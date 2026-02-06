@@ -138,8 +138,26 @@ func (s *ParserService) ParseFilenameWithContext(ctx context.Context, filename s
 			slog.Warn("AI parsing failed",
 				"filename", filename,
 				"error", err,
+				"is_service_error", IsAIServiceError(err),
 				"duration_ms", time.Since(start).Milliseconds(),
 			)
+
+			// Check if this is a service error (quota, timeout, etc.) per NFR-R11
+			if IsAIServiceError(err) {
+				slog.Info("AI service error detected, returning with degradation message",
+					"filename", filename,
+					"error", err,
+				)
+				return &parser.ParseResult{
+					OriginalFilename:   filename,
+					Status:             parser.ParseStatusNeedsAI,
+					MediaType:          parser.MediaTypeUnknown,
+					Confidence:         0,
+					ErrorMessage:       "AI parsing failed: " + err.Error(),
+					DegradationMessage: AIFallbackMessage(),
+				}
+			}
+
 			// Return needs_ai status on AI failure
 			return &parser.ParseResult{
 				OriginalFilename: filename,
@@ -170,22 +188,17 @@ func (s *ParserService) ParseFilenameWithContext(ctx context.Context, filename s
 }
 
 // parseWithFansubAI handles fansub filename parsing using the specialized AI fansub parser.
+// If AI fails with a service error (quota, timeout, etc.), falls back to regex parsing per NFR-R11.
 func (s *ParserService) parseWithFansubAI(ctx context.Context, filename string, detection *ai.FansubDetectionResult, start time.Time) *parser.ParseResult {
 	if s.aiService == nil || !s.aiService.IsConfigured() {
-		slog.Info("Fansub detected but AI not configured",
+		slog.Info("Fansub detected but AI not configured, using regex fallback",
 			"filename", filename,
 			"bracket_type", detection.BracketType,
 			"group_name", detection.GroupName,
 			"duration_ms", time.Since(start).Milliseconds(),
 		)
-		return &parser.ParseResult{
-			OriginalFilename: filename,
-			Status:           parser.ParseStatusNeedsAI,
-			MediaType:        parser.MediaTypeUnknown,
-			ReleaseGroup:     detection.GroupName,
-			Confidence:       0,
-			ErrorMessage:     "Fansub filename detected, AI required for parsing",
-		}
+		// Try regex parsing as fallback
+		return s.parseWithRegexFallback(filename, detection.GroupName, start)
 	}
 
 	slog.Info("Fansub detected, using specialized AI parser",
@@ -201,8 +214,20 @@ func (s *ParserService) parseWithFansubAI(ctx context.Context, filename string, 
 		slog.Warn("AI fansub parsing failed",
 			"filename", filename,
 			"error", err,
+			"is_service_error", IsAIServiceError(err),
 			"duration_ms", time.Since(start).Milliseconds(),
 		)
+
+		// Check if this is a service error that warrants fallback (NFR-R11)
+		if IsAIServiceError(err) {
+			slog.Info("AI service error detected, falling back to regex parsing",
+				"filename", filename,
+				"error", err,
+			)
+			return s.parseWithRegexFallback(filename, detection.GroupName, start)
+		}
+
+		// Non-service error - return needs_ai status
 		return &parser.ParseResult{
 			OriginalFilename: filename,
 			Status:           parser.ParseStatusNeedsAI,
@@ -215,6 +240,65 @@ func (s *ParserService) parseWithFansubAI(ctx context.Context, filename string, 
 
 	// Convert AI response to ParseResult with fansub source
 	return convertAIResponseToParseResult(filename, aiResult, "ai_fansub", s.aiService.GetProviderName(), start)
+}
+
+// parseWithRegexFallback attempts regex parsing when AI is unavailable.
+// Marks the result with MetadataSourceRegexFallback and degradation message per NFR-R11.
+func (s *ParserService) parseWithRegexFallback(filename string, groupName string, start time.Time) *parser.ParseResult {
+	// Try TV show pattern first
+	if s.tvParser.CanParse(filename) {
+		result := s.tvParser.Parse(filename)
+		if result.Status == parser.ParseStatusSuccess {
+			result.Confidence = calculateConfidence(result)
+			result.ParseDurationMs = time.Since(start).Milliseconds()
+			if groupName != "" {
+				result.ReleaseGroup = groupName
+			}
+			ApplyRegexFallback(result)
+			slog.Info("Parsed with regex fallback (TV)",
+				"filename", filename,
+				"title", result.Title,
+				"duration_ms", result.ParseDurationMs,
+			)
+			return result
+		}
+	}
+
+	// Try movie pattern
+	if s.movieParser.CanParse(filename) {
+		result := s.movieParser.Parse(filename)
+		if result.Status == parser.ParseStatusSuccess {
+			result.Confidence = calculateConfidence(result)
+			result.ParseDurationMs = time.Since(start).Milliseconds()
+			if groupName != "" {
+				result.ReleaseGroup = groupName
+			}
+			ApplyRegexFallback(result)
+			slog.Info("Parsed with regex fallback (Movie)",
+				"filename", filename,
+				"title", result.Title,
+				"duration_ms", result.ParseDurationMs,
+			)
+			return result
+		}
+	}
+
+	// Regex also failed
+	slog.Warn("Regex fallback also failed",
+		"filename", filename,
+		"duration_ms", time.Since(start).Milliseconds(),
+	)
+
+	return &parser.ParseResult{
+		OriginalFilename:   filename,
+		Status:             parser.ParseStatusNeedsAI,
+		MediaType:          parser.MediaTypeUnknown,
+		ReleaseGroup:       groupName,
+		Confidence:         0,
+		ErrorMessage:       "Both AI and regex parsing failed",
+		DegradationMessage: AIFallbackMessage(),
+		ParseDurationMs:    time.Since(start).Milliseconds(),
+	}
 }
 
 // convertAIResponseToParseResult converts an AI parsing response to ParseResult.

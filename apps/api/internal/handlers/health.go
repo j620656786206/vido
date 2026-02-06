@@ -7,6 +7,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/vido/api/internal/database"
+	"github.com/vido/api/internal/models"
+	"github.com/vido/api/internal/services"
 )
 
 // DatabaseHealth represents the database health status
@@ -74,5 +76,51 @@ func HealthCheck(c *gin.Context) {
 	c.JSON(http.StatusOK, HealthResponse{
 		Status:  "healthy",
 		Service: "vido-api",
+	})
+}
+
+// ServiceHealthHandler handles GET /api/v1/health/services
+// Returns health status of all external services and degradation level.
+type ServiceHealthHandler struct {
+	degradationService services.DegradationServiceInterface
+}
+
+// NewServiceHealthHandler creates a new ServiceHealthHandler.
+func NewServiceHealthHandler(degradationService services.DegradationServiceInterface) *ServiceHealthHandler {
+	return &ServiceHealthHandler{
+		degradationService: degradationService,
+	}
+}
+
+// GetServicesHealth returns the health status of all external services.
+// @Summary Get external services health status
+// @Description Returns the health status of TMDb, Douban, Wikipedia, and AI services
+// @Tags Health
+// @Produce json
+// @Success 200 {object} models.HealthStatusResponse
+// @Router /api/v1/health/services [get]
+func (h *ServiceHealthHandler) GetServicesHealth(c *gin.Context) {
+	if h.degradationService == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"success": false,
+			"error": gin.H{
+				"code":    "HEALTH_NOT_CONFIGURED",
+				"message": "Health monitoring is not configured",
+			},
+		})
+		return
+	}
+
+	status := h.degradationService.GetHealthStatus()
+
+	// Determine HTTP status based on degradation level
+	httpStatus := http.StatusOK
+	if status.DegradationLevel == models.DegradationOffline {
+		httpStatus = http.StatusServiceUnavailable
+	}
+
+	c.JSON(httpStatus, gin.H{
+		"success": true,
+		"data":    status,
 	})
 }

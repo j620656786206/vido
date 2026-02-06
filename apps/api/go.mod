@@ -4,10 +4,12 @@ go 1.24.0
 
 require (
 	github.com/PuerkitoBio/goquery v1.11.0
+	github.com/agnivade/levenshtein v1.2.1
 	github.com/gin-contrib/cors v1.7.2
 	github.com/gin-gonic/gin v1.10.0
 	github.com/google/uuid v1.6.0
 	github.com/longbridgeapp/opencc v0.3.13
+	github.com/mattn/go-sqlite3 v1.14.33
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/crypto v0.44.0
 	golang.org/x/image v0.35.0
@@ -16,7 +18,6 @@ require (
 )
 
 require (
-	github.com/agnivade/levenshtein v1.2.1 // indirect
 	github.com/andybalholm/cascadia v1.3.3 // indirect
 	github.com/bytedance/sonic v1.11.6 // indirect
 	github.com/bytedance/sonic/loader v0.1.1 // indirect

@@ -24,6 +24,8 @@ type MetadataSource string
 const (
 	// MetadataSourceRegex indicates metadata was extracted using regex patterns.
 	MetadataSourceRegex MetadataSource = "regex"
+	// MetadataSourceRegexFallback indicates regex was used as fallback when AI was unavailable.
+	MetadataSourceRegexFallback MetadataSource = "regex_fallback"
 	// MetadataSourceAI indicates metadata was extracted using generic AI parsing.
 	MetadataSourceAI MetadataSource = "ai"
 	// MetadataSourceAIFansub indicates metadata was extracted using specialized AI fansub parser.
@@ -108,6 +110,10 @@ type ParseResult struct {
 
 	// LearnedMetadataID is the metadata ID (movie/series) from the learned pattern.
 	LearnedMetadataID string `json:"learned_metadata_id,omitempty"`
+
+	// DegradationMessage contains a user-friendly message when operating in degraded mode.
+	// E.g., "AI 服務暫時無法使用，使用基本解析" (NFR-R11)
+	DegradationMessage string `json:"degradation_message,omitempty"`
 }
 
 // Parser defines the interface for filename parsers.
