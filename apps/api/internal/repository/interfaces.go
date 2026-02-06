@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/vido/api/internal/models"
+	"github.com/vido/api/internal/retry"
 )
 
 // MovieRepositoryInterface defines the contract for movie data access operations.
@@ -205,6 +206,24 @@ type LearningRepositoryInterface interface {
 	Count(ctx context.Context) (int, error)
 }
 
+// RetryRepositoryInterface defines the contract for retry queue data access
+type RetryRepositoryInterface interface {
+	Add(ctx context.Context, item *RetryItem) error
+	FindByID(ctx context.Context, id string) (*RetryItem, error)
+	FindByTaskID(ctx context.Context, taskID string) (*RetryItem, error)
+	GetPending(ctx context.Context, now time.Time) ([]*RetryItem, error)
+	GetAll(ctx context.Context) ([]*RetryItem, error)
+	Update(ctx context.Context, item *RetryItem) error
+	Delete(ctx context.Context, id string) error
+	DeleteByTaskID(ctx context.Context, taskID string) error
+	Count(ctx context.Context) (int, error)
+	CountByTaskType(ctx context.Context, taskType string) (int, error)
+	ClearAll(ctx context.Context) error
+}
+
+// RetryItem is imported from retry package for interface definition
+type RetryItem = retry.RetryItem
+
 // Compile-time interface verification
 // These assertions ensure that concrete types implement their respective interfaces.
 // If any of these fail to compile, it means the implementation is missing required methods.
@@ -216,4 +235,5 @@ var (
 	_ CacheRepositoryInterface    = (*CacheRepository)(nil)
 	_ SecretsRepositoryInterface  = (*SecretsRepository)(nil)
 	_ LearningRepositoryInterface = (*LearningRepository)(nil)
+	_ RetryRepositoryInterface    = (*RetryRepository)(nil)
 )
