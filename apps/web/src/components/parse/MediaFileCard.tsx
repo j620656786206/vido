@@ -42,12 +42,7 @@ export interface MediaFileCardProps {
  * Card component for displaying a local media file with parse status
  * Implements AC1: Status Icons in File List
  */
-export function MediaFileCard({
-  file,
-  isParsing = false,
-  onClick,
-  className,
-}: MediaFileCardProps) {
+export function MediaFileCard({ file, isParsing = false, onClick, className }: MediaFileCardProps) {
   const displayTitle = file.parsedInfo?.title || extractTitleFromFilename(file.filename);
   const year = file.parsedInfo?.year;
   const isTV = file.mediaType === 'tv';
@@ -79,11 +74,7 @@ export function MediaFileCard({
       {/* Poster Area */}
       <div className="aspect-[2/3] bg-slate-700/50 flex items-center justify-center">
         {file.posterPath ? (
-          <img
-            src={file.posterPath}
-            alt={displayTitle}
-            className="w-full h-full object-cover"
-          />
+          <img src={file.posterPath} alt={displayTitle} className="w-full h-full object-cover" />
         ) : (
           <div className="flex flex-col items-center text-slate-500">
             {isParsing ? (
@@ -100,19 +91,14 @@ export function MediaFileCard({
       {/* Content */}
       <div className="flex-1 p-3">
         {/* Title */}
-        <h3
-          className="text-sm font-medium text-white line-clamp-2 mb-1"
-          title={file.filename}
-        >
+        <h3 className="text-sm font-medium text-white line-clamp-2 mb-1" title={file.filename}>
           {displayTitle}
         </h3>
 
         {/* Metadata line */}
         <div className="flex items-center gap-2 text-xs text-slate-400 mb-1">
           {year && <span>{year}</span>}
-          {file.mediaType && (
-            <span>{file.mediaType === 'tv' ? '影集' : '電影'}</span>
-          )}
+          {file.mediaType && <span>{file.mediaType === 'tv' ? '影集' : '電影'}</span>}
           {file.parsedInfo?.season && <span>S{file.parsedInfo.season}</span>}
           {file.parsedInfo?.episode && <span>E{file.parsedInfo.episode}</span>}
         </div>
@@ -132,12 +118,7 @@ export function MediaFileCard({
 /**
  * List view row for media file
  */
-export function MediaFileRow({
-  file,
-  isParsing = false,
-  onClick,
-  className,
-}: MediaFileCardProps) {
+export function MediaFileRow({ file, isParsing = false, onClick, className }: MediaFileCardProps) {
   const displayTitle = file.parsedInfo?.title || extractTitleFromFilename(file.filename);
   const year = file.parsedInfo?.year;
 
@@ -172,9 +153,7 @@ export function MediaFileRow({
       </div>
 
       {/* File size */}
-      <div className="text-xs text-slate-400 flex-shrink-0">
-        {formatFileSize(file.size)}
-      </div>
+      <div className="text-xs text-slate-400 flex-shrink-0">{formatFileSize(file.size)}</div>
     </div>
   );
 }

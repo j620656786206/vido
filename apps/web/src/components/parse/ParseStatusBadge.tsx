@@ -103,16 +103,10 @@ export function ParseStatusBadge({
       data-status={status}
     >
       <Icon
-        className={cn(
-          sizeConfig.iconSize,
-          config.color,
-          config.animate && 'animate-spin'
-        )}
+        className={cn(sizeConfig.iconSize, config.color, config.animate && 'animate-spin')}
         aria-hidden="true"
       />
-      {showLabel && (
-        <span className={cn(sizeConfig.textSize, config.color)}>{config.label}</span>
-      )}
+      {showLabel && <span className={cn(sizeConfig.textSize, config.color)}>{config.label}</span>}
     </div>
   );
 }
@@ -144,13 +138,8 @@ export function ParsingStatusBadge({
       aria-live="polite"
       data-testid="parsing-status-badge"
     >
-      <Icon
-        className={cn(sizeConfig.iconSize, config.color, 'animate-spin')}
-        aria-hidden="true"
-      />
-      {showLabel && (
-        <span className={cn(sizeConfig.textSize, config.color)}>{config.label}</span>
-      )}
+      <Icon className={cn(sizeConfig.iconSize, config.color, 'animate-spin')} aria-hidden="true" />
+      {showLabel && <span className={cn(sizeConfig.textSize, config.color)}>{config.label}</span>}
     </div>
   );
 }

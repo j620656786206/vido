@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, act, waitFor } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { FloatingParseProgressCard } from './FloatingParseProgressCard';
 
@@ -160,11 +160,7 @@ describe('FloatingParseProgressCard', () => {
     });
 
     render(
-      <FloatingParseProgressCard
-        taskId="task-123"
-        onClose={onClose}
-        autoDismissDelay={3000}
-      />
+      <FloatingParseProgressCard taskId="task-123" onClose={onClose} autoDismissDelay={3000} />
     );
 
     expect(onClose).not.toHaveBeenCalled();
@@ -188,13 +184,7 @@ describe('FloatingParseProgressCard', () => {
       reconnect: vi.fn(),
     });
 
-    render(
-      <FloatingParseProgressCard
-        taskId="task-123"
-        onClose={onClose}
-        autoDismissDelay={0}
-      />
-    );
+    render(<FloatingParseProgressCard taskId="task-123" onClose={onClose} autoDismissDelay={0} />);
 
     act(() => {
       vi.advanceTimersByTime(5000);
@@ -210,7 +200,12 @@ describe('FloatingParseProgressCard', () => {
         status: 'failed',
         steps: [
           { name: 'filename_extract', label: '解析檔名', status: 'success' as const },
-          { name: 'tmdb_search', label: '搜尋 TMDb', status: 'failed' as const, error: 'API timeout' },
+          {
+            name: 'tmdb_search',
+            label: '搜尋 TMDb',
+            status: 'failed' as const,
+            error: 'API timeout',
+          },
           { name: 'douban_search', label: '搜尋豆瓣', status: 'failed' as const },
           { name: 'wikipedia_search', label: '搜尋 Wikipedia', status: 'pending' as const },
           { name: 'ai_retry', label: 'AI 重試', status: 'pending' as const },
@@ -243,9 +238,7 @@ describe('FloatingParseProgressCard', () => {
       progress: {
         ...mockProgress,
         status: 'failed',
-        steps: [
-          { name: 'tmdb_search', label: '搜尋 TMDb', status: 'failed' as const },
-        ],
+        steps: [{ name: 'tmdb_search', label: '搜尋 TMDb', status: 'failed' as const }],
       },
       status: 'failed',
       error: null,

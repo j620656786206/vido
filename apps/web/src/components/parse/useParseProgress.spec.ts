@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 import { useParseProgress } from './useParseProgress';
 import type { ParseProgress } from './types';
 
@@ -127,9 +127,7 @@ describe('useParseProgress', () => {
 
   it('handles parse_started event', async () => {
     const onParseStarted = vi.fn();
-    const { result } = renderHook(() =>
-      useParseProgress('task-123', { onParseStarted })
-    );
+    const { result } = renderHook(() => useParseProgress('task-123', { onParseStarted }));
 
     await act(async () => {
       await vi.runAllTimersAsync();
@@ -141,9 +139,7 @@ describe('useParseProgress', () => {
         data: {
           filename: 'test-movie.mkv',
           totalSteps: 6,
-          steps: [
-            { name: 'filename_extract', label: '解析檔名', status: 'pending' },
-          ],
+          steps: [{ name: 'filename_extract', label: '解析檔名', status: 'pending' }],
         },
       });
     });
@@ -154,9 +150,7 @@ describe('useParseProgress', () => {
 
   it('handles step_completed event', async () => {
     const onStepCompleted = vi.fn();
-    const { result } = renderHook(() =>
-      useParseProgress('task-123', { onStepCompleted })
-    );
+    const { result } = renderHook(() => useParseProgress('task-123', { onStepCompleted }));
 
     await act(async () => {
       await vi.runAllTimersAsync();
@@ -167,9 +161,7 @@ describe('useParseProgress', () => {
       taskId: 'task-123',
       filename: 'test.mkv',
       status: 'pending',
-      steps: [
-        { name: 'filename_extract', label: '解析檔名', status: 'success' },
-      ],
+      steps: [{ name: 'filename_extract', label: '解析檔名', status: 'success' }],
       currentStep: 1,
       percentage: 16,
       startedAt: new Date().toISOString(),
@@ -191,9 +183,7 @@ describe('useParseProgress', () => {
 
   it('handles parse_completed event', async () => {
     const onParseCompleted = vi.fn();
-    const { result } = renderHook(() =>
-      useParseProgress('task-123', { onParseCompleted })
-    );
+    const { result } = renderHook(() => useParseProgress('task-123', { onParseCompleted }));
 
     await act(async () => {
       await vi.runAllTimersAsync();
@@ -231,9 +221,7 @@ describe('useParseProgress', () => {
 
   it('handles parse_failed event', async () => {
     const onParseFailed = vi.fn();
-    const { result } = renderHook(() =>
-      useParseProgress('task-123', { onParseFailed })
-    );
+    const { result } = renderHook(() => useParseProgress('task-123', { onParseFailed }));
 
     await act(async () => {
       await vi.runAllTimersAsync();

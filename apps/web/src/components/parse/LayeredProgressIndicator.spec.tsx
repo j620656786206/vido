@@ -50,9 +50,18 @@ describe('LayeredProgressIndicator', () => {
   it('shows correct status for each step', () => {
     render(<LayeredProgressIndicator steps={mockSteps} currentStep={1} />);
 
-    expect(screen.getByTestId('progress-step-filename_extract')).toHaveAttribute('data-status', 'success');
-    expect(screen.getByTestId('progress-step-tmdb_search')).toHaveAttribute('data-status', 'in_progress');
-    expect(screen.getByTestId('progress-step-douban_search')).toHaveAttribute('data-status', 'pending');
+    expect(screen.getByTestId('progress-step-filename_extract')).toHaveAttribute(
+      'data-status',
+      'success'
+    );
+    expect(screen.getByTestId('progress-step-tmdb_search')).toHaveAttribute(
+      'data-status',
+      'in_progress'
+    );
+    expect(screen.getByTestId('progress-step-douban_search')).toHaveAttribute(
+      'data-status',
+      'pending'
+    );
   });
 
   it('shows "搜尋中..." for in_progress step', () => {

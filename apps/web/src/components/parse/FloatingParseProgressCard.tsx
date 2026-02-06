@@ -6,19 +6,12 @@
  */
 
 import { useState, useEffect } from 'react';
-import {
-  Loader2,
-  CheckCircle,
-  XCircle,
-  ChevronUp,
-  ChevronDown,
-  X,
-} from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, ChevronUp, ChevronDown, X } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useParseProgress } from './useParseProgress';
 import { LayeredProgressIndicator } from './LayeredProgressIndicator';
 import { ErrorDetailsPanel } from './ErrorDetailsPanel';
-import type { ParseResult, ParseProgress } from './types';
+import type { ParseResult } from './types';
 
 export interface FloatingParseProgressCardProps {
   /** Task ID to track */
@@ -54,11 +47,9 @@ export function FloatingParseProgressCard({
   className,
 }: FloatingParseProgressCardProps) {
   const [isMinimized, setIsMinimized] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
 
   const { progress, status, isConnected, error } = useParseProgress(taskId, {
     onParseCompleted: (data) => {
-      setShowSuccess(true);
       onComplete?.(data.result || undefined);
     },
   });
@@ -93,15 +84,9 @@ export function FloatingParseProgressCard({
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">
         <div className="flex items-center gap-2">
-          {isParsing && (
-            <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />
-          )}
-          {isSuccess && (
-            <CheckCircle className="h-4 w-4 text-green-500" />
-          )}
-          {isFailed && (
-            <XCircle className="h-4 w-4 text-red-500" />
-          )}
+          {isParsing && <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />}
+          {isSuccess && <CheckCircle className="h-4 w-4 text-green-500" />}
+          {isFailed && <XCircle className="h-4 w-4 text-red-500" />}
           <span className="font-medium text-white">
             {isParsing && '正在解析...'}
             {isSuccess && '✅ 解析完成！'}
@@ -116,11 +101,7 @@ export function FloatingParseProgressCard({
             aria-label={isMinimized ? '展開' : '縮小'}
             data-testid="minimize-button"
           >
-            {isMinimized ? (
-              <ChevronUp className="h-4 w-4" />
-            ) : (
-              <ChevronDown className="h-4 w-4" />
-            )}
+            {isMinimized ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </button>
           <button
             onClick={onClose}
@@ -163,10 +144,7 @@ export function FloatingParseProgressCard({
           </div>
 
           {/* Layered Steps */}
-          <LayeredProgressIndicator
-            steps={progress.steps}
-            currentStep={progress.currentStep}
-          />
+          <LayeredProgressIndicator steps={progress.steps} currentStep={progress.currentStep} />
 
           {/* Filename */}
           <div className="text-sm text-slate-400 truncate" title={progress.filename}>
@@ -204,9 +182,7 @@ export function FloatingParseProgressCard({
       {/* Minimized View */}
       {isMinimized && progress && (
         <div className="px-4 py-2 flex items-center justify-between text-sm">
-          <span className="text-slate-400 truncate flex-1 mr-2">
-            {progress.filename}
-          </span>
+          <span className="text-slate-400 truncate flex-1 mr-2">{progress.filename}</span>
           <span className="text-white font-medium">{progress.percentage}%</span>
         </div>
       )}

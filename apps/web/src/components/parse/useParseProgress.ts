@@ -7,7 +7,6 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import type {
   ParseProgress,
   ParseStatus,
-  ParseEvent,
   ParseEventType,
   StepEventData,
   ParseCompletedData,
@@ -88,6 +87,7 @@ export function useParseProgress(
   const eventSourceRef = useRef<EventSource | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isManuallyDisconnectedRef = useRef(false);
+  const connectRef = useRef<(() => void) | null>(null);
 
   // Initialize default progress
   const initializeProgress = useCallback(
@@ -288,11 +288,16 @@ export function useParseProgress(
       if (autoReconnect && !isManuallyDisconnectedRef.current) {
         setIsReconnecting(true);
         reconnectTimeoutRef.current = setTimeout(() => {
-          connect();
+          connectRef.current?.();
         }, reconnectDelay);
       }
     };
   }, [taskId, handleEvent, onError, autoReconnect, reconnectDelay]);
+
+  // Store connect function in ref for recursive reconnection
+  useEffect(() => {
+    connectRef.current = connect;
+  }, [connect]);
 
   // Disconnect from SSE
   const disconnect = useCallback(() => {

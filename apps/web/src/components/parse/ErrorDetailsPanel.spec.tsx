@@ -79,11 +79,7 @@ describe('ErrorDetailsPanel', () => {
     const user = userEvent.setup();
 
     render(
-      <ErrorDetailsPanel
-        steps={failedSteps}
-        filename="test.mkv"
-        onManualSearch={onManualSearch}
-      />
+      <ErrorDetailsPanel steps={failedSteps} filename="test.mkv" onManualSearch={onManualSearch} />
     );
 
     await user.click(screen.getByTestId('manual-search-button'));
@@ -95,11 +91,7 @@ describe('ErrorDetailsPanel', () => {
     const user = userEvent.setup();
 
     render(
-      <ErrorDetailsPanel
-        steps={failedSteps}
-        filename="test.mkv"
-        onEditFilename={onEditFilename}
-      />
+      <ErrorDetailsPanel steps={failedSteps} filename="test.mkv" onEditFilename={onEditFilename} />
     );
 
     await user.click(screen.getByTestId('edit-filename-button'));
@@ -110,13 +102,7 @@ describe('ErrorDetailsPanel', () => {
     const onSkip = vi.fn();
     const user = userEvent.setup();
 
-    render(
-      <ErrorDetailsPanel
-        steps={failedSteps}
-        filename="test.mkv"
-        onSkip={onSkip}
-      />
-    );
+    render(<ErrorDetailsPanel steps={failedSteps} filename="test.mkv" onSkip={onSkip} />);
 
     await user.click(screen.getByTestId('skip-button'));
     expect(onSkip).toHaveBeenCalledTimes(1);
@@ -129,13 +115,7 @@ describe('ErrorDetailsPanel', () => {
   });
 
   it('applies custom className', () => {
-    render(
-      <ErrorDetailsPanel
-        steps={failedSteps}
-        filename="test.mkv"
-        className="custom-class"
-      />
-    );
+    render(<ErrorDetailsPanel steps={failedSteps} filename="test.mkv" className="custom-class" />);
 
     expect(screen.getByTestId('error-details-panel')).toHaveClass('custom-class');
   });

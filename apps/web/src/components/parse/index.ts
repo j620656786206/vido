@@ -19,11 +19,7 @@ export type {
   ProgressUpdateData,
 } from './types';
 
-export {
-  STANDARD_PARSE_STEPS,
-  STATUS_CONFIG,
-  STEP_STATUS_CONFIG,
-} from './types';
+export { STANDARD_PARSE_STEPS, STATUS_CONFIG, STEP_STATUS_CONFIG } from './types';
 
 // Hook
 export { useParseProgress } from './useParseProgress';
@@ -46,10 +42,5 @@ export type { ErrorDetailsPanelProps } from './ErrorDetailsPanel';
 export { FloatingParseProgressCard } from './FloatingParseProgressCard';
 export type { FloatingParseProgressCardProps } from './FloatingParseProgressCard';
 
-export {
-  MediaFileCard,
-  MediaFileRow,
-  MediaFileGrid,
-  MediaFileList,
-} from './MediaFileCard';
+export { MediaFileCard, MediaFileRow, MediaFileGrid, MediaFileList } from './MediaFileCard';
 export type { MediaFile, MediaFileCardProps } from './MediaFileCard';

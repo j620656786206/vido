@@ -4,13 +4,7 @@
  * AC2: Step Progress Indicators (UX-3)
  */
 
-import {
-  CheckCircle,
-  Loader2,
-  XCircle,
-  MinusCircle,
-  Circle,
-} from 'lucide-react';
+import { CheckCircle, Loader2, XCircle, MinusCircle, Circle } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import type { ParseStep, StepStatus } from './types';
 
@@ -86,9 +80,7 @@ function ProgressStep({
           </span>
 
           {step.status === 'in_progress' && (
-            <span className="text-sm text-blue-400 animate-pulse">
-              搜尋中...
-            </span>
+            <span className="text-sm text-blue-400 animate-pulse">搜尋中...</span>
           )}
 
           {step.status === 'failed' && step.error && (
@@ -159,11 +151,7 @@ export function InlineProgressIndicator({
             className="flex items-center"
           >
             <Icon
-              className={cn(
-                'h-3 w-3',
-                config.color,
-                config.animate && 'animate-spin'
-              )}
+              className={cn('h-3 w-3', config.color, config.animate && 'animate-spin')}
               aria-hidden="true"
             />
           </div>
@@ -208,9 +196,7 @@ export function SourceChainIndicator({
             {step.status === 'success' && ' ✓'}
             {step.status === 'failed' && ' ✗'}
           </span>
-          {index < searchSteps.length - 1 && (
-            <span className="mx-1.5 text-slate-600">→</span>
-          )}
+          {index < searchSteps.length - 1 && <span className="mx-1.5 text-slate-600">→</span>}
         </div>
       ))}
     </div>

@@ -109,10 +109,7 @@ export const STANDARD_PARSE_STEPS: ParseStep[] = [
 ];
 
 // Status display configuration
-export const STATUS_CONFIG: Record<
-  ParseStatus,
-  { label: string; color: string; icon: string }
-> = {
+export const STATUS_CONFIG: Record<ParseStatus, { label: string; color: string; icon: string }> = {
   pending: { label: '等待中', color: 'text-muted-foreground', icon: 'clock' },
   success: { label: '已完成', color: 'text-green-500', icon: 'check-circle' },
   needs_ai: { label: '需要處理', color: 'text-yellow-500', icon: 'alert-triangle' },
@@ -120,10 +117,7 @@ export const STATUS_CONFIG: Record<
 };
 
 // Step status display configuration
-export const STEP_STATUS_CONFIG: Record<
-  StepStatus,
-  { label: string; color: string }
-> = {
+export const STEP_STATUS_CONFIG: Record<StepStatus, { label: string; color: string }> = {
   pending: { label: '等待中', color: 'text-muted-foreground' },
   in_progress: { label: '進行中', color: 'text-blue-500' },
   success: { label: '成功', color: 'text-green-500' },

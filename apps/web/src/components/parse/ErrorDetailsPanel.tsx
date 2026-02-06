@@ -29,7 +29,7 @@ export interface ErrorDetailsPanelProps {
  */
 export function ErrorDetailsPanel({
   steps,
-  filename,
+  filename: _filename,
   onManualSearch,
   onEditFilename,
   onSkip,
@@ -55,9 +55,7 @@ export function ErrorDetailsPanel({
                 <XCircle className="h-3.5 w-3.5 text-red-400 mt-0.5 flex-shrink-0" />
                 <span className="text-slate-300">
                   {step.label}
-                  {step.error && (
-                    <span className="text-slate-400">：{step.error}</span>
-                  )}
+                  {step.error && <span className="text-slate-400">：{step.error}</span>}
                   {!step.error && <span className="text-slate-400">：無回應</span>}
                 </span>
               </li>
@@ -140,10 +138,7 @@ export function CompactErrorSummary({
   }
 
   return (
-    <div
-      className={cn('text-xs text-red-400', className)}
-      data-testid="compact-error-summary"
-    >
+    <div className={cn('text-xs text-red-400', className)} data-testid="compact-error-summary">
       <span>{failedSteps.length} 個來源失敗</span>
       {failedSteps.length > 0 && failedSteps[0].error && (
         <span className="text-slate-400">：{failedSteps[0].error}</span>

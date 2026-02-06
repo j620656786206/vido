@@ -5,12 +5,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import {
-  MediaFileCard,
-  MediaFileRow,
-  MediaFileGrid,
-  MediaFileList,
-} from './MediaFileCard';
+import { MediaFileCard, MediaFileRow, MediaFileGrid, MediaFileList } from './MediaFileCard';
 import type { MediaFile } from './MediaFileCard';
 
 const mockFile: MediaFile = {
