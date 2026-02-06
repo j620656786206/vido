@@ -14,6 +14,7 @@ import (
 	"github.com/vido/api/internal/config"
 	"github.com/vido/api/internal/database"
 	"github.com/vido/api/internal/database/migrations"
+	"github.com/vido/api/internal/events"
 	"github.com/vido/api/internal/handlers"
 	"github.com/vido/api/internal/images"
 	"github.com/vido/api/internal/repository"
@@ -183,6 +184,10 @@ func main() {
 
 	slog.Info("Services initialized with repository injection")
 
+	// Initialize event emitter for real-time parse progress (Story 3.10)
+	parseEventEmitter := events.NewChannelEmitter()
+	defer parseEventEmitter.Close()
+
 	// Initialize handlers with injected service interfaces
 	// Following Handler → Service → Repository → Database architecture
 	movieHandler := handlers.NewMovieHandler(movieService)
@@ -193,6 +198,7 @@ func main() {
 	parserHandler := handlers.NewParserHandler(parserService)
 	metadataHandler := handlers.NewMetadataHandler(metadataService)
 	learningHandler := handlers.NewLearningHandler(learningService)
+	parseProgressHandler := handlers.NewParseProgressHandler(parseEventEmitter)
 	slog.Info("Handlers initialized with service injection")
 
 	// Create Gin router
@@ -220,6 +226,7 @@ func main() {
 		parserHandler.RegisterRoutes(apiV1)
 		metadataHandler.RegisterRoutes(apiV1)
 		learningHandler.RegisterRoutes(apiV1)
+		parseProgressHandler.RegisterRoutes(apiV1)
 	}
 	slog.Info("API routes registered", "prefix", "/api/v1")
 
