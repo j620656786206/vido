@@ -356,7 +356,9 @@ test.describe('Upload Poster API @api @metadata-editor', () => {
     expect(response.error!.code).toBe('POSTER_UPLOAD_NOT_FOUND');
   });
 
-  test('[P2] POST /media/{id}/poster - should return 400 for file too large', async ({ api }) => {
+  test('[P2] POST /media/{id}/poster - should return 400 for file too large', async ({
+    api: _api,
+  }) => {
     // GIVEN: A file larger than 5MB (simulate with header check)
     // Note: In real test, we'd need a large file - this tests the error handling
     // Creating a 6MB buffer would be slow, so we rely on handler tests for full coverage

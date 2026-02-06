@@ -13,7 +13,7 @@ export function App() {
     rating: 8.5,
   };
 
-  const exampleResponse: ApiResponse<Movie> = {
+  const _exampleResponse: ApiResponse<Movie> = {
     success: true,
     data: exampleMovie,
     message: 'Movie fetched successfully',

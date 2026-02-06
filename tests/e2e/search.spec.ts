@@ -168,7 +168,7 @@ test.describe('Media Search - Results Display @e2e @search', () => {
     await searchInput.fill('Interstellar');
 
     // Then press enter and immediately check for loading
-    const loadingPromise = page.getByTestId('search-loading').isVisible();
+    const _loadingPromise = page.getByTestId('search-loading').isVisible();
     await searchInput.press('Enter');
 
     // THEN: Loading indicator may briefly appear (or results load quickly)

@@ -20,7 +20,6 @@ import { test, expect } from '../support/fixtures';
 import {
   createLearnPatternRequest,
   createMoviePatternRequest,
-  presetPatternRequests,
 } from '../support/fixtures/factories/learning-factory';
 
 const API_BASE_URL = process.env.API_URL || 'http://localhost:8080/api/v1';

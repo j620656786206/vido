@@ -6,7 +6,7 @@
 import { useState } from 'react';
 import { Film, Tv, Search, AlertTriangle } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { ManualSearchDialog, FallbackStatusDisplay } from '../manual-search';
+import { ManualSearchDialog } from '../manual-search';
 import type { FallbackStatus } from '../manual-search/ManualSearchDialog';
 
 /**

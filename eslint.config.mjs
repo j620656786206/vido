@@ -89,6 +89,8 @@ export default [
         Headers: 'readonly',
         AbortController: 'readonly',
         AbortSignal: 'readonly',
+        EventSource: 'readonly',
+        MessageEvent: 'readonly',
         // Node globals
         process: 'readonly',
         __dirname: 'readonly',

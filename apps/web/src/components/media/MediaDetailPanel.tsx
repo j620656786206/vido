@@ -1,6 +1,5 @@
 import { getImageUrl } from '../../lib/image';
 import type { MovieDetails, TVShowDetails, Credits } from '../../types/tmdb';
-import { cn } from '../../lib/utils';
 
 export interface MediaDetailPanelProps {
   type: 'movie' | 'tv';

@@ -187,7 +187,7 @@ function cleanupStaleSessions(): void {
 /**
  * Global teardown function
  */
-async function globalTeardown(config: FullConfig): Promise<void> {
+async function globalTeardown(_config: FullConfig): Promise<void> {
   const session = readSession();
   const sessionFile = getSessionFilePath();
 

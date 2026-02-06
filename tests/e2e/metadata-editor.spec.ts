@@ -21,8 +21,6 @@
  */
 
 import { test, expect } from '../support/fixtures';
-import { faker } from '@faker-js/faker';
-import * as path from 'path';
 
 // =============================================================================
 // ⚠️ ARCHITECTURE NOTE - TESTS SKIPPED
@@ -359,7 +357,7 @@ test.describe.skip('Save Metadata @e2e @metadata-editor', () => {
       const saveButton = page.getByRole('button', { name: /儲存|Save/i });
 
       // Create a promise to check for loading state
-      const loadingPromise = page
+      const _loadingPromise = page
         .waitForSelector('button:has-text("儲存中"), button:has-text("Saving")', {
           timeout: 2000,
         })

@@ -67,7 +67,7 @@ export function trackPid(pid: number): void {
 /**
  * Global setup function
  */
-async function globalSetup(config: FullConfig): Promise<void> {
+async function globalSetup(_config: FullConfig): Promise<void> {
   // Generate unique session ID
   const sessionId = `session-${process.pid}-${crypto.randomBytes(4).toString('hex')}`;
 

@@ -1,6 +1,4 @@
 import type {
-  Movie,
-  TVShow,
   MovieSearchResponse,
   TVShowSearchResponse,
   ApiResponse,

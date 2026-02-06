@@ -550,7 +550,7 @@ test.describe('Pattern Auto-Apply Toast @e2e @learning @story-3-9', () => {
 test.describe('Learning Full Integration Flow @e2e @learning @story-3-9', () => {
   test('[P1] should complete full learning flow: correct → learn → manage (AC1, AC3)', async ({
     page,
-    request,
+    request: _request,
   }) => {
     // This test verifies the complete user journey
     let createdPatternId: string | null = null;

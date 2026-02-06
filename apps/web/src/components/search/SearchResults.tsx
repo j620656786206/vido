@@ -1,6 +1,6 @@
 import { MediaGrid, type MediaItem } from '../media/MediaGrid';
 import { Pagination } from '../ui/Pagination';
-import type { Movie, TVShow, MovieSearchResponse, TVShowSearchResponse } from '../../types/tmdb';
+import type { MovieSearchResponse, TVShowSearchResponse } from '../../types/tmdb';
 
 interface SearchResultsProps {
   movies?: MovieSearchResponse;
