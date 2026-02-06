@@ -18,6 +18,7 @@ import (
 	"github.com/vido/api/internal/handlers"
 	"github.com/vido/api/internal/images"
 	"github.com/vido/api/internal/repository"
+	"github.com/vido/api/internal/retry"
 	"github.com/vido/api/internal/secrets"
 	"github.com/vido/api/internal/services"
 
@@ -143,9 +144,11 @@ func main() {
 	slog.Info("Learning service initialized")
 
 	// Initialize retry service for auto-retry mechanism (Story 3.11)
-	// Note: executor is nil initially, will be set after metadata service is created
+	// Note: executor will be wired up after metadata service is created
+	// We create a placeholder executor first and update it after metadata service exists
+	var retryExecutor *retry.RetryExecutor
 	retryService := services.NewRetryService(repos.Retry, nil, slog.Default())
-	slog.Info("Retry service initialized")
+	slog.Info("Retry service initialized (executor pending)")
 
 	// Initialize parser service with AI and learning integration (Story 2.5, 3.1, 3.9)
 	// Note: must use a typed nil interface to avoid Go's nil interface gotcha.
@@ -186,6 +189,42 @@ func main() {
 		metadataService.SetKeywordGenerator(keywordService)
 		slog.Info("AI keyword retry phase enabled for metadata search")
 	}
+
+	// Wire up retry service with metadata service (Story 3.11)
+	// Create executor that can re-execute failed metadata searches
+	retryExecutor = retry.NewRetryExecutor(metadataService, slog.Default())
+	// Recreate retry service with the executor now that we have it
+	retryService = services.NewRetryService(repos.Retry, retryExecutor, slog.Default())
+	// Wire retry service to metadata service for automatic retry queueing
+	metadataService.SetRetryService(retryService)
+
+	// Set up retry event handler for notifications (Story 3.11 - AC2, AC3)
+	retryService.SetEventHandler(func(event retry.Event) {
+		switch event.Type {
+		case retry.EventRetrySuccess:
+			slog.Info("Retry succeeded - metadata now available",
+				"task_id", event.Item.TaskID,
+				"task_type", event.Item.TaskType,
+				"attempts", event.Item.AttemptCount,
+			)
+			// TODO: Emit SSE event for real-time UI notification (Story 3.11 - AC3)
+		case retry.EventRetryExhausted:
+			slog.Warn("Retry exhausted - manual intervention required",
+				"task_id", event.Item.TaskID,
+				"task_type", event.Item.TaskType,
+				"attempts", event.Item.AttemptCount,
+				"last_error", event.Item.LastError,
+			)
+			// TODO: Emit SSE event for real-time UI notification (Story 3.11 - AC2)
+		case retry.EventRetryFailed:
+			slog.Debug("Retry attempt failed, will retry later",
+				"task_id", event.Item.TaskID,
+				"attempt", event.Item.AttemptCount,
+				"next_attempt", event.Metadata["next_attempt"],
+			)
+		}
+	})
+	slog.Info("Retry executor and event handler configured")
 
 	slog.Info("Services initialized with repository injection")
 

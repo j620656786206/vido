@@ -3,6 +3,7 @@ package handlers
 import (
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/vido/api/internal/retry"
@@ -74,7 +75,7 @@ func (h *RetryHandler) TriggerImmediate(c *gin.Context) {
 		slog.Error("Failed to trigger immediate retry", "error", err, "id", id)
 
 		// Check for not found
-		if containsString(err.Error(), "not found") {
+		if strings.Contains(err.Error(), "not found") {
 			ErrorResponse(c, http.StatusNotFound, "RETRY_NOT_FOUND",
 				"找不到此重試項目",
 				"重試項目可能已完成或被取消。")
@@ -109,7 +110,7 @@ func (h *RetryHandler) Cancel(c *gin.Context) {
 		slog.Error("Failed to cancel retry", "error", err, "id", id)
 
 		// Check for not found
-		if containsString(err.Error(), "not found") {
+		if strings.Contains(err.Error(), "not found") {
 			ErrorResponse(c, http.StatusNotFound, "RETRY_NOT_FOUND",
 				"找不到此重試項目",
 				"重試項目可能已完成或被取消。")
@@ -149,16 +150,6 @@ func (h *RetryHandler) GetByID(c *gin.Context) {
 	}
 
 	SuccessResponse(c, item.ToResponse())
-}
-
-// helper function to check if string contains substring
-func containsString(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
 }
 
 // RegisterRetryRoutes registers the retry routes on a Gin engine

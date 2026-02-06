@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/vido/api/internal/metadata"
 	"github.com/vido/api/internal/models"
+	"github.com/vido/api/internal/retry"
 )
 
 // MetadataServiceConfig holds configuration for the metadata service
@@ -322,6 +324,7 @@ type MetadataService struct {
 	movieEditor      MetadataEditor
 	seriesEditor     MetadataEditor
 	posterUploader   PosterUploader
+	retryService     RetryServiceInterface // Story 3.11: Auto-retry integration
 }
 
 // Compile-time interface verification
@@ -409,6 +412,11 @@ func (s *MetadataService) SearchMetadata(ctx context.Context, req *SearchMetadat
 	metaReq := req.ToMetadataRequest()
 	result, status := s.orchestrator.Search(ctx, metaReq)
 
+	// Story 3.11: Queue retry if search failed due to transient errors
+	if result == nil || len(result.Items) == 0 {
+		s.queueRetryIfNeeded(ctx, req, status)
+	}
+
 	return result, status, nil
 }
 
@@ -433,6 +441,115 @@ func (s *MetadataService) GetProviders() []ProviderInfo {
 func (s *MetadataService) SetKeywordGenerator(generator metadata.KeywordGenerator) {
 	s.orchestrator.SetKeywordGenerator(generator)
 	slog.Info("AI keyword generator configured for metadata search")
+}
+
+// SetRetryService sets the retry service for auto-retry on transient failures (Story 3.11)
+func (s *MetadataService) SetRetryService(retryService RetryServiceInterface) {
+	s.retryService = retryService
+	slog.Info("Retry service configured for metadata search")
+}
+
+// SearchByTaskPayload implements retry.MetadataSearcher interface (Story 3.11)
+// This method is called by the retry executor to re-attempt failed metadata searches
+func (s *MetadataService) SearchByTaskPayload(ctx context.Context, payload json.RawMessage) error {
+	var p retry.RetryPayload
+	if err := json.Unmarshal(payload, &p); err != nil {
+		return fmt.Errorf("failed to parse retry payload: %w", err)
+	}
+
+	if p.Title == "" {
+		return fmt.Errorf("retry payload missing title")
+	}
+
+	mediaType := "movie"
+	if p.MediaType == "series" || p.MediaType == "tv" {
+		mediaType = "tv"
+	}
+
+	req := &SearchMetadataRequest{
+		Query:     p.Title,
+		MediaType: mediaType,
+		Year:      p.Year,
+	}
+
+	result, status, err := s.SearchMetadata(ctx, req)
+	if err != nil {
+		return fmt.Errorf("metadata search failed: %w", err)
+	}
+
+	// Check if we got results
+	if result == nil || len(result.Items) == 0 {
+		if status != nil && len(status.Attempts) > 0 {
+			// Return the last error from attempts
+			for i := len(status.Attempts) - 1; i >= 0; i-- {
+				if status.Attempts[i].Error != nil {
+					return status.Attempts[i].Error
+				}
+			}
+		}
+		return fmt.Errorf("no results found for: %s", p.Title)
+	}
+
+	slog.Info("Retry successful",
+		"title", p.Title,
+		"results", len(result.Items),
+	)
+
+	return nil
+}
+
+// queueRetryIfNeeded checks if a failed search should be queued for retry (Story 3.11)
+func (s *MetadataService) queueRetryIfNeeded(ctx context.Context, req *SearchMetadataRequest, status *metadata.FallbackStatus) {
+	if s.retryService == nil || status == nil {
+		return
+	}
+
+	// Collect errors from attempts
+	var attemptErrors []error
+	for _, attempt := range status.Attempts {
+		if attempt.Error != nil {
+			attemptErrors = append(attemptErrors, attempt.Error)
+		}
+	}
+
+	// Check if we should queue a retry
+	if !retry.ShouldQueueRetry(attemptErrors) {
+		return
+	}
+
+	// Build retry payload
+	payload := retry.RetryPayload{
+		Title:     req.Query,
+		MediaType: req.MediaType,
+		Year:      req.Year,
+	}
+
+	// Use first retryable error for the retry queue
+	var retryErr error
+	for _, err := range attemptErrors {
+		if retry.IsRetryableMetadataError(err) {
+			retryErr = err
+			break
+		}
+	}
+
+	if retryErr == nil {
+		return
+	}
+
+	taskID := fmt.Sprintf("metadata-search-%s-%s-%d", req.MediaType, req.Query, req.Year)
+	if err := s.retryService.QueueRetry(ctx, taskID, retry.TaskTypeMetadataFetch, payload, retryErr); err != nil {
+		slog.Error("Failed to queue retry",
+			"error", err,
+			"query", req.Query,
+		)
+	} else {
+		slog.Info("Queued metadata search for retry",
+			"task_id", taskID,
+			"query", req.Query,
+			"error", retryErr.Error(),
+		)
+	}
 }
 
 // ManualSearch performs manual search across selected sources (Story 3.7)

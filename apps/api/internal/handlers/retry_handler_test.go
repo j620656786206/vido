@@ -319,22 +319,4 @@ func TestRetryHandler_GetByID_Error(t *testing.T) {
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }
 
-func TestContainsString(t *testing.T) {
-	tests := []struct {
-		s        string
-		substr   string
-		expected bool
-	}{
-		{"hello world", "world", true},
-		{"hello world", "foo", false},
-		{"not found", "not found", true},
-		{"item not found", "not found", true},
-		{"", "test", false},
-		{"test", "", true},
-	}
-
-	for _, tt := range tests {
-		result := containsString(tt.s, tt.substr)
-		assert.Equal(t, tt.expected, result, "containsString(%q, %q)", tt.s, tt.substr)
-	}
-}
+// TestContainsString removed - now using standard library strings.Contains
