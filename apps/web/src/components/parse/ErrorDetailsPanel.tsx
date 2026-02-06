@@ -7,6 +7,7 @@
 import { XCircle, Search, Edit, SkipForward, ArrowRight } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import type { ParseStep } from './types';
+import { getSourceDisplayName } from './types';
 
 export interface ErrorDetailsPanelProps {
   /** List of parse steps (to extract failures from) */
@@ -151,18 +152,6 @@ export function CompactErrorSummary({
       )}
     </div>
   );
-}
-
-function getSourceDisplayName(stepName: string): string {
-  const names: Record<string, string> = {
-    tmdb_search: 'TMDb',
-    douban_search: '豆瓣',
-    wikipedia_search: 'Wikipedia',
-    ai_retry: 'AI',
-    filename_extract: '解析檔名',
-    download_poster: '下載海報',
-  };
-  return names[stepName] || stepName;
 }
 
 export default ErrorDetailsPanel;

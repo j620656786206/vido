@@ -25,7 +25,7 @@ const API_BASE_URL = process.env.API_URL || 'http://localhost:8080/api/v1';
 interface ParseProgress {
   taskId: string;
   filename: string;
-  status: 'pending' | 'parsing' | 'success' | 'warning' | 'failed';
+  status: 'pending' | 'parsing' | 'success' | 'needs_ai' | 'failed';
   steps: ParseStep[];
   currentStep: number;
   percentage: number;

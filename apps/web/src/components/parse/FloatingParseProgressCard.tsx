@@ -12,6 +12,7 @@ import { useParseProgress } from './useParseProgress';
 import { LayeredProgressIndicator } from './LayeredProgressIndicator';
 import { ErrorDetailsPanel } from './ErrorDetailsPanel';
 import type { ParseResult } from './types';
+import { getSourceDisplayName } from './types';
 
 export interface FloatingParseProgressCardProps {
   /** Task ID to track */
@@ -64,7 +65,7 @@ export function FloatingParseProgressCard({
     }
   }, [status, autoDismissDelay, onClose]);
 
-  const isParsing = status === 'pending' && isConnected;
+  const isParsing = status === 'parsing';
   const isSuccess = status === 'success';
   const isFailed = status === 'failed';
 
@@ -195,16 +196,6 @@ export function FloatingParseProgressCard({
       )}
     </div>
   );
-}
-
-function getSourceDisplayName(source: string): string {
-  const names: Record<string, string> = {
-    tmdb: 'TMDb',
-    douban: '豆瓣',
-    wikipedia: 'Wikipedia',
-    manual: '手動選擇',
-  };
-  return names[source] || source;
 }
 
 export default FloatingParseProgressCard;

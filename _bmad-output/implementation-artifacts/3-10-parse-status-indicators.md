@@ -696,9 +696,24 @@ Claude Opus 4.5 (claude-opus-4-5-20251101)
 - Added `NewParseProgressHandlerWithTTL()` constructor for custom TTL configuration
 - Updated `IsComplete` test to include `parsing` status case
 
+### Code Review Fixes (2026-02-06 - Round 2)
+
+**Reviewer:** Claude Opus 4.5 (Amelia Dev Agent)
+
+**Issues Fixed:**
+1. [HIGH] Fixed `FloatingParseProgressCard.tsx` status detection - changed from `status === 'pending' && isConnected` to `status === 'parsing'`
+2. [HIGH] Added `defer parseProgressHandler.Close()` in `main.go` to prevent goroutine leak during graceful shutdown
+3. [HIGH] Updated `IsComplete()` in `parse_status.go` to include `ParseStatusNeedsAI` as a complete state (AC1 compliance)
+4. [MEDIUM] Fixed E2E test type mismatch in `parse-progress.api.spec.ts` - changed `'warning'` to `'needs_ai'`
+5. [MEDIUM] Extracted `getSourceDisplayName()` to `types.ts` as shared utility, removed duplicates from `ErrorDetailsPanel.tsx` and `FloatingParseProgressCard.tsx`
+
+**Test Updates:**
+- Updated `TestParseProgress_IsComplete` to expect `needs_ai` as complete state
+
 ### File List
 
 **Backend Files:**
+- `apps/api/cmd/api/main.go` - Main entry point (added parseProgressHandler.Close() for graceful shutdown)
 - `apps/api/internal/models/parse_status.go` - Parse status types, ParseProgress, ParseStep structs
 - `apps/api/internal/models/parse_status_test.go` - Model tests
 - `apps/api/internal/events/parse_events.go` - Event types and ChannelEmitter
@@ -707,7 +722,7 @@ Claude Opus 4.5 (claude-opus-4-5-20251101)
 - `apps/api/internal/handlers/parse_progress_handler_test.go` - Handler tests
 
 **Frontend Files:**
-- `apps/web/src/components/parse/types.ts` - TypeScript types matching backend
+- `apps/web/src/components/parse/types.ts` - TypeScript types matching backend + shared `getSourceDisplayName()` utility
 - `apps/web/src/components/parse/useParseProgress.ts` - SSE hook with auto-reconnect
 - `apps/web/src/components/parse/useParseProgress.spec.ts` - Hook tests
 - `apps/web/src/components/parse/ParseStatusBadge.tsx` - Status badge with icons
@@ -721,3 +736,6 @@ Claude Opus 4.5 (claude-opus-4-5-20251101)
 - `apps/web/src/components/parse/MediaFileCard.tsx` - File list integration
 - `apps/web/src/components/parse/MediaFileCard.spec.tsx` - Card tests
 - `apps/web/src/components/parse/index.ts` - Barrel exports
+
+**E2E Test Files:**
+- `tests/e2e/parse-progress.api.spec.ts` - Parse Progress API E2E tests

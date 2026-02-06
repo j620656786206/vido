@@ -219,7 +219,7 @@ func TestParseProgress_IsComplete(t *testing.T) {
 		{"parsing", ParseStatusParsing, false},
 		{"success", ParseStatusSuccess, true},
 		{"failed", ParseStatusFailed, true},
-		{"needs_ai", ParseStatusNeedsAI, false},
+		{"needs_ai", ParseStatusNeedsAI, true},
 	}
 
 	for _, tt := range tests {

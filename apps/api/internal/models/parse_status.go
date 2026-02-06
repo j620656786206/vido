@@ -209,7 +209,7 @@ func (p *ParseProgress) GetFailedSteps() []ParseStep {
 	return failed
 }
 
-// IsComplete returns true if the parse operation is complete (success or failed)
+// IsComplete returns true if the parse operation is complete (success, failed, or needs_ai)
 func (p *ParseProgress) IsComplete() bool {
-	return p.Status == ParseStatusSuccess || p.Status == ParseStatusFailed
+	return p.Status == ParseStatusSuccess || p.Status == ParseStatusFailed || p.Status == ParseStatusNeedsAI
 }

@@ -125,3 +125,22 @@ export const STEP_STATUS_CONFIG: Record<StepStatus, { label: string; color: stri
   failed: { label: '失敗', color: 'text-red-500' },
   skipped: { label: '跳過', color: 'text-muted-foreground' },
 };
+
+// Metadata source display names (shared utility)
+export function getSourceDisplayName(source: string): string {
+  const names: Record<string, string> = {
+    // Step names
+    tmdb_search: 'TMDb',
+    douban_search: '豆瓣',
+    wikipedia_search: 'Wikipedia',
+    ai_retry: 'AI',
+    filename_extract: '解析檔名',
+    download_poster: '下載海報',
+    // Metadata source values
+    tmdb: 'TMDb',
+    douban: '豆瓣',
+    wikipedia: 'Wikipedia',
+    manual: '手動選擇',
+  };
+  return names[source] || source;
+}

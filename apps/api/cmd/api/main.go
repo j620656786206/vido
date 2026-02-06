@@ -188,6 +188,10 @@ func main() {
 	parseEventEmitter := events.NewChannelEmitter()
 	defer parseEventEmitter.Close()
 
+	// Initialize parse progress handler early so we can defer Close()
+	parseProgressHandler := handlers.NewParseProgressHandler(parseEventEmitter)
+	defer parseProgressHandler.Close()
+
 	// Initialize handlers with injected service interfaces
 	// Following Handler → Service → Repository → Database architecture
 	movieHandler := handlers.NewMovieHandler(movieService)
@@ -198,7 +202,7 @@ func main() {
 	parserHandler := handlers.NewParserHandler(parserService)
 	metadataHandler := handlers.NewMetadataHandler(metadataService)
 	learningHandler := handlers.NewLearningHandler(learningService)
-	parseProgressHandler := handlers.NewParseProgressHandler(parseEventEmitter)
+	// parseProgressHandler already initialized above with defer Close()
 	slog.Info("Handlers initialized with service injection")
 
 	// Create Gin router
