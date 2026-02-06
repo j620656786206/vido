@@ -11,6 +11,7 @@ import { cn } from '../../lib/utils';
 import { useParseProgress } from './useParseProgress';
 import { LayeredProgressIndicator } from './LayeredProgressIndicator';
 import { ErrorDetailsPanel } from './ErrorDetailsPanel';
+import { RetryQueueSection } from './RetryQueueSection';
 import type { ParseResult } from './types';
 import { getSourceDisplayName } from './types';
 
@@ -177,6 +178,9 @@ export function FloatingParseProgressCard({
               )}
             </div>
           )}
+
+          {/* Retry Queue Section (Story 3.11 - AC4) */}
+          <RetryQueueSection />
         </div>
       )}
 

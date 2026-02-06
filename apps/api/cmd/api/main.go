@@ -198,8 +198,9 @@ func main() {
 	// Wire retry service to metadata service for automatic retry queueing
 	metadataService.SetRetryService(retryService)
 
-	// Set up retry event handler for notifications (Story 3.11 - AC2, AC3)
+	// Set up retry event handler for notifications and stats tracking (Story 3.11 - AC2, AC3)
 	retryService.SetEventHandler(func(event retry.Event) {
+		statsCtx := context.Background()
 		switch event.Type {
 		case retry.EventRetrySuccess:
 			slog.Info("Retry succeeded - metadata now available",
@@ -207,6 +208,10 @@ func main() {
 				"task_type", event.Item.TaskType,
 				"attempts", event.Item.AttemptCount,
 			)
+			// Record success stat
+			if err := retryService.RecordSucceeded(statsCtx, event.Item.TaskType); err != nil {
+				slog.Warn("Failed to record success stat", "error", err)
+			}
 			// TODO: Emit SSE event for real-time UI notification (Story 3.11 - AC3)
 		case retry.EventRetryExhausted:
 			slog.Warn("Retry exhausted - manual intervention required",
@@ -215,6 +220,10 @@ func main() {
 				"attempts", event.Item.AttemptCount,
 				"last_error", event.Item.LastError,
 			)
+			// Record exhausted stat
+			if err := retryService.RecordExhausted(statsCtx, event.Item.TaskType); err != nil {
+				slog.Warn("Failed to record exhausted stat", "error", err)
+			}
 			// TODO: Emit SSE event for real-time UI notification (Story 3.11 - AC2)
 		case retry.EventRetryFailed:
 			slog.Debug("Retry attempt failed, will retry later",
@@ -222,6 +231,10 @@ func main() {
 				"attempt", event.Item.AttemptCount,
 				"next_attempt", event.Metadata["next_attempt"],
 			)
+			// Record failed attempt stat
+			if err := retryService.RecordFailed(statsCtx, event.Item.TaskType); err != nil {
+				slog.Warn("Failed to record failed stat", "error", err)
+			}
 		}
 	})
 	slog.Info("Retry executor and event handler configured")

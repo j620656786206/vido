@@ -219,6 +219,12 @@ type RetryRepositoryInterface interface {
 	Count(ctx context.Context) (int, error)
 	CountByTaskType(ctx context.Context, taskType string) (int, error)
 	ClearAll(ctx context.Context) error
+	// Stats methods for tracking historical retry data (Story 3.11)
+	IncrementQueued(ctx context.Context, taskType string) error
+	IncrementSucceeded(ctx context.Context, taskType string) error
+	IncrementFailed(ctx context.Context, taskType string) error
+	IncrementExhausted(ctx context.Context, taskType string) error
+	GetStats(ctx context.Context) (*retry.RetryStats, error)
 }
 
 // RetryItem is imported from retry package for interface definition

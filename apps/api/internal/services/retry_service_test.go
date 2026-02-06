@@ -106,6 +106,31 @@ func (m *MockRetryRepository) ClearAll(ctx context.Context) error {
 	return nil
 }
 
+// Stats methods for Story 3.11
+func (m *MockRetryRepository) IncrementQueued(ctx context.Context, taskType string) error {
+	return nil
+}
+
+func (m *MockRetryRepository) IncrementSucceeded(ctx context.Context, taskType string) error {
+	return nil
+}
+
+func (m *MockRetryRepository) IncrementFailed(ctx context.Context, taskType string) error {
+	return nil
+}
+
+func (m *MockRetryRepository) IncrementExhausted(ctx context.Context, taskType string) error {
+	return nil
+}
+
+func (m *MockRetryRepository) GetStats(ctx context.Context) (*retry.RetryStats, error) {
+	return &retry.RetryStats{
+		TotalPending:   len(m.items),
+		TotalSucceeded: 0,
+		TotalFailed:    0,
+	}, nil
+}
+
 // MockTaskExecutor is a mock executor for testing
 type MockTaskExecutor struct {
 	shouldFail bool

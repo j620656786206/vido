@@ -25,6 +25,11 @@ type RetryServiceInterface interface {
 	IsRetryableError(err error) bool
 	StartScheduler(ctx context.Context) error
 	StopScheduler()
+	// Stats recording methods (Story 3.11)
+	RecordQueued(ctx context.Context, taskType string) error
+	RecordSucceeded(ctx context.Context, taskType string) error
+	RecordFailed(ctx context.Context, taskType string) error
+	RecordExhausted(ctx context.Context, taskType string) error
 }
 
 // RetryService manages retry operations
@@ -134,6 +139,11 @@ func (s *RetryService) QueueRetry(ctx context.Context, taskID, taskType string, 
 		return fmt.Errorf("failed to queue retry: %w", err)
 	}
 
+	// Record stats (Story 3.11)
+	if err := s.repo.IncrementQueued(ctx, taskType); err != nil {
+		s.logger.Warn("Failed to record queued stat", "error", err)
+	}
+
 	s.logger.Info("Retry queued",
 		"task_id", taskID,
 		"task_type", taskType,
@@ -204,16 +214,27 @@ func (s *RetryService) GetPendingRetries(ctx context.Context) ([]*retry.RetryIte
 
 // GetRetryStats returns statistics about the retry queue
 func (s *RetryService) GetRetryStats(ctx context.Context) (*retry.RetryStats, error) {
-	count, err := s.repo.Count(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get retry count: %w", err)
-	}
+	return s.repo.GetStats(ctx)
+}
 
-	return &retry.RetryStats{
-		TotalPending:   count,
-		TotalSucceeded: 0, // Would need separate tracking for historical data
-		TotalFailed:    0,
-	}, nil
+// RecordQueued records that a task was queued for retry (Story 3.11)
+func (s *RetryService) RecordQueued(ctx context.Context, taskType string) error {
+	return s.repo.IncrementQueued(ctx, taskType)
+}
+
+// RecordSucceeded records that a retry succeeded (Story 3.11)
+func (s *RetryService) RecordSucceeded(ctx context.Context, taskType string) error {
+	return s.repo.IncrementSucceeded(ctx, taskType)
+}
+
+// RecordFailed records that a retry failed (Story 3.11)
+func (s *RetryService) RecordFailed(ctx context.Context, taskType string) error {
+	return s.repo.IncrementFailed(ctx, taskType)
+}
+
+// RecordExhausted records that a retry was exhausted (Story 3.11)
+func (s *RetryService) RecordExhausted(ctx context.Context, taskType string) error {
+	return s.repo.IncrementExhausted(ctx, taskType)
 }
 
 // IsRetryableError checks if an error should trigger a retry

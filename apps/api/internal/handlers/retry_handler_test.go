@@ -67,6 +67,23 @@ func (m *MockRetryService) StartScheduler(ctx context.Context) error {
 
 func (m *MockRetryService) StopScheduler() {}
 
+// Stats recording methods (Story 3.11)
+func (m *MockRetryService) RecordQueued(ctx context.Context, taskType string) error {
+	return nil
+}
+
+func (m *MockRetryService) RecordSucceeded(ctx context.Context, taskType string) error {
+	return nil
+}
+
+func (m *MockRetryService) RecordFailed(ctx context.Context, taskType string) error {
+	return nil
+}
+
+func (m *MockRetryService) RecordExhausted(ctx context.Context, taskType string) error {
+	return nil
+}
+
 func (m *MockRetryService) GetByID(ctx context.Context, id string) (*retry.RetryItem, error) {
 	if m.getByIDErr != nil {
 		return nil, m.getByIDErr

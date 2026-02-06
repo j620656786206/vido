@@ -284,6 +284,77 @@ func (r *RetryRepository) ClearAll(ctx context.Context) error {
 	return nil
 }
 
+// Stats methods for tracking historical retry data (Story 3.11)
+
+// IncrementQueued increments the queued count for a task type
+func (r *RetryRepository) IncrementQueued(ctx context.Context, taskType string) error {
+	return r.incrementStat(ctx, taskType, "total_queued")
+}
+
+// IncrementSucceeded increments the succeeded count for a task type
+func (r *RetryRepository) IncrementSucceeded(ctx context.Context, taskType string) error {
+	return r.incrementStat(ctx, taskType, "total_succeeded")
+}
+
+// IncrementFailed increments the failed count for a task type
+func (r *RetryRepository) IncrementFailed(ctx context.Context, taskType string) error {
+	return r.incrementStat(ctx, taskType, "total_failed")
+}
+
+// IncrementExhausted increments the exhausted count for a task type
+func (r *RetryRepository) IncrementExhausted(ctx context.Context, taskType string) error {
+	return r.incrementStat(ctx, taskType, "total_exhausted")
+}
+
+// incrementStat is a helper to increment a specific stat column
+func (r *RetryRepository) incrementStat(ctx context.Context, taskType, column string) error {
+	today := time.Now().Format("2006-01-02")
+
+	// Use UPSERT to create or update the stats row
+	query := fmt.Sprintf(`
+		INSERT INTO retry_stats (task_type, date, %s, created_at, updated_at)
+		VALUES (?, ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+		ON CONFLICT(task_type, date)
+		DO UPDATE SET %s = %s + 1, updated_at = CURRENT_TIMESTAMP
+	`, column, column, column)
+
+	_, err := r.db.ExecContext(ctx, query, taskType, today)
+	if err != nil {
+		return fmt.Errorf("failed to increment %s stat: %w", column, err)
+	}
+
+	return nil
+}
+
+// GetStats returns aggregated retry statistics
+func (r *RetryRepository) GetStats(ctx context.Context) (*retry.RetryStats, error) {
+	// Get pending count from retry_queue
+	pendingCount, err := r.Count(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get pending count: %w", err)
+	}
+
+	// Get historical totals from retry_stats
+	query := `
+		SELECT
+			COALESCE(SUM(total_succeeded), 0) as succeeded,
+			COALESCE(SUM(total_failed), 0) as failed
+		FROM retry_stats
+	`
+
+	var succeeded, failed int
+	err = r.db.QueryRowContext(ctx, query).Scan(&succeeded, &failed)
+	if err != nil && err != sql.ErrNoRows {
+		return nil, fmt.Errorf("failed to get stats: %w", err)
+	}
+
+	return &retry.RetryStats{
+		TotalPending:   pendingCount,
+		TotalSucceeded: succeeded,
+		TotalFailed:    failed,
+	}, nil
+}
+
 // Helper functions
 
 func nullStringFromString(s string) sql.NullString {

@@ -42,5 +42,8 @@ export type { ErrorDetailsPanelProps } from './ErrorDetailsPanel';
 export { FloatingParseProgressCard } from './FloatingParseProgressCard';
 export type { FloatingParseProgressCardProps } from './FloatingParseProgressCard';
 
+export { RetryQueueSection } from './RetryQueueSection';
+export type { RetryQueueSectionProps } from './RetryQueueSection';
+
 export { MediaFileCard, MediaFileRow, MediaFileGrid, MediaFileList } from './MediaFileCard';
 export type { MediaFile, MediaFileCardProps } from './MediaFileCard';
