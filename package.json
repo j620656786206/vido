@@ -26,7 +26,9 @@
     "test:burn-in": "bash scripts/burn-in.sh",
     "test:burn-in:strict": "bash scripts/burn-in.sh 20",
     "test:changed": "bash scripts/test-changed.sh",
-    "test:ci-local": "bash scripts/ci-local.sh"
+    "test:ci-local": "bash scripts/ci-local.sh",
+    "test:cleanup": "bash scripts/cleanup-test-processes.sh --list",
+    "test:cleanup:all": "bash scripts/cleanup-test-processes.sh --all"
   },
   "private": true,
   "devDependencies": {

@@ -5,6 +5,10 @@ import * as dotenv from 'dotenv';
 // Load environment variables from .env file
 dotenv.config({ path: path.resolve(__dirname, '.env') });
 
+// Global setup and teardown for session-aware process cleanup
+const globalSetup = path.resolve(__dirname, './tests/support/global-setup.ts');
+const globalTeardown = path.resolve(__dirname, './tests/support/global-teardown.ts');
+
 /**
  * Playwright Configuration for Vido
  *
@@ -23,6 +27,11 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:4200';
 const API_URL = process.env.API_URL || 'http://localhost:8080/api/v1';
 
 export default defineConfig({
+  // Global setup/teardown for session-aware process cleanup
+  // This ensures orphaned test servers are cleaned up even if tests crash
+  globalSetup,
+  globalTeardown,
+
   // Test directory
   testDir: path.resolve(__dirname, './tests/e2e'),
 
