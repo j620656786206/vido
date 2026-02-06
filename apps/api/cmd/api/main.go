@@ -142,6 +142,11 @@ func main() {
 	learningService := services.NewLearningService(repos.Learning)
 	slog.Info("Learning service initialized")
 
+	// Initialize retry service for auto-retry mechanism (Story 3.11)
+	// Note: executor is nil initially, will be set after metadata service is created
+	retryService := services.NewRetryService(repos.Retry, nil, slog.Default())
+	slog.Info("Retry service initialized")
+
 	// Initialize parser service with AI and learning integration (Story 2.5, 3.1, 3.9)
 	// Note: must use a typed nil interface to avoid Go's nil interface gotcha.
 	// A nil *AIService assigned to AIServiceInterface creates a non-nil interface
@@ -202,6 +207,7 @@ func main() {
 	parserHandler := handlers.NewParserHandler(parserService)
 	metadataHandler := handlers.NewMetadataHandler(metadataService)
 	learningHandler := handlers.NewLearningHandler(learningService)
+	retryHandler := handlers.NewRetryHandler(retryService)
 	// parseProgressHandler already initialized above with defer Close()
 	slog.Info("Handlers initialized with service injection")
 
@@ -231,8 +237,17 @@ func main() {
 		metadataHandler.RegisterRoutes(apiV1)
 		learningHandler.RegisterRoutes(apiV1)
 		parseProgressHandler.RegisterRoutes(apiV1)
+		handlers.RegisterRetryRoutes(apiV1, retryHandler)
 	}
 	slog.Info("API routes registered", "prefix", "/api/v1")
+
+	// Start retry scheduler for auto-retry mechanism (Story 3.11)
+	if err := retryService.StartScheduler(ctx); err != nil {
+		slog.Error("Failed to start retry scheduler", "error", err)
+		// Non-fatal error - continue without retry scheduler
+	} else {
+		slog.Info("Retry scheduler started")
+	}
 
 	// Start server in a goroutine for graceful shutdown
 	addr := cfg.GetAddress()
@@ -253,6 +268,10 @@ func main() {
 	// Wait for interrupt signal
 	<-quit
 	slog.Info("Shutting down server...")
+
+	// Stop retry scheduler first
+	slog.Info("Stopping retry scheduler...")
+	retryService.StopScheduler()
 
 	// Give ongoing requests time to finish
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

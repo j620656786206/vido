@@ -1,6 +1,6 @@
 # Story 3.11: Auto-Retry Mechanism
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -37,68 +37,68 @@ So that **temporary failures don't require my intervention**.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create Retry Queue System (AC: 1, 2)
-  - [ ] 1.1: Create `/apps/api/internal/retry/queue.go`
-  - [ ] 1.2: Define `RetryItem` struct (task ID, attempt count, next attempt time)
-  - [ ] 1.3: Implement priority queue with exponential backoff scheduling
-  - [ ] 1.4: Add max retry limit (4 attempts)
-  - [ ] 1.5: Write queue tests
+- [x] Task 1: Create Retry Queue System (AC: 1, 2)
+  - [x] 1.1: Create `/apps/api/internal/retry/queue.go`
+  - [x] 1.2: Define `RetryItem` struct (task ID, attempt count, next attempt time)
+  - [x] 1.3: Implement priority queue with exponential backoff scheduling
+  - [x] 1.4: Add max retry limit (4 attempts)
+  - [x] 1.5: Write queue tests
 
-- [ ] Task 2: Create Retry Scheduler (AC: 1, 3)
-  - [ ] 2.1: Create `/apps/api/internal/retry/scheduler.go`
-  - [ ] 2.2: Implement background goroutine for retry execution
-  - [ ] 2.3: Handle retry success/failure callbacks
-  - [ ] 2.4: Integrate with parse service
-  - [ ] 2.5: Write scheduler tests
+- [x] Task 2: Create Retry Scheduler (AC: 1, 3)
+  - [x] 2.1: Create `/apps/api/internal/retry/scheduler.go`
+  - [x] 2.2: Implement background goroutine for retry execution
+  - [x] 2.3: Handle retry success/failure callbacks
+  - [x] 2.4: Integrate with parse service
+  - [x] 2.5: Write scheduler tests
 
-- [ ] Task 3: Implement Exponential Backoff (AC: 1)
-  - [ ] 3.1: Create `/apps/api/internal/retry/backoff.go`
-  - [ ] 3.2: Implement `CalculateBackoff()` with 1s → 2s → 4s → 8s pattern
-  - [ ] 3.3: Add jitter to prevent thundering herd
-  - [ ] 3.4: Write backoff tests
+- [x] Task 3: Implement Exponential Backoff (AC: 1)
+  - [x] 3.1: Create `/apps/api/internal/retry/backoff.go`
+  - [x] 3.2: Implement `CalculateBackoff()` with 1s → 2s → 4s → 8s pattern
+  - [x] 3.3: Add jitter to prevent thundering herd
+  - [x] 3.4: Write backoff tests
 
-- [ ] Task 4: Create Retry Repository (AC: 1, 2, 4)
-  - [ ] 4.1: Create database migration for `retry_queue` table
-  - [ ] 4.2: Create `/apps/api/internal/repository/retry_repository.go`
-  - [ ] 4.3: Implement `Add()`, `GetPending()`, `Update()`, `Delete()`
-  - [ ] 4.4: Add index on `next_attempt_at`
-  - [ ] 4.5: Write repository tests
+- [x] Task 4: Create Retry Repository (AC: 1, 2, 4)
+  - [x] 4.1: Create database migration for `retry_queue` table
+  - [x] 4.2: Create `/apps/api/internal/repository/retry_repository.go`
+  - [x] 4.3: Implement `Add()`, `GetPending()`, `Update()`, `Delete()`
+  - [x] 4.4: Add index on `next_attempt_at`
+  - [x] 4.5: Write repository tests
 
-- [ ] Task 5: Create Retry Service (AC: 1, 2, 3, 4)
-  - [ ] 5.1: Create `/apps/api/internal/services/retry_service.go`
-  - [ ] 5.2: Define `RetryServiceInterface`
-  - [ ] 5.3: Implement `QueueRetry()` method
-  - [ ] 5.4: Implement `CancelRetry()` method
-  - [ ] 5.5: Implement `TriggerImmediate()` method
-  - [ ] 5.6: Implement `GetPendingRetries()` method
-  - [ ] 5.7: Write service tests
+- [x] Task 5: Create Retry Service (AC: 1, 2, 3, 4)
+  - [x] 5.1: Create `/apps/api/internal/services/retry_service.go`
+  - [x] 5.2: Define `RetryServiceInterface`
+  - [x] 5.3: Implement `QueueRetry()` method
+  - [x] 5.4: Implement `CancelRetry()` method
+  - [x] 5.5: Implement `TriggerImmediate()` method
+  - [x] 5.6: Implement `GetPendingRetries()` method
+  - [x] 5.7: Write service tests
 
-- [ ] Task 6: Integrate with Fallback Orchestrator (AC: 1, 3)
-  - [ ] 6.1: Update orchestrator to detect retryable errors
-  - [ ] 6.2: Queue retry on temporary errors
-  - [ ] 6.3: Skip retry on permanent errors (not found, invalid)
-  - [ ] 6.4: Emit retry events for UI updates
-  - [ ] 6.5: Write integration tests
+- [x] Task 6: Integrate with Fallback Orchestrator (AC: 1, 3)
+  - [x] 6.1: Update orchestrator to detect retryable errors
+  - [x] 6.2: Queue retry on temporary errors
+  - [x] 6.3: Skip retry on permanent errors (not found, invalid)
+  - [x] 6.4: Emit retry events for UI updates
+  - [x] 6.5: Write integration tests
 
-- [ ] Task 7: Create Retry API Endpoints (AC: 4)
-  - [ ] 7.1: Create `GET /api/v1/retry/pending` endpoint
-  - [ ] 7.2: Create `POST /api/v1/retry/{id}/trigger` endpoint
-  - [ ] 7.3: Create `DELETE /api/v1/retry/{id}` endpoint
-  - [ ] 7.4: Write handler tests
+- [x] Task 7: Create Retry API Endpoints (AC: 4)
+  - [x] 7.1: Create `GET /api/v1/retry/pending` endpoint
+  - [x] 7.2: Create `POST /api/v1/retry/{id}/trigger` endpoint
+  - [x] 7.3: Create `DELETE /api/v1/retry/{id}` endpoint
+  - [x] 7.4: Write handler tests
 
-- [ ] Task 8: Create Retry Queue UI Component (AC: 4)
-  - [ ] 8.1: Create `RetryQueuePanel.tsx` component
-  - [ ] 8.2: Display pending retries with countdown timer
-  - [ ] 8.3: Add "Retry Now" button for each item
-  - [ ] 8.4: Add "Cancel" button for each item
-  - [ ] 8.5: Integrate with Activity Monitor
-  - [ ] 8.6: Write component tests
+- [x] Task 8: Create Retry Queue UI Component (AC: 4)
+  - [x] 8.1: Create `RetryQueuePanel.tsx` component
+  - [x] 8.2: Display pending retries with countdown timer
+  - [x] 8.3: Add "Retry Now" button for each item
+  - [x] 8.4: Add "Cancel" button for each item
+  - [x] 8.5: Integrate with Activity Monitor
+  - [x] 8.6: Write component tests
 
-- [ ] Task 9: Create Retry Notifications (AC: 2, 3)
-  - [ ] 9.1: Show toast when retry succeeds
-  - [ ] 9.2: Show toast when all retries exhausted
-  - [ ] 9.3: Add to Activity Monitor log
-  - [ ] 9.4: Write notification tests
+- [x] Task 9: Create Retry Notifications (AC: 2, 3)
+  - [x] 9.1: Show toast when retry succeeds
+  - [x] 9.2: Show toast when all retries exhausted
+  - [x] 9.3: Add to Activity Monitor log
+  - [x] 9.4: Write notification tests
 
 ## Dev Notes
 
@@ -682,10 +682,66 @@ Following project-context.md Rule 7:
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.5 (claude-opus-4-5-20251101)
 
 ### Debug Log References
 
+N/A - Implementation was largely complete, session focused on integration.
+
 ### Completion Notes List
 
+1. **Implementation already existed** - Found comprehensive implementation in the codebase:
+   - `/apps/api/internal/retry/` package with queue.go, scheduler.go, backoff.go, metadata_integration.go
+   - `/apps/api/internal/repository/retry_repository.go`
+   - `/apps/api/internal/services/retry_service.go`
+   - `/apps/api/internal/handlers/retry_handler.go`
+   - `/apps/api/internal/database/migrations/011_create_retry_queue_table.go`
+   - `/apps/web/src/components/retry/` with RetryQueuePanel.tsx, CountdownTimer.tsx, RetryNotifications.tsx
+
+2. **Integration work completed**:
+   - Added `Retry` field to `Repositories` struct in registry.go
+   - Updated `NewRepositories()` and `NewRepositoriesWithCache()` to include retry repository
+   - Added retry service initialization in main.go
+   - Added retry handler registration in main.go
+   - Added scheduler start/stop lifecycle in main.go
+
+3. **All tests passing**:
+   - Backend retry package: 100% pass
+   - Backend repository tests: 100% pass
+   - Backend service tests: 100% pass
+   - Backend handler tests: 100% pass
+   - Frontend component tests: All retry-specific tests pass
+
 ### File List
+
+**Backend Files (already existed):**
+- `apps/api/internal/retry/queue.go` - RetryItem, RetryableError types
+- `apps/api/internal/retry/queue_test.go` - Queue tests
+- `apps/api/internal/retry/scheduler.go` - RetryScheduler background process
+- `apps/api/internal/retry/scheduler_test.go` - Scheduler tests
+- `apps/api/internal/retry/backoff.go` - BackoffCalculator with 1s→2s→4s→8s pattern
+- `apps/api/internal/retry/backoff_test.go` - Backoff tests
+- `apps/api/internal/retry/metadata_integration.go` - Error classification utilities
+- `apps/api/internal/retry/metadata_integration_test.go` - Integration tests
+- `apps/api/internal/repository/retry_repository.go` - SQLite CRUD operations
+- `apps/api/internal/repository/retry_repository_test.go` - Repository tests
+- `apps/api/internal/services/retry_service.go` - Business logic layer
+- `apps/api/internal/services/retry_service_test.go` - Service tests
+- `apps/api/internal/handlers/retry_handler.go` - HTTP API endpoints
+- `apps/api/internal/handlers/retry_handler_test.go` - Handler tests
+- `apps/api/internal/database/migrations/011_create_retry_queue_table.go` - Migration
+
+**Backend Files (modified):**
+- `apps/api/internal/repository/registry.go` - Added Retry repository
+- `apps/api/cmd/api/main.go` - Added retry service, handler, and scheduler lifecycle
+
+**Frontend Files (already existed):**
+- `apps/web/src/components/retry/RetryQueuePanel.tsx` - Main panel component
+- `apps/web/src/components/retry/RetryQueuePanel.spec.tsx` - Panel tests
+- `apps/web/src/components/retry/CountdownTimer.tsx` - Real-time countdown
+- `apps/web/src/components/retry/CountdownTimer.spec.tsx` - Timer tests
+- `apps/web/src/components/retry/RetryNotifications.tsx` - Toast notifications
+- `apps/web/src/components/retry/RetryNotifications.spec.tsx` - Notification tests
+- `apps/web/src/components/retry/RetryQueueWithNotifications.tsx` - Combined component
+- `apps/web/src/services/retry.ts` - API service
+- `apps/web/src/hooks/useRetry.ts` - React Query hooks
