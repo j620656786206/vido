@@ -290,7 +290,8 @@ export function useParseProgress(
       eventSourceRef.current = null;
 
       // Attempt reconnection if enabled, not manually disconnected, and within retry limit
-      const withinRetryLimit = maxReconnectAttempts === 0 || reconnectAttemptsRef.current < maxReconnectAttempts;
+      const withinRetryLimit =
+        maxReconnectAttempts === 0 || reconnectAttemptsRef.current < maxReconnectAttempts;
       if (autoReconnect && !isManuallyDisconnectedRef.current && withinRetryLimit) {
         reconnectAttemptsRef.current++;
         setIsReconnecting(true);
@@ -299,7 +300,9 @@ export function useParseProgress(
         }, reconnectDelay);
       } else if (!withinRetryLimit) {
         setIsReconnecting(false);
-        const maxRetriesErr = new Error(`SSE connection failed after ${maxReconnectAttempts} attempts`);
+        const maxRetriesErr = new Error(
+          `SSE connection failed after ${maxReconnectAttempts} attempts`
+        );
         setError(maxRetriesErr);
         onError?.(maxRetriesErr);
       }
