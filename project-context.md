@@ -511,6 +511,11 @@ pnpm run test:cleanup:all
 
 Before committing code, verify:
 
+**Format & Lint (MANDATORY):**
+
+- [ ] Run `pnpm run format:check` and fix any issues with `pnpm exec prettier --write <files>`
+- [ ] Run `pnpm run lint` to check for linting errors
+
 **Code Location & Architecture:**
 
 - [ ] All new code is in `/apps/api` (backend) or `/apps/web` (frontend)
