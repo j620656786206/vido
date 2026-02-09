@@ -1,6 +1,6 @@
 # Story 3.12: Graceful Degradation
 
-Status: dev-complete
+Status: done
 
 ## Story
 
