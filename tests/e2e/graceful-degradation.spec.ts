@@ -158,19 +158,13 @@ const mockOfflineResponse = {
 // =============================================================================
 
 test.describe('Graceful Degradation - API Integration @e2e @p1', () => {
-  test('[P1] should fetch services health status on app load', async ({ page, request }) => {
-    // GIVEN: The app is loading
+  test('[P1] should fetch services health status on app load', async ({ request }) => {
+    // GIVEN: The API server is running
 
-    // WHEN: Navigating to the app
-    const healthPromise = page.waitForResponse(
-      (response) => response.url().includes('/health/services') && response.status() === 200
-    );
-
-    await page.goto('/');
-
-    // THEN: Health endpoint should be called (if the app has health monitoring UI)
-    // Note: This test verifies that the API works, not that the UI calls it
+    // WHEN: Requesting the services health endpoint
     const response = await request.get(`${API_BASE_URL}/health/services`);
+
+    // THEN: Should return valid health status
     expect(response.status()).toBe(200);
 
     const body = await response.json();

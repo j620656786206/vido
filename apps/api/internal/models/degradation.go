@@ -172,7 +172,7 @@ func (s *ServicesHealth) AllServices() []*ServiceHealth {
 
 // HealthStatusResponse represents the API response for health status endpoint
 type HealthStatusResponse struct {
-	DegradationLevel DegradationLevel  `json:"degradationLevel"`
-	Services         *ServicesHealth   `json:"services"`
-	Message          string            `json:"message,omitempty"`
+	DegradationLevel DegradationLevel `json:"degradationLevel"`
+	Services         *ServicesHealth  `json:"services"`
+	Message          string           `json:"message"`
 }
