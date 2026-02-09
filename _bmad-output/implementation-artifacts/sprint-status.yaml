@@ -90,13 +90,13 @@ development_status:
   # Phase: 1.0 (Q2 - June 2026)
   # FRs: FR27-FR33
   # ==============================================================================
-  epic-4: backlog
-  4-1-qbittorrent-connection-configuration: backlog
-  4-2-real-time-download-status-monitoring: backlog
-  4-3-unified-download-dashboard: backlog
-  4-4-download-status-filtering: backlog
-  4-5-completed-download-detection-and-parsing-trigger: backlog
-  4-6-connection-health-monitoring: backlog
+  epic-4: in-progress  # Stories created 2026-02-09
+  4-1-qbittorrent-connection-configuration: ready-for-dev
+  4-2-real-time-download-status-monitoring: ready-for-dev
+  4-3-unified-download-dashboard: ready-for-dev
+  4-4-download-status-filtering: ready-for-dev
+  4-5-completed-download-detection-and-parsing-trigger: ready-for-dev
+  4-6-connection-health-monitoring: ready-for-dev
   epic-4-retrospective: optional
 
   # ==============================================================================
