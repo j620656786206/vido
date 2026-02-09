@@ -22,6 +22,7 @@ import (
 	"github.com/vido/api/internal/retry"
 	"github.com/vido/api/internal/secrets"
 	"github.com/vido/api/internal/services"
+	"github.com/vido/api/internal/cache"
 
 	// Media config is loaded during service initialization
 	// and validates directories from VIDO_MEDIA_DIRS env var
@@ -100,6 +101,14 @@ func main() {
 	}
 	slog.Info("Database migrations completed", "applied", appliedCount, "total", len(status))
 
+	// Initialize offline cache for graceful degradation (Story 3.12)
+	offlineCache := cache.NewOfflineCache(db.Conn())
+	if err := offlineCache.InitSchema(ctx); err != nil {
+		slog.Error("Failed to initialize offline cache schema", "error", err)
+		os.Exit(1)
+	}
+	slog.Info("Offline cache initialized")
+
 	// Initialize repositories via factory (enables future database migration)
 	repos := repository.NewRepositoriesWithCache(db.Conn())
 	slog.Info("Repositories initialized via factory")
@@ -145,10 +154,18 @@ func main() {
 	slog.Info("Learning service initialized")
 
 	// Initialize health monitoring for graceful degradation (Story 3.12)
-	healthChecker := health.NewStubHealthChecker()
+	// Use actual service health checks where available, config-based checks for optional services
+	var tmdbPingable health.Pingable = tmdbService
+	var aiPingable health.Pingable
+	if aiService != nil {
+		aiPingable = aiService
+	}
+	doubanPingable := health.NewConfigurablePingable("Douban", cfg.EnableDouban)
+	wikipediaPingable := health.NewConfigurablePingable("Wikipedia", cfg.EnableWikipedia)
+	healthChecker := health.NewServiceHealthChecker(tmdbPingable, doubanPingable, wikipediaPingable, aiPingable)
 	healthMonitor := health.NewHealthMonitor(healthChecker)
-	degradationService := services.NewDegradationService(healthMonitor)
-	slog.Info("Health monitoring initialized")
+	degradationService := services.NewDegradationServiceWithCache(healthMonitor, offlineCache)
+	slog.Info("Health monitoring initialized with service health checks and offline cache")
 
 	// Initialize retry service for auto-retry mechanism (Story 3.11)
 	// Note: executor will be wired up after metadata service is created

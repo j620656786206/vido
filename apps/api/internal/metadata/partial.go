@@ -187,7 +187,7 @@ func (h *PartialResultHandler) SetPlaceholder(item *MergedMetadata, field string
 	case "overview":
 		item.Overview = "暫無簡介"
 	case "posterUrl":
-		item.PosterURL = "/images/placeholder-poster.webp"
+		item.PosterURL = "/images/placeholder-poster.svg"
 	}
 }
 

@@ -202,3 +202,15 @@ func (s *TMDbService) GetTVShowDetails(ctx context.Context, tvID int) (*tmdb.TVS
 
 	return result, nil
 }
+
+// Ping checks if the TMDb API is accessible.
+// Implements health.Pingable interface for health monitoring.
+func (s *TMDbService) Ping(ctx context.Context) error {
+	// Use a simple search query to verify API connectivity
+	_, err := s.cacheService.SearchMovies(ctx, "test", 1)
+	if err != nil {
+		slog.Debug("TMDb ping failed", "error", err)
+		return err
+	}
+	return nil
+}

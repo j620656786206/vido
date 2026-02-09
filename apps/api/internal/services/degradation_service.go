@@ -3,6 +3,7 @@ package services
 import (
 	"log/slog"
 
+	"github.com/vido/api/internal/cache"
 	"github.com/vido/api/internal/health"
 	"github.com/vido/api/internal/metadata"
 	"github.com/vido/api/internal/models"
@@ -27,6 +28,7 @@ type DegradationServiceInterface interface {
 type DegradationService struct {
 	monitor        *health.HealthMonitor
 	partialHandler *metadata.PartialResultHandler
+	offlineCache   *cache.OfflineCache
 	logger         *slog.Logger
 }
 
@@ -40,6 +42,22 @@ func NewDegradationService(monitor *health.HealthMonitor) *DegradationService {
 		partialHandler: metadata.NewPartialResultHandler(),
 		logger:         slog.Default(),
 	}
+}
+
+// NewDegradationServiceWithCache creates a new DegradationService with offline cache.
+func NewDegradationServiceWithCache(monitor *health.HealthMonitor, offlineCache *cache.OfflineCache) *DegradationService {
+	return &DegradationService{
+		monitor:        monitor,
+		partialHandler: metadata.NewPartialResultHandler(),
+		offlineCache:   offlineCache,
+		logger:         slog.Default(),
+	}
+}
+
+// GetOfflineCache returns the offline cache for external use.
+// Returns nil if offline cache is not configured.
+func (s *DegradationService) GetOfflineCache() *cache.OfflineCache {
+	return s.offlineCache
 }
 
 // GetCurrentLevel returns the current system degradation level.

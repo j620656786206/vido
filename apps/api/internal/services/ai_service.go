@@ -372,3 +372,14 @@ func (s *AIService) GetProviderName() string {
 	}
 	return string(s.provider.Name())
 }
+
+// Ping checks if the AI service is accessible.
+// Implements health.Pingable interface for health monitoring.
+func (s *AIService) Ping(ctx context.Context) error {
+	if s.provider == nil {
+		return errors.New("AI provider not configured")
+	}
+	// AI service is considered healthy if it's configured
+	// Actual API connectivity is verified on first use
+	return nil
+}

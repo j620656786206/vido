@@ -134,7 +134,7 @@ func TestPartialResultHandler_SetPlaceholder(t *testing.T) {
 	assert.Equal(t, "暫無簡介", item.Overview)
 
 	handler.SetPlaceholder(item, "posterUrl")
-	assert.Equal(t, "/images/placeholder-poster.webp", item.PosterURL)
+	assert.Equal(t, "/images/placeholder-poster.svg", item.PosterURL)
 }
 
 func TestFieldAvailability(t *testing.T) {

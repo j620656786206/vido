@@ -88,3 +88,26 @@ func (c *StubHealthChecker) CheckWikipedia(ctx context.Context) error {
 func (c *StubHealthChecker) CheckAI(ctx context.Context) error {
 	return nil
 }
+
+// ConfigurablePingable implements Pingable based on configuration.
+// Returns healthy if enabled, error if disabled.
+type ConfigurablePingable struct {
+	serviceName string
+	enabled     bool
+}
+
+// NewConfigurablePingable creates a new ConfigurablePingable.
+func NewConfigurablePingable(serviceName string, enabled bool) *ConfigurablePingable {
+	return &ConfigurablePingable{
+		serviceName: serviceName,
+		enabled:     enabled,
+	}
+}
+
+// Ping returns nil if the service is enabled, or an error if disabled.
+func (p *ConfigurablePingable) Ping(ctx context.Context) error {
+	if !p.enabled {
+		return errors.New(p.serviceName + " service not enabled")
+	}
+	return nil
+}

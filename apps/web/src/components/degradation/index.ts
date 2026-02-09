@@ -9,3 +9,5 @@ export type {
   PlaceholderPosterProps,
   DegradationMessageProps,
 } from './PlaceholderContent';
+export { UnidentifiedFileCard } from './UnidentifiedFileCard';
+export type { UnidentifiedFileCardProps } from './UnidentifiedFileCard';
