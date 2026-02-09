@@ -16,6 +16,7 @@ import (
 	"github.com/vido/api/internal/database/migrations"
 	"github.com/vido/api/internal/events"
 	"github.com/vido/api/internal/handlers"
+	"github.com/vido/api/internal/health"
 	"github.com/vido/api/internal/images"
 	"github.com/vido/api/internal/repository"
 	"github.com/vido/api/internal/retry"
@@ -143,6 +144,12 @@ func main() {
 	learningService := services.NewLearningService(repos.Learning)
 	slog.Info("Learning service initialized")
 
+	// Initialize health monitoring for graceful degradation (Story 3.12)
+	healthChecker := health.NewStubHealthChecker()
+	healthMonitor := health.NewHealthMonitor(healthChecker)
+	degradationService := services.NewDegradationService(healthMonitor)
+	slog.Info("Health monitoring initialized")
+
 	// Initialize retry service for auto-retry mechanism (Story 3.11)
 	// Note: executor will be wired up after metadata service is created
 	// We create a placeholder executor first and update it after metadata service exists
@@ -260,6 +267,7 @@ func main() {
 	metadataHandler := handlers.NewMetadataHandler(metadataService)
 	learningHandler := handlers.NewLearningHandler(learningService)
 	retryHandler := handlers.NewRetryHandler(retryService)
+	serviceHealthHandler := handlers.NewServiceHealthHandler(degradationService)
 	// parseProgressHandler already initialized above with defer Close()
 	slog.Info("Handlers initialized with service injection")
 
@@ -290,6 +298,8 @@ func main() {
 		learningHandler.RegisterRoutes(apiV1)
 		parseProgressHandler.RegisterRoutes(apiV1)
 		handlers.RegisterRetryRoutes(apiV1, retryHandler)
+		// Health services endpoint (Story 3.12 - Graceful Degradation)
+		apiV1.GET("/health/services", serviceHealthHandler.GetServicesHealth)
 	}
 	slog.Info("API routes registered", "prefix", "/api/v1")
 

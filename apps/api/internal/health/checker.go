@@ -59,3 +59,32 @@ func (c *ServiceHealthChecker) CheckAI(ctx context.Context) error {
 	}
 	return c.ai.Ping(ctx)
 }
+
+// StubHealthChecker implements HealthChecker with all services reporting healthy.
+// Used when actual service health checking is not yet implemented.
+type StubHealthChecker struct{}
+
+// NewStubHealthChecker creates a new StubHealthChecker.
+func NewStubHealthChecker() *StubHealthChecker {
+	return &StubHealthChecker{}
+}
+
+// CheckTMDb always returns healthy.
+func (c *StubHealthChecker) CheckTMDb(ctx context.Context) error {
+	return nil
+}
+
+// CheckDouban always returns healthy.
+func (c *StubHealthChecker) CheckDouban(ctx context.Context) error {
+	return nil
+}
+
+// CheckWikipedia always returns healthy.
+func (c *StubHealthChecker) CheckWikipedia(ctx context.Context) error {
+	return nil
+}
+
+// CheckAI always returns healthy.
+func (c *StubHealthChecker) CheckAI(ctx context.Context) error {
+	return nil
+}
