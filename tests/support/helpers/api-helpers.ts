@@ -98,6 +98,35 @@ export interface HealthResponse {
   };
 }
 
+// =============================================================================
+// Degradation Types (Story 3-12)
+// =============================================================================
+
+export type DegradationLevel = 'normal' | 'partial' | 'minimal' | 'offline';
+
+export interface ServiceHealth {
+  name: string;
+  displayName: string;
+  status: 'healthy' | 'degraded' | 'down';
+  lastCheck: string;
+  lastSuccess: string;
+  errorCount: number;
+  message?: string;
+}
+
+export interface ServicesHealth {
+  tmdb: ServiceHealth;
+  douban: ServiceHealth;
+  wikipedia: ServiceHealth;
+  ai: ServiceHealth;
+}
+
+export interface HealthStatusResponse {
+  degradationLevel: DegradationLevel;
+  services: ServicesHealth;
+  message: string;
+}
+
 // Legacy types for backwards compatibility
 export interface SearchResult {
   results: Movie[];
@@ -288,6 +317,7 @@ export interface ApiHelpers {
 
   // Health
   healthCheck: () => Promise<HealthResponse>;
+  servicesHealth: () => Promise<ApiResponse<HealthStatusResponse>>;
 
   // Generic helpers
   get: <T>(endpoint: string) => Promise<ApiResponse<T>>;
@@ -436,6 +466,8 @@ export function apiHelpers(request: APIRequestContext): ApiHelpers {
       const response = await request.get(`${API_BASE_URL.replace('/api/v1', '')}/health`);
       return response.json();
     },
+
+    servicesHealth: async () => get<HealthStatusResponse>('/health/services'),
 
     // Generic helpers
     get,
