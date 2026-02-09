@@ -52,9 +52,7 @@ interface ApiResponse<T> {
 // =============================================================================
 
 test.describe('Services Health API @api @p1', () => {
-  test('[P1] should return services health status with all services', async ({
-    request,
-  }) => {
+  test('[P1] should return services health status with all services', async ({ request }) => {
     // GIVEN: The API server is running with health monitoring
 
     // WHEN: Requesting the services health endpoint
@@ -68,9 +66,7 @@ test.describe('Services Health API @api @p1', () => {
     expect(body.data).toBeDefined();
   });
 
-  test('[P1] should include degradation level in response', async ({
-    request,
-  }) => {
+  test('[P1] should include degradation level in response', async ({ request }) => {
     // GIVEN: The API server is running
 
     // WHEN: Requesting the services health endpoint
@@ -80,9 +76,7 @@ test.describe('Services Health API @api @p1', () => {
     expect(response.status()).toBe(200);
 
     const body: ApiResponse<HealthStatusResponse> = await response.json();
-    expect(body.data?.degradationLevel).toMatch(
-      /^(normal|partial|minimal|offline)$/
-    );
+    expect(body.data?.degradationLevel).toMatch(/^(normal|partial|minimal|offline)$/);
   });
 
   test('[P1] should include all four external services', async ({ request }) => {
@@ -146,9 +140,7 @@ test.describe('Services Health API @api @p1', () => {
     }
   });
 
-  test('[P1] should include status message when degraded', async ({
-    request,
-  }) => {
+  test('[P1] should include status message when degraded', async ({ request }) => {
     // GIVEN: The services health endpoint
 
     // WHEN: Requesting health status

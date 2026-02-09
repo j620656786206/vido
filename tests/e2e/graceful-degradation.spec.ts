@@ -158,16 +158,12 @@ const mockOfflineResponse = {
 // =============================================================================
 
 test.describe('Graceful Degradation - API Integration @e2e @p1', () => {
-  test('[P1] should fetch services health status on app load', async ({
-    page,
-    request,
-  }) => {
+  test('[P1] should fetch services health status on app load', async ({ page, request }) => {
     // GIVEN: The app is loading
 
     // WHEN: Navigating to the app
     const healthPromise = page.waitForResponse(
-      (response) =>
-        response.url().includes('/health/services') && response.status() === 200
+      (response) => response.url().includes('/health/services') && response.status() === 200
     );
 
     await page.goto('/');
@@ -267,16 +263,11 @@ test.describe('Graceful Degradation - Core Functionality @e2e @p1', () => {
     await expect(page).toHaveURL('/');
 
     // Verify basic health endpoint still responds
-    const healthResponse = await request.get(
-      'http://localhost:8080/health'
-    );
+    const healthResponse = await request.get('http://localhost:8080/health');
     expect(healthResponse.status()).toBe(200);
   });
 
-  test('[P1] should keep local data accessible during degradation', async ({
-    page,
-    api,
-  }) => {
+  test('[P1] should keep local data accessible during degradation', async ({ page, api }) => {
     // GIVEN: Some movies exist in local database
     const movies = await api.listMovies();
 
@@ -322,9 +313,7 @@ test.describe('Graceful Degradation - AI Fallback @e2e @p1', () => {
     // Note: If AI is down, the source should be 'regex_fallback'
   });
 
-  test('[P1] should return degradation message when using fallback', async ({
-    request,
-  }) => {
+  test('[P1] should return degradation message when using fallback', async ({ request }) => {
     // GIVEN: Health endpoint shows AI is down
     const healthResponse = await request.get(`${API_BASE_URL}/health/services`);
     const health = await healthResponse.json();

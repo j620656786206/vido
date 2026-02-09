@@ -37,11 +37,7 @@ const levelConfig: Record<
   },
 };
 
-export function DegradationBadge({
-  level,
-  className,
-  showLabel = true,
-}: DegradationBadgeProps) {
+export function DegradationBadge({ level, className, showLabel = true }: DegradationBadgeProps) {
   const config = levelConfig[level];
 
   if (level === 'normal') {

@@ -1,10 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import {
-  PlaceholderContent,
-  PlaceholderPoster,
-  DegradationMessage,
-} from './PlaceholderContent';
+import { PlaceholderContent, PlaceholderPoster, DegradationMessage } from './PlaceholderContent';
 
 describe('PlaceholderContent', () => {
   it('renders title placeholder', () => {
@@ -23,18 +19,13 @@ describe('PlaceholderContent', () => {
   });
 
   it('applies custom className', () => {
-    const { container } = render(
-      <PlaceholderContent field="title" className="custom-class" />
-    );
+    const { container } = render(<PlaceholderContent field="title" className="custom-class" />);
     expect(container.firstChild).toHaveClass('custom-class');
   });
 
   it('has title attribute explaining the placeholder', () => {
     render(<PlaceholderContent field="title" />);
-    expect(screen.getByText('未知標題')).toHaveAttribute(
-      'title',
-      '標題暫時無法取得'
-    );
+    expect(screen.getByText('未知標題')).toHaveAttribute('title', '標題暫時無法取得');
   });
 });
 
@@ -46,10 +37,7 @@ describe('PlaceholderPoster', () => {
 
   it('has accessible label', () => {
     render(<PlaceholderPoster />);
-    expect(screen.getByRole('img')).toHaveAttribute(
-      'aria-label',
-      '海報無法載入'
-    );
+    expect(screen.getByRole('img')).toHaveAttribute('aria-label', '海報無法載入');
   });
 
   it('applies size classes', () => {
@@ -73,12 +61,7 @@ describe('DegradationMessage', () => {
   });
 
   it('renders missing fields', () => {
-    render(
-      <DegradationMessage
-        message="部分資料遺失"
-        missingFields={['title', 'overview']}
-      />
-    );
+    render(<DegradationMessage message="部分資料遺失" missingFields={['title', 'overview']} />);
     expect(screen.getByText('部分資料遺失')).toBeInTheDocument();
     expect(screen.getByText(/無法取得：/)).toBeInTheDocument();
     expect(screen.getByText(/標題/)).toBeInTheDocument();
@@ -86,9 +69,7 @@ describe('DegradationMessage', () => {
   });
 
   it('applies custom className', () => {
-    render(
-      <DegradationMessage message="test" className="custom-class" />
-    );
+    render(<DegradationMessage message="test" className="custom-class" />);
     expect(screen.getByRole('status')).toHaveClass('custom-class');
   });
 

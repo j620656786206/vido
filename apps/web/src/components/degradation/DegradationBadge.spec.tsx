@@ -38,9 +38,6 @@ describe('DegradationBadge', () => {
 
   it('has accessible label', () => {
     render(<DegradationBadge level="offline" />);
-    expect(screen.getByRole('status')).toHaveAttribute(
-      'aria-label',
-      '系統狀態：離線模式'
-    );
+    expect(screen.getByRole('status')).toHaveAttribute('aria-label', '系統狀態：離線模式');
   });
 });

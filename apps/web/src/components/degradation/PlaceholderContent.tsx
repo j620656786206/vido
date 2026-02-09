@@ -35,18 +35,12 @@ const placeholderConfig: Record<
   },
 };
 
-export function PlaceholderContent({
-  field,
-  className,
-}: PlaceholderContentProps) {
+export function PlaceholderContent({ field, className }: PlaceholderContentProps) {
   const config = placeholderConfig[field];
 
   return (
     <span
-      className={cn(
-        'inline-block text-gray-500 italic',
-        className
-      )}
+      className={cn('inline-block text-gray-500 italic', className)}
       title={`${config.label}暫時無法取得`}
     >
       {config.message}
@@ -65,10 +59,7 @@ const sizeClasses = {
   lg: 'h-72 w-48',
 };
 
-export function PlaceholderPoster({
-  className,
-  size = 'md',
-}: PlaceholderPosterProps) {
+export function PlaceholderPoster({ className, size = 'md' }: PlaceholderPosterProps) {
   return (
     <div
       className={cn(
@@ -111,11 +102,7 @@ const fieldLabels: Record<string, string> = {
   cast: '演員',
 };
 
-export function DegradationMessage({
-  message,
-  missingFields,
-  className,
-}: DegradationMessageProps) {
+export function DegradationMessage({ message, missingFields, className }: DegradationMessageProps) {
   return (
     <div
       className={cn(

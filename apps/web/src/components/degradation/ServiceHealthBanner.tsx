@@ -64,14 +64,11 @@ export function ServiceHealthBanner({
   // Get affected services list
   const affectedServices: string[] = [];
   if (services) {
-    if (services.tmdb.status !== 'healthy')
-      affectedServices.push(services.tmdb.displayName);
-    if (services.douban.status !== 'healthy')
-      affectedServices.push(services.douban.displayName);
+    if (services.tmdb.status !== 'healthy') affectedServices.push(services.tmdb.displayName);
+    if (services.douban.status !== 'healthy') affectedServices.push(services.douban.displayName);
     if (services.wikipedia.status !== 'healthy')
       affectedServices.push(services.wikipedia.displayName);
-    if (services.ai.status !== 'healthy')
-      affectedServices.push(services.ai.displayName);
+    if (services.ai.status !== 'healthy') affectedServices.push(services.ai.displayName);
   }
 
   return (
@@ -92,9 +89,7 @@ export function ServiceHealthBanner({
         <div className={cn('text-sm', config.textColor)}>
           <p className="font-medium">{displayMessage}</p>
           {affectedServices.length > 0 && (
-            <p className="mt-1 text-xs opacity-80">
-              受影響服務：{affectedServices.join('、')}
-            </p>
+            <p className="mt-1 text-xs opacity-80">受影響服務：{affectedServices.join('、')}</p>
           )}
         </div>
       </div>
@@ -102,18 +97,10 @@ export function ServiceHealthBanner({
       {onDismiss && (
         <button
           onClick={onDismiss}
-          className={cn(
-            'rounded p-1 transition-colors hover:bg-white/10',
-            config.textColor
-          )}
+          className={cn('rounded p-1 transition-colors hover:bg-white/10', config.textColor)}
           aria-label="關閉通知"
         >
-          <svg
-            className="h-4 w-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
