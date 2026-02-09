@@ -5,7 +5,23 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { FloatingParseProgressCard } from './FloatingParseProgressCard';
+
+// Create a wrapper with QueryClientProvider for tests
+const createTestQueryClient = () =>
+  new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
+
+const renderWithQueryClient = (ui: React.ReactElement) => {
+  const queryClient = createTestQueryClient();
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+};
 
 // Mock useParseProgress hook
 const mockProgress = {
@@ -36,7 +52,7 @@ describe('FloatingParseProgressCard', () => {
     vi.useFakeTimers();
     mockUseParseProgress = vi.fn().mockReturnValue({
       progress: mockProgress,
-      status: 'pending',
+      status: 'parsing',
       error: null,
       isConnected: true,
       isReconnecting: false,
@@ -50,31 +66,31 @@ describe('FloatingParseProgressCard', () => {
   });
 
   it('renders the floating card', () => {
-    render(<FloatingParseProgressCard taskId="task-123" onClose={vi.fn()} />);
+    renderWithQueryClient(<FloatingParseProgressCard taskId="task-123" onClose={vi.fn()} />);
 
     expect(screen.getByTestId('floating-parse-progress-card')).toBeInTheDocument();
   });
 
   it('displays "正在解析..." when parsing', () => {
-    render(<FloatingParseProgressCard taskId="task-123" onClose={vi.fn()} />);
+    renderWithQueryClient(<FloatingParseProgressCard taskId="task-123" onClose={vi.fn()} />);
 
     expect(screen.getByText('正在解析...')).toBeInTheDocument();
   });
 
   it('shows progress percentage', () => {
-    render(<FloatingParseProgressCard taskId="task-123" onClose={vi.fn()} />);
+    renderWithQueryClient(<FloatingParseProgressCard taskId="task-123" onClose={vi.fn()} />);
 
     expect(screen.getByText('16%')).toBeInTheDocument();
   });
 
   it('displays filename', () => {
-    render(<FloatingParseProgressCard taskId="task-123" onClose={vi.fn()} />);
+    renderWithQueryClient(<FloatingParseProgressCard taskId="task-123" onClose={vi.fn()} />);
 
     expect(screen.getByText(/test-movie.mkv/)).toBeInTheDocument();
   });
 
   it('shows progress bar with correct value', () => {
-    render(<FloatingParseProgressCard taskId="task-123" onClose={vi.fn()} />);
+    renderWithQueryClient(<FloatingParseProgressCard taskId="task-123" onClose={vi.fn()} />);
 
     const progressBar = screen.getByRole('progressbar');
     expect(progressBar).toHaveAttribute('aria-valuenow', '16');
@@ -83,7 +99,7 @@ describe('FloatingParseProgressCard', () => {
   });
 
   it('renders layered progress indicator', () => {
-    render(<FloatingParseProgressCard taskId="task-123" onClose={vi.fn()} />);
+    renderWithQueryClient(<FloatingParseProgressCard taskId="task-123" onClose={vi.fn()} />);
 
     expect(screen.getByTestId('layered-progress-indicator')).toBeInTheDocument();
     expect(screen.getByText('解析檔名')).toBeInTheDocument();
@@ -95,7 +111,7 @@ describe('FloatingParseProgressCard', () => {
     const onClose = vi.fn();
     const user = userEvent.setup();
 
-    render(<FloatingParseProgressCard taskId="task-123" onClose={onClose} />);
+    renderWithQueryClient(<FloatingParseProgressCard taskId="task-123" onClose={onClose} />);
 
     await user.click(screen.getByTestId('close-button'));
     expect(onClose).toHaveBeenCalledTimes(1);
@@ -106,7 +122,7 @@ describe('FloatingParseProgressCard', () => {
     vi.useRealTimers();
     const user = userEvent.setup();
 
-    render(<FloatingParseProgressCard taskId="task-123" onClose={vi.fn()} />);
+    renderWithQueryClient(<FloatingParseProgressCard taskId="task-123" onClose={vi.fn()} />);
 
     // Initially expanded - should show layered progress
     expect(screen.getByTestId('layered-progress-indicator')).toBeInTheDocument();
@@ -139,7 +155,7 @@ describe('FloatingParseProgressCard', () => {
       reconnect: vi.fn(),
     });
 
-    render(<FloatingParseProgressCard taskId="task-123" onClose={vi.fn()} />);
+    renderWithQueryClient(<FloatingParseProgressCard taskId="task-123" onClose={vi.fn()} />);
 
     expect(screen.getByText('✅ 解析完成！')).toBeInTheDocument();
     expect(screen.getByText(/Test Movie/)).toBeInTheDocument();
@@ -159,7 +175,7 @@ describe('FloatingParseProgressCard', () => {
       reconnect: vi.fn(),
     });
 
-    render(
+    renderWithQueryClient(
       <FloatingParseProgressCard taskId="task-123" onClose={onClose} autoDismissDelay={3000} />
     );
 
@@ -184,7 +200,9 @@ describe('FloatingParseProgressCard', () => {
       reconnect: vi.fn(),
     });
 
-    render(<FloatingParseProgressCard taskId="task-123" onClose={onClose} autoDismissDelay={0} />);
+    renderWithQueryClient(
+      <FloatingParseProgressCard taskId="task-123" onClose={onClose} autoDismissDelay={0} />
+    );
 
     act(() => {
       vi.advanceTimersByTime(5000);
@@ -220,7 +238,7 @@ describe('FloatingParseProgressCard', () => {
       reconnect: vi.fn(),
     });
 
-    render(<FloatingParseProgressCard taskId="task-123" onClose={vi.fn()} />);
+    renderWithQueryClient(<FloatingParseProgressCard taskId="task-123" onClose={vi.fn()} />);
 
     expect(screen.getByText('❌ 解析失敗')).toBeInTheDocument();
     expect(screen.getByTestId('error-details-panel')).toBeInTheDocument();
@@ -248,7 +266,7 @@ describe('FloatingParseProgressCard', () => {
       reconnect: vi.fn(),
     });
 
-    render(
+    renderWithQueryClient(
       <FloatingParseProgressCard
         taskId="task-123"
         onClose={vi.fn()}
@@ -280,13 +298,13 @@ describe('FloatingParseProgressCard', () => {
       reconnect: vi.fn(),
     });
 
-    render(<FloatingParseProgressCard taskId="task-123" onClose={vi.fn()} />);
+    renderWithQueryClient(<FloatingParseProgressCard taskId="task-123" onClose={vi.fn()} />);
 
     expect(screen.getByText(/連線中斷/)).toBeInTheDocument();
   });
 
   it('has correct ARIA attributes', () => {
-    render(<FloatingParseProgressCard taskId="task-123" onClose={vi.fn()} />);
+    renderWithQueryClient(<FloatingParseProgressCard taskId="task-123" onClose={vi.fn()} />);
 
     const card = screen.getByTestId('floating-parse-progress-card');
     expect(card).toHaveAttribute('role', 'status');
@@ -294,7 +312,7 @@ describe('FloatingParseProgressCard', () => {
   });
 
   it('close button has accessible label', () => {
-    render(<FloatingParseProgressCard taskId="task-123" onClose={vi.fn()} />);
+    renderWithQueryClient(<FloatingParseProgressCard taskId="task-123" onClose={vi.fn()} />);
 
     expect(screen.getByTestId('close-button')).toHaveAttribute('aria-label', '關閉進度卡片');
   });
