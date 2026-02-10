@@ -164,13 +164,13 @@ development_status:
   # Phase: Growth (Q3+ - September 2026+)
   # FRs: FR75-FR80
   # ==============================================================================
-  epic-9: backlog
-  9-1-subtitle-search-integration: backlog
-  9-2-traditional-chinese-subtitle-priority: backlog
-  9-3-subtitle-download: backlog
-  9-4-manual-subtitle-upload: backlog
-  9-5-automatic-subtitle-download: backlog
-  9-6-subtitle-availability-status: backlog
+  epic-9: in-progress  # Stories created 2026-02-10
+  9-1-subtitle-search-integration: ready-for-dev
+  9-2-traditional-chinese-subtitle-priority: ready-for-dev
+  9-3-subtitle-download: ready-for-dev
+  9-4-manual-subtitle-upload: ready-for-dev
+  9-5-automatic-subtitle-download: ready-for-dev
+  9-6-subtitle-availability-status: ready-for-dev
   epic-9-retrospective: optional
 
   # ==============================================================================
