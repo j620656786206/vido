@@ -178,10 +178,10 @@ development_status:
   # Phase: Growth (Q3+ - September 2026+)
   # FRs: FR9, FR10
   # ==============================================================================
-  epic-10: backlog
-  10-1-genre-based-recommendations: backlog
-  10-2-cast-and-director-based-recommendations: backlog
-  10-3-similar-titles-suggestions: backlog
+  epic-10: in-progress  # Stories created 2026-02-10
+  10-1-genre-based-recommendations: ready-for-dev
+  10-2-cast-and-director-based-recommendations: ready-for-dev
+  10-3-similar-titles-suggestions: ready-for-dev
   epic-10-retrospective: optional
 
   # ==============================================================================
