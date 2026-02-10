@@ -1,6 +1,6 @@
 # Story 4.2: Real-Time Download Status Monitoring
 
-Status: review
+Status: done
 
 ## Story
 
@@ -670,6 +670,14 @@ None - all implementations and tests passed on first attempt.
 - **Task 10**: Created E2E API test file with 6 test cases covering list endpoint, sort params, detail retrieval, 404 handling, and response format validation.
 - All 573 frontend tests pass, all backend tests pass (25 packages), formatting clean.
 
+### Code Review Fixes (AI)
+
+- **H1 Fixed**: Cached qBittorrent client in DownloadService with config fingerprint. Client is only recreated when config changes (host/username/password/basePath). Eliminates redundant login on every 5s poll.
+- **H2 Fixed**: Added "status" sort option per AC5. Replaced "size" with "status" in frontend sort dropdown. Backend handles status sort server-side (Go sort.Slice) since qBittorrent API doesn't support native status sorting.
+- **M1 Fixed**: Removed empty expanded div from DownloadItem.tsx that created visual noise. DownloadList handles rendering DownloadDetails externally. Updated tests to use aria-expanded checks.
+- **M2 Fixed**: GetTorrentDetails now uses `?hashes={hash}` filter on `/torrents/info` instead of fetching ALL torrents. Reduces network transfer and API load.
+- **M3 Fixed**: Added 7 undocumented files to story File List (test files, factories, helpers, auto-generated route tree).
+
 ### File List
 
 **Backend (New):**
@@ -698,5 +706,18 @@ None - all implementations and tests passed on first attempt.
 - apps/web/src/components/downloads/DownloadList.spec.tsx
 - apps/web/src/routes/downloads.tsx
 
+**Frontend (Test):**
+- apps/web/src/hooks/useDownloads.spec.ts
+- apps/web/src/components/downloads/DownloadDetails.spec.tsx
+
 **E2E (New):**
 - tests/e2e/downloads.api.spec.ts
+- tests/e2e/downloads.spec.ts
+
+**Test Support (New):**
+- tests/support/fixtures/factories/download-factory.ts
+- tests/support/fixtures/factories/index.ts (modified)
+- tests/support/helpers/api-helpers.ts (modified)
+
+**Auto-generated:**
+- apps/web/src/routeTree.gen.ts

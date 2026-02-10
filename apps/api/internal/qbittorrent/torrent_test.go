@@ -70,6 +70,7 @@ func TestTorrentsSort_Constants(t *testing.T) {
 	assert.Equal(t, TorrentsSort("name"), SortName)
 	assert.Equal(t, TorrentsSort("progress"), SortProgress)
 	assert.Equal(t, TorrentsSort("size"), SortSize)
+	assert.Equal(t, TorrentsSort("status"), SortStatus)
 }
 
 func TestTorrent_JSONSerialization(t *testing.T) {
@@ -471,9 +472,33 @@ func TestClient_GetTorrents_ServerError(t *testing.T) {
 func TestClient_GetTorrentDetails_Success(t *testing.T) {
 	mux := setupTorrentTestServer(t)
 	mux.HandleFunc("/api/v2/torrents/info", func(w http.ResponseWriter, r *http.Request) {
+		// Verify hashes filter is used for detail requests
+		hashes := r.URL.Query().Get("hashes")
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprint(w, mockTorrentInfoJSON())
+		if hashes == "abc123def456" {
+			// Return only the matching torrent
+			fmt.Fprint(w, `[`+`{
+				"hash": "abc123def456",
+				"name": "[SubGroup] Movie Name (2024) [1080p]",
+				"size": 4294967296,
+				"progress": 0.85,
+				"dlspeed": 10485760,
+				"upspeed": 524288,
+				"eta": 600,
+				"state": "downloading",
+				"added_on": 1704067200,
+				"completion_on": 0,
+				"num_seeds": 10,
+				"num_leechs": 5,
+				"save_path": "/downloads/movies",
+				"downloaded": 3650722201,
+				"uploaded": 104857600,
+				"ratio": 0.03
+			}`+`]`)
+		} else {
+			fmt.Fprint(w, mockTorrentInfoJSON())
+		}
 	})
 	mux.HandleFunc("/api/v2/torrents/properties", func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "abc123def456", r.URL.Query().Get("hash"))
@@ -510,7 +535,8 @@ func TestClient_GetTorrentDetails_NotFound(t *testing.T) {
 	mux.HandleFunc("/api/v2/torrents/info", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprint(w, mockTorrentInfoJSON())
+		// hashes filter returns empty when no match
+		fmt.Fprint(w, "[]")
 	})
 
 	server := newTestServer(t, mux)
@@ -536,7 +562,8 @@ func TestClient_GetTorrentDetails_PropertiesError(t *testing.T) {
 	mux.HandleFunc("/api/v2/torrents/info", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprint(w, mockTorrentInfoJSON())
+		// Return a single matching torrent
+		fmt.Fprint(w, `[{"hash":"abc123def456","name":"Test","state":"downloading","added_on":1704067200}]`)
 	})
 	mux.HandleFunc("/api/v2/torrents/properties", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)

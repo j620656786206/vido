@@ -15,7 +15,7 @@ const sortOptions: { value: SortField; label: string }[] = [
   { value: 'added_on', label: '新增時間' },
   { value: 'name', label: '名稱' },
   { value: 'progress', label: '進度' },
-  { value: 'size', label: '大小' },
+  { value: 'status', label: '狀態' },
 ];
 
 export function DownloadList({

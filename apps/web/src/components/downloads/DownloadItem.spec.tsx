@@ -68,14 +68,14 @@ describe('DownloadItem', () => {
     expect(onToggle).toHaveBeenCalledTimes(1);
   });
 
-  it('shows expanded section when expanded', () => {
+  it('sets aria-expanded true when expanded', () => {
     render(<DownloadItem download={mockDownload} expanded={true} onToggleExpand={() => {}} />);
-    expect(screen.getByTestId('download-expanded')).toBeTruthy();
+    expect(screen.getByRole('button').getAttribute('aria-expanded')).toBe('true');
   });
 
-  it('hides expanded section when collapsed', () => {
+  it('sets aria-expanded false when collapsed', () => {
     render(<DownloadItem download={mockDownload} expanded={false} onToggleExpand={() => {}} />);
-    expect(screen.queryByTestId('download-expanded')).toBeNull();
+    expect(screen.getByRole('button').getAttribute('aria-expanded')).toBe('false');
   });
 
   it('renders status icon', () => {

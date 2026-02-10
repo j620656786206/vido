@@ -14,7 +14,7 @@ export type TorrentStatus =
   | 'queued'
   | 'checking';
 
-export type SortField = 'added_on' | 'name' | 'progress' | 'size';
+export type SortField = 'added_on' | 'name' | 'progress' | 'status';
 export type SortOrder = 'asc' | 'desc';
 
 export interface Download {

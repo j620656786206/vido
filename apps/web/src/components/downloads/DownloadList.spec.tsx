@@ -140,8 +140,8 @@ describe('DownloadList', () => {
     );
 
     const select = screen.getByLabelText('排序：');
-    await user.selectOptions(select, 'name');
-    expect(onSortChange).toHaveBeenCalledWith('name');
+    await user.selectOptions(select, 'status');
+    expect(onSortChange).toHaveBeenCalledWith('status');
   });
 
   it('calls onOrderChange when order button is clicked', async () => {

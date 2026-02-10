@@ -81,13 +81,6 @@ export function DownloadItem({ download, expanded, onToggleExpand }: DownloadIte
           </svg>
         </div>
       </button>
-
-      {/* Expanded indicator for parent to render details */}
-      {expanded && (
-        <div className="border-t border-slate-700 px-4 pb-4" data-testid="download-expanded">
-          {/* DownloadDetails will be rendered by parent (DownloadList) */}
-        </div>
-      )}
     </div>
   );
 }

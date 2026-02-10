@@ -48,6 +48,7 @@ const (
 	SortName     TorrentsSort = "name"
 	SortProgress TorrentsSort = "progress"
 	SortSize     TorrentsSort = "size"
+	SortStatus   TorrentsSort = "status" // Sorted server-side (not supported by qBittorrent API)
 )
 
 // ListTorrentsOptions configures the torrent list request.

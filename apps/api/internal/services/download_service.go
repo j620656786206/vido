@@ -4,13 +4,15 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sort"
+	"sync"
 
 	"github.com/vido/api/internal/qbittorrent"
 )
 
 // DownloadServiceInterface defines the contract for download monitoring operations.
 type DownloadServiceInterface interface {
-	GetAllDownloads(ctx context.Context, sort string, order string) ([]qbittorrent.Torrent, error)
+	GetAllDownloads(ctx context.Context, sortField string, order string) ([]qbittorrent.Torrent, error)
 	GetDownloadDetails(ctx context.Context, hash string) (*qbittorrent.TorrentDetails, error)
 }
 
@@ -18,6 +20,10 @@ type DownloadServiceInterface interface {
 type DownloadService struct {
 	qbService QBittorrentServiceInterface
 	logger    *slog.Logger
+
+	mu              sync.Mutex
+	cachedClient    *qbittorrent.Client
+	cachedConfigKey string // "host|username|password" fingerprint
 }
 
 // NewDownloadService creates a new DownloadService.
@@ -28,8 +34,31 @@ func NewDownloadService(qbService QBittorrentServiceInterface, logger *slog.Logg
 	}
 }
 
+// configFingerprint returns a string key representing the config identity.
+func configFingerprint(cfg *qbittorrent.Config) string {
+	return cfg.Host + "|" + cfg.Username + "|" + cfg.Password + "|" + cfg.BasePath
+}
+
+// getClient returns a cached qBittorrent client, creating a new one only when config changes.
+func (s *DownloadService) getClient(config *qbittorrent.Config) *qbittorrent.Client {
+	key := configFingerprint(config)
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.cachedClient != nil && s.cachedConfigKey == key {
+		return s.cachedClient
+	}
+
+	s.cachedClient = qbittorrent.NewClient(config)
+	s.cachedConfigKey = key
+	return s.cachedClient
+}
+
 // GetAllDownloads retrieves all torrents from qBittorrent with optional sorting.
-func (s *DownloadService) GetAllDownloads(ctx context.Context, sort string, order string) ([]qbittorrent.Torrent, error) {
+// When sortField is "status", sorting is performed server-side since qBittorrent
+// does not support native status sorting.
+func (s *DownloadService) GetAllDownloads(ctx context.Context, sortField string, order string) ([]qbittorrent.Torrent, error) {
 	config, err := s.qbService.GetConfig(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("get qBittorrent config: %w", err)
@@ -42,17 +71,31 @@ func (s *DownloadService) GetAllDownloads(ctx context.Context, sort string, orde
 		}
 	}
 
-	client := qbittorrent.NewClient(config)
+	client := s.getClient(config)
 
-	opts := &qbittorrent.ListTorrentsOptions{
-		Sort:    qbittorrent.TorrentsSort(sort),
-		Reverse: order == "desc",
+	// For "status" sort, fetch without sort and sort in Go
+	var opts *qbittorrent.ListTorrentsOptions
+	if sortField != "status" {
+		opts = &qbittorrent.ListTorrentsOptions{
+			Sort:    qbittorrent.TorrentsSort(sortField),
+			Reverse: order == "desc",
+		}
 	}
 
 	torrents, err := client.GetTorrents(ctx, opts)
 	if err != nil {
 		s.logger.Error("Failed to get torrents", "error", err)
 		return nil, err
+	}
+
+	// Server-side sort by status (AC5)
+	if sortField == "status" {
+		sort.Slice(torrents, func(i, j int) bool {
+			if order == "desc" {
+				return string(torrents[i].Status) > string(torrents[j].Status)
+			}
+			return string(torrents[i].Status) < string(torrents[j].Status)
+		})
 	}
 
 	return torrents, nil
@@ -72,7 +115,7 @@ func (s *DownloadService) GetDownloadDetails(ctx context.Context, hash string) (
 		}
 	}
 
-	client := qbittorrent.NewClient(config)
+	client := s.getClient(config)
 
 	details, err := client.GetTorrentDetails(ctx, hash)
 	if err != nil {

@@ -223,13 +223,14 @@ func (c *Client) GetTorrents(ctx context.Context, opts *ListTorrentsOptions) ([]
 }
 
 // GetTorrentDetails retrieves detailed information for a specific torrent.
+// Uses the hashes filter to fetch only the target torrent instead of the full list.
 func (c *Client) GetTorrentDetails(ctx context.Context, hash string) (*TorrentDetails, error) {
 	if err := c.Login(ctx); err != nil {
 		return nil, err
 	}
 
-	// First get the basic torrent info list to find the target torrent
-	apiURL := c.buildURL("/torrents/info")
+	// Fetch only the target torrent using hashes filter
+	apiURL := c.buildURL("/torrents/info") + fmt.Sprintf("?hashes=%s", hash)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
 	if err != nil {
 		return nil, &ConnectionError{
@@ -249,6 +250,13 @@ func (c *Client) GetTorrentDetails(ctx context.Context, hash string) (*TorrentDe
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		return nil, &ConnectionError{
+			Code:    ErrCodeConnectionFailed,
+			Message: fmt.Sprintf("get torrents failed with status %d", resp.StatusCode),
+		}
+	}
+
 	var qbTorrents []qbTorrentInfo
 	if err := json.NewDecoder(resp.Body).Decode(&qbTorrents); err != nil {
 		return nil, &ConnectionError{
@@ -258,20 +266,14 @@ func (c *Client) GetTorrentDetails(ctx context.Context, hash string) (*TorrentDe
 		}
 	}
 
-	var torrent *Torrent
-	for _, qbt := range qbTorrents {
-		if qbt.Hash == hash {
-			t := mapQBTorrentInfo(qbt)
-			torrent = &t
-			break
-		}
-	}
-	if torrent == nil {
+	if len(qbTorrents) == 0 {
 		return nil, &ConnectionError{
 			Code:    ErrCodeTorrentNotFound,
 			Message: fmt.Sprintf("torrent not found: %s", hash),
 		}
 	}
+
+	torrent := mapQBTorrentInfo(qbTorrents[0])
 
 	// Get detailed properties
 	propsURL := c.buildURL("/torrents/properties") + fmt.Sprintf("?hash=%s", hash)
@@ -310,5 +312,5 @@ func (c *Client) GetTorrentDetails(ctx context.Context, hash string) (*TorrentDe
 		}
 	}
 
-	return mapTorrentDetails(torrent, props), nil
+	return mapTorrentDetails(&torrent, props), nil
 }
