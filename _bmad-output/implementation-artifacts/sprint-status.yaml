@@ -120,18 +120,18 @@ development_status:
   # Phase: 1.0 (Q2 - June 2026)
   # FRs: FR52-FR66
   # ==============================================================================
-  epic-6: backlog
-  6-1-setup-wizard: backlog
-  6-2-cache-management: backlog
-  6-3-system-logs-viewer: backlog
-  6-4-service-connection-status-dashboard: backlog
-  6-5-database-backup: backlog
-  6-6-backup-integrity-verification: backlog
-  6-7-data-restore: backlog
-  6-8-scheduled-backups: backlog
-  6-9-metadata-export-json-yaml-nfo: backlog
-  6-10-metadata-import: backlog
-  6-11-performance-metrics-dashboard: backlog
+  epic-6: in-progress  # Stories created 2026-02-10
+  6-1-setup-wizard: ready-for-dev
+  6-2-cache-management: ready-for-dev
+  6-3-system-logs-viewer: ready-for-dev
+  6-4-service-connection-status-dashboard: ready-for-dev
+  6-5-database-backup: ready-for-dev
+  6-6-backup-integrity-verification: ready-for-dev
+  6-7-data-restore: ready-for-dev
+  6-8-scheduled-backups: ready-for-dev
+  6-9-metadata-export-json-yaml-nfo: ready-for-dev
+  6-10-metadata-import: ready-for-dev
+  6-11-performance-metrics-dashboard: ready-for-dev
   epic-6-retrospective: optional
 
   # ==============================================================================
