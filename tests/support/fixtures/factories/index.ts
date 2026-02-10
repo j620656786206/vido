@@ -85,6 +85,18 @@ export {
   type PartialQBConfigData,
 } from './qbittorrent-factory';
 
+// Download Factory (Story 4-2)
+export {
+  createDownloadData,
+  createDownloadDetailsData,
+  createDownloadList,
+  presetDownloads,
+  type DownloadData,
+  type DownloadDetailsData,
+  type PartialDownloadData,
+  type PartialDownloadDetailsData,
+} from './download-factory';
+
 // Learning Factory
 export {
   createLearnPatternRequest,

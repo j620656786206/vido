@@ -128,6 +128,41 @@ export interface HealthStatusResponse {
 }
 
 // =============================================================================
+// Download Types (Story 4-2)
+// =============================================================================
+
+export interface DownloadItem {
+  hash: string;
+  name: string;
+  size: number;
+  progress: number;
+  downloadSpeed: number;
+  uploadSpeed: number;
+  eta: number;
+  status: string;
+  addedOn: string;
+  completedOn?: string;
+  seeds: number;
+  peers: number;
+  downloaded: number;
+  uploaded: number;
+  ratio: number;
+  savePath: string;
+}
+
+export interface DownloadDetailsItem extends DownloadItem {
+  pieceSize: number;
+  comment?: string;
+  createdBy?: string;
+  creationDate: string;
+  totalWasted: number;
+  timeElapsed: number;
+  seedingTime: number;
+  avgDownSpeed: number;
+  avgUpSpeed: number;
+}
+
+// =============================================================================
 // qBittorrent Types (Story 4-1)
 // =============================================================================
 
@@ -338,6 +373,13 @@ export interface ApiHelpers {
   deletePattern: (id: string) => Promise<APIResponse>;
   getPatternStats: () => Promise<ApiResponse<PatternStats>>;
 
+  // Downloads (Story 4-2)
+  listDownloads: (params?: {
+    sort?: string;
+    order?: string;
+  }) => Promise<ApiResponse<DownloadItem[]>>;
+  getDownloadDetails: (hash: string) => Promise<ApiResponse<DownloadDetailsItem>>;
+
   // qBittorrent (Story 4-1)
   getQBConfig: () => Promise<ApiResponse<QBConfigResponse>>;
   saveQBConfig: (config: SaveQBConfigRequest) => Promise<ApiResponse<{ message: string }>>;
@@ -488,6 +530,14 @@ export function apiHelpers(request: APIRequestContext): ApiHelpers {
     deletePattern: async (id) => del(`/learning/patterns/${id}`),
 
     getPatternStats: async () => get<PatternStats>('/learning/stats'),
+
+    // Downloads (Story 4-2)
+    listDownloads: async (params) => {
+      const qs = buildQueryString({ sort: params?.sort, order: params?.order });
+      return get<DownloadItem[]>(`/downloads${qs}`);
+    },
+
+    getDownloadDetails: async (hash) => get<DownloadDetailsItem>(`/downloads/${hash}`),
 
     // qBittorrent (Story 4-1)
     getQBConfig: async () => get<QBConfigResponse>('/settings/qbittorrent'),
