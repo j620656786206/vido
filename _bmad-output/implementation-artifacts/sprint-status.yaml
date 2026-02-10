@@ -91,7 +91,7 @@ development_status:
   # FRs: FR27-FR33
   # ==============================================================================
   epic-4: in-progress  # Stories created 2026-02-09
-  4-1-qbittorrent-connection-configuration: ready-for-dev
+  4-1-qbittorrent-connection-configuration: review
   4-2-real-time-download-status-monitoring: ready-for-dev
   4-3-unified-download-dashboard: ready-for-dev
   4-4-download-status-filtering: ready-for-dev
