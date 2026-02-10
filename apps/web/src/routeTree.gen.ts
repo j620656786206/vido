@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SearchRouteImport } from './routes/search'
+import { Route as DownloadsRouteImport } from './routes/downloads'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as TestManualSearchRouteImport } from './routes/test/manual-search'
 import { Route as SettingsQbittorrentRouteImport } from './routes/settings/qbittorrent'
@@ -18,6 +19,11 @@ import { Route as MediaTypeIdRouteImport } from './routes/media/$type.$id'
 const SearchRoute = SearchRouteImport.update({
   id: '/search',
   path: '/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DownloadsRoute = DownloadsRouteImport.update({
+  id: '/downloads',
+  path: '/downloads',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -43,6 +49,7 @@ const MediaTypeIdRoute = MediaTypeIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/downloads': typeof DownloadsRoute
   '/search': typeof SearchRoute
   '/settings/qbittorrent': typeof SettingsQbittorrentRoute
   '/test/manual-search': typeof TestManualSearchRoute
@@ -50,6 +57,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/downloads': typeof DownloadsRoute
   '/search': typeof SearchRoute
   '/settings/qbittorrent': typeof SettingsQbittorrentRoute
   '/test/manual-search': typeof TestManualSearchRoute
@@ -58,6 +66,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/downloads': typeof DownloadsRoute
   '/search': typeof SearchRoute
   '/settings/qbittorrent': typeof SettingsQbittorrentRoute
   '/test/manual-search': typeof TestManualSearchRoute
@@ -67,6 +76,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/downloads'
     | '/search'
     | '/settings/qbittorrent'
     | '/test/manual-search'
@@ -74,6 +84,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/downloads'
     | '/search'
     | '/settings/qbittorrent'
     | '/test/manual-search'
@@ -81,6 +92,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/downloads'
     | '/search'
     | '/settings/qbittorrent'
     | '/test/manual-search'
@@ -89,6 +101,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  DownloadsRoute: typeof DownloadsRoute
   SearchRoute: typeof SearchRoute
   SettingsQbittorrentRoute: typeof SettingsQbittorrentRoute
   TestManualSearchRoute: typeof TestManualSearchRoute
@@ -102,6 +115,13 @@ declare module '@tanstack/react-router' {
       path: '/search'
       fullPath: '/search'
       preLoaderRoute: typeof SearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/downloads': {
+      id: '/downloads'
+      path: '/downloads'
+      fullPath: '/downloads'
+      preLoaderRoute: typeof DownloadsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -137,6 +157,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  DownloadsRoute: DownloadsRoute,
   SearchRoute: SearchRoute,
   SettingsQbittorrentRoute: SettingsQbittorrentRoute,
   TestManualSearchRoute: TestManualSearchRoute,

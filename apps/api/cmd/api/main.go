@@ -128,6 +128,7 @@ func main() {
 	seriesService := services.NewSeriesService(repos.Series)
 	settingsService := services.NewSettingsServiceWithSecrets(repos.Settings, secretsService)
 	qbittorrentService := services.NewQBittorrentService(repos.Settings, secretsService)
+	downloadService := services.NewDownloadService(qbittorrentService, slog.Default())
 	mediaService := services.NewMediaService(cfg.MediaDirs)
 
 	// Initialize TMDb service with cache integration (Story 2.1)
@@ -287,6 +288,7 @@ func main() {
 	retryHandler := handlers.NewRetryHandler(retryService)
 	serviceHealthHandler := handlers.NewServiceHealthHandler(degradationService)
 	qbittorrentHandler := handlers.NewQBittorrentHandler(qbittorrentService)
+	downloadHandler := handlers.NewDownloadHandler(downloadService)
 	// parseProgressHandler already initialized above with defer Close()
 	slog.Info("Handlers initialized with service injection")
 
@@ -318,6 +320,7 @@ func main() {
 		parseProgressHandler.RegisterRoutes(apiV1)
 		handlers.RegisterRetryRoutes(apiV1, retryHandler)
 		qbittorrentHandler.RegisterRoutes(apiV1)
+		downloadHandler.RegisterRoutes(apiV1)
 		// Health services endpoint (Story 3.12 - Graceful Degradation)
 		apiV1.GET("/health/services", serviceHealthHandler.GetServicesHealth)
 	}

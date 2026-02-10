@@ -2,6 +2,7 @@ package qbittorrent
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
@@ -156,4 +157,158 @@ func (c *Client) getVersion(ctx context.Context, path string) (string, error) {
 		return "", fmt.Errorf("read response body: %w", err)
 	}
 	return strings.TrimSpace(string(body)), nil
+}
+
+// GetTorrents retrieves all torrents from qBittorrent.
+func (c *Client) GetTorrents(ctx context.Context, opts *ListTorrentsOptions) ([]Torrent, error) {
+	if err := c.Login(ctx); err != nil {
+		return nil, err
+	}
+
+	apiURL := c.buildURL("/torrents/info")
+
+	// Append query parameters
+	if opts != nil {
+		sep := "?"
+		if opts.Sort != "" {
+			apiURL += fmt.Sprintf("%ssort=%s", sep, string(opts.Sort))
+			sep = "&"
+		}
+		if opts.Reverse {
+			apiURL += fmt.Sprintf("%sreverse=true", sep)
+		}
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
+	if err != nil {
+		return nil, &ConnectionError{
+			Code:    ErrCodeConnectionFailed,
+			Message: "failed to create torrents request",
+			Cause:   err,
+		}
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, &ConnectionError{
+			Code:    ErrCodeConnectionFailed,
+			Message: "get torrents failed",
+			Cause:   err,
+		}
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, &ConnectionError{
+			Code:    ErrCodeConnectionFailed,
+			Message: fmt.Sprintf("get torrents failed with status %d", resp.StatusCode),
+		}
+	}
+
+	var qbTorrents []qbTorrentInfo
+	if err := json.NewDecoder(resp.Body).Decode(&qbTorrents); err != nil {
+		return nil, &ConnectionError{
+			Code:    ErrCodeConnectionFailed,
+			Message: "failed to decode torrents response",
+			Cause:   err,
+		}
+	}
+
+	torrents := make([]Torrent, len(qbTorrents))
+	for i, qbt := range qbTorrents {
+		torrents[i] = mapQBTorrentInfo(qbt)
+	}
+
+	return torrents, nil
+}
+
+// GetTorrentDetails retrieves detailed information for a specific torrent.
+func (c *Client) GetTorrentDetails(ctx context.Context, hash string) (*TorrentDetails, error) {
+	if err := c.Login(ctx); err != nil {
+		return nil, err
+	}
+
+	// First get the basic torrent info list to find the target torrent
+	apiURL := c.buildURL("/torrents/info")
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
+	if err != nil {
+		return nil, &ConnectionError{
+			Code:    ErrCodeConnectionFailed,
+			Message: "failed to create torrents request",
+			Cause:   err,
+		}
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, &ConnectionError{
+			Code:    ErrCodeConnectionFailed,
+			Message: "get torrents failed",
+			Cause:   err,
+		}
+	}
+	defer resp.Body.Close()
+
+	var qbTorrents []qbTorrentInfo
+	if err := json.NewDecoder(resp.Body).Decode(&qbTorrents); err != nil {
+		return nil, &ConnectionError{
+			Code:    ErrCodeConnectionFailed,
+			Message: "failed to decode torrents response",
+			Cause:   err,
+		}
+	}
+
+	var torrent *Torrent
+	for _, qbt := range qbTorrents {
+		if qbt.Hash == hash {
+			t := mapQBTorrentInfo(qbt)
+			torrent = &t
+			break
+		}
+	}
+	if torrent == nil {
+		return nil, &ConnectionError{
+			Code:    ErrCodeTorrentNotFound,
+			Message: fmt.Sprintf("torrent not found: %s", hash),
+		}
+	}
+
+	// Get detailed properties
+	propsURL := c.buildURL("/torrents/properties") + fmt.Sprintf("?hash=%s", hash)
+	propsReq, err := http.NewRequestWithContext(ctx, http.MethodGet, propsURL, nil)
+	if err != nil {
+		return nil, &ConnectionError{
+			Code:    ErrCodeConnectionFailed,
+			Message: "failed to create properties request",
+			Cause:   err,
+		}
+	}
+
+	propsResp, err := c.httpClient.Do(propsReq)
+	if err != nil {
+		return nil, &ConnectionError{
+			Code:    ErrCodeConnectionFailed,
+			Message: "get torrent properties failed",
+			Cause:   err,
+		}
+	}
+	defer propsResp.Body.Close()
+
+	if propsResp.StatusCode != http.StatusOK {
+		return nil, &ConnectionError{
+			Code:    ErrCodeConnectionFailed,
+			Message: fmt.Sprintf("get properties failed with status %d", propsResp.StatusCode),
+		}
+	}
+
+	var props qbTorrentProperties
+	if err := json.NewDecoder(propsResp.Body).Decode(&props); err != nil {
+		return nil, &ConnectionError{
+			Code:    ErrCodeConnectionFailed,
+			Message: "failed to decode properties response",
+			Cause:   err,
+		}
+	}
+
+	return mapTorrentDetails(torrent, props), nil
 }
