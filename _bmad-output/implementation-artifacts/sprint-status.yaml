@@ -104,15 +104,15 @@ development_status:
   # Phase: 1.0 (Q2 - June 2026)
   # FRs: FR5-FR8, FR38-FR42
   # ==============================================================================
-  epic-5: backlog
-  5-1-media-library-grid-view: backlog
-  5-2-library-list-view-toggle: backlog
-  5-3-library-search: backlog
-  5-4-library-sorting: backlog
-  5-5-library-filtering: backlog
-  5-6-media-detail-page-full-version: backlog
-  5-7-batch-operations: backlog
-  5-8-recently-added-section: backlog
+  epic-5: in-progress  # Stories created 2026-02-10
+  5-1-media-library-grid-view: ready-for-dev
+  5-2-library-list-view-toggle: ready-for-dev
+  5-3-library-search: ready-for-dev
+  5-4-library-sorting: ready-for-dev
+  5-5-library-filtering: ready-for-dev
+  5-6-media-detail-page-full-version: ready-for-dev
+  5-7-batch-operations: ready-for-dev
+  5-8-recently-added-section: ready-for-dev
   epic-5-retrospective: optional
 
   # ==============================================================================
