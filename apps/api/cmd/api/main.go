@@ -289,6 +289,7 @@ func main() {
 	serviceHealthHandler := handlers.NewServiceHealthHandler(degradationService)
 	qbittorrentHandler := handlers.NewQBittorrentHandler(qbittorrentService)
 	downloadHandler := handlers.NewDownloadHandler(downloadService)
+	recentMediaHandler := handlers.NewRecentMediaHandler(movieService, seriesService)
 	// parseProgressHandler already initialized above with defer Close()
 	slog.Info("Handlers initialized with service injection")
 
@@ -321,6 +322,7 @@ func main() {
 		handlers.RegisterRetryRoutes(apiV1, retryHandler)
 		qbittorrentHandler.RegisterRoutes(apiV1)
 		downloadHandler.RegisterRoutes(apiV1)
+		recentMediaHandler.RegisterRoutes(apiV1)
 		// Health services endpoint (Story 3.12 - Graceful Degradation)
 		apiV1.GET("/health/services", serviceHealthHandler.GetServicesHealth)
 	}

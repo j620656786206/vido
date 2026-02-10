@@ -1,6 +1,6 @@
 # Story 4.3: Unified Download Dashboard
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -45,66 +45,66 @@ So that **I can see my complete workflow in one place**.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create Dashboard Layout Component (AC: 1, 4)
-  - [ ] 1.1: Create `/apps/web/src/components/dashboard/DashboardLayout.tsx`
-  - [ ] 1.2: Implement responsive grid (2 columns desktop, stack mobile)
-  - [ ] 1.3: Use CSS Grid or Tailwind grid utilities
-  - [ ] 1.4: Write component tests
+- [x] Task 1: Create Dashboard Layout Component (AC: 1, 4)
+  - [x] 1.1: Create `/apps/web/src/components/dashboard/DashboardLayout.tsx`
+  - [x] 1.2: Implement responsive grid (2 columns desktop, stack mobile)
+  - [x] 1.3: Use CSS Grid or Tailwind grid utilities
+  - [x] 1.4: Write component tests
 
-- [ ] Task 2: Create Compact Download List Component (AC: 1, 2, 3, 5)
-  - [ ] 2.1: Create `/apps/web/src/components/dashboard/DownloadPanel.tsx`
-  - [ ] 2.2: Show compact view of downloads (name, progress bar, status)
-  - [ ] 2.3: Display "qBittorrent 未連線" when disconnected
-  - [ ] 2.4: Add "查看全部" link to full downloads page
-  - [ ] 2.5: Add hover quick actions
-  - [ ] 2.6: Write component tests
+- [x] Task 2: Create Compact Download List Component (AC: 1, 2, 3, 5)
+  - [x] 2.1: Create `/apps/web/src/components/dashboard/DownloadPanel.tsx`
+  - [x] 2.2: Show compact view of downloads (name, progress bar, status)
+  - [x] 2.3: Display "qBittorrent 未連線" when disconnected
+  - [x] 2.4: Add "查看全部" link to full downloads page
+  - [x] 2.5: Add hover quick actions
+  - [x] 2.6: Write component tests
 
-- [ ] Task 3: Create Recent Media Panel (AC: 1, 2, 5)
-  - [ ] 3.1: Create `/apps/web/src/components/dashboard/RecentMediaPanel.tsx`
-  - [ ] 3.2: Show recently added media with poster thumbnails
-  - [ ] 3.3: Show "剛剛新增" badge for newly parsed items
-  - [ ] 3.4: Add hover quick actions
-  - [ ] 3.5: Add "查看全部" link to library page
-  - [ ] 3.6: Write component tests
+- [x] Task 3: Create Recent Media Panel (AC: 1, 2, 5)
+  - [x] 3.1: Create `/apps/web/src/components/dashboard/RecentMediaPanel.tsx`
+  - [x] 3.2: Show recently added media with poster thumbnails
+  - [x] 3.3: Show "剛剛新增" badge for newly parsed items
+  - [x] 3.4: Add hover quick actions
+  - [x] 3.5: Add "查看全部" link to library page
+  - [x] 3.6: Write component tests
 
-- [ ] Task 4: Create Quick Search Bar (AC: 1)
-  - [ ] 4.1: Create `/apps/web/src/components/dashboard/QuickSearchBar.tsx`
-  - [ ] 4.2: Implement search input with TMDb search
-  - [ ] 4.3: Show recent searches dropdown
-  - [ ] 4.4: Navigate to search results on submit
-  - [ ] 4.5: Write component tests
+- [x] Task 4: Create Quick Search Bar (AC: 1)
+  - [x] 4.1: Create `/apps/web/src/components/dashboard/QuickSearchBar.tsx`
+  - [x] 4.2: Implement search input with TMDb search
+  - [x] 4.3: Show recent searches dropdown
+  - [x] 4.4: Navigate to search results on submit
+  - [x] 4.5: Write component tests
 
-- [ ] Task 5: Create Dashboard Page (AC: 1, 2, 3, 4)
-  - [ ] 5.1: Create `/apps/web/src/routes/index.tsx` (homepage)
-  - [ ] 5.2: Compose all dashboard components
-  - [ ] 5.3: Handle loading states for each panel independently
-  - [ ] 5.4: Handle error states for each panel independently
+- [x] Task 5: Create Dashboard Page (AC: 1, 2, 3, 4)
+  - [x] 5.1: Create `/apps/web/src/routes/index.tsx` (homepage)
+  - [x] 5.2: Compose all dashboard components
+  - [x] 5.3: Handle loading states for each panel independently
+  - [x] 5.4: Handle error states for each panel independently
 
-- [ ] Task 6: Create Dashboard API Hooks (AC: 1, 2)
-  - [ ] 6.1: Create `/apps/web/src/hooks/useDashboardData.ts`
-  - [ ] 6.2: Combine downloads, recent media, and connection status
-  - [ ] 6.3: Use parallel queries for independent data fetching
-  - [ ] 6.4: Implement polling for downloads only
+- [x] Task 6: Create Dashboard API Hooks (AC: 1, 2)
+  - [x] 6.1: Create `/apps/web/src/hooks/useDashboardData.ts`
+  - [x] 6.2: Combine downloads, recent media, and connection status
+  - [x] 6.3: Use parallel queries for independent data fetching
+  - [x] 6.4: Implement polling for downloads only
 
-- [ ] Task 7: Create Recent Media API Endpoint (AC: 1, 2)
-  - [ ] 7.1: Implement `GET /api/v1/media/recent?limit=10` handler
-  - [ ] 7.2: Return recently added media items
-  - [ ] 7.3: Include "just_added" flag for items added in last 5 minutes
-  - [ ] 7.4: Add Swagger documentation
-  - [ ] 7.5: Write handler tests
+- [x] Task 7: Create Recent Media API Endpoint (AC: 1, 2)
+  - [x] 7.1: Implement `GET /api/v1/media/recent?limit=10` handler
+  - [x] 7.2: Return recently added media items
+  - [x] 7.3: Include "just_added" flag for items added in last 5 minutes
+  - [x] 7.4: Add Swagger documentation
+  - [x] 7.5: Write handler tests
 
-- [ ] Task 8: Create Notification for New Media (AC: 2)
-  - [ ] 8.1: Create `/apps/web/src/components/notifications/NewMediaToast.tsx`
-  - [ ] 8.2: Show toast when new media added to library
-  - [ ] 8.3: Include media poster thumbnail and title
-  - [ ] 8.4: Write component tests
+- [x] Task 8: Create Notification for New Media (AC: 2)
+  - [x] 8.1: Create `/apps/web/src/components/notifications/NewMediaToast.tsx`
+  - [x] 8.2: Show toast when new media added to library
+  - [x] 8.3: Include media poster thumbnail and title
+  - [x] 8.4: Write component tests
 
-- [ ] Task 9: E2E Tests (AC: all)
-  - [ ] 9.1: Create `/e2e/dashboard.spec.ts`
-  - [ ] 9.2: Test dashboard layout
-  - [ ] 9.3: Test disconnected state
-  - [ ] 9.4: Test mobile responsive layout
-  - [ ] 9.5: Test quick actions
+- [x] Task 9: E2E Tests (AC: all)
+  - [x] 9.1: Create `/e2e/dashboard.spec.ts`
+  - [x] 9.2: Test dashboard layout
+  - [x] 9.3: Test disconnected state
+  - [x] 9.4: Test mobile responsive layout
+  - [x] 9.5: Test quick actions
 
 ## Dev Notes
 
@@ -528,10 +528,52 @@ Each panel should handle errors independently:
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.6
 
 ### Debug Log References
 
+- TanStack Router Link requires full router context in tests (createMemoryHistory + createRouter + RouterProvider)
+- "下載中" text collision: heading and StatusIcon labels both render same text → use `findByRole('heading')` instead of `findByText`
+- vitest `--testPathPattern` flag doesn't exist → use positional argument pattern
+- `models.NullString` doesn't exist → use `database/sql` `sql.NullString` directly
+
 ### Completion Notes List
 
+- All 9 tasks implemented following red-green-refactor TDD cycle
+- Frontend: 621 tests pass (57 files), zero regressions
+- Backend: All packages compile and pass, zero regressions
+- Prettier formatting applied to all new files
+- Used pure Tailwind CSS (no shadcn/ui) per project conventions
+- Used `cn()` utility from clsx + tailwind-merge
+- Query key factory pattern with `mediaKeys` for consistent cache management
+- Backend handler combines movie + series services, sorts by CreatedAt DESC
+- justAdded flag: items added within 5 minutes marked as true
+
+### Change Log
+
+- 2026-02-10: All 9 tasks implemented, tests passing, status → review
+
 ### File List
+
+**Created:**
+- `apps/web/src/components/dashboard/DashboardLayout.tsx` - Responsive grid layout wrapper
+- `apps/web/src/components/dashboard/DashboardLayout.spec.tsx` - 4 tests
+- `apps/web/src/components/dashboard/DownloadPanel.tsx` - Compact download list with connection status
+- `apps/web/src/components/dashboard/DownloadPanel.spec.tsx` - 11 tests
+- `apps/web/src/components/dashboard/RecentMediaPanel.tsx` - Recent media grid with poster cards
+- `apps/web/src/components/dashboard/RecentMediaPanel.spec.tsx` - 8 tests
+- `apps/web/src/components/dashboard/QuickSearchBar.tsx` - Search input with navigation
+- `apps/web/src/components/dashboard/QuickSearchBar.spec.tsx` - 4 tests
+- `apps/web/src/components/dashboard/index.ts` - Barrel exports
+- `apps/web/src/components/notifications/NewMediaToast.tsx` - Media addition toast notification
+- `apps/web/src/components/notifications/NewMediaToast.spec.tsx` - 6 tests
+- `apps/web/src/services/mediaService.ts` - Media API service with fetchApi pattern
+- `apps/web/src/hooks/useDashboardData.ts` - Query hooks for recent media
+- `apps/web/src/hooks/useDashboardData.spec.ts` - 4 tests
+- `apps/api/internal/handlers/recent_media_handler.go` - GET /api/v1/media/recent handler
+- `apps/api/internal/handlers/recent_media_handler_test.go` - 6 tests
+- `tests/e2e/dashboard.spec.ts` - 11 E2E tests
+
+**Modified:**
+- `apps/web/src/routes/index.tsx` - Replaced NxWelcome with DashboardPage
+- `apps/api/cmd/api/main.go` - Registered recentMediaHandler routes
