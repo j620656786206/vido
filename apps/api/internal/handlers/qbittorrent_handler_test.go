@@ -42,6 +42,14 @@ func (m *MockQBittorrentService) TestConnection(ctx context.Context) (*qbittorre
 	return args.Get(0).(*qbittorrent.VersionInfo), args.Error(1)
 }
 
+func (m *MockQBittorrentService) TestConnectionWithConfig(ctx context.Context, config *qbittorrent.Config) (*qbittorrent.VersionInfo, error) {
+	args := m.Called(ctx, config)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*qbittorrent.VersionInfo), args.Error(1)
+}
+
 func (m *MockQBittorrentService) IsConfigured(ctx context.Context) bool {
 	args := m.Called(ctx)
 	return args.Bool(0)
@@ -235,7 +243,7 @@ func TestQBittorrentHandler_TestConnection(t *testing.T) {
 			},
 		},
 		{
-			name: "returns error on connection failure",
+			name: "returns error on connection failure with specific error code",
 			setupMock: func(m *MockQBittorrentService) {
 				m.On("TestConnection", mock.Anything).Return(nil, &qbittorrent.ConnectionError{
 					Code:    qbittorrent.ErrCodeAuthFailed,
@@ -245,12 +253,12 @@ func TestQBittorrentHandler_TestConnection(t *testing.T) {
 			expectedStatus: http.StatusBadRequest,
 			checkResponse: func(t *testing.T, resp *APIResponse) {
 				assert.False(t, resp.Success)
-				assert.Equal(t, "QB_CONNECTION_FAILED", resp.Error.Code)
+				assert.Equal(t, "QB_AUTH_FAILED", resp.Error.Code)
 				assert.Equal(t, "無法連線到 qBittorrent", resp.Error.Message)
 			},
 		},
 		{
-			name: "returns error when not configured",
+			name: "returns error when not configured with specific code",
 			setupMock: func(m *MockQBittorrentService) {
 				m.On("TestConnection", mock.Anything).Return(nil, &qbittorrent.ConnectionError{
 					Code:    qbittorrent.ErrCodeNotConfigured,
@@ -261,6 +269,7 @@ func TestQBittorrentHandler_TestConnection(t *testing.T) {
 			checkResponse: func(t *testing.T, resp *APIResponse) {
 				assert.False(t, resp.Success)
 				assert.NotNil(t, resp.Error)
+				assert.Equal(t, "QB_NOT_CONFIGURED", resp.Error.Code)
 			},
 		},
 	}
@@ -289,4 +298,44 @@ func TestQBittorrentHandler_TestConnection(t *testing.T) {
 			mockService.AssertExpectations(t)
 		})
 	}
+}
+
+func TestQBittorrentHandler_TestConnection_WithBody(t *testing.T) {
+	mockService := new(MockQBittorrentService)
+	mockService.On("TestConnectionWithConfig", mock.Anything, mock.MatchedBy(func(c *qbittorrent.Config) bool {
+		return c.Host == "http://192.168.1.100:8080" &&
+			c.Username == "admin" &&
+			c.Password == "secret" &&
+			c.BasePath == "/qbt"
+	})).Return(&qbittorrent.VersionInfo{
+		AppVersion: "v4.5.2",
+		APIVersion: "2.9.3",
+	}, nil)
+
+	handler := NewQBittorrentHandler(mockService)
+	router := setupQBRouter(handler)
+
+	body := TestQBConnectionRequest{
+		Host:     "http://192.168.1.100:8080",
+		Username: "admin",
+		Password: "secret",
+		BasePath: "/qbt",
+	}
+	bodyBytes, _ := json.Marshal(body)
+	req, _ := http.NewRequest(http.MethodPost, "/api/v1/settings/qbittorrent/test", bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+
+	var apiResp APIResponse
+	err := json.Unmarshal(resp.Body.Bytes(), &apiResp)
+	assert.NoError(t, err)
+	assert.True(t, apiResp.Success)
+
+	data := apiResp.Data.(map[string]interface{})
+	assert.Equal(t, "v4.5.2", data["appVersion"])
+
+	mockService.AssertExpectations(t)
 }

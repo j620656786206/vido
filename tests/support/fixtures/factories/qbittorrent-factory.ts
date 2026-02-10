@@ -39,8 +39,6 @@ export interface QBVersionInfoData {
 // Factory Implementation
 // =============================================================================
 
-let configCounter = 0;
-
 /**
  * Generate unique qBittorrent config data with optional overrides
  *
@@ -49,7 +47,6 @@ let configCounter = 0;
  * const custom = createQBConfigData({ host: 'http://nas:8080', basePath: '/qbt' });
  */
 export function createQBConfigData(overrides: PartialQBConfigData = {}): QBConfigData {
-  configCounter++;
   const port = faker.number.int({ min: 8000, max: 9999 });
 
   return {
@@ -69,13 +66,6 @@ export function createQBReverseProxyConfig(overrides: PartialQBConfigData = {}):
     basePath: '/qbittorrent',
     ...overrides,
   });
-}
-
-/**
- * Reset the counter (useful between test files)
- */
-export function resetQBFactory(): void {
-  configCounter = 0;
 }
 
 // =============================================================================

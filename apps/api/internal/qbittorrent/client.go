@@ -74,7 +74,14 @@ func (c *Client) Login(ctx context.Context) error {
 	}
 	defer resp.Body.Close()
 
-	body, _ := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return &ConnectionError{
+			Code:    ErrCodeConnectionFailed,
+			Message: "failed to read login response",
+			Cause:   err,
+		}
+	}
 
 	if resp.StatusCode != http.StatusOK {
 		return &ConnectionError{
@@ -144,6 +151,9 @@ func (c *Client) getVersion(ctx context.Context, path string) (string, error) {
 		return "", fmt.Errorf("unexpected status %d", resp.StatusCode)
 	}
 
-	body, _ := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("read response body: %w", err)
+	}
 	return strings.TrimSpace(string(body)), nil
 }

@@ -67,9 +67,10 @@ export const qbittorrentService = {
     });
   },
 
-  async testConnection(): Promise<QBVersionInfo> {
+  async testConnection(config?: SaveQBConfigParams): Promise<QBVersionInfo> {
     return fetchApi<QBVersionInfo>('/settings/qbittorrent/test', {
       method: 'POST',
+      body: config ? JSON.stringify(config) : undefined,
     });
   },
 };

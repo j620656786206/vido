@@ -337,6 +337,18 @@ func TestQBittorrentService_TestConnection_NotConfigured(t *testing.T) {
 	assert.Equal(t, qbittorrent.ErrCodeNotConfigured, connErr.Code)
 }
 
+func TestQBittorrentService_TestConnectionWithConfig_EmptyHost(t *testing.T) {
+	service := NewQBittorrentService(new(MockQBSettingsRepo), new(MockQBSecretsService))
+	info, err := service.TestConnectionWithConfig(context.Background(), &qbittorrent.Config{Host: ""})
+
+	assert.Nil(t, info)
+	assert.Error(t, err)
+
+	var connErr *qbittorrent.ConnectionError
+	assert.ErrorAs(t, err, &connErr)
+	assert.Equal(t, qbittorrent.ErrCodeNotConfigured, connErr.Code)
+}
+
 func TestQBittorrentService_IsConfigured(t *testing.T) {
 	tests := []struct {
 		name      string

@@ -1,6 +1,6 @@
 # Story 4.1: qBittorrent Connection Configuration
 
-Status: review
+Status: done
 
 ## Story
 
@@ -765,6 +765,7 @@ Claude Opus 4.6
 ### Change Log
 
 - 2026-02-10: Story 4-1 implemented — qBittorrent connection configuration with full backend (client, service, handler), frontend (settings page, form, connection test), and E2E tests.
+- 2026-02-10: Code review fixes — (H1) Handler propagates specific error codes from ConnectionError, (M1) Host field validated as URL, (M3) Test connection no longer auto-saves, accepts config in body, (M4) Added frontend test for test connection flow, (L1) io.ReadAll errors handled, (L2) Dead configCounter removed, (M2) File List updated.
 
 ### File List
 
@@ -792,3 +793,8 @@ Claude Opus 4.6
 
 **E2E (new):**
 - tests/e2e/qbittorrent-settings.api.spec.ts
+
+**Test Support (new/modified):**
+- tests/support/fixtures/factories/qbittorrent-factory.ts
+- tests/support/fixtures/factories/index.ts
+- tests/support/helpers/api-helpers.ts

@@ -38,32 +38,21 @@ export function QBittorrentForm() {
 
   const handleTestConnection = () => {
     setTestResult(null);
-    // Save first, then test to use the latest credentials
-    saveMutation.mutate(
+    testMutation.mutate(
       { host, username, password, basePath },
       {
-        onSuccess: () => {
-          testMutation.mutate(undefined, {
-            onSuccess: (info) => {
-              setTestResult({
-                success: true,
-                message: '連線成功！',
-                version: info.appVersion,
-                apiVersion: info.apiVersion,
-              });
-            },
-            onError: (error) => {
-              setTestResult({
-                success: false,
-                message: error.message || '連線失敗',
-              });
-            },
+        onSuccess: (info) => {
+          setTestResult({
+            success: true,
+            message: '連線成功！',
+            version: info.appVersion,
+            apiVersion: info.apiVersion,
           });
         },
         onError: (error) => {
           setTestResult({
             success: false,
-            message: `儲存設定失敗: ${error.message}`,
+            message: error.message || '連線失敗',
           });
         },
       }

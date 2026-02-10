@@ -107,6 +107,28 @@ describe('QBittorrentForm', () => {
     expect(saveBtn?.disabled).toBe(false);
   });
 
+  it('calls test mutation directly on test connection click (AC3)', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<QBittorrentForm />);
+
+    await user.type(screen.getByLabelText('Host URL'), 'http://host:8080');
+    await user.type(screen.getByLabelText('使用者名稱'), 'admin');
+    await user.type(screen.getByLabelText('密碼'), 'secret');
+    await user.click(screen.getByText('測試連線'));
+
+    expect(mockTestMutate).toHaveBeenCalledWith(
+      {
+        host: 'http://host:8080',
+        username: 'admin',
+        password: 'secret',
+        basePath: '',
+      },
+      expect.any(Object)
+    );
+    // Should NOT call save when testing
+    expect(mockSaveMutate).not.toHaveBeenCalled();
+  });
+
   it('calls save mutation on form submit', async () => {
     const user = userEvent.setup();
     renderWithProviders(<QBittorrentForm />);

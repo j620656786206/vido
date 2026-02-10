@@ -23,6 +23,7 @@ type QBittorrentServiceInterface interface {
 	GetConfig(ctx context.Context) (*qbittorrent.Config, error)
 	SaveConfig(ctx context.Context, config *qbittorrent.Config) error
 	TestConnection(ctx context.Context) (*qbittorrent.VersionInfo, error)
+	TestConnectionWithConfig(ctx context.Context, config *qbittorrent.Config) (*qbittorrent.VersionInfo, error)
 	IsConfigured(ctx context.Context) bool
 }
 
@@ -109,6 +110,20 @@ func (s *QBittorrentService) TestConnection(ctx context.Context) (*qbittorrent.V
 		return nil, &qbittorrent.ConnectionError{
 			Code:    qbittorrent.ErrCodeNotConfigured,
 			Message: "qBittorrent not configured",
+		}
+	}
+
+	client := qbittorrent.NewClient(config)
+	return client.TestConnection(ctx)
+}
+
+// TestConnectionWithConfig tests connectivity using the provided config directly,
+// without reading from the database. Used for testing before saving.
+func (s *QBittorrentService) TestConnectionWithConfig(ctx context.Context, config *qbittorrent.Config) (*qbittorrent.VersionInfo, error) {
+	if config.Host == "" {
+		return nil, &qbittorrent.ConnectionError{
+			Code:    qbittorrent.ErrCodeNotConfigured,
+			Message: "host is required",
 		}
 	}
 

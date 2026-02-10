@@ -78,7 +78,6 @@ export {
 export {
   createQBConfigData,
   createQBReverseProxyConfig,
-  resetQBFactory,
   presetQBConfigs,
   type QBConfigData,
   type QBConfigResponseData,

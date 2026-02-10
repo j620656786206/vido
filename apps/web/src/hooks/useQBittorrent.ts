@@ -42,9 +42,10 @@ export function useSaveQBConfig() {
 
 /**
  * Hook for testing qBittorrent connection (AC3)
+ * Accepts config directly so connection can be tested without saving first.
  */
 export function useTestQBConnection() {
-  return useMutation<QBVersionInfo, Error, void>({
-    mutationFn: () => qbittorrentService.testConnection(),
+  return useMutation<QBVersionInfo, Error, SaveQBConfigParams>({
+    mutationFn: (config) => qbittorrentService.testConnection(config),
   });
 }

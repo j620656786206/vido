@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net/http"
 
@@ -15,6 +16,7 @@ type QBittorrentServiceInterface interface {
 	GetConfig(ctx context.Context) (*qbittorrent.Config, error)
 	SaveConfig(ctx context.Context, config *qbittorrent.Config) error
 	TestConnection(ctx context.Context) (*qbittorrent.VersionInfo, error)
+	TestConnectionWithConfig(ctx context.Context, config *qbittorrent.Config) (*qbittorrent.VersionInfo, error)
 	IsConfigured(ctx context.Context) bool
 }
 
@@ -39,7 +41,7 @@ type QBConfigResponse struct {
 
 // SaveQBConfigRequest is the request body for saving qBittorrent configuration.
 type SaveQBConfigRequest struct {
-	Host     string `json:"host" binding:"required"`
+	Host     string `json:"host" binding:"required,url"`
 	Username string `json:"username" binding:"required"`
 	Password string `json:"password" binding:"required"`
 	BasePath string `json:"basePath"`
@@ -86,15 +88,48 @@ func (h *QBittorrentHandler) SaveConfig(c *gin.Context) {
 	SuccessResponse(c, gin.H{"message": "Configuration saved"})
 }
 
+// TestQBConnectionRequest is the optional request body for testing qBittorrent connection.
+// If provided, tests with the given config without requiring a save first.
+type TestQBConnectionRequest struct {
+	Host     string `json:"host"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+	BasePath string `json:"basePath"`
+}
+
 // TestConnection handles POST /api/v1/settings/qbittorrent/test
 func (h *QBittorrentHandler) TestConnection(c *gin.Context) {
-	info, err := h.service.TestConnection(c.Request.Context())
+	var info *qbittorrent.VersionInfo
+	var err error
+
+	// If config is provided in body, test with it directly (no save needed)
+	var req TestQBConnectionRequest
+	if c.ShouldBindJSON(&req) == nil && req.Host != "" {
+		config := &qbittorrent.Config{
+			Host:     req.Host,
+			Username: req.Username,
+			Password: req.Password,
+			BasePath: req.BasePath,
+		}
+		info, err = h.service.TestConnectionWithConfig(c.Request.Context(), config)
+	} else {
+		// No body provided — test with saved config
+		info, err = h.service.TestConnection(c.Request.Context())
+	}
+
 	if err != nil {
 		slog.Error("qBittorrent connection test failed", "error", err)
+
+		code := "QB_CONNECTION_FAILED"
+		var connErr *qbittorrent.ConnectionError
+		if errors.As(err, &connErr) {
+			code = connErr.Code
+		}
+
 		c.JSON(http.StatusBadRequest, APIResponse{
 			Success: false,
 			Error: &APIError{
-				Code:       "QB_CONNECTION_FAILED",
+				Code:       code,
 				Message:    "無法連線到 qBittorrent",
 				Suggestion: err.Error(),
 			},
