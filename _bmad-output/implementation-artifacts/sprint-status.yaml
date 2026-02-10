@@ -152,11 +152,11 @@ development_status:
   # Phase: Growth (Q3+ - September 2026+)
   # FRs: FR34-FR37
   # ==============================================================================
-  epic-8: backlog
-  8-1-torrent-control-operations: backlog
-  8-2-download-priority-management: backlog
-  8-3-bandwidth-settings-control: backlog
-  8-4-download-scheduling: backlog
+  epic-8: in-progress  # Stories created 2026-02-10
+  8-1-torrent-control-operations: ready-for-dev
+  8-2-download-priority-management: ready-for-dev
+  8-3-bandwidth-settings-control: ready-for-dev
+  8-4-download-scheduling: ready-for-dev
   epic-8-retrospective: optional
 
   # ==============================================================================
