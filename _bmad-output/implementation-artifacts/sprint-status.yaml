@@ -139,12 +139,12 @@ development_status:
   # Phase: 1.0 (Q2 - June 2026)
   # FRs: FR67-FR70
   # ==============================================================================
-  epic-7: backlog
-  7-1-password-pin-setup: backlog
-  7-2-login-page: backlog
-  7-3-session-management: backlog
-  7-4-api-authentication: backlog
-  7-5-rate-limiting: backlog
+  epic-7: in-progress  # Stories created 2026-02-10
+  7-1-password-pin-setup: ready-for-dev
+  7-2-login-page: ready-for-dev
+  7-3-session-management: ready-for-dev
+  7-4-api-authentication: ready-for-dev
+  7-5-rate-limiting: ready-for-dev
   epic-7-retrospective: optional
 
   # ==============================================================================
