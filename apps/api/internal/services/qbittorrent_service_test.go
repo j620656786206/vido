@@ -233,6 +233,49 @@ func TestQBittorrentService_SaveConfig(t *testing.T) {
 			errMsg:  "host is required",
 		},
 		{
+			name: "returns error when saving host fails",
+			config: &qbittorrent.Config{
+				Host:     "http://192.168.1.100:8080",
+				Username: "admin",
+				Password: "secret",
+			},
+			setupMock: func(repo *MockQBSettingsRepo, sec *MockQBSecretsService) {
+				repo.On("SetString", mock.Anything, SettingQBHost, "http://192.168.1.100:8080").Return(errors.New("db write error"))
+			},
+			wantErr: true,
+			errMsg:  "save host",
+		},
+		{
+			name: "returns error when saving username fails",
+			config: &qbittorrent.Config{
+				Host:     "http://192.168.1.100:8080",
+				Username: "admin",
+				Password: "secret",
+			},
+			setupMock: func(repo *MockQBSettingsRepo, sec *MockQBSecretsService) {
+				repo.On("SetString", mock.Anything, SettingQBHost, "http://192.168.1.100:8080").Return(nil)
+				repo.On("SetString", mock.Anything, SettingQBUsername, "admin").Return(errors.New("db write error"))
+			},
+			wantErr: true,
+			errMsg:  "save username",
+		},
+		{
+			name: "returns error when saving base path fails",
+			config: &qbittorrent.Config{
+				Host:     "http://192.168.1.100:8080",
+				Username: "admin",
+				Password: "secret",
+				BasePath: "/qbt",
+			},
+			setupMock: func(repo *MockQBSettingsRepo, sec *MockQBSecretsService) {
+				repo.On("SetString", mock.Anything, SettingQBHost, "http://192.168.1.100:8080").Return(nil)
+				repo.On("SetString", mock.Anything, SettingQBUsername, "admin").Return(nil)
+				repo.On("SetString", mock.Anything, SettingQBBasePath, "/qbt").Return(errors.New("db write error"))
+			},
+			wantErr: true,
+			errMsg:  "save base path",
+		},
+		{
 			name: "returns error when encryption fails",
 			config: &qbittorrent.Config{
 				Host:     "http://host:8080",

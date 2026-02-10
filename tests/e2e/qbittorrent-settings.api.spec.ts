@@ -11,6 +11,7 @@
  */
 
 import { test, expect } from '../support/fixtures';
+import { createQBConfigData, createQBReverseProxyConfig } from '../support/fixtures/factories';
 
 const API_BASE_URL = process.env.API_URL || 'http://localhost:8080/api/v1';
 
@@ -92,6 +93,106 @@ test.describe('qBittorrent Settings API @api @qbittorrent', () => {
     expect(json.success).toBe(false);
   });
 
+  test('[P1] PUT /settings/qbittorrent - should update existing configuration (AC5)', async ({
+    request,
+  }) => {
+    // GIVEN: An initial configuration is saved
+    const initialConfig = createQBConfigData({
+      host: 'http://10.0.0.1:8080',
+      username: 'initial-user',
+      password: 'initial-pass',
+      basePath: '',
+    });
+    await request.put(`${API_BASE_URL}/settings/qbittorrent`, { data: initialConfig });
+
+    // WHEN: Updating with new configuration
+    const updatedConfig = createQBConfigData({
+      host: 'http://10.0.0.2:9090',
+      username: 'updated-user',
+      password: 'updated-pass',
+      basePath: '/new-path',
+    });
+    const response = await request.put(`${API_BASE_URL}/settings/qbittorrent`, {
+      data: updatedConfig,
+    });
+
+    // THEN: Should save successfully
+    expect(response.ok()).toBe(true);
+
+    // THEN: GET should return updated values
+    const getResponse = await request.get(`${API_BASE_URL}/settings/qbittorrent`);
+    const getJson = await getResponse.json();
+    expect(getJson.data.host).toBe('http://10.0.0.2:9090');
+    expect(getJson.data.username).toBe('updated-user');
+    expect(getJson.data.basePath).toBe('/new-path');
+    expect(getJson.data.configured).toBe(true);
+    // Password is never exposed
+    expect(getJson.data).not.toHaveProperty('password');
+  });
+
+  test('[P2] PUT /settings/qbittorrent - should persist basePath for reverse proxy (AC4)', async ({
+    request,
+  }) => {
+    // GIVEN: Configuration with reverse proxy base path
+    const config = createQBReverseProxyConfig({
+      host: 'https://nas.example.com',
+      username: 'proxy-admin',
+      password: 'proxy-pass',
+      basePath: '/qbittorrent',
+    });
+
+    // WHEN: Saving the reverse proxy configuration
+    const response = await request.put(`${API_BASE_URL}/settings/qbittorrent`, {
+      data: config,
+    });
+
+    // THEN: Should save successfully
+    expect(response.ok()).toBe(true);
+
+    // THEN: basePath should be persisted correctly
+    const getResponse = await request.get(`${API_BASE_URL}/settings/qbittorrent`);
+    const getJson = await getResponse.json();
+    expect(getJson.data.host).toBe('https://nas.example.com');
+    expect(getJson.data.basePath).toBe('/qbittorrent');
+    expect(getJson.data.configured).toBe(true);
+  });
+
+  test('[P2] PUT /settings/qbittorrent - should reject missing username', async ({ request }) => {
+    // GIVEN: Config with missing username
+    const config = {
+      host: 'http://192.168.1.100:8080',
+      password: 'secret',
+    };
+
+    // WHEN: Attempting to save
+    const response = await request.put(`${API_BASE_URL}/settings/qbittorrent`, {
+      data: config,
+    });
+
+    // THEN: Should return 400
+    expect(response.status()).toBe(400);
+    const json = await response.json();
+    expect(json.success).toBe(false);
+  });
+
+  test('[P2] PUT /settings/qbittorrent - should reject missing password', async ({ request }) => {
+    // GIVEN: Config with missing password
+    const config = {
+      host: 'http://192.168.1.100:8080',
+      username: 'admin',
+    };
+
+    // WHEN: Attempting to save
+    const response = await request.put(`${API_BASE_URL}/settings/qbittorrent`, {
+      data: config,
+    });
+
+    // THEN: Should return 400
+    expect(response.status()).toBe(400);
+    const json = await response.json();
+    expect(json.success).toBe(false);
+  });
+
   // ---------------------------------------------------------------------------
   // POST /settings/qbittorrent/test
   // ---------------------------------------------------------------------------
@@ -133,5 +234,26 @@ test.describe('qBittorrent Settings API @api @qbittorrent', () => {
     expect(json.error.code).toBe('QB_CONNECTION_FAILED');
     expect(json.error.message).toBeTruthy();
     expect(json.error.suggestion).toBeTruthy();
+  });
+
+  test('[P2] POST /settings/qbittorrent/test - should include error structure with code, message, suggestion (AC3)', async ({
+    request,
+  }) => {
+    // GIVEN: Config pointing to unreachable host
+    await request.put(`${API_BASE_URL}/settings/qbittorrent`, {
+      data: createQBConfigData({ host: 'http://192.0.2.1:1' }),
+    });
+
+    // WHEN: Testing connection
+    const response = await request.post(`${API_BASE_URL}/settings/qbittorrent/test`);
+
+    // THEN: Error response follows ApiResponse error format (Rule 3)
+    const json = await response.json();
+    expect(json.success).toBe(false);
+    expect(json.error).toMatchObject({
+      code: expect.any(String),
+      message: expect.any(String),
+      suggestion: expect.any(String),
+    });
   });
 });

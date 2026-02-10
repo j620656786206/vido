@@ -127,6 +127,29 @@ export interface HealthStatusResponse {
   message: string;
 }
 
+// =============================================================================
+// qBittorrent Types (Story 4-1)
+// =============================================================================
+
+export interface QBConfigResponse {
+  host: string;
+  username: string;
+  basePath: string;
+  configured: boolean;
+}
+
+export interface QBVersionInfo {
+  appVersion: string;
+  apiVersion: string;
+}
+
+export interface SaveQBConfigRequest {
+  host: string;
+  username: string;
+  password: string;
+  basePath?: string;
+}
+
 // Legacy types for backwards compatibility
 export interface SearchResult {
   results: Movie[];
@@ -315,6 +338,11 @@ export interface ApiHelpers {
   deletePattern: (id: string) => Promise<APIResponse>;
   getPatternStats: () => Promise<ApiResponse<PatternStats>>;
 
+  // qBittorrent (Story 4-1)
+  getQBConfig: () => Promise<ApiResponse<QBConfigResponse>>;
+  saveQBConfig: (config: SaveQBConfigRequest) => Promise<ApiResponse<{ message: string }>>;
+  testQBConnection: () => Promise<ApiResponse<QBVersionInfo>>;
+
   // Health
   healthCheck: () => Promise<HealthResponse>;
   servicesHealth: () => Promise<ApiResponse<HealthStatusResponse>>;
@@ -460,6 +488,13 @@ export function apiHelpers(request: APIRequestContext): ApiHelpers {
     deletePattern: async (id) => del(`/learning/patterns/${id}`),
 
     getPatternStats: async () => get<PatternStats>('/learning/stats'),
+
+    // qBittorrent (Story 4-1)
+    getQBConfig: async () => get<QBConfigResponse>('/settings/qbittorrent'),
+
+    saveQBConfig: async (config) => put<{ message: string }>('/settings/qbittorrent', config),
+
+    testQBConnection: async () => post<QBVersionInfo>('/settings/qbittorrent/test'),
 
     // Health
     healthCheck: async () => {

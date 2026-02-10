@@ -74,6 +74,18 @@ export {
   type PartialUpdateMetadataRequest,
 } from './metadata-factory';
 
+// qBittorrent Factory
+export {
+  createQBConfigData,
+  createQBReverseProxyConfig,
+  resetQBFactory,
+  presetQBConfigs,
+  type QBConfigData,
+  type QBConfigResponseData,
+  type QBVersionInfoData,
+  type PartialQBConfigData,
+} from './qbittorrent-factory';
+
 // Learning Factory
 export {
   createLearnPatternRequest,
