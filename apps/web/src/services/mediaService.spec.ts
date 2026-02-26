@@ -100,5 +100,32 @@ describe('mediaService', () => {
         headers: { 'Content-Type': 'application/json' },
       });
     });
+
+    it('[P2] passes custom limit in URL', async () => {
+      // GIVEN: API returns success
+      vi.mocked(fetch).mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ success: true, data: [] }),
+      } as Response);
+
+      // WHEN: Calling with custom limit
+      await mediaService.getRecentMedia(5);
+
+      // THEN: Sends limit=5 in URL
+      expect(fetch).toHaveBeenCalledWith(`${API_BASE_URL}/media/recent?limit=5`, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+    });
+
+    it('[P2] throws generic fallback when success:false has no error message', async () => {
+      // GIVEN: API returns success:false with no error details
+      vi.mocked(fetch).mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ success: false }),
+      } as Response);
+
+      // WHEN/THEN: Should throw generic fallback message
+      await expect(mediaService.getRecentMedia()).rejects.toThrow('API request failed');
+    });
   });
 });

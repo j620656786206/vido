@@ -175,4 +175,92 @@ describe('RecentMediaPanel', () => {
     expect(screen.getByText('2024')).toBeTruthy();
     expect(screen.getByText('2023')).toBeTruthy();
   });
+
+  it('[P2] shows emoji fallback when media has no posterUrl', async () => {
+    const mediaWithoutPoster = [
+      {
+        id: 'no-poster-1',
+        title: '無海報電影',
+        year: 2024,
+        mediaType: 'movie' as const,
+        justAdded: false,
+        addedAt: '2026-02-10T10:00:00Z',
+      },
+    ];
+    mockUseRecentMedia.mockReturnValue({
+      data: mediaWithoutPoster,
+      isLoading: false,
+      isSuccess: true,
+      error: null,
+    } as ReturnType<typeof useRecentMedia>);
+    renderPanel();
+    await screen.findByText('無海報電影');
+    expect(screen.getByText('🎬')).toBeTruthy();
+  });
+
+  it('[P2] does not show "剛剛新增" badge when justAdded is false', async () => {
+    const mediaNotJustAdded = [
+      {
+        id: 'old-media-1',
+        title: '舊電影',
+        year: 2020,
+        posterUrl: 'https://example.com/poster.jpg',
+        mediaType: 'movie' as const,
+        justAdded: false,
+        addedAt: '2026-02-09T10:00:00Z',
+      },
+    ];
+    mockUseRecentMedia.mockReturnValue({
+      data: mediaNotJustAdded,
+      isLoading: false,
+      isSuccess: true,
+      error: null,
+    } as ReturnType<typeof useRecentMedia>);
+    renderPanel();
+    await screen.findByText('舊電影');
+    expect(screen.queryByText('剛剛新增')).toBeNull();
+  });
+
+  it('[P2] renders poster image with lazy loading', async () => {
+    mockUseRecentMedia.mockReturnValue({
+      data: mockMedia,
+      isLoading: false,
+      isSuccess: true,
+      error: null,
+    } as ReturnType<typeof useRecentMedia>);
+    renderPanel();
+    const img = await screen.findByAltText('測試電影');
+    expect(img).toBeTruthy();
+    expect(img.getAttribute('loading')).toBe('lazy');
+    expect((img as HTMLImageElement).src).toContain('poster1.jpg');
+  });
+
+  it('[P2] does not show year when year is absent', async () => {
+    const mediaNoYear = [
+      {
+        id: 'no-year-1',
+        title: '無年份電影',
+        posterUrl: 'https://example.com/poster.jpg',
+        mediaType: 'movie' as const,
+        justAdded: false,
+        addedAt: '2026-02-10T10:00:00Z',
+      },
+    ];
+    mockUseRecentMedia.mockReturnValue({
+      data: mediaNoYear,
+      isLoading: false,
+      isSuccess: true,
+      error: null,
+    } as ReturnType<typeof useRecentMedia>);
+    renderPanel();
+    await screen.findByText('無年份電影');
+    // Should only have the title text, not any year text
+    const panel = screen.getByTestId('recent-media-panel');
+    const yearElements = panel.querySelectorAll('.text-slate-400');
+    // No year paragraph should be rendered for this item
+    const yearTexts = Array.from(yearElements)
+      .map((el) => el.textContent)
+      .filter(Boolean);
+    expect(yearTexts.every((t) => !t?.match(/^\d{4}$/))).toBe(true);
+  });
 });

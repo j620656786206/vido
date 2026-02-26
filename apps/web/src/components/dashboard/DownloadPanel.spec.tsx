@@ -257,4 +257,53 @@ describe('DownloadPanel', () => {
     renderPanel();
     expect(await screen.findByText('前往設定')).toBeTruthy();
   });
+
+  it('[P2] shows "已連線" badge when connected', async () => {
+    mockConnected();
+    renderPanel();
+    expect(await screen.findByText('已連線')).toBeTruthy();
+  });
+
+  it('[P2] shows "未連線" badge when disconnected', async () => {
+    mockDisconnected();
+    renderPanel();
+    expect(await screen.findByText('未連線')).toBeTruthy();
+  });
+
+  it('[P2] hides connection badge during loading', async () => {
+    mockLoading();
+    renderPanel();
+    await screen.findByTestId('download-panel-loading');
+    expect(screen.queryByText('已連線')).toBeNull();
+    expect(screen.queryByText('未連線')).toBeNull();
+  });
+
+  it('[P2] progress bar has correct aria-valuenow', async () => {
+    mockConnected();
+    renderPanel();
+    await screen.findByText('[SubGroup] Movie Name (2024) [1080p]');
+    const progressBars = screen.getAllByRole('progressbar');
+    // First download at 85%
+    expect(progressBars[0].getAttribute('aria-valuenow')).toBe('85');
+    // Second download at 45%
+    expect(progressBars[1].getAttribute('aria-valuenow')).toBe('45');
+  });
+
+  it('[P2] does not show count badge when connected with empty downloads', async () => {
+    mockConnected([]);
+    renderPanel();
+    await screen.findByText('目前沒有下載任務');
+    // Count badge should not exist when downloads is empty
+    const heading = screen.getByRole('heading', { name: '下載中' });
+    // The badge would be a sibling span with a number — it should not exist
+    expect(heading.parentElement?.querySelector('.rounded-full')).toBeNull();
+  });
+
+  it('[P2] each download item has detail link with aria-label', async () => {
+    mockConnected();
+    renderPanel();
+    await screen.findByText('[SubGroup] Movie Name (2024) [1080p]');
+    expect(screen.getByLabelText('查看 [SubGroup] Movie Name (2024) [1080p] 詳情')).toBeTruthy();
+    expect(screen.getByLabelText('查看 Another Download 詳情')).toBeTruthy();
+  });
 });

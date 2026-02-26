@@ -445,6 +445,86 @@ test.describe('Dashboard Search Navigation @dashboard @ui', () => {
 });
 
 // =============================================================================
+// Empty Dashboard State Tests
+// =============================================================================
+
+test.describe('Dashboard Empty State @dashboard @ui', () => {
+  test('[P2] should show empty states when connected but no data (AC1, AC3)', async ({ page }) => {
+    // Network-first: intercept BEFORE navigation
+    await page.route(`${API_BASE_URL}/settings/qbittorrent`, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, data: mockQBConfig }),
+      })
+    );
+
+    await page.route(`${API_BASE_URL}/downloads*`, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, data: [] }),
+      })
+    );
+
+    await page.route(`${API_BASE_URL}/media/recent*`, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, data: [] }),
+      })
+    );
+
+    await page.goto('/');
+
+    // THEN: Both panels show their empty states
+    await expect(page.getByText('目前沒有下載任務')).toBeVisible();
+    await expect(page.getByText('媒體庫中還沒有內容')).toBeVisible();
+    // Navigation links still available
+    await expect(page.getByText('查看全部下載 →')).toBeVisible();
+    await expect(page.getByText('查看全部媒體庫 →')).toBeVisible();
+  });
+});
+
+// =============================================================================
+// Connection Status Badge Tests
+// =============================================================================
+
+test.describe('Dashboard Connection Badge @dashboard @ui', () => {
+  test('[P2] should show "已連線" badge when qBittorrent connected (AC3)', async ({ page }) => {
+    // Network-first: intercept BEFORE navigation
+    await page.route(`${API_BASE_URL}/settings/qbittorrent`, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, data: mockQBConfig }),
+      })
+    );
+
+    await page.route(`${API_BASE_URL}/downloads*`, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, data: mockDownloads }),
+      })
+    );
+
+    await page.route(`${API_BASE_URL}/media/recent*`, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, data: mockRecentMedia }),
+      })
+    );
+
+    await page.goto('/');
+
+    // THEN: Connected badge is visible
+    await expect(page.getByText('已連線')).toBeVisible();
+  });
+});
+
+// =============================================================================
 // Recent Media API Tests
 // =============================================================================
 
