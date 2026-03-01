@@ -5,12 +5,16 @@ import {
   RecentMediaPanel,
   QuickSearchBar,
 } from '../components/dashboard';
+import { NewMediaNotifications } from '../components/notifications/NewMediaNotifications';
+import { useNewMediaNotifications } from '../hooks/useNewMediaNotifications';
 
 export const Route = createFileRoute('/')({
   component: DashboardPage,
 });
 
 function DashboardPage() {
+  const { notifications, dismissNotification } = useNewMediaNotifications();
+
   return (
     <div className="min-h-screen bg-slate-900">
       {/* Header */}
@@ -30,6 +34,9 @@ function DashboardPage() {
       <div className="mx-auto max-w-7xl px-4 pb-6">
         <QuickSearchBar />
       </div>
+
+      {/* New Media Notifications (AC2) */}
+      <NewMediaNotifications notifications={notifications} onDismiss={dismissNotification} />
     </div>
   );
 }

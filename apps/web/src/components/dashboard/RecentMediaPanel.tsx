@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
+import { ChevronDown, Film } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useRecentMedia } from '../../hooks/useDashboardData';
 import type { RecentMedia } from '../../services/mediaService';
@@ -9,19 +11,44 @@ interface RecentMediaPanelProps {
 
 export function RecentMediaPanel({ className }: RecentMediaPanelProps) {
   const { data: recentMedia, isLoading } = useRecentMedia(8);
+  const [isExpanded, setIsExpanded] = useState(true);
 
   return (
     <div
       className={cn('rounded-lg border border-slate-700 bg-slate-800/50', className)}
       data-testid="recent-media-panel"
     >
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-slate-700 px-4 py-3">
-        <h2 className="text-lg font-semibold text-slate-100">最近新增</h2>
-      </div>
+      {/* Collapsible Header (AC4) */}
+      <button
+        type="button"
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="flex w-full items-center justify-between border-b border-slate-700 px-4 py-3 text-left lg:cursor-default"
+        aria-expanded={isExpanded}
+        aria-controls="recent-media-content"
+      >
+        <div className="flex items-center gap-2">
+          <Film className="h-5 w-5 text-slate-300" />
+          <h2 className="text-lg font-semibold text-slate-100">最近新增</h2>
+        </div>
+        {/* Chevron only visible on mobile */}
+        <ChevronDown
+          className={cn(
+            'h-5 w-5 text-slate-400 transition-transform lg:hidden',
+            isExpanded && 'rotate-180'
+          )}
+        />
+      </button>
 
-      {/* Content */}
-      <div className="px-4 py-3">
+      {/* Collapsible Content (AC4) */}
+      <div
+        id="recent-media-content"
+        className={cn(
+          'overflow-hidden transition-all duration-300',
+          isExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0 lg:max-h-none lg:opacity-100'
+        )}
+      >
+        {/* Content */}
+        <div className="px-4 py-3">
         {isLoading ? (
           <div className="grid grid-cols-4 gap-3" data-testid="recent-media-loading">
             {Array.from({ length: 8 }).map((_, i) => (
@@ -41,13 +68,14 @@ export function RecentMediaPanel({ className }: RecentMediaPanelProps) {
             ))}
           </div>
         )}
-      </div>
+        </div>
 
-      {/* Footer */}
-      <div className="border-t border-slate-700 px-4 py-2">
-        <Link to="/library" className="text-sm text-blue-400 hover:text-blue-300 hover:underline">
-          查看全部媒體庫 →
-        </Link>
+        {/* Footer */}
+        <div className="border-t border-slate-700 px-4 py-2">
+          <Link to="/library" className="text-sm text-blue-400 hover:text-blue-300 hover:underline">
+            查看全部媒體庫 →
+          </Link>
+        </div>
       </div>
     </div>
   );
@@ -74,6 +102,28 @@ function MediaCard({ media }: { media: RecentMedia }) {
             剛剛新增
           </span>
         )}
+        {/* Hover Quick Action (AC5) */}
+        <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+          <span
+            className="rounded-full bg-blue-600 p-2 text-white shadow-lg"
+            aria-label={`查看 ${media.title} 詳情`}
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+              />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+              />
+            </svg>
+          </span>
+        </div>
       </div>
       <p className="mt-1 truncate text-xs text-slate-200">{media.title}</p>
       {media.year && <p className="text-xs text-slate-400">{media.year}</p>}

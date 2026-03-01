@@ -1,3 +1,4 @@
+export { CollapsibleSection } from './CollapsibleSection';
 export { DashboardLayout } from './DashboardLayout';
 export { DownloadPanel } from './DownloadPanel';
 export { RecentMediaPanel } from './RecentMediaPanel';

@@ -1,6 +1,6 @@
 # Story 4.3: Unified Download Dashboard
 
-Status: review
+Status: done
 
 ## Story
 
@@ -552,6 +552,13 @@ Claude Opus 4.6
 ### Change Log
 
 - 2026-02-10: All 9 tasks implemented, tests passing, status → review
+- 2026-03-01: Code review fixes applied (5 issues):
+  - HIGH #1: Implemented NewMediaToast trigger mechanism with useNewMediaNotifications hook
+  - HIGH #2: Added recent searches dropdown to QuickSearchBar (sessionStorage, max 10)
+  - HIGH #3: Added Swagger documentation to recent_media_handler.go
+  - MEDIUM #4: Added hover quick actions (eye icon overlay) to MediaCard
+  - MEDIUM #5: Added collapsible sections for mobile (ChevronDown toggle)
+  - All 641 frontend tests passing, Go tests passing
 
 ### File List
 
@@ -575,5 +582,15 @@ Claude Opus 4.6
 - `tests/e2e/dashboard.spec.ts` - 11 E2E tests
 
 **Modified:**
-- `apps/web/src/routes/index.tsx` - Replaced NxWelcome with DashboardPage
+- `apps/web/src/routes/index.tsx` - Replaced NxWelcome with DashboardPage, integrated NewMediaNotifications
 - `apps/api/cmd/api/main.go` - Registered recentMediaHandler routes
+
+**Code Review Fixes (2026-03-01):**
+- `apps/web/src/hooks/useNewMediaNotifications.ts` - Hook for detecting and notifying new media additions (HIGH #1)
+- `apps/web/src/components/notifications/NewMediaNotifications.tsx` - Container for NewMediaToast with animation (HIGH #1)
+- `apps/web/src/components/dashboard/CollapsibleSection.tsx` - Reusable collapsible wrapper for mobile (MEDIUM #5)
+- `apps/web/src/components/dashboard/QuickSearchBar.tsx` - Enhanced with recent searches dropdown (HIGH #2)
+- `apps/web/src/components/dashboard/DownloadPanel.tsx` - Added collapsible behavior for mobile, Lucide icons (MEDIUM #5)
+- `apps/web/src/components/dashboard/RecentMediaPanel.tsx` - Added collapsible behavior and hover quick actions (MEDIUM #4, #5)
+- `apps/api/internal/handlers/recent_media_handler.go` - Added Swagger annotations (HIGH #3)
+- `apps/web/src/components/dashboard/index.ts` - Added CollapsibleSection export

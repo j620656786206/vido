@@ -43,7 +43,15 @@ func NewRecentMediaHandler(movieService MovieServiceInterface, seriesService Ser
 }
 
 // GetRecentMedia handles GET /api/v1/media/recent
-// Returns recently added media items (movies and series combined).
+// @Summary Get recently added media
+// @Description Returns recently added media items (movies and series combined), sorted by creation date descending
+// @Tags media
+// @Accept json
+// @Produce json
+// @Param limit query int false "Number of items to return" default(10) minimum(1) maximum(50)
+// @Success 200 {object} APIResponse{data=[]RecentMediaItem} "List of recent media items"
+// @Failure 500 {object} APIResponse "Internal server error"
+// @Router /api/v1/media/recent [get]
 func (h *RecentMediaHandler) GetRecentMedia(c *gin.Context) {
 	limit := 10
 	if l, err := strconv.Atoi(c.Query("limit")); err == nil && l > 0 && l <= 50 {

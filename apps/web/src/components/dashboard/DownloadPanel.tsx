@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
+import { ChevronDown, Download as DownloadIcon } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useDownloads } from '../../hooks/useDownloads';
 import { useQBittorrentConfig } from '../../hooks/useQBittorrent';
@@ -13,57 +15,83 @@ interface DownloadPanelProps {
 export function DownloadPanel({ className }: DownloadPanelProps) {
   const { data: config, isLoading: configLoading } = useQBittorrentConfig();
   const { data: downloads, isLoading: downloadsLoading } = useDownloads();
+  const [isExpanded, setIsExpanded] = useState(true);
 
   const isConnected = config?.configured === true;
   const isLoading = configLoading || (isConnected && downloadsLoading);
+  const downloadCount = isConnected && downloads ? downloads.length : 0;
 
   return (
     <div
       className={cn('rounded-lg border border-slate-700 bg-slate-800/50', className)}
       data-testid="download-panel"
     >
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-slate-700 px-4 py-3">
+      {/* Collapsible Header (AC4) */}
+      <button
+        type="button"
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="flex w-full items-center justify-between border-b border-slate-700 px-4 py-3 text-left lg:cursor-default"
+        aria-expanded={isExpanded}
+        aria-controls="download-panel-content"
+      >
         <div className="flex items-center gap-2">
-          <span className="text-base">↓</span>
+          <DownloadIcon className="h-5 w-5 text-slate-300" />
           <h2 className="text-lg font-semibold text-slate-100">下載中</h2>
-          {isConnected && downloads && downloads.length > 0 && (
+          {isConnected && downloadCount > 0 && (
             <span className="rounded-full bg-slate-700 px-2 py-0.5 text-xs text-slate-300">
-              {downloads.length}
+              {downloadCount}
             </span>
           )}
         </div>
-        <ConnectionStatusBadge connected={isConnected} loading={configLoading} />
-      </div>
+        <div className="flex items-center gap-2">
+          <ConnectionStatusBadge connected={isConnected} loading={configLoading} />
+          {/* Chevron only visible on mobile */}
+          <ChevronDown
+            className={cn(
+              'h-5 w-5 text-slate-400 transition-transform lg:hidden',
+              isExpanded && 'rotate-180'
+            )}
+          />
+        </div>
+      </button>
 
-      {/* Content */}
-      <div className="px-4 py-3">
-        {isLoading ? (
-          <div
-            className="flex items-center justify-center py-6"
-            data-testid="download-panel-loading"
-          >
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
-            <span className="ml-2 text-sm text-slate-400">載入中...</span>
-          </div>
-        ) : !isConnected ? (
-          <DisconnectedState />
-        ) : downloads?.length === 0 ? (
-          <div className="py-6 text-center text-sm text-slate-400">目前沒有下載任務</div>
-        ) : (
-          <div className="space-y-2">
-            {downloads?.slice(0, 5).map((download) => (
-              <CompactDownloadItem key={download.hash} download={download} />
-            ))}
-          </div>
+      {/* Collapsible Content (AC4) */}
+      <div
+        id="download-panel-content"
+        className={cn(
+          'overflow-hidden transition-all duration-300',
+          isExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0 lg:max-h-none lg:opacity-100'
         )}
-      </div>
+      >
+        {/* Content */}
+        <div className="px-4 py-3">
+          {isLoading ? (
+            <div
+              className="flex items-center justify-center py-6"
+              data-testid="download-panel-loading"
+            >
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
+              <span className="ml-2 text-sm text-slate-400">載入中...</span>
+            </div>
+          ) : !isConnected ? (
+            <DisconnectedState />
+          ) : downloads?.length === 0 ? (
+            <div className="py-6 text-center text-sm text-slate-400">目前沒有下載任務</div>
+          ) : (
+            <div className="space-y-2">
+              {downloads?.slice(0, 5).map((download) => (
+                <CompactDownloadItem key={download.hash} download={download} />
+              ))}
+            </div>
+          )}
+        </div>
 
-      {/* Footer */}
-      <div className="border-t border-slate-700 px-4 py-2">
-        <Link to="/downloads" className="text-sm text-blue-400 hover:text-blue-300 hover:underline">
-          查看全部下載 →
-        </Link>
+        {/* Footer */}
+        <div className="border-t border-slate-700 px-4 py-2">
+          <Link to="/downloads" className="text-sm text-blue-400 hover:text-blue-300 hover:underline">
+            查看全部下載 →
+          </Link>
+        </div>
       </div>
     </div>
   );

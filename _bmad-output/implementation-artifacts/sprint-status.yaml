@@ -93,7 +93,7 @@ development_status:
   epic-4: in-progress  # Stories created 2026-02-09
   4-1-qbittorrent-connection-configuration: done  # Code review fixes completed 2026-02-10
   4-2-real-time-download-status-monitoring: done  # Code review fixes completed 2026-02-10
-  4-3-unified-download-dashboard: review
+  4-3-unified-download-dashboard: done  # Code review fixes completed 2026-03-01
   4-4-download-status-filtering: ready-for-dev
   4-5-completed-download-detection-and-parsing-trigger: ready-for-dev
   4-6-connection-health-monitoring: ready-for-dev
