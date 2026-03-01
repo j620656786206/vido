@@ -40,6 +40,18 @@ func MapQBState(state string) TorrentStatus {
 	}
 }
 
+// TorrentsFilter defines available filter values for torrent listing.
+type TorrentsFilter string
+
+const (
+	FilterAll         TorrentsFilter = "all"
+	FilterDownloading TorrentsFilter = "downloading"
+	FilterPaused      TorrentsFilter = "paused"
+	FilterCompleted   TorrentsFilter = "completed"
+	FilterSeeding     TorrentsFilter = "seeding"
+	FilterErrored     TorrentsFilter = "errored"
+)
+
 // TorrentsSort defines available sort fields for torrent listing.
 type TorrentsSort string
 
@@ -53,6 +65,7 @@ const (
 
 // ListTorrentsOptions configures the torrent list request.
 type ListTorrentsOptions struct {
+	Filter  TorrentsFilter
 	Sort    TorrentsSort
 	Reverse bool
 }
@@ -89,6 +102,16 @@ type TorrentDetails struct {
 	SeedingTime  int64     `json:"seedingTime"`
 	AvgDownSpeed int64     `json:"avgDownSpeed"`
 	AvgUpSpeed   int64     `json:"avgUpSpeed"`
+}
+
+// DownloadCounts holds the count of torrents grouped by status.
+type DownloadCounts struct {
+	All         int `json:"all"`
+	Downloading int `json:"downloading"`
+	Paused      int `json:"paused"`
+	Completed   int `json:"completed"`
+	Seeding     int `json:"seeding"`
+	Error       int `json:"error"`
 }
 
 // Error code for torrent not found.

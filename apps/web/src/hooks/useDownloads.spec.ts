@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useDownloads, useDownloadDetails, downloadKeys } from './useDownloads';
+import { useDownloads, useDownloadDetails, useDownloadCounts, downloadKeys } from './useDownloads';
 import type { ReactNode } from 'react';
 import React from 'react';
 
@@ -10,6 +10,7 @@ vi.mock('../services/downloadService', () => ({
   downloadService: {
     getDownloads: vi.fn(),
     getDownloadDetails: vi.fn(),
+    getDownloadCounts: vi.fn(),
   },
 }));
 
@@ -17,6 +18,7 @@ vi.mock('../services/downloadService', () => ({
 import { downloadService } from '../services/downloadService';
 const mockGetDownloads = vi.mocked(downloadService.getDownloads);
 const mockGetDownloadDetails = vi.mocked(downloadService.getDownloadDetails);
+const mockGetDownloadCounts = vi.mocked(downloadService.getDownloadCounts);
 
 // Test data
 const mockDownloads = [
@@ -52,6 +54,15 @@ const mockDetails = {
   avgUpSpeed: 262144,
 };
 
+const mockCounts = {
+  all: 10,
+  downloading: 3,
+  paused: 2,
+  completed: 4,
+  seeding: 1,
+  error: 0,
+};
+
 function createWrapper() {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -72,42 +83,81 @@ describe('useDownloads', () => {
     vi.restoreAllMocks();
   });
 
-  it('[P1] returns download data (AC1)', async () => {
-    // GIVEN: Download service returns data
+  it('[P1] returns download data with default filter (AC1)', async () => {
     const { result } = renderHook(() => useDownloads(), { wrapper: createWrapper() });
 
-    // WHEN: Hook finishes loading
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    // THEN: Data is returned
     expect(result.current.data).toEqual(mockDownloads);
-    expect(mockGetDownloads).toHaveBeenCalledWith({ sort: 'added_on', order: 'desc' });
+    expect(mockGetDownloads).toHaveBeenCalledWith({
+      filter: 'all',
+      sort: 'added_on',
+      order: 'desc',
+    });
   });
 
-  it('[P1] passes sort params to service (AC5)', async () => {
-    // GIVEN: Custom sort params
-    const { result } = renderHook(() => useDownloads('name', 'asc'), {
+  it('[P1] passes filter param to service (AC2)', async () => {
+    const { result } = renderHook(() => useDownloads('downloading'), {
       wrapper: createWrapper(),
     });
 
-    // WHEN: Hook finishes loading
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    // THEN: Sort params are passed to service
-    expect(mockGetDownloads).toHaveBeenCalledWith({ sort: 'name', order: 'asc' });
+    expect(mockGetDownloads).toHaveBeenCalledWith({
+      filter: 'downloading',
+      sort: 'added_on',
+      order: 'desc',
+    });
   });
 
-  it('[P1] configures 5-second polling interval (AC2)', () => {
-    // GIVEN: useDownloads hook
+  it('[P1] passes filter and sort params to service', async () => {
+    const { result } = renderHook(() => useDownloads('paused', 'name', 'asc'), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(mockGetDownloads).toHaveBeenCalledWith({
+      filter: 'paused',
+      sort: 'name',
+      order: 'asc',
+    });
+  });
+
+  it('[P1] configures 5-second polling interval (AC3)', () => {
     const { result } = renderHook(() => useDownloads(), { wrapper: createWrapper() });
 
-    // THEN: The query should be configured (verify hook initializes without error)
     expect(result.current.isLoading || result.current.isSuccess || result.current.isError).toBe(
       true
     );
-    // Note: refetchInterval is verified by TanStack Query internally;
-    // the 5000ms value is set in useDownloads hook (line 39)
-    // and tested at the E2E level via polling behavior
+  });
+});
+
+describe('useDownloadCounts', () => {
+  beforeEach(() => {
+    mockGetDownloadCounts.mockResolvedValue(mockCounts);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('[P1] returns download counts (AC1)', async () => {
+    const { result } = renderHook(() => useDownloadCounts(), { wrapper: createWrapper() });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(result.current.data).toEqual(mockCounts);
+    expect(mockGetDownloadCounts).toHaveBeenCalled();
+  });
+
+  it('[P1] can be disabled', () => {
+    const { result } = renderHook(() => useDownloadCounts(false), {
+      wrapper: createWrapper(),
+    });
+
+    expect(result.current.fetchStatus).toBe('idle');
+    expect(mockGetDownloadCounts).not.toHaveBeenCalled();
   });
 });
 
@@ -121,35 +171,82 @@ describe('useDownloadDetails', () => {
   });
 
   it('[P1] returns download details (AC4)', async () => {
-    // GIVEN: Detail service returns data
     const { result } = renderHook(() => useDownloadDetails('abc123'), {
       wrapper: createWrapper(),
     });
 
-    // WHEN: Hook finishes loading
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    // THEN: Detail data is returned
     expect(result.current.data).toEqual(mockDetails);
     expect(mockGetDownloadDetails).toHaveBeenCalledWith('abc123');
   });
 
   it('[P1] does not fetch when hash is empty', async () => {
-    // GIVEN: Empty hash
     const { result } = renderHook(() => useDownloadDetails(''), {
       wrapper: createWrapper(),
     });
 
-    // THEN: Query is disabled, no fetch
     expect(result.current.fetchStatus).toBe('idle');
     expect(mockGetDownloadDetails).not.toHaveBeenCalled();
+  });
+});
+
+describe('useDownloads - error handling', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('[P1] exposes error state when service fails (AC3)', async () => {
+    // GIVEN: service rejects with error
+    mockGetDownloads.mockRejectedValue(new Error('Network error'));
+
+    const { result } = renderHook(() => useDownloads(), { wrapper: createWrapper() });
+
+    // THEN: error state is exposed
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.error).toBeInstanceOf(Error);
+    expect(result.current.error?.message).toBe('Network error');
+  });
+});
+
+describe('useDownloadCounts - error handling', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('[P1] exposes error state when counts service fails', async () => {
+    // GIVEN: counts service rejects
+    mockGetDownloadCounts.mockRejectedValue(new Error('API request failed: 400'));
+
+    const { result } = renderHook(() => useDownloadCounts(), { wrapper: createWrapper() });
+
+    // THEN: error state is exposed
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.error?.message).toBe('API request failed: 400');
   });
 });
 
 describe('downloadKeys', () => {
   it('[P2] generates correct query keys', () => {
     expect(downloadKeys.all).toEqual(['downloads']);
-    expect(downloadKeys.list('name', 'asc')).toEqual(['downloads', 'list', 'name', 'asc']);
+    expect(downloadKeys.list('all', 'name', 'asc')).toEqual([
+      'downloads',
+      'list',
+      'all',
+      'name',
+      'asc',
+    ]);
+    expect(downloadKeys.counts()).toEqual(['downloads', 'counts']);
     expect(downloadKeys.detail('abc123')).toEqual(['downloads', 'detail', 'abc123']);
+  });
+
+  it('[P2] generates unique keys per filter combination', () => {
+    const key1 = downloadKeys.list('downloading', 'name', 'asc');
+    const key2 = downloadKeys.list('paused', 'name', 'asc');
+    const key3 = downloadKeys.list('downloading', 'size', 'desc');
+
+    // Keys should differ when filter or sort params differ
+    expect(key1).not.toEqual(key2);
+    expect(key1).not.toEqual(key3);
   });
 });

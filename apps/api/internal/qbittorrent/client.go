@@ -170,6 +170,10 @@ func (c *Client) GetTorrents(ctx context.Context, opts *ListTorrentsOptions) ([]
 	// Append query parameters
 	if opts != nil {
 		sep := "?"
+		if opts.Filter != "" && opts.Filter != FilterAll {
+			apiURL += fmt.Sprintf("%sfilter=%s", sep, string(opts.Filter))
+			sep = "&"
+		}
 		if opts.Sort != "" {
 			apiURL += fmt.Sprintf("%ssort=%s", sep, string(opts.Sort))
 			sep = "&"

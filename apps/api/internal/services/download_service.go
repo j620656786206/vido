@@ -12,8 +12,9 @@ import (
 
 // DownloadServiceInterface defines the contract for download monitoring operations.
 type DownloadServiceInterface interface {
-	GetAllDownloads(ctx context.Context, sortField string, order string) ([]qbittorrent.Torrent, error)
+	GetAllDownloads(ctx context.Context, filter string, sortField string, order string) ([]qbittorrent.Torrent, error)
 	GetDownloadDetails(ctx context.Context, hash string) (*qbittorrent.TorrentDetails, error)
+	GetDownloadCounts(ctx context.Context) (*qbittorrent.DownloadCounts, error)
 }
 
 // DownloadService provides business logic for download monitoring.
@@ -55,10 +56,34 @@ func (s *DownloadService) getClient(config *qbittorrent.Config) *qbittorrent.Cli
 	return s.cachedClient
 }
 
-// GetAllDownloads retrieves all torrents from qBittorrent with optional sorting.
+// mapToQBFilter maps our API filter values to qBittorrent API filter values.
+func mapToQBFilter(filter string) qbittorrent.TorrentsFilter {
+	switch filter {
+	case "downloading":
+		return qbittorrent.FilterDownloading
+	case "paused":
+		return qbittorrent.FilterPaused
+	case "completed":
+		return qbittorrent.FilterCompleted
+	case "seeding":
+		return qbittorrent.FilterSeeding
+	case "error":
+		return qbittorrent.TorrentsFilter("errored")
+	default:
+		return qbittorrent.FilterAll
+	}
+}
+
+// validFilters defines the set of accepted filter values.
+var validFilters = map[string]bool{
+	"all": true, "downloading": true, "paused": true,
+	"completed": true, "seeding": true, "error": true,
+}
+
+// GetAllDownloads retrieves all torrents from qBittorrent with optional filtering and sorting.
 // When sortField is "status", sorting is performed server-side since qBittorrent
 // does not support native status sorting.
-func (s *DownloadService) GetAllDownloads(ctx context.Context, sortField string, order string) ([]qbittorrent.Torrent, error) {
+func (s *DownloadService) GetAllDownloads(ctx context.Context, filter string, sortField string, order string) ([]qbittorrent.Torrent, error) {
 	config, err := s.qbService.GetConfig(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("get qBittorrent config: %w", err)
@@ -73,12 +98,23 @@ func (s *DownloadService) GetAllDownloads(ctx context.Context, sortField string,
 
 	client := s.getClient(config)
 
+	// Validate and map filter
+	if !validFilters[filter] {
+		filter = "all"
+	}
+	qbFilter := mapToQBFilter(filter)
+
 	// For "status" sort, fetch without sort and sort in Go
 	var opts *qbittorrent.ListTorrentsOptions
 	if sortField != "status" {
 		opts = &qbittorrent.ListTorrentsOptions{
+			Filter:  qbFilter,
 			Sort:    qbittorrent.TorrentsSort(sortField),
 			Reverse: order == "desc",
+		}
+	} else {
+		opts = &qbittorrent.ListTorrentsOptions{
+			Filter: qbFilter,
 		}
 	}
 
@@ -124,6 +160,35 @@ func (s *DownloadService) GetDownloadDetails(ctx context.Context, hash string) (
 	}
 
 	return details, nil
+}
+
+// GetDownloadCounts retrieves the count of torrents grouped by status.
+func (s *DownloadService) GetDownloadCounts(ctx context.Context) (*qbittorrent.DownloadCounts, error) {
+	torrents, err := s.GetAllDownloads(ctx, "all", "", "")
+	if err != nil {
+		return nil, err
+	}
+
+	counts := &qbittorrent.DownloadCounts{
+		All: len(torrents),
+	}
+
+	for _, t := range torrents {
+		switch t.Status {
+		case qbittorrent.StatusDownloading:
+			counts.Downloading++
+		case qbittorrent.StatusPaused:
+			counts.Paused++
+		case qbittorrent.StatusCompleted:
+			counts.Completed++
+		case qbittorrent.StatusSeeding:
+			counts.Seeding++
+		case qbittorrent.StatusError:
+			counts.Error++
+		}
+	}
+
+	return counts, nil
 }
 
 // Compile-time interface verification

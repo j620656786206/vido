@@ -48,7 +48,19 @@ export interface DownloadDetails extends Download {
   avgUpSpeed: number;
 }
 
+export type FilterStatus = 'all' | 'downloading' | 'paused' | 'completed' | 'seeding' | 'error';
+
+export interface DownloadCounts {
+  all: number;
+  downloading: number;
+  paused: number;
+  completed: number;
+  seeding: number;
+  error: number;
+}
+
 export interface GetDownloadsParams {
+  filter?: FilterStatus;
   sort?: SortField;
   order?: SortOrder;
 }
@@ -86,13 +98,18 @@ async function fetchApi<T>(endpoint: string): Promise<T> {
 
 export const downloadService = {
   async getDownloads(params?: GetDownloadsParams): Promise<Download[]> {
+    const filter = params?.filter || 'all';
     const sort = params?.sort || 'added_on';
     const order = params?.order || 'desc';
-    return fetchApi<Download[]>(`/downloads?sort=${sort}&order=${order}`);
+    return fetchApi<Download[]>(`/downloads?filter=${filter}&sort=${sort}&order=${order}`);
   },
 
   async getDownloadDetails(hash: string): Promise<DownloadDetails> {
     return fetchApi<DownloadDetails>(`/downloads/${hash}`);
+  },
+
+  async getDownloadCounts(): Promise<DownloadCounts> {
+    return fetchApi<DownloadCounts>(`/downloads/counts`);
   },
 };
 

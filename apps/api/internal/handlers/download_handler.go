@@ -12,8 +12,9 @@ import (
 // DownloadServiceInterface defines the contract for download operations
 // used by the handler layer.
 type DownloadServiceInterface interface {
-	GetAllDownloads(ctx context.Context, sort string, order string) ([]qbittorrent.Torrent, error)
+	GetAllDownloads(ctx context.Context, filter string, sort string, order string) ([]qbittorrent.Torrent, error)
 	GetDownloadDetails(ctx context.Context, hash string) (*qbittorrent.TorrentDetails, error)
+	GetDownloadCounts(ctx context.Context) (*qbittorrent.DownloadCounts, error)
 }
 
 // DownloadHandler handles HTTP requests for download monitoring.
@@ -28,10 +29,11 @@ func NewDownloadHandler(service DownloadServiceInterface) *DownloadHandler {
 
 // ListDownloads handles GET /api/v1/downloads
 // @Summary List all downloads
-// @Description Retrieves all torrents from qBittorrent with optional sorting
+// @Description Retrieves all torrents from qBittorrent with optional filtering and sorting
 // @Tags downloads
 // @Accept json
 // @Produce json
+// @Param filter query string false "Filter by status (all, downloading, paused, completed, seeding, error)" default(all)
 // @Param sort query string false "Sort field (added_on, name, progress, size)" default(added_on)
 // @Param order query string false "Sort order (asc, desc)" default(desc)
 // @Success 200 {object} APIResponse
@@ -39,10 +41,11 @@ func NewDownloadHandler(service DownloadServiceInterface) *DownloadHandler {
 // @Failure 500 {object} APIResponse
 // @Router /api/v1/downloads [get]
 func (h *DownloadHandler) ListDownloads(c *gin.Context) {
+	filter := c.DefaultQuery("filter", "all")
 	sort := c.DefaultQuery("sort", "added_on")
 	order := c.DefaultQuery("order", "desc")
 
-	torrents, err := h.service.GetAllDownloads(c.Request.Context(), sort, order)
+	torrents, err := h.service.GetAllDownloads(c.Request.Context(), filter, sort, order)
 	if err != nil {
 		slog.Error("Failed to list downloads", "error", err)
 
@@ -109,11 +112,46 @@ func (h *DownloadHandler) GetDownloadDetails(c *gin.Context) {
 	SuccessResponse(c, details)
 }
 
+// GetDownloadCounts handles GET /api/v1/downloads/counts
+// @Summary Get download counts by status
+// @Description Returns the count of torrents grouped by status
+// @Tags downloads
+// @Produce json
+// @Success 200 {object} APIResponse
+// @Failure 400 {object} APIResponse
+// @Failure 500 {object} APIResponse
+// @Router /api/v1/downloads/counts [get]
+func (h *DownloadHandler) GetDownloadCounts(c *gin.Context) {
+	counts, err := h.service.GetDownloadCounts(c.Request.Context())
+	if err != nil {
+		slog.Error("Failed to get download counts", "error", err)
+
+		var connErr *qbittorrent.ConnectionError
+		if errors.As(err, &connErr) {
+			switch connErr.Code {
+			case qbittorrent.ErrCodeNotConfigured:
+				ErrorResponse(c, 400, connErr.Code, "qBittorrent 尚未設定", "請先設定 qBittorrent 連線。")
+			case qbittorrent.ErrCodeAuthFailed:
+				ErrorResponse(c, 400, connErr.Code, "qBittorrent 認證失敗", "請檢查帳號密碼是否正確。")
+			default:
+				ErrorResponse(c, 400, connErr.Code, "無法連線到 qBittorrent", connErr.Error())
+			}
+			return
+		}
+
+		InternalServerError(c, "Failed to retrieve download counts")
+		return
+	}
+
+	SuccessResponse(c, counts)
+}
+
 // RegisterRoutes registers download monitoring routes.
 func (h *DownloadHandler) RegisterRoutes(rg *gin.RouterGroup) {
 	downloads := rg.Group("/downloads")
 	{
 		downloads.GET("", h.ListDownloads)
+		downloads.GET("/counts", h.GetDownloadCounts)
 		downloads.GET("/:hash", h.GetDownloadDetails)
 	}
 }

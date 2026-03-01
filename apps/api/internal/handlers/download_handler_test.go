@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -20,8 +21,8 @@ type MockDownloadService struct {
 	mock.Mock
 }
 
-func (m *MockDownloadService) GetAllDownloads(ctx context.Context, sort string, order string) ([]qbittorrent.Torrent, error) {
-	args := m.Called(ctx, sort, order)
+func (m *MockDownloadService) GetAllDownloads(ctx context.Context, filter string, sort string, order string) ([]qbittorrent.Torrent, error) {
+	args := m.Called(ctx, filter, sort, order)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -34,6 +35,14 @@ func (m *MockDownloadService) GetDownloadDetails(ctx context.Context, hash strin
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*qbittorrent.TorrentDetails), args.Error(1)
+}
+
+func (m *MockDownloadService) GetDownloadCounts(ctx context.Context) (*qbittorrent.DownloadCounts, error) {
+	args := m.Called(ctx)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*qbittorrent.DownloadCounts), args.Error(1)
 }
 
 func setupDownloadRouter(handler *DownloadHandler) *gin.Engine {
@@ -63,7 +72,7 @@ func TestDownloadHandler_ListDownloads_Success(t *testing.T) {
 			Peers:         5,
 		},
 	}
-	mockService.On("GetAllDownloads", mock.Anything, "added_on", "desc").Return(torrents, nil)
+	mockService.On("GetAllDownloads", mock.Anything, "all", "added_on", "desc").Return(torrents, nil)
 
 	handler := NewDownloadHandler(mockService)
 	router := setupDownloadRouter(handler)
@@ -84,7 +93,7 @@ func TestDownloadHandler_ListDownloads_Success(t *testing.T) {
 
 func TestDownloadHandler_ListDownloads_WithSortParams(t *testing.T) {
 	mockService := new(MockDownloadService)
-	mockService.On("GetAllDownloads", mock.Anything, "name", "asc").Return([]qbittorrent.Torrent{}, nil)
+	mockService.On("GetAllDownloads", mock.Anything, "all", "name", "asc").Return([]qbittorrent.Torrent{}, nil)
 
 	handler := NewDownloadHandler(mockService)
 	router := setupDownloadRouter(handler)
@@ -97,9 +106,39 @@ func TestDownloadHandler_ListDownloads_WithSortParams(t *testing.T) {
 	mockService.AssertExpectations(t)
 }
 
+func TestDownloadHandler_ListDownloads_WithFilterParam(t *testing.T) {
+	mockService := new(MockDownloadService)
+	mockService.On("GetAllDownloads", mock.Anything, "downloading", "added_on", "desc").Return([]qbittorrent.Torrent{}, nil)
+
+	handler := NewDownloadHandler(mockService)
+	router := setupDownloadRouter(handler)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/api/v1/downloads?filter=downloading", nil)
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	mockService.AssertExpectations(t)
+}
+
+func TestDownloadHandler_ListDownloads_WithFilterAndSort(t *testing.T) {
+	mockService := new(MockDownloadService)
+	mockService.On("GetAllDownloads", mock.Anything, "paused", "name", "asc").Return([]qbittorrent.Torrent{}, nil)
+
+	handler := NewDownloadHandler(mockService)
+	router := setupDownloadRouter(handler)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/api/v1/downloads?filter=paused&sort=name&order=asc", nil)
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	mockService.AssertExpectations(t)
+}
+
 func TestDownloadHandler_ListDownloads_NotConfigured(t *testing.T) {
 	mockService := new(MockDownloadService)
-	mockService.On("GetAllDownloads", mock.Anything, "added_on", "desc").Return(
+	mockService.On("GetAllDownloads", mock.Anything, "all", "added_on", "desc").Return(
 		nil,
 		&qbittorrent.ConnectionError{
 			Code:    qbittorrent.ErrCodeNotConfigured,
@@ -126,7 +165,7 @@ func TestDownloadHandler_ListDownloads_NotConfigured(t *testing.T) {
 
 func TestDownloadHandler_ListDownloads_AuthFailure(t *testing.T) {
 	mockService := new(MockDownloadService)
-	mockService.On("GetAllDownloads", mock.Anything, "added_on", "desc").Return(
+	mockService.On("GetAllDownloads", mock.Anything, "all", "added_on", "desc").Return(
 		nil,
 		&qbittorrent.ConnectionError{
 			Code:    qbittorrent.ErrCodeAuthFailed,
@@ -212,6 +251,71 @@ func TestDownloadHandler_GetDownloadDetails_NotFound(t *testing.T) {
 	mockService.AssertExpectations(t)
 }
 
+func TestDownloadHandler_GetDownloadCounts_Success(t *testing.T) {
+	mockService := new(MockDownloadService)
+	counts := &qbittorrent.DownloadCounts{
+		All:         10,
+		Downloading: 3,
+		Paused:      2,
+		Completed:   4,
+		Seeding:     1,
+		Error:       0,
+	}
+	mockService.On("GetDownloadCounts", mock.Anything).Return(counts, nil)
+
+	handler := NewDownloadHandler(mockService)
+	router := setupDownloadRouter(handler)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/api/v1/downloads/counts", nil)
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var response APIResponse
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+	assert.True(t, response.Success)
+	assert.NotNil(t, response.Data)
+
+	dataMap, ok := response.Data.(map[string]interface{})
+	require.True(t, ok)
+	assert.Equal(t, float64(10), dataMap["all"])
+	assert.Equal(t, float64(3), dataMap["downloading"])
+	assert.Equal(t, float64(2), dataMap["paused"])
+	assert.Equal(t, float64(4), dataMap["completed"])
+	assert.Equal(t, float64(1), dataMap["seeding"])
+	assert.Equal(t, float64(0), dataMap["error"])
+	mockService.AssertExpectations(t)
+}
+
+func TestDownloadHandler_GetDownloadCounts_NotConfigured(t *testing.T) {
+	mockService := new(MockDownloadService)
+	mockService.On("GetDownloadCounts", mock.Anything).Return(
+		nil,
+		&qbittorrent.ConnectionError{
+			Code:    qbittorrent.ErrCodeNotConfigured,
+			Message: "qBittorrent not configured",
+		},
+	)
+
+	handler := NewDownloadHandler(mockService)
+	router := setupDownloadRouter(handler)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/api/v1/downloads/counts", nil)
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	var response APIResponse
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+	assert.False(t, response.Success)
+	assert.Equal(t, qbittorrent.ErrCodeNotConfigured, response.Error.Code)
+	mockService.AssertExpectations(t)
+}
+
 func TestDownloadHandler_GetDownloadDetails_NotConfigured(t *testing.T) {
 	mockService := new(MockDownloadService)
 	mockService.On("GetDownloadDetails", mock.Anything, "abc123").Return(
@@ -235,5 +339,180 @@ func TestDownloadHandler_GetDownloadDetails_NotConfigured(t *testing.T) {
 	err := json.Unmarshal(w.Body.Bytes(), &response)
 	require.NoError(t, err)
 	assert.Equal(t, qbittorrent.ErrCodeNotConfigured, response.Error.Code)
+	mockService.AssertExpectations(t)
+}
+
+func TestDownloadHandler_ListDownloads_AllFilterValues(t *testing.T) {
+	// GIVEN: all valid filter values
+	filters := []string{"all", "downloading", "paused", "completed", "seeding", "error"}
+
+	for _, filter := range filters {
+		t.Run(filter, func(t *testing.T) {
+			mockService := new(MockDownloadService)
+			mockService.On("GetAllDownloads", mock.Anything, filter, "added_on", "desc").Return([]qbittorrent.Torrent{}, nil)
+
+			handler := NewDownloadHandler(mockService)
+			router := setupDownloadRouter(handler)
+
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequest("GET", "/api/v1/downloads?filter="+filter, nil)
+			router.ServeHTTP(w, req)
+
+			// THEN: each filter value is accepted and passed through
+			assert.Equal(t, http.StatusOK, w.Code)
+			mockService.AssertExpectations(t)
+		})
+	}
+}
+
+func TestDownloadHandler_ListDownloads_InternalServerError(t *testing.T) {
+	// GIVEN: service returns a non-ConnectionError
+	mockService := new(MockDownloadService)
+	mockService.On("GetAllDownloads", mock.Anything, "all", "added_on", "desc").Return(
+		nil,
+		fmt.Errorf("unexpected internal error"),
+	)
+
+	handler := NewDownloadHandler(mockService)
+	router := setupDownloadRouter(handler)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/api/v1/downloads", nil)
+	router.ServeHTTP(w, req)
+
+	// THEN: returns 500 internal server error
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+
+	var response APIResponse
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+	assert.False(t, response.Success)
+	mockService.AssertExpectations(t)
+}
+
+func TestDownloadHandler_GetDownloadCounts_AuthFailure(t *testing.T) {
+	// GIVEN: counts endpoint returns auth failure
+	mockService := new(MockDownloadService)
+	mockService.On("GetDownloadCounts", mock.Anything).Return(
+		nil,
+		&qbittorrent.ConnectionError{
+			Code:    qbittorrent.ErrCodeAuthFailed,
+			Message: "auth failed",
+		},
+	)
+
+	handler := NewDownloadHandler(mockService)
+	router := setupDownloadRouter(handler)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/api/v1/downloads/counts", nil)
+	router.ServeHTTP(w, req)
+
+	// THEN: returns 400 with auth error code
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	var response APIResponse
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+	assert.Equal(t, qbittorrent.ErrCodeAuthFailed, response.Error.Code)
+	mockService.AssertExpectations(t)
+}
+
+func TestDownloadHandler_GetDownloadCounts_InternalServerError(t *testing.T) {
+	// GIVEN: counts service returns a non-ConnectionError
+	mockService := new(MockDownloadService)
+	mockService.On("GetDownloadCounts", mock.Anything).Return(
+		nil,
+		fmt.Errorf("unexpected error"),
+	)
+
+	handler := NewDownloadHandler(mockService)
+	router := setupDownloadRouter(handler)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/api/v1/downloads/counts", nil)
+	router.ServeHTTP(w, req)
+
+	// THEN: returns 500
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+
+	var response APIResponse
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+	assert.False(t, response.Success)
+	mockService.AssertExpectations(t)
+}
+
+func TestDownloadHandler_ListDownloads_GenericConnectionError(t *testing.T) {
+	// GIVEN: service returns a generic connection error (not NotConfigured or AuthFailed)
+	mockService := new(MockDownloadService)
+	mockService.On("GetAllDownloads", mock.Anything, "all", "added_on", "desc").Return(
+		nil,
+		&qbittorrent.ConnectionError{
+			Code:    qbittorrent.ErrCodeConnectionFailed,
+			Message: "connection refused",
+		},
+	)
+
+	handler := NewDownloadHandler(mockService)
+	router := setupDownloadRouter(handler)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/api/v1/downloads", nil)
+	router.ServeHTTP(w, req)
+
+	// THEN: returns 400 with connection error
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	var response APIResponse
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+	assert.Equal(t, qbittorrent.ErrCodeConnectionFailed, response.Error.Code)
+	mockService.AssertExpectations(t)
+}
+
+func TestDownloadHandler_GetDownloadCounts_VerifyResponseStructure(t *testing.T) {
+	// GIVEN: counts with all statuses including error > 0
+	mockService := new(MockDownloadService)
+	counts := &qbittorrent.DownloadCounts{
+		All:         15,
+		Downloading: 5,
+		Paused:      3,
+		Completed:   4,
+		Seeding:     2,
+		Error:       1,
+	}
+	mockService.On("GetDownloadCounts", mock.Anything).Return(counts, nil)
+
+	handler := NewDownloadHandler(mockService)
+	router := setupDownloadRouter(handler)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/api/v1/downloads/counts", nil)
+	router.ServeHTTP(w, req)
+
+	// THEN: response has all 6 count fields with correct values
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var response APIResponse
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+
+	dataMap, ok := response.Data.(map[string]interface{})
+	require.True(t, ok)
+
+	// Verify all 6 fields present and correct
+	assert.Equal(t, float64(15), dataMap["all"])
+	assert.Equal(t, float64(5), dataMap["downloading"])
+	assert.Equal(t, float64(3), dataMap["paused"])
+	assert.Equal(t, float64(4), dataMap["completed"])
+	assert.Equal(t, float64(2), dataMap["seeding"])
+	assert.Equal(t, float64(1), dataMap["error"])
+
+	// Verify exactly 6 count fields
+	countFields := []string{"all", "downloading", "paused", "completed", "seeding", "error"}
+	for _, field := range countFields {
+		assert.Contains(t, dataMap, field)
+	}
 	mockService.AssertExpectations(t)
 }
