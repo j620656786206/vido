@@ -97,7 +97,11 @@ function EmptyFilterState({ filter }: { filter: FilterStatus }) {
   return (
     <div className="rounded-lg border border-slate-700 bg-slate-800/50 py-12 text-center text-slate-400">
       <p className="text-lg">{messages[filter]}</p>
-      {filter !== 'all' && <p className="mt-1 text-sm">嘗試切換其他篩選條件</p>}
+      {filter === 'all' ? (
+        <p className="mt-1 text-sm">在 qBittorrent 中新增種子後會自動顯示</p>
+      ) : (
+        <p className="mt-1 text-sm">嘗試切換其他篩選條件</p>
+      )}
     </div>
   );
 }
