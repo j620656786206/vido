@@ -272,4 +272,74 @@ test.describe('Duplicate Detection @parse-trigger @story-4-5', () => {
     // THEN: No parse status badge is shown for downloading torrent
     await expect(page.getByTestId('download-parse-status-badge')).not.toBeVisible();
   });
+
+  test('[P2] should show "已跳過" status for skipped/duplicate torrent (AC5)', async ({ page }) => {
+    // GIVEN: API returns a completed download that was skipped (already in library)
+    const completedWithSkipped = {
+      ...presetDownloads.completed,
+      hash: 'h'.repeat(40),
+      name: 'Already.In.Library.mkv',
+      parseStatus: {
+        status: 'skipped',
+      },
+    };
+
+    await page.route(`${API_BASE_URL}/downloads*`, (route) => {
+      if (route.request().url().includes('/counts')) {
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            success: true,
+            data: { all: 1, downloading: 0, paused: 0, completed: 1, seeding: 0, error: 0 },
+          }),
+        });
+      }
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, data: [completedWithSkipped] }),
+      });
+    });
+
+    // WHEN: Navigating to downloads page
+    await page.goto('/downloads');
+
+    // THEN: Parse status badge shows "已跳過" (skipped/already in library)
+    await expect(page.getByText('已跳過')).toBeVisible();
+  });
+});
+
+// =============================================================================
+// Parse Retry API Tests (AC3)
+// =============================================================================
+
+test.describe('Parse Retry API @parse-trigger @story-4-5 @api', () => {
+  test('[P1] POST /parse-jobs/:id/retry returns error for nonexistent job (AC3)', async ({
+    request,
+  }) => {
+    // GIVEN: A parse job ID that does not exist
+    // WHEN: Attempting to retry the nonexistent job
+    const response = await request.post(`${API_BASE_URL}/parse-jobs/nonexistent-job-id/retry`);
+
+    // THEN: Returns an error (404 or 500 depending on backend state)
+    if (response.ok()) {
+      const json = await response.json();
+      expect(json.success).toBe(false);
+    } else {
+      expect(response.status()).toBeGreaterThanOrEqual(400);
+    }
+  });
+
+  test('[P2] POST /parse-jobs/:id/retry validates job ID is required (AC3)', async ({
+    request,
+  }) => {
+    // GIVEN: An empty job ID path
+    // WHEN: Calling retry with empty-ish ID
+    const response = await request.post(`${API_BASE_URL}/parse-jobs/%20/retry`);
+
+    // THEN: Returns validation or not-found error
+    expect(response.ok()).toBeFalsy();
+    expect(response.status()).toBeGreaterThanOrEqual(400);
+  });
 });

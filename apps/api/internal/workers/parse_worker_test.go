@@ -198,3 +198,68 @@ func TestParseWorker_ContextCancellation(t *testing.T) {
 		t.Fatal("workers did not stop after context cancellation")
 	}
 }
+
+// --- Queue error mock ---
+
+type mockParseQueueServiceQueueFails struct {
+	mockParseQueueService
+	queueErr   error
+	queueCalls int
+}
+
+func (m *mockParseQueueServiceQueueFails) QueueParseJob(_ context.Context, _ *qbittorrent.Torrent) (*models.ParseJob, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.queueCalls++
+	return nil, m.queueErr
+}
+
+// --- Expanded worker tests ---
+
+func TestParseWorker_CheckForCompletions_QueueError(t *testing.T) {
+	torrents := []qbittorrent.Torrent{
+		{Hash: "hash1", Name: "m1.mkv", SavePath: "/dl", Status: qbittorrent.StatusCompleted},
+		{Hash: "hash2", Name: "m2.mkv", SavePath: "/dl", Status: qbittorrent.StatusCompleted},
+	}
+
+	dlService := &mockDownloadService{torrents: torrents}
+	detector := &mockCompletionDetector{completions: torrents}
+	pqService := &mockParseQueueServiceQueueFails{queueErr: fmt.Errorf("db full")}
+
+	worker := NewParseWorker(dlService, detector, pqService, slog.Default())
+
+	// GIVEN: QueueParseJob will fail for all completions
+	// WHEN: Checking for completions
+	worker.checkForCompletions(context.Background())
+
+	// THEN: Worker should not panic, and should attempt to queue both
+	pqService.mu.Lock()
+	defer pqService.mu.Unlock()
+	assert.Equal(t, 2, pqService.queueCalls, "should attempt to queue all completions even when errors occur")
+}
+
+func TestParseWorker_CheckForCompletions_MultipleCompletions(t *testing.T) {
+	torrents := []qbittorrent.Torrent{
+		{Hash: "hash1", Name: "m1.mkv", SavePath: "/dl/a", Status: qbittorrent.StatusCompleted},
+		{Hash: "hash2", Name: "m2.mkv", SavePath: "/dl/b", Status: qbittorrent.StatusCompleted},
+		{Hash: "hash3", Name: "m3.mkv", SavePath: "/dl/c", Status: qbittorrent.StatusCompleted},
+	}
+
+	dlService := &mockDownloadService{torrents: torrents}
+	detector := &mockCompletionDetector{completions: torrents}
+	pqService := &mockParseQueueService{}
+
+	worker := NewParseWorker(dlService, detector, pqService, slog.Default())
+
+	// GIVEN: 3 newly completed torrents
+	// WHEN: Checking for completions
+	worker.checkForCompletions(context.Background())
+
+	// THEN: All 3 should be queued for parsing
+	pqService.mu.Lock()
+	defer pqService.mu.Unlock()
+	require.Len(t, pqService.queuedJobs, 3)
+	assert.Equal(t, "hash1", pqService.queuedJobs[0].Hash)
+	assert.Equal(t, "hash2", pqService.queuedJobs[1].Hash)
+	assert.Equal(t, "hash3", pqService.queuedJobs[2].Hash)
+}

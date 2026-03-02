@@ -443,3 +443,185 @@ func TestParseQueueService_GetJobStatus_NotFound(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Nil(t, job)
 }
+
+// --- Per-method error mock for targeted error injection ---
+
+type mockPQRepoWithMethodErrors struct {
+	*mockPQParseJobRepo
+	updateStatusErr error
+	updateErr       error
+}
+
+func (m *mockPQRepoWithMethodErrors) UpdateStatus(ctx context.Context, id string, status models.ParseJobStatus, errMsg string) error {
+	if m.updateStatusErr != nil {
+		return m.updateStatusErr
+	}
+	return m.mockPQParseJobRepo.UpdateStatus(ctx, id, status, errMsg)
+}
+
+func (m *mockPQRepoWithMethodErrors) Update(ctx context.Context, job *models.ParseJob) error {
+	if m.updateErr != nil {
+		return m.updateErr
+	}
+	return m.mockPQParseJobRepo.Update(ctx, job)
+}
+
+var _ repository.ParseJobRepositoryInterface = (*mockPQRepoWithMethodErrors)(nil)
+
+// --- Expanded error path tests ---
+
+func TestParseQueueService_QueueParseJob_RepoError(t *testing.T) {
+	repo := newMockPQParseJobRepo()
+	repo.err = fmt.Errorf("db connection lost")
+	svc := newTestParseQueueService(repo, nil, nil, nil)
+
+	torrent := &qbittorrent.Torrent{Hash: "abc", Name: "test.mkv", SavePath: "/dl"}
+	_, err := svc.QueueParseJob(context.Background(), torrent)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "create parse job")
+	assert.Contains(t, err.Error(), "db connection lost")
+}
+
+func TestParseQueueService_ProcessNextJob_GetPendingError(t *testing.T) {
+	repo := newMockPQParseJobRepo()
+	repo.err = fmt.Errorf("database locked")
+	svc := newTestParseQueueService(repo, nil, nil, nil)
+
+	err := svc.ProcessNextJob(context.Background())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "get pending jobs")
+	assert.Contains(t, err.Error(), "database locked")
+}
+
+func TestParseQueueService_ProcessNextJob_MarkProcessingError(t *testing.T) {
+	baseRepo := newMockPQParseJobRepo()
+	baseRepo.jobs["job-1"] = &models.ParseJob{
+		ID:       "job-1",
+		FileName: "test.mkv",
+		Status:   models.ParseJobPending,
+	}
+	repo := &mockPQRepoWithMethodErrors{
+		mockPQParseJobRepo: baseRepo,
+		updateStatusErr:    fmt.Errorf("disk full"),
+	}
+	svc := newTestParseQueueService(repo, nil, nil, nil)
+
+	err := svc.ProcessNextJob(context.Background())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "mark job processing")
+	assert.Contains(t, err.Error(), "disk full")
+}
+
+func TestParseQueueService_ProcessNextJob_NilParseResult(t *testing.T) {
+	repo := newMockPQParseJobRepo()
+	repo.jobs["job-1"] = &models.ParseJob{
+		ID:       "job-1",
+		FileName: "test.mkv",
+		Status:   models.ParseJobPending,
+	}
+
+	parserSvc := &mockPQParserService{result: nil}
+	svc := newTestParseQueueService(repo, parserSvc, nil, nil)
+
+	err := svc.ProcessNextJob(context.Background())
+	assert.NoError(t, err) // Should not propagate
+
+	assert.Equal(t, models.ParseJobFailed, repo.jobs["job-1"].Status)
+	require.NotNil(t, repo.jobs["job-1"].ErrorMessage)
+	assert.Contains(t, *repo.jobs["job-1"].ErrorMessage, "filename parsing failed")
+}
+
+func TestParseQueueService_ProcessNextJob_MovieCreateError(t *testing.T) {
+	repo := newMockPQParseJobRepo()
+	repo.jobs["job-1"] = &models.ParseJob{
+		ID:       "job-1",
+		FileName: "Movie.2024.mkv",
+		Status:   models.ParseJobPending,
+	}
+
+	parserSvc := &mockPQParserService{
+		result: &parser.ParseResult{
+			Status:       parser.ParseStatusSuccess,
+			CleanedTitle: "Movie",
+			Year:         2024,
+			MediaType:    parser.MediaTypeMovie,
+		},
+	}
+	metaSvc := &mockPQMetadataService{
+		searchResult: &metadata.SearchResult{
+			Items:  []metadata.MetadataItem{{ID: "123", Title: "Movie", Year: 2024}},
+			Source: models.MetadataSourceTMDb,
+		},
+	}
+	movieRepo := newMockPQMovieRepo()
+	movieRepo.err = fmt.Errorf("unique constraint violated")
+	svc := newTestParseQueueService(repo, parserSvc, metaSvc, movieRepo)
+
+	err := svc.ProcessNextJob(context.Background())
+	assert.NoError(t, err) // Doesn't propagate
+
+	assert.Equal(t, models.ParseJobFailed, repo.jobs["job-1"].Status)
+	require.NotNil(t, repo.jobs["job-1"].ErrorMessage)
+	assert.Contains(t, *repo.jobs["job-1"].ErrorMessage, "create media entry failed")
+}
+
+func TestParseQueueService_ProcessNextJob_FinalUpdateError(t *testing.T) {
+	baseRepo := newMockPQParseJobRepo()
+	baseRepo.jobs["job-1"] = &models.ParseJob{
+		ID:       "job-1",
+		FileName: "Movie.2024.mkv",
+		Status:   models.ParseJobPending,
+	}
+	repo := &mockPQRepoWithMethodErrors{
+		mockPQParseJobRepo: baseRepo,
+		updateErr:          fmt.Errorf("WAL corrupted"),
+	}
+
+	parserSvc := &mockPQParserService{
+		result: &parser.ParseResult{
+			Status:       parser.ParseStatusSuccess,
+			CleanedTitle: "Movie",
+			Year:         2024,
+			MediaType:    parser.MediaTypeMovie,
+		},
+	}
+	metaSvc := &mockPQMetadataService{
+		searchResult: &metadata.SearchResult{
+			Items:  []metadata.MetadataItem{{ID: "123", Title: "Movie", Year: 2024}},
+			Source: models.MetadataSourceTMDb,
+		},
+	}
+	movieRepo := newMockPQMovieRepo()
+	svc := newTestParseQueueService(repo, parserSvc, metaSvc, movieRepo)
+
+	err := svc.ProcessNextJob(context.Background())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "mark job completed")
+	assert.Contains(t, err.Error(), "WAL corrupted")
+}
+
+func TestParseQueueService_ListJobs(t *testing.T) {
+	repo := newMockPQParseJobRepo()
+	repo.jobs["job-1"] = &models.ParseJob{ID: "job-1", Status: models.ParseJobCompleted}
+	repo.jobs["job-2"] = &models.ParseJob{ID: "job-2", Status: models.ParseJobPending}
+	svc := newTestParseQueueService(repo, nil, nil, nil)
+
+	jobs, err := svc.ListJobs(context.Background(), 10)
+	require.NoError(t, err)
+	assert.Len(t, jobs, 2)
+}
+
+func TestParseQueueService_ListJobs_DefaultLimit(t *testing.T) {
+	repo := newMockPQParseJobRepo()
+	svc := newTestParseQueueService(repo, nil, nil, nil)
+
+	// Zero limit should default to 50 (no error)
+	jobs, err := svc.ListJobs(context.Background(), 0)
+	assert.NoError(t, err)
+	assert.Empty(t, jobs)
+
+	// Negative limit should also default to 50
+	jobs, err = svc.ListJobs(context.Background(), -1)
+	assert.NoError(t, err)
+	assert.Empty(t, jobs)
+}
