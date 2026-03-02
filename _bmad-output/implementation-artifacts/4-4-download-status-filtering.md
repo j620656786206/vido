@@ -1,6 +1,6 @@
 # Story 4.4: Download Status Filtering
 
-Status: review
+Status: done
 
 ## Story
 
@@ -546,6 +546,7 @@ None - clean implementation, no debugging needed.
 ### Change Log
 
 - 2026-03-01: Initial implementation of all 7 tasks for download status filtering
+- 2026-03-02: Code review fixes — removed duplicate interface (Rule 11), refactored usePageVisibility to useSyncExternalStore singleton, used FilterErrored constant, updated File List with missing dashboard files
 
 ### File List
 
@@ -553,13 +554,13 @@ None - clean implementation, no debugging needed.
 - `apps/api/internal/qbittorrent/torrent.go` — Added `TorrentsFilter` type, filter constants, `DownloadCounts` type, `Filter` field to `ListTorrentsOptions`
 - `apps/api/internal/qbittorrent/client.go` — Updated `GetTorrents` to pass filter parameter to qBittorrent API
 - `apps/api/internal/services/download_service.go` — Updated `DownloadServiceInterface` (added filter param, `GetDownloadCounts`), added `mapToQBFilter`, `validFilters`, `GetDownloadCounts` method
-- `apps/api/internal/handlers/download_handler.go` — Updated `DownloadServiceInterface`, added filter param to `ListDownloads`, added `GetDownloadCounts` handler, registered `/counts` route
+- `apps/api/internal/handlers/download_handler.go` — Imports `services.DownloadServiceInterface` (Rule 11), added filter param to `ListDownloads`, added `GetDownloadCounts` handler, registered `/counts` route
 - `apps/api/internal/handlers/download_handler_test.go` — Updated mock for new signatures, added filter tests, counts tests
 - `apps/api/internal/services/download_service_test.go` — Updated tests for new filter param, added `MapToQBFilter` tests, `ValidFilters` tests, `GetDownloadCounts` tests
 
 **Frontend - Modified:**
 - `apps/web/src/services/downloadService.ts` — Added `FilterStatus`, `DownloadCounts` types, `filter` param to `GetDownloadsParams`, `getDownloadCounts` method
-- `apps/web/src/hooks/useDownloads.ts` — Added filter param to `useDownloads`, added `useDownloadCounts` hook, added `usePageVisibility` helper, updated `downloadKeys`
+- `apps/web/src/hooks/useDownloads.ts` — Added filter param to `useDownloads`, added `useDownloadCounts` hook, `usePageVisibility` via `useSyncExternalStore` singleton, updated `downloadKeys`
 - `apps/web/src/hooks/useDownloads.spec.ts` — Updated tests for new signatures, added counts hook tests
 - `apps/web/src/routes/downloads.tsx` — Added `validateSearch` for URL filter persistence, integrated `DownloadFilterTabs`, added `EmptyFilterState` component
 - `apps/web/src/components/downloads/index.ts` — Added `DownloadFilterTabs` export
@@ -567,6 +568,11 @@ None - clean implementation, no debugging needed.
 **Frontend - Created:**
 - `apps/web/src/components/downloads/DownloadFilterTabs.tsx` — Filter tabs component with counts and ARIA
 - `apps/web/src/components/downloads/DownloadFilterTabs.spec.tsx` — 7 component tests
+
+**Frontend - Formatting only (Prettier):**
+- `apps/web/src/components/dashboard/CollapsibleSection.tsx` — Prettier formatting fix
+- `apps/web/src/components/dashboard/DownloadPanel.tsx` — Prettier formatting fix
+- `apps/web/src/components/dashboard/RecentMediaPanel.tsx` — Prettier formatting fix
 
 **E2E - Created:**
 - `tests/e2e/download-filtering.api.spec.ts` — API E2E tests for filter and counts endpoints

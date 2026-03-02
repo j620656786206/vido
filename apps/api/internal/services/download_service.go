@@ -68,7 +68,7 @@ func mapToQBFilter(filter string) qbittorrent.TorrentsFilter {
 	case "seeding":
 		return qbittorrent.FilterSeeding
 	case "error":
-		return qbittorrent.TorrentsFilter("errored")
+		return qbittorrent.FilterErrored
 	default:
 		return qbittorrent.FilterAll
 	}

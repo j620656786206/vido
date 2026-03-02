@@ -1,29 +1,21 @@
 package handlers
 
 import (
-	"context"
 	"errors"
 	"log/slog"
 
 	"github.com/gin-gonic/gin"
 	"github.com/vido/api/internal/qbittorrent"
+	"github.com/vido/api/internal/services"
 )
-
-// DownloadServiceInterface defines the contract for download operations
-// used by the handler layer.
-type DownloadServiceInterface interface {
-	GetAllDownloads(ctx context.Context, filter string, sort string, order string) ([]qbittorrent.Torrent, error)
-	GetDownloadDetails(ctx context.Context, hash string) (*qbittorrent.TorrentDetails, error)
-	GetDownloadCounts(ctx context.Context) (*qbittorrent.DownloadCounts, error)
-}
 
 // DownloadHandler handles HTTP requests for download monitoring.
 type DownloadHandler struct {
-	service DownloadServiceInterface
+	service services.DownloadServiceInterface
 }
 
 // NewDownloadHandler creates a new DownloadHandler.
-func NewDownloadHandler(service DownloadServiceInterface) *DownloadHandler {
+func NewDownloadHandler(service services.DownloadServiceInterface) *DownloadHandler {
 	return &DownloadHandler{service: service}
 }
 

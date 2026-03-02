@@ -3,7 +3,7 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
-import { useState, useEffect } from 'react';
+import { useSyncExternalStore } from 'react';
 import {
   downloadService,
   type Download,
@@ -23,20 +23,18 @@ export const downloadKeys = {
 };
 
 /**
- * Hook for page visibility detection, shared by download hooks.
+ * Singleton page visibility detection using useSyncExternalStore.
+ * Module-level functions ensure a single shared subscription across all callers.
  */
+const subscribeVisibility = (callback: () => void) => {
+  document.addEventListener('visibilitychange', callback);
+  return () => document.removeEventListener('visibilitychange', callback);
+};
+const getVisibilitySnapshot = () => document.visibilityState === 'visible';
+const getServerSnapshot = () => true;
+
 function usePageVisibility() {
-  const [isVisible, setIsVisible] = useState(true);
-
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      setIsVisible(document.visibilityState === 'visible');
-    };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, []);
-
-  return isVisible;
+  return useSyncExternalStore(subscribeVisibility, getVisibilitySnapshot, getServerSnapshot);
 }
 
 /**
