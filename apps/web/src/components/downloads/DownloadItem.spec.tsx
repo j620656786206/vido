@@ -98,9 +98,7 @@ describe('DownloadItem', () => {
   });
 
   it('does not render parse status badge when parseStatus is absent', () => {
-    render(
-      <DownloadItem download={mockDownload} expanded={false} onToggleExpand={() => {}} />
-    );
+    render(<DownloadItem download={mockDownload} expanded={false} onToggleExpand={() => {}} />);
     expect(screen.queryByTestId('download-parse-status-badge')).toBeNull();
   });
 

@@ -57,7 +57,10 @@ const STATUS_CONFIG: Record<
   },
 };
 
-export function DownloadParseStatusBadge({ parseStatus, className }: DownloadParseStatusBadgeProps) {
+export function DownloadParseStatusBadge({
+  parseStatus,
+  className,
+}: DownloadParseStatusBadgeProps) {
   if (!parseStatus) return null;
 
   let configKey = parseStatus.status as string;

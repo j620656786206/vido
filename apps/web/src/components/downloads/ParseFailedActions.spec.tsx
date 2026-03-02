@@ -5,12 +5,7 @@ import { ParseFailedActions } from './ParseFailedActions';
 
 describe('ParseFailedActions', () => {
   it('renders retry and manual search buttons', () => {
-    render(
-      <ParseFailedActions
-        torrentHash="abc123"
-        onRetry={vi.fn()}
-      />
-    );
+    render(<ParseFailedActions torrentHash="abc123" onRetry={vi.fn()} />);
     expect(screen.getByRole('button', { name: /重試/i })).toBeTruthy();
     expect(screen.getByRole('button', { name: /手動搜尋/i })).toBeTruthy();
   });
@@ -18,12 +13,7 @@ describe('ParseFailedActions', () => {
   it('calls onRetry when retry button is clicked', async () => {
     const user = userEvent.setup();
     const onRetry = vi.fn();
-    render(
-      <ParseFailedActions
-        torrentHash="abc123"
-        onRetry={onRetry}
-      />
-    );
+    render(<ParseFailedActions torrentHash="abc123" onRetry={onRetry} />);
 
     await user.click(screen.getByRole('button', { name: /重試/i }));
     expect(onRetry).toHaveBeenCalledTimes(1);
@@ -33,11 +23,7 @@ describe('ParseFailedActions', () => {
     const user = userEvent.setup();
     const onManualSearch = vi.fn();
     render(
-      <ParseFailedActions
-        torrentHash="abc123"
-        onRetry={vi.fn()}
-        onManualSearch={onManualSearch}
-      />
+      <ParseFailedActions torrentHash="abc123" onRetry={vi.fn()} onManualSearch={onManualSearch} />
     );
 
     await user.click(screen.getByRole('button', { name: /手動搜尋/i }));
@@ -56,24 +42,13 @@ describe('ParseFailedActions', () => {
   });
 
   it('disables retry button when retrying', () => {
-    render(
-      <ParseFailedActions
-        torrentHash="abc123"
-        onRetry={vi.fn()}
-        isRetrying={true}
-      />
-    );
+    render(<ParseFailedActions torrentHash="abc123" onRetry={vi.fn()} isRetrying={true} />);
     const retryBtn = screen.getByRole('button', { name: /重試/i });
     expect(retryBtn).toBeDisabled();
   });
 
   it('has proper data-testid attributes', () => {
-    render(
-      <ParseFailedActions
-        torrentHash="abc123"
-        onRetry={vi.fn()}
-      />
-    );
+    render(<ParseFailedActions torrentHash="abc123" onRetry={vi.fn()} />);
     expect(screen.getByTestId('parse-failed-actions')).toBeTruthy();
   });
 });

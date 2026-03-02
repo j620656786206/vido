@@ -66,13 +66,12 @@ export function DownloadItem({ download, expanded, onToggleExpand }: DownloadIte
             {download.status === 'seeding' && (
               <p className="text-blue-400">↑ {formatSpeed(download.uploadSpeed)}</p>
             )}
-            {download.status === 'completed' && (
-              download.parseStatus ? (
+            {download.status === 'completed' &&
+              (download.parseStatus ? (
                 <DownloadParseStatusBadge parseStatus={download.parseStatus} />
               ) : (
                 <p className="text-emerald-400">完成</p>
-              )
-            )}
+              ))}
             {download.status === 'paused' && <p className="text-yellow-400">已暫停</p>}
             {download.status === 'error' && <p className="text-red-400">錯誤</p>}
           </div>

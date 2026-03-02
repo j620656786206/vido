@@ -24,18 +24,14 @@ describe('DownloadParseStatusBadge', () => {
 
   it('renders "已入庫" for completed status with mediaId', () => {
     render(
-      <DownloadParseStatusBadge
-        parseStatus={{ status: 'completed', mediaId: 'media-123' }}
-      />
+      <DownloadParseStatusBadge parseStatus={{ status: 'completed', mediaId: 'media-123' }} />
     );
     expect(screen.getByText('已入庫')).toBeTruthy();
     expect(screen.getByRole('status').getAttribute('data-status')).toBe('completed');
   });
 
   it('renders "已解析" for completed status without mediaId', () => {
-    render(
-      <DownloadParseStatusBadge parseStatus={{ status: 'completed' }} />
-    );
+    render(<DownloadParseStatusBadge parseStatus={{ status: 'completed' }} />);
     expect(screen.getByText('已解析')).toBeTruthy();
   });
 
@@ -50,16 +46,12 @@ describe('DownloadParseStatusBadge', () => {
   });
 
   it('renders "已跳過" for skipped status', () => {
-    render(
-      <DownloadParseStatusBadge parseStatus={{ status: 'skipped' }} />
-    );
+    render(<DownloadParseStatusBadge parseStatus={{ status: 'skipped' }} />);
     expect(screen.getByText('已跳過')).toBeTruthy();
   });
 
   it('has correct accessibility attributes', () => {
-    render(
-      <DownloadParseStatusBadge parseStatus={{ status: 'processing' }} />
-    );
+    render(<DownloadParseStatusBadge parseStatus={{ status: 'processing' }} />);
     const badge = screen.getByRole('status');
     expect(badge.getAttribute('aria-label')).toContain('解析');
   });
