@@ -338,6 +338,98 @@ func TestDownloadService_GetAllDownloads_StatusSort(t *testing.T) {
 	mockQB.AssertExpectations(t)
 }
 
+func TestDownloadService_GetDownloadCounts_ConfigError(t *testing.T) {
+	// GIVEN: GetConfig returns an error
+	mockQB := new(MockQBServiceForDownload)
+	mockQB.On("GetConfig", mock.Anything).Return(nil, errors.New("database error"))
+
+	service := newTestDownloadService(mockQB)
+
+	// WHEN: GetDownloadCounts is called
+	counts, err := service.GetDownloadCounts(context.Background())
+
+	// THEN: returns nil counts and wrapped error
+	assert.Nil(t, counts)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "get qBittorrent config")
+	mockQB.AssertExpectations(t)
+}
+
+func TestDownloadService_GetDownloadDetails_Success(t *testing.T) {
+	// GIVEN: qBittorrent server returns torrent details
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v2/auth/login", func(w http.ResponseWriter, r *http.Request) {
+		http.SetCookie(w, &http.Cookie{Name: "SID", Value: "test-session"})
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, "Ok.")
+	})
+	mux.HandleFunc("/api/v2/torrents/info", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, `[{"hash":"abc123","name":"Test Movie","state":"downloading","added_on":1704067200,"size":5000}]`)
+	})
+	mux.HandleFunc("/api/v2/torrents/properties", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, `{"piece_size":4194304,"comment":"Test comment","creation_date":1704067200,"time_elapsed":3600}`)
+	})
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	mockQB := new(MockQBServiceForDownload)
+	mockQB.On("GetConfig", mock.Anything).Return(&qbittorrent.Config{
+		Host:     server.URL,
+		Username: "admin",
+		Password: "password",
+	}, nil)
+
+	service := newTestDownloadService(mockQB)
+
+	// WHEN: GetDownloadDetails is called
+	details, err := service.GetDownloadDetails(context.Background(), "abc123")
+
+	// THEN: returns valid details
+	require.NoError(t, err)
+	require.NotNil(t, details)
+	assert.Equal(t, "abc123", details.Hash)
+	assert.Equal(t, "Test Movie", details.Name)
+	mockQB.AssertExpectations(t)
+}
+
+func TestDownloadService_GetDownloadDetails_ClientError(t *testing.T) {
+	// GIVEN: qBittorrent server returns error for torrent info
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v2/auth/login", func(w http.ResponseWriter, r *http.Request) {
+		http.SetCookie(w, &http.Cookie{Name: "SID", Value: "test-session"})
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, "Ok.")
+	})
+	mux.HandleFunc("/api/v2/torrents/info", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, `[]`) // Empty = not found
+	})
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	mockQB := new(MockQBServiceForDownload)
+	mockQB.On("GetConfig", mock.Anything).Return(&qbittorrent.Config{
+		Host:     server.URL,
+		Username: "admin",
+		Password: "password",
+	}, nil)
+
+	service := newTestDownloadService(mockQB)
+
+	// WHEN: GetDownloadDetails is called with non-existent hash
+	details, err := service.GetDownloadDetails(context.Background(), "nonexistent")
+
+	// THEN: returns error (torrent not found)
+	assert.Nil(t, details)
+	assert.Error(t, err)
+	mockQB.AssertExpectations(t)
+}
+
 func TestDownloadService_GetAllDownloads_StatusSortDesc(t *testing.T) {
 	// GIVEN: torrents with different statuses
 	torrentsJSON := `[
