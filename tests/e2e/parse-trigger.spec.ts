@@ -187,7 +187,7 @@ test.describe('Completion Detection @parse-trigger @story-4-5', () => {
     await page.goto('/downloads');
 
     // THEN: Shows default "完成" text (no parse badge yet)
-    await expect(page.getByText('完成')).toBeVisible();
+    await expect(page.getByText('完成', { exact: true })).toBeVisible();
   });
 });
 
