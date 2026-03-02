@@ -5,18 +5,37 @@ import (
 	"log/slog"
 
 	"github.com/gin-gonic/gin"
+	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/qbittorrent"
 	"github.com/vido/api/internal/services"
 )
 
+// DownloadItem extends Torrent with parse status information.
+type DownloadItem struct {
+	qbittorrent.Torrent
+	ParseStatus *DownloadParseStatus `json:"parseStatus,omitempty"`
+}
+
+// DownloadParseStatus represents the parse status for a download.
+type DownloadParseStatus struct {
+	Status       models.ParseJobStatus `json:"status"`
+	ErrorMessage *string               `json:"errorMessage,omitempty"`
+	MediaID      *string               `json:"mediaId,omitempty"`
+}
+
 // DownloadHandler handles HTTP requests for download monitoring.
 type DownloadHandler struct {
-	service services.DownloadServiceInterface
+	service       services.DownloadServiceInterface
+	parseQueueSvc services.ParseQueueServiceInterface
 }
 
 // NewDownloadHandler creates a new DownloadHandler.
-func NewDownloadHandler(service services.DownloadServiceInterface) *DownloadHandler {
-	return &DownloadHandler{service: service}
+func NewDownloadHandler(service services.DownloadServiceInterface, parseQueueSvc ...services.ParseQueueServiceInterface) *DownloadHandler {
+	h := &DownloadHandler{service: service}
+	if len(parseQueueSvc) > 0 && parseQueueSvc[0] != nil {
+		h.parseQueueSvc = parseQueueSvc[0]
+	}
+	return h
 }
 
 // ListDownloads handles GET /api/v1/downloads
@@ -55,6 +74,25 @@ func (h *DownloadHandler) ListDownloads(c *gin.Context) {
 		}
 
 		InternalServerError(c, "Failed to retrieve downloads")
+		return
+	}
+
+	// Enrich with parse status if service is available
+	if h.parseQueueSvc != nil {
+		items := make([]DownloadItem, len(torrents))
+		for i, t := range torrents {
+			items[i] = DownloadItem{Torrent: t}
+			if t.Status == qbittorrent.StatusCompleted || t.Status == qbittorrent.StatusSeeding {
+				if job, err := h.parseQueueSvc.GetJobStatus(c.Request.Context(), t.Hash); err == nil && job != nil {
+					items[i].ParseStatus = &DownloadParseStatus{
+						Status:       job.Status,
+						ErrorMessage: job.ErrorMessage,
+						MediaID:      job.MediaID,
+					}
+				}
+			}
+		}
+		SuccessResponse(c, items)
 		return
 	}
 

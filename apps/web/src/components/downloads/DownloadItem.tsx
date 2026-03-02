@@ -1,6 +1,7 @@
 import type { Download } from '../../services/downloadService';
 import { cn } from '../../lib/utils';
 import { StatusIcon } from './StatusIcon';
+import { DownloadParseStatusBadge } from './DownloadParseStatusBadge';
 import { formatSpeed, formatSize, formatETA, formatProgress } from './formatters';
 
 interface DownloadItemProps {
@@ -65,7 +66,13 @@ export function DownloadItem({ download, expanded, onToggleExpand }: DownloadIte
             {download.status === 'seeding' && (
               <p className="text-blue-400">↑ {formatSpeed(download.uploadSpeed)}</p>
             )}
-            {download.status === 'completed' && <p className="text-emerald-400">完成</p>}
+            {download.status === 'completed' && (
+              download.parseStatus ? (
+                <DownloadParseStatusBadge parseStatus={download.parseStatus} />
+              ) : (
+                <p className="text-emerald-400">完成</p>
+              )
+            )}
             {download.status === 'paused' && <p className="text-yellow-400">已暫停</p>}
             {download.status === 'error' && <p className="text-red-400">錯誤</p>}
           </div>

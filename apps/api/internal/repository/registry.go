@@ -8,13 +8,14 @@ import (
 // This struct enables swapping implementations (e.g., SQLite to PostgreSQL)
 // without changing the service layer code.
 type Repositories struct {
-	Movies   MovieRepositoryInterface
-	Series   SeriesRepositoryInterface
-	Settings SettingsRepositoryInterface
-	Cache    CacheRepositoryInterface
-	Secrets  SecretsRepositoryInterface
-	Learning LearningRepositoryInterface
-	Retry    RetryRepositoryInterface
+	Movies    MovieRepositoryInterface
+	Series    SeriesRepositoryInterface
+	Settings  SettingsRepositoryInterface
+	Cache     CacheRepositoryInterface
+	Secrets   SecretsRepositoryInterface
+	Learning  LearningRepositoryInterface
+	Retry     RetryRepositoryInterface
+	ParseJobs ParseJobRepositoryInterface
 }
 
 // NewRepositories creates all repository implementations for the given database connection.
@@ -27,14 +28,15 @@ type Repositories struct {
 //	movieService := services.NewMovieService(repos.Movies)
 func NewRepositories(db *sql.DB) *Repositories {
 	return &Repositories{
-		Movies:   NewMovieRepository(db),
-		Series:   NewSeriesRepository(db),
-		Settings: NewSettingsRepository(db),
+		Movies:    NewMovieRepository(db),
+		Series:    NewSeriesRepository(db),
+		Settings:  NewSettingsRepository(db),
 		// Cache will be initialized after CacheRepository implementation in Task 4
-		Cache:    nil,
-		Secrets:  NewSecretsRepository(db),
-		Learning: NewLearningRepository(db),
-		Retry:    NewRetryRepository(db),
+		Cache:     nil,
+		Secrets:   NewSecretsRepository(db),
+		Learning:  NewLearningRepository(db),
+		Retry:     NewRetryRepository(db),
+		ParseJobs: NewParseJobRepository(db),
 	}
 }
 
@@ -48,12 +50,13 @@ func (r *Repositories) SetCacheRepository(cache CacheRepositoryInterface) {
 // Use this after the cache_entries table migration has been applied.
 func NewRepositoriesWithCache(db *sql.DB) *Repositories {
 	return &Repositories{
-		Movies:   NewMovieRepository(db),
-		Series:   NewSeriesRepository(db),
-		Settings: NewSettingsRepository(db),
-		Cache:    NewCacheRepository(db),
-		Secrets:  NewSecretsRepository(db),
-		Learning: NewLearningRepository(db),
-		Retry:    NewRetryRepository(db),
+		Movies:    NewMovieRepository(db),
+		Series:    NewSeriesRepository(db),
+		Settings:  NewSettingsRepository(db),
+		Cache:     NewCacheRepository(db),
+		Secrets:   NewSecretsRepository(db),
+		Learning:  NewLearningRepository(db),
+		Retry:     NewRetryRepository(db),
+		ParseJobs: NewParseJobRepository(db),
 	}
 }

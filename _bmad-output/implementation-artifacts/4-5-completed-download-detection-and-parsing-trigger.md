@@ -1,6 +1,6 @@
 # Story 4.5: Completed Download Detection and Parsing Trigger
 
-Status: ready-for-dev
+Status: completed
 
 ## Story
 
@@ -42,82 +42,82 @@ So that **new media appears in my library without manual action**.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create Completion Detection Service (AC: 1, 5)
-  - [ ] 1.1: Create `/apps/api/internal/services/completion_detector.go`
-  - [ ] 1.2: Define `CompletionDetectorInterface`
-  - [ ] 1.3: Track previously seen completed torrents (prevent re-trigger)
-  - [ ] 1.4: Implement `DetectNewCompletions(ctx, currentTorrents) []Torrent`
-  - [ ] 1.5: Check if file already exists in library (duplicate detection)
-  - [ ] 1.6: Write service tests
+- [x] Task 1: Create Completion Detection Service (AC: 1, 5)
+  - [x] 1.1: Create `/apps/api/internal/services/completion_detector.go`
+  - [x] 1.2: Define `CompletionDetectorInterface`
+  - [x] 1.3: Track previously seen completed torrents (prevent re-trigger)
+  - [x] 1.4: Implement `DetectNewCompletions(ctx, currentTorrents) []Torrent`
+  - [x] 1.5: Check if file already exists in library (duplicate detection)
+  - [x] 1.6: Write service tests
 
-- [ ] Task 2: Create Parse Queue Types (AC: 1, 2, 3)
-  - [ ] 2.1: Create `/apps/api/internal/models/parse_job.go`
-  - [ ] 2.2: Define `ParseJob` struct (ID, TorrentHash, FilePath, Status, CreatedAt, CompletedAt, Error)
-  - [ ] 2.3: Define `ParseJobStatus` enum (pending, processing, completed, failed, skipped)
-  - [ ] 2.4: Write type tests
+- [x] Task 2: Create Parse Queue Types (AC: 1, 2, 3)
+  - [x] 2.1: Create `/apps/api/internal/models/parse_job.go`
+  - [x] 2.2: Define `ParseJob` struct (ID, TorrentHash, FilePath, Status, CreatedAt, CompletedAt, Error)
+  - [x] 2.3: Define `ParseJobStatus` enum (pending, processing, completed, failed, skipped)
+  - [x] 2.4: Write type tests
 
-- [ ] Task 3: Create Parse Job Repository (AC: 1, 2, 3)
-  - [ ] 3.1: Create `/apps/api/internal/repository/parse_job_repository.go`
-  - [ ] 3.2: Add migration for `parse_jobs` table
-  - [ ] 3.3: Implement `CreateJob(ctx, job) error`
-  - [ ] 3.4: Implement `GetJobByTorrentHash(ctx, hash) (*ParseJob, error)`
-  - [ ] 3.5: Implement `UpdateJobStatus(ctx, id, status, error) error`
-  - [ ] 3.6: Implement `GetPendingJobs(ctx) ([]ParseJob, error)`
-  - [ ] 3.7: Write repository tests
+- [x] Task 3: Create Parse Job Repository (AC: 1, 2, 3)
+  - [x] 3.1: Create `/apps/api/internal/repository/parse_job_repository.go`
+  - [x] 3.2: Add migration for `parse_jobs` table
+  - [x] 3.3: Implement `CreateJob(ctx, job) error`
+  - [x] 3.4: Implement `GetJobByTorrentHash(ctx, hash) (*ParseJob, error)`
+  - [x] 3.5: Implement `UpdateJobStatus(ctx, id, status, error) error`
+  - [x] 3.6: Implement `GetPendingJobs(ctx) ([]ParseJob, error)`
+  - [x] 3.7: Write repository tests
 
-- [ ] Task 4: Create Parse Queue Service (AC: 1, 2, 3, 4)
-  - [ ] 4.1: Create `/apps/api/internal/services/parse_queue_service.go`
-  - [ ] 4.2: Define `ParseQueueServiceInterface`
-  - [ ] 4.3: Implement `QueueParseJob(ctx, torrent) (*ParseJob, error)`
-  - [ ] 4.4: Implement `ProcessNextJob(ctx) error` - run parsing pipeline
-  - [ ] 4.5: Implement `GetJobStatus(ctx, jobId) (*ParseJob, error)`
-  - [ ] 4.6: Integrate with Epic 3 parsing pipeline
-  - [ ] 4.7: Write service tests
+- [x] Task 4: Create Parse Queue Service (AC: 1, 2, 3, 4)
+  - [x] 4.1: Create `/apps/api/internal/services/parse_queue_service.go`
+  - [x] 4.2: Define `ParseQueueServiceInterface`
+  - [x] 4.3: Implement `QueueParseJob(ctx, torrent) (*ParseJob, error)`
+  - [x] 4.4: Implement `ProcessNextJob(ctx) error` - run parsing pipeline
+  - [x] 4.5: Implement `GetJobStatus(ctx, jobId) (*ParseJob, error)`
+  - [x] 4.6: Integrate with Epic 3 parsing pipeline
+  - [x] 4.7: Write service tests
 
-- [ ] Task 5: Create Background Worker (AC: 4)
-  - [ ] 5.1: Create `/apps/api/internal/workers/parse_worker.go`
-  - [ ] 5.2: Implement worker pool (3-5 concurrent workers per ARCH-5)
-  - [ ] 5.3: Poll for new completed downloads
-  - [ ] 5.4: Process parse queue
-  - [ ] 5.5: Handle errors with retry logic
-  - [ ] 5.6: Write worker tests
+- [x] Task 5: Create Background Worker (AC: 4)
+  - [x] 5.1: Create `/apps/api/internal/workers/parse_worker.go`
+  - [x] 5.2: Implement worker pool (3-5 concurrent workers per ARCH-5)
+  - [x] 5.3: Poll for new completed downloads
+  - [x] 5.4: Process parse queue
+  - [x] 5.5: Handle errors with retry logic
+  - [x] 5.6: Write worker tests
 
-- [ ] Task 6: Create Parse Status API (AC: 1, 2, 3)
-  - [ ] 6.1: Create `GET /api/v1/downloads/:hash/parse-status` endpoint
-  - [ ] 6.2: Return parse job status for a torrent
-  - [ ] 6.3: Create `GET /api/v1/parse-jobs` endpoint for all jobs
-  - [ ] 6.4: Add Swagger documentation
-  - [ ] 6.5: Write handler tests
+- [x] Task 6: Create Parse Status API (AC: 1, 2, 3)
+  - [x] 6.1: Create `GET /api/v1/downloads/:hash/parse-status` endpoint
+  - [x] 6.2: Return parse job status for a torrent
+  - [x] 6.3: Create `GET /api/v1/parse-jobs` endpoint for all jobs
+  - [x] 6.4: Add Swagger documentation
+  - [x] 6.5: Write handler tests
 
-- [ ] Task 7: Extend Download Response with Parse Status (AC: 1, 2, 3)
-  - [ ] 7.1: Add `parseStatus` field to download response
-  - [ ] 7.2: Include parse job info (status, error message)
-  - [ ] 7.3: Update Swagger documentation
+- [x] Task 7: Extend Download Response with Parse Status (AC: 1, 2, 3)
+  - [x] 7.1: Add `parseStatus` field to download response
+  - [x] 7.2: Include parse job info (status, error message)
+  - [x] 7.3: Update Swagger documentation
 
-- [ ] Task 8: Create Parse Status UI Components (AC: 1, 2, 3)
-  - [ ] 8.1: Create `/apps/web/src/components/downloads/ParseStatusBadge.tsx`
-  - [ ] 8.2: Show "Parsing...", "Parsed", "Failed", "In Library" states
-  - [ ] 8.3: Create `/apps/web/src/components/downloads/ParseFailedActions.tsx`
-  - [ ] 8.4: Show retry and manual search buttons on failure
-  - [ ] 8.5: Write component tests
+- [x] Task 8: Create Parse Status UI Components (AC: 1, 2, 3)
+  - [x] 8.1: Create `/apps/web/src/components/downloads/DownloadParseStatusBadge.tsx`
+  - [x] 8.2: Show "Parsing...", "Parsed", "Failed", "In Library" states
+  - [x] 8.3: Create `/apps/web/src/components/downloads/ParseFailedActions.tsx`
+  - [x] 8.4: Show retry and manual search buttons on failure
+  - [x] 8.5: Write component tests
 
-- [ ] Task 9: Update Download Item with Parse Status (AC: 1, 2, 3)
-  - [ ] 9.1: Integrate ParseStatusBadge in DownloadItem
-  - [ ] 9.2: Show manual action button when parsing failed
-  - [ ] 9.3: Link to manual search (from Epic 3)
+- [x] Task 9: Update Download Item with Parse Status (AC: 1, 2, 3)
+  - [x] 9.1: Integrate ParseStatusBadge in DownloadItem
+  - [x] 9.2: Show manual action button when parsing failed
+  - [x] 9.3: Link to manual search (from Epic 3)
 
-- [ ] Task 10: Create Parse Completion Notification (AC: 2)
-  - [ ] 10.1: Create `/apps/web/src/components/notifications/ParseCompleteToast.tsx`
-  - [ ] 10.2: Show notification when parsing completes
-  - [ ] 10.3: Include media poster and title
-  - [ ] 10.4: Write component tests
+- [x] Task 10: Create Parse Completion Notification (AC: 2)
+  - [x] 10.1: Create `/apps/web/src/components/notifications/ParseCompleteToast.tsx`
+  - [x] 10.2: Show notification when parsing completes
+  - [x] 10.3: Include media poster and title
+  - [x] 10.4: Write component tests
 
-- [ ] Task 11: E2E Tests (AC: all)
-  - [ ] 11.1: Create `/e2e/parse-trigger.spec.ts`
-  - [ ] 11.2: Test completion detection flow
-  - [ ] 11.3: Test successful parsing notification
-  - [ ] 11.4: Test failed parsing with manual action
-  - [ ] 11.5: Test duplicate detection
+- [x] Task 11: E2E Tests (AC: all)
+  - [x] 11.1: Create `/tests/e2e/parse-trigger.spec.ts`
+  - [x] 11.2: Test completion detection flow
+  - [x] 11.3: Test successful parsing notification
+  - [x] 11.4: Test failed parsing with manual action
+  - [x] 11.5: Test duplicate detection
 
 ## Dev Notes
 

@@ -85,6 +85,14 @@ func (m *MockMovieRepository) Upsert(ctx context.Context, movie *models.Movie) e
 	return args.Error(0)
 }
 
+func (m *MockMovieRepository) FindByFilePath(ctx context.Context, filePath string) (*models.Movie, error) {
+	args := m.Called(ctx, filePath)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.Movie), args.Error(1)
+}
+
 // Verify mock implements interface
 var _ repository.MovieRepositoryInterface = (*MockMovieRepository)(nil)
 

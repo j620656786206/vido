@@ -17,6 +17,14 @@ export type TorrentStatus =
 export type SortField = 'added_on' | 'name' | 'progress' | 'status';
 export type SortOrder = 'asc' | 'desc';
 
+export type ParseJobStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'skipped';
+
+export interface DownloadParseStatus {
+  status: ParseJobStatus;
+  errorMessage?: string;
+  mediaId?: string;
+}
+
 export interface Download {
   hash: string;
   name: string;
@@ -34,6 +42,7 @@ export interface Download {
   uploaded: number;
   ratio: number;
   savePath: string;
+  parseStatus?: DownloadParseStatus;
 }
 
 export interface DownloadDetails extends Download {

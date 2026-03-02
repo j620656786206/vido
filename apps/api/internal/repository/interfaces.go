@@ -42,6 +42,9 @@ type MovieRepositoryInterface interface {
 	// Upsert creates or updates a movie based on TMDb ID
 	// If a movie with the same TMDb ID exists, it updates the existing record
 	Upsert(ctx context.Context, movie *models.Movie) error
+
+	// FindByFilePath retrieves a movie by its file path (for duplicate detection)
+	FindByFilePath(ctx context.Context, filePath string) (*models.Movie, error)
 }
 
 // SeriesRepositoryInterface defines the contract for TV series data access operations.
@@ -225,6 +228,33 @@ type RetryRepositoryInterface interface {
 	IncrementFailed(ctx context.Context, taskType string) error
 	IncrementExhausted(ctx context.Context, taskType string) error
 	GetStats(ctx context.Context) (*retry.RetryStats, error)
+}
+
+// ParseJobRepositoryInterface defines the contract for parse job data access operations.
+type ParseJobRepositoryInterface interface {
+	// Create inserts a new parse job into the database
+	Create(ctx context.Context, job *models.ParseJob) error
+
+	// GetByID retrieves a parse job by its primary key
+	GetByID(ctx context.Context, id string) (*models.ParseJob, error)
+
+	// GetByTorrentHash retrieves a parse job by torrent hash
+	GetByTorrentHash(ctx context.Context, hash string) (*models.ParseJob, error)
+
+	// GetPending retrieves pending parse jobs with a limit
+	GetPending(ctx context.Context, limit int) ([]*models.ParseJob, error)
+
+	// UpdateStatus updates a parse job's status and optional error message
+	UpdateStatus(ctx context.Context, id string, status models.ParseJobStatus, errMsg string) error
+
+	// Update modifies an existing parse job in the database
+	Update(ctx context.Context, job *models.ParseJob) error
+
+	// Delete removes a parse job from the database by ID
+	Delete(ctx context.Context, id string) error
+
+	// ListAll retrieves all parse jobs ordered by creation time descending
+	ListAll(ctx context.Context, limit int) ([]*models.ParseJob, error)
 }
 
 // RetryItem is imported from retry package for interface definition

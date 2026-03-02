@@ -82,4 +82,38 @@ describe('DownloadItem', () => {
     render(<DownloadItem download={mockDownload} expanded={false} onToggleExpand={() => {}} />);
     expect(screen.getByText('下載中')).toBeTruthy();
   });
+
+  it('renders parse status badge when parseStatus is present', () => {
+    const downloadWithParse: Download = {
+      ...mockDownload,
+      status: 'completed',
+      progress: 1,
+      parseStatus: { status: 'completed', mediaId: 'media-123' },
+    };
+    render(
+      <DownloadItem download={downloadWithParse} expanded={false} onToggleExpand={() => {}} />
+    );
+    expect(screen.getByTestId('download-parse-status-badge')).toBeTruthy();
+    expect(screen.getByText('已入庫')).toBeTruthy();
+  });
+
+  it('does not render parse status badge when parseStatus is absent', () => {
+    render(
+      <DownloadItem download={mockDownload} expanded={false} onToggleExpand={() => {}} />
+    );
+    expect(screen.queryByTestId('download-parse-status-badge')).toBeNull();
+  });
+
+  it('shows parse status badge for failed parsing', () => {
+    const downloadWithFailed: Download = {
+      ...mockDownload,
+      status: 'completed',
+      progress: 1,
+      parseStatus: { status: 'failed', errorMessage: 'parse error' },
+    };
+    render(
+      <DownloadItem download={downloadWithFailed} expanded={false} onToggleExpand={() => {}} />
+    );
+    expect(screen.getByText('解析失敗')).toBeTruthy();
+  });
 });

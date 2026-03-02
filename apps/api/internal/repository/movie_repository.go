@@ -216,6 +216,53 @@ func (r *MovieRepository) FindByIMDbID(ctx context.Context, imdbID string) (*mod
 	return movie, nil
 }
 
+// FindByFilePath retrieves a movie by its file path (for duplicate detection)
+func (r *MovieRepository) FindByFilePath(ctx context.Context, filePath string) (*models.Movie, error) {
+	query := `
+		SELECT
+			id, title, original_title, release_date, genres, rating,
+			overview, poster_path, backdrop_path, runtime, original_language,
+			status, imdb_id, tmdb_id, created_at, updated_at
+		FROM movies
+		WHERE file_path = ?
+	`
+
+	movie := &models.Movie{}
+	var genresJSON string
+
+	err := r.db.QueryRowContext(ctx, query, filePath).Scan(
+		&movie.ID,
+		&movie.Title,
+		&movie.OriginalTitle,
+		&movie.ReleaseDate,
+		&genresJSON,
+		&movie.Rating,
+		&movie.Overview,
+		&movie.PosterPath,
+		&movie.BackdropPath,
+		&movie.Runtime,
+		&movie.OriginalLanguage,
+		&movie.Status,
+		&movie.IMDbID,
+		&movie.TMDbID,
+		&movie.CreatedAt,
+		&movie.UpdatedAt,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to find movie by file_path: %w", err)
+	}
+
+	if err := movie.ScanGenres(genresJSON); err != nil {
+		return nil, fmt.Errorf("failed to parse genres: %w", err)
+	}
+
+	return movie, nil
+}
+
 // Update modifies an existing movie in the database
 func (r *MovieRepository) Update(ctx context.Context, movie *models.Movie) error {
 	if movie == nil {

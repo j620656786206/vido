@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/qbittorrent"
 )
 
@@ -672,4 +673,212 @@ func TestDownloadHandler_GetDownloadCounts_VerifyResponseStructure(t *testing.T)
 		assert.Contains(t, dataMap, field)
 	}
 	mockService.AssertExpectations(t)
+}
+
+// --- Parse Status Enrichment Tests ---
+
+func setupDownloadRouterWithParseQueue(handler *DownloadHandler) *gin.Engine {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	apiV1 := router.Group("/api/v1")
+	handler.RegisterRoutes(apiV1)
+	return router
+}
+
+func TestDownloadHandler_ListDownloads_WithParseStatus(t *testing.T) {
+	mockDLService := new(MockDownloadService)
+	mockPQService := new(MockParseQueueService)
+
+	addedOn := time.Date(2026, 1, 15, 10, 0, 0, 0, time.UTC)
+	torrents := []qbittorrent.Torrent{
+		{
+			Hash:    "completed-hash",
+			Name:    "Movie.mkv",
+			Status:  qbittorrent.StatusCompleted,
+			AddedOn: addedOn,
+		},
+		{
+			Hash:    "downloading-hash",
+			Name:    "Other.mkv",
+			Status:  qbittorrent.StatusDownloading,
+			AddedOn: addedOn,
+		},
+	}
+	mockDLService.On("GetAllDownloads", mock.Anything, "all", "added_on", "desc").Return(torrents, nil)
+
+	mediaID := "media-123"
+	mockPQService.On("GetJobStatus", mock.Anything, "completed-hash").Return(&models.ParseJob{
+		ID:          "job-1",
+		TorrentHash: "completed-hash",
+		Status:      models.ParseJobCompleted,
+		MediaID:     &mediaID,
+	}, nil)
+	// downloading-hash should NOT be looked up (not completed/seeding)
+
+	handler := NewDownloadHandler(mockDLService, mockPQService)
+	router := setupDownloadRouterWithParseQueue(handler)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/api/v1/downloads", nil)
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var response APIResponse
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+	assert.True(t, response.Success)
+
+	dataSlice, ok := response.Data.([]interface{})
+	require.True(t, ok)
+	require.Len(t, dataSlice, 2)
+
+	// First item (completed) should have parseStatus
+	item0, ok := dataSlice[0].(map[string]interface{})
+	require.True(t, ok)
+	assert.Equal(t, "completed-hash", item0["hash"])
+	parseStatus, ok := item0["parseStatus"].(map[string]interface{})
+	require.True(t, ok)
+	assert.Equal(t, "completed", parseStatus["status"])
+	assert.Equal(t, "media-123", parseStatus["mediaId"])
+
+	// Second item (downloading) should NOT have parseStatus
+	item1, ok := dataSlice[1].(map[string]interface{})
+	require.True(t, ok)
+	assert.Equal(t, "downloading-hash", item1["hash"])
+	assert.Nil(t, item1["parseStatus"])
+
+	mockDLService.AssertExpectations(t)
+	mockPQService.AssertExpectations(t)
+	// Verify downloading hash was never looked up
+	mockPQService.AssertNotCalled(t, "GetJobStatus", mock.Anything, "downloading-hash")
+}
+
+func TestDownloadHandler_ListDownloads_WithParseStatus_NoJob(t *testing.T) {
+	mockDLService := new(MockDownloadService)
+	mockPQService := new(MockParseQueueService)
+
+	addedOn := time.Date(2026, 1, 15, 10, 0, 0, 0, time.UTC)
+	torrents := []qbittorrent.Torrent{
+		{
+			Hash:    "completed-hash",
+			Name:    "Movie.mkv",
+			Status:  qbittorrent.StatusCompleted,
+			AddedOn: addedOn,
+		},
+	}
+	mockDLService.On("GetAllDownloads", mock.Anything, "all", "added_on", "desc").Return(torrents, nil)
+	mockPQService.On("GetJobStatus", mock.Anything, "completed-hash").Return(nil, nil)
+
+	handler := NewDownloadHandler(mockDLService, mockPQService)
+	router := setupDownloadRouterWithParseQueue(handler)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/api/v1/downloads", nil)
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var response APIResponse
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+
+	dataSlice, ok := response.Data.([]interface{})
+	require.True(t, ok)
+	require.Len(t, dataSlice, 1)
+
+	item, ok := dataSlice[0].(map[string]interface{})
+	require.True(t, ok)
+	// No parse job exists, so parseStatus should be nil/absent
+	assert.Nil(t, item["parseStatus"])
+
+	mockDLService.AssertExpectations(t)
+	mockPQService.AssertExpectations(t)
+}
+
+func TestDownloadHandler_ListDownloads_WithParseStatus_Failed(t *testing.T) {
+	mockDLService := new(MockDownloadService)
+	mockPQService := new(MockParseQueueService)
+
+	addedOn := time.Date(2026, 1, 15, 10, 0, 0, 0, time.UTC)
+	torrents := []qbittorrent.Torrent{
+		{
+			Hash:    "failed-hash",
+			Name:    "Unknown.mkv",
+			Status:  qbittorrent.StatusCompleted,
+			AddedOn: addedOn,
+		},
+	}
+	mockDLService.On("GetAllDownloads", mock.Anything, "all", "added_on", "desc").Return(torrents, nil)
+
+	errMsg := "could not parse filename"
+	mockPQService.On("GetJobStatus", mock.Anything, "failed-hash").Return(&models.ParseJob{
+		ID:           "job-2",
+		TorrentHash:  "failed-hash",
+		Status:       models.ParseJobFailed,
+		ErrorMessage: &errMsg,
+	}, nil)
+
+	handler := NewDownloadHandler(mockDLService, mockPQService)
+	router := setupDownloadRouterWithParseQueue(handler)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/api/v1/downloads", nil)
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var response APIResponse
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+
+	dataSlice, ok := response.Data.([]interface{})
+	require.True(t, ok)
+	item, ok := dataSlice[0].(map[string]interface{})
+	require.True(t, ok)
+
+	parseStatus, ok := item["parseStatus"].(map[string]interface{})
+	require.True(t, ok)
+	assert.Equal(t, "failed", parseStatus["status"])
+	assert.Equal(t, "could not parse filename", parseStatus["errorMessage"])
+
+	mockDLService.AssertExpectations(t)
+	mockPQService.AssertExpectations(t)
+}
+
+func TestDownloadHandler_ListDownloads_WithoutParseQueueService(t *testing.T) {
+	// When no parse queue service is provided, response should be plain torrents
+	mockDLService := new(MockDownloadService)
+
+	addedOn := time.Date(2026, 1, 15, 10, 0, 0, 0, time.UTC)
+	torrents := []qbittorrent.Torrent{
+		{
+			Hash:    "abc123",
+			Name:    "Movie.mkv",
+			Status:  qbittorrent.StatusCompleted,
+			AddedOn: addedOn,
+		},
+	}
+	mockDLService.On("GetAllDownloads", mock.Anything, "all", "added_on", "desc").Return(torrents, nil)
+
+	handler := NewDownloadHandler(mockDLService) // No parse queue service
+	router := setupDownloadRouterWithParseQueue(handler)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/api/v1/downloads", nil)
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var response APIResponse
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+	assert.True(t, response.Success)
+
+	// Should still work, returning plain torrent data
+	dataSlice, ok := response.Data.([]interface{})
+	require.True(t, ok)
+	require.Len(t, dataSlice, 1)
+
+	mockDLService.AssertExpectations(t)
 }
