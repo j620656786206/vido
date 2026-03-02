@@ -120,9 +120,7 @@ describe('DownloadFilterTabs', () => {
       seeding: 9999,
       error: 0,
     };
-    render(
-      <DownloadFilterTabs activeFilter="all" counts={largeCounts} onFilterChange={vi.fn()} />
-    );
+    render(<DownloadFilterTabs activeFilter="all" counts={largeCounts} onFilterChange={vi.fn()} />);
 
     // THEN: large numbers render correctly
     expect(screen.getByText('99999')).toBeInTheDocument();

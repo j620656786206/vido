@@ -44,30 +44,32 @@ export function RecentMediaPanel({ className }: RecentMediaPanelProps) {
         id="recent-media-content"
         className={cn(
           'overflow-hidden transition-all duration-300',
-          isExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0 lg:max-h-none lg:opacity-100'
+          isExpanded
+            ? 'max-h-[2000px] opacity-100'
+            : 'max-h-0 opacity-0 lg:max-h-none lg:opacity-100'
         )}
       >
         {/* Content */}
         <div className="px-4 py-3">
-        {isLoading ? (
-          <div className="grid grid-cols-4 gap-3" data-testid="recent-media-loading">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="animate-pulse">
-                <div className="aspect-[2/3] rounded-lg bg-slate-700" />
-                <div className="mt-1 h-3 w-3/4 rounded bg-slate-700" />
-                <div className="mt-1 h-3 w-1/2 rounded bg-slate-700" />
-              </div>
-            ))}
-          </div>
-        ) : recentMedia?.length === 0 ? (
-          <div className="py-6 text-center text-sm text-slate-400">媒體庫中還沒有內容</div>
-        ) : (
-          <div className="grid grid-cols-4 gap-3">
-            {recentMedia?.map((media) => (
-              <MediaCard key={media.id} media={media} />
-            ))}
-          </div>
-        )}
+          {isLoading ? (
+            <div className="grid grid-cols-4 gap-3" data-testid="recent-media-loading">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="animate-pulse">
+                  <div className="aspect-[2/3] rounded-lg bg-slate-700" />
+                  <div className="mt-1 h-3 w-3/4 rounded bg-slate-700" />
+                  <div className="mt-1 h-3 w-1/2 rounded bg-slate-700" />
+                </div>
+              ))}
+            </div>
+          ) : recentMedia?.length === 0 ? (
+            <div className="py-6 text-center text-sm text-slate-400">媒體庫中還沒有內容</div>
+          ) : (
+            <div className="grid grid-cols-4 gap-3">
+              {recentMedia?.map((media) => (
+                <MediaCard key={media.id} media={media} />
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Footer */}

@@ -60,7 +60,9 @@ export function DownloadPanel({ className }: DownloadPanelProps) {
         id="download-panel-content"
         className={cn(
           'overflow-hidden transition-all duration-300',
-          isExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0 lg:max-h-none lg:opacity-100'
+          isExpanded
+            ? 'max-h-[2000px] opacity-100'
+            : 'max-h-0 opacity-0 lg:max-h-none lg:opacity-100'
         )}
       >
         {/* Content */}
@@ -88,7 +90,10 @@ export function DownloadPanel({ className }: DownloadPanelProps) {
 
         {/* Footer */}
         <div className="border-t border-slate-700 px-4 py-2">
-          <Link to="/downloads" className="text-sm text-blue-400 hover:text-blue-300 hover:underline">
+          <Link
+            to="/downloads"
+            className="text-sm text-blue-400 hover:text-blue-300 hover:underline"
+          >
             查看全部下載 →
           </Link>
         </div>
