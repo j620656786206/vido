@@ -926,3 +926,11 @@ export function ParseFailedActions({ torrentHash, fileName }: ParseFailedActions
 ### Change Log
 
 - **2026-03-03** (Code Review): Fixed H1 MovieRepository.Create() missing columns (file_path, parse_status, metadata_source, vote_average). Fixed H3 seenHashes memory leak with maxSeenHashes cap. Fixed H4 swallowed UpdateStatus errors. Fixed H5 SavePath→full file path in CompletionDetector and QueueParseJob. Added M2 sentinel errors (ErrJobNotRetryable, ErrMaxRetriesReached). Added M3 MaxRetryAttempts limit. Fixed M4 weak test assertions (toBeTruthy→toBeInTheDocument). Fixed M5 conditional manual search button render. Fixed M6 URL parameter encoding. Fixed M7 DB errors now skip torrent instead of treating as new.
+
+### Technical Debt (for Epic 4 Retrospective)
+
+The following issues were identified during code review but deferred as out-of-scope:
+
+- **[TD-H2] TV shows stored as Movie** — `parse_queue_service.go:146` always creates `models.Movie` regardless of `mediaType`. When Series entity support is fully built out, `ProcessNextJob` should branch on mediaType to create the correct entity. Low impact now since TV parsing pipeline is not yet active.
+- **[TD-M1] N+1 query in download parse status enrichment** — `download_handler.go:81-97` calls `GetJobStatus` individually per completed torrent. Should add `GetByTorrentHashes(ctx, []string{...})` batch method to `ParseJobRepositoryInterface` when download volume justifies the optimization.
+- **[TD-M8] E2E missing core polling flow test** — `parse-trigger.spec.ts` only tests static states. No test for the critical scenario: download transitions from `downloading` → `completed` during polling and parse badge appears. Requires mock polling infrastructure or WebSocket support.
