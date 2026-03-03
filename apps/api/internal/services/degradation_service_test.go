@@ -14,10 +14,11 @@ import (
 // MockHealthChecker for testing
 type MockHealthChecker struct{}
 
-func (m *MockHealthChecker) CheckTMDb(ctx context.Context) error      { return nil }
-func (m *MockHealthChecker) CheckDouban(ctx context.Context) error    { return nil }
-func (m *MockHealthChecker) CheckWikipedia(ctx context.Context) error { return nil }
-func (m *MockHealthChecker) CheckAI(ctx context.Context) error        { return nil }
+func (m *MockHealthChecker) CheckTMDb(ctx context.Context) error        { return nil }
+func (m *MockHealthChecker) CheckDouban(ctx context.Context) error      { return nil }
+func (m *MockHealthChecker) CheckWikipedia(ctx context.Context) error   { return nil }
+func (m *MockHealthChecker) CheckAI(ctx context.Context) error          { return nil }
+func (m *MockHealthChecker) CheckQBittorrent(ctx context.Context) error { return nil }
 
 func TestNewDegradationService(t *testing.T) {
 	checker := &MockHealthChecker{}

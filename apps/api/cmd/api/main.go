@@ -165,6 +165,15 @@ func main() {
 	doubanPingable := health.NewConfigurablePingable("Douban", cfg.EnableDouban)
 	wikipediaPingable := health.NewConfigurablePingable("Wikipedia", cfg.EnableWikipedia)
 	healthChecker := health.NewServiceHealthChecker(tmdbPingable, doubanPingable, wikipediaPingable, aiPingable)
+	// Wire qBittorrent health check via Ping method on client (Story 4.6)
+	qbHealthPingable := health.NewQBPingable(
+		qbittorrentService.IsConfigured,
+		func(ctx context.Context) error {
+			_, err := qbittorrentService.TestConnection(ctx)
+			return err
+		},
+	)
+	healthChecker.SetQBittorrent(qbHealthPingable)
 	healthMonitor := health.NewHealthMonitor(healthChecker)
 	degradationService := services.NewDegradationServiceWithCache(healthMonitor, offlineCache)
 	slog.Info("Health monitoring initialized with service health checks and offline cache")
@@ -287,6 +296,7 @@ func main() {
 	learningHandler := handlers.NewLearningHandler(learningService)
 	retryHandler := handlers.NewRetryHandler(retryService)
 	serviceHealthHandler := handlers.NewServiceHealthHandler(degradationService)
+	serviceHealthHandler.SetHistoryRepo(repos.ConnectionHistory)
 	qbittorrentHandler := handlers.NewQBittorrentHandler(qbittorrentService)
 	downloadHandler := handlers.NewDownloadHandler(downloadService)
 	recentMediaHandler := handlers.NewRecentMediaHandler(movieService, seriesService)
@@ -325,6 +335,8 @@ func main() {
 		recentMediaHandler.RegisterRoutes(apiV1)
 		// Health services endpoint (Story 3.12 - Graceful Degradation)
 		apiV1.GET("/health/services", serviceHealthHandler.GetServicesHealth)
+		// Connection history endpoint (Story 4.6 - Connection Health Monitoring)
+		apiV1.GET("/health/services/:service/history", serviceHealthHandler.GetConnectionHistory)
 	}
 	slog.Info("API routes registered", "prefix", "/api/v1")
 
@@ -335,6 +347,10 @@ func main() {
 	} else {
 		slog.Info("Retry scheduler started")
 	}
+
+	// Start qBittorrent health monitoring with 30s interval (Story 4.6 - NFR-R6)
+	go healthMonitor.StartQBMonitoring(ctx)
+	slog.Info("qBittorrent health monitoring started (30s interval)")
 
 	// Start server in a goroutine for graceful shutdown
 	addr := cfg.GetAddress()

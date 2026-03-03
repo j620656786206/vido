@@ -25,10 +25,11 @@ const (
 type ServiceName string
 
 const (
-	ServiceNameTMDb      ServiceName = "tmdb"
-	ServiceNameDouban    ServiceName = "douban"
-	ServiceNameWikipedia ServiceName = "wikipedia"
-	ServiceNameAI        ServiceName = "ai"
+	ServiceNameTMDb         ServiceName = "tmdb"
+	ServiceNameDouban       ServiceName = "douban"
+	ServiceNameWikipedia    ServiceName = "wikipedia"
+	ServiceNameAI           ServiceName = "ai"
+	ServiceNameQBittorrent  ServiceName = "qbittorrent"
 )
 
 // Service status constants
@@ -133,19 +134,21 @@ type FieldAvailability struct {
 
 // ServicesHealth holds health status for all external services
 type ServicesHealth struct {
-	TMDb      *ServiceHealth `json:"tmdb"`
-	Douban    *ServiceHealth `json:"douban"`
-	Wikipedia *ServiceHealth `json:"wikipedia"`
-	AI        *ServiceHealth `json:"ai"`
+	TMDb        *ServiceHealth `json:"tmdb"`
+	Douban      *ServiceHealth `json:"douban"`
+	Wikipedia   *ServiceHealth `json:"wikipedia"`
+	AI          *ServiceHealth `json:"ai"`
+	QBittorrent *ServiceHealth `json:"qbittorrent"`
 }
 
 // NewServicesHealth creates a new ServicesHealth with all services healthy
 func NewServicesHealth() *ServicesHealth {
 	return &ServicesHealth{
-		TMDb:      NewServiceHealth(string(ServiceNameTMDb), "TMDb API"),
-		Douban:    NewServiceHealth(string(ServiceNameDouban), "Douban Scraper"),
-		Wikipedia: NewServiceHealth(string(ServiceNameWikipedia), "Wikipedia API"),
-		AI:        NewServiceHealth(string(ServiceNameAI), "AI Parser"),
+		TMDb:        NewServiceHealth(string(ServiceNameTMDb), "TMDb API"),
+		Douban:      NewServiceHealth(string(ServiceNameDouban), "Douban Scraper"),
+		Wikipedia:   NewServiceHealth(string(ServiceNameWikipedia), "Wikipedia API"),
+		AI:          NewServiceHealth(string(ServiceNameAI), "AI Parser"),
+		QBittorrent: NewServiceHealth(string(ServiceNameQBittorrent), "qBittorrent"),
 	}
 }
 
@@ -160,6 +163,8 @@ func (s *ServicesHealth) GetService(name ServiceName) *ServiceHealth {
 		return s.Wikipedia
 	case ServiceNameAI:
 		return s.AI
+	case ServiceNameQBittorrent:
+		return s.QBittorrent
 	default:
 		return nil
 	}
@@ -167,7 +172,7 @@ func (s *ServicesHealth) GetService(name ServiceName) *ServiceHealth {
 
 // AllServices returns all service health statuses as a slice
 func (s *ServicesHealth) AllServices() []*ServiceHealth {
-	return []*ServiceHealth{s.TMDb, s.Douban, s.Wikipedia, s.AI}
+	return []*ServiceHealth{s.TMDb, s.Douban, s.Wikipedia, s.AI, s.QBittorrent}
 }
 
 // HealthStatusResponse represents the API response for health status endpoint

@@ -110,8 +110,8 @@ export const downloadService = {
     const filter = params?.filter || 'all';
     const sort = params?.sort || 'added_on';
     const order = params?.order || 'desc';
-    const params = new URLSearchParams({ filter, sort, order });
-    return fetchApi<Download[]>(`/downloads?${params.toString()}`);
+    const searchParams = new URLSearchParams({ filter, sort, order });
+    return fetchApi<Download[]>(`/downloads?${searchParams.toString()}`);
   },
 
   async getDownloadDetails(hash: string): Promise<DownloadDetails> {

@@ -14,11 +14,12 @@ import (
 
 // MockHealthChecker is a mock implementation of HealthChecker for testing
 type MockHealthChecker struct {
-	mu           sync.RWMutex
-	tmdbErr      error
-	doubanErr    error
-	wikipediaErr error
-	aiErr        error
+	mu             sync.RWMutex
+	tmdbErr        error
+	doubanErr      error
+	wikipediaErr   error
+	aiErr          error
+	qbittorrentErr error
 }
 
 func (m *MockHealthChecker) CheckTMDb(ctx context.Context) error {
@@ -45,6 +46,12 @@ func (m *MockHealthChecker) CheckAI(ctx context.Context) error {
 	return m.aiErr
 }
 
+func (m *MockHealthChecker) CheckQBittorrent(ctx context.Context) error {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.qbittorrentErr
+}
+
 func (m *MockHealthChecker) SetTMDbError(err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -67,6 +74,12 @@ func (m *MockHealthChecker) SetAIError(err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.aiErr = err
+}
+
+func (m *MockHealthChecker) SetQBittorrentError(err error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.qbittorrentErr = err
 }
 
 func TestNewHealthMonitor(t *testing.T) {
@@ -114,7 +127,7 @@ func TestHealthMonitor_GetDegradationLevel_MultipleDown(t *testing.T) {
 	checker := &MockHealthChecker{}
 	monitor := NewHealthMonitor(checker)
 
-	// Simulate 3 services down (more than half of 4)
+	// Simulate 3 services down (more than half of 5)
 	for i := 0; i < 3; i++ {
 		monitor.services.TMDb.RecordError("error")
 		monitor.services.Douban.RecordError("error")
@@ -135,6 +148,7 @@ func TestHealthMonitor_GetDegradationLevel_AllDown(t *testing.T) {
 		monitor.services.Douban.RecordError("error")
 		monitor.services.Wikipedia.RecordError("error")
 		monitor.services.AI.RecordError("error")
+		monitor.services.QBittorrent.RecordError("error")
 	}
 
 	level := monitor.GetDegradationLevel()
@@ -169,6 +183,7 @@ func TestHealthMonitor_GetAllServices(t *testing.T) {
 	assert.NotNil(t, services.Douban)
 	assert.NotNil(t, services.Wikipedia)
 	assert.NotNil(t, services.AI)
+	assert.NotNil(t, services.QBittorrent)
 }
 
 func TestHealthMonitor_CheckAllServices(t *testing.T) {
@@ -183,6 +198,7 @@ func TestHealthMonitor_CheckAllServices(t *testing.T) {
 	assert.Equal(t, models.ServiceStatusHealthy, monitor.services.Douban.Status)
 	assert.Equal(t, models.ServiceStatusHealthy, monitor.services.Wikipedia.Status)
 	assert.Equal(t, models.ServiceStatusHealthy, monitor.services.AI.Status)
+	assert.Equal(t, models.ServiceStatusHealthy, monitor.services.QBittorrent.Status)
 }
 
 func TestHealthMonitor_CheckAllServices_WithErrors(t *testing.T) {
@@ -286,4 +302,44 @@ func TestHealthMonitor_GenerateStatusMessage(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestHealthMonitor_GetServiceHealth_QBittorrent(t *testing.T) {
+	checker := &MockHealthChecker{}
+	monitor := NewHealthMonitor(checker)
+
+	health := monitor.GetServiceHealth(models.ServiceNameQBittorrent)
+	require.NotNil(t, health)
+	assert.Equal(t, "qbittorrent", health.Name)
+	assert.Equal(t, models.ServiceStatusHealthy, health.Status)
+}
+
+func TestHealthMonitor_UpdateServiceHealth_QBittorrent(t *testing.T) {
+	checker := &MockHealthChecker{}
+	monitor := NewHealthMonitor(checker)
+
+	// Record an error
+	monitor.UpdateServiceHealth(models.ServiceNameQBittorrent, errors.New("connection refused"))
+	assert.Equal(t, models.ServiceStatusDegraded, monitor.services.QBittorrent.Status)
+	assert.Equal(t, "connection refused", monitor.services.QBittorrent.Message)
+
+	// Record success - should recover
+	monitor.UpdateServiceHealth(models.ServiceNameQBittorrent, nil)
+	assert.Equal(t, models.ServiceStatusHealthy, monitor.services.QBittorrent.Status)
+}
+
+func TestHealthMonitor_CheckAllServices_QBittorrentError(t *testing.T) {
+	checker := &MockHealthChecker{}
+	checker.SetQBittorrentError(errors.New("qBittorrent unreachable"))
+
+	monitor := NewHealthMonitor(checker)
+
+	ctx := context.Background()
+	monitor.CheckAllServices(ctx)
+
+	// Wait for goroutines to complete
+	time.Sleep(100 * time.Millisecond)
+
+	assert.Equal(t, models.ServiceStatusDegraded, monitor.services.QBittorrent.Status)
+	assert.Equal(t, models.ServiceStatusHealthy, monitor.services.TMDb.Status)
 }

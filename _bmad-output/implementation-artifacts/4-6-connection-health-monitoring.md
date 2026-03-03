@@ -1,6 +1,6 @@
 # Story 4.6: Connection Health Monitoring
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -40,75 +40,75 @@ So that **I know immediately when there are connectivity issues**.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Extend Health Monitor for qBittorrent (AC: 1, 2, 3, 5)
-  - [ ] 1.1: Add qBittorrent to HealthChecker interface
-  - [ ] 1.2: Implement `CheckQBittorrent(ctx) error` in health checker
-  - [ ] 1.3: Add qBittorrent to monitored services list
-  - [ ] 1.4: Configure 30-second retry interval (NFR-R6)
-  - [ ] 1.5: Write health check tests
+- [x] Task 1: Extend Health Monitor for qBittorrent (AC: 1, 2, 3, 5)
+  - [x] 1.1: Add qBittorrent to HealthChecker interface
+  - [x] 1.2: Implement `CheckQBittorrent(ctx) error` in health checker
+  - [x] 1.3: Add qBittorrent to monitored services list
+  - [x] 1.4: Configure 30-second retry interval (NFR-R6)
+  - [x] 1.5: Write health check tests
 
-- [ ] Task 2: Create qBittorrent Health Check (AC: 1, 2, 3)
-  - [ ] 2.1: Add health check endpoint call to qBittorrent client
-  - [ ] 2.2: Implement `Ping(ctx) error` method on client
-  - [ ] 2.3: Handle authentication refresh if needed
-  - [ ] 2.4: Track last successful connection time
-  - [ ] 2.5: Write client tests
+- [x] Task 2: Create qBittorrent Health Check (AC: 1, 2, 3)
+  - [x] 2.1: Add health check endpoint call to qBittorrent client
+  - [x] 2.2: Implement `Ping(ctx) error` method on client
+  - [x] 2.3: Handle authentication refresh if needed
+  - [x] 2.4: Track last successful connection time
+  - [x] 2.5: Write client tests
 
-- [ ] Task 3: Create Connection History Repository (AC: 4)
-  - [ ] 3.1: Create `/apps/api/internal/repository/connection_history_repository.go`
-  - [ ] 3.2: Add migration for `connection_history` table
-  - [ ] 3.3: Implement `RecordEvent(ctx, event) error`
-  - [ ] 3.4: Implement `GetHistory(ctx, service, limit) ([]ConnectionEvent, error)`
-  - [ ] 3.5: Write repository tests
+- [x] Task 3: Create Connection History Repository (AC: 4)
+  - [x] 3.1: Create `/apps/api/internal/repository/connection_history_repository.go`
+  - [x] 3.2: Add migration for `connection_history` table
+  - [x] 3.3: Implement `RecordEvent(ctx, event) error`
+  - [x] 3.4: Implement `GetHistory(ctx, service, limit) ([]ConnectionEvent, error)`
+  - [x] 3.5: Write repository tests
 
-- [ ] Task 4: Create Connection History Types (AC: 4)
-  - [ ] 4.1: Create `/apps/api/internal/models/connection_event.go`
-  - [ ] 4.2: Define `ConnectionEvent` struct (ID, Service, Status, Message, Timestamp)
-  - [ ] 4.3: Define `ConnectionEventType` enum (connected, disconnected, error, recovered)
-  - [ ] 4.4: Write type tests
+- [x] Task 4: Create Connection History Types (AC: 4)
+  - [x] 4.1: Create `/apps/api/internal/models/connection_event.go`
+  - [x] 4.2: Define `ConnectionEvent` struct (ID, Service, Status, Message, Timestamp)
+  - [x] 4.3: Define `ConnectionEventType` enum (connected, disconnected, error, recovered)
+  - [x] 4.4: Write type tests
 
-- [ ] Task 5: Create Connection History Handler (AC: 4)
-  - [ ] 5.1: Create `GET /api/v1/health/services/qbittorrent/history` endpoint
-  - [ ] 5.2: Return recent connection events
-  - [ ] 5.3: Add Swagger documentation
-  - [ ] 5.4: Write handler tests
+- [x] Task 5: Create Connection History Handler (AC: 4)
+  - [x] 5.1: Create `GET /api/v1/health/services/qbittorrent/history` endpoint
+  - [x] 5.2: Return recent connection events
+  - [x] 5.3: Add Swagger documentation
+  - [x] 5.4: Write handler tests
 
-- [ ] Task 6: Update Health Services Response (AC: 5)
-  - [ ] 6.1: Add qBittorrent to `/api/v1/health/services` response
-  - [ ] 6.2: Include last success time
-  - [ ] 6.3: Include error count
-  - [ ] 6.4: Update Swagger documentation
+- [x] Task 6: Update Health Services Response (AC: 5)
+  - [x] 6.1: Add qBittorrent to `/api/v1/health/services` response
+  - [x] 6.2: Include last success time
+  - [x] 6.3: Include error count
+  - [x] 6.4: Update Swagger documentation
 
-- [ ] Task 7: Create Connection Status Indicator Component (AC: 1, 2)
-  - [ ] 7.1: Create `/apps/web/src/components/health/QBStatusIndicator.tsx`
-  - [ ] 7.2: Show green/yellow/red indicator based on status
-  - [ ] 7.3: Show tooltip with details on hover
-  - [ ] 7.4: Show "Last success: X ago" when disconnected
-  - [ ] 7.5: Write component tests
+- [x] Task 7: Create Connection Status Indicator Component (AC: 1, 2)
+  - [x] 7.1: Create `/apps/web/src/components/health/QBStatusIndicator.tsx`
+  - [x] 7.2: Show green/yellow/red indicator based on status
+  - [x] 7.3: Show tooltip with details on hover
+  - [x] 7.4: Show "Last success: X ago" when disconnected
+  - [x] 7.5: Write component tests
 
-- [ ] Task 8: Create Connection History Modal (AC: 4)
-  - [ ] 8.1: Create `/apps/web/src/components/health/ConnectionHistoryModal.tsx`
-  - [ ] 8.2: Show history list with timestamps
-  - [ ] 8.3: Color-code events by type
-  - [ ] 8.4: Allow filtering by event type
-  - [ ] 8.5: Write component tests
+- [x] Task 8: Create Connection History Modal (AC: 4)
+  - [x] 8.1: Create `/apps/web/src/components/health/ConnectionHistoryPanel.tsx` (SidePanel, not modal)
+  - [x] 8.2: Show history list with timestamps
+  - [x] 8.3: Color-code events by type
+  - [x] 8.4: Allow filtering by event type
+  - [x] 8.5: Write component tests
 
-- [ ] Task 9: Add Status Indicator to Header (AC: 1, 2)
-  - [ ] 9.1: Add QBStatusIndicator to main layout header
-  - [ ] 9.2: Click opens ConnectionHistoryModal
-  - [ ] 9.3: Poll status at regular intervals
+- [x] Task 9: Add Status Indicator to Header (AC: 1, 2)
+  - [x] 9.1: Add QBStatusIndicator to main layout header
+  - [x] 9.2: Click opens ConnectionHistoryPanel
+  - [x] 9.3: Poll status at regular intervals
 
-- [ ] Task 10: Create Connection Health Hook (AC: 1, 2, 3)
-  - [ ] 10.1: Create `/apps/web/src/hooks/useQBConnectionHealth.ts`
-  - [ ] 10.2: Poll health status every 30 seconds
-  - [ ] 10.3: Expose connected, lastSuccess, errorCount
+- [x] Task 10: Create Connection Health Hook (AC: 1, 2, 3)
+  - [x] 10.1: Create `/apps/web/src/hooks/useConnectionHealth.ts`
+  - [x] 10.2: Poll health status every 30 seconds
+  - [x] 10.3: Expose connected, lastSuccess, errorCount
 
-- [ ] Task 11: E2E Tests (AC: all)
-  - [ ] 11.1: Create `/e2e/connection-health.spec.ts`
-  - [ ] 11.2: Test status indicator display
-  - [ ] 11.3: Test disconnection detection
-  - [ ] 11.4: Test history modal
-  - [ ] 11.5: Test auto-recovery behavior
+- [x] Task 11: E2E Tests (AC: all)
+  - [x] 11.1: Create `/tests/e2e/connection-health.spec.ts`
+  - [x] 11.2: Test status indicator display
+  - [x] 11.3: Test disconnection detection
+  - [x] 11.4: Test history panel
+  - [x] 11.5: Test auto-recovery behavior
 
 ## Dev Notes
 
@@ -669,10 +669,52 @@ export function useQBConnectionHealth() {
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.6 (claude-opus-4-6)
 
 ### Debug Log References
 
+- Fixed `params` redeclaration in `downloadService.ts:113` (pre-existing bug)
+- Used `dispatchEvent('click')` in E2E tests to bypass search icon SVG overlay
+
 ### Completion Notes List
 
+- Used SidePanel component instead of Dialog/Modal for connection history (consistent with existing patterns)
+- Used function closure adapter (QBPingable) to avoid circular Go package dependencies between health and qbittorrent packages
+- Used `SetQBittorrent()` setter instead of modifying `NewServiceHealthChecker()` constructor for backward compatibility
+- Updated `totalServices` from 4 to 5 in both `GetDegradationLevel` and `getDegradationLevelUnlocked`
+- Hook file named `useConnectionHealth.ts` (not `useQBConnectionHealth.ts`) to house both `useQBConnectionHealth` and `useConnectionHistory` hooks
+- ConnectionHistoryPanel uses event type filtering (all/connected/disconnected/error/recovered) with color-coded icons
+
 ### File List
+
+**Backend (Go):**
+- `apps/api/internal/models/degradation.go` — Added `ServiceNameQBittorrent`, `QBittorrent` field in `ServicesHealth`
+- `apps/api/internal/models/connection_event.go` — NEW: ConnectionEvent model + ConnectionEventType enum
+- `apps/api/internal/models/connection_event_test.go` — NEW: Type tests
+- `apps/api/internal/health/monitor.go` — Added `CheckQBittorrent` to interface, `StartQBMonitoring()`
+- `apps/api/internal/health/checker.go` — Added `CheckQBittorrent`, `QBPingable` adapter, `SetQBittorrent`
+- `apps/api/internal/health/checker_test.go` — Added qBittorrent checker tests
+- `apps/api/internal/health/monitor_test.go` — Updated mock + added qBittorrent monitor tests
+- `apps/api/internal/qbittorrent/client.go` — Added `Ping()` method
+- `apps/api/internal/qbittorrent/client_test.go` — Added Ping tests
+- `apps/api/internal/database/migrations/014_create_connection_history_table.go` — NEW: Migration
+- `apps/api/internal/repository/connection_history_repository.go` — NEW: Repository interface + impl
+- `apps/api/internal/repository/connection_history_repository_test.go` — NEW: Repository tests
+- `apps/api/internal/repository/registry.go` — Added ConnectionHistory to registry
+- `apps/api/internal/handlers/health.go` — Added `GetConnectionHistory` handler, `SetHistoryRepo`
+- `apps/api/internal/handlers/health_test.go` — Added history handler tests + updated mock
+- `apps/api/cmd/api/main.go` — Wired QBPingable, history repo, monitoring goroutine, history route
+
+**Frontend (React/TypeScript):**
+- `apps/web/src/services/healthService.ts` — NEW: Health service types + API calls
+- `apps/web/src/services/downloadService.ts` — Fixed `params` redeclaration bug
+- `apps/web/src/hooks/useConnectionHealth.ts` — NEW: `useQBConnectionHealth` + `useConnectionHistory` hooks
+- `apps/web/src/components/health/QBStatusIndicator.tsx` — NEW: Status indicator component
+- `apps/web/src/components/health/QBStatusIndicator.spec.tsx` — NEW: 6 component tests
+- `apps/web/src/components/health/ConnectionHistoryPanel.tsx` — NEW: History side panel
+- `apps/web/src/components/health/ConnectionHistoryPanel.spec.tsx` — NEW: 6 component tests
+- `apps/web/src/components/health/index.ts` — NEW: Barrel export
+- `apps/web/src/routes/index.tsx` — Added QBStatusIndicator to header + ConnectionHistoryPanel
+
+**E2E Tests:**
+- `tests/e2e/connection-health.spec.ts` — NEW: 13 E2E tests (AC1-AC5)

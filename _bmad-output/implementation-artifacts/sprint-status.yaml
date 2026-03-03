@@ -96,7 +96,7 @@ development_status:
   4-3-unified-download-dashboard: done  # Code review fixes completed 2026-03-01
   4-4-download-status-filtering: done  # Code review fixes completed 2026-03-02
   4-5-completed-download-detection-and-parsing-trigger: done  # Code review fixes completed 2026-03-03
-  4-6-connection-health-monitoring: ready-for-dev
+  4-6-connection-health-monitoring: review
   epic-4-retrospective: optional
 
   # ==============================================================================

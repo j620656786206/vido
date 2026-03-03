@@ -102,6 +102,32 @@ func (c *Client) Login(ctx context.Context) error {
 	return nil
 }
 
+// Ping checks if qBittorrent is reachable and authenticated.
+// Uses app version endpoint as a lightweight health check.
+// If the initial check fails, attempts re-authentication before retrying.
+func (c *Client) Ping(ctx context.Context) error {
+	_, err := c.getVersion(ctx, "/app/version")
+	if err != nil {
+		// Try re-authentication
+		if authErr := c.Login(ctx); authErr != nil {
+			return &ConnectionError{
+				Code:    ErrCodeConnectionFailed,
+				Message: "qBittorrent unreachable",
+				Cause:   authErr,
+			}
+		}
+		// Retry version check after re-auth
+		if _, err = c.getVersion(ctx, "/app/version"); err != nil {
+			return &ConnectionError{
+				Code:    ErrCodeConnectionFailed,
+				Message: "qBittorrent health check failed after re-auth",
+				Cause:   err,
+			}
+		}
+	}
+	return nil
+}
+
 // TestConnection verifies connectivity to qBittorrent by authenticating
 // and retrieving version information.
 func (c *Client) TestConnection(ctx context.Context) (*VersionInfo, error) {

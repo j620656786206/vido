@@ -17,6 +17,7 @@ type HealthChecker interface {
 	CheckDouban(ctx context.Context) error
 	CheckWikipedia(ctx context.Context) error
 	CheckAI(ctx context.Context) error
+	CheckQBittorrent(ctx context.Context) error
 }
 
 // HealthMonitor tracks the health of external services
@@ -43,7 +44,7 @@ func (m *HealthMonitor) GetDegradationLevel() models.DegradationLevel {
 
 	downCount := 0
 	degradedCount := 0
-	totalServices := 4 // TMDb, Douban, Wikipedia, AI
+	totalServices := 5 // TMDb, Douban, Wikipedia, AI, qBittorrent
 
 	for _, svc := range m.services.AllServices() {
 		if svc.IsDown() {
@@ -97,6 +98,7 @@ func (m *HealthMonitor) CheckAllServices(ctx context.Context) {
 		{models.ServiceNameDouban, m.checker.CheckDouban},
 		{models.ServiceNameWikipedia, m.checker.CheckWikipedia},
 		{models.ServiceNameAI, m.checker.CheckAI},
+		{models.ServiceNameQBittorrent, m.checker.CheckQBittorrent},
 	}
 
 	for _, check := range checks {
@@ -232,6 +234,27 @@ func (m *HealthMonitor) StartMonitoring(ctx context.Context, interval time.Durat
 			return
 		case <-ticker.C:
 			m.CheckAllServices(ctx)
+		}
+	}
+}
+
+// StartQBMonitoring starts a dedicated monitor for qBittorrent with 30s interval (NFR-R6)
+func (m *HealthMonitor) StartQBMonitoring(ctx context.Context) {
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+
+	// Perform initial check
+	err := m.checker.CheckQBittorrent(ctx)
+	m.UpdateServiceHealth(models.ServiceNameQBittorrent, err)
+
+	for {
+		select {
+		case <-ctx.Done():
+			m.logger.Info("qBittorrent health monitoring stopped")
+			return
+		case <-ticker.C:
+			err := m.checker.CheckQBittorrent(ctx)
+			m.UpdateServiceHealth(models.ServiceNameQBittorrent, err)
 		}
 	}
 }

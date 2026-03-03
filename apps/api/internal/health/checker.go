@@ -12,10 +12,11 @@ type Pingable interface {
 
 // ServiceHealthChecker implements HealthChecker for actual service clients
 type ServiceHealthChecker struct {
-	tmdb      Pingable
-	douban    Pingable
-	wikipedia Pingable
-	ai        Pingable
+	tmdb        Pingable
+	douban      Pingable
+	wikipedia   Pingable
+	ai          Pingable
+	qbittorrent Pingable
 }
 
 // NewServiceHealthChecker creates a new ServiceHealthChecker
@@ -26,6 +27,11 @@ func NewServiceHealthChecker(tmdb, douban, wikipedia, ai Pingable) *ServiceHealt
 		wikipedia: wikipedia,
 		ai:        ai,
 	}
+}
+
+// SetQBittorrent sets the qBittorrent pingable client for health checking
+func (c *ServiceHealthChecker) SetQBittorrent(qb Pingable) {
+	c.qbittorrent = qb
 }
 
 // CheckTMDb checks the health of TMDb API
@@ -60,6 +66,14 @@ func (c *ServiceHealthChecker) CheckAI(ctx context.Context) error {
 	return c.ai.Ping(ctx)
 }
 
+// CheckQBittorrent checks the health of qBittorrent
+func (c *ServiceHealthChecker) CheckQBittorrent(ctx context.Context) error {
+	if c.qbittorrent == nil {
+		return errors.New("qBittorrent client not configured")
+	}
+	return c.qbittorrent.Ping(ctx)
+}
+
 // StubHealthChecker implements HealthChecker with all services reporting healthy.
 // Used when actual service health checking is not yet implemented.
 type StubHealthChecker struct{}
@@ -87,6 +101,34 @@ func (c *StubHealthChecker) CheckWikipedia(ctx context.Context) error {
 // CheckAI always returns healthy.
 func (c *StubHealthChecker) CheckAI(ctx context.Context) error {
 	return nil
+}
+
+// CheckQBittorrent always returns healthy.
+func (c *StubHealthChecker) CheckQBittorrent(ctx context.Context) error {
+	return nil
+}
+
+// QBPingable adapts a qBittorrent service to the Pingable interface for health checks.
+// Uses function closures to avoid circular package dependencies.
+type QBPingable struct {
+	isConfigured   func(ctx context.Context) bool
+	testConnection func(ctx context.Context) error
+}
+
+// NewQBPingable creates a new QBPingable adapter from check functions
+func NewQBPingable(isConfigured func(ctx context.Context) bool, testConnection func(ctx context.Context) error) *QBPingable {
+	return &QBPingable{
+		isConfigured:   isConfigured,
+		testConnection: testConnection,
+	}
+}
+
+// Ping checks if qBittorrent is reachable
+func (p *QBPingable) Ping(ctx context.Context) error {
+	if !p.isConfigured(ctx) {
+		return errors.New("qBittorrent not configured")
+	}
+	return p.testConnection(ctx)
 }
 
 // ConfigurablePingable implements Pingable based on configuration.

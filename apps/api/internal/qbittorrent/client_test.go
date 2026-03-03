@@ -298,6 +298,92 @@ func TestClient_TestConnection_ContextCancelled(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestClient_Ping_Success(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v2/app/version", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, "v4.5.2")
+	})
+
+	server := newTestServer(t, mux)
+	defer server.Close()
+
+	client := NewClient(&Config{Host: server.URL})
+
+	err := client.Ping(context.Background())
+	assert.NoError(t, err)
+}
+
+func TestClient_Ping_FailsWithReAuth(t *testing.T) {
+	callCount := 0
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v2/app/version", func(w http.ResponseWriter, r *http.Request) {
+		callCount++
+		if callCount == 1 {
+			// First call fails (session expired)
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+		// Second call after re-auth succeeds
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, "v4.5.2")
+	})
+	mux.HandleFunc("/api/v2/auth/login", func(w http.ResponseWriter, r *http.Request) {
+		http.SetCookie(w, &http.Cookie{Name: "SID", Value: "new-session"})
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, "Ok.")
+	})
+
+	server := newTestServer(t, mux)
+	defer server.Close()
+
+	client := NewClient(&Config{
+		Host:     server.URL,
+		Username: "admin",
+		Password: "password",
+	})
+
+	err := client.Ping(context.Background())
+	assert.NoError(t, err)
+	assert.Equal(t, 2, callCount)
+}
+
+func TestClient_Ping_ConnectionRefused(t *testing.T) {
+	client := NewClient(&Config{
+		Host:    "http://127.0.0.1:1",
+		Timeout: 1 * time.Second,
+	})
+
+	err := client.Ping(context.Background())
+	assert.Error(t, err)
+}
+
+func TestClient_Ping_ReAuthFails(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v2/app/version", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusForbidden)
+	})
+	mux.HandleFunc("/api/v2/auth/login", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, "Fails.")
+	})
+
+	server := newTestServer(t, mux)
+	defer server.Close()
+
+	client := NewClient(&Config{
+		Host:     server.URL,
+		Username: "admin",
+		Password: "wrong",
+	})
+
+	err := client.Ping(context.Background())
+	assert.Error(t, err)
+	var connErr *ConnectionError
+	assert.ErrorAs(t, err, &connErr)
+	assert.Equal(t, ErrCodeConnectionFailed, connErr.Code)
+}
+
 func TestClient_TestConnection_VersionEndpointFailure(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/v2/auth/login", func(w http.ResponseWriter, r *http.Request) {

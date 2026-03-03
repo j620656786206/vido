@@ -3,11 +3,13 @@ package handlers
 import (
 	"context"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/vido/api/internal/database"
 	"github.com/vido/api/internal/models"
+	"github.com/vido/api/internal/repository"
 	"github.com/vido/api/internal/services"
 )
 
@@ -83,6 +85,7 @@ func HealthCheck(c *gin.Context) {
 // Returns health status of all external services and degradation level.
 type ServiceHealthHandler struct {
 	degradationService services.DegradationServiceInterface
+	historyRepo        repository.ConnectionHistoryRepositoryInterface
 }
 
 // NewServiceHealthHandler creates a new ServiceHealthHandler.
@@ -90,6 +93,11 @@ func NewServiceHealthHandler(degradationService services.DegradationServiceInter
 	return &ServiceHealthHandler{
 		degradationService: degradationService,
 	}
+}
+
+// SetHistoryRepo sets the connection history repository for history endpoints
+func (h *ServiceHealthHandler) SetHistoryRepo(repo repository.ConnectionHistoryRepositoryInterface) {
+	h.historyRepo = repo
 }
 
 // GetServicesHealth returns the health status of all external services.
@@ -122,5 +130,67 @@ func (h *ServiceHealthHandler) GetServicesHealth(c *gin.Context) {
 	c.JSON(httpStatus, gin.H{
 		"success": true,
 		"data":    status,
+	})
+}
+
+// GetConnectionHistory returns connection history for a specific service.
+// @Summary Get connection history for a service
+// @Description Returns recent connection status change events for the specified service
+// @Tags Health
+// @Produce json
+// @Param service path string true "Service name (e.g., qbittorrent)"
+// @Param limit query int false "Number of events to return (default 20)"
+// @Success 200 {object} map[string]interface{}
+// @Router /api/v1/health/services/{service}/history [get]
+func (h *ServiceHealthHandler) GetConnectionHistory(c *gin.Context) {
+	if h.historyRepo == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"success": false,
+			"error": gin.H{
+				"code":    "CONNECTION_HISTORY_ERROR",
+				"message": "Connection history is not configured",
+			},
+		})
+		return
+	}
+
+	service := c.Param("service")
+	if service == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error": gin.H{
+				"code":    "VALIDATION_REQUIRED_FIELD",
+				"message": "Service name is required",
+			},
+		})
+		return
+	}
+
+	limit := 20
+	if limitStr := c.Query("limit"); limitStr != "" {
+		if parsed, err := strconv.Atoi(limitStr); err == nil && parsed > 0 {
+			limit = parsed
+		}
+	}
+
+	events, err := h.historyRepo.GetHistory(c.Request.Context(), service, limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error": gin.H{
+				"code":    "CONNECTION_HISTORY_ERROR",
+				"message": "Failed to retrieve connection history",
+			},
+		})
+		return
+	}
+
+	if events == nil {
+		events = []models.ConnectionEvent{}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    events,
 	})
 }

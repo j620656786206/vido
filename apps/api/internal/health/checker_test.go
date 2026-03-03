@@ -187,3 +187,50 @@ func TestServiceHealthChecker_CheckAI_NilClient(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "not configured")
 }
+
+// MockQBittorrentClient is a mock qBittorrent client for testing
+type MockQBittorrentClient struct {
+	shouldFail bool
+}
+
+func (m *MockQBittorrentClient) Ping(ctx context.Context) error {
+	if m.shouldFail {
+		return errors.New("qBittorrent connection failed")
+	}
+	return nil
+}
+
+func TestServiceHealthChecker_CheckQBittorrent_Success(t *testing.T) {
+	checker := NewServiceHealthChecker(
+		&MockTMDbClient{},
+		&MockDoubanScraper{},
+		&MockWikipediaClient{},
+		&MockAIProvider{},
+	)
+	checker.SetQBittorrent(&MockQBittorrentClient{shouldFail: false})
+
+	err := checker.CheckQBittorrent(context.Background())
+	assert.NoError(t, err)
+}
+
+func TestServiceHealthChecker_CheckQBittorrent_Failure(t *testing.T) {
+	checker := NewServiceHealthChecker(
+		&MockTMDbClient{},
+		&MockDoubanScraper{},
+		&MockWikipediaClient{},
+		&MockAIProvider{},
+	)
+	checker.SetQBittorrent(&MockQBittorrentClient{shouldFail: true})
+
+	err := checker.CheckQBittorrent(context.Background())
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "qBittorrent")
+}
+
+func TestServiceHealthChecker_CheckQBittorrent_NilClient(t *testing.T) {
+	checker := NewServiceHealthChecker(nil, nil, nil, nil)
+
+	err := checker.CheckQBittorrent(context.Background())
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "not configured")
+}
