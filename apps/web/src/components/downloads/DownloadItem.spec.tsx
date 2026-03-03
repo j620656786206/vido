@@ -25,30 +25,30 @@ const mockDownload: Download = {
 describe('DownloadItem', () => {
   it('renders torrent name', () => {
     render(<DownloadItem download={mockDownload} expanded={false} onToggleExpand={() => {}} />);
-    expect(screen.getByText('[SubGroup] Movie Name (2024) [1080p]')).toBeTruthy();
+    expect(screen.getByText('[SubGroup] Movie Name (2024) [1080p]')).toBeInTheDocument();
   });
 
   it('renders progress bar', () => {
     render(<DownloadItem download={mockDownload} expanded={false} onToggleExpand={() => {}} />);
     const progressBar = screen.getByRole('progressbar');
-    expect(progressBar).toBeTruthy();
+    expect(progressBar).toBeInTheDocument();
     expect(progressBar.getAttribute('aria-valuenow')).toBe('85');
   });
 
   it('renders progress percentage', () => {
     render(<DownloadItem download={mockDownload} expanded={false} onToggleExpand={() => {}} />);
-    expect(screen.getByText('85.0%')).toBeTruthy();
+    expect(screen.getByText('85.0%')).toBeInTheDocument();
   });
 
   it('renders download speed for downloading status', () => {
     render(<DownloadItem download={mockDownload} expanded={false} onToggleExpand={() => {}} />);
-    expect(screen.getByText(/10\.0 MB\/s/)).toBeTruthy();
+    expect(screen.getByText(/10\.0 MB\/s/)).toBeInTheDocument();
   });
 
   it('renders upload speed for seeding status', () => {
     const seedingDownload = { ...mockDownload, status: 'seeding' as const, uploadSpeed: 1048576 };
     render(<DownloadItem download={seedingDownload} expanded={false} onToggleExpand={() => {}} />);
-    expect(screen.getByText(/1\.0 MB\/s/)).toBeTruthy();
+    expect(screen.getByText(/1\.0 MB\/s/)).toBeInTheDocument();
   });
 
   it('renders completed text for completed status', () => {
@@ -56,7 +56,7 @@ describe('DownloadItem', () => {
     render(
       <DownloadItem download={completedDownload} expanded={false} onToggleExpand={() => {}} />
     );
-    expect(screen.getByText('完成')).toBeTruthy();
+    expect(screen.getByText('完成')).toBeInTheDocument();
   });
 
   it('calls onToggleExpand when clicked', async () => {
@@ -80,7 +80,7 @@ describe('DownloadItem', () => {
 
   it('renders status icon', () => {
     render(<DownloadItem download={mockDownload} expanded={false} onToggleExpand={() => {}} />);
-    expect(screen.getByText('下載中')).toBeTruthy();
+    expect(screen.getByText('下載中')).toBeInTheDocument();
   });
 
   it('renders parse status badge when parseStatus is present', () => {
@@ -93,8 +93,8 @@ describe('DownloadItem', () => {
     render(
       <DownloadItem download={downloadWithParse} expanded={false} onToggleExpand={() => {}} />
     );
-    expect(screen.getByTestId('download-parse-status-badge')).toBeTruthy();
-    expect(screen.getByText('已入庫')).toBeTruthy();
+    expect(screen.getByTestId('download-parse-status-badge')).toBeInTheDocument();
+    expect(screen.getByText('已入庫')).toBeInTheDocument();
   });
 
   it('does not render parse status badge when parseStatus is absent', () => {
@@ -112,6 +112,6 @@ describe('DownloadItem', () => {
     render(
       <DownloadItem download={downloadWithFailed} expanded={false} onToggleExpand={() => {}} />
     );
-    expect(screen.getByText('解析失敗')).toBeTruthy();
+    expect(screen.getByText('解析失敗')).toBeInTheDocument();
   });
 });

@@ -232,6 +232,7 @@ func TestParseQueueService_QueueParseJob(t *testing.T) {
 	require.NotNil(t, job)
 	assert.Equal(t, "abc123", job.TorrentHash)
 	assert.Equal(t, "[SubGroup] Movie (2024).mkv", job.FileName)
+	assert.Equal(t, "/downloads/[SubGroup] Movie (2024).mkv", job.FilePath)
 	assert.Equal(t, models.ParseJobPending, job.Status)
 	assert.NotEmpty(t, job.ID)
 }
@@ -417,7 +418,25 @@ func TestParseQueueService_RetryJob_NotFailed(t *testing.T) {
 
 	err := svc.RetryJob(context.Background(), "job-1")
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "can only retry failed jobs")
+	assert.ErrorIs(t, err, ErrJobNotRetryable)
+}
+
+func TestParseQueueService_RetryJob_MaxRetriesReached(t *testing.T) {
+	repo := newMockPQParseJobRepo()
+	errMsg := "previous error"
+	repo.jobs["job-1"] = &models.ParseJob{
+		ID:           "job-1",
+		TorrentHash:  "hash1",
+		Status:       models.ParseJobFailed,
+		ErrorMessage: &errMsg,
+		RetryCount:   MaxRetryAttempts,
+	}
+
+	svc := newTestParseQueueService(repo, nil, nil, nil)
+
+	err := svc.RetryJob(context.Background(), "job-1")
+	assert.Error(t, err)
+	assert.ErrorIs(t, err, ErrMaxRetriesReached)
 }
 
 func TestParseQueueService_GetJobStatus(t *testing.T) {

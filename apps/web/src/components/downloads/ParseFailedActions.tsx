@@ -37,19 +37,21 @@ export function ParseFailedActions({
           <RotateCcw className={cn('h-3 w-3', isRetrying && 'animate-spin')} />
           重試
         </button>
-        <button
-          type="button"
-          className={cn(
-            'inline-flex items-center gap-1 rounded px-2 py-1 text-xs',
-            'border border-slate-600 text-slate-300 transition-colors',
-            'hover:border-slate-500 hover:text-white'
-          )}
-          onClick={() => onManualSearch?.(torrentHash)}
-          aria-label="手動搜尋"
-        >
-          <Search className="h-3 w-3" />
-          手動搜尋
-        </button>
+        {onManualSearch && (
+          <button
+            type="button"
+            className={cn(
+              'inline-flex items-center gap-1 rounded px-2 py-1 text-xs',
+              'border border-slate-600 text-slate-300 transition-colors',
+              'hover:border-slate-500 hover:text-white'
+            )}
+            onClick={() => onManualSearch(torrentHash)}
+            aria-label="手動搜尋"
+          >
+            <Search className="h-3 w-3" />
+            手動搜尋
+          </button>
+        )}
       </div>
     </div>
   );

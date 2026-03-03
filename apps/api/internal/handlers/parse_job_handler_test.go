@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/qbittorrent"
+	"github.com/vido/api/internal/services"
 )
 
 // MockParseQueueService mocks ParseQueueServiceInterface for handler tests.
@@ -304,7 +305,7 @@ func TestParseJobHandler_RetryParseJob_Success(t *testing.T) {
 
 func TestParseJobHandler_RetryParseJob_NotFailed(t *testing.T) {
 	mockService := new(MockParseQueueService)
-	mockService.On("RetryJob", mock.Anything, "job-1").Return(fmt.Errorf("can only retry failed jobs, current status: processing"))
+	mockService.On("RetryJob", mock.Anything, "job-1").Return(fmt.Errorf("%w: current status: processing", services.ErrJobNotRetryable))
 
 	handler := NewParseJobHandler(mockService)
 	router := setupParseJobRouter(handler)

@@ -1,6 +1,6 @@
 # Story 4.5: Completed Download Detection and Parsing Trigger
 
-Status: completed
+Status: done
 
 ## Story
 
@@ -883,3 +883,46 @@ export function ParseFailedActions({ torrentHash, fileName }: ParseFailedActions
 ### Completion Notes List
 
 ### File List
+
+**Backend - New Files:**
+- `apps/api/internal/models/parse_job.go` — ParseJob model and status enum
+- `apps/api/internal/models/parse_job_test.go` — Model tests
+- `apps/api/internal/repository/parse_job_repository.go` — ParseJob repository (CRUD)
+- `apps/api/internal/repository/parse_job_repository_test.go` — Repository tests
+- `apps/api/internal/services/completion_detector.go` — Detects newly completed downloads
+- `apps/api/internal/services/completion_detector_test.go` — Detector tests
+- `apps/api/internal/services/parse_queue_service.go` — Parse queue management
+- `apps/api/internal/services/parse_queue_service_test.go` — Queue service tests
+- `apps/api/internal/workers/parse_worker.go` — Background worker pool
+- `apps/api/internal/workers/parse_worker_test.go` — Worker tests
+- `apps/api/internal/handlers/parse_job_handler.go` — Parse job API endpoints
+- `apps/api/internal/handlers/parse_job_handler_test.go` — Handler tests
+- `apps/api/internal/database/migrations/013_create_parse_jobs_table.go` — DB migration
+
+**Backend - Modified Files:**
+- `apps/api/internal/handlers/download_handler.go` — Added parse status enrichment
+- `apps/api/internal/handlers/download_handler_test.go` — Enrichment tests
+- `apps/api/internal/repository/interfaces.go` — Added ParseJobRepositoryInterface
+- `apps/api/internal/repository/registry.go` — Added ParseJobs to registry
+- `apps/api/internal/repository/movie_repository.go` — Added FindByFilePath, fixed Create() columns
+- `apps/api/internal/services/movie_service_test.go` — Added FindByFilePath mock
+
+**Frontend - New Files:**
+- `apps/web/src/components/downloads/DownloadParseStatusBadge.tsx` — Parse status badge
+- `apps/web/src/components/downloads/DownloadParseStatusBadge.spec.tsx` — Badge tests
+- `apps/web/src/components/downloads/ParseFailedActions.tsx` — Retry/manual search actions
+- `apps/web/src/components/downloads/ParseFailedActions.spec.tsx` — Action tests
+- `apps/web/src/components/notifications/ParseCompleteToast.tsx` — Parse completion toast
+- `apps/web/src/components/notifications/ParseCompleteToast.spec.tsx` — Toast tests
+
+**Frontend - Modified Files:**
+- `apps/web/src/components/downloads/DownloadItem.tsx` — Integrated parse status badge
+- `apps/web/src/components/downloads/DownloadItem.spec.tsx` — Added parse status tests
+- `apps/web/src/services/downloadService.ts` — Added parse status types, URL encoding
+
+**E2E Tests:**
+- `tests/e2e/parse-trigger.spec.ts` — Parse trigger E2E tests
+
+### Change Log
+
+- **2026-03-03** (Code Review): Fixed H1 MovieRepository.Create() missing columns (file_path, parse_status, metadata_source, vote_average). Fixed H3 seenHashes memory leak with maxSeenHashes cap. Fixed H4 swallowed UpdateStatus errors. Fixed H5 SavePath→full file path in CompletionDetector and QueueParseJob. Added M2 sentinel errors (ErrJobNotRetryable, ErrMaxRetriesReached). Added M3 MaxRetryAttempts limit. Fixed M4 weak test assertions (toBeTruthy→toBeInTheDocument). Fixed M5 conditional manual search button render. Fixed M6 URL parameter encoding. Fixed M7 DB errors now skip torrent instead of treating as new.

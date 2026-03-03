@@ -42,8 +42,10 @@ func (r *MovieRepository) Create(ctx context.Context, movie *models.Movie) error
 		INSERT INTO movies (
 			id, title, original_title, release_date, genres, rating,
 			overview, poster_path, backdrop_path, runtime, original_language,
-			status, imdb_id, tmdb_id, created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			status, imdb_id, tmdb_id,
+			file_path, parse_status, metadata_source, vote_average,
+			created_at, updated_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
 	_, err = r.db.ExecContext(ctx, query,
@@ -61,6 +63,10 @@ func (r *MovieRepository) Create(ctx context.Context, movie *models.Movie) error
 		movie.Status,
 		movie.IMDbID,
 		movie.TMDbID,
+		movie.FilePath,
+		movie.ParseStatus,
+		movie.MetadataSource,
+		movie.VoteAverage,
 		movie.CreatedAt,
 		movie.UpdatedAt,
 	)

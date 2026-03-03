@@ -1,4 +1,4 @@
-import { Loader2, CheckCircle, XCircle, Clock, SkipForward } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, SkipForward } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import type { DownloadParseStatus } from '../../services/downloadService';
 
@@ -10,7 +10,7 @@ interface DownloadParseStatusBadgeProps {
 const STATUS_CONFIG: Record<
   string,
   {
-    icon: typeof Clock;
+    icon: typeof Loader2;
     color: string;
     bgColor: string;
     label: string;

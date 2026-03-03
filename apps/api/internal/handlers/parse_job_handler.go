@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"log/slog"
 	"strconv"
 	"strings"
@@ -100,7 +101,7 @@ func (h *ParseJobHandler) RetryParseJob(c *gin.Context) {
 	if err != nil {
 		slog.Error("Failed to retry parse job", "error", err, "id", id)
 
-		if strings.Contains(err.Error(), "can only retry failed jobs") {
+		if errors.Is(err, services.ErrJobNotRetryable) || errors.Is(err, services.ErrMaxRetriesReached) {
 			BadRequestError(c, "PARSE_JOB_NOT_RETRYABLE", err.Error())
 			return
 		}

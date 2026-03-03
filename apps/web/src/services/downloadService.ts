@@ -110,11 +110,12 @@ export const downloadService = {
     const filter = params?.filter || 'all';
     const sort = params?.sort || 'added_on';
     const order = params?.order || 'desc';
-    return fetchApi<Download[]>(`/downloads?filter=${filter}&sort=${sort}&order=${order}`);
+    const params = new URLSearchParams({ filter, sort, order });
+    return fetchApi<Download[]>(`/downloads?${params.toString()}`);
   },
 
   async getDownloadDetails(hash: string): Promise<DownloadDetails> {
-    return fetchApi<DownloadDetails>(`/downloads/${hash}`);
+    return fetchApi<DownloadDetails>(`/downloads/${encodeURIComponent(hash)}`);
   },
 
   async getDownloadCounts(): Promise<DownloadCounts> {

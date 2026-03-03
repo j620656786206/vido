@@ -4,10 +4,16 @@ import userEvent from '@testing-library/user-event';
 import { ParseFailedActions } from './ParseFailedActions';
 
 describe('ParseFailedActions', () => {
-  it('renders retry and manual search buttons', () => {
+  it('renders retry button and manual search button when onManualSearch is provided', () => {
+    render(<ParseFailedActions torrentHash="abc123" onRetry={vi.fn()} onManualSearch={vi.fn()} />);
+    expect(screen.getByRole('button', { name: /重試/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /手動搜尋/i })).toBeInTheDocument();
+  });
+
+  it('does not render manual search button when onManualSearch is not provided', () => {
     render(<ParseFailedActions torrentHash="abc123" onRetry={vi.fn()} />);
-    expect(screen.getByRole('button', { name: /重試/i })).toBeTruthy();
-    expect(screen.getByRole('button', { name: /手動搜尋/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /重試/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /手動搜尋/i })).not.toBeInTheDocument();
   });
 
   it('calls onRetry when retry button is clicked', async () => {
@@ -38,7 +44,7 @@ describe('ParseFailedActions', () => {
         onRetry={vi.fn()}
       />
     );
-    expect(screen.getByText(/could not parse filename/i)).toBeTruthy();
+    expect(screen.getByText(/could not parse filename/i)).toBeInTheDocument();
   });
 
   it('disables retry button when retrying', () => {
@@ -49,6 +55,6 @@ describe('ParseFailedActions', () => {
 
   it('has proper data-testid attributes', () => {
     render(<ParseFailedActions torrentHash="abc123" onRetry={vi.fn()} />);
-    expect(screen.getByTestId('parse-failed-actions')).toBeTruthy();
+    expect(screen.getByTestId('parse-failed-actions')).toBeInTheDocument();
   });
 });

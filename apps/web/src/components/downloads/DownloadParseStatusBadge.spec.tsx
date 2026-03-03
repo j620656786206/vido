@@ -10,15 +10,15 @@ describe('DownloadParseStatusBadge', () => {
 
   it('renders "解析中..." for pending status', () => {
     render(<DownloadParseStatusBadge parseStatus={{ status: 'pending' }} />);
-    expect(screen.getByRole('status')).toBeTruthy();
-    expect(screen.getByText('解析中...')).toBeTruthy();
+    expect(screen.getByRole('status')).toBeInTheDocument();
+    expect(screen.getByText('解析中...')).toBeInTheDocument();
   });
 
   it('renders "解析中..." for processing status with spinner', () => {
     render(<DownloadParseStatusBadge parseStatus={{ status: 'processing' }} />);
     const badge = screen.getByRole('status');
-    expect(badge).toBeTruthy();
-    expect(screen.getByText('解析中...')).toBeTruthy();
+    expect(badge).toBeInTheDocument();
+    expect(screen.getByText('解析中...')).toBeInTheDocument();
     expect(badge.getAttribute('data-status')).toBe('processing');
   });
 
@@ -26,13 +26,13 @@ describe('DownloadParseStatusBadge', () => {
     render(
       <DownloadParseStatusBadge parseStatus={{ status: 'completed', mediaId: 'media-123' }} />
     );
-    expect(screen.getByText('已入庫')).toBeTruthy();
+    expect(screen.getByText('已入庫')).toBeInTheDocument();
     expect(screen.getByRole('status').getAttribute('data-status')).toBe('completed');
   });
 
   it('renders "已解析" for completed status without mediaId', () => {
     render(<DownloadParseStatusBadge parseStatus={{ status: 'completed' }} />);
-    expect(screen.getByText('已解析')).toBeTruthy();
+    expect(screen.getByText('已解析')).toBeInTheDocument();
   });
 
   it('renders "解析失敗" for failed status', () => {
@@ -41,13 +41,13 @@ describe('DownloadParseStatusBadge', () => {
         parseStatus={{ status: 'failed', errorMessage: 'could not parse' }}
       />
     );
-    expect(screen.getByText('解析失敗')).toBeTruthy();
+    expect(screen.getByText('解析失敗')).toBeInTheDocument();
     expect(screen.getByRole('status').getAttribute('data-status')).toBe('failed');
   });
 
   it('renders "已跳過" for skipped status', () => {
     render(<DownloadParseStatusBadge parseStatus={{ status: 'skipped' }} />);
-    expect(screen.getByText('已跳過')).toBeTruthy();
+    expect(screen.getByText('已跳過')).toBeInTheDocument();
   });
 
   it('has correct accessibility attributes', () => {

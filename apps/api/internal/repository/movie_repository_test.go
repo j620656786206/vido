@@ -34,6 +34,10 @@ func setupTestDB(t *testing.T) *sql.DB {
 			status TEXT,
 			imdb_id TEXT,
 			tmdb_id INTEGER,
+			file_path TEXT,
+			parse_status TEXT NOT NULL DEFAULT 'pending',
+			metadata_source TEXT,
+			vote_average REAL,
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 		)

@@ -3,8 +3,10 @@ package services
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log/slog"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -13,6 +15,15 @@ import (
 	"github.com/vido/api/internal/parser"
 	"github.com/vido/api/internal/qbittorrent"
 	"github.com/vido/api/internal/repository"
+)
+
+// MaxRetryAttempts is the maximum number of times a parse job can be retried.
+const MaxRetryAttempts = 4
+
+// Sentinel errors for parse queue operations.
+var (
+	ErrJobNotRetryable = errors.New("can only retry failed jobs")
+	ErrMaxRetriesReached = errors.New("maximum retry attempts reached")
 )
 
 // ParseQueueServiceInterface defines the contract for parse queue operations.
@@ -59,7 +70,7 @@ func (s *ParseQueueService) QueueParseJob(ctx context.Context, torrent *qbittorr
 	job := &models.ParseJob{
 		ID:          uuid.New().String(),
 		TorrentHash: torrent.Hash,
-		FilePath:    torrent.SavePath,
+		FilePath:    filepath.Join(torrent.SavePath, torrent.Name),
 		FileName:    torrent.Name,
 		Status:      models.ParseJobPending,
 		CreatedAt:   time.Now(),
@@ -108,7 +119,9 @@ func (s *ParseQueueService) ProcessNextJob(ctx context.Context) error {
 			errMsg = parseResult.ErrorMessage
 		}
 		s.logger.Error("Parsing failed", "job_id", job.ID, "error", errMsg)
-		s.parseJobRepo.UpdateStatus(ctx, job.ID, models.ParseJobFailed, errMsg)
+		if statusErr := s.parseJobRepo.UpdateStatus(ctx, job.ID, models.ParseJobFailed, errMsg); statusErr != nil {
+			s.logger.Error("Failed to update job status to failed", "job_id", job.ID, "error", statusErr)
+		}
 		return nil
 	}
 
@@ -128,14 +141,18 @@ func (s *ParseQueueService) ProcessNextJob(ctx context.Context) error {
 	if err != nil {
 		errMsg := fmt.Sprintf("metadata search failed: %s", err.Error())
 		s.logger.Error("Metadata search failed", "job_id", job.ID, "error", err)
-		s.parseJobRepo.UpdateStatus(ctx, job.ID, models.ParseJobFailed, errMsg)
+		if statusErr := s.parseJobRepo.UpdateStatus(ctx, job.ID, models.ParseJobFailed, errMsg); statusErr != nil {
+			s.logger.Error("Failed to update job status to failed", "job_id", job.ID, "error", statusErr)
+		}
 		return nil
 	}
 
 	if searchResult == nil || !searchResult.HasResults() {
 		errMsg := "no metadata found"
 		s.logger.Warn("No metadata found", "job_id", job.ID, "query", parseResult.CleanedTitle)
-		s.parseJobRepo.UpdateStatus(ctx, job.ID, models.ParseJobFailed, errMsg)
+		if statusErr := s.parseJobRepo.UpdateStatus(ctx, job.ID, models.ParseJobFailed, errMsg); statusErr != nil {
+			s.logger.Error("Failed to update job status to failed", "job_id", job.ID, "error", statusErr)
+		}
 		return nil
 	}
 
@@ -168,7 +185,9 @@ func (s *ParseQueueService) ProcessNextJob(ctx context.Context) error {
 	if err := s.movieRepo.Create(ctx, movie); err != nil {
 		errMsg := fmt.Sprintf("create media entry failed: %s", err.Error())
 		s.logger.Error("Media creation failed", "job_id", job.ID, "error", err)
-		s.parseJobRepo.UpdateStatus(ctx, job.ID, models.ParseJobFailed, errMsg)
+		if statusErr := s.parseJobRepo.UpdateStatus(ctx, job.ID, models.ParseJobFailed, errMsg); statusErr != nil {
+			s.logger.Error("Failed to update job status to failed", "job_id", job.ID, "error", statusErr)
+		}
 		return nil
 	}
 
@@ -204,7 +223,11 @@ func (s *ParseQueueService) RetryJob(ctx context.Context, jobID string) error {
 	}
 
 	if job.Status != models.ParseJobFailed {
-		return fmt.Errorf("can only retry failed jobs, current status: %s", job.Status)
+		return fmt.Errorf("%w: current status: %s", ErrJobNotRetryable, job.Status)
+	}
+
+	if job.RetryCount >= MaxRetryAttempts {
+		return fmt.Errorf("%w: %d/%d attempts used", ErrMaxRetriesReached, job.RetryCount, MaxRetryAttempts)
 	}
 
 	job.Status = models.ParseJobPending

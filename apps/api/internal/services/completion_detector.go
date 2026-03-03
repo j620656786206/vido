@@ -3,12 +3,16 @@ package services
 import (
 	"context"
 	"log/slog"
+	"path/filepath"
 	"sync"
 
 	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/qbittorrent"
 	"github.com/vido/api/internal/repository"
 )
+
+// maxSeenHashes caps the in-memory seen cache to prevent unbounded growth.
+const maxSeenHashes = 10000
 
 // CompletionDetectorInterface defines the contract for detecting newly completed downloads.
 type CompletionDetectorInterface interface {
@@ -67,46 +71,55 @@ func (d *CompletionDetector) DetectNewCompletions(ctx context.Context, torrents 
 		// Check if already has a parse job
 		existingJob, err := d.parseJobRepo.GetByTorrentHash(ctx, t.Hash)
 		if err != nil {
-			d.logger.Debug("Error checking parse job, treating as new",
+			d.logger.Warn("Error checking parse job, skipping torrent to avoid duplicates",
 				"hash", t.Hash,
 				"error", err,
 			)
+			continue
 		}
 		if existingJob != nil {
-			d.mu.Lock()
-			d.seenHashes[t.Hash] = true
-			d.mu.Unlock()
+			d.markSeen(t.Hash)
 			continue
 		}
 
 		// Check if file already in library (duplicate detection)
-		existingMedia, err := d.movieRepo.FindByFilePath(ctx, t.SavePath)
+		// Use full file path (SavePath + Name) instead of just the directory
+		fullPath := filepath.Join(t.SavePath, t.Name)
+		existingMedia, err := d.movieRepo.FindByFilePath(ctx, fullPath)
 		if err != nil {
-			d.logger.Debug("Error checking library, treating as new",
+			d.logger.Warn("Error checking library, skipping torrent to avoid duplicates",
 				"hash", t.Hash,
 				"error", err,
 			)
+			continue
 		}
 		if existingMedia != nil {
 			d.logger.Info("File already in library, skipping",
 				"hash", t.Hash,
-				"path", t.SavePath,
+				"path", fullPath,
 			)
-			d.mu.Lock()
-			d.seenHashes[t.Hash] = true
-			d.mu.Unlock()
+			d.markSeen(t.Hash)
 			continue
 		}
 
 		// New completion detected
 		newCompletions = append(newCompletions, t)
-
-		d.mu.Lock()
-		d.seenHashes[t.Hash] = true
-		d.mu.Unlock()
+		d.markSeen(t.Hash)
 	}
 
 	return newCompletions
+}
+
+// markSeen adds a hash to the seen cache, evicting all entries when the cap is reached.
+func (d *CompletionDetector) markSeen(hash string) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	if len(d.seenHashes) >= maxSeenHashes {
+		d.logger.Info("Seen hashes cache full, clearing", "size", len(d.seenHashes))
+		d.seenHashes = make(map[string]bool)
+	}
+	d.seenHashes[hash] = true
 }
 
 // Compile-time interface verification

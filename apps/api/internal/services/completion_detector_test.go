@@ -166,7 +166,8 @@ func TestCompletionDetector_DetectNewCompletions_SkipsExistingParseJob(t *testin
 
 func TestCompletionDetector_DetectNewCompletions_SkipsAlreadyInLibrary(t *testing.T) {
 	movieRepo := newMockMovieFileLookup()
-	movieRepo.movies["/downloads"] = &models.Movie{
+	// Full path = SavePath + Name (filepath.Join)
+	movieRepo.movies["/downloads/existing.mkv"] = &models.Movie{
 		ID:    "movie-1",
 		Title: "Existing Movie",
 	}
@@ -231,7 +232,7 @@ func TestCompletionDetector_DetectNewCompletions_SeenHashesPersistAcrossCalls(t 
 	assert.Equal(t, "hash2", result2[0].Hash)
 }
 
-func TestCompletionDetector_DetectNewCompletions_ParseJobRepoErrorContinues(t *testing.T) {
+func TestCompletionDetector_DetectNewCompletions_ParseJobRepoErrorSkips(t *testing.T) {
 	parseJobRepo := newMockParseJobRepo()
 	parseJobRepo.err = fmt.Errorf("db error")
 
@@ -241,7 +242,7 @@ func TestCompletionDetector_DetectNewCompletions_ParseJobRepoErrorContinues(t *t
 		makeTorrent("hash1", "movie.mkv", qbittorrent.StatusCompleted, "/downloads"),
 	}
 
-	// Should still return the torrent even if repo errors (graceful degradation)
+	// Should skip the torrent on DB error to avoid duplicate processing
 	result := detector.DetectNewCompletions(context.Background(), torrents)
-	require.Len(t, result, 1)
+	assert.Len(t, result, 0)
 }
