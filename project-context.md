@@ -4,7 +4,7 @@
 
 **Full Documentation:** See `_bmad-output/planning-artifacts/architecture/index.md` for complete architectural decisions and patterns (sharded into ~20 focused files).
 
-**Last Updated:** 2026-02-06
+**Last Updated:** 2026-03-04
 **Architecture Status:** ✅ Validated and Ready for Implementation (5,463 lines, 8 steps completed)
 
 ---
@@ -210,6 +210,111 @@ Display:  toLocaleDateString('zh-TW') → "2024年1月15日"
 ✅ Only Alexyu can authorize --no-verify after reviewing the specific error
 ❌ Dev agents MUST NOT use --no-verify when committing
 ❌ NEVER bypass pre-commit hooks without explicit user approval
+```
+
+### Rule 13: Error Handling Completeness
+
+```go
+// ✅ CORRECT — propagate ALL errors
+result, err := s.repo.UpdateStatus(ctx, id, status)
+if err != nil {
+    return fmt.Errorf("update status: %w", err)
+}
+
+// ✅ CORRECT — log then return error
+if err := s.repo.Save(ctx, item); err != nil {
+    slog.Error("Failed to save item", "error", err, "id", item.ID)
+    return err
+}
+
+// ❌ WRONG — swallowed error (silent failure)
+result, err := s.repo.UpdateStatus(ctx, id, status)
+if err != nil {
+    slog.Error("update failed", "error", err)
+    // BUG: no return! Continues with stale result
+}
+
+// ❌ WRONG — error ignored entirely
+s.repo.UpdateStatus(ctx, id, status)
+```
+
+```
+Every error return MUST be either:
+  1. Propagated to caller (return err / return fmt.Errorf("context: %w", err))
+  2. Explicitly logged AND execution halted (return after log)
+  3. Intentionally discarded with comment explaining why (rare, needs justification)
+Never log an error and continue executing as if it succeeded.
+```
+
+### Rule 14: Resource Lifecycle Management
+
+```
+Bounded Maps:
+  ✅ In-memory maps/caches MUST have an upper bound or eviction policy
+  ✅ Use sync.Map with periodic cleanup or fixed-size LRU
+  ❌ Unbounded map[string]T that grows forever in long-running processes
+
+Graceful Shutdown:
+  ✅ Background goroutines MUST accept context.Context and honor cancellation
+  ✅ Use errgroup or WaitGroup to ensure clean shutdown
+  ❌ Goroutines that ignore context and run until process kill
+
+Client Caching:
+  ✅ Expensive clients (HTTP, DB, API) MUST be created once and reused
+  ✅ Cache with config fingerprint — recreate only when config changes
+  ❌ Creating new client instances per request or per poll cycle
+```
+
+### Rule 15: Pre-commit Self-verification
+
+```
+Before marking a story task complete, verify:
+
+main.go Wiring:
+  ✅ New handlers/services registered in main.go dependency injection
+  ✅ New routes added to router setup
+  ❌ Implementing handler but forgetting to wire it up
+
+DB Column Sync:
+  ✅ New model fields have corresponding migration ALTER/CREATE
+  ✅ Repository INSERT/UPDATE SQL includes ALL model fields
+  ❌ Adding model field but missing it in repository SQL or migration
+
+Swagger:
+  ✅ New/changed endpoints have updated Swaggo annotations
+  ✅ Run swag init if annotations changed
+  ❌ Changing API contract without updating docs
+```
+
+### Rule 16: Test Assertion Quality
+
+```typescript
+// ✅ CORRECT — specific DOM assertion
+expect(screen.getByText('Movie Title')).toBeInTheDocument();
+
+// ✅ CORRECT — use toBeAttached for CSS hover/transition elements
+expect(overlay).toBeAttached();
+
+// ✅ CORRECT — specific value assertion
+expect(result).toEqual({ id: '1', title: 'Test' });
+
+// ❌ WRONG — toBeTruthy for DOM presence (too vague)
+expect(screen.getByText('Movie Title')).toBeTruthy();
+
+// ❌ WRONG — toBeVisible for CSS hover-dependent elements (flaky)
+expect(overlay).toBeVisible();
+
+// ❌ WRONG — generic boolean for structured data
+expect(!!result).toBe(true);
+```
+
+```
+Use the MOST SPECIFIC assertion matcher available:
+  - DOM presence: toBeInTheDocument() (not toBeTruthy)
+  - CSS hover/transition elements: toBeAttached() (not toBeVisible)
+  - Text content: toHaveTextContent() (not check innerHTML)
+  - Equality: toEqual/toStrictEqual (not toBe for objects)
+  - Errors: toThrow/toReject (not try-catch with toBeTruthy)
 ```
 
 ---
@@ -540,6 +645,9 @@ Before committing code, verify:
 - [ ] Error codes follow `{SOURCE}_{ERROR_TYPE}` pattern
 - [ ] Dates are ISO 8601 strings in JSON
 - [ ] Naming conventions followed (see tables above)
+- [ ] No swallowed errors — every error propagated or logged+returned (Rule 13)
+- [ ] In-memory maps/caches have upper bounds (Rule 14)
+- [ ] Background goroutines honor context cancellation (Rule 14)
 
 **Testing (Definition of Done):**
 
@@ -547,10 +655,13 @@ Before committing code, verify:
 - [ ] Services test coverage ≥ 80%
 - [ ] Handlers test coverage ≥ 70%
 - [ ] Tests co-located with source files (`*_test.go`, `*.spec.tsx`)
+- [ ] Assertions use specific matchers — `toBeInTheDocument`, `toBeAttached` (Rule 16)
 
 **Integration (Definition of Done):**
 
-- [ ] New Services/Handlers wired up in `main.go`
+- [ ] New Services/Handlers wired up in `main.go` (Rule 15)
+- [ ] New model fields reflected in migration SQL and repository (Rule 15)
+- [ ] Swagger annotations updated for new/changed endpoints (Rule 15)
 - [ ] No binary files or sensitive data staged
 - [ ] TanStack Query used for server state (NOT Zustand)
 
@@ -582,7 +693,7 @@ These agreements were established during Epic 1 retrospective to improve develop
 
 > "This file is the single source of truth. Read it before implementing."
 
-- All Rules (1-11) must be followed
+- All Rules (1-16) must be followed
 - When in doubt, check this file first
 - Update this file when new patterns are established
 
