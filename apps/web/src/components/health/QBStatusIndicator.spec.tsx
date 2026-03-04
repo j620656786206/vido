@@ -17,9 +17,7 @@ function renderWithQuery(ui: React.ReactElement) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  return render(
-    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
-  );
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
 }
 
 describe('QBStatusIndicator', () => {
@@ -51,9 +49,7 @@ describe('QBStatusIndicator', () => {
     } as ReturnType<typeof useQBConnectionHealth>);
 
     renderWithQuery(<QBStatusIndicator />);
-    expect(
-      screen.getByRole('button', { name: 'qBittorrent 已連線' })
-    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'qBittorrent 已連線' })).toBeInTheDocument();
   });
 
   it('shows degraded status', () => {
@@ -71,15 +67,11 @@ describe('QBStatusIndicator', () => {
     } as ReturnType<typeof useQBConnectionHealth>);
 
     renderWithQuery(<QBStatusIndicator />);
-    expect(
-      screen.getByRole('button', { name: 'qBittorrent 連線不穩定' })
-    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'qBittorrent 連線不穩定' })).toBeInTheDocument();
   });
 
   it('shows disconnected status with last success time', () => {
-    const fiveMinutesAgo = new Date(
-      Date.now() - 5 * 60 * 1000
-    ).toISOString();
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
     mockUseQBConnectionHealth.mockReturnValue({
       data: {
         name: 'qbittorrent',
@@ -95,10 +87,7 @@ describe('QBStatusIndicator', () => {
 
     renderWithQuery(<QBStatusIndicator />);
     const button = screen.getByRole('button');
-    expect(button).toHaveAttribute(
-      'aria-label',
-      'qBittorrent 未連線'
-    );
+    expect(button).toHaveAttribute('aria-label', 'qBittorrent 未連線');
   });
 
   it('calls onClick when clicked', async () => {
@@ -129,8 +118,79 @@ describe('QBStatusIndicator', () => {
     } as ReturnType<typeof useQBConnectionHealth>);
 
     renderWithQuery(<QBStatusIndicator />);
-    expect(
-      screen.getByRole('button', { name: 'qBittorrent 未連線' })
-    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'qBittorrent 未連線' })).toBeInTheDocument();
+  });
+
+  it('[P2] shows "上次" text when status is down with valid lastSuccess', () => {
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    mockUseQBConnectionHealth.mockReturnValue({
+      data: {
+        name: 'qbittorrent',
+        displayName: 'qBittorrent',
+        status: 'down',
+        lastCheck: new Date().toISOString(),
+        lastSuccess: tenMinutesAgo,
+        errorCount: 3,
+        message: 'connection refused',
+      },
+      isLoading: false,
+    } as ReturnType<typeof useQBConnectionHealth>);
+
+    renderWithQuery(<QBStatusIndicator />);
+    expect(screen.getByText(/上次：10 分鐘前/)).toBeInTheDocument();
+  });
+
+  it('[P2] does not show "上次" text when status is healthy', () => {
+    mockUseQBConnectionHealth.mockReturnValue({
+      data: {
+        name: 'qbittorrent',
+        displayName: 'qBittorrent',
+        status: 'healthy',
+        lastCheck: new Date().toISOString(),
+        lastSuccess: new Date().toISOString(),
+        errorCount: 0,
+      },
+      isLoading: false,
+    } as ReturnType<typeof useQBConnectionHealth>);
+
+    renderWithQuery(<QBStatusIndicator />);
+    expect(screen.queryByText(/上次：/)).not.toBeInTheDocument();
+  });
+
+  it('[P2] includes last success in title attribute when down', () => {
+    const threeMinutesAgo = new Date(Date.now() - 3 * 60 * 1000).toISOString();
+    mockUseQBConnectionHealth.mockReturnValue({
+      data: {
+        name: 'qbittorrent',
+        displayName: 'qBittorrent',
+        status: 'down',
+        lastCheck: new Date().toISOString(),
+        lastSuccess: threeMinutesAgo,
+        errorCount: 5,
+      },
+      isLoading: false,
+    } as ReturnType<typeof useQBConnectionHealth>);
+
+    renderWithQuery(<QBStatusIndicator />);
+    const button = screen.getByRole('button');
+    expect(button.title).toContain('上次連線：3 分鐘前');
+  });
+
+  it('[P2] shows "剛剛" for very recent lastSuccess when down', () => {
+    const justNow = new Date(Date.now() - 10 * 1000).toISOString();
+    mockUseQBConnectionHealth.mockReturnValue({
+      data: {
+        name: 'qbittorrent',
+        displayName: 'qBittorrent',
+        status: 'down',
+        lastCheck: new Date().toISOString(),
+        lastSuccess: justNow,
+        errorCount: 3,
+      },
+      isLoading: false,
+    } as ReturnType<typeof useQBConnectionHealth>);
+
+    renderWithQuery(<QBStatusIndicator />);
+    expect(screen.getByText(/上次：剛剛/)).toBeInTheDocument();
   });
 });

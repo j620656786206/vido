@@ -16,9 +16,7 @@ function renderWithQuery(ui: React.ReactElement) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  return render(
-    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
-  );
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
 }
 
 const mockEvents = [
@@ -57,9 +55,7 @@ describe('ConnectionHistoryPanel', () => {
       isLoading: true,
     } as ReturnType<typeof useConnectionHistory>);
 
-    renderWithQuery(
-      <ConnectionHistoryPanel isOpen={true} onClose={vi.fn()} />
-    );
+    renderWithQuery(<ConnectionHistoryPanel isOpen={true} onClose={vi.fn()} />);
     expect(screen.getByText('載入中...')).toBeInTheDocument();
   });
 
@@ -69,9 +65,7 @@ describe('ConnectionHistoryPanel', () => {
       isLoading: false,
     } as ReturnType<typeof useConnectionHistory>);
 
-    renderWithQuery(
-      <ConnectionHistoryPanel isOpen={true} onClose={vi.fn()} />
-    );
+    renderWithQuery(<ConnectionHistoryPanel isOpen={true} onClose={vi.fn()} />);
     expect(screen.getByText('沒有連線記錄')).toBeInTheDocument();
   });
 
@@ -81,9 +75,7 @@ describe('ConnectionHistoryPanel', () => {
       isLoading: false,
     } as ReturnType<typeof useConnectionHistory>);
 
-    renderWithQuery(
-      <ConnectionHistoryPanel isOpen={true} onClose={vi.fn()} />
-    );
+    renderWithQuery(<ConnectionHistoryPanel isOpen={true} onClose={vi.fn()} />);
     // Each label appears both in filter buttons and in event items
     expect(screen.getAllByText('已斷線').length).toBeGreaterThanOrEqual(2);
     expect(screen.getAllByText('已連線').length).toBeGreaterThanOrEqual(2);
@@ -97,9 +89,7 @@ describe('ConnectionHistoryPanel', () => {
       isLoading: false,
     } as ReturnType<typeof useConnectionHistory>);
 
-    renderWithQuery(
-      <ConnectionHistoryPanel isOpen={true} onClose={vi.fn()} />
-    );
+    renderWithQuery(<ConnectionHistoryPanel isOpen={true} onClose={vi.fn()} />);
     expect(screen.getByText('全部')).toBeInTheDocument();
     // Filter buttons for event types
     expect(screen.getAllByText('已連線').length).toBeGreaterThanOrEqual(1);
@@ -113,9 +103,7 @@ describe('ConnectionHistoryPanel', () => {
       isLoading: false,
     } as ReturnType<typeof useConnectionHistory>);
 
-    renderWithQuery(
-      <ConnectionHistoryPanel isOpen={true} onClose={vi.fn()} />
-    );
+    renderWithQuery(<ConnectionHistoryPanel isOpen={true} onClose={vi.fn()} />);
 
     // Click the "已斷線" filter button (the one in the filter group)
     const filterButtons = screen.getAllByText('已斷線');
@@ -133,12 +121,93 @@ describe('ConnectionHistoryPanel', () => {
       isLoading: false,
     } as ReturnType<typeof useConnectionHistory>);
 
-    renderWithQuery(
-      <ConnectionHistoryPanel isOpen={false} onClose={vi.fn()} />
-    );
-    expect(mockUseConnectionHistory).toHaveBeenCalledWith(
-      'qbittorrent',
-      false
-    );
+    renderWithQuery(<ConnectionHistoryPanel isOpen={false} onClose={vi.fn()} />);
+    expect(mockUseConnectionHistory).toHaveBeenCalledWith('qbittorrent', false);
+  });
+
+  it('[P2] shows event message text when present', () => {
+    mockUseConnectionHistory.mockReturnValue({
+      data: [
+        {
+          id: 'evt-msg',
+          service: 'qbittorrent',
+          eventType: 'error' as const,
+          status: 'degraded',
+          message: 'auth timeout after 5s',
+          createdAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+        },
+      ],
+      isLoading: false,
+    } as ReturnType<typeof useConnectionHistory>);
+
+    renderWithQuery(<ConnectionHistoryPanel isOpen={true} onClose={vi.fn()} />);
+    expect(screen.getByText('auth timeout after 5s')).toBeInTheDocument();
+  });
+
+  it('[P2] handles events without message gracefully', () => {
+    mockUseConnectionHistory.mockReturnValue({
+      data: [
+        {
+          id: 'evt-no-msg',
+          service: 'qbittorrent',
+          eventType: 'connected' as const,
+          status: 'healthy',
+          createdAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
+        },
+      ],
+      isLoading: false,
+    } as ReturnType<typeof useConnectionHistory>);
+
+    renderWithQuery(<ConnectionHistoryPanel isOpen={true} onClose={vi.fn()} />);
+    const listItems = screen.getAllByRole('listitem');
+    expect(listItems).toHaveLength(1);
+  });
+
+  it('[P2] resets filter back to "全部" showing all events', async () => {
+    const user = userEvent.setup();
+    mockUseConnectionHistory.mockReturnValue({
+      data: mockEvents,
+      isLoading: false,
+    } as ReturnType<typeof useConnectionHistory>);
+
+    renderWithQuery(<ConnectionHistoryPanel isOpen={true} onClose={vi.fn()} />);
+
+    // First filter to disconnected only
+    const filterButtons = screen.getAllByText('已斷線');
+    await user.click(filterButtons[0]);
+    expect(screen.getAllByRole('listitem')).toHaveLength(1);
+
+    // Then reset to "全部"
+    await user.click(screen.getByText('全部'));
+    expect(screen.getAllByRole('listitem')).toHaveLength(3);
+  });
+
+  it('[P2] displays relative time labels correctly', () => {
+    const events = [
+      {
+        id: 'evt-recent',
+        service: 'qbittorrent',
+        eventType: 'connected' as const,
+        status: 'healthy',
+        createdAt: new Date(Date.now() - 20 * 1000).toISOString(), // 20 seconds ago
+      },
+      {
+        id: 'evt-minutes',
+        service: 'qbittorrent',
+        eventType: 'disconnected' as const,
+        status: 'down',
+        message: 'timeout',
+        createdAt: new Date(Date.now() - 45 * 60 * 1000).toISOString(), // 45 minutes ago
+      },
+    ];
+
+    mockUseConnectionHistory.mockReturnValue({
+      data: events,
+      isLoading: false,
+    } as ReturnType<typeof useConnectionHistory>);
+
+    renderWithQuery(<ConnectionHistoryPanel isOpen={true} onClose={vi.fn()} />);
+    expect(screen.getByText('剛剛')).toBeInTheDocument();
+    expect(screen.getByText('45 分鐘前')).toBeInTheDocument();
   });
 });

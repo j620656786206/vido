@@ -258,6 +258,51 @@ test.describe('Connection Health - Disconnection Detection @e2e @p1', () => {
 });
 
 // =============================================================================
+// AC3: Auto-Recovery
+// =============================================================================
+
+test.describe('Connection Health - Auto-Recovery @e2e @p1', () => {
+  test('[P1] should update indicator from down to healthy on recovery (AC3)', async ({ page }) => {
+    await mockDashboardAPIs(page);
+
+    // GIVEN: Start with qBittorrent down
+    let callCount = 0;
+    await page.route('**/api/v1/health/services', (route) => {
+      callCount++;
+      const isRecovered = callCount > 1;
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(
+          isRecovered
+            ? buildServicesHealth('healthy')
+            : buildServicesHealth('down', {
+                lastSuccess: new Date(Date.now() - 3 * 60 * 1000).toISOString(),
+                errorCount: 5,
+                message: 'connection refused',
+              })
+        ),
+      });
+    });
+
+    await page.goto('/');
+
+    // THEN: Initially shows disconnected
+    await expect(page.getByRole('button', { name: 'qBittorrent 未連線' })).toBeVisible();
+
+    // WHEN: Trigger re-fetch (simulate window focus to trigger refetchOnWindowFocus)
+    await page.evaluate(() => {
+      window.dispatchEvent(new Event('focus'));
+    });
+
+    // THEN: Indicator recovers to healthy
+    await expect(page.getByRole('button', { name: 'qBittorrent 已連線' })).toBeVisible({
+      timeout: 35000,
+    });
+  });
+});
+
+// =============================================================================
 // AC4: Connection History Panel
 // =============================================================================
 
