@@ -951,6 +951,270 @@ func TestParseQueueService_ProcessNextJob_TVShow_ExistingSeries(t *testing.T) {
 	assert.Equal(t, "existing-series", *repo.jobs["job-1"].MediaID)
 }
 
+func TestParseQueueService_ProcessNextJob_TVShow_SeasonReuse(t *testing.T) {
+	repo := newMockPQParseJobRepo()
+	// Two episodes from the same season
+	repo.jobs["job-1"] = &models.ParseJob{
+		ID:       "job-1",
+		FileName: "[SubGroup] Show S01E05.mkv",
+		FilePath: "/downloads/S01E05.mkv",
+		Status:   models.ParseJobPending,
+	}
+
+	parserSvc := &mockPQParserService{
+		result: &parser.ParseResult{
+			Status:       parser.ParseStatusSuccess,
+			CleanedTitle: "Show",
+			MediaType:    parser.MediaTypeTVShow,
+			Season:       1,
+			Episode:      5,
+		},
+	}
+
+	metaSvc := &mockPQMetadataService{
+		searchResult: &metadata.SearchResult{
+			Items:  []metadata.MetadataItem{{ID: "99999", Title: "Show"}},
+			Source: models.MetadataSourceTMDb,
+		},
+	}
+
+	seriesRepo := newMockPQSeriesRepo()
+	seasonRepo := newMockPQSeasonRepo()
+	episodeRepo := newMockPQEpisodeRepo()
+
+	// Pre-populate existing series and season
+	seriesRepo.series["existing-series"] = &models.Series{
+		ID:     "existing-series",
+		Title:  "Show",
+		TMDbID: sql.NullInt64{Int64: 99999, Valid: true},
+	}
+	seasonRepo.seasons["existing-season"] = &models.Season{
+		ID:           "existing-season",
+		SeriesID:     "existing-series",
+		SeasonNumber: 1,
+	}
+
+	svc := newTestParseQueueServiceFull(repo, parserSvc, metaSvc, nil, seriesRepo, seasonRepo, episodeRepo)
+
+	err := svc.ProcessNextJob(context.Background())
+	require.NoError(t, err)
+
+	// Should reuse existing series — no new series created
+	assert.Len(t, seriesRepo.series, 1)
+
+	// Should reuse existing season — no new season created
+	assert.Len(t, seasonRepo.seasons, 1)
+
+	// Episode should reference the existing season
+	assert.Len(t, episodeRepo.episodes, 1)
+	for _, ep := range episodeRepo.episodes {
+		assert.Equal(t, "existing-series", ep.SeriesID)
+		assert.Equal(t, "existing-season", ep.SeasonID.String)
+		assert.True(t, ep.SeasonID.Valid)
+	}
+}
+
+func TestParseQueueService_ProcessNextJob_TVShow_SeriesCreateError(t *testing.T) {
+	repo := newMockPQParseJobRepo()
+	repo.jobs["job-1"] = &models.ParseJob{
+		ID:       "job-1",
+		FileName: "[SubGroup] Show S01E01.mkv",
+		FilePath: "/downloads/show.mkv",
+		Status:   models.ParseJobPending,
+	}
+
+	parserSvc := &mockPQParserService{
+		result: &parser.ParseResult{
+			Status:       parser.ParseStatusSuccess,
+			CleanedTitle: "Show",
+			MediaType:    parser.MediaTypeTVShow,
+			Season:       1,
+			Episode:      1,
+		},
+	}
+
+	metaSvc := &mockPQMetadataService{
+		searchResult: &metadata.SearchResult{
+			Items:  []metadata.MetadataItem{{ID: "99999", Title: "Show"}},
+			Source: models.MetadataSourceTMDb,
+		},
+	}
+
+	seriesRepo := newMockPQSeriesRepo()
+	seriesRepo.err = fmt.Errorf("database connection lost")
+	seasonRepo := newMockPQSeasonRepo()
+	episodeRepo := newMockPQEpisodeRepo()
+
+	svc := newTestParseQueueServiceFull(repo, parserSvc, metaSvc, nil, seriesRepo, seasonRepo, episodeRepo)
+
+	err := svc.ProcessNextJob(context.Background())
+	assert.NoError(t, err) // ProcessNextJob returns nil but marks job failed
+
+	// Job should be marked as failed
+	assert.Equal(t, models.ParseJobFailed, repo.jobs["job-1"].Status)
+	assert.NotNil(t, repo.jobs["job-1"].ErrorMessage)
+	assert.Contains(t, *repo.jobs["job-1"].ErrorMessage, "create media entry failed")
+}
+
+func TestParseQueueService_ProcessNextJob_TVShow_SeasonCreateError(t *testing.T) {
+	repo := newMockPQParseJobRepo()
+	repo.jobs["job-1"] = &models.ParseJob{
+		ID:       "job-1",
+		FileName: "[SubGroup] Show S01E01.mkv",
+		FilePath: "/downloads/show.mkv",
+		Status:   models.ParseJobPending,
+	}
+
+	parserSvc := &mockPQParserService{
+		result: &parser.ParseResult{
+			Status:       parser.ParseStatusSuccess,
+			CleanedTitle: "Show",
+			MediaType:    parser.MediaTypeTVShow,
+			Season:       1,
+			Episode:      1,
+		},
+	}
+
+	metaSvc := &mockPQMetadataService{
+		searchResult: &metadata.SearchResult{
+			Items:  []metadata.MetadataItem{{ID: "99999", Title: "Show"}},
+			Source: models.MetadataSourceTMDb,
+		},
+	}
+
+	seriesRepo := newMockPQSeriesRepo()
+	seasonRepo := newMockPQSeasonRepo()
+	seasonRepo.err = fmt.Errorf("season table locked")
+	episodeRepo := newMockPQEpisodeRepo()
+
+	svc := newTestParseQueueServiceFull(repo, parserSvc, metaSvc, nil, seriesRepo, seasonRepo, episodeRepo)
+
+	err := svc.ProcessNextJob(context.Background())
+	assert.NoError(t, err) // ProcessNextJob returns nil but marks job failed
+
+	// Job should be marked as failed
+	assert.Equal(t, models.ParseJobFailed, repo.jobs["job-1"].Status)
+	assert.Contains(t, *repo.jobs["job-1"].ErrorMessage, "create media entry failed")
+}
+
+func TestParseQueueService_ProcessNextJob_TVShow_EpisodeCreateError(t *testing.T) {
+	repo := newMockPQParseJobRepo()
+	repo.jobs["job-1"] = &models.ParseJob{
+		ID:       "job-1",
+		FileName: "[SubGroup] Show S01E01.mkv",
+		FilePath: "/downloads/show.mkv",
+		Status:   models.ParseJobPending,
+	}
+
+	parserSvc := &mockPQParserService{
+		result: &parser.ParseResult{
+			Status:       parser.ParseStatusSuccess,
+			CleanedTitle: "Show",
+			MediaType:    parser.MediaTypeTVShow,
+			Season:       1,
+			Episode:      1,
+		},
+	}
+
+	metaSvc := &mockPQMetadataService{
+		searchResult: &metadata.SearchResult{
+			Items:  []metadata.MetadataItem{{ID: "99999", Title: "Show"}},
+			Source: models.MetadataSourceTMDb,
+		},
+	}
+
+	seriesRepo := newMockPQSeriesRepo()
+	seasonRepo := newMockPQSeasonRepo()
+	episodeRepo := newMockPQEpisodeRepo()
+	episodeRepo.err = fmt.Errorf("episode insert failed")
+
+	svc := newTestParseQueueServiceFull(repo, parserSvc, metaSvc, nil, seriesRepo, seasonRepo, episodeRepo)
+
+	err := svc.ProcessNextJob(context.Background())
+	assert.NoError(t, err) // ProcessNextJob returns nil but marks job failed
+
+	// Job should be marked as failed
+	assert.Equal(t, models.ParseJobFailed, repo.jobs["job-1"].Status)
+	assert.Contains(t, *repo.jobs["job-1"].ErrorMessage, "create media entry failed")
+}
+
+func TestParseQueueService_ProcessNextJob_TVShow_SeasonMetadataFromSeasonsJSON(t *testing.T) {
+	repo := newMockPQParseJobRepo()
+	repo.jobs["job-1"] = &models.ParseJob{
+		ID:       "job-1",
+		FileName: "[SubGroup] Show S02E01.mkv",
+		FilePath: "/downloads/show-s02e01.mkv",
+		Status:   models.ParseJobPending,
+	}
+
+	parserSvc := &mockPQParserService{
+		result: &parser.ParseResult{
+			Status:       parser.ParseStatusSuccess,
+			CleanedTitle: "Show",
+			MediaType:    parser.MediaTypeTVShow,
+			Season:       2,
+			Episode:      1,
+		},
+	}
+
+	metaSvc := &mockPQMetadataService{
+		searchResult: &metadata.SearchResult{
+			Items:  []metadata.MetadataItem{{ID: "99999", Title: "Show"}},
+			Source: models.MetadataSourceTMDb,
+		},
+	}
+
+	// Pre-populate series with SeasonsJSON containing season 2 metadata
+	seriesRepo := newMockPQSeriesRepo()
+	existingSeries := &models.Series{
+		ID:     "existing-series",
+		Title:  "Show",
+		TMDbID: sql.NullInt64{Int64: 99999, Valid: true},
+	}
+	existingSeries.SetSeasons([]models.SeasonSummary{
+		{
+			ID:           100,
+			SeasonNumber: 1,
+			Name:         "Season 1",
+			PosterPath:   "/posters/s1.jpg",
+			AirDate:      "2023-01-01",
+			EpisodeCount: 10,
+		},
+		{
+			ID:           200,
+			SeasonNumber: 2,
+			Name:         "Season 2",
+			Overview:     "The second season",
+			PosterPath:   "/posters/s2.jpg",
+			AirDate:      "2024-01-01",
+			EpisodeCount: 8,
+		},
+	})
+	seriesRepo.series["existing-series"] = existingSeries
+
+	seasonRepo := newMockPQSeasonRepo()
+	episodeRepo := newMockPQEpisodeRepo()
+
+	svc := newTestParseQueueServiceFull(repo, parserSvc, metaSvc, nil, seriesRepo, seasonRepo, episodeRepo)
+
+	err := svc.ProcessNextJob(context.Background())
+	require.NoError(t, err)
+
+	// Verify season was created with metadata from SeasonsJSON
+	assert.Len(t, seasonRepo.seasons, 1)
+	for _, s := range seasonRepo.seasons {
+		assert.Equal(t, 2, s.SeasonNumber)
+		assert.Equal(t, "existing-series", s.SeriesID)
+		assert.Equal(t, int64(200), s.TMDbID.Int64)
+		assert.True(t, s.TMDbID.Valid)
+		assert.Equal(t, "Season 2", s.Name.String)
+		assert.Equal(t, "The second season", s.Overview.String)
+		assert.Equal(t, "/posters/s2.jpg", s.PosterPath.String)
+		assert.Equal(t, "2024-01-01", s.AirDate.String)
+		assert.Equal(t, int64(8), s.EpisodeCount.Int64)
+	}
+}
+
 func TestParseQueueService_ProcessNextJob_TVShow_SpecialsSeason0(t *testing.T) {
 	repo := newMockPQParseJobRepo()
 	repo.jobs["job-1"] = &models.ParseJob{
