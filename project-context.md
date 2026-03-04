@@ -203,6 +203,15 @@ Display:  toLocaleDateString('zh-TW') → "2024年1月15日"
 ❌ Never define service interfaces in handlers package
 ```
 
+### Rule 12: Pre-commit Hooks (--no-verify Forbidden)
+
+```
+✅ If a pre-commit hook fails, fix the issue and commit normally
+✅ Only Alexyu can authorize --no-verify after reviewing the specific error
+❌ Dev agents MUST NOT use --no-verify when committing
+❌ NEVER bypass pre-commit hooks without explicit user approval
+```
+
 ---
 
 ## 🏗️ Project Structure
