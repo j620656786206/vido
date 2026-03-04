@@ -18,6 +18,7 @@ func TestNewRepositories(t *testing.T) {
 	assert.NotNil(t, repos)
 	assert.NotNil(t, repos.Movies)
 	assert.NotNil(t, repos.Series)
+	assert.NotNil(t, repos.Seasons)
 	assert.NotNil(t, repos.Settings)
 	assert.Nil(t, repos.Cache) // Cache is not initialized yet
 	assert.NotNil(t, repos.Secrets)
@@ -74,6 +75,7 @@ func TestNewRepositoriesWithCache(t *testing.T) {
 	assert.NotNil(t, repos)
 	assert.NotNil(t, repos.Movies)
 	assert.NotNil(t, repos.Series)
+	assert.NotNil(t, repos.Seasons)
 	assert.NotNil(t, repos.Settings)
 	assert.NotNil(t, repos.Cache) // Cache is initialized
 	assert.NotNil(t, repos.Secrets)

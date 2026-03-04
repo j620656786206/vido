@@ -83,6 +83,30 @@ type SeriesRepositoryInterface interface {
 	Upsert(ctx context.Context, series *models.Series) error
 }
 
+// SeasonRepositoryInterface defines the contract for season data access operations.
+type SeasonRepositoryInterface interface {
+	// Create inserts a new season into the database
+	Create(ctx context.Context, season *models.Season) error
+
+	// FindByID retrieves a season by its primary key
+	FindByID(ctx context.Context, id string) (*models.Season, error)
+
+	// FindBySeriesID retrieves all seasons for a series
+	FindBySeriesID(ctx context.Context, seriesID string) ([]models.Season, error)
+
+	// FindBySeriesAndNumber retrieves a season by series ID and season number
+	FindBySeriesAndNumber(ctx context.Context, seriesID string, seasonNumber int) (*models.Season, error)
+
+	// Update modifies an existing season in the database
+	Update(ctx context.Context, season *models.Season) error
+
+	// Delete removes a season from the database by ID
+	Delete(ctx context.Context, id string) error
+
+	// Upsert creates or updates a season based on UNIQUE(series_id, season_number)
+	Upsert(ctx context.Context, season *models.Season) error
+}
+
 // EpisodeRepositoryInterface defines the contract for episode data access operations.
 type EpisodeRepositoryInterface interface {
 	// Create inserts a new episode into the database
@@ -266,6 +290,7 @@ type RetryItem = retry.RetryItem
 var (
 	_ MovieRepositoryInterface    = (*MovieRepository)(nil)
 	_ SeriesRepositoryInterface   = (*SeriesRepository)(nil)
+	_ SeasonRepositoryInterface   = (*SeasonRepository)(nil)
 	_ EpisodeRepositoryInterface  = (*EpisodeRepository)(nil)
 	_ SettingsRepositoryInterface = (*SettingsRepository)(nil)
 	_ CacheRepositoryInterface    = (*CacheRepository)(nil)

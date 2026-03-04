@@ -50,6 +50,7 @@ func setupEpisodeTestDB(t *testing.T) *sql.DB {
 		CREATE TABLE episodes (
 			id TEXT PRIMARY KEY,
 			series_id TEXT NOT NULL,
+			season_id TEXT,
 			tmdb_id INTEGER,
 			season_number INTEGER NOT NULL,
 			episode_number INTEGER NOT NULL,

@@ -145,6 +145,40 @@ export interface TVShowDetails {
   seasons: Season[];
 }
 
+// Vido internal API types for Series/Season/Episode 3-tier architecture
+export interface SeasonDetail {
+  id: string;
+  seriesId: string;
+  tmdbId?: number;
+  seasonNumber: number;
+  name?: string;
+  overview?: string;
+  posterPath?: string;
+  airDate?: string;
+  episodeCount?: number;
+  voteAverage?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EpisodeDetail {
+  id: string;
+  seriesId: string;
+  seasonId?: string;
+  tmdbId?: number;
+  seasonNumber: number;
+  episodeNumber: number;
+  title?: string;
+  overview?: string;
+  airDate?: string;
+  runtime?: number;
+  stillPath?: string;
+  voteAverage?: number;
+  filePath?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface CastMember {
   id: number;
   name: string;

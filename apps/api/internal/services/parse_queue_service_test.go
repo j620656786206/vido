@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log/slog"
 	"testing"
@@ -206,13 +207,192 @@ func (m *mockPQMovieRepo) Upsert(_ context.Context, _ *models.Movie) error { ret
 
 var _ repository.MovieRepositoryInterface = (*mockPQMovieRepo)(nil)
 
+type mockPQSeriesRepo struct {
+	series map[string]*models.Series
+	err    error
+}
+
+func newMockPQSeriesRepo() *mockPQSeriesRepo {
+	return &mockPQSeriesRepo{series: make(map[string]*models.Series)}
+}
+
+func (m *mockPQSeriesRepo) Create(_ context.Context, s *models.Series) error {
+	if m.err != nil {
+		return m.err
+	}
+	m.series[s.ID] = s
+	return nil
+}
+
+func (m *mockPQSeriesRepo) FindByID(_ context.Context, id string) (*models.Series, error) {
+	if s, ok := m.series[id]; ok {
+		return s, nil
+	}
+	return nil, fmt.Errorf("series with id %s not found", id)
+}
+
+func (m *mockPQSeriesRepo) FindByTMDbID(_ context.Context, tmdbID int64) (*models.Series, error) {
+	for _, s := range m.series {
+		if s.TMDbID.Valid && s.TMDbID.Int64 == tmdbID {
+			return s, nil
+		}
+	}
+	return nil, fmt.Errorf("series with tmdb_id %d not found", tmdbID)
+}
+
+func (m *mockPQSeriesRepo) FindByIMDbID(_ context.Context, _ string) (*models.Series, error) {
+	return nil, nil
+}
+func (m *mockPQSeriesRepo) Update(_ context.Context, _ *models.Series) error { return nil }
+func (m *mockPQSeriesRepo) Delete(_ context.Context, _ string) error         { return nil }
+func (m *mockPQSeriesRepo) List(_ context.Context, _ repository.ListParams) ([]models.Series, *repository.PaginationResult, error) {
+	return nil, nil, nil
+}
+func (m *mockPQSeriesRepo) SearchByTitle(_ context.Context, _ string, _ repository.ListParams) ([]models.Series, *repository.PaginationResult, error) {
+	return nil, nil, nil
+}
+func (m *mockPQSeriesRepo) FullTextSearch(_ context.Context, _ string, _ repository.ListParams) ([]models.Series, *repository.PaginationResult, error) {
+	return nil, nil, nil
+}
+func (m *mockPQSeriesRepo) Upsert(_ context.Context, _ *models.Series) error { return nil }
+
+var _ repository.SeriesRepositoryInterface = (*mockPQSeriesRepo)(nil)
+
+type mockPQSeasonRepo struct {
+	seasons map[string]*models.Season
+	err     error
+}
+
+func newMockPQSeasonRepo() *mockPQSeasonRepo {
+	return &mockPQSeasonRepo{seasons: make(map[string]*models.Season)}
+}
+
+func (m *mockPQSeasonRepo) Create(_ context.Context, s *models.Season) error {
+	if m.err != nil {
+		return m.err
+	}
+	m.seasons[s.ID] = s
+	return nil
+}
+
+func (m *mockPQSeasonRepo) FindByID(_ context.Context, id string) (*models.Season, error) {
+	if s, ok := m.seasons[id]; ok {
+		return s, nil
+	}
+	return nil, fmt.Errorf("season with id %s not found", id)
+}
+
+func (m *mockPQSeasonRepo) FindBySeriesID(_ context.Context, seriesID string) ([]models.Season, error) {
+	var result []models.Season
+	for _, s := range m.seasons {
+		if s.SeriesID == seriesID {
+			result = append(result, *s)
+		}
+	}
+	return result, nil
+}
+
+func (m *mockPQSeasonRepo) FindBySeriesAndNumber(_ context.Context, seriesID string, seasonNumber int) (*models.Season, error) {
+	for _, s := range m.seasons {
+		if s.SeriesID == seriesID && s.SeasonNumber == seasonNumber {
+			return s, nil
+		}
+	}
+	return nil, fmt.Errorf("season %d for series %s not found", seasonNumber, seriesID)
+}
+
+func (m *mockPQSeasonRepo) Update(_ context.Context, _ *models.Season) error { return nil }
+func (m *mockPQSeasonRepo) Delete(_ context.Context, _ string) error         { return nil }
+func (m *mockPQSeasonRepo) Upsert(_ context.Context, s *models.Season) error {
+	if m.err != nil {
+		return m.err
+	}
+	m.seasons[s.ID] = s
+	return nil
+}
+
+var _ repository.SeasonRepositoryInterface = (*mockPQSeasonRepo)(nil)
+
+type mockPQEpisodeRepo struct {
+	episodes map[string]*models.Episode
+	err      error
+}
+
+func newMockPQEpisodeRepo() *mockPQEpisodeRepo {
+	return &mockPQEpisodeRepo{episodes: make(map[string]*models.Episode)}
+}
+
+func (m *mockPQEpisodeRepo) Create(_ context.Context, ep *models.Episode) error {
+	if m.err != nil {
+		return m.err
+	}
+	m.episodes[ep.ID] = ep
+	return nil
+}
+
+func (m *mockPQEpisodeRepo) FindByID(_ context.Context, id string) (*models.Episode, error) {
+	if ep, ok := m.episodes[id]; ok {
+		return ep, nil
+	}
+	return nil, fmt.Errorf("episode with id %s not found", id)
+}
+
+func (m *mockPQEpisodeRepo) FindBySeriesID(_ context.Context, _ string) ([]models.Episode, error) {
+	return nil, nil
+}
+
+func (m *mockPQEpisodeRepo) FindBySeasonNumber(_ context.Context, _ string, _ int) ([]models.Episode, error) {
+	return nil, nil
+}
+
+func (m *mockPQEpisodeRepo) FindBySeriesSeasonEpisode(_ context.Context, seriesID string, season, episode int) (*models.Episode, error) {
+	for _, ep := range m.episodes {
+		if ep.SeriesID == seriesID && ep.SeasonNumber == season && ep.EpisodeNumber == episode {
+			return ep, nil
+		}
+	}
+	return nil, fmt.Errorf("episode S%02dE%02d for series %s not found", season, episode, seriesID)
+}
+
+func (m *mockPQEpisodeRepo) Update(_ context.Context, _ *models.Episode) error { return nil }
+func (m *mockPQEpisodeRepo) Delete(_ context.Context, _ string) error          { return nil }
+func (m *mockPQEpisodeRepo) Upsert(_ context.Context, ep *models.Episode) error {
+	if m.err != nil {
+		return m.err
+	}
+	m.episodes[ep.ID] = ep
+	return nil
+}
+
+var _ repository.EpisodeRepositoryInterface = (*mockPQEpisodeRepo)(nil)
+
 func newTestParseQueueService(
 	parseJobRepo repository.ParseJobRepositoryInterface,
 	parserSvc ParserServiceInterface,
 	metaSvc MetadataServiceInterface,
 	movieRepo repository.MovieRepositoryInterface,
 ) *ParseQueueService {
-	return NewParseQueueService(parseJobRepo, parserSvc, metaSvc, movieRepo, slog.Default())
+	return NewParseQueueService(
+		parseJobRepo, parserSvc, metaSvc, movieRepo,
+		newMockPQSeriesRepo(), newMockPQSeasonRepo(), newMockPQEpisodeRepo(),
+		slog.Default(),
+	)
+}
+
+func newTestParseQueueServiceFull(
+	parseJobRepo repository.ParseJobRepositoryInterface,
+	parserSvc ParserServiceInterface,
+	metaSvc MetadataServiceInterface,
+	movieRepo repository.MovieRepositoryInterface,
+	seriesRepo repository.SeriesRepositoryInterface,
+	seasonRepo repository.SeasonRepositoryInterface,
+	episodeRepo repository.EpisodeRepositoryInterface,
+) *ParseQueueService {
+	return NewParseQueueService(
+		parseJobRepo, parserSvc, metaSvc, movieRepo,
+		seriesRepo, seasonRepo, episodeRepo,
+		slog.Default(),
+	)
 }
 
 // --- Tests ---
@@ -643,4 +823,171 @@ func TestParseQueueService_ListJobs_DefaultLimit(t *testing.T) {
 	jobs, err = svc.ListJobs(context.Background(), -1)
 	assert.NoError(t, err)
 	assert.Empty(t, jobs)
+}
+
+// --- TV Show Branch Tests ---
+
+func TestParseQueueService_ProcessNextJob_TVShow_Success(t *testing.T) {
+	repo := newMockPQParseJobRepo()
+	repo.jobs["job-1"] = &models.ParseJob{
+		ID:       "job-1",
+		FileName: "[SubGroup] Show S01E05.mkv",
+		FilePath: "/downloads/[SubGroup] Show S01E05.mkv",
+		Status:   models.ParseJobPending,
+	}
+
+	parserSvc := &mockPQParserService{
+		result: &parser.ParseResult{
+			Status:       parser.ParseStatusSuccess,
+			Title:        "Show",
+			CleanedTitle: "Show",
+			Year:         2024,
+			MediaType:    parser.MediaTypeTVShow,
+			Season:       1,
+			Episode:      5,
+		},
+	}
+
+	metaSvc := &mockPQMetadataService{
+		searchResult: &metadata.SearchResult{
+			Items: []metadata.MetadataItem{
+				{
+					ID:            "99999",
+					Title:         "Show",
+					OriginalTitle: "Show Original",
+					Year:          2024,
+					PosterURL:     "https://image.tmdb.org/poster.jpg",
+					Overview:      "A great show",
+					Genres:        []string{"Drama"},
+					Rating:        8.0,
+					ReleaseDate:   "2024-01-01",
+				},
+			},
+			Source: models.MetadataSourceTMDb,
+		},
+	}
+
+	seriesRepo := newMockPQSeriesRepo()
+	seasonRepo := newMockPQSeasonRepo()
+	episodeRepo := newMockPQEpisodeRepo()
+
+	svc := newTestParseQueueServiceFull(repo, parserSvc, metaSvc, nil, seriesRepo, seasonRepo, episodeRepo)
+
+	err := svc.ProcessNextJob(context.Background())
+	require.NoError(t, err)
+
+	// Verify job is completed
+	assert.Equal(t, models.ParseJobCompleted, repo.jobs["job-1"].Status)
+	assert.NotNil(t, repo.jobs["job-1"].MediaID)
+
+	// Verify series was created
+	assert.Len(t, seriesRepo.series, 1)
+
+	// Verify season was created
+	assert.Len(t, seasonRepo.seasons, 1)
+	for _, s := range seasonRepo.seasons {
+		assert.Equal(t, 1, s.SeasonNumber)
+	}
+
+	// Verify episode was created
+	assert.Len(t, episodeRepo.episodes, 1)
+	for _, ep := range episodeRepo.episodes {
+		assert.Equal(t, 1, ep.SeasonNumber)
+		assert.Equal(t, 5, ep.EpisodeNumber)
+		assert.True(t, ep.SeasonID.Valid)
+	}
+}
+
+func TestParseQueueService_ProcessNextJob_TVShow_ExistingSeries(t *testing.T) {
+	repo := newMockPQParseJobRepo()
+	repo.jobs["job-1"] = &models.ParseJob{
+		ID:       "job-1",
+		FileName: "[SubGroup] Show S01E06.mkv",
+		FilePath: "/downloads/[SubGroup] Show S01E06.mkv",
+		Status:   models.ParseJobPending,
+	}
+
+	parserSvc := &mockPQParserService{
+		result: &parser.ParseResult{
+			Status:       parser.ParseStatusSuccess,
+			CleanedTitle: "Show",
+			MediaType:    parser.MediaTypeTVShow,
+			Season:       1,
+			Episode:      6,
+		},
+	}
+
+	metaSvc := &mockPQMetadataService{
+		searchResult: &metadata.SearchResult{
+			Items: []metadata.MetadataItem{
+				{
+					ID:    "99999",
+					Title: "Show",
+				},
+			},
+			Source: models.MetadataSourceTMDb,
+		},
+	}
+
+	// Pre-populate series with TMDb ID 99999
+	seriesRepo := newMockPQSeriesRepo()
+	seriesRepo.series["existing-series"] = &models.Series{
+		ID:     "existing-series",
+		Title:  "Show",
+		TMDbID: sql.NullInt64{Int64: 99999, Valid: true},
+	}
+
+	seasonRepo := newMockPQSeasonRepo()
+	episodeRepo := newMockPQEpisodeRepo()
+
+	svc := newTestParseQueueServiceFull(repo, parserSvc, metaSvc, nil, seriesRepo, seasonRepo, episodeRepo)
+
+	err := svc.ProcessNextJob(context.Background())
+	require.NoError(t, err)
+
+	// Should reuse existing series, not create a new one
+	assert.Len(t, seriesRepo.series, 1)
+	assert.NotNil(t, repo.jobs["job-1"].MediaID)
+	assert.Equal(t, "existing-series", *repo.jobs["job-1"].MediaID)
+}
+
+func TestParseQueueService_ProcessNextJob_TVShow_SpecialsSeason0(t *testing.T) {
+	repo := newMockPQParseJobRepo()
+	repo.jobs["job-1"] = &models.ParseJob{
+		ID:       "job-1",
+		FileName: "[SubGroup] Show S00E01 Special.mkv",
+		FilePath: "/downloads/special.mkv",
+		Status:   models.ParseJobPending,
+	}
+
+	parserSvc := &mockPQParserService{
+		result: &parser.ParseResult{
+			Status:       parser.ParseStatusSuccess,
+			CleanedTitle: "Show",
+			MediaType:    parser.MediaTypeTVShow,
+			Season:       0,
+			Episode:      1,
+		},
+	}
+
+	metaSvc := &mockPQMetadataService{
+		searchResult: &metadata.SearchResult{
+			Items:  []metadata.MetadataItem{{ID: "99999", Title: "Show"}},
+			Source: models.MetadataSourceTMDb,
+		},
+	}
+
+	seriesRepo := newMockPQSeriesRepo()
+	seasonRepo := newMockPQSeasonRepo()
+	episodeRepo := newMockPQEpisodeRepo()
+
+	svc := newTestParseQueueServiceFull(repo, parserSvc, metaSvc, nil, seriesRepo, seasonRepo, episodeRepo)
+
+	err := svc.ProcessNextJob(context.Background())
+	require.NoError(t, err)
+
+	// Verify season 0 (Specials) was created
+	for _, s := range seasonRepo.seasons {
+		assert.Equal(t, 0, s.SeasonNumber)
+	}
 }

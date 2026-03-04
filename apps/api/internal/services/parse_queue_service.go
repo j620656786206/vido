@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/vido/api/internal/metadata"
 	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/parser"
 	"github.com/vido/api/internal/qbittorrent"
@@ -22,7 +23,7 @@ const MaxRetryAttempts = 4
 
 // Sentinel errors for parse queue operations.
 var (
-	ErrJobNotRetryable = errors.New("can only retry failed jobs")
+	ErrJobNotRetryable   = errors.New("can only retry failed jobs")
 	ErrMaxRetriesReached = errors.New("maximum retry attempts reached")
 )
 
@@ -41,6 +42,9 @@ type ParseQueueService struct {
 	parserService   ParserServiceInterface
 	metadataService MetadataServiceInterface
 	movieRepo       repository.MovieRepositoryInterface
+	seriesRepo      repository.SeriesRepositoryInterface
+	seasonRepo      repository.SeasonRepositoryInterface
+	episodeRepo     repository.EpisodeRepositoryInterface
 	logger          *slog.Logger
 }
 
@@ -50,6 +54,9 @@ func NewParseQueueService(
 	parserService ParserServiceInterface,
 	metadataService MetadataServiceInterface,
 	movieRepo repository.MovieRepositoryInterface,
+	seriesRepo repository.SeriesRepositoryInterface,
+	seasonRepo repository.SeasonRepositoryInterface,
+	episodeRepo repository.EpisodeRepositoryInterface,
 	logger *slog.Logger,
 ) *ParseQueueService {
 	return &ParseQueueService{
@@ -57,6 +64,9 @@ func NewParseQueueService(
 		parserService:   parserService,
 		metadataService: metadataService,
 		movieRepo:       movieRepo,
+		seriesRepo:      seriesRepo,
+		seasonRepo:      seasonRepo,
+		episodeRepo:     episodeRepo,
 		logger:          logger,
 	}
 }
@@ -156,8 +166,53 @@ func (s *ParseQueueService) ProcessNextJob(ctx context.Context) error {
 		return nil
 	}
 
-	// Step 3: Create media entry from best match
+	// Step 3: Create media entry from best match — branch on mediaType
 	bestMatch := searchResult.Items[0]
+	var mediaID string
+	var createErr error
+
+	if mediaType == "tv" {
+		mediaID, createErr = s.createTVEntryFromMatch(ctx, bestMatch, searchResult, job, parseResult)
+	} else {
+		mediaID, createErr = s.createMovieFromMatch(ctx, bestMatch, searchResult, job)
+	}
+
+	if createErr != nil {
+		errMsg := fmt.Sprintf("create media entry failed: %s", createErr.Error())
+		s.logger.Error("Media creation failed", "job_id", job.ID, "media_type", mediaType, "error", createErr)
+		if statusErr := s.parseJobRepo.UpdateStatus(ctx, job.ID, models.ParseJobFailed, errMsg); statusErr != nil {
+			s.logger.Error("Failed to update job status to failed", "job_id", job.ID, "error", statusErr)
+		}
+		return nil
+	}
+
+	// Step 4: Mark job as completed
+	job.MediaID = &mediaID
+	job.Status = models.ParseJobCompleted
+	now := time.Now()
+	job.CompletedAt = &now
+
+	if err := s.parseJobRepo.Update(ctx, job); err != nil {
+		return fmt.Errorf("mark job completed: %w", err)
+	}
+
+	s.logger.Info("Parse job completed",
+		"job_id", job.ID,
+		"media_id", mediaID,
+		"media_type", mediaType,
+		"title", bestMatch.Title,
+	)
+
+	return nil
+}
+
+// createMovieFromMatch creates a Movie record from the best metadata match.
+func (s *ParseQueueService) createMovieFromMatch(
+	ctx context.Context,
+	bestMatch metadata.MetadataItem,
+	searchResult *metadata.SearchResult,
+	job *models.ParseJob,
+) (string, error) {
 	mediaID := uuid.New().String()
 
 	movie := &models.Movie{
@@ -183,31 +238,156 @@ func (s *ParseQueueService) ProcessNextJob(ctx context.Context) error {
 	}
 
 	if err := s.movieRepo.Create(ctx, movie); err != nil {
-		errMsg := fmt.Sprintf("create media entry failed: %s", err.Error())
-		s.logger.Error("Media creation failed", "job_id", job.ID, "error", err)
-		if statusErr := s.parseJobRepo.UpdateStatus(ctx, job.ID, models.ParseJobFailed, errMsg); statusErr != nil {
-			s.logger.Error("Failed to update job status to failed", "job_id", job.ID, "error", statusErr)
-		}
-		return nil
+		return "", fmt.Errorf("create movie: %w", err)
 	}
 
-	// Step 4: Mark job as completed
-	job.MediaID = &mediaID
-	job.Status = models.ParseJobCompleted
-	now := time.Now()
-	job.CompletedAt = &now
+	return mediaID, nil
+}
 
-	if err := s.parseJobRepo.Update(ctx, job); err != nil {
-		return fmt.Errorf("mark job completed: %w", err)
+// createTVEntryFromMatch creates Series, Season, and Episode records from the best metadata match.
+func (s *ParseQueueService) createTVEntryFromMatch(
+	ctx context.Context,
+	bestMatch metadata.MetadataItem,
+	searchResult *metadata.SearchResult,
+	job *models.ParseJob,
+	parseResult *parser.ParseResult,
+) (string, error) {
+	tmdbID := parseProviderID(bestMatch.ID)
+
+	// 1. Upsert Series
+	seriesID, err := s.upsertSeries(ctx, bestMatch, searchResult, tmdbID)
+	if err != nil {
+		return "", fmt.Errorf("upsert series: %w", err)
 	}
 
-	s.logger.Info("Parse job completed",
-		"job_id", job.ID,
-		"media_id", mediaID,
-		"title", searchResult.Items[0].Title,
+	// 2. Upsert Season
+	seasonNumber := parseResult.Season
+	seasonID, err := s.upsertSeason(ctx, seriesID, seasonNumber, tmdbID)
+	if err != nil {
+		return "", fmt.Errorf("upsert season: %w", err)
+	}
+
+	// 3. Upsert Episode
+	episodeNumber := parseResult.Episode
+	episode := &models.Episode{
+		ID:            uuid.New().String(),
+		SeriesID:      seriesID,
+		SeasonID:      sql.NullString{String: seasonID, Valid: true},
+		SeasonNumber:  seasonNumber,
+		EpisodeNumber: episodeNumber,
+		Title:         sql.NullString{String: bestMatch.Title, Valid: bestMatch.Title != ""},
+		FilePath:      sql.NullString{String: job.FilePath, Valid: true},
+	}
+
+	if err := s.episodeRepo.Upsert(ctx, episode); err != nil {
+		return "", fmt.Errorf("upsert episode: %w", err)
+	}
+
+	s.logger.Info("TV entry created",
+		"series_id", seriesID,
+		"season_id", seasonID,
+		"season", seasonNumber,
+		"episode", episodeNumber,
 	)
 
-	return nil
+	return seriesID, nil
+}
+
+// upsertSeries finds an existing series by TMDb ID or creates a new one.
+func (s *ParseQueueService) upsertSeries(
+	ctx context.Context,
+	bestMatch metadata.MetadataItem,
+	searchResult *metadata.SearchResult,
+	tmdbID int64,
+) (string, error) {
+	// Check if series already exists by TMDb ID
+	if tmdbID > 0 {
+		existing, err := s.seriesRepo.FindByTMDbID(ctx, tmdbID)
+		if err == nil && existing != nil {
+			return existing.ID, nil
+		}
+	}
+
+	// Create new series
+	seriesID := uuid.New().String()
+	series := &models.Series{
+		ID:         seriesID,
+		Title:      bestMatch.Title,
+		TMDbID:     sql.NullInt64{Int64: tmdbID, Valid: tmdbID > 0},
+		PosterPath: sql.NullString{String: bestMatch.PosterURL, Valid: bestMatch.PosterURL != ""},
+		Overview:   sql.NullString{String: bestMatch.Overview, Valid: bestMatch.Overview != ""},
+		Genres:     bestMatch.Genres,
+		ParseStatus:    models.ParseStatusSuccess,
+		MetadataSource: sql.NullString{String: string(searchResult.Source), Valid: true},
+	}
+
+	if bestMatch.ReleaseDate != "" {
+		series.FirstAirDate = bestMatch.ReleaseDate
+	}
+	if bestMatch.Rating > 0 {
+		series.VoteAverage = sql.NullFloat64{Float64: bestMatch.Rating, Valid: true}
+	}
+	if bestMatch.OriginalTitle != "" {
+		series.OriginalTitle = sql.NullString{String: bestMatch.OriginalTitle, Valid: true}
+	}
+
+	if err := s.seriesRepo.Create(ctx, series); err != nil {
+		return "", fmt.Errorf("create series: %w", err)
+	}
+
+	return seriesID, nil
+}
+
+// upsertSeason finds an existing season or creates a new one.
+// Season data is sourced from the Series' SeasonsJSON (TMDb summary) when available.
+func (s *ParseQueueService) upsertSeason(
+	ctx context.Context,
+	seriesID string,
+	seasonNumber int,
+	seriesTMDbID int64,
+) (string, error) {
+	// Check if season already exists
+	existing, err := s.seasonRepo.FindBySeriesAndNumber(ctx, seriesID, seasonNumber)
+	if err == nil && existing != nil {
+		return existing.ID, nil
+	}
+
+	// Try to get season data from the Series' SeasonsJSON
+	var seasonSummary *models.SeasonSummary
+	series, seriesErr := s.seriesRepo.FindByID(ctx, seriesID)
+	if seriesErr == nil && series != nil {
+		seasons, parseErr := series.GetSeasons()
+		if parseErr == nil {
+			for i := range seasons {
+				if seasons[i].SeasonNumber == seasonNumber {
+					seasonSummary = &seasons[i]
+					break
+				}
+			}
+		}
+	}
+
+	// Create season
+	season := &models.Season{
+		ID:           uuid.New().String(),
+		SeriesID:     seriesID,
+		SeasonNumber: seasonNumber,
+	}
+
+	if seasonSummary != nil {
+		season.TMDbID = sql.NullInt64{Int64: int64(seasonSummary.ID), Valid: seasonSummary.ID > 0}
+		season.Name = sql.NullString{String: seasonSummary.Name, Valid: seasonSummary.Name != ""}
+		season.Overview = sql.NullString{String: seasonSummary.Overview, Valid: seasonSummary.Overview != ""}
+		season.PosterPath = sql.NullString{String: seasonSummary.PosterPath, Valid: seasonSummary.PosterPath != ""}
+		season.AirDate = sql.NullString{String: seasonSummary.AirDate, Valid: seasonSummary.AirDate != ""}
+		season.EpisodeCount = sql.NullInt64{Int64: int64(seasonSummary.EpisodeCount), Valid: seasonSummary.EpisodeCount > 0}
+	}
+
+	if err := s.seasonRepo.Create(ctx, season); err != nil {
+		return "", fmt.Errorf("create season: %w", err)
+	}
+
+	return season.ID, nil
 }
 
 // GetJobStatus retrieves the current status of a parse job by torrent hash.

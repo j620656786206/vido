@@ -34,15 +34,16 @@ func (r *EpisodeRepository) Create(ctx context.Context, episode *models.Episode)
 
 	query := `
 		INSERT INTO episodes (
-			id, series_id, tmdb_id, season_number, episode_number,
+			id, series_id, season_id, tmdb_id, season_number, episode_number,
 			title, overview, air_date, runtime, still_path,
 			vote_average, file_path, created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
 	_, err := r.db.ExecContext(ctx, query,
 		episode.ID,
 		episode.SeriesID,
+		episode.SeasonID,
 		episode.TMDbID,
 		episode.SeasonNumber,
 		episode.EpisodeNumber,
@@ -68,7 +69,7 @@ func (r *EpisodeRepository) Create(ctx context.Context, episode *models.Episode)
 func (r *EpisodeRepository) FindByID(ctx context.Context, id string) (*models.Episode, error) {
 	query := `
 		SELECT
-			id, series_id, tmdb_id, season_number, episode_number,
+			id, series_id, season_id, tmdb_id, season_number, episode_number,
 			title, overview, air_date, runtime, still_path,
 			vote_average, file_path, created_at, updated_at
 		FROM episodes
@@ -79,6 +80,7 @@ func (r *EpisodeRepository) FindByID(ctx context.Context, id string) (*models.Ep
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&episode.ID,
 		&episode.SeriesID,
+		&episode.SeasonID,
 		&episode.TMDbID,
 		&episode.SeasonNumber,
 		&episode.EpisodeNumber,
@@ -107,7 +109,7 @@ func (r *EpisodeRepository) FindByID(ctx context.Context, id string) (*models.Ep
 func (r *EpisodeRepository) FindBySeriesID(ctx context.Context, seriesID string) ([]models.Episode, error) {
 	query := `
 		SELECT
-			id, series_id, tmdb_id, season_number, episode_number,
+			id, series_id, season_id, tmdb_id, season_number, episode_number,
 			title, overview, air_date, runtime, still_path,
 			vote_average, file_path, created_at, updated_at
 		FROM episodes
@@ -127,6 +129,7 @@ func (r *EpisodeRepository) FindBySeriesID(ctx context.Context, seriesID string)
 		err := rows.Scan(
 			&episode.ID,
 			&episode.SeriesID,
+			&episode.SeasonID,
 			&episode.TMDbID,
 			&episode.SeasonNumber,
 			&episode.EpisodeNumber,
@@ -157,7 +160,7 @@ func (r *EpisodeRepository) FindBySeriesID(ctx context.Context, seriesID string)
 func (r *EpisodeRepository) FindBySeasonNumber(ctx context.Context, seriesID string, seasonNumber int) ([]models.Episode, error) {
 	query := `
 		SELECT
-			id, series_id, tmdb_id, season_number, episode_number,
+			id, series_id, season_id, tmdb_id, season_number, episode_number,
 			title, overview, air_date, runtime, still_path,
 			vote_average, file_path, created_at, updated_at
 		FROM episodes
@@ -177,6 +180,7 @@ func (r *EpisodeRepository) FindBySeasonNumber(ctx context.Context, seriesID str
 		err := rows.Scan(
 			&episode.ID,
 			&episode.SeriesID,
+			&episode.SeasonID,
 			&episode.TMDbID,
 			&episode.SeasonNumber,
 			&episode.EpisodeNumber,
@@ -207,7 +211,7 @@ func (r *EpisodeRepository) FindBySeasonNumber(ctx context.Context, seriesID str
 func (r *EpisodeRepository) FindBySeriesSeasonEpisode(ctx context.Context, seriesID string, season, episode int) (*models.Episode, error) {
 	query := `
 		SELECT
-			id, series_id, tmdb_id, season_number, episode_number,
+			id, series_id, season_id, tmdb_id, season_number, episode_number,
 			title, overview, air_date, runtime, still_path,
 			vote_average, file_path, created_at, updated_at
 		FROM episodes
@@ -218,6 +222,7 @@ func (r *EpisodeRepository) FindBySeriesSeasonEpisode(ctx context.Context, serie
 	err := r.db.QueryRowContext(ctx, query, seriesID, season, episode).Scan(
 		&ep.ID,
 		&ep.SeriesID,
+		&ep.SeasonID,
 		&ep.TMDbID,
 		&ep.SeasonNumber,
 		&ep.EpisodeNumber,
@@ -255,6 +260,7 @@ func (r *EpisodeRepository) Update(ctx context.Context, episode *models.Episode)
 		UPDATE episodes
 		SET
 			series_id = ?,
+			season_id = ?,
 			tmdb_id = ?,
 			season_number = ?,
 			episode_number = ?,
@@ -271,6 +277,7 @@ func (r *EpisodeRepository) Update(ctx context.Context, episode *models.Episode)
 
 	result, err := r.db.ExecContext(ctx, query,
 		episode.SeriesID,
+		episode.SeasonID,
 		episode.TMDbID,
 		episode.SeasonNumber,
 		episode.EpisodeNumber,

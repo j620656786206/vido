@@ -9,11 +9,12 @@ import (
 // Episode represents a TV series episode entity in the database
 type Episode struct {
 	// Core fields
-	ID            string        `db:"id" json:"id"`
-	SeriesID      string        `db:"series_id" json:"seriesId"`
-	TMDbID        sql.NullInt64 `db:"tmdb_id" json:"tmdbId,omitempty"`
-	SeasonNumber  int           `db:"season_number" json:"seasonNumber"`
-	EpisodeNumber int           `db:"episode_number" json:"episodeNumber"`
+	ID            string         `db:"id" json:"id"`
+	SeriesID      string         `db:"series_id" json:"seriesId"`
+	SeasonID      sql.NullString `db:"season_id" json:"seasonId,omitempty"`
+	TMDbID        sql.NullInt64  `db:"tmdb_id" json:"tmdbId,omitempty"`
+	SeasonNumber  int            `db:"season_number" json:"seasonNumber"`
+	EpisodeNumber int            `db:"episode_number" json:"episodeNumber"`
 
 	// Content fields
 	Title       sql.NullString  `db:"title" json:"title,omitempty"`
