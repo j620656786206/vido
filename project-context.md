@@ -2,7 +2,7 @@
 
 > **Purpose:** Mandatory reading for all AI agents before implementing ANY code. This document ensures consistency across all implementations.
 
-**Full Documentation:** See `_bmad-output/planning-artifacts/architecture.md` for complete architectural decisions and patterns.
+**Full Documentation:** See `_bmad-output/planning-artifacts/architecture/index.md` for complete architectural decisions and patterns (sharded into ~20 focused files).
 
 **Last Updated:** 2026-02-06
 **Architecture Status:** ✅ Validated and Ready for Implementation (5,463 lines, 8 steps completed)
@@ -34,7 +34,7 @@
 - **Step 1.3:** Migrate middleware: `/internal/middleware/` → `/apps/api/internal/middleware/`
 
 **Phase 2-5:** Implement architectural decisions, frontend alignment, core features, and testing.
-See `_bmad-output/planning-artifacts/architecture.md` Section "Consolidation & Refactoring Plan" for complete 5-phase roadmap.
+See `_bmad-output/planning-artifacts/architecture/consolidation-refactoring-plan.md` for complete 5-phase roadmap.
 
 **Root backend** (`/cmd`, `/internal`) will be archived to `/archive/` after Phase 1 completion.
 **DO NOT add code to `/cmd` or root `/internal`** - these are deprecated.
@@ -252,7 +252,8 @@ vido/
 ├── project-context.md          # ⭐ THIS FILE
 └── _bmad-output/
     └── planning-artifacts/
-        └── architecture.md     # Complete architecture doc
+        └── architecture/       # Complete architecture doc (sharded)
+            └── index.md
 ```
 
 ---
@@ -605,11 +606,11 @@ These agreements were established during Epic 1 retrospective to improve develop
 
 **For full details, see:**
 
-- **Architecture Decisions:** `_bmad-output/planning-artifacts/architecture.md`
+- **Architecture Decisions:** `_bmad-output/planning-artifacts/architecture/index.md`
 - **PRD:** `_bmad-output/planning-artifacts/prd.md`
 - **UX Design:** `_bmad-output/planning-artifacts/ux-design-specification.md`
 
-**Key Sections in architecture.md:**
+**Key Sections in architecture/:**
 
 - Core Architectural Decisions (Step 4)
 - Implementation Patterns & Consistency Rules (Step 5)
@@ -631,7 +632,7 @@ The complete architecture has been validated for:
 **Key Deliverables:**
 
 - 6 architectural decisions documented with versions and rationale
-- 47 implementation patterns preventing AI agent conflicts (see architecture.md)
+- 47 implementation patterns preventing AI agent conflicts (see architecture/)
 - 400+ files/directories defined in complete project structure
 - 5-phase consolidation roadmap from current to target state
 
@@ -642,7 +643,7 @@ The complete architecture has been validated for:
 ## 🚀 Implementation Workflow
 
 1. **Read this file FIRST** before implementing any feature
-2. **Check architecture.md** for specific pattern details if needed
+2. **Check architecture/** for specific pattern details if needed
 3. **Follow the consolidation plan** (Phase 1-5) for refactoring
 4. **Verify checklist** before committing code
 5. **Write tests** alongside implementation (TDD encouraged)
