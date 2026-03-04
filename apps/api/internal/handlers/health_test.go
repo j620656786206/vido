@@ -79,17 +79,17 @@ func TestServiceHealthHandler_GetServicesHealth(t *testing.T) {
 	})
 }
 
-// MockConnectionHistoryRepo for testing
-type MockConnectionHistoryRepo struct {
+// MockConnectionHistoryService for testing
+type MockConnectionHistoryService struct {
 	events []models.ConnectionEvent
 	err    error
 }
 
-func (m *MockConnectionHistoryRepo) Create(ctx context.Context, event *models.ConnectionEvent) error {
+func (m *MockConnectionHistoryService) RecordEvent(_ context.Context, _ string, _ models.ConnectionEventType, _ string, _ string) error {
 	return m.err
 }
 
-func (m *MockConnectionHistoryRepo) GetHistory(ctx context.Context, service string, limit int) ([]models.ConnectionEvent, error) {
+func (m *MockConnectionHistoryService) GetHistory(_ context.Context, _ string, _ int) ([]models.ConnectionEvent, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
@@ -105,13 +105,13 @@ func TestServiceHealthHandler_GetConnectionHistory(t *testing.T) {
 		degradationService := services.NewDegradationService(monitor)
 		handler := NewServiceHealthHandler(degradationService)
 
-		mockRepo := &MockConnectionHistoryRepo{
+		mockSvc := &MockConnectionHistoryService{
 			events: []models.ConnectionEvent{
 				{ID: "evt-1", Service: "qbittorrent", EventType: models.EventDisconnected, Status: models.ServiceStatusDown, Message: "timeout", CreatedAt: time.Now()},
 				{ID: "evt-2", Service: "qbittorrent", EventType: models.EventConnected, Status: models.ServiceStatusHealthy, CreatedAt: time.Now()},
 			},
 		}
-		handler.SetHistoryRepo(mockRepo)
+		handler.SetHistoryService(mockSvc)
 
 		router := gin.New()
 		router.GET("/api/v1/health/services/:service/history", handler.GetConnectionHistory)
@@ -133,8 +133,8 @@ func TestServiceHealthHandler_GetConnectionHistory(t *testing.T) {
 		degradationService := services.NewDegradationService(monitor)
 		handler := NewServiceHealthHandler(degradationService)
 
-		mockRepo := &MockConnectionHistoryRepo{events: nil}
-		handler.SetHistoryRepo(mockRepo)
+		mockSvc := &MockConnectionHistoryService{events: nil}
+		handler.SetHistoryService(mockSvc)
 
 		router := gin.New()
 		router.GET("/api/v1/health/services/:service/history", handler.GetConnectionHistory)
@@ -172,8 +172,8 @@ func TestServiceHealthHandler_GetConnectionHistory(t *testing.T) {
 		degradationService := services.NewDegradationService(monitor)
 		handler := NewServiceHealthHandler(degradationService)
 
-		mockRepo := &MockConnectionHistoryRepo{err: fmt.Errorf("db error")}
-		handler.SetHistoryRepo(mockRepo)
+		mockSvc := &MockConnectionHistoryService{err: fmt.Errorf("db error")}
+		handler.SetHistoryService(mockSvc)
 
 		router := gin.New()
 		router.GET("/api/v1/health/services/:service/history", handler.GetConnectionHistory)
@@ -193,8 +193,8 @@ func TestServiceHealthHandler_GetConnectionHistory(t *testing.T) {
 		degradationService := services.NewDegradationService(monitor)
 		handler := NewServiceHealthHandler(degradationService)
 
-		mockRepo := &MockConnectionHistoryRepo{events: []models.ConnectionEvent{}}
-		handler.SetHistoryRepo(mockRepo)
+		mockSvc := &MockConnectionHistoryService{events: []models.ConnectionEvent{}}
+		handler.SetHistoryService(mockSvc)
 
 		router := gin.New()
 		router.GET("/api/v1/health/services/:service/history", handler.GetConnectionHistory)
@@ -205,5 +205,26 @@ func TestServiceHealthHandler_GetConnectionHistory(t *testing.T) {
 		router.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	t.Run("returns 400 for invalid service name", func(t *testing.T) {
+		checker := &MockHealthChecker{}
+		monitor := health.NewHealthMonitor(checker)
+		degradationService := services.NewDegradationService(monitor)
+		handler := NewServiceHealthHandler(degradationService)
+
+		mockSvc := &MockConnectionHistoryService{events: []models.ConnectionEvent{}}
+		handler.SetHistoryService(mockSvc)
+
+		router := gin.New()
+		router.GET("/api/v1/health/services/:service/history", handler.GetConnectionHistory)
+
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/health/services/unknown-service/history", nil)
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Contains(t, w.Body.String(), "VALIDATION_INVALID_FORMAT")
 	})
 }

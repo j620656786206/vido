@@ -8,7 +8,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/vido/api/internal/models"
+	"github.com/vido/api/internal/repository"
 )
 
 // HealthChecker defines the interface for checking external service health
@@ -22,10 +24,11 @@ type HealthChecker interface {
 
 // HealthMonitor tracks the health of external services
 type HealthMonitor struct {
-	mu       sync.RWMutex
-	services *models.ServicesHealth
-	checker  HealthChecker
-	logger   *slog.Logger
+	mu          sync.RWMutex
+	services    *models.ServicesHealth
+	checker     HealthChecker
+	historyRepo repository.ConnectionHistoryRepositoryInterface
+	logger      *slog.Logger
 }
 
 // NewHealthMonitor creates a new HealthMonitor
@@ -35,6 +38,11 @@ func NewHealthMonitor(checker HealthChecker) *HealthMonitor {
 		checker:  checker,
 		logger:   slog.Default(),
 	}
+}
+
+// SetHistoryRepo sets the connection history repository for event persistence.
+func (m *HealthMonitor) SetHistoryRepo(repo repository.ConnectionHistoryRepositoryInterface) {
+	m.historyRepo = repo
 }
 
 // GetDegradationLevel returns the current degradation level based on service health
@@ -123,8 +131,9 @@ func (m *HealthMonitor) UpdateServiceHealth(name models.ServiceName, err error) 
 		return
 	}
 
+	previousStatus := svc.Status
+
 	if err == nil {
-		previousStatus := svc.Status
 		svc.RecordSuccess()
 		if previousStatus != models.ServiceStatusHealthy {
 			m.logger.Info("Service recovered",
@@ -133,7 +142,6 @@ func (m *HealthMonitor) UpdateServiceHealth(name models.ServiceName, err error) 
 			)
 		}
 	} else {
-		previousStatus := svc.Status
 		svc.RecordError(err.Error())
 		if previousStatus != svc.Status {
 			m.logger.Warn("Service health changed",
@@ -141,6 +149,38 @@ func (m *HealthMonitor) UpdateServiceHealth(name models.ServiceName, err error) 
 				"previous_status", previousStatus,
 				"new_status", svc.Status,
 				"error", err.Error(),
+			)
+		}
+	}
+
+	// Record status change events to connection history
+	if previousStatus != svc.Status && previousStatus != "" && m.historyRepo != nil {
+		var eventType models.ConnectionEventType
+		switch {
+		case svc.Status == models.ServiceStatusHealthy:
+			eventType = models.EventRecovered
+		case svc.Status == models.ServiceStatusDown:
+			eventType = models.EventDisconnected
+		default:
+			eventType = models.EventError
+		}
+
+		event := &models.ConnectionEvent{
+			ID:        uuid.New().String(),
+			Service:   string(name),
+			EventType: eventType,
+			Status:    svc.Status,
+			Message:   svc.Message,
+			CreatedAt: time.Now(),
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if repoErr := m.historyRepo.Create(ctx, event); repoErr != nil {
+			m.logger.Error("Failed to record connection event",
+				"service", name,
+				"event_type", eventType,
+				"error", repoErr,
 			)
 		}
 	}
@@ -165,7 +205,7 @@ func (m *HealthMonitor) GetHealthStatus() *models.HealthStatusResponse {
 func (m *HealthMonitor) getDegradationLevelUnlocked() models.DegradationLevel {
 	downCount := 0
 	degradedCount := 0
-	totalServices := 4
+	totalServices := 5 // TMDb, Douban, Wikipedia, AI, qBittorrent
 
 	for _, svc := range m.services.AllServices() {
 		if svc.IsDown() {

@@ -9,7 +9,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/vido/api/internal/database"
 	"github.com/vido/api/internal/models"
-	"github.com/vido/api/internal/repository"
 	"github.com/vido/api/internal/services"
 )
 
@@ -85,7 +84,7 @@ func HealthCheck(c *gin.Context) {
 // Returns health status of all external services and degradation level.
 type ServiceHealthHandler struct {
 	degradationService services.DegradationServiceInterface
-	historyRepo        repository.ConnectionHistoryRepositoryInterface
+	historyService     services.ConnectionHistoryServiceInterface
 }
 
 // NewServiceHealthHandler creates a new ServiceHealthHandler.
@@ -95,9 +94,9 @@ func NewServiceHealthHandler(degradationService services.DegradationServiceInter
 	}
 }
 
-// SetHistoryRepo sets the connection history repository for history endpoints
-func (h *ServiceHealthHandler) SetHistoryRepo(repo repository.ConnectionHistoryRepositoryInterface) {
-	h.historyRepo = repo
+// SetHistoryService sets the connection history service for history endpoints
+func (h *ServiceHealthHandler) SetHistoryService(svc services.ConnectionHistoryServiceInterface) {
+	h.historyService = svc
 }
 
 // GetServicesHealth returns the health status of all external services.
@@ -143,7 +142,7 @@ func (h *ServiceHealthHandler) GetServicesHealth(c *gin.Context) {
 // @Success 200 {object} map[string]interface{}
 // @Router /api/v1/health/services/{service}/history [get]
 func (h *ServiceHealthHandler) GetConnectionHistory(c *gin.Context) {
-	if h.historyRepo == nil {
+	if h.historyService == nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{
 			"success": false,
 			"error": gin.H{
@@ -166,6 +165,17 @@ func (h *ServiceHealthHandler) GetConnectionHistory(c *gin.Context) {
 		return
 	}
 
+	if !services.IsValidServiceName(service) {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error": gin.H{
+				"code":    "VALIDATION_INVALID_FORMAT",
+				"message": "Invalid service name",
+			},
+		})
+		return
+	}
+
 	limit := 20
 	if limitStr := c.Query("limit"); limitStr != "" {
 		if parsed, err := strconv.Atoi(limitStr); err == nil && parsed > 0 {
@@ -173,7 +183,7 @@ func (h *ServiceHealthHandler) GetConnectionHistory(c *gin.Context) {
 		}
 	}
 
-	events, err := h.historyRepo.GetHistory(c.Request.Context(), service, limit)
+	events, err := h.historyService.GetHistory(c.Request.Context(), service, limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,

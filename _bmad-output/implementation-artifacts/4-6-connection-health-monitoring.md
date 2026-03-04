@@ -1,6 +1,6 @@
 # Story 4.6: Connection Health Monitoring
 
-Status: review
+Status: done
 
 ## Story
 
@@ -701,12 +701,17 @@ Claude Opus 4.6 (claude-opus-4-6)
 - `apps/api/internal/repository/connection_history_repository.go` — NEW: Repository interface + impl
 - `apps/api/internal/repository/connection_history_repository_test.go` — NEW: Repository tests
 - `apps/api/internal/repository/registry.go` — Added ConnectionHistory to registry
-- `apps/api/internal/handlers/health.go` — Added `GetConnectionHistory` handler, `SetHistoryRepo`
-- `apps/api/internal/handlers/health_test.go` — Added history handler tests + updated mock
-- `apps/api/cmd/api/main.go` — Wired QBPingable, history repo, monitoring goroutine, history route
+- `apps/api/internal/services/connection_history_service.go` — NEW: ConnectionHistoryService (Rule 4 compliance)
+- `apps/api/internal/services/connection_history_service_test.go` — NEW: Service tests
+- `apps/api/internal/services/degradation_service_test.go` — Updated for qBittorrent service count
+- `apps/api/internal/handlers/health.go` — Added `GetConnectionHistory` handler, `SetHistoryService`, service name validation
+- `apps/api/internal/handlers/health_test.go` — Added history handler tests + updated mock + invalid service test
+- `apps/api/cmd/api/main.go` — Wired QBPingable, history service, monitoring goroutine with cancellable context, history route
 
 **Frontend (React/TypeScript):**
 - `apps/web/src/services/healthService.ts` — NEW: Health service types + API calls
+- `apps/web/src/services/healthService.spec.ts` — NEW: Health service unit tests
+- `apps/web/src/lib/timeFormat.ts` — NEW: Shared relative time formatting utility
 - `apps/web/src/services/downloadService.ts` — Fixed `params` redeclaration bug
 - `apps/web/src/hooks/useConnectionHealth.ts` — NEW: `useQBConnectionHealth` + `useConnectionHistory` hooks
 - `apps/web/src/components/health/QBStatusIndicator.tsx` — NEW: Status indicator component

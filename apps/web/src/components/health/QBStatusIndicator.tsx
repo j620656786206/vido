@@ -4,25 +4,11 @@
 
 import { Wifi, WifiOff, AlertTriangle } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { formatRelativeTimeZh } from '../../lib/timeFormat';
 import { useQBConnectionHealth } from '../../hooks/useConnectionHealth';
 
 interface QBStatusIndicatorProps {
   onClick?: () => void;
-}
-
-function formatLastSuccess(lastSuccess?: string): string {
-  if (!lastSuccess) return '';
-  const date = new Date(lastSuccess);
-  if (isNaN(date.getTime())) return '';
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-
-  if (diffMins < 1) return '剛剛';
-  if (diffMins < 60) return `${diffMins} 分鐘前`;
-  const diffHours = Math.floor(diffMins / 60);
-  if (diffHours < 24) return `${diffHours} 小時前`;
-  return `${Math.floor(diffHours / 24)} 天前`;
 }
 
 const statusConfig = {
@@ -67,7 +53,7 @@ export function QBStatusIndicator({ onClick }: QBStatusIndicatorProps) {
   const status = health?.status || 'down';
   const config = statusConfig[status] || statusConfig.down;
   const { Icon } = config;
-  const lastSuccessText = formatLastSuccess(health?.lastSuccess);
+  const lastSuccessText = formatRelativeTimeZh(health?.lastSuccess);
 
   return (
     <button
@@ -85,10 +71,7 @@ export function QBStatusIndicator({ onClick }: QBStatusIndicatorProps) {
           : config.label
       }
     >
-      <span
-        className={cn('h-1.5 w-1.5 rounded-full', config.dotColor)}
-        aria-hidden="true"
-      />
+      <span className={cn('h-1.5 w-1.5 rounded-full', config.dotColor)} aria-hidden="true" />
       <Icon className="h-3.5 w-3.5" aria-hidden="true" />
       {status === 'down' && lastSuccessText && (
         <span className="hidden sm:inline">上次：{lastSuccessText}</span>

@@ -175,6 +175,7 @@ func main() {
 	)
 	healthChecker.SetQBittorrent(qbHealthPingable)
 	healthMonitor := health.NewHealthMonitor(healthChecker)
+	healthMonitor.SetHistoryRepo(repos.ConnectionHistory)
 	degradationService := services.NewDegradationServiceWithCache(healthMonitor, offlineCache)
 	slog.Info("Health monitoring initialized with service health checks and offline cache")
 
@@ -295,8 +296,9 @@ func main() {
 	metadataHandler := handlers.NewMetadataHandler(metadataService)
 	learningHandler := handlers.NewLearningHandler(learningService)
 	retryHandler := handlers.NewRetryHandler(retryService)
+	connectionHistoryService := services.NewConnectionHistoryService(repos.ConnectionHistory)
 	serviceHealthHandler := handlers.NewServiceHealthHandler(degradationService)
-	serviceHealthHandler.SetHistoryRepo(repos.ConnectionHistory)
+	serviceHealthHandler.SetHistoryService(connectionHistoryService)
 	qbittorrentHandler := handlers.NewQBittorrentHandler(qbittorrentService)
 	downloadHandler := handlers.NewDownloadHandler(downloadService)
 	recentMediaHandler := handlers.NewRecentMediaHandler(movieService, seriesService)
@@ -349,7 +351,8 @@ func main() {
 	}
 
 	// Start qBittorrent health monitoring with 30s interval (Story 4.6 - NFR-R6)
-	go healthMonitor.StartQBMonitoring(ctx)
+	monitorCtx, monitorCancel := context.WithCancel(context.Background())
+	go healthMonitor.StartQBMonitoring(monitorCtx)
 	slog.Info("qBittorrent health monitoring started (30s interval)")
 
 	// Start server in a goroutine for graceful shutdown
@@ -372,7 +375,11 @@ func main() {
 	<-quit
 	slog.Info("Shutting down server...")
 
-	// Stop retry scheduler first
+	// Stop health monitoring goroutine
+	slog.Info("Stopping health monitoring...")
+	monitorCancel()
+
+	// Stop retry scheduler
 	slog.Info("Stopping retry scheduler...")
 	retryService.StopScheduler()
 

@@ -2,20 +2,12 @@
  * Connection history side panel (Story 4.6 - AC4)
  */
 
-import {
-  Wifi,
-  WifiOff,
-  AlertTriangle,
-  RefreshCw,
-  Loader2,
-} from 'lucide-react';
+import { Wifi, WifiOff, AlertTriangle, RefreshCw, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '../../lib/utils';
+import { formatRelativeTimeZh } from '../../lib/timeFormat';
 import { SidePanel } from '../ui/SidePanel';
-import {
-  useConnectionHistory,
-  type ConnectionEvent,
-} from '../../hooks/useConnectionHealth';
+import { useConnectionHistory, type ConnectionEvent } from '../../hooks/useConnectionHealth';
 import type { ConnectionEventType } from '../../services/healthService';
 
 interface ConnectionHistoryPanelProps {
@@ -33,44 +25,14 @@ const eventTypeConfig: Record<
   recovered: { label: '已恢復', Icon: RefreshCw, color: 'text-emerald-400' },
 };
 
-const validEventTypes: ConnectionEventType[] = [
-  'connected',
-  'disconnected',
-  'error',
-  'recovered',
-];
+const validEventTypes: ConnectionEventType[] = ['connected', 'disconnected', 'error', 'recovered'];
 
-function formatRelativeTime(isoString: string): string {
-  const date = new Date(isoString);
-  if (isNaN(date.getTime())) return '';
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-
-  if (diffMins < 1) return '剛剛';
-  if (diffMins < 60) return `${diffMins} 分鐘前`;
-  const diffHours = Math.floor(diffMins / 60);
-  if (diffHours < 24) return `${diffHours} 小時前`;
-  const diffDays = Math.floor(diffHours / 24);
-  return `${diffDays} 天前`;
-}
-
-export function ConnectionHistoryPanel({
-  isOpen,
-  onClose,
-}: ConnectionHistoryPanelProps) {
-  const [filterType, setFilterType] = useState<ConnectionEventType | 'all'>(
-    'all'
-  );
-  const { data: history, isLoading } = useConnectionHistory(
-    'qbittorrent',
-    isOpen
-  );
+export function ConnectionHistoryPanel({ isOpen, onClose }: ConnectionHistoryPanelProps) {
+  const [filterType, setFilterType] = useState<ConnectionEventType | 'all'>('all');
+  const { data: history, isLoading } = useConnectionHistory('qbittorrent', isOpen);
 
   const filteredHistory =
-    filterType === 'all'
-      ? history
-      : history?.filter((e) => e.eventType === filterType);
+    filterType === 'all' ? history : history?.filter((e) => e.eventType === filterType);
 
   return (
     <SidePanel isOpen={isOpen} onClose={onClose} title="qBittorrent 連線記錄">
@@ -114,9 +76,7 @@ export function ConnectionHistoryPanel({
             <span className="ml-2 text-sm text-slate-400">載入中...</span>
           </div>
         ) : !filteredHistory || filteredHistory.length === 0 ? (
-          <div className="py-8 text-center text-sm text-slate-500">
-            沒有連線記錄
-          </div>
+          <div className="py-8 text-center text-sm text-slate-500">沒有連線記錄</div>
         ) : (
           <div className="flex flex-col gap-1" role="list" aria-label="連線記錄列表">
             {filteredHistory.map((event) => (
@@ -134,22 +94,14 @@ function ConnectionEventItem({ event }: { event: ConnectionEvent }) {
   const { Icon } = config;
 
   return (
-    <div
-      className="flex items-start gap-3 rounded-lg p-2.5 hover:bg-slate-800/50"
-      role="listitem"
-    >
-      <Icon
-        className={cn('mt-0.5 h-4 w-4 shrink-0', config.color)}
-        aria-hidden="true"
-      />
+    <div className="flex items-start gap-3 rounded-lg p-2.5 hover:bg-slate-800/50" role="listitem">
+      <Icon className={cn('mt-0.5 h-4 w-4 shrink-0', config.color)} aria-hidden="true" />
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-slate-200">{config.label}</p>
-        {event.message && (
-          <p className="truncate text-xs text-slate-500">{event.message}</p>
-        )}
+        {event.message && <p className="truncate text-xs text-slate-500">{event.message}</p>}
       </div>
       <time className="shrink-0 text-xs text-slate-500">
-        {formatRelativeTime(event.createdAt)}
+        {formatRelativeTimeZh(event.createdAt)}
       </time>
     </div>
   );
