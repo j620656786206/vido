@@ -90,14 +90,14 @@ development_status:
   # Phase: 1.0 (Q2 - June 2026)
   # FRs: FR27-FR33
   # ==============================================================================
-  epic-4: in-progress  # Stories created 2026-02-09
+  epic-4: done  # All 6 stories completed - 2026-03-04
   4-1-qbittorrent-connection-configuration: done  # Code review fixes completed 2026-02-10
   4-2-real-time-download-status-monitoring: done  # Code review fixes completed 2026-02-10
   4-3-unified-download-dashboard: done  # Code review fixes completed 2026-03-01
   4-4-download-status-filtering: done  # Code review fixes completed 2026-03-02
   4-5-completed-download-detection-and-parsing-trigger: done  # Code review fixes completed 2026-03-03
   4-6-connection-health-monitoring: done  # Code review fixes completed 2026-03-04
-  epic-4-retrospective: optional
+  epic-4-retrospective: done  # Completed 2026-03-04
 
   # ==============================================================================
   # Epic 5: Media Library Management
