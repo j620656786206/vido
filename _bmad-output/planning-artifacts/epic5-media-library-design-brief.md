@@ -458,7 +458,7 @@ Show **3 keyframe states side by side** (or stacked with labels):
 |            [Sort: Date Added v]                     |
 |            [Filter v]                               |
 +-----------------------------------------------------+
-| Active Filters: [Drama x] [2020-2026 x]  [Clear All]|
+| Active Filters: [Drama x] [2020s x]  [Clear All]    |
 | Showing 45 of 500 items                             |
 +-----------------------------------------------------+
 | [filtered poster grid...]                           |
@@ -479,7 +479,7 @@ Show **3 keyframe states side by side** (or stacked with labels):
 | [脫口秀] [新聞] [肥皂劇] [兒童]|
 |                               |
 | Year                          |
-| [2015] ----o---- [2026]       |
+| [2020s] [2010s] [2000s] [older]|
 |                               |
 | Type                          |
 | [All | Movies | TV Shows]     |
@@ -487,6 +487,13 @@ Show **3 keyframe states side by side** (or stacked with labels):
 | [Apply]  [Reset]              |
 +-------------------------------+
 ```
+
+**Year Filter — Decade Chip Toggles:**
+- Same chip style as genre filter (radius-full pills, same visual states)
+- Chips: `[2020s]` `[2010s]` `[2000s]` `[1990s]` `[更早]` (zh-TW) / `[Older]` (en)
+- Multi-select: tap to toggle, e.g. selecting `[2020s]` + `[2010s]` shows 2010-2029
+- Decade labels are static (not API-driven), derived from library content range
+- Active state identical to genre chips: `--accent-primary/15` bg + `--accent-primary` border + Check icon
 
 **Genre Filter — Wrapping Chip Toggle Grid:**
 - Pattern: All genres rendered as `radius-full` pill chips in a `flex-wrap` container
@@ -584,7 +591,7 @@ Show **3 keyframe states side by side** (or stacked with labels):
 +---------------------------+
 | [Search...]               |
 | [Sort v]  [Filter v]     |
-| [Drama x] [2020+ x]      |
+| [Drama x] [2020s x]      |
 | 45 of 500                 |
 +---------------------------+
 | [poster]  [poster]        |
@@ -605,7 +612,8 @@ Filter Bottom Sheet (on tap):
 | [脫口秀] [新聞] [肥皂劇] [兒童]|
 |                 [清除全部]     |
 |                               |
-| Year: 2015 - 2026            |
+| Year                          |
+| [2020s] [2010s] [2000s] [older]|
 |                               |
 | Type                          |
 | [All | Movies | TV Shows]     |
