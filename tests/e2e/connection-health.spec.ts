@@ -328,10 +328,10 @@ test.describe('Connection Health - History Panel @e2e @p1', () => {
 
     await page.goto('/');
 
-    // WHEN: Click the status indicator (force: search icon overlay may intercept)
+    // WHEN: Click the status indicator
     const indicator = page.getByRole('button', { name: 'qBittorrent 已連線' });
     await expect(indicator).toBeVisible();
-    await indicator.dispatchEvent('click');
+    await indicator.click();
 
     // THEN: Side panel opens with title
     await expect(page.getByText('qBittorrent 連線記錄')).toBeVisible();
@@ -359,7 +359,7 @@ test.describe('Connection Health - History Panel @e2e @p1', () => {
     await page.goto('/');
     const indicator = page.getByRole('button', { name: 'qBittorrent 已連線' });
     await expect(indicator).toBeVisible();
-    await indicator.dispatchEvent('click');
+    await indicator.click();
 
     // THEN: History events are displayed
     await expect(page.getByText('connection refused')).toBeVisible();
@@ -390,7 +390,7 @@ test.describe('Connection Health - History Panel @e2e @p1', () => {
     await page.goto('/');
     const indicator = page.getByRole('button', { name: 'qBittorrent 已連線' });
     await expect(indicator).toBeVisible();
-    await indicator.dispatchEvent('click');
+    await indicator.click();
     await expect(page.getByText('qBittorrent 連線記錄')).toBeVisible();
 
     // WHEN: Click "已斷線" filter button (in filter group)
@@ -425,7 +425,7 @@ test.describe('Connection Health - History Panel @e2e @p1', () => {
     await page.goto('/');
     const indicator = page.getByRole('button', { name: 'qBittorrent 已連線' });
     await expect(indicator).toBeVisible();
-    await indicator.dispatchEvent('click');
+    await indicator.click();
 
     // THEN: Empty state message
     await expect(page.getByText('沒有連線記錄')).toBeVisible();
@@ -453,7 +453,7 @@ test.describe('Connection Health - History Panel @e2e @p1', () => {
     await page.goto('/');
     const indicator = page.getByRole('button', { name: 'qBittorrent 已連線' });
     await expect(indicator).toBeVisible();
-    await indicator.dispatchEvent('click');
+    await indicator.click();
     await expect(page.getByText('qBittorrent 連線記錄')).toBeVisible();
 
     // WHEN: Click close button
