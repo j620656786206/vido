@@ -16,7 +16,7 @@ So that **I can narrow down to specific categories**.
    - Then filter options include:
      - Genre (multi-select checkboxes)
      - Year range (min/max inputs or slider)
-     - Media Type (Movie, TV Show, Anime — radio/checkbox)
+     - Media Type (Movie, TV Show — segmented control)
 
 2. **AC2: Filter Application**
    - Given filters are applied

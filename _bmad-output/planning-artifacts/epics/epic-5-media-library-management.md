@@ -154,7 +154,7 @@ So that **I can narrow down to specific categories**.
 **Then** filter options include:
 - Genre (multi-select)
 - Year range (slider or inputs)
-- Media Type (Movie, TV Show, Anime)
+- Media Type (Movie, TV Show)
 
 **Given** filters are applied
 **When** the library updates

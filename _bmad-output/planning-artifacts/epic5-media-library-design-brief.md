@@ -467,29 +467,39 @@ Show **3 keyframe states side by side** (or stacked with labels):
 
 **Filter Panel (expanded, dropdown or side panel):**
 ```
-+-------------------------+
-| Filters                 |
-|                         |
-| Genre                   |
-| [x] Drama               |
-| [ ] Action              |
-| [ ] Animation           |
-| [ ] Comedy              |
-| [ ] Sci-Fi              |
-| [Show more...]          |
-|                         |
-| Year                    |
-| [2015] ----o---- [2026] |
-|                         |
-| Type                    |
-| ( ) All                 |
-| ( ) Movies              |
-| ( ) TV Shows            |
-| ( ) Anime               |
-|                         |
-| [Apply]  [Reset]        |
-+-------------------------+
++-------------------------------+
+| Filters                       |
+|                               |
+| Genre (dynamic from API)      |
+| [動作] [冒險] [✓ 動畫] [喜劇] |
+| [犯罪] [✓ 劇情] [家庭] [奇幻] |
+| [歷史] [恐怖] [音樂] [懸疑]   |
+| [愛情] [科幻] [電視電影] [驚悚]|
+| [戰爭] [西部] [運動] [真人秀] |
+| [脫口秀] [新聞] [肥皂劇] [兒童]|
+|                               |
+| Year                          |
+| [2015] ----o---- [2026]       |
+|                               |
+| Type                          |
+| [All | Movies | TV Shows]     |
+|                               |
+| [Apply]  [Reset]              |
++-------------------------------+
 ```
+
+**Genre Filter — Wrapping Chip Toggle Grid:**
+- Pattern: All genres rendered as `radius-full` pill chips in a `flex-wrap` container
+- All options visible at once — no "Show more", no hidden content
+- Chips: `px-3 py-1.5`, `text-sm`, `font-body` (Noto Sans TC for zh-TW, system sans for en)
+- Container: `flex flex-wrap gap-2` (8px gap)
+- **Default state:** `--bg-tertiary/30` background, `border border-bg-tertiary`, `--text-secondary`
+- **Hover:** `--bg-tertiary` background
+- **Active (selected):** `--accent-primary/15` background, `border-accent-primary`, `--accent-hover` text, Lucide Check icon (14px) prefix
+- **Interaction:** Single tap/click toggles active state (multi-select)
+- **Space budget:** CJK genres (2-4 chars) fit ~7-8 per row at 320px; English genres (4-15 chars) fit ~3-4 per row — both acceptable for 25 items
+- **Clear all:** Text button below chip container, `--text-muted`, resets all selections
+- Genre list is dynamically populated from `GET /api/v1/library/genres` — mockup values are illustrative only
 
 - Search: Real-time filter as user types, matching terms highlighted in --accent-primary
 - Active filter chips: --bg-tertiary pills with Lucide X to remove
@@ -582,26 +592,36 @@ Show **3 keyframe states side by side** (or stacked with labels):
 +---------------------------+
 
 Filter Bottom Sheet (on tap):
-+===========================+
-| --- drag handle ---       |
-| Filters            [Done] |
-|                           |
-| Genre                     |
-| [x] Drama  [ ] Action    |
-| [ ] Animation  [ ] Comedy|
-|                           |
-| Year: 2015 - 2026        |
-|                           |
-| Type                      |
-| [All] [Movie] [TV] [Anime]|
-|                           |
-| [Apply]  [Reset]          |
-+===========================+
++===============================+
+| --- drag handle ---           |
+| Filters                [Done] |
+|                               |
+| Genre (dynamic from API)      |
+| [動作] [冒險] [✓ 動畫] [喜劇] |
+| [犯罪] [✓ 劇情] [家庭] [奇幻] |
+| [歷史] [恐怖] [音樂] [懸疑]   |
+| [愛情] [科幻] [電視電影] [驚悚]|
+| [戰爭] [西部] [運動] [真人秀] |
+| [脫口秀] [新聞] [肥皂劇] [兒童]|
+|                 [清除全部]     |
+|                               |
+| Year: 2015 - 2026            |
+|                               |
+| Type                          |
+| [All | Movies | TV Shows]     |
+|                               |
+| [Apply]  [Reset]              |
++===============================+
 ```
 
 - Sort and Filter trigger bottom sheets (not dropdowns)
 - Filter chips below search, horizontally scrollable if overflow
 - Segmented control for media type (instead of radio buttons)
+- Genre list is dynamically populated from `GET /api/v1/library/genres` — mockup values are illustrative only
+- **Genre filter pattern: Wrapping Chip Toggle Grid** — same spec as Screen 7 desktop filter panel, with these mobile adjustments:
+  - Chip touch targets: min 44px height (`py-2` instead of `py-1.5`)
+  - Container width: full bottom sheet width (~375px), fits ~8 CJK chips or ~4 English chips per row
+  - All 25 genres visible without scrolling in the genre section (~6 rows CJK, ~8 rows English)
 - Touch-friendly: All targets min 44px
 
 ---
@@ -627,7 +647,6 @@ Filter Bottom Sheet (on tap):
 | Media type label | 媒體類別 |
 | Movie | 電影 |
 | TV Show | 影集 |
-| Anime | 動畫 |
 | Apply | 套用 |
 | Reset | 重置 |
 | Clear All | 清除全部 |
