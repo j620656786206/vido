@@ -46,6 +46,18 @@ So that **I can access all information including cast, trailers, and metadata so
    - Then additional info shows: number of seasons, episode count, production company
    - And season list with episode counts per season
 
+6. **AC6: Detail Panel Context Menu**
+   - Given the detail panel is open
+   - When the user clicks the `...` (three-dot) icon (top-right, next to close button)
+   - Then a context menu opens with the following items (Epic 5 scope):
+     - Re-parse Metadata (Lucide: `RefreshCw`) — re-parse this item (FR40)
+     - Export Metadata (Lucide: `Download`) — export JSON/YAML/NFO (FR40)
+     - *(separator)*
+     - Delete (Lucide: `Trash2`, `--error` red color) — remove from library, requires confirmation dialog
+   - And the menu dismisses when clicking outside
+   - And on mobile, the menu presents as a bottom sheet
+   - And single-item operations reuse the same API endpoints as PosterCard context menu (Story 5.1)
+
 ## Tasks / Subtasks
 
 - [ ] Task 1: Add Trailer Data to Backend (AC: 2)
@@ -92,12 +104,26 @@ So that **I can access all information including cast, trailers, and metadata so
   - [ ] 7.2: Query key: `['library', type, id, 'videos']`
   - [ ] 7.3: Fetch on-demand (not preloaded)
 
+- [ ] Task 8: Create DetailPanelMenu Component (AC: 6)
+  - [ ] 8.1: Create `/apps/web/src/components/media/DetailPanelMenu.tsx`
+  - [ ] 8.2: Add `...` (MoreHorizontal) icon button to detail panel header, next to close button
+  - [ ] 8.3: Menu items with Lucide icons: RefreshCw (Re-parse), Download (Export), Trash2 (Delete)
+  - [ ] 8.4: Delete uses `--error` red color, separated by divider, appears last
+  - [ ] 8.5: Delete triggers confirmation dialog (reuse pattern from Story 5.7)
+  - [ ] 8.6: Reuse single-item API endpoints from Story 5.1 Task 10
+  - [ ] 8.7: Mobile: bottom sheet menu presentation
+  - [ ] 8.8: Menu dismisses on outside click
+  - [ ] 8.9: After delete, close detail panel and invalidate library query
+  - [ ] 8.10: Write component tests
+
 ## Dev Notes
 
 ### Architecture Requirements
 
 **FR39:** View media detail pages with cast info, trailers, complete metadata
+**FR40:** Single-item operations via context menu (delete, re-parse, export metadata)
 **FR42:** Display metadata source indicators (TMDb/Douban/Wikipedia/AI/Manual)
+**PRD UI Component Interaction Specs:** Detail Panel Context Menu (#3)
 
 ### Existing Code to Reuse (DO NOT Reinvent)
 
@@ -181,12 +207,14 @@ Backend (extend):
 /apps/api/internal/handlers/library_handler.go ← ADD videos endpoint
 
 Frontend (new):
-/apps/web/src/components/media/TrailerEmbed.tsx           ← NEW
-/apps/web/src/components/media/TrailerEmbed.spec.tsx      ← NEW
-/apps/web/src/components/media/MetadataSourceBadge.tsx    ← NEW
+/apps/web/src/components/media/TrailerEmbed.tsx             ← NEW
+/apps/web/src/components/media/TrailerEmbed.spec.tsx        ← NEW
+/apps/web/src/components/media/MetadataSourceBadge.tsx      ← NEW
 /apps/web/src/components/media/MetadataSourceBadge.spec.tsx ← NEW
-/apps/web/src/components/media/FileInfo.tsx               ← NEW
-/apps/web/src/components/media/FileInfo.spec.tsx          ← NEW
+/apps/web/src/components/media/FileInfo.tsx                 ← NEW
+/apps/web/src/components/media/FileInfo.spec.tsx            ← NEW
+/apps/web/src/components/media/DetailPanelMenu.tsx          ← NEW
+/apps/web/src/components/media/DetailPanelMenu.spec.tsx     ← NEW
 
 Frontend (modify):
 /apps/web/src/components/media/MediaDetailPanel.tsx ← EXTEND with new sections
@@ -211,6 +239,7 @@ Frontend (modify):
 - [Source: _bmad-output/planning-artifacts/prd.md#FR39]
 - [Source: _bmad-output/planning-artifacts/prd.md#FR42]
 - [Source: _bmad-output/planning-artifacts/ux-design-specification.md#Slide-in-Detail-Panel]
+- [Source: _bmad-output/planning-artifacts/prd.md#UI-Component-Interaction-Specifications]
 
 ## Dev Agent Record
 

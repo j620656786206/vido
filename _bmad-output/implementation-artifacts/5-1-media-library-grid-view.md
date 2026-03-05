@@ -47,6 +47,29 @@ So that **I can enjoy seeing my collection with beautiful posters**.
    - Then skeleton cards with pulsing animation are displayed
    - And the grid layout is preserved during loading
 
+7. **AC7: PosterCard Context Menu**
+   - Given the grid is displayed
+   - When the user clicks the `...` (three-dot) icon on a poster card (appears on hover, top-right)
+   - Then a context menu opens with the following items (Epic 5 scope):
+     - View Details (Lucide: `Eye`) — opens Detail Panel (Story 5.6)
+     - Re-parse Metadata (Lucide: `RefreshCw`) — re-parse this item (FR40)
+     - Export Metadata (Lucide: `Download`) — export this item (FR40)
+     - *(separator)*
+     - Delete (Lucide: `Trash2`, `--error` red color) — remove from library, requires confirmation dialog
+   - And the menu dismisses when clicking outside
+   - And on mobile, the context menu triggers via long-press and presents as a bottom sheet
+   - And single-item operations (re-parse, export, delete) call individual API endpoints
+
+8. **AC8: Settings Gear Dropdown**
+   - Given the library toolbar is displayed
+   - When the user clicks the Settings gear icon (Lucide: `Settings`)
+   - Then a dropdown shows library display preferences:
+     - Poster Size / Density — Small / Medium / Large (adjusts grid columns)
+     - Default Sort Preference — remember preferred sort order
+     - Title Display Language — zh-TW priority / Original title priority
+   - And preferences persist across sessions (localStorage)
+   - And changes apply immediately to the library view
+
 ## Tasks / Subtasks
 
 - [ ] Task 1: Create Library API Endpoints (AC: 1, 4)
@@ -86,25 +109,58 @@ So that **I can enjoy seeing my collection with beautiful posters**.
   - [ ] 5.5: Add skeleton loading state using existing `PosterCardSkeleton`
   - [ ] 5.6: Write component tests
 
-- [ ] Task 6: Enhance PosterCard for Library Context (AC: 3)
+- [ ] Task 6: Enhance PosterCard for Library Context (AC: 3, 7)
   - [ ] 6.1: Add metadata source badge to `PosterCard` hover state
   - [ ] 6.2: Add library-specific props (date added, metadata source)
   - [ ] 6.3: Ensure click navigates to detail panel/page
-  - [ ] 6.4: Write updated PosterCard tests
+  - [ ] 6.4: Add `...` (MoreHorizontal) icon to hover overlay at top-right position
+  - [ ] 6.5: On `...` click, open PosterCardMenu (stopPropagation to prevent card click)
+  - [ ] 6.6: Write updated PosterCard tests
 
 - [ ] Task 7: Create Library Types (AC: 1)
   - [ ] 7.1: Add library types to `/apps/web/src/types/library.ts`
   - [ ] 7.2: Define `LibraryItem` (unified movie + series type)
   - [ ] 7.3: Define `LibraryListResponse` with pagination
 
+- [ ] Task 8: Create PosterCardMenu Component (AC: 7)
+  - [ ] 8.1: Create `/apps/web/src/components/library/PosterCardMenu.tsx`
+  - [ ] 8.2: Menu items with Lucide icons: Eye (View Details), RefreshCw (Re-parse), Download (Export), Trash2 (Delete)
+  - [ ] 8.3: Delete uses `--error` red color, separated by divider, appears last
+  - [ ] 8.4: Delete triggers confirmation dialog (reuse pattern from Story 5.7 BatchConfirmDialog)
+  - [ ] 8.5: Re-parse calls `POST /api/v1/library/{type}/{id}/reparse` (single-item endpoint)
+  - [ ] 8.6: Export calls `POST /api/v1/library/{type}/{id}/export` (single-item endpoint)
+  - [ ] 8.7: Mobile: long-press trigger with bottom sheet menu presentation
+  - [ ] 8.8: Menu dismisses on outside click
+  - [ ] 8.9: Write component tests
+
+- [ ] Task 9: Create Settings Gear Dropdown Component (AC: 8)
+  - [ ] 9.1: Create `/apps/web/src/components/library/SettingsGearDropdown.tsx`
+  - [ ] 9.2: Trigger icon: Lucide `Settings` in library toolbar
+  - [ ] 9.3: Poster Size / Density selector (Small / Medium / Large) — adjusts grid column min-width
+  - [ ] 9.4: Default Sort Preference — dropdown to select and remember sort order
+  - [ ] 9.5: Title Display Language toggle — zh-TW priority vs. Original title priority
+  - [ ] 9.6: Persist preferences in localStorage; apply immediately on change
+  - [ ] 9.7: Write component tests
+
+- [ ] Task 10: Create Single-Item API Endpoints for Context Menu (AC: 7)
+  - [ ] 10.1: Add `POST /api/v1/library/movies/:id/reparse` endpoint
+  - [ ] 10.2: Add `POST /api/v1/library/series/:id/reparse` endpoint
+  - [ ] 10.3: Add `POST /api/v1/library/movies/:id/export` endpoint
+  - [ ] 10.4: Add `POST /api/v1/library/series/:id/export` endpoint
+  - [ ] 10.5: Add `DELETE /api/v1/library/movies/:id` endpoint
+  - [ ] 10.6: Add `DELETE /api/v1/library/series/:id` endpoint
+  - [ ] 10.7: Write handler and service tests
+
 ## Dev Notes
 
 ### Architecture Requirements
 
 **FR38:** Browse complete media library collection
+**FR40:** Single-item operations via context menu (delete, re-parse, export metadata)
 **NFR-SC6:** Virtual scrolling when library >1,000 items
 **NFR-P10:** Grid scrolling maintains 60 FPS
 **UX-9:** Appreciation Loop — browsing library is the most frequent daily action
+**PRD UI Component Interaction Specs:** Settings Gear Dropdown (#1), PosterCard Context Menu (#2)
 
 ### Existing Code to Reuse (DO NOT Reinvent)
 
@@ -223,6 +279,10 @@ Frontend (new + reuse):
 /apps/web/src/components/library/LibraryGrid.tsx ← NEW
 /apps/web/src/components/library/LibraryGrid.spec.tsx ← NEW
 /apps/web/src/components/library/EmptyLibrary.tsx ← NEW
+/apps/web/src/components/library/PosterCardMenu.tsx      ← NEW
+/apps/web/src/components/library/PosterCardMenu.spec.tsx ← NEW
+/apps/web/src/components/library/SettingsGearDropdown.tsx      ← NEW
+/apps/web/src/components/library/SettingsGearDropdown.spec.tsx ← NEW
 ```
 
 ### Testing Strategy
@@ -246,6 +306,7 @@ Frontend (new + reuse):
 - [Source: _bmad-output/planning-artifacts/ux-design-specification.md#Media-Library-Page]
 - [Source: project-context.md#Rule-4-Layered-Architecture]
 - [Source: project-context.md#Rule-5-TanStack-Query]
+- [Source: _bmad-output/planning-artifacts/prd.md#UI-Component-Interaction-Specifications]
 
 ## Dev Agent Record
 

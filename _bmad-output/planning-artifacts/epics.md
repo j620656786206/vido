@@ -1597,12 +1597,29 @@ So that **I can enjoy seeing my collection with beautiful posters**.
 **Given** the grid is displayed
 **When** hovering over a card (desktop)
 **Then** additional info appears: genre, description preview, metadata source
+**And** a `...` (three-dot) icon appears at the top-right of the card
 **And** the card has a subtle animation effect
+
+**Given** the user clicks the `...` icon on a poster card
+**When** the context menu opens
+**Then** menu items include: View Details, Re-parse Metadata, Export Metadata, Delete
+**And** Delete appears last with `--error` (red) color and requires confirmation dialog
+**And** each menu item is prefixed with a Lucide icon
+**And** on mobile, the context menu triggers via long-press and presents as a bottom sheet
+
+**Given** the library toolbar is displayed
+**When** the user clicks the Settings gear icon
+**Then** a dropdown shows library display preferences:
+- Poster Size / Density (Small / Medium / Large)
+- Default Sort Preference
+- Title Display Language (zh-TW priority / Original title priority)
 
 **Technical Notes:**
 - Implements FR38: Browse complete media library
+- Implements FR40: Single-item operations via context menu (delete, re-parse, export)
 - Implements NFR-SC6, NFR-P10: Virtual scrolling, 60 FPS
 - Implements UX-9: Appreciation Loop
+- Implements PRD UI Component Interaction Specifications (Settings Gear, PosterCard Context Menu)
 
 ---
 
@@ -1754,9 +1771,18 @@ So that **I can access all information including cast, trailers, and metadata so
 **When** hovering over the source badge
 **Then** details show: "Fetched from TMDb on 2026-01-10"
 
+**Given** the detail panel is open
+**When** the user clicks the `...` icon (top-right, next to close button)
+**Then** a context menu opens with: Re-parse Metadata, Export Metadata, Delete
+**And** Delete appears last with `--error` (red) color and requires confirmation dialog
+**And** each menu item is prefixed with a Lucide icon
+**And** on mobile, the menu presents as a bottom sheet
+
 **Technical Notes:**
 - Implements FR39: View media detail pages with cast/trailers
+- Implements FR40: Single-item operations via context menu (delete, re-parse, export)
 - Implements FR42: Display metadata source indicators
+- Implements PRD UI Component Interaction Specifications (Detail Panel Context Menu)
 - YouTube embed with privacy-enhanced mode
 
 ---
