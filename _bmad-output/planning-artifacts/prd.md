@@ -943,6 +943,62 @@ Vido adopts modern SPA architecture:
 
 ---
 
+### UI Component Interaction Specifications
+
+Defines the interactive behavior of contextual menus and quick-settings across the Media Library UI. Each item is scoped to its target epic/phase.
+
+**1. Settings Gear Dropdown (Top Toolbar)**
+
+The toolbar gear icon provides **library display preferences** (quick access). The full Settings page (Tab 4) covers system-level configuration (Epic 6).
+
+| # | Item | Description | Scope |
+|---|------|-------------|-------|
+| 1 | Poster Size / Density | Small / Medium / Large (adjusts grid columns) | 1.0 - Epic 5 |
+| 2 | Default Sort Preference | Remember preferred sort order | 1.0 - Epic 5 |
+| 3 | Title Display Language | zh-TW priority / Original title priority | 1.0 - Epic 5 |
+| 4 | Rescan Media Library | Manually trigger full library rescan | Growth |
+| 5 | Cache Management | View/clear cache (FR53) | 1.0 - Epic 6 |
+
+**2. PosterCard Context Menu (Hover `...` icon, top-right)**
+
+Single media item quick actions accessible from the grid/list card.
+
+| # | Item | Description | Scope |
+|---|------|-------------|-------|
+| 1 | View Details | Open Detail Panel (Story 5.6) | 1.0 - Epic 5 |
+| 2 | Re-parse Metadata | Re-parse this item's metadata (FR40) | 1.0 - Epic 5 |
+| 3 | Export Metadata | Export this item's metadata (FR40) | 1.0 - Epic 5 |
+| 4 | Delete | Remove from library, requires confirmation dialog (FR40) | 1.0 - Epic 5 |
+| — | *(separator)* | | |
+| 5 | Mark Watched / Unwatched | Toggle watch status (FR45) | Growth - Epic 11 |
+| 6 | Add to Collection | Add to custom collection (FR46) | Growth - Epic 11 |
+| 7 | Edit Metadata | Manually modify metadata (FR21) | Growth |
+
+**3. Detail Panel Context Menu (`...` icon, top-right next to close)**
+
+Advanced operations when viewing full media details.
+
+| # | Item | Description | Scope |
+|---|------|-------------|-------|
+| 1 | Re-parse Metadata | Re-parse metadata (FR40) | 1.0 - Epic 5 |
+| 2 | Export Metadata | Export JSON/YAML/NFO (FR40) | 1.0 - Epic 5 |
+| 3 | Delete | Remove from library, requires confirmation (FR40) | 1.0 - Epic 5 |
+| — | *(separator)* | | |
+| 4 | Edit Metadata | Manually modify all fields (FR21) | Growth |
+| 5 | Mark Watched / Unwatched | Toggle watch status (FR45) | Growth - Epic 11 |
+| 6 | Add to Collection | Add to custom collection (FR46) | Growth - Epic 11 |
+| 7 | Find Subtitles | Search/download subtitles (FR75-80) | Growth - Epic 9 |
+| 8 | Show in File System | Reveal actual file path | Growth |
+
+**Interaction Rules:**
+- Delete actions always appear last, use `--error` (red) color, and require a confirmation dialog
+- Each menu item is prefixed with a Lucide icon (consistent with Design Brief icon rules)
+- Items beyond current epic scope are **not rendered** until their epic is implemented
+- PosterCard menu uses standard context menu (dropdown); Detail Panel menu uses the same pattern
+- Mobile: Context menus trigger via long-press on cards; Detail Panel uses bottom sheet menu
+
+---
+
 ### Performance Targets
 
 **Page Load Performance:**
