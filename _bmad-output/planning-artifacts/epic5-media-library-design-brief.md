@@ -191,6 +191,23 @@ Desktop (1440px+):
 - Title below card (not overlaid)
 - No overlays, no badges in default state — clean and poster-focused
 
+**Settings Gear Dropdown (Top Toolbar):**
+- Triggered by: Lucide Settings icon click (far-right of Top Toolbar)
+- Pattern: Standard dropdown menu, aligned to right edge
+- Width: 240-280px, --bg-secondary, --shadow-lg, radius-md
+- Items (Epic 5 scope only — do NOT render Growth items):
+
+| # | Icon | Label | Description |
+|---|------|-------|-------------|
+| 1 | Lucide LayoutGrid | 海報大小 | Small / Medium / Large segmented control (adjusts grid columns) |
+| 2 | Lucide ArrowUpDown | 預設排序 | Dropdown or radio: 新增日期 / 標題 / 年份 / 評分 |
+| 3 | Lucide Languages | 標題顯示語言 | Toggle: 中文優先 / 原文優先 |
+
+- Each item row: Icon (--text-muted, 16px) + Label (--text-primary) + Control on right
+- Divider lines between items (1px --bg-tertiary)
+- Close on: Click outside, Escape key, or selecting an option
+- Mobile: Same dropdown, but may shift to bottom sheet if viewport is narrow
+
 ---
 
 ### Screen 2: Library Grid View — Tablet (768-1439px)
@@ -254,7 +271,39 @@ Show **3 keyframe states side by side** (or stacked with labels):
 - Card: scale(1.05), translateY(-4px), shadow-xl
 - Overlay: Dark gradient (bottom-up, opacity 0.5), badges slide in
 - Rating badge: Small pill, --bg-tertiary with --text-primary
+- `...` icon (Lucide MoreHorizontal): Top-right, 24px, white, --bg-tertiary/60% pill backdrop
 - Accent glow beneath card: hsl(217, 91%, 60%, 0.12)
+
+**Keyframe A-1 — PosterCard Context Menu (on `...` click):**
+```
++----------------+
+| [8.7]    [...] |
+|       +-----------------+
+|       | View Details     |
+|       | Re-parse         |
+|       | Export Metadata   |
+|       |------------------|
+|       | Delete           |  <- --error red text
+|       +-----------------+
++----------------+
+```
+- Triggered by: Click on `...` icon (desktop), long-press on card (mobile)
+- Pattern: Standard dropdown, right-aligned to `...` icon
+- Width: 200-220px, --bg-secondary, --shadow-lg, radius-md
+- Items (Epic 5 scope only — Growth items NOT rendered):
+
+| # | Icon | Label | Notes |
+|---|------|-------|-------|
+| 1 | Lucide Eye | 查看詳情 | Opens Detail Panel (Story 5.6) |
+| 2 | Lucide RefreshCw | 重新解析 | Re-parse metadata |
+| 3 | Lucide Download | 匯出中繼資料 | Export metadata |
+| — | *(separator)* | | 1px --bg-tertiary divider |
+| 4 | Lucide Trash2 | 刪除 | --error color, confirmation dialog required |
+
+- Each row: Icon (16px, --text-muted; Trash2 uses --error) + Label (--text-primary; Delete uses --error)
+- Row hover: --bg-tertiary background
+- Delete confirmation dialog: "確定要刪除「{title}」嗎？此操作無法復原。" with [取消] + [刪除] (--error) buttons
+- Mobile: Long-press triggers bottom sheet with same items, larger touch targets (min 48px row height)
 
 **Keyframe B — Panel Opening (transition midpoint):**
 ```
@@ -310,7 +359,36 @@ Show **3 keyframe states side by side** (or stacked with labels):
 - Metadata source badge: Small indicator "TMDb" or "Manual" in --text-muted
 - Action buttons: Primary (Play) + Secondary (Add to List)
 - Close: Lucide X icon, top-right
+- `...` icon: Lucide MoreHorizontal, top-right (left of X close button), 24px
 - Scrollable independently from grid
+
+**Detail Panel Context Menu (on `...` click):**
+```
++--------------------+
+| [X]          [...] |  <- `...` left of X
+|        +-----------------+
+|        | Re-parse         |
+|        | Export Metadata   |
+|        |------------------|
+|        | Delete           |  <- --error red text
+|        +-----------------+
+```
+- Triggered by: Click on `...` icon (desktop), tap (mobile shows bottom sheet)
+- Pattern: Same dropdown style as PosterCard menu, right-aligned
+- Width: 200-220px, --bg-secondary, --shadow-lg, radius-md
+- Items (Epic 5 scope only — Growth items NOT rendered):
+
+| # | Icon | Label | Notes |
+|---|------|-------|-------|
+| 1 | Lucide RefreshCw | 重新解析 | Re-parse metadata |
+| 2 | Lucide Download | 匯出中繼資料 | Export JSON/YAML/NFO |
+| — | *(separator)* | | 1px --bg-tertiary divider |
+| 3 | Lucide Trash2 | 刪除 | --error color, confirmation dialog required |
+
+- Same styling rules as PosterCard Context Menu (icon + label per row, hover states)
+- "View Details" is omitted here (user is already in the Detail Panel)
+- Delete confirmation: Same dialog pattern as PosterCard
+- Mobile: Bottom sheet menu with large touch targets (min 48px row height)
 
 ---
 
@@ -571,6 +649,23 @@ Filter Bottom Sheet (on tap):
 | Detail: Related | 相關推薦 |
 | Play button | 播放 |
 | Add to list | 加入清單 |
+| **Context Menu Items** | |
+| View Details | 查看詳情 |
+| Re-parse Metadata | 重新解析 |
+| Export Metadata | 匯出中繼資料 |
+| Delete | 刪除 |
+| Delete confirm heading | 確認刪除 |
+| Delete confirm message | 確定要刪除「{title}」嗎？此操作無法復原。 |
+| Delete confirm button | 刪除 |
+| **Settings Gear Items** | |
+| Poster Size / Density | 海報大小 |
+| Size: Small | 小 |
+| Size: Medium | 中 |
+| Size: Large | 大 |
+| Default Sort Preference | 預設排序 |
+| Title Display Language | 標題顯示語言 |
+| Language: zh-TW priority | 中文優先 |
+| Language: Original priority | 原文優先 |
 
 ---
 
@@ -593,7 +688,22 @@ Use these as realistic content in the design mockups:
 
 ---
 
-## 8. What NOT to Do
+## 8. Interaction Design Rules (Context Menus & Dropdowns)
+
+These rules apply to ALL dropdown/context menus in the design:
+
+1. **Scope gating:** Only render items scoped to Epic 5 (1.0). Growth/future items do NOT appear in the UI — they are defined in PRD for future reference only.
+2. **Delete always last:** Delete actions always appear as the final item, separated by a divider, styled in `--error` (red) color.
+3. **Confirmation required:** All destructive actions (Delete) trigger a confirmation dialog before executing.
+4. **Lucide icons mandatory:** Every menu item is prefixed with a Lucide icon (16px, --text-muted; Delete uses --error).
+5. **Consistent sizing:** Menu width 200-280px, row height min 36px (desktop) / 48px (mobile).
+6. **Dismiss behavior:** Click outside, Escape key, or selecting an item closes the menu.
+7. **Mobile adaptation:** Desktop dropdowns become bottom sheets on mobile (<768px), triggered by long-press (cards) or tap (explicit icons).
+8. **No nested menus:** Keep menus flat — no sub-menus or flyouts in 1.0.
+
+---
+
+## 9. What NOT to Do
 
 - NO emoji in navigation, tabs, buttons, or status badges
 - NO bright gradient backgrounds or decorative color blocks
