@@ -3,11 +3,15 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/vido/api/internal/models"
 )
+
+// ErrEpisodeNotFound is returned when an episode lookup finds no matching record.
+var ErrEpisodeNotFound = errors.New("episode not found")
 
 // EpisodeRepository provides data access operations for episodes
 type EpisodeRepository struct {
@@ -96,7 +100,7 @@ func (r *EpisodeRepository) FindByID(ctx context.Context, id string) (*models.Ep
 	)
 
 	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("episode with id %s not found", id)
+		return nil, fmt.Errorf("episode with id %s: %w", id, ErrEpisodeNotFound)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to find episode: %w", err)
@@ -238,7 +242,7 @@ func (r *EpisodeRepository) FindBySeriesSeasonEpisode(ctx context.Context, serie
 	)
 
 	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("episode S%02dE%02d for series %s not found", season, episode, seriesID)
+		return nil, fmt.Errorf("episode S%02dE%02d for series %s: %w", season, episode, seriesID, ErrEpisodeNotFound)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to find episode: %w", err)
@@ -338,9 +342,7 @@ func (r *EpisodeRepository) Upsert(ctx context.Context, episode *models.Episode)
 	// Check if episode already exists
 	existing, err := r.FindBySeriesSeasonEpisode(ctx, episode.SeriesID, episode.SeasonNumber, episode.EpisodeNumber)
 	if err != nil {
-		// If not found, create new episode
-		errMsg := fmt.Sprintf("episode S%02dE%02d for series %s not found", episode.SeasonNumber, episode.EpisodeNumber, episode.SeriesID)
-		if err.Error() == errMsg {
+		if errors.Is(err, ErrEpisodeNotFound) {
 			return r.Create(ctx, episode)
 		}
 		return fmt.Errorf("failed to check existing episode: %w", err)

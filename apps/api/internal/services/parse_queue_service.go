@@ -262,7 +262,7 @@ func (s *ParseQueueService) createTVEntryFromMatch(
 
 	// 2. Upsert Season
 	seasonNumber := parseResult.Season
-	seasonID, err := s.upsertSeason(ctx, seriesID, seasonNumber, tmdbID)
+	seasonID, err := s.upsertSeason(ctx, seriesID, seasonNumber)
 	if err != nil {
 		return "", fmt.Errorf("upsert season: %w", err)
 	}
@@ -344,7 +344,6 @@ func (s *ParseQueueService) upsertSeason(
 	ctx context.Context,
 	seriesID string,
 	seasonNumber int,
-	seriesTMDbID int64,
 ) (string, error) {
 	// Check if season already exists
 	existing, err := s.seasonRepo.FindBySeriesAndNumber(ctx, seriesID, seasonNumber)

@@ -298,7 +298,7 @@ func (m *mockPQSeasonRepo) FindBySeriesAndNumber(_ context.Context, seriesID str
 			return s, nil
 		}
 	}
-	return nil, fmt.Errorf("season %d for series %s not found", seasonNumber, seriesID)
+	return nil, fmt.Errorf("season %d for series %s: %w", seasonNumber, seriesID, repository.ErrSeasonNotFound)
 }
 
 func (m *mockPQSeasonRepo) Update(_ context.Context, _ *models.Season) error { return nil }
@@ -351,7 +351,7 @@ func (m *mockPQEpisodeRepo) FindBySeriesSeasonEpisode(_ context.Context, seriesI
 			return ep, nil
 		}
 	}
-	return nil, fmt.Errorf("episode S%02dE%02d for series %s not found", season, episode, seriesID)
+	return nil, fmt.Errorf("episode S%02dE%02d for series %s: %w", season, episode, seriesID, repository.ErrEpisodeNotFound)
 }
 
 func (m *mockPQEpisodeRepo) Update(_ context.Context, _ *models.Episode) error { return nil }

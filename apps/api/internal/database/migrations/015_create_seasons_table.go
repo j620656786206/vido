@@ -56,6 +56,7 @@ func (m *CreateSeasonsTable) Down(tx *sql.Tx) error {
 	// SQLite 3.35.0+ supports ALTER TABLE DROP COLUMN
 	query := `
 		DROP INDEX IF EXISTS idx_episodes_season_id;
+		ALTER TABLE episodes DROP COLUMN season_id;
 		DROP INDEX IF EXISTS idx_seasons_tmdb_id;
 		DROP INDEX IF EXISTS idx_seasons_series_id;
 		DROP TABLE IF EXISTS seasons;

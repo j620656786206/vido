@@ -3,11 +3,15 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/vido/api/internal/models"
 )
+
+// ErrSeasonNotFound is returned when a season lookup finds no matching record.
+var ErrSeasonNotFound = errors.New("season not found")
 
 // SeasonRepository provides data access operations for seasons
 type SeasonRepository struct {
@@ -89,7 +93,7 @@ func (r *SeasonRepository) FindByID(ctx context.Context, id string) (*models.Sea
 	)
 
 	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("season with id %s not found", id)
+		return nil, fmt.Errorf("season with id %s: %w", id, ErrSeasonNotFound)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to find season: %w", err)
@@ -174,7 +178,7 @@ func (r *SeasonRepository) FindBySeriesAndNumber(ctx context.Context, seriesID s
 	)
 
 	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("season %d for series %s not found", seasonNumber, seriesID)
+		return nil, fmt.Errorf("season %d for series %s: %w", seasonNumber, seriesID, ErrSeasonNotFound)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to find season: %w", err)
@@ -266,9 +270,7 @@ func (r *SeasonRepository) Upsert(ctx context.Context, season *models.Season) er
 
 	existing, err := r.FindBySeriesAndNumber(ctx, season.SeriesID, season.SeasonNumber)
 	if err != nil {
-		// Not found — create new
-		errMsg := fmt.Sprintf("season %d for series %s not found", season.SeasonNumber, season.SeriesID)
-		if err.Error() == errMsg {
+		if errors.Is(err, ErrSeasonNotFound) {
 			return r.Create(ctx, season)
 		}
 		return fmt.Errorf("failed to check existing season: %w", err)
