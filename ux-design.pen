@@ -312,8 +312,8 @@
             {
               "type": "frame",
               "id": "XE39P",
-              "x": 12,
-              "y": 12,
+              "x": 154,
+              "y": 298,
               "name": "rating-badge",
               "fill": "#000000AA",
               "cornerRadius": 6,
@@ -400,32 +400,32 @@
             },
             {
               "type": "frame",
-              "id": "zBi36",
+              "id": "v24S1",
               "x": 12,
-              "y": 304,
-              "name": "bottom-info",
-              "gap": 8,
-              "alignItems": "center",
+              "y": 12,
+              "name": "select-checkbox",
+              "width": 24,
+              "height": 24,
+              "fill": "#00000066",
+              "cornerRadius": 100,
+              "stroke": {
+                "thickness": 2,
+                "fill": "#FFFFFF99"
+              },
+              "layout": "none",
               "children": [
                 {
                   "type": "icon_font",
-                  "id": "HLsfI",
-                  "name": "type-icon",
+                  "id": "HsMeF",
+                  "x": 5,
+                  "y": 5,
+                  "name": "check-icon",
+                  "enabled": false,
                   "width": 14,
                   "height": 14,
-                  "iconFontName": "film",
+                  "iconFontName": "check",
                   "iconFontFamily": "lucide",
-                  "fill": "#FFFFFFCC"
-                },
-                {
-                  "type": "text",
-                  "id": "BYN3t",
-                  "name": "ep-count",
-                  "fill": "#FFFFFFCC",
-                  "content": "動畫",
-                  "fontFamily": "Noto Sans TC",
-                  "fontSize": 11,
-                  "fontWeight": "normal"
+                  "fill": "#FFFFFF"
                 }
               ]
             }
@@ -4178,136 +4178,751 @@
                     },
                     {
                       "type": "frame",
-                      "id": "fvg7K",
-                      "name": "genreOptions",
+                      "id": "e3qpQ",
+                      "name": "genreChipGrid",
                       "width": "fill_container",
                       "layout": "vertical",
-                      "gap": 10,
+                      "gap": 8,
                       "children": [
                         {
                           "type": "frame",
-                          "id": "qqNdk",
-                          "name": "opt1",
+                          "id": "bX8PG",
+                          "name": "chipRow1",
+                          "width": "fill_container",
                           "gap": 8,
-                          "alignItems": "center",
                           "children": [
                             {
-                              "id": "uz0Mb",
-                              "type": "ref",
-                              "ref": "4EHFN",
-                              "name": "opt1check"
+                              "type": "frame",
+                              "id": "8vBqZ",
+                              "name": "chipActive1",
+                              "fill": "#3B82F626",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$accent-primary"
+                              },
+                              "gap": 4,
+                              "padding": [
+                                6,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon_font",
+                                  "id": "WgWSj",
+                                  "name": "c1icon",
+                                  "width": 14,
+                                  "height": 14,
+                                  "iconFontName": "check",
+                                  "iconFontFamily": "lucide",
+                                  "fill": "$accent-hover"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "BFCfE",
+                                  "name": "c1text",
+                                  "fill": "$accent-hover",
+                                  "content": "動畫",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                }
+                              ]
                             },
                             {
-                              "type": "text",
-                              "id": "m3k8z",
-                              "name": "opt1label",
-                              "fill": "$text-primary",
-                              "content": "劇情",
-                              "fontFamily": "Noto Sans TC",
-                              "fontSize": 13,
-                              "fontWeight": "normal"
+                              "type": "frame",
+                              "id": "GscXL",
+                              "name": "chipDefault1",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 4,
+                              "padding": [
+                                6,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "dfDmO",
+                                  "name": "c2text",
+                                  "fill": "$text-secondary",
+                                  "content": "動作",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "BDARD",
+                              "name": "chipDefault2",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 4,
+                              "padding": [
+                                6,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "DWpzy",
+                                  "name": "c3text",
+                                  "fill": "$text-secondary",
+                                  "content": "冒險",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                }
+                              ]
                             }
                           ]
                         },
                         {
                           "type": "frame",
-                          "id": "p7oxo",
-                          "name": "opt2",
+                          "id": "fOXbO",
+                          "name": "chipRow2",
+                          "width": "fill_container",
                           "gap": 8,
-                          "alignItems": "center",
                           "children": [
                             {
-                              "id": "JHAy2",
-                              "type": "ref",
-                              "ref": "Wd9AL",
-                              "name": "opt2check"
+                              "type": "frame",
+                              "id": "DH0e7",
+                              "name": "chipDefault3",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 4,
+                              "padding": [
+                                6,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "A7qMq",
+                                  "name": "c4t",
+                                  "fill": "$text-secondary",
+                                  "content": "喜劇",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                }
+                              ]
                             },
                             {
-                              "type": "text",
-                              "id": "N8ouK",
-                              "name": "opt2label",
-                              "fill": "$text-primary",
-                              "content": "動作",
-                              "fontFamily": "Noto Sans TC",
-                              "fontSize": 13,
-                              "fontWeight": "normal"
+                              "type": "frame",
+                              "id": "V37vD",
+                              "name": "chipDefault4",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 4,
+                              "padding": [
+                                6,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "RTfaR",
+                                  "name": "c5t",
+                                  "fill": "$text-secondary",
+                                  "content": "犯罪",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "8Qp7P",
+                              "name": "chipActive2",
+                              "fill": "#3B82F626",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$accent-primary"
+                              },
+                              "gap": 4,
+                              "padding": [
+                                6,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon_font",
+                                  "id": "30UBr",
+                                  "name": "c6icon",
+                                  "width": 14,
+                                  "height": 14,
+                                  "iconFontName": "check",
+                                  "iconFontFamily": "lucide",
+                                  "fill": "$accent-hover"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "0BSvd",
+                                  "name": "c6t",
+                                  "fill": "$accent-hover",
+                                  "content": "劇情",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                }
+                              ]
                             }
                           ]
                         },
                         {
                           "type": "frame",
-                          "id": "I7y6k",
-                          "name": "opt3",
+                          "id": "1fu0P",
+                          "name": "chipRow3",
+                          "width": "fill_container",
                           "gap": 8,
-                          "alignItems": "center",
                           "children": [
                             {
-                              "id": "K4CVm",
-                              "type": "ref",
-                              "ref": "4EHFN",
-                              "name": "opt3check"
+                              "type": "frame",
+                              "id": "C1Bqq",
+                              "name": "c7",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 4,
+                              "padding": [
+                                6,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "aQxY1",
+                                  "name": "c7t",
+                                  "fill": "$text-secondary",
+                                  "content": "家庭",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                }
+                              ]
                             },
                             {
-                              "type": "text",
-                              "id": "zILmA",
-                              "name": "opt3label",
-                              "fill": "$text-primary",
-                              "content": "動畫",
-                              "fontFamily": "Noto Sans TC",
-                              "fontSize": 13,
-                              "fontWeight": "normal"
+                              "type": "frame",
+                              "id": "bwSbU",
+                              "name": "c8",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 4,
+                              "padding": [
+                                6,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "NIKPK",
+                                  "name": "c8t",
+                                  "fill": "$text-secondary",
+                                  "content": "奇幻",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "sGjQc",
+                              "name": "c9",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 4,
+                              "padding": [
+                                6,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "t2VwV",
+                                  "name": "c9t",
+                                  "fill": "$text-secondary",
+                                  "content": "歷史",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                }
+                              ]
                             }
                           ]
                         },
                         {
                           "type": "frame",
-                          "id": "vezy2",
-                          "name": "opt4",
+                          "id": "AXqG4",
+                          "name": "chipRow4",
+                          "width": "fill_container",
                           "gap": 8,
-                          "alignItems": "center",
                           "children": [
                             {
-                              "id": "loIdD",
-                              "type": "ref",
-                              "ref": "Wd9AL",
-                              "name": "opt4check"
+                              "type": "frame",
+                              "id": "fpRPe",
+                              "name": "c10",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 4,
+                              "padding": [
+                                6,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "j99x5",
+                                  "name": "c10t",
+                                  "fill": "$text-secondary",
+                                  "content": "恐怖",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                }
+                              ]
                             },
                             {
-                              "type": "text",
-                              "id": "liZ8e",
-                              "name": "opt4label",
-                              "fill": "$text-primary",
-                              "content": "喜劇",
-                              "fontFamily": "Noto Sans TC",
-                              "fontSize": 13,
-                              "fontWeight": "normal"
+                              "type": "frame",
+                              "id": "SxiCw",
+                              "name": "c11",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 4,
+                              "padding": [
+                                6,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "5mqoy",
+                                  "name": "c11t",
+                                  "fill": "$text-secondary",
+                                  "content": "音樂",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "m2ktN",
+                              "name": "c12",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 4,
+                              "padding": [
+                                6,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "3XXZJ",
+                                  "name": "c12t",
+                                  "fill": "$text-secondary",
+                                  "content": "懸疑",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                }
+                              ]
                             }
                           ]
                         },
                         {
                           "type": "frame",
-                          "id": "lGShG",
-                          "name": "opt5",
+                          "id": "BetVA",
+                          "name": "chipRow5",
+                          "width": "fill_container",
                           "gap": 8,
-                          "alignItems": "center",
                           "children": [
                             {
-                              "id": "u0PNJ",
-                              "type": "ref",
-                              "ref": "Wd9AL",
-                              "name": "opt5check"
+                              "type": "frame",
+                              "id": "DvBKe",
+                              "name": "c13",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 4,
+                              "padding": [
+                                6,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "FRXeo",
+                                  "name": "c13t",
+                                  "fill": "$text-secondary",
+                                  "content": "愛情",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                }
+                              ]
                             },
                             {
-                              "type": "text",
-                              "id": "3hHYM",
-                              "name": "opt5label",
-                              "fill": "$text-primary",
-                              "content": "科幻",
-                              "fontFamily": "Noto Sans TC",
-                              "fontSize": 13,
-                              "fontWeight": "normal"
+                              "type": "frame",
+                              "id": "v8eXn",
+                              "name": "c14",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 4,
+                              "padding": [
+                                6,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "lzPsh",
+                                  "name": "c14t",
+                                  "fill": "$text-secondary",
+                                  "content": "科幻",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "c80L1",
+                              "name": "c15",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 4,
+                              "padding": [
+                                6,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "OhAvy",
+                                  "name": "c15t",
+                                  "fill": "$text-secondary",
+                                  "content": "驚悚",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                }
+                              ]
                             }
                           ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "pQdWh",
+                          "name": "chipRow6",
+                          "width": "fill_container",
+                          "gap": 8,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "isb7l",
+                              "name": "c16",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 4,
+                              "padding": [
+                                6,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "T0clM",
+                                  "name": "c16t",
+                                  "fill": "$text-secondary",
+                                  "content": "戰爭",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "iZQTd",
+                              "name": "c17",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 4,
+                              "padding": [
+                                6,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "CLGrZ",
+                                  "name": "c17t",
+                                  "fill": "$text-secondary",
+                                  "content": "西部",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "rrrFx",
+                              "name": "c18",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 4,
+                              "padding": [
+                                6,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "w9AGi",
+                                  "name": "c18t",
+                                  "fill": "$text-secondary",
+                                  "content": "運動",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "LU3nS",
+                          "name": "chipRow7",
+                          "width": "fill_container",
+                          "gap": 8,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "c6nP4",
+                              "name": "c19",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 4,
+                              "padding": [
+                                6,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "2gUZo",
+                                  "name": "c19t",
+                                  "fill": "$text-secondary",
+                                  "content": "真人秀",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "HWmel",
+                              "name": "c20",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 4,
+                              "padding": [
+                                6,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "RcJqI",
+                                  "name": "c20t",
+                                  "fill": "$text-secondary",
+                                  "content": "兒童",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "ISEGy",
+                          "name": "chipRow8",
+                          "width": "fill_container",
+                          "gap": 8,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "16Tds",
+                              "name": "c21",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 4,
+                              "padding": [
+                                6,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "iVo3o",
+                                  "name": "c21t",
+                                  "fill": "$text-secondary",
+                                  "content": "脫口秀",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "iDPIa",
+                              "name": "c22",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 4,
+                              "padding": [
+                                6,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "eCWKd",
+                                  "name": "c22t",
+                                  "fill": "$text-secondary",
+                                  "content": "新聞",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "BEMR7",
+                          "name": "clearAllBtn",
+                          "fill": "$text-muted",
+                          "content": "清除全部",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
                         }
                       ]
                     }
@@ -4333,114 +4948,184 @@
                     },
                     {
                       "type": "frame",
-                      "id": "ZTsxQ",
-                      "name": "yearRange",
+                      "id": "JyogY",
+                      "name": "yearChipGrid",
                       "width": "fill_container",
+                      "layout": "vertical",
                       "gap": 8,
-                      "alignItems": "center",
                       "children": [
                         {
                           "type": "frame",
-                          "id": "LWwW5",
-                          "name": "yearFrom",
-                          "fill": "$bg-tertiary",
-                          "cornerRadius": 6,
-                          "padding": [
-                            6,
-                            10
-                          ],
-                          "justifyContent": "center",
-                          "alignItems": "center",
+                          "id": "Qnb7y",
+                          "name": "yearChipRow1",
+                          "width": "fill_container",
+                          "gap": 8,
                           "children": [
                             {
-                              "type": "text",
-                              "id": "PrdTf",
-                              "name": "yearFromText",
-                              "fill": "$text-primary",
-                              "content": "2015",
-                              "fontFamily": "JetBrains Mono",
-                              "fontSize": 12,
-                              "fontWeight": "normal"
+                              "type": "frame",
+                              "id": "aCglY",
+                              "name": "yc1",
+                              "fill": "#3B82F626",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$accent-primary"
+                              },
+                              "gap": 4,
+                              "padding": [
+                                6,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon_font",
+                                  "id": "eCPej",
+                                  "name": "yc1i",
+                                  "width": 14,
+                                  "height": 14,
+                                  "iconFontName": "check",
+                                  "iconFontFamily": "lucide",
+                                  "fill": "$accent-hover"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "42QNj",
+                                  "name": "yc1t",
+                                  "fill": "$accent-hover",
+                                  "content": "2020s",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "GUEN7",
+                              "name": "yc2",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 4,
+                              "padding": [
+                                6,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "rTobV",
+                                  "name": "yc2t",
+                                  "fill": "$text-secondary",
+                                  "content": "2010s",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "UalRW",
+                              "name": "yc3",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 4,
+                              "padding": [
+                                6,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "WC9lM",
+                                  "name": "yc3t",
+                                  "fill": "$text-secondary",
+                                  "content": "2000s",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                }
+                              ]
                             }
                           ]
                         },
                         {
-                          "type": "text",
-                          "id": "fW7mQ",
-                          "name": "yearDash",
-                          "fill": "$text-muted",
-                          "content": "—",
-                          "fontFamily": "Inter",
-                          "fontSize": 14,
-                          "fontWeight": "normal"
-                        },
-                        {
                           "type": "frame",
-                          "id": "2wl6z",
-                          "name": "yearTo",
-                          "fill": "$bg-tertiary",
-                          "cornerRadius": 6,
-                          "padding": [
-                            6,
-                            10
-                          ],
-                          "justifyContent": "center",
-                          "alignItems": "center",
+                          "id": "Dbxds",
+                          "name": "yearChipRow2",
+                          "width": "fill_container",
+                          "gap": 8,
                           "children": [
                             {
-                              "type": "text",
-                              "id": "n34iR",
-                              "name": "yearToText",
-                              "fill": "$text-primary",
-                              "content": "2026",
-                              "fontFamily": "JetBrains Mono",
-                              "fontSize": 12,
-                              "fontWeight": "normal"
+                              "type": "frame",
+                              "id": "auqhu",
+                              "name": "yc4",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 4,
+                              "padding": [
+                                6,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "aVzik",
+                                  "name": "yc4t",
+                                  "fill": "$text-secondary",
+                                  "content": "1990s",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "MyGFt",
+                              "name": "yc5",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 4,
+                              "padding": [
+                                6,
+                                12
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "BLCar",
+                                  "name": "yc5t",
+                                  "fill": "$text-secondary",
+                                  "content": "更早",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 13,
+                                  "fontWeight": "normal"
+                                }
+                              ]
                             }
                           ]
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "y2E7y",
-                      "name": "yearSlider",
-                      "width": "fill_container",
-                      "height": 4,
-                      "fill": "$bg-tertiary",
-                      "cornerRadius": 2,
-                      "layout": "none",
-                      "children": [
-                        {
-                          "type": "rectangle",
-                          "cornerRadius": 2,
-                          "id": "JBL0N",
-                          "x": 30,
-                          "y": 0,
-                          "name": "yearSliderFill",
-                          "fill": "$accent-primary",
-                          "width": 160,
-                          "height": 4
-                        },
-                        {
-                          "type": "ellipse",
-                          "id": "XcZRt",
-                          "x": 24,
-                          "y": -5,
-                          "name": "yearSliderThumb1",
-                          "fill": "#FFFFFF",
-                          "width": 14,
-                          "height": 14
-                        },
-                        {
-                          "type": "ellipse",
-                          "id": "at7Fo",
-                          "x": 184,
-                          "y": -5,
-                          "name": "yearSliderThumb2",
-                          "fill": "#FFFFFF",
-                          "width": 14,
-                          "height": 14
                         }
                       ]
                     }
@@ -4557,36 +5242,6 @@
                               "name": "tTvLabel",
                               "fill": "$text-primary",
                               "content": "影集",
-                              "fontFamily": "Noto Sans TC",
-                              "fontSize": 13,
-                              "fontWeight": "normal"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "jJqao",
-                          "name": "tAnime",
-                          "gap": 8,
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "ellipse",
-                              "id": "tPupp",
-                              "name": "tAnimeRadio",
-                              "width": 18,
-                              "height": 18,
-                              "stroke": {
-                                "thickness": 1.5,
-                                "fill": "$text-muted"
-                              }
-                            },
-                            {
-                              "type": "text",
-                              "id": "LK9An",
-                              "name": "tAnimeLabel",
-                              "fill": "$text-primary",
-                              "content": "動畫",
                               "fontFamily": "Noto Sans TC",
                               "fontSize": 13,
                               "fontWeight": "normal"
@@ -4758,7 +5413,7 @@
                       "name": "chip3",
                       "descendants": {
                         "v1GYz": {
-                          "content": "2015-2026"
+                          "content": "2020s"
                         }
                       }
                     },
@@ -5130,157 +5785,238 @@
               "gap": 16,
               "children": [
                 {
-                  "type": "frame",
-                  "id": "O4nLi",
-                  "name": "selected-card",
+                  "id": "jpWIp",
+                  "type": "ref",
+                  "ref": "MQbvp",
+                  "name": "sel1",
                   "width": "fill_container",
-                  "cornerRadius": 12,
-                  "stroke": {
-                    "thickness": 2,
-                    "fill": "$accent-primary"
-                  },
-                  "layout": "vertical",
-                  "children": [
-                    {
-                      "id": "uyZNE",
-                      "type": "ref",
-                      "ref": "RusTY",
-                      "width": "fill_container",
-                      "name": "sel1poster",
-                      "descendants": {
-                        "GZVLH": {
-                          "content": "你的名字"
-                        },
-                        "xeGGx": {
-                          "content": "2016"
-                        }
+                  "descendants": {
+                    "ATlIm": {
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "./images/generated-1772689734075.png",
+                        "mode": "fill"
                       }
                     },
-                    {
-                      "id": "eSg5l",
-                      "type": "ref",
-                      "ref": "4EHFN",
-                      "x": 0,
-                      "y": 382,
-                      "name": "sel1check"
-                    }
-                  ]
-                },
-                {
-                  "type": "frame",
-                  "id": "s1Xgi",
-                  "name": "selected-card",
-                  "width": "fill_container",
-                  "cornerRadius": 12,
-                  "stroke": {
-                    "thickness": 2,
-                    "fill": "$accent-primary"
-                  },
-                  "layout": "vertical",
-                  "children": [
-                    {
-                      "id": "p3TpR",
-                      "type": "ref",
-                      "ref": "RusTY",
-                      "width": "fill_container",
-                      "name": "sel2poster",
-                      "descendants": {
-                        "GZVLH": {
-                          "content": "鬼滅之刃"
-                        },
-                        "xeGGx": {
-                          "content": "2019"
+                    "bVVcf": {
+                      "fill": [
+                        "#3B82F626",
+                        {
+                          "type": "gradient",
+                          "gradientType": "linear",
+                          "enabled": true,
+                          "rotation": 0,
+                          "size": {
+                            "height": 1
+                          },
+                          "colors": [
+                            {
+                              "color": "#00000000",
+                              "position": 0
+                            },
+                            {
+                              "color": "#000000AA",
+                              "position": 1
+                            }
+                          ]
                         }
+                      ]
+                    },
+                    "h0RoT": {
+                      "content": "8.4"
+                    },
+                    "v24S1": {
+                      "fill": "$accent-primary",
+                      "stroke": {
+                        "thickness": 2,
+                        "fill": "$accent-primary"
                       }
                     },
-                    {
-                      "id": "7fJPS",
-                      "type": "ref",
-                      "ref": "4EHFN",
-                      "x": 0,
-                      "y": 382,
-                      "name": "sel2check"
+                    "HsMeF": {
+                      "enabled": true
+                    },
+                    "rrFoX": {
+                      "content": "你的名字"
+                    },
+                    "ESl54": {
+                      "content": "2016"
                     }
-                  ]
+                  }
                 },
                 {
-                  "type": "frame",
-                  "id": "afbad",
-                  "name": "unselected-card",
+                  "id": "SyZsF",
+                  "type": "ref",
+                  "ref": "MQbvp",
+                  "name": "sel2",
+                  "width": "fill_container",
+                  "descendants": {
+                    "ATlIm": {
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "./images/generated-1772689741272.png",
+                        "mode": "fill"
+                      }
+                    },
+                    "bVVcf": {
+                      "fill": [
+                        "#3B82F626",
+                        {
+                          "type": "gradient",
+                          "gradientType": "linear",
+                          "enabled": true,
+                          "rotation": 0,
+                          "size": {
+                            "height": 1
+                          },
+                          "colors": [
+                            {
+                              "color": "#00000000",
+                              "position": 0
+                            },
+                            {
+                              "color": "#000000AA",
+                              "position": 1
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "h0RoT": {
+                      "content": "8.7"
+                    },
+                    "v24S1": {
+                      "fill": "$accent-primary",
+                      "stroke": {
+                        "thickness": 2,
+                        "fill": "$accent-primary"
+                      }
+                    },
+                    "HsMeF": {
+                      "enabled": true
+                    },
+                    "rrFoX": {
+                      "content": "鬼滅之刃"
+                    },
+                    "ESl54": {
+                      "content": "2019"
+                    }
+                  }
+                },
+                {
+                  "id": "HR5Xu",
+                  "type": "ref",
+                  "ref": "MQbvp",
+                  "name": "unsel1",
+                  "width": "fill_container",
                   "opacity": 0.6,
-                  "width": "fill_container",
-                  "layout": "vertical",
-                  "children": [
-                    {
-                      "id": "o1RL4",
-                      "type": "ref",
-                      "ref": "RusTY",
-                      "width": "fill_container",
-                      "name": "u1poster",
-                      "descendants": {
-                        "GZVLH": {
-                          "content": "寄生上流"
-                        },
-                        "xeGGx": {
-                          "content": "2019"
-                        }
+                  "descendants": {
+                    "ATlIm": {
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "./images/generated-1772689749070.png",
+                        "mode": "fill"
                       }
+                    },
+                    "h0RoT": {
+                      "content": "7.8"
+                    },
+                    "rrFoX": {
+                      "content": "寄生上流"
+                    },
+                    "ESl54": {
+                      "content": "2019"
                     }
-                  ]
+                  }
                 },
                 {
-                  "type": "frame",
-                  "id": "umEqh",
-                  "name": "unselected-card",
+                  "id": "0x6nS",
+                  "type": "ref",
+                  "ref": "MQbvp",
+                  "name": "unsel2",
+                  "width": "fill_container",
                   "opacity": 0.6,
-                  "width": "fill_container",
-                  "layout": "vertical",
-                  "children": [
-                    {
-                      "id": "pkKAf",
-                      "type": "ref",
-                      "ref": "RusTY",
-                      "width": "fill_container",
-                      "name": "u2poster",
-                      "descendants": {
-                        "GZVLH": {
-                          "content": "進擊的巨人"
-                        },
-                        "xeGGx": {
-                          "content": "2013"
-                        }
+                  "descendants": {
+                    "ATlIm": {
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "./images/generated-1772689756708.png",
+                        "mode": "fill"
                       }
+                    },
+                    "h0RoT": {
+                      "content": "9.0"
+                    },
+                    "rrFoX": {
+                      "content": "進擊的巨人"
+                    },
+                    "ESl54": {
+                      "content": "2013"
                     }
-                  ]
+                  }
                 },
                 {
-                  "type": "frame",
-                  "id": "YgtNa",
-                  "name": "selected-card",
+                  "id": "UfTKf",
+                  "type": "ref",
+                  "ref": "MQbvp",
+                  "name": "sel3",
                   "width": "fill_container",
-                  "cornerRadius": 12,
-                  "stroke": {
-                    "thickness": 2,
-                    "fill": "$accent-primary"
-                  },
-                  "layout": "vertical",
-                  "children": [
-                    {
-                      "id": "ieJH9",
-                      "type": "ref",
-                      "ref": "RusTY",
-                      "width": "fill_container",
-                      "name": "sel3poster",
-                      "descendants": {
-                        "GZVLH": {
-                          "content": "駭客任務"
-                        },
-                        "xeGGx": {
-                          "content": "1999"
-                        }
+                  "descendants": {
+                    "ATlIm": {
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "./images/generated-1772689763452.png",
+                        "mode": "fill"
                       }
+                    },
+                    "bVVcf": {
+                      "fill": [
+                        "#3B82F626",
+                        {
+                          "type": "gradient",
+                          "gradientType": "linear",
+                          "enabled": true,
+                          "rotation": 0,
+                          "size": {
+                            "height": 1
+                          },
+                          "colors": [
+                            {
+                              "color": "#00000000",
+                              "position": 0
+                            },
+                            {
+                              "color": "#000000AA",
+                              "position": 1
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "h0RoT": {
+                      "content": "8.7"
+                    },
+                    "v24S1": {
+                      "fill": "$accent-primary",
+                      "stroke": {
+                        "thickness": 2,
+                        "fill": "$accent-primary"
+                      }
+                    },
+                    "HsMeF": {
+                      "enabled": true
+                    },
+                    "rrFoX": {
+                      "content": "駭客任務"
+                    },
+                    "ESl54": {
+                      "content": "1999"
                     }
-                  ]
+                  }
                 }
               ]
             },
@@ -5292,137 +6028,205 @@
               "gap": 16,
               "children": [
                 {
-                  "type": "frame",
-                  "id": "dDne2",
+                  "id": "7E4Sw",
+                  "type": "ref",
+                  "ref": "MQbvp",
                   "name": "unsel3",
-                  "opacity": 0.6,
                   "width": "fill_container",
-                  "layout": "vertical",
-                  "children": [
-                    {
-                      "id": "zx8gn",
-                      "type": "ref",
-                      "ref": "RusTY",
-                      "width": "fill_container",
-                      "name": "u3poster",
-                      "descendants": {
-                        "GZVLH": {
-                          "content": "鈴芽之旅"
-                        },
-                        "xeGGx": {
-                          "content": "2022"
-                        }
+                  "opacity": 0.6,
+                  "descendants": {
+                    "ATlIm": {
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "./images/generated-1772689734075.png",
+                        "mode": "fill"
                       }
+                    },
+                    "h0RoT": {
+                      "content": "7.6"
+                    },
+                    "rrFoX": {
+                      "content": "鈴芽之旅"
+                    },
+                    "ESl54": {
+                      "content": "2022"
                     }
-                  ]
+                  }
                 },
                 {
-                  "type": "frame",
-                  "id": "qak1o",
+                  "id": "aQsWh",
+                  "type": "ref",
+                  "ref": "MQbvp",
                   "name": "sel4",
                   "width": "fill_container",
-                  "cornerRadius": 12,
-                  "stroke": {
-                    "thickness": 2,
-                    "fill": "$accent-primary"
-                  },
-                  "layout": "vertical",
-                  "children": [
-                    {
-                      "id": "Mq0gr",
-                      "type": "ref",
-                      "ref": "RusTY",
-                      "width": "fill_container",
-                      "name": "sel4poster",
-                      "descendants": {
-                        "GZVLH": {
-                          "content": "咒術迴戰"
-                        },
-                        "xeGGx": {
-                          "content": "2020"
-                        }
+                  "descendants": {
+                    "ATlIm": {
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "./images/generated-1772689734075.png",
+                        "mode": "fill"
                       }
+                    },
+                    "bVVcf": {
+                      "fill": [
+                        "#3B82F626",
+                        {
+                          "type": "gradient",
+                          "gradientType": "linear",
+                          "enabled": true,
+                          "rotation": 0,
+                          "size": {
+                            "height": 1
+                          },
+                          "colors": [
+                            {
+                              "color": "#00000000",
+                              "position": 0
+                            },
+                            {
+                              "color": "#000000AA",
+                              "position": 1
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "h0RoT": {
+                      "content": "8.6"
+                    },
+                    "v24S1": {
+                      "fill": "$accent-primary",
+                      "stroke": {
+                        "thickness": 2,
+                        "fill": "$accent-primary"
+                      }
+                    },
+                    "HsMeF": {
+                      "enabled": true
+                    },
+                    "rrFoX": {
+                      "content": "咒術迴戰"
+                    },
+                    "ESl54": {
+                      "content": "2020"
                     }
-                  ]
+                  }
                 },
                 {
-                  "type": "frame",
-                  "id": "J9L7Y",
+                  "id": "eteE6",
+                  "type": "ref",
+                  "ref": "MQbvp",
                   "name": "unsel4",
-                  "opacity": 0.6,
                   "width": "fill_container",
-                  "layout": "vertical",
-                  "children": [
-                    {
-                      "id": "uhSFy",
-                      "type": "ref",
-                      "ref": "RusTY",
-                      "width": "fill_container",
-                      "name": "u4poster",
-                      "descendants": {
-                        "GZVLH": {
-                          "content": "瀑布"
-                        },
-                        "xeGGx": {
-                          "content": "2021"
-                        }
+                  "opacity": 0.6,
+                  "descendants": {
+                    "ATlIm": {
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "./images/generated-1772689734075.png",
+                        "mode": "fill"
                       }
+                    },
+                    "h0RoT": {
+                      "content": "7.2"
+                    },
+                    "rrFoX": {
+                      "content": "瀑布"
+                    },
+                    "ESl54": {
+                      "content": "2021"
                     }
-                  ]
+                  }
                 },
                 {
-                  "type": "frame",
-                  "id": "5xHIH",
+                  "id": "gPs9p",
+                  "type": "ref",
+                  "ref": "MQbvp",
                   "name": "sel5",
                   "width": "fill_container",
-                  "cornerRadius": 12,
-                  "stroke": {
-                    "thickness": 2,
-                    "fill": "$accent-primary"
-                  },
-                  "layout": "vertical",
-                  "children": [
-                    {
-                      "id": "onL18",
-                      "type": "ref",
-                      "ref": "RusTY",
-                      "width": "fill_container",
-                      "name": "sel5poster",
-                      "descendants": {
-                        "GZVLH": {
-                          "content": "周處除三害"
-                        },
-                        "xeGGx": {
-                          "content": "2023"
-                        }
+                  "descendants": {
+                    "ATlIm": {
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "./images/generated-1772689734075.png",
+                        "mode": "fill"
                       }
+                    },
+                    "bVVcf": {
+                      "fill": [
+                        "#3B82F626",
+                        {
+                          "type": "gradient",
+                          "gradientType": "linear",
+                          "enabled": true,
+                          "rotation": 0,
+                          "size": {
+                            "height": 1
+                          },
+                          "colors": [
+                            {
+                              "color": "#00000000",
+                              "position": 0
+                            },
+                            {
+                              "color": "#000000AA",
+                              "position": 1
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "h0RoT": {
+                      "content": "7.8"
+                    },
+                    "v24S1": {
+                      "fill": "$accent-primary",
+                      "stroke": {
+                        "thickness": 2,
+                        "fill": "$accent-primary"
+                      }
+                    },
+                    "HsMeF": {
+                      "enabled": true
+                    },
+                    "rrFoX": {
+                      "content": "周處除三害"
+                    },
+                    "ESl54": {
+                      "content": "2023"
                     }
-                  ]
+                  }
                 },
                 {
-                  "type": "frame",
-                  "id": "rHM2R",
+                  "id": "vxzjE",
+                  "type": "ref",
+                  "ref": "MQbvp",
                   "name": "unsel5",
-                  "opacity": 0.6,
                   "width": "fill_container",
-                  "layout": "vertical",
-                  "children": [
-                    {
-                      "id": "UPohb",
-                      "type": "ref",
-                      "ref": "RusTY",
-                      "width": "fill_container",
-                      "name": "u5poster",
-                      "descendants": {
-                        "GZVLH": {
-                          "content": "排球少年"
-                        },
-                        "xeGGx": {
-                          "content": "2014"
-                        }
+                  "opacity": 0.6,
+                  "descendants": {
+                    "ATlIm": {
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "./images/generated-1772689814077.png",
+                        "mode": "fill"
                       }
+                    },
+                    "h0RoT": {
+                      "content": "8.5"
+                    },
+                    "rrFoX": {
+                      "content": "排球少年"
+                    },
+                    "ESl54": {
+                      "content": "2014"
                     }
-                  ]
+                  }
                 }
               ]
             }
@@ -7276,38 +8080,52 @@
                     },
                     {
                       "type": "frame",
-                      "id": "obqC2",
-                      "name": "fGenreGrid",
+                      "id": "dooBp",
+                      "name": "mGenreChipGrid",
                       "width": "fill_container",
-                      "gap": 12,
+                      "layout": "vertical",
+                      "gap": 8,
                       "children": [
                         {
                           "type": "frame",
-                          "id": "buikv",
-                          "name": "fGenreCol1",
+                          "id": "zSvo6",
+                          "name": "mChipRow1",
                           "width": "fill_container",
-                          "layout": "vertical",
-                          "gap": 10,
+                          "gap": 8,
                           "children": [
                             {
                               "type": "frame",
-                              "id": "TVUjY",
-                              "name": "fg1",
-                              "gap": 8,
+                              "id": "NBs5O",
+                              "name": "mc1",
+                              "fill": "#3B82F626",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$accent-primary"
+                              },
+                              "gap": 6,
+                              "padding": [
+                                10,
+                                14
+                              ],
                               "alignItems": "center",
                               "children": [
                                 {
-                                  "id": "XlGIz",
-                                  "type": "ref",
-                                  "ref": "4EHFN",
-                                  "name": "fg1c"
+                                  "type": "icon_font",
+                                  "id": "Z2aKX",
+                                  "name": "mc1i",
+                                  "width": 14,
+                                  "height": 14,
+                                  "iconFontName": "check",
+                                  "iconFontFamily": "lucide",
+                                  "fill": "$accent-hover"
                                 },
                                 {
                                   "type": "text",
-                                  "id": "LOsJt",
-                                  "name": "fg1l",
-                                  "fill": "$text-primary",
-                                  "content": "劇情",
+                                  "id": "qXEoq",
+                                  "name": "mc1t",
+                                  "fill": "$accent-hover",
+                                  "content": "動畫",
                                   "fontFamily": "Noto Sans TC",
                                   "fontSize": 14,
                                   "fontWeight": "normal"
@@ -7316,23 +8134,85 @@
                             },
                             {
                               "type": "frame",
-                              "id": "WdGiN",
-                              "name": "fg2",
-                              "gap": 8,
+                              "id": "mto33",
+                              "name": "mc2",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 6,
+                              "padding": [
+                                10,
+                                14
+                              ],
                               "alignItems": "center",
                               "children": [
                                 {
-                                  "id": "EUCEJ",
-                                  "type": "ref",
-                                  "ref": "Wd9AL",
-                                  "name": "fg2c"
-                                },
+                                  "type": "text",
+                                  "id": "1kPwT",
+                                  "name": "mc2t",
+                                  "fill": "$text-secondary",
+                                  "content": "動作",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "5n6cd",
+                              "name": "mc3",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 6,
+                              "padding": [
+                                10,
+                                14
+                              ],
+                              "alignItems": "center",
+                              "children": [
                                 {
                                   "type": "text",
-                                  "id": "t7AQo",
-                                  "name": "fg2l",
-                                  "fill": "$text-primary",
-                                  "content": "動畫",
+                                  "id": "8rCI4",
+                                  "name": "mc3t",
+                                  "fill": "$text-secondary",
+                                  "content": "冒險",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "1UWot",
+                              "name": "mc4",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 6,
+                              "padding": [
+                                10,
+                                14
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "KGXmY",
+                                  "name": "mc4t",
+                                  "fill": "$text-secondary",
+                                  "content": "喜劇",
                                   "fontFamily": "Noto Sans TC",
                                   "fontSize": 14,
                                   "fontWeight": "normal"
@@ -7343,31 +8223,34 @@
                         },
                         {
                           "type": "frame",
-                          "id": "fSlt2",
-                          "name": "fGenreCol2",
+                          "id": "SdtIj",
+                          "name": "mChipRow2",
                           "width": "fill_container",
-                          "layout": "vertical",
-                          "gap": 10,
+                          "gap": 8,
                           "children": [
                             {
                               "type": "frame",
-                              "id": "EVXvi",
-                              "name": "fg3",
-                              "gap": 8,
+                              "id": "YNNNU",
+                              "name": "mc5",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 6,
+                              "padding": [
+                                10,
+                                14
+                              ],
                               "alignItems": "center",
                               "children": [
                                 {
-                                  "id": "WMzG5",
-                                  "type": "ref",
-                                  "ref": "Wd9AL",
-                                  "name": "fg3c"
-                                },
-                                {
                                   "type": "text",
-                                  "id": "yVOAH",
-                                  "name": "fg3l",
-                                  "fill": "$text-primary",
-                                  "content": "動作",
+                                  "id": "uVgu1",
+                                  "name": "mc5t",
+                                  "fill": "$text-secondary",
+                                  "content": "犯罪",
                                   "fontFamily": "Noto Sans TC",
                                   "fontSize": 14,
                                   "fontWeight": "normal"
@@ -7376,23 +8259,95 @@
                             },
                             {
                               "type": "frame",
-                              "id": "Q2vIZ",
-                              "name": "fg4",
-                              "gap": 8,
+                              "id": "mOvHx",
+                              "name": "mc6",
+                              "fill": "#3B82F626",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$accent-primary"
+                              },
+                              "gap": 6,
+                              "padding": [
+                                10,
+                                14
+                              ],
                               "alignItems": "center",
                               "children": [
                                 {
-                                  "id": "xrsCW",
-                                  "type": "ref",
-                                  "ref": "Wd9AL",
-                                  "name": "fg4c"
+                                  "type": "icon_font",
+                                  "id": "tcaL4",
+                                  "name": "mc6i",
+                                  "width": 14,
+                                  "height": 14,
+                                  "iconFontName": "check",
+                                  "iconFontFamily": "lucide",
+                                  "fill": "$accent-hover"
                                 },
                                 {
                                   "type": "text",
-                                  "id": "PhOUy",
-                                  "name": "fg4l",
-                                  "fill": "$text-primary",
-                                  "content": "喜劇",
+                                  "id": "QLukr",
+                                  "name": "mc6t",
+                                  "fill": "$accent-hover",
+                                  "content": "劇情",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "msQri",
+                              "name": "mc7",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 6,
+                              "padding": [
+                                10,
+                                14
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "j0hGy",
+                                  "name": "mc7t",
+                                  "fill": "$text-secondary",
+                                  "content": "家庭",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "Go43f",
+                              "name": "mc8",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 6,
+                              "padding": [
+                                10,
+                                14
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "bBW5f",
+                                  "name": "mc8t",
+                                  "fill": "$text-secondary",
+                                  "content": "奇幻",
                                   "fontFamily": "Noto Sans TC",
                                   "fontSize": 14,
                                   "fontWeight": "normal"
@@ -7400,6 +8355,516 @@
                               ]
                             }
                           ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "sf2ko",
+                          "name": "mChipRow3",
+                          "width": "fill_container",
+                          "gap": 8,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "SgG1n",
+                              "name": "mc9",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 6,
+                              "padding": [
+                                10,
+                                14
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "zFA67",
+                                  "name": "mc9t",
+                                  "fill": "$text-secondary",
+                                  "content": "歷史",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "GzsVb",
+                              "name": "mc10",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 6,
+                              "padding": [
+                                10,
+                                14
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "CavEM",
+                                  "name": "mc10t",
+                                  "fill": "$text-secondary",
+                                  "content": "恐怖",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "oGXfu",
+                              "name": "mc11",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 6,
+                              "padding": [
+                                10,
+                                14
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "UEy9R",
+                                  "name": "mc11t",
+                                  "fill": "$text-secondary",
+                                  "content": "音樂",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "ASVcg",
+                              "name": "mc12",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 6,
+                              "padding": [
+                                10,
+                                14
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "WR2O9",
+                                  "name": "mc12t",
+                                  "fill": "$text-secondary",
+                                  "content": "懸疑",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "ZpyfC",
+                          "name": "mChipRow4",
+                          "width": "fill_container",
+                          "gap": 8,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "lxBk1",
+                              "name": "mc13",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 6,
+                              "padding": [
+                                10,
+                                14
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "QXfYL",
+                                  "name": "mc13t",
+                                  "fill": "$text-secondary",
+                                  "content": "愛情",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "mzMSu",
+                              "name": "mc14",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 6,
+                              "padding": [
+                                10,
+                                14
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "rc8od",
+                                  "name": "mc14t",
+                                  "fill": "$text-secondary",
+                                  "content": "科幻",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "rn8zD",
+                              "name": "mc15",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 6,
+                              "padding": [
+                                10,
+                                14
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "X3ei5",
+                                  "name": "mc15t",
+                                  "fill": "$text-secondary",
+                                  "content": "驚悚",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "LNmnt",
+                              "name": "mc16",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 6,
+                              "padding": [
+                                10,
+                                14
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "Le5A9",
+                                  "name": "mc16t",
+                                  "fill": "$text-secondary",
+                                  "content": "電視電影",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "LWQ2g",
+                          "name": "mChipRow5",
+                          "width": "fill_container",
+                          "gap": 8,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "uSX4I",
+                              "name": "mc17",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 6,
+                              "padding": [
+                                10,
+                                14
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "T3jjo",
+                                  "name": "mc17t",
+                                  "fill": "$text-secondary",
+                                  "content": "戰爭",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "SzCdF",
+                              "name": "mc18",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 6,
+                              "padding": [
+                                10,
+                                14
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "AzPWX",
+                                  "name": "mc18t",
+                                  "fill": "$text-secondary",
+                                  "content": "西部",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "Ru1Fr",
+                              "name": "mc19",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 6,
+                              "padding": [
+                                10,
+                                14
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "mLxkM",
+                                  "name": "mc19t",
+                                  "fill": "$text-secondary",
+                                  "content": "運動",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "yckGq",
+                              "name": "mc20",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 6,
+                              "padding": [
+                                10,
+                                14
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "VOYVb",
+                                  "name": "mc20t",
+                                  "fill": "$text-secondary",
+                                  "content": "真人秀",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Jag0R",
+                          "name": "mChipRow6",
+                          "width": "fill_container",
+                          "gap": 8,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "DbASv",
+                              "name": "mc21",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 6,
+                              "padding": [
+                                10,
+                                14
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "mJzmG",
+                                  "name": "mc21t",
+                                  "fill": "$text-secondary",
+                                  "content": "脫口秀",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "ilQtm",
+                              "name": "mc22",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 6,
+                              "padding": [
+                                10,
+                                14
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "7Xoke",
+                                  "name": "mc22t",
+                                  "fill": "$text-secondary",
+                                  "content": "新聞",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "xU45g",
+                              "name": "mc23",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 6,
+                              "padding": [
+                                10,
+                                14
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "lX8Ld",
+                                  "name": "mc23t",
+                                  "fill": "$text-secondary",
+                                  "content": "肥皂劇",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "qcXs1",
+                              "name": "mc24",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 6,
+                              "padding": [
+                                10,
+                                14
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "zIXWz",
+                                  "name": "mc24t",
+                                  "fill": "$text-secondary",
+                                  "content": "兒童",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "TT5rk",
+                          "name": "mClearAllBtn",
+                          "fill": "$text-muted",
+                          "content": "清除全部",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
                         }
                       ]
                     }
@@ -7418,51 +8883,191 @@
                       "id": "gJdEx",
                       "name": "fYearLabel",
                       "fill": "$text-secondary",
-                      "content": "年份: 2015 - 2026",
+                      "content": "年份",
                       "fontFamily": "Noto Sans TC",
                       "fontSize": 14,
                       "fontWeight": "500"
                     },
                     {
                       "type": "frame",
-                      "id": "U885e",
-                      "name": "fYearSlider",
+                      "id": "zARLt",
+                      "name": "mYearChipGrid",
                       "width": "fill_container",
-                      "height": 4,
-                      "fill": "$bg-tertiary",
-                      "cornerRadius": 2,
-                      "layout": "none",
+                      "layout": "vertical",
+                      "gap": 8,
                       "children": [
                         {
-                          "type": "rectangle",
-                          "cornerRadius": 2,
-                          "id": "WOq9V",
-                          "x": 20,
-                          "y": 0,
-                          "name": "fYearFill",
-                          "fill": "$accent-primary",
-                          "width": 240,
-                          "height": 4
+                          "type": "frame",
+                          "id": "i1zjC",
+                          "name": "mYearChipRow1",
+                          "width": "fill_container",
+                          "gap": 8,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "VvRfN",
+                              "name": "myc1",
+                              "fill": "#3B82F626",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$accent-primary"
+                              },
+                              "gap": 6,
+                              "padding": [
+                                10,
+                                14
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon_font",
+                                  "id": "3qDdR",
+                                  "name": "myc1i",
+                                  "width": 14,
+                                  "height": 14,
+                                  "iconFontName": "check",
+                                  "iconFontFamily": "lucide",
+                                  "fill": "$accent-hover"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "ydKX6",
+                                  "name": "myc1t",
+                                  "fill": "$accent-hover",
+                                  "content": "2020s",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "i6u5r",
+                              "name": "myc2",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 6,
+                              "padding": [
+                                10,
+                                14
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "WvkEB",
+                                  "name": "myc2t",
+                                  "fill": "$text-secondary",
+                                  "content": "2010s",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "kPdWr",
+                              "name": "myc3",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 6,
+                              "padding": [
+                                10,
+                                14
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "Vsokh",
+                                  "name": "myc3t",
+                                  "fill": "$text-secondary",
+                                  "content": "2000s",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
                         },
                         {
-                          "type": "ellipse",
-                          "id": "I8Bpa",
-                          "x": 14,
-                          "y": -8,
-                          "name": "fYearThumb1",
-                          "fill": "#FFFFFF",
-                          "width": 20,
-                          "height": 20
-                        },
-                        {
-                          "type": "ellipse",
-                          "id": "aBpyj",
-                          "x": 254,
-                          "y": -8,
-                          "name": "fYearThumb2",
-                          "fill": "#FFFFFF",
-                          "width": 20,
-                          "height": 20
+                          "type": "frame",
+                          "id": "FZu6B",
+                          "name": "mYearChipRow2",
+                          "width": "fill_container",
+                          "gap": 8,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "2f9vs",
+                              "name": "myc4",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 6,
+                              "padding": [
+                                10,
+                                14
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "6G5F0",
+                                  "name": "myc4t",
+                                  "fill": "$text-secondary",
+                                  "content": "1990s",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "JJguG",
+                              "name": "myc5",
+                              "fill": "#2E3B564D",
+                              "cornerRadius": 999,
+                              "stroke": {
+                                "thickness": 1,
+                                "fill": "$bg-tertiary"
+                              },
+                              "gap": 6,
+                              "padding": [
+                                10,
+                                14
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "yq8sp",
+                                  "name": "myc5t",
+                                  "fill": "$text-secondary",
+                                  "content": "更早",
+                                  "fontFamily": "Noto Sans TC",
+                                  "fontSize": 14,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
                         }
                       ]
                     }
@@ -7565,31 +9170,6 @@
                               "name": "seg3label",
                               "fill": "$text-secondary",
                               "content": "影集",
-                              "fontFamily": "Noto Sans TC",
-                              "fontSize": 13,
-                              "fontWeight": "normal"
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "j4FRE",
-                          "name": "seg4",
-                          "width": "fill_container",
-                          "cornerRadius": 6,
-                          "padding": [
-                            8,
-                            0
-                          ],
-                          "justifyContent": "center",
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "yIbFU",
-                              "name": "seg4label",
-                              "fill": "$text-secondary",
-                              "content": "動畫",
                               "fontFamily": "Noto Sans TC",
                               "fontSize": 13,
                               "fontWeight": "normal"
@@ -12793,13 +14373,15 @@
                       "gap": 16,
                       "children": [
                         {
-                          "id": "Tj4Dw",
+                          "id": "Zguvc",
                           "type": "ref",
-                          "ref": "RusTY",
+                          "ref": "MQbvp",
+                          "name": "selectedCard",
                           "width": "fill_container",
-                          "name": "g1",
+                          "x": 0,
+                          "y": 0,
                           "descendants": {
-                            "3vQc8": {
+                            "ATlIm": {
                               "fill": {
                                 "type": "image",
                                 "enabled": true,
@@ -12807,10 +14389,47 @@
                                 "mode": "fill"
                               }
                             },
-                            "GZVLH": {
+                            "bVVcf": {
+                              "fill": [
+                                "#3B82F626",
+                                {
+                                  "type": "gradient",
+                                  "gradientType": "linear",
+                                  "enabled": true,
+                                  "rotation": 0,
+                                  "size": {
+                                    "height": 1
+                                  },
+                                  "colors": [
+                                    {
+                                      "color": "#00000000",
+                                      "position": 0
+                                    },
+                                    {
+                                      "color": "#000000AA",
+                                      "position": 1
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            "h0RoT": {
+                              "content": "8.4"
+                            },
+                            "v24S1": {
+                              "fill": "$accent-primary",
+                              "stroke": {
+                                "thickness": 2,
+                                "fill": "$accent-primary"
+                              }
+                            },
+                            "HsMeF": {
+                              "enabled": true
+                            },
+                            "rrFoX": {
                               "content": "你的名字"
                             },
-                            "xeGGx": {
+                            "ESl54": {
                               "content": "2016"
                             }
                           }
@@ -12855,9 +14474,6 @@
                             },
                             "h0RoT": {
                               "content": "8.7"
-                            },
-                            "BYN3t": {
-                              "content": "動畫"
                             },
                             "rrFoX": {
                               "content": "鬼滅之刃"
@@ -15701,64 +17317,127 @@
               "gap": 12,
               "children": [
                 {
-                  "type": "frame",
-                  "id": "cwzzw",
-                  "name": "selected-card",
+                  "id": "OmxBM",
+                  "type": "ref",
+                  "ref": "MQbvp",
+                  "name": "msel1",
                   "width": "fill_container",
-                  "cornerRadius": 12,
-                  "stroke": {
-                    "thickness": 2,
-                    "fill": "$accent-primary"
-                  },
-                  "layout": "vertical",
-                  "children": [
-                    {
-                      "id": "pJF01",
-                      "type": "ref",
-                      "ref": "RusTY",
-                      "width": "fill_container",
-                      "name": "sel1p",
-                      "descendants": {
-                        "GZVLH": {
-                          "content": "你的名字"
-                        },
-                        "xeGGx": {
-                          "content": "2016"
+                  "descendants": {
+                    "ATlIm": {
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "./images/generated-1772689734075.png",
+                        "mode": "fill"
+                      },
+                      "width": 173,
+                      "height": 330
+                    },
+                    "bVVcf": {
+                      "fill": [
+                        "#3B82F626",
+                        {
+                          "type": "gradient",
+                          "gradientType": "linear",
+                          "enabled": true,
+                          "rotation": 0,
+                          "size": {
+                            "height": 1
+                          },
+                          "colors": [
+                            {
+                              "color": "#00000000",
+                              "position": 0
+                            },
+                            {
+                              "color": "#000000AA",
+                              "position": 1
+                            }
+                          ]
                         }
+                      ],
+                      "width": 173,
+                      "height": 330
+                    },
+                    "XE39P": {
+                      "x": 111,
+                      "y": 298
+                    },
+                    "h0RoT": {
+                      "content": "8.4"
+                    },
+                    "PoBSL": {
+                      "x": 137,
+                      "y": 12
+                    },
+                    "s8dXg": {
+                      "x": 63,
+                      "y": 141
+                    },
+                    "v24S1": {
+                      "fill": "$accent-primary",
+                      "stroke": {
+                        "thickness": 2,
+                        "fill": "$accent-primary"
                       }
                     },
-                    {
-                      "id": "oyr8L",
-                      "type": "ref",
-                      "ref": "4EHFN",
-                      "name": "sel1c"
+                    "HsMeF": {
+                      "enabled": true
+                    },
+                    "rrFoX": {
+                      "content": "你的名字",
+                      "width": 149
+                    },
+                    "ESl54": {
+                      "content": "2016"
                     }
-                  ]
+                  }
                 },
                 {
-                  "type": "frame",
-                  "id": "Ksqhm",
-                  "name": "unsel-card",
-                  "opacity": 0.6,
+                  "id": "iHr2d",
+                  "type": "ref",
+                  "ref": "MQbvp",
+                  "name": "munsel1",
                   "width": "fill_container",
-                  "layout": "vertical",
-                  "children": [
-                    {
-                      "id": "j7ypm",
-                      "type": "ref",
-                      "ref": "RusTY",
-                      "width": "fill_container",
-                      "name": "unsel1p",
-                      "descendants": {
-                        "GZVLH": {
-                          "content": "鬼滅之刃"
-                        },
-                        "xeGGx": {
-                          "content": "2019"
-                        }
-                      }
+                  "opacity": 0.6,
+                  "descendants": {
+                    "ATlIm": {
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "./images/generated-1772689741272.png",
+                        "mode": "fill"
+                      },
+                      "width": 173,
+                      "height": 330
+                    },
+                    "bVVcf": {
+                      "width": 173,
+                      "height": 330
+                    },
+                    "XE39P": {
+                      "x": 111,
+                      "y": 298
+                    },
+                    "h0RoT": {
+                      "content": "8.7"
+                    },
+                    "PoBSL": {
+                      "x": 137,
+                      "y": 12
+                    },
+                    "s8dXg": {
+                      "x": 63,
+                      "y": 141
+                    },
+                    "rrFoX": {
+                      "content": "鬼滅之刃",
+                      "width": 149
+                    },
+                    "ESl54": {
+                      "content": "2019"
                     }
-                  ]
+                  }
                 }
               ]
             },
@@ -15770,64 +17449,127 @@
               "gap": 12,
               "children": [
                 {
-                  "type": "frame",
-                  "id": "5ry3M",
-                  "name": "selected-card",
+                  "id": "w6hJy",
+                  "type": "ref",
+                  "ref": "MQbvp",
+                  "name": "msel2",
                   "width": "fill_container",
-                  "cornerRadius": 12,
-                  "stroke": {
-                    "thickness": 2,
-                    "fill": "$accent-primary"
-                  },
-                  "layout": "vertical",
-                  "children": [
-                    {
-                      "id": "jffWF",
-                      "type": "ref",
-                      "ref": "RusTY",
-                      "width": "fill_container",
-                      "name": "sel2p",
-                      "descendants": {
-                        "GZVLH": {
-                          "content": "寄生上流"
-                        },
-                        "xeGGx": {
-                          "content": "2019"
+                  "descendants": {
+                    "ATlIm": {
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "./images/generated-1772689749070.png",
+                        "mode": "fill"
+                      },
+                      "width": 173,
+                      "height": 330
+                    },
+                    "bVVcf": {
+                      "fill": [
+                        "#3B82F626",
+                        {
+                          "type": "gradient",
+                          "gradientType": "linear",
+                          "enabled": true,
+                          "rotation": 0,
+                          "size": {
+                            "height": 1
+                          },
+                          "colors": [
+                            {
+                              "color": "#00000000",
+                              "position": 0
+                            },
+                            {
+                              "color": "#000000AA",
+                              "position": 1
+                            }
+                          ]
                         }
+                      ],
+                      "width": 173,
+                      "height": 330
+                    },
+                    "XE39P": {
+                      "x": 111,
+                      "y": 298
+                    },
+                    "h0RoT": {
+                      "content": "7.8"
+                    },
+                    "PoBSL": {
+                      "x": 137,
+                      "y": 12
+                    },
+                    "s8dXg": {
+                      "x": 63,
+                      "y": 141
+                    },
+                    "v24S1": {
+                      "fill": "$accent-primary",
+                      "stroke": {
+                        "thickness": 2,
+                        "fill": "$accent-primary"
                       }
                     },
-                    {
-                      "id": "ghl15",
-                      "type": "ref",
-                      "ref": "4EHFN",
-                      "name": "sel2c"
+                    "HsMeF": {
+                      "enabled": true
+                    },
+                    "rrFoX": {
+                      "content": "寄生上流",
+                      "width": 149
+                    },
+                    "ESl54": {
+                      "content": "2019"
                     }
-                  ]
+                  }
                 },
                 {
-                  "type": "frame",
-                  "id": "SjNm0",
-                  "name": "unsel-card",
-                  "opacity": 0.6,
+                  "id": "j3xXp",
+                  "type": "ref",
+                  "ref": "MQbvp",
+                  "name": "munsel2",
                   "width": "fill_container",
-                  "layout": "vertical",
-                  "children": [
-                    {
-                      "id": "Ownuh",
-                      "type": "ref",
-                      "ref": "RusTY",
-                      "width": "fill_container",
-                      "name": "unsel2p",
-                      "descendants": {
-                        "GZVLH": {
-                          "content": "進擊的巨人"
-                        },
-                        "xeGGx": {
-                          "content": "2013"
-                        }
-                      }
+                  "opacity": 0.6,
+                  "descendants": {
+                    "ATlIm": {
+                      "fill": {
+                        "type": "image",
+                        "enabled": true,
+                        "url": "./images/generated-1772689756708.png",
+                        "mode": "fill"
+                      },
+                      "width": 173,
+                      "height": 330
+                    },
+                    "bVVcf": {
+                      "width": 173,
+                      "height": 330
+                    },
+                    "XE39P": {
+                      "x": 111,
+                      "y": 298
+                    },
+                    "h0RoT": {
+                      "content": "9.0"
+                    },
+                    "PoBSL": {
+                      "x": 137,
+                      "y": 12
+                    },
+                    "s8dXg": {
+                      "x": 63,
+                      "y": 141
+                    },
+                    "rrFoX": {
+                      "content": "進擊的巨人",
+                      "width": 149
+                    },
+                    "ESl54": {
+                      "content": "2013"
                     }
-                  ]
+                  }
                 }
               ]
             }
@@ -16193,6 +17935,91 @@
       "content": "點擊齒輪圖示",
       "fontFamily": "Noto Sans TC",
       "fontSize": 10,
+      "fontWeight": "normal"
+    },
+    {
+      "id": "ttfgH",
+      "type": "ref",
+      "ref": "MQbvp",
+      "name": "Component/PosterCardHoverSelected",
+      "x": -363,
+      "y": 1050,
+      "descendants": {
+        "bVVcf": {
+          "fill": [
+            "#3B82F626",
+            {
+              "type": "gradient",
+              "gradientType": "linear",
+              "enabled": true,
+              "rotation": 0,
+              "size": {
+                "height": 1
+              },
+              "colors": [
+                {
+                  "color": "#00000000",
+                  "position": 0
+                },
+                {
+                  "color": "#000000AA",
+                  "position": 1
+                }
+              ]
+            }
+          ]
+        },
+        "v24S1": {
+          "fill": "$accent-primary",
+          "stroke": {
+            "thickness": 2,
+            "fill": "$accent-primary"
+          }
+        },
+        "HsMeF": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "type": "text",
+      "id": "TFnB6",
+      "x": 1440,
+      "y": 2665,
+      "name": "trigger-label-1",
+      "fill": "$accent-hover",
+      "textGrowth": "fixed-width",
+      "width": 120,
+      "content": "觸發：Hover Checkbox\n或 ⌘/Ctrl + Click",
+      "fontFamily": "Noto Sans TC",
+      "fontSize": 11,
+      "fontWeight": "normal"
+    },
+    {
+      "type": "text",
+      "id": "7H1fu",
+      "x": 1450,
+      "y": 2700,
+      "name": "trigger-label-1b",
+      "fill": "$text-muted",
+      "content": "(手機：長按卡片)",
+      "fontFamily": "Noto Sans TC",
+      "fontSize": 10,
+      "fontWeight": "normal"
+    },
+    {
+      "type": "text",
+      "id": "wD0CK",
+      "x": 0,
+      "y": 2030,
+      "name": "hover-desc",
+      "fill": "$text-secondary",
+      "textGrowth": "fixed-width",
+      "width": 400,
+      "content": "Hover 時左上角顯示選取 Checkbox，點擊進入批次模式\n⌘/Ctrl+Click 可直接選取（桌面）\n長按卡片進入批次模式（手機）\n已選取卡片顯示藍色打勾 + 半透明覆蓋",
+      "lineHeight": 1.6,
+      "fontFamily": "Noto Sans TC",
+      "fontSize": 11,
       "fontWeight": "normal"
     }
   ],
