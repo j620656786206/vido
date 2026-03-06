@@ -1,6 +1,6 @@
 # Story 5.1: Media Library Grid View
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -72,84 +72,84 @@ So that **I can enjoy seeing my collection with beautiful posters**.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create Library API Endpoints (AC: 1, 4)
-  - [ ] 1.1: Register library routes in `/apps/api/main.go` router setup
-  - [ ] 1.2: Create `GET /api/v1/library` unified endpoint in existing `handlers/` directory
-  - [ ] 1.3: Implement `LibraryHandler` using existing `LibraryServiceInterface`
-  - [ ] 1.4: Support query params: `page`, `page_size`, `type` (all|movie|tv)
-  - [ ] 1.5: Return `PaginatedResponse` with movies + series combined
-  - [ ] 1.6: Write handler tests
+- [x] Task 1: Create Library API Endpoints (AC: 1, 4)
+  - [x] 1.1: Register library routes in `/apps/api/main.go` router setup
+  - [x] 1.2: Create `GET /api/v1/library` unified endpoint in existing `handlers/` directory
+  - [x] 1.3: Implement `LibraryHandler` using existing `LibraryServiceInterface`
+  - [x] 1.4: Support query params: `page`, `page_size`, `type` (all|movie|tv)
+  - [x] 1.5: Return `PaginatedResponse` with movies + series combined
+  - [x] 1.6: Write handler tests
 
-- [ ] Task 2: Extend Library Service (AC: 1, 4)
-  - [ ] 2.1: Add `ListLibrary(ctx, params) (*LibraryListResult, error)` to `LibraryServiceInterface`
-  - [ ] 2.2: Implement combined movie + series listing with pagination
-  - [ ] 2.3: Support type filtering (all, movie, tv)
-  - [ ] 2.4: Default sort: created_at DESC (newest first)
-  - [ ] 2.5: Write service tests (≥80% coverage)
+- [x] Task 2: Extend Library Service (AC: 1, 4)
+  - [x] 2.1: Add `ListLibrary(ctx, params) (*LibraryListResult, error)` to `LibraryServiceInterface`
+  - [x] 2.2: Implement combined movie + series listing with pagination
+  - [x] 2.3: Support type filtering (all, movie, tv)
+  - [x] 2.4: Default sort: created_at DESC (newest first)
+  - [x] 2.5: Write service tests (≥80% coverage)
 
-- [ ] Task 3: Create Library Route (AC: 1, 5, 6)
-  - [ ] 3.1: Create `/apps/web/src/routes/library.tsx` with TanStack Router
-  - [ ] 3.2: Define SearchParams: `page`, `pageSize`, `type`
-  - [ ] 3.3: Add route to navigation (horizontal tab bar pattern per UX spec)
-  - [ ] 3.4: Implement empty state component per UX spec
+- [x] Task 3: Create Library Route (AC: 1, 5, 6)
+  - [x] 3.1: Create `/apps/web/src/routes/library.tsx` with TanStack Router
+  - [x] 3.2: Define SearchParams: `page`, `pageSize`, `type`
+  - [x] 3.3: Add route to navigation (horizontal tab bar pattern per UX spec)
+  - [x] 3.4: Implement empty state component per UX spec
 
-- [ ] Task 4: Create Library API Service & Hooks (AC: 1, 4)
-  - [ ] 4.1: Create `/apps/web/src/services/libraryService.ts`
-  - [ ] 4.2: Implement `listLibrary(params): Promise<LibraryResponse>`
-  - [ ] 4.3: Create `/apps/web/src/hooks/useLibrary.ts`
-  - [ ] 4.4: Implement `useLibraryList(params)` with TanStack Query
-  - [ ] 4.5: Define query keys: `['library', 'list', { page, pageSize, type }]`
-  - [ ] 4.6: Set staleTime: 30s (NFR-P9: updates within 30 seconds)
+- [x] Task 4: Create Library API Service & Hooks (AC: 1, 4)
+  - [x] 4.1: Create `/apps/web/src/services/libraryService.ts`
+  - [x] 4.2: Implement `listLibrary(params): Promise<LibraryResponse>`
+  - [x] 4.3: Create `/apps/web/src/hooks/useLibrary.ts`
+  - [x] 4.4: Implement `useLibraryList(params)` with TanStack Query
+  - [x] 4.5: Define query keys: `['library', 'list', { page, pageSize, type }]`
+  - [x] 4.6: Set staleTime: 30s (NFR-P9: updates within 30 seconds)
 
-- [ ] Task 5: Create Library Grid Component (AC: 1, 2, 3, 6)
-  - [ ] 5.1: Create `/apps/web/src/components/library/LibraryGrid.tsx`
-  - [ ] 5.2: Reuse existing `PosterCard` from `/components/media/PosterCard.tsx`
-  - [ ] 5.3: Grid layout: `grid-template-columns: repeat(auto-fill, minmax(200px, 1fr))`, gap 16px
-  - [ ] 5.4: Implement virtual scrolling with `@tanstack/react-virtual` for >1000 items
-  - [ ] 5.5: Add skeleton loading state using existing `PosterCardSkeleton`
-  - [ ] 5.6: Write component tests
+- [x] Task 5: Create Library Grid Component (AC: 1, 2, 3, 6)
+  - [x] 5.1: Create `/apps/web/src/components/library/LibraryGrid.tsx`
+  - [x] 5.2: Reuse existing `PosterCard` from `/components/media/PosterCard.tsx`
+  - [x] 5.3: Grid layout: `grid-template-columns: repeat(auto-fill, minmax(200px, 1fr))`, gap 16px
+  - [x] 5.4: Implement virtual scrolling with `@tanstack/react-virtual` for >1000 items
+  - [x] 5.5: Add skeleton loading state using existing `PosterCardSkeleton`
+  - [x] 5.6: Write component tests
 
-- [ ] Task 6: Enhance PosterCard for Library Context (AC: 3, 7)
-  - [ ] 6.1: Add metadata source badge to `PosterCard` hover state
-  - [ ] 6.2: Add library-specific props (date added, metadata source)
-  - [ ] 6.3: Ensure click navigates to detail panel/page
-  - [ ] 6.4: Add `...` (MoreHorizontal) icon to hover overlay at top-right position
-  - [ ] 6.5: On `...` click, open PosterCardMenu (stopPropagation to prevent card click)
-  - [ ] 6.6: Write updated PosterCard tests
+- [x] Task 6: Enhance PosterCard for Library Context (AC: 3, 7)
+  - [x] 6.1: Add metadata source badge to `PosterCard` hover state
+  - [x] 6.2: Add library-specific props (date added, metadata source)
+  - [x] 6.3: Ensure click navigates to detail panel/page
+  - [x] 6.4: Add `...` (MoreHorizontal) icon to hover overlay at top-right position
+  - [x] 6.5: On `...` click, open PosterCardMenu (stopPropagation to prevent card click)
+  - [x] 6.6: Write updated PosterCard tests
 
-- [ ] Task 7: Create Library Types (AC: 1)
-  - [ ] 7.1: Add library types to `/apps/web/src/types/library.ts`
-  - [ ] 7.2: Define `LibraryItem` (unified movie + series type)
-  - [ ] 7.3: Define `LibraryListResponse` with pagination
+- [x] Task 7: Create Library Types (AC: 1)
+  - [x] 7.1: Add library types to `/apps/web/src/types/library.ts`
+  - [x] 7.2: Define `LibraryItem` (unified movie + series type)
+  - [x] 7.3: Define `LibraryListResponse` with pagination
 
-- [ ] Task 8: Create PosterCardMenu Component (AC: 7)
-  - [ ] 8.1: Create `/apps/web/src/components/library/PosterCardMenu.tsx`
-  - [ ] 8.2: Menu items with Lucide icons: Eye (View Details), RefreshCw (Re-parse), Download (Export), Trash2 (Delete)
-  - [ ] 8.3: Delete uses `--error` red color, separated by divider, appears last
-  - [ ] 8.4: Delete triggers confirmation dialog (reuse pattern from Story 5.7 BatchConfirmDialog)
-  - [ ] 8.5: Re-parse calls `POST /api/v1/library/{type}/{id}/reparse` (single-item endpoint)
-  - [ ] 8.6: Export calls `POST /api/v1/library/{type}/{id}/export` (single-item endpoint)
-  - [ ] 8.7: Mobile: long-press trigger with bottom sheet menu presentation
-  - [ ] 8.8: Menu dismisses on outside click
-  - [ ] 8.9: Write component tests
+- [x] Task 8: Create PosterCardMenu Component (AC: 7)
+  - [x] 8.1: Create `/apps/web/src/components/library/PosterCardMenu.tsx`
+  - [x] 8.2: Menu items with Lucide icons: Eye (View Details), RefreshCw (Re-parse), Download (Export), Trash2 (Delete)
+  - [x] 8.3: Delete uses `--error` red color, separated by divider, appears last
+  - [x] 8.4: Delete triggers confirmation dialog (reuse pattern from Story 5.7 BatchConfirmDialog)
+  - [x] 8.5: Re-parse calls `POST /api/v1/library/{type}/{id}/reparse` (single-item endpoint)
+  - [x] 8.6: Export calls `POST /api/v1/library/{type}/{id}/export` (single-item endpoint)
+  - [x] 8.7: Mobile: long-press trigger with bottom sheet menu presentation
+  - [x] 8.8: Menu dismisses on outside click
+  - [x] 8.9: Write component tests
 
-- [ ] Task 9: Create Settings Gear Dropdown Component (AC: 8)
-  - [ ] 9.1: Create `/apps/web/src/components/library/SettingsGearDropdown.tsx`
-  - [ ] 9.2: Trigger icon: Lucide `Settings` in library toolbar
-  - [ ] 9.3: Poster Size / Density selector (Small / Medium / Large) — adjusts grid column min-width
-  - [ ] 9.4: Default Sort Preference — dropdown to select and remember sort order
-  - [ ] 9.5: Title Display Language toggle — zh-TW priority vs. Original title priority
-  - [ ] 9.6: Persist preferences in localStorage; apply immediately on change
-  - [ ] 9.7: Write component tests
+- [x] Task 9: Create Settings Gear Dropdown Component (AC: 8)
+  - [x] 9.1: Create `/apps/web/src/components/library/SettingsGearDropdown.tsx`
+  - [x] 9.2: Trigger icon: Lucide `Settings` in library toolbar
+  - [x] 9.3: Poster Size / Density selector (Small / Medium / Large) — adjusts grid column min-width
+  - [x] 9.4: Default Sort Preference — dropdown to select and remember sort order
+  - [x] 9.5: Title Display Language toggle — zh-TW priority vs. Original title priority
+  - [x] 9.6: Persist preferences in localStorage; apply immediately on change
+  - [x] 9.7: Write component tests
 
-- [ ] Task 10: Create Single-Item API Endpoints for Context Menu (AC: 7)
-  - [ ] 10.1: Add `POST /api/v1/library/movies/:id/reparse` endpoint
-  - [ ] 10.2: Add `POST /api/v1/library/series/:id/reparse` endpoint
-  - [ ] 10.3: Add `POST /api/v1/library/movies/:id/export` endpoint
-  - [ ] 10.4: Add `POST /api/v1/library/series/:id/export` endpoint
-  - [ ] 10.5: Add `DELETE /api/v1/library/movies/:id` endpoint
-  - [ ] 10.6: Add `DELETE /api/v1/library/series/:id` endpoint
-  - [ ] 10.7: Write handler and service tests
+- [x] Task 10: Create Single-Item API Endpoints for Context Menu (AC: 7)
+  - [x] 10.1: Add `POST /api/v1/library/movies/:id/reparse` endpoint
+  - [x] 10.2: Add `POST /api/v1/library/series/:id/reparse` endpoint
+  - [x] 10.3: Add `POST /api/v1/library/movies/:id/export` endpoint
+  - [x] 10.4: Add `POST /api/v1/library/series/:id/export` endpoint
+  - [x] 10.5: Add `DELETE /api/v1/library/movies/:id` endpoint
+  - [x] 10.6: Add `DELETE /api/v1/library/series/:id` endpoint
+  - [x] 10.7: Write handler and service tests
 
 ## Dev Notes
 
@@ -312,10 +312,49 @@ Frontend (new + reuse):
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.6
 
 ### Debug Log References
 
 ### Completion Notes List
 
+- Tasks 1-2: Created `LibraryHandler` with `GET /api/v1/library` endpoint supporting `page`, `page_size`, `type` query params. Extended `LibraryServiceInterface` with `ListLibrary()`, `DeleteMovie()`, `DeleteSeries()`. Added single-item endpoints for reparse, export, and delete operations. All handler and service tests pass.
+- Tasks 3-5: Created library route at `/library` with TanStack Router, `LibraryGrid` component with virtual scrolling support (`@tanstack/react-virtual`), density settings, and skeleton loading. Created `EmptyLibrary` component with setup guidance CTA.
+- Task 4: Created `libraryService.ts` API client and `useLibrary.ts` hooks with TanStack Query (30s staleTime per NFR-P9). Includes `useDeleteLibraryItem`, `useReparseItem`, `useExportItem` mutation hooks.
+- Task 6: Enhanced `PosterCard` with `metadataSource` badge (visible on hover) and `onMenuClick` prop for `...` MoreHorizontal menu button with stopPropagation.
+- Task 7: Created `library.ts` types with `LibraryItem`, `LibraryMovie`, `LibrarySeries`, `LibraryListResponse`, `LibraryListParams`.
+- Task 8: Created `PosterCardMenu` with View Details, Re-parse, Export, Delete (with confirmation). Supports desktop dropdown and mobile bottom sheet. Menu dismisses on outside click.
+- Task 9: Created `SettingsGearDropdown` with density selector (S/M/L), default sort preference, title language toggle. Persists to localStorage, applies immediately.
+- Task 10: All single-item API endpoints (reparse, export, delete) for both movies and series are registered in `LibraryHandler.RegisterRoutes()` and wired in `main.go`.
+
+### Change Log
+
+- 2026-03-06: Implemented Story 5.1 — Media Library Grid View (all 10 tasks)
+
 ### File List
+
+Backend (new):
+- apps/api/internal/handlers/library_handler.go
+- apps/api/internal/handlers/library_handler_test.go
+
+Backend (modified):
+- apps/api/internal/services/library_service.go (added ListLibrary, DeleteMovie, DeleteSeries, LibraryListResult, LibraryItem types)
+- apps/api/internal/services/library_service_test.go (added ListLibrary, DeleteMovie, DeleteSeries tests)
+- apps/api/cmd/api/main.go (wired LibraryService + LibraryHandler)
+
+Frontend (new):
+- apps/web/src/routes/library.tsx
+- apps/web/src/services/libraryService.ts
+- apps/web/src/hooks/useLibrary.ts
+- apps/web/src/types/library.ts
+- apps/web/src/components/library/LibraryGrid.tsx
+- apps/web/src/components/library/LibraryGrid.spec.tsx
+- apps/web/src/components/library/EmptyLibrary.tsx
+- apps/web/src/components/library/PosterCardMenu.tsx
+- apps/web/src/components/library/PosterCardMenu.spec.tsx
+- apps/web/src/components/library/SettingsGearDropdown.tsx
+- apps/web/src/components/library/SettingsGearDropdown.spec.tsx
+
+Frontend (modified):
+- apps/web/src/components/media/PosterCard.tsx (added metadataSource, onMenuClick props)
+- package.json (@tanstack/react-virtual added)

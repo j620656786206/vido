@@ -27,6 +27,19 @@ type LibrarySearchResults struct {
 	TotalCount int                            `json:"totalCount"`
 }
 
+// LibraryListResult contains combined movie + series listing with pagination
+type LibraryListResult struct {
+	Items      []LibraryItem                `json:"items"`
+	Pagination *repository.PaginationResult `json:"pagination"`
+}
+
+// LibraryItem represents a unified library item (movie or series)
+type LibraryItem struct {
+	Type   string         `json:"type"` // "movie" or "series"
+	Movie  *models.Movie  `json:"movie,omitempty"`
+	Series *models.Series `json:"series,omitempty"`
+}
+
 // LibraryServiceInterface defines the contract for media library operations
 type LibraryServiceInterface interface {
 	// SaveMovieFromTMDb saves a movie from TMDb search/details to the database
@@ -49,6 +62,15 @@ type LibraryServiceInterface interface {
 
 	// GetSeriesByTMDbID retrieves a series by TMDb ID
 	GetSeriesByTMDbID(ctx context.Context, tmdbID int64) (*models.Series, error)
+
+	// ListLibrary lists media items with pagination and optional type filtering
+	ListLibrary(ctx context.Context, params repository.ListParams, mediaType string) (*LibraryListResult, error)
+
+	// DeleteMovie deletes a movie by ID
+	DeleteMovie(ctx context.Context, id string) error
+
+	// DeleteSeries deletes a series by ID
+	DeleteSeries(ctx context.Context, id string) error
 }
 
 // LibraryService handles media library storage and search operations
@@ -230,6 +252,153 @@ func (s *LibraryService) GetMovieByTMDbID(ctx context.Context, tmdbID int64) (*m
 // GetSeriesByTMDbID retrieves a series by TMDb ID
 func (s *LibraryService) GetSeriesByTMDbID(ctx context.Context, tmdbID int64) (*models.Series, error) {
 	return s.seriesRepo.FindByTMDbID(ctx, tmdbID)
+}
+
+// ListLibrary lists media items with pagination and optional type filtering.
+// mediaType can be "all", "movie", or "tv".
+// Default sort is created_at DESC (newest first).
+func (s *LibraryService) ListLibrary(ctx context.Context, params repository.ListParams, mediaType string) (*LibraryListResult, error) {
+	params.Validate()
+
+	// Default sort to created_at DESC
+	if params.SortBy == "" {
+		params.SortBy = "created_at"
+	}
+	if params.SortOrder == "" {
+		params.SortOrder = "desc"
+	}
+
+	switch mediaType {
+	case "movie":
+		return s.listMoviesOnly(ctx, params)
+	case "tv":
+		return s.listSeriesOnly(ctx, params)
+	default:
+		return s.listAll(ctx, params)
+	}
+}
+
+func (s *LibraryService) listMoviesOnly(ctx context.Context, params repository.ListParams) (*LibraryListResult, error) {
+	movies, pagination, err := s.movieRepo.List(ctx, params)
+	if err != nil {
+		s.logger.Error("Failed to list movies", "error", err)
+		return nil, fmt.Errorf("failed to list movies: %w", err)
+	}
+
+	items := make([]LibraryItem, len(movies))
+	for i := range movies {
+		items[i] = LibraryItem{Type: "movie", Movie: &movies[i]}
+	}
+
+	return &LibraryListResult{Items: items, Pagination: pagination}, nil
+}
+
+func (s *LibraryService) listSeriesOnly(ctx context.Context, params repository.ListParams) (*LibraryListResult, error) {
+	series, pagination, err := s.seriesRepo.List(ctx, params)
+	if err != nil {
+		s.logger.Error("Failed to list series", "error", err)
+		return nil, fmt.Errorf("failed to list series: %w", err)
+	}
+
+	items := make([]LibraryItem, len(series))
+	for i := range series {
+		items[i] = LibraryItem{Type: "series", Series: &series[i]}
+	}
+
+	return &LibraryListResult{Items: items, Pagination: pagination}, nil
+}
+
+func (s *LibraryService) listAll(ctx context.Context, params repository.ListParams) (*LibraryListResult, error) {
+	var wg sync.WaitGroup
+	var moviesErr, seriesErr error
+	var movies []models.Movie
+	var series []models.Series
+	var moviesPagination, seriesPagination *repository.PaginationResult
+
+	wg.Add(2)
+
+	go func() {
+		defer wg.Done()
+		movies, moviesPagination, moviesErr = s.movieRepo.List(ctx, params)
+	}()
+
+	go func() {
+		defer wg.Done()
+		series, seriesPagination, seriesErr = s.seriesRepo.List(ctx, params)
+	}()
+
+	wg.Wait()
+
+	if moviesErr != nil {
+		s.logger.Error("Failed to list movies", "error", moviesErr)
+		return nil, fmt.Errorf("failed to list movies: %w", moviesErr)
+	}
+	if seriesErr != nil {
+		s.logger.Error("Failed to list series", "error", seriesErr)
+		return nil, fmt.Errorf("failed to list series: %w", seriesErr)
+	}
+
+	// Combine items
+	items := make([]LibraryItem, 0, len(movies)+len(series))
+	for i := range movies {
+		items = append(items, LibraryItem{Type: "movie", Movie: &movies[i]})
+	}
+	for i := range series {
+		items = append(items, LibraryItem{Type: "series", Series: &series[i]})
+	}
+
+	// Combined pagination
+	totalResults := 0
+	if moviesPagination != nil {
+		totalResults += moviesPagination.TotalResults
+	}
+	if seriesPagination != nil {
+		totalResults += seriesPagination.TotalResults
+	}
+
+	totalPages := 0
+	if moviesPagination != nil && moviesPagination.TotalPages > totalPages {
+		totalPages = moviesPagination.TotalPages
+	}
+	if seriesPagination != nil && seriesPagination.TotalPages > totalPages {
+		totalPages = seriesPagination.TotalPages
+	}
+
+	return &LibraryListResult{
+		Items: items,
+		Pagination: &repository.PaginationResult{
+			Page:         params.Page,
+			PageSize:     params.PageSize,
+			TotalResults: totalResults,
+			TotalPages:   totalPages,
+		},
+	}, nil
+}
+
+// DeleteMovie deletes a movie by ID
+func (s *LibraryService) DeleteMovie(ctx context.Context, id string) error {
+	if id == "" {
+		return fmt.Errorf("movie ID cannot be empty")
+	}
+	if err := s.movieRepo.Delete(ctx, id); err != nil {
+		s.logger.Error("Failed to delete movie", "error", err, "id", id)
+		return fmt.Errorf("failed to delete movie: %w", err)
+	}
+	s.logger.Info("Movie deleted", "id", id)
+	return nil
+}
+
+// DeleteSeries deletes a series by ID
+func (s *LibraryService) DeleteSeries(ctx context.Context, id string) error {
+	if id == "" {
+		return fmt.Errorf("series ID cannot be empty")
+	}
+	if err := s.seriesRepo.Delete(ctx, id); err != nil {
+		s.logger.Error("Failed to delete series", "error", err, "id", id)
+		return fmt.Errorf("failed to delete series: %w", err)
+	}
+	s.logger.Info("Series deleted", "id", id)
+	return nil
 }
 
 // Compile-time interface verification

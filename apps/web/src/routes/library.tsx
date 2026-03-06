@@ -1,0 +1,100 @@
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { useLibraryList } from '../hooks/useLibrary';
+import { LibraryGrid } from '../components/library/LibraryGrid';
+import { EmptyLibrary } from '../components/library/EmptyLibrary';
+import { Pagination } from '../components/ui/Pagination';
+import type { LibraryMediaType } from '../types/library';
+
+interface LibrarySearchParams {
+  page?: number;
+  pageSize?: number;
+  type?: LibraryMediaType;
+}
+
+export const Route = createFileRoute('/library')({
+  validateSearch: (search: Record<string, unknown>): LibrarySearchParams => ({
+    page: typeof search.page === 'number' ? search.page : 1,
+    pageSize: typeof search.pageSize === 'number' ? search.pageSize : 20,
+    type: ['all', 'movie', 'tv'].includes(search.type as string)
+      ? (search.type as LibraryMediaType)
+      : 'all',
+  }),
+  component: LibraryPage,
+});
+
+function LibraryPage() {
+  const { page, pageSize, type } = Route.useSearch();
+  const navigate = useNavigate({ from: Route.fullPath });
+
+  const currentPage = page || 1;
+  const currentPageSize = pageSize || 20;
+  const currentType = type || 'all';
+
+  const { data, isLoading } = useLibraryList({
+    page: currentPage,
+    pageSize: currentPageSize,
+    type: currentType,
+  });
+
+  const handlePageChange = (newPage: number) => {
+    navigate({ search: { page: newPage, pageSize: currentPageSize, type: currentType } });
+  };
+
+  const handleTypeChange = (newType: LibraryMediaType) => {
+    navigate({ search: { page: 1, pageSize: currentPageSize, type: newType } });
+  };
+
+  const totalItems = data?.totalItems ?? 0;
+  const totalPages = data?.totalPages ?? 0;
+  const items = data?.items ?? [];
+  const isEmpty = !isLoading && items.length === 0;
+
+  return (
+    <div className="min-h-screen bg-slate-900">
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-6 flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-white">媒體庫</h1>
+          {!isEmpty && (
+            <span className="text-sm text-slate-400">
+              顯示 {(currentPage - 1) * currentPageSize + 1}-
+              {Math.min(currentPage * currentPageSize, totalItems)} / {totalItems} 項
+            </span>
+          )}
+        </div>
+
+        {/* Type filter tabs */}
+        {!isEmpty && (
+          <div className="mb-6 flex gap-2">
+            {(['all', 'movie', 'tv'] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => handleTypeChange(t)}
+                className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                  currentType === t
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'
+                }`}
+              >
+                {t === 'all' ? '全部' : t === 'movie' ? '電影' : '影集'}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {isEmpty ? (
+          <EmptyLibrary />
+        ) : (
+          <>
+            <LibraryGrid items={items} isLoading={isLoading} totalItems={totalItems} />
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+              className="mt-8"
+            />
+          </>
+        )}
+      </div>
+    </div>
+  );
+}

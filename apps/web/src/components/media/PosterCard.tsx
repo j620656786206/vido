@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
+import { MoreHorizontal } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { getImageUrl, getImageSrcSet, getImageSizes } from '../../lib/image';
 import { HoverPreviewCard } from './HoverPreviewCard';
@@ -14,6 +15,8 @@ export interface PosterCardProps {
   voteAverage?: number;
   overview?: string;
   genreIds?: number[];
+  metadataSource?: string;
+  onMenuClick?: (e: React.MouseEvent) => void;
 }
 
 export function PosterCard({
@@ -26,6 +29,8 @@ export function PosterCard({
   voteAverage,
   overview,
   genreIds,
+  metadataSource,
+  onMenuClick,
 }: PosterCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -98,11 +103,32 @@ export function PosterCard({
         )}
 
         {/* Media type badge */}
-        <div className="absolute right-2 top-2">
+        <div className="absolute right-2 top-2 flex items-center gap-1">
+          {metadataSource && (
+            <span className="rounded bg-blue-600/80 px-1.5 py-0.5 text-[10px] font-medium text-white opacity-0 transition-opacity lg:group-hover:opacity-100">
+              {metadataSource}
+            </span>
+          )}
           <span className="rounded bg-black/70 px-2 py-0.5 text-xs font-medium text-white">
             {type === 'movie' ? '電影' : '影集'}
           </span>
         </div>
+
+        {/* More menu button (visible on hover) */}
+        {onMenuClick && (
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onMenuClick(e);
+            }}
+            className="absolute left-2 top-2 rounded-full bg-black/70 p-1.5 text-white opacity-0 transition-opacity hover:bg-black/90 lg:group-hover:opacity-100"
+            aria-label="更多選項"
+            data-testid="poster-menu-button"
+          >
+            <MoreHorizontal className="h-4 w-4" />
+          </button>
+        )}
 
         {/* Rating badge */}
         {voteAverage !== undefined && voteAverage > 0 && (

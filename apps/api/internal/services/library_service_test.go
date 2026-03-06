@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -584,6 +585,165 @@ func TestLibraryService_GetMovieByID(t *testing.T) {
 		movie, err := service.GetMovieByID(ctx, "")
 		assert.Error(t, err)
 		assert.Nil(t, movie)
+	})
+}
+
+func TestLibraryService_ListLibrary(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	movieRepo := repository.NewMovieRepository(db)
+	seriesRepo := repository.NewSeriesRepository(db)
+	episodeRepo := repository.NewEpisodeRepository(db)
+
+	service := NewLibraryService(movieRepo, seriesRepo, episodeRepo)
+
+	ctx := context.Background()
+
+	// Insert test data
+	posterPath := "/poster.jpg"
+	for i := 1; i <= 3; i++ {
+		_, err := service.SaveMovieFromTMDb(ctx, &tmdb.MovieDetails{
+			Movie: tmdb.Movie{
+				ID:          i,
+				Title:       fmt.Sprintf("Movie %d", i),
+				ReleaseDate: "2023-01-01",
+				PosterPath:  &posterPath,
+			},
+		}, "")
+		require.NoError(t, err)
+	}
+	for i := 100; i <= 102; i++ {
+		_, err := service.SaveSeriesFromTMDb(ctx, &tmdb.TVShowDetails{
+			TVShow: tmdb.TVShow{
+				ID:           i,
+				Name:         fmt.Sprintf("Series %d", i-99),
+				FirstAirDate: "2023-01-01",
+				PosterPath:   &posterPath,
+			},
+		}, "")
+		require.NoError(t, err)
+	}
+
+	t.Run("list all media types", func(t *testing.T) {
+		result, err := service.ListLibrary(ctx, repository.NewListParams(), "all")
+		require.NoError(t, err)
+		require.NotNil(t, result)
+		assert.Equal(t, 6, len(result.Items))
+		assert.Equal(t, 6, result.Pagination.TotalResults)
+	})
+
+	t.Run("list movies only", func(t *testing.T) {
+		result, err := service.ListLibrary(ctx, repository.NewListParams(), "movie")
+		require.NoError(t, err)
+		require.NotNil(t, result)
+		assert.Equal(t, 3, len(result.Items))
+		for _, item := range result.Items {
+			assert.Equal(t, "movie", item.Type)
+			assert.NotNil(t, item.Movie)
+			assert.Nil(t, item.Series)
+		}
+	})
+
+	t.Run("list series only", func(t *testing.T) {
+		result, err := service.ListLibrary(ctx, repository.NewListParams(), "tv")
+		require.NoError(t, err)
+		require.NotNil(t, result)
+		assert.Equal(t, 3, len(result.Items))
+		for _, item := range result.Items {
+			assert.Equal(t, "series", item.Type)
+			assert.NotNil(t, item.Series)
+			assert.Nil(t, item.Movie)
+		}
+	})
+
+	t.Run("pagination works", func(t *testing.T) {
+		params := repository.NewListParams()
+		params.PageSize = 2
+		params.Page = 1
+		result, err := service.ListLibrary(ctx, params, "movie")
+		require.NoError(t, err)
+		assert.Equal(t, 2, len(result.Items))
+		assert.Equal(t, 3, result.Pagination.TotalResults)
+		assert.Equal(t, 2, result.Pagination.TotalPages)
+	})
+
+	t.Run("default sort is created_at DESC", func(t *testing.T) {
+		result, err := service.ListLibrary(ctx, repository.NewListParams(), "movie")
+		require.NoError(t, err)
+		require.GreaterOrEqual(t, len(result.Items), 2)
+		// Last inserted should be first (DESC order)
+		assert.Equal(t, "Movie 3", result.Items[0].Movie.Title)
+	})
+}
+
+func TestLibraryService_DeleteMovie(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	movieRepo := repository.NewMovieRepository(db)
+	seriesRepo := repository.NewSeriesRepository(db)
+	episodeRepo := repository.NewEpisodeRepository(db)
+
+	service := NewLibraryService(movieRepo, seriesRepo, episodeRepo)
+
+	ctx := context.Background()
+
+	posterPath := "/poster.jpg"
+	movie, err := service.SaveMovieFromTMDb(ctx, &tmdb.MovieDetails{
+		Movie: tmdb.Movie{
+			ID:         500,
+			Title:      "To Delete",
+			PosterPath: &posterPath,
+		},
+	}, "")
+	require.NoError(t, err)
+
+	t.Run("delete existing movie", func(t *testing.T) {
+		err := service.DeleteMovie(ctx, movie.ID)
+		require.NoError(t, err)
+		_, err = service.GetMovieByID(ctx, movie.ID)
+		assert.Error(t, err)
+	})
+
+	t.Run("empty ID returns error", func(t *testing.T) {
+		err := service.DeleteMovie(ctx, "")
+		assert.Error(t, err)
+	})
+}
+
+func TestLibraryService_DeleteSeries(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	movieRepo := repository.NewMovieRepository(db)
+	seriesRepo := repository.NewSeriesRepository(db)
+	episodeRepo := repository.NewEpisodeRepository(db)
+
+	service := NewLibraryService(movieRepo, seriesRepo, episodeRepo)
+
+	ctx := context.Background()
+
+	posterPath := "/poster.jpg"
+	series, err := service.SaveSeriesFromTMDb(ctx, &tmdb.TVShowDetails{
+		TVShow: tmdb.TVShow{
+			ID:         700,
+			Name:       "To Delete Series",
+			PosterPath: &posterPath,
+		},
+	}, "")
+	require.NoError(t, err)
+
+	t.Run("delete existing series", func(t *testing.T) {
+		err := service.DeleteSeries(ctx, series.ID)
+		require.NoError(t, err)
+		_, err = service.GetSeriesByID(ctx, series.ID)
+		assert.Error(t, err)
+	})
+
+	t.Run("empty ID returns error", func(t *testing.T) {
+		err := service.DeleteSeries(ctx, "")
+		assert.Error(t, err)
 	})
 }
 
