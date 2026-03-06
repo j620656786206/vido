@@ -41,7 +41,15 @@ vido/
 │   ├── bmm/                            # BMAD workflows and agents
 │   └── core/                           # Core BMAD utilities
 │
+├── ux-design.pen                       # UX design source (Pencil app)
 ├── _bmad-output/                       # BMAD generated artifacts
+│   ├── screenshots/                    # Exported design screenshots
+│   │   ├── flow-a-browse-desktop/      # Desktop browse flow
+│   │   ├── flow-b-hover-detail-desktop/ # Desktop hover + detail flow
+│   │   ├── flow-c-search-filter-settings-desktop/ # Desktop search/filter
+│   │   ├── flow-d-browse-mobile/       # Mobile browse flow
+│   │   ├── flow-e-interaction-mobile/  # Mobile interaction flow
+│   │   └── flow-f-batch-settings-mobile/ # Mobile batch/settings flow
 │   └── planning-artifacts/
 │       ├── architecture.md             # ⭐ Complete architecture doc
 │       ├── prd.md                      # Product requirements

@@ -4,6 +4,8 @@
 **Date:** 2026-03-05
 **Author:** Sally (UX Designer) + Alexyu
 **Reference:** UX Design Specification (ux-design-specification.md), Epic 5 Stories (epics.md)
+**Design File:** `ux-design.pen` (Pencil app — read via MCP tools only)
+**Screenshots:** `_bmad-output/screenshots/` (regenerate via `python3 scripts/export-pen-screenshots.py`)
 
 ---
 
@@ -730,7 +732,31 @@ These rules apply to ALL dropdown/context menus in the design:
 
 ---
 
-## 9. What NOT to Do
+## 9. Design File & Screenshot Workflow
+
+**Source of truth:** `ux-design.pen` (Pencil app, root of project)
+
+**Exported screenshots** are committed to `_bmad-output/screenshots/` organized by user flow:
+
+| Folder | Flow | Screens |
+|--------|------|---------|
+| `flow-a-browse-desktop/` | Desktop browse | Empty → Loading → Grid → List |
+| `flow-b-hover-detail-desktop/` | Desktop hover + detail | Hover → Context Menu → Detail (Movie/TV) → Detail Context Menu |
+| `flow-c-search-filter-settings-desktop/` | Desktop search/filter/settings | Search+Filter → Batch Ops → Settings |
+| `flow-d-browse-mobile/` | Mobile browse | Empty → Loading → Grid → Sort → Filter |
+| `flow-e-interaction-mobile/` | Mobile interaction | Context Menu → Detail → Detail Context Menu |
+| `flow-f-batch-settings-mobile/` | Mobile batch/settings | Batch Ops → Settings |
+
+**When the .pen file is updated:**
+1. Run `python3 scripts/export-pen-screenshots.py` (requires Pencil.app running)
+2. If new screens were added, update the `SCREENS` dict in the script
+3. Commit updated screenshots alongside .pen file changes
+
+**Implementation reference:** Developers should reference these screenshots when implementing screens. Each screenshot filename maps to the screen number in this Design Brief (e.g., `01-library-grid-desktop.png` → Screen 1).
+
+---
+
+## 10. What NOT to Do
 
 - NO emoji in navigation, tabs, buttons, or status badges
 - NO bright gradient backgrounds or decorative color blocks
