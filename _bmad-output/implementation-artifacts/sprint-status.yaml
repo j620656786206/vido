@@ -105,14 +105,20 @@ development_status:
   # FRs: FR5-FR8, FR38-FR42
   # ==============================================================================
   epic-5: in-progress  # Stories created 2026-02-10
+  # Development Order: 5-1+5-8 → 5-2 → 5-3//5-4 → 5-5 → 5-6//5-7
+  # Phase 1: Foundation (develop together — same page)
   5-1-media-library-grid-view: ready-for-dev
+  5-8-recently-added-section: ready-for-dev
+  # Phase 2: View Options (depends on 5-1)
   5-2-library-list-view-toggle: ready-for-dev
+  # Phase 3: Data Operations (parallelizable, depends on 5-1)
   5-3-library-search: ready-for-dev
   5-4-library-sorting: ready-for-dev
+  # Phase 4: Filtering (depends on 5-1 + genre API)
   5-5-library-filtering: ready-for-dev
+  # Phase 5: Detail & Batch (depends on 5-1 interactions)
   5-6-media-detail-page-full-version: ready-for-dev
   5-7-batch-operations: ready-for-dev
-  5-8-recently-added-section: ready-for-dev
   epic-5-retrospective: optional
 
   # ==============================================================================

@@ -4,6 +4,41 @@
 
 **Goal:** Users can browse, search, filter, and manage their complete media library collection.
 
+**Design Reference:** `ux-design.pen` (Pencil app) | Screenshots: `_bmad-output/screenshots/`
+
+---
+
+## Development Order & Dependencies
+
+Stories MUST be developed in the following order due to UI and data dependencies:
+
+```
+Phase 1: Foundation
+  5-1 (Grid View) + 5-8 (Recently Added)  ← Same page, develop together
+
+Phase 2: View Options
+  5-2 (List View Toggle)                  ← Depends on 5-1 page skeleton
+
+Phase 3: Data Operations (parallelizable)
+  5-3 (Search)   ← Depends on 5-1 grid/list rendering
+  5-4 (Sorting)  ← Depends on 5-1 grid/list rendering
+
+Phase 4: Filtering
+  5-5 (Filtering) ← Depends on 5-1 + needs genre API endpoint
+
+Phase 5: Detail & Batch
+  5-6 (Detail Page)     ← Depends on 5-1 card click interaction
+  5-7 (Batch Operations) ← Depends on 5-1 card selection mechanism
+```
+
+**Key notes:**
+- 5-1 is the foundation — all other stories depend on its page skeleton, grid rendering, and API integration
+- 5-8 shares the same page layout as 5-1 (Recently Added section above the main grid), so they should be developed together
+- 5-3 and 5-4 are independent of each other and can be developed in parallel
+- 5-6 and 5-7 can also be parallelized if needed, but both are larger stories
+
+---
+
 ## Story 5.1: Media Library Grid View
 
 As a **media collector**,
