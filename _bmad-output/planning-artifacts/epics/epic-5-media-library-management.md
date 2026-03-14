@@ -13,8 +13,11 @@
 Stories MUST be developed in the following order due to UI and data dependencies:
 
 ```
+Phase 0: Global Shell (prerequisite — all pages depend on this)
+  5-0 (Navigation Shell)                  ← Global header, tabs, dark theme
+
 Phase 1: Foundation
-  5-1 (Grid View) + 5-8 (Recently Added)  ← Same page, develop together
+  5-1 (Grid View) + 5-8 (Recently Added)  ← Same page, develop together (DONE)
 
 Phase 2: View Options
   5-2 (List View Toggle)                  ← Depends on 5-1 page skeleton
@@ -32,10 +35,15 @@ Phase 5: Detail & Batch
 ```
 
 **Key notes:**
+- 5-0 is the global app shell — provides consistent navigation, header, and dark theme for all pages
 - 5-1 is the foundation — all other stories depend on its page skeleton, grid rendering, and API integration
 - 5-8 shares the same page layout as 5-1 (Recently Added section above the main grid), so they should be developed together
 - 5-3 and 5-4 are independent of each other and can be developed in parallel
 - 5-6 and 5-7 can also be parallelized if needed, but both are larger stories
+
+**Development Workflow Rule (added 2026-03-15):**
+- Dev Agent must verify UI matches design screenshots after every story completion
+- Deviations must be flagged to SM (Bob) + UX (Sally) + User (Alexyu) for scope decision
 
 ---
 
