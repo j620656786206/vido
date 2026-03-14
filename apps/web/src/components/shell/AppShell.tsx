@@ -22,21 +22,24 @@ export function AppShell({ children }: AppShellProps) {
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-900" data-testid="app-shell">
-      {/* Header */}
       <header className="bg-slate-900/95 backdrop-blur-sm">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          {/* Top row: 3-column grid — logo | search | settings */}
-          <div className="grid h-12 grid-cols-[auto_1fr_auto] items-center gap-4">
-            {/* Left: Logo */}
-            <Link to="/" className="text-lg font-bold text-blue-400" data-testid="app-logo">
+          {/* Row 1: logo | search | gear */}
+          <div className="flex h-12 items-center">
+            {/* Logo */}
+            <Link
+              to="/"
+              className="mr-6 shrink-0 text-lg font-bold text-blue-400"
+              data-testid="app-logo"
+            >
               vido
             </Link>
 
-            {/* Center: Search bar (desktop) */}
-            <div className="flex justify-center max-[639px]:hidden">
+            {/* Desktop: search bar centered via flex-1 wrappers */}
+            <div className="hidden flex-1 justify-center sm:flex">
               <form
                 onSubmit={handleSearchSubmit}
-                className="relative w-full max-w-xs"
+                className="relative w-64"
                 data-testid="search-form"
               >
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500" />
@@ -52,16 +55,13 @@ export function AppShell({ children }: AppShellProps) {
               </form>
             </div>
 
-            {/* Center: spacer for mobile */}
-            <div className="min-[640px]:hidden" />
-
-            {/* Right: Icons */}
-            <div className="flex items-center gap-0.5">
+            {/* Right: icons — ml-auto on mobile, natural position on desktop */}
+            <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:ml-0">
               {/* Mobile search toggle */}
               <button
                 type="button"
                 onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
-                className="rounded-lg p-1.5 text-slate-400 transition-colors hover:text-slate-200 min-[640px]:hidden"
+                className="rounded-lg p-1.5 text-slate-400 transition-colors hover:text-slate-200 sm:hidden"
                 aria-label="搜尋"
                 data-testid="mobile-search-toggle"
               >
@@ -80,9 +80,9 @@ export function AppShell({ children }: AppShellProps) {
             </div>
           </div>
 
-          {/* Mobile search bar (expandable) */}
+          {/* Mobile search (expandable) */}
           {mobileSearchOpen && (
-            <form onSubmit={handleSearchSubmit} className="pb-3 min-[640px]:hidden">
+            <form onSubmit={handleSearchSubmit} className="pb-3 sm:hidden">
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500" />
                 <input
@@ -99,12 +99,11 @@ export function AppShell({ children }: AppShellProps) {
             </form>
           )}
 
-          {/* Tab Navigation */}
+          {/* Row 2: Tab navigation */}
           <TabNavigation />
         </div>
       </header>
 
-      {/* Page Content */}
       <main className="flex-1 bg-slate-900">{children}</main>
     </div>
   );
