@@ -34,7 +34,7 @@ export function TabNavigation() {
             className={cn(
               'relative shrink-0 border-b-2 px-1 py-2 text-sm font-medium transition-colors',
               isActive
-                ? 'border-blue-400 text-blue-400'
+                ? 'border-blue-400 text-white'
                 : 'border-transparent text-slate-500 hover:text-slate-300'
             )}
             data-testid={`tab-${tab.label}`}

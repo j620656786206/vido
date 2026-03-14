@@ -67,7 +67,7 @@ describe('TabNavigation', () => {
   it('highlights the active tab for library route', async () => {
     renderWithRouter('/library');
     const libraryTab = await screen.findByTestId('tab-媒體庫');
-    expect(libraryTab).toHaveClass('text-blue-400');
+    expect(libraryTab).toHaveClass('text-white');
     expect(libraryTab).toHaveClass('border-blue-400');
     expect(screen.getByTestId('tab-下載中')).toHaveClass('text-slate-500');
   });
@@ -75,14 +75,14 @@ describe('TabNavigation', () => {
   it('highlights the active tab for downloads route', async () => {
     renderWithRouter('/downloads');
     const downloadsTab = await screen.findByTestId('tab-下載中');
-    expect(downloadsTab).toHaveClass('text-blue-400');
+    expect(downloadsTab).toHaveClass('text-white');
     expect(screen.getByTestId('tab-媒體庫')).toHaveClass('text-slate-500');
   });
 
   it('highlights the active tab for settings route', async () => {
     renderWithRouter('/settings/qbittorrent');
     const settingsTab = await screen.findByTestId('tab-設定');
-    expect(settingsTab).toHaveClass('text-blue-400');
+    expect(settingsTab).toHaveClass('text-white');
   });
 
   it('shows active tab indicator for current route', async () => {
