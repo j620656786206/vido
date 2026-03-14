@@ -10,8 +10,10 @@ body,
   color: #f1f5f9; /* slate-100 */
 }
 
-/* Reset link colors — Tailwind Preflight should do this but ensure override */
-a {
-  color: inherit;
-  text-decoration: inherit;
+/* Reset link colors in base layer so Tailwind utilities can override */
+@layer base {
+  a {
+    color: inherit;
+    text-decoration: inherit;
+  }
 }
