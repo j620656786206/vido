@@ -1,5 +1,6 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LibraryGrid } from './LibraryGrid';
 import type { LibraryItem } from '../../types/library';
 
@@ -28,6 +29,20 @@ vi.mock('@tanstack/react-router', () => ({
     );
   },
 }));
+
+function createWrapper() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  return ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
+}
+
+function renderWithQuery(ui: React.ReactElement) {
+  const Wrapper = createWrapper();
+  return render(ui, { wrapper: Wrapper });
+}
 
 const mockItems: LibraryItem[] = [
   {
@@ -65,50 +80,50 @@ const mockItems: LibraryItem[] = [
 
 describe('LibraryGrid', () => {
   it('renders loading skeletons when isLoading is true', () => {
-    render(<LibraryGrid items={[]} isLoading={true} />);
+    renderWithQuery(<LibraryGrid items={[]} isLoading={true} />);
     expect(screen.getByTestId('library-grid-loading')).toBeInTheDocument();
   });
 
   it('renders nothing when items are empty and not loading', () => {
-    const { container } = render(<LibraryGrid items={[]} />);
+    const { container } = renderWithQuery(<LibraryGrid items={[]} />);
     expect(container.querySelector('[data-testid="library-grid"]')).not.toBeInTheDocument();
   });
 
   it('renders poster cards for items', () => {
-    render(<LibraryGrid items={mockItems} />);
+    renderWithQuery(<LibraryGrid items={mockItems} />);
     expect(screen.getByTestId('library-grid')).toBeInTheDocument();
     expect(screen.getByText('Test Movie')).toBeInTheDocument();
     expect(screen.getByText('Test Series')).toBeInTheDocument();
   });
 
   it('renders correct number of items', () => {
-    render(<LibraryGrid items={mockItems} />);
+    renderWithQuery(<LibraryGrid items={mockItems} />);
     const cards = screen.getAllByTestId('poster-card');
     expect(cards).toHaveLength(2);
   });
 
   it('applies density settings', () => {
-    const { container } = render(<LibraryGrid items={mockItems} density="large" />);
+    const { container } = renderWithQuery(<LibraryGrid items={mockItems} density="large" />);
     const grid = container.querySelector('[data-testid="library-grid"]');
     expect(grid).toBeInTheDocument();
   });
 
   it('renders correct skeleton count for small density', () => {
-    render(<LibraryGrid items={[]} isLoading={true} density="small" />);
+    renderWithQuery(<LibraryGrid items={[]} isLoading={true} density="small" />);
     const loading = screen.getByTestId('library-grid-loading');
     // small density = 18 skeletons
     expect(loading.children).toHaveLength(18);
   });
 
   it('renders correct skeleton count for medium density', () => {
-    render(<LibraryGrid items={[]} isLoading={true} density="medium" />);
+    renderWithQuery(<LibraryGrid items={[]} isLoading={true} density="medium" />);
     const loading = screen.getByTestId('library-grid-loading');
     // medium density = 12 skeletons
     expect(loading.children).toHaveLength(12);
   });
 
   it('renders correct skeleton count for large density', () => {
-    render(<LibraryGrid items={[]} isLoading={true} density="large" />);
+    renderWithQuery(<LibraryGrid items={[]} isLoading={true} density="large" />);
     const loading = screen.getByTestId('library-grid-loading');
     // large density = 8 skeletons
     expect(loading.children).toHaveLength(8);
@@ -116,14 +131,14 @@ describe('LibraryGrid', () => {
 
   it('skips items with mismatched type/data', () => {
     const itemsWithNull: LibraryItem[] = [{ type: 'movie', movie: undefined }, ...mockItems];
-    render(<LibraryGrid items={itemsWithNull} />);
+    renderWithQuery(<LibraryGrid items={itemsWithNull} />);
     const cards = screen.getAllByTestId('poster-card');
     // Only the 2 valid items should render
     expect(cards).toHaveLength(2);
   });
 
   it('uses normal grid when totalItems <= 1000', () => {
-    render(<LibraryGrid items={mockItems} totalItems={500} />);
+    renderWithQuery(<LibraryGrid items={mockItems} totalItems={500} />);
     expect(screen.getByTestId('library-grid')).toBeInTheDocument();
   });
 
@@ -145,13 +160,26 @@ describe('LibraryGrid', () => {
         },
       },
     ];
-    render(<LibraryGrid items={seriesOnly} />);
+    renderWithQuery(<LibraryGrid items={seriesOnly} />);
     expect(screen.getByText('2024')).toBeInTheDocument();
   });
 
   it('maps movie tmdb_id to PosterCard id', () => {
-    render(<LibraryGrid items={[mockItems[0]]} />);
+    renderWithQuery(<LibraryGrid items={[mockItems[0]]} />);
     const link = screen.getByRole('link');
     expect(link).toHaveAttribute('href', '/media/movie/123');
+  });
+
+  it('renders menu button on each poster card', () => {
+    renderWithQuery(<LibraryGrid items={mockItems} />);
+    const menuButtons = screen.getAllByTestId('poster-menu-button');
+    expect(menuButtons).toHaveLength(2);
+  });
+
+  it('opens context menu when menu button is clicked', () => {
+    renderWithQuery(<LibraryGrid items={[mockItems[0]]} />);
+    const menuButton = screen.getByTestId('poster-menu-button');
+    fireEvent.click(menuButton);
+    expect(screen.getByTestId('poster-card-menu')).toBeInTheDocument();
   });
 });

@@ -1,9 +1,15 @@
+import { useState } from 'react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useLibraryList } from '../hooks/useLibrary';
 import { LibraryGrid } from '../components/library/LibraryGrid';
 import { EmptyLibrary } from '../components/library/EmptyLibrary';
+import {
+  SettingsGearDropdown,
+  getStoredPreferences,
+} from '../components/library/SettingsGearDropdown';
 import { Pagination } from '../components/ui/Pagination';
 import type { LibraryMediaType } from '../types/library';
+import type { PosterDensity, TitleLanguage } from '../components/library/SettingsGearDropdown';
 
 interface LibrarySearchParams {
   page?: number;
@@ -26,6 +32,8 @@ function LibraryPage() {
   const { page, pageSize, type } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
 
+  const [preferences, setPreferences] = useState(() => getStoredPreferences());
+
   const currentPage = page || 1;
   const currentPageSize = pageSize || 20;
   const currentType = type || 'all';
@@ -34,6 +42,7 @@ function LibraryPage() {
     page: currentPage,
     pageSize: currentPageSize,
     type: currentType,
+    sortBy: preferences.defaultSort,
   });
 
   const handlePageChange = (newPage: number) => {
@@ -54,12 +63,15 @@ function LibraryPage() {
       <div className="container mx-auto px-4 py-8">
         <div className="mb-6 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-white">媒體庫</h1>
-          {!isEmpty && (
-            <span className="text-sm text-slate-400">
-              顯示 {(currentPage - 1) * currentPageSize + 1}-
-              {Math.min(currentPage * currentPageSize, totalItems)} / {totalItems} 項
-            </span>
-          )}
+          <div className="flex items-center gap-3">
+            {!isEmpty && (
+              <span className="text-sm text-slate-400">
+                顯示 {(currentPage - 1) * currentPageSize + 1}-
+                {Math.min(currentPage * currentPageSize, totalItems)} / {totalItems} 項
+              </span>
+            )}
+            <SettingsGearDropdown preferences={preferences} onPreferencesChange={setPreferences} />
+          </div>
         </div>
 
         {/* Type filter tabs */}
@@ -85,7 +97,12 @@ function LibraryPage() {
           <EmptyLibrary />
         ) : (
           <>
-            <LibraryGrid items={items} isLoading={isLoading} totalItems={totalItems} />
+            <LibraryGrid
+              items={items}
+              isLoading={isLoading}
+              totalItems={totalItems}
+              density={preferences.density}
+            />
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}

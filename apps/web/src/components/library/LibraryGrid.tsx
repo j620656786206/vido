@@ -1,7 +1,9 @@
-import { useRef, useMemo } from 'react';
+import { useState, useRef, useMemo, useCallback } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { PosterCard } from '../media/PosterCard';
 import { PosterCardSkeleton } from '../media/PosterCardSkeleton';
+import { PosterCardMenu } from './PosterCardMenu';
+import { useDeleteLibraryItem, useReparseItem, useExportItem } from '../../hooks/useLibrary';
 import type { LibraryItem } from '../../types/library';
 
 interface LibraryGridProps {
@@ -22,6 +24,8 @@ function getItemProps(item: LibraryItem) {
     const m = item.movie;
     return {
       id: m.tmdb_id ?? 0,
+      itemId: m.id,
+      itemType: 'movie' as const,
       type: 'movie' as const,
       title: m.title,
       originalTitle: m.original_title,
@@ -29,12 +33,15 @@ function getItemProps(item: LibraryItem) {
       releaseDate: m.release_date,
       voteAverage: m.vote_average,
       overview: m.overview,
+      metadataSource: m.metadata_source,
     };
   }
   if (item.type === 'series' && item.series) {
     const s = item.series;
     return {
       id: s.tmdb_id ?? 0,
+      itemId: s.id,
+      itemType: 'series' as const,
       type: 'tv' as const,
       title: s.title,
       originalTitle: s.original_title,
@@ -42,6 +49,7 @@ function getItemProps(item: LibraryItem) {
       releaseDate: s.first_air_date,
       voteAverage: s.vote_average,
       overview: s.overview,
+      metadataSource: s.metadata_source,
     };
   }
   return null;
@@ -56,6 +64,50 @@ export function LibraryGrid({
   const parentRef = useRef<HTMLDivElement>(null);
   const config = DENSITY_CONFIG[density];
   const useVirtual = totalItems > 1000;
+
+  const [menuState, setMenuState] = useState<{
+    itemId: string;
+    itemType: 'movie' | 'series';
+  } | null>(null);
+
+  const deleteMutation = useDeleteLibraryItem();
+  const reparseMutation = useReparseItem();
+  const exportMutation = useExportItem();
+
+  const handleMenuClick = useCallback(
+    (itemId: string, itemType: 'movie' | 'series') => (_e: React.MouseEvent) => {
+      setMenuState({ itemId, itemType });
+    },
+    []
+  );
+
+  const handleCloseMenu = useCallback(() => setMenuState(null), []);
+
+  const handleViewDetails = useCallback(() => {
+    // TODO: Open detail panel (Story 5.6)
+    setMenuState(null);
+  }, []);
+
+  const handleReparse = useCallback(() => {
+    if (menuState) {
+      reparseMutation.mutate({ type: menuState.itemType, id: menuState.itemId });
+    }
+    setMenuState(null);
+  }, [menuState, reparseMutation]);
+
+  const handleExport = useCallback(() => {
+    if (menuState) {
+      exportMutation.mutate({ type: menuState.itemType, id: menuState.itemId });
+    }
+    setMenuState(null);
+  }, [menuState, exportMutation]);
+
+  const handleDelete = useCallback(() => {
+    if (menuState) {
+      deleteMutation.mutate({ type: menuState.itemType, id: menuState.itemId });
+    }
+    setMenuState(null);
+  }, [menuState, deleteMutation]);
 
   const gridStyle = useMemo(
     () =>
@@ -79,7 +131,20 @@ export function LibraryGrid({
 
   // Virtual scrolling for large libraries (>1000 items)
   if (useVirtual) {
-    return <VirtualGrid items={items} parentRef={parentRef} density={density} />;
+    return (
+      <VirtualGrid
+        items={items}
+        parentRef={parentRef}
+        density={density}
+        onMenuClick={handleMenuClick}
+        menuState={menuState}
+        onCloseMenu={handleCloseMenu}
+        onViewDetails={handleViewDetails}
+        onReparse={handleReparse}
+        onExport={handleExport}
+        onDelete={handleDelete}
+      />
+    );
   }
 
   return (
@@ -87,24 +152,56 @@ export function LibraryGrid({
       {items.map((item, index) => {
         const props = getItemProps(item);
         if (!props) return null;
-        return <PosterCard key={`${props.type}-${props.id}-${index}`} {...props} />;
+        const { itemId, itemType, ...cardProps } = props;
+        return (
+          <div key={`${props.type}-${props.id}-${index}`} className="relative">
+            <PosterCard {...cardProps} onMenuClick={handleMenuClick(itemId, itemType)} />
+            {menuState?.itemId === itemId && (
+              <PosterCardMenu
+                isOpen={true}
+                onClose={handleCloseMenu}
+                onViewDetails={handleViewDetails}
+                onReparse={handleReparse}
+                onExport={handleExport}
+                onDelete={handleDelete}
+              />
+            )}
+          </div>
+        );
       })}
     </div>
   );
+}
+
+interface VirtualGridProps {
+  items: LibraryItem[];
+  parentRef: React.RefObject<HTMLDivElement | null>;
+  density: 'small' | 'medium' | 'large';
+  onMenuClick: (itemId: string, itemType: 'movie' | 'series') => (e: React.MouseEvent) => void;
+  menuState: { itemId: string; itemType: 'movie' | 'series' } | null;
+  onCloseMenu: () => void;
+  onViewDetails: () => void;
+  onReparse: () => void;
+  onExport: () => void;
+  onDelete: () => void;
 }
 
 function VirtualGrid({
   items,
   parentRef,
   density,
-}: {
-  items: LibraryItem[];
-  parentRef: React.RefObject<HTMLDivElement | null>;
-  density: 'small' | 'medium' | 'large';
-}) {
+  onMenuClick,
+  menuState,
+  onCloseMenu,
+  onViewDetails,
+  onReparse,
+  onExport,
+  onDelete,
+}: VirtualGridProps) {
   const config = DENSITY_CONFIG[density];
-  // Estimate columns based on common viewport widths
-  const estimatedColumns = Math.max(2, Math.floor(1200 / config.minWidth));
+  // Use window.innerWidth when available, fallback to 1200
+  const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1200;
+  const estimatedColumns = Math.max(2, Math.floor(viewportWidth / config.minWidth));
   const rowCount = Math.ceil(items.length / estimatedColumns);
 
   const virtualizer = useVirtualizer({
@@ -143,11 +240,24 @@ function VirtualGrid({
               {rowItems.map((item, colIndex) => {
                 const props = getItemProps(item);
                 if (!props) return null;
+                const { itemId, itemType, ...cardProps } = props;
                 return (
-                  <PosterCard
+                  <div
                     key={`${props.type}-${props.id}-${startIndex + colIndex}`}
-                    {...props}
-                  />
+                    className="relative"
+                  >
+                    <PosterCard {...cardProps} onMenuClick={onMenuClick(itemId, itemType)} />
+                    {menuState?.itemId === itemId && (
+                      <PosterCardMenu
+                        isOpen={true}
+                        onClose={onCloseMenu}
+                        onViewDetails={onViewDetails}
+                        onReparse={onReparse}
+                        onExport={onExport}
+                        onDelete={onDelete}
+                      />
+                    )}
+                  </div>
                 );
               })}
             </div>

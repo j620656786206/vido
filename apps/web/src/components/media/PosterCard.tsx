@@ -61,7 +61,7 @@ export function PosterCard({
       <div
         className={cn(
           'relative aspect-[2/3] overflow-hidden rounded-lg bg-gray-800',
-          'transition-all duration-150 ease-out',
+          'transition-all duration-300 ease-out',
           // Hover effects only on desktop (lg breakpoint)
           'lg:group-hover:scale-105 lg:group-hover:shadow-2xl',
           // Active state for touch feedback on mobile

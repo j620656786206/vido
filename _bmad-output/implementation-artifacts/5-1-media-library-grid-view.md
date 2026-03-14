@@ -1,6 +1,6 @@
 # Story 5.1: Media Library Grid View
 
-Status: review
+Status: done
 
 ## Story
 
@@ -330,6 +330,7 @@ Claude Opus 4.6
 ### Change Log
 
 - 2026-03-06: Implemented Story 5.1 — Media Library Grid View (all 10 tasks)
+- 2026-03-14: Code Review fixes — wired PosterCardMenu into LibraryGrid (CR-1), integrated SettingsGearDropdown into library route (CR-2), fixed listAll pagination double-count bug (CR-3), corrected hover animation to 300ms (CR-4), updated File List (CR-5), fixed VirtualGrid viewport estimation (CR-6)
 
 ### File List
 
@@ -345,11 +346,14 @@ Backend (modified):
 Frontend (new):
 - apps/web/src/routes/library.tsx
 - apps/web/src/services/libraryService.ts
+- apps/web/src/services/libraryService.spec.ts
 - apps/web/src/hooks/useLibrary.ts
+- apps/web/src/hooks/useLibrary.spec.tsx
 - apps/web/src/types/library.ts
 - apps/web/src/components/library/LibraryGrid.tsx
 - apps/web/src/components/library/LibraryGrid.spec.tsx
 - apps/web/src/components/library/EmptyLibrary.tsx
+- apps/web/src/components/library/EmptyLibrary.spec.tsx
 - apps/web/src/components/library/PosterCardMenu.tsx
 - apps/web/src/components/library/PosterCardMenu.spec.tsx
 - apps/web/src/components/library/SettingsGearDropdown.tsx
@@ -357,4 +361,7 @@ Frontend (new):
 
 Frontend (modified):
 - apps/web/src/components/media/PosterCard.tsx (added metadataSource, onMenuClick props)
+- apps/web/src/components/media/PosterCard.spec.tsx (added library-specific prop tests)
+- apps/web/src/routeTree.gen.ts (auto-generated)
 - package.json (@tanstack/react-virtual added)
+- pnpm-lock.yaml

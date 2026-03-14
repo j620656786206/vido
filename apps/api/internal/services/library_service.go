@@ -309,12 +309,14 @@ func (s *LibraryService) listSeriesOnly(ctx context.Context, params repository.L
 }
 
 func (s *LibraryService) listAll(ctx context.Context, params repository.ListParams) (*LibraryListResult, error) {
+	// Fetch counts first to compute correct per-type page sizes
 	var wg sync.WaitGroup
 	var moviesErr, seriesErr error
 	var movies []models.Movie
 	var series []models.Series
 	var moviesPagination, seriesPagination *repository.PaginationResult
 
+	// Query both repos with full page size — we'll trim to the requested pageSize after merging
 	wg.Add(2)
 
 	go func() {
@@ -338,16 +340,22 @@ func (s *LibraryService) listAll(ctx context.Context, params repository.ListPara
 		return nil, fmt.Errorf("failed to list series: %w", seriesErr)
 	}
 
-	// Combine items
-	items := make([]LibraryItem, 0, len(movies)+len(series))
+	// Combine items: movies first, then series
+	allItems := make([]LibraryItem, 0, len(movies)+len(series))
 	for i := range movies {
-		items = append(items, LibraryItem{Type: "movie", Movie: &movies[i]})
+		allItems = append(allItems, LibraryItem{Type: "movie", Movie: &movies[i]})
 	}
 	for i := range series {
-		items = append(items, LibraryItem{Type: "series", Series: &series[i]})
+		allItems = append(allItems, LibraryItem{Type: "series", Series: &series[i]})
 	}
 
-	// Combined pagination
+	// Trim combined results to respect the requested pageSize
+	items := allItems
+	if len(items) > params.PageSize {
+		items = items[:params.PageSize]
+	}
+
+	// Compute combined pagination from total counts
 	totalResults := 0
 	if moviesPagination != nil {
 		totalResults += moviesPagination.TotalResults
@@ -357,11 +365,8 @@ func (s *LibraryService) listAll(ctx context.Context, params repository.ListPara
 	}
 
 	totalPages := 0
-	if moviesPagination != nil && moviesPagination.TotalPages > totalPages {
-		totalPages = moviesPagination.TotalPages
-	}
-	if seriesPagination != nil && seriesPagination.TotalPages > totalPages {
-		totalPages = seriesPagination.TotalPages
+	if params.PageSize > 0 {
+		totalPages = (totalResults + params.PageSize - 1) / params.PageSize
 	}
 
 	return &LibraryListResult{
