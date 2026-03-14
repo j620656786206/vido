@@ -47,10 +47,8 @@ function SearchPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900">
+    <div>
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold text-white mb-6">搜尋媒體</h1>
-
         <div className="mb-6">
           <SearchBar onSearch={handleSearch} initialQuery={query} />
         </div>

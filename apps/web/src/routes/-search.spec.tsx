@@ -79,11 +79,11 @@ describe('SearchPage', () => {
     vi.clearAllMocks();
   });
 
-  it('should render search page with title', async () => {
+  it('should render search page with search input', async () => {
     renderWithProviders();
 
     await waitFor(() => {
-      expect(screen.getByText('搜尋媒體')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('搜尋電影或影集...')).toBeInTheDocument();
     });
   });
 

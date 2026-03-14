@@ -74,10 +74,9 @@ function LibraryPage() {
   const isEmpty = !isLoading && items.length === 0;
 
   return (
-    <div className="min-h-screen bg-slate-900">
+    <div>
       <div className="container mx-auto px-4 py-8">
         <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-white">媒體庫</h1>
           <div className="flex items-center gap-3">
             {!isEmpty && (
               <span className="text-sm text-slate-400">
@@ -85,8 +84,8 @@ function LibraryPage() {
                 {Math.min(currentPage * currentPageSize, totalItems)} / {totalItems} 項
               </span>
             )}
-            <SettingsGearDropdown preferences={preferences} onPreferencesChange={setPreferences} />
           </div>
+          <SettingsGearDropdown preferences={preferences} onPreferencesChange={setPreferences} />
         </div>
 
         {/* Type filter tabs */}

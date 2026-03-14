@@ -108,7 +108,7 @@ function TestManualSearchPage() {
   // Block access in production
   if (!isTestEnvironment) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-white mb-4">Access Denied</h1>
           <p className="text-slate-400">This page is only available in test environments.</p>
@@ -125,7 +125,7 @@ function TestManualSearchPage() {
   const completedFiles = MOCK_FILES.filter((f) => appliedItems.includes(f.id));
 
   return (
-    <div className="min-h-screen bg-slate-900 p-8" data-testid="test-manual-search-page">
+    <div className="p-8" data-testid="test-manual-search-page">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">

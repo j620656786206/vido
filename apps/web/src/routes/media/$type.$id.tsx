@@ -52,7 +52,7 @@ function NotFoundComponent() {
   const navigate = useNavigate();
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-900">
+    <div className="flex min-h-screen items-center justify-center">
       <div className="text-center">
         <h1 className="mb-4 text-4xl font-bold text-white">404</h1>
         <p className="mb-6 text-gray-400">找不到該媒體內容</p>
