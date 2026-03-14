@@ -47,10 +47,7 @@ function createTestRouter(initialPath = '/library') {
   ]);
   const memoryHistory = createMemoryHistory({ initialEntries: [initialPath] });
 
-  return createRouter({
-    routeTree,
-    history: memoryHistory,
-  });
+  return createRouter({ routeTree, history: memoryHistory });
 }
 
 function renderWithRouter(initialPath = '/library') {
@@ -71,14 +68,15 @@ describe('TabNavigation', () => {
     renderWithRouter('/library');
     const libraryTab = await screen.findByTestId('tab-媒體庫');
     expect(libraryTab).toHaveClass('text-blue-400');
-    expect(screen.getByTestId('tab-下載中')).toHaveClass('text-slate-400');
+    expect(libraryTab).toHaveClass('border-blue-400');
+    expect(screen.getByTestId('tab-下載中')).toHaveClass('text-slate-500');
   });
 
   it('highlights the active tab for downloads route', async () => {
     renderWithRouter('/downloads');
     const downloadsTab = await screen.findByTestId('tab-下載中');
     expect(downloadsTab).toHaveClass('text-blue-400');
-    expect(screen.getByTestId('tab-媒體庫')).toHaveClass('text-slate-400');
+    expect(screen.getByTestId('tab-媒體庫')).toHaveClass('text-slate-500');
   });
 
   it('highlights the active tab for settings route', async () => {

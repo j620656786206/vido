@@ -20,7 +20,7 @@ export function TabNavigation() {
 
   return (
     <nav
-      className="flex gap-4 overflow-x-auto scrollbar-none"
+      className="-mb-px flex gap-6 overflow-x-auto border-b border-slate-800/50"
       aria-label="主要導航"
       data-testid="tab-navigation"
     >
@@ -32,17 +32,18 @@ export function TabNavigation() {
             key={tab.to}
             to={tab.to}
             className={cn(
-              'relative shrink-0 px-3 py-2.5 text-sm font-medium transition-colors',
-              isActive ? 'text-blue-400' : 'text-slate-400 hover:text-slate-200'
+              'relative shrink-0 border-b-2 px-1 py-2 text-sm font-medium transition-colors',
+              isActive
+                ? 'border-blue-400 text-blue-400'
+                : 'border-transparent text-slate-500 hover:text-slate-300'
             )}
             data-testid={`tab-${tab.label}`}
           >
             {tab.label}
             {isActive && (
-              <span
-                className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-blue-400"
-                data-testid="active-tab-indicator"
-              />
+              <span className="sr-only" data-testid="active-tab-indicator">
+                (目前頁面)
+              </span>
             )}
           </Link>
         );
