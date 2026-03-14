@@ -20,7 +20,7 @@ export function TabNavigation() {
 
   return (
     <nav
-      className="flex gap-1 overflow-x-auto scrollbar-none"
+      className="flex gap-4 overflow-x-auto scrollbar-none"
       aria-label="主要導航"
       data-testid="tab-navigation"
     >

@@ -21,9 +21,9 @@ export function AppShell({ children }: AppShellProps) {
   };
 
   return (
-    <div className="flex min-h-screen flex-col" data-testid="app-shell">
+    <div className="flex min-h-screen flex-col bg-slate-900" data-testid="app-shell">
       {/* Header */}
-      <header className="border-b border-slate-800">
+      <header className="border-b border-slate-800 bg-slate-900">
         <div className="mx-auto max-w-7xl px-4">
           {/* Top row: logo, search, settings */}
           <div className="flex h-14 items-center gap-4">
@@ -39,7 +39,7 @@ export function AppShell({ children }: AppShellProps) {
             {/* Desktop search bar */}
             <form
               onSubmit={handleSearchSubmit}
-              className="relative mx-auto hidden w-full max-w-md md:block"
+              className="relative mx-auto hidden w-full max-w-md sm:block"
             >
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
@@ -54,12 +54,12 @@ export function AppShell({ children }: AppShellProps) {
             </form>
 
             {/* Right icons */}
-            <div className="ml-auto flex items-center gap-2 md:ml-0">
+            <div className="ml-auto flex items-center gap-2 sm:ml-0">
               {/* Mobile search toggle */}
               <button
                 type="button"
                 onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
-                className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200 md:hidden"
+                className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200 sm:hidden"
                 aria-label="搜尋"
                 data-testid="mobile-search-toggle"
               >
@@ -80,7 +80,7 @@ export function AppShell({ children }: AppShellProps) {
 
           {/* Mobile search bar (expandable) */}
           {mobileSearchOpen && (
-            <form onSubmit={handleSearchSubmit} className="pb-3 md:hidden">
+            <form onSubmit={handleSearchSubmit} className="pb-3 sm:hidden">
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <input
@@ -103,7 +103,7 @@ export function AppShell({ children }: AppShellProps) {
       </header>
 
       {/* Page Content */}
-      <main className="flex-1">{children}</main>
+      <main className="flex-1 bg-slate-900">{children}</main>
     </div>
   );
 }
