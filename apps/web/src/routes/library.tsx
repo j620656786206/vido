@@ -76,17 +76,14 @@ function LibraryPage() {
   return (
     <div>
       <div className="container mx-auto px-4 py-8">
-        <div className="mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {!isEmpty && (
-              <span className="text-sm text-slate-400">
-                顯示 {(currentPage - 1) * currentPageSize + 1}-
-                {Math.min(currentPage * currentPageSize, totalItems)} / {totalItems} 項
-              </span>
-            )}
+        {!isEmpty && (
+          <div className="mb-6 flex items-center justify-between">
+            <span className="text-sm text-slate-400">
+              顯示 {(currentPage - 1) * currentPageSize + 1}-
+              {Math.min(currentPage * currentPageSize, totalItems)} / {totalItems} 項
+            </span>
           </div>
-          <SettingsGearDropdown preferences={preferences} onPreferencesChange={setPreferences} />
-        </div>
+        )}
 
         {/* Type filter tabs */}
         {!isEmpty && (

@@ -1,17 +1,15 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
 
 /* Global dark theme baseline */
-html,
-body,
-#root {
-  background-color: #0f172a; /* slate-900 */
-  color: #f1f5f9; /* slate-100 */
-}
-
-/* Reset link colors in base layer so Tailwind utilities can override */
 @layer base {
+  html,
+  body,
+  #root {
+    background-color: #0f172a; /* slate-900 */
+    color: #f1f5f9; /* slate-100 */
+  }
+
+  /* Reset link colors so Tailwind utilities can override */
   a {
     color: inherit;
     text-decoration: inherit;
