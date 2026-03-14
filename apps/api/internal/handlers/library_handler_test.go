@@ -87,6 +87,14 @@ func (m *MockLibraryService) ListLibrary(ctx context.Context, params repository.
 	return args.Get(0).(*services.LibraryListResult), args.Error(1)
 }
 
+func (m *MockLibraryService) GetRecentlyAdded(ctx context.Context, limit int) (*services.LibraryListResult, error) {
+	args := m.Called(ctx, limit)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*services.LibraryListResult), args.Error(1)
+}
+
 func (m *MockLibraryService) DeleteMovie(ctx context.Context, id string) error {
 	args := m.Called(ctx, id)
 	return args.Error(0)
@@ -306,6 +314,92 @@ func TestLibraryHandler_ExportMovie(t *testing.T) {
 		router.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	mockService.AssertExpectations(t)
+}
+
+func TestLibraryHandler_GetRecentlyAdded(t *testing.T) {
+	mockService := new(MockLibraryService)
+	handler := NewLibraryHandler(mockService)
+	router := setupLibraryTestRouter(handler)
+
+	t.Run("success - default limit", func(t *testing.T) {
+		expectedResult := &services.LibraryListResult{
+			Items: []services.LibraryItem{
+				{Type: "movie", Movie: &models.Movie{ID: "m1", Title: "New Movie"}},
+				{Type: "series", Series: &models.Series{ID: "s1", Title: "New Series"}},
+			},
+			Pagination: &repository.PaginationResult{
+				Page: 1, PageSize: 20, TotalResults: 2, TotalPages: 1,
+			},
+		}
+
+		mockService.On("GetRecentlyAdded", mock.Anything, 20).Return(expectedResult, nil).Once()
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library/recent", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		var resp APIResponse
+		err := json.Unmarshal(w.Body.Bytes(), &resp)
+		require.NoError(t, err)
+		assert.True(t, resp.Success)
+	})
+
+	t.Run("success - custom limit", func(t *testing.T) {
+		expectedResult := &services.LibraryListResult{
+			Items: []services.LibraryItem{
+				{Type: "movie", Movie: &models.Movie{ID: "m1", Title: "New Movie"}},
+			},
+			Pagination: &repository.PaginationResult{
+				Page: 1, PageSize: 10, TotalResults: 1, TotalPages: 1,
+			},
+		}
+
+		mockService.On("GetRecentlyAdded", mock.Anything, 10).Return(expectedResult, nil).Once()
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library/recent?limit=10", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	t.Run("invalid limit - not a number", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library/recent?limit=abc", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("invalid limit - zero", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library/recent?limit=0", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("invalid limit - over 100", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library/recent?limit=101", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("service error returns 500", func(t *testing.T) {
+		mockService.On("GetRecentlyAdded", mock.Anything, 20).Return(nil, errors.New("db error")).Once()
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library/recent", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
 	})
 
 	mockService.AssertExpectations(t)

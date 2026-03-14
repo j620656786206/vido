@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"log/slog"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/vido/api/internal/services"
@@ -43,6 +44,29 @@ func (h *LibraryHandler) ListLibrary(c *gin.Context) {
 		TotalItems: result.Pagination.TotalResults,
 		TotalPages: result.Pagination.TotalPages,
 	})
+}
+
+// GetRecentlyAdded handles GET /api/v1/library/recent
+// Returns the most recently added media items sorted by created_at DESC.
+func (h *LibraryHandler) GetRecentlyAdded(c *gin.Context) {
+	limit := 20
+	if limitStr := c.Query("limit"); limitStr != "" {
+		parsed, err := strconv.Atoi(limitStr)
+		if err != nil || parsed < 1 || parsed > 100 {
+			BadRequestError(c, "VALIDATION_INVALID_FORMAT", "limit must be a number between 1 and 100")
+			return
+		}
+		limit = parsed
+	}
+
+	result, err := h.service.GetRecentlyAdded(c.Request.Context(), limit)
+	if err != nil {
+		slog.Error("Failed to get recently added", "error", err)
+		InternalServerError(c, "Failed to retrieve recently added items")
+		return
+	}
+
+	SuccessResponse(c, result.Items)
 }
 
 // DeleteMovie handles DELETE /api/v1/library/movies/:id
@@ -163,6 +187,7 @@ func (h *LibraryHandler) RegisterRoutes(rg *gin.RouterGroup) {
 	library := rg.Group("/library")
 	{
 		library.GET("", h.ListLibrary)
+		library.GET("/recent", h.GetRecentlyAdded)
 
 		movies := library.Group("/movies")
 		{

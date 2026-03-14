@@ -108,7 +108,7 @@ development_status:
   # Development Order: 5-1+5-8 → 5-2 → 5-3//5-4 → 5-5 → 5-6//5-7
   # Phase 1: Foundation (develop together — same page)
   5-1-media-library-grid-view: done
-  5-8-recently-added-section: ready-for-dev
+  5-8-recently-added-section: review
   # Phase 2: View Options (depends on 5-1)
   5-2-library-list-view-toggle: ready-for-dev
   # Phase 3: Data Operations (parallelizable, depends on 5-1)

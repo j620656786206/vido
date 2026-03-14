@@ -16,6 +16,7 @@ export interface PosterCardProps {
   overview?: string;
   genreIds?: number[];
   metadataSource?: string;
+  isNew?: boolean;
   onMenuClick?: (e: React.MouseEvent) => void;
 }
 
@@ -30,6 +31,7 @@ export function PosterCard({
   overview,
   genreIds,
   metadataSource,
+  isNew,
   onMenuClick,
 }: PosterCardProps) {
   const [isHovered, setIsHovered] = useState(false);
@@ -102,8 +104,16 @@ export function PosterCard({
           </div>
         )}
 
-        {/* Media type badge */}
+        {/* Badges (top-right) */}
         <div className="absolute right-2 top-2 flex items-center gap-1">
+          {isNew && (
+            <span
+              data-testid="new-badge"
+              className="rounded bg-emerald-500 px-1.5 py-0.5 text-[10px] font-bold text-white"
+            >
+              新增
+            </span>
+          )}
           {metadataSource && (
             <span className="rounded bg-blue-600/80 px-1.5 py-0.5 text-[10px] font-medium text-white opacity-0 transition-opacity lg:group-hover:opacity-100">
               {metadataSource}

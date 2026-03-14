@@ -229,6 +229,24 @@ describe('PosterCard', () => {
     });
   });
 
+  describe('New Badge (Story 5-8)', () => {
+    it('renders "新增" badge when isNew is true', () => {
+      render(<PosterCard {...defaultProps} isNew={true} />);
+      expect(screen.getByTestId('new-badge')).toBeInTheDocument();
+      expect(screen.getByText('新增')).toBeInTheDocument();
+    });
+
+    it('does not render "新增" badge when isNew is false', () => {
+      render(<PosterCard {...defaultProps} isNew={false} />);
+      expect(screen.queryByTestId('new-badge')).not.toBeInTheDocument();
+    });
+
+    it('does not render "新增" badge when isNew is undefined', () => {
+      render(<PosterCard {...defaultProps} />);
+      expect(screen.queryByTestId('new-badge')).not.toBeInTheDocument();
+    });
+  });
+
   describe('Library-specific Props (Story 5-1)', () => {
     it('renders metadata source badge when metadataSource is provided', () => {
       render(<PosterCard {...defaultProps} metadataSource="TMDb" />);

@@ -66,6 +66,9 @@ type LibraryServiceInterface interface {
 	// ListLibrary lists media items with pagination and optional type filtering
 	ListLibrary(ctx context.Context, params repository.ListParams, mediaType string) (*LibraryListResult, error)
 
+	// GetRecentlyAdded returns the most recently added media items
+	GetRecentlyAdded(ctx context.Context, limit int) (*LibraryListResult, error)
+
 	// DeleteMovie deletes a movie by ID
 	DeleteMovie(ctx context.Context, id string) error
 
@@ -378,6 +381,20 @@ func (s *LibraryService) listAll(ctx context.Context, params repository.ListPara
 			TotalPages:   totalPages,
 		},
 	}, nil
+}
+
+// GetRecentlyAdded returns the most recently added media items sorted by created_at DESC.
+func (s *LibraryService) GetRecentlyAdded(ctx context.Context, limit int) (*LibraryListResult, error) {
+	if limit <= 0 {
+		limit = 20
+	}
+	params := repository.ListParams{
+		Page:      1,
+		PageSize:  limit,
+		SortBy:    "created_at",
+		SortOrder: "desc",
+	}
+	return s.ListLibrary(ctx, params, "all")
 }
 
 // DeleteMovie deletes a movie by ID

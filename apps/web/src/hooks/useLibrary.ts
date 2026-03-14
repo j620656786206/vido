@@ -6,6 +6,7 @@ export const libraryKeys = {
   all: ['library'] as const,
   lists: () => [...libraryKeys.all, 'list'] as const,
   list: (params: LibraryListParams) => [...libraryKeys.lists(), params] as const,
+  recent: (limit: number) => [...libraryKeys.all, 'recent', limit] as const,
 };
 
 export function useLibraryList(params: LibraryListParams) {
@@ -13,6 +14,15 @@ export function useLibraryList(params: LibraryListParams) {
     queryKey: libraryKeys.list(params),
     queryFn: () => libraryService.listLibrary(params),
     staleTime: 30 * 1000, // NFR-P9: 30s freshness
+  });
+}
+
+export function useRecentlyAdded(limit: number = 20) {
+  return useQuery({
+    queryKey: libraryKeys.recent(limit),
+    queryFn: () => libraryService.getRecentlyAdded(limit),
+    staleTime: 30 * 1000, // 30s (NFR-P9)
+    refetchInterval: 30_000, // Auto-refresh every 30s
   });
 }
 

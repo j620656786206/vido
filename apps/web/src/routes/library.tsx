@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useLibraryList } from '../hooks/useLibrary';
 import { LibraryGrid } from '../components/library/LibraryGrid';
+import { RecentlyAdded } from '../components/library/RecentlyAdded';
 import { EmptyLibrary } from '../components/library/EmptyLibrary';
 import {
   SettingsGearDropdown,
@@ -15,6 +16,8 @@ interface LibrarySearchParams {
   page?: number;
   pageSize?: number;
   type?: LibraryMediaType;
+  sortBy?: string;
+  sortOrder?: string;
 }
 
 export const Route = createFileRoute('/library')({
@@ -24,12 +27,16 @@ export const Route = createFileRoute('/library')({
     type: ['all', 'movie', 'tv'].includes(search.type as string)
       ? (search.type as LibraryMediaType)
       : 'all',
+    sortBy: typeof search.sortBy === 'string' ? search.sortBy : undefined,
+    sortOrder: ['asc', 'desc'].includes(search.sortOrder as string)
+      ? (search.sortOrder as string)
+      : undefined,
   }),
   component: LibraryPage,
 });
 
 function LibraryPage() {
-  const { page, pageSize, type } = Route.useSearch();
+  const { page, pageSize, type, sortBy, sortOrder } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
 
   const [preferences, setPreferences] = useState(() => getStoredPreferences());
@@ -38,11 +45,19 @@ function LibraryPage() {
   const currentPageSize = pageSize || 20;
   const currentType = type || 'all';
 
+  // Search params override preferences for sort (e.g., from "查看全部" link)
+  const effectiveSortBy = sortBy || preferences.defaultSort;
+  const effectiveSortOrder = sortOrder as 'asc' | 'desc' | undefined;
+
+  // Show recently added only in clean browse mode (no custom sort/filter)
+  const isCleanBrowse = !sortBy && !sortOrder;
+
   const { data, isLoading } = useLibraryList({
     page: currentPage,
     pageSize: currentPageSize,
     type: currentType,
-    sortBy: preferences.defaultSort,
+    sortBy: effectiveSortBy,
+    sortOrder: effectiveSortOrder,
   });
 
   const handlePageChange = (newPage: number) => {
@@ -97,6 +112,7 @@ function LibraryPage() {
           <EmptyLibrary />
         ) : (
           <>
+            {isCleanBrowse && <RecentlyAdded />}
             <LibraryGrid
               items={items}
               isLoading={isLoading}
