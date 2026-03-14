@@ -69,4 +69,49 @@ describe('SettingsGearDropdown', () => {
     expect(prefs.defaultSort).toBe('created_at');
     expect(prefs.titleLanguage).toBe('zh-tw');
   });
+
+  it('changes sort preference', () => {
+    render(<SettingsGearDropdown preferences={defaultPrefs} onPreferencesChange={onChange} />);
+    fireEvent.click(screen.getByTestId('settings-gear-button'));
+
+    const select = screen.getByRole('combobox');
+    fireEvent.change(select, { target: { value: 'title' } });
+
+    expect(onChange).toHaveBeenCalledWith({ ...defaultPrefs, defaultSort: 'title' });
+  });
+
+  it('changes title language on click', () => {
+    render(<SettingsGearDropdown preferences={defaultPrefs} onPreferencesChange={onChange} />);
+    fireEvent.click(screen.getByTestId('settings-gear-button'));
+    fireEvent.click(screen.getByText('原始語言'));
+
+    expect(onChange).toHaveBeenCalledWith({ ...defaultPrefs, titleLanguage: 'original' });
+  });
+
+  it('handles corrupted localStorage data gracefully', () => {
+    localStorage.setItem('vido-library-preferences', 'invalid-json');
+    const prefs = getStoredPreferences();
+    expect(prefs.density).toBe('medium');
+    expect(prefs.defaultSort).toBe('created_at');
+    expect(prefs.titleLanguage).toBe('zh-tw');
+  });
+
+  it('saves and retrieves complex preferences', () => {
+    const complexPrefs = {
+      density: 'large' as const,
+      defaultSort: 'rating',
+      titleLanguage: 'original' as const,
+    };
+    savePreferences(complexPrefs);
+    const stored = getStoredPreferences();
+    expect(stored).toEqual(complexPrefs);
+  });
+
+  it('changes density to small', () => {
+    render(<SettingsGearDropdown preferences={defaultPrefs} onPreferencesChange={onChange} />);
+    fireEvent.click(screen.getByTestId('settings-gear-button'));
+    fireEvent.click(screen.getByText('小'));
+
+    expect(onChange).toHaveBeenCalledWith({ ...defaultPrefs, density: 'small' });
+  });
 });

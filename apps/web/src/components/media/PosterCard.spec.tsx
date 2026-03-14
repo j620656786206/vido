@@ -228,4 +228,41 @@ describe('PosterCard', () => {
       expect(screen.getByText('動作')).toBeInTheDocument();
     });
   });
+
+  describe('Library-specific Props (Story 5-1)', () => {
+    it('renders metadata source badge when metadataSource is provided', () => {
+      render(<PosterCard {...defaultProps} metadataSource="TMDb" />);
+      expect(screen.getByText('TMDb')).toBeInTheDocument();
+    });
+
+    it('does not render metadata source badge when not provided', () => {
+      render(<PosterCard {...defaultProps} />);
+      expect(screen.queryByText('TMDb')).not.toBeInTheDocument();
+    });
+
+    it('renders menu button when onMenuClick is provided', () => {
+      const onMenuClick = vi.fn();
+      render(<PosterCard {...defaultProps} onMenuClick={onMenuClick} />);
+      expect(screen.getByTestId('poster-menu-button')).toBeInTheDocument();
+    });
+
+    it('does not render menu button when onMenuClick is not provided', () => {
+      render(<PosterCard {...defaultProps} />);
+      expect(screen.queryByTestId('poster-menu-button')).not.toBeInTheDocument();
+    });
+
+    it('calls onMenuClick when menu button is clicked', () => {
+      const onMenuClick = vi.fn();
+      render(<PosterCard {...defaultProps} onMenuClick={onMenuClick} />);
+
+      fireEvent.click(screen.getByTestId('poster-menu-button'));
+      expect(onMenuClick).toHaveBeenCalledTimes(1);
+    });
+
+    it('menu button has accessible label', () => {
+      const onMenuClick = vi.fn();
+      render(<PosterCard {...defaultProps} onMenuClick={onMenuClick} />);
+      expect(screen.getByLabelText('更多選項')).toBeInTheDocument();
+    });
+  });
 });

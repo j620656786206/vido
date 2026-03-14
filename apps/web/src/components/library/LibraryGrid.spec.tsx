@@ -92,4 +92,66 @@ describe('LibraryGrid', () => {
     const grid = container.querySelector('[data-testid="library-grid"]');
     expect(grid).toBeInTheDocument();
   });
+
+  it('renders correct skeleton count for small density', () => {
+    render(<LibraryGrid items={[]} isLoading={true} density="small" />);
+    const loading = screen.getByTestId('library-grid-loading');
+    // small density = 18 skeletons
+    expect(loading.children).toHaveLength(18);
+  });
+
+  it('renders correct skeleton count for medium density', () => {
+    render(<LibraryGrid items={[]} isLoading={true} density="medium" />);
+    const loading = screen.getByTestId('library-grid-loading');
+    // medium density = 12 skeletons
+    expect(loading.children).toHaveLength(12);
+  });
+
+  it('renders correct skeleton count for large density', () => {
+    render(<LibraryGrid items={[]} isLoading={true} density="large" />);
+    const loading = screen.getByTestId('library-grid-loading');
+    // large density = 8 skeletons
+    expect(loading.children).toHaveLength(8);
+  });
+
+  it('skips items with mismatched type/data', () => {
+    const itemsWithNull: LibraryItem[] = [{ type: 'movie', movie: undefined }, ...mockItems];
+    render(<LibraryGrid items={itemsWithNull} />);
+    const cards = screen.getAllByTestId('poster-card');
+    // Only the 2 valid items should render
+    expect(cards).toHaveLength(2);
+  });
+
+  it('uses normal grid when totalItems <= 1000', () => {
+    render(<LibraryGrid items={mockItems} totalItems={500} />);
+    expect(screen.getByTestId('library-grid')).toBeInTheDocument();
+  });
+
+  it('maps series first_air_date to releaseDate', () => {
+    const seriesOnly: LibraryItem[] = [
+      {
+        type: 'series',
+        series: {
+          id: 's-1',
+          title: 'Series Title',
+          first_air_date: '2024-06-15',
+          genres: [],
+          vote_average: 7.5,
+          poster_path: '/poster.jpg',
+          tmdb_id: 789,
+          parse_status: 'success',
+          created_at: '2024-01-01',
+          updated_at: '2024-01-01',
+        },
+      },
+    ];
+    render(<LibraryGrid items={seriesOnly} />);
+    expect(screen.getByText('2024')).toBeInTheDocument();
+  });
+
+  it('maps movie tmdb_id to PosterCard id', () => {
+    render(<LibraryGrid items={[mockItems[0]]} />);
+    const link = screen.getByRole('link');
+    expect(link).toHaveAttribute('href', '/media/movie/123');
+  });
 });

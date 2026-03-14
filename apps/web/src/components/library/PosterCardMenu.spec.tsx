@@ -63,4 +63,42 @@ describe('PosterCardMenu', () => {
     const menu = screen.getByTestId('poster-card-menu');
     expect(menu.className).toContain('fixed');
   });
+
+  it('calls onExport and onClose when Export is clicked', () => {
+    render(<PosterCardMenu {...defaultProps} />);
+    fireEvent.click(screen.getByText('匯出中繼資料'));
+    expect(defaultProps.onExport).toHaveBeenCalled();
+    expect(defaultProps.onClose).toHaveBeenCalled();
+  });
+
+  it('resets confirm state after successful delete', () => {
+    render(<PosterCardMenu {...defaultProps} />);
+    // First click to show confirm
+    fireEvent.click(screen.getByText('刪除'));
+    expect(screen.getByText('確認刪除')).toBeInTheDocument();
+
+    // Second click to confirm
+    fireEvent.click(screen.getByText('確認刪除'));
+    expect(defaultProps.onDelete).toHaveBeenCalled();
+    expect(defaultProps.onClose).toHaveBeenCalled();
+  });
+
+  it('renders separator before delete item', () => {
+    const { container } = render(<PosterCardMenu {...defaultProps} />);
+    const separators = container.querySelectorAll('.border-t');
+    expect(separators.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('applies danger styling to delete button', () => {
+    render(<PosterCardMenu {...defaultProps} />);
+    const deleteButton = screen.getByText('刪除').closest('button');
+    expect(deleteButton?.className).toContain('text-red');
+  });
+
+  it('renders desktop dropdown by default (not fixed)', () => {
+    render(<PosterCardMenu {...defaultProps} />);
+    const menu = screen.getByTestId('poster-card-menu');
+    expect(menu.className).toContain('absolute');
+    expect(menu.className).not.toContain('fixed');
+  });
 });
