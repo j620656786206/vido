@@ -747,6 +747,90 @@ func TestLibraryService_DeleteSeries(t *testing.T) {
 	})
 }
 
+func TestLibraryService_GetRecentlyAdded(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	movieRepo := repository.NewMovieRepository(db)
+	seriesRepo := repository.NewSeriesRepository(db)
+	episodeRepo := repository.NewEpisodeRepository(db)
+
+	service := NewLibraryService(movieRepo, seriesRepo, episodeRepo)
+
+	ctx := context.Background()
+
+	// Insert movies with different created_at timestamps
+	posterPath := "/poster.jpg"
+	for i := 1; i <= 3; i++ {
+		_, err := service.SaveMovieFromTMDb(ctx, &tmdb.MovieDetails{
+			Movie: tmdb.Movie{
+				ID:          2000 + i,
+				Title:       fmt.Sprintf("Recent Movie %d", i),
+				ReleaseDate: "2026-01-01",
+				PosterPath:  &posterPath,
+			},
+		}, "")
+		require.NoError(t, err)
+	}
+
+	// Insert series
+	for i := 1; i <= 2; i++ {
+		_, err := service.SaveSeriesFromTMDb(ctx, &tmdb.TVShowDetails{
+			TVShow: tmdb.TVShow{
+				ID:           3000 + i,
+				Name:         fmt.Sprintf("Recent Series %d", i),
+				FirstAirDate: "2026-01-01",
+				PosterPath:   &posterPath,
+			},
+		}, "")
+		require.NoError(t, err)
+	}
+
+	t.Run("returns all items with mixed types", func(t *testing.T) {
+		result, err := service.GetRecentlyAdded(ctx, 20)
+		require.NoError(t, err)
+		require.NotNil(t, result)
+		assert.Equal(t, 5, len(result.Items))
+
+		// Verify items contain both movies and series
+		movieCount := 0
+		seriesCount := 0
+		for _, item := range result.Items {
+			if item.Type == "movie" {
+				movieCount++
+				assert.NotNil(t, item.Movie)
+			} else if item.Type == "series" {
+				seriesCount++
+				assert.NotNil(t, item.Series)
+			}
+		}
+		assert.Equal(t, 3, movieCount)
+		assert.Equal(t, 2, seriesCount)
+	})
+
+	t.Run("respects limit parameter", func(t *testing.T) {
+		result, err := service.GetRecentlyAdded(ctx, 3)
+		require.NoError(t, err)
+		require.NotNil(t, result)
+		assert.Equal(t, 3, len(result.Items))
+	})
+
+	t.Run("defaults to 20 when limit is zero", func(t *testing.T) {
+		result, err := service.GetRecentlyAdded(ctx, 0)
+		require.NoError(t, err)
+		require.NotNil(t, result)
+		// Should return all 5 items (less than default 20)
+		assert.Equal(t, 5, len(result.Items))
+	})
+
+	t.Run("defaults to 20 when limit is negative", func(t *testing.T) {
+		result, err := service.GetRecentlyAdded(ctx, -1)
+		require.NoError(t, err)
+		require.NotNil(t, result)
+		assert.Equal(t, 5, len(result.Items))
+	})
+}
+
 func TestLibraryService_GetSeriesByID(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()

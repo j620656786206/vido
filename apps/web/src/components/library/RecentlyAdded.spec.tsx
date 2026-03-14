@@ -166,4 +166,151 @@ describe('RecentlyAdded', () => {
     render(<RecentlyAdded />, { wrapper: createWrapper() });
     expect(mockUseRecentlyAdded).toHaveBeenCalledWith(20);
   });
+
+  it('passes isNew=true for items created within 7 days', () => {
+    const recentDate = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(); // 3 days ago
+    mockUseRecentlyAdded.mockReturnValue({
+      data: [
+        {
+          type: 'movie',
+          movie: {
+            id: 'new1',
+            tmdb_id: 500,
+            title: 'New Movie',
+            poster_path: '/new.jpg',
+            release_date: '2026-03-10',
+            created_at: recentDate,
+            parse_status: 'complete',
+            genres: [],
+          },
+        },
+      ],
+      isLoading: false,
+    });
+
+    render(<RecentlyAdded />, { wrapper: createWrapper() });
+    expect(screen.getByText('New Movie')).toBeInTheDocument();
+    expect(screen.getByTestId('new-badge')).toBeInTheDocument();
+  });
+
+  it('passes isNew=false for items created more than 7 days ago', () => {
+    const oldDate = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(); // 8 days ago
+    mockUseRecentlyAdded.mockReturnValue({
+      data: [
+        {
+          type: 'movie',
+          movie: {
+            id: 'old1',
+            tmdb_id: 501,
+            title: 'Old Movie',
+            poster_path: '/old.jpg',
+            release_date: '2026-01-01',
+            created_at: oldDate,
+            parse_status: 'complete',
+            genres: [],
+          },
+        },
+      ],
+      isLoading: false,
+    });
+
+    render(<RecentlyAdded />, { wrapper: createWrapper() });
+    expect(screen.getByText('Old Movie')).toBeInTheDocument();
+    expect(screen.queryByTestId('new-badge')).not.toBeInTheDocument();
+  });
+
+  it('maps series items correctly with isNew badge', () => {
+    const recentDate = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(); // 1 day ago
+    mockUseRecentlyAdded.mockReturnValue({
+      data: [
+        {
+          type: 'series',
+          series: {
+            id: 's1',
+            tmdb_id: 600,
+            title: 'New Series',
+            poster_path: '/series.jpg',
+            first_air_date: '2026-03-01',
+            created_at: recentDate,
+            parse_status: 'complete',
+            genres: [],
+          },
+        },
+      ],
+      isLoading: false,
+    });
+
+    render(<RecentlyAdded />, { wrapper: createWrapper() });
+    expect(screen.getByText('New Series')).toBeInTheDocument();
+    expect(screen.getByTestId('new-badge')).toBeInTheDocument();
+  });
+
+  it('handles mixed new and old items correctly', () => {
+    const recentDate = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString();
+    const oldDate = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString();
+    mockUseRecentlyAdded.mockReturnValue({
+      data: [
+        {
+          type: 'movie',
+          movie: {
+            id: 'new1',
+            tmdb_id: 700,
+            title: 'Fresh Movie',
+            poster_path: '/fresh.jpg',
+            release_date: '2026-03-10',
+            created_at: recentDate,
+            parse_status: 'complete',
+            genres: [],
+          },
+        },
+        {
+          type: 'movie',
+          movie: {
+            id: 'old1',
+            tmdb_id: 701,
+            title: 'Stale Movie',
+            poster_path: '/stale.jpg',
+            release_date: '2025-12-01',
+            created_at: oldDate,
+            parse_status: 'complete',
+            genres: [],
+          },
+        },
+      ],
+      isLoading: false,
+    });
+
+    render(<RecentlyAdded />, { wrapper: createWrapper() });
+    expect(screen.getByText('Fresh Movie')).toBeInTheDocument();
+    expect(screen.getByText('Stale Movie')).toBeInTheDocument();
+    // Only 1 badge for the fresh item
+    const badges = screen.getAllByTestId('new-badge');
+    expect(badges).toHaveLength(1);
+  });
+
+  it('renders "查看全部" link with sortBy and sortOrder params', () => {
+    mockUseRecentlyAdded.mockReturnValue({
+      data: [
+        {
+          type: 'movie',
+          movie: {
+            id: 'm1',
+            tmdb_id: 800,
+            title: 'Test',
+            poster_path: '/t.jpg',
+            release_date: '2026-03-10',
+            created_at: new Date().toISOString(),
+            parse_status: 'complete',
+            genres: [],
+          },
+        },
+      ],
+      isLoading: false,
+    });
+
+    render(<RecentlyAdded />, { wrapper: createWrapper() });
+    const link = screen.getByText(/查看全部/).closest('a');
+    expect(link).toHaveAttribute('href', expect.stringContaining('sortBy=created_at'));
+    expect(link).toHaveAttribute('href', expect.stringContaining('sortOrder=desc'));
+  });
 });
