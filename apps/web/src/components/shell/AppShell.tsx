@@ -23,10 +23,10 @@ export function AppShell({ children }: AppShellProps) {
   return (
     <div className="flex min-h-screen flex-col bg-slate-900" data-testid="app-shell">
       {/* Header */}
-      <header className="border-b border-slate-800 bg-slate-900">
+      <header className="bg-slate-900">
         <div className="mx-auto max-w-7xl px-4">
           {/* Top row: logo, search, settings */}
-          <div className="flex h-14 items-center gap-4">
+          <div className="flex h-12 items-center gap-4">
             {/* Logo */}
             <Link
               to="/"
@@ -36,30 +36,31 @@ export function AppShell({ children }: AppShellProps) {
               vido
             </Link>
 
-            {/* Desktop search bar */}
+            {/* Search bar — visible on desktop, hidden on mobile */}
             <form
               onSubmit={handleSearchSubmit}
-              className="relative mx-auto hidden w-full max-w-md sm:block"
+              className="relative mx-auto w-full max-w-sm max-[639px]:hidden"
+              data-testid="search-form"
             >
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
               <input
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="搜尋電影或影集..."
-                className="w-full rounded-full border border-slate-700 bg-slate-800 py-1.5 pl-10 pr-4 text-sm text-slate-100 placeholder-slate-500 transition-colors focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-full rounded-full border border-slate-700 bg-slate-800/80 py-1.5 pl-9 pr-4 text-sm text-slate-200 placeholder-slate-500 transition-colors focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 autoComplete="off"
                 data-testid="global-search-input"
               />
             </form>
 
             {/* Right icons */}
-            <div className="ml-auto flex items-center gap-2 sm:ml-0">
-              {/* Mobile search toggle */}
+            <div className="ml-auto flex shrink-0 items-center gap-1">
+              {/* Mobile search toggle — hidden on desktop */}
               <button
                 type="button"
                 onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
-                className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200 sm:hidden"
+                className="rounded-lg p-2 text-slate-400 transition-colors hover:text-slate-200 min-[640px]:hidden"
                 aria-label="搜尋"
                 data-testid="mobile-search-toggle"
               >
@@ -69,7 +70,7 @@ export function AppShell({ children }: AppShellProps) {
               {/* Settings gear */}
               <Link
                 to="/settings/qbittorrent"
-                className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"
+                className="rounded-lg p-2 text-slate-400 transition-colors hover:text-slate-200"
                 aria-label="設定"
                 data-testid="settings-link"
               >
@@ -80,15 +81,15 @@ export function AppShell({ children }: AppShellProps) {
 
           {/* Mobile search bar (expandable) */}
           {mobileSearchOpen && (
-            <form onSubmit={handleSearchSubmit} className="pb-3 sm:hidden">
+            <form onSubmit={handleSearchSubmit} className="pb-3 min-[640px]:hidden">
               <div className="relative">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
                 <input
                   type="text"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="搜尋電影或影集..."
-                  className="w-full rounded-full border border-slate-700 bg-slate-800 py-1.5 pl-10 pr-4 text-sm text-slate-100 placeholder-slate-500 transition-colors focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-full rounded-full border border-slate-700 bg-slate-800/80 py-1.5 pl-9 pr-4 text-sm text-slate-200 placeholder-slate-500 transition-colors focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   autoComplete="off"
                   autoFocus
                   data-testid="mobile-search-input"

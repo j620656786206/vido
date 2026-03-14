@@ -19,24 +19,27 @@ vi.mock('@tanstack/react-router', () => ({
 }));
 
 describe('EmptyLibrary', () => {
-  it('renders welcome heading', () => {
+  it('renders empty state heading', () => {
     render(<EmptyLibrary />);
-    expect(screen.getByText('歡迎來到你的媒體庫')).toBeInTheDocument();
+    expect(screen.getByText('你的媒體庫還是空的')).toBeInTheDocument();
   });
 
   it('renders guidance text', () => {
     render(<EmptyLibrary />);
-    expect(screen.getByText(/你的媒體庫目前是空的/)).toBeInTheDocument();
+    expect(screen.getByText(/透過 qBittorrent/)).toBeInTheDocument();
   });
 
-  it('renders link to search page', () => {
+  it('renders connect qBittorrent button linking to settings', () => {
     render(<EmptyLibrary />);
-    const link = screen.getByRole('link', { name: '搜尋媒體' });
+    const link = screen.getByTestId('connect-qbittorrent-btn');
+    expect(link).toHaveAttribute('href', '/settings/qbittorrent');
+    expect(link).toHaveTextContent('連接 qBittorrent');
+  });
+
+  it('renders learn more button linking to search', () => {
+    render(<EmptyLibrary />);
+    const link = screen.getByTestId('learn-more-btn');
     expect(link).toHaveAttribute('href', '/search');
-  });
-
-  it('renders emoji with accessible label', () => {
-    render(<EmptyLibrary />);
-    expect(screen.getByRole('img', { name: '媒體庫' })).toBeInTheDocument();
+    expect(link).toHaveTextContent('了解更多');
   });
 });
