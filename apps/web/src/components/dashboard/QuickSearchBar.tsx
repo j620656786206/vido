@@ -133,9 +133,11 @@ export function QuickSearchBar({ className }: QuickSearchBarProps) {
 
   return (
     <div className={cn('relative', className)} data-testid="quick-search-bar">
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} className="relative">
         <svg
           className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+          width="16"
+          height="16"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
