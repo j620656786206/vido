@@ -108,10 +108,11 @@ export function FilterPanel({
               key={t}
               onClick={() => onTypeChange(t)}
               data-testid={`filter-type-${t}`}
+              aria-pressed={mediaType === t}
               className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm transition-colors ${
                 mediaType === t
-                  ? 'bg-blue-500/15 border border-blue-500 text-blue-300'
-                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  ? 'border border-blue-500 bg-blue-500/15 text-blue-300'
+                  : 'border border-transparent bg-slate-700 text-slate-300 hover:bg-slate-600'
               }`}
             >
               {mediaType === t && <Check className="h-3.5 w-3.5" />}
@@ -130,10 +131,11 @@ export function FilterPanel({
               key={genre}
               onClick={() => handleGenreToggle(genre)}
               data-testid={`filter-genre-${genre}`}
+              aria-pressed={localGenres.includes(genre)}
               className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm transition-colors ${
                 localGenres.includes(genre)
-                  ? 'bg-blue-500/15 border border-blue-500 text-blue-300'
-                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  ? 'border border-blue-500 bg-blue-500/15 text-blue-300'
+                  : 'border border-transparent bg-slate-700 text-slate-300 hover:bg-slate-600'
               }`}
             >
               {localGenres.includes(genre) && <Check className="h-3.5 w-3.5" />}
@@ -155,10 +157,11 @@ export function FilterPanel({
               key={decade.label}
               onClick={() => handleDecadeToggle(decade.label)}
               data-testid={`filter-decade-${decade.label}`}
+              aria-pressed={localDecades.includes(decade.label)}
               className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm transition-colors ${
                 localDecades.includes(decade.label)
-                  ? 'bg-blue-500/15 border border-blue-500 text-blue-300'
-                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  ? 'border border-blue-500 bg-blue-500/15 text-blue-300'
+                  : 'border border-transparent bg-slate-700 text-slate-300 hover:bg-slate-600'
               }`}
             >
               {localDecades.includes(decade.label) && <Check className="h-3.5 w-3.5" />}

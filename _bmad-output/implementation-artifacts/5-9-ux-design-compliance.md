@@ -1,6 +1,6 @@
 # Story 5.9: UX Design Compliance — Epic 5 Design Review Fixes
 
-Status: review
+Status: done
 
 <!-- Note: This story addresses all UX design deviations found during the Epic 5 design review (2026-03-15). -->
 <!-- Source: _bmad-output/implementation-artifacts/ux-design-review-epic5.md -->
@@ -233,6 +233,7 @@ Claude Opus 4.6 (1M context)
 ### Change Log
 
 - 2026-03-15: Story 5-9 UX design compliance — all 5 tasks completed, 20 subtasks checked
+- 2026-03-15: Code review — fixed 3 MEDIUM issues: chip border layout shift (border-transparent), aria-pressed on toggle chips, File List completeness
 
 ### File List
 
@@ -240,7 +241,9 @@ Claude Opus 4.6 (1M context)
 - `apps/web/src/components/library/FilterPanel.tsx` — Major refactor: dropdown → sidebar content, chip toggles, decade chips, type section
 - `apps/web/src/components/library/FilterPanel.spec.tsx` — Rewrote all tests for new component structure
 - `apps/web/src/components/library/FilterChips.tsx` — Unified chip colors, replaced SVG with Lucide X icon
+- `apps/web/src/components/library/FilterChips.spec.tsx` — Added unified blue color scheme test (AC7)
 - `apps/web/src/components/library/LibrarySearchBar.tsx` — rounded-lg → rounded-full
 - `apps/web/src/components/library/LibraryTable.tsx` — Header row bg-slate-800/50, label "加入日期" → "新增日期"
+- `apps/web/src/components/library/LibraryTable.spec.tsx` — Added header background and label tests (AC5)
 - `apps/web/src/routes/library.tsx` — Sidebar layout, controls row order, "全部媒體" heading, filter toggle, removed standalone type buttons
 - `apps/web/src/routes/library.spec.tsx` — Updated type filter + section heading tests
