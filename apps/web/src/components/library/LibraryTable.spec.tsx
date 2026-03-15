@@ -248,6 +248,18 @@ describe('LibraryTable', () => {
     expect(elements).toHaveLength(1);
   });
 
+  it('[P2] renders table header with bg-slate-800/50 background', () => {
+    const { container } = render(<LibraryTable items={mockItems} />);
+    const headerRow = container.querySelector('thead tr');
+    expect(headerRow).not.toBeNull();
+    expect(headerRow!.className).toContain('bg-slate-800/50');
+  });
+
+  it('[P2] shows 新增日期 label for created_at column', () => {
+    render(<LibraryTable items={mockItems} onSort={vi.fn()} />);
+    expect(screen.getByTestId('sort-created_at')).toHaveTextContent('新增日期');
+  });
+
   it('handles item with empty genres array', () => {
     const noGenreItems: LibraryItem[] = [
       {

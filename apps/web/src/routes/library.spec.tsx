@@ -348,6 +348,40 @@ describe('LibraryPage', () => {
     });
   });
 
+  describe('AC6: Filter toggle visible during search', () => {
+    it('[P1] shows filter toggle button during active search', async () => {
+      renderLibrary({ q: '駭客' });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('filter-toggle')).toBeInTheDocument();
+      });
+    });
+
+    it('[P1] can open filter sidebar during active search', async () => {
+      renderLibrary({ q: '駭客' });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('filter-toggle')).toBeInTheDocument();
+      });
+
+      await userEvent.click(screen.getByTestId('filter-toggle'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('filter-sidebar')).toBeInTheDocument();
+      });
+    });
+
+    it('[P2] hides SortSelector during active search but keeps filter toggle', async () => {
+      renderLibrary({ q: '駭客' });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('filter-toggle')).toBeInTheDocument();
+      });
+
+      expect(screen.queryByTestId('sort-selector-button')).not.toBeInTheDocument();
+    });
+  });
+
   describe('Search integration (Story 5-3)', () => {
     it('[P1] renders search bar when library has items', async () => {
       renderLibrary();

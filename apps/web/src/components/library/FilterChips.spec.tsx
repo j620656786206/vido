@@ -99,6 +99,26 @@ describe('FilterChips', () => {
     expect(onRemoveYearMax).toHaveBeenCalled();
   });
 
+  it('[P2] renders all chips with unified blue color scheme', () => {
+    const { container } = render(
+      <FilterChips
+        filters={{ genres: ['Action'], yearMin: 2000, yearMax: 2020 }}
+        onRemoveGenre={onRemoveGenre}
+        onRemoveYearMin={onRemoveYearMin}
+        onRemoveYearMax={onRemoveYearMax}
+        onClearAll={onClearAll}
+      />
+    );
+    // All chip spans should use blue styling (not green)
+    const chipSpans = container.querySelectorAll('span.rounded-full');
+    expect(chipSpans.length).toBe(3); // 1 genre + yearMin + yearMax
+    chipSpans.forEach((span) => {
+      expect(span.className).toContain('bg-blue-600/20');
+      expect(span.className).toContain('text-blue-300');
+      expect(span.className).not.toContain('green');
+    });
+  });
+
   it('shows clear all button and calls onClearAll', async () => {
     render(
       <FilterChips

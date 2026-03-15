@@ -188,4 +188,150 @@ describe('FilterPanel', () => {
     );
     expect(screen.getByText('年份')).toBeInTheDocument();
   });
+
+  it('[P1] combines multiple decades into merged year range on apply', async () => {
+    renderWithProvider(
+      <FilterPanel
+        filters={emptyFilters}
+        mediaType="all"
+        onApply={onApply}
+        onClear={onClear}
+        onTypeChange={onTypeChange}
+      />
+    );
+
+    // Select 2020s and 2000s (non-contiguous)
+    await userEvent.click(screen.getByTestId('filter-decade-2020s'));
+    await userEvent.click(screen.getByTestId('filter-decade-2000s'));
+    await userEvent.click(screen.getByTestId('filter-apply'));
+
+    // Should combine into min=2000, max=2029
+    expect(onApply).toHaveBeenCalledWith(expect.objectContaining({ yearMin: 2000, yearMax: 2029 }));
+  });
+
+  it('[P1] deselecting all decades clears year range', async () => {
+    renderWithProvider(
+      <FilterPanel
+        filters={{ genres: [], yearMin: 2020, yearMax: 2029 }}
+        mediaType="all"
+        onApply={onApply}
+        onClear={onClear}
+        onTypeChange={onTypeChange}
+      />
+    );
+
+    // Deselect 2020s (the only selected decade)
+    await userEvent.click(screen.getByTestId('filter-decade-2020s'));
+    await userEvent.click(screen.getByTestId('filter-apply'));
+
+    expect(onApply).toHaveBeenCalledWith(
+      expect.objectContaining({ yearMin: undefined, yearMax: undefined })
+    );
+  });
+
+  it('[P1] highlights selected genre chip with Check icon', async () => {
+    renderWithProvider(
+      <FilterPanel
+        filters={emptyFilters}
+        mediaType="all"
+        onApply={onApply}
+        onClear={onClear}
+        onTypeChange={onTypeChange}
+      />
+    );
+
+    const genreButton = screen.getByTestId('filter-genre-Action');
+    // Before click: no check icon
+    expect(genreButton.querySelector('svg')).toBeNull();
+
+    await userEvent.click(genreButton);
+    // After click: check icon appears
+    expect(genreButton.querySelector('svg')).not.toBeNull();
+  });
+
+  it('[P1] highlights active type chip with Check icon', () => {
+    renderWithProvider(
+      <FilterPanel
+        filters={emptyFilters}
+        mediaType="movie"
+        onApply={onApply}
+        onClear={onClear}
+        onTypeChange={onTypeChange}
+      />
+    );
+
+    const movieChip = screen.getByTestId('filter-type-movie');
+    expect(movieChip.querySelector('svg')).not.toBeNull();
+
+    const allChip = screen.getByTestId('filter-type-all');
+    expect(allChip.querySelector('svg')).toBeNull();
+  });
+
+  it('[P2] renders section labels for 類型 and 類別', () => {
+    renderWithProvider(
+      <FilterPanel
+        filters={emptyFilters}
+        mediaType="all"
+        onApply={onApply}
+        onClear={onClear}
+        onTypeChange={onTypeChange}
+      />
+    );
+    expect(screen.getByText('類型')).toBeInTheDocument();
+    expect(screen.getByText('類別')).toBeInTheDocument();
+  });
+
+  it('[P2] syncs local state when external filters prop changes', () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const { rerender } = render(
+      <QueryClientProvider client={queryClient}>
+        <FilterPanel
+          filters={emptyFilters}
+          mediaType="all"
+          onApply={onApply}
+          onClear={onClear}
+          onTypeChange={onTypeChange}
+        />
+      </QueryClientProvider>
+    );
+
+    // Rerender with new external filters
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <FilterPanel
+          filters={{ genres: ['Drama'], yearMin: 2010, yearMax: 2019 }}
+          mediaType="all"
+          onApply={onApply}
+          onClear={onClear}
+          onTypeChange={onTypeChange}
+        />
+      </QueryClientProvider>
+    );
+
+    // Genre chip should show as selected (has check icon)
+    const dramaChip = screen.getByTestId('filter-genre-Drama');
+    expect(dramaChip.querySelector('svg')).not.toBeNull();
+  });
+
+  it('[P2] selects 更早 decade for pre-1990 year range', async () => {
+    renderWithProvider(
+      <FilterPanel
+        filters={emptyFilters}
+        mediaType="all"
+        onApply={onApply}
+        onClear={onClear}
+        onTypeChange={onTypeChange}
+      />
+    );
+
+    await userEvent.click(screen.getByTestId('filter-decade-更早'));
+    await userEvent.click(screen.getByTestId('filter-apply'));
+
+    // 更早 has min=0 which converts to yearMin=undefined, max=1989
+    expect(onApply).toHaveBeenCalledWith(
+      expect.objectContaining({ yearMin: undefined, yearMax: 1989 })
+    );
+  });
 });
