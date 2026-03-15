@@ -4,6 +4,33 @@
 
 **Goal:** Users can control qBittorrent directly from Vido, including pause/resume/delete torrents, adjust download priority, manage bandwidth settings, and schedule downloads.
 
+**Design Reference:** `ux-design.pen` (Pencil app) | Screenshots: `_bmad-output/screenshots/`
+
+---
+
+## Development Order & Dependencies
+
+```
+Phase 0: Shared Download Control Components
+  8-0 (Download Control UI Foundation)  ← Shared control buttons, bandwidth sliders, time-grid base
+
+Phase 1: Basic Controls
+  8-1 (Torrent Control Operations)     ← Pause/Resume/Delete on download list
+  8-2 (Priority Management)            ← File-level priority, expandable tree
+
+Phase 2: Settings & Scheduling
+  8-3 (Bandwidth Settings)             ← Settings page with sliders
+  8-4 (Download Scheduling)            ← Complex 7×24 time grid UI
+```
+
+**Epic 5 Retrospective Lessons Applied:**
+- Consider Phase 0 story for shared Download Control UI Components (control buttons, bandwidth sliders, time-grid base layout)
+- Story 8-4 (Download Scheduling) has a complex 7×24 time grid — design must be finalized before development
+- Every UI story must include a mandatory Design Verification task
+- Dev Agent must verify UI matches design screenshots before marking done
+
+---
+
 ## Story 8.1: Torrent Control Operations
 
 As a **media collector**,

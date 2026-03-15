@@ -4,6 +4,35 @@
 
 **Goal:** Users must authenticate to access Vido, with secure session management and API protection.
 
+**Design Reference:** `ux-design.pen` (Pencil app) | Screenshots: `_bmad-output/screenshots/`
+
+---
+
+## Development Order & Dependencies
+
+```
+Phase 0: Auth Foundation
+  7-0 (Login Page)                    ← Login UI, auth layout, redirect flow (consider merging with 7.2)
+
+Phase 1: Credential Setup
+  7-1 (Password/PIN Setup)            ← Settings > Security page, depends on auth infrastructure
+
+Phase 2: Session & API (parallelizable)
+  7-3 (Session Management)            ← Depends on 7-0 login flow
+  7-4 (API Authentication)            ← Backend-focused, depends on auth service
+
+Phase 3: Protection
+  7-5 (Rate Limiting)                 ← Depends on 7-4 API auth
+```
+
+**Epic 5 Retrospective Lessons Applied:**
+- Story 7.2 (Login Page) should be treated as Phase 0 foundation — all protected pages depend on it
+- Every UI story must include a mandatory Design Verification task
+- Dev Agent must verify UI matches design screenshots before marking done
+- SM + UX Designer + User three-gate verification required
+
+---
+
 ## Story 7.1: Password/PIN Setup
 
 As a **first-time user**,

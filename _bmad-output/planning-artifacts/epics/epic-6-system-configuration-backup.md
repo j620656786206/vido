@@ -4,6 +4,99 @@
 
 **Goal:** Users can configure the system through a setup wizard, manage cache, view logs, and backup/restore their data.
 
+**Design Reference:** `ux-design.pen` (Pencil app) | Screenshots: `_bmad-output/screenshots/`
+
+---
+
+## Development Order & Dependencies
+
+Stories MUST be developed in the following order due to UI and data dependencies:
+
+```
+Phase 0: Settings Foundation (prerequisite — all settings pages depend on this)
+  6-0 (Settings Page Foundation)        ← Settings shell, tab/sidebar navigation, shared layout
+
+Phase 1: First-Run Experience
+  6-1 (Setup Wizard)                    ← Standalone wizard flow, depends on 6-0 for post-wizard navigation
+
+Phase 2: System Monitoring (parallelizable)
+  6-2 (Cache Management)               ← Settings > Cache tab
+  6-3 (System Logs Viewer)             ← Settings > Logs tab
+  6-4 (Service Connection Status)       ← Settings > Status tab
+
+Phase 3: Backup & Restore (sequential)
+  6-5 (Database Backup)               ← Settings > Backup tab
+  6-6 (Backup Integrity Verification)  ← Depends on 6-5 backup infrastructure
+  6-7 (Data Restore)                   ← Depends on 6-5 backup list UI
+  6-8 (Scheduled Backups)             ← Depends on 6-5 backup service
+
+Phase 4: Import/Export (parallelizable)
+  6-9 (Metadata Export)               ← Settings > Export or standalone page
+  6-10 (Metadata Import)              ← Settings > Import or standalone page
+
+Phase 5: Advanced Monitoring
+  6-11 (Performance Metrics Dashboard)  ← Settings > Performance tab (may require chart library)
+```
+
+**Key notes:**
+- 6-0 is the settings page foundation — provides shared tab/sidebar navigation and layout for ALL settings pages
+- 6-1 (Setup Wizard) is a standalone flow but lands on the settings page shell after completion
+- 6-2, 6-3, 6-4 are independent tabs and can be parallelized
+- 6-5 through 6-8 are sequential — backup infrastructure must exist before verification/restore/scheduling
+- 6-9 and 6-10 are independent and can be parallelized
+- 6-11 may require selecting and integrating a chart library (verify package.json first)
+
+**Development Workflow Rules (from Epic 5 Retrospective):**
+- Dev Agent must verify UI matches design screenshots after every story completion (MANDATORY)
+- Every UI story must include a Design Verification task with SM + UX Designer + User sign-off
+- Deviations must be flagged to SM (Bob) + UX (Sally) + User (Alexyu) before marking story as done
+- Dev Agent must run local dev server and visually verify before declaring story complete
+
+---
+
+## Story 6.0: Settings Page Foundation
+
+As a **Vido user**,
+I want a **consistent settings page layout with organized navigation**,
+So that **I can easily find and manage all system configuration options**.
+
+**Acceptance Criteria:**
+
+**Given** the user navigates to the Settings tab
+**When** the settings page loads
+**Then** a sidebar/tab navigation displays all settings categories:
+- 連線設定 (Connection — existing qBittorrent settings)
+- 快取管理 (Cache)
+- 系統日誌 (Logs)
+- 服務狀態 (Status)
+- 備份與還原 (Backup & Restore)
+- 匯出/匯入 (Export/Import)
+- 效能監控 (Performance)
+
+**Given** the settings navigation is displayed
+**When** clicking a category
+**Then** the corresponding settings panel loads in the content area
+**And** the active category is visually highlighted
+**And** URL updates to `/settings/{category}` for deep-linking
+
+**Given** the settings page is displayed on mobile
+**When** viewing on a small screen
+**Then** the navigation adapts to mobile layout (collapsible sidebar or top tabs)
+
+**Given** existing qBittorrent settings exist
+**When** the new settings shell is integrated
+**Then** existing `/settings/qbittorrent` route continues to work
+**And** qBittorrent form is rendered inside the new settings shell
+
+**Technical Notes:**
+- Creates the settings page shell that ALL subsequent 6.x stories will render within
+- Must integrate with existing `/settings/qbittorrent` route and `QBittorrentForm` component
+- Use TanStack Router nested routes: `/settings` → `/settings/cache`, `/settings/logs`, etc.
+- Reuse Global Navigation Shell pattern from Story 5-0
+- Settings categories may initially show "Coming Soon" placeholder for unimplemented tabs
+
+---
+
 ## Story 6.1: Setup Wizard
 
 As a **first-time user**,
@@ -354,5 +447,6 @@ So that **I can monitor system health and identify issues**.
 - Implements FR65: Display performance metrics
 - Implements FR66, NFR-SC2: Scalability warnings
 - Implements NFR-M12: Performance metrics queryable
+- May require chart library (e.g., recharts, Chart.js) — verify existing dependencies first
 
 ---

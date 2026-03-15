@@ -104,7 +104,7 @@ development_status:
   # Phase: 1.0 (Q2 - June 2026)
   # FRs: FR5-FR8, FR38-FR42
   # ==============================================================================
-  epic-5: in-progress  # Stories created 2026-02-10
+  epic-5: done  # All 11 stories completed - 2026-03-15
   # Development Order: 5-0 → 5-1+5-8 → 5-2 → 5-3//5-4 → 5-5 → 5-6//5-7
   # Phase 0: Global Navigation Shell (prerequisite for all pages)
   5-0-global-navigation-shell: done
@@ -125,14 +125,18 @@ development_status:
   5-7-batch-operations: done
   # Phase 5b: UX Design Compliance (fix design deviations from 5-6 and 5-7)
   5-10-ux-design-compliance-phase5: done
-  epic-5-retrospective: optional
+  epic-5-retrospective: done  # Completed 2026-03-15
 
   # ==============================================================================
   # Epic 6: System Configuration & Backup
   # Phase: 1.0 (Q2 - June 2026)
   # FRs: FR52-FR66
   # ==============================================================================
-  epic-6: in-progress  # Stories created 2026-02-10
+  epic-6: in-progress  # Stories created 2026-02-10, 6-0 added 2026-03-15 (Epic 5 retro finding)
+  # Development Order: 6-0 → 6-1 → 6-2//6-3//6-4 → 6-5 → 6-6 → 6-7 → 6-8 → 6-9//6-10 → 6-11
+  # Phase 0: Settings Foundation (prerequisite for all settings pages)
+  6-0-settings-page-foundation: backlog
+  # Phase 1: First-Run Experience
   6-1-setup-wizard: ready-for-dev
   6-2-cache-management: ready-for-dev
   6-3-system-logs-viewer: ready-for-dev

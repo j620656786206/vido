@@ -4,6 +4,14 @@
 
 **Goal:** Users can search for subtitles from OpenSubtitles and Zimuku with Traditional Chinese subtitle priority, download subtitles, manually upload subtitles, and see subtitle availability status.
 
+**Epic 5 Retrospective Lessons Applied:**
+- Consider a Phase 0 story for "Subtitle Section on Detail Page" — defines container, indicators, button placement on MediaDetailPanel
+- Stories 9.1 (search) and 9.6 (availability status) both modify the detail page — coordinate design together
+- Every UI story must include a mandatory Design Verification task
+- Dev Agent must verify UI matches design screenshots before marking done
+
+---
+
 ## Story 9.1: Subtitle Search Integration
 
 As a **Traditional Chinese user**,

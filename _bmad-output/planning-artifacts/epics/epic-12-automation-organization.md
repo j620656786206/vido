@@ -4,6 +4,16 @@
 
 **Goal:** The system can monitor watch folders to detect new files, automatically trigger parsing, rename files based on patterns, move files to organized structure, and execute automation tasks in background queue.
 
+**Epic 5 Retrospective Lessons Applied:**
+- CRITICAL: Phase 0 story needed — "Automation Settings Shell & Components" (Settings > Automation layout, form patterns, preview/dry-run UI)
+- Stories 12.1, 12.3, 12.4, 12.6 all place UI in "Settings > Automation" — need coordinated layout
+- Story 12.5 (Queue Management) creates a new top-level page — needs navigation integration
+- Pattern preview (12.3/12.4) is visual and must be design-verified
+- Every UI story must include a mandatory Design Verification task
+- Dev Agent must verify UI matches design screenshots before marking done
+
+---
+
 ## Story 12.1: Watch Folder Monitoring
 
 As a **media collector**,

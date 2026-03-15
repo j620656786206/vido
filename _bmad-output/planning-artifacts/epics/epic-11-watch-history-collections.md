@@ -4,6 +4,15 @@
 
 **Goal:** Users can track personal watch history, see watch progress indicators, mark media as watched/unwatched, and create custom collections of media items.
 
+**Epic 5 Retrospective Lessons Applied:**
+- Consider Phase 0 story for "Progress Indicators" as reusable library card component (progress bar, checkmark, watch date) before 11.1-11.3 depend on it
+- Story 11.4 (Custom Collections) creates a new top-level page — needs navigation integration with Global Shell (5-0)
+- Story 11.2 (Watch Progress) modifies PosterCard from Epic 5 — coordinate design carefully
+- Every UI story must include a mandatory Design Verification task
+- Dev Agent must verify UI matches design screenshots before marking done
+
+---
+
 ## Story 11.1: Watch History Tracking
 
 As a **user**,
