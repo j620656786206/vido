@@ -1,6 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { libraryService } from '../services/libraryService';
-import type { LibraryListParams, LibraryStats, VideosResponse } from '../types/library';
+import type {
+  LibraryListParams,
+  LibraryStats,
+  VideosResponse,
+  BatchResult,
+} from '../types/library';
 
 export const libraryKeys = {
   all: ['library'] as const,
@@ -95,5 +100,33 @@ export function useExportItem() {
     mutationFn: ({ type, id }: { type: 'movie' | 'series'; id: string }) => {
       return type === 'movie' ? libraryService.exportMovie(id) : libraryService.exportSeries(id);
     },
+  });
+}
+
+export function useBatchDelete() {
+  const queryClient = useQueryClient();
+
+  return useMutation<BatchResult, Error, { ids: string[]; type: 'movie' | 'series' }>({
+    mutationFn: ({ ids, type }) => libraryService.batchDelete(ids, type),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: libraryKeys.all });
+    },
+  });
+}
+
+export function useBatchReparse() {
+  const queryClient = useQueryClient();
+
+  return useMutation<BatchResult, Error, { ids: string[]; type: 'movie' | 'series' }>({
+    mutationFn: ({ ids, type }) => libraryService.batchReparse(ids, type),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: libraryKeys.all });
+    },
+  });
+}
+
+export function useBatchExport() {
+  return useMutation<unknown[], Error, { ids: string[]; type: 'movie' | 'series' }>({
+    mutationFn: ({ ids, type }) => libraryService.batchExport(ids, type),
   });
 }

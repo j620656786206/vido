@@ -119,3 +119,14 @@ export interface LibrarySearchResponse {
   results: LibrarySearchResult[];
   totalCount: number;
 }
+
+export interface BatchResult {
+  success_count: number;
+  failed_count: number;
+  errors?: BatchError[];
+}
+
+export interface BatchError {
+  id: string;
+  message: string;
+}

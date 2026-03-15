@@ -95,6 +95,15 @@ type LibraryServiceInterface interface {
 
 	// GetSeriesVideos retrieves videos for a library series by looking up its TMDb ID
 	GetSeriesVideos(ctx context.Context, id string) (*tmdb.VideosResponse, error)
+
+	// BatchDelete deletes multiple items by IDs and type
+	BatchDelete(ctx context.Context, ids []string, mediaType string) (*BatchResult, error)
+
+	// BatchReparse resets parse_status to "pending" for multiple items
+	BatchReparse(ctx context.Context, ids []string, mediaType string) (*BatchResult, error)
+
+	// BatchExport returns metadata for multiple items
+	BatchExport(ctx context.Context, ids []string, mediaType string) ([]interface{}, error)
 }
 
 // LibraryService handles media library storage and search operations
@@ -721,6 +730,113 @@ func (s *LibraryService) GetSeriesVideos(ctx context.Context, id string) (*tmdb.
 	}
 
 	return videos, nil
+}
+
+// BatchResult contains the result of a batch operation
+type BatchResult struct {
+	SuccessCount int          `json:"success_count"`
+	FailedCount  int          `json:"failed_count"`
+	Errors       []BatchError `json:"errors,omitempty"`
+}
+
+// BatchError represents a single item failure in a batch operation
+type BatchError struct {
+	ID      string `json:"id"`
+	Message string `json:"message"`
+}
+
+// BatchDelete deletes multiple items by IDs and type
+func (s *LibraryService) BatchDelete(ctx context.Context, ids []string, mediaType string) (*BatchResult, error) {
+	if len(ids) == 0 {
+		return nil, fmt.Errorf("no IDs provided")
+	}
+
+	result := &BatchResult{}
+	for _, id := range ids {
+		var err error
+		if mediaType == "movie" {
+			err = s.movieRepo.Delete(ctx, id)
+		} else {
+			err = s.seriesRepo.Delete(ctx, id)
+		}
+		if err != nil {
+			result.FailedCount++
+			result.Errors = append(result.Errors, BatchError{ID: id, Message: err.Error()})
+			s.logger.Error("Batch delete failed for item", "id", id, "type", mediaType, "error", err)
+		} else {
+			result.SuccessCount++
+		}
+	}
+
+	s.logger.Info("Batch delete completed", "type", mediaType, "success", result.SuccessCount, "failed", result.FailedCount)
+	return result, nil
+}
+
+// BatchReparse resets parse_status to "pending" for multiple items
+func (s *LibraryService) BatchReparse(ctx context.Context, ids []string, mediaType string) (*BatchResult, error) {
+	if len(ids) == 0 {
+		return nil, fmt.Errorf("no IDs provided")
+	}
+
+	result := &BatchResult{}
+	for _, id := range ids {
+		var err error
+		if mediaType == "movie" {
+			movie, findErr := s.movieRepo.FindByID(ctx, id)
+			if findErr != nil {
+				err = findErr
+			} else {
+				movie.ParseStatus = "pending"
+				err = s.movieRepo.Update(ctx, movie)
+			}
+		} else {
+			series, findErr := s.seriesRepo.FindByID(ctx, id)
+			if findErr != nil {
+				err = findErr
+			} else {
+				series.ParseStatus = "pending"
+				err = s.seriesRepo.Update(ctx, series)
+			}
+		}
+		if err != nil {
+			result.FailedCount++
+			result.Errors = append(result.Errors, BatchError{ID: id, Message: err.Error()})
+			s.logger.Error("Batch reparse failed for item", "id", id, "type", mediaType, "error", err)
+		} else {
+			result.SuccessCount++
+		}
+	}
+
+	s.logger.Info("Batch reparse completed", "type", mediaType, "success", result.SuccessCount, "failed", result.FailedCount)
+	return result, nil
+}
+
+// BatchExport returns metadata for multiple items
+func (s *LibraryService) BatchExport(ctx context.Context, ids []string, mediaType string) ([]interface{}, error) {
+	if len(ids) == 0 {
+		return nil, fmt.Errorf("no IDs provided")
+	}
+
+	results := make([]interface{}, 0, len(ids))
+	for _, id := range ids {
+		if mediaType == "movie" {
+			movie, err := s.movieRepo.FindByID(ctx, id)
+			if err != nil {
+				s.logger.Error("Batch export: movie not found", "id", id, "error", err)
+				continue
+			}
+			results = append(results, movie)
+		} else {
+			series, err := s.seriesRepo.FindByID(ctx, id)
+			if err != nil {
+				s.logger.Error("Batch export: series not found", "id", id, "error", err)
+				continue
+			}
+			results = append(results, series)
+		}
+	}
+
+	return results, nil
 }
 
 // Compile-time interface verification

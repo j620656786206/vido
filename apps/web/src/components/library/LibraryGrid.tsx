@@ -12,6 +12,9 @@ interface LibraryGridProps {
   totalItems?: number;
   density?: 'small' | 'medium' | 'large';
   highlightQuery?: string;
+  selectionMode?: boolean;
+  selectedIds?: Set<string>;
+  onSelect?: (id: string, e: React.MouseEvent) => void;
 }
 
 const DENSITY_CONFIG = {
@@ -62,6 +65,9 @@ export function LibraryGrid({
   totalItems = 0,
   density = 'medium',
   highlightQuery,
+  selectionMode,
+  selectedIds,
+  onSelect,
 }: LibraryGridProps) {
   const parentRef = useRef<HTMLDivElement>(null);
   const config = DENSITY_CONFIG[density];
@@ -161,9 +167,12 @@ export function LibraryGrid({
             <PosterCard
               {...cardProps}
               highlightQuery={highlightQuery}
-              onMenuClick={handleMenuClick(itemId, itemType)}
+              onMenuClick={selectionMode ? undefined : handleMenuClick(itemId, itemType)}
+              selectable={selectionMode}
+              selected={selectionMode && selectedIds?.has(itemId)}
+              onSelect={selectionMode ? (e) => onSelect?.(itemId, e) : undefined}
             />
-            {menuState?.itemId === itemId && (
+            {!selectionMode && menuState?.itemId === itemId && (
               <PosterCardMenu
                 isOpen={true}
                 onClose={handleCloseMenu}

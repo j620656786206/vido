@@ -122,7 +122,7 @@ development_status:
   5-9-ux-design-compliance: done
   # Phase 5: Detail & Batch (depends on 5-1 interactions)
   5-6-media-detail-page-full-version: review
-  5-7-batch-operations: ready-for-dev
+  5-7-batch-operations: review
   epic-5-retrospective: optional
 
   # ==============================================================================

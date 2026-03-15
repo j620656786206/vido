@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
-import { MoreHorizontal } from 'lucide-react';
+import { MoreHorizontal, Check } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { getImageUrl, getImageSrcSet, getImageSizes } from '../../lib/image';
 import { HighlightText } from '../ui/HighlightText';
@@ -20,6 +20,9 @@ export interface PosterCardProps {
   isNew?: boolean;
   highlightQuery?: string;
   onMenuClick?: (e: React.MouseEvent) => void;
+  selectable?: boolean;
+  selected?: boolean;
+  onSelect?: (e: React.MouseEvent) => void;
 }
 
 export function PosterCard({
@@ -36,6 +39,9 @@ export function PosterCard({
   isNew,
   highlightQuery,
   onMenuClick,
+  selectable,
+  selected,
+  onSelect,
 }: PosterCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -49,16 +55,26 @@ export function PosterCard({
   const showFallback = !posterUrl || imageError;
   const showSkeleton = !imageLoaded && !imageError && posterUrl;
 
+  const handleCardClick = (e: React.MouseEvent) => {
+    if (selectable && onSelect) {
+      e.preventDefault();
+      e.stopPropagation();
+      onSelect(e);
+    }
+  };
+
   return (
     <Link
       to="/media/$type/$id"
       params={{ type, id: String(id) }}
       data-testid="poster-card"
+      onClick={handleCardClick}
       className={cn(
         'group relative block rounded-lg',
         'focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500',
         // Minimum touch target size (44px) ensured by aspect-ratio and grid min-width
-        'min-h-[44px]'
+        'min-h-[44px]',
+        selectable && 'cursor-pointer'
       )}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -67,10 +83,13 @@ export function PosterCard({
         className={cn(
           'relative aspect-[2/3] overflow-hidden rounded-lg bg-gray-800',
           'transition-all duration-300 ease-out',
-          // Hover effects only on desktop (lg breakpoint)
-          'lg:group-hover:scale-105 lg:group-hover:shadow-2xl',
+          // Hover effects only on desktop (lg breakpoint) — disabled in selection mode
+          !selectable && 'lg:group-hover:scale-105 lg:group-hover:shadow-2xl',
           // Active state for touch feedback on mobile
-          'active:scale-[0.98] active:opacity-90'
+          'active:scale-[0.98] active:opacity-90',
+          // Selection mode styling
+          selectable && selected && 'ring-2 ring-blue-500',
+          selectable && !selected && 'opacity-70'
         )}
       >
         {/* Loading skeleton */}
@@ -104,6 +123,19 @@ export function PosterCard({
             <span role="img" aria-label="無海報圖片" className="text-4xl text-gray-500">
               🎬
             </span>
+          </div>
+        )}
+
+        {/* Selection checkbox overlay (top-left) */}
+        {selectable && (
+          <div
+            data-testid="selection-checkbox"
+            className={cn(
+              'absolute left-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded border-2 transition-colors',
+              selected ? 'border-blue-500 bg-blue-500 text-white' : 'border-white/60 bg-black/40'
+            )}
+          >
+            {selected && <Check className="h-4 w-4" />}
           </div>
         )}
 

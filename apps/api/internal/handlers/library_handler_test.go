@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -135,6 +136,30 @@ func (m *MockLibraryService) GetSeriesVideos(ctx context.Context, id string) (*t
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*tmdb.VideosResponse), args.Error(1)
+}
+
+func (m *MockLibraryService) BatchDelete(ctx context.Context, ids []string, mediaType string) (*services.BatchResult, error) {
+	args := m.Called(ctx, ids, mediaType)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*services.BatchResult), args.Error(1)
+}
+
+func (m *MockLibraryService) BatchReparse(ctx context.Context, ids []string, mediaType string) (*services.BatchResult, error) {
+	args := m.Called(ctx, ids, mediaType)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*services.BatchResult), args.Error(1)
+}
+
+func (m *MockLibraryService) BatchExport(ctx context.Context, ids []string, mediaType string) ([]interface{}, error) {
+	args := m.Called(ctx, ids, mediaType)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]interface{}), args.Error(1)
 }
 
 // Verify mock implements interface
@@ -915,6 +940,195 @@ func TestLibraryHandler_GetSeriesVideos(t *testing.T) {
 		router.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusNotFound, w.Code)
+	})
+
+	mockService.AssertExpectations(t)
+}
+
+func TestLibraryHandler_BatchDelete(t *testing.T) {
+	mockService := new(MockLibraryService)
+	handler := NewLibraryHandler(mockService)
+	router := setupLibraryTestRouter(handler)
+
+	t.Run("success - all deleted", func(t *testing.T) {
+		ids := []string{"m1", "m2", "m3"}
+		expectedResult := &services.BatchResult{
+			SuccessCount: 3,
+			FailedCount:  0,
+		}
+
+		mockService.On("BatchDelete", mock.Anything, ids, "movie").Return(expectedResult, nil).Once()
+
+		body := `{"ids":["m1","m2","m3"],"type":"movie"}`
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("DELETE", "/api/v1/library/batch", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		var resp APIResponse
+		err := json.Unmarshal(w.Body.Bytes(), &resp)
+		require.NoError(t, err)
+		assert.True(t, resp.Success)
+
+		dataMap, ok := resp.Data.(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, float64(3), dataMap["success_count"])
+		assert.Equal(t, float64(0), dataMap["failed_count"])
+	})
+
+	t.Run("success - partial failure", func(t *testing.T) {
+		ids := []string{"m1", "m2"}
+		expectedResult := &services.BatchResult{
+			SuccessCount: 1,
+			FailedCount:  1,
+			Errors:       []services.BatchError{{ID: "m2", Message: "not found"}},
+		}
+
+		mockService.On("BatchDelete", mock.Anything, ids, "series").Return(expectedResult, nil).Once()
+
+		body := `{"ids":["m1","m2"],"type":"series"}`
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("DELETE", "/api/v1/library/batch", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		var resp APIResponse
+		err := json.Unmarshal(w.Body.Bytes(), &resp)
+		require.NoError(t, err)
+		assert.True(t, resp.Success)
+
+		dataMap, ok := resp.Data.(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, float64(1), dataMap["success_count"])
+		assert.Equal(t, float64(1), dataMap["failed_count"])
+	})
+
+	t.Run("missing ids returns 400", func(t *testing.T) {
+		body := `{"type":"movie"}`
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("DELETE", "/api/v1/library/batch", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("invalid type returns 400", func(t *testing.T) {
+		body := `{"ids":["m1"],"type":"invalid"}`
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("DELETE", "/api/v1/library/batch", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("empty body returns 400", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("DELETE", "/api/v1/library/batch", strings.NewReader("{}"))
+		req.Header.Set("Content-Type", "application/json")
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	mockService.AssertExpectations(t)
+}
+
+func TestLibraryHandler_BatchReparse(t *testing.T) {
+	mockService := new(MockLibraryService)
+	handler := NewLibraryHandler(mockService)
+	router := setupLibraryTestRouter(handler)
+
+	t.Run("success", func(t *testing.T) {
+		ids := []string{"m1", "m2"}
+		expectedResult := &services.BatchResult{
+			SuccessCount: 2,
+			FailedCount:  0,
+		}
+
+		mockService.On("BatchReparse", mock.Anything, ids, "movie").Return(expectedResult, nil).Once()
+
+		body := `{"ids":["m1","m2"],"type":"movie"}`
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("POST", "/api/v1/library/batch/reparse", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		var resp APIResponse
+		err := json.Unmarshal(w.Body.Bytes(), &resp)
+		require.NoError(t, err)
+		assert.True(t, resp.Success)
+	})
+
+	t.Run("missing type returns 400", func(t *testing.T) {
+		body := `{"ids":["m1"]}`
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("POST", "/api/v1/library/batch/reparse", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("service error returns 500", func(t *testing.T) {
+		ids := []string{"m1"}
+		mockService.On("BatchReparse", mock.Anything, ids, "movie").Return(nil, errors.New("db error")).Once()
+
+		body := `{"ids":["m1"],"type":"movie"}`
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("POST", "/api/v1/library/batch/reparse", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
+	})
+
+	mockService.AssertExpectations(t)
+}
+
+func TestLibraryHandler_BatchExport(t *testing.T) {
+	mockService := new(MockLibraryService)
+	handler := NewLibraryHandler(mockService)
+	router := setupLibraryTestRouter(handler)
+
+	t.Run("success", func(t *testing.T) {
+		ids := []string{"m1", "m2"}
+		expectedItems := []interface{}{
+			&models.Movie{ID: "m1", Title: "Movie 1"},
+			&models.Movie{ID: "m2", Title: "Movie 2"},
+		}
+
+		mockService.On("BatchExport", mock.Anything, ids, "movie").Return(expectedItems, nil).Once()
+
+		body := `{"ids":["m1","m2"],"format":"json"}`
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("POST", "/api/v1/library/batch/export?type=movie", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		var resp APIResponse
+		err := json.Unmarshal(w.Body.Bytes(), &resp)
+		require.NoError(t, err)
+		assert.True(t, resp.Success)
+	})
+
+	t.Run("missing format returns 400", func(t *testing.T) {
+		body := `{"ids":["m1"]}`
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("POST", "/api/v1/library/batch/export", strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
 	})
 
 	mockService.AssertExpectations(t)

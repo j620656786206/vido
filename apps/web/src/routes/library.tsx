@@ -1,7 +1,14 @@
 import { useState, useMemo, useCallback } from 'react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { Filter } from 'lucide-react';
-import { useLibraryList, useLibrarySearch, useLibraryStats } from '../hooks/useLibrary';
+import { Filter, CheckSquare } from 'lucide-react';
+import {
+  useLibraryList,
+  useLibrarySearch,
+  useLibraryStats,
+  useBatchDelete,
+  useBatchReparse,
+  useBatchExport,
+} from '../hooks/useLibrary';
 import { LibraryGrid } from '../components/library/LibraryGrid';
 import { LibraryTable } from '../components/library/LibraryTable';
 import { SortSelector } from '../components/library/SortSelector';
@@ -14,6 +21,9 @@ import { RecentlyAdded } from '../components/library/RecentlyAdded';
 import { EmptyLibrary } from '../components/library/EmptyLibrary';
 import { ViewToggle } from '../components/library/ViewToggle';
 import type { ViewMode } from '../components/library/ViewToggle';
+import { SelectionToolbar } from '../components/library/SelectionToolbar';
+import { BatchConfirmDialog } from '../components/library/BatchConfirmDialog';
+import { BatchProgress } from '../components/library/BatchProgress';
 import { Pagination } from '../components/ui/Pagination';
 import type { LibraryMediaType, LibraryItem, SortField, SortOrder } from '../types/library';
 import { VALID_SORT_FIELDS } from '../types/library';
@@ -117,6 +127,24 @@ function LibraryPage() {
   );
   const [searchQuery, setSearchQuery] = useState(q || '');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+  // Selection mode state (Task 4)
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectedType, setSelectedType] = useState<'movie' | 'series'>('movie');
+  const [confirmAction, setConfirmAction] = useState<'delete' | 'reparse' | 'export' | null>(null);
+  const [batchProgress, setBatchProgress] = useState<{
+    isOpen: boolean;
+    current: number;
+    total: number;
+    action: string;
+    isComplete: boolean;
+    errors?: { id: string; message: string }[];
+  }>({ isOpen: false, current: 0, total: 0, action: '', isComplete: false });
+
+  const batchDeleteMutation = useBatchDelete();
+  const batchReparseMutation = useBatchReparse();
+  const batchExportMutation = useBatchExport();
 
   const currentPage = page || 1;
   const currentPageSize = pageSize || 20;
@@ -292,6 +320,85 @@ function LibraryPage() {
     (currentFilters.yearMin !== undefined ? 1 : 0) +
     (currentFilters.yearMax !== undefined ? 1 : 0);
 
+  // Selection handlers
+  const enterSelectionMode = useCallback(() => {
+    setIsSelectionMode(true);
+    setSelectedIds(new Set());
+  }, []);
+
+  const exitSelectionMode = useCallback(() => {
+    setIsSelectionMode(false);
+    setSelectedIds(new Set());
+    setSelectedType('movie');
+  }, []);
+
+  const executeBatchAction = useCallback(
+    async (action: 'delete' | 'reparse' | 'export') => {
+      const ids = Array.from(selectedIds);
+      const total = ids.length;
+
+      setBatchProgress({
+        isOpen: true,
+        current: 0,
+        total,
+        action:
+          action === 'delete' ? '刪除中...' : action === 'reparse' ? '重新解析中...' : '匯出中...',
+        isComplete: false,
+      });
+
+      try {
+        if (action === 'delete') {
+          const result = await batchDeleteMutation.mutateAsync({ ids, type: selectedType });
+          setBatchProgress((prev) => ({
+            ...prev,
+            current: total,
+            isComplete: true,
+            errors: result.errors,
+          }));
+        } else if (action === 'reparse') {
+          const result = await batchReparseMutation.mutateAsync({ ids, type: selectedType });
+          setBatchProgress((prev) => ({
+            ...prev,
+            current: total,
+            isComplete: true,
+            errors: result.errors,
+          }));
+        } else {
+          const result = await batchExportMutation.mutateAsync({ ids, type: selectedType });
+          // Trigger download of the JSON
+          const blob = new Blob([JSON.stringify(result, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `vido-export-${selectedType}-${new Date().toISOString().slice(0, 10)}.json`;
+          a.click();
+          URL.revokeObjectURL(url);
+          setBatchProgress((prev) => ({ ...prev, current: total, isComplete: true }));
+        }
+      } catch {
+        setBatchProgress((prev) => ({
+          ...prev,
+          current: total,
+          isComplete: true,
+          errors: [{ id: 'batch', message: '操作失敗' }],
+        }));
+      }
+    },
+    [selectedIds, selectedType, batchDeleteMutation, batchReparseMutation, batchExportMutation]
+  );
+
+  const handleBatchConfirm = useCallback(() => {
+    if (confirmAction) {
+      executeBatchAction(confirmAction);
+      setConfirmAction(null);
+    }
+  }, [confirmAction, executeBatchAction]);
+
+  const closeBatchProgress = useCallback(() => {
+    setBatchProgress({ isOpen: false, current: 0, total: 0, action: '', isComplete: false });
+    exitSelectionMode();
+  }, [exitSelectionMode]);
+
   // Derive display data based on search mode
   let items: LibraryItem[] = [];
   let totalItems = 0;
@@ -319,11 +426,82 @@ function LibraryPage() {
   const isSearchEmpty = isSearchActive && isEmpty;
   const isLibraryEmpty = !isSearchActive && isEmpty;
 
+  const handleSelect = useCallback(
+    (id: string, _e: React.MouseEvent) => {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(id)) {
+          next.delete(id);
+        } else {
+          next.add(id);
+        }
+        return next;
+      });
+
+      // Determine item type for the first selected item
+      if (selectedIds.size === 0) {
+        const found = items.find((item) => {
+          const itemId = item.movie?.id || item.series?.id;
+          return itemId === id;
+        });
+        if (found) {
+          setSelectedType(found.type === 'movie' ? 'movie' : 'series');
+        }
+      }
+    },
+    [items, selectedIds.size]
+  );
+
+  const handleSelectAll = useCallback(() => {
+    const allIds = items
+      .map((item) => item.movie?.id || item.series?.id)
+      .filter((id): id is string => !!id);
+    setSelectedIds(new Set(allIds));
+  }, [items]);
+
   return (
     <div>
       <div className="container mx-auto px-4 py-8">
+        {/* Selection toolbar */}
+        {isSelectionMode && (
+          <div className="mb-4">
+            <SelectionToolbar
+              selectedCount={selectedIds.size}
+              onDelete={() => setConfirmAction('delete')}
+              onReparse={() => setConfirmAction('reparse')}
+              onExport={() => executeBatchAction('export')}
+              onCancel={exitSelectionMode}
+              isProcessing={
+                batchDeleteMutation.isPending ||
+                batchReparseMutation.isPending ||
+                batchExportMutation.isPending
+              }
+            />
+            {items.length > 0 && (
+              <div className="mt-2 flex items-center gap-2">
+                <button
+                  onClick={handleSelectAll}
+                  data-testid="select-all-btn"
+                  className="text-sm text-blue-400 hover:text-blue-300"
+                >
+                  全選 ({items.length})
+                </button>
+                {selectedIds.size > 0 && (
+                  <button
+                    onClick={() => setSelectedIds(new Set())}
+                    data-testid="deselect-all-btn"
+                    className="text-sm text-slate-400 hover:text-slate-300"
+                  >
+                    取消全選
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Search bar */}
-        {!isLibraryEmpty && (
+        {!isLibraryEmpty && !isSelectionMode && (
           <div className="mb-6">
             <LibrarySearchBar
               onSearch={handleSearch}
@@ -334,7 +512,7 @@ function LibraryPage() {
         )}
 
         {/* Controls row: heading left, controls right */}
-        {!isEmpty && (
+        {!isEmpty && !isSelectionMode && (
           <div className="mb-6 flex items-center justify-between">
             <div className="flex items-baseline gap-3">
               <h2 className="text-xl font-semibold text-white">全部媒體</h2>
@@ -352,6 +530,14 @@ function LibraryPage() {
                   onSortChange={handleSortChange}
                 />
               )}
+              <button
+                onClick={enterSelectionMode}
+                data-testid="enter-selection-btn"
+                className="flex items-center gap-2 rounded-lg bg-slate-800 px-3 py-2 text-sm font-medium text-slate-400 transition-colors hover:bg-slate-700 hover:text-white"
+              >
+                <CheckSquare size={16} />
+                選取
+              </button>
               <button
                 onClick={() => setIsFilterOpen(!isFilterOpen)}
                 data-testid="filter-toggle"
@@ -418,6 +604,9 @@ function LibraryPage() {
                   isLoading={isLoading}
                   totalItems={totalItems}
                   highlightQuery={isSearchActive ? searchQuery : undefined}
+                  selectionMode={isSelectionMode}
+                  selectedIds={selectedIds}
+                  onSelect={handleSelect}
                 />
               ) : (
                 <LibraryTable
@@ -439,6 +628,26 @@ function LibraryPage() {
           </div>
         )}
       </div>
+
+      {/* Batch confirmation dialog */}
+      <BatchConfirmDialog
+        isOpen={confirmAction !== null}
+        itemCount={selectedIds.size}
+        action={confirmAction || 'delete'}
+        onConfirm={handleBatchConfirm}
+        onCancel={() => setConfirmAction(null)}
+      />
+
+      {/* Batch progress */}
+      <BatchProgress
+        isOpen={batchProgress.isOpen}
+        current={batchProgress.current}
+        total={batchProgress.total}
+        action={batchProgress.action}
+        errors={batchProgress.errors}
+        isComplete={batchProgress.isComplete}
+        onClose={closeBatchProgress}
+      />
     </div>
   );
 }

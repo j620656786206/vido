@@ -6,6 +6,7 @@ import type {
   LibrarySearchResponse,
   LibraryStats,
   VideosResponse,
+  BatchResult,
 } from '../types/library';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
@@ -117,5 +118,29 @@ export const libraryService = {
 
   async getSeriesVideos(id: string): Promise<VideosResponse> {
     return fetchApi<VideosResponse>(`/library/series/${id}/videos`);
+  },
+
+  async batchDelete(ids: string[], type: 'movie' | 'series'): Promise<BatchResult> {
+    return fetchApi<BatchResult>('/library/batch', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids, type }),
+    });
+  },
+
+  async batchReparse(ids: string[], type: 'movie' | 'series'): Promise<BatchResult> {
+    return fetchApi<BatchResult>('/library/batch/reparse', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids, type }),
+    });
+  },
+
+  async batchExport(ids: string[], type: 'movie' | 'series'): Promise<unknown[]> {
+    return fetchApi<unknown[]>(`/library/batch/export?type=${type}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids, format: 'json' }),
+    });
   },
 };

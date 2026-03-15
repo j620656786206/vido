@@ -328,6 +328,80 @@ func (h *LibraryHandler) SearchLibrary(c *gin.Context) {
 	SuccessResponse(c, result)
 }
 
+// BatchRequest represents the request body for batch operations
+type BatchRequest struct {
+	IDs  []string `json:"ids" binding:"required,min=1"`
+	Type string   `json:"type" binding:"required,oneof=movie series"`
+}
+
+// BatchExportRequest represents the request body for batch export
+type BatchExportRequest struct {
+	IDs    []string `json:"ids" binding:"required,min=1"`
+	Format string   `json:"format" binding:"required,oneof=json"`
+}
+
+// BatchDelete handles DELETE /api/v1/library/batch
+func (h *LibraryHandler) BatchDelete(c *gin.Context) {
+	var req BatchRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		BadRequestError(c, "VALIDATION_ERROR", "Invalid request: ids (required, non-empty) and type (movie|series) are required")
+		return
+	}
+
+	result, err := h.service.BatchDelete(c.Request.Context(), req.IDs, req.Type)
+	if err != nil {
+		slog.Error("Failed to batch delete", "error", err, "type", req.Type, "count", len(req.IDs))
+		InternalServerError(c, "Failed to perform batch delete")
+		return
+	}
+
+	SuccessResponse(c, result)
+}
+
+// BatchReparse handles POST /api/v1/library/batch/reparse
+func (h *LibraryHandler) BatchReparse(c *gin.Context) {
+	var req BatchRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		BadRequestError(c, "VALIDATION_ERROR", "Invalid request: ids (required, non-empty) and type (movie|series) are required")
+		return
+	}
+
+	result, err := h.service.BatchReparse(c.Request.Context(), req.IDs, req.Type)
+	if err != nil {
+		slog.Error("Failed to batch reparse", "error", err, "type", req.Type, "count", len(req.IDs))
+		InternalServerError(c, "Failed to perform batch reparse")
+		return
+	}
+
+	SuccessResponse(c, result)
+}
+
+// BatchExport handles POST /api/v1/library/batch/export
+func (h *LibraryHandler) BatchExport(c *gin.Context) {
+	var req BatchExportRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		BadRequestError(c, "VALIDATION_ERROR", "Invalid request: ids (required, non-empty) and format (json) are required")
+		return
+	}
+
+	// For export, we need the type in query param or accept mixed types
+	// Default to exporting as items (we'll look up each ID in both repos)
+	mediaType := c.DefaultQuery("type", "movie")
+	if mediaType != "movie" && mediaType != "series" {
+		BadRequestError(c, "VALIDATION_INVALID_FORMAT", "type must be 'movie' or 'series'")
+		return
+	}
+
+	items, err := h.service.BatchExport(c.Request.Context(), req.IDs, mediaType)
+	if err != nil {
+		slog.Error("Failed to batch export", "error", err, "count", len(req.IDs))
+		InternalServerError(c, "Failed to perform batch export")
+		return
+	}
+
+	SuccessResponse(c, items)
+}
+
 // RegisterRoutes registers all library routes on the given router group
 func (h *LibraryHandler) RegisterRoutes(rg *gin.RouterGroup) {
 	library := rg.Group("/library")
@@ -337,6 +411,9 @@ func (h *LibraryHandler) RegisterRoutes(rg *gin.RouterGroup) {
 		library.GET("/recent", h.GetRecentlyAdded)
 		library.GET("/genres", h.GetGenres)
 		library.GET("/stats", h.GetStats)
+		library.DELETE("/batch", h.BatchDelete)
+		library.POST("/batch/reparse", h.BatchReparse)
+		library.POST("/batch/export", h.BatchExport)
 
 		movies := library.Group("/movies")
 		{
