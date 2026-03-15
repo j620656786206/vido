@@ -1,16 +1,18 @@
 import { useState, useCallback } from 'react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { useLibraryList } from '../hooks/useLibrary';
+import { useLibraryList, useLibrarySearch } from '../hooks/useLibrary';
 import { LibraryGrid } from '../components/library/LibraryGrid';
 import { LibraryTable } from '../components/library/LibraryTable';
 import type { SortField } from '../components/library/LibraryTable';
+import { LibrarySearchBar } from '../components/library/LibrarySearchBar';
+import { EmptySearchResults } from '../components/library/EmptySearchResults';
 import { RecentlyAdded } from '../components/library/RecentlyAdded';
 import { EmptyLibrary } from '../components/library/EmptyLibrary';
 import { ViewToggle } from '../components/library/ViewToggle';
 import type { ViewMode } from '../components/library/ViewToggle';
 import { getStoredPreferences } from '../components/library/SettingsGearDropdown';
 import { Pagination } from '../components/ui/Pagination';
-import type { LibraryMediaType } from '../types/library';
+import type { LibraryMediaType, LibraryItem } from '../types/library';
 
 const VIEW_STORAGE_KEY = 'vido:library:view';
 
@@ -35,6 +37,7 @@ interface LibrarySearchParams {
   sortBy?: string;
   sortOrder?: string;
   view?: string;
+  q?: string;
 }
 
 export const Route = createFileRoute('/library')({
@@ -49,31 +52,34 @@ export const Route = createFileRoute('/library')({
       ? (search.sortOrder as string)
       : undefined,
     view: ['grid', 'list'].includes(search.view as string) ? (search.view as string) : undefined,
+    q: typeof search.q === 'string' ? search.q : undefined,
   }),
   component: LibraryPage,
 });
 
 function LibraryPage() {
-  const { page, pageSize, type, sortBy, sortOrder, view: viewParam } = Route.useSearch();
+  const { page, pageSize, type, sortBy, sortOrder, view: viewParam, q } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
 
   const [preferences] = useState(() => getStoredPreferences());
   const [currentView, setCurrentView] = useState<ViewMode>(
     () => (viewParam as ViewMode) || getStoredView()
   );
+  const [searchQuery, setSearchQuery] = useState(q || '');
 
   const currentPage = page || 1;
   const currentPageSize = pageSize || 20;
   const currentType = type || 'all';
+  const isSearchActive = searchQuery.length >= 2;
 
   // Search params override preferences for sort (e.g., from "查看全部" link)
   const effectiveSortBy = sortBy || preferences.defaultSort;
   const effectiveSortOrder = (sortOrder as 'asc' | 'desc') || undefined;
 
-  // Show recently added only in clean browse mode (no custom sort/filter)
-  const isCleanBrowse = !sortBy && !sortOrder;
+  // Show recently added only in clean browse mode (no custom sort/filter/search)
+  const isCleanBrowse = !sortBy && !sortOrder && !isSearchActive;
 
-  const { data, isLoading } = useLibraryList({
+  const listQuery = useLibraryList({
     page: currentPage,
     pageSize: currentPageSize,
     type: currentType,
@@ -81,30 +87,41 @@ function LibraryPage() {
     sortOrder: effectiveSortOrder,
   });
 
+  const searchResult = useLibrarySearch(searchQuery, {
+    page: currentPage,
+    pageSize: currentPageSize,
+    type: currentType,
+  });
+
+  const buildSearchParams = useCallback(
+    (overrides: Partial<LibrarySearchParams> = {}): LibrarySearchParams => ({
+      page: overrides.page ?? currentPage,
+      pageSize: overrides.pageSize ?? currentPageSize,
+      type: overrides.type ?? currentType,
+      sortBy: overrides.sortBy !== undefined ? overrides.sortBy : sortBy || undefined,
+      sortOrder: overrides.sortOrder !== undefined ? overrides.sortOrder : sortOrder || undefined,
+      view: currentView !== 'grid' ? currentView : undefined,
+      q: overrides.q !== undefined ? overrides.q : searchQuery || undefined,
+    }),
+    [currentPage, currentPageSize, currentType, sortBy, sortOrder, currentView, searchQuery]
+  );
+
+  const handleSearch = useCallback(
+    (query: string) => {
+      setSearchQuery(query);
+      navigate({
+        search: buildSearchParams({ page: 1, q: query || undefined }),
+      });
+    },
+    [navigate, buildSearchParams]
+  );
+
   const handlePageChange = (newPage: number) => {
-    navigate({
-      search: {
-        page: newPage,
-        pageSize: currentPageSize,
-        type: currentType,
-        sortBy: sortBy || undefined,
-        sortOrder: sortOrder || undefined,
-        view: currentView !== 'grid' ? currentView : undefined,
-      },
-    });
+    navigate({ search: buildSearchParams({ page: newPage }) });
   };
 
   const handleTypeChange = (newType: LibraryMediaType) => {
-    navigate({
-      search: {
-        page: 1,
-        pageSize: currentPageSize,
-        type: newType,
-        sortBy: sortBy || undefined,
-        sortOrder: sortOrder || undefined,
-        view: currentView !== 'grid' ? currentView : undefined,
-      },
-    });
+    navigate({ search: buildSearchParams({ page: 1, type: newType }) });
   };
 
   const handleViewChange = useCallback(
@@ -112,44 +129,62 @@ function LibraryPage() {
       setCurrentView(newView);
       setStoredView(newView);
       navigate({
-        search: {
-          page: currentPage,
-          pageSize: currentPageSize,
-          type: currentType,
-          sortBy: sortBy || undefined,
-          sortOrder: sortOrder || undefined,
-          view: newView !== 'grid' ? newView : undefined,
-        },
+        search: { ...buildSearchParams(), view: newView !== 'grid' ? newView : undefined },
       });
     },
-    [currentPage, currentPageSize, currentType, sortBy, sortOrder, navigate]
+    [navigate, buildSearchParams]
   );
 
   const handleColumnSort = useCallback(
     (field: SortField) => {
       const newOrder = sortBy === field && sortOrder === 'asc' ? 'desc' : 'asc';
-      navigate({
-        search: {
-          page: 1,
-          pageSize: currentPageSize,
-          type: currentType,
-          sortBy: field,
-          sortOrder: newOrder,
-          view: currentView !== 'grid' ? currentView : undefined,
-        },
-      });
+      navigate({ search: buildSearchParams({ page: 1, sortBy: field, sortOrder: newOrder }) });
     },
-    [sortBy, sortOrder, currentPageSize, currentType, currentView, navigate]
+    [sortBy, sortOrder, navigate, buildSearchParams]
   );
 
-  const totalItems = data?.totalItems ?? 0;
-  const totalPages = data?.totalPages ?? 0;
-  const items = data?.items ?? [];
+  // Derive display data based on search mode
+  let items: LibraryItem[] = [];
+  let totalItems = 0;
+  let totalPages = 0;
+  let isLoading = false;
+
+  if (isSearchActive) {
+    isLoading = searchResult.isLoading;
+    const results = searchResult.data?.results ?? [];
+    totalItems = searchResult.data?.totalCount ?? 0;
+    totalPages = totalItems > 0 ? Math.ceil(totalItems / currentPageSize) : 0;
+    // Convert SearchResult[] to LibraryItem[] for grid/table components
+    items = results.map((r) => ({
+      type: r.type,
+      movie: r.movie,
+      series: r.series,
+    }));
+  } else {
+    isLoading = listQuery.isLoading;
+    totalItems = listQuery.data?.totalItems ?? 0;
+    totalPages = listQuery.data?.totalPages ?? 0;
+    items = listQuery.data?.items ?? [];
+  }
+
   const isEmpty = !isLoading && items.length === 0;
+  const isSearchEmpty = isSearchActive && isEmpty;
+  const isLibraryEmpty = !isSearchActive && isEmpty;
 
   return (
     <div>
       <div className="container mx-auto px-4 py-8">
+        {/* Search bar - always visible unless library is empty with no search */}
+        {!isLibraryEmpty && (
+          <div className="mb-6">
+            <LibrarySearchBar
+              onSearch={handleSearch}
+              initialQuery={searchQuery}
+              resultCount={isSearchActive ? totalItems : undefined}
+            />
+          </div>
+        )}
+
         {!isEmpty && (
           <div className="mb-6 flex items-center justify-between">
             <span className="text-sm text-slate-400">
@@ -179,7 +214,9 @@ function LibraryPage() {
           </div>
         )}
 
-        {isEmpty ? (
+        {isSearchEmpty ? (
+          <EmptySearchResults query={searchQuery} onClear={() => handleSearch('')} />
+        ) : isLibraryEmpty ? (
           <EmptyLibrary />
         ) : (
           <>

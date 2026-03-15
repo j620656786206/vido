@@ -188,11 +188,40 @@ func (h *LibraryHandler) ExportSeries(c *gin.Context) {
 	SuccessResponse(c, series)
 }
 
+// SearchLibrary handles GET /api/v1/library/search?q=X&page=1&page_size=20&type=all
+// Performs FTS5 full-text search across movies and series in the library.
+func (h *LibraryHandler) SearchLibrary(c *gin.Context) {
+	query := c.Query("q")
+	if len(query) < 2 {
+		BadRequestError(c, "VALIDATION_REQUIRED_FIELD", "Search query (q) must be at least 2 characters")
+		return
+	}
+
+	// Parse type filter: all (default), movie, tv
+	mediaType := c.DefaultQuery("type", "all")
+	if mediaType != "all" && mediaType != "movie" && mediaType != "tv" {
+		BadRequestError(c, "VALIDATION_INVALID_FORMAT", "type must be 'all', 'movie', or 'tv'")
+		return
+	}
+
+	params := parseListParams(c)
+
+	result, err := h.service.SearchLibrary(c.Request.Context(), query, params)
+	if err != nil {
+		slog.Error("Failed to search library", "error", err, "query", query, "type", mediaType)
+		InternalServerError(c, "Failed to search library")
+		return
+	}
+
+	SuccessResponse(c, result)
+}
+
 // RegisterRoutes registers all library routes on the given router group
 func (h *LibraryHandler) RegisterRoutes(rg *gin.RouterGroup) {
 	library := rg.Group("/library")
 	{
 		library.GET("", h.ListLibrary)
+		library.GET("/search", h.SearchLibrary)
 		library.GET("/recent", h.GetRecentlyAdded)
 
 		movies := library.Group("/movies")

@@ -114,8 +114,8 @@ development_status:
   # Phase 2: View Options (depends on 5-1)
   5-2-library-list-view-toggle: done
   # Phase 3: Data Operations (parallelizable, depends on 5-1)
-  5-3-library-search: ready-for-dev
-  5-4-library-sorting: ready-for-dev
+  5-3-library-search: review
+  5-4-library-sorting: in-progress
   # Phase 4: Filtering (depends on 5-1 + genre API)
   5-5-library-filtering: ready-for-dev
   # Phase 5: Detail & Batch (depends on 5-1 interactions)

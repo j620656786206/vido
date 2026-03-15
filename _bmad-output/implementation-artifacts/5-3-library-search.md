@@ -1,6 +1,6 @@
 # Story 5.3: Library Search
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -38,42 +38,42 @@ So that **I can quickly find specific titles in my collection**.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create Library Search API Endpoint (AC: 1, 2)
-  - [ ] 1.1: Add `GET /api/v1/library/search?q=X&page=1&page_size=20&type=all` endpoint
-  - [ ] 1.2: Use existing `LibraryService.SearchLibrary()` which calls FTS5
-  - [ ] 1.3: Return combined movie + series results with pagination
-  - [ ] 1.4: Ensure FTS5 searches title, original_title, overview fields
-  - [ ] 1.5: Write handler tests
+- [x] Task 1: Create Library Search API Endpoint (AC: 1, 2)
+  - [x] 1.1: Add `GET /api/v1/library/search?q=X&page=1&page_size=20&type=all` endpoint
+  - [x] 1.2: Use existing `LibraryService.SearchLibrary()` which calls FTS5
+  - [x] 1.3: Return combined movie + series results with pagination
+  - [x] 1.4: Ensure FTS5 searches title, original_title, overview fields
+  - [x] 1.5: Write handler tests
 
-- [ ] Task 2: Create Library Search Hook (AC: 1, 2)
-  - [ ] 2.1: Add `useLibrarySearch(query, params)` to `/apps/web/src/hooks/useLibrary.ts`
-  - [ ] 2.2: Query key: `['library', 'search', query, params]`
-  - [ ] 2.3: Only trigger when query.length ≥ 2
-  - [ ] 2.4: staleTime: 60s, gcTime: 5min
-  - [ ] 2.5: Add `searchLibrary(query, params)` to libraryService.ts
+- [x] Task 2: Create Library Search Hook (AC: 1, 2)
+  - [x] 2.1: Add `useLibrarySearch(query, params)` to `/apps/web/src/hooks/useLibrary.ts`
+  - [x] 2.2: Query key: `['library', 'search', query, params]`
+  - [x] 2.3: Only trigger when query.length ≥ 2
+  - [x] 2.4: staleTime: 60s, gcTime: 5min
+  - [x] 2.5: Add `searchLibrary(query, params)` to libraryService.ts
 
-- [ ] Task 3: Create Library Search Bar Component (AC: 1, 4)
-  - [ ] 3.1: Create `/apps/web/src/components/library/LibrarySearchBar.tsx`
-  - [ ] 3.2: Search icon left, clear button right (appears when value exists)
-  - [ ] 3.3: Placeholder: "搜尋媒體標題..."
-  - [ ] 3.4: 500ms debounce on input change
-  - [ ] 3.5: Add Ctrl+K global shortcut to focus search
-  - [ ] 3.6: Show result count below: "找到 N 個結果"
-  - [ ] 3.7: Write component tests
+- [x] Task 3: Create Library Search Bar Component (AC: 1, 4)
+  - [x] 3.1: Create `/apps/web/src/components/library/LibrarySearchBar.tsx`
+  - [x] 3.2: Search icon left, clear button right (appears when value exists)
+  - [x] 3.3: Placeholder: "搜尋媒體標題..."
+  - [x] 3.4: 500ms debounce on input change
+  - [x] 3.5: Add Ctrl+K global shortcut to focus search
+  - [x] 3.6: Show result count below: "找到 N 個結果"
+  - [x] 3.7: Write component tests
 
-- [ ] Task 4: Create No Results Component (AC: 3)
-  - [ ] 4.1: Create `/apps/web/src/components/library/EmptySearchResults.tsx`
-  - [ ] 4.2: Show 🔍 icon + "找不到相關結果" message
-  - [ ] 4.3: Show search query context: "搜尋「{query}」沒有找到匹配的電影或影集"
-  - [ ] 4.4: Bullet suggestions: different keywords, zh-TW/English, check spelling
-  - [ ] 4.5: Clear search button
-  - [ ] 4.6: Fade in after 500ms delay
+- [x] Task 4: Create No Results Component (AC: 3)
+  - [x] 4.1: Create `/apps/web/src/components/library/EmptySearchResults.tsx`
+  - [x] 4.2: Show 🔍 icon + "找不到相關結果" message
+  - [x] 4.3: Show search query context: "搜尋「{query}」沒有找到匹配的電影或影集"
+  - [x] 4.4: Bullet suggestions: different keywords, zh-TW/English, check spelling
+  - [x] 4.5: Clear search button
+  - [x] 4.6: Fade in after 500ms delay
 
-- [ ] Task 5: Integrate Search into Library Page (AC: 1, 2, 3, 4)
-  - [ ] 5.1: Add `q` search param to library route
-  - [ ] 5.2: When search is active, use `useLibrarySearch` instead of `useLibraryList`
-  - [ ] 5.3: Pass search results to same LibraryGrid/LibraryTable components
-  - [ ] 5.4: Show EmptySearchResults when no matches
+- [x] Task 5: Integrate Search into Library Page (AC: 1, 2, 3, 4)
+  - [x] 5.1: Add `q` search param to library route
+  - [x] 5.2: When search is active, use `useLibrarySearch` instead of `useLibraryList`
+  - [x] 5.3: Pass search results to same LibraryGrid/LibraryTable components
+  - [x] 5.4: Show EmptySearchResults when no matches
 
 ## Dev Notes
 
@@ -185,10 +185,33 @@ Frontend (modify):
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.6 (1M context)
 
 ### Debug Log References
 
 ### Completion Notes List
 
+- **Task 1:** Added `SearchLibrary` handler to `library_handler.go` with `GET /api/v1/library/search` route. Validates query ≥2 chars, type filter (all/movie/tv), pagination. Delegates to existing `LibraryService.SearchLibrary()` which uses FTS5. 8 handler tests written and passing.
+- **Task 2:** Added `useLibrarySearch` hook to `useLibrary.ts` with query key `['library', 'search', query, params]`, enabled when query ≥2 chars, staleTime 60s, gcTime 5min. Added `searchLibrary()` to `libraryService.ts` and `LibrarySearchResponse` type.
+- **Task 3:** Created `LibrarySearchBar` component with Search icon (left), clear button (right, conditional), 500ms debounce, Ctrl+K/Cmd+K focus shortcut, result count display. 16 tests written and passing.
+- **Task 4:** Created `EmptySearchResults` component with search icon, "找不到相關結果" message, query context, bullet suggestions, clear button, fade-in animation. 6 tests written and passing.
+- **Task 5:** Integrated search into library route — added `q` search param, conditional `useLibrarySearch` vs `useLibraryList`, search result → LibraryItem conversion for grid/table reuse, EmptySearchResults display. All 16 existing library route tests pass without regression.
+
 ### File List
+
+- `apps/api/internal/handlers/library_handler.go` — MODIFIED (added SearchLibrary handler + route)
+- `apps/api/internal/handlers/library_handler_test.go` — MODIFIED (added 8 search handler tests)
+- `apps/web/src/components/library/LibrarySearchBar.tsx` — NEW
+- `apps/web/src/components/library/LibrarySearchBar.spec.tsx` — NEW (16 tests)
+- `apps/web/src/components/library/EmptySearchResults.tsx` — NEW
+- `apps/web/src/components/library/EmptySearchResults.spec.tsx` — NEW (6 tests)
+- `apps/web/src/routes/library.tsx` — MODIFIED (search integration, q param)
+- `apps/web/src/hooks/useLibrary.ts` — MODIFIED (added useLibrarySearch, search keys)
+- `apps/web/src/services/libraryService.ts` — MODIFIED (added searchLibrary)
+- `apps/web/src/types/library.ts` — MODIFIED (added LibrarySearchResult, LibrarySearchResponse)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — MODIFIED (5-3 status)
+- `_bmad-output/implementation-artifacts/5-3-library-search.md` — MODIFIED (this file)
+
+## Change Log
+
+- 2026-03-15: Implemented all 5 tasks for Story 5-3 Library Search. Backend search endpoint, frontend hook/service, search bar component with debounce/keyboard shortcut, no-results component, and full library page integration. 30 new tests (8 backend + 22 frontend) all passing.

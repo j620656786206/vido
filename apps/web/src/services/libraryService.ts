@@ -1,5 +1,10 @@
 import type { ApiResponse } from '../types/tmdb';
-import type { LibraryItem, LibraryListResponse, LibraryListParams } from '../types/library';
+import type {
+  LibraryItem,
+  LibraryListResponse,
+  LibraryListParams,
+  LibrarySearchResponse,
+} from '../types/library';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
 
@@ -36,6 +41,19 @@ export const libraryService = {
   async getRecentlyAdded(limit: number = 20): Promise<LibraryItem[]> {
     const response = await fetchApi<LibraryListResponse>(`/library/recent?limit=${limit}`);
     return response.items;
+  },
+
+  async searchLibrary(
+    query: string,
+    params: LibraryListParams = {}
+  ): Promise<LibrarySearchResponse> {
+    const searchParams = new URLSearchParams();
+    searchParams.set('q', query);
+    if (params.page) searchParams.set('page', String(params.page));
+    if (params.pageSize) searchParams.set('page_size', String(params.pageSize));
+    if (params.type && params.type !== 'all') searchParams.set('type', params.type);
+
+    return fetchApi<LibrarySearchResponse>(`/library/search?${searchParams.toString()}`);
   },
 
   async deleteMovie(id: string): Promise<void> {

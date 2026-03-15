@@ -7,6 +7,9 @@ export const libraryKeys = {
   lists: () => [...libraryKeys.all, 'list'] as const,
   list: (params: LibraryListParams) => [...libraryKeys.lists(), params] as const,
   recent: (limit: number) => [...libraryKeys.all, 'recent', limit] as const,
+  searches: () => [...libraryKeys.all, 'search'] as const,
+  search: (query: string, params: LibraryListParams) =>
+    [...libraryKeys.searches(), query, params] as const,
 };
 
 export function useLibraryList(params: LibraryListParams) {
@@ -23,6 +26,16 @@ export function useRecentlyAdded(limit: number = 20) {
     queryFn: () => libraryService.getRecentlyAdded(limit),
     staleTime: 30 * 1000, // 30s (NFR-P9)
     refetchInterval: 30_000, // Auto-refresh every 30s
+  });
+}
+
+export function useLibrarySearch(query: string, params: LibraryListParams = {}) {
+  return useQuery({
+    queryKey: libraryKeys.search(query, params),
+    queryFn: () => libraryService.searchLibrary(query, params),
+    enabled: query.length >= 2,
+    staleTime: 60 * 1000, // 60s
+    gcTime: 5 * 60 * 1000, // 5min
   });
 }
 

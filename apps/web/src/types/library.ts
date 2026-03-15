@@ -70,3 +70,14 @@ export interface LibraryListParams {
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
 }
+
+export interface LibrarySearchResult {
+  type: 'movie' | 'series';
+  movie?: LibraryMovie;
+  series?: LibrarySeries;
+}
+
+export interface LibrarySearchResponse {
+  results: LibrarySearchResult[];
+  totalCount: number;
+}

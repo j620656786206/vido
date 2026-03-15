@@ -410,3 +410,119 @@ func TestLibraryHandler_GetRecentlyAdded(t *testing.T) {
 
 	mockService.AssertExpectations(t)
 }
+
+func TestLibraryHandler_SearchLibrary(t *testing.T) {
+	mockService := new(MockLibraryService)
+	handler := NewLibraryHandler(mockService)
+	router := setupLibraryTestRouter(handler)
+
+	t.Run("success - search with results", func(t *testing.T) {
+		expectedResult := &services.LibrarySearchResults{
+			Results: []services.SearchResult{
+				{Type: "movie", Movie: &models.Movie{ID: "m1", Title: "駭客任務"}},
+				{Type: "series", Series: &models.Series{ID: "s1", Title: "進擊的巨人"}},
+			},
+			Movies: &repository.PaginationResult{
+				Page: 1, PageSize: 20, TotalResults: 1, TotalPages: 1,
+			},
+			Series: &repository.PaginationResult{
+				Page: 1, PageSize: 20, TotalResults: 1, TotalPages: 1,
+			},
+			TotalCount: 2,
+		}
+
+		mockService.On("SearchLibrary", mock.Anything, "駭客", mock.Anything).Return(expectedResult, nil).Once()
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library/search?q=%E9%A7%AD%E5%AE%A2", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		var resp APIResponse
+		err := json.Unmarshal(w.Body.Bytes(), &resp)
+		require.NoError(t, err)
+		assert.True(t, resp.Success)
+
+		dataMap, ok := resp.Data.(map[string]interface{})
+		require.True(t, ok)
+		assert.Contains(t, dataMap, "results")
+		assert.Contains(t, dataMap, "totalCount")
+	})
+
+	t.Run("missing query returns 400", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library/search", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("empty query returns 400", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library/search?q=", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("query too short returns 400", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library/search?q=a", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("success - with type filter", func(t *testing.T) {
+		expectedResult := &services.LibrarySearchResults{
+			Results:    []services.SearchResult{},
+			TotalCount: 0,
+		}
+
+		mockService.On("SearchLibrary", mock.Anything, "test", mock.Anything).Return(expectedResult, nil).Once()
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library/search?q=test&type=movie", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	t.Run("success - with pagination", func(t *testing.T) {
+		expectedResult := &services.LibrarySearchResults{
+			Results:    []services.SearchResult{},
+			TotalCount: 0,
+		}
+
+		mockService.On("SearchLibrary", mock.Anything, "movie", mock.MatchedBy(func(p repository.ListParams) bool {
+			return p.Page == 2 && p.PageSize == 10
+		})).Return(expectedResult, nil).Once()
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library/search?q=movie&page=2&page_size=10", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	t.Run("invalid type returns 400", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library/search?q=test&type=invalid", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("service error returns 500", func(t *testing.T) {
+		mockService.On("SearchLibrary", mock.Anything, "fail", mock.Anything).Return(nil, errors.New("db error")).Once()
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library/search?q=fail", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
+	})
+
+	mockService.AssertExpectations(t)
+}
