@@ -110,4 +110,87 @@ describe('AppShell', () => {
     const searchInput = await screen.findByTestId('global-search-input');
     expect(searchInput).toHaveAttribute('placeholder', '搜尋電影或影集...');
   });
+
+  it('[P0] navigates to /search with query on form submit', async () => {
+    const router = createTestRouter('/');
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    render(
+      React.createElement(
+        QueryClientProvider,
+        { client: queryClient },
+        React.createElement(RouterProvider, { router })
+      )
+    );
+
+    // GIVEN: Search input is available
+    const searchInput = await screen.findByTestId('global-search-input');
+
+    // WHEN: User types a query and submits the form
+    fireEvent.change(searchInput, { target: { value: '蜘蛛人' } });
+    fireEvent.submit(screen.getByTestId('search-form'));
+
+    // THEN: Router navigates to /search with query param
+    await vi.waitFor(() => {
+      expect(router.state.location.pathname).toBe('/search');
+      expect(router.state.location.search).toEqual({ q: '蜘蛛人' });
+    });
+  });
+
+  it('[P1] does not navigate when search query is empty', async () => {
+    const router = createTestRouter('/library');
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+
+    render(
+      React.createElement(
+        QueryClientProvider,
+        { client: queryClient },
+        React.createElement(RouterProvider, { router })
+      )
+    );
+
+    // GIVEN: Search input is empty
+    const searchInput = await screen.findByTestId('global-search-input');
+    expect(searchInput).toHaveValue('');
+
+    // WHEN: User submits the form without typing
+    fireEvent.submit(screen.getByTestId('search-form'));
+
+    // THEN: Router stays on current page
+    expect(router.state.location.pathname).toBe('/library');
+  });
+
+  it('[P1] mobile search toggle shows and hides search input', async () => {
+    renderWithRouter();
+
+    // GIVEN: Mobile search is initially hidden
+    await screen.findByTestId('mobile-search-toggle');
+    expect(screen.queryByTestId('mobile-search-input')).not.toBeInTheDocument();
+
+    // WHEN: User clicks the mobile search toggle
+    fireEvent.click(screen.getByTestId('mobile-search-toggle'));
+
+    // THEN: Mobile search input appears
+    expect(screen.getByTestId('mobile-search-input')).toBeInTheDocument();
+
+    // WHEN: User clicks toggle again
+    fireEvent.click(screen.getByTestId('mobile-search-toggle'));
+
+    // THEN: Mobile search input disappears
+    expect(screen.queryByTestId('mobile-search-input')).not.toBeInTheDocument();
+  });
+
+  it('[P1] app shell container has dark theme baseline', async () => {
+    renderWithRouter();
+
+    // GIVEN/WHEN: App shell renders
+    const shell = await screen.findByTestId('app-shell');
+
+    // THEN: Container has dark theme classes
+    expect(shell).toHaveClass('bg-slate-900');
+  });
 });

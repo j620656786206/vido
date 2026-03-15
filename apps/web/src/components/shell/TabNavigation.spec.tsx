@@ -39,7 +39,14 @@ function createTestRouter(initialPath = '/library') {
     component: () => React.createElement('div', null, 'Settings'),
   });
 
+  const indexRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/',
+    component: () => React.createElement('div', null, 'Home'),
+  });
+
   const routeTree = rootRoute.addChildren([
+    indexRoute,
     libraryRoute,
     downloadsRoute,
     pendingRoute,
@@ -95,5 +102,30 @@ describe('TabNavigation', () => {
     renderWithRouter();
     const nav = await screen.findByTestId('tab-navigation');
     expect(nav).toHaveAttribute('aria-label', '主要導航');
+  });
+
+  it('[P1] highlights the active tab for pending route', async () => {
+    renderWithRouter('/pending');
+
+    // GIVEN/WHEN: User is on /pending route
+    const pendingTab = await screen.findByTestId('tab-待解析');
+
+    // THEN: Pending tab is active with correct styles
+    expect(pendingTab).toHaveClass('text-white');
+    expect(pendingTab).toHaveClass('border-blue-400');
+    expect(screen.getByTestId('tab-媒體庫')).toHaveClass('text-slate-500');
+  });
+
+  it('[P2] shows no active tab on non-tab route', async () => {
+    renderWithRouter('/');
+
+    // GIVEN/WHEN: User is on root route (not matching any tab)
+    await screen.findByTestId('tab-navigation');
+
+    // THEN: No tab has active styling
+    expect(screen.getByTestId('tab-媒體庫')).toHaveClass('text-slate-500');
+    expect(screen.getByTestId('tab-下載中')).toHaveClass('text-slate-500');
+    expect(screen.getByTestId('tab-待解析')).toHaveClass('text-slate-500');
+    expect(screen.getByTestId('tab-設定')).toHaveClass('text-slate-500');
   });
 });
