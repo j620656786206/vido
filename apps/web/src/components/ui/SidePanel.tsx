@@ -51,7 +51,7 @@ export function SidePanel({ isOpen, onClose, children, title, className }: SideP
 
   return (
     <div
-      className="fixed inset-0 z-40"
+      className="fixed inset-0 z-[60]"
       onClick={handleBackdropClick}
       role="dialog"
       aria-modal="true"
@@ -72,7 +72,7 @@ export function SidePanel({ isOpen, onClose, children, title, className }: SideP
         ref={panelRef}
         className={cn(
           // Base styles
-          'fixed right-0 top-0 z-50 h-full',
+          'fixed right-0 top-0 z-[70] h-full',
           // Task 3.3: Width - full on mobile, 450px on desktop
           'w-full sm:w-[450px]',
           // Background and shadow
