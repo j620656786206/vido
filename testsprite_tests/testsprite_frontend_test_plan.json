@@ -1,0 +1,2192 @@
+[
+  {
+    "id": "TC001",
+    "title": "Dashboard renders key panels (active downloads, recent media, QB status)",
+    "description": "Verifies the home dashboard loads and shows the core sections a user expects to see.",
+    "category": "Dashboard",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Active downloads\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Recently added\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"qBittorrent status indicator\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Active downloads\" panel is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Recently added\" panel is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC002",
+    "title": "Open and dismiss qBittorrent connection history modal from dashboard",
+    "description": "Verifies the QB status indicator opens the connection history modal and it can be dismissed.",
+    "category": "Dashboard",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"qBittorrent\" status indicator"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Connection history\" modal is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Connection history\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Close\" in the connection history modal"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Connection history\" modal is not visible"
+      }
+    ]
+  },
+  {
+    "id": "TC003",
+    "title": "Connection history modal shows event list structure",
+    "description": "Verifies the connection history modal displays a list-like history (even if empty) with recognizable event information.",
+    "category": "Dashboard",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"qBittorrent\" status indicator"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Connection history\" modal is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Events\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"connection history event list\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Close\" in the connection history modal"
+      }
+    ]
+  },
+  {
+    "id": "TC004",
+    "title": "New media toast notification can be dismissed",
+    "description": "Verifies that when a new media toast is shown, the user can dismiss it and it disappears.",
+    "category": "Dashboard",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Wait for element \"new media\" toast notification to appear"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"new media\" toast notification is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Dismiss\" on the toast notification"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"new media\" toast notification is not visible"
+      }
+    ]
+  },
+  {
+    "id": "TC005",
+    "title": "New media toast is visible and contains a recognizable title",
+    "description": "Verifies the new media notification toast presents human-readable content that identifies the media item.",
+    "category": "Dashboard",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Wait for element \"new media\" toast notification to appear"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"new media\" toast notification is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"toast title\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"toast body\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Dismiss\" on the toast notification"
+      }
+    ]
+  },
+  {
+    "id": "TC006",
+    "title": "Disconnected QB state shows error toast and provides Settings guidance text",
+    "description": "Verifies that when qBittorrent is disconnected, the dashboard surfaces an error state and a visible recommendation to check the qBittorrent settings page.",
+    "category": "Dashboard",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"qBittorrent status indicator\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Disconnected\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Connection error\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"/settings/qbittorrent\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC007",
+    "title": "Disconnected QB state allows retry action and still shows persistent error on failure",
+    "description": "Verifies the retry control is present in the disconnected state and the UI still indicates failure when the connection remains down.",
+    "category": "Dashboard",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Connection error\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Retry\""
+      },
+      {
+        "type": "action",
+        "description": "Wait for text \"Connection error\" to be visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Connection error\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Check /settings/qbittorrent\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC008",
+    "title": "Dashboard download panel supports basic status comprehension (counts/progress visible)",
+    "description": "Verifies the Active downloads area provides visible progress information and/or counts suitable for monitoring.",
+    "category": "Dashboard",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Active downloads\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"download progress bar\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"download item\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"download counts\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC009",
+    "title": "Switch to list view, sort by Year, paginate, and verify item count updates",
+    "description": "Verifies the library supports view toggle, sorting in list view, and pagination with a visible item count change.",
+    "category": "Media Library",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /library"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Library\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click the view toggle control to switch to list view"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a table header row is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Year\" column header to sort"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the \"Year\" column header is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click \"Next\" in the pagination control"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the item count display text is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC010",
+    "title": "Delete an item from list view and confirm it is removed",
+    "description": "Verifies deleting a media item from the library via the item action menu removes it from the visible list after confirmation.",
+    "category": "Media Library",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /library"
+      },
+      {
+        "type": "action",
+        "description": "Click the view toggle control to switch to list view"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a media items table is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click the action menu for the first media item in the table"
+      },
+      {
+        "type": "action",
+        "description": "Click \"Delete\" in the action menu"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Confirm\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click \"Confirm\" in the delete confirmation dialog"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Deleted\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC011",
+    "title": "Cancel delete from item action menu leaves item intact",
+    "description": "Verifies canceling the delete confirmation does not remove the item from the library view.",
+    "category": "Media Library",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /library"
+      },
+      {
+        "type": "action",
+        "description": "Click the view toggle control to switch to list view"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a media items table is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click the action menu for the first media item in the table"
+      },
+      {
+        "type": "action",
+        "description": "Click \"Delete\" in the action menu"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Confirm\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click \"Cancel\" in the delete confirmation dialog"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the media items table is still visible"
+      }
+    ]
+  },
+  {
+    "id": "TC012",
+    "title": "Filter media by type TV and then clear filter to repopulate results",
+    "description": "Verifies type filtering can be applied and cleared, and results update accordingly (including empty state when no matches).",
+    "category": "Media Library",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /library"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the type filter control is visible"
+      },
+      {
+        "type": "action",
+        "description": "Select \"TV\" from the type filter dropdown"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"No media found\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click \"Clear filter\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"No media found\" is not visible"
+      }
+    ]
+  },
+  {
+    "id": "TC013",
+    "title": "Export a media item from the action menu shows visible confirmation/feedback",
+    "description": "Verifies the Export action is reachable from an item menu and provides visible UI feedback after triggering export.",
+    "category": "Media Library",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /library"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a grid of media poster cards or a media items table is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click the action menu for the first visible media item"
+      },
+      {
+        "type": "action",
+        "description": "Click \"Export\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Export\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Success\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC014",
+    "title": "Pagination previous/next controls behave at boundaries",
+    "description": "Verifies pagination boundary behavior (e.g., Previous disabled on first page) using visible control states and navigation results.",
+    "category": "Media Library",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /library"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the pagination control is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Previous\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click \"Next\" in the pagination control"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Previous\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click \"Previous\" in the pagination control"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the pagination control is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC015",
+    "title": "Search for a Traditional Chinese query and view paginated results",
+    "description": "Verifies that a valid (>=2 characters) Traditional Chinese query returns visible, paginated results on the Search page.",
+    "category": "Search",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /search"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Search\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on the search input"
+      },
+      {
+        "type": "action",
+        "description": "Type \"魔女宅急便\" into the search input"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Search results list\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Pagination controls\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Next\" in the pagination controls"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Search results list\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC016",
+    "title": "Open a search result and verify media detail page shows key metadata",
+    "description": "Verifies that clicking a search result navigates to a media detail page and shows core metadata (Traditional Chinese title, poster, year, genres).",
+    "category": "Search",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /search"
+      },
+      {
+        "type": "action",
+        "description": "Click on the search input"
+      },
+      {
+        "type": "action",
+        "description": "Type \"魔女宅急便\" into the search input"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Search results list\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on the first result in the search results list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/media/\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Poster\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Genres\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC017",
+    "title": "Validate minimum query length (1 character) shows inline message and no results",
+    "description": "Verifies that entering fewer than 2 characters shows the validation message and prevents results from populating.",
+    "category": "Search",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /search"
+      },
+      {
+        "type": "action",
+        "description": "Click on the search input"
+      },
+      {
+        "type": "action",
+        "description": "Type \"a\" into the search input"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Please enter at least 2 characters\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Search results list\" is not visible"
+      }
+    ]
+  },
+  {
+    "id": "TC018",
+    "title": "Filter results by Movie type after searching",
+    "description": "Verifies that filtering to Movie updates the visible results set for a valid query.",
+    "category": "Search",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /search"
+      },
+      {
+        "type": "action",
+        "description": "Click on the search input"
+      },
+      {
+        "type": "action",
+        "description": "Type \"魔女宅急便\" into the search input"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Search results list\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Movie\" type filter tab"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Search results list\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Active type filter: Movie\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC019",
+    "title": "Filter results by TV type after searching",
+    "description": "Verifies that filtering to TV updates the visible results set for a valid query.",
+    "category": "Search",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /search"
+      },
+      {
+        "type": "action",
+        "description": "Click on the search input"
+      },
+      {
+        "type": "action",
+        "description": "Type \"魔女宅急便\" into the search input"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Search results list\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"TV\" type filter tab"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Search results list\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Active type filter: TV\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC020",
+    "title": "Paginate within a filtered result set",
+    "description": "Verifies that pagination works after applying a type filter (e.g., Movie).",
+    "category": "Search",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /search"
+      },
+      {
+        "type": "action",
+        "description": "Click on the search input"
+      },
+      {
+        "type": "action",
+        "description": "Type \"魔女宅急便\" into the search input"
+      },
+      {
+        "type": "action",
+        "description": "Click on the \"Movie\" type filter tab"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Pagination controls\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Next\" in the pagination controls"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Search results list\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Active type filter: Movie\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC021",
+    "title": "Filter to Downloading and view inline torrent details with ETA and speed",
+    "description": "Verifies that the downloads list can be filtered to Downloading and that clicking a row opens inline details showing ETA and speed metrics.",
+    "category": "Downloads Monitor",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /downloads"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Downloads\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click filter tab \"Downloading\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Downloading\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click the first torrent row in the list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"ETA\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Speed\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC022",
+    "title": "Completed filter shows empty state with scan call-to-action",
+    "description": "Verifies that when there are no completed downloads, the Completed filter shows an empty state message and a Scan completed downloads call-to-action.",
+    "category": "Downloads Monitor",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /downloads"
+      },
+      {
+        "type": "action",
+        "description": "Click filter tab \"Completed\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"empty state\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"No completed downloads\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Scan completed downloads\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC023",
+    "title": "Scan completed downloads shows 'No new completed downloads' toast",
+    "description": "Verifies that scanning from the Completed empty state triggers a toast indicating no newly found completed downloads.",
+    "category": "Downloads Monitor",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /downloads"
+      },
+      {
+        "type": "action",
+        "description": "Click filter tab \"Completed\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Scan completed downloads\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click \"Scan completed downloads\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"No new completed downloads\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC024",
+    "title": "Sort downloads by Name changes ordering",
+    "description": "Verifies that sorting by Name is available and results in a visibly re-ordered list.",
+    "category": "Downloads Monitor",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /downloads"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"downloads list\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click sort control for \"Name\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Name\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click sort control for \"Name\" again"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Name\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC025",
+    "title": "Sort downloads by Progress changes ordering",
+    "description": "Verifies that sorting by Progress is available and results in a visibly re-ordered list.",
+    "category": "Downloads Monitor",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /downloads"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"downloads list\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click sort control for \"Progress\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Progress\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click sort control for \"Progress\" again"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Progress\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC026",
+    "title": "Switch among multiple status filters without losing page stability",
+    "description": "Verifies that the user can switch between multiple status filter tabs and the UI remains responsive with a visible list or empty state each time.",
+    "category": "Downloads Monitor",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /downloads"
+      },
+      {
+        "type": "action",
+        "description": "Click filter tab \"All\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"downloads list\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click filter tab \"Paused\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"downloads list\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click filter tab \"Seeding\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"downloads list\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC027",
+    "title": "Empty state appears for a filter with no matching downloads",
+    "description": "Verifies that selecting a filter with no matching items shows an empty state rather than a broken or blank page.",
+    "category": "Downloads Monitor",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /downloads"
+      },
+      {
+        "type": "action",
+        "description": "Click filter tab \"Error\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"empty state\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"No downloads\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Error\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC028",
+    "title": "Media detail side panel shows core metadata and credits (movie or TV)",
+    "description": "Verifies the media detail view renders key metadata fields and a visible credits section.",
+    "category": "Media Detail",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /search"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Search\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on the first visible media result in the results list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/media/\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"media detail side panel\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"poster\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Credits\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC029",
+    "title": "Open metadata editor dialog from media detail",
+    "description": "Verifies the Edit action opens the metadata editor dialog from the media detail side panel.",
+    "category": "Media Detail",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /search"
+      },
+      {
+        "type": "action",
+        "description": "Click on the first visible media result in the results list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"media detail side panel\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Edit\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Metadata editor\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Save\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Title\" field is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC030",
+    "title": "Cancel/close metadata editor without saving",
+    "description": "Verifies the user can close the metadata editor and return to the media detail side panel without applying changes.",
+    "category": "Media Detail",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /search"
+      },
+      {
+        "type": "action",
+        "description": "Click on the first visible media result in the results list"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Edit\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Metadata editor\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Close\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Metadata editor\" is not visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"media detail side panel\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC031",
+    "title": "Inline validation: invalid year shows 'Invalid year' and blocks save",
+    "description": "Verifies Zod validation displays an inline error for an invalid year and prevents a successful save until corrected.",
+    "category": "Media Detail",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /search"
+      },
+      {
+        "type": "action",
+        "description": "Click on the first visible media result in the results list"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Edit\""
+      },
+      {
+        "type": "action",
+        "description": "Fill \"abcd\" into the \"Year\" field"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Save\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Invalid year\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Metadata editor\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC032",
+    "title": "Update metadata fields and save successfully (title + overview)",
+    "description": "Verifies saving edited title and overview updates the visible metadata in the side panel after a successful save.",
+    "category": "Media Detail",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /search"
+      },
+      {
+        "type": "action",
+        "description": "Click on the first visible media result in the results list"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Edit\""
+      },
+      {
+        "type": "action",
+        "description": "Fill \"Test Title Updated\" into the \"Title\" field"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"Test overview updated by E2E.\" into the \"Overview\" field"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Save\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Test Title Updated\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Test overview updated by E2E.\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC033",
+    "title": "Upload poster via URL and save updates poster in side panel",
+    "description": "Verifies the poster can be set via URL in the metadata editor and the updated poster is visible after save.",
+    "category": "Media Detail",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /search"
+      },
+      {
+        "type": "action",
+        "description": "Click on the first visible media result in the results list"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Edit\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Poster URL\" field is visible"
+      },
+      {
+        "type": "action",
+        "description": "Fill \"https://example.com/poster.jpg\" into the \"Poster URL\" field"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Save\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"poster\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC034",
+    "title": "Close side panel returns to previous page",
+    "description": "Verifies closing the media detail side panel navigates back to the originating page (Search) without direct URL navigation.",
+    "category": "Media Detail",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /search"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Search\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on the first visible media result in the results list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"media detail side panel\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Close\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/search\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Search\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC035",
+    "title": "Load qBittorrent settings page and verify form is visible",
+    "description": "Verifies the qBittorrent settings page loads and shows the key input fields and actions.",
+    "category": "qBittorrent Settings",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/qbittorrent"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify page title contains \"qBittorrent\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Host\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Username\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Password\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Test Connection\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Save\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC036",
+    "title": "Successful connection test and save settings",
+    "description": "Verifies a user can test a valid qBittorrent connection and then save the configuration, seeing success confirmations.",
+    "category": "qBittorrent Settings",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/qbittorrent"
+      },
+      {
+        "type": "action",
+        "description": "Type \"http://localhost:8080\" into \"Host\" field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"admin\" into \"Username\" field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"adminadmin\" into \"Password\" field"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Test Connection\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Connected\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"qBittorrent\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Save\""
+      }
+    ]
+  },
+  {
+    "id": "TC037",
+    "title": "Verify save confirmation after successful test",
+    "description": "Verifies the UI shows a clear confirmation that settings were saved after a successful connection test.",
+    "category": "qBittorrent Settings",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/qbittorrent"
+      },
+      {
+        "type": "action",
+        "description": "Type \"http://localhost:8080\" into \"Host\" field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"admin\" into \"Username\" field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"adminadmin\" into \"Password\" field"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Test Connection\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Connected\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Save\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Settings saved\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC038",
+    "title": "Connection test failure shows inline error and guidance",
+    "description": "Verifies an invalid host causes the connection test to fail and shows an inline error with guidance.",
+    "category": "qBittorrent Settings",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/qbittorrent"
+      },
+      {
+        "type": "action",
+        "description": "Type \"http://invalid-host\" into \"Host\" field"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Test Connection\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Connection failed\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"verify\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"host\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"credentials\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC039",
+    "title": "Save is disabled (or blocked) until a successful test occurs",
+    "description": "Verifies the user cannot save qBittorrent settings when the last connection test failed or was not successful.",
+    "category": "qBittorrent Settings",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/qbittorrent"
+      },
+      {
+        "type": "action",
+        "description": "Type \"http://invalid-host\" into \"Host\" field"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Test Connection\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Connection failed\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Save\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Test Connection\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Save\""
+      }
+    ]
+  },
+  {
+    "id": "TC040",
+    "title": "Empty host validation prevents connection test",
+    "description": "Verifies the Host field is required and the UI prevents running a connection test when Host is empty.",
+    "category": "qBittorrent Settings",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/qbittorrent"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Test Connection\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Host\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"required\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Connection failed\" is not visible"
+      }
+    ]
+  },
+  {
+    "id": "TC041",
+    "title": "Password field masks input",
+    "description": "Verifies the password input is treated as a password field (masked) and is present for secure entry.",
+    "category": "qBittorrent Settings",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/qbittorrent"
+      },
+      {
+        "type": "action",
+        "description": "Type \"secret-password\" into \"Password\" field"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Password\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"secret-password\" is not visible"
+      }
+    ]
+  },
+  {
+    "id": "TC042",
+    "title": "Re-test after failure shows updated success state",
+    "description": "Verifies the UI can recover from a failed test by re-running a successful test and displaying the success result.",
+    "category": "qBittorrent Settings",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/qbittorrent"
+      },
+      {
+        "type": "action",
+        "description": "Type \"http://invalid-host\" into \"Host\" field"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Test Connection\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Connection failed\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Type \"http://localhost:8080\" into \"Host\" field"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Test Connection\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Connected\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC043",
+    "title": "Dashboard shows qBittorrent health indicator in Connected state (happy path)",
+    "description": "Verifies the dashboard renders the QB connection health indicator as connected when backend reports connected.",
+    "category": "Connection Health Monitoring",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"qBittorrent connection health indicator\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"connected\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"connected (green) state indicator\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC044",
+    "title": "Open connection history modal from the health indicator",
+    "description": "Verifies clicking the QB health indicator opens the connection history modal UI.",
+    "category": "Connection Health Monitoring",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"qBittorrent connection health indicator\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Connection history modal\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"History\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC045",
+    "title": "Connection history modal shows timestamped events list",
+    "description": "Verifies the history modal displays a list of connection events with visible timestamps.",
+    "category": "Connection Health Monitoring",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"qBittorrent connection health indicator\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Connection history events list\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"event timestamp\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"event type\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC046",
+    "title": "Filter connection history to Errors only",
+    "description": "Verifies the history modal filter for error events narrows the list and shows only error-type entries.",
+    "category": "Connection Health Monitoring",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"qBittorrent connection health indicator\""
+      },
+      {
+        "type": "action",
+        "description": "Click on filter \"errors\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"error\" is visible in the connection history events list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"connected\" is not visible in the connection history events list"
+      }
+    ]
+  },
+  {
+    "id": "TC047",
+    "title": "Dashboard shows Degraded state when health API reports degraded",
+    "description": "Verifies the QB health indicator reflects a degraded status when the service is partially unhealthy.",
+    "category": "Connection Health Monitoring",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"qBittorrent connection health indicator\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"degraded\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"degraded state indicator\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC048",
+    "title": "Indicator and modal remain usable after switching filters multiple times",
+    "description": "Verifies filter toggling does not break the modal and continues to render a consistent event list state.",
+    "category": "Connection Health Monitoring",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"qBittorrent connection health indicator\""
+      },
+      {
+        "type": "action",
+        "description": "Click on filter \"errors\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Connection history events list\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on filter \"all\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Connection history events list\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC049",
+    "title": "Manual metadata search returns results and can be applied successfully",
+    "description": "Verifies a user can open Manual Search from the metadata editor, select a search result, apply it, and see updated metadata.",
+    "category": "Manual Metadata Search",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /search"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify page title contains \"Search\""
+      },
+      {
+        "type": "action",
+        "description": "Type \"Attack on Titan\" into the search input field"
+      },
+      {
+        "type": "action",
+        "description": "Press Enter"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Search results\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on the first search result item"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Edit\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click \"Edit\""
+      }
+    ]
+  },
+  {
+    "id": "TC050",
+    "title": "Manual search supports multi-source results visibility",
+    "description": "Verifies manual search results show entries from multiple metadata sources (as grouped sections or source labels).",
+    "category": "Manual Metadata Search",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /search"
+      },
+      {
+        "type": "action",
+        "description": "Type \"Attack on Titan\" into the search input field"
+      },
+      {
+        "type": "action",
+        "description": "Press Enter"
+      },
+      {
+        "type": "action",
+        "description": "Click on the first search result item"
+      },
+      {
+        "type": "action",
+        "description": "Click \"Edit\""
+      },
+      {
+        "type": "action",
+        "description": "Click \"Manual Search\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Manual Search\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Source\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC051",
+    "title": "Manual search with a specific query returns results list",
+    "description": "Verifies typing a specific manual search query produces a visible list of matches.",
+    "category": "Manual Metadata Search",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /search"
+      },
+      {
+        "type": "action",
+        "description": "Type \"Attack on Titan\" into the search input field"
+      },
+      {
+        "type": "action",
+        "description": "Press Enter"
+      },
+      {
+        "type": "action",
+        "description": "Click on the first search result item"
+      },
+      {
+        "type": "action",
+        "description": "Click \"Edit\""
+      },
+      {
+        "type": "action",
+        "description": "Click \"Manual Search\""
+      },
+      {
+        "type": "action",
+        "description": "Type \"Attack on Titan S02\" into the manual search query input field"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Manual search results\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC052",
+    "title": "Selecting a manual search result shows a confirmation/preview before apply",
+    "description": "Verifies clicking a manual search result shows a selected state or metadata preview, indicating what will be applied.",
+    "category": "Manual Metadata Search",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /search"
+      },
+      {
+        "type": "action",
+        "description": "Type \"Attack on Titan\" into the search input field"
+      },
+      {
+        "type": "action",
+        "description": "Press Enter"
+      },
+      {
+        "type": "action",
+        "description": "Click on the first search result item"
+      },
+      {
+        "type": "action",
+        "description": "Click \"Edit\""
+      },
+      {
+        "type": "action",
+        "description": "Click \"Manual Search\""
+      },
+      {
+        "type": "action",
+        "description": "Type \"Attack on Titan S02\" into the manual search query input field"
+      },
+      {
+        "type": "action",
+        "description": "Click on the first manual search result"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Apply\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC053",
+    "title": "Applying a selected manual search result updates metadata shown in the editor",
+    "description": "Verifies clicking Apply after selecting a manual search result results in visible updated metadata in the editor UI.",
+    "category": "Manual Metadata Search",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /search"
+      },
+      {
+        "type": "action",
+        "description": "Type \"Attack on Titan\" into the search input field"
+      },
+      {
+        "type": "action",
+        "description": "Press Enter"
+      },
+      {
+        "type": "action",
+        "description": "Click on the first search result item"
+      },
+      {
+        "type": "action",
+        "description": "Click \"Edit\""
+      },
+      {
+        "type": "action",
+        "description": "Click \"Manual Search\""
+      },
+      {
+        "type": "action",
+        "description": "Type \"Attack on Titan S02\" into the manual search query input field"
+      },
+      {
+        "type": "action",
+        "description": "Click on the first manual search result"
+      },
+      {
+        "type": "action",
+        "description": "Click \"Apply\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Applied\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC054",
+    "title": "Manual search shows 'No matches found' for a rare query",
+    "description": "Verifies a rare query returns an empty state message instead of results.",
+    "category": "Manual Metadata Search",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /search"
+      },
+      {
+        "type": "action",
+        "description": "Type \"Attack on Titan\" into the search input field"
+      },
+      {
+        "type": "action",
+        "description": "Press Enter"
+      },
+      {
+        "type": "action",
+        "description": "Click on the first search result item"
+      },
+      {
+        "type": "action",
+        "description": "Click \"Edit\""
+      },
+      {
+        "type": "action",
+        "description": "Click \"Manual Search\""
+      },
+      {
+        "type": "action",
+        "description": "Type \"zzzz-no-such-title-12345\" into the manual search query input field"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"No matches found\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC055",
+    "title": "From 'No matches found', user can choose 'Edit manually' entry point",
+    "description": "Verifies the empty-state path offers an 'Edit manually' action and opens manual editing UI.",
+    "category": "Manual Metadata Search",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /search"
+      },
+      {
+        "type": "action",
+        "description": "Type \"Attack on Titan\" into the search input field"
+      },
+      {
+        "type": "action",
+        "description": "Press Enter"
+      },
+      {
+        "type": "action",
+        "description": "Click on the first search result item"
+      },
+      {
+        "type": "action",
+        "description": "Click \"Edit\""
+      },
+      {
+        "type": "action",
+        "description": "Click \"Manual Search\""
+      },
+      {
+        "type": "action",
+        "description": "Type \"zzzz-no-such-title-12345\" into the manual search query input field"
+      },
+      {
+        "type": "action",
+        "description": "Click \"Edit manually\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Save\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC056",
+    "title": "Manual edits can be saved after choosing 'Edit manually'",
+    "description": "Verifies a user can make a manual edit and save it after no search results are found.",
+    "category": "Manual Metadata Search",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /search"
+      },
+      {
+        "type": "action",
+        "description": "Type \"Attack on Titan\" into the search input field"
+      },
+      {
+        "type": "action",
+        "description": "Press Enter"
+      },
+      {
+        "type": "action",
+        "description": "Click on the first search result item"
+      },
+      {
+        "type": "action",
+        "description": "Click \"Edit\""
+      },
+      {
+        "type": "action",
+        "description": "Click \"Manual Search\""
+      },
+      {
+        "type": "action",
+        "description": "Type \"zzzz-no-such-title-12345\" into the manual search query input field"
+      },
+      {
+        "type": "action",
+        "description": "Click \"Edit manually\""
+      },
+      {
+        "type": "action",
+        "description": "Type \"Test Title Override\" into the \"Title\" field"
+      },
+      {
+        "type": "action",
+        "description": "Click \"Save\""
+      }
+    ]
+  },
+  {
+    "id": "TC057",
+    "title": "Learned Patterns list loads and shows list + stats sections",
+    "description": "Verifies the Learned Patterns UI loads from Settings and displays expected list and statistics areas.",
+    "category": "Pattern Learning",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/qbittorrent"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify page title contains \"qBittorrent\""
+      },
+      {
+        "type": "action",
+        "description": "Scroll to the \"Learned Patterns\" section"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Learned Patterns\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Learned Patterns list\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Pattern statistics\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC058",
+    "title": "Learned Patterns list supports empty state when no patterns exist",
+    "description": "Verifies the UI provides a clear empty state when there are no learned patterns to display.",
+    "category": "Pattern Learning",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/qbittorrent"
+      },
+      {
+        "type": "action",
+        "description": "Scroll to the \"Learned Patterns\" section"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Learned Patterns\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify one of the following is visible: text \"No learned patterns\" or text \"No patterns\" or text \"Nothing to show\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Learned Patterns list\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC059",
+    "title": "Learned Patterns row renders required fields (pattern + usage stats)",
+    "description": "Verifies a learned pattern entry shows a recognizable pattern identifier and usage-related statistics in the list.",
+    "category": "Pattern Learning",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/qbittorrent"
+      },
+      {
+        "type": "action",
+        "description": "Scroll to the \"Learned Patterns\" section"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Learned Patterns\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"A learned pattern row\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify one of the following is visible within the patterns area: text \"Uses\" or text \"Usage\" or text \"Matched\""
+      }
+    ]
+  },
+  {
+    "id": "TC060",
+    "title": "Delete learned pattern success removes it from the list",
+    "description": "Verifies deleting a learned pattern removes the entry from the Learned Patterns list after successful deletion.",
+    "category": "Pattern Learning",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/qbittorrent"
+      },
+      {
+        "type": "action",
+        "description": "Scroll to the \"Learned Patterns\" section"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"A learned pattern row\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Delete\" for the first learned pattern row"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Unable to delete pattern\" is not visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"The deleted learned pattern row\" is not visible"
+      }
+    ]
+  },
+  {
+    "id": "TC061",
+    "title": "Delete action can be cancelled if a confirmation is shown",
+    "description": "Verifies that if the UI shows a delete confirmation prompt/modal, cancelling does not remove the pattern.",
+    "category": "Pattern Learning",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/qbittorrent"
+      },
+      {
+        "type": "action",
+        "description": "Scroll to the \"Learned Patterns\" section"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"A learned pattern row\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Delete\" for a learned pattern row"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Delete confirmation\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Cancel\" in the delete confirmation"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"A learned pattern row\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC062",
+    "title": "Learned Patterns statistics update/refresh is reflected on the page",
+    "description": "Verifies the statistics area can be refreshed (via visible refresh control if present) and remains visible after update.",
+    "category": "Pattern Learning",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/qbittorrent"
+      },
+      {
+        "type": "action",
+        "description": "Scroll to the \"Learned Patterns\" section"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Pattern statistics\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Refresh\" in the Learned Patterns or Statistics area"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Pattern statistics\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Learned Patterns list\" is visible"
+      }
+    ]
+  }
+]

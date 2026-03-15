@@ -4,6 +4,9 @@
 # Claude Code TTS audio files
 .claude/audio/
 
+# TestSprite temp files (contains API keys and session data)
+testsprite_tests/tmp/
+
 # See https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
 
 # compiled output
