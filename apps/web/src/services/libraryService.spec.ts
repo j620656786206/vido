@@ -220,4 +220,204 @@ describe('libraryService', () => {
       expect(result).toEqual(exportData);
     });
   });
+
+  describe('listLibrary filter params', () => {
+    it('[P0] includes genres as query param', async () => {
+      mockFetch.mockResolvedValue(
+        mockSuccessResponse({ items: [], page: 1, pageSize: 20, totalItems: 0, totalPages: 0 })
+      );
+
+      await libraryService.listLibrary({ genres: '科幻,動作' });
+
+      const url = mockFetch.mock.calls[0][0] as string;
+      expect(url).toContain('genres=%E7%A7%91%E5%B9%BB%2C%E5%8B%95%E4%BD%9C');
+    });
+
+    it('[P0] includes yearMin as year_min query param', async () => {
+      mockFetch.mockResolvedValue(
+        mockSuccessResponse({ items: [], page: 1, pageSize: 20, totalItems: 0, totalPages: 0 })
+      );
+
+      await libraryService.listLibrary({ yearMin: 2010 });
+
+      const url = mockFetch.mock.calls[0][0] as string;
+      expect(url).toContain('year_min=2010');
+    });
+
+    it('[P0] includes yearMax as year_max query param', async () => {
+      mockFetch.mockResolvedValue(
+        mockSuccessResponse({ items: [], page: 1, pageSize: 20, totalItems: 0, totalPages: 0 })
+      );
+
+      await libraryService.listLibrary({ yearMax: 2020 });
+
+      const url = mockFetch.mock.calls[0][0] as string;
+      expect(url).toContain('year_max=2020');
+    });
+
+    it('[P0] includes all filter params together', async () => {
+      mockFetch.mockResolvedValue(
+        mockSuccessResponse({ items: [], page: 1, pageSize: 20, totalItems: 0, totalPages: 0 })
+      );
+
+      await libraryService.listLibrary({
+        type: 'movie',
+        genres: '劇情',
+        yearMin: 2000,
+        yearMax: 2010,
+        sortBy: 'title',
+        sortOrder: 'asc',
+        page: 2,
+        pageSize: 10,
+      });
+
+      const url = mockFetch.mock.calls[0][0] as string;
+      expect(url).toContain('type=movie');
+      expect(url).toContain('genres=');
+      expect(url).toContain('year_min=2000');
+      expect(url).toContain('year_max=2010');
+      expect(url).toContain('sort_by=title');
+      expect(url).toContain('sort_order=asc');
+      expect(url).toContain('page=2');
+      expect(url).toContain('page_size=10');
+    });
+
+    it('[P1] omits yearMin when not provided', async () => {
+      mockFetch.mockResolvedValue(
+        mockSuccessResponse({ items: [], page: 1, pageSize: 20, totalItems: 0, totalPages: 0 })
+      );
+
+      await libraryService.listLibrary({ genres: '科幻' });
+
+      const url = mockFetch.mock.calls[0][0] as string;
+      expect(url).not.toContain('year_min');
+      expect(url).not.toContain('year_max');
+    });
+
+    it('[P1] omits genres when not provided', async () => {
+      mockFetch.mockResolvedValue(
+        mockSuccessResponse({ items: [], page: 1, pageSize: 20, totalItems: 0, totalPages: 0 })
+      );
+
+      await libraryService.listLibrary({ yearMin: 2020 });
+
+      const url = mockFetch.mock.calls[0][0] as string;
+      expect(url).not.toContain('genres');
+    });
+  });
+
+  describe('searchLibrary', () => {
+    it('[P1] calls GET /library/search with query param', async () => {
+      mockFetch.mockResolvedValue(
+        mockSuccessResponse({ items: [], totalItems: 0, page: 1, pageSize: 20, totalPages: 0 })
+      );
+
+      await libraryService.searchLibrary('batman');
+
+      const url = mockFetch.mock.calls[0][0] as string;
+      expect(url).toContain('/library/search?');
+      expect(url).toContain('q=batman');
+    });
+
+    it('[P1] includes type filter in search', async () => {
+      mockFetch.mockResolvedValue(
+        mockSuccessResponse({ items: [], totalItems: 0, page: 1, pageSize: 20, totalPages: 0 })
+      );
+
+      await libraryService.searchLibrary('test', { type: 'movie' });
+
+      const url = mockFetch.mock.calls[0][0] as string;
+      expect(url).toContain('q=test');
+      expect(url).toContain('type=movie');
+    });
+
+    it('[P1] includes pagination params in search', async () => {
+      mockFetch.mockResolvedValue(
+        mockSuccessResponse({ items: [], totalItems: 0, page: 2, pageSize: 10, totalPages: 0 })
+      );
+
+      await libraryService.searchLibrary('query', { page: 2, pageSize: 10 });
+
+      const url = mockFetch.mock.calls[0][0] as string;
+      expect(url).toContain('page=2');
+      expect(url).toContain('page_size=10');
+    });
+
+    it('[P1] omits type when "all"', async () => {
+      mockFetch.mockResolvedValue(
+        mockSuccessResponse({ items: [], totalItems: 0, page: 1, pageSize: 20, totalPages: 0 })
+      );
+
+      await libraryService.searchLibrary('test', { type: 'all' });
+
+      const url = mockFetch.mock.calls[0][0] as string;
+      expect(url).not.toContain('type=');
+    });
+
+    it('[P1] throws on API error', async () => {
+      mockFetch.mockResolvedValue(mockErrorResponse(500, 'Search failed'));
+
+      await expect(libraryService.searchLibrary('test')).rejects.toThrow('Search failed');
+    });
+  });
+
+  describe('getGenres', () => {
+    it('[P1] calls GET /library/genres', async () => {
+      const genres = ['科幻', '動作', '劇情', '恐怖'];
+      mockFetch.mockResolvedValue(mockSuccessResponse(genres));
+
+      const result = await libraryService.getGenres();
+
+      expect(mockFetch).toHaveBeenCalledWith(`${API_BASE}/library/genres`, undefined);
+      expect(result).toEqual(genres);
+    });
+
+    it('[P1] throws on API error', async () => {
+      mockFetch.mockResolvedValue(mockErrorResponse(500, 'Failed to fetch genres'));
+
+      await expect(libraryService.getGenres()).rejects.toThrow('Failed to fetch genres');
+    });
+  });
+
+  describe('getStats', () => {
+    it('[P1] calls GET /library/stats', async () => {
+      const stats = { yearMin: 1990, yearMax: 2024, movieCount: 100, tvCount: 50, totalCount: 150 };
+      mockFetch.mockResolvedValue(mockSuccessResponse(stats));
+
+      const result = await libraryService.getStats();
+
+      expect(mockFetch).toHaveBeenCalledWith(`${API_BASE}/library/stats`, undefined);
+      expect(result).toEqual(stats);
+    });
+
+    it('[P1] throws on API error', async () => {
+      mockFetch.mockResolvedValue(mockErrorResponse(500, 'Failed to fetch stats'));
+
+      await expect(libraryService.getStats()).rejects.toThrow('Failed to fetch stats');
+    });
+  });
+
+  describe('getRecentlyAdded', () => {
+    it('[P2] calls GET /library/recent with default limit', async () => {
+      mockFetch.mockResolvedValue(
+        mockSuccessResponse({ items: [], page: 1, pageSize: 20, totalItems: 0, totalPages: 0 })
+      );
+
+      await libraryService.getRecentlyAdded();
+
+      const url = mockFetch.mock.calls[0][0] as string;
+      expect(url).toContain('/library/recent?limit=20');
+    });
+
+    it('[P2] calls GET /library/recent with custom limit', async () => {
+      mockFetch.mockResolvedValue(
+        mockSuccessResponse({ items: [], page: 1, pageSize: 10, totalItems: 0, totalPages: 0 })
+      );
+
+      await libraryService.getRecentlyAdded(10);
+
+      const url = mockFetch.mock.calls[0][0] as string;
+      expect(url).toContain('/library/recent?limit=10');
+    });
+  });
 });

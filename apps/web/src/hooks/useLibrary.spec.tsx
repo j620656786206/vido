@@ -4,16 +4,24 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   libraryKeys,
   useLibraryList,
+  useLibraryGenres,
+  useLibraryStats,
+  useLibrarySearch,
+  useRecentlyAdded,
   useDeleteLibraryItem,
   useReparseItem,
   useExportItem,
 } from './useLibrary';
 import { libraryService } from '../services/libraryService';
-import type { LibraryListResponse } from '../types/library';
+import type { LibraryListResponse, LibraryStats } from '../types/library';
 
 vi.mock('../services/libraryService', () => ({
   libraryService: {
     listLibrary: vi.fn(),
+    searchLibrary: vi.fn(),
+    getRecentlyAdded: vi.fn(),
+    getGenres: vi.fn(),
+    getStats: vi.fn(),
     deleteMovie: vi.fn(),
     deleteSeries: vi.fn(),
     reparseMovie: vi.fn(),
@@ -106,6 +114,167 @@ describe('useLibraryList', () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error?.message).toBe('Fetch failed');
+  });
+});
+
+describe('useLibraryGenres', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('[P1] calls libraryService.getGenres', async () => {
+    const genres = ['科幻', '動作', '劇情'];
+    vi.mocked(libraryService.getGenres).mockResolvedValue(genres);
+
+    const { result } = renderHook(() => useLibraryGenres(), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(libraryService.getGenres).toHaveBeenCalled();
+    expect(result.current.data).toEqual(genres);
+  });
+
+  it('[P1] returns error state on failure', async () => {
+    vi.mocked(libraryService.getGenres).mockRejectedValue(new Error('Fetch failed'));
+
+    const { result } = renderHook(() => useLibraryGenres(), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.error?.message).toBe('Fetch failed');
+  });
+});
+
+describe('useLibraryStats', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('[P1] calls libraryService.getStats', async () => {
+    const stats: LibraryStats = {
+      yearMin: 1990,
+      yearMax: 2024,
+      movieCount: 100,
+      tvCount: 50,
+      totalCount: 150,
+    };
+    vi.mocked(libraryService.getStats).mockResolvedValue(stats);
+
+    const { result } = renderHook(() => useLibraryStats(), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(libraryService.getStats).toHaveBeenCalled();
+    expect(result.current.data).toEqual(stats);
+  });
+
+  it('[P1] returns error state on failure', async () => {
+    vi.mocked(libraryService.getStats).mockRejectedValue(new Error('Stats failed'));
+
+    const { result } = renderHook(() => useLibraryStats(), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.error?.message).toBe('Stats failed');
+  });
+});
+
+describe('useLibrarySearch', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('[P1] calls libraryService.searchLibrary with query', async () => {
+    const searchResponse = {
+      items: [],
+      totalItems: 0,
+      page: 1,
+      pageSize: 20,
+      totalPages: 0,
+    };
+    vi.mocked(libraryService.searchLibrary).mockResolvedValue(searchResponse);
+
+    const { result } = renderHook(() => useLibrarySearch('batman'), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(libraryService.searchLibrary).toHaveBeenCalledWith('batman', {});
+    expect(result.current.data).toEqual(searchResponse);
+  });
+
+  it('[P1] does not fetch when query is shorter than 2 chars', () => {
+    const { result } = renderHook(() => useLibrarySearch('b'), {
+      wrapper: createWrapper(),
+    });
+
+    expect(result.current.fetchStatus).toBe('idle');
+    expect(libraryService.searchLibrary).not.toHaveBeenCalled();
+  });
+
+  it('[P1] does not fetch when query is empty', () => {
+    const { result } = renderHook(() => useLibrarySearch(''), {
+      wrapper: createWrapper(),
+    });
+
+    expect(result.current.fetchStatus).toBe('idle');
+    expect(libraryService.searchLibrary).not.toHaveBeenCalled();
+  });
+
+  it('[P1] passes additional params to search', async () => {
+    const searchResponse = {
+      items: [],
+      totalItems: 0,
+      page: 1,
+      pageSize: 20,
+      totalPages: 0,
+    };
+    vi.mocked(libraryService.searchLibrary).mockResolvedValue(searchResponse);
+
+    const { result } = renderHook(() => useLibrarySearch('test', { type: 'movie', page: 2 }), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(libraryService.searchLibrary).toHaveBeenCalledWith('test', { type: 'movie', page: 2 });
+  });
+});
+
+describe('useRecentlyAdded', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('[P2] calls libraryService.getRecentlyAdded with default limit', async () => {
+    vi.mocked(libraryService.getRecentlyAdded).mockResolvedValue([]);
+
+    const { result } = renderHook(() => useRecentlyAdded(), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(libraryService.getRecentlyAdded).toHaveBeenCalledWith(20);
+  });
+
+  it('[P2] calls libraryService.getRecentlyAdded with custom limit', async () => {
+    vi.mocked(libraryService.getRecentlyAdded).mockResolvedValue([]);
+
+    const { result } = renderHook(() => useRecentlyAdded(10), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(libraryService.getRecentlyAdded).toHaveBeenCalledWith(10);
   });
 });
 
