@@ -21,8 +21,8 @@ export function AppShell({ children }: AppShellProps) {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-900" data-testid="app-shell">
-      <header className="bg-slate-900/95 backdrop-blur-sm">
+    <div className="flex min-h-screen flex-col" data-testid="app-shell">
+      <header className="sticky top-0 z-50 bg-slate-900/95 backdrop-blur-sm">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           {/* Row 1: logo | search | gear */}
           <div className="flex h-12 items-center">
@@ -104,7 +104,7 @@ export function AppShell({ children }: AppShellProps) {
         </div>
       </header>
 
-      <main className="flex-1 bg-slate-900">{children}</main>
+      <main className="flex-1">{children}</main>
     </div>
   );
 }

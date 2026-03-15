@@ -190,7 +190,7 @@ describe('AppShell', () => {
     // GIVEN/WHEN: App shell renders
     const shell = await screen.findByTestId('app-shell');
 
-    // THEN: Container has dark theme classes
-    expect(shell).toHaveClass('bg-slate-900');
+    // THEN: Container has min-h-screen flex layout (dark theme from CSS base layer)
+    expect(shell).toHaveClass('min-h-screen');
   });
 });

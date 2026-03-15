@@ -1,6 +1,6 @@
 # Story 5.0: Global Navigation Shell
 
-Status: review
+Status: done
 
 ## Story
 
@@ -48,7 +48,7 @@ So that **I can easily switch between sections and always know where I am in the
    - And clicking a tab navigates to the corresponding route:
      - 媒體庫 → `/library`
      - 下載中 → `/downloads`
-     - 待備新 → `/pending` (or appropriate route)
+     - 待解析 → `/pending`
      - 設定 → `/settings`
    - And on mobile, tabs are horizontally scrollable if needed
 
@@ -149,3 +149,4 @@ So that **I can easily switch between sections and always know where I am in the
 | Story created | Global navigation shell missing from all pages, identified during 5-1 design review | 2026-03-15 |
 | Tasks 1-4 implemented | AppShell + TabNavigation created, integrated into root, pages adapted, 819 tests passing | 2026-03-15 |
 | Task 5 completed | Design verification done — fixed tab label 待處理→待解析 per design spec, all elements match | 2026-03-15 |
+| Code Review fixes | H1: Added sticky header positioning (AC2). M1: Removed 4x bg-slate-900 redundancy. M2: Removed unused SettingsGearDropdown import. M3: Fixed AC4 typo. L1: Removed duplicate min-h-screen. | 2026-03-15 |

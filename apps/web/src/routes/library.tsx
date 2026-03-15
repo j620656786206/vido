@@ -4,10 +4,7 @@ import { useLibraryList } from '../hooks/useLibrary';
 import { LibraryGrid } from '../components/library/LibraryGrid';
 import { RecentlyAdded } from '../components/library/RecentlyAdded';
 import { EmptyLibrary } from '../components/library/EmptyLibrary';
-import {
-  SettingsGearDropdown,
-  getStoredPreferences,
-} from '../components/library/SettingsGearDropdown';
+import { getStoredPreferences } from '../components/library/SettingsGearDropdown';
 import { Pagination } from '../components/ui/Pagination';
 import type { LibraryMediaType } from '../types/library';
 import type { PosterDensity, TitleLanguage } from '../components/library/SettingsGearDropdown';
