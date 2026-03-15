@@ -142,77 +142,14 @@ async function mockDashboardAPIs(page: import('@playwright/test').Page) {
 // AC1: Status Indicator Display
 // =============================================================================
 
-test.describe('Connection Health - Status Indicator @e2e @p1', () => {
-  test('[P1] should show connected status when qBittorrent is healthy (AC1)', async ({ page }) => {
-    await mockDashboardAPIs(page);
-
-    await page.route('**/api/v1/health/services', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(buildServicesHealth('healthy')),
-      });
-    });
-
-    await page.goto('/');
-
-    // THEN: Status indicator shows connected
-    const indicator = page.getByRole('button', { name: 'qBittorrent 已連線' });
-    await expect(indicator).toBeVisible();
-  });
-
-  test('[P1] should show degraded status when qBittorrent is unstable (AC1)', async ({ page }) => {
-    await mockDashboardAPIs(page);
-
-    await page.route('**/api/v1/health/services', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(
-          buildServicesHealth('degraded', { errorCount: 1, message: 'timeout' })
-        ),
-      });
-    });
-
-    await page.goto('/');
-
-    const indicator = page.getByRole('button', { name: 'qBittorrent 連線不穩定' });
-    await expect(indicator).toBeVisible();
-  });
-});
+// [Downgraded to unit] status indicator display → QBStatusIndicator.spec.tsx
 
 // =============================================================================
 // AC2: Disconnection Detection
 // =============================================================================
 
 test.describe('Connection Health - Disconnection Detection @e2e @p1', () => {
-  test('[P1] should show disconnected status with last success time (AC2)', async ({ page }) => {
-    await mockDashboardAPIs(page);
-
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-    await page.route('**/api/v1/health/services', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(
-          buildServicesHealth('down', {
-            lastSuccess: fiveMinutesAgo,
-            errorCount: 3,
-            message: 'connection refused',
-          })
-        ),
-      });
-    });
-
-    await page.goto('/');
-
-    // THEN: Status indicator shows disconnected
-    const indicator = page.getByRole('button', { name: 'qBittorrent 未連線' });
-    await expect(indicator).toBeVisible();
-
-    // And shows "上次：X分鐘前" text
-    await expect(page.getByText('上次：5 分鐘前')).toBeAttached();
-  });
+  // [Downgraded to unit] disconnected status display → QBStatusIndicator.spec.tsx
 
   test('[P1] should update indicator when status changes from healthy to down (AC2)', async ({
     page,
@@ -403,33 +340,7 @@ test.describe('Connection Health - History Panel @e2e @p1', () => {
     await expect(page.getByText('connection refused')).toBeVisible();
   });
 
-  test('[P1] should show empty state when no history (AC4)', async ({ page }) => {
-    await mockDashboardAPIs(page);
-
-    await page.route('**/api/v1/health/services', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(buildServicesHealth('healthy')),
-      });
-    });
-
-    await page.route('**/api/v1/health/services/qbittorrent/history*', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(mockEmptyHistory),
-      });
-    });
-
-    await page.goto('/');
-    const indicator = page.getByRole('button', { name: 'qBittorrent 已連線' });
-    await expect(indicator).toBeVisible();
-    await indicator.click();
-
-    // THEN: Empty state message
-    await expect(page.getByText('沒有連線記錄')).toBeVisible();
-  });
+  // [Downgraded to unit] empty history state → ConnectionHistoryPanel.spec.tsx
 
   test('[P1] should close history panel via close button (AC4)', async ({ page }) => {
     await mockDashboardAPIs(page);

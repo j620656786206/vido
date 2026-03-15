@@ -54,66 +54,7 @@ test.describe('Media Detail - Movie @e2e @media-detail', () => {
     await expect(page.getByText(testData.movie.title).first()).toBeVisible({ timeout: 15000 });
   });
 
-  test('[P1] should display movie poster image', async ({ page }) => {
-    // GIVEN: User is on movie detail page
-    await page.goto(`/media/movie/${testData.movie.id}`);
-    await page.waitForLoadState('networkidle');
-
-    // WHEN: Content loads
-
-    // THEN: Poster image should be visible
-    const posterImage = page.locator('[data-testid="detail-poster"]');
-    await expect(posterImage).toBeVisible({ timeout: 15000 });
-  });
-
-  test('[P1] should display movie overview/description', async ({ page }) => {
-    // GIVEN: User is on movie detail page
-    await page.goto(`/media/movie/${testData.movie.id}`);
-    await page.waitForLoadState('networkidle');
-
-    // WHEN: Content loads
-
-    // THEN: Overview should be visible (non-empty text)
-    const detailPanel = page.locator('[data-testid="media-detail-panel"]');
-    if (await detailPanel.isVisible()) {
-      await expect(detailPanel).toContainText(/.{50,}/); // At least 50 chars
-    }
-  });
-
-  test('[P1] should display movie release year', async ({ page }) => {
-    // GIVEN: User is on movie detail page
-    await page.goto(`/media/movie/${testData.movie.id}`);
-    await page.waitForLoadState('networkidle');
-
-    // WHEN: Content loads
-
-    // THEN: Release year should be visible
-    await expect(page.getByText(testData.movie.year)).toBeVisible({ timeout: 15000 });
-  });
-
-  test('[P2] should display movie genres', async ({ page }) => {
-    // GIVEN: User is on movie detail page
-    await page.goto(`/media/movie/${testData.movie.id}`);
-    await page.waitForLoadState('networkidle');
-
-    // WHEN: Content loads
-
-    // THEN: At least one genre should be visible
-    const genreRegex = /動作|科幻|冒險|劇情|Action|Sci-Fi|Adventure|Drama/i;
-    await expect(page.getByText(genreRegex).first()).toBeVisible({ timeout: 15000 });
-  });
-
-  test('[P2] should display movie rating', async ({ page }) => {
-    // GIVEN: User is on movie detail page
-    await page.goto(`/media/movie/${testData.movie.id}`);
-    await page.waitForLoadState('networkidle');
-
-    // WHEN: Content loads
-
-    // THEN: Rating should be visible (number format)
-    const ratingRegex = /\d\.\d/; // e.g., 8.4
-    await expect(page.getByText(ratingRegex).first()).toBeVisible({ timeout: 15000 });
-  });
+  // [Downgraded to unit] poster, overview, year, genres, rating → MediaDetailPanel.spec.tsx
 });
 
 // =============================================================================
@@ -132,77 +73,14 @@ test.describe('Media Detail - TV Show @e2e @media-detail', () => {
     await expect(page.getByText(testData.tvShow.title).first()).toBeVisible({ timeout: 15000 });
   });
 
-  test('[P1] should display TV show poster image', async ({ page }) => {
-    // GIVEN: User is on TV show detail page
-    await page.goto(`/media/tv/${testData.tvShow.id}`);
-    await page.waitForLoadState('networkidle');
-
-    // WHEN: Content loads
-
-    // THEN: Poster image should be visible
-    const posterImage = page.locator('[data-testid="detail-poster"]');
-    await expect(posterImage).toBeVisible({ timeout: 15000 });
-  });
-
-  test('[P1] should display TV-specific information', async ({ page }) => {
-    // GIVEN: User is on TV show detail page
-    await page.goto(`/media/tv/${testData.tvShow.id}`);
-    await page.waitForLoadState('networkidle');
-
-    // WHEN: Content loads
-
-    // THEN: TV-specific info like seasons should be visible
-    const tvInfo = page.locator('[data-testid="tv-show-info"]');
-    if (await tvInfo.isVisible()) {
-      await expect(tvInfo).toBeVisible();
-    }
-  });
-
-  test('[P2] should display first air date', async ({ page }) => {
-    // GIVEN: User is on TV show detail page
-    await page.goto(`/media/tv/${testData.tvShow.id}`);
-    await page.waitForLoadState('networkidle');
-
-    // WHEN: Content loads
-
-    // THEN: First air date/year should be visible (in detail-year element)
-    const yearElement = page.locator('[data-testid="detail-year"]');
-    await expect(yearElement).toBeVisible({ timeout: 15000 });
-    await expect(yearElement).toContainText(testData.tvShow.year);
-  });
+  // [Downgraded to unit] TV poster, TV info, air date → MediaDetailPanel.spec.tsx, TVShowInfo.spec.tsx
 });
 
 // =============================================================================
 // Credits Section Tests
 // =============================================================================
 
-test.describe('Media Detail - Credits @e2e @media-detail', () => {
-  test('[P1] should display cast members', async ({ page }) => {
-    // GIVEN: User is on movie detail page
-    await page.goto(`/media/movie/${testData.movie.id}`);
-    await page.waitForLoadState('networkidle');
-
-    // WHEN: Content loads
-
-    // THEN: Credits section should be visible
-    const creditsSection = page.locator('[data-testid="credits-section"]');
-    if (await creditsSection.isVisible()) {
-      await expect(creditsSection).toBeVisible();
-    }
-  });
-
-  test('[P2] should display director information', async ({ page }) => {
-    // GIVEN: User is on movie detail page
-    await page.goto(`/media/movie/${testData.movie.id}`);
-    await page.waitForLoadState('networkidle');
-
-    // WHEN: Content loads
-
-    // THEN: Director info may be visible (depends on component design)
-    // This is a soft check as the UI may vary
-    await page.waitForLoadState('networkidle');
-  });
-});
+// [Downgraded to unit] cast members, director → CreditsSection.spec.tsx
 
 // =============================================================================
 // Navigation Tests

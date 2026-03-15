@@ -48,7 +48,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
 
   // Worker configuration
-  workers: process.env.CI ? 1 : undefined,
+  workers: process.env.CI ? 2 : undefined,
 
   // Global test timeout: 60 seconds
   timeout: 60 * 1000,
@@ -105,10 +105,17 @@ export default defineConfig({
       use: { ...devices['Desktop Firefox'] },
     },
 
-    // Desktop Safari
+    // Desktop Safari — core subset only (Safari-critical specs)
     {
-      name: 'webkit',
+      name: 'webkit-core',
       use: { ...devices['Desktop Safari'] },
+      testMatch: [
+        'search.spec.ts',
+        'media-detail.spec.ts',
+        'dashboard.spec.ts',
+        'connection-health.spec.ts',
+        'graceful-degradation.spec.ts',
+      ],
     },
 
     // Mobile Chrome

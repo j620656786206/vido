@@ -117,28 +117,8 @@ test.describe('Media Search - Type Filters @e2e @search', () => {
     await expect(page).toHaveURL(/type=tv/);
   });
 
-  test('[P1] should show all results by default', async ({ page }) => {
-    // GIVEN: User performs a new search
-    await page.goto('/search?q=Star');
-    await page.waitForLoadState('networkidle');
-
-    // WHEN: No type filter is selected
-
-    // THEN: All tab should be active (default)
-    const allTab = page.getByRole('tab', { name: /全部/i });
-    await expect(allTab).toHaveAttribute('aria-selected', 'true');
-  });
-
-  test('[P2] should show result counts in tabs', async ({ page }) => {
-    // GIVEN: Search results are loaded
-
-    // WHEN: Viewing the type tabs
-
-    // THEN: Tabs should show result counts (if any results exist)
-    // Note: Count display depends on actual search results
-    await expect(page.getByRole('tab', { name: /電影/i })).toBeVisible();
-    await expect(page.getByRole('tab', { name: /影集/i })).toBeVisible();
-  });
+  // [Downgraded to unit] tab default state → MediaTypeTabs.spec.tsx
+  // [Downgraded to unit] tab result counts → MediaTypeTabs.spec.tsx
 });
 
 // =============================================================================
@@ -159,22 +139,7 @@ test.describe('Media Search - Results Display @e2e @search', () => {
     await expect(posterCards.first()).toBeVisible({ timeout: 15000 });
   });
 
-  test('[P1] should show loading state while searching', async ({ page }) => {
-    // GIVEN: User is on search page
-    await page.goto('/search');
-
-    // WHEN: User initiates search
-    const searchInput = page.locator('main').getByPlaceholder(/搜尋電影或影集/i);
-    await searchInput.fill('Interstellar');
-
-    // Then press enter and immediately check for loading
-    const _loadingPromise = page.getByTestId('search-loading').isVisible();
-    await searchInput.press('Enter');
-
-    // THEN: Loading indicator may briefly appear (or results load quickly)
-    // This test verifies the search completes successfully
-    await page.waitForLoadState('networkidle');
-  });
+  // [Downgraded to unit] loading state → SearchResultsGrid.spec.tsx
 
   test('[P1] should navigate to movie detail on card click', async ({ page }) => {
     // GIVEN: Search results are displayed
@@ -207,20 +172,7 @@ test.describe('Media Search - Results Display @e2e @search', () => {
 // =============================================================================
 
 test.describe('Media Search - Pagination @e2e @search', () => {
-  test('[P1] should display pagination for multiple pages', async ({ page }) => {
-    // GIVEN: Search with many results
-    await page.goto('/search?q=action');
-    await page.waitForLoadState('networkidle');
-
-    // WHEN: Results load
-
-    // THEN: Pagination should be visible if results exceed one page
-    const pagination = page.locator('[data-testid="pagination"]');
-    // Pagination may not appear if fewer than one page of results
-    if (await pagination.isVisible()) {
-      await expect(pagination).toBeVisible();
-    }
-  });
+  // [Downgraded to unit] pagination visibility → Pagination.spec.tsx
 
   test('[P2] should navigate to next page', async ({ page }) => {
     // GIVEN: Search results with pagination

@@ -141,22 +141,7 @@ test.describe('Dashboard Layout @dashboard @ui', () => {
     await expect(page.getByText('測試影集')).toBeVisible();
   });
 
-  test('[P1] should show "剛剛新增" badge for just-added items (AC2)', async ({ page }) => {
-    await page.goto('/');
-
-    // THEN: justAdded badge is shown
-    await expect(page.getByText('剛剛新增')).toBeVisible();
-  });
-
-  test('[P1] should have "查看全部下載" link (AC1)', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.getByText('查看全部下載 →')).toBeVisible();
-  });
-
-  test('[P1] should have "查看全部媒體庫" link (AC1)', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.getByText('查看全部媒體庫 →')).toBeVisible();
-  });
+  // [Downgraded to unit] badges, links → RecentMediaPanel.spec.tsx, DownloadPanel.spec.tsx
 });
 
 // =============================================================================
@@ -286,17 +271,7 @@ test.describe('Dashboard Quick Search @dashboard @ui', () => {
     );
   });
 
-  test('[P1] should have search input with placeholder (AC1)', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.getByPlaceholder('搜尋電影或影集...')).toBeVisible();
-  });
-
-  test('[P2] should accept search input (AC5)', async ({ page }) => {
-    await page.goto('/');
-    const input = page.getByPlaceholder('搜尋電影或影集...');
-    await input.fill('鬼滅之刃');
-    await expect(input).toHaveValue('鬼滅之刃');
-  });
+  // [Downgraded to unit] search input, placeholder → QuickSearchBar.spec.tsx
 });
 
 // =============================================================================
@@ -490,39 +465,7 @@ test.describe('Dashboard Empty State @dashboard @ui', () => {
 // Connection Status Badge Tests
 // =============================================================================
 
-test.describe('Dashboard Connection Badge @dashboard @ui', () => {
-  test('[P2] should show "已連線" badge when qBittorrent connected (AC3)', async ({ page }) => {
-    // Network-first: intercept BEFORE navigation
-    await page.route(`${API_BASE_URL}/settings/qbittorrent`, (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ success: true, data: mockQBConfig }),
-      })
-    );
-
-    await page.route(`${API_BASE_URL}/downloads*`, (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ success: true, data: mockDownloads }),
-      })
-    );
-
-    await page.route(`${API_BASE_URL}/media/recent*`, (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ success: true, data: mockRecentMedia }),
-      })
-    );
-
-    await page.goto('/');
-
-    // THEN: Connected badge is visible
-    await expect(page.getByText('已連線')).toBeVisible();
-  });
-});
+// [Downgraded to unit] connection badge → DownloadPanel.spec.tsx
 
 // =============================================================================
 // Recent Media API Tests

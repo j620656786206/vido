@@ -172,64 +172,7 @@ test.describe('Graceful Degradation - API Integration @e2e @p1', () => {
     expect(body.data.degradationLevel).toBeDefined();
   });
 
-  test('[P1] should handle healthy services status', async ({ page }) => {
-    // GIVEN: All services are healthy
-    await page.route('**/api/v1/health/services', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(mockHealthyResponse),
-      });
-    });
-
-    // WHEN: Page loads
-    await page.goto('/');
-
-    // THEN: No degradation banner should be visible
-    // (Normal status should not show warning)
-    const banner = page.locator('[role="alert"]');
-    await expect(banner).toHaveCount(0);
-  });
-
-  test('[P1] should display degradation banner when services are partially down', async ({
-    page,
-  }) => {
-    // GIVEN: Mock the health endpoint to return partial degradation
-    await page.route('**/api/v1/health/services', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(mockPartialDegradedResponse),
-      });
-    });
-
-    // WHEN: Page loads (with hypothetical integration)
-    await page.goto('/');
-
-    // Note: This test documents expected behavior if ServiceHealthBanner
-    // is integrated into the app layout. If not yet integrated, this test
-    // serves as a specification for future implementation.
-
-    // THEN: Page should load successfully
-    await expect(page).toHaveURL('/');
-  });
-
-  test('[P1] should handle offline status gracefully', async ({ page }) => {
-    // GIVEN: Mock the health endpoint to return offline status
-    await page.route('**/api/v1/health/services', (route) => {
-      route.fulfill({
-        status: 503,
-        contentType: 'application/json',
-        body: JSON.stringify(mockOfflineResponse),
-      });
-    });
-
-    // WHEN: Page loads
-    await page.goto('/');
-
-    // THEN: Page should still be accessible (core functionality works)
-    await expect(page).toHaveURL('/');
-  });
+  // [Downgraded to unit] healthy/degraded/offline banner display → ServiceHealthBanner.spec.tsx
 });
 
 // =============================================================================

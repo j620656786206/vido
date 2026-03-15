@@ -179,7 +179,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps chromium webkit
 
       - name: Download build artifacts
         uses: actions/download-artifact@v4
@@ -221,7 +221,7 @@ jobs:
           done
 
       - name: Run E2E tests (shard ${{ matrix.shard }}/4)
-        run: npx playwright test --shard=${{ matrix.shard }}/4 --project=chromium
+        run: npx playwright test --shard=${{ matrix.shard }}/4 --project=chromium --project=webkit-core
         env:
           TEST_ENV: ci
           BASE_URL: http://localhost:4200
