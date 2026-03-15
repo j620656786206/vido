@@ -164,7 +164,7 @@ describe('DetailPanelMenu', () => {
     expect(separator).toBeInTheDocument();
   });
 
-  it('[P1] resets confirm state when menu is reopened', () => {
+  it('[P1] resets confirm state when menu is reopened via outside click', () => {
     render(<DetailPanelMenu {...defaultProps} />);
 
     // Open and click delete to show confirmation
@@ -174,6 +174,24 @@ describe('DetailPanelMenu', () => {
 
     // Close via outside click
     fireEvent.mouseDown(document.body);
+    expect(screen.queryByTestId('detail-menu-dropdown')).not.toBeInTheDocument();
+
+    // Reopen — should show normal menu, not confirmation
+    fireEvent.click(screen.getByTestId('detail-menu-trigger'));
+    expect(screen.getByTestId('menu-delete')).toBeInTheDocument();
+    expect(screen.queryByText('確定要刪除嗎？')).not.toBeInTheDocument();
+  });
+
+  it('[P1] resets confirm state when menu is closed via trigger toggle', () => {
+    render(<DetailPanelMenu {...defaultProps} />);
+
+    // Open and click delete to show confirmation
+    fireEvent.click(screen.getByTestId('detail-menu-trigger'));
+    fireEvent.click(screen.getByTestId('menu-delete'));
+    expect(screen.getByText('確定要刪除嗎？')).toBeInTheDocument();
+
+    // Close via trigger toggle
+    fireEvent.click(screen.getByTestId('detail-menu-trigger'));
     expect(screen.queryByTestId('detail-menu-dropdown')).not.toBeInTheDocument();
 
     // Reopen — should show normal menu, not confirmation

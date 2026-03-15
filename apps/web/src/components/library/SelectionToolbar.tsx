@@ -32,6 +32,7 @@ export function SelectionToolbar({
           onClick={onReparse}
           disabled={isProcessing}
           data-testid="batch-reparse-btn"
+          aria-label="重新解析"
           className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-slate-300 transition-colors hover:bg-slate-700 hover:text-white disabled:opacity-50"
         >
           <RefreshCw size={14} />
@@ -41,6 +42,7 @@ export function SelectionToolbar({
           onClick={onExport}
           disabled={isProcessing}
           data-testid="batch-export-btn"
+          aria-label="匯出中繼資料"
           className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-slate-300 transition-colors hover:bg-slate-700 hover:text-white disabled:opacity-50"
         >
           <Download size={14} />
@@ -50,6 +52,7 @@ export function SelectionToolbar({
           onClick={onDelete}
           disabled={isProcessing}
           data-testid="batch-delete-btn"
+          aria-label="刪除選取項目"
           className="flex items-center gap-1.5 rounded-lg bg-red-600/20 px-3 py-1.5 text-sm text-red-400 transition-colors hover:bg-red-600/30 hover:text-red-300 disabled:opacity-50"
         >
           <Trash2 size={14} />

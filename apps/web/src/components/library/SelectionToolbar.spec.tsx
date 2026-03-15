@@ -72,4 +72,11 @@ describe('SelectionToolbar', () => {
     render(<SelectionToolbar {...defaultProps} />);
     expect(screen.getByTestId('batch-export-btn')).toHaveTextContent('匯出中繼資料');
   });
+
+  it('[P1] action buttons have aria-labels for mobile icon-only display', () => {
+    render(<SelectionToolbar {...defaultProps} />);
+    expect(screen.getByTestId('batch-reparse-btn')).toHaveAttribute('aria-label', '重新解析');
+    expect(screen.getByTestId('batch-export-btn')).toHaveAttribute('aria-label', '匯出中繼資料');
+    expect(screen.getByTestId('batch-delete-btn')).toHaveAttribute('aria-label', '刪除選取項目');
+  });
 });

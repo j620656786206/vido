@@ -3,7 +3,7 @@
 ## Origin
 UX Designer (Sally) verification of Stories 5-6 and 5-7 against design screenshots.
 
-## Status: review
+## Status: done
 
 ---
 
@@ -103,11 +103,13 @@ The following implemented components have no corresponding design screenshots. T
 - `apps/web/src/components/media/MediaDetailPanel.spec.tsx` — Modified (new tests for CTA buttons, cast)
 - `apps/web/src/components/media/DetailPanelMenu.tsx` — Modified (terminology fix)
 - `apps/web/src/components/media/DetailPanelMenu.spec.tsx` — Modified (terminology fix in test)
-- `apps/web/src/components/library/SelectionToolbar.tsx` — Modified (terminology fix, responsive layout)
+- `apps/web/src/components/library/SelectionToolbar.tsx` — Modified (terminology fix, responsive layout, aria-labels)
+- `apps/web/src/components/library/SelectionToolbar.spec.tsx` — Modified (terminology, aria-label tests)
 
 ## Change Log
 
 - 2026-03-15: Implemented all 6 UX design compliance fixes from Sally's verification report
+- 2026-03-15: Code review fixes — DetailPanelMenu showConfirm reset bug, SelectionToolbar aria-labels, File List update
 
 ## Dev Agent Record
 

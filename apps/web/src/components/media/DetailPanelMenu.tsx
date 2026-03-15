@@ -28,7 +28,11 @@ export function DetailPanelMenu({ onReparse, onExport, onDelete }: DetailPanelMe
   return (
     <div className="relative" ref={menuRef}>
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          const nextOpen = !isOpen;
+          setIsOpen(nextOpen);
+          if (!nextOpen) setShowConfirm(false);
+        }}
         className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-slate-700 hover:text-white"
         aria-label="更多操作"
         aria-expanded={isOpen}
