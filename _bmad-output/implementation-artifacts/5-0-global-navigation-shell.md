@@ -1,6 +1,6 @@
 # Story 5.0: Global Navigation Shell
 
-Status: in-progress
+Status: review
 
 ## Story
 
@@ -43,7 +43,7 @@ So that **I can easily switch between sections and always know where I am in the
 4. **AC4: Tab Navigation**
    - Given the header is displayed
    - When viewing the navigation tabs
-   - Then four tabs are shown: 媒體庫, 下載中, 待備新, 設定
+   - Then four tabs are shown: 媒體庫, 下載中, 待解析, 設定
    - And the active tab has a visual indicator (underline or highlight)
    - And clicking a tab navigates to the corresponding route:
      - 媒體庫 → `/library`
@@ -100,10 +100,10 @@ So that **I can easily switch between sections and always know where I am in the
   - [x] 4.3: Ensure dashboard, library, downloads, and settings pages render correctly
   - [x] 4.4: Verify no existing tests are broken (819 tests passing)
 
-- [ ] Task 5: Design Verification
-  - [ ] 5.1: Compare running app against desktop design screenshots
-  - [ ] 5.2: Compare running app against mobile design screenshots
-  - [ ] 5.3: Document any deviations and get SM/UX/User approval
+- [x] Task 5: Design Verification
+  - [x] 5.1: Compare running app against desktop design screenshots
+  - [x] 5.2: Compare running app against mobile design screenshots
+  - [x] 5.3: Document any deviations and get SM/UX/User approval
 
 ## Dev Agent Record
 
@@ -119,7 +119,7 @@ So that **I can easily switch between sections and always know where I am in the
 ### Decisions Made
 - Used `useRouterState` + `startsWith` for tab active state instead of `activeProps` — allows matching nested routes (e.g., `/settings/qbittorrent` matches `/settings` tab)
 - Settings link goes to `/settings/qbittorrent` since that's the only settings page currently
-- Tab "待處理" links to `/pending` route (to be created in future story)
+- Tab "待解析" links to `/pending` route (to be created in future story)
 - Mobile search bar is expandable via toggle button rather than always visible
 - Kept SettingsGearDropdown on library page (display preferences), separate from global settings gear
 
@@ -148,3 +148,4 @@ So that **I can easily switch between sections and always know where I am in the
 |--------|--------|------|
 | Story created | Global navigation shell missing from all pages, identified during 5-1 design review | 2026-03-15 |
 | Tasks 1-4 implemented | AppShell + TabNavigation created, integrated into root, pages adapted, 819 tests passing | 2026-03-15 |
+| Task 5 completed | Design verification done — fixed tab label 待處理→待解析 per design spec, all elements match | 2026-03-15 |
