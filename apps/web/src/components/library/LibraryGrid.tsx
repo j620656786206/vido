@@ -152,6 +152,9 @@ export function LibraryGrid({
         onReparse={handleReparse}
         onExport={handleExport}
         onDelete={handleDelete}
+        selectionMode={selectionMode}
+        selectedIds={selectedIds}
+        onSelect={onSelect}
       />
     );
   }
@@ -201,6 +204,9 @@ interface VirtualGridProps {
   onReparse: () => void;
   onExport: () => void;
   onDelete: () => void;
+  selectionMode?: boolean;
+  selectedIds?: Set<string>;
+  onSelect?: (id: string, e: React.MouseEvent) => void;
 }
 
 function VirtualGrid({
@@ -215,6 +221,9 @@ function VirtualGrid({
   onReparse,
   onExport,
   onDelete,
+  selectionMode,
+  selectedIds,
+  onSelect,
 }: VirtualGridProps) {
   const config = DENSITY_CONFIG[density];
   // Use window.innerWidth when available, fallback to 1200
@@ -267,9 +276,12 @@ function VirtualGrid({
                     <PosterCard
                       {...cardProps}
                       highlightQuery={highlightQuery}
-                      onMenuClick={onMenuClick(itemId, itemType)}
+                      onMenuClick={selectionMode ? undefined : onMenuClick(itemId, itemType)}
+                      selectable={selectionMode}
+                      selected={selectionMode && selectedIds?.has(itemId)}
+                      onSelect={selectionMode ? (e) => onSelect?.(itemId, e) : undefined}
                     />
-                    {menuState?.itemId === itemId && (
+                    {!selectionMode && menuState?.itemId === itemId && (
                       <PosterCardMenu
                         isOpen={true}
                         onClose={onCloseMenu}

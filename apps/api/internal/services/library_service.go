@@ -815,6 +815,12 @@ func (s *LibraryService) BatchReparse(ctx context.Context, ids []string, mediaTy
 	return result, nil
 }
 
+// BatchExportResult contains exported items and any errors
+type BatchExportResult struct {
+	Items  []interface{} `json:"items"`
+	Errors []BatchError  `json:"errors,omitempty"`
+}
+
 // BatchExport returns metadata for multiple items
 func (s *LibraryService) BatchExport(ctx context.Context, ids []string, mediaType string) ([]interface{}, error) {
 	if len(ids) == 0 {
@@ -826,18 +832,23 @@ func (s *LibraryService) BatchExport(ctx context.Context, ids []string, mediaTyp
 		if mediaType == "movie" {
 			movie, err := s.movieRepo.FindByID(ctx, id)
 			if err != nil {
-				s.logger.Error("Batch export: movie not found", "id", id, "error", err)
+				s.logger.Warn("Batch export: movie not found", "id", id, "error", err)
 				continue
 			}
 			results = append(results, movie)
 		} else {
 			series, err := s.seriesRepo.FindByID(ctx, id)
 			if err != nil {
-				s.logger.Error("Batch export: series not found", "id", id, "error", err)
+				s.logger.Warn("Batch export: series not found", "id", id, "error", err)
 				continue
 			}
 			results = append(results, series)
 		}
+	}
+
+	if len(results) < len(ids) {
+		s.logger.Warn("Batch export: some items not found",
+			"requested", len(ids), "found", len(results), "type", mediaType)
 	}
 
 	return results, nil

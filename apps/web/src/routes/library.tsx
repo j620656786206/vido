@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { Filter, CheckSquare } from 'lucide-react';
 import {
@@ -141,6 +141,8 @@ function LibraryPage() {
     isComplete: boolean;
     errors?: { id: string; message: string }[];
   }>({ isOpen: false, current: 0, total: 0, action: '', isComplete: false });
+
+  const lastSelectedIndexRef = useRef<number>(-1);
 
   const batchDeleteMutation = useBatchDelete();
   const batchReparseMutation = useBatchReparse();
@@ -426,30 +428,50 @@ function LibraryPage() {
   const isSearchEmpty = isSearchActive && isEmpty;
   const isLibraryEmpty = !isSearchActive && isEmpty;
 
-  const handleSelect = useCallback(
-    (id: string, _e: React.MouseEvent) => {
-      setSelectedIds((prev) => {
-        const next = new Set(prev);
-        if (next.has(id)) {
-          next.delete(id);
-        } else {
-          next.add(id);
-        }
-        return next;
-      });
+  const getAllItemIds = useCallback(
+    (): string[] =>
+      items.map((item) => item.movie?.id || item.series?.id).filter((id): id is string => !!id),
+    [items]
+  );
 
-      // Determine item type for the first selected item
-      if (selectedIds.size === 0) {
-        const found = items.find((item) => {
-          const itemId = item.movie?.id || item.series?.id;
-          return itemId === id;
+  const handleSelect = useCallback(
+    (id: string, e: React.MouseEvent) => {
+      const allIds = getAllItemIds();
+      const currentIndex = allIds.indexOf(id);
+
+      if (e.shiftKey && lastSelectedIndexRef.current >= 0) {
+        // Shift+Click: range select
+        const start = Math.min(lastSelectedIndexRef.current, currentIndex);
+        const end = Math.max(lastSelectedIndexRef.current, currentIndex);
+        const rangeIds = allIds.slice(start, end + 1);
+        setSelectedIds((prev) => {
+          const next = new Set(prev);
+          for (const rangeId of rangeIds) {
+            next.add(rangeId);
+          }
+          return next;
         });
-        if (found) {
-          setSelectedType(found.type === 'movie' ? 'movie' : 'series');
-        }
+      } else {
+        // Single click or Ctrl/Cmd+Click: toggle individual item
+        setSelectedIds((prev) => {
+          const next = new Set(prev);
+          if (next.has(id)) {
+            next.delete(id);
+          } else {
+            next.add(id);
+          }
+          return next;
+        });
+        lastSelectedIndexRef.current = currentIndex;
+      }
+
+      // Determine item type from the clicked item
+      const found = items.find((item) => (item.movie?.id || item.series?.id) === id);
+      if (found) {
+        setSelectedType(found.type === 'movie' ? 'movie' : 'series');
       }
     },
-    [items, selectedIds.size]
+    [items, getAllItemIds]
   );
 
   const handleSelectAll = useCallback(() => {
@@ -458,6 +480,23 @@ function LibraryPage() {
       .filter((id): id is string => !!id);
     setSelectedIds(new Set(allIds));
   }, [items]);
+
+  // Keyboard shortcuts for selection mode (Escape, Ctrl+A)
+  useEffect(() => {
+    if (!isSelectionMode) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        exitSelectionMode();
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+        e.preventDefault();
+        handleSelectAll();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isSelectionMode, exitSelectionMode, handleSelectAll]);
 
   return (
     <div>
@@ -469,7 +508,7 @@ function LibraryPage() {
               selectedCount={selectedIds.size}
               onDelete={() => setConfirmAction('delete')}
               onReparse={() => setConfirmAction('reparse')}
-              onExport={() => executeBatchAction('export')}
+              onExport={() => setConfirmAction('export')}
               onCancel={exitSelectionMode}
               isProcessing={
                 batchDeleteMutation.isPending ||
@@ -616,6 +655,9 @@ function LibraryPage() {
                   sortOrder={effectiveSortOrder}
                   onSort={handleColumnSort}
                   highlightQuery={isSearchActive ? searchQuery : undefined}
+                  selectionMode={isSelectionMode}
+                  selectedIds={selectedIds}
+                  onSelect={handleSelect}
                 />
               )}
               <Pagination

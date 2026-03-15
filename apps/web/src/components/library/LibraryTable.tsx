@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router';
-import { ArrowUp, ArrowDown } from 'lucide-react';
+import { ArrowUp, ArrowDown, Check } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { HighlightText } from '../ui/HighlightText';
 import type { LibraryItem, SortField, SortOrder } from '../../types/library';
@@ -11,6 +11,9 @@ interface LibraryTableProps {
   sortOrder?: SortOrder;
   onSort?: (field: SortField) => void;
   highlightQuery?: string;
+  selectionMode?: boolean;
+  selectedIds?: Set<string>;
+  onSelect?: (id: string, e: React.MouseEvent) => void;
 }
 
 interface Column {
@@ -79,6 +82,10 @@ function formatYear(dateStr: string | undefined): string {
   return dateStr.slice(0, 4) || '-';
 }
 
+function getItemId(item: LibraryItem): string | undefined {
+  return item.movie?.id || item.series?.id;
+}
+
 export function LibraryTable({
   items,
   isLoading,
@@ -86,6 +93,9 @@ export function LibraryTable({
   sortOrder,
   onSort,
   highlightQuery,
+  selectionMode,
+  selectedIds,
+  onSelect,
 }: LibraryTableProps) {
   if (isLoading) {
     return (
@@ -106,6 +116,7 @@ export function LibraryTable({
       <table className="w-full border-collapse">
         <thead>
           <tr className="border-b border-slate-700 bg-slate-800/50 text-left text-sm text-slate-400">
+            {selectionMode && <th className="w-10 px-3 py-2" />}
             {COLUMNS.map((col) => (
               <th key={col.key} className={cn('px-3 py-2 font-medium', col.className)}>
                 {col.sortable ? (
@@ -132,13 +143,35 @@ export function LibraryTable({
           {items.map((item, index) => {
             const data = getItemData(item);
             if (!data) return null;
+            const itemId = getItemId(item);
+            const isSelected = selectionMode && itemId && selectedIds?.has(itemId);
 
             return (
               <tr
                 key={`${data.type}-${data.id}-${index}`}
                 data-testid="library-table-row"
-                className="border-b border-slate-800 transition-colors hover:bg-slate-800/50"
+                className={cn(
+                  'border-b border-slate-800 transition-colors hover:bg-slate-800/50',
+                  selectionMode && 'cursor-pointer',
+                  isSelected && 'bg-blue-600/10'
+                )}
+                onClick={selectionMode && itemId ? (e) => onSelect?.(itemId, e) : undefined}
               >
+                {selectionMode && (
+                  <td className="px-3 py-2">
+                    <div
+                      data-testid="table-selection-checkbox"
+                      className={cn(
+                        'flex h-5 w-5 items-center justify-center rounded border-2 transition-colors',
+                        isSelected
+                          ? 'border-blue-500 bg-blue-500 text-white'
+                          : 'border-slate-500 bg-transparent'
+                      )}
+                    >
+                      {isSelected && <Check className="h-3 w-3" />}
+                    </div>
+                  </td>
+                )}
                 <td className="px-3 py-2">
                   <Link to="/media/$type/$id" params={{ type: data.type, id: String(data.id) }}>
                     {data.posterPath ? (

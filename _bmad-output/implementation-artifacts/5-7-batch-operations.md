@@ -1,6 +1,6 @@
 # Story 5.7: Batch Operations
 
-Status: review
+Status: done
 
 ## Story
 
@@ -248,8 +248,10 @@ Claude Opus 4.6 (1M context)
 - apps/web/src/hooks/useLibrary.ts (modified — batch mutation hooks)
 - apps/web/src/services/libraryService.ts (modified — batch API methods)
 - apps/web/src/types/library.ts (modified — BatchResult, BatchError types)
-- apps/web/src/routes/library.tsx (modified — selection state, toolbar, dialogs)
+- apps/web/src/routes/library.tsx (modified — selection state, toolbar, dialogs, Shift+Click, keyboard shortcuts)
+- apps/web/src/components/media/PosterCard.spec.tsx (modified — selection mode tests)
 
 ### Change Log
 
 - 2026-03-15: Story 5.7 implemented — all 9 tasks completed with full backend APIs, frontend selection mode, batch operations UI, and comprehensive tests
+- 2026-03-15: Code Review fixes — H1: Shift+Click range select + keyboard shortcuts (Escape, Ctrl+A), H2: VirtualGrid selection support, M1: LibraryTable selection mode, M2: selectedType race condition fix, M3: BatchExport warns on missing items, M4: Export goes through confirmation dialog
