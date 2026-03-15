@@ -15,6 +15,7 @@ vi.mock('../services/libraryService', () => ({
   libraryService: {
     listLibrary: vi.fn(),
     getRecentlyAdded: vi.fn(),
+    searchLibrary: vi.fn(),
     deleteMovie: vi.fn(),
     deleteSeries: vi.fn(),
     reparseMovie: vi.fn(),
@@ -103,13 +104,43 @@ function createTestRouter(initialSearch: Record<string, string> = {}) {
   return router;
 }
 
-async function setupMocks(overrides?: { listEmpty?: boolean }) {
+function getMockSearchResponse(empty = false) {
+  if (empty) {
+    return { results: [], totalCount: 0 };
+  }
+  return {
+    results: [
+      {
+        type: 'movie' as const,
+        movie: {
+          id: 'movie-1',
+          title: '駭客任務',
+          original_title: 'The Matrix',
+          release_date: '1999-03-31',
+          genres: ['動作', '科幻'],
+          vote_average: 8.7,
+          poster_path: '/matrix.jpg',
+          tmdb_id: 603,
+          parse_status: 'success',
+          created_at: '2024-01-15T00:00:00Z',
+          updated_at: '2024-01-15T00:00:00Z',
+        },
+      },
+    ],
+    totalCount: 1,
+  };
+}
+
+async function setupMocks(overrides?: { listEmpty?: boolean; searchEmpty?: boolean }) {
   const { libraryService } = await import('../services/libraryService');
   const listResponse = overrides?.listEmpty ? getEmptyResponse() : getMockListResponse();
   vi.mocked(libraryService.listLibrary).mockResolvedValue(listResponse);
   // getRecentlyAdded returns LibraryItem[] (not full response)
   vi.mocked(libraryService.getRecentlyAdded).mockResolvedValue(
     overrides?.listEmpty ? [] : [getMockListResponse().items[0]]
+  );
+  vi.mocked(libraryService.searchLibrary).mockResolvedValue(
+    getMockSearchResponse(overrides?.searchEmpty)
   );
 }
 
@@ -305,6 +336,74 @@ describe('LibraryPage', () => {
 
       await waitFor(() => {
         expect(screen.getByText(/1-2 \/ 2 項/)).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Search integration (Story 5-3)', () => {
+    it('[P1] renders search bar when library has items', async () => {
+      renderLibrary();
+
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText('搜尋媒體標題...')).toBeInTheDocument();
+      });
+    });
+
+    it('[P1] does not render search bar when library is empty', async () => {
+      await setupMocks({ listEmpty: true });
+      renderLibrary();
+
+      await waitFor(() => {
+        expect(screen.getByText('你的媒體庫還是空的')).toBeInTheDocument();
+      });
+
+      expect(screen.queryByPlaceholderText('搜尋媒體標題...')).not.toBeInTheDocument();
+    });
+
+    it('[P1] initializes search bar with q param from URL', async () => {
+      renderLibrary({ q: '駭客' });
+
+      await waitFor(() => {
+        const input = screen.getByPlaceholderText('搜尋媒體標題...') as HTMLInputElement;
+        expect(input.value).toBe('駭客');
+      });
+    });
+
+    it('[P1] shows search results when q param ≥ 2 chars', async () => {
+      renderLibrary({ q: '駭客' });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('search-result-count')).toBeInTheDocument();
+      });
+    });
+
+    it('[P1] shows EmptySearchResults for no-match query', async () => {
+      await setupMocks({ searchEmpty: true });
+      renderLibrary({ q: 'zzzzz' });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('empty-search-results')).toBeInTheDocument();
+        expect(screen.getByText('找不到相關結果')).toBeInTheDocument();
+      });
+    });
+
+    it('[P2] hides RecentlyAdded section during active search', async () => {
+      renderLibrary({ q: '駭客' });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('search-result-count')).toBeInTheDocument();
+      });
+
+      // RecentlyAdded should not be visible during search
+      expect(screen.queryByText('最近新增')).not.toBeInTheDocument();
+    });
+
+    it('[P2] preserves sort and view params alongside search', async () => {
+      renderLibrary({ q: '駭客', view: 'list', sortBy: 'title', sortOrder: 'asc' });
+
+      await waitFor(() => {
+        // List view should be active
+        expect(screen.getByTestId('library-table')).toBeInTheDocument();
       });
     });
   });

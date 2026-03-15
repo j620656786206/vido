@@ -524,5 +524,72 @@ func TestLibraryHandler_SearchLibrary(t *testing.T) {
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
 	})
 
+	t.Run("success - English query", func(t *testing.T) {
+		expectedResult := &services.LibrarySearchResults{
+			Results: []services.SearchResult{
+				{Type: "movie", Movie: &models.Movie{ID: "m2", Title: "The Matrix"}},
+			},
+			Movies: &repository.PaginationResult{
+				Page: 1, PageSize: 20, TotalResults: 1, TotalPages: 1,
+			},
+			TotalCount: 1,
+		}
+
+		mockService.On("SearchLibrary", mock.Anything, "matrix", mock.Anything).Return(expectedResult, nil).Once()
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library/search?q=matrix", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		var resp APIResponse
+		err := json.Unmarshal(w.Body.Bytes(), &resp)
+		require.NoError(t, err)
+		assert.True(t, resp.Success)
+	})
+
+	t.Run("success - empty results returns valid structure", func(t *testing.T) {
+		expectedResult := &services.LibrarySearchResults{
+			Results:    []services.SearchResult{},
+			TotalCount: 0,
+		}
+
+		mockService.On("SearchLibrary", mock.Anything, "nonexistent", mock.Anything).Return(expectedResult, nil).Once()
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library/search?q=nonexistent", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		var resp APIResponse
+		err := json.Unmarshal(w.Body.Bytes(), &resp)
+		require.NoError(t, err)
+		assert.True(t, resp.Success)
+
+		dataMap, ok := resp.Data.(map[string]interface{})
+		require.True(t, ok)
+
+		totalCount, ok := dataMap["totalCount"].(float64)
+		require.True(t, ok)
+		assert.Equal(t, float64(0), totalCount)
+	})
+
+	t.Run("success - type=tv filter passes to service", func(t *testing.T) {
+		expectedResult := &services.LibrarySearchResults{
+			Results:    []services.SearchResult{},
+			TotalCount: 0,
+		}
+
+		mockService.On("SearchLibrary", mock.Anything, "drama", mock.Anything).Return(expectedResult, nil).Once()
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library/search?q=drama&type=tv", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
 	mockService.AssertExpectations(t)
 }

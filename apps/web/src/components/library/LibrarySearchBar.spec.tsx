@@ -141,4 +141,58 @@ describe('LibrarySearchBar', () => {
     vi.advanceTimersByTime(500);
     expect(onSearch).toHaveBeenCalledWith('進擊的巨人');
   });
+
+  it('should support English input', () => {
+    const onSearch = vi.fn();
+    render(<LibrarySearchBar onSearch={onSearch} />);
+
+    const input = screen.getByRole('textbox');
+    fireEvent.change(input, { target: { value: 'avatar' } });
+
+    vi.advanceTimersByTime(500);
+    expect(onSearch).toHaveBeenCalledWith('avatar');
+  });
+
+  it('should restart debounce on rapid typing', () => {
+    const onSearch = vi.fn();
+    render(<LibrarySearchBar onSearch={onSearch} />);
+
+    const input = screen.getByRole('textbox');
+
+    // Type first value
+    fireEvent.change(input, { target: { value: 'av' } });
+    vi.advanceTimersByTime(300);
+
+    // Type again before debounce fires — should restart timer
+    fireEvent.change(input, { target: { value: 'avatar' } });
+    vi.advanceTimersByTime(300);
+
+    // First debounce window passed (600ms total) but second hasn't (only 300ms)
+    expect(onSearch).not.toHaveBeenCalled();
+
+    // Complete the second debounce
+    vi.advanceTimersByTime(200);
+    expect(onSearch).toHaveBeenCalledTimes(1);
+    expect(onSearch).toHaveBeenCalledWith('avatar');
+  });
+
+  it('should show result count of 0 when provided', () => {
+    render(<LibrarySearchBar onSearch={vi.fn()} initialQuery="nonexistent" resultCount={0} />);
+    expect(screen.getByTestId('search-result-count')).toHaveTextContent('找到 0 個結果');
+  });
+
+  it('should show result count of 1', () => {
+    render(<LibrarySearchBar onSearch={vi.fn()} initialQuery="unique" resultCount={1} />);
+    expect(screen.getByTestId('search-result-count')).toHaveTextContent('找到 1 個結果');
+  });
+
+  it('should call onSearch with empty string immediately on clear (no debounce)', () => {
+    const onSearch = vi.fn();
+    render(<LibrarySearchBar onSearch={onSearch} initialQuery="test" />);
+
+    fireEvent.click(screen.getByLabelText('清除搜尋'));
+
+    // Should fire immediately without waiting for debounce
+    expect(onSearch).toHaveBeenCalledWith('');
+  });
 });
