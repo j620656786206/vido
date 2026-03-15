@@ -66,7 +66,13 @@ func (h *LibraryHandler) GetRecentlyAdded(c *gin.Context) {
 		return
 	}
 
-	SuccessResponse(c, result.Items)
+	SuccessResponse(c, PaginatedResponse{
+		Items:      result.Items,
+		Page:       result.Pagination.Page,
+		PageSize:   result.Pagination.PageSize,
+		TotalItems: result.Pagination.TotalResults,
+		TotalPages: result.Pagination.TotalPages,
+	})
 }
 
 // DeleteMovie handles DELETE /api/v1/library/movies/:id

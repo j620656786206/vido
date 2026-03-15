@@ -110,7 +110,7 @@ development_status:
   5-0-global-navigation-shell: done
   # Phase 1: Foundation (develop together — same page)
   5-1-media-library-grid-view: done
-  5-8-recently-added-section: review
+  5-8-recently-added-section: done
   # Phase 2: View Options (depends on 5-1)
   5-2-library-list-view-toggle: ready-for-dev
   # Phase 3: Data Operations (parallelizable, depends on 5-1)

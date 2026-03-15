@@ -74,7 +74,11 @@ export function RecentlyAdded() {
               const props = getCardProps(item);
               if (!props) return null;
               return (
-                <div key={`${props.type}-${props.id}-${index}`} className="w-[180px] flex-shrink-0">
+                <div
+                  key={`${props.type}-${props.id}-${index}`}
+                  className="w-[180px] flex-shrink-0 animate-[fadeIn_0.4s_ease-out_forwards]"
+                  style={{ animationDelay: `${index * 50}ms`, opacity: 0 }}
+                >
                   <PosterCard {...props} />
                 </div>
               );

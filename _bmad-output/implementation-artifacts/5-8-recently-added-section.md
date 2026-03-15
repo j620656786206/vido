@@ -1,6 +1,6 @@
 # Story 5.8: Recently Added Section
 
-Status: review
+Status: done
 
 ## Story
 
@@ -209,6 +209,7 @@ Claude Opus 4.6 (1M context)
 - apps/api/internal/services/library_service.go (modified — added GetRecentlyAdded method + interface)
 - apps/api/internal/handlers/library_handler.go (modified — added GetRecentlyAdded handler + /recent route)
 - apps/api/internal/handlers/library_handler_test.go (modified — added mock method + 6 handler tests)
+- apps/api/internal/services/library_service_test.go (modified — added 4 GetRecentlyAdded tests)
 - apps/web/src/components/library/RecentlyAdded.tsx (new — RecentlyAdded section component)
 - apps/web/src/components/library/RecentlyAdded.spec.tsx (new — 6 component tests)
 - apps/web/src/components/media/PosterCard.tsx (modified — added isNew badge prop)
@@ -218,6 +219,27 @@ Claude Opus 4.6 (1M context)
 - apps/web/src/routes/library.tsx (modified — added RecentlyAdded section + sortBy/sortOrder params)
 - _bmad-output/implementation-artifacts/sprint-status.yaml (modified — status in-progress → review)
 
+## Senior Developer Review (AI)
+
+**Reviewer:** Amelia (Dev Agent) | **Date:** 2026-03-15
+
+### Issues Found: 2 HIGH, 3 MEDIUM — All Fixed
+
+1. **HIGH** (Bug): `listAll()` concatenated movies then series without merge-sorting by `created_at`. Fixed by adding `sort.Slice` to interleave by timestamp.
+2. **HIGH** (Task marked [x] but not done): AC2 fade-in animation was missing. Fixed by adding CSS `@keyframes fadeIn` and staggered animation delays.
+3. **MEDIUM** (File List incomplete): Added missing `library_service_test.go` to File List.
+4. **MEDIUM** (API inconsistency): `/library/recent` now returns `PaginatedResponse` wrapper matching `/library` format.
+5. **MEDIUM** (Pre-existing): `listAll()` pagination with type="all" queries both repos with same page/pageSize — mitigated by merge-sort fix but may need future refactor for large datasets.
+
+### Files Modified in Review
+- apps/api/internal/services/library_service.go (added merge-sort in listAll + getCreatedAt helper)
+- apps/api/internal/handlers/library_handler.go (changed /recent to return PaginatedResponse)
+- apps/api/internal/handlers/library_handler_test.go (updated test to verify paginated response)
+- apps/web/src/components/library/RecentlyAdded.tsx (added fade-in animation)
+- apps/web/src/styles.css (added fadeIn keyframes)
+- apps/web/src/services/libraryService.ts (updated to unwrap paginated response)
+
 ## Change Log
 
+- 2026-03-15: Code review fixes — merge-sort interleaving, fade-in animation, API response consistency, File List update
 - 2026-03-14: Story 5.8 implemented — Recently Added section with API endpoint, auto-refresh, "新增" badge, and library page integration

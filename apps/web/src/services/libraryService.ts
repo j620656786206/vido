@@ -34,7 +34,8 @@ export const libraryService = {
   },
 
   async getRecentlyAdded(limit: number = 20): Promise<LibraryItem[]> {
-    return fetchApi<LibraryItem[]>(`/library/recent?limit=${limit}`);
+    const response = await fetchApi<LibraryListResponse>(`/library/recent?limit=${limit}`);
+    return response.items;
   },
 
   async deleteMovie(id: string): Promise<void> {

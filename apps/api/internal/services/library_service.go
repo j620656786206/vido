@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sort"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/vido/api/internal/models"
@@ -343,7 +345,7 @@ func (s *LibraryService) listAll(ctx context.Context, params repository.ListPara
 		return nil, fmt.Errorf("failed to list series: %w", seriesErr)
 	}
 
-	// Combine items: movies first, then series
+	// Combine items and sort by created_at to interleave correctly
 	allItems := make([]LibraryItem, 0, len(movies)+len(series))
 	for i := range movies {
 		allItems = append(allItems, LibraryItem{Type: "movie", Movie: &movies[i]})
@@ -351,6 +353,16 @@ func (s *LibraryService) listAll(ctx context.Context, params repository.ListPara
 	for i := range series {
 		allItems = append(allItems, LibraryItem{Type: "series", Series: &series[i]})
 	}
+
+	// Sort combined items by created_at to ensure correct interleaved ordering
+	sort.Slice(allItems, func(i, j int) bool {
+		ti := getCreatedAt(allItems[i])
+		tj := getCreatedAt(allItems[j])
+		if params.SortOrder == "asc" {
+			return ti.Before(tj)
+		}
+		return ti.After(tj) // DESC by default
+	})
 
 	// Trim combined results to respect the requested pageSize
 	items := allItems
@@ -421,6 +433,17 @@ func (s *LibraryService) DeleteSeries(ctx context.Context, id string) error {
 	}
 	s.logger.Info("Series deleted", "id", id)
 	return nil
+}
+
+// getCreatedAt extracts the created_at timestamp from a LibraryItem for sorting.
+func getCreatedAt(item LibraryItem) time.Time {
+	if item.Movie != nil {
+		return item.Movie.CreatedAt
+	}
+	if item.Series != nil {
+		return item.Series.CreatedAt
+	}
+	return time.Time{}
 }
 
 // Compile-time interface verification

@@ -347,6 +347,12 @@ func TestLibraryHandler_GetRecentlyAdded(t *testing.T) {
 		err := json.Unmarshal(w.Body.Bytes(), &resp)
 		require.NoError(t, err)
 		assert.True(t, resp.Success)
+
+		// Verify paginated response structure
+		dataMap, ok := resp.Data.(map[string]interface{})
+		require.True(t, ok, "Response data should be a paginated object")
+		assert.Contains(t, dataMap, "items")
+		assert.Contains(t, dataMap, "totalItems")
 	})
 
 	t.Run("success - custom limit", func(t *testing.T) {
