@@ -101,4 +101,54 @@ describe('DetailPanelMenu', () => {
     fireEvent.mouseDown(screen.getByTestId('outside'));
     expect(screen.queryByTestId('detail-menu-dropdown')).not.toBeInTheDocument();
   });
+
+  it('[P1] trigger button has accessible aria-label', () => {
+    render(<DetailPanelMenu {...defaultProps} />);
+    expect(screen.getByTestId('detail-menu-trigger')).toHaveAttribute('aria-label', '更多操作');
+  });
+
+  it('[P1] toggles menu closed on second click', () => {
+    render(<DetailPanelMenu {...defaultProps} />);
+
+    fireEvent.click(screen.getByTestId('detail-menu-trigger'));
+    expect(screen.getByTestId('detail-menu-dropdown')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('detail-menu-trigger'));
+    expect(screen.queryByTestId('detail-menu-dropdown')).not.toBeInTheDocument();
+  });
+
+  it('[P1] delete button has red text styling', () => {
+    render(<DetailPanelMenu {...defaultProps} />);
+    fireEvent.click(screen.getByTestId('detail-menu-trigger'));
+
+    const deleteBtn = screen.getByTestId('menu-delete');
+    expect(deleteBtn.className).toContain('text-red');
+  });
+
+  it('[P1] has separator between export and delete', () => {
+    render(<DetailPanelMenu {...defaultProps} />);
+    fireEvent.click(screen.getByTestId('detail-menu-trigger'));
+
+    const dropdown = screen.getByTestId('detail-menu-dropdown');
+    const separator = dropdown.querySelector('.border-t');
+    expect(separator).toBeInTheDocument();
+  });
+
+  it('[P1] resets confirm state when menu is reopened', () => {
+    render(<DetailPanelMenu {...defaultProps} />);
+
+    // Open and click delete to show confirmation
+    fireEvent.click(screen.getByTestId('detail-menu-trigger'));
+    fireEvent.click(screen.getByTestId('menu-delete'));
+    expect(screen.getByText('確定要刪除嗎？')).toBeInTheDocument();
+
+    // Close via outside click
+    fireEvent.mouseDown(document.body);
+    expect(screen.queryByTestId('detail-menu-dropdown')).not.toBeInTheDocument();
+
+    // Reopen — should show normal menu, not confirmation
+    fireEvent.click(screen.getByTestId('detail-menu-trigger'));
+    expect(screen.getByTestId('menu-delete')).toBeInTheDocument();
+    expect(screen.queryByText('確定要刪除嗎？')).not.toBeInTheDocument();
+  });
 });

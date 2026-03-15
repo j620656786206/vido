@@ -11,9 +11,10 @@ import {
   useDeleteLibraryItem,
   useReparseItem,
   useExportItem,
+  useMediaTrailers,
 } from './useLibrary';
 import { libraryService } from '../services/libraryService';
-import type { LibraryListResponse, LibraryStats } from '../types/library';
+import type { LibraryListResponse, LibraryStats, VideosResponse } from '../types/library';
 
 vi.mock('../services/libraryService', () => ({
   libraryService: {
@@ -28,6 +29,8 @@ vi.mock('../services/libraryService', () => ({
     reparseSeries: vi.fn(),
     exportMovie: vi.fn(),
     exportSeries: vi.fn(),
+    getMovieVideos: vi.fn(),
+    getSeriesVideos: vi.fn(),
   },
 }));
 
@@ -74,6 +77,24 @@ describe('libraryKeys', () => {
   it('includes all params in list key', () => {
     const params = { page: 2, pageSize: 10, type: 'movie' as const };
     expect(libraryKeys.list(params)).toEqual(['library', 'list', params]);
+  });
+
+  it('[P0] generates correct videos key for movie', () => {
+    expect(libraryKeys.videos('movie', 'abc-123')).toEqual([
+      'library',
+      'movie',
+      'abc-123',
+      'videos',
+    ]);
+  });
+
+  it('[P0] generates correct videos key for series', () => {
+    expect(libraryKeys.videos('series', 'xyz-456')).toEqual([
+      'library',
+      'series',
+      'xyz-456',
+      'videos',
+    ]);
   });
 });
 
@@ -379,5 +400,83 @@ describe('useExportItem', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(libraryService.exportSeries).toHaveBeenCalledWith('series-1');
+  });
+});
+
+describe('useMediaTrailers', () => {
+  const mockVideosResponse: VideosResponse = {
+    id: 123,
+    results: [
+      {
+        id: 'v1',
+        key: 'dQw4w9WgXcQ',
+        name: 'Official Trailer',
+        site: 'YouTube',
+        type: 'Trailer',
+        official: true,
+        published_at: '2024-01-01',
+      },
+    ],
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('[P0] does not fetch when enabled is false', () => {
+    const { result } = renderHook(() => useMediaTrailers('movie', 'movie-1', false), {
+      wrapper: createWrapper(),
+    });
+
+    expect(result.current.fetchStatus).toBe('idle');
+    expect(libraryService.getMovieVideos).not.toHaveBeenCalled();
+  });
+
+  it('[P0] does not fetch when enabled defaults to false', () => {
+    const { result } = renderHook(() => useMediaTrailers('movie', 'movie-1'), {
+      wrapper: createWrapper(),
+    });
+
+    expect(result.current.fetchStatus).toBe('idle');
+    expect(libraryService.getMovieVideos).not.toHaveBeenCalled();
+  });
+
+  it('[P0] calls getMovieVideos when enabled for movie type', async () => {
+    vi.mocked(libraryService.getMovieVideos).mockResolvedValue(mockVideosResponse);
+
+    const { result } = renderHook(() => useMediaTrailers('movie', 'movie-1', true), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(libraryService.getMovieVideos).toHaveBeenCalledWith('movie-1');
+    expect(libraryService.getSeriesVideos).not.toHaveBeenCalled();
+    expect(result.current.data).toEqual(mockVideosResponse);
+  });
+
+  it('[P0] calls getSeriesVideos when enabled for series type', async () => {
+    vi.mocked(libraryService.getSeriesVideos).mockResolvedValue(mockVideosResponse);
+
+    const { result } = renderHook(() => useMediaTrailers('series', 'series-1', true), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(libraryService.getSeriesVideos).toHaveBeenCalledWith('series-1');
+    expect(libraryService.getMovieVideos).not.toHaveBeenCalled();
+    expect(result.current.data).toEqual(mockVideosResponse);
+  });
+
+  it('[P1] returns error state on failure', async () => {
+    vi.mocked(libraryService.getMovieVideos).mockRejectedValue(new Error('TMDb API error'));
+
+    const { result } = renderHook(() => useMediaTrailers('movie', 'movie-1', true), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.error?.message).toBe('TMDb API error');
   });
 });

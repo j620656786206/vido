@@ -43,6 +43,18 @@ describe('parseQuality', () => {
   it('returns null for no quality info', () => {
     expect(parseQuality('movie.mkv')).toBeNull();
   });
+
+  it('[P2] detects 480p', () => {
+    expect(parseQuality('Movie.480p.HDTV.mkv')).toBe('480P');
+  });
+
+  it('[P2] detects 360p', () => {
+    expect(parseQuality('Movie.360p.mkv')).toBe('360P');
+  });
+
+  it('[P2] is case-insensitive', () => {
+    expect(parseQuality('Movie.1080P.BluRay.mkv')).toBe('1080P');
+  });
 });
 
 describe('FileInfo', () => {
@@ -84,5 +96,22 @@ describe('FileInfo', () => {
     render(<FileInfo filePath="/media/movie.mkv" />);
     expect(screen.getByTestId('file-name')).toBeInTheDocument();
     expect(screen.queryByTestId('file-size')).not.toBeInTheDocument();
+  });
+
+  it('[P1] does not display file size when fileSize is 0', () => {
+    render(<FileInfo filePath="/media/movie.mkv" fileSize={0} />);
+    expect(screen.getByTestId('file-name')).toBeInTheDocument();
+    expect(screen.queryByTestId('file-size')).not.toBeInTheDocument();
+  });
+
+  it('[P1] does not render quality badge when filename has no quality', () => {
+    render(<FileInfo filePath="/media/movie.mkv" fileSize={1024} />);
+    expect(screen.queryByTestId('file-quality')).not.toBeInTheDocument();
+  });
+
+  it('[P2] renders with only fileSize (no filePath)', () => {
+    render(<FileInfo fileSize={2048} />);
+    expect(screen.queryByTestId('file-name')).not.toBeInTheDocument();
+    expect(screen.getByTestId('file-size')).toHaveTextContent('2 KB');
   });
 });

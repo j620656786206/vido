@@ -332,5 +332,87 @@ describe('MediaDetailPanel', () => {
       });
       expect(screen.queryByTestId('detail-menu-trigger')).not.toBeInTheDocument();
     });
+
+    it('[P1] does not render metadata badge when metadataSource not provided', () => {
+      render(<MediaDetailPanel type="movie" details={mockMovieDetails} />, {
+        wrapper: createWrapper(),
+      });
+      expect(screen.queryByTestId('metadata-source-badge')).not.toBeInTheDocument();
+    });
+
+    it('[P1] does not render file info when neither filePath nor fileSize provided', () => {
+      render(<MediaDetailPanel type="movie" details={mockMovieDetails} />, {
+        wrapper: createWrapper(),
+      });
+      expect(screen.queryByTestId('file-info')).not.toBeInTheDocument();
+    });
+
+    it('[P1] does not render date added when createdAt not provided', () => {
+      render(<MediaDetailPanel type="movie" details={mockMovieDetails} />, {
+        wrapper: createWrapper(),
+      });
+      expect(screen.queryByTestId('detail-date-added')).not.toBeInTheDocument();
+    });
+
+    it('[P1] does not render trailer button when libraryId not provided', () => {
+      render(<MediaDetailPanel type="movie" details={mockMovieDetails} />, {
+        wrapper: createWrapper(),
+      });
+      expect(screen.queryByTestId('load-trailers-button')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Edge cases', () => {
+    it('[P1] hides rating when vote_average is 0', () => {
+      const movieNoRating = { ...mockMovieDetails, vote_average: 0, vote_count: 0 };
+      render(<MediaDetailPanel type="movie" details={movieNoRating} />, {
+        wrapper: createWrapper(),
+      });
+      expect(screen.queryByTestId('detail-rating')).not.toBeInTheDocument();
+    });
+
+    it('[P1] hides runtime when runtime is 0', () => {
+      const movieNoRuntime = { ...mockMovieDetails, runtime: 0 };
+      render(<MediaDetailPanel type="movie" details={movieNoRuntime} />, {
+        wrapper: createWrapper(),
+      });
+      expect(screen.queryByTestId('detail-runtime')).not.toBeInTheDocument();
+    });
+
+    it('[P1] does not render poster when poster_path is null', () => {
+      const movieNoPoster = { ...mockMovieDetails, poster_path: null };
+      render(<MediaDetailPanel type="movie" details={movieNoPoster} />, {
+        wrapper: createWrapper(),
+      });
+      expect(screen.queryByTestId('detail-poster')).not.toBeInTheDocument();
+    });
+
+    it('[P1] renders TV show without seasons gracefully', () => {
+      const tvNoSeasons = { ...mockTVShowDetails, seasons: [] };
+      render(<MediaDetailPanel type="tv" details={tvNoSeasons} />, {
+        wrapper: createWrapper(),
+      });
+      expect(screen.queryByTestId('tv-seasons')).not.toBeInTheDocument();
+    });
+
+    it('[P1] renders TV show production countries in season section', () => {
+      render(<MediaDetailPanel type="tv" details={mockTVShowDetails} />, {
+        wrapper: createWrapper(),
+      });
+      expect(screen.getByText(/United States/)).toBeInTheDocument();
+    });
+
+    it('[P1] does not render context menu when only some callbacks provided', () => {
+      render(
+        <MediaDetailPanel
+          type="movie"
+          details={mockMovieDetails}
+          onReparse={vi.fn()}
+          onExport={vi.fn()}
+        />,
+        { wrapper: createWrapper() }
+      );
+      expect(screen.queryByTestId('detail-menu-trigger')).not.toBeInTheDocument();
+    });
   });
 });

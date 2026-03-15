@@ -38,4 +38,42 @@ describe('TrailerEmbed', () => {
     const container = screen.getByTestId('trailer-player');
     expect(container.className).toContain('aspect-video');
   });
+
+  it('[P1] iframe has correct allow attributes for security', () => {
+    render(<TrailerEmbed videoKey="sec-test" title="Security Test" />);
+    fireEvent.click(screen.getByTestId('trailer-button'));
+
+    const iframe = screen.getByTitle('Security Test 預告片');
+    expect(iframe).toHaveAttribute(
+      'allow',
+      'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope'
+    );
+    expect(iframe).toHaveAttribute('allowFullScreen');
+  });
+
+  it('[P1] constructs correct title with zh-TW suffix', () => {
+    render(<TrailerEmbed videoKey="key1" title="蜘蛛人" />);
+    fireEvent.click(screen.getByTestId('trailer-button'));
+
+    expect(screen.getByTitle('蜘蛛人 預告片')).toBeInTheDocument();
+  });
+
+  it('[P1] button hides after iframe is shown', () => {
+    render(<TrailerEmbed videoKey="abc123" title="Test" />);
+    fireEvent.click(screen.getByTestId('trailer-button'));
+
+    expect(screen.queryByTestId('trailer-button')).not.toBeInTheDocument();
+    expect(screen.getByTestId('trailer-player')).toBeInTheDocument();
+  });
+
+  it('[P2] embeds different video keys correctly', () => {
+    render(<TrailerEmbed videoKey="DIFFERENT_KEY_123" title="Diff" />);
+    fireEvent.click(screen.getByTestId('trailer-button'));
+
+    const iframe = screen.getByTitle('Diff 預告片');
+    expect(iframe).toHaveAttribute(
+      'src',
+      'https://www.youtube-nocookie.com/embed/DIFFERENT_KEY_123'
+    );
+  });
 });
