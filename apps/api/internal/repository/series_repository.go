@@ -332,19 +332,19 @@ func (r *SeriesRepository) List(ctx context.Context, params ListParams) ([]model
 	// Default sort column
 	sortBy := "created_at"
 	if params.SortBy != "" {
-		// Validate sort column to prevent SQL injection
-		validSortColumns := map[string]bool{
-			"id":             true,
-			"title":          true,
-			"first_air_date": true,
-			"release_date":   true,
-			"rating":         true,
-			"vote_average":   true,
-			"created_at":     true,
-			"updated_at":     true,
+		// Map frontend sort fields to actual series table columns
+		sortColumnMap := map[string]string{
+			"id":             "id",
+			"title":          "title",
+			"first_air_date": "first_air_date",
+			"release_date":   "first_air_date", // alias: frontend uses release_date for both movie/series
+			"rating":         "vote_average",    // alias: frontend rating maps to vote_average column
+			"vote_average":   "vote_average",
+			"created_at":     "created_at",
+			"updated_at":     "updated_at",
 		}
-		if validSortColumns[params.SortBy] {
-			sortBy = params.SortBy
+		if col, ok := sortColumnMap[params.SortBy]; ok {
+			sortBy = col
 		}
 	}
 

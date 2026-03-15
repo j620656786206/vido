@@ -1,6 +1,6 @@
 # Story 5.2: Library List View Toggle
 
-Status: review
+Status: done
 
 ## Story
 
@@ -195,6 +195,19 @@ Claude Opus 4.6 (1M context)
 - _bmad-output/implementation-artifacts/sprint-status.yaml (MODIFIED)
 - _bmad-output/implementation-artifacts/5-2-library-list-view-toggle.md (MODIFIED)
 
+### Senior Developer Review (AI)
+
+**Reviewer:** Amelia (Dev Agent) — 2026-03-15
+**Outcome:** Approved with fixes applied
+
+**Issues Found & Fixed (5):**
+1. **[HIGH] release_date sort crashes on series table** — series table has `first_air_date`, not `release_date`. Fixed by converting validSortColumns map to sortColumnMap with aliases in series_repository.go.
+2. **[HIGH] rating vs vote_average sort inconsistency** — Frontend sends `rating` but TMDb data populates `vote_average`. Fixed by aliasing `rating` → `vote_average` in both movie_repository.go and series_repository.go sortColumnMap.
+3. **[HIGH] Navigation handlers drop sort & view params** — handlePageChange, handleTypeChange, handleColumnSort all lost sortBy/sortOrder/view on navigate. Fixed all handlers to preserve current search params.
+4. **[MEDIUM] View toggle doesn't sync to URL** — handleViewChange only set state+localStorage. Fixed to also navigate with view param.
+5. **[MEDIUM] Thumbnail size doesn't match spec** — Was 36x54px, spec says 48x72px. Fixed to w-12 h-[72px].
+
 ### Change Log
 
 - 2026-03-15: Implemented Story 5-2 Library List View Toggle — all 4 tasks complete, 29 new frontend tests + 3 new backend tests, all 854 frontend tests and all backend tests pass.
+- 2026-03-15: Code Review — Fixed 3 HIGH + 2 MEDIUM issues (sort column aliasing, navigation param preservation, thumbnail size). All 64 related tests pass.

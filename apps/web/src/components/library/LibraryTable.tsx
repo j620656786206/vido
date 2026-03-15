@@ -22,7 +22,7 @@ interface Column {
 }
 
 const COLUMNS: Column[] = [
-  { key: 'poster', label: '', sortable: false, className: 'w-12' },
+  { key: 'poster', label: '', sortable: false, className: 'w-16' },
   { key: 'title', label: '標題', sortable: true },
   { key: 'release_date', label: '年份', sortable: true, className: 'w-24 text-center' },
   { key: 'genre', label: '類型', sortable: false },
@@ -139,11 +139,11 @@ export function LibraryTable({ items, isLoading, sortBy, sortOrder, onSort }: Li
                       <img
                         src={`https://image.tmdb.org/t/p/w92${data.posterPath}`}
                         alt=""
-                        className="h-[54px] w-9 rounded object-cover"
+                        className="h-[72px] w-12 rounded object-cover"
                         loading="lazy"
                       />
                     ) : (
-                      <div className="flex h-[54px] w-9 items-center justify-center rounded bg-slate-700 text-xs text-slate-500">
+                      <div className="flex h-[72px] w-12 items-center justify-center rounded bg-slate-700 text-xs text-slate-500">
                         N/A
                       </div>
                     )}

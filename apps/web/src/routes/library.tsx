@@ -82,17 +82,48 @@ function LibraryPage() {
   });
 
   const handlePageChange = (newPage: number) => {
-    navigate({ search: { page: newPage, pageSize: currentPageSize, type: currentType } });
+    navigate({
+      search: {
+        page: newPage,
+        pageSize: currentPageSize,
+        type: currentType,
+        sortBy: sortBy || undefined,
+        sortOrder: sortOrder || undefined,
+        view: currentView !== 'grid' ? currentView : undefined,
+      },
+    });
   };
 
   const handleTypeChange = (newType: LibraryMediaType) => {
-    navigate({ search: { page: 1, pageSize: currentPageSize, type: newType } });
+    navigate({
+      search: {
+        page: 1,
+        pageSize: currentPageSize,
+        type: newType,
+        sortBy: sortBy || undefined,
+        sortOrder: sortOrder || undefined,
+        view: currentView !== 'grid' ? currentView : undefined,
+      },
+    });
   };
 
-  const handleViewChange = useCallback((newView: ViewMode) => {
-    setCurrentView(newView);
-    setStoredView(newView);
-  }, []);
+  const handleViewChange = useCallback(
+    (newView: ViewMode) => {
+      setCurrentView(newView);
+      setStoredView(newView);
+      navigate({
+        search: {
+          page: currentPage,
+          pageSize: currentPageSize,
+          type: currentType,
+          sortBy: sortBy || undefined,
+          sortOrder: sortOrder || undefined,
+          view: newView !== 'grid' ? newView : undefined,
+        },
+      });
+    },
+    [currentPage, currentPageSize, currentType, sortBy, sortOrder, navigate]
+  );
 
   const handleColumnSort = useCallback(
     (field: SortField) => {
@@ -104,10 +135,11 @@ function LibraryPage() {
           type: currentType,
           sortBy: field,
           sortOrder: newOrder,
+          view: currentView !== 'grid' ? currentView : undefined,
         },
       });
     },
-    [sortBy, sortOrder, currentPageSize, currentType, navigate]
+    [sortBy, sortOrder, currentPageSize, currentType, currentView, navigate]
   );
 
   const totalItems = data?.totalItems ?? 0;

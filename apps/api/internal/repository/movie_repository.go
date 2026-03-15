@@ -367,18 +367,18 @@ func (r *MovieRepository) List(ctx context.Context, params ListParams) ([]models
 	// Default sort column
 	sortBy := "created_at"
 	if params.SortBy != "" {
-		// Validate sort column to prevent SQL injection
-		validSortColumns := map[string]bool{
-			"id":            true,
-			"title":         true,
-			"release_date":  true,
-			"rating":        true,
-			"vote_average":  true,
-			"created_at":    true,
-			"updated_at":    true,
+		// Map frontend sort fields to actual movie table columns
+		sortColumnMap := map[string]string{
+			"id":           "id",
+			"title":        "title",
+			"release_date": "release_date",
+			"rating":       "vote_average", // alias: frontend rating maps to vote_average column
+			"vote_average": "vote_average",
+			"created_at":   "created_at",
+			"updated_at":   "updated_at",
 		}
-		if validSortColumns[params.SortBy] {
-			sortBy = params.SortBy
+		if col, ok := sortColumnMap[params.SortBy]; ok {
+			sortBy = col
 		}
 	}
 
