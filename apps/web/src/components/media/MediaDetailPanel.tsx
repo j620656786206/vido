@@ -18,6 +18,8 @@ export interface MediaDetailPanelProps {
   filePath?: string;
   fileSize?: number;
   createdAt?: string;
+  onPlay?: () => void;
+  onAddToList?: () => void;
   onReparse?: () => void;
   onExport?: () => void;
   onDelete?: () => void;
@@ -33,6 +35,8 @@ export function MediaDetailPanel({
   filePath,
   fileSize,
   createdAt,
+  onPlay,
+  onAddToList,
   onReparse,
   onExport,
   onDelete,
@@ -55,6 +59,7 @@ export function MediaDetailPanel({
   const backdropUrl = getImageUrl(details.backdrop_path, 'w780');
 
   const director = credits?.crew?.find((c) => c.job === 'Director');
+  const topCast = credits?.cast?.slice(0, 5) ?? [];
 
   const hasContextMenu = onReparse && onExport && onDelete;
 
@@ -68,7 +73,7 @@ export function MediaDetailPanel({
         </div>
       )}
 
-      <div className="p-4">
+      <div className="-mt-12 relative z-10 p-4">
         {/* Context menu */}
         {hasContextMenu && (
           <div className="mb-2 flex justify-end">
@@ -153,6 +158,38 @@ export function MediaDetailPanel({
             <span className="ml-2 text-sm text-white">
               {tvShow.created_by.map((c) => c.name).join(', ')}
             </span>
+          </div>
+        )}
+
+        {/* Cast (AC2) */}
+        {topCast.length > 0 && (
+          <div className="mt-4" data-testid="detail-cast">
+            <span className="text-sm text-gray-400">主演：</span>
+            <span className="ml-2 text-sm text-white">{topCast.map((c) => c.name).join('、')}</span>
+          </div>
+        )}
+
+        {/* CTA Buttons (AC1) */}
+        {(onPlay || onAddToList) && (
+          <div className="mt-6 flex gap-3" data-testid="detail-cta-buttons">
+            {onPlay && (
+              <button
+                onClick={onPlay}
+                className="flex-1 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-500"
+                data-testid="detail-play-button"
+              >
+                播放
+              </button>
+            )}
+            {onAddToList && (
+              <button
+                onClick={onAddToList}
+                className="flex-1 rounded-lg border border-blue-500 px-4 py-2.5 text-sm font-medium text-blue-400 transition-colors hover:bg-blue-500/10"
+                data-testid="detail-add-to-list-button"
+              >
+                加入清單
+              </button>
+            )}
           </div>
         )}
 

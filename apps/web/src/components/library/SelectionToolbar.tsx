@@ -20,14 +20,14 @@ export function SelectionToolbar({
   return (
     <div
       data-testid="selection-toolbar"
-      className="sticky top-0 z-20 flex items-center justify-between rounded-lg bg-slate-800 px-4 py-3"
+      className="sticky top-0 z-20 flex flex-col gap-2 rounded-lg bg-slate-800 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
     >
       <div className="flex items-center gap-4">
         <span className="text-sm font-medium text-white" data-testid="selected-count">
           已選取 {selectedCount} 項
         </span>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <button
           onClick={onReparse}
           disabled={isProcessing}
@@ -35,7 +35,7 @@ export function SelectionToolbar({
           className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-slate-300 transition-colors hover:bg-slate-700 hover:text-white disabled:opacity-50"
         >
           <RefreshCw size={14} />
-          重新解析
+          <span className="hidden sm:inline">重新解析</span>
         </button>
         <button
           onClick={onExport}
@@ -44,7 +44,7 @@ export function SelectionToolbar({
           className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-slate-300 transition-colors hover:bg-slate-700 hover:text-white disabled:opacity-50"
         >
           <Download size={14} />
-          匯出元數據
+          <span className="hidden sm:inline">匯出中繼資料</span>
         </button>
         <button
           onClick={onDelete}
@@ -53,9 +53,9 @@ export function SelectionToolbar({
           className="flex items-center gap-1.5 rounded-lg bg-red-600/20 px-3 py-1.5 text-sm text-red-400 transition-colors hover:bg-red-600/30 hover:text-red-300 disabled:opacity-50"
         >
           <Trash2 size={14} />
-          刪除選取項目
+          <span className="hidden sm:inline">刪除選取項目</span>
         </button>
-        <div className="mx-2 h-5 w-px bg-slate-600" />
+        <div className="mx-2 hidden h-5 w-px bg-slate-600 sm:block" />
         <button
           onClick={onCancel}
           data-testid="batch-cancel-btn"

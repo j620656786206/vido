@@ -66,7 +66,7 @@ export function DetailPanelMenu({ onReparse, onExport, onDelete }: DetailPanelMe
             data-testid="menu-export"
           >
             <Download size={16} />
-            匯出 Metadata
+            匯出中繼資料
           </button>
           <div className="my-1 border-t border-slate-700" role="separator" />
           {!showConfirm ? (

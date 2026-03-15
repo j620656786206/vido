@@ -28,7 +28,7 @@ describe('DetailPanelMenu', () => {
     fireEvent.click(screen.getByTestId('detail-menu-trigger'));
 
     expect(screen.getByTestId('menu-reparse')).toHaveTextContent('重新解析');
-    expect(screen.getByTestId('menu-export')).toHaveTextContent('匯出 Metadata');
+    expect(screen.getByTestId('menu-export')).toHaveTextContent('匯出中繼資料');
     expect(screen.getByTestId('menu-delete')).toHaveTextContent('刪除');
   });
 

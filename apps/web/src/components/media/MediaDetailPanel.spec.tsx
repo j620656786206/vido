@@ -312,6 +312,46 @@ describe('MediaDetailPanel', () => {
       expect(screen.getByTestId('load-trailers-button')).toBeInTheDocument();
     });
 
+    it('renders cast members when credits provided (AC2)', () => {
+      render(<MediaDetailPanel type="movie" details={mockMovieDetails} credits={mockCredits} />, {
+        wrapper: createWrapper(),
+      });
+      expect(screen.getByTestId('detail-cast')).toBeInTheDocument();
+      expect(screen.getByTestId('detail-cast')).toHaveTextContent('演員一');
+      expect(screen.getByTestId('detail-cast')).toHaveTextContent('演員二');
+    });
+
+    it('does not render cast when credits has no cast', () => {
+      const creditsNoCast: Credits = { id: 123, cast: [], crew: mockCredits.crew };
+      render(<MediaDetailPanel type="movie" details={mockMovieDetails} credits={creditsNoCast} />, {
+        wrapper: createWrapper(),
+      });
+      expect(screen.queryByTestId('detail-cast')).not.toBeInTheDocument();
+    });
+
+    it('renders play and add-to-list CTA buttons (AC1)', () => {
+      const onPlay = vi.fn();
+      const onAddToList = vi.fn();
+      render(
+        <MediaDetailPanel
+          type="movie"
+          details={mockMovieDetails}
+          onPlay={onPlay}
+          onAddToList={onAddToList}
+        />,
+        { wrapper: createWrapper() }
+      );
+      expect(screen.getByTestId('detail-play-button')).toHaveTextContent('播放');
+      expect(screen.getByTestId('detail-add-to-list-button')).toHaveTextContent('加入清單');
+    });
+
+    it('does not render CTA buttons when callbacks not provided', () => {
+      render(<MediaDetailPanel type="movie" details={mockMovieDetails} />, {
+        wrapper: createWrapper(),
+      });
+      expect(screen.queryByTestId('detail-cta-buttons')).not.toBeInTheDocument();
+    });
+
     it('renders context menu when all callbacks provided (AC6)', () => {
       render(
         <MediaDetailPanel
