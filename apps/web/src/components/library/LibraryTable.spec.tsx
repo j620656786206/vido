@@ -208,4 +208,59 @@ describe('LibraryTable', () => {
     const dashes = screen.getAllByText('-');
     expect(dashes.length).toBeGreaterThanOrEqual(1);
   });
+
+  it('links series items to /media/tv/ path', () => {
+    render(<LibraryTable items={mockItems} />);
+    const links = screen.getAllByRole('link');
+    const seriesLinks = links.filter((l) => l.getAttribute('href') === '/media/tv/456');
+    expect(seriesLinks.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('displays dash for missing release date', () => {
+    const noDateItems: LibraryItem[] = [
+      {
+        type: 'movie',
+        movie: {
+          ...mockItems[0].movie!,
+          release_date: '',
+        },
+      },
+    ];
+    render(<LibraryTable items={noDateItems} />);
+    const dashes = screen.getAllByText('-');
+    expect(dashes.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('does not show original title when same as title', () => {
+    const sameTitleItems: LibraryItem[] = [
+      {
+        type: 'movie',
+        movie: {
+          ...mockItems[0].movie!,
+          title: 'Same Title',
+          original_title: 'Same Title',
+        },
+      },
+    ];
+    render(<LibraryTable items={sameTitleItems} />);
+    // Title should appear once (in the main title), not twice
+    const elements = screen.getAllByText('Same Title');
+    expect(elements).toHaveLength(1);
+  });
+
+  it('handles item with empty genres array', () => {
+    const noGenreItems: LibraryItem[] = [
+      {
+        type: 'movie',
+        movie: {
+          ...mockItems[0].movie!,
+          genres: [],
+        },
+      },
+    ];
+    const { container } = render(<LibraryTable items={noGenreItems} />);
+    const row = screen.getByTestId('library-table-row');
+    const genreSpans = row.querySelectorAll('.rounded.bg-slate-700');
+    expect(genreSpans).toHaveLength(0);
+  });
 });
