@@ -338,7 +338,7 @@ func (r *SeriesRepository) List(ctx context.Context, params ListParams) ([]model
 			"title":          "title",
 			"first_air_date": "first_air_date",
 			"release_date":   "first_air_date", // alias: frontend uses release_date for both movie/series
-			"rating":         "vote_average",    // alias: frontend rating maps to vote_average column
+			"rating":         "rating",
 			"vote_average":   "vote_average",
 			"created_at":     "created_at",
 			"updated_at":     "updated_at",

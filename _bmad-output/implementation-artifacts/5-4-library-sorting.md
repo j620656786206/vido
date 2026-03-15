@@ -1,6 +1,6 @@
 # Story 5.4: Library Sorting
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -33,30 +33,30 @@ So that **I can organize my view based on what I'm looking for**.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create Sort Selector Component (AC: 1, 2)
-  - [ ] 1.1: Create `/apps/web/src/components/library/SortSelector.tsx`
-  - [ ] 1.2: Dropdown with sort options (zh-TW labels)
-  - [ ] 1.3: Each option includes direction toggle (asc/desc)
-  - [ ] 1.4: Show current sort label + arrow indicator
-  - [ ] 1.5: Accessible: proper aria-label, keyboard navigation
-  - [ ] 1.6: Write component tests
+- [x] Task 1: Create Sort Selector Component (AC: 1, 2)
+  - [x] 1.1: Create `/apps/web/src/components/library/SortSelector.tsx`
+  - [x] 1.2: Dropdown with sort options (zh-TW labels)
+  - [x] 1.3: Each option includes direction toggle (asc/desc)
+  - [x] 1.4: Show current sort label + arrow indicator
+  - [x] 1.5: Accessible: proper aria-label, keyboard navigation
+  - [x] 1.6: Write component tests
 
-- [ ] Task 2: Add Sort Params to Library Route (AC: 2, 3)
-  - [ ] 2.1: Add `sortBy` and `sortOrder` to library route SearchParams
-  - [ ] 2.2: Map frontend sort keys to backend: `created_at`, `title`, `release_date`, `vote_average`
-  - [ ] 2.3: Pass sort params to `useLibraryList` / `useLibrarySearch` hooks
-  - [ ] 2.4: Reset to page 1 when sort changes
+- [x] Task 2: Add Sort Params to Library Route (AC: 2, 3)
+  - [x] 2.1: Add `sortBy` and `sortOrder` to library route SearchParams
+  - [x] 2.2: Map frontend sort keys to backend: `created_at`, `title`, `release_date`, `vote_average`
+  - [x] 2.3: Pass sort params to `useLibraryList` / `useLibrarySearch` hooks
+  - [x] 2.4: Reset to page 1 when sort changes
 
-- [ ] Task 3: Persist Sort Preference (AC: 3)
-  - [ ] 3.1: Save to localStorage key `vido:library:sort` as JSON `{ sortBy, sortOrder }`
-  - [ ] 3.2: Initialize from localStorage when no URL sort params present
-  - [ ] 3.3: URL params take priority over localStorage
+- [x] Task 3: Persist Sort Preference (AC: 3)
+  - [x] 3.1: Save to localStorage key `vido:library:sort` as JSON `{ sortBy, sortOrder }`
+  - [x] 3.2: Initialize from localStorage when no URL sort params present
+  - [x] 3.3: URL params take priority over localStorage
 
-- [ ] Task 4: Ensure Backend Sort Support (AC: 2)
-  - [ ] 4.1: Verify `ListParams` validates allowed sort fields
-  - [ ] 4.2: Add database indexes if missing for sort columns
-  - [ ] 4.3: Handle combined movie+series sort (interleave by sort field)
-  - [ ] 4.4: Write backend sort tests
+- [x] Task 4: Ensure Backend Sort Support (AC: 2)
+  - [x] 4.1: Verify `ListParams` validates allowed sort fields
+  - [x] 4.2: Add database indexes if missing for sort columns
+  - [x] 4.3: Handle combined movie+series sort (interleave by sort field)
+  - [x] 4.4: Write backend sort tests
 
 ## Dev Notes
 
@@ -126,10 +126,23 @@ Frontend (modify):
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.6 (1M context)
 
 ### Debug Log References
 
 ### Completion Notes List
 
+- Task 1: Created SortSelector component with 4 sort options (新增日期/標題/年份/評分), direction toggle, active highlighting, outside click close, Escape key close, aria-label accessibility. 13 unit tests.
+- Task 2: Integrated SortSelector into library route next to ViewToggle. sortBy/sortOrder already existed in SearchParams, hooks, and service from prior stories. Added handleSortChange callback that resets page to 1.
+- Task 3: Added localStorage persistence via `vido:library:sort` key. URL params take priority over localStorage. Sort preference saved on both SortSelector and column header sort changes.
+- Task 4: Fixed backend sort column mapping bug — "rating" was incorrectly mapped to "vote_average" (non-existent in series table, empty in movie table). Changed to map to "rating" column. Both movie and series sort tests now pass. All backend sort infrastructure already existed (ListParams validation, column mapping, combined movie+series interleave sort in library service).
+
 ### File List
+
+- apps/web/src/components/library/SortSelector.tsx (NEW)
+- apps/web/src/components/library/SortSelector.spec.tsx (NEW)
+- apps/web/src/routes/library.tsx (MODIFIED)
+- apps/api/internal/repository/movie_repository.go (MODIFIED)
+- apps/api/internal/repository/series_repository.go (MODIFIED)
+- _bmad-output/implementation-artifacts/5-4-library-sorting.md (MODIFIED)
+- _bmad-output/implementation-artifacts/sprint-status.yaml (MODIFIED)

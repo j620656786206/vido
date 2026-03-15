@@ -372,7 +372,7 @@ func (r *MovieRepository) List(ctx context.Context, params ListParams) ([]models
 			"id":           "id",
 			"title":        "title",
 			"release_date": "release_date",
-			"rating":       "vote_average", // alias: frontend rating maps to vote_average column
+			"rating":       "rating",
 			"vote_average": "vote_average",
 			"created_at":   "created_at",
 			"updated_at":   "updated_at",

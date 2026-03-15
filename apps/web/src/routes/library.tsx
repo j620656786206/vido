@@ -4,17 +4,26 @@ import { useLibraryList, useLibrarySearch } from '../hooks/useLibrary';
 import { LibraryGrid } from '../components/library/LibraryGrid';
 import { LibraryTable } from '../components/library/LibraryTable';
 import type { SortField } from '../components/library/LibraryTable';
+import { SortSelector } from '../components/library/SortSelector';
+import type { SortField as SortSelectorField, SortOrder } from '../components/library/SortSelector';
 import { LibrarySearchBar } from '../components/library/LibrarySearchBar';
 import { EmptySearchResults } from '../components/library/EmptySearchResults';
 import { RecentlyAdded } from '../components/library/RecentlyAdded';
 import { EmptyLibrary } from '../components/library/EmptyLibrary';
 import { ViewToggle } from '../components/library/ViewToggle';
 import type { ViewMode } from '../components/library/ViewToggle';
-import { getStoredPreferences } from '../components/library/SettingsGearDropdown';
 import { Pagination } from '../components/ui/Pagination';
 import type { LibraryMediaType, LibraryItem } from '../types/library';
 
 const VIEW_STORAGE_KEY = 'vido:library:view';
+const SORT_STORAGE_KEY = 'vido:library:sort';
+
+interface SortPreference {
+  sortBy: string;
+  sortOrder: 'asc' | 'desc';
+}
+
+const DEFAULT_SORT: SortPreference = { sortBy: 'created_at', sortOrder: 'desc' };
 
 function getStoredView(): ViewMode {
   try {
@@ -28,6 +37,25 @@ function getStoredView(): ViewMode {
 
 function setStoredView(view: ViewMode) {
   localStorage.setItem(VIEW_STORAGE_KEY, view);
+}
+
+function getStoredSort(): SortPreference {
+  try {
+    const stored = localStorage.getItem(SORT_STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (parsed.sortBy && (parsed.sortOrder === 'asc' || parsed.sortOrder === 'desc')) {
+        return parsed;
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return DEFAULT_SORT;
+}
+
+function setStoredSort(pref: SortPreference) {
+  localStorage.setItem(SORT_STORAGE_KEY, JSON.stringify(pref));
 }
 
 interface LibrarySearchParams {
@@ -61,7 +89,6 @@ function LibraryPage() {
   const { page, pageSize, type, sortBy, sortOrder, view: viewParam, q } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
 
-  const [preferences] = useState(() => getStoredPreferences());
   const [currentView, setCurrentView] = useState<ViewMode>(
     () => (viewParam as ViewMode) || getStoredView()
   );
@@ -72,9 +99,10 @@ function LibraryPage() {
   const currentType = type || 'all';
   const isSearchActive = searchQuery.length >= 2;
 
-  // Search params override preferences for sort (e.g., from "查看全部" link)
-  const effectiveSortBy = sortBy || preferences.defaultSort;
-  const effectiveSortOrder = (sortOrder as 'asc' | 'desc') || undefined;
+  // URL params > localStorage > default
+  const storedSort = useState(() => getStoredSort())[0];
+  const effectiveSortBy = sortBy || storedSort.sortBy;
+  const effectiveSortOrder: 'asc' | 'desc' = (sortOrder as 'asc' | 'desc') || storedSort.sortOrder;
 
   // Show recently added only in clean browse mode (no custom sort/filter/search)
   const isCleanBrowse = !sortBy && !sortOrder && !isSearchActive;
@@ -138,9 +166,18 @@ function LibraryPage() {
   const handleColumnSort = useCallback(
     (field: SortField) => {
       const newOrder = sortBy === field && sortOrder === 'asc' ? 'desc' : 'asc';
+      setStoredSort({ sortBy: field, sortOrder: newOrder });
       navigate({ search: buildSearchParams({ page: 1, sortBy: field, sortOrder: newOrder }) });
     },
     [sortBy, sortOrder, navigate, buildSearchParams]
+  );
+
+  const handleSortChange = useCallback(
+    (field: SortSelectorField, order: SortOrder) => {
+      setStoredSort({ sortBy: field, sortOrder: order });
+      navigate({ search: buildSearchParams({ page: 1, sortBy: field, sortOrder: order }) });
+    },
+    [navigate, buildSearchParams]
   );
 
   // Derive display data based on search mode
@@ -191,7 +228,14 @@ function LibraryPage() {
               顯示 {(currentPage - 1) * currentPageSize + 1}-
               {Math.min(currentPage * currentPageSize, totalItems)} / {totalItems} 項
             </span>
-            <ViewToggle view={currentView} onViewChange={handleViewChange} />
+            <div className="flex items-center gap-2">
+              <SortSelector
+                sortBy={effectiveSortBy as SortSelectorField}
+                sortOrder={effectiveSortOrder}
+                onSortChange={handleSortChange}
+              />
+              <ViewToggle view={currentView} onViewChange={handleViewChange} />
+            </div>
           </div>
         )}
 
@@ -222,12 +266,7 @@ function LibraryPage() {
           <>
             {isCleanBrowse && <RecentlyAdded />}
             {currentView === 'grid' ? (
-              <LibraryGrid
-                items={items}
-                isLoading={isLoading}
-                totalItems={totalItems}
-                density={preferences.density}
-              />
+              <LibraryGrid items={items} isLoading={isLoading} totalItems={totalItems} />
             ) : (
               <LibraryTable
                 items={items}
