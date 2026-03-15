@@ -181,19 +181,40 @@ The following architectural decisions were made collaboratively, prioritized by 
    - **Hook Tests:** Custom React hooks with `@testing-library/react-hooks`
    - **Integration Tests:** Multi-component workflows
 
-### E2E Testing (Deferred)
+### E2E Testing: Dual-Layer Strategy (Playwright + TestSprite)
 
-**Decision:** Defer E2E testing to 1.0 phase
+**Decision:** Two-tier E2E testing — Playwright for feature-level tests, TestSprite for PRD acceptance-criteria journey tests
 
-**Recommendation:** Playwright (when implemented)
-- Cross-browser testing
-- Auto-wait mechanisms
-- Visual regression testing capability
+**Tier 1 — Playwright (Active, 328 test cases):**
+- Feature-level E2E tests co-located with stories
+- Cross-browser testing with auto-wait mechanisms
+- Runs in CI nightly or when related story changes
+- 25 spec files covering individual features (API + UI)
 
-**Rationale for Deferral:**
-- Focus MVP on unit and integration tests
-- E2E tests add significant maintenance overhead
-- Component and API tests provide sufficient coverage for early development
+**Tier 2 — TestSprite (Installed, deferred until Epic 5+6 complete):**
+- AI-powered journey-level testing via MCP server
+- Tests run in TestSprite cloud sandbox (requires external access to app)
+- 62 test cases generated across 9 categories, mapping to 6 P0 user journeys
+- Test plan: `testsprite_tests/testsprite_frontend_test_plan.json`
+
+**6 P0 Critical User Journeys (TestSprite):**
+1. 搜尋 → 瀏覽 → 查看詳情
+2. 檔名解析 → 元資料匹配 → 手動修正
+3. 下載監控全流程
+4. 連線健康 → 降級 → 恢復
+5. 媒體庫瀏覽與互動
+6. qBittorrent 連線設定
+
+**TestSprite Activation Prerequisites (target: after Epic 5+6):**
+- [ ] Epic 5 (Media Library Management) fully complete
+- [ ] Epic 6 (System Config & Backup) complete
+- [ ] Seed data script (`scripts/seed-test-data.sh`) for test database
+- [ ] External access via ngrok/cloudflared tunnel or staging deployment
+- [ ] Run in production mode to unlock all 62 tests (dev mode limits to 15)
+
+**Initial Test Run (2026-03-15):** 15/62 tests executed in dev mode, 3 passed, 12 failed due to infrastructure gaps (cloud sandbox cannot reach localhost, empty DB, zh-TW label mismatches). No app bugs identified.
+
+**TestSprite Account:** Free plan, 150 credits, MCP server installed at project scope
 
 ---
 

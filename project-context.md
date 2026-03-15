@@ -53,6 +53,8 @@ See `_bmad-output/planning-artifacts/architecture/consolidation-refactoring-plan
 
 - **Backend:** Go testing + testify (coverage >80%)
 - **Frontend:** Vitest + React Testing Library (coverage >70%)
+- **E2E Feature-level:** Playwright (328 tests, runs in CI/nightly)
+- **E2E Journey-level:** TestSprite MCP (62 tests, deferred until Epic 5+6 complete — see `testsprite_tests/`)
 - **Pattern:** Co-located tests (`*_test.go`, `*.spec.tsx`)
 
 ### 3. Authentication: JWT Stateless
