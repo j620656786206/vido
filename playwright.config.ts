@@ -58,12 +58,14 @@ export default defineConfig({
     timeout: 10 * 1000,
   },
 
-  // Reporters
-  reporter: [
-    ['html', { outputFolder: 'playwright-report', open: 'never' }],
-    ['junit', { outputFile: 'test-results/junit.xml' }],
-    ['list'],
-  ],
+  // Reporters — CI uses blob for cross-shard merge, local uses HTML
+  reporter: process.env.CI
+    ? [['blob'], ['list']]
+    : [
+        ['html', { outputFolder: 'playwright-report', open: 'never' }],
+        ['junit', { outputFile: 'test-results/junit.xml' }],
+        ['list'],
+      ],
 
   // Shared settings for all projects
   use: {

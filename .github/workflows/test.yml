@@ -227,14 +227,20 @@ jobs:
           BASE_URL: http://localhost:4200
           API_URL: http://localhost:8080/api/v1
 
-      - name: Upload test results
+      - name: Upload blob report (for merge)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: blob-report-shard-${{ matrix.shard }}
+          path: blob-report/
+          retention-days: 7
+
+      - name: Upload test results (traces & screenshots)
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-results-shard-${{ matrix.shard }}
-          path: |
-            test-results/
-            playwright-report/
+          path: test-results/
           retention-days: 30
 
   # =============================================================================
@@ -263,15 +269,15 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Download all shard results
+      - name: Download all blob reports
         uses: actions/download-artifact@v4
         with:
-          pattern: test-results-shard-*
-          path: all-results/
+          pattern: blob-report-shard-*
+          path: all-blob-reports/
           merge-multiple: true
 
-      - name: Merge HTML reports
-        run: npx playwright merge-reports --reporter=html ./all-results/
+      - name: Merge blob reports into HTML
+        run: npx playwright merge-reports --reporter=html ./all-blob-reports/
         continue-on-error: true
 
       - name: Upload merged report
