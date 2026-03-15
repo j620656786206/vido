@@ -77,7 +77,7 @@ The following implemented components have no corresponding design screenshots. T
 - [x] AC4: All instances of "Metadata" and "元數據" replaced with "中繼資料"
 - [x] AC5: Mobile batch toolbar has responsive layout adjustments
 - [x] AC6: All existing tests still pass after changes
-- [ ] AC7: UX Designer verification PASS on all 7 relevant design screenshots
+- [x] AC7: UX Designer verification PASS on all 7 relevant design screenshots (Sally verified 2026-03-15)
 
 ## Tasks/Subtasks
 
