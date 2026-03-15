@@ -49,6 +49,10 @@ type ClientInterface interface {
 	GetTVShowDetails(ctx context.Context, tvID int) (*TVShowDetails, error)
 	// GetTVShowDetailsWithLanguage retrieves TV show details with a specific language
 	GetTVShowDetailsWithLanguage(ctx context.Context, tvID int, language string) (*TVShowDetails, error)
+	// GetMovieVideos retrieves videos (trailers, teasers) for a movie
+	GetMovieVideos(ctx context.Context, movieID int) (*VideosResponse, error)
+	// GetTVShowVideos retrieves videos (trailers, teasers) for a TV show
+	GetTVShowVideos(ctx context.Context, tvID int) (*VideosResponse, error)
 }
 
 // Client represents a TMDb API client

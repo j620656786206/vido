@@ -301,7 +301,7 @@ func main() {
 	serviceHealthHandler.SetHistoryService(connectionHistoryService)
 	qbittorrentHandler := handlers.NewQBittorrentHandler(qbittorrentService)
 	downloadHandler := handlers.NewDownloadHandler(downloadService)
-	libraryService := services.NewLibraryService(repos.Movies, repos.Series, repos.Episodes)
+	libraryService := services.NewLibraryService(repos.Movies, repos.Series, repos.Episodes, services.WithTMDbVideos(tmdbService.VideosProvider()))
 	libraryHandler := handlers.NewLibraryHandler(libraryService)
 	recentMediaHandler := handlers.NewRecentMediaHandler(movieService, seriesService)
 	// parseProgressHandler already initialized above with defer Close()

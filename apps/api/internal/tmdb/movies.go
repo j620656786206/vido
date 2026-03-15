@@ -71,3 +71,22 @@ func (c *Client) GetMovieDetailsWithLanguage(ctx context.Context, movieID int, l
 
 	return &result, nil
 }
+
+// GetMovieVideos retrieves videos (trailers, teasers, etc.) for a movie
+func (c *Client) GetMovieVideos(ctx context.Context, movieID int) (*VideosResponse, error) {
+	if movieID <= 0 {
+		return nil, NewBadRequestError("movie ID must be greater than 0")
+	}
+
+	endpoint := fmt.Sprintf("/movie/%d/videos", movieID)
+	queryParams := url.Values{
+		"language": []string{c.language},
+	}
+
+	var result VideosResponse
+	if err := c.Get(ctx, endpoint, queryParams, &result); err != nil {
+		return nil, fmt.Errorf("failed to get movie videos: %w", err)
+	}
+
+	return &result, nil
+}

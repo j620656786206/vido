@@ -121,6 +121,22 @@ func (m *MockLibraryService) GetLibraryStats(ctx context.Context) (*services.Lib
 	return args.Get(0).(*services.LibraryStats), args.Error(1)
 }
 
+func (m *MockLibraryService) GetMovieVideos(ctx context.Context, id string) (*tmdb.VideosResponse, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*tmdb.VideosResponse), args.Error(1)
+}
+
+func (m *MockLibraryService) GetSeriesVideos(ctx context.Context, id string) (*tmdb.VideosResponse, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*tmdb.VideosResponse), args.Error(1)
+}
+
 // Verify mock implements interface
 var _ services.LibraryServiceInterface = (*MockLibraryService)(nil)
 
@@ -802,6 +818,103 @@ func TestLibraryHandler_GetStats(t *testing.T) {
 		router.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
+	})
+
+	mockService.AssertExpectations(t)
+}
+
+func TestLibraryHandler_GetMovieVideos(t *testing.T) {
+	mockService := new(MockLibraryService)
+	handler := NewLibraryHandler(mockService)
+	router := setupLibraryTestRouter(handler)
+
+	t.Run("success - returns videos", func(t *testing.T) {
+		expectedVideos := &tmdb.VideosResponse{
+			ID: 550,
+			Results: []tmdb.Video{
+				{ID: "v1", Key: "BdJKm16Co6M", Name: "Official Trailer", Site: "YouTube", Type: "Trailer", Official: true},
+			},
+		}
+
+		mockService.On("GetMovieVideos", mock.Anything, "movie-123").Return(expectedVideos, nil).Once()
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library/movies/movie-123/videos", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		var resp APIResponse
+		err := json.Unmarshal(w.Body.Bytes(), &resp)
+		require.NoError(t, err)
+		assert.True(t, resp.Success)
+
+		dataMap, ok := resp.Data.(map[string]interface{})
+		require.True(t, ok)
+		assert.Contains(t, dataMap, "results")
+	})
+
+	t.Run("not found returns 404", func(t *testing.T) {
+		mockService.On("GetMovieVideos", mock.Anything, "missing").
+			Return(nil, errors.New("movie not found")).Once()
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library/movies/missing/videos", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusNotFound, w.Code)
+	})
+
+	t.Run("service error returns 500", func(t *testing.T) {
+		mockService.On("GetMovieVideos", mock.Anything, "err-id").
+			Return(nil, errors.New("tmdb api error")).Once()
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library/movies/err-id/videos", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
+	})
+
+	mockService.AssertExpectations(t)
+}
+
+func TestLibraryHandler_GetSeriesVideos(t *testing.T) {
+	mockService := new(MockLibraryService)
+	handler := NewLibraryHandler(mockService)
+	router := setupLibraryTestRouter(handler)
+
+	t.Run("success - returns videos", func(t *testing.T) {
+		expectedVideos := &tmdb.VideosResponse{
+			ID: 1396,
+			Results: []tmdb.Video{
+				{ID: "v2", Key: "HhesaQXLuRY", Name: "Season 1 Trailer", Site: "YouTube", Type: "Trailer", Official: true},
+			},
+		}
+
+		mockService.On("GetSeriesVideos", mock.Anything, "series-123").Return(expectedVideos, nil).Once()
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library/series/series-123/videos", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		var resp APIResponse
+		err := json.Unmarshal(w.Body.Bytes(), &resp)
+		require.NoError(t, err)
+		assert.True(t, resp.Success)
+	})
+
+	t.Run("not found returns 404", func(t *testing.T) {
+		mockService.On("GetSeriesVideos", mock.Anything, "missing").
+			Return(nil, errors.New("series not found")).Once()
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library/series/missing/videos", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusNotFound, w.Code)
 	})
 
 	mockService.AssertExpectations(t)

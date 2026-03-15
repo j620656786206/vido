@@ -5,6 +5,7 @@ import type {
   LibraryListParams,
   LibrarySearchResponse,
   LibraryStats,
+  VideosResponse,
 } from '../types/library';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
@@ -108,5 +109,13 @@ export const libraryService = {
 
   async getStats(): Promise<LibraryStats> {
     return fetchApi<LibraryStats>('/library/stats');
+  },
+
+  async getMovieVideos(id: string): Promise<VideosResponse> {
+    return fetchApi<VideosResponse>(`/library/movies/${id}/videos`);
+  },
+
+  async getSeriesVideos(id: string): Promise<VideosResponse> {
+    return fetchApi<VideosResponse>(`/library/series/${id}/videos`);
   },
 };

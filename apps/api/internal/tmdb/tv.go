@@ -71,3 +71,22 @@ func (c *Client) GetTVShowDetailsWithLanguage(ctx context.Context, tvID int, lan
 
 	return &result, nil
 }
+
+// GetTVShowVideos retrieves videos (trailers, teasers, etc.) for a TV show
+func (c *Client) GetTVShowVideos(ctx context.Context, tvID int) (*VideosResponse, error) {
+	if tvID <= 0 {
+		return nil, NewBadRequestError("TV show ID must be greater than 0")
+	}
+
+	endpoint := fmt.Sprintf("/tv/%d/videos", tvID)
+	queryParams := url.Values{
+		"language": []string{c.language},
+	}
+
+	var result VideosResponse
+	if err := c.Get(ctx, endpoint, queryParams, &result); err != nil {
+		return nil, fmt.Errorf("failed to get TV show videos: %w", err)
+	}
+
+	return &result, nil
+}

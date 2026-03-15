@@ -33,6 +33,7 @@ type TMDbServiceInterface interface {
 // TMDbService implements TMDbServiceInterface
 type TMDbService struct {
 	cacheService tmdb.CacheServiceInterface
+	client       tmdb.ClientInterface
 }
 
 // Compile-time interface verification
@@ -72,7 +73,13 @@ func NewTMDbService(cfg TMDbConfig, cacheRepo repository.CacheRepositoryInterfac
 
 	return &TMDbService{
 		cacheService: cacheService,
+		client:       client,
 	}
+}
+
+// VideosProvider returns the TMDb client as a TMDbVideosProvider for on-demand video fetching
+func (s *TMDbService) VideosProvider() TMDbVideosProvider {
+	return s.client
 }
 
 // NewTMDbServiceWithCacheService creates a TMDb service with a custom cache service

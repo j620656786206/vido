@@ -1,6 +1,6 @@
 # Story 5.6: Media Detail Page (Full Version)
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -60,61 +60,61 @@ So that **I can access all information including cast, trailers, and metadata so
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add Trailer Data to Backend (AC: 2)
-  - [ ] 1.1: Add `videos` field to movie/series detail API response
-  - [ ] 1.2: Store YouTube trailer key from TMDb API in models (or fetch on-demand)
-  - [ ] 1.3: Add `GET /api/v1/library/movies/:id/videos` endpoint (proxy to TMDb)
-  - [ ] 1.4: Write handler tests
+- [x] Task 1: Add Trailer Data to Backend (AC: 2)
+  - [x] 1.1: Add `videos` field to movie/series detail API response
+  - [x] 1.2: Store YouTube trailer key from TMDb API in models (or fetch on-demand)
+  - [x] 1.3: Add `GET /api/v1/library/movies/:id/videos` endpoint (proxy to TMDb)
+  - [x] 1.4: Write handler tests
 
-- [ ] Task 2: Add File Info to Library Detail API (AC: 4)
-  - [ ] 2.1: Ensure `file_path`, `file_size` returned in library item detail
-  - [ ] 2.2: Add file size formatting utility (bytes → human-readable)
-  - [ ] 2.3: Parse quality from filename if available (1080p, 4K, etc.)
-  - [ ] 2.4: Write tests
+- [x] Task 2: Add File Info to Library Detail API (AC: 4)
+  - [x] 2.1: Ensure `file_path`, `file_size` returned in library item detail
+  - [x] 2.2: Add file size formatting utility (bytes → human-readable)
+  - [x] 2.3: Parse quality from filename if available (1080p, 4K, etc.)
+  - [x] 2.4: Write tests
 
-- [ ] Task 3: Enhance MediaDetailPanel Component (AC: 1, 3, 4, 5)
-  - [ ] 3.1: Extend `/apps/web/src/components/media/MediaDetailPanel.tsx`
-  - [ ] 3.2: Add metadata source badge with icon + tooltip
-  - [ ] 3.3: Add file info section (filename, size, quality)
-  - [ ] 3.4: Add date added display
-  - [ ] 3.5: Enhance TV show details with season list
-  - [ ] 3.6: Write updated component tests
+- [x] Task 3: Enhance MediaDetailPanel Component (AC: 1, 3, 4, 5)
+  - [x] 3.1: Extend `/apps/web/src/components/media/MediaDetailPanel.tsx`
+  - [x] 3.2: Add metadata source badge with icon + tooltip
+  - [x] 3.3: Add file info section (filename, size, quality)
+  - [x] 3.4: Add date added display
+  - [x] 3.5: Enhance TV show details with season list
+  - [x] 3.6: Write updated component tests
 
-- [ ] Task 4: Create YouTube Trailer Component (AC: 2)
-  - [ ] 4.1: Create `/apps/web/src/components/media/TrailerEmbed.tsx`
-  - [ ] 4.2: Use privacy-enhanced embed: `https://www.youtube-nocookie.com/embed/{key}`
-  - [ ] 4.3: Lazy load iframe (only render when "觀看預告片" clicked)
-  - [ ] 4.4: Responsive aspect ratio (16:9)
-  - [ ] 4.5: Write component tests
+- [x] Task 4: Create YouTube Trailer Component (AC: 2)
+  - [x] 4.1: Create `/apps/web/src/components/media/TrailerEmbed.tsx`
+  - [x] 4.2: Use privacy-enhanced embed: `https://www.youtube-nocookie.com/embed/{key}`
+  - [x] 4.3: Lazy load iframe (only render when "觀看預告片" clicked)
+  - [x] 4.4: Responsive aspect ratio (16:9)
+  - [x] 4.5: Write component tests
 
-- [ ] Task 5: Create Metadata Source Badge Component (AC: 3)
-  - [ ] 5.1: Create `/apps/web/src/components/media/MetadataSourceBadge.tsx`
-  - [ ] 5.2: Icons per source: TMDb (blue), Douban (green), Wikipedia (gray), AI (purple), Manual (orange)
-  - [ ] 5.3: Tooltip with source details and fetch date
-  - [ ] 5.4: Write component tests
+- [x] Task 5: Create Metadata Source Badge Component (AC: 3)
+  - [x] 5.1: Create `/apps/web/src/components/media/MetadataSourceBadge.tsx`
+  - [x] 5.2: Icons per source: TMDb (blue), Douban (green), Wikipedia (gray), AI (purple), Manual (orange)
+  - [x] 5.3: Tooltip with source details and fetch date
+  - [x] 5.4: Write component tests
 
-- [ ] Task 6: Create File Info Component (AC: 4)
-  - [ ] 6.1: Create `/apps/web/src/components/media/FileInfo.tsx`
-  - [ ] 6.2: Display filename (truncated), file size (formatted), quality badge
-  - [ ] 6.3: Full path in tooltip on hover
-  - [ ] 6.4: Write component tests
+- [x] Task 6: Create File Info Component (AC: 4)
+  - [x] 6.1: Create `/apps/web/src/components/media/FileInfo.tsx`
+  - [x] 6.2: Display filename (truncated), file size (formatted), quality badge
+  - [x] 6.3: Full path in tooltip on hover
+  - [x] 6.4: Write component tests
 
-- [ ] Task 7: Add Trailer Hook (AC: 2)
-  - [ ] 7.1: Add `useMediaTrailers(type, id)` hook
-  - [ ] 7.2: Query key: `['library', type, id, 'videos']`
-  - [ ] 7.3: Fetch on-demand (not preloaded)
+- [x] Task 7: Add Trailer Hook (AC: 2)
+  - [x] 7.1: Add `useMediaTrailers(type, id)` hook
+  - [x] 7.2: Query key: `['library', type, id, 'videos']`
+  - [x] 7.3: Fetch on-demand (not preloaded)
 
-- [ ] Task 8: Create DetailPanelMenu Component (AC: 6)
-  - [ ] 8.1: Create `/apps/web/src/components/media/DetailPanelMenu.tsx`
-  - [ ] 8.2: Add `...` (MoreHorizontal) icon button to detail panel header, next to close button
-  - [ ] 8.3: Menu items with Lucide icons: RefreshCw (Re-parse), Download (Export), Trash2 (Delete)
-  - [ ] 8.4: Delete uses `--error` red color, separated by divider, appears last
-  - [ ] 8.5: Delete triggers confirmation dialog (reuse pattern from Story 5.7)
-  - [ ] 8.6: Reuse single-item API endpoints from Story 5.1 Task 10
-  - [ ] 8.7: Mobile: bottom sheet menu presentation
-  - [ ] 8.8: Menu dismisses on outside click
-  - [ ] 8.9: After delete, close detail panel and invalidate library query
-  - [ ] 8.10: Write component tests
+- [x] Task 8: Create DetailPanelMenu Component (AC: 6)
+  - [x] 8.1: Create `/apps/web/src/components/media/DetailPanelMenu.tsx`
+  - [x] 8.2: Add `...` (MoreHorizontal) icon button to detail panel header, next to close button
+  - [x] 8.3: Menu items with Lucide icons: RefreshCw (Re-parse), Download (Export), Trash2 (Delete)
+  - [x] 8.4: Delete uses `--error` red color, separated by divider, appears last
+  - [x] 8.5: Delete triggers confirmation dialog (reuse pattern from Story 5.7)
+  - [x] 8.6: Reuse single-item API endpoints from Story 5.1 Task 10
+  - [x] 8.7: Mobile: bottom sheet menu presentation
+  - [x] 8.8: Menu dismisses on outside click
+  - [x] 8.9: After delete, close detail panel and invalidate library query
+  - [x] 8.10: Write component tests
 
 ## Dev Notes
 
@@ -245,10 +245,59 @@ Frontend (modify):
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.6 (1M context)
 
 ### Debug Log References
 
 ### Completion Notes List
 
+- Task 1: Backend videos endpoint — added `Video`/`VideosResponse` types to TMDb package, `GetMovieVideos`/`GetTVShowVideos` methods on Client, `TMDbVideosProvider` interface in services, `WithTMDbVideos` option for LibraryService, `GET /library/movies/:id/videos` and `GET /library/series/:id/videos` endpoints, handler tests pass
+- Task 2: File info — `file_size` added to frontend LibraryMovie/LibrarySeries types, `formatFileSize()` utility, `parseQuality()` parser for 1080p/4K/720p etc., tests pass
+- Task 3: Enhanced MediaDetailPanel — extended with metadata source badge, file info section, date added, TV show seasons, trailer section, context menu integration, 25 tests pass
+- Task 4: TrailerEmbed — lazy-load YouTube iframe with youtube-nocookie.com, responsive 16:9 aspect-video, 4 tests pass
+- Task 5: MetadataSourceBadge — 5 source types with icons/colors/labels, tooltip with source+date, 7 tests pass
+- Task 6: FileInfo — truncated filename, formatted file size, quality badge, tooltip for full path, 11 tests pass
+- Task 7: useMediaTrailers hook — query key `['library', type, id, 'videos']`, on-demand fetch via `enabled` parameter, 10min staleTime
+- Task 8: DetailPanelMenu — MoreHorizontal trigger, RefreshCw/Download/Trash2 icons, red delete with confirmation dialog, outside click dismiss, 8 tests pass
+
+🎨 UX Verification: SKIPPED — this story adds new components; no existing design screenshots to compare against
+
 ### File List
+
+**Backend (modified):**
+- apps/api/internal/tmdb/types.go — added Video, VideosResponse types
+- apps/api/internal/tmdb/client.go — added GetMovieVideos, GetTVShowVideos to ClientInterface
+- apps/api/internal/tmdb/movies.go — added GetMovieVideos implementation
+- apps/api/internal/tmdb/tv.go — added GetTVShowVideos implementation
+- apps/api/internal/tmdb/fallback_test.go — added MockClient video methods
+- apps/api/internal/services/library_service.go — added TMDbVideosProvider, WithTMDbVideos, GetMovieVideos, GetSeriesVideos
+- apps/api/internal/services/tmdb_service.go — added client field, VideosProvider method
+- apps/api/internal/handlers/library_handler.go — added GetMovieVideos, GetSeriesVideos endpoints
+- apps/api/internal/handlers/library_handler_test.go — added video handler tests
+- apps/api/cmd/api/main.go — wired TMDb videos provider to library service
+
+**Frontend (new):**
+- apps/web/src/components/media/TrailerEmbed.tsx
+- apps/web/src/components/media/TrailerEmbed.spec.tsx
+- apps/web/src/components/media/MetadataSourceBadge.tsx
+- apps/web/src/components/media/MetadataSourceBadge.spec.tsx
+- apps/web/src/components/media/FileInfo.tsx
+- apps/web/src/components/media/FileInfo.spec.tsx
+- apps/web/src/components/media/DetailPanelMenu.tsx
+- apps/web/src/components/media/DetailPanelMenu.spec.tsx
+
+**Frontend (modified):**
+- apps/web/src/components/media/MediaDetailPanel.tsx — enhanced with all new sections
+- apps/web/src/components/media/MediaDetailPanel.spec.tsx — updated tests
+- apps/web/src/hooks/useLibrary.ts — added useMediaTrailers hook, videos query key
+- apps/web/src/services/libraryService.ts — added getMovieVideos, getSeriesVideos
+- apps/web/src/types/library.ts — added file_size, TMDbVideo, VideosResponse types
+- apps/web/src/types/tmdb.ts — added missing fields to MovieDetails, TVShowDetails, Creator
+
+**Story tracking:**
+- _bmad-output/implementation-artifacts/5-6-media-detail-page-full-version.md
+- _bmad-output/implementation-artifacts/sprint-status.yaml
+
+## Change Log
+
+- 2026-03-15: Story 5.6 implemented — all 8 tasks complete, backend videos API + 4 new frontend components + enhanced MediaDetailPanel + context menu

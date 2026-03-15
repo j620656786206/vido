@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { libraryService } from '../services/libraryService';
-import type { LibraryListParams, LibraryStats } from '../types/library';
+import type { LibraryListParams, LibraryStats, VideosResponse } from '../types/library';
 
 export const libraryKeys = {
   all: ['library'] as const,
@@ -12,6 +12,8 @@ export const libraryKeys = {
     [...libraryKeys.searches(), query, params] as const,
   genres: () => [...libraryKeys.all, 'genres'] as const,
   stats: () => [...libraryKeys.all, 'stats'] as const,
+  videos: (type: 'movie' | 'series', id: string) =>
+    [...libraryKeys.all, type, id, 'videos'] as const,
 };
 
 export function useLibraryList(params: LibraryListParams) {
@@ -75,6 +77,16 @@ export function useReparseItem() {
     mutationFn: ({ type, id }: { type: 'movie' | 'series'; id: string }) => {
       return type === 'movie' ? libraryService.reparseMovie(id) : libraryService.reparseSeries(id);
     },
+  });
+}
+
+export function useMediaTrailers(type: 'movie' | 'series', id: string, enabled = false) {
+  return useQuery({
+    queryKey: libraryKeys.videos(type, id),
+    queryFn: () =>
+      type === 'movie' ? libraryService.getMovieVideos(id) : libraryService.getSeriesVideos(id),
+    enabled,
+    staleTime: 10 * 60 * 1000, // 10min — trailers rarely change
   });
 }
 

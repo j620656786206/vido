@@ -164,6 +164,23 @@ type ImagesResponse struct {
 	Posters   []Image `json:"posters"`
 }
 
+// Video represents a video (trailer, teaser, etc.) from TMDb API
+type Video struct {
+	ID          string `json:"id"`
+	Key         string `json:"key" example:"BdJKm16Co6M"`
+	Name        string `json:"name" example:"Official Trailer"`
+	Site        string `json:"site" example:"YouTube"`
+	Type        string `json:"type" example:"Trailer"`
+	Official    bool   `json:"official" example:"true"`
+	PublishedAt string `json:"published_at" example:"2024-01-15T00:00:00.000Z"`
+}
+
+// VideosResponse represents the response from the videos endpoint
+type VideosResponse struct {
+	ID      int     `json:"id" example:"550"`
+	Results []Video `json:"results"`
+}
+
 // ErrorResponse represents a TMDb API error response
 type ErrorResponse struct {
 	StatusCode    int    `json:"status_code" example:"7"`

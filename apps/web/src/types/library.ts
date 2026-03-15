@@ -27,10 +27,26 @@ export interface LibraryMovie {
   imdb_id?: string;
   tmdb_id?: number;
   file_path?: string;
+  file_size?: number;
   parse_status: string;
   metadata_source?: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface TMDbVideo {
+  id: string;
+  key: string;
+  name: string;
+  site: string;
+  type: string;
+  official: boolean;
+  published_at: string;
+}
+
+export interface VideosResponse {
+  id: number;
+  results: TMDbVideo[];
 }
 
 export interface LibrarySeries {
@@ -53,6 +69,7 @@ export interface LibrarySeries {
   tmdb_id?: number;
   in_production?: boolean;
   file_path?: string;
+  file_size?: number;
   parse_status: string;
   metadata_source?: string;
   created_at: string;

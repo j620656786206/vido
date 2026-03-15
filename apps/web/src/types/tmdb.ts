@@ -87,6 +87,11 @@ export interface MovieDetails {
   backdrop_path: string | null;
   vote_average: number;
   vote_count: number;
+  popularity: number;
+  genre_ids: number[];
+  original_language: string;
+  adult: boolean;
+  video: boolean;
   runtime: number;
   budget: number;
   revenue: number;
@@ -107,7 +112,9 @@ export interface Network {
 
 export interface Creator {
   id: number;
+  credit_id: string;
   name: string;
+  gender: number;
   profile_path: string | null;
 }
 
@@ -132,6 +139,10 @@ export interface TVShowDetails {
   backdrop_path: string | null;
   vote_average: number;
   vote_count: number;
+  popularity: number;
+  genre_ids: number[];
+  original_language: string;
+  origin_country: string[];
   episode_run_time: number[];
   number_of_seasons: number;
   number_of_episodes: number;
@@ -140,8 +151,11 @@ export interface TVShowDetails {
   tagline: string;
   genres: Genre[];
   created_by: Creator[];
-  networks: Network[];
+  homepage: string | null;
   in_production: boolean;
+  languages: string[];
+  networks: Network[];
+  production_countries: ProductionCountry[];
   seasons: Season[];
 }
 

@@ -42,6 +42,12 @@ type LibraryItem struct {
 	Series *models.Series `json:"series,omitempty"`
 }
 
+// TMDbVideosProvider provides access to TMDb video data for on-demand fetching
+type TMDbVideosProvider interface {
+	GetMovieVideos(ctx context.Context, movieID int) (*tmdb.VideosResponse, error)
+	GetTVShowVideos(ctx context.Context, tvID int) (*tmdb.VideosResponse, error)
+}
+
 // LibraryServiceInterface defines the contract for media library operations
 type LibraryServiceInterface interface {
 	// SaveMovieFromTMDb saves a movie from TMDb search/details to the database
@@ -83,14 +89,21 @@ type LibraryServiceInterface interface {
 
 	// GetLibraryStats returns library statistics including year range and counts
 	GetLibraryStats(ctx context.Context) (*LibraryStats, error)
+
+	// GetMovieVideos retrieves videos for a library movie by looking up its TMDb ID
+	GetMovieVideos(ctx context.Context, id string) (*tmdb.VideosResponse, error)
+
+	// GetSeriesVideos retrieves videos for a library series by looking up its TMDb ID
+	GetSeriesVideos(ctx context.Context, id string) (*tmdb.VideosResponse, error)
 }
 
 // LibraryService handles media library storage and search operations
 type LibraryService struct {
-	movieRepo   repository.MovieRepositoryInterface
-	seriesRepo  repository.SeriesRepositoryInterface
-	episodeRepo repository.EpisodeRepositoryInterface
-	logger      *slog.Logger
+	movieRepo      repository.MovieRepositoryInterface
+	seriesRepo     repository.SeriesRepositoryInterface
+	episodeRepo    repository.EpisodeRepositoryInterface
+	tmdbVideos     TMDbVideosProvider
+	logger         *slog.Logger
 }
 
 // NewLibraryService creates a new LibraryService
@@ -98,12 +111,27 @@ func NewLibraryService(
 	movieRepo repository.MovieRepositoryInterface,
 	seriesRepo repository.SeriesRepositoryInterface,
 	episodeRepo repository.EpisodeRepositoryInterface,
+	opts ...LibraryServiceOption,
 ) *LibraryService {
-	return &LibraryService{
+	s := &LibraryService{
 		movieRepo:   movieRepo,
 		seriesRepo:  seriesRepo,
 		episodeRepo: episodeRepo,
 		logger:      slog.Default().With("service", "library"),
+	}
+	for _, opt := range opts {
+		opt(s)
+	}
+	return s
+}
+
+// LibraryServiceOption configures optional dependencies for LibraryService
+type LibraryServiceOption func(*LibraryService)
+
+// WithTMDbVideos sets the TMDb videos provider for on-demand video fetching
+func WithTMDbVideos(provider TMDbVideosProvider) LibraryServiceOption {
+	return func(s *LibraryService) {
+		s.tmdbVideos = provider
 	}
 }
 
@@ -645,6 +673,54 @@ func (s *LibraryService) GetLibraryStats(ctx context.Context) (*LibraryStats, er
 		TvCount:    seriesCount,
 		TotalCount: movieCount + seriesCount,
 	}, nil
+}
+
+// GetMovieVideos retrieves videos for a library movie by looking up its TMDb ID
+func (s *LibraryService) GetMovieVideos(ctx context.Context, id string) (*tmdb.VideosResponse, error) {
+	if s.tmdbVideos == nil {
+		return &tmdb.VideosResponse{Results: []tmdb.Video{}}, nil
+	}
+
+	movie, err := s.movieRepo.FindByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("movie not found: %w", err)
+	}
+
+	if !movie.TMDbID.Valid || movie.TMDbID.Int64 <= 0 {
+		return &tmdb.VideosResponse{Results: []tmdb.Video{}}, nil
+	}
+
+	videos, err := s.tmdbVideos.GetMovieVideos(ctx, int(movie.TMDbID.Int64))
+	if err != nil {
+		slog.Error("Failed to fetch movie videos from TMDb", "error", err, "movie_id", id, "tmdb_id", movie.TMDbID.Int64)
+		return nil, fmt.Errorf("failed to fetch videos: %w", err)
+	}
+
+	return videos, nil
+}
+
+// GetSeriesVideos retrieves videos for a library series by looking up its TMDb ID
+func (s *LibraryService) GetSeriesVideos(ctx context.Context, id string) (*tmdb.VideosResponse, error) {
+	if s.tmdbVideos == nil {
+		return &tmdb.VideosResponse{Results: []tmdb.Video{}}, nil
+	}
+
+	series, err := s.seriesRepo.FindByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("series not found: %w", err)
+	}
+
+	if !series.TMDbID.Valid || series.TMDbID.Int64 <= 0 {
+		return &tmdb.VideosResponse{Results: []tmdb.Video{}}, nil
+	}
+
+	videos, err := s.tmdbVideos.GetTVShowVideos(ctx, int(series.TMDbID.Int64))
+	if err != nil {
+		slog.Error("Failed to fetch series videos from TMDb", "error", err, "series_id", id, "tmdb_id", series.TMDbID.Int64)
+		return nil, fmt.Errorf("failed to fetch videos: %w", err)
+	}
+
+	return videos, nil
 }
 
 // Compile-time interface verification

@@ -254,6 +254,52 @@ func (h *LibraryHandler) GetStats(c *gin.Context) {
 	SuccessResponse(c, stats)
 }
 
+// GetMovieVideos handles GET /api/v1/library/movies/:id/videos
+// Returns trailer and video data for a library movie (proxied from TMDb)
+func (h *LibraryHandler) GetMovieVideos(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		BadRequestError(c, "VALIDATION_REQUIRED_FIELD", "Movie ID is required")
+		return
+	}
+
+	videos, err := h.service.GetMovieVideos(c.Request.Context(), id)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			NotFoundError(c, "Movie")
+			return
+		}
+		slog.Error("Failed to get movie videos", "error", err, "movie_id", id)
+		InternalServerError(c, "Failed to retrieve movie videos")
+		return
+	}
+
+	SuccessResponse(c, videos)
+}
+
+// GetSeriesVideos handles GET /api/v1/library/series/:id/videos
+// Returns trailer and video data for a library series (proxied from TMDb)
+func (h *LibraryHandler) GetSeriesVideos(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		BadRequestError(c, "VALIDATION_REQUIRED_FIELD", "Series ID is required")
+		return
+	}
+
+	videos, err := h.service.GetSeriesVideos(c.Request.Context(), id)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			NotFoundError(c, "Series")
+			return
+		}
+		slog.Error("Failed to get series videos", "error", err, "series_id", id)
+		InternalServerError(c, "Failed to retrieve series videos")
+		return
+	}
+
+	SuccessResponse(c, videos)
+}
+
 // SearchLibrary handles GET /api/v1/library/search?q=X&page=1&page_size=20&type=all
 // Performs FTS5 full-text search across movies and series in the library.
 func (h *LibraryHandler) SearchLibrary(c *gin.Context) {
@@ -294,6 +340,7 @@ func (h *LibraryHandler) RegisterRoutes(rg *gin.RouterGroup) {
 
 		movies := library.Group("/movies")
 		{
+			movies.GET("/:id/videos", h.GetMovieVideos)
 			movies.POST("/:id/reparse", h.ReparseMovie)
 			movies.POST("/:id/export", h.ExportMovie)
 			movies.DELETE("/:id", h.DeleteMovie)
@@ -301,6 +348,7 @@ func (h *LibraryHandler) RegisterRoutes(rg *gin.RouterGroup) {
 
 		series := library.Group("/series")
 		{
+			series.GET("/:id/videos", h.GetSeriesVideos)
 			series.POST("/:id/reparse", h.ReparseSeries)
 			series.POST("/:id/export", h.ExportSeries)
 			series.DELETE("/:id", h.DeleteSeries)

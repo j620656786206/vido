@@ -77,6 +77,14 @@ func (m *MockClient) GetTVShowDetailsWithLanguage(ctx context.Context, tvID int,
 	return &TVShowDetails{}, nil
 }
 
+func (m *MockClient) GetMovieVideos(ctx context.Context, movieID int) (*VideosResponse, error) {
+	return &VideosResponse{ID: movieID, Results: []Video{}}, nil
+}
+
+func (m *MockClient) GetTVShowVideos(ctx context.Context, tvID int) (*VideosResponse, error) {
+	return &VideosResponse{ID: tvID, Results: []Video{}}, nil
+}
+
 func TestNewLanguageFallbackClient(t *testing.T) {
 	tests := []struct {
 		name      string
