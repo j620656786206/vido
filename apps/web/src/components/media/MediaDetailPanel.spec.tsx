@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MediaDetailPanel } from './MediaDetailPanel';
@@ -329,6 +329,35 @@ describe('MediaDetailPanel', () => {
       expect(screen.queryByTestId('detail-cast')).not.toBeInTheDocument();
     });
 
+    it('[P2] limits cast display to top 5 members', () => {
+      const creditsManyCast: Credits = {
+        id: 123,
+        cast: Array.from({ length: 8 }, (_, i) => ({
+          id: i + 1,
+          name: `演員${i + 1}`,
+          character: `角色${i + 1}`,
+          profile_path: null,
+          order: i,
+        })),
+        crew: [],
+      };
+      render(
+        <MediaDetailPanel type="movie" details={mockMovieDetails} credits={creditsManyCast} />,
+        { wrapper: createWrapper() }
+      );
+      const castElement = screen.getByTestId('detail-cast');
+      expect(castElement).toHaveTextContent('演員1');
+      expect(castElement).toHaveTextContent('演員5');
+      expect(castElement).not.toHaveTextContent('演員6');
+    });
+
+    it('[P2] separates cast names with Chinese separator', () => {
+      render(<MediaDetailPanel type="movie" details={mockMovieDetails} credits={mockCredits} />, {
+        wrapper: createWrapper(),
+      });
+      expect(screen.getByTestId('detail-cast')).toHaveTextContent('演員一、演員二');
+    });
+
     it('renders play and add-to-list CTA buttons (AC1)', () => {
       const onPlay = vi.fn();
       const onAddToList = vi.fn();
@@ -350,6 +379,41 @@ describe('MediaDetailPanel', () => {
         wrapper: createWrapper(),
       });
       expect(screen.queryByTestId('detail-cta-buttons')).not.toBeInTheDocument();
+    });
+
+    it('[P1] calls onPlay when play button is clicked', () => {
+      const onPlay = vi.fn();
+      render(<MediaDetailPanel type="movie" details={mockMovieDetails} onPlay={onPlay} />, {
+        wrapper: createWrapper(),
+      });
+      fireEvent.click(screen.getByTestId('detail-play-button'));
+      expect(onPlay).toHaveBeenCalledOnce();
+    });
+
+    it('[P1] calls onAddToList when add-to-list button is clicked', () => {
+      const onAddToList = vi.fn();
+      render(
+        <MediaDetailPanel type="movie" details={mockMovieDetails} onAddToList={onAddToList} />,
+        { wrapper: createWrapper() }
+      );
+      fireEvent.click(screen.getByTestId('detail-add-to-list-button'));
+      expect(onAddToList).toHaveBeenCalledOnce();
+    });
+
+    it('[P2] renders only play button when onAddToList not provided', () => {
+      render(<MediaDetailPanel type="movie" details={mockMovieDetails} onPlay={vi.fn()} />, {
+        wrapper: createWrapper(),
+      });
+      expect(screen.getByTestId('detail-play-button')).toBeInTheDocument();
+      expect(screen.queryByTestId('detail-add-to-list-button')).not.toBeInTheDocument();
+    });
+
+    it('[P2] renders only add-to-list button when onPlay not provided', () => {
+      render(<MediaDetailPanel type="movie" details={mockMovieDetails} onAddToList={vi.fn()} />, {
+        wrapper: createWrapper(),
+      });
+      expect(screen.queryByTestId('detail-play-button')).not.toBeInTheDocument();
+      expect(screen.getByTestId('detail-add-to-list-button')).toBeInTheDocument();
     });
 
     it('renders context menu when all callbacks provided (AC6)', () => {

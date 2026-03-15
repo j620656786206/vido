@@ -62,4 +62,14 @@ describe('SelectionToolbar', () => {
     rerender(<SelectionToolbar {...defaultProps} selectedCount={10} />);
     expect(screen.getByTestId('selected-count')).toHaveTextContent('已選取 10 項');
   });
+
+  it('[P1] cancel button remains enabled during processing', () => {
+    render(<SelectionToolbar {...defaultProps} isProcessing={true} />);
+    expect(screen.getByTestId('batch-cancel-btn')).not.toBeDisabled();
+  });
+
+  it('[P1] export button uses correct Traditional Chinese terminology', () => {
+    render(<SelectionToolbar {...defaultProps} />);
+    expect(screen.getByTestId('batch-export-btn')).toHaveTextContent('匯出中繼資料');
+  });
 });
