@@ -60,7 +60,7 @@ describe('TabNavigation', () => {
     renderWithRouter();
     expect(await screen.findByTestId('tab-媒體庫')).toBeInTheDocument();
     expect(screen.getByTestId('tab-下載中')).toBeInTheDocument();
-    expect(screen.getByTestId('tab-待處理')).toBeInTheDocument();
+    expect(screen.getByTestId('tab-待解析')).toBeInTheDocument();
     expect(screen.getByTestId('tab-設定')).toBeInTheDocument();
   });
 
