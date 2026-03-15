@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 const YOUTUBE_EMBED_BASE = 'https://www.youtube-nocookie.com/embed/';
+const VALID_VIDEO_KEY = /^[a-zA-Z0-9_-]+$/;
 
 export interface TrailerEmbedProps {
   videoKey: string;
@@ -9,6 +10,10 @@ export interface TrailerEmbedProps {
 
 export function TrailerEmbed({ videoKey, title }: TrailerEmbedProps) {
   const [showPlayer, setShowPlayer] = useState(false);
+
+  if (!VALID_VIDEO_KEY.test(videoKey)) {
+    return null;
+  }
 
   if (!showPlayer) {
     return (

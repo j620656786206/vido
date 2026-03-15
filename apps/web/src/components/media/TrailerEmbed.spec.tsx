@@ -76,4 +76,21 @@ describe('TrailerEmbed', () => {
       'https://www.youtube-nocookie.com/embed/DIFFERENT_KEY_123'
     );
   });
+
+  it('[P1] rejects invalid video keys with special characters', () => {
+    const { container } = render(
+      <TrailerEmbed videoKey="abc<script>alert(1)</script>" title="XSS Test" />
+    );
+    expect(container.firstChild).toBeNull();
+  });
+
+  it('[P1] rejects video keys with slashes', () => {
+    const { container } = render(<TrailerEmbed videoKey="../../../etc" title="Path Test" />);
+    expect(container.firstChild).toBeNull();
+  });
+
+  it('[P1] accepts valid YouTube video key with hyphens and underscores', () => {
+    render(<TrailerEmbed videoKey="dQw4w9WgXcQ" title="Valid Key" />);
+    expect(screen.getByTestId('trailer-button')).toBeInTheDocument();
+  });
 });

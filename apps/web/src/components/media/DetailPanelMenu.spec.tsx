@@ -107,6 +107,36 @@ describe('DetailPanelMenu', () => {
     expect(screen.getByTestId('detail-menu-trigger')).toHaveAttribute('aria-label', '更多操作');
   });
 
+  it('[P1] trigger has aria-expanded and aria-haspopup', () => {
+    render(<DetailPanelMenu {...defaultProps} />);
+    const trigger = screen.getByTestId('detail-menu-trigger');
+
+    expect(trigger).toHaveAttribute('aria-haspopup', 'menu');
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+
+    fireEvent.click(trigger);
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('[P1] dropdown has role=menu and items have role=menuitem', () => {
+    render(<DetailPanelMenu {...defaultProps} />);
+    fireEvent.click(screen.getByTestId('detail-menu-trigger'));
+
+    expect(screen.getByTestId('detail-menu-dropdown')).toHaveAttribute('role', 'menu');
+    expect(screen.getByTestId('menu-reparse')).toHaveAttribute('role', 'menuitem');
+    expect(screen.getByTestId('menu-export')).toHaveAttribute('role', 'menuitem');
+    expect(screen.getByTestId('menu-delete')).toHaveAttribute('role', 'menuitem');
+  });
+
+  it('[P1] separator has role=separator', () => {
+    render(<DetailPanelMenu {...defaultProps} />);
+    fireEvent.click(screen.getByTestId('detail-menu-trigger'));
+
+    const dropdown = screen.getByTestId('detail-menu-dropdown');
+    const separator = dropdown.querySelector('[role="separator"]');
+    expect(separator).toBeInTheDocument();
+  });
+
   it('[P1] toggles menu closed on second click', () => {
     render(<DetailPanelMenu {...defaultProps} />);
 

@@ -31,6 +31,8 @@ export function DetailPanelMenu({ onReparse, onExport, onDelete }: DetailPanelMe
         onClick={() => setIsOpen(!isOpen)}
         className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-slate-700 hover:text-white"
         aria-label="更多操作"
+        aria-expanded={isOpen}
+        aria-haspopup="menu"
         data-testid="detail-menu-trigger"
       >
         <MoreHorizontal size={20} />
@@ -39,6 +41,7 @@ export function DetailPanelMenu({ onReparse, onExport, onDelete }: DetailPanelMe
       {isOpen && (
         <div
           className="absolute right-0 top-full z-50 mt-1 w-48 rounded-lg border border-slate-700 bg-slate-800 py-1 shadow-xl"
+          role="menu"
           data-testid="detail-menu-dropdown"
         >
           <button
@@ -47,6 +50,7 @@ export function DetailPanelMenu({ onReparse, onExport, onDelete }: DetailPanelMe
               setIsOpen(false);
             }}
             className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:bg-slate-700"
+            role="menuitem"
             data-testid="menu-reparse"
           >
             <RefreshCw size={16} />
@@ -58,16 +62,18 @@ export function DetailPanelMenu({ onReparse, onExport, onDelete }: DetailPanelMe
               setIsOpen(false);
             }}
             className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:bg-slate-700"
+            role="menuitem"
             data-testid="menu-export"
           >
             <Download size={16} />
             匯出 Metadata
           </button>
-          <div className="my-1 border-t border-slate-700" />
+          <div className="my-1 border-t border-slate-700" role="separator" />
           {!showConfirm ? (
             <button
               onClick={() => setShowConfirm(true)}
               className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-slate-700"
+              role="menuitem"
               data-testid="menu-delete"
             >
               <Trash2 size={16} />

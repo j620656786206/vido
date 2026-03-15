@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"sort"
@@ -13,6 +14,9 @@ import (
 	"github.com/vido/api/internal/repository"
 	"github.com/vido/api/internal/tmdb"
 )
+
+// ErrNotFound is returned when a requested resource does not exist
+var ErrNotFound = errors.New("not found")
 
 // SearchResult represents a unified search result item
 type SearchResult struct {
@@ -692,7 +696,7 @@ func (s *LibraryService) GetMovieVideos(ctx context.Context, id string) (*tmdb.V
 
 	movie, err := s.movieRepo.FindByID(ctx, id)
 	if err != nil {
-		return nil, fmt.Errorf("movie not found: %w", err)
+		return nil, fmt.Errorf("%w: movie %s", ErrNotFound, id)
 	}
 
 	if !movie.TMDbID.Valid || movie.TMDbID.Int64 <= 0 {
@@ -716,7 +720,7 @@ func (s *LibraryService) GetSeriesVideos(ctx context.Context, id string) (*tmdb.
 
 	series, err := s.seriesRepo.FindByID(ctx, id)
 	if err != nil {
-		return nil, fmt.Errorf("series not found: %w", err)
+		return nil, fmt.Errorf("%w: series %s", ErrNotFound, id)
 	}
 
 	if !series.TMDbID.Valid || series.TMDbID.Int64 <= 0 {

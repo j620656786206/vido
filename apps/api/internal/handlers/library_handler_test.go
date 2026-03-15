@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -881,7 +882,7 @@ func TestLibraryHandler_GetMovieVideos(t *testing.T) {
 
 	t.Run("not found returns 404", func(t *testing.T) {
 		mockService.On("GetMovieVideos", mock.Anything, "missing").
-			Return(nil, errors.New("movie not found")).Once()
+			Return(nil, fmt.Errorf("%w: movie missing", services.ErrNotFound)).Once()
 
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/api/v1/library/movies/missing/videos", nil)
@@ -933,7 +934,7 @@ func TestLibraryHandler_GetSeriesVideos(t *testing.T) {
 
 	t.Run("not found returns 404", func(t *testing.T) {
 		mockService.On("GetSeriesVideos", mock.Anything, "missing").
-			Return(nil, errors.New("series not found")).Once()
+			Return(nil, fmt.Errorf("%w: series missing", services.ErrNotFound)).Once()
 
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/api/v1/library/series/missing/videos", nil)

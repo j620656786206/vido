@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"log/slog"
 	"strconv"
 	"strings"
@@ -265,7 +266,7 @@ func (h *LibraryHandler) GetMovieVideos(c *gin.Context) {
 
 	videos, err := h.service.GetMovieVideos(c.Request.Context(), id)
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
+		if errors.Is(err, services.ErrNotFound) {
 			NotFoundError(c, "Movie")
 			return
 		}
@@ -288,7 +289,7 @@ func (h *LibraryHandler) GetSeriesVideos(c *gin.Context) {
 
 	videos, err := h.service.GetSeriesVideos(c.Request.Context(), id)
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
+		if errors.Is(err, services.ErrNotFound) {
 			NotFoundError(c, "Series")
 			return
 		}

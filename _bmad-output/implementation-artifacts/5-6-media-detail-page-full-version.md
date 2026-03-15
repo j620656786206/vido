@@ -1,6 +1,6 @@
 # Story 5.6: Media Detail Page (Full Version)
 
-Status: review
+Status: done
 
 ## Story
 
@@ -301,3 +301,4 @@ Claude Opus 4.6 (1M context)
 ## Change Log
 
 - 2026-03-15: Story 5.6 implemented — all 8 tasks complete, backend videos API + 4 new frontend components + enhanced MediaDetailPanel + context menu
+- 2026-03-15: Code review (CR 5-6) — 3 Medium + 2 Low issues found and fixed: M1 videoKey sanitization, M2 ARIA menu attributes, M3 sentinel ErrNotFound, L1 two-click trailer UX noted, L2 production_countries label fix

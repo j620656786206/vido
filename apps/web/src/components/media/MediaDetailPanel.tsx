@@ -251,7 +251,7 @@ function TVShowSeasons({ tvShow }: { tvShow: TVShowDetails }) {
       </h3>
       {tvShow.production_countries && tvShow.production_countries.length > 0 && (
         <p className="mb-2 text-xs text-gray-500">
-          製作公司：{tvShow.production_countries.map((c) => c.name).join(', ')}
+          製作國家：{tvShow.production_countries.map((c) => c.name).join(', ')}
         </p>
       )}
       <div className="space-y-1">
