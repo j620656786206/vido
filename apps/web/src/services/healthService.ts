@@ -2,8 +2,7 @@
  * Health service for connection health monitoring (Story 4.6)
  */
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
 
 export interface ServiceHealth {
   name: string;
@@ -29,11 +28,7 @@ export interface HealthStatusResponse {
   message: string;
 }
 
-export type ConnectionEventType =
-  | 'connected'
-  | 'disconnected'
-  | 'error'
-  | 'recovered';
+export type ConnectionEventType = 'connected' | 'disconnected' | 'error' | 'recovered';
 
 export interface ConnectionEvent {
   id: string;
@@ -58,9 +53,7 @@ async function fetchApi<T>(endpoint: string): Promise<T> {
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(
-      errorData.error?.message || `API request failed: ${response.status}`
-    );
+    throw new Error(errorData.error?.message || `API request failed: ${response.status}`);
   }
 
   const data: ApiResponse<T> = await response.json();
@@ -77,10 +70,7 @@ export const healthService = {
     return fetchApi<HealthStatusResponse>('/health/services');
   },
 
-  async getConnectionHistory(
-    service: string,
-    limit = 20
-  ): Promise<ConnectionEvent[]> {
+  async getConnectionHistory(service: string, limit = 20): Promise<ConnectionEvent[]> {
     return fetchApi<ConnectionEvent[]>(
       `/health/services/${encodeURIComponent(service)}/history?limit=${limit}`
     );

@@ -5,6 +5,7 @@
 **IMPORTANT:** After ANY modification to `ux-design.pen` (whether via Pencil MCP tools in this session, or externally), you MUST regenerate and commit screenshots before finishing.
 
 ### Steps:
+
 1. Run `python3 scripts/export-pen-screenshots.py` (requires Pencil.app running)
    - The script starts its own MCP HTTP connection — safe to run even when Pencil MCP is already active
 2. Screenshots are saved to `_bmad-output/screenshots/` organized by flow:
@@ -18,6 +19,7 @@
 4. `git add` both the `.pen` file changes AND the updated screenshots, commit together
 
 ### Commit convention:
+
 - If only design changed: `feat: update UX design — [what changed]`
 - Include both `ux-design.pen` and `_bmad-output/screenshots/` in the same commit
 

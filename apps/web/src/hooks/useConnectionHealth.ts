@@ -4,18 +4,13 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { useSyncExternalStore } from 'react';
-import {
-  healthService,
-  type ServiceHealth,
-  type ConnectionEvent,
-} from '../services/healthService';
+import { healthService, type ServiceHealth, type ConnectionEvent } from '../services/healthService';
 
 export const healthKeys = {
   all: ['health'] as const,
   services: () => [...healthKeys.all, 'services'] as const,
   qbittorrent: () => [...healthKeys.all, 'qbittorrent'] as const,
-  history: (service: string) =>
-    [...healthKeys.all, 'history', service] as const,
+  history: (service: string) => [...healthKeys.all, 'history', service] as const,
 };
 
 /**
@@ -29,11 +24,7 @@ const getVisibilitySnapshot = () => document.visibilityState === 'visible';
 const getServerSnapshot = () => true;
 
 function usePageVisibility() {
-  return useSyncExternalStore(
-    subscribeVisibility,
-    getVisibilitySnapshot,
-    getServerSnapshot
-  );
+  return useSyncExternalStore(subscribeVisibility, getVisibilitySnapshot, getServerSnapshot);
 }
 
 /**
