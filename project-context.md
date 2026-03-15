@@ -592,17 +592,22 @@ describe('MovieCard', () => {
 
 ## 🧹 Test Process Cleanup
 
-### Session-Aware Process Management
+### Process Lifecycle Rule
 
-E2E tests (Playwright) automatically start Go backend and Vite dev server. To prevent orphaned processes from consuming CPU after tests crash or complete:
+**All test-related child processes MUST terminate when the parent process exits.** This applies to:
 
-**Automatic Cleanup (Built-in):**
+- **Unit tests (Vitest):** Uses `pool: 'forks'` so workers are child processes that can be force-killed on exit. `teardownTimeout: 5000` prevents indefinite hangs from uncleaned timers/listeners.
+- **E2E tests (Playwright):** `globalSetup`/`globalTeardown` track and clean up spawned servers (Go backend, Vite dev server) per session.
+- **Go backend:** Started as background process during E2E; cleaned up by teardown.
+- **Vite dev server:** Started as background process during E2E; cleaned up by teardown.
 
-- `globalSetup` creates a session-specific tracking file
-- `globalTeardown` cleans up only processes from the current session
+### Automatic Cleanup (Built-in)
+
+- Vitest `pool: 'forks'` ensures workers exit even with open handles
+- Playwright `globalTeardown` cleans up only processes from the current session
 - Safe for multiple Claude Code sessions running tests in parallel
 
-**Manual Cleanup Commands:**
+### Manual Cleanup Commands
 
 ```bash
 # List orphaned test processes
@@ -618,6 +623,8 @@ pnpm run test:cleanup:all
 
 - Go backend (`go run ./cmd/api`)
 - Vite dev server (`nx serve web`)
+- Vitest workers (`node (vitest N)`)
+- Playwright test runners
 - Processes on ports 8080, 4200
 
 ---

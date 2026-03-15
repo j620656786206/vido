@@ -137,13 +137,23 @@ function findOrphanedTestProcesses(session: TestSession): number[] {
       .map((pid) => parseInt(pid, 10))
       .filter((pid) => !isNaN(pid));
 
+    // Find vitest worker processes
+    const vitestProcs = execSync(`pgrep -f "vitest" 2>/dev/null || true`, {
+      encoding: 'utf-8',
+    })
+      .trim()
+      .split('\n')
+      .filter((line) => line.trim())
+      .map((pid) => parseInt(pid, 10))
+      .filter((pid) => !isNaN(pid));
+
     // Only include processes that are descendants of our session
     const sessionDescendants = new Set<number>();
     for (const pid of session.pids) {
       getAllDescendants(pid).forEach((d) => sessionDescendants.add(d));
     }
 
-    for (const pid of [...goProcs, ...viteProcs]) {
+    for (const pid of [...goProcs, ...viteProcs, ...vitestProcs]) {
       if (sessionDescendants.has(pid) || session.pids.includes(pid)) {
         orphans.push(pid);
       }

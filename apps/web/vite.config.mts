@@ -46,6 +46,8 @@ export default defineConfig(() => ({
     include: ['{src,tests}/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     setupFiles: ['./src/test-setup.ts'],
     reporters: ['default'],
+    pool: 'forks',
+    teardownTimeout: 5000,
     coverage: {
       reportsDirectory: '../../coverage/apps/web',
       provider: 'v8' as const,

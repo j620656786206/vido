@@ -32,6 +32,9 @@ find_test_processes() {
     # Playwright test processes
     pids+=$(pgrep -f "playwright.*test" 2>/dev/null | tr '\n' ' ' || true)
 
+    # Vitest worker processes (can hang if tests leave open handles)
+    pids+=$(pgrep -f "vitest" 2>/dev/null | tr '\n' ' ' || true)
+
     # Node processes on test ports
     for port in 8080 4200; do
         local port_pids=$(lsof -i :$port -t 2>/dev/null | tr '\n' ' ' || true)
