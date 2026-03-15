@@ -1,9 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { cn } from '../../lib/utils';
-
-export type SortField = 'title' | 'release_date' | 'rating' | 'created_at';
-export type SortOrder = 'asc' | 'desc';
+import type { SortField, SortOrder } from '../../types/library';
 
 interface SortOption {
   field: SortField;

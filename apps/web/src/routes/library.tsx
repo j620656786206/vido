@@ -1,11 +1,9 @@
-import { useState, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useLibraryList, useLibrarySearch } from '../hooks/useLibrary';
 import { LibraryGrid } from '../components/library/LibraryGrid';
 import { LibraryTable } from '../components/library/LibraryTable';
-import type { SortField } from '../components/library/LibraryTable';
 import { SortSelector } from '../components/library/SortSelector';
-import type { SortField as SortSelectorField, SortOrder } from '../components/library/SortSelector';
 import { LibrarySearchBar } from '../components/library/LibrarySearchBar';
 import { EmptySearchResults } from '../components/library/EmptySearchResults';
 import { RecentlyAdded } from '../components/library/RecentlyAdded';
@@ -13,7 +11,8 @@ import { EmptyLibrary } from '../components/library/EmptyLibrary';
 import { ViewToggle } from '../components/library/ViewToggle';
 import type { ViewMode } from '../components/library/ViewToggle';
 import { Pagination } from '../components/ui/Pagination';
-import type { LibraryMediaType, LibraryItem } from '../types/library';
+import type { LibraryMediaType, LibraryItem, SortField, SortOrder } from '../types/library';
+import { VALID_SORT_FIELDS } from '../types/library';
 
 const VIEW_STORAGE_KEY = 'vido:library:view';
 const SORT_STORAGE_KEY = 'vido:library:sort';
@@ -44,7 +43,10 @@ function getStoredSort(): SortPreference {
     const stored = localStorage.getItem(SORT_STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
-      if (parsed.sortBy && (parsed.sortOrder === 'asc' || parsed.sortOrder === 'desc')) {
+      if (
+        VALID_SORT_FIELDS.includes(parsed.sortBy) &&
+        (parsed.sortOrder === 'asc' || parsed.sortOrder === 'desc')
+      ) {
         return parsed;
       }
     }
@@ -100,9 +102,9 @@ function LibraryPage() {
   const isSearchActive = searchQuery.length >= 2;
 
   // URL params > localStorage > default
-  const storedSort = useState(() => getStoredSort())[0];
-  const effectiveSortBy = sortBy || storedSort.sortBy;
-  const effectiveSortOrder: 'asc' | 'desc' = (sortOrder as 'asc' | 'desc') || storedSort.sortOrder;
+  const storedSort = useMemo(() => getStoredSort(), []);
+  const effectiveSortBy = (sortBy || storedSort.sortBy) as SortField;
+  const effectiveSortOrder: SortOrder = (sortOrder as SortOrder) || storedSort.sortOrder;
 
   // Show recently added only in clean browse mode (no custom sort/filter/search)
   const isCleanBrowse = !sortBy && !sortOrder && !isSearchActive;
@@ -173,7 +175,7 @@ function LibraryPage() {
   );
 
   const handleSortChange = useCallback(
-    (field: SortSelectorField, order: SortOrder) => {
+    (field: SortField, order: SortOrder) => {
       setStoredSort({ sortBy: field, sortOrder: order });
       navigate({ search: buildSearchParams({ page: 1, sortBy: field, sortOrder: order }) });
     },
@@ -229,11 +231,13 @@ function LibraryPage() {
               {Math.min(currentPage * currentPageSize, totalItems)} / {totalItems} 項
             </span>
             <div className="flex items-center gap-2">
-              <SortSelector
-                sortBy={effectiveSortBy as SortSelectorField}
-                sortOrder={effectiveSortOrder}
-                onSortChange={handleSortChange}
-              />
+              {!isSearchActive && (
+                <SortSelector
+                  sortBy={effectiveSortBy}
+                  sortOrder={effectiveSortOrder}
+                  onSortChange={handleSortChange}
+                />
+              )}
               <ViewToggle view={currentView} onViewChange={handleViewChange} />
             </div>
           </div>
@@ -266,7 +270,12 @@ function LibraryPage() {
           <>
             {isCleanBrowse && <RecentlyAdded />}
             {currentView === 'grid' ? (
-              <LibraryGrid items={items} isLoading={isLoading} totalItems={totalItems} />
+              <LibraryGrid
+                items={items}
+                isLoading={isLoading}
+                totalItems={totalItems}
+                highlightQuery={isSearchActive ? searchQuery : undefined}
+              />
             ) : (
               <LibraryTable
                 items={items}
@@ -274,6 +283,7 @@ function LibraryPage() {
                 sortBy={effectiveSortBy}
                 sortOrder={effectiveSortOrder}
                 onSort={handleColumnSort}
+                highlightQuery={isSearchActive ? searchQuery : undefined}
               />
             )}
             <Pagination

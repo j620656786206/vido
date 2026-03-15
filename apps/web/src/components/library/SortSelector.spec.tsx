@@ -2,7 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi } from 'vitest';
 import { SortSelector } from './SortSelector';
-import type { SortField, SortOrder } from './SortSelector';
+import type { SortField, SortOrder } from '../../types/library';
 
 describe('SortSelector', () => {
   const defaultProps = {

@@ -1,3 +1,13 @@
+export type SortField = 'title' | 'release_date' | 'rating' | 'created_at';
+export type SortOrder = 'asc' | 'desc';
+
+export const VALID_SORT_FIELDS: readonly SortField[] = [
+  'title',
+  'release_date',
+  'rating',
+  'created_at',
+] as const;
+
 export type LibraryMediaType = 'all' | 'movie' | 'tv';
 
 export interface LibraryMovie {

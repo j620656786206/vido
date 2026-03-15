@@ -1,10 +1,8 @@
 import { Link } from '@tanstack/react-router';
 import { ArrowUp, ArrowDown } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import type { LibraryItem } from '../../types/library';
-
-export type SortField = 'title' | 'release_date' | 'rating' | 'created_at';
-export type SortOrder = 'asc' | 'desc';
+import { HighlightText } from '../ui/HighlightText';
+import type { LibraryItem, SortField, SortOrder } from '../../types/library';
 
 interface LibraryTableProps {
   items: LibraryItem[];
@@ -12,6 +10,7 @@ interface LibraryTableProps {
   sortBy?: string;
   sortOrder?: SortOrder;
   onSort?: (field: SortField) => void;
+  highlightQuery?: string;
 }
 
 interface Column {
@@ -80,7 +79,14 @@ function formatYear(dateStr: string | undefined): string {
   return dateStr.slice(0, 4) || '-';
 }
 
-export function LibraryTable({ items, isLoading, sortBy, sortOrder, onSort }: LibraryTableProps) {
+export function LibraryTable({
+  items,
+  isLoading,
+  sortBy,
+  sortOrder,
+  onSort,
+  highlightQuery,
+}: LibraryTableProps) {
   if (isLoading) {
     return (
       <div data-testid="library-table-loading" className="space-y-2">
@@ -156,10 +162,12 @@ export function LibraryTable({ items, isLoading, sortBy, sortOrder, onSort }: Li
                     className="block"
                   >
                     <div className="text-sm font-medium text-white hover:text-blue-400">
-                      {data.title}
+                      <HighlightText text={data.title} query={highlightQuery} />
                     </div>
                     {data.originalTitle && data.originalTitle !== data.title && (
-                      <div className="text-xs text-slate-500">{data.originalTitle}</div>
+                      <div className="text-xs text-slate-500">
+                        <HighlightText text={data.originalTitle} query={highlightQuery} />
+                      </div>
                     )}
                   </Link>
                 </td>
