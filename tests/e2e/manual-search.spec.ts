@@ -20,9 +20,6 @@
 
 import { test, expect } from '../support/fixtures';
 
-// Skip: Tests cause process hang after completion (duplicate search inputs from AppShell)
-test.skip();
-
 // =============================================================================
 // Manual Search Dialog Tests (AC1)
 // =============================================================================
