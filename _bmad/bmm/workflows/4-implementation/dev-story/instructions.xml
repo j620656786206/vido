@@ -321,11 +321,59 @@
       <goto step="5">Next task</goto>
     </action>
     <action if="no tasks remain">
-      <goto step="9">Completion</goto>
+      <goto step="9">UX Design Verification</goto>
     </action>
   </step>
 
-  <step n="9" goal="Story completion and mark for review" tag="sprint-status">
+  <step n="9" goal="UX Design Verification (mandatory for UI stories)" tag="ux-verification">
+    <critical>This step is MANDATORY for any story that modifies frontend UI components.
+      A story is NOT complete until the implementation visually matches the design specifications.
+      Skip this step ONLY if the story has zero frontend/UI changes.</critical>
+
+    <check if="story involves frontend/UI changes">
+      <action>Locate design screenshots in `_bmad-output/screenshots/` relevant to this story's UI changes</action>
+      <action>Identify which design screenshots (flow-a through flow-f) correspond to the implemented features</action>
+      <action>For EACH relevant design screenshot, systematically compare:
+        - Layout structure (element positioning, flex/grid arrangement, sidebar vs overlay)
+        - Spacing and sizing (padding, margins, gaps, widths, heights)
+        - Typography (font size, weight, color for headings, body text, labels)
+        - Color scheme (background colors, text colors, border colors, accent colors)
+        - Component styling (border radius, shadows, hover states, transitions)
+        - Content and labels (Chinese text, button labels, placeholder text)
+        - Responsive behavior (if design shows mobile variants in flow-d/e/f)
+      </action>
+
+      <action>Document findings in a comparison table in Dev Agent Record:
+        | Area | Design Spec | Implementation | Match? | Fix Needed |
+        |------|------------|----------------|--------|------------|
+      </action>
+
+      <check if="discrepancies found between design and implementation">
+        <action>Fix ALL discrepancies before proceeding to step 10</action>
+        <action>Re-verify after fixes: compare updated implementation against screenshots again</action>
+        <action>Add fixed items to Dev Agent Record → Completion Notes with prefix "🎨 UX Fix:"</action>
+        <action>Add modified files to File List</action>
+        <action>Run tests again to ensure no regressions from UX fixes</action>
+      </check>
+
+      <check if="discrepancy requires backend changes not covered by current story tasks">
+        <action>HALT: "UX design requires backend changes not in story scope.
+          Describe the gap and recommend creating a follow-up story or expanding scope."</action>
+      </check>
+
+      <check if="no discrepancies found">
+        <action>Record in Dev Agent Record: "🎨 UX Verification: PASS — implementation matches design screenshots"</action>
+      </check>
+    </check>
+
+    <check if="story has NO frontend/UI changes">
+      <action>Record in Dev Agent Record: "🎨 UX Verification: SKIPPED — no UI changes in this story"</action>
+    </check>
+
+    <action>Proceed to step 10 once UX verification passes</action>
+  </step>
+
+  <step n="10" goal="Story completion and mark for review" tag="sprint-status">
     <action>Verify ALL tasks and subtasks are marked [x] (re-scan the story document now)</action>
     <action>Run the full regression suite (do not skip)</action>
     <action>Confirm File List includes every changed file</action>
@@ -375,7 +423,7 @@
     <action if="definition-of-done validation fails">HALT - Address DoD failures before completing</action>
   </step>
 
-  <step n="10" goal="Completion communication and user support">
+  <step n="11" goal="Completion communication and user support">
     <action>Execute the enhanced definition-of-done checklist using the validation framework</action>
     <action>Prepare a concise summary in Dev Agent Record → Completion Notes</action>
 

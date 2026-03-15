@@ -55,6 +55,18 @@ validation-rules:
 - [ ] **Review Follow-ups:** All review follow-up tasks (marked [AI-Review]) completed and corresponding review items marked resolved (if applicable)
 - [ ] **Story Structure Compliance:** Only permitted sections of story file were modified
 
+## 🎨 UX Design Verification (UI Stories Only)
+
+- [ ] **Design Screenshots Compared:** All relevant design screenshots from `_bmad-output/screenshots/` reviewed against implementation
+- [ ] **Layout Structure Match:** Element positioning, flex/grid arrangement, sidebar/overlay patterns match design
+- [ ] **Spacing & Sizing Match:** Padding, margins, gaps, widths, heights match design specifications
+- [ ] **Typography Match:** Font sizes, weights, colors for all text elements match design
+- [ ] **Color Scheme Match:** Background, text, border, and accent colors match design palette
+- [ ] **Component Styling Match:** Border radius, shadows, hover states, transitions match design
+- [ ] **Content Labels Match:** Chinese text labels, button text, placeholders match design exactly
+- [ ] **Discrepancies Fixed:** All identified gaps between design and implementation have been resolved
+- [ ] **UX Verification Recorded:** Result (PASS/SKIPPED) recorded in Dev Agent Record
+
 ## 🔚 Final Status Verification
 
 - [ ] **Story Status Updated:** Story Status set to "review"
