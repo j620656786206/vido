@@ -39,8 +39,8 @@ func (m *MockLibraryService) SaveSeriesFromTMDb(ctx context.Context, tmdbSeries 
 	return args.Get(0).(*models.Series), args.Error(1)
 }
 
-func (m *MockLibraryService) SearchLibrary(ctx context.Context, query string, params repository.ListParams) (*services.LibrarySearchResults, error) {
-	args := m.Called(ctx, query, params)
+func (m *MockLibraryService) SearchLibrary(ctx context.Context, query string, params repository.ListParams, mediaType string) (*services.LibrarySearchResults, error) {
+	args := m.Called(ctx, query, params, mediaType)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -431,7 +431,7 @@ func TestLibraryHandler_SearchLibrary(t *testing.T) {
 			TotalCount: 2,
 		}
 
-		mockService.On("SearchLibrary", mock.Anything, "駭客", mock.Anything).Return(expectedResult, nil).Once()
+		mockService.On("SearchLibrary", mock.Anything, "駭客", mock.Anything, "all").Return(expectedResult, nil).Once()
 
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/api/v1/library/search?q=%E9%A7%AD%E5%AE%A2", nil)
@@ -480,7 +480,7 @@ func TestLibraryHandler_SearchLibrary(t *testing.T) {
 			TotalCount: 0,
 		}
 
-		mockService.On("SearchLibrary", mock.Anything, "test", mock.Anything).Return(expectedResult, nil).Once()
+		mockService.On("SearchLibrary", mock.Anything, "test", mock.Anything, "movie").Return(expectedResult, nil).Once()
 
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/api/v1/library/search?q=test&type=movie", nil)
@@ -497,7 +497,7 @@ func TestLibraryHandler_SearchLibrary(t *testing.T) {
 
 		mockService.On("SearchLibrary", mock.Anything, "movie", mock.MatchedBy(func(p repository.ListParams) bool {
 			return p.Page == 2 && p.PageSize == 10
-		})).Return(expectedResult, nil).Once()
+		}), "all").Return(expectedResult, nil).Once()
 
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/api/v1/library/search?q=movie&page=2&page_size=10", nil)
@@ -515,7 +515,7 @@ func TestLibraryHandler_SearchLibrary(t *testing.T) {
 	})
 
 	t.Run("service error returns 500", func(t *testing.T) {
-		mockService.On("SearchLibrary", mock.Anything, "fail", mock.Anything).Return(nil, errors.New("db error")).Once()
+		mockService.On("SearchLibrary", mock.Anything, "fail", mock.Anything, "all").Return(nil, errors.New("db error")).Once()
 
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/api/v1/library/search?q=fail", nil)
@@ -535,7 +535,7 @@ func TestLibraryHandler_SearchLibrary(t *testing.T) {
 			TotalCount: 1,
 		}
 
-		mockService.On("SearchLibrary", mock.Anything, "matrix", mock.Anything).Return(expectedResult, nil).Once()
+		mockService.On("SearchLibrary", mock.Anything, "matrix", mock.Anything, "all").Return(expectedResult, nil).Once()
 
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/api/v1/library/search?q=matrix", nil)
@@ -555,7 +555,7 @@ func TestLibraryHandler_SearchLibrary(t *testing.T) {
 			TotalCount: 0,
 		}
 
-		mockService.On("SearchLibrary", mock.Anything, "nonexistent", mock.Anything).Return(expectedResult, nil).Once()
+		mockService.On("SearchLibrary", mock.Anything, "nonexistent", mock.Anything, "all").Return(expectedResult, nil).Once()
 
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/api/v1/library/search?q=nonexistent", nil)
@@ -582,7 +582,7 @@ func TestLibraryHandler_SearchLibrary(t *testing.T) {
 			TotalCount: 0,
 		}
 
-		mockService.On("SearchLibrary", mock.Anything, "drama", mock.Anything).Return(expectedResult, nil).Once()
+		mockService.On("SearchLibrary", mock.Anything, "drama", mock.Anything, "tv").Return(expectedResult, nil).Once()
 
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/api/v1/library/search?q=drama&type=tv", nil)

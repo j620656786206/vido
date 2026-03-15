@@ -3,6 +3,7 @@ import { Link } from '@tanstack/react-router';
 import { MoreHorizontal } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { getImageUrl, getImageSrcSet, getImageSizes } from '../../lib/image';
+import { HighlightText } from '../ui/HighlightText';
 import { HoverPreviewCard } from './HoverPreviewCard';
 
 export interface PosterCardProps {
@@ -17,6 +18,7 @@ export interface PosterCardProps {
   genreIds?: number[];
   metadataSource?: string;
   isNew?: boolean;
+  highlightQuery?: string;
   onMenuClick?: (e: React.MouseEvent) => void;
 }
 
@@ -32,6 +34,7 @@ export function PosterCard({
   genreIds,
   metadataSource,
   isNew,
+  highlightQuery,
   onMenuClick,
 }: PosterCardProps) {
   const [isHovered, setIsHovered] = useState(false);
@@ -152,7 +155,9 @@ export function PosterCard({
 
       {/* Title and year */}
       <div className="mt-2">
-        <h3 className="truncate text-sm font-medium text-white">{title}</h3>
+        <h3 className="truncate text-sm font-medium text-white">
+          <HighlightText text={title} query={highlightQuery} />
+        </h3>
         {year && <p className="text-xs text-gray-400">{year}</p>}
       </div>
 

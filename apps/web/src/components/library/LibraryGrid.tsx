@@ -11,6 +11,7 @@ interface LibraryGridProps {
   isLoading?: boolean;
   totalItems?: number;
   density?: 'small' | 'medium' | 'large';
+  highlightQuery?: string;
 }
 
 const DENSITY_CONFIG = {
@@ -60,6 +61,7 @@ export function LibraryGrid({
   isLoading,
   totalItems = 0,
   density = 'medium',
+  highlightQuery,
 }: LibraryGridProps) {
   const parentRef = useRef<HTMLDivElement>(null);
   const config = DENSITY_CONFIG[density];
@@ -136,6 +138,7 @@ export function LibraryGrid({
         items={items}
         parentRef={parentRef}
         density={density}
+        highlightQuery={highlightQuery}
         onMenuClick={handleMenuClick}
         menuState={menuState}
         onCloseMenu={handleCloseMenu}
@@ -155,7 +158,11 @@ export function LibraryGrid({
         const { itemId, itemType, ...cardProps } = props;
         return (
           <div key={`${props.type}-${props.id}-${index}`} className="relative">
-            <PosterCard {...cardProps} onMenuClick={handleMenuClick(itemId, itemType)} />
+            <PosterCard
+              {...cardProps}
+              highlightQuery={highlightQuery}
+              onMenuClick={handleMenuClick(itemId, itemType)}
+            />
             {menuState?.itemId === itemId && (
               <PosterCardMenu
                 isOpen={true}
@@ -177,6 +184,7 @@ interface VirtualGridProps {
   items: LibraryItem[];
   parentRef: React.RefObject<HTMLDivElement | null>;
   density: 'small' | 'medium' | 'large';
+  highlightQuery?: string;
   onMenuClick: (itemId: string, itemType: 'movie' | 'series') => (e: React.MouseEvent) => void;
   menuState: { itemId: string; itemType: 'movie' | 'series' } | null;
   onCloseMenu: () => void;
@@ -190,6 +198,7 @@ function VirtualGrid({
   items,
   parentRef,
   density,
+  highlightQuery,
   onMenuClick,
   menuState,
   onCloseMenu,
@@ -246,7 +255,11 @@ function VirtualGrid({
                     key={`${props.type}-${props.id}-${startIndex + colIndex}`}
                     className="relative"
                   >
-                    <PosterCard {...cardProps} onMenuClick={onMenuClick(itemId, itemType)} />
+                    <PosterCard
+                      {...cardProps}
+                      highlightQuery={highlightQuery}
+                      onMenuClick={onMenuClick(itemId, itemType)}
+                    />
                     {menuState?.itemId === itemId && (
                       <PosterCardMenu
                         isOpen={true}

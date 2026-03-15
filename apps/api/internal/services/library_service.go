@@ -50,8 +50,9 @@ type LibraryServiceInterface interface {
 	// SaveSeriesFromTMDb saves a series from TMDb search/details to the database
 	SaveSeriesFromTMDb(ctx context.Context, tmdbSeries *tmdb.TVShowDetails, filePath string) (*models.Series, error)
 
-	// SearchLibrary performs unified FTS search across movies and series
-	SearchLibrary(ctx context.Context, query string, params repository.ListParams) (*LibrarySearchResults, error)
+	// SearchLibrary performs unified FTS search across movies and series.
+	// mediaType filters results: "all" (default), "movie", or "tv".
+	SearchLibrary(ctx context.Context, query string, params repository.ListParams, mediaType string) (*LibrarySearchResults, error)
 
 	// GetMovieByID retrieves a movie by its ID
 	GetMovieByID(ctx context.Context, id string) (*models.Movie, error)
@@ -164,10 +165,14 @@ func (s *LibraryService) SaveSeriesFromTMDb(ctx context.Context, tmdbSeries *tmd
 	return series, nil
 }
 
-// SearchLibrary performs unified FTS search across movies and series
-// Results are returned within 500ms as per NFR-SC8
-func (s *LibraryService) SearchLibrary(ctx context.Context, query string, params repository.ListParams) (*LibrarySearchResults, error) {
+// SearchLibrary performs unified FTS search across movies and series.
+// mediaType filters results: "all" (default), "movie", or "tv".
+// Results are returned within 500ms as per NFR-SC8.
+func (s *LibraryService) SearchLibrary(ctx context.Context, query string, params repository.ListParams, mediaType string) (*LibrarySearchResults, error) {
 	params.Validate()
+
+	searchMovies := mediaType == "" || mediaType == "all" || mediaType == "movie"
+	searchSeries := mediaType == "" || mediaType == "all" || mediaType == "tv"
 
 	var wg sync.WaitGroup
 	var moviesErr, seriesErr error
@@ -176,17 +181,21 @@ func (s *LibraryService) SearchLibrary(ctx context.Context, query string, params
 	var moviesPagination, seriesPagination *repository.PaginationResult
 
 	// Search movies and series in parallel for performance
-	wg.Add(2)
+	if searchMovies {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			movies, moviesPagination, moviesErr = s.movieRepo.FullTextSearch(ctx, query, params)
+		}()
+	}
 
-	go func() {
-		defer wg.Done()
-		movies, moviesPagination, moviesErr = s.movieRepo.FullTextSearch(ctx, query, params)
-	}()
-
-	go func() {
-		defer wg.Done()
-		series, seriesPagination, seriesErr = s.seriesRepo.FullTextSearch(ctx, query, params)
-	}()
+	if searchSeries {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			series, seriesPagination, seriesErr = s.seriesRepo.FullTextSearch(ctx, query, params)
+		}()
+	}
 
 	wg.Wait()
 

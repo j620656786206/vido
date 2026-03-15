@@ -206,7 +206,7 @@ func (h *LibraryHandler) SearchLibrary(c *gin.Context) {
 
 	params := parseListParams(c)
 
-	result, err := h.service.SearchLibrary(c.Request.Context(), query, params)
+	result, err := h.service.SearchLibrary(c.Request.Context(), query, params, mediaType)
 	if err != nil {
 		slog.Error("Failed to search library", "error", err, "query", query, "type", mediaType)
 		InternalServerError(c, "Failed to search library")

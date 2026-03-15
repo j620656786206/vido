@@ -460,7 +460,7 @@ func TestLibraryService_SearchLibrary(t *testing.T) {
 		results, err := service.SearchLibrary(ctx, "dark", repository.ListParams{
 			PageSize: 10,
 			Page:     1,
-		})
+		}, "all")
 		require.NoError(t, err)
 		require.NotNil(t, results)
 
@@ -486,7 +486,7 @@ func TestLibraryService_SearchLibrary(t *testing.T) {
 		results, err := service.SearchLibrary(ctx, "batman", repository.ListParams{
 			PageSize: 10,
 			Page:     1,
-		})
+		}, "all")
 		require.NoError(t, err)
 
 		found := false
@@ -503,7 +503,7 @@ func TestLibraryService_SearchLibrary(t *testing.T) {
 		results, err := service.SearchLibrary(ctx, "chemistry", repository.ListParams{
 			PageSize: 10,
 			Page:     1,
-		})
+		}, "all")
 		require.NoError(t, err)
 
 		found := false
@@ -520,7 +520,7 @@ func TestLibraryService_SearchLibrary(t *testing.T) {
 		results, err := service.SearchLibrary(ctx, "zzzznonexistent", repository.ListParams{
 			PageSize: 10,
 			Page:     1,
-		})
+		}, "all")
 		require.NoError(t, err)
 		require.NotNil(t, results)
 		assert.Equal(t, 0, len(results.Results))
@@ -533,7 +533,7 @@ func TestLibraryService_SearchLibrary(t *testing.T) {
 		_, err := service.SearchLibrary(ctx, "dark", repository.ListParams{
 			PageSize: 20,
 			Page:     1,
-		})
+		}, "all")
 		elapsed := time.Since(start)
 
 		require.NoError(t, err)

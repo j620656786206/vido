@@ -1,6 +1,6 @@
 # Story 5.3: Library Search
 
-Status: review
+Status: done
 
 ## Story
 
@@ -187,6 +187,20 @@ Frontend (modify):
 
 Claude Opus 4.6 (1M context)
 
+### Code Review Findings (CR 5-3)
+
+**Reviewed by:** Amelia (Dev Agent) — adversarial CR
+**Issues Found:** 2 High, 3 Medium, 1 Low — all fixed
+
+| ID | Severity | Description | Fix |
+|----|----------|-------------|-----|
+| H1 | HIGH | AC2 search result highlighting not implemented | Created HighlightText component, added highlightQuery prop to PosterCard/LibraryGrid/LibraryTable |
+| H2 | HIGH | type filter parsed but discarded in SearchLibrary handler | Added mediaType param to service interface/impl, handler now passes it |
+| M1 | MEDIUM | library.spec.tsx missing from File List | Updated File List |
+| M2 | MEDIUM | AC3 missing "或新增媒體" in suggestion text | Added to first bullet |
+| M3 | MEDIUM | EmptySearchResults uses duration-500 instead of delay-500 | Added delay-500 fill-mode-backwards |
+| L1 | LOW | Search handler test "with type filter" doesn't verify type passed | Now fixed by H2 — mock expects specific mediaType |
+
 ### Debug Log References
 
 ### Completion Notes List
@@ -205,13 +219,21 @@ Claude Opus 4.6 (1M context)
 - `apps/web/src/components/library/LibrarySearchBar.spec.tsx` — NEW (16 tests)
 - `apps/web/src/components/library/EmptySearchResults.tsx` — NEW
 - `apps/web/src/components/library/EmptySearchResults.spec.tsx` — NEW (6 tests)
-- `apps/web/src/routes/library.tsx` — MODIFIED (search integration, q param)
+- `apps/web/src/routes/library.tsx` — MODIFIED (search integration, q param, highlight query)
+- `apps/web/src/routes/library.spec.tsx` — MODIFIED (added 7 search integration tests)
 - `apps/web/src/hooks/useLibrary.ts` — MODIFIED (added useLibrarySearch, search keys)
 - `apps/web/src/services/libraryService.ts` — MODIFIED (added searchLibrary)
 - `apps/web/src/types/library.ts` — MODIFIED (added LibrarySearchResult, LibrarySearchResponse)
+- `apps/web/src/components/ui/HighlightText.tsx` — NEW (search term highlighting)
+- `apps/web/src/components/media/PosterCard.tsx` — MODIFIED (added highlightQuery prop)
+- `apps/web/src/components/library/LibraryGrid.tsx` — MODIFIED (pass highlightQuery to PosterCard)
+- `apps/web/src/components/library/LibraryTable.tsx` — MODIFIED (highlight title/originalTitle)
+- `apps/api/internal/services/library_service.go` — MODIFIED (added mediaType filter to SearchLibrary)
+- `apps/api/internal/services/library_service_test.go` — MODIFIED (updated SearchLibrary calls)
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` — MODIFIED (5-3 status)
 - `_bmad-output/implementation-artifacts/5-3-library-search.md` — MODIFIED (this file)
 
 ## Change Log
 
 - 2026-03-15: Implemented all 5 tasks for Story 5-3 Library Search. Backend search endpoint, frontend hook/service, search bar component with debounce/keyboard shortcut, no-results component, and full library page integration. 30 new tests (8 backend + 22 frontend) all passing.
+- 2026-03-15: **Code Review fixes** — (1) AC2: Added search result highlighting via HighlightText component in grid/table; (2) Fixed type filter silently discarded in SearchLibrary handler — now passed to service which conditionally searches movies/series; (3) AC3: Added "或新增媒體" to suggestion text; (4) Fixed EmptySearchResults fade-in delay (delay-500 instead of just duration-500); (5) Updated File List to include library.spec.tsx and all CR-modified files.

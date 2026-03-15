@@ -15,7 +15,7 @@ describe('EmptySearchResults', () => {
 
   it('should show suggestion bullets', () => {
     render(<EmptySearchResults query="test" onClear={vi.fn()} />);
-    expect(screen.getByText(/試試不同的關鍵字/)).toBeInTheDocument();
+    expect(screen.getByText(/試試不同的關鍵字或新增媒體/)).toBeInTheDocument();
     expect(screen.getByText(/嘗試使用繁體中文或英文搜尋/)).toBeInTheDocument();
     expect(screen.getByText(/檢查拼寫是否正確/)).toBeInTheDocument();
   });
