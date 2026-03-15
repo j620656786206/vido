@@ -45,6 +45,15 @@ type MovieRepositoryInterface interface {
 
 	// FindByFilePath retrieves a movie by its file path (for duplicate detection)
 	FindByFilePath(ctx context.Context, filePath string) (*models.Movie, error)
+
+	// GetDistinctGenres returns all unique genres from movies
+	GetDistinctGenres(ctx context.Context) ([]string, error)
+
+	// GetYearRange returns the min and max release years from movies
+	GetYearRange(ctx context.Context) (minYear, maxYear int, err error)
+
+	// Count returns the total number of movies
+	Count(ctx context.Context) (int, error)
 }
 
 // SeriesRepositoryInterface defines the contract for TV series data access operations.
@@ -81,6 +90,15 @@ type SeriesRepositoryInterface interface {
 	// Upsert creates or updates a series based on TMDb ID
 	// If a series with the same TMDb ID exists, it updates the existing record
 	Upsert(ctx context.Context, series *models.Series) error
+
+	// GetDistinctGenres returns all unique genres from series
+	GetDistinctGenres(ctx context.Context) ([]string, error)
+
+	// GetYearRange returns the min and max first_air_date years from series
+	GetYearRange(ctx context.Context) (minYear, maxYear int, err error)
+
+	// Count returns the total number of series
+	Count(ctx context.Context) (int, error)
 }
 
 // SeasonRepositoryInterface defines the contract for season data access operations.

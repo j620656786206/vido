@@ -93,6 +93,24 @@ func (m *MockMovieRepository) FindByFilePath(ctx context.Context, filePath strin
 	return args.Get(0).(*models.Movie), args.Error(1)
 }
 
+func (m *MockMovieRepository) GetDistinctGenres(ctx context.Context) ([]string, error) {
+	args := m.Called(ctx)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]string), args.Error(1)
+}
+
+func (m *MockMovieRepository) GetYearRange(ctx context.Context) (int, int, error) {
+	args := m.Called(ctx)
+	return args.Int(0), args.Int(1), args.Error(2)
+}
+
+func (m *MockMovieRepository) Count(ctx context.Context) (int, error) {
+	args := m.Called(ctx)
+	return args.Int(0), args.Error(1)
+}
+
 // Verify mock implements interface
 var _ repository.MovieRepositoryInterface = (*MockMovieRepository)(nil)
 

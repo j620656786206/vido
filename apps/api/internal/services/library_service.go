@@ -16,17 +16,17 @@ import (
 
 // SearchResult represents a unified search result item
 type SearchResult struct {
-	Type   string      `json:"type"` // "movie" or "series"
+	Type   string         `json:"type"` // "movie" or "series"
 	Movie  *models.Movie  `json:"movie,omitempty"`
 	Series *models.Series `json:"series,omitempty"`
 }
 
 // LibrarySearchResults contains unified search results across movies and series
 type LibrarySearchResults struct {
-	Results    []SearchResult                 `json:"results"`
-	Movies     *repository.PaginationResult   `json:"moviesPagination"`
-	Series     *repository.PaginationResult   `json:"seriesPagination"`
-	TotalCount int                            `json:"totalCount"`
+	Results    []SearchResult               `json:"results"`
+	Movies     *repository.PaginationResult `json:"moviesPagination"`
+	Series     *repository.PaginationResult `json:"seriesPagination"`
+	TotalCount int                          `json:"totalCount"`
 }
 
 // LibraryListResult contains combined movie + series listing with pagination
@@ -77,6 +77,12 @@ type LibraryServiceInterface interface {
 
 	// DeleteSeries deletes a series by ID
 	DeleteSeries(ctx context.Context, id string) error
+
+	// GetDistinctGenres returns all unique genres across movies and series
+	GetDistinctGenres(ctx context.Context) ([]string, error)
+
+	// GetLibraryStats returns library statistics including year range and counts
+	GetLibraryStats(ctx context.Context) (*LibraryStats, error)
 }
 
 // LibraryService handles media library storage and search operations
@@ -520,6 +526,115 @@ func getVoteAverage(item LibraryItem) float64 {
 		return item.Series.VoteAverage.Float64
 	}
 	return 0
+}
+
+// LibraryStats contains library statistics
+type LibraryStats struct {
+	YearMin    int `json:"yearMin"`
+	YearMax    int `json:"yearMax"`
+	MovieCount int `json:"movieCount"`
+	TvCount    int `json:"tvCount"`
+	TotalCount int `json:"totalCount"`
+}
+
+// GetDistinctGenres returns all unique genres across movies and series
+func (s *LibraryService) GetDistinctGenres(ctx context.Context) ([]string, error) {
+	var wg sync.WaitGroup
+	var movieGenres, seriesGenres []string
+	var movieErr, seriesErr error
+
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		movieGenres, movieErr = s.movieRepo.GetDistinctGenres(ctx)
+	}()
+	go func() {
+		defer wg.Done()
+		seriesGenres, seriesErr = s.seriesRepo.GetDistinctGenres(ctx)
+	}()
+	wg.Wait()
+
+	if movieErr != nil {
+		return nil, fmt.Errorf("failed to get movie genres: %w", movieErr)
+	}
+	if seriesErr != nil {
+		return nil, fmt.Errorf("failed to get series genres: %w", seriesErr)
+	}
+
+	// Merge and deduplicate
+	genreSet := make(map[string]struct{})
+	for _, g := range movieGenres {
+		genreSet[g] = struct{}{}
+	}
+	for _, g := range seriesGenres {
+		genreSet[g] = struct{}{}
+	}
+
+	genres := make([]string, 0, len(genreSet))
+	for g := range genreSet {
+		genres = append(genres, g)
+	}
+
+	sort.Strings(genres)
+	return genres, nil
+}
+
+// GetLibraryStats returns library statistics including year range and counts
+func (s *LibraryService) GetLibraryStats(ctx context.Context) (*LibraryStats, error) {
+	var wg sync.WaitGroup
+	var movieMinYear, movieMaxYear, seriesMinYear, seriesMaxYear int
+	var movieCount, seriesCount int
+	var movieYearErr, seriesYearErr, movieCountErr, seriesCountErr error
+
+	wg.Add(4)
+	go func() {
+		defer wg.Done()
+		movieMinYear, movieMaxYear, movieYearErr = s.movieRepo.GetYearRange(ctx)
+	}()
+	go func() {
+		defer wg.Done()
+		seriesMinYear, seriesMaxYear, seriesYearErr = s.seriesRepo.GetYearRange(ctx)
+	}()
+	go func() {
+		defer wg.Done()
+		movieCount, movieCountErr = s.movieRepo.Count(ctx)
+	}()
+	go func() {
+		defer wg.Done()
+		seriesCount, seriesCountErr = s.seriesRepo.Count(ctx)
+	}()
+	wg.Wait()
+
+	if movieYearErr != nil {
+		return nil, fmt.Errorf("failed to get movie year range: %w", movieYearErr)
+	}
+	if seriesYearErr != nil {
+		return nil, fmt.Errorf("failed to get series year range: %w", seriesYearErr)
+	}
+	if movieCountErr != nil {
+		return nil, fmt.Errorf("failed to count movies: %w", movieCountErr)
+	}
+	if seriesCountErr != nil {
+		return nil, fmt.Errorf("failed to count series: %w", seriesCountErr)
+	}
+
+	// Calculate overall min/max year
+	minYear := movieMinYear
+	if seriesMinYear > 0 && (minYear == 0 || seriesMinYear < minYear) {
+		minYear = seriesMinYear
+	}
+	maxYear := movieMaxYear
+	if seriesMaxYear > maxYear {
+		maxYear = seriesMaxYear
+	}
+
+	return &LibraryStats{
+		YearMin:    minYear,
+		YearMax:    maxYear,
+		MovieCount: movieCount,
+		TvCount:    seriesCount,
+		TotalCount: movieCount + seriesCount,
+	}, nil
 }
 
 // Compile-time interface verification

@@ -864,6 +864,251 @@ func TestLibraryService_GetRecentlyAdded(t *testing.T) {
 	})
 }
 
+func TestLibraryService_FilterByGenre(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	movieRepo := repository.NewMovieRepository(db)
+	seriesRepo := repository.NewSeriesRepository(db)
+	episodeRepo := repository.NewEpisodeRepository(db)
+
+	service := NewLibraryService(movieRepo, seriesRepo, episodeRepo)
+
+	ctx := context.Background()
+	posterPath := "/poster.jpg"
+
+	// Insert movies with different genres
+	_, err := service.SaveMovieFromTMDb(ctx, &tmdb.MovieDetails{
+		Movie:  tmdb.Movie{ID: 10, Title: "Sci-Fi Action Movie", PosterPath: &posterPath, ReleaseDate: "2020-01-01"},
+		Genres: []tmdb.Genre{{Name: "Science Fiction"}, {Name: "Action"}},
+	}, "")
+	require.NoError(t, err)
+
+	_, err = service.SaveMovieFromTMDb(ctx, &tmdb.MovieDetails{
+		Movie:  tmdb.Movie{ID: 11, Title: "Drama Movie", PosterPath: &posterPath, ReleaseDate: "2015-06-01"},
+		Genres: []tmdb.Genre{{Name: "Drama"}},
+	}, "")
+	require.NoError(t, err)
+
+	_, err = service.SaveMovieFromTMDb(ctx, &tmdb.MovieDetails{
+		Movie:  tmdb.Movie{ID: 12, Title: "Action Drama Movie", PosterPath: &posterPath, ReleaseDate: "2022-03-15"},
+		Genres: []tmdb.Genre{{Name: "Action"}, {Name: "Drama"}},
+	}, "")
+	require.NoError(t, err)
+
+	t.Run("filter by single genre returns matching movies", func(t *testing.T) {
+		params := repository.NewListParams()
+		params.Filters["genres"] = []string{"Action"}
+		result, err := service.ListLibrary(ctx, params, "movie")
+		require.NoError(t, err)
+		assert.Equal(t, 2, len(result.Items)) // Sci-Fi Action + Action Drama
+	})
+
+	t.Run("filter by multiple genres uses AND logic", func(t *testing.T) {
+		params := repository.NewListParams()
+		params.Filters["genres"] = []string{"Action", "Drama"}
+		result, err := service.ListLibrary(ctx, params, "movie")
+		require.NoError(t, err)
+		assert.Equal(t, 1, len(result.Items)) // Only Action Drama
+		assert.Equal(t, "Action Drama Movie", result.Items[0].Movie.Title)
+	})
+
+	t.Run("filter by non-existing genre returns empty", func(t *testing.T) {
+		params := repository.NewListParams()
+		params.Filters["genres"] = []string{"Horror"}
+		result, err := service.ListLibrary(ctx, params, "movie")
+		require.NoError(t, err)
+		assert.Equal(t, 0, len(result.Items))
+	})
+}
+
+func TestLibraryService_FilterByYearRange(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	movieRepo := repository.NewMovieRepository(db)
+	seriesRepo := repository.NewSeriesRepository(db)
+	episodeRepo := repository.NewEpisodeRepository(db)
+
+	service := NewLibraryService(movieRepo, seriesRepo, episodeRepo)
+
+	ctx := context.Background()
+	posterPath := "/poster.jpg"
+
+	// Insert movies with different years
+	for _, m := range []struct {
+		id    int
+		title string
+		year  string
+	}{
+		{20, "Movie 1999", "1999-05-15"},
+		{21, "Movie 2010", "2010-08-20"},
+		{22, "Movie 2020", "2020-12-01"},
+		{23, "Movie 2023", "2023-03-10"},
+	} {
+		_, err := service.SaveMovieFromTMDb(ctx, &tmdb.MovieDetails{
+			Movie: tmdb.Movie{ID: m.id, Title: m.title, PosterPath: &posterPath, ReleaseDate: m.year},
+		}, "")
+		require.NoError(t, err)
+	}
+
+	t.Run("filter by year_min", func(t *testing.T) {
+		params := repository.NewListParams()
+		params.Filters["year_min"] = "2010"
+		result, err := service.ListLibrary(ctx, params, "movie")
+		require.NoError(t, err)
+		assert.Equal(t, 3, len(result.Items)) // 2010, 2020, 2023
+	})
+
+	t.Run("filter by year_max", func(t *testing.T) {
+		params := repository.NewListParams()
+		params.Filters["year_max"] = "2010"
+		result, err := service.ListLibrary(ctx, params, "movie")
+		require.NoError(t, err)
+		assert.Equal(t, 2, len(result.Items)) // 1999, 2010
+	})
+
+	t.Run("filter by year range", func(t *testing.T) {
+		params := repository.NewListParams()
+		params.Filters["year_min"] = "2010"
+		params.Filters["year_max"] = "2020"
+		result, err := service.ListLibrary(ctx, params, "movie")
+		require.NoError(t, err)
+		assert.Equal(t, 2, len(result.Items)) // 2010, 2020
+	})
+}
+
+func TestLibraryService_GetDistinctGenres(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	movieRepo := repository.NewMovieRepository(db)
+	seriesRepo := repository.NewSeriesRepository(db)
+	episodeRepo := repository.NewEpisodeRepository(db)
+
+	service := NewLibraryService(movieRepo, seriesRepo, episodeRepo)
+
+	ctx := context.Background()
+	posterPath := "/poster.jpg"
+
+	// Insert movies and series with various genres
+	_, err := service.SaveMovieFromTMDb(ctx, &tmdb.MovieDetails{
+		Movie:  tmdb.Movie{ID: 30, Title: "Movie A", PosterPath: &posterPath},
+		Genres: []tmdb.Genre{{Name: "Action"}, {Name: "Drama"}},
+	}, "")
+	require.NoError(t, err)
+
+	_, err = service.SaveMovieFromTMDb(ctx, &tmdb.MovieDetails{
+		Movie:  tmdb.Movie{ID: 31, Title: "Movie B", PosterPath: &posterPath},
+		Genres: []tmdb.Genre{{Name: "Comedy"}, {Name: "Drama"}},
+	}, "")
+	require.NoError(t, err)
+
+	_, err = service.SaveSeriesFromTMDb(ctx, &tmdb.TVShowDetails{
+		TVShow: tmdb.TVShow{ID: 200, Name: "Series A", PosterPath: &posterPath},
+		Genres: []tmdb.Genre{{Name: "Thriller"}, {Name: "Action"}},
+	}, "")
+	require.NoError(t, err)
+
+	t.Run("returns deduplicated sorted genres", func(t *testing.T) {
+		genres, err := service.GetDistinctGenres(ctx)
+		require.NoError(t, err)
+		assert.Equal(t, []string{"Action", "Comedy", "Drama", "Thriller"}, genres)
+	})
+}
+
+func TestLibraryService_GetLibraryStats(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	movieRepo := repository.NewMovieRepository(db)
+	seriesRepo := repository.NewSeriesRepository(db)
+	episodeRepo := repository.NewEpisodeRepository(db)
+
+	service := NewLibraryService(movieRepo, seriesRepo, episodeRepo)
+
+	ctx := context.Background()
+	posterPath := "/poster.jpg"
+
+	// Insert movies
+	_, err := service.SaveMovieFromTMDb(ctx, &tmdb.MovieDetails{
+		Movie: tmdb.Movie{ID: 40, Title: "Old Movie", PosterPath: &posterPath, ReleaseDate: "1999-05-01"},
+	}, "")
+	require.NoError(t, err)
+
+	_, err = service.SaveMovieFromTMDb(ctx, &tmdb.MovieDetails{
+		Movie: tmdb.Movie{ID: 41, Title: "New Movie", PosterPath: &posterPath, ReleaseDate: "2024-01-01"},
+	}, "")
+	require.NoError(t, err)
+
+	// Insert series
+	_, err = service.SaveSeriesFromTMDb(ctx, &tmdb.TVShowDetails{
+		TVShow: tmdb.TVShow{ID: 300, Name: "Old Series", PosterPath: &posterPath, FirstAirDate: "2005-06-01"},
+	}, "")
+	require.NoError(t, err)
+
+	t.Run("returns correct stats", func(t *testing.T) {
+		stats, err := service.GetLibraryStats(ctx)
+		require.NoError(t, err)
+		assert.Equal(t, 1999, stats.YearMin)
+		assert.Equal(t, 2024, stats.YearMax)
+		assert.Equal(t, 2, stats.MovieCount)
+		assert.Equal(t, 1, stats.TvCount)
+		assert.Equal(t, 3, stats.TotalCount)
+	})
+}
+
+func TestLibraryService_CombinedFilters(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	movieRepo := repository.NewMovieRepository(db)
+	seriesRepo := repository.NewSeriesRepository(db)
+	episodeRepo := repository.NewEpisodeRepository(db)
+
+	service := NewLibraryService(movieRepo, seriesRepo, episodeRepo)
+
+	ctx := context.Background()
+	posterPath := "/poster.jpg"
+
+	// Insert diverse test data
+	_, err := service.SaveMovieFromTMDb(ctx, &tmdb.MovieDetails{
+		Movie:  tmdb.Movie{ID: 50, Title: "Old Action", PosterPath: &posterPath, ReleaseDate: "2000-01-01"},
+		Genres: []tmdb.Genre{{Name: "Action"}},
+	}, "")
+	require.NoError(t, err)
+
+	_, err = service.SaveMovieFromTMDb(ctx, &tmdb.MovieDetails{
+		Movie:  tmdb.Movie{ID: 51, Title: "New Action", PosterPath: &posterPath, ReleaseDate: "2022-06-01"},
+		Genres: []tmdb.Genre{{Name: "Action"}},
+	}, "")
+	require.NoError(t, err)
+
+	_, err = service.SaveMovieFromTMDb(ctx, &tmdb.MovieDetails{
+		Movie:  tmdb.Movie{ID: 52, Title: "New Drama", PosterPath: &posterPath, ReleaseDate: "2023-01-01"},
+		Genres: []tmdb.Genre{{Name: "Drama"}},
+	}, "")
+	require.NoError(t, err)
+
+	t.Run("genre + year range combined filter", func(t *testing.T) {
+		params := repository.NewListParams()
+		params.Filters["genres"] = []string{"Action"}
+		params.Filters["year_min"] = "2020"
+		result, err := service.ListLibrary(ctx, params, "movie")
+		require.NoError(t, err)
+		assert.Equal(t, 1, len(result.Items))
+		assert.Equal(t, "New Action", result.Items[0].Movie.Title)
+	})
+
+	t.Run("genre + type combined filter", func(t *testing.T) {
+		params := repository.NewListParams()
+		params.Filters["genres"] = []string{"Action"}
+		result, err := service.ListLibrary(ctx, params, "movie")
+		require.NoError(t, err)
+		assert.Equal(t, 2, len(result.Items))
+	})
+}
+
 func TestLibraryService_GetSeriesByID(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()

@@ -3,6 +3,7 @@ package handlers
 import (
 	"log/slog"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/vido/api/internal/services"
@@ -20,6 +21,7 @@ func NewLibraryHandler(service services.LibraryServiceInterface) *LibraryHandler
 
 // ListLibrary handles GET /api/v1/library
 // Returns a paginated list of library items (movies + series combined)
+// Supports filters: genre, year_min, year_max via query params
 func (h *LibraryHandler) ListLibrary(c *gin.Context) {
 	params := parseListParams(c)
 
@@ -28,6 +30,35 @@ func (h *LibraryHandler) ListLibrary(c *gin.Context) {
 	if mediaType != "all" && mediaType != "movie" && mediaType != "tv" {
 		BadRequestError(c, "VALIDATION_INVALID_FORMAT", "type must be 'all', 'movie', or 'tv'")
 		return
+	}
+
+	// Parse filter params
+	if genres := c.Query("genres"); genres != "" {
+		genreList := strings.Split(genres, ",")
+		cleaned := make([]string, 0, len(genreList))
+		for _, g := range genreList {
+			g = strings.TrimSpace(g)
+			if g != "" {
+				cleaned = append(cleaned, g)
+			}
+		}
+		if len(cleaned) > 0 {
+			params.Filters["genres"] = cleaned
+		}
+	}
+	if yearMin := c.Query("year_min"); yearMin != "" {
+		if _, err := strconv.Atoi(yearMin); err != nil {
+			BadRequestError(c, "VALIDATION_INVALID_FORMAT", "year_min must be a valid year number")
+			return
+		}
+		params.Filters["year_min"] = yearMin
+	}
+	if yearMax := c.Query("year_max"); yearMax != "" {
+		if _, err := strconv.Atoi(yearMax); err != nil {
+			BadRequestError(c, "VALIDATION_INVALID_FORMAT", "year_max must be a valid year number")
+			return
+		}
+		params.Filters["year_max"] = yearMax
 	}
 
 	result, err := h.service.ListLibrary(c.Request.Context(), params, mediaType)
@@ -188,6 +219,32 @@ func (h *LibraryHandler) ExportSeries(c *gin.Context) {
 	SuccessResponse(c, series)
 }
 
+// GetGenres handles GET /api/v1/library/genres
+// Returns distinct genres across all library items
+func (h *LibraryHandler) GetGenres(c *gin.Context) {
+	genres, err := h.service.GetDistinctGenres(c.Request.Context())
+	if err != nil {
+		slog.Error("Failed to get genres", "error", err)
+		InternalServerError(c, "Failed to retrieve genres")
+		return
+	}
+
+	SuccessResponse(c, genres)
+}
+
+// GetStats handles GET /api/v1/library/stats
+// Returns library statistics including year range and counts
+func (h *LibraryHandler) GetStats(c *gin.Context) {
+	stats, err := h.service.GetLibraryStats(c.Request.Context())
+	if err != nil {
+		slog.Error("Failed to get library stats", "error", err)
+		InternalServerError(c, "Failed to retrieve library stats")
+		return
+	}
+
+	SuccessResponse(c, stats)
+}
+
 // SearchLibrary handles GET /api/v1/library/search?q=X&page=1&page_size=20&type=all
 // Performs FTS5 full-text search across movies and series in the library.
 func (h *LibraryHandler) SearchLibrary(c *gin.Context) {
@@ -223,6 +280,8 @@ func (h *LibraryHandler) RegisterRoutes(rg *gin.RouterGroup) {
 		library.GET("", h.ListLibrary)
 		library.GET("/search", h.SearchLibrary)
 		library.GET("/recent", h.GetRecentlyAdded)
+		library.GET("/genres", h.GetGenres)
+		library.GET("/stats", h.GetStats)
 
 		movies := library.Group("/movies")
 		{

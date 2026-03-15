@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { libraryService } from '../services/libraryService';
-import type { LibraryListParams } from '../types/library';
+import type { LibraryListParams, LibraryStats } from '../types/library';
 
 export const libraryKeys = {
   all: ['library'] as const,
@@ -10,6 +10,8 @@ export const libraryKeys = {
   searches: () => [...libraryKeys.all, 'search'] as const,
   search: (query: string, params: LibraryListParams) =>
     [...libraryKeys.searches(), query, params] as const,
+  genres: () => [...libraryKeys.all, 'genres'] as const,
+  stats: () => [...libraryKeys.all, 'stats'] as const,
 };
 
 export function useLibraryList(params: LibraryListParams) {
@@ -36,6 +38,22 @@ export function useLibrarySearch(query: string, params: LibraryListParams = {}) 
     enabled: query.length >= 2,
     staleTime: 60 * 1000, // 60s
     gcTime: 5 * 60 * 1000, // 5min
+  });
+}
+
+export function useLibraryGenres() {
+  return useQuery({
+    queryKey: libraryKeys.genres(),
+    queryFn: () => libraryService.getGenres(),
+    staleTime: 5 * 60 * 1000, // 5min — genres change infrequently
+  });
+}
+
+export function useLibraryStats() {
+  return useQuery({
+    queryKey: libraryKeys.stats(),
+    queryFn: () => libraryService.getStats(),
+    staleTime: 60 * 1000, // 1min
   });
 }
 

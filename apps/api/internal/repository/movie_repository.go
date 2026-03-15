@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -382,13 +383,38 @@ func (r *MovieRepository) List(ctx context.Context, params ListParams) ([]models
 		}
 	}
 
-	// Build WHERE clause for search filter
-	whereClause := ""
+	// Build WHERE clause from filters
+	conditions := []string{}
 	args := []interface{}{}
 
 	if searchTerm, ok := params.Filters["search"].(string); ok && searchTerm != "" {
-		whereClause = "WHERE title LIKE ?"
+		conditions = append(conditions, "title LIKE ?")
 		args = append(args, "%"+searchTerm+"%")
+	}
+
+	if genres, ok := params.Filters["genres"].([]string); ok {
+		for _, g := range genres {
+			conditions = append(conditions, `genres LIKE ?`)
+			args = append(args, `%"`+g+`"%`)
+		}
+	}
+
+	if yearMin, ok := params.Filters["year_min"].(string); ok && yearMin != "" {
+		conditions = append(conditions, "substr(release_date, 1, 4) >= ?")
+		args = append(args, yearMin)
+	}
+
+	if yearMax, ok := params.Filters["year_max"].(string); ok && yearMax != "" {
+		conditions = append(conditions, "substr(release_date, 1, 4) <= ?")
+		args = append(args, yearMax)
+	}
+
+	whereClause := ""
+	if len(conditions) > 0 {
+		whereClause = "WHERE " + conditions[0]
+		for _, c := range conditions[1:] {
+			whereClause += " AND " + c
+		}
 	}
 
 	// Get total count
@@ -558,6 +584,70 @@ func (r *MovieRepository) FullTextSearch(ctx context.Context, query string, para
 
 	pagination := NewPaginationResult(params, totalResults)
 	return movies, pagination, nil
+}
+
+// GetDistinctGenres returns all unique genres from movies
+func (r *MovieRepository) GetDistinctGenres(ctx context.Context) ([]string, error) {
+	query := `SELECT genres FROM movies WHERE genres != '[]' AND genres != ''`
+
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query movie genres: %w", err)
+	}
+	defer rows.Close()
+
+	genreSet := make(map[string]struct{})
+	for rows.Next() {
+		var genresJSON string
+		if err := rows.Scan(&genresJSON); err != nil {
+			return nil, fmt.Errorf("failed to scan genres: %w", err)
+		}
+
+		var genres []string
+		if err := json.Unmarshal([]byte(genresJSON), &genres); err != nil {
+			continue // skip malformed JSON
+		}
+
+		for _, g := range genres {
+			genreSet[g] = struct{}{}
+		}
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating movie genres: %w", err)
+	}
+
+	result := make([]string, 0, len(genreSet))
+	for g := range genreSet {
+		result = append(result, g)
+	}
+
+	return result, nil
+}
+
+// GetYearRange returns the min and max release years from movies
+func (r *MovieRepository) GetYearRange(ctx context.Context) (minYear, maxYear int, err error) {
+	query := `SELECT
+		COALESCE(MIN(CAST(substr(release_date, 1, 4) AS INTEGER)), 0),
+		COALESCE(MAX(CAST(substr(release_date, 1, 4) AS INTEGER)), 0)
+		FROM movies WHERE release_date != '' AND release_date IS NOT NULL`
+
+	err = r.db.QueryRowContext(ctx, query).Scan(&minYear, &maxYear)
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to get movie year range: %w", err)
+	}
+
+	return minYear, maxYear, nil
+}
+
+// Count returns the total number of movies
+func (r *MovieRepository) Count(ctx context.Context) (int, error) {
+	var count int
+	err := r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM movies").Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count movies: %w", err)
+	}
+	return count, nil
 }
 
 // Upsert creates or updates a movie based on TMDb ID

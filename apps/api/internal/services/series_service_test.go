@@ -85,6 +85,24 @@ func (m *MockSeriesRepository) Upsert(ctx context.Context, series *models.Series
 	return args.Error(0)
 }
 
+func (m *MockSeriesRepository) GetDistinctGenres(ctx context.Context) ([]string, error) {
+	args := m.Called(ctx)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]string), args.Error(1)
+}
+
+func (m *MockSeriesRepository) GetYearRange(ctx context.Context) (int, int, error) {
+	args := m.Called(ctx)
+	return args.Int(0), args.Int(1), args.Error(2)
+}
+
+func (m *MockSeriesRepository) Count(ctx context.Context) (int, error) {
+	args := m.Called(ctx)
+	return args.Int(0), args.Error(1)
+}
+
 // Verify mock implements interface
 var _ repository.SeriesRepositoryInterface = (*MockSeriesRepository)(nil)
 

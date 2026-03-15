@@ -4,6 +4,7 @@ import type {
   LibraryListResponse,
   LibraryListParams,
   LibrarySearchResponse,
+  LibraryStats,
 } from '../types/library';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
@@ -33,6 +34,9 @@ export const libraryService = {
     if (params.type && params.type !== 'all') searchParams.set('type', params.type);
     if (params.sortBy) searchParams.set('sort_by', params.sortBy);
     if (params.sortOrder) searchParams.set('sort_order', params.sortOrder);
+    if (params.genres) searchParams.set('genres', params.genres);
+    if (params.yearMin) searchParams.set('year_min', String(params.yearMin));
+    if (params.yearMax) searchParams.set('year_max', String(params.yearMax));
 
     const qs = searchParams.toString();
     return fetchApi<LibraryListResponse>(`/library${qs ? `?${qs}` : ''}`);
@@ -96,5 +100,13 @@ export const libraryService = {
 
   async exportSeries(id: string): Promise<unknown> {
     return fetchApi(`/library/series/${id}/export`, { method: 'POST' });
+  },
+
+  async getGenres(): Promise<string[]> {
+    return fetchApi<string[]>('/library/genres');
+  },
+
+  async getStats(): Promise<LibraryStats> {
+    return fetchApi<LibraryStats>('/library/stats');
   },
 };

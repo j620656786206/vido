@@ -5,6 +5,9 @@ import { LibraryGrid } from '../components/library/LibraryGrid';
 import { LibraryTable } from '../components/library/LibraryTable';
 import { SortSelector } from '../components/library/SortSelector';
 import { LibrarySearchBar } from '../components/library/LibrarySearchBar';
+import { FilterPanel } from '../components/library/FilterPanel';
+import type { FilterValues } from '../components/library/FilterPanel';
+import { FilterChips } from '../components/library/FilterChips';
 import { EmptySearchResults } from '../components/library/EmptySearchResults';
 import { RecentlyAdded } from '../components/library/RecentlyAdded';
 import { EmptyLibrary } from '../components/library/EmptyLibrary';
@@ -68,6 +71,9 @@ interface LibrarySearchParams {
   sortOrder?: string;
   view?: string;
   q?: string;
+  genres?: string;
+  yearMin?: number;
+  yearMax?: number;
 }
 
 export const Route = createFileRoute('/library')({
@@ -83,12 +89,26 @@ export const Route = createFileRoute('/library')({
       : undefined,
     view: ['grid', 'list'].includes(search.view as string) ? (search.view as string) : undefined,
     q: typeof search.q === 'string' ? search.q : undefined,
+    genres: typeof search.genres === 'string' ? search.genres : undefined,
+    yearMin: typeof search.yearMin === 'number' ? search.yearMin : undefined,
+    yearMax: typeof search.yearMax === 'number' ? search.yearMax : undefined,
   }),
   component: LibraryPage,
 });
 
 function LibraryPage() {
-  const { page, pageSize, type, sortBy, sortOrder, view: viewParam, q } = Route.useSearch();
+  const {
+    page,
+    pageSize,
+    type,
+    sortBy,
+    sortOrder,
+    view: viewParam,
+    q,
+    genres: genresParam,
+    yearMin: yearMinParam,
+    yearMax: yearMaxParam,
+  } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
 
   const [currentView, setCurrentView] = useState<ViewMode>(
@@ -101,13 +121,28 @@ function LibraryPage() {
   const currentType = type || 'all';
   const isSearchActive = searchQuery.length >= 2;
 
+  // Parse filter state from URL
+  const currentFilters: FilterValues = useMemo(
+    () => ({
+      genres: genresParam ? genresParam.split(',').filter(Boolean) : [],
+      yearMin: yearMinParam,
+      yearMax: yearMaxParam,
+    }),
+    [genresParam, yearMinParam, yearMaxParam]
+  );
+
+  const hasActiveFilters =
+    currentFilters.genres.length > 0 ||
+    currentFilters.yearMin !== undefined ||
+    currentFilters.yearMax !== undefined;
+
   // URL params > localStorage > default
   const storedSort = useMemo(() => getStoredSort(), []);
   const effectiveSortBy = (sortBy || storedSort.sortBy) as SortField;
   const effectiveSortOrder: SortOrder = (sortOrder as SortOrder) || storedSort.sortOrder;
 
   // Show recently added only in clean browse mode (no custom sort/filter/search)
-  const isCleanBrowse = !sortBy && !sortOrder && !isSearchActive;
+  const isCleanBrowse = !sortBy && !sortOrder && !isSearchActive && !hasActiveFilters;
 
   const listQuery = useLibraryList({
     page: currentPage,
@@ -115,6 +150,9 @@ function LibraryPage() {
     type: currentType,
     sortBy: effectiveSortBy,
     sortOrder: effectiveSortOrder,
+    genres: genresParam || undefined,
+    yearMin: yearMinParam,
+    yearMax: yearMaxParam,
   });
 
   const searchResult = useLibrarySearch(searchQuery, {
@@ -132,8 +170,22 @@ function LibraryPage() {
       sortOrder: overrides.sortOrder !== undefined ? overrides.sortOrder : sortOrder || undefined,
       view: currentView !== 'grid' ? currentView : undefined,
       q: overrides.q !== undefined ? overrides.q : searchQuery || undefined,
+      genres: overrides.genres !== undefined ? overrides.genres : genresParam || undefined,
+      yearMin: overrides.yearMin !== undefined ? overrides.yearMin : yearMinParam,
+      yearMax: overrides.yearMax !== undefined ? overrides.yearMax : yearMaxParam,
     }),
-    [currentPage, currentPageSize, currentType, sortBy, sortOrder, currentView, searchQuery]
+    [
+      currentPage,
+      currentPageSize,
+      currentType,
+      sortBy,
+      sortOrder,
+      currentView,
+      searchQuery,
+      genresParam,
+      yearMinParam,
+      yearMaxParam,
+    ]
   );
 
   const handleSearch = useCallback(
@@ -181,6 +233,52 @@ function LibraryPage() {
     },
     [navigate, buildSearchParams]
   );
+
+  const handleFilterApply = useCallback(
+    (filters: FilterValues) => {
+      navigate({
+        search: buildSearchParams({
+          page: 1,
+          genres: filters.genres.length > 0 ? filters.genres.join(',') : undefined,
+          yearMin: filters.yearMin,
+          yearMax: filters.yearMax,
+        }),
+      });
+    },
+    [navigate, buildSearchParams]
+  );
+
+  const handleFilterClear = useCallback(() => {
+    navigate({
+      search: buildSearchParams({
+        page: 1,
+        genres: undefined,
+        yearMin: undefined,
+        yearMax: undefined,
+      }),
+    });
+  }, [navigate, buildSearchParams]);
+
+  const handleRemoveGenre = useCallback(
+    (genre: string) => {
+      const newGenres = currentFilters.genres.filter((g) => g !== genre);
+      navigate({
+        search: buildSearchParams({
+          page: 1,
+          genres: newGenres.length > 0 ? newGenres.join(',') : undefined,
+        }),
+      });
+    },
+    [currentFilters.genres, navigate, buildSearchParams]
+  );
+
+  const handleRemoveYearMin = useCallback(() => {
+    navigate({ search: buildSearchParams({ page: 1, yearMin: undefined }) });
+  }, [navigate, buildSearchParams]);
+
+  const handleRemoveYearMax = useCallback(() => {
+    navigate({ search: buildSearchParams({ page: 1, yearMax: undefined }) });
+  }, [navigate, buildSearchParams]);
 
   // Derive display data based on search mode
   let items: LibraryItem[] = [];
@@ -232,14 +330,34 @@ function LibraryPage() {
             </span>
             <div className="flex items-center gap-2">
               {!isSearchActive && (
-                <SortSelector
-                  sortBy={effectiveSortBy}
-                  sortOrder={effectiveSortOrder}
-                  onSortChange={handleSortChange}
-                />
+                <>
+                  <FilterPanel
+                    filters={currentFilters}
+                    onApply={handleFilterApply}
+                    onClear={handleFilterClear}
+                  />
+                  <SortSelector
+                    sortBy={effectiveSortBy}
+                    sortOrder={effectiveSortOrder}
+                    onSortChange={handleSortChange}
+                  />
+                </>
               )}
               <ViewToggle view={currentView} onViewChange={handleViewChange} />
             </div>
+          </div>
+        )}
+
+        {/* Active filter chips */}
+        {hasActiveFilters && !isEmpty && (
+          <div className="mb-4">
+            <FilterChips
+              filters={currentFilters}
+              onRemoveGenre={handleRemoveGenre}
+              onRemoveYearMin={handleRemoveYearMin}
+              onRemoveYearMax={handleRemoveYearMax}
+              onClearAll={handleFilterClear}
+            />
           </div>
         )}
 

@@ -79,6 +79,17 @@ export interface LibraryListParams {
   type?: LibraryMediaType;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
+  genres?: string;
+  yearMin?: number;
+  yearMax?: number;
+}
+
+export interface LibraryStats {
+  yearMin: number;
+  yearMax: number;
+  movieCount: number;
+  tvCount: number;
+  totalCount: number;
 }
 
 export interface LibrarySearchResult {

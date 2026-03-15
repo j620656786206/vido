@@ -204,6 +204,11 @@ func (m *mockPQMovieRepo) FullTextSearch(_ context.Context, _ string, _ reposito
 	return nil, nil, nil
 }
 func (m *mockPQMovieRepo) Upsert(_ context.Context, _ *models.Movie) error { return nil }
+func (m *mockPQMovieRepo) GetDistinctGenres(_ context.Context) ([]string, error) {
+	return nil, nil
+}
+func (m *mockPQMovieRepo) GetYearRange(_ context.Context) (int, int, error) { return 0, 0, nil }
+func (m *mockPQMovieRepo) Count(_ context.Context) (int, error)            { return 0, nil }
 
 var _ repository.MovieRepositoryInterface = (*mockPQMovieRepo)(nil)
 
@@ -255,6 +260,11 @@ func (m *mockPQSeriesRepo) FullTextSearch(_ context.Context, _ string, _ reposit
 	return nil, nil, nil
 }
 func (m *mockPQSeriesRepo) Upsert(_ context.Context, _ *models.Series) error { return nil }
+func (m *mockPQSeriesRepo) GetDistinctGenres(_ context.Context) ([]string, error) {
+	return nil, nil
+}
+func (m *mockPQSeriesRepo) GetYearRange(_ context.Context) (int, int, error) { return 0, 0, nil }
+func (m *mockPQSeriesRepo) Count(_ context.Context) (int, error)            { return 0, nil }
 
 var _ repository.SeriesRepositoryInterface = (*mockPQSeriesRepo)(nil)
 

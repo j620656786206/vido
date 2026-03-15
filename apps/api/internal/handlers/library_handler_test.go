@@ -105,6 +105,22 @@ func (m *MockLibraryService) DeleteSeries(ctx context.Context, id string) error 
 	return args.Error(0)
 }
 
+func (m *MockLibraryService) GetDistinctGenres(ctx context.Context) ([]string, error) {
+	args := m.Called(ctx)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]string), args.Error(1)
+}
+
+func (m *MockLibraryService) GetLibraryStats(ctx context.Context) (*services.LibraryStats, error) {
+	args := m.Called(ctx)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*services.LibraryStats), args.Error(1)
+}
+
 // Verify mock implements interface
 var _ services.LibraryServiceInterface = (*MockLibraryService)(nil)
 
@@ -589,6 +605,179 @@ func TestLibraryHandler_SearchLibrary(t *testing.T) {
 		router.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	mockService.AssertExpectations(t)
+}
+
+func TestLibraryHandler_ListLibrary_WithFilters(t *testing.T) {
+	mockService := new(MockLibraryService)
+	handler := NewLibraryHandler(mockService)
+	router := setupLibraryTestRouter(handler)
+
+	t.Run("genre filter passed to service", func(t *testing.T) {
+		expectedResult := &services.LibraryListResult{
+			Items: []services.LibraryItem{},
+			Pagination: &repository.PaginationResult{
+				Page: 1, PageSize: 20, TotalResults: 0, TotalPages: 0,
+			},
+		}
+
+		mockService.On("ListLibrary", mock.Anything, mock.MatchedBy(func(p repository.ListParams) bool {
+			genres, ok := p.Filters["genres"].([]string)
+			return ok && len(genres) == 1 && genres[0] == "科幻"
+		}), "all").Return(expectedResult, nil).Once()
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library?genres=%E7%A7%91%E5%B9%BB", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	t.Run("multiple genres filter passed to service", func(t *testing.T) {
+		expectedResult := &services.LibraryListResult{
+			Items: []services.LibraryItem{},
+			Pagination: &repository.PaginationResult{
+				Page: 1, PageSize: 20, TotalResults: 0, TotalPages: 0,
+			},
+		}
+
+		mockService.On("ListLibrary", mock.Anything, mock.MatchedBy(func(p repository.ListParams) bool {
+			genres, ok := p.Filters["genres"].([]string)
+			return ok && len(genres) == 2 && genres[0] == "Action" && genres[1] == "Drama"
+		}), "all").Return(expectedResult, nil).Once()
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library?genres=Action,Drama", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	t.Run("year range filters passed to service", func(t *testing.T) {
+		expectedResult := &services.LibraryListResult{
+			Items: []services.LibraryItem{},
+			Pagination: &repository.PaginationResult{
+				Page: 1, PageSize: 20, TotalResults: 0, TotalPages: 0,
+			},
+		}
+
+		mockService.On("ListLibrary", mock.Anything, mock.MatchedBy(func(p repository.ListParams) bool {
+			yearMin, ok1 := p.Filters["year_min"].(string)
+			yearMax, ok2 := p.Filters["year_max"].(string)
+			return ok1 && ok2 && yearMin == "2000" && yearMax == "2020"
+		}), "all").Return(expectedResult, nil).Once()
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library?year_min=2000&year_max=2020", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	t.Run("invalid year_min returns 400", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library?year_min=abc", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("invalid year_max returns 400", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library?year_max=xyz", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	mockService.AssertExpectations(t)
+}
+
+func TestLibraryHandler_GetGenres(t *testing.T) {
+	mockService := new(MockLibraryService)
+	handler := NewLibraryHandler(mockService)
+	router := setupLibraryTestRouter(handler)
+
+	t.Run("success - returns genres", func(t *testing.T) {
+		expectedGenres := []string{"Action", "Drama", "科幻"}
+
+		mockService.On("GetDistinctGenres", mock.Anything).Return(expectedGenres, nil).Once()
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library/genres", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		var resp APIResponse
+		err := json.Unmarshal(w.Body.Bytes(), &resp)
+		require.NoError(t, err)
+		assert.True(t, resp.Success)
+
+		dataSlice, ok := resp.Data.([]interface{})
+		require.True(t, ok)
+		assert.Equal(t, 3, len(dataSlice))
+	})
+
+	t.Run("service error returns 500", func(t *testing.T) {
+		mockService.On("GetDistinctGenres", mock.Anything).Return(nil, errors.New("db error")).Once()
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library/genres", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
+	})
+
+	mockService.AssertExpectations(t)
+}
+
+func TestLibraryHandler_GetStats(t *testing.T) {
+	mockService := new(MockLibraryService)
+	handler := NewLibraryHandler(mockService)
+	router := setupLibraryTestRouter(handler)
+
+	t.Run("success - returns stats", func(t *testing.T) {
+		expectedStats := &services.LibraryStats{
+			YearMin:    1999,
+			YearMax:    2024,
+			MovieCount: 50,
+			TvCount:    30,
+			TotalCount: 80,
+		}
+
+		mockService.On("GetLibraryStats", mock.Anything).Return(expectedStats, nil).Once()
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library/stats", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		var resp APIResponse
+		err := json.Unmarshal(w.Body.Bytes(), &resp)
+		require.NoError(t, err)
+		assert.True(t, resp.Success)
+
+		dataMap, ok := resp.Data.(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, float64(1999), dataMap["yearMin"])
+		assert.Equal(t, float64(2024), dataMap["yearMax"])
+		assert.Equal(t, float64(50), dataMap["movieCount"])
+		assert.Equal(t, float64(30), dataMap["tvCount"])
+		assert.Equal(t, float64(80), dataMap["totalCount"])
+	})
+
+	t.Run("service error returns 500", func(t *testing.T) {
+		mockService.On("GetLibraryStats", mock.Anything).Return(nil, errors.New("db error")).Once()
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library/stats", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
 	})
 
 	mockService.AssertExpectations(t)
