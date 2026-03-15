@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -26,98 +26,166 @@ describe('FilterPanel', () => {
   const emptyFilters: FilterValues = { genres: [], yearMin: undefined, yearMax: undefined };
   let onApply: ReturnType<typeof vi.fn>;
   let onClear: ReturnType<typeof vi.fn>;
+  let onTypeChange: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     onApply = vi.fn();
     onClear = vi.fn();
+    onTypeChange = vi.fn();
   });
 
-  it('renders filter button', () => {
-    renderWithProvider(<FilterPanel filters={emptyFilters} onApply={onApply} onClear={onClear} />);
-    expect(screen.getByText('篩選')).toBeInTheDocument();
+  it('renders panel heading', () => {
+    renderWithProvider(
+      <FilterPanel
+        filters={emptyFilters}
+        mediaType="all"
+        onApply={onApply}
+        onClear={onClear}
+        onTypeChange={onTypeChange}
+      />
+    );
+    expect(screen.getByText('篩選條件')).toBeInTheDocument();
   });
 
-  it('opens panel on click', async () => {
-    renderWithProvider(<FilterPanel filters={emptyFilters} onApply={onApply} onClear={onClear} />);
-    await userEvent.click(screen.getByText('篩選'));
-    expect(screen.getByText('類型')).toBeInTheDocument();
-    expect(screen.getByText('年份範圍')).toBeInTheDocument();
+  it('renders type section with chip toggles', () => {
+    renderWithProvider(
+      <FilterPanel
+        filters={emptyFilters}
+        mediaType="all"
+        onApply={onApply}
+        onClear={onClear}
+        onTypeChange={onTypeChange}
+      />
+    );
+    expect(screen.getByText('全部')).toBeInTheDocument();
+    expect(screen.getByText('電影')).toBeInTheDocument();
+    expect(screen.getByText('影集')).toBeInTheDocument();
   });
 
-  it('renders genre checkboxes from API data', async () => {
-    renderWithProvider(<FilterPanel filters={emptyFilters} onApply={onApply} onClear={onClear} />);
-    await userEvent.click(screen.getByText('篩選'));
-
+  it('renders genre chip toggles from API data', () => {
+    renderWithProvider(
+      <FilterPanel
+        filters={emptyFilters}
+        mediaType="all"
+        onApply={onApply}
+        onClear={onClear}
+        onTypeChange={onTypeChange}
+      />
+    );
     expect(screen.getByText('Action')).toBeInTheDocument();
     expect(screen.getByText('Drama')).toBeInTheDocument();
     expect(screen.getByText('Comedy')).toBeInTheDocument();
     expect(screen.getByText('科幻')).toBeInTheDocument();
   });
 
-  it('renders year range inputs', async () => {
-    renderWithProvider(<FilterPanel filters={emptyFilters} onApply={onApply} onClear={onClear} />);
-    await userEvent.click(screen.getByText('篩選'));
-
-    const inputs = screen.getAllByRole('spinbutton');
-    expect(inputs).toHaveLength(2);
+  it('renders decade chip toggles instead of number inputs', () => {
+    renderWithProvider(
+      <FilterPanel
+        filters={emptyFilters}
+        mediaType="all"
+        onApply={onApply}
+        onClear={onClear}
+        onTypeChange={onTypeChange}
+      />
+    );
+    expect(screen.getByText('2020s')).toBeInTheDocument();
+    expect(screen.getByText('2010s')).toBeInTheDocument();
+    expect(screen.getByText('2000s')).toBeInTheDocument();
+    expect(screen.getByText('1990s')).toBeInTheDocument();
+    expect(screen.getByText('更早')).toBeInTheDocument();
+    // No number inputs should exist
+    expect(screen.queryAllByRole('spinbutton')).toHaveLength(0);
   });
 
-  it('shows apply and clear buttons', async () => {
-    renderWithProvider(<FilterPanel filters={emptyFilters} onApply={onApply} onClear={onClear} />);
-    await userEvent.click(screen.getByText('篩選'));
-
-    expect(screen.getByText('套用篩選')).toBeInTheDocument();
-    expect(screen.getByText('清除')).toBeInTheDocument();
+  it('shows apply and reset buttons with correct labels', () => {
+    renderWithProvider(
+      <FilterPanel
+        filters={emptyFilters}
+        mediaType="all"
+        onApply={onApply}
+        onClear={onClear}
+        onTypeChange={onTypeChange}
+      />
+    );
+    expect(screen.getByText('套用')).toBeInTheDocument();
+    expect(screen.getByText('重置')).toBeInTheDocument();
   });
 
   it('calls onApply with selected genres', async () => {
-    renderWithProvider(<FilterPanel filters={emptyFilters} onApply={onApply} onClear={onClear} />);
-    await userEvent.click(screen.getByText('篩選'));
+    renderWithProvider(
+      <FilterPanel
+        filters={emptyFilters}
+        mediaType="all"
+        onApply={onApply}
+        onClear={onClear}
+        onTypeChange={onTypeChange}
+      />
+    );
 
-    // Select a genre checkbox
-    const checkboxes = screen.getAllByRole('checkbox');
-    await userEvent.click(checkboxes[0]); // Action
-
-    await userEvent.click(screen.getByText('套用篩選'));
+    // Click genre chip toggle
+    await userEvent.click(screen.getByTestId('filter-genre-Action'));
+    await userEvent.click(screen.getByTestId('filter-apply'));
 
     expect(onApply).toHaveBeenCalledWith(expect.objectContaining({ genres: ['Action'] }));
+  });
+
+  it('calls onApply with decade-based year range', async () => {
+    renderWithProvider(
+      <FilterPanel
+        filters={emptyFilters}
+        mediaType="all"
+        onApply={onApply}
+        onClear={onClear}
+        onTypeChange={onTypeChange}
+      />
+    );
+
+    await userEvent.click(screen.getByTestId('filter-decade-2020s'));
+    await userEvent.click(screen.getByTestId('filter-apply'));
+
+    expect(onApply).toHaveBeenCalledWith(expect.objectContaining({ yearMin: 2020, yearMax: 2029 }));
   });
 
   it('calls onClear and resets form', async () => {
     renderWithProvider(
       <FilterPanel
         filters={{ genres: ['Action'], yearMin: 2000, yearMax: 2020 }}
+        mediaType="all"
         onApply={onApply}
         onClear={onClear}
+        onTypeChange={onTypeChange}
       />
     );
-    await userEvent.click(screen.getByText('篩選'));
-    await userEvent.click(screen.getByText('清除'));
+    await userEvent.click(screen.getByTestId('filter-reset'));
 
     expect(onClear).toHaveBeenCalled();
   });
 
-  it('shows active filter count badge when filters are active', () => {
+  it('calls onTypeChange when type chip is clicked', async () => {
     renderWithProvider(
       <FilterPanel
-        filters={{ genres: ['Action', 'Drama'], yearMin: 2000, yearMax: undefined }}
+        filters={emptyFilters}
+        mediaType="all"
         onApply={onApply}
         onClear={onClear}
+        onTypeChange={onTypeChange}
       />
     );
-    // 2 genres + 1 yearMin = 3
-    expect(screen.getByText('3')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByTestId('filter-type-movie'));
+    expect(onTypeChange).toHaveBeenCalledWith('movie');
   });
 
-  it('highlights filter button when filters are active', () => {
-    const { container } = renderWithProvider(
+  it('shows year section label as 年份', () => {
+    renderWithProvider(
       <FilterPanel
-        filters={{ genres: ['Action'], yearMin: undefined, yearMax: undefined }}
+        filters={emptyFilters}
+        mediaType="all"
         onApply={onApply}
         onClear={onClear}
+        onTypeChange={onTypeChange}
       />
     );
-    const button = container.querySelector('button');
-    expect(button?.className).toContain('bg-blue-600');
+    expect(screen.getByText('年份')).toBeInTheDocument();
   });
 });

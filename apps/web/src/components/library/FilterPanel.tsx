@@ -1,5 +1,7 @@
-import { useState, useCallback } from 'react';
-import { useLibraryGenres, useLibraryStats } from '../../hooks/useLibrary';
+import { useState, useCallback, useEffect } from 'react';
+import { Check } from 'lucide-react';
+import { useLibraryGenres } from '../../hooks/useLibrary';
+import type { LibraryMediaType } from '../../types/library';
 
 export interface FilterValues {
   genres: string[];
@@ -7,24 +9,64 @@ export interface FilterValues {
   yearMax?: number;
 }
 
+const DECADE_OPTIONS = [
+  { label: '2020s', min: 2020, max: 2029 },
+  { label: '2010s', min: 2010, max: 2019 },
+  { label: '2000s', min: 2000, max: 2009 },
+  { label: '1990s', min: 1990, max: 1999 },
+  { label: '更早', min: 0, max: 1989 },
+];
+
 interface FilterPanelProps {
   filters: FilterValues;
+  mediaType: LibraryMediaType;
   onApply: (filters: FilterValues) => void;
   onClear: () => void;
+  onTypeChange: (type: LibraryMediaType) => void;
 }
 
-export function FilterPanel({ filters, onApply, onClear }: FilterPanelProps) {
-  const [isOpen, setIsOpen] = useState(false);
+function getSelectedDecades(yearMin?: number, yearMax?: number): string[] {
+  if (yearMin === undefined && yearMax === undefined) return [];
+  return DECADE_OPTIONS.filter((d) => {
+    if (yearMin !== undefined && yearMax !== undefined) {
+      return d.max >= yearMin && d.min <= yearMax;
+    }
+    if (yearMin !== undefined) return d.max >= yearMin;
+    if (yearMax !== undefined) return d.min <= yearMax;
+    return false;
+  }).map((d) => d.label);
+}
+
+function decadesToYearRange(selectedDecades: string[]): { yearMin?: number; yearMax?: number } {
+  if (selectedDecades.length === 0) return {};
+  const selected = DECADE_OPTIONS.filter((d) => selectedDecades.includes(d.label));
+  const yearMin = Math.min(...selected.map((d) => d.min));
+  const yearMax = Math.max(...selected.map((d) => d.max));
+  return {
+    yearMin: yearMin === 0 ? undefined : yearMin,
+    yearMax,
+  };
+}
+
+export function FilterPanel({
+  filters,
+  mediaType,
+  onApply,
+  onClear,
+  onTypeChange,
+}: FilterPanelProps) {
   const [localGenres, setLocalGenres] = useState<string[]>(filters.genres);
-  const [localYearMin, setLocalYearMin] = useState<string>(
-    filters.yearMin ? String(filters.yearMin) : ''
-  );
-  const [localYearMax, setLocalYearMax] = useState<string>(
-    filters.yearMax ? String(filters.yearMax) : ''
+  const [localDecades, setLocalDecades] = useState<string[]>(() =>
+    getSelectedDecades(filters.yearMin, filters.yearMax)
   );
 
   const { data: availableGenres = [] } = useLibraryGenres();
-  const { data: stats } = useLibraryStats();
+
+  // Sync local state when external filters change
+  useEffect(() => {
+    setLocalGenres(filters.genres);
+    setLocalDecades(getSelectedDecades(filters.yearMin, filters.yearMax));
+  }, [filters.genres, filters.yearMin, filters.yearMax]);
 
   const handleGenreToggle = useCallback((genre: string) => {
     setLocalGenres((prev) =>
@@ -32,119 +74,117 @@ export function FilterPanel({ filters, onApply, onClear }: FilterPanelProps) {
     );
   }, []);
 
+  const handleDecadeToggle = useCallback((decade: string) => {
+    setLocalDecades((prev) =>
+      prev.includes(decade) ? prev.filter((d) => d !== decade) : [...prev, decade]
+    );
+  }, []);
+
   const handleApply = useCallback(() => {
+    const yearRange = decadesToYearRange(localDecades);
     onApply({
       genres: localGenres,
-      yearMin: localYearMin ? parseInt(localYearMin, 10) : undefined,
-      yearMax: localYearMax ? parseInt(localYearMax, 10) : undefined,
+      yearMin: yearRange.yearMin,
+      yearMax: yearRange.yearMax,
     });
-  }, [localGenres, localYearMin, localYearMax, onApply]);
+  }, [localGenres, localDecades, onApply]);
 
   const handleClear = useCallback(() => {
     setLocalGenres([]);
-    setLocalYearMin('');
-    setLocalYearMax('');
+    setLocalDecades([]);
     onClear();
   }, [onClear]);
 
-  const hasActiveFilters =
-    filters.genres.length > 0 || filters.yearMin !== undefined || filters.yearMax !== undefined;
-
   return (
-    <div>
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-          hasActiveFilters
-            ? 'bg-blue-600 text-white'
-            : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'
-        }`}
-      >
-        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
-          />
-        </svg>
-        篩選
-        {hasActiveFilters && (
-          <span className="rounded-full bg-white/20 px-1.5 text-xs">
-            {filters.genres.length + (filters.yearMin ? 1 : 0) + (filters.yearMax ? 1 : 0)}
-          </span>
-        )}
-      </button>
+    <div className="flex h-full flex-col" data-testid="filter-panel">
+      <h3 className="mb-4 text-sm font-semibold text-white">篩選條件</h3>
 
-      {isOpen && (
-        <div className="mt-2 rounded-lg border border-slate-700 bg-slate-800 p-4">
-          {/* Genre Section */}
-          <div className="mb-4">
-            <h4 className="mb-2 text-sm font-medium text-slate-300">類型</h4>
-            <div className="flex flex-wrap gap-2">
-              {availableGenres.map((genre) => (
-                <label
-                  key={genre}
-                  className="flex cursor-pointer items-center gap-1.5 rounded-md bg-slate-700 px-2.5 py-1.5 text-sm transition-colors hover:bg-slate-600"
-                >
-                  <input
-                    type="checkbox"
-                    checked={localGenres.includes(genre)}
-                    onChange={() => handleGenreToggle(genre)}
-                    className="rounded border-slate-500 bg-slate-600 text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
-                  />
-                  <span className="text-slate-200">{genre}</span>
-                </label>
-              ))}
-              {availableGenres.length === 0 && (
-                <span className="text-sm text-slate-500">無可用類型</span>
-              )}
-            </div>
-          </div>
-
-          {/* Year Range Section */}
-          <div className="mb-4">
-            <h4 className="mb-2 text-sm font-medium text-slate-300">年份範圍</h4>
-            <div className="flex items-center gap-2">
-              <input
-                type="number"
-                value={localYearMin}
-                onChange={(e) => setLocalYearMin(e.target.value)}
-                placeholder={stats?.yearMin ? String(stats.yearMin) : '最早'}
-                min={stats?.yearMin}
-                max={stats?.yearMax}
-                className="w-24 rounded-md border border-slate-600 bg-slate-700 px-3 py-1.5 text-sm text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
-              <span className="text-slate-500">—</span>
-              <input
-                type="number"
-                value={localYearMax}
-                onChange={(e) => setLocalYearMax(e.target.value)}
-                placeholder={stats?.yearMax ? String(stats.yearMax) : '最新'}
-                min={stats?.yearMin}
-                max={stats?.yearMax}
-                className="w-24 rounded-md border border-slate-600 bg-slate-700 px-3 py-1.5 text-sm text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div className="flex gap-2">
+      {/* Type Section */}
+      <div className="mb-4">
+        <h4 className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">類型</h4>
+        <div className="flex flex-wrap gap-1.5">
+          {(['all', 'movie', 'tv'] as const).map((t) => (
             <button
-              onClick={handleApply}
-              className="rounded-md bg-blue-600 px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-500"
+              key={t}
+              onClick={() => onTypeChange(t)}
+              data-testid={`filter-type-${t}`}
+              className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm transition-colors ${
+                mediaType === t
+                  ? 'bg-blue-500/15 border border-blue-500 text-blue-300'
+                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+              }`}
             >
-              套用篩選
+              {mediaType === t && <Check className="h-3.5 w-3.5" />}
+              {t === 'all' ? '全部' : t === 'movie' ? '電影' : '影集'}
             </button>
-            <button
-              onClick={handleClear}
-              className="rounded-md bg-slate-700 px-4 py-1.5 text-sm text-slate-300 transition-colors hover:bg-slate-600"
-            >
-              清除
-            </button>
-          </div>
+          ))}
         </div>
-      )}
+      </div>
+
+      {/* Genre Section */}
+      <div className="mb-4">
+        <h4 className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">類別</h4>
+        <div className="flex flex-wrap gap-1.5">
+          {availableGenres.map((genre) => (
+            <button
+              key={genre}
+              onClick={() => handleGenreToggle(genre)}
+              data-testid={`filter-genre-${genre}`}
+              className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm transition-colors ${
+                localGenres.includes(genre)
+                  ? 'bg-blue-500/15 border border-blue-500 text-blue-300'
+                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+              }`}
+            >
+              {localGenres.includes(genre) && <Check className="h-3.5 w-3.5" />}
+              {genre}
+            </button>
+          ))}
+          {availableGenres.length === 0 && (
+            <span className="text-sm text-slate-500">無可用類別</span>
+          )}
+        </div>
+      </div>
+
+      {/* Year Section — Decade Chips */}
+      <div className="mb-4">
+        <h4 className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">年份</h4>
+        <div className="flex flex-wrap gap-1.5">
+          {DECADE_OPTIONS.map((decade) => (
+            <button
+              key={decade.label}
+              onClick={() => handleDecadeToggle(decade.label)}
+              data-testid={`filter-decade-${decade.label}`}
+              className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm transition-colors ${
+                localDecades.includes(decade.label)
+                  ? 'bg-blue-500/15 border border-blue-500 text-blue-300'
+                  : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+              }`}
+            >
+              {localDecades.includes(decade.label) && <Check className="h-3.5 w-3.5" />}
+              {decade.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="mt-auto flex gap-2">
+        <button
+          onClick={handleApply}
+          data-testid="filter-apply"
+          className="flex-1 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500"
+        >
+          套用
+        </button>
+        <button
+          onClick={handleClear}
+          data-testid="filter-reset"
+          className="flex-1 rounded-md border border-slate-600 px-4 py-2 text-sm text-slate-300 transition-colors hover:bg-slate-700"
+        >
+          重置
+        </button>
+      </div>
     </div>
   );
 }

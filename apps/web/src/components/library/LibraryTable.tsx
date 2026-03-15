@@ -26,7 +26,7 @@ const COLUMNS: Column[] = [
   { key: 'release_date', label: '年份', sortable: true, className: 'w-24 text-center' },
   { key: 'genre', label: '類型', sortable: false },
   { key: 'rating', label: '評分', sortable: true, className: 'w-20 text-center' },
-  { key: 'created_at', label: '加入日期', sortable: true, className: 'w-28 text-right' },
+  { key: 'created_at', label: '新增日期', sortable: true, className: 'w-28 text-right' },
 ];
 
 function getItemData(item: LibraryItem) {
@@ -105,7 +105,7 @@ export function LibraryTable({
     <div data-testid="library-table" className="overflow-x-auto">
       <table className="w-full border-collapse">
         <thead>
-          <tr className="border-b border-slate-700 text-left text-sm text-slate-400">
+          <tr className="border-b border-slate-700 bg-slate-800/50 text-left text-sm text-slate-400">
             {COLUMNS.map((col) => (
               <th key={col.key} className={cn('px-3 py-2 font-medium', col.className)}>
                 {col.sortable ? (

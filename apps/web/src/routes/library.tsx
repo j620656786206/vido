@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { Filter } from 'lucide-react';
 import { useLibraryList, useLibrarySearch } from '../hooks/useLibrary';
 import { LibraryGrid } from '../components/library/LibraryGrid';
 import { LibraryTable } from '../components/library/LibraryTable';
@@ -115,6 +116,7 @@ function LibraryPage() {
     () => (viewParam as ViewMode) || getStoredView()
   );
   const [searchQuery, setSearchQuery] = useState(q || '');
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   const currentPage = page || 1;
   const currentPageSize = pageSize || 20;
@@ -202,9 +204,12 @@ function LibraryPage() {
     navigate({ search: buildSearchParams({ page: newPage }) });
   };
 
-  const handleTypeChange = (newType: LibraryMediaType) => {
-    navigate({ search: buildSearchParams({ page: 1, type: newType }) });
-  };
+  const handleTypeChange = useCallback(
+    (newType: LibraryMediaType) => {
+      navigate({ search: buildSearchParams({ page: 1, type: newType }) });
+    },
+    [navigate, buildSearchParams]
+  );
 
   const handleViewChange = useCallback(
     (newView: ViewMode) => {
@@ -280,6 +285,11 @@ function LibraryPage() {
     navigate({ search: buildSearchParams({ page: 1, yearMax: undefined }) });
   }, [navigate, buildSearchParams]);
 
+  const activeFilterCount =
+    currentFilters.genres.length +
+    (currentFilters.yearMin !== undefined ? 1 : 0) +
+    (currentFilters.yearMax !== undefined ? 1 : 0);
+
   // Derive display data based on search mode
   let items: LibraryItem[] = [];
   let totalItems = 0;
@@ -291,7 +301,6 @@ function LibraryPage() {
     const results = searchResult.data?.results ?? [];
     totalItems = searchResult.data?.totalCount ?? 0;
     totalPages = totalItems > 0 ? Math.ceil(totalItems / currentPageSize) : 0;
-    // Convert SearchResult[] to LibraryItem[] for grid/table components
     items = results.map((r) => ({
       type: r.type,
       movie: r.movie,
@@ -311,7 +320,7 @@ function LibraryPage() {
   return (
     <div>
       <div className="container mx-auto px-4 py-8">
-        {/* Search bar - always visible unless library is empty with no search */}
+        {/* Search bar */}
         {!isLibraryEmpty && (
           <div className="mb-6">
             <LibrarySearchBar
@@ -322,27 +331,35 @@ function LibraryPage() {
           </div>
         )}
 
+        {/* Controls row: heading left, controls right */}
         {!isEmpty && (
           <div className="mb-6 flex items-center justify-between">
-            <span className="text-sm text-slate-400">
-              顯示 {(currentPage - 1) * currentPageSize + 1}-
-              {Math.min(currentPage * currentPageSize, totalItems)} / {totalItems} 項
-            </span>
+            <h2 className="text-xl font-semibold text-white">全部媒體</h2>
             <div className="flex items-center gap-2">
               {!isSearchActive && (
-                <>
-                  <FilterPanel
-                    filters={currentFilters}
-                    onApply={handleFilterApply}
-                    onClear={handleFilterClear}
-                  />
-                  <SortSelector
-                    sortBy={effectiveSortBy}
-                    sortOrder={effectiveSortOrder}
-                    onSortChange={handleSortChange}
-                  />
-                </>
+                <SortSelector
+                  sortBy={effectiveSortBy}
+                  sortOrder={effectiveSortOrder}
+                  onSortChange={handleSortChange}
+                />
               )}
+              <button
+                onClick={() => setIsFilterOpen(!isFilterOpen)}
+                data-testid="filter-toggle"
+                className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                  isFilterOpen || hasActiveFilters
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'
+                }`}
+              >
+                <Filter size={16} />
+                篩選
+                {activeFilterCount > 0 && (
+                  <span className="rounded-full bg-white/20 px-1.5 text-xs">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </button>
               <ViewToggle view={currentView} onViewChange={handleViewChange} />
             </div>
           </div>
@@ -361,56 +378,56 @@ function LibraryPage() {
           </div>
         )}
 
-        {/* Type filter tabs */}
-        {!isEmpty && (
-          <div className="mb-6 flex gap-2">
-            {(['all', 'movie', 'tv'] as const).map((t) => (
-              <button
-                key={t}
-                onClick={() => handleTypeChange(t)}
-                className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-                  currentType === t
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'
-                }`}
-              >
-                {t === 'all' ? '全部' : t === 'movie' ? '電影' : '影集'}
-              </button>
-            ))}
-          </div>
-        )}
-
         {isSearchEmpty ? (
           <EmptySearchResults query={searchQuery} onClear={() => handleSearch('')} />
         ) : isLibraryEmpty ? (
           <EmptyLibrary />
         ) : (
-          <>
-            {isCleanBrowse && <RecentlyAdded />}
-            {currentView === 'grid' ? (
-              <LibraryGrid
-                items={items}
-                isLoading={isLoading}
-                totalItems={totalItems}
-                highlightQuery={isSearchActive ? searchQuery : undefined}
-              />
-            ) : (
-              <LibraryTable
-                items={items}
-                isLoading={isLoading}
-                sortBy={effectiveSortBy}
-                sortOrder={effectiveSortOrder}
-                onSort={handleColumnSort}
-                highlightQuery={isSearchActive ? searchQuery : undefined}
-              />
+          <div className="flex gap-0">
+            {/* Filter sidebar */}
+            {isFilterOpen && (
+              <aside
+                data-testid="filter-sidebar"
+                className="sticky top-16 mr-6 h-[calc(100vh-8rem)] w-[200px] flex-shrink-0 overflow-y-auto border-r border-slate-700 pr-4"
+              >
+                <FilterPanel
+                  filters={currentFilters}
+                  mediaType={currentType}
+                  onApply={handleFilterApply}
+                  onClear={handleFilterClear}
+                  onTypeChange={handleTypeChange}
+                />
+              </aside>
             )}
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={handlePageChange}
-              className="mt-8"
-            />
-          </>
+
+            {/* Main content */}
+            <div className="min-w-0 flex-1">
+              {isCleanBrowse && <RecentlyAdded />}
+              {currentView === 'grid' ? (
+                <LibraryGrid
+                  items={items}
+                  isLoading={isLoading}
+                  totalItems={totalItems}
+                  highlightQuery={isSearchActive ? searchQuery : undefined}
+                />
+              ) : (
+                <LibraryTable
+                  items={items}
+                  isLoading={isLoading}
+                  sortBy={effectiveSortBy}
+                  sortOrder={effectiveSortOrder}
+                  onSort={handleColumnSort}
+                  highlightQuery={isSearchActive ? searchQuery : undefined}
+                />
+              )}
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+                className="mt-8"
+              />
+            </div>
+          </div>
         )}
       </div>
     </div>

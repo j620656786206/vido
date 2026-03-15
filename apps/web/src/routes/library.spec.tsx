@@ -1,4 +1,5 @@
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   createMemoryHistory,
@@ -296,24 +297,31 @@ describe('LibraryPage', () => {
     });
   });
 
-  describe('Type filter tabs', () => {
-    it('[P1] renders type filter tabs (全部/電影/影集)', async () => {
+  describe('Type filter tabs (inside filter sidebar)', () => {
+    it('[P1] renders type filter chips inside filter sidebar when opened', async () => {
       renderLibrary();
 
       await waitFor(() => {
-        expect(screen.getByText('全部')).toBeInTheDocument();
-        expect(screen.getByText('電影')).toBeInTheDocument();
-        expect(screen.getByText('影集')).toBeInTheDocument();
+        expect(screen.getByTestId('filter-toggle')).toBeInTheDocument();
+      });
+
+      // Open filter sidebar
+      await userEvent.click(screen.getByTestId('filter-toggle'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('filter-type-all')).toBeInTheDocument();
+        expect(screen.getByTestId('filter-type-movie')).toBeInTheDocument();
+        expect(screen.getByTestId('filter-type-tv')).toBeInTheDocument();
       });
     });
 
-    it('[P2] does not render type filter tabs when library is empty', async () => {
+    it('[P2] does not render filter toggle when library is empty', async () => {
       await setupMocks({ listEmpty: true });
 
       renderLibrary();
 
       await waitFor(() => {
-        expect(screen.queryByText('全部')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('filter-toggle')).not.toBeInTheDocument();
       });
     });
   });
@@ -330,12 +338,12 @@ describe('LibraryPage', () => {
     });
   });
 
-  describe('Item count display', () => {
-    it('[P2] shows item count range text', async () => {
+  describe('Section heading display', () => {
+    it('[P2] shows 全部媒體 section heading', async () => {
       renderLibrary();
 
       await waitFor(() => {
-        expect(screen.getByText(/1-2 \/ 2 項/)).toBeInTheDocument();
+        expect(screen.getByText('全部媒體')).toBeInTheDocument();
       });
     });
   });

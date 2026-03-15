@@ -1,3 +1,4 @@
+import { X } from 'lucide-react';
 import type { FilterValues } from './FilterPanel';
 
 interface FilterChipsProps {
@@ -33,54 +34,33 @@ export function FilterChips({
             className="ml-0.5 rounded-full p-0.5 hover:bg-blue-600/30"
             aria-label={`移除 ${genre} 篩選`}
           >
-            <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
+            <X className="h-3 w-3" />
           </button>
         </span>
       ))}
 
       {filters.yearMin !== undefined && (
-        <span className="inline-flex items-center gap-1 rounded-full bg-green-600/20 px-3 py-1 text-sm text-green-300">
+        <span className="inline-flex items-center gap-1 rounded-full bg-blue-600/20 px-3 py-1 text-sm text-blue-300">
           {filters.yearMin} 年起
           <button
             onClick={onRemoveYearMin}
-            className="ml-0.5 rounded-full p-0.5 hover:bg-green-600/30"
+            className="ml-0.5 rounded-full p-0.5 hover:bg-blue-600/30"
             aria-label="移除最早年份篩選"
           >
-            <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
+            <X className="h-3 w-3" />
           </button>
         </span>
       )}
 
       {filters.yearMax !== undefined && (
-        <span className="inline-flex items-center gap-1 rounded-full bg-green-600/20 px-3 py-1 text-sm text-green-300">
+        <span className="inline-flex items-center gap-1 rounded-full bg-blue-600/20 px-3 py-1 text-sm text-blue-300">
           至 {filters.yearMax} 年
           <button
             onClick={onRemoveYearMax}
-            className="ml-0.5 rounded-full p-0.5 hover:bg-green-600/30"
+            className="ml-0.5 rounded-full p-0.5 hover:bg-blue-600/30"
             aria-label="移除最晚年份篩選"
           >
-            <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
+            <X className="h-3 w-3" />
           </button>
         </span>
       )}
