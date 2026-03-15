@@ -337,7 +337,9 @@ func (r *SeriesRepository) List(ctx context.Context, params ListParams) ([]model
 			"id":             true,
 			"title":          true,
 			"first_air_date": true,
+			"release_date":   true,
 			"rating":         true,
+			"vote_average":   true,
 			"created_at":     true,
 			"updated_at":     true,
 		}

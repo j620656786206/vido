@@ -369,12 +369,13 @@ func (r *MovieRepository) List(ctx context.Context, params ListParams) ([]models
 	if params.SortBy != "" {
 		// Validate sort column to prevent SQL injection
 		validSortColumns := map[string]bool{
-			"id":           true,
-			"title":        true,
-			"release_date": true,
-			"rating":       true,
-			"created_at":   true,
-			"updated_at":   true,
+			"id":            true,
+			"title":         true,
+			"release_date":  true,
+			"rating":        true,
+			"vote_average":  true,
+			"created_at":    true,
+			"updated_at":    true,
 		}
 		if validSortColumns[params.SortBy] {
 			sortBy = params.SortBy

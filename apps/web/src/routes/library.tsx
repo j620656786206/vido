@@ -1,13 +1,32 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useLibraryList } from '../hooks/useLibrary';
 import { LibraryGrid } from '../components/library/LibraryGrid';
+import { LibraryTable } from '../components/library/LibraryTable';
+import type { SortField } from '../components/library/LibraryTable';
 import { RecentlyAdded } from '../components/library/RecentlyAdded';
 import { EmptyLibrary } from '../components/library/EmptyLibrary';
+import { ViewToggle } from '../components/library/ViewToggle';
+import type { ViewMode } from '../components/library/ViewToggle';
 import { getStoredPreferences } from '../components/library/SettingsGearDropdown';
 import { Pagination } from '../components/ui/Pagination';
 import type { LibraryMediaType } from '../types/library';
-import type { PosterDensity, TitleLanguage } from '../components/library/SettingsGearDropdown';
+
+const VIEW_STORAGE_KEY = 'vido:library:view';
+
+function getStoredView(): ViewMode {
+  try {
+    const stored = localStorage.getItem(VIEW_STORAGE_KEY);
+    if (stored === 'grid' || stored === 'list') return stored;
+  } catch {
+    // ignore
+  }
+  return 'grid';
+}
+
+function setStoredView(view: ViewMode) {
+  localStorage.setItem(VIEW_STORAGE_KEY, view);
+}
 
 interface LibrarySearchParams {
   page?: number;
@@ -15,6 +34,7 @@ interface LibrarySearchParams {
   type?: LibraryMediaType;
   sortBy?: string;
   sortOrder?: string;
+  view?: string;
 }
 
 export const Route = createFileRoute('/library')({
@@ -28,15 +48,19 @@ export const Route = createFileRoute('/library')({
     sortOrder: ['asc', 'desc'].includes(search.sortOrder as string)
       ? (search.sortOrder as string)
       : undefined,
+    view: ['grid', 'list'].includes(search.view as string) ? (search.view as string) : undefined,
   }),
   component: LibraryPage,
 });
 
 function LibraryPage() {
-  const { page, pageSize, type, sortBy, sortOrder } = Route.useSearch();
+  const { page, pageSize, type, sortBy, sortOrder, view: viewParam } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
 
-  const [preferences, setPreferences] = useState(() => getStoredPreferences());
+  const [preferences] = useState(() => getStoredPreferences());
+  const [currentView, setCurrentView] = useState<ViewMode>(
+    () => (viewParam as ViewMode) || getStoredView()
+  );
 
   const currentPage = page || 1;
   const currentPageSize = pageSize || 20;
@@ -44,7 +68,7 @@ function LibraryPage() {
 
   // Search params override preferences for sort (e.g., from "查看全部" link)
   const effectiveSortBy = sortBy || preferences.defaultSort;
-  const effectiveSortOrder = sortOrder as 'asc' | 'desc' | undefined;
+  const effectiveSortOrder = (sortOrder as 'asc' | 'desc') || undefined;
 
   // Show recently added only in clean browse mode (no custom sort/filter)
   const isCleanBrowse = !sortBy && !sortOrder;
@@ -65,6 +89,27 @@ function LibraryPage() {
     navigate({ search: { page: 1, pageSize: currentPageSize, type: newType } });
   };
 
+  const handleViewChange = useCallback((newView: ViewMode) => {
+    setCurrentView(newView);
+    setStoredView(newView);
+  }, []);
+
+  const handleColumnSort = useCallback(
+    (field: SortField) => {
+      const newOrder = sortBy === field && sortOrder === 'asc' ? 'desc' : 'asc';
+      navigate({
+        search: {
+          page: 1,
+          pageSize: currentPageSize,
+          type: currentType,
+          sortBy: field,
+          sortOrder: newOrder,
+        },
+      });
+    },
+    [sortBy, sortOrder, currentPageSize, currentType, navigate]
+  );
+
   const totalItems = data?.totalItems ?? 0;
   const totalPages = data?.totalPages ?? 0;
   const items = data?.items ?? [];
@@ -79,6 +124,7 @@ function LibraryPage() {
               顯示 {(currentPage - 1) * currentPageSize + 1}-
               {Math.min(currentPage * currentPageSize, totalItems)} / {totalItems} 項
             </span>
+            <ViewToggle view={currentView} onViewChange={handleViewChange} />
           </div>
         )}
 
@@ -106,12 +152,22 @@ function LibraryPage() {
         ) : (
           <>
             {isCleanBrowse && <RecentlyAdded />}
-            <LibraryGrid
-              items={items}
-              isLoading={isLoading}
-              totalItems={totalItems}
-              density={preferences.density}
-            />
+            {currentView === 'grid' ? (
+              <LibraryGrid
+                items={items}
+                isLoading={isLoading}
+                totalItems={totalItems}
+                density={preferences.density}
+              />
+            ) : (
+              <LibraryTable
+                items={items}
+                isLoading={isLoading}
+                sortBy={effectiveSortBy}
+                sortOrder={effectiveSortOrder}
+                onSort={handleColumnSort}
+              />
+            )}
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}

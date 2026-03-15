@@ -1,6 +1,6 @@
 # Story 5.2: Library List View Toggle
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -37,35 +37,35 @@ So that **I can choose the display format that suits my preference**.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create View Toggle Component (AC: 1)
-  - [ ] 1.1: Create `/apps/web/src/components/library/ViewToggle.tsx`
-  - [ ] 1.2: Two icon buttons: grid icon + list icon
-  - [ ] 1.3: Active state styling (filled vs outline)
-  - [ ] 1.4: Accessible: `role="radiogroup"`, `aria-label="切換檢視模式"`
-  - [ ] 1.5: Write component tests
+- [x] Task 1: Create View Toggle Component (AC: 1)
+  - [x] 1.1: Create `/apps/web/src/components/library/ViewToggle.tsx`
+  - [x] 1.2: Two icon buttons: grid icon + list icon
+  - [x] 1.3: Active state styling (filled vs outline)
+  - [x] 1.4: Accessible: `role="radiogroup"`, `aria-label="切換檢視模式"`
+  - [x] 1.5: Write component tests
 
-- [ ] Task 2: Create Library Table Component (AC: 2, 3)
-  - [ ] 2.1: Create `/apps/web/src/components/library/LibraryTable.tsx`
-  - [ ] 2.2: Columns: thumbnail (48x72px), title (zh-TW primary, original secondary), year, genre tags, rating star, date added
-  - [ ] 2.3: Sortable column headers with click handler
-  - [ ] 2.4: Sort indicator arrows (▲/▼)
-  - [ ] 2.5: Hover row highlight
-  - [ ] 2.6: Click row → navigate to detail (same as grid card click)
-  - [ ] 2.7: Skeleton loading rows for loading state
-  - [ ] 2.8: Write component tests
+- [x] Task 2: Create Library Table Component (AC: 2, 3)
+  - [x] 2.1: Create `/apps/web/src/components/library/LibraryTable.tsx`
+  - [x] 2.2: Columns: thumbnail (48x72px), title (zh-TW primary, original secondary), year, genre tags, rating star, date added
+  - [x] 2.3: Sortable column headers with click handler
+  - [x] 2.4: Sort indicator arrows (▲/▼)
+  - [x] 2.5: Hover row highlight
+  - [x] 2.6: Click row → navigate to detail (same as grid card click)
+  - [x] 2.7: Skeleton loading rows for loading state
+  - [x] 2.8: Write component tests
 
-- [ ] Task 3: Integrate View Toggle into Library Page (AC: 1, 4)
-  - [ ] 3.1: Add `view` to library route SearchParams (`grid` | `list`)
-  - [ ] 3.2: Add ViewToggle to library toolbar area
-  - [ ] 3.3: Conditionally render LibraryGrid or LibraryTable based on view
-  - [ ] 3.4: Persist preference to localStorage key `vido:library:view`
-  - [ ] 3.5: Initialize from localStorage on page load
+- [x] Task 3: Integrate View Toggle into Library Page (AC: 1, 4)
+  - [x] 3.1: Add `view` to library route SearchParams (`grid` | `list`)
+  - [x] 3.2: Add ViewToggle to library toolbar area
+  - [x] 3.3: Conditionally render LibraryGrid or LibraryTable based on view
+  - [x] 3.4: Persist preference to localStorage key `vido:library:view`
+  - [x] 3.5: Initialize from localStorage on page load
 
-- [ ] Task 4: Extend Backend Sort Support (AC: 3)
-  - [ ] 4.1: Ensure `ListParams.SortBy` supports: `created_at`, `title`, `release_date`/`first_air_date`, `vote_average`
-  - [ ] 4.2: Update `ListLibrary` service to pass sort params to repositories
-  - [ ] 4.3: Add `sort_by` and `sort_order` query params to library API
-  - [ ] 4.4: Write tests for sort options
+- [x] Task 4: Extend Backend Sort Support (AC: 3)
+  - [x] 4.1: Ensure `ListParams.SortBy` supports: `created_at`, `title`, `release_date`/`first_air_date`, `vote_average`
+  - [x] 4.2: Update `ListLibrary` service to pass sort params to repositories
+  - [x] 4.3: Add `sort_by` and `sort_order` query params to library API
+  - [x] 4.4: Write tests for sort options
 
 ## Dev Notes
 
@@ -170,10 +170,31 @@ Frontend (modify):
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.6 (1M context)
 
 ### Debug Log References
 
 ### Completion Notes List
 
+- Task 1: Created ViewToggle component with LayoutGrid/List icons, radiogroup ARIA, active/inactive styling. 9 tests pass.
+- Task 2: Created LibraryTable component with 6 columns (poster, title, year, genre, rating, date added), sortable headers with ArrowUp/ArrowDown indicators, hover highlight, row click navigation via Link, skeleton loading. 20 tests pass.
+- Task 3: Integrated ViewToggle into library toolbar, added `view` search param, conditional rendering of LibraryGrid vs LibraryTable, localStorage persistence with `vido:library:view` key, column sort handler with asc/desc toggle via URL params.
+- Task 4: Added `vote_average` to valid sort columns in movie and series repositories. Updated `listAll` service method to sort by any requested field (title, release_date, rating/vote_average, created_at) instead of hardcoded created_at. Added `release_date` alias to series repository. 3 new backend tests for sort (title ASC, title DESC, vote_average).
+
 ### File List
+
+- apps/web/src/components/library/ViewToggle.tsx (NEW)
+- apps/web/src/components/library/ViewToggle.spec.tsx (NEW)
+- apps/web/src/components/library/LibraryTable.tsx (NEW)
+- apps/web/src/components/library/LibraryTable.spec.tsx (NEW)
+- apps/web/src/routes/library.tsx (MODIFIED)
+- apps/api/internal/repository/movie_repository.go (MODIFIED)
+- apps/api/internal/repository/series_repository.go (MODIFIED)
+- apps/api/internal/services/library_service.go (MODIFIED)
+- apps/api/internal/services/library_service_test.go (MODIFIED)
+- _bmad-output/implementation-artifacts/sprint-status.yaml (MODIFIED)
+- _bmad-output/implementation-artifacts/5-2-library-list-view-toggle.md (MODIFIED)
+
+### Change Log
+
+- 2026-03-15: Implemented Story 5-2 Library List View Toggle — all 4 tasks complete, 29 new frontend tests + 3 new backend tests, all 854 frontend tests and all backend tests pass.

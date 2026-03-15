@@ -675,6 +675,39 @@ func TestLibraryService_ListLibrary(t *testing.T) {
 		// Last inserted should be first (DESC order)
 		assert.Equal(t, "Movie 3", result.Items[0].Movie.Title)
 	})
+
+	t.Run("sort by title ASC", func(t *testing.T) {
+		params := repository.NewListParams()
+		params.SortBy = "title"
+		params.SortOrder = "asc"
+		result, err := service.ListLibrary(ctx, params, "movie")
+		require.NoError(t, err)
+		require.GreaterOrEqual(t, len(result.Items), 3)
+		assert.Equal(t, "Movie 1", result.Items[0].Movie.Title)
+		assert.Equal(t, "Movie 2", result.Items[1].Movie.Title)
+		assert.Equal(t, "Movie 3", result.Items[2].Movie.Title)
+	})
+
+	t.Run("sort by title DESC", func(t *testing.T) {
+		params := repository.NewListParams()
+		params.SortBy = "title"
+		params.SortOrder = "desc"
+		result, err := service.ListLibrary(ctx, params, "movie")
+		require.NoError(t, err)
+		require.GreaterOrEqual(t, len(result.Items), 3)
+		assert.Equal(t, "Movie 3", result.Items[0].Movie.Title)
+		assert.Equal(t, "Movie 2", result.Items[1].Movie.Title)
+		assert.Equal(t, "Movie 1", result.Items[2].Movie.Title)
+	})
+
+	t.Run("sort by vote_average supported", func(t *testing.T) {
+		params := repository.NewListParams()
+		params.SortBy = "vote_average"
+		params.SortOrder = "desc"
+		result, err := service.ListLibrary(ctx, params, "movie")
+		require.NoError(t, err)
+		assert.NotNil(t, result)
+	})
 }
 
 func TestLibraryService_DeleteMovie(t *testing.T) {

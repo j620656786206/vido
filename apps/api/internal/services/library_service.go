@@ -345,7 +345,7 @@ func (s *LibraryService) listAll(ctx context.Context, params repository.ListPara
 		return nil, fmt.Errorf("failed to list series: %w", seriesErr)
 	}
 
-	// Combine items and sort by created_at to interleave correctly
+	// Combine items and sort to interleave correctly
 	allItems := make([]LibraryItem, 0, len(movies)+len(series))
 	for i := range movies {
 		allItems = append(allItems, LibraryItem{Type: "movie", Movie: &movies[i]})
@@ -354,14 +354,9 @@ func (s *LibraryService) listAll(ctx context.Context, params repository.ListPara
 		allItems = append(allItems, LibraryItem{Type: "series", Series: &series[i]})
 	}
 
-	// Sort combined items by created_at to ensure correct interleaved ordering
+	// Sort combined items by the requested field to ensure correct interleaved ordering
 	sort.Slice(allItems, func(i, j int) bool {
-		ti := getCreatedAt(allItems[i])
-		tj := getCreatedAt(allItems[j])
-		if params.SortOrder == "asc" {
-			return ti.Before(tj)
-		}
-		return ti.After(tj) // DESC by default
+		return compareLibraryItems(allItems[i], allItems[j], params.SortBy, params.SortOrder)
 	})
 
 	// Trim combined results to respect the requested pageSize
@@ -435,7 +430,46 @@ func (s *LibraryService) DeleteSeries(ctx context.Context, id string) error {
 	return nil
 }
 
-// getCreatedAt extracts the created_at timestamp from a LibraryItem for sorting.
+// compareLibraryItems compares two library items by the given sort field and order.
+func compareLibraryItems(a, b LibraryItem, sortBy, sortOrder string) bool {
+	asc := sortOrder == "asc"
+
+	switch sortBy {
+	case "title":
+		at := getTitle(a)
+		bt := getTitle(b)
+		if asc {
+			return at < bt
+		}
+		return at > bt
+
+	case "release_date":
+		at := getReleaseDate(a)
+		bt := getReleaseDate(b)
+		if asc {
+			return at < bt
+		}
+		return at > bt
+
+	case "rating", "vote_average":
+		ar := getVoteAverage(a)
+		br := getVoteAverage(b)
+		if asc {
+			return ar < br
+		}
+		return ar > br
+
+	default: // created_at
+		at := getCreatedAt(a)
+		bt := getCreatedAt(b)
+		if asc {
+			return at.Before(bt)
+		}
+		return at.After(bt)
+	}
+}
+
+// getCreatedAt extracts the created_at timestamp from a LibraryItem.
 func getCreatedAt(item LibraryItem) time.Time {
 	if item.Movie != nil {
 		return item.Movie.CreatedAt
@@ -444,6 +478,39 @@ func getCreatedAt(item LibraryItem) time.Time {
 		return item.Series.CreatedAt
 	}
 	return time.Time{}
+}
+
+// getTitle extracts the title from a LibraryItem.
+func getTitle(item LibraryItem) string {
+	if item.Movie != nil {
+		return item.Movie.Title
+	}
+	if item.Series != nil {
+		return item.Series.Title
+	}
+	return ""
+}
+
+// getReleaseDate extracts the release date string from a LibraryItem.
+func getReleaseDate(item LibraryItem) string {
+	if item.Movie != nil {
+		return item.Movie.ReleaseDate
+	}
+	if item.Series != nil {
+		return item.Series.FirstAirDate
+	}
+	return ""
+}
+
+// getVoteAverage extracts the vote average from a LibraryItem.
+func getVoteAverage(item LibraryItem) float64 {
+	if item.Movie != nil && item.Movie.VoteAverage.Valid {
+		return item.Movie.VoteAverage.Float64
+	}
+	if item.Series != nil && item.Series.VoteAverage.Valid {
+		return item.Series.VoteAverage.Float64
+	}
+	return 0
 }
 
 // Compile-time interface verification

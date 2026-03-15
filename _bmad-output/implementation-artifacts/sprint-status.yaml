@@ -112,7 +112,7 @@ development_status:
   5-1-media-library-grid-view: done
   5-8-recently-added-section: done
   # Phase 2: View Options (depends on 5-1)
-  5-2-library-list-view-toggle: ready-for-dev
+  5-2-library-list-view-toggle: review
   # Phase 3: Data Operations (parallelizable, depends on 5-1)
   5-3-library-search: ready-for-dev
   5-4-library-sorting: ready-for-dev
