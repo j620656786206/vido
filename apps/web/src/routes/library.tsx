@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { Filter } from 'lucide-react';
-import { useLibraryList, useLibrarySearch } from '../hooks/useLibrary';
+import { useLibraryList, useLibrarySearch, useLibraryStats } from '../hooks/useLibrary';
 import { LibraryGrid } from '../components/library/LibraryGrid';
 import { LibraryTable } from '../components/library/LibraryTable';
 import { SortSelector } from '../components/library/SortSelector';
@@ -145,6 +145,8 @@ function LibraryPage() {
 
   // Show recently added only in clean browse mode (no custom sort/filter/search)
   const isCleanBrowse = !sortBy && !sortOrder && !isSearchActive && !hasActiveFilters;
+
+  const { data: libraryStats } = useLibraryStats();
 
   const listQuery = useLibraryList({
     page: currentPage,
@@ -334,7 +336,14 @@ function LibraryPage() {
         {/* Controls row: heading left, controls right */}
         {!isEmpty && (
           <div className="mb-6 flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-white">全部媒體</h2>
+            <div className="flex items-baseline gap-3">
+              <h2 className="text-xl font-semibold text-white">全部媒體</h2>
+              {hasActiveFilters && !isSearchActive && (
+                <span className="text-sm text-slate-400" data-testid="filter-count">
+                  顯示 {totalItems} / {libraryStats?.totalCount ?? totalItems} 項
+                </span>
+              )}
+            </div>
             <div className="flex items-center gap-2">
               {!isSearchActive && (
                 <SortSelector

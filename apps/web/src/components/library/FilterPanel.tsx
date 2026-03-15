@@ -48,6 +48,18 @@ function decadesToYearRange(selectedDecades: string[]): { yearMin?: number; year
   };
 }
 
+// Auto-fill gaps between non-contiguous decade selections since backend only supports min/max range.
+// e.g., selecting 2020s + 2000s auto-selects 2010s to match actual query behavior.
+function normalizeDecadeSelection(decades: string[]): string[] {
+  if (decades.length <= 1) return decades;
+  const indices = DECADE_OPTIONS.map((d, i) => (decades.includes(d.label) ? i : -1)).filter(
+    (i) => i >= 0
+  );
+  const minIdx = Math.min(...indices);
+  const maxIdx = Math.max(...indices);
+  return DECADE_OPTIONS.slice(minIdx, maxIdx + 1).map((d) => d.label);
+}
+
 export function FilterPanel({
   filters,
   mediaType,
@@ -75,9 +87,10 @@ export function FilterPanel({
   }, []);
 
   const handleDecadeToggle = useCallback((decade: string) => {
-    setLocalDecades((prev) =>
-      prev.includes(decade) ? prev.filter((d) => d !== decade) : [...prev, decade]
-    );
+    setLocalDecades((prev) => {
+      const toggled = prev.includes(decade) ? prev.filter((d) => d !== decade) : [...prev, decade];
+      return normalizeDecadeSelection(toggled);
+    });
   }, []);
 
   const handleApply = useCallback(() => {

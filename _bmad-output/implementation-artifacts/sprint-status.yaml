@@ -117,7 +117,7 @@ development_status:
   5-3-library-search: done
   5-4-library-sorting: done
   # Phase 4: Filtering (depends on 5-1 + genre API)
-  5-5-library-filtering: review
+  5-5-library-filtering: done
   # Phase 4b: UX Design Compliance (fix design deviations from 5-2 through 5-5)
   5-9-ux-design-compliance: done
   # Phase 5: Detail & Batch (depends on 5-1 interactions)

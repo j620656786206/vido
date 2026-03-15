@@ -1,6 +1,6 @@
 # Story 5.5: Library Filtering
 
-Status: review
+Status: done
 
 ## Story
 
@@ -194,6 +194,33 @@ Claude Opus 4.6 (1M context)
 ### Change Log
 
 - 2026-03-15: Implemented Story 5-5 Library Filtering — full-stack genre/year/type filtering with URL state persistence
+- 2026-03-15: Code Review fixes (H1: listAll pagination, H2: AC2 filter count display, H3: useLibraryStats wired, M1: decade auto-fill, M2: year validation)
+
+## Senior Developer Review (AI)
+
+**Reviewer:** Amelia (Dev Agent) — 2026-03-15
+**Outcome:** Approved with fixes applied
+
+### Issues Found & Fixed (5/7)
+
+| ID | Severity | Description | Status |
+|----|----------|-------------|--------|
+| H1 | HIGH | `listAll` pagination broken for page>1 — repos paginated independently before merge | FIXED |
+| H2 | HIGH | AC2 "顯示 N / Total 項" filter count not displayed anywhere | FIXED |
+| H3 | HIGH | `useLibraryStats` hook defined but never consumed | FIXED (wired to filter count) |
+| M1 | MEDIUM | Non-contiguous decade selection merged as contiguous range | FIXED (auto-fill gaps) |
+| M2 | MEDIUM | year_min/year_max accepts invalid values (negative, inverted range) | FIXED (range 1888-2100, order check) |
+| M3 | MEDIUM | GetDistinctGenres full table scan O(N) | DEFERRED (acceptable at NAS scale) |
+| L1 | LOW | Genre LIKE matching edge cases with special chars | ACCEPTED (impractical in production) |
+
+### Files Changed in Review
+
+- apps/api/internal/services/library_service.go — Fixed listAll pagination (fetch page*pageSize then slice)
+- apps/api/internal/handlers/library_handler.go — Added year range validation (1888-2100, min<=max)
+- apps/api/internal/handlers/library_handler_test.go — Added 3 new validation tests
+- apps/web/src/components/library/FilterPanel.tsx — Added normalizeDecadeSelection auto-fill
+- apps/web/src/components/library/FilterPanel.spec.tsx — Added auto-fill decade test
+- apps/web/src/routes/library.tsx — Added useLibraryStats + "顯示 N / Total 項" display
 
 ### File List
 

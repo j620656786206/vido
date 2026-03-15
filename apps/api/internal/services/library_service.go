@@ -329,24 +329,29 @@ func (s *LibraryService) listSeriesOnly(ctx context.Context, params repository.L
 }
 
 func (s *LibraryService) listAll(ctx context.Context, params repository.ListParams) (*LibraryListResult, error) {
-	// Fetch counts first to compute correct per-type page sizes
+	// To correctly interleave movies+series across pages, we must fetch enough
+	// items from both repos to cover the requested page window after merging.
+	// Override each repo query to fetch page=1 with limit=page*pageSize.
+	fetchParams := params
+	fetchParams.Page = 1
+	fetchParams.PageSize = params.Page * params.PageSize
+
 	var wg sync.WaitGroup
 	var moviesErr, seriesErr error
 	var movies []models.Movie
 	var series []models.Series
 	var moviesPagination, seriesPagination *repository.PaginationResult
 
-	// Query both repos with full page size — we'll trim to the requested pageSize after merging
 	wg.Add(2)
 
 	go func() {
 		defer wg.Done()
-		movies, moviesPagination, moviesErr = s.movieRepo.List(ctx, params)
+		movies, moviesPagination, moviesErr = s.movieRepo.List(ctx, fetchParams)
 	}()
 
 	go func() {
 		defer wg.Done()
-		series, seriesPagination, seriesErr = s.seriesRepo.List(ctx, params)
+		series, seriesPagination, seriesErr = s.seriesRepo.List(ctx, fetchParams)
 	}()
 
 	wg.Wait()
@@ -374,11 +379,16 @@ func (s *LibraryService) listAll(ctx context.Context, params repository.ListPara
 		return compareLibraryItems(allItems[i], allItems[j], params.SortBy, params.SortOrder)
 	})
 
-	// Trim combined results to respect the requested pageSize
-	items := allItems
-	if len(items) > params.PageSize {
-		items = items[:params.PageSize]
+	// Slice to the correct page window from the merged result
+	start := (params.Page - 1) * params.PageSize
+	end := start + params.PageSize
+	if start > len(allItems) {
+		start = len(allItems)
 	}
+	if end > len(allItems) {
+		end = len(allItems)
+	}
+	items := allItems[start:end]
 
 	// Compute combined pagination from total counts
 	totalResults := 0

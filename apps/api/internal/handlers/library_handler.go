@@ -46,19 +46,28 @@ func (h *LibraryHandler) ListLibrary(c *gin.Context) {
 			params.Filters["genres"] = cleaned
 		}
 	}
+	var parsedYearMin, parsedYearMax int
 	if yearMin := c.Query("year_min"); yearMin != "" {
-		if _, err := strconv.Atoi(yearMin); err != nil {
-			BadRequestError(c, "VALIDATION_INVALID_FORMAT", "year_min must be a valid year number")
+		val, err := strconv.Atoi(yearMin)
+		if err != nil || val < 1888 || val > 2100 {
+			BadRequestError(c, "VALIDATION_INVALID_FORMAT", "year_min must be a year between 1888 and 2100")
 			return
 		}
+		parsedYearMin = val
 		params.Filters["year_min"] = yearMin
 	}
 	if yearMax := c.Query("year_max"); yearMax != "" {
-		if _, err := strconv.Atoi(yearMax); err != nil {
-			BadRequestError(c, "VALIDATION_INVALID_FORMAT", "year_max must be a valid year number")
+		val, err := strconv.Atoi(yearMax)
+		if err != nil || val < 1888 || val > 2100 {
+			BadRequestError(c, "VALIDATION_INVALID_FORMAT", "year_max must be a year between 1888 and 2100")
 			return
 		}
+		parsedYearMax = val
 		params.Filters["year_max"] = yearMax
+	}
+	if parsedYearMin > 0 && parsedYearMax > 0 && parsedYearMin > parsedYearMax {
+		BadRequestError(c, "VALIDATION_INVALID_FORMAT", "year_min must not be greater than year_max")
+		return
 	}
 
 	result, err := h.service.ListLibrary(c.Request.Context(), params, mediaType)

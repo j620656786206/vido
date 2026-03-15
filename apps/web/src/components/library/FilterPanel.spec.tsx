@@ -315,6 +315,26 @@ describe('FilterPanel', () => {
     expect(dramaChip.querySelector('svg')).not.toBeNull();
   });
 
+  it('[P1] auto-fills gap decades when selecting non-contiguous decades', async () => {
+    renderWithProvider(
+      <FilterPanel
+        filters={emptyFilters}
+        mediaType="all"
+        onApply={onApply}
+        onClear={onClear}
+        onTypeChange={onTypeChange}
+      />
+    );
+
+    // Select 2020s then 2000s — should auto-fill 2010s
+    await userEvent.click(screen.getByTestId('filter-decade-2020s'));
+    await userEvent.click(screen.getByTestId('filter-decade-2000s'));
+
+    // 2010s should now be visually selected (auto-filled)
+    const decade2010s = screen.getByTestId('filter-decade-2010s');
+    expect(decade2010s.querySelector('svg')).not.toBeNull();
+  });
+
   it('[P2] selects 更早 decade for pre-1990 year range', async () => {
     renderWithProvider(
       <FilterPanel
