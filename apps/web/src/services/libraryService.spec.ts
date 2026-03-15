@@ -397,6 +397,142 @@ describe('libraryService', () => {
     });
   });
 
+  describe('batchDelete (Story 5-7)', () => {
+    it('[P0] calls DELETE /library/batch with ids and type', async () => {
+      const batchResult = { success_count: 3, failed_count: 0 };
+      mockFetch.mockResolvedValue(mockSuccessResponse(batchResult));
+
+      const result = await libraryService.batchDelete(['m1', 'm2', 'm3'], 'movie');
+
+      expect(mockFetch).toHaveBeenCalledWith(`${API_BASE}/library/batch`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: ['m1', 'm2', 'm3'], type: 'movie' }),
+      });
+      expect(result).toEqual(batchResult);
+    });
+
+    it('[P0] sends series type correctly', async () => {
+      mockFetch.mockResolvedValue(mockSuccessResponse({ success_count: 2, failed_count: 0 }));
+
+      await libraryService.batchDelete(['s1', 's2'], 'series');
+
+      const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(body.type).toBe('series');
+      expect(body.ids).toEqual(['s1', 's2']);
+    });
+
+    it('[P1] returns partial failure result', async () => {
+      const partialResult = {
+        success_count: 2,
+        failed_count: 1,
+        errors: [{ id: 'm3', message: 'not found' }],
+      };
+      mockFetch.mockResolvedValue(mockSuccessResponse(partialResult));
+
+      const result = await libraryService.batchDelete(['m1', 'm2', 'm3'], 'movie');
+
+      expect(result.failed_count).toBe(1);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors![0].id).toBe('m3');
+    });
+
+    it('[P1] throws on API error response', async () => {
+      mockFetch.mockResolvedValue(mockErrorResponse(500, 'Batch delete failed'));
+
+      await expect(libraryService.batchDelete(['m1'], 'movie')).rejects.toThrow(
+        'Batch delete failed'
+      );
+    });
+
+    it('[P1] throws on success=false response', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({ success: false, error: { message: 'Invalid batch request' } }),
+      });
+
+      await expect(libraryService.batchDelete(['m1'], 'movie')).rejects.toThrow(
+        'Invalid batch request'
+      );
+    });
+  });
+
+  describe('batchReparse (Story 5-7)', () => {
+    it('[P0] calls POST /library/batch/reparse with ids and type', async () => {
+      const batchResult = { success_count: 3, failed_count: 0 };
+      mockFetch.mockResolvedValue(mockSuccessResponse(batchResult));
+
+      const result = await libraryService.batchReparse(['m1', 'm2', 'm3'], 'movie');
+
+      expect(mockFetch).toHaveBeenCalledWith(`${API_BASE}/library/batch/reparse`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: ['m1', 'm2', 'm3'], type: 'movie' }),
+      });
+      expect(result).toEqual(batchResult);
+    });
+
+    it('[P0] sends series type correctly', async () => {
+      mockFetch.mockResolvedValue(mockSuccessResponse({ success_count: 1, failed_count: 0 }));
+
+      await libraryService.batchReparse(['s1'], 'series');
+
+      const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(body.type).toBe('series');
+    });
+
+    it('[P1] throws on API error response', async () => {
+      mockFetch.mockResolvedValue(mockErrorResponse(500, 'Batch reparse failed'));
+
+      await expect(libraryService.batchReparse(['m1'], 'movie')).rejects.toThrow(
+        'Batch reparse failed'
+      );
+    });
+  });
+
+  describe('batchExport (Story 5-7)', () => {
+    it('[P0] calls POST /library/batch/export with type as query param', async () => {
+      const exportData = [{ title: 'Movie 1' }, { title: 'Movie 2' }];
+      mockFetch.mockResolvedValue(mockSuccessResponse(exportData));
+
+      const result = await libraryService.batchExport(['m1', 'm2'], 'movie');
+
+      expect(mockFetch).toHaveBeenCalledWith(`${API_BASE}/library/batch/export?type=movie`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: ['m1', 'm2'], format: 'json' }),
+      });
+      expect(result).toEqual(exportData);
+    });
+
+    it('[P0] includes series type in query param', async () => {
+      mockFetch.mockResolvedValue(mockSuccessResponse([{ title: 'Series 1' }]));
+
+      await libraryService.batchExport(['s1'], 'series');
+
+      const url = mockFetch.mock.calls[0][0] as string;
+      expect(url).toContain('type=series');
+    });
+
+    it('[P1] sends format=json in body', async () => {
+      mockFetch.mockResolvedValue(mockSuccessResponse([]));
+
+      await libraryService.batchExport(['m1'], 'movie');
+
+      const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(body.format).toBe('json');
+    });
+
+    it('[P1] throws on API error response', async () => {
+      mockFetch.mockResolvedValue(mockErrorResponse(500, 'Batch export failed'));
+
+      await expect(libraryService.batchExport(['m1'], 'movie')).rejects.toThrow(
+        'Batch export failed'
+      );
+    });
+  });
+
   describe('getRecentlyAdded', () => {
     it('[P2] calls GET /library/recent with default limit', async () => {
       mockFetch.mockResolvedValue(

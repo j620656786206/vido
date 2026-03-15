@@ -12,9 +12,17 @@ import {
   useReparseItem,
   useExportItem,
   useMediaTrailers,
+  useBatchDelete,
+  useBatchReparse,
+  useBatchExport,
 } from './useLibrary';
 import { libraryService } from '../services/libraryService';
-import type { LibraryListResponse, LibraryStats, VideosResponse } from '../types/library';
+import type {
+  LibraryListResponse,
+  LibraryStats,
+  VideosResponse,
+  BatchResult,
+} from '../types/library';
 
 vi.mock('../services/libraryService', () => ({
   libraryService: {
@@ -31,6 +39,9 @@ vi.mock('../services/libraryService', () => ({
     exportSeries: vi.fn(),
     getMovieVideos: vi.fn(),
     getSeriesVideos: vi.fn(),
+    batchDelete: vi.fn(),
+    batchReparse: vi.fn(),
+    batchExport: vi.fn(),
   },
 }));
 
@@ -478,5 +489,156 @@ describe('useMediaTrailers', () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error?.message).toBe('TMDb API error');
+  });
+});
+
+describe('useBatchDelete (Story 5-7)', () => {
+  const mockBatchResult: BatchResult = {
+    success_count: 3,
+    failed_count: 0,
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('[P0] calls libraryService.batchDelete with correct params', async () => {
+    vi.mocked(libraryService.batchDelete).mockResolvedValue(mockBatchResult);
+
+    const { result } = renderHook(() => useBatchDelete(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate({ ids: ['m1', 'm2', 'm3'], type: 'movie' });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(libraryService.batchDelete).toHaveBeenCalledWith(['m1', 'm2', 'm3'], 'movie');
+    expect(result.current.data).toEqual(mockBatchResult);
+  });
+
+  it('[P0] calls batchDelete for series type', async () => {
+    vi.mocked(libraryService.batchDelete).mockResolvedValue(mockBatchResult);
+
+    const { result } = renderHook(() => useBatchDelete(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate({ ids: ['s1', 's2'], type: 'series' });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(libraryService.batchDelete).toHaveBeenCalledWith(['s1', 's2'], 'series');
+  });
+
+  it('[P1] returns error state on failure', async () => {
+    vi.mocked(libraryService.batchDelete).mockRejectedValue(new Error('Batch delete failed'));
+
+    const { result } = renderHook(() => useBatchDelete(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate({ ids: ['m1'], type: 'movie' });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.error?.message).toBe('Batch delete failed');
+  });
+});
+
+describe('useBatchReparse (Story 5-7)', () => {
+  const mockBatchResult: BatchResult = {
+    success_count: 2,
+    failed_count: 1,
+    errors: [{ id: 'm3', message: 'not found' }],
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('[P0] calls libraryService.batchReparse with correct params', async () => {
+    vi.mocked(libraryService.batchReparse).mockResolvedValue(mockBatchResult);
+
+    const { result } = renderHook(() => useBatchReparse(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate({ ids: ['m1', 'm2', 'm3'], type: 'movie' });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(libraryService.batchReparse).toHaveBeenCalledWith(['m1', 'm2', 'm3'], 'movie');
+    expect(result.current.data).toEqual(mockBatchResult);
+  });
+
+  it('[P0] calls batchReparse for series type', async () => {
+    vi.mocked(libraryService.batchReparse).mockResolvedValue(mockBatchResult);
+
+    const { result } = renderHook(() => useBatchReparse(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate({ ids: ['s1'], type: 'series' });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(libraryService.batchReparse).toHaveBeenCalledWith(['s1'], 'series');
+  });
+
+  it('[P1] returns error state on failure', async () => {
+    vi.mocked(libraryService.batchReparse).mockRejectedValue(new Error('Batch reparse failed'));
+
+    const { result } = renderHook(() => useBatchReparse(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate({ ids: ['m1'], type: 'movie' });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.error?.message).toBe('Batch reparse failed');
+  });
+});
+
+describe('useBatchExport (Story 5-7)', () => {
+  const mockExportResult = [{ title: 'Movie 1' }, { title: 'Movie 2' }];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('[P0] calls libraryService.batchExport with correct params', async () => {
+    vi.mocked(libraryService.batchExport).mockResolvedValue(mockExportResult);
+
+    const { result } = renderHook(() => useBatchExport(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate({ ids: ['m1', 'm2'], type: 'movie' });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(libraryService.batchExport).toHaveBeenCalledWith(['m1', 'm2'], 'movie');
+    expect(result.current.data).toEqual(mockExportResult);
+  });
+
+  it('[P1] calls batchExport for series type', async () => {
+    vi.mocked(libraryService.batchExport).mockResolvedValue(mockExportResult);
+
+    const { result } = renderHook(() => useBatchExport(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate({ ids: ['s1'], type: 'series' });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(libraryService.batchExport).toHaveBeenCalledWith(['s1'], 'series');
+  });
+
+  it('[P1] returns error state on failure', async () => {
+    vi.mocked(libraryService.batchExport).mockRejectedValue(new Error('Batch export failed'));
+
+    const { result } = renderHook(() => useBatchExport(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate({ ids: ['m1'], type: 'movie' });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.error?.message).toBe('Batch export failed');
   });
 });

@@ -182,4 +182,48 @@ describe('LibraryGrid', () => {
     fireEvent.click(menuButton);
     expect(screen.getByTestId('poster-card-menu')).toBeInTheDocument();
   });
+
+  describe('Selection Mode (Story 5-7)', () => {
+    it('[P0] hides menu buttons when selectionMode is true', () => {
+      renderWithQuery(<LibraryGrid items={mockItems} selectionMode={true} />);
+      expect(screen.queryAllByTestId('poster-menu-button')).toHaveLength(0);
+    });
+
+    it('[P0] renders selection checkboxes when selectionMode is true', () => {
+      renderWithQuery(<LibraryGrid items={mockItems} selectionMode={true} />);
+      expect(screen.getAllByTestId('selection-checkbox')).toHaveLength(2);
+    });
+
+    it('[P0] marks items as selected based on selectedIds', () => {
+      const selectedIds = new Set(['movie-1']);
+      renderWithQuery(
+        <LibraryGrid items={mockItems} selectionMode={true} selectedIds={selectedIds} />
+      );
+      const checkboxes = screen.getAllByTestId('selection-checkbox');
+      // First item (movie-1) should have check icon, second (series-1) should not
+      expect(checkboxes[0].querySelector('svg')).toBeInTheDocument();
+      expect(checkboxes[1].querySelector('svg')).not.toBeInTheDocument();
+    });
+
+    it('[P0] calls onSelect with itemId when card is clicked in selection mode', () => {
+      const onSelect = vi.fn();
+      renderWithQuery(
+        <LibraryGrid items={[mockItems[0]]} selectionMode={true} onSelect={onSelect} />
+      );
+
+      fireEvent.click(screen.getByTestId('poster-card'));
+      expect(onSelect).toHaveBeenCalledWith('movie-1', expect.any(Object));
+    });
+
+    it('[P1] does not render selection checkboxes when selectionMode is false', () => {
+      renderWithQuery(<LibraryGrid items={mockItems} selectionMode={false} />);
+      expect(screen.queryAllByTestId('selection-checkbox')).toHaveLength(0);
+    });
+
+    it('[P1] does not render PosterCardMenu when selectionMode is active', () => {
+      renderWithQuery(<LibraryGrid items={mockItems} selectionMode={true} />);
+      // No menu buttons to click, so no menu should appear
+      expect(screen.queryByTestId('poster-card-menu')).not.toBeInTheDocument();
+    });
+  });
 });

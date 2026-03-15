@@ -247,6 +247,79 @@ describe('PosterCard', () => {
     });
   });
 
+  describe('Selection Mode (Story 5-7)', () => {
+    it('[P0] renders selection checkbox when selectable is true', () => {
+      render(<PosterCard {...defaultProps} selectable={true} />);
+      expect(screen.getByTestId('selection-checkbox')).toBeInTheDocument();
+    });
+
+    it('[P0] hides selection checkbox when selectable is false', () => {
+      render(<PosterCard {...defaultProps} selectable={false} />);
+      expect(screen.queryByTestId('selection-checkbox')).not.toBeInTheDocument();
+    });
+
+    it('[P0] hides selection checkbox when selectable is undefined', () => {
+      render(<PosterCard {...defaultProps} />);
+      expect(screen.queryByTestId('selection-checkbox')).not.toBeInTheDocument();
+    });
+
+    it('[P0] calls onSelect when card is clicked in selection mode', () => {
+      const onSelect = vi.fn();
+      render(<PosterCard {...defaultProps} selectable={true} onSelect={onSelect} />);
+
+      fireEvent.click(screen.getByTestId('poster-card'));
+      expect(onSelect).toHaveBeenCalledOnce();
+    });
+
+    it('[P0] does not call onSelect when card is clicked outside selection mode', () => {
+      const onSelect = vi.fn();
+      render(<PosterCard {...defaultProps} selectable={false} onSelect={onSelect} />);
+
+      fireEvent.click(screen.getByTestId('poster-card'));
+      expect(onSelect).not.toHaveBeenCalled();
+    });
+
+    it('[P1] shows check icon when selected', () => {
+      const { container } = render(
+        <PosterCard {...defaultProps} selectable={true} selected={true} />
+      );
+      // Check icon rendered inside selection-checkbox
+      const checkbox = screen.getByTestId('selection-checkbox');
+      expect(checkbox.querySelector('svg')).toBeInTheDocument();
+    });
+
+    it('[P1] does not show check icon when not selected', () => {
+      render(<PosterCard {...defaultProps} selectable={true} selected={false} />);
+      const checkbox = screen.getByTestId('selection-checkbox');
+      expect(checkbox.querySelector('svg')).not.toBeInTheDocument();
+    });
+
+    it('[P1] applies ring-2 styling when selected', () => {
+      const { container } = render(
+        <PosterCard {...defaultProps} selectable={true} selected={true} />
+      );
+      const posterWrapper = container.querySelector('.aspect-\\[2\\/3\\]');
+      expect(posterWrapper?.className).toContain('ring-2');
+      expect(posterWrapper?.className).toContain('ring-blue-500');
+    });
+
+    it('[P1] applies opacity-70 when selectable but not selected', () => {
+      const { container } = render(
+        <PosterCard {...defaultProps} selectable={true} selected={false} />
+      );
+      const posterWrapper = container.querySelector('.aspect-\\[2\\/3\\]');
+      expect(posterWrapper?.className).toContain('opacity-70');
+    });
+
+    it('[P1] does not apply opacity-70 when selected', () => {
+      const { container } = render(
+        <PosterCard {...defaultProps} selectable={true} selected={true} />
+      );
+      const posterWrapper = container.querySelector('.aspect-\\[2\\/3\\]');
+      expect(posterWrapper?.className).not.toContain('opacity-70');
+    });
+  });
+
   describe('Library-specific Props (Story 5-1)', () => {
     it('renders metadata source badge when metadataSource is provided', () => {
       render(<PosterCard {...defaultProps} metadataSource="TMDb" />);
