@@ -608,6 +608,16 @@ describe('MovieCard', () => {
 - Vitest `pool: 'forks'` ensures workers exit even with open handles
 - Playwright `globalTeardown` cleans up only processes from the current session
 - Safe for multiple Claude Code sessions running tests in parallel
+- `nx run web:test` automatically runs `test:cleanup:all` after vitest exits (configured in `apps/web/project.json`)
+
+### Developer Responsibility (MANDATORY)
+
+After **every** test execution — whether via `nx run web:test`, direct `vitest`, or any other method:
+
+1. Run `pnpm run test:cleanup` to verify no orphaned processes remain
+2. If orphaned processes are found, run `pnpm run test:cleanup:all` immediately
+3. Test execution is NOT considered complete until cleanup verification passes
+4. This rule applies regardless of test pass/fail outcome
 
 ### Manual Cleanup Commands
 

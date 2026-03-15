@@ -267,6 +267,11 @@
     <action>Validate implementation meets ALL story acceptance criteria; enforce quantitative thresholds explicitly</action>
     <action if="regression tests fail">STOP and fix before continuing - identify breaking changes immediately</action>
     <action if="new tests fail">STOP and fix before continuing - ensure implementation correctness</action>
+    <critical>After EVERY test execution, verify no orphaned test processes remain.
+      Run the project's test cleanup command (e.g., `test:cleanup`) to check for residual workers.
+      If orphaned processes are found, kill them immediately before proceeding.
+      This applies to ALL test runs — unit, integration, E2E — regardless of pass/fail outcome.
+      Test execution is NOT complete until cleanup verification passes.</critical>
   </step>
 
   <step n="8" goal="Validate and mark task complete ONLY when fully done">
