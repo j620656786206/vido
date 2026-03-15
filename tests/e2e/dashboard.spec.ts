@@ -122,7 +122,7 @@ test.describe('Dashboard Layout @dashboard @ui', () => {
     await expect(page.getByTestId('dashboard-layout')).toBeVisible();
     await expect(page.getByTestId('download-panel')).toBeVisible();
     await expect(page.getByTestId('recent-media-panel')).toBeVisible();
-    await expect(page.getByTestId('quick-search-bar')).toBeVisible();
+    await expect(page.getByTestId('search-form')).toBeVisible();
   });
 
   test('[P1] should display downloads in compact view (AC1)', async ({ page }) => {
