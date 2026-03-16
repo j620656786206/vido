@@ -135,7 +135,7 @@ development_status:
   epic-6: in-progress  # Stories created 2026-02-10, 6-0 added 2026-03-15 (Epic 5 retro finding)
   # Development Order: 6-0 → 6-1 → 6-2//6-3//6-4 → 6-5 → 6-6 → 6-7 → 6-8 → 6-9//6-10 → 6-11
   # Phase 0: Settings Foundation (prerequisite for all settings pages)
-  6-0-settings-page-foundation: in-progress
+  6-0-settings-page-foundation: review
   # Phase 1: First-Run Experience
   6-1-setup-wizard: ready-for-dev
   6-2-cache-management: ready-for-dev
