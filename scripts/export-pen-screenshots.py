@@ -52,6 +52,9 @@ SCREENS = {
     # Flow F - Mobile batch/settings
     "0KOE7": ("flow-f-batch-settings-mobile", "08-m-batch-operations-mobile"),
     "IfrPQ": ("flow-f-batch-settings-mobile", "01a-m-settings-bottom-sheet-mobile"),
+    # Flow G - Settings pages
+    "6UCtX": ("flow-c-search-filter-settings-desktop", "10-settings-desktop"),
+    "2H4OM": ("flow-f-batch-settings-mobile", "10-m-settings-mobile"),
 }
 
 
