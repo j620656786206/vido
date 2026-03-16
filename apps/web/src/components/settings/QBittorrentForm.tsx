@@ -85,7 +85,7 @@ export function QBittorrentForm() {
       <div className="space-y-5">
         <div>
           <label htmlFor="qb-host" className="mb-1.5 block text-sm font-medium text-slate-300">
-            Host URL
+            主機位址
           </label>
           <input
             id="qb-host"
@@ -151,7 +151,7 @@ export function QBittorrentForm() {
         <p className="mt-4 text-sm text-red-400">{saveMutation.error.message}</p>
       )}
 
-      <div className="mt-6 flex gap-3">
+      <div className="mt-6 flex flex-col gap-3 md:flex-row md:justify-end">
         <button
           type="button"
           onClick={handleTestConnection}

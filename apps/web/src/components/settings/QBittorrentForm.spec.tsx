@@ -45,7 +45,7 @@ describe('QBittorrentForm', () => {
   it('renders the form fields', () => {
     renderWithProviders(<QBittorrentForm />);
 
-    expect(screen.getByLabelText('Host URL')).toBeTruthy();
+    expect(screen.getByLabelText('主機位址')).toBeTruthy();
     expect(screen.getByLabelText('使用者名稱')).toBeTruthy();
     expect(screen.getByLabelText('密碼')).toBeTruthy();
     expect(screen.getByText('測試連線')).toBeTruthy();
@@ -76,7 +76,7 @@ describe('QBittorrentForm', () => {
 
     renderWithProviders(<QBittorrentForm />);
 
-    expect((screen.getByLabelText('Host URL') as HTMLInputElement).value).toBe(
+    expect((screen.getByLabelText('主機位址') as HTMLInputElement).value).toBe(
       'http://192.168.1.100:8080'
     );
     expect((screen.getByLabelText('使用者名稱') as HTMLInputElement).value).toBe('admin');
@@ -96,7 +96,7 @@ describe('QBittorrentForm', () => {
     const user = userEvent.setup();
     renderWithProviders(<QBittorrentForm />);
 
-    await user.type(screen.getByLabelText('Host URL'), 'http://host:8080');
+    await user.type(screen.getByLabelText('主機位址'), 'http://host:8080');
     await user.type(screen.getByLabelText('使用者名稱'), 'admin');
     await user.type(screen.getByLabelText('密碼'), 'pass');
 
@@ -111,7 +111,7 @@ describe('QBittorrentForm', () => {
     const user = userEvent.setup();
     renderWithProviders(<QBittorrentForm />);
 
-    await user.type(screen.getByLabelText('Host URL'), 'http://host:8080');
+    await user.type(screen.getByLabelText('主機位址'), 'http://host:8080');
     await user.type(screen.getByLabelText('使用者名稱'), 'admin');
     await user.type(screen.getByLabelText('密碼'), 'secret');
     await user.click(screen.getByText('測試連線'));
@@ -133,7 +133,7 @@ describe('QBittorrentForm', () => {
     const user = userEvent.setup();
     renderWithProviders(<QBittorrentForm />);
 
-    await user.type(screen.getByLabelText('Host URL'), 'http://host:8080');
+    await user.type(screen.getByLabelText('主機位址'), 'http://host:8080');
     await user.type(screen.getByLabelText('使用者名稱'), 'admin');
     await user.type(screen.getByLabelText('密碼'), 'secret');
     await user.click(screen.getByText('儲存設定'));

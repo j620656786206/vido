@@ -14,18 +14,19 @@ import { cn } from '../../lib/utils';
 interface SettingsCategory {
   key: string;
   label: string;
+  shortLabel: string;
   icon: LucideIcon;
   to: string;
 }
 
 const SETTINGS_CATEGORIES: SettingsCategory[] = [
-  { key: 'connection', label: '連線設定', icon: Plug, to: '/settings/connection' },
-  { key: 'cache', label: '快取管理', icon: Database, to: '/settings/cache' },
-  { key: 'logs', label: '系統日誌', icon: FileText, to: '/settings/logs' },
-  { key: 'status', label: '服務狀態', icon: Activity, to: '/settings/status' },
-  { key: 'backup', label: '備份與還原', icon: HardDrive, to: '/settings/backup' },
-  { key: 'export', label: '匯出/匯入', icon: ArrowUpDown, to: '/settings/export' },
-  { key: 'performance', label: '效能監控', icon: Gauge, to: '/settings/performance' },
+  { key: 'connection', label: '連線設定', shortLabel: '連線', icon: Plug, to: '/settings/connection' },
+  { key: 'cache', label: '快取管理', shortLabel: '快取', icon: Database, to: '/settings/cache' },
+  { key: 'logs', label: '系統日誌', shortLabel: '日誌', icon: FileText, to: '/settings/logs' },
+  { key: 'status', label: '服務狀態', shortLabel: '狀態', icon: Activity, to: '/settings/status' },
+  { key: 'backup', label: '備份與還原', shortLabel: '備份', icon: HardDrive, to: '/settings/backup' },
+  { key: 'export', label: '匯出/匯入', shortLabel: '匯出', icon: ArrowUpDown, to: '/settings/export' },
+  { key: 'performance', label: '效能監控', shortLabel: '效能', icon: Gauge, to: '/settings/performance' },
 ];
 
 interface SettingsLayoutProps {
@@ -89,13 +90,13 @@ export function SettingsLayout({ children }: SettingsLayoutProps) {
                 className={cn(
                   'flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
                   isActive
-                    ? 'bg-blue-500/20 text-blue-400'
-                    : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                    ? 'border border-blue-400 text-blue-400'
+                    : 'border border-transparent text-slate-400 hover:bg-slate-800 hover:text-slate-200'
                 )}
                 data-testid={`settings-tab-${cat.key}`}
               >
                 <Icon className="h-3.5 w-3.5 shrink-0" />
-                {cat.label}
+                {cat.shortLabel}
               </Link>
             );
           })}

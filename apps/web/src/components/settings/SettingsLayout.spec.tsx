@@ -158,6 +158,15 @@ describe('SettingsLayout', () => {
     renderWithRouter('/settings/connection');
     const connectionTab = await screen.findByTestId('settings-tab-connection');
     expect(connectionTab).toHaveClass('text-blue-400');
+    expect(connectionTab).toHaveClass('border-blue-400');
+  });
+
+  it('displays abbreviated labels in mobile tabs', async () => {
+    renderWithRouter();
+    await screen.findByTestId('settings-tabs');
+    expect(screen.getByTestId('settings-tab-connection')).toHaveTextContent('連線');
+    expect(screen.getByTestId('settings-tab-cache')).toHaveTextContent('快取');
+    expect(screen.getByTestId('settings-tab-logs')).toHaveTextContent('日誌');
   });
 
   it('renders the content area', async () => {
