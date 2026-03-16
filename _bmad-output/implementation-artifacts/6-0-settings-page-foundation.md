@@ -1,6 +1,6 @@
 # Story 6.0: Settings Page Foundation
 
-Status: review
+Status: done
 
 ## Story
 
