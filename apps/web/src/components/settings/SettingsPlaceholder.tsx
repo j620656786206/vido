@@ -22,7 +22,7 @@ export function SettingsPlaceholder({ icon: Icon, title, description }: Settings
         {description}
       </p>
       <span className="mt-4 rounded-full bg-slate-800 px-3 py-1 text-xs text-slate-500">
-        即將推出
+        此功能將在後續版本中提供
       </span>
     </div>
   );

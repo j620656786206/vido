@@ -45,7 +45,7 @@ export function SettingsLayout({ children }: SettingsLayoutProps) {
       {/* Desktop sidebar */}
       <nav
         className="hidden w-56 shrink-0 border-r border-slate-700 md:block"
-        aria-label="設定分類"
+        aria-label="設定分類導航"
         data-testid="settings-sidebar"
       >
         <ul className="py-4">
@@ -76,7 +76,7 @@ export function SettingsLayout({ children }: SettingsLayoutProps) {
       {/* Mobile horizontal tabs */}
       <nav
         className="overflow-x-auto border-b border-slate-700 md:hidden"
-        aria-label="設定分類"
+        aria-label="設定分類標籤"
         data-testid="settings-tabs"
       >
         <div className="flex gap-1 px-4 py-2">

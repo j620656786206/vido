@@ -45,11 +45,11 @@ describe('QBittorrentForm', () => {
   it('renders the form fields', () => {
     renderWithProviders(<QBittorrentForm />);
 
-    expect(screen.getByLabelText('主機位址')).toBeTruthy();
-    expect(screen.getByLabelText('使用者名稱')).toBeTruthy();
-    expect(screen.getByLabelText('密碼')).toBeTruthy();
-    expect(screen.getByText('測試連線')).toBeTruthy();
-    expect(screen.getByText('儲存設定')).toBeTruthy();
+    expect(screen.getByLabelText('主機位址')).toBeInTheDocument();
+    expect(screen.getByLabelText('使用者名稱')).toBeInTheDocument();
+    expect(screen.getByLabelText('密碼')).toBeInTheDocument();
+    expect(screen.getByText('測試連線')).toBeInTheDocument();
+    expect(screen.getByText('儲存設定')).toBeInTheDocument();
   });
 
   it('shows loading state', () => {

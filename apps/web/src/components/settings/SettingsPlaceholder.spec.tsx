@@ -48,7 +48,7 @@ describe('SettingsPlaceholder', () => {
         description: '管理快取資料，釋放儲存空間',
       })
     );
-    expect(screen.getByText('即將推出')).toBeInTheDocument();
+    expect(screen.getByText('此功能將在後續版本中提供')).toBeInTheDocument();
   });
 
   it('renders the placeholder container', () => {
@@ -62,9 +62,9 @@ describe('SettingsPlaceholder', () => {
     expect(screen.getByTestId('settings-placeholder')).toBeInTheDocument();
   });
 
-  // --- "即將推出" badge styling ---
+  // --- "此功能將在後續版本中提供" badge styling ---
 
-  it('renders "即將推出" badge with rounded-full styling', () => {
+  it('renders "此功能將在後續版本中提供" badge with rounded-full styling', () => {
     render(
       React.createElement(SettingsPlaceholder, {
         icon: Database,
@@ -72,7 +72,7 @@ describe('SettingsPlaceholder', () => {
         description: '管理快取資料，釋放儲存空間',
       })
     );
-    const badge = screen.getByText('即將推出');
+    const badge = screen.getByText('此功能將在後續版本中提供');
     expect(badge.tagName).toBe('SPAN');
     expect(badge).toHaveClass('rounded-full');
   });
@@ -149,11 +149,11 @@ describe('SettingsPlaceholder', () => {
   });
 
   // --- "此功能將在後續版本中提供" message verification ---
-  // Note: The actual implementation uses "即將推出" as the badge text
+  // Note: The actual implementation uses "此功能將在後續版本中提供" as the badge text
   // and each placeholder has its own specific description.
   // Verify the badge always renders regardless of props.
 
-  it('always renders "即將推出" badge regardless of props', () => {
+  it('always renders "此功能將在後續版本中提供" badge regardless of props', () => {
     render(
       React.createElement(SettingsPlaceholder, {
         icon: Gauge,
@@ -161,7 +161,7 @@ describe('SettingsPlaceholder', () => {
         description: '查看系統效能指標與趨勢',
       })
     );
-    expect(screen.getByText('即將推出')).toBeInTheDocument();
+    expect(screen.getByText('此功能將在後續版本中提供')).toBeInTheDocument();
   });
 
   // --- Structure verification ---

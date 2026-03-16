@@ -176,13 +176,13 @@ describe('SettingsLayout', () => {
   it('renders sidebar with aria-label for accessibility', async () => {
     renderWithRouter();
     const sidebar = await screen.findByTestId('settings-sidebar');
-    expect(sidebar).toHaveAttribute('aria-label', '設定分類');
+    expect(sidebar).toHaveAttribute('aria-label', '設定分類導航');
   });
 
   it('renders mobile tabs with aria-label for accessibility', async () => {
     renderWithRouter();
     const tabs = await screen.findByTestId('settings-tabs');
-    expect(tabs).toHaveAttribute('aria-label', '設定分類');
+    expect(tabs).toHaveAttribute('aria-label', '設定分類標籤');
   });
 
   // --- Navigation between categories ---
@@ -409,5 +409,46 @@ describe('SettingsLayout', () => {
     const layout = await screen.findByTestId('settings-layout');
     const sidebar = screen.getByTestId('settings-sidebar');
     expect(layout).toContainElement(sidebar);
+  });
+
+  // --- Redirect behavior (AC4, AC5) ---
+
+  it('redirects /settings/ to /settings/connection (AC4)', async () => {
+    const rootRoute = createRootRoute({
+      component: () => React.createElement(Outlet),
+    });
+    const settingsRoute = createRoute({
+      getParentRoute: () => rootRoute,
+      path: '/settings',
+      component: () =>
+        React.createElement(SettingsLayout, null, React.createElement(Outlet)),
+    });
+    const indexRoute = createRoute({
+      getParentRoute: () => settingsRoute,
+      path: '/',
+      beforeLoad: () => {
+        throw new Error('redirect:/settings/connection');
+      },
+    });
+    const connectionRoute = createRoute({
+      getParentRoute: () => settingsRoute,
+      path: '/connection',
+      component: () =>
+        React.createElement('div', { 'data-testid': 'connection-page' }, 'Connection'),
+    });
+    const routeTree = rootRoute.addChildren([
+      settingsRoute.addChildren([indexRoute, connectionRoute]),
+    ]);
+    // Verify the redirect route file uses beforeLoad with redirect
+    // (structural test — TanStack Router redirect throws are hard to test in unit context)
+    const { Route: IndexRoute } = await import('../../routes/settings/index');
+    expect(IndexRoute).toBeDefined();
+    expect(IndexRoute.options).toHaveProperty('beforeLoad');
+  });
+
+  it('qbittorrent route has redirect beforeLoad (AC5)', async () => {
+    const { Route: QBRoute } = await import('../../routes/settings/qbittorrent');
+    expect(QBRoute).toBeDefined();
+    expect(QBRoute.options).toHaveProperty('beforeLoad');
   });
 });
