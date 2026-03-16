@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, it, expect } from 'vitest';
 import {
   createRootRoute,
@@ -9,7 +10,7 @@ import {
   RouterProvider,
   Outlet,
 } from '@tanstack/react-router';
-import { SettingsLayout } from './SettingsLayout';
+import { SettingsLayout, SETTINGS_CATEGORIES } from './SettingsLayout';
 
 function createTestRouter(initialPath = '/settings/connection') {
   const rootRoute = createRootRoute({
@@ -19,15 +20,13 @@ function createTestRouter(initialPath = '/settings/connection') {
   const settingsRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/settings',
-    component: () =>
-      React.createElement(SettingsLayout, null, React.createElement(Outlet)),
+    component: () => React.createElement(SettingsLayout, null, React.createElement(Outlet)),
   });
 
   const connectionRoute = createRoute({
     getParentRoute: () => settingsRoute,
     path: '/connection',
-    component: () =>
-      React.createElement('div', { 'data-testid': 'connection-page' }, 'Connection'),
+    component: () => React.createElement('div', { 'data-testid': 'connection-page' }, 'Connection'),
   });
 
   const cacheRoute = createRoute({
@@ -184,5 +183,231 @@ describe('SettingsLayout', () => {
     renderWithRouter();
     const tabs = await screen.findByTestId('settings-tabs');
     expect(tabs).toHaveAttribute('aria-label', '設定分類');
+  });
+
+  // --- Navigation between categories ---
+
+  it('highlights cache sidebar item when navigated to /settings/cache', async () => {
+    renderWithRouter('/settings/cache');
+    const cacheNav = await screen.findByTestId('settings-nav-cache');
+    expect(cacheNav).toHaveClass('text-blue-400');
+    expect(cacheNav).toHaveClass('bg-slate-700');
+    expect(cacheNav).toHaveClass('border-blue-400');
+    // connection should be inactive
+    const connectionNav = screen.getByTestId('settings-nav-connection');
+    expect(connectionNav).toHaveClass('text-slate-400');
+    expect(connectionNav).toHaveClass('border-transparent');
+  });
+
+  it('highlights logs sidebar item when navigated to /settings/logs', async () => {
+    renderWithRouter('/settings/logs');
+    const logsNav = await screen.findByTestId('settings-nav-logs');
+    expect(logsNav).toHaveClass('text-blue-400');
+    expect(logsNav).toHaveClass('border-blue-400');
+  });
+
+  it('highlights status sidebar item when navigated to /settings/status', async () => {
+    renderWithRouter('/settings/status');
+    const statusNav = await screen.findByTestId('settings-nav-status');
+    expect(statusNav).toHaveClass('text-blue-400');
+    expect(statusNav).toHaveClass('border-blue-400');
+  });
+
+  it('highlights backup sidebar item when navigated to /settings/backup', async () => {
+    renderWithRouter('/settings/backup');
+    const backupNav = await screen.findByTestId('settings-nav-backup');
+    expect(backupNav).toHaveClass('text-blue-400');
+    expect(backupNav).toHaveClass('border-blue-400');
+  });
+
+  it('highlights export sidebar item when navigated to /settings/export', async () => {
+    renderWithRouter('/settings/export');
+    const exportNav = await screen.findByTestId('settings-nav-export');
+    expect(exportNav).toHaveClass('text-blue-400');
+    expect(exportNav).toHaveClass('border-blue-400');
+  });
+
+  it('highlights performance sidebar item when navigated to /settings/performance', async () => {
+    renderWithRouter('/settings/performance');
+    const perfNav = await screen.findByTestId('settings-nav-performance');
+    expect(perfNav).toHaveClass('text-blue-400');
+    expect(perfNav).toHaveClass('border-blue-400');
+  });
+
+  // --- Mobile tab active states for each category ---
+
+  it('highlights cache mobile tab when navigated to /settings/cache', async () => {
+    renderWithRouter('/settings/cache');
+    const cacheTab = await screen.findByTestId('settings-tab-cache');
+    expect(cacheTab).toHaveClass('text-blue-400');
+    expect(cacheTab).toHaveClass('border-blue-400');
+    // connection tab should be inactive
+    const connectionTab = screen.getByTestId('settings-tab-connection');
+    expect(connectionTab).toHaveClass('text-slate-400');
+  });
+
+  it('highlights performance mobile tab when navigated to /settings/performance', async () => {
+    renderWithRouter('/settings/performance');
+    const perfTab = await screen.findByTestId('settings-tab-performance');
+    expect(perfTab).toHaveClass('text-blue-400');
+    expect(perfTab).toHaveClass('border-blue-400');
+  });
+
+  // --- All 7 categories have correct routes ---
+
+  it('sidebar navigation items link to correct routes', async () => {
+    renderWithRouter();
+    await screen.findByTestId('settings-sidebar');
+    expect(screen.getByTestId('settings-nav-connection')).toHaveAttribute(
+      'href',
+      '/settings/connection'
+    );
+    expect(screen.getByTestId('settings-nav-cache')).toHaveAttribute('href', '/settings/cache');
+    expect(screen.getByTestId('settings-nav-logs')).toHaveAttribute('href', '/settings/logs');
+    expect(screen.getByTestId('settings-nav-status')).toHaveAttribute('href', '/settings/status');
+    expect(screen.getByTestId('settings-nav-backup')).toHaveAttribute('href', '/settings/backup');
+    expect(screen.getByTestId('settings-nav-export')).toHaveAttribute('href', '/settings/export');
+    expect(screen.getByTestId('settings-nav-performance')).toHaveAttribute(
+      'href',
+      '/settings/performance'
+    );
+  });
+
+  it('mobile tab items link to correct routes', async () => {
+    renderWithRouter();
+    await screen.findByTestId('settings-tabs');
+    expect(screen.getByTestId('settings-tab-connection')).toHaveAttribute(
+      'href',
+      '/settings/connection'
+    );
+    expect(screen.getByTestId('settings-tab-cache')).toHaveAttribute('href', '/settings/cache');
+    expect(screen.getByTestId('settings-tab-logs')).toHaveAttribute('href', '/settings/logs');
+    expect(screen.getByTestId('settings-tab-status')).toHaveAttribute('href', '/settings/status');
+    expect(screen.getByTestId('settings-tab-backup')).toHaveAttribute('href', '/settings/backup');
+    expect(screen.getByTestId('settings-tab-export')).toHaveAttribute('href', '/settings/export');
+    expect(screen.getByTestId('settings-tab-performance')).toHaveAttribute(
+      'href',
+      '/settings/performance'
+    );
+  });
+
+  // --- Mobile abbreviated labels vs desktop full labels ---
+
+  it('displays all abbreviated labels in mobile tabs', async () => {
+    renderWithRouter();
+    await screen.findByTestId('settings-tabs');
+    expect(screen.getByTestId('settings-tab-connection')).toHaveTextContent('連線');
+    expect(screen.getByTestId('settings-tab-cache')).toHaveTextContent('快取');
+    expect(screen.getByTestId('settings-tab-logs')).toHaveTextContent('日誌');
+    expect(screen.getByTestId('settings-tab-status')).toHaveTextContent('狀態');
+    expect(screen.getByTestId('settings-tab-backup')).toHaveTextContent('備份');
+    expect(screen.getByTestId('settings-tab-export')).toHaveTextContent('匯出');
+    expect(screen.getByTestId('settings-tab-performance')).toHaveTextContent('效能');
+  });
+
+  it('mobile tabs use shortLabel (not full label) for brevity', async () => {
+    renderWithRouter();
+    await screen.findByTestId('settings-tabs');
+    // Mobile tabs should NOT contain the full labels (which have extra characters)
+    // e.g. '連線設定' vs '連線', '備份與還原' vs '備份'
+    const backupTab = screen.getByTestId('settings-tab-backup');
+    expect(backupTab.textContent).not.toContain('與還原');
+    const exportTab = screen.getByTestId('settings-tab-export');
+    expect(exportTab.textContent).not.toContain('/匯入');
+  });
+
+  // --- Clicking sidebar item navigates and changes active state ---
+
+  it('clicking a sidebar item navigates and updates active state', async () => {
+    const user = userEvent.setup();
+    renderWithRouter('/settings/connection');
+    await screen.findByTestId('settings-sidebar');
+
+    // Verify connection is active initially
+    expect(screen.getByTestId('settings-nav-connection')).toHaveClass('text-blue-400');
+
+    // Click cache
+    await user.click(screen.getByTestId('settings-nav-cache'));
+
+    // Cache should now be active
+    const cacheNav = await screen.findByTestId('settings-nav-cache');
+    expect(cacheNav).toHaveClass('text-blue-400');
+    expect(cacheNav).toHaveClass('border-blue-400');
+
+    // Connection should now be inactive
+    expect(screen.getByTestId('settings-nav-connection')).toHaveClass('text-slate-400');
+  });
+
+  it('clicking a mobile tab navigates and updates active state', async () => {
+    const user = userEvent.setup();
+    renderWithRouter('/settings/connection');
+    await screen.findByTestId('settings-tabs');
+
+    // Click logs tab
+    await user.click(screen.getByTestId('settings-tab-logs'));
+
+    const logsTab = await screen.findByTestId('settings-tab-logs');
+    expect(logsTab).toHaveClass('text-blue-400');
+  });
+
+  // --- Content rendering ---
+
+  it('renders child content in the content area for connection route', async () => {
+    renderWithRouter('/settings/connection');
+    expect(await screen.findByTestId('connection-page')).toBeInTheDocument();
+    expect(screen.getByTestId('connection-page')).toHaveTextContent('Connection');
+  });
+
+  it('renders child content in the content area for cache route', async () => {
+    renderWithRouter('/settings/cache');
+    expect(await screen.findByTestId('cache-page')).toBeInTheDocument();
+    expect(screen.getByTestId('cache-page')).toHaveTextContent('Cache');
+  });
+
+  // --- SETTINGS_CATEGORIES export ---
+
+  it('exports SETTINGS_CATEGORIES with exactly 7 entries', () => {
+    expect(SETTINGS_CATEGORIES).toHaveLength(7);
+  });
+
+  it('SETTINGS_CATEGORIES entries have required fields', () => {
+    for (const cat of SETTINGS_CATEGORIES) {
+      expect(cat).toHaveProperty('key');
+      expect(cat).toHaveProperty('label');
+      expect(cat).toHaveProperty('shortLabel');
+      expect(cat).toHaveProperty('icon');
+      expect(cat).toHaveProperty('to');
+      expect(cat.to).toMatch(/^\/settings\//);
+    }
+  });
+
+  // --- Sidebar uses <nav> elements ---
+
+  it('sidebar is rendered as a nav element', async () => {
+    renderWithRouter();
+    const sidebar = await screen.findByTestId('settings-sidebar');
+    expect(sidebar.tagName).toBe('NAV');
+  });
+
+  it('mobile tabs container is rendered as a nav element', async () => {
+    renderWithRouter();
+    const tabs = await screen.findByTestId('settings-tabs');
+    expect(tabs.tagName).toBe('NAV');
+  });
+
+  // --- Layout structure ---
+
+  it('content area is inside the layout container', async () => {
+    renderWithRouter();
+    const layout = await screen.findByTestId('settings-layout');
+    const content = screen.getByTestId('settings-content');
+    expect(layout).toContainElement(content);
+  });
+
+  it('sidebar is inside the layout container', async () => {
+    renderWithRouter();
+    const layout = await screen.findByTestId('settings-layout');
+    const sidebar = screen.getByTestId('settings-sidebar');
+    expect(layout).toContainElement(sidebar);
   });
 });

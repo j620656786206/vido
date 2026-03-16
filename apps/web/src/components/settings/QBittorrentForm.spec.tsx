@@ -148,4 +148,76 @@ describe('QBittorrentForm', () => {
       expect.any(Object)
     );
   });
+
+  // --- Label verification: 主機位址 (not "Host URL") ---
+
+  it('uses zh-TW label "主機位址" for the host field', () => {
+    renderWithProviders(<QBittorrentForm />);
+    expect(screen.getByLabelText('主機位址')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Host URL')).not.toBeInTheDocument();
+  });
+
+  // --- Button alignment: justify-end on desktop ---
+
+  it('button container has md:justify-end for desktop right-alignment', () => {
+    renderWithProviders(<QBittorrentForm />);
+    const testBtn = screen.getByText('測試連線').closest('button');
+    const buttonContainer = testBtn?.parentElement;
+    expect(buttonContainer).toHaveClass('md:justify-end');
+  });
+
+  it('button container uses flex-col on mobile and flex-row on desktop', () => {
+    renderWithProviders(<QBittorrentForm />);
+    const testBtn = screen.getByText('測試連線').closest('button');
+    const buttonContainer = testBtn?.parentElement;
+    expect(buttonContainer).toHaveClass('flex-col');
+    expect(buttonContainer).toHaveClass('md:flex-row');
+  });
+
+  // --- Base path field is optional ---
+
+  it('renders base path field with optional indicator', () => {
+    renderWithProviders(<QBittorrentForm />);
+    expect(screen.getByLabelText(/Base Path/)).toBeInTheDocument();
+    expect(screen.getByText('（選填，反向代理用）')).toBeInTheDocument();
+  });
+
+  it('base path field is not required', () => {
+    renderWithProviders(<QBittorrentForm />);
+    const basePath = screen.getByLabelText(/Base Path/);
+    expect(basePath).not.toBeRequired();
+  });
+
+  // --- Form element and test-id ---
+
+  it('renders with data-testid qbittorrent-form', () => {
+    renderWithProviders(<QBittorrentForm />);
+    expect(screen.getByTestId('qbittorrent-form')).toBeInTheDocument();
+  });
+
+  it('form element wraps all inputs', () => {
+    renderWithProviders(<QBittorrentForm />);
+    const form = screen.getByTestId('qbittorrent-form');
+    expect(form.tagName).toBe('FORM');
+    expect(form).toContainElement(screen.getByLabelText('主機位址'));
+    expect(form).toContainElement(screen.getByLabelText('使用者名稱'));
+    expect(form).toContainElement(screen.getByLabelText('密碼'));
+  });
+
+  // --- Password field type ---
+
+  it('password field has type password for security', () => {
+    renderWithProviders(<QBittorrentForm />);
+    const passwordField = screen.getByLabelText('密碼');
+    expect(passwordField).toHaveAttribute('type', 'password');
+  });
+
+  // --- Required fields ---
+
+  it('host, username, and password fields are required', () => {
+    renderWithProviders(<QBittorrentForm />);
+    expect(screen.getByLabelText('主機位址')).toBeRequired();
+    expect(screen.getByLabelText('使用者名稱')).toBeRequired();
+    expect(screen.getByLabelText('密碼')).toBeRequired();
+  });
 });
