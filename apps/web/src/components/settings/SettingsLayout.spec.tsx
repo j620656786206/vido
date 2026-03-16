@@ -420,8 +420,7 @@ describe('SettingsLayout', () => {
     const settingsRoute = createRoute({
       getParentRoute: () => rootRoute,
       path: '/settings',
-      component: () =>
-        React.createElement(SettingsLayout, null, React.createElement(Outlet)),
+      component: () => React.createElement(SettingsLayout, null, React.createElement(Outlet)),
     });
     const indexRoute = createRoute({
       getParentRoute: () => settingsRoute,

@@ -1,13 +1,5 @@
 import { Link, useRouterState } from '@tanstack/react-router';
-import {
-  Plug,
-  Database,
-  FileText,
-  Activity,
-  HardDrive,
-  ArrowUpDown,
-  Gauge,
-} from 'lucide-react';
+import { Plug, Database, FileText, Activity, HardDrive, ArrowUpDown, Gauge } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -20,13 +12,37 @@ interface SettingsCategory {
 }
 
 const SETTINGS_CATEGORIES: SettingsCategory[] = [
-  { key: 'connection', label: '連線設定', shortLabel: '連線', icon: Plug, to: '/settings/connection' },
+  {
+    key: 'connection',
+    label: '連線設定',
+    shortLabel: '連線',
+    icon: Plug,
+    to: '/settings/connection',
+  },
   { key: 'cache', label: '快取管理', shortLabel: '快取', icon: Database, to: '/settings/cache' },
   { key: 'logs', label: '系統日誌', shortLabel: '日誌', icon: FileText, to: '/settings/logs' },
   { key: 'status', label: '服務狀態', shortLabel: '狀態', icon: Activity, to: '/settings/status' },
-  { key: 'backup', label: '備份與還原', shortLabel: '備份', icon: HardDrive, to: '/settings/backup' },
-  { key: 'export', label: '匯出/匯入', shortLabel: '匯出', icon: ArrowUpDown, to: '/settings/export' },
-  { key: 'performance', label: '效能監控', shortLabel: '效能', icon: Gauge, to: '/settings/performance' },
+  {
+    key: 'backup',
+    label: '備份與還原',
+    shortLabel: '備份',
+    icon: HardDrive,
+    to: '/settings/backup',
+  },
+  {
+    key: 'export',
+    label: '匯出/匯入',
+    shortLabel: '匯出',
+    icon: ArrowUpDown,
+    to: '/settings/export',
+  },
+  {
+    key: 'performance',
+    label: '效能監控',
+    shortLabel: '效能',
+    icon: Gauge,
+    to: '/settings/performance',
+  },
 ];
 
 interface SettingsLayoutProps {
@@ -38,10 +54,7 @@ export function SettingsLayout({ children }: SettingsLayoutProps) {
   const currentPath = routerState.location.pathname;
 
   return (
-    <div
-      className="mx-auto flex max-w-7xl flex-col md:flex-row"
-      data-testid="settings-layout"
-    >
+    <div className="mx-auto flex max-w-7xl flex-col md:flex-row" data-testid="settings-layout">
       {/* Desktop sidebar */}
       <nav
         className="hidden w-56 shrink-0 border-r border-slate-700 md:block"

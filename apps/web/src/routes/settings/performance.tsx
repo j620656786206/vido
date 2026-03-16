@@ -7,11 +7,5 @@ export const Route = createFileRoute('/settings/performance')({
 });
 
 function PerformanceSettingsPage() {
-  return (
-    <SettingsPlaceholder
-      icon={Gauge}
-      title="效能監控"
-      description="查看系統效能指標與趨勢"
-    />
-  );
+  return <SettingsPlaceholder icon={Gauge} title="效能監控" description="查看系統效能指標與趨勢" />;
 }

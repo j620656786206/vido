@@ -8,10 +8,6 @@ export const Route = createFileRoute('/settings/backup')({
 
 function BackupSettingsPage() {
   return (
-    <SettingsPlaceholder
-      icon={HardDrive}
-      title="備份與還原"
-      description="備份與還原資料庫及設定"
-    />
+    <SettingsPlaceholder icon={HardDrive} title="備份與還原" description="備份與還原資料庫及設定" />
   );
 }

@@ -8,10 +8,6 @@ export const Route = createFileRoute('/settings/status')({
 
 function StatusSettingsPage() {
   return (
-    <SettingsPlaceholder
-      icon={Activity}
-      title="服務狀態"
-      description="監控外部服務連線狀態"
-    />
+    <SettingsPlaceholder icon={Activity} title="服務狀態" description="監控外部服務連線狀態" />
   );
 }
