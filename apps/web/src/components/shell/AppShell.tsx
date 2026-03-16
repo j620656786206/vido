@@ -70,7 +70,7 @@ export function AppShell({ children }: AppShellProps) {
 
               {/* Settings gear */}
               <Link
-                to="/settings/qbittorrent"
+                to="/settings"
                 className="rounded-lg p-1.5 text-slate-400 transition-colors hover:text-slate-200"
                 aria-label="設定"
                 data-testid="settings-link"

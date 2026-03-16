@@ -35,8 +35,14 @@ function createTestRouter(initialPath = '/library') {
 
   const settingsRoute = createRoute({
     getParentRoute: () => rootRoute,
-    path: '/settings/qbittorrent',
+    path: '/settings',
     component: () => React.createElement('div', null, 'Settings'),
+  });
+
+  const settingsConnectionRoute = createRoute({
+    getParentRoute: () => settingsRoute,
+    path: '/connection',
+    component: () => React.createElement('div', null, 'Connection'),
   });
 
   const indexRoute = createRoute({
@@ -50,7 +56,7 @@ function createTestRouter(initialPath = '/library') {
     libraryRoute,
     downloadsRoute,
     pendingRoute,
-    settingsRoute,
+    settingsRoute.addChildren([settingsConnectionRoute]),
   ]);
   const memoryHistory = createMemoryHistory({ initialEntries: [initialPath] });
 
@@ -87,7 +93,7 @@ describe('TabNavigation', () => {
   });
 
   it('highlights the active tab for settings route', async () => {
-    renderWithRouter('/settings/qbittorrent');
+    renderWithRouter('/settings/connection');
     const settingsTab = await screen.findByTestId('tab-設定');
     expect(settingsTab).toHaveClass('text-white');
   });

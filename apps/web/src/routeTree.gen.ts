@@ -9,14 +9,28 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as LibraryRouteImport } from './routes/library'
 import { Route as DownloadsRouteImport } from './routes/downloads'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as TestManualSearchRouteImport } from './routes/test/manual-search'
+import { Route as SettingsStatusRouteImport } from './routes/settings/status'
 import { Route as SettingsQbittorrentRouteImport } from './routes/settings/qbittorrent'
+import { Route as SettingsPerformanceRouteImport } from './routes/settings/performance'
+import { Route as SettingsLogsRouteImport } from './routes/settings/logs'
+import { Route as SettingsExportRouteImport } from './routes/settings/export'
+import { Route as SettingsConnectionRouteImport } from './routes/settings/connection'
+import { Route as SettingsCacheRouteImport } from './routes/settings/cache'
+import { Route as SettingsBackupRouteImport } from './routes/settings/backup'
 import { Route as MediaTypeIdRouteImport } from './routes/media/$type.$id'
 
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SearchRoute = SearchRouteImport.update({
   id: '/search',
   path: '/search',
@@ -37,15 +51,55 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsIndexRoute = SettingsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => SettingsRoute,
+} as any)
 const TestManualSearchRoute = TestManualSearchRouteImport.update({
   id: '/test/manual-search',
   path: '/test/manual-search',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsStatusRoute = SettingsStatusRouteImport.update({
+  id: '/status',
+  path: '/status',
+  getParentRoute: () => SettingsRoute,
+} as any)
 const SettingsQbittorrentRoute = SettingsQbittorrentRouteImport.update({
-  id: '/settings/qbittorrent',
-  path: '/settings/qbittorrent',
-  getParentRoute: () => rootRouteImport,
+  id: '/qbittorrent',
+  path: '/qbittorrent',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsPerformanceRoute = SettingsPerformanceRouteImport.update({
+  id: '/performance',
+  path: '/performance',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsLogsRoute = SettingsLogsRouteImport.update({
+  id: '/logs',
+  path: '/logs',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsExportRoute = SettingsExportRouteImport.update({
+  id: '/export',
+  path: '/export',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsConnectionRoute = SettingsConnectionRouteImport.update({
+  id: '/connection',
+  path: '/connection',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsCacheRoute = SettingsCacheRouteImport.update({
+  id: '/cache',
+  path: '/cache',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsBackupRoute = SettingsBackupRouteImport.update({
+  id: '/backup',
+  path: '/backup',
+  getParentRoute: () => SettingsRoute,
 } as any)
 const MediaTypeIdRoute = MediaTypeIdRouteImport.update({
   id: '/media/$type/$id',
@@ -58,8 +112,17 @@ export interface FileRoutesByFullPath {
   '/downloads': typeof DownloadsRoute
   '/library': typeof LibraryRoute
   '/search': typeof SearchRoute
+  '/settings': typeof SettingsRouteWithChildren
+  '/settings/backup': typeof SettingsBackupRoute
+  '/settings/cache': typeof SettingsCacheRoute
+  '/settings/connection': typeof SettingsConnectionRoute
+  '/settings/export': typeof SettingsExportRoute
+  '/settings/logs': typeof SettingsLogsRoute
+  '/settings/performance': typeof SettingsPerformanceRoute
   '/settings/qbittorrent': typeof SettingsQbittorrentRoute
+  '/settings/status': typeof SettingsStatusRoute
   '/test/manual-search': typeof TestManualSearchRoute
+  '/settings/': typeof SettingsIndexRoute
   '/media/$type/$id': typeof MediaTypeIdRoute
 }
 export interface FileRoutesByTo {
@@ -67,8 +130,16 @@ export interface FileRoutesByTo {
   '/downloads': typeof DownloadsRoute
   '/library': typeof LibraryRoute
   '/search': typeof SearchRoute
+  '/settings/backup': typeof SettingsBackupRoute
+  '/settings/cache': typeof SettingsCacheRoute
+  '/settings/connection': typeof SettingsConnectionRoute
+  '/settings/export': typeof SettingsExportRoute
+  '/settings/logs': typeof SettingsLogsRoute
+  '/settings/performance': typeof SettingsPerformanceRoute
   '/settings/qbittorrent': typeof SettingsQbittorrentRoute
+  '/settings/status': typeof SettingsStatusRoute
   '/test/manual-search': typeof TestManualSearchRoute
+  '/settings': typeof SettingsIndexRoute
   '/media/$type/$id': typeof MediaTypeIdRoute
 }
 export interface FileRoutesById {
@@ -77,8 +148,17 @@ export interface FileRoutesById {
   '/downloads': typeof DownloadsRoute
   '/library': typeof LibraryRoute
   '/search': typeof SearchRoute
+  '/settings': typeof SettingsRouteWithChildren
+  '/settings/backup': typeof SettingsBackupRoute
+  '/settings/cache': typeof SettingsCacheRoute
+  '/settings/connection': typeof SettingsConnectionRoute
+  '/settings/export': typeof SettingsExportRoute
+  '/settings/logs': typeof SettingsLogsRoute
+  '/settings/performance': typeof SettingsPerformanceRoute
   '/settings/qbittorrent': typeof SettingsQbittorrentRoute
+  '/settings/status': typeof SettingsStatusRoute
   '/test/manual-search': typeof TestManualSearchRoute
+  '/settings/': typeof SettingsIndexRoute
   '/media/$type/$id': typeof MediaTypeIdRoute
 }
 export interface FileRouteTypes {
@@ -88,8 +168,17 @@ export interface FileRouteTypes {
     | '/downloads'
     | '/library'
     | '/search'
+    | '/settings'
+    | '/settings/backup'
+    | '/settings/cache'
+    | '/settings/connection'
+    | '/settings/export'
+    | '/settings/logs'
+    | '/settings/performance'
     | '/settings/qbittorrent'
+    | '/settings/status'
     | '/test/manual-search'
+    | '/settings/'
     | '/media/$type/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -97,8 +186,16 @@ export interface FileRouteTypes {
     | '/downloads'
     | '/library'
     | '/search'
+    | '/settings/backup'
+    | '/settings/cache'
+    | '/settings/connection'
+    | '/settings/export'
+    | '/settings/logs'
+    | '/settings/performance'
     | '/settings/qbittorrent'
+    | '/settings/status'
     | '/test/manual-search'
+    | '/settings'
     | '/media/$type/$id'
   id:
     | '__root__'
@@ -106,8 +203,17 @@ export interface FileRouteTypes {
     | '/downloads'
     | '/library'
     | '/search'
+    | '/settings'
+    | '/settings/backup'
+    | '/settings/cache'
+    | '/settings/connection'
+    | '/settings/export'
+    | '/settings/logs'
+    | '/settings/performance'
     | '/settings/qbittorrent'
+    | '/settings/status'
     | '/test/manual-search'
+    | '/settings/'
     | '/media/$type/$id'
   fileRoutesById: FileRoutesById
 }
@@ -116,13 +222,20 @@ export interface RootRouteChildren {
   DownloadsRoute: typeof DownloadsRoute
   LibraryRoute: typeof LibraryRoute
   SearchRoute: typeof SearchRoute
-  SettingsQbittorrentRoute: typeof SettingsQbittorrentRoute
+  SettingsRoute: typeof SettingsRouteWithChildren
   TestManualSearchRoute: typeof TestManualSearchRoute
   MediaTypeIdRoute: typeof MediaTypeIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/search': {
       id: '/search'
       path: '/search'
@@ -151,6 +264,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings/': {
+      id: '/settings/'
+      path: '/'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof SettingsIndexRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/test/manual-search': {
       id: '/test/manual-search'
       path: '/test/manual-search'
@@ -158,12 +278,61 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TestManualSearchRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings/status': {
+      id: '/settings/status'
+      path: '/status'
+      fullPath: '/settings/status'
+      preLoaderRoute: typeof SettingsStatusRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/settings/qbittorrent': {
       id: '/settings/qbittorrent'
-      path: '/settings/qbittorrent'
+      path: '/qbittorrent'
       fullPath: '/settings/qbittorrent'
       preLoaderRoute: typeof SettingsQbittorrentRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/performance': {
+      id: '/settings/performance'
+      path: '/performance'
+      fullPath: '/settings/performance'
+      preLoaderRoute: typeof SettingsPerformanceRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/logs': {
+      id: '/settings/logs'
+      path: '/logs'
+      fullPath: '/settings/logs'
+      preLoaderRoute: typeof SettingsLogsRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/export': {
+      id: '/settings/export'
+      path: '/export'
+      fullPath: '/settings/export'
+      preLoaderRoute: typeof SettingsExportRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/connection': {
+      id: '/settings/connection'
+      path: '/connection'
+      fullPath: '/settings/connection'
+      preLoaderRoute: typeof SettingsConnectionRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/cache': {
+      id: '/settings/cache'
+      path: '/cache'
+      fullPath: '/settings/cache'
+      preLoaderRoute: typeof SettingsCacheRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/backup': {
+      id: '/settings/backup'
+      path: '/backup'
+      fullPath: '/settings/backup'
+      preLoaderRoute: typeof SettingsBackupRouteImport
+      parentRoute: typeof SettingsRoute
     }
     '/media/$type/$id': {
       id: '/media/$type/$id'
@@ -175,12 +344,40 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface SettingsRouteChildren {
+  SettingsBackupRoute: typeof SettingsBackupRoute
+  SettingsCacheRoute: typeof SettingsCacheRoute
+  SettingsConnectionRoute: typeof SettingsConnectionRoute
+  SettingsExportRoute: typeof SettingsExportRoute
+  SettingsLogsRoute: typeof SettingsLogsRoute
+  SettingsPerformanceRoute: typeof SettingsPerformanceRoute
+  SettingsQbittorrentRoute: typeof SettingsQbittorrentRoute
+  SettingsStatusRoute: typeof SettingsStatusRoute
+  SettingsIndexRoute: typeof SettingsIndexRoute
+}
+
+const SettingsRouteChildren: SettingsRouteChildren = {
+  SettingsBackupRoute: SettingsBackupRoute,
+  SettingsCacheRoute: SettingsCacheRoute,
+  SettingsConnectionRoute: SettingsConnectionRoute,
+  SettingsExportRoute: SettingsExportRoute,
+  SettingsLogsRoute: SettingsLogsRoute,
+  SettingsPerformanceRoute: SettingsPerformanceRoute,
+  SettingsQbittorrentRoute: SettingsQbittorrentRoute,
+  SettingsStatusRoute: SettingsStatusRoute,
+  SettingsIndexRoute: SettingsIndexRoute,
+}
+
+const SettingsRouteWithChildren = SettingsRoute._addFileChildren(
+  SettingsRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DownloadsRoute: DownloadsRoute,
   LibraryRoute: LibraryRoute,
   SearchRoute: SearchRoute,
-  SettingsQbittorrentRoute: SettingsQbittorrentRoute,
+  SettingsRoute: SettingsRouteWithChildren,
   TestManualSearchRoute: TestManualSearchRoute,
   MediaTypeIdRoute: MediaTypeIdRoute,
 }

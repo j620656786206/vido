@@ -1,6 +1,6 @@
 # Story 6.0: Settings Page Foundation
 
-Status: ready-for-dev
+Status: in-progress
 
 ## Story
 
@@ -82,28 +82,28 @@ So that **I can easily find and manage all system configuration options**.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create Settings Layout Route (AC: 1, 3)
-  - [ ] 1.1: Create `apps/web/src/routes/settings.tsx` as layout route with `<Outlet />`
-  - [ ] 1.2: Create `apps/web/src/components/settings/SettingsLayout.tsx` with sidebar + content area
-  - [ ] 1.3: Implement sidebar with 7 category items (Lucide icons + zh-TW labels)
-  - [ ] 1.4: Implement mobile responsive layout (sidebar → horizontal tabs below 768px)
-  - [ ] 1.5: Write tests for SettingsLayout component
+- [x] Task 1: Create Settings Layout Route (AC: 1, 3)
+  - [x] 1.1: Create `apps/web/src/routes/settings.tsx` as layout route with `<Outlet />`
+  - [x] 1.2: Create `apps/web/src/components/settings/SettingsLayout.tsx` with sidebar + content area
+  - [x] 1.3: Implement sidebar with 7 category items (Lucide icons + zh-TW labels)
+  - [x] 1.4: Implement mobile responsive layout (sidebar → horizontal tabs below 768px)
+  - [x] 1.5: Write tests for SettingsLayout component (12 tests)
 
-- [ ] Task 2: Setup Nested Routes (AC: 2, 4, 5)
-  - [ ] 2.1: Create `apps/web/src/routes/settings/index.tsx` — redirect to `/settings/connection`
-  - [ ] 2.2: Create `apps/web/src/routes/settings/connection.tsx` — renders QBittorrentForm
-  - [ ] 2.3: Create placeholder routes: `cache.tsx`, `logs.tsx`, `status.tsx`, `backup.tsx`, `export.tsx`, `performance.tsx`
-  - [ ] 2.4: Remove or redirect old `apps/web/src/routes/settings/qbittorrent.tsx`
+- [x] Task 2: Setup Nested Routes (AC: 2, 4, 5)
+  - [x] 2.1: Create `apps/web/src/routes/settings/index.tsx` — redirect to `/settings/connection`
+  - [x] 2.2: Create `apps/web/src/routes/settings/connection.tsx` — renders QBittorrentForm
+  - [x] 2.3: Create placeholder routes: `cache.tsx`, `logs.tsx`, `status.tsx`, `backup.tsx`, `export.tsx`, `performance.tsx`
+  - [x] 2.4: Redirect old `apps/web/src/routes/settings/qbittorrent.tsx` to `/settings/connection`
 
-- [ ] Task 3: Create Placeholder Component (AC: 6)
-  - [ ] 3.1: Create `apps/web/src/components/settings/SettingsPlaceholder.tsx`
-  - [ ] 3.2: Accept `icon`, `title`, `description` props
-  - [ ] 3.3: Write tests for SettingsPlaceholder
+- [x] Task 3: Create Placeholder Component (AC: 6)
+  - [x] 3.1: Create `apps/web/src/components/settings/SettingsPlaceholder.tsx`
+  - [x] 3.2: Accept `icon`, `title`, `description` props
+  - [x] 3.3: Write tests for SettingsPlaceholder (5 tests)
 
-- [ ] Task 4: Update Global Navigation (AC: 7)
-  - [ ] 4.1: Update `TabNavigation.tsx` — change "設定" tab `to` from `/settings/qbittorrent` to `/settings`
-  - [ ] 4.2: Verify `matchPaths: ['/settings']` still highlights correctly for all sub-routes
-  - [ ] 4.3: Update TabNavigation tests if needed
+- [x] Task 4: Update Global Navigation (AC: 7)
+  - [x] 4.1: Update `TabNavigation.tsx` — change "設定" tab `to` from `/settings/qbittorrent` to `/settings`
+  - [x] 4.2: Verify `matchPaths: ['/settings']` still highlights correctly for all sub-routes
+  - [x] 4.3: Update TabNavigation tests — updated route paths
 
 - [ ] Task 5: Design Verification (AC: all)
   - [ ] 5.1: Run dev server and verify desktop settings layout
@@ -265,10 +265,46 @@ Before marking done:
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.6 (1M context)
 
 ### Debug Log References
 
 ### Completion Notes List
 
+- Tasks 1-4 implemented: SettingsLayout with sidebar/mobile tabs, 9 nested routes, SettingsPlaceholder, TabNavigation updated
+- 91 test files, 1153 tests all passing (17 new tests: 12 SettingsLayout + 5 SettingsPlaceholder)
+- qbittorrent.tsx preserved as redirect route for backward compatibility
+- AppShell gear icon link updated from `/settings/qbittorrent` to `/settings`
+- Task 5 (Design Verification) pending — requires SM/UX/User approval
+
 ### File List
+
+#### Created Files
+- `apps/web/src/routes/settings.tsx` — Layout route with SettingsLayout + Outlet
+- `apps/web/src/routes/settings/index.tsx` — Redirect /settings/ → /settings/connection
+- `apps/web/src/routes/settings/connection.tsx` — QBittorrentForm wrapper
+- `apps/web/src/routes/settings/cache.tsx` — Placeholder
+- `apps/web/src/routes/settings/logs.tsx` — Placeholder
+- `apps/web/src/routes/settings/status.tsx` — Placeholder
+- `apps/web/src/routes/settings/backup.tsx` — Placeholder
+- `apps/web/src/routes/settings/export.tsx` — Placeholder
+- `apps/web/src/routes/settings/performance.tsx` — Placeholder
+- `apps/web/src/components/settings/SettingsLayout.tsx` — Sidebar + mobile tabs
+- `apps/web/src/components/settings/SettingsLayout.spec.tsx` — 12 tests
+- `apps/web/src/components/settings/SettingsPlaceholder.tsx` — Coming soon component
+- `apps/web/src/components/settings/SettingsPlaceholder.spec.tsx` — 5 tests
+
+#### Modified Files
+- `apps/web/src/routes/settings/qbittorrent.tsx` — Changed to redirect to /settings/connection
+- `apps/web/src/components/shell/TabNavigation.tsx` — Settings tab to="/settings"
+- `apps/web/src/components/shell/TabNavigation.spec.tsx` — Updated test routes
+- `apps/web/src/components/shell/AppShell.tsx` — Gear icon link to="/settings"
+- `apps/web/src/components/shell/AppShell.spec.tsx` — Updated test routes
+- `apps/web/src/routeTree.gen.ts` — Auto-regenerated with new route tree
+
+## Changelog
+
+| Change | Reason | Date |
+|--------|--------|------|
+| Story created | Settings page foundation needed for Epic 6 (Epic 5 retro finding) | 2026-03-16 |
+| Tasks 1-4 implemented | SettingsLayout, nested routes, placeholders, nav update — 1153 tests passing | 2026-03-16 |

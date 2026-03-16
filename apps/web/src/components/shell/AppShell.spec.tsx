@@ -41,7 +41,7 @@ function createTestRouter(initialPath = '/') {
 
   const settingsRoute = createRoute({
     getParentRoute: () => rootRoute,
-    path: '/settings/qbittorrent',
+    path: '/settings',
     component: () => React.createElement('div', null, 'Settings'),
   });
 
