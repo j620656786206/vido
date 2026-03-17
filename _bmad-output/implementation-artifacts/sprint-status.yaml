@@ -138,7 +138,7 @@ development_status:
   6-0-settings-page-foundation: done
   # Phase 1: First-Run Experience
   6-1-setup-wizard: done
-  6-2-cache-management: ready-for-dev
+  6-2-cache-management: review
   6-3-system-logs-viewer: ready-for-dev
   6-4-service-connection-status-dashboard: ready-for-dev
   6-5-database-backup: ready-for-dev

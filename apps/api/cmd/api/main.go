@@ -132,6 +132,12 @@ func main() {
 	downloadService := services.NewDownloadService(qbittorrentService, slog.Default())
 	mediaService := services.NewMediaService(cfg.MediaDirs)
 
+	// Initialize cache management services (Story 6.2)
+	posterDir := filepath.Join(cfg.DataDir, "posters")
+	cacheStatsService := services.NewCacheStatsService(db.Conn(), posterDir)
+	cacheCleanupService := services.NewCacheCleanupService(db.Conn(), posterDir)
+	slog.Info("Cache management services initialized")
+
 	// Initialize TMDb service with cache integration (Story 2.1)
 	tmdbService := services.NewTMDbService(services.TMDbConfig{
 		APIKey:            cfg.TMDbAPIKey,
@@ -209,7 +215,6 @@ func main() {
 	}, tmdbService)
 
 	// Initialize metadata editor service for manual editing (Story 3.8)
-	posterDir := filepath.Join(cfg.DataDir, "posters")
 	imageProcessor, err := images.NewImageProcessor(posterDir)
 	if err != nil {
 		slog.Error("Failed to initialize image processor", "error", err)
@@ -306,6 +311,7 @@ func main() {
 	libraryService := services.NewLibraryService(repos.Movies, repos.Series, repos.Episodes, services.WithTMDbVideos(tmdbService.VideosProvider()))
 	libraryHandler := handlers.NewLibraryHandler(libraryService)
 	recentMediaHandler := handlers.NewRecentMediaHandler(movieService, seriesService)
+	cacheHandler := handlers.NewCacheHandler(cacheStatsService, cacheCleanupService)
 	// parseProgressHandler already initialized above with defer Close()
 	slog.Info("Handlers initialized with service injection")
 
@@ -328,6 +334,7 @@ func main() {
 	{
 		movieHandler.RegisterRoutes(apiV1)
 		seriesHandler.RegisterRoutes(apiV1)
+		cacheHandler.RegisterRoutes(apiV1) // Must be before settingsHandler to avoid /settings/:key conflict
 		settingsHandler.RegisterRoutes(apiV1)
 		setupHandler.RegisterRoutes(apiV1)
 		mediaHandler.RegisterRoutes(apiV1)
