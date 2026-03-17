@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SetupRouteImport } from './routes/setup'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as LibraryRouteImport } from './routes/library'
@@ -26,6 +27,11 @@ import { Route as SettingsCacheRouteImport } from './routes/settings/cache'
 import { Route as SettingsBackupRouteImport } from './routes/settings/backup'
 import { Route as MediaTypeIdRouteImport } from './routes/media/$type.$id'
 
+const SetupRoute = SetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -113,6 +119,7 @@ export interface FileRoutesByFullPath {
   '/library': typeof LibraryRoute
   '/search': typeof SearchRoute
   '/settings': typeof SettingsRouteWithChildren
+  '/setup': typeof SetupRoute
   '/settings/backup': typeof SettingsBackupRoute
   '/settings/cache': typeof SettingsCacheRoute
   '/settings/connection': typeof SettingsConnectionRoute
@@ -130,6 +137,7 @@ export interface FileRoutesByTo {
   '/downloads': typeof DownloadsRoute
   '/library': typeof LibraryRoute
   '/search': typeof SearchRoute
+  '/setup': typeof SetupRoute
   '/settings/backup': typeof SettingsBackupRoute
   '/settings/cache': typeof SettingsCacheRoute
   '/settings/connection': typeof SettingsConnectionRoute
@@ -149,6 +157,7 @@ export interface FileRoutesById {
   '/library': typeof LibraryRoute
   '/search': typeof SearchRoute
   '/settings': typeof SettingsRouteWithChildren
+  '/setup': typeof SetupRoute
   '/settings/backup': typeof SettingsBackupRoute
   '/settings/cache': typeof SettingsCacheRoute
   '/settings/connection': typeof SettingsConnectionRoute
@@ -169,6 +178,7 @@ export interface FileRouteTypes {
     | '/library'
     | '/search'
     | '/settings'
+    | '/setup'
     | '/settings/backup'
     | '/settings/cache'
     | '/settings/connection'
@@ -186,6 +196,7 @@ export interface FileRouteTypes {
     | '/downloads'
     | '/library'
     | '/search'
+    | '/setup'
     | '/settings/backup'
     | '/settings/cache'
     | '/settings/connection'
@@ -204,6 +215,7 @@ export interface FileRouteTypes {
     | '/library'
     | '/search'
     | '/settings'
+    | '/setup'
     | '/settings/backup'
     | '/settings/cache'
     | '/settings/connection'
@@ -223,12 +235,20 @@ export interface RootRouteChildren {
   LibraryRoute: typeof LibraryRoute
   SearchRoute: typeof SearchRoute
   SettingsRoute: typeof SettingsRouteWithChildren
+  SetupRoute: typeof SetupRoute
   TestManualSearchRoute: typeof TestManualSearchRoute
   MediaTypeIdRoute: typeof MediaTypeIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/setup': {
+      id: '/setup'
+      path: '/setup'
+      fullPath: '/setup'
+      preLoaderRoute: typeof SetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings': {
       id: '/settings'
       path: '/settings'
@@ -378,6 +398,7 @@ const rootRouteChildren: RootRouteChildren = {
   LibraryRoute: LibraryRoute,
   SearchRoute: SearchRoute,
   SettingsRoute: SettingsRouteWithChildren,
+  SetupRoute: SetupRoute,
   TestManualSearchRoute: TestManualSearchRoute,
   MediaTypeIdRoute: MediaTypeIdRoute,
 }

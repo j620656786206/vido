@@ -137,7 +137,7 @@ development_status:
   # Phase 0: Settings Foundation (prerequisite for all settings pages)
   6-0-settings-page-foundation: done
   # Phase 1: First-Run Experience
-  6-1-setup-wizard: ready-for-dev
+  6-1-setup-wizard: review
   6-2-cache-management: ready-for-dev
   6-3-system-logs-viewer: ready-for-dev
   6-4-service-connection-status-dashboard: ready-for-dev

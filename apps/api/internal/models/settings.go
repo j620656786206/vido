@@ -24,3 +24,15 @@ const (
 	SettingTypeBool   SettingType = "bool"
 	SettingTypeJSON   SettingType = "json"
 )
+
+// SetupConfig holds all wizard settings collected during setup.
+type SetupConfig struct {
+	Language        string `json:"language"`
+	QBTUrl          string `json:"qbtUrl,omitempty"`
+	QBTUsername     string `json:"qbtUsername,omitempty"`
+	QBTPassword     string `json:"qbtPassword,omitempty"`
+	MediaFolderPath string `json:"mediaFolderPath"`
+	TMDbApiKey      string `json:"tmdbApiKey,omitempty"`
+	AIProvider      string `json:"aiProvider,omitempty"`
+	AIApiKey        string `json:"aiApiKey,omitempty"`
+}
