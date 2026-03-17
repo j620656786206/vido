@@ -37,6 +37,140 @@ func (m *MockSetupService) ValidateStep(ctx context.Context, step string, data m
 
 var _ SetupServiceInterface = (*MockSetupService)(nil)
 
+// TestSetupHandler_GetStatus_ResponseStructure validates exact response body shape
+func TestSetupHandler_GetStatus_ResponseStructure(t *testing.T) {
+	mockService := new(MockSetupService)
+	mockService.On("IsFirstRun", mock.Anything).Return(true, nil)
+
+	handler := NewSetupHandler(mockService)
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	apiV1 := router.Group("/api/v1")
+	handler.RegisterRoutes(apiV1)
+
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/setup/status", nil)
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+
+	var raw map[string]interface{}
+	err := json.Unmarshal(resp.Body.Bytes(), &raw)
+	assert.NoError(t, err)
+	assert.True(t, raw["success"].(bool))
+
+	data := raw["data"].(map[string]interface{})
+	_, hasNeedsSetup := data["needsSetup"]
+	assert.True(t, hasNeedsSetup, "response data must contain 'needsSetup' field")
+	assert.Equal(t, true, data["needsSetup"])
+}
+
+// TestSetupHandler_Complete_ResponseStructure validates exact response body shape
+func TestSetupHandler_Complete_ResponseStructure(t *testing.T) {
+	mockService := new(MockSetupService)
+	mockService.On("CompleteSetup", mock.Anything, mock.AnythingOfType("models.SetupConfig")).Return(nil)
+
+	handler := NewSetupHandler(mockService)
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	apiV1 := router.Group("/api/v1")
+	handler.RegisterRoutes(apiV1)
+
+	body, _ := json.Marshal(models.SetupConfig{Language: "en", MediaFolderPath: "/m"})
+	req, _ := http.NewRequest(http.MethodPost, "/api/v1/setup/complete", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+
+	var raw map[string]interface{}
+	err := json.Unmarshal(resp.Body.Bytes(), &raw)
+	assert.NoError(t, err)
+	assert.True(t, raw["success"].(bool))
+
+	data := raw["data"].(map[string]interface{})
+	_, hasMessage := data["message"]
+	assert.True(t, hasMessage, "response data must contain 'message' field")
+	assert.Equal(t, "Setup completed successfully", data["message"])
+}
+
+// TestSetupHandler_Complete_EmptyBody tests empty JSON body
+func TestSetupHandler_Complete_EmptyBody(t *testing.T) {
+	mockService := new(MockSetupService)
+	// Empty SetupConfig is valid JSON binding — all fields are optional in Go struct
+	mockService.On("CompleteSetup", mock.Anything, mock.AnythingOfType("models.SetupConfig")).Return(nil)
+
+	handler := NewSetupHandler(mockService)
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	apiV1 := router.Group("/api/v1")
+	handler.RegisterRoutes(apiV1)
+
+	req, _ := http.NewRequest(http.MethodPost, "/api/v1/setup/complete", bytes.NewBufferString("{}"))
+	req.Header.Set("Content-Type", "application/json")
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+}
+
+// TestSetupHandler_ValidateStep_ResponseStructure validates the valid=true response shape
+func TestSetupHandler_ValidateStep_ResponseStructure(t *testing.T) {
+	mockService := new(MockSetupService)
+	mockService.On("ValidateStep", mock.Anything, "welcome", mock.AnythingOfType("map[string]interface {}")).Return(nil)
+
+	handler := NewSetupHandler(mockService)
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	apiV1 := router.Group("/api/v1")
+	handler.RegisterRoutes(apiV1)
+
+	body, _ := json.Marshal(ValidateStepRequest{Step: "welcome", Data: map[string]interface{}{"language": "en"}})
+	req, _ := http.NewRequest(http.MethodPost, "/api/v1/setup/validate-step", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+
+	var raw map[string]interface{}
+	err := json.Unmarshal(resp.Body.Bytes(), &raw)
+	assert.NoError(t, err)
+
+	data := raw["data"].(map[string]interface{})
+	assert.Equal(t, true, data["valid"])
+}
+
+// TestSetupHandler_ValidateStep_ErrorResponseStructure validates the error response shape
+func TestSetupHandler_ValidateStep_ErrorResponseStructure(t *testing.T) {
+	mockService := new(MockSetupService)
+	mockService.On("ValidateStep", mock.Anything, "welcome", mock.AnythingOfType("map[string]interface {}")).Return(errors.New("language is required"))
+
+	handler := NewSetupHandler(mockService)
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	apiV1 := router.Group("/api/v1")
+	handler.RegisterRoutes(apiV1)
+
+	body, _ := json.Marshal(ValidateStepRequest{Step: "welcome", Data: map[string]interface{}{}})
+	req, _ := http.NewRequest(http.MethodPost, "/api/v1/setup/validate-step", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusBadRequest, resp.Code)
+
+	var raw map[string]interface{}
+	err := json.Unmarshal(resp.Body.Bytes(), &raw)
+	assert.NoError(t, err)
+	assert.False(t, raw["success"].(bool))
+
+	errObj := raw["error"].(map[string]interface{})
+	assert.Equal(t, "SETUP_VALIDATION_FAILED", errObj["code"])
+	assert.Equal(t, "language is required", errObj["message"])
+}
+
 func setupSetupTestRouter(handler *SetupHandler) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()

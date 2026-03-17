@@ -275,6 +275,252 @@ func TestSetupService_CompleteSetup(t *testing.T) {
 	}
 }
 
+// TestSetupService_CompleteSetup_PartialFailures tests individual field save failures
+func TestSetupService_CompleteSetup_PartialFailures(t *testing.T) {
+	tests := []struct {
+		name   string
+		config SetupConfig
+		setup  func(*MockSettingsRepo, *MockSecretsService)
+		errMsg string
+	}{
+		{
+			name: "error - save qbt_url fails",
+			config: SetupConfig{
+				Language: "zh-TW",
+				QBTUrl:   "http://localhost:8080",
+			},
+			setup: func(repo *MockSettingsRepo, sec *MockSecretsService) {
+				repo.On("GetBool", mock.Anything, "setup_completed").Return(false, errors.New("not found"))
+				repo.On("SetString", mock.Anything, "language", "zh-TW").Return(nil)
+				repo.On("SetString", mock.Anything, "qbt_url", "http://localhost:8080").Return(errors.New("db error"))
+			},
+			errMsg: "save qbt_url",
+		},
+		{
+			name: "error - save qbt_username fails",
+			config: SetupConfig{
+				Language:    "zh-TW",
+				QBTUrl:      "http://localhost:8080",
+				QBTUsername: "admin",
+			},
+			setup: func(repo *MockSettingsRepo, sec *MockSecretsService) {
+				repo.On("GetBool", mock.Anything, "setup_completed").Return(false, errors.New("not found"))
+				repo.On("SetString", mock.Anything, "language", "zh-TW").Return(nil)
+				repo.On("SetString", mock.Anything, "qbt_url", "http://localhost:8080").Return(nil)
+				repo.On("SetString", mock.Anything, "qbt_username", "admin").Return(errors.New("db error"))
+			},
+			errMsg: "save qbt_username",
+		},
+		{
+			name: "error - save qbt_password fails",
+			config: SetupConfig{
+				Language:    "zh-TW",
+				QBTUrl:      "http://localhost:8080",
+				QBTPassword: "secret",
+			},
+			setup: func(repo *MockSettingsRepo, sec *MockSecretsService) {
+				repo.On("GetBool", mock.Anything, "setup_completed").Return(false, errors.New("not found"))
+				repo.On("SetString", mock.Anything, "language", "zh-TW").Return(nil)
+				repo.On("SetString", mock.Anything, "qbt_url", "http://localhost:8080").Return(nil)
+				sec.On("Store", mock.Anything, "qbt_password", "secret").Return(errors.New("encryption error"))
+			},
+			errMsg: "save qbt_password",
+		},
+		{
+			name: "error - save media_folder_path fails",
+			config: SetupConfig{
+				Language:        "zh-TW",
+				MediaFolderPath: "/media",
+			},
+			setup: func(repo *MockSettingsRepo, sec *MockSecretsService) {
+				repo.On("GetBool", mock.Anything, "setup_completed").Return(false, errors.New("not found"))
+				repo.On("SetString", mock.Anything, "language", "zh-TW").Return(nil)
+				repo.On("SetString", mock.Anything, "media_folder_path", "/media").Return(errors.New("db error"))
+			},
+			errMsg: "save media_folder_path",
+		},
+		{
+			name: "error - save tmdb_api_key fails",
+			config: SetupConfig{
+				Language:   "zh-TW",
+				TMDbApiKey: "key123",
+			},
+			setup: func(repo *MockSettingsRepo, sec *MockSecretsService) {
+				repo.On("GetBool", mock.Anything, "setup_completed").Return(false, errors.New("not found"))
+				repo.On("SetString", mock.Anything, "language", "zh-TW").Return(nil)
+				sec.On("Store", mock.Anything, "tmdb_api_key", "key123").Return(errors.New("encryption error"))
+			},
+			errMsg: "save tmdb_api_key",
+		},
+		{
+			name: "error - save ai_provider fails",
+			config: SetupConfig{
+				Language:   "zh-TW",
+				AIProvider: "gemini",
+			},
+			setup: func(repo *MockSettingsRepo, sec *MockSecretsService) {
+				repo.On("GetBool", mock.Anything, "setup_completed").Return(false, errors.New("not found"))
+				repo.On("SetString", mock.Anything, "language", "zh-TW").Return(nil)
+				repo.On("SetString", mock.Anything, "ai_provider", "gemini").Return(errors.New("db error"))
+			},
+			errMsg: "save ai_provider",
+		},
+		{
+			name: "error - save ai_api_key fails",
+			config: SetupConfig{
+				Language:   "zh-TW",
+				AIProvider: "gemini",
+				AIApiKey:   "ai-key",
+			},
+			setup: func(repo *MockSettingsRepo, sec *MockSecretsService) {
+				repo.On("GetBool", mock.Anything, "setup_completed").Return(false, errors.New("not found"))
+				repo.On("SetString", mock.Anything, "language", "zh-TW").Return(nil)
+				repo.On("SetString", mock.Anything, "ai_provider", "gemini").Return(nil)
+				sec.On("Store", mock.Anything, "ai_api_key", "ai-key").Return(errors.New("encryption error"))
+			},
+			errMsg: "save ai_api_key",
+		},
+		{
+			name: "success - qbt password skipped when no secrets service",
+			config: SetupConfig{
+				Language:    "zh-TW",
+				QBTUrl:      "http://localhost:8080",
+				QBTPassword: "secret",
+			},
+			setup: func(repo *MockSettingsRepo, sec *MockSecretsService) {
+				repo.On("GetBool", mock.Anything, "setup_completed").Return(false, errors.New("not found"))
+				repo.On("SetString", mock.Anything, "language", "zh-TW").Return(nil)
+				repo.On("SetString", mock.Anything, "qbt_url", "http://localhost:8080").Return(nil)
+				// No secrets call expected — nil secrets service
+				repo.On("SetBool", mock.Anything, "setup_completed", true).Return(nil)
+			},
+			errMsg: "", // no error — password silently skipped when no secrets service
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockRepo := new(MockSettingsRepo)
+			mockSecrets := new(MockSecretsService)
+			tt.setup(mockRepo, mockSecrets)
+
+			// Use nil secrets service for the "skipped" test case
+			var svc *SetupService
+			if tt.errMsg == "" && tt.name == "success - qbt password skipped when no secrets service" {
+				svc = NewSetupService(mockRepo, nil)
+			} else {
+				svc = NewSetupService(mockRepo, mockSecrets)
+			}
+
+			err := svc.CompleteSetup(context.Background(), tt.config)
+
+			if tt.errMsg != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errMsg)
+			} else {
+				assert.NoError(t, err)
+			}
+			mockRepo.AssertExpectations(t)
+		})
+	}
+}
+
+// TestSetupService_ValidateStep_EdgeCases tests edge cases for validation
+func TestSetupService_ValidateStep_EdgeCases(t *testing.T) {
+	tests := []struct {
+		name    string
+		step    string
+		data    map[string]interface{}
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			name: "welcome - empty string language",
+			step: "welcome",
+			data: map[string]interface{}{
+				"language": "",
+			},
+			wantErr: true,
+			errMsg:  "language is required",
+		},
+		{
+			name: "welcome - non-string language type",
+			step: "welcome",
+			data: map[string]interface{}{
+				"language": 123,
+			},
+			wantErr: true,
+			errMsg:  "language is required",
+		},
+		{
+			name: "media-folder - path is a file not directory",
+			step: "media-folder",
+			data: func() map[string]interface{} {
+				// Create a temp file (not directory)
+				f, _ := os.CreateTemp("", "testfile")
+				f.Close()
+				return map[string]interface{}{
+					"mediaFolderPath": f.Name(),
+				}
+			}(),
+			wantErr: true,
+			errMsg:  "not a directory",
+		},
+		{
+			name: "api-keys - TMDb key exactly 16 chars (valid)",
+			step: "api-keys",
+			data: map[string]interface{}{
+				"tmdbApiKey": "1234567890123456",
+			},
+			wantErr: false,
+		},
+		{
+			name: "api-keys - TMDb key 15 chars (invalid)",
+			step: "api-keys",
+			data: map[string]interface{}{
+				"tmdbApiKey": "123456789012345",
+			},
+			wantErr: true,
+			errMsg:  "invalid TMDb API key format",
+		},
+		{
+			name: "qbittorrent - URL exactly 7 chars (valid)",
+			step: "qbittorrent",
+			data: map[string]interface{}{
+				"qbtUrl": "http://",
+			},
+			wantErr: false,
+		},
+		{
+			name: "qbittorrent - URL 6 chars (invalid)",
+			step: "qbittorrent",
+			data: map[string]interface{}{
+				"qbtUrl": "ftp://",
+			},
+			wantErr: true,
+			errMsg:  "invalid qBittorrent URL",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockRepo := new(MockSettingsRepo)
+			svc := NewSetupService(mockRepo, nil)
+
+			err := svc.ValidateStep(context.Background(), tt.step, tt.data)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.errMsg != "" {
+					assert.Contains(t, err.Error(), tt.errMsg)
+				}
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
 // TestSetupService_ValidateStep tests the ValidateStep method
 func TestSetupService_ValidateStep(t *testing.T) {
 	tests := []struct {
