@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/vido/api/internal/models"
+	"github.com/vido/api/internal/services"
 )
 
 // MockSetupService is a mock implementation of SetupServiceInterface
@@ -265,7 +266,7 @@ func TestSetupHandler_Complete(t *testing.T) {
 				Language: "zh-TW",
 			},
 			setupMock: func(m *MockSetupService) {
-				m.On("CompleteSetup", mock.Anything, mock.AnythingOfType("models.SetupConfig")).Return(errors.New("setup already completed"))
+				m.On("CompleteSetup", mock.Anything, mock.AnythingOfType("models.SetupConfig")).Return(services.ErrSetupAlreadyCompleted)
 			},
 			expectedStatus: http.StatusBadRequest,
 		},

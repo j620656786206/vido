@@ -2,23 +2,22 @@ package services
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 
 	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/repository"
 	"github.com/vido/api/internal/secrets"
 )
 
-// SetupServiceInterface defines the contract for setup wizard operations.
-type SetupServiceInterface interface {
-	IsFirstRun(ctx context.Context) (bool, error)
-	CompleteSetup(ctx context.Context, config models.SetupConfig) error
-	ValidateStep(ctx context.Context, step string, data map[string]interface{}) error
-}
+// ErrSetupAlreadyCompleted is returned when setup has already been completed.
+var ErrSetupAlreadyCompleted = errors.New("setup already completed")
 
 // SetupService provides business logic for the setup wizard.
+// Implements handlers.SetupServiceInterface.
 type SetupService struct {
 	settingsRepo   repository.SettingsRepositoryInterface
 	secretsService secrets.SecretsServiceInterface
@@ -34,12 +33,18 @@ func NewSetupService(settingsRepo repository.SettingsRepositoryInterface, secret
 
 // IsFirstRun checks if the setup wizard has been completed.
 // Returns true if setup_completed flag is not set or is false.
+// Returns an error only for real failures (DB errors), not for missing keys.
 func (s *SetupService) IsFirstRun(ctx context.Context) (bool, error) {
 	completed, err := s.settingsRepo.GetBool(ctx, "setup_completed")
 	if err != nil {
-		// If the key doesn't exist, it's a first run
-		slog.Debug("Setup completed flag not found, treating as first run", "error", err)
-		return true, nil
+		// Settings repo returns "not found" for missing keys — treat as first run.
+		// Other errors (DB connection failure, etc.) are propagated.
+		if strings.Contains(err.Error(), "not found") {
+			slog.Debug("Setup completed flag not found, treating as first run")
+			return true, nil
+		}
+		slog.Error("Failed to check setup status", "error", err)
+		return false, fmt.Errorf("check setup status: %w", err)
 	}
 	return !completed, nil
 }
@@ -52,7 +57,7 @@ func (s *SetupService) CompleteSetup(ctx context.Context, config models.SetupCon
 		return fmt.Errorf("check first run: %w", err)
 	}
 	if !isFirst {
-		return fmt.Errorf("setup already completed")
+		return ErrSetupAlreadyCompleted
 	}
 
 	// Save language

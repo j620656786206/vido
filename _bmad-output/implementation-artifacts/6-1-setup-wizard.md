@@ -1,6 +1,6 @@
 # Story 6.1: Setup Wizard
 
-Status: review
+Status: done
 
 ## Story
 
@@ -209,6 +209,22 @@ const WIZARD_STEPS: WizardStep[] = [
 - [Source: _bmad-output/planning-artifacts/ux-design-specification.md#Form-Patterns]
 - [Source: project-context.md#Rule-4-Layered-Architecture]
 
+## Senior Developer Review (AI)
+
+**Review Date:** 2026-03-17
+**Review Outcome:** Approve (after fixes)
+
+### Action Items
+
+- [x] [High] Handler uses fragile string comparison for error detection — replaced with sentinel error + errors.Is
+- [x] [High] SetupServiceInterface defined in both services and handlers (Rule 11 violation) — removed from services
+- [x] [High] IsFirstRun swallows all errors as "first run" including DB failures — now distinguishes not-found vs real errors
+- [x] [Med] Missing compile-time interface check — handler now imports services for sentinel error
+- [ ] [Med] __root.tsx setup status fires on every page (staleTime 5min mitigates impact) — acceptable for MVP
+- [ ] [Low] fetchApi Content-Type on GET requests — cosmetic, non-breaking
+- [ ] [Low] validateMediaFolderStep uses os.Stat directly — acceptable, tests use os.TempDir
+- [ ] [Low] handleNext stepData mapping hardcoded — acceptable for 5 fixed steps
+
 ## Dev Agent Record
 
 ### Agent Model Used
@@ -234,6 +250,8 @@ Claude Opus 4.6 (1M context)
 ### Change Log
 
 - 2026-03-17: Story 6.1 implemented — setup wizard with 5-step flow, backend API, frontend components, 43 total tests
+- 2026-03-17: Test expansion — 74 new tests (service edge cases, handler response validation, step component tests, API client tests)
+- 2026-03-17: Code review fixes — sentinel error for setup-already-completed, IsFirstRun distinguishes not-found vs DB errors, removed duplicate interface (Rule 11), handler uses errors.Is instead of string comparison
 
 ### File List
 

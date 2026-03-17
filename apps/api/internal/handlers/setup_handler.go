@@ -2,10 +2,12 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 
 	"github.com/gin-gonic/gin"
 	"github.com/vido/api/internal/models"
+	"github.com/vido/api/internal/services"
 )
 
 // SetupServiceInterface defines the contract for setup wizard operations.
@@ -57,7 +59,7 @@ func (h *SetupHandler) Complete(c *gin.Context) {
 
 	if err := h.service.CompleteSetup(c.Request.Context(), config); err != nil {
 		slog.Error("Failed to complete setup", "error", err)
-		if err.Error() == "setup already completed" {
+		if errors.Is(err, services.ErrSetupAlreadyCompleted) {
 			BadRequestError(c, "SETUP_ALREADY_COMPLETED", "Setup wizard has already been completed")
 			return
 		}
