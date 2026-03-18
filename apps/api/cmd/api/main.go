@@ -32,50 +32,6 @@ import (
 	_ "github.com/vido/api/internal/database/migrations"
 )
 
-// multiHandler fans out log records to multiple slog.Handlers.
-type multiHandler struct {
-	handlers []slog.Handler
-}
-
-func newMultiHandler(handlers ...slog.Handler) *multiHandler {
-	return &multiHandler{handlers: handlers}
-}
-
-func (h *multiHandler) Enabled(ctx context.Context, level slog.Level) bool {
-	for _, handler := range h.handlers {
-		if handler.Enabled(ctx, level) {
-			return true
-		}
-	}
-	return false
-}
-
-func (h *multiHandler) Handle(ctx context.Context, r slog.Record) error {
-	for _, handler := range h.handlers {
-		if handler.Enabled(ctx, r.Level) {
-			// Ignore errors from individual handlers to avoid cascading failures
-			_ = handler.Handle(ctx, r)
-		}
-	}
-	return nil
-}
-
-func (h *multiHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
-	handlers := make([]slog.Handler, len(h.handlers))
-	for i, handler := range h.handlers {
-		handlers[i] = handler.WithAttrs(attrs)
-	}
-	return &multiHandler{handlers: handlers}
-}
-
-func (h *multiHandler) WithGroup(name string) slog.Handler {
-	handlers := make([]slog.Handler, len(h.handlers))
-	for i, handler := range h.handlers {
-		handlers[i] = handler.WithGroup(name)
-	}
-	return &multiHandler{handlers: handlers}
-}
-
 func main() {
 	// Load configuration
 	cfg, err := config.Load()
@@ -153,7 +109,7 @@ func main() {
 	defer dbLogHandler.Close()
 	// Add DB handler alongside existing stdout handler
 	currentHandler := slog.Default().Handler()
-	multiHandler := slog.New(newMultiHandler(currentHandler, dbLogHandler))
+	multiHandler := slog.New(logger.NewMultiHandler(currentHandler, dbLogHandler))
 	slog.SetDefault(multiHandler)
 	slog.Info("System log DB handler initialized")
 

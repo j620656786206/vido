@@ -88,7 +88,7 @@ func TestLogService_GetLogs(t *testing.T) {
 
 		_, err := svc.GetLogs(ctx, models.LogFilter{Level: "INVALID"})
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "invalid log level")
+		assert.ErrorIs(t, err, ErrInvalidLogLevel)
 	})
 
 	t.Run("defaults pagination", func(t *testing.T) {

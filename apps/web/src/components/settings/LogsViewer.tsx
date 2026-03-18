@@ -32,9 +32,10 @@ export function LogsViewer() {
     setPage(1);
   }, []);
 
-  const handleClearOld = async () => {
-    const result = await clearLogs.mutateAsync(30);
-    setLastResult(result);
+  const handleClearOld = () => {
+    clearLogs.mutate(30, {
+      onSuccess: (result) => setLastResult(result),
+    });
   };
 
   const totalPages = data ? Math.ceil(data.total / PER_PAGE) : 0;

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -102,6 +103,9 @@ func TestLogHandler_GetLogs_WithFilters(t *testing.T) {
 
 func TestLogHandler_GetLogs_InvalidLevel(t *testing.T) {
 	mockSvc := new(MockLogService)
+
+	// Service returns sentinel error for invalid level
+	mockSvc.On("GetLogs", mock.Anything, mock.Anything).Return(nil, fmt.Errorf("%w: INVALID", services.ErrInvalidLogLevel))
 
 	router := setupLogRouter(mockSvc)
 	req, _ := http.NewRequest(http.MethodGet, "/api/v1/settings/logs?level=INVALID", nil)

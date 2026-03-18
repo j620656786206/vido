@@ -1,6 +1,6 @@
 # Story 6.3: System Logs Viewer
 
-Status: review
+Status: done
 
 ## Story
 
@@ -192,9 +192,27 @@ Claude Opus 4.6 (1M context)
 - Task 6: Wired DBHandler in main.go via multiHandler (stdout + DB), registered log routes before settingsHandler, component tests pass (LogsViewer.spec.tsx, LogFilters.spec.tsx).
 - 🎨 UX Verification: No dedicated logs page design mockup exists. Implementation follows established design patterns (dark theme, SettingsLayout sidebar, Tailwind color-coded badges per Dev Notes spec).
 
+## Senior Developer Review (AI)
+
+**Review Date:** 2026-03-18
+**Review Outcome:** Approve (after fixes)
+**Reviewer:** Claude Opus 4.6 (CR workflow)
+
+### Action Items
+
+- [x] [High] SQL LIKE wildcard injection — escape `%` and `_` in keyword search (log_repository.go:46)
+- [x] [High] Sentinel error — use `ErrInvalidLogLevel` sentinel error per project patterns (log_service.go:63)
+- [x] [High] Slice mutation — copy args before append to prevent Go slice gotcha (log_repository.go:68)
+- [x] [Med] Unhandled promise rejection — use `mutate()` with `onSuccess` instead of `mutateAsync` (LogsViewer.tsx:35)
+- [x] [Med] multiHandler in main.go — moved to `logger.MultiHandler` for testability (main.go → logger/multi_handler.go)
+- [ ] [Med] No automatic log retention — table grows unboundedly (accepted risk for now)
+- [ ] [Low] `source` field mostly empty for standard slog calls
+- [ ] [Low] Dropped logs on flush failure not tracked
+
 ### Change Log
 
 - 2026-03-18: Implemented Story 6.3 System Logs Viewer — all 6 tasks complete, all tests pass
+- 2026-03-18: Code review fixes — sentinel error, SQL LIKE escape, slice mutation, error handling, multiHandler refactor
 
 ### File List
 
@@ -210,7 +228,8 @@ Claude Opus 4.6 (1M context)
 - apps/api/internal/services/log_service_test.go (new)
 - apps/api/internal/handlers/log_handler.go (new)
 - apps/api/internal/handlers/log_handler_test.go (new)
-- apps/api/cmd/api/main.go (modified — added multiHandler, DB log handler, log service, log handler wiring)
+- apps/api/internal/logger/multi_handler.go (new — moved from main.go)
+- apps/api/cmd/api/main.go (modified — DB log handler, log service, log handler wiring)
 - apps/web/src/services/logService.ts (new)
 - apps/web/src/hooks/useLogs.ts (new)
 - apps/web/src/components/settings/LogsViewer.tsx (new)

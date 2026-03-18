@@ -42,8 +42,10 @@ func (r *LogRepository) GetLogs(ctx context.Context, filter models.LogFilter) ([
 	}
 
 	if filter.Keyword != "" {
-		conditions = append(conditions, "(message LIKE ? OR source LIKE ? OR context_json LIKE ?)")
-		kw := "%" + filter.Keyword + "%"
+		conditions = append(conditions, "(message LIKE ? ESCAPE '\\' OR source LIKE ? ESCAPE '\\' OR context_json LIKE ? ESCAPE '\\')")
+		// Escape SQL LIKE meta-characters to prevent wildcard injection
+		escaped := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(filter.Keyword)
+		kw := "%" + escaped + "%"
 		args = append(args, kw, kw, kw)
 	}
 
@@ -65,7 +67,10 @@ func (r *LogRepository) GetLogs(ctx context.Context, filter models.LogFilter) ([
 		"SELECT id, level, message, COALESCE(source, ''), COALESCE(context_json, ''), created_at FROM system_logs %s ORDER BY created_at DESC LIMIT ? OFFSET ?",
 		where,
 	)
-	dataArgs := append(args, filter.PerPage, offset)
+	// Copy args to avoid mutating the original slice (Go append gotcha)
+	dataArgs := make([]interface{}, len(args), len(args)+2)
+	copy(dataArgs, args)
+	dataArgs = append(dataArgs, filter.PerPage, offset)
 
 	rows, err := r.db.QueryContext(ctx, dataQuery, dataArgs...)
 	if err != nil {

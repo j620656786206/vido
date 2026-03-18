@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"log/slog"
 	"strconv"
 
@@ -38,14 +39,12 @@ func (h *LogHandler) GetLogs(c *gin.Context) {
 		}
 	}
 
-	// Validate level if provided
-	if filter.Level != "" && !models.IsValidLogLevel(filter.Level) {
-		BadRequestError(c, "VALIDATION_INVALID_FORMAT", "Invalid log level. Must be one of: ERROR, WARN, INFO, DEBUG")
-		return
-	}
-
 	result, err := h.service.GetLogs(c.Request.Context(), filter)
 	if err != nil {
+		if errors.Is(err, services.ErrInvalidLogLevel) {
+			BadRequestError(c, "VALIDATION_INVALID_FORMAT", err.Error())
+			return
+		}
 		slog.Error("Failed to get system logs", "error", err)
 		InternalServerError(c, "Failed to retrieve system logs")
 		return

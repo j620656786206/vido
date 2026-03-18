@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -10,6 +11,9 @@ import (
 	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/repository"
 )
+
+// ErrInvalidLogLevel indicates an unknown log level was provided
+var ErrInvalidLogLevel = errors.New("invalid log level")
 
 // LogServiceInterface defines the contract for system log operations.
 type LogServiceInterface interface {
@@ -60,7 +64,7 @@ func NewLogService(repo repository.LogRepositoryInterface) *LogService {
 func (s *LogService) GetLogs(ctx context.Context, filter models.LogFilter) (*LogsResponse, error) {
 	// Validate level filter if provided
 	if filter.Level != "" && !models.IsValidLogLevel(filter.Level) {
-		return nil, fmt.Errorf("invalid log level: %s", filter.Level)
+		return nil, fmt.Errorf("%w: %s", ErrInvalidLogLevel, filter.Level)
 	}
 
 	// Defaults
