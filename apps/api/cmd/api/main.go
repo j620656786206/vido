@@ -18,6 +18,7 @@ import (
 	"github.com/vido/api/internal/handlers"
 	"github.com/vido/api/internal/health"
 	"github.com/vido/api/internal/images"
+	"github.com/vido/api/internal/logger"
 	"github.com/vido/api/internal/repository"
 	"github.com/vido/api/internal/retry"
 	"github.com/vido/api/internal/secrets"
@@ -30,6 +31,50 @@ import (
 	// Import migrations to register them via init()
 	_ "github.com/vido/api/internal/database/migrations"
 )
+
+// multiHandler fans out log records to multiple slog.Handlers.
+type multiHandler struct {
+	handlers []slog.Handler
+}
+
+func newMultiHandler(handlers ...slog.Handler) *multiHandler {
+	return &multiHandler{handlers: handlers}
+}
+
+func (h *multiHandler) Enabled(ctx context.Context, level slog.Level) bool {
+	for _, handler := range h.handlers {
+		if handler.Enabled(ctx, level) {
+			return true
+		}
+	}
+	return false
+}
+
+func (h *multiHandler) Handle(ctx context.Context, r slog.Record) error {
+	for _, handler := range h.handlers {
+		if handler.Enabled(ctx, r.Level) {
+			// Ignore errors from individual handlers to avoid cascading failures
+			_ = handler.Handle(ctx, r)
+		}
+	}
+	return nil
+}
+
+func (h *multiHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	handlers := make([]slog.Handler, len(h.handlers))
+	for i, handler := range h.handlers {
+		handlers[i] = handler.WithAttrs(attrs)
+	}
+	return &multiHandler{handlers: handlers}
+}
+
+func (h *multiHandler) WithGroup(name string) slog.Handler {
+	handlers := make([]slog.Handler, len(h.handlers))
+	for i, handler := range h.handlers {
+		handlers[i] = handler.WithGroup(name)
+	}
+	return &multiHandler{handlers: handlers}
+}
 
 func main() {
 	// Load configuration
@@ -101,6 +146,17 @@ func main() {
 	}
 	slog.Info("Database migrations completed", "applied", appliedCount, "total", len(status))
 
+	// Initialize DB log handler for system logs (Story 6.3)
+	// Must come after migrations so the system_logs table exists
+	logRepo := repository.NewLogRepository(db.Conn())
+	dbLogHandler := logger.NewDBHandler(logRepo)
+	defer dbLogHandler.Close()
+	// Add DB handler alongside existing stdout handler
+	currentHandler := slog.Default().Handler()
+	multiHandler := slog.New(newMultiHandler(currentHandler, dbLogHandler))
+	slog.SetDefault(multiHandler)
+	slog.Info("System log DB handler initialized")
+
 	// Initialize offline cache for graceful degradation (Story 3.12)
 	offlineCache := cache.NewOfflineCache(db.Conn())
 	if err := offlineCache.InitSchema(ctx); err != nil {
@@ -131,6 +187,9 @@ func main() {
 	qbittorrentService := services.NewQBittorrentService(repos.Settings, secretsService)
 	downloadService := services.NewDownloadService(qbittorrentService, slog.Default())
 	mediaService := services.NewMediaService(cfg.MediaDirs)
+
+	// Initialize log service (Story 6.3)
+	logService := services.NewLogService(repos.Logs)
 
 	// Initialize cache management services (Story 6.2)
 	posterDir := filepath.Join(cfg.DataDir, "posters")
@@ -311,6 +370,7 @@ func main() {
 	libraryService := services.NewLibraryService(repos.Movies, repos.Series, repos.Episodes, services.WithTMDbVideos(tmdbService.VideosProvider()))
 	libraryHandler := handlers.NewLibraryHandler(libraryService)
 	recentMediaHandler := handlers.NewRecentMediaHandler(movieService, seriesService)
+	logHandler := handlers.NewLogHandler(logService)
 	cacheHandler := handlers.NewCacheHandler(cacheStatsService, cacheCleanupService)
 	// parseProgressHandler already initialized above with defer Close()
 	slog.Info("Handlers initialized with service injection")
@@ -334,6 +394,7 @@ func main() {
 	{
 		movieHandler.RegisterRoutes(apiV1)
 		seriesHandler.RegisterRoutes(apiV1)
+		logHandler.RegisterRoutes(apiV1)    // Must be before settingsHandler to avoid /settings/:key conflict
 		cacheHandler.RegisterRoutes(apiV1) // Must be before settingsHandler to avoid /settings/:key conflict
 		settingsHandler.RegisterRoutes(apiV1)
 		setupHandler.RegisterRoutes(apiV1)

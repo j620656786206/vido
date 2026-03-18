@@ -19,6 +19,7 @@ type Repositories struct {
 	Retry             RetryRepositoryInterface
 	ParseJobs         ParseJobRepositoryInterface
 	ConnectionHistory ConnectionHistoryRepositoryInterface
+	Logs              LogRepositoryInterface
 }
 
 // NewRepositories creates all repository implementations for the given database connection.
@@ -43,6 +44,7 @@ func NewRepositories(db *sql.DB) *Repositories {
 		Retry:             NewRetryRepository(db),
 		ParseJobs:         NewParseJobRepository(db),
 		ConnectionHistory: NewConnectionHistoryRepository(db),
+		Logs:              NewLogRepository(db),
 	}
 }
 
@@ -67,5 +69,6 @@ func NewRepositoriesWithCache(db *sql.DB) *Repositories {
 		Retry:             NewRetryRepository(db),
 		ParseJobs:         NewParseJobRepository(db),
 		ConnectionHistory: NewConnectionHistoryRepository(db),
+		Logs:              NewLogRepository(db),
 	}
 }
