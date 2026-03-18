@@ -154,4 +154,100 @@ func TestFindHint(t *testing.T) {
 		hint := findHint(map[string]interface{}{}, "random message")
 		assert.Empty(t, hint)
 	})
+
+	// All known error codes produce hints
+	t.Run("all known error codes", func(t *testing.T) {
+		knownCodes := []string{
+			"TMDB_TIMEOUT", "AI_QUOTA_EXCEEDED", "DB_QUERY_FAILED",
+			"QBT_CONNECTION", "TMDB_NOT_FOUND", "TMDB_RATE_LIMIT",
+			"AI_TIMEOUT", "AUTH_TOKEN_EXPIRED",
+		}
+		for _, code := range knownCodes {
+			hint := findHint(map[string]interface{}{"error_code": code}, "")
+			assert.NotEmpty(t, hint, "expected hint for code: %s", code)
+		}
+	})
+
+	t.Run("error_code takes precedence over code", func(t *testing.T) {
+		hint := findHint(map[string]interface{}{
+			"error_code": "TMDB_TIMEOUT",
+			"code":       "QBT_CONNECTION",
+		}, "")
+		assert.Contains(t, hint, "TMDb")
+	})
+
+	t.Run("non-string error_code is ignored", func(t *testing.T) {
+		hint := findHint(map[string]interface{}{"error_code": 12345}, "")
+		assert.Empty(t, hint)
+	})
+
+	t.Run("empty context empty message", func(t *testing.T) {
+		hint := findHint(map[string]interface{}{}, "")
+		assert.Empty(t, hint)
+	})
+
+	t.Run("nil context map", func(t *testing.T) {
+		hint := findHint(nil, "some error")
+		assert.Empty(t, hint)
+	})
+}
+
+func TestLogService_GetLogs_MalformedJSON(t *testing.T) {
+	ctx := context.Background()
+	repo := new(MockLogRepo)
+	svc := NewLogService(repo)
+
+	logs := []models.SystemLog{
+		{
+			ID:          1,
+			Level:       models.LogLevelError,
+			Message:     "Error with bad context",
+			ContextJSON: `{invalid json`,
+			CreatedAt:   time.Now(),
+		},
+	}
+
+	repo.On("GetLogs", mock.Anything, mock.Anything).Return(logs, 1, nil)
+
+	result, err := svc.GetLogs(ctx, models.LogFilter{Page: 1, PerPage: 50})
+	require.NoError(t, err)
+	assert.Len(t, result.Logs, 1)
+	// Malformed JSON should not crash — Context stays nil
+	assert.Nil(t, result.Logs[0].Context)
+	assert.Empty(t, result.Logs[0].Hint)
+}
+
+func TestLogService_GetLogs_EmptyResult(t *testing.T) {
+	ctx := context.Background()
+	repo := new(MockLogRepo)
+	svc := NewLogService(repo)
+
+	repo.On("GetLogs", mock.Anything, mock.Anything).Return([]models.SystemLog{}, 0, nil)
+
+	result, err := svc.GetLogs(ctx, models.LogFilter{Page: 1, PerPage: 50})
+	require.NoError(t, err)
+	assert.Equal(t, 0, result.Total)
+	assert.Empty(t, result.Logs)
+}
+
+func TestLogService_GetLogs_RepoError(t *testing.T) {
+	ctx := context.Background()
+	repo := new(MockLogRepo)
+	svc := NewLogService(repo)
+
+	repo.On("GetLogs", mock.Anything, mock.Anything).Return([]models.SystemLog(nil), 0, assert.AnError)
+
+	_, err := svc.GetLogs(ctx, models.LogFilter{Page: 1, PerPage: 50})
+	assert.Error(t, err)
+}
+
+func TestLogService_ClearLogs_RepoError(t *testing.T) {
+	ctx := context.Background()
+	repo := new(MockLogRepo)
+	svc := NewLogService(repo)
+
+	repo.On("DeleteOlderThan", mock.Anything, 7).Return(int64(0), assert.AnError)
+
+	_, err := svc.ClearLogs(ctx, 7)
+	assert.Error(t, err)
 }

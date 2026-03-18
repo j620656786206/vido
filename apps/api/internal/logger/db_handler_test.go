@@ -209,10 +209,101 @@ func TestMaskSensitiveValue(t *testing.T) {
 		{"password", "pass", "****"},
 		{"token", "tok123456", "tok1****"},
 		{"username", "john", "john"},
+		// Case-insensitive sensitive keys
+		{"API_KEY", "longvalue123", "long****"},
+		{"Password", "secret99", "secr****"},
+		{"SECRET", "topsecretval", "tops****"},
+		{"passwd", "pw12345", "pw12****"},
+		{"PWD", "shortpwd", "shor****"},
+		// Non-sensitive key with short value
+		{"name", "ab", "ab"},
+		// Empty value
+		{"api_key", "", "****"},
+		// Exactly 4 chars
+		{"token", "abcd", "****"},
+		// 5 chars
+		{"token", "abcde", "abcd****"},
 	}
 
 	for _, tt := range tests {
 		result := maskSensitiveValue(tt.key, tt.value)
 		assert.Equal(t, tt.expected, result, "key=%s value=%s", tt.key, tt.value)
 	}
+}
+
+func TestMaskSensitiveString(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		contains string
+		absent   string
+	}{
+		{
+			name:   "masks bearer token pattern",
+			input:  "Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.payload.sig",
+			absent: "eyJhbGciOiJIUzI1NiJ9",
+		},
+		{
+			name:   "masks hex string >= 32 chars",
+			input:  "Key: abcdef0123456789abcdef0123456789",
+			absent: "abcdef0123456789abcdef0123456789",
+		},
+		{
+			name:     "does not mask short hex string",
+			input:    "ID: abcdef01234567",
+			contains: "abcdef01234567",
+		},
+		{
+			name:   "masks api_key=value pattern",
+			input:  "config has api_key=supersecret123456",
+			absent: "supersecret123456",
+		},
+		{
+			name:   "masks password: value pattern",
+			input:  "password: mysecretpassword99",
+			absent: "mysecretpassword99",
+		},
+		{
+			name:     "preserves non-sensitive text",
+			input:    "Server started on port 8080",
+			contains: "Server started on port 8080",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := maskSensitiveString(tt.input)
+			if tt.absent != "" {
+				assert.NotContains(t, result, tt.absent)
+			}
+			if tt.contains != "" {
+				assert.Contains(t, result, tt.contains)
+			}
+		})
+	}
+}
+
+func TestDBHandler_ConcurrentLogging(t *testing.T) {
+	repo := &mockLogRepo{}
+	handler := NewDBHandler(repo)
+	defer handler.Close()
+
+	logger := slog.New(handler)
+
+	// Log from 10 goroutines simultaneously
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+			for j := 0; j < 10; j++ {
+				logger.Info("Concurrent log", "goroutine", idx, "iter", j)
+			}
+		}(i)
+	}
+	wg.Wait()
+	handler.flush()
+
+	logs := repo.getLogs()
+	assert.Equal(t, 100, len(logs))
 }

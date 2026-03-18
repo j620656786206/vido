@@ -199,3 +199,76 @@ func TestLogHandler_ClearLogs_ServiceError(t *testing.T) {
 
 	assert.Equal(t, http.StatusInternalServerError, resp.Code)
 }
+
+func TestLogHandler_GetLogs_LevelOnlyFilter(t *testing.T) {
+	mockSvc := new(MockLogService)
+
+	mockSvc.On("GetLogs", mock.Anything, models.LogFilter{
+		Level: models.LogLevelWarn,
+	}).Return(&services.LogsResponse{
+		Logs:    []models.SystemLog{},
+		Total:   0,
+		Page:    1,
+		PerPage: 50,
+	}, nil)
+
+	router := setupLogRouter(mockSvc)
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/settings/logs?level=WARN", nil)
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+	mockSvc.AssertExpectations(t)
+}
+
+func TestLogHandler_GetLogs_KeywordOnlyFilter(t *testing.T) {
+	mockSvc := new(MockLogService)
+
+	mockSvc.On("GetLogs", mock.Anything, models.LogFilter{
+		Keyword: "database",
+	}).Return(&services.LogsResponse{
+		Logs:    []models.SystemLog{},
+		Total:   0,
+		Page:    1,
+		PerPage: 50,
+	}, nil)
+
+	router := setupLogRouter(mockSvc)
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/settings/logs?keyword=database", nil)
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+	mockSvc.AssertExpectations(t)
+}
+
+func TestLogHandler_GetLogs_InvalidPageParams(t *testing.T) {
+	mockSvc := new(MockLogService)
+
+	// Non-numeric page/per_page should be silently ignored (default to 0 which service normalizes)
+	mockSvc.On("GetLogs", mock.Anything, models.LogFilter{}).Return(&services.LogsResponse{
+		Logs:    []models.SystemLog{},
+		Total:   0,
+		Page:    1,
+		PerPage: 50,
+	}, nil)
+
+	router := setupLogRouter(mockSvc)
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/settings/logs?page=abc&per_page=xyz", nil)
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+}
+
+func TestLogHandler_ClearLogs_FloatDays(t *testing.T) {
+	mockSvc := new(MockLogService)
+
+	router := setupLogRouter(mockSvc)
+	req, _ := http.NewRequest(http.MethodDelete, "/api/v1/settings/logs?older_than_days=3.5", nil)
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	// Float is not a valid integer
+	assert.Equal(t, http.StatusBadRequest, resp.Code)
+}
