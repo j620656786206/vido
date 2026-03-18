@@ -65,9 +65,48 @@ export function trackPid(pid: number): void {
 }
 
 /**
+ * Complete the setup wizard so the app doesn't redirect to /setup.
+ * In fresh environments (CI or first-time local), the API returns needsSetup: true,
+ * which causes __root.tsx to redirect all routes to /setup, breaking E2E tests.
+ */
+async function completeSetupWizard(apiUrl: string): Promise<void> {
+  // Check if setup is needed
+  const statusRes = await fetch(`${apiUrl}/setup/status`);
+  if (!statusRes.ok) {
+    console.log('   Setup status check failed, skipping setup completion');
+    return;
+  }
+
+  const statusBody = await statusRes.json();
+  const needsSetup = statusBody?.data?.needsSetup ?? statusBody?.needsSetup;
+
+  if (!needsSetup) {
+    console.log('   Setup already completed, skipping');
+    return;
+  }
+
+  // Complete setup with minimal config
+  const completeRes = await fetch(`${apiUrl}/setup/complete`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      language: 'zh-TW',
+      mediaFolderPath: '/media',
+    }),
+  });
+
+  if (completeRes.ok) {
+    console.log('   Setup wizard completed successfully');
+  } else {
+    const body = await completeRes.text();
+    console.warn(`   Setup completion failed (${completeRes.status}): ${body}`);
+  }
+}
+
+/**
  * Global setup function
  */
-async function globalSetup(_config: FullConfig): Promise<void> {
+async function globalSetup(config: FullConfig): Promise<void> {
   // Generate unique session ID
   const sessionId = `session-${process.pid}-${crypto.randomBytes(4).toString('hex')}`;
 
@@ -85,7 +124,13 @@ async function globalSetup(_config: FullConfig): Promise<void> {
   writeSession(session);
 
   console.log(`\n📋 Test session started: ${sessionId}`);
-  console.log(`   Session file: ${getSessionFilePath()}\n`);
+  console.log(`   Session file: ${getSessionFilePath()}`);
+
+  // Complete setup wizard to prevent redirect to /setup
+  const apiUrl = process.env.API_URL || 'http://localhost:8080/api/v1';
+  console.log(`   Checking setup wizard status at ${apiUrl}...`);
+  await completeSetupWizard(apiUrl);
+  console.log('');
 }
 
 export default globalSetup;
