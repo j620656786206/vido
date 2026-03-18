@@ -16,9 +16,10 @@ var ErrInvalidCacheType = errors.New("invalid cache type")
 
 // CleanupResult represents the outcome of a cache cleanup operation
 type CleanupResult struct {
-	Type           string `json:"type"`
-	EntriesRemoved int64  `json:"entriesRemoved"`
-	BytesReclaimed int64  `json:"bytesReclaimed"`
+	Type           string   `json:"type"`
+	EntriesRemoved int64    `json:"entriesRemoved"`
+	BytesReclaimed int64    `json:"bytesReclaimed"`
+	Errors         []string `json:"errors,omitempty"`
 }
 
 // ValidCacheTypes lists all recognized cache type keys
@@ -68,6 +69,7 @@ func (s *CacheCleanupService) ClearCacheByAge(ctx context.Context, days int) (*C
 		removed, err := s.deleteOlderThan(ctx, tbl.name, tbl.dateCol, cutoff)
 		if err != nil {
 			slog.Warn("Failed to clear old entries from table", "table", tbl.name, "error", err)
+			result.Errors = append(result.Errors, fmt.Sprintf("%s: %v", tbl.name, err))
 			continue
 		}
 		result.EntriesRemoved += removed
@@ -77,6 +79,7 @@ func (s *CacheCleanupService) ClearCacheByAge(ctx context.Context, days int) (*C
 	imageRemoved, imageBytes, err := s.clearOldImages(cutoff)
 	if err != nil {
 		slog.Warn("Failed to clear old images", "error", err)
+		result.Errors = append(result.Errors, fmt.Sprintf("images: %v", err))
 	} else {
 		result.EntriesRemoved += imageRemoved
 		result.BytesReclaimed += imageBytes

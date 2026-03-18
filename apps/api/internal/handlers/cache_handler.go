@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"errors"
 	"log/slog"
 	"strconv"
@@ -10,25 +9,14 @@ import (
 	"github.com/vido/api/internal/services"
 )
 
-// CacheStatsServiceInterface defines the contract for cache stats in handler layer
-type CacheStatsServiceInterface interface {
-	GetCacheStats(ctx context.Context) (*services.CacheStats, error)
-}
-
-// CacheCleanupServiceInterface defines the contract for cache cleanup in handler layer
-type CacheCleanupServiceInterface interface {
-	ClearCacheByAge(ctx context.Context, days int) (*services.CleanupResult, error)
-	ClearCacheByType(ctx context.Context, cacheType string) (*services.CleanupResult, error)
-}
-
 // CacheHandler handles HTTP requests for cache management
 type CacheHandler struct {
-	statsService   CacheStatsServiceInterface
-	cleanupService CacheCleanupServiceInterface
+	statsService   services.CacheStatsServiceInterface
+	cleanupService services.CacheCleanupServiceInterface
 }
 
 // NewCacheHandler creates a new CacheHandler
-func NewCacheHandler(stats CacheStatsServiceInterface, cleanup CacheCleanupServiceInterface) *CacheHandler {
+func NewCacheHandler(stats services.CacheStatsServiceInterface, cleanup services.CacheCleanupServiceInterface) *CacheHandler {
 	return &CacheHandler{
 		statsService:   stats,
 		cleanupService: cleanup,

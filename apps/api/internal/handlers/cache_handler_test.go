@@ -28,6 +28,11 @@ func (m *MockCacheStatsService) GetCacheStats(ctx context.Context) (*services.Ca
 	return args.Get(0).(*services.CacheStats), args.Error(1)
 }
 
+func (m *MockCacheStatsService) GetImageCacheSize(ctx context.Context) (int64, error) {
+	args := m.Called(ctx)
+	return args.Get(0).(int64), args.Error(1)
+}
+
 // MockCacheCleanupService
 type MockCacheCleanupService struct {
 	mock.Mock
@@ -49,7 +54,7 @@ func (m *MockCacheCleanupService) ClearCacheByType(ctx context.Context, cacheTyp
 	return args.Get(0).(*services.CleanupResult), args.Error(1)
 }
 
-func setupCacheRouter(stats CacheStatsServiceInterface, cleanup CacheCleanupServiceInterface) *gin.Engine {
+func setupCacheRouter(stats services.CacheStatsServiceInterface, cleanup services.CacheCleanupServiceInterface) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 	handler := NewCacheHandler(stats, cleanup)

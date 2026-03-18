@@ -1,6 +1,6 @@
 # Story 6.2: Cache Management
 
-Status: review
+Status: done
 
 ## Story
 

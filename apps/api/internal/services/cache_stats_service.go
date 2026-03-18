@@ -47,17 +47,8 @@ func NewCacheStatsService(db *sql.DB, imageDir string) *CacheStatsService {
 func (s *CacheStatsService) GetCacheStats(ctx context.Context) (*CacheStats, error) {
 	stats := &CacheStats{}
 
-	// Image cache (filesystem)
-	imageSize, err := s.GetImageCacheSize(ctx)
-	if err != nil {
-		slog.Warn("Failed to get image cache size", "error", err)
-		imageSize = 0
-	}
-	imageCount, err := s.countImageFiles()
-	if err != nil {
-		slog.Warn("Failed to count image files", "error", err)
-		imageCount = 0
-	}
+	// Image cache (filesystem) — single walk for both size and count
+	imageSize, imageCount := s.getImageStats()
 	stats.CacheTypes = append(stats.CacheTypes, CacheTypeInfo{
 		Type:       "image",
 		Label:      "圖片快取",
@@ -121,56 +112,36 @@ func (s *CacheStatsService) GetCacheStats(ctx context.Context) (*CacheStats, err
 	return stats, nil
 }
 
-// GetImageCacheSize calculates the total size of image cache directory
-func (s *CacheStatsService) GetImageCacheSize(ctx context.Context) (int64, error) {
-	if s.imageDir == "" {
-		return 0, nil
-	}
-
-	var totalSize int64
-	err := filepath.Walk(s.imageDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if !info.IsDir() {
-			totalSize += info.Size()
-		}
-		return nil
-	})
-	if err != nil {
-		if os.IsNotExist(err) {
-			return 0, nil
-		}
-		return 0, fmt.Errorf("walk image dir: %w", err)
-	}
-
-	return totalSize, nil
+// GetImageCacheSize calculates the total size of image cache directory.
+// Implements CacheStatsServiceInterface.
+func (s *CacheStatsService) GetImageCacheSize(_ context.Context) (int64, error) {
+	size, _ := s.getImageStats()
+	return size, nil
 }
 
-// countImageFiles counts the number of files in image cache directory
-func (s *CacheStatsService) countImageFiles() (int64, error) {
+// getImageStats returns both total size and file count in a single walk.
+func (s *CacheStatsService) getImageStats() (sizeBytes int64, count int64) {
 	if s.imageDir == "" {
-		return 0, nil
+		return 0, 0
 	}
 
-	var count int64
-	err := filepath.Walk(s.imageDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
+	err := filepath.Walk(s.imageDir, func(path string, info os.FileInfo, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
 		}
 		if !info.IsDir() {
+			sizeBytes += info.Size()
 			count++
 		}
 		return nil
 	})
 	if err != nil {
-		if os.IsNotExist(err) {
-			return 0, nil
+		if !os.IsNotExist(err) {
+			slog.Warn("Failed to walk image cache dir", "error", err)
 		}
-		return 0, fmt.Errorf("count image files: %w", err)
 	}
 
-	return count, nil
+	return sizeBytes, count
 }
 
 // getTableStats returns the estimated size and row count for a given table.
