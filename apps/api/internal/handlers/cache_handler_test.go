@@ -238,6 +238,110 @@ func TestCacheHandler_ClearCacheByType_ServerError(t *testing.T) {
 	assert.Equal(t, "CACHE_CLEAR_FAILED", errObj["code"])
 }
 
+func TestCacheHandler_ClearAllCache_ZeroDaysParam(t *testing.T) {
+	mockStats := new(MockCacheStatsService)
+	mockCleanup := new(MockCacheCleanupService)
+
+	router := setupCacheRouter(mockStats, mockCleanup)
+	req, _ := http.NewRequest(http.MethodDelete, "/api/v1/settings/cache?older_than_days=0", nil)
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusBadRequest, resp.Code)
+}
+
+func TestCacheHandler_ClearAllCache_EmptyDaysParam_FallsToAllClear(t *testing.T) {
+	mockStats := new(MockCacheStatsService)
+	mockCleanup := new(MockCacheCleanupService)
+
+	// Empty older_than_days= → gin returns "" → handler treats as no param → clear all
+	for _, ct := range services.ValidCacheTypes {
+		mockCleanup.On("ClearCacheByType", mock.Anything, ct).Return(
+			&services.CleanupResult{Type: ct, EntriesRemoved: 1, BytesReclaimed: 0}, nil,
+		)
+	}
+
+	router := setupCacheRouter(mockStats, mockCleanup)
+	req, _ := http.NewRequest(http.MethodDelete, "/api/v1/settings/cache?older_than_days=", nil)
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	// Falls through to clear-all since "" != "" is false
+	assert.Equal(t, http.StatusOK, resp.Code)
+
+	var body map[string]interface{}
+	require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &body))
+	data := body["data"].(map[string]interface{})
+	assert.Equal(t, "all", data["type"])
+}
+
+func TestCacheHandler_ClearAllCache_FloatDaysParam(t *testing.T) {
+	mockStats := new(MockCacheStatsService)
+	mockCleanup := new(MockCacheCleanupService)
+
+	router := setupCacheRouter(mockStats, mockCleanup)
+	req, _ := http.NewRequest(http.MethodDelete, "/api/v1/settings/cache?older_than_days=30.5", nil)
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	// strconv.Atoi rejects floats
+	assert.Equal(t, http.StatusBadRequest, resp.Code)
+}
+
+func TestCacheHandler_ClearAllCache_PartialTypeFailure(t *testing.T) {
+	mockStats := new(MockCacheStatsService)
+	mockCleanup := new(MockCacheCleanupService)
+
+	// Some types succeed, some fail
+	mockCleanup.On("ClearCacheByType", mock.Anything, "image").Return(
+		&services.CleanupResult{Type: "image", EntriesRemoved: 3, BytesReclaimed: 500}, nil,
+	)
+	mockCleanup.On("ClearCacheByType", mock.Anything, "ai").Return(
+		nil, errors.New("db locked"),
+	)
+	mockCleanup.On("ClearCacheByType", mock.Anything, "metadata").Return(
+		&services.CleanupResult{Type: "metadata", EntriesRemoved: 2, BytesReclaimed: 0}, nil,
+	)
+	mockCleanup.On("ClearCacheByType", mock.Anything, "douban").Return(
+		nil, errors.New("table missing"),
+	)
+	mockCleanup.On("ClearCacheByType", mock.Anything, "wikipedia").Return(
+		&services.CleanupResult{Type: "wikipedia", EntriesRemoved: 1, BytesReclaimed: 0}, nil,
+	)
+
+	router := setupCacheRouter(mockStats, mockCleanup)
+	req, _ := http.NewRequest(http.MethodDelete, "/api/v1/settings/cache", nil)
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	// Should still return 200 with partial results
+	assert.Equal(t, http.StatusOK, resp.Code)
+
+	var body map[string]interface{}
+	require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &body))
+	data := body["data"].(map[string]interface{})
+	assert.Equal(t, "all", data["type"])
+	// Only successful types: 3 + 2 + 1 = 6
+	assert.Equal(t, float64(6), data["entriesRemoved"])
+	assert.Equal(t, float64(500), data["bytesReclaimed"])
+}
+
+func TestCacheHandler_ClearCacheByAge_ServiceError(t *testing.T) {
+	mockStats := new(MockCacheStatsService)
+	mockCleanup := new(MockCacheCleanupService)
+
+	mockCleanup.On("ClearCacheByAge", mock.Anything, 30).Return(
+		nil, errors.New("disk full"),
+	)
+
+	router := setupCacheRouter(mockStats, mockCleanup)
+	req, _ := http.NewRequest(http.MethodDelete, "/api/v1/settings/cache?older_than_days=30", nil)
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusInternalServerError, resp.Code)
+}
+
 func TestCacheHandler_ResponseStructure(t *testing.T) {
 	mockStats := new(MockCacheStatsService)
 	mockCleanup := new(MockCacheCleanupService)

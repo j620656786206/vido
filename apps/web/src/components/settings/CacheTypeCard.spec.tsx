@@ -100,6 +100,82 @@ describe('CacheTypeCard', () => {
     );
     expect(screen.getByTestId('cache-type-ai')).toBeInTheDocument();
   });
+
+  it('disables clear button while clearing', async () => {
+    // Create a promise that won't resolve immediately
+    let resolvePromise: () => void;
+    const pendingPromise = new Promise<void>((resolve) => {
+      resolvePromise = resolve;
+    });
+    const onClear = vi.fn().mockReturnValue(pendingPromise);
+
+    render(
+      React.createElement(CacheTypeCard, {
+        cacheType: mockCacheType,
+        onClear,
+      })
+    );
+
+    const clearBtn = screen.getByTestId('cache-clear-btn');
+    fireEvent.click(clearBtn); // enter confirm
+    fireEvent.click(clearBtn); // start clear
+
+    await waitFor(() => {
+      expect(clearBtn).toBeDisabled();
+    });
+
+    // Resolve the promise to clean up
+    resolvePromise!();
+  });
+
+  it('resets to initial state after clearing completes', async () => {
+    const onClear = vi.fn().mockResolvedValue(undefined);
+    render(
+      React.createElement(CacheTypeCard, {
+        cacheType: mockCacheType,
+        onClear,
+      })
+    );
+
+    const clearBtn = screen.getByTestId('cache-clear-btn');
+    fireEvent.click(clearBtn); // confirm
+    fireEvent.click(clearBtn); // clear
+
+    await waitFor(() => {
+      expect(clearBtn).toHaveTextContent('清除');
+    });
+  });
+
+  it('hides cancel button when not in confirming state', () => {
+    render(
+      React.createElement(CacheTypeCard, {
+        cacheType: mockCacheType,
+        onClear: vi.fn(),
+      })
+    );
+
+    expect(screen.queryByTestId('cache-cancel-btn')).not.toBeInTheDocument();
+  });
+
+  it('renders different cache types correctly', () => {
+    const imageCacheType: CacheTypeInfo = {
+      type: 'image',
+      label: '圖片快取',
+      sizeBytes: 1073741824,
+      entryCount: 450,
+    };
+
+    render(
+      React.createElement(CacheTypeCard, {
+        cacheType: imageCacheType,
+        onClear: vi.fn(),
+      })
+    );
+
+    expect(screen.getByTestId('cache-type-image')).toBeInTheDocument();
+    expect(screen.getByTestId('cache-type-label')).toHaveTextContent('圖片快取');
+    expect(screen.getByTestId('cache-type-size')).toHaveTextContent('1.0 GB');
+  });
 });
 
 describe('formatBytes', () => {
@@ -121,5 +197,21 @@ describe('formatBytes', () => {
 
   it('formats gigabytes', () => {
     expect(formatBytes(1073741824)).toBe('1.0 GB');
+  });
+
+  it('formats boundary value 1023 bytes as bytes', () => {
+    expect(formatBytes(1023)).toBe('1023 B');
+  });
+
+  it('formats 1025 bytes as KB', () => {
+    expect(formatBytes(1025)).toBe('1.0 KB');
+  });
+
+  it('formats fractional KB correctly', () => {
+    expect(formatBytes(1536)).toBe('1.5 KB');
+  });
+
+  it('formats large MB values', () => {
+    expect(formatBytes(52428800)).toBe('50.0 MB');
   });
 });

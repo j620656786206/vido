@@ -123,4 +123,71 @@ describe('CacheManagement', () => {
     renderWithQuery(React.createElement(CacheManagement));
     expect(screen.getByText('快取管理')).toBeInTheDocument();
   });
+
+  it('disables clear old cache button while pending', () => {
+    mockUseCacheStats.mockReturnValue({
+      data: {
+        cacheTypes: [],
+        totalSizeBytes: 0,
+      },
+      isLoading: false,
+      error: null,
+    } as any);
+    mockUseClearByAge.mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: true,
+    } as any);
+
+    renderWithQuery(React.createElement(CacheManagement));
+    const btn = screen.getByTestId('clear-old-cache-btn');
+    expect(btn).toBeDisabled();
+  });
+
+  it('displays error message text from error object', () => {
+    mockUseCacheStats.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: new Error('Connection refused'),
+    } as any);
+
+    renderWithQuery(React.createElement(CacheManagement));
+    expect(screen.getByText('無法載入快取資訊')).toBeInTheDocument();
+    expect(screen.getByText('Connection refused')).toBeInTheDocument();
+  });
+
+  it('renders all 5 cache type cards when data has 5 types', () => {
+    mockUseCacheStats.mockReturnValue({
+      data: {
+        cacheTypes: [
+          { type: 'image', label: '圖片快取', sizeBytes: 1024, entryCount: 10 },
+          { type: 'ai', label: 'AI 解析快取', sizeBytes: 512, entryCount: 5 },
+          { type: 'metadata', label: 'TMDb 中繼資料', sizeBytes: 256, entryCount: 3 },
+          { type: 'douban', label: '豆瓣快取', sizeBytes: 128, entryCount: 2 },
+          { type: 'wikipedia', label: '維基百科快取', sizeBytes: 64, entryCount: 1 },
+        ],
+        totalSizeBytes: 1984,
+      },
+      isLoading: false,
+      error: null,
+    } as any);
+
+    renderWithQuery(React.createElement(CacheManagement));
+    expect(screen.getByTestId('cache-type-image')).toBeInTheDocument();
+    expect(screen.getByTestId('cache-type-ai')).toBeInTheDocument();
+    expect(screen.getByTestId('cache-type-metadata')).toBeInTheDocument();
+    expect(screen.getByTestId('cache-type-douban')).toBeInTheDocument();
+    expect(screen.getByTestId('cache-type-wikipedia')).toBeInTheDocument();
+  });
+
+  it('shows dash when stats are not yet loaded', () => {
+    mockUseCacheStats.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: null,
+    } as any);
+
+    renderWithQuery(React.createElement(CacheManagement));
+    // Component renders but stats is undefined, so totalSizeBytes fallback is '—'
+    expect(screen.getByText(/總計.*—/)).toBeInTheDocument();
+  });
 });
