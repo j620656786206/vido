@@ -328,6 +328,71 @@ func TestHealthMonitor_UpdateServiceHealth_QBittorrent(t *testing.T) {
 	assert.Equal(t, models.ServiceStatusHealthy, monitor.services.QBittorrent.Status)
 }
 
+func TestHealthMonitor_GetAllServiceStatuses(t *testing.T) {
+	checker := &MockHealthChecker{}
+	monitor := NewHealthMonitor(checker)
+
+	// Set up some service states
+	monitor.UpdateServiceHealth(models.ServiceNameTMDb, nil)
+	monitor.UpdateServiceHealth(models.ServiceNameAI, errors.New("quota exceeded"))
+
+	statuses := monitor.GetAllServiceStatuses()
+	assert.Len(t, statuses, 5)
+
+	// TMDb should be connected
+	assert.Equal(t, models.StatusConnected, statuses[0].Status)
+
+	// AI should be error
+	found := false
+	for _, s := range statuses {
+		if s.Name == "ai" {
+			assert.Equal(t, models.StatusError, s.Status)
+			found = true
+		}
+	}
+	assert.True(t, found, "AI status should be in results")
+}
+
+func TestHealthMonitor_UpdateServiceHealthWithTime(t *testing.T) {
+	checker := &MockHealthChecker{}
+	monitor := NewHealthMonitor(checker)
+
+	monitor.UpdateServiceHealthWithTime(models.ServiceNameTMDb, nil, 150)
+
+	svc := monitor.GetServiceHealth(models.ServiceNameTMDb)
+	require.NotNil(t, svc)
+	assert.Equal(t, int64(150), svc.ResponseTimeMs)
+	assert.Equal(t, models.ServiceStatusHealthy, svc.Status)
+}
+
+func TestHealthMonitor_UpdateServiceHealthWithTime_Error(t *testing.T) {
+	checker := &MockHealthChecker{}
+	monitor := NewHealthMonitor(checker)
+
+	monitor.UpdateServiceHealthWithTime(models.ServiceNameTMDb, errors.New("timeout"), 5000)
+
+	svc := monitor.GetServiceHealth(models.ServiceNameTMDb)
+	require.NotNil(t, svc)
+	assert.Equal(t, int64(5000), svc.ResponseTimeMs)
+	assert.Equal(t, models.ServiceStatusDegraded, svc.Status)
+}
+
+func TestHealthMonitor_CheckAllServices_TracksResponseTime(t *testing.T) {
+	checker := &MockHealthChecker{}
+	monitor := NewHealthMonitor(checker)
+
+	ctx := context.Background()
+	monitor.CheckAllServices(ctx)
+
+	// Wait for goroutines
+	time.Sleep(100 * time.Millisecond)
+
+	// All services should have non-negative response times
+	for _, svc := range monitor.services.AllServices() {
+		assert.GreaterOrEqual(t, svc.ResponseTimeMs, int64(0))
+	}
+}
+
 func TestHealthMonitor_CheckAllServices_QBittorrentError(t *testing.T) {
 	checker := &MockHealthChecker{}
 	checker.SetQBittorrentError(errors.New("qBittorrent unreachable"))
