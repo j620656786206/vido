@@ -166,6 +166,6 @@ describe('LogsViewer', () => {
     await waitFor(() => {
       expect(screen.getByTestId('logs-clear-result')).toBeInTheDocument();
     });
-    expect(screen.getByText(/10/)).toBeInTheDocument();
+    expect(screen.getByText(/已清除 10 筆日誌記錄/)).toBeInTheDocument();
   });
 });
