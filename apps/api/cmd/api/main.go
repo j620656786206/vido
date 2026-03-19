@@ -107,9 +107,11 @@ func main() {
 	logRepo := repository.NewLogRepository(db.Conn())
 	dbLogHandler := logger.NewDBHandler(logRepo)
 	defer dbLogHandler.Close()
-	// Add DB handler alongside existing stdout handler
-	currentHandler := slog.Default().Handler()
-	multiHandler := slog.New(logger.NewMultiHandler(currentHandler, dbLogHandler))
+	// Create a concrete stdout handler to avoid infinite recursion.
+	// slog.Default().Handler() returns a defaultHandler that delegates back to
+	// slog.Default(), which would cause a loop after slog.SetDefault(multiHandler).
+	stdoutHandler := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo})
+	multiHandler := slog.New(logger.NewMultiHandler(stdoutHandler, dbLogHandler))
 	slog.SetDefault(multiHandler)
 	slog.Info("System log DB handler initialized")
 
