@@ -7,13 +7,16 @@ export function ServiceStatusDashboard() {
   const { data, isLoading, error } = useServiceStatuses();
   const testConnection = useTestServiceConnection();
   const [testingService, setTestingService] = useState<string | null>(null);
+  const [testError, setTestError] = useState<string | null>(null);
 
   const handleTest = async (serviceName: string) => {
+    if (testingService) return; // Prevent concurrent test requests
     setTestingService(serviceName);
+    setTestError(null);
     try {
       await testConnection.mutateAsync(serviceName);
-    } catch {
-      // Error handled by TanStack Query
+    } catch (err) {
+      setTestError(err instanceof Error ? err.message : '測試連線失敗');
     } finally {
       setTestingService(null);
     }
@@ -60,6 +63,15 @@ export function ServiceStatusDashboard() {
           />
         ))}
       </div>
+
+      {testError && (
+        <div
+          className="rounded-lg border border-red-800 bg-red-900/20 px-4 py-3 text-sm text-red-400"
+          data-testid="test-error"
+        >
+          {testError}
+        </div>
+      )}
 
       {services.length === 0 && (
         <div className="py-10 text-center text-sm text-slate-500" data-testid="status-empty">

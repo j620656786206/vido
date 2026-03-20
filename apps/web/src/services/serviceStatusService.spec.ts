@@ -76,6 +76,19 @@ describe('serviceStatusService', () => {
         'API request failed: 503'
       );
     });
+
+    it('[P1] throws error when success is true but data field is missing', async () => {
+      // GIVEN: API returns success without data
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ success: true }),
+      });
+
+      // WHEN/THEN: Should throw for missing data
+      await expect(serviceStatusService.getAllStatuses()).rejects.toThrow(
+        'API response missing data field'
+      );
+    });
   });
 
   describe('testService', () => {

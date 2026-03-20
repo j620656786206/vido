@@ -47,7 +47,11 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
     throw new Error(data.error?.message || `API request failed: ${response.status}`);
   }
 
-  return data.data as T;
+  if (data.data === undefined) {
+    throw new Error('API response missing data field');
+  }
+
+  return data.data;
 }
 
 export const serviceStatusService = {

@@ -254,7 +254,7 @@ describe('ServiceStatusDashboard', () => {
     expect(screen.getByTestId('service-card-ai')).toBeInTheDocument();
   });
 
-  it('[P2] handles mutateAsync rejection gracefully without crashing', async () => {
+  it('[P1] shows error message when test connection fails', async () => {
     const user = userEvent.setup();
     const mockMutateAsync = vi.fn().mockRejectedValue(new Error('Service unreachable'));
     mockUseTestServiceConnection.mockReturnValue({
@@ -280,10 +280,49 @@ describe('ServiceStatusDashboard', () => {
     } as any);
 
     renderWithQuery(React.createElement(ServiceStatusDashboard));
-    // Should not throw
     await user.click(screen.getByTestId('test-btn-tmdb'));
     expect(mockMutateAsync).toHaveBeenCalledWith('tmdb');
-    // Dashboard should still be rendered
-    expect(screen.getByTestId('service-status-dashboard')).toBeInTheDocument();
+    expect(screen.getByTestId('test-error')).toBeInTheDocument();
+    expect(screen.getByText('Service unreachable')).toBeInTheDocument();
+  });
+
+  it('[P1] clears test error on next successful test', async () => {
+    const user = userEvent.setup();
+    let callCount = 0;
+    const mockMutateAsync = vi.fn().mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) return Promise.reject(new Error('Failed'));
+      return Promise.resolve({});
+    });
+    mockUseTestServiceConnection.mockReturnValue({
+      mutateAsync: mockMutateAsync,
+      isPending: false,
+    } as any);
+    mockUseServiceStatuses.mockReturnValue({
+      data: {
+        services: [
+          {
+            name: 'tmdb',
+            displayName: 'TMDb API',
+            status: 'connected',
+            message: '已連線',
+            lastSuccessAt: '2026-02-10T14:30:00Z',
+            lastCheckAt: '2026-02-10T14:30:00Z',
+            responseTimeMs: 45,
+          },
+        ],
+      },
+      isLoading: false,
+      error: null,
+    } as any);
+
+    renderWithQuery(React.createElement(ServiceStatusDashboard));
+    // First click fails
+    await user.click(screen.getByTestId('test-btn-tmdb'));
+    expect(screen.getByTestId('test-error')).toBeInTheDocument();
+
+    // Second click succeeds — error should clear
+    await user.click(screen.getByTestId('test-btn-tmdb'));
+    expect(screen.queryByTestId('test-error')).not.toBeInTheDocument();
   });
 });
