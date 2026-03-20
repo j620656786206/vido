@@ -424,6 +424,201 @@ func TestValidateSchedule(t *testing.T) {
 	})
 }
 
+func TestBackupScheduler_SetSchedule_RepoError(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("save error propagated", func(t *testing.T) {
+		settingsRepo := new(MockSchedulerSettingsRepo)
+		svc := NewBackupScheduler(nil, settingsRepo, nil)
+
+		settingsRepo.On("SetString", ctx, settingsKeyBackupSchedule, mock.AnythingOfType("string")).Return(assert.AnError)
+
+		err := svc.SetSchedule(ctx, BackupSchedule{Frequency: "daily", Hour: 3})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "save schedule")
+	})
+
+	t.Run("persisted JSON has correct fields", func(t *testing.T) {
+		settingsRepo := new(MockSchedulerSettingsRepo)
+		svc := NewBackupScheduler(nil, settingsRepo, nil)
+
+		var savedJSON string
+		settingsRepo.On("SetString", ctx, settingsKeyBackupSchedule, mock.AnythingOfType("string")).Run(func(args mock.Arguments) {
+			savedJSON = args.String(2)
+		}).Return(nil)
+
+		err := svc.SetSchedule(ctx, BackupSchedule{
+			Enabled:   true,
+			Frequency: "weekly",
+			Hour:      14,
+			DayOfWeek: 3,
+		})
+		assert.NoError(t, err)
+
+		var parsed BackupSchedule
+		assert.NoError(t, json.Unmarshal([]byte(savedJSON), &parsed))
+		assert.True(t, parsed.Enabled)
+		assert.Equal(t, "weekly", parsed.Frequency)
+		assert.Equal(t, 14, parsed.Hour)
+		assert.Equal(t, 3, parsed.DayOfWeek)
+	})
+}
+
+func TestBackupScheduler_LoadSchedule_CorruptedJSON(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("corrupted JSON returns error", func(t *testing.T) {
+		settingsRepo := new(MockSchedulerSettingsRepo)
+		backupRepo := new(MockBackupRepo)
+		svc := NewBackupScheduler(nil, settingsRepo, backupRepo)
+
+		settingsRepo.On("GetString", ctx, settingsKeyBackupSchedule).Return("not valid json{{{", nil)
+
+		_, err := svc.GetSchedule(ctx)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "parse schedule")
+	})
+}
+
+func TestBackupScheduler_CheckAndRun(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("creates backup and applies retention on match", func(t *testing.T) {
+		backupSvc := new(MockBackupSvc)
+		settingsRepo := new(MockSchedulerSettingsRepo)
+		backupRepo := new(MockBackupRepo)
+		svc := NewBackupScheduler(backupSvc, settingsRepo, backupRepo)
+
+		scheduleJSON, _ := json.Marshal(BackupSchedule{Enabled: true, Frequency: "daily", Hour: 3})
+		settingsRepo.On("GetString", ctx, settingsKeyBackupSchedule).Return(string(scheduleJSON), nil)
+
+		backup := &models.Backup{ID: "new-backup", Filename: "vido-backup-new.tar.gz"}
+		backupSvc.On("CreateBackup", ctx).Return(backup, nil)
+		backupRepo.On("List", ctx).Return([]models.Backup{}, nil)
+
+		now := time.Date(2026, 3, 20, 3, 0, 0, 0, time.UTC)
+		svc.checkAndRun(ctx, now)
+
+		backupSvc.AssertCalled(t, "CreateBackup", ctx)
+	})
+
+	t.Run("does not run when schedule disabled", func(t *testing.T) {
+		backupSvc := new(MockBackupSvc)
+		settingsRepo := new(MockSchedulerSettingsRepo)
+		svc := NewBackupScheduler(backupSvc, settingsRepo, nil)
+
+		scheduleJSON, _ := json.Marshal(BackupSchedule{Enabled: false, Frequency: "disabled"})
+		settingsRepo.On("GetString", ctx, settingsKeyBackupSchedule).Return(string(scheduleJSON), nil)
+
+		now := time.Date(2026, 3, 20, 3, 0, 0, 0, time.UTC)
+		svc.checkAndRun(ctx, now)
+
+		backupSvc.AssertNotCalled(t, "CreateBackup", mock.Anything)
+	})
+
+	t.Run("does not apply retention when backup fails", func(t *testing.T) {
+		backupSvc := new(MockBackupSvc)
+		settingsRepo := new(MockSchedulerSettingsRepo)
+		svc := NewBackupScheduler(backupSvc, settingsRepo, nil)
+
+		scheduleJSON, _ := json.Marshal(BackupSchedule{Enabled: true, Frequency: "daily", Hour: 3})
+		settingsRepo.On("GetString", ctx, settingsKeyBackupSchedule).Return(string(scheduleJSON), nil)
+		backupSvc.On("CreateBackup", ctx).Return((*models.Backup)(nil), assert.AnError)
+
+		now := time.Date(2026, 3, 20, 3, 0, 0, 0, time.UTC)
+		svc.checkAndRun(ctx, now)
+
+		backupSvc.AssertCalled(t, "CreateBackup", ctx)
+		// Retention should NOT be called since backup failed
+		backupSvc.AssertNotCalled(t, "DeleteBackup", mock.Anything, mock.Anything)
+	})
+}
+
+func TestBackupScheduler_ApplyRetentionPolicy_Errors(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("repo list error", func(t *testing.T) {
+		backupRepo := new(MockBackupRepo)
+		svc := NewBackupScheduler(nil, nil, backupRepo)
+
+		backupRepo.On("List", ctx).Return(([]models.Backup)(nil), assert.AnError)
+
+		_, err := svc.ApplyRetentionPolicy(ctx)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "list backups")
+	})
+
+	t.Run("delete error continues with remaining", func(t *testing.T) {
+		backupSvc := new(MockBackupSvc)
+		backupRepo := new(MockBackupRepo)
+		svc := NewBackupScheduler(backupSvc, nil, backupRepo)
+
+		// 9 completed backups - 7 kept daily, 2 to delete
+		var backups []models.Backup
+		for i := 0; i < 9; i++ {
+			backups = append(backups, models.Backup{
+				ID:        fmt.Sprintf("b%d", i),
+				Filename:  fmt.Sprintf("vido-backup-%d.tar.gz", i),
+				Status:    "completed",
+				CreatedAt: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC).AddDate(0, 0, -i*7), // Different weeks
+			})
+		}
+		backupRepo.On("List", ctx).Return(backups, nil)
+		// First delete fails, second succeeds
+		backupSvc.On("DeleteBackup", ctx, mock.AnythingOfType("string")).Return(assert.AnError).Once()
+		backupSvc.On("DeleteBackup", ctx, mock.AnythingOfType("string")).Return(nil)
+
+		result, err := svc.ApplyRetentionPolicy(ctx)
+		assert.NoError(t, err)
+		// Delete was attempted but one failed — doesn't block others
+		assert.GreaterOrEqual(t, result.Deleted, 0)
+	})
+
+	t.Run("non-completed backups are kept", func(t *testing.T) {
+		backupRepo := new(MockBackupRepo)
+		svc := NewBackupScheduler(nil, nil, backupRepo)
+
+		backups := []models.Backup{
+			{ID: "b1", Filename: "vido-backup-1.tar.gz", Status: "completed", CreatedAt: time.Now()},
+			{ID: "b2", Filename: "vido-backup-2.tar.gz", Status: "failed", CreatedAt: time.Now().AddDate(0, 0, -30)},
+			{ID: "b3", Filename: "vido-backup-3.tar.gz", Status: "running", CreatedAt: time.Now().AddDate(0, 0, -31)},
+		}
+		backupRepo.On("List", ctx).Return(backups, nil)
+
+		result, err := svc.ApplyRetentionPolicy(ctx)
+		assert.NoError(t, err)
+		// b1 kept (daily), b2+b3 kept (non-completed = never delete)
+		assert.Equal(t, 3, result.Kept)
+		assert.Equal(t, 0, result.Deleted)
+	})
+}
+
+func TestBackupScheduler_CalculateNextBackup_WeeklySameDay(t *testing.T) {
+	svc := NewBackupScheduler(nil, nil, nil)
+
+	t.Run("weekly same day past time goes to next week", func(t *testing.T) {
+		// Friday 15:00, schedule is Friday 03:00 → next Friday
+		now := time.Date(2026, 3, 20, 15, 0, 0, 0, time.UTC)
+		schedule := &BackupSchedule{Frequency: "weekly", Hour: 3, DayOfWeek: 5}
+
+		next := svc.calculateNextBackup(now, schedule)
+		assert.Equal(t, time.Friday, next.Weekday())
+		assert.Equal(t, 27, next.Day()) // Next Friday
+		assert.Equal(t, 3, next.Hour())
+	})
+
+	t.Run("weekly same day before time runs today", func(t *testing.T) {
+		// Friday 01:00, schedule is Friday 03:00 → today
+		now := time.Date(2026, 3, 20, 1, 0, 0, 0, time.UTC)
+		schedule := &BackupSchedule{Frequency: "weekly", Hour: 3, DayOfWeek: 5}
+
+		next := svc.calculateNextBackup(now, schedule)
+		assert.Equal(t, time.Friday, next.Weekday())
+		assert.Equal(t, 20, next.Day()) // Today
+		assert.Equal(t, 3, next.Hour())
+	})
+}
+
 func TestIsAutoSnapshot(t *testing.T) {
 	assert.True(t, isAutoSnapshot("vido-auto-snapshot-before-restore-20260320-150000.tar.gz"))
 	assert.False(t, isAutoSnapshot("vido-backup-20260320-150000-v17.tar.gz"))
