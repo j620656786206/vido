@@ -196,10 +196,14 @@ func (s *BackupService) DeleteBackup(ctx context.Context, id string) error {
 		return ErrBackupNotFound
 	}
 
-	// Remove file
+	// Remove backup file and .sha256 sidecar
 	filePath := filepath.Join(s.backupDir, backup.Filename)
 	if err := os.Remove(filePath); err != nil && !os.IsNotExist(err) {
 		slog.Warn("Failed to remove backup file", "path", filePath, "error", err)
+	}
+	sha256Path := filePath + ".sha256"
+	if err := os.Remove(sha256Path); err != nil && !os.IsNotExist(err) {
+		slog.Warn("Failed to remove SHA-256 sidecar", "path", sha256Path, "error", err)
 	}
 
 	// Remove record
@@ -353,6 +357,10 @@ func (s *BackupService) VerifyBackup(ctx context.Context, id string) (*models.Ve
 	}
 	if backup == nil {
 		return nil, ErrBackupNotFound
+	}
+
+	if backup.Status != models.BackupStatusCompleted {
+		return nil, fmt.Errorf("cannot verify backup with status %q: only completed backups can be verified", backup.Status)
 	}
 
 	result := &models.VerificationResult{

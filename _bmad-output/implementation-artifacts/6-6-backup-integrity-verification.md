@@ -117,6 +117,7 @@ Claude Opus 4.6 (1M context)
 ### Change Log
 
 - 2026-03-20: Implemented Story 6-6 Backup Integrity Verification — .sha256 sidecar, VerifyBackup service, verify endpoint, UI verify button with corrupted status
+- 2026-03-20: CR fixes — DeleteBackup now removes .sha256 sidecar, VerifyBackup guards against non-completed backups. TA expanded 8 tests.
 
 ### File List
 
