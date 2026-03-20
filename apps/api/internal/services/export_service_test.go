@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -265,6 +266,215 @@ func TestExportService_GetExportFilePath(t *testing.T) {
 		path, err := svc.GetExportFilePath(ctx, "e1")
 		assert.NoError(t, err)
 		assert.Equal(t, "/tmp/export.json", path)
+	})
+}
+
+func TestExportService_ExportJSON_RepoError(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("movie repo error returns failed status", func(t *testing.T) {
+		movieRepo := new(MockMovieRepoExport)
+		seriesRepo := new(MockSeriesRepoExport)
+		svc := NewExportService(movieRepo, seriesRepo, t.TempDir())
+
+		movieRepo.On("List", mock.Anything, mock.AnythingOfType("repository.ListParams")).Return(
+			[]models.Movie{}, (*repository.PaginationResult)(nil), assert.AnError,
+		)
+
+		result, err := svc.ExportJSON(ctx)
+		assert.NoError(t, err) // Returns result, not error
+		assert.Equal(t, ExportStatusFailed, result.Status)
+		assert.Contains(t, result.Error, "EXPORT_FAILED")
+	})
+}
+
+func TestExportService_ExportJSON_EmptyLibrary(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("empty library exports 0 items", func(t *testing.T) {
+		movieRepo := new(MockMovieRepoExport)
+		seriesRepo := new(MockSeriesRepoExport)
+		svc := NewExportService(movieRepo, seriesRepo, t.TempDir())
+
+		pagination := &repository.PaginationResult{Page: 1, PageSize: 100, TotalResults: 0, TotalPages: 1}
+		movieRepo.On("List", mock.Anything, mock.AnythingOfType("repository.ListParams")).Return([]models.Movie{}, pagination, nil)
+		seriesRepo.On("List", mock.Anything, mock.AnythingOfType("repository.ListParams")).Return([]models.Series{}, pagination, nil)
+
+		result, err := svc.ExportJSON(ctx)
+		assert.NoError(t, err)
+		assert.Equal(t, ExportStatusCompleted, result.Status)
+		assert.Equal(t, 0, result.ItemCount)
+	})
+}
+
+func TestExportService_ExportJSON_FieldVerification(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("exported JSON includes all optional fields", func(t *testing.T) {
+		movieRepo, seriesRepo := setupExportMocks()
+		svc := NewExportService(movieRepo, seriesRepo, t.TempDir())
+
+		result, err := svc.ExportJSON(ctx)
+		assert.NoError(t, err)
+
+		data, err := os.ReadFile(result.FilePath)
+		assert.NoError(t, err)
+
+		var doc ExportDocument
+		assert.NoError(t, json.Unmarshal(data, &doc))
+
+		// Verify movie fields
+		movie := doc.Media[0]
+		assert.Equal(t, "The Matrix", movie.OriginalTitle)
+		assert.Equal(t, int64(603), movie.TMDbID)
+		assert.Equal(t, 8.7, movie.Rating)
+		assert.Equal(t, "一個年輕的電腦駭客...", movie.Overview)
+		assert.Equal(t, []string{"科幻", "動作"}, movie.Genres)
+
+		// Verify series fields
+		series := doc.Media[1]
+		assert.Equal(t, int64(12345), series.TMDbID)
+		assert.Equal(t, "tv", series.MediaType)
+	})
+}
+
+func TestExportService_ExportNFO_SeriesWithFilePath(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("creates NFO file for series with file path", func(t *testing.T) {
+		movieRepo := new(MockMovieRepoExport)
+		seriesRepo := new(MockSeriesRepoExport)
+		tmpDir := t.TempDir()
+		svc := NewExportService(movieRepo, seriesRepo, tmpDir)
+
+		seriesFile := filepath.Join(tmpDir, "Ping.Pong.S01")
+		os.MkdirAll(seriesFile, 0o755)
+
+		pagination := &repository.PaginationResult{Page: 1, PageSize: 100, TotalResults: 0, TotalPages: 1}
+		movieRepo.On("List", mock.Anything, mock.AnythingOfType("repository.ListParams")).Return([]models.Movie{}, pagination, nil)
+		seriesRepo.On("List", mock.Anything, mock.AnythingOfType("repository.ListParams")).Return([]models.Series{
+			{
+				ID: "s1", Title: "乒乓", FirstAirDate: "2014",
+				FilePath:  sql.NullString{String: seriesFile, Valid: true},
+				Genres:    []string{"動畫"},
+				CreatedAt: time.Now(),
+			},
+		}, pagination, nil)
+
+		result, err := svc.ExportNFO(ctx)
+		assert.NoError(t, err)
+		assert.Equal(t, ExportStatusCompleted, result.Status)
+		assert.Equal(t, 1, result.ItemCount)
+
+		nfoPath := seriesFile + ".nfo"
+		data, err := os.ReadFile(nfoPath)
+		assert.NoError(t, err)
+		assert.Contains(t, string(data), "<tvshow>")
+		assert.Contains(t, string(data), "<title>乒乓</title>")
+	})
+}
+
+func TestExportService_ExportNFO_MovieRepoError(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("movie repo error returns failed status", func(t *testing.T) {
+		movieRepo := new(MockMovieRepoExport)
+		seriesRepo := new(MockSeriesRepoExport)
+		svc := NewExportService(movieRepo, seriesRepo, t.TempDir())
+
+		movieRepo.On("List", mock.Anything, mock.AnythingOfType("repository.ListParams")).Return(
+			[]models.Movie{}, (*repository.PaginationResult)(nil), assert.AnError,
+		)
+
+		result, err := svc.ExportNFO(ctx)
+		assert.NoError(t, err)
+		assert.Equal(t, ExportStatusFailed, result.Status)
+		assert.Contains(t, result.Error, "fetch movies")
+	})
+}
+
+func TestExportService_GetExportFilePath_MismatchedID(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("wrong ID returns error", func(t *testing.T) {
+		svc := NewExportService(nil, nil, "")
+		svc.lastResult = &ExportResult{ExportID: "e1", FilePath: "/tmp/export.json"}
+
+		_, err := svc.GetExportFilePath(ctx, "wrong-id")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "export not found")
+	})
+}
+
+func TestNFOGenerator_GenerateMovieNFO_MinimalData(t *testing.T) {
+	gen := &NFOGenerator{}
+
+	t.Run("minimal movie with no optional fields", func(t *testing.T) {
+		movie := models.Movie{
+			Title:       "Test Movie",
+			ReleaseDate: "2026",
+		}
+
+		data := gen.GenerateMovieNFO(movie)
+		xml := string(data)
+
+		assert.Contains(t, xml, "<movie>")
+		assert.Contains(t, xml, "<title>Test Movie</title>")
+		assert.Contains(t, xml, "<year>2026</year>")
+		assert.NotContains(t, xml, "<originaltitle>")
+		assert.NotContains(t, xml, "<director>")
+		assert.NotContains(t, xml, "<actor>")
+	})
+}
+
+func TestNFOGenerator_GenerateMovieNFO_ActorLimit(t *testing.T) {
+	gen := &NFOGenerator{}
+
+	t.Run("limits actors to 10", func(t *testing.T) {
+		// Build credits with 15 cast members
+		var cast []CreditsPerson
+		for i := 0; i < 15; i++ {
+			cast = append(cast, CreditsPerson{Name: fmt.Sprintf("Actor %d", i), Character: fmt.Sprintf("Role %d", i)})
+		}
+		creditsJSON, _ := json.Marshal(CreditsData{Cast: cast})
+
+		movie := models.Movie{
+			Title:       "Big Cast",
+			ReleaseDate: "2026",
+			CreditsJSON: sql.NullString{String: string(creditsJSON), Valid: true},
+		}
+
+		data := gen.GenerateMovieNFO(movie)
+		xml := string(data)
+
+		// Count <name> occurrences — should be exactly 10
+		count := 0
+		for i := 0; i < len(xml)-6; i++ {
+			if xml[i:i+6] == "<name>" {
+				count++
+			}
+		}
+		assert.Equal(t, 10, count)
+	})
+}
+
+func TestNFOGenerator_GenerateMovieNFO_InvalidCreditsJSON(t *testing.T) {
+	gen := &NFOGenerator{}
+
+	t.Run("invalid credits JSON doesn't crash", func(t *testing.T) {
+		movie := models.Movie{
+			Title:       "Bad Credits",
+			ReleaseDate: "2026",
+			CreditsJSON: sql.NullString{String: "not valid json{{{", Valid: true},
+		}
+
+		data := gen.GenerateMovieNFO(movie)
+		xml := string(data)
+
+		// Should still generate valid XML, just without actors/directors
+		assert.Contains(t, xml, "<movie>")
+		assert.Contains(t, xml, "<title>Bad Credits</title>")
+		assert.NotContains(t, xml, "<actor>")
 	})
 }
 
