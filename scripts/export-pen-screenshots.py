@@ -55,6 +55,7 @@ SCREENS = {
     # Flow G - Settings pages
     "6UCtX": ("flow-c-search-filter-settings-desktop", "10-settings-desktop"),
     "2H4OM": ("flow-f-batch-settings-mobile", "10-m-settings-mobile"),
+    "uhAKd": ("flow-c-search-filter-settings-desktop", "11-backup-management-desktop"),
 }
 
 
