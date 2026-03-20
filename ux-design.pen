@@ -16401,7 +16401,7 @@
       "y": 2180,
       "name": "Flow C Desc",
       "fill": "$text-secondary",
-      "content": "Search + Filter → Batch Operations → Settings Gear Dropdown",
+      "content": "Search + Filter → Batch Operations → Settings Gear Dropdown → Settings Page",
       "fontFamily": "Noto Sans TC",
       "fontSize": 14,
       "fontWeight": "normal"
@@ -19640,7 +19640,7 @@
       "y": 7580,
       "name": "Flow F Desc",
       "fill": "$text-secondary",
-      "content": "Batch Operations → Settings Bottom Sheet",
+      "content": "Batch Operations → Settings Bottom Sheet → Settings Page",
       "fontFamily": "Noto Sans TC",
       "fontSize": 14,
       "fontWeight": "normal"
@@ -19805,8 +19805,8 @@
     {
       "type": "frame",
       "id": "6UCtX",
-      "x": -800,
-      "y": 8574,
+      "x": 4620,
+      "y": 2200,
       "name": "Screen 10 - Settings Desktop",
       "clip": true,
       "width": 1440,
@@ -20587,8 +20587,8 @@
     {
       "type": "frame",
       "id": "2H4OM",
-      "x": 740,
-      "y": 8574,
+      "x": 980,
+      "y": 7600,
       "name": "Screen 10-m - Settings Mobile",
       "clip": true,
       "width": 390,
@@ -21270,6 +21270,78 @@
           ]
         }
       ]
+    },
+    {
+      "type": "text",
+      "id": "iRByA",
+      "x": 980,
+      "y": 8454,
+      "name": "Label 10-m",
+      "fill": "$text-primary",
+      "content": "10-m. Settings Page",
+      "fontFamily": "Noto Sans TC",
+      "fontSize": 14,
+      "fontWeight": "600"
+    },
+    {
+      "type": "text",
+      "id": "x0XJO",
+      "x": 910,
+      "y": 8000,
+      "name": "arrow",
+      "fill": "$text-muted",
+      "content": "→",
+      "fontFamily": "Inter",
+      "fontSize": 32,
+      "fontWeight": "normal"
+    },
+    {
+      "type": "text",
+      "id": "qob2a",
+      "x": 4620,
+      "y": 3110,
+      "name": "Label 10",
+      "fill": "$text-primary",
+      "content": "10. Settings Page",
+      "fontFamily": "Noto Sans TC",
+      "fontSize": 14,
+      "fontWeight": "600"
+    },
+    {
+      "type": "text",
+      "id": "y3Ezl",
+      "x": 4550,
+      "y": 2630,
+      "name": "arrow",
+      "fill": "$text-muted",
+      "content": "→",
+      "fontFamily": "Inter",
+      "fontSize": 32,
+      "fontWeight": "normal"
+    },
+    {
+      "type": "text",
+      "id": "rV6Kr",
+      "x": 4550,
+      "y": 2630,
+      "name": "arrow",
+      "fill": "$text-muted",
+      "content": "→",
+      "fontFamily": "Inter",
+      "fontSize": 32,
+      "fontWeight": "normal"
+    },
+    {
+      "type": "text",
+      "id": "Qum7R",
+      "x": 4620,
+      "y": 3110,
+      "name": "label",
+      "fill": "$text-primary",
+      "content": "10. Settings Page",
+      "fontFamily": "Noto Sans TC",
+      "fontSize": 14,
+      "fontWeight": "600"
     }
   ],
   "variables": {
