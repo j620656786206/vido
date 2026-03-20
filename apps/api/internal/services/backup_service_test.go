@@ -611,4 +611,8 @@ func TestIsSubPath(t *testing.T) {
 	t.Run("traversal attempt", func(t *testing.T) {
 		assert.False(t, isSubPath("/base/dir", "/base/other"))
 	})
+
+	t.Run("prefix overlap - dir-extra is NOT subpath of dir", func(t *testing.T) {
+		assert.False(t, isSubPath("/base/dir", "/base/dir-extra/file.txt"))
+	})
 }

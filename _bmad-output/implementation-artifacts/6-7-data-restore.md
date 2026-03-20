@@ -1,6 +1,6 @@
 # Story 6.7: Data Restore
 
-Status: review
+Status: done
 
 ## Story
 

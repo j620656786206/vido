@@ -65,7 +65,7 @@ export function BackupManagement() {
   };
 
   const handleRestoreConfirm = async () => {
-    if (!restoreTarget) return;
+    if (!restoreTarget || restoreBackup.isPending) return;
     setRestoreMessage(null);
     try {
       const result = await restoreBackup.mutateAsync(restoreTarget.id);

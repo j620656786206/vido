@@ -471,6 +471,8 @@ func (s *BackupService) RestoreBackup(ctx context.Context, id string) (*models.R
 	backupFilePath := filepath.Join(s.backupDir, backup.Filename)
 	tmpDir, err := os.MkdirTemp("", "vido-restore-*")
 	if err != nil {
+		result.Status = models.RestoreStatusFailed
+		result.Error = fmt.Sprintf("RESTORE_EXTRACT_FAILED: create temp dir: %v", err)
 		s.rollbackFromSnapshot(ctx, snapshot.ID, result)
 		return result, nil
 	}
@@ -599,6 +601,12 @@ func (s *BackupService) createAutoSnapshot(ctx context.Context) (*models.Backup,
 		return nil, fmt.Errorf("move snapshot: %w", err)
 	}
 
+	// Write .sha256 sidecar file (consistent with CreateBackup)
+	sha256Path := finalPath + ".sha256"
+	if err := os.WriteFile(sha256Path, []byte(checksum+"  "+filename+"\n"), 0o644); err != nil {
+		slog.Warn("Failed to write snapshot SHA-256 sidecar file", "path", sha256Path, "error", err)
+	}
+
 	snapshot.SizeBytes = sizeBytes
 	snapshot.Checksum = checksum
 	snapshot.Status = models.BackupStatusCompleted
@@ -678,7 +686,11 @@ func isSubPath(base, target string) bool {
 	if err != nil {
 		return false
 	}
-	return len(absTarget) >= len(absBase) && absTarget[:len(absBase)] == absBase
+	// Ensure base ends with separator to prevent /base/dir matching /base/dir-extra
+	if absBase[len(absBase)-1] != filepath.Separator {
+		absBase += string(filepath.Separator)
+	}
+	return absTarget == absBase[:len(absBase)-1] || len(absTarget) >= len(absBase) && absTarget[:len(absBase)] == absBase
 }
 
 // readManifest reads and parses the backup manifest
