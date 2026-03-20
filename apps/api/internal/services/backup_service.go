@@ -28,6 +28,12 @@ var ErrBackupInProgress = errors.New("backup in progress")
 // ErrBackupNotFound is returned when a backup ID is not found
 var ErrBackupNotFound = errors.New("backup not found")
 
+// ErrRestoreInProgress is returned when a restore is already running
+var ErrRestoreInProgress = errors.New("restore in progress")
+
+// ErrIncompatibleVersion is returned when the backup schema version is newer than current
+var ErrIncompatibleVersion = errors.New("incompatible schema version")
+
 // BackupServiceInterface defines the contract for backup operations
 type BackupServiceInterface interface {
 	CreateBackup(ctx context.Context) (*models.Backup, error)
@@ -36,6 +42,8 @@ type BackupServiceInterface interface {
 	DeleteBackup(ctx context.Context, id string) error
 	GetBackupFilePath(ctx context.Context, id string) (string, error)
 	VerifyBackup(ctx context.Context, id string) (*models.VerificationResult, error)
+	RestoreBackup(ctx context.Context, id string) (*models.RestoreResult, error)
+	GetRestoreStatus(ctx context.Context) (*models.RestoreResult, error)
 }
 
 // BackupService manages database backup operations
@@ -46,6 +54,9 @@ type BackupService struct {
 	schemaVersion int64
 	mu            sync.Mutex
 	running       bool
+	restoreMu     sync.Mutex
+	restoring     bool
+	restoreResult *models.RestoreResult
 }
 
 // Compile-time interface verification
@@ -395,6 +406,413 @@ func (s *BackupService) VerifyBackup(ctx context.Context, id string) (*models.Ve
 
 	slog.Info("Backup verification completed", "id", id, "status", result.Status)
 	return result, nil
+}
+
+// RestoreBackup restores the database from a backup archive (Story 6-7)
+func (s *BackupService) RestoreBackup(ctx context.Context, id string) (*models.RestoreResult, error) {
+	s.restoreMu.Lock()
+	if s.restoring {
+		s.restoreMu.Unlock()
+		return nil, ErrRestoreInProgress
+	}
+	s.restoring = true
+	s.restoreMu.Unlock()
+	defer func() {
+		s.restoreMu.Lock()
+		s.restoring = false
+		s.restoreMu.Unlock()
+	}()
+
+	result := &models.RestoreResult{
+		RestoreID: uuid.New().String(),
+		Status:    models.RestoreStatusInProgress,
+	}
+
+	// Step 1: Get and validate the backup
+	backup, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("get backup: %w", err)
+	}
+	if backup == nil {
+		return nil, ErrBackupNotFound
+	}
+	if backup.Status != models.BackupStatusCompleted {
+		return nil, fmt.Errorf("cannot restore backup with status %q: only completed backups can be restored", backup.Status)
+	}
+
+	// Step 2: Verify backup integrity before restore
+	verifyResult, err := s.VerifyBackup(ctx, id)
+	if err != nil {
+		result.Status = models.RestoreStatusFailed
+		result.Error = fmt.Sprintf("RESTORE_VERIFY_FAILED: %v", err)
+		s.setRestoreResult(result)
+		return result, nil
+	}
+	if !verifyResult.Match {
+		result.Status = models.RestoreStatusFailed
+		result.Error = "RESTORE_VERIFY_FAILED: backup integrity check failed, checksum mismatch"
+		s.setRestoreResult(result)
+		return result, nil
+	}
+
+	// Step 3: Create auto-snapshot before restore (NFR-R9)
+	snapshot, err := s.createAutoSnapshot(ctx)
+	if err != nil {
+		result.Status = models.RestoreStatusFailed
+		result.Error = fmt.Sprintf("RESTORE_SNAPSHOT_FAILED: %v", err)
+		s.setRestoreResult(result)
+		return result, nil
+	}
+	result.SnapshotID = snapshot.ID
+	result.Message = "自動快照已建立，正在還原..."
+	s.setRestoreResult(result)
+
+	// Step 4: Extract tar.gz to temp directory
+	backupFilePath := filepath.Join(s.backupDir, backup.Filename)
+	tmpDir, err := os.MkdirTemp("", "vido-restore-*")
+	if err != nil {
+		s.rollbackFromSnapshot(ctx, snapshot.ID, result)
+		return result, nil
+	}
+	defer os.RemoveAll(tmpDir)
+
+	if err := s.extractTarGz(backupFilePath, tmpDir); err != nil {
+		result.Status = models.RestoreStatusFailed
+		result.Error = fmt.Sprintf("RESTORE_EXTRACT_FAILED: %v", err)
+		s.rollbackFromSnapshot(ctx, snapshot.ID, result)
+		return result, nil
+	}
+
+	// Step 5: Read and check schema version compatibility
+	manifestPath := filepath.Join(tmpDir, "manifest.json")
+	manifest, err := s.readManifest(manifestPath)
+	if err != nil {
+		result.Status = models.RestoreStatusFailed
+		result.Error = fmt.Sprintf("RESTORE_EXTRACT_FAILED: cannot read manifest: %v", err)
+		s.rollbackFromSnapshot(ctx, snapshot.ID, result)
+		return result, nil
+	}
+
+	if manifest.SchemaVersion > s.schemaVersion {
+		result.Status = models.RestoreStatusFailed
+		result.Error = fmt.Sprintf("RESTORE_INCOMPATIBLE_VERSION: backup schema version %d is newer than current %d", manifest.SchemaVersion, s.schemaVersion)
+		s.setRestoreResult(result)
+		return result, nil
+	}
+
+	// Step 6: Replace current database with backup database
+	backupDBPath := filepath.Join(tmpDir, "vido.db")
+	if _, err := os.Stat(backupDBPath); os.IsNotExist(err) {
+		result.Status = models.RestoreStatusFailed
+		result.Error = "RESTORE_EXTRACT_FAILED: backup archive does not contain vido.db"
+		s.rollbackFromSnapshot(ctx, snapshot.ID, result)
+		return result, nil
+	}
+
+	if err := s.replaceDatabase(ctx, backupDBPath); err != nil {
+		result.Status = models.RestoreStatusFailed
+		result.Error = fmt.Sprintf("RESTORE_DB_FAILED: %v", err)
+		s.rollbackFromSnapshot(ctx, snapshot.ID, result)
+		return result, nil
+	}
+
+	// Step 7: Success
+	result.Status = models.RestoreStatusCompleted
+	result.Message = "還原完成，資料庫已恢復"
+	s.setRestoreResult(result)
+
+	slog.Info("Restore completed successfully", "backup_id", id, "restore_id", result.RestoreID, "snapshot_id", snapshot.ID)
+	return result, nil
+}
+
+// GetRestoreStatus returns the current restore operation status
+func (s *BackupService) GetRestoreStatus(ctx context.Context) (*models.RestoreResult, error) {
+	s.restoreMu.Lock()
+	defer s.restoreMu.Unlock()
+
+	if s.restoreResult == nil {
+		return &models.RestoreResult{
+			Status:  models.RestoreStatusCompleted,
+			Message: "沒有進行中的還原作業",
+		}, nil
+	}
+	return s.restoreResult, nil
+}
+
+func (s *BackupService) setRestoreResult(result *models.RestoreResult) {
+	s.restoreMu.Lock()
+	s.restoreResult = result
+	s.restoreMu.Unlock()
+}
+
+// createAutoSnapshot creates an automatic backup before restore (NFR-R9)
+func (s *BackupService) createAutoSnapshot(ctx context.Context) (*models.Backup, error) {
+	now := time.Now()
+	snapshotID := uuid.New().String()
+	filename := fmt.Sprintf("vido-auto-snapshot-before-restore-%s.tar.gz", now.Format("20060102-150405"))
+
+	snapshot := &models.Backup{
+		ID:            snapshotID,
+		Filename:      filename,
+		SchemaVersion: s.schemaVersion,
+		Status:        models.BackupStatusRunning,
+		CreatedAt:     now,
+	}
+
+	if err := s.repo.Create(ctx, snapshot); err != nil {
+		return nil, fmt.Errorf("create snapshot record: %w", err)
+	}
+
+	if err := os.MkdirAll(s.backupDir, 0o755); err != nil {
+		s.failBackup(ctx, snapshot, fmt.Sprintf("create backup dir: %v", err))
+		return nil, fmt.Errorf("create backup dir: %w", err)
+	}
+
+	tmpDBFile, err := os.CreateTemp("", "vido-snapshot-*.db")
+	if err != nil {
+		s.failBackup(ctx, snapshot, fmt.Sprintf("create temp file: %v", err))
+		return nil, fmt.Errorf("create temp file: %w", err)
+	}
+	tmpDBPath := tmpDBFile.Name()
+	tmpDBFile.Close()
+	defer os.Remove(tmpDBPath)
+
+	if err := s.sqliteBackup(ctx, tmpDBPath); err != nil {
+		s.failBackup(ctx, snapshot, fmt.Sprintf("sqlite backup: %v", err))
+		return nil, fmt.Errorf("sqlite snapshot: %w", err)
+	}
+
+	manifest := s.createManifest(now)
+	finalPath := filepath.Join(s.backupDir, filename)
+	tmpTarPath := finalPath + ".tmp"
+
+	checksum, sizeBytes, err := s.createTarGz(tmpTarPath, tmpDBPath, manifest)
+	if err != nil {
+		os.Remove(tmpTarPath)
+		s.failBackup(ctx, snapshot, fmt.Sprintf("create tar.gz: %v", err))
+		return nil, fmt.Errorf("create snapshot archive: %w", err)
+	}
+
+	if err := os.Rename(tmpTarPath, finalPath); err != nil {
+		os.Remove(tmpTarPath)
+		s.failBackup(ctx, snapshot, fmt.Sprintf("move snapshot: %v", err))
+		return nil, fmt.Errorf("move snapshot: %w", err)
+	}
+
+	snapshot.SizeBytes = sizeBytes
+	snapshot.Checksum = checksum
+	snapshot.Status = models.BackupStatusCompleted
+	if err := s.repo.Update(ctx, snapshot); err != nil {
+		slog.Error("Failed to update snapshot record", "error", err, "id", snapshotID)
+	}
+
+	slog.Info("Auto-snapshot created before restore", "id", snapshotID, "filename", filename)
+	return snapshot, nil
+}
+
+// extractTarGz extracts a tar.gz archive to the destination directory
+func (s *BackupService) extractTarGz(archivePath, destDir string) error {
+	f, err := os.Open(archivePath)
+	if err != nil {
+		return fmt.Errorf("open archive: %w", err)
+	}
+	defer f.Close()
+
+	gzReader, err := gzip.NewReader(f)
+	if err != nil {
+		return fmt.Errorf("create gzip reader: %w", err)
+	}
+	defer gzReader.Close()
+
+	tarReader := tar.NewReader(gzReader)
+	for {
+		header, err := tarReader.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return fmt.Errorf("read tar entry: %w", err)
+		}
+
+		// Sanitize file name to prevent path traversal
+		cleanName := filepath.Clean(header.Name)
+		if filepath.IsAbs(cleanName) || cleanName == ".." || len(cleanName) > 0 && cleanName[0] == '/' {
+			return fmt.Errorf("invalid tar entry name: %s", header.Name)
+		}
+
+		targetPath := filepath.Join(destDir, cleanName)
+		// Verify the target path is within the destination directory
+		if !isSubPath(destDir, targetPath) {
+			return fmt.Errorf("tar entry %q escapes destination directory", header.Name)
+		}
+
+		switch header.Typeflag {
+		case tar.TypeDir:
+			if err := os.MkdirAll(targetPath, 0o755); err != nil {
+				return fmt.Errorf("create dir %s: %w", cleanName, err)
+			}
+		case tar.TypeReg:
+			outFile, err := os.Create(targetPath)
+			if err != nil {
+				return fmt.Errorf("create file %s: %w", cleanName, err)
+			}
+			// Limit file size to 10GB to prevent decompression bombs
+			limited := io.LimitReader(tarReader, 10*1024*1024*1024)
+			if _, err := io.Copy(outFile, limited); err != nil {
+				outFile.Close()
+				return fmt.Errorf("extract file %s: %w", cleanName, err)
+			}
+			outFile.Close()
+		}
+	}
+	return nil
+}
+
+// isSubPath checks if target is within the base directory
+func isSubPath(base, target string) bool {
+	absBase, err := filepath.Abs(base)
+	if err != nil {
+		return false
+	}
+	absTarget, err := filepath.Abs(target)
+	if err != nil {
+		return false
+	}
+	return len(absTarget) >= len(absBase) && absTarget[:len(absBase)] == absBase
+}
+
+// readManifest reads and parses the backup manifest
+func (s *BackupService) readManifest(path string) (*backupManifest, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("read manifest: %w", err)
+	}
+	var manifest backupManifest
+	if err := json.Unmarshal(data, &manifest); err != nil {
+		return nil, fmt.Errorf("parse manifest: %w", err)
+	}
+	return &manifest, nil
+}
+
+// replaceDatabase replaces the current database with the backup database using SQLite backup API
+func (s *BackupService) replaceDatabase(ctx context.Context, backupDBPath string) error {
+	// Open the backup database
+	backupDB, err := sql.Open("sqlite3", backupDBPath+"?mode=ro")
+	if err != nil {
+		return fmt.Errorf("open backup db: %w", err)
+	}
+	defer backupDB.Close()
+
+	// Verify backup database is valid
+	if err := backupDB.PingContext(ctx); err != nil {
+		return fmt.Errorf("validate backup db: %w", err)
+	}
+
+	// Use SQLite's built-in mechanism: load backup data into current DB
+	// We do this by running VACUUM INTO to save current state, then
+	// restore by overwriting tables from the backup
+	// Using a transaction to replace all data atomically
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin restore transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// Attach the backup database
+	_, err = tx.ExecContext(ctx, fmt.Sprintf("ATTACH DATABASE '%s' AS restore_db", backupDBPath))
+	if err != nil {
+		return fmt.Errorf("attach backup db: %w", err)
+	}
+
+	// Get list of tables from the backup database
+	rows, err := tx.QueryContext(ctx, "SELECT name FROM restore_db.sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name != 'schema_migrations'")
+	if err != nil {
+		return fmt.Errorf("list backup tables: %w", err)
+	}
+
+	var tables []string
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			rows.Close()
+			return fmt.Errorf("scan table name: %w", err)
+		}
+		tables = append(tables, name)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return fmt.Errorf("iterate backup tables: %w", err)
+	}
+	rows.Close()
+
+	// For each table in backup: delete current data, copy from backup
+	for _, table := range tables {
+		// Check if table exists in current database
+		var count int
+		err := tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?", table).Scan(&count)
+		if err != nil || count == 0 {
+			slog.Warn("Skipping restore table not in current schema", "table", table)
+			continue
+		}
+
+		if _, err := tx.ExecContext(ctx, fmt.Sprintf("DELETE FROM main.%q", table)); err != nil {
+			return fmt.Errorf("clear table %s: %w", table, err)
+		}
+		if _, err := tx.ExecContext(ctx, fmt.Sprintf("INSERT INTO main.%q SELECT * FROM restore_db.%q", table, table)); err != nil {
+			return fmt.Errorf("restore table %s: %w", table, err)
+		}
+	}
+
+	// Commit first, then detach outside the transaction
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit restore: %w", err)
+	}
+
+	// Detach restore database outside the transaction
+	if _, err := s.db.ExecContext(ctx, "DETACH DATABASE restore_db"); err != nil {
+		slog.Warn("Failed to detach restore database", "error", err)
+	}
+
+	slog.Info("Database restored successfully", "tables_restored", len(tables))
+	return nil
+}
+
+// rollbackFromSnapshot attempts to restore from the auto-snapshot when restore fails
+func (s *BackupService) rollbackFromSnapshot(ctx context.Context, snapshotID string, result *models.RestoreResult) {
+	snapshot, err := s.repo.GetByID(ctx, snapshotID)
+	if err != nil || snapshot == nil {
+		result.Error += " | RESTORE_ROLLBACK_FAILED: cannot find snapshot"
+		s.setRestoreResult(result)
+		slog.Error("Rollback failed: snapshot not found", "snapshot_id", snapshotID)
+		return
+	}
+
+	snapshotPath := filepath.Join(s.backupDir, snapshot.Filename)
+	tmpDir, err := os.MkdirTemp("", "vido-rollback-*")
+	if err != nil {
+		result.Error += " | RESTORE_ROLLBACK_FAILED: " + err.Error()
+		s.setRestoreResult(result)
+		return
+	}
+	defer os.RemoveAll(tmpDir)
+
+	if err := s.extractTarGz(snapshotPath, tmpDir); err != nil {
+		result.Error += " | RESTORE_ROLLBACK_FAILED: " + err.Error()
+		s.setRestoreResult(result)
+		return
+	}
+
+	dbPath := filepath.Join(tmpDir, "vido.db")
+	if err := s.replaceDatabase(ctx, dbPath); err != nil {
+		result.Error += " | RESTORE_ROLLBACK_FAILED: " + err.Error()
+		s.setRestoreResult(result)
+		slog.Error("Rollback failed", "error", err, "snapshot_id", snapshotID)
+		return
+	}
+
+	result.Error += " | RESTORE_ROLLBACK_SUCCESS: recovered from auto-snapshot"
+	s.setRestoreResult(result)
+	slog.Info("Rollback from snapshot successful", "snapshot_id", snapshotID)
 }
 
 func calculateFileChecksum(filePath string) (string, error) {

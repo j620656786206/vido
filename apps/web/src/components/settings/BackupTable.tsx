@@ -1,4 +1,4 @@
-import { Download, Trash2, ShieldCheck } from 'lucide-react';
+import { Download, Trash2, ShieldCheck, RotateCcw } from 'lucide-react';
 import type { Backup, BackupStatus } from '../../services/backupService';
 import { backupService } from '../../services/backupService';
 import { formatBytes } from '../../utils/formatBytes';
@@ -19,16 +19,20 @@ interface BackupTableProps {
   backups: Backup[];
   onDelete: (id: string) => void;
   onVerify: (id: string) => void;
+  onRestore: (id: string) => void;
   isDeleting: boolean;
   isVerifying: boolean;
+  isRestoring: boolean;
 }
 
 export function BackupTable({
   backups,
   onDelete,
   onVerify,
+  onRestore,
   isDeleting,
   isVerifying,
+  isRestoring,
 }: BackupTableProps) {
   return (
     <div
@@ -73,6 +77,15 @@ export function BackupTable({
             <span className="flex flex-1 items-center justify-end gap-2">
               {backup.status === 'completed' && (
                 <>
+                  <button
+                    onClick={() => onRestore(backup.id)}
+                    disabled={isRestoring}
+                    className="text-slate-400 transition-colors hover:text-amber-400 disabled:opacity-50"
+                    data-testid={`restore-btn-${backup.id}`}
+                    title="還原"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                  </button>
                   <button
                     onClick={() => onVerify(backup.id)}
                     disabled={isVerifying}

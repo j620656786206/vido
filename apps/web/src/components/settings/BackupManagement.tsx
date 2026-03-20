@@ -5,18 +5,24 @@ import {
   useCreateBackup,
   useDeleteBackup,
   useVerifyBackup,
+  useRestoreBackup,
 } from '../../hooks/useBackups';
 import { BackupTable } from './BackupTable';
+import { RestoreConfirmDialog } from './RestoreConfirmDialog';
 import { formatBytes } from '../../utils/formatBytes';
+import type { Backup } from '../../services/backupService';
 
 export function BackupManagement() {
   const { data, isLoading, error } = useBackups();
   const createBackup = useCreateBackup();
   const deleteBackup = useDeleteBackup();
   const verifyBackup = useVerifyBackup();
+  const restoreBackup = useRestoreBackup();
   const [createError, setCreateError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [verifyMessage, setVerifyMessage] = useState<string | null>(null);
+  const [restoreMessage, setRestoreMessage] = useState<string | null>(null);
+  const [restoreTarget, setRestoreTarget] = useState<Backup | null>(null);
 
   const handleCreate = async () => {
     if (createBackup.isPending) return;
@@ -48,6 +54,30 @@ export function BackupManagement() {
       }
     } catch (err) {
       setVerifyMessage(err instanceof Error ? err.message : '驗證失敗');
+    }
+  };
+
+  const handleRestoreClick = (id: string) => {
+    const backup = data?.backups?.find((b) => b.id === id);
+    if (backup) {
+      setRestoreTarget(backup);
+    }
+  };
+
+  const handleRestoreConfirm = async () => {
+    if (!restoreTarget) return;
+    setRestoreMessage(null);
+    try {
+      const result = await restoreBackup.mutateAsync(restoreTarget.id);
+      setRestoreTarget(null);
+      if (result.status === 'completed') {
+        setRestoreMessage('✅ 還原完成，資料庫已恢復');
+      } else {
+        setRestoreMessage(`⚠️ 還原失敗：${result.error || '未知錯誤'}`);
+      }
+    } catch (err) {
+      setRestoreTarget(null);
+      setRestoreMessage(err instanceof Error ? err.message : '還原失敗');
     }
   };
 
@@ -125,6 +155,16 @@ export function BackupManagement() {
         </div>
       )}
 
+      {restoreMessage && (
+        <div
+          className="rounded-lg border border-amber-800 bg-amber-900/20 px-4 py-3 text-sm text-amber-300"
+          role="status"
+          data-testid="restore-message"
+        >
+          {restoreMessage}
+        </div>
+      )}
+
       {deleteError && (
         <div
           className="rounded-lg border border-red-800 bg-red-900/20 px-4 py-3 text-sm text-red-400"
@@ -141,8 +181,10 @@ export function BackupManagement() {
           backups={backups}
           onDelete={handleDelete}
           onVerify={handleVerify}
+          onRestore={handleRestoreClick}
           isDeleting={deleteBackup.isPending}
           isVerifying={verifyBackup.isPending}
+          isRestoring={restoreBackup.isPending}
         />
       ) : (
         <div
@@ -151,6 +193,16 @@ export function BackupManagement() {
         >
           尚未建立任何備份
         </div>
+      )}
+
+      {/* Restore confirmation dialog */}
+      {restoreTarget && (
+        <RestoreConfirmDialog
+          backup={restoreTarget}
+          isRestoring={restoreBackup.isPending}
+          onConfirm={handleRestoreConfirm}
+          onCancel={() => setRestoreTarget(null)}
+        />
       )}
     </div>
   );

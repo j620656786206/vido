@@ -44,8 +44,10 @@ describe('BackupTable', () => {
         backups: [completedBackup],
         onDelete,
         onVerify: vi.fn(),
+        onRestore: vi.fn(),
         isDeleting: false,
         isVerifying: false,
+        isRestoring: false,
       })
     );
     expect(screen.getByText('檔案名稱')).toBeInTheDocument();
@@ -62,8 +64,10 @@ describe('BackupTable', () => {
         backups: [completedBackup],
         onDelete,
         onVerify: vi.fn(),
+        onRestore: vi.fn(),
         isDeleting: false,
         isVerifying: false,
+        isRestoring: false,
       })
     );
     expect(screen.getByTestId('backup-row-b1')).toBeInTheDocument();
@@ -81,8 +85,10 @@ describe('BackupTable', () => {
         backups: [failedBackup],
         onDelete,
         onVerify: vi.fn(),
+        onRestore: vi.fn(),
         isDeleting: false,
         isVerifying: false,
+        isRestoring: false,
       })
     );
     expect(screen.getByText('失敗')).toBeInTheDocument();
@@ -97,8 +103,10 @@ describe('BackupTable', () => {
         backups: [runningBackup],
         onDelete,
         onVerify: vi.fn(),
+        onRestore: vi.fn(),
         isDeleting: false,
         isVerifying: false,
+        isRestoring: false,
       })
     );
     expect(screen.getByText('執行中')).toBeInTheDocument();
@@ -112,8 +120,10 @@ describe('BackupTable', () => {
         backups: [completedBackup],
         onDelete,
         onVerify: vi.fn(),
+        onRestore: vi.fn(),
         isDeleting: false,
         isVerifying: false,
+        isRestoring: false,
       })
     );
     await user.click(screen.getByTestId('delete-btn-b1'));
@@ -126,7 +136,11 @@ describe('BackupTable', () => {
       React.createElement(BackupTable, {
         backups: [completedBackup, failedBackup, runningBackup],
         onDelete,
+        onVerify: vi.fn(),
+        onRestore: vi.fn(),
         isDeleting: false,
+        isVerifying: false,
+        isRestoring: false,
       })
     );
     expect(screen.getByTestId('backup-row-b1')).toBeInTheDocument();
@@ -164,8 +178,10 @@ describe('BackupTable', () => {
         backups: [pendingBackup],
         onDelete,
         onVerify: vi.fn(),
+        onRestore: vi.fn(),
         isDeleting: false,
         isVerifying: false,
+        isRestoring: false,
       })
     );
     expect(screen.getByText('等待中')).toBeInTheDocument();
@@ -179,8 +195,10 @@ describe('BackupTable', () => {
         backups: [completedBackup],
         onDelete,
         onVerify: vi.fn(),
+        onRestore: vi.fn(),
         isDeleting: false,
         isVerifying: false,
+        isRestoring: false,
       })
     );
     const downloadLink = screen.getByTestId('download-btn-b1');
@@ -224,8 +242,10 @@ describe('BackupTable', () => {
         backups: [corruptedBackup],
         onDelete,
         onVerify: vi.fn(),
+        onRestore: vi.fn(),
         isDeleting: false,
         isVerifying: false,
+        isRestoring: false,
       })
     );
     expect(screen.getByText('已損壞')).toBeInTheDocument();
@@ -240,10 +260,76 @@ describe('BackupTable', () => {
         backups: [completedBackup],
         onDelete,
         onVerify: vi.fn(),
+        onRestore: vi.fn(),
         isDeleting: false,
         isVerifying: true,
+        isRestoring: false,
       })
     );
     expect(screen.getByTestId('verify-btn-b1')).toBeDisabled();
+  });
+
+  it('[P1] renders restore button for completed backups', () => {
+    const onDelete = vi.fn();
+    render(
+      React.createElement(BackupTable, {
+        backups: [completedBackup],
+        onDelete,
+        onVerify: vi.fn(),
+        onRestore: vi.fn(),
+        isDeleting: false,
+        isVerifying: false,
+        isRestoring: false,
+      })
+    );
+    expect(screen.getByTestId('restore-btn-b1')).toBeInTheDocument();
+  });
+
+  it('[P1] calls onRestore when restore button is clicked', async () => {
+    const user = userEvent.setup();
+    const onRestore = vi.fn();
+    render(
+      React.createElement(BackupTable, {
+        backups: [completedBackup],
+        onDelete: vi.fn(),
+        onVerify: vi.fn(),
+        onRestore,
+        isDeleting: false,
+        isVerifying: false,
+        isRestoring: false,
+      })
+    );
+    await user.click(screen.getByTestId('restore-btn-b1'));
+    expect(onRestore).toHaveBeenCalledWith('b1');
+  });
+
+  it('[P2] does not show restore button for failed backups', () => {
+    render(
+      React.createElement(BackupTable, {
+        backups: [failedBackup],
+        onDelete: vi.fn(),
+        onVerify: vi.fn(),
+        onRestore: vi.fn(),
+        isDeleting: false,
+        isVerifying: false,
+        isRestoring: false,
+      })
+    );
+    expect(screen.queryByTestId('restore-btn-b2')).not.toBeInTheDocument();
+  });
+
+  it('[P2] disables restore button when isRestoring is true', () => {
+    render(
+      React.createElement(BackupTable, {
+        backups: [completedBackup],
+        onDelete: vi.fn(),
+        onVerify: vi.fn(),
+        onRestore: vi.fn(),
+        isDeleting: false,
+        isVerifying: false,
+        isRestoring: true,
+      })
+    );
+    expect(screen.getByTestId('restore-btn-b1')).toBeDisabled();
   });
 });

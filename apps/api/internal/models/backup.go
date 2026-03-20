@@ -40,6 +40,24 @@ const (
 	VerificationStatusMissing   VerificationStatus = "missing"
 )
 
+// RestoreStatus represents the current state of a restore operation
+type RestoreStatus string
+
+const (
+	RestoreStatusInProgress RestoreStatus = "in_progress"
+	RestoreStatusCompleted  RestoreStatus = "completed"
+	RestoreStatusFailed     RestoreStatus = "failed"
+)
+
+// RestoreResult contains the outcome of a restore operation
+type RestoreResult struct {
+	RestoreID  string        `json:"restoreId"`
+	Status     RestoreStatus `json:"status"`
+	SnapshotID string        `json:"snapshotId"`
+	Message    string        `json:"message"`
+	Error      string        `json:"error,omitempty"`
+}
+
 // VerificationResult contains the outcome of a backup verification
 type VerificationResult struct {
 	BackupID           string             `json:"backupId"`

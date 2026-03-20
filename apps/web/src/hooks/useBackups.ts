@@ -4,7 +4,12 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { backupService } from '../services/backupService';
-import type { BackupListResponse, Backup, VerificationResult } from '../services/backupService';
+import type {
+  BackupListResponse,
+  Backup,
+  VerificationResult,
+  RestoreResult,
+} from '../services/backupService';
 
 export const backupKeys = {
   all: ['backups'] as const,
@@ -35,6 +40,17 @@ export function useDeleteBackup() {
 
   return useMutation<void, Error, string>({
     mutationFn: (id) => backupService.deleteBackup(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: backupKeys.list() });
+    },
+  });
+}
+
+export function useRestoreBackup() {
+  const queryClient = useQueryClient();
+
+  return useMutation<RestoreResult, Error, string>({
+    mutationFn: (id) => backupService.restoreBackup(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: backupKeys.list() });
     },

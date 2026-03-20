@@ -10,6 +10,7 @@ vi.mock('../../hooks/useBackups', () => ({
   useCreateBackup: vi.fn(),
   useDeleteBackup: vi.fn(),
   useVerifyBackup: vi.fn(),
+  useRestoreBackup: vi.fn(),
 }));
 
 import {
@@ -17,12 +18,14 @@ import {
   useCreateBackup,
   useDeleteBackup,
   useVerifyBackup,
+  useRestoreBackup,
 } from '../../hooks/useBackups';
 
 const mockUseBackups = vi.mocked(useBackups);
 const mockUseCreateBackup = vi.mocked(useCreateBackup);
 const mockUseDeleteBackup = vi.mocked(useDeleteBackup);
 const mockUseVerifyBackup = vi.mocked(useVerifyBackup);
+const mockUseRestoreBackup = vi.mocked(useRestoreBackup);
 
 function renderWithQuery(ui: React.ReactElement) {
   const queryClient = new QueryClient({
@@ -42,6 +45,10 @@ beforeEach(() => {
   } as any);
   mockUseVerifyBackup.mockReturnValue({
     mutateAsync: vi.fn().mockResolvedValue({ match: true, status: 'verified' }),
+    isPending: false,
+  } as any);
+  mockUseRestoreBackup.mockReturnValue({
+    mutateAsync: vi.fn().mockResolvedValue({ status: 'completed', message: '還原完成' }),
     isPending: false,
   } as any);
 });
@@ -231,6 +238,128 @@ describe('BackupManagement', () => {
 
     renderWithQuery(React.createElement(BackupManagement));
     expect(screen.getByTestId('backup-summary')).toHaveTextContent('2 個備份');
+  });
+
+  describe('AC1-4: Data restore', () => {
+    const backupData = {
+      backups: [
+        {
+          id: 'b1',
+          filename: 'vido-backup-20260320-140000-v17.tar.gz',
+          sizeBytes: 52428800,
+          schemaVersion: 17,
+          checksum: 'abc123',
+          status: 'completed' as const,
+          createdAt: '2026-03-20T14:00:00Z',
+        },
+      ],
+      totalSizeBytes: 52428800,
+    };
+
+    it('[P1] shows restore button for completed backups', () => {
+      mockUseBackups.mockReturnValue({
+        data: backupData,
+        isLoading: false,
+        error: null,
+      } as any);
+
+      renderWithQuery(React.createElement(BackupManagement));
+      expect(screen.getByTestId('restore-btn-b1')).toBeInTheDocument();
+    });
+
+    it('[P1] opens confirm dialog when restore is clicked', async () => {
+      const user = userEvent.setup();
+      mockUseBackups.mockReturnValue({
+        data: backupData,
+        isLoading: false,
+        error: null,
+      } as any);
+
+      renderWithQuery(React.createElement(BackupManagement));
+      await user.click(screen.getByTestId('restore-btn-b1'));
+      expect(screen.getByTestId('restore-confirm-dialog')).toBeInTheDocument();
+      expect(screen.getByTestId('restore-filename')).toHaveTextContent(
+        'vido-backup-20260320-140000-v17.tar.gz'
+      );
+    });
+
+    it('[P1] closes dialog on cancel', async () => {
+      const user = userEvent.setup();
+      mockUseBackups.mockReturnValue({
+        data: backupData,
+        isLoading: false,
+        error: null,
+      } as any);
+
+      renderWithQuery(React.createElement(BackupManagement));
+      await user.click(screen.getByTestId('restore-btn-b1'));
+      expect(screen.getByTestId('restore-confirm-dialog')).toBeInTheDocument();
+
+      await user.click(screen.getByTestId('restore-cancel-btn'));
+      expect(screen.queryByTestId('restore-confirm-dialog')).not.toBeInTheDocument();
+    });
+
+    it('[P1] shows success message after restore completes', async () => {
+      const user = userEvent.setup();
+      mockUseRestoreBackup.mockReturnValue({
+        mutateAsync: vi.fn().mockResolvedValue({ status: 'completed', message: '還原完成' }),
+        isPending: false,
+      } as any);
+      mockUseBackups.mockReturnValue({
+        data: backupData,
+        isLoading: false,
+        error: null,
+      } as any);
+
+      renderWithQuery(React.createElement(BackupManagement));
+      await user.click(screen.getByTestId('restore-btn-b1'));
+      await user.click(screen.getByTestId('restore-confirm-btn'));
+
+      expect(screen.getByTestId('restore-message')).toBeInTheDocument();
+      expect(screen.getByText(/還原完成/)).toBeInTheDocument();
+    });
+
+    it('[P1] shows error message when restore fails', async () => {
+      const user = userEvent.setup();
+      mockUseRestoreBackup.mockReturnValue({
+        mutateAsync: vi
+          .fn()
+          .mockResolvedValue({ status: 'failed', error: 'RESTORE_VERIFY_FAILED' }),
+        isPending: false,
+      } as any);
+      mockUseBackups.mockReturnValue({
+        data: backupData,
+        isLoading: false,
+        error: null,
+      } as any);
+
+      renderWithQuery(React.createElement(BackupManagement));
+      await user.click(screen.getByTestId('restore-btn-b1'));
+      await user.click(screen.getByTestId('restore-confirm-btn'));
+
+      expect(screen.getByTestId('restore-message')).toBeInTheDocument();
+      expect(screen.getByText(/還原失敗/)).toBeInTheDocument();
+    });
+
+    it('[P2] shows error when restore API throws', async () => {
+      const user = userEvent.setup();
+      mockUseRestoreBackup.mockReturnValue({
+        mutateAsync: vi.fn().mockRejectedValue(new Error('Network error')),
+        isPending: false,
+      } as any);
+      mockUseBackups.mockReturnValue({
+        data: backupData,
+        isLoading: false,
+        error: null,
+      } as any);
+
+      renderWithQuery(React.createElement(BackupManagement));
+      await user.click(screen.getByTestId('restore-btn-b1'));
+      await user.click(screen.getByTestId('restore-confirm-btn'));
+
+      expect(screen.getByTestId('restore-message')).toBeInTheDocument();
+      expect(screen.getByText('Network error')).toBeInTheDocument();
+    });
   });
 
   describe('AC2/AC3: Backup verification', () => {

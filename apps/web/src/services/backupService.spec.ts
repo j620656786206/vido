@@ -133,6 +133,62 @@ describe('backupService', () => {
     });
   });
 
+  describe('restoreBackup', () => {
+    it('[P1] sends POST request to restore endpoint', async () => {
+      const mockResult = {
+        restoreId: 'r1',
+        status: 'completed',
+        snapshotId: 'snap1',
+        message: '還原完成',
+      };
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ success: true, data: mockResult }),
+      });
+
+      const result = await backupService.restoreBackup('b1');
+      expect(result).toEqual(mockResult);
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/settings/backups/b1/restore'),
+        expect.objectContaining({ method: 'POST' })
+      );
+    });
+
+    it('[P1] throws error when restore in progress', async () => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 409,
+        json: () =>
+          Promise.resolve({
+            success: false,
+            error: { code: 'RESTORE_IN_PROGRESS', message: 'Another restore is running' },
+          }),
+      });
+
+      await expect(backupService.restoreBackup('b1')).rejects.toThrow('Another restore is running');
+    });
+  });
+
+  describe('getRestoreStatus', () => {
+    it('[P1] returns restore status', async () => {
+      const mockResult = {
+        status: 'completed',
+        message: '沒有進行中的還原作業',
+      };
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ success: true, data: mockResult }),
+      });
+
+      const result = await backupService.getRestoreStatus();
+      expect(result).toEqual(mockResult);
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/settings/restore/status'),
+        expect.objectContaining({ headers: { 'Content-Type': 'application/json' } })
+      );
+    });
+  });
+
   describe('getDownloadUrl', () => {
     it('[P1] returns correct download URL', () => {
       const url = backupService.getDownloadUrl('b1');

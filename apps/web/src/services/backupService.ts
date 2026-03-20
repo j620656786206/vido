@@ -17,6 +17,16 @@ export interface VerificationResult {
   verifiedAt: string;
 }
 
+export type RestoreStatus = 'in_progress' | 'completed' | 'failed';
+
+export interface RestoreResult {
+  restoreId: string;
+  status: RestoreStatus;
+  snapshotId: string;
+  message: string;
+  error?: string;
+}
+
 export interface Backup {
   id: string;
   filename: string;
@@ -82,6 +92,16 @@ export const backupService = {
     return fetchApi<VerificationResult>(`/settings/backups/${encodeURIComponent(id)}/verify`, {
       method: 'POST',
     });
+  },
+
+  async restoreBackup(id: string): Promise<RestoreResult> {
+    return fetchApi<RestoreResult>(`/settings/backups/${encodeURIComponent(id)}/restore`, {
+      method: 'POST',
+    });
+  },
+
+  async getRestoreStatus(): Promise<RestoreResult> {
+    return fetchApi<RestoreResult>('/settings/restore/status');
   },
 
   getDownloadUrl(id: string): string {

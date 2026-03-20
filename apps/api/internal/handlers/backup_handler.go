@@ -29,7 +29,9 @@ func (h *BackupHandler) RegisterRoutes(rg *gin.RouterGroup) {
 		backups.DELETE("/:id", h.DeleteBackup)
 		backups.GET("/:id/download", h.DownloadBackup)
 		backups.POST("/:id/verify", h.VerifyBackup)
+		backups.POST("/:id/restore", h.RestoreBackup)
 	}
+	rg.GET("/settings/restore/status", h.GetRestoreStatus)
 }
 
 // CreateBackup handles POST /api/v1/settings/backups
@@ -114,6 +116,40 @@ func (h *BackupHandler) DownloadBackup(c *gin.Context) {
 	c.Header("Content-Disposition", "attachment; filename="+filename)
 	c.Header("Content-Type", "application/gzip")
 	c.File(filePath)
+}
+
+// RestoreBackup handles POST /api/v1/settings/backups/:id/restore
+func (h *BackupHandler) RestoreBackup(c *gin.Context) {
+	id := c.Param("id")
+
+	result, err := h.backupService.RestoreBackup(c.Request.Context(), id)
+	if err != nil {
+		if errors.Is(err, services.ErrBackupNotFound) {
+			BadRequestError(c, "BACKUP_NOT_FOUND", "Backup not found: "+id)
+			return
+		}
+		if errors.Is(err, services.ErrRestoreInProgress) {
+			ErrorResponse(c, 409, "RESTORE_IN_PROGRESS", "Another restore operation is already running", "Please wait for the current restore to complete.")
+			return
+		}
+		slog.Error("Failed to restore backup", "error", err, "id", id)
+		ErrorResponse(c, 500, "RESTORE_FAILED", "Failed to restore backup", "Please try again later.")
+		return
+	}
+
+	SuccessResponse(c, result)
+}
+
+// GetRestoreStatus handles GET /api/v1/settings/restore/status
+func (h *BackupHandler) GetRestoreStatus(c *gin.Context) {
+	result, err := h.backupService.GetRestoreStatus(c.Request.Context())
+	if err != nil {
+		slog.Error("Failed to get restore status", "error", err)
+		InternalServerError(c, "Failed to get restore status")
+		return
+	}
+
+	SuccessResponse(c, result)
 }
 
 // VerifyBackup handles POST /api/v1/settings/backups/:id/verify
