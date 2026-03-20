@@ -587,5 +587,91 @@ describe('ServiceStatusDashboard', () => {
 
       expect(screen.queryByTestId('status-change-notification')).not.toBeInTheDocument();
     });
+
+    it('[P2] does not show notification when a new service appears', () => {
+      const initialServices = [
+        {
+          name: 'tmdb',
+          displayName: 'TMDb API',
+          status: 'connected' as const,
+          message: '已連線',
+          lastSuccessAt: '2026-02-10T14:30:00Z',
+          lastCheckAt: '2026-02-10T14:30:00Z',
+          responseTimeMs: 45,
+        },
+      ];
+
+      mockUseServiceStatuses.mockReturnValue({
+        data: { services: initialServices },
+        isLoading: false,
+        error: null,
+      } as any);
+
+      const { rerender } = renderWithQuery(React.createElement(ServiceStatusDashboard));
+
+      // A new service appears (wasn't in previous map)
+      mockUseServiceStatuses.mockReturnValue({
+        data: {
+          services: [
+            ...initialServices,
+            {
+              name: 'ai',
+              displayName: 'AI 服務',
+              status: 'unconfigured' as const,
+              message: '未設定',
+              lastSuccessAt: null,
+              lastCheckAt: '2026-02-10T14:30:00Z',
+              responseTimeMs: 0,
+            },
+          ],
+        },
+        isLoading: false,
+        error: null,
+      } as any);
+
+      rerender(
+        React.createElement(
+          QueryClientProvider,
+          {
+            client: new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+          },
+          React.createElement(ServiceStatusDashboard)
+        )
+      );
+
+      // No notification — new service is not a "change"
+      expect(screen.queryByTestId('status-change-notification')).not.toBeInTheDocument();
+    });
+  });
+
+  it('[P2] shows fallback error message for non-Error rejection', async () => {
+    const user = userEvent.setup();
+    const mockMutateAsync = vi.fn().mockRejectedValue('string error');
+    mockUseTestServiceConnection.mockReturnValue({
+      mutateAsync: mockMutateAsync,
+      isPending: false,
+    } as any);
+    mockUseServiceStatuses.mockReturnValue({
+      data: {
+        services: [
+          {
+            name: 'tmdb',
+            displayName: 'TMDb API',
+            status: 'connected',
+            message: '已連線',
+            lastSuccessAt: '2026-02-10T14:30:00Z',
+            lastCheckAt: '2026-02-10T14:30:00Z',
+            responseTimeMs: 45,
+          },
+        ],
+      },
+      isLoading: false,
+      error: null,
+    } as any);
+
+    renderWithQuery(React.createElement(ServiceStatusDashboard));
+    await user.click(screen.getByTestId('test-btn-tmdb'));
+    expect(screen.getByTestId('test-error')).toBeInTheDocument();
+    expect(screen.getByText('測試連線失敗')).toBeInTheDocument();
   });
 });
