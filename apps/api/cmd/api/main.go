@@ -154,6 +154,10 @@ func main() {
 	backupService := services.NewBackupService(db.Conn(), repos.Backups, backupDir, 17)
 	slog.Info("Backup service initialized", "backup_dir", backupDir)
 
+	// Initialize backup scheduler (Story 6.8)
+	backupScheduler := services.NewBackupScheduler(backupService, repos.Settings, repos.Backups)
+	slog.Info("Backup scheduler initialized")
+
 	// Initialize cache management services (Story 6.2)
 	posterDir := filepath.Join(cfg.DataDir, "posters")
 	cacheStatsService := services.NewCacheStatsService(db.Conn(), posterDir)
@@ -338,6 +342,7 @@ func main() {
 	serviceStatusService := services.NewServiceStatusService(healthMonitor, healthChecker)
 	statusHandler := handlers.NewStatusHandler(serviceStatusService)
 	backupHandler := handlers.NewBackupHandler(backupService)
+	backupHandler.SetScheduler(backupScheduler)
 	// parseProgressHandler already initialized above with defer Close()
 	slog.Info("Handlers initialized with service injection")
 
@@ -392,6 +397,11 @@ func main() {
 		slog.Info("Retry scheduler started")
 	}
 
+	// Start backup scheduler (Story 6.8)
+	schedulerCtx, schedulerCancel := context.WithCancel(context.Background())
+	go backupScheduler.Start(schedulerCtx)
+	slog.Info("Backup scheduler started")
+
 	// Start qBittorrent health monitoring with 30s interval (Story 4.6 - NFR-R6)
 	monitorCtx, monitorCancel := context.WithCancel(context.Background())
 	go healthMonitor.StartQBMonitoring(monitorCtx)
@@ -420,6 +430,11 @@ func main() {
 	// Stop health monitoring goroutine
 	slog.Info("Stopping health monitoring...")
 	monitorCancel()
+
+	// Stop backup scheduler
+	slog.Info("Stopping backup scheduler...")
+	schedulerCancel()
+	backupScheduler.Stop()
 
 	// Stop retry scheduler
 	slog.Info("Stopping retry scheduler...")

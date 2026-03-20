@@ -11,6 +11,8 @@ vi.mock('../../hooks/useBackups', () => ({
   useDeleteBackup: vi.fn(),
   useVerifyBackup: vi.fn(),
   useRestoreBackup: vi.fn(),
+  useBackupSchedule: vi.fn(),
+  useUpdateSchedule: vi.fn(),
 }));
 
 import {
@@ -19,6 +21,8 @@ import {
   useDeleteBackup,
   useVerifyBackup,
   useRestoreBackup,
+  useBackupSchedule,
+  useUpdateSchedule,
 } from '../../hooks/useBackups';
 
 const mockUseBackups = vi.mocked(useBackups);
@@ -26,6 +30,8 @@ const mockUseCreateBackup = vi.mocked(useCreateBackup);
 const mockUseDeleteBackup = vi.mocked(useDeleteBackup);
 const mockUseVerifyBackup = vi.mocked(useVerifyBackup);
 const mockUseRestoreBackup = vi.mocked(useRestoreBackup);
+const mockUseBackupSchedule = vi.mocked(useBackupSchedule);
+const mockUseUpdateSchedule = vi.mocked(useUpdateSchedule);
 
 function renderWithQuery(ui: React.ReactElement) {
   const queryClient = new QueryClient({
@@ -49,6 +55,14 @@ beforeEach(() => {
   } as any);
   mockUseRestoreBackup.mockReturnValue({
     mutateAsync: vi.fn().mockResolvedValue({ status: 'completed', message: '還原完成' }),
+    isPending: false,
+  } as any);
+  mockUseBackupSchedule.mockReturnValue({
+    data: { enabled: false, frequency: 'disabled', hour: 3, dayOfWeek: 0 },
+    isLoading: false,
+  } as any);
+  mockUseUpdateSchedule.mockReturnValue({
+    mutateAsync: vi.fn().mockResolvedValue({}),
     isPending: false,
   } as any);
 });

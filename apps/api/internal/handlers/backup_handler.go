@@ -12,11 +12,17 @@ import (
 // BackupHandler handles HTTP requests for backup management
 type BackupHandler struct {
 	backupService services.BackupServiceInterface
+	scheduler     services.BackupSchedulerInterface
 }
 
 // NewBackupHandler creates a new BackupHandler
 func NewBackupHandler(backupService services.BackupServiceInterface) *BackupHandler {
 	return &BackupHandler{backupService: backupService}
+}
+
+// SetScheduler sets the backup scheduler for schedule endpoints
+func (h *BackupHandler) SetScheduler(scheduler services.BackupSchedulerInterface) {
+	h.scheduler = scheduler
 }
 
 // RegisterRoutes registers backup management routes
@@ -30,6 +36,8 @@ func (h *BackupHandler) RegisterRoutes(rg *gin.RouterGroup) {
 		backups.GET("/:id/download", h.DownloadBackup)
 		backups.POST("/:id/verify", h.VerifyBackup)
 		backups.POST("/:id/restore", h.RestoreBackup)
+		backups.GET("/schedule", h.GetSchedule)
+		backups.PUT("/schedule", h.UpdateSchedule)
 	}
 	rg.GET("/settings/restore/status", h.GetRestoreStatus)
 }
@@ -150,6 +158,52 @@ func (h *BackupHandler) GetRestoreStatus(c *gin.Context) {
 	}
 
 	SuccessResponse(c, result)
+}
+
+// GetSchedule handles GET /api/v1/settings/backups/schedule
+func (h *BackupHandler) GetSchedule(c *gin.Context) {
+	if h.scheduler == nil {
+		InternalServerError(c, "Scheduler not configured")
+		return
+	}
+
+	resp, err := h.scheduler.GetSchedule(c.Request.Context())
+	if err != nil {
+		slog.Error("Failed to get backup schedule", "error", err)
+		InternalServerError(c, "Failed to get backup schedule")
+		return
+	}
+
+	SuccessResponse(c, resp)
+}
+
+// UpdateSchedule handles PUT /api/v1/settings/backups/schedule
+func (h *BackupHandler) UpdateSchedule(c *gin.Context) {
+	if h.scheduler == nil {
+		InternalServerError(c, "Scheduler not configured")
+		return
+	}
+
+	var schedule services.BackupSchedule
+	if err := c.ShouldBindJSON(&schedule); err != nil {
+		BadRequestError(c, "SCHEDULE_INVALID", "Invalid schedule configuration: "+err.Error())
+		return
+	}
+
+	if err := h.scheduler.SetSchedule(c.Request.Context(), schedule); err != nil {
+		slog.Error("Failed to update backup schedule", "error", err)
+		BadRequestError(c, "SCHEDULE_INVALID", err.Error())
+		return
+	}
+
+	resp, err := h.scheduler.GetSchedule(c.Request.Context())
+	if err != nil {
+		slog.Error("Failed to get updated schedule", "error", err)
+		InternalServerError(c, "Schedule updated but failed to retrieve")
+		return
+	}
+
+	SuccessResponse(c, resp)
 }
 
 // VerifyBackup handles POST /api/v1/settings/backups/:id/verify

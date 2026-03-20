@@ -9,6 +9,7 @@ import {
 } from '../../hooks/useBackups';
 import { BackupTable } from './BackupTable';
 import { RestoreConfirmDialog } from './RestoreConfirmDialog';
+import { BackupScheduleConfig } from './BackupScheduleConfig';
 import { formatBytes } from '../../utils/formatBytes';
 import type { Backup } from '../../services/backupService';
 
@@ -194,6 +195,9 @@ export function BackupManagement() {
           尚未建立任何備份
         </div>
       )}
+
+      {/* Schedule config */}
+      <BackupScheduleConfig />
 
       {/* Restore confirmation dialog */}
       {restoreTarget && (

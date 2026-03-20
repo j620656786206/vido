@@ -3,8 +3,10 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -78,10 +80,42 @@ func (m *MockBackupService) GetRestoreStatus(ctx context.Context) (*models.Resto
 	return args.Get(0).(*models.RestoreResult), args.Error(1)
 }
 
+// MockScheduler implements BackupSchedulerInterface
+type MockScheduler struct {
+	mock.Mock
+}
+
+func (m *MockScheduler) Start(ctx context.Context) {
+	m.Called(ctx)
+}
+func (m *MockScheduler) Stop() {
+	m.Called()
+}
+func (m *MockScheduler) SetSchedule(ctx context.Context, schedule services.BackupSchedule) error {
+	return m.Called(ctx, schedule).Error(0)
+}
+func (m *MockScheduler) GetSchedule(ctx context.Context) (*services.BackupScheduleResponse, error) {
+	args := m.Called(ctx)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*services.BackupScheduleResponse), args.Error(1)
+}
+
 func setupBackupRouter(svc services.BackupServiceInterface) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 	handler := NewBackupHandler(svc)
+	apiV1 := router.Group("/api/v1")
+	handler.RegisterRoutes(apiV1)
+	return router
+}
+
+func setupBackupRouterWithScheduler(svc services.BackupServiceInterface, scheduler services.BackupSchedulerInterface) *gin.Engine {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	handler := NewBackupHandler(svc)
+	handler.SetScheduler(scheduler)
 	apiV1 := router.Group("/api/v1")
 	handler.RegisterRoutes(apiV1)
 	return router
@@ -235,5 +269,60 @@ func TestBackupHandler_GetRestoreStatus(t *testing.T) {
 		require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &body))
 		assert.True(t, body.Success)
 		mockSvc.AssertExpectations(t)
+	})
+}
+
+func TestBackupHandler_GetSchedule(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		mockSvc := new(MockBackupService)
+		mockScheduler := new(MockScheduler)
+		resp := &services.BackupScheduleResponse{
+			BackupSchedule: services.BackupSchedule{Enabled: true, Frequency: "daily", Hour: 3},
+		}
+		mockScheduler.On("GetSchedule", mock.Anything).Return(resp, nil)
+
+		router := setupBackupRouterWithScheduler(mockSvc, mockScheduler)
+		req, _ := http.NewRequest(http.MethodGet, "/api/v1/settings/backups/schedule", nil)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+		var body APIResponse
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+		assert.True(t, body.Success)
+	})
+}
+
+func TestBackupHandler_UpdateSchedule(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		mockSvc := new(MockBackupService)
+		mockScheduler := new(MockScheduler)
+		mockScheduler.On("SetSchedule", mock.Anything, mock.AnythingOfType("services.BackupSchedule")).Return(nil)
+		resp := &services.BackupScheduleResponse{
+			BackupSchedule: services.BackupSchedule{Enabled: true, Frequency: "daily", Hour: 3},
+		}
+		mockScheduler.On("GetSchedule", mock.Anything).Return(resp, nil)
+
+		router := setupBackupRouterWithScheduler(mockSvc, mockScheduler)
+		req, _ := http.NewRequest(http.MethodPut, "/api/v1/settings/backups/schedule", strings.NewReader(`{"enabled":true,"frequency":"daily","hour":3}`))
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusOK, rec.Code)
+	})
+
+	t.Run("invalid schedule", func(t *testing.T) {
+		mockSvc := new(MockBackupService)
+		mockScheduler := new(MockScheduler)
+		mockScheduler.On("SetSchedule", mock.Anything, mock.AnythingOfType("services.BackupSchedule")).Return(fmt.Errorf("SCHEDULE_INVALID: frequency must be daily, weekly, or disabled"))
+
+		router := setupBackupRouterWithScheduler(mockSvc, mockScheduler)
+		req, _ := http.NewRequest(http.MethodPut, "/api/v1/settings/backups/schedule", strings.NewReader(`{"enabled":true,"frequency":"hourly","hour":3}`))
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+
+		assert.Equal(t, http.StatusBadRequest, rec.Code)
 	})
 }

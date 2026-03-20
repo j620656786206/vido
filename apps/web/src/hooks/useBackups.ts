@@ -9,6 +9,7 @@ import type {
   Backup,
   VerificationResult,
   RestoreResult,
+  BackupSchedule,
 } from '../services/backupService';
 
 export const backupKeys = {
@@ -53,6 +54,24 @@ export function useRestoreBackup() {
     mutationFn: (id) => backupService.restoreBackup(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: backupKeys.list() });
+    },
+  });
+}
+
+export function useBackupSchedule() {
+  return useQuery<BackupSchedule, Error>({
+    queryKey: [...backupKeys.all, 'schedule'] as const,
+    queryFn: () => backupService.getSchedule(),
+  });
+}
+
+export function useUpdateSchedule() {
+  const queryClient = useQueryClient();
+
+  return useMutation<BackupSchedule, Error, Partial<BackupSchedule>>({
+    mutationFn: (schedule) => backupService.updateSchedule(schedule),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...backupKeys.all, 'schedule'] });
     },
   });
 }

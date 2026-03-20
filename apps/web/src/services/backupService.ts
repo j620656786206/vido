@@ -27,6 +27,15 @@ export interface RestoreResult {
   error?: string;
 }
 
+export interface BackupSchedule {
+  enabled: boolean;
+  frequency: 'daily' | 'weekly' | 'disabled';
+  hour: number;
+  dayOfWeek: number;
+  nextBackupAt?: string;
+  lastBackupAt?: string;
+}
+
 export interface Backup {
   id: string;
   filename: string;
@@ -102,6 +111,17 @@ export const backupService = {
 
   async getRestoreStatus(): Promise<RestoreResult> {
     return fetchApi<RestoreResult>('/settings/restore/status');
+  },
+
+  async getSchedule(): Promise<BackupSchedule> {
+    return fetchApi<BackupSchedule>('/settings/backups/schedule');
+  },
+
+  async updateSchedule(schedule: Partial<BackupSchedule>): Promise<BackupSchedule> {
+    return fetchApi<BackupSchedule>('/settings/backups/schedule', {
+      method: 'PUT',
+      body: JSON.stringify(schedule),
+    });
   },
 
   getDownloadUrl(id: string): string {
