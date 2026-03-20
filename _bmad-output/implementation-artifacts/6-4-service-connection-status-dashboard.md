@@ -1,6 +1,6 @@
 # Story 6.4: Service Connection Status Dashboard
 
-Status: review
+Status: done
 
 ## Story
 
@@ -176,6 +176,7 @@ Claude Opus 4.6 (1M context)
 - 2026-03-18: Implemented Story 6-4 Service Connection Status Dashboard — full backend (model, service, handler) + frontend (service, hook, dashboard UI, card component) with 44 new tests
 - 2026-03-20: Code review fixes — fetchApi null guard, test error display, concurrent click prevention. TA expanded 16 tests + CR added 3 more tests.
 - 2026-03-20: Implemented AC3 status change notification — inline notification banner with auto-dismiss (5s), dismiss button, multi-service change support. 5 new tests.
+- 2026-03-20: CR2 fixes — removed unused import, added aria-live/role for accessibility, updated File List. Story → done.
 
 ### File List
 
@@ -192,7 +193,8 @@ Claude Opus 4.6 (1M context)
 - apps/web/src/services/serviceStatusService.spec.ts (new — 6 tests)
 - apps/web/src/hooks/useServiceStatus.ts (new — TanStack Query hooks)
 - apps/web/src/components/settings/ServiceStatusDashboard.tsx (modified — AC3 status change notification, test error display, concurrent click guard)
-- apps/web/src/components/settings/ServiceStatusDashboard.spec.tsx (modified — 17 tests)
+- apps/web/src/components/settings/ServiceStatusDashboard.spec.tsx (modified — 19 tests)
+- apps/web/src/hooks/useServiceStatus.spec.ts (new — 2 tests)
 - apps/web/src/components/settings/ServiceStatusCard.tsx (new — service card)
 - apps/web/src/components/settings/ServiceStatusCard.spec.tsx (modified — 13 tests)
 - apps/web/src/routes/settings/status.tsx (modified — replaced placeholder with dashboard)

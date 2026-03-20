@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Activity, Bell, Loader2 } from 'lucide-react';
 import { useServiceStatuses, useTestServiceConnection } from '../../hooks/useServiceStatus';
 import { ServiceStatusCard } from './ServiceStatusCard';
-import type { ServiceConnectionStatus, ServiceStatus } from '../../services/serviceStatusService';
+import type { ServiceConnectionStatus } from '../../services/serviceStatusService';
 
 const STATUS_LABELS: Record<ServiceConnectionStatus, string> = {
   connected: '已連線',
@@ -110,6 +110,8 @@ export function ServiceStatusDashboard() {
       {statusChanges.length > 0 && (
         <div
           className="flex items-start gap-3 rounded-lg border border-blue-800 bg-blue-900/20 px-4 py-3"
+          role="status"
+          aria-live="polite"
           data-testid="status-change-notification"
         >
           <Bell className="mt-0.5 h-4 w-4 shrink-0 text-blue-400" />
@@ -145,6 +147,7 @@ export function ServiceStatusDashboard() {
       {testError && (
         <div
           className="rounded-lg border border-red-800 bg-red-900/20 px-4 py-3 text-sm text-red-400"
+          role="alert"
           data-testid="test-error"
         >
           {testError}

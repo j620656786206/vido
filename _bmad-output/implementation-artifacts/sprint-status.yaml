@@ -140,7 +140,7 @@ development_status:
   6-1-setup-wizard: done
   6-2-cache-management: done
   6-3-system-logs-viewer: done
-  6-4-service-connection-status-dashboard: review
+  6-4-service-connection-status-dashboard: done
   6-5-database-backup: ready-for-dev
   6-6-backup-integrity-verification: ready-for-dev
   6-7-data-restore: ready-for-dev
