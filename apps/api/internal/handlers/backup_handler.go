@@ -28,6 +28,7 @@ func (h *BackupHandler) RegisterRoutes(rg *gin.RouterGroup) {
 		backups.GET("/:id", h.GetBackup)
 		backups.DELETE("/:id", h.DeleteBackup)
 		backups.GET("/:id/download", h.DownloadBackup)
+		backups.POST("/:id/verify", h.VerifyBackup)
 	}
 }
 
@@ -113,4 +114,22 @@ func (h *BackupHandler) DownloadBackup(c *gin.Context) {
 	c.Header("Content-Disposition", "attachment; filename="+filename)
 	c.Header("Content-Type", "application/gzip")
 	c.File(filePath)
+}
+
+// VerifyBackup handles POST /api/v1/settings/backups/:id/verify
+func (h *BackupHandler) VerifyBackup(c *gin.Context) {
+	id := c.Param("id")
+
+	result, err := h.backupService.VerifyBackup(c.Request.Context(), id)
+	if err != nil {
+		if errors.Is(err, services.ErrBackupNotFound) {
+			BadRequestError(c, "BACKUP_NOT_FOUND", "Backup not found: "+id)
+			return
+		}
+		slog.Error("Failed to verify backup", "error", err, "id", id)
+		ErrorResponse(c, 500, "BACKUP_VERIFY_FAILED", "Failed to verify backup", "Please try again later.")
+		return
+	}
+
+	SuccessResponse(c, result)
 }

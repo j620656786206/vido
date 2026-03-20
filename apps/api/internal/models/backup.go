@@ -10,6 +10,7 @@ const (
 	BackupStatusRunning   BackupStatus = "running"
 	BackupStatusCompleted BackupStatus = "completed"
 	BackupStatusFailed    BackupStatus = "failed"
+	BackupStatusCorrupted BackupStatus = "corrupted"
 )
 
 // Backup represents a database backup record
@@ -28,4 +29,23 @@ type Backup struct {
 type BackupListResponse struct {
 	Backups        []Backup `json:"backups"`
 	TotalSizeBytes int64    `json:"totalSizeBytes"`
+}
+
+// VerificationStatus represents the result of a backup integrity check
+type VerificationStatus string
+
+const (
+	VerificationStatusVerified  VerificationStatus = "verified"
+	VerificationStatusCorrupted VerificationStatus = "corrupted"
+	VerificationStatusMissing   VerificationStatus = "missing"
+)
+
+// VerificationResult contains the outcome of a backup verification
+type VerificationResult struct {
+	BackupID           string             `json:"backupId"`
+	Status             VerificationStatus `json:"status"`
+	StoredChecksum     string             `json:"storedChecksum"`
+	CalculatedChecksum string             `json:"calculatedChecksum"`
+	Match              bool               `json:"match"`
+	VerifiedAt         time.Time          `json:"verifiedAt"`
 }

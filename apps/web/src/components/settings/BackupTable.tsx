@@ -1,4 +1,4 @@
-import { Download, Trash2 } from 'lucide-react';
+import { Download, Trash2, ShieldCheck } from 'lucide-react';
 import type { Backup, BackupStatus } from '../../services/backupService';
 import { backupService } from '../../services/backupService';
 import { formatBytes } from '../../utils/formatBytes';
@@ -8,6 +8,7 @@ const statusConfig: Record<BackupStatus, { label: string; color: string; bg: str
   running: { label: '執行中', color: 'text-blue-400', bg: 'bg-blue-400/10' },
   pending: { label: '等待中', color: 'text-yellow-400', bg: 'bg-yellow-400/10' },
   failed: { label: '失敗', color: 'text-red-400', bg: 'bg-red-400/10' },
+  corrupted: { label: '已損壞', color: 'text-orange-400', bg: 'bg-orange-400/10' },
 };
 
 function formatDate(dateStr: string): string {
@@ -17,10 +18,18 @@ function formatDate(dateStr: string): string {
 interface BackupTableProps {
   backups: Backup[];
   onDelete: (id: string) => void;
+  onVerify: (id: string) => void;
   isDeleting: boolean;
+  isVerifying: boolean;
 }
 
-export function BackupTable({ backups, onDelete, isDeleting }: BackupTableProps) {
+export function BackupTable({
+  backups,
+  onDelete,
+  onVerify,
+  isDeleting,
+  isVerifying,
+}: BackupTableProps) {
   return (
     <div
       className="overflow-hidden rounded-lg border border-slate-700 bg-slate-800"
@@ -56,21 +65,32 @@ export function BackupTable({ backups, onDelete, isDeleting }: BackupTableProps)
                 className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-medium ${config.bg} ${config.color}`}
               >
                 <span
-                  className={`inline-block h-1.5 w-1.5 rounded-full ${backup.status === 'completed' ? 'bg-green-400' : backup.status === 'running' ? 'bg-blue-400' : backup.status === 'pending' ? 'bg-yellow-400' : 'bg-red-400'}`}
+                  className={`inline-block h-1.5 w-1.5 rounded-full ${backup.status === 'completed' ? 'bg-green-400' : backup.status === 'running' ? 'bg-blue-400' : backup.status === 'pending' ? 'bg-yellow-400' : backup.status === 'corrupted' ? 'bg-orange-400' : 'bg-red-400'}`}
                 />
                 {config.label}
               </span>
             </span>
             <span className="flex flex-1 items-center justify-end gap-2">
               {backup.status === 'completed' && (
-                <a
-                  href={backupService.getDownloadUrl(backup.id)}
-                  className="text-slate-400 transition-colors hover:text-slate-200"
-                  data-testid={`download-btn-${backup.id}`}
-                  title="下載"
-                >
-                  <Download className="h-4 w-4" />
-                </a>
+                <>
+                  <button
+                    onClick={() => onVerify(backup.id)}
+                    disabled={isVerifying}
+                    className="text-slate-400 transition-colors hover:text-blue-400 disabled:opacity-50"
+                    data-testid={`verify-btn-${backup.id}`}
+                    title="驗證完整性"
+                  >
+                    <ShieldCheck className="h-4 w-4" />
+                  </button>
+                  <a
+                    href={backupService.getDownloadUrl(backup.id)}
+                    className="text-slate-400 transition-colors hover:text-slate-200"
+                    data-testid={`download-btn-${backup.id}`}
+                    title="下載"
+                  >
+                    <Download className="h-4 w-4" />
+                  </a>
+                </>
               )}
               <button
                 onClick={() => onDelete(backup.id)}

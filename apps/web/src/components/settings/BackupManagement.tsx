@@ -1,6 +1,11 @@
 import { useState } from 'react';
 import { HardDrive, Loader2, Plus } from 'lucide-react';
-import { useBackups, useCreateBackup, useDeleteBackup } from '../../hooks/useBackups';
+import {
+  useBackups,
+  useCreateBackup,
+  useDeleteBackup,
+  useVerifyBackup,
+} from '../../hooks/useBackups';
 import { BackupTable } from './BackupTable';
 import { formatBytes } from '../../utils/formatBytes';
 
@@ -8,8 +13,10 @@ export function BackupManagement() {
   const { data, isLoading, error } = useBackups();
   const createBackup = useCreateBackup();
   const deleteBackup = useDeleteBackup();
+  const verifyBackup = useVerifyBackup();
   const [createError, setCreateError] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [verifyMessage, setVerifyMessage] = useState<string | null>(null);
 
   const handleCreate = async () => {
     if (createBackup.isPending) return;
@@ -27,6 +34,20 @@ export function BackupManagement() {
       await deleteBackup.mutateAsync(id);
     } catch (err) {
       setDeleteError(err instanceof Error ? err.message : '刪除備份失敗');
+    }
+  };
+
+  const handleVerify = async (id: string) => {
+    setVerifyMessage(null);
+    try {
+      const result = await verifyBackup.mutateAsync(id);
+      if (result.match) {
+        setVerifyMessage('✅ 備份驗證通過，資料完整');
+      } else {
+        setVerifyMessage('⚠️ 備份校驗碼不符，檔案可能已損壞');
+      }
+    } catch (err) {
+      setVerifyMessage(err instanceof Error ? err.message : '驗證失敗');
     }
   };
 
@@ -94,6 +115,16 @@ export function BackupManagement() {
         </div>
       )}
 
+      {verifyMessage && (
+        <div
+          className="rounded-lg border border-blue-800 bg-blue-900/20 px-4 py-3 text-sm text-blue-300"
+          role="status"
+          data-testid="verify-message"
+        >
+          {verifyMessage}
+        </div>
+      )}
+
       {deleteError && (
         <div
           className="rounded-lg border border-red-800 bg-red-900/20 px-4 py-3 text-sm text-red-400"
@@ -109,7 +140,9 @@ export function BackupManagement() {
         <BackupTable
           backups={backups}
           onDelete={handleDelete}
+          onVerify={handleVerify}
           isDeleting={deleteBackup.isPending}
+          isVerifying={verifyBackup.isPending}
         />
       ) : (
         <div

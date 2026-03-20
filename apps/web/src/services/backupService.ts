@@ -4,7 +4,18 @@
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
 
-export type BackupStatus = 'pending' | 'running' | 'completed' | 'failed';
+export type BackupStatus = 'pending' | 'running' | 'completed' | 'failed' | 'corrupted';
+
+export type VerificationStatus = 'verified' | 'corrupted' | 'missing';
+
+export interface VerificationResult {
+  backupId: string;
+  status: VerificationStatus;
+  storedChecksum: string;
+  calculatedChecksum: string;
+  match: boolean;
+  verifiedAt: string;
+}
 
 export interface Backup {
   id: string;
@@ -65,6 +76,12 @@ export const backupService = {
 
   async deleteBackup(id: string): Promise<void> {
     await fetchApi(`/settings/backups/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  },
+
+  async verifyBackup(id: string): Promise<VerificationResult> {
+    return fetchApi<VerificationResult>(`/settings/backups/${encodeURIComponent(id)}/verify`, {
+      method: 'POST',
+    });
   },
 
   getDownloadUrl(id: string): string {

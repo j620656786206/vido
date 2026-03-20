@@ -40,7 +40,13 @@ describe('BackupTable', () => {
   it('renders table header', () => {
     const onDelete = vi.fn();
     render(
-      React.createElement(BackupTable, { backups: [completedBackup], onDelete, isDeleting: false })
+      React.createElement(BackupTable, {
+        backups: [completedBackup],
+        onDelete,
+        onVerify: vi.fn(),
+        isDeleting: false,
+        isVerifying: false,
+      })
     );
     expect(screen.getByText('檔案名稱')).toBeInTheDocument();
     expect(screen.getByText('大小')).toBeInTheDocument();
@@ -52,7 +58,13 @@ describe('BackupTable', () => {
   it('renders completed backup row with download button', () => {
     const onDelete = vi.fn();
     render(
-      React.createElement(BackupTable, { backups: [completedBackup], onDelete, isDeleting: false })
+      React.createElement(BackupTable, {
+        backups: [completedBackup],
+        onDelete,
+        onVerify: vi.fn(),
+        isDeleting: false,
+        isVerifying: false,
+      })
     );
     expect(screen.getByTestId('backup-row-b1')).toBeInTheDocument();
     expect(screen.getByText(completedBackup.filename)).toBeInTheDocument();
@@ -65,7 +77,13 @@ describe('BackupTable', () => {
   it('renders failed backup without download button', () => {
     const onDelete = vi.fn();
     render(
-      React.createElement(BackupTable, { backups: [failedBackup], onDelete, isDeleting: false })
+      React.createElement(BackupTable, {
+        backups: [failedBackup],
+        onDelete,
+        onVerify: vi.fn(),
+        isDeleting: false,
+        isVerifying: false,
+      })
     );
     expect(screen.getByText('失敗')).toBeInTheDocument();
     expect(screen.queryByTestId('download-btn-b2')).not.toBeInTheDocument();
@@ -75,7 +93,13 @@ describe('BackupTable', () => {
   it('renders running backup status', () => {
     const onDelete = vi.fn();
     render(
-      React.createElement(BackupTable, { backups: [runningBackup], onDelete, isDeleting: false })
+      React.createElement(BackupTable, {
+        backups: [runningBackup],
+        onDelete,
+        onVerify: vi.fn(),
+        isDeleting: false,
+        isVerifying: false,
+      })
     );
     expect(screen.getByText('執行中')).toBeInTheDocument();
   });
@@ -84,7 +108,13 @@ describe('BackupTable', () => {
     const user = userEvent.setup();
     const onDelete = vi.fn();
     render(
-      React.createElement(BackupTable, { backups: [completedBackup], onDelete, isDeleting: false })
+      React.createElement(BackupTable, {
+        backups: [completedBackup],
+        onDelete,
+        onVerify: vi.fn(),
+        isDeleting: false,
+        isVerifying: false,
+      })
     );
     await user.click(screen.getByTestId('delete-btn-b1'));
     expect(onDelete).toHaveBeenCalledWith('b1');
@@ -107,7 +137,13 @@ describe('BackupTable', () => {
   it('disables delete button when isDeleting is true', () => {
     const onDelete = vi.fn();
     render(
-      React.createElement(BackupTable, { backups: [completedBackup], onDelete, isDeleting: true })
+      React.createElement(BackupTable, {
+        backups: [completedBackup],
+        onDelete,
+        onVerify: vi.fn(),
+        isDeleting: true,
+        isVerifying: false,
+      })
     );
     expect(screen.getByTestId('delete-btn-b1')).toBeDisabled();
   });
@@ -124,7 +160,13 @@ describe('BackupTable', () => {
       createdAt: '2026-03-20T16:00:00Z',
     };
     render(
-      React.createElement(BackupTable, { backups: [pendingBackup], onDelete, isDeleting: false })
+      React.createElement(BackupTable, {
+        backups: [pendingBackup],
+        onDelete,
+        onVerify: vi.fn(),
+        isDeleting: false,
+        isVerifying: false,
+      })
     );
     expect(screen.getByText('等待中')).toBeInTheDocument();
     expect(screen.queryByTestId('download-btn-b4')).not.toBeInTheDocument();
@@ -133,7 +175,13 @@ describe('BackupTable', () => {
   it('[P1] download link points to correct API endpoint', () => {
     const onDelete = vi.fn();
     render(
-      React.createElement(BackupTable, { backups: [completedBackup], onDelete, isDeleting: false })
+      React.createElement(BackupTable, {
+        backups: [completedBackup],
+        onDelete,
+        onVerify: vi.fn(),
+        isDeleting: false,
+        isVerifying: false,
+      })
     );
     const downloadLink = screen.getByTestId('download-btn-b1');
     expect(downloadLink).toHaveAttribute(

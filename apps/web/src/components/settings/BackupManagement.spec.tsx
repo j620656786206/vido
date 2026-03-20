@@ -9,13 +9,20 @@ vi.mock('../../hooks/useBackups', () => ({
   useBackups: vi.fn(),
   useCreateBackup: vi.fn(),
   useDeleteBackup: vi.fn(),
+  useVerifyBackup: vi.fn(),
 }));
 
-import { useBackups, useCreateBackup, useDeleteBackup } from '../../hooks/useBackups';
+import {
+  useBackups,
+  useCreateBackup,
+  useDeleteBackup,
+  useVerifyBackup,
+} from '../../hooks/useBackups';
 
 const mockUseBackups = vi.mocked(useBackups);
 const mockUseCreateBackup = vi.mocked(useCreateBackup);
 const mockUseDeleteBackup = vi.mocked(useDeleteBackup);
+const mockUseVerifyBackup = vi.mocked(useVerifyBackup);
 
 function renderWithQuery(ui: React.ReactElement) {
   const queryClient = new QueryClient({
@@ -31,6 +38,10 @@ beforeEach(() => {
   } as any);
   mockUseDeleteBackup.mockReturnValue({
     mutateAsync: vi.fn().mockResolvedValue(undefined),
+    isPending: false,
+  } as any);
+  mockUseVerifyBackup.mockReturnValue({
+    mutateAsync: vi.fn().mockResolvedValue({ match: true, status: 'verified' }),
     isPending: false,
   } as any);
 });

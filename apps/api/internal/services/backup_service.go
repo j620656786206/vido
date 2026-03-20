@@ -35,6 +35,7 @@ type BackupServiceInterface interface {
 	GetBackup(ctx context.Context, id string) (*models.Backup, error)
 	DeleteBackup(ctx context.Context, id string) error
 	GetBackupFilePath(ctx context.Context, id string) (string, error)
+	VerifyBackup(ctx context.Context, id string) (*models.VerificationResult, error)
 }
 
 // BackupService manages database backup operations
@@ -133,7 +134,13 @@ func (s *BackupService) CreateBackup(ctx context.Context) (*models.Backup, error
 		return backup, fmt.Errorf("move backup: %w", err)
 	}
 
-	// Step 5: Update backup record
+	// Step 5: Write .sha256 sidecar file
+	sha256Path := finalPath + ".sha256"
+	if err := os.WriteFile(sha256Path, []byte(checksum+"  "+filename+"\n"), 0o644); err != nil {
+		slog.Warn("Failed to write SHA-256 sidecar file", "path", sha256Path, "error", err)
+	}
+
+	// Step 6: Update backup record
 	backup.SizeBytes = sizeBytes
 	backup.Checksum = checksum
 	backup.Status = models.BackupStatusCompleted
@@ -336,4 +343,62 @@ func (s *BackupService) failBackup(ctx context.Context, backup *models.Backup, e
 	if err := s.repo.Update(ctx, backup); err != nil {
 		slog.Error("Failed to update backup status to failed", "error", err, "id", backup.ID)
 	}
+}
+
+// VerifyBackup recalculates the checksum of a backup file and compares with stored value
+func (s *BackupService) VerifyBackup(ctx context.Context, id string) (*models.VerificationResult, error) {
+	backup, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("get backup: %w", err)
+	}
+	if backup == nil {
+		return nil, ErrBackupNotFound
+	}
+
+	result := &models.VerificationResult{
+		BackupID:       id,
+		StoredChecksum: backup.Checksum,
+		VerifiedAt:     time.Now(),
+	}
+
+	filePath := filepath.Join(s.backupDir, backup.Filename)
+	calculatedChecksum, err := calculateFileChecksum(filePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			result.Status = models.VerificationStatusMissing
+			return result, nil
+		}
+		return nil, fmt.Errorf("calculate checksum: %w", err)
+	}
+
+	result.CalculatedChecksum = calculatedChecksum
+	result.Match = calculatedChecksum == backup.Checksum
+
+	if result.Match {
+		result.Status = models.VerificationStatusVerified
+	} else {
+		result.Status = models.VerificationStatusCorrupted
+		backup.Status = models.BackupStatusCorrupted
+		backup.ErrorMessage = "Checksum mismatch detected"
+		if err := s.repo.Update(ctx, backup); err != nil {
+			slog.Error("Failed to update backup status to corrupted", "error", err, "id", id)
+		}
+	}
+
+	slog.Info("Backup verification completed", "id", id, "status", result.Status)
+	return result, nil
+}
+
+func calculateFileChecksum(filePath string) (string, error) {
+	f, err := os.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
 }
