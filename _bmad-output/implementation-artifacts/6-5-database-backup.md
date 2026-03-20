@@ -1,6 +1,6 @@
 # Story 6.5: Database Backup
 
-Status: review
+Status: done
 
 ## Story
 
