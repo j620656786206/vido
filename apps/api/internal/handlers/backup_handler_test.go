@@ -146,6 +146,75 @@ func TestBackupHandler_RestoreBackup(t *testing.T) {
 	})
 }
 
+func TestBackupHandler_RestoreBackup_InternalError(t *testing.T) {
+	t.Run("generic error returns 500", func(t *testing.T) {
+		mockSvc := new(MockBackupService)
+		mockSvc.On("RestoreBackup", mock.Anything, "b1").Return(nil, assert.AnError)
+
+		router := setupBackupRouter(mockSvc)
+		req, _ := http.NewRequest(http.MethodPost, "/api/v1/settings/backups/b1/restore", nil)
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+
+		assert.Equal(t, http.StatusInternalServerError, resp.Code)
+
+		var body APIResponse
+		require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &body))
+		assert.False(t, body.Success)
+		assert.Equal(t, "RESTORE_FAILED", body.Error.Code)
+	})
+}
+
+func TestBackupHandler_RestoreBackup_ResponseFields(t *testing.T) {
+	t.Run("response contains all restore result fields", func(t *testing.T) {
+		mockSvc := new(MockBackupService)
+		result := &models.RestoreResult{
+			RestoreID:  "r-uuid",
+			Status:     models.RestoreStatusCompleted,
+			SnapshotID: "snap-uuid",
+			Message:    "還原完成，資料庫已恢復",
+		}
+		mockSvc.On("RestoreBackup", mock.Anything, "b1").Return(result, nil)
+
+		router := setupBackupRouter(mockSvc)
+		req, _ := http.NewRequest(http.MethodPost, "/api/v1/settings/backups/b1/restore", nil)
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+
+		assert.Equal(t, http.StatusOK, resp.Code)
+
+		var body struct {
+			Success bool `json:"success"`
+			Data    struct {
+				RestoreID  string `json:"restoreId"`
+				Status     string `json:"status"`
+				SnapshotID string `json:"snapshotId"`
+				Message    string `json:"message"`
+			} `json:"data"`
+		}
+		require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &body))
+		assert.True(t, body.Success)
+		assert.Equal(t, "r-uuid", body.Data.RestoreID)
+		assert.Equal(t, "completed", body.Data.Status)
+		assert.Equal(t, "snap-uuid", body.Data.SnapshotID)
+		assert.Equal(t, "還原完成，資料庫已恢復", body.Data.Message)
+	})
+}
+
+func TestBackupHandler_GetRestoreStatus_Error(t *testing.T) {
+	t.Run("internal error returns 500", func(t *testing.T) {
+		mockSvc := new(MockBackupService)
+		mockSvc.On("GetRestoreStatus", mock.Anything).Return(nil, assert.AnError)
+
+		router := setupBackupRouter(mockSvc)
+		req, _ := http.NewRequest(http.MethodGet, "/api/v1/settings/restore/status", nil)
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+
+		assert.Equal(t, http.StatusInternalServerError, resp.Code)
+	})
+}
+
 func TestBackupHandler_GetRestoreStatus(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		mockSvc := new(MockBackupService)

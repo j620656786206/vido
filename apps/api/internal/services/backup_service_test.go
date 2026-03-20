@@ -398,6 +398,207 @@ func TestBackupService_ReadManifest(t *testing.T) {
 	})
 }
 
+func TestBackupService_RestoreBackup_RepoError(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("repo GetByID returns error", func(t *testing.T) {
+		repo := new(MockBackupRepo)
+		db, _ := createTestDB(t)
+		defer db.Close()
+
+		svc := NewBackupService(db, repo, t.TempDir(), 17)
+
+		repo.On("GetByID", ctx, "b1").Return((*models.Backup)(nil), assert.AnError)
+
+		_, err := svc.RestoreBackup(ctx, "b1")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "get backup")
+	})
+}
+
+func TestBackupService_RestoreBackup_OlderSchemaVersion(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("older schema version - compatible restore", func(t *testing.T) {
+		repo := new(MockBackupRepo)
+		backupDir := t.TempDir()
+		db, _ := createTestDB(t)
+		defer db.Close()
+
+		// Current version 17, backup version 10 (older = compatible)
+		svc := NewBackupService(db, repo, backupDir, 17)
+
+		filename, checksum := createTestBackupArchive(t, backupDir, 10, "old-data")
+
+		backup := &models.Backup{
+			ID:       "b1",
+			Filename: filename,
+			Checksum: checksum,
+			Status:   models.BackupStatusCompleted,
+		}
+		repo.On("GetByID", ctx, "b1").Return(backup, nil)
+		repo.On("GetByID", ctx, mock.MatchedBy(func(id string) bool {
+			return id != "b1"
+		})).Return((*models.Backup)(nil), nil).Maybe()
+		repo.On("Create", ctx, mock.AnythingOfType("*models.Backup")).Return(nil)
+		repo.On("Update", ctx, mock.AnythingOfType("*models.Backup")).Return(nil)
+
+		result, err := svc.RestoreBackup(ctx, "b1")
+		assert.NoError(t, err)
+		// Older schema version should still succeed (compatible)
+		assert.Equal(t, models.RestoreStatusCompleted, result.Status)
+		assert.NotEmpty(t, result.SnapshotID)
+	})
+}
+
+func TestBackupService_RestoreBackup_VerifyDBContent(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("restored data is actually in the database", func(t *testing.T) {
+		repo := new(MockBackupRepo)
+		backupDir := t.TempDir()
+		db, _ := createTestDB(t)
+		defer db.Close()
+
+		svc := NewBackupService(db, repo, backupDir, 17)
+
+		// Verify original data exists
+		var origName string
+		err := db.QueryRow("SELECT name FROM test_data WHERE id='1'").Scan(&origName)
+		require.NoError(t, err)
+		assert.Equal(t, "test", origName)
+
+		// Create backup with different data
+		filename, checksum := createTestBackupArchive(t, backupDir, 17, "verification-data")
+
+		backup := &models.Backup{
+			ID:       "b1",
+			Filename: filename,
+			Checksum: checksum,
+			Status:   models.BackupStatusCompleted,
+		}
+		repo.On("GetByID", ctx, "b1").Return(backup, nil)
+		repo.On("GetByID", ctx, mock.MatchedBy(func(id string) bool {
+			return id != "b1"
+		})).Return((*models.Backup)(nil), nil).Maybe()
+		repo.On("Create", ctx, mock.AnythingOfType("*models.Backup")).Return(nil)
+		repo.On("Update", ctx, mock.AnythingOfType("*models.Backup")).Return(nil)
+
+		result, err := svc.RestoreBackup(ctx, "b1")
+		assert.NoError(t, err)
+		assert.Equal(t, models.RestoreStatusCompleted, result.Status)
+
+		// Verify original data was replaced
+		var restoredName string
+		err = db.QueryRow("SELECT name FROM test_data WHERE id='restored'").Scan(&restoredName)
+		require.NoError(t, err)
+		assert.Equal(t, "verification-data", restoredName)
+	})
+}
+
+func TestBackupService_RestoreBackup_SnapshotFailure(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("auto-snapshot creation fails", func(t *testing.T) {
+		repo := new(MockBackupRepo)
+		backupDir := t.TempDir()
+		db, _ := createTestDB(t)
+		defer db.Close()
+
+		svc := NewBackupService(db, repo, backupDir, 17)
+
+		filename, checksum := createTestBackupArchive(t, backupDir, 17, "data")
+		backup := &models.Backup{
+			ID:       "b1",
+			Filename: filename,
+			Checksum: checksum,
+			Status:   models.BackupStatusCompleted,
+		}
+		repo.On("GetByID", ctx, "b1").Return(backup, nil)
+		// Fail the snapshot Create call
+		repo.On("Create", ctx, mock.AnythingOfType("*models.Backup")).Return(assert.AnError)
+		repo.On("Update", ctx, mock.AnythingOfType("*models.Backup")).Return(nil)
+
+		result, err := svc.RestoreBackup(ctx, "b1")
+		assert.NoError(t, err)
+		assert.Equal(t, models.RestoreStatusFailed, result.Status)
+		assert.Contains(t, result.Error, "RESTORE_SNAPSHOT_FAILED")
+	})
+}
+
+func TestBackupService_RestoreBackup_RunningStatus(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("cannot restore backup with running status", func(t *testing.T) {
+		repo := new(MockBackupRepo)
+		db, _ := createTestDB(t)
+		defer db.Close()
+
+		svc := NewBackupService(db, repo, t.TempDir(), 17)
+
+		backup := &models.Backup{ID: "b1", Status: models.BackupStatusRunning}
+		repo.On("GetByID", ctx, "b1").Return(backup, nil)
+
+		_, err := svc.RestoreBackup(ctx, "b1")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "only completed backups")
+	})
+}
+
+func TestBackupService_ReadManifest_InvalidJSON(t *testing.T) {
+	t.Run("returns error for invalid JSON", func(t *testing.T) {
+		db, _ := createTestDB(t)
+		defer db.Close()
+
+		svc := NewBackupService(db, nil, "", 17)
+
+		tmpFile, err := os.CreateTemp("", "manifest-*.json")
+		require.NoError(t, err)
+		defer os.Remove(tmpFile.Name())
+
+		_, err = tmpFile.WriteString("not valid json{{{")
+		require.NoError(t, err)
+		tmpFile.Close()
+
+		_, err = svc.readManifest(tmpFile.Name())
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "parse manifest")
+	})
+}
+
+func TestBackupService_ExtractTarGz_InvalidArchive(t *testing.T) {
+	t.Run("returns error for non-gzip file", func(t *testing.T) {
+		db, _ := createTestDB(t)
+		defer db.Close()
+
+		svc := NewBackupService(db, nil, "", 17)
+
+		// Create a non-gzip file
+		tmpFile, err := os.CreateTemp("", "invalid-*.tar.gz")
+		require.NoError(t, err)
+		defer os.Remove(tmpFile.Name())
+
+		_, err = tmpFile.WriteString("this is not a gzip file")
+		require.NoError(t, err)
+		tmpFile.Close()
+
+		err = svc.extractTarGz(tmpFile.Name(), t.TempDir())
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "create gzip reader")
+	})
+
+	t.Run("returns error for missing file", func(t *testing.T) {
+		db, _ := createTestDB(t)
+		defer db.Close()
+
+		svc := NewBackupService(db, nil, "", 17)
+
+		err := svc.extractTarGz("/nonexistent/file.tar.gz", t.TempDir())
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "open archive")
+	})
+}
+
 func TestIsSubPath(t *testing.T) {
 	t.Run("valid sub path", func(t *testing.T) {
 		assert.True(t, isSubPath("/base/dir", "/base/dir/sub/file.txt"))
