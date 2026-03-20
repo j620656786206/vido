@@ -157,4 +157,126 @@ describe('ServiceStatusCard', () => {
 
     expect(screen.queryByText('5000ms')).not.toBeInTheDocument();
   });
+
+  it('[P1] renders error status with detail toggle', async () => {
+    const user = userEvent.setup();
+    const onTest = vi.fn();
+    const errorStatusService: ServiceStatus = {
+      name: 'ai',
+      displayName: 'AI 服務',
+      status: 'error',
+      message: 'API key invalid',
+      lastSuccessAt: null,
+      lastCheckAt: '2026-02-10T14:30:00Z',
+      responseTimeMs: 0,
+      errorMessage: 'API key invalid',
+    };
+    render(
+      React.createElement(ServiceStatusCard, {
+        service: errorStatusService,
+        onTest,
+        isTesting: false,
+      })
+    );
+
+    expect(screen.getByText('錯誤')).toBeInTheDocument();
+    expect(screen.getByTestId('detail-toggle-ai')).toBeInTheDocument();
+
+    await user.click(screen.getByTestId('detail-toggle-ai'));
+    expect(screen.getByText(/API key invalid/)).toBeInTheDocument();
+  });
+
+  it('[P1] shows lastSuccessAt in detail panel when available (AC2)', async () => {
+    const user = userEvent.setup();
+    const onTest = vi.fn();
+    render(
+      React.createElement(ServiceStatusCard, {
+        service: errorService,
+        onTest,
+        isTesting: false,
+      })
+    );
+
+    await user.click(screen.getByTestId('detail-toggle-qbittorrent'));
+    expect(screen.getByText('最後成功：')).toBeInTheDocument();
+    expect(screen.getByText('最後檢查：')).toBeInTheDocument();
+  });
+
+  it('[P1] collapses detail panel on second click', async () => {
+    const user = userEvent.setup();
+    const onTest = vi.fn();
+    render(
+      React.createElement(ServiceStatusCard, {
+        service: errorService,
+        onTest,
+        isTesting: false,
+      })
+    );
+
+    const toggle = screen.getByTestId('detail-toggle-qbittorrent');
+    // Expand
+    await user.click(toggle);
+    expect(screen.getByTestId('detail-panel-qbittorrent')).toBeInTheDocument();
+    expect(screen.getByText('隱藏詳情')).toBeInTheDocument();
+
+    // Collapse
+    await user.click(toggle);
+    expect(screen.queryByTestId('detail-panel-qbittorrent')).not.toBeInTheDocument();
+    expect(screen.getByText('顯示詳情')).toBeInTheDocument();
+  });
+
+  it('[P1] shows rate limited service with detail panel content', async () => {
+    const user = userEvent.setup();
+    const onTest = vi.fn();
+    render(
+      React.createElement(ServiceStatusCard, {
+        service: rateLimitedService,
+        onTest,
+        isTesting: false,
+      })
+    );
+
+    expect(screen.getByText('速率限制')).toBeInTheDocument();
+    expect(screen.getByTestId('detail-toggle-tmdb')).toBeInTheDocument();
+
+    await user.click(screen.getByTestId('detail-toggle-tmdb'));
+    expect(screen.getByTestId('detail-panel-tmdb')).toBeInTheDocument();
+    expect(screen.getByText(/TMDb API rate limit exceeded/)).toBeInTheDocument();
+    expect(screen.getByText('最後成功：')).toBeInTheDocument();
+  });
+
+  it('[P2] does not show response time when responseTimeMs is 0 for connected service', () => {
+    const onTest = vi.fn();
+    const zeroResponseService: ServiceStatus = {
+      name: 'tmdb',
+      displayName: 'TMDb API',
+      status: 'connected',
+      message: '已連線',
+      lastSuccessAt: '2026-02-10T14:30:00Z',
+      lastCheckAt: '2026-02-10T14:30:00Z',
+      responseTimeMs: 0,
+    };
+    render(
+      React.createElement(ServiceStatusCard, {
+        service: zeroResponseService,
+        onTest,
+        isTesting: false,
+      })
+    );
+
+    expect(screen.queryByText('0ms')).not.toBeInTheDocument();
+  });
+
+  it('[P2] does not show detail toggle for connected service', () => {
+    const onTest = vi.fn();
+    render(
+      React.createElement(ServiceStatusCard, {
+        service: connectedService,
+        onTest,
+        isTesting: false,
+      })
+    );
+
+    expect(screen.queryByTestId('detail-toggle-tmdb')).not.toBeInTheDocument();
+  });
 });

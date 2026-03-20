@@ -156,4 +156,134 @@ describe('ServiceStatusDashboard', () => {
     expect(screen.getByText('已連線')).toBeInTheDocument();
     expect(screen.getByText('已斷線')).toBeInTheDocument();
   });
+
+  it('[P1] renders header text', () => {
+    mockUseServiceStatuses.mockReturnValue({
+      data: { services: [] },
+      isLoading: false,
+      error: null,
+    } as any);
+
+    renderWithQuery(React.createElement(ServiceStatusDashboard));
+    expect(screen.getByText('服務狀態')).toBeInTheDocument();
+    expect(screen.getByText('監控外部服務連線狀態')).toBeInTheDocument();
+  });
+
+  it('[P1] calls mutateAsync when test button is clicked on a service card', async () => {
+    const user = userEvent.setup();
+    const mockMutateAsync = vi.fn().mockResolvedValue({});
+    mockUseTestServiceConnection.mockReturnValue({
+      mutateAsync: mockMutateAsync,
+      isPending: false,
+    } as any);
+    mockUseServiceStatuses.mockReturnValue({
+      data: {
+        services: [
+          {
+            name: 'tmdb',
+            displayName: 'TMDb API',
+            status: 'connected',
+            message: '已連線',
+            lastSuccessAt: '2026-02-10T14:30:00Z',
+            lastCheckAt: '2026-02-10T14:30:00Z',
+            responseTimeMs: 45,
+          },
+        ],
+      },
+      isLoading: false,
+      error: null,
+    } as any);
+
+    renderWithQuery(React.createElement(ServiceStatusDashboard));
+    await user.click(screen.getByTestId('test-btn-tmdb'));
+    expect(mockMutateAsync).toHaveBeenCalledWith('tmdb');
+  });
+
+  it('[P2] shows error message text from API error', () => {
+    mockUseServiceStatuses.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: new Error('Connection timeout'),
+    } as any);
+
+    renderWithQuery(React.createElement(ServiceStatusDashboard));
+    expect(screen.getByText('Connection timeout')).toBeInTheDocument();
+  });
+
+  it('[P1] renders all three service types together', () => {
+    mockUseServiceStatuses.mockReturnValue({
+      data: {
+        services: [
+          {
+            name: 'qbittorrent',
+            displayName: 'qBittorrent',
+            status: 'connected',
+            message: '已連線',
+            lastSuccessAt: '2026-02-10T14:30:00Z',
+            lastCheckAt: '2026-02-10T14:30:00Z',
+            responseTimeMs: 30,
+          },
+          {
+            name: 'tmdb',
+            displayName: 'TMDb API',
+            status: 'rate_limited',
+            message: '速率限制中',
+            lastSuccessAt: '2026-02-10T14:29:00Z',
+            lastCheckAt: '2026-02-10T14:30:00Z',
+            responseTimeMs: 230,
+          },
+          {
+            name: 'ai',
+            displayName: 'AI 服務',
+            status: 'error',
+            message: 'API key invalid',
+            lastSuccessAt: null,
+            lastCheckAt: '2026-02-10T14:30:00Z',
+            responseTimeMs: 0,
+            errorMessage: 'API key invalid',
+          },
+        ],
+      },
+      isLoading: false,
+      error: null,
+    } as any);
+
+    renderWithQuery(React.createElement(ServiceStatusDashboard));
+    expect(screen.getByTestId('service-card-qbittorrent')).toBeInTheDocument();
+    expect(screen.getByTestId('service-card-tmdb')).toBeInTheDocument();
+    expect(screen.getByTestId('service-card-ai')).toBeInTheDocument();
+  });
+
+  it('[P2] handles mutateAsync rejection gracefully without crashing', async () => {
+    const user = userEvent.setup();
+    const mockMutateAsync = vi.fn().mockRejectedValue(new Error('Service unreachable'));
+    mockUseTestServiceConnection.mockReturnValue({
+      mutateAsync: mockMutateAsync,
+      isPending: false,
+    } as any);
+    mockUseServiceStatuses.mockReturnValue({
+      data: {
+        services: [
+          {
+            name: 'tmdb',
+            displayName: 'TMDb API',
+            status: 'connected',
+            message: '已連線',
+            lastSuccessAt: '2026-02-10T14:30:00Z',
+            lastCheckAt: '2026-02-10T14:30:00Z',
+            responseTimeMs: 45,
+          },
+        ],
+      },
+      isLoading: false,
+      error: null,
+    } as any);
+
+    renderWithQuery(React.createElement(ServiceStatusDashboard));
+    // Should not throw
+    await user.click(screen.getByTestId('test-btn-tmdb'));
+    expect(mockMutateAsync).toHaveBeenCalledWith('tmdb');
+    // Dashboard should still be rendered
+    expect(screen.getByTestId('service-status-dashboard')).toBeInTheDocument();
+  });
 });
