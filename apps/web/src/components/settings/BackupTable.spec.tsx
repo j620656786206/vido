@@ -189,4 +189,61 @@ describe('BackupTable', () => {
       expect.stringContaining('/settings/backups/b1/download')
     );
   });
+
+  it('[P1] calls onVerify when verify button is clicked', async () => {
+    const user = userEvent.setup();
+    const onDelete = vi.fn();
+    const onVerify = vi.fn();
+    render(
+      React.createElement(BackupTable, {
+        backups: [completedBackup],
+        onDelete,
+        onVerify,
+        isDeleting: false,
+        isVerifying: false,
+      })
+    );
+    await user.click(screen.getByTestId('verify-btn-b1'));
+    expect(onVerify).toHaveBeenCalledWith('b1');
+  });
+
+  it('[P1] renders corrupted backup status', () => {
+    const onDelete = vi.fn();
+    const corruptedBackup: Backup = {
+      id: 'b5',
+      filename: 'vido-backup-20260318-030000-v17.tar.gz',
+      sizeBytes: 52000000,
+      schemaVersion: 17,
+      checksum: 'abc123',
+      status: 'corrupted',
+      errorMessage: 'Checksum mismatch detected',
+      createdAt: '2026-03-18T03:00:00Z',
+    };
+    render(
+      React.createElement(BackupTable, {
+        backups: [corruptedBackup],
+        onDelete,
+        onVerify: vi.fn(),
+        isDeleting: false,
+        isVerifying: false,
+      })
+    );
+    expect(screen.getByText('已損壞')).toBeInTheDocument();
+    expect(screen.queryByTestId('verify-btn-b5')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('download-btn-b5')).not.toBeInTheDocument();
+  });
+
+  it('[P2] disables verify button when isVerifying is true', () => {
+    const onDelete = vi.fn();
+    render(
+      React.createElement(BackupTable, {
+        backups: [completedBackup],
+        onDelete,
+        onVerify: vi.fn(),
+        isDeleting: false,
+        isVerifying: true,
+      })
+    );
+    expect(screen.getByTestId('verify-btn-b1')).toBeDisabled();
+  });
 });

@@ -232,4 +232,75 @@ describe('BackupManagement', () => {
     renderWithQuery(React.createElement(BackupManagement));
     expect(screen.getByTestId('backup-summary')).toHaveTextContent('2 個備份');
   });
+
+  describe('AC2/AC3: Backup verification', () => {
+    const backupData = {
+      backups: [
+        {
+          id: 'b1',
+          filename: 'vido-backup-20260320-140000-v17.tar.gz',
+          sizeBytes: 52428800,
+          schemaVersion: 17,
+          checksum: 'abc123',
+          status: 'completed' as const,
+          createdAt: '2026-03-20T14:00:00Z',
+        },
+      ],
+      totalSizeBytes: 52428800,
+    };
+
+    it('[P1] shows success message when verification passes', async () => {
+      const user = userEvent.setup();
+      mockUseVerifyBackup.mockReturnValue({
+        mutateAsync: vi.fn().mockResolvedValue({ match: true, status: 'verified' }),
+        isPending: false,
+      } as any);
+      mockUseBackups.mockReturnValue({
+        data: backupData,
+        isLoading: false,
+        error: null,
+      } as any);
+
+      renderWithQuery(React.createElement(BackupManagement));
+      await user.click(screen.getByTestId('verify-btn-b1'));
+      expect(screen.getByTestId('verify-message')).toBeInTheDocument();
+      expect(screen.getByText(/備份驗證通過/)).toBeInTheDocument();
+    });
+
+    it('[P1] shows warning message when verification detects corruption', async () => {
+      const user = userEvent.setup();
+      mockUseVerifyBackup.mockReturnValue({
+        mutateAsync: vi.fn().mockResolvedValue({ match: false, status: 'corrupted' }),
+        isPending: false,
+      } as any);
+      mockUseBackups.mockReturnValue({
+        data: backupData,
+        isLoading: false,
+        error: null,
+      } as any);
+
+      renderWithQuery(React.createElement(BackupManagement));
+      await user.click(screen.getByTestId('verify-btn-b1'));
+      expect(screen.getByTestId('verify-message')).toBeInTheDocument();
+      expect(screen.getByText(/備份校驗碼不符/)).toBeInTheDocument();
+    });
+
+    it('[P2] shows error message when verification API fails', async () => {
+      const user = userEvent.setup();
+      mockUseVerifyBackup.mockReturnValue({
+        mutateAsync: vi.fn().mockRejectedValue(new Error('File missing')),
+        isPending: false,
+      } as any);
+      mockUseBackups.mockReturnValue({
+        data: backupData,
+        isLoading: false,
+        error: null,
+      } as any);
+
+      renderWithQuery(React.createElement(BackupManagement));
+      await user.click(screen.getByTestId('verify-btn-b1'));
+      expect(screen.getByTestId('verify-message')).toBeInTheDocument();
+      expect(screen.getByText('File missing')).toBeInTheDocument();
+    });
+  });
 });
