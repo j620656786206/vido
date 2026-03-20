@@ -158,6 +158,11 @@ func main() {
 	backupScheduler := services.NewBackupScheduler(backupService, repos.Settings, repos.Backups)
 	slog.Info("Backup scheduler initialized")
 
+	// Initialize export service (Story 6.9)
+	exportDir := filepath.Join(cfg.DataDir, "exports")
+	exportService := services.NewExportService(repos.Movies, repos.Series, exportDir)
+	slog.Info("Export service initialized", "export_dir", exportDir)
+
 	// Initialize cache management services (Story 6.2)
 	posterDir := filepath.Join(cfg.DataDir, "posters")
 	cacheStatsService := services.NewCacheStatsService(db.Conn(), posterDir)
@@ -343,6 +348,7 @@ func main() {
 	statusHandler := handlers.NewStatusHandler(serviceStatusService)
 	backupHandler := handlers.NewBackupHandler(backupService)
 	backupHandler.SetScheduler(backupScheduler)
+	exportHandler := handlers.NewExportHandler(exportService)
 	// parseProgressHandler already initialized above with defer Close()
 	slog.Info("Handlers initialized with service injection")
 
@@ -369,6 +375,7 @@ func main() {
 		cacheHandler.RegisterRoutes(apiV1) // Must be before settingsHandler to avoid /settings/:key conflict
 		statusHandler.RegisterRoutes(apiV1) // Must be before settingsHandler to avoid /settings/:key conflict
 		backupHandler.RegisterRoutes(apiV1) // Must be before settingsHandler to avoid /settings/:key conflict
+		exportHandler.RegisterRoutes(apiV1) // Must be before settingsHandler to avoid /settings/:key conflict
 		settingsHandler.RegisterRoutes(apiV1)
 		setupHandler.RegisterRoutes(apiV1)
 		mediaHandler.RegisterRoutes(apiV1)

@@ -34,11 +34,7 @@ export function BackupScheduleConfig() {
     if (updateSchedule.isPending) return;
     const newEnabled = !enabled;
     const prevFrequency = frequency;
-    const newFrequency = newEnabled
-      ? frequency === 'disabled'
-        ? 'daily'
-        : frequency
-      : 'disabled';
+    const newFrequency = newEnabled ? (frequency === 'disabled' ? 'daily' : frequency) : 'disabled';
     setEnabled(newEnabled);
     setFrequency(newFrequency);
     setMessage(null);

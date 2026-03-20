@@ -10,6 +10,7 @@ import type {
   VerificationResult,
   RestoreResult,
   BackupSchedule,
+  ExportResult,
 } from '../services/backupService';
 
 export const backupKeys = {
@@ -73,6 +74,12 @@ export function useUpdateSchedule() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [...backupKeys.all, 'schedule'] });
     },
+  });
+}
+
+export function useExport() {
+  return useMutation<ExportResult, Error, 'json' | 'yaml' | 'nfo'>({
+    mutationFn: (format) => backupService.triggerExport(format),
   });
 }
 

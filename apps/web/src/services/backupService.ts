@@ -36,6 +36,16 @@ export interface BackupSchedule {
   lastBackupAt?: string;
 }
 
+export interface ExportResult {
+  exportId: string;
+  format: 'json' | 'yaml' | 'nfo';
+  status: 'in_progress' | 'completed' | 'failed';
+  filePath?: string;
+  itemCount: number;
+  message?: string;
+  error?: string;
+}
+
 export interface Backup {
   id: string;
   filename: string;
@@ -122,6 +132,21 @@ export const backupService = {
       method: 'PUT',
       body: JSON.stringify(schedule),
     });
+  },
+
+  async triggerExport(format: 'json' | 'yaml' | 'nfo'): Promise<ExportResult> {
+    return fetchApi<ExportResult>('/settings/export', {
+      method: 'POST',
+      body: JSON.stringify({ format }),
+    });
+  },
+
+  async getExportStatus(): Promise<ExportResult> {
+    return fetchApi<ExportResult>('/settings/export/status');
+  },
+
+  getExportDownloadUrl(id: string): string {
+    return `${API_BASE_URL}/settings/export/${encodeURIComponent(id)}/download`;
   },
 
   getDownloadUrl(id: string): string {
