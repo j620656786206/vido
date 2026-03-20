@@ -1,6 +1,6 @@
 # Story 6.8: Scheduled Backups
 
-Status: review
+Status: done
 
 ## Story
 

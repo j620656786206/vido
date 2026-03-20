@@ -33,18 +33,26 @@ export function BackupScheduleConfig() {
   const handleToggle = async () => {
     if (updateSchedule.isPending) return;
     const newEnabled = !enabled;
+    const prevFrequency = frequency;
+    const newFrequency = newEnabled
+      ? frequency === 'disabled'
+        ? 'daily'
+        : frequency
+      : 'disabled';
     setEnabled(newEnabled);
+    setFrequency(newFrequency);
     setMessage(null);
     try {
       await updateSchedule.mutateAsync({
         enabled: newEnabled,
-        frequency: newEnabled ? (frequency === 'disabled' ? 'daily' : frequency) : 'disabled',
+        frequency: newFrequency,
         hour,
         dayOfWeek,
       });
       setMessage(newEnabled ? '✅ 自動備份已啟用' : '自動備份已停用');
     } catch (err) {
       setEnabled(!newEnabled);
+      setFrequency(prevFrequency);
       setMessage(err instanceof Error ? err.message : '更新失敗');
     }
   };

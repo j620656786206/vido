@@ -31,13 +31,14 @@ func (h *BackupHandler) RegisterRoutes(rg *gin.RouterGroup) {
 	{
 		backups.POST("", h.CreateBackup)
 		backups.GET("", h.ListBackups)
+		// Schedule routes MUST be registered before /:id to avoid Gin radix tree conflict
+		backups.GET("/schedule", h.GetSchedule)
+		backups.PUT("/schedule", h.UpdateSchedule)
 		backups.GET("/:id", h.GetBackup)
 		backups.DELETE("/:id", h.DeleteBackup)
 		backups.GET("/:id/download", h.DownloadBackup)
 		backups.POST("/:id/verify", h.VerifyBackup)
 		backups.POST("/:id/restore", h.RestoreBackup)
-		backups.GET("/schedule", h.GetSchedule)
-		backups.PUT("/schedule", h.UpdateSchedule)
 	}
 	rg.GET("/settings/restore/status", h.GetRestoreStatus)
 }

@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/repository"
 )
 
@@ -272,7 +274,7 @@ func (s *BackupScheduler) ApplyRetentionPolicy(ctx context.Context) (*RetentionR
 
 	for _, b := range backups {
 		// Never delete auto-snapshots or non-completed backups
-		if isAutoSnapshot(b.Filename) || b.Status != "completed" {
+		if isAutoSnapshot(b.Filename) || b.Status != models.BackupStatusCompleted {
 			result.Kept++
 			continue
 		}
@@ -330,5 +332,5 @@ func (s *BackupScheduler) ApplyRetentionPolicy(ctx context.Context) (*RetentionR
 }
 
 func isAutoSnapshot(filename string) bool {
-	return len(filename) > 28 && filename[:28] == "vido-auto-snapshot-before-re"
+	return strings.HasPrefix(filename, "vido-auto-snapshot-before-restore-")
 }
