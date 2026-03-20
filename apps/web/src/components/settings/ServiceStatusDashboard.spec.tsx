@@ -1,7 +1,7 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ServiceStatusDashboard } from './ServiceStatusDashboard';
 
@@ -324,5 +324,268 @@ describe('ServiceStatusDashboard', () => {
     // Second click succeeds — error should clear
     await user.click(screen.getByTestId('test-btn-tmdb'));
     expect(screen.queryByTestId('test-error')).not.toBeInTheDocument();
+  });
+
+  describe('AC3: Status change notifications', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('[P1] shows notification when service status changes between renders', () => {
+      const initialServices = [
+        {
+          name: 'tmdb',
+          displayName: 'TMDb API',
+          status: 'connected' as const,
+          message: '已連線',
+          lastSuccessAt: '2026-02-10T14:30:00Z',
+          lastCheckAt: '2026-02-10T14:30:00Z',
+          responseTimeMs: 45,
+        },
+      ];
+
+      const mockReturn = {
+        data: { services: initialServices },
+        isLoading: false,
+        error: null,
+      };
+      mockUseServiceStatuses.mockReturnValue(mockReturn as any);
+
+      const { rerender } = renderWithQuery(React.createElement(ServiceStatusDashboard));
+
+      // No notification on first render
+      expect(screen.queryByTestId('status-change-notification')).not.toBeInTheDocument();
+
+      // Simulate status change on next polling cycle
+      const changedServices = [
+        {
+          ...initialServices[0],
+          status: 'disconnected' as const,
+          message: 'connection refused',
+          errorMessage: 'connection refused',
+        },
+      ];
+      mockUseServiceStatuses.mockReturnValue({
+        data: { services: changedServices },
+        isLoading: false,
+        error: null,
+      } as any);
+
+      rerender(
+        React.createElement(
+          QueryClientProvider,
+          {
+            client: new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+          },
+          React.createElement(ServiceStatusDashboard)
+        )
+      );
+
+      const notification = screen.getByTestId('status-change-notification');
+      expect(notification).toBeInTheDocument();
+      expect(notification).toHaveTextContent('TMDb API：已連線 → 已斷線');
+    });
+
+    it('[P1] dismisses notification when close button is clicked', async () => {
+      const user = userEvent.setup();
+      const initialServices = [
+        {
+          name: 'tmdb',
+          displayName: 'TMDb API',
+          status: 'connected' as const,
+          message: '已連線',
+          lastSuccessAt: '2026-02-10T14:30:00Z',
+          lastCheckAt: '2026-02-10T14:30:00Z',
+          responseTimeMs: 45,
+        },
+      ];
+
+      mockUseServiceStatuses.mockReturnValue({
+        data: { services: initialServices },
+        isLoading: false,
+        error: null,
+      } as any);
+
+      const { rerender } = renderWithQuery(React.createElement(ServiceStatusDashboard));
+
+      // Trigger status change
+      mockUseServiceStatuses.mockReturnValue({
+        data: {
+          services: [{ ...initialServices[0], status: 'error' as const, message: 'timeout' }],
+        },
+        isLoading: false,
+        error: null,
+      } as any);
+
+      rerender(
+        React.createElement(
+          QueryClientProvider,
+          {
+            client: new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+          },
+          React.createElement(ServiceStatusDashboard)
+        )
+      );
+
+      expect(screen.getByTestId('status-change-notification')).toBeInTheDocument();
+
+      await user.click(screen.getByTestId('dismiss-notification'));
+      expect(screen.queryByTestId('status-change-notification')).not.toBeInTheDocument();
+    });
+
+    it('[P1] shows multiple status changes in one notification', () => {
+      const initialServices = [
+        {
+          name: 'tmdb',
+          displayName: 'TMDb API',
+          status: 'connected' as const,
+          message: '已連線',
+          lastSuccessAt: '2026-02-10T14:30:00Z',
+          lastCheckAt: '2026-02-10T14:30:00Z',
+          responseTimeMs: 45,
+        },
+        {
+          name: 'qbittorrent',
+          displayName: 'qBittorrent',
+          status: 'disconnected' as const,
+          message: 'refused',
+          lastSuccessAt: null,
+          lastCheckAt: '2026-02-10T14:30:00Z',
+          responseTimeMs: 0,
+          errorMessage: 'refused',
+        },
+      ];
+
+      mockUseServiceStatuses.mockReturnValue({
+        data: { services: initialServices },
+        isLoading: false,
+        error: null,
+      } as any);
+
+      const { rerender } = renderWithQuery(React.createElement(ServiceStatusDashboard));
+
+      // Both services change
+      mockUseServiceStatuses.mockReturnValue({
+        data: {
+          services: [
+            { ...initialServices[0], status: 'rate_limited' as const, message: '速率限制中' },
+            { ...initialServices[1], status: 'connected' as const, message: '已連線' },
+          ],
+        },
+        isLoading: false,
+        error: null,
+      } as any);
+
+      rerender(
+        React.createElement(
+          QueryClientProvider,
+          {
+            client: new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+          },
+          React.createElement(ServiceStatusDashboard)
+        )
+      );
+
+      const notification = screen.getByTestId('status-change-notification');
+      expect(notification).toBeInTheDocument();
+      expect(screen.getByText(/TMDb API：已連線 → 速率限制/)).toBeInTheDocument();
+      expect(screen.getByText(/qBittorrent：已斷線 → 已連線/)).toBeInTheDocument();
+    });
+
+    it('[P2] auto-dismisses notification after 5 seconds', () => {
+      vi.useFakeTimers();
+
+      const initialServices = [
+        {
+          name: 'tmdb',
+          displayName: 'TMDb API',
+          status: 'connected' as const,
+          message: '已連線',
+          lastSuccessAt: '2026-02-10T14:30:00Z',
+          lastCheckAt: '2026-02-10T14:30:00Z',
+          responseTimeMs: 45,
+        },
+      ];
+
+      mockUseServiceStatuses.mockReturnValue({
+        data: { services: initialServices },
+        isLoading: false,
+        error: null,
+      } as any);
+
+      const { rerender } = renderWithQuery(React.createElement(ServiceStatusDashboard));
+
+      mockUseServiceStatuses.mockReturnValue({
+        data: {
+          services: [
+            { ...initialServices[0], status: 'disconnected' as const, message: 'refused' },
+          ],
+        },
+        isLoading: false,
+        error: null,
+      } as any);
+
+      rerender(
+        React.createElement(
+          QueryClientProvider,
+          {
+            client: new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+          },
+          React.createElement(ServiceStatusDashboard)
+        )
+      );
+
+      expect(screen.getByTestId('status-change-notification')).toBeInTheDocument();
+
+      // Advance past 5 seconds
+      act(() => {
+        vi.advanceTimersByTime(5000);
+      });
+
+      expect(screen.queryByTestId('status-change-notification')).not.toBeInTheDocument();
+
+      vi.useRealTimers();
+    });
+
+    it('[P2] does not show notification when same status is returned', () => {
+      const services = [
+        {
+          name: 'tmdb',
+          displayName: 'TMDb API',
+          status: 'connected' as const,
+          message: '已連線',
+          lastSuccessAt: '2026-02-10T14:30:00Z',
+          lastCheckAt: '2026-02-10T14:30:00Z',
+          responseTimeMs: 45,
+        },
+      ];
+
+      mockUseServiceStatuses.mockReturnValue({
+        data: { services },
+        isLoading: false,
+        error: null,
+      } as any);
+
+      const { rerender } = renderWithQuery(React.createElement(ServiceStatusDashboard));
+
+      // Re-render with same status (different responseTimeMs but same status)
+      mockUseServiceStatuses.mockReturnValue({
+        data: { services: [{ ...services[0], responseTimeMs: 50 }] },
+        isLoading: false,
+        error: null,
+      } as any);
+
+      rerender(
+        React.createElement(
+          QueryClientProvider,
+          {
+            client: new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+          },
+          React.createElement(ServiceStatusDashboard)
+        )
+      );
+
+      expect(screen.queryByTestId('status-change-notification')).not.toBeInTheDocument();
+    });
   });
 });

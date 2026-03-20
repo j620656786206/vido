@@ -1,13 +1,69 @@
-import { useState } from 'react';
-import { Activity, Loader2 } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Activity, Bell, Loader2 } from 'lucide-react';
 import { useServiceStatuses, useTestServiceConnection } from '../../hooks/useServiceStatus';
 import { ServiceStatusCard } from './ServiceStatusCard';
+import type { ServiceConnectionStatus, ServiceStatus } from '../../services/serviceStatusService';
+
+const STATUS_LABELS: Record<ServiceConnectionStatus, string> = {
+  connected: '已連線',
+  rate_limited: '速率限制',
+  error: '錯誤',
+  disconnected: '已斷線',
+  unconfigured: '未設定',
+};
+
+interface StatusChange {
+  displayName: string;
+  from: string;
+  to: string;
+}
 
 export function ServiceStatusDashboard() {
   const { data, isLoading, error } = useServiceStatuses();
   const testConnection = useTestServiceConnection();
   const [testingService, setTestingService] = useState<string | null>(null);
   const [testError, setTestError] = useState<string | null>(null);
+  const [statusChanges, setStatusChanges] = useState<StatusChange[]>([]);
+  const previousStatusesRef = useRef<Map<string, ServiceConnectionStatus> | null>(null);
+
+  const services = data?.services ?? [];
+
+  // Detect status changes between polling intervals
+  useEffect(() => {
+    if (services.length === 0) return;
+
+    const currentMap = new Map<string, ServiceConnectionStatus>();
+    for (const svc of services) {
+      currentMap.set(svc.name, svc.status);
+    }
+
+    const prev = previousStatusesRef.current;
+    if (prev !== null) {
+      const changes: StatusChange[] = [];
+      for (const svc of services) {
+        const prevStatus = prev.get(svc.name);
+        if (prevStatus && prevStatus !== svc.status) {
+          changes.push({
+            displayName: svc.displayName,
+            from: STATUS_LABELS[prevStatus] || prevStatus,
+            to: STATUS_LABELS[svc.status] || svc.status,
+          });
+        }
+      }
+      if (changes.length > 0) {
+        setStatusChanges(changes);
+      }
+    }
+
+    previousStatusesRef.current = currentMap;
+  }, [services]);
+
+  // Auto-dismiss notifications after 5 seconds
+  useEffect(() => {
+    if (statusChanges.length === 0) return;
+    const timer = setTimeout(() => setStatusChanges([]), 5000);
+    return () => clearTimeout(timer);
+  }, [statusChanges]);
 
   const handleTest = async (serviceName: string) => {
     if (testingService) return; // Prevent concurrent test requests
@@ -39,8 +95,6 @@ export function ServiceStatusDashboard() {
     );
   }
 
-  const services = data?.services ?? [];
-
   return (
     <div className="space-y-6" data-testid="service-status-dashboard">
       {/* Header */}
@@ -51,6 +105,30 @@ export function ServiceStatusDashboard() {
           <p className="text-sm text-slate-400">監控外部服務連線狀態</p>
         </div>
       </div>
+
+      {/* Status change notifications (AC3) */}
+      {statusChanges.length > 0 && (
+        <div
+          className="flex items-start gap-3 rounded-lg border border-blue-800 bg-blue-900/20 px-4 py-3"
+          data-testid="status-change-notification"
+        >
+          <Bell className="mt-0.5 h-4 w-4 shrink-0 text-blue-400" />
+          <div className="space-y-1 text-sm text-blue-300">
+            {statusChanges.map((change, i) => (
+              <p key={i}>
+                {change.displayName}：{change.from} → {change.to}
+              </p>
+            ))}
+          </div>
+          <button
+            onClick={() => setStatusChanges([])}
+            className="ml-auto shrink-0 text-xs text-slate-500 hover:text-slate-400"
+            data-testid="dismiss-notification"
+          >
+            關閉
+          </button>
+        </div>
+      )}
 
       {/* Service cards */}
       <div className="space-y-3" data-testid="service-cards-list">
