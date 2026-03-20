@@ -145,7 +145,7 @@ development_status:
   6-6-backup-integrity-verification: done
   6-7-data-restore: done
   6-8-scheduled-backups: done
-  6-9-metadata-export-json-yaml-nfo: review
+  6-9-metadata-export-json-yaml-nfo: done
   6-10-metadata-import: ready-for-dev
   6-11-performance-metrics-dashboard: ready-for-dev
   epic-6-retrospective: optional

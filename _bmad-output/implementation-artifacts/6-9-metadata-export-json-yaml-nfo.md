@@ -1,6 +1,6 @@
 # Story 6.9: Metadata Export (JSON/YAML/NFO)
 
-Status: review
+Status: done
 
 ## Story
 

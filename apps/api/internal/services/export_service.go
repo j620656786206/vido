@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -39,7 +40,7 @@ type ExportResult struct {
 	ExportID  string       `json:"exportId"`
 	Format    ExportFormat `json:"format"`
 	Status    ExportStatus `json:"status"`
-	FilePath  string       `json:"filePath,omitempty"`
+	FilePath  string       `json:"-"` // internal only, not exposed to API
 	ItemCount int          `json:"itemCount"`
 	Message   string       `json:"message,omitempty"`
 	Error     string       `json:"error,omitempty"`
@@ -257,7 +258,7 @@ func (s *ExportService) ExportNFO(ctx context.Context) (*ExportResult, error) {
 			continue
 		}
 		nfoData := nfoGen.GenerateMovieNFO(m)
-		nfoPath := m.FilePath.String + ".nfo"
+		nfoPath := nfoFilePath(m.FilePath.String)
 		if err := writeFile(nfoPath, nfoData); err != nil {
 			slog.Warn("Failed to write movie NFO", "path", nfoPath, "error", err)
 			continue
@@ -279,7 +280,7 @@ func (s *ExportService) ExportNFO(ctx context.Context) (*ExportResult, error) {
 			continue
 		}
 		nfoData := nfoGen.GenerateSeriesNFO(sv)
-		nfoPath := sv.FilePath.String + ".nfo"
+		nfoPath := nfoFilePath(sv.FilePath.String)
 		if err := writeFile(nfoPath, nfoData); err != nil {
 			slog.Warn("Failed to write series NFO", "path", nfoPath, "error", err)
 			continue
@@ -331,7 +332,7 @@ func (s *ExportService) setResult(result *ExportResult) {
 }
 
 func (s *ExportService) buildExportDocument(ctx context.Context) (*ExportDocument, error) {
-	var items []ExportMediaItem
+	items := make([]ExportMediaItem, 0)
 
 	movies, err := s.fetchAllMovies(ctx)
 	if err != nil {
@@ -461,6 +462,21 @@ func (s *ExportService) fetchAllSeries(ctx context.Context) ([]models.Series, er
 		params.Page++
 	}
 	return allSeries, nil
+}
+
+// nfoFilePath generates the NFO path for a media file.
+// For files with known media extensions (.mkv, .mp4, etc.), strips the extension: movie.mkv → movie.nfo
+// For directories or unknown extensions, appends .nfo: ShowDir → ShowDir.nfo
+func nfoFilePath(mediaPath string) string {
+	ext := strings.ToLower(filepath.Ext(mediaPath))
+	mediaExts := map[string]bool{
+		".mkv": true, ".mp4": true, ".avi": true, ".mov": true,
+		".wmv": true, ".flv": true, ".ts": true, ".m4v": true,
+	}
+	if mediaExts[ext] {
+		return strings.TrimSuffix(mediaPath, filepath.Ext(mediaPath)) + ".nfo"
+	}
+	return mediaPath + ".nfo"
 }
 
 func (s *ExportService) writeExportFile(filename string, data []byte) (string, error) {

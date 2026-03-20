@@ -216,8 +216,8 @@ func TestExportService_ExportNFO(t *testing.T) {
 		assert.Equal(t, ExportStatusCompleted, result.Status)
 		assert.Equal(t, 1, result.ItemCount)
 
-		// Verify NFO file was created
-		nfoPath := movieFile + ".nfo"
+		// Verify NFO file was created (strips .mkv extension per Kodi convention)
+		nfoPath := filepath.Join(tmpDir, "The.Matrix.1999.nfo")
 		_, err = os.Stat(nfoPath)
 		assert.NoError(t, err)
 	})
