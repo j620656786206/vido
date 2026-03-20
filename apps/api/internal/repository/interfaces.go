@@ -317,6 +317,27 @@ type LogRepositoryInterface interface {
 	DeleteOlderThan(ctx context.Context, days int) (int64, error)
 }
 
+// BackupRepositoryInterface defines the contract for backup data access operations.
+type BackupRepositoryInterface interface {
+	// Create inserts a new backup record
+	Create(ctx context.Context, backup *models.Backup) error
+
+	// List retrieves all backups ordered by creation time descending
+	List(ctx context.Context) ([]models.Backup, error)
+
+	// GetByID retrieves a backup by its ID
+	GetByID(ctx context.Context, id string) (*models.Backup, error)
+
+	// Update modifies an existing backup record
+	Update(ctx context.Context, backup *models.Backup) error
+
+	// Delete removes a backup record by ID
+	Delete(ctx context.Context, id string) error
+
+	// TotalSizeBytes returns the sum of all completed backup sizes
+	TotalSizeBytes(ctx context.Context) (int64, error)
+}
+
 // Compile-time interface verification
 // These assertions ensure that concrete types implement their respective interfaces.
 // If any of these fail to compile, it means the implementation is missing required methods.
@@ -331,4 +352,5 @@ var (
 	_ LearningRepositoryInterface = (*LearningRepository)(nil)
 	_ RetryRepositoryInterface    = (*RetryRepository)(nil)
 	_ LogRepositoryInterface      = (*LogRepository)(nil)
+	_ BackupRepositoryInterface   = (*BackupRepository)(nil)
 )

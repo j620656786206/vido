@@ -149,6 +149,11 @@ func main() {
 	// Initialize log service (Story 6.3)
 	logService := services.NewLogService(repos.Logs)
 
+	// Initialize backup service (Story 6.5)
+	backupDir := filepath.Join(cfg.DataDir, "backups")
+	backupService := services.NewBackupService(db.Conn(), repos.Backups, backupDir, 17)
+	slog.Info("Backup service initialized", "backup_dir", backupDir)
+
 	// Initialize cache management services (Story 6.2)
 	posterDir := filepath.Join(cfg.DataDir, "posters")
 	cacheStatsService := services.NewCacheStatsService(db.Conn(), posterDir)
@@ -332,6 +337,7 @@ func main() {
 	cacheHandler := handlers.NewCacheHandler(cacheStatsService, cacheCleanupService)
 	serviceStatusService := services.NewServiceStatusService(healthMonitor, healthChecker)
 	statusHandler := handlers.NewStatusHandler(serviceStatusService)
+	backupHandler := handlers.NewBackupHandler(backupService)
 	// parseProgressHandler already initialized above with defer Close()
 	slog.Info("Handlers initialized with service injection")
 
@@ -357,6 +363,7 @@ func main() {
 		logHandler.RegisterRoutes(apiV1)    // Must be before settingsHandler to avoid /settings/:key conflict
 		cacheHandler.RegisterRoutes(apiV1) // Must be before settingsHandler to avoid /settings/:key conflict
 		statusHandler.RegisterRoutes(apiV1) // Must be before settingsHandler to avoid /settings/:key conflict
+		backupHandler.RegisterRoutes(apiV1) // Must be before settingsHandler to avoid /settings/:key conflict
 		settingsHandler.RegisterRoutes(apiV1)
 		setupHandler.RegisterRoutes(apiV1)
 		mediaHandler.RegisterRoutes(apiV1)

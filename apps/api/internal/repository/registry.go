@@ -20,6 +20,7 @@ type Repositories struct {
 	ParseJobs         ParseJobRepositoryInterface
 	ConnectionHistory ConnectionHistoryRepositoryInterface
 	Logs              LogRepositoryInterface
+	Backups           BackupRepositoryInterface
 }
 
 // NewRepositories creates all repository implementations for the given database connection.
@@ -45,6 +46,7 @@ func NewRepositories(db *sql.DB) *Repositories {
 		ParseJobs:         NewParseJobRepository(db),
 		ConnectionHistory: NewConnectionHistoryRepository(db),
 		Logs:              NewLogRepository(db),
+		Backups:           NewBackupRepository(db),
 	}
 }
 
