@@ -302,6 +302,21 @@ type ParseJobRepositoryInterface interface {
 // RetryItem is imported from retry package for interface definition
 type RetryItem = retry.RetryItem
 
+// LogRepositoryInterface defines the contract for system log data access operations.
+type LogRepositoryInterface interface {
+	// GetLogs retrieves paginated system logs with optional filters
+	GetLogs(ctx context.Context, filter models.LogFilter) ([]models.SystemLog, int, error)
+
+	// CreateLog inserts a new log entry
+	CreateLog(ctx context.Context, log *models.SystemLog) error
+
+	// CreateLogBatch inserts multiple log entries in a single transaction
+	CreateLogBatch(ctx context.Context, logs []models.SystemLog) error
+
+	// DeleteOlderThan removes logs older than the specified number of days
+	DeleteOlderThan(ctx context.Context, days int) (int64, error)
+}
+
 // Compile-time interface verification
 // These assertions ensure that concrete types implement their respective interfaces.
 // If any of these fail to compile, it means the implementation is missing required methods.
@@ -315,4 +330,5 @@ var (
 	_ SecretsRepositoryInterface  = (*SecretsRepository)(nil)
 	_ LearningRepositoryInterface = (*LearningRepository)(nil)
 	_ RetryRepositoryInterface    = (*RetryRepository)(nil)
+	_ LogRepositoryInterface      = (*LogRepository)(nil)
 )

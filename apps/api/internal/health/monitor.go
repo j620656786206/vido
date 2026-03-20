@@ -113,12 +113,33 @@ func (m *HealthMonitor) CheckAllServices(ctx context.Context) {
 		wg.Add(1)
 		go func(name models.ServiceName, fn func(context.Context) error) {
 			defer wg.Done()
+			start := time.Now()
 			err := fn(ctx)
-			m.UpdateServiceHealth(name, err)
+			elapsed := time.Since(start).Milliseconds()
+			m.UpdateServiceHealthWithTime(name, err, elapsed)
 		}(check.name, check.checker)
 	}
 
 	wg.Wait()
+}
+
+// GetAllServiceStatuses returns all service statuses in the settings dashboard format
+func (m *HealthMonitor) GetAllServiceStatuses() []models.ServiceStatus {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.services.AllServiceStatuses()
+}
+
+// UpdateServiceHealthWithTime updates the health status with response time tracking
+func (m *HealthMonitor) UpdateServiceHealthWithTime(name models.ServiceName, err error, responseTimeMs int64) {
+	m.mu.Lock()
+	svc := m.services.GetService(name)
+	if svc != nil {
+		svc.SetResponseTime(responseTimeMs)
+	}
+	m.mu.Unlock()
+	// Delegate to existing UpdateServiceHealth (which acquires its own lock)
+	m.UpdateServiceHealth(name, err)
 }
 
 // UpdateServiceHealth updates the health status of a specific service
@@ -284,8 +305,9 @@ func (m *HealthMonitor) StartQBMonitoring(ctx context.Context) {
 	defer ticker.Stop()
 
 	// Perform initial check
+	start := time.Now()
 	err := m.checker.CheckQBittorrent(ctx)
-	m.UpdateServiceHealth(models.ServiceNameQBittorrent, err)
+	m.UpdateServiceHealthWithTime(models.ServiceNameQBittorrent, err, time.Since(start).Milliseconds())
 
 	for {
 		select {
@@ -293,8 +315,9 @@ func (m *HealthMonitor) StartQBMonitoring(ctx context.Context) {
 			m.logger.Info("qBittorrent health monitoring stopped")
 			return
 		case <-ticker.C:
+			s := time.Now()
 			err := m.checker.CheckQBittorrent(ctx)
-			m.UpdateServiceHealth(models.ServiceNameQBittorrent, err)
+			m.UpdateServiceHealthWithTime(models.ServiceNameQBittorrent, err, time.Since(s).Milliseconds())
 		}
 	}
 }

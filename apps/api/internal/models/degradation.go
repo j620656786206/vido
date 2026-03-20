@@ -1,6 +1,7 @@
 package models
 
 import (
+	"strings"
 	"time"
 )
 
@@ -44,14 +45,37 @@ const ErrorThresholdDown = 3
 
 // ServiceHealth represents the health status of an external service
 type ServiceHealth struct {
-	Name        string    `json:"name"`
-	DisplayName string    `json:"displayName"`
-	Status      string    `json:"status"`
-	LastCheck   time.Time `json:"lastCheck"`
-	LastSuccess time.Time `json:"lastSuccess"`
-	ErrorCount  int       `json:"errorCount"`
-	Message     string    `json:"message,omitempty"`
+	Name           string    `json:"name"`
+	DisplayName    string    `json:"displayName"`
+	Status         string    `json:"status"`
+	LastCheck      time.Time `json:"lastCheck"`
+	LastSuccess    time.Time `json:"lastSuccess"`
+	ErrorCount     int       `json:"errorCount"`
+	Message        string    `json:"message,omitempty"`
+	ResponseTimeMs int64     `json:"responseTimeMs"`
 }
+
+// ServiceStatus represents a service connection status for the settings dashboard.
+// Maps from internal ServiceHealth to user-facing status format.
+type ServiceStatus struct {
+	Name           string     `json:"name"`
+	DisplayName    string     `json:"displayName"`
+	Status         string     `json:"status"` // "connected", "rate_limited", "error", "disconnected", "unconfigured"
+	Message        string     `json:"message"`
+	LastSuccessAt  *time.Time `json:"lastSuccessAt"`
+	LastCheckAt    time.Time  `json:"lastCheckAt"`
+	ResponseTimeMs int64      `json:"responseTimeMs"`
+	ErrorMessage   string     `json:"errorMessage,omitempty"`
+}
+
+// ServiceStatus constants for the settings dashboard
+const (
+	StatusConnected    = "connected"
+	StatusRateLimited  = "rate_limited"
+	StatusError        = "error"
+	StatusDisconnected = "disconnected"
+	StatusUnconfigured = "unconfigured"
+)
 
 // NewServiceHealth creates a new ServiceHealth with healthy status
 func NewServiceHealth(name, displayName string) *ServiceHealth {
@@ -99,6 +123,83 @@ func (h *ServiceHealth) RecordSuccess() {
 	h.ErrorCount = 0
 	h.Message = ""
 	h.Status = ServiceStatusHealthy
+}
+
+// SetResponseTime sets the response time in milliseconds from the last health check
+func (h *ServiceHealth) SetResponseTime(ms int64) {
+	h.ResponseTimeMs = ms
+}
+
+// ToServiceStatus converts internal ServiceHealth to user-facing ServiceStatus
+func (h *ServiceHealth) ToServiceStatus() ServiceStatus {
+	status := ServiceStatus{
+		Name:           h.Name,
+		DisplayName:    h.DisplayName,
+		LastCheckAt:    h.LastCheck,
+		ResponseTimeMs: h.ResponseTimeMs,
+	}
+
+	if !h.LastSuccess.IsZero() {
+		t := h.LastSuccess
+		status.LastSuccessAt = &t
+	}
+
+	switch h.Status {
+	case ServiceStatusHealthy:
+		status.Status = StatusConnected
+		status.Message = "已連線"
+	case ServiceStatusDegraded:
+		if isUnconfiguredError(h.Message) {
+			status.Status = StatusUnconfigured
+			status.Message = "未設定"
+		} else if isRateLimitError(h.Message) {
+			status.Status = StatusRateLimited
+			status.Message = "速率限制中"
+		} else {
+			status.Status = StatusError
+			status.Message = h.Message
+		}
+		status.ErrorMessage = h.Message
+	case ServiceStatusDown:
+		if isUnconfiguredError(h.Message) {
+			status.Status = StatusUnconfigured
+			status.Message = "未設定"
+		} else {
+			status.Status = StatusDisconnected
+			status.Message = h.Message
+		}
+		status.ErrorMessage = h.Message
+	default:
+		status.Status = StatusUnconfigured
+		status.Message = "未設定"
+	}
+
+	return status
+}
+
+// isRateLimitError detects rate limit errors from error messages
+func isRateLimitError(msg string) bool {
+	lower := strings.ToLower(msg)
+	return strings.Contains(lower, "rate limit") ||
+		strings.Contains(lower, "rate_limit") ||
+		strings.Contains(lower, "429") ||
+		strings.Contains(lower, "too many requests")
+}
+
+// isUnconfiguredError detects if a service is not configured
+func isUnconfiguredError(msg string) bool {
+	lower := strings.ToLower(msg)
+	return strings.Contains(lower, "not configured") ||
+		strings.Contains(lower, "not enabled")
+}
+
+// AllServiceStatuses returns all service statuses in the settings dashboard format
+func (s *ServicesHealth) AllServiceStatuses() []ServiceStatus {
+	statuses := make([]ServiceStatus, 0, 5)
+	for _, svc := range s.AllServices() {
+		statuses = append(statuses, svc.ToServiceStatus())
+	}
+	return statuses
 }
 
 // DegradedResult represents a result with missing or fallback data

@@ -18,6 +18,7 @@ import (
 	"github.com/vido/api/internal/handlers"
 	"github.com/vido/api/internal/health"
 	"github.com/vido/api/internal/images"
+	"github.com/vido/api/internal/logger"
 	"github.com/vido/api/internal/repository"
 	"github.com/vido/api/internal/retry"
 	"github.com/vido/api/internal/secrets"
@@ -101,6 +102,19 @@ func main() {
 	}
 	slog.Info("Database migrations completed", "applied", appliedCount, "total", len(status))
 
+	// Initialize DB log handler for system logs (Story 6.3)
+	// Must come after migrations so the system_logs table exists
+	logRepo := repository.NewLogRepository(db.Conn())
+	dbLogHandler := logger.NewDBHandler(logRepo)
+	defer dbLogHandler.Close()
+	// Create a concrete stdout handler to avoid infinite recursion.
+	// slog.Default().Handler() returns a defaultHandler that delegates back to
+	// slog.Default(), which would cause a loop after slog.SetDefault(multiHandler).
+	stdoutHandler := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo})
+	multiHandler := slog.New(logger.NewMultiHandler(stdoutHandler, dbLogHandler))
+	slog.SetDefault(multiHandler)
+	slog.Info("System log DB handler initialized")
+
 	// Initialize offline cache for graceful degradation (Story 3.12)
 	offlineCache := cache.NewOfflineCache(db.Conn())
 	if err := offlineCache.InitSchema(ctx); err != nil {
@@ -127,9 +141,19 @@ func main() {
 	movieService := services.NewMovieService(repos.Movies)
 	seriesService := services.NewSeriesService(repos.Series)
 	settingsService := services.NewSettingsServiceWithSecrets(repos.Settings, secretsService)
+	setupService := services.NewSetupService(repos.Settings, secretsService)
 	qbittorrentService := services.NewQBittorrentService(repos.Settings, secretsService)
 	downloadService := services.NewDownloadService(qbittorrentService, slog.Default())
 	mediaService := services.NewMediaService(cfg.MediaDirs)
+
+	// Initialize log service (Story 6.3)
+	logService := services.NewLogService(repos.Logs)
+
+	// Initialize cache management services (Story 6.2)
+	posterDir := filepath.Join(cfg.DataDir, "posters")
+	cacheStatsService := services.NewCacheStatsService(db.Conn(), posterDir)
+	cacheCleanupService := services.NewCacheCleanupService(db.Conn(), posterDir)
+	slog.Info("Cache management services initialized")
 
 	// Initialize TMDb service with cache integration (Story 2.1)
 	tmdbService := services.NewTMDbService(services.TMDbConfig{
@@ -208,7 +232,6 @@ func main() {
 	}, tmdbService)
 
 	// Initialize metadata editor service for manual editing (Story 3.8)
-	posterDir := filepath.Join(cfg.DataDir, "posters")
 	imageProcessor, err := images.NewImageProcessor(posterDir)
 	if err != nil {
 		slog.Error("Failed to initialize image processor", "error", err)
@@ -290,6 +313,7 @@ func main() {
 	movieHandler := handlers.NewMovieHandler(movieService)
 	seriesHandler := handlers.NewSeriesHandler(seriesService)
 	settingsHandler := handlers.NewSettingsHandler(settingsService)
+	setupHandler := handlers.NewSetupHandler(setupService)
 	mediaHandler := handlers.NewMediaHandler(mediaService)
 	tmdbHandler := handlers.NewTMDbHandler(tmdbService)
 	parserHandler := handlers.NewParserHandler(parserService)
@@ -304,6 +328,10 @@ func main() {
 	libraryService := services.NewLibraryService(repos.Movies, repos.Series, repos.Episodes, services.WithTMDbVideos(tmdbService.VideosProvider()))
 	libraryHandler := handlers.NewLibraryHandler(libraryService)
 	recentMediaHandler := handlers.NewRecentMediaHandler(movieService, seriesService)
+	logHandler := handlers.NewLogHandler(logService)
+	cacheHandler := handlers.NewCacheHandler(cacheStatsService, cacheCleanupService)
+	serviceStatusService := services.NewServiceStatusService(healthMonitor, healthChecker)
+	statusHandler := handlers.NewStatusHandler(serviceStatusService)
 	// parseProgressHandler already initialized above with defer Close()
 	slog.Info("Handlers initialized with service injection")
 
@@ -326,7 +354,11 @@ func main() {
 	{
 		movieHandler.RegisterRoutes(apiV1)
 		seriesHandler.RegisterRoutes(apiV1)
+		logHandler.RegisterRoutes(apiV1)    // Must be before settingsHandler to avoid /settings/:key conflict
+		cacheHandler.RegisterRoutes(apiV1) // Must be before settingsHandler to avoid /settings/:key conflict
+		statusHandler.RegisterRoutes(apiV1) // Must be before settingsHandler to avoid /settings/:key conflict
 		settingsHandler.RegisterRoutes(apiV1)
+		setupHandler.RegisterRoutes(apiV1)
 		mediaHandler.RegisterRoutes(apiV1)
 		tmdbHandler.RegisterRoutes(apiV1)
 		parserHandler.RegisterRoutes(apiV1)
