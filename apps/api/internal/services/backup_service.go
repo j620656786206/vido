@@ -257,10 +257,7 @@ func (s *BackupService) createTarGz(outputPath, dbPath string, manifest backupMa
 	multiWriter := io.MultiWriter(outFile, hasher)
 
 	gzWriter := gzip.NewWriter(multiWriter)
-	defer gzWriter.Close()
-
 	tarWriter := tar.NewWriter(gzWriter)
-	defer tarWriter.Close()
 
 	// Add database file
 	if err := addFileToTar(tarWriter, dbPath, "vido.db"); err != nil {

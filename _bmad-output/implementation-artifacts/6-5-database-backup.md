@@ -196,6 +196,7 @@ Claude Opus 4.6 (1M context)
 ### Change Log
 
 - 2026-03-20: Implemented Story 6-5 Database Backup — full backend (model, migration, repository, service, handler) + frontend (service, hooks, table UI) with 14 new tests
+- 2026-03-20: CR fixes — delete error display, shared formatBytes util, fixed double-close in createTarGz. TA expanded 14 tests.
 
 ### File List
 
@@ -204,14 +205,17 @@ Claude Opus 4.6 (1M context)
 - apps/api/internal/repository/backup_repository.go (new — CRUD + TotalSizeBytes)
 - apps/api/internal/repository/interfaces.go (modified — added BackupRepositoryInterface)
 - apps/api/internal/repository/registry.go (modified — added Backups field)
-- apps/api/internal/services/backup_service.go (new — SQLite VACUUM INTO + tar.gz + SHA-256)
+- apps/api/internal/services/backup_service.go (modified — fixed double-close in createTarGz)
 - apps/api/internal/handlers/backup_handler.go (new — 5 endpoints)
 - apps/api/cmd/api/main.go (modified — wired BackupService + BackupHandler)
+- apps/web/src/utils/formatBytes.ts (new — shared byte formatting util)
 - apps/web/src/services/backupService.ts (new — API client)
+- apps/web/src/services/backupService.spec.ts (new — 6 tests)
 - apps/web/src/hooks/useBackups.ts (new — TanStack Query hooks)
-- apps/web/src/components/settings/BackupManagement.tsx (new — main backup view)
-- apps/web/src/components/settings/BackupManagement.spec.tsx (new — 7 tests)
-- apps/web/src/components/settings/BackupTable.tsx (new — compact table component)
-- apps/web/src/components/settings/BackupTable.spec.tsx (new — 7 tests)
+- apps/web/src/hooks/useBackups.spec.ts (new — 2 tests)
+- apps/web/src/components/settings/BackupManagement.tsx (modified — delete error display, shared formatBytes)
+- apps/web/src/components/settings/BackupManagement.spec.tsx (modified — 11 tests)
+- apps/web/src/components/settings/BackupTable.tsx (modified — shared formatBytes)
+- apps/web/src/components/settings/BackupTable.spec.tsx (modified — 9 tests)
 - apps/web/src/routes/settings/backup.tsx (modified — replaced placeholder with BackupManagement)
 - _bmad-output/implementation-artifacts/sprint-status.yaml (modified — status updated)

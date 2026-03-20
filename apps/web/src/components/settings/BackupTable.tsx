@@ -1,6 +1,7 @@
 import { Download, Trash2 } from 'lucide-react';
 import type { Backup, BackupStatus } from '../../services/backupService';
 import { backupService } from '../../services/backupService';
+import { formatBytes } from '../../utils/formatBytes';
 
 const statusConfig: Record<BackupStatus, { label: string; color: string; bg: string }> = {
   completed: { label: '完成', color: 'text-green-400', bg: 'bg-green-400/10' },
@@ -8,13 +9,6 @@ const statusConfig: Record<BackupStatus, { label: string; color: string; bg: str
   pending: { label: '等待中', color: 'text-yellow-400', bg: 'bg-yellow-400/10' },
   failed: { label: '失敗', color: 'text-red-400', bg: 'bg-red-400/10' },
 };
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const units = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
-}
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleString('zh-TW');

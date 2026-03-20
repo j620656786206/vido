@@ -2,19 +2,14 @@ import { useState } from 'react';
 import { HardDrive, Loader2, Plus } from 'lucide-react';
 import { useBackups, useCreateBackup, useDeleteBackup } from '../../hooks/useBackups';
 import { BackupTable } from './BackupTable';
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const units = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
-}
+import { formatBytes } from '../../utils/formatBytes';
 
 export function BackupManagement() {
   const { data, isLoading, error } = useBackups();
   const createBackup = useCreateBackup();
   const deleteBackup = useDeleteBackup();
   const [createError, setCreateError] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const handleCreate = async () => {
     if (createBackup.isPending) return;
@@ -27,10 +22,11 @@ export function BackupManagement() {
   };
 
   const handleDelete = async (id: string) => {
+    setDeleteError(null);
     try {
       await deleteBackup.mutateAsync(id);
-    } catch {
-      // Error handled by TanStack Query
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : '刪除備份失敗');
     }
   };
 
@@ -95,6 +91,16 @@ export function BackupManagement() {
           data-testid="create-error"
         >
           {createError}
+        </div>
+      )}
+
+      {deleteError && (
+        <div
+          className="rounded-lg border border-red-800 bg-red-900/20 px-4 py-3 text-sm text-red-400"
+          role="alert"
+          data-testid="delete-error"
+        >
+          {deleteError}
         </div>
       )}
 
