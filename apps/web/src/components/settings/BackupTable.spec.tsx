@@ -111,4 +111,34 @@ describe('BackupTable', () => {
     );
     expect(screen.getByTestId('delete-btn-b1')).toBeDisabled();
   });
+
+  it('[P2] renders pending backup status', () => {
+    const onDelete = vi.fn();
+    const pendingBackup: Backup = {
+      id: 'b4',
+      filename: 'vido-backup-20260320-160000-v17.tar.gz',
+      sizeBytes: 0,
+      schemaVersion: 17,
+      checksum: '',
+      status: 'pending',
+      createdAt: '2026-03-20T16:00:00Z',
+    };
+    render(
+      React.createElement(BackupTable, { backups: [pendingBackup], onDelete, isDeleting: false })
+    );
+    expect(screen.getByText('等待中')).toBeInTheDocument();
+    expect(screen.queryByTestId('download-btn-b4')).not.toBeInTheDocument();
+  });
+
+  it('[P1] download link points to correct API endpoint', () => {
+    const onDelete = vi.fn();
+    render(
+      React.createElement(BackupTable, { backups: [completedBackup], onDelete, isDeleting: false })
+    );
+    const downloadLink = screen.getByTestId('download-btn-b1');
+    expect(downloadLink).toHaveAttribute(
+      'href',
+      expect.stringContaining('/settings/backups/b1/download')
+    );
+  });
 });

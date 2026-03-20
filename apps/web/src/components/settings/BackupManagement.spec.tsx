@@ -145,4 +145,80 @@ describe('BackupManagement', () => {
     expect(screen.getByTestId('create-error')).toBeInTheDocument();
     expect(screen.getByText('Disk full')).toBeInTheDocument();
   });
+
+  it('[P1] disables create button when backup is in progress', () => {
+    mockUseCreateBackup.mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: true,
+    } as any);
+    mockUseBackups.mockReturnValue({
+      data: { backups: [], totalSizeBytes: 0 },
+      isLoading: false,
+      error: null,
+    } as any);
+
+    renderWithQuery(React.createElement(BackupManagement));
+    expect(screen.getByTestId('create-backup-btn')).toBeDisabled();
+  });
+
+  it('[P2] shows fallback error message for non-Error rejection', async () => {
+    const user = userEvent.setup();
+    mockUseCreateBackup.mockReturnValue({
+      mutateAsync: vi.fn().mockRejectedValue('string error'),
+      isPending: false,
+    } as any);
+    mockUseBackups.mockReturnValue({
+      data: { backups: [], totalSizeBytes: 0 },
+      isLoading: false,
+      error: null,
+    } as any);
+
+    renderWithQuery(React.createElement(BackupManagement));
+    await user.click(screen.getByTestId('create-backup-btn'));
+    expect(screen.getByText('建立備份失敗')).toBeInTheDocument();
+  });
+
+  it('[P2] shows error message text from API error', () => {
+    mockUseBackups.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: new Error('Connection refused'),
+    } as any);
+
+    renderWithQuery(React.createElement(BackupManagement));
+    expect(screen.getByText('Connection refused')).toBeInTheDocument();
+  });
+
+  it('[P1] renders correct summary for multiple backups', () => {
+    mockUseBackups.mockReturnValue({
+      data: {
+        backups: [
+          {
+            id: 'b1',
+            filename: 'backup1.tar.gz',
+            sizeBytes: 52428800,
+            schemaVersion: 17,
+            checksum: 'a',
+            status: 'completed',
+            createdAt: '2026-03-20T14:00:00Z',
+          },
+          {
+            id: 'b2',
+            filename: 'backup2.tar.gz',
+            sizeBytes: 41943040,
+            schemaVersion: 17,
+            checksum: 'b',
+            status: 'completed',
+            createdAt: '2026-03-19T14:00:00Z',
+          },
+        ],
+        totalSizeBytes: 94371840,
+      },
+      isLoading: false,
+      error: null,
+    } as any);
+
+    renderWithQuery(React.createElement(BackupManagement));
+    expect(screen.getByTestId('backup-summary')).toHaveTextContent('2 個備份');
+  });
 });
