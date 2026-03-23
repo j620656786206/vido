@@ -1,6 +1,7 @@
 import { createRootRoute, Outlet, useNavigate, useLocation } from '@tanstack/react-router';
 import { useEffect } from 'react';
 import { AppShell } from '../components/shell';
+import { ScanProgress } from '../components/scanner/ScanProgress';
 import { useSetupStatus } from '../hooks/useSetupStatus';
 
 export const Route = createRootRoute({
@@ -36,6 +37,7 @@ function RootComponent() {
       <AppShell>
         <Outlet />
       </AppShell>
+      <ScanProgress />
     </div>
   );
 }

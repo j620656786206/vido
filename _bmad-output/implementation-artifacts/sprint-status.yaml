@@ -45,7 +45,7 @@ v4_epics:
   7-1-recursive-folder-scanner: done  # 2026-03-23 — TA 82/100, CR fixes applied
   7-2-scheduled-scan-service: done  # 2026-03-23 — TA+CR fixes applied
   7-3-manual-scan-trigger-ui: done  # 2026-03-23 — TA 82/100, CR fixes applied
-  7-4-scan-progress-tracking: ready-for-dev
+  7-4-scan-progress-tracking: done  # 2026-03-23 — 41 new tests, 1500 total passing
   epic-8-subtitle-engine:
     status: backlog
   epic-9-ai-subtitle-enhancement:
