@@ -1,6 +1,6 @@
 # Story 8.2: Zimuku Web Scraper
 
-Status: review
+Status: done
 
 ## Story
 
@@ -98,6 +98,21 @@ Claude Opus 4.6 (1M context)
 - io.LimitReader for OOM protection (2MB HTML, 50MB downloads)
 - 17 tests with HTML fixtures, 82.8% coverage
 - 🎨 UX Verification: SKIPPED — no UI changes
+
+### Code Review Findings (2026-03-23)
+Reviewer: Claude Opus 4.6 (adversarial review), 7 findings, 6 auto-fixed
+
+| # | Severity | Issue | Fix |
+|---|----------|-------|-----|
+| 1 | HIGH | **SSRF via Download() ID** — accepted absolute URLs, enabling server to fetch arbitrary internal/external resources | Reject non-relative IDs; validate starts with `/`, reject `http://`, `https://`, `//` |
+| 2 | HIGH | **No CAPTCHA detection on download response (step 3)** — CAPTCHA HTML returned as "subtitle content" | Added `detectCaptcha(data)` check after download fetch |
+| 3 | MEDIUM | **DownloadURL set to detail page href** — misleading; not an actual download URL | Left DownloadURL empty; actual URL only known after detail page navigation |
+| 4 | MEDIUM | **CAPTCHA check after status check** — CAPTCHA on 403 reported as generic HTTP error | Reordered: CAPTCHA detection runs before status code check in Search + Download |
+| 5 | MEDIUM | **Race condition in UA rotation test** — map written from handler goroutine without sync | Added `sync.Mutex` around agents map access |
+| 6 | LOW | **Unused constant `zimukuUserAgent`** — dead code | Removed |
+| 7 | LOW | **Deterministic UA rotation with math/rand** — acceptable in Go 1.24 (auto-seeded, concurrency-safe) | No fix needed |
+
+Tests: 36 pass (with `-race`), 0 fail
 
 ### File List
 - apps/api/internal/subtitle/providers/zimuku.go (NEW)

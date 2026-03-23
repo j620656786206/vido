@@ -23,7 +23,6 @@ const (
 	zimukuMaxDelay         = 3 * time.Second
 	zimukuMaxResponseBytes = 2 << 20  // 2 MB max for HTML pages
 	zimukuMaxDownloadBytes = 50 << 20 // 50 MB max for subtitle files
-	zimukuUserAgent        = "Vido/1.0 (NAS Media Manager)"
 )
 
 // Sentinel errors for Zimuku-specific failure modes.
@@ -32,6 +31,9 @@ var (
 	// The provider does NOT attempt to solve CAPTCHAs — the engine should
 	// fall back to other sources.
 	ErrCaptchaDetected = errors.New("zimuku: CAPTCHA challenge detected")
+
+	// ErrInvalidID indicates the provided ID is not a safe relative path.
+	ErrInvalidID = errors.New("zimuku: invalid subtitle ID — must be a relative path")
 )
 
 // ErrParseFailure indicates the HTML structure changed and expected elements
@@ -161,12 +163,14 @@ func (p *ZimukuProvider) Search(ctx context.Context, query SubtitleQuery) ([]Sub
 		return nil, fmt.Errorf("zimuku: read response: %w", err)
 	}
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("zimuku: search returned HTTP %d", resp.StatusCode)
-	}
-
+	// Check CAPTCHA before status code — CAPTCHA pages may return 403/200,
+	// and the specific ErrCaptchaDetected is more useful than a generic HTTP error.
 	if detectCaptcha(body) {
 		return nil, ErrCaptchaDetected
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("zimuku: search returned HTTP %d", resp.StatusCode)
 	}
 
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(string(body)))
@@ -209,7 +213,8 @@ func (p *ZimukuProvider) parseSearchResults(doc *goquery.Document) ([]SubtitleRe
 			result.Filename = strings.TrimSpace(titleLink.Text())
 			if href, exists := titleLink.Attr("href"); exists {
 				result.ID = href
-				result.DownloadURL = href
+				// DownloadURL is intentionally left empty — the actual download link
+				// is only available after navigating the detail page in Download().
 			}
 		}
 
@@ -264,15 +269,23 @@ func (p *ZimukuProvider) Download(ctx context.Context, id string) ([]byte, error
 		return nil, fmt.Errorf("zimuku: download ID is required")
 	}
 
+	// Validate ID is a relative path to prevent SSRF.
+	// IDs come from parseSearchResults() and are always relative hrefs like "/detail/12345".
+	// Reject absolute URLs to prevent an attacker-controlled search result from making the
+	// server fetch arbitrary internal/external resources.
+	if strings.HasPrefix(id, "http://") || strings.HasPrefix(id, "https://") || strings.HasPrefix(id, "//") {
+		return nil, ErrInvalidID
+	}
+	if !strings.HasPrefix(id, "/") {
+		return nil, ErrInvalidID
+	}
+
 	// Step 1: Fetch detail page
 	if err := p.randomDelay(ctx); err != nil {
 		return nil, fmt.Errorf("zimuku: delay interrupted: %w", err)
 	}
 
-	detailURL := id
-	if !strings.HasPrefix(id, "http") {
-		detailURL = p.baseURL() + id
-	}
+	detailURL := p.baseURL() + id
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, detailURL, nil)
 	if err != nil {
@@ -291,12 +304,12 @@ func (p *ZimukuProvider) Download(ctx context.Context, id string) ([]byte, error
 		return nil, fmt.Errorf("zimuku: read detail response: %w", err)
 	}
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("zimuku: detail returned HTTP %d", resp.StatusCode)
-	}
-
 	if detectCaptcha(body) {
 		return nil, ErrCaptchaDetected
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("zimuku: detail returned HTTP %d", resp.StatusCode)
 	}
 
 	// Step 2: Parse detail page for download link
@@ -353,6 +366,12 @@ func (p *ZimukuProvider) Download(ctx context.Context, id string) ([]byte, error
 
 	if len(data) == 0 {
 		return nil, fmt.Errorf("zimuku: downloaded empty subtitle file for %s", id)
+	}
+
+	// Check for CAPTCHA in download response — Zimuku can serve CAPTCHA pages
+	// instead of subtitle files at the download endpoint.
+	if detectCaptcha(data) {
+		return nil, ErrCaptchaDetected
 	}
 
 	return data, nil

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -289,13 +290,57 @@ func TestZimukuProvider_DownloadEmptyID(t *testing.T) {
 	assert.Contains(t, err.Error(), "ID is required")
 }
 
-func TestZimukuProvider_UserAgentRotation(t *testing.T) {
-	agents := make(map[string]bool)
+func TestZimukuProvider_DownloadRejectsAbsoluteURL(t *testing.T) {
+	tests := []struct {
+		name string
+		id   string
+	}{
+		{"http URL", "http://evil.com/steal-creds"},
+		{"https URL", "https://169.254.169.254/latest/meta-data/"},
+		{"protocol-relative URL", "//evil.com/ssrf"},
+		{"no leading slash", "detail/12345"},
+	}
+
+	p := NewZimukuProvider()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			data, err := p.Download(context.Background(), tt.id)
+			assert.ErrorIs(t, err, ErrInvalidID)
+			assert.Nil(t, data)
+		})
+	}
+}
+
+func TestZimukuProvider_DownloadCaptchaOnFileResponse(t *testing.T) {
 	var requestCount int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		count := atomic.AddInt32(&requestCount, 1)
+		if count == 1 {
+			// Detail page — normal
+			w.Header().Set("Content-Type", "text/html")
+			w.Write([]byte(detailPageHTML))
+		} else {
+			// Download endpoint returns CAPTCHA instead of file
+			w.Header().Set("Content-Type", "text/html")
+			w.Write([]byte(captchaPageHTML))
+		}
+	}))
+	defer server.Close()
+
+	p := newTestZimukuProvider(server.URL)
+	data, err := p.Download(context.Background(), "/detail/12345")
+	assert.ErrorIs(t, err, ErrCaptchaDetected)
+	assert.Nil(t, data)
+}
+
+func TestZimukuProvider_UserAgentRotation(t *testing.T) {
+	var mu sync.Mutex
+	agents := make(map[string]bool)
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		atomic.AddInt32(&requestCount, 1)
+		mu.Lock()
 		agents[r.Header.Get("User-Agent")] = true
+		mu.Unlock()
 		w.Header().Set("Content-Type", "text/html")
 		w.Write([]byte(emptySearchHTML))
 	}))
@@ -308,8 +353,11 @@ func TestZimukuProvider_UserAgentRotation(t *testing.T) {
 		_, _ = p.Search(context.Background(), SubtitleQuery{Title: "test"})
 	}
 
+	mu.Lock()
+	agentCount := len(agents)
+	mu.Unlock()
 	// With 10 UAs and 20 requests, we should have at least 2 different ones
-	assert.GreaterOrEqual(t, len(agents), 2, "should rotate between multiple user agents")
+	assert.GreaterOrEqual(t, agentCount, 2, "should rotate between multiple user agents")
 }
 
 func TestZimukuProvider_ContextCancellation(t *testing.T) {
