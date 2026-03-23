@@ -181,7 +181,7 @@ development_status:
   8-7-auto-download-service:     ready-for-dev
   8-8-manual-subtitle-search-ui: ready-for-dev
   8-9-batch-subtitle-processing: ready-for-dev
-  8-10-subtitle-file-management: ready-for-dev
+  8-10-subtitle-file-management: review
   epic-8-retrospective: optional
 
   # ==============================================================================
