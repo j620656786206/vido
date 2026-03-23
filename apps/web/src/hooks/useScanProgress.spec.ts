@@ -51,23 +51,38 @@ class MockEventSource {
   }
 }
 
+const idleStatus = {
+  is_scanning: false,
+  files_found: 0,
+  files_processed: 0,
+  current_file: '',
+  percent_done: 0,
+  error_count: 0,
+  estimated_time: '',
+  last_scan_at: '',
+  last_scan_files: 0,
+  last_scan_duration: '',
+};
+
+const scanningStatus = {
+  is_scanning: true,
+  files_found: 200,
+  files_processed: 50,
+  current_file: 'init.mkv',
+  percent_done: 25,
+  error_count: 0,
+  estimated_time: '3 分',
+  last_scan_at: '',
+  last_scan_files: 0,
+  last_scan_duration: '',
+};
+
 describe('useScanProgress', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     MockEventSource.instances = [];
     (global as Record<string, unknown>).EventSource = MockEventSource;
-    mockGetScanStatus.mockResolvedValue({
-      is_scanning: false,
-      files_found: 0,
-      files_processed: 0,
-      current_file: '',
-      percent_done: 0,
-      error_count: 0,
-      estimated_time: '',
-      last_scan_at: '',
-      last_scan_files: 0,
-      last_scan_duration: '',
-    });
+    mockGetScanStatus.mockResolvedValue(idleStatus);
   });
 
   afterEach(() => {
@@ -75,7 +90,14 @@ describe('useScanProgress', () => {
     vi.restoreAllMocks();
   });
 
-  it('creates EventSource connection on mount', async () => {
+  it('does NOT create EventSource when idle (lazy SSE)', async () => {
+    renderHook(() => useScanProgress());
+    await vi.advanceTimersByTimeAsync(0);
+    expect(MockEventSource.instances).toHaveLength(0);
+  });
+
+  it('creates EventSource when scan is active on mount', async () => {
+    mockGetScanStatus.mockResolvedValue(scanningStatus);
     renderHook(() => useScanProgress());
     await vi.advanceTimersByTimeAsync(0);
     expect(MockEventSource.instances).toHaveLength(1);
@@ -88,7 +110,7 @@ describe('useScanProgress', () => {
     expect(mockGetScanStatus).toHaveBeenCalledTimes(1);
   });
 
-  it('starts as not visible', async () => {
+  it('starts as not visible when idle', async () => {
     const { result } = renderHook(() => useScanProgress());
     await vi.advanceTimersByTimeAsync(0);
     expect(result.current.isVisible).toBe(false);
@@ -96,6 +118,7 @@ describe('useScanProgress', () => {
   });
 
   it('updates state on SSE scan_progress event', async () => {
+    mockGetScanStatus.mockResolvedValue(scanningStatus);
     const { result } = renderHook(() => useScanProgress());
     await vi.advanceTimersByTimeAsync(0);
 
@@ -122,12 +145,12 @@ describe('useScanProgress', () => {
   });
 
   it('handles scan_complete SSE event', async () => {
+    mockGetScanStatus.mockResolvedValue(scanningStatus);
     const { result } = renderHook(() => useScanProgress());
     await vi.advanceTimersByTimeAsync(0);
 
     const es = MockEventSource.instances[0];
 
-    // First start scanning
     act(() => {
       es.emit('scan_progress', {
         data: {
@@ -141,7 +164,6 @@ describe('useScanProgress', () => {
     });
     expect(result.current.isScanning).toBe(true);
 
-    // Then complete
     act(() => {
       es.emit('scan_complete', {
         data: { files_found: 200, error_count: 1 },
@@ -155,6 +177,7 @@ describe('useScanProgress', () => {
   });
 
   it('handles scan_cancelled SSE event', async () => {
+    mockGetScanStatus.mockResolvedValue(scanningStatus);
     const { result } = renderHook(() => useScanProgress());
     await vi.advanceTimersByTimeAsync(0);
 
@@ -193,6 +216,7 @@ describe('useScanProgress', () => {
   });
 
   it('dismiss hides the card', async () => {
+    mockGetScanStatus.mockResolvedValue(scanningStatus);
     const { result } = renderHook(() => useScanProgress());
     await vi.advanceTimersByTimeAsync(0);
 
@@ -208,22 +232,16 @@ describe('useScanProgress', () => {
 
   it('falls back to polling on SSE error', async () => {
     vi.useRealTimers();
+    mockGetScanStatus.mockResolvedValue(scanningStatus);
     const { result } = renderHook(() => useScanProgress());
-    // Wait for initial fetch
     await new Promise((r) => setTimeout(r, 50));
 
     const es = MockEventSource.instances[0];
     mockGetScanStatus.mockResolvedValue({
-      is_scanning: true,
+      ...scanningStatus,
       files_found: 300,
-      files_processed: 100,
       current_file: 'poll.mkv',
       percent_done: 33,
-      error_count: 0,
-      estimated_time: '2 分',
-      last_scan_at: '',
-      last_scan_files: 0,
-      last_scan_duration: '',
     });
 
     act(() => {
@@ -237,18 +255,7 @@ describe('useScanProgress', () => {
 
   it('shows scanning state from initial status fetch', async () => {
     vi.useRealTimers();
-    mockGetScanStatus.mockResolvedValue({
-      is_scanning: true,
-      files_found: 200,
-      files_processed: 50,
-      current_file: 'init.mkv',
-      percent_done: 25,
-      error_count: 0,
-      estimated_time: '3 分',
-      last_scan_at: '',
-      last_scan_files: 0,
-      last_scan_duration: '',
-    });
+    mockGetScanStatus.mockResolvedValue(scanningStatus);
 
     const { result } = renderHook(() => useScanProgress());
 
@@ -259,6 +266,7 @@ describe('useScanProgress', () => {
   });
 
   it('closes EventSource on unmount', async () => {
+    mockGetScanStatus.mockResolvedValue(scanningStatus);
     const { unmount } = renderHook(() => useScanProgress());
     await vi.advanceTimersByTimeAsync(0);
 
@@ -266,5 +274,29 @@ describe('useScanProgress', () => {
     unmount();
 
     expect(es.readyState).toBe(2); // CLOSED
+  });
+
+  it('connects SSE via idle poll when scan starts after mount', async () => {
+    vi.useRealTimers();
+    // Start idle
+    mockGetScanStatus.mockResolvedValue(idleStatus);
+    const { result } = renderHook(() => useScanProgress());
+    await new Promise((r) => setTimeout(r, 50));
+    expect(MockEventSource.instances).toHaveLength(0);
+
+    // Scan starts — use startTracking to trigger immediate SSE connection
+    mockGetScanStatus.mockResolvedValue(scanningStatus);
+    act(() => result.current.startTracking());
+
+    expect(MockEventSource.instances).toHaveLength(1);
+  });
+
+  it('exposes startTracking to manually connect SSE', async () => {
+    const { result } = renderHook(() => useScanProgress());
+    await vi.advanceTimersByTimeAsync(0);
+    expect(MockEventSource.instances).toHaveLength(0);
+
+    act(() => result.current.startTracking());
+    expect(MockEventSource.instances).toHaveLength(1);
   });
 });

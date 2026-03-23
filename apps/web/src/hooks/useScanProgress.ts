@@ -268,24 +268,39 @@ export function useScanProgress() {
   const connectSSERef = useRef(connectSSE);
   connectSSERef.current = connectSSE;
 
-  // Connect on mount, fetch initial status
+  // Lazy SSE: only connect when scan is active (avoids persistent SSE connection
+  // that blocks Playwright networkidle detection in E2E tests).
+  // When idle, poll every 10s to detect if a scan started elsewhere.
+  const idlePollRef = useRef<ReturnType<typeof setInterval>>();
+
+  const checkAndConnect = useCallback(async () => {
+    try {
+      const status = await scannerService.getScanStatus();
+      if (!mountedRef.current) return;
+      if (status.is_scanning) {
+        dispatch({ type: 'STATUS_UPDATE', payload: status });
+        // Stop idle polling, connect SSE for real-time updates
+        if (idlePollRef.current) {
+          clearInterval(idlePollRef.current);
+          idlePollRef.current = undefined;
+        }
+        if (!eventSourceRef.current || eventSourceRef.current.readyState === 2) {
+          connectSSERef.current();
+        }
+      }
+    } catch {
+      // Ignore — will retry on next poll
+    }
+  }, []);
+
   useEffect(() => {
     mountedRef.current = true;
 
-    // Fetch initial status to decide if scan is running
-    (async () => {
-      try {
-        const status = await scannerService.getScanStatus();
-        if (!mountedRef.current) return;
-        if (status.is_scanning) {
-          dispatch({ type: 'STATUS_UPDATE', payload: status });
-        }
-      } catch {
-        // Ignore initial fetch errors
-      }
-    })();
+    // Initial check — connect SSE only if scan is already running
+    checkAndConnect();
 
-    connectSSERef.current();
+    // Light idle poll (10s) to detect scan triggered from settings or schedule
+    idlePollRef.current = setInterval(checkAndConnect, 10000);
 
     return () => {
       mountedRef.current = false;
@@ -297,10 +312,21 @@ export function useScanProgress() {
         clearInterval(pollTimerRef.current);
         pollTimerRef.current = undefined;
       }
+      if (idlePollRef.current) {
+        clearInterval(idlePollRef.current);
+        idlePollRef.current = undefined;
+      }
       if (sseTimeoutRef.current) clearTimeout(sseTimeoutRef.current);
       if (sseReconnectRef.current) clearTimeout(sseReconnectRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Connect SSE on demand — called when a scan is triggered externally
+  const startTracking = useCallback(() => {
+    if (!eventSourceRef.current || eventSourceRef.current.readyState === 2) {
+      connectSSERef.current();
+    }
   }, []);
 
   const toggleMinimize = useCallback(() => {
@@ -317,6 +343,7 @@ export function useScanProgress() {
   return {
     ...state,
     isVisible: showCard,
+    startTracking,
     toggleMinimize,
     dismiss,
   };
