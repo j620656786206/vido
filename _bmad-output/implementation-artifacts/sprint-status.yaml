@@ -47,7 +47,17 @@ v4_epics:
   7-3-manual-scan-trigger-ui: done  # 2026-03-23 — TA 82/100, CR fixes applied
   7-4-scan-progress-tracking: done  # 2026-03-23 — TA 82/100, CR 5 fixes applied, 1503 total passing
   epic-8-subtitle-engine:
-    status: backlog
+    status: in-progress
+  8-1-assrt-api-client: ready-for-dev
+  8-2-zimuku-web-scraper: ready-for-dev
+  8-3-opensubtitles-api-client: ready-for-dev
+  8-4-language-detection: ready-for-dev
+  8-5-opencc-integration: ready-for-dev
+  8-6-subtitle-scoring-ranking: ready-for-dev
+  8-7-auto-download-service: ready-for-dev
+  8-8-manual-subtitle-search-ui: ready-for-dev
+  8-9-batch-subtitle-processing: ready-for-dev
+  8-10-subtitle-file-management: ready-for-dev
   epic-9-ai-subtitle-enhancement:
     status: backlog
 
