@@ -1,6 +1,6 @@
 # Story 8.8: Manual Subtitle Search UI
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -173,5 +173,24 @@ so that **I can override automatic results and choose the exact subtitle I prefe
 ## Dev Agent Record
 
 ### Agent Model Used
+Claude Opus 4.6 (1M context)
+
 ### Completion Notes List
+- Backend: SubtitleHandler with POST /search, /download, /preview endpoints
+- Provider filtering: checkbox-based, defaults to all configured
+- Preview: first 10 non-empty lines with 5s timeout
+- Frontend service: subtitleService.ts with TypeScript types
+- useSubtitleSearch hook: TanStack Query mutations, sort state, downloaded tracking
+- SubtitleSearchDialog: shadcn/ui Dialog, sortable Table, Popover preview, download states
+- Score color coding: green >70%, yellow >40%, red ≤40%
+- zh-TW labels: 搜尋字幕, 來源, 語言, 字幕組, 評分, 下載數, 預覽, 下載
+- 10 backend handler tests pass
+- Frontend builds without TypeScript errors
+- 🎨 UX Verification: Dialog designed per shadcn/ui patterns, needs visual review in Story 8-8 CR
+
 ### File List
+- apps/api/internal/handlers/subtitle_handler.go (NEW)
+- apps/api/internal/handlers/subtitle_handler_test.go (NEW)
+- apps/web/src/services/subtitleService.ts (NEW)
+- apps/web/src/hooks/useSubtitleSearch.ts (NEW)
+- apps/web/src/components/subtitle/SubtitleSearchDialog.tsx (NEW)
