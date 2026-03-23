@@ -18,6 +18,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as TestManualSearchRouteImport } from './routes/test/manual-search'
 import { Route as SettingsStatusRouteImport } from './routes/settings/status'
+import { Route as SettingsScannerRouteImport } from './routes/settings/scanner'
 import { Route as SettingsQbittorrentRouteImport } from './routes/settings/qbittorrent'
 import { Route as SettingsPerformanceRouteImport } from './routes/settings/performance'
 import { Route as SettingsLogsRouteImport } from './routes/settings/logs'
@@ -70,6 +71,11 @@ const TestManualSearchRoute = TestManualSearchRouteImport.update({
 const SettingsStatusRoute = SettingsStatusRouteImport.update({
   id: '/status',
   path: '/status',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsScannerRoute = SettingsScannerRouteImport.update({
+  id: '/scanner',
+  path: '/scanner',
   getParentRoute: () => SettingsRoute,
 } as any)
 const SettingsQbittorrentRoute = SettingsQbittorrentRouteImport.update({
@@ -127,6 +133,7 @@ export interface FileRoutesByFullPath {
   '/settings/logs': typeof SettingsLogsRoute
   '/settings/performance': typeof SettingsPerformanceRoute
   '/settings/qbittorrent': typeof SettingsQbittorrentRoute
+  '/settings/scanner': typeof SettingsScannerRoute
   '/settings/status': typeof SettingsStatusRoute
   '/test/manual-search': typeof TestManualSearchRoute
   '/settings/': typeof SettingsIndexRoute
@@ -145,6 +152,7 @@ export interface FileRoutesByTo {
   '/settings/logs': typeof SettingsLogsRoute
   '/settings/performance': typeof SettingsPerformanceRoute
   '/settings/qbittorrent': typeof SettingsQbittorrentRoute
+  '/settings/scanner': typeof SettingsScannerRoute
   '/settings/status': typeof SettingsStatusRoute
   '/test/manual-search': typeof TestManualSearchRoute
   '/settings': typeof SettingsIndexRoute
@@ -165,6 +173,7 @@ export interface FileRoutesById {
   '/settings/logs': typeof SettingsLogsRoute
   '/settings/performance': typeof SettingsPerformanceRoute
   '/settings/qbittorrent': typeof SettingsQbittorrentRoute
+  '/settings/scanner': typeof SettingsScannerRoute
   '/settings/status': typeof SettingsStatusRoute
   '/test/manual-search': typeof TestManualSearchRoute
   '/settings/': typeof SettingsIndexRoute
@@ -186,6 +195,7 @@ export interface FileRouteTypes {
     | '/settings/logs'
     | '/settings/performance'
     | '/settings/qbittorrent'
+    | '/settings/scanner'
     | '/settings/status'
     | '/test/manual-search'
     | '/settings/'
@@ -204,6 +214,7 @@ export interface FileRouteTypes {
     | '/settings/logs'
     | '/settings/performance'
     | '/settings/qbittorrent'
+    | '/settings/scanner'
     | '/settings/status'
     | '/test/manual-search'
     | '/settings'
@@ -223,6 +234,7 @@ export interface FileRouteTypes {
     | '/settings/logs'
     | '/settings/performance'
     | '/settings/qbittorrent'
+    | '/settings/scanner'
     | '/settings/status'
     | '/test/manual-search'
     | '/settings/'
@@ -305,6 +317,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsStatusRouteImport
       parentRoute: typeof SettingsRoute
     }
+    '/settings/scanner': {
+      id: '/settings/scanner'
+      path: '/scanner'
+      fullPath: '/settings/scanner'
+      preLoaderRoute: typeof SettingsScannerRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/settings/qbittorrent': {
       id: '/settings/qbittorrent'
       path: '/qbittorrent'
@@ -372,6 +391,7 @@ interface SettingsRouteChildren {
   SettingsLogsRoute: typeof SettingsLogsRoute
   SettingsPerformanceRoute: typeof SettingsPerformanceRoute
   SettingsQbittorrentRoute: typeof SettingsQbittorrentRoute
+  SettingsScannerRoute: typeof SettingsScannerRoute
   SettingsStatusRoute: typeof SettingsStatusRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
 }
@@ -384,6 +404,7 @@ const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsLogsRoute: SettingsLogsRoute,
   SettingsPerformanceRoute: SettingsPerformanceRoute,
   SettingsQbittorrentRoute: SettingsQbittorrentRoute,
+  SettingsScannerRoute: SettingsScannerRoute,
   SettingsStatusRoute: SettingsStatusRoute,
   SettingsIndexRoute: SettingsIndexRoute,
 }
