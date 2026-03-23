@@ -1,6 +1,6 @@
 # Story 7.1: Recursive Folder Scanner
 
-Status: review
+Status: done
 
 ## Story
 

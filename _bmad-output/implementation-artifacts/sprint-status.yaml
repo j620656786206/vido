@@ -42,7 +42,7 @@ v4_epics:
   # Phase 1 — Core Library
   epic-7-media-library-scanner:
     status: in-progress  # P1-002/003/004/007 done from v3; 4 new stories below
-  7-1-recursive-folder-scanner: review
+  7-1-recursive-folder-scanner: done  # 2026-03-23 — TA 82/100, CR fixes applied
   7-2-scheduled-scan-service: ready-for-dev
   7-3-manual-scan-trigger-ui: ready-for-dev
   7-4-scan-progress-tracking: ready-for-dev
