@@ -127,6 +127,9 @@ func (m *MockMovieRepository) FindBySubtitleStatus(ctx context.Context, status m
 func (m *MockMovieRepository) FindNeedingSubtitleSearch(ctx context.Context, olderThan time.Time) ([]models.Movie, error) {
 	return nil, nil
 }
+func (m *MockMovieRepository) FindAllWithFilePath(ctx context.Context) ([]models.Movie, error) {
+	return nil, nil
+}
 
 // Verify mock implements interface
 var _ repository.MovieRepositoryInterface = (*MockMovieRepository)(nil)

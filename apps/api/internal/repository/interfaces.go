@@ -74,6 +74,10 @@ type MovieRepositoryInterface interface {
 	// FindNeedingSubtitleSearch retrieves movies not yet searched or last searched before threshold
 	// Needed by: Epic 8 (batch subtitle search scheduler)
 	FindNeedingSubtitleSearch(ctx context.Context, olderThan time.Time) ([]models.Movie, error)
+
+	// FindAllWithFilePath retrieves all movies that have a non-null file_path and are not removed
+	// Needed by: Story 7-2 (detect removed files during incremental scan)
+	FindAllWithFilePath(ctx context.Context) ([]models.Movie, error)
 }
 
 // SeriesRepositoryInterface defines the contract for TV series data access operations.

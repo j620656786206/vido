@@ -330,6 +330,10 @@ func main() {
 	)
 	slog.Info("Scanner service initialized")
 
+	// Initialize scan scheduler (Story 7.2)
+	scanScheduler := services.NewScanScheduler(scannerService, repos.Settings, slog.Default())
+	slog.Info("Scan scheduler initialized")
+
 	// Initialize event emitter for real-time parse progress (Story 3.10)
 	parseEventEmitter := events.NewChannelEmitter()
 	defer parseEventEmitter.Close()
@@ -366,6 +370,7 @@ func main() {
 	backupHandler.SetScheduler(backupScheduler)
 	exportHandler := handlers.NewExportHandler(exportService)
 	scannerHandler := handlers.NewScannerHandler(scannerService)
+	scannerHandler.SetScheduler(scanScheduler)
 	// parseProgressHandler already initialized above with defer Close()
 	slog.Info("Handlers initialized with service injection")
 
@@ -429,6 +434,11 @@ func main() {
 	go backupScheduler.Start(schedulerCtx)
 	slog.Info("Backup scheduler started")
 
+	// Start scan scheduler (Story 7.2)
+	scanSchedulerCtx, scanSchedulerCancel := context.WithCancel(context.Background())
+	go scanScheduler.Start(scanSchedulerCtx)
+	slog.Info("Scan scheduler started")
+
 	// Start qBittorrent health monitoring with 30s interval (Story 4.6 - NFR-R6)
 	monitorCtx, monitorCancel := context.WithCancel(context.Background())
 	go healthMonitor.StartQBMonitoring(monitorCtx)
@@ -457,6 +467,11 @@ func main() {
 	// Stop health monitoring goroutine
 	slog.Info("Stopping health monitoring...")
 	monitorCancel()
+
+	// Stop scan scheduler (Story 7.2)
+	slog.Info("Stopping scan scheduler...")
+	scanSchedulerCancel()
+	scanScheduler.Stop()
 
 	// Stop backup scheduler
 	slog.Info("Stopping backup scheduler...")

@@ -38,6 +38,7 @@ type ScanProgress struct {
 	FilesCreated int       `json:"filesCreated"`
 	FilesUpdated int       `json:"filesUpdated"`
 	FilesSkipped int       `json:"filesSkipped"`
+	FilesRemoved int       `json:"filesRemoved"`
 	ErrorCount   int       `json:"errorCount"`
 	CurrentFile  string    `json:"currentFile"`
 	PercentDone  int       `json:"percentDone"`
@@ -51,6 +52,7 @@ type ScanResult struct {
 	FilesCreated int       `json:"filesCreated"`
 	FilesUpdated int       `json:"filesUpdated"`
 	FilesSkipped int       `json:"filesSkipped"`
+	FilesRemoved int       `json:"filesRemoved"`
 	ErrorCount   int       `json:"errorCount"`
 	Duration     string    `json:"duration"`
 	StartedAt    time.Time `json:"startedAt"`
@@ -173,6 +175,17 @@ func (s *ScannerService) StartScan(ctx context.Context) (*ScanResult, error) {
 		if err := s.flushBatch(ctx, &pendingMovies); err != nil {
 			s.logger.Error("failed to flush final batch", "error", err)
 		}
+	}
+
+	// Detect removed files (Story 7-2: incremental scan)
+	removedCount, err := s.detectRemovedFiles(ctx)
+	if err != nil {
+		s.logger.Error("failed to detect removed files", "error", err)
+	} else if removedCount > 0 {
+		s.mu.Lock()
+		s.progress.FilesRemoved = removedCount
+		s.mu.Unlock()
+		s.logger.Info("detected removed files", "count", removedCount)
 	}
 
 	result := s.buildResult(startedAt)
@@ -330,15 +343,19 @@ func (s *ScannerService) processVideoFile(ctx context.Context, resolvedPath stri
 	}
 
 	if existing != nil {
-		// File already in DB — check if file size changed
-		if existing.FileSize.Valid && existing.FileSize.Int64 == info.Size() {
+		// File already in DB — check if file size changed or mtime is newer
+		sizeChanged := !existing.FileSize.Valid || existing.FileSize.Int64 != info.Size()
+		mtimeNewer := info.ModTime().After(existing.UpdatedAt)
+
+		if !sizeChanged && !mtimeNewer {
 			// No change, skip
 			s.mu.Lock()
 			s.progress.FilesSkipped++
 			s.mu.Unlock()
 			return nil
 		}
-		// File size changed, update the record
+
+		// File changed (size or mtime) — update the record and reset parse status
 		existing.FileSize = sql.NullInt64{Int64: info.Size(), Valid: true}
 		existing.UpdatedAt = time.Now()
 		if err := s.movieRepo.Update(ctx, existing); err != nil {
@@ -409,6 +426,46 @@ func (s *ScannerService) broadcastProgress() {
 	s.sseHub.Broadcast(event)
 }
 
+// detectRemovedFiles checks all movies with file paths and marks those
+// whose files no longer exist on disk as removed (IsRemoved=true).
+func (s *ScannerService) detectRemovedFiles(ctx context.Context) (int, error) {
+	movies, err := s.movieRepo.FindAllWithFilePath(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("failed to query movies with file paths: %w", err)
+	}
+
+	removedCount := 0
+	for i := range movies {
+		movie := &movies[i]
+		if !movie.FilePath.Valid || movie.FilePath.String == "" {
+			continue
+		}
+
+		_, err := os.Stat(movie.FilePath.String)
+		if err == nil {
+			// File exists, skip
+			continue
+		}
+		if !os.IsNotExist(err) {
+			// Some other error (permissions, etc.) — log but don't mark as removed
+			s.logger.Warn("error checking file existence", "path", movie.FilePath.String, "error", err)
+			continue
+		}
+
+		// File does not exist — mark as removed
+		movie.IsRemoved = true
+		movie.UpdatedAt = time.Now()
+		if err := s.movieRepo.Update(ctx, movie); err != nil {
+			s.logger.Error("failed to mark movie as removed", "id", movie.ID, "path", movie.FilePath.String, "error", err)
+			continue
+		}
+		removedCount++
+		s.logger.Info("marked movie as removed (file not found)", "id", movie.ID, "path", movie.FilePath.String)
+	}
+
+	return removedCount, nil
+}
+
 // buildResult creates a ScanResult from the current progress
 func (s *ScannerService) buildResult(startedAt time.Time) *ScanResult {
 	s.mu.Lock()
@@ -420,6 +477,7 @@ func (s *ScannerService) buildResult(startedAt time.Time) *ScanResult {
 		FilesCreated: s.progress.FilesCreated,
 		FilesUpdated: s.progress.FilesUpdated,
 		FilesSkipped: s.progress.FilesSkipped,
+		FilesRemoved: s.progress.FilesRemoved,
 		ErrorCount:   s.progress.ErrorCount,
 		Duration:     completedAt.Sub(startedAt).String(),
 		StartedAt:    startedAt,

@@ -22,6 +22,7 @@ type ScannerServiceInterface interface {
 // ScannerHandler handles HTTP requests for scanner operations.
 type ScannerHandler struct {
 	scannerService ScannerServiceInterface
+	scanScheduler  services.ScanSchedulerInterface
 }
 
 // NewScannerHandler creates a new ScannerHandler with the given service.
@@ -31,6 +32,11 @@ func NewScannerHandler(scannerService ScannerServiceInterface) *ScannerHandler {
 	}
 }
 
+// SetScheduler sets the scan scheduler for schedule management endpoints.
+func (h *ScannerHandler) SetScheduler(scheduler services.ScanSchedulerInterface) {
+	h.scanScheduler = scheduler
+}
+
 // RegisterRoutes registers scanner routes on the given router group.
 func (h *ScannerHandler) RegisterRoutes(rg *gin.RouterGroup) {
 	scanner := rg.Group("/scanner")
@@ -38,6 +44,8 @@ func (h *ScannerHandler) RegisterRoutes(rg *gin.RouterGroup) {
 		scanner.POST("/scan", h.TriggerScan)
 		scanner.GET("/status", h.GetStatus)
 		scanner.POST("/cancel", h.CancelScan)
+		scanner.GET("/schedule", h.GetSchedule)
+		scanner.PUT("/schedule", h.SetSchedule)
 	}
 }
 
@@ -76,6 +84,52 @@ func (h *ScannerHandler) TriggerScan(c *gin.Context) {
 func (h *ScannerHandler) GetStatus(c *gin.Context) {
 	progress := h.scannerService.GetProgress()
 	SuccessResponse(c, progress)
+}
+
+// scheduleRequest represents the request body for setting scan schedule
+type scheduleRequest struct {
+	Interval string `json:"interval" binding:"required"`
+}
+
+// GetSchedule handles GET /api/v1/scanner/schedule
+// Returns the current scan schedule configuration.
+func (h *ScannerHandler) GetSchedule(c *gin.Context) {
+	if h.scanScheduler == nil {
+		InternalServerError(c, "Scan scheduler not configured")
+		return
+	}
+
+	interval := h.scanScheduler.GetInterval()
+	SuccessResponse(c, gin.H{"interval": string(interval)})
+}
+
+// SetSchedule handles PUT /api/v1/scanner/schedule
+// Updates the scan schedule interval and reconfigures the scheduler.
+func (h *ScannerHandler) SetSchedule(c *gin.Context) {
+	if h.scanScheduler == nil {
+		InternalServerError(c, "Scan scheduler not configured")
+		return
+	}
+
+	var req scheduleRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		BadRequestError(c, "SCANNER_SCHEDULE_INVALID", "Request body must contain an 'interval' field")
+		return
+	}
+
+	interval := services.ScanScheduleInterval(req.Interval)
+	if !services.ValidScanScheduleIntervals[interval] {
+		BadRequestError(c, "SCANNER_SCHEDULE_INVALID",
+			"Invalid schedule interval. Must be one of: manual, hourly, daily")
+		return
+	}
+
+	if err := h.scanScheduler.Reconfigure(interval); err != nil {
+		InternalServerError(c, "Failed to update scan schedule")
+		return
+	}
+
+	SuccessResponse(c, gin.H{"interval": req.Interval})
 }
 
 // CancelScan handles POST /api/v1/scanner/cancel

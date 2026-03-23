@@ -658,7 +658,7 @@ const movieSelectColumns = `
 	status, imdb_id, tmdb_id,
 	file_path, parse_status, metadata_source,
 	subtitle_status, subtitle_path, subtitle_language, subtitle_last_searched, subtitle_search_score,
-	vote_average,
+	vote_average, is_removed,
 	created_at, updated_at
 `
 
@@ -691,6 +691,7 @@ func scanMovie(scanner interface{ Scan(dest ...interface{}) error }) (models.Mov
 		&movie.SubtitleLastSearched,
 		&movie.SubtitleSearchScore,
 		&movie.VoteAverage,
+		&movie.IsRemoved,
 		&movie.CreatedAt,
 		&movie.UpdatedAt,
 	)
@@ -881,6 +882,32 @@ func (r *MovieRepository) FindNeedingSubtitleSearch(ctx context.Context, olderTh
 	rows, err := r.db.QueryContext(ctx, query, olderThan)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query movies needing subtitle search: %w", err)
+	}
+	defer rows.Close()
+
+	var movies []models.Movie
+	for rows.Next() {
+		movie, err := scanMovie(rows)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan movie: %w", err)
+		}
+		movies = append(movies, movie)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating movies: %w", err)
+	}
+
+	return movies, nil
+}
+
+// FindAllWithFilePath retrieves all movies that have a non-null file_path and are not removed
+func (r *MovieRepository) FindAllWithFilePath(ctx context.Context) ([]models.Movie, error) {
+	query := fmt.Sprintf(`SELECT %s FROM movies WHERE file_path IS NOT NULL AND file_path != '' AND is_removed = 0`, movieSelectColumns)
+
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query movies with file_path: %w", err)
 	}
 	defer rows.Close()
 

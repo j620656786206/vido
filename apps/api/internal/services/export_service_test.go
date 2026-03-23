@@ -72,6 +72,9 @@ func (m *MockMovieRepoExport) FindBySubtitleStatus(ctx context.Context, status m
 func (m *MockMovieRepoExport) FindNeedingSubtitleSearch(ctx context.Context, olderThan time.Time) ([]models.Movie, error) {
 	return nil, nil
 }
+func (m *MockMovieRepoExport) FindAllWithFilePath(ctx context.Context) ([]models.Movie, error) {
+	return nil, nil
+}
 
 // MockSeriesRepoExport implements SeriesRepositoryInterface for testing
 type MockSeriesRepoExport struct {

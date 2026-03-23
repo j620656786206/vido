@@ -225,6 +225,9 @@ func (m *mockPQMovieRepo) FindBySubtitleStatus(_ context.Context, _ models.Subti
 func (m *mockPQMovieRepo) FindNeedingSubtitleSearch(_ context.Context, _ time.Time) ([]models.Movie, error) {
 	return nil, nil
 }
+func (m *mockPQMovieRepo) FindAllWithFilePath(_ context.Context) ([]models.Movie, error) {
+	return nil, nil
+}
 
 var _ repository.MovieRepositoryInterface = (*mockPQMovieRepo)(nil)
 

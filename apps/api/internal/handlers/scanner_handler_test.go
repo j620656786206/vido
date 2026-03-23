@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -43,10 +44,43 @@ func (m *MockScannerService) GetProgress() services.ScanProgress {
 	return args.Get(0).(services.ScanProgress)
 }
 
+// MockScanScheduler implements ScanSchedulerInterface for testing
+type MockScanScheduler struct {
+	mock.Mock
+}
+
+func (m *MockScanScheduler) Start(ctx context.Context) {
+	m.Called(ctx)
+}
+
+func (m *MockScanScheduler) Stop() {
+	m.Called()
+}
+
+func (m *MockScanScheduler) Reconfigure(interval services.ScanScheduleInterval) error {
+	args := m.Called(interval)
+	return args.Error(0)
+}
+
+func (m *MockScanScheduler) GetInterval() services.ScanScheduleInterval {
+	args := m.Called()
+	return args.Get(0).(services.ScanScheduleInterval)
+}
+
 func setupScannerRouter(svc ScannerServiceInterface) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 	handler := NewScannerHandler(svc)
+	apiV1 := router.Group("/api/v1")
+	handler.RegisterRoutes(apiV1)
+	return router
+}
+
+func setupScannerRouterWithScheduler(svc ScannerServiceInterface, scheduler services.ScanSchedulerInterface) *gin.Engine {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	handler := NewScannerHandler(svc)
+	handler.SetScheduler(scheduler)
 	apiV1 := router.Group("/api/v1")
 	handler.RegisterRoutes(apiV1)
 	return router
@@ -164,4 +198,99 @@ func TestScannerHandler_CancelScan_NoActiveScan(t *testing.T) {
 	assert.False(t, body.Success)
 	assert.NotNil(t, body.Error)
 	assert.Equal(t, "SCANNER_NOT_ACTIVE", body.Error.Code)
+}
+
+func TestScannerHandler_GetSchedule(t *testing.T) {
+	mockSvc := new(MockScannerService)
+	mockScheduler := new(MockScanScheduler)
+	mockScheduler.On("GetInterval").Return(services.ScheduleHourly)
+
+	router := setupScannerRouterWithScheduler(mockSvc, mockScheduler)
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/scanner/schedule", nil)
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+	var body APIResponse
+	require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &body))
+	assert.True(t, body.Success)
+
+	dataMap, ok := body.Data.(map[string]interface{})
+	require.True(t, ok)
+	assert.Equal(t, "hourly", dataMap["interval"])
+}
+
+func TestScannerHandler_SetSchedule_Success(t *testing.T) {
+	mockSvc := new(MockScannerService)
+	mockScheduler := new(MockScanScheduler)
+	mockScheduler.On("Reconfigure", services.ScheduleDaily).Return(nil)
+
+	router := setupScannerRouterWithScheduler(mockSvc, mockScheduler)
+	reqBody := strings.NewReader(`{"interval":"daily"}`)
+	req, _ := http.NewRequest(http.MethodPut, "/api/v1/scanner/schedule", reqBody)
+	req.Header.Set("Content-Type", "application/json")
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+	var body APIResponse
+	require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &body))
+	assert.True(t, body.Success)
+
+	dataMap, ok := body.Data.(map[string]interface{})
+	require.True(t, ok)
+	assert.Equal(t, "daily", dataMap["interval"])
+
+	mockScheduler.AssertCalled(t, "Reconfigure", services.ScheduleDaily)
+}
+
+func TestScannerHandler_SetSchedule_InvalidInterval(t *testing.T) {
+	mockSvc := new(MockScannerService)
+	mockScheduler := new(MockScanScheduler)
+
+	router := setupScannerRouterWithScheduler(mockSvc, mockScheduler)
+	reqBody := strings.NewReader(`{"interval":"every_5_minutes"}`)
+	req, _ := http.NewRequest(http.MethodPut, "/api/v1/scanner/schedule", reqBody)
+	req.Header.Set("Content-Type", "application/json")
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusBadRequest, resp.Code)
+	var body APIResponse
+	require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &body))
+	assert.False(t, body.Success)
+	assert.NotNil(t, body.Error)
+	assert.Equal(t, "SCANNER_SCHEDULE_INVALID", body.Error.Code)
+
+	mockScheduler.AssertNotCalled(t, "Reconfigure", mock.Anything)
+}
+
+func TestScannerHandler_SetSchedule_MissingBody(t *testing.T) {
+	mockSvc := new(MockScannerService)
+	mockScheduler := new(MockScanScheduler)
+
+	router := setupScannerRouterWithScheduler(mockSvc, mockScheduler)
+	reqBody := strings.NewReader(`{}`)
+	req, _ := http.NewRequest(http.MethodPut, "/api/v1/scanner/schedule", reqBody)
+	req.Header.Set("Content-Type", "application/json")
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusBadRequest, resp.Code)
+	var body APIResponse
+	require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &body))
+	assert.False(t, body.Success)
+	assert.Equal(t, "SCANNER_SCHEDULE_INVALID", body.Error.Code)
+}
+
+func TestScannerHandler_GetSchedule_NoScheduler(t *testing.T) {
+	mockSvc := new(MockScannerService)
+
+	// Use the router without a scheduler set
+	router := setupScannerRouter(mockSvc)
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/scanner/schedule", nil)
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusInternalServerError, resp.Code)
 }

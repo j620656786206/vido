@@ -38,6 +38,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 			parse_status TEXT NOT NULL DEFAULT 'pending',
 			metadata_source TEXT,
 			vote_average REAL,
+			is_removed INTEGER NOT NULL DEFAULT 0,
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 		)

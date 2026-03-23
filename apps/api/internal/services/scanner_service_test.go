@@ -81,6 +81,13 @@ func (m *MockMovieRepoScanner) FindBySubtitleStatus(ctx context.Context, status 
 func (m *MockMovieRepoScanner) FindNeedingSubtitleSearch(ctx context.Context, olderThan time.Time) ([]models.Movie, error) {
 	return nil, nil
 }
+func (m *MockMovieRepoScanner) FindAllWithFilePath(ctx context.Context) ([]models.Movie, error) {
+	args := m.Called(ctx)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]models.Movie), args.Error(1)
+}
 
 // MockSeriesRepoScanner implements SeriesRepositoryInterface for scanner tests
 type MockSeriesRepoScanner struct {
@@ -148,6 +155,11 @@ func setupScannerService(t *testing.T, mediaDirs []string) (*ScannerService, *Mo
 
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelWarn}))
 	svc := NewScannerService(movieRepo, seriesRepo, mediaDirs, hub, logger)
+
+	// Default mock for FindAllWithFilePath (called by detectRemovedFiles in StartScan)
+	// Tests can override this by adding their own expectation before calling StartScan
+	movieRepo.On("FindAllWithFilePath", mock.Anything).Maybe().Return([]models.Movie{}, nil)
+
 	return svc, movieRepo, hub
 }
 
@@ -268,10 +280,11 @@ func TestScannerService_StartScan_DuplicateDetection(t *testing.T) {
 	resolvedPath, _ := filepath.EvalSymlinks(paths[0])
 	resolvedPath, _ = filepath.Abs(resolvedPath)
 	existingMovie := &models.Movie{
-		ID:       "existing-id",
-		Title:    "existing.mkv",
-		FilePath: sql.NullString{String: resolvedPath, Valid: true},
-		FileSize: sql.NullInt64{Int64: int64(len("fake video content")), Valid: true},
+		ID:        "existing-id",
+		Title:     "existing.mkv",
+		FilePath:  sql.NullString{String: resolvedPath, Valid: true},
+		FileSize:  sql.NullInt64{Int64: int64(len("fake video content")), Valid: true},
+		UpdatedAt: time.Now().Add(1 * time.Hour), // future time so mtime is not newer
 	}
 	movieRepo.On("FindByFilePath", mock.Anything, resolvedPath).Return(existingMovie, nil)
 
@@ -282,7 +295,7 @@ func TestScannerService_StartScan_DuplicateDetection(t *testing.T) {
 	assert.NotNil(t, result)
 	assert.Equal(t, 1, result.FilesFound)
 	assert.Equal(t, 0, result.FilesCreated)
-	assert.Equal(t, 1, result.FilesSkipped) // skipped because same size
+	assert.Equal(t, 1, result.FilesSkipped) // skipped because same size and mtime not newer
 	assert.Equal(t, 0, result.FilesUpdated)
 
 	movieRepo.AssertNotCalled(t, "Update", mock.Anything, mock.Anything)
@@ -642,10 +655,88 @@ func TestScannerService_NilSSEHub(t *testing.T) {
 
 	movieRepo.On("FindByFilePath", mock.Anything, mock.AnythingOfType("string")).Return(nil, nil)
 	movieRepo.On("BulkCreate", mock.Anything, mock.AnythingOfType("[]*models.Movie")).Return(nil)
+	movieRepo.On("FindAllWithFilePath", mock.Anything).Return([]models.Movie{}, nil)
 
 	ctx := context.Background()
 	result, err := svc.StartScan(ctx)
 
 	assert.NoError(t, err)
 	assert.Equal(t, 1, result.FilesCreated)
+}
+
+func TestScannerService_IncrementalScan_DetectRemovedFiles(t *testing.T) {
+	dir := t.TempDir()
+
+	svc, movieRepo, _ := setupScannerService(t, []string{dir})
+
+	// Return movies with file paths that don't exist
+	nonExistentPath := "/tmp/nonexistent_movie_" + t.Name() + ".mkv"
+	existingMovies := []models.Movie{
+		{
+			ID:       "movie-1",
+			Title:    "removed.mkv",
+			FilePath: sql.NullString{String: nonExistentPath, Valid: true},
+		},
+	}
+
+	// Override the default Maybe() mock with a specific one
+	movieRepo.ExpectedCalls = filterCalls(movieRepo.ExpectedCalls, "FindAllWithFilePath")
+	movieRepo.On("FindAllWithFilePath", mock.Anything).Return(existingMovies, nil)
+	movieRepo.On("Update", mock.Anything, mock.MatchedBy(func(m *models.Movie) bool {
+		return m.ID == "movie-1" && m.IsRemoved == true
+	})).Return(nil)
+
+	ctx := context.Background()
+	result, err := svc.StartScan(ctx)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
+	assert.Equal(t, 1, result.FilesRemoved)
+
+	movieRepo.AssertCalled(t, "Update", mock.Anything, mock.MatchedBy(func(m *models.Movie) bool {
+		return m.ID == "movie-1" && m.IsRemoved == true
+	}))
+}
+
+func TestScannerService_IncrementalScan_MtimeChange(t *testing.T) {
+	dir := t.TempDir()
+	paths := createVideoFiles(t, dir, []string{"mtime_test.mkv"})
+
+	svc, movieRepo, _ := setupScannerService(t, []string{dir})
+
+	resolvedPath, _ := filepath.EvalSymlinks(paths[0])
+	resolvedPath, _ = filepath.Abs(resolvedPath)
+
+	// Existing movie with same size but old UpdatedAt (mtime is newer)
+	existingMovie := &models.Movie{
+		ID:        "existing-id",
+		Title:     "mtime_test.mkv",
+		FilePath:  sql.NullString{String: resolvedPath, Valid: true},
+		FileSize:  sql.NullInt64{Int64: int64(len("fake video content")), Valid: true},
+		UpdatedAt: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC), // old time
+	}
+	movieRepo.On("FindByFilePath", mock.Anything, resolvedPath).Return(existingMovie, nil)
+	movieRepo.On("Update", mock.Anything, mock.AnythingOfType("*models.Movie")).Return(nil)
+
+	ctx := context.Background()
+	result, err := svc.StartScan(ctx)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
+	assert.Equal(t, 1, result.FilesFound)
+	assert.Equal(t, 1, result.FilesUpdated) // updated because mtime is newer
+	assert.Equal(t, 0, result.FilesSkipped)
+
+	movieRepo.AssertCalled(t, "Update", mock.Anything, mock.AnythingOfType("*models.Movie"))
+}
+
+// filterCalls removes mock calls matching the given method name
+func filterCalls(calls []*mock.Call, method string) []*mock.Call {
+	var filtered []*mock.Call
+	for _, c := range calls {
+		if c.Method != method {
+			filtered = append(filtered, c)
+		}
+	}
+	return filtered
 }

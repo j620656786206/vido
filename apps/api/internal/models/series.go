@@ -76,6 +76,9 @@ type Series struct {
 	SubtitleLastSearched sql.NullTime    `db:"subtitle_last_searched" json:"subtitleLastSearched,omitempty"`
 	SubtitleSearchScore  sql.NullFloat64 `db:"subtitle_search_score" json:"subtitleSearchScore,omitempty"`
 
+	// Soft-delete flag for removed files (Story 7-2)
+	IsRemoved bool `db:"is_removed" json:"isRemoved"`
+
 	// Timestamps
 	CreatedAt time.Time `db:"created_at" json:"createdAt"`
 	UpdatedAt time.Time `db:"updated_at" json:"updatedAt"`
