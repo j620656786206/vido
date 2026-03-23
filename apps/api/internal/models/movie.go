@@ -27,6 +27,16 @@ const (
 	MetadataSourceManual    MetadataSource = "manual"
 )
 
+// SubtitleStatus represents the subtitle search status of a media file
+type SubtitleStatus string
+
+const (
+	SubtitleStatusNotSearched SubtitleStatus = "not_searched"
+	SubtitleStatusSearching   SubtitleStatus = "searching"
+	SubtitleStatusFound       SubtitleStatus = "found"
+	SubtitleStatusNotFound    SubtitleStatus = "not_found"
+)
+
 // Genre represents a genre with ID and name
 type Genre struct {
 	ID   int    `json:"id"`
@@ -110,6 +120,13 @@ type Movie struct {
 	// Parse tracking fields
 	ParseStatus    ParseStatus    `db:"parse_status" json:"parseStatus"`
 	MetadataSource sql.NullString `db:"metadata_source" json:"metadataSource,omitempty"`
+
+	// Subtitle tracking fields
+	SubtitleStatus       SubtitleStatus  `db:"subtitle_status" json:"subtitleStatus"`
+	SubtitlePath         sql.NullString  `db:"subtitle_path" json:"subtitlePath,omitempty"`
+	SubtitleLanguage     sql.NullString  `db:"subtitle_language" json:"subtitleLanguage,omitempty"`
+	SubtitleLastSearched sql.NullTime    `db:"subtitle_last_searched" json:"subtitleLastSearched,omitempty"`
+	SubtitleSearchScore  sql.NullFloat64 `db:"subtitle_search_score" json:"subtitleSearchScore,omitempty"`
 
 	// Timestamps
 	CreatedAt time.Time `db:"created_at" json:"createdAt"`

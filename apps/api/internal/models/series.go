@@ -69,6 +69,13 @@ type Series struct {
 	ParseStatus    ParseStatus    `db:"parse_status" json:"parseStatus"`
 	MetadataSource sql.NullString `db:"metadata_source" json:"metadataSource,omitempty"`
 
+	// Subtitle tracking fields
+	SubtitleStatus       SubtitleStatus  `db:"subtitle_status" json:"subtitleStatus"`
+	SubtitlePath         sql.NullString  `db:"subtitle_path" json:"subtitlePath,omitempty"`
+	SubtitleLanguage     sql.NullString  `db:"subtitle_language" json:"subtitleLanguage,omitempty"`
+	SubtitleLastSearched sql.NullTime    `db:"subtitle_last_searched" json:"subtitleLastSearched,omitempty"`
+	SubtitleSearchScore  sql.NullFloat64 `db:"subtitle_search_score" json:"subtitleSearchScore,omitempty"`
+
 	// Timestamps
 	CreatedAt time.Time `db:"created_at" json:"createdAt"`
 	UpdatedAt time.Time `db:"updated_at" json:"updatedAt"`
