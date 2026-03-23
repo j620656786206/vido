@@ -1,6 +1,6 @@
 # Story 8.6: Subtitle Scoring and Ranking
 
-Status: review
+Status: done
 
 ## Story
 

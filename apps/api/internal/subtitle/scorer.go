@@ -1,11 +1,15 @@
 package subtitle
 
 import (
+	"math"
 	"sort"
 	"strings"
 
 	"github.com/vido/api/internal/subtitle/providers"
 )
+
+// scoreEpsilon is the threshold for treating two scores as equal.
+const scoreEpsilon = 1e-9
 
 // Scoring weight defaults (Gate 2A decision).
 const (
@@ -77,22 +81,31 @@ func (s *Scorer) Score(results []providers.SubtitleResult, mediaResolution strin
 		return nil
 	}
 
-	// Find max download count for normalization
+	// Find max download count for normalization.
+	// If only one result exists, it gets 1.0 for downloads per AC #6.
 	maxDownloads := 0
 	for _, r := range results {
 		if r.Downloads > maxDownloads {
 			maxDownloads = r.Downloads
 		}
 	}
+	singleResult := len(results) == 1
 
 	scored := make([]ScoredResult, len(results))
 	for i, r := range results {
+		var dlScore float64
+		if singleResult {
+			dlScore = 1.0 // AC #6: single result always scores 1.0 for downloads
+		} else {
+			dlScore = scoreDownloads(r.Downloads, maxDownloads)
+		}
+
 		bd := ScoreBreakdown{
 			Language:    scoreLanguage(r.Language),
 			Resolution:  scoreResolution(mediaResolution, r.Resolution),
 			SourceTrust: s.scoreSourceTrust(r.Source),
 			Group:       scoreGroup(r.Group),
-			Downloads:   scoreDownloads(r.Downloads, maxDownloads),
+			Downloads:   dlScore,
 		}
 
 		composite := bd.Language*s.config.WeightLanguage +
@@ -108,12 +121,15 @@ func (s *Scorer) Score(results []providers.SubtitleResult, mediaResolution strin
 		}
 	}
 
-	// Sort descending by score, then by downloads for ties
+	// Sort descending by score, then by downloads for ties, then by ID for determinism
 	sort.SliceStable(scored, func(i, j int) bool {
-		if scored[i].Score != scored[j].Score {
+		if math.Abs(scored[i].Score-scored[j].Score) > scoreEpsilon {
 			return scored[i].Score > scored[j].Score
 		}
-		return scored[i].Downloads > scored[j].Downloads
+		if scored[i].Downloads != scored[j].Downloads {
+			return scored[i].Downloads > scored[j].Downloads
+		}
+		return scored[i].ID < scored[j].ID
 	})
 
 	return scored
@@ -203,9 +219,13 @@ func scoreGroup(groupName string) float64 {
 }
 
 // scoreDownloads returns the downloads factor normalized to 0.0–1.0.
+// Negative counts are clamped to 0.
 func scoreDownloads(count int, maxCount int) float64 {
 	if maxCount <= 0 {
 		return 0.0
+	}
+	if count < 0 {
+		count = 0
 	}
 	return float64(count) / float64(maxCount)
 }

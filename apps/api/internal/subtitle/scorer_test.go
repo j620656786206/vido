@@ -137,6 +137,8 @@ func TestScoreDownloads(t *testing.T) {
 		{"zero downloads", 0, 1000, 0.0},
 		{"single result", 42, 42, 1.0},
 		{"zero max", 0, 0, 0.0},
+		{"negative downloads clamped", -5, 1000, 0.0},
+		{"negative max", 100, -1, 0.0},
 	}
 
 	for _, tt := range tests {
@@ -281,6 +283,71 @@ func TestScorer_Score_CustomConfig(t *testing.T) {
 	assert.InDelta(t, 1.0, scored[0].Score, 0.001)
 	assert.Equal(t, "en", scored[1].ID)
 	assert.InDelta(t, 0.0, scored[1].Score, 0.001)
+}
+
+// --- CR Fix: Single result with zero downloads should score 1.0 (AC #6) ---
+
+func TestScorer_Score_SingleResultZeroDownloads(t *testing.T) {
+	s := NewScorer(NewDefaultScorerConfig())
+
+	results := []providers.SubtitleResult{
+		{ID: "only", Source: "assrt", Language: "zh-Hant", Downloads: 0},
+	}
+
+	scored := s.Score(results, "1080p")
+	require.Len(t, scored, 1)
+
+	// AC #6: single result scores 1.0 for downloads
+	assert.InDelta(t, 1.0, scored[0].ScoreBreakdown.Downloads, 0.001)
+}
+
+// --- CR Fix: Negative downloads should not produce negative scores ---
+
+func TestScorer_Score_NegativeDownloads(t *testing.T) {
+	s := NewScorer(NewDefaultScorerConfig())
+
+	results := []providers.SubtitleResult{
+		{ID: "normal", Source: "assrt", Language: "zh-Hant", Downloads: 100},
+		{ID: "negative", Source: "assrt", Language: "zh-Hant", Downloads: -5},
+	}
+
+	scored := s.Score(results, "1080p")
+	require.Len(t, scored, 2)
+
+	for _, r := range scored {
+		assert.GreaterOrEqual(t, r.ScoreBreakdown.Downloads, 0.0,
+			"downloads score should never be negative for %s", r.ID)
+		assert.GreaterOrEqual(t, r.Score, 0.0,
+			"composite score should never be negative for %s", r.ID)
+	}
+}
+
+// --- CR Fix: Tertiary tie-breaker by ID for full determinism ---
+
+func TestScorer_Score_TertiaryTieBreakByID(t *testing.T) {
+	s := NewScorer(NewDefaultScorerConfig())
+
+	// Identical scores and downloads — should tie-break by ID ascending
+	results := []providers.SubtitleResult{
+		{ID: "zzz", Source: "assrt", Language: "zh-Hant", Downloads: 100},
+		{ID: "aaa", Source: "assrt", Language: "zh-Hant", Downloads: 100},
+	}
+
+	scored := s.Score(results, "1080p")
+	require.Len(t, scored, 2)
+
+	// With equal scores and downloads, "aaa" < "zzz" so "aaa" comes first
+	assert.Equal(t, "aaa", scored[0].ID)
+	assert.Equal(t, "zzz", scored[1].ID)
+}
+
+// --- CR Fix: Default weights must sum to 1.0 ---
+
+func TestDefaultWeightsSumToOne(t *testing.T) {
+	config := NewDefaultScorerConfig()
+	sum := config.WeightLanguage + config.WeightResolution + config.WeightTrust +
+		config.WeightGroup + config.WeightDownloads
+	assert.InDelta(t, 1.0, sum, 0.001, "default weights must sum to 1.0")
 }
 
 func TestNewDefaultScorerConfig(t *testing.T) {
