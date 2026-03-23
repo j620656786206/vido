@@ -41,9 +41,8 @@ class MockEventSource {
 
   // Test helpers
   emit(type: string, data?: unknown) {
-    const event = data !== undefined
-      ? new MessageEvent(type, { data: JSON.stringify(data) })
-      : new Event(type);
+    const event =
+      data !== undefined ? new MessageEvent(type, { data: JSON.stringify(data) }) : new Event(type);
     this.listeners[type]?.forEach((cb) => cb(event));
   }
 

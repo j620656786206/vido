@@ -1,5 +1,14 @@
 import { Link, useRouterState } from '@tanstack/react-router';
-import { Plug, Database, FileText, Activity, HardDrive, ArrowUpDown, Gauge, ScanLine } from 'lucide-react';
+import {
+  Plug,
+  Database,
+  FileText,
+  Activity,
+  HardDrive,
+  ArrowUpDown,
+  Gauge,
+  ScanLine,
+} from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '../../lib/utils';
 

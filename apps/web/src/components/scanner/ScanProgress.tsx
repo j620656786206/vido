@@ -41,10 +41,7 @@ export function ScanProgress() {
 
   if (isDesktop) {
     return (
-      <div
-        className="fixed bottom-4 right-4 z-50"
-        data-testid="scan-progress-wrapper"
-      >
+      <div className="fixed bottom-4 right-4 z-50" data-testid="scan-progress-wrapper">
         <ScanProgressCard
           state={scanProgress}
           onCancel={handleCancel}
@@ -57,10 +54,7 @@ export function ScanProgress() {
   }
 
   return (
-    <div
-      className="fixed inset-x-0 bottom-0 z-50"
-      data-testid="scan-progress-wrapper"
-    >
+    <div className="fixed inset-x-0 bottom-0 z-50" data-testid="scan-progress-wrapper">
       <ScanProgressSheet
         state={scanProgress}
         onCancel={handleCancel}

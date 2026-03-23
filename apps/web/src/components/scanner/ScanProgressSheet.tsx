@@ -4,15 +4,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import {
-  Loader,
-  File,
-  FileCheck,
-  AlertTriangle,
-  CheckCircle,
-  XCircle,
-  X,
-} from 'lucide-react';
+import { Loader, File, FileCheck, AlertTriangle, CheckCircle, XCircle, X } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import type { ScanProgressState } from '../../hooks/useScanProgress';
 
@@ -141,10 +133,7 @@ export function ScanProgressSheet({
     >
       {/* Drag handle */}
       <div className="flex justify-center pb-2 pt-3">
-        <div
-          className="h-1 w-10 rounded-full bg-slate-600"
-          data-testid="sheet-drag-handle"
-        />
+        <div className="h-1 w-10 rounded-full bg-slate-600" data-testid="sheet-drag-handle" />
       </div>
 
       <div className="px-4 pb-4">
@@ -169,16 +158,22 @@ export function ScanProgressSheet({
         <div className="mb-3 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-400">
           <span className="flex items-center gap-1">
             <File className="h-3.5 w-3.5" />
-            找到 <span className="font-mono text-slate-200">{state.filesFound.toLocaleString()}</span>
+            找到{' '}
+            <span className="font-mono text-slate-200">{state.filesFound.toLocaleString()}</span>
           </span>
           <span className="flex items-center gap-1">
             <FileCheck className="h-3.5 w-3.5" />
-            解析 <span className="font-mono text-slate-200">{state.filesProcessed.toLocaleString()}</span>
+            解析{' '}
+            <span className="font-mono text-slate-200">
+              {state.filesProcessed.toLocaleString()}
+            </span>
           </span>
           <span className="flex items-center gap-1">
             <AlertTriangle className={cn('h-3.5 w-3.5', state.errorCount > 0 && 'text-red-400')} />
             錯誤{' '}
-            <span className={cn('font-mono', state.errorCount > 0 ? 'text-red-400' : 'text-slate-200')}>
+            <span
+              className={cn('font-mono', state.errorCount > 0 ? 'text-red-400' : 'text-slate-200')}
+            >
               {state.errorCount}
             </span>
           </span>
@@ -192,9 +187,7 @@ export function ScanProgressSheet({
         {/* Cancel */}
         {showCancelConfirm ? (
           <div className="rounded-lg bg-slate-900 p-3" data-testid="sheet-cancel-confirm">
-            <p className="mb-3 text-sm text-slate-300">
-              確定要取消掃描嗎？已處理的結果會保留。
-            </p>
+            <p className="mb-3 text-sm text-slate-300">確定要取消掃描嗎？已處理的結果會保留。</p>
             <div className="flex justify-end gap-2">
               <button
                 type="button"

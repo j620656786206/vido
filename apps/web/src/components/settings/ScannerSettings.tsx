@@ -97,9 +97,7 @@ export function ScannerSettings() {
       {/* Header */}
       <div>
         <h2 className="text-xl font-semibold text-slate-100">媒體庫掃描</h2>
-        <p className="mt-1 text-sm text-slate-400">
-          設定掃描資料夾、排程，以及手動觸發媒體庫掃描
-        </p>
+        <p className="mt-1 text-sm text-slate-400">設定掃描資料夾、排程，以及手動觸發媒體庫掃描</p>
       </div>
 
       {/* Notification */}

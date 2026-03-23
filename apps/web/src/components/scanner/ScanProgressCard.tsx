@@ -93,9 +93,7 @@ export function ScanProgressCard({
         data-testid="scan-progress-pill"
       >
         <Loader className="h-4 w-4 animate-spin text-blue-400" />
-        <span className="text-sm font-medium text-slate-200">
-          掃描中 {state.percentDone}%
-        </span>
+        <span className="text-sm font-medium text-slate-200">掃描中 {state.percentDone}%</span>
         <ChevronUp className="h-3.5 w-3.5 text-slate-400" />
       </button>
     );
@@ -137,9 +135,8 @@ export function ScanProgressCard({
 
         {/* Stats summary */}
         <p className="mb-3 text-sm text-slate-300">
-          <span className="font-mono text-slate-100">{state.filesFound.toLocaleString()}</span>{' '}
-          檔案 ·{' '}
-          比對成功{' '}
+          <span className="font-mono text-slate-100">{state.filesFound.toLocaleString()}</span> 檔案
+          · 比對成功{' '}
           <span className="font-mono text-slate-100">{state.filesProcessed.toLocaleString()}</span>{' '}
           · 未比對{' '}
           <span className="font-mono text-slate-100">
@@ -245,10 +242,7 @@ export function ScanProgressCard({
           <AlertTriangle className={cn('h-3.5 w-3.5', state.errorCount > 0 && 'text-red-400')} />
           <span>錯誤</span>
           <span
-            className={cn(
-              'font-mono',
-              state.errorCount > 0 ? 'text-red-400' : 'text-slate-200'
-            )}
+            className={cn('font-mono', state.errorCount > 0 ? 'text-red-400' : 'text-slate-200')}
           >
             {state.errorCount}
           </span>
@@ -279,9 +273,7 @@ export function ScanProgressCard({
       {/* Cancel button / Cancel confirmation */}
       {showCancelConfirm ? (
         <div className="rounded-lg bg-slate-900 p-3" data-testid="cancel-confirm-dialog">
-          <p className="mb-3 text-sm text-slate-300">
-            確定要取消掃描嗎？已處理的結果會保留。
-          </p>
+          <p className="mb-3 text-sm text-slate-300">確定要取消掃描嗎？已處理的結果會保留。</p>
           <div className="flex justify-end gap-2">
             <button
               type="button"

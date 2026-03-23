@@ -272,6 +272,26 @@ describe('ScanProgressCard', () => {
     expect(screen.getByTestId('auto-dismiss-bar')).toBeInTheDocument();
   });
 
+  it('pauses auto-dismiss when user hovers on complete card', () => {
+    render(
+      <ScanProgressCard
+        state={completeState}
+        onCancel={mockCancel}
+        onToggleMinimize={mockToggleMinimize}
+        onDismiss={mockDismiss}
+      />,
+    );
+
+    // Hover to pause auto-dismiss
+    fireEvent.mouseEnter(screen.getByTestId('scan-progress-card'));
+
+    // Advance past auto-dismiss time
+    vi.advanceTimersByTime(15000);
+
+    // Should NOT have been dismissed because user is interacting
+    expect(mockDismiss).not.toHaveBeenCalled();
+  });
+
   it('shows cancelling state on confirm button', () => {
     render(
       <ScanProgressCard

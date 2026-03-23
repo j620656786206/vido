@@ -95,7 +95,10 @@ describe('ScannerSettings', () => {
   });
 
   it('shows warning notification when scan already running', async () => {
-    mockTriggerScan.mockRejectedValue({ code: 'SCANNER_ALREADY_RUNNING', message: '掃描已在進行中' });
+    mockTriggerScan.mockRejectedValue({
+      code: 'SCANNER_ALREADY_RUNNING',
+      message: '掃描已在進行中',
+    });
     renderWithProviders();
 
     const btn = screen.getByTestId('scan-trigger-button');

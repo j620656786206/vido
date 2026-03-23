@@ -26,7 +26,9 @@ vi.mock('../services/scannerService', () => ({
       last_scan_duration: '3m12s',
     }),
     getSchedule: vi.fn().mockResolvedValue({ frequency: 'hourly' }),
-    triggerScan: vi.fn().mockResolvedValue({ files_found: 10, files_new: 5, errors: 0, duration: '10s' }),
+    triggerScan: vi
+      .fn()
+      .mockResolvedValue({ files_found: 10, files_new: 5, errors: 0, duration: '10s' }),
     cancelScan: vi.fn().mockResolvedValue(undefined),
     updateSchedule: vi.fn().mockResolvedValue({ frequency: 'daily' }),
   },

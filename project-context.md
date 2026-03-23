@@ -84,6 +84,7 @@ See `_bmad-output/planning-artifacts/architecture/consolidation-refactoring-plan
 **Decision:** Embedded plugin system using Go interfaces for external service integration.
 
 **Interfaces:**
+
 - `MediaServerPlugin` — Plex, Jellyfin (SyncLibrary, GetWatchHistory)
 - `DownloaderPlugin` — qBittorrent, NZBGet (AddDownload, GetStatus, Pause, Remove)
 - `DVRPlugin` — Sonarr, Radarr (AddMovie, AddSeries, GetQueue)
@@ -93,6 +94,7 @@ See `_bmad-output/planning-artifacts/architecture/consolidation-refactoring-plan
 **Location:** `/apps/api/internal/plugins/`
 
 **Rules:**
+
 - All plugin configs must pass `TestConnection()` before being saved
 - Plugins must implement graceful degradation (feature disabled when plugin unavailable)
 - Plugin health checks run at configurable intervals (default 60s)
@@ -106,6 +108,7 @@ See `_bmad-output/planning-artifacts/architecture/consolidation-refactoring-plan
 **Location:** `/apps/api/internal/sse/`
 
 **Rules:**
+
 - SSE endpoint: `GET /api/v1/events`
 - Buffered channels per client (capacity 100), drop oldest on overflow
 - Support `Last-Event-ID` for reconnection
@@ -120,6 +123,7 @@ See `_bmad-output/planning-artifacts/architecture/consolidation-refactoring-plan
 **Location:** `/apps/api/internal/subtitle/`
 
 **Rules:**
+
 - Language detection MUST analyze subtitle file content (not filename) — this fixes Bazarr's core zh-TW bug
 - OpenCC conversion direction: s2twp (Simplified → Traditional with Taiwan phrases)
 - Subtitle files use `.zh-Hant.srt` extension for Plex/Jellyfin compatibility
@@ -427,14 +431,14 @@ vido/
 
 ### Database (SQLite)
 
-| Element     | Pattern                | Example                       | ❌ Anti-pattern       |
-| ----------- | ---------------------- | ----------------------------- | --------------------- |
-| Tables      | snake_case plural      | `movies`, `media_files`       | `Movies`, `movie`     |
-| Columns     | snake_case             | `tmdb_id`, `created_at`       | `tmdbId`, `createdAt` |
-| Primary Key | `id`                   | `id TEXT PRIMARY KEY`         | `movie_id`            |
+| Element     | Pattern                | Example                       | ❌ Anti-pattern         |
+| ----------- | ---------------------- | ----------------------------- | ----------------------- |
+| Tables      | snake_case plural      | `movies`, `media_files`       | `Movies`, `movie`       |
+| Columns     | snake_case             | `tmdb_id`, `created_at`       | `tmdbId`, `createdAt`   |
+| Primary Key | `id`                   | `id TEXT PRIMARY KEY`         | `movie_id`              |
 | Foreign Key | `{table}_id`           | `library_id`, `movie_id`      | `fk_library`, `movieId` |
-| Indexes     | `idx_{table}_{column}` | `idx_movies_tmdb_id`          | `movies_tmdb_index`   |
-| Migrations  | `{seq}_{desc}.sql`     | `001_create_movies_table.sql` | `create-movies.sql`   |
+| Indexes     | `idx_{table}_{column}` | `idx_movies_tmdb_id`          | `movies_tmdb_index`     |
+| Migrations  | `{seq}_{desc}.sql`     | `001_create_movies_table.sql` | `create-movies.sql`     |
 
 ### Backend (Go)
 
