@@ -1,6 +1,6 @@
 # Story 8.4: 簡繁 Language Detection
 
-Status: review
+Status: done
 
 ## Story
 

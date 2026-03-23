@@ -1,6 +1,6 @@
 # Story 8.3: OpenSubtitles API Client
 
-Status: review
+Status: done
 
 ## Story
 
