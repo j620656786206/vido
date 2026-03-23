@@ -1,6 +1,6 @@
 # Story 8.7: Auto-Download Service
 
-Status: review
+Status: done
 
 ## Story
 

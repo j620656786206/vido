@@ -115,8 +115,8 @@ func (e *Engine) Process(ctx context.Context, mediaID, mediaType, mediaFilePath 
 	convertedData, finalLang, err := e.convertIfNeeded(data)
 	if err != nil {
 		slog.Warn("Conversion failed, using original", "error", err, "mediaID", mediaID)
-		convertedData = data
-		finalLang = match.Language
+		// convertIfNeeded already returns original data on failure;
+		// keep finalLang from detector (not provider metadata, which is often inaccurate).
 	}
 
 	// Stage 5: Place
@@ -153,12 +153,12 @@ func (e *Engine) search(ctx context.Context, query providers.SubtitleQuery) ([]p
 		errs    []error
 	)
 
-	g, gctx := errgroup.WithContext(ctx)
+	var g errgroup.Group
 
 	for _, p := range e.providers {
 		p := p // capture loop variable
 		g.Go(func() error {
-			res, err := p.Search(gctx, query)
+			res, err := p.Search(ctx, query)
 			mu.Lock()
 			defer mu.Unlock()
 
@@ -266,6 +266,9 @@ func (e *Engine) updateStatus(ctx context.Context, mediaID, mediaType string, st
 		err = e.movieRepo.UpdateSubtitleStatus(ctx, mediaID, status, "", "", 0)
 	case "series":
 		err = e.seriesRepo.UpdateSubtitleStatus(ctx, mediaID, status, "", "", 0)
+	default:
+		slog.Error("Unknown mediaType in updateStatus", "mediaType", mediaType, "mediaID", mediaID)
+		return
 	}
 	if err != nil {
 		slog.Warn("Failed to update subtitle status", "mediaID", mediaID, "status", status, "error", err)
@@ -280,6 +283,9 @@ func (e *Engine) updateSubtitleFound(ctx context.Context, mediaID, mediaType, pa
 		err = e.movieRepo.UpdateSubtitleStatus(ctx, mediaID, models.SubtitleStatusFound, path, lang, score)
 	case "series":
 		err = e.seriesRepo.UpdateSubtitleStatus(ctx, mediaID, models.SubtitleStatusFound, path, lang, score)
+	default:
+		slog.Error("Unknown mediaType in updateSubtitleFound", "mediaType", mediaType, "mediaID", mediaID)
+		return
 	}
 	if err != nil {
 		slog.Warn("Failed to update subtitle found status", "mediaID", mediaID, "error", err)
