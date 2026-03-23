@@ -56,6 +56,16 @@ SCREENS = {
     "6UCtX": ("flow-c-search-filter-settings-desktop", "10-settings-desktop"),
     "2H4OM": ("flow-f-batch-settings-mobile", "10-m-settings-mobile"),
     "uhAKd": ("flow-c-search-filter-settings-desktop", "11-backup-management-desktop"),
+    # Flow H - Scanner UI (Desktop)
+    "KvZSc": ("flow-h-scanner-desktop", "h1-settings-scanner-desktop"),
+    "wyuhF": ("flow-h-scanner-desktop", "h2-scan-progress-desktop"),
+    "szzaW": ("flow-h-scanner-desktop", "h3-scan-complete-toast-desktop"),
+    "QTqcC": ("flow-h-scanner-desktop", "h7-filtered-library-unmatched-desktop"),
+    # Flow H - Scanner UI (Mobile)
+    "uABWl": ("flow-h-scanner-mobile", "h4-settings-scanner-mobile"),
+    "yezIo": ("flow-h-scanner-mobile", "h5-scan-progress-mobile"),
+    "ZjoEI": ("flow-h-scanner-mobile", "h6-scan-complete-toast-mobile"),
+    "n7jVF": ("flow-h-scanner-mobile", "h8-filtered-library-unmatched-mobile"),
 }
 
 
