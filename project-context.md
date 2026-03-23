@@ -4,7 +4,7 @@
 
 **Full Documentation:** See `_bmad-output/planning-artifacts/architecture/index.md` for complete architectural decisions and patterns (sharded into ~20 focused files).
 
-**Last Updated:** 2026-03-04
+**Last Updated:** 2026-03-23 (PRD v4 migration)
 **Architecture Status:** ✅ Validated and Ready for Implementation (5,463 lines, 8 steps completed)
 
 ---
@@ -57,12 +57,9 @@ See `_bmad-output/planning-artifacts/architecture/consolidation-refactoring-plan
 - **E2E Journey-level:** TestSprite MCP (62 tests, deferred until Epic 5+6 complete — see `testsprite_tests/`)
 - **Pattern:** Co-located tests (`*_test.go`, `*.spec.tsx`)
 
-### 3. Authentication: JWT Stateless
+### 3. Authentication — REMOVED (v4)
 
-- **Library:** `golang-jwt/jwt` v5.x
-- **Storage:** httpOnly cookies
-- **Expiration:** 24 hours
-- **Password Hashing:** bcrypt (cost factor 12)
+> **v4 Decision:** Vido v4 is single-user with no authentication required. Multi-user support is deferred to v5.0. All auth-related code, middleware, and configuration have been removed from scope.
 
 ### 4. Caching: Tiered (Memory + SQLite)
 
@@ -81,6 +78,51 @@ See `_bmad-output/planning-artifacts/architecture/consolidation-refactoring-plan
 - **Logging:** Go `log/slog` (NOT zerolog, NOT fmt.Println)
 - **Errors:** Custom `AppError` type with error codes
 - **Format:** Structured JSON logs with sensitive data filtering
+
+### 7. Plugin Architecture: Go Interfaces
+
+**Decision:** Embedded plugin system using Go interfaces for external service integration.
+
+**Interfaces:**
+- `MediaServerPlugin` — Plex, Jellyfin (SyncLibrary, GetWatchHistory)
+- `DownloaderPlugin` — qBittorrent, NZBGet (AddDownload, GetStatus, Pause, Remove)
+- `DVRPlugin` — Sonarr, Radarr (AddMovie, AddSeries, GetQueue)
+- Common: `Name()`, `TestConnection(config PluginConfig) error`
+
+**Plugin Manager:** Registration at startup, per-plugin config in SQLite, health check scheduler.
+**Location:** `/apps/api/internal/plugins/`
+
+**Rules:**
+- All plugin configs must pass `TestConnection()` before being saved
+- Plugins must implement graceful degradation (feature disabled when plugin unavailable)
+- Plugin health checks run at configurable intervals (default 60s)
+
+### 8. Real-Time Events: SSE Hub
+
+**Decision:** Server-Sent Events for real-time progress updates, replacing polling for downloads/scans/subtitles.
+
+**Architecture:** Single hub goroutine, fan-out to client channels via `http.Flusher`.
+**Event Types:** `download_progress`, `scan_status`, `subtitle_status`, `notification`
+**Location:** `/apps/api/internal/sse/`
+
+**Rules:**
+- SSE endpoint: `GET /api/v1/events`
+- Buffered channels per client (capacity 100), drop oldest on overflow
+- Support `Last-Event-ID` for reconnection
+
+### 9. Subtitle Engine Pipeline
+
+**Decision:** Multi-source subtitle search with content-based language detection and OpenCC conversion.
+
+**Pipeline:** search → score → download → post-process (OpenCC 簡繁轉換) → place
+**Sources:** Assrt API, Zimuku scraper, OpenSubtitles API
+**Scoring:** Language match 40% + Resolution match 20% + Source trust 20% + Group reputation 10% + Downloads 10%
+**Location:** `/apps/api/internal/subtitle/`
+
+**Rules:**
+- Language detection MUST analyze subtitle file content (not filename) — this fixes Bazarr's core zh-TW bug
+- OpenCC conversion direction: s2twp (Simplified → Traditional with Taiwan phrases)
+- Subtitle files use `.zh-Hant.srt` extension for Plex/Jellyfin compatibility
 
 ---
 
@@ -148,7 +190,7 @@ const movie = useMovieStore((state) => state.movie);
 ### Rule 6: Naming Conventions
 
 ```
-Database:   snake_case plural (movies, users)
+Database:   snake_case plural (movies, media_files)
 API Paths:  /api/v1/{resource} (plural: /api/v1/movies)
 Go Files:   snake_case.go (movie_handler.go)
 Go Structs: PascalCase (Movie, TMDbClient)
@@ -165,8 +207,11 @@ Format: {SOURCE}_{ERROR_TYPE}
 TMDB_TIMEOUT, TMDB_NOT_FOUND, TMDB_RATE_LIMIT
 AI_TIMEOUT, AI_QUOTA_EXCEEDED
 DB_NOT_FOUND, DB_QUERY_FAILED
-AUTH_INVALID_CREDENTIALS, AUTH_TOKEN_EXPIRED
 VALIDATION_REQUIRED_FIELD, VALIDATION_INVALID_FORMAT
+SUBTITLE_NOT_FOUND, SUBTITLE_DOWNLOAD_FAILED, SUBTITLE_CONVERT_FAILED
+PLUGIN_INIT_FAILED, PLUGIN_HEALTH_CHECK_FAILED, PLUGIN_NOT_CONFIGURED
+SCANNER_PERMISSION_DENIED, SCANNER_PARSE_FAILED
+SSE_CONNECTION_FAILED
 ```
 
 ### Rule 8: Date/Time Format
@@ -190,7 +235,7 @@ Display:  toLocaleDateString('zh-TW') → "2024年1月15日"
 
 ```
 ✅ /api/v1/movies
-✅ /api/v1/auth/login
+✅ /api/v1/events
 ❌ /movies (missing version)
 ❌ /api/movie (singular)
 ```
@@ -339,6 +384,10 @@ vido/
 │   │   │   ├── parser/         # Filename parser
 │   │   │   ├── cache/          # Cache manager
 │   │   │   ├── tasks/          # Background task queue
+│   │   │   ├── plugins/        # Plugin interfaces and manager
+│   │   │   ├── sse/            # Server-Sent Events hub
+│   │   │   ├── subtitle/       # Subtitle engine pipeline
+│   │   │   ├── scanner/        # Media library scanner
 │   │   │   ├── errors/         # Unified AppError
 │   │   │   └── logger/         # slog config
 │   │   ├── migrations/         # SQLite migrations
@@ -380,10 +429,10 @@ vido/
 
 | Element     | Pattern                | Example                       | ❌ Anti-pattern       |
 | ----------- | ---------------------- | ----------------------------- | --------------------- |
-| Tables      | snake_case plural      | `movies`, `users`             | `Movies`, `movie`     |
+| Tables      | snake_case plural      | `movies`, `media_files`       | `Movies`, `movie`     |
 | Columns     | snake_case             | `tmdb_id`, `created_at`       | `tmdbId`, `createdAt` |
 | Primary Key | `id`                   | `id TEXT PRIMARY KEY`         | `movie_id`            |
-| Foreign Key | `{table}_id`           | `user_id`, `movie_id`         | `fk_user`, `userId`   |
+| Foreign Key | `{table}_id`           | `library_id`, `movie_id`      | `fk_library`, `movieId` |
 | Indexes     | `idx_{table}_{column}` | `idx_movies_tmdb_id`          | `movies_tmdb_index`   |
 | Migrations  | `{seq}_{desc}.sql`     | `001_create_movies_table.sql` | `create-movies.sql`   |
 
@@ -403,7 +452,7 @@ vido/
 | ---------------- | --------------- | ----------------------------- | ------------------------- |
 | Components       | PascalCase      | `SearchBar`, `MovieCard`      | `searchBar`, `search-bar` |
 | Component Files  | PascalCase.tsx  | `SearchBar.tsx`               | `search-bar.tsx`          |
-| Hooks            | use + camelCase | `useSearch`, `useAuth`        | `UseSearch`, `searchHook` |
+| Hooks            | use + camelCase | `useSearch`, `useLibrary`     | `UseSearch`, `searchHook` |
 | Hook Files       | use{Name}.ts    | `useSearch.ts`                | `search.hook.ts`          |
 | Types/Interfaces | PascalCase      | `Movie`, `ApiResponse<T>`     | `IMovie`, `movieType`     |
 | Constants        | SCREAMING_SNAKE | `API_BASE_URL`, `MAX_RETRIES` | `apiBaseUrl`              |
@@ -505,20 +554,18 @@ const { data: movie } = useQuery({
 
 ```typescript
 // ✅ ONLY for UI state, NOT server data
-interface AuthState {
-  isAuthenticated: boolean;
-  user: User | null;
-  login: (credentials: Credentials) => Promise<void>;
-  logout: () => void;
+interface UIState {
+  sidebarOpen: boolean;
+  viewMode: 'grid' | 'list';
+  toggleSidebar: () => void;
+  setViewMode: (mode: 'grid' | 'list') => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
-  isAuthenticated: false,
-  user: null,
-  login: async (credentials) => {
-    /* ... */
-  },
-  logout: () => set({ isAuthenticated: false, user: null }),
+export const useUIStore = create<UIState>((set) => ({
+  sidebarOpen: true,
+  viewMode: 'grid',
+  toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
+  setViewMode: (mode) => set({ viewMode: mode }),
 }));
 ```
 
@@ -764,13 +811,13 @@ These agreements were established during Epic 1 retrospective to improve develop
 
 The complete architecture has been validated for:
 
-- ✅ **Coherence:** All 6 architectural decisions work together without conflicts
+- ✅ **Coherence:** All 9 architectural decisions work together without conflicts
 - ✅ **Coverage:** All 94 functional requirements are architecturally supported
 - ✅ **Readiness:** 47 implementation patterns ensure AI agent consistency
 
 **Key Deliverables:**
 
-- 6 architectural decisions documented with versions and rationale
+- 9 architectural decisions documented with versions and rationale
 - 47 implementation patterns preventing AI agent conflicts (see architecture/)
 - 400+ files/directories defined in complete project structure
 - 5-phase consolidation roadmap from current to target state
