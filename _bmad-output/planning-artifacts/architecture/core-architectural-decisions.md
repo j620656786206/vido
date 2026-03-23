@@ -954,16 +954,16 @@ GET /api/v1/events
 
 **Pipeline Stages:**
 
-1. **Search:** Parallel query across Assrt API, Zimuku scraper, OpenSubtitles API
-2. **Score:** Multi-factor ranking:
-   - Language match: 40%
+1. **Search:** Parallel query across all configured sources (Assrt API, Zimuku scraper, OpenSubtitles API). Assrt API key is optional — skip Assrt when not configured. Source failures are isolated; other sources continue.
+2. **Score:** Multi-factor ranking (Gate 2A confirmed weights):
+   - Language match: 40% (non-traditional Chinese scores 0)
    - Resolution match: 20%
    - Source trust score: 20%
-   - Release group match: 10%
+   - Fansub group reputation: 10%
    - Download count: 10%
-3. **Download:** Best match download with retry (up to 3 attempts)
-4. **Post-process:** OpenCC 簡繁轉換 + cross-strait terminology correction
-5. **Place:** Copy to media file directory with normalized extension (`.zh-Hant.srt`)
+3. **Download:** Best match download with retry; on failure auto-retry next-best scored result. All exhausted → status='not_found', UI shows indicator (no popup interruption).
+4. **Post-process:** OpenCC 簡繁轉換 using **s2twp** profile (Simplified → Traditional with Taiwan phrases) + cross-strait terminology correction (軟件→軟體, 內存→記憶體)
+5. **Place:** Copy to media file directory with normalized extension (`.zh-Hant.srt`, IETF BCP 47)
 
 **Provider Interface:**
 
@@ -976,10 +976,11 @@ type SubtitleProvider interface {
 ```
 
 **Key Design Decisions:**
-- **Content-based language detection** (not filename-based) — analyzes actual subtitle text to determine zh-Hans vs zh-Hant
-- **OpenCC integration** via Go binding or subprocess for 簡→繁 conversion
+- **Content-based language detection** (not filename-based) — Unicode unique character set analysis (~2000 simplified-only + ~2000 traditional-only chars). Threshold: >70% traditional = zh-Hant. Accuracy target: >99%, latency ~3-5ms/file.
+- **OpenCC integration** via Go binding or subprocess for 簡→繁 conversion; profile: **s2twp**
 - **Subtitle cache** in SQLite (search results TTL 24h, downloaded subtitles permanent)
-- **Parallel search** with configurable timeout per provider (default 10s)
+- **Parallel search** across all configured sources with configurable timeout per provider (default 10s). Assrt API key is optional.
+- **Subtitle extension:** `.zh-Hant.srt` (IETF BCP 47, compatible with Plex/Jellyfin/Infuse)
 
 **Location:** `/apps/api/internal/subtitle/`
 

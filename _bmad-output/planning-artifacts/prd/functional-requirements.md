@@ -39,28 +39,30 @@ Source of truth: `prd-v4-source.md` Section 3 — 功能規格.
 
 | ID | 功能 | Priority | Description | Status |
 |----|------|----------|-------------|--------|
-| P1-001 | 資料夾掃描 | P0 | Specify one or more media library paths; recursively scan for video files (mkv, mp4, avi, rmvb). | DONE (Epic 5) |
+| P1-001 | 資料夾掃描 | P0 | Specify one or more media library paths; recursively scan for video files (mkv, mp4, avi, rmvb). Follow symlinks; deduplicate by resolved absolute path. Supported formats: mkv, mp4, avi, rmvb. | DONE (Epic 5) |
 | P1-002 | 檔名解析引擎 | P0 | Parse standard naming (`Movie.Name.2024.1080p.BluRay`) and fansub naming (`[SweetSub][動畫名][12][BIG5][1080P]`). | DONE (Epic 2–3) |
 | P1-003 | TMDB 自動匹配 | P0 | Auto-match parsed results to TMDB IDs; fetch metadata (poster, synopsis, rating, cast). | DONE (Epic 2) |
 | P1-004 | 繁中 metadata fallback | P1 | When TMDB Traditional Chinese data is incomplete, fetch supplementary info from Douban and Wikipedia. | DONE (Epic 3) |
-| P1-005 | 定時掃描 | P1 | Configurable scan frequency (hourly/daily); new files are automatically ingested. | NEW |
+| P1-005 | 定時掃描 | P1 | Configurable scan frequency (hourly/daily); new files are automatically ingested. Mutex: only one scan runs at a time. Manual trigger during active scan returns 'scan in progress'. Incremental scan uses file mtime comparison. | NEW |
 | P1-006 | 手動掃描 | P0 | One-click trigger for full or folder-specific scan from Web UI. | DONE (Epic 5) |
 | P1-007 | 媒體庫瀏覽 | P0 | Browse scanned movies/series in poster-wall view with search, sort, and filter. | DONE (Epic 5) |
 
 ### 3.2 繁中字幕引擎
 
+> **Search strategy (Gate 2A):** All 3 sources (Assrt, Zimuku, OpenSubtitles) queried in parallel. Results merged and scored uniformly. Source failures are isolated — other sources continue. Assrt requires optional API key (skip if not configured).
+
 | ID | 功能 | Priority | Description | Status |
 |----|------|----------|-------------|--------|
 | P1-010 | 多來源字幕搜尋 | P0 | Search subtitles from Assrt (射手網), Zimuku (字幕庫), and OpenSubtitles. | NEW |
 | P1-011 | Assrt API 修正 | P0 | Use the correct response key (`native_name`); fix the bug where existing subtitles are skipped. | NEW |
-| P1-012 | 簡繁正確識別 | P0 | Detect Simplified vs Traditional via content analysis (not filename) before download; prevent Simplified subtitles from blocking Traditional ones. | NEW |
-| P1-013 | 副檔名正規化 | P0 | Normalize output to `.zh-Hant` or `.cht` extension so Plex/Jellyfin/Infuse correctly identify the language. | NEW |
-| P1-014 | 簡繁轉換 | P0 | OpenCC conversion in the correct direction (Simplified → Traditional) with cross-strait terminology correction (軟件→軟體, 內存→記憶體). | NEW |
+| P1-012 | 簡繁正確識別 | P0 | Detect Simplified vs Traditional via content analysis (not filename) before download; prevent Simplified subtitles from blocking Traditional ones. Content-based detection using Unicode unique character sets (~2000 simplified-only + ~2000 traditional-only characters). Threshold: >70% traditional = zh-Hant. Accuracy target: >99%. | NEW |
+| P1-013 | 副檔名正規化 | P0 | Normalize output to `.zh-Hant` or `.cht` extension so Plex/Jellyfin/Infuse correctly identify the language. Output extension: .zh-Hant.srt (IETF BCP 47). Compatible with Plex, Jellyfin, and Infuse. | NEW |
+| P1-014 | 簡繁轉換 | P0 | OpenCC conversion in the correct direction (Simplified → Traditional) with cross-strait terminology correction (軟件→軟體, 內存→記憶體). OpenCC profile: s2twp (Simplified → Traditional with Taiwan phrases). Handles cross-strait terminology (軟件→軟體, 內存→記憶體). | NEW |
 | P1-015 | 字幕組命名解析 | P1 | Parse common Traditional Chinese fansub naming patterns: `[Group][Title][Episode][Language][Resolution]` and match to the correct video file. | NEW |
-| P1-016 | 字幕評分與排序 | P1 | Score search results: language match > resolution match > source trustworthiness > download count. | NEW |
-| P1-017 | 自動下載最佳字幕 | P1 | Automatically select and download the best Traditional Chinese subtitle based on score; place it at the correct path. | NEW |
-| P1-018 | 手動搜尋與選擇 | P0 | Search subtitles, preview results, and manually select a download from Web UI. | NEW |
-| P1-019 | 批次字幕處理 | P2 | Batch search and download subtitles for all episodes of a full season at once. | NEW |
+| P1-016 | 字幕評分與排序 | P1 | Score search results: language match > resolution match > source trustworthiness > download count. Scoring weights: Language match 40% + Resolution match 20% + Source trust 20% + Fansub group reputation 10% + Download count 10%. Non-traditional Chinese subtitles score 0 on language factor. | NEW |
+| P1-017 | 自動下載最佳字幕 | P1 | Automatically select and download the best Traditional Chinese subtitle based on score; place it at the correct path. On failure: auto-retry next-best scored result. All exhausted → status='not_found', UI shows indicator. No popup interruption. | NEW |
+| P1-018 | 手動搜尋與選擇 | P0 | Search subtitles, preview results, and manually select a download from Web UI. Scope: single movie or single episode. Multi-select batch operations handled by P1-019. | NEW |
+| P1-019 | 批次字幕處理 | P2 | Batch search and download subtitles for all episodes of a full season at once. Scope: whole season or whole library. Queue-based processing with progress tracking. | NEW |
 
 ### 3.3 AI 輔助功能
 

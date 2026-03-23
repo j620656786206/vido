@@ -12,10 +12,17 @@ Users can configure media library paths, trigger recursive scanning of their NAS
 - Epic 5: Library grid/list views, search, sort, filter, detail pages
 
 **Stories (to be created):**
-- A-1: Recursive folder scanner — walk configured media paths, detect video files, create scan records
-- A-2: Scheduled scan service — configurable cron-based automatic re-scanning (new/changed/removed files)
-- A-3: Manual scan trigger UI — button in settings/library to trigger full or incremental scan with progress tracking
-- A-4: Scan progress tracking — SSE-based real-time progress (files found, parsed, matched, errors)
+- 7-1: Recursive folder scanner — walk configured media paths, detect video files, create scan records
+- 7-2: Scheduled scan service — configurable cron-based automatic re-scanning (new/changed/removed files)
+- 7-3: Manual scan trigger UI — button in settings/library to trigger full or incremental scan with progress tracking
+- 7-4: Scan progress tracking — SSE-based real-time progress (files found, parsed, matched, errors)
+
+**Implementation Decisions (Gate 2A — 2026-03-23):**
+- Symlinks: Follow symlinks, deduplicate by resolved absolute file path
+- Concurrency: Mutex lock — only one scan at a time; manual trigger returns "scan in progress" if active
+- Incremental scan: Use file mtime to detect new/changed/removed files
+- Video formats: mkv, mp4, avi, rmvb
+- Story scope confirmed: 4 stories sufficient (P1-002/003/004/007 already done)
 
 **Success Criteria:**
 - Scan 1,000 files in <5 minutes end-to-end (scan + parse + match)
