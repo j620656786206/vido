@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from '@tanstack/react-router';
 import {
   Loader,
   File,
@@ -36,6 +37,7 @@ export function ScanProgressCard({
   onDismiss,
   isCancelling = false,
 }: ScanProgressCardProps) {
+  const navigate = useNavigate();
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [autoDismissProgress, setAutoDismissProgress] = useState(100);
   const autoDismissTimerRef = useRef<ReturnType<typeof setTimeout>>();
@@ -150,6 +152,10 @@ export function ScanProgressCard({
         <div className="flex gap-4">
           <button
             type="button"
+            onClick={() => {
+              onDismiss();
+              navigate({ to: '/', search: { status: 'unmatched' } });
+            }}
             className="text-sm text-blue-400 underline-offset-2 hover:underline"
             data-testid="view-unmatched-link"
           >
@@ -158,6 +164,10 @@ export function ScanProgressCard({
           {state.errorCount > 0 && (
             <button
               type="button"
+              onClick={() => {
+                onDismiss();
+                navigate({ to: '/', search: { status: 'error' } });
+              }}
               className="text-sm text-blue-400 underline-offset-2 hover:underline"
               data-testid="view-errors-link"
             >

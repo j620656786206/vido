@@ -53,19 +53,27 @@ function scanProgressReducer(
   action: ScanProgressAction
 ): ScanProgressState {
   switch (action.type) {
-    case 'SSE_UPDATE':
+    case 'SSE_UPDATE': {
+      const pct = action.payload.percent_done;
+      const found = action.payload.files_found;
+      // Estimate filesProcessed from percent_done × filesFound when not provided by SSE
+      const estimatedProcessed = found > 0 ? Math.round((pct / 100) * found) : 0;
       return {
         ...state,
         isScanning: true,
-        percentDone: action.payload.percent_done,
+        percentDone: pct,
         currentFile: action.payload.current_file,
-        filesFound: action.payload.files_found,
+        filesFound: found,
+        filesProcessed: (action.payload as Record<string, unknown>).files_processed
+          ? Number((action.payload as Record<string, unknown>).files_processed)
+          : estimatedProcessed,
         errorCount: action.payload.error_count,
         estimatedTime: action.payload.estimated_time,
         isComplete: false,
         isCancelled: false,
         isDismissed: false,
       };
+    }
     case 'STATUS_UPDATE': {
       const p = action.payload;
       if (!p.is_scanning && state.isScanning) {
@@ -137,12 +145,14 @@ function scanProgressReducer(
 
 const SSE_TIMEOUT_MS = 5000;
 const POLL_INTERVAL_MS = 3000;
+const SSE_RECONNECT_MS = 10000;
 
 export function useScanProgress() {
   const [state, dispatch] = useReducer(scanProgressReducer, initialState);
   const eventSourceRef = useRef<EventSource | null>(null);
   const pollTimerRef = useRef<ReturnType<typeof setInterval>>();
   const sseTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const sseReconnectRef = useRef<ReturnType<typeof setTimeout>>();
   const mountedRef = useRef(true);
 
   const stopPolling = useCallback(() => {
@@ -243,11 +253,20 @@ export function useScanProgress() {
 
     es.onerror = () => {
       if (!mountedRef.current) return;
-      // SSE connection lost — fall back to polling
+      // SSE connection lost — fall back to polling, schedule reconnect
       es.close();
       startPolling();
+      if (sseReconnectRef.current) clearTimeout(sseReconnectRef.current);
+      sseReconnectRef.current = setTimeout(() => {
+        if (mountedRef.current) connectSSE();
+      }, SSE_RECONNECT_MS);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stopPolling, startPolling, resetSseTimeout]);
+
+  // Keep a stable ref to connectSSE to avoid useEffect re-firing
+  const connectSSERef = useRef(connectSSE);
+  connectSSERef.current = connectSSE;
 
   // Connect on mount, fetch initial status
   useEffect(() => {
@@ -266,7 +285,7 @@ export function useScanProgress() {
       }
     })();
 
-    connectSSE();
+    connectSSERef.current();
 
     return () => {
       mountedRef.current = false;
@@ -274,10 +293,15 @@ export function useScanProgress() {
         eventSourceRef.current.close();
         eventSourceRef.current = null;
       }
-      stopPolling();
+      if (pollTimerRef.current) {
+        clearInterval(pollTimerRef.current);
+        pollTimerRef.current = undefined;
+      }
       if (sseTimeoutRef.current) clearTimeout(sseTimeoutRef.current);
+      if (sseReconnectRef.current) clearTimeout(sseReconnectRef.current);
     };
-  }, [connectSSE, stopPolling]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const toggleMinimize = useCallback(() => {
     dispatch({ type: 'TOGGLE_MINIMIZE' });

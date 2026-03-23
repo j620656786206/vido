@@ -23,8 +23,10 @@ function RootComponent() {
     }
   }, [setupStatus, isLoading, location.pathname, navigate]);
 
-  // On setup page, render without AppShell
-  if (location.pathname === '/setup') {
+  const isSetupPage = location.pathname === '/setup';
+
+  // On setup page, render without AppShell or ScanProgress
+  if (isSetupPage) {
     return (
       <div className="text-slate-100">
         <Outlet />

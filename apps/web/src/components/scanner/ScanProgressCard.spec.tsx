@@ -3,6 +3,11 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { ScanProgressCard } from './ScanProgressCard';
 import type { ScanProgressState } from '../../hooks/useScanProgress';
 
+const mockNavigate = vi.fn();
+vi.mock('@tanstack/react-router', () => ({
+  useNavigate: () => mockNavigate,
+}));
+
 const baseScanningState: ScanProgressState = {
   isScanning: true,
   percentDone: 62,
@@ -51,6 +56,7 @@ describe('ScanProgressCard', () => {
     mockCancel.mockReset();
     mockToggleMinimize.mockReset();
     mockDismiss.mockReset();
+    mockNavigate.mockReset();
   });
 
   it('renders scanning state with progress and stats', () => {
@@ -217,6 +223,36 @@ describe('ScanProgressCard', () => {
     expect(screen.getByText('掃描已取消')).toBeInTheDocument();
   });
 
+  it('navigates to unmatched filter when action link clicked', () => {
+    render(
+      <ScanProgressCard
+        state={completeState}
+        onCancel={mockCancel}
+        onToggleMinimize={mockToggleMinimize}
+        onDismiss={mockDismiss}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId('view-unmatched-link'));
+    expect(mockDismiss).toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenCalledWith({ to: '/', search: { status: 'unmatched' } });
+  });
+
+  it('navigates to error filter when view errors clicked', () => {
+    render(
+      <ScanProgressCard
+        state={completeState}
+        onCancel={mockCancel}
+        onToggleMinimize={mockToggleMinimize}
+        onDismiss={mockDismiss}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId('view-errors-link'));
+    expect(mockDismiss).toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenCalledWith({ to: '/', search: { status: 'error' } });
+  });
+
   it('calls onDismiss when dismiss button clicked on complete card', () => {
     render(
       <ScanProgressCard
@@ -279,7 +315,7 @@ describe('ScanProgressCard', () => {
         onCancel={mockCancel}
         onToggleMinimize={mockToggleMinimize}
         onDismiss={mockDismiss}
-      />,
+      />
     );
 
     // Hover to pause auto-dismiss
