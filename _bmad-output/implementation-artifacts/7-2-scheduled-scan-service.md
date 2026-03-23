@@ -1,6 +1,6 @@
 # Story 7.2: Scheduled Scan Service
 
-Status: review
+Status: done
 
 ## Story
 
