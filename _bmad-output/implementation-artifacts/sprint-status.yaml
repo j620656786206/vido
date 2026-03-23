@@ -1,255 +1,64 @@
-# generated: 2026-01-14
-# project: vido
-# tracking_system: file-system
-# story_location: _bmad-output/implementation-artifacts
-
-# STATUS DEFINITIONS:
-# ==================
-# Epic Status:
-#   - backlog: Epic not yet started
-#   - in-progress: Epic actively being worked on
-#   - done: All stories in epic completed
+# Vido Sprint Status — PRD v4 Migration (2026-03-23)
 #
-# Epic Status Transitions:
-#   - backlog → in-progress: Automatically when first story is created (via create-story)
-#   - in-progress → done: Manually when all stories reach 'done' status
-#
-# Story Status:
-#   - backlog: Story only exists in epic file
-#   - ready-for-dev: Story file created in stories folder
-#   - in-progress: Developer actively working on implementation
-#   - review: Ready for code review (via Dev's code-review workflow)
-#   - done: Story completed
-#
-# Retrospective Status:
-#   - optional: Can be completed but not required
-#   - done: Retrospective has been completed
-#
-# WORKFLOW NOTES:
-# ===============
-# - Epic transitions to 'in-progress' automatically when first story is created
-# - Stories can be worked in parallel if team capacity allows
-# - SM typically creates next story after previous one is 'done' to incorporate learnings
-# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+# This file tracks development progress after the PRD v3 → v4 rewrite.
+# All v3 epics (1-6) are completed or closed. Epic 7 (auth) was removed in v4.
+# New v4 epics (A-L) replace the old growth-phase epics (8-14) and add new scope.
+# Archived story files live in ./archive/
 
-generated: 2026-01-14
-project: vido
-tracking_system: file-system
-story_location: _bmad-output/implementation-artifacts
+# ==============================================================================
+# Completed work from PRD v3
+# ==============================================================================
+completed_work_v3:
+  epic-1-project-foundation:       done  # 2026-01-16
+  epic-2-media-search-metadata:    done  # 2026-01-17
+  epic-3-ai-parsing-fallback:      done  # 2026-02-09
+  epic-4-qbittorrent-monitoring:   done  # 2026-03-04
+  epic-5-media-library-management: done  # 2026-03-15
+  epic-6-system-config-backup:     done  # 2026-03-23  # 6-10 kept for settings; 6-11 archived
 
-development_status:
-  # ==============================================================================
-  # Epic 1: Project Foundation & Docker Deployment
-  # Phase: MVP (Q1 - March 2026)
-  # FRs: FR47, FR48, FR49, FR50, FR51
-  # ==============================================================================
-  epic-1: done  # All 5 stories completed - 2026-01-16
-  1-1-repository-pattern-database-abstraction-layer: done
-  1-2-docker-compose-production-configuration: done
-  1-3-environment-variable-configuration-system: done
-  1-4-secrets-management-with-aes-256-encryption: done
-  1-5-media-folder-configuration: done
-  epic-1-retrospective: done  # Completed 2026-01-17
+# ==============================================================================
+# Deprecated / removed in v4
+# ==============================================================================
+deprecated:
+  epic-7-user-auth:  deleted  # Auth removed in PRD v4; stories archived
 
-  # ==============================================================================
-  # Epic 2: Media Search & Traditional Chinese Metadata
-  # Phase: MVP (Q1 - March 2026)
-  # FRs: FR1, FR2, FR3, FR4, FR11, FR12, FR13, FR14
-  # ==============================================================================
-  epic-2: done  # All 6 stories completed - 2026-01-17
-  2-1-tmdb-api-integration-with-zh-tw-priority: done
-  2-2-media-search-interface: done
-  2-3-search-results-grid-view: done
-  2-4-media-detail-page: done
-  2-5-standard-filename-parser-regex-based: done
-  2-6-media-entity-and-database-storage: done  # Completed 2026-01-17
-  epic-2-retrospective: done  # Completed 2026-01-18
+# ==============================================================================
+# PRD v4 Epics (A-L)
+# ==============================================================================
+v4_epics:
+  # Phase 1 — Core Library
+  epic-7-media-library-scanner:
+    status: partial-done  # P1-002/003/004/007 done from v3 Epics 1,2,3,5
+  epic-8-subtitle-engine:
+    status: backlog
+  epic-9-ai-subtitle-enhancement:
+    status: backlog
 
-  # ==============================================================================
-  # Epic 3: AI-Powered Fansub Parsing & Multi-Source Fallback
-  # Phase: 1.0 (Q2 - June 2026)
-  # FRs: FR15-FR26
-  # ==============================================================================
-  epic-3: done  # All 12 stories completed - 2026-02-09
-  3-1-ai-provider-abstraction-layer: done  # Completed 2026-01-18
-  3-2-ai-fansub-filename-parsing: done  # Code review completed 2026-01-23
-  3-3-multi-source-metadata-fallback-chain: done  # Code review completed 2026-01-23
-  3-4-douban-web-scraper: done  # Code review completed 2026-01-24
-  3-5-wikipedia-metadata-fallback: done  # Completed 2026-01-24
-  3-6-ai-search-keyword-generation: done  # Completed 2026-01-24
-  3-7-manual-metadata-search-and-selection: done  # Completed 2026-01-25
-  3-8-metadata-editor: done  # Code review fixes completed 2026-02-04
-  3-9-filename-mapping-learning-system: done  # Code review approved 2026-02-06
-  3-10-parse-status-indicators: done  # Code review fixes completed 2026-02-06
-  3-11-auto-retry-mechanism: done  # Code review completed 2026-02-06
-  3-12-graceful-degradation: done  # Code review fixes completed 2026-02-09
-  epic-3-retrospective: done  # Completed 2026-02-09
+  # Phase 2 — Browse & Discover
+  epic-10-homepage-tv-wall:
+    status: backlog
+  epic-11-advanced-search:
+    status: backlog
+  epic-12-rich-detail-page:
+    status: backlog
 
-  # ==============================================================================
-  # Epic 4: qBittorrent Download Monitoring
-  # Phase: 1.0 (Q2 - June 2026)
-  # FRs: FR27-FR33
-  # ==============================================================================
-  epic-4: done  # All 6 stories completed - 2026-03-04
-  4-1-qbittorrent-connection-configuration: done  # Code review fixes completed 2026-02-10
-  4-2-real-time-download-status-monitoring: done  # Code review fixes completed 2026-02-10
-  4-3-unified-download-dashboard: done  # Code review fixes completed 2026-03-01
-  4-4-download-status-filtering: done  # Code review fixes completed 2026-03-02
-  4-5-completed-download-detection-and-parsing-trigger: done  # Code review fixes completed 2026-03-03
-  4-6-connection-health-monitoring: done  # Code review fixes completed 2026-03-04
-  epic-4-retrospective: done  # Completed 2026-03-04
+  # Phase 3 — Acquire & Manage
+  epic-13-request-system:
+    status: backlog
+  epic-14-download-management-v2:
+    status: partial-done  # P3-010 done from v3 Epic 4
+  epic-15-indexer-integration:
+    status: backlog
 
-  # ==============================================================================
-  # Epic 5: Media Library Management
-  # Phase: 1.0 (Q2 - June 2026)
-  # FRs: FR5-FR8, FR38-FR42
-  # ==============================================================================
-  epic-5: done  # All 11 stories completed - 2026-03-15
-  # Development Order: 5-0 → 5-1+5-8 → 5-2 → 5-3//5-4 → 5-5 → 5-6//5-7
-  # Phase 0: Global Navigation Shell (prerequisite for all pages)
-  5-0-global-navigation-shell: done
-  # Phase 1: Foundation (develop together — same page)
-  5-1-media-library-grid-view: done
-  5-8-recently-added-section: done
-  # Phase 2: View Options (depends on 5-1)
-  5-2-library-list-view-toggle: done
-  # Phase 3: Data Operations (parallelizable, depends on 5-1)
-  5-3-library-search: done
-  5-4-library-sorting: done
-  # Phase 4: Filtering (depends on 5-1 + genre API)
-  5-5-library-filtering: done
-  # Phase 4b: UX Design Compliance (fix design deviations from 5-2 through 5-5)
-  5-9-ux-design-compliance: done
-  # Phase 5: Detail & Batch (depends on 5-1 interactions)
-  5-6-media-detail-page-full-version: done
-  5-7-batch-operations: done
-  # Phase 5b: UX Design Compliance (fix design deviations from 5-6 and 5-7)
-  5-10-ux-design-compliance-phase5: done
-  epic-5-retrospective: done  # Completed 2026-03-15
+  # Phase 4 — Ops & Extend
+  epic-16-media-stats-dashboard:
+    status: backlog
+  epic-17-media-server-integration:
+    status: backlog
+  epic-18-service-health-monitoring:
+    status: backlog
 
-  # ==============================================================================
-  # Epic 6: System Configuration & Backup
-  # Phase: 1.0 (Q2 - June 2026)
-  # FRs: FR52-FR66
-  # ==============================================================================
-  epic-6: in-progress  # Stories created 2026-02-10, 6-0 added 2026-03-15 (Epic 5 retro finding)
-  # Development Order: 6-0 → 6-1 → 6-2//6-3//6-4 → 6-5 → 6-6 → 6-7 → 6-8 → 6-9//6-10 → 6-11
-  # Phase 0: Settings Foundation (prerequisite for all settings pages)
-  6-0-settings-page-foundation: done
-  # Phase 1: First-Run Experience
-  6-1-setup-wizard: done
-  6-2-cache-management: done
-  6-3-system-logs-viewer: done
-  6-4-service-connection-status-dashboard: done
-  6-5-database-backup: done
-  6-6-backup-integrity-verification: done
-  6-7-data-restore: done
-  6-8-scheduled-backups: done
-  6-9-metadata-export-json-yaml-nfo: done
-  6-10-metadata-import: ready-for-dev
-  6-11-performance-metrics-dashboard: ready-for-dev
-  epic-6-retrospective: optional
-
-  # ==============================================================================
-  # Epic 7: User Authentication & Access Control
-  # Phase: 1.0 (Q2 - June 2026)
-  # FRs: FR67-FR70
-  # ==============================================================================
-  epic-7: in-progress  # Stories created 2026-02-10
-  7-1-password-pin-setup: ready-for-dev
-  7-2-login-page: ready-for-dev
-  7-3-session-management: ready-for-dev
-  7-4-api-authentication: ready-for-dev
-  7-5-rate-limiting: ready-for-dev
-  epic-7-retrospective: optional
-
-  # ==============================================================================
-  # Epic 8: Advanced Download Control
-  # Phase: Growth (Q3+ - September 2026+)
-  # FRs: FR34-FR37
-  # ==============================================================================
-  epic-8: in-progress  # Stories created 2026-02-10
-  8-1-torrent-control-operations: ready-for-dev
-  8-2-download-priority-management: ready-for-dev
-  8-3-bandwidth-settings-control: ready-for-dev
-  8-4-download-scheduling: ready-for-dev
-  epic-8-retrospective: optional
-
-  # ==============================================================================
-  # Epic 9: Subtitle Integration
-  # Phase: Growth (Q3+ - September 2026+)
-  # FRs: FR75-FR80
-  # ==============================================================================
-  epic-9: in-progress  # Stories created 2026-02-10
-  9-1-subtitle-search-integration: ready-for-dev
-  9-2-traditional-chinese-subtitle-priority: ready-for-dev
-  9-3-subtitle-download: ready-for-dev
-  9-4-manual-subtitle-upload: ready-for-dev
-  9-5-automatic-subtitle-download: ready-for-dev
-  9-6-subtitle-availability-status: ready-for-dev
-  epic-9-retrospective: optional
-
-  # ==============================================================================
-  # Epic 10: Smart Recommendations & Discovery
-  # Phase: Growth (Q3+ - September 2026+)
-  # FRs: FR9, FR10
-  # ==============================================================================
-  epic-10: in-progress  # Stories created 2026-02-10
-  10-1-genre-based-recommendations: ready-for-dev
-  10-2-cast-and-director-based-recommendations: ready-for-dev
-  10-3-similar-titles-suggestions: ready-for-dev
-  epic-10-retrospective: optional
-
-  # ==============================================================================
-  # Epic 11: Watch History & Collections
-  # Phase: Growth (Q3+ - September 2026+)
-  # FRs: FR43-FR46
-  # ==============================================================================
-  epic-11: backlog
-  11-1-watch-history-tracking: backlog
-  11-2-watch-progress-indicators: backlog
-  11-3-mark-as-watched-unwatched: backlog
-  11-4-custom-collections: backlog
-  epic-11-retrospective: optional
-
-  # ==============================================================================
-  # Epic 12: Automation & Organization
-  # Phase: Growth (Q3+ - September 2026+)
-  # FRs: FR81-FR86
-  # ==============================================================================
-  epic-12: backlog
-  12-1-watch-folder-monitoring: backlog
-  12-2-automatic-parsing-trigger: backlog
-  12-3-automatic-file-renaming: backlog
-  12-4-automatic-file-organization: backlog
-  12-5-background-task-queue: backlog
-  12-6-automation-rules-configuration: backlog
-  epic-12-retrospective: optional
-
-  # ==============================================================================
-  # Epic 13: Multi-User Support
-  # Phase: Growth (Q3+ - September 2026+)
-  # FRs: FR71-FR74
-  # ==============================================================================
-  epic-13: backlog
-  13-1-multiple-user-accounts: backlog
-  13-2-admin-permission-management: backlog
-  13-3-personal-watch-history-per-user: backlog
-  13-4-personal-preference-settings: backlog
-  epic-13-retrospective: optional
-
-  # ==============================================================================
-  # Epic 14: External API & Mobile Application
-  # Phase: Growth (Q3+ - September 2026+)
-  # FRs: FR87-FR94
-  # ==============================================================================
-  epic-14: backlog
-  14-1-versioned-restful-api: backlog
-  14-2-api-token-authentication: backlog
-  14-3-openapi-swagger-documentation: backlog
-  14-4-webhook-subscriptions: backlog
-  14-5-plex-jellyfin-metadata-export: backlog
-  14-6-watch-status-sync-with-plex-jellyfin: backlog
-  14-7-mobile-application-core: backlog
-  14-8-remote-download-control-from-mobile: backlog
-  epic-14-retrospective: optional
+# ==============================================================================
+# Next priority
+# ==============================================================================
+next_priority: epic-7-media-library-scanner  # Complete scanner first; Epic 8 (subtitle) depends on scanned media
