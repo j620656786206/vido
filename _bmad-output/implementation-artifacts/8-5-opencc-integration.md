@@ -1,6 +1,6 @@
 # Story 8.5: OpenCC Integration
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -20,58 +20,58 @@ so that **subtitles use correct Taiwan terminology and phrasing (e.g., 軟體 no
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Evaluate and implement OpenCC invocation strategy (AC: 1, 5, 7)
-  - [ ] 1.1: Create `apps/api/internal/subtitle/converter.go` with `Converter` struct
-  - [ ] 1.2: Evaluate Go binding options: `github.com/longbridgeapp/opencc` (pure Go) vs subprocess `opencc` CLI — prefer pure Go binding for deployment simplicity
-  - [ ] 1.3: If using Go binding: implement `NewConverter() (*Converter, error)` — initialize with "s2twp" config
-  - [ ] 1.4: If using subprocess: implement `NewConverter() (*Converter, error)` — verify `opencc` binary exists in PATH
-  - [ ] 1.5: Implement `IsAvailable() bool` — returns true if OpenCC can perform conversions
+- [x] Task 1: Evaluate and implement OpenCC invocation strategy (AC: 1, 5, 7)
+  - [x] 1.1: Create `apps/api/internal/subtitle/converter.go` with `Converter` struct
+  - [x] 1.2: Evaluate Go binding options: chose `github.com/longbridgeapp/opencc` (pure Go, already in go.mod) — no CGo, no external binary needed
+  - [x] 1.3: Implement `NewConverter() (*Converter, error)` — initialize with "s2twp" config via `opencc.New("s2twp")`
+  - [x] 1.4: N/A — using Go binding, not subprocess
+  - [x] 1.5: Implement `IsAvailable() bool` — returns true if OpenCC was initialized successfully
 
-- [ ] Task 2: Implement Convert method (AC: 1, 2, 4, 5, 6)
-  - [ ] 2.1: Implement `Convert(content []byte, profile string) ([]byte, error)` — primary conversion method
-  - [ ] 2.2: Decode input bytes to UTF-8 string (handle BOM if present)
-  - [ ] 2.3: If using Go binding: call `opencc.Convert(input)` with s2twp config
-  - [ ] 2.4: If using subprocess: pipe content to `opencc -c s2twp` via stdin/stdout
-  - [ ] 2.5: Re-encode result to []byte preserving original encoding characteristics
-  - [ ] 2.6: On any error: return original `content` unchanged + the error (AC: 5 graceful degradation)
+- [x] Task 2: Implement Convert method (AC: 1, 2, 4, 5, 6)
+  - [x] 2.1: Implement `Convert(content []byte, profile string) ([]byte, error)` — primary conversion method
+  - [x] 2.2: Decode input bytes to UTF-8 string (strip BOM before conversion, restore after)
+  - [x] 2.3: Call `cc.Convert(input)` with s2twp config (Go binding)
+  - [x] 2.4: N/A — using Go binding, not subprocess
+  - [x] 2.5: Re-encode result to []byte, restore BOM if original had one
+  - [x] 2.6: On any error: return original `content` unchanged + the error (graceful degradation)
 
-- [ ] Task 3: Implement convenience methods (AC: 1, 3)
-  - [ ] 3.1: Implement `ConvertS2TWP(content []byte) ([]byte, error)` — shorthand for `Convert(content, "s2twp")`
-  - [ ] 3.2: Implement `NeedsConversion(language string) bool` — returns true only for "zh-Hans" (simplified); returns false for "zh-Hant", "zh", "und", or any non-Chinese language
-  - [ ] 3.3: Document that calling Convert on already-traditional text is safe (idempotent)
+- [x] Task 3: Implement convenience methods (AC: 1, 3)
+  - [x] 3.1: Implement `ConvertS2TWP(content []byte) ([]byte, error)` — shorthand for `Convert(content, "s2twp")`
+  - [x] 3.2: Implement `NeedsConversion(language string) bool` — returns true only for "zh-Hans"; false for "zh-Hant", "zh", "und", etc.
+  - [x] 3.3: Document idempotency in ConvertS2TWP godoc comment
 
-- [ ] Task 4: Handle SRT format preservation (AC: 4)
-  - [ ] 4.1: Verify that SRT timing codes (00:01:23,456 --> 00:01:25,789) pass through unchanged
-  - [ ] 4.2: Verify that SRT sequence numbers pass through unchanged
-  - [ ] 4.3: Verify that HTML-style tags in SRT (<i>, <b>, <font>) pass through unchanged
-  - [ ] 4.4: Verify that line breaks (\r\n, \n) are preserved
-  - [ ] 4.5: Add specific test cases for each of these format elements
+- [x] Task 4: Handle SRT format preservation (AC: 4)
+  - [x] 4.1: Verify SRT timing codes (00:01:23,456 --> 00:01:25,789) pass through unchanged — tested
+  - [x] 4.2: Verify SRT sequence numbers pass through unchanged — tested
+  - [x] 4.3: Verify HTML-style tags (<i>, <b>, </i>, </b>) pass through unchanged — tested
+  - [x] 4.4: Verify line breaks (\r\n, \n) are preserved — tested (TestConverter_WindowsLineEndings)
+  - [x] 4.5: Test cases added in TestConverter_SRTFormatPreservation and TestConverter_WindowsLineEndings
 
-- [ ] Task 5: Write unit tests (AC: all)
-  - [ ] 5.1: Create `apps/api/internal/subtitle/converter_test.go`
-  - [ ] 5.2: Test basic s2twp conversion: 简体字 → 簡體字 (character conversion)
-  - [ ] 5.3: Test Taiwan phrase substitution: 软件 → 軟體, 内存 → 記憶體, 网络 → 網路, 信息 → 訊息, 程序 → 程式
-  - [ ] 5.4: Test idempotent conversion: Traditional Chinese input → identical output
-  - [ ] 5.5: Test mixed content: Chinese + English + numbers → only Chinese converted
-  - [ ] 5.6: Test SRT format preservation: timing codes, sequence numbers, tags intact
-  - [ ] 5.7: Test graceful degradation: simulate failure → original content returned with error
-  - [ ] 5.8: Test IsAvailable returns correct status
-  - [ ] 5.9: Test NeedsConversion for various language codes
-  - [ ] 5.10: Test empty input → empty output (no error)
-  - [ ] 5.11: Test content with BOM → conversion works correctly
-  - [ ] 5.12: Verify ≥80% code coverage
+- [x] Task 5: Write unit tests (AC: all)
+  - [x] 5.1: Create `apps/api/internal/subtitle/converter_test.go`
+  - [x] 5.2: Test basic s2twp conversion: 简体字 → 簡體字 — TestConverter_BasicConversion
+  - [x] 5.3: Test Taiwan phrase substitution: 软件→軟體, 内存→記憶體, 网络→網路, 信息→資訊, 程序→程式, 打印机→印表機, 硬盘→硬碟 — TestConverter_TaiwanPhraseSubstitution (Note: OpenCC maps 信息→資訊, not 訊息)
+  - [x] 5.4: Test idempotent conversion: Traditional Chinese → identical output — TestConverter_Idempotent_TraditionalInput
+  - [x] 5.5: Test mixed content: Chinese + English + numbers → only Chinese converted — TestConverter_MixedContent
+  - [x] 5.6: Test SRT format preservation — TestConverter_SRTFormatPreservation
+  - [x] 5.7: Test graceful degradation: unavailable converter → original content + error — TestConverter_GracefulDegradation
+  - [x] 5.8: Test IsAvailable returns correct status — TestConverter_IsAvailable
+  - [x] 5.9: Test NeedsConversion for various language codes — TestNeedsConversion (7 cases)
+  - [x] 5.10: Test empty input → empty output (no error) — TestConverter_EmptyInput
+  - [x] 5.11: Test content with BOM → BOM preserved, conversion works — TestConverter_BOMHandling
+  - [x] 5.12: Verify ≥80% code coverage — 88.2%
 
-- [ ] Task 6: Write benchmark test (AC: 6)
-  - [ ] 6.1: Create benchmark in `converter_test.go`: `BenchmarkConvertS2TWP`
-  - [ ] 6.2: Use a realistic 100KB Simplified Chinese subtitle sample
-  - [ ] 6.3: Verify ≤100ms per conversion
+- [x] Task 6: Write benchmark test (AC: 6)
+  - [x] 6.1: Create benchmark `BenchmarkConvertS2TWP` in converter_test.go
+  - [x] 6.2: Use ~100KB simplified Chinese subtitle sample
+  - [x] 6.3: ~50ms per 100KB conversion (well under 100ms target)
 
-- [ ] Task 7: Build and integration verification (AC: all)
-  - [ ] 7.1: Run `go build ./...` — verify no compilation errors
-  - [ ] 7.2: Run `go test ./internal/subtitle/...` — verify all tests pass
-  - [ ] 7.3: Run `go test -bench=. ./internal/subtitle/...` — verify benchmark completes
-  - [ ] 7.4: Run `go vet ./internal/subtitle/...` — verify no vet issues
-  - [ ] 7.5: If using CGo or subprocess, document any build/deployment prerequisites in dev notes
+- [x] Task 7: Build and integration verification (AC: all)
+  - [x] 7.1: Run `go build ./...` — no compilation errors
+  - [x] 7.2: Run `go test ./internal/subtitle/...` — all tests pass (32 subtitle + 48 providers)
+  - [x] 7.3: Run `go test -bench=. ./internal/subtitle/...` — benchmark completes (~50ms/100KB)
+  - [x] 7.4: Run `go vet ./internal/subtitle/...` — no vet issues
+  - [x] 7.5: Pure Go binding — no CGo or subprocess dependency, no build prerequisites
 
 ## Dev Notes
 
@@ -114,5 +114,22 @@ so that **subtitles use correct Taiwan terminology and phrasing (e.g., 軟體 no
 ## Dev Agent Record
 
 ### Agent Model Used
+Claude Opus 4.6 (1M context)
+
 ### Completion Notes List
+- Used pure Go binding `github.com/longbridgeapp/opencc` (already in go.mod) — no CGo, no external binary
+- Profile: s2twp (Simplified → Traditional Taiwan + phrases)
+- Taiwan phrase substitutions verified: 軟件→軟體, 內存→記憶體, 網絡→網路, 信息→資訊, 程序→程式, 打印機→印表機, 硬盤→硬碟
+- Note: OpenCC maps 信息→資訊 (not 訊息 as listed in epic) — this is the correct s2twp mapping
+- Idempotent: Traditional Chinese passes through unchanged
+- SRT format preserved: timing codes, sequence numbers, HTML tags, line endings
+- BOM handling: strip before conversion, restore after
+- Graceful degradation: unavailable converter returns original content + error
+- NeedsConversion() only returns true for "zh-Hans"
+- Benchmark: ~50ms per 100KB (target: ≤100ms)
+- 16 converter tests + 1 benchmark, 88.2% coverage
+- 🎨 UX Verification: SKIPPED — no UI changes
+
 ### File List
+- apps/api/internal/subtitle/converter.go (NEW)
+- apps/api/internal/subtitle/converter_test.go (NEW)
