@@ -1,53 +1,177 @@
-# Vido Sprint Status — PRD v4 Migration (2026-03-23)
+# generated: 2026-03-23
+# project: vido
+# tracking_system: file-system
+# story_location: _bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
 #
-# This file tracks development progress after the PRD v3 → v4 rewrite.
-# All v3 epics (1-6) are completed or closed. Epic 7 (auth) was removed in v4.
-# New v4 epics (A-L) replace the old growth-phase epics (8-14) and add new scope.
-# Archived story files live in ./archive/
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - SM typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+#
+# PRD VERSION NOTES:
+# ==================
+# - All v3 epics (1-6) are completed or closed
+# - Epic 7 (user auth) was removed in PRD v4 (single-user, no login)
+# - v4 epics (7-18) replace old growth-phase epics (8-14) and add new scope
+# - Archived story files live in ./archive/
 
-# ==============================================================================
-# Completed work from PRD v3
-# ==============================================================================
-completed_work_v3:
-  epic-1-project-foundation:       done  # 2026-01-16
-  epic-2-media-search-metadata:    done  # 2026-01-17
-  epic-3-ai-parsing-fallback:      done  # 2026-02-09
-  epic-4-qbittorrent-monitoring:   done  # 2026-03-04
-  epic-5-media-library-management: done  # 2026-03-15
-  epic-6-system-config-backup:     done  # 2026-03-23  # 6-10 kept for settings; 6-11 archived
+generated: 2026-03-23
+project: vido
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
 
-# ==============================================================================
-# Deprecated / removed in v4
-# ==============================================================================
-deprecated:
-  epic-7-user-auth:  deleted  # Auth removed in PRD v4; stories archived
+development_status:
+  # ==============================================================================
+  # Epic 1: Project Foundation & Docker Deployment (PRD v3)
+  # Phase: MVP — Completed 2026-01-16
+  # ==============================================================================
+  epic-1: done  # 2026-01-16
+  1-1-repository-pattern-database-abstraction-layer: done
+  1-2-docker-compose-production-configuration: done
+  1-3-environment-variable-configuration-system: done
+  1-4-secrets-management-with-aes-256-encryption: done
+  1-5-media-folder-configuration: done
+  epic-1-retrospective: done  # 2026-01-17
 
-# ==============================================================================
-# Phase 0 — Architecture Prerequisites (v4 infrastructure)
-# ==============================================================================
-phase0_prerequisites:
-  epic-0-phase0-prerequisites:
-    status: done  # 2026-03-23
-  0-1-subtitle-fields-migration:
-    status: done  # Migration 018 + SubtitleStatus type + Movie/Series model fields
-  0-2-repository-extensions:
-    status: done  # BulkCreate, FindByParseStatus, subtitle query methods
-  0-3-sse-hub:
-    status: done  # SSE hub package + handler + wired into main.go
+  # ==============================================================================
+  # Epic 2: Media Search & Traditional Chinese Metadata (PRD v3)
+  # Phase: MVP — Completed 2026-01-17
+  # ==============================================================================
+  epic-2: done  # 2026-01-17
+  2-1-tmdb-api-integration-with-zh-tw-priority: done
+  2-2-media-search-interface: done
+  2-3-search-results-grid-view: done
+  2-4-media-detail-page: done
+  2-5-standard-filename-parser-regex-based: done
+  2-6-media-entity-and-database-storage: done
+  epic-2-retrospective: done  # 2026-01-18
 
-# ==============================================================================
-# PRD v4 Epics (7-18)
-# ==============================================================================
-v4_epics:
-  # Phase 1 — Core Library
-  epic-7-media-library-scanner:
-    status: done  # 2026-03-23 — All 4 stories complete, TA+CR applied
-  7-1-recursive-folder-scanner: done  # 2026-03-23 — TA 82/100, CR fixes applied
-  7-2-scheduled-scan-service: done  # 2026-03-23 — TA+CR fixes applied
-  7-3-manual-scan-trigger-ui: done  # 2026-03-23 — TA 82/100, CR fixes applied
-  7-4-scan-progress-tracking: done  # 2026-03-23 — TA 82/100, CR 5 fixes applied, 1503 total passing
-  epic-8-subtitle-engine:
-    status: in-progress
+  # ==============================================================================
+  # Epic 3: AI-Powered Fansub Parsing & Multi-Source Fallback (PRD v3)
+  # Phase: 1.0 — Completed 2026-02-09
+  # ==============================================================================
+  epic-3: done  # 2026-02-09
+  3-1-ai-provider-abstraction-layer: done
+  3-2-ai-fansub-filename-parsing: done
+  3-3-multi-source-metadata-fallback-chain: done
+  3-4-douban-web-scraper: done
+  3-5-wikipedia-metadata-fallback: done
+  3-6-ai-search-keyword-generation: done
+  3-7-manual-metadata-search-and-selection: done
+  3-8-metadata-editor: done
+  3-9-filename-mapping-learning-system: done
+  3-10-parse-status-indicators: done
+  3-11-auto-retry-mechanism: done
+  3-12-graceful-degradation: done
+  epic-3-retrospective: done  # 2026-02-09
+
+  # ==============================================================================
+  # Epic 4: qBittorrent Download Monitoring (PRD v3)
+  # Phase: 1.0 — Completed 2026-03-04
+  # ==============================================================================
+  epic-4: done  # 2026-03-04
+  4-1-qbittorrent-connection-configuration: done
+  4-2-real-time-download-status-monitoring: done
+  4-3-unified-download-dashboard: done
+  4-4-download-status-filtering: done
+  4-5-completed-download-detection-and-parsing-trigger: done
+  4-6-connection-health-monitoring: done
+  epic-4-retrospective: done  # 2026-03-04
+
+  # ==============================================================================
+  # Epic 5: Media Library Management (PRD v3)
+  # Phase: 1.0 — Completed 2026-03-15
+  # ==============================================================================
+  epic-5: done  # 2026-03-15
+  5-0-global-navigation-shell: done
+  5-1-media-library-grid-view: done
+  5-8-recently-added-section: done
+  5-2-library-list-view-toggle: done
+  5-3-library-search: done
+  5-4-library-sorting: done
+  5-5-library-filtering: done
+  5-9-ux-design-compliance: done
+  5-6-media-detail-page-full-version: done
+  5-7-batch-operations: done
+  5-10-ux-design-compliance-phase5: done
+  epic-5-retrospective: done  # 2026-03-15
+
+  # ==============================================================================
+  # Epic 6: System Configuration & Backup (PRD v3)
+  # Phase: 1.0 — Completed 2026-03-23
+  # Note: 6-10 kept for settings; 6-11 archived
+  # ==============================================================================
+  epic-6: done  # 2026-03-23
+  6-0-settings-page-foundation: done
+  6-1-setup-wizard: done
+  6-2-cache-management: done
+  6-3-system-logs-viewer: done
+  6-4-service-connection-status-dashboard: done
+  6-5-database-backup: done
+  6-6-backup-integrity-verification: done
+  6-7-data-restore: done
+  6-8-scheduled-backups: done
+  6-9-metadata-export-json-yaml-nfo: done
+  6-10-metadata-import: ready-for-dev
+  6-11-performance-metrics-dashboard: ready-for-dev
+  epic-6-retrospective: optional
+
+  # ==============================================================================
+  # Deprecated: Epic 7 User Auth (removed in PRD v4 — single-user, no login)
+  # ==============================================================================
+  # epic-7-user-auth: deleted  # Stories archived
+
+  # ==============================================================================
+  # Phase 0: Architecture Prerequisites (v4 infrastructure)
+  # Completed 2026-03-23
+  # ==============================================================================
+  epic-0-phase0-prerequisites: done  # 2026-03-23
+  0-1-subtitle-fields-migration: done  # Migration 018 + SubtitleStatus type + Movie/Series model fields
+  0-2-repository-extensions: done  # BulkCreate, FindByParseStatus, subtitle query methods
+  0-3-sse-hub: done  # SSE hub package + handler + wired into main.go
+
+  # ==============================================================================
+  # Epic 7: Media Library Scanner (PRD v4)
+  # Phase: Phase 1 — Core Library — Completed 2026-03-23
+  # FRs: P1-001–P1-007
+  # ==============================================================================
+  epic-7: done  # 2026-03-23 — All 4 stories complete, TA+CR applied
+  7-1-recursive-folder-scanner: done  # TA 82/100, CR fixes applied
+  7-2-scheduled-scan-service: done  # TA+CR fixes applied
+  7-3-manual-scan-trigger-ui: done  # TA 82/100, CR fixes applied
+  7-4-scan-progress-tracking: done  # TA 82/100, CR 5 fixes applied, 1503 total passing
+  epic-7-retrospective: done  # 2026-03-23
+
+  # ==============================================================================
+  # Epic 8: Subtitle Engine (PRD v4)
+  # Phase: Phase 1 — Core Library
+  # FRs: P1-010–P1-019
+  # ==============================================================================
+  epic-8: in-progress
   8-1-assrt-api-client:          ready-for-dev
   8-2-zimuku-web-scraper:        ready-for-dev
   8-3-opensubtitles-api-client:  ready-for-dev
@@ -58,32 +182,87 @@ v4_epics:
   8-8-manual-subtitle-search-ui: ready-for-dev
   8-9-batch-subtitle-processing: ready-for-dev
   8-10-subtitle-file-management: ready-for-dev
-  epic-9-ai-subtitle-enhancement:
-    status: backlog
+  epic-8-retrospective: optional
 
-  # Phase 2 — Browse & Discover
-  epic-10-homepage-tv-wall:
-    status: backlog
-  epic-11-advanced-search:
-    status: backlog
-  epic-12-rich-detail-page:
-    status: backlog
+  # ==============================================================================
+  # Epic 9: AI Subtitle Enhancement (PRD v4)
+  # Phase: Phase 1 — Core Library
+  # FRs: P1-020–P1-021
+  # ==============================================================================
+  epic-9: backlog
+  epic-9-retrospective: optional
 
-  # Phase 3 — Acquire & Manage
-  epic-13-request-system:
-    status: backlog
-  epic-14-download-management-v2:
-    status: partial-done  # P3-010 done from v3 Epic 4
-  epic-15-indexer-integration:
-    status: backlog
+  # ==============================================================================
+  # Epic 10: Homepage TV Wall (PRD v4)
+  # Phase: Phase 2 — Browse & Discover
+  # FRs: P2-010–P2-015
+  # ==============================================================================
+  epic-10: backlog
+  epic-10-retrospective: optional
 
-  # Phase 4 — Ops & Extend
-  epic-16-media-stats-dashboard:
-    status: backlog
-  epic-17-media-server-integration:
-    status: backlog
-  epic-18-service-health-monitoring:
-    status: backlog
+  # ==============================================================================
+  # Epic 11: Advanced Search (PRD v4)
+  # Phase: Phase 2 — Browse & Discover
+  # FRs: P2-016–P2-019
+  # ==============================================================================
+  epic-11: backlog
+  epic-11-retrospective: optional
+
+  # ==============================================================================
+  # Epic 12: Rich Detail Page (PRD v4)
+  # Phase: Phase 2 — Browse & Discover
+  # FRs: P2-020–P2-023
+  # ==============================================================================
+  epic-12: backlog
+  epic-12-retrospective: optional
+
+  # ==============================================================================
+  # Epic 13: Request System (PRD v4)
+  # Phase: Phase 3 — Acquire & Manage
+  # FRs: P3-001–P3-005
+  # ==============================================================================
+  epic-13: backlog
+  epic-13-retrospective: optional
+
+  # ==============================================================================
+  # Epic 14: Download Management v2 (PRD v4)
+  # Phase: Phase 3 — Acquire & Manage
+  # FRs: P3-006–P3-015
+  # ==============================================================================
+  epic-14: partial-done  # P3-010 done from v3 Epic 4
+  epic-14-retrospective: optional
+
+  # ==============================================================================
+  # Epic 15: Indexer Integration (PRD v4)
+  # Phase: Phase 3 — Acquire & Manage
+  # FRs: P3-016–P3-019
+  # ==============================================================================
+  epic-15: backlog
+  epic-15-retrospective: optional
+
+  # ==============================================================================
+  # Epic 16: Media Stats Dashboard (PRD v4)
+  # Phase: Phase 4 — Ops & Extend
+  # FRs: P4-001–P4-010
+  # ==============================================================================
+  epic-16: backlog
+  epic-16-retrospective: optional
+
+  # ==============================================================================
+  # Epic 17: Media Server Integration (PRD v4)
+  # Phase: Phase 4 — Ops & Extend
+  # FRs: P4-011–P4-015
+  # ==============================================================================
+  epic-17: backlog
+  epic-17-retrospective: optional
+
+  # ==============================================================================
+  # Epic 18: Service Health Monitoring (PRD v4)
+  # Phase: Phase 4 — Ops & Extend
+  # FRs: P4-016–P4-022
+  # ==============================================================================
+  epic-18: backlog
+  epic-18-retrospective: optional
 
 # ==============================================================================
 # Next priority
