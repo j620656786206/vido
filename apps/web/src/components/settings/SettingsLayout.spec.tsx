@@ -366,8 +366,8 @@ describe('SettingsLayout', () => {
 
   // --- SETTINGS_CATEGORIES export ---
 
-  it('exports SETTINGS_CATEGORIES with exactly 7 entries', () => {
-    expect(SETTINGS_CATEGORIES).toHaveLength(7);
+  it('exports SETTINGS_CATEGORIES with exactly 8 entries', () => {
+    expect(SETTINGS_CATEGORIES).toHaveLength(8);
   });
 
   it('SETTINGS_CATEGORIES entries have required fields', () => {

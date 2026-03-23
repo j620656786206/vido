@@ -1,5 +1,5 @@
 import { Link, useRouterState } from '@tanstack/react-router';
-import { Plug, Database, FileText, Activity, HardDrive, ArrowUpDown, Gauge } from 'lucide-react';
+import { Plug, Database, FileText, Activity, HardDrive, ArrowUpDown, Gauge, ScanLine } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -18,6 +18,13 @@ const SETTINGS_CATEGORIES: SettingsCategory[] = [
     shortLabel: '連線',
     icon: Plug,
     to: '/settings/connection',
+  },
+  {
+    key: 'scanner',
+    label: '媒體庫掃描',
+    shortLabel: '掃描',
+    icon: ScanLine,
+    to: '/settings/scanner',
   },
   { key: 'cache', label: '快取管理', shortLabel: '快取', icon: Database, to: '/settings/cache' },
   { key: 'logs', label: '系統日誌', shortLabel: '日誌', icon: FileText, to: '/settings/logs' },
