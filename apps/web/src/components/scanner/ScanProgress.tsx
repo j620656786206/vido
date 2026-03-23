@@ -39,9 +39,17 @@ export function ScanProgress() {
     cancelScan.mutate();
   };
 
+  // Completion toast: top-center per H3 spec; progress card: bottom-right per H2 spec
+  const isComplete = scanProgress.isComplete || scanProgress.isCancelled;
+
   if (isDesktop) {
     return (
-      <div className="fixed bottom-4 right-4 z-50" data-testid="scan-progress-wrapper">
+      <div
+        className={
+          isComplete ? 'fixed left-1/2 top-4 z-50 -translate-x-1/2' : 'fixed bottom-4 right-4 z-50'
+        }
+        data-testid="scan-progress-wrapper"
+      >
         <ScanProgressCard
           state={scanProgress}
           onCancel={handleCancel}

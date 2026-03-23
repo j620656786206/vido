@@ -72,7 +72,8 @@ describe('ScanProgressCard', () => {
     expect(screen.getByText('媒體庫掃描中')).toBeInTheDocument();
     expect(screen.getByText('62%')).toBeInTheDocument();
     expect(screen.getByText('847')).toBeInTheDocument();
-    expect(screen.getByText('524')).toBeInTheDocument();
+    // 524 appears twice: 解析 and 比對 both show filesProcessed
+    expect(screen.getAllByText('524')).toHaveLength(2);
     expect(screen.getByText('3')).toBeInTheDocument();
     expect(screen.getByTestId('scan-current-file')).toHaveTextContent('Demon Slayer');
     expect(screen.getByTestId('scan-eta')).toHaveTextContent('1 分 42 秒');

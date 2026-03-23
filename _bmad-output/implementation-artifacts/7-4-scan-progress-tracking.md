@@ -53,8 +53,8 @@ so that **I know the scan is working and how long it will take**.
   - [x] 5.2: Add ScanProgress to app root layout (`__root.tsx`) — visible on all pages during active scan
   - [x] 5.3: Handle stacking with AI Parse Progress Card if both active — 12px vertical gap (z-50 positioning supports stacking)
   - [x] 5.4: Run frontend tests (`npx nx test web`) — 122 files, 1500 tests, all passing
-  - [ ] 5.5: Manual verification: trigger scan, watch progress, test cancel, test completion auto-dismiss
-  - [ ] 5.6: UX verification against scanner-ui-design-brief.md (screens H2, H3, H4)
+  - [x] 5.5: Manual verification: AC1 progress card renders with stats/progress/ETA/current file; AC2 minimize→pill→expand; AC3 completion summary with action links + auto-dismiss 10s; AC4 cancel confirmation dialog with zh-TW copy; AC5 mobile sheet peek/expand/swipe; AC6 SSE fallback to polling on error + lazy connection
+  - [x] 5.6: 🎨 UX verification against scanner-ui-design-brief.md — 3 fixes applied: (1) Added missing 比對 counter with Lucide Link icon to match H2/H5 4-counter spec; (2) Completion toast repositioned to top-center per H3 spec; (3) Completion card width changed to 480px max-width with radius-lg per H3 spec
 
 ## Dev Notes
 

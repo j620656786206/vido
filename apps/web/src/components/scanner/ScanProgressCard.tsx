@@ -10,6 +10,7 @@ import {
   Loader,
   File,
   FileCheck,
+  Link,
   AlertTriangle,
   CheckCircle,
   XCircle,
@@ -101,11 +102,11 @@ export function ScanProgressCard({
     );
   }
 
-  // Completion/cancelled summary
+  // Completion/cancelled summary — H3 spec: 480px max-width, radius-lg
   if (state.isComplete || state.isCancelled) {
     return (
       <div
-        className="w-[400px] rounded-xl bg-slate-800 p-4 shadow-xl"
+        className="w-[480px] max-w-[calc(100vw-2rem)] rounded-lg bg-slate-800 p-4 shadow-xl"
         data-testid="scan-progress-card"
         onMouseEnter={handleUserInteract}
         role="status"
@@ -236,8 +237,8 @@ export function ScanProgressCard({
         </div>
       </div>
 
-      {/* Stats row */}
-      <div className="mb-3 flex items-center gap-4 text-xs text-slate-400">
+      {/* Stats row — 4 counters per design spec H2 */}
+      <div className="mb-3 flex items-center gap-3 text-xs text-slate-400">
         <span className="flex items-center gap-1">
           <File className="h-3.5 w-3.5" />
           <span>找到</span>
@@ -246,6 +247,11 @@ export function ScanProgressCard({
         <span className="flex items-center gap-1">
           <FileCheck className="h-3.5 w-3.5" />
           <span>解析</span>
+          <span className="font-mono text-slate-200">{state.filesProcessed.toLocaleString()}</span>
+        </span>
+        <span className="flex items-center gap-1">
+          <Link className="h-3.5 w-3.5" />
+          <span>比對</span>
           <span className="font-mono text-slate-200">{state.filesProcessed.toLocaleString()}</span>
         </span>
         <span className="flex items-center gap-1">

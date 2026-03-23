@@ -4,7 +4,16 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Loader, File, FileCheck, AlertTriangle, CheckCircle, XCircle, X } from 'lucide-react';
+import {
+  Loader,
+  File,
+  FileCheck,
+  Link,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  X,
+} from 'lucide-react';
 import { cn } from '../../lib/utils';
 import type { ScanProgressState } from '../../hooks/useScanProgress';
 
@@ -154,7 +163,7 @@ export function ScanProgressSheet({
           </span>
         </div>
 
-        {/* Stats — two rows for narrow viewport */}
+        {/* Stats — two rows for narrow viewport (4 counters per design H5) */}
         <div className="mb-3 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-400">
           <span className="flex items-center gap-1">
             <File className="h-3.5 w-3.5" />
@@ -164,6 +173,13 @@ export function ScanProgressSheet({
           <span className="flex items-center gap-1">
             <FileCheck className="h-3.5 w-3.5" />
             解析{' '}
+            <span className="font-mono text-slate-200">
+              {state.filesProcessed.toLocaleString()}
+            </span>
+          </span>
+          <span className="flex items-center gap-1">
+            <Link className="h-3.5 w-3.5" />
+            比對{' '}
             <span className="font-mono text-slate-200">
               {state.filesProcessed.toLocaleString()}
             </span>

@@ -78,7 +78,8 @@ describe('ScanProgressSheet', () => {
     fireEvent.click(screen.getByTestId('scan-progress-sheet'));
 
     expect(screen.getByText('847')).toBeInTheDocument();
-    expect(screen.getByText('524')).toBeInTheDocument();
+    // 524 appears twice: 解析 and 比對 both show filesProcessed
+    expect(screen.getAllByText('524')).toHaveLength(2);
     expect(screen.getByText('3')).toBeInTheDocument();
   });
 
