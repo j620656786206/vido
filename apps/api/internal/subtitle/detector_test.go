@@ -163,9 +163,9 @@ func TestDetect_BoundaryThreshold69(t *testing.T) {
 		'龍', '門', '電', '號', '樂', '寫', '買', '賣', '紅', '綠',
 		'藍', '銀', '鐵', '錢', '鐘', '鋼', '鬧', '聞', '陽'}
 	simp := []rune{'这', '个', '来', '进', '过', '还', '从', '为', '们', '会',
-		'着', '没', '给', '让', '动', '关', '开', '长', '问', '时',
-		'应', '点', '经', '机', '头', '现', '实', '说', '种', '边',
-		'走'}
+		'没', '给', '让', '动', '关', '开', '长', '问', '时', '应',
+		'点', '经', '机', '头', '现', '实', '说', '种', '边', '听',
+		'远'}
 
 	for _, r := range trad[:69] {
 		sb.WriteRune(r)
@@ -176,6 +176,58 @@ func TestDetect_BoundaryThreshold69(t *testing.T) {
 
 	result := Detect([]byte(sb.String()))
 	assert.Equal(t, LangAmbiguous, result.Language, "69%% traditional should be zh (ambiguous)")
+}
+
+func TestDetect_BoundaryExact70(t *testing.T) {
+	// Exactly 70% traditional → should be ambiguous (threshold is >70%, not >=)
+	var sb strings.Builder
+	trad := []rune{'這', '個', '來', '進', '過', '還', '從', '為', '們', '會',
+		'著', '沒', '給', '讓', '動', '關', '開', '長', '問', '時',
+		'應', '點', '經', '機', '頭', '現', '實', '說', '種', '見',
+		'邊', '後', '嗎', '裡', '聽', '遠', '運', '兩', '幾', '發',
+		'無', '書', '東', '馬', '車', '雲', '風', '飛', '鳥', '魚',
+		'龍', '門', '電', '號', '樂', '寫', '買', '賣', '紅', '綠',
+		'藍', '銀', '鐵', '錢', '鐘', '鋼', '鬧', '聞', '陽', '陰'}
+	simp := []rune{'这', '个', '来', '进', '过', '还', '从', '为', '们', '会',
+		'没', '给', '让', '动', '关', '开', '长', '问', '时', '应',
+		'点', '经', '机', '头', '现', '实', '说', '种', '边', '听'}
+
+	for _, r := range trad[:70] {
+		sb.WriteRune(r)
+	}
+	for _, r := range simp[:30] {
+		sb.WriteRune(r)
+	}
+
+	result := Detect([]byte(sb.String()))
+	// 70/100 = 0.70, NOT > 0.70, so ambiguous
+	assert.Equal(t, LangAmbiguous, result.Language, "exactly 70%% traditional should be zh (ambiguous)")
+}
+
+func TestDetect_BoundaryExact30(t *testing.T) {
+	// Exactly 30% traditional → should be zh-Hans (threshold is ≤30%)
+	var sb strings.Builder
+	trad := []rune{'這', '個', '來', '進', '過', '還', '從', '為', '們', '會',
+		'著', '沒', '給', '讓', '動', '關', '開', '長', '問', '時',
+		'應', '點', '經', '機', '頭', '現', '實', '說', '種', '見'}
+	simp := []rune{'这', '个', '来', '进', '过', '还', '从', '为', '们', '会',
+		'没', '给', '让', '动', '关', '开', '长', '问', '时', '应',
+		'点', '经', '机', '头', '现', '实', '说', '种', '边', '听',
+		'远', '运', '两', '几', '发', '无', '书', '东', '马', '车',
+		'云', '风', '飞', '鸟', '鱼', '龙', '门', '电', '号', '乐',
+		'写', '买', '卖', '红', '绿', '蓝', '银', '铁', '钱', '钟',
+		'钢', '闹', '闻', '间', '阳', '阴', '队', '际', '陆', '险'}
+
+	for _, r := range trad[:30] {
+		sb.WriteRune(r)
+	}
+	for _, r := range simp[:70] {
+		sb.WriteRune(r)
+	}
+
+	result := Detect([]byte(sb.String()))
+	// 30/100 = 0.30, ≤ 0.30, so zh-Hans
+	assert.Equal(t, LangSimplified, result.Language, "exactly 30%% traditional should be zh-Hans")
 }
 
 func TestDetect_SharedCharactersOnly(t *testing.T) {

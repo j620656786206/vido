@@ -176,7 +176,7 @@ development_status:
   8-2-zimuku-web-scraper:        done  # CR 2026-03-23: 7 findings, 6 auto-fixed
   8-3-opensubtitles-api-client:  done  # CR 2026-03-24: partial CR (usage limit), impl verified
   8-4-language-detection:        done  # CR 2026-03-24: partial CR (usage limit), boundary tests added
-  8-5-opencc-integration:        ready-for-dev
+  8-5-opencc-integration:        in-progress
   8-6-subtitle-scoring-ranking:  ready-for-dev
   8-7-auto-download-service:     ready-for-dev
   8-8-manual-subtitle-search-ui: ready-for-dev
