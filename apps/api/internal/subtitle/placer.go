@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -75,6 +76,13 @@ type PlaceResult struct {
 //
 //	Movie.2024.1080p.mkv → Movie.2024.1080p.zh-Hant.srt
 func (p *Placer) Place(req PlaceRequest) (*PlaceResult, error) {
+	// Clean the media file path to prevent path traversal (e.g., /../../../etc/Movie.mkv)
+	cleanPath := filepath.Clean(req.MediaFilePath)
+	if !filepath.IsAbs(cleanPath) {
+		return nil, fmt.Errorf("placer: media file path must be absolute: %s", req.MediaFilePath)
+	}
+	req.MediaFilePath = cleanPath
+
 	// Validate media file directory exists
 	mediaDir := filepath.Dir(req.MediaFilePath)
 	if _, err := os.Stat(mediaDir); os.IsNotExist(err) {
@@ -136,11 +144,19 @@ func normalizeLanguageTag(lang string) string {
 		return "en"
 	default:
 		if lang != "" {
+			// Sanitize: only allow alphanumeric, hyphens, and underscores
+			// to prevent path traversal via crafted language tags
+			if !safeTagPattern.MatchString(lang) {
+				return "und"
+			}
 			return lang
 		}
 		return "und"
 	}
 }
+
+// safeTagPattern matches valid BCP 47-like language tags (alphanumeric + hyphens).
+var safeTagPattern = regexp.MustCompile(`^[a-zA-Z0-9\-]+$`)
 
 // buildSubtitleFilename creates the subtitle path from media path, language, and format.
 // Example: /media/Movie.2024.1080p.mkv → /media/Movie.2024.1080p.zh-Hant.srt
@@ -212,6 +228,12 @@ func backupExistingFile(path string) (string, error) {
 	}
 
 	backupPath := path + ".bak"
+
+	// Guard: if .bak target exists as a directory, refuse to overwrite
+	if info, err := os.Stat(backupPath); err == nil && info.IsDir() {
+		return "", fmt.Errorf("backup target is a directory: %s", backupPath)
+	}
+
 	if err := os.Rename(path, backupPath); err != nil {
 		return "", fmt.Errorf("rename to backup: %w", err)
 	}

@@ -306,6 +306,119 @@ func TestPlacer_Place_Success(t *testing.T) {
 	assert.FileExists(t, result.SubtitlePath)
 }
 
+// --- CR: Path traversal prevention ---
+
+func TestPlacer_Place_RelativePathRejected(t *testing.T) {
+	p := NewPlacer(DefaultPlacerConfig())
+
+	_, err := p.Place(PlaceRequest{
+		MediaFilePath: "relative/path/Movie.mkv",
+		SubtitleData:  []byte("subtitle"),
+		Language:      "zh-Hant",
+		Format:        "srt",
+	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "must be absolute")
+}
+
+func TestPlacer_Place_PathTraversalCleaned(t *testing.T) {
+	dir := t.TempDir()
+	mediaPath := filepath.Join(dir, "sub/../Movie.mkv")
+	os.WriteFile(filepath.Join(dir, "Movie.mkv"), []byte("fake"), 0644)
+
+	p := NewPlacer(DefaultPlacerConfig())
+
+	result, err := p.Place(PlaceRequest{
+		MediaFilePath: mediaPath,
+		SubtitleData:  []byte("1\n00:00:01,000 --> 00:00:03,000\nTest\n"),
+		Language:      "zh-Hant",
+		Format:        "srt",
+	})
+	require.NoError(t, err)
+	// Path should be cleaned — no ".." in result
+	assert.NotContains(t, result.SubtitlePath, "..")
+	assert.Equal(t, filepath.Join(dir, "Movie.zh-Hant.srt"), result.SubtitlePath)
+}
+
+// --- CR: Language tag sanitization ---
+
+func TestNormalizeLanguageTag_PathTraversal(t *testing.T) {
+	// Malicious language tag should be rejected, not passed through
+	assert.Equal(t, "und", normalizeLanguageTag("../../etc"))
+	assert.Equal(t, "und", normalizeLanguageTag("foo/bar"))
+	assert.Equal(t, "und", normalizeLanguageTag("a.b"))
+	// Valid unknown tags should pass through
+	assert.Equal(t, "ja", normalizeLanguageTag("ja"))
+	assert.Equal(t, "ko", normalizeLanguageTag("ko"))
+	assert.Equal(t, "pt-BR", normalizeLanguageTag("pt-BR"))
+}
+
+// --- CR: Backup target is a directory ---
+
+func TestBackupExistingFile_BakIsDirectory(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "subtitle.zh-Hant.srt")
+
+	// Create existing subtitle file
+	os.WriteFile(path, []byte("old subtitle"), 0644)
+
+	// Create .bak as a directory
+	os.MkdirAll(path+".bak", 0755)
+
+	_, err := backupExistingFile(path)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "backup target is a directory")
+}
+
+// --- CR: Special characters in filenames ---
+
+func TestBuildSubtitleFilename_SpecialCharacters(t *testing.T) {
+	tests := []struct {
+		name      string
+		mediaPath string
+		lang      string
+		ext       string
+		expected  string
+	}{
+		{
+			"fansub brackets",
+			"/media/[SubGroup] Movie Name (2024) [1080p].mkv",
+			"zh-Hant", "srt",
+			"/media/[SubGroup] Movie Name (2024) [1080p].zh-Hant.srt",
+		},
+		{
+			"spaces in name",
+			"/media/My Movie.mkv",
+			"zh-Hant", "srt",
+			"/media/My Movie.zh-Hant.srt",
+		},
+		{
+			"unicode in name",
+			"/media/電影名稱.mkv",
+			"zh-Hant", "srt",
+			"/media/電影名稱.zh-Hant.srt",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := buildSubtitleFilename(tt.mediaPath, tt.lang, tt.ext)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+// --- CR: detectFormat with empty data and no hint ---
+
+func TestDetectFormat_EmptyDataNoHint(t *testing.T) {
+	_, err := detectFormat([]byte{}, "")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "unable to detect")
+
+	_, err = detectFormat(nil, "")
+	assert.Error(t, err)
+}
+
 func TestPlacer_Place_FormatDetection(t *testing.T) {
 	dir := t.TempDir()
 	mediaPath := filepath.Join(dir, "Movie.mkv")

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"time"
 
 	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/repository"
@@ -34,28 +33,37 @@ func (m *Manager) PlaceAndRecord(ctx context.Context, mediaID, mediaType string,
 		return fmt.Errorf("manager: place failed: %w", err)
 	}
 
-	// Update database
+	// Update database — if this fails, clean up the orphaned file on disk
+	var dbErr error
 	switch mediaType {
 	case "movie":
-		if err := m.movieRepo.UpdateSubtitleStatus(ctx, mediaID,
+		dbErr = m.movieRepo.UpdateSubtitleStatus(ctx, mediaID,
 			models.SubtitleStatusFound,
 			result.SubtitlePath,
 			result.Language,
 			req.Score,
-		); err != nil {
-			return fmt.Errorf("manager: update movie subtitle status: %w", err)
-		}
+		)
 	case "series":
-		if err := m.seriesRepo.UpdateSubtitleStatus(ctx, mediaID,
+		dbErr = m.seriesRepo.UpdateSubtitleStatus(ctx, mediaID,
 			models.SubtitleStatusFound,
 			result.SubtitlePath,
 			result.Language,
 			req.Score,
-		); err != nil {
-			return fmt.Errorf("manager: update series subtitle status: %w", err)
-		}
+		)
 	default:
+		// Clean up the written file before returning
+		if cleanErr := Cleanup(result.SubtitlePath); cleanErr != nil {
+			slog.Warn("Failed to clean up subtitle after bad media type", "path", result.SubtitlePath, "error", cleanErr)
+		}
 		return fmt.Errorf("manager: unknown media type %q", mediaType)
+	}
+
+	if dbErr != nil {
+		// Compensating action: remove the orphaned subtitle file
+		if cleanErr := Cleanup(result.SubtitlePath); cleanErr != nil {
+			slog.Warn("Failed to clean up subtitle after DB error", "path", result.SubtitlePath, "error", cleanErr)
+		}
+		return fmt.Errorf("manager: update %s subtitle status: %w", mediaType, dbErr)
 	}
 
 	slog.Info("Subtitle placed and recorded",
@@ -94,7 +102,6 @@ func (m *Manager) CleanupAndClear(ctx context.Context, mediaID, mediaType, subti
 		return fmt.Errorf("manager: clear subtitle fields: %w", err)
 	}
 
-	_ = time.Now() // reference time package to suppress unused import
 	slog.Info("Subtitle cleaned up and DB cleared",
 		"mediaID", mediaID,
 		"mediaType", mediaType,

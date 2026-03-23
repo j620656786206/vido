@@ -1,6 +1,6 @@
 # Story 8.10: Subtitle File Management
 
-Status: review
+Status: done
 
 ## Story
 
