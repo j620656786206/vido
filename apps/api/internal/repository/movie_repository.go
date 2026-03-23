@@ -650,6 +650,256 @@ func (r *MovieRepository) Count(ctx context.Context) (int, error) {
 	return count, nil
 }
 
+// movieSelectColumns defines the column list used by multi-row scan queries.
+// This must match the order in scanMovie.
+const movieSelectColumns = `
+	id, title, original_title, release_date, genres, rating,
+	overview, poster_path, backdrop_path, runtime, original_language,
+	status, imdb_id, tmdb_id,
+	file_path, parse_status, metadata_source,
+	subtitle_status, subtitle_path, subtitle_language, subtitle_last_searched, subtitle_search_score,
+	vote_average,
+	created_at, updated_at
+`
+
+// scanMovie scans a row into a Movie struct using the standard column order.
+func scanMovie(scanner interface{ Scan(dest ...interface{}) error }) (models.Movie, error) {
+	var movie models.Movie
+	var genresJSON string
+
+	err := scanner.Scan(
+		&movie.ID,
+		&movie.Title,
+		&movie.OriginalTitle,
+		&movie.ReleaseDate,
+		&genresJSON,
+		&movie.Rating,
+		&movie.Overview,
+		&movie.PosterPath,
+		&movie.BackdropPath,
+		&movie.Runtime,
+		&movie.OriginalLanguage,
+		&movie.Status,
+		&movie.IMDbID,
+		&movie.TMDbID,
+		&movie.FilePath,
+		&movie.ParseStatus,
+		&movie.MetadataSource,
+		&movie.SubtitleStatus,
+		&movie.SubtitlePath,
+		&movie.SubtitleLanguage,
+		&movie.SubtitleLastSearched,
+		&movie.SubtitleSearchScore,
+		&movie.VoteAverage,
+		&movie.CreatedAt,
+		&movie.UpdatedAt,
+	)
+	if err != nil {
+		return movie, err
+	}
+
+	if err := movie.ScanGenres(genresJSON); err != nil {
+		return movie, fmt.Errorf("failed to parse genres: %w", err)
+	}
+
+	return movie, nil
+}
+
+// BulkCreate inserts multiple movies in a single transaction
+func (r *MovieRepository) BulkCreate(ctx context.Context, movies []*models.Movie) error {
+	if len(movies) == 0 {
+		return nil
+	}
+
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	query := `
+		INSERT INTO movies (
+			id, title, original_title, release_date, genres, rating,
+			overview, poster_path, backdrop_path, runtime, original_language,
+			status, imdb_id, tmdb_id,
+			file_path, parse_status, metadata_source, vote_average,
+			created_at, updated_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`
+
+	stmt, err := tx.PrepareContext(ctx, query)
+	if err != nil {
+		return fmt.Errorf("failed to prepare statement: %w", err)
+	}
+	defer stmt.Close()
+
+	now := time.Now()
+	for _, movie := range movies {
+		if movie == nil {
+			continue
+		}
+
+		movie.CreatedAt = now
+		movie.UpdatedAt = now
+
+		genresJSON, err := movie.GenresJSON()
+		if err != nil {
+			return fmt.Errorf("failed to marshal genres: %w", err)
+		}
+
+		_, err = stmt.ExecContext(ctx,
+			movie.ID,
+			movie.Title,
+			movie.OriginalTitle,
+			movie.ReleaseDate,
+			genresJSON,
+			movie.Rating,
+			movie.Overview,
+			movie.PosterPath,
+			movie.BackdropPath,
+			movie.Runtime,
+			movie.OriginalLanguage,
+			movie.Status,
+			movie.IMDbID,
+			movie.TMDbID,
+			movie.FilePath,
+			movie.ParseStatus,
+			movie.MetadataSource,
+			movie.VoteAverage,
+			movie.CreatedAt,
+			movie.UpdatedAt,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to insert movie %s: %w", movie.ID, err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
+}
+
+// FindByParseStatus retrieves movies matching a given parse status
+func (r *MovieRepository) FindByParseStatus(ctx context.Context, status models.ParseStatus) ([]models.Movie, error) {
+	query := fmt.Sprintf(`SELECT %s FROM movies WHERE parse_status = ? ORDER BY updated_at DESC`, movieSelectColumns)
+
+	rows, err := r.db.QueryContext(ctx, query, status)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query movies by parse status: %w", err)
+	}
+	defer rows.Close()
+
+	var movies []models.Movie
+	for rows.Next() {
+		movie, err := scanMovie(rows)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan movie: %w", err)
+		}
+		movies = append(movies, movie)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating movies: %w", err)
+	}
+
+	return movies, nil
+}
+
+// UpdateSubtitleStatus updates subtitle-related fields for a movie
+func (r *MovieRepository) UpdateSubtitleStatus(ctx context.Context, id string, status models.SubtitleStatus, path, language string, score float64) error {
+	now := time.Now()
+
+	query := `
+		UPDATE movies
+		SET subtitle_status = ?, subtitle_path = ?, subtitle_language = ?,
+			subtitle_search_score = ?, subtitle_last_searched = ?, updated_at = ?
+		WHERE id = ?
+	`
+
+	result, err := r.db.ExecContext(ctx, query,
+		status,
+		sql.NullString{String: path, Valid: path != ""},
+		sql.NullString{String: language, Valid: language != ""},
+		sql.NullFloat64{Float64: score, Valid: score > 0},
+		sql.NullTime{Time: now, Valid: true},
+		now,
+		id,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to update movie subtitle status: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("movie with id %s not found", id)
+	}
+
+	return nil
+}
+
+// FindBySubtitleStatus retrieves movies matching a given subtitle status
+func (r *MovieRepository) FindBySubtitleStatus(ctx context.Context, status models.SubtitleStatus) ([]models.Movie, error) {
+	query := fmt.Sprintf(`SELECT %s FROM movies WHERE subtitle_status = ? ORDER BY updated_at DESC`, movieSelectColumns)
+
+	rows, err := r.db.QueryContext(ctx, query, status)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query movies by subtitle status: %w", err)
+	}
+	defer rows.Close()
+
+	var movies []models.Movie
+	for rows.Next() {
+		movie, err := scanMovie(rows)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan movie: %w", err)
+		}
+		movies = append(movies, movie)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating movies: %w", err)
+	}
+
+	return movies, nil
+}
+
+// FindNeedingSubtitleSearch retrieves movies not yet searched or last searched before threshold
+func (r *MovieRepository) FindNeedingSubtitleSearch(ctx context.Context, olderThan time.Time) ([]models.Movie, error) {
+	query := fmt.Sprintf(`
+		SELECT %s FROM movies
+		WHERE subtitle_status = 'not_searched'
+			OR (subtitle_last_searched IS NOT NULL AND subtitle_last_searched < ?)
+		ORDER BY updated_at DESC
+	`, movieSelectColumns)
+
+	rows, err := r.db.QueryContext(ctx, query, olderThan)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query movies needing subtitle search: %w", err)
+	}
+	defer rows.Close()
+
+	var movies []models.Movie
+	for rows.Next() {
+		movie, err := scanMovie(rows)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan movie: %w", err)
+		}
+		movies = append(movies, movie)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating movies: %w", err)
+	}
+
+	return movies, nil
+}
+
 // Upsert creates or updates a movie based on TMDb ID
 func (r *MovieRepository) Upsert(ctx context.Context, movie *models.Movie) error {
 	if movie == nil {

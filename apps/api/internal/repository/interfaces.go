@@ -54,6 +54,26 @@ type MovieRepositoryInterface interface {
 
 	// Count returns the total number of movies
 	Count(ctx context.Context) (int, error)
+
+	// BulkCreate inserts multiple movies in a single transaction
+	// Needed by: Epic 7 (scan results batch insert)
+	BulkCreate(ctx context.Context, movies []*models.Movie) error
+
+	// FindByParseStatus retrieves movies matching a given parse status
+	// Needed by: Epic 7 (find pending/failed items for re-scan)
+	FindByParseStatus(ctx context.Context, status models.ParseStatus) ([]models.Movie, error)
+
+	// UpdateSubtitleStatus updates subtitle-related fields for a movie
+	// Needed by: Epic 8 (subtitle search results)
+	UpdateSubtitleStatus(ctx context.Context, id string, status models.SubtitleStatus, path, language string, score float64) error
+
+	// FindBySubtitleStatus retrieves movies matching a given subtitle status
+	// Needed by: Epic 8 (find items needing subtitles)
+	FindBySubtitleStatus(ctx context.Context, status models.SubtitleStatus) ([]models.Movie, error)
+
+	// FindNeedingSubtitleSearch retrieves movies not yet searched or last searched before threshold
+	// Needed by: Epic 8 (batch subtitle search scheduler)
+	FindNeedingSubtitleSearch(ctx context.Context, olderThan time.Time) ([]models.Movie, error)
 }
 
 // SeriesRepositoryInterface defines the contract for TV series data access operations.
@@ -99,6 +119,26 @@ type SeriesRepositoryInterface interface {
 
 	// Count returns the total number of series
 	Count(ctx context.Context) (int, error)
+
+	// BulkCreate inserts multiple series in a single transaction
+	// Needed by: Epic 7 (scan results batch insert)
+	BulkCreate(ctx context.Context, seriesList []*models.Series) error
+
+	// FindByParseStatus retrieves series matching a given parse status
+	// Needed by: Epic 7 (find pending/failed items for re-scan)
+	FindByParseStatus(ctx context.Context, status models.ParseStatus) ([]models.Series, error)
+
+	// UpdateSubtitleStatus updates subtitle-related fields for a series
+	// Needed by: Epic 8 (subtitle search results)
+	UpdateSubtitleStatus(ctx context.Context, id string, status models.SubtitleStatus, path, language string, score float64) error
+
+	// FindBySubtitleStatus retrieves series matching a given subtitle status
+	// Needed by: Epic 8 (find items needing subtitles)
+	FindBySubtitleStatus(ctx context.Context, status models.SubtitleStatus) ([]models.Series, error)
+
+	// FindNeedingSubtitleSearch retrieves series not yet searched or last searched before threshold
+	// Needed by: Epic 8 (batch subtitle search scheduler)
+	FindNeedingSubtitleSearch(ctx context.Context, olderThan time.Time) ([]models.Series, error)
 }
 
 // SeasonRepositoryInterface defines the contract for season data access operations.

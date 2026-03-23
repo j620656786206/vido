@@ -622,6 +622,256 @@ func (r *SeriesRepository) Count(ctx context.Context) (int, error) {
 	return count, nil
 }
 
+// seriesSelectColumns defines the column list used by multi-row scan queries.
+// This must match the order in scanSeries.
+const seriesSelectColumns = `
+	id, title, original_title, first_air_date, last_air_date, genres, rating,
+	overview, poster_path, backdrop_path, number_of_seasons, number_of_episodes,
+	status, original_language, imdb_id, tmdb_id, in_production,
+	file_path, parse_status, metadata_source,
+	subtitle_status, subtitle_path, subtitle_language, subtitle_last_searched, subtitle_search_score,
+	vote_average,
+	created_at, updated_at
+`
+
+// scanSeries scans a row into a Series struct using the standard column order.
+func scanSeries(scanner interface{ Scan(dest ...interface{}) error }) (models.Series, error) {
+	var s models.Series
+	var genresJSON string
+
+	err := scanner.Scan(
+		&s.ID,
+		&s.Title,
+		&s.OriginalTitle,
+		&s.FirstAirDate,
+		&s.LastAirDate,
+		&genresJSON,
+		&s.Rating,
+		&s.Overview,
+		&s.PosterPath,
+		&s.BackdropPath,
+		&s.NumberOfSeasons,
+		&s.NumberOfEpisodes,
+		&s.Status,
+		&s.OriginalLanguage,
+		&s.IMDbID,
+		&s.TMDbID,
+		&s.InProduction,
+		&s.FilePath,
+		&s.ParseStatus,
+		&s.MetadataSource,
+		&s.SubtitleStatus,
+		&s.SubtitlePath,
+		&s.SubtitleLanguage,
+		&s.SubtitleLastSearched,
+		&s.SubtitleSearchScore,
+		&s.VoteAverage,
+		&s.CreatedAt,
+		&s.UpdatedAt,
+	)
+	if err != nil {
+		return s, err
+	}
+
+	if err := s.ScanGenres(genresJSON); err != nil {
+		return s, fmt.Errorf("failed to parse genres: %w", err)
+	}
+
+	return s, nil
+}
+
+// BulkCreate inserts multiple series in a single transaction
+func (r *SeriesRepository) BulkCreate(ctx context.Context, seriesList []*models.Series) error {
+	if len(seriesList) == 0 {
+		return nil
+	}
+
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	query := `
+		INSERT INTO series (
+			id, title, original_title, first_air_date, last_air_date, genres, rating,
+			overview, poster_path, backdrop_path, number_of_seasons, number_of_episodes,
+			status, original_language, imdb_id, tmdb_id, in_production, created_at, updated_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`
+
+	stmt, err := tx.PrepareContext(ctx, query)
+	if err != nil {
+		return fmt.Errorf("failed to prepare statement: %w", err)
+	}
+	defer stmt.Close()
+
+	now := time.Now()
+	for _, series := range seriesList {
+		if series == nil {
+			continue
+		}
+
+		series.CreatedAt = now
+		series.UpdatedAt = now
+
+		genresJSON, err := series.GenresJSON()
+		if err != nil {
+			return fmt.Errorf("failed to marshal genres: %w", err)
+		}
+
+		_, err = stmt.ExecContext(ctx,
+			series.ID,
+			series.Title,
+			series.OriginalTitle,
+			series.FirstAirDate,
+			series.LastAirDate,
+			genresJSON,
+			series.Rating,
+			series.Overview,
+			series.PosterPath,
+			series.BackdropPath,
+			series.NumberOfSeasons,
+			series.NumberOfEpisodes,
+			series.Status,
+			series.OriginalLanguage,
+			series.IMDbID,
+			series.TMDbID,
+			series.InProduction,
+			series.CreatedAt,
+			series.UpdatedAt,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to insert series %s: %w", series.ID, err)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
+}
+
+// FindByParseStatus retrieves series matching a given parse status
+func (r *SeriesRepository) FindByParseStatus(ctx context.Context, status models.ParseStatus) ([]models.Series, error) {
+	query := fmt.Sprintf(`SELECT %s FROM series WHERE parse_status = ? ORDER BY updated_at DESC`, seriesSelectColumns)
+
+	rows, err := r.db.QueryContext(ctx, query, status)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query series by parse status: %w", err)
+	}
+	defer rows.Close()
+
+	var seriesList []models.Series
+	for rows.Next() {
+		s, err := scanSeries(rows)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan series: %w", err)
+		}
+		seriesList = append(seriesList, s)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating series: %w", err)
+	}
+
+	return seriesList, nil
+}
+
+// UpdateSubtitleStatus updates subtitle-related fields for a series
+func (r *SeriesRepository) UpdateSubtitleStatus(ctx context.Context, id string, status models.SubtitleStatus, path, language string, score float64) error {
+	now := time.Now()
+
+	query := `
+		UPDATE series
+		SET subtitle_status = ?, subtitle_path = ?, subtitle_language = ?,
+			subtitle_search_score = ?, subtitle_last_searched = ?, updated_at = ?
+		WHERE id = ?
+	`
+
+	result, err := r.db.ExecContext(ctx, query,
+		status,
+		sql.NullString{String: path, Valid: path != ""},
+		sql.NullString{String: language, Valid: language != ""},
+		sql.NullFloat64{Float64: score, Valid: score > 0},
+		sql.NullTime{Time: now, Valid: true},
+		now,
+		id,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to update series subtitle status: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("series with id %s not found", id)
+	}
+
+	return nil
+}
+
+// FindBySubtitleStatus retrieves series matching a given subtitle status
+func (r *SeriesRepository) FindBySubtitleStatus(ctx context.Context, status models.SubtitleStatus) ([]models.Series, error) {
+	query := fmt.Sprintf(`SELECT %s FROM series WHERE subtitle_status = ? ORDER BY updated_at DESC`, seriesSelectColumns)
+
+	rows, err := r.db.QueryContext(ctx, query, status)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query series by subtitle status: %w", err)
+	}
+	defer rows.Close()
+
+	var seriesList []models.Series
+	for rows.Next() {
+		s, err := scanSeries(rows)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan series: %w", err)
+		}
+		seriesList = append(seriesList, s)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating series: %w", err)
+	}
+
+	return seriesList, nil
+}
+
+// FindNeedingSubtitleSearch retrieves series not yet searched or last searched before threshold
+func (r *SeriesRepository) FindNeedingSubtitleSearch(ctx context.Context, olderThan time.Time) ([]models.Series, error) {
+	query := fmt.Sprintf(`
+		SELECT %s FROM series
+		WHERE subtitle_status = 'not_searched'
+			OR (subtitle_last_searched IS NOT NULL AND subtitle_last_searched < ?)
+		ORDER BY updated_at DESC
+	`, seriesSelectColumns)
+
+	rows, err := r.db.QueryContext(ctx, query, olderThan)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query series needing subtitle search: %w", err)
+	}
+	defer rows.Close()
+
+	var seriesList []models.Series
+	for rows.Next() {
+		s, err := scanSeries(rows)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan series: %w", err)
+		}
+		seriesList = append(seriesList, s)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating series: %w", err)
+	}
+
+	return seriesList, nil
+}
+
 // Upsert creates or updates a series based on TMDb ID
 func (r *SeriesRepository) Upsert(ctx context.Context, series *models.Series) error {
 	if series == nil {
