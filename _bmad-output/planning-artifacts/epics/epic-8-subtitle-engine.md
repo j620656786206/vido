@@ -1,0 +1,29 @@
+# Epic 8: Subtitle Engine
+**Phase:** Phase 1 — Core Media Pipeline
+
+Users can search for Traditional Chinese subtitles across multiple sources (Assrt, Zimuku, OpenSubtitles), with correct 簡繁 identification to prevent false-positive simplified Chinese subtitles. The engine integrates OpenCC for automatic simplified-to-traditional conversion, scores and ranks subtitle results by quality, supports auto-download for matched media, provides a manual search UI for unmatched content, and enables batch subtitle processing across the entire library. This is the core v4 MVP differentiator — solving the #1 pain point for Traditional Chinese NAS users.
+
+**v4 Feature IDs covered:** P1-010, P1-011, P1-012, P1-013, P1-014, P1-015, P1-016, P1-017, P1-018, P1-019
+
+**Dependencies on Completed Work:**
+- Epic 1: Repository pattern, secrets management (for API keys)
+- Epic 2: Media entity storage, TMDB metadata (for matching subtitles to media)
+- Epic 3: Multi-source fallback pattern (reusable for subtitle sources)
+- Epic 5: Library UI (subtitle status indicators in grid/detail views)
+
+**Stories (to be created):**
+- B-1: Assrt API client — search, download, rate limiting, error handling
+- B-2: Zimuku web scraper — search, download, anti-scraping mitigation
+- B-3: OpenSubtitles API client — search, download, auth, hash-based matching
+- B-4: 簡繁 language detection — detect simplified vs traditional Chinese in subtitle files
+- B-5: OpenCC integration — automatic simplified→traditional conversion with configurable profiles
+- B-6: Subtitle scoring and ranking — score results by source reliability, language match, release group match, format
+- B-7: Auto-download service — automatically find and download best-match subtitle for new media
+- B-8: Manual subtitle search UI — search interface with source selection, preview, download
+- B-9: Batch subtitle processing — queue-based processing for library-wide subtitle search
+- B-10: Subtitle file management — store, rename, associate subtitle files with media entries
+
+**Success Criteria:**
+- >85% zh-TW subtitle hit rate across Assrt + Zimuku + OpenSubtitles combined
+- 0% false-positive simplified Chinese subtitles served as Traditional Chinese
+- Batch processing of 100 media items completes in <10 minutes

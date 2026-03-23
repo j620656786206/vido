@@ -1,3 +1,8 @@
+> **STATUS: COMPLETED (v3 PRD)**
+> This epic was completed under the v3 PRD structure. Its work is fully integrated
+> into the v4 codebase. See [Completed Work Registry](./completed-work-registry.md)
+> for the mapping to v4 feature IDs.
+
 # Epic 4: qBittorrent Download Monitoring
 
 **Phase:** 1.0 (Q2 - June 2026)

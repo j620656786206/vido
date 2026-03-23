@@ -1,215 +1,141 @@
 # Epic List
 
-## Epic 1: Project Foundation & Docker Deployment
-**Phase:** MVP (Q1 - March 2026)
-
-Users can deploy Vido on their NAS within 5 minutes using Docker Compose, with zero-configuration startup and sensible defaults. The foundation includes encrypted storage for sensitive data and environment variable configuration support.
-
-**FRs covered:** FR47, FR48, FR49, FR50, FR51
-
-**Implementation Notes:**
-- ARCH-1: Repository Pattern mandatory from Day 1
-- ARCH-10: Brownfield project with existing Go/Gin + React 19/TanStack stack
-- NFR-U1: Docker Compose deployment <5 minutes
-- NFR-SC3: Repository Pattern for SQLite → PostgreSQL migration path
+> **v4 PRD Structure** — Epics 1-6 (completed under v3) are preserved for reference.
+> New work follows the A-L epic structure organized by delivery phase.
 
 ---
 
-## Epic 2: Media Search & Traditional Chinese Metadata
-**Phase:** MVP (Q1 - March 2026)
+## Completed Epics (v3 PRD)
 
-Users can search for movies and TV shows by title (Traditional Chinese or English), view search results with beautiful Traditional Chinese metadata (title, poster, description, genre, cast), and browse results in a responsive grid view. The system can parse standard naming convention filenames and retrieve metadata from TMDb with zh-TW priority.
+| Epic | Name | Status |
+|------|------|--------|
+| [Epic 1](./epic-1-project-foundation-docker-deployment.md) | Project Foundation & Docker Deployment | COMPLETED |
+| [Epic 2](./epic-2-media-search-traditional-chinese-metadata.md) | Media Search & Traditional Chinese Metadata | COMPLETED |
+| [Epic 3](./epic-3-ai-powered-fansub-parsing-multi-source-fallback.md) | AI-Powered Fansub Parsing & Multi-Source Fallback | COMPLETED |
+| [Epic 4](./epic-4-qbittorrent-download-monitoring.md) | qBittorrent Download Monitoring | COMPLETED |
+| [Epic 5](./epic-5-media-library-management.md) | Media Library Management | COMPLETED |
+| [Epic 6](./epic-6-system-configuration-backup.md) | System Configuration & Backup | COMPLETED |
 
-**FRs covered:** FR1, FR2, FR3, FR4, FR11, FR12, FR13, FR14
-
-**Implementation Notes:**
-- NFR-I5: TMDb API v3 with zh-TW language priority
-- NFR-I6: Respect TMDb rate limits (40 req/10s)
-- NFR-I7: TMDb response cache 24 hours
-- NFR-P5: Search API <500ms (p95)
-- UX-1: Desktop-first design with hover interactions
-- UX-8: Hover over Click principle
+See [Completed Work Registry](./completed-work-registry.md) for the mapping of 50 completed stories to v4 feature IDs.
 
 ---
 
-## Epic 3: AI-Powered Fansub Parsing & Multi-Source Fallback
-**Phase:** 1.0 (Q2 - June 2026)
+## Phase 1: Core Media Pipeline
 
-Users can parse complex fansub naming conventions (e.g., `[Leopard-Raws]`, `【幻櫻字幕組】`) using AI (Gemini/Claude). The system implements a four-layer fallback mechanism (TMDb → Douban → Wikipedia → AI → Manual), automatically retries when sources fail, learns from user corrections, and provides graceful degradation with clear next steps.
+### Epic 7: Media Library Scanner
+**File:** [epic-7-media-library-scanner.md](./epic-7-media-library-scanner.md)
 
-**FRs covered:** FR15, FR16, FR17, FR18, FR19, FR20, FR21, FR22, FR23, FR24, FR25, FR26
+Users can configure media library paths, trigger recursive scanning, have filenames parsed (regex + AI), auto-match TMDB, get zh-TW metadata fallback, and browse their library in grid/list views.
 
-**Implementation Notes:**
-- ARCH-2: Multi-source metadata orchestrator
-- ARCH-3: AI Provider Abstraction Layer (Gemini/Claude switching, 30-day cache)
-- ARCH-7: Circuit Breaker Pattern for external services
-- NFR-P14: AI fansub parsing <10 seconds per file
-- NFR-R3: Auto-retry TMDb → Douban within <1 second
-- UX-3: AI parsing wait experience (progress visualization)
-- UX-4: Failure handling friendliness
-- UX-5: Learning system feedback
+**v4 Feature IDs:** P1-001, P1-002, P1-003, P1-004, P1-005, P1-006, P1-007
 
 ---
 
-## Epic 4: qBittorrent Download Monitoring
-**Phase:** 1.0 (Q2 - June 2026)
+### Epic 8: Subtitle Engine
+**File:** [epic-8-subtitle-engine.md](./epic-8-subtitle-engine.md)
 
-Users can connect to their qBittorrent instance, monitor download status in real-time (progress, speed, ETA, status), view a unified download dashboard, filter downloads by status, and see connection health indicators. The system automatically detects completed downloads and triggers parsing.
+Users can search for Traditional Chinese subtitles across multiple sources (Assrt, Zimuku, OpenSubtitles), with correct 簡繁 identification, automatic OpenCC conversion, subtitle scoring/ranking, auto-download, manual search UI, and batch processing.
 
-**FRs covered:** FR27, FR28, FR29, FR30, FR31, FR32, FR33
-
-**Implementation Notes:**
-- NFR-I1: qBittorrent Web API v2.x with backward compatibility
-- NFR-I2: Connection health detection within <10 seconds
-- NFR-I3: Support qBittorrent behind reverse proxy
-- NFR-P8: qBittorrent status updates <5 seconds
-- NFR-R6: Auto-recover from qBittorrent failures (30s reconnection)
-- ARCH-8: Health Check Scheduler
+**v4 Feature IDs:** P1-010, P1-011, P1-012, P1-013, P1-014, P1-015, P1-016, P1-017, P1-018, P1-019
 
 ---
 
-## Epic 5: Media Library Management
-**Phase:** 1.0 (Q2 - June 2026)
+### Epic 9: AI Subtitle Enhancement
+**File:** [epic-9-ai-subtitle-enhancement.md](./epic-9-ai-subtitle-enhancement.md)
 
-Users can browse their complete media library collection, search within the library, sort by date/title/year/rating, filter by genre/year/type, toggle between grid and list views, view detailed media pages with cast info and trailers, perform batch operations, and see metadata source indicators.
+Optional AI-powered subtitle enhancements: terminology correction (簡→繁 word-level fixes using Claude API) and MKV English audio track translation (Whisper transcription → translation).
 
-**FRs covered:** FR5, FR6, FR7, FR8, FR38, FR39, FR40, FR41, FR42
-
-**Implementation Notes:**
-- NFR-SC6: Virtual scrolling when library >1,000 items
-- NFR-SC8: SQLite FTS5 for full-text search <500ms
-- NFR-P6: Media library listing API <300ms (p95)
-- NFR-P10: Grid scrolling 60 FPS
-- UX-9: Appreciation Loop (browse → see zh-TW posters → select content)
+**v4 Feature IDs:** P1-020, P1-021
 
 ---
 
-## Epic 6: System Configuration & Backup
-**Phase:** 1.0 (Q2 - June 2026)
+## Phase 2: Discovery & Browse Experience
 
-Users can complete initial setup via a guided wizard (<5 steps), manage cache, view system logs, see service connection status, receive update notifications, backup/restore data with integrity verification, export/import metadata (JSON/YAML/NFO), configure backup schedules, and view performance metrics with scalability warnings.
+### Epic 10: Homepage TV Wall
+**File:** [epic-10-homepage-tv-wall.md](./epic-10-homepage-tv-wall.md)
 
-**FRs covered:** FR52, FR53, FR54, FR55, FR56, FR57, FR58, FR59, FR60, FR61, FR62, FR63, FR64, FR65, FR66
+Users see a Hero Banner with trending content, customizable explore blocks, smart trending with server-side language/region filtering, auto-hiding of low-quality content, and "已有/已請求" badges.
 
-**Implementation Notes:**
-- ARCH-4: Background Task Queue for scheduled backups
-- ARCH-5: Cache Management System (multi-tier)
-- ARCH-6: Secrets Management Service
-- NFR-U2: Setup wizard <5 steps
-- NFR-R7: SQLite atomic backups (.backup command)
-- NFR-R8: Backup integrity verification (checksum)
-- UX-6: Activity Monitor Center
-- UX-7: Minimal onboarding
+**v4 Feature IDs:** P2-001, P2-002, P2-003, P2-004, P2-005, P2-006
 
 ---
 
-## Epic 7: User Authentication & Access Control
-**Phase:** 1.0 (Q2 - June 2026)
+### Epic 11: Advanced Search & Filter
+**File:** [epic-11-advanced-search-filter.md](./epic-11-advanced-search-filter.md)
 
-Users must authenticate via password/PIN to access Vido. The system manages secure sessions with cryptographically-signed tokens, protects all API endpoints, and implements rate limiting to prevent abuse.
+Users can filter content by multiple dimensions simultaneously using persistent chip UI, complex sorting, instant search with debounced suggestions, zh-TW search priority, and saved filter presets.
 
-**FRs covered:** FR67, FR68, FR69, FR70
-
-**Implementation Notes:**
-- NFR-S9: All endpoints require authentication
-- NFR-S10: Secure, cryptographically-signed session tokens
-- NFR-S11: API endpoints protected with auth tokens
-- NFR-S12: Rate limiting (100 requests/minute per IP)
-- NFR-S13: Failed auth attempts rate-limited (5 per 15 min)
+**v4 Feature IDs:** P2-010, P2-011, P2-012, P2-013, P2-014, P2-015
 
 ---
 
-## Epic 8: Advanced Download Control
-**Phase:** Growth (Q3+ - September 2026+)
+### Epic 12: Rich Media Detail Page
+**File:** [epic-12-rich-media-detail-page.md](./epic-12-rich-media-detail-page.md)
 
-Users can control qBittorrent directly from Vido (pause/resume/delete torrents), adjust download priorities, manage bandwidth settings, and schedule downloads.
+Enhanced media detail page with TMDB + Douban dual ratings, TV show season/episode lists with subtitle status, related recommendations, streaming platform availability, trailer embeds, and Douban links.
 
-**FRs covered:** FR34, FR35, FR36, FR37
-
-**Implementation Notes:**
-- Builds upon Epic 4 (qBittorrent Monitoring)
-- Extends qBittorrent API integration with write operations
+**v4 Feature IDs:** P2-020, P2-021, P2-022, P2-023, P2-024, P2-025
 
 ---
 
-## Epic 9: Subtitle Integration
-**Phase:** Growth (Q3+ - September 2026+)
+## Phase 3: Automation & Integration
 
-Users can search for subtitles (OpenSubtitles and Zimuku), with Traditional Chinese subtitles prioritized. Users can download subtitle files, manually upload subtitles, enable automatic subtitle downloads, and see subtitle availability status.
+### Epic 13: Request System
+**File:** [epic-13-request-system.md](./epic-13-request-system.md)
 
-**FRs covered:** FR75, FR76, FR77, FR78, FR79, FR80
+Users can one-click request movies/shows, request specific seasons/episodes, track request status, optionally route through Sonarr/Radarr, and auto-trigger subtitle search on completion.
 
-**Implementation Notes:**
-- Key pain point from UX research: subtitle timeline matching
-- Consider AI-assisted subtitle matching in future iterations
+**v4 Feature IDs:** P3-001, P3-002, P3-003, P3-004, P3-005
 
 ---
 
-## Epic 10: Smart Recommendations & Discovery
-**Phase:** Growth (Q3+ - September 2026+)
+### Epic 14: Download Management v2
+**File:** [epic-14-download-management-v2.md](./epic-14-download-management-v2.md)
 
-Users can receive smart recommendations based on genre, cast, and director, and see "similar titles" suggestions to discover new content.
+Enhanced download management with qBittorrent control (DONE), optional NZBGet support, SSE real-time progress push, download completion notifications, and future internal BT engine.
 
-**FRs covered:** FR9, FR10
-
-**Implementation Notes:**
-- Builds upon media library data from Epic 5
-- Recommendation engine based on user's collection patterns
+**v4 Feature IDs:** P3-010, P3-011, P3-012, P3-013, P3-014
 
 ---
 
-## Epic 11: Watch History & Collections
-**Phase:** Growth (Q3+ - September 2026+)
+### Epic 15: Indexer Integration
+**File:** [epic-15-indexer-integration.md](./epic-15-indexer-integration.md)
 
-Users can track personal watch history, see watch progress indicators, mark media as watched/unwatched, and create custom collections of media items.
+Users can connect to Prowlarr for indexer management, or use Vido's built-in basic public tracker search when Prowlarr is not configured.
 
-**FRs covered:** FR43, FR44, FR45, FR46
-
-**Implementation Notes:**
-- Foundation for future multi-user personal tracking (Epic 13)
-- Syncs with Plex/Jellyfin in Epic 14
+**v4 Feature IDs:** P3-020, P3-021
 
 ---
 
-## Epic 12: Automation & Organization
-**Phase:** Growth (Q3+ - September 2026+)
+## Phase 4: Polish & Ecosystem
 
-The system can monitor watch folders to detect new files, automatically trigger parsing, rename files based on user-configured patterns, move files to organized directory structures, and execute automation tasks in background processing queue.
+### Epic 16: Media Statistics Dashboard
+**File:** [epic-16-media-statistics-dashboard.md](./epic-16-media-statistics-dashboard.md)
 
-**FRs covered:** FR81, FR82, FR83, FR84, FR85, FR86
+Users see a dashboard with library overview (counts, disk usage, resolution distribution), subtitle coverage visualization, genre/region/year distribution charts, and recently added media.
 
-**Implementation Notes:**
-- ARCH-4: Background Task Queue
-- Builds upon AI parsing from Epic 3
+**v4 Feature IDs:** P4-001, P4-002, P4-003, P4-004
 
 ---
 
-## Epic 13: Multi-User Support
-**Phase:** Growth (Q3+ - September 2026+)
+### Epic 17: Media Server Integration
+**File:** [epic-17-media-server-integration.md](./epic-17-media-server-integration.md)
 
-The system supports multiple user accounts with admin/user permission management. Each user has their own personal watch history and preference settings.
+Users can connect Plex or Jellyfin to sync watch history, see "繼續觀看" on homepage, and synchronize library inventory to mark owned content in explore views.
 
-**FRs covered:** FR71, FR72, FR73, FR74
-
-**Implementation Notes:**
-- NFR-SC4: Support 5 concurrent user sessions
-- NFR-SC10: Database schema supports future user tables
-- Extends Epic 7 authentication system
+**v4 Feature IDs:** P4-010, P4-011, P4-012
 
 ---
 
-## Epic 14: External API & Mobile Application
-**Phase:** Growth (Q3+ - September 2026+)
+### Epic 18: Service Health Monitoring
+**File:** [epic-18-service-health-monitoring.md](./epic-18-service-health-monitoring.md)
 
-The system provides a versioned RESTful API (/api/v1) with OpenAPI/Swagger documentation, supports webhook subscriptions for external automation, enables metadata export to Plex/Jellyfin with watch status sync. Users can access Vido via mobile application and remotely control downloads.
+Users see connection status of all configured external services, disk space warnings, and a searchable/filterable activity log.
 
-**FRs covered:** FR87, FR88, FR89, FR90, FR91, FR92, FR93, FR94
-
-**Implementation Notes:**
-- ARCH-9: API Versioning Strategy
-- NFR-I16: Versioned API (/api/v1)
-- NFR-I17: OpenAPI/Swagger spec
-- NFR-I18: Webhook support for events
-- UX-2: Mobile simplified monitoring
+**v4 Feature IDs:** P4-020, P4-021, P4-022
 
 ---
+
+## Archived Epics (v3 PRD — superseded)
+
+Old Epics 7-14 have been archived to `archive/`. Their scope has been redistributed across Epics A-L under the v4 feature ID system.
