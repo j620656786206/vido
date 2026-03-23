@@ -320,6 +320,16 @@ func main() {
 	defer sseHub.Close()
 	slog.Info("SSE hub initialized")
 
+	// Initialize scanner service for media library scanning (Story 7.1)
+	scannerService := services.NewScannerService(
+		repos.Movies,
+		repos.Series,
+		cfg.MediaDirs,
+		sseHub,
+		slog.Default(),
+	)
+	slog.Info("Scanner service initialized")
+
 	// Initialize event emitter for real-time parse progress (Story 3.10)
 	parseEventEmitter := events.NewChannelEmitter()
 	defer parseEventEmitter.Close()
@@ -355,6 +365,7 @@ func main() {
 	backupHandler := handlers.NewBackupHandler(backupService)
 	backupHandler.SetScheduler(backupScheduler)
 	exportHandler := handlers.NewExportHandler(exportService)
+	scannerHandler := handlers.NewScannerHandler(scannerService)
 	// parseProgressHandler already initialized above with defer Close()
 	slog.Info("Handlers initialized with service injection")
 
@@ -395,6 +406,7 @@ func main() {
 		downloadHandler.RegisterRoutes(apiV1)
 		libraryHandler.RegisterRoutes(apiV1)
 		recentMediaHandler.RegisterRoutes(apiV1)
+		scannerHandler.RegisterRoutes(apiV1)
 		// SSE event stream endpoint
 		apiV1.GET("/events", sse.Handler(sseHub))
 		// Health services endpoint (Story 3.12 - Graceful Degradation)

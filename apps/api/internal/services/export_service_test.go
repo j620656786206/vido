@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/vido/api/internal/models"
@@ -56,6 +57,21 @@ func (m *MockMovieRepoExport) GetDistinctGenres(ctx context.Context) ([]string, 
 }
 func (m *MockMovieRepoExport) GetYearRange(ctx context.Context) (int, int, error) { return 0, 0, nil }
 func (m *MockMovieRepoExport) Count(ctx context.Context) (int, error)             { return 0, nil }
+func (m *MockMovieRepoExport) BulkCreate(ctx context.Context, movies []*models.Movie) error {
+	return nil
+}
+func (m *MockMovieRepoExport) FindByParseStatus(ctx context.Context, status models.ParseStatus) ([]models.Movie, error) {
+	return nil, nil
+}
+func (m *MockMovieRepoExport) UpdateSubtitleStatus(ctx context.Context, id string, status models.SubtitleStatus, path, language string, score float64) error {
+	return nil
+}
+func (m *MockMovieRepoExport) FindBySubtitleStatus(ctx context.Context, status models.SubtitleStatus) ([]models.Movie, error) {
+	return nil, nil
+}
+func (m *MockMovieRepoExport) FindNeedingSubtitleSearch(ctx context.Context, olderThan time.Time) ([]models.Movie, error) {
+	return nil, nil
+}
 
 // MockSeriesRepoExport implements SeriesRepositoryInterface for testing
 type MockSeriesRepoExport struct {
@@ -94,6 +110,21 @@ func (m *MockSeriesRepoExport) GetYearRange(ctx context.Context) (int, int, erro
 	return 0, 0, nil
 }
 func (m *MockSeriesRepoExport) Count(ctx context.Context) (int, error) { return 0, nil }
+func (m *MockSeriesRepoExport) BulkCreate(ctx context.Context, seriesList []*models.Series) error {
+	return nil
+}
+func (m *MockSeriesRepoExport) FindByParseStatus(ctx context.Context, status models.ParseStatus) ([]models.Series, error) {
+	return nil, nil
+}
+func (m *MockSeriesRepoExport) UpdateSubtitleStatus(ctx context.Context, id string, status models.SubtitleStatus, path, language string, score float64) error {
+	return nil
+}
+func (m *MockSeriesRepoExport) FindBySubtitleStatus(ctx context.Context, status models.SubtitleStatus) ([]models.Series, error) {
+	return nil, nil
+}
+func (m *MockSeriesRepoExport) FindNeedingSubtitleSearch(ctx context.Context, olderThan time.Time) ([]models.Series, error) {
+	return nil, nil
+}
 
 func setupExportMocks() (*MockMovieRepoExport, *MockSeriesRepoExport) {
 	movieRepo := new(MockMovieRepoExport)

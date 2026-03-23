@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -209,6 +210,21 @@ func (m *mockPQMovieRepo) GetDistinctGenres(_ context.Context) ([]string, error)
 }
 func (m *mockPQMovieRepo) GetYearRange(_ context.Context) (int, int, error) { return 0, 0, nil }
 func (m *mockPQMovieRepo) Count(_ context.Context) (int, error)            { return 0, nil }
+func (m *mockPQMovieRepo) BulkCreate(_ context.Context, _ []*models.Movie) error {
+	return nil
+}
+func (m *mockPQMovieRepo) FindByParseStatus(_ context.Context, _ models.ParseStatus) ([]models.Movie, error) {
+	return nil, nil
+}
+func (m *mockPQMovieRepo) UpdateSubtitleStatus(_ context.Context, _ string, _ models.SubtitleStatus, _, _ string, _ float64) error {
+	return nil
+}
+func (m *mockPQMovieRepo) FindBySubtitleStatus(_ context.Context, _ models.SubtitleStatus) ([]models.Movie, error) {
+	return nil, nil
+}
+func (m *mockPQMovieRepo) FindNeedingSubtitleSearch(_ context.Context, _ time.Time) ([]models.Movie, error) {
+	return nil, nil
+}
 
 var _ repository.MovieRepositoryInterface = (*mockPQMovieRepo)(nil)
 
@@ -265,6 +281,21 @@ func (m *mockPQSeriesRepo) GetDistinctGenres(_ context.Context) ([]string, error
 }
 func (m *mockPQSeriesRepo) GetYearRange(_ context.Context) (int, int, error) { return 0, 0, nil }
 func (m *mockPQSeriesRepo) Count(_ context.Context) (int, error)            { return 0, nil }
+func (m *mockPQSeriesRepo) BulkCreate(_ context.Context, _ []*models.Series) error {
+	return nil
+}
+func (m *mockPQSeriesRepo) FindByParseStatus(_ context.Context, _ models.ParseStatus) ([]models.Series, error) {
+	return nil, nil
+}
+func (m *mockPQSeriesRepo) UpdateSubtitleStatus(_ context.Context, _ string, _ models.SubtitleStatus, _, _ string, _ float64) error {
+	return nil
+}
+func (m *mockPQSeriesRepo) FindBySubtitleStatus(_ context.Context, _ models.SubtitleStatus) ([]models.Series, error) {
+	return nil, nil
+}
+func (m *mockPQSeriesRepo) FindNeedingSubtitleSearch(_ context.Context, _ time.Time) ([]models.Series, error) {
+	return nil, nil
+}
 
 var _ repository.SeriesRepositoryInterface = (*mockPQSeriesRepo)(nil)
 

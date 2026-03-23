@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -109,6 +110,22 @@ func (m *MockMovieRepository) GetYearRange(ctx context.Context) (int, int, error
 func (m *MockMovieRepository) Count(ctx context.Context) (int, error) {
 	args := m.Called(ctx)
 	return args.Int(0), args.Error(1)
+}
+
+func (m *MockMovieRepository) BulkCreate(ctx context.Context, movies []*models.Movie) error {
+	return m.Called(ctx, movies).Error(0)
+}
+func (m *MockMovieRepository) FindByParseStatus(ctx context.Context, status models.ParseStatus) ([]models.Movie, error) {
+	return nil, nil
+}
+func (m *MockMovieRepository) UpdateSubtitleStatus(ctx context.Context, id string, status models.SubtitleStatus, path, language string, score float64) error {
+	return nil
+}
+func (m *MockMovieRepository) FindBySubtitleStatus(ctx context.Context, status models.SubtitleStatus) ([]models.Movie, error) {
+	return nil, nil
+}
+func (m *MockMovieRepository) FindNeedingSubtitleSearch(ctx context.Context, olderThan time.Time) ([]models.Movie, error) {
+	return nil, nil
 }
 
 // Verify mock implements interface
