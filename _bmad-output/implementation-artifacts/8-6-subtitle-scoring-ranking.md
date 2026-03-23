@@ -1,6 +1,6 @@
 # Story 8.6: Subtitle Scoring and Ranking
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -55,56 +55,56 @@ so that **the best-matching Traditional Chinese subtitle is automatically priori
 ## Tasks / Subtasks
 
 ### Task 1: Define Scoring Types (AC: #1, #7)
-- [ ] 1.1 Create `apps/api/internal/subtitle/scorer.go`
-- [ ] 1.2 Define `ScoredResult` struct: embeds `SubtitleResult`, adds `Score float64`, `ScoreBreakdown ScoreBreakdown`
-- [ ] 1.3 Define `ScoreBreakdown` struct with fields: `Language`, `Resolution`, `SourceTrust`, `Group`, `Downloads` (all `float64`)
-- [ ] 1.4 Define `ScorerConfig` struct with configurable weights and provider trust map
-- [ ] 1.5 Define `NewDefaultScorerConfig()` returning default weights (0.4, 0.2, 0.2, 0.1, 0.1)
+- [x] 1.1 Create `apps/api/internal/subtitle/scorer.go`
+- [x] 1.2 Define `ScoredResult` struct: embeds `providers.SubtitleResult`, adds `Score float64`, `ScoreBreakdown ScoreBreakdown`
+- [x] 1.3 Define `ScoreBreakdown` struct with fields: `Language`, `Resolution`, `SourceTrust`, `Group`, `Downloads` (all `float64`, JSON-tagged)
+- [x] 1.4 Define `ScorerConfig` struct with configurable weights and provider trust map
+- [x] 1.5 Define `NewDefaultScorerConfig()` returning default weights (0.4, 0.2, 0.2, 0.1, 0.1)
 
 ### Task 2: Implement Language Factor (AC: #2)
-- [ ] 2.1 Create `scorerLanguage(lang string) float64` method
-- [ ] 2.2 Map zh-Hant, zh-TW → 1.0; zh-Hans, zh-CN → 0.6; all other → 0.0
-- [ ] 2.3 Handle case-insensitive language tag comparison
+- [x] 2.1 Create `scoreLanguage(lang string) float64` function
+- [x] 2.2 Map zh-Hant/zh-TW/CHT/繁體 → 1.0; zh-Hans/zh-CN/CHS/簡體 → 0.6; zh → 0.4; all other → 0.0
+- [x] 2.3 Handle case-insensitive comparison via `strings.ToLower()`
 
 ### Task 3: Implement Resolution Factor (AC: #3)
-- [ ] 3.1 Create `scoreResolution(mediaRes, subtitleRes string) float64` method
-- [ ] 3.2 Exact match → 1.0, untagged → 0.5, mismatch → 0.2
-- [ ] 3.3 Normalize resolution strings (e.g., "1080p", "1080", "FHD" → "1080p")
+- [x] 3.1 Create `scoreResolution(mediaRes, subtitleRes string) float64` function
+- [x] 3.2 Exact match → 1.0, untagged → 0.5, mismatch → 0.2
+- [x] 3.3 `normalizeResolution()`: "1080p"/"1080"/"FHD"/"FullHD" → "1080p", "4K"/"UHD" → "2160p", etc.
 
 ### Task 4: Implement Source Trust Factor (AC: #4)
-- [ ] 4.1 Create `scoreSourceTrust(providerName string) float64` method
-- [ ] 4.2 Default trust map: `{"assrt": 0.8, "opensubtitles": 0.7, "zimuku": 0.6}`
-- [ ] 4.3 Unknown provider defaults to 0.5
+- [x] 4.1 Create `scoreSourceTrust(providerName string) float64` method on Scorer
+- [x] 4.2 Default trust map: `{"assrt": 0.8, "opensubtitles": 0.7, "zimuku": 0.6}`
+- [x] 4.3 Unknown provider defaults to 0.5
 
 ### Task 5: Implement Group Match Factor (AC: #5)
-- [ ] 5.1 Create `scoreGroup(groupName string) float64` method
-- [ ] 5.2 Define `knownFansubGroups` set with initial entries (e.g., "CHD", "CMCT", "MySiLU", "FLTth", "HDChina")
-- [ ] 5.3 Known group → 1.0, unknown non-empty → 0.3, empty → 0.0
+- [x] 5.1 Create `scoreGroup(groupName string) float64` function
+- [x] 5.2 Define `knownFansubGroups` set with 24 entries (CHD, CMCT, MySiLU, YYeTs, 幻櫻字幕組, Leopard-Raws, etc.)
+- [x] 5.3 Known group → 1.0, unknown non-empty → 0.3, empty → 0.0
 
 ### Task 6: Implement Downloads Factor (AC: #6)
-- [ ] 6.1 Create `scoreDownloads(count int, maxCount int) float64` method
-- [ ] 6.2 Normalize: `float64(count) / float64(maxCount)`
-- [ ] 6.3 Handle maxCount == 0 edge case (return 0.0)
+- [x] 6.1 Create `scoreDownloads(count int, maxCount int) float64` function
+- [x] 6.2 Normalize: `float64(count) / float64(maxCount)`
+- [x] 6.3 Handle maxCount <= 0 edge case (return 0.0)
 
 ### Task 7: Implement Score Aggregation and Sorting (AC: #1, #7)
-- [ ] 7.1 Create `Scorer` struct with `config ScorerConfig`
-- [ ] 7.2 Implement `Score(results []SubtitleResult, mediaResolution string) []ScoredResult`
-- [ ] 7.3 Calculate composite: `lang*0.4 + res*0.2 + trust*0.2 + group*0.1 + dl*0.1`
-- [ ] 7.4 Sort descending by Score, then by DownloadCount for ties
-- [ ] 7.5 Populate `ScoreBreakdown` on each result for debugging/UI display
+- [x] 7.1 Create `Scorer` struct with `config ScorerConfig`
+- [x] 7.2 Implement `Score(results []providers.SubtitleResult, mediaResolution string) []ScoredResult`
+- [x] 7.3 Calculate composite: `lang*0.4 + res*0.2 + trust*0.2 + group*0.1 + dl*0.1`
+- [x] 7.4 Sort descending by Score, then by DownloadCount for ties (`sort.SliceStable`)
+- [x] 7.5 Populate `ScoreBreakdown` on each result for debugging/UI display
 
 ### Task 8: Write Tests (AC: #1–#7)
-- [ ] 8.1 Create `apps/api/internal/subtitle/scorer_test.go`
-- [ ] 8.2 Test language factor: zh-Hant=1.0, zh-Hans=0.6, en=0.0, empty=0.0
-- [ ] 8.3 Test resolution factor: exact match, untagged, mismatch
-- [ ] 8.4 Test source trust: known providers, unknown provider
-- [ ] 8.5 Test group match: known group, unknown group, empty
-- [ ] 8.6 Test downloads normalization: various counts, single result, zero max
-- [ ] 8.7 Test composite scoring with full result set
-- [ ] 8.8 Test sort order: descending score, tie-breaking by downloads
-- [ ] 8.9 Test empty input returns empty slice
-- [ ] 8.10 Test custom ScorerConfig overrides defaults
-- [ ] 8.11 Ensure >80% coverage on scorer.go
+- [x] 8.1 Create `apps/api/internal/subtitle/scorer_test.go`
+- [x] 8.2 Test language factor: zh-Hant=1.0, zh-Hans=0.6, zh=0.4, en=0.0, empty=0.0 — TestScoreLanguage (14 cases)
+- [x] 8.3 Test resolution factor: exact match, untagged, mismatch — TestScoreResolution (8 cases) + TestNormalizeResolution (11 cases)
+- [x] 8.4 Test source trust: known providers, unknown provider — TestScoreSourceTrust
+- [x] 8.5 Test group match: known group, unknown group, empty — TestScoreGroup (5 cases)
+- [x] 8.6 Test downloads normalization: various counts, single result, zero max — TestScoreDownloads (5 cases)
+- [x] 8.7 Test composite scoring with full result set — TestScorer_Score_CompositeScoring
+- [x] 8.8 Test sort order: descending score, tie-breaking by downloads — TestScorer_Score_SortOrder + TestScorer_Score_TieBreakByDownloads
+- [x] 8.9 Test empty input returns nil — TestScorer_Score_EmptyInput
+- [x] 8.10 Test custom ScorerConfig overrides defaults — TestScorer_Score_CustomConfig
+- [x] 8.11 Coverage: 93.3% (target >80%)
 
 ## Dev Notes
 
@@ -130,5 +130,19 @@ so that **the best-matching Traditional Chinese subtitle is automatically priori
 ## Dev Agent Record
 
 ### Agent Model Used
+Claude Opus 4.6 (1M context)
+
 ### Completion Notes List
+- Multi-factor scoring: Language 40% + Resolution 20% + Source trust 20% + Group 10% + Downloads 10%
+- Language scoring includes zh (ambiguous) = 0.4 and Chinese label variants (繁體/簡體/CHT/CHS)
+- Resolution normalization: FHD/FullHD → 1080p, 4K/UHD → 2160p, HD → 720p, SD → 480p
+- 24 known fansub groups including Chinese groups (幻櫻字幕組, 天使動漫, Leopard-Raws)
+- ScorerConfig is fully configurable (custom weights + trust map)
+- ScoreBreakdown exposed for UI transparency (Story 8-8)
+- sort.SliceStable for deterministic ordering; tie-break by download count
+- 12 test functions with 60+ test cases, 93.3% coverage
+- 🎨 UX Verification: SKIPPED — no UI changes
+
 ### File List
+- apps/api/internal/subtitle/scorer.go (NEW)
+- apps/api/internal/subtitle/scorer_test.go (NEW)
