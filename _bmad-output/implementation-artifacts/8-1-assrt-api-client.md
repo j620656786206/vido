@@ -1,6 +1,6 @@
 # Story 8.1: Assrt API Client
 
-Status: review
+Status: done
 
 ## Story
 
@@ -103,6 +103,15 @@ Claude Opus 4.6 (1M context)
 - 13 unit tests with httptest mock server, 82.4% coverage
 - Full regression suite passes (all existing packages cached + new tests green)
 - 🎨 UX Verification: SKIPPED — no UI changes in this story
+
+### Code Review Findings (applied 2026-03-23)
+- **HIGH — Unbounded io.ReadAll (OOM risk)**: All 3 `io.ReadAll` calls had no size limit. Fixed: API JSON responses capped at 1MB via `io.LimitReader`, subtitle downloads capped at 50MB.
+- **HIGH — API key leakable in error messages**: Go's `http` package can include full URLs (with `token=` query param) in error messages. Fixed: added `sanitizeTokenError()` helper that redacts token values from error strings.
+- **MEDIUM — Rate limiter burst=1 too restrictive**: Token bucket burst was 1 but rate is 2 req/s. Fixed: burst set to 2 (matching rate) via `assrtRateBurst` const.
+- **MEDIUM — No validation of empty search title**: `Search()` accepted empty Title, sending meaningless API requests. Fixed: early return with descriptive error.
+- **MEDIUM — Flaky context cancellation test (5s block)**: Test server handler slept 5s unconditionally, blocking `server.Close()`. Fixed: handler now listens on `r.Context().Done()` to exit promptly.
+- **LOW — No User-Agent header**: Requests lacked identification. Fixed: all requests now send `User-Agent: Vido/1.0 (NAS Media Manager)`.
+- **LOW — Dead code in test helper**: Unused `origBaseURL` variable removed.
 
 ### File List
 - apps/api/internal/subtitle/providers/provider.go (NEW)

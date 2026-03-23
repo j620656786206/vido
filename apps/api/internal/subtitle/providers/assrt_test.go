@@ -111,6 +111,20 @@ func TestAssrtProvider_SearchSuccess_NativeName(t *testing.T) {
 	assert.Equal(t, "進擊的巨人 第02話", results[1].Filename)
 }
 
+func TestAssrtProvider_SearchEmptyTitle(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Fatal("should not reach server with empty title")
+	}))
+	defer server.Close()
+
+	p := newTestAssrtProvider("test-key", server.URL)
+
+	results, err := p.Search(context.Background(), SubtitleQuery{Title: ""})
+	assert.Error(t, err)
+	assert.Nil(t, results)
+	assert.Contains(t, err.Error(), "title is required")
+}
+
 func TestAssrtProvider_SearchDisabled(t *testing.T) {
 	// When API key is not configured, provider should return empty, not error
 	p := NewAssrtProvider(context.Background(), newMockSecrets(map[string]string{}))
@@ -311,22 +325,27 @@ func TestAssrtProvider_RateLimiter(t *testing.T) {
 
 	p := newTestAssrtProvider("test-key", server.URL)
 
-	// Make 3 rapid requests — should be throttled
+	// Make 4 rapid requests — should be throttled
+	// With burst=2, first 2 go immediately, then ~500ms each for 3rd and 4th
 	start := time.Now()
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 4; i++ {
 		_, _ = p.Search(context.Background(), SubtitleQuery{Title: "test"})
 	}
 	elapsed := time.Since(start)
 
-	// With 2 req/s limit, 3 requests should take at least ~1 second
-	// (first goes through immediately, 2nd waits ~500ms, 3rd waits ~500ms)
+	// With 2 req/s limit and burst=2, 4 requests should take at least ~1 second
 	assert.GreaterOrEqual(t, elapsed, 800*time.Millisecond, "rate limiter should throttle requests")
-	assert.Equal(t, int32(3), atomic.LoadInt32(&requestCount))
+	assert.Equal(t, int32(4), atomic.LoadInt32(&requestCount))
 }
 
 func TestAssrtProvider_ContextCancellation(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		time.Sleep(5 * time.Second) // Simulate slow response
+		// Use the request context to detect client disconnect, avoiding
+		// a long sleep that blocks server.Close() and slows CI.
+		select {
+		case <-r.Context().Done():
+		case <-time.After(5 * time.Second):
+		}
 	}))
 	defer server.Close()
 
@@ -347,14 +366,8 @@ func newTestAssrtProvider(apiKey, baseURL string) *AssrtProvider {
 		apiKey:      apiKey,
 		disabled:    false,
 		httpClient:  &http.Client{Timeout: 10 * time.Second},
-		rateLimiter: rate.NewLimiter(rate.Limit(assrtRateLimit), 1),
+		rateLimiter: rate.NewLimiter(rate.Limit(assrtRateLimit), assrtRateBurst),
 	}
-	// Override base URL for testing — we patch the const via closure
-	origBaseURL := assrtBaseURL
-	_ = origBaseURL // suppress unused warning
-
-	// We need to override the URL used in Search/Download. Since it's a const,
-	// we'll use a different approach: set a testBaseURL field.
 	p.testBaseURL = baseURL + "/v1"
 	return p
 }

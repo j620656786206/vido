@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"golang.org/x/time/rate"
@@ -16,10 +17,14 @@ import (
 )
 
 const (
-	assrtBaseURL     = "https://api.assrt.net/v1"
-	assrtSecretKey   = "assrt_api_key"
-	assrtRateLimit   = 2 // requests per second
-	assrtHTTPTimeout = 30 * time.Second
+	assrtBaseURL          = "https://api.assrt.net/v1"
+	assrtSecretKey        = "assrt_api_key"
+	assrtRateLimit        = 2 // requests per second
+	assrtRateBurst        = 2 // token bucket burst size
+	assrtHTTPTimeout      = 30 * time.Second
+	assrtMaxResponseBytes = 1 << 20  // 1 MB max for API JSON responses
+	assrtMaxDownloadBytes = 50 << 20 // 50 MB max for subtitle file downloads
+	assrtUserAgent        = "Vido/1.0 (NAS Media Manager)"
 )
 
 // AssrtProvider implements SubtitleProvider for the Assrt (射手網) subtitle source.
@@ -39,7 +44,7 @@ func NewAssrtProvider(ctx context.Context, secretsSvc secrets.SecretsServiceInte
 		httpClient: &http.Client{
 			Timeout: assrtHTTPTimeout,
 		},
-		rateLimiter: rate.NewLimiter(rate.Limit(assrtRateLimit), 1),
+		rateLimiter: rate.NewLimiter(rate.Limit(assrtRateLimit), assrtRateBurst),
 	}
 
 	apiKey, err := secretsSvc.Retrieve(ctx, assrtSecretKey)
@@ -117,6 +122,10 @@ func (p *AssrtProvider) Search(ctx context.Context, query SubtitleQuery) ([]Subt
 		return nil, nil
 	}
 
+	if query.Title == "" {
+		return nil, fmt.Errorf("assrt: search title is required")
+	}
+
 	if err := p.rateLimiter.Wait(ctx); err != nil {
 		return nil, fmt.Errorf("assrt rate limiter: %w", err)
 	}
@@ -127,25 +136,27 @@ func (p *AssrtProvider) Search(ctx context.Context, query SubtitleQuery) ([]Subt
 	}
 
 	q := u.Query()
-	q.Set("q", query.Title)
 	q.Set("token", p.apiKey)
 	if query.Year > 0 {
 		q.Set("q", fmt.Sprintf("%s %d", query.Title, query.Year))
+	} else {
+		q.Set("q", query.Title)
 	}
 	u.RawQuery = q.Encode()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
-		return nil, fmt.Errorf("assrt: create request: %w", err)
+		return nil, fmt.Errorf("assrt: create request: %w", sanitizeTokenError(err))
 	}
+	req.Header.Set("User-Agent", assrtUserAgent)
 
 	resp, err := p.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("assrt: search request failed: %w", err)
+		return nil, fmt.Errorf("assrt: search request failed: %w", sanitizeTokenError(err))
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, assrtMaxResponseBytes))
 	if err != nil {
 		return nil, fmt.Errorf("assrt: read response: %w", err)
 	}
@@ -204,16 +215,17 @@ func (p *AssrtProvider) Download(ctx context.Context, id string) ([]byte, error)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
-		return nil, fmt.Errorf("assrt: create detail request: %w", err)
+		return nil, fmt.Errorf("assrt: create detail request: %w", sanitizeTokenError(err))
 	}
+	req.Header.Set("User-Agent", assrtUserAgent)
 
 	resp, err := p.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("assrt: detail request failed: %w", err)
+		return nil, fmt.Errorf("assrt: detail request failed: %w", sanitizeTokenError(err))
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, assrtMaxResponseBytes))
 	if err != nil {
 		return nil, fmt.Errorf("assrt: read detail response: %w", err)
 	}
@@ -251,6 +263,7 @@ func (p *AssrtProvider) Download(ctx context.Context, id string) ([]byte, error)
 	if err != nil {
 		return nil, fmt.Errorf("assrt: create download request: %w", err)
 	}
+	dlReq.Header.Set("User-Agent", assrtUserAgent)
 
 	dlResp, err := p.httpClient.Do(dlReq)
 	if err != nil {
@@ -262,7 +275,7 @@ func (p *AssrtProvider) Download(ctx context.Context, id string) ([]byte, error)
 		return nil, fmt.Errorf("assrt: download returned HTTP %d", dlResp.StatusCode)
 	}
 
-	data, err := io.ReadAll(dlResp.Body)
+	data, err := io.ReadAll(io.LimitReader(dlResp.Body, assrtMaxDownloadBytes))
 	if err != nil {
 		return nil, fmt.Errorf("assrt: read download response: %w", err)
 	}
@@ -272,6 +285,24 @@ func (p *AssrtProvider) Download(ctx context.Context, id string) ([]byte, error)
 	}
 
 	return data, nil
+}
+
+// sanitizeTokenError removes the API token from error messages to prevent
+// accidental secret leakage in logs or error responses.
+func sanitizeTokenError(err error) error {
+	if err == nil {
+		return nil
+	}
+	msg := err.Error()
+	// Look for token= query parameter and redact its value
+	if idx := strings.Index(msg, "token="); idx >= 0 {
+		end := strings.IndexAny(msg[idx:], "&\" ")
+		if end < 0 {
+			end = len(msg) - idx
+		}
+		msg = msg[:idx] + "token=REDACTED" + msg[idx+end:]
+	}
+	return fmt.Errorf("%s", msg)
 }
 
 // Compile-time interface verification.

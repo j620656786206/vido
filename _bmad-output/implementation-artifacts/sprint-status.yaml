@@ -172,7 +172,7 @@ development_status:
   # FRs: P1-010–P1-019
   # ==============================================================================
   epic-8: in-progress
-  8-1-assrt-api-client:          review
+  8-1-assrt-api-client:          done  # CR 2026-03-23: 7 findings, all auto-fixed
   8-2-zimuku-web-scraper:        ready-for-dev
   8-3-opensubtitles-api-client:  ready-for-dev
   8-4-language-detection:        ready-for-dev
