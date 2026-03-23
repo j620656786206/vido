@@ -1,6 +1,6 @@
 # Story 8.1: Assrt API Client
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -20,47 +20,47 @@ so that **I have access to one of the largest Chinese subtitle databases for mat
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Define SubtitleResult and SubtitleQuery types (AC: 1, 3)
-  - [ ] 1.1: Create `apps/api/internal/subtitle/providers/provider.go` with `SubtitleProvider` interface, `SubtitleQuery` struct (Title, Year, ImdbID, Season, Episode, FileHash), and `SubtitleResult` struct (ID, Source, Filename, Language, DownloadURL, FileSize, UploadDate, Downloads, Group)
-  - [ ] 1.2: Write godoc comments for each type and method in the interface
+- [x] Task 1: Define SubtitleResult and SubtitleQuery types (AC: 1, 3)
+  - [x] 1.1: Create `apps/api/internal/subtitle/providers/provider.go` with `SubtitleProvider` interface, `SubtitleQuery` struct (Title, Year, ImdbID, Season, Episode, FileHash, Languages), and `SubtitleResult` struct (ID, Source, Filename, Language, DownloadURL, FileSize, UploadDate, Downloads, Group, Resolution, Format)
+  - [x] 1.2: Write godoc comments for each type and method in the interface
 
-- [ ] Task 2: Implement Assrt API client struct (AC: 1, 2, 5)
-  - [ ] 2.1: Create `apps/api/internal/subtitle/providers/assrt.go` with `AssrtProvider` struct holding apiKey, httpClient, rateLimiter
-  - [ ] 2.2: Implement `NewAssrtProvider(secretsService secrets.Service) *AssrtProvider` constructor — fetch API key from secrets, if not found set `disabled=true`
-  - [ ] 2.3: Add `golang.org/x/time/rate` limiter initialized to 2 requests/second
-  - [ ] 2.4: Implement `Name() string` returning `"assrt"`
+- [x] Task 2: Implement Assrt API client struct (AC: 1, 2, 5)
+  - [x] 2.1: Create `apps/api/internal/subtitle/providers/assrt.go` with `AssrtProvider` struct holding apiKey, httpClient, rateLimiter
+  - [x] 2.2: Implement `NewAssrtProvider(ctx, secretsService) *AssrtProvider` constructor — fetch API key from secrets, if not found set `disabled=true`
+  - [x] 2.3: Add `golang.org/x/time/rate` limiter initialized to 2 requests/second
+  - [x] 2.4: Implement `Name() string` returning `"assrt"`
 
-- [ ] Task 3: Implement Search method (AC: 1, 2, 3, 5, 6, 7)
-  - [ ] 3.1: Implement `Search(ctx context.Context, query SubtitleQuery) ([]SubtitleResult, error)` — if disabled, return `nil, nil`
-  - [ ] 3.2: Build API request URL: `https://api.assrt.net/v1/sub/search` with params `q` (title), `token` (API key)
-  - [ ] 3.3: Call `rateLimiter.Wait(ctx)` before making HTTP request
-  - [ ] 3.4: Parse response JSON — use correct key `native_name` (NOT `name`) for the Chinese title (P1-011 fix)
-  - [ ] 3.5: Map each result to `SubtitleResult` with source="assrt", extract language from metadata fields
-  - [ ] 3.6: Handle HTTP errors: wrap with status code and endpoint context
-  - [ ] 3.7: Handle JSON parse errors: log raw body at debug, return descriptive error
+- [x] Task 3: Implement Search method (AC: 1, 2, 3, 5, 6, 7)
+  - [x] 3.1: Implement `Search(ctx context.Context, query SubtitleQuery) ([]SubtitleResult, error)` — if disabled, return `nil, nil`
+  - [x] 3.2: Build API request URL: `https://api.assrt.net/v1/sub/search` with params `q` (title), `token` (API key)
+  - [x] 3.3: Call `rateLimiter.Wait(ctx)` before making HTTP request
+  - [x] 3.4: Parse response JSON — use correct key `native_name` (NOT `name`) for the Chinese title (P1-011 fix)
+  - [x] 3.5: Map each result to `SubtitleResult` with source="assrt", extract language from metadata fields
+  - [x] 3.6: Handle HTTP errors: wrap with status code and endpoint context
+  - [x] 3.7: Handle JSON parse errors: log raw body at debug, return descriptive error
 
-- [ ] Task 4: Implement Download method (AC: 4, 5, 6)
-  - [ ] 4.1: Implement `Download(ctx context.Context, id string) ([]byte, error)` — fetch subtitle content by ID
-  - [ ] 4.2: Build download URL: `https://api.assrt.net/v1/sub/detail` with subtitle ID, then extract download link
-  - [ ] 4.3: Call `rateLimiter.Wait(ctx)` before each HTTP request
-  - [ ] 4.4: Return raw subtitle file bytes
-  - [ ] 4.5: Handle errors (HTTP errors, empty response, timeout)
+- [x] Task 4: Implement Download method (AC: 4, 5, 6)
+  - [x] 4.1: Implement `Download(ctx context.Context, id string) ([]byte, error)` — fetch subtitle content by ID
+  - [x] 4.2: Build download URL via `/sub/detail` endpoint, then extract download link from filelist
+  - [x] 4.3: Call `rateLimiter.Wait(ctx)` before each HTTP request
+  - [x] 4.4: Return raw subtitle file bytes
+  - [x] 4.5: Handle errors (HTTP errors, empty response, timeout, no download URL)
 
-- [ ] Task 5: Write unit tests (AC: all)
-  - [ ] 5.1: Create `apps/api/internal/subtitle/providers/assrt_test.go`
-  - [ ] 5.2: Use `httptest.NewServer` to mock Assrt API responses
-  - [ ] 5.3: Test successful search with `native_name` parsing (verify P1-011 fix)
-  - [ ] 5.4: Test search when API key is not configured (disabled mode)
-  - [ ] 5.5: Test rate limiter behavior (verify requests are throttled)
-  - [ ] 5.6: Test HTTP error handling (4xx, 5xx, timeout)
-  - [ ] 5.7: Test malformed JSON handling
-  - [ ] 5.8: Test successful download
-  - [ ] 5.9: Verify ≥80% code coverage
+- [x] Task 5: Write unit tests (AC: all)
+  - [x] 5.1: Create `apps/api/internal/subtitle/providers/assrt_test.go`
+  - [x] 5.2: Use `httptest.NewServer` to mock Assrt API responses
+  - [x] 5.3: Test successful search with `native_name` parsing (verify P1-011 fix)
+  - [x] 5.4: Test search when API key is not configured (disabled mode)
+  - [x] 5.5: Test rate limiter behavior (verify requests are throttled)
+  - [x] 5.6: Test HTTP error handling (4xx, 5xx, timeout)
+  - [x] 5.7: Test malformed JSON handling
+  - [x] 5.8: Test successful download
+  - [x] 5.9: Verify ≥80% code coverage — achieved 82.4%
 
-- [ ] Task 6: Build verification (AC: all)
-  - [ ] 6.1: Run `go build ./...` — verify no compilation errors
-  - [ ] 6.2: Run `go test ./internal/subtitle/...` — verify all tests pass
-  - [ ] 6.3: Run `go vet ./internal/subtitle/...` — verify no vet issues
+- [x] Task 6: Build verification (AC: all)
+  - [x] 6.1: Run `go build ./...` — no compilation errors
+  - [x] 6.2: Run `go test ./internal/subtitle/...` — 13 tests pass
+  - [x] 6.3: Run `go vet ./internal/subtitle/...` — no vet issues
 
 ## Dev Notes
 
@@ -92,5 +92,19 @@ The existing Assrt integration had a bug using the wrong response key. The Assrt
 ## Dev Agent Record
 
 ### Agent Model Used
+Claude Opus 4.6 (1M context)
+
 ### Completion Notes List
+- Created shared `SubtitleProvider` interface, `SubtitleQuery`, and `SubtitleResult` types in `provider.go` — stable contract for all 3 providers
+- Implemented `AssrtProvider` with optional API key (disabled mode returns empty, not error)
+- P1-011 fix applied: response parsing uses `native_name` key for Chinese titles
+- Rate limiter: `golang.org/x/time/rate` at 2 req/s with token bucket
+- Download uses two-step flow: detail API → extract download URL from filelist → fetch file
+- 13 unit tests with httptest mock server, 82.4% coverage
+- Full regression suite passes (all existing packages cached + new tests green)
+- 🎨 UX Verification: SKIPPED — no UI changes in this story
+
 ### File List
+- apps/api/internal/subtitle/providers/provider.go (NEW)
+- apps/api/internal/subtitle/providers/assrt.go (NEW)
+- apps/api/internal/subtitle/providers/assrt_test.go (NEW)
