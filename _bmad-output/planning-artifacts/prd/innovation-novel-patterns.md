@@ -118,6 +118,59 @@ Existing tools' Traditional Chinese support:
 
 ---
 
+**4. Pluggable Integration Architecture (v4)**
+
+**Innovation Essence:**
+Vido uses Go interfaces to create a pluggable integration layer for external services, allowing it to function as both a standalone tool and a unified UI for existing *arr stack setups.
+
+**Plugin Types:**
+```go
+type MediaServerPlugin interface {  // Plex, Jellyfin
+    SyncLibrary() ([]MediaItem, error)
+    GetWatchHistory(userID string) ([]WatchRecord, error)
+}
+
+type DownloaderPlugin interface {   // qBittorrent, NZBGet
+    AddDownload(request DownloadRequest) (string, error)
+    GetStatus(id string) (DownloadStatus, error)
+}
+
+type DVRPlugin interface {          // Sonarr, Radarr
+    AddMovie(tmdbID int, qualityProfile string) error
+    AddSeries(tmdbID int, qualityProfile string, seasons []int) error
+}
+```
+
+**Market Differentiation:**
+- MediaManager: Requires *arr stack
+- Sublarr: Requires *arr stack
+- Vido: Works standalone OR with *arr stack (pluggable)
+
+---
+
+**5. Traditional Chinese Subtitle Scoring Engine (v4)**
+
+**Innovation Essence:**
+Multi-factor subtitle scoring algorithm that prioritizes Traditional Chinese quality:
+
+```
+Score = Language Match (40%) + Resolution Match (20%) + Source Trust (20%) + Group Reputation (10%) + Download Count (10%)
+```
+
+**Key Innovation — Content-Based Language Detection:**
+- Analyze subtitle file content (not just filename) to determine 簡體/繁體
+- Prevents the #1 Bazarr bug: Simplified Chinese subtitles blocking Traditional Chinese downloads
+- OpenCC post-processing with cross-strait terminology correction (軟件→軟體, 內存→記憶體)
+
+---
+
+**6. SSE Hub for Real-Time NAS Events (v4)**
+
+**Innovation Essence:**
+Server-Sent Events hub replaces polling for real-time progress tracking across all Vido operations (downloads, scans, subtitle processing). Single connection, multiple event types, zero external dependencies.
+
+---
+
 ## Market Context & Competitive Landscape
 
 **Competitor Analysis:**

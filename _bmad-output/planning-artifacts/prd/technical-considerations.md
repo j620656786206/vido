@@ -29,16 +29,13 @@
   - No automatic sharing or external reporting of user's media collection
   - Privacy-first approach: user data stays on their NAS
 
-**Authentication & Access Control:**
-- **1.0 Requirement**: Authentication required even for single-user deployment
-- Simple password/PIN protection (prepare for future multi-user)
-- Session management with secure tokens
-- API endpoints protected with authentication tokens
+**Network Security:**
+- **v4.0**: Single-user deployment, no authentication required
 - **External Access Security**:
   - Support HTTPS for external access (reverse proxy compatible)
   - Avoid transmitting sensitive information in plain text over network
   - Recommend VPN or secure tunnel for external access
-  - Rate limiting on API endpoints to prevent abuse
+  - Rate limiting on API endpoints to prevent abuse (defense in depth)
 
 ---
 
@@ -165,17 +162,30 @@
 - Retry logic for temporary network failures
 - Support for qBittorrent behind reverse proxy
 
-**External API Access (Future-Ready Architecture):**
-- RESTful API with versioning (`/api/v1`)
-- OpenAPI/Swagger documentation
-- API authentication with tokens
-- Rate limiting to prevent abuse
-- Webhook support for external automation
+**Plugin Architecture (v4 — Pluggable Integration Layer):**
+- Go interfaces for external service integration: `MediaServerPlugin`, `DownloaderPlugin`, `DVRPlugin`
+- Plugin Manager with registration, health check, configuration
+- Each external service (Sonarr, Radarr, Plex, Jellyfin, qBittorrent, Prowlarr) implemented as a plugin
+- Plugin configuration stored in SQLite
+- Connection testing via `TestConnection(config)` before saving
 
-**Multi-User Preparation (Architecture Design):**
-- Database schema supports future user tables
-- Permission model foundation (even if 1.0 has single user)
-- Authentication layer abstracted for future expansion
+**Subtitle Engine Integration:**
+- Multi-source subtitle search: Assrt API, Zimuku scraper, OpenSubtitles API
+- Subtitle scoring algorithm (language detection + release group match + format)
+- OpenCC integration for 簡繁轉換 with terminology correction
+- Pipeline: search → score → download → post-process → place
+
+**SSE (Server-Sent Events) Hub:**
+- Real-time progress push for download status, scan progress, subtitle status
+- Replaces polling-based updates for download monitoring
+- Native Go `http.Flusher` implementation, zero external dependencies
+- Frontend `EventSource` integration
+
+**Server-Side TMDB Filtering:**
+- Post-filtering of TMDB trending/discover results in Go backend
+- Filter criteria: language, region, release date range, vote threshold
+- In-memory cache with 1-hour TTL to reduce API calls
+- Eliminates Seerr's client-side filtering limitations
 
 ---
 

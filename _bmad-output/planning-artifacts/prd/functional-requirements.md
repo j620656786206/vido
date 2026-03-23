@@ -1,158 +1,173 @@
-# Functional Requirements
+# Functional Requirements (v4)
 
-## Media Search & Discovery
+## Traceability Header
 
-**MVP:**
-- FR1: Users can search for movies and TV shows by title (Traditional Chinese or English)
-- FR2: Users can view search results with Traditional Chinese metadata (title, description, release year, poster, genre, director, cast)
-- FR3: Users can browse search results in grid view
-- FR4: Users can view media item detail pages (read-only)
+This document replaces the previous FR1–FR94 numbering scheme with the v4 feature ID scheme: **P{phase}-{sequence}**. The v4 PRD reorganizes all functionality into four delivery phases aligned with the product roadmap. Requirements previously marked as "Growth" or "Post-1.0" have been either promoted into a specific phase, merged into broader features, or explicitly deleted.
 
-**1.0:**
-- FR5: Users can search within their saved media library
-- FR6: Users can sort media library by date added, title, year, rating
-- FR7: Users can filter media library by genre, year, media type
-- FR8: Users can toggle between grid view and list view
-
-**Growth:**
-- FR9: Users can receive smart recommendations based on genre, cast, director
-- FR10: Users can see "similar titles" suggestions
+Source of truth: `prd-v4-source.md` Section 3 — 功能規格.
 
 ---
 
-## Filename Parsing & Metadata Retrieval
+## Legacy FR Mapping Table
 
-**MVP:**
-- FR11: System can parse standard naming convention filenames (e.g., `Movie.Name.2024.1080p.BluRay.mkv`)
-- FR12: System can extract title, year, season/episode from filenames
-- FR13: System can retrieve Traditional Chinese priority metadata from TMDb API
-- FR14: System can store metadata to local database
-
-**1.0:**
-- FR15: System can parse fansub naming conventions using AI (Gemini/Claude) (e.g., `[Leopard-Raws] Show - 01 (BD 1920x1080 x264 FLAC).mkv`)
-- FR16: System can implement multi-source metadata fallback (TMDb → Douban → Wikipedia → AI → Manual)
-- FR17: System can automatically switch to Douban web scraper when TMDb fails
-- FR18: System can retrieve metadata from Wikipedia when TMDb and Douban fail
-- FR19: System can use AI to re-parse filenames and generate alternative search keywords
-- FR20: Users can manually search and select correct metadata
-- FR21: Users can manually edit media item metadata
-- FR22: Users can view parse status indicators (success/failure/processing)
-- FR23: System can cache AI parsing results to reduce API costs
-- FR24: System can learn from user manual corrections and remember filename mapping rules
-- FR25: System can automatically retry when metadata sources are temporarily unavailable
-- FR26: System can gracefully degrade when all sources fail and provide manual option
-
----
-
-## Download Integration & Monitoring
-
-**1.0:**
-- FR27: Users can connect to qBittorrent instance (enter host, username, password)
-- FR28: Users can test qBittorrent connection
-- FR29: System can monitor qBittorrent download status in real-time (progress, speed, ETA, status)
-- FR30: Users can view download list in unified dashboard
-- FR31: Users can filter downloads by status (downloading, paused, completed, seeding)
-- FR32: System can detect completed downloads and trigger parsing
-- FR33: System can display qBittorrent connection health status
-
-**Growth:**
-- FR34: Users can control qBittorrent directly from Vido (pause/resume/delete torrents)
-- FR35: Users can adjust download priority
-- FR36: Users can manage bandwidth settings
-- FR37: Users can schedule downloads
+| Old FR IDs | Topic | New v4 ID(s) | Status |
+|------------|-------|--------------|--------|
+| FR1–FR4 | Media search & discovery (MVP) | P2-013, P2-014 | Partially DONE (Epic 2 search) |
+| FR5–FR8 | Library search, sort, filter, views | P1-007 | DONE (Epic 5) |
+| FR9–FR10 | Smart recommendations, similar titles | P2-022 | NEW |
+| FR11–FR14 | Filename parsing, metadata retrieval | P1-002, P1-003 | DONE (Epic 2–3) |
+| FR15–FR26 | AI parsing, multi-source fallback, manual edit | P1-002, P1-004 | DONE (Epic 3) |
+| FR27–FR33 | qBittorrent monitoring | P3-010 | DONE (Epic 4) |
+| FR34–FR37 | Advanced download control | P3-010–P3-014 | NEW |
+| FR38–FR42 | Media library management | P1-007 | DONE (Epic 5) |
+| FR43–FR46 | Watch history, collections | P4-011 | NEW |
+| FR47–FR51 | Deployment, Docker, config | Infrastructure | DONE (Epic 1) |
+| FR52–FR66 | Settings, backup, export, metrics | Settings | Partially DONE (Epic 6) |
+| FR67–FR70 | Authentication & access control | — | DELETED (single user, no login in v4) |
+| FR71–FR74 | Multi-user accounts & permissions | — | DELETED (deferred to v5.0) |
+| FR75–FR80 | Subtitle search & download | P1-010–P1-019 | NEW (expanded massively) |
+| FR81–FR86 | Automation & organization | P1-001, P1-005 (partial) | Partial; rest DELETED |
+| FR87–FR94 | External API, mobile app | — | DELETED (out of scope) |
 
 ---
 
-## Media Library Management
+## Phase 1: 字幕核心穩定 (MVP)
 
-**1.0:**
-- FR38: Users can browse complete media library collection
-- FR39: Users can view media detail pages (cast info, trailers, complete metadata)
-- FR40: Users can perform batch operations on media items (delete, re-parse)
-- FR41: Users can view recently added media items
-- FR42: System can display metadata source indicators (TMDb/Douban/Wikipedia/AI/Manual)
+> Goal: Become the go-to subtitle solution for Traditional Chinese NAS users, with zero dependency on external tools.
 
-**Growth:**
-- FR43: Users can track personal watch history
-- FR44: System can display watch progress indicators
-- FR45: Users can mark media as watched/unwatched
-- FR46: Users can create custom collections of media items
+### 3.1 媒體庫掃描器
 
----
+| ID | 功能 | Priority | Description | Status |
+|----|------|----------|-------------|--------|
+| P1-001 | 資料夾掃描 | P0 | Specify one or more media library paths; recursively scan for video files (mkv, mp4, avi, rmvb). | DONE (Epic 5) |
+| P1-002 | 檔名解析引擎 | P0 | Parse standard naming (`Movie.Name.2024.1080p.BluRay`) and fansub naming (`[SweetSub][動畫名][12][BIG5][1080P]`). | DONE (Epic 2–3) |
+| P1-003 | TMDB 自動匹配 | P0 | Auto-match parsed results to TMDB IDs; fetch metadata (poster, synopsis, rating, cast). | DONE (Epic 2) |
+| P1-004 | 繁中 metadata fallback | P1 | When TMDB Traditional Chinese data is incomplete, fetch supplementary info from Douban and Wikipedia. | DONE (Epic 3) |
+| P1-005 | 定時掃描 | P1 | Configurable scan frequency (hourly/daily); new files are automatically ingested. | NEW |
+| P1-006 | 手動掃描 | P0 | One-click trigger for full or folder-specific scan from Web UI. | DONE (Epic 5) |
+| P1-007 | 媒體庫瀏覽 | P0 | Browse scanned movies/series in poster-wall view with search, sort, and filter. | DONE (Epic 5) |
 
-## System Configuration & Management
+### 3.2 繁中字幕引擎
 
-**MVP:**
-- FR47: Users can deploy Vido via Docker container
-- FR48: System can provide zero-config startup (sensible defaults)
-- FR49: Users can configure media folder locations
-- FR50: Users can configure API keys via environment variables
-- FR51: System can store sensitive data in encrypted format (AES-256)
+| ID | 功能 | Priority | Description | Status |
+|----|------|----------|-------------|--------|
+| P1-010 | 多來源字幕搜尋 | P0 | Search subtitles from Assrt (射手網), Zimuku (字幕庫), and OpenSubtitles. | NEW |
+| P1-011 | Assrt API 修正 | P0 | Use the correct response key (`native_name`); fix the bug where existing subtitles are skipped. | NEW |
+| P1-012 | 簡繁正確識別 | P0 | Detect Simplified vs Traditional via content analysis (not filename) before download; prevent Simplified subtitles from blocking Traditional ones. | NEW |
+| P1-013 | 副檔名正規化 | P0 | Normalize output to `.zh-Hant` or `.cht` extension so Plex/Jellyfin/Infuse correctly identify the language. | NEW |
+| P1-014 | 簡繁轉換 | P0 | OpenCC conversion in the correct direction (Simplified → Traditional) with cross-strait terminology correction (軟件→軟體, 內存→記憶體). | NEW |
+| P1-015 | 字幕組命名解析 | P1 | Parse common Traditional Chinese fansub naming patterns: `[Group][Title][Episode][Language][Resolution]` and match to the correct video file. | NEW |
+| P1-016 | 字幕評分與排序 | P1 | Score search results: language match > resolution match > source trustworthiness > download count. | NEW |
+| P1-017 | 自動下載最佳字幕 | P1 | Automatically select and download the best Traditional Chinese subtitle based on score; place it at the correct path. | NEW |
+| P1-018 | 手動搜尋與選擇 | P0 | Search subtitles, preview results, and manually select a download from Web UI. | NEW |
+| P1-019 | 批次字幕處理 | P2 | Batch search and download subtitles for all episodes of a full season at once. | NEW |
 
-**1.0:**
-- FR52: Users can complete initial setup via setup wizard
-- FR53: Users can manage cache (view cache size, clear old cache)
-- FR54: Users can view system logs
-- FR55: System can display service connection status (qBittorrent, TMDb, AI APIs)
-- FR56: Users can receive automatic update notifications
-- FR57: System can backup database and configuration
-- FR58: Users can restore data from backup
-- FR59: System can verify backup integrity (checksum)
-- FR60: System can export metadata to JSON/YAML format
-- FR61: System can import metadata from JSON/YAML
-- FR62: System can export metadata as NFO files (Kodi/Plex/Jellyfin compatible)
-- FR63: Users can configure backup schedule (daily/weekly)
-- FR64: System can automatically cleanup old backups (retention policy)
-- FR65: System can display performance metrics (query latency, cache hit rate)
-- FR66: System can warn when approaching scalability limits (e.g., SQLite items >8,000)
+### 3.3 AI 輔助功能
+
+| ID | 功能 | Priority | Description | Status |
+|----|------|----------|-------------|--------|
+| P1-020 | AI 用語校正 | P2 | Use Claude API to fine-tune cross-strait terminology in Simplified→Traditional conversion results (requires user-provided API key). | NEW |
+| P1-021 | MKV 英文軌翻譯 | P3 | No-subtitle fallback: extract English audio track from MKV → Whisper transcription → DeepL/Claude translation to Traditional Chinese (requires user-provided API keys). | NEW |
 
 ---
 
-## User Authentication & Access Control
+## Phase 2: 媒體探索
 
-**1.0:**
-- FR67: Users must authenticate via password/PIN to access Vido
-- FR68: System can manage user sessions with secure tokens
-- FR69: API endpoints must be protected with authentication tokens
-- FR70: System can implement rate limiting to prevent abuse
+> Goal: Replace Seerr's discovery experience with better Asian content browsing.
 
-**Growth:**
-- FR71: System can support multiple user accounts
-- FR72: Administrators can manage user permissions (admin/user roles)
-- FR73: Users can have personal watch history
-- FR74: Users can have personal preference settings
+### 3.4 首頁電視牆
+
+| ID | 功能 | Priority | Description | Status |
+|----|------|----------|-------------|--------|
+| P2-001 | Hero Banner 輪播 | P0 | Large hero carousel at top of home page showcasing featured/trending content; supports auto-playing trailers when available. | NEW |
+| P2-002 | 可自訂探索區塊 | P0 | Users can add, remove, and reorder content sections on the home page (e.g., "Recent Taiwan Theatrical," "Trending J/K-Drama," "Netflix Taiwan New Arrivals"). | NEW |
+| P2-003 | 智慧趨勢區段 | P0 | Trending content **enforces** language/region filtering via server-side filtering, bypassing TMDB API endpoint limitations. | NEW |
+| P2-004 | 隱藏遠期內容 | P0 | Auto-filter content with release dates more than 6 months in the future (e.g., Avatar 5 2031). | NEW |
+| P2-005 | 隱藏低品質內容 | P1 | Auto-filter content with TMDB rating < 3 and vote count < 50. | NEW |
+| P2-006 | 已有/已請求標記 | P1 | Content already in the media library shows a "Available" badge; content already requested shows a "Requested" badge. | NEW |
+
+### 3.5 進階搜尋與過濾
+
+| ID | 功能 | Priority | Description | Status |
+|----|------|----------|-------------|--------|
+| P2-010 | 多維過濾器 | P0 | Multi-facet filtering: genre, year range, region/language, rating range, streaming platform — all simultaneously. | NEW |
+| P2-011 | 過濾器常駐 UI | P0 | Filters displayed as persistent pill/chip UI at page top (not hidden in dropdowns). | NEW |
+| P2-012 | 複合排序 | P0 | Sort by popularity, release date, rating, or date added; sort results respect active filters. | NEW |
+| P2-013 | 即時搜尋 | P0 | Search bar with instant suggestions (debounced); shows movies, series, and people as separate result categories. | Partially DONE (Epic 2 search) |
+| P2-014 | 繁中搜尋優先 | P1 | Search queries simultaneously match TMDB Chinese titles and original titles; Traditional Chinese results ranked first. | Partially DONE (Epic 2 search) |
+| P2-015 | 儲存篩選條件 | P2 | Users can save frequently-used filter combinations (e.g., "Korean dramas after 2024") for quick access. | NEW |
+
+### 3.6 媒體詳情頁
+
+| ID | 功能 | Priority | Description | Status |
+|----|------|----------|-------------|--------|
+| P2-020 | 豐富資訊展示 | P0 | Poster, backdrop, Traditional Chinese synopsis, cast/director, genre, runtime, release date, dual ratings (TMDB + Douban). | NEW |
+| P2-021 | 影集季/集列表 | P0 | Series detail page with expandable season/episode list showing titles, synopses, and subtitle availability status. | NEW |
+| P2-022 | 相關推薦 | P1 | Recommend similar content based on current item; apply region/language filtering. | NEW |
+| P2-023 | 串流平台資訊 | P1 | Show streaming platforms where the content is available in Taiwan (Netflix/Disney+/KKTV/…) via TMDB Watch Providers data. | NEW |
+| P2-024 | 預告片播放 | P2 | Embed YouTube trailer when available. | NEW |
+| P2-025 | 豆瓣連結 | P2 | Direct link to Douban page for Chinese-language reviews. | NEW |
 
 ---
 
-## Subtitle Management (Growth - Post-1.0)
+## Phase 3: 請求流程 + 下載管理
 
-- FR75: Users can search for subtitles (OpenSubtitles and Zimuku)
-- FR76: System can prioritize Traditional Chinese subtitles
-- FR77: Users can download subtitle files
-- FR78: Users can manually upload subtitle files
-- FR79: System can automatically download subtitles (based on user preferences)
-- FR80: System can display subtitle availability status
+> Goal: One-click request → auto-download → auto-fetch subtitles — fully automated pipeline.
+
+### 3.7 請求系統
+
+| ID | 功能 | Priority | Description | Status |
+|----|------|----------|-------------|--------|
+| P3-001 | 一鍵請求 | P0 | Request a movie or series directly from the explore page or detail page. | NEW |
+| P3-002 | 影集部分請求 | P0 | Select specific seasons or individual episodes to request. | NEW |
+| P3-003 | 請求狀態追蹤 | P0 | Request list page showing each request's status: pending / searching / downloading / completed / failed. | NEW |
+| P3-004 | Sonarr/Radarr 串接（可選） | P0 | When Sonarr/Radarr is configured, route requests via their API; otherwise use Vido's built-in flow. | NEW |
+| P3-005 | 自動字幕觸發 | P1 | Automatically trigger subtitle search (Phase 1 subtitle engine) upon download completion. | NEW |
+
+### 3.8 下載任務管理
+
+| ID | 功能 | Priority | Description | Status |
+|----|------|----------|-------------|--------|
+| P3-010 | qBittorrent 串接 | P0 | Manage download tasks via qBittorrent Web API (add/pause/delete/view progress). | DONE (Epic 4) |
+| P3-011 | NZBGet 串接（可選） | P2 | Same as above but for Usenet downloads via NZBGet. | NEW |
+| P3-012 | 下載進度即時更新 | P0 | SSE push of download progress to frontend; no manual refresh needed. | NEW |
+| P3-013 | 下載完成通知 | P1 | Web UI notification on download completion (future: extend to Telegram/Discord). | NEW |
+| P3-014 | 內建 BT 引擎（未來） | P3 | Built-in BT download using Go BT library (anacrolix/torrent), eliminating qBittorrent dependency. | NEW |
+
+### 3.9 Indexer 管理
+
+| ID | 功能 | Priority | Description | Status |
+|----|------|----------|-------------|--------|
+| P3-020 | Prowlarr 串接（可選） | P1 | When Prowlarr is configured, search indexers via its API. | NEW |
+| P3-021 | 內建 indexer 搜尋 | P2 | When Prowlarr is not configured, Vido provides basic built-in torrent search capability (public trackers). | NEW |
 
 ---
 
-## Automation & Organization (Growth - Post-1.0)
+## Phase 4: NAS Dashboard
 
-- FR81: System can monitor watch folders to detect new files
-- FR82: System can automatically trigger parsing when files are detected
-- FR83: System can automatically rename files based on user-configured patterns
-- FR84: System can automatically move files to organized directory structure
-- FR85: System can execute automation tasks in background processing queue
-- FR86: Users can configure automation rules (watch folders, naming patterns, target folders)
+> Goal: A single interface to monitor the full state of the NAS media system.
 
----
+### 3.10 媒體庫統計
 
-## External Integration & Extensibility (Growth - Post-1.0)
+| ID | 功能 | Priority | Description | Status |
+|----|------|----------|-------------|--------|
+| P4-001 | 媒體庫總覽 | P0 | Movie/series count, disk usage, average file size, resolution distribution (4K/1080p/720p). | NEW |
+| P4-002 | 字幕覆蓋率 | P0 | Pie/bar chart: has Traditional Chinese subtitles / has other subtitles / no subtitles. | NEW |
+| P4-003 | 類型分佈 | P1 | Charts showing genre, region, and year distribution of the collection. | NEW |
+| P4-004 | 最近新增 | P0 | List of media added in the last 7/30 days. | NEW |
 
-- FR87: System can provide RESTful API (versioned /api/v1)
-- FR88: Developers can authenticate API requests with API tokens
-- FR89: System can provide OpenAPI/Swagger documentation
-- FR90: System can support webhook subscriptions for external automation
-- FR91: Users can export metadata to Plex/Jellyfin
-- FR92: System can sync watch status with Plex/Jellyfin
-- FR93: Users can access Vido via mobile application (React Native/Flutter)
-- FR94: Users can remotely control downloads from mobile device
+### 3.11 Plex/Jellyfin 串接
+
+| ID | 功能 | Priority | Description | Status |
+|----|------|----------|-------------|--------|
+| P4-010 | 觀看紀錄同步 | P1 | Sync watch history from Plex/Jellyfin for personalized recommendations. | NEW |
+| P4-011 | 正在觀看 | P1 | Home page "Continue Watching" section based on Plex/Jellyfin watch progress. | NEW |
+| P4-012 | 庫存同步 | P0 | Periodically scan Plex/Jellyfin libraries to mark content as already owned. | NEW |
+
+### 3.12 服務健康監控
+
+| ID | 功能 | Priority | Description | Status |
+|----|------|----------|-------------|--------|
+| P4-020 | 外部服務狀態 | P1 | Display connection status of all integrated services (Sonarr/Radarr/qBittorrent/Plex/Jellyfin). | NEW |
+| P4-021 | 磁碟空間警告 | P1 | Alert when media library disk usage exceeds a configurable threshold. | NEW |
+| P4-022 | 活動日誌 | P2 | Log all automated actions (subtitle downloads, request processing, scan results); searchable and filterable. | NEW |

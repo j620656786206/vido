@@ -113,9 +113,9 @@ Single media item quick actions accessible from the grid/list card.
 | 3 | Export Metadata | Export this item's metadata (FR40) | 1.0 - Epic 5 |
 | 4 | Delete | Remove from library, requires confirmation dialog (FR40) | 1.0 - Epic 5 |
 | — | *(separator)* | | |
-| 5 | Mark Watched / Unwatched | Toggle watch status (FR45) | Growth - Epic 11 |
-| 6 | Add to Collection | Add to custom collection (FR46) | Growth - Epic 11 |
-| 7 | Edit Metadata | Manually modify metadata (FR21) | Growth |
+| 5 | Find Subtitles | Search/download subtitles (P1-018) | Phase 1 - Epic 8 |
+| 6 | Mark Watched / Unwatched | Toggle watch status (P4-011) | Phase 4 - Epic 17 |
+| 7 | Request | One-click request (P3-001) | Phase 3 - Epic 13 |
 
 **3. Detail Panel Context Menu (`...` icon, top-right next to close)**
 
@@ -127,10 +127,10 @@ Advanced operations when viewing full media details.
 | 2 | Export Metadata | Export JSON/YAML/NFO (FR40) | 1.0 - Epic 5 |
 | 3 | Delete | Remove from library, requires confirmation (FR40) | 1.0 - Epic 5 |
 | — | *(separator)* | | |
-| 4 | Edit Metadata | Manually modify all fields (FR21) | Growth |
-| 5 | Mark Watched / Unwatched | Toggle watch status (FR45) | Growth - Epic 11 |
-| 6 | Add to Collection | Add to custom collection (FR46) | Growth - Epic 11 |
-| 7 | Find Subtitles | Search/download subtitles (FR75-80) | Growth - Epic 9 |
+| 4 | Find Subtitles | Search/download subtitles (P1-018) | Phase 1 - Epic 8 |
+| 5 | Request | One-click request (P3-001) | Phase 3 - Epic 13 |
+| 6 | Mark Watched / Unwatched | Toggle watch status (P4-011) | Phase 4 - Epic 17 |
+| 7 | View on Streaming | Show streaming platform info (P2-023) | Phase 2 - Epic 12 |
 | 8 | Show in File System | Reveal actual file path | Growth |
 
 **Interaction Rules:**
@@ -174,45 +174,59 @@ Advanced operations when viewing full media details.
 
 ## Real-Time Update Mechanism
 
-**Strategy: Polling (1.0 Approach)**
+**Strategy: SSE (Server-Sent Events) + Polling Hybrid (v4)**
 
-**Why Polling for 1.0:**
-- ✅ Simple implementation (TanStack Query built-in support)
-- ✅ No WebSocket server maintenance needed
-- ✅ Firewall/proxy friendly
-- ✅ Automatic reconnection mechanism
-- ⚠️ More resource-intensive (acceptable for self-hosted environment)
+**v4 Architecture — SSE for real-time, Polling for periodic:**
 
-**Polling Configuration:**
+| Data Type | Mechanism | Rationale |
+|-----------|-----------|-----------|
+| Download progress | SSE | Real-time updates (<1s latency), replaces 5s polling |
+| Scan progress | SSE | Users expect live feedback during scans |
+| Subtitle download status | SSE | Short-lived but needs immediate feedback |
+| Library content | Polling (30s) | Infrequent changes, TanStack Query refetch |
+| Service health | Polling (60s) | Low urgency, background check |
+
+**SSE Implementation (Go Backend):**
+
+```go
+// SSE hub broadcasts events to all connected clients
+// Events: download_progress, scan_status, subtitle_status, notification
+func (h *SSEHandler) Stream(c *gin.Context) {
+    c.Header("Content-Type", "text/event-stream")
+    c.Header("Cache-Control", "no-cache")
+    c.Header("Connection", "keep-alive")
+    // Fan-out from hub to client channels
+}
+```
+
+**Frontend EventSource Integration:**
 
 ```typescript
-// qBittorrent download status
-const { data: downloads } = useQuery({
-  queryKey: ['downloads'],
-  queryFn: fetchDownloads,
-  refetchInterval: 5000, // 5 second polling
-  refetchIntervalInBackground: false, // No polling in background
+// Real-time download progress via SSE
+const eventSource = new EventSource('/api/v1/events');
+eventSource.addEventListener('download_progress', (e) => {
+  const data = JSON.parse(e.data);
+  queryClient.setQueryData(['downloads', data.id], data);
 });
+```
 
+**Polling (TanStack Query) for non-real-time data:**
+
+```typescript
 // Library updates (less frequent)
 const { data: library } = useQuery({
   queryKey: ['library'],
   queryFn: fetchLibrary,
-  refetchInterval: 30000, // 30 second polling
-  staleTime: 10000, // Consider fresh for 10 seconds
+  refetchInterval: 30000,
+  staleTime: 10000,
 });
 ```
 
-**Smart Polling Optimization:**
-- Stop polling when user not on current page (`refetchIntervalInBackground: false`)
-- Immediately refresh when user returns (`refetchOnWindowFocus: true`)
-- Auto-trigger library refresh after download completion
-- Exponential backoff after errors (1s → 2s → 4s → 8s)
-
-**Future Consideration (Post-1.0):**
-- WebSocket or SSE for true real-time updates
-- Reduce server load
-- Better battery efficiency (mobile devices)
+**SSE Benefits over Pure Polling:**
+- Lower latency for download/scan progress
+- Reduced server load (no repeated polling requests)
+- Battery friendly (no constant HTTP requests)
+- Firewall/proxy friendly (standard HTTP, unlike WebSockets)
 
 ---
 

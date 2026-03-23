@@ -56,13 +56,10 @@
 - **NFR-S7**: Media library data must remain local on user's NAS with no automatic external reporting
 - **NFR-S8**: System must implement privacy-first approach with no telemetry or analytics by default
 
-**Authentication & Access Control:**
+**Network Security (v4 — Single User, No Auth):**
 
-- **NFR-S9**: All Vido endpoints must require user authentication (password/PIN)
-- **NFR-S10**: User sessions must be managed with secure, cryptographically-signed tokens
-- **NFR-S11**: API endpoints must be protected with authentication tokens
-- **NFR-S12**: System must implement rate limiting on API endpoints to prevent abuse (max 100 requests/minute per IP)
-- **NFR-S13**: Failed authentication attempts must be logged and rate-limited (max 5 attempts per 15 minutes)
+- ~~NFR-S9 through NFR-S13~~: **REMOVED** — v4 is single-user with no authentication required
+- **NFR-S20**: System must implement rate limiting on API endpoints for defense in depth (max 100 requests/minute per IP)
 
 **External Access Security:**
 
@@ -88,7 +85,7 @@
 
 **Concurrent Access:**
 
-- **NFR-SC4**: System must support up to 5 concurrent user sessions (for household sharing scenarios)
+- **NFR-SC4**: ~~Support 5 concurrent user sessions~~ **UPDATED** — v4 is single-user; system must handle concurrent browser tabs gracefully
 - **NFR-SC5**: Database write operations must use proper locking to prevent corruption under concurrent access
 
 **Large Library Handling:**
@@ -99,8 +96,8 @@
 
 **Growth Planning:**
 
-- **NFR-SC9**: System architecture must support horizontal scaling for future multi-user scenarios
-- **NFR-SC10**: Database schema must support future user table additions without breaking changes
+- **NFR-SC9**: ~~Horizontal scaling for multi-user~~ **REMOVED** — v4 is single-user; multi-user deferred to v5.0
+- **NFR-SC10**: ~~Future user tables~~ **REMOVED** — No multi-user in v4 scope
 
 ---
 
@@ -162,11 +159,26 @@
 - **NFR-I14**: System must respect Wikipedia API etiquette (max 1 request/second)
 - **NFR-I15**: Wikipedia Infobox parsing must handle multiple template variations gracefully
 
-**Future API Extensibility:**
+**Plugin Architecture (v4):**
 
 - **NFR-I16**: RESTful API must be versioned (/api/v1) to support backward compatibility
 - **NFR-I17**: API responses must follow OpenAPI/Swagger specification
-- **NFR-I18**: Webhook support must allow external systems to subscribe to events (parsing complete, download finished)
+- **NFR-I18**: Plugin initialization must complete within <2 seconds on startup
+- **NFR-I19**: Plugin health checks must complete within <5 seconds per plugin
+- **NFR-I20**: Plugin configuration changes must take effect without server restart
+
+**SSE Real-Time Updates (v4):**
+
+- **NFR-I21**: SSE download progress updates must have <1 second latency
+- **NFR-I22**: SSE connections must auto-reconnect within <5 seconds after network interruption
+- **NFR-I23**: SSE hub must handle graceful client disconnection without resource leaks
+
+**Subtitle Engine (v4):**
+
+- **NFR-I24**: Subtitle search across all sources must complete within <10 seconds
+- **NFR-I25**: Subtitle download must complete within <5 seconds per file
+- **NFR-I26**: OpenCC 簡繁轉換 must complete within <1 second per subtitle file
+- **NFR-I27**: Subtitle scoring must consider language accuracy, release group match, and format compatibility
 
 ---
 

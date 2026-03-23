@@ -1,67 +1,51 @@
 # Success Criteria
 
-## User Success
+## Phase 1 Validation Metrics
 
-**Core "Aha!" Moments:**
-- Users experience unified workflow in a single interface:
-  - qBittorrent download progress (speed, ETA, completion status)
-  - Media library collection (grid/list views)
-  - All media items displaying **perfect Traditional Chinese metadata and posters**
+These metrics must be met before Phase 1 (Subtitle Core MVP) can be considered complete.
 
-**Specific User Success Metrics:**
-- First-time users complete their first media search and see Traditional Chinese results within **5 minutes**
-- User satisfaction with AI parsing of **fansub naming** (e.g., `[Coalgirls] Show - 01 [BD 1080p].mkv`) >90%
-- Users can track the complete "download → parse → manage" workflow without switching applications
-- Users discover that Vido can parse naming conventions that other tools (Radarr/Sonarr/FileBot) cannot handle
+| Metric | Target |
+|--------|--------|
+| Standard filename parsing success rate | >99% |
+| Fansub filename parsing success rate | >95% |
+| Traditional Chinese subtitle search hit rate | >85% |
+| No false-positive Simplified Chinese subtitles | 100% |
+| Cross-strait terminology correction accuracy | >95% |
+| Docker startup to usable | <10 seconds |
 
-## Business Success
+## Phase 1 Post-Release (3 Months)
 
-**Phased Goals:**
+| Metric | Target |
+|--------|--------|
+| GitHub Stars | >100 |
+| Docker Hub pulls | >500 |
+| Community-reported zh-TW subtitle bugs | <5 |
+| Personal dogfooding: replaces Bazarr in daily use | Yes |
 
-**MVP (Q1 - March 2026):**
-- Complete core search and metadata functionality
-- Obtain feedback from first 50 early adopters
+## Phase 2 Post-Release (6 Months)
 
-**1.0 Version (Q2 - June 2026):**
-- Active users: **500+** (login at least once per week)
-- User retention rate: >60% (30-day)
-- Average media items per user: >100 items
-- User satisfaction: >4.5/5
-- **Success metric**: Correctly parse >95% of user files (including fansub naming)
+| Metric | Target |
+|--------|--------|
+| GitHub Stars | >500 |
+| Docker Hub pulls | >2,000 |
+| Organic discussion on PTT/巴哈 NAS boards | Yes |
+| Personal dogfooding: replaces Seerr in daily use | Yes |
 
-**Growth Phase (Q3 - September 2026):**
-- Active users: **1000+** (login at least once per week)
-- Total managed media items: 100,000+
-- Subtitle success rate: >90%
+## Phase 4 Complete (12 Months)
 
-## Technical Success
+| Metric | Target |
+|--------|--------|
+| GitHub Stars | >1,000 |
+| Docker Hub pulls | >5,000 |
+| External contributors | >5 |
+| Recommended tool in zh-TW NAS communities | Yes |
 
-**Performance Metrics:**
-- Uptime: >99.5%
-- API response time: <500ms (p95)
-- Homepage load time: <2 seconds
-- Build time: <2 minutes
+## Technical Success Metrics
 
-**Parsing Accuracy:**
-- **Overall file parsing success rate**: >95% (standard naming + fansub naming combined)
-- **AI fansub parsing success rate**: >93% (at least 28 out of 30 correct)
-- AI parsing response time: <10 seconds/file
-- Metadata fallback success rate: >98% (at least one success in TMDb → Douban → AI chain)
-
-**Quality Metrics:**
-- Test coverage: Backend >80%, Frontend >70%
-- Zero critical security vulnerabilities
-- qBittorrent status update latency: <5 seconds
-
-## Measurable Outcomes
-
-**User Experience Milestones:**
-1. First-time user completes media search and sees Traditional Chinese results: <5 minutes
-2. AI parsing of fansub naming files completes: <10 seconds
-3. Download status real-time updates: <5 seconds latency
-4. From download completion to metadata fetched: <30 seconds (after automation)
-
-**Competitive Advantage Validation:**
-- Vido correctly parses fansub naming that Radarr/Sonarr cannot handle: >90% success rate
-- Traditional Chinese metadata coverage: >95% (vs Jellyfin/Plex's limited support)
-- Chinese subtitle auto-download success rate: >90% (vs Bazarr's broken providers)
+| Metric | Target |
+|--------|--------|
+| API response time (p95) | <500ms |
+| Grid scrolling frame rate | 60 FPS |
+| Docker image size | <500MB |
+| SQLite query time (p95) | <300ms |
+| Zero downtime on metadata source failures | Yes (multi-source fallback) |

@@ -1,299 +1,147 @@
 # User Journeys
 
-## Journey 1: Alex (NAS Media Collector) - The Perfect Day
+## Journey 1: Alex — 字幕自動化之旅 (Subtitle Automation)
 
-**Character Background:**
-- **Name:** Alex, 32 years old, Software Engineer
-- **Situation:** Runs a Synology NAS at home, managing a media collection of over 500 movies and 200 TV shows. 70% is Asian content (Japanese anime, Taiwanese movies, Korean dramas), frequently encountering complex fansub naming conventions.
-- **Goal:** Wants the media library to "organize itself" with perfect Traditional Chinese metadata, posters, and automatic metadata fetching after downloads complete.
-- **Obstacles:**
-  - Radarr/Sonarr cannot parse fansub naming like `[Leopard-Raws] Kimetsu no Yaiba - 01 (BD 1920x1080 x264 FLAC).mkv`
-  - Jellyfin/Plex's Traditional Chinese metadata support is poor, often displaying Simplified Chinese or English
-  - Constantly switching between qBittorrent, file manager, and Jellyfin
-- **Solution:** Vido lets him handle everything in one place
+**Setting:** Alex downloads a new anime series via qBittorrent. He wants subtitles ready by the time he opens Plex.
 
-**Journey Narrative:**
+### 🎬 Act 1 — Scanner Detects New Media
 
-**Opening - Saturday Morning, Alex Discovers New Episodes**
+1. qBittorrent finishes downloading a batch of anime episodes
+2. Vido's media scanner detects new files in the configured media directory
+3. The filename parser engine processes each file:
+   - Standard names (e.g., `Demon.Slayer.S01E26.1080p.BluRay.mkv`) are parsed instantly
+   - Fansub names (e.g., `[Leopard-Raws] Kimetsu no Yaiba - 26 (END) (BD 1920x1080 x264 FLAC).mkv`) trigger AI-powered parsing
+4. Each parsed result is matched against TMDB for metadata, with Traditional Chinese metadata prioritized
+5. **Key features exercised:** P1-001, P1-002, P1-003, P1-004, P1-005
 
-Alex opens qBittorrent and sees 3 new anime episodes downloaded overnight. He sighs, preparing for the "weekend organization ritual": manually renaming files, searching for metadata, copying posters...
+### 🔍 Act 2 — Subtitle Engine Searches
 
-Suddenly remembers Vido recommended by a friend and decides to give it a try.
+6. For each matched media item, the subtitle engine kicks off an automated search
+7. Multiple sources are queried in parallel: Assrt, Zimuku, OpenSubtitles
+8. Results are filtered with strict 簡/繁 identification — no Simplified Chinese false positives
+9. Best match is selected based on format compatibility, source reliability, and language accuracy
+10. **Key features exercised:** P1-010, P1-011, P1-012, P1-013
 
-**Act One - First Launch of Vido**
+### ✨ Act 3 — Conversion and Placement
 
-1. Alex starts the Vido Docker container on his NAS
-2. Browser opens to `http://nas.local:8080`
-3. Sees a clean welcome screen: "Connect your qBittorrent"
-4. Enters qBittorrent IP and credentials
-5. **Aha Moment #1**: Immediately sees his 3 download items showing 100% progress, seeding
+11. If the best available subtitle is in Simplified Chinese, OpenCC converts it to Traditional Chinese
+12. Cross-strait terminology correction is applied (e.g., 程式 vs 程序, 記憶體 vs 內存)
+13. The subtitle file is renamed to match the media file and placed in the correct directory
+14. The `.srt` / `.ass` file uses proper naming so Plex/Jellyfin auto-detects it
+15. **Key features exercised:** P1-014, P1-015, P1-016, P1-017
 
-**Act Two - The Magic Happens**
+### 📺 Act 4 — Ready to Watch
 
-6. Alex clicks "Scan completed downloads"
-7. Vido detects 3 new files, one being:
-   ```
-   [Leopard-Raws] Kimetsu no Yaiba - 26 (END) (BD 1920x1080 x264 FLAC).mkv
-   ```
-8. He thinks: "Radarr is definitely going to fail on this..."
-9. Waits 8 seconds... Vido displays:
-   - ✅ **鬼滅之刃 (Traditional Chinese title)**
-   - Episode 26 (Final)
-   - Complete Traditional Chinese plot summary
-   - Beautiful anime poster
-10. **Aha Moment #2**: "Oh my god! It parsed it correctly!"
-
-**Act Three - Exploring the Media Library**
-
-11. Alex switches to "Library" page
-12. Sees grid view with all media showing:
-    - Traditional Chinese titles (not Simplified!)
-    - High-quality posters
-    - Year, genre, ratings
-13. He tries searching for "台北物語", finds it immediately with perfect metadata
-14. **Aha Moment #3**: "This is exactly what I've always wanted!"
-
-**Act Four - Unified Dashboard Experience**
-
-15. Alex returns to homepage, sees unified dashboard:
-    - Left: qBittorrent download list (2 downloading, 5 seeding)
-    - Right: Recently added media (including the 3 newly parsed anime)
-    - Bottom: Quick TMDb search
-16. **Aha Moment #4**: "Finally no more jumping between multiple apps!"
-
-**Resolution - New Life**
-
-17. Alex sits on the couch, opens Vido on his phone
-18. Sees download progress: new movie has 30 minutes remaining
-19. Switches to library, browses collection, all Chinese titles display perfectly
-20. He messages his friend: "Vido is amazing, it can even parse fansub naming!"
-
-**Requirements Revealed by Journey:**
-- qBittorrent connection and authentication
-- Real-time download status sync (<5 seconds)
-- AI filename parsing (handles fansub naming)
-- Traditional Chinese metadata priority fetching
-- Unified dashboard (downloads + media library)
-- Responsive design (mobile/desktop)
-- Media search functionality (TMDb)
+16. Alex opens Plex (or Jellyfin) — the subtitle is already attached and ready
+17. Traditional Chinese metadata (title, plot summary, poster) displays correctly
+18. If no subtitle was found automatically, Alex opens Vido's manual search UI
+19. He searches by show name, browses available subtitles, and downloads the best match manually
+20. The manual selection is remembered for future episodes of the same series
+21. **Key features exercised:** P1-006, P1-007, P1-018, P1-019
 
 ---
 
-## Journey 2: Alex - When Things Don't Go as Expected (Edge Cases & Error Handling)
+## Journey 2: Alex — 媒體探索之旅 (Media Discovery)
 
-**Situation:** Not every file can be parsed perfectly, and metadata sources can fail. Alex encounters some tricky situations.
+**Setting:** Alex wants to find new shows to watch this weekend. He opens Vido to browse and discover content.
 
-**Journey Narrative:**
+### 🏠 Act 1 — Homepage Experience
 
-**Opening - Encountering Weird Filenames**
+1. Alex opens Vido's homepage in his browser
+2. A Hero Banner showcases trending content, curated for the zh-TW audience
+3. Below the banner, custom explore blocks display curated categories:
+   - "熱門日韓劇" (Popular J/K-Drama)
+   - "本季新番" (This Season's Anime)
+   - "高分電影" (Top-Rated Movies)
+4. All titles, descriptions, and metadata are in Traditional Chinese
+5. **Key features exercised:** P2-001, P2-002, P2-003, P2-004, P2-005
 
-Alex downloads an old anime with the filename:
-```
-【幻櫻字幕組】【4月新番】我的英雄學院 第01話 1080P【繁體】.mp4
-```
+### 🔎 Act 2 — Browse and Filter
 
-He thinks: "This is even more complex, Chinese fansub group name..."
+6. Alex taps into the "熱門日韓劇" block to browse more
+7. He uses the multi-filter chip UI to narrow results:
+   - Genre: 懸疑 (Thriller)
+   - Year: 2025-2026
+   - Region: 韓國 (South Korea)
+8. Results update instantly with server-side filtering
+9. He scrolls through the grid at a smooth 60 FPS
+10. **Key features exercised:** P2-006, P2-007, P2-008, P2-009, P2-010
 
-**Act One - AI Parsing Challenge**
+### 📋 Act 3 — Detail Page Deep Dive
 
-1. Vido starts parsing this file
-2. AI processes for 12 seconds (longer than usual)
-3. Result shows:
-   - ✅ **我的英雄學院** (Correct!)
-   - Episode 1
-   - But metadata source shows: "TMDb failed → Douban succeeded"
-4. **Key Moment**: Alex sees Vido automatically switched to Douban, fetched Traditional Chinese info
-5. He thinks: "The fallback mechanism really works!"
+11. Alex taps on a show that looks interesting
+12. The detail page displays:
+    - TMDB rating alongside 豆瓣 (Douban) rating for a dual perspective
+    - Available streaming platforms (Netflix, Disney+, etc.)
+    - Trailer embed
+    - Cast and crew with Traditional Chinese names
+    - Subtitle availability status
+13. He reads the zh-TW plot summary and checks the Douban score
+14. **Key features exercised:** P2-015, P2-016, P2-017, P2-018, P2-019, P2-020
 
-**Act Two - Completely Unrecognizable File**
+### 🚀 Act 4 — One-Click Request
 
-6. Another file is stranger:
-   ```
-   abc_s01_e05_final_v2_repack.mkv
-   ```
-7. Vido displays:
-   - ⚠️ "Unable to auto-parse"
-   - Provides manual edit option
-8. Alex clicks "Manual search"
-9. Enters "ABC Season 1"
-10. Selects correct series
-11. Vido saves mapping: will remember for similar filenames next time
+15. Alex decides he wants to watch this show
+16. He clicks the "Request" button — a single click
+17. The request is routed to Sonarr (or Radarr for movies) via the pluggable integration layer
+18. Sonarr picks up the request, searches indexers via Prowlarr, and sends the torrent to qBittorrent
+19. **Key features exercised:** P2-021, P2-022, P2-023, P3-001, P3-002, P3-003
 
-**Act Three - All Metadata Sources Fail**
+### 🎉 Act 5 — Full Automation Loop
 
-12. One day, TMDb API is down (maintenance)
-13. Douban is also inaccessible (network issue)
-14. Alex adds a new file
-15. Vido displays:
-    - ⚠️ "Metadata sources temporarily unavailable"
-    - But file info is saved
-    - "Will auto-retry in 30 minutes"
-16. **Key Moment**: System doesn't crash, gracefully degrades
-17. 30 minutes later, TMDb recovers, Vido auto-fills metadata
-
-**Act Four - Manual Correction of AI Error**
-
-18. AI occasionally makes mistakes, misidentifying "Attack on Titan Season 2" as "Season 1"
-19. Alex sees "Edit Metadata" button on media detail page
-20. Corrects season number, saves
-21. Vido asks: "Learn this correction? Future similar filenames will use this rule"
-22. Alex selects "Yes"
-23. **Key Moment**: System learns from errors, gets smarter with use
-
-**Resolution - Resilience & Trust**
-
-24. Alex realizes Vido isn't "perfect" but "never gives up"
-25. Even with the weirdest filenames, API outages, AI errors...
-26. There's always a backup, always manual options, always recovery
-27. He tells his friend: "Vido's strength isn't 100% accuracy, it's always giving you choices"
-
-**Requirements Revealed by Journey:**
-- Multi-source fallback mechanism (TMDb → Douban → AI)
-- Manual search and metadata editing
-- Filename mapping learning mechanism
-- Graceful degradation (handling API failures)
-- Auto-retry mechanism (background tasks)
-- User feedback learning system
-- Parse status indicators (success/failure/processing)
+20. qBittorrent downloads the series; progress is visible in Vido's download manager
+21. Download completes — Vido's scanner auto-detects the new files
+22. Filename parsing, TMDB matching, and subtitle search all trigger automatically
+23. By the time Alex sits down to watch, the show is in his library with zh-TW subtitles attached
+24. **Key features exercised:** P3-004, P3-005, P2-024, P2-025
 
 ---
 
-## Journey 3: Alex (System Administrator Role) - Initial Setup & Maintenance
+## Journey 3: Alex — 系統管理之旅 (System Administration)
 
-**Situation:** Before enjoying Vido, Alex needs to complete setup. He also needs periodic system maintenance.
+**Setting:** Alex periodically checks his NAS media system health through Vido's dashboard.
 
-**Journey Narrative:**
+### 📊 Act 1 — Dashboard Overview
 
-**Opening - Deciding to Try Vido**
+1. Alex opens Vido's Dashboard page
+2. Media library statistics are displayed at a glance:
+   - Total movies and TV series count
+   - Resolution distribution chart (4K / 1080p / 720p / SD)
+   - Storage usage breakdown by media type
+   - Average file size metrics
+3. Subtitle coverage rate is shown as a visual chart:
+   - Has zh-TW subtitle / Has other subtitle / No subtitle
+4. Recently added media from the last 7 and 30 days is listed
+5. **Key features exercised:** P4-001, P4-002, P4-003, P4-004
 
-Alex sees Vido discussion on Reddit, decides to try it on his Synology NAS.
+### 🔗 Act 2 — Service Health Check
 
-**Act One - Zero-Config Installation**
+6. Alex checks the service connectivity panel
+7. Integration status is shown for each connected service:
+   - qBittorrent: Connected, 2 active downloads, 5 seeding
+   - Plex: Synced, last sync 3 minutes ago
+   - Sonarr/Radarr: Connected, 0 pending requests
+8. Disk space indicator shows 72% used with a projected "days until full" estimate
+9. If any service is unreachable, a warning badge appears with last-known-good timestamp
+10. **Key features exercised:** P4-005, P4-006, P4-007, P4-008
 
-1. Alex downloads Vido Docker compose file
-2. Runs `docker-compose up -d`
-3. Waits 30 seconds... container starts
-4. Browser opens to `http://nas.local:8080`
-5. **Key Moment**: No complex setup wizard, straight to clean welcome page
-6. He thinks: "Really is zero-config!"
+### 📝 Act 3 — Activity Log Review
 
-**Act Two - Integration Configuration**
+11. Alex opens the activity log
+12. Today's activity summary:
+    - 3 subtitles downloaded (2 auto, 1 manual)
+    - 1 media scan completed (12 new files detected)
+    - 1 failed subtitle search (queued for retry)
+13. He can filter logs by type: scan, subtitle, download, system
+14. Each log entry links to the relevant media item for quick access
+15. **Key features exercised:** P4-009, P4-010, P4-011, P4-012
 
-7. Vido prompts: "Connect your download tool"
-8. Alex enters qBittorrent settings:
-   - Host: `192.168.1.100:8080`
-   - Username/password
-9. Clicks "Test Connection" → ✅ Success
-10. Vido prompts: "Configure media folders"
-11. Alex enters: `/volume1/media/movies` and `/volume1/media/tv`
-12. Vido asks: "Need TMDb API key to increase quota (optional)"
-13. Alex skips (use public quota)
-14. **Key Moment**: All setup completed within 5 minutes
+### ⚙️ Act 4 — Settings and Configuration
 
-**Act Three - Daily Maintenance**
-
-15. A month later, Alex notices Vido's disk usage increasing
-16. Goes to "Settings → Cache Management"
-17. Sees:
-    - Image cache: 2.3 GB
-    - AI parsing cache: 450 MB
-    - Clear cache older than 30 days?
-18. Clicks "Clear", reclaims 1.8 GB space
-
-**Act Four - Troubleshooting**
-
-19. One day, qBittorrent connection fails
-20. Vido homepage shows: ⚠️ "qBittorrent connection failed - Last success: 2 minutes ago"
-21. Alex checks logs: "Settings → System Logs"
-22. Sees error: `Connection refused: 192.168.1.100:8080`
-23. He realizes qBittorrent restarted, IP unchanged but connection temporarily interrupted
-24. Clicks "Reconnect" → ✅ Back to normal
-
-**Act Five - System Upgrade**
-
-25. Vido displays notification: "New version available: v1.2.0 - Subtitle support added"
-26. Alex clicks "View changelog"
-27. After confirming, clicks "Upgrade"
-28. Vido executes:
-    - Backup current settings
-    - Pull new Docker image
-    - Migrate database (if needed)
-    - Restart service
-29. 5 minutes later, upgrade complete
-30. **Key Moment**: Zero-downtime upgrade, all data preserved
-
-**Resolution - Low Maintenance Burden**
-
-31. Alex discovers Vido needs almost no maintenance
-32. Occasional cache cleanup, check updates
-33. System auto-handles most issues (retry, fallback, error recovery)
-34. He tells his friend: "Set it once, forget about it, but it keeps working silently"
-
-**Requirements Revealed by Journey:**
-- Docker containerized deployment
-- Zero-config startup (sensible defaults)
-- Setup wizard (qBittorrent, media folders, API keys)
-- Connection test functionality
-- Cache management interface
-- System log viewing
-- Health status monitoring (service connection status)
-- Auto-update notifications
-- Backup and migration mechanism
-
----
-
-## Journey 4: Developer David - API Integration (Future Flexibility Consideration)
-
-**Situation:** David is a Python developer who wants to build automation scripts integrating Vido into his media workflow. While 1.0 may not have a complete public API yet, the system architecture needs to consider this extensibility.
-
-**Journey Narrative (Simplified, Focusing on Architecture Needs):**
-
-**Opening**
-
-David wants to build an automation script: when qBittorrent completes a download, automatically trigger Vido parsing and notify him.
-
-**Key Requirements:**
-
-1. **API Authentication**: David needs API token to authenticate requests
-2. **Trigger Parsing**: `POST /api/v1/parse` - Manually trigger file parsing
-3. **Query Status**: `GET /api/v1/media/{id}` - Query media information
-4. **Webhook Callback**: When parsing completes, Vido calls David's webhook
-5. **Error Handling**: Clear HTTP status codes and error messages
-
-**Architecture Considerations:**
-- RESTful API design
-- OpenAPI/Swagger documentation
-- Versioning (/api/v1)
-- Rate limiting (prevent abuse)
-- Webhook subscription mechanism
-
----
-
-## Journey Requirements Summary
-
-These journeys reveal the following major capability areas:
-
-**Core Capabilities:**
-1. qBittorrent integration and real-time sync
-2. AI-powered filename parsing (fansub naming)
-3. Multi-source metadata fallback (TMDb → Douban → AI)
-4. Unified dashboard (downloads + media library)
-5. Traditional Chinese priority metadata
-
-**Resilience Mechanisms:**
-6. Graceful degradation and error recovery
-7. Manual editing and search
-8. Auto-retry mechanism
-9. Learning and improvement system
-
-**Management & Maintenance:**
-10. Zero-config deployment (Docker)
-11. Setup wizard and connection testing
-12. System monitoring and logging
-13. Cache management
-14. Auto-update mechanism
-
-**Extensibility (Future):**
-15. RESTful API (preserve flexibility)
-16. Webhook mechanism
-17. External integration support
+16. Alex navigates to Settings
+17. He adjusts the media scan schedule from every 6 hours to every 4 hours
+18. He configures a new Prowlarr indexer that a friend recommended
+19. He reviews subtitle source priority order: Assrt > Zimuku > OpenSubtitles
+20. He checks cache usage and clears metadata cache older than 30 days
+21. All changes take effect immediately — no restart required
+22. **Key features exercised:** P4-013, P4-014, P4-015, P4-016, P4-017, P4-018, P4-019, P4-020, P4-021, P4-022, Settings
