@@ -59,6 +59,12 @@ func setupTestDB(t *testing.T) *sql.DB {
 			file_size INTEGER,
 			parse_status TEXT DEFAULT 'pending',
 			metadata_source TEXT,
+			subtitle_status TEXT NOT NULL DEFAULT 'not_searched',
+			subtitle_path TEXT,
+			subtitle_language TEXT,
+			subtitle_last_searched TIMESTAMP,
+			subtitle_search_score REAL,
+			is_removed INTEGER NOT NULL DEFAULT 0,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)
@@ -133,6 +139,12 @@ func setupTestDB(t *testing.T) *sql.DB {
 			file_path TEXT,
 			parse_status TEXT DEFAULT 'pending',
 			metadata_source TEXT,
+			subtitle_status TEXT NOT NULL DEFAULT 'not_searched',
+			subtitle_path TEXT,
+			subtitle_language TEXT,
+			subtitle_last_searched TIMESTAMP,
+			subtitle_search_score REAL,
+			is_removed INTEGER NOT NULL DEFAULT 0,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)

@@ -357,6 +357,7 @@ func (s *ScannerService) processVideoFile(ctx context.Context, resolvedPath stri
 
 		// File changed (size or mtime) — update the record and reset parse status
 		existing.FileSize = sql.NullInt64{Int64: info.Size(), Valid: true}
+		existing.ParseStatus = models.ParseStatusPending
 		existing.UpdatedAt = time.Now()
 		if err := s.movieRepo.Update(ctx, existing); err != nil {
 			return fmt.Errorf("failed to update movie record: %w", err)

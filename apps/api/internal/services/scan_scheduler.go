@@ -44,11 +44,12 @@ type ScanScheduler struct {
 	settingsRepo   repository.SettingsRepositoryInterface
 	logger         *slog.Logger
 
-	mu       sync.Mutex
-	ticker   *time.Ticker
-	done     chan struct{}
-	interval ScanScheduleInterval
-	running  bool
+	mu          sync.Mutex
+	ticker      *time.Ticker
+	done        chan struct{}
+	reconfigCh  chan struct{} // signals runTickerLoop to re-read the ticker
+	interval    ScanScheduleInterval
+	running     bool
 }
 
 // Compile-time interface verification
@@ -68,6 +69,7 @@ func NewScanScheduler(
 		settingsRepo:   settingsRepo,
 		logger:         logger,
 		interval:       ScheduleManual,
+		reconfigCh:     make(chan struct{}, 1),
 	}
 }
 
@@ -84,24 +86,12 @@ func (s *ScanScheduler) Start(ctx context.Context) {
 
 	s.logger.Info("Scan scheduler started", "interval", interval)
 
-	if interval == ScheduleManual {
-		// No ticker needed for manual mode — just wait for stop/ctx
-		select {
-		case <-ctx.Done():
-			s.logger.Info("Scan scheduler stopped (context cancelled)")
-		case <-s.done:
-			s.logger.Info("Scan scheduler stopped (stop signal)")
-		}
+	if interval != ScheduleManual {
+		duration := getTickerDuration(interval)
 		s.mu.Lock()
-		s.running = false
+		s.ticker = time.NewTicker(duration)
 		s.mu.Unlock()
-		return
 	}
-
-	duration := getTickerDuration(interval)
-	s.mu.Lock()
-	s.ticker = time.NewTicker(duration)
-	s.mu.Unlock()
 
 	s.runTickerLoop(ctx)
 }
@@ -159,6 +149,12 @@ func (s *ScanScheduler) Reconfigure(interval ScanScheduleInterval) error {
 	}
 	s.mu.Unlock()
 
+	// Signal the ticker loop to re-read the ticker (non-blocking send)
+	select {
+	case s.reconfigCh <- struct{}{}:
+	default:
+	}
+
 	s.logger.Info("Scan schedule reconfigured", "old_interval", oldInterval, "new_interval", interval)
 	return nil
 }
@@ -206,7 +202,7 @@ func (s *ScanScheduler) runTickerLoop(ctx context.Context) {
 		s.mu.Unlock()
 
 		if ticker == nil {
-			// Manual mode or stopped — wait for done/ctx
+			// Manual mode or stopped — wait for done/ctx/reconfigure
 			select {
 			case <-ctx.Done():
 				s.logger.Info("Scan scheduler stopped (context cancelled)")
@@ -214,6 +210,9 @@ func (s *ScanScheduler) runTickerLoop(ctx context.Context) {
 			case <-done:
 				s.logger.Info("Scan scheduler stopped (stop signal)")
 				return
+			case <-s.reconfigCh:
+				s.logger.Info("Scan scheduler reconfigured, re-reading ticker")
+				continue
 			}
 		}
 
@@ -224,6 +223,9 @@ func (s *ScanScheduler) runTickerLoop(ctx context.Context) {
 		case <-done:
 			s.logger.Info("Scan scheduler stopped (stop signal)")
 			return
+		case <-s.reconfigCh:
+			s.logger.Info("Scan scheduler reconfigured, re-reading ticker")
+			continue
 		case <-ticker.C:
 			s.onTick(ctx)
 		}

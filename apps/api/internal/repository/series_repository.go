@@ -263,6 +263,11 @@ func (r *SeriesRepository) Update(ctx context.Context, series *models.Series) er
 			imdb_id = ?,
 			tmdb_id = ?,
 			in_production = ?,
+			file_path = ?,
+			parse_status = ?,
+			metadata_source = ?,
+			vote_average = ?,
+			is_removed = ?,
 			updated_at = ?
 		WHERE id = ?
 	`
@@ -284,6 +289,11 @@ func (r *SeriesRepository) Update(ctx context.Context, series *models.Series) er
 		series.IMDbID,
 		series.TMDbID,
 		series.InProduction,
+		series.FilePath,
+		series.ParseStatus,
+		series.MetadataSource,
+		series.VoteAverage,
+		series.IsRemoved,
 		series.UpdatedAt,
 		series.ID,
 	)

@@ -37,6 +37,16 @@ func setupSeriesTestDB(t *testing.T) *sql.DB {
 			imdb_id TEXT,
 			tmdb_id INTEGER,
 			in_production INTEGER,
+			file_path TEXT,
+			parse_status TEXT NOT NULL DEFAULT 'pending',
+			metadata_source TEXT,
+			subtitle_status TEXT NOT NULL DEFAULT 'not_searched',
+			subtitle_path TEXT,
+			subtitle_language TEXT,
+			subtitle_last_searched TIMESTAMP,
+			subtitle_search_score REAL,
+			vote_average REAL,
+			is_removed INTEGER NOT NULL DEFAULT 0,
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 		)
