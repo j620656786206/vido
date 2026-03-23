@@ -41,7 +41,11 @@ phase0_prerequisites:
 v4_epics:
   # Phase 1 — Core Library
   epic-7-media-library-scanner:
-    status: partial-done  # P1-002/003/004/007 done from v3 Epics 1,2,3,5
+    status: in-progress  # P1-002/003/004/007 done from v3; 4 new stories below
+  7-1-recursive-folder-scanner: ready-for-dev
+  7-2-scheduled-scan-service: backlog
+  7-3-manual-scan-trigger-ui: backlog
+  7-4-scan-progress-tracking: backlog
   epic-8-subtitle-engine:
     status: backlog
   epic-9-ai-subtitle-enhancement:
