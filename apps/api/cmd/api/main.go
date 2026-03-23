@@ -23,6 +23,7 @@ import (
 	"github.com/vido/api/internal/retry"
 	"github.com/vido/api/internal/secrets"
 	"github.com/vido/api/internal/services"
+	"github.com/vido/api/internal/sse"
 	"github.com/vido/api/internal/cache"
 
 	// Media config is loaded during service initialization
@@ -314,6 +315,11 @@ func main() {
 
 	slog.Info("Services initialized with repository injection")
 
+	// Initialize SSE hub for real-time event broadcasting
+	sseHub := sse.NewHub()
+	defer sseHub.Close()
+	slog.Info("SSE hub initialized")
+
 	// Initialize event emitter for real-time parse progress (Story 3.10)
 	parseEventEmitter := events.NewChannelEmitter()
 	defer parseEventEmitter.Close()
@@ -389,6 +395,8 @@ func main() {
 		downloadHandler.RegisterRoutes(apiV1)
 		libraryHandler.RegisterRoutes(apiV1)
 		recentMediaHandler.RegisterRoutes(apiV1)
+		// SSE event stream endpoint
+		apiV1.GET("/events", sse.Handler(sseHub))
 		// Health services endpoint (Story 3.12 - Graceful Degradation)
 		apiV1.GET("/health/services", serviceHealthHandler.GetServicesHealth)
 		// Connection history endpoint (Story 4.6 - Connection Health Monitoring)
