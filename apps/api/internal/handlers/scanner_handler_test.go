@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -55,7 +54,7 @@ func setupScannerRouter(svc ScannerServiceInterface) *gin.Engine {
 
 func TestScannerHandler_TriggerScan_Success(t *testing.T) {
 	mockSvc := new(MockScannerService)
-	mockSvc.On("IsScanActive").Return(false)
+	// Handler no longer calls IsScanActive — StartScan's mutex is the gate
 	mockSvc.On("StartScan", mock.Anything).Return(&services.ScanResult{
 		FilesFound:   10,
 		FilesCreated: 10,
@@ -72,31 +71,13 @@ func TestScannerHandler_TriggerScan_Success(t *testing.T) {
 	require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &body))
 	assert.True(t, body.Success)
 
-	// Verify the data contains the message
 	dataMap, ok := body.Data.(map[string]interface{})
 	require.True(t, ok)
 	assert.Equal(t, "Scan started", dataMap["message"])
 
-	// Give goroutine time to start
+	// Give goroutine time to call StartScan
 	time.Sleep(50 * time.Millisecond)
-	mockSvc.AssertCalled(t, "IsScanActive")
-}
-
-func TestScannerHandler_TriggerScan_AlreadyRunning(t *testing.T) {
-	mockSvc := new(MockScannerService)
-	mockSvc.On("IsScanActive").Return(true)
-
-	router := setupScannerRouter(mockSvc)
-	req, _ := http.NewRequest(http.MethodPost, "/api/v1/scanner/scan", nil)
-	resp := httptest.NewRecorder()
-	router.ServeHTTP(resp, req)
-
-	assert.Equal(t, http.StatusConflict, resp.Code)
-	var body APIResponse
-	require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &body))
-	assert.False(t, body.Success)
-	assert.NotNil(t, body.Error)
-	assert.Equal(t, "SCANNER_ALREADY_RUNNING", body.Error.Code)
+	mockSvc.AssertCalled(t, "StartScan", mock.Anything)
 }
 
 func TestScannerHandler_GetStatus_NoScan(t *testing.T) {
@@ -170,7 +151,7 @@ func TestScannerHandler_CancelScan_Success(t *testing.T) {
 
 func TestScannerHandler_CancelScan_NoActiveScan(t *testing.T) {
 	mockSvc := new(MockScannerService)
-	mockSvc.On("CancelScan").Return(fmt.Errorf("no scan is currently active"))
+	mockSvc.On("CancelScan").Return(services.ErrScanNotActive)
 
 	router := setupScannerRouter(mockSvc)
 	req, _ := http.NewRequest(http.MethodPost, "/api/v1/scanner/cancel", nil)

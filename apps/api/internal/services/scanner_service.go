@@ -18,13 +18,19 @@ import (
 	"github.com/vido/api/internal/sse"
 )
 
-// videoExtensions defines the supported video file extensions (lowercase)
-var videoExtensions = map[string]bool{
-	".mkv":  true,
-	".mp4":  true,
-	".avi":  true,
-	".rmvb": true,
-}
+// ErrScanNotActive is returned when attempting to cancel a scan that is not running
+var ErrScanNotActive = fmt.Errorf("SCANNER_NOT_ACTIVE: no scan is currently active")
+
+// videoExtensions defines the supported video file extensions (lowercase).
+// Using a function to prevent mutation of the lookup map.
+var videoExtensions = func() map[string]bool {
+	return map[string]bool{
+		".mkv":  true,
+		".mp4":  true,
+		".avi":  true,
+		".rmvb": true,
+	}
+}()
 
 // ScanProgress represents the current state of an active scan
 type ScanProgress struct {
@@ -198,7 +204,7 @@ func (s *ScannerService) CancelScan() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if !s.isScanning {
-		return fmt.Errorf("no scan is currently active")
+		return ErrScanNotActive
 	}
 	close(s.cancelChan)
 	s.logger.Info("scan cancellation requested")
@@ -306,7 +312,10 @@ func isVideoFile(path string) bool {
 	return videoExtensions[ext]
 }
 
-// processVideoFile checks for duplicates and either creates or updates a movie record
+// processVideoFile checks for duplicates and either creates or updates a movie record.
+// Note: All scanned files are initially created as Movie records regardless of whether
+// they are movies or TV series. The parser service (Stories 2-3, 3-1) is responsible
+// for determining the media type and converting to Series records if needed.
 func (s *ScannerService) processVideoFile(ctx context.Context, resolvedPath string, pendingMovies *[]*models.Movie) error {
 	// Get file info for size
 	info, err := os.Stat(resolvedPath)

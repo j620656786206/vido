@@ -458,7 +458,7 @@ func TestScannerService_CancelScan(t *testing.T) {
 	// Cancel before scan should return error
 	err := svc.CancelScan()
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "no scan is currently active")
+	assert.ErrorIs(t, err, ErrScanNotActive)
 
 	// Simulate a running scan and cancel it
 	svc.mu.Lock()

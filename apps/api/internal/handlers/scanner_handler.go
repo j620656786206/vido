@@ -2,8 +2,9 @@ package handlers
 
 import (
 	"context"
+	"errors"
+	"log/slog"
 	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/vido/api/internal/services"
@@ -42,17 +43,26 @@ func (h *ScannerHandler) RegisterRoutes(rg *gin.RouterGroup) {
 
 // TriggerScan handles POST /api/v1/scanner/scan
 // Starts a new scan in the background. Returns 409 if a scan is already running.
+// Uses context.Background() for the goroutine since the scan outlives the HTTP request.
+// The StartScan mutex is the single gate for concurrency — no pre-check race condition.
 func (h *ScannerHandler) TriggerScan(c *gin.Context) {
-	if h.scannerService.IsScanActive() {
-		ErrorResponse(c, http.StatusConflict, "SCANNER_ALREADY_RUNNING",
-			"A scan is already in progress",
-			"Wait for the current scan to complete or cancel it first.")
-		return
-	}
-
-	// Start scan in a goroutine (non-blocking)
+	// Start scan in a goroutine with background context (not request context,
+	// which would be cancelled when the HTTP response is sent).
+	// StartScan's internal mutex handles concurrent request protection — if two
+	// requests arrive simultaneously, the second will get SCANNER_ALREADY_RUNNING.
 	go func() {
-		_, _ = h.scannerService.StartScan(c.Request.Context())
+		result, err := h.scannerService.StartScan(context.Background())
+		if err != nil {
+			slog.Error("scan failed", "error", err)
+			return
+		}
+		if result != nil {
+			slog.Info("scan completed in background",
+				"files_found", result.FilesFound,
+				"files_created", result.FilesCreated,
+				"duration", result.Duration,
+			)
+		}
 	}()
 
 	c.JSON(http.StatusAccepted, APIResponse{
@@ -73,7 +83,7 @@ func (h *ScannerHandler) GetStatus(c *gin.Context) {
 func (h *ScannerHandler) CancelScan(c *gin.Context) {
 	err := h.scannerService.CancelScan()
 	if err != nil {
-		if strings.Contains(err.Error(), "no scan is currently active") {
+		if errors.Is(err, services.ErrScanNotActive) {
 			BadRequestError(c, "SCANNER_NOT_ACTIVE", "No scan is currently active")
 			return
 		}
