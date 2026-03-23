@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"log/slog"
+	"sync"
 
 	"github.com/longbridgeapp/opencc"
 )
@@ -15,9 +16,14 @@ const (
 
 // Converter wraps OpenCC for Chinese variant conversion.
 // It uses the pure Go opencc binding (no external binary required).
+//
+// Converter is safe for concurrent use. The underlying opencc library performs
+// read-only dictionary lookups after initialization, and non-default profiles
+// are cached with a sync.Map to avoid per-call allocation.
 type Converter struct {
 	cc        *opencc.OpenCC
 	available bool
+	cache     sync.Map // profile string → *opencc.OpenCC
 }
 
 // NewConverter creates a Converter initialized with the s2twp profile.
@@ -34,11 +40,16 @@ func NewConverter() (*Converter, error) {
 	}
 
 	slog.Info("OpenCC converter initialized", "profile", ProfileS2TWP)
-	return &Converter{cc: cc, available: true}, nil
+	c := &Converter{cc: cc, available: true}
+	c.cache.Store(ProfileS2TWP, cc)
+	return c, nil
 }
 
 // IsAvailable returns true if OpenCC can perform conversions.
 func (c *Converter) IsAvailable() bool {
+	if c == nil {
+		return false
+	}
 	return c.available
 }
 
@@ -46,6 +57,10 @@ func (c *Converter) IsAvailable() bool {
 // On any error, returns the original content unchanged along with the error
 // (graceful degradation — unconverted subtitle is better than no subtitle).
 func (c *Converter) Convert(content []byte, profile string) ([]byte, error) {
+	if c == nil {
+		return content, fmt.Errorf("opencc: nil converter")
+	}
+
 	if len(content) == 0 {
 		return content, nil
 	}
@@ -55,21 +70,16 @@ func (c *Converter) Convert(content []byte, profile string) ([]byte, error) {
 	}
 
 	// Strip UTF-8 BOM if present
-	stripped := bytes.TrimPrefix(content, []byte{0xEF, 0xBB, 0xBF})
+	bom := []byte{0xEF, 0xBB, 0xBF}
+	stripped := bytes.TrimPrefix(content, bom)
 	hasBOM := len(stripped) < len(content)
 
 	input := string(stripped)
 
-	// If a different profile is requested, create a temporary converter
-	var cc *opencc.OpenCC
-	if profile != ProfileS2TWP {
-		var err error
-		cc, err = opencc.New(profile)
-		if err != nil {
-			return content, fmt.Errorf("opencc: unsupported profile %q: %w", profile, err)
-		}
-	} else {
-		cc = c.cc
+	// Look up or create the converter for this profile (cached)
+	cc, err := c.getOrCreateCC(profile)
+	if err != nil {
+		return content, fmt.Errorf("opencc: unsupported profile %q: %w", profile, err)
 	}
 
 	output, err := cc.Convert(input)
@@ -82,14 +92,30 @@ func (c *Converter) Convert(content []byte, profile string) ([]byte, error) {
 		return content, fmt.Errorf("opencc: conversion failed: %w", err)
 	}
 
-	result := []byte(output)
-
-	// Restore BOM if original had one
+	// Pre-allocate result with BOM space if needed
 	if hasBOM {
-		result = append([]byte{0xEF, 0xBB, 0xBF}, result...)
+		result := make([]byte, 0, len(bom)+len(output))
+		result = append(result, bom...)
+		result = append(result, output...)
+		return result, nil
 	}
 
-	return result, nil
+	return []byte(output), nil
+}
+
+// getOrCreateCC returns a cached OpenCC instance for the given profile,
+// creating and caching one if it doesn't exist yet.
+func (c *Converter) getOrCreateCC(profile string) (*opencc.OpenCC, error) {
+	if v, ok := c.cache.Load(profile); ok {
+		return v.(*opencc.OpenCC), nil
+	}
+	cc, err := opencc.New(profile)
+	if err != nil {
+		return nil, err
+	}
+	// Store-or-load: if another goroutine raced us, use theirs and discard ours
+	actual, _ := c.cache.LoadOrStore(profile, cc)
+	return actual.(*opencc.OpenCC), nil
 }
 
 // ConvertS2TWP is a convenience method for Simplified → Traditional (Taiwan phrases).

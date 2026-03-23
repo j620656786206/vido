@@ -2,6 +2,7 @@ package subtitle
 
 import (
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -236,6 +237,59 @@ func TestConverter_WindowsLineEndings(t *testing.T) {
 	assert.Contains(t, output, "\r\n")
 }
 
+// CR: Nil receiver safety
+func TestConverter_NilReceiver(t *testing.T) {
+	var c *Converter
+
+	assert.False(t, c.IsAvailable(), "nil converter should not be available")
+
+	input := []byte("测试")
+	result, err := c.ConvertS2TWP(input)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "nil converter")
+	assert.Equal(t, input, result, "nil converter should return original content")
+}
+
+// CR: Concurrent access safety
+func TestConverter_ConcurrentAccess(t *testing.T) {
+	c, err := NewConverter()
+	require.NoError(t, err)
+
+	const goroutines = 20
+	var wg sync.WaitGroup
+	wg.Add(goroutines)
+
+	for i := 0; i < goroutines; i++ {
+		go func() {
+			defer wg.Done()
+			for j := 0; j < 50; j++ {
+				result, err := c.ConvertS2TWP([]byte("软件程序信息"))
+				assert.NoError(t, err)
+				assert.Equal(t, "軟體程式資訊", string(result))
+			}
+		}()
+	}
+
+	wg.Wait()
+}
+
+// CR: Profile caching — repeated non-default profile calls should not leak
+func TestConverter_ProfileCaching(t *testing.T) {
+	c, err := NewConverter()
+	require.NoError(t, err)
+
+	// Call with a non-default profile multiple times
+	for i := 0; i < 5; i++ {
+		result, err := c.Convert([]byte("簡體"), "t2s")
+		require.NoError(t, err)
+		assert.Equal(t, "简体", string(result))
+	}
+
+	// Verify cache was used (second call should hit cache)
+	_, ok := c.cache.Load("t2s")
+	assert.True(t, ok, "non-default profile should be cached after first use")
+}
+
 // Task 6: Benchmark
 func BenchmarkConvertS2TWP(b *testing.B) {
 	c, err := NewConverter()
@@ -251,6 +305,7 @@ func BenchmarkConvertS2TWP(b *testing.B) {
 	}
 	content := []byte(sb.String())
 
+	b.SetBytes(int64(len(content)))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, _ = c.ConvertS2TWP(content)

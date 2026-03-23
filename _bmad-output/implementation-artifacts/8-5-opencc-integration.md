@@ -1,6 +1,6 @@
 # Story 8.5: OpenCC Integration
 
-Status: review
+Status: done
 
 ## Story
 
@@ -129,6 +129,14 @@ Claude Opus 4.6 (1M context)
 - Benchmark: ~50ms per 100KB (target: ≤100ms)
 - 16 converter tests + 1 benchmark, 88.2% coverage
 - 🎨 UX Verification: SKIPPED — no UI changes
+- **CR (Opus 4.6):** 7 findings (2 HIGH, 3 MEDIUM, 2 LOW), all auto-fixed:
+  - HIGH: Non-default profile converter leaked per call → added sync.Map cache with LoadOrStore
+  - HIGH: Thread safety undocumented, no concurrent test → confirmed read-only safety, added godoc + concurrent test (20 goroutines × 50 calls)
+  - MEDIUM: Nil receiver panic on all methods → added nil guard on IsAvailable and Convert
+  - MEDIUM: BOM restoration double-allocated (append to 3-byte slice copies entire result) → pre-allocate with make([]byte, 0, len(bom)+len(output))
+  - MEDIUM: No concurrent access test → TestConverter_ConcurrentAccess added
+  - LOW: Benchmark missing b.SetBytes for throughput reporting → added
+  - LOW: Triple content copy in Convert (string(stripped) + []byte(output) + BOM append) → reduced to 2 copies (BOM path now pre-allocates)
 
 ### File List
 - apps/api/internal/subtitle/converter.go (NEW)
