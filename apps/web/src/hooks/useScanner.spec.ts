@@ -1,8 +1,15 @@
 import { describe, it, expect, vi } from 'vitest';
-import { renderHook, waitFor } from '@testing-library/react';
+import { renderHook, waitFor, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createElement } from 'react';
-import { useScanStatus, useScanSchedule, scannerKeys } from './useScanner';
+import {
+  useScanStatus,
+  useScanSchedule,
+  useTriggerScan,
+  useCancelScan,
+  useUpdateScanSchedule,
+  scannerKeys,
+} from './useScanner';
 
 vi.mock('../services/scannerService', () => ({
   scannerService: {
@@ -62,6 +69,51 @@ describe('useScanner hooks', () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.data?.frequency).toBe('hourly');
+    });
+  });
+
+  describe('useTriggerScan', () => {
+    it('calls scannerService.triggerScan on mutate', async () => {
+      const { scannerService } = await import('../services/scannerService');
+      const { result } = renderHook(() => useTriggerScan(), {
+        wrapper: createWrapper(),
+      });
+
+      await act(async () => {
+        await result.current.mutateAsync();
+      });
+
+      expect(scannerService.triggerScan).toHaveBeenCalled();
+    });
+  });
+
+  describe('useCancelScan', () => {
+    it('calls scannerService.cancelScan on mutate', async () => {
+      const { scannerService } = await import('../services/scannerService');
+      const { result } = renderHook(() => useCancelScan(), {
+        wrapper: createWrapper(),
+      });
+
+      await act(async () => {
+        await result.current.mutateAsync();
+      });
+
+      expect(scannerService.cancelScan).toHaveBeenCalled();
+    });
+  });
+
+  describe('useUpdateScanSchedule', () => {
+    it('calls scannerService.updateSchedule with frequency', async () => {
+      const { scannerService } = await import('../services/scannerService');
+      const { result } = renderHook(() => useUpdateScanSchedule(), {
+        wrapper: createWrapper(),
+      });
+
+      await act(async () => {
+        await result.current.mutateAsync('daily');
+      });
+
+      expect(scannerService.updateSchedule).toHaveBeenCalledWith('daily');
     });
   });
 });

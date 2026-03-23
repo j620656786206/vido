@@ -3,7 +3,7 @@
  * Displays media folder paths, scan schedule, last scan info, and scan trigger button.
  */
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { ScanLine, Loader, FolderOpen, AlertCircle } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import {
@@ -43,6 +43,20 @@ export function ScannerSettings() {
     type: 'success' | 'warning' | 'error';
     message: string;
   } | null>(null);
+  const dismissTimerRef = useRef<ReturnType<typeof setTimeout>>();
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
+    };
+  }, []);
+
+  const showNotification = (type: 'success' | 'warning' | 'error', message: string) => {
+    if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
+    setNotification({ type, message });
+    dismissTimerRef.current = setTimeout(() => setNotification(null), 5000);
+  };
 
   const isScanning = status?.is_scanning ?? false;
 
@@ -53,12 +67,10 @@ export function ScannerSettings() {
     } catch (err) {
       const apiErr = err as ScannerApiError;
       if (apiErr.code === 'SCANNER_ALREADY_RUNNING') {
-        setNotification({ type: 'warning', message: '掃描已在進行中' });
+        showNotification('warning', '掃描已在進行中');
       } else {
-        setNotification({ type: 'error', message: apiErr.message || '掃描觸發失敗' });
+        showNotification('error', apiErr.message || '掃描觸發失敗');
       }
-      // Auto-dismiss after 5s
-      setTimeout(() => setNotification(null), 5000);
     }
   };
 
@@ -67,8 +79,7 @@ export function ScannerSettings() {
       await updateSchedule.mutateAsync(frequency);
     } catch (err) {
       const apiErr = err as ScannerApiError;
-      setNotification({ type: 'error', message: apiErr.message || '排程更新失敗' });
-      setTimeout(() => setNotification(null), 5000);
+      showNotification('error', apiErr.message || '排程更新失敗');
     }
   };
 

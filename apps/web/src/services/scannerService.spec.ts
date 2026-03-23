@@ -40,8 +40,14 @@ describe('scannerService', () => {
     it('throws ScannerApiError on 409 conflict', async () => {
       mockError(409, 'SCANNER_ALREADY_RUNNING', '掃描已在進行中');
 
-      await expect(scannerService.triggerScan()).rejects.toThrow(ScannerApiError);
-      await expect(scannerService.triggerScan().catch((e) => e.code)).resolves.toBe(undefined);
+      try {
+        await scannerService.triggerScan();
+        expect.fail('should have thrown');
+      } catch (e) {
+        expect(e).toBeInstanceOf(ScannerApiError);
+        expect((e as ScannerApiError).code).toBe('SCANNER_ALREADY_RUNNING');
+        expect((e as ScannerApiError).message).toBe('掃描已在進行中');
+      }
     });
   });
 
