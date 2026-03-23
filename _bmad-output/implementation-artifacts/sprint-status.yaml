@@ -23,7 +23,20 @@ deprecated:
   epic-7-user-auth:  deleted  # Auth removed in PRD v4; stories archived
 
 # ==============================================================================
-# PRD v4 Epics (A-L)
+# Phase 0 — Architecture Prerequisites (v4 infrastructure)
+# ==============================================================================
+phase0_prerequisites:
+  epic-0-phase0-prerequisites:
+    status: done  # 2026-03-23
+  0-1-subtitle-fields-migration:
+    status: done  # Migration 018 + SubtitleStatus type + Movie/Series model fields
+  0-2-repository-extensions:
+    status: done  # BulkCreate, FindByParseStatus, subtitle query methods
+  0-3-sse-hub:
+    status: done  # SSE hub package + handler + wired into main.go
+
+# ==============================================================================
+# PRD v4 Epics (7-18)
 # ==============================================================================
 v4_epics:
   # Phase 1 — Core Library
