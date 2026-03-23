@@ -1,6 +1,6 @@
 # Story 8.3: OpenSubtitles API Client
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -108,5 +108,17 @@ The hash is computed by combining: file size (as a 64-bit little-endian integer)
 ## Dev Agent Record
 
 ### Agent Model Used
+Claude Opus 4.6 (1M context)
+
 ### Completion Notes List
+- OpenSubtitles REST API v1 with JWT auth token management
+- Transparent re-auth: expired tokens auto-refresh before API calls
+- Hash-based matching via CalculateOpenSubHash (first+last 64KB)
+- HTTP 429 rate limiting: parse Retry-After header, wait and retry once
+- Disabled mode: empty results when API key missing (not errors)
+- 16 unit tests, 80.6% coverage, zero regressions
+- 🎨 UX Verification: SKIPPED — no UI changes
+
 ### File List
+- apps/api/internal/subtitle/providers/opensub.go (NEW)
+- apps/api/internal/subtitle/providers/opensub_test.go (NEW)

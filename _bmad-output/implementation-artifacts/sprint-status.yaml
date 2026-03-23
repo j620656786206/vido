@@ -174,7 +174,7 @@ development_status:
   epic-8: in-progress
   8-1-assrt-api-client:          done  # CR 2026-03-23: 7 findings, all auto-fixed
   8-2-zimuku-web-scraper:        done  # CR 2026-03-23: 7 findings, 6 auto-fixed
-  8-3-opensubtitles-api-client:  ready-for-dev
+  8-3-opensubtitles-api-client:  review
   8-4-language-detection:        in-progress
   8-5-opencc-integration:        ready-for-dev
   8-6-subtitle-scoring-ranking:  ready-for-dev
