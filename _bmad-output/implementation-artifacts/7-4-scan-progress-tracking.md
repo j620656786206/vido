@@ -134,24 +134,32 @@ Claude Opus 4.6 (1M context)
 
 ### Debug Log References
 - Fixed 4 test failures: 2 async/timer issues in useScanProgress.spec.ts (switched to real timers for async tests), 2 matchMedia mock issues in ScanProgress.spec.tsx (added global mock)
+- TA review: 82/100 (A - Good) — 1 P1 fix applied (auto-dismiss interaction test)
+- CR review: 2 High + 3 Medium + 2 Low found, 5 fixed:
+  1. HIGH: SSE reconnection after error (10s retry)
+  2. HIGH: Action links now navigate to library with status filter
+  3. MEDIUM: filesProcessed estimated from percentDone when SSE lacks field
+  4. MEDIUM: useEffect stabilized with connectSSE ref to prevent loop
+  5. MEDIUM: ScanProgress excluded from setup page
 
 ### Completion Notes List
 - SSE hook uses useReducer for push-based state (not TanStack Query per spec)
 - EventSource connects to /api/v1/events, filters scan_progress, scan_complete, scan_cancelled events
 - SSE data format: outer JSON has `data` field containing actual event payload (matches hub.go Event struct)
-- Polling fallback activates on SSE error or 5s timeout, polls every 3s
-- Stats row shows found/parsed/errors (3 counters) — backend doesn't distinguish "matched" separately yet
+- Polling fallback activates on SSE error or 5s timeout, polls every 3s; SSE reconnects after 10s
+- Stats row shows found/parsed/errors (3 counters) — filesProcessed estimated from percentDone
 - Auto-dismiss uses shrinking progress bar (50ms interval for smooth animation)
 - Mobile sheet uses touch events for swipe-to-expand/collapse gesture
-- ScanProgress wrapper added to `__root.tsx` outside AppShell (visible on all pages)
+- ScanProgress wrapper added to `__root.tsx` outside AppShell (visible on all pages except /setup)
+- Action links navigate to library with status=unmatched or status=error filter
 
 ### File List
-- `apps/web/src/hooks/useScanProgress.ts` — SSE consumption hook with useReducer + polling fallback
+- `apps/web/src/hooks/useScanProgress.ts` — SSE consumption hook with useReducer + polling fallback + reconnect
 - `apps/web/src/hooks/useScanProgress.spec.ts` — 10 tests
-- `apps/web/src/components/scanner/ScanProgressCard.tsx` — Desktop floating card (400px, bottom-right)
-- `apps/web/src/components/scanner/ScanProgressCard.spec.tsx` — 16 tests
+- `apps/web/src/components/scanner/ScanProgressCard.tsx` — Desktop floating card (400px, bottom-right) with navigation
+- `apps/web/src/components/scanner/ScanProgressCard.spec.tsx` — 19 tests
 - `apps/web/src/components/scanner/ScanProgressSheet.tsx` — Mobile bottom sheet (peek + expanded)
 - `apps/web/src/components/scanner/ScanProgressSheet.spec.tsx` — 12 tests
 - `apps/web/src/components/scanner/ScanProgress.tsx` — Responsive wrapper (breakpoint 768px)
 - `apps/web/src/components/scanner/ScanProgress.spec.tsx` — 3 tests
-- `apps/web/src/routes/__root.tsx` — Modified: added ScanProgress to root layout
+- `apps/web/src/routes/__root.tsx` — Modified: added ScanProgress to root layout (excluded from setup)
