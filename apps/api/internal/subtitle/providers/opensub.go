@@ -32,6 +32,9 @@ const (
 	openSubUserAgent        = "Vido/1.0 (NAS Media Manager)"
 )
 
+// openSubMaxRetries is the maximum number of 429 retries before giving up.
+const openSubMaxRetries = 2
+
 // OpenSubProvider implements SubtitleProvider for the OpenSubtitles REST API v1.
 type OpenSubProvider struct {
 	apiKey      string
@@ -41,7 +44,7 @@ type OpenSubProvider struct {
 	httpClient  *http.Client
 	testBaseURL string // override for testing
 
-	mu          sync.Mutex
+	mu          sync.RWMutex
 	authToken   string
 	tokenExpiry time.Time
 }
@@ -134,6 +137,15 @@ func (p *OpenSubProvider) authenticate(ctx context.Context) error {
 
 // ensureAuth checks token validity and re-authenticates if needed.
 func (p *OpenSubProvider) ensureAuth(ctx context.Context) error {
+	// Fast path: check with read lock first.
+	p.mu.RLock()
+	valid := p.authToken != "" && time.Now().Before(p.tokenExpiry)
+	p.mu.RUnlock()
+	if valid {
+		return nil
+	}
+
+	// Slow path: acquire write lock and re-check.
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
@@ -180,6 +192,10 @@ type openSubFeature struct {
 
 // Search queries the OpenSubtitles API for subtitles.
 func (p *OpenSubProvider) Search(ctx context.Context, query SubtitleQuery) ([]SubtitleResult, error) {
+	return p.searchWithRetry(ctx, query, 0)
+}
+
+func (p *OpenSubProvider) searchWithRetry(ctx context.Context, query SubtitleQuery, retryCount int) ([]SubtitleResult, error) {
 	if p.disabled {
 		slog.Info("OpenSubtitles search skipped — provider disabled")
 		return nil, nil
@@ -232,14 +248,16 @@ func (p *OpenSubProvider) Search(ctx context.Context, query SubtitleQuery) ([]Su
 	}
 
 	if resp.StatusCode == http.StatusTooManyRequests {
+		if retryCount >= openSubMaxRetries {
+			return nil, fmt.Errorf("opensubtitles: rate limited after %d retries", retryCount)
+		}
 		retryAfter := parseRetryAfter(resp.Header.Get("Retry-After"))
 		select {
 		case <-time.After(retryAfter):
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		}
-		// Retry once
-		return p.Search(ctx, query)
+		return p.searchWithRetry(ctx, query, retryCount+1)
 	}
 
 	if resp.StatusCode != http.StatusOK {
@@ -291,6 +309,10 @@ type openSubDownloadResponse struct {
 
 // Download fetches a subtitle file by file ID.
 func (p *OpenSubProvider) Download(ctx context.Context, id string) ([]byte, error) {
+	return p.downloadWithRetry(ctx, id, 0)
+}
+
+func (p *OpenSubProvider) downloadWithRetry(ctx context.Context, id string, retryCount int) ([]byte, error) {
 	if p.disabled {
 		return nil, fmt.Errorf("opensubtitles: provider is disabled")
 	}
@@ -318,13 +340,16 @@ func (p *OpenSubProvider) Download(ctx context.Context, id string) ([]byte, erro
 	}
 
 	if resp.StatusCode == http.StatusTooManyRequests {
+		if retryCount >= openSubMaxRetries {
+			return nil, fmt.Errorf("opensubtitles: download rate limited after %d retries", retryCount)
+		}
 		retryAfter := parseRetryAfter(resp.Header.Get("Retry-After"))
 		select {
 		case <-time.After(retryAfter):
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		}
-		return p.Download(ctx, id)
+		return p.downloadWithRetry(ctx, id, retryCount+1)
 	}
 
 	if resp.StatusCode != http.StatusOK {
@@ -370,13 +395,18 @@ func (p *OpenSubProvider) Download(ctx context.Context, id string) ([]byte, erro
 }
 
 // doRequest makes an authenticated API request with standard headers.
-func (p *OpenSubProvider) doRequest(ctx context.Context, method, url string, body io.Reader) (*http.Response, error) {
-	req, err := http.NewRequestWithContext(ctx, method, url, body)
+func (p *OpenSubProvider) doRequest(ctx context.Context, method, reqURL string, body io.Reader) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, method, reqURL, body)
 	if err != nil {
 		return nil, fmt.Errorf("opensubtitles: create request: %w", err)
 	}
+
+	p.mu.RLock()
+	token := p.authToken
+	p.mu.RUnlock()
+
 	req.Header.Set("Api-Key", p.apiKey)
-	req.Header.Set("Authorization", "Bearer "+p.authToken)
+	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", openSubUserAgent)
 

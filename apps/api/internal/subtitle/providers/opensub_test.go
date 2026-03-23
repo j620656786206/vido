@@ -303,15 +303,14 @@ func TestParseRetryAfter(t *testing.T) {
 }
 
 func TestCalculateOpenSubHash(t *testing.T) {
-	// Create a test file with known content
+	// Create a test file with known content — all zeros
 	dir := t.TempDir()
 	path := filepath.Join(dir, "testfile.mkv")
 
-	// Create a file larger than 128KB (2 * 64KB)
-	data := make([]byte, 200*1024)
-	for i := range data {
-		data[i] = byte(i % 256)
-	}
+	// 200KB of zeros: hash = fileSize + sum_first_64KB(zeros) + sum_last_64KB(zeros)
+	// = 204800 + 0 + 0 = 204800 = 0x0000000000032000
+	fileSize := 200 * 1024
+	data := make([]byte, fileSize)
 	err := os.WriteFile(path, data, 0644)
 	require.NoError(t, err)
 
@@ -320,10 +319,53 @@ func TestCalculateOpenSubHash(t *testing.T) {
 	assert.Len(t, hash, 16) // 64-bit hex = 16 chars
 	assert.Regexp(t, `^[0-9a-f]{16}$`, hash)
 
-	// Same file should produce same hash
+	// Known value: for all-zero file, hash = file size only
+	expectedHash := fmt.Sprintf("%016x", fileSize)
+	assert.Equal(t, expectedHash, hash, "all-zero file hash should equal file size")
+
+	// Deterministic: same file → same hash
 	hash2, err := CalculateOpenSubHash(path)
 	require.NoError(t, err)
 	assert.Equal(t, hash, hash2)
+}
+
+func TestCalculateOpenSubHash_KnownContent(t *testing.T) {
+	// Create a file with known non-zero content for deterministic hash verification
+	dir := t.TempDir()
+	path := filepath.Join(dir, "known.mkv")
+
+	fileSize := 128 * 1024 // exactly 128KB (minimum valid size)
+	data := make([]byte, fileSize)
+	// Fill first 64KB with 0x01 pattern
+	for i := 0; i < 64*1024; i++ {
+		data[i] = 0x01
+	}
+	// Fill last 64KB with 0x02 pattern
+	for i := 64 * 1024; i < 128*1024; i++ {
+		data[i] = 0x02
+	}
+
+	err := os.WriteFile(path, data, 0644)
+	require.NoError(t, err)
+
+	hash, err := CalculateOpenSubHash(path)
+	require.NoError(t, err)
+	assert.Len(t, hash, 16)
+
+	// Compute expected hash manually:
+	// First 64KB: 8192 uint64 words, each = 0x0101010101010101
+	// Sum = 8192 * 0x0101010101010101
+	// Last 64KB: 8192 uint64 words, each = 0x0202020202020202
+	// Sum = 8192 * 0x0202020202020202
+	// Hash = fileSize + firstSum + lastSum
+	var firstSum, lastSum uint64
+	firstWord := uint64(0x0101010101010101)
+	lastWord := uint64(0x0202020202020202)
+	firstSum = 8192 * firstWord
+	lastSum = 8192 * lastWord
+	expectedHash := fmt.Sprintf("%016x", uint64(fileSize)+firstSum+lastSum)
+
+	assert.Equal(t, expectedHash, hash, "known content hash should match manual calculation")
 }
 
 func TestCalculateOpenSubHash_FileTooSmall(t *testing.T) {
