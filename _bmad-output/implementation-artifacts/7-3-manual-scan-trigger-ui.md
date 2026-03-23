@@ -55,6 +55,8 @@ so that **I can manage my library scanning without using API calls**.
 
 ### Design Reference
 - Screen H1 from `scanner-ui-design-brief.md` — Scan Trigger & Settings section layout
+- **Desktop screenshot:** `_bmad-output/screenshots/flow-h-scanner-desktop/h1-settings-scanner-desktop.png`
+- **Mobile screenshot:** `_bmad-output/screenshots/flow-h-scanner-mobile/h4-settings-scanner-mobile.png`
 - Reuse existing Settings page layout and patterns from `apps/web/src/components/settings/`
 - Dark theme: all colors from Epic 5 design system (--bg-primary, --bg-secondary, etc.)
 - Lucide icons: ScanLine (button), Loader (spinning), FolderPlus, CheckCircle, AlertCircle

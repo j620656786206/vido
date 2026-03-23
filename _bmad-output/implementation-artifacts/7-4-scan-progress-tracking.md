@@ -60,8 +60,16 @@ so that **I know the scan is working and how long it will take**.
 
 ### Design Reference
 - **Screen H2:** Scan Progress (Desktop) — floating card, bottom-right, 400px, --bg-secondary, --shadow-lg, radius-xl
+  - Screenshot: `_bmad-output/screenshots/flow-h-scanner-desktop/h2-scan-progress-desktop.png`
 - **Screen H3:** Scan Results Summary — toast notification, top-center, 480px max-width, auto-dismiss 10s
-- **Screen H4:** Scan Progress (Mobile) — bottom sheet, peek height 64px, expandable on tap
+  - Screenshot: `_bmad-output/screenshots/flow-h-scanner-desktop/h3-scan-complete-toast-desktop.png`
+- **Screen H5:** Scan Progress (Mobile) — bottom sheet, peek height 64px, expandable on tap
+  - Screenshot: `_bmad-output/screenshots/flow-h-scanner-mobile/h5-scan-progress-mobile.png`
+- **Screen H6:** Scan Complete Toast (Mobile)
+  - Screenshot: `_bmad-output/screenshots/flow-h-scanner-mobile/h6-scan-complete-toast-mobile.png`
+- **Screen H7/H8:** Filtered library grid (unmatched) — destination for "查看未比對項目" action link
+  - Desktop: `_bmad-output/screenshots/flow-h-scanner-desktop/h7-filtered-library-unmatched-desktop.png`
+  - Mobile: `_bmad-output/screenshots/flow-h-scanner-mobile/h8-filtered-library-unmatched-mobile.png`
 - Full specs: `_bmad-output/planning-artifacts/scanner-ui-design-brief.md`
 
 ### Backend Endpoints (all exist from Story 7-1, no backend changes needed)
