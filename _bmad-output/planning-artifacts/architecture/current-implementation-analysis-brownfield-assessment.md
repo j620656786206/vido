@@ -150,7 +150,7 @@ The project currently maintains **TWO separate Go backend implementations** with
 - ❌ **NO DOWNLOAD MONITOR** - qBittorrent integration UI missing (FR27-FR37)
 - ❌ **NO MEDIA LIBRARY** - Browse/manage UI missing (FR38-FR46)
 - ❌ **NO SETTINGS PAGE** - Configuration UI missing (FR47-FR66)
-- ❌ **NO AUTHENTICATION UI** - Login/PIN entry missing (FR67-FR74)
+- ~~Authentication UI~~ — **NOT NEEDED in v4** (single-user, no auth required)
 - ❌ **NO ACTUAL COMPONENTS** - Only placeholder structures exist
 
 **File Structure:**

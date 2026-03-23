@@ -1,270 +1,188 @@
-# Implementation Gap Analysis
+# Implementation Gap Analysis (v4)
 
-## Gap Category 1: PRD Features vs Current Implementation
+## Overview
 
-**Methodology:** Map 94 functional requirements to existing code
-
-### Search & Discovery (FR1-FR10) - 0% Implemented
-
-| Requirement | Status | Evidence |
-|------------|--------|----------|
-| FR1: Search by title/keyword | ❌ Missing | No search endpoint, no UI |
-| FR2: zh-TW metadata priority | ⚠️ Partial | TMDb client exists (root backend), no database integration |
-| FR3: Grid/List view toggle | ❌ Missing | No UI components |
-| FR4: Filter by genre/year/rating | ❌ Missing | No filter logic, no UI |
-| FR5: Sort options | ❌ Missing | No sort implementation |
-| FR6-FR10: Pagination, recommendations, etc. | ❌ Missing | No implementation |
-
-**Blocking Issues:**
-- Root backend has TMDb client but NO database to store results
-- Apps backend has database but NO TMDb client to fetch metadata
-- Frontend has NO search UI components
+This gap analysis maps the current codebase state against PRD v4 feature IDs. Epics 1-6 from the previous iteration have been partially implemented; this document identifies what exists and what remains.
 
 ---
 
-### Filename Parsing & Metadata (FR11-FR26) - 5% Implemented
+## Already Implemented (Epics 1-6)
 
-| Requirement | Status | Evidence |
-|------------|--------|----------|
-| FR11: Standard regex parsing | ❌ Missing | No parser implementation |
-| FR12: AI-powered parsing | ❌ Missing | No AI provider integration |
-| FR13: Manual entry fallback | ❌ Missing | No UI for manual entry |
-| FR14: Batch parsing | ❌ Missing | No batch logic |
-| FR15-FR20: Multi-source fallback | ⚠️ Partial | TMDb client exists, Douban/Wikipedia/AI missing |
-| FR21-FR23: Confidence scoring | ❌ Missing | No scoring logic |
-| FR24: Manual verification | ❌ Missing | No UI |
-| FR25-FR26: Learning system | ❌ Missing | No `filename_mappings` table |
-
-**Blocking Issues:**
-- NO filename parser (regex or AI)
-- NO AI provider abstraction layer
-- NO multi-source orchestrator
-- NO learning system database schema
-
----
-
-### Download Integration (FR27-FR37) - 0% Implemented
-
-| Requirement | Status | Evidence |
-|------------|--------|----------|
-| FR27-FR37: qBittorrent integration | ❌ Missing | No qBittorrent client, no UI, no database schema |
-
-**Blocking Issues:**
-- No qBittorrent Web API client implementation
-- No download monitoring UI
-- No `download_history` table in database schema
+| Component | Status | Evidence |
+|-----------|--------|----------|
+| Nx monorepo structure | ✅ Complete | `nx.json`, `apps/api/`, `apps/web/` |
+| Go backend with Gin | ✅ Complete | `apps/api/main.go`, handlers, services |
+| React frontend with TanStack Router | ✅ Complete | `apps/web/src/router.tsx`, routes |
+| SQLite database with WAL mode | ✅ Complete | `movies`, `series`, `settings` tables |
+| TMDB metadata provider (zh-TW) | ✅ Complete | `internal/tmdb/` client with zh-TW priority |
+| Basic filename parser (regex) | ✅ Complete | `internal/parser/` with regex patterns |
+| AI-powered filename parsing | ✅ Complete | `internal/ai/` with Gemini/Claude providers |
+| Multi-source metadata fallback | ✅ Complete | TMDb → Douban → Wikipedia chain |
+| qBittorrent download integration | ✅ Complete | `internal/qbittorrent/` client |
+| Media search UI | ✅ Complete | Search components in `apps/web/` |
+| Tailwind CSS styling | ✅ Complete | `tailwind.config.js` configured |
+| Testing infrastructure | ✅ Complete | Go testify + Vitest + Playwright |
+| Docker deployment | ✅ Complete | `docker-compose.yml` |
+| Settings management | ✅ Partial | `settings` table, basic endpoints |
+| Metadata export (JSON/YAML/NFO) | ✅ Complete | Story 6-9 implementation |
 
 ---
 
-### Media Library Management (FR38-FR46) - 15% Implemented
+## Gap Category 1: Missing v4 Features
 
-| Requirement | Status | Evidence |
-|------------|--------|----------|
-| FR38: Browse media library | ⚠️ Partial | Database schema exists, NO backend endpoints, NO UI |
-| FR39: Grid/List view | ❌ Missing | No UI |
-| FR40-FR46: Batch ops, filters, watch history | ❌ Missing | No implementation |
+### Subtitle Engine (P1-010~P1-019) — ❌ Completely Missing
+
+| Feature ID | Description | Status |
+|-----------|-------------|--------|
+| P1-010 | Subtitle provider interface | ❌ Missing |
+| P1-011 | Assrt API integration | ❌ Missing |
+| P1-012 | Zimuku scraper integration | ❌ Missing |
+| P1-013 | OpenSubtitles API integration | ❌ Missing |
+| P1-014 | Multi-factor subtitle scoring | ❌ Missing |
+| P1-015 | Content-based language detection | ❌ Missing |
+| P1-016 | OpenCC 簡繁轉換 integration | ❌ Missing |
+| P1-017 | Subtitle file placement | ❌ Missing |
+| P1-018 | Subtitle search cache (SQLite) | ❌ Missing |
+| P1-019 | Batch subtitle processing | ❌ Missing |
+
+**Blocking Issues:**
+- No subtitle provider implementations
+- No OpenCC binding or subprocess integration
+- No content-based language detection logic
+- No subtitle scoring algorithm
+
+---
+
+### Media Scanner (P1-001, P1-005, P1-006) — ❌ Missing Scheduled/Manual Scan
+
+| Feature ID | Description | Status |
+|-----------|-------------|--------|
+| P1-001 | Recursive media file scanner | ❌ Missing |
+| P1-005 | Scheduled scanning (configurable interval) | ❌ Missing |
+| P1-006 | Manual scan trigger via API | ❌ Missing |
 
 **What Exists:**
-- `movies` and `series` tables in apps/api database
-- Repository pattern with CRUD operations
+- TMDB matching logic exists (from metadata fallback)
+- File parsing logic exists (from filename parser)
 
 **What's Missing:**
-- API endpoints to query repositories
-- Frontend UI to display library
-- Watch history tracking (no table)
-- Filter/sort logic
+- `/internal/scanner/` package
+- File system watcher for scheduled scans
+- API endpoint for manual scan trigger
+- Background task integration for scan progress
 
 ---
 
-### System Configuration (FR47-FR66) - 10% Implemented
+### Plugin Architecture — ❌ Not Implemented
 
-| Requirement | Status | Evidence |
-|------------|--------|----------|
-| FR47: Docker deployment | ✅ Exists | Docker Compose configured |
-| FR48: Setup wizard | ❌ Missing | No UI |
-| FR49-FR66: Settings, cache mgmt, backups, etc. | ⚠️ Partial | `settings` table exists, NO UI, NO cache system, NO backup logic |
+| Component | Status |
+|-----------|--------|
+| Plugin interfaces (MediaServerPlugin, DownloaderPlugin, DVRPlugin) | ❌ Missing |
+| Plugin manager (registration, health checks) | ❌ Missing |
+| Plex MediaServerPlugin | ❌ Missing |
+| Jellyfin MediaServerPlugin | ❌ Missing |
+| Sonarr DVRPlugin | ❌ Missing |
+| Radarr DVRPlugin | ❌ Missing |
+| Prowlarr indexer integration | ❌ Missing |
+| Per-plugin config in SQLite | ❌ Missing |
 
-**What Exists:**
-- Docker Compose configuration
-- Settings table in database
-
-**What's Missing:**
-- Setup wizard UI
-- Settings management UI
-- Cache management system (Decision #4 not implemented)
-- Backup/restore system
-- Performance monitoring
+**Note:** qBittorrent client exists but is not yet refactored into the DownloaderPlugin interface.
 
 ---
 
-### Authentication (FR67-FR74) - 0% Implemented
+### SSE Hub — ❌ Not Implemented
 
-| Requirement | Status | Evidence |
-|------------|--------|----------|
-| FR67-FR74: Auth system | ❌ Missing | No JWT implementation, no `users` table, no login UI |
+| Component | Status |
+|-----------|--------|
+| SSE hub goroutine | ❌ Missing |
+| Client registration/deregistration | ❌ Missing |
+| Event types (download_progress, scan_status, etc.) | ❌ Missing |
+| HTTP handler for `/api/v1/events` | ❌ Missing |
+| Last-Event-ID reconnection support | ❌ Missing |
 
-**Blocking Issues:**
-- Decision #3 (JWT auth) not implemented
-- No authentication middleware
-- No password hashing (bcrypt)
-- No login/PIN UI
-
----
-
-### Subtitle Management (FR75-FR80) - 0% Implemented
-
-| Requirement | Status | Evidence |
-|------------|--------|----------|
-| FR75-FR80: Subtitle automation | ❌ Missing | Growth phase feature, deferred |
+**Current State:** Frontend polls for download status (5-second interval). SSE would replace this with push-based updates.
 
 ---
 
-### Automation (FR81-FR86) - 0% Implemented
+### Server-side TMDB Filtering — ❌ Not Implemented
 
-| Requirement | Status | Evidence |
-|------------|--------|----------|
-| FR81-FR86: Watch folder, auto-parsing | ❌ Missing | Growth phase feature, deferred |
+| Component | Status |
+|-----------|--------|
+| In-memory TMDB trending/discover cache | ❌ Missing |
+| 1-hour TTL for trending results | ❌ Missing |
+| Explore/browse endpoints | ❌ Missing |
+
+**Note:** TMDB client exists for search/detail lookups. Filtering cache needed for Phase 2 explore features.
 
 ---
 
-### External Integration (FR87-FR94) - 5% Implemented
+### Request System — ❌ Not Implemented
 
-| Requirement | Status | Evidence |
-|------------|--------|----------|
-| FR87: RESTful API | ⚠️ Partial | Gin routers initialized, NO endpoints implemented |
-| FR88: OpenAPI spec | ⚠️ Partial | Swaggo in root backend, NOT integrated with apps backend |
-| FR89-FR94: Webhooks, Plex/Jellyfin, mobile | ❌ Missing | Growth phase features |
+| Component | Status |
+|-----------|--------|
+| Media request submission | ❌ Missing |
+| Request status tracking | ❌ Missing |
+| DVR plugin integration for auto-add | ❌ Missing |
+
+---
+
+### NAS Dashboard — ❌ Not Implemented
+
+| Component | Status |
+|-----------|--------|
+| Storage usage overview | ❌ Missing |
+| Recent activity feed | ❌ Missing |
+| Plugin health status | ❌ Missing |
+| Quick actions | ❌ Missing |
 
 ---
 
 ## Gap Category 2: Architectural Decisions vs Implementation
 
-**From Step 4 - Core Architectural Decisions:**
+### Decision #3: Authentication — REMOVED ✅
 
-### Decision #1: Tailwind CSS - ❌ Not Implemented
+Authentication was removed in v4 (single-user). Any existing auth references (if any) should be cleaned up.
 
-**Required:**
-- Install Tailwind CSS v3.x
-- Configure `tailwind.config.js`
-- Set up PostCSS pipeline
+### Decision #4: Caching Strategy — ⚠️ Partially Implemented
 
-**Current State:**
-- No Tailwind installed
-- No CSS framework configured
-- Basic styles only
+- ✅ Basic in-memory caching exists for TMDB responses
+- ❌ No `CacheManager` with tiered strategy
+- ❌ No `cache_entries` SQLite table
+- ❌ No server-side TMDB filtering cache
 
-**Impact:** Frontend development blocked
+### Decision #5: Background Tasks — ⚠️ Partially Implemented
 
----
+- ✅ Some async operations exist
+- ❌ No formal worker pool implementation
+- ❌ No task types for media scan, subtitle batch, plugin health
 
-### Decision #2: Testing Infrastructure - ❌ Not Implemented
+### Decision #7: Plugin Architecture — ❌ Not Implemented
 
-**Required:**
-- Backend: Go testing + testify
-- Frontend: Vitest + React Testing Library
-- Coverage gates: Backend >80%, Frontend >70%
+### Decision #8: SSE Hub — ❌ Not Implemented
 
-**Current State:**
-- Zero test files exist
-- No testing configuration
-- No CI pipeline
-
-**Impact:** Quality gates missing, TDD impossible
-
----
-
-### Decision #3: JWT Authentication - ❌ Not Implemented
-
-**Required:**
-- `golang-jwt/jwt` v5.x integration
-- Authentication middleware
-- bcrypt password hashing
-- `users` table in database
-
-**Current State:**
-- No JWT library installed
-- No auth middleware
-- No `users` table
-- No password hashing
-
-**Impact:** Security requirement (NFR-S9-S13) unmet, ALL endpoints unprotected
-
----
-
-### Decision #4: Caching Strategy - ❌ Not Implemented
-
-**Required:**
-- Tiered cache (memory + SQLite)
-- `cache_entries` table
-- CacheManager implementation
-- TTL management
-
-**Current State:**
-- No caching system exists
-- No `cache_entries` table
-- No cache library (bigcache/ristretto)
-
-**Impact:** Performance degradation, AI API cost explosion, NFR-I7/I10 unmet
-
----
-
-### Decision #5: Background Tasks - ❌ Not Implemented
-
-**Required:**
-- Worker pool with goroutines + channels
-- Task types: AI parsing, metadata refresh, backups
-- Retry logic with exponential backoff
-
-**Current State:**
-- No worker pool implementation
-- No background task system
-- No job queue
-
-**Impact:** AI parsing blocks UI (10s wait), no async operations, NFR violated
-
----
-
-### Decision #6: Error Handling & Logging - ❌ Partially Implemented
-
-**Required:**
-- Go `slog` standard library (NOT zerolog)
-- `AppError` unified error types
-- Sensitive data filtering
-
-**Current State:**
-- Root backend uses **zerolog** (non-compliant with Decision #6)
-- Apps backend uses basic logging
-- No `AppError` type
-- No structured error codes
-
-**Impact:** Inconsistent error messages, security risk (API key logging), debugging difficulty
+### Decision #9: Subtitle Engine — ❌ Not Implemented
 
 ---
 
 ## Gap Summary by Priority
 
-**🔴 Critical Gaps (Block MVP):**
+**🔴 Critical Gaps (Block v4 Core Features):**
 
-1. **Backend Consolidation** - Dual architecture prevents coherent development
-2. **Authentication System** - All endpoints unprotected, security violation
-3. **Caching System** - Performance and cost requirements unmet
-4. **Filename Parser** - Core differentiator missing (standard regex + AI)
-5. **Multi-Source Metadata** - TMDb exists, Douban/Wikipedia/AI missing
-6. **Search UI** - Core user feature missing
-7. **Media Library UI** - Core user feature missing
+1. **Subtitle Engine Pipeline** — Core differentiator, completely missing
+2. **Media Library Scanner** — Essential for automated library management
+3. **Plugin Architecture** — Foundation for all external service integrations
+4. **SSE Hub** — Required for real-time progress updates
 
-**🟡 Important Gaps (Affect Quality):**
+**🟡 Important Gaps (Affect Quality/Experience):**
 
-8. **Testing Infrastructure** - Quality gates missing
-9. **Background Task System** - UI blocking operations
-10. **Error Handling Compliance** - Using zerolog instead of slog
-11. **Download Monitor UI** - Important feature incomplete
-12. **Settings UI** - Configuration management missing
+5. **Server-side TMDB Filtering** — Needed for Phase 2 explore features
+6. **Formal Caching System** — CacheManager with tiered strategy
+7. **Worker Pool** — Formal background task system with all task types
+8. **NAS Dashboard** — Overview and monitoring UI
 
-**🟢 Deferred Gaps (Post-MVP):**
+**🟢 Deferred Gaps (Phase 3+):**
 
-13. **Subtitle Automation** - Growth phase
-14. **Watch Folder** - Growth phase
-15. **Webhooks & External Integrations** - Growth phase
+9. **Request System** — DVR integration for media requests
+10. **Multi-user Authentication** — Deferred to v5.0
 
 ---

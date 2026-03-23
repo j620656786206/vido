@@ -11,7 +11,7 @@ Vido has 94 functional requirements organized across three development phases (M
 3. **Download Integration & Monitoring (FR27-FR37):** qBittorrent real-time status monitoring, connection health tracking, and download control
 4. **Media Library Management (FR38-FR46):** Browsing, batch operations, recently added items, watch history tracking
 5. **System Configuration & Management (FR47-FR66):** Docker deployment, setup wizard, cache management, backup/restore, NFO export, performance monitoring
-6. **User Authentication & Access Control (FR67-FR74):** Password/PIN authentication, session management, API token protection, multi-user preparation (architecture)
+6. ~~**User Authentication & Access Control (FR67-FR74)**~~ — **REMOVED in v4.** Single-user deployment, no authentication required.
 7. **Subtitle Management (FR75-FR80):** Growth phase - Traditional Chinese subtitle priority from OpenSubtitles and Zimuku
 8. **Automation & Organization (FR81-FR86):** Growth phase - Watch folder monitoring, auto-parsing, file renaming/organization
 9. **External Integration & Extensibility (FR87-FR94):** Growth phase - RESTful API, webhooks, Plex/Jellyfin sync, mobile app

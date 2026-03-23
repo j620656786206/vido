@@ -12,6 +12,15 @@
 8. **Use TanStack Query** for server state - Never use Zustand/Redux for API data
 9. **Follow layered architecture** - Handlers → Services → Repositories (no shortcuts)
 10. **Validate inputs** at handler/component level before processing
+11. **No authentication middleware** - Vido v4 is single-user with no auth (deferred to v5.0)
+
+## Plugin Validation Rules:
+
+1. **TestConnection before save** - Always call `plugin.TestConnection(ctx, config)` before persisting plugin configuration to SQLite. If TestConnection fails, reject the config with a descriptive error.
+2. **Health check on startup** - When the application starts, run `TestConnection()` on all registered plugins. Log warnings for unreachable plugins but do not block startup.
+3. **Graceful degradation** - If a plugin becomes unavailable at runtime, mark it as degraded and continue operating. Never crash or block other plugins due to one plugin's failure.
+4. **Config validation** - Each plugin must validate its required config fields (URL, API key, etc.) before attempting TestConnection.
+5. **Plugin interface compliance** - All plugins must implement the base `Plugin` interface (`Name()`, `TestConnection()`). Type-specific plugins must implement their full interface (`MediaServerPlugin`, `DownloaderPlugin`, or `DVRPlugin`).
 
 ## Pattern Verification Checklist:
 
@@ -27,6 +36,9 @@ Before committing code, verify:
 - [ ] Logging uses `slog` with structured fields
 - [ ] API responses use standard wrapper format
 - [ ] TanStack Query used for server state, NOT Zustand
+- [ ] No authentication/JWT middleware added (v4 is single-user)
+- [ ] Plugin configs validated with TestConnection before persistence
+- [ ] Plugin health checks registered with plugin manager
 
 ## Pattern Violations:
 

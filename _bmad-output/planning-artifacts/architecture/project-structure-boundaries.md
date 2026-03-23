@@ -190,6 +190,34 @@ vido/
 │   │       │   ├── ai_parser_test.go
 │   │       │   └── parser.go                   # Parser interface
 │   │       │
+│   │       ├── plugins/                # Plugin interfaces and manager
+│   │       │   ├── manager.go                  # Plugin registration, health checks
+│   │       │   ├── types.go                    # MediaServerPlugin, DownloaderPlugin, DVRPlugin interfaces
+│   │       │   ├── plex/                       # Plex MediaServerPlugin implementation
+│   │       │   ├── jellyfin/                   # Jellyfin MediaServerPlugin implementation
+│   │       │   ├── sonarr/                     # Sonarr DVRPlugin implementation
+│   │       │   ├── radarr/                     # Radarr DVRPlugin implementation
+│   │       │   └── prowlarr/                   # Prowlarr indexer integration
+│   │       │
+│   │       ├── sse/                    # Server-Sent Events hub
+│   │       │   ├── hub.go                      # Central event broadcaster
+│   │       │   └── handler.go                  # HTTP handler for /api/v1/events
+│   │       │
+│   │       ├── subtitle/               # Subtitle engine pipeline
+│   │       │   ├── engine.go                   # Pipeline orchestrator
+│   │       │   ├── scorer.go                   # Multi-factor subtitle scoring
+│   │       │   ├── converter.go                # OpenCC 簡繁轉換
+│   │       │   ├── providers/                  # Subtitle source implementations
+│   │       │   │   ├── assrt.go
+│   │       │   │   ├── zimuku.go
+│   │       │   │   └── opensub.go
+│   │       │   └── detector.go                 # Content-based language detection
+│   │       │
+│   │       ├── scanner/                # Media library scanner
+│   │       │   ├── scanner.go                  # Recursive file scanner
+│   │       │   ├── watcher.go                  # File system watcher for scheduled scans
+│   │       │   └── matcher.go                  # TMDB matching orchestrator
+│   │       │
 │   │       ├── cache/                  # Cache management (Phase 2.2)
 │   │       │   ├── manager.go                  # Cache manager (tiered)
 │   │       │   ├── manager_test.go
@@ -302,11 +330,7 @@ vido/
 │           │   │   ├── BackupSettings.tsx
 │           │   │   └── QBitSettings.tsx
 │           │   │
-│           │   ├── auth/               # Authentication UI (FR67-74)
-│           │   │   ├── LoginForm.tsx
-│           │   │   ├── LoginForm.spec.tsx
-│           │   │   ├── PINEntry.tsx
-│           │   │   └── LogoutButton.tsx
+│           │   # auth/ — REMOVED in v4 (single-user, no auth)
 │           │   │
 │           │   └── ui/                 # Shared UI components
 │           │       ├── Button.tsx
@@ -760,27 +784,7 @@ Database:
   Migration 005: cache_entries table
 ```
 
-**FR67-FR74: User Authentication & Access Control**
-
-```
-Frontend:
-  /apps/web/src/routes/login.tsx
-  /apps/web/src/components/auth/
-    - LoginForm.tsx            (FR67: Password/PIN login)
-    - PINEntry.tsx             (FR68: PIN authentication)
-    - LogoutButton.tsx         (FR69: Logout)
-
-Backend:
-  /apps/api/internal/middleware/auth.go      (JWT verification)
-  /apps/api/internal/handlers/auth_handler.go
-  /apps/api/internal/services/auth_service.go
-  /apps/api/internal/repository/user_repository.go
-
-Database:
-  Migration 004: users table
-  Password hashing: bcrypt (cost factor 12)
-  JWT expiration: 24 hours (NFR-S10)
-```
+~~**FR67-FR74: User Authentication & Access Control**~~ — **REMOVED in v4.** Single-user deployment, no authentication required. All auth components (login routes, auth middleware, JWT, bcrypt, user repository) are not needed.
 
 **FR75-FR94: Growth Phase Features (Deferred)**
 

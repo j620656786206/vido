@@ -118,8 +118,8 @@ Vido is a **brownfield project** with an established technical foundation. The f
 
 ⚠️ **Requires implementation:**
 - AES-256 encryption layer for secrets (NFR-S2, NFR-S3)
-- Authentication middleware (password/PIN, session tokens) (NFR-S9, NFR-S10, NFR-S11)
-- Rate limiting middleware (NFR-S12, NFR-S13)
+- ~~Authentication middleware~~ — REMOVED in v4 (single-user, no auth)
+- Rate limiting middleware (defense in depth)
 - Secrets management service (NFR-S1, NFR-S4, NFR-S5, NFR-S6)
 - API key zero-logging enforcement (NFR-S4)
 
@@ -229,11 +229,10 @@ Based on requirements analysis, the following components need to be architected 
    - Complexity: Medium
    - Dependencies: Database drivers, migration tooling
 
-7. **Authentication Middleware**
-   - Purpose: Password/PIN protection, session tokens, rate limiting
-   - Requirements: NFR-S9, NFR-S10, NFR-S11, NFR-S12, NFR-S13
-   - Complexity: Medium
-   - Dependencies: Session storage, token generation, rate limiter
+7. ~~**Authentication Middleware**~~ — **REMOVED in v4** (single-user deployment, no auth needed)
+   - Requirements: REMOVED in v4 — single-user deployment, no auth needed
+   - Complexity: N/A
+   - Dependencies: N/A
 
 8. **Circuit Breaker Pattern**
    - Purpose: Protect external service calls, implement fallback logic

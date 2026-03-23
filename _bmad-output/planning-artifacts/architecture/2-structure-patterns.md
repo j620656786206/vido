@@ -154,7 +154,92 @@ vido/
 
 ---
 
-## 2.4 Configuration File Organization
+## 2.4 Plugin Package Structure Pattern
+
+**MANDATORY Structure for `/apps/api/internal/plugins/`:**
+
+```
+plugins/
+├── manager.go          # Plugin registration, health checks, lifecycle
+├── types.go            # Plugin, MediaServerPlugin, DownloaderPlugin, DVRPlugin interfaces
+├── plex/
+│   ├── plex.go         # Plex MediaServerPlugin implementation
+│   └── plex_test.go
+├── jellyfin/
+│   ├── jellyfin.go     # Jellyfin MediaServerPlugin implementation
+│   └── jellyfin_test.go
+├── sonarr/
+│   ├── sonarr.go       # Sonarr DVRPlugin implementation
+│   └── sonarr_test.go
+├── radarr/
+│   ├── radarr.go       # Radarr DVRPlugin implementation
+│   └── radarr_test.go
+└── prowlarr/
+    ├── prowlarr.go     # Prowlarr indexer integration
+    └── prowlarr_test.go
+```
+
+**Critical Rules:**
+- ✅ All plugins implement the base `Plugin` interface (`Name()`, `TestConnection()`)
+- ✅ Each plugin in its own sub-package
+- ✅ Plugin registration happens in `main.go` at startup
+- ❌ NO dynamic plugin loading (Go plugins or shared libraries)
+
+---
+
+## 2.5 Subtitle Engine Package Pattern
+
+**MANDATORY Structure for `/apps/api/internal/subtitle/`:**
+
+```
+subtitle/
+├── engine.go           # Pipeline orchestrator (search → score → download → convert → place)
+├── engine_test.go
+├── scorer.go           # Multi-factor subtitle scoring
+├── scorer_test.go
+├── converter.go        # OpenCC 簡繁轉換 integration
+├── converter_test.go
+├── detector.go         # Content-based language detection
+├── detector_test.go
+└── providers/          # Subtitle source implementations
+    ├── provider.go     # SubtitleProvider interface
+    ├── assrt.go        # Assrt API provider
+    ├── assrt_test.go
+    ├── zimuku.go       # Zimuku scraper provider
+    ├── zimuku_test.go
+    ├── opensub.go      # OpenSubtitles API provider
+    └── opensub_test.go
+```
+
+**Critical Rules:**
+- ✅ Each provider implements `SubtitleProvider` interface
+- ✅ Providers are independent and can be enabled/disabled
+- ✅ Scoring weights are configurable (not hard-coded)
+- ❌ Provider files MUST NOT import from other provider packages
+
+---
+
+## 2.6 SSE Handler Package Pattern
+
+**MANDATORY Structure for `/apps/api/internal/sse/`:**
+
+```
+sse/
+├── hub.go              # Central event broadcaster (single goroutine)
+├── hub_test.go
+├── handler.go          # HTTP handler for GET /api/v1/events
+└── handler_test.go
+```
+
+**Critical Rules:**
+- ✅ Single hub instance, initialized at application startup
+- ✅ Hub runs as a single goroutine, fan-out to client channels
+- ✅ Handler uses `http.Flusher` interface for streaming
+- ❌ NO WebSocket fallback (SSE is sufficient for server→client push)
+
+---
+
+## 2.7 Configuration File Organization
 
 **Backend Configuration:**
 - ✅ **Air config:** `/apps/api/.air.toml`

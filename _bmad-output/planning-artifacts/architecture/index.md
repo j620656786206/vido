@@ -45,7 +45,7 @@
       - [Download Integration (FR27-FR37) - 0% Implemented](./implementation-gap-analysis.md#download-integration-fr27-fr37-0-implemented)
       - [Media Library Management (FR38-FR46) - 15% Implemented](./implementation-gap-analysis.md#media-library-management-fr38-fr46-15-implemented)
       - [System Configuration (FR47-FR66) - 10% Implemented](./implementation-gap-analysis.md#system-configuration-fr47-fr66-10-implemented)
-      - [Authentication (FR67-FR74) - 0% Implemented](./implementation-gap-analysis.md#authentication-fr67-fr74-0-implemented)
+      - ~~[Authentication (FR67-FR74)](./implementation-gap-analysis.md#authentication-fr67-fr74-0-implemented)~~ — REMOVED in v4 (single-user, no auth)
       - [Subtitle Management (FR75-FR80) - 0% Implemented](./implementation-gap-analysis.md#subtitle-management-fr75-fr80-0-implemented)
       - [Automation (FR81-FR86) - 0% Implemented](./implementation-gap-analysis.md#automation-fr81-fr86-0-implemented)
       - [External Integration (FR87-FR94) - 5% Implemented](./implementation-gap-analysis.md#external-integration-fr87-fr94-5-implemented)

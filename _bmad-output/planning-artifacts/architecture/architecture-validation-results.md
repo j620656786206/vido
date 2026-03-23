@@ -33,7 +33,7 @@ All 9 capability areas architecturally supported:
 3. **Downloads (FR27-37)** → qBittorrent client + Worker pool + Real-time status
 4. **Library (FR38-46)** → Repository pattern + SQLite + Library components
 5. **Config (FR47-66)** → Docker + Setup wizard + Cache manager + Backup service
-6. **Auth (FR67-74)** → JWT + bcrypt + Auth middleware + Session management
+6. ~~Auth (FR67-74)~~ — **REMOVED in v4** (single-user, no auth). Replaced by Decision #7 (Plugin Architecture).
 7. **Subtitles (FR75-80)** → Subtitle service + OpenSubtitles/Zimuku clients
 8. **Automation (FR81-86)** → File watcher + Auto-parser + Background tasks
 9. **Integration (FR87-94)** → REST API + Webhooks + Plex/Jellyfin sync

@@ -8,10 +8,13 @@ The following architectural decisions were made collaboratively, prioritized by 
 
 1. **CSS Framework:** Tailwind CSS
 2. **Testing Infrastructure:** Go testing + testify (backend), Vitest + React Testing Library (frontend)
-3. **Authentication Strategy:** JWT (Stateless)
+3. ~~Authentication Strategy~~ — REMOVED in v4 (single-user, no auth)
 4. **Caching Implementation:** In-Memory + SQLite tiered architecture
 5. **Background Task Processing:** Lightweight Worker Pool + Channel
 6. **Error Handling & Logging:** Structured logging (slog) + Unified error types
+7. **Plugin Architecture:** Go Interfaces (embedded plugins, no hot-reloading)
+8. **SSE (Server-Sent Events) Hub:** Native Go http.Flusher + buffered channels
+9. **Subtitle Engine Pipeline:** Provider interface pattern with multi-source scoring
 
 **🟡 Important Decisions (Shape Architecture):**
 - Deferred to implementation phase based on specific component needs
@@ -218,76 +221,9 @@ The following architectural decisions were made collaboratively, prioritized by 
 
 ---
 
-## 3. Authentication Strategy: JWT (Stateless)
+## Decision #3: Authentication — REMOVED in v4
 
-**Decision:** Implement JSON Web Token (JWT) based stateless authentication
-
-**Version:** golang-jwt/jwt v5.x
-
-**Rationale:**
-- **Stateless Architecture:** Server doesn't need to maintain session state, simplifying self-hosted deployment (no Redis required)
-- **Scalability Preparation:** Easier horizontal scaling for future multi-user scenarios (FR73)
-- **API-First Design:** Natural fit for RESTful API architecture (NFR-I16)
-- **Standard Protocol:** Widely adopted, mature libraries, extensive documentation
-- **Self-Hosted Simplicity:** Zero external dependencies beyond the application itself
-
-**Security Parameters:**
-- **Token Expiration:** 24 hours (balances security with user experience)
-- **Storage:** httpOnly cookie (prevents XSS attacks)
-- **Signing Algorithm:** HS256 (HMAC-SHA256)
-- **Secret Key:** Environment variable `JWT_SECRET` (minimum 32 bytes)
-
-**Implementation Requirements:**
-
-1. **Backend JWT Middleware (Gin):**
-   ```go
-   // middleware/auth.go
-   func AuthMiddleware() gin.HandlerFunc {
-       return func(c *gin.Context) {
-           tokenString := extractTokenFromCookie(c)
-           token, err := jwt.Parse(tokenString, keyFunc)
-           
-           if err != nil || !token.Valid {
-               c.AbortWithStatusJSON(401, gin.H{"error": "Unauthorized"})
-               return
-           }
-           
-           // Inject user context
-           claims := token.Claims.(jwt.MapClaims)
-           c.Set("user_id", claims["user_id"])
-           c.Next()
-       }
-   }
-   ```
-
-2. **Login Flow:**
-   - User submits password/PIN → Validate with bcrypt hash (NFR-S9)
-   - Generate JWT with claims: `{user_id, exp, iat}`
-   - Set httpOnly cookie with JWT
-   - Return success response
-
-3. **Frontend Integration:**
-   - TanStack Query auth mutation
-   - Automatic retry on 401 (redirect to login)
-   - Token refresh mechanism (if implementing shorter expiration)
-
-4. **Password Security:**
-   - Use bcrypt for password hashing (cost factor: 12)
-   - Minimum password requirements: 8 characters (configurable)
-   - Support for PIN (4-6 digits) as alternative (NFR-S9)
-
-**Logout Mechanism:**
-- Clear httpOnly cookie
-- Client-side state cleanup
-
-**Multi-User Preparation:**
-- JWT already supports multiple users
-- Add `role` claim when implementing RBAC (Growth phase)
-- Database schema includes `users` table (architecture ready)
-
-**Alternatives Considered:**
-- **Session-based:** Requires session store (Redis/database), stateful, harder to scale
-- **Hybrid (JWT + Refresh Token):** Added complexity, deferred to Growth phase if needed
+Vido v4 is single-user with no authentication. Multi-user support deferred to v5.0.
 
 ---
 
@@ -418,6 +354,13 @@ func (cm *CacheManager) Get(key string) (interface{}, error) {
    }
    ```
 
+**Server-side TMDB Filtering Cache:**
+- **Purpose:** In-memory cache for TMDB trending/discover results used by Phase 2 explore features
+- **TTL:** 1 hour (trending data changes infrequently)
+- **Key pattern:** `tmdb:trending:{media_type}:{time_window}:v1`, `tmdb:discover:{filters_hash}:v1`
+- **Capacity:** Shared with Tier 1 memory cache budget
+- **Invalidation:** Automatic TTL expiry; manual refresh via admin endpoint
+
 **TTL Management:**
 - **Background Cleanup Goroutine:** Runs every hour, removes expired entries from SQLite
 - **Memory Cache:** Auto-eviction via LRU
@@ -477,6 +420,9 @@ const (
     TaskAIParsing TaskType = iota  // High priority
     TaskMetadataRefresh             // Medium priority
     TaskBackup                      // Low priority, scheduled
+    TaskMediaScan                   // Scheduled/manual media library scanning
+    TaskBatchSubtitle               // Batch subtitle search and processing
+    TaskPluginHealthCheck           // Periodic plugin health checks
 )
 ```
 
@@ -547,6 +493,24 @@ func (tq *TaskQueue) executeWithRetry(task Task) error {
    - Max retries: 2
    - Scheduled: Configurable (default: daily at 3 AM)
    - Retry on: Disk space errors (after cleanup)
+
+4. **Media Scan Task** (Medium Priority)
+   - Max retries: 3
+   - Scheduled: Configurable interval (default: every 6 hours) or manual trigger
+   - Scans configured library paths recursively
+   - Matches new files against TMDB for metadata
+
+5. **Batch Subtitle Task** (Medium Priority)
+   - Max retries: 2
+   - Processes subtitle search for multiple media items
+   - Runs subtitle engine pipeline (search → score → download → convert → place)
+   - Queued per-item to avoid overwhelming subtitle APIs
+
+6. **Plugin Health Check Task** (Low Priority)
+   - Max retries: 1
+   - Scheduled: Configurable interval (default: every 5 minutes)
+   - Calls TestConnection() on each registered plugin
+   - Updates plugin status in SSE hub for real-time UI feedback
 
 **Configuration:**
 ```go
@@ -859,6 +823,173 @@ const queryClient = new QueryClient({
 
 ---
 
+## 7. Plugin Architecture: Go Interfaces (Embedded Plugins)
+
+**Decision:** Use Go interfaces for plugin architecture with embedded (compiled-in) plugins, no hot-reloading
+
+**Technology:** Go Interfaces
+
+**Rationale:**
+- **Single-user deployment:** Zero external dependencies, simpler than dynamic plugin loading
+- **Type safety:** Compile-time interface verification
+- **Performance:** No reflection or RPC overhead
+- **Simplicity:** New plugins added by implementing interface and registering at startup
+
+**Plugin Interfaces:**
+
+```go
+// MediaServerPlugin: Plex, Jellyfin
+type MediaServerPlugin interface {
+    Plugin
+    SyncLibrary(ctx context.Context) ([]MediaItem, error)
+    GetWatchHistory(ctx context.Context, userID string) ([]WatchEntry, error)
+}
+
+// DownloaderPlugin: qBittorrent, NZBGet
+type DownloaderPlugin interface {
+    Plugin
+    AddDownload(ctx context.Context, req DownloadRequest) (string, error)
+    GetStatus(ctx context.Context, id string) (*DownloadStatus, error)
+    Pause(ctx context.Context, id string) error
+    Remove(ctx context.Context, id string, deleteFiles bool) error
+}
+
+// DVRPlugin: Sonarr, Radarr
+type DVRPlugin interface {
+    Plugin
+    AddMovie(ctx context.Context, req AddMovieRequest) error
+    AddSeries(ctx context.Context, req AddSeriesRequest) error
+    GetQueue(ctx context.Context) ([]QueueItem, error)
+}
+
+// Common base interface
+type Plugin interface {
+    Name() string
+    TestConnection(ctx context.Context, config map[string]string) error
+}
+```
+
+**Plugin Manager:**
+- Registration at startup via `manager.Register(plugin)`
+- Per-plugin config stored in SQLite `plugin_configs` table
+- Health check scheduler (configurable interval, default 5 minutes)
+- Graceful degradation when plugin unavailable (circuit breaker pattern)
+
+**Location:** `/apps/api/internal/plugins/`
+
+**Affects:**
+- Plex/Jellyfin media server integration
+- qBittorrent/NZBGet download management
+- Sonarr/Radarr DVR automation
+- Prowlarr indexer integration
+
+---
+
+## 8. SSE (Server-Sent Events) Hub
+
+**Decision:** Use native Go `http.Flusher` with buffered channels for real-time event streaming
+
+**Technology:** Native Go http.Flusher + buffered channels
+
+**Rationale:**
+- **Replaces polling:** Eliminates need for clients to poll download/scan progress endpoints
+- **Zero dependencies:** Uses Go standard library only
+- **Firewall-friendly:** Works over standard HTTP, no WebSocket upgrade needed
+- **Unidirectional:** Server-to-client push is the primary need; client-to-server uses REST
+
+**Architecture:**
+
+```go
+type SSEHub struct {
+    clients    map[string]chan SSEEvent  // clientID → event channel
+    broadcast  chan SSEEvent             // incoming events
+    register   chan ClientConn
+    deregister chan string
+    mu         sync.RWMutex
+}
+
+type SSEEvent struct {
+    ID   string `json:"id"`
+    Type string `json:"type"`  // download_progress, scan_status, subtitle_status, notification
+    Data any    `json:"data"`
+}
+```
+
+- Single SSE hub goroutine, fan-out to client channels
+- Event types: `download_progress`, `scan_status`, `subtitle_status`, `notification`
+- Client registration/deregistration on connect/disconnect
+- Buffered channels per client (capacity 100), drop oldest on overflow
+- Auto-reconnect support via `Last-Event-ID` header
+
+**HTTP Handler:**
+```
+GET /api/v1/events
+  Content-Type: text/event-stream
+  Cache-Control: no-cache
+  Connection: keep-alive
+```
+
+**Location:** `/apps/api/internal/sse/`
+
+**Affects:**
+- Download progress real-time updates
+- Media scan progress reporting
+- Subtitle processing status
+- Plugin health status notifications
+- System notifications
+
+---
+
+## 9. Subtitle Engine Pipeline
+
+**Decision:** Implement a multi-stage subtitle processing pipeline with provider interface pattern
+
+**Technology:** Provider interface pattern (similar to AI provider abstraction)
+
+**Rationale:**
+- **Multiple subtitle sources** with different APIs need unified scoring and processing
+- **Content-based language detection** fixes Bazarr's #1 zh-TW bug (filename-based detection is unreliable)
+- **OpenCC integration** enables proper 簡繁轉換 with cross-strait terminology correction
+- **Caching** reduces redundant API calls to subtitle providers
+
+**Pipeline Stages:**
+
+1. **Search:** Parallel query across Assrt API, Zimuku scraper, OpenSubtitles API
+2. **Score:** Multi-factor ranking:
+   - Language match: 40%
+   - Resolution match: 20%
+   - Source trust score: 20%
+   - Release group match: 10%
+   - Download count: 10%
+3. **Download:** Best match download with retry (up to 3 attempts)
+4. **Post-process:** OpenCC 簡繁轉換 + cross-strait terminology correction
+5. **Place:** Copy to media file directory with normalized extension (`.zh-Hant.srt`)
+
+**Provider Interface:**
+
+```go
+type SubtitleProvider interface {
+    Name() string
+    Search(ctx context.Context, query SubtitleQuery) ([]SubtitleResult, error)
+    Download(ctx context.Context, id string) ([]byte, error)
+}
+```
+
+**Key Design Decisions:**
+- **Content-based language detection** (not filename-based) — analyzes actual subtitle text to determine zh-Hans vs zh-Hant
+- **OpenCC integration** via Go binding or subprocess for 簡→繁 conversion
+- **Subtitle cache** in SQLite (search results TTL 24h, downloaded subtitles permanent)
+- **Parallel search** with configurable timeout per provider (default 10s)
+
+**Location:** `/apps/api/internal/subtitle/`
+
+**Affects:**
+- Automated subtitle acquisition for all media
+- Traditional Chinese subtitle quality (primary differentiator)
+- User experience for zh-TW users who need proper 繁體中文 subtitles
+
+---
+
 ## Decision Impact Analysis
 
 **Implementation Sequence:**
@@ -870,58 +1001,74 @@ The following order is recommended for implementing these architectural decision
    - Configure `slog` with sensitive data filtering
    - Required by all subsequent components
 
-2. **Authentication** (Early Security)
-   - Implement JWT middleware
-   - Password hashing with bcrypt
-   - Blocks API endpoint implementation
-
-3. **Testing Infrastructure** (Quality Enabler)
+2. **Testing Infrastructure** (Quality Enabler)
    - Set up Vitest + React Testing Library
    - Configure Go testing + testify
    - Enables TDD for subsequent features
 
-4. **Caching** (Performance Foundation)
+3. **Caching** (Performance Foundation)
    - Implement CacheManager with tiered strategy
+   - Including server-side TMDB filtering cache
    - Required for external API integrations
    - Critical for cost control
 
-5. **Background Tasks** (Non-Blocking Operations)
+4. **Background Tasks** (Non-Blocking Operations)
    - Implement Worker Pool
-   - Define task types (AI parsing, backups)
+   - Define task types (AI parsing, backups, media scan, subtitle batch, plugin health)
    - Enables asynchronous AI parsing
 
-6. **Frontend Styling** (UI Development)
+5. **Frontend Styling** (UI Development)
    - Configure Tailwind CSS
    - Establish design tokens
    - Enables component development
+
+6. **Plugin Architecture** (Integration Foundation)
+   - Define plugin interfaces
+   - Implement plugin manager with health checks
+   - Enables Plex/Jellyfin/Sonarr/Radarr integration
+
+7. **SSE Hub** (Real-time Updates)
+   - Implement event broadcaster
+   - Connect to download/scan/subtitle progress
+   - Replaces polling for status updates
+
+8. **Subtitle Engine** (Core Differentiator)
+   - Implement provider interface and pipeline
+   - OpenCC 簡繁轉換 integration
+   - Content-based language detection
 
 **Cross-Component Dependencies:**
 
 ```
 Error Handling & Logging
     ↓
-Authentication ←→ Caching
+Caching ←→ Background Tasks
     ↓              ↓
-Background Tasks ←┘
+Plugin Architecture ←┘
     ↓
-All External Integrations (TMDb, AI, qBittorrent)
+SSE Hub ← Subtitle Engine
+    ↓
+All External Integrations (TMDb, AI, Plugins, Subtitle Providers)
 ```
 
 - **Error Handling** is foundational - all components depend on it
-- **Authentication** and **Caching** are independent but both required for API layer
-- **Background Tasks** depends on error handling and caching (for retry logic and result storage)
-- **External Integrations** depend on all above (auth, caching, error handling, background processing)
+- **Caching** and **Background Tasks** are independent but both required for API layer
+- **Plugin Architecture** depends on error handling and caching
+- **SSE Hub** depends on background tasks (receives progress events)
+- **Subtitle Engine** depends on caching, background tasks, and SSE hub
+- **External Integrations** depend on all above (caching, error handling, background processing)
 
 **Critical Path:**
 
 For MVP implementation to proceed, the following must be decided and implemented:
 
 1. ✅ Error Handling & Logging
-2. ✅ Authentication Strategy
-3. ✅ Caching Implementation
-4. ✅ Testing Infrastructure
+2. ✅ Caching Implementation
+3. ✅ Testing Infrastructure
+4. ✅ Plugin Architecture (interfaces)
+5. ✅ Subtitle Engine Pipeline
 
-These four decisions are blockers for core feature development.
+These five decisions are blockers for core feature development. Authentication was removed in v4 (single-user).
 
 **Deferred Decisions (Can be made during implementation):**
 
