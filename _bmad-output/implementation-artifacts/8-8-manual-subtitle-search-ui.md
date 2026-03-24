@@ -104,61 +104,61 @@ so that **I can override automatic results and choose the exact subtitle I prefe
 - [ ] 4.3 Register `POST /api/v1/subtitles/preview` in router
 - [ ] 4.4 Wire SubtitleHandler with SubtitleService dependency
 
-### Task 5: Create Frontend Subtitle Service (AC: #2, #5, #4)
-- [ ] 5.1 Create `apps/web/src/services/subtitleService.ts`
-- [ ] 5.2 Implement `searchSubtitles(params)` → POST /api/v1/subtitles/search
-- [ ] 5.3 Implement `downloadSubtitle(params)` → POST /api/v1/subtitles/download
-- [ ] 5.4 Implement `previewSubtitle(params)` → POST /api/v1/subtitles/preview
-- [ ] 5.5 Define TypeScript types: `SubtitleSearchParams`, `SubtitleSearchResult`, `SubtitleDownloadParams`
+### Task 5: CN Content Conversion Policy — Backend (AC: #9, #10, #11)
+- [ ] 5.1 Add `ConversionPolicy` type to `converter.go`: `ConvertAlways`, `ConvertNever`, `ConvertAuto`
+- [ ] 5.2 Update `engine.go` `convertIfNeeded()` to accept and check `ConversionPolicy`
+- [ ] 5.3 Update `Engine.Process()` to accept `productionCountry` parameter and derive policy
+- [ ] 5.4 Update `subtitle_handler.go` to pass production_countries from media DB record
+- [ ] 5.5 Update subtitle file extension: `.zh-Hans.srt` when conversion skipped, `.zh-Hant.srt` when converted
+- [ ] 5.6 Test: CN content skips conversion, non-CN converts, policy override works
 
-### Task 6: Create useSubtitleSearch Hook (AC: #2, #3, #6)
-- [ ] 6.1 Create `apps/web/src/hooks/useSubtitleSearch.ts`
-- [ ] 6.2 Use TanStack Query `useMutation` for search (not a query — user-triggered)
-- [ ] 6.3 Manage search results state with sorting support
-- [ ] 6.4 Use `useMutation` for download action
-- [ ] 6.5 Integrate SSE `subtitle_status` events for real-time progress updates
-- [ ] 6.6 Export `{ search, download, results, isSearching, isDownloading, sortBy, setSortBy }`
+### Task 6: Create Frontend Subtitle Service (AC: #2, #5, #4)
+- [ ] 6.1 Create `apps/web/src/services/subtitleService.ts`
+- [ ] 6.2 Implement `searchSubtitles(params)` → POST /api/v1/subtitles/search
+- [ ] 6.3 Implement `downloadSubtitle(params)` → POST /api/v1/subtitles/download (include `convertToTraditional` boolean)
+- [ ] 6.4 Implement `previewSubtitle(params)` → POST /api/v1/subtitles/preview
+- [ ] 6.5 Define TypeScript types: `SubtitleSearchParams`, `SubtitleSearchResult`, `SubtitleDownloadParams`
 
-### Task 7: Create SubtitleSearchDialog Component (AC: #1, #3)
-- [ ] 7.1 Create `apps/web/src/components/subtitle/SubtitleSearchDialog.tsx`
-- [ ] 7.2 Use shadcn/ui `Dialog`, `DialogContent`, `DialogHeader`, `DialogTitle`
-- [ ] 7.3 Search form: query input (pre-filled with media title), provider checkboxes
-- [ ] 7.4 Results table using shadcn/ui `Table`: Source, Language, Group, Resolution, Score, Downloads columns
-- [ ] 7.5 Sortable column headers (click to toggle asc/desc)
-- [ ] 7.6 Score column displays as percentage with color coding (green >70%, yellow >40%, red <=40%)
-- [ ] 7.7 Accept props: `mediaId`, `mediaType`, `mediaTitle`, `open`, `onOpenChange`
+### Task 7: Create useSubtitleSearch Hook (AC: #2, #3, #6)
+- [ ] 7.1 Create `apps/web/src/hooks/useSubtitleSearch.ts`
+- [ ] 7.2 Use TanStack Query `useMutation` for search (not a query — user-triggered)
+- [ ] 7.3 Manage search results state with sorting support
+- [ ] 7.4 Use `useMutation` for download action
+- [ ] 7.5 Integrate SSE `subtitle_status` events for real-time progress updates
+- [ ] 7.6 Export `{ search, download, results, isSearching, isDownloading, sortBy, setSortBy }`
 
-### Task 8: Create Result Row Actions (AC: #4, #5, #6)
-- [ ] 8.1 Add "Preview" button per row — opens popover with first 10 lines
-- [ ] 8.2 Add "Download" button per row — triggers download mutation
-- [ ] 8.3 Show spinner on download button while processing
-- [ ] 8.4 Replace download button with checkmark icon on success
-- [ ] 8.5 Show error inline on row if download fails
-- [ ] 8.6 Success toast notification using existing toast system
+### Task 8: Create SubtitleSearchDialog Component (AC: #1, #3, #9, #10, #11)
+- [ ] 8.1 Create `apps/web/src/components/subtitle/SubtitleSearchDialog.tsx`
+- [ ] 8.2 Use shadcn/ui `Dialog`, `DialogContent`, `DialogHeader`, `DialogTitle`
+- [ ] 8.3 Search form: query input (pre-filled with media title), provider checkboxes
+- [ ] 8.4 Add "繁體轉換" toggle (default ON for non-CN, OFF for CN content based on `productionCountry`)
+- [ ] 8.5 Results table using shadcn/ui `Table`: Source, Language, Group, Format, Score, Downloads columns
+- [ ] 8.6 Sortable column headers (click to toggle asc/desc)
+- [ ] 8.7 Score column displays as percentage with color coding (green >70%, yellow >40%, red <=40%)
+- [ ] 8.8 Accept props: `mediaId`, `mediaType`, `mediaTitle`, `productionCountry`, `open`, `onOpenChange`
 
-### Task 9: Integrate into Media Detail Page (AC: #1)
-- [ ] 9.1 Add "Search Subtitles" button/action to media detail page and context menus
-- [ ] 9.2 Pass `mediaId`, `mediaType`, `mediaTitle`, `productionCountry` to `SubtitleSearchDialog`
-- [ ] 9.3 Refresh media detail data after successful download (invalidate TanStack Query)
+### Task 9: Create Result Row Actions (AC: #4, #5, #6)
+- [ ] 9.1 Add "Preview" button per row — opens popover with first 10 lines
+- [ ] 9.2 Add "Download" button per row — triggers download mutation (pass toggle state as `convertToTraditional`)
+- [ ] 9.3 Show spinner on download button while processing
+- [ ] 9.4 Replace download button with checkmark icon on success
+- [ ] 9.5 Show error inline on row if download fails
+- [ ] 9.6 Success toast notification using existing toast system
 
-### Task 12: CN Content Conversion Policy (AC: #9, #10, #11)
-- [ ] 12.1 Add `ConversionPolicy` type to `converter.go`: `ConvertAlways`, `ConvertNever`, `ConvertAuto`
-- [ ] 12.2 Update `engine.go` `convertIfNeeded()` to accept and check `ConversionPolicy`
-- [ ] 12.3 Update `Engine.Process()` to accept `productionCountry` parameter and derive policy
-- [ ] 12.4 Update `subtitle_handler.go` to pass production_countries from media DB record
-- [ ] 12.5 Add "繁體轉換" toggle to `SubtitleSearchDialog.tsx` (default based on production_country)
-- [ ] 12.6 Pass toggle state to download API call as `convertToTraditional` boolean
-- [ ] 12.7 Update subtitle file extension: `.zh-Hans.srt` when conversion skipped, `.zh-Hant.srt` when converted
-- [ ] 12.8 Test: CN content skips conversion, non-CN converts, toggle override works
+### Task 10: Integrate into Media Detail Page (AC: #1)
+- [ ] 10.1 Add "Search Subtitles" button/action to media detail page and context menus
+- [ ] 10.2 Pass `mediaId`, `mediaType`, `mediaTitle`, `productionCountry` to `SubtitleSearchDialog`
+- [ ] 10.3 Refresh media detail data after successful download (invalidate TanStack Query)
 
-### Task 10: Write Backend Tests (AC: #2, #4, #5, #7, #8)
-- [ ] 10.1 Create `apps/api/internal/handlers/subtitle_handler_test.go`
-- [ ] 10.2 Test search endpoint: valid request, missing mediaId, invalid mediaType, empty results
-- [ ] 10.3 Test download endpoint: success path, provider not found, download failure
-- [ ] 10.4 Test preview endpoint: success, timeout, encoding detection
-- [ ] 10.5 Ensure >80% handler coverage
+### Task 11: Write Backend Tests (AC: #2, #4, #5, #7, #8, #9, #10)
+- [ ] 11.1 Create `apps/api/internal/handlers/subtitle_handler_test.go`
+- [ ] 11.2 Test search endpoint: valid request, missing mediaId, invalid mediaType, empty results
+- [ ] 11.3 Test download endpoint: success path, provider not found, download failure
+- [ ] 11.4 Test preview endpoint: success, timeout, encoding detection
+- [ ] 11.5 Test conversion policy: CN content skips, non-CN converts, override toggle
+- [ ] 11.6 Ensure >80% handler coverage
 
-### Task 11: Write Frontend Tests (AC: #1, #3, #6)
+### Task 12: Write Frontend Tests (AC: #1, #3, #6, #9, #10, #11)
 - [ ] 11.1 Create `apps/web/src/services/subtitleService.spec.ts`
 - [ ] 11.2 Create `apps/web/src/hooks/useSubtitleSearch.spec.ts`
 - [ ] 11.3 Create `apps/web/src/components/subtitle/SubtitleSearchDialog.spec.tsx`
