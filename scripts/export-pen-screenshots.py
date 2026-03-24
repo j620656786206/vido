@@ -66,6 +66,14 @@ SCREENS = {
     "yezIo": ("flow-h-scanner-mobile", "h5-scan-progress-mobile"),
     "ZjoEI": ("flow-h-scanner-mobile", "h6-scan-complete-toast-mobile"),
     "n7jVF": ("flow-h-scanner-mobile", "h8-filtered-library-unmatched-mobile"),
+    # Flow I - Subtitle Search & Batch (Desktop)
+    "cOrOR": ("flow-i-subtitle-desktop", "i1-subtitle-search-dialog-desktop"),
+    "wy5Nx": ("flow-i-subtitle-desktop", "i2-search-preview-download-states-desktop"),
+    "NXijD": ("flow-i-subtitle-desktop", "i4-batch-progress-desktop"),
+    # Flow I - Subtitle Search & Batch (Mobile)
+    "GZ294": ("flow-i-subtitle-mobile", "i3-subtitle-search-dialog-mobile"),
+    "fUtqO": ("flow-i-subtitle-mobile", "i5-batch-progress-mobile"),
+    "ogQ6Y": ("flow-i-subtitle-mobile", "i6-subtitle-preview-mobile"),
 }
 
 
