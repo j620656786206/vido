@@ -54,6 +54,20 @@ so that **I can override automatic results and choose the exact subtitle I prefe
    **Then** it returns 200 with `{subtitlePath, language, score}`;
    **And** the media's subtitle fields are updated in the database.
 
+9. **Given** the media's `production_countries` contains "CN" (mainland China),
+   **When** the subtitle search dialog opens,
+   **Then** the "繁體轉換" toggle defaults to OFF;
+   **And** downloaded subtitles skip OpenCC s2twp conversion, preserving Simplified Chinese.
+
+10. **Given** the media's `production_countries` does NOT contain "CN",
+    **When** the subtitle search dialog opens,
+    **Then** the "繁體轉換" toggle defaults to ON;
+    **And** downloaded Simplified Chinese subtitles are converted to Traditional Chinese via OpenCC s2twp.
+
+11. **Given** the user manually toggles "繁體轉換" in the dialog,
+    **When** they download a subtitle,
+    **Then** the conversion follows the user's toggle override regardless of production country.
+
 ## Tasks / Subtasks
 
 ### Task 1: Create Backend Search Handler (AC: #2, #7)
@@ -123,9 +137,19 @@ so that **I can override automatic results and choose the exact subtitle I prefe
 - [ ] 8.6 Success toast notification using existing toast system
 
 ### Task 9: Integrate into Media Detail Page (AC: #1)
-- [ ] 9.1 Add "Search Subtitles" button/action to media detail page
-- [ ] 9.2 Pass `mediaId`, `mediaType`, `mediaTitle` to `SubtitleSearchDialog`
+- [ ] 9.1 Add "Search Subtitles" button/action to media detail page and context menus
+- [ ] 9.2 Pass `mediaId`, `mediaType`, `mediaTitle`, `productionCountry` to `SubtitleSearchDialog`
 - [ ] 9.3 Refresh media detail data after successful download (invalidate TanStack Query)
+
+### Task 12: CN Content Conversion Policy (AC: #9, #10, #11)
+- [ ] 12.1 Add `ConversionPolicy` type to `converter.go`: `ConvertAlways`, `ConvertNever`, `ConvertAuto`
+- [ ] 12.2 Update `engine.go` `convertIfNeeded()` to accept and check `ConversionPolicy`
+- [ ] 12.3 Update `Engine.Process()` to accept `productionCountry` parameter and derive policy
+- [ ] 12.4 Update `subtitle_handler.go` to pass production_countries from media DB record
+- [ ] 12.5 Add "繁體轉換" toggle to `SubtitleSearchDialog.tsx` (default based on production_country)
+- [ ] 12.6 Pass toggle state to download API call as `convertToTraditional` boolean
+- [ ] 12.7 Update subtitle file extension: `.zh-Hans.srt` when conversion skipped, `.zh-Hant.srt` when converted
+- [ ] 12.8 Test: CN content skips conversion, non-CN converts, toggle override works
 
 ### Task 10: Write Backend Tests (AC: #2, #4, #5, #7, #8)
 - [ ] 10.1 Create `apps/api/internal/handlers/subtitle_handler_test.go`

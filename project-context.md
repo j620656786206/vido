@@ -126,7 +126,10 @@ See `_bmad-output/planning-artifacts/architecture/consolidation-refactoring-plan
 
 - Language detection MUST analyze subtitle file content (not filename) — this fixes Bazarr's core zh-TW bug
 - OpenCC conversion direction: s2twp (Simplified → Traditional with Taiwan phrases)
-- Subtitle files use `.zh-Hant.srt` extension for Plex/Jellyfin compatibility
+- CN content policy: Skip conversion when `production_countries` contains `CN` (mainland content keeps simplified subtitles — dialogue expressions match audio)
+- Conversion is user-overridable: per-search toggle in subtitle dialog, global preference in settings
+- Edge cases: Co-productions (multiple countries) default to convert (conservative); already-traditional subtitles pass through unchanged (idempotent)
+- Subtitle files use `.zh-Hant.srt` or `.zh-Hans.srt` extension based on final language for Plex/Jellyfin compatibility
 
 ---
 

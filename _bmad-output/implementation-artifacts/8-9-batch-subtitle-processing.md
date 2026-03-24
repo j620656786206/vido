@@ -53,6 +53,11 @@ so that **I don't have to manually trigger subtitle search for each media item i
    **Then** a final SSE event is broadcast with `status: "complete"` and summary counts;
    **And** the batch is removed from active state.
 
+9. **Given** batch processing encounters a media item with `production_countries` containing "CN",
+   **When** the engine processes that item's subtitle,
+   **Then** OpenCC s2twp conversion is skipped and Simplified Chinese is preserved;
+   **And** the subtitle file uses `.zh-Hans.srt` extension.
+
 ## Tasks / Subtasks
 
 ### Task 1: Define Batch Types (AC: #3, #4)
@@ -66,7 +71,7 @@ so that **I don't have to manually trigger subtitle search for each media item i
 ### Task 2: Implement Batch Processor (AC: #1, #2, #5, #6)
 - [ ] 2.1 Define `BatchProcessor` struct with dependencies: `engine *Engine`, `movieRepo`, `seriesRepo`, `sseHub *sse.Hub`
 - [ ] 2.2 Implement `Process(ctx context.Context, req BatchRequest) (*BatchResult, error)`
-- [ ] 2.3 Implement `collectItems(ctx, scope, seasonID)` to gather media items needing subtitles
+- [ ] 2.3 Implement `collectItems(ctx, scope, seasonID)` to gather media items needing subtitles (include production_countries)
 - [ ] 2.4 For season scope: query episodes by seasonID where subtitle_status != 'found'
 - [ ] 2.5 For library scope: use `FindNeedingSubtitleSearch` from Story 0-2 repositories
 - [ ] 2.6 Process items sequentially (to respect rate limits)
