@@ -24,6 +24,8 @@ import (
 	"github.com/vido/api/internal/secrets"
 	"github.com/vido/api/internal/services"
 	"github.com/vido/api/internal/sse"
+	"github.com/vido/api/internal/subtitle"
+	subtitleproviders "github.com/vido/api/internal/subtitle/providers"
 	"github.com/vido/api/internal/cache"
 
 	// Media config is loaded during service initialization
@@ -334,6 +336,17 @@ func main() {
 	scanScheduler := services.NewScanScheduler(scannerService, repos.Settings, slog.Default())
 	slog.Info("Scan scheduler initialized")
 
+	// Initialize subtitle engine components (Story 8.1-8.8)
+	subtitleConverter, _ := subtitle.NewConverter()
+	subtitleScorer := subtitle.NewScorer(subtitle.NewDefaultScorerConfig())
+	subtitlePlacer := subtitle.NewPlacer(subtitle.DefaultPlacerConfig())
+	// Initialize subtitle providers (Assrt, OpenSubtitles, Zimuku)
+	assrtProvider := subtitleproviders.NewAssrtProvider(ctx, secretsService)
+	opensubProvider := subtitleproviders.NewOpenSubProvider(ctx, secretsService)
+	zimukuProvider := subtitleproviders.NewZimukuProvider()
+	subtitleProviders := []subtitleproviders.SubtitleProvider{assrtProvider, opensubProvider, zimukuProvider}
+	slog.Info("Subtitle engine initialized", "providers", len(subtitleProviders))
+
 	// Initialize event emitter for real-time parse progress (Story 3.10)
 	parseEventEmitter := events.NewChannelEmitter()
 	defer parseEventEmitter.Close()
@@ -371,6 +384,10 @@ func main() {
 	exportHandler := handlers.NewExportHandler(exportService)
 	scannerHandler := handlers.NewScannerHandler(scannerService)
 	scannerHandler.SetScheduler(scanScheduler)
+	subtitleHandler := handlers.NewSubtitleHandler(
+		subtitleProviders, subtitleScorer, subtitleConverter, subtitlePlacer,
+		sseHub, repos.Movies, repos.Series,
+	)
 	// parseProgressHandler already initialized above with defer Close()
 	slog.Info("Handlers initialized with service injection")
 
@@ -412,6 +429,7 @@ func main() {
 		libraryHandler.RegisterRoutes(apiV1)
 		recentMediaHandler.RegisterRoutes(apiV1)
 		scannerHandler.RegisterRoutes(apiV1)
+		subtitleHandler.RegisterRoutes(apiV1)
 		// SSE event stream endpoint
 		apiV1.GET("/events", sse.Handler(sseHub))
 		// Health services endpoint (Story 3.12 - Graceful Degradation)

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -9,6 +9,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Checkbox } from '../ui/checkbox';
 import { Label } from '../ui/label';
+import { Switch } from '../ui/switch';
 import {
   Table,
   TableBody,
@@ -31,6 +32,7 @@ interface SubtitleSearchDialogProps {
   mediaTitle: string;
   mediaFilePath: string;
   mediaResolution?: string;
+  productionCountry?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -47,6 +49,7 @@ export function SubtitleSearchDialog({
   mediaTitle,
   mediaFilePath,
   mediaResolution,
+  productionCountry,
   open,
   onOpenChange,
 }: SubtitleSearchDialogProps) {
@@ -55,26 +58,40 @@ export function SubtitleSearchDialog({
     PROVIDERS.map((p) => p.id),
   );
 
+  // CN Conversion Policy (AC #9, #10, #11)
+  // Default: OFF for CN content, ON for non-CN content
+  const isCNContent = productionCountry?.includes('CN') ?? false;
+  const [convertToTraditional, setConvertToTraditional] = useState(!isCNContent);
+
+  // Reset query and toggle when dialog opens for different media (M7 fix)
+  useEffect(() => {
+    if (open) {
+      setQuery(mediaTitle);
+      setConvertToTraditional(!isCNContent);
+    }
+  }, [open, mediaTitle, isCNContent]);
+
   const {
     search,
     isSearching,
+    searchError,
     results,
     resultCount,
     sortBy,
     sortOrder,
     toggleSort,
     download,
-    isDownloading,
+    downloadingIds,
     downloadedIds,
     preview,
-    previewData,
-    isPreviewing,
+    previewDataMap,
+    previewingId,
   } = useSubtitleSearch();
 
   const handleSearch = useCallback(() => {
     search({
-      mediaId,
-      mediaType,
+      media_id: mediaId,
+      media_type: mediaType,
       providers: selectedProviders,
       query,
     });
@@ -83,15 +100,16 @@ export function SubtitleSearchDialog({
   const handleDownload = useCallback(
     (result: SubtitleSearchResult) => {
       download({
-        mediaId,
-        mediaType,
-        mediaFilePath,
-        subtitleId: result.ID,
-        provider: result.Source,
+        media_id: mediaId,
+        media_type: mediaType,
+        media_file_path: mediaFilePath,
+        subtitle_id: result.id,
+        provider: result.source,
         resolution: mediaResolution,
+        convert_to_traditional: convertToTraditional,
       });
     },
-    [download, mediaId, mediaType, mediaFilePath, mediaResolution],
+    [download, mediaId, mediaType, mediaFilePath, mediaResolution, convertToTraditional],
   );
 
   const toggleProvider = useCallback((providerId: string) => {
@@ -103,9 +121,9 @@ export function SubtitleSearchDialog({
   }, []);
 
   const scoreColor = (score: number) => {
-    if (score > 0.7) return 'text-green-600';
-    if (score > 0.4) return 'text-yellow-600';
-    return 'text-red-600';
+    if (score > 0.7) return 'text-green-600 bg-green-600/10 border border-green-600/40';
+    if (score > 0.4) return 'text-yellow-600 bg-yellow-600/10 border border-yellow-600/40';
+    return 'text-red-600 bg-red-600/10 border border-red-600/40';
   };
 
   const SortableHeader = ({
@@ -150,24 +168,45 @@ export function SubtitleSearchDialog({
             </Button>
           </div>
 
-          {/* Provider Checkboxes */}
-          <div className="flex gap-4">
-            {PROVIDERS.map((p) => (
-              <div key={p.id} className="flex items-center gap-2">
-                <Checkbox
-                  id={`provider-${p.id}`}
-                  checked={selectedProviders.includes(p.id)}
-                  onCheckedChange={() => toggleProvider(p.id)}
-                />
-                <Label htmlFor={`provider-${p.id}`} className="text-sm">
-                  {p.label}
-                </Label>
-              </div>
-            ))}
+          {/* Provider Checkboxes + 繁體轉換 Toggle */}
+          <div className="flex items-center justify-between">
+            <div className="flex gap-4">
+              {PROVIDERS.map((p) => (
+                <div key={p.id} className="flex items-center gap-2">
+                  <Checkbox
+                    id={`provider-${p.id}`}
+                    checked={selectedProviders.includes(p.id)}
+                    onCheckedChange={() => toggleProvider(p.id)}
+                  />
+                  <Label htmlFor={`provider-${p.id}`} className="text-sm">
+                    {p.label}
+                  </Label>
+                </div>
+              ))}
+            </div>
+
+            {/* 繁體轉換 Toggle (AC #9, #10, #11) */}
+            <div className="flex items-center gap-2">
+              <Label htmlFor="convert-toggle" className="text-sm">
+                繁體轉換
+              </Label>
+              <Switch
+                id="convert-toggle"
+                checked={convertToTraditional}
+                onCheckedChange={setConvertToTraditional}
+              />
+            </div>
           </div>
         </div>
 
-        {/* Results Table */}
+        {/* Search Error (M8 fix) */}
+        {searchError && (
+          <div className="mt-2 p-3 text-sm text-red-600 bg-red-50 rounded-md border border-red-200">
+            搜尋失敗：{searchError.message}
+          </div>
+        )}
+
+        {/* Results Table — columns per UX design Flow I */}
         {resultCount > 0 && (
           <div className="mt-4">
             <p className="text-sm text-muted-foreground mb-2">
@@ -176,32 +215,36 @@ export function SubtitleSearchDialog({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <SortableHeader field="Source">來源</SortableHeader>
-                  <SortableHeader field="Language">語言</SortableHeader>
-                  <SortableHeader field="Group">字幕組</SortableHeader>
-                  <TableHead>檔名</TableHead>
+                  <SortableHeader field="source">來源</SortableHeader>
+                  <SortableHeader field="language">語言</SortableHeader>
+                  <TableHead>字幕名稱</TableHead>
+                  <TableHead>格式</TableHead>
                   <SortableHeader field="score">評分</SortableHeader>
-                  <SortableHeader field="Downloads">下載數</SortableHeader>
+                  <SortableHeader field="downloads">下載數</SortableHeader>
                   <TableHead>操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {results.map((result) => (
-                  <TableRow key={`${result.Source}-${result.ID}`}>
+                  <TableRow key={`${result.source}-${result.id}`}>
                     <TableCell className="font-medium">
-                      {result.Source}
+                      {result.source}
                     </TableCell>
-                    <TableCell>{result.Language}</TableCell>
-                    <TableCell>{result.Group || '-'}</TableCell>
-                    <TableCell className="max-w-[200px] truncate" title={result.Filename}>
-                      {result.Filename}
+                    <TableCell>{result.language}</TableCell>
+                    <TableCell className="max-w-[200px] truncate" title={result.filename}>
+                      {result.filename}
+                    </TableCell>
+                    <TableCell className="uppercase text-xs text-muted-foreground">
+                      {result.format || '-'}
                     </TableCell>
                     <TableCell>
-                      <span className={scoreColor(result.score)}>
+                      <span
+                        className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-medium ${scoreColor(result.score)}`}
+                      >
                         {(result.score * 100).toFixed(0)}%
                       </span>
                     </TableCell>
-                    <TableCell>{result.Downloads}</TableCell>
+                    <TableCell>{result.downloads}</TableCell>
                     <TableCell>
                       <div className="flex gap-1">
                         {/* Preview */}
@@ -212,30 +255,40 @@ export function SubtitleSearchDialog({
                               size="sm"
                               onClick={() =>
                                 preview({
-                                  subtitleId: result.ID,
-                                  provider: result.Source,
+                                  subtitleId: result.id,
+                                  provider: result.source,
                                 })
                               }
-                              disabled={isPreviewing}
+                              disabled={previewingId === result.id}
                             >
-                              預覽
+                              {previewingId === result.id ? '...' : '預覽'}
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-96">
                             <div className="space-y-1">
                               <p className="text-sm font-medium">字幕預覽</p>
-                              {previewData?.lines?.map((line, i) => (
-                                <p key={i} className="text-xs text-muted-foreground font-mono">
-                                  {line}
-                                </p>
-                              ))}
+                              {previewDataMap[result.id]?.lines?.map(
+                                (line, i) => (
+                                  <p
+                                    key={i}
+                                    className="text-xs text-muted-foreground font-mono"
+                                  >
+                                    {line}
+                                  </p>
+                                ),
+                              )}
                             </div>
                           </PopoverContent>
                         </Popover>
 
-                        {/* Download */}
-                        {downloadedIds.has(result.ID) ? (
-                          <Button variant="outline" size="sm" disabled className="text-green-600">
+                        {/* Download — per-row state (M2 fix) */}
+                        {downloadedIds.has(result.id) ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled
+                            className="text-green-600"
+                          >
                             ✓
                           </Button>
                         ) : (
@@ -243,9 +296,9 @@ export function SubtitleSearchDialog({
                             variant="default"
                             size="sm"
                             onClick={() => handleDownload(result)}
-                            disabled={isDownloading}
+                            disabled={downloadingIds.has(result.id)}
                           >
-                            {isDownloading ? '...' : '下載'}
+                            {downloadingIds.has(result.id) ? '...' : '下載'}
                           </Button>
                         )}
                       </div>
@@ -258,7 +311,7 @@ export function SubtitleSearchDialog({
         )}
 
         {/* Empty state */}
-        {resultCount === 0 && !isSearching && (
+        {resultCount === 0 && !isSearching && !searchError && (
           <div className="text-center py-8 text-muted-foreground">
             點擊「搜尋」開始查找字幕
           </div>

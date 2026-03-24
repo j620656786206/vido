@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/subtitle"
 	"github.com/vido/api/internal/subtitle/providers"
 )
@@ -35,14 +36,24 @@ func (m *handlerMockProvider) Download(_ context.Context, _ string) ([]byte, err
 	return m.downloadData, m.downloadErr
 }
 
-// --- Mock Engine ---
+// --- Mock Status Updater ---
 
-type mockEngine struct {
-	result subtitle.EngineResult
+type mockStatusUpdater struct {
+	lastID       string
+	lastStatus   models.SubtitleStatus
+	lastPath     string
+	lastLanguage string
+	lastScore    float64
+	updateErr    error
 }
 
-func (m *mockEngine) Process(_ context.Context, _, _, _ string, _ providers.SubtitleQuery, _ string) subtitle.EngineResult {
-	return m.result
+func (m *mockStatusUpdater) UpdateSubtitleStatus(_ context.Context, id string, status models.SubtitleStatus, path, language string, score float64) error {
+	m.lastID = id
+	m.lastStatus = status
+	m.lastPath = path
+	m.lastLanguage = language
+	m.lastScore = score
+	return m.updateErr
 }
 
 // --- Test Setup ---
@@ -60,7 +71,11 @@ func setupSubtitleHandler(t *testing.T) (*SubtitleHandler, *gin.Engine) {
 	}
 
 	scorer := subtitle.NewScorer(subtitle.NewDefaultScorerConfig())
-	handler := NewSubtitleHandler(&mockEngine{}, []providers.SubtitleProvider{prov}, scorer, nil, nil)
+	placer := subtitle.NewPlacer(subtitle.DefaultPlacerConfig())
+	handler := NewSubtitleHandler(
+		[]providers.SubtitleProvider{prov},
+		scorer, nil, placer, nil, nil, nil,
+	)
 
 	router := gin.New()
 	api := router.Group("/api/v1")
@@ -92,13 +107,23 @@ func TestSubtitleHandler_Search_Success(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, resp.Success)
 	assert.NotNil(t, resp.Data)
+
+	// Verify snake_case JSON keys in response
+	var rawResp map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &rawResp))
+	var dataItems []map[string]interface{}
+	require.NoError(t, json.Unmarshal(rawResp["data"], &dataItems))
+	require.Len(t, dataItems, 1)
+	// Check snake_case keys exist
+	assert.Contains(t, dataItems[0], "download_url")
+	assert.Contains(t, dataItems[0], "score_breakdown")
 }
 
 func TestSubtitleHandler_Search_MissingMediaID(t *testing.T) {
 	_, router := setupSubtitleHandler(t)
 
 	body, _ := json.Marshal(map[string]string{
-		"mediaType": "movie",
+		"media_type": "movie",
 	})
 
 	w := httptest.NewRecorder()
@@ -112,10 +137,10 @@ func TestSubtitleHandler_Search_MissingMediaID(t *testing.T) {
 func TestSubtitleHandler_Search_InvalidMediaType(t *testing.T) {
 	_, router := setupSubtitleHandler(t)
 
-	body, _ := json.Marshal(SubtitleSearchRequest{
-		MediaID:   "1",
-		MediaType: "invalid",
-		Query:     "test",
+	body, _ := json.Marshal(map[string]string{
+		"media_id":   "1",
+		"media_type": "invalid",
+		"query":      "test",
 	})
 
 	w := httptest.NewRecorder()
@@ -129,7 +154,6 @@ func TestSubtitleHandler_Search_InvalidMediaType(t *testing.T) {
 func TestSubtitleHandler_Search_ProviderFilter(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	// Two providers
 	prov1 := &handlerMockProvider{name: "assrt", searchResult: []providers.SubtitleResult{
 		{ID: "1", Source: "assrt", Language: "zh-Hant"},
 	}}
@@ -138,13 +162,16 @@ func TestSubtitleHandler_Search_ProviderFilter(t *testing.T) {
 	}}
 
 	scorer := subtitle.NewScorer(subtitle.NewDefaultScorerConfig())
-	handler := NewSubtitleHandler(&mockEngine{}, []providers.SubtitleProvider{prov1, prov2}, scorer, nil, nil)
+	placer := subtitle.NewPlacer(subtitle.DefaultPlacerConfig())
+	handler := NewSubtitleHandler(
+		[]providers.SubtitleProvider{prov1, prov2},
+		scorer, nil, placer, nil, nil, nil,
+	)
 
 	router := gin.New()
 	api := router.Group("/api/v1")
 	handler.RegisterRoutes(api)
 
-	// Request only assrt
 	body, _ := json.Marshal(SubtitleSearchRequest{
 		MediaID:   "1",
 		MediaType: "movie",
@@ -165,7 +192,11 @@ func TestSubtitleHandler_Search_EmptyResults(t *testing.T) {
 
 	prov := &handlerMockProvider{name: "assrt", searchResult: nil}
 	scorer := subtitle.NewScorer(subtitle.NewDefaultScorerConfig())
-	handler := NewSubtitleHandler(&mockEngine{}, []providers.SubtitleProvider{prov}, scorer, nil, nil)
+	placer := subtitle.NewPlacer(subtitle.DefaultPlacerConfig())
+	handler := NewSubtitleHandler(
+		[]providers.SubtitleProvider{prov},
+		scorer, nil, placer, nil, nil, nil,
+	)
 
 	router := gin.New()
 	api := router.Group("/api/v1")
@@ -183,6 +214,109 @@ func TestSubtitleHandler_Search_EmptyResults(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+// --- Download Tests ---
+
+func TestSubtitleHandler_Download_ProviderNotFound(t *testing.T) {
+	_, router := setupSubtitleHandler(t)
+
+	body, _ := json.Marshal(SubtitleDownloadRequest{
+		MediaID:       "1",
+		MediaType:     "movie",
+		MediaFilePath: "/media/movie.mkv",
+		SubtitleID:    "sub-1",
+		Provider:      "nonexistent",
+	})
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/subtitles/download", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestSubtitleHandler_Download_DownloadFailure(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	prov := &handlerMockProvider{
+		name:        "assrt",
+		downloadErr: errors.New("download failed"),
+	}
+
+	scorer := subtitle.NewScorer(subtitle.NewDefaultScorerConfig())
+	placer := subtitle.NewPlacer(subtitle.DefaultPlacerConfig())
+	handler := NewSubtitleHandler(
+		[]providers.SubtitleProvider{prov},
+		scorer, nil, placer, nil, nil, nil,
+	)
+
+	router := gin.New()
+	api := router.Group("/api/v1")
+	handler.RegisterRoutes(api)
+
+	body, _ := json.Marshal(SubtitleDownloadRequest{
+		MediaID:       "1",
+		MediaType:     "movie",
+		MediaFilePath: "/media/movie.mkv",
+		SubtitleID:    "sub-1",
+		Provider:      "assrt",
+	})
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/subtitles/download", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}
+
+func TestSubtitleHandler_Download_MissingFields(t *testing.T) {
+	_, router := setupSubtitleHandler(t)
+
+	// Missing media_file_path
+	body, _ := json.Marshal(map[string]string{
+		"media_id":    "1",
+		"media_type":  "movie",
+		"subtitle_id": "sub-1",
+		"provider":    "assrt",
+	})
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/subtitles/download", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+// --- CN Conversion Policy Tests ---
+
+func TestSubtitleHandler_ShouldConvert(t *testing.T) {
+	h := &SubtitleHandler{}
+	boolPtr := func(b bool) *bool { return &b }
+
+	tests := []struct {
+		name         string
+		detectedLang string
+		userOverride *bool
+		want         bool
+	}{
+		{"zh-Hans no override → convert", "zh-Hans", nil, true},
+		{"zh-Hant → no convert", "zh-Hant", nil, false},
+		{"en → no convert", "en", nil, false},
+		{"zh-Hans with CN override OFF → no convert", "zh-Hans", boolPtr(false), false},
+		{"zh-Hans with override ON → convert", "zh-Hans", boolPtr(true), true},
+		{"zh-Hant with override ON → no convert (already traditional)", "zh-Hant", boolPtr(true), false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := h.shouldConvert(tt.detectedLang, tt.userOverride)
+			assert.Equal(t, tt.want, got)
+		})
+	}
 }
 
 // --- Preview Tests ---
@@ -227,8 +361,12 @@ func TestSubtitleHandler_Preview_DownloadFailure(t *testing.T) {
 		downloadErr: errors.New("download failed"),
 	}
 
-	handler := NewSubtitleHandler(&mockEngine{}, []providers.SubtitleProvider{prov},
-		subtitle.NewScorer(subtitle.NewDefaultScorerConfig()), nil, nil)
+	scorer := subtitle.NewScorer(subtitle.NewDefaultScorerConfig())
+	placer := subtitle.NewPlacer(subtitle.DefaultPlacerConfig())
+	handler := NewSubtitleHandler(
+		[]providers.SubtitleProvider{prov},
+		scorer, nil, placer, nil, nil, nil,
+	)
 
 	router := gin.New()
 	api := router.Group("/api/v1")

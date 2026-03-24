@@ -8,7 +8,7 @@ import {
   type SubtitlePreviewResult,
 } from '../services/subtitleService';
 
-export type SortField = 'score' | 'Language' | 'Source' | 'Downloads' | 'Group';
+export type SortField = 'score' | 'language' | 'source' | 'downloads' | 'group';
 export type SortOrder = 'asc' | 'desc';
 
 export function useSubtitleSearch() {
@@ -16,6 +16,13 @@ export function useSubtitleSearch() {
   const [sortBy, setSortBy] = useState<SortField>('score');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [downloadedIds, setDownloadedIds] = useState<Set<string>>(new Set());
+  // Per-row download tracking (M2 fix)
+  const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set());
+  // Per-row preview tracking (M3 fix)
+  const [previewDataMap, setPreviewDataMap] = useState<
+    Record<string, SubtitlePreviewResult>
+  >({});
+  const [previewingId, setPreviewingId] = useState<string | null>(null);
 
   // Search mutation
   const searchMutation = useMutation({
@@ -24,22 +31,53 @@ export function useSubtitleSearch() {
     onSuccess: (data) => {
       setResults(data || []);
       setDownloadedIds(new Set());
+      setDownloadingIds(new Set());
+      setPreviewDataMap({});
     },
   });
 
-  // Download mutation
+  // Download mutation (per-row tracking)
   const downloadMutation = useMutation({
-    mutationFn: (params: SubtitleDownloadParams) =>
-      subtitleService.downloadSubtitle(params),
+    mutationFn: (params: SubtitleDownloadParams) => {
+      setDownloadingIds((prev) => new Set(prev).add(params.subtitle_id));
+      return subtitleService.downloadSubtitle(params);
+    },
     onSuccess: (_data, variables) => {
-      setDownloadedIds((prev) => new Set(prev).add(variables.subtitleId));
+      setDownloadedIds((prev) => new Set(prev).add(variables.subtitle_id));
+      setDownloadingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(variables.subtitle_id);
+        return next;
+      });
+    },
+    onError: (_error, variables) => {
+      setDownloadingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(variables.subtitle_id);
+        return next;
+      });
     },
   });
 
-  // Preview mutation
+  // Preview mutation (per-row tracking)
   const previewMutation = useMutation({
-    mutationFn: (params: { subtitleId: string; provider: string }) =>
-      subtitleService.previewSubtitle(params),
+    mutationFn: (params: { subtitleId: string; provider: string }) => {
+      setPreviewingId(params.subtitleId);
+      return subtitleService.previewSubtitle({
+        subtitle_id: params.subtitleId,
+        provider: params.provider,
+      });
+    },
+    onSuccess: (data, variables) => {
+      setPreviewDataMap((prev) => ({
+        ...prev,
+        [variables.subtitleId]: data,
+      }));
+      setPreviewingId(null);
+    },
+    onError: () => {
+      setPreviewingId(null);
+    },
   });
 
   // Sort results
@@ -48,14 +86,14 @@ export function useSubtitleSearch() {
     switch (sortBy) {
       case 'score':
         return (a.score - b.score) * multiplier;
-      case 'Downloads':
-        return (a.Downloads - b.Downloads) * multiplier;
-      case 'Language':
-        return a.Language.localeCompare(b.Language) * multiplier;
-      case 'Source':
-        return a.Source.localeCompare(b.Source) * multiplier;
-      case 'Group':
-        return (a.Group || '').localeCompare(b.Group || '') * multiplier;
+      case 'downloads':
+        return (a.downloads - b.downloads) * multiplier;
+      case 'language':
+        return a.language.localeCompare(b.language) * multiplier;
+      case 'source':
+        return a.source.localeCompare(b.source) * multiplier;
+      case 'group':
+        return (a.group || '').localeCompare(b.group || '') * multiplier;
       default:
         return 0;
     }
@@ -89,15 +127,16 @@ export function useSubtitleSearch() {
     sortOrder,
     toggleSort,
 
-    // Download
+    // Download (per-row)
     download: downloadMutation.mutate,
-    isDownloading: downloadMutation.isPending,
+    downloadingIds,
     downloadError: downloadMutation.error,
     downloadedIds,
 
-    // Preview
+    // Preview (per-row)
     preview: previewMutation.mutateAsync,
-    previewData: previewMutation.data as SubtitlePreviewResult | undefined,
+    previewDataMap,
+    previewingId,
     isPreviewing: previewMutation.isPending,
   };
 }
