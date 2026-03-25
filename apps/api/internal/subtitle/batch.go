@@ -1,0 +1,448 @@
+package subtitle
+
+import (
+	"context"
+	"fmt"
+	"log/slog"
+	"strings"
+	"sync"
+	"time"
+
+	"github.com/google/uuid"
+
+	"github.com/vido/api/internal/models"
+	"github.com/vido/api/internal/sse"
+	"github.com/vido/api/internal/subtitle/providers"
+)
+
+// BatchScope defines the scope of batch subtitle processing.
+type BatchScope string
+
+const (
+	// ScopeSeason processes all episodes in a specific season.
+	ScopeSeason BatchScope = "season"
+	// ScopeLibrary processes all media items needing subtitles.
+	ScopeLibrary BatchScope = "library"
+)
+
+// BatchRequest is the input for starting a batch subtitle operation.
+type BatchRequest struct {
+	Scope    BatchScope `json:"scope"`
+	SeasonID *int64     `json:"season_id,omitempty"`
+}
+
+// BatchProgress reports the current state of a running batch.
+type BatchProgress struct {
+	BatchID      string `json:"batch_id"`
+	TotalItems   int    `json:"total_items"`
+	CurrentIndex int    `json:"current_index"`
+	CurrentItem  string `json:"current_item"`
+	SuccessCount int    `json:"success_count"`
+	FailCount    int    `json:"fail_count"`
+	Status       string `json:"status"` // "running", "complete", "cancelled", "error"
+}
+
+// BatchResult is the outcome of a completed batch operation.
+type BatchResult struct {
+	BatchID      string        `json:"batch_id"`
+	TotalItems   int           `json:"total_items"`
+	SuccessCount int           `json:"success_count"`
+	FailCount    int           `json:"fail_count"`
+	Duration     time.Duration `json:"duration"`
+	FailedItems  []FailedItem  `json:"failed_items,omitempty"`
+}
+
+// FailedItem records a single item that failed during batch processing.
+type FailedItem struct {
+	MediaID   string `json:"media_id"`
+	MediaType string `json:"media_type"`
+	Title     string `json:"title"`
+	Error     string `json:"error"`
+}
+
+// batchItem is an internal representation of a media item to process.
+type batchItem struct {
+	MediaID            string
+	MediaType          string
+	MediaFilePath      string
+	Title              string
+	Resolution         string
+	ProductionCountry  string // comma-separated ISO codes
+}
+
+// BatchConfig holds configurable parameters for batch processing.
+type BatchConfig struct {
+	// DelayBetweenItems is the pause between processing each item (default 3s).
+	DelayBetweenItems time.Duration
+}
+
+// DefaultBatchConfig returns the default batch configuration.
+func DefaultBatchConfig() BatchConfig {
+	return BatchConfig{
+		DelayBetweenItems: 3 * time.Second,
+	}
+}
+
+// BatchItemCollector defines the interface for collecting items needing subtitles.
+type BatchItemCollector interface {
+	CollectMoviesNeedingSubtitles(ctx context.Context) ([]batchItem, error)
+	CollectSeriesNeedingSubtitles(ctx context.Context) ([]batchItem, error)
+}
+
+// BatchProcessor manages batch subtitle processing with concurrency control.
+type BatchProcessor struct {
+	engine  *Engine
+	sseHub  *sse.Hub
+	config  BatchConfig
+	collect BatchItemCollector
+
+	mu          sync.Mutex
+	activeBatch *BatchProgress
+}
+
+// NewBatchProcessor creates a new BatchProcessor.
+func NewBatchProcessor(
+	engine *Engine,
+	sseHub *sse.Hub,
+	collector BatchItemCollector,
+	config BatchConfig,
+) *BatchProcessor {
+	return &BatchProcessor{
+		engine:  engine,
+		sseHub:  sseHub,
+		config:  config,
+		collect: collector,
+	}
+}
+
+// IsRunning returns true if a batch is currently active.
+func (bp *BatchProcessor) IsRunning() bool {
+	bp.mu.Lock()
+	defer bp.mu.Unlock()
+	return bp.activeBatch != nil
+}
+
+// GetProgress returns the current batch progress, or nil if no batch is running.
+func (bp *BatchProcessor) GetProgress() *BatchProgress {
+	bp.mu.Lock()
+	defer bp.mu.Unlock()
+	if bp.activeBatch == nil {
+		return nil
+	}
+	// Return a copy to avoid race
+	p := *bp.activeBatch
+	return &p
+}
+
+// Start begins batch processing in the background. Returns the batch ID and item count,
+// or an error if a batch is already running (409 scenario).
+func (bp *BatchProcessor) Start(ctx context.Context, req BatchRequest) (string, int, error) {
+	bp.mu.Lock()
+	if bp.activeBatch != nil {
+		progress := *bp.activeBatch
+		bp.mu.Unlock()
+		return progress.BatchID, progress.TotalItems, fmt.Errorf("batch already running: %s", progress.BatchID)
+	}
+
+	// Collect items
+	items, err := bp.collectItems(ctx, req)
+	if err != nil {
+		bp.mu.Unlock()
+		return "", 0, fmt.Errorf("collect items: %w", err)
+	}
+
+	if len(items) == 0 {
+		bp.mu.Unlock()
+		// No items to process — return immediately with empty result
+		batchID := uuid.New().String()
+		bp.broadcastComplete(batchID, 0, 0, 0)
+		return batchID, 0, nil
+	}
+
+	batchID := uuid.New().String()
+	bp.activeBatch = &BatchProgress{
+		BatchID:    batchID,
+		TotalItems: len(items),
+		Status:     "running",
+	}
+	bp.mu.Unlock()
+
+	// Launch background processing
+	go bp.process(ctx, batchID, items)
+
+	return batchID, len(items), nil
+}
+
+// process runs the batch sequentially with delays.
+func (bp *BatchProcessor) process(ctx context.Context, batchID string, items []batchItem) {
+	startTime := time.Now()
+	var (
+		successCount int
+		failCount    int
+		failedItems  []FailedItem
+	)
+
+	for i, item := range items {
+		// Check cancellation
+		select {
+		case <-ctx.Done():
+			slog.Info("Batch cancelled", "batch_id", batchID, "processed", i, "total", len(items))
+			bp.mu.Lock()
+			if bp.activeBatch != nil {
+				bp.activeBatch.Status = "cancelled"
+			}
+			bp.mu.Unlock()
+			bp.broadcastProgress(batchID, len(items), i, item.Title, successCount, failCount, "cancelled")
+			bp.clearActiveBatch()
+			return
+		default:
+		}
+
+		// Update progress
+		bp.mu.Lock()
+		if bp.activeBatch != nil {
+			bp.activeBatch.CurrentIndex = i + 1
+			bp.activeBatch.CurrentItem = item.Title
+			bp.activeBatch.SuccessCount = successCount
+			bp.activeBatch.FailCount = failCount
+		}
+		bp.mu.Unlock()
+
+		// Build ProcessOptions with CN policy
+		opts := ProcessOptions{
+			ProductionCountry: item.ProductionCountry,
+		}
+
+		// Process the item
+		query := providers.SubtitleQuery{Title: item.Title}
+		result := bp.engine.Process(ctx, item.MediaID, item.MediaType, item.MediaFilePath,
+			query, item.Resolution, opts)
+
+		if result.Success {
+			successCount++
+			slog.Info("Batch item succeeded",
+				"batch_id", batchID,
+				"index", i+1,
+				"total", len(items),
+				"media_id", item.MediaID,
+				"title", item.Title,
+			)
+		} else {
+			failCount++
+			errMsg := "unknown error"
+			if result.Error != nil {
+				errMsg = result.Error.Error()
+			}
+			failedItems = append(failedItems, FailedItem{
+				MediaID:   item.MediaID,
+				MediaType: item.MediaType,
+				Title:     item.Title,
+				Error:     errMsg,
+			})
+			slog.Warn("Batch item failed",
+				"batch_id", batchID,
+				"index", i+1,
+				"total", len(items),
+				"media_id", item.MediaID,
+				"title", item.Title,
+				"error", errMsg,
+			)
+		}
+
+		// Broadcast per-item progress
+		bp.broadcastProgress(batchID, len(items), i+1, item.Title, successCount, failCount, "running")
+
+		// Delay between items (except last)
+		if i < len(items)-1 {
+			select {
+			case <-ctx.Done():
+				// Cancelled during delay
+				bp.clearActiveBatch()
+				return
+			case <-time.After(bp.config.DelayBetweenItems):
+			}
+		}
+	}
+
+	duration := time.Since(startTime)
+	slog.Info("Batch complete",
+		"batch_id", batchID,
+		"total", len(items),
+		"success", successCount,
+		"fail", failCount,
+		"duration", duration,
+	)
+
+	bp.broadcastComplete(batchID, len(items), successCount, failCount)
+	bp.clearActiveBatch()
+}
+
+// collectItems gathers media items based on the batch scope.
+func (bp *BatchProcessor) collectItems(ctx context.Context, req BatchRequest) ([]batchItem, error) {
+	switch req.Scope {
+	case ScopeLibrary:
+		return bp.collectLibraryItems(ctx)
+	case ScopeSeason:
+		if req.SeasonID == nil {
+			return nil, fmt.Errorf("season_id required for season scope")
+		}
+		// Season scope would query episodes by season ID
+		// For now, delegate to collector interface
+		return nil, fmt.Errorf("season scope not yet implemented")
+	default:
+		return nil, fmt.Errorf("unknown batch scope: %s", req.Scope)
+	}
+}
+
+// collectLibraryItems gathers all movies and series needing subtitle search.
+func (bp *BatchProcessor) collectLibraryItems(ctx context.Context) ([]batchItem, error) {
+	var items []batchItem
+
+	movies, err := bp.collect.CollectMoviesNeedingSubtitles(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("collect movies: %w", err)
+	}
+	items = append(items, movies...)
+
+	series, err := bp.collect.CollectSeriesNeedingSubtitles(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("collect series: %w", err)
+	}
+	items = append(items, series...)
+
+	return items, nil
+}
+
+// clearActiveBatch resets the active batch state.
+func (bp *BatchProcessor) clearActiveBatch() {
+	bp.mu.Lock()
+	bp.activeBatch = nil
+	bp.mu.Unlock()
+}
+
+// broadcastProgress sends a batch progress SSE event.
+func (bp *BatchProcessor) broadcastProgress(batchID string, total, current int, currentItem string, success, fail int, status string) {
+	if bp.sseHub == nil {
+		return
+	}
+	bp.sseHub.Broadcast(sse.Event{
+		Type: sse.EventSubtitleProgress,
+		Data: map[string]interface{}{
+			"batch_id":      batchID,
+			"total_items":   total,
+			"current_index": current,
+			"current_item":  currentItem,
+			"success_count": success,
+			"fail_count":    fail,
+			"status":        status,
+		},
+	})
+}
+
+// broadcastComplete sends a batch completion SSE event.
+func (bp *BatchProcessor) broadcastComplete(batchID string, total, success, fail int) {
+	if bp.sseHub == nil {
+		return
+	}
+	bp.sseHub.Broadcast(sse.Event{
+		Type: sse.EventSubtitleProgress,
+		Data: map[string]interface{}{
+			"batch_id":      batchID,
+			"total_items":   total,
+			"current_index": total,
+			"success_count": success,
+			"fail_count":    fail,
+			"status":        "complete",
+		},
+	})
+}
+
+// --- Default Collector Implementation ---
+
+// RepoCollector implements BatchItemCollector using repository interfaces.
+type RepoCollector struct {
+	movieRepo  MovieSubtitleFinder
+	seriesRepo SeriesSubtitleFinder
+}
+
+// MovieSubtitleFinder is the interface for finding movies needing subtitles.
+type MovieSubtitleFinder interface {
+	FindBySubtitleStatus(ctx context.Context, status models.SubtitleStatus) ([]models.Movie, error)
+}
+
+// SeriesSubtitleFinder is the interface for finding series needing subtitles.
+type SeriesSubtitleFinder interface {
+	FindBySubtitleStatus(ctx context.Context, status models.SubtitleStatus) ([]models.Series, error)
+}
+
+// NewRepoCollector creates a collector backed by repositories.
+func NewRepoCollector(movieRepo MovieSubtitleFinder, seriesRepo SeriesSubtitleFinder) *RepoCollector {
+	return &RepoCollector{movieRepo: movieRepo, seriesRepo: seriesRepo}
+}
+
+// CollectMoviesNeedingSubtitles returns movies with not_searched or not_found status.
+func (rc *RepoCollector) CollectMoviesNeedingSubtitles(ctx context.Context) ([]batchItem, error) {
+	var items []batchItem
+
+	for _, status := range []models.SubtitleStatus{models.SubtitleStatusNotSearched, models.SubtitleStatusNotFound} {
+		movies, err := rc.movieRepo.FindBySubtitleStatus(ctx, status)
+		if err != nil {
+			return nil, err
+		}
+		for _, m := range movies {
+			country := ""
+			if countries, err := m.GetProductionCountries(); err == nil {
+				codes := make([]string, 0, len(countries))
+				for _, c := range countries {
+					codes = append(codes, c.ISO3166_1)
+				}
+				country = strings.Join(codes, ",")
+			}
+
+			filePath := ""
+			if m.FilePath.Valid {
+				filePath = m.FilePath.String
+			}
+
+			items = append(items, batchItem{
+				MediaID:           m.ID,
+				MediaType:         "movie",
+				MediaFilePath:     filePath,
+				Title:             m.Title,
+				ProductionCountry: country,
+			})
+		}
+	}
+
+	return items, nil
+}
+
+// CollectSeriesNeedingSubtitles returns series with not_searched or not_found status.
+// Note: Series model does not have production_countries — CN policy defaults to ConvertAuto.
+func (rc *RepoCollector) CollectSeriesNeedingSubtitles(ctx context.Context) ([]batchItem, error) {
+	var items []batchItem
+
+	for _, status := range []models.SubtitleStatus{models.SubtitleStatusNotSearched, models.SubtitleStatusNotFound} {
+		seriesList, err := rc.seriesRepo.FindBySubtitleStatus(ctx, status)
+		if err != nil {
+			return nil, err
+		}
+		for _, s := range seriesList {
+			filePath := ""
+			if s.FilePath.Valid {
+				filePath = s.FilePath.String
+			}
+
+			items = append(items, batchItem{
+				MediaID:       s.ID,
+				MediaType:     "series",
+				MediaFilePath: filePath,
+				Title:         s.Title,
+				// Series model doesn't have production_countries — empty string = ConvertAuto
+				ProductionCountry: "",
+			})
+		}
+	}
+
+	return items, nil
+}

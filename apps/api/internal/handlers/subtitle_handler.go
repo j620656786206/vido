@@ -23,13 +23,14 @@ type SubtitleStatusUpdater interface {
 
 // SubtitleHandler handles HTTP requests for manual subtitle search and download.
 type SubtitleHandler struct {
-	providers  []providers.SubtitleProvider
-	scorer     *subtitle.Scorer
-	converter  *subtitle.Converter
-	placer     *subtitle.Placer
-	sseHub     *sse.Hub
-	movieRepo  SubtitleStatusUpdater
-	seriesRepo SubtitleStatusUpdater
+	providers      []providers.SubtitleProvider
+	scorer         *subtitle.Scorer
+	converter      *subtitle.Converter
+	placer         *subtitle.Placer
+	sseHub         *sse.Hub
+	movieRepo      SubtitleStatusUpdater
+	seriesRepo     SubtitleStatusUpdater
+	batchProcessor *subtitle.BatchProcessor
 }
 
 // NewSubtitleHandler creates a new SubtitleHandler.
@@ -53,6 +54,11 @@ func NewSubtitleHandler(
 	}
 }
 
+// SetBatchProcessor sets the batch processor for batch subtitle operations (Story 8-9).
+func (h *SubtitleHandler) SetBatchProcessor(bp *subtitle.BatchProcessor) {
+	h.batchProcessor = bp
+}
+
 // RegisterRoutes registers subtitle routes on the given router group.
 func (h *SubtitleHandler) RegisterRoutes(rg *gin.RouterGroup) {
 	subtitles := rg.Group("/subtitles")
@@ -60,6 +66,8 @@ func (h *SubtitleHandler) RegisterRoutes(rg *gin.RouterGroup) {
 		subtitles.POST("/search", h.SearchSubtitles)
 		subtitles.POST("/download", h.DownloadSubtitle)
 		subtitles.POST("/preview", h.PreviewSubtitle)
+		subtitles.POST("/batch", h.StartBatch)
+		subtitles.GET("/batch/status", h.GetBatchStatus)
 	}
 }
 
@@ -368,6 +376,92 @@ func (h *SubtitleHandler) updateSubtitleDB(ctx context.Context, mediaID, mediaTy
 		}
 	}
 	return nil
+}
+
+// --- Batch Handlers (Story 8-9) ---
+
+// BatchStartRequest is the request body for starting a batch.
+type BatchStartRequest struct {
+	Scope    string `json:"scope" binding:"required,oneof=season library"`
+	SeasonID *int64 `json:"season_id"`
+}
+
+// StartBatch handles POST /api/v1/subtitles/batch
+func (h *SubtitleHandler) StartBatch(c *gin.Context) {
+	if h.batchProcessor == nil {
+		InternalServerError(c, "Batch processing not configured")
+		return
+	}
+
+	var req BatchStartRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		ValidationError(c, "Invalid request: "+err.Error())
+		return
+	}
+
+	// Validate season scope requires season_id
+	if req.Scope == "season" && req.SeasonID == nil {
+		BadRequestError(c, "VALIDATION_REQUIRED_FIELD", "season_id is required for season scope")
+		return
+	}
+
+	// Check if batch already running (AC #7)
+	if h.batchProcessor.IsRunning() {
+		progress := h.batchProcessor.GetProgress()
+		c.JSON(409, APIResponse{
+			Success: false,
+			Error: &APIError{
+				Code:       "SUBTITLE_BATCH_RUNNING",
+				Message:    "A batch is already in progress",
+				Suggestion: "Wait for the current batch to complete before starting a new one.",
+			},
+			Data: progress,
+		})
+		return
+	}
+
+	batchReq := subtitle.BatchRequest{
+		Scope:    subtitle.BatchScope(req.Scope),
+		SeasonID: req.SeasonID,
+	}
+
+	batchID, totalItems, err := h.batchProcessor.Start(c.Request.Context(), batchReq)
+	if err != nil {
+		InternalServerError(c, "Failed to start batch: "+err.Error())
+		return
+	}
+
+	// Return 202 Accepted (AC #4)
+	c.JSON(202, APIResponse{
+		Success: true,
+		Data: map[string]interface{}{
+			"batch_id":    batchID,
+			"total_items": totalItems,
+		},
+	})
+}
+
+// GetBatchStatus handles GET /api/v1/subtitles/batch/status
+func (h *SubtitleHandler) GetBatchStatus(c *gin.Context) {
+	if h.batchProcessor == nil {
+		SuccessResponse(c, map[string]interface{}{
+			"running": false,
+		})
+		return
+	}
+
+	progress := h.batchProcessor.GetProgress()
+	if progress == nil {
+		SuccessResponse(c, map[string]interface{}{
+			"running": false,
+		})
+		return
+	}
+
+	SuccessResponse(c, map[string]interface{}{
+		"running":  true,
+		"progress": progress,
+	})
 }
 
 // --- Provider Helpers ---

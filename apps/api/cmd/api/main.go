@@ -345,6 +345,10 @@ func main() {
 	opensubProvider := subtitleproviders.NewOpenSubProvider(ctx, secretsService)
 	zimukuProvider := subtitleproviders.NewZimukuProvider()
 	subtitleProviders := []subtitleproviders.SubtitleProvider{assrtProvider, opensubProvider, zimukuProvider}
+	subtitleEngine := subtitle.NewEngine(
+		subtitleProviders, subtitleScorer, subtitleConverter, subtitlePlacer,
+		sseHub, repos.Movies, repos.Series,
+	)
 	slog.Info("Subtitle engine initialized", "providers", len(subtitleProviders))
 
 	// Initialize event emitter for real-time parse progress (Story 3.10)
@@ -388,6 +392,10 @@ func main() {
 		subtitleProviders, subtitleScorer, subtitleConverter, subtitlePlacer,
 		sseHub, repos.Movies, repos.Series,
 	)
+	// Wire batch processor (Story 8-9)
+	batchCollector := subtitle.NewRepoCollector(repos.Movies, repos.Series)
+	batchProcessor := subtitle.NewBatchProcessor(subtitleEngine, sseHub, batchCollector, subtitle.DefaultBatchConfig())
+	subtitleHandler.SetBatchProcessor(batchProcessor)
 	// parseProgressHandler already initialized above with defer Close()
 	slog.Info("Handlers initialized with service injection")
 
