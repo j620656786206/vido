@@ -799,6 +799,163 @@ func TestSubtitleHandler_GetBatchStatus_Idle(t *testing.T) {
 	assert.Equal(t, false, data["running"])
 }
 
+// --- TA 8-9: Additional Handler Coverage Tests ---
+
+// batchCollectorWithItems returns configurable items for batch tests.
+type batchCollectorWithItems struct {
+	movies []subtitle.BatchItem
+}
+
+func (b *batchCollectorWithItems) CollectMoviesNeedingSubtitles(_ context.Context) ([]subtitle.BatchItem, error) {
+	return b.movies, nil
+}
+func (b *batchCollectorWithItems) CollectSeriesNeedingSubtitles(_ context.Context) ([]subtitle.BatchItem, error) {
+	return nil, nil
+}
+
+// setupBatchHandlerWithItems creates a handler with a batch processor that has items to process.
+func setupBatchHandlerWithItems(t *testing.T) (*SubtitleHandler, *gin.Engine) {
+	t.Helper()
+	gin.SetMode(gin.TestMode)
+
+	prov := &handlerMockProvider{
+		name:         "assrt",
+		searchResult: []providers.SubtitleResult{{ID: "1", Source: "assrt", Language: "zh-Hant"}},
+		downloadData: []byte("1\n00:00:01,000 --> 00:00:03,000\n測試\n"),
+	}
+
+	scorer := subtitle.NewScorer(subtitle.NewDefaultScorerConfig())
+	placer := subtitle.NewPlacer(subtitle.DefaultPlacerConfig())
+	handler := NewSubtitleHandler(
+		[]providers.SubtitleProvider{prov},
+		scorer, nil, placer, nil, nil, nil,
+	)
+
+	items := []subtitle.BatchItem{
+		{MediaID: "m1", MediaType: "movie", Title: "Movie 1"},
+		{MediaID: "m2", MediaType: "movie", Title: "Movie 2"},
+		{MediaID: "m3", MediaType: "movie", Title: "Movie 3"},
+	}
+	collector := &batchCollectorWithItems{movies: items}
+	bp := subtitle.NewBatchProcessor(
+		subtitle.NewEngine([]providers.SubtitleProvider{prov}, scorer, nil, nil, nil, &mockStatusUpdater{}, &mockStatusUpdater{}),
+		nil, collector, subtitle.BatchConfig{DelayBetweenItems: 100 * time.Millisecond},
+	)
+	handler.SetBatchProcessor(bp)
+
+	router := gin.New()
+	api := router.Group("/api/v1")
+	handler.RegisterRoutes(api)
+
+	return handler, router
+}
+
+// AC #7: [P0] POST /batch while running returns 409 with progress data
+func TestSubtitleHandler_StartBatch_Conflict409(t *testing.T) {
+	_, router := setupBatchHandlerWithItems(t)
+
+	body, _ := json.Marshal(BatchStartRequest{Scope: "library"})
+
+	// Start first batch
+	w1 := httptest.NewRecorder()
+	req1 := httptest.NewRequest(http.MethodPost, "/api/v1/subtitles/batch", bytes.NewReader(body))
+	req1.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w1, req1)
+	assert.Equal(t, 202, w1.Code)
+
+	// Brief wait to ensure batch is running
+	time.Sleep(20 * time.Millisecond)
+
+	// Start second batch — should get 409
+	w2 := httptest.NewRecorder()
+	body2, _ := json.Marshal(BatchStartRequest{Scope: "library"})
+	req2 := httptest.NewRequest(http.MethodPost, "/api/v1/subtitles/batch", bytes.NewReader(body2))
+	req2.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w2, req2)
+
+	assert.Equal(t, 409, w2.Code)
+
+	var resp map[string]interface{}
+	require.NoError(t, json.Unmarshal(w2.Body.Bytes(), &resp))
+	assert.Equal(t, false, resp["success"])
+
+	// Verify error structure
+	errObj, ok := resp["error"].(map[string]interface{})
+	require.True(t, ok, "Expected error object in response")
+	assert.Equal(t, "SUBTITLE_BATCH_RUNNING", errObj["code"])
+
+	// Verify progress data is included
+	assert.Contains(t, resp, "data", "409 response should include progress data")
+
+	// Wait for completion
+	time.Sleep(500 * time.Millisecond)
+}
+
+// [P1] POST /batch with empty body returns 400
+func TestSubtitleHandler_StartBatch_EmptyBody(t *testing.T) {
+	_, router := setupBatchHandler(t)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/subtitles/batch", bytes.NewReader([]byte("{}")))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+// [P1] POST /batch with no Content-Type returns 400
+func TestSubtitleHandler_StartBatch_NoContentType(t *testing.T) {
+	_, router := setupBatchHandler(t)
+
+	body, _ := json.Marshal(BatchStartRequest{Scope: "library"})
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/subtitles/batch", bytes.NewReader(body))
+	// No Content-Type header
+	router.ServeHTTP(w, req)
+
+	// Gin should still accept it or return 400 — key is no panic
+	assert.Contains(t, []int{200, 202, 400}, w.Code)
+}
+
+// [P1] GET /batch/status while batch running returns progress
+func TestSubtitleHandler_GetBatchStatus_Running(t *testing.T) {
+	_, router := setupBatchHandlerWithItems(t)
+
+	// Start a batch first
+	body, _ := json.Marshal(BatchStartRequest{Scope: "library"})
+	w1 := httptest.NewRecorder()
+	req1 := httptest.NewRequest(http.MethodPost, "/api/v1/subtitles/batch", bytes.NewReader(body))
+	req1.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w1, req1)
+	require.Equal(t, 202, w1.Code)
+
+	// Brief wait for background processing to start
+	time.Sleep(20 * time.Millisecond)
+
+	// Check status
+	w2 := httptest.NewRecorder()
+	req2 := httptest.NewRequest(http.MethodGet, "/api/v1/subtitles/batch/status", nil)
+	router.ServeHTTP(w2, req2)
+
+	assert.Equal(t, http.StatusOK, w2.Code)
+
+	var resp map[string]interface{}
+	require.NoError(t, json.Unmarshal(w2.Body.Bytes(), &resp))
+	data := resp["data"].(map[string]interface{})
+	assert.Equal(t, true, data["running"])
+	assert.Contains(t, data, "progress", "Running response should include progress object")
+
+	progress, ok := data["progress"].(map[string]interface{})
+	require.True(t, ok, "progress should be a JSON object")
+	assert.Contains(t, progress, "batch_id")
+	assert.Contains(t, progress, "total_items")
+	assert.Equal(t, "running", progress["status"])
+
+	// Wait for completion
+	time.Sleep(500 * time.Millisecond)
+}
+
 // No batch processor returns error
 func TestSubtitleHandler_StartBatch_NoBatchProcessor(t *testing.T) {
 	gin.SetMode(gin.TestMode)
