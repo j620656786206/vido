@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import {
   subtitleService,
@@ -8,8 +8,19 @@ import {
   type SubtitlePreviewResult,
 } from '../services/subtitleService';
 
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
+
 export type SortField = 'score' | 'language' | 'source' | 'downloads' | 'group';
 export type SortOrder = 'asc' | 'desc';
+
+// SSE subtitle_progress event data shape
+interface SubtitleProgressEvent {
+  media_id: string;
+  media_type: string;
+  stage: string;
+  message: string;
+}
 
 export function useSubtitleSearch() {
   const [results, setResults] = useState<SubtitleSearchResult[]>([]);
@@ -23,6 +34,48 @@ export function useSubtitleSearch() {
     Record<string, SubtitlePreviewResult>
   >({});
   const [previewingId, setPreviewingId] = useState<string | null>(null);
+  // SSE subtitle progress (Task 7.5)
+  const [downloadStage, setDownloadStage] = useState<string | null>(null);
+  const eventSourceRef = useRef<EventSource | null>(null);
+
+  // Connect to SSE when any download is in progress
+  useEffect(() => {
+    if (downloadingIds.size === 0) {
+      // No active downloads — disconnect SSE
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
+      setDownloadStage(null);
+      return;
+    }
+
+    // Already connected
+    if (eventSourceRef.current) return;
+
+    const es = new EventSource(`${API_BASE_URL}/events`);
+    eventSourceRef.current = es;
+
+    es.addEventListener('subtitle_progress', (e: MessageEvent) => {
+      try {
+        const parsed = JSON.parse(e.data);
+        const data: SubtitleProgressEvent = parsed.data || parsed;
+        setDownloadStage(data.stage);
+      } catch {
+        // Ignore parse errors
+      }
+    });
+
+    es.onerror = () => {
+      es.close();
+      eventSourceRef.current = null;
+    };
+
+    return () => {
+      es.close();
+      eventSourceRef.current = null;
+    };
+  }, [downloadingIds.size]);
 
   // Search mutation
   const searchMutation = useMutation({
@@ -138,5 +191,8 @@ export function useSubtitleSearch() {
     previewDataMap,
     previewingId,
     isPreviewing: previewMutation.isPending,
+
+    // SSE progress (Task 7.5)
+    downloadStage,
   };
 }

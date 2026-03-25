@@ -4,6 +4,7 @@ import { TrailerEmbed } from './TrailerEmbed';
 import { MetadataSourceBadge } from './MetadataSourceBadge';
 import { FileInfo } from './FileInfo';
 import { DetailPanelMenu } from './DetailPanelMenu';
+import { SubtitleSearchDialog } from '../subtitle/SubtitleSearchDialog';
 import { useMediaTrailers } from '../../hooks/useLibrary';
 import type { MovieDetails, TVShowDetails, Credits } from '../../types/tmdb';
 import type { TMDbVideo } from '../../types/library';
@@ -62,6 +63,12 @@ export function MediaDetailPanel({
   const topCast = credits?.cast?.slice(0, 5) ?? [];
 
   const hasContextMenu = onReparse && onExport && onDelete;
+
+  // Subtitle search dialog state (Story 8-8 Task 10)
+  const [subtitleDialogOpen, setSubtitleDialogOpen] = useState(false);
+  const productionCountryStr = details.production_countries
+    ?.map((c) => c.iso_3166_1)
+    .join(',') ?? '';
 
   return (
     <div className="flex flex-col" data-testid="media-detail-panel">
@@ -192,6 +199,30 @@ export function MediaDetailPanel({
             )}
           </div>
         )}
+
+        {/* Search Subtitles button (Story 8-8 AC #1) */}
+        {filePath && (
+          <div className="mt-3">
+            <button
+              onClick={() => setSubtitleDialogOpen(true)}
+              className="w-full rounded-lg border border-slate-600 px-4 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-700"
+              data-testid="search-subtitles-button"
+            >
+              搜尋字幕
+            </button>
+          </div>
+        )}
+
+        {/* Subtitle Search Dialog (Story 8-8) */}
+        <SubtitleSearchDialog
+          mediaId={libraryId ?? ''}
+          mediaType={type === 'movie' ? 'movie' : 'series'}
+          mediaTitle={title}
+          mediaFilePath={filePath ?? ''}
+          productionCountry={productionCountryStr}
+          open={subtitleDialogOpen}
+          onOpenChange={setSubtitleDialogOpen}
+        />
 
         {/* TV Show enhanced details (AC5) */}
         {tvShow && <TVShowSeasons tvShow={tvShow} />}

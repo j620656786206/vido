@@ -216,7 +216,7 @@ func TestEngine_ConvertIfNeeded_SimplifiedConverted(t *testing.T) {
 
 	// Simplified Chinese content
 	data := []byte("这是简体中文测试内容")
-	result, lang, err := engine.convertIfNeeded(data)
+	result, lang, err := engine.convertIfNeeded(data, ConvertAuto)
 	require.NoError(t, err)
 	assert.Equal(t, LangTraditional, lang)
 	assert.NotEqual(t, string(data), string(result), "simplified should be converted")
@@ -228,7 +228,7 @@ func TestEngine_ConvertIfNeeded_TraditionalPassthrough(t *testing.T) {
 	engine := &Engine{converter: converter}
 
 	data := []byte("這是繁體中文測試內容")
-	result, lang, err := engine.convertIfNeeded(data)
+	result, lang, err := engine.convertIfNeeded(data, ConvertAuto)
 	require.NoError(t, err)
 	assert.Equal(t, LangTraditional, lang)
 	assert.Equal(t, string(data), string(result), "traditional should pass through")

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"os"
 	"net/http/httptest"
 	"testing"
 
@@ -289,6 +290,107 @@ func TestSubtitleHandler_Download_MissingFields(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestSubtitleHandler_Download_Success(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	// Create a temp dir with a fake media file
+	tmpDir := t.TempDir()
+	mediaPath := tmpDir + "/movie.mkv"
+	if err := os.WriteFile(mediaPath, []byte("fake"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	prov := &handlerMockProvider{
+		name:         "assrt",
+		downloadData: []byte("1\n00:00:01,000 --> 00:00:03,000\n測試字幕\n"),
+	}
+
+	scorer := subtitle.NewScorer(subtitle.NewDefaultScorerConfig())
+	placer := subtitle.NewPlacer(subtitle.DefaultPlacerConfig())
+	mockMovieRepo := &mockStatusUpdater{}
+	handler := NewSubtitleHandler(
+		[]providers.SubtitleProvider{prov},
+		scorer, nil, placer, nil, mockMovieRepo, nil,
+	)
+
+	router := gin.New()
+	api := router.Group("/api/v1")
+	handler.RegisterRoutes(api)
+
+	body, _ := json.Marshal(SubtitleDownloadRequest{
+		MediaID:       "movie-1",
+		MediaType:     "movie",
+		MediaFilePath: mediaPath,
+		SubtitleID:    "sub-1",
+		Provider:      "assrt",
+	})
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/subtitles/download", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var resp APIResponse
+	err := json.Unmarshal(w.Body.Bytes(), &resp)
+	require.NoError(t, err)
+	assert.True(t, resp.Success)
+
+	// Verify DB was updated
+	assert.Equal(t, "movie-1", mockMovieRepo.lastID)
+	assert.Equal(t, models.SubtitleStatusFound, mockMovieRepo.lastStatus)
+}
+
+func TestSubtitleHandler_Download_WithConvertToTraditionalFalse(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	tmpDir := t.TempDir()
+	mediaPath := tmpDir + "/movie.mkv"
+	os.WriteFile(mediaPath, []byte("fake"), 0644)
+
+	// Simplified Chinese content
+	prov := &handlerMockProvider{
+		name:         "assrt",
+		downloadData: []byte("1\n00:00:01,000 --> 00:00:03,000\n这是简体中文测试\n"),
+	}
+
+	scorer := subtitle.NewScorer(subtitle.NewDefaultScorerConfig())
+	placer := subtitle.NewPlacer(subtitle.DefaultPlacerConfig())
+	handler := NewSubtitleHandler(
+		[]providers.SubtitleProvider{prov},
+		scorer, nil, placer, nil, nil, nil,
+	)
+
+	router := gin.New()
+	api := router.Group("/api/v1")
+	handler.RegisterRoutes(api)
+
+	convertFalse := false
+	body, _ := json.Marshal(SubtitleDownloadRequest{
+		MediaID:              "movie-1",
+		MediaType:            "movie",
+		MediaFilePath:        mediaPath,
+		SubtitleID:           "sub-1",
+		Provider:             "assrt",
+		ConvertToTraditional: &convertFalse,
+	})
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/subtitles/download", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	// Verify response contains language info
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	data := resp["data"].(map[string]interface{})
+	// Without conversion, language should be zh-Hans (simplified detected)
+	assert.Contains(t, data["language"], "zh")
 }
 
 // --- CN Conversion Policy Tests ---

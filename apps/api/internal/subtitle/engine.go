@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"sync"
 
 	"golang.org/x/sync/errgroup"
@@ -81,8 +82,46 @@ func NewEngine(
 	}
 }
 
+// ConversionPolicy controls how the engine handles simplified→traditional conversion.
+type ConversionPolicy int
+
+const (
+	// ConvertAuto is the default: convert simplified Chinese to traditional.
+	ConvertAuto ConversionPolicy = iota
+	// ConvertAlways forces conversion regardless of detection result.
+	ConvertAlways
+	// ConvertNever skips conversion (for CN mainland content).
+	ConvertNever
+)
+
+// ProcessOptions contains optional parameters for the subtitle pipeline.
+type ProcessOptions struct {
+	// ProductionCountry is the media's production country code (e.g., "CN").
+	// When "CN", the default ConversionPolicy becomes ConvertNever.
+	ProductionCountry string
+	// ConversionOverride allows the caller to override the derived policy.
+	// nil = use default based on ProductionCountry.
+	ConversionOverride *ConversionPolicy
+}
+
+// deriveConversionPolicy returns the effective ConversionPolicy based on options.
+func deriveConversionPolicy(opts *ProcessOptions) ConversionPolicy {
+	if opts != nil && opts.ConversionOverride != nil {
+		return *opts.ConversionOverride
+	}
+	if opts != nil && strings.Contains(opts.ProductionCountry, "CN") {
+		return ConvertNever
+	}
+	return ConvertAuto
+}
+
 // Process runs the full subtitle pipeline for a single media item.
-func (e *Engine) Process(ctx context.Context, mediaID, mediaType, mediaFilePath string, query providers.SubtitleQuery, mediaResolution string) EngineResult {
+func (e *Engine) Process(ctx context.Context, mediaID, mediaType, mediaFilePath string, query providers.SubtitleQuery, mediaResolution string, opts ...ProcessOptions) EngineResult {
+	var processOpts *ProcessOptions
+	if len(opts) > 0 {
+		processOpts = &opts[0]
+	}
+	conversionPolicy := deriveConversionPolicy(processOpts)
 	// Stage 1: Search
 	e.broadcastStatus(mediaID, mediaType, StageSearching, "Searching subtitle providers...")
 	e.updateStatus(ctx, mediaID, mediaType, models.SubtitleStatusSearching)
@@ -110,9 +149,9 @@ func (e *Engine) Process(ctx context.Context, mediaID, mediaType, mediaFilePath 
 
 	slog.Info("Subtitle downloaded", "provider", match.Source, "score", match.Score, "mediaID", mediaID)
 
-	// Stage 4: Convert if needed
+	// Stage 4: Convert if needed (respects CN conversion policy)
 	e.broadcastStatus(mediaID, mediaType, StageConverting, "Checking language...")
-	convertedData, finalLang, err := e.convertIfNeeded(data)
+	convertedData, finalLang, err := e.convertIfNeeded(data, conversionPolicy)
 	if err != nil {
 		slog.Warn("Conversion failed, using original", "error", err, "mediaID", mediaID)
 		// convertIfNeeded already returns original data on failure;
@@ -215,11 +254,22 @@ func (e *Engine) downloadBestMatch(ctx context.Context, scored []ScoredResult) (
 }
 
 // convertIfNeeded detects language and converts simplified → traditional if needed.
-func (e *Engine) convertIfNeeded(data []byte) ([]byte, string, error) {
+// Respects ConversionPolicy: ConvertNever skips conversion (CN content),
+// ConvertAlways forces it, ConvertAuto uses detection-based logic.
+func (e *Engine) convertIfNeeded(data []byte, policy ConversionPolicy) ([]byte, string, error) {
 	detection := Detect(data)
+
+	// ConvertNever: skip conversion entirely (CN mainland content)
+	if policy == ConvertNever {
+		return data, detection.Language, nil
+	}
 
 	switch detection.Language {
 	case LangTraditional:
+		if policy == ConvertAlways {
+			// Already traditional — no conversion needed even if forced
+			return data, LangTraditional, nil
+		}
 		return data, LangTraditional, nil
 	case LangSimplified, LangAmbiguous:
 		if e.converter != nil && e.converter.IsAvailable() {
