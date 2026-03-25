@@ -13,6 +13,7 @@ interface SubtitleSearchDialogProps {
   productionCountry?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onDownloadSuccess?: () => void;
 }
 
 const PROVIDERS = [
@@ -30,6 +31,7 @@ export function SubtitleSearchDialog({
   productionCountry,
   open,
   onOpenChange,
+  onDownloadSuccess,
 }: SubtitleSearchDialogProps) {
   const [query, setQuery] = useState(mediaTitle);
   const [selectedProviders, setSelectedProviders] = useState<string[]>(
@@ -82,7 +84,7 @@ export function SubtitleSearchDialog({
     download,
     downloadingIds,
     downloadedIds,
-    downloadError,
+    downloadErrorMap,
     preview,
     previewDataMap,
     previewingId,
@@ -108,9 +110,13 @@ export function SubtitleSearchDialog({
           provider: result.source,
           resolution: mediaResolution,
           convert_to_traditional: convertToTraditional,
+          score: result.score,
         },
         {
-          onSuccess: () => setToast('字幕下載成功'),
+          onSuccess: () => {
+            setToast('字幕下載成功');
+            onDownloadSuccess?.();
+          },
         },
       );
     },
@@ -382,13 +388,11 @@ export function SubtitleSearchDialog({
                             )}
                           </div>
                           {/* Per-row download error (Task 9.5) */}
-                          {downloadError &&
-                            !downloadedIds.has(result.id) &&
-                            !downloadingIds.has(result.id) && (
-                              <p className="mt-1 text-xs text-red-400">
-                                下載失敗
-                              </p>
-                            )}
+                          {downloadErrorMap[result.id] && (
+                            <p className="mt-1 text-xs text-red-400">
+                              {downloadErrorMap[result.id]}
+                            </p>
+                          )}
                         </td>
                       </tr>
                     ))}

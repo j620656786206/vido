@@ -34,6 +34,8 @@ export function useSubtitleSearch() {
     Record<string, SubtitlePreviewResult>
   >({});
   const [previewingId, setPreviewingId] = useState<string | null>(null);
+  // Per-row download error tracking (M1 fix — CR pass 2)
+  const [downloadErrorMap, setDownloadErrorMap] = useState<Record<string, string>>({});
   // SSE subtitle progress (Task 7.5)
   const [downloadStage, setDownloadStage] = useState<string | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -86,6 +88,7 @@ export function useSubtitleSearch() {
       setDownloadedIds(new Set());
       setDownloadingIds(new Set());
       setPreviewDataMap({});
+      setDownloadErrorMap({});
     },
   });
 
@@ -102,13 +105,24 @@ export function useSubtitleSearch() {
         next.delete(variables.subtitle_id);
         return next;
       });
+      // Clear any previous error for this row
+      setDownloadErrorMap((prev) => {
+        const next = { ...prev };
+        delete next[variables.subtitle_id];
+        return next;
+      });
     },
-    onError: (_error, variables) => {
+    onError: (error, variables) => {
       setDownloadingIds((prev) => {
         const next = new Set(prev);
         next.delete(variables.subtitle_id);
         return next;
       });
+      // Track error per-row
+      setDownloadErrorMap((prev) => ({
+        ...prev,
+        [variables.subtitle_id]: error instanceof Error ? error.message : '下載失敗',
+      }));
     },
   });
 
@@ -183,7 +197,7 @@ export function useSubtitleSearch() {
     // Download (per-row)
     download: downloadMutation.mutate,
     downloadingIds,
-    downloadError: downloadMutation.error,
+    downloadErrorMap,
     downloadedIds,
 
     // Preview (per-row)

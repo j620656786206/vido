@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { getImageUrl } from '../../lib/image';
 import { TrailerEmbed } from './TrailerEmbed';
 import { MetadataSourceBadge } from './MetadataSourceBadge';
 import { FileInfo } from './FileInfo';
 import { DetailPanelMenu } from './DetailPanelMenu';
 import { SubtitleSearchDialog } from '../subtitle/SubtitleSearchDialog';
-import { useMediaTrailers } from '../../hooks/useLibrary';
+import { useMediaTrailers, libraryKeys } from '../../hooks/useLibrary';
 import type { MovieDetails, TVShowDetails, Credits } from '../../types/tmdb';
 import type { TMDbVideo } from '../../types/library';
 
@@ -65,10 +66,14 @@ export function MediaDetailPanel({
   const hasContextMenu = onReparse && onExport && onDelete;
 
   // Subtitle search dialog state (Story 8-8 Task 10)
+  const queryClient = useQueryClient();
   const [subtitleDialogOpen, setSubtitleDialogOpen] = useState(false);
   const productionCountryStr = details.production_countries
     ?.map((c) => c.iso_3166_1)
     .join(',') ?? '';
+  const handleSubtitleDownloadSuccess = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: libraryKeys.all });
+  }, [queryClient]);
 
   return (
     <div className="flex flex-col" data-testid="media-detail-panel">
@@ -222,6 +227,7 @@ export function MediaDetailPanel({
           productionCountry={productionCountryStr}
           open={subtitleDialogOpen}
           onOpenChange={setSubtitleDialogOpen}
+          onDownloadSuccess={handleSubtitleDownloadSuccess}
         />
 
         {/* TV Show enhanced details (AC5) */}

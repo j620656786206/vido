@@ -104,8 +104,9 @@ type SubtitleDownloadRequest struct {
 	MediaFilePath        string `json:"media_file_path" binding:"required"`
 	SubtitleID           string `json:"subtitle_id" binding:"required"`
 	Provider             string `json:"provider" binding:"required"`
-	Resolution           string `json:"resolution"`
-	ConvertToTraditional *bool  `json:"convert_to_traditional"`
+	Resolution           string  `json:"resolution"`
+	ConvertToTraditional *bool   `json:"convert_to_traditional"`
+	Score                float64 `json:"score"`
 }
 
 // SubtitlePreviewRequest is the request body for subtitle preview.
@@ -266,7 +267,7 @@ func (h *SubtitleHandler) DownloadSubtitle(c *gin.Context) {
 
 	// Update DB subtitle status (AC #8 — M1 fix)
 	if err := h.updateSubtitleDB(c.Request.Context(), req.MediaID, req.MediaType,
-		placeResult.SubtitlePath, placeResult.Language, 0); err != nil {
+		placeResult.SubtitlePath, placeResult.Language, req.Score); err != nil {
 		slog.Error("Failed to update subtitle DB status",
 			"media_id", req.MediaID,
 			"error", err)
@@ -278,7 +279,7 @@ func (h *SubtitleHandler) DownloadSubtitle(c *gin.Context) {
 	SuccessResponse(c, map[string]interface{}{
 		"subtitle_path": placeResult.SubtitlePath,
 		"language":      placeResult.Language,
-		"score":         0.0,
+		"score":         req.Score,
 	})
 }
 

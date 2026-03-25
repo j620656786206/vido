@@ -148,7 +148,7 @@ so that **I can override automatic results and choose the exact subtitle I prefe
 ### Task 10: Integrate into Media Detail Page (AC: #1)
 - [x] 10.1 Add "搜尋字幕" button to media detail page (below CTA buttons)
 - [x] 10.2 Pass `mediaId`, `mediaType`, `mediaTitle`, `productionCountry` to `SubtitleSearchDialog`
-- [ ] 10.3 Refresh media detail data after successful download (invalidate TanStack Query)
+- [x] 10.3 Refresh media detail data via `queryClient.invalidateQueries` on download success
 
 ### Task 11: Write Backend Tests (AC: #2, #4, #5, #7, #8, #9, #10)
 - [x] 11.1 Create `apps/api/internal/handlers/subtitle_handler_test.go`
@@ -176,7 +176,7 @@ so that **I can override automatic results and choose the exact subtitle I prefe
 - Preview is a lightweight read-only operation but uses POST to pass provider + ID
 - Frontend uses TanStack Query mutations (not queries) since search is user-initiated, not auto-fetched
 - SSE integration reuses existing `useSSE` hook pattern from scanner feature
-- Dialog component follows shadcn/ui Dialog pattern used elsewhere in the project
+- Dialog component uses plain HTML + Tailwind CSS matching project convention
 
 ### Project Structure Notes
 - Backend handler: `apps/api/internal/handlers/subtitle_handler.go`
@@ -253,11 +253,12 @@ Claude Opus 4.6 (1M context)
 
 **Issues Found:** 5 Critical, 8 Medium, 4 Low — **all fixed except noted below**
 
-### Remaining Items (not fixed)
-- [ ] Task 7.5: SSE subscription in frontend hook (needs useSSE integration)
-- [ ] Task 9.5: Inline error display per download row
-- [ ] Task 9.6: Success toast notification
-- [ ] Task 10: Integration into Media Detail Page (all subtasks)
-- [ ] Task 12: Frontend tests (all subtasks)
-- [ ] Install shadcn/ui components (Dialog, Button, Input, Checkbox, Label, Switch, Table, Popover)
-- [ ] Task 5.2-5.3: Engine.Process CN policy (auto-download path, separate from manual handler)
+### Remaining Items (all resolved in dev-story + ATDD + CR pass 2)
+- [x] Task 7.5: SSE subscription via EventSource
+- [x] Task 9.5: Per-row error display via downloadErrorMap
+- [x] Task 9.6: Success toast (3s auto-dismiss)
+- [x] Task 10: Integration into MediaDetailPanel with query invalidation
+- [x] Task 12: 24 frontend tests (20 dialog + 4 service)
+- [x] Converted to plain HTML + Tailwind (no shadcn dependency)
+- [x] Task 5.2-5.3: Engine.Process with ConversionPolicy + ProcessOptions
+- [x] Score passed through download request (not hardcoded 0.0)

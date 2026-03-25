@@ -64,6 +64,7 @@ export interface SubtitleDownloadParams {
   provider: string;
   resolution?: string;
   convert_to_traditional?: boolean;
+  score?: number;
 }
 
 export interface SubtitleDownloadResult {
