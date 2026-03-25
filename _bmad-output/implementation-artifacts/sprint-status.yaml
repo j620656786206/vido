@@ -171,7 +171,7 @@ development_status:
   # Phase: Phase 1 — Core Library
   # FRs: P1-010–P1-019
   # ==============================================================================
-  epic-8: in-progress
+  epic-8: done  # 2026-03-25 — All 10 stories complete, retro done
   8-1-assrt-api-client:          done  # CR 2026-03-23: 7 findings, all auto-fixed
   8-2-zimuku-web-scraper:        done  # CR 2026-03-23: 7 findings, 6 auto-fixed
   8-3-opensubtitles-api-client:  done  # CR 2026-03-24: partial CR (usage limit), impl verified
@@ -182,7 +182,52 @@ development_status:
   8-8-manual-subtitle-search-ui: done  # CR pass 3 2026-03-25: 9 issues fixed
   8-9-batch-subtitle-processing: done
   8-10-subtitle-file-management: done  # CR 2026-03-24: 7 findings, 5 auto-fixed
-  epic-8-retrospective: optional
+  epic-8-retrospective: done  # 2026-03-25
+
+  # ==============================================================================
+  # Epic 8 Retro Action Items (tracked per Agreement 4)
+  # Source: epic-8-retro-2026-03-25.md
+  # Rule: ALL retro action items become tracked entries — no exceptions
+  #
+  # AGENT ROUTING KEY:
+  #   SM  = /bmad:bmm:agents:sm   (Scrum Master — process rules, story prep)
+  #   DEV = /bmad:bmm:agents:dev  + /bmad:bmm:workflows:dev-story (implementation)
+  #   QD  = /bmad:bmm:workflows:quick-dev (lightweight dev — no story file needed)
+  #   TW  = /bmad:bmm:agents:tech-writer (documentation)
+  #   TEA = /bmad:bmm:agents:tea  + /bmad:bmm:workflows:testarch-automate (test automation)
+  #   CR  = /bmad:bmm:workflows:code-review (adversarial review)
+  # ==============================================================================
+
+  # --- Process Improvements ---
+  retro-8-P1-retro-action-items-tracking-rule:       backlog  # → SM: update retrospective workflow instructions to enforce tracking rule
+  retro-8-P2-story-splitting-rule:                   backlog  # → SM: update create-story workflow to enforce split check
+  retro-8-P3-dev-story-completion-verification:      backlog  # → SM: update dev-story workflow to add mandatory checkbox verification step
+
+  # --- Deployment (before Epic 9) ---
+  retro-8-D1-single-docker-image:                    backlog  # → SM /create-story → DEV /dev-story: merge API+Web into single Docker image
+  retro-8-D2-ci-docker-build-push-ghcr:              backlog  # → SM /create-story → DEV /dev-story: GitHub Actions Docker build+push workflow
+  retro-8-D3-env-example-file:                       backlog  # → QD /quick-dev: create .env.example with all config vars
+  retro-8-D4-unraid-template-xml:                    backlog  # → QD /quick-dev: Unraid Community Apps XML template
+
+  # --- Documentation (EN + zh-TW bilingual) ---
+  retro-8-DOC1-sse-event-types-docs:                 backlog  # → TW /bmad:bmm:agents:tech-writer: SSE payload schema docs (EN + zh-TW)
+  retro-8-DOC2-missing-sse-events:                   backlog  # → QD /quick-dev: Add EventScanComplete/Cancelled code + CR
+  retro-8-DOC3-unraid-installation-guide:            backlog  # → TW /bmad:bmm:agents:tech-writer: installation guide (EN + zh-TW)
+  retro-8-DOC4-bilingual-docs-rule:                  backlog  # → SM: add bilingual rule to project-context.md
+
+  # --- Technical Debt ---
+  retro-8-TD1-fix-husky-precommit-hook:              backlog  # → QD /quick-dev: fix .husky/pre-commit permissions + verify
+  retro-8-TD2-lazy-sse-pattern-docs:                 backlog  # → QD /quick-dev: add lazy SSE pattern to project-context.md
+  retro-8-TD3-per-provider-rate-limiter:             backlog  # → SM /create-story → DEV /dev-story: batch rate limiting per provider
+  retro-8-TD4-season-scope-batch:                    backlog  # → SM /create-story → DEV /dev-story: implement season scope batch
+  retro-8-TD5-shared-scanner-test-fixtures:          backlog  # → QD /quick-dev: extract shared test fixtures
+  retro-8-TD6-auto-dismiss-css-animation:            backlog  # → QD /quick-dev: replace setInterval with CSS animation
+
+  # --- Testing ---
+  retro-8-TS1-testsprite-v4-regeneration:            backlog  # → TEA /bmad:bmm:workflows:testarch-automate: regenerate TestSprite tests for Epic 7+8 features
+
+  # --- Epic 9 Preparation ---
+  retro-8-E9-1-split-c2-whisper-ai-translation:     backlog  # → SM /bmad:bmm:agents:sm: update epic-9 file to split C-2 → C-2a + C-2b
 
   # ==============================================================================
   # Epic 9: AI Subtitle Enhancement (PRD v4)
@@ -267,4 +312,4 @@ development_status:
 # ==============================================================================
 # Next priority
 # ==============================================================================
-next_priority: epic-8-subtitle-engine  # Epic 7 complete; subtitle engine next
+next_priority: retro-8-deployment-sprint  # Epic 8 complete; deployment sprint (D1-D4 + DOC1-DOC4 + TD1-TD2) before Epic 9
