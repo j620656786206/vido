@@ -199,9 +199,9 @@ development_status:
   # ==============================================================================
 
   # --- Process Improvements ---
-  retro-8-P1-retro-action-items-tracking-rule:       backlog  # → SM: update retrospective workflow instructions to enforce tracking rule
-  retro-8-P2-story-splitting-rule:                   backlog  # → SM: update create-story workflow to enforce split check
-  retro-8-P3-dev-story-completion-verification:      backlog  # → SM: update dev-story workflow to add mandatory checkbox verification step
+  retro-8-P1-retro-action-items-tracking-rule:       done  # 2026-03-25 — Added mandatory tracking rule to retrospective/instructions.md step 11
+  retro-8-P2-story-splitting-rule:                   done  # 2026-03-25 — Added cross-stack split check to create-story/instructions.xml step 5
+  retro-8-P3-dev-story-completion-verification:      done  # 2026-03-25 — Added mandatory checkbox audit to dev-story/instructions.xml + checklist.md
 
   # --- Deployment (before Epic 9) ---
   retro-8-D1-single-docker-image:                    backlog  # → SM /create-story → DEV /dev-story: merge API+Web into single Docker image

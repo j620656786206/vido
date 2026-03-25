@@ -374,6 +374,18 @@
   </step>
 
   <step n="10" goal="Story completion and mark for review" tag="sprint-status">
+    <!-- MANDATORY CHECKBOX AUDIT (Agreement 5, Epic 8 Retro) -->
+    <action critical="MANDATORY">TASK CHECKBOX AUDIT — Prevents Story 8-8 failure pattern:
+    1. Re-read the ENTIRE Tasks/Subtasks section of the story file from first task to last
+    2. Count EVERY line containing "[ ]" (unchecked checkbox)
+    3. If unchecked_count > 0:
+       - LIST each unchecked task with its task number
+       - For each: either COMPLETE the task now, or DOCUMENT why it is deferred with justification
+       - After resolving all items, re-count to verify unchecked_count == 0
+    4. ONLY proceed to "review" status when unchecked_count == 0
+    5. This check is NON-NEGOTIABLE — a story with unchecked tasks CANNOT be marked complete
+    </action>
+
     <action>Verify ALL tasks and subtasks are marked [x] (re-scan the story document now)</action>
     <action>Run the full regression suite (do not skip)</action>
     <action>Confirm File List includes every changed file</action>
@@ -382,7 +394,7 @@
 
     <!-- Enhanced Definition of Done Validation -->
     <action>Validate definition-of-done checklist with essential requirements:
-      - All tasks/subtasks marked complete with [x]
+      - All tasks/subtasks marked complete with [x] (VERIFIED by checkbox audit above)
       - Implementation satisfies every Acceptance Criterion
       - Unit tests for core functionality added/updated
       - Integration tests for component interactions added when required

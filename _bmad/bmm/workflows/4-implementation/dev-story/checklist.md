@@ -32,6 +32,7 @@ validation-rules:
 ## ✅ Implementation Completion
 
 - [ ] **All Tasks Complete:** Every task and subtask marked complete with [x]
+- [ ] **MANDATORY CHECKBOX AUDIT (Agreement 5, Epic 8 Retro):** Re-read the ENTIRE Tasks/Subtasks section of the story file from top to bottom. Count total `[ ]` (unchecked) items. If ANY unchecked items remain, either complete them or explicitly document why they are deferred. A story with unchecked tasks CANNOT be marked as done. This prevents the Story 8-8 failure where tasks were left unchecked but the story was declared complete.
 - [ ] **Acceptance Criteria Satisfaction:** Implementation satisfies EVERY Acceptance Criterion in the story
 - [ ] **No Ambiguous Implementation:** Clear, unambiguous implementation that meets story requirements
 - [ ] **Edge Cases Handled:** Error conditions and edge cases appropriately addressed

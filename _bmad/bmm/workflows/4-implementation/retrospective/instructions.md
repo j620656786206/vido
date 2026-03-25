@@ -1337,6 +1337,22 @@ Bob (Scrum Master): "See you all when prep work is done. Meeting adjourned!"
 <action>Update development_status["epic-{{epic_number}}-retrospective"] = "done"</action>
 <action>Save file, preserving ALL comments and structure including STATUS DEFINITIONS</action>
 
+<action critical="MANDATORY">RETRO ACTION ITEMS → SPRINT-STATUS TRACKING (Agreement 4, Epic 8 Retro):
+For EVERY action item produced by this retrospective (regardless of priority — HIGH, MEDIUM, or LOW):
+1. Create a tracked entry in {sprint_status_file} under a new section "Epic {{epic_number}} Retro Action Items"
+2. Use naming convention: retro-{{epic_number}}-{ID}-{short-name} (e.g., retro-8-P1-retro-tracking-rule)
+3. Set initial status to "backlog"
+4. Add agent routing annotation as a comment: which agent + workflow should execute it
+   - SM = /bmad:bmm:agents:sm (process rules, workflow updates)
+   - DEV = /bmad:bmm:agents:dev + /bmad:bmm:workflows:dev-story (full story implementation)
+   - QD = /bmad:bmm:workflows:quick-dev (lightweight changes, no story file needed)
+   - TW = /bmad:bmm:agents:tech-writer (documentation)
+   - TEA = /bmad:bmm:agents:tea + /bmad:bmm:workflows:testarch-automate (test automation)
+   - CR = /bmad:bmm:workflows:code-review (adversarial review)
+5. Add an AGENT ROUTING KEY comment block above the entries explaining the abbreviations
+6. NEVER leave action items only in the retro document — they MUST be in sprint-status.yaml
+</action>
+
 <check if="update successful">
   <output>
 ✅ Retrospective marked as completed in {sprint_status_file}
