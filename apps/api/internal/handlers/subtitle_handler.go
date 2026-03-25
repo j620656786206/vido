@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"errors"
+
 	"github.com/gin-gonic/gin"
 	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/sse"
@@ -409,28 +411,27 @@ func (h *SubtitleHandler) StartBatch(c *gin.Context) {
 		return
 	}
 
-	// Check if batch already running (AC #7)
-	if h.batchProcessor.IsRunning() {
-		progress := h.batchProcessor.GetProgress()
-		c.JSON(409, APIResponse{
-			Success: false,
-			Error: &APIError{
-				Code:       "SUBTITLE_BATCH_RUNNING",
-				Message:    "A batch is already in progress",
-				Suggestion: "Wait for the current batch to complete before starting a new one.",
-			},
-			Data: progress,
-		})
-		return
-	}
-
 	batchReq := subtitle.BatchRequest{
 		Scope:    subtitle.BatchScope(req.Scope),
 		SeasonID: req.SeasonID,
 	}
 
+	// Start atomically checks for running batch and launches processing (H2 fix: no TOCTOU)
 	batchID, totalItems, err := h.batchProcessor.Start(c.Request.Context(), batchReq)
 	if err != nil {
+		if errors.Is(err, subtitle.ErrBatchAlreadyRunning) {
+			progress := h.batchProcessor.GetProgress()
+			c.JSON(409, APIResponse{
+				Success: false,
+				Error: &APIError{
+					Code:       "SUBTITLE_BATCH_RUNNING",
+					Message:    "A batch is already in progress",
+					Suggestion: "Wait for the current batch to complete before starting a new one.",
+				},
+				Data: progress,
+			})
+			return
+		}
 		ErrorResponse(c, 500, "SUBTITLE_BATCH_START_FAILED",
 			"Failed to start batch: "+err.Error(),
 			"Check that media items exist and providers are configured.")

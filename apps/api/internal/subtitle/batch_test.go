@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"errors"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -133,7 +135,7 @@ func TestBatchProcessor_ConcurrencyGuard(t *testing.T) {
 	// Try to start second batch — should error
 	_, _, err = bp.Start(context.Background(), BatchRequest{Scope: ScopeLibrary})
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "batch already running")
+	assert.True(t, errors.Is(err, ErrBatchAlreadyRunning))
 
 	// Wait for completion
 	time.Sleep(300 * time.Millisecond)
@@ -173,7 +175,7 @@ func TestBatchProcessor_ContinuesOnFailure(t *testing.T) {
 	assert.False(t, bp.IsRunning())
 }
 
-// Context cancellation
+// Cancellation via Cancel() method
 func TestBatchProcessor_Cancellation(t *testing.T) {
 	items := make([]BatchItem, 10)
 	for i := range items {
@@ -198,13 +200,12 @@ func TestBatchProcessor_Cancellation(t *testing.T) {
 	config := BatchConfig{DelayBetweenItems: 50 * time.Millisecond}
 	bp := NewBatchProcessor(engine, hub, collector, config)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	_, _, err := bp.Start(ctx, BatchRequest{Scope: ScopeLibrary})
+	_, _, err := bp.Start(context.Background(), BatchRequest{Scope: ScopeLibrary})
 	require.NoError(t, err)
 
 	// Cancel after processing starts
 	time.Sleep(30 * time.Millisecond)
-	cancel()
+	bp.Cancel()
 
 	// Wait a bit for cancellation to take effect
 	time.Sleep(100 * time.Millisecond)
@@ -356,7 +357,7 @@ collected:
 
 	// Validate each event has required fields
 	for _, evt := range events {
-		assert.Equal(t, sse.EventSubtitleProgress, evt.Type)
+		assert.Equal(t, sse.EventSubtitleBatchProgress, evt.Type)
 
 		data, ok := evt.Data.(map[string]interface{})
 		require.True(t, ok, "Event data should be map[string]interface{}")

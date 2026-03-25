@@ -13,9 +13,10 @@ import (
 type EventType string
 
 const (
-	EventScanProgress     EventType = "scan_progress"
-	EventSubtitleProgress EventType = "subtitle_progress"
-	EventNotification     EventType = "notification"
+	EventScanProgress          EventType = "scan_progress"
+	EventSubtitleProgress      EventType = "subtitle_progress"
+	EventSubtitleBatchProgress EventType = "subtitle_batch_progress"
+	EventNotification          EventType = "notification"
 )
 
 // Event represents an SSE event to broadcast

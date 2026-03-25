@@ -2,6 +2,7 @@ package subtitle
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -14,6 +15,9 @@ import (
 	"github.com/vido/api/internal/sse"
 	"github.com/vido/api/internal/subtitle/providers"
 )
+
+// ErrBatchAlreadyRunning is returned when a batch is already in progress.
+var ErrBatchAlreadyRunning = errors.New("batch already running")
 
 // BatchScope defines the scope of batch subtitle processing.
 type BatchScope string
@@ -40,16 +44,6 @@ type BatchProgress struct {
 	SuccessCount int    `json:"success_count"`
 	FailCount    int    `json:"fail_count"`
 	Status       string `json:"status"` // "running", "complete", "cancelled", "error"
-}
-
-// BatchResult is the outcome of a completed batch operation.
-type BatchResult struct {
-	BatchID      string        `json:"batch_id"`
-	TotalItems   int           `json:"total_items"`
-	SuccessCount int           `json:"success_count"`
-	FailCount    int           `json:"fail_count"`
-	Duration     time.Duration `json:"duration"`
-	FailedItems  []FailedItem  `json:"failed_items,omitempty"`
 }
 
 // FailedItem records a single item that failed during batch processing.
@@ -96,8 +90,9 @@ type BatchProcessor struct {
 	config  BatchConfig
 	collect BatchItemCollector
 
-	mu          sync.Mutex
-	activeBatch *BatchProgress
+	mu           sync.Mutex
+	activeBatch  *BatchProgress
+	activeCancel context.CancelFunc
 }
 
 // NewBatchProcessor creates a new BatchProcessor.
@@ -112,6 +107,15 @@ func NewBatchProcessor(
 		sseHub:  sseHub,
 		config:  config,
 		collect: collector,
+	}
+}
+
+// Cancel stops the active batch processing, if any.
+func (bp *BatchProcessor) Cancel() {
+	bp.mu.Lock()
+	defer bp.mu.Unlock()
+	if bp.activeCancel != nil {
+		bp.activeCancel()
 	}
 }
 
@@ -135,40 +139,47 @@ func (bp *BatchProcessor) GetProgress() *BatchProgress {
 }
 
 // Start begins batch processing in the background. Returns the batch ID and item count,
-// or an error if a batch is already running (409 scenario).
+// or ErrBatchAlreadyRunning if a batch is already in progress (409 scenario).
 func (bp *BatchProcessor) Start(ctx context.Context, req BatchRequest) (string, int, error) {
+	// Quick check — release lock before DB queries (H1 fix)
 	bp.mu.Lock()
 	if bp.activeBatch != nil {
-		progress := *bp.activeBatch
 		bp.mu.Unlock()
-		return progress.BatchID, progress.TotalItems, fmt.Errorf("batch already running: %s", progress.BatchID)
+		return "", 0, ErrBatchAlreadyRunning
 	}
+	bp.mu.Unlock()
 
-	// Collect items
+	// Collect items WITHOUT holding the lock (H1 fix: avoid blocking IsRunning/GetProgress)
 	items, err := bp.collectItems(ctx, req)
 	if err != nil {
-		bp.mu.Unlock()
 		return "", 0, fmt.Errorf("collect items: %w", err)
 	}
 
 	if len(items) == 0 {
-		bp.mu.Unlock()
-		// No items to process — return immediately with empty result
 		batchID := uuid.New().String()
 		bp.broadcastComplete(batchID, 0, 0, 0)
 		return batchID, 0, nil
 	}
 
+	// Re-acquire lock and double-check (another Start may have raced)
+	bp.mu.Lock()
+	if bp.activeBatch != nil {
+		bp.mu.Unlock()
+		return "", 0, ErrBatchAlreadyRunning
+	}
+
 	batchID := uuid.New().String()
+	// Use background context so batch outlives the HTTP request (C1 fix)
+	processCtx, processCancel := context.WithCancel(context.Background())
 	bp.activeBatch = &BatchProgress{
 		BatchID:    batchID,
 		TotalItems: len(items),
 		Status:     "running",
 	}
+	bp.activeCancel = processCancel
 	bp.mu.Unlock()
 
-	// Launch background processing
-	go bp.process(ctx, batchID, items)
+	go bp.process(processCtx, batchID, items)
 
 	return batchID, len(items), nil
 }
@@ -256,7 +267,13 @@ func (bp *BatchProcessor) process(ctx context.Context, batchID string, items []B
 		if i < len(items)-1 {
 			select {
 			case <-ctx.Done():
-				// Cancelled during delay
+				slog.Info("Batch cancelled during delay", "batch_id", batchID, "processed", i+1, "total", len(items))
+				bp.mu.Lock()
+				if bp.activeBatch != nil {
+					bp.activeBatch.Status = "cancelled"
+				}
+				bp.mu.Unlock()
+				bp.broadcastProgress(batchID, len(items), i+1, item.Title, successCount, failCount, "cancelled")
 				bp.clearActiveBatch()
 				return
 			case <-time.After(bp.config.DelayBetweenItems):
@@ -313,10 +330,14 @@ func (bp *BatchProcessor) collectLibraryItems(ctx context.Context) ([]BatchItem,
 	return items, nil
 }
 
-// clearActiveBatch resets the active batch state.
+// clearActiveBatch resets the active batch state and cancels the processing context.
 func (bp *BatchProcessor) clearActiveBatch() {
 	bp.mu.Lock()
 	bp.activeBatch = nil
+	if bp.activeCancel != nil {
+		bp.activeCancel()
+		bp.activeCancel = nil
+	}
 	bp.mu.Unlock()
 }
 
@@ -326,7 +347,7 @@ func (bp *BatchProcessor) broadcastProgress(batchID string, total, current int, 
 		return
 	}
 	bp.sseHub.Broadcast(sse.Event{
-		Type: sse.EventSubtitleProgress,
+		Type: sse.EventSubtitleBatchProgress,
 		Data: map[string]interface{}{
 			"batch_id":      batchID,
 			"total_items":   total,
@@ -345,7 +366,7 @@ func (bp *BatchProcessor) broadcastComplete(batchID string, total, success, fail
 		return
 	}
 	bp.sseHub.Broadcast(sse.Event{
-		Type: sse.EventSubtitleProgress,
+		Type: sse.EventSubtitleBatchProgress,
 		Data: map[string]interface{}{
 			"batch_id":      batchID,
 			"total_items":   total,
