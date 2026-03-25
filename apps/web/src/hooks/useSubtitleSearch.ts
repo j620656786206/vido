@@ -94,9 +94,10 @@ export function useSubtitleSearch() {
 
   // Download mutation (per-row tracking)
   const downloadMutation = useMutation({
-    mutationFn: (params: SubtitleDownloadParams) => {
-      setDownloadingIds((prev) => new Set(prev).add(params.subtitle_id));
-      return subtitleService.downloadSubtitle(params);
+    mutationFn: (params: SubtitleDownloadParams) =>
+      subtitleService.downloadSubtitle(params),
+    onMutate: (variables) => {
+      setDownloadingIds((prev) => new Set(prev).add(variables.subtitle_id));
     },
     onSuccess: (_data, variables) => {
       setDownloadedIds((prev) => new Set(prev).add(variables.subtitle_id));
@@ -128,12 +129,13 @@ export function useSubtitleSearch() {
 
   // Preview mutation (per-row tracking)
   const previewMutation = useMutation({
-    mutationFn: (params: { subtitleId: string; provider: string }) => {
-      setPreviewingId(params.subtitleId);
-      return subtitleService.previewSubtitle({
+    mutationFn: (params: { subtitleId: string; provider: string }) =>
+      subtitleService.previewSubtitle({
         subtitle_id: params.subtitleId,
         provider: params.provider,
-      });
+      }),
+    onMutate: (variables) => {
+      setPreviewingId(variables.subtitleId);
     },
     onSuccess: (data, variables) => {
       setPreviewDataMap((prev) => ({

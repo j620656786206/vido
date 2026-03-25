@@ -16,7 +16,7 @@ const defaultHookReturn = {
   download: vi.fn(),
   downloadingIds: new Set<string>(),
   downloadedIds: new Set<string>(),
-  downloadError: null,
+  downloadErrorMap: {} as Record<string, string>,
   preview: vi.fn(),
   previewDataMap: {} as Record<string, any>,
   previewingId: null as string | null,

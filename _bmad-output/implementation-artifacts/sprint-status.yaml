@@ -179,7 +179,7 @@ development_status:
   8-5-opencc-integration:        done  # CR 2026-03-24: 7 findings, all auto-fixed
   8-6-subtitle-scoring-ranking:  done  # CR 2026-03-24: 7 findings, 4 auto-fixed
   8-7-auto-download-service:     done  # CR 2026-03-24: 7 findings, 3 auto-fixed
-  8-8-manual-subtitle-search-ui: review
+  8-8-manual-subtitle-search-ui: done  # CR pass 3 2026-03-25: 9 issues fixed
   8-9-batch-subtitle-processing: ready-for-dev
   8-10-subtitle-file-management: done  # CR 2026-03-24: 7 findings, 5 auto-fixed
   epic-8-retrospective: optional

@@ -1,6 +1,6 @@
 # Story 8.8: Manual Subtitle Search UI
 
-Status: review
+Status: done
 
 ## Story
 
@@ -262,3 +262,22 @@ Claude Opus 4.6 (1M context)
 - [x] Converted to plain HTML + Tailwind (no shadcn dependency)
 - [x] Task 5.2-5.3: Engine.Process with ConversionPolicy + ProcessOptions
 - [x] Score passed through download request (not hardcoded 0.0)
+
+### Review Pass 3: 2026-03-25
+
+**Reviewer:** Amelia (Dev Agent — Claude Opus 4.6)
+
+**Issues Found:** 3 High, 4 Medium, 2 Low — **all fixed**
+
+#### Fixed Issues
+- [x] H1: SSE event key inconsistency (engine camelCase → snake_case) — Rule 6
+- [x] H2: Duplicate SubtitleStatusUpdater interface removed from handlers — Rule 11
+- [x] H3: InternalServerError calls replaced with specific error codes — Rule 7
+- [x] M1: Side effects moved from mutationFn to onMutate in TanStack Query hooks
+- [x] M2: Stale mock field `downloadError` → `downloadErrorMap` in spec
+- [x] M3: `onDownloadSuccess` added to handleDownload useCallback deps
+- [x] L1: extractFirstLines uses bytes.NewReader instead of string copy
+- [x] L2: downloadStage kept (SSE stage for future UI progress display)
+
+#### Noted (not fixed — design decision)
+- M4: Dual conversion logic (handler shouldConvert vs engine convertIfNeeded) — by design: handler serves user-overridden manual flow, engine serves auto pipeline

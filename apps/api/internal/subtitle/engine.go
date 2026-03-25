@@ -350,11 +350,11 @@ func (e *Engine) broadcastStatus(mediaID, mediaType string, stage PipelineStage,
 
 	e.sseHub.Broadcast(sse.Event{
 		Type: sse.EventSubtitleProgress,
-		Data: map[string]interface{}{
-			"mediaId":   mediaID,
-			"mediaType": mediaType,
-			"stage":     string(stage),
-			"message":   message,
+		Data: map[string]string{
+			"media_id":   mediaID,
+			"media_type": mediaType,
+			"stage":      string(stage),
+			"message":    message,
 		},
 	})
 }

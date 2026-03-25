@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"fmt"
 	"log/slog"
@@ -16,11 +17,6 @@ import (
 	"github.com/vido/api/internal/subtitle/providers"
 )
 
-// SubtitleStatusUpdater is the interface for updating subtitle status in the DB.
-type SubtitleStatusUpdater interface {
-	UpdateSubtitleStatus(ctx context.Context, id string, status models.SubtitleStatus, path, language string, score float64) error
-}
-
 // SubtitleHandler handles HTTP requests for manual subtitle search and download.
 type SubtitleHandler struct {
 	providers      []providers.SubtitleProvider
@@ -28,8 +24,8 @@ type SubtitleHandler struct {
 	converter      *subtitle.Converter
 	placer         *subtitle.Placer
 	sseHub         *sse.Hub
-	movieRepo      SubtitleStatusUpdater
-	seriesRepo     SubtitleStatusUpdater
+	movieRepo      subtitle.SubtitleStatusUpdater
+	seriesRepo     subtitle.SubtitleStatusUpdater
 	batchProcessor *subtitle.BatchProcessor
 }
 
@@ -40,8 +36,8 @@ func NewSubtitleHandler(
 	converter *subtitle.Converter,
 	placer *subtitle.Placer,
 	sseHub *sse.Hub,
-	movieRepo SubtitleStatusUpdater,
-	seriesRepo SubtitleStatusUpdater,
+	movieRepo subtitle.SubtitleStatusUpdater,
+	seriesRepo subtitle.SubtitleStatusUpdater,
 ) *SubtitleHandler {
 	return &SubtitleHandler{
 		providers:  providerList,
@@ -233,7 +229,9 @@ func (h *SubtitleHandler) DownloadSubtitle(c *gin.Context) {
 			"error", err)
 		h.broadcastStatus(req.MediaID, req.MediaType, "failed",
 			"Download failed: "+err.Error())
-		InternalServerError(c, "Failed to download subtitle: "+err.Error())
+		ErrorResponse(c, 500, "SUBTITLE_DOWNLOAD_FAILED",
+			"Failed to download subtitle: "+err.Error(),
+			"Try a different provider or subtitle.")
 		return
 	}
 
@@ -269,7 +267,9 @@ func (h *SubtitleHandler) DownloadSubtitle(c *gin.Context) {
 	if err != nil {
 		h.broadcastStatus(req.MediaID, req.MediaType, "failed",
 			"Failed to place subtitle: "+err.Error())
-		InternalServerError(c, "Failed to place subtitle file: "+err.Error())
+		ErrorResponse(c, 500, "SUBTITLE_PLACE_FAILED",
+			"Failed to place subtitle file: "+err.Error(),
+			"Check file permissions and disk space.")
 		return
 	}
 
@@ -312,7 +312,9 @@ func (h *SubtitleHandler) PreviewSubtitle(c *gin.Context) {
 
 	data, err := provider.Download(ctx, req.SubtitleID)
 	if err != nil {
-		InternalServerError(c, "Failed to download subtitle for preview: "+err.Error())
+		ErrorResponse(c, 500, "SUBTITLE_PREVIEW_FAILED",
+			"Failed to download subtitle for preview: "+err.Error(),
+			"Try a different subtitle or provider.")
 		return
 	}
 
@@ -389,7 +391,9 @@ type BatchStartRequest struct {
 // StartBatch handles POST /api/v1/subtitles/batch
 func (h *SubtitleHandler) StartBatch(c *gin.Context) {
 	if h.batchProcessor == nil {
-		InternalServerError(c, "Batch processing not configured")
+		ErrorResponse(c, 500, "SUBTITLE_BATCH_NOT_CONFIGURED",
+			"Batch processing not configured",
+			"Check server configuration for batch subtitle processing.")
 		return
 	}
 
@@ -427,7 +431,9 @@ func (h *SubtitleHandler) StartBatch(c *gin.Context) {
 
 	batchID, totalItems, err := h.batchProcessor.Start(c.Request.Context(), batchReq)
 	if err != nil {
-		InternalServerError(c, "Failed to start batch: "+err.Error())
+		ErrorResponse(c, 500, "SUBTITLE_BATCH_START_FAILED",
+			"Failed to start batch: "+err.Error(),
+			"Check that media items exist and providers are configured.")
 		return
 	}
 
@@ -498,7 +504,7 @@ func (h *SubtitleHandler) findProvider(name string) providers.SubtitleProvider {
 
 // extractFirstLines returns the first N non-empty lines from subtitle content.
 func extractFirstLines(data []byte, n int) []string {
-	scanner := bufio.NewScanner(strings.NewReader(string(data)))
+	scanner := bufio.NewScanner(bytes.NewReader(data))
 	var lines []string
 	for scanner.Scan() && len(lines) < n {
 		line := scanner.Text()

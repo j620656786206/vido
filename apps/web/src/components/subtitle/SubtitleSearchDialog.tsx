@@ -120,7 +120,7 @@ export function SubtitleSearchDialog({
         },
       );
     },
-    [download, mediaId, mediaType, mediaFilePath, mediaResolution, convertToTraditional],
+    [download, mediaId, mediaType, mediaFilePath, mediaResolution, convertToTraditional, onDownloadSuccess],
   );
 
   const toggleProvider = useCallback((providerId: string) => {
