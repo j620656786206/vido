@@ -30,7 +30,10 @@
         "type": "assertion",
         "description": "Verify element \"Recently added\" panel is visible"
       }
-    ]
+    ],
+    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
+    "v4_reason": "v4 replaces Dashboard with TV Wall homepage (Epic 10, Phase 2). Current tests validate v3 Dashboard layout which will be completely redesigned.",
+    "v4_action": "DELETE when Epic 10 is implemented; regenerate from updated standard_prd.json"
   },
   {
     "id": "TC002",
@@ -63,7 +66,10 @@
         "type": "assertion",
         "description": "Verify element \"Connection history\" modal is not visible"
       }
-    ]
+    ],
+    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
+    "v4_reason": "v4 replaces Dashboard with TV Wall homepage (Epic 10, Phase 2). Current tests validate v3 Dashboard layout which will be completely redesigned.",
+    "v4_action": "DELETE when Epic 10 is implemented; regenerate from updated standard_prd.json"
   },
   {
     "id": "TC003",
@@ -96,7 +102,10 @@
         "type": "action",
         "description": "Click on \"Close\" in the connection history modal"
       }
-    ]
+    ],
+    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
+    "v4_reason": "v4 replaces Dashboard with TV Wall homepage (Epic 10, Phase 2). Current tests validate v3 Dashboard layout which will be completely redesigned.",
+    "v4_action": "DELETE when Epic 10 is implemented; regenerate from updated standard_prd.json"
   },
   {
     "id": "TC004",
@@ -125,7 +134,10 @@
         "type": "assertion",
         "description": "Verify element \"new media\" toast notification is not visible"
       }
-    ]
+    ],
+    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
+    "v4_reason": "v4 replaces Dashboard with TV Wall homepage (Epic 10, Phase 2). Current tests validate v3 Dashboard layout which will be completely redesigned.",
+    "v4_action": "DELETE when Epic 10 is implemented; regenerate from updated standard_prd.json"
   },
   {
     "id": "TC005",
@@ -158,7 +170,10 @@
         "type": "action",
         "description": "Click on \"Dismiss\" on the toast notification"
       }
-    ]
+    ],
+    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
+    "v4_reason": "v4 replaces Dashboard with TV Wall homepage (Epic 10, Phase 2). Current tests validate v3 Dashboard layout which will be completely redesigned.",
+    "v4_action": "DELETE when Epic 10 is implemented; regenerate from updated standard_prd.json"
   },
   {
     "id": "TC006",
@@ -187,7 +202,10 @@
         "type": "assertion",
         "description": "Verify text \"/settings/qbittorrent\" is visible"
       }
-    ]
+    ],
+    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
+    "v4_reason": "v4 replaces Dashboard with TV Wall homepage (Epic 10, Phase 2). Current tests validate v3 Dashboard layout which will be completely redesigned.",
+    "v4_action": "DELETE when Epic 10 is implemented; regenerate from updated standard_prd.json"
   },
   {
     "id": "TC007",
@@ -220,7 +238,10 @@
         "type": "assertion",
         "description": "Verify text \"Check /settings/qbittorrent\" is visible"
       }
-    ]
+    ],
+    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
+    "v4_reason": "v4 replaces Dashboard with TV Wall homepage (Epic 10, Phase 2). Current tests validate v3 Dashboard layout which will be completely redesigned.",
+    "v4_action": "DELETE when Epic 10 is implemented; regenerate from updated standard_prd.json"
   },
   {
     "id": "TC008",
@@ -249,7 +270,10 @@
         "type": "assertion",
         "description": "Verify element \"download counts\" is visible"
       }
-    ]
+    ],
+    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
+    "v4_reason": "v4 replaces Dashboard with TV Wall homepage (Epic 10, Phase 2). Current tests validate v3 Dashboard layout which will be completely redesigned.",
+    "v4_action": "DELETE when Epic 10 is implemented; regenerate from updated standard_prd.json"
   },
   {
     "id": "TC009",
@@ -290,7 +314,10 @@
         "type": "assertion",
         "description": "Verify the item count display text is visible"
       }
-    ]
+    ],
+    "v4_status": "VALID_WITH_UPDATES_NEEDED",
+    "v4_reason": "Core library browsing (Epic 5) is done and retained in v4. However, v4 adds context menu with 'Search Subtitles' option (Epic 8) and Scanner integration (Epic 7). Some test assertions about UI elements may need updating.",
+    "v4_action": "KEEP but update assertions after Epic 7/8 complete"
   },
   {
     "id": "TC010",
@@ -331,7 +358,10 @@
         "type": "assertion",
         "description": "Verify text \"Deleted\" is visible"
       }
-    ]
+    ],
+    "v4_status": "VALID_WITH_UPDATES_NEEDED",
+    "v4_reason": "Core library browsing (Epic 5) is done and retained in v4. However, v4 adds context menu with 'Search Subtitles' option (Epic 8) and Scanner integration (Epic 7). Some test assertions about UI elements may need updating.",
+    "v4_action": "KEEP but update assertions after Epic 7/8 complete"
   },
   {
     "id": "TC011",
@@ -372,7 +402,10 @@
         "type": "assertion",
         "description": "Verify the media items table is still visible"
       }
-    ]
+    ],
+    "v4_status": "VALID_WITH_UPDATES_NEEDED",
+    "v4_reason": "Core library browsing (Epic 5) is done and retained in v4. However, v4 adds context menu with 'Search Subtitles' option (Epic 8) and Scanner integration (Epic 7). Some test assertions about UI elements may need updating.",
+    "v4_action": "KEEP but update assertions after Epic 7/8 complete"
   },
   {
     "id": "TC012",
@@ -405,7 +438,10 @@
         "type": "assertion",
         "description": "Verify text \"No media found\" is not visible"
       }
-    ]
+    ],
+    "v4_status": "VALID_WITH_UPDATES_NEEDED",
+    "v4_reason": "Core library browsing (Epic 5) is done and retained in v4. However, v4 adds context menu with 'Search Subtitles' option (Epic 8) and Scanner integration (Epic 7). Some test assertions about UI elements may need updating.",
+    "v4_action": "KEEP but update assertions after Epic 7/8 complete"
   },
   {
     "id": "TC013",
@@ -438,7 +474,10 @@
         "type": "assertion",
         "description": "Verify text \"Success\" is visible"
       }
-    ]
+    ],
+    "v4_status": "VALID_WITH_UPDATES_NEEDED",
+    "v4_reason": "Core library browsing (Epic 5) is done and retained in v4. However, v4 adds context menu with 'Search Subtitles' option (Epic 8) and Scanner integration (Epic 7). Some test assertions about UI elements may need updating.",
+    "v4_action": "KEEP but update assertions after Epic 7/8 complete"
   },
   {
     "id": "TC014",
@@ -475,7 +514,10 @@
         "type": "assertion",
         "description": "Verify the pagination control is visible"
       }
-    ]
+    ],
+    "v4_status": "VALID_WITH_UPDATES_NEEDED",
+    "v4_reason": "Core library browsing (Epic 5) is done and retained in v4. However, v4 adds context menu with 'Search Subtitles' option (Epic 8) and Scanner integration (Epic 7). Some test assertions about UI elements may need updating.",
+    "v4_action": "KEEP but update assertions after Epic 7/8 complete"
   },
   {
     "id": "TC015",
@@ -516,7 +558,10 @@
         "type": "assertion",
         "description": "Verify element \"Search results list\" is visible"
       }
-    ]
+    ],
+    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
+    "v4_reason": "v4 expands to Advanced Search with multi-facet filtering (Epic 11, Phase 2). Current basic search tests have some validity but query length changed from 2->1 char minimum, and UI will be significantly redesigned.",
+    "v4_action": "DELETE when Epic 11 is implemented; regenerate from updated standard_prd.json"
   },
   {
     "id": "TC016",
@@ -557,7 +602,10 @@
         "type": "assertion",
         "description": "Verify element \"Genres\" is visible"
       }
-    ]
+    ],
+    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
+    "v4_reason": "v4 expands to Advanced Search with multi-facet filtering (Epic 11, Phase 2). Current basic search tests have some validity but query length changed from 2->1 char minimum, and UI will be significantly redesigned.",
+    "v4_action": "DELETE when Epic 11 is implemented; regenerate from updated standard_prd.json"
   },
   {
     "id": "TC017",
@@ -586,7 +634,10 @@
         "type": "assertion",
         "description": "Verify element \"Search results list\" is not visible"
       }
-    ]
+    ],
+    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
+    "v4_reason": "v4 expands to Advanced Search with multi-facet filtering (Epic 11, Phase 2). Current basic search tests have some validity but query length changed from 2->1 char minimum, and UI will be significantly redesigned.",
+    "v4_action": "DELETE when Epic 11 is implemented; regenerate from updated standard_prd.json"
   },
   {
     "id": "TC018",
@@ -623,7 +674,10 @@
         "type": "assertion",
         "description": "Verify element \"Active type filter: Movie\" is visible"
       }
-    ]
+    ],
+    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
+    "v4_reason": "v4 expands to Advanced Search with multi-facet filtering (Epic 11, Phase 2). Current basic search tests have some validity but query length changed from 2->1 char minimum, and UI will be significantly redesigned.",
+    "v4_action": "DELETE when Epic 11 is implemented; regenerate from updated standard_prd.json"
   },
   {
     "id": "TC019",
@@ -660,7 +714,10 @@
         "type": "assertion",
         "description": "Verify element \"Active type filter: TV\" is visible"
       }
-    ]
+    ],
+    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
+    "v4_reason": "v4 expands to Advanced Search with multi-facet filtering (Epic 11, Phase 2). Current basic search tests have some validity but query length changed from 2->1 char minimum, and UI will be significantly redesigned.",
+    "v4_action": "DELETE when Epic 11 is implemented; regenerate from updated standard_prd.json"
   },
   {
     "id": "TC020",
@@ -701,7 +758,10 @@
         "type": "assertion",
         "description": "Verify element \"Active type filter: Movie\" is visible"
       }
-    ]
+    ],
+    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
+    "v4_reason": "v4 expands to Advanced Search with multi-facet filtering (Epic 11, Phase 2). Current basic search tests have some validity but query length changed from 2->1 char minimum, and UI will be significantly redesigned.",
+    "v4_action": "DELETE when Epic 11 is implemented; regenerate from updated standard_prd.json"
   },
   {
     "id": "TC021",
@@ -738,7 +798,10 @@
         "type": "assertion",
         "description": "Verify text \"Speed\" is visible"
       }
-    ]
+    ],
+    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
+    "v4_reason": "v4 replaces polling with SSE for real-time updates (Epic 14, Phase 3). Download Management v2 adds Sonarr/Radarr integration. Current tests assume 5s polling model.",
+    "v4_action": "DELETE when Epic 14 is implemented; regenerate from updated standard_prd.json"
   },
   {
     "id": "TC022",
@@ -767,7 +830,10 @@
         "type": "assertion",
         "description": "Verify text \"Scan completed downloads\" is visible"
       }
-    ]
+    ],
+    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
+    "v4_reason": "v4 replaces polling with SSE for real-time updates (Epic 14, Phase 3). Download Management v2 adds Sonarr/Radarr integration. Current tests assume 5s polling model.",
+    "v4_action": "DELETE when Epic 14 is implemented; regenerate from updated standard_prd.json"
   },
   {
     "id": "TC023",
@@ -796,7 +862,10 @@
         "type": "assertion",
         "description": "Verify text \"No new completed downloads\" is visible"
       }
-    ]
+    ],
+    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
+    "v4_reason": "v4 replaces polling with SSE for real-time updates (Epic 14, Phase 3). Download Management v2 adds Sonarr/Radarr integration. Current tests assume 5s polling model.",
+    "v4_action": "DELETE when Epic 14 is implemented; regenerate from updated standard_prd.json"
   },
   {
     "id": "TC024",
@@ -829,7 +898,10 @@
         "type": "assertion",
         "description": "Verify text \"Name\" is visible"
       }
-    ]
+    ],
+    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
+    "v4_reason": "v4 replaces polling with SSE for real-time updates (Epic 14, Phase 3). Download Management v2 adds Sonarr/Radarr integration. Current tests assume 5s polling model.",
+    "v4_action": "DELETE when Epic 14 is implemented; regenerate from updated standard_prd.json"
   },
   {
     "id": "TC025",
@@ -862,7 +934,10 @@
         "type": "assertion",
         "description": "Verify text \"Progress\" is visible"
       }
-    ]
+    ],
+    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
+    "v4_reason": "v4 replaces polling with SSE for real-time updates (Epic 14, Phase 3). Download Management v2 adds Sonarr/Radarr integration. Current tests assume 5s polling model.",
+    "v4_action": "DELETE when Epic 14 is implemented; regenerate from updated standard_prd.json"
   },
   {
     "id": "TC026",
@@ -899,7 +974,10 @@
         "type": "assertion",
         "description": "Verify element \"downloads list\" is visible"
       }
-    ]
+    ],
+    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
+    "v4_reason": "v4 replaces polling with SSE for real-time updates (Epic 14, Phase 3). Download Management v2 adds Sonarr/Radarr integration. Current tests assume 5s polling model.",
+    "v4_action": "DELETE when Epic 14 is implemented; regenerate from updated standard_prd.json"
   },
   {
     "id": "TC027",
@@ -928,7 +1006,10 @@
         "type": "assertion",
         "description": "Verify text \"Error\" is visible"
       }
-    ]
+    ],
+    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
+    "v4_reason": "v4 replaces polling with SSE for real-time updates (Epic 14, Phase 3). Download Management v2 adds Sonarr/Radarr integration. Current tests assume 5s polling model.",
+    "v4_action": "DELETE when Epic 14 is implemented; regenerate from updated standard_prd.json"
   },
   {
     "id": "TC028",
@@ -965,7 +1046,10 @@
         "type": "assertion",
         "description": "Verify element \"Credits\" is visible"
       }
-    ]
+    ],
+    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
+    "v4_reason": "v4 creates Rich Media Detail Page (Epic 12, Phase 2) with dual ratings, season/episode list, streaming platforms. Current tests validate v3 side panel with metadata editor which is being restructured. Subtitle search integration (Epic 8) also changes the UI.",
+    "v4_action": "DELETE when Epic 12 is implemented; regenerate from updated standard_prd.json"
   },
   {
     "id": "TC029",
@@ -1002,7 +1086,10 @@
         "type": "assertion",
         "description": "Verify element \"Title\" field is visible"
       }
-    ]
+    ],
+    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
+    "v4_reason": "v4 creates Rich Media Detail Page (Epic 12, Phase 2) with dual ratings, season/episode list, streaming platforms. Current tests validate v3 side panel with metadata editor which is being restructured. Subtitle search integration (Epic 8) also changes the UI.",
+    "v4_action": "DELETE when Epic 12 is implemented; regenerate from updated standard_prd.json"
   },
   {
     "id": "TC030",
@@ -1039,7 +1126,10 @@
         "type": "assertion",
         "description": "Verify element \"media detail side panel\" is visible"
       }
-    ]
+    ],
+    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
+    "v4_reason": "v4 creates Rich Media Detail Page (Epic 12, Phase 2) with dual ratings, season/episode list, streaming platforms. Current tests validate v3 side panel with metadata editor which is being restructured. Subtitle search integration (Epic 8) also changes the UI.",
+    "v4_action": "DELETE when Epic 12 is implemented; regenerate from updated standard_prd.json"
   },
   {
     "id": "TC031",
@@ -1076,7 +1166,10 @@
         "type": "assertion",
         "description": "Verify element \"Metadata editor\" is visible"
       }
-    ]
+    ],
+    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
+    "v4_reason": "v4 creates Rich Media Detail Page (Epic 12, Phase 2) with dual ratings, season/episode list, streaming platforms. Current tests validate v3 side panel with metadata editor which is being restructured. Subtitle search integration (Epic 8) also changes the UI.",
+    "v4_action": "DELETE when Epic 12 is implemented; regenerate from updated standard_prd.json"
   },
   {
     "id": "TC032",
@@ -1117,7 +1210,10 @@
         "type": "assertion",
         "description": "Verify text \"Test overview updated by E2E.\" is visible"
       }
-    ]
+    ],
+    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
+    "v4_reason": "v4 creates Rich Media Detail Page (Epic 12, Phase 2) with dual ratings, season/episode list, streaming platforms. Current tests validate v3 side panel with metadata editor which is being restructured. Subtitle search integration (Epic 8) also changes the UI.",
+    "v4_action": "DELETE when Epic 12 is implemented; regenerate from updated standard_prd.json"
   },
   {
     "id": "TC033",
@@ -1154,7 +1250,10 @@
         "type": "assertion",
         "description": "Verify element \"poster\" is visible"
       }
-    ]
+    ],
+    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
+    "v4_reason": "v4 creates Rich Media Detail Page (Epic 12, Phase 2) with dual ratings, season/episode list, streaming platforms. Current tests validate v3 side panel with metadata editor which is being restructured. Subtitle search integration (Epic 8) also changes the UI.",
+    "v4_action": "DELETE when Epic 12 is implemented; regenerate from updated standard_prd.json"
   },
   {
     "id": "TC034",
@@ -1191,7 +1290,10 @@
         "type": "assertion",
         "description": "Verify text \"Search\" is visible"
       }
-    ]
+    ],
+    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
+    "v4_reason": "v4 creates Rich Media Detail Page (Epic 12, Phase 2) with dual ratings, season/episode list, streaming platforms. Current tests validate v3 side panel with metadata editor which is being restructured. Subtitle search integration (Epic 8) also changes the UI.",
+    "v4_action": "DELETE when Epic 12 is implemented; regenerate from updated standard_prd.json"
   },
   {
     "id": "TC035",
@@ -1228,7 +1330,10 @@
         "type": "assertion",
         "description": "Verify element \"Save\" is visible"
       }
-    ]
+    ],
+    "v4_status": "VALID_WITH_UPDATES_NEEDED",
+    "v4_reason": "QB settings core flow is retained. However, settings page restructured from single page to multi-section hub. Learned Patterns moved out of QB settings page.",
+    "v4_action": "KEEP but update route/navigation assertions"
   },
   {
     "id": "TC036",
@@ -1269,7 +1374,10 @@
         "type": "action",
         "description": "Click on \"Save\""
       }
-    ]
+    ],
+    "v4_status": "VALID_WITH_UPDATES_NEEDED",
+    "v4_reason": "QB settings core flow is retained. However, settings page restructured from single page to multi-section hub. Learned Patterns moved out of QB settings page.",
+    "v4_action": "KEEP but update route/navigation assertions"
   },
   {
     "id": "TC037",
@@ -1310,7 +1418,10 @@
         "type": "assertion",
         "description": "Verify text \"Settings saved\" is visible"
       }
-    ]
+    ],
+    "v4_status": "VALID_WITH_UPDATES_NEEDED",
+    "v4_reason": "QB settings core flow is retained. However, settings page restructured from single page to multi-section hub. Learned Patterns moved out of QB settings page.",
+    "v4_action": "KEEP but update route/navigation assertions"
   },
   {
     "id": "TC038",
@@ -1347,7 +1458,10 @@
         "type": "assertion",
         "description": "Verify text \"credentials\" is visible"
       }
-    ]
+    ],
+    "v4_status": "VALID_WITH_UPDATES_NEEDED",
+    "v4_reason": "QB settings core flow is retained. However, settings page restructured from single page to multi-section hub. Learned Patterns moved out of QB settings page.",
+    "v4_action": "KEEP but update route/navigation assertions"
   },
   {
     "id": "TC039",
@@ -1384,7 +1498,10 @@
         "type": "action",
         "description": "Click on \"Save\""
       }
-    ]
+    ],
+    "v4_status": "VALID_WITH_UPDATES_NEEDED",
+    "v4_reason": "QB settings core flow is retained. However, settings page restructured from single page to multi-section hub. Learned Patterns moved out of QB settings page.",
+    "v4_action": "KEEP but update route/navigation assertions"
   },
   {
     "id": "TC040",
@@ -1413,7 +1530,10 @@
         "type": "assertion",
         "description": "Verify text \"Connection failed\" is not visible"
       }
-    ]
+    ],
+    "v4_status": "VALID_WITH_UPDATES_NEEDED",
+    "v4_reason": "QB settings core flow is retained. However, settings page restructured from single page to multi-section hub. Learned Patterns moved out of QB settings page.",
+    "v4_action": "KEEP but update route/navigation assertions"
   },
   {
     "id": "TC041",
@@ -1438,7 +1558,10 @@
         "type": "assertion",
         "description": "Verify text \"secret-password\" is not visible"
       }
-    ]
+    ],
+    "v4_status": "VALID_WITH_UPDATES_NEEDED",
+    "v4_reason": "QB settings core flow is retained. However, settings page restructured from single page to multi-section hub. Learned Patterns moved out of QB settings page.",
+    "v4_action": "KEEP but update route/navigation assertions"
   },
   {
     "id": "TC042",
@@ -1475,7 +1598,10 @@
         "type": "assertion",
         "description": "Verify text \"Connected\" is visible"
       }
-    ]
+    ],
+    "v4_status": "VALID_WITH_UPDATES_NEEDED",
+    "v4_reason": "QB settings core flow is retained. However, settings page restructured from single page to multi-section hub. Learned Patterns moved out of QB settings page.",
+    "v4_action": "KEEP but update route/navigation assertions"
   },
   {
     "id": "TC043",
@@ -1500,7 +1626,10 @@
         "type": "assertion",
         "description": "Verify element \"connected (green) state indicator\" is visible"
       }
-    ]
+    ],
+    "v4_status": "VALID",
+    "v4_reason": "Connection health monitoring retained in v4 and will be expanded in Phase 4 (Epic 18). Current tests still valid for QB health indicator.",
+    "v4_action": "KEEP as-is; expand when Epic 18 adds multi-service health"
   },
   {
     "id": "TC044",
@@ -1525,7 +1654,10 @@
         "type": "assertion",
         "description": "Verify text \"History\" is visible"
       }
-    ]
+    ],
+    "v4_status": "VALID",
+    "v4_reason": "Connection health monitoring retained in v4 and will be expanded in Phase 4 (Epic 18). Current tests still valid for QB health indicator.",
+    "v4_action": "KEEP as-is; expand when Epic 18 adds multi-service health"
   },
   {
     "id": "TC045",
@@ -1554,7 +1686,10 @@
         "type": "assertion",
         "description": "Verify element \"event type\" is visible"
       }
-    ]
+    ],
+    "v4_status": "VALID",
+    "v4_reason": "Connection health monitoring retained in v4 and will be expanded in Phase 4 (Epic 18). Current tests still valid for QB health indicator.",
+    "v4_action": "KEEP as-is; expand when Epic 18 adds multi-service health"
   },
   {
     "id": "TC046",
@@ -1583,7 +1718,10 @@
         "type": "assertion",
         "description": "Verify text \"connected\" is not visible in the connection history events list"
       }
-    ]
+    ],
+    "v4_status": "VALID",
+    "v4_reason": "Connection health monitoring retained in v4 and will be expanded in Phase 4 (Epic 18). Current tests still valid for QB health indicator.",
+    "v4_action": "KEEP as-is; expand when Epic 18 adds multi-service health"
   },
   {
     "id": "TC047",
@@ -1608,7 +1746,10 @@
         "type": "assertion",
         "description": "Verify element \"degraded state indicator\" is visible"
       }
-    ]
+    ],
+    "v4_status": "VALID",
+    "v4_reason": "Connection health monitoring retained in v4 and will be expanded in Phase 4 (Epic 18). Current tests still valid for QB health indicator.",
+    "v4_action": "KEEP as-is; expand when Epic 18 adds multi-service health"
   },
   {
     "id": "TC048",
@@ -1641,7 +1782,10 @@
         "type": "assertion",
         "description": "Verify element \"Connection history events list\" is visible"
       }
-    ]
+    ],
+    "v4_status": "VALID",
+    "v4_reason": "Connection health monitoring retained in v4 and will be expanded in Phase 4 (Epic 18). Current tests still valid for QB health indicator.",
+    "v4_action": "KEEP as-is; expand when Epic 18 adds multi-service health"
   },
   {
     "id": "TC049",
@@ -1682,7 +1826,10 @@
         "type": "action",
         "description": "Click \"Edit\""
       }
-    ]
+    ],
+    "v4_status": "VALID_WITH_UPDATES_NEEDED",
+    "v4_reason": "Manual metadata search (Epic 3) is done and retained. However, subtitle search integration (Epic 8) adds new search entry points and the manual search dialog component has been updated.",
+    "v4_action": "KEEP but verify UI element selectors still match"
   },
   {
     "id": "TC050",
@@ -1723,7 +1870,10 @@
         "type": "assertion",
         "description": "Verify text \"Source\" is visible"
       }
-    ]
+    ],
+    "v4_status": "VALID_WITH_UPDATES_NEEDED",
+    "v4_reason": "Manual metadata search (Epic 3) is done and retained. However, subtitle search integration (Epic 8) adds new search entry points and the manual search dialog component has been updated.",
+    "v4_action": "KEEP but verify UI element selectors still match"
   },
   {
     "id": "TC051",
@@ -1764,7 +1914,10 @@
         "type": "assertion",
         "description": "Verify element \"Manual search results\" is visible"
       }
-    ]
+    ],
+    "v4_status": "VALID_WITH_UPDATES_NEEDED",
+    "v4_reason": "Manual metadata search (Epic 3) is done and retained. However, subtitle search integration (Epic 8) adds new search entry points and the manual search dialog component has been updated.",
+    "v4_action": "KEEP but verify UI element selectors still match"
   },
   {
     "id": "TC052",
@@ -1809,7 +1962,10 @@
         "type": "assertion",
         "description": "Verify text \"Apply\" is visible"
       }
-    ]
+    ],
+    "v4_status": "VALID_WITH_UPDATES_NEEDED",
+    "v4_reason": "Manual metadata search (Epic 3) is done and retained. However, subtitle search integration (Epic 8) adds new search entry points and the manual search dialog component has been updated.",
+    "v4_action": "KEEP but verify UI element selectors still match"
   },
   {
     "id": "TC053",
@@ -1858,7 +2014,10 @@
         "type": "assertion",
         "description": "Verify text \"Applied\" is visible"
       }
-    ]
+    ],
+    "v4_status": "VALID_WITH_UPDATES_NEEDED",
+    "v4_reason": "Manual metadata search (Epic 3) is done and retained. However, subtitle search integration (Epic 8) adds new search entry points and the manual search dialog component has been updated.",
+    "v4_action": "KEEP but verify UI element selectors still match"
   },
   {
     "id": "TC054",
@@ -1899,7 +2058,10 @@
         "type": "assertion",
         "description": "Verify text \"No matches found\" is visible"
       }
-    ]
+    ],
+    "v4_status": "VALID_WITH_UPDATES_NEEDED",
+    "v4_reason": "Manual metadata search (Epic 3) is done and retained. However, subtitle search integration (Epic 8) adds new search entry points and the manual search dialog component has been updated.",
+    "v4_action": "KEEP but verify UI element selectors still match"
   },
   {
     "id": "TC055",
@@ -1944,7 +2106,10 @@
         "type": "assertion",
         "description": "Verify text \"Save\" is visible"
       }
-    ]
+    ],
+    "v4_status": "VALID_WITH_UPDATES_NEEDED",
+    "v4_reason": "Manual metadata search (Epic 3) is done and retained. However, subtitle search integration (Epic 8) adds new search entry points and the manual search dialog component has been updated.",
+    "v4_action": "KEEP but verify UI element selectors still match"
   },
   {
     "id": "TC056",
@@ -1993,7 +2158,10 @@
         "type": "action",
         "description": "Click \"Save\""
       }
-    ]
+    ],
+    "v4_status": "VALID_WITH_UPDATES_NEEDED",
+    "v4_reason": "Manual metadata search (Epic 3) is done and retained. However, subtitle search integration (Epic 8) adds new search entry points and the manual search dialog component has been updated.",
+    "v4_action": "KEEP but verify UI element selectors still match"
   },
   {
     "id": "TC057",
@@ -2026,7 +2194,10 @@
         "type": "assertion",
         "description": "Verify element \"Pattern statistics\" is visible"
       }
-    ]
+    ],
+    "v4_status": "VALID",
+    "v4_reason": "Pattern learning (Epic 3) is done and retained in v4. No significant changes planned.",
+    "v4_action": "KEEP as-is"
   },
   {
     "id": "TC058",
@@ -2055,7 +2226,10 @@
         "type": "assertion",
         "description": "Verify element \"Learned Patterns list\" is visible"
       }
-    ]
+    ],
+    "v4_status": "VALID",
+    "v4_reason": "Pattern learning (Epic 3) is done and retained in v4. No significant changes planned.",
+    "v4_action": "KEEP as-is"
   },
   {
     "id": "TC059",
@@ -2084,7 +2258,10 @@
         "type": "assertion",
         "description": "Verify one of the following is visible within the patterns area: text \"Uses\" or text \"Usage\" or text \"Matched\""
       }
-    ]
+    ],
+    "v4_status": "VALID",
+    "v4_reason": "Pattern learning (Epic 3) is done and retained in v4. No significant changes planned.",
+    "v4_action": "KEEP as-is"
   },
   {
     "id": "TC060",
@@ -2117,7 +2294,10 @@
         "type": "assertion",
         "description": "Verify element \"The deleted learned pattern row\" is not visible"
       }
-    ]
+    ],
+    "v4_status": "VALID",
+    "v4_reason": "Pattern learning (Epic 3) is done and retained in v4. No significant changes planned.",
+    "v4_action": "KEEP as-is"
   },
   {
     "id": "TC061",
@@ -2154,7 +2334,10 @@
         "type": "assertion",
         "description": "Verify element \"A learned pattern row\" is visible"
       }
-    ]
+    ],
+    "v4_status": "VALID",
+    "v4_reason": "Pattern learning (Epic 3) is done and retained in v4. No significant changes planned.",
+    "v4_action": "KEEP as-is"
   },
   {
     "id": "TC062",
@@ -2187,6 +2370,9 @@
         "type": "assertion",
         "description": "Verify element \"Learned Patterns list\" is visible"
       }
-    ]
+    ],
+    "v4_status": "VALID",
+    "v4_reason": "Pattern learning (Epic 3) is done and retained in v4. No significant changes planned.",
+    "v4_action": "KEEP as-is"
   }
 ]
