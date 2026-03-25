@@ -157,11 +157,7 @@
       "Vite 7.0.0",
       "lucide-react 0.562.0"
     ],
-    "backend_stack": [
-      "Go (Gin framework)",
-      "SQLite with WAL mode",
-      "RESTful API + SSE (planned)"
-    ],
+    "backend_stack": ["Go (Gin framework)", "SQLite with WAL mode", "RESTful API + SSE (planned)"],
     "routes": [
       {
         "path": "/",
@@ -249,12 +245,12 @@
           "Navigate pages via pagination"
         ],
         "api_calls": [
-          {"method": "GET", "endpoint": "/api/v1/library"},
-          {"method": "GET", "endpoint": "/api/v1/library/recent"},
-          {"method": "DELETE", "endpoint": "/api/v1/library/movies/:id"},
-          {"method": "DELETE", "endpoint": "/api/v1/library/series/:id"},
-          {"method": "POST", "endpoint": "/api/v1/library/movies/:id/reparse"},
-          {"method": "POST", "endpoint": "/api/v1/library/series/:id/reparse"}
+          { "method": "GET", "endpoint": "/api/v1/library" },
+          { "method": "GET", "endpoint": "/api/v1/library/recent" },
+          { "method": "DELETE", "endpoint": "/api/v1/library/movies/:id" },
+          { "method": "DELETE", "endpoint": "/api/v1/library/series/:id" },
+          { "method": "POST", "endpoint": "/api/v1/library/movies/:id/reparse" },
+          { "method": "POST", "endpoint": "/api/v1/library/series/:id/reparse" }
         ],
         "auth_required": false
       },
@@ -274,8 +270,8 @@
           "See empty state when no subtitles found"
         ],
         "api_calls": [
-          {"method": "GET", "endpoint": "/api/v1/subtitles/search"},
-          {"method": "POST", "endpoint": "/api/v1/subtitles/download"}
+          { "method": "GET", "endpoint": "/api/v1/subtitles/search" },
+          { "method": "POST", "endpoint": "/api/v1/subtitles/download" }
         ],
         "auth_required": false
       },
@@ -299,10 +295,10 @@
           "Close panel to navigate back"
         ],
         "api_calls": [
-          {"method": "GET", "endpoint": "/api/v1/tmdb/movies/:id"},
-          {"method": "GET", "endpoint": "/api/v1/tmdb/tv/:id"},
-          {"method": "GET", "endpoint": "/api/v1/tmdb/movies/:id/credits"},
-          {"method": "GET", "endpoint": "/api/v1/tmdb/tv/:id/credits"}
+          { "method": "GET", "endpoint": "/api/v1/tmdb/movies/:id" },
+          { "method": "GET", "endpoint": "/api/v1/tmdb/tv/:id" },
+          { "method": "GET", "endpoint": "/api/v1/tmdb/movies/:id/credits" },
+          { "method": "GET", "endpoint": "/api/v1/tmdb/tv/:id/credits" }
         ],
         "auth_required": false
       },
@@ -323,8 +319,8 @@
           "Click result to view media detail"
         ],
         "api_calls": [
-          {"method": "GET", "endpoint": "/api/v1/tmdb/search/movies"},
-          {"method": "GET", "endpoint": "/api/v1/tmdb/search/tv"}
+          { "method": "GET", "endpoint": "/api/v1/tmdb/search/movies" },
+          { "method": "GET", "endpoint": "/api/v1/tmdb/search/tv" }
         ],
         "auth_required": false
       },
@@ -345,8 +341,8 @@
           "See empty state when no downloads match filter"
         ],
         "api_calls": [
-          {"method": "GET", "endpoint": "/api/v1/downloads"},
-          {"method": "GET", "endpoint": "/api/v1/downloads/counts"}
+          { "method": "GET", "endpoint": "/api/v1/downloads" },
+          { "method": "GET", "endpoint": "/api/v1/downloads/counts" }
         ],
         "auth_required": false
       },
@@ -367,9 +363,9 @@
           "Click Save to persist configuration"
         ],
         "api_calls": [
-          {"method": "GET", "endpoint": "/api/v1/settings/qbittorrent"},
-          {"method": "POST", "endpoint": "/api/v1/settings/qbittorrent/test"},
-          {"method": "PUT", "endpoint": "/api/v1/settings/qbittorrent"}
+          { "method": "GET", "endpoint": "/api/v1/settings/qbittorrent" },
+          { "method": "POST", "endpoint": "/api/v1/settings/qbittorrent/test" },
+          { "method": "PUT", "endpoint": "/api/v1/settings/qbittorrent" }
         ],
         "auth_required": false
       },
@@ -390,8 +386,8 @@
           "Filter history by event type"
         ],
         "api_calls": [
-          {"method": "GET", "endpoint": "/api/v1/health/services"},
-          {"method": "GET", "endpoint": "/api/v1/health/services/qbittorrent/history"}
+          { "method": "GET", "endpoint": "/api/v1/health/services" },
+          { "method": "GET", "endpoint": "/api/v1/health/services/qbittorrent/history" }
         ],
         "auth_required": false
       },
@@ -412,8 +408,8 @@
           "Select and apply correct metadata"
         ],
         "api_calls": [
-          {"method": "POST", "endpoint": "/api/v1/metadata/manual-search"},
-          {"method": "POST", "endpoint": "/api/v1/metadata/apply"}
+          { "method": "POST", "endpoint": "/api/v1/metadata/manual-search" },
+          { "method": "POST", "endpoint": "/api/v1/metadata/apply" }
         ],
         "auth_required": false
       },
@@ -434,10 +430,10 @@
           "See auto-apply notification when pattern is reused"
         ],
         "api_calls": [
-          {"method": "POST", "endpoint": "/api/v1/learning/patterns"},
-          {"method": "GET", "endpoint": "/api/v1/learning/patterns"},
-          {"method": "DELETE", "endpoint": "/api/v1/learning/patterns/:id"},
-          {"method": "GET", "endpoint": "/api/v1/learning/stats"}
+          { "method": "POST", "endpoint": "/api/v1/learning/patterns" },
+          { "method": "GET", "endpoint": "/api/v1/learning/patterns" },
+          { "method": "DELETE", "endpoint": "/api/v1/learning/patterns/:id" },
+          { "method": "GET", "endpoint": "/api/v1/learning/stats" }
         ],
         "auth_required": false
       }

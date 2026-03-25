@@ -51,7 +51,7 @@ describe('subtitleService', () => {
     it('throws on API error', async () => {
       mockFetch.mockResolvedValueOnce(mockErrorResponse(400, 'Invalid request'));
       await expect(
-        subtitleService.searchSubtitles({ media_id: '1', media_type: 'movie' }),
+        subtitleService.searchSubtitles({ media_id: '1', media_type: 'movie' })
       ).rejects.toThrow('Invalid request');
     });
   });

@@ -43,6 +43,13 @@ export function MediaDetailPanel({
   onExport,
   onDelete,
 }: MediaDetailPanelProps) {
+  // Hooks must be called before any early return (rules-of-hooks)
+  const queryClient = useQueryClient();
+  const [subtitleDialogOpen, setSubtitleDialogOpen] = useState(false);
+  const handleSubtitleDownloadSuccess = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: libraryKeys.all });
+  }, [queryClient]);
+
   if (isLoading || !details) {
     return <MediaDetailSkeleton />;
   }
@@ -65,15 +72,8 @@ export function MediaDetailPanel({
 
   const hasContextMenu = onReparse && onExport && onDelete;
 
-  // Subtitle search dialog state (Story 8-8 Task 10)
-  const queryClient = useQueryClient();
-  const [subtitleDialogOpen, setSubtitleDialogOpen] = useState(false);
-  const productionCountryStr = details.production_countries
-    ?.map((c) => c.iso_3166_1)
-    .join(',') ?? '';
-  const handleSubtitleDownloadSuccess = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: libraryKeys.all });
-  }, [queryClient]);
+  const productionCountryStr =
+    details.production_countries?.map((c) => c.iso_3166_1).join(',') ?? '';
 
   return (
     <div className="flex flex-col" data-testid="media-detail-panel">

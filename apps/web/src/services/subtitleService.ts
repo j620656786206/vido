@@ -1,19 +1,13 @@
 import type { ApiResponse } from '../types/tmdb';
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
 
-async function fetchApi<T>(
-  endpoint: string,
-  options?: RequestInit,
-): Promise<T> {
+async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(
-      errorData.error?.message || `API request failed: ${response.status}`,
-    );
+    throw new Error(errorData.error?.message || `API request failed: ${response.status}`);
   }
 
   const data: ApiResponse<T> = await response.json();
@@ -86,9 +80,7 @@ export interface SubtitlePreviewResult {
 // --- Service ---
 
 export const subtitleService = {
-  async searchSubtitles(
-    params: SubtitleSearchParams,
-  ): Promise<SubtitleSearchResult[]> {
+  async searchSubtitles(params: SubtitleSearchParams): Promise<SubtitleSearchResult[]> {
     return fetchApi<SubtitleSearchResult[]>('/subtitles/search', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -96,9 +88,7 @@ export const subtitleService = {
     });
   },
 
-  async downloadSubtitle(
-    params: SubtitleDownloadParams,
-  ): Promise<SubtitleDownloadResult> {
+  async downloadSubtitle(params: SubtitleDownloadParams): Promise<SubtitleDownloadResult> {
     return fetchApi<SubtitleDownloadResult>('/subtitles/download', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -106,9 +96,7 @@ export const subtitleService = {
     });
   },
 
-  async previewSubtitle(
-    params: SubtitlePreviewParams,
-  ): Promise<SubtitlePreviewResult> {
+  async previewSubtitle(params: SubtitlePreviewParams): Promise<SubtitlePreviewResult> {
     return fetchApi<SubtitlePreviewResult>('/subtitles/preview', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

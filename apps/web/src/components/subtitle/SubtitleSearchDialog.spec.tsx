@@ -47,7 +47,7 @@ function renderDialog(props?: Partial<Parameters<typeof SubtitleSearchDialog>[0]
   return render(
     <QueryClientProvider client={queryClient}>
       <SubtitleSearchDialog {...defaultProps} {...props} />
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
 }
 
@@ -139,7 +139,13 @@ describe('SubtitleSearchDialog — Results Table', () => {
       resolution: '1080p',
       format: 'SRT',
       score: 0.85,
-      score_breakdown: { language: 0.9, resolution: 0.8, source_trust: 0.7, group: 0.6, downloads: 0.5 },
+      score_breakdown: {
+        language: 0.9,
+        resolution: 0.8,
+        source_trust: 0.7,
+        group: 0.6,
+        downloads: 0.5,
+      },
     },
     {
       id: 'sub-2',
@@ -152,7 +158,13 @@ describe('SubtitleSearchDialog — Results Table', () => {
       resolution: '720p',
       format: 'ASS',
       score: 0.45,
-      score_breakdown: { language: 0.5, resolution: 0.4, source_trust: 0.3, group: 0.2, downloads: 0.1 },
+      score_breakdown: {
+        language: 0.5,
+        resolution: 0.4,
+        source_trust: 0.3,
+        group: 0.2,
+        downloads: 0.1,
+      },
     },
   ];
 

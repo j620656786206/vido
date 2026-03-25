@@ -8,8 +8,7 @@ import {
   type SubtitlePreviewResult,
 } from '../services/subtitleService';
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
 
 export type SortField = 'score' | 'language' | 'source' | 'downloads' | 'group';
 export type SortOrder = 'asc' | 'desc';
@@ -30,9 +29,7 @@ export function useSubtitleSearch() {
   // Per-row download tracking (M2 fix)
   const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set());
   // Per-row preview tracking (M3 fix)
-  const [previewDataMap, setPreviewDataMap] = useState<
-    Record<string, SubtitlePreviewResult>
-  >({});
+  const [previewDataMap, setPreviewDataMap] = useState<Record<string, SubtitlePreviewResult>>({});
   const [previewingId, setPreviewingId] = useState<string | null>(null);
   // Per-row download error tracking (M1 fix — CR pass 2)
   const [downloadErrorMap, setDownloadErrorMap] = useState<Record<string, string>>({});
@@ -81,8 +78,7 @@ export function useSubtitleSearch() {
 
   // Search mutation
   const searchMutation = useMutation({
-    mutationFn: (params: SubtitleSearchParams) =>
-      subtitleService.searchSubtitles(params),
+    mutationFn: (params: SubtitleSearchParams) => subtitleService.searchSubtitles(params),
     onSuccess: (data) => {
       setResults(data || []);
       setDownloadedIds(new Set());
@@ -94,8 +90,7 @@ export function useSubtitleSearch() {
 
   // Download mutation (per-row tracking)
   const downloadMutation = useMutation({
-    mutationFn: (params: SubtitleDownloadParams) =>
-      subtitleService.downloadSubtitle(params),
+    mutationFn: (params: SubtitleDownloadParams) => subtitleService.downloadSubtitle(params),
     onMutate: (variables) => {
       setDownloadingIds((prev) => new Set(prev).add(variables.subtitle_id));
     },
@@ -178,7 +173,7 @@ export function useSubtitleSearch() {
         setSortOrder('desc');
       }
     },
-    [sortBy],
+    [sortBy]
   );
 
   return {

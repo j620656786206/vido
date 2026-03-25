@@ -4,6 +4,23 @@ import { cn } from '../../lib/utils';
 import { useSubtitleSearch, type SortField } from '../../hooks/useSubtitleSearch';
 import type { SubtitleSearchResult } from '../../services/subtitleService';
 
+function SortIcon({
+  field,
+  sortBy,
+  sortOrder,
+}: {
+  field: SortField;
+  sortBy: SortField | null;
+  sortOrder: 'asc' | 'desc';
+}) {
+  if (sortBy !== field) return null;
+  return sortOrder === 'desc' ? (
+    <ChevronDown className="inline h-3 w-3" />
+  ) : (
+    <ChevronUp className="inline h-3 w-3" />
+  );
+}
+
 interface SubtitleSearchDialogProps {
   mediaId: string;
   mediaType: 'movie' | 'series';
@@ -34,9 +51,7 @@ export function SubtitleSearchDialog({
   onDownloadSuccess,
 }: SubtitleSearchDialogProps) {
   const [query, setQuery] = useState(mediaTitle);
-  const [selectedProviders, setSelectedProviders] = useState<string[]>(
-    PROVIDERS.map((p) => p.id),
-  );
+  const [selectedProviders, setSelectedProviders] = useState<string[]>(PROVIDERS.map((p) => p.id));
   const [previewOpen, setPreviewOpen] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -117,17 +132,23 @@ export function SubtitleSearchDialog({
             setToast('字幕下載成功');
             onDownloadSuccess?.();
           },
-        },
+        }
       );
     },
-    [download, mediaId, mediaType, mediaFilePath, mediaResolution, convertToTraditional, onDownloadSuccess],
+    [
+      download,
+      mediaId,
+      mediaType,
+      mediaFilePath,
+      mediaResolution,
+      convertToTraditional,
+      onDownloadSuccess,
+    ]
   );
 
   const toggleProvider = useCallback((providerId: string) => {
     setSelectedProviders((prev) =>
-      prev.includes(providerId)
-        ? prev.filter((p) => p !== providerId)
-        : [...prev, providerId],
+      prev.includes(providerId) ? prev.filter((p) => p !== providerId) : [...prev, providerId]
     );
   }, []);
 
@@ -135,13 +156,6 @@ export function SubtitleSearchDialog({
     if (score > 0.7) return 'text-green-400 bg-green-400/10 border-green-400/40';
     if (score > 0.4) return 'text-yellow-400 bg-yellow-400/10 border-yellow-400/40';
     return 'text-red-400 bg-red-400/10 border-red-400/40';
-  };
-
-  const SortIcon = ({ field }: { field: SortField }) => {
-    if (sortBy !== field) return null;
-    return sortOrder === 'desc'
-      ? <ChevronDown className="inline h-3 w-3" />
-      : <ChevronUp className="inline h-3 w-3" />;
   };
 
   if (!open) return null;
@@ -227,13 +241,13 @@ export function SubtitleSearchDialog({
                 onClick={() => setConvertToTraditional((v) => !v)}
                 className={cn(
                   'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
-                  convertToTraditional ? 'bg-blue-600' : 'bg-slate-600',
+                  convertToTraditional ? 'bg-blue-600' : 'bg-slate-600'
                 )}
               >
                 <span
                   className={cn(
                     'inline-block h-4 w-4 rounded-full bg-white transition-transform',
-                    convertToTraditional ? 'translate-x-6' : 'translate-x-1',
+                    convertToTraditional ? 'translate-x-6' : 'translate-x-1'
                   )}
                 />
               </button>
@@ -250,9 +264,7 @@ export function SubtitleSearchDialog({
           {/* Results Table */}
           {resultCount > 0 && (
             <div>
-              <p className="mb-2 text-sm text-slate-400">
-                找到 {resultCount} 個結果
-              </p>
+              <p className="mb-2 text-sm text-slate-400">找到 {resultCount} 個結果</p>
               <div className="overflow-x-auto rounded-lg border border-slate-700">
                 <table className="w-full text-sm" data-testid="subtitle-results-table">
                   <thead>
@@ -261,13 +273,13 @@ export function SubtitleSearchDialog({
                         className="cursor-pointer px-3 py-2 text-left text-xs font-medium text-slate-400 hover:text-white"
                         onClick={() => toggleSort('source')}
                       >
-                        來源 <SortIcon field="source" />
+                        來源 <SortIcon sortBy={sortBy} sortOrder={sortOrder} field="source" />
                       </th>
                       <th
                         className="cursor-pointer px-3 py-2 text-left text-xs font-medium text-slate-400 hover:text-white"
                         onClick={() => toggleSort('language')}
                       >
-                        語言 <SortIcon field="language" />
+                        語言 <SortIcon sortBy={sortBy} sortOrder={sortOrder} field="language" />
                       </th>
                       <th className="px-3 py-2 text-left text-xs font-medium text-slate-400">
                         字幕名稱
@@ -279,13 +291,13 @@ export function SubtitleSearchDialog({
                         className="cursor-pointer px-3 py-2 text-center text-xs font-medium text-slate-400 hover:text-white"
                         onClick={() => toggleSort('score')}
                       >
-                        評分 <SortIcon field="score" />
+                        評分 <SortIcon sortBy={sortBy} sortOrder={sortOrder} field="score" />
                       </th>
                       <th
                         className="cursor-pointer px-3 py-2 text-right text-xs font-medium text-slate-400 hover:text-white"
                         onClick={() => toggleSort('downloads')}
                       >
-                        下載數 <SortIcon field="downloads" />
+                        下載數 <SortIcon sortBy={sortBy} sortOrder={sortOrder} field="downloads" />
                       </th>
                       <th className="px-3 py-2 text-right text-xs font-medium text-slate-400">
                         操作
@@ -299,9 +311,7 @@ export function SubtitleSearchDialog({
                         className="border-b border-slate-700/50 hover:bg-slate-700/30"
                         data-testid={`subtitle-row-${result.id}`}
                       >
-                        <td className="px-3 py-2 font-medium text-slate-200">
-                          {result.source}
-                        </td>
+                        <td className="px-3 py-2 font-medium text-slate-200">{result.source}</td>
                         <td className="px-3 py-2 text-slate-300">{result.language}</td>
                         <td
                           className="max-w-[200px] truncate px-3 py-2 text-slate-300"
@@ -316,15 +326,13 @@ export function SubtitleSearchDialog({
                           <span
                             className={cn(
                               'inline-flex items-center justify-center rounded border px-2 py-0.5 text-xs font-medium',
-                              scoreColor(result.score),
+                              scoreColor(result.score)
                             )}
                           >
                             {(result.score * 100).toFixed(0)}%
                           </span>
                         </td>
-                        <td className="px-3 py-2 text-right text-slate-400">
-                          {result.downloads}
-                        </td>
+                        <td className="px-3 py-2 text-right text-slate-400">{result.downloads}</td>
                         <td className="px-3 py-2 text-right">
                           <div className="flex items-center justify-end gap-1">
                             {/* Preview */}
@@ -354,7 +362,9 @@ export function SubtitleSearchDialog({
                               {/* Preview Popover */}
                               {previewOpen === result.id && previewDataMap[result.id] && (
                                 <div className="absolute right-0 top-8 z-10 w-80 rounded-lg border border-slate-600 bg-slate-800 p-3 shadow-xl">
-                                  <p className="mb-2 text-xs font-medium text-slate-300">字幕預覽</p>
+                                  <p className="mb-2 text-xs font-medium text-slate-300">
+                                    字幕預覽
+                                  </p>
                                   {previewDataMap[result.id].lines.map((line, i) => (
                                     <p key={i} className="font-mono text-xs text-slate-400">
                                       {line}
