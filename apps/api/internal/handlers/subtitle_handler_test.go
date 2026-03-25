@@ -487,6 +487,191 @@ func TestSubtitleHandler_Preview_DownloadFailure(t *testing.T) {
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }
 
+// --- Acceptance Tests: Coverage Gaps ---
+
+// AC #2: Verify search returns scored results with all expected DTO fields
+func TestSubtitleHandler_Search_ResponseFields(t *testing.T) {
+	_, router := setupSubtitleHandler(t)
+
+	body, _ := json.Marshal(SubtitleSearchRequest{
+		MediaID:   "movie-1",
+		MediaType: "movie",
+		Query:     "Test",
+	})
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/subtitles/search", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var rawResp map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &rawResp))
+	var items []map[string]interface{}
+	require.NoError(t, json.Unmarshal(rawResp["data"], &items))
+	require.NotEmpty(t, items)
+
+	item := items[0]
+	// AC #2: Scored results must include all DTO fields (snake_case)
+	for _, field := range []string{"id", "source", "filename", "language", "download_url", "downloads", "group", "resolution", "format", "score", "score_breakdown"} {
+		assert.Contains(t, item, field, "missing field: %s", field)
+	}
+	// score_breakdown must have all sub-fields
+	sb := item["score_breakdown"].(map[string]interface{})
+	for _, field := range []string{"language", "resolution", "source_trust", "group", "downloads"} {
+		assert.Contains(t, sb, field, "missing score_breakdown field: %s", field)
+	}
+}
+
+// AC #4: Preview returns exactly first 10 non-empty lines
+func TestSubtitleHandler_Preview_ReturnsFirst10Lines(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	// Create SRT content with more than 10 non-empty lines
+	srtContent := "1\n00:00:01,000 --> 00:00:03,000\nLine A\n\n2\n00:00:04,000 --> 00:00:06,000\nLine B\n\n3\n00:00:07,000 --> 00:00:09,000\nLine C\n\n4\n00:00:10,000 --> 00:00:12,000\nLine D\n\n5\n00:00:13,000 --> 00:00:15,000\nLine E\n\n6\n00:00:16,000 --> 00:00:18,000\nLine F\n"
+
+	prov := &handlerMockProvider{
+		name:         "assrt",
+		downloadData: []byte(srtContent),
+	}
+	scorer := subtitle.NewScorer(subtitle.NewDefaultScorerConfig())
+	placer := subtitle.NewPlacer(subtitle.DefaultPlacerConfig())
+	handler := NewSubtitleHandler(
+		[]providers.SubtitleProvider{prov},
+		scorer, nil, placer, nil, nil, nil,
+	)
+	router := gin.New()
+	api := router.Group("/api/v1")
+	handler.RegisterRoutes(api)
+
+	body, _ := json.Marshal(SubtitlePreviewRequest{
+		SubtitleID: "1",
+		Provider:   "assrt",
+	})
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/subtitles/preview", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	data := resp["data"].(map[string]interface{})
+	lines := data["lines"].([]interface{})
+	// AC #4: exactly 10 non-empty lines
+	assert.Len(t, lines, 10)
+	assert.Contains(t, data, "language")
+}
+
+// AC #8: Download response contains all required fields with values
+func TestSubtitleHandler_Download_ResponseFields(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	tmpDir := t.TempDir()
+	mediaPath := tmpDir + "/movie.mkv"
+	os.WriteFile(mediaPath, []byte("fake"), 0644)
+
+	prov := &handlerMockProvider{
+		name:         "assrt",
+		downloadData: []byte("1\n00:00:01,000 --> 00:00:03,000\n字幕測試\n"),
+	}
+
+	scorer := subtitle.NewScorer(subtitle.NewDefaultScorerConfig())
+	placer := subtitle.NewPlacer(subtitle.DefaultPlacerConfig())
+	handler := NewSubtitleHandler(
+		[]providers.SubtitleProvider{prov},
+		scorer, nil, placer, nil, nil, nil,
+	)
+	router := gin.New()
+	api := router.Group("/api/v1")
+	handler.RegisterRoutes(api)
+
+	body, _ := json.Marshal(SubtitleDownloadRequest{
+		MediaID:       "movie-1",
+		MediaType:     "movie",
+		MediaFilePath: mediaPath,
+		SubtitleID:    "sub-1",
+		Provider:      "assrt",
+	})
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/subtitles/download", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	data := resp["data"].(map[string]interface{})
+	// AC #8: response must contain all 3 fields
+	assert.Contains(t, data, "subtitle_path")
+	assert.Contains(t, data, "language")
+	assert.Contains(t, data, "score")
+	// language should be detected and non-empty
+	assert.NotEmpty(t, data["language"])
+}
+
+// AC #2: Multiple providers searched (verify both contribute results)
+func TestSubtitleHandler_Search_MultipleProviders(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	prov1 := &handlerMockProvider{
+		name: "assrt",
+		searchResult: []providers.SubtitleResult{
+			{ID: "a1", Source: "assrt", Language: "zh-Hant", Filename: "a.srt"},
+		},
+	}
+	prov2 := &handlerMockProvider{
+		name: "zimuku",
+		searchResult: []providers.SubtitleResult{
+			{ID: "z1", Source: "zimuku", Language: "zh-Hant", Filename: "z.srt"},
+		},
+	}
+
+	scorer := subtitle.NewScorer(subtitle.NewDefaultScorerConfig())
+	placer := subtitle.NewPlacer(subtitle.DefaultPlacerConfig())
+	handler := NewSubtitleHandler(
+		[]providers.SubtitleProvider{prov1, prov2},
+		scorer, nil, placer, nil, nil, nil,
+	)
+	router := gin.New()
+	api := router.Group("/api/v1")
+	handler.RegisterRoutes(api)
+
+	// Search without provider filter = all providers
+	body, _ := json.Marshal(SubtitleSearchRequest{
+		MediaID:   "1",
+		MediaType: "movie",
+		Query:     "test",
+	})
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/subtitles/search", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var rawResp map[string]json.RawMessage
+	json.Unmarshal(w.Body.Bytes(), &rawResp)
+	var items []map[string]interface{}
+	json.Unmarshal(rawResp["data"], &items)
+	// AC #2: Both providers contribute results (at least 2)
+	assert.GreaterOrEqual(t, len(items), 2, "Expected results from both providers")
+
+	// Verify both sources are represented
+	sources := make(map[string]bool)
+	for _, item := range items {
+		sources[item["source"].(string)] = true
+	}
+	assert.True(t, sources["assrt"], "Missing results from assrt provider")
+	assert.True(t, sources["zimuku"], "Missing results from zimuku provider")
+}
+
 // --- Helper function tests ---
 
 func TestExtractFirstLines(t *testing.T) {
