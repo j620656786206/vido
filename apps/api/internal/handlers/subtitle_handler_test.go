@@ -9,6 +9,7 @@ import (
 	"os"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -685,4 +686,136 @@ func TestExtractFirstLines(t *testing.T) {
 func TestExtractFirstLines_Empty(t *testing.T) {
 	lines := extractFirstLines([]byte{}, 10)
 	assert.Empty(t, lines)
+}
+
+// --- Batch Handler Tests (Story 8-9) ---
+
+func setupBatchHandler(t *testing.T) (*SubtitleHandler, *gin.Engine) {
+	t.Helper()
+	gin.SetMode(gin.TestMode)
+
+	prov := &handlerMockProvider{
+		name:         "assrt",
+		searchResult: []providers.SubtitleResult{{ID: "1", Source: "assrt", Language: "zh-Hant"}},
+		downloadData: []byte("1\n00:00:01,000 --> 00:00:03,000\n測試\n"),
+	}
+
+	scorer := subtitle.NewScorer(subtitle.NewDefaultScorerConfig())
+	placer := subtitle.NewPlacer(subtitle.DefaultPlacerConfig())
+	handler := NewSubtitleHandler(
+		[]providers.SubtitleProvider{prov},
+		scorer, nil, placer, nil, nil, nil,
+	)
+
+	// Wire batch processor with empty collector (no items)
+	collector := &emptyBatchCollector{}
+	bp := subtitle.NewBatchProcessor(
+		subtitle.NewEngine([]providers.SubtitleProvider{prov}, scorer, nil, nil, nil, &mockStatusUpdater{}, &mockStatusUpdater{}),
+		nil, collector, subtitle.BatchConfig{DelayBetweenItems: 1 * time.Millisecond},
+	)
+	handler.SetBatchProcessor(bp)
+
+	router := gin.New()
+	api := router.Group("/api/v1")
+	handler.RegisterRoutes(api)
+
+	return handler, router
+}
+
+// emptyBatchCollector returns no items.
+type emptyBatchCollector struct{}
+
+func (e *emptyBatchCollector) CollectMoviesNeedingSubtitles(_ context.Context) ([]subtitle.BatchItem, error) {
+	return nil, nil
+}
+func (e *emptyBatchCollector) CollectSeriesNeedingSubtitles(_ context.Context) ([]subtitle.BatchItem, error) {
+	return nil, nil
+}
+
+// AC #4: POST /batch returns 202 with batch_id + total_items
+func TestSubtitleHandler_StartBatch_Returns202(t *testing.T) {
+	_, router := setupBatchHandler(t)
+
+	body, _ := json.Marshal(BatchStartRequest{
+		Scope: "library",
+	})
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/subtitles/batch", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, 202, w.Code)
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	assert.True(t, resp["success"].(bool))
+	data := resp["data"].(map[string]interface{})
+	assert.Contains(t, data, "batch_id")
+	assert.Contains(t, data, "total_items")
+}
+
+// AC #4: Invalid scope returns 400
+func TestSubtitleHandler_StartBatch_InvalidScope(t *testing.T) {
+	_, router := setupBatchHandler(t)
+
+	body, _ := json.Marshal(map[string]string{"scope": "invalid"})
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/subtitles/batch", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+// AC #4: Season scope requires season_id
+func TestSubtitleHandler_StartBatch_SeasonRequiresID(t *testing.T) {
+	_, router := setupBatchHandler(t)
+
+	body, _ := json.Marshal(BatchStartRequest{Scope: "season"})
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/subtitles/batch", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+// GET /batch/status returns running:false when no batch
+func TestSubtitleHandler_GetBatchStatus_Idle(t *testing.T) {
+	_, router := setupBatchHandler(t)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/subtitles/batch/status", nil)
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	data := resp["data"].(map[string]interface{})
+	assert.Equal(t, false, data["running"])
+}
+
+// No batch processor returns error
+func TestSubtitleHandler_StartBatch_NoBatchProcessor(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	handler := NewSubtitleHandler(nil, nil, nil, nil, nil, nil, nil)
+	// Don't set batch processor
+
+	router := gin.New()
+	api := router.Group("/api/v1")
+	handler.RegisterRoutes(api)
+
+	body, _ := json.Marshal(BatchStartRequest{Scope: "library"})
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/subtitles/batch", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }

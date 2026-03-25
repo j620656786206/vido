@@ -60,8 +60,8 @@ type FailedItem struct {
 	Error     string `json:"error"`
 }
 
-// batchItem is an internal representation of a media item to process.
-type batchItem struct {
+// BatchItem is a media item to process in a batch.
+type BatchItem struct {
 	MediaID            string
 	MediaType          string
 	MediaFilePath      string
@@ -85,8 +85,8 @@ func DefaultBatchConfig() BatchConfig {
 
 // BatchItemCollector defines the interface for collecting items needing subtitles.
 type BatchItemCollector interface {
-	CollectMoviesNeedingSubtitles(ctx context.Context) ([]batchItem, error)
-	CollectSeriesNeedingSubtitles(ctx context.Context) ([]batchItem, error)
+	CollectMoviesNeedingSubtitles(ctx context.Context) ([]BatchItem, error)
+	CollectSeriesNeedingSubtitles(ctx context.Context) ([]BatchItem, error)
 }
 
 // BatchProcessor manages batch subtitle processing with concurrency control.
@@ -174,7 +174,7 @@ func (bp *BatchProcessor) Start(ctx context.Context, req BatchRequest) (string, 
 }
 
 // process runs the batch sequentially with delays.
-func (bp *BatchProcessor) process(ctx context.Context, batchID string, items []batchItem) {
+func (bp *BatchProcessor) process(ctx context.Context, batchID string, items []BatchItem) {
 	startTime := time.Now()
 	var (
 		successCount int
@@ -278,7 +278,7 @@ func (bp *BatchProcessor) process(ctx context.Context, batchID string, items []b
 }
 
 // collectItems gathers media items based on the batch scope.
-func (bp *BatchProcessor) collectItems(ctx context.Context, req BatchRequest) ([]batchItem, error) {
+func (bp *BatchProcessor) collectItems(ctx context.Context, req BatchRequest) ([]BatchItem, error) {
 	switch req.Scope {
 	case ScopeLibrary:
 		return bp.collectLibraryItems(ctx)
@@ -295,8 +295,8 @@ func (bp *BatchProcessor) collectItems(ctx context.Context, req BatchRequest) ([
 }
 
 // collectLibraryItems gathers all movies and series needing subtitle search.
-func (bp *BatchProcessor) collectLibraryItems(ctx context.Context) ([]batchItem, error) {
-	var items []batchItem
+func (bp *BatchProcessor) collectLibraryItems(ctx context.Context) ([]BatchItem, error) {
+	var items []BatchItem
 
 	movies, err := bp.collect.CollectMoviesNeedingSubtitles(ctx)
 	if err != nil {
@@ -381,8 +381,8 @@ func NewRepoCollector(movieRepo MovieSubtitleFinder, seriesRepo SeriesSubtitleFi
 }
 
 // CollectMoviesNeedingSubtitles returns movies with not_searched or not_found status.
-func (rc *RepoCollector) CollectMoviesNeedingSubtitles(ctx context.Context) ([]batchItem, error) {
-	var items []batchItem
+func (rc *RepoCollector) CollectMoviesNeedingSubtitles(ctx context.Context) ([]BatchItem, error) {
+	var items []BatchItem
 
 	for _, status := range []models.SubtitleStatus{models.SubtitleStatusNotSearched, models.SubtitleStatusNotFound} {
 		movies, err := rc.movieRepo.FindBySubtitleStatus(ctx, status)
@@ -404,7 +404,7 @@ func (rc *RepoCollector) CollectMoviesNeedingSubtitles(ctx context.Context) ([]b
 				filePath = m.FilePath.String
 			}
 
-			items = append(items, batchItem{
+			items = append(items, BatchItem{
 				MediaID:           m.ID,
 				MediaType:         "movie",
 				MediaFilePath:     filePath,
@@ -419,8 +419,8 @@ func (rc *RepoCollector) CollectMoviesNeedingSubtitles(ctx context.Context) ([]b
 
 // CollectSeriesNeedingSubtitles returns series with not_searched or not_found status.
 // Note: Series model does not have production_countries — CN policy defaults to ConvertAuto.
-func (rc *RepoCollector) CollectSeriesNeedingSubtitles(ctx context.Context) ([]batchItem, error) {
-	var items []batchItem
+func (rc *RepoCollector) CollectSeriesNeedingSubtitles(ctx context.Context) ([]BatchItem, error) {
+	var items []BatchItem
 
 	for _, status := range []models.SubtitleStatus{models.SubtitleStatusNotSearched, models.SubtitleStatusNotFound} {
 		seriesList, err := rc.seriesRepo.FindBySubtitleStatus(ctx, status)
@@ -433,7 +433,7 @@ func (rc *RepoCollector) CollectSeriesNeedingSubtitles(ctx context.Context) ([]b
 				filePath = s.FilePath.String
 			}
 
-			items = append(items, batchItem{
+			items = append(items, BatchItem{
 				MediaID:       s.ID,
 				MediaType:     "series",
 				MediaFilePath: filePath,

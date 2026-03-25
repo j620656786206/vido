@@ -16,21 +16,21 @@ import (
 // --- Mock Collector ---
 
 type mockCollector struct {
-	movies []batchItem
-	series []batchItem
+	movies []BatchItem
+	series []BatchItem
 	err    error
 }
 
-func (m *mockCollector) CollectMoviesNeedingSubtitles(_ context.Context) ([]batchItem, error) {
+func (m *mockCollector) CollectMoviesNeedingSubtitles(_ context.Context) ([]BatchItem, error) {
 	return m.movies, m.err
 }
-func (m *mockCollector) CollectSeriesNeedingSubtitles(_ context.Context) ([]batchItem, error) {
+func (m *mockCollector) CollectSeriesNeedingSubtitles(_ context.Context) ([]BatchItem, error) {
 	return m.series, m.err
 }
 
 // --- Helper: create a batch processor with mock dependencies ---
 
-func newTestBatchProcessor(t *testing.T, items []batchItem) *BatchProcessor {
+func newTestBatchProcessor(t *testing.T, items []BatchItem) *BatchProcessor {
 	t.Helper()
 
 	prov := &mockProvider{
@@ -67,7 +67,7 @@ func TestBatchProcessor_InitialState(t *testing.T) {
 
 // AC #4: Start returns batchId and totalItems
 func TestBatchProcessor_Start_ReturnsIdAndCount(t *testing.T) {
-	items := []batchItem{
+	items := []BatchItem{
 		{MediaID: "m1", MediaType: "movie", Title: "Movie 1"},
 		{MediaID: "m2", MediaType: "movie", Title: "Movie 2"},
 	}
@@ -96,7 +96,7 @@ func TestBatchProcessor_Start_EmptyItems(t *testing.T) {
 // AC #7: Second batch returns error
 func TestBatchProcessor_ConcurrencyGuard(t *testing.T) {
 	// Create items with slow processing
-	items := []batchItem{
+	items := []BatchItem{
 		{MediaID: "m1", MediaType: "movie", Title: "Movie 1"},
 		{MediaID: "m2", MediaType: "movie", Title: "Movie 2"},
 		{MediaID: "m3", MediaType: "movie", Title: "Movie 3"},
@@ -138,7 +138,7 @@ func TestBatchProcessor_ConcurrencyGuard(t *testing.T) {
 
 // AC #6: Individual item failure doesn't abort batch
 func TestBatchProcessor_ContinuesOnFailure(t *testing.T) {
-	items := []batchItem{
+	items := []BatchItem{
 		{MediaID: "m1", MediaType: "movie", Title: "Movie 1"},
 		{MediaID: "m2", MediaType: "movie", Title: "Movie 2"},
 	}
@@ -172,9 +172,9 @@ func TestBatchProcessor_ContinuesOnFailure(t *testing.T) {
 
 // Context cancellation
 func TestBatchProcessor_Cancellation(t *testing.T) {
-	items := make([]batchItem, 10)
+	items := make([]BatchItem, 10)
 	for i := range items {
-		items[i] = batchItem{MediaID: fmt.Sprintf("m%d", i), MediaType: "movie", Title: fmt.Sprintf("Movie %d", i)}
+		items[i] = BatchItem{MediaID: fmt.Sprintf("m%d", i), MediaType: "movie", Title: fmt.Sprintf("Movie %d", i)}
 	}
 
 	prov := &mockProvider{
@@ -228,7 +228,7 @@ func TestBatchProcessor_SeasonScopeRequiresID(t *testing.T) {
 
 // SSE events are broadcast
 func TestBatchProcessor_BroadcastsSSE(t *testing.T) {
-	items := []batchItem{
+	items := []BatchItem{
 		{MediaID: "m1", MediaType: "movie", Title: "Movie 1"},
 	}
 
@@ -260,7 +260,7 @@ done:
 
 // AC #9: CN content passes productionCountry to engine
 func TestBatchProcessor_CNContentPolicy(t *testing.T) {
-	items := []batchItem{
+	items := []BatchItem{
 		{MediaID: "m1", MediaType: "movie", Title: "CN Movie", ProductionCountry: "CN"},
 		{MediaID: "m2", MediaType: "movie", Title: "US Movie", ProductionCountry: "US"},
 	}
