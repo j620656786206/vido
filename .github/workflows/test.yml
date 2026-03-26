@@ -59,6 +59,10 @@ jobs:
       - name: Check formatting
         run: pnpm run format:check
 
+      - name: Verify git hook permissions
+        run: |
+          test -x .husky/pre-commit || { echo "ERROR: .husky/pre-commit is not executable"; exit 1; }
+
   # =============================================================================
   # Stage 2: Unit Tests (Vitest)
   # =============================================================================
