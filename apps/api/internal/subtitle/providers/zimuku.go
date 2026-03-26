@@ -146,7 +146,7 @@ func (p *ZimukuProvider) Search(ctx context.Context, query SubtitleQuery) ([]Sub
 	}
 
 	if err := p.rateLimiter.Wait(ctx); err != nil {
-		return nil, fmt.Errorf("zimuku rate limiter: %w", err)
+		return nil, fmt.Errorf("zimuku: rate limiter: %w", err)
 	}
 
 	if err := p.randomDelay(ctx); err != nil {
@@ -291,7 +291,7 @@ func (p *ZimukuProvider) Download(ctx context.Context, id string) ([]byte, error
 
 	// Step 1: Fetch detail page
 	if err := p.rateLimiter.Wait(ctx); err != nil {
-		return nil, fmt.Errorf("zimuku rate limiter: %w", err)
+		return nil, fmt.Errorf("zimuku: rate limiter: %w", err)
 	}
 
 	if err := p.randomDelay(ctx); err != nil {
@@ -353,7 +353,7 @@ func (p *ZimukuProvider) Download(ctx context.Context, id string) ([]byte, error
 
 	// Step 3: Download subtitle file
 	if err := p.rateLimiter.Wait(ctx); err != nil {
-		return nil, fmt.Errorf("zimuku rate limiter: %w", err)
+		return nil, fmt.Errorf("zimuku: rate limiter: %w", err)
 	}
 
 	if err := p.randomDelay(ctx); err != nil {

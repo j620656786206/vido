@@ -401,18 +401,18 @@ func TestOpenSubProvider_RateLimiter(t *testing.T) {
 
 	p := newTestOpenSubProvider(server.URL)
 
-	// Make 8 rapid requests — should be throttled
-	// With burst=5, first 5 go immediately, then ~200ms each for 6th, 7th, 8th
+	// Make 5 rapid requests — should be throttled
+	// With burst=2, first 2 go immediately, then ~500ms each for 3rd, 4th, 5th
 	start := time.Now()
-	for i := 0; i < 8; i++ {
+	for i := 0; i < 5; i++ {
 		_, _ = p.Search(context.Background(), SubtitleQuery{Title: "test"})
 	}
 	elapsed := time.Since(start)
 
-	// With 5 req/s limit and burst=5, 8 requests should take at least ~500ms
-	// (5 burst + 3 throttled at 200ms each = ~600ms minimum)
-	assert.GreaterOrEqual(t, elapsed, 400*time.Millisecond, "rate limiter should throttle requests")
-	assert.Equal(t, int32(8), atomic.LoadInt32(&searchCount))
+	// With 2 req/s limit and burst=2, 5 requests should take at least ~1200ms
+	// (2 burst + 3 throttled at 500ms each = ~1500ms minimum)
+	assert.GreaterOrEqual(t, elapsed, 1200*time.Millisecond, "rate limiter should throttle requests")
+	assert.Equal(t, int32(5), atomic.LoadInt32(&searchCount))
 }
 
 func TestOpenSubProvider_RateLimiterContextCancellation(t *testing.T) {
