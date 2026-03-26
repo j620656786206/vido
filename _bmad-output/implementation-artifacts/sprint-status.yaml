@@ -213,7 +213,7 @@ development_status:
   retro-8-DOC1-sse-event-types-docs:                 done  # 2026-03-26 — TW: SSE payload schema docs created (EN + zh-TW bilingual)
   retro-8-DOC2-missing-sse-events:                   done  # 2026-03-26 — QD: Added EventScanComplete/Cancelled SSE broadcasts + tests + docs
   retro-8-DOC3-unraid-installation-guide:            done  # 2026-03-26 — TW: Unraid installation guide created (EN + zh-TW bilingual)
-  retro-8-DOC4-bilingual-docs-rule:                  backlog  # → SM: add bilingual rule to project-context.md
+  retro-8-DOC4-bilingual-docs-rule:                  done  # 2026-03-26 — SM: added Rule 17 bilingual docs to project-context.md
 
   # --- Technical Debt ---
   retro-8-TD1-fix-husky-precommit-hook:              backlog  # → QD /quick-dev: fix .husky/pre-commit permissions + verify

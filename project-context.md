@@ -371,6 +371,31 @@ Use the MOST SPECIFIC assertion matcher available:
   - Errors: toThrow/toReject (not try-catch with toBeTruthy)
 ```
 
+### Rule 17: Bilingual Documentation
+
+```
+All user-facing documentation MUST be bilingual (EN + zh-TW):
+
+File Naming:
+  ✅ doc-name.md (English, primary)
+  ✅ doc-name.zh-TW.md (Traditional Chinese)
+  ❌ doc-name.zh.md (wrong language tag)
+  ❌ Chinese-only doc without English version
+
+Scope:
+  ✅ docs/ folder: installation guides, API references, event docs
+  ✅ README.md + README.zh-TW.md (when user-facing)
+  ❌ Internal docs (_bmad-output/, architecture/) — English only
+  ❌ Code comments — English only
+
+Translation Rules:
+  ✅ Code blocks, URLs, file paths remain in English
+  ✅ Technical terms keep English with optional Chinese annotation
+  ✅ Tables preserve same structure in both languages
+
+Reference: Epic 8 Agreement 6
+```
+
 ---
 
 ## 🏗️ Project Structure
@@ -766,7 +791,7 @@ These agreements were established during Epic 1 retrospective to improve develop
 
 > "This file is the single source of truth. Read it before implementing."
 
-- All Rules (1-16) must be followed
+- All Rules (1-17) must be followed
 - When in doubt, check this file first
 - Update this file when new patterns are established
 
