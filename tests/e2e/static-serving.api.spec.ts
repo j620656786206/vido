@@ -39,7 +39,10 @@ test.describe('Static Serving & SPA Fallback @api @deployment', () => {
   });
 
   test.beforeEach(async () => {
-    test.skip(!hasStaticFiles, 'Static files not deployed — skipping deployment tests (run in Docker)');
+    test.skip(
+      !hasStaticFiles,
+      'Static files not deployed — skipping deployment tests (run in Docker)'
+    );
   });
 
   test('[P1] SPA fallback: /library returns 200 with HTML content', async ({ request }) => {
