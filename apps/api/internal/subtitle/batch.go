@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -33,7 +32,7 @@ const (
 // BatchRequest is the input for starting a batch subtitle operation.
 type BatchRequest struct {
 	Scope    BatchScope `json:"scope"`
-	SeasonID *int64     `json:"season_id,omitempty"`
+	SeasonID *string    `json:"season_id,omitempty"`
 }
 
 // BatchProgress reports the current state of a running batch.
@@ -82,7 +81,7 @@ func DefaultBatchConfig() BatchConfig {
 type BatchItemCollector interface {
 	CollectMoviesNeedingSubtitles(ctx context.Context) ([]BatchItem, error)
 	CollectSeriesNeedingSubtitles(ctx context.Context) ([]BatchItem, error)
-	CollectEpisodesBySeasonID(ctx context.Context, seasonID int64) ([]BatchItem, error)
+	CollectEpisodesBySeasonID(ctx context.Context, seasonID string) ([]BatchItem, error)
 }
 
 // BatchProcessor manages batch subtitle processing with concurrency control.
@@ -331,7 +330,7 @@ func (bp *BatchProcessor) collectLibraryItems(ctx context.Context) ([]BatchItem,
 }
 
 // collectSeasonItems gathers episodes for a specific season needing subtitle search.
-func (bp *BatchProcessor) collectSeasonItems(ctx context.Context, seasonID int64) ([]BatchItem, error) {
+func (bp *BatchProcessor) collectSeasonItems(ctx context.Context, seasonID string) ([]BatchItem, error) {
 	items, err := bp.collect.CollectEpisodesBySeasonID(ctx, seasonID)
 	if err != nil {
 		return nil, fmt.Errorf("collect episodes by season: %w", err)
@@ -484,8 +483,11 @@ func (rc *RepoCollector) CollectSeriesNeedingSubtitles(ctx context.Context) ([]B
 }
 
 // CollectEpisodesBySeasonID returns episodes for a given season that have a file path.
-func (rc *RepoCollector) CollectEpisodesBySeasonID(ctx context.Context, seasonID int64) ([]BatchItem, error) {
-	episodes, err := rc.episodeRepo.FindBySeasonID(ctx, strconv.FormatInt(seasonID, 10))
+func (rc *RepoCollector) CollectEpisodesBySeasonID(ctx context.Context, seasonID string) ([]BatchItem, error) {
+	if rc.episodeRepo == nil {
+		return nil, fmt.Errorf("episode repository not configured")
+	}
+	episodes, err := rc.episodeRepo.FindBySeasonID(ctx, seasonID)
 	if err != nil {
 		return nil, err
 	}

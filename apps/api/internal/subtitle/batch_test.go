@@ -35,7 +35,7 @@ func (m *mockCollector) CollectMoviesNeedingSubtitles(_ context.Context) ([]Batc
 func (m *mockCollector) CollectSeriesNeedingSubtitles(_ context.Context) ([]BatchItem, error) {
 	return m.series, m.err
 }
-func (m *mockCollector) CollectEpisodesBySeasonID(_ context.Context, _ int64) ([]BatchItem, error) {
+func (m *mockCollector) CollectEpisodesBySeasonID(_ context.Context, _ string) ([]BatchItem, error) {
 	if m.episodeErr != nil {
 		return nil, m.episodeErr
 	}
@@ -718,7 +718,7 @@ func TestBatchProcessor_SeasonScope_CollectsEpisodes(t *testing.T) {
 	config := BatchConfig{DelayBetweenItems: 1 * time.Millisecond}
 	bp := NewBatchProcessor(engine, hub, collector, config)
 
-	seasonID := int64(42)
+	seasonID := "season-uuid-42"
 	batchID, total, err := bp.Start(context.Background(), BatchRequest{
 		Scope:    ScopeSeason,
 		SeasonID: &seasonID,
@@ -752,7 +752,7 @@ func TestBatchProcessor_SeasonScope_NoEpisodes(t *testing.T) {
 	config := BatchConfig{DelayBetweenItems: 1 * time.Millisecond}
 	bp := NewBatchProcessor(engine, hub, collector, config)
 
-	seasonID := int64(42)
+	seasonID := "season-uuid-42"
 	batchID, total, err := bp.Start(context.Background(), BatchRequest{
 		Scope:    ScopeSeason,
 		SeasonID: &seasonID,
@@ -792,7 +792,7 @@ func TestBatchProcessor_SeasonScope_CollectorError(t *testing.T) {
 	config := BatchConfig{DelayBetweenItems: 1 * time.Millisecond}
 	bp := NewBatchProcessor(engine, hub, collector, config)
 
-	seasonID := int64(999)
+	seasonID := "nonexistent-season"
 	_, _, err := bp.Start(context.Background(), BatchRequest{
 		Scope:    ScopeSeason,
 		SeasonID: &seasonID,
@@ -860,7 +860,7 @@ func TestRepoCollector_CollectEpisodesBySeasonID(t *testing.T) {
 	seriesRepo := &mockSeriesSubtitleFinder{series: map[models.SubtitleStatus][]models.Series{}}
 	rc := NewRepoCollector(movieRepo, seriesRepo, episodeRepo)
 
-	items, err := rc.CollectEpisodesBySeasonID(context.Background(), 42)
+	items, err := rc.CollectEpisodesBySeasonID(context.Background(), "season-42")
 	require.NoError(t, err)
 	require.Len(t, items, 3) // ep-4 excluded (no file path)
 
@@ -897,7 +897,7 @@ func TestRepoCollector_CollectEpisodesBySeasonID_Empty(t *testing.T) {
 	seriesRepo := &mockSeriesSubtitleFinder{series: map[models.SubtitleStatus][]models.Series{}}
 	rc := NewRepoCollector(movieRepo, seriesRepo, episodeRepo)
 
-	items, err := rc.CollectEpisodesBySeasonID(context.Background(), 42)
+	items, err := rc.CollectEpisodesBySeasonID(context.Background(), "season-42")
 	require.NoError(t, err)
 	assert.Empty(t, items)
 }
@@ -909,7 +909,7 @@ func TestRepoCollector_EpisodeRepoError(t *testing.T) {
 	seriesRepo := &mockSeriesSubtitleFinder{series: map[models.SubtitleStatus][]models.Series{}}
 	rc := NewRepoCollector(movieRepo, seriesRepo, episodeRepo)
 
-	_, err := rc.CollectEpisodesBySeasonID(context.Background(), 42)
+	_, err := rc.CollectEpisodesBySeasonID(context.Background(), "season-42")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "db connection lost")
 }

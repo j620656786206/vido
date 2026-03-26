@@ -387,7 +387,7 @@ func (h *SubtitleHandler) updateSubtitleDB(ctx context.Context, mediaID, mediaTy
 // BatchStartRequest is the request body for starting a batch.
 type BatchStartRequest struct {
 	Scope    string `json:"scope" binding:"required,oneof=season library"`
-	SeasonID *int64 `json:"season_id"`
+	SeasonID *string `json:"season_id"`
 }
 
 // StartBatch handles POST /api/v1/subtitles/batch
