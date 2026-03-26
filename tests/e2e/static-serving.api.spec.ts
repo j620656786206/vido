@@ -122,8 +122,11 @@ test.describe('Server Middleware @api', () => {
       },
     });
 
-    // THEN: Response should be successful (Playwright auto-decompresses)
+    // THEN: Response should be compressed with gzip
     expect(response.status()).toBe(200);
+    const headers = response.headers();
+    expect(headers['content-encoding']).toBe('gzip');
+    // Playwright auto-decompresses, so body should still be valid JSON
     const body = await response.json();
     expect(body).toHaveProperty('status');
     expect(body).toHaveProperty('service');

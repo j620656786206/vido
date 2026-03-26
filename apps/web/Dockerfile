@@ -1,5 +1,6 @@
-# NOTE: For production, use the unified Dockerfile at project root.
-# This file is kept for development and CI split builds.
+# ⚠️ BROKEN: This file uses npm but the project uses pnpm.
+# Update to pnpm before using, or use the unified Dockerfile at project root.
+# This file is kept as reference for development and CI split builds.
 # ==============================================================================
 # Vido Web - Multi-Stage Dockerfile
 # ==============================================================================
