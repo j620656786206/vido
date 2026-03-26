@@ -210,7 +210,7 @@ development_status:
   retro-8-D4-unraid-template-xml:                    done  # 2026-03-26 — QD /quick-dev: Unraid Community Apps XML template
 
   # --- Documentation (EN + zh-TW bilingual) ---
-  retro-8-DOC1-sse-event-types-docs:                 backlog  # → TW /bmad:bmm:agents:tech-writer: SSE payload schema docs (EN + zh-TW)
+  retro-8-DOC1-sse-event-types-docs:                 done  # 2026-03-26 — TW: SSE payload schema docs created (EN + zh-TW bilingual)
   retro-8-DOC2-missing-sse-events:                   backlog  # → QD /quick-dev: Add EventScanComplete/Cancelled code + CR
   retro-8-DOC3-unraid-installation-guide:            backlog  # → TW /bmad:bmm:agents:tech-writer: installation guide (EN + zh-TW)
   retro-8-DOC4-bilingual-docs-rule:                  backlog  # → SM: add bilingual rule to project-context.md
