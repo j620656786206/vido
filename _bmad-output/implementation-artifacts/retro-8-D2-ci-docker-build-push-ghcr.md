@@ -1,6 +1,6 @@
 # Story retro-8-D2: CI Docker Build + Push to GHCR
 
-Status: review
+Status: done
 
 ## Story
 
@@ -165,11 +165,15 @@ Claude Opus 4.6 (1M context)
 
 ### File List
 
-- `.github/workflows/docker.yml` (NEW) — Docker build+push workflow
+- `.github/workflows/docker.yml` (NEW) — Docker build+push workflow with concurrency control
 - `.github/workflows/test.yml` (MODIFIED) — GO_VERSION 1.24 → 1.25
+- `tests/e2e/ci-docker-workflow.spec.ts` (NEW) — 27 CI workflow validation tests (YAML structure, AC coverage)
+- `package.json` (MODIFIED) — Added `test:ci` script, `js-yaml` + `@types/js-yaml` devDeps
+- `pnpm-lock.yaml` (MODIFIED) — Lock file updated for js-yaml
 - `_bmad-output/implementation-artifacts/retro-8-D2-ci-docker-build-push-ghcr.md` (MODIFIED) — Story status + task checkboxes + dev record
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` (MODIFIED) — Story status ready-for-dev → review
 
 ## Change Log
 
 - 2026-03-26: Implemented CI Docker build+push workflow for GHCR with multi-platform support, registry caching, provenance, and SBOM. Fixed GO_VERSION mismatch in test.yml.
+- 2026-03-26: Code review — Added concurrency control (H1), improved test type safety with GHAWorkflow interface (M1), added 2 concurrency tests, updated File List (M3). AC10 documented as unverifiable until first GitHub Actions run (M2).

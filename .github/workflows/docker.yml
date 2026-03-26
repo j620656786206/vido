@@ -12,6 +12,11 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Cancel in-progress runs for the same branch/tag to avoid duplicate builds
+concurrency:
+  group: docker-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
   packages: write
