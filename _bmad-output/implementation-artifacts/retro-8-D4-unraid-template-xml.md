@@ -1,6 +1,6 @@
 # Story retro-8-D4: Unraid Community Apps XML Template
 
-Status: ready-for-dev
+Status: complete
 
 ## Story
 
@@ -30,15 +30,15 @@ so that Unraid users can install Vido from Community Apps with a single click.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create Unraid XML template file (AC: 1, 2, 3, 4, 5, 6, 7)
-  - [ ] 1.1 Create `unraid-template/vido.xml` with Unraid Community Apps XML structure
-  - [ ] 1.2 Configure `<Repository>` to `ghcr.io/alexyu/vido:latest`
-  - [ ] 1.3 Add `<Config>` entries for port (8080), three volumes, and env vars
-  - [ ] 1.4 Add `<WebUI>` tag: `http://[IP]:[PORT:8080]`
-  - [ ] 1.5 Add `<Icon>` URL (use GitHub raw URL to project icon or placeholder)
-  - [ ] 1.6 Add `<Overview>` with EN description of Vido
-- [ ] Task 2: Validate XML (AC: 8)
-  - [ ] 2.1 Run `xmllint --noout unraid-template/vido.xml`
+- [x] Task 1: Create Unraid XML template file (AC: 1, 2, 3, 4, 5, 6, 7)
+  - [x] 1.1 Create `unraid-template/vido.xml` with Unraid Community Apps XML structure
+  - [x] 1.2 Configure `<Repository>` to `ghcr.io/alexyu/vido:latest`
+  - [x] 1.3 Add `<Config>` entries for port (8080), three volumes, and env vars
+  - [x] 1.4 Add `<WebUI>` tag: `http://[IP]:[PORT:8080]`
+  - [x] 1.5 Add `<Icon>` URL (use GitHub raw URL to favicon.ico)
+  - [x] 1.6 Add `<Overview>` with EN description of Vido
+- [x] Task 2: Validate XML (AC: 8)
+  - [x] 2.1 Run `xmllint --noout unraid-template/vido.xml` — passed
 
 ## Dev Notes
 
@@ -114,10 +114,28 @@ If no icon exists yet, use a placeholder URL. The icon should be a PNG, ideally 
 
 ### Agent Model Used
 
+Claude Opus 4.6 (1M context)
+
 ### Debug Log References
+
+N/A — XML template creation, no debugging needed.
 
 ### Completion Notes List
 
+- Created `unraid-template/vido.xml` with Unraid Community Apps v2 format
+- Repository: `ghcr.io/alexyu/vido:latest`
+- 1 port (8080), 3 volumes (vido-data, vido-backups, media:ro)
+- 6 env vars: TMDB_API_KEY, TMDB_DEFAULT_LANGUAGE, GIN_MODE, AI_PROVIDER, GEMINI_API_KEY, CLAUDE_API_KEY
+- API keys use Mask="true" for security
+- Advanced settings (GIN_MODE, AI_PROVIDER, Claude/Gemini keys) use Display="advanced"
+- Container runs read-only with tmpfs /tmp (via ExtraParams)
+- XML validated with xmllint — no errors
+
 ### File List
 
+- `unraid-template/vido.xml` — Unraid Community Apps XML template (new)
+- `_bmad-output/implementation-artifacts/retro-8-D4-unraid-template-xml.md` — story marked complete
+
 ## Change Log
+
+- 2026-03-26: Story completed — Unraid template created and validated

@@ -1,0 +1,130 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>Vido</Name>
+  <Repository>ghcr.io/alexyu/vido:latest</Repository>
+  <Registry>https://github.com/alexyu/vido/pkgs/container/vido</Registry>
+  <Network>bridge</Network>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/alexyu/vido/issues</Support>
+  <Project>https://github.com/alexyu/vido</Project>
+  <Overview>Vido is a NAS media management platform for organizing movies and TV shows with automatic metadata retrieval (TMDb), AI-powered fansub filename parsing, multi-source subtitle search with Traditional Chinese (zh-TW) language detection and OpenCC conversion, and qBittorrent download integration. Built for Taiwanese and Chinese media enthusiasts managing media libraries on NAS devices.</Overview>
+  <Category>MediaApp:Video</Category>
+  <WebUI>http://[IP]:[PORT:8080]</WebUI>
+  <Icon>https://raw.githubusercontent.com/alexyu/vido/main/apps/web/public/favicon.ico</Icon>
+  <ExtraParams>--read-only --tmpfs /tmp:size=64M,mode=1777</ExtraParams>
+  <PostArgs/>
+  <DonateText/>
+  <DonateLink/>
+  <Requires/>
+  <Config
+    Name="WebUI Port"
+    Target="8080"
+    Default="8080"
+    Mode="tcp"
+    Description="Port for Vido web interface. The Go API serves both the web UI and API endpoints on this single port."
+    Type="Port"
+    Display="always"
+    Required="true"
+    Mask="false"
+  >8080</Config>
+  <Config
+    Name="App Data"
+    Target="/vido-data"
+    Default="/mnt/user/appdata/vido"
+    Mode="rw"
+    Description="Persistent storage for SQLite database, cache, and application data."
+    Type="Path"
+    Display="always"
+    Required="true"
+    Mask="false"
+  >/mnt/user/appdata/vido</Config>
+  <Config
+    Name="Backups"
+    Target="/vido-backups"
+    Default="/mnt/user/appdata/vido/backups"
+    Mode="rw"
+    Description="Directory for database backups and metadata exports."
+    Type="Path"
+    Display="always"
+    Required="true"
+    Mask="false"
+  >/mnt/user/appdata/vido/backups</Config>
+  <Config
+    Name="Media Library"
+    Target="/media"
+    Default=""
+    Mode="ro"
+    Description="Path to your media library on the host. Mounted read-only. Example: /mnt/user/media"
+    Type="Path"
+    Display="always"
+    Required="true"
+    Mask="false"
+  />
+  <Config
+    Name="TMDb API Key"
+    Target="TMDB_API_KEY"
+    Default=""
+    Mode=""
+    Description="API key from themoviedb.org for fetching movie and TV show metadata, posters, and images. Get yours at https://www.themoviedb.org/settings/api"
+    Type="Variable"
+    Display="always"
+    Required="false"
+    Mask="true"
+  />
+  <Config
+    Name="TMDb Language"
+    Target="TMDB_DEFAULT_LANGUAGE"
+    Default="zh-TW"
+    Mode=""
+    Description="Default language for TMDb metadata. Use ISO 639-1 format: zh-TW (Traditional Chinese), zh-CN (Simplified Chinese), en-US (English)."
+    Type="Variable"
+    Display="always"
+    Required="false"
+    Mask="false"
+  >zh-TW</Config>
+  <Config
+    Name="Gin Mode"
+    Target="GIN_MODE"
+    Default="release"
+    Mode=""
+    Description="Gin framework mode. Use 'release' for production (less logging, better performance) or 'debug' for troubleshooting."
+    Type="Variable"
+    Display="advanced"
+    Required="false"
+    Mask="false"
+  >release</Config>
+  <Config
+    Name="AI Provider"
+    Target="AI_PROVIDER"
+    Default="gemini"
+    Mode=""
+    Description="AI provider for filename parsing: 'gemini' (Google) or 'claude' (Anthropic). Requires the corresponding API key below."
+    Type="Variable"
+    Display="advanced"
+    Required="false"
+    Mask="false"
+  >gemini</Config>
+  <Config
+    Name="Gemini API Key"
+    Target="GEMINI_API_KEY"
+    Default=""
+    Mode=""
+    Description="Google Gemini API key for AI-powered fansub filename parsing. Get yours at https://makersuite.google.com/app/apikey"
+    Type="Variable"
+    Display="advanced"
+    Required="false"
+    Mask="true"
+  />
+  <Config
+    Name="Claude API Key"
+    Target="CLAUDE_API_KEY"
+    Default=""
+    Mode=""
+    Description="Anthropic Claude API key (alternative to Gemini). Get yours at https://console.anthropic.com/"
+    Type="Variable"
+    Display="advanced"
+    Required="false"
+    Mask="true"
+  />
+</Container>
