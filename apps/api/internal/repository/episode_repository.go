@@ -211,6 +211,57 @@ func (r *EpisodeRepository) FindBySeasonNumber(ctx context.Context, seriesID str
 	return episodes, nil
 }
 
+// FindBySeasonID retrieves all episodes for a specific season
+func (r *EpisodeRepository) FindBySeasonID(ctx context.Context, seasonID string) ([]models.Episode, error) {
+	query := `
+		SELECT
+			id, series_id, season_id, tmdb_id, season_number, episode_number,
+			title, overview, air_date, runtime, still_path,
+			vote_average, file_path, created_at, updated_at
+		FROM episodes
+		WHERE season_id = ?
+		ORDER BY episode_number
+	`
+
+	rows, err := r.db.QueryContext(ctx, query, seasonID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find episodes by season_id: %w", err)
+	}
+	defer rows.Close()
+
+	episodes := []models.Episode{}
+	for rows.Next() {
+		episode := models.Episode{}
+		err := rows.Scan(
+			&episode.ID,
+			&episode.SeriesID,
+			&episode.SeasonID,
+			&episode.TMDbID,
+			&episode.SeasonNumber,
+			&episode.EpisodeNumber,
+			&episode.Title,
+			&episode.Overview,
+			&episode.AirDate,
+			&episode.Runtime,
+			&episode.StillPath,
+			&episode.VoteAverage,
+			&episode.FilePath,
+			&episode.CreatedAt,
+			&episode.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan episode: %w", err)
+		}
+		episodes = append(episodes, episode)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating episodes: %w", err)
+	}
+
+	return episodes, nil
+}
+
 // FindBySeriesSeasonEpisode retrieves an episode by series ID, season, and episode number
 func (r *EpisodeRepository) FindBySeriesSeasonEpisode(ctx context.Context, seriesID string, season, episode int) (*models.Episode, error) {
 	query := `

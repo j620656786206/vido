@@ -21,9 +21,12 @@ import (
 // --- Mock Collector ---
 
 type mockCollector struct {
-	movies []BatchItem
-	series []BatchItem
-	err    error
+	movies   []BatchItem
+	series   []BatchItem
+	episodes []BatchItem
+	err      error
+	// episodeErr allows separate error control for episode collection
+	episodeErr error
 }
 
 func (m *mockCollector) CollectMoviesNeedingSubtitles(_ context.Context) ([]BatchItem, error) {
@@ -31,6 +34,12 @@ func (m *mockCollector) CollectMoviesNeedingSubtitles(_ context.Context) ([]Batc
 }
 func (m *mockCollector) CollectSeriesNeedingSubtitles(_ context.Context) ([]BatchItem, error) {
 	return m.series, m.err
+}
+func (m *mockCollector) CollectEpisodesBySeasonID(_ context.Context, _ int64) ([]BatchItem, error) {
+	if m.episodeErr != nil {
+		return nil, m.episodeErr
+	}
+	return m.episodes, m.err
 }
 
 // --- Helper: create a batch processor with mock dependencies ---
@@ -545,7 +554,7 @@ func TestRepoCollector_CollectMoviesNeedingSubtitles(t *testing.T) {
 		series: map[models.SubtitleStatus][]models.Series{},
 	}
 
-	rc := NewRepoCollector(movieRepo, seriesRepo)
+	rc := NewRepoCollector(movieRepo, seriesRepo, nil)
 	items, err := rc.CollectMoviesNeedingSubtitles(context.Background())
 	require.NoError(t, err)
 	require.Len(t, items, 3)
@@ -591,7 +600,7 @@ func TestRepoCollector_CollectSeriesNeedingSubtitles(t *testing.T) {
 		movies: map[models.SubtitleStatus][]models.Movie{},
 	}
 
-	rc := NewRepoCollector(movieRepo, seriesRepo)
+	rc := NewRepoCollector(movieRepo, seriesRepo, nil)
 	items, err := rc.CollectSeriesNeedingSubtitles(context.Background())
 	require.NoError(t, err)
 	require.Len(t, items, 2)
@@ -612,7 +621,7 @@ func TestRepoCollector_MovieRepoError(t *testing.T) {
 		series: map[models.SubtitleStatus][]models.Series{},
 	}
 
-	rc := NewRepoCollector(movieRepo, seriesRepo)
+	rc := NewRepoCollector(movieRepo, seriesRepo, nil)
 	_, err := rc.CollectMoviesNeedingSubtitles(context.Background())
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "db timeout")
@@ -625,7 +634,7 @@ func TestRepoCollector_SeriesRepoError(t *testing.T) {
 	}
 	seriesRepo := &mockSeriesSubtitleFinder{err: fmt.Errorf("connection refused")}
 
-	rc := NewRepoCollector(movieRepo, seriesRepo)
+	rc := NewRepoCollector(movieRepo, seriesRepo, nil)
 	_, err := rc.CollectSeriesNeedingSubtitles(context.Background())
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "connection refused")
@@ -640,7 +649,7 @@ func TestRepoCollector_EmptyRepos(t *testing.T) {
 		series: map[models.SubtitleStatus][]models.Series{},
 	}
 
-	rc := NewRepoCollector(movieRepo, seriesRepo)
+	rc := NewRepoCollector(movieRepo, seriesRepo, nil)
 
 	movies, err := rc.CollectMoviesNeedingSubtitles(context.Background())
 	require.NoError(t, err)
@@ -673,11 +682,234 @@ func TestRepoCollector_MultiCountryProduction(t *testing.T) {
 		series: map[models.SubtitleStatus][]models.Series{},
 	}
 
-	rc := NewRepoCollector(movieRepo, seriesRepo)
+	rc := NewRepoCollector(movieRepo, seriesRepo, nil)
 	items, err := rc.CollectMoviesNeedingSubtitles(context.Background())
 	require.NoError(t, err)
 	require.Len(t, items, 1)
 
 	// Multi-country should be comma-separated
 	assert.Equal(t, "CN,HK", items[0].ProductionCountry)
+}
+
+// --- Season Scope Tests ---
+
+// Season scope collects episodes and processes them
+func TestBatchProcessor_SeasonScope_CollectsEpisodes(t *testing.T) {
+	episodes := []BatchItem{
+		{MediaID: "ep1", MediaType: "episode", Title: "S01E01 Pilot", MediaFilePath: "/media/s01e01.mkv"},
+		{MediaID: "ep2", MediaType: "episode", Title: "S01E02 Second", MediaFilePath: "/media/s01e02.mkv"},
+	}
+
+	prov := &mockProvider{
+		name: "assrt",
+		searchResult: []providers.SubtitleResult{
+			{ID: "1", Source: "assrt", Language: "zh-Hant", Filename: "sub.srt"},
+		},
+		downloadData: []byte("1\n00:00:01,000 --> 00:00:03,000\n測試\n"),
+	}
+
+	scorer := NewScorer(NewDefaultScorerConfig())
+	mockRepo := &mockStatusUpdater{}
+	engine := NewEngine([]providers.SubtitleProvider{prov}, scorer, nil, nil, nil, mockRepo, mockRepo)
+	hub := sse.NewHub()
+	t.Cleanup(func() { hub.Close() })
+
+	collector := &mockCollector{episodes: episodes}
+	config := BatchConfig{DelayBetweenItems: 1 * time.Millisecond}
+	bp := NewBatchProcessor(engine, hub, collector, config)
+
+	seasonID := int64(42)
+	batchID, total, err := bp.Start(context.Background(), BatchRequest{
+		Scope:    ScopeSeason,
+		SeasonID: &seasonID,
+	})
+	require.NoError(t, err)
+	assert.NotEmpty(t, batchID)
+	assert.Equal(t, 2, total)
+
+	// Wait for processing to complete
+	time.Sleep(100 * time.Millisecond)
+	assert.False(t, bp.IsRunning())
+}
+
+// Season scope with no eligible episodes returns empty
+func TestBatchProcessor_SeasonScope_NoEpisodes(t *testing.T) {
+	prov := &mockProvider{
+		name: "assrt",
+		searchResult: []providers.SubtitleResult{
+			{ID: "1", Source: "assrt", Language: "zh-Hant", Filename: "sub.srt"},
+		},
+		downloadData: []byte("test"),
+	}
+
+	scorer := NewScorer(NewDefaultScorerConfig())
+	mockRepo := &mockStatusUpdater{}
+	engine := NewEngine([]providers.SubtitleProvider{prov}, scorer, nil, nil, nil, mockRepo, mockRepo)
+	hub := sse.NewHub()
+	t.Cleanup(func() { hub.Close() })
+
+	collector := &mockCollector{episodes: nil} // no episodes
+	config := BatchConfig{DelayBetweenItems: 1 * time.Millisecond}
+	bp := NewBatchProcessor(engine, hub, collector, config)
+
+	seasonID := int64(42)
+	batchID, total, err := bp.Start(context.Background(), BatchRequest{
+		Scope:    ScopeSeason,
+		SeasonID: &seasonID,
+	})
+	require.NoError(t, err)
+	assert.NotEmpty(t, batchID)
+	assert.Equal(t, 0, total)
+	assert.False(t, bp.IsRunning())
+}
+
+// Season scope without season_id returns error
+func TestBatchProcessor_SeasonScope_MissingSeasonID(t *testing.T) {
+	bp := newTestBatchProcessor(t, nil)
+
+	_, _, err := bp.Start(context.Background(), BatchRequest{Scope: ScopeSeason})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "season_id required")
+}
+
+// Season scope collector error propagates
+func TestBatchProcessor_SeasonScope_CollectorError(t *testing.T) {
+	prov := &mockProvider{
+		name: "assrt",
+		searchResult: []providers.SubtitleResult{
+			{ID: "1", Source: "assrt", Language: "zh-Hant", Filename: "sub.srt"},
+		},
+		downloadData: []byte("test"),
+	}
+
+	scorer := NewScorer(NewDefaultScorerConfig())
+	mockRepo := &mockStatusUpdater{}
+	engine := NewEngine([]providers.SubtitleProvider{prov}, scorer, nil, nil, nil, mockRepo, mockRepo)
+	hub := sse.NewHub()
+	t.Cleanup(func() { hub.Close() })
+
+	collector := &mockCollector{episodeErr: fmt.Errorf("season not found")}
+	config := BatchConfig{DelayBetweenItems: 1 * time.Millisecond}
+	bp := NewBatchProcessor(engine, hub, collector, config)
+
+	seasonID := int64(999)
+	_, _, err := bp.Start(context.Background(), BatchRequest{
+		Scope:    ScopeSeason,
+		SeasonID: &seasonID,
+	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "season not found")
+	assert.False(t, bp.IsRunning())
+}
+
+// --- RepoCollector: CollectEpisodesBySeasonID Tests ---
+
+// Mock episode season finder
+type mockEpisodeSeasonFinder struct {
+	episodes []models.Episode
+	err      error
+}
+
+func (m *mockEpisodeSeasonFinder) FindBySeasonID(_ context.Context, _ string) ([]models.Episode, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	return m.episodes, nil
+}
+
+// RepoCollector collects episodes by season ID, filtering out those without file paths
+func TestRepoCollector_CollectEpisodesBySeasonID(t *testing.T) {
+	episodeRepo := &mockEpisodeSeasonFinder{
+		episodes: []models.Episode{
+			{
+				ID:            "ep-1",
+				SeriesID:      "series-1",
+				SeasonNumber:  1,
+				EpisodeNumber: 1,
+				Title:         sql.NullString{String: "Pilot", Valid: true},
+				FilePath:      sql.NullString{String: "/media/s01e01.mkv", Valid: true},
+			},
+			{
+				ID:            "ep-2",
+				SeriesID:      "series-1",
+				SeasonNumber:  1,
+				EpisodeNumber: 2,
+				Title:         sql.NullString{String: "Second Episode", Valid: true},
+				FilePath:      sql.NullString{String: "/media/s01e02.mkv", Valid: true},
+			},
+			{
+				ID:            "ep-3",
+				SeriesID:      "series-1",
+				SeasonNumber:  1,
+				EpisodeNumber: 3,
+				Title:         sql.NullString{Valid: false}, // no title
+				FilePath:      sql.NullString{String: "/media/s01e03.mkv", Valid: true},
+			},
+			{
+				ID:            "ep-4",
+				SeriesID:      "series-1",
+				SeasonNumber:  1,
+				EpisodeNumber: 4,
+				Title:         sql.NullString{String: "No File", Valid: true},
+				FilePath:      sql.NullString{Valid: false}, // no file path — should be excluded
+			},
+		},
+	}
+
+	movieRepo := &mockMovieSubtitleFinder{movies: map[models.SubtitleStatus][]models.Movie{}}
+	seriesRepo := &mockSeriesSubtitleFinder{series: map[models.SubtitleStatus][]models.Series{}}
+	rc := NewRepoCollector(movieRepo, seriesRepo, episodeRepo)
+
+	items, err := rc.CollectEpisodesBySeasonID(context.Background(), 42)
+	require.NoError(t, err)
+	require.Len(t, items, 3) // ep-4 excluded (no file path)
+
+	// Episode with title
+	assert.Equal(t, "ep-1", items[0].MediaID)
+	assert.Equal(t, "episode", items[0].MediaType)
+	assert.Equal(t, "/media/s01e01.mkv", items[0].MediaFilePath)
+	assert.Equal(t, "S01E01 Pilot", items[0].Title)
+	assert.Empty(t, items[0].ProductionCountry)
+
+	// Second episode
+	assert.Equal(t, "ep-2", items[1].MediaID)
+	assert.Equal(t, "S01E02 Second Episode", items[1].Title)
+
+	// Episode without title — uses season/episode code only
+	assert.Equal(t, "ep-3", items[2].MediaID)
+	assert.Equal(t, "S01E03", items[2].Title)
+}
+
+// RepoCollector returns empty when season has no episodes with files
+func TestRepoCollector_CollectEpisodesBySeasonID_Empty(t *testing.T) {
+	episodeRepo := &mockEpisodeSeasonFinder{
+		episodes: []models.Episode{
+			{
+				ID:            "ep-1",
+				SeasonNumber:  1,
+				EpisodeNumber: 1,
+				FilePath:      sql.NullString{Valid: false}, // no file
+			},
+		},
+	}
+
+	movieRepo := &mockMovieSubtitleFinder{movies: map[models.SubtitleStatus][]models.Movie{}}
+	seriesRepo := &mockSeriesSubtitleFinder{series: map[models.SubtitleStatus][]models.Series{}}
+	rc := NewRepoCollector(movieRepo, seriesRepo, episodeRepo)
+
+	items, err := rc.CollectEpisodesBySeasonID(context.Background(), 42)
+	require.NoError(t, err)
+	assert.Empty(t, items)
+}
+
+// RepoCollector episode repo error propagates
+func TestRepoCollector_EpisodeRepoError(t *testing.T) {
+	episodeRepo := &mockEpisodeSeasonFinder{err: fmt.Errorf("db connection lost")}
+	movieRepo := &mockMovieSubtitleFinder{movies: map[models.SubtitleStatus][]models.Movie{}}
+	seriesRepo := &mockSeriesSubtitleFinder{series: map[models.SubtitleStatus][]models.Series{}}
+	rc := NewRepoCollector(movieRepo, seriesRepo, episodeRepo)
+
+	_, err := rc.CollectEpisodesBySeasonID(context.Background(), 42)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "db connection lost")
 }

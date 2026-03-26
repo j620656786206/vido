@@ -394,7 +394,7 @@ func main() {
 		sseHub, repos.Movies, repos.Series,
 	)
 	// Wire batch processor (Story 8-9)
-	batchCollector := subtitle.NewRepoCollector(repos.Movies, repos.Series)
+	batchCollector := subtitle.NewRepoCollector(repos.Movies, repos.Series, repos.Episodes)
 	batchProcessor := subtitle.NewBatchProcessor(subtitleEngine, sseHub, batchCollector, subtitle.DefaultBatchConfig())
 	subtitleHandler.SetBatchProcessor(batchProcessor)
 	// parseProgressHandler already initialized above with defer Close()

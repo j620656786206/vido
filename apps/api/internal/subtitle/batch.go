@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -81,6 +82,7 @@ func DefaultBatchConfig() BatchConfig {
 type BatchItemCollector interface {
 	CollectMoviesNeedingSubtitles(ctx context.Context) ([]BatchItem, error)
 	CollectSeriesNeedingSubtitles(ctx context.Context) ([]BatchItem, error)
+	CollectEpisodesBySeasonID(ctx context.Context, seasonID int64) ([]BatchItem, error)
 }
 
 // BatchProcessor manages batch subtitle processing with concurrency control.
@@ -303,9 +305,7 @@ func (bp *BatchProcessor) collectItems(ctx context.Context, req BatchRequest) ([
 		if req.SeasonID == nil {
 			return nil, fmt.Errorf("season_id required for season scope")
 		}
-		// Season scope would query episodes by season ID
-		// For now, delegate to collector interface
-		return nil, fmt.Errorf("season scope not yet implemented")
+		return bp.collectSeasonItems(ctx, *req.SeasonID)
 	default:
 		return nil, fmt.Errorf("unknown batch scope: %s", req.Scope)
 	}
@@ -327,6 +327,15 @@ func (bp *BatchProcessor) collectLibraryItems(ctx context.Context) ([]BatchItem,
 	}
 	items = append(items, series...)
 
+	return items, nil
+}
+
+// collectSeasonItems gathers episodes for a specific season needing subtitle search.
+func (bp *BatchProcessor) collectSeasonItems(ctx context.Context, seasonID int64) ([]BatchItem, error) {
+	items, err := bp.collect.CollectEpisodesBySeasonID(ctx, seasonID)
+	if err != nil {
+		return nil, fmt.Errorf("collect episodes by season: %w", err)
+	}
 	return items, nil
 }
 
@@ -382,8 +391,9 @@ func (bp *BatchProcessor) broadcastComplete(batchID string, total, success, fail
 
 // RepoCollector implements BatchItemCollector using repository interfaces.
 type RepoCollector struct {
-	movieRepo  MovieSubtitleFinder
-	seriesRepo SeriesSubtitleFinder
+	movieRepo   MovieSubtitleFinder
+	seriesRepo  SeriesSubtitleFinder
+	episodeRepo EpisodeSeasonFinder
 }
 
 // MovieSubtitleFinder is the interface for finding movies needing subtitles.
@@ -396,9 +406,14 @@ type SeriesSubtitleFinder interface {
 	FindBySubtitleStatus(ctx context.Context, status models.SubtitleStatus) ([]models.Series, error)
 }
 
+// EpisodeSeasonFinder is the interface for finding episodes by season ID.
+type EpisodeSeasonFinder interface {
+	FindBySeasonID(ctx context.Context, seasonID string) ([]models.Episode, error)
+}
+
 // NewRepoCollector creates a collector backed by repositories.
-func NewRepoCollector(movieRepo MovieSubtitleFinder, seriesRepo SeriesSubtitleFinder) *RepoCollector {
-	return &RepoCollector{movieRepo: movieRepo, seriesRepo: seriesRepo}
+func NewRepoCollector(movieRepo MovieSubtitleFinder, seriesRepo SeriesSubtitleFinder, episodeRepo EpisodeSeasonFinder) *RepoCollector {
+	return &RepoCollector{movieRepo: movieRepo, seriesRepo: seriesRepo, episodeRepo: episodeRepo}
 }
 
 // CollectMoviesNeedingSubtitles returns movies with not_searched or not_found status.
@@ -463,6 +478,38 @@ func (rc *RepoCollector) CollectSeriesNeedingSubtitles(ctx context.Context) ([]B
 				ProductionCountry: "",
 			})
 		}
+	}
+
+	return items, nil
+}
+
+// CollectEpisodesBySeasonID returns episodes for a given season that have a file path.
+func (rc *RepoCollector) CollectEpisodesBySeasonID(ctx context.Context, seasonID int64) ([]BatchItem, error) {
+	episodes, err := rc.episodeRepo.FindBySeasonID(ctx, strconv.FormatInt(seasonID, 10))
+	if err != nil {
+		return nil, err
+	}
+
+	var items []BatchItem
+	for _, ep := range episodes {
+		// Only include episodes that have a media file
+		if !ep.FilePath.Valid || ep.FilePath.String == "" {
+			continue
+		}
+
+		title := ep.GetSeasonEpisodeCode()
+		if ep.Title.Valid && ep.Title.String != "" {
+			title = fmt.Sprintf("%s %s", ep.GetSeasonEpisodeCode(), ep.Title.String)
+		}
+
+		items = append(items, BatchItem{
+			MediaID:       ep.ID,
+			MediaType:     "episode",
+			MediaFilePath: ep.FilePath.String,
+			Title:         title,
+			// Episodes don't have production_countries — empty string = ConvertAuto
+			ProductionCountry: "",
+		})
 	}
 
 	return items, nil

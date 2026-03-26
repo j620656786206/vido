@@ -180,6 +180,9 @@ type EpisodeRepositoryInterface interface {
 	// FindBySeriesID retrieves all episodes for a series
 	FindBySeriesID(ctx context.Context, seriesID string) ([]models.Episode, error)
 
+	// FindBySeasonID retrieves all episodes for a specific season by season ID
+	FindBySeasonID(ctx context.Context, seasonID string) ([]models.Episode, error)
+
 	// FindBySeasonNumber retrieves all episodes for a specific season of a series
 	FindBySeasonNumber(ctx context.Context, seriesID string, seasonNumber int) ([]models.Episode, error)
 
