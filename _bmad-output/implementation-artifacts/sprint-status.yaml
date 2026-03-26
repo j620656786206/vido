@@ -207,7 +207,7 @@ development_status:
   retro-8-D1-single-docker-image:                    done  # → DEV /dev-story: merge API+Web into single Docker image — CR 2026-03-26
   retro-8-D2-ci-docker-build-push-ghcr:              done  # → DEV /dev-story: GitHub Actions Docker build+push workflow — CR 2026-03-26
   retro-8-D3-env-example-file:                       done  # 2026-03-26 — QD /quick-dev: added 11 missing env vars, updated Docker section
-  retro-8-D4-unraid-template-xml:                    backlog  # → QD /quick-dev: Unraid Community Apps XML template
+  retro-8-D4-unraid-template-xml:                    ready-for-dev  # → QD /quick-dev: Unraid Community Apps XML template
 
   # --- Documentation (EN + zh-TW bilingual) ---
   retro-8-DOC1-sse-event-types-docs:                 backlog  # → TW /bmad:bmm:agents:tech-writer: SSE payload schema docs (EN + zh-TW)
