@@ -211,7 +211,7 @@ development_status:
 
   # --- Documentation (EN + zh-TW bilingual) ---
   retro-8-DOC1-sse-event-types-docs:                 done  # 2026-03-26 — TW: SSE payload schema docs created (EN + zh-TW bilingual)
-  retro-8-DOC2-missing-sse-events:                   backlog  # → QD /quick-dev: Add EventScanComplete/Cancelled code + CR
+  retro-8-DOC2-missing-sse-events:                   done  # 2026-03-26 — QD: Added EventScanComplete/Cancelled SSE broadcasts + tests + docs
   retro-8-DOC3-unraid-installation-guide:            backlog  # → TW /bmad:bmm:agents:tech-writer: installation guide (EN + zh-TW)
   retro-8-DOC4-bilingual-docs-rule:                  backlog  # → SM: add bilingual rule to project-context.md
 

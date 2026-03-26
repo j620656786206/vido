@@ -128,7 +128,9 @@ func (s *ScannerService) StartScan(ctx context.Context) (*ScanResult, error) {
 		select {
 		case <-s.cancelChan:
 			s.logger.Info("scan cancelled before walking directory", "dir", dir)
-			return s.buildResult(startedAt), nil
+			result := s.buildResult(startedAt)
+			s.broadcastScanCancelled(result)
+			return result, nil
 		default:
 		}
 
@@ -190,8 +192,21 @@ func (s *ScannerService) StartScan(ctx context.Context) (*ScanResult, error) {
 
 	result := s.buildResult(startedAt)
 
-	// Broadcast final completion event
+	// Broadcast final progress update
 	s.broadcastProgress()
+
+	// Broadcast completion or cancellation event
+	wasCancelled := false
+	select {
+	case <-s.cancelChan:
+		wasCancelled = true
+	default:
+	}
+	if wasCancelled {
+		s.broadcastScanCancelled(result)
+	} else {
+		s.broadcastScanComplete(result)
+	}
 
 	s.logger.Info("scan completed",
 		"files_found", result.FilesFound,
@@ -425,6 +440,44 @@ func (s *ScannerService) broadcastProgress() {
 		Data: progress,
 	}
 	s.sseHub.Broadcast(event)
+}
+
+// broadcastScanComplete sends a scan_complete SSE event with final result data.
+// NOTE: Uses snake_case keys (files_found, error_count) to match frontend
+// useScanProgress.ts expectations at lines 230-233. This differs from
+// broadcastProgress() which sends the ScanProgress struct with camelCase JSON tags.
+func (s *ScannerService) broadcastScanComplete(result *ScanResult) {
+	if s.sseHub == nil {
+		return
+	}
+	s.sseHub.Broadcast(sse.Event{
+		ID:   uuid.New().String(),
+		Type: sse.EventScanComplete,
+		Data: map[string]interface{}{
+			"files_found":   result.FilesFound,
+			"files_created": result.FilesCreated,
+			"files_updated": result.FilesUpdated,
+			"files_skipped": result.FilesSkipped,
+			"files_removed": result.FilesRemoved,
+			"error_count":   result.ErrorCount,
+			"duration":      result.Duration,
+		},
+	})
+}
+
+// broadcastScanCancelled sends a scan_cancelled SSE event.
+func (s *ScannerService) broadcastScanCancelled(result *ScanResult) {
+	if s.sseHub == nil {
+		return
+	}
+	s.sseHub.Broadcast(sse.Event{
+		ID:   uuid.New().String(),
+		Type: sse.EventScanCancelled,
+		Data: map[string]interface{}{
+			"files_found": result.FilesFound,
+			"error_count": result.ErrorCount,
+		},
+	})
 }
 
 // detectRemovedFiles checks all movies with file paths and marks those

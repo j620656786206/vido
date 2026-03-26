@@ -88,6 +88,68 @@ Media library scan progress updates. Broadcast every 10 files during a scan and 
 
 ---
 
+### scan_complete
+
+Sent once when a media library scan finishes successfully. Contains final counts.
+
+**Publisher:** `ScannerService.broadcastScanComplete()`
+
+| Field           | Type     | Description                 |
+| --------------- | -------- | --------------------------- |
+| `files_found`   | `int`    | Total files discovered      |
+| `files_created` | `int`    | New media entries created   |
+| `files_updated` | `int`    | Existing entries updated    |
+| `files_skipped` | `int`    | Files skipped               |
+| `files_removed` | `int`    | Orphaned entries removed    |
+| `error_count`   | `int`    | Errors encountered          |
+| `duration`      | `string` | Scan duration (e.g. "2.5s") |
+
+**Example payload:**
+
+```json
+{
+  "id": "uuid",
+  "type": "scan_complete",
+  "data": {
+    "files_found": 142,
+    "files_created": 38,
+    "files_updated": 2,
+    "files_skipped": 100,
+    "files_removed": 2,
+    "error_count": 0,
+    "duration": "4.231s"
+  }
+}
+```
+
+---
+
+### scan_cancelled
+
+Sent when a scan is cancelled by the user. Contains partial counts at the time of cancellation.
+
+**Publisher:** `ScannerService.broadcastScanCancelled()`
+
+| Field         | Type  | Description                          |
+| ------------- | ----- | ------------------------------------ |
+| `files_found` | `int` | Files discovered before cancellation |
+| `error_count` | `int` | Errors encountered before cancel     |
+
+**Example payload:**
+
+```json
+{
+  "id": "uuid",
+  "type": "scan_cancelled",
+  "data": {
+    "files_found": 42,
+    "error_count": 1
+  }
+}
+```
+
+---
+
 ### subtitle_progress
 
 Subtitle pipeline progress for individual media items. Broadcast at each pipeline stage during search and download.

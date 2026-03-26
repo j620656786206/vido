@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -520,6 +521,9 @@ func TestScannerService_SSEBroadcast(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
 
+	// Wait for events to propagate through hub goroutine
+	time.Sleep(20 * time.Millisecond)
+
 	// Collect events (non-blocking drain)
 	var events []sse.Event
 	for {
@@ -532,11 +536,72 @@ func TestScannerService_SSEBroadcast(t *testing.T) {
 	}
 done:
 
-	// Should have received at least one scan_progress event (at 10 files) + final broadcast
-	assert.GreaterOrEqual(t, len(events), 1, "should have received at least one SSE event")
-	for _, evt := range events {
+	// Should have received at least one scan_progress event + one scan_complete event
+	assert.GreaterOrEqual(t, len(events), 2, "should have received at least two SSE events (progress + complete)")
+
+	// All events except the last should be scan_progress
+	for _, evt := range events[:len(events)-1] {
 		assert.Equal(t, sse.EventScanProgress, evt.Type)
 	}
+
+	// Last event should be scan_complete
+	lastEvent := events[len(events)-1]
+	assert.Equal(t, sse.EventScanComplete, lastEvent.Type)
+
+	// Verify scan_complete payload has expected fields
+	data, ok := lastEvent.Data.(map[string]interface{})
+	assert.True(t, ok, "scan_complete data should be map[string]interface{}")
+	assert.Contains(t, data, "files_found")
+	assert.Contains(t, data, "error_count")
+}
+
+func TestScannerService_SSEBroadcast_ScanCancelled(t *testing.T) {
+	dir := t.TempDir()
+	// Create enough files so scan takes time
+	for i := 0; i < 20; i++ {
+		name := filepath.Join(dir, fmt.Sprintf("movie_%02d.mkv", i))
+		os.WriteFile(name, []byte("fake video"), 0644)
+	}
+
+	svc, movieRepo, hub := setupScannerService(t, []string{dir})
+	movieRepo.On("FindByFilePath", mock.Anything, mock.AnythingOfType("string")).Return(nil, nil)
+	movieRepo.On("BulkCreate", mock.Anything, mock.AnythingOfType("[]*models.Movie")).Return(nil)
+	movieRepo.On("FindAllWithFilePath", mock.Anything).Return(nil, nil)
+
+	client := hub.Register()
+	time.Sleep(10 * time.Millisecond)
+
+	// Start scan and immediately cancel
+	ctx := context.Background()
+	go func() {
+		time.Sleep(5 * time.Millisecond)
+		svc.CancelScan()
+	}()
+
+	result, err := svc.StartScan(ctx)
+	assert.NoError(t, err)
+	assert.NotNil(t, result)
+
+	// Wait a bit for events to propagate
+	time.Sleep(20 * time.Millisecond)
+
+	// Drain events
+	var events []sse.Event
+	for {
+		select {
+		case evt := <-client.Events:
+			events = append(events, evt)
+		default:
+			goto cancelled_done
+		}
+	}
+cancelled_done:
+
+	// Should have at least one event, and the last should be scan_cancelled
+	assert.GreaterOrEqual(t, len(events), 1, "should have received at least one SSE event")
+
+	lastEvent := events[len(events)-1]
+	assert.Equal(t, sse.EventScanCancelled, lastEvent.Type)
 }
 
 func TestScannerService_GetProgress(t *testing.T) {

@@ -14,6 +14,8 @@ type EventType string
 
 const (
 	EventScanProgress          EventType = "scan_progress"
+	EventScanComplete          EventType = "scan_complete"
+	EventScanCancelled         EventType = "scan_cancelled"
 	EventSubtitleProgress      EventType = "subtitle_progress"
 	EventSubtitleBatchProgress EventType = "subtitle_batch_progress"
 	EventNotification          EventType = "notification"

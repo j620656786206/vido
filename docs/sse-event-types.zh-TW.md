@@ -88,6 +88,68 @@ es.addEventListener('scan_progress', (e: MessageEvent) => {
 
 ---
 
+### scan_complete
+
+媒體庫掃描成功完成時發送一次。包含最終統計數據。
+
+**發布者：** `ScannerService.broadcastScanComplete()`
+
+| 欄位            | 型別     | 說明                  |
+| --------------- | -------- | --------------------- |
+| `files_found`   | `int`    | 發現的檔案總數        |
+| `files_created` | `int`    | 新建的媒體項目數      |
+| `files_updated` | `int`    | 已更新的項目數        |
+| `files_skipped` | `int`    | 略過的檔案數          |
+| `files_removed` | `int`    | 移除的孤立項目數      |
+| `error_count`   | `int`    | 遇到的錯誤數          |
+| `duration`      | `string` | 掃描耗時（如 "2.5s"） |
+
+**範例 payload：**
+
+```json
+{
+  "id": "uuid",
+  "type": "scan_complete",
+  "data": {
+    "files_found": 142,
+    "files_created": 38,
+    "files_updated": 2,
+    "files_skipped": 100,
+    "files_removed": 2,
+    "error_count": 0,
+    "duration": "4.231s"
+  }
+}
+```
+
+---
+
+### scan_cancelled
+
+使用者取消掃描時發送。包含取消時的部分統計數據。
+
+**發布者：** `ScannerService.broadcastScanCancelled()`
+
+| 欄位          | 型別  | 說明                 |
+| ------------- | ----- | -------------------- |
+| `files_found` | `int` | 取消前已發現的檔案數 |
+| `error_count` | `int` | 取消前遇到的錯誤數   |
+
+**範例 payload：**
+
+```json
+{
+  "id": "uuid",
+  "type": "scan_cancelled",
+  "data": {
+    "files_found": 42,
+    "error_count": 1
+  }
+}
+```
+
+---
+
 ### subtitle_progress
 
 單一媒體項目的字幕管線進度。在搜尋和下載過程中，每個管線階段都會廣播。
