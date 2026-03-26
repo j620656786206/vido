@@ -1,6 +1,6 @@
 # Story retro-8-D3: Update .env.example with All Config Vars
 
-Status: ready-for-dev
+Status: complete
 
 ## Story
 
@@ -21,23 +21,23 @@ so that I can configure Vido without reading source code.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Audit current `.env.example` against `config.go` and `database.go` (AC: 1)
-  - [ ] 1.1 Read `apps/api/internal/config/config.go` — list all `os.Getenv` calls
-  - [ ] 1.2 Read `apps/api/internal/config/database.go` — list all DB env vars
-  - [ ] 1.3 Compare with current `.env.example` — identify missing vars
-- [ ] Task 2: Add missing Epic 3-8 variables (AC: 2, 3, 4)
-  - [ ] 2.1 Add AI Provider section: `AI_PROVIDER`, `CLAUDE_API_KEY`
-  - [ ] 2.2 Add Metadata Fallback section: `ENABLE_DOUBAN`, `ENABLE_WIKIPEDIA`, `ENABLE_CIRCUIT_BREAKER`, `FALLBACK_DELAY_MS`, `CIRCUIT_BREAKER_FAILURE_THRESHOLD`, `CIRCUIT_BREAKER_TIMEOUT_SECONDS`
-  - [ ] 2.3 Add `VIDO_PUBLIC_DIR` to Path Configuration section
-- [ ] Task 3: Add frontend variable (AC: 5)
-  - [ ] 3.1 Add `VITE_API_BASE_URL` with description noting it's used by `apps/web/` via `import.meta.env`
-- [ ] Task 4: Update Docker section for unified container (AC: 6)
-  - [ ] 4.1 Remove obsolete `WEB_PORT` and `API_PORT` entries
-  - [ ] 4.2 Update Docker section to reference unified single-container deployment
-  - [ ] 4.3 Add `GIN_MODE` for production Gin framework mode
-- [ ] Task 5: Verify completeness and formatting (AC: 7, 8)
-  - [ ] 5.1 Ensure logical section grouping
-  - [ ] 5.2 Run `prettier --check .env.example`
+- [x] Task 1: Audit current `.env.example` against `config.go` and `database.go` (AC: 1)
+  - [x] 1.1 Read `apps/api/internal/config/config.go` — list all `os.Getenv` calls
+  - [x] 1.2 Read `apps/api/internal/config/database.go` — list all DB env vars
+  - [x] 1.3 Compare with current `.env.example` — identify missing vars
+- [x] Task 2: Add missing Epic 3-8 variables (AC: 2, 3, 4)
+  - [x] 2.1 Add AI Provider section: `AI_PROVIDER`, `CLAUDE_API_KEY`
+  - [x] 2.2 Add Metadata Fallback section: `ENABLE_DOUBAN`, `ENABLE_WIKIPEDIA`, `ENABLE_CIRCUIT_BREAKER`, `FALLBACK_DELAY_MS`, `CIRCUIT_BREAKER_FAILURE_THRESHOLD`, `CIRCUIT_BREAKER_TIMEOUT_SECONDS`
+  - [x] 2.3 Add `VIDO_PUBLIC_DIR` to Path Configuration section
+- [x] Task 3: Add frontend variable (AC: 5)
+  - [x] 3.1 Add `VITE_API_BASE_URL` with description noting it's used by `apps/web/` via `import.meta.env`
+- [x] Task 4: Update Docker section for unified container (AC: 6)
+  - [x] 4.1 Remove obsolete `WEB_PORT` and `API_PORT` entries
+  - [x] 4.2 Update Docker section to reference unified single-container deployment
+  - [x] 4.3 Add `GIN_MODE` for production Gin framework mode
+- [x] Task 5: Verify completeness and formatting (AC: 7, 8)
+  - [x] 5.1 Ensure logical section grouping
+  - [x] 5.2 Run `prettier --check .env.example` — N/A, prettier has no .env parser
 
 ## Dev Notes
 
@@ -92,10 +92,26 @@ The project consolidated from 2-container (nginx + API) to unified single-contai
 
 ### Agent Model Used
 
+Claude Opus 4.6 (1M context)
+
 ### Debug Log References
+
+N/A — config-only change, no debugging needed.
 
 ### Completion Notes List
 
+- Audited config.go (18 env vars), database.go (10 env vars), static.go (VIDO_PUBLIC_DIR), frontend services (VITE_API_BASE_URL)
+- Added 11 missing variables: CLAUDE_API_KEY, AI_PROVIDER, ENABLE_DOUBAN, ENABLE_WIKIPEDIA, ENABLE_CIRCUIT_BREAKER, FALLBACK_DELAY_MS, CIRCUIT_BREAKER_FAILURE_THRESHOLD, CIRCUIT_BREAKER_TIMEOUT_SECONDS, VIDO_PUBLIC_DIR, VITE_API_BASE_URL, GIN_MODE
+- Removed obsolete WEB_PORT and API_PORT (replaced by unified VIDO_PORT)
+- Docker section updated to reflect single-container architecture from retro-8-D1
+- Sections: Server, Paths, Database, API Keys, AI Provider, TMDb, Metadata Fallback, Docker, Frontend, Testing
+- Prettier does not have an .env parser — AC 8 is not applicable
+
 ### File List
 
+- `.env.example` — updated with all config vars
+- `_bmad-output/implementation-artifacts/retro-8-D3-env-example-file.md` — story marked complete
+
 ## Change Log
+
+- 2026-03-26: Story completed — all 11 missing vars added, Docker section modernized
