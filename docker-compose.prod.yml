@@ -15,10 +15,10 @@
 
 services:
   # ---------------------------------------------------------------------------
-  # Vido API - Production overrides
+  # Vido - Production overrides
   # ---------------------------------------------------------------------------
-  vido-api:
-    # Resource limits
+  vido:
+    # Resource limits (combined API + Web serving)
     deploy:
       resources:
         limits:
@@ -45,35 +45,4 @@ services:
     # Production environment
     environment:
       - ENV=production
-      # Disable debug mode
       - GIN_MODE=release
-
-  # ---------------------------------------------------------------------------
-  # Vido Web - Production overrides
-  # ---------------------------------------------------------------------------
-  vido-web:
-    # Resource limits
-    deploy:
-      resources:
-        limits:
-          cpus: '1'
-          memory: 256M
-        reservations:
-          cpus: '0.25'
-          memory: 64M
-
-    # Production logging configuration
-    logging:
-      driver: json-file
-      options:
-        max-size: '10m'
-        max-file: '3'
-        labels: 'service,environment'
-
-    # Security: Read-only root filesystem
-    read_only: true
-    # Required tmpfs for nginx runtime files
-    tmpfs:
-      - /var/cache/nginx:size=64M
-      - /var/run:size=16M
-      - /tmp:size=32M

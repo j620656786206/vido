@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gin-contrib/cors"
+	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
 	"github.com/vido/api/internal/config"
 	"github.com/vido/api/internal/database"
@@ -402,6 +403,15 @@ func main() {
 	// Create Gin router
 	router := gin.Default()
 
+	// Security headers middleware (replaces Nginx security headers)
+	router.Use(securityHeadersMiddleware())
+
+	// Gzip compression middleware (replaces Nginx gzip)
+	// Exclude SSE endpoint to preserve streaming (http.Flusher compatibility)
+	router.Use(gzip.Gzip(gzip.DefaultCompression,
+		gzip.WithExcludedPaths([]string{"/api/v1/events"}),
+	))
+
 	// Configure CORS middleware using config values
 	corsConfig := cors.DefaultConfig()
 	corsConfig.AllowOrigins = cfg.CORSOrigins
@@ -446,6 +456,11 @@ func main() {
 		apiV1.GET("/health/services/:service/history", serviceHealthHandler.GetConnectionHistory)
 	}
 	slog.Info("API routes registered", "prefix", "/api/v1")
+
+	// Register static file serving and SPA fallback (must be AFTER all API routes)
+	publicDir := getPublicDir()
+	registerStaticRoutes(router, publicDir)
+	slog.Info("Static file serving configured", "public_dir", publicDir)
 
 	// Start retry scheduler for auto-retry mechanism (Story 3.11)
 	if err := retryService.StartScheduler(ctx); err != nil {

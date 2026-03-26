@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+.pnp/
+
+# Build outputs
+dist/
+coverage/
+.nx/
+
+# Git
+.git/
+.gitignore
+
+# Worktrees (BMAD development)
+.worktrees/
+
+# BMAD artifacts
+_bmad*/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test artifacts
+testsprite_tests/
+*.test
+*.spec
+
+# Documentation
+*.md
+!apps/web/src/**/*.md
+
+# Development configs
+.claude/
+.env
+.env.local
+.air.toml

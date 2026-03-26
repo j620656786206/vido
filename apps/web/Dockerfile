@@ -1,3 +1,5 @@
+# NOTE: For production, use the unified Dockerfile at project root.
+# This file is kept for development and CI split builds.
 # ==============================================================================
 # Vido Web - Multi-Stage Dockerfile
 # ==============================================================================

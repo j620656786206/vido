@@ -1,7 +1,7 @@
 # ==============================================================================
 # Vido - Docker Compose Configuration
 # ==============================================================================
-# Orchestrates the Vido application stack for local development and production.
+# Single-container deployment for NAS (Unraid, Synology, etc.)
 #
 # Quick Start:
 #   docker-compose up -d
@@ -9,7 +9,7 @@
 # Access:
 #   - Web UI: http://localhost:8080
 #   - API: http://localhost:8080/api/v1
-#   - Health: http://localhost:8080/api-health
+#   - Health: http://localhost:8080/health
 #
 # Volumes:
 #   - vido-data: Database and cache files
@@ -23,16 +23,14 @@
 
 services:
   # ---------------------------------------------------------------------------
-  # Vido API - Backend service
+  # Vido - Unified API + Web UI
   # ---------------------------------------------------------------------------
-  vido-api:
+  vido:
     build:
-      context: ./apps/api
+      context: .
       dockerfile: Dockerfile
-    container_name: vido-api
+    container_name: vido
     restart: unless-stopped
-    networks:
-      - vido-network
     volumes:
       # Persistent data storage
       - vido-data:/vido-data
@@ -56,40 +54,8 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
-    # Expose port for direct API access (useful for debugging)
-    # Comment out in production if using reverse proxy
     ports:
-      - '${API_PORT:-8081}:8080'
-
-  # ---------------------------------------------------------------------------
-  # Vido Web - Frontend service
-  # ---------------------------------------------------------------------------
-  vido-web:
-    build:
-      context: .
-      dockerfile: apps/web/Dockerfile
-    container_name: vido-web
-    restart: unless-stopped
-    networks:
-      - vido-network
-    ports:
-      - '${WEB_PORT:-8080}:80'
-    depends_on:
-      vido-api:
-        condition: service_healthy
-    healthcheck:
-      test: ['CMD', 'wget', '-q', '--spider', 'http://localhost/nginx-health']
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 5s
-
-# -----------------------------------------------------------------------------
-# Networks
-# -----------------------------------------------------------------------------
-networks:
-  vido-network:
-    driver: bridge
+      - '${VIDO_PORT:-8080}:8080'
 
 # -----------------------------------------------------------------------------
 # Volumes
