@@ -1,6 +1,6 @@
 # Story retro-8-TD4: Season Scope Batch Subtitle Processing
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
