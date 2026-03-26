@@ -14,6 +14,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"golang.org/x/time/rate"
 )
 
 func TestOpenSubProvider_Name(t *testing.T) {
@@ -384,6 +386,62 @@ func TestCalculateOpenSubHash_FileNotFound(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestOpenSubProvider_RateLimiter(t *testing.T) {
+	var searchCount int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/login" {
+			json.NewEncoder(w).Encode(map[string]string{"token": "tok"})
+			return
+		}
+		atomic.AddInt32(&searchCount, 1)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(openSubSearchResponse{Data: nil})
+	}))
+	defer server.Close()
+
+	p := newTestOpenSubProvider(server.URL)
+
+	// Make 8 rapid requests — should be throttled
+	// With burst=5, first 5 go immediately, then ~200ms each for 6th, 7th, 8th
+	start := time.Now()
+	for i := 0; i < 8; i++ {
+		_, _ = p.Search(context.Background(), SubtitleQuery{Title: "test"})
+	}
+	elapsed := time.Since(start)
+
+	// With 5 req/s limit and burst=5, 8 requests should take at least ~500ms
+	// (5 burst + 3 throttled at 200ms each = ~600ms minimum)
+	assert.GreaterOrEqual(t, elapsed, 400*time.Millisecond, "rate limiter should throttle requests")
+	assert.Equal(t, int32(8), atomic.LoadInt32(&searchCount))
+}
+
+func TestOpenSubProvider_RateLimiterContextCancellation(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/login" {
+			json.NewEncoder(w).Encode(map[string]string{"token": "tok"})
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(openSubSearchResponse{Data: nil})
+	}))
+	defer server.Close()
+
+	// Use a very restrictive limiter (1 req/s, burst 1) to make the test fast
+	p := newTestOpenSubProvider(server.URL)
+	p.rateLimiter = rate.NewLimiter(rate.Limit(1), 1)
+
+	// Exhaust the burst token
+	_, _ = p.Search(context.Background(), SubtitleQuery{Title: "test"})
+
+	// Now cancel context before the rate limiter can issue the next token
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+
+	_, err := p.Search(ctx, SubtitleQuery{Title: "test"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "rate limiter")
+}
+
 // --- Helper ---
 
 func newTestOpenSubProvider(baseURL string) *OpenSubProvider {
@@ -393,6 +451,7 @@ func newTestOpenSubProvider(baseURL string) *OpenSubProvider {
 		password:    "testpass",
 		disabled:    false,
 		httpClient:  &http.Client{Timeout: 10 * time.Second},
+		rateLimiter: rate.NewLimiter(rate.Limit(openSubRateLimit), openSubRateBurst),
 		testBaseURL: baseURL,
 	}
 }

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
+	"golang.org/x/time/rate"
 )
 
 const (
@@ -23,6 +24,8 @@ const (
 	zimukuMaxDelay         = 3 * time.Second
 	zimukuMaxResponseBytes = 2 << 20  // 2 MB max for HTML pages
 	zimukuMaxDownloadBytes = 50 << 20 // 50 MB max for subtitle files
+	zimukuRateLimit        = 1        // requests per second
+	zimukuRateBurst        = 1        // token bucket burst size
 )
 
 // Sentinel errors for Zimuku-specific failure modes.
@@ -67,6 +70,7 @@ var defaultUserAgents = []string{
 // ZimukuProvider implements SubtitleProvider for the Zimuku (字幕庫) subtitle source.
 type ZimukuProvider struct {
 	httpClient   *http.Client
+	rateLimiter  *rate.Limiter
 	userAgents   []string
 	testBaseURL  string // override for testing; empty = use zimukuBaseURL
 	skipDelays   bool   // skip random delays in tests
@@ -84,7 +88,8 @@ func NewZimukuProvider() *ZimukuProvider {
 				return nil
 			},
 		},
-		userAgents: defaultUserAgents,
+		rateLimiter: rate.NewLimiter(rate.Limit(zimukuRateLimit), zimukuRateBurst),
+		userAgents:  defaultUserAgents,
 	}
 }
 
@@ -138,6 +143,10 @@ func detectCaptcha(body []byte) bool {
 func (p *ZimukuProvider) Search(ctx context.Context, query SubtitleQuery) ([]SubtitleResult, error) {
 	if query.Title == "" {
 		return nil, fmt.Errorf("zimuku: search title is required")
+	}
+
+	if err := p.rateLimiter.Wait(ctx); err != nil {
+		return nil, fmt.Errorf("zimuku rate limiter: %w", err)
 	}
 
 	if err := p.randomDelay(ctx); err != nil {
@@ -281,6 +290,10 @@ func (p *ZimukuProvider) Download(ctx context.Context, id string) ([]byte, error
 	}
 
 	// Step 1: Fetch detail page
+	if err := p.rateLimiter.Wait(ctx); err != nil {
+		return nil, fmt.Errorf("zimuku rate limiter: %w", err)
+	}
+
 	if err := p.randomDelay(ctx); err != nil {
 		return nil, fmt.Errorf("zimuku: delay interrupted: %w", err)
 	}
@@ -339,6 +352,10 @@ func (p *ZimukuProvider) Download(ctx context.Context, id string) ([]byte, error
 	}
 
 	// Step 3: Download subtitle file
+	if err := p.rateLimiter.Wait(ctx); err != nil {
+		return nil, fmt.Errorf("zimuku rate limiter: %w", err)
+	}
+
 	if err := p.randomDelay(ctx); err != nil {
 		return nil, fmt.Errorf("zimuku: delay interrupted: %w", err)
 	}

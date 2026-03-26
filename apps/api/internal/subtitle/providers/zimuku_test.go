@@ -12,6 +12,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"golang.org/x/time/rate"
 )
 
 // --- HTML Fixtures ---
@@ -387,6 +389,51 @@ func TestDetectCaptcha(t *testing.T) {
 	assert.False(t, detectCaptcha([]byte("normal search results page")))
 }
 
+func TestZimukuProvider_RateLimiter(t *testing.T) {
+	var requestCount int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&requestCount, 1)
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte(emptySearchHTML))
+	}))
+	defer server.Close()
+
+	p := newTestZimukuProvider(server.URL)
+
+	// Make 3 rapid requests — should be throttled
+	// With burst=1, first 1 goes immediately, then ~1s each for 2nd and 3rd
+	start := time.Now()
+	for i := 0; i < 3; i++ {
+		_, _ = p.Search(context.Background(), SubtitleQuery{Title: "test"})
+	}
+	elapsed := time.Since(start)
+
+	// With 1 req/s limit and burst=1, 3 requests should take at least ~2 seconds
+	assert.GreaterOrEqual(t, elapsed, 1800*time.Millisecond, "rate limiter should throttle requests")
+	assert.Equal(t, int32(3), atomic.LoadInt32(&requestCount))
+}
+
+func TestZimukuProvider_RateLimiterContextCancellation(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte(emptySearchHTML))
+	}))
+	defer server.Close()
+
+	p := newTestZimukuProvider(server.URL)
+
+	// Exhaust the burst token
+	_, _ = p.Search(context.Background(), SubtitleQuery{Title: "test"})
+
+	// Now cancel context before the rate limiter can issue the next token
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+
+	_, err := p.Search(ctx, SubtitleQuery{Title: "test"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "rate limiter")
+}
+
 // --- Helper ---
 
 // newTestZimukuProvider creates a ZimukuProvider pointing at a test server
@@ -394,6 +441,7 @@ func TestDetectCaptcha(t *testing.T) {
 func newTestZimukuProvider(baseURL string) *ZimukuProvider {
 	return &ZimukuProvider{
 		httpClient:  &http.Client{Timeout: 10 * time.Second},
+		rateLimiter: rate.NewLimiter(rate.Limit(zimukuRateLimit), zimukuRateBurst),
 		userAgents:  defaultUserAgents,
 		testBaseURL: baseURL,
 		skipDelays:  true,

@@ -16,6 +16,8 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/time/rate"
+
 	"github.com/vido/api/internal/secrets"
 )
 
@@ -35,6 +37,11 @@ const (
 // openSubMaxRetries is the maximum number of 429 retries before giving up.
 const openSubMaxRetries = 2
 
+const (
+	openSubRateLimit = 5 // requests per second
+	openSubRateBurst = 5 // token bucket burst size
+)
+
 // OpenSubProvider implements SubtitleProvider for the OpenSubtitles REST API v1.
 type OpenSubProvider struct {
 	apiKey      string
@@ -42,6 +49,7 @@ type OpenSubProvider struct {
 	password    string
 	disabled    bool
 	httpClient  *http.Client
+	rateLimiter *rate.Limiter
 	testBaseURL string // override for testing
 
 	mu          sync.RWMutex
@@ -53,7 +61,8 @@ type OpenSubProvider struct {
 // Disabled mode if API key or credentials are not configured.
 func NewOpenSubProvider(ctx context.Context, secretsSvc secrets.SecretsServiceInterface) *OpenSubProvider {
 	p := &OpenSubProvider{
-		httpClient: &http.Client{Timeout: openSubHTTPTimeout},
+		httpClient:  &http.Client{Timeout: openSubHTTPTimeout},
+		rateLimiter: rate.NewLimiter(rate.Limit(openSubRateLimit), openSubRateBurst),
 	}
 
 	apiKey, err := secretsSvc.Retrieve(ctx, openSubAPIKeySecret)
@@ -88,6 +97,10 @@ func (p *OpenSubProvider) baseURL() string {
 
 // authenticate performs a login to get a JWT token.
 func (p *OpenSubProvider) authenticate(ctx context.Context) error {
+	if err := p.rateLimiter.Wait(ctx); err != nil {
+		return fmt.Errorf("opensubtitles rate limiter: %w", err)
+	}
+
 	body, _ := json.Marshal(map[string]string{
 		"username": p.username,
 		"password": p.password,
@@ -236,6 +249,10 @@ func (p *OpenSubProvider) searchWithRetry(ctx context.Context, query SubtitleQue
 	}
 	u.RawQuery = q.Encode()
 
+	if err := p.rateLimiter.Wait(ctx); err != nil {
+		return nil, fmt.Errorf("opensubtitles rate limiter: %w", err)
+	}
+
 	resp, err := p.doRequest(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
 		return nil, err
@@ -327,6 +344,10 @@ func (p *OpenSubProvider) downloadWithRetry(ctx context.Context, id string, retr
 		return nil, fmt.Errorf("opensubtitles: invalid file ID %q: %w", id, err)
 	}
 
+	if err := p.rateLimiter.Wait(ctx); err != nil {
+		return nil, fmt.Errorf("opensubtitles rate limiter: %w", err)
+	}
+
 	reqBody, _ := json.Marshal(map[string]int{"file_id": fileID})
 	resp, err := p.doRequest(ctx, http.MethodPost, p.baseURL()+"/download", bytes.NewReader(reqBody))
 	if err != nil {
@@ -366,6 +387,10 @@ func (p *OpenSubProvider) downloadWithRetry(ctx context.Context, id string, retr
 	}
 
 	// Step 2: Fetch actual subtitle file
+	if err := p.rateLimiter.Wait(ctx); err != nil {
+		return nil, fmt.Errorf("opensubtitles rate limiter: %w", err)
+	}
+
 	dlReq, err := http.NewRequestWithContext(ctx, http.MethodGet, dlResp.Link, nil)
 	if err != nil {
 		return nil, fmt.Errorf("opensubtitles: create file request: %w", err)
