@@ -218,7 +218,7 @@ development_status:
   # --- Technical Debt ---
   retro-8-TD1-fix-husky-precommit-hook:              done  # 2026-03-27 — QD: fixed permissions 644→755, added shebang, CI guard
   retro-8-TD2-lazy-sse-pattern-docs:                 done  # 2026-03-27 — QD: expanded Section 8 with lazy pattern, corrected event types, wire format
-  retro-8-TD3-per-provider-rate-limiter:             ready-for-dev  # → DEV /dev-story: batch rate limiting per provider
+  retro-8-TD3-per-provider-rate-limiter:             done  # 2026-03-27 — DEV: Zimuku 1 req/s, OpenSub 2 req/s proactive limiters
   retro-8-TD4-season-scope-batch:                    backlog  # → SM /create-story → DEV /dev-story: implement season scope batch
   retro-8-TD5-shared-scanner-test-fixtures:          backlog  # → QD /quick-dev: extract shared test fixtures
   retro-8-TD6-auto-dismiss-css-animation:            backlog  # → QD /quick-dev: replace setInterval with CSS animation
