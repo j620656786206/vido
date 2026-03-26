@@ -4,7 +4,7 @@
 
 **Full Documentation:** See `_bmad-output/planning-artifacts/architecture/index.md` for complete architectural decisions and patterns (sharded into ~20 focused files).
 
-**Last Updated:** 2026-03-23 (PRD v4 migration)
+**Last Updated:** 2026-03-27 (SSE lazy pattern docs)
 **Architecture Status:** ✅ Validated and Ready for Implementation (5,463 lines, 8 steps completed)
 
 ---
@@ -104,7 +104,8 @@ See `_bmad-output/planning-artifacts/architecture/consolidation-refactoring-plan
 **Decision:** Server-Sent Events for real-time progress updates, replacing polling for downloads/scans/subtitles.
 
 **Architecture:** Single Hub goroutine, fan-out to client channels via `http.Flusher`.
-**Event Types:** `scan_progress`, `scan_complete`, `scan_cancelled`, `subtitle_progress`, `subtitle_batch_progress`, `notification`
+**Broadcast Event Types:** `scan_progress`, `scan_complete`, `scan_cancelled`, `subtitle_progress`, `subtitle_batch_progress`, `notification`
+**Control Event Types:** `connected` (handshake), `ping` (keepalive)
 **Location:** `/apps/api/internal/sse/`
 
 **Rules:**
@@ -112,7 +113,8 @@ See `_bmad-output/planning-artifacts/architecture/consolidation-refactoring-plan
 - SSE endpoint: `GET /api/v1/events`
 - Buffered channels per client (capacity 100), drop on overflow via non-blocking send
 - Hub internal channels: broadcast (256), register/unregister (64 each)
-- Wire format: `event: {type}\ndata: {json}\n\n`
+- Wire format: `event: {type}\ndata: {json}\n\n` — note: `{json}` is the full `Event` struct (`id`, `type`, `data`), so `type` appears both in the SSE event line and inside the JSON payload
+- Reconnection (`Last-Event-ID`) not yet supported; `Event.ID` field exists but is not emitted as SSE `id:` line
 
 **Lazy Connection Pattern** (`handler.go`):
 
@@ -123,7 +125,7 @@ See `_bmad-output/planning-artifacts/architecture/consolidation-refactoring-plan
 5. Initial `connected` event sent with `clientId` to confirm handshake
 6. Event streaming begins via `c.Stream()` loop
 7. **Keepalive:** 30-second `ping` events (with timestamp payload) prevent proxy/client timeouts
-8. On client disconnect, deferred `Unregister()` closes channel and removes client from Hub
+8. On client disconnect, deferred `Unregister()` enqueues removal; Hub's `Run()` goroutine then closes the channel and deletes the client
 
 **Non-blocking Broadcast** (`hub.go`):
 
