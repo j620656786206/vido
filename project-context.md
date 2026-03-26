@@ -103,15 +103,33 @@ See `_bmad-output/planning-artifacts/architecture/consolidation-refactoring-plan
 
 **Decision:** Server-Sent Events for real-time progress updates, replacing polling for downloads/scans/subtitles.
 
-**Architecture:** Single hub goroutine, fan-out to client channels via `http.Flusher`.
-**Event Types:** `download_progress`, `scan_status`, `subtitle_status`, `notification`
+**Architecture:** Single Hub goroutine, fan-out to client channels via `http.Flusher`.
+**Event Types:** `scan_progress`, `scan_complete`, `scan_cancelled`, `subtitle_progress`, `subtitle_batch_progress`, `notification`
 **Location:** `/apps/api/internal/sse/`
 
 **Rules:**
 
 - SSE endpoint: `GET /api/v1/events`
-- Buffered channels per client (capacity 100), drop oldest on overflow
-- Support `Last-Event-ID` for reconnection
+- Buffered channels per client (capacity 100), drop on overflow via non-blocking send
+- Hub internal channels: broadcast (256), register/unregister (64 each)
+- Wire format: `event: {type}\ndata: {json}\n\n`
+
+**Lazy Connection Pattern** (`handler.go`):
+
+1. Client HTTP request arrives at `GET /api/v1/events`
+2. SSE headers are set (`text/event-stream`, `Cache-Control: no-cache`, `X-Accel-Buffering: no`)
+3. Client registers with Hub **after** HTTP handshake completes — lazy registration
+4. Hub assigns UUID client ID, creates buffered channel (capacity 100)
+5. Initial `connected` event sent with `clientId` to confirm handshake
+6. Event streaming begins via `c.Stream()` loop
+7. **Keepalive:** 30-second ping comments (`: ping`) prevent proxy/client timeouts
+8. On client disconnect, deferred `Unregister()` closes channel and removes client from Hub
+
+**Non-blocking Broadcast** (`hub.go`):
+
+- `Broadcast()` sends to Hub's broadcast channel (capacity 256) via `select...default` — drops event with warning log if full
+- `Run()` goroutine fans out each broadcast to all registered clients via `select...default` — drops per-client if that client's channel is full
+- `Close()` uses `atomic.Bool` for once-only shutdown, signals via `done` channel, closes all client channels
 
 ### 9. Subtitle Engine Pipeline
 
