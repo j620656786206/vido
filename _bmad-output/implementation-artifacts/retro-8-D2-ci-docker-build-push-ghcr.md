@@ -1,6 +1,6 @@
 # Story retro-8-D2: CI Docker Build + Push to GHCR
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -27,34 +27,34 @@ so that I can pull versioned images directly without building locally.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create `.github/workflows/docker.yml` workflow file (AC: 1, 9)
-  - [ ] 1.1 Define trigger events: `push` (main + v* tags), `pull_request` (main), `workflow_dispatch`
-  - [ ] 1.2 Set `permissions: contents: read, packages: write, id-token: write`
-  - [ ] 1.3 Set `env: GO_VERSION: '1.25'` (match `apps/api/go.mod`)
-- [ ] Task 2: Add Go backend test job as prerequisite (AC: 6)
-  - [ ] 2.1 Job `test-go`: checkout, setup-go@v5, `go test ./...` in `apps/api/`
-  - [ ] 2.2 Use `cache-dependency-path: apps/api/go.sum` for Go module caching
-- [ ] Task 3: Add Docker build+push job (AC: 2, 3, 4, 5, 7, 8)
-  - [ ] 3.1 `needs: [test-go]` — only build after tests pass
-  - [ ] 3.2 `actions/checkout@v4`
-  - [ ] 3.3 `docker/setup-qemu-action@v4` — enable ARM64 emulation
-  - [ ] 3.4 `docker/setup-buildx-action@v4` — enable BuildKit
-  - [ ] 3.5 `docker/login-action@v4` — login to `ghcr.io` with `GITHUB_TOKEN`
-  - [ ] 3.6 `docker/metadata-action@v6` — generate tags and OCI labels
-  - [ ] 3.7 `docker/build-push-action@v7` — build, push (except PRs), cache, provenance, SBOM
-- [ ] Task 4: Configure Docker metadata tags (AC: 4)
-  - [ ] 4.1 `type=semver,pattern={{version}}` — e.g., `1.2.3`
-  - [ ] 4.2 `type=semver,pattern={{major}}.{{minor}}` — e.g., `1.2`
-  - [ ] 4.3 `type=semver,pattern={{major}}` — e.g., `1`
-  - [ ] 4.4 `type=ref,event=branch` — e.g., `main`
-  - [ ] 4.5 `type=sha,prefix=sha-,format=short` — e.g., `sha-a1b2c3d`
-  - [ ] 4.6 OCI labels: `org.opencontainers.image.title=Vido`, description, vendor, licenses=MIT
-- [ ] Task 5: Update existing `test.yml` GO_VERSION (AC: 6)
-  - [ ] 5.1 Change `GO_VERSION: '1.24'` to `GO_VERSION: '1.25'` in `.github/workflows/test.yml` to match `go.mod`
-- [ ] Task 6: Verify workflow (AC: 9, 10)
-  - [ ] 6.1 YAML lint the workflow file (validate syntax)
-  - [ ] 6.2 Verify all action versions are latest stable (checkout@v4, setup-go@v5, etc.)
-  - [ ] 6.3 Verify conditional push logic: `push: ${{ github.event_name != 'pull_request' }}`
+- [x] Task 1: Create `.github/workflows/docker.yml` workflow file (AC: 1, 9)
+  - [x] 1.1 Define trigger events: `push` (main + v* tags), `pull_request` (main), `workflow_dispatch`
+  - [x] 1.2 Set `permissions: contents: read, packages: write, id-token: write`
+  - [x] 1.3 Set `env: GO_VERSION: '1.25'` (match `apps/api/go.mod`)
+- [x] Task 2: Add Go backend test job as prerequisite (AC: 6)
+  - [x] 2.1 Job `test-go`: checkout, setup-go@v5, `go test ./...` in `apps/api/`
+  - [x] 2.2 Use `cache-dependency-path: apps/api/go.sum` for Go module caching
+- [x] Task 3: Add Docker build+push job (AC: 2, 3, 4, 5, 7, 8)
+  - [x] 3.1 `needs: [test-go]` — only build after tests pass
+  - [x] 3.2 `actions/checkout@v4`
+  - [x] 3.3 `docker/setup-qemu-action@v4` — enable ARM64 emulation
+  - [x] 3.4 `docker/setup-buildx-action@v4` — enable BuildKit
+  - [x] 3.5 `docker/login-action@v4` — login to `ghcr.io` with `GITHUB_TOKEN`
+  - [x] 3.6 `docker/metadata-action@v6` — generate tags and OCI labels
+  - [x] 3.7 `docker/build-push-action@v7` — build, push (except PRs), cache, provenance, SBOM
+- [x] Task 4: Configure Docker metadata tags (AC: 4)
+  - [x] 4.1 `type=semver,pattern={{version}}` — e.g., `1.2.3`
+  - [x] 4.2 `type=semver,pattern={{major}}.{{minor}}` — e.g., `1.2`
+  - [x] 4.3 `type=semver,pattern={{major}}` — e.g., `1`
+  - [x] 4.4 `type=ref,event=branch` — e.g., `main`
+  - [x] 4.5 `type=sha,prefix=sha-,format=short` — e.g., `sha-a1b2c3d`
+  - [x] 4.6 OCI labels: `org.opencontainers.image.title=Vido`, description, vendor, licenses=MIT
+- [x] Task 5: Update existing `test.yml` GO_VERSION (AC: 6)
+  - [x] 5.1 Change `GO_VERSION: '1.24'` to `GO_VERSION: '1.25'` in `.github/workflows/test.yml` to match `go.mod`
+- [x] Task 6: Verify workflow (AC: 9, 10)
+  - [x] 6.1 YAML lint the workflow file (validate syntax)
+  - [x] 6.2 Verify all action versions are latest stable (checkout@v4, setup-go@v5, etc.)
+  - [x] 6.3 Verify conditional push logic: `push: ${{ github.event_name != 'pull_request' }}`
 
 ## Dev Notes
 
@@ -152,10 +152,24 @@ push: ${{ github.event_name != 'pull_request' }}
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Opus 4.6 (1M context)
 
 ### Debug Log References
 
 ### Completion Notes List
 
+- Task 1-4: Created `.github/workflows/docker.yml` with 2-job pipeline (test-go → docker build+push). Triggers on push to main, semver tags, PRs, and manual dispatch. Multi-platform amd64+arm64 via QEMU. GHCR login with GITHUB_TOKEN. Metadata tags: semver (version/major.minor/major), branch ref, sha prefix. OCI labels: title, description, vendor, licenses. Registry cache with mode=max (write-on-push only). Provenance mode=max + SBOM enabled.
+- Task 5: Fixed `test.yml` GO_VERSION from `1.24` to `1.25` to match `go.mod` (go 1.25.0).
+- Task 6: actionlint validation PASS on docker.yml. All 7 action versions verified as latest stable. Conditional push logic confirmed correct.
+- 🎨 UX Verification: SKIPPED — no UI changes in this story
+
 ### File List
+
+- `.github/workflows/docker.yml` (NEW) — Docker build+push workflow
+- `.github/workflows/test.yml` (MODIFIED) — GO_VERSION 1.24 → 1.25
+- `_bmad-output/implementation-artifacts/retro-8-D2-ci-docker-build-push-ghcr.md` (MODIFIED) — Story status + task checkboxes + dev record
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (MODIFIED) — Story status ready-for-dev → review
+
+## Change Log
+
+- 2026-03-26: Implemented CI Docker build+push workflow for GHCR with multi-platform support, registry caching, provenance, and SBOM. Fixed GO_VERSION mismatch in test.yml.

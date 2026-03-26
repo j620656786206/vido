@@ -205,7 +205,7 @@ development_status:
 
   # --- Deployment (before Epic 9) ---
   retro-8-D1-single-docker-image:                    done  # → DEV /dev-story: merge API+Web into single Docker image — CR 2026-03-26
-  retro-8-D2-ci-docker-build-push-ghcr:              ready-for-dev  # → DEV /dev-story: GitHub Actions Docker build+push workflow
+  retro-8-D2-ci-docker-build-push-ghcr:              review  # → DEV /dev-story: GitHub Actions Docker build+push workflow
   retro-8-D3-env-example-file:                       backlog  # → QD /quick-dev: create .env.example with all config vars
   retro-8-D4-unraid-template-xml:                    backlog  # → QD /quick-dev: Unraid Community Apps XML template
 
