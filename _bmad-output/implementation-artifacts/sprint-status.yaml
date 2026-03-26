@@ -216,7 +216,7 @@ development_status:
   retro-8-DOC4-bilingual-docs-rule:                  done  # 2026-03-26 — SM: added Rule 17 bilingual docs to project-context.md
 
   # --- Technical Debt ---
-  retro-8-TD1-fix-husky-precommit-hook:              backlog  # → QD /quick-dev: fix .husky/pre-commit permissions + verify
+  retro-8-TD1-fix-husky-precommit-hook:              done  # 2026-03-27 — QD: fixed permissions 644→755, added shebang, CI guard
   retro-8-TD2-lazy-sse-pattern-docs:                 backlog  # → QD /quick-dev: add lazy SSE pattern to project-context.md
   retro-8-TD3-per-provider-rate-limiter:             backlog  # → SM /create-story → DEV /dev-story: batch rate limiting per provider
   retro-8-TD4-season-scope-batch:                    backlog  # → SM /create-story → DEV /dev-story: implement season scope batch
