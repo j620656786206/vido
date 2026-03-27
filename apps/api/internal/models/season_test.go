@@ -1,7 +1,6 @@
 package models
 
 import (
-	"database/sql"
 	"testing"
 	"time"
 
@@ -84,14 +83,14 @@ func TestSeason_FullModel(t *testing.T) {
 	season := &Season{
 		ID:           "season-abc123",
 		SeriesID:     "series-xyz789",
-		TMDbID:       sql.NullInt64{Int64: 54321, Valid: true},
+		TMDbID:       NewNullInt64(54321),
 		SeasonNumber: 2,
-		Name:         sql.NullString{String: "Season 2", Valid: true},
-		Overview:     sql.NullString{String: "The second season continues the story", Valid: true},
-		PosterPath:   sql.NullString{String: "/posters/season-2.jpg", Valid: true},
-		AirDate:      sql.NullString{String: "2024-06-15", Valid: true},
-		EpisodeCount: sql.NullInt64{Int64: 10, Valid: true},
-		VoteAverage:  sql.NullFloat64{Float64: 8.2, Valid: true},
+		Name:         NewNullString("Season 2"),
+		Overview:     NewNullString("The second season continues the story"),
+		PosterPath:   NewNullString("/posters/season-2.jpg"),
+		AirDate:      NewNullString("2024-06-15"),
+		EpisodeCount: NewNullInt64(10),
+		VoteAverage:  NewNullFloat64(8.2),
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}

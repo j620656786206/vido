@@ -2,13 +2,13 @@ package handlers
 
 import (
 	"context"
-	"database/sql"
 	"log/slog"
 	"sort"
 	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/repository"
 )
 
@@ -141,7 +141,7 @@ func extractYear(dateStr string) int {
 	return 0
 }
 
-func nullStringValue(ns sql.NullString) string {
+func nullStringValue(ns models.NullString) string {
 	if ns.Valid {
 		return ns.String
 	}

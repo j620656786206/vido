@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"log/slog"
 	"testing"
@@ -982,7 +981,7 @@ func TestParseQueueService_ProcessNextJob_TVShow_ExistingSeries(t *testing.T) {
 	seriesRepo.series["existing-series"] = &models.Series{
 		ID:     "existing-series",
 		Title:  "Show",
-		TMDbID: sql.NullInt64{Int64: 99999, Valid: true},
+		TMDbID: models.NewNullInt64(99999),
 	}
 
 	seasonRepo := newMockPQSeasonRepo()
@@ -1034,7 +1033,7 @@ func TestParseQueueService_ProcessNextJob_TVShow_SeasonReuse(t *testing.T) {
 	seriesRepo.series["existing-series"] = &models.Series{
 		ID:     "existing-series",
 		Title:  "Show",
-		TMDbID: sql.NullInt64{Int64: 99999, Valid: true},
+		TMDbID: models.NewNullInt64(99999),
 	}
 	seasonRepo.seasons["existing-season"] = &models.Season{
 		ID:           "existing-season",
@@ -1217,7 +1216,7 @@ func TestParseQueueService_ProcessNextJob_TVShow_SeasonMetadataFromSeasonsJSON(t
 	existingSeries := &models.Series{
 		ID:     "existing-series",
 		Title:  "Show",
-		TMDbID: sql.NullInt64{Int64: 99999, Valid: true},
+		TMDbID: models.NewNullInt64(99999),
 	}
 	existingSeries.SetSeasons([]models.SeasonSummary{
 		{

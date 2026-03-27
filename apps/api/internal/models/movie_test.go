@@ -1,7 +1,6 @@
 package models
 
 import (
-	"database/sql"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -140,7 +139,7 @@ func TestMovie_Credits(t *testing.T) {
 
 	t.Run("GetCredits with invalid JSON", func(t *testing.T) {
 		movie := &Movie{
-			CreditsJSON: sql.NullString{String: "invalid json", Valid: true},
+			CreditsJSON: NewNullString("invalid json"),
 		}
 		_, err := movie.GetCredits()
 		assert.Error(t, err)

@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"log/slog"
 	"os"
@@ -156,8 +155,8 @@ func TestScannerService_StartScan_DuplicateDetection(t *testing.T) {
 	existingMovie := &models.Movie{
 		ID:        "existing-id",
 		Title:     "existing.mkv",
-		FilePath:  sql.NullString{String: resolvedPath, Valid: true},
-		FileSize:  sql.NullInt64{Int64: int64(len("fake video content")), Valid: true},
+		FilePath:  models.NewNullString(resolvedPath),
+		FileSize:  models.NewNullInt64(int64(len("fake video content"))),
 		UpdatedAt: time.Now().Add(1 * time.Hour), // future time so mtime is not newer
 	}
 	movieRepo.On("FindByFilePath", mock.Anything, resolvedPath).Return(existingMovie, nil)
@@ -187,8 +186,8 @@ func TestScannerService_StartScan_DuplicateDetection_SizeChanged(t *testing.T) {
 	existingMovie := &models.Movie{
 		ID:       "existing-id",
 		Title:    "changed.mkv",
-		FilePath: sql.NullString{String: resolvedPath, Valid: true},
-		FileSize: sql.NullInt64{Int64: 999, Valid: true}, // different size
+		FilePath: models.NewNullString(resolvedPath),
+		FileSize: models.NewNullInt64(999), // different size
 	}
 	movieRepo.On("FindByFilePath", mock.Anything, resolvedPath).Return(existingMovie, nil)
 	movieRepo.On("Update", mock.Anything, mock.AnythingOfType("*models.Movie")).Return(nil)
@@ -613,7 +612,7 @@ func TestScannerService_IncrementalScan_DetectRemovedFiles(t *testing.T) {
 		{
 			ID:       "movie-1",
 			Title:    "removed.mkv",
-			FilePath: sql.NullString{String: nonExistentPath, Valid: true},
+			FilePath: models.NewNullString(nonExistentPath),
 		},
 	}
 
@@ -649,8 +648,8 @@ func TestScannerService_IncrementalScan_MtimeChange(t *testing.T) {
 	existingMovie := &models.Movie{
 		ID:        "existing-id",
 		Title:     "mtime_test.mkv",
-		FilePath:  sql.NullString{String: resolvedPath, Valid: true},
-		FileSize:  sql.NullInt64{Int64: int64(len("fake video content")), Valid: true},
+		FilePath:  models.NewNullString(resolvedPath),
+		FileSize:  models.NewNullInt64(int64(len("fake video content"))),
 		UpdatedAt: time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC), // old time
 	}
 	movieRepo.On("FindByFilePath", mock.Anything, resolvedPath).Return(existingMovie, nil)

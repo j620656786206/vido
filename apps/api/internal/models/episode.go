@@ -1,7 +1,6 @@
 package models
 
 import (
-	"database/sql"
 	"fmt"
 	"time"
 )
@@ -11,21 +10,21 @@ type Episode struct {
 	// Core fields
 	ID            string         `db:"id" json:"id"`
 	SeriesID      string         `db:"series_id" json:"seriesId"`
-	SeasonID      sql.NullString `db:"season_id" json:"seasonId,omitempty"`
-	TMDbID        sql.NullInt64  `db:"tmdb_id" json:"tmdbId,omitempty"`
+	SeasonID      NullString `db:"season_id" json:"seasonId,omitempty"`
+	TMDbID        NullInt64  `db:"tmdb_id" json:"tmdbId,omitempty"`
 	SeasonNumber  int            `db:"season_number" json:"seasonNumber"`
 	EpisodeNumber int            `db:"episode_number" json:"episodeNumber"`
 
 	// Content fields
-	Title       sql.NullString  `db:"title" json:"title,omitempty"`
-	Overview    sql.NullString  `db:"overview" json:"overview,omitempty"`
-	AirDate     sql.NullString  `db:"air_date" json:"airDate,omitempty"`
-	Runtime     sql.NullInt64   `db:"runtime" json:"runtime,omitempty"`
-	StillPath   sql.NullString  `db:"still_path" json:"stillPath,omitempty"`
-	VoteAverage sql.NullFloat64 `db:"vote_average" json:"voteAverage,omitempty"`
+	Title       NullString  `db:"title" json:"title,omitempty"`
+	Overview    NullString  `db:"overview" json:"overview,omitempty"`
+	AirDate     NullString  `db:"air_date" json:"airDate,omitempty"`
+	Runtime     NullInt64   `db:"runtime" json:"runtime,omitempty"`
+	StillPath   NullString  `db:"still_path" json:"stillPath,omitempty"`
+	VoteAverage NullFloat64 `db:"vote_average" json:"voteAverage,omitempty"`
 
 	// File tracking
-	FilePath sql.NullString `db:"file_path" json:"filePath,omitempty"`
+	FilePath NullString `db:"file_path" json:"filePath,omitempty"`
 
 	// Timestamps
 	CreatedAt time.Time `db:"created_at" json:"createdAt"`

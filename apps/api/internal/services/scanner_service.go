@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"io/fs"
 	"log/slog"
@@ -371,7 +370,7 @@ func (s *ScannerService) processVideoFile(ctx context.Context, resolvedPath stri
 		}
 
 		// File changed (size or mtime) — update the record and reset parse status
-		existing.FileSize = sql.NullInt64{Int64: info.Size(), Valid: true}
+		existing.FileSize = models.NewNullInt64(info.Size())
 		existing.ParseStatus = models.ParseStatusPending
 		existing.UpdatedAt = time.Now()
 		if err := s.movieRepo.Update(ctx, existing); err != nil {
@@ -387,8 +386,8 @@ func (s *ScannerService) processVideoFile(ctx context.Context, resolvedPath stri
 	movie := &models.Movie{
 		ID:             uuid.New().String(),
 		Title:          filepath.Base(resolvedPath),
-		FilePath:       sql.NullString{String: resolvedPath, Valid: true},
-		FileSize:       sql.NullInt64{Int64: info.Size(), Valid: true},
+		FilePath:       models.NewNullString(resolvedPath),
+		FileSize:       models.NewNullInt64(info.Size()),
 		ParseStatus:    models.ParseStatusPending,
 		SubtitleStatus: models.SubtitleStatusNotSearched,
 		CreatedAt:      time.Now(),

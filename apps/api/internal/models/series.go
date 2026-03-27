@@ -1,7 +1,6 @@
 package models
 
 import (
-	"database/sql"
 	"encoding/json"
 	"time"
 )
@@ -30,51 +29,51 @@ type Series struct {
 	// Core fields
 	ID            string         `db:"id" json:"id"`
 	Title         string         `db:"title" json:"title"`
-	OriginalTitle sql.NullString `db:"original_title" json:"originalTitle,omitempty"`
+	OriginalTitle NullString `db:"original_title" json:"originalTitle,omitempty"`
 	FirstAirDate  string         `db:"first_air_date" json:"firstAirDate"`
-	LastAirDate   sql.NullString `db:"last_air_date" json:"lastAirDate,omitempty"`
+	LastAirDate   NullString `db:"last_air_date" json:"lastAirDate,omitempty"`
 	Genres        []string       `db:"genres" json:"genres"`
 
 	// Rating fields (kept for backward compatibility)
-	Rating sql.NullFloat64 `db:"rating" json:"rating,omitempty"`
+	Rating NullFloat64 `db:"rating" json:"rating,omitempty"`
 
 	// TMDb-specific rating fields
-	VoteAverage sql.NullFloat64 `db:"vote_average" json:"voteAverage,omitempty"`
-	VoteCount   sql.NullInt64   `db:"vote_count" json:"voteCount,omitempty"`
-	Popularity  sql.NullFloat64 `db:"popularity" json:"popularity,omitempty"`
+	VoteAverage NullFloat64 `db:"vote_average" json:"voteAverage,omitempty"`
+	VoteCount   NullInt64   `db:"vote_count" json:"voteCount,omitempty"`
+	Popularity  NullFloat64 `db:"popularity" json:"popularity,omitempty"`
 
 	// Content fields
-	Overview         sql.NullString `db:"overview" json:"overview,omitempty"`
-	PosterPath       sql.NullString `db:"poster_path" json:"posterPath,omitempty"`
-	BackdropPath     sql.NullString `db:"backdrop_path" json:"backdropPath,omitempty"`
-	NumberOfSeasons  sql.NullInt64  `db:"number_of_seasons" json:"numberOfSeasons,omitempty"`
-	NumberOfEpisodes sql.NullInt64  `db:"number_of_episodes" json:"numberOfEpisodes,omitempty"`
+	Overview         NullString `db:"overview" json:"overview,omitempty"`
+	PosterPath       NullString `db:"poster_path" json:"posterPath,omitempty"`
+	BackdropPath     NullString `db:"backdrop_path" json:"backdropPath,omitempty"`
+	NumberOfSeasons  NullInt64  `db:"number_of_seasons" json:"numberOfSeasons,omitempty"`
+	NumberOfEpisodes NullInt64  `db:"number_of_episodes" json:"numberOfEpisodes,omitempty"`
 
 	// Metadata fields
-	Status           sql.NullString `db:"status" json:"status,omitempty"`
-	OriginalLanguage sql.NullString `db:"original_language" json:"originalLanguage,omitempty"`
-	IMDbID           sql.NullString `db:"imdb_id" json:"imdbId,omitempty"`
-	TMDbID           sql.NullInt64  `db:"tmdb_id" json:"tmdbId,omitempty"`
-	InProduction     sql.NullBool   `db:"in_production" json:"inProduction,omitempty"`
+	Status           NullString `db:"status" json:"status,omitempty"`
+	OriginalLanguage NullString `db:"original_language" json:"originalLanguage,omitempty"`
+	IMDbID           NullString `db:"imdb_id" json:"imdbId,omitempty"`
+	TMDbID           NullInt64  `db:"tmdb_id" json:"tmdbId,omitempty"`
+	InProduction     NullBool   `db:"in_production" json:"inProduction,omitempty"`
 
 	// New fields for enhanced TMDb data (Story 2-6)
-	CreditsJSON  sql.NullString `db:"credits" json:"-"`  // JSON stored in DB
-	SeasonsJSON  sql.NullString `db:"seasons" json:"-"`  // JSON stored in DB
-	NetworksJSON sql.NullString `db:"networks" json:"-"` // JSON stored in DB
+	CreditsJSON  NullString `db:"credits" json:"-"`  // JSON stored in DB
+	SeasonsJSON  NullString `db:"seasons" json:"-"`  // JSON stored in DB
+	NetworksJSON NullString `db:"networks" json:"-"` // JSON stored in DB
 
 	// File tracking fields
-	FilePath sql.NullString `db:"file_path" json:"filePath,omitempty"`
+	FilePath NullString `db:"file_path" json:"filePath,omitempty"`
 
 	// Parse tracking fields
 	ParseStatus    ParseStatus    `db:"parse_status" json:"parseStatus"`
-	MetadataSource sql.NullString `db:"metadata_source" json:"metadataSource,omitempty"`
+	MetadataSource NullString `db:"metadata_source" json:"metadataSource,omitempty"`
 
 	// Subtitle tracking fields
 	SubtitleStatus       SubtitleStatus  `db:"subtitle_status" json:"subtitleStatus"`
-	SubtitlePath         sql.NullString  `db:"subtitle_path" json:"subtitlePath,omitempty"`
-	SubtitleLanguage     sql.NullString  `db:"subtitle_language" json:"subtitleLanguage,omitempty"`
-	SubtitleLastSearched sql.NullTime    `db:"subtitle_last_searched" json:"subtitleLastSearched,omitempty"`
-	SubtitleSearchScore  sql.NullFloat64 `db:"subtitle_search_score" json:"subtitleSearchScore,omitempty"`
+	SubtitlePath         NullString  `db:"subtitle_path" json:"subtitlePath,omitempty"`
+	SubtitleLanguage     NullString  `db:"subtitle_language" json:"subtitleLanguage,omitempty"`
+	SubtitleLastSearched NullTime    `db:"subtitle_last_searched" json:"subtitleLastSearched,omitempty"`
+	SubtitleSearchScore  NullFloat64 `db:"subtitle_search_score" json:"subtitleSearchScore,omitempty"`
 
 	// Soft-delete flag for removed files (Story 7-2)
 	IsRemoved bool `db:"is_removed" json:"isRemoved"`
@@ -140,7 +139,7 @@ func (s *Series) GetCredits() (*Credits, error) {
 // SetCredits serializes credits to JSON and stores in CreditsJSON
 func (s *Series) SetCredits(credits *Credits) error {
 	if credits == nil {
-		s.CreditsJSON = sql.NullString{Valid: false}
+		s.CreditsJSON = NullString{}
 		return nil
 	}
 
@@ -149,7 +148,7 @@ func (s *Series) SetCredits(credits *Credits) error {
 		return err
 	}
 
-	s.CreditsJSON = sql.NullString{String: string(bytes), Valid: true}
+	s.CreditsJSON = NewNullString(string(bytes))
 	return nil
 }
 
@@ -170,7 +169,7 @@ func (s *Series) GetSeasons() ([]SeasonSummary, error) {
 // SetSeasons serializes seasons to JSON
 func (s *Series) SetSeasons(seasons []SeasonSummary) error {
 	if seasons == nil {
-		s.SeasonsJSON = sql.NullString{Valid: false}
+		s.SeasonsJSON = NullString{}
 		return nil
 	}
 
@@ -179,7 +178,7 @@ func (s *Series) SetSeasons(seasons []SeasonSummary) error {
 		return err
 	}
 
-	s.SeasonsJSON = sql.NullString{String: string(bytes), Valid: true}
+	s.SeasonsJSON = NewNullString(string(bytes))
 	return nil
 }
 
@@ -200,7 +199,7 @@ func (s *Series) GetNetworks() ([]Network, error) {
 // SetNetworks serializes networks to JSON
 func (s *Series) SetNetworks(networks []Network) error {
 	if networks == nil {
-		s.NetworksJSON = sql.NullString{Valid: false}
+		s.NetworksJSON = NullString{}
 		return nil
 	}
 
@@ -209,7 +208,7 @@ func (s *Series) SetNetworks(networks []Network) error {
 		return err
 	}
 
-	s.NetworksJSON = sql.NullString{String: string(bytes), Valid: true}
+	s.NetworksJSON = NewNullString(string(bytes))
 	return nil
 }
 

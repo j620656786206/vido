@@ -1,7 +1,6 @@
 package models
 
 import (
-	"database/sql"
 	"time"
 )
 
@@ -10,16 +9,16 @@ type Season struct {
 	// Core fields
 	ID           string        `db:"id" json:"id"`
 	SeriesID     string        `db:"series_id" json:"seriesId"`
-	TMDbID       sql.NullInt64 `db:"tmdb_id" json:"tmdbId,omitempty"`
+	TMDbID       NullInt64 `db:"tmdb_id" json:"tmdbId,omitempty"`
 	SeasonNumber int           `db:"season_number" json:"seasonNumber"`
 
 	// Content fields
-	Name         sql.NullString  `db:"name" json:"name,omitempty"`
-	Overview     sql.NullString  `db:"overview" json:"overview,omitempty"`
-	PosterPath   sql.NullString  `db:"poster_path" json:"posterPath,omitempty"`
-	AirDate      sql.NullString  `db:"air_date" json:"airDate,omitempty"`
-	EpisodeCount sql.NullInt64   `db:"episode_count" json:"episodeCount,omitempty"`
-	VoteAverage  sql.NullFloat64 `db:"vote_average" json:"voteAverage,omitempty"`
+	Name         NullString  `db:"name" json:"name,omitempty"`
+	Overview     NullString  `db:"overview" json:"overview,omitempty"`
+	PosterPath   NullString  `db:"poster_path" json:"posterPath,omitempty"`
+	AirDate      NullString  `db:"air_date" json:"airDate,omitempty"`
+	EpisodeCount NullInt64   `db:"episode_count" json:"episodeCount,omitempty"`
+	VoteAverage  NullFloat64 `db:"vote_average" json:"voteAverage,omitempty"`
 
 	// Timestamps
 	CreatedAt time.Time `db:"created_at" json:"createdAt"`

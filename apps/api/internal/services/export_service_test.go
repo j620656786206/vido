@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -24,18 +23,18 @@ func setupExportMocks() (*testutil.MockMovieRepository, *testutil.MockSeriesRepo
 	movies := []models.Movie{
 		{
 			ID: "m1", Title: "駭客任務", ReleaseDate: "1999",
-			OriginalTitle: sql.NullString{String: "The Matrix", Valid: true},
-			TMDbID:        sql.NullInt64{Int64: 603, Valid: true},
+			OriginalTitle: models.NewNullString("The Matrix"),
+			TMDbID:        models.NewNullInt64(603),
 			Genres:        []string{"科幻", "動作"},
-			Overview:      sql.NullString{String: "一個年輕的電腦駭客...", Valid: true},
-			VoteAverage:   sql.NullFloat64{Float64: 8.7, Valid: true},
+			Overview:      models.NewNullString("一個年輕的電腦駭客..."),
+			VoteAverage:   models.NewNullFloat64(8.7),
 			CreatedAt:     time.Now(),
 		},
 	}
 	series := []models.Series{
 		{
 			ID: "s1", Title: "乒乓", FirstAirDate: "2014",
-			TMDbID:    sql.NullInt64{Int64: 12345, Valid: true},
+			TMDbID:    models.NewNullInt64(12345),
 			Genres:    []string{"動畫"},
 			CreatedAt: time.Now(),
 		},
@@ -124,7 +123,7 @@ func TestExportService_ExportNFO(t *testing.T) {
 		movies := []models.Movie{
 			{
 				ID: "m1", Title: "駭客任務", ReleaseDate: "1999",
-				FilePath:  sql.NullString{String: movieFile, Valid: true},
+				FilePath:  models.NewNullString(movieFile),
 				Genres:    []string{"科幻"},
 				CreatedAt: time.Now(),
 			},
@@ -277,7 +276,7 @@ func TestExportService_ExportNFO_SeriesWithFilePath(t *testing.T) {
 		seriesRepo.On("List", mock.Anything, mock.AnythingOfType("repository.ListParams")).Return([]models.Series{
 			{
 				ID: "s1", Title: "乒乓", FirstAirDate: "2014",
-				FilePath:  sql.NullString{String: seriesFile, Valid: true},
+				FilePath:  models.NewNullString(seriesFile),
 				Genres:    []string{"動畫"},
 				CreatedAt: time.Now(),
 			},
@@ -363,7 +362,7 @@ func TestNFOGenerator_GenerateMovieNFO_ActorLimit(t *testing.T) {
 		movie := models.Movie{
 			Title:       "Big Cast",
 			ReleaseDate: "2026",
-			CreditsJSON: sql.NullString{String: string(creditsJSON), Valid: true},
+			CreditsJSON: models.NewNullString(string(creditsJSON)),
 		}
 
 		data := gen.GenerateMovieNFO(movie)
@@ -387,7 +386,7 @@ func TestNFOGenerator_GenerateMovieNFO_InvalidCreditsJSON(t *testing.T) {
 		movie := models.Movie{
 			Title:       "Bad Credits",
 			ReleaseDate: "2026",
-			CreditsJSON: sql.NullString{String: "not valid json{{{", Valid: true},
+			CreditsJSON: models.NewNullString("not valid json{{{"),
 		}
 
 		data := gen.GenerateMovieNFO(movie)
@@ -406,14 +405,14 @@ func TestNFOGenerator_GenerateMovieNFO(t *testing.T) {
 	t.Run("generates valid movie NFO XML", func(t *testing.T) {
 		movie := models.Movie{
 			Title:         "駭客任務",
-			OriginalTitle: sql.NullString{String: "The Matrix", Valid: true},
+			OriginalTitle: models.NewNullString("The Matrix"),
 			ReleaseDate:   "1999",
 			Genres:        []string{"科幻", "動作"},
-			Overview:      sql.NullString{String: "一個年輕的電腦駭客", Valid: true},
-			VoteAverage:   sql.NullFloat64{Float64: 8.7, Valid: true},
-			TMDbID:        sql.NullInt64{Int64: 603, Valid: true},
-			IMDbID:        sql.NullString{String: "tt0133093", Valid: true},
-			CreditsJSON:   sql.NullString{String: `{"cast":[{"name":"Keanu Reeves","character":"Neo"}],"crew":[{"name":"Lana Wachowski","job":"Director"}]}`, Valid: true},
+			Overview:      models.NewNullString("一個年輕的電腦駭客"),
+			VoteAverage:   models.NewNullFloat64(8.7),
+			TMDbID:        models.NewNullInt64(603),
+			IMDbID:        models.NewNullString("tt0133093"),
+			CreditsJSON:   models.NewNullString(`{"cast":[{"name":"Keanu Reeves","character":"Neo"}],"crew":[{"name":"Lana Wachowski","job":"Director"}]}`),
 		}
 
 		data := gen.GenerateMovieNFO(movie)
@@ -440,8 +439,8 @@ func TestNFOGenerator_GenerateSeriesNFO(t *testing.T) {
 			Title:        "乒乓",
 			FirstAirDate: "2014",
 			Genres:       []string{"動畫"},
-			TMDbID:       sql.NullInt64{Int64: 12345, Valid: true},
-			Status:       sql.NullString{String: "Ended", Valid: true},
+			TMDbID:       models.NewNullInt64(12345),
+			Status:       models.NewNullString("Ended"),
 		}
 
 		data := gen.GenerateSeriesNFO(series)

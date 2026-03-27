@@ -85,19 +85,19 @@ func TestSeriesCreate(t *testing.T) {
 	series := &models.Series{
 		ID:               "series-1",
 		Title:            "Breaking Bad",
-		OriginalTitle:    sql.NullString{String: "Breaking Bad", Valid: true},
+		OriginalTitle:    models.NewNullString("Breaking Bad"),
 		FirstAirDate:     "2008-01-20",
-		LastAirDate:      sql.NullString{String: "2013-09-29", Valid: true},
+		LastAirDate:      models.NewNullString("2013-09-29"),
 		Genres:           []string{"Drama", "Crime", "Thriller"},
-		Rating:           sql.NullFloat64{Float64: 9.5, Valid: true},
-		Overview:         sql.NullString{String: "A high school chemistry teacher turned meth cook.", Valid: true},
-		NumberOfSeasons:  sql.NullInt64{Int64: 5, Valid: true},
-		NumberOfEpisodes: sql.NullInt64{Int64: 62, Valid: true},
-		Status:           sql.NullString{String: "Ended", Valid: true},
-		OriginalLanguage: sql.NullString{String: "en", Valid: true},
-		IMDbID:           sql.NullString{String: "tt0903747", Valid: true},
-		TMDbID:           sql.NullInt64{Int64: 1396, Valid: true},
-		InProduction:     sql.NullBool{Bool: false, Valid: true},
+		Rating:           models.NewNullFloat64(9.5),
+		Overview:         models.NewNullString("A high school chemistry teacher turned meth cook."),
+		NumberOfSeasons:  models.NewNullInt64(5),
+		NumberOfEpisodes: models.NewNullInt64(62),
+		Status:           models.NewNullString("Ended"),
+		OriginalLanguage: models.NewNullString("en"),
+		IMDbID:           models.NewNullString("tt0903747"),
+		TMDbID:           models.NewNullInt64(1396),
+		InProduction:     models.NewNullBool(false),
 	}
 
 	err := repo.Create(ctx, series)
@@ -152,9 +152,9 @@ func TestSeriesFindByID(t *testing.T) {
 		Title:            "Game of Thrones",
 		FirstAirDate:     "2011-04-17",
 		Genres:           []string{"Drama", "Fantasy"},
-		Rating:           sql.NullFloat64{Float64: 9.3, Valid: true},
-		NumberOfSeasons:  sql.NullInt64{Int64: 8, Valid: true},
-		NumberOfEpisodes: sql.NullInt64{Int64: 73, Valid: true},
+		Rating:           models.NewNullFloat64(9.3),
+		NumberOfSeasons:  models.NewNullInt64(8),
+		NumberOfEpisodes: models.NewNullInt64(73),
 	}
 
 	err := repo.Create(ctx, series)
@@ -207,7 +207,7 @@ func TestSeriesFindByTMDbID(t *testing.T) {
 		Title:        "The Mandalorian",
 		FirstAirDate: "2019-11-12",
 		Genres:       []string{"Science Fiction", "Action"},
-		TMDbID:       sql.NullInt64{Int64: 82856, Valid: true},
+		TMDbID:       models.NewNullInt64(82856),
 	}
 
 	err := repo.Create(ctx, series)
@@ -243,7 +243,7 @@ func TestSeriesFindByIMDbID(t *testing.T) {
 		Title:        "Stranger Things",
 		FirstAirDate: "2016-07-15",
 		Genres:       []string{"Science Fiction", "Horror", "Drama"},
-		IMDbID:       sql.NullString{String: "tt4574334", Valid: true},
+		IMDbID:       models.NewNullString("tt4574334"),
 	}
 
 	err := repo.Create(ctx, series)
@@ -279,8 +279,8 @@ func TestSeriesUpdate(t *testing.T) {
 		Title:            "Original Title",
 		FirstAirDate:     "2020-01-01",
 		Genres:           []string{"Drama"},
-		NumberOfSeasons:  sql.NullInt64{Int64: 1, Valid: true},
-		NumberOfEpisodes: sql.NullInt64{Int64: 10, Valid: true},
+		NumberOfSeasons:  models.NewNullInt64(1),
+		NumberOfEpisodes: models.NewNullInt64(10),
 	}
 
 	err := repo.Create(ctx, series)
@@ -294,8 +294,8 @@ func TestSeriesUpdate(t *testing.T) {
 	// Update series
 	series.Title = "Updated Title"
 	series.Genres = []string{"Drama", "Thriller"}
-	series.NumberOfSeasons = sql.NullInt64{Int64: 2, Valid: true}
-	series.NumberOfEpisodes = sql.NullInt64{Int64: 20, Valid: true}
+	series.NumberOfSeasons = models.NewNullInt64(2)
+	series.NumberOfEpisodes = models.NewNullInt64(20)
 	originalUpdatedAt := series.UpdatedAt
 
 	err = repo.Update(ctx, series)
@@ -482,21 +482,21 @@ func TestSeriesListWithSorting(t *testing.T) {
 			Title:        "Series A",
 			FirstAirDate: "2020-01-01",
 			Genres:       []string{},
-			Rating:       sql.NullFloat64{Float64: 7.5, Valid: true},
+			Rating:       models.NewNullFloat64(7.5),
 		},
 		{
 			ID:           "series-2",
 			Title:        "Series B",
 			FirstAirDate: "2020-01-01",
 			Genres:       []string{},
-			Rating:       sql.NullFloat64{Float64: 9.0, Valid: true},
+			Rating:       models.NewNullFloat64(9.0),
 		},
 		{
 			ID:           "series-3",
 			Title:        "Series C",
 			FirstAirDate: "2020-01-01",
 			Genres:       []string{},
-			Rating:       sql.NullFloat64{Float64: 8.0, Valid: true},
+			Rating:       models.NewNullFloat64(8.0),
 		},
 	}
 
@@ -644,7 +644,7 @@ func TestSeriesInProduction(t *testing.T) {
 		Title:        "Test Series",
 		FirstAirDate: "2020-01-01",
 		Genres:       []string{"Drama"},
-		InProduction: sql.NullBool{Bool: true, Valid: true},
+		InProduction: models.NewNullBool(true),
 	}
 
 	err := repo.Create(ctx, series)
@@ -679,7 +679,7 @@ func TestSeriesUpsertCreate(t *testing.T) {
 		Title:        "New Series",
 		FirstAirDate: "2023-01-01",
 		Genres:       []string{"Drama"},
-		TMDbID:       sql.NullInt64{Int64: 99999, Valid: true},
+		TMDbID:       models.NewNullInt64(99999),
 	}
 
 	err := repo.Upsert(ctx, series)
@@ -712,9 +712,9 @@ func TestSeriesUpsertUpdate(t *testing.T) {
 		Title:            "Original Title",
 		FirstAirDate:     "2023-01-01",
 		Genres:           []string{"Drama"},
-		TMDbID:           sql.NullInt64{Int64: 12345, Valid: true},
-		NumberOfSeasons:  sql.NullInt64{Int64: 2, Valid: true},
-		NumberOfEpisodes: sql.NullInt64{Int64: 20, Valid: true},
+		TMDbID:           models.NewNullInt64(12345),
+		NumberOfSeasons:  models.NewNullInt64(2),
+		NumberOfEpisodes: models.NewNullInt64(20),
 	}
 
 	err := repo.Create(ctx, series)
@@ -728,9 +728,9 @@ func TestSeriesUpsertUpdate(t *testing.T) {
 		Title:            "Updated Title",
 		FirstAirDate:     "2023-01-01",
 		Genres:           []string{"Drama", "Thriller"},
-		TMDbID:           sql.NullInt64{Int64: 12345, Valid: true},
-		NumberOfSeasons:  sql.NullInt64{Int64: 3, Valid: true},
-		NumberOfEpisodes: sql.NullInt64{Int64: 30, Valid: true},
+		TMDbID:           models.NewNullInt64(12345),
+		NumberOfSeasons:  models.NewNullInt64(3),
+		NumberOfEpisodes: models.NewNullInt64(30),
 	}
 
 	err = repo.Upsert(ctx, updatedSeries)
@@ -969,21 +969,21 @@ func TestSeriesFullTextSearchByTitle(t *testing.T) {
 			Title:        "The Walking Dead",
 			FirstAirDate: "2010-10-31",
 			Genres:       []string{"Horror"},
-			Overview:     sql.NullString{String: "Sheriff's deputy awakens from a coma to find a zombie apocalypse.", Valid: true},
+			Overview:     models.NewNullString("Sheriff's deputy awakens from a coma to find a zombie apocalypse."),
 		},
 		{
 			ID:           "series-2",
 			Title:        "Fear the Walking Dead",
 			FirstAirDate: "2015-08-23",
 			Genres:       []string{"Horror"},
-			Overview:     sql.NullString{String: "A prequel to The Walking Dead.", Valid: true},
+			Overview:     models.NewNullString("A prequel to The Walking Dead."),
 		},
 		{
 			ID:           "series-3",
 			Title:        "Breaking Bad",
 			FirstAirDate: "2008-01-20",
 			Genres:       []string{"Drama"},
-			Overview:     sql.NullString{String: "A chemistry teacher turns to cooking meth.", Valid: true},
+			Overview:     models.NewNullString("A chemistry teacher turns to cooking meth."),
 		},
 	}
 

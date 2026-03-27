@@ -1,7 +1,6 @@
 package models
 
 import (
-	"database/sql"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -105,7 +104,7 @@ func TestSeries_Seasons(t *testing.T) {
 
 	t.Run("GetSeasons with invalid JSON", func(t *testing.T) {
 		series := &Series{
-			SeasonsJSON: sql.NullString{String: "invalid", Valid: true},
+			SeasonsJSON: NewNullString("invalid"),
 		}
 		_, err := series.GetSeasons()
 		assert.Error(t, err)
@@ -283,7 +282,7 @@ func TestSeries_SetCredits_Nil(t *testing.T) {
 
 func TestSeries_GetCredits_InvalidJSON(t *testing.T) {
 	series := &Series{
-		CreditsJSON: sql.NullString{String: "not-valid-json", Valid: true},
+		CreditsJSON: NewNullString("not-valid-json"),
 	}
 	_, err := series.GetCredits()
 	assert.Error(t, err)
@@ -298,7 +297,7 @@ func TestSeries_SetNetworks_Nil(t *testing.T) {
 
 func TestSeries_GetNetworks_InvalidJSON(t *testing.T) {
 	series := &Series{
-		NetworksJSON: sql.NullString{String: "not-valid-json", Valid: true},
+		NetworksJSON: NewNullString("not-valid-json"),
 	}
 	_, err := series.GetNetworks()
 	assert.Error(t, err)

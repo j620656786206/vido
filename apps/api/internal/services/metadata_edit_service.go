@@ -4,7 +4,6 @@ package services
 import (
 	"bytes"
 	"context"
-	"database/sql"
 	"fmt"
 	"io"
 	"log/slog"
@@ -97,7 +96,7 @@ func (s *MetadataEditService) updateMovieMetadata(ctx context.Context, req *Upda
 	// Update fields
 	movie.Title = req.Title
 	if req.TitleEnglish != "" {
-		movie.OriginalTitle = sql.NullString{String: req.TitleEnglish, Valid: true}
+		movie.OriginalTitle = models.NewNullString(req.TitleEnglish)
 	}
 
 	// Update year in release date
@@ -135,16 +134,16 @@ func (s *MetadataEditService) updateMovieMetadata(ctx context.Context, req *Upda
 
 	// Update overview
 	if req.Overview != "" {
-		movie.Overview = sql.NullString{String: req.Overview, Valid: true}
+		movie.Overview = models.NewNullString(req.Overview)
 	}
 
 	// Update poster URL if provided
 	if req.PosterURL != "" {
-		movie.PosterPath = sql.NullString{String: req.PosterURL, Valid: true}
+		movie.PosterPath = models.NewNullString(req.PosterURL)
 	}
 
 	// Set metadata source to manual
-	movie.MetadataSource = sql.NullString{String: string(models.MetadataSourceManual), Valid: true}
+	movie.MetadataSource = models.NewNullString(string(models.MetadataSourceManual))
 
 	// Update timestamp
 	now := time.Now()
@@ -186,7 +185,7 @@ func (s *MetadataEditService) updateSeriesMetadata(ctx context.Context, req *Upd
 	// Update fields
 	series.Title = req.Title
 	if req.TitleEnglish != "" {
-		series.OriginalTitle = sql.NullString{String: req.TitleEnglish, Valid: true}
+		series.OriginalTitle = models.NewNullString(req.TitleEnglish)
 	}
 
 	// Update year in first air date
@@ -224,16 +223,16 @@ func (s *MetadataEditService) updateSeriesMetadata(ctx context.Context, req *Upd
 
 	// Update overview
 	if req.Overview != "" {
-		series.Overview = sql.NullString{String: req.Overview, Valid: true}
+		series.Overview = models.NewNullString(req.Overview)
 	}
 
 	// Update poster URL if provided
 	if req.PosterURL != "" {
-		series.PosterPath = sql.NullString{String: req.PosterURL, Valid: true}
+		series.PosterPath = models.NewNullString(req.PosterURL)
 	}
 
 	// Set metadata source to manual
-	series.MetadataSource = sql.NullString{String: string(models.MetadataSourceManual), Valid: true}
+	series.MetadataSource = models.NewNullString(string(models.MetadataSourceManual))
 
 	// Update timestamp
 	now := time.Now()
@@ -313,7 +312,7 @@ func (s *MetadataEditService) updatePosterPath(ctx context.Context, id, mediaTyp
 		if err != nil {
 			return err
 		}
-		series.PosterPath = sql.NullString{String: posterURL, Valid: true}
+		series.PosterPath = models.NewNullString(posterURL)
 		series.UpdatedAt = time.Now()
 		return s.seriesRepo.Update(ctx, series)
 	default:
@@ -321,7 +320,7 @@ func (s *MetadataEditService) updatePosterPath(ctx context.Context, id, mediaTyp
 		if err != nil {
 			return err
 		}
-		movie.PosterPath = sql.NullString{String: posterURL, Valid: true}
+		movie.PosterPath = models.NewNullString(posterURL)
 		movie.UpdatedAt = time.Now()
 		return s.movieRepo.Update(ctx, movie)
 	}

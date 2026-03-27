@@ -83,16 +83,16 @@ func TestMovieCreate(t *testing.T) {
 	movie := &models.Movie{
 		ID:               "movie-1",
 		Title:            "The Matrix",
-		OriginalTitle:    sql.NullString{String: "The Matrix", Valid: true},
+		OriginalTitle:    models.NewNullString("The Matrix"),
 		ReleaseDate:      "1999-03-31",
 		Genres:           []string{"Action", "Science Fiction"},
-		Rating:           sql.NullFloat64{Float64: 8.7, Valid: true},
-		Overview:         sql.NullString{String: "A computer hacker learns about the true nature of reality.", Valid: true},
-		Runtime:          sql.NullInt64{Int64: 136, Valid: true},
-		OriginalLanguage: sql.NullString{String: "en", Valid: true},
-		Status:           sql.NullString{String: "Released", Valid: true},
-		IMDbID:           sql.NullString{String: "tt0133093", Valid: true},
-		TMDbID:           sql.NullInt64{Int64: 603, Valid: true},
+		Rating:           models.NewNullFloat64(8.7),
+		Overview:         models.NewNullString("A computer hacker learns about the true nature of reality."),
+		Runtime:          models.NewNullInt64(136),
+		OriginalLanguage: models.NewNullString("en"),
+		Status:           models.NewNullString("Released"),
+		IMDbID:           models.NewNullString("tt0133093"),
+		TMDbID:           models.NewNullInt64(603),
 	}
 
 	err := repo.Create(ctx, movie)
@@ -147,7 +147,7 @@ func TestMovieFindByID(t *testing.T) {
 		Title:       "Inception",
 		ReleaseDate: "2010-07-16",
 		Genres:      []string{"Action", "Thriller"},
-		Rating:      sql.NullFloat64{Float64: 8.8, Valid: true},
+		Rating:      models.NewNullFloat64(8.8),
 	}
 
 	err := repo.Create(ctx, movie)
@@ -200,7 +200,7 @@ func TestMovieFindByTMDbID(t *testing.T) {
 		Title:       "Interstellar",
 		ReleaseDate: "2014-11-07",
 		Genres:      []string{"Science Fiction", "Drama"},
-		TMDbID:      sql.NullInt64{Int64: 157336, Valid: true},
+		TMDbID:      models.NewNullInt64(157336),
 	}
 
 	err := repo.Create(ctx, movie)
@@ -236,7 +236,7 @@ func TestMovieFindByIMDbID(t *testing.T) {
 		Title:       "The Dark Knight",
 		ReleaseDate: "2008-07-18",
 		Genres:      []string{"Action", "Crime", "Drama"},
-		IMDbID:      sql.NullString{String: "tt0468569", Valid: true},
+		IMDbID:      models.NewNullString("tt0468569"),
 	}
 
 	err := repo.Create(ctx, movie)
@@ -391,8 +391,8 @@ func TestMovieList(t *testing.T) {
 	// Create multiple movies
 	for i := 1; i <= 5; i++ {
 		movie := &models.Movie{
-			ID:          sql.NullString{String: string(rune('0' + i)), Valid: true}.String,
-			Title:       sql.NullString{String: "Movie " + string(rune('0'+i)), Valid: true}.String,
+			ID:          models.NewNullString(string(rune('0' + i))).String,
+			Title:       models.NewNullString("Movie " + string(rune('0'+i))).String,
 			ReleaseDate: "2020-01-01",
 			Genres:      []string{"Drama"},
 		}
@@ -470,21 +470,21 @@ func TestMovieListWithSorting(t *testing.T) {
 			Title:       "Movie A",
 			ReleaseDate: "2020-01-01",
 			Genres:      []string{},
-			Rating:      sql.NullFloat64{Float64: 7.5, Valid: true},
+			Rating:      models.NewNullFloat64(7.5),
 		},
 		{
 			ID:          "movie-2",
 			Title:       "Movie B",
 			ReleaseDate: "2020-01-01",
 			Genres:      []string{},
-			Rating:      sql.NullFloat64{Float64: 9.0, Valid: true},
+			Rating:      models.NewNullFloat64(9.0),
 		},
 		{
 			ID:          "movie-3",
 			Title:       "Movie C",
 			ReleaseDate: "2020-01-01",
 			Genres:      []string{},
-			Rating:      sql.NullFloat64{Float64: 8.0, Valid: true},
+			Rating:      models.NewNullFloat64(8.0),
 		},
 	}
 
@@ -666,7 +666,7 @@ func TestMovieUpsertCreate(t *testing.T) {
 		Title:       "New Movie",
 		ReleaseDate: "2023-01-01",
 		Genres:      []string{"Action"},
-		TMDbID:      sql.NullInt64{Int64: 99999, Valid: true},
+		TMDbID:      models.NewNullInt64(99999),
 	}
 
 	err := repo.Upsert(ctx, movie)
@@ -699,7 +699,7 @@ func TestMovieUpsertUpdate(t *testing.T) {
 		Title:       "Original Title",
 		ReleaseDate: "2023-01-01",
 		Genres:      []string{"Action"},
-		TMDbID:      sql.NullInt64{Int64: 12345, Valid: true},
+		TMDbID:      models.NewNullInt64(12345),
 	}
 
 	err := repo.Create(ctx, movie)
@@ -713,7 +713,7 @@ func TestMovieUpsertUpdate(t *testing.T) {
 		Title:       "Updated Title",
 		ReleaseDate: "2023-06-01",
 		Genres:      []string{"Action", "Thriller"},
-		TMDbID:      sql.NullInt64{Int64: 12345, Valid: true},
+		TMDbID:      models.NewNullInt64(12345),
 	}
 
 	err = repo.Upsert(ctx, updatedMovie)
@@ -914,21 +914,21 @@ func TestMovieFullTextSearchByTitle(t *testing.T) {
 			Title:       "The Matrix",
 			ReleaseDate: "1999-03-31",
 			Genres:      []string{"Action"},
-			Overview:    sql.NullString{String: "A computer hacker discovers reality is a simulation.", Valid: true},
+			Overview:    models.NewNullString("A computer hacker discovers reality is a simulation."),
 		},
 		{
 			ID:          "movie-2",
 			Title:       "Matrix Reloaded",
 			ReleaseDate: "2003-05-15",
 			Genres:      []string{"Action"},
-			Overview:    sql.NullString{String: "Neo continues his fight against the machines.", Valid: true},
+			Overview:    models.NewNullString("Neo continues his fight against the machines."),
 		},
 		{
 			ID:          "movie-3",
 			Title:       "Inception",
 			ReleaseDate: "2010-07-16",
 			Genres:      []string{"Sci-Fi"},
-			Overview:    sql.NullString{String: "A thief who steals corporate secrets through dream-sharing.", Valid: true},
+			Overview:    models.NewNullString("A thief who steals corporate secrets through dream-sharing."),
 		},
 	}
 
@@ -969,21 +969,21 @@ func TestMovieFullTextSearchByOverview(t *testing.T) {
 			Title:       "The Matrix",
 			ReleaseDate: "1999-03-31",
 			Genres:      []string{"Action"},
-			Overview:    sql.NullString{String: "A computer simulation discovers reality.", Valid: true},
+			Overview:    models.NewNullString("A computer simulation discovers reality."),
 		},
 		{
 			ID:          "movie-2",
 			Title:       "Dark City",
 			ReleaseDate: "1998-02-27",
 			Genres:      []string{"Thriller"},
-			Overview:    sql.NullString{String: "A man wakes up in a strange simulation world.", Valid: true},
+			Overview:    models.NewNullString("A man wakes up in a strange simulation world."),
 		},
 		{
 			ID:          "movie-3",
 			Title:       "Inception",
 			ReleaseDate: "2010-07-16",
 			Genres:      []string{"Sci-Fi"},
-			Overview:    sql.NullString{String: "A thief who steals corporate secrets through dreams.", Valid: true},
+			Overview:    models.NewNullString("A thief who steals corporate secrets through dreams."),
 		},
 	}
 

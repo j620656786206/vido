@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"testing"
 
@@ -172,7 +171,7 @@ func TestMovieService_GetByTMDbID(t *testing.T) {
 				m.On("FindByTMDbID", mock.Anything, int64(12345)).Return(&models.Movie{
 					ID:     "movie-123",
 					Title:  "Test Movie",
-					TMDbID: sql.NullInt64{Int64: 12345, Valid: true},
+					TMDbID: models.NewNullInt64(12345),
 				}, nil)
 			},
 			wantErr: false,
@@ -244,7 +243,7 @@ func TestMovieService_GetByIMDbID(t *testing.T) {
 				m.On("FindByIMDbID", mock.Anything, "tt1234567").Return(&models.Movie{
 					ID:     "movie-123",
 					Title:  "Test Movie",
-					IMDbID: sql.NullString{String: "tt1234567", Valid: true},
+					IMDbID: models.NewNullString("tt1234567"),
 				}, nil)
 			},
 			wantErr: false,

@@ -2,7 +2,6 @@ package database
 
 import (
 	"context"
-	"database/sql"
 	"os"
 	"path/filepath"
 	"testing"
@@ -25,34 +24,34 @@ func TestDatabasePersistenceAcrossRestarts(t *testing.T) {
 	testMovie := &models.Movie{
 		ID:               "movie-persist-1",
 		Title:            "Persistence Test Movie",
-		OriginalTitle:    sql.NullString{String: "Original Title", Valid: true},
+		OriginalTitle:    models.NewNullString("Original Title"),
 		ReleaseDate:      "2024-01-01",
 		Genres:           []string{"Action", "Drama"},
-		Rating:           sql.NullFloat64{Float64: 8.5, Valid: true},
-		Overview:         sql.NullString{String: "A movie to test persistence", Valid: true},
-		Runtime:          sql.NullInt64{Int64: 120, Valid: true},
-		OriginalLanguage: sql.NullString{String: "en", Valid: true},
-		Status:           sql.NullString{String: "Released", Valid: true},
-		IMDbID:           sql.NullString{String: "tt1234567", Valid: true},
-		TMDbID:           sql.NullInt64{Int64: 12345, Valid: true},
+		Rating:           models.NewNullFloat64(8.5),
+		Overview:         models.NewNullString("A movie to test persistence"),
+		Runtime:          models.NewNullInt64(120),
+		OriginalLanguage: models.NewNullString("en"),
+		Status:           models.NewNullString("Released"),
+		IMDbID:           models.NewNullString("tt1234567"),
+		TMDbID:           models.NewNullInt64(12345),
 	}
 
 	testSeries := &models.Series{
 		ID:               "series-persist-1",
 		Title:            "Persistence Test Series",
-		OriginalTitle:    sql.NullString{String: "Original Series Title", Valid: true},
+		OriginalTitle:    models.NewNullString("Original Series Title"),
 		FirstAirDate:     "2024-01-01",
-		LastAirDate:      sql.NullString{String: "2024-12-31", Valid: true},
+		LastAirDate:      models.NewNullString("2024-12-31"),
 		Genres:           []string{"Sci-Fi", "Thriller"},
-		Rating:           sql.NullFloat64{Float64: 9.0, Valid: true},
-		Overview:         sql.NullString{String: "A series to test persistence", Valid: true},
-		NumberOfSeasons:  sql.NullInt64{Int64: 3, Valid: true},
-		NumberOfEpisodes: sql.NullInt64{Int64: 30, Valid: true},
-		Status:           sql.NullString{String: "Ended", Valid: true},
-		OriginalLanguage: sql.NullString{String: "en", Valid: true},
-		IMDbID:           sql.NullString{String: "tt7654321", Valid: true},
-		TMDbID:           sql.NullInt64{Int64: 54321, Valid: true},
-		InProduction:     sql.NullBool{Bool: false, Valid: true},
+		Rating:           models.NewNullFloat64(9.0),
+		Overview:         models.NewNullString("A series to test persistence"),
+		NumberOfSeasons:  models.NewNullInt64(3),
+		NumberOfEpisodes: models.NewNullInt64(30),
+		Status:           models.NewNullString("Ended"),
+		OriginalLanguage: models.NewNullString("en"),
+		IMDbID:           models.NewNullString("tt7654321"),
+		TMDbID:           models.NewNullInt64(54321),
+		InProduction:     models.NewNullBool(false),
 	}
 
 	testSettingKey := "test_persistence_setting"

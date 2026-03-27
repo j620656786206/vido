@@ -1,8 +1,6 @@
 package services
 
 import (
-	"database/sql"
-
 	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/tmdb"
 )
@@ -21,54 +19,54 @@ func ConvertTMDbMovieToModel(tmdbMovie *tmdb.MovieDetails, filePath string) *mod
 	}
 
 	// Set TMDb ID
-	movie.TMDbID = sql.NullInt64{Int64: int64(tmdbMovie.ID), Valid: true}
+	movie.TMDbID = models.NewNullInt64(int64(tmdbMovie.ID))
 
 	// Set original title
 	if tmdbMovie.OriginalTitle != "" {
-		movie.OriginalTitle = sql.NullString{String: tmdbMovie.OriginalTitle, Valid: true}
+		movie.OriginalTitle = models.NewNullString(tmdbMovie.OriginalTitle)
 	}
 
 	// Set overview
 	if tmdbMovie.Overview != "" {
-		movie.Overview = sql.NullString{String: tmdbMovie.Overview, Valid: true}
+		movie.Overview = models.NewNullString(tmdbMovie.Overview)
 	}
 
 	// Set poster path
 	if tmdbMovie.PosterPath != nil && *tmdbMovie.PosterPath != "" {
-		movie.PosterPath = sql.NullString{String: *tmdbMovie.PosterPath, Valid: true}
+		movie.PosterPath = models.NewNullString(*tmdbMovie.PosterPath)
 	}
 
 	// Set backdrop path
 	if tmdbMovie.BackdropPath != nil && *tmdbMovie.BackdropPath != "" {
-		movie.BackdropPath = sql.NullString{String: *tmdbMovie.BackdropPath, Valid: true}
+		movie.BackdropPath = models.NewNullString(*tmdbMovie.BackdropPath)
 	}
 
 	// Set rating fields
-	movie.VoteAverage = sql.NullFloat64{Float64: tmdbMovie.VoteAverage, Valid: true}
-	movie.VoteCount = sql.NullInt64{Int64: int64(tmdbMovie.VoteCount), Valid: true}
-	movie.Popularity = sql.NullFloat64{Float64: tmdbMovie.Popularity, Valid: true}
+	movie.VoteAverage = models.NewNullFloat64(tmdbMovie.VoteAverage)
+	movie.VoteCount = models.NewNullInt64(int64(tmdbMovie.VoteCount))
+	movie.Popularity = models.NewNullFloat64(tmdbMovie.Popularity)
 
 	// Also set the legacy rating field for backward compatibility
-	movie.Rating = sql.NullFloat64{Float64: tmdbMovie.VoteAverage, Valid: true}
+	movie.Rating = models.NewNullFloat64(tmdbMovie.VoteAverage)
 
 	// Set runtime
 	if tmdbMovie.Runtime > 0 {
-		movie.Runtime = sql.NullInt64{Int64: int64(tmdbMovie.Runtime), Valid: true}
+		movie.Runtime = models.NewNullInt64(int64(tmdbMovie.Runtime))
 	}
 
 	// Set original language
 	if tmdbMovie.OriginalLanguage != "" {
-		movie.OriginalLanguage = sql.NullString{String: tmdbMovie.OriginalLanguage, Valid: true}
+		movie.OriginalLanguage = models.NewNullString(tmdbMovie.OriginalLanguage)
 	}
 
 	// Set status
 	if tmdbMovie.Status != "" {
-		movie.Status = sql.NullString{String: tmdbMovie.Status, Valid: true}
+		movie.Status = models.NewNullString(tmdbMovie.Status)
 	}
 
 	// Set IMDb ID
 	if tmdbMovie.ImdbID != "" {
-		movie.IMDbID = sql.NullString{String: tmdbMovie.ImdbID, Valid: true}
+		movie.IMDbID = models.NewNullString(tmdbMovie.ImdbID)
 	}
 
 	// Convert genres (from []Genre to []string of names)
@@ -103,11 +101,11 @@ func ConvertTMDbMovieToModel(tmdbMovie *tmdb.MovieDetails, filePath string) *mod
 
 	// Set file path if provided
 	if filePath != "" {
-		movie.FilePath = sql.NullString{String: filePath, Valid: true}
+		movie.FilePath = models.NewNullString(filePath)
 	}
 
 	// Set metadata source
-	movie.MetadataSource = sql.NullString{String: string(models.MetadataSourceTMDb), Valid: true}
+	movie.MetadataSource = models.NewNullString(string(models.MetadataSourceTMDb))
 
 	return movie
 }
@@ -126,57 +124,57 @@ func ConvertTMDbSeriesToModel(tmdbSeries *tmdb.TVShowDetails, filePath string) *
 	}
 
 	// Set TMDb ID
-	series.TMDbID = sql.NullInt64{Int64: int64(tmdbSeries.ID), Valid: true}
+	series.TMDbID = models.NewNullInt64(int64(tmdbSeries.ID))
 
 	// Set original title
 	if tmdbSeries.OriginalName != "" {
-		series.OriginalTitle = sql.NullString{String: tmdbSeries.OriginalName, Valid: true}
+		series.OriginalTitle = models.NewNullString(tmdbSeries.OriginalName)
 	}
 
 	// Set last air date
 	if tmdbSeries.LastAirDate != "" {
-		series.LastAirDate = sql.NullString{String: tmdbSeries.LastAirDate, Valid: true}
+		series.LastAirDate = models.NewNullString(tmdbSeries.LastAirDate)
 	}
 
 	// Set overview
 	if tmdbSeries.Overview != "" {
-		series.Overview = sql.NullString{String: tmdbSeries.Overview, Valid: true}
+		series.Overview = models.NewNullString(tmdbSeries.Overview)
 	}
 
 	// Set poster path
 	if tmdbSeries.PosterPath != nil && *tmdbSeries.PosterPath != "" {
-		series.PosterPath = sql.NullString{String: *tmdbSeries.PosterPath, Valid: true}
+		series.PosterPath = models.NewNullString(*tmdbSeries.PosterPath)
 	}
 
 	// Set backdrop path
 	if tmdbSeries.BackdropPath != nil && *tmdbSeries.BackdropPath != "" {
-		series.BackdropPath = sql.NullString{String: *tmdbSeries.BackdropPath, Valid: true}
+		series.BackdropPath = models.NewNullString(*tmdbSeries.BackdropPath)
 	}
 
 	// Set rating fields
-	series.VoteAverage = sql.NullFloat64{Float64: tmdbSeries.VoteAverage, Valid: true}
-	series.VoteCount = sql.NullInt64{Int64: int64(tmdbSeries.VoteCount), Valid: true}
-	series.Popularity = sql.NullFloat64{Float64: tmdbSeries.Popularity, Valid: true}
+	series.VoteAverage = models.NewNullFloat64(tmdbSeries.VoteAverage)
+	series.VoteCount = models.NewNullInt64(int64(tmdbSeries.VoteCount))
+	series.Popularity = models.NewNullFloat64(tmdbSeries.Popularity)
 
 	// Also set the legacy rating field for backward compatibility
-	series.Rating = sql.NullFloat64{Float64: tmdbSeries.VoteAverage, Valid: true}
+	series.Rating = models.NewNullFloat64(tmdbSeries.VoteAverage)
 
 	// Set number of seasons and episodes
-	series.NumberOfSeasons = sql.NullInt64{Int64: int64(tmdbSeries.NumberOfSeasons), Valid: true}
-	series.NumberOfEpisodes = sql.NullInt64{Int64: int64(tmdbSeries.NumberOfEpisodes), Valid: true}
+	series.NumberOfSeasons = models.NewNullInt64(int64(tmdbSeries.NumberOfSeasons))
+	series.NumberOfEpisodes = models.NewNullInt64(int64(tmdbSeries.NumberOfEpisodes))
 
 	// Set original language
 	if tmdbSeries.OriginalLanguage != "" {
-		series.OriginalLanguage = sql.NullString{String: tmdbSeries.OriginalLanguage, Valid: true}
+		series.OriginalLanguage = models.NewNullString(tmdbSeries.OriginalLanguage)
 	}
 
 	// Set status
 	if tmdbSeries.Status != "" {
-		series.Status = sql.NullString{String: tmdbSeries.Status, Valid: true}
+		series.Status = models.NewNullString(tmdbSeries.Status)
 	}
 
 	// Set in production flag
-	series.InProduction = sql.NullBool{Bool: tmdbSeries.InProduction, Valid: true}
+	series.InProduction = models.NewNullBool(tmdbSeries.InProduction)
 
 	// Convert genres (from []Genre to []string of names)
 	series.Genres = make([]string, 0, len(tmdbSeries.Genres))
@@ -208,11 +206,11 @@ func ConvertTMDbSeriesToModel(tmdbSeries *tmdb.TVShowDetails, filePath string) *
 
 	// Set file path if provided
 	if filePath != "" {
-		series.FilePath = sql.NullString{String: filePath, Valid: true}
+		series.FilePath = models.NewNullString(filePath)
 	}
 
 	// Set metadata source
-	series.MetadataSource = sql.NullString{String: string(models.MetadataSourceTMDb), Valid: true}
+	series.MetadataSource = models.NewNullString(string(models.MetadataSourceTMDb))
 
 	return series
 }
@@ -231,37 +229,37 @@ func ConvertTMDbMovieSearchResultToModel(tmdbMovie *tmdb.Movie, filePath string)
 	}
 
 	// Set TMDb ID
-	movie.TMDbID = sql.NullInt64{Int64: int64(tmdbMovie.ID), Valid: true}
+	movie.TMDbID = models.NewNullInt64(int64(tmdbMovie.ID))
 
 	// Set original title
 	if tmdbMovie.OriginalTitle != "" {
-		movie.OriginalTitle = sql.NullString{String: tmdbMovie.OriginalTitle, Valid: true}
+		movie.OriginalTitle = models.NewNullString(tmdbMovie.OriginalTitle)
 	}
 
 	// Set overview
 	if tmdbMovie.Overview != "" {
-		movie.Overview = sql.NullString{String: tmdbMovie.Overview, Valid: true}
+		movie.Overview = models.NewNullString(tmdbMovie.Overview)
 	}
 
 	// Set poster path
 	if tmdbMovie.PosterPath != nil && *tmdbMovie.PosterPath != "" {
-		movie.PosterPath = sql.NullString{String: *tmdbMovie.PosterPath, Valid: true}
+		movie.PosterPath = models.NewNullString(*tmdbMovie.PosterPath)
 	}
 
 	// Set backdrop path
 	if tmdbMovie.BackdropPath != nil && *tmdbMovie.BackdropPath != "" {
-		movie.BackdropPath = sql.NullString{String: *tmdbMovie.BackdropPath, Valid: true}
+		movie.BackdropPath = models.NewNullString(*tmdbMovie.BackdropPath)
 	}
 
 	// Set rating fields
-	movie.VoteAverage = sql.NullFloat64{Float64: tmdbMovie.VoteAverage, Valid: true}
-	movie.VoteCount = sql.NullInt64{Int64: int64(tmdbMovie.VoteCount), Valid: true}
-	movie.Popularity = sql.NullFloat64{Float64: tmdbMovie.Popularity, Valid: true}
-	movie.Rating = sql.NullFloat64{Float64: tmdbMovie.VoteAverage, Valid: true}
+	movie.VoteAverage = models.NewNullFloat64(tmdbMovie.VoteAverage)
+	movie.VoteCount = models.NewNullInt64(int64(tmdbMovie.VoteCount))
+	movie.Popularity = models.NewNullFloat64(tmdbMovie.Popularity)
+	movie.Rating = models.NewNullFloat64(tmdbMovie.VoteAverage)
 
 	// Set original language
 	if tmdbMovie.OriginalLanguage != "" {
-		movie.OriginalLanguage = sql.NullString{String: tmdbMovie.OriginalLanguage, Valid: true}
+		movie.OriginalLanguage = models.NewNullString(tmdbMovie.OriginalLanguage)
 	}
 
 	// Note: Search results only have genre IDs, not names
@@ -270,11 +268,11 @@ func ConvertTMDbMovieSearchResultToModel(tmdbMovie *tmdb.Movie, filePath string)
 
 	// Set file path if provided
 	if filePath != "" {
-		movie.FilePath = sql.NullString{String: filePath, Valid: true}
+		movie.FilePath = models.NewNullString(filePath)
 	}
 
 	// Set metadata source
-	movie.MetadataSource = sql.NullString{String: string(models.MetadataSourceTMDb), Valid: true}
+	movie.MetadataSource = models.NewNullString(string(models.MetadataSourceTMDb))
 
 	return movie
 }
@@ -293,37 +291,37 @@ func ConvertTMDbTVShowSearchResultToModel(tmdbSeries *tmdb.TVShow, filePath stri
 	}
 
 	// Set TMDb ID
-	series.TMDbID = sql.NullInt64{Int64: int64(tmdbSeries.ID), Valid: true}
+	series.TMDbID = models.NewNullInt64(int64(tmdbSeries.ID))
 
 	// Set original title
 	if tmdbSeries.OriginalName != "" {
-		series.OriginalTitle = sql.NullString{String: tmdbSeries.OriginalName, Valid: true}
+		series.OriginalTitle = models.NewNullString(tmdbSeries.OriginalName)
 	}
 
 	// Set overview
 	if tmdbSeries.Overview != "" {
-		series.Overview = sql.NullString{String: tmdbSeries.Overview, Valid: true}
+		series.Overview = models.NewNullString(tmdbSeries.Overview)
 	}
 
 	// Set poster path
 	if tmdbSeries.PosterPath != nil && *tmdbSeries.PosterPath != "" {
-		series.PosterPath = sql.NullString{String: *tmdbSeries.PosterPath, Valid: true}
+		series.PosterPath = models.NewNullString(*tmdbSeries.PosterPath)
 	}
 
 	// Set backdrop path
 	if tmdbSeries.BackdropPath != nil && *tmdbSeries.BackdropPath != "" {
-		series.BackdropPath = sql.NullString{String: *tmdbSeries.BackdropPath, Valid: true}
+		series.BackdropPath = models.NewNullString(*tmdbSeries.BackdropPath)
 	}
 
 	// Set rating fields
-	series.VoteAverage = sql.NullFloat64{Float64: tmdbSeries.VoteAverage, Valid: true}
-	series.VoteCount = sql.NullInt64{Int64: int64(tmdbSeries.VoteCount), Valid: true}
-	series.Popularity = sql.NullFloat64{Float64: tmdbSeries.Popularity, Valid: true}
-	series.Rating = sql.NullFloat64{Float64: tmdbSeries.VoteAverage, Valid: true}
+	series.VoteAverage = models.NewNullFloat64(tmdbSeries.VoteAverage)
+	series.VoteCount = models.NewNullInt64(int64(tmdbSeries.VoteCount))
+	series.Popularity = models.NewNullFloat64(tmdbSeries.Popularity)
+	series.Rating = models.NewNullFloat64(tmdbSeries.VoteAverage)
 
 	// Set original language
 	if tmdbSeries.OriginalLanguage != "" {
-		series.OriginalLanguage = sql.NullString{String: tmdbSeries.OriginalLanguage, Valid: true}
+		series.OriginalLanguage = models.NewNullString(tmdbSeries.OriginalLanguage)
 	}
 
 	// Note: Search results only have genre IDs, not names
@@ -332,11 +330,11 @@ func ConvertTMDbTVShowSearchResultToModel(tmdbSeries *tmdb.TVShow, filePath stri
 
 	// Set file path if provided
 	if filePath != "" {
-		series.FilePath = sql.NullString{String: filePath, Valid: true}
+		series.FilePath = models.NewNullString(filePath)
 	}
 
 	// Set metadata source
-	series.MetadataSource = sql.NullString{String: string(models.MetadataSourceTMDb), Valid: true}
+	series.MetadataSource = models.NewNullString(string(models.MetadataSourceTMDb))
 
 	return series
 }

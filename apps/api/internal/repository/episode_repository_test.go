@@ -112,16 +112,16 @@ func TestEpisodeCreate(t *testing.T) {
 	episode := &models.Episode{
 		ID:            "episode-1",
 		SeriesID:      "series-1",
-		TMDbID:        sql.NullInt64{Int64: 62085, Valid: true},
+		TMDbID:        models.NewNullInt64(62085),
 		SeasonNumber:  1,
 		EpisodeNumber: 1,
-		Title:         sql.NullString{String: "Pilot", Valid: true},
-		Overview:      sql.NullString{String: "The first episode of the series.", Valid: true},
-		AirDate:       sql.NullString{String: "2020-01-15", Valid: true},
-		Runtime:       sql.NullInt64{Int64: 45, Valid: true},
-		StillPath:     sql.NullString{String: "/path/to/still.jpg", Valid: true},
-		VoteAverage:   sql.NullFloat64{Float64: 8.5, Valid: true},
-		FilePath:      sql.NullString{String: "/media/series/s01e01.mkv", Valid: true},
+		Title:         models.NewNullString("Pilot"),
+		Overview:      models.NewNullString("The first episode of the series."),
+		AirDate:       models.NewNullString("2020-01-15"),
+		Runtime:       models.NewNullInt64(45),
+		StillPath:     models.NewNullString("/path/to/still.jpg"),
+		VoteAverage:   models.NewNullFloat64(8.5),
+		FilePath:      models.NewNullString("/media/series/s01e01.mkv"),
 	}
 
 	err := repo.Create(ctx, episode)
@@ -178,7 +178,7 @@ func TestEpisodeFindByID(t *testing.T) {
 		SeriesID:      "series-1",
 		SeasonNumber:  1,
 		EpisodeNumber: 1,
-		Title:         sql.NullString{String: "Test Episode", Valid: true},
+		Title:         models.NewNullString("Test Episode"),
 	}
 
 	err := repo.Create(ctx, episode)
@@ -235,7 +235,7 @@ func TestEpisodeFindBySeriesID(t *testing.T) {
 			SeriesID:      "series-1",
 			SeasonNumber:  1,
 			EpisodeNumber: i,
-			Title:         sql.NullString{String: "Episode " + string(rune('0'+i)), Valid: true},
+			Title:         models.NewNullString("Episode " + string(rune('0'+i))),
 		}
 		if err := repo.Create(ctx, episode); err != nil {
 			t.Fatalf("Failed to create episode: %v", err)
@@ -248,7 +248,7 @@ func TestEpisodeFindBySeriesID(t *testing.T) {
 		SeriesID:      "series-2",
 		SeasonNumber:  1,
 		EpisodeNumber: 1,
-		Title:         sql.NullString{String: "Other Series Episode", Valid: true},
+		Title:         models.NewNullString("Other Series Episode"),
 	}
 	if err := repo.Create(ctx, episode); err != nil {
 		t.Fatalf("Failed to create episode: %v", err)
@@ -398,7 +398,7 @@ func TestEpisodeFindBySeriesSeasonEpisode(t *testing.T) {
 		SeriesID:      "series-1",
 		SeasonNumber:  2,
 		EpisodeNumber: 5,
-		Title:         sql.NullString{String: "S02E05", Valid: true},
+		Title:         models.NewNullString("S02E05"),
 	}
 
 	err := repo.Create(ctx, episode)
@@ -455,8 +455,8 @@ func TestEpisodeUpdate(t *testing.T) {
 		SeriesID:      "series-1",
 		SeasonNumber:  1,
 		EpisodeNumber: 1,
-		Title:         sql.NullString{String: "Original Title", Valid: true},
-		Runtime:       sql.NullInt64{Int64: 30, Valid: true},
+		Title:         models.NewNullString("Original Title"),
+		Runtime:       models.NewNullInt64(30),
 	}
 
 	err := repo.Create(ctx, episode)
@@ -468,8 +468,8 @@ func TestEpisodeUpdate(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 
 	// Update episode
-	episode.Title = sql.NullString{String: "Updated Title", Valid: true}
-	episode.Runtime = sql.NullInt64{Int64: 45, Valid: true}
+	episode.Title = models.NewNullString("Updated Title")
+	episode.Runtime = models.NewNullInt64(45)
 	originalUpdatedAt := episode.UpdatedAt
 
 	err = repo.Update(ctx, episode)
@@ -596,7 +596,7 @@ func TestEpisodeUpsertCreate(t *testing.T) {
 		SeriesID:      "series-1",
 		SeasonNumber:  1,
 		EpisodeNumber: 1,
-		Title:         sql.NullString{String: "New Episode", Valid: true},
+		Title:         models.NewNullString("New Episode"),
 	}
 
 	err := repo.Upsert(ctx, episode)
@@ -631,7 +631,7 @@ func TestEpisodeUpsertUpdate(t *testing.T) {
 		SeriesID:      "series-1",
 		SeasonNumber:  1,
 		EpisodeNumber: 1,
-		Title:         sql.NullString{String: "Original Title", Valid: true},
+		Title:         models.NewNullString("Original Title"),
 	}
 
 	err := repo.Create(ctx, episode)
@@ -645,7 +645,7 @@ func TestEpisodeUpsertUpdate(t *testing.T) {
 		SeriesID:      "series-1",
 		SeasonNumber:  1,
 		EpisodeNumber: 1,
-		Title:         sql.NullString{String: "Updated Title", Valid: true},
+		Title:         models.NewNullString("Updated Title"),
 	}
 
 	err = repo.Upsert(ctx, updatedEpisode)
@@ -748,16 +748,16 @@ func TestEpisodeAllFieldsPersistence(t *testing.T) {
 	episode := &models.Episode{
 		ID:            "episode-1",
 		SeriesID:      "series-1",
-		TMDbID:        sql.NullInt64{Int64: 12345, Valid: true},
+		TMDbID:        models.NewNullInt64(12345),
 		SeasonNumber:  3,
 		EpisodeNumber: 7,
-		Title:         sql.NullString{String: "Full Episode", Valid: true},
-		Overview:      sql.NullString{String: "A detailed overview of the episode.", Valid: true},
-		AirDate:       sql.NullString{String: "2023-06-15", Valid: true},
-		Runtime:       sql.NullInt64{Int64: 52, Valid: true},
-		StillPath:     sql.NullString{String: "/stills/ep307.jpg", Valid: true},
-		VoteAverage:   sql.NullFloat64{Float64: 8.7, Valid: true},
-		FilePath:      sql.NullString{String: "/media/series/S03E07.mkv", Valid: true},
+		Title:         models.NewNullString("Full Episode"),
+		Overview:      models.NewNullString("A detailed overview of the episode."),
+		AirDate:       models.NewNullString("2023-06-15"),
+		Runtime:       models.NewNullInt64(52),
+		StillPath:     models.NewNullString("/stills/ep307.jpg"),
+		VoteAverage:   models.NewNullFloat64(8.7),
+		FilePath:      models.NewNullString("/media/series/S03E07.mkv"),
 	}
 
 	err := repo.Create(ctx, episode)

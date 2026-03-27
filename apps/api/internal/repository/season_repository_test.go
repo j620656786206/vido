@@ -108,14 +108,14 @@ func TestSeasonCreate(t *testing.T) {
 	season := &models.Season{
 		ID:           "season-1",
 		SeriesID:     "series-1",
-		TMDbID:       sql.NullInt64{Int64: 12345, Valid: true},
+		TMDbID:       models.NewNullInt64(12345),
 		SeasonNumber: 1,
-		Name:         sql.NullString{String: "Season 1", Valid: true},
-		Overview:     sql.NullString{String: "The first season", Valid: true},
-		PosterPath:   sql.NullString{String: "/posters/s1.jpg", Valid: true},
-		AirDate:      sql.NullString{String: "2020-01-15", Valid: true},
-		EpisodeCount: sql.NullInt64{Int64: 10, Valid: true},
-		VoteAverage:  sql.NullFloat64{Float64: 8.5, Valid: true},
+		Name:         models.NewNullString("Season 1"),
+		Overview:     models.NewNullString("The first season"),
+		PosterPath:   models.NewNullString("/posters/s1.jpg"),
+		AirDate:      models.NewNullString("2020-01-15"),
+		EpisodeCount: models.NewNullInt64(10),
+		VoteAverage:  models.NewNullFloat64(8.5),
 	}
 
 	err := repo.Create(ctx, season)
@@ -154,14 +154,14 @@ func TestSeasonFindByID(t *testing.T) {
 	original := &models.Season{
 		ID:           "season-1",
 		SeriesID:     "series-1",
-		TMDbID:       sql.NullInt64{Int64: 12345, Valid: true},
+		TMDbID:       models.NewNullInt64(12345),
 		SeasonNumber: 1,
-		Name:         sql.NullString{String: "Season 1", Valid: true},
-		Overview:     sql.NullString{String: "The first season", Valid: true},
-		PosterPath:   sql.NullString{String: "/posters/s1.jpg", Valid: true},
-		AirDate:      sql.NullString{String: "2020-01-15", Valid: true},
-		EpisodeCount: sql.NullInt64{Int64: 10, Valid: true},
-		VoteAverage:  sql.NullFloat64{Float64: 8.5, Valid: true},
+		Name:         models.NewNullString("Season 1"),
+		Overview:     models.NewNullString("The first season"),
+		PosterPath:   models.NewNullString("/posters/s1.jpg"),
+		AirDate:      models.NewNullString("2020-01-15"),
+		EpisodeCount: models.NewNullInt64(10),
+		VoteAverage:  models.NewNullFloat64(8.5),
 	}
 
 	err := repo.Create(ctx, original)
@@ -216,7 +216,7 @@ func TestSeasonFindBySeriesID(t *testing.T) {
 			ID:           s.id,
 			SeriesID:     "series-1",
 			SeasonNumber: s.num,
-			Name:         sql.NullString{String: s.name, Valid: true},
+			Name:         models.NewNullString(s.name),
 		})
 		require.NoError(t, err)
 	}
@@ -254,7 +254,7 @@ func TestSeasonFindBySeriesAndNumber(t *testing.T) {
 		ID:           "season-1",
 		SeriesID:     "series-1",
 		SeasonNumber: 1,
-		Name:         sql.NullString{String: "Season 1", Valid: true},
+		Name:         models.NewNullString("Season 1"),
 	})
 	require.NoError(t, err)
 
@@ -262,7 +262,7 @@ func TestSeasonFindBySeriesAndNumber(t *testing.T) {
 		ID:           "season-2",
 		SeriesID:     "series-1",
 		SeasonNumber: 2,
-		Name:         sql.NullString{String: "Season 2", Valid: true},
+		Name:         models.NewNullString("Season 2"),
 	})
 	require.NoError(t, err)
 
@@ -299,7 +299,7 @@ func TestSeasonUpdate(t *testing.T) {
 		ID:           "season-1",
 		SeriesID:     "series-1",
 		SeasonNumber: 1,
-		Name:         sql.NullString{String: "Season 1", Valid: true},
+		Name:         models.NewNullString("Season 1"),
 	}
 
 	err := repo.Create(ctx, season)
@@ -308,9 +308,9 @@ func TestSeasonUpdate(t *testing.T) {
 	originalUpdatedAt := season.UpdatedAt
 
 	// Update the season
-	season.Name = sql.NullString{String: "Season 1 - Updated", Valid: true}
-	season.Overview = sql.NullString{String: "Updated overview", Valid: true}
-	season.EpisodeCount = sql.NullInt64{Int64: 12, Valid: true}
+	season.Name = models.NewNullString("Season 1 - Updated")
+	season.Overview = models.NewNullString("Updated overview")
+	season.EpisodeCount = models.NewNullInt64(12)
 
 	err = repo.Update(ctx, season)
 	require.NoError(t, err)
@@ -396,7 +396,7 @@ func TestSeasonUpsertCreate(t *testing.T) {
 		ID:           "season-new",
 		SeriesID:     "series-1",
 		SeasonNumber: 1,
-		Name:         sql.NullString{String: "Season 1", Valid: true},
+		Name:         models.NewNullString("Season 1"),
 	}
 
 	err := repo.Upsert(ctx, season)
@@ -423,7 +423,7 @@ func TestSeasonUpsertUpdate(t *testing.T) {
 		ID:           "season-original",
 		SeriesID:     "series-1",
 		SeasonNumber: 1,
-		Name:         sql.NullString{String: "Season 1", Valid: true},
+		Name:         models.NewNullString("Season 1"),
 	}
 	err := repo.Create(ctx, original)
 	require.NoError(t, err)
@@ -433,8 +433,8 @@ func TestSeasonUpsertUpdate(t *testing.T) {
 		ID:           "season-should-be-overridden",
 		SeriesID:     "series-1",
 		SeasonNumber: 1,
-		Name:         sql.NullString{String: "Season 1 - Updated via Upsert", Valid: true},
-		Overview:     sql.NullString{String: "New overview", Valid: true},
+		Name:         models.NewNullString("Season 1 - Updated via Upsert"),
+		Overview:     models.NewNullString("New overview"),
 	}
 	err = repo.Upsert(ctx, updated)
 	require.NoError(t, err)
@@ -473,14 +473,14 @@ func TestSeasonAllFieldsPersistence(t *testing.T) {
 	season := &models.Season{
 		ID:           "season-full",
 		SeriesID:     "series-1",
-		TMDbID:       sql.NullInt64{Int64: 99999, Valid: true},
+		TMDbID:       models.NewNullInt64(99999),
 		SeasonNumber: 3,
-		Name:         sql.NullString{String: "第三季", Valid: true},
-		Overview:     sql.NullString{String: "精彩的第三季", Valid: true},
-		PosterPath:   sql.NullString{String: "/posters/s3.jpg", Valid: true},
-		AirDate:      sql.NullString{String: "2023-09-01", Valid: true},
-		EpisodeCount: sql.NullInt64{Int64: 8, Valid: true},
-		VoteAverage:  sql.NullFloat64{Float64: 9.1, Valid: true},
+		Name:         models.NewNullString("第三季"),
+		Overview:     models.NewNullString("精彩的第三季"),
+		PosterPath:   models.NewNullString("/posters/s3.jpg"),
+		AirDate:      models.NewNullString("2023-09-01"),
+		EpisodeCount: models.NewNullInt64(8),
+		VoteAverage:  models.NewNullFloat64(9.1),
 	}
 
 	err := repo.Create(ctx, season)

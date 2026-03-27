@@ -218,23 +218,23 @@ func (s *ParseQueueService) createMovieFromMatch(
 	movie := &models.Movie{
 		ID:         mediaID,
 		Title:      bestMatch.Title,
-		TMDbID:     sql.NullInt64{Int64: parseProviderID(bestMatch.ID), Valid: bestMatch.ID != ""},
-		PosterPath: sql.NullString{String: bestMatch.PosterURL, Valid: bestMatch.PosterURL != ""},
-		Overview:   sql.NullString{String: bestMatch.Overview, Valid: bestMatch.Overview != ""},
+		TMDbID:     models.NullInt64{sql.NullInt64{Int64: parseProviderID(bestMatch.ID), Valid: bestMatch.ID != ""}},
+		PosterPath: models.NullString{sql.NullString{String: bestMatch.PosterURL, Valid: bestMatch.PosterURL != ""}},
+		Overview:   models.NullString{sql.NullString{String: bestMatch.Overview, Valid: bestMatch.Overview != ""}},
 		Genres:     bestMatch.Genres,
-		FilePath:   sql.NullString{String: job.FilePath, Valid: true},
+		FilePath:   models.NewNullString(job.FilePath),
 		ParseStatus:    models.ParseStatusSuccess,
-		MetadataSource: sql.NullString{String: string(searchResult.Source), Valid: true},
+		MetadataSource: models.NewNullString(string(searchResult.Source)),
 	}
 
 	if bestMatch.ReleaseDate != "" {
 		movie.ReleaseDate = bestMatch.ReleaseDate
 	}
 	if bestMatch.Rating > 0 {
-		movie.VoteAverage = sql.NullFloat64{Float64: bestMatch.Rating, Valid: true}
+		movie.VoteAverage = models.NewNullFloat64(bestMatch.Rating)
 	}
 	if bestMatch.OriginalTitle != "" {
-		movie.OriginalTitle = sql.NullString{String: bestMatch.OriginalTitle, Valid: true}
+		movie.OriginalTitle = models.NewNullString(bestMatch.OriginalTitle)
 	}
 
 	if err := s.movieRepo.Create(ctx, movie); err != nil {
@@ -272,11 +272,11 @@ func (s *ParseQueueService) createTVEntryFromMatch(
 	episode := &models.Episode{
 		ID:            uuid.New().String(),
 		SeriesID:      seriesID,
-		SeasonID:      sql.NullString{String: seasonID, Valid: true},
+		SeasonID:      models.NewNullString(seasonID),
 		SeasonNumber:  seasonNumber,
 		EpisodeNumber: episodeNumber,
-		Title:         sql.NullString{String: bestMatch.Title, Valid: bestMatch.Title != ""},
-		FilePath:      sql.NullString{String: job.FilePath, Valid: true},
+		Title:         models.NullString{sql.NullString{String: bestMatch.Title, Valid: bestMatch.Title != ""}},
+		FilePath:      models.NewNullString(job.FilePath),
 	}
 
 	if err := s.episodeRepo.Upsert(ctx, episode); err != nil {
@@ -313,22 +313,22 @@ func (s *ParseQueueService) upsertSeries(
 	series := &models.Series{
 		ID:         seriesID,
 		Title:      bestMatch.Title,
-		TMDbID:     sql.NullInt64{Int64: tmdbID, Valid: tmdbID > 0},
-		PosterPath: sql.NullString{String: bestMatch.PosterURL, Valid: bestMatch.PosterURL != ""},
-		Overview:   sql.NullString{String: bestMatch.Overview, Valid: bestMatch.Overview != ""},
+		TMDbID:     models.NullInt64{sql.NullInt64{Int64: tmdbID, Valid: tmdbID > 0}},
+		PosterPath: models.NullString{sql.NullString{String: bestMatch.PosterURL, Valid: bestMatch.PosterURL != ""}},
+		Overview:   models.NullString{sql.NullString{String: bestMatch.Overview, Valid: bestMatch.Overview != ""}},
 		Genres:     bestMatch.Genres,
 		ParseStatus:    models.ParseStatusSuccess,
-		MetadataSource: sql.NullString{String: string(searchResult.Source), Valid: true},
+		MetadataSource: models.NewNullString(string(searchResult.Source)),
 	}
 
 	if bestMatch.ReleaseDate != "" {
 		series.FirstAirDate = bestMatch.ReleaseDate
 	}
 	if bestMatch.Rating > 0 {
-		series.VoteAverage = sql.NullFloat64{Float64: bestMatch.Rating, Valid: true}
+		series.VoteAverage = models.NewNullFloat64(bestMatch.Rating)
 	}
 	if bestMatch.OriginalTitle != "" {
-		series.OriginalTitle = sql.NullString{String: bestMatch.OriginalTitle, Valid: true}
+		series.OriginalTitle = models.NewNullString(bestMatch.OriginalTitle)
 	}
 
 	if err := s.seriesRepo.Create(ctx, series); err != nil {
@@ -374,12 +374,12 @@ func (s *ParseQueueService) upsertSeason(
 	}
 
 	if seasonSummary != nil {
-		season.TMDbID = sql.NullInt64{Int64: int64(seasonSummary.ID), Valid: seasonSummary.ID > 0}
-		season.Name = sql.NullString{String: seasonSummary.Name, Valid: seasonSummary.Name != ""}
-		season.Overview = sql.NullString{String: seasonSummary.Overview, Valid: seasonSummary.Overview != ""}
-		season.PosterPath = sql.NullString{String: seasonSummary.PosterPath, Valid: seasonSummary.PosterPath != ""}
-		season.AirDate = sql.NullString{String: seasonSummary.AirDate, Valid: seasonSummary.AirDate != ""}
-		season.EpisodeCount = sql.NullInt64{Int64: int64(seasonSummary.EpisodeCount), Valid: seasonSummary.EpisodeCount > 0}
+		season.TMDbID = models.NullInt64{sql.NullInt64{Int64: int64(seasonSummary.ID), Valid: seasonSummary.ID > 0}}
+		season.Name = models.NullString{sql.NullString{String: seasonSummary.Name, Valid: seasonSummary.Name != ""}}
+		season.Overview = models.NullString{sql.NullString{String: seasonSummary.Overview, Valid: seasonSummary.Overview != ""}}
+		season.PosterPath = models.NullString{sql.NullString{String: seasonSummary.PosterPath, Valid: seasonSummary.PosterPath != ""}}
+		season.AirDate = models.NullString{sql.NullString{String: seasonSummary.AirDate, Valid: seasonSummary.AirDate != ""}}
+		season.EpisodeCount = models.NullInt64{sql.NullInt64{Int64: int64(seasonSummary.EpisodeCount), Valid: seasonSummary.EpisodeCount > 0}}
 	}
 
 	if err := s.seasonRepo.Create(ctx, season); err != nil {

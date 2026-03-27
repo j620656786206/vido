@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -47,7 +46,7 @@ func TestRecentMediaHandler_GetRecentMedia(t *testing.T) {
 							ID:         "movie-1",
 							Title:      "Test Movie",
 							ReleaseDate: "2024-06-15",
-							PosterPath: sql.NullString{String: "/poster1.jpg", Valid: true},
+							PosterPath: models.NewNullString("/poster1.jpg"),
 							CreatedAt:  recentTime,
 						},
 					},
@@ -60,7 +59,7 @@ func TestRecentMediaHandler_GetRecentMedia(t *testing.T) {
 							ID:           "series-1",
 							Title:        "Test Series",
 							FirstAirDate: "2023-01-10",
-							PosterPath:   sql.NullString{String: "/poster2.jpg", Valid: true},
+							PosterPath:   models.NewNullString("/poster2.jpg"),
 							CreatedAt:    olderTime,
 						},
 					},
@@ -197,7 +196,7 @@ func TestRecentMediaHandler_GetRecentMedia(t *testing.T) {
 							ID:          "movie-old",
 							Title:       "Old Movie",
 							ReleaseDate: "2020-01-01",
-							PosterPath:  sql.NullString{String: "", Valid: false},
+							PosterPath:  models.NullString{},
 							CreatedAt:   olderTime,
 						},
 					},
@@ -210,7 +209,7 @@ func TestRecentMediaHandler_GetRecentMedia(t *testing.T) {
 							ID:           "series-new",
 							Title:        "New Series",
 							FirstAirDate: "2025-06-01",
-							PosterPath:   sql.NullString{String: "/new.jpg", Valid: true},
+							PosterPath:   models.NewNullString("/new.jpg"),
 							CreatedAt:    recentTime,
 						},
 					},

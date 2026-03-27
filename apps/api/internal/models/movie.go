@@ -1,7 +1,6 @@
 package models
 
 import (
-	"database/sql"
 	"encoding/json"
 	"time"
 )
@@ -84,49 +83,49 @@ type Movie struct {
 	// Core fields
 	ID            string         `db:"id" json:"id"`
 	Title         string         `db:"title" json:"title"`
-	OriginalTitle sql.NullString `db:"original_title" json:"originalTitle,omitempty"`
+	OriginalTitle NullString `db:"original_title" json:"originalTitle,omitempty"`
 	ReleaseDate   string         `db:"release_date" json:"releaseDate"`
 	Genres        []string       `db:"genres" json:"genres"` // Simple string array for backward compatibility
 
 	// Rating fields (kept for backward compatibility)
-	Rating sql.NullFloat64 `db:"rating" json:"rating,omitempty"`
+	Rating NullFloat64 `db:"rating" json:"rating,omitempty"`
 
 	// TMDb-specific rating fields
-	VoteAverage sql.NullFloat64 `db:"vote_average" json:"voteAverage,omitempty"`
-	VoteCount   sql.NullInt64   `db:"vote_count" json:"voteCount,omitempty"`
-	Popularity  sql.NullFloat64 `db:"popularity" json:"popularity,omitempty"`
+	VoteAverage NullFloat64 `db:"vote_average" json:"voteAverage,omitempty"`
+	VoteCount   NullInt64   `db:"vote_count" json:"voteCount,omitempty"`
+	Popularity  NullFloat64 `db:"popularity" json:"popularity,omitempty"`
 
 	// Content fields
-	Overview     sql.NullString `db:"overview" json:"overview,omitempty"`
-	PosterPath   sql.NullString `db:"poster_path" json:"posterPath,omitempty"`
-	BackdropPath sql.NullString `db:"backdrop_path" json:"backdropPath,omitempty"`
-	Runtime      sql.NullInt64  `db:"runtime" json:"runtime,omitempty"`
+	Overview     NullString `db:"overview" json:"overview,omitempty"`
+	PosterPath   NullString `db:"poster_path" json:"posterPath,omitempty"`
+	BackdropPath NullString `db:"backdrop_path" json:"backdropPath,omitempty"`
+	Runtime      NullInt64  `db:"runtime" json:"runtime,omitempty"`
 
 	// Metadata fields
-	OriginalLanguage sql.NullString `db:"original_language" json:"originalLanguage,omitempty"`
-	Status           sql.NullString `db:"status" json:"status,omitempty"`
-	IMDbID           sql.NullString `db:"imdb_id" json:"imdbId,omitempty"`
-	TMDbID           sql.NullInt64  `db:"tmdb_id" json:"tmdbId,omitempty"`
+	OriginalLanguage NullString `db:"original_language" json:"originalLanguage,omitempty"`
+	Status           NullString `db:"status" json:"status,omitempty"`
+	IMDbID           NullString `db:"imdb_id" json:"imdbId,omitempty"`
+	TMDbID           NullInt64  `db:"tmdb_id" json:"tmdbId,omitempty"`
 
 	// New fields for enhanced TMDb data (Story 2-6)
-	CreditsJSON            sql.NullString `db:"credits" json:"-"`              // JSON stored in DB
-	ProductionCountriesJSON sql.NullString `db:"production_countries" json:"-"` // JSON stored in DB
-	SpokenLanguagesJSON    sql.NullString `db:"spoken_languages" json:"-"`     // JSON stored in DB
+	CreditsJSON            NullString `db:"credits" json:"-"`              // JSON stored in DB
+	ProductionCountriesJSON NullString `db:"production_countries" json:"-"` // JSON stored in DB
+	SpokenLanguagesJSON    NullString `db:"spoken_languages" json:"-"`     // JSON stored in DB
 
 	// File tracking fields
-	FilePath sql.NullString `db:"file_path" json:"filePath,omitempty"`
-	FileSize sql.NullInt64  `db:"file_size" json:"fileSize,omitempty"`
+	FilePath NullString `db:"file_path" json:"filePath,omitempty"`
+	FileSize NullInt64  `db:"file_size" json:"fileSize,omitempty"`
 
 	// Parse tracking fields
 	ParseStatus    ParseStatus    `db:"parse_status" json:"parseStatus"`
-	MetadataSource sql.NullString `db:"metadata_source" json:"metadataSource,omitempty"`
+	MetadataSource NullString `db:"metadata_source" json:"metadataSource,omitempty"`
 
 	// Subtitle tracking fields
 	SubtitleStatus       SubtitleStatus  `db:"subtitle_status" json:"subtitleStatus"`
-	SubtitlePath         sql.NullString  `db:"subtitle_path" json:"subtitlePath,omitempty"`
-	SubtitleLanguage     sql.NullString  `db:"subtitle_language" json:"subtitleLanguage,omitempty"`
-	SubtitleLastSearched sql.NullTime    `db:"subtitle_last_searched" json:"subtitleLastSearched,omitempty"`
-	SubtitleSearchScore  sql.NullFloat64 `db:"subtitle_search_score" json:"subtitleSearchScore,omitempty"`
+	SubtitlePath         NullString  `db:"subtitle_path" json:"subtitlePath,omitempty"`
+	SubtitleLanguage     NullString  `db:"subtitle_language" json:"subtitleLanguage,omitempty"`
+	SubtitleLastSearched NullTime    `db:"subtitle_last_searched" json:"subtitleLastSearched,omitempty"`
+	SubtitleSearchScore  NullFloat64 `db:"subtitle_search_score" json:"subtitleSearchScore,omitempty"`
 
 	// Soft-delete flag for removed files (Story 7-2)
 	IsRemoved bool `db:"is_removed" json:"isRemoved"`
@@ -192,7 +191,7 @@ func (m *Movie) GetCredits() (*Credits, error) {
 // SetCredits serializes credits to JSON and stores in CreditsJSON
 func (m *Movie) SetCredits(credits *Credits) error {
 	if credits == nil {
-		m.CreditsJSON = sql.NullString{Valid: false}
+		m.CreditsJSON = NullString{}
 		return nil
 	}
 
@@ -201,7 +200,7 @@ func (m *Movie) SetCredits(credits *Credits) error {
 		return err
 	}
 
-	m.CreditsJSON = sql.NullString{String: string(bytes), Valid: true}
+	m.CreditsJSON = NewNullString(string(bytes))
 	return nil
 }
 
@@ -222,7 +221,7 @@ func (m *Movie) GetProductionCountries() ([]ProductionCountry, error) {
 // SetProductionCountries serializes production countries to JSON
 func (m *Movie) SetProductionCountries(countries []ProductionCountry) error {
 	if countries == nil {
-		m.ProductionCountriesJSON = sql.NullString{Valid: false}
+		m.ProductionCountriesJSON = NullString{}
 		return nil
 	}
 
@@ -231,7 +230,7 @@ func (m *Movie) SetProductionCountries(countries []ProductionCountry) error {
 		return err
 	}
 
-	m.ProductionCountriesJSON = sql.NullString{String: string(bytes), Valid: true}
+	m.ProductionCountriesJSON = NewNullString(string(bytes))
 	return nil
 }
 
@@ -252,7 +251,7 @@ func (m *Movie) GetSpokenLanguages() ([]SpokenLanguage, error) {
 // SetSpokenLanguages serializes spoken languages to JSON
 func (m *Movie) SetSpokenLanguages(languages []SpokenLanguage) error {
 	if languages == nil {
-		m.SpokenLanguagesJSON = sql.NullString{Valid: false}
+		m.SpokenLanguagesJSON = NullString{}
 		return nil
 	}
 
@@ -261,7 +260,7 @@ func (m *Movie) SetSpokenLanguages(languages []SpokenLanguage) error {
 		return err
 	}
 
-	m.SpokenLanguagesJSON = sql.NullString{String: string(bytes), Valid: true}
+	m.SpokenLanguagesJSON = NewNullString(string(bytes))
 	return nil
 }
 

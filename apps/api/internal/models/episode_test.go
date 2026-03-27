@@ -1,7 +1,6 @@
 package models
 
 import (
-	"database/sql"
 	"testing"
 	"time"
 
@@ -145,16 +144,16 @@ func TestEpisode_FullModel(t *testing.T) {
 	episode := &Episode{
 		ID:            "ep-abc123",
 		SeriesID:      "series-xyz789",
-		TMDbID:        sql.NullInt64{Int64: 12345, Valid: true},
+		TMDbID:        NewNullInt64(12345),
 		SeasonNumber:  2,
 		EpisodeNumber: 8,
-		Title:         sql.NullString{String: "The One With All the Episodes", Valid: true},
-		Overview:      sql.NullString{String: "An exciting episode happens", Valid: true},
-		AirDate:       sql.NullString{String: "2024-03-15", Valid: true},
-		Runtime:       sql.NullInt64{Int64: 45, Valid: true},
-		StillPath:     sql.NullString{String: "/stills/ep-abc123.jpg", Valid: true},
-		VoteAverage:   sql.NullFloat64{Float64: 8.5, Valid: true},
-		FilePath:      sql.NullString{String: "/media/series/S02E08.mkv", Valid: true},
+		Title:         NewNullString("The One With All the Episodes"),
+		Overview:      NewNullString("An exciting episode happens"),
+		AirDate:       NewNullString("2024-03-15"),
+		Runtime:       NewNullInt64(45),
+		StillPath:     NewNullString("/stills/ep-abc123.jpg"),
+		VoteAverage:   NewNullFloat64(8.5),
+		FilePath:      NewNullString("/media/series/S02E08.mkv"),
 		CreatedAt:     now,
 		UpdatedAt:     now,
 	}

@@ -2,7 +2,6 @@ package subtitle
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"testing"
@@ -530,21 +529,21 @@ func TestRepoCollector_CollectMoviesNeedingSubtitles(t *testing.T) {
 				{
 					ID:                      "movie-1",
 					Title:                   "CN Movie",
-					FilePath:                sql.NullString{String: "/media/cn.mkv", Valid: true},
-					ProductionCountriesJSON: sql.NullString{String: string(cnCountries), Valid: true},
+					FilePath:                models.NewNullString("/media/cn.mkv"),
+					ProductionCountriesJSON: models.NewNullString(string(cnCountries)),
 				},
 			},
 			models.SubtitleStatusNotFound: {
 				{
 					ID:                      "movie-2",
 					Title:                   "TW Movie",
-					FilePath:                sql.NullString{String: "/media/tw.mkv", Valid: true},
-					ProductionCountriesJSON: sql.NullString{String: string(twCountries), Valid: true},
+					FilePath:                models.NewNullString("/media/tw.mkv"),
+					ProductionCountriesJSON: models.NewNullString(string(twCountries)),
 				},
 				{
 					ID:       "movie-3",
 					Title:    "No Path Movie",
-					FilePath: sql.NullString{Valid: false},
+					FilePath: models.NullString{},
 				},
 			},
 		},
@@ -583,14 +582,14 @@ func TestRepoCollector_CollectSeriesNeedingSubtitles(t *testing.T) {
 				{
 					ID:       "series-1",
 					Title:    "Drama",
-					FilePath: sql.NullString{String: "/media/drama/", Valid: true},
+					FilePath: models.NewNullString("/media/drama/"),
 				},
 			},
 			models.SubtitleStatusNotFound: {
 				{
 					ID:       "series-2",
 					Title:    "Anime",
-					FilePath: sql.NullString{Valid: false},
+					FilePath: models.NullString{},
 				},
 			},
 		},
@@ -673,7 +672,7 @@ func TestRepoCollector_MultiCountryProduction(t *testing.T) {
 				{
 					ID:                      "coproduction",
 					Title:                   "Co-production",
-					ProductionCountriesJSON: sql.NullString{String: string(multiCountries), Valid: true},
+					ProductionCountriesJSON: models.NewNullString(string(multiCountries)),
 				},
 			},
 		},
@@ -827,32 +826,32 @@ func TestRepoCollector_CollectEpisodesBySeasonID(t *testing.T) {
 				SeriesID:      "series-1",
 				SeasonNumber:  1,
 				EpisodeNumber: 1,
-				Title:         sql.NullString{String: "Pilot", Valid: true},
-				FilePath:      sql.NullString{String: "/media/s01e01.mkv", Valid: true},
+				Title:         models.NewNullString("Pilot"),
+				FilePath:      models.NewNullString("/media/s01e01.mkv"),
 			},
 			{
 				ID:            "ep-2",
 				SeriesID:      "series-1",
 				SeasonNumber:  1,
 				EpisodeNumber: 2,
-				Title:         sql.NullString{String: "Second Episode", Valid: true},
-				FilePath:      sql.NullString{String: "/media/s01e02.mkv", Valid: true},
+				Title:         models.NewNullString("Second Episode"),
+				FilePath:      models.NewNullString("/media/s01e02.mkv"),
 			},
 			{
 				ID:            "ep-3",
 				SeriesID:      "series-1",
 				SeasonNumber:  1,
 				EpisodeNumber: 3,
-				Title:         sql.NullString{Valid: false}, // no title
-				FilePath:      sql.NullString{String: "/media/s01e03.mkv", Valid: true},
+				Title:         models.NullString{}, // no title
+				FilePath:      models.NewNullString("/media/s01e03.mkv"),
 			},
 			{
 				ID:            "ep-4",
 				SeriesID:      "series-1",
 				SeasonNumber:  1,
 				EpisodeNumber: 4,
-				Title:         sql.NullString{String: "No File", Valid: true},
-				FilePath:      sql.NullString{Valid: false}, // no file path — should be excluded
+				Title:         models.NewNullString("No File"),
+				FilePath:      models.NullString{}, // no file path — should be excluded
 			},
 		},
 	}
@@ -889,7 +888,7 @@ func TestRepoCollector_CollectEpisodesBySeasonID_Empty(t *testing.T) {
 				ID:            "ep-1",
 				SeasonNumber:  1,
 				EpisodeNumber: 1,
-				FilePath:      sql.NullString{Valid: false}, // no file
+				FilePath:      models.NullString{}, // no file
 			},
 		},
 	}
