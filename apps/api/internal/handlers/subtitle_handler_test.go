@@ -731,6 +731,9 @@ func (e *emptyBatchCollector) CollectMoviesNeedingSubtitles(_ context.Context) (
 func (e *emptyBatchCollector) CollectSeriesNeedingSubtitles(_ context.Context) ([]subtitle.BatchItem, error) {
 	return nil, nil
 }
+func (e *emptyBatchCollector) CollectEpisodesBySeasonID(_ context.Context, _ string) ([]subtitle.BatchItem, error) {
+	return nil, nil
+}
 
 // AC #4: POST /batch returns 202 with batch_id + total_items
 func TestSubtitleHandler_StartBatch_Returns202(t *testing.T) {
@@ -810,6 +813,9 @@ func (b *batchCollectorWithItems) CollectMoviesNeedingSubtitles(_ context.Contex
 	return b.movies, nil
 }
 func (b *batchCollectorWithItems) CollectSeriesNeedingSubtitles(_ context.Context) ([]subtitle.BatchItem, error) {
+	return nil, nil
+}
+func (b *batchCollectorWithItems) CollectEpisodesBySeasonID(_ context.Context, _ string) ([]subtitle.BatchItem, error) {
 	return nil, nil
 }
 
