@@ -20,25 +20,25 @@ so that batch operations don't trigger API rate limit errors.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add `rate.Limiter` to Zimuku provider (AC: 1, 3)
-  - [ ] 1.1 Add `rate.Limiter` field and constants to `zimuku.go` (1 req/s, burst 1)
-  - [ ] 1.2 Initialize limiter in `NewZimukuProvider` constructor
-  - [ ] 1.3 Add `limiter.Wait(ctx)` call before each HTTP request in `Search()` and `Download()`
-- [ ] Task 2: Add proactive `rate.Limiter` to OpenSubtitles provider (AC: 2, 3)
-  - [ ] 2.1 Add `rate.Limiter` field and constants to `opensub.go` (5 req/s, burst 5)
-  - [ ] 2.2 Initialize limiter in `NewOpenSubProvider` constructor
-  - [ ] 2.3 Add `limiter.Wait(ctx)` call before each HTTP request in `Search()` and `Download()`
-  - [ ] 2.4 Keep existing 429 retry logic intact — proactive limiter is defense layer 1, retry is defense layer 2
-- [ ] Task 3: Write rate limiter unit tests for Zimuku (AC: 4)
-  - [ ] 3.1 Add `TestZimukuProvider_RateLimiter` — verify requests are throttled to 1 req/s
-  - [ ] 3.2 Follow the same test pattern as `TestAssrtProvider_RateLimiter`
-- [ ] Task 4: Write proactive rate limiter unit tests for OpenSubtitles (AC: 5)
-  - [ ] 4.1 Add `TestOpenSubProvider_RateLimiter` — verify requests are throttled to 5 req/s
-  - [ ] 4.2 Ensure existing `TestOpenSubProvider_RateLimiting429` still passes alongside new test
-- [ ] Task 5: Run full test suite to verify no regressions (AC: 6, 7)
-  - [ ] 5.1 Run `nx test api` — all provider tests pass
-  - [ ] 5.2 Verify `TestAssrtProvider_RateLimiter` unchanged and passing
-  - [ ] 5.3 Verify batch processor `DelayBetweenItems` is still 3 seconds (no changes to `batch.go`)
+- [x] Task 1: Add `rate.Limiter` to Zimuku provider (AC: 1, 3)
+  - [x] 1.1 Add `rate.Limiter` field and constants to `zimuku.go` (1 req/s, burst 1)
+  - [x] 1.2 Initialize limiter in `NewZimukuProvider` constructor
+  - [x] 1.3 Add `limiter.Wait(ctx)` call before each HTTP request in `Search()` and `Download()`
+- [x] Task 2: Add proactive `rate.Limiter` to OpenSubtitles provider (AC: 2, 3)
+  - [x] 2.1 Add `rate.Limiter` field and constants to `opensub.go` (5 req/s, burst 5)
+  - [x] 2.2 Initialize limiter in `NewOpenSubProvider` constructor
+  - [x] 2.3 Add `limiter.Wait(ctx)` call before each HTTP request in `Search()` and `Download()`
+  - [x] 2.4 Keep existing 429 retry logic intact — proactive limiter is defense layer 1, retry is defense layer 2
+- [x] Task 3: Write rate limiter unit tests for Zimuku (AC: 4)
+  - [x] 3.1 Add `TestZimukuProvider_RateLimiter` — verify requests are throttled to 1 req/s
+  - [x] 3.2 Follow the same test pattern as `TestAssrtProvider_RateLimiter`
+- [x] Task 4: Write proactive rate limiter unit tests for OpenSubtitles (AC: 5)
+  - [x] 4.1 Add `TestOpenSubProvider_RateLimiter` — verify requests are throttled to 5 req/s
+  - [x] 4.2 Ensure existing `TestOpenSubProvider_RateLimiting429` still passes alongside new test
+- [x] Task 5: Run full test suite to verify no regressions (AC: 6, 7)
+  - [x] 5.1 Run `nx test api` — all provider tests pass
+  - [x] 5.2 Verify `TestAssrtProvider_RateLimiter` unchanged and passing
+  - [x] 5.3 Verify batch processor `DelayBetweenItems` is still 3 seconds (no changes to `batch.go`)
 
 ## Dev Notes
 
@@ -114,3 +114,7 @@ Do NOT modify `DelayBetweenItems` in `batch.go` — it serves a different purpos
 ## Change Log
 
 - 2026-03-26: Story created — ready-for-dev
+- 2026-03-27: Implementation complete — Zimuku 1 req/s, OpenSub 2 req/s (reduced from 5 per CR), removed auth double-token bug, all tests pass
+- 2026-03-27: QA pass — all HTTP paths guarded, pattern consistent with Assrt
+- 2026-03-27: CR fixes applied — rate constant, error format, auth mutex contention
+- 2026-03-27: Status → done

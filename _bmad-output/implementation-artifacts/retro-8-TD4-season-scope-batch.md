@@ -18,27 +18,27 @@ so that I can efficiently find subtitles for a whole season at once.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add `CollectEpisodesBySeasonID` to `BatchCollector` interface (AC: 1)
-  - [ ] 1.1 Add `CollectEpisodesBySeasonID(ctx context.Context, seasonID int64) ([]BatchItem, error)` to the `BatchCollector` interface in `batch.go`
-- [ ] Task 2: Implement `CollectEpisodesBySeasonID` in `RepoCollector` (AC: 1, 2)
-  - [ ] 2.1 Query episodes by `season_id` where `subtitle_status` indicates subtitles are needed
-  - [ ] 2.2 Convert each `Episode` to a `BatchItem` with proper `MediaID`, `MediaType`, `Title`, `MediaFilePath`
-  - [ ] 2.3 Return empty slice (not error) when no eligible episodes exist
-- [ ] Task 3: Implement `collectSeasonItems()` in batch processor (AC: 1, 2, 3, 4)
-  - [ ] 3.1 Add `collectSeasonItems(ctx context.Context, seasonID int64) ([]BatchItem, error)` method
-  - [ ] 3.2 Call `collector.CollectEpisodesBySeasonID(ctx, seasonID)`
-  - [ ] 3.3 Handle empty result — return appropriate response for "no eligible episodes"
-- [ ] Task 4: Wire into `collectItems()` switch case (AC: 1, 3)
-  - [ ] 4.1 Replace `ScopeSeason` case (currently returns `"season scope not yet implemented"`) with call to `collectSeasonItems()`
-  - [ ] 4.2 Pass `req.SeasonID` (dereferenced) to the method
-- [ ] Task 5: Add unit tests for season scope (AC: 1, 2, 4, 5)
-  - [ ] 5.1 Test `CollectEpisodesBySeasonID` — returns only episodes needing subtitles for the given season
-  - [ ] 5.2 Test `CollectEpisodesBySeasonID` — returns empty slice for season with no eligible episodes
-  - [ ] 5.3 Test `collectItems()` with `ScopeSeason` — full integration through the switch case
-  - [ ] 5.4 Test batch processing with season scope — verify SSE progress events fire per episode
-- [ ] Task 6: Run full test suite for regressions (AC: 5)
-  - [ ] 6.1 Run `nx test api` — all existing batch tests pass
-  - [ ] 6.2 Verify `ScopeLibrary` batch tests unchanged and passing
+- [x] Task 1: Add `CollectEpisodesBySeasonID` to `BatchCollector` interface (AC: 1)
+  - [x] 1.1 Add `CollectEpisodesBySeasonID(ctx context.Context, seasonID int64) ([]BatchItem, error)` to the `BatchCollector` interface in `batch.go`
+- [x] Task 2: Implement `CollectEpisodesBySeasonID` in `RepoCollector` (AC: 1, 2)
+  - [x] 2.1 Query episodes by `season_id` where `subtitle_status` indicates subtitles are needed
+  - [x] 2.2 Convert each `Episode` to a `BatchItem` with proper `MediaID`, `MediaType`, `Title`, `MediaFilePath`
+  - [x] 2.3 Return empty slice (not error) when no eligible episodes exist
+- [x] Task 3: Implement `collectSeasonItems()` in batch processor (AC: 1, 2, 3, 4)
+  - [x] 3.1 Add `collectSeasonItems(ctx context.Context, seasonID int64) ([]BatchItem, error)` method
+  - [x] 3.2 Call `collector.CollectEpisodesBySeasonID(ctx, seasonID)`
+  - [x] 3.3 Handle empty result — return appropriate response for "no eligible episodes"
+- [x] Task 4: Wire into `collectItems()` switch case (AC: 1, 3)
+  - [x] 4.1 Replace `ScopeSeason` case (currently returns `"season scope not yet implemented"`) with call to `collectSeasonItems()`
+  - [x] 4.2 Pass `req.SeasonID` (dereferenced) to the method
+- [x] Task 5: Add unit tests for season scope (AC: 1, 2, 4, 5)
+  - [x] 5.1 Test `CollectEpisodesBySeasonID` — returns only episodes needing subtitles for the given season
+  - [x] 5.2 Test `CollectEpisodesBySeasonID` — returns empty slice for season with no eligible episodes
+  - [x] 5.3 Test `collectItems()` with `ScopeSeason` — full integration through the switch case
+  - [x] 5.4 Test batch processing with season scope — verify SSE progress events fire per episode
+- [x] Task 6: Run full test suite for regressions (AC: 5)
+  - [x] 6.1 Run `nx test api` — all existing batch tests pass
+  - [x] 6.2 Verify `ScopeLibrary` batch tests unchanged and passing
 
 ## Dev Notes
 
@@ -93,3 +93,7 @@ Each episode should map to a `BatchItem` with:
 ## Change Log
 
 - 2026-03-26: Story created — ready-for-dev
+- 2026-03-27: Implementation complete — season scope with EpisodeSeasonFinder, RepoCollector, 7 tests
+- 2026-03-27: QA pass — all code paths verified, SQL injection-safe, interface consistent
+- 2026-03-27: CR fixes — SeasonID changed from *int64 to *string (UUID), nil episodeRepo guard added
+- 2026-03-27: Status → done
