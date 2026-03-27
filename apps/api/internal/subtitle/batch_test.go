@@ -710,7 +710,8 @@ func TestBatchProcessor_SeasonScope_CollectsEpisodes(t *testing.T) {
 
 	scorer := NewScorer(NewDefaultScorerConfig())
 	mockRepo := &mockStatusUpdater{}
-	engine := NewEngine([]providers.SubtitleProvider{prov}, scorer, nil, nil, nil, mockRepo, mockRepo)
+	placer := NewPlacer(DefaultPlacerConfig())
+	engine := NewEngine([]providers.SubtitleProvider{prov}, scorer, nil, placer, nil, mockRepo, mockRepo)
 	hub := sse.NewHub()
 	t.Cleanup(func() { hub.Close() })
 
@@ -727,7 +728,7 @@ func TestBatchProcessor_SeasonScope_CollectsEpisodes(t *testing.T) {
 	assert.NotEmpty(t, batchID)
 	assert.Equal(t, 2, total)
 
-	// Wait for processing to complete
+	// Wait for processing to complete (items will fail at placer due to missing media dir, but no panic)
 	time.Sleep(100 * time.Millisecond)
 	assert.False(t, bp.IsRunning())
 }
