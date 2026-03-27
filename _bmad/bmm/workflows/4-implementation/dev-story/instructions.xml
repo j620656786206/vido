@@ -6,6 +6,8 @@
   <critical>Only modify the story file in these areas: Tasks/Subtasks checkboxes, Dev Agent Record (Debug Log, Completion Notes), File List,
     Change Log, and Status</critical>
   <critical>Execute ALL steps in exact order; do NOT skip steps</critical>
+  <critical>Story file updates (marking [x], Change Log, File List) are PART OF implementation — not optional post-work.
+    A task is NOT complete until its checkbox is [x] in the story file AND a Change Log entry exists.</critical>
   <critical>Absolutely DO NOT stop because of "milestones", "significant progress", or "session boundaries". Continue in a single execution
     until the story is COMPLETE (all ACs satisfied and all tasks/subtasks checked) UNLESS a HALT condition is triggered or the USER gives
     other instruction.</critical>
@@ -303,7 +305,13 @@
       <action>ONLY THEN mark the task (and subtasks) checkbox with [x]</action>
       <action>Update File List section with ALL new, modified, or deleted files (paths relative to repo root)</action>
       <action>Add completion notes to Dev Agent Record summarizing what was ACTUALLY implemented and tested</action>
+      <action>Add Change Log entry summarizing what was implemented for this task (Date: {{date}})</action>
     </check>
+
+    <!-- STORY FILE SAVE REMINDER (Epic 8 Retro - TD3/TD4 failure pattern) -->
+    <critical>After marking task [x], you MUST save the story file BEFORE proceeding to the next task or commit.
+      The story file is the source of truth for completion status. Code changes without corresponding [x] marks
+      in the story file are considered incomplete — even if the implementation is correct.</critical>
 
     <check if="ANY validation fails">
       <action>DO NOT mark task complete - fix issues first</action>

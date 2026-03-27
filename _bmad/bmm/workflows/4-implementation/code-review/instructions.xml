@@ -85,6 +85,14 @@
       4. Record specific proof (file:line)
     </action>
 
+    <!-- Story File Integrity Audit (Epic 8 Retro: TD3/TD4 failure pattern) -->
+    <action>Verify story file completeness:
+      1. Check that ALL implemented tasks have [x] marks — tasks left as [ ] despite implementation → MEDIUM finding
+      2. Check that Change Log has entries for the work done — empty Change Log → MEDIUM finding
+      3. Check that File List includes all modified files — missing files → LOW finding
+      These are story hygiene issues that indicate the dev workflow was not fully followed.
+    </action>
+
     <!-- Code Quality Deep Dive -->
     <action>For EACH file in comprehensive review list:
       1. **Security**: Look for injection risks, missing validation, auth issues

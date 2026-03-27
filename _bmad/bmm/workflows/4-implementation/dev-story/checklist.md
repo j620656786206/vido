@@ -52,7 +52,7 @@ validation-rules:
 
 - [ ] **File List Complete:** File List includes EVERY new, modified, or deleted file (paths relative to repo root)
 - [ ] **Dev Agent Record Updated:** Contains relevant Implementation Notes and/or Debug Log for this work
-- [ ] **Change Log Updated:** Change Log includes clear summary of what changed and why
+- [ ] **Change Log Updated:** Change Log includes clear summary of what changed and why. Each implemented task should have a corresponding Change Log entry with date. (Epic 8 Retro: TD3/TD4 stories were implemented correctly but Change Log was empty — this check prevents that pattern.)
 - [ ] **Review Follow-ups:** All review follow-up tasks (marked [AI-Review]) completed and corresponding review items marked resolved (if applicable)
 - [ ] **Story Structure Compliance:** Only permitted sections of story file were modified
 
