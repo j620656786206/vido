@@ -221,7 +221,7 @@ development_status:
   retro-8-TD3-per-provider-rate-limiter:             done  # 2026-03-27 — DEV: Zimuku 1 req/s, OpenSub 2 req/s proactive limiters
   retro-8-TD4-season-scope-batch:                    done  # 2026-03-27 — DEV: season scope with string UUID IDs, nil guard, episode collection
   retro-8-TD5-shared-scanner-test-fixtures:          done  # 2026-03-27 — QD: extracted to testutil package, ~480 lines dedup
-  retro-8-TD6-auto-dismiss-css-animation:            backlog  # → QD /quick-dev: replace setInterval with CSS animation
+  retro-8-TD6-auto-dismiss-css-animation:            done  # 2026-03-27 — QD: CSS keyframes replace setInterval, motion-reduce support
 
   # --- Testing ---
   retro-8-TS1-testsprite-v4-regeneration:            backlog  # → TEA /bmad:bmm:workflows:testarch-automate: regenerate TestSprite tests for Epic 7+8 features
