@@ -14,143 +14,16 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/vido/api/internal/models"
-	"github.com/vido/api/internal/repository"
 	"github.com/vido/api/internal/sse"
+	"github.com/vido/api/internal/testutil"
 )
 
-// MockMovieRepoScanner implements MovieRepositoryInterface for scanner tests
-type MockMovieRepoScanner struct {
-	mock.Mock
-}
-
-func (m *MockMovieRepoScanner) Create(ctx context.Context, movie *models.Movie) error {
-	return m.Called(ctx, movie).Error(0)
-}
-func (m *MockMovieRepoScanner) FindByID(ctx context.Context, id string) (*models.Movie, error) {
-	args := m.Called(ctx, id)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*models.Movie), args.Error(1)
-}
-func (m *MockMovieRepoScanner) FindByTMDbID(ctx context.Context, tmdbID int64) (*models.Movie, error) {
-	return nil, nil
-}
-func (m *MockMovieRepoScanner) FindByIMDbID(ctx context.Context, imdbID string) (*models.Movie, error) {
-	return nil, nil
-}
-func (m *MockMovieRepoScanner) Update(ctx context.Context, movie *models.Movie) error {
-	return m.Called(ctx, movie).Error(0)
-}
-func (m *MockMovieRepoScanner) Delete(ctx context.Context, id string) error { return nil }
-func (m *MockMovieRepoScanner) List(ctx context.Context, params repository.ListParams) ([]models.Movie, *repository.PaginationResult, error) {
-	return nil, nil, nil
-}
-func (m *MockMovieRepoScanner) SearchByTitle(ctx context.Context, title string, params repository.ListParams) ([]models.Movie, *repository.PaginationResult, error) {
-	return nil, nil, nil
-}
-func (m *MockMovieRepoScanner) FullTextSearch(ctx context.Context, query string, params repository.ListParams) ([]models.Movie, *repository.PaginationResult, error) {
-	return nil, nil, nil
-}
-func (m *MockMovieRepoScanner) Upsert(ctx context.Context, movie *models.Movie) error { return nil }
-func (m *MockMovieRepoScanner) FindByFilePath(ctx context.Context, filePath string) (*models.Movie, error) {
-	args := m.Called(ctx, filePath)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*models.Movie), args.Error(1)
-}
-func (m *MockMovieRepoScanner) GetDistinctGenres(ctx context.Context) ([]string, error) {
-	return nil, nil
-}
-func (m *MockMovieRepoScanner) GetYearRange(ctx context.Context) (int, int, error) {
-	return 0, 0, nil
-}
-func (m *MockMovieRepoScanner) Count(ctx context.Context) (int, error) { return 0, nil }
-func (m *MockMovieRepoScanner) BulkCreate(ctx context.Context, movies []*models.Movie) error {
-	return m.Called(ctx, movies).Error(0)
-}
-func (m *MockMovieRepoScanner) FindByParseStatus(ctx context.Context, status models.ParseStatus) ([]models.Movie, error) {
-	return nil, nil
-}
-func (m *MockMovieRepoScanner) UpdateSubtitleStatus(ctx context.Context, id string, status models.SubtitleStatus, path, language string, score float64) error {
-	return nil
-}
-func (m *MockMovieRepoScanner) FindBySubtitleStatus(ctx context.Context, status models.SubtitleStatus) ([]models.Movie, error) {
-	return nil, nil
-}
-func (m *MockMovieRepoScanner) FindNeedingSubtitleSearch(ctx context.Context, olderThan time.Time) ([]models.Movie, error) {
-	return nil, nil
-}
-func (m *MockMovieRepoScanner) FindAllWithFilePath(ctx context.Context) ([]models.Movie, error) {
-	args := m.Called(ctx)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).([]models.Movie), args.Error(1)
-}
-
-// MockSeriesRepoScanner implements SeriesRepositoryInterface for scanner tests
-type MockSeriesRepoScanner struct {
-	mock.Mock
-}
-
-func (m *MockSeriesRepoScanner) Create(ctx context.Context, series *models.Series) error {
-	return nil
-}
-func (m *MockSeriesRepoScanner) FindByID(ctx context.Context, id string) (*models.Series, error) {
-	return nil, nil
-}
-func (m *MockSeriesRepoScanner) FindByTMDbID(ctx context.Context, tmdbID int64) (*models.Series, error) {
-	return nil, nil
-}
-func (m *MockSeriesRepoScanner) FindByIMDbID(ctx context.Context, imdbID string) (*models.Series, error) {
-	return nil, nil
-}
-func (m *MockSeriesRepoScanner) Update(ctx context.Context, series *models.Series) error {
-	return nil
-}
-func (m *MockSeriesRepoScanner) Delete(ctx context.Context, id string) error { return nil }
-func (m *MockSeriesRepoScanner) List(ctx context.Context, params repository.ListParams) ([]models.Series, *repository.PaginationResult, error) {
-	return nil, nil, nil
-}
-func (m *MockSeriesRepoScanner) SearchByTitle(ctx context.Context, title string, params repository.ListParams) ([]models.Series, *repository.PaginationResult, error) {
-	return nil, nil, nil
-}
-func (m *MockSeriesRepoScanner) FullTextSearch(ctx context.Context, query string, params repository.ListParams) ([]models.Series, *repository.PaginationResult, error) {
-	return nil, nil, nil
-}
-func (m *MockSeriesRepoScanner) Upsert(ctx context.Context, series *models.Series) error {
-	return nil
-}
-func (m *MockSeriesRepoScanner) GetDistinctGenres(ctx context.Context) ([]string, error) {
-	return nil, nil
-}
-func (m *MockSeriesRepoScanner) GetYearRange(ctx context.Context) (int, int, error) {
-	return 0, 0, nil
-}
-func (m *MockSeriesRepoScanner) Count(ctx context.Context) (int, error) { return 0, nil }
-func (m *MockSeriesRepoScanner) BulkCreate(ctx context.Context, seriesList []*models.Series) error {
-	return nil
-}
-func (m *MockSeriesRepoScanner) FindByParseStatus(ctx context.Context, status models.ParseStatus) ([]models.Series, error) {
-	return nil, nil
-}
-func (m *MockSeriesRepoScanner) UpdateSubtitleStatus(ctx context.Context, id string, status models.SubtitleStatus, path, language string, score float64) error {
-	return nil
-}
-func (m *MockSeriesRepoScanner) FindBySubtitleStatus(ctx context.Context, status models.SubtitleStatus) ([]models.Series, error) {
-	return nil, nil
-}
-func (m *MockSeriesRepoScanner) FindNeedingSubtitleSearch(ctx context.Context, olderThan time.Time) ([]models.Series, error) {
-	return nil, nil
-}
-
 // helper to create a scanner service with mocks
-func setupScannerService(t *testing.T, mediaDirs []string) (*ScannerService, *MockMovieRepoScanner, *sse.Hub) {
+func setupScannerService(t *testing.T, mediaDirs []string) (*ScannerService, *testutil.MockMovieRepository, *sse.Hub) {
 	t.Helper()
-	movieRepo := new(MockMovieRepoScanner)
-	seriesRepo := new(MockSeriesRepoScanner)
+	movieRepo := new(testutil.MockMovieRepository)
+	seriesRepo := new(testutil.MockSeriesRepository)
+
 	hub := sse.NewHub()
 	t.Cleanup(func() { hub.Close() })
 
@@ -711,8 +584,8 @@ func TestScannerService_NilSSEHub(t *testing.T) {
 	dir := t.TempDir()
 	createVideoFiles(t, dir, []string{"movie.mkv"})
 
-	movieRepo := new(MockMovieRepoScanner)
-	seriesRepo := new(MockSeriesRepoScanner)
+	movieRepo := new(testutil.MockMovieRepository)
+	seriesRepo := new(testutil.MockSeriesRepository)
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelWarn}))
 
 	// Create service with nil SSE hub — should not panic

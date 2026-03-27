@@ -10,128 +10,16 @@ import (
 	"testing"
 	"time"
 
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/repository"
+	"github.com/vido/api/internal/testutil"
 )
 
-// MockMovieRepo implements MovieRepositoryInterface for testing
-type MockMovieRepoExport struct {
-	mock.Mock
-}
-
-func (m *MockMovieRepoExport) List(ctx context.Context, params repository.ListParams) ([]models.Movie, *repository.PaginationResult, error) {
-	args := m.Called(ctx, params)
-	return args.Get(0).([]models.Movie), args.Get(1).(*repository.PaginationResult), args.Error(2)
-}
-func (m *MockMovieRepoExport) Create(ctx context.Context, movie *models.Movie) error {
-	return m.Called(ctx, movie).Error(0)
-}
-func (m *MockMovieRepoExport) FindByID(ctx context.Context, id string) (*models.Movie, error) {
-	return nil, nil
-}
-func (m *MockMovieRepoExport) FindByTMDbID(ctx context.Context, tmdbID int64) (*models.Movie, error) {
-	return nil, nil
-}
-func (m *MockMovieRepoExport) FindByIMDbID(ctx context.Context, imdbID string) (*models.Movie, error) {
-	return nil, nil
-}
-func (m *MockMovieRepoExport) Update(ctx context.Context, movie *models.Movie) error {
-	return nil
-}
-func (m *MockMovieRepoExport) Delete(ctx context.Context, id string) error { return nil }
-func (m *MockMovieRepoExport) SearchByTitle(ctx context.Context, title string, params repository.ListParams) ([]models.Movie, *repository.PaginationResult, error) {
-	return nil, nil, nil
-}
-func (m *MockMovieRepoExport) FullTextSearch(ctx context.Context, query string, params repository.ListParams) ([]models.Movie, *repository.PaginationResult, error) {
-	return nil, nil, nil
-}
-func (m *MockMovieRepoExport) Upsert(ctx context.Context, movie *models.Movie) error { return nil }
-func (m *MockMovieRepoExport) FindByFilePath(ctx context.Context, filePath string) (*models.Movie, error) {
-	return nil, nil
-}
-func (m *MockMovieRepoExport) GetDistinctGenres(ctx context.Context) ([]string, error) {
-	return nil, nil
-}
-func (m *MockMovieRepoExport) GetYearRange(ctx context.Context) (int, int, error) { return 0, 0, nil }
-func (m *MockMovieRepoExport) Count(ctx context.Context) (int, error)             { return 0, nil }
-func (m *MockMovieRepoExport) BulkCreate(ctx context.Context, movies []*models.Movie) error {
-	return nil
-}
-func (m *MockMovieRepoExport) FindByParseStatus(ctx context.Context, status models.ParseStatus) ([]models.Movie, error) {
-	return nil, nil
-}
-func (m *MockMovieRepoExport) UpdateSubtitleStatus(ctx context.Context, id string, status models.SubtitleStatus, path, language string, score float64) error {
-	return nil
-}
-func (m *MockMovieRepoExport) FindBySubtitleStatus(ctx context.Context, status models.SubtitleStatus) ([]models.Movie, error) {
-	return nil, nil
-}
-func (m *MockMovieRepoExport) FindNeedingSubtitleSearch(ctx context.Context, olderThan time.Time) ([]models.Movie, error) {
-	return nil, nil
-}
-func (m *MockMovieRepoExport) FindAllWithFilePath(ctx context.Context) ([]models.Movie, error) {
-	return nil, nil
-}
-
-// MockSeriesRepoExport implements SeriesRepositoryInterface for testing
-type MockSeriesRepoExport struct {
-	mock.Mock
-}
-
-func (m *MockSeriesRepoExport) List(ctx context.Context, params repository.ListParams) ([]models.Series, *repository.PaginationResult, error) {
-	args := m.Called(ctx, params)
-	return args.Get(0).([]models.Series), args.Get(1).(*repository.PaginationResult), args.Error(2)
-}
-func (m *MockSeriesRepoExport) Create(ctx context.Context, series *models.Series) error {
-	return nil
-}
-func (m *MockSeriesRepoExport) FindByID(ctx context.Context, id string) (*models.Series, error) {
-	return nil, nil
-}
-func (m *MockSeriesRepoExport) FindByTMDbID(ctx context.Context, tmdbID int64) (*models.Series, error) {
-	return nil, nil
-}
-func (m *MockSeriesRepoExport) FindByIMDbID(ctx context.Context, imdbID string) (*models.Series, error) {
-	return nil, nil
-}
-func (m *MockSeriesRepoExport) Update(ctx context.Context, series *models.Series) error { return nil }
-func (m *MockSeriesRepoExport) Delete(ctx context.Context, id string) error             { return nil }
-func (m *MockSeriesRepoExport) SearchByTitle(ctx context.Context, title string, params repository.ListParams) ([]models.Series, *repository.PaginationResult, error) {
-	return nil, nil, nil
-}
-func (m *MockSeriesRepoExport) FullTextSearch(ctx context.Context, query string, params repository.ListParams) ([]models.Series, *repository.PaginationResult, error) {
-	return nil, nil, nil
-}
-func (m *MockSeriesRepoExport) Upsert(ctx context.Context, series *models.Series) error { return nil }
-func (m *MockSeriesRepoExport) GetDistinctGenres(ctx context.Context) ([]string, error) {
-	return nil, nil
-}
-func (m *MockSeriesRepoExport) GetYearRange(ctx context.Context) (int, int, error) {
-	return 0, 0, nil
-}
-func (m *MockSeriesRepoExport) Count(ctx context.Context) (int, error) { return 0, nil }
-func (m *MockSeriesRepoExport) BulkCreate(ctx context.Context, seriesList []*models.Series) error {
-	return nil
-}
-func (m *MockSeriesRepoExport) FindByParseStatus(ctx context.Context, status models.ParseStatus) ([]models.Series, error) {
-	return nil, nil
-}
-func (m *MockSeriesRepoExport) UpdateSubtitleStatus(ctx context.Context, id string, status models.SubtitleStatus, path, language string, score float64) error {
-	return nil
-}
-func (m *MockSeriesRepoExport) FindBySubtitleStatus(ctx context.Context, status models.SubtitleStatus) ([]models.Series, error) {
-	return nil, nil
-}
-func (m *MockSeriesRepoExport) FindNeedingSubtitleSearch(ctx context.Context, olderThan time.Time) ([]models.Series, error) {
-	return nil, nil
-}
-
-func setupExportMocks() (*MockMovieRepoExport, *MockSeriesRepoExport) {
-	movieRepo := new(MockMovieRepoExport)
-	seriesRepo := new(MockSeriesRepoExport)
+func setupExportMocks() (*testutil.MockMovieRepository, *testutil.MockSeriesRepository) {
+	movieRepo := new(testutil.MockMovieRepository)
+	seriesRepo := new(testutil.MockSeriesRepository)
 
 	movies := []models.Movie{
 		{
@@ -225,8 +113,8 @@ func TestExportService_ExportNFO(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("successful NFO export with file paths", func(t *testing.T) {
-		movieRepo := new(MockMovieRepoExport)
-		seriesRepo := new(MockSeriesRepoExport)
+		movieRepo := new(testutil.MockMovieRepository)
+		seriesRepo := new(testutil.MockSeriesRepository)
 		tmpDir := t.TempDir()
 		svc := NewExportService(movieRepo, seriesRepo, tmpDir)
 
@@ -257,8 +145,8 @@ func TestExportService_ExportNFO(t *testing.T) {
 	})
 
 	t.Run("skips media without file path", func(t *testing.T) {
-		movieRepo := new(MockMovieRepoExport)
-		seriesRepo := new(MockSeriesRepoExport)
+		movieRepo := new(testutil.MockMovieRepository)
+		seriesRepo := new(testutil.MockSeriesRepository)
 		svc := NewExportService(movieRepo, seriesRepo, t.TempDir())
 
 		movies := []models.Movie{
@@ -307,8 +195,8 @@ func TestExportService_ExportJSON_RepoError(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("movie repo error returns failed status", func(t *testing.T) {
-		movieRepo := new(MockMovieRepoExport)
-		seriesRepo := new(MockSeriesRepoExport)
+		movieRepo := new(testutil.MockMovieRepository)
+		seriesRepo := new(testutil.MockSeriesRepository)
 		svc := NewExportService(movieRepo, seriesRepo, t.TempDir())
 
 		movieRepo.On("List", mock.Anything, mock.AnythingOfType("repository.ListParams")).Return(
@@ -326,8 +214,8 @@ func TestExportService_ExportJSON_EmptyLibrary(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("empty library exports 0 items", func(t *testing.T) {
-		movieRepo := new(MockMovieRepoExport)
-		seriesRepo := new(MockSeriesRepoExport)
+		movieRepo := new(testutil.MockMovieRepository)
+		seriesRepo := new(testutil.MockSeriesRepository)
 		svc := NewExportService(movieRepo, seriesRepo, t.TempDir())
 
 		pagination := &repository.PaginationResult{Page: 1, PageSize: 100, TotalResults: 0, TotalPages: 1}
@@ -376,8 +264,8 @@ func TestExportService_ExportNFO_SeriesWithFilePath(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("creates NFO file for series with file path", func(t *testing.T) {
-		movieRepo := new(MockMovieRepoExport)
-		seriesRepo := new(MockSeriesRepoExport)
+		movieRepo := new(testutil.MockMovieRepository)
+		seriesRepo := new(testutil.MockSeriesRepository)
 		tmpDir := t.TempDir()
 		svc := NewExportService(movieRepo, seriesRepo, tmpDir)
 
@@ -412,8 +300,8 @@ func TestExportService_ExportNFO_MovieRepoError(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("movie repo error returns failed status", func(t *testing.T) {
-		movieRepo := new(MockMovieRepoExport)
-		seriesRepo := new(MockSeriesRepoExport)
+		movieRepo := new(testutil.MockMovieRepository)
+		seriesRepo := new(testutil.MockSeriesRepository)
 		svc := NewExportService(movieRepo, seriesRepo, t.TempDir())
 
 		movieRepo.On("List", mock.Anything, mock.AnythingOfType("repository.ListParams")).Return(

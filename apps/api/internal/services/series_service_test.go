@@ -5,136 +5,26 @@ import (
 	"database/sql"
 	"errors"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/repository"
+	"github.com/vido/api/internal/testutil"
 )
-
-// MockSeriesRepository is a mock implementation of SeriesRepositoryInterface
-type MockSeriesRepository struct {
-	mock.Mock
-}
-
-func (m *MockSeriesRepository) Create(ctx context.Context, series *models.Series) error {
-	args := m.Called(ctx, series)
-	return args.Error(0)
-}
-
-func (m *MockSeriesRepository) FindByID(ctx context.Context, id string) (*models.Series, error) {
-	args := m.Called(ctx, id)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*models.Series), args.Error(1)
-}
-
-func (m *MockSeriesRepository) FindByTMDbID(ctx context.Context, tmdbID int64) (*models.Series, error) {
-	args := m.Called(ctx, tmdbID)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*models.Series), args.Error(1)
-}
-
-func (m *MockSeriesRepository) FindByIMDbID(ctx context.Context, imdbID string) (*models.Series, error) {
-	args := m.Called(ctx, imdbID)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*models.Series), args.Error(1)
-}
-
-func (m *MockSeriesRepository) Update(ctx context.Context, series *models.Series) error {
-	args := m.Called(ctx, series)
-	return args.Error(0)
-}
-
-func (m *MockSeriesRepository) Delete(ctx context.Context, id string) error {
-	args := m.Called(ctx, id)
-	return args.Error(0)
-}
-
-func (m *MockSeriesRepository) List(ctx context.Context, params repository.ListParams) ([]models.Series, *repository.PaginationResult, error) {
-	args := m.Called(ctx, params)
-	if args.Get(0) == nil {
-		return nil, nil, args.Error(2)
-	}
-	return args.Get(0).([]models.Series), args.Get(1).(*repository.PaginationResult), args.Error(2)
-}
-
-func (m *MockSeriesRepository) SearchByTitle(ctx context.Context, title string, params repository.ListParams) ([]models.Series, *repository.PaginationResult, error) {
-	args := m.Called(ctx, title, params)
-	if args.Get(0) == nil {
-		return nil, nil, args.Error(2)
-	}
-	return args.Get(0).([]models.Series), args.Get(1).(*repository.PaginationResult), args.Error(2)
-}
-
-func (m *MockSeriesRepository) FullTextSearch(ctx context.Context, query string, params repository.ListParams) ([]models.Series, *repository.PaginationResult, error) {
-	args := m.Called(ctx, query, params)
-	if args.Get(0) == nil {
-		return nil, nil, args.Error(2)
-	}
-	return args.Get(0).([]models.Series), args.Get(1).(*repository.PaginationResult), args.Error(2)
-}
-
-func (m *MockSeriesRepository) Upsert(ctx context.Context, series *models.Series) error {
-	args := m.Called(ctx, series)
-	return args.Error(0)
-}
-
-func (m *MockSeriesRepository) GetDistinctGenres(ctx context.Context) ([]string, error) {
-	args := m.Called(ctx)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).([]string), args.Error(1)
-}
-
-func (m *MockSeriesRepository) GetYearRange(ctx context.Context) (int, int, error) {
-	args := m.Called(ctx)
-	return args.Int(0), args.Int(1), args.Error(2)
-}
-
-func (m *MockSeriesRepository) Count(ctx context.Context) (int, error) {
-	args := m.Called(ctx)
-	return args.Int(0), args.Error(1)
-}
-
-func (m *MockSeriesRepository) BulkCreate(ctx context.Context, seriesList []*models.Series) error {
-	return nil
-}
-func (m *MockSeriesRepository) FindByParseStatus(ctx context.Context, status models.ParseStatus) ([]models.Series, error) {
-	return nil, nil
-}
-func (m *MockSeriesRepository) UpdateSubtitleStatus(ctx context.Context, id string, status models.SubtitleStatus, path, language string, score float64) error {
-	return nil
-}
-func (m *MockSeriesRepository) FindBySubtitleStatus(ctx context.Context, status models.SubtitleStatus) ([]models.Series, error) {
-	return nil, nil
-}
-func (m *MockSeriesRepository) FindNeedingSubtitleSearch(ctx context.Context, olderThan time.Time) ([]models.Series, error) {
-	return nil, nil
-}
-
-// Verify mock implements interface
-var _ repository.SeriesRepositoryInterface = (*MockSeriesRepository)(nil)
 
 func TestSeriesService_GetByID(t *testing.T) {
 	tests := []struct {
 		name      string
 		seriesID  string
-		setupMock func(*MockSeriesRepository)
+		setupMock func(*testutil.MockSeriesRepository)
 		wantErr   bool
 		errMsg    string
 	}{
 		{
 			name:     "success",
 			seriesID: "series-123",
-			setupMock: func(m *MockSeriesRepository) {
+			setupMock: func(m *testutil.MockSeriesRepository) {
 				m.On("FindByID", mock.Anything, "series-123").Return(&models.Series{
 					ID:    "series-123",
 					Title: "Test Series",
@@ -145,7 +35,7 @@ func TestSeriesService_GetByID(t *testing.T) {
 		{
 			name:     "empty id returns error",
 			seriesID: "",
-			setupMock: func(m *MockSeriesRepository) {
+			setupMock: func(m *testutil.MockSeriesRepository) {
 				// No mock setup needed - validation should fail first
 			},
 			wantErr: true,
@@ -154,7 +44,7 @@ func TestSeriesService_GetByID(t *testing.T) {
 		{
 			name:     "repository error",
 			seriesID: "series-456",
-			setupMock: func(m *MockSeriesRepository) {
+			setupMock: func(m *testutil.MockSeriesRepository) {
 				m.On("FindByID", mock.Anything, "series-456").Return(nil, errors.New("not found"))
 			},
 			wantErr: true,
@@ -163,7 +53,7 @@ func TestSeriesService_GetByID(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockRepo := new(MockSeriesRepository)
+			mockRepo := new(testutil.MockSeriesRepository)
 			tt.setupMock(mockRepo)
 
 			service := NewSeriesService(mockRepo)
@@ -189,7 +79,7 @@ func TestSeriesService_Create(t *testing.T) {
 	tests := []struct {
 		name      string
 		series    *models.Series
-		setupMock func(*MockSeriesRepository)
+		setupMock func(*testutil.MockSeriesRepository)
 		wantErr   bool
 		errMsg    string
 	}{
@@ -199,7 +89,7 @@ func TestSeriesService_Create(t *testing.T) {
 				Title:        "New Series",
 				FirstAirDate: "2024-01-15",
 			},
-			setupMock: func(m *MockSeriesRepository) {
+			setupMock: func(m *testutil.MockSeriesRepository) {
 				m.On("Create", mock.Anything, mock.AnythingOfType("*models.Series")).Return(nil)
 			},
 			wantErr: false,
@@ -207,7 +97,7 @@ func TestSeriesService_Create(t *testing.T) {
 		{
 			name:   "nil series returns error",
 			series: nil,
-			setupMock: func(m *MockSeriesRepository) {
+			setupMock: func(m *testutil.MockSeriesRepository) {
 				// No mock setup needed - validation should fail first
 			},
 			wantErr: true,
@@ -219,7 +109,7 @@ func TestSeriesService_Create(t *testing.T) {
 				Title:        "",
 				FirstAirDate: "2024-01-15",
 			},
-			setupMock: func(m *MockSeriesRepository) {
+			setupMock: func(m *testutil.MockSeriesRepository) {
 				// No mock setup needed - validation should fail first
 			},
 			wantErr: true,
@@ -229,7 +119,7 @@ func TestSeriesService_Create(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockRepo := new(MockSeriesRepository)
+			mockRepo := new(testutil.MockSeriesRepository)
 			tt.setupMock(mockRepo)
 
 			service := NewSeriesService(mockRepo)
@@ -251,7 +141,7 @@ func TestSeriesService_Create(t *testing.T) {
 }
 
 func TestSeriesService_List(t *testing.T) {
-	mockRepo := new(MockSeriesRepository)
+	mockRepo := new(testutil.MockSeriesRepository)
 	mockRepo.On("List", mock.Anything, mock.AnythingOfType("repository.ListParams")).Return(
 		[]models.Series{{ID: "1", Title: "Series 1"}},
 		&repository.PaginationResult{Page: 1, PageSize: 20, TotalResults: 1, TotalPages: 1},
@@ -271,14 +161,14 @@ func TestSeriesService_GetByTMDbID(t *testing.T) {
 	tests := []struct {
 		name      string
 		tmdbID    int64
-		setupMock func(*MockSeriesRepository)
+		setupMock func(*testutil.MockSeriesRepository)
 		wantErr   bool
 		errMsg    string
 	}{
 		{
 			name:   "success",
 			tmdbID: 12345,
-			setupMock: func(m *MockSeriesRepository) {
+			setupMock: func(m *testutil.MockSeriesRepository) {
 				m.On("FindByTMDbID", mock.Anything, int64(12345)).Return(&models.Series{
 					ID:     "series-123",
 					Title:  "Test Series",
@@ -290,7 +180,7 @@ func TestSeriesService_GetByTMDbID(t *testing.T) {
 		{
 			name:   "zero tmdb id returns error",
 			tmdbID: 0,
-			setupMock: func(m *MockSeriesRepository) {
+			setupMock: func(m *testutil.MockSeriesRepository) {
 				// No mock setup needed - validation should fail first
 			},
 			wantErr: true,
@@ -299,7 +189,7 @@ func TestSeriesService_GetByTMDbID(t *testing.T) {
 		{
 			name:   "negative tmdb id returns error",
 			tmdbID: -1,
-			setupMock: func(m *MockSeriesRepository) {
+			setupMock: func(m *testutil.MockSeriesRepository) {
 				// No mock setup needed - validation should fail first
 			},
 			wantErr: true,
@@ -308,7 +198,7 @@ func TestSeriesService_GetByTMDbID(t *testing.T) {
 		{
 			name:   "repository error",
 			tmdbID: 99999,
-			setupMock: func(m *MockSeriesRepository) {
+			setupMock: func(m *testutil.MockSeriesRepository) {
 				m.On("FindByTMDbID", mock.Anything, int64(99999)).Return(nil, errors.New("not found"))
 			},
 			wantErr: true,
@@ -317,7 +207,7 @@ func TestSeriesService_GetByTMDbID(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockRepo := new(MockSeriesRepository)
+			mockRepo := new(testutil.MockSeriesRepository)
 			tt.setupMock(mockRepo)
 
 			service := NewSeriesService(mockRepo)
@@ -343,14 +233,14 @@ func TestSeriesService_GetByIMDbID(t *testing.T) {
 	tests := []struct {
 		name      string
 		imdbID    string
-		setupMock func(*MockSeriesRepository)
+		setupMock func(*testutil.MockSeriesRepository)
 		wantErr   bool
 		errMsg    string
 	}{
 		{
 			name:   "success",
 			imdbID: "tt1234567",
-			setupMock: func(m *MockSeriesRepository) {
+			setupMock: func(m *testutil.MockSeriesRepository) {
 				m.On("FindByIMDbID", mock.Anything, "tt1234567").Return(&models.Series{
 					ID:     "series-123",
 					Title:  "Test Series",
@@ -362,7 +252,7 @@ func TestSeriesService_GetByIMDbID(t *testing.T) {
 		{
 			name:   "empty imdb id returns error",
 			imdbID: "",
-			setupMock: func(m *MockSeriesRepository) {
+			setupMock: func(m *testutil.MockSeriesRepository) {
 				// No mock setup needed - validation should fail first
 			},
 			wantErr: true,
@@ -371,7 +261,7 @@ func TestSeriesService_GetByIMDbID(t *testing.T) {
 		{
 			name:   "repository error",
 			imdbID: "tt9999999",
-			setupMock: func(m *MockSeriesRepository) {
+			setupMock: func(m *testutil.MockSeriesRepository) {
 				m.On("FindByIMDbID", mock.Anything, "tt9999999").Return(nil, errors.New("not found"))
 			},
 			wantErr: true,
@@ -380,7 +270,7 @@ func TestSeriesService_GetByIMDbID(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockRepo := new(MockSeriesRepository)
+			mockRepo := new(testutil.MockSeriesRepository)
 			tt.setupMock(mockRepo)
 
 			service := NewSeriesService(mockRepo)
@@ -406,7 +296,7 @@ func TestSeriesService_Update(t *testing.T) {
 	tests := []struct {
 		name      string
 		series    *models.Series
-		setupMock func(*MockSeriesRepository)
+		setupMock func(*testutil.MockSeriesRepository)
 		wantErr   bool
 		errMsg    string
 	}{
@@ -416,7 +306,7 @@ func TestSeriesService_Update(t *testing.T) {
 				ID:    "series-123",
 				Title: "Updated Series",
 			},
-			setupMock: func(m *MockSeriesRepository) {
+			setupMock: func(m *testutil.MockSeriesRepository) {
 				m.On("Update", mock.Anything, mock.AnythingOfType("*models.Series")).Return(nil)
 			},
 			wantErr: false,
@@ -424,7 +314,7 @@ func TestSeriesService_Update(t *testing.T) {
 		{
 			name:   "nil series returns error",
 			series: nil,
-			setupMock: func(m *MockSeriesRepository) {
+			setupMock: func(m *testutil.MockSeriesRepository) {
 				// No mock setup needed - validation should fail first
 			},
 			wantErr: true,
@@ -436,7 +326,7 @@ func TestSeriesService_Update(t *testing.T) {
 				ID:    "",
 				Title: "Test Series",
 			},
-			setupMock: func(m *MockSeriesRepository) {
+			setupMock: func(m *testutil.MockSeriesRepository) {
 				// No mock setup needed - validation should fail first
 			},
 			wantErr: true,
@@ -448,7 +338,7 @@ func TestSeriesService_Update(t *testing.T) {
 				ID:    "series-123",
 				Title: "",
 			},
-			setupMock: func(m *MockSeriesRepository) {
+			setupMock: func(m *testutil.MockSeriesRepository) {
 				// No mock setup needed - validation should fail first
 			},
 			wantErr: true,
@@ -460,7 +350,7 @@ func TestSeriesService_Update(t *testing.T) {
 				ID:    "series-123",
 				Title: "Test Series",
 			},
-			setupMock: func(m *MockSeriesRepository) {
+			setupMock: func(m *testutil.MockSeriesRepository) {
 				m.On("Update", mock.Anything, mock.AnythingOfType("*models.Series")).Return(errors.New("update failed"))
 			},
 			wantErr: true,
@@ -470,7 +360,7 @@ func TestSeriesService_Update(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockRepo := new(MockSeriesRepository)
+			mockRepo := new(testutil.MockSeriesRepository)
 			tt.setupMock(mockRepo)
 
 			service := NewSeriesService(mockRepo)
@@ -494,14 +384,14 @@ func TestSeriesService_Delete(t *testing.T) {
 	tests := []struct {
 		name      string
 		seriesID  string
-		setupMock func(*MockSeriesRepository)
+		setupMock func(*testutil.MockSeriesRepository)
 		wantErr   bool
 		errMsg    string
 	}{
 		{
 			name:     "success",
 			seriesID: "series-123",
-			setupMock: func(m *MockSeriesRepository) {
+			setupMock: func(m *testutil.MockSeriesRepository) {
 				m.On("Delete", mock.Anything, "series-123").Return(nil)
 			},
 			wantErr: false,
@@ -509,7 +399,7 @@ func TestSeriesService_Delete(t *testing.T) {
 		{
 			name:     "empty id returns error",
 			seriesID: "",
-			setupMock: func(m *MockSeriesRepository) {
+			setupMock: func(m *testutil.MockSeriesRepository) {
 				// No mock setup needed - validation should fail first
 			},
 			wantErr: true,
@@ -518,7 +408,7 @@ func TestSeriesService_Delete(t *testing.T) {
 		{
 			name:     "repository error",
 			seriesID: "series-456",
-			setupMock: func(m *MockSeriesRepository) {
+			setupMock: func(m *testutil.MockSeriesRepository) {
 				m.On("Delete", mock.Anything, "series-456").Return(errors.New("delete failed"))
 			},
 			wantErr: true,
@@ -528,7 +418,7 @@ func TestSeriesService_Delete(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockRepo := new(MockSeriesRepository)
+			mockRepo := new(testutil.MockSeriesRepository)
 			tt.setupMock(mockRepo)
 
 			service := NewSeriesService(mockRepo)
@@ -552,7 +442,7 @@ func TestSeriesService_SearchByTitle(t *testing.T) {
 	tests := []struct {
 		name      string
 		title     string
-		setupMock func(*MockSeriesRepository)
+		setupMock func(*testutil.MockSeriesRepository)
 		wantErr   bool
 		errMsg    string
 		wantLen   int
@@ -560,7 +450,7 @@ func TestSeriesService_SearchByTitle(t *testing.T) {
 		{
 			name:  "success",
 			title: "Test",
-			setupMock: func(m *MockSeriesRepository) {
+			setupMock: func(m *testutil.MockSeriesRepository) {
 				m.On("SearchByTitle", mock.Anything, "Test", mock.AnythingOfType("repository.ListParams")).Return(
 					[]models.Series{{ID: "1", Title: "Test Series"}},
 					&repository.PaginationResult{Page: 1, PageSize: 20, TotalResults: 1, TotalPages: 1},
@@ -573,7 +463,7 @@ func TestSeriesService_SearchByTitle(t *testing.T) {
 		{
 			name:  "empty title returns error",
 			title: "",
-			setupMock: func(m *MockSeriesRepository) {
+			setupMock: func(m *testutil.MockSeriesRepository) {
 				// No mock setup needed - validation should fail first
 			},
 			wantErr: true,
@@ -582,7 +472,7 @@ func TestSeriesService_SearchByTitle(t *testing.T) {
 		{
 			name:  "repository error",
 			title: "Error",
-			setupMock: func(m *MockSeriesRepository) {
+			setupMock: func(m *testutil.MockSeriesRepository) {
 				m.On("SearchByTitle", mock.Anything, "Error", mock.AnythingOfType("repository.ListParams")).Return(
 					nil, nil, errors.New("search failed"),
 				)
@@ -594,7 +484,7 @@ func TestSeriesService_SearchByTitle(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockRepo := new(MockSeriesRepository)
+			mockRepo := new(testutil.MockSeriesRepository)
 			tt.setupMock(mockRepo)
 
 			service := NewSeriesService(mockRepo)
@@ -617,7 +507,7 @@ func TestSeriesService_SearchByTitle(t *testing.T) {
 }
 
 func TestSeriesService_List_Error(t *testing.T) {
-	mockRepo := new(MockSeriesRepository)
+	mockRepo := new(testutil.MockSeriesRepository)
 	mockRepo.On("List", mock.Anything, mock.AnythingOfType("repository.ListParams")).Return(
 		nil, nil, errors.New("list failed"),
 	)

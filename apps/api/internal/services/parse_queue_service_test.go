@@ -385,6 +385,10 @@ func (m *mockPQEpisodeRepo) FindBySeriesID(_ context.Context, _ string) ([]model
 	return nil, nil
 }
 
+func (m *mockPQEpisodeRepo) FindBySeasonID(_ context.Context, _ string) ([]models.Episode, error) {
+	return nil, nil
+}
+
 func (m *mockPQEpisodeRepo) FindBySeasonNumber(_ context.Context, _ string, _ int) ([]models.Episode, error) {
 	return nil, nil
 }

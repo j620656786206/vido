@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/sse"
+	"github.com/vido/api/internal/testutil"
 )
 
 // MockSettingsRepoScheduler implements SettingsRepositoryInterface for scheduler tests
@@ -51,10 +52,10 @@ func (m *MockSettingsRepoScheduler) SetBool(ctx context.Context, key string, val
 	return nil
 }
 
-func setupScanScheduler(t *testing.T) (*ScanScheduler, *MockMovieRepoScanner, *MockSettingsRepoScheduler) {
+func setupScanScheduler(t *testing.T) (*ScanScheduler, *testutil.MockMovieRepository, *MockSettingsRepoScheduler) {
 	t.Helper()
-	movieRepo := new(MockMovieRepoScanner)
-	seriesRepo := new(MockSeriesRepoScanner)
+	movieRepo := new(testutil.MockMovieRepository)
+	seriesRepo := new(testutil.MockSeriesRepository)
 	settingsRepo := new(MockSettingsRepoScheduler)
 	hub := sse.NewHub()
 	t.Cleanup(func() { hub.Close() })
