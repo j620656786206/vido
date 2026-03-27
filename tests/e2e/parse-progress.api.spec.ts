@@ -23,7 +23,7 @@ const API_BASE_URL = process.env.API_URL || 'http://localhost:8080/api/v1';
 // =============================================================================
 
 interface _ParseProgress {
-  taskId: string;
+  task_id: string;
   filename: string;
   status: 'pending' | 'parsing' | 'success' | 'needs_ai' | 'failed';
   steps: ParseStep[];
@@ -45,10 +45,10 @@ interface ParseStep {
 }
 
 interface ParseResult {
-  mediaId: string;
+  media_id: string;
   title: string;
   year?: number;
-  metadataSource?: string;
+  metadata_source?: string;
 }
 
 interface SSEEvent {
@@ -115,7 +115,7 @@ test.describe('Parse Progress API - Status Endpoint @api @parse-progress @story-
   // Error Cases (These can be tested without active parse tasks)
   // ---------------------------------------------------------------------------
 
-  test('[P1] GET /parse/progress/{taskId}/status - should return 404 JSON for nonexistent task', async ({
+  test('[P1] GET /parse/progress/{task_id}/status - should return 404 JSON for nonexistent task', async ({
     request,
   }) => {
     // GIVEN: A task ID that does not exist
@@ -145,7 +145,7 @@ test.describe('Parse Progress API - Status Endpoint @api @parse-progress @story-
     expect(body.error.message).toContain('not found');
   });
 
-  test('[P2] GET /parse/progress/{taskId}/status - should handle special characters in taskId', async ({
+  test('[P2] GET /parse/progress/{task_id}/status - should handle special characters in task_id', async ({
     request,
   }) => {
     // GIVEN: A task ID with special characters
@@ -168,7 +168,7 @@ test.describe('Parse Progress API - Status Endpoint @api @parse-progress @story-
     expect(body.error.code).toBe('PARSE_TASK_NOT_FOUND');
   });
 
-  test('[P2] GET /parse/progress/{taskId}/status - should return 404 JSON for UUID-like taskId', async ({
+  test('[P2] GET /parse/progress/{task_id}/status - should return 404 JSON for UUID-like task_id', async ({
     request,
   }) => {
     // GIVEN: A UUID-like task ID that doesn't exist
@@ -199,11 +199,11 @@ test.describe('Parse Progress API - SSE Streaming @api @parse-progress @sse @sto
   // SSE Connection Tests
   // ---------------------------------------------------------------------------
 
-  test('[P1] GET /parse/progress/{taskId} - should set correct SSE headers', async ({
+  test('[P1] GET /parse/progress/{task_id} - should set correct SSE headers', async ({
     request,
   }) => {
     // GIVEN: A valid task ID (even if task doesn't exist, headers should be set)
-    const taskId = 'test-sse-headers-' + Date.now();
+    const task_id = 'test-sse-headers-' + Date.now();
 
     // WHEN: Connecting to the SSE endpoint
     // Note: We use a short timeout to just check headers without waiting for events
@@ -211,7 +211,7 @@ test.describe('Parse Progress API - SSE Streaming @api @parse-progress @sse @sto
     const timeout = setTimeout(() => controller.abort(), 1000);
 
     try {
-      const response = await request.get(`${API_BASE_URL}/parse/progress/${taskId}`, {
+      const response = await request.get(`${API_BASE_URL}/parse/progress/${task_id}`, {
         timeout: 2000,
       });
 
@@ -229,16 +229,16 @@ test.describe('Parse Progress API - SSE Streaming @api @parse-progress @sse @sto
     }
   });
 
-  test('[P1] GET /parse/progress/{taskId} - should receive connected event on connection', async ({
+  test('[P1] GET /parse/progress/{task_id} - should receive connected event on connection', async ({
     request,
   }) => {
     // GIVEN: A new task ID for SSE connection
-    const taskId = 'test-sse-connect-' + Date.now();
+    const task_id = 'test-sse-connect-' + Date.now();
 
     // WHEN: Connecting to the SSE endpoint
     // Use a short timeout since we only need the initial connected event
     try {
-      const response = await request.get(`${API_BASE_URL}/parse/progress/${taskId}`, {
+      const response = await request.get(`${API_BASE_URL}/parse/progress/${task_id}`, {
         timeout: 3000,
       });
 
@@ -250,8 +250,8 @@ test.describe('Parse Progress API - SSE Streaming @api @parse-progress @sse @sto
       expect(connectedEvent).toBeDefined();
 
       if (connectedEvent) {
-        const data = connectedEvent.data as { taskId: string; message: string };
-        expect(data.taskId).toBe(taskId);
+        const data = connectedEvent.data as { task_id: string; message: string };
+        expect(data.task_id).toBe(task_id);
         expect(data.message).toContain('Connected');
       }
     } catch {
@@ -260,17 +260,17 @@ test.describe('Parse Progress API - SSE Streaming @api @parse-progress @sse @sto
     }
   });
 
-  test('[P2] GET /parse/progress/{taskId} - should handle concurrent connections', async ({
+  test('[P2] GET /parse/progress/{task_id} - should handle concurrent connections', async ({
     request,
   }) => {
     // GIVEN: A shared task ID
-    const taskId = 'test-concurrent-' + Date.now();
+    const task_id = 'test-concurrent-' + Date.now();
 
     // WHEN: Opening multiple concurrent connections
     const connections = await Promise.allSettled([
-      request.get(`${API_BASE_URL}/parse/progress/${taskId}`, { timeout: 2000 }),
-      request.get(`${API_BASE_URL}/parse/progress/${taskId}`, { timeout: 2000 }),
-      request.get(`${API_BASE_URL}/parse/progress/${taskId}`, { timeout: 2000 }),
+      request.get(`${API_BASE_URL}/parse/progress/${task_id}`, { timeout: 2000 }),
+      request.get(`${API_BASE_URL}/parse/progress/${task_id}`, { timeout: 2000 }),
+      request.get(`${API_BASE_URL}/parse/progress/${task_id}`, { timeout: 2000 }),
     ]);
 
     // THEN: All connections should be established (or timeout gracefully)
@@ -292,10 +292,10 @@ test.describe('Parse Progress API - Response Format @api @parse-progress @story-
     request,
   }) => {
     // GIVEN: A request that will fail (nonexistent task)
-    const taskId = 'nonexistent-format-test-' + Date.now();
+    const task_id = 'nonexistent-format-test-' + Date.now();
 
     // WHEN: Making request to status endpoint
-    const response = await request.get(`${API_BASE_URL}/parse/progress/${taskId}/status`, {
+    const response = await request.get(`${API_BASE_URL}/parse/progress/${task_id}/status`, {
       headers: { Accept: 'application/json' },
       timeout: 5000,
     });
@@ -312,12 +312,12 @@ test.describe('Parse Progress API - Response Format @api @parse-progress @story-
 
   test('[P2] SSE endpoint should return text/event-stream content-type', async ({ request }) => {
     // GIVEN: An SSE endpoint request
-    const taskId = 'content-type-test-' + Date.now();
+    const task_id = 'content-type-test-' + Date.now();
 
     // WHEN: Making request to SSE endpoint
     // SSE connections stay open, so timeout is expected
     try {
-      const response = await request.get(`${API_BASE_URL}/parse/progress/${taskId}`, {
+      const response = await request.get(`${API_BASE_URL}/parse/progress/${task_id}`, {
         timeout: 3000,
       });
 
@@ -360,10 +360,10 @@ test.describe('Parse Progress API - Edge Cases @api @parse-progress @story-3-10'
   });
 
   test('[P2] should handle empty string path gracefully', async ({ request }) => {
-    // GIVEN: Attempting to access with missing taskId
+    // GIVEN: Attempting to access with missing task_id
     // Note: This tests the route matching, not the handler
 
-    // WHEN: Requesting without taskId (will hit different route or 404)
+    // WHEN: Requesting without task_id (will hit different route or 404)
     const response = await request.get(`${API_BASE_URL}/parse/progress//status`);
 
     // THEN: Should return error (not 500)

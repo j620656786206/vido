@@ -21,24 +21,24 @@ const API_BASE_URL = process.env.API_URL || 'http://localhost:8080/api/v1';
 
 interface MovieInput {
   title: string;
-  releaseDate: string;
-  originalTitle?: string;
+  release_date: string;
+  original_title?: string;
   genres?: string[];
   overview?: string;
-  posterPath?: string;
-  tmdbId?: number;
-  imdbId?: string;
+  poster_path?: string;
+  tmdb_id?: number;
+  imdb_id?: string;
 }
 
 function createMovieInput(overrides: Partial<MovieInput> = {}): MovieInput {
   return {
     title: faker.lorem.words(3),
-    releaseDate: faker.date.past({ years: 10 }).toISOString().split('T')[0],
-    originalTitle: faker.lorem.words(3),
+    release_date: faker.date.past({ years: 10 }).toISOString().split('T')[0],
+    original_title: faker.lorem.words(3),
     genres: [faker.helpers.arrayElement(['Action', 'Drama', 'Comedy', 'Thriller'])],
     overview: faker.lorem.paragraph(),
-    posterPath: `/posters/${faker.string.alphanumeric(10)}.jpg`,
-    tmdbId: faker.number.int({ min: 100000, max: 999999 }),
+    poster_path: `/posters/${faker.string.alphanumeric(10)}.jpg`,
+    tmdb_id: faker.number.int({ min: 100000, max: 999999 }),
     ...overrides,
   };
 }
@@ -66,7 +66,7 @@ test.describe('Movies API - CRUD Operations @api @movies', () => {
     // GIVEN: Valid movie data with required fields only
     const movieData = {
       title: '測試電影 ' + Date.now(),
-      releaseDate: '2024-01-15',
+      release_date: '2024-01-15',
     };
 
     // WHEN: Creating a movie via POST
@@ -82,7 +82,7 @@ test.describe('Movies API - CRUD Operations @api @movies', () => {
     expect(body.data).toBeDefined();
     expect(body.data.id).toBeDefined();
     expect(body.data.title).toBe(movieData.title);
-    expect(body.data.releaseDate).toBe(movieData.releaseDate);
+    expect(body.data.release_date).toBe(movieData.release_date);
 
     // Store for cleanup
     createdMovieId = body.data.id;
@@ -113,7 +113,7 @@ test.describe('Movies API - CRUD Operations @api @movies', () => {
   test('[P1] POST /movies - should return 400 for missing required fields', async ({ request }) => {
     // GIVEN: Movie data missing required 'title' field
     const invalidData = {
-      releaseDate: '2024-01-15',
+      release_date: '2024-01-15',
       // title is missing
     };
 
@@ -170,9 +170,9 @@ test.describe('Movies API - CRUD Operations @api @movies', () => {
     expect(body.data).toBeDefined();
     expect(body.data.items).toBeInstanceOf(Array);
     expect(body.data.page).toBe(1);
-    expect(body.data.pageSize).toBe(10);
-    expect(body.data).toHaveProperty('totalItems');
-    expect(body.data).toHaveProperty('totalPages');
+    expect(body.data.page_size).toBe(10);
+    expect(body.data).toHaveProperty('total_items');
+    expect(body.data).toHaveProperty('total_pages');
   });
 
   test('[P1] GET /movies/:id - should return movie by ID', async ({ request }) => {
@@ -372,7 +372,7 @@ test.describe('Movies API - Pagination @api @movies', () => {
     expect(response.status()).toBe(200);
 
     const body = await response.json();
-    expect(body.data.pageSize).toBe(5);
+    expect(body.data.page_size).toBe(5);
     expect(body.data.items.length).toBeLessThanOrEqual(5);
   });
 
@@ -399,7 +399,7 @@ test.describe('Movies API - Pagination @api @movies', () => {
     expect(response.status()).toBe(200);
 
     const body = await response.json();
-    expect(body.data.pageSize).toBeLessThanOrEqual(100);
+    expect(body.data.page_size).toBeLessThanOrEqual(100);
   });
 });
 

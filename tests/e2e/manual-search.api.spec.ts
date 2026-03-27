@@ -21,7 +21,7 @@ test.describe('Manual Search API @api @metadata', () => {
     // GIVEN: A valid search request for all sources
     const searchRequest = {
       query: 'Inception',
-      mediaType: 'movie' as const,
+      media_type: 'movie' as const,
       source: 'all' as const,
     };
 
@@ -41,7 +41,7 @@ test.describe('Manual Search API @api @metadata', () => {
     // GIVEN: A search request for TMDb only
     const searchRequest = {
       query: 'Fight Club',
-      mediaType: 'movie' as const,
+      media_type: 'movie' as const,
       source: 'tmdb' as const,
     };
 
@@ -65,7 +65,7 @@ test.describe('Manual Search API @api @metadata', () => {
     // GIVEN: A search request for TV shows
     const searchRequest = {
       query: 'Breaking Bad',
-      mediaType: 'tv' as const,
+      media_type: 'tv' as const,
       source: 'tmdb' as const,
     };
 
@@ -78,7 +78,7 @@ test.describe('Manual Search API @api @metadata', () => {
 
     if (response.data!.results.length > 0) {
       const firstResult = response.data!.results[0];
-      expect(firstResult.mediaType).toBe('tv');
+      expect(firstResult.media_type).toBe('tv');
     }
   });
 
@@ -86,7 +86,7 @@ test.describe('Manual Search API @api @metadata', () => {
     // GIVEN: A search request with year filter
     const searchRequest = {
       query: 'Matrix',
-      mediaType: 'movie' as const,
+      media_type: 'movie' as const,
       year: 1999,
       source: 'tmdb' as const,
     };
@@ -105,7 +105,7 @@ test.describe('Manual Search API @api @metadata', () => {
     // GIVEN: A search request for non-existent content
     const searchRequest = {
       query: 'xyznonexistentmovie99999abcdef',
-      mediaType: 'movie' as const,
+      media_type: 'movie' as const,
       source: 'tmdb' as const,
     };
 
@@ -116,7 +116,7 @@ test.describe('Manual Search API @api @metadata', () => {
     expect(response.success).toBe(true);
     expect(response.data).toBeDefined();
     expect(response.data!.results).toEqual([]);
-    expect(response.data!.totalCount).toBe(0);
+    expect(response.data!.total_count).toBe(0);
   });
 
   test('[P1] POST /metadata/manual-search - should return error for missing query', async ({
@@ -125,7 +125,7 @@ test.describe('Manual Search API @api @metadata', () => {
     // GIVEN: A search request without query
     const searchRequest = {
       query: '',
-      mediaType: 'movie' as const,
+      media_type: 'movie' as const,
       source: 'all' as const,
     };
 
@@ -141,7 +141,7 @@ test.describe('Manual Search API @api @metadata', () => {
   test('[P2] POST /metadata/manual-search - should default to movie media type', async ({
     api,
   }) => {
-    // GIVEN: A search request without mediaType
+    // GIVEN: A search request without media_type
     const searchRequest = {
       query: 'Inception',
       source: 'tmdb' as const,
@@ -159,7 +159,7 @@ test.describe('Manual Search API @api @metadata', () => {
     // GIVEN: A search request without source
     const searchRequest = {
       query: 'Inception',
-      mediaType: 'movie' as const,
+      media_type: 'movie' as const,
     };
 
     // WHEN: Calling the manual search API
@@ -178,7 +178,7 @@ test.describe('Manual Search API @api @metadata', () => {
     // GIVEN: A search request
     const searchRequest = {
       query: 'Inception',
-      mediaType: 'movie' as const,
+      media_type: 'movie' as const,
       source: 'all' as const,
     };
 
@@ -201,7 +201,7 @@ test.describe('Manual Search API @api @metadata', () => {
     // GIVEN: A search request that should return results
     const searchRequest = {
       query: 'Inception',
-      mediaType: 'movie' as const,
+      media_type: 'movie' as const,
       source: 'tmdb' as const,
     };
 
@@ -232,8 +232,8 @@ test.describe('Apply Metadata API @api @metadata', () => {
     // Skip until we have proper test data seeding
 
     const applyRequest = {
-      mediaId: 'test-movie-id',
-      mediaType: 'movie' as const,
+      media_id: 'test-movie-id',
+      media_type: 'movie' as const,
       selectedItem: {
         id: 'tmdb-550',
         source: 'tmdb',
@@ -246,7 +246,7 @@ test.describe('Apply Metadata API @api @metadata', () => {
     // THEN: Should return success
     expect(response.success).toBe(true);
     expect(response.data).toBeDefined();
-    expect(response.data!.mediaId).toBe('test-movie-id');
+    expect(response.data!.media_id).toBe('test-movie-id');
     expect(response.data!.source).toBe('tmdb');
   });
 
@@ -256,8 +256,8 @@ test.describe('Apply Metadata API @api @metadata', () => {
     // Skip until we have proper test data seeding
 
     const applyRequest = {
-      mediaId: 'test-series-id',
-      mediaType: 'series' as const,
+      media_id: 'test-series-id',
+      media_type: 'series' as const,
       selectedItem: {
         id: 'tmdb-1396',
         source: 'tmdb',
@@ -270,14 +270,14 @@ test.describe('Apply Metadata API @api @metadata', () => {
     // THEN: Should return success
     expect(response.success).toBe(true);
     expect(response.data).toBeDefined();
-    expect(response.data!.mediaType).toBe('series');
+    expect(response.data!.media_type).toBe('series');
   });
 
-  test('[P1] POST /metadata/apply - should return error for missing mediaId', async ({ api }) => {
-    // GIVEN: A request without mediaId
+  test('[P1] POST /metadata/apply - should return error for missing media_id', async ({ api }) => {
+    // GIVEN: A request without media_id
     const applyRequest = {
-      mediaId: '',
-      mediaType: 'movie' as const,
+      media_id: '',
+      media_type: 'movie' as const,
       selectedItem: {
         id: 'tmdb-550',
         source: 'tmdb',
@@ -302,8 +302,8 @@ test.describe('Apply Metadata API @api @metadata', () => {
 
     // GIVEN: A request for non-existent media
     const applyRequest = {
-      mediaId: 'nonexistent-media-id-12345',
-      mediaType: 'movie' as const,
+      media_id: 'nonexistent-media-id-12345',
+      media_type: 'movie' as const,
       selectedItem: {
         id: 'tmdb-550',
         source: 'tmdb',
@@ -327,8 +327,8 @@ test.describe('Apply Metadata API @api @metadata', () => {
     // Skip until we have proper test data seeding
 
     const applyRequest = {
-      mediaId: 'test-movie-id',
-      mediaType: 'movie' as const,
+      media_id: 'test-movie-id',
+      media_type: 'movie' as const,
       selectedItem: {
         id: 'tmdb-550',
         source: 'tmdb',

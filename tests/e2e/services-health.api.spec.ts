@@ -17,11 +17,11 @@ const API_BASE_URL = 'http://localhost:8080/api/v1';
 
 interface ServiceHealth {
   name: string;
-  displayName: string;
+  display_name: string;
   status: 'healthy' | 'degraded' | 'down';
-  lastCheck: string;
-  lastSuccess: string;
-  errorCount: number;
+  last_check: string;
+  last_success: string;
+  error_count: number;
   message?: string;
 }
 
@@ -33,7 +33,7 @@ interface ServicesHealth {
 }
 
 interface HealthStatusResponse {
-  degradationLevel: 'normal' | 'partial' | 'minimal' | 'offline';
+  degradation_level: 'normal' | 'partial' | 'minimal' | 'offline';
   services: ServicesHealth;
   message: string;
 }
@@ -76,7 +76,7 @@ test.describe('Services Health API @api @p1', () => {
     expect(response.status()).toBe(200);
 
     const body: ApiResponse<HealthStatusResponse> = await response.json();
-    expect(body.data?.degradationLevel).toMatch(/^(normal|partial|minimal|offline)$/);
+    expect(body.data?.degradation_level).toMatch(/^(normal|partial|minimal|offline)$/);
   });
 
   test('[P1] should include all four external services', async ({ request }) => {
@@ -111,11 +111,11 @@ test.describe('Services Health API @api @p1', () => {
     const tmdb = body.data?.services?.tmdb;
 
     expect(tmdb?.name).toBe('tmdb');
-    expect(tmdb?.displayName).toBeDefined();
+    expect(tmdb?.display_name).toBeDefined();
     expect(tmdb?.status).toMatch(/^(healthy|degraded|down)$/);
-    expect(tmdb?.lastCheck).toBeDefined();
-    expect(tmdb?.lastSuccess).toBeDefined();
-    expect(typeof tmdb?.errorCount).toBe('number');
+    expect(tmdb?.last_check).toBeDefined();
+    expect(tmdb?.last_success).toBeDefined();
+    expect(typeof tmdb?.error_count).toBe('number');
   });
 
   test('[P1] should follow API response format', async ({ request }) => {
@@ -156,7 +156,7 @@ test.describe('Services Health API @api @p1', () => {
     expect(typeof body.data?.message).toBe('string');
 
     // If degraded, message should contain affected service info
-    if (body.data?.degradationLevel !== 'normal') {
+    if (body.data?.degradation_level !== 'normal') {
       expect(body.data?.message.length).toBeGreaterThan(0);
     }
   });
@@ -176,11 +176,11 @@ test.describe('Services Health API @api @p1', () => {
     // ISO 8601 regex pattern
     const isoPattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
 
-    if (tmdb?.lastCheck) {
-      expect(tmdb.lastCheck).toMatch(isoPattern);
+    if (tmdb?.last_check) {
+      expect(tmdb.last_check).toMatch(isoPattern);
     }
-    if (tmdb?.lastSuccess) {
-      expect(tmdb.lastSuccess).toMatch(isoPattern);
+    if (tmdb?.last_success) {
+      expect(tmdb.last_success).toMatch(isoPattern);
     }
   });
 });

@@ -34,7 +34,7 @@ test.describe('qBittorrent Settings API @api @qbittorrent', () => {
     expect(json.success).toBe(true);
     expect(json.data).toHaveProperty('host');
     expect(json.data).toHaveProperty('username');
-    expect(json.data).toHaveProperty('basePath');
+    expect(json.data).toHaveProperty('base_path');
     expect(json.data).toHaveProperty('configured');
     // Password should NEVER be in response (AC2)
     expect(json.data).not.toHaveProperty('password');
@@ -50,7 +50,7 @@ test.describe('qBittorrent Settings API @api @qbittorrent', () => {
       host: 'http://192.168.1.100:8080',
       username: 'admin',
       password: 'test-password-123',
-      basePath: '/qbt',
+      base_path: '/qbt',
     };
 
     // WHEN: Saving the configuration
@@ -68,7 +68,7 @@ test.describe('qBittorrent Settings API @api @qbittorrent', () => {
     const getJson = await getResponse.json();
     expect(getJson.data.host).toBe('http://192.168.1.100:8080');
     expect(getJson.data.username).toBe('admin');
-    expect(getJson.data.basePath).toBe('/qbt');
+    expect(getJson.data.base_path).toBe('/qbt');
     expect(getJson.data.configured).toBe(true);
     expect(getJson.data).not.toHaveProperty('password');
   });
@@ -101,7 +101,7 @@ test.describe('qBittorrent Settings API @api @qbittorrent', () => {
       host: 'http://10.0.0.1:8080',
       username: 'initial-user',
       password: 'initial-pass',
-      basePath: '',
+      base_path: '',
     });
     await request.put(`${API_BASE_URL}/settings/qbittorrent`, { data: initialConfig });
 
@@ -110,7 +110,7 @@ test.describe('qBittorrent Settings API @api @qbittorrent', () => {
       host: 'http://10.0.0.2:9090',
       username: 'updated-user',
       password: 'updated-pass',
-      basePath: '/new-path',
+      base_path: '/new-path',
     });
     const response = await request.put(`${API_BASE_URL}/settings/qbittorrent`, {
       data: updatedConfig,
@@ -124,13 +124,13 @@ test.describe('qBittorrent Settings API @api @qbittorrent', () => {
     const getJson = await getResponse.json();
     expect(getJson.data.host).toBe('http://10.0.0.2:9090');
     expect(getJson.data.username).toBe('updated-user');
-    expect(getJson.data.basePath).toBe('/new-path');
+    expect(getJson.data.base_path).toBe('/new-path');
     expect(getJson.data.configured).toBe(true);
     // Password is never exposed
     expect(getJson.data).not.toHaveProperty('password');
   });
 
-  test('[P2] PUT /settings/qbittorrent - should persist basePath for reverse proxy (AC4)', async ({
+  test('[P2] PUT /settings/qbittorrent - should persist base_path for reverse proxy (AC4)', async ({
     request,
   }) => {
     // GIVEN: Configuration with reverse proxy base path
@@ -138,7 +138,7 @@ test.describe('qBittorrent Settings API @api @qbittorrent', () => {
       host: 'https://nas.example.com',
       username: 'proxy-admin',
       password: 'proxy-pass',
-      basePath: '/qbittorrent',
+      base_path: '/qbittorrent',
     });
 
     // WHEN: Saving the reverse proxy configuration
@@ -149,11 +149,11 @@ test.describe('qBittorrent Settings API @api @qbittorrent', () => {
     // THEN: Should save successfully
     expect(response.ok()).toBe(true);
 
-    // THEN: basePath should be persisted correctly
+    // THEN: base_path should be persisted correctly
     const getResponse = await request.get(`${API_BASE_URL}/settings/qbittorrent`);
     const getJson = await getResponse.json();
     expect(getJson.data.host).toBe('https://nas.example.com');
-    expect(getJson.data.basePath).toBe('/qbittorrent');
+    expect(getJson.data.base_path).toBe('/qbittorrent');
     expect(getJson.data.configured).toBe(true);
   });
 

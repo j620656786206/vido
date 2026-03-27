@@ -27,8 +27,8 @@ import { getValidPngBuffer, getValidJpegBuffer } from '../support/fixtures/test-
 function createTestMovieData() {
   return {
     title: `測試電影 ${Date.now()}`,
-    releaseDate: faker.date.past({ years: 10 }).toISOString().split('T')[0],
-    originalTitle: faker.lorem.words(3),
+    release_date: faker.date.past({ years: 10 }).toISOString().split('T')[0],
+    original_title: faker.lorem.words(3),
     genres: ['動作', '科幻'],
     overview: faker.lorem.paragraph(),
   };
@@ -83,7 +83,7 @@ test.describe('Update Metadata API @api @metadata-editor', () => {
     expect(response.data).toBeDefined();
     expect(response.data!.id).toBe(testMovieId);
     expect(response.data!.title).toBe(updateData.title);
-    expect(response.data!.metadataSource).toBe('manual');
+    expect(response.data!.metadata_source).toBe('manual');
   });
 
   test('[P1] PUT /media/{id}/metadata - should update only title and year (minimal required fields)', async ({
@@ -209,7 +209,7 @@ test.describe('Update Metadata API @api @metadata-editor', () => {
     expect(response.data!.title).toBe(updateData.title);
   });
 
-  test('[P2] PUT /media/{id}/metadata - should set metadataSource to manual (AC2)', async ({
+  test('[P2] PUT /media/{id}/metadata - should set metadata_source to manual (AC2)', async ({
     api,
   }) => {
     // GIVEN: An existing movie
@@ -220,7 +220,7 @@ test.describe('Update Metadata API @api @metadata-editor', () => {
 
     // THEN: Source should be set to manual
     expect(response.success).toBe(true);
-    expect(response.data!.metadataSource).toBe('manual');
+    expect(response.data!.metadata_source).toBe('manual');
   });
 });
 
@@ -235,8 +235,8 @@ test.describe('Update Series Metadata API @api @metadata-editor', () => {
     // Create a test series for each test
     const seriesData = {
       title: `測試影集 ${Date.now()}`,
-      firstAirDate: faker.date.past({ years: 5 }).toISOString().split('T')[0],
-      originalTitle: faker.lorem.words(3),
+      first_air_date: faker.date.past({ years: 5 }).toISOString().split('T')[0],
+      original_title: faker.lorem.words(3),
       genres: ['劇情', '犯罪'],
       overview: faker.lorem.paragraph(),
     };
@@ -256,7 +256,7 @@ test.describe('Update Series Metadata API @api @metadata-editor', () => {
   test('[P1] PUT /media/{id}/metadata - should update series metadata', async ({ api }) => {
     // GIVEN: An existing series and valid update data
     const updateData = {
-      mediaType: 'series' as const,
+      media_type: 'series' as const,
       title: '絕命毒師',
       titleEnglish: 'Breaking Bad',
       year: 2008,
@@ -273,7 +273,7 @@ test.describe('Update Series Metadata API @api @metadata-editor', () => {
     expect(response.success).toBe(true);
     expect(response.data).toBeDefined();
     expect(response.data!.title).toBe(updateData.title);
-    expect(response.data!.metadataSource).toBe('manual');
+    expect(response.data!.metadata_source).toBe('manual');
   });
 });
 
@@ -417,7 +417,7 @@ test.describe('Metadata Editor Integration @api @metadata-editor', () => {
 
     // THEN: Metadata update should succeed
     expect(metadataResponse.success).toBe(true);
-    expect(metadataResponse.data!.metadataSource).toBe('manual');
+    expect(metadataResponse.data!.metadata_source).toBe('manual');
 
     // WHEN: Then uploading poster
     const posterResponse = await api.uploadPoster(testMovieId, pngBuffer, 'poster.png');
@@ -429,6 +429,6 @@ test.describe('Metadata Editor Integration @api @metadata-editor', () => {
     // VERIFY: Final state
     const getResponse = await api.getMovie(testMovieId);
     expect(getResponse.success).toBe(true);
-    expect(getResponse.data!.posterPath).toBeDefined();
+    expect(getResponse.data!.poster_path).toBeDefined();
   });
 });

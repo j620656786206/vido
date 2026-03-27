@@ -34,9 +34,9 @@ test.describe('Cache Stats API @api @cache @story-6-2', () => {
     expect(response.status()).toBe(200);
     const body = await response.json();
     expect(body.success).toBe(true);
-    expect(body.data).toHaveProperty('cacheTypes');
-    expect(body.data).toHaveProperty('totalSizeBytes');
-    expect(Array.isArray(body.data.cacheTypes)).toBe(true);
+    expect(body.data).toHaveProperty('cache_types');
+    expect(body.data).toHaveProperty('total_size_bytes');
+    expect(Array.isArray(body.data.cache_types)).toBe(true);
   });
 
   test('[P1] GET /settings/cache should include all 5 cache types (AC1)', async ({ request }) => {
@@ -47,7 +47,7 @@ test.describe('Cache Stats API @api @cache @story-6-2', () => {
 
     // THEN: Should contain all 5 cache types
     const body = await response.json();
-    const types = body.data.cacheTypes.map((ct: { type: string }) => ct.type);
+    const types = body.data.cache_types.map((ct: { type: string }) => ct.type);
     expect(types).toContain('image');
     expect(types).toContain('ai');
     expect(types).toContain('metadata');
@@ -63,21 +63,21 @@ test.describe('Cache Stats API @api @cache @story-6-2', () => {
     // WHEN: Requesting cache statistics
     const response = await request.get(`${API_BASE_URL}/settings/cache`);
 
-    // THEN: Each cache type should have type, label, sizeBytes, entryCount
+    // THEN: Each cache type should have type, label, size_bytes, entry_count
     const body = await response.json();
-    for (const ct of body.data.cacheTypes) {
+    for (const ct of body.data.cache_types) {
       expect(ct).toHaveProperty('type');
       expect(ct).toHaveProperty('label');
-      expect(ct).toHaveProperty('sizeBytes');
-      expect(ct).toHaveProperty('entryCount');
-      expect(typeof ct.sizeBytes).toBe('number');
-      expect(typeof ct.entryCount).toBe('number');
-      expect(ct.sizeBytes).toBeGreaterThanOrEqual(0);
-      expect(ct.entryCount).toBeGreaterThanOrEqual(0);
+      expect(ct).toHaveProperty('size_bytes');
+      expect(ct).toHaveProperty('entry_count');
+      expect(typeof ct.size_bytes).toBe('number');
+      expect(typeof ct.entry_count).toBe('number');
+      expect(ct.size_bytes).toBeGreaterThanOrEqual(0);
+      expect(ct.entry_count).toBeGreaterThanOrEqual(0);
     }
   });
 
-  test('[P1] GET /settings/cache totalSizeBytes should be sum of all types (AC1)', async ({
+  test('[P1] GET /settings/cache total_size_bytes should be sum of all types (AC1)', async ({
     request,
   }) => {
     // GIVEN: Backend is running
@@ -85,13 +85,13 @@ test.describe('Cache Stats API @api @cache @story-6-2', () => {
     // WHEN: Requesting cache statistics
     const response = await request.get(`${API_BASE_URL}/settings/cache`);
 
-    // THEN: totalSizeBytes should match sum
+    // THEN: total_size_bytes should match sum
     const body = await response.json();
-    const summedSize = body.data.cacheTypes.reduce(
-      (sum: number, ct: { sizeBytes: number }) => sum + ct.sizeBytes,
+    const summedSize = body.data.cache_types.reduce(
+      (sum: number, ct: { size_bytes: number }) => sum + ct.size_bytes,
       0
     );
-    expect(body.data.totalSizeBytes).toBe(summedSize);
+    expect(body.data.total_size_bytes).toBe(summedSize);
   });
 
   test('[P2] GET /settings/cache should include Chinese labels for each type', async ({
@@ -104,7 +104,7 @@ test.describe('Cache Stats API @api @cache @story-6-2', () => {
 
     // THEN: Labels should be in Chinese
     const body = await response.json();
-    const labels = body.data.cacheTypes.map((ct: { label: string }) => ct.label);
+    const labels = body.data.cache_types.map((ct: { label: string }) => ct.label);
     expect(labels).toContain('圖片快取');
     expect(labels).toContain('AI 解析快取');
   });
@@ -128,10 +128,10 @@ test.describe('Cache Clear by Age API @api @cache @story-6-2', () => {
     const body = await response.json();
     expect(body.success).toBe(true);
     expect(body.data).toHaveProperty('type');
-    expect(body.data).toHaveProperty('entriesRemoved');
-    expect(body.data).toHaveProperty('bytesReclaimed');
-    expect(typeof body.data.entriesRemoved).toBe('number');
-    expect(typeof body.data.bytesReclaimed).toBe('number');
+    expect(body.data).toHaveProperty('entries_removed');
+    expect(body.data).toHaveProperty('bytes_reclaimed');
+    expect(typeof body.data.entries_removed).toBe('number');
+    expect(typeof body.data.bytes_reclaimed).toBe('number');
   });
 
   test('[P1] DELETE /settings/cache?older_than_days=abc should return 400 (AC2)', async ({
@@ -206,7 +206,7 @@ test.describe('Cache Clear by Type API @api @cache @story-6-2', () => {
     const body = await response.json();
     expect(body.success).toBe(true);
     expect(body.data.type).toBe('metadata');
-    expect(typeof body.data.entriesRemoved).toBe('number');
+    expect(typeof body.data.entries_removed).toBe('number');
   });
 
   test('[P1] DELETE /settings/cache/ai should clear AI cache (AC3)', async ({ request }) => {
@@ -227,11 +227,11 @@ test.describe('Cache Clear by Type API @api @cache @story-6-2', () => {
     // WHEN: Clearing image cache
     const response = await request.delete(`${API_BASE_URL}/settings/cache/image`);
 
-    // THEN: Should return 200 with bytesReclaimed
+    // THEN: Should return 200 with bytes_reclaimed
     expect(response.status()).toBe(200);
     const body = await response.json();
     expect(body.data.type).toBe('image');
-    expect(body.data).toHaveProperty('bytesReclaimed');
+    expect(body.data).toHaveProperty('bytes_reclaimed');
   });
 
   test('[P1] DELETE /settings/cache/bogus should return 400 CACHE_TYPE_INVALID (AC3)', async ({
@@ -279,8 +279,8 @@ test.describe('Cache Clear All API @api @cache @story-6-2', () => {
     const body = await response.json();
     expect(body.success).toBe(true);
     expect(body.data.type).toBe('all');
-    expect(typeof body.data.entriesRemoved).toBe('number');
-    expect(typeof body.data.bytesReclaimed).toBe('number');
+    expect(typeof body.data.entries_removed).toBe('number');
+    expect(typeof body.data.bytes_reclaimed).toBe('number');
   });
 });
 

@@ -46,14 +46,14 @@ test.describe('Downloads API @api @downloads', () => {
         expect(torrent).toHaveProperty('name');
         expect(torrent).toHaveProperty('size');
         expect(torrent).toHaveProperty('progress');
-        expect(torrent).toHaveProperty('downloadSpeed');
-        expect(torrent).toHaveProperty('uploadSpeed');
+        expect(torrent).toHaveProperty('download_speed');
+        expect(torrent).toHaveProperty('upload_speed');
         expect(torrent).toHaveProperty('eta');
         expect(torrent).toHaveProperty('status');
-        expect(torrent).toHaveProperty('addedOn');
+        expect(torrent).toHaveProperty('added_on');
         expect(torrent).toHaveProperty('seeds');
         expect(torrent).toHaveProperty('peers');
-        expect(torrent).toHaveProperty('savePath');
+        expect(torrent).toHaveProperty('save_path');
 
         // Validate status is one of expected values
         expect([

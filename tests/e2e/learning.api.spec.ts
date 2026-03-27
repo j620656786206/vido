@@ -45,7 +45,7 @@ test.describe('Learning API - Create Pattern @api @learning @story-3-9', () => {
     // GIVEN: A fansub-formatted filename with metadata reference
     const patternRequest = createLearnPatternRequest({
       filename: '[SubsPlease] Spy x Family - 12 (1080p) [ABC123].mkv',
-      metadataType: 'series',
+      metadata_type: 'series',
     });
 
     // WHEN: Learning a pattern from this filename
@@ -61,13 +61,13 @@ test.describe('Learning API - Create Pattern @api @learning @story-3-9', () => {
     expect(body.data).toBeDefined();
     expect(body.data.id).toBeTruthy();
     expect(body.data.pattern).toBeTruthy();
-    expect(body.data.metadataType).toBe('series');
-    expect(body.data.metadataId).toBe(patternRequest.metadataId);
-    expect(body.data.fansubGroup).toBe('SubsPlease');
-    expect(body.data.titlePattern).toBeTruthy();
-    expect(body.data.patternType).toBe('fansub');
+    expect(body.data.metadata_type).toBe('series');
+    expect(body.data.metadata_id).toBe(patternRequest.metadata_id);
+    expect(body.data.fansub_group).toBe('SubsPlease');
+    expect(body.data.title_pattern).toBeTruthy();
+    expect(body.data.pattern_type).toBe('fansub');
     expect(body.data.confidence).toBe(1.0);
-    expect(body.data.useCount).toBe(0);
+    expect(body.data.use_count).toBe(0);
 
     createdPatternIds.push(body.data.id);
   });
@@ -78,7 +78,7 @@ test.describe('Learning API - Create Pattern @api @learning @story-3-9', () => {
     // GIVEN: A standard movie filename
     const patternRequest = createMoviePatternRequest({
       filename: 'The.Matrix.1999.1080p.BluRay.x264-GROUP.mkv',
-      metadataType: 'movie',
+      metadata_type: 'movie',
     });
 
     // WHEN: Learning a pattern from this filename
@@ -91,8 +91,8 @@ test.describe('Learning API - Create Pattern @api @learning @story-3-9', () => {
 
     const body = await response.json();
     expect(body.success).toBe(true);
-    expect(body.data.metadataType).toBe('movie');
-    expect(body.data.titlePattern).toBeTruthy();
+    expect(body.data.metadata_type).toBe('movie');
+    expect(body.data.title_pattern).toBeTruthy();
 
     createdPatternIds.push(body.data.id);
   });
@@ -103,8 +103,8 @@ test.describe('Learning API - Create Pattern @api @learning @story-3-9', () => {
     // GIVEN: A filename with fansub group in brackets
     const patternRequest = createLearnPatternRequest({
       filename: '[Leopard-Raws] Kimetsu no Yaiba - 26 (BD 1920x1080 x264 FLAC).mkv',
-      metadataType: 'series',
-      tmdbId: 85937,
+      metadata_type: 'series',
+      tmdb_id: 85937,
     });
 
     // WHEN: Learning a pattern
@@ -116,8 +116,8 @@ test.describe('Learning API - Create Pattern @api @learning @story-3-9', () => {
     expect(response.status()).toBe(201);
 
     const body = await response.json();
-    expect(body.data.fansubGroup).toBe('Leopard-Raws');
-    expect(body.data.titlePattern).toContain('Kimetsu no Yaiba');
+    expect(body.data.fansub_group).toBe('Leopard-Raws');
+    expect(body.data.title_pattern).toContain('Kimetsu no Yaiba');
     expect(body.data.patternRegex).toBeTruthy();
 
     createdPatternIds.push(body.data.id);
@@ -129,8 +129,8 @@ test.describe('Learning API - Create Pattern @api @learning @story-3-9', () => {
     // GIVEN: A pattern already exists for this fansub+title
     const firstRequest = createLearnPatternRequest({
       filename: '[Erai-raws] One Piece - 01 (1080p).mkv',
-      metadataId: 'series-op-001',
-      metadataType: 'series',
+      metadata_id: 'series-op-001',
+      metadata_type: 'series',
     });
 
     const firstResponse = await request.post(`${API_BASE_URL}/learning/patterns`, {
@@ -143,8 +143,8 @@ test.describe('Learning API - Create Pattern @api @learning @story-3-9', () => {
     // WHEN: Learning from a very similar filename (same fansub + title, different episode)
     const secondRequest = createLearnPatternRequest({
       filename: '[Erai-raws] One Piece - 02 (1080p).mkv',
-      metadataId: 'series-op-001',
-      metadataType: 'series',
+      metadata_id: 'series-op-001',
+      metadata_type: 'series',
     });
 
     const secondResponse = await request.post(`${API_BASE_URL}/learning/patterns`, {
@@ -169,8 +169,8 @@ test.describe('Learning API - Create Pattern @api @learning @story-3-9', () => {
   }) => {
     // GIVEN: Request without filename
     const invalidRequest = {
-      metadataId: 'series-001',
-      metadataType: 'series',
+      metadata_id: 'series-001',
+      metadata_type: 'series',
     };
 
     // WHEN: Attempting to create pattern without filename
@@ -187,16 +187,16 @@ test.describe('Learning API - Create Pattern @api @learning @story-3-9', () => {
     expect(body.error.code).toBe('VALIDATION_ERROR');
   });
 
-  test('[P1] POST /learning/patterns - should return 400 for missing metadataId (AC1)', async ({
+  test('[P1] POST /learning/patterns - should return 400 for missing metadata_id (AC1)', async ({
     request,
   }) => {
-    // GIVEN: Request without metadataId
+    // GIVEN: Request without metadata_id
     const invalidRequest = {
       filename: '[Test] Some Anime - 01.mkv',
-      metadataType: 'series',
+      metadata_type: 'series',
     };
 
-    // WHEN: Attempting to create pattern without metadataId
+    // WHEN: Attempting to create pattern without metadata_id
     const response = await request.post(`${API_BASE_URL}/learning/patterns`, {
       data: invalidRequest,
     });
@@ -209,14 +209,14 @@ test.describe('Learning API - Create Pattern @api @learning @story-3-9', () => {
     expect(body.error.code).toBe('VALIDATION_ERROR');
   });
 
-  test('[P1] POST /learning/patterns - should return 400 for invalid metadataType (AC1)', async ({
+  test('[P1] POST /learning/patterns - should return 400 for invalid metadata_type (AC1)', async ({
     request,
   }) => {
-    // GIVEN: Request with invalid metadataType
+    // GIVEN: Request with invalid metadata_type
     const invalidRequest = {
       filename: '[Test] Some Anime - 01.mkv',
-      metadataId: 'series-001',
-      metadataType: 'invalid',
+      metadata_id: 'series-001',
+      metadata_type: 'invalid',
     };
 
     // WHEN: Attempting to create pattern with invalid type
@@ -272,8 +272,8 @@ test.describe('Learning API - List & Stats @api @learning @story-3-9', () => {
   }) => {
     // GIVEN: Multiple patterns exist
     const requests = [
-      createLearnPatternRequest({ filename: '[GroupA] Title A - 01.mkv', metadataId: 'series-a' }),
-      createMoviePatternRequest({ filename: 'Movie.B.2024.mkv', metadataId: 'movie-b' }),
+      createLearnPatternRequest({ filename: '[GroupA] Title A - 01.mkv', metadata_id: 'series-a' }),
+      createMoviePatternRequest({ filename: 'Movie.B.2024.mkv', metadata_id: 'movie-b' }),
     ];
 
     for (const req of requests) {
@@ -287,17 +287,17 @@ test.describe('Learning API - List & Stats @api @learning @story-3-9', () => {
     // WHEN: Listing all patterns
     const response = await request.get(`${API_BASE_URL}/learning/patterns`);
 
-    // THEN: Should return patterns with totalCount and stats
+    // THEN: Should return patterns with total_count and stats
     expect(response.status()).toBe(200);
 
     const body = await response.json();
     expect(body.success).toBe(true);
     expect(body.data).toBeDefined();
     expect(body.data.patterns).toBeInstanceOf(Array);
-    expect(body.data.totalCount).toBeGreaterThanOrEqual(2);
+    expect(body.data.total_count).toBeGreaterThanOrEqual(2);
     expect(body.data.stats).toBeDefined();
-    expect(body.data.stats.totalPatterns).toBeGreaterThanOrEqual(2);
-    expect(typeof body.data.stats.totalApplied).toBe('number');
+    expect(body.data.stats.total_patterns).toBeGreaterThanOrEqual(2);
+    expect(typeof body.data.stats.total_applied).toBe('number');
   });
 
   test('[P2] GET /learning/patterns - should return valid structure when no patterns exist (AC3)', async ({
@@ -318,14 +318,14 @@ test.describe('Learning API - List & Stats @api @learning @story-3-9', () => {
     // Go serializes nil slices as null, so patterns can be null or array
     const patterns = body.data.patterns ?? [];
     expect(Array.isArray(patterns)).toBe(true);
-    expect(typeof body.data.totalCount).toBe('number');
+    expect(typeof body.data.total_count).toBe('number');
   });
 
   test('[P1] GET /learning/stats - should return pattern statistics (AC3)', async ({ request }) => {
     // GIVEN: At least one pattern exists
     const patternRequest = createLearnPatternRequest({
       filename: '[Stats-Test] Stats Anime - 01.mkv',
-      metadataId: 'series-stats-001',
+      metadata_id: 'series-stats-001',
     });
     const createRes = await request.post(`${API_BASE_URL}/learning/patterns`, {
       data: patternRequest,
@@ -342,9 +342,9 @@ test.describe('Learning API - List & Stats @api @learning @story-3-9', () => {
     const body = await response.json();
     expect(body.success).toBe(true);
     expect(body.data).toBeDefined();
-    expect(typeof body.data.totalPatterns).toBe('number');
-    expect(body.data.totalPatterns).toBeGreaterThanOrEqual(1);
-    expect(typeof body.data.totalApplied).toBe('number');
+    expect(typeof body.data.total_patterns).toBe('number');
+    expect(body.data.total_patterns).toBeGreaterThanOrEqual(1);
+    expect(typeof body.data.total_applied).toBe('number');
   });
 });
 
@@ -359,7 +359,7 @@ test.describe('Learning API - Delete Pattern @api @learning @story-3-9', () => {
     // GIVEN: A pattern exists
     const patternRequest = createLearnPatternRequest({
       filename: '[Delete-Test] Deletable Anime - 01.mkv',
-      metadataId: 'series-del-001',
+      metadata_id: 'series-del-001',
     });
     const createRes = await request.post(`${API_BASE_URL}/learning/patterns`, {
       data: patternRequest,
@@ -409,9 +409,9 @@ test.describe('Learning API - CRUD Lifecycle @api @learning @story-3-9', () => {
     // GIVEN: A new fansub filename to learn
     const patternRequest = createLearnPatternRequest({
       filename: '[Lifecycle-Test] Full CRUD Anime - 05 (1080p).mkv',
-      metadataId: 'series-lifecycle-001',
-      metadataType: 'series',
-      tmdbId: 12345,
+      metadata_id: 'series-lifecycle-001',
+      metadata_type: 'series',
+      tmdb_id: 12345,
     });
 
     // WHEN: Creating a new pattern
@@ -435,7 +435,7 @@ test.describe('Learning API - CRUD Lifecycle @api @learning @story-3-9', () => {
     const listBody = await listRes.json();
     const foundPattern = listBody.data.patterns.find((p: { id: string }) => p.id === patternId);
     expect(foundPattern).toBeDefined();
-    expect(foundPattern.metadataId).toBe('series-lifecycle-001');
+    expect(foundPattern.metadata_id).toBe('series-lifecycle-001');
 
     // === STATS ===
     // WHEN: Getting stats
@@ -444,7 +444,7 @@ test.describe('Learning API - CRUD Lifecycle @api @learning @story-3-9', () => {
     // THEN: Stats should reflect at least one pattern
     expect(statsRes.status()).toBe(200);
     const statsBody = await statsRes.json();
-    expect(statsBody.data.totalPatterns).toBeGreaterThanOrEqual(1);
+    expect(statsBody.data.total_patterns).toBeGreaterThanOrEqual(1);
 
     // === DELETE ===
     // WHEN: Deleting the pattern

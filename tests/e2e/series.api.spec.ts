@@ -21,28 +21,28 @@ const API_BASE_URL = process.env.API_URL || 'http://localhost:8080/api/v1';
 
 interface SeriesInput {
   title: string;
-  firstAirDate: string;
-  originalTitle?: string;
+  first_air_date: string;
+  original_title?: string;
   genres?: string[];
   overview?: string;
-  posterPath?: string;
-  numberOfSeasons?: number;
-  numberOfEpisodes?: number;
-  tmdbId?: number;
-  imdbId?: string;
+  poster_path?: string;
+  number_of_seasons?: number;
+  number_of_episodes?: number;
+  tmdb_id?: number;
+  imdb_id?: string;
 }
 
 function createSeriesInput(overrides: Partial<SeriesInput> = {}): SeriesInput {
   return {
     title: faker.lorem.words(3),
-    firstAirDate: faker.date.past({ years: 5 }).toISOString().split('T')[0],
-    originalTitle: faker.lorem.words(3),
+    first_air_date: faker.date.past({ years: 5 }).toISOString().split('T')[0],
+    original_title: faker.lorem.words(3),
     genres: [faker.helpers.arrayElement(['Drama', 'Comedy', 'Thriller', 'Sci-Fi'])],
     overview: faker.lorem.paragraph(),
-    posterPath: `/posters/${faker.string.alphanumeric(10)}.jpg`,
-    numberOfSeasons: faker.number.int({ min: 1, max: 10 }),
-    numberOfEpisodes: faker.number.int({ min: 6, max: 100 }),
-    tmdbId: faker.number.int({ min: 100000, max: 999999 }),
+    poster_path: `/posters/${faker.string.alphanumeric(10)}.jpg`,
+    number_of_seasons: faker.number.int({ min: 1, max: 10 }),
+    number_of_episodes: faker.number.int({ min: 6, max: 100 }),
+    tmdb_id: faker.number.int({ min: 100000, max: 999999 }),
     ...overrides,
   };
 }
@@ -70,7 +70,7 @@ test.describe('Series API - CRUD Operations @api @series', () => {
     // GIVEN: Valid series data with required fields only
     const seriesData = {
       title: '測試劇集 ' + Date.now(),
-      firstAirDate: '2024-01-15',
+      first_air_date: '2024-01-15',
     };
 
     // WHEN: Creating a series via POST
@@ -86,7 +86,7 @@ test.describe('Series API - CRUD Operations @api @series', () => {
     expect(body.data).toBeDefined();
     expect(body.data.id).toBeDefined();
     expect(body.data.title).toBe(seriesData.title);
-    expect(body.data.firstAirDate).toBe(seriesData.firstAirDate);
+    expect(body.data.first_air_date).toBe(seriesData.first_air_date);
 
     // Store for cleanup
     createdSeriesId = body.data.id;
@@ -117,7 +117,7 @@ test.describe('Series API - CRUD Operations @api @series', () => {
   test('[P1] POST /series - should return 400 for missing required fields', async ({ request }) => {
     // GIVEN: Series data missing required 'title' field
     const invalidData = {
-      firstAirDate: '2024-01-15',
+      first_air_date: '2024-01-15',
       // title is missing
     };
 
@@ -161,9 +161,9 @@ test.describe('Series API - CRUD Operations @api @series', () => {
     expect(body.data).toBeDefined();
     expect(body.data.items).toBeInstanceOf(Array);
     expect(body.data.page).toBe(1);
-    expect(body.data.pageSize).toBe(10);
-    expect(body.data).toHaveProperty('totalItems');
-    expect(body.data).toHaveProperty('totalPages');
+    expect(body.data.page_size).toBe(10);
+    expect(body.data).toHaveProperty('total_items');
+    expect(body.data).toHaveProperty('total_pages');
   });
 
   test('[P1] GET /series/:id - should return series by ID', async ({ request }) => {
@@ -280,7 +280,7 @@ test.describe('Series API - CRUD Operations @api @series', () => {
     const updateData = {
       title: '更新後標題劇集 ' + Date.now(),
       rating: 9.0,
-      numberOfSeasons: 5,
+      number_of_seasons: 5,
     };
     const response = await request.put(`${API_BASE_URL}/series/${createdSeriesId}`, {
       data: updateData,
@@ -349,12 +349,12 @@ test.describe('Series API - TV-Specific Fields @api @series', () => {
     }
   });
 
-  test('[P2] should handle numberOfSeasons and numberOfEpisodes', async ({ request }) => {
+  test('[P2] should handle number_of_seasons and number_of_episodes', async ({ request }) => {
     // GIVEN: Series with TV-specific fields
     const seriesData = createSeriesInput({
       title: '季數測試 ' + Date.now(),
-      numberOfSeasons: 3,
-      numberOfEpisodes: 24,
+      number_of_seasons: 3,
+      number_of_episodes: 24,
     });
 
     // WHEN: Creating series
@@ -371,11 +371,11 @@ test.describe('Series API - TV-Specific Fields @api @series', () => {
     // Verify by GET
     const getResponse = await request.get(`${API_BASE_URL}/series/${createdSeriesId}`);
     const getData = await getResponse.json();
-    expect(getData.data.numberOfSeasons).toBeDefined();
-    expect(getData.data.numberOfEpisodes).toBeDefined();
+    expect(getData.data.number_of_seasons).toBeDefined();
+    expect(getData.data.number_of_episodes).toBeDefined();
   });
 
-  test('[P2] should handle inProduction status update', async ({ request }) => {
+  test('[P2] should handle in_production status update', async ({ request }) => {
     // GIVEN: An existing series
     const seriesData = createSeriesInput({ title: '製作狀態測試 ' + Date.now() });
     const createResponse = await request.post(`${API_BASE_URL}/series`, {
@@ -387,7 +387,7 @@ test.describe('Series API - TV-Specific Fields @api @series', () => {
     // WHEN: Updating production status
     const updateResponse = await request.put(`${API_BASE_URL}/series/${createdSeriesId}`, {
       data: {
-        inProduction: false,
+        in_production: false,
         status: 'Ended',
       },
     });

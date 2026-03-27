@@ -35,7 +35,7 @@ test.describe('System Logs API @api @logs @story-6-3', () => {
     expect(body.data).toHaveProperty('logs');
     expect(body.data).toHaveProperty('total');
     expect(body.data).toHaveProperty('page');
-    expect(body.data).toHaveProperty('perPage');
+    expect(body.data).toHaveProperty('per_page');
     expect(Array.isArray(body.data.logs)).toBe(true);
     expect(typeof body.data.total).toBe('number');
   });
@@ -55,7 +55,7 @@ test.describe('System Logs API @api @logs @story-6-3', () => {
       expect(log).toHaveProperty('id');
       expect(log).toHaveProperty('level');
       expect(log).toHaveProperty('message');
-      expect(log).toHaveProperty('createdAt');
+      expect(log).toHaveProperty('created_at');
       expect(['ERROR', 'WARN', 'INFO', 'DEBUG']).toContain(log.level);
       expect(typeof log.message).toBe('string');
     }
@@ -70,8 +70,8 @@ test.describe('System Logs API @api @logs @story-6-3', () => {
 
     // THEN: Logs should be in descending chronological order
     if (body.data.logs.length >= 2) {
-      const first = new Date(body.data.logs[0].createdAt).getTime();
-      const second = new Date(body.data.logs[1].createdAt).getTime();
+      const first = new Date(body.data.logs[0].created_at).getTime();
+      const second = new Date(body.data.logs[1].created_at).getTime();
       expect(first).toBeGreaterThanOrEqual(second);
     }
   });
@@ -115,7 +115,7 @@ test.describe('System Logs API @api @logs @story-6-3', () => {
     const body = await response.json();
     expect(body.data.logs.length).toBeLessThanOrEqual(5);
     expect(body.data.page).toBe(1);
-    expect(body.data.perPage).toBe(5);
+    expect(body.data.per_page).toBe(5);
   });
 
   test('[P1] GET /settings/logs?level=INVALID should return 400 (AC3)', async ({ request }) => {
@@ -149,9 +149,9 @@ test.describe('System Logs Clear API @api @logs @story-6-3', () => {
     expect(response.status()).toBe(200);
     const body = await response.json();
     expect(body.success).toBe(true);
-    expect(body.data).toHaveProperty('entriesRemoved');
+    expect(body.data).toHaveProperty('entries_removed');
     expect(body.data).toHaveProperty('days');
-    expect(typeof body.data.entriesRemoved).toBe('number');
+    expect(typeof body.data.entries_removed).toBe('number');
     expect(body.data.days).toBe(30);
   });
 
