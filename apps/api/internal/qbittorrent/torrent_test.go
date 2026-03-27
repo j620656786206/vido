@@ -106,9 +106,9 @@ func TestTorrent_JSONSerialization(t *testing.T) {
 	assert.Equal(t, "abc123", result["hash"])
 	assert.Equal(t, "Test Movie [1080p]", result["name"])
 	assert.Equal(t, "downloading", result["status"])
-	assert.Equal(t, float64(10485760), result["downloadSpeed"])
-	assert.Equal(t, "/downloads/movies", result["savePath"])
-	assert.Contains(t, result, "completedOn")
+	assert.Equal(t, float64(10485760), result["download_speed"])
+	assert.Equal(t, "/downloads/movies", result["save_path"])
+	assert.Contains(t, result, "completed_on")
 }
 
 func TestTorrent_JSONSerialization_NilCompletedOn(t *testing.T) {
@@ -126,7 +126,7 @@ func TestTorrent_JSONSerialization_NilCompletedOn(t *testing.T) {
 	err = json.Unmarshal(data, &result)
 	require.NoError(t, err)
 
-	assert.NotContains(t, result, "completedOn", "completedOn should be omitted when nil")
+	assert.NotContains(t, result, "completed_on", "completedOn should be omitted when nil")
 }
 
 func TestTorrentDetails_JSONSerialization(t *testing.T) {
@@ -158,9 +158,9 @@ func TestTorrentDetails_JSONSerialization(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, "abc123", result["hash"])
-	assert.Equal(t, float64(4194304), result["pieceSize"])
+	assert.Equal(t, float64(4194304), result["piece_size"])
 	assert.Equal(t, "Test comment", result["comment"])
-	assert.Equal(t, float64(3600), result["timeElapsed"])
+	assert.Equal(t, float64(3600), result["time_elapsed"])
 }
 
 func TestMapQBTorrentInfo(t *testing.T) {
