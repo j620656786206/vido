@@ -50,15 +50,15 @@ const mockItems: LibraryItem[] = [
     movie: {
       id: 'movie-1',
       title: 'Test Movie',
-      original_title: 'Test Movie EN',
-      release_date: '2023-01-15',
+      originalTitle: 'Test Movie EN',
+      releaseDate: '2023-01-15',
       genres: ['Action'],
-      vote_average: 8.5,
-      poster_path: '/poster.jpg',
-      tmdb_id: 123,
-      parse_status: 'success',
-      created_at: '2023-01-01',
-      updated_at: '2023-01-01',
+      voteAverage: 8.5,
+      posterPath: '/poster.jpg',
+      tmdbId: 123,
+      parseStatus: 'success',
+      createdAt: '2023-01-01',
+      updatedAt: '2023-01-01',
     },
   },
   {
@@ -66,14 +66,14 @@ const mockItems: LibraryItem[] = [
     series: {
       id: 'series-1',
       title: 'Test Series',
-      first_air_date: '2023-06-01',
+      firstAirDate: '2023-06-01',
       genres: ['Drama'],
-      vote_average: 9.0,
-      poster_path: '/poster2.jpg',
-      tmdb_id: 456,
-      parse_status: 'success',
-      created_at: '2023-01-01',
-      updated_at: '2023-01-01',
+      voteAverage: 9.0,
+      posterPath: '/poster2.jpg',
+      tmdbId: 456,
+      parseStatus: 'success',
+      createdAt: '2023-01-01',
+      updatedAt: '2023-01-01',
     },
   },
 ];
@@ -142,21 +142,21 @@ describe('LibraryGrid', () => {
     expect(screen.getByTestId('library-grid')).toBeInTheDocument();
   });
 
-  it('maps series first_air_date to releaseDate', () => {
+  it('maps series firstAirDate to releaseDate', () => {
     const seriesOnly: LibraryItem[] = [
       {
         type: 'series',
         series: {
           id: 's-1',
           title: 'Series Title',
-          first_air_date: '2024-06-15',
+          firstAirDate: '2024-06-15',
           genres: [],
-          vote_average: 7.5,
-          poster_path: '/poster.jpg',
-          tmdb_id: 789,
-          parse_status: 'success',
-          created_at: '2024-01-01',
-          updated_at: '2024-01-01',
+          voteAverage: 7.5,
+          posterPath: '/poster.jpg',
+          tmdbId: 789,
+          parseStatus: 'success',
+          createdAt: '2024-01-01',
+          updatedAt: '2024-01-01',
         },
       },
     ];
@@ -164,7 +164,7 @@ describe('LibraryGrid', () => {
     expect(screen.getByText('2024')).toBeInTheDocument();
   });
 
-  it('maps movie tmdb_id to PosterCard id', () => {
+  it('maps movie tmdbId to PosterCard id', () => {
     renderWithQuery(<LibraryGrid items={[mockItems[0]]} />);
     const link = screen.getByRole('link');
     expect(link).toHaveAttribute('href', '/media/movie/123');

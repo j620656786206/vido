@@ -8,22 +8,22 @@ const mockDirector: CrewMember = {
   name: '導演名',
   job: 'Director',
   department: 'Directing',
-  profile_path: '/director.jpg',
+  profilePath: '/director.jpg',
 };
 
 const mockCast: CastMember[] = [
-  { id: 1, name: '演員一', character: '角色一', profile_path: '/actor1.jpg', order: 0 },
-  { id: 2, name: '演員二', character: '角色二', profile_path: '/actor2.jpg', order: 1 },
-  { id: 3, name: '演員三', character: '角色三', profile_path: null, order: 2 },
-  { id: 4, name: '演員四', character: '角色四', profile_path: '/actor4.jpg', order: 3 },
-  { id: 5, name: '演員五', character: '角色五', profile_path: '/actor5.jpg', order: 4 },
-  { id: 6, name: '演員六', character: '角色六', profile_path: '/actor6.jpg', order: 5 },
-  { id: 7, name: '演員七', character: '角色七', profile_path: '/actor7.jpg', order: 6 },
+  { id: 1, name: '演員一', character: '角色一', profilePath: '/actor1.jpg', order: 0 },
+  { id: 2, name: '演員二', character: '角色二', profilePath: '/actor2.jpg', order: 1 },
+  { id: 3, name: '演員三', character: '角色三', profilePath: null, order: 2 },
+  { id: 4, name: '演員四', character: '角色四', profilePath: '/actor4.jpg', order: 3 },
+  { id: 5, name: '演員五', character: '角色五', profilePath: '/actor5.jpg', order: 4 },
+  { id: 6, name: '演員六', character: '角色六', profilePath: '/actor6.jpg', order: 5 },
+  { id: 7, name: '演員七', character: '角色七', profilePath: '/actor7.jpg', order: 6 },
 ];
 
 const mockCreatedBy: Creator[] = [
-  { id: 1, name: '創作者一', profile_path: '/creator1.jpg' },
-  { id: 2, name: '創作者二', profile_path: null },
+  { id: 1, name: '創作者一', profilePath: '/creator1.jpg' },
+  { id: 2, name: '創作者二', profilePath: null },
 ];
 
 describe('CreditsSection', () => {
@@ -89,7 +89,7 @@ describe('CreditsSection', () => {
       expect(screen.getByText('👤')).toBeInTheDocument();
     });
 
-    it('should render profile images for cast with profile_path', () => {
+    it('should render profile images for cast with profilePath', () => {
       render(<CreditsSection cast={[mockCast[0]]} />);
       const images = screen.getAllByRole('img');
       expect(images.some((img) => img.getAttribute('src')?.includes('/actor1.jpg'))).toBe(true);

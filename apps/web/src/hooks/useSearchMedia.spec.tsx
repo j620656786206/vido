@@ -47,18 +47,18 @@ describe('useSearchMovies', () => {
         {
           id: 1,
           title: '鬼滅之刃',
-          original_title: 'Demon Slayer',
+          originalTitle: 'Demon Slayer',
           overview: '',
-          release_date: '2019-04-06',
-          poster_path: null,
-          backdrop_path: null,
-          vote_average: 8.5,
-          vote_count: 1000,
-          genre_ids: [],
+          releaseDate: '2019-04-06',
+          posterPath: null,
+          backdropPath: null,
+          voteAverage: 8.5,
+          voteCount: 1000,
+          genreIds: [],
         },
       ],
-      total_pages: 1,
-      total_results: 1,
+      totalPages: 1,
+      totalResults: 1,
     };
 
     vi.mocked(tmdbModule.tmdbService.searchMovies).mockResolvedValueOnce(mockData);
@@ -79,8 +79,8 @@ describe('useSearchMovies', () => {
     const mockData = {
       page: 2,
       results: [],
-      total_pages: 5,
-      total_results: 100,
+      totalPages: 5,
+      totalResults: 100,
     };
 
     vi.mocked(tmdbModule.tmdbService.searchMovies).mockResolvedValueOnce(mockData);
@@ -132,18 +132,18 @@ describe('useSearchTVShows', () => {
         {
           id: 2,
           name: '進擊的巨人',
-          original_name: 'Attack on Titan',
+          originalName: 'Attack on Titan',
           overview: '',
-          first_air_date: '2013-04-07',
-          poster_path: null,
-          backdrop_path: null,
-          vote_average: 9.0,
-          vote_count: 2000,
-          genre_ids: [],
+          firstAirDate: '2013-04-07',
+          posterPath: null,
+          backdropPath: null,
+          voteAverage: 9.0,
+          voteCount: 2000,
+          genreIds: [],
         },
       ],
-      total_pages: 1,
-      total_results: 1,
+      totalPages: 1,
+      totalResults: 1,
     };
 
     vi.mocked(tmdbModule.tmdbService.searchTVShows).mockResolvedValueOnce(mockData);

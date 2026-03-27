@@ -34,15 +34,15 @@ function getMockListResponse() {
         movie: {
           id: 'movie-1',
           title: '測試電影',
-          original_title: 'Test Movie',
-          release_date: '2023-06-15',
+          originalTitle: 'Test Movie',
+          releaseDate: '2023-06-15',
           genres: ['動作'],
-          vote_average: 8.5,
-          poster_path: '/poster.jpg',
-          tmdb_id: 123,
-          parse_status: 'success',
-          created_at: '2024-01-15T00:00:00Z',
-          updated_at: '2024-01-15T00:00:00Z',
+          voteAverage: 8.5,
+          posterPath: '/poster.jpg',
+          tmdbId: 123,
+          parseStatus: 'success',
+          createdAt: '2024-01-15T00:00:00Z',
+          updatedAt: '2024-01-15T00:00:00Z',
         },
       },
       {
@@ -50,15 +50,15 @@ function getMockListResponse() {
         series: {
           id: 'series-1',
           title: '測試影集',
-          original_title: 'Test Series',
-          first_air_date: '2022-03-10',
+          originalTitle: 'Test Series',
+          firstAirDate: '2022-03-10',
           genres: ['劇情'],
-          vote_average: 9.1,
-          poster_path: '/poster2.jpg',
-          tmdb_id: 456,
-          parse_status: 'success',
-          created_at: '2024-02-01T00:00:00Z',
-          updated_at: '2024-02-01T00:00:00Z',
+          voteAverage: 9.1,
+          posterPath: '/poster2.jpg',
+          tmdbId: 456,
+          parseStatus: 'success',
+          createdAt: '2024-02-01T00:00:00Z',
+          updatedAt: '2024-02-01T00:00:00Z',
         },
       },
     ],
@@ -116,15 +116,15 @@ function getMockSearchResponse(empty = false) {
         movie: {
           id: 'movie-1',
           title: '駭客任務',
-          original_title: 'The Matrix',
-          release_date: '1999-03-31',
+          originalTitle: 'The Matrix',
+          releaseDate: '1999-03-31',
           genres: ['動作', '科幻'],
-          vote_average: 8.7,
-          poster_path: '/matrix.jpg',
-          tmdb_id: 603,
-          parse_status: 'success',
-          created_at: '2024-01-15T00:00:00Z',
-          updated_at: '2024-01-15T00:00:00Z',
+          voteAverage: 8.7,
+          posterPath: '/matrix.jpg',
+          tmdbId: 603,
+          parseStatus: 'success',
+          createdAt: '2024-01-15T00:00:00Z',
+          updatedAt: '2024-01-15T00:00:00Z',
         },
       },
     ],
@@ -230,9 +230,9 @@ describe('LibraryPage', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('sort-title')).toBeInTheDocument();
-        expect(screen.getByTestId('sort-release_date')).toBeInTheDocument();
+        expect(screen.getByTestId('sort-releaseDate')).toBeInTheDocument();
         expect(screen.getByTestId('sort-rating')).toBeInTheDocument();
-        expect(screen.getByTestId('sort-created_at')).toBeInTheDocument();
+        expect(screen.getByTestId('sort-createdAt')).toBeInTheDocument();
       });
     });
 

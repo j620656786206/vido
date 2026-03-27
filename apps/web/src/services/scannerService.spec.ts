@@ -26,7 +26,7 @@ describe('scannerService', () => {
 
   describe('triggerScan', () => {
     it('sends POST to /scanner/scan', async () => {
-      const result = { files_found: 100, files_new: 10, errors: 0, duration: '30s' };
+      const result = { filesFound: 100, filesNew: 10, errors: 0, duration: '30s' };
       mockSuccess(result);
 
       const data = await scannerService.triggerScan();
@@ -54,21 +54,21 @@ describe('scannerService', () => {
   describe('getScanStatus', () => {
     it('fetches scan status', async () => {
       const status = {
-        is_scanning: false,
-        files_found: 0,
-        files_processed: 0,
-        current_file: '',
-        percent_done: 0,
-        error_count: 0,
-        estimated_time: '',
-        last_scan_at: '2026-03-22T14:30:00Z',
-        last_scan_files: 1247,
-        last_scan_duration: '3m12s',
+        isScanning: false,
+        filesFound: 0,
+        filesProcessed: 0,
+        currentFile: '',
+        percentDone: 0,
+        errorCount: 0,
+        estimatedTime: '',
+        lastScanAt: '2026-03-22T14:30:00Z',
+        lastScanFiles: 1247,
+        lastScanDuration: '3m12s',
       };
       mockSuccess(status);
 
       const data = await scannerService.getScanStatus();
-      expect(data.last_scan_files).toBe(1247);
+      expect(data.lastScanFiles).toBe(1247);
     });
   });
 

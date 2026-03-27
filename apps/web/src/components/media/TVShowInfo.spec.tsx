@@ -6,27 +6,27 @@ import type { TVShowDetails } from '../../types/tmdb';
 const mockTVShow: TVShowDetails = {
   id: 456,
   name: '測試影集',
-  original_name: 'Test TV Show',
+  originalName: 'Test TV Show',
   overview: '這是一部測試影集',
-  first_air_date: '2023-06-15',
-  last_air_date: '2024-01-20',
-  poster_path: '/poster.jpg',
-  backdrop_path: '/backdrop.jpg',
-  vote_average: 8.5,
-  vote_count: 2000,
-  episode_run_time: [45, 50],
-  number_of_seasons: 3,
-  number_of_episodes: 30,
+  firstAirDate: '2023-06-15',
+  lastAirDate: '2024-01-20',
+  posterPath: '/poster.jpg',
+  backdropPath: '/backdrop.jpg',
+  voteAverage: 8.5,
+  voteCount: 2000,
+  episodeRunTime: [45, 50],
+  numberOfSeasons: 3,
+  numberOfEpisodes: 30,
   status: 'Returning Series',
   type: 'Scripted',
   tagline: '',
   genres: [{ id: 1, name: '劇情' }],
-  created_by: [],
+  createdBy: [],
   networks: [
-    { id: 1, name: 'Netflix', logo_path: null },
-    { id: 2, name: 'HBO', logo_path: null },
+    { id: 1, name: 'Netflix', logoPath: null },
+    { id: 2, name: 'HBO', logoPath: null },
   ],
-  in_production: true,
+  inProduction: true,
   seasons: [],
 };
 
@@ -90,19 +90,19 @@ describe('TVShowInfo', () => {
     });
 
     it('should not render last air date when null', () => {
-      const showNoLastDate = { ...mockTVShow, last_air_date: '' };
+      const showNoLastDate = { ...mockTVShow, lastAirDate: '' };
       render(<TVShowInfo show={showNoLastDate} />);
       expect(screen.queryByTestId('last-air-date')).not.toBeInTheDocument();
     });
 
-    it('should show "未知" when first_air_date is null', () => {
-      const showNullDate = { ...mockTVShow, first_air_date: null as unknown as string };
+    it('should show "未知" when firstAirDate is null', () => {
+      const showNullDate = { ...mockTVShow, firstAirDate: null as unknown as string };
       render(<TVShowInfo show={showNullDate} />);
       expect(screen.getByTestId('first-air-date')).toHaveTextContent('未知');
     });
 
     it('should return raw date string when date is invalid', () => {
-      const showInvalidDate = { ...mockTVShow, first_air_date: 'not-a-valid-date' };
+      const showInvalidDate = { ...mockTVShow, firstAirDate: 'not-a-valid-date' };
       render(<TVShowInfo show={showInvalidDate} />);
       expect(screen.getByTestId('first-air-date')).toHaveTextContent('not-a-valid-date');
     });

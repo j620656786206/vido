@@ -27,30 +27,30 @@ const mockMovies: MovieSearchResponse = {
     {
       id: 1,
       title: '鬼滅之刃 無限列車篇',
-      original_title: 'Demon Slayer: Mugen Train',
+      originalTitle: 'Demon Slayer: Mugen Train',
       overview: '炭治郎與夥伴登上無限列車...',
-      release_date: '2020-10-16',
-      poster_path: '/poster1.jpg',
-      backdrop_path: '/backdrop1.jpg',
-      vote_average: 8.5,
-      vote_count: 5000,
-      genre_ids: [16, 28],
+      releaseDate: '2020-10-16',
+      posterPath: '/poster1.jpg',
+      backdropPath: '/backdrop1.jpg',
+      voteAverage: 8.5,
+      voteCount: 5000,
+      genreIds: [16, 28],
     },
     {
       id: 2,
       title: '鬼滅之刃 絆之奇蹟',
-      original_title: 'Demon Slayer: Kimetsu no Yaiba',
+      originalTitle: 'Demon Slayer: Kimetsu no Yaiba',
       overview: '電影版劇情...',
-      release_date: '2019-04-06',
-      poster_path: null,
-      backdrop_path: null,
-      vote_average: 7.5,
-      vote_count: 3000,
-      genre_ids: [16],
+      releaseDate: '2019-04-06',
+      posterPath: null,
+      backdropPath: null,
+      voteAverage: 7.5,
+      voteCount: 3000,
+      genreIds: [16],
     },
   ],
-  total_pages: 1,
-  total_results: 2,
+  totalPages: 1,
+  totalResults: 2,
 };
 
 const mockTVShows: TVShowSearchResponse = {
@@ -59,25 +59,25 @@ const mockTVShows: TVShowSearchResponse = {
     {
       id: 3,
       name: '進擊的巨人',
-      original_name: 'Attack on Titan',
+      originalName: 'Attack on Titan',
       overview: '人類與巨人的戰鬥...',
-      first_air_date: '2013-04-07',
-      poster_path: '/poster3.jpg',
-      backdrop_path: '/backdrop3.jpg',
-      vote_average: 9.0,
-      vote_count: 10000,
-      genre_ids: [16, 10759],
+      firstAirDate: '2013-04-07',
+      posterPath: '/poster3.jpg',
+      backdropPath: '/backdrop3.jpg',
+      voteAverage: 9.0,
+      voteCount: 10000,
+      genreIds: [16, 10759],
     },
   ],
-  total_pages: 1,
-  total_results: 1,
+  totalPages: 1,
+  totalResults: 1,
 };
 
 const mockMoviesWithPagination: MovieSearchResponse = {
   page: 1,
   results: mockMovies.results,
-  total_pages: 5,
-  total_results: 100,
+  totalPages: 5,
+  totalResults: 100,
 };
 
 describe('SearchResults', () => {
@@ -92,8 +92,8 @@ describe('SearchResults', () => {
   it('should show empty state when no results', () => {
     render(
       <SearchResults
-        movies={{ page: 1, results: [], total_pages: 0, total_results: 0 }}
-        tvShows={{ page: 1, results: [], total_pages: 0, total_results: 0 }}
+        movies={{ page: 1, results: [], totalPages: 0, totalResults: 0 }}
+        tvShows={{ page: 1, results: [], totalPages: 0, totalResults: 0 }}
         isLoading={false}
         type="all"
         currentPage={1}

@@ -14,21 +14,21 @@ import {
 vi.mock('../services/scannerService', () => ({
   scannerService: {
     getScanStatus: vi.fn().mockResolvedValue({
-      is_scanning: false,
-      files_found: 0,
-      files_processed: 0,
-      current_file: '',
-      percent_done: 0,
-      error_count: 0,
-      estimated_time: '',
-      last_scan_at: '2026-03-22T14:30:00Z',
-      last_scan_files: 1247,
-      last_scan_duration: '3m12s',
+      isScanning: false,
+      filesFound: 0,
+      filesProcessed: 0,
+      currentFile: '',
+      percentDone: 0,
+      errorCount: 0,
+      estimatedTime: '',
+      lastScanAt: '2026-03-22T14:30:00Z',
+      lastScanFiles: 1247,
+      lastScanDuration: '3m12s',
     }),
     getSchedule: vi.fn().mockResolvedValue({ frequency: 'hourly' }),
     triggerScan: vi
       .fn()
-      .mockResolvedValue({ files_found: 10, files_new: 5, errors: 0, duration: '10s' }),
+      .mockResolvedValue({ filesFound: 10, filesNew: 5, errors: 0, duration: '10s' }),
     cancelScan: vi.fn().mockResolvedValue(undefined),
     updateSchedule: vi.fn().mockResolvedValue({ frequency: 'daily' }),
   },
@@ -58,8 +58,8 @@ describe('useScanner hooks', () => {
       });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(result.current.data?.last_scan_files).toBe(1247);
-      expect(result.current.data?.is_scanning).toBe(false);
+      expect(result.current.data?.lastScanFiles).toBe(1247);
+      expect(result.current.data?.isScanning).toBe(false);
     });
   });
 

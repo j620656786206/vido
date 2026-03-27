@@ -64,11 +64,11 @@ const mockListResponse: LibraryListResponse = {
       movie: {
         id: 'm1',
         title: 'Test Movie',
-        release_date: '2023-01-01',
+        releaseDate: '2023-01-01',
         genres: ['Action'],
-        parse_status: 'success',
-        created_at: '2023-01-01',
-        updated_at: '2023-01-01',
+        parseStatus: 'success',
+        createdAt: '2023-01-01',
+        updatedAt: '2023-01-01',
       },
     },
   ],
@@ -425,7 +425,7 @@ describe('useMediaTrailers', () => {
         site: 'YouTube',
         type: 'Trailer',
         official: true,
-        published_at: '2024-01-01',
+        publishedAt: '2024-01-01',
       },
     ],
   };
@@ -494,8 +494,8 @@ describe('useMediaTrailers', () => {
 
 describe('useBatchDelete (Story 5-7)', () => {
   const mockBatchResult: BatchResult = {
-    success_count: 3,
-    failed_count: 0,
+    successCount: 3,
+    failedCount: 0,
   };
 
   beforeEach(() => {
@@ -545,8 +545,8 @@ describe('useBatchDelete (Story 5-7)', () => {
 
 describe('useBatchReparse (Story 5-7)', () => {
   const mockBatchResult: BatchResult = {
-    success_count: 2,
-    failed_count: 1,
+    successCount: 2,
+    failedCount: 1,
     errors: [{ id: 'm3', message: 'not found' }],
   };
 

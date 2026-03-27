@@ -18,14 +18,14 @@ vi.mock('../services/tmdb', () => ({
     searchMovies: vi.fn().mockResolvedValue({
       page: 1,
       results: [],
-      total_pages: 0,
-      total_results: 0,
+      totalPages: 0,
+      totalResults: 0,
     }),
     searchTVShows: vi.fn().mockResolvedValue({
       page: 1,
       results: [],
-      total_pages: 0,
-      total_results: 0,
+      totalPages: 0,
+      totalResults: 0,
     }),
   },
   getImageUrl: vi.fn((path) => (path ? `https://image.tmdb.org/t/p/w342${path}` : null)),

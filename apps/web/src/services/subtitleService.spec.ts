@@ -31,8 +31,8 @@ describe('subtitleService', () => {
       mockFetch.mockResolvedValueOnce(mockSuccessResponse(mockResults));
 
       const result = await subtitleService.searchSubtitles({
-        media_id: 'movie-1',
-        media_type: 'movie',
+        mediaId: 'movie-1',
+        mediaType: 'movie',
         query: 'Test',
       });
 
@@ -41,8 +41,8 @@ describe('subtitleService', () => {
       expect(url).toContain('/subtitles/search');
       expect(options.method).toBe('POST');
       expect(JSON.parse(options.body)).toEqual({
-        media_id: 'movie-1',
-        media_type: 'movie',
+        mediaId: 'movie-1',
+        mediaType: 'movie',
         query: 'Test',
       });
       expect(result).toEqual(mockResults);
@@ -51,27 +51,27 @@ describe('subtitleService', () => {
     it('throws on API error', async () => {
       mockFetch.mockResolvedValueOnce(mockErrorResponse(400, 'Invalid request'));
       await expect(
-        subtitleService.searchSubtitles({ media_id: '1', media_type: 'movie' })
+        subtitleService.searchSubtitles({ mediaId: '1', mediaType: 'movie' })
       ).rejects.toThrow('Invalid request');
     });
   });
 
   describe('downloadSubtitle', () => {
-    it('sends POST request with convert_to_traditional', async () => {
-      const mockResult = { subtitle_path: '/path/sub.srt', language: 'zh-Hant', score: 0.9 };
+    it('sends POST request with convertToTraditional', async () => {
+      const mockResult = { subtitlePath: '/path/sub.srt', language: 'zh-Hant', score: 0.9 };
       mockFetch.mockResolvedValueOnce(mockSuccessResponse(mockResult));
 
       const result = await subtitleService.downloadSubtitle({
-        media_id: 'movie-1',
-        media_type: 'movie',
-        media_file_path: '/media/movie.mkv',
-        subtitle_id: 'sub-1',
+        mediaId: 'movie-1',
+        mediaType: 'movie',
+        mediaFilePath: '/media/movie.mkv',
+        subtitleId: 'sub-1',
         provider: 'assrt',
-        convert_to_traditional: false,
+        convertToTraditional: false,
       });
 
       const body = JSON.parse(mockFetch.mock.calls[0][1].body);
-      expect(body.convert_to_traditional).toBe(false);
+      expect(body.convertToTraditional).toBe(false);
       expect(result).toEqual(mockResult);
     });
   });
@@ -82,7 +82,7 @@ describe('subtitleService', () => {
       mockFetch.mockResolvedValueOnce(mockSuccessResponse(mockResult));
 
       const result = await subtitleService.previewSubtitle({
-        subtitle_id: 'sub-1',
+        subtitleId: 'sub-1',
         provider: 'assrt',
       });
 

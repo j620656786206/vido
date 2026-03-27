@@ -35,15 +35,15 @@ const mockItems: LibraryItem[] = [
     movie: {
       id: 'movie-1',
       title: '測試電影',
-      original_title: 'Test Movie',
-      release_date: '2023-06-15',
+      originalTitle: 'Test Movie',
+      releaseDate: '2023-06-15',
       genres: ['動作', '冒險', '科幻'],
-      vote_average: 8.5,
-      poster_path: '/poster.jpg',
-      tmdb_id: 123,
-      parse_status: 'success',
-      created_at: '2024-01-15T00:00:00Z',
-      updated_at: '2024-01-15T00:00:00Z',
+      voteAverage: 8.5,
+      posterPath: '/poster.jpg',
+      tmdbId: 123,
+      parseStatus: 'success',
+      createdAt: '2024-01-15T00:00:00Z',
+      updatedAt: '2024-01-15T00:00:00Z',
     },
   },
   {
@@ -51,15 +51,15 @@ const mockItems: LibraryItem[] = [
     series: {
       id: 'series-1',
       title: '測試影集',
-      original_title: 'Test Series',
-      first_air_date: '2022-03-10',
+      originalTitle: 'Test Series',
+      firstAirDate: '2022-03-10',
       genres: ['劇情'],
-      vote_average: 9.1,
-      poster_path: '/poster2.jpg',
-      tmdb_id: 456,
-      parse_status: 'success',
-      created_at: '2024-02-01T00:00:00Z',
-      updated_at: '2024-02-01T00:00:00Z',
+      voteAverage: 9.1,
+      posterPath: '/poster2.jpg',
+      tmdbId: 456,
+      parseStatus: 'success',
+      createdAt: '2024-02-01T00:00:00Z',
+      updatedAt: '2024-02-01T00:00:00Z',
     },
   },
 ];
@@ -140,7 +140,7 @@ describe('LibraryTable', () => {
         type: 'movie',
         movie: {
           ...mockItems[0].movie!,
-          poster_path: undefined,
+          posterPath: undefined,
         },
       },
     ];
@@ -151,9 +151,9 @@ describe('LibraryTable', () => {
   it('renders sortable column headers', () => {
     render(<LibraryTable items={mockItems} onSort={vi.fn()} />);
     expect(screen.getByTestId('sort-title')).toBeInTheDocument();
-    expect(screen.getByTestId('sort-release_date')).toBeInTheDocument();
+    expect(screen.getByTestId('sort-releaseDate')).toBeInTheDocument();
     expect(screen.getByTestId('sort-rating')).toBeInTheDocument();
-    expect(screen.getByTestId('sort-created_at')).toBeInTheDocument();
+    expect(screen.getByTestId('sort-createdAt')).toBeInTheDocument();
   });
 
   it('calls onSort when sortable column header is clicked', () => {
@@ -199,7 +199,7 @@ describe('LibraryTable', () => {
         type: 'movie',
         movie: {
           ...mockItems[0].movie!,
-          vote_average: undefined,
+          voteAverage: undefined,
         },
       },
     ];
@@ -222,7 +222,7 @@ describe('LibraryTable', () => {
         type: 'movie',
         movie: {
           ...mockItems[0].movie!,
-          release_date: '',
+          releaseDate: '',
         },
       },
     ];
@@ -238,7 +238,7 @@ describe('LibraryTable', () => {
         movie: {
           ...mockItems[0].movie!,
           title: 'Same Title',
-          original_title: 'Same Title',
+          originalTitle: 'Same Title',
         },
       },
     ];
@@ -255,9 +255,9 @@ describe('LibraryTable', () => {
     expect(headerRow!.className).toContain('bg-slate-800/50');
   });
 
-  it('[P2] shows 新增日期 label for created_at column', () => {
+  it('[P2] shows 新增日期 label for createdAt column', () => {
     render(<LibraryTable items={mockItems} onSort={vi.fn()} />);
-    expect(screen.getByTestId('sort-created_at')).toHaveTextContent('新增日期');
+    expect(screen.getByTestId('sort-createdAt')).toHaveTextContent('新增日期');
   });
 
   it('handles item with empty genres array', () => {

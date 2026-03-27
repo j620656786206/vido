@@ -16,13 +16,13 @@ function createWrapper() {
 const mockMovieDetails: MovieDetails = {
   id: 123,
   title: '測試電影',
-  original_title: 'Test Movie',
+  originalTitle: 'Test Movie',
   overview: '這是一部測試電影的劇情簡介。',
-  release_date: '2024-01-15',
-  poster_path: '/poster.jpg',
-  backdrop_path: '/backdrop.jpg',
-  vote_average: 8.5,
-  vote_count: 1000,
+  releaseDate: '2024-01-15',
+  posterPath: '/poster.jpg',
+  backdropPath: '/backdrop.jpg',
+  voteAverage: 8.5,
+  voteCount: 1000,
   runtime: 120,
   budget: 10000000,
   revenue: 50000000,
@@ -32,13 +32,13 @@ const mockMovieDetails: MovieDetails = {
     { id: 1, name: '動作' },
     { id: 2, name: '冒險' },
   ],
-  production_countries: [],
-  spoken_languages: [],
-  imdb_id: 'tt1234567',
+  productionCountries: [],
+  spokenLanguages: [],
+  imdbId: 'tt1234567',
   homepage: null,
   popularity: 61.4,
-  genre_ids: [],
-  original_language: 'en',
+  genreIds: [],
+  originalLanguage: 'en',
   adult: false,
   video: false,
 };
@@ -46,17 +46,17 @@ const mockMovieDetails: MovieDetails = {
 const mockTVShowDetails: TVShowDetails = {
   id: 456,
   name: '測試影集',
-  original_name: 'Test TV Show',
+  originalName: 'Test TV Show',
   overview: '這是一部測試影集的劇情簡介。',
-  first_air_date: '2023-06-01',
-  last_air_date: '2024-01-01',
-  poster_path: '/tv_poster.jpg',
-  backdrop_path: '/tv_backdrop.jpg',
-  vote_average: 9.0,
-  vote_count: 2000,
-  episode_run_time: [45],
-  number_of_seasons: 3,
-  number_of_episodes: 30,
+  firstAirDate: '2023-06-01',
+  lastAirDate: '2024-01-01',
+  posterPath: '/tv_poster.jpg',
+  backdropPath: '/tv_backdrop.jpg',
+  voteAverage: 9.0,
+  voteCount: 2000,
+  episodeRunTime: [45],
+  numberOfSeasons: 3,
+  numberOfEpisodes: 30,
   status: 'Returning Series',
   type: 'Scripted',
   tagline: '',
@@ -64,42 +64,42 @@ const mockTVShowDetails: TVShowDetails = {
     { id: 3, name: '劇情' },
     { id: 4, name: '懸疑' },
   ],
-  created_by: [{ id: 1, name: '創作者一', profile_path: null, credit_id: 'c1', gender: 0 }],
+  createdBy: [{ id: 1, name: '創作者一', profilePath: null, creditId: 'c1', gender: 0 }],
   homepage: null,
-  in_production: true,
+  inProduction: true,
   languages: ['en'],
-  production_countries: [{ iso_3166_1: 'US', name: 'United States' }],
+  productionCountries: [{ iso_3166_1: 'US', name: 'United States' }],
   seasons: [
     {
       id: 1,
       name: 'Season 1',
       overview: '',
-      poster_path: null,
-      season_number: 1,
-      episode_count: 10,
-      air_date: '2023-06-01',
+      posterPath: null,
+      seasonNumber: 1,
+      episodeCount: 10,
+      airDate: '2023-06-01',
     },
     {
       id: 2,
       name: 'Season 2',
       overview: '',
-      poster_path: null,
-      season_number: 2,
-      episode_count: 12,
-      air_date: '2024-01-01',
+      posterPath: null,
+      seasonNumber: 2,
+      episodeCount: 12,
+      airDate: '2024-01-01',
     },
   ],
   popularity: 100,
-  genre_ids: [],
-  original_language: 'en',
-  origin_country: ['US'],
+  genreIds: [],
+  originalLanguage: 'en',
+  originCountry: ['US'],
 };
 
 const mockCredits: Credits = {
   id: 123,
   cast: [
-    { id: 1, name: '演員一', character: '角色一', profile_path: '/actor1.jpg', order: 0 },
-    { id: 2, name: '演員二', character: '角色二', profile_path: null, order: 1 },
+    { id: 1, name: '演員一', character: '角色一', profilePath: '/actor1.jpg', order: 0 },
+    { id: 2, name: '演員二', character: '角色二', profilePath: null, order: 1 },
   ],
   crew: [
     {
@@ -107,7 +107,7 @@ const mockCredits: Credits = {
       name: '導演名',
       job: 'Director',
       department: 'Directing',
-      profile_path: '/director.jpg',
+      profilePath: '/director.jpg',
     },
   ],
 };
@@ -145,7 +145,7 @@ describe('MediaDetailPanel', () => {
     });
 
     it('should not render original title when same as title', () => {
-      const movieWithSameTitle = { ...mockMovieDetails, original_title: '測試電影' };
+      const movieWithSameTitle = { ...mockMovieDetails, originalTitle: '測試電影' };
       render(<MediaDetailPanel type="movie" details={movieWithSameTitle} />, {
         wrapper: createWrapper(),
       });
@@ -257,7 +257,7 @@ describe('MediaDetailPanel', () => {
     });
 
     it('should not render poster when path is null', () => {
-      const movieNoPoster = { ...mockMovieDetails, poster_path: null };
+      const movieNoPoster = { ...mockMovieDetails, posterPath: null };
       render(<MediaDetailPanel type="movie" details={movieNoPoster} />, {
         wrapper: createWrapper(),
       });
@@ -336,7 +336,7 @@ describe('MediaDetailPanel', () => {
           id: i + 1,
           name: `演員${i + 1}`,
           character: `角色${i + 1}`,
-          profile_path: null,
+          profilePath: null,
           order: i,
         })),
         crew: [],
@@ -467,8 +467,8 @@ describe('MediaDetailPanel', () => {
   });
 
   describe('Edge cases', () => {
-    it('[P1] hides rating when vote_average is 0', () => {
-      const movieNoRating = { ...mockMovieDetails, vote_average: 0, vote_count: 0 };
+    it('[P1] hides rating when voteAverage is 0', () => {
+      const movieNoRating = { ...mockMovieDetails, voteAverage: 0, voteCount: 0 };
       render(<MediaDetailPanel type="movie" details={movieNoRating} />, {
         wrapper: createWrapper(),
       });
@@ -483,8 +483,8 @@ describe('MediaDetailPanel', () => {
       expect(screen.queryByTestId('detail-runtime')).not.toBeInTheDocument();
     });
 
-    it('[P1] does not render poster when poster_path is null', () => {
-      const movieNoPoster = { ...mockMovieDetails, poster_path: null };
+    it('[P1] does not render poster when posterPath is null', () => {
+      const movieNoPoster = { ...mockMovieDetails, posterPath: null };
       render(<MediaDetailPanel type="movie" details={movieNoPoster} />, {
         wrapper: createWrapper(),
       });

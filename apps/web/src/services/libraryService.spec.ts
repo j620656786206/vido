@@ -399,7 +399,7 @@ describe('libraryService', () => {
 
   describe('batchDelete (Story 5-7)', () => {
     it('[P0] calls DELETE /library/batch with ids and type', async () => {
-      const batchResult = { success_count: 3, failed_count: 0 };
+      const batchResult = { successCount: 3, failedCount: 0 };
       mockFetch.mockResolvedValue(mockSuccessResponse(batchResult));
 
       const result = await libraryService.batchDelete(['m1', 'm2', 'm3'], 'movie');
@@ -413,7 +413,7 @@ describe('libraryService', () => {
     });
 
     it('[P0] sends series type correctly', async () => {
-      mockFetch.mockResolvedValue(mockSuccessResponse({ success_count: 2, failed_count: 0 }));
+      mockFetch.mockResolvedValue(mockSuccessResponse({ successCount: 2, failedCount: 0 }));
 
       await libraryService.batchDelete(['s1', 's2'], 'series');
 
@@ -424,15 +424,15 @@ describe('libraryService', () => {
 
     it('[P1] returns partial failure result', async () => {
       const partialResult = {
-        success_count: 2,
-        failed_count: 1,
+        successCount: 2,
+        failedCount: 1,
         errors: [{ id: 'm3', message: 'not found' }],
       };
       mockFetch.mockResolvedValue(mockSuccessResponse(partialResult));
 
       const result = await libraryService.batchDelete(['m1', 'm2', 'm3'], 'movie');
 
-      expect(result.failed_count).toBe(1);
+      expect(result.failedCount).toBe(1);
       expect(result.errors).toHaveLength(1);
       expect(result.errors![0].id).toBe('m3');
     });
@@ -460,7 +460,7 @@ describe('libraryService', () => {
 
   describe('batchReparse (Story 5-7)', () => {
     it('[P0] calls POST /library/batch/reparse with ids and type', async () => {
-      const batchResult = { success_count: 3, failed_count: 0 };
+      const batchResult = { successCount: 3, failedCount: 0 };
       mockFetch.mockResolvedValue(mockSuccessResponse(batchResult));
 
       const result = await libraryService.batchReparse(['m1', 'm2', 'm3'], 'movie');
@@ -474,7 +474,7 @@ describe('libraryService', () => {
     });
 
     it('[P0] sends series type correctly', async () => {
-      mockFetch.mockResolvedValue(mockSuccessResponse({ success_count: 1, failed_count: 0 }));
+      mockFetch.mockResolvedValue(mockSuccessResponse({ successCount: 1, failedCount: 0 }));
 
       await libraryService.batchReparse(['s1'], 'series');
 

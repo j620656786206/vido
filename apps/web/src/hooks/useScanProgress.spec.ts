@@ -52,29 +52,29 @@ class MockEventSource {
 }
 
 const idleStatus = {
-  is_scanning: false,
-  files_found: 0,
-  files_processed: 0,
-  current_file: '',
-  percent_done: 0,
-  error_count: 0,
-  estimated_time: '',
-  last_scan_at: '',
-  last_scan_files: 0,
-  last_scan_duration: '',
+  isScanning: false,
+  filesFound: 0,
+  filesProcessed: 0,
+  currentFile: '',
+  percentDone: 0,
+  errorCount: 0,
+  estimatedTime: '',
+  lastScanAt: '',
+  lastScanFiles: 0,
+  lastScanDuration: '',
 };
 
 const scanningStatus = {
-  is_scanning: true,
-  files_found: 200,
-  files_processed: 50,
-  current_file: 'init.mkv',
-  percent_done: 25,
-  error_count: 0,
-  estimated_time: '3 分',
-  last_scan_at: '',
-  last_scan_files: 0,
-  last_scan_duration: '',
+  isScanning: true,
+  filesFound: 200,
+  filesProcessed: 50,
+  currentFile: 'init.mkv',
+  percentDone: 25,
+  errorCount: 0,
+  estimatedTime: '3 分',
+  lastScanAt: '',
+  lastScanFiles: 0,
+  lastScanDuration: '',
 };
 
 describe('useScanProgress', () => {
@@ -126,11 +126,11 @@ describe('useScanProgress', () => {
     act(() => {
       es.emit('scan_progress', {
         data: {
-          files_found: 500,
-          current_file: 'test.mkv',
-          percent_done: 42,
-          error_count: 2,
-          estimated_time: '1 分 30 秒',
+          filesFound: 500,
+          currentFile: 'test.mkv',
+          percentDone: 42,
+          errorCount: 2,
+          estimatedTime: '1 分 30 秒',
         },
       });
     });
@@ -154,11 +154,11 @@ describe('useScanProgress', () => {
     act(() => {
       es.emit('scan_progress', {
         data: {
-          files_found: 100,
-          current_file: 'a.mkv',
-          percent_done: 50,
-          error_count: 0,
-          estimated_time: '30 秒',
+          filesFound: 100,
+          currentFile: 'a.mkv',
+          percentDone: 50,
+          errorCount: 0,
+          estimatedTime: '30 秒',
         },
       });
     });
@@ -166,7 +166,7 @@ describe('useScanProgress', () => {
 
     act(() => {
       es.emit('scan_complete', {
-        data: { files_found: 200, error_count: 1 },
+        data: { filesFound: 200, errorCount: 1 },
       });
     });
 
@@ -186,11 +186,11 @@ describe('useScanProgress', () => {
     act(() => {
       es.emit('scan_progress', {
         data: {
-          files_found: 50,
-          current_file: 'x.mkv',
-          percent_done: 25,
-          error_count: 0,
-          estimated_time: '1 分',
+          filesFound: 50,
+          currentFile: 'x.mkv',
+          percentDone: 25,
+          errorCount: 0,
+          estimatedTime: '1 分',
         },
       });
     });
@@ -222,7 +222,7 @@ describe('useScanProgress', () => {
 
     const es = MockEventSource.instances[0];
     act(() => {
-      es.emit('scan_complete', { data: { files_found: 10, error_count: 0 } });
+      es.emit('scan_complete', { data: { filesFound: 10, errorCount: 0 } });
     });
     expect(result.current.isVisible).toBe(true);
 
@@ -239,9 +239,9 @@ describe('useScanProgress', () => {
     const es = MockEventSource.instances[0];
     mockGetScanStatus.mockResolvedValue({
       ...scanningStatus,
-      files_found: 300,
-      current_file: 'poll.mkv',
-      percent_done: 33,
+      filesFound: 300,
+      currentFile: 'poll.mkv',
+      percentDone: 33,
     });
 
     act(() => {
