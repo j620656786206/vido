@@ -183,8 +183,11 @@ export function ScanProgressCard({
         {/* Auto-dismiss progress bar */}
         <div className="mt-3 h-0.5 w-full overflow-hidden rounded-full bg-slate-700">
           <div
-            className={cn('h-full bg-slate-500', isAutoDismissing && 'animate-shrink')}
-            style={isPaused ? { animationPlayState: 'paused', width: '0%' } : undefined}
+            className={cn(
+              'h-full bg-slate-500 motion-reduce:animate-none',
+              isAutoDismissing && 'animate-shrink'
+            )}
+            style={isPaused ? { animationPlayState: 'paused' } : undefined}
             data-testid="auto-dismiss-bar"
           />
         </div>
