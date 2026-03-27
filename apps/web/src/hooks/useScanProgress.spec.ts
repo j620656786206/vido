@@ -4,7 +4,7 @@ import { useScanProgress } from './useScanProgress';
 
 // Mock scannerService
 const mockGetScanStatus = vi.fn();
-const mockGetSSEUrl = vi.fn(() => 'http://localhost:8080/api/v1/events');
+const mockGetSSEUrl = vi.fn(() => '/api/v1/events');
 
 vi.mock('../services/scannerService', () => ({
   scannerService: {
@@ -101,7 +101,7 @@ describe('useScanProgress', () => {
     renderHook(() => useScanProgress());
     await vi.advanceTimersByTimeAsync(0);
     expect(MockEventSource.instances).toHaveLength(1);
-    expect(MockEventSource.instances[0].url).toBe('http://localhost:8080/api/v1/events');
+    expect(MockEventSource.instances[0].url).toBe('/api/v1/events');
   });
 
   it('fetches initial status on mount', async () => {

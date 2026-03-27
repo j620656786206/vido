@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { setupService } from './setupService';
 
-const API_BASE = 'http://localhost:8080/api/v1';
+const API_BASE = '/api/v1';
 
 describe('setupService', () => {
   const mockFetch = vi.fn();

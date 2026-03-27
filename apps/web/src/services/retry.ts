@@ -2,7 +2,7 @@
  * Retry service for retry queue operations (Story 3.11)
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
 // Types for retry queue
 export interface RetryItem {

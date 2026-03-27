@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mediaService } from './mediaService';
 
-const API_BASE_URL = 'http://localhost:8080/api/v1';
+const API_BASE_URL = '/api/v1';
 
 describe('mediaService', () => {
   beforeEach(() => {

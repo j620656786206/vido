@@ -26,7 +26,7 @@
 | Name             | `Vido`                                        |
 | Repository       | `ghcr.io/j620656786206/vido:main`             |
 | Network Type     | `Bridge`                                      |
-| WebUI            | `http://[IP]:[PORT:8080]`                     |
+| WebUI            | `http://[IP]:[PORT:8088]`                     |
 | Extra Parameters | `--read-only --tmpfs /tmp:size=64M,mode=1777` |
 
 3. 依照下方[設定](#設定)章節新增 port、path 和變數對應
@@ -38,7 +38,7 @@
 
 | 名稱       | 容器連接埠 | 主機連接埠       | 協定 |
 | ---------- | ---------- | ---------------- | ---- |
-| WebUI Port | `8080`     | `8080`（可自訂） | TCP  |
+| WebUI Port | `8080`     | `8088`（可自訂） | TCP  |
 
 Vido 在單一連接埠上同時提供網頁介面和 API。
 
@@ -72,7 +72,7 @@ Vido 在單一連接埠上同時提供網頁介面和 API。
 
 1. 從 Docker 分頁啟動 Vido 容器
 2. 等待健康檢查通過（綠色圖示，通常在 30 秒內）
-3. 開啟 WebUI：`http://[你的 Unraid IP]:8080`
+3. 開啟 WebUI：`http://[你的 Unraid IP]:8088`
 4. 前往**設定**頁面設定 TMDb API 金鑰
 5. 前往媒體庫並觸發第一次掃描
 
@@ -86,7 +86,7 @@ Vido 在單一連接埠上同時提供網頁介面和 API。
 
 - 檢查 Docker 日誌中的錯誤訊息（點擊 Vido 容器圖示 > **Log**）
 - 確認 App Data 路徑存在且可寫入
-- 確保連接埠 8080 未被其他容器使用
+- 確保連接埠 8088 未被其他容器使用（8080 通常已被 qBittorrent 佔用）
 
 ### 找不到媒體檔案
 

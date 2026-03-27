@@ -2,7 +2,7 @@
  * Cache management API service (Story 6.2)
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
 export interface CacheTypeInfo {
   type: string;

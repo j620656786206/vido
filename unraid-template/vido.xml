@@ -10,7 +10,7 @@
   <Project>https://github.com/j620656786206/vido</Project>
   <Overview>Vido is a NAS media management platform for organizing movies and TV shows with automatic metadata retrieval (TMDb), AI-powered fansub filename parsing, multi-source subtitle search with Traditional Chinese (zh-TW) language detection and OpenCC conversion, and qBittorrent download integration. Built for Taiwanese and Chinese media enthusiasts managing media libraries on NAS devices.</Overview>
   <Category>MediaApp:Video</Category>
-  <WebUI>http://[IP]:[PORT:8080]</WebUI>
+  <WebUI>http://[IP]:[PORT:8088]</WebUI>
   <Icon>https://raw.githubusercontent.com/alexyu/vido/main/apps/web/public/favicon.ico</Icon>
   <ExtraParams>--read-only --tmpfs /tmp:size=64M,mode=1777</ExtraParams>
   <PostArgs/>
@@ -20,14 +20,14 @@
   <Config
     Name="WebUI Port"
     Target="8080"
-    Default="8080"
+    Default="8088"
     Mode="tcp"
     Description="Port for Vido web interface. The Go API serves both the web UI and API endpoints on this single port."
     Type="Port"
     Display="always"
     Required="true"
     Mask="false"
-  >8080</Config>
+  >8088</Config>
   <Config
     Name="App Data"
     Target="/vido-data"

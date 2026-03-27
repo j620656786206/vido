@@ -26,7 +26,7 @@
 | Name             | `Vido`                                        |
 | Repository       | `ghcr.io/j620656786206/vido:main`             |
 | Network Type     | `Bridge`                                      |
-| WebUI            | `http://[IP]:[PORT:8080]`                     |
+| WebUI            | `http://[IP]:[PORT:8088]`                     |
 | Extra Parameters | `--read-only --tmpfs /tmp:size=64M,mode=1777` |
 
 3. Add port, path, and variable mappings as described in the [Configuration](#configuration) section
@@ -38,7 +38,7 @@
 
 | Name       | Container Port | Host Port             | Protocol |
 | ---------- | -------------- | --------------------- | -------- |
-| WebUI Port | `8080`         | `8080` (configurable) | TCP      |
+| WebUI Port | `8080`         | `8088` (configurable) | TCP      |
 
 Vido serves both the web UI and API on a single port.
 
@@ -72,7 +72,7 @@ Vido serves both the web UI and API on a single port.
 
 1. Start the Vido container from the Docker tab
 2. Wait for the health check to pass (green icon, usually within 30 seconds)
-3. Open the WebUI at `http://[YOUR-UNRAID-IP]:8080`
+3. Open the WebUI at `http://[YOUR-UNRAID-IP]:8088`
 4. Navigate to **Settings** and configure your TMDb API key
 5. Go to the media library and trigger your first scan
 
@@ -86,7 +86,7 @@ The container includes a built-in health check that queries `GET /health` every 
 
 - Check the Docker log for error messages (click the Vido container icon > **Log**)
 - Verify the App Data path exists and is writable
-- Ensure port 8080 is not already in use by another container
+- Ensure port 8088 is not already in use by another container (8080 is often taken by qBittorrent)
 
 ### Media files not found
 

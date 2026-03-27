@@ -2,7 +2,7 @@
  * Service status API client for settings dashboard (Story 6.4)
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
 export type ServiceConnectionStatus =
   | 'connected'
