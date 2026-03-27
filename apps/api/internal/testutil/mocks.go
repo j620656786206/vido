@@ -1,5 +1,13 @@
 // Package testutil provides shared mock implementations and test fixtures
 // for use across multiple test files in the Vido API.
+//
+// WARNING: This package must only be imported from _test.go files.
+// It pulls in testify/mock which should not be in the production binary.
+//
+// All mocks use testify/mock.Called() delegation. If a method is called
+// without a matching .On() expectation, testify will panic. Use
+// SetupDefault*Expectations() to register catch-all expectations, then
+// override specific methods with concrete matchers as needed.
 package testutil
 
 import (
