@@ -2,6 +2,8 @@
  * Retry service for retry queue operations (Story 3.11)
  */
 
+import { snakeToCamel } from '../utils/caseTransform';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
 // Types for retry queue
@@ -67,7 +69,7 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
     throw new Error(data.error?.message || 'API request failed');
   }
 
-  return data.data as T;
+  return snakeToCamel<T>(data.data);
 }
 
 export const retryService = {

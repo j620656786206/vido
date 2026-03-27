@@ -1,4 +1,5 @@
 import type { ApiResponse } from '../types/tmdb';
+import { snakeToCamel, camelToSnake } from '../utils/caseTransform';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
@@ -16,7 +17,7 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
     throw new Error(data.error?.message || 'API request failed');
   }
 
-  return data.data as T;
+  return snakeToCamel<T>(data.data);
 }
 
 // --- Types (camelCase frontend convention, transformed at API boundary) ---
@@ -84,7 +85,7 @@ export const subtitleService = {
     return fetchApi<SubtitleSearchResult[]>('/subtitles/search', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(params),
+      body: JSON.stringify(camelToSnake(params)),
     });
   },
 
@@ -92,7 +93,7 @@ export const subtitleService = {
     return fetchApi<SubtitleDownloadResult>('/subtitles/download', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(params),
+      body: JSON.stringify(camelToSnake(params)),
     });
   },
 
@@ -100,7 +101,7 @@ export const subtitleService = {
     return fetchApi<SubtitlePreviewResult>('/subtitles/preview', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(params),
+      body: JSON.stringify(camelToSnake(params)),
     });
   },
 };

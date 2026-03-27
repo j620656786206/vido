@@ -2,6 +2,8 @@
  * Scanner API client (Story 7.3)
  */
 
+import { snakeToCamel } from '../utils/caseTransform';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
 export type ScheduleFrequency = 'hourly' | 'daily' | 'manual';
@@ -75,7 +77,7 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
     throw new Error('API response missing data field');
   }
 
-  return data.data;
+  return snakeToCamel<T>(data.data);
 }
 
 export const scannerService = {

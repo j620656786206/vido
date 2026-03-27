@@ -2,6 +2,8 @@
  * Backup management API client (Story 6.5)
  */
 
+import { snakeToCamel } from '../utils/caseTransform';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
 export type BackupStatus = 'pending' | 'running' | 'completed' | 'failed' | 'corrupted';
@@ -87,7 +89,7 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
     throw new Error('API response missing data field');
   }
 
-  return data.data;
+  return snakeToCamel(data.data);
 }
 
 export const backupService = {

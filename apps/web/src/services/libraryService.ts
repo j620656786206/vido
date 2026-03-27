@@ -1,4 +1,5 @@
 import type { ApiResponse } from '../types/tmdb';
+import { snakeToCamel } from '../utils/caseTransform';
 import type {
   LibraryItem,
   LibraryListResponse,
@@ -25,7 +26,7 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
     throw new Error(data.error?.message || 'API request failed');
   }
 
-  return data.data as T;
+  return snakeToCamel<T>(data.data);
 }
 
 export const libraryService = {

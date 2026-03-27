@@ -2,6 +2,8 @@
  * Metadata service for manual search and apply operations (Story 3.7)
  */
 
+import { snakeToCamel } from '../utils/caseTransform';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
 // Types for manual search
@@ -107,7 +109,7 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
     throw new Error(data.error?.message || 'API request failed');
   }
 
-  return data.data as T;
+  return snakeToCamel<T>(data.data);
 }
 
 export const metadataService = {
@@ -168,7 +170,7 @@ export const metadataService = {
       throw new Error(data.error?.message || 'Upload failed');
     }
 
-    return data.data as UploadPosterResponse;
+    return snakeToCamel<UploadPosterResponse>(data.data);
   },
 };
 

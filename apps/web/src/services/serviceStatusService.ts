@@ -2,6 +2,8 @@
  * Service status API client for settings dashboard (Story 6.4)
  */
 
+import { snakeToCamel } from '../utils/caseTransform';
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
 export type ServiceConnectionStatus =
@@ -51,7 +53,7 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
     throw new Error('API response missing data field');
   }
 
-  return data.data;
+  return snakeToCamel(data.data);
 }
 
 export const serviceStatusService = {
