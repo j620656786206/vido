@@ -1,13 +1,13 @@
 <?xml version="1.0"?>
 <Container version="2">
   <Name>Vido</Name>
-  <Repository>ghcr.io/alexyu/vido:latest</Repository>
-  <Registry>https://github.com/alexyu/vido/pkgs/container/vido</Registry>
+  <Repository>ghcr.io/j620656786206/vido:main</Repository>
+  <Registry>https://github.com/j620656786206/vido/pkgs/container/vido</Registry>
   <Network>bridge</Network>
   <Shell>sh</Shell>
   <Privileged>false</Privileged>
-  <Support>https://github.com/alexyu/vido/issues</Support>
-  <Project>https://github.com/alexyu/vido</Project>
+  <Support>https://github.com/j620656786206/vido/issues</Support>
+  <Project>https://github.com/j620656786206/vido</Project>
   <Overview>Vido is a NAS media management platform for organizing movies and TV shows with automatic metadata retrieval (TMDb), AI-powered fansub filename parsing, multi-source subtitle search with Traditional Chinese (zh-TW) language detection and OpenCC conversion, and qBittorrent download integration. Built for Taiwanese and Chinese media enthusiasts managing media libraries on NAS devices.</Overview>
   <Category>MediaApp:Video</Category>
   <WebUI>http://[IP]:[PORT:8080]</WebUI>

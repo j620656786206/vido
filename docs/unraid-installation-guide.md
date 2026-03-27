@@ -24,7 +24,7 @@
 | Field            | Value                                         |
 | ---------------- | --------------------------------------------- |
 | Name             | `Vido`                                        |
-| Repository       | `ghcr.io/alexyu/vido:latest`                  |
+| Repository       | `ghcr.io/j620656786206/vido:main`             |
 | Network Type     | `Bridge`                                      |
 | WebUI            | `http://[IP]:[PORT:8080]`                     |
 | Extra Parameters | `--read-only --tmpfs /tmp:size=64M,mode=1777` |
