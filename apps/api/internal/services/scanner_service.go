@@ -66,10 +66,16 @@ type ScannerService struct {
 	sseHub     *sse.Hub
 	logger     *slog.Logger
 
-	mu         sync.Mutex
-	isScanning bool
-	cancelChan chan struct{}
-	progress   ScanProgress
+	mu              sync.Mutex
+	isScanning      bool
+	cancelChan      chan struct{}
+	progress        ScanProgress
+	onScanComplete  func()
+}
+
+// SetOnScanComplete sets a callback to be invoked after a successful scan.
+func (s *ScannerService) SetOnScanComplete(fn func()) {
+	s.onScanComplete = fn
 }
 
 // NewScannerService creates a new ScannerService
@@ -205,6 +211,10 @@ func (s *ScannerService) StartScan(ctx context.Context) (*ScanResult, error) {
 		s.broadcastScanCancelled(result)
 	} else {
 		s.broadcastScanComplete(result)
+		// Trigger post-scan enrichment if configured
+		if s.onScanComplete != nil && (result.FilesCreated > 0 || result.FilesUpdated > 0) {
+			s.onScanComplete()
+		}
 	}
 
 	s.logger.Info("scan completed",

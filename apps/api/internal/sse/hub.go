@@ -19,6 +19,8 @@ const (
 	EventSubtitleProgress      EventType = "subtitle_progress"
 	EventSubtitleBatchProgress EventType = "subtitle_batch_progress"
 	EventNotification          EventType = "notification"
+	EventEnrichProgress        EventType = "enrich_progress"
+	EventEnrichComplete        EventType = "enrich_complete"
 )
 
 // Event represents an SSE event to broadcast

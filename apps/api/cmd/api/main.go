@@ -333,6 +333,32 @@ func main() {
 	)
 	slog.Info("Scanner service initialized")
 
+	// Initialize enrichment service for post-scan metadata enrichment
+	enrichmentService := services.NewEnrichmentService(
+		repos.Movies,
+		parserService,
+		metadataService,
+		sseHub,
+		slog.Default(),
+	)
+	// Wire post-scan auto-enrichment: after scan completes with new/updated files,
+	// automatically trigger metadata enrichment in background
+	scannerService.SetOnScanComplete(func() {
+		go func() {
+			result, err := enrichmentService.StartEnrichment(context.Background())
+			if err != nil {
+				slog.Error("post-scan enrichment failed", "error", err)
+				return
+			}
+			slog.Info("post-scan enrichment completed",
+				"succeeded", result.Succeeded,
+				"failed", result.Failed,
+				"duration", result.Duration,
+			)
+		}()
+	})
+	slog.Info("Enrichment service initialized with post-scan auto-trigger")
+
 	// Initialize scan scheduler (Story 7.2)
 	scanScheduler := services.NewScanScheduler(scannerService, repos.Settings, slog.Default())
 	slog.Info("Scan scheduler initialized")
@@ -389,6 +415,7 @@ func main() {
 	exportHandler := handlers.NewExportHandler(exportService)
 	scannerHandler := handlers.NewScannerHandler(scannerService)
 	scannerHandler.SetScheduler(scanScheduler)
+	scannerHandler.SetEnrichmentService(enrichmentService)
 	subtitleHandler := handlers.NewSubtitleHandler(
 		subtitleProviders, subtitleScorer, subtitleConverter, subtitlePlacer,
 		sseHub, repos.Movies, repos.Series,

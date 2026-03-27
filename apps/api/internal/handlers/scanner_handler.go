@@ -19,10 +19,19 @@ type ScannerServiceInterface interface {
 	GetProgress() services.ScanProgress
 }
 
+// EnrichmentServiceInterface defines the contract for enrichment operations.
+type EnrichmentServiceInterface interface {
+	StartEnrichment(ctx context.Context) (*services.EnrichmentResult, error)
+	CancelEnrichment() error
+	IsEnrichmentActive() bool
+	GetProgress() services.EnrichmentProgress
+}
+
 // ScannerHandler handles HTTP requests for scanner operations.
 type ScannerHandler struct {
-	scannerService ScannerServiceInterface
-	scanScheduler  services.ScanSchedulerInterface
+	scannerService    ScannerServiceInterface
+	scanScheduler     services.ScanSchedulerInterface
+	enrichmentService EnrichmentServiceInterface
 }
 
 // NewScannerHandler creates a new ScannerHandler with the given service.
@@ -37,6 +46,11 @@ func (h *ScannerHandler) SetScheduler(scheduler services.ScanSchedulerInterface)
 	h.scanScheduler = scheduler
 }
 
+// SetEnrichmentService sets the enrichment service for metadata enrichment endpoints.
+func (h *ScannerHandler) SetEnrichmentService(svc EnrichmentServiceInterface) {
+	h.enrichmentService = svc
+}
+
 // RegisterRoutes registers scanner routes on the given router group.
 func (h *ScannerHandler) RegisterRoutes(rg *gin.RouterGroup) {
 	scanner := rg.Group("/scanner")
@@ -46,6 +60,9 @@ func (h *ScannerHandler) RegisterRoutes(rg *gin.RouterGroup) {
 		scanner.POST("/cancel", h.CancelScan)
 		scanner.GET("/schedule", h.GetSchedule)
 		scanner.PUT("/schedule", h.SetSchedule)
+		scanner.POST("/enrich", h.TriggerEnrich)
+		scanner.GET("/enrich/status", h.GetEnrichStatus)
+		scanner.POST("/enrich/cancel", h.CancelEnrich)
 	}
 }
 
@@ -146,4 +163,63 @@ func (h *ScannerHandler) CancelScan(c *gin.Context) {
 	}
 
 	SuccessResponse(c, gin.H{"message": "Scan cancelled"})
+}
+
+// TriggerEnrich handles POST /api/v1/scanner/enrich
+// Starts metadata enrichment for unenriched movies in the background.
+func (h *ScannerHandler) TriggerEnrich(c *gin.Context) {
+	if h.enrichmentService == nil {
+		InternalServerError(c, "Enrichment service not configured")
+		return
+	}
+
+	if h.enrichmentService.IsEnrichmentActive() {
+		c.JSON(http.StatusConflict, APIResponse{
+			Success: false,
+			Error:   &APIError{Code: "ENRICHMENT_ALREADY_RUNNING", Message: "An enrichment is already in progress"},
+		})
+		return
+	}
+
+	go func() {
+		result, err := h.enrichmentService.StartEnrichment(context.Background())
+		if err != nil {
+			slog.Error("enrichment failed", "error", err)
+			return
+		}
+		if result != nil {
+			slog.Info("enrichment completed in background",
+				"succeeded", result.Succeeded,
+				"failed", result.Failed,
+				"duration", result.Duration,
+			)
+		}
+	}()
+
+	c.JSON(http.StatusAccepted, APIResponse{
+		Success: true,
+		Data:    gin.H{"message": "Enrichment started"},
+	})
+}
+
+// GetEnrichStatus handles GET /api/v1/scanner/enrich/status
+func (h *ScannerHandler) GetEnrichStatus(c *gin.Context) {
+	if h.enrichmentService == nil {
+		InternalServerError(c, "Enrichment service not configured")
+		return
+	}
+	SuccessResponse(c, h.enrichmentService.GetProgress())
+}
+
+// CancelEnrich handles POST /api/v1/scanner/enrich/cancel
+func (h *ScannerHandler) CancelEnrich(c *gin.Context) {
+	if h.enrichmentService == nil {
+		InternalServerError(c, "Enrichment service not configured")
+		return
+	}
+	if err := h.enrichmentService.CancelEnrichment(); err != nil {
+		BadRequestError(c, "ENRICHMENT_NOT_ACTIVE", "No enrichment is currently active")
+		return
+	}
+	SuccessResponse(c, gin.H{"message": "Enrichment cancelled"})
 }
