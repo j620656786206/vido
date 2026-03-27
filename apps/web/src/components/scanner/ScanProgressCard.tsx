@@ -40,25 +40,20 @@ export function ScanProgressCard({
 }: ScanProgressCardProps) {
   const navigate = useNavigate();
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
-  const [autoDismissProgress, setAutoDismissProgress] = useState(100);
+  const [isAutoDismissing, setIsAutoDismissing] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const autoDismissTimerRef = useRef<ReturnType<typeof setTimeout>>();
-  const autoDismissAnimRef = useRef<ReturnType<typeof setInterval>>();
 
   const clearAutoDismiss = useCallback(() => {
     if (autoDismissTimerRef.current) clearTimeout(autoDismissTimerRef.current);
-    if (autoDismissAnimRef.current) clearInterval(autoDismissAnimRef.current);
-    setAutoDismissProgress(100);
+    setIsAutoDismissing(false);
+    setIsPaused(false);
   }, []);
 
   // Auto-dismiss on completion
   useEffect(() => {
     if (state.isComplete || state.isCancelled) {
-      const startTime = Date.now();
-      autoDismissAnimRef.current = setInterval(() => {
-        const elapsed = Date.now() - startTime;
-        const remaining = Math.max(0, 100 - (elapsed / AUTO_DISMISS_MS) * 100);
-        setAutoDismissProgress(remaining);
-      }, 50);
+      setIsAutoDismissing(true);
 
       autoDismissTimerRef.current = setTimeout(() => {
         clearAutoDismiss();
@@ -71,9 +66,16 @@ export function ScanProgressCard({
     return clearAutoDismiss;
   }, [state.isComplete, state.isCancelled, onDismiss, clearAutoDismiss]);
 
-  const handleUserInteract = () => {
+  const handleMouseEnter = () => {
     if (state.isComplete || state.isCancelled) {
       clearAutoDismiss();
+      setIsPaused(true);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (isPaused) {
+      setIsPaused(false);
     }
   };
 
@@ -108,7 +110,8 @@ export function ScanProgressCard({
       <div
         className="w-[480px] max-w-[calc(100vw-2rem)] rounded-lg bg-slate-800 p-4 shadow-xl"
         data-testid="scan-progress-card"
-        onMouseEnter={handleUserInteract}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
         role="status"
       >
         {/* Header */}
@@ -180,8 +183,8 @@ export function ScanProgressCard({
         {/* Auto-dismiss progress bar */}
         <div className="mt-3 h-0.5 w-full overflow-hidden rounded-full bg-slate-700">
           <div
-            className="h-full bg-slate-500 transition-[width] duration-100"
-            style={{ width: `${autoDismissProgress}%` }}
+            className={cn('h-full bg-slate-500', isAutoDismissing && 'animate-shrink')}
+            style={isPaused ? { animationPlayState: 'paused', width: '0%' } : undefined}
             data-testid="auto-dismiss-bar"
           />
         </div>
