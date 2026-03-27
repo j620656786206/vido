@@ -22,37 +22,14 @@ permissions:
   packages: write
   id-token: write
 
-env:
-  GO_VERSION: '1.25'
-
 jobs:
   # =============================================================================
-  # Stage 1: Go Backend Tests (fail-fast before Docker build)
-  # =============================================================================
-  test-go:
-    name: Go Tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: ${{ env.GO_VERSION }}
-          cache-dependency-path: apps/api/go.sum
-
-      - name: Run Go tests
-        working-directory: apps/api
-        run: go test ./...
-
-  # =============================================================================
-  # Stage 2: Docker Build + Push
+  # Docker Build + Push
+  # (Go compilation is verified by the Dockerfile build stage;
+  #  unit tests run in the separate Tests workflow)
   # =============================================================================
   docker:
     name: Build & Push Docker Image
-    needs: [test-go]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
