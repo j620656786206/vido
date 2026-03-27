@@ -41,8 +41,8 @@ describe('subtitleService', () => {
       expect(url).toContain('/subtitles/search');
       expect(options.method).toBe('POST');
       expect(JSON.parse(options.body)).toEqual({
-        mediaId: 'movie-1',
-        mediaType: 'movie',
+        media_id: 'movie-1',
+        media_type: 'movie',
         query: 'Test',
       });
       expect(result).toEqual(mockResults);
@@ -71,7 +71,7 @@ describe('subtitleService', () => {
       });
 
       const body = JSON.parse(mockFetch.mock.calls[0][1].body);
-      expect(body.convertToTraditional).toBe(false);
+      expect(body.convert_to_traditional).toBe(false);
       expect(result).toEqual(mockResult);
     });
   });

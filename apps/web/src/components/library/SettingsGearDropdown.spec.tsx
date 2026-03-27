@@ -9,7 +9,7 @@ import {
 describe('SettingsGearDropdown', () => {
   const defaultPrefs = {
     density: 'medium' as const,
-    defaultSort: 'createdAt',
+    defaultSort: 'created_at',
     titleLanguage: 'zh-tw' as const,
   };
   const onChange = vi.fn();
@@ -66,7 +66,7 @@ describe('SettingsGearDropdown', () => {
   it('returns defaults when localStorage is empty', () => {
     const prefs = getStoredPreferences();
     expect(prefs.density).toBe('medium');
-    expect(prefs.defaultSort).toBe('createdAt');
+    expect(prefs.defaultSort).toBe('created_at');
     expect(prefs.titleLanguage).toBe('zh-tw');
   });
 
@@ -92,7 +92,7 @@ describe('SettingsGearDropdown', () => {
     localStorage.setItem('vido-library-preferences', 'invalid-json');
     const prefs = getStoredPreferences();
     expect(prefs.density).toBe('medium');
-    expect(prefs.defaultSort).toBe('createdAt');
+    expect(prefs.defaultSort).toBe('created_at');
     expect(prefs.titleLanguage).toBe('zh-tw');
   });
 

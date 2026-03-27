@@ -230,9 +230,9 @@ describe('LibraryPage', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('sort-title')).toBeInTheDocument();
-        expect(screen.getByTestId('sort-releaseDate')).toBeInTheDocument();
+        expect(screen.getByTestId('sort-release_date')).toBeInTheDocument();
         expect(screen.getByTestId('sort-rating')).toBeInTheDocument();
-        expect(screen.getByTestId('sort-createdAt')).toBeInTheDocument();
+        expect(screen.getByTestId('sort-created_at')).toBeInTheDocument();
       });
     });
 

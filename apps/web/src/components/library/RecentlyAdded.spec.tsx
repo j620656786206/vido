@@ -310,7 +310,7 @@ describe('RecentlyAdded', () => {
 
     render(<RecentlyAdded />, { wrapper: createWrapper() });
     const link = screen.getByText(/查看全部/).closest('a');
-    expect(link).toHaveAttribute('href', expect.stringContaining('sortBy=createdAt'));
+    expect(link).toHaveAttribute('href', expect.stringContaining('sortBy=created_at'));
     expect(link).toHaveAttribute('href', expect.stringContaining('sortOrder=desc'));
   });
 });

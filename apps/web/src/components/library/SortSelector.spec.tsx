@@ -6,7 +6,7 @@ import type { SortField, SortOrder } from '../../types/library';
 
 describe('SortSelector', () => {
   const defaultProps = {
-    sortBy: 'createdAt' as SortField,
+    sortBy: 'created_at' as SortField,
     sortOrder: 'desc' as SortOrder,
     onSortChange: vi.fn(),
   };
@@ -37,9 +37,9 @@ describe('SortSelector', () => {
     render(<SortSelector {...defaultProps} />);
     await userEvent.click(screen.getByTestId('sort-selector-button'));
 
-    expect(screen.getByTestId('sort-option-createdAt')).toHaveTextContent('新增日期');
+    expect(screen.getByTestId('sort-option-created_at')).toHaveTextContent('新增日期');
     expect(screen.getByTestId('sort-option-title')).toHaveTextContent('標題');
-    expect(screen.getByTestId('sort-option-releaseDate')).toHaveTextContent('年份');
+    expect(screen.getByTestId('sort-option-release_date')).toHaveTextContent('年份');
     expect(screen.getByTestId('sort-option-rating')).toHaveTextContent('評分');
   });
 
@@ -54,16 +54,16 @@ describe('SortSelector', () => {
 
   it('toggles direction when clicking same sort option', async () => {
     const onSortChange = vi.fn();
-    render(<SortSelector sortBy="createdAt" sortOrder="desc" onSortChange={onSortChange} />);
+    render(<SortSelector sortBy="created_at" sortOrder="desc" onSortChange={onSortChange} />);
     await userEvent.click(screen.getByTestId('sort-selector-button'));
 
-    await userEvent.click(screen.getByTestId('sort-option-createdAt'));
-    expect(onSortChange).toHaveBeenCalledWith('createdAt', 'asc');
+    await userEvent.click(screen.getByTestId('sort-option-created_at'));
+    expect(onSortChange).toHaveBeenCalledWith('created_at', 'asc');
   });
 
   it('uses default direction for new sort field selection', async () => {
     const onSortChange = vi.fn();
-    render(<SortSelector sortBy="createdAt" sortOrder="desc" onSortChange={onSortChange} />);
+    render(<SortSelector sortBy="created_at" sortOrder="desc" onSortChange={onSortChange} />);
     await userEvent.click(screen.getByTestId('sort-selector-button'));
 
     // Title defaults to asc, rating defaults to desc
@@ -119,9 +119,9 @@ describe('SortSelector', () => {
 
   it('shows correct label for each sortBy value', () => {
     const labels: Record<SortField, string> = {
-      createdAt: '新增日期',
+      created_at: '新增日期',
       title: '標題',
-      releaseDate: '年份',
+      release_date: '年份',
       rating: '評分',
     };
 

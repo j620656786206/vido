@@ -151,9 +151,9 @@ describe('LibraryTable', () => {
   it('renders sortable column headers', () => {
     render(<LibraryTable items={mockItems} onSort={vi.fn()} />);
     expect(screen.getByTestId('sort-title')).toBeInTheDocument();
-    expect(screen.getByTestId('sort-releaseDate')).toBeInTheDocument();
+    expect(screen.getByTestId('sort-release_date')).toBeInTheDocument();
     expect(screen.getByTestId('sort-rating')).toBeInTheDocument();
-    expect(screen.getByTestId('sort-createdAt')).toBeInTheDocument();
+    expect(screen.getByTestId('sort-created_at')).toBeInTheDocument();
   });
 
   it('calls onSort when sortable column header is clicked', () => {
@@ -257,7 +257,7 @@ describe('LibraryTable', () => {
 
   it('[P2] shows 新增日期 label for createdAt column', () => {
     render(<LibraryTable items={mockItems} onSort={vi.fn()} />);
-    expect(screen.getByTestId('sort-createdAt')).toHaveTextContent('新增日期');
+    expect(screen.getByTestId('sort-created_at')).toHaveTextContent('新增日期');
   });
 
   it('handles item with empty genres array', () => {
