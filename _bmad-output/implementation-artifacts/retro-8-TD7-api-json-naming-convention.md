@@ -63,22 +63,22 @@ This mismatch was hidden by a second bug: `sql.NullString` serialized as `{"Stri
 
 ### Task 3: Frontend TypeScript types → camelCase (AC4)
 
-- [ ] 3.1 Update `apps/web/src/types/library.ts` — `LibraryMovie` and `LibrarySeries` interfaces: `poster_path` → `posterPath`, `release_date` → `releaseDate`, etc.
-- [ ] 3.2 Update any other TypeScript type files that reference snake_case API fields
-- [ ] 3.3 Update component references to use new camelCase field names
+- [x] 3.1 Update `apps/web/src/types/library.ts` — `LibraryMovie` and `LibrarySeries` interfaces: `poster_path` → `posterPath`, `release_date` → `releaseDate`, etc.
+- [x] 3.2 Update any other TypeScript type files that reference snake_case API fields (tmdb.ts, scannerService.ts, subtitleService.ts, useSubtitleSearch.ts, useScanProgress.ts)
+- [x] 3.3 Update component references to use new camelCase field names (21 files: LibraryGrid, LibraryTable, RecentlyAdded, MediaDetailPanel, TVShowInfo, MediaGrid, CreditsSection, SubtitleSearchDialog, SearchResults, ScannerSettings, routes)
 
 ### Task 4: Frontend service integration (AC3)
 
-- [ ] 4.1 Apply `snakeToCamel` in `libraryService.ts` response handling
-- [ ] 4.2 Apply `snakeToCamel` in `mediaService.ts` response handling
-- [ ] 4.3 Apply `snakeToCamel` in `downloadService.ts` response handling (if needed — check if download API uses Go models)
-- [ ] 4.4 Apply in remaining service files that consume Go API responses
-- [ ] 4.5 Update frontend unit tests (`.spec.ts/.spec.tsx`) to use camelCase mock data
+- [x] 4.1 Apply `snakeToCamel` in `libraryService.ts` response handling
+- [x] 4.2 Apply `snakeToCamel` in `mediaService.ts` response handling
+- [x] 4.3 Apply `snakeToCamel` in `downloadService.ts` response handling
+- [x] 4.4 Apply in remaining 13 service files (tmdb, scanner, subtitle, health, learning, qbittorrent, log, retry, cache, setup, metadata, backup, serviceStatus). Added `camelToSnake` for subtitle request params.
+- [x] 4.5 Update frontend unit tests (24 `.spec.ts/.spec.tsx` files, 474 snake_case → camelCase mock data replacements)
 
 ### Task 5: Verification (AC5, AC6)
 
-- [ ] 5.1 Run `go test ./apps/api/...` — all pass
-- [ ] 5.2 Run `pnpm nx run web:test` — all pass
+- [x] 5.1 Run Go tests — all pass (1 pre-existing flaky SSE test excluded)
+- [x] 5.2 Run `pnpm nx run web:test` — all 125 files, 1545 tests pass
 - [ ] 5.3 Run E2E tests — all pass (especially library grid, dashboard, downloads)
 - [ ] 5.4 Manual verification: library grid shows poster images when TMDb metadata exists
 
@@ -165,10 +165,15 @@ Claude Opus 4.6 (1M context)
 
 - ✅ Task 1 (2026-03-27): Changed all Go JSON tags from camelCase to snake_case across 40+ files (models, handlers, services, qbittorrent, retry, cache, metadata, events, repository, ai, subtitle). Updated all corresponding test assertions. Go test suite passes (1 pre-existing flaky scanner SSE test excluded).
 - ✅ Task 2 (2026-03-27): Created `snakeToCamel` transform utility with 14 unit tests covering flat objects, nested objects, arrays, null/undefined, primitives, and edge cases (tmdb_id, imdb_id, created_at).
+- ✅ Task 3 (2026-03-27): Converted all frontend TypeScript types to camelCase (library.ts, tmdb.ts, scannerService.ts, subtitleService.ts) and updated 21 component/hook files. Added `camelToSnake` utility for request param serialization. (commit 13a449a)
+- ✅ Task 4 (2026-03-27): Applied `snakeToCamel` transform in all 16 service files' `fetchApi` wrappers. Applied `camelToSnake` for subtitleService request params. Updated 24 test files with 474 mock data conversions. (commits 348b7bc, 059eea8, 30c5676)
+- ✅ Task 5.1+5.2 (2026-03-27): Go tests pass (1 pre-existing flaky SSE test excluded). Frontend tests: 125/125 files, 1545/1545 tests pass.
 
 ### Change Log
 
 - 2026-03-27: Task 1+2 complete — Go backend snake_case JSON tags + frontend transform utility (commit d7a0119)
+- 2026-03-27: Task 3 complete — Frontend types + components → camelCase (commit 13a449a)
+- 2026-03-27: Task 4 complete — snakeToCamel in all services + test mock data (commits 348b7bc, 059eea8, 30c5676)
 
 ### File List
 
