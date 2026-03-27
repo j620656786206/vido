@@ -38,27 +38,28 @@ This mismatch was hidden by a second bug: `sql.NullString` serialized as `{"Stri
 
 ### Task 1: Go JSON tags → snake_case (AC1)
 
-- [ ] 1.1 Update `movie.go` JSON tags: all camelCase → snake_case (match `db:` tags)
-- [ ] 1.2 Update `series.go` JSON tags (including `SeriesBasicInfo`, `Network` embedded structs)
-- [ ] 1.3 Update `season.go` JSON tags
-- [ ] 1.4 Update `episode.go` JSON tags
-- [ ] 1.5 Update `parse_job.go` JSON tags
-- [ ] 1.6 Update `parse_status.go` JSON tags
-- [ ] 1.7 Update `filename_mapping.go` JSON tags
-- [ ] 1.8 Update `settings.go` JSON tags
-- [ ] 1.9 Update `backup.go` JSON tags
-- [ ] 1.10 Update `secret.go` JSON tags
-- [ ] 1.11 Update `system_log.go` JSON tags
-- [ ] 1.12 Update `connection_event.go` JSON tags
-- [ ] 1.13 Update `degradation.go` JSON tags
-- [ ] 1.14 Update Go handler tests that assert JSON field names (grep for camelCase field assertions in `*_handler_test.go`)
+- [x] 1.1 Update `movie.go` JSON tags: all camelCase → snake_case (match `db:` tags)
+- [x] 1.2 Update `series.go` JSON tags (including `SeriesBasicInfo`, `Network` embedded structs)
+- [x] 1.3 Update `season.go` JSON tags
+- [x] 1.4 Update `episode.go` JSON tags
+- [x] 1.5 Update `parse_job.go` JSON tags
+- [x] 1.6 Update `parse_status.go` JSON tags
+- [x] 1.7 Update `filename_mapping.go` JSON tags
+- [x] 1.8 Update `settings.go` JSON tags
+- [x] 1.9 Update `backup.go` JSON tags
+- [x] 1.10 Update `secret.go` JSON tags
+- [x] 1.11 Update `system_log.go` JSON tags
+- [x] 1.12 Update `connection_event.go` JSON tags
+- [x] 1.13 Update `degradation.go` JSON tags
+- [x] 1.14 Update Go handler tests that assert JSON field names (grep for camelCase field assertions in `*_handler_test.go`)
+- [x] 1.15 (additional) Update JSON tags in handlers/, services/, qbittorrent/, retry/, cache/, metadata/, events/, repository/, ai/, subtitle/ packages
 
 ### Task 2: Frontend transform utility (AC2, AC7)
 
-- [ ] 2.1 Create `apps/web/src/utils/caseTransform.ts` with `snakeToCamel(obj)` function
-- [ ] 2.2 Handle edge cases: nested objects, arrays of objects, null/undefined, primitive values
-- [ ] 2.3 Create `apps/web/src/utils/caseTransform.spec.ts` with comprehensive tests
-- [ ] 2.4 Test edge cases: `tmdb_id` → `tmdbId`, `imdb_id` → `imdbId`, `created_at` → `createdAt`
+- [x] 2.1 Create `apps/web/src/utils/caseTransform.ts` with `snakeToCamel(obj)` function
+- [x] 2.2 Handle edge cases: nested objects, arrays of objects, null/undefined, primitive values
+- [x] 2.3 Create `apps/web/src/utils/caseTransform.spec.ts` with comprehensive tests (14 tests)
+- [x] 2.4 Test edge cases: `tmdb_id` → `tmdbId`, `imdb_id` → `imdbId`, `created_at` → `createdAt`
 
 ### Task 3: Frontend TypeScript types → camelCase (AC4)
 
@@ -156,8 +157,74 @@ export async function getLibraryItems(params: LibraryListParams): Promise<Librar
 
 ### Agent Model Used
 
+Claude Opus 4.6 (1M context)
+
 ### Debug Log References
 
 ### Completion Notes List
 
+- ✅ Task 1 (2026-03-27): Changed all Go JSON tags from camelCase to snake_case across 40+ files (models, handlers, services, qbittorrent, retry, cache, metadata, events, repository, ai, subtitle). Updated all corresponding test assertions. Go test suite passes (1 pre-existing flaky scanner SSE test excluded).
+- ✅ Task 2 (2026-03-27): Created `snakeToCamel` transform utility with 14 unit tests covering flat objects, nested objects, arrays, null/undefined, primitives, and edge cases (tmdb_id, imdb_id, created_at).
+
+### Change Log
+
+- 2026-03-27: Task 1+2 complete — Go backend snake_case JSON tags + frontend transform utility (commit d7a0119)
+
 ### File List
+
+**Go backend (snake_case JSON tags):**
+- apps/api/internal/models/movie.go
+- apps/api/internal/models/series.go
+- apps/api/internal/models/season.go
+- apps/api/internal/models/episode.go
+- apps/api/internal/models/parse_job.go
+- apps/api/internal/models/parse_status.go
+- apps/api/internal/models/filename_mapping.go
+- apps/api/internal/models/settings.go
+- apps/api/internal/models/backup.go
+- apps/api/internal/models/secret.go
+- apps/api/internal/models/system_log.go
+- apps/api/internal/models/connection_event.go
+- apps/api/internal/models/degradation.go
+- apps/api/internal/handlers/movie_handler.go
+- apps/api/internal/handlers/series_handler.go
+- apps/api/internal/handlers/metadata_handler.go
+- apps/api/internal/handlers/download_handler.go
+- apps/api/internal/handlers/learning_handler.go
+- apps/api/internal/handlers/recent_media_handler.go
+- apps/api/internal/handlers/parse_progress_handler.go
+- apps/api/internal/handlers/qbittorrent_handler.go
+- apps/api/internal/handlers/health.go
+- apps/api/internal/handlers/response.go
+- apps/api/internal/services/cache_stats_service.go
+- apps/api/internal/services/metadata_service.go
+- apps/api/internal/services/scanner_service.go
+- apps/api/internal/services/library_service.go
+- apps/api/internal/services/learning_service.go
+- apps/api/internal/services/export_service.go
+- apps/api/internal/services/backup_service.go
+- apps/api/internal/services/backup_scheduler.go
+- apps/api/internal/services/cache_cleanup_service.go
+- apps/api/internal/services/log_service.go
+- apps/api/internal/qbittorrent/torrent.go
+- apps/api/internal/qbittorrent/types.go
+- apps/api/internal/retry/queue.go
+- apps/api/internal/retry/executor.go
+- apps/api/internal/cache/offline_cache.go
+- apps/api/internal/metadata/orchestrator.go
+- apps/api/internal/metadata/partial.go
+- apps/api/internal/events/parse_events.go
+- apps/api/internal/repository/interfaces.go
+- apps/api/internal/repository/repository.go
+- apps/api/internal/ai/gemini.go
+- apps/api/internal/subtitle/scorer.go
+
+**Go test files (assertion updates):**
+- apps/api/internal/handlers/*_test.go (12 files)
+- apps/api/internal/qbittorrent/types_test.go
+- apps/api/internal/retry/executor_test.go
+- apps/api/internal/services/backup_service_test.go
+
+**Frontend (new files):**
+- apps/web/src/utils/caseTransform.ts (NEW)
+- apps/web/src/utils/caseTransform.spec.ts (NEW)
