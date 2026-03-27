@@ -144,21 +144,27 @@ test.describe('Multi-Platform Build @ci @validation', () => {
 // =============================================================================
 test.describe('GHCR Authentication @ci @validation', () => {
   test('[P1] uses GITHUB_TOKEN for GHCR login (no PAT required)', () => {
-    // GIVEN: The docker job login step
+    // GIVEN: The docker job GHCR login step (may have multiple login steps)
     const dockerJob = dockerWorkflow.jobs.docker;
-    const loginStep = findStepByAction(dockerJob.steps, 'docker/login-action');
+    const ghcrLoginStep = dockerJob.steps.find(
+      (s: WorkflowStep) =>
+        s.uses?.startsWith('docker/login-action') && s.with?.registry === 'ghcr.io'
+    );
     // WHEN: Checking login credentials
     // THEN: Should use GITHUB_TOKEN, not a PAT
-    expect(loginStep?.with?.registry).toBe('ghcr.io');
-    expect(loginStep?.with?.password).toContain('GITHUB_TOKEN');
+    expect(ghcrLoginStep).toBeDefined();
+    expect(ghcrLoginStep?.with?.password).toContain('GITHUB_TOKEN');
   });
 
   test('[P1] login is skipped for pull requests', () => {
-    // GIVEN: The docker job login step
+    // GIVEN: The docker job GHCR login step
     const dockerJob = dockerWorkflow.jobs.docker;
-    const loginStep = findStepByAction(dockerJob.steps, 'docker/login-action');
+    const ghcrLoginStep = dockerJob.steps.find(
+      (s: WorkflowStep) =>
+        s.uses?.startsWith('docker/login-action') && s.with?.registry === 'ghcr.io'
+    );
     // THEN: Login should be conditional (skip on PR)
-    expect(loginStep?.if).toContain('pull_request');
+    expect(ghcrLoginStep?.if).toContain('pull_request');
   });
 });
 
