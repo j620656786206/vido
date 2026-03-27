@@ -8,20 +8,20 @@ import (
 // SeasonSummary represents a season summary for series
 type SeasonSummary struct {
 	ID           int    `json:"id"`
-	SeasonNumber int    `json:"seasonNumber"`
+	SeasonNumber int    `json:"season_number"`
 	Name         string `json:"name,omitempty"`
 	Overview     string `json:"overview,omitempty"`
-	PosterPath   string `json:"posterPath,omitempty"`
-	AirDate      string `json:"airDate,omitempty"`
-	EpisodeCount int    `json:"episodeCount,omitempty"`
+	PosterPath   string `json:"poster_path,omitempty"`
+	AirDate      string `json:"air_date,omitempty"`
+	EpisodeCount int    `json:"episode_count,omitempty"`
 }
 
 // Network represents a TV network
 type Network struct {
 	ID            int    `json:"id"`
 	Name          string `json:"name"`
-	LogoPath      string `json:"logoPath,omitempty"`
-	OriginCountry string `json:"originCountry,omitempty"`
+	LogoPath      string `json:"logo_path,omitempty"`
+	OriginCountry string `json:"origin_country,omitempty"`
 }
 
 // Series represents a TV series entity in the database
@@ -29,32 +29,32 @@ type Series struct {
 	// Core fields
 	ID            string         `db:"id" json:"id"`
 	Title         string         `db:"title" json:"title"`
-	OriginalTitle NullString `db:"original_title" json:"originalTitle,omitempty"`
-	FirstAirDate  string         `db:"first_air_date" json:"firstAirDate"`
-	LastAirDate   NullString `db:"last_air_date" json:"lastAirDate,omitempty"`
+	OriginalTitle NullString `db:"original_title" json:"original_title,omitempty"`
+	FirstAirDate  string         `db:"first_air_date" json:"first_air_date"`
+	LastAirDate   NullString `db:"last_air_date" json:"last_air_date,omitempty"`
 	Genres        []string       `db:"genres" json:"genres"`
 
 	// Rating fields (kept for backward compatibility)
 	Rating NullFloat64 `db:"rating" json:"rating,omitempty"`
 
 	// TMDb-specific rating fields
-	VoteAverage NullFloat64 `db:"vote_average" json:"voteAverage,omitempty"`
-	VoteCount   NullInt64   `db:"vote_count" json:"voteCount,omitempty"`
+	VoteAverage NullFloat64 `db:"vote_average" json:"vote_average,omitempty"`
+	VoteCount   NullInt64   `db:"vote_count" json:"vote_count,omitempty"`
 	Popularity  NullFloat64 `db:"popularity" json:"popularity,omitempty"`
 
 	// Content fields
 	Overview         NullString `db:"overview" json:"overview,omitempty"`
-	PosterPath       NullString `db:"poster_path" json:"posterPath,omitempty"`
-	BackdropPath     NullString `db:"backdrop_path" json:"backdropPath,omitempty"`
-	NumberOfSeasons  NullInt64  `db:"number_of_seasons" json:"numberOfSeasons,omitempty"`
-	NumberOfEpisodes NullInt64  `db:"number_of_episodes" json:"numberOfEpisodes,omitempty"`
+	PosterPath       NullString `db:"poster_path" json:"poster_path,omitempty"`
+	BackdropPath     NullString `db:"backdrop_path" json:"backdrop_path,omitempty"`
+	NumberOfSeasons  NullInt64  `db:"number_of_seasons" json:"number_of_seasons,omitempty"`
+	NumberOfEpisodes NullInt64  `db:"number_of_episodes" json:"number_of_episodes,omitempty"`
 
 	// Metadata fields
 	Status           NullString `db:"status" json:"status,omitempty"`
-	OriginalLanguage NullString `db:"original_language" json:"originalLanguage,omitempty"`
-	IMDbID           NullString `db:"imdb_id" json:"imdbId,omitempty"`
-	TMDbID           NullInt64  `db:"tmdb_id" json:"tmdbId,omitempty"`
-	InProduction     NullBool   `db:"in_production" json:"inProduction,omitempty"`
+	OriginalLanguage NullString `db:"original_language" json:"original_language,omitempty"`
+	IMDbID           NullString `db:"imdb_id" json:"imdb_id,omitempty"`
+	TMDbID           NullInt64  `db:"tmdb_id" json:"tmdb_id,omitempty"`
+	InProduction     NullBool   `db:"in_production" json:"in_production,omitempty"`
 
 	// New fields for enhanced TMDb data (Story 2-6)
 	CreditsJSON  NullString `db:"credits" json:"-"`  // JSON stored in DB
@@ -62,25 +62,25 @@ type Series struct {
 	NetworksJSON NullString `db:"networks" json:"-"` // JSON stored in DB
 
 	// File tracking fields
-	FilePath NullString `db:"file_path" json:"filePath,omitempty"`
+	FilePath NullString `db:"file_path" json:"file_path,omitempty"`
 
 	// Parse tracking fields
-	ParseStatus    ParseStatus    `db:"parse_status" json:"parseStatus"`
-	MetadataSource NullString `db:"metadata_source" json:"metadataSource,omitempty"`
+	ParseStatus    ParseStatus    `db:"parse_status" json:"parse_status"`
+	MetadataSource NullString `db:"metadata_source" json:"metadata_source,omitempty"`
 
 	// Subtitle tracking fields
-	SubtitleStatus       SubtitleStatus  `db:"subtitle_status" json:"subtitleStatus"`
-	SubtitlePath         NullString  `db:"subtitle_path" json:"subtitlePath,omitempty"`
-	SubtitleLanguage     NullString  `db:"subtitle_language" json:"subtitleLanguage,omitempty"`
-	SubtitleLastSearched NullTime    `db:"subtitle_last_searched" json:"subtitleLastSearched,omitempty"`
-	SubtitleSearchScore  NullFloat64 `db:"subtitle_search_score" json:"subtitleSearchScore,omitempty"`
+	SubtitleStatus       SubtitleStatus  `db:"subtitle_status" json:"subtitle_status"`
+	SubtitlePath         NullString  `db:"subtitle_path" json:"subtitle_path,omitempty"`
+	SubtitleLanguage     NullString  `db:"subtitle_language" json:"subtitle_language,omitempty"`
+	SubtitleLastSearched NullTime    `db:"subtitle_last_searched" json:"subtitle_last_searched,omitempty"`
+	SubtitleSearchScore  NullFloat64 `db:"subtitle_search_score" json:"subtitle_search_score,omitempty"`
 
 	// Soft-delete flag for removed files (Story 7-2)
-	IsRemoved bool `db:"is_removed" json:"isRemoved"`
+	IsRemoved bool `db:"is_removed" json:"is_removed"`
 
 	// Timestamps
-	CreatedAt time.Time `db:"created_at" json:"createdAt"`
-	UpdatedAt time.Time `db:"updated_at" json:"updatedAt"`
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 }
 
 // ScanGenres handles scanning genres from database (stored as JSON text)

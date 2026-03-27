@@ -39,23 +39,23 @@ func NewMovieHandler(service MovieServiceInterface) *MovieHandler {
 // CreateMovieRequest represents the request body for creating a movie
 type CreateMovieRequest struct {
 	Title         string   `json:"title" binding:"required"`
-	OriginalTitle string   `json:"originalTitle,omitempty"`
-	ReleaseDate   string   `json:"releaseDate" binding:"required"`
+	OriginalTitle string   `json:"original_title,omitempty"`
+	ReleaseDate   string   `json:"release_date" binding:"required"`
 	Genres        []string `json:"genres,omitempty"`
 	Overview      string   `json:"overview,omitempty"`
-	PosterPath    string   `json:"posterPath,omitempty"`
-	TMDbID        int64    `json:"tmdbId,omitempty"`
-	IMDbID        string   `json:"imdbId,omitempty"`
+	PosterPath    string   `json:"poster_path,omitempty"`
+	TMDbID        int64    `json:"tmdb_id,omitempty"`
+	IMDbID        string   `json:"imdb_id,omitempty"`
 }
 
 // UpdateMovieRequest represents the request body for updating a movie
 type UpdateMovieRequest struct {
 	Title         string   `json:"title,omitempty"`
-	OriginalTitle string   `json:"originalTitle,omitempty"`
-	ReleaseDate   string   `json:"releaseDate,omitempty"`
+	OriginalTitle string   `json:"original_title,omitempty"`
+	ReleaseDate   string   `json:"release_date,omitempty"`
 	Genres        []string `json:"genres,omitempty"`
 	Overview      string   `json:"overview,omitempty"`
-	PosterPath    string   `json:"posterPath,omitempty"`
+	PosterPath    string   `json:"poster_path,omitempty"`
 	Rating        float64  `json:"rating,omitempty"`
 	Runtime       int64    `json:"runtime,omitempty"`
 	Status        string   `json:"status,omitempty"`

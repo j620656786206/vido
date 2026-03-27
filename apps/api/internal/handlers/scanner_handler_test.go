@@ -133,7 +133,7 @@ func TestScannerHandler_GetStatus_NoScan(t *testing.T) {
 
 	dataMap, ok := body.Data.(map[string]interface{})
 	require.True(t, ok)
-	assert.Equal(t, false, dataMap["isActive"])
+	assert.Equal(t, false, dataMap["is_active"])
 }
 
 func TestScannerHandler_GetStatus_ActiveScan(t *testing.T) {
@@ -158,10 +158,10 @@ func TestScannerHandler_GetStatus_ActiveScan(t *testing.T) {
 
 	dataMap, ok := body.Data.(map[string]interface{})
 	require.True(t, ok)
-	assert.Equal(t, true, dataMap["isActive"])
-	assert.Equal(t, float64(42), dataMap["filesFound"])
-	assert.Equal(t, "/media/movies/test.mkv", dataMap["currentFile"])
-	assert.Equal(t, float64(50), dataMap["percentDone"])
+	assert.Equal(t, true, dataMap["is_active"])
+	assert.Equal(t, float64(42), dataMap["files_found"])
+	assert.Equal(t, "/media/movies/test.mkv", dataMap["current_file"])
+	assert.Equal(t, float64(50), dataMap["percent_done"])
 }
 
 func TestScannerHandler_CancelScan_Success(t *testing.T) {

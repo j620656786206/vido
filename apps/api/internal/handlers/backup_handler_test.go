@@ -220,9 +220,9 @@ func TestBackupHandler_RestoreBackup_ResponseFields(t *testing.T) {
 		var body struct {
 			Success bool `json:"success"`
 			Data    struct {
-				RestoreID  string `json:"restoreId"`
+				RestoreID  string `json:"restore_id"`
 				Status     string `json:"status"`
-				SnapshotID string `json:"snapshotId"`
+				SnapshotID string `json:"snapshot_id"`
 				Message    string `json:"message"`
 			} `json:"data"`
 		}

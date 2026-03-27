@@ -22,10 +22,10 @@ type RecentMediaItem struct {
 	ID        string    `json:"id"`
 	Title     string    `json:"title"`
 	Year      int       `json:"year,omitempty"`
-	PosterURL string    `json:"posterUrl,omitempty"`
-	MediaType string    `json:"mediaType"` // "movie" or "tv"
-	JustAdded bool      `json:"justAdded"`
-	AddedAt   time.Time `json:"addedAt"`
+	PosterURL string    `json:"poster_url,omitempty"`
+	MediaType string    `json:"media_type"` // "movie" or "tv"
+	JustAdded bool      `json:"just_added"`
+	AddedAt   time.Time `json:"added_at"`
 }
 
 // RecentMediaHandler handles HTTP requests for the dashboard recent media endpoint.

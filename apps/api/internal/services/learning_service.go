@@ -23,17 +23,17 @@ type LearningServiceInterface interface {
 // LearnFromCorrectionRequest represents the request to learn from a user correction
 type LearnFromCorrectionRequest struct {
 	Filename     string `json:"filename"`
-	MetadataID   string `json:"metadataId"`
-	MetadataType string `json:"metadataType"` // "movie" or "series"
-	TmdbID       int    `json:"tmdbId,omitempty"`
+	MetadataID   string `json:"metadata_id"`
+	MetadataType string `json:"metadata_type"` // "movie" or "series"
+	TmdbID       int    `json:"tmdb_id,omitempty"`
 }
 
 // PatternStats contains statistics about learned patterns
 type PatternStats struct {
-	TotalPatterns    int    `json:"totalPatterns"`
-	TotalApplied     int    `json:"totalApplied"`
-	MostUsedPattern  string `json:"mostUsedPattern,omitempty"`
-	MostUsedCount    int    `json:"mostUsedCount,omitempty"`
+	TotalPatterns    int    `json:"total_patterns"`
+	TotalApplied     int    `json:"total_applied"`
+	MostUsedPattern  string `json:"most_used_pattern,omitempty"`
+	MostUsedCount    int    `json:"most_used_count,omitempty"`
 }
 
 // LearningService provides business logic for filename pattern learning

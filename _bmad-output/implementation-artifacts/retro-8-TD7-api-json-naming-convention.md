@@ -1,6 +1,6 @@
 # Story retro-8-TD7: Fix API JSON Naming Convention (Rule 6 Compliance)
 
-Status: ready-for-dev
+Status: in-progress
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 

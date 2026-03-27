@@ -200,10 +200,10 @@ func (c *OfflineCache) Refresh(ctx context.Context, key, value string, ttl time.
 
 // Stats returns cache statistics.
 type CacheStats struct {
-	TotalEntries  int64 `json:"totalEntries"`
-	StaleEntries  int64 `json:"staleEntries"`
-	ExpiredCount  int64 `json:"expiredCount"`
-	TotalSizeKB   int64 `json:"totalSizeKb"`
+	TotalEntries  int64 `json:"total_entries"`
+	StaleEntries  int64 `json:"stale_entries"`
+	ExpiredCount  int64 `json:"expired_count"`
+	TotalSizeKB   int64 `json:"total_size_kb"`
 }
 
 // GetStats returns cache statistics.

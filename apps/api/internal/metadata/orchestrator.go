@@ -30,7 +30,7 @@ type SourceAttempt struct {
 	// Skipped indicates if the provider was skipped
 	Skipped bool `json:"skipped,omitempty"`
 	// SkipReason is the reason for skipping
-	SkipReason string `json:"skipReason,omitempty"`
+	SkipReason string `json:"skip_reason,omitempty"`
 	// Error is the error if the attempt failed
 	Error error `json:"-"`
 	// Duration is how long the attempt took
@@ -50,13 +50,13 @@ type FallbackStatus struct {
 	// Attempts contains all provider attempts in order
 	Attempts []SourceAttempt `json:"attempts"`
 	// TotalDuration is the total time spent in the fallback chain
-	TotalDuration time.Duration `json:"totalDuration"`
+	TotalDuration time.Duration `json:"total_duration"`
 	// Cancelled indicates if the search was cancelled
 	Cancelled bool `json:"cancelled,omitempty"`
 	// KeywordAttempts contains the AI-generated keyword retry attempts (Story 3.6)
-	KeywordAttempts []KeywordAttempt `json:"keywordAttempts,omitempty"`
+	KeywordAttempts []KeywordAttempt `json:"keyword_attempts,omitempty"`
 	// SuccessfulKeyword is the keyword that succeeded (if any)
-	SuccessfulKeyword string `json:"successfulKeyword,omitempty"`
+	SuccessfulKeyword string `json:"successful_keyword,omitempty"`
 	// KeywordError captures keyword-related errors (Story 3.6)
 	KeywordError error `json:"-"`
 }

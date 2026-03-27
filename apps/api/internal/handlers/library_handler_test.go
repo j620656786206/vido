@@ -410,7 +410,7 @@ func TestLibraryHandler_GetRecentlyAdded(t *testing.T) {
 		dataMap, ok := resp.Data.(map[string]interface{})
 		require.True(t, ok, "Response data should be a paginated object")
 		assert.Contains(t, dataMap, "items")
-		assert.Contains(t, dataMap, "totalItems")
+		assert.Contains(t, dataMap, "total_items")
 	})
 
 	t.Run("success - custom limit", func(t *testing.T) {
@@ -505,7 +505,7 @@ func TestLibraryHandler_SearchLibrary(t *testing.T) {
 		dataMap, ok := resp.Data.(map[string]interface{})
 		require.True(t, ok)
 		assert.Contains(t, dataMap, "results")
-		assert.Contains(t, dataMap, "totalCount")
+		assert.Contains(t, dataMap, "total_count")
 	})
 
 	t.Run("missing query returns 400", func(t *testing.T) {
@@ -629,7 +629,7 @@ func TestLibraryHandler_SearchLibrary(t *testing.T) {
 		dataMap, ok := resp.Data.(map[string]interface{})
 		require.True(t, ok)
 
-		totalCount, ok := dataMap["totalCount"].(float64)
+		totalCount, ok := dataMap["total_count"].(float64)
 		require.True(t, ok)
 		assert.Equal(t, float64(0), totalCount)
 	})
@@ -829,11 +829,11 @@ func TestLibraryHandler_GetStats(t *testing.T) {
 
 		dataMap, ok := resp.Data.(map[string]interface{})
 		require.True(t, ok)
-		assert.Equal(t, float64(1999), dataMap["yearMin"])
-		assert.Equal(t, float64(2024), dataMap["yearMax"])
-		assert.Equal(t, float64(50), dataMap["movieCount"])
-		assert.Equal(t, float64(30), dataMap["tvCount"])
-		assert.Equal(t, float64(80), dataMap["totalCount"])
+		assert.Equal(t, float64(1999), dataMap["year_min"])
+		assert.Equal(t, float64(2024), dataMap["year_max"])
+		assert.Equal(t, float64(50), dataMap["movie_count"])
+		assert.Equal(t, float64(30), dataMap["tv_count"])
+		assert.Equal(t, float64(80), dataMap["total_count"])
 	})
 
 	t.Run("service error returns 500", func(t *testing.T) {

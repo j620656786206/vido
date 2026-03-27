@@ -6,15 +6,15 @@ import "time"
 type FilenameMapping struct {
 	ID           string     `json:"id"`
 	Pattern      string     `json:"pattern"`
-	PatternType  string     `json:"patternType"` // "exact", "regex", "fuzzy", "fansub", "standard"
-	PatternRegex string     `json:"patternRegex,omitempty"`
-	FansubGroup  string     `json:"fansubGroup,omitempty"`
-	TitlePattern string     `json:"titlePattern,omitempty"`
-	MetadataType string     `json:"metadataType"` // "movie" or "series"
-	MetadataID   string     `json:"metadataId"`
-	TmdbID       int        `json:"tmdbId,omitempty"`
+	PatternType  string     `json:"pattern_type"` // "exact", "regex", "fuzzy", "fansub", "standard"
+	PatternRegex string     `json:"pattern_regex,omitempty"`
+	FansubGroup  string     `json:"fansub_group,omitempty"`
+	TitlePattern string     `json:"title_pattern,omitempty"`
+	MetadataType string     `json:"metadata_type"` // "movie" or "series"
+	MetadataID   string     `json:"metadata_id"`
+	TmdbID       int        `json:"tmdb_id,omitempty"`
 	Confidence   float64    `json:"confidence"`
-	UseCount     int        `json:"useCount"`
-	CreatedAt    time.Time  `json:"createdAt"`
-	LastUsedAt   *time.Time `json:"lastUsedAt,omitempty"`
+	UseCount     int        `json:"use_count"`
+	CreatedAt    time.Time  `json:"created_at"`
+	LastUsedAt   *time.Time `json:"last_used_at,omitempty"`
 }

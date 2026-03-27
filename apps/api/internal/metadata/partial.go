@@ -24,10 +24,10 @@ type MergedMetadata struct {
 	Title       string   `json:"title"`
 	Year        int      `json:"year,omitempty"`
 	Overview    string   `json:"overview,omitempty"`
-	PosterURL   string   `json:"posterUrl,omitempty"`
+	PosterURL   string   `json:"poster_url,omitempty"`
 	Genres      []string `json:"genres,omitempty"`
 	Cast        []string `json:"cast,omitempty"`
-	PlaceholderFields []string `json:"placeholderFields,omitempty"`
+	PlaceholderFields []string `json:"placeholder_fields,omitempty"`
 }
 
 // PartialResultHandler merges and fills incomplete metadata.

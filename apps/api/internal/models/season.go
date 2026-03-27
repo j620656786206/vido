@@ -8,21 +8,21 @@ import (
 type Season struct {
 	// Core fields
 	ID           string        `db:"id" json:"id"`
-	SeriesID     string        `db:"series_id" json:"seriesId"`
-	TMDbID       NullInt64 `db:"tmdb_id" json:"tmdbId,omitempty"`
-	SeasonNumber int           `db:"season_number" json:"seasonNumber"`
+	SeriesID     string        `db:"series_id" json:"series_id"`
+	TMDbID       NullInt64 `db:"tmdb_id" json:"tmdb_id,omitempty"`
+	SeasonNumber int           `db:"season_number" json:"season_number"`
 
 	// Content fields
 	Name         NullString  `db:"name" json:"name,omitempty"`
 	Overview     NullString  `db:"overview" json:"overview,omitempty"`
-	PosterPath   NullString  `db:"poster_path" json:"posterPath,omitempty"`
-	AirDate      NullString  `db:"air_date" json:"airDate,omitempty"`
-	EpisodeCount NullInt64   `db:"episode_count" json:"episodeCount,omitempty"`
-	VoteAverage  NullFloat64 `db:"vote_average" json:"voteAverage,omitempty"`
+	PosterPath   NullString  `db:"poster_path" json:"poster_path,omitempty"`
+	AirDate      NullString  `db:"air_date" json:"air_date,omitempty"`
+	EpisodeCount NullInt64   `db:"episode_count" json:"episode_count,omitempty"`
+	VoteAverage  NullFloat64 `db:"vote_average" json:"vote_average,omitempty"`
 
 	// Timestamps
-	CreatedAt time.Time `db:"created_at" json:"createdAt"`
-	UpdatedAt time.Time `db:"updated_at" json:"updatedAt"`
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 }
 
 // Validate validates the season fields

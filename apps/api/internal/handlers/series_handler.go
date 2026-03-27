@@ -38,31 +38,31 @@ func NewSeriesHandler(service SeriesServiceInterface) *SeriesHandler {
 // CreateSeriesRequest represents the request body for creating a series
 type CreateSeriesRequest struct {
 	Title            string   `json:"title" binding:"required"`
-	OriginalTitle    string   `json:"originalTitle,omitempty"`
-	FirstAirDate     string   `json:"firstAirDate" binding:"required"`
+	OriginalTitle    string   `json:"original_title,omitempty"`
+	FirstAirDate     string   `json:"first_air_date" binding:"required"`
 	Genres           []string `json:"genres,omitempty"`
 	Overview         string   `json:"overview,omitempty"`
-	PosterPath       string   `json:"posterPath,omitempty"`
-	NumberOfSeasons  int64    `json:"numberOfSeasons,omitempty"`
-	NumberOfEpisodes int64    `json:"numberOfEpisodes,omitempty"`
-	TMDbID           int64    `json:"tmdbId,omitempty"`
-	IMDbID           string   `json:"imdbId,omitempty"`
+	PosterPath       string   `json:"poster_path,omitempty"`
+	NumberOfSeasons  int64    `json:"number_of_seasons,omitempty"`
+	NumberOfEpisodes int64    `json:"number_of_episodes,omitempty"`
+	TMDbID           int64    `json:"tmdb_id,omitempty"`
+	IMDbID           string   `json:"imdb_id,omitempty"`
 }
 
 // UpdateSeriesRequest represents the request body for updating a series
 type UpdateSeriesRequest struct {
 	Title            string   `json:"title,omitempty"`
-	OriginalTitle    string   `json:"originalTitle,omitempty"`
-	FirstAirDate     string   `json:"firstAirDate,omitempty"`
-	LastAirDate      string   `json:"lastAirDate,omitempty"`
+	OriginalTitle    string   `json:"original_title,omitempty"`
+	FirstAirDate     string   `json:"first_air_date,omitempty"`
+	LastAirDate      string   `json:"last_air_date,omitempty"`
 	Genres           []string `json:"genres,omitempty"`
 	Overview         string   `json:"overview,omitempty"`
-	PosterPath       string   `json:"posterPath,omitempty"`
+	PosterPath       string   `json:"poster_path,omitempty"`
 	Rating           float64  `json:"rating,omitempty"`
-	NumberOfSeasons  int64    `json:"numberOfSeasons,omitempty"`
-	NumberOfEpisodes int64    `json:"numberOfEpisodes,omitempty"`
+	NumberOfSeasons  int64    `json:"number_of_seasons,omitempty"`
+	NumberOfEpisodes int64    `json:"number_of_episodes,omitempty"`
 	Status           string   `json:"status,omitempty"`
-	InProduction     *bool    `json:"inProduction,omitempty"`
+	InProduction     *bool    `json:"in_production,omitempty"`
 }
 
 // List handles GET /api/v1/series

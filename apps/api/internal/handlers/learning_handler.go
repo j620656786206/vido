@@ -26,15 +26,15 @@ func NewLearningHandler(service services.LearningServiceInterface) *LearningHand
 // CreatePatternRequest represents the request body for learning a new pattern
 type CreatePatternRequest struct {
 	Filename     string `json:"filename" binding:"required"`
-	MetadataID   string `json:"metadataId" binding:"required"`
-	MetadataType string `json:"metadataType" binding:"required,oneof=movie series"`
-	TmdbID       int    `json:"tmdbId,omitempty"`
+	MetadataID   string `json:"metadata_id" binding:"required"`
+	MetadataType string `json:"metadata_type" binding:"required,oneof=movie series"`
+	TmdbID       int    `json:"tmdb_id,omitempty"`
 }
 
 // PatternListResponse represents the response for listing patterns
 type PatternListResponse struct {
 	Patterns   []*models.FilenameMapping `json:"patterns"`
-	TotalCount int                         `json:"totalCount"`
+	TotalCount int                         `json:"total_count"`
 	Stats      *services.PatternStats      `json:"stats,omitempty"`
 }
 

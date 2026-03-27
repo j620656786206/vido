@@ -42,7 +42,7 @@ type ProviderInfo struct {
 // SearchMetadataRequest represents a request to search for metadata
 type SearchMetadataRequest struct {
 	Query     string `json:"query"`
-	MediaType string `json:"mediaType"` // "movie" or "tv"
+	MediaType string `json:"media_type"` // "movie" or "tv"
 	Year      int    `json:"year,omitempty"`
 	Page      int    `json:"page,omitempty"`
 	Language  string `json:"language,omitempty"`
@@ -75,7 +75,7 @@ func (r *SearchMetadataRequest) Validate() error {
 // ManualSearchRequest represents a request for manual metadata search (Story 3.7)
 type ManualSearchRequest struct {
 	Query     string `json:"query"`
-	MediaType string `json:"mediaType"` // "movie" or "tv"
+	MediaType string `json:"media_type"` // "movie" or "tv"
 	Year      int    `json:"year,omitempty"`
 	Source    string `json:"source"` // "tmdb", "douban", "wikipedia", or "all"
 }
@@ -106,11 +106,11 @@ type ManualSearchResultItem struct {
 	ID         string               `json:"id"`
 	Source     models.MetadataSource `json:"source"`
 	Title      string               `json:"title"`
-	TitleZhTW  string               `json:"titleZhTW,omitempty"`
+	TitleZhTW  string               `json:"title_zh_tw,omitempty"`
 	Year       int                  `json:"year,omitempty"`
-	MediaType  string               `json:"mediaType"`
+	MediaType  string               `json:"media_type"`
 	Overview   string               `json:"overview,omitempty"`
-	PosterURL  string               `json:"posterUrl,omitempty"`
+	PosterURL  string               `json:"poster_url,omitempty"`
 	Rating     float64              `json:"rating,omitempty"`
 	Confidence float64              `json:"confidence,omitempty"`
 }
@@ -118,8 +118,8 @@ type ManualSearchResultItem struct {
 // ManualSearchResponse represents the response from manual search (Story 3.7)
 type ManualSearchResponse struct {
 	Results         []ManualSearchResultItem `json:"results"`
-	TotalCount      int                      `json:"totalCount"`
-	SearchedSources []string                 `json:"searchedSources"`
+	TotalCount      int                      `json:"total_count"`
+	SearchedSources []string                 `json:"searched_sources"`
 }
 
 // Manual search errors
@@ -136,10 +136,10 @@ type SelectedMetadataItem struct {
 
 // ApplyMetadataRequest represents a request to apply metadata to a media item (Story 3.7)
 type ApplyMetadataRequest struct {
-	MediaID      string               `json:"mediaId"`
-	MediaType    string               `json:"mediaType"` // "movie" or "series"
-	SelectedItem SelectedMetadataItem `json:"selectedItem"`
-	LearnPattern bool                 `json:"learnPattern,omitempty"` // Optional: trigger learning system (Story 3.9)
+	MediaID      string               `json:"media_id"`
+	MediaType    string               `json:"media_type"` // "movie" or "series"
+	SelectedItem SelectedMetadataItem `json:"selected_item"`
+	LearnPattern bool                 `json:"learn_pattern,omitempty"` // Optional: trigger learning system (Story 3.9)
 }
 
 // Validate validates the apply metadata request
@@ -163,8 +163,8 @@ func (r *ApplyMetadataRequest) Validate() error {
 // ApplyMetadataResponse represents the response from applying metadata
 type ApplyMetadataResponse struct {
 	Success   bool                  `json:"success"`
-	MediaID   string                `json:"mediaId"`
-	MediaType string                `json:"mediaType"`
+	MediaID   string                `json:"media_id"`
+	MediaType string                `json:"media_type"`
 	Title     string                `json:"title"`
 	Source    models.MetadataSource `json:"source"`
 }
@@ -180,15 +180,15 @@ var (
 // UpdateMetadataRequest represents a request to manually update metadata (Story 3.8)
 type UpdateMetadataRequest struct {
 	ID           string   `json:"id"`
-	MediaType    string   `json:"mediaType"`    // "movie" or "series"
-	Title        string   `json:"title"`        // Required: Chinese title
-	TitleEnglish string   `json:"titleEnglish"` // Optional: English title
+	MediaType    string   `json:"media_type"`    // "movie" or "series"
+	Title        string   `json:"title"`         // Required: Chinese title
+	TitleEnglish string   `json:"title_english"` // Optional: English title
 	Year         int      `json:"year"`         // Required
 	Genres       []string `json:"genres"`
 	Director     string   `json:"director"`
 	Cast         []string `json:"cast"`
 	Overview     string   `json:"overview"`
-	PosterURL    string   `json:"posterUrl"` // Optional: URL for poster
+	PosterURL    string   `json:"poster_url"` // Optional: URL for poster
 }
 
 // Validate validates the update metadata request
@@ -213,8 +213,8 @@ func (r *UpdateMetadataRequest) Validate() error {
 type UpdateMetadataResponse struct {
 	ID             string               `json:"id"`
 	Title          string               `json:"title"`
-	MetadataSource models.MetadataSource `json:"metadataSource"`
-	UpdatedAt      string               `json:"updatedAt"`
+	MetadataSource models.MetadataSource `json:"metadata_source"`
+	UpdatedAt      string               `json:"updated_at"`
 }
 
 // Update metadata errors
@@ -228,12 +228,12 @@ var (
 
 // UploadPosterRequest represents a request to upload a poster image (Story 3.8 - AC3)
 type UploadPosterRequest struct {
-	MediaID     string `json:"mediaId"`
-	MediaType   string `json:"mediaType"` // "movie" or "series"
+	MediaID     string `json:"media_id"`
+	MediaType   string `json:"media_type"` // "movie" or "series"
 	FileData    []byte `json:"-"`         // Binary image data
-	FileName    string `json:"fileName"`
-	ContentType string `json:"contentType"`
-	FileSize    int64  `json:"fileSize"`
+	FileName    string `json:"file_name"`
+	ContentType string `json:"content_type"`
+	FileSize    int64  `json:"file_size"`
 }
 
 // Validate validates the upload poster request
@@ -267,8 +267,8 @@ func (r *UploadPosterRequest) Validate() error {
 
 // UploadPosterResponse represents the response from uploading a poster
 type UploadPosterResponse struct {
-	PosterURL    string `json:"posterUrl"`
-	ThumbnailURL string `json:"thumbnailUrl"`
+	PosterURL    string `json:"poster_url"`
+	ThumbnailURL string `json:"thumbnail_url"`
 }
 
 // Upload poster errors

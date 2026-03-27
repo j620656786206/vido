@@ -9,15 +9,15 @@ import (
 // RetryItem represents a task queued for retry
 type RetryItem struct {
 	ID            string          `json:"id" db:"id"`
-	TaskID        string          `json:"taskId" db:"task_id"`
-	TaskType      string          `json:"taskType" db:"task_type"` // "parse", "metadata_fetch"
+	TaskID        string          `json:"task_id" db:"task_id"`
+	TaskType      string          `json:"task_type" db:"task_type"` // "parse", "metadata_fetch"
 	Payload       json.RawMessage `json:"payload" db:"payload"`    // Task-specific data
-	AttemptCount  int             `json:"attemptCount" db:"attempt_count"`
-	MaxAttempts   int             `json:"maxAttempts" db:"max_attempts"`
-	LastError     string          `json:"lastError,omitempty" db:"last_error"`
-	NextAttemptAt time.Time       `json:"nextAttemptAt" db:"next_attempt_at"`
-	CreatedAt     time.Time       `json:"createdAt" db:"created_at"`
-	UpdatedAt     time.Time       `json:"updatedAt" db:"updated_at"`
+	AttemptCount  int             `json:"attempt_count" db:"attempt_count"`
+	MaxAttempts   int             `json:"max_attempts" db:"max_attempts"`
+	LastError     string          `json:"last_error,omitempty" db:"last_error"`
+	NextAttemptAt time.Time       `json:"next_attempt_at" db:"next_attempt_at"`
+	CreatedAt     time.Time       `json:"created_at" db:"created_at"`
+	UpdatedAt     time.Time       `json:"updated_at" db:"updated_at"`
 }
 
 // RetryableError represents an error that can be retried
@@ -25,7 +25,7 @@ type RetryableError struct {
 	Code       string `json:"code"`
 	Message    string `json:"message"`
 	Retryable  bool   `json:"retryable"`
-	StatusCode int    `json:"statusCode,omitempty"`
+	StatusCode int    `json:"status_code,omitempty"`
 }
 
 // Error implements the error interface
@@ -140,9 +140,9 @@ const MaxRetryAttempts = 4
 
 // RetryStats contains statistics about the retry queue
 type RetryStats struct {
-	TotalPending   int `json:"totalPending"`
-	TotalSucceeded int `json:"totalSucceeded"`
-	TotalFailed    int `json:"totalFailed"`
+	TotalPending   int `json:"total_pending"`
+	TotalSucceeded int `json:"total_succeeded"`
+	TotalFailed    int `json:"total_failed"`
 }
 
 // RetryResponse contains pending retries and stats for API response
@@ -154,13 +154,13 @@ type RetryResponse struct {
 // RetryItemResponse is the API response format for a retry item
 type RetryItemResponse struct {
 	ID             string    `json:"id"`
-	TaskID         string    `json:"taskId"`
-	TaskType       string    `json:"taskType"`
-	AttemptCount   int       `json:"attemptCount"`
-	MaxAttempts    int       `json:"maxAttempts"`
-	LastError      string    `json:"lastError,omitempty"`
-	NextAttemptAt  time.Time `json:"nextAttemptAt"`
-	TimeUntilRetry string    `json:"timeUntilRetry"`
+	TaskID         string    `json:"task_id"`
+	TaskType       string    `json:"task_type"`
+	AttemptCount   int       `json:"attempt_count"`
+	MaxAttempts    int       `json:"max_attempts"`
+	LastError      string    `json:"last_error,omitempty"`
+	NextAttemptAt  time.Time `json:"next_attempt_at"`
+	TimeUntilRetry string    `json:"time_until_retry"`
 }
 
 // ToResponse converts a RetryItem to RetryItemResponse

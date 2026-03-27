@@ -29,12 +29,12 @@ type LogsResponse struct {
 	Logs    []models.SystemLog `json:"logs"`
 	Total   int                `json:"total"`
 	Page    int                `json:"page"`
-	PerPage int                `json:"perPage"`
+	PerPage int                `json:"per_page"`
 }
 
 // LogClearResult represents the result of clearing logs
 type LogClearResult struct {
-	EntriesRemoved int64 `json:"entriesRemoved"`
+	EntriesRemoved int64 `json:"entries_removed"`
 	Days           int   `json:"days"`
 }
 

@@ -90,9 +90,9 @@ func (p *ListParams) Limit() int {
 // PaginationResult contains pagination metadata returned with list queries
 type PaginationResult struct {
 	Page         int `json:"page"`         // Current page number (1-indexed)
-	PageSize     int `json:"pageSize"`     // Number of items per page
-	TotalResults int `json:"totalResults"` // Total number of items across all pages
-	TotalPages   int `json:"totalPages"`   // Total number of pages
+	PageSize     int `json:"page_size"`     // Number of items per page
+	TotalResults int `json:"total_results"` // Total number of items across all pages
+	TotalPages   int `json:"total_pages"`   // Total number of pages
 }
 
 // NewPaginationResult creates a PaginationResult from params and total count

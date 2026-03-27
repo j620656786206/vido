@@ -132,7 +132,7 @@ func (h *ParseProgressHandler) StreamProgress(c *gin.Context) {
 
 	// Send initial connection event
 	h.sendSSEEvent(c.Writer, "connected", map[string]string{
-		"taskId":  taskID,
+		"task_id":  taskID,
 		"message": "Connected to parse progress stream",
 	})
 	c.Writer.Flush()

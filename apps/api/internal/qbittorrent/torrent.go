@@ -76,32 +76,32 @@ type Torrent struct {
 	Name          string        `json:"name"`
 	Size          int64         `json:"size"`
 	Progress      float64       `json:"progress"`
-	DownloadSpeed int64         `json:"downloadSpeed"`
-	UploadSpeed   int64         `json:"uploadSpeed"`
+	DownloadSpeed int64         `json:"download_speed"`
+	UploadSpeed   int64         `json:"upload_speed"`
 	ETA           int64         `json:"eta"`
 	Status        TorrentStatus `json:"status"`
-	AddedOn       time.Time     `json:"addedOn"`
-	CompletedOn   *time.Time    `json:"completedOn,omitempty"`
+	AddedOn       time.Time     `json:"added_on"`
+	CompletedOn   *time.Time    `json:"completed_on,omitempty"`
 	Seeds         int           `json:"seeds"`
 	Peers         int           `json:"peers"`
 	Downloaded    int64         `json:"downloaded"`
 	Uploaded      int64         `json:"uploaded"`
 	Ratio         float64       `json:"ratio"`
-	SavePath      string        `json:"savePath"`
+	SavePath      string        `json:"save_path"`
 }
 
 // TorrentDetails extends Torrent with additional properties.
 type TorrentDetails struct {
 	Torrent
-	PieceSize    int64     `json:"pieceSize"`
+	PieceSize    int64     `json:"piece_size"`
 	Comment      string    `json:"comment,omitempty"`
-	CreatedBy    string    `json:"createdBy,omitempty"`
-	CreationDate time.Time `json:"creationDate"`
-	TotalWasted  int64     `json:"totalWasted"`
-	TimeElapsed  int64     `json:"timeElapsed"`
-	SeedingTime  int64     `json:"seedingTime"`
-	AvgDownSpeed int64     `json:"avgDownSpeed"`
-	AvgUpSpeed   int64     `json:"avgUpSpeed"`
+	CreatedBy    string    `json:"created_by,omitempty"`
+	CreationDate time.Time `json:"creation_date"`
+	TotalWasted  int64     `json:"total_wasted"`
+	TimeElapsed  int64     `json:"time_elapsed"`
+	SeedingTime  int64     `json:"seeding_time"`
+	AvgDownSpeed int64     `json:"avg_down_speed"`
+	AvgUpSpeed   int64     `json:"avg_up_speed"`
 }
 
 // DownloadCounts holds the count of torrents grouped by status.

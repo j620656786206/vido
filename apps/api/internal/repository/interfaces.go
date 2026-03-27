@@ -238,9 +238,9 @@ type CacheEntry struct {
 	Key       string    `db:"key" json:"key"`
 	Value     string    `db:"value" json:"value"`
 	Type      string    `db:"type" json:"type"` // "tmdb", "ai", "image", etc.
-	ExpiresAt time.Time `db:"expires_at" json:"expiresAt"`
-	CreatedAt time.Time `db:"created_at" json:"createdAt"`
-	UpdatedAt time.Time `db:"updated_at" json:"updatedAt"`
+	ExpiresAt time.Time `db:"expires_at" json:"expires_at"`
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 }
 
 // CacheRepositoryInterface defines the contract for cache data access operations.

@@ -9,26 +9,26 @@ import (
 type Episode struct {
 	// Core fields
 	ID            string         `db:"id" json:"id"`
-	SeriesID      string         `db:"series_id" json:"seriesId"`
-	SeasonID      NullString `db:"season_id" json:"seasonId,omitempty"`
-	TMDbID        NullInt64  `db:"tmdb_id" json:"tmdbId,omitempty"`
-	SeasonNumber  int            `db:"season_number" json:"seasonNumber"`
-	EpisodeNumber int            `db:"episode_number" json:"episodeNumber"`
+	SeriesID      string         `db:"series_id" json:"series_id"`
+	SeasonID      NullString `db:"season_id" json:"season_id,omitempty"`
+	TMDbID        NullInt64  `db:"tmdb_id" json:"tmdb_id,omitempty"`
+	SeasonNumber  int            `db:"season_number" json:"season_number"`
+	EpisodeNumber int            `db:"episode_number" json:"episode_number"`
 
 	// Content fields
 	Title       NullString  `db:"title" json:"title,omitempty"`
 	Overview    NullString  `db:"overview" json:"overview,omitempty"`
-	AirDate     NullString  `db:"air_date" json:"airDate,omitempty"`
+	AirDate     NullString  `db:"air_date" json:"air_date,omitempty"`
 	Runtime     NullInt64   `db:"runtime" json:"runtime,omitempty"`
-	StillPath   NullString  `db:"still_path" json:"stillPath,omitempty"`
-	VoteAverage NullFloat64 `db:"vote_average" json:"voteAverage,omitempty"`
+	StillPath   NullString  `db:"still_path" json:"still_path,omitempty"`
+	VoteAverage NullFloat64 `db:"vote_average" json:"vote_average,omitempty"`
 
 	// File tracking
-	FilePath NullString `db:"file_path" json:"filePath,omitempty"`
+	FilePath NullString `db:"file_path" json:"file_path,omitempty"`
 
 	// Timestamps
-	CreatedAt time.Time `db:"created_at" json:"createdAt"`
-	UpdatedAt time.Time `db:"updated_at" json:"updatedAt"`
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 }
 
 // Validate validates the episode fields

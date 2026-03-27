@@ -256,15 +256,15 @@ func TestRecentMediaHandler_GetRecentMedia(t *testing.T) {
 					// First item should be the movie (more recent)
 					firstItem := items[0].(map[string]interface{})
 					assert.Equal(t, "movie-1", firstItem["id"])
-					assert.Equal(t, "movie", firstItem["mediaType"])
-					assert.Equal(t, true, firstItem["justAdded"])
+					assert.Equal(t, "movie", firstItem["media_type"])
+					assert.Equal(t, true, firstItem["just_added"])
 					assert.Equal(t, float64(2024), firstItem["year"])
 
 					// Second item should be the series (older)
 					secondItem := items[1].(map[string]interface{})
 					assert.Equal(t, "series-1", secondItem["id"])
-					assert.Equal(t, "tv", secondItem["mediaType"])
-					assert.Equal(t, false, secondItem["justAdded"])
+					assert.Equal(t, "tv", secondItem["media_type"])
+					assert.Equal(t, false, secondItem["just_added"])
 				}
 
 				// Verify sort order for the sort test case

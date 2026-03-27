@@ -16,10 +16,10 @@ const (
 type ConnectionEvent struct {
 	ID        string              `json:"id"`
 	Service   string              `json:"service"`
-	EventType ConnectionEventType `json:"eventType"`
+	EventType ConnectionEventType `json:"event_type"`
 	Status    string              `json:"status"` // healthy, degraded, down
 	Message   string              `json:"message,omitempty"`
-	CreatedAt time.Time           `json:"createdAt"`
+	CreatedAt time.Time           `json:"created_at"`
 }
 
 // ValidEventTypes returns all valid connection event types

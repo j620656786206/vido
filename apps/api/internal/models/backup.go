@@ -17,18 +17,18 @@ const (
 type Backup struct {
 	ID            string       `json:"id"`
 	Filename      string       `json:"filename"`
-	SizeBytes     int64        `json:"sizeBytes"`
-	SchemaVersion int64        `json:"schemaVersion"`
+	SizeBytes     int64        `json:"size_bytes"`
+	SchemaVersion int64        `json:"schema_version"`
 	Checksum      string       `json:"checksum"`
 	Status        BackupStatus `json:"status"`
-	ErrorMessage  string       `json:"errorMessage,omitempty"`
-	CreatedAt     time.Time    `json:"createdAt"`
+	ErrorMessage  string       `json:"error_message,omitempty"`
+	CreatedAt     time.Time    `json:"created_at"`
 }
 
 // BackupListResponse wraps the backup list with total size
 type BackupListResponse struct {
 	Backups        []Backup `json:"backups"`
-	TotalSizeBytes int64    `json:"totalSizeBytes"`
+	TotalSizeBytes int64    `json:"total_size_bytes"`
 }
 
 // VerificationStatus represents the result of a backup integrity check
@@ -51,19 +51,19 @@ const (
 
 // RestoreResult contains the outcome of a restore operation
 type RestoreResult struct {
-	RestoreID  string        `json:"restoreId"`
+	RestoreID  string        `json:"restore_id"`
 	Status     RestoreStatus `json:"status"`
-	SnapshotID string        `json:"snapshotId"`
+	SnapshotID string        `json:"snapshot_id"`
 	Message    string        `json:"message"`
 	Error      string        `json:"error,omitempty"`
 }
 
 // VerificationResult contains the outcome of a backup verification
 type VerificationResult struct {
-	BackupID           string             `json:"backupId"`
+	BackupID           string             `json:"backup_id"`
 	Status             VerificationStatus `json:"status"`
-	StoredChecksum     string             `json:"storedChecksum"`
-	CalculatedChecksum string             `json:"calculatedChecksum"`
+	StoredChecksum     string             `json:"stored_checksum"`
+	CalculatedChecksum string             `json:"calculated_checksum"`
 	Match              bool               `json:"match"`
-	VerifiedAt         time.Time          `json:"verifiedAt"`
+	VerifiedAt         time.Time          `json:"verified_at"`
 }

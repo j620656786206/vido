@@ -86,7 +86,7 @@ func TestQBittorrentHandler_GetConfig(t *testing.T) {
 			checkResponse: func(t *testing.T, data map[string]interface{}) {
 				assert.Equal(t, "http://192.168.1.100:8080", data["host"])
 				assert.Equal(t, "admin", data["username"])
-				assert.Equal(t, "/qbt", data["basePath"])
+				assert.Equal(t, "/qbt", data["base_path"])
 				assert.Equal(t, true, data["configured"])
 				assert.NotContains(t, data, "password")
 			},
@@ -238,8 +238,8 @@ func TestQBittorrentHandler_TestConnection(t *testing.T) {
 			checkResponse: func(t *testing.T, resp *APIResponse) {
 				assert.True(t, resp.Success)
 				data := resp.Data.(map[string]interface{})
-				assert.Equal(t, "v4.5.2", data["appVersion"])
-				assert.Equal(t, "2.9.3", data["apiVersion"])
+				assert.Equal(t, "v4.5.2", data["app_version"])
+				assert.Equal(t, "2.9.3", data["api_version"])
 			},
 		},
 		{
@@ -335,7 +335,7 @@ func TestQBittorrentHandler_TestConnection_WithBody(t *testing.T) {
 	assert.True(t, apiResp.Success)
 
 	data := apiResp.Data.(map[string]interface{})
-	assert.Equal(t, "v4.5.2", data["appVersion"])
+	assert.Equal(t, "v4.5.2", data["app_version"])
 
 	mockService.AssertExpectations(t)
 }

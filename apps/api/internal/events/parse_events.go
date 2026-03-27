@@ -24,7 +24,7 @@ const (
 // ParseEvent represents a real-time parse event
 type ParseEvent struct {
 	Type      ParseEventType `json:"type"`
-	TaskID    string         `json:"taskId"`
+	TaskID    string         `json:"task_id"`
 	Timestamp time.Time      `json:"timestamp"`
 	Data      interface{}    `json:"data,omitempty"`
 }
@@ -32,13 +32,13 @@ type ParseEvent struct {
 // ParseStartedData contains data for parse_started event
 type ParseStartedData struct {
 	Filename   string              `json:"filename"`
-	TotalSteps int                 `json:"totalSteps"`
+	TotalSteps int                 `json:"total_steps"`
 	Steps      []models.ParseStep  `json:"steps"`
 }
 
 // StepEventData contains data for step-related events
 type StepEventData struct {
-	StepIndex int                `json:"stepIndex"`
+	StepIndex int                `json:"step_index"`
 	Step      models.ParseStep   `json:"step"`
 	Progress  *models.ParseProgress `json:"progress,omitempty"`
 }
@@ -52,14 +52,14 @@ type ParseCompletedData struct {
 // ParseFailedData contains data for parse_failed event
 type ParseFailedData struct {
 	Message      string              `json:"message"`
-	FailedSteps  []models.ParseStep  `json:"failedSteps"`
+	FailedSteps  []models.ParseStep  `json:"failed_steps"`
 	Progress     *models.ParseProgress `json:"progress"`
 }
 
 // ProgressUpdateData contains data for progress_update event
 type ProgressUpdateData struct {
 	Percentage  int                   `json:"percentage"`
-	CurrentStep int                   `json:"currentStep"`
+	CurrentStep int                   `json:"current_step"`
 	Progress    *models.ParseProgress `json:"progress"`
 }
 

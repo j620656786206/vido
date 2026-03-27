@@ -22,14 +22,14 @@ type BackupSchedule struct {
 	Enabled   bool   `json:"enabled"`
 	Frequency string `json:"frequency"` // "daily", "weekly", "disabled"
 	Hour      int    `json:"hour"`      // 0-23
-	DayOfWeek int    `json:"dayOfWeek"` // 0=Sunday, 1=Monday, ... (only for weekly)
+	DayOfWeek int    `json:"day_of_week"` // 0=Sunday, 1=Monday, ... (only for weekly)
 }
 
 // BackupScheduleResponse extends BackupSchedule with computed fields
 type BackupScheduleResponse struct {
 	BackupSchedule
-	NextBackupAt *time.Time `json:"nextBackupAt,omitempty"`
-	LastBackupAt *time.Time `json:"lastBackupAt,omitempty"`
+	NextBackupAt *time.Time `json:"next_backup_at,omitempty"`
+	LastBackupAt *time.Time `json:"last_backup_at,omitempty"`
 }
 
 // RetentionResult contains the outcome of a retention policy application

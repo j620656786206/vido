@@ -36,7 +36,7 @@ type SystemLog struct {
 	ContextJSON string   `json:"-"`
 	Context     any      `json:"context,omitempty"`
 	Hint        string   `json:"hint,omitempty"`
-	CreatedAt   time.Time `json:"createdAt"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
 // LogFilter contains filter parameters for querying logs

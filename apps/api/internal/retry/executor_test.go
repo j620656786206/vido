@@ -174,9 +174,9 @@ func TestParsePayload(t *testing.T) {
 
 func TestRetryPayload_Fields(t *testing.T) {
 	data := json.RawMessage(`{
-		"mediaId": "media-123",
+		"media_id": "media-123",
 		"filename": "test.mkv",
-		"mediaType": "movie",
+		"media_type": "movie",
 		"title": "Test Movie",
 		"year": 2024,
 		"season": 1,

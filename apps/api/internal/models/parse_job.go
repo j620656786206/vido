@@ -16,14 +16,14 @@ const (
 // ParseJob represents a queued job to parse a completed download.
 type ParseJob struct {
 	ID           string         `json:"id"`
-	TorrentHash  string         `json:"torrentHash"`
-	FilePath     string         `json:"filePath"`
-	FileName     string         `json:"fileName"`
+	TorrentHash  string         `json:"torrent_hash"`
+	FilePath     string         `json:"file_path"`
+	FileName     string         `json:"file_name"`
 	Status       ParseJobStatus `json:"status"`
-	MediaID      *string        `json:"mediaId,omitempty"`
-	ErrorMessage *string        `json:"errorMessage,omitempty"`
-	RetryCount   int            `json:"retryCount"`
-	CreatedAt    time.Time      `json:"createdAt"`
-	UpdatedAt    time.Time      `json:"updatedAt"`
-	CompletedAt  *time.Time     `json:"completedAt,omitempty"`
+	MediaID      *string        `json:"media_id,omitempty"`
+	ErrorMessage *string        `json:"error_message,omitempty"`
+	RetryCount   int            `json:"retry_count"`
+	CreatedAt    time.Time      `json:"created_at"`
+	UpdatedAt    time.Time      `json:"updated_at"`
+	CompletedAt  *time.Time     `json:"completed_at,omitempty"`
 }

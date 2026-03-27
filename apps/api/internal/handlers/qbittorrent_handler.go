@@ -35,7 +35,7 @@ func NewQBittorrentHandler(service QBittorrentServiceInterface) *QBittorrentHand
 type QBConfigResponse struct {
 	Host       string `json:"host"`
 	Username   string `json:"username"`
-	BasePath   string `json:"basePath"`
+	BasePath   string `json:"base_path"`
 	Configured bool   `json:"configured"`
 }
 
@@ -44,7 +44,7 @@ type SaveQBConfigRequest struct {
 	Host     string `json:"host" binding:"required,url"`
 	Username string `json:"username" binding:"required"`
 	Password string `json:"password" binding:"required"`
-	BasePath string `json:"basePath"`
+	BasePath string `json:"base_path"`
 }
 
 // GetConfig handles GET /api/v1/settings/qbittorrent
@@ -94,7 +94,7 @@ type TestQBConnectionRequest struct {
 	Host     string `json:"host"`
 	Username string `json:"username"`
 	Password string `json:"password"`
-	BasePath string `json:"basePath"`
+	BasePath string `json:"base_path"`
 }
 
 // TestConnection handles POST /api/v1/settings/qbittorrent/test

@@ -17,8 +17,8 @@ var ErrInvalidCacheType = errors.New("invalid cache type")
 // CleanupResult represents the outcome of a cache cleanup operation
 type CleanupResult struct {
 	Type           string   `json:"type"`
-	EntriesRemoved int64    `json:"entriesRemoved"`
-	BytesReclaimed int64    `json:"bytesReclaimed"`
+	EntriesRemoved int64    `json:"entries_removed"`
+	BytesReclaimed int64    `json:"bytes_reclaimed"`
 	Errors         []string `json:"errors,omitempty"`
 }
 

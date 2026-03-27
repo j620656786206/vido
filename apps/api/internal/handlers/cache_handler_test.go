@@ -88,9 +88,9 @@ func TestCacheHandler_GetCacheStats_Success(t *testing.T) {
 	assert.True(t, body["success"].(bool))
 
 	data := body["data"].(map[string]interface{})
-	cacheTypes := data["cacheTypes"].([]interface{})
+	cacheTypes := data["cache_types"].([]interface{})
 	assert.Len(t, cacheTypes, 2)
-	assert.Equal(t, float64(1536), data["totalSizeBytes"])
+	assert.Equal(t, float64(1536), data["total_size_bytes"])
 }
 
 func TestCacheHandler_GetCacheStats_Error(t *testing.T) {
@@ -127,7 +127,7 @@ func TestCacheHandler_ClearCacheByType_Success(t *testing.T) {
 	assert.True(t, body["success"].(bool))
 	data := body["data"].(map[string]interface{})
 	assert.Equal(t, "ai", data["type"])
-	assert.Equal(t, float64(5), data["entriesRemoved"])
+	assert.Equal(t, float64(5), data["entries_removed"])
 }
 
 func TestCacheHandler_ClearCacheByType_InvalidType(t *testing.T) {
@@ -169,7 +169,7 @@ func TestCacheHandler_ClearAllCache_WithDaysParam(t *testing.T) {
 	var body map[string]interface{}
 	require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &body))
 	data := body["data"].(map[string]interface{})
-	assert.Equal(t, float64(10), data["entriesRemoved"])
+	assert.Equal(t, float64(10), data["entries_removed"])
 }
 
 func TestCacheHandler_ClearAllCache_InvalidDaysParam(t *testing.T) {
@@ -218,8 +218,8 @@ func TestCacheHandler_ClearAllCache_NoParam(t *testing.T) {
 	require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &body))
 	data := body["data"].(map[string]interface{})
 	assert.Equal(t, "all", data["type"])
-	assert.Equal(t, float64(5), data["entriesRemoved"])     // 5 types * 1
-	assert.Equal(t, float64(500), data["bytesReclaimed"])    // 5 types * 100
+	assert.Equal(t, float64(5), data["entries_removed"])     // 5 types * 1
+	assert.Equal(t, float64(500), data["bytes_reclaimed"])    // 5 types * 100
 }
 
 func TestCacheHandler_ClearCacheByType_ServerError(t *testing.T) {
@@ -327,8 +327,8 @@ func TestCacheHandler_ClearAllCache_PartialTypeFailure(t *testing.T) {
 	data := body["data"].(map[string]interface{})
 	assert.Equal(t, "all", data["type"])
 	// Only successful types: 3 + 2 + 1 = 6
-	assert.Equal(t, float64(6), data["entriesRemoved"])
-	assert.Equal(t, float64(500), data["bytesReclaimed"])
+	assert.Equal(t, float64(6), data["entries_removed"])
+	assert.Equal(t, float64(500), data["bytes_reclaimed"])
 }
 
 func TestCacheHandler_ClearCacheByAge_ServiceError(t *testing.T) {
@@ -372,14 +372,14 @@ func TestCacheHandler_ResponseStructure(t *testing.T) {
 	assert.True(t, raw["success"].(bool))
 
 	data := raw["data"].(map[string]interface{})
-	assert.Contains(t, data, "cacheTypes")
-	assert.Contains(t, data, "totalSizeBytes")
+	assert.Contains(t, data, "cache_types")
+	assert.Contains(t, data, "total_size_bytes")
 
 	// Verify cache type structure
-	cacheTypes := data["cacheTypes"].([]interface{})
+	cacheTypes := data["cache_types"].([]interface{})
 	ct := cacheTypes[0].(map[string]interface{})
 	assert.Contains(t, ct, "type")
 	assert.Contains(t, ct, "label")
-	assert.Contains(t, ct, "sizeBytes")
-	assert.Contains(t, ct, "entryCount")
+	assert.Contains(t, ct, "size_bytes")
+	assert.Contains(t, ct, "entry_count")
 }

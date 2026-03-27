@@ -227,7 +227,7 @@ func TestSeriesHandler_Create(t *testing.T) {
 		{
 			name: "validation error - missing title",
 			requestBody: map[string]string{
-				"firstAirDate": "2024-06-15",
+				"first_air_date": "2024-06-15",
 			},
 			setupMock:      func(m *MockSeriesService) {},
 			expectedStatus: http.StatusBadRequest,

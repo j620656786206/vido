@@ -52,7 +52,7 @@ func NewDefaultScorerConfig() ScorerConfig {
 type ScoreBreakdown struct {
 	Language   float64 `json:"language"`
 	Resolution float64 `json:"resolution"`
-	SourceTrust float64 `json:"sourceTrust"`
+	SourceTrust float64 `json:"source_trust"`
 	Group      float64 `json:"group"`
 	Downloads  float64 `json:"downloads"`
 }
@@ -61,7 +61,7 @@ type ScoreBreakdown struct {
 type ScoredResult struct {
 	providers.SubtitleResult
 	Score          float64        `json:"score"`
-	ScoreBreakdown ScoreBreakdown `json:"scoreBreakdown"`
+	ScoreBreakdown ScoreBreakdown `json:"score_breakdown"`
 }
 
 // Scorer calculates and ranks subtitle search results.

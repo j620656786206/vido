@@ -228,7 +228,7 @@ func TestMovieHandler_Create(t *testing.T) {
 		{
 			name: "validation error - missing title",
 			requestBody: map[string]string{
-				"releaseDate": "2024-06-15",
+				"release_date": "2024-06-15",
 			},
 			setupMock:      func(m *MockMovieService) {},
 			expectedStatus: http.StatusBadRequest,

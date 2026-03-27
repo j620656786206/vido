@@ -33,29 +33,29 @@ var videoExtensions = func() map[string]bool {
 
 // ScanProgress represents the current state of an active scan
 type ScanProgress struct {
-	FilesFound   int       `json:"filesFound"`
-	FilesCreated int       `json:"filesCreated"`
-	FilesUpdated int       `json:"filesUpdated"`
-	FilesSkipped int       `json:"filesSkipped"`
-	FilesRemoved int       `json:"filesRemoved"`
-	ErrorCount   int       `json:"errorCount"`
-	CurrentFile  string    `json:"currentFile"`
-	PercentDone  int       `json:"percentDone"`
-	IsActive     bool      `json:"isActive"`
-	StartedAt    time.Time `json:"startedAt,omitempty"`
+	FilesFound   int       `json:"files_found"`
+	FilesCreated int       `json:"files_created"`
+	FilesUpdated int       `json:"files_updated"`
+	FilesSkipped int       `json:"files_skipped"`
+	FilesRemoved int       `json:"files_removed"`
+	ErrorCount   int       `json:"error_count"`
+	CurrentFile  string    `json:"current_file"`
+	PercentDone  int       `json:"percent_done"`
+	IsActive     bool      `json:"is_active"`
+	StartedAt    time.Time `json:"started_at,omitempty"`
 }
 
 // ScanResult contains the outcome of a completed scan operation
 type ScanResult struct {
-	FilesFound   int       `json:"filesFound"`
-	FilesCreated int       `json:"filesCreated"`
-	FilesUpdated int       `json:"filesUpdated"`
-	FilesSkipped int       `json:"filesSkipped"`
-	FilesRemoved int       `json:"filesRemoved"`
-	ErrorCount   int       `json:"errorCount"`
+	FilesFound   int       `json:"files_found"`
+	FilesCreated int       `json:"files_created"`
+	FilesUpdated int       `json:"files_updated"`
+	FilesSkipped int       `json:"files_skipped"`
+	FilesRemoved int       `json:"files_removed"`
+	ErrorCount   int       `json:"error_count"`
 	Duration     string    `json:"duration"`
-	StartedAt    time.Time `json:"startedAt"`
-	CompletedAt  time.Time `json:"completedAt"`
+	StartedAt    time.Time `json:"started_at"`
+	CompletedAt  time.Time `json:"completed_at"`
 }
 
 // ScannerService handles recursive folder scanning and video file discovery

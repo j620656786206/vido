@@ -13,14 +13,14 @@ import (
 // DownloadItem extends Torrent with parse status information.
 type DownloadItem struct {
 	qbittorrent.Torrent
-	ParseStatus *DownloadParseStatus `json:"parseStatus,omitempty"`
+	ParseStatus *DownloadParseStatus `json:"parse_status,omitempty"`
 }
 
 // DownloadParseStatus represents the parse status for a download.
 type DownloadParseStatus struct {
 	Status       models.ParseJobStatus `json:"status"`
-	ErrorMessage *string               `json:"errorMessage,omitempty"`
-	MediaID      *string               `json:"mediaId,omitempty"`
+	ErrorMessage *string               `json:"error_message,omitempty"`
+	MediaID      *string               `json:"media_id,omitempty"`
 }
 
 // DownloadHandler handles HTTP requests for download monitoring.

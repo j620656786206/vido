@@ -737,16 +737,16 @@ func TestDownloadHandler_ListDownloads_WithParseStatus(t *testing.T) {
 	item0, ok := dataSlice[0].(map[string]interface{})
 	require.True(t, ok)
 	assert.Equal(t, "completed-hash", item0["hash"])
-	parseStatus, ok := item0["parseStatus"].(map[string]interface{})
+	parseStatus, ok := item0["parse_status"].(map[string]interface{})
 	require.True(t, ok)
 	assert.Equal(t, "completed", parseStatus["status"])
-	assert.Equal(t, "media-123", parseStatus["mediaId"])
+	assert.Equal(t, "media-123", parseStatus["media_id"])
 
 	// Second item (downloading) should NOT have parseStatus
 	item1, ok := dataSlice[1].(map[string]interface{})
 	require.True(t, ok)
 	assert.Equal(t, "downloading-hash", item1["hash"])
-	assert.Nil(t, item1["parseStatus"])
+	assert.Nil(t, item1["parse_status"])
 
 	mockDLService.AssertExpectations(t)
 	mockPQService.AssertExpectations(t)
@@ -790,7 +790,7 @@ func TestDownloadHandler_ListDownloads_WithParseStatus_NoJob(t *testing.T) {
 	item, ok := dataSlice[0].(map[string]interface{})
 	require.True(t, ok)
 	// No parse job exists, so parseStatus should be nil/absent
-	assert.Nil(t, item["parseStatus"])
+	assert.Nil(t, item["parse_status"])
 
 	mockDLService.AssertExpectations(t)
 	mockPQService.AssertExpectations(t)
@@ -837,10 +837,10 @@ func TestDownloadHandler_ListDownloads_WithParseStatus_Failed(t *testing.T) {
 	item, ok := dataSlice[0].(map[string]interface{})
 	require.True(t, ok)
 
-	parseStatus, ok := item["parseStatus"].(map[string]interface{})
+	parseStatus, ok := item["parse_status"].(map[string]interface{})
 	require.True(t, ok)
 	assert.Equal(t, "failed", parseStatus["status"])
-	assert.Equal(t, "could not parse filename", parseStatus["errorMessage"])
+	assert.Equal(t, "could not parse filename", parseStatus["error_message"])
 
 	mockDLService.AssertExpectations(t)
 	mockPQService.AssertExpectations(t)

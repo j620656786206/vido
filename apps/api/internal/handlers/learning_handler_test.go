@@ -97,9 +97,9 @@ func TestLearningHandler_Create(t *testing.T) {
 			name: "successful pattern creation",
 			requestBody: map[string]interface{}{
 				"filename":     "[Leopard-Raws] Kimetsu no Yaiba - 26.mkv",
-				"metadataId":   "series-123",
-				"metadataType": "series",
-				"tmdbId":       85937,
+				"metadata_id":   "series-123",
+				"metadata_type": "series",
+				"tmdb_id":       85937,
 			},
 			mockResult: &models.FilenameMapping{
 				ID:           "pattern-456",
@@ -122,8 +122,8 @@ func TestLearningHandler_Create(t *testing.T) {
 		{
 			name: "missing filename",
 			requestBody: map[string]interface{}{
-				"metadataId":   "series-123",
-				"metadataType": "series",
+				"metadata_id":   "series-123",
+				"metadata_type": "series",
 			},
 			expectedStatus: http.StatusBadRequest,
 			expectedError:  true,
@@ -132,7 +132,7 @@ func TestLearningHandler_Create(t *testing.T) {
 			name: "missing metadataId",
 			requestBody: map[string]interface{}{
 				"filename":     "test.mkv",
-				"metadataType": "series",
+				"metadata_type": "series",
 			},
 			expectedStatus: http.StatusBadRequest,
 			expectedError:  true,
@@ -141,7 +141,7 @@ func TestLearningHandler_Create(t *testing.T) {
 			name: "missing metadataType",
 			requestBody: map[string]interface{}{
 				"filename":   "test.mkv",
-				"metadataId": "series-123",
+				"metadata_id": "series-123",
 			},
 			expectedStatus: http.StatusBadRequest,
 			expectedError:  true,
@@ -150,8 +150,8 @@ func TestLearningHandler_Create(t *testing.T) {
 			name: "invalid metadataType",
 			requestBody: map[string]interface{}{
 				"filename":     "test.mkv",
-				"metadataId":   "series-123",
-				"metadataType": "invalid",
+				"metadata_id":   "series-123",
+				"metadata_type": "invalid",
 			},
 			expectedStatus: http.StatusBadRequest,
 			expectedError:  true,
@@ -160,8 +160,8 @@ func TestLearningHandler_Create(t *testing.T) {
 			name: "service error",
 			requestBody: map[string]interface{}{
 				"filename":     "test.mkv",
-				"metadataId":   "series-123",
-				"metadataType": "series",
+				"metadata_id":   "series-123",
+				"metadata_type": "series",
 			},
 			mockErr:        errors.New("service error"),
 			expectedStatus: http.StatusInternalServerError,
@@ -400,8 +400,8 @@ func TestLearningHandler_GetStats(t *testing.T) {
 				if tt.mockStats != nil {
 					data, ok := response.Data.(map[string]interface{})
 					assert.True(t, ok)
-					assert.Equal(t, float64(tt.mockStats.TotalPatterns), data["totalPatterns"])
-					assert.Equal(t, float64(tt.mockStats.TotalApplied), data["totalApplied"])
+					assert.Equal(t, float64(tt.mockStats.TotalPatterns), data["total_patterns"])
+					assert.Equal(t, float64(tt.mockStats.TotalApplied), data["total_applied"])
 				}
 			}
 		})

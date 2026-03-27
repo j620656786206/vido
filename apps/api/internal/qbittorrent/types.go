@@ -10,14 +10,14 @@ type Config struct {
 	Host     string        `json:"host"`
 	Username string        `json:"username"`
 	Password string        `json:"-"`
-	BasePath string        `json:"basePath,omitempty"`
+	BasePath string        `json:"base_path,omitempty"`
 	Timeout  time.Duration `json:"-"`
 }
 
 // VersionInfo holds qBittorrent version information returned by a successful connection test.
 type VersionInfo struct {
-	AppVersion string `json:"appVersion"`
-	APIVersion string `json:"apiVersion"`
+	AppVersion string `json:"app_version"`
+	APIVersion string `json:"api_version"`
 }
 
 // ConnectionError represents a qBittorrent connection error with an error code.

@@ -13,14 +13,14 @@ import (
 type CacheTypeInfo struct {
 	Type       string `json:"type"`
 	Label      string `json:"label"`
-	SizeBytes  int64  `json:"sizeBytes"`
-	EntryCount int64  `json:"entryCount"`
+	SizeBytes  int64  `json:"size_bytes"`
+	EntryCount int64  `json:"entry_count"`
 }
 
 // CacheStats represents the complete cache statistics response
 type CacheStats struct {
-	CacheTypes     []CacheTypeInfo `json:"cacheTypes"`
-	TotalSizeBytes int64           `json:"totalSizeBytes"`
+	CacheTypes     []CacheTypeInfo `json:"cache_types"`
+	TotalSizeBytes int64           `json:"total_size_bytes"`
 }
 
 // CacheStatsServiceInterface defines the contract for cache statistics operations

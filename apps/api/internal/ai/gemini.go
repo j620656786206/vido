@@ -221,7 +221,7 @@ func (p *GeminiProvider) Parse(ctx context.Context, req *ParseRequest) (*ParseRe
 
 type geminiRequest struct {
 	Contents         []geminiContent         `json:"contents"`
-	GenerationConfig geminiGenerationConfig `json:"generationConfig,omitempty"`
+	GenerationConfig geminiGenerationConfig `json:"generation_config,omitempty"`
 }
 
 type geminiContent struct {
@@ -233,7 +233,7 @@ type geminiPart struct {
 }
 
 type geminiGenerationConfig struct {
-	ResponseMimeType string `json:"responseMimeType,omitempty"`
+	ResponseMimeType string `json:"response_mime_type,omitempty"`
 }
 
 type geminiResponse struct {

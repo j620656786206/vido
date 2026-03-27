@@ -48,7 +48,7 @@ type CastMember struct {
 	Name        string `json:"name"`
 	Character   string `json:"character,omitempty"`
 	Order       int    `json:"order,omitempty"`
-	ProfilePath string `json:"profilePath,omitempty"`
+	ProfilePath string `json:"profile_path,omitempty"`
 }
 
 // CrewMember represents a crew member in credits
@@ -57,7 +57,7 @@ type CrewMember struct {
 	Name        string `json:"name"`
 	Job         string `json:"job,omitempty"`
 	Department  string `json:"department,omitempty"`
-	ProfilePath string `json:"profilePath,omitempty"`
+	ProfilePath string `json:"profile_path,omitempty"`
 }
 
 // Credits represents movie/series credits with cast and crew
@@ -83,29 +83,29 @@ type Movie struct {
 	// Core fields
 	ID            string         `db:"id" json:"id"`
 	Title         string         `db:"title" json:"title"`
-	OriginalTitle NullString `db:"original_title" json:"originalTitle,omitempty"`
-	ReleaseDate   string         `db:"release_date" json:"releaseDate"`
+	OriginalTitle NullString `db:"original_title" json:"original_title,omitempty"`
+	ReleaseDate   string         `db:"release_date" json:"release_date"`
 	Genres        []string       `db:"genres" json:"genres"` // Simple string array for backward compatibility
 
 	// Rating fields (kept for backward compatibility)
 	Rating NullFloat64 `db:"rating" json:"rating,omitempty"`
 
 	// TMDb-specific rating fields
-	VoteAverage NullFloat64 `db:"vote_average" json:"voteAverage,omitempty"`
-	VoteCount   NullInt64   `db:"vote_count" json:"voteCount,omitempty"`
+	VoteAverage NullFloat64 `db:"vote_average" json:"vote_average,omitempty"`
+	VoteCount   NullInt64   `db:"vote_count" json:"vote_count,omitempty"`
 	Popularity  NullFloat64 `db:"popularity" json:"popularity,omitempty"`
 
 	// Content fields
 	Overview     NullString `db:"overview" json:"overview,omitempty"`
-	PosterPath   NullString `db:"poster_path" json:"posterPath,omitempty"`
-	BackdropPath NullString `db:"backdrop_path" json:"backdropPath,omitempty"`
+	PosterPath   NullString `db:"poster_path" json:"poster_path,omitempty"`
+	BackdropPath NullString `db:"backdrop_path" json:"backdrop_path,omitempty"`
 	Runtime      NullInt64  `db:"runtime" json:"runtime,omitempty"`
 
 	// Metadata fields
-	OriginalLanguage NullString `db:"original_language" json:"originalLanguage,omitempty"`
+	OriginalLanguage NullString `db:"original_language" json:"original_language,omitempty"`
 	Status           NullString `db:"status" json:"status,omitempty"`
-	IMDbID           NullString `db:"imdb_id" json:"imdbId,omitempty"`
-	TMDbID           NullInt64  `db:"tmdb_id" json:"tmdbId,omitempty"`
+	IMDbID           NullString `db:"imdb_id" json:"imdb_id,omitempty"`
+	TMDbID           NullInt64  `db:"tmdb_id" json:"tmdb_id,omitempty"`
 
 	// New fields for enhanced TMDb data (Story 2-6)
 	CreditsJSON            NullString `db:"credits" json:"-"`              // JSON stored in DB
@@ -113,26 +113,26 @@ type Movie struct {
 	SpokenLanguagesJSON    NullString `db:"spoken_languages" json:"-"`     // JSON stored in DB
 
 	// File tracking fields
-	FilePath NullString `db:"file_path" json:"filePath,omitempty"`
-	FileSize NullInt64  `db:"file_size" json:"fileSize,omitempty"`
+	FilePath NullString `db:"file_path" json:"file_path,omitempty"`
+	FileSize NullInt64  `db:"file_size" json:"file_size,omitempty"`
 
 	// Parse tracking fields
-	ParseStatus    ParseStatus    `db:"parse_status" json:"parseStatus"`
-	MetadataSource NullString `db:"metadata_source" json:"metadataSource,omitempty"`
+	ParseStatus    ParseStatus    `db:"parse_status" json:"parse_status"`
+	MetadataSource NullString `db:"metadata_source" json:"metadata_source,omitempty"`
 
 	// Subtitle tracking fields
-	SubtitleStatus       SubtitleStatus  `db:"subtitle_status" json:"subtitleStatus"`
-	SubtitlePath         NullString  `db:"subtitle_path" json:"subtitlePath,omitempty"`
-	SubtitleLanguage     NullString  `db:"subtitle_language" json:"subtitleLanguage,omitempty"`
-	SubtitleLastSearched NullTime    `db:"subtitle_last_searched" json:"subtitleLastSearched,omitempty"`
-	SubtitleSearchScore  NullFloat64 `db:"subtitle_search_score" json:"subtitleSearchScore,omitempty"`
+	SubtitleStatus       SubtitleStatus  `db:"subtitle_status" json:"subtitle_status"`
+	SubtitlePath         NullString  `db:"subtitle_path" json:"subtitle_path,omitempty"`
+	SubtitleLanguage     NullString  `db:"subtitle_language" json:"subtitle_language,omitempty"`
+	SubtitleLastSearched NullTime    `db:"subtitle_last_searched" json:"subtitle_last_searched,omitempty"`
+	SubtitleSearchScore  NullFloat64 `db:"subtitle_search_score" json:"subtitle_search_score,omitempty"`
 
 	// Soft-delete flag for removed files (Story 7-2)
-	IsRemoved bool `db:"is_removed" json:"isRemoved"`
+	IsRemoved bool `db:"is_removed" json:"is_removed"`
 
 	// Timestamps
-	CreatedAt time.Time `db:"created_at" json:"createdAt"`
-	UpdatedAt time.Time `db:"updated_at" json:"updatedAt"`
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 }
 
 // ScanGenres handles scanning genres from database (stored as JSON text)

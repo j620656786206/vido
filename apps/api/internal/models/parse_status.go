@@ -6,16 +6,16 @@ import (
 
 // ParseProgress holds the full progress state for a parse operation
 type ParseProgress struct {
-	TaskID      string       `json:"taskId"`
+	TaskID      string       `json:"task_id"`
 	Filename    string       `json:"filename"`
 	Status      ParseStatus  `json:"status"`
 	Steps       []ParseStep  `json:"steps"`
-	CurrentStep int          `json:"currentStep"`
+	CurrentStep int          `json:"current_step"`
 	Percentage  int          `json:"percentage"`
 	Message     string       `json:"message,omitempty"`
 	Result      *ParseResult `json:"result,omitempty"`
-	StartedAt   time.Time    `json:"startedAt"`
-	CompletedAt *time.Time   `json:"completedAt,omitempty"`
+	StartedAt   time.Time    `json:"started_at"`
+	CompletedAt *time.Time   `json:"completed_at,omitempty"`
 }
 
 // ParseStep represents a single step in the parse process
@@ -23,8 +23,8 @@ type ParseStep struct {
 	Name      string     `json:"name"`
 	Label     string     `json:"label"`
 	Status    StepStatus `json:"status"`
-	StartedAt *time.Time `json:"startedAt,omitempty"`
-	EndedAt   *time.Time `json:"endedAt,omitempty"`
+	StartedAt *time.Time `json:"started_at,omitempty"`
+	EndedAt   *time.Time `json:"ended_at,omitempty"`
 	Error     string     `json:"error,omitempty"`
 }
 
@@ -41,11 +41,11 @@ const (
 
 // ParseResult represents the result of a successful parse operation
 type ParseResult struct {
-	MediaID        string         `json:"mediaId,omitempty"`
+	MediaID        string         `json:"media_id,omitempty"`
 	Title          string         `json:"title,omitempty"`
 	Year           int            `json:"year,omitempty"`
-	MediaType      string         `json:"mediaType,omitempty"`
-	MetadataSource MetadataSource `json:"metadataSource,omitempty"`
+	MediaType      string         `json:"media_type,omitempty"`
+	MetadataSource MetadataSource `json:"metadata_source,omitempty"`
 	Confidence     float64        `json:"confidence,omitempty"`
 }
 

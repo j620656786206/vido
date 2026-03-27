@@ -11,8 +11,8 @@ type Setting struct {
 	Type  string `db:"type" json:"type"` // "string", "int", "bool", "json"
 
 	// Timestamps
-	CreatedAt time.Time `db:"created_at" json:"createdAt"`
-	UpdatedAt time.Time `db:"updated_at" json:"updatedAt"`
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 }
 
 // SettingType defines the type of setting value
@@ -28,11 +28,11 @@ const (
 // SetupConfig holds all wizard settings collected during setup.
 type SetupConfig struct {
 	Language        string `json:"language"`
-	QBTUrl          string `json:"qbtUrl,omitempty"`
-	QBTUsername     string `json:"qbtUsername,omitempty"`
-	QBTPassword     string `json:"qbtPassword,omitempty"`
-	MediaFolderPath string `json:"mediaFolderPath"`
-	TMDbApiKey      string `json:"tmdbApiKey,omitempty"`
-	AIProvider      string `json:"aiProvider,omitempty"`
-	AIApiKey        string `json:"aiApiKey,omitempty"`
+	QBTUrl          string `json:"qbt_url,omitempty"`
+	QBTUsername     string `json:"qbt_username,omitempty"`
+	QBTPassword     string `json:"qbt_password,omitempty"`
+	MediaFolderPath string `json:"media_folder_path"`
+	TMDbApiKey      string `json:"tmdb_api_key,omitempty"`
+	AIProvider      string `json:"ai_provider,omitempty"`
+	AIApiKey        string `json:"ai_api_key,omitempty"`
 }

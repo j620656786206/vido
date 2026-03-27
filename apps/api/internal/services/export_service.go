@@ -37,11 +37,11 @@ const (
 
 // ExportResult contains the outcome of an export operation
 type ExportResult struct {
-	ExportID  string       `json:"exportId"`
+	ExportID  string       `json:"export_id"`
 	Format    ExportFormat `json:"format"`
 	Status    ExportStatus `json:"status"`
 	FilePath  string       `json:"-"` // internal only, not exposed to API
-	ItemCount int          `json:"itemCount"`
+	ItemCount int          `json:"item_count"`
 	Message   string       `json:"message,omitempty"`
 	Error     string       `json:"error,omitempty"`
 }
@@ -49,24 +49,24 @@ type ExportResult struct {
 // ExportMediaItem represents a single media item in the export
 type ExportMediaItem struct {
 	Title         string   `json:"title" yaml:"title"`
-	OriginalTitle string   `json:"originalTitle,omitempty" yaml:"originalTitle,omitempty"`
+	OriginalTitle string   `json:"original_title,omitempty" yaml:"original_title,omitempty"`
 	Year          string   `json:"year" yaml:"year"`
-	MediaType     string   `json:"mediaType" yaml:"mediaType"`
-	TMDbID        int64    `json:"tmdbId,omitempty" yaml:"tmdbId,omitempty"`
-	IMDbID        string   `json:"imdbId,omitempty" yaml:"imdbId,omitempty"`
+	MediaType     string   `json:"media_type" yaml:"media_type"`
+	TMDbID        int64    `json:"tmdb_id,omitempty" yaml:"tmdb_id,omitempty"`
+	IMDbID        string   `json:"imdb_id,omitempty" yaml:"imdb_id,omitempty"`
 	Genres        []string `json:"genres" yaml:"genres"`
 	Overview      string   `json:"overview,omitempty" yaml:"overview,omitempty"`
-	PosterURL     string   `json:"posterUrl,omitempty" yaml:"posterUrl,omitempty"`
-	FilePath      string   `json:"filePath,omitempty" yaml:"filePath,omitempty"`
+	PosterURL     string   `json:"poster_url,omitempty" yaml:"poster_url,omitempty"`
+	FilePath      string   `json:"file_path,omitempty" yaml:"file_path,omitempty"`
 	Rating        float64  `json:"rating,omitempty" yaml:"rating,omitempty"`
-	AddedAt       string   `json:"addedAt" yaml:"addedAt"`
+	AddedAt       string   `json:"added_at" yaml:"added_at"`
 }
 
 // ExportDocument is the top-level export structure
 type ExportDocument struct {
-	ExportVersion string            `json:"exportVersion" yaml:"exportVersion"`
-	ExportedAt    string            `json:"exportedAt" yaml:"exportedAt"`
-	ItemCount     int               `json:"itemCount" yaml:"itemCount"`
+	ExportVersion string            `json:"export_version" yaml:"export_version"`
+	ExportedAt    string            `json:"exported_at" yaml:"exported_at"`
+	ItemCount     int               `json:"item_count" yaml:"item_count"`
 	Media         []ExportMediaItem `json:"media" yaml:"media"`
 }
 

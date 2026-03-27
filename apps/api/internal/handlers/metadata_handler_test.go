@@ -130,7 +130,7 @@ func TestMetadataHandler_SearchMetadata_Success(t *testing.T) {
 	results := data["results"].([]interface{})
 	assert.Len(t, results, 1)
 
-	fallbackStatus := data["fallbackStatus"].(map[string]interface{})
+	fallbackStatus := data["fallback_status"].(map[string]interface{})
 	attempts := fallbackStatus["attempts"].([]interface{})
 	assert.Len(t, attempts, 1)
 }
@@ -196,7 +196,7 @@ func TestMetadataHandler_SearchMetadata_AllProvidersFailed(t *testing.T) {
 	assert.Empty(t, results)
 
 	// Should still have fallback status
-	fallbackStatus := data["fallbackStatus"].(map[string]interface{})
+	fallbackStatus := data["fallback_status"].(map[string]interface{})
 	assert.NotNil(t, fallbackStatus)
 }
 
@@ -465,7 +465,7 @@ func TestMetadataHandler_SearchMetadata_FallbackSourceIndication(t *testing.T) {
 	assert.Equal(t, "douban", data["source"])
 
 	// Verify fallback status shows the chain
-	fallbackStatus := data["fallbackStatus"].(map[string]interface{})
+	fallbackStatus := data["fallback_status"].(map[string]interface{})
 	attempts := fallbackStatus["attempts"].([]interface{})
 	assert.Len(t, attempts, 2)
 
@@ -580,7 +580,7 @@ func TestMetadataHandler_ManualSearch_AllSources(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
-	body := `{"query":"Demon Slayer","mediaType":"tv","source":"all"}`
+	body := `{"query":"Demon Slayer","media_type":"tv","source":"all"}`
 	c.Request = httptest.NewRequest("POST", "/api/v1/metadata/manual-search", strings.NewReader(body))
 	c.Request.Header.Set("Content-Type", "application/json")
 
@@ -606,7 +606,7 @@ func TestMetadataHandler_ManualSearch_AllSources(t *testing.T) {
 	assert.Equal(t, "douban", secondResult["source"])
 
 	// Verify searched sources
-	searchedSources := data["searchedSources"].([]interface{})
+	searchedSources := data["searched_sources"].([]interface{})
 	assert.Len(t, searchedSources, 2)
 }
 
@@ -641,7 +641,7 @@ func TestMetadataHandler_ManualSearch_SpecificSource(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
-	body := `{"query":"Fight Club","mediaType":"movie","source":"tmdb"}`
+	body := `{"query":"Fight Club","media_type":"movie","source":"tmdb"}`
 	c.Request = httptest.NewRequest("POST", "/api/v1/metadata/manual-search", strings.NewReader(body))
 	c.Request.Header.Set("Content-Type", "application/json")
 
@@ -657,7 +657,7 @@ func TestMetadataHandler_ManualSearch_SpecificSource(t *testing.T) {
 	data := response["data"].(map[string]interface{})
 
 	// Verify only searched the specified source
-	searchedSources := data["searchedSources"].([]interface{})
+	searchedSources := data["searched_sources"].([]interface{})
 	assert.Len(t, searchedSources, 1)
 	assert.Equal(t, "tmdb", searchedSources[0])
 }
@@ -671,7 +671,7 @@ func TestMetadataHandler_ManualSearch_MissingQuery(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
-	body := `{"mediaType":"movie","source":"all"}`
+	body := `{"media_type":"movie","source":"all"}`
 	c.Request = httptest.NewRequest("POST", "/api/v1/metadata/manual-search", strings.NewReader(body))
 	c.Request.Header.Set("Content-Type", "application/json")
 
@@ -732,7 +732,7 @@ func TestMetadataHandler_ManualSearch_WithYearFilter(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
-	body := `{"query":"Matrix","mediaType":"movie","year":1999,"source":"tmdb"}`
+	body := `{"query":"Matrix","media_type":"movie","year":1999,"source":"tmdb"}`
 	c.Request = httptest.NewRequest("POST", "/api/v1/metadata/manual-search", strings.NewReader(body))
 	c.Request.Header.Set("Content-Type", "application/json")
 
@@ -760,7 +760,7 @@ func TestMetadataHandler_ManualSearch_NoResults(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
-	body := `{"query":"Nonexistent Movie 12345","mediaType":"movie","source":"all"}`
+	body := `{"query":"Nonexistent Movie 12345","media_type":"movie","source":"all"}`
 	c.Request = httptest.NewRequest("POST", "/api/v1/metadata/manual-search", strings.NewReader(body))
 	c.Request.Header.Set("Content-Type", "application/json")
 
@@ -776,7 +776,7 @@ func TestMetadataHandler_ManualSearch_NoResults(t *testing.T) {
 	data := response["data"].(map[string]interface{})
 	results := data["results"].([]interface{})
 	assert.Empty(t, results)
-	assert.Equal(t, float64(0), data["totalCount"])
+	assert.Equal(t, float64(0), data["total_count"])
 }
 
 // [P2] Tests manual search invalid source returns error
@@ -793,7 +793,7 @@ func TestMetadataHandler_ManualSearch_InvalidSource(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
-	body := `{"query":"Test","mediaType":"movie","source":"invalid"}`
+	body := `{"query":"Test","media_type":"movie","source":"invalid"}`
 	c.Request = httptest.NewRequest("POST", "/api/v1/metadata/manual-search", strings.NewReader(body))
 	c.Request.Header.Set("Content-Type", "application/json")
 
@@ -886,7 +886,7 @@ func TestMetadataHandler_ManualSearch_DefaultsToAllSources(t *testing.T) {
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	// No source specified
-	body := `{"query":"Test","mediaType":"movie"}`
+	body := `{"query":"Test","media_type":"movie"}`
 	c.Request = httptest.NewRequest("POST", "/api/v1/metadata/manual-search", strings.NewReader(body))
 	c.Request.Header.Set("Content-Type", "application/json")
 
@@ -927,9 +927,9 @@ func TestMetadataHandler_ApplyMetadata_MovieSuccess(t *testing.T) {
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	body := `{
-		"mediaId": "test-movie-id",
-		"mediaType": "movie",
-		"selectedItem": {
+		"media_id": "test-movie-id",
+		"media_type": "movie",
+		"selected_item": {
 			"id": "tmdb-550",
 			"source": "tmdb"
 		}
@@ -947,7 +947,7 @@ func TestMetadataHandler_ApplyMetadata_MovieSuccess(t *testing.T) {
 
 	assert.True(t, response["success"].(bool))
 	data := response["data"].(map[string]interface{})
-	assert.Equal(t, "test-movie-id", data["mediaId"])
+	assert.Equal(t, "test-movie-id", data["media_id"])
 	assert.Equal(t, "Fight Club", data["title"])
 	assert.Equal(t, "tmdb", data["source"])
 }
@@ -962,8 +962,8 @@ func TestMetadataHandler_ApplyMetadata_MissingMediaId(t *testing.T) {
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	body := `{
-		"mediaType": "movie",
-		"selectedItem": {
+		"media_type": "movie",
+		"selected_item": {
 			"id": "tmdb-550",
 			"source": "tmdb"
 		}
@@ -994,8 +994,8 @@ func TestMetadataHandler_ApplyMetadata_MissingSelectedItem(t *testing.T) {
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	body := `{
-		"mediaId": "test-movie-id",
-		"mediaType": "movie"
+		"media_id": "test-movie-id",
+		"media_type": "movie"
 	}`
 	c.Request = httptest.NewRequest("POST", "/api/v1/metadata/apply", strings.NewReader(body))
 	c.Request.Header.Set("Content-Type", "application/json")
@@ -1038,9 +1038,9 @@ func TestMetadataHandler_ApplyMetadata_MediaNotFound(t *testing.T) {
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	body := `{
-		"mediaId": "nonexistent-id",
-		"mediaType": "movie",
-		"selectedItem": {
+		"media_id": "nonexistent-id",
+		"media_type": "movie",
+		"selected_item": {
 			"id": "tmdb-550",
 			"source": "tmdb"
 		}
@@ -1084,13 +1084,13 @@ func TestMetadataHandler_ApplyMetadata_WithLearnPattern(t *testing.T) {
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	body := `{
-		"mediaId": "test-id",
-		"mediaType": "movie",
-		"selectedItem": {
+		"media_id": "test-id",
+		"media_type": "movie",
+		"selected_item": {
 			"id": "tmdb-550",
 			"source": "tmdb"
 		},
-		"learnPattern": true
+		"learn_pattern": true
 	}`
 	c.Request = httptest.NewRequest("POST", "/api/v1/metadata/apply", strings.NewReader(body))
 	c.Request.Header.Set("Content-Type", "application/json")
@@ -1150,9 +1150,9 @@ func TestMetadataHandler_ApplyMetadata_SeriesSuccess(t *testing.T) {
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	body := `{
-		"mediaId": "test-series-id",
-		"mediaType": "series",
-		"selectedItem": {
+		"media_id": "test-series-id",
+		"media_type": "series",
+		"selected_item": {
 			"id": "tmdb-1396",
 			"source": "tmdb"
 		}
@@ -1170,7 +1170,7 @@ func TestMetadataHandler_ApplyMetadata_SeriesSuccess(t *testing.T) {
 
 	assert.True(t, response["success"].(bool))
 	data := response["data"].(map[string]interface{})
-	assert.Equal(t, "series", data["mediaType"])
+	assert.Equal(t, "series", data["media_type"])
 }
 
 // =============================================================================
@@ -1208,9 +1208,9 @@ func TestMetadataHandler_UpdateMetadata_MovieSuccess(t *testing.T) {
 	c, _ := gin.CreateTestContext(w)
 	c.Params = gin.Params{{Key: "id", Value: "test-movie-id"}}
 	body := `{
-		"mediaType": "movie",
+		"media_type": "movie",
 		"title": "鬼滅之刃",
-		"titleEnglish": "Demon Slayer",
+		"title_english": "Demon Slayer",
 		"year": 2019,
 		"genres": ["動作", "奇幻", "冒險"],
 		"director": "外崎春雄",
@@ -1232,7 +1232,7 @@ func TestMetadataHandler_UpdateMetadata_MovieSuccess(t *testing.T) {
 	data := response["data"].(map[string]interface{})
 	assert.Equal(t, "test-movie-id", data["id"])
 	assert.Equal(t, "鬼滅之刃", data["title"])
-	assert.Equal(t, "manual", data["metadataSource"])
+	assert.Equal(t, "manual", data["metadata_source"])
 }
 
 // [P1] Tests update metadata missing title returns error (AC4)
@@ -1250,7 +1250,7 @@ func TestMetadataHandler_UpdateMetadata_MissingTitle(t *testing.T) {
 	c, _ := gin.CreateTestContext(w)
 	c.Params = gin.Params{{Key: "id", Value: "test-id"}}
 	body := `{
-		"mediaType": "movie",
+		"media_type": "movie",
 		"year": 2019
 	}`
 	c.Request = httptest.NewRequest("PUT", "/api/v1/media/test-id/metadata", strings.NewReader(body))
@@ -1284,7 +1284,7 @@ func TestMetadataHandler_UpdateMetadata_MissingYear(t *testing.T) {
 	c, _ := gin.CreateTestContext(w)
 	c.Params = gin.Params{{Key: "id", Value: "test-id"}}
 	body := `{
-		"mediaType": "movie",
+		"media_type": "movie",
 		"title": "Test Movie"
 	}`
 	c.Request = httptest.NewRequest("PUT", "/api/v1/media/test-id/metadata", strings.NewReader(body))
@@ -1344,7 +1344,7 @@ func TestMetadataHandler_UpdateMetadata_MediaNotFound(t *testing.T) {
 	c, _ := gin.CreateTestContext(w)
 	c.Params = gin.Params{{Key: "id", Value: "nonexistent-id"}}
 	body := `{
-		"mediaType": "movie",
+		"media_type": "movie",
 		"title": "Test",
 		"year": 2020
 	}`
@@ -1389,7 +1389,7 @@ func TestMetadataHandler_UpdateMetadata_SeriesSuccess(t *testing.T) {
 	c, _ := gin.CreateTestContext(w)
 	c.Params = gin.Params{{Key: "id", Value: "test-series-id"}}
 	body := `{
-		"mediaType": "series",
+		"media_type": "series",
 		"title": "Breaking Bad",
 		"year": 2008
 	}`
@@ -1430,10 +1430,10 @@ func TestMetadataHandler_UpdateMetadata_WithPosterURL(t *testing.T) {
 	c, _ := gin.CreateTestContext(w)
 	c.Params = gin.Params{{Key: "id", Value: "test-id"}}
 	body := `{
-		"mediaType": "movie",
+		"media_type": "movie",
 		"title": "Test Movie",
 		"year": 2020,
-		"posterUrl": "https://example.com/poster.jpg"
+		"poster_url": "https://example.com/poster.jpg"
 	}`
 	c.Request = httptest.NewRequest("PUT", "/api/v1/media/test-id/metadata", strings.NewReader(body))
 	c.Request.Header.Set("Content-Type", "application/json")
@@ -1553,8 +1553,8 @@ func TestMetadataHandler_UploadPoster_Success(t *testing.T) {
 
 	assert.True(t, response["success"].(bool))
 	data := response["data"].(map[string]interface{})
-	assert.Equal(t, "/posters/test-movie-id.webp", data["posterUrl"])
-	assert.Equal(t, "/posters/test-movie-id-thumb.webp", data["thumbnailUrl"])
+	assert.Equal(t, "/posters/test-movie-id.webp", data["poster_url"])
+	assert.Equal(t, "/posters/test-movie-id-thumb.webp", data["thumbnail_url"])
 }
 
 // [P1] Tests upload poster missing file returns error

@@ -255,9 +255,9 @@ func (s *BackupService) sqliteBackup(ctx context.Context, destPath string) error
 }
 
 type backupManifest struct {
-	SchemaVersion int64  `json:"schemaVersion"`
-	CreatedAt     string `json:"createdAt"`
-	AppVersion    string `json:"appVersion"`
+	SchemaVersion int64  `json:"schema_version"`
+	CreatedAt     string `json:"created_at"`
+	AppVersion    string `json:"app_version"`
 }
 
 func (s *BackupService) createManifest(now time.Time) backupManifest {

@@ -28,7 +28,7 @@ func TestConfig_JSONSerialization(t *testing.T) {
 
 	assert.Equal(t, "http://192.168.1.100:8080", result["host"])
 	assert.Equal(t, "admin", result["username"])
-	assert.Equal(t, "/qbt", result["basePath"])
+	assert.Equal(t, "/qbt", result["base_path"])
 	assert.NotContains(t, result, "password", "password should not be serialized")
 	assert.NotContains(t, result, "timeout", "timeout should not be serialized")
 }
@@ -46,8 +46,8 @@ func TestVersionInfo_JSONSerialization(t *testing.T) {
 	err = json.Unmarshal(data, &result)
 	assert.NoError(t, err)
 
-	assert.Equal(t, "v4.5.2", result["appVersion"])
-	assert.Equal(t, "2.9.3", result["apiVersion"])
+	assert.Equal(t, "v4.5.2", result["app_version"])
+	assert.Equal(t, "2.9.3", result["api_version"])
 }
 
 func TestConnectionError_Error(t *testing.T) {

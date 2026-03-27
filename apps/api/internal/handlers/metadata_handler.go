@@ -26,10 +26,10 @@ func NewMetadataHandler(service services.MetadataServiceInterface) *MetadataHand
 type SearchMetadataResponse struct {
 	Source         string                   `json:"source"`
 	Results        []metadata.MetadataItem  `json:"results"`
-	TotalCount     int                      `json:"totalCount"`
+	TotalCount     int                      `json:"total_count"`
 	Page           int                      `json:"page"`
-	TotalPages     int                      `json:"totalPages"`
-	FallbackStatus *metadata.FallbackStatus `json:"fallbackStatus,omitempty"`
+	TotalPages     int                      `json:"total_pages"`
+	FallbackStatus *metadata.FallbackStatus `json:"fallback_status,omitempty"`
 }
 
 // SearchMetadata handles GET /api/v1/metadata/search
@@ -124,7 +124,7 @@ func (h *MetadataHandler) GetProviders(c *gin.Context) {
 // ManualSearchRequest represents the request body for manual search
 type ManualSearchRequest struct {
 	Query     string `json:"query"`
-	MediaType string `json:"mediaType"`
+	MediaType string `json:"media_type"`
 	Year      int    `json:"year,omitempty"`
 	Source    string `json:"source"`
 }
@@ -193,13 +193,13 @@ func (h *MetadataHandler) ManualSearch(c *gin.Context) {
 
 // ApplyMetadataRequestBody represents the request body for applying metadata (Story 3.7 - AC3)
 type ApplyMetadataRequestBody struct {
-	MediaID      string `json:"mediaId"`
-	MediaType    string `json:"mediaType"`
+	MediaID      string `json:"media_id"`
+	MediaType    string `json:"media_type"`
 	SelectedItem struct {
 		ID     string `json:"id"`
 		Source string `json:"source"`
-	} `json:"selectedItem"`
-	LearnPattern bool `json:"learnPattern,omitempty"`
+	} `json:"selected_item"`
+	LearnPattern bool `json:"learn_pattern,omitempty"`
 }
 
 // ApplyMetadata handles POST /api/v1/metadata/apply (Story 3.7 - AC3)
@@ -273,15 +273,15 @@ func (h *MetadataHandler) ApplyMetadata(c *gin.Context) {
 
 // UpdateMetadataRequestBody represents the request body for updating metadata (Story 3.8 - AC2)
 type UpdateMetadataRequestBody struct {
-	MediaType    string   `json:"mediaType"`
+	MediaType    string   `json:"media_type"`
 	Title        string   `json:"title"`
-	TitleEnglish string   `json:"titleEnglish,omitempty"`
+	TitleEnglish string   `json:"title_english,omitempty"`
 	Year         int      `json:"year"`
 	Genres       []string `json:"genres,omitempty"`
 	Director     string   `json:"director,omitempty"`
 	Cast         []string `json:"cast,omitempty"`
 	Overview     string   `json:"overview,omitempty"`
-	PosterURL    string   `json:"posterUrl,omitempty"`
+	PosterURL    string   `json:"poster_url,omitempty"`
 }
 
 // UpdateMetadata handles PUT /api/v1/media/{id}/metadata (Story 3.8 - AC2)

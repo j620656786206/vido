@@ -16,11 +16,11 @@ import (
 type DatabaseHealth struct {
 	Status          string `json:"status"`           // "healthy", "degraded", "unhealthy"
 	Latency         int64  `json:"latency"`          // Latency in milliseconds
-	WALEnabled      bool   `json:"walEnabled"`       // Whether WAL mode is active
-	WALMode         string `json:"walMode"`          // Current journal mode
-	SyncMode        string `json:"syncMode"`         // Current synchronous mode
-	OpenConnections int    `json:"openConnections"`  // Current open connections
-	IdleConnections int    `json:"idleConnections"`  // Current idle connections
+	WALEnabled      bool   `json:"wal_enabled"`       // Whether WAL mode is active
+	WALMode         string `json:"wal_mode"`          // Current journal mode
+	SyncMode        string `json:"sync_mode"`         // Current synchronous mode
+	OpenConnections int    `json:"open_connections"`  // Current open connections
+	IdleConnections int    `json:"idle_connections"`  // Current idle connections
 	Error           string `json:"error,omitempty"`  // Error message if unhealthy
 }
 

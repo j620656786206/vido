@@ -80,9 +80,9 @@ var _ TaskExecutor = (*RetryExecutor)(nil)
 // RetryPayload represents the payload structure for retry tasks
 type RetryPayload struct {
 	// For parse/metadata_fetch tasks
-	MediaID   string `json:"mediaId,omitempty"`
+	MediaID   string `json:"media_id,omitempty"`
 	Filename  string `json:"filename,omitempty"`
-	MediaType string `json:"mediaType,omitempty"` // "movie" or "series"
+	MediaType string `json:"media_type,omitempty"` // "movie" or "series"
 	Title     string `json:"title,omitempty"`
 	Year      int    `json:"year,omitempty"`
 	Season    int    `json:"season,omitempty"`

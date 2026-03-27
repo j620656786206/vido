@@ -376,7 +376,7 @@ func TestBackupService_ReadManifest(t *testing.T) {
 		require.NoError(t, err)
 		defer os.Remove(tmpFile.Name())
 
-		manifestData := `{"schemaVersion": 17, "createdAt": "2026-01-01T00:00:00Z", "appVersion": "1.0.0"}`
+		manifestData := `{"schema_version": 17, "created_at": "2026-01-01T00:00:00Z", "app_version": "1.0.0"}`
 		_, err = tmpFile.WriteString(manifestData)
 		require.NoError(t, err)
 		tmpFile.Close()

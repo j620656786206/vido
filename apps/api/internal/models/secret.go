@@ -12,8 +12,8 @@ type Secret struct {
 	EncryptedValue string `db:"encrypted_value" json:"-"` // Never expose in JSON
 
 	// Timestamps
-	CreatedAt time.Time `db:"created_at" json:"createdAt"`
-	UpdatedAt time.Time `db:"updated_at" json:"updatedAt"`
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 }
 
 // SecretInfo represents secret metadata without the encrypted value.
@@ -21,8 +21,8 @@ type Secret struct {
 type SecretInfo struct {
 	ID        string    `json:"id"`
 	Name      string    `json:"name"`
-	CreatedAt time.Time `json:"createdAt"`
-	UpdatedAt time.Time `json:"updatedAt"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // ToInfo converts a Secret to SecretInfo (without encrypted value).

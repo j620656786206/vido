@@ -28,9 +28,9 @@ type SearchResult struct {
 // LibrarySearchResults contains unified search results across movies and series
 type LibrarySearchResults struct {
 	Results    []SearchResult               `json:"results"`
-	Movies     *repository.PaginationResult `json:"moviesPagination"`
-	Series     *repository.PaginationResult `json:"seriesPagination"`
-	TotalCount int                          `json:"totalCount"`
+	Movies     *repository.PaginationResult `json:"movies_pagination"`
+	Series     *repository.PaginationResult `json:"series_pagination"`
+	TotalCount int                          `json:"total_count"`
 }
 
 // LibraryListResult contains combined movie + series listing with pagination
@@ -581,11 +581,11 @@ func getVoteAverage(item LibraryItem) float64 {
 
 // LibraryStats contains library statistics
 type LibraryStats struct {
-	YearMin    int `json:"yearMin"`
-	YearMax    int `json:"yearMax"`
-	MovieCount int `json:"movieCount"`
-	TvCount    int `json:"tvCount"`
-	TotalCount int `json:"totalCount"`
+	YearMin    int `json:"year_min"`
+	YearMax    int `json:"year_max"`
+	MovieCount int `json:"movie_count"`
+	TvCount    int `json:"tv_count"`
+	TotalCount int `json:"total_count"`
 }
 
 // GetDistinctGenres returns all unique genres across movies and series

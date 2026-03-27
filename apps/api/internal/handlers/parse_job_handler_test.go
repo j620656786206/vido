@@ -98,7 +98,7 @@ func TestParseJobHandler_GetParseStatus_Success(t *testing.T) {
 
 	dataMap, ok := response.Data.(map[string]interface{})
 	require.True(t, ok)
-	assert.Equal(t, "abc123", dataMap["torrentHash"])
+	assert.Equal(t, "abc123", dataMap["torrent_hash"])
 	assert.Equal(t, "completed", dataMap["status"])
 	mockService.AssertExpectations(t)
 }

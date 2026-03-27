@@ -46,26 +46,26 @@ const ErrorThresholdDown = 3
 // ServiceHealth represents the health status of an external service
 type ServiceHealth struct {
 	Name           string    `json:"name"`
-	DisplayName    string    `json:"displayName"`
+	DisplayName    string    `json:"display_name"`
 	Status         string    `json:"status"`
-	LastCheck      time.Time `json:"lastCheck"`
-	LastSuccess    time.Time `json:"lastSuccess"`
-	ErrorCount     int       `json:"errorCount"`
+	LastCheck      time.Time `json:"last_check"`
+	LastSuccess    time.Time `json:"last_success"`
+	ErrorCount     int       `json:"error_count"`
 	Message        string    `json:"message,omitempty"`
-	ResponseTimeMs int64     `json:"responseTimeMs"`
+	ResponseTimeMs int64     `json:"response_time_ms"`
 }
 
 // ServiceStatus represents a service connection status for the settings dashboard.
 // Maps from internal ServiceHealth to user-facing status format.
 type ServiceStatus struct {
 	Name           string     `json:"name"`
-	DisplayName    string     `json:"displayName"`
+	DisplayName    string     `json:"display_name"`
 	Status         string     `json:"status"` // "connected", "rate_limited", "error", "disconnected", "unconfigured"
 	Message        string     `json:"message"`
-	LastSuccessAt  *time.Time `json:"lastSuccessAt"`
-	LastCheckAt    time.Time  `json:"lastCheckAt"`
-	ResponseTimeMs int64      `json:"responseTimeMs"`
-	ErrorMessage   string     `json:"errorMessage,omitempty"`
+	LastSuccessAt  *time.Time `json:"last_success_at"`
+	LastCheckAt    time.Time  `json:"last_check_at"`
+	ResponseTimeMs int64      `json:"response_time_ms"`
+	ErrorMessage   string     `json:"error_message,omitempty"`
 }
 
 // ServiceStatus constants for the settings dashboard
@@ -205,9 +205,9 @@ func (s *ServicesHealth) AllServiceStatuses() []ServiceStatus {
 // DegradedResult represents a result with missing or fallback data
 type DegradedResult struct {
 	Data             interface{}      `json:"data"`
-	DegradationLevel DegradationLevel `json:"degradationLevel"`
-	MissingFields    []string         `json:"missingFields,omitempty"`
-	FallbackUsed     []string         `json:"fallbackUsed,omitempty"`
+	DegradationLevel DegradationLevel `json:"degradation_level"`
+	MissingFields    []string         `json:"missing_fields,omitempty"`
+	FallbackUsed     []string         `json:"fallback_used,omitempty"`
 	Message          string           `json:"message,omitempty"`
 }
 
@@ -278,7 +278,7 @@ func (s *ServicesHealth) AllServices() []*ServiceHealth {
 
 // HealthStatusResponse represents the API response for health status endpoint
 type HealthStatusResponse struct {
-	DegradationLevel DegradationLevel `json:"degradationLevel"`
+	DegradationLevel DegradationLevel `json:"degradation_level"`
 	Services         *ServicesHealth  `json:"services"`
 	Message          string           `json:"message"`
 }
