@@ -228,7 +228,7 @@ development_status:
   retro-8-TS2-testsprite-generate-executable-tests:  backlog  # → TEA: run TestSprite MCP generate-tests to produce .py files for TC063-TC078. Requires frontend+backend running with seed data + subtitle provider access/mocks.
 
   # --- Epic 9 Preparation ---
-  retro-8-E9-1-split-c2-whisper-ai-translation:     backlog  # → SM /bmad:bmm:agents:sm: update epic-9 file to split C-2 → C-2a + C-2b
+  retro-8-E9-1-split-c2-whisper-ai-translation:     done  # 2026-03-27 — SM: split C-2 into C-2a (Whisper transcription) + C-2b (AI translation), added split rationale and Whisper WER success criterion
 
   # ==============================================================================
   # Epic 9: AI Subtitle Enhancement (PRD v4)
