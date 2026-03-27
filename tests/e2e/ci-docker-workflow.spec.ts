@@ -226,24 +226,20 @@ test.describe('Build Layer Caching @ci @validation', () => {
 });
 
 // =============================================================================
-// AC6: Go Backend Tests as Prerequisite
+// AC6: Docker Build Verifies Compilation (test-go removed; Dockerfile handles it)
 // =============================================================================
-test.describe('Go Test Prerequisite @ci @validation', () => {
-  test('[P1] test-go job runs before docker build', () => {
-    // GIVEN: The docker job dependencies
+test.describe('Docker Build Standalone @ci @validation', () => {
+  test('[P1] docker job has no test-go dependency', () => {
+    // GIVEN: The docker job
     const dockerJob = dockerWorkflow.jobs.docker;
-    // THEN: Docker job should depend on test-go
-    expect(dockerJob.needs).toContain('test-go');
+    // THEN: Docker job should not depend on test-go (unit tests run in Tests workflow)
+    expect(dockerJob.needs).toBeUndefined();
   });
 
-  test('[P1] test-go job runs go test ./... in apps/api', () => {
-    // GIVEN: The test-go job
-    const testGoJob = dockerWorkflow.jobs['test-go'];
-    const testStep = testGoJob.steps.find((s) => s.run?.includes('go test'));
-    // THEN: Should run go test in apps/api directory
-    expect(testStep).toBeDefined();
-    expect(testStep!.run).toContain('go test ./...');
-    expect(testStep!['working-directory']).toBe('apps/api');
+  test('[P1] test-go job does not exist in docker workflow', () => {
+    // GIVEN: The docker workflow jobs
+    // THEN: test-go job should not be present
+    expect(dockerWorkflow.jobs['test-go']).toBeUndefined();
   });
 });
 
@@ -293,13 +289,12 @@ test.describe('Provenance & SBOM @ci @validation', () => {
 test.describe('Action Versions @ci @validation', () => {
   test('[P1] all actions use latest stable versions', () => {
     // GIVEN: The docker job steps with uses
-    const allSteps = [...dockerWorkflow.jobs['test-go'].steps, ...dockerWorkflow.jobs.docker.steps];
+    const allSteps = [...dockerWorkflow.jobs.docker.steps];
     const actionSteps = allSteps.filter((s) => s.uses);
 
     // Expected minimum versions (latest stable as of March 2026)
     const expectedVersions: Record<string, string> = {
       'actions/checkout': 'v4',
-      'actions/setup-go': 'v5',
       'docker/setup-qemu-action': 'v4',
       'docker/setup-buildx-action': 'v4',
       'docker/login-action': 'v4',
@@ -367,15 +362,6 @@ test.describe('Workflow Permissions @ci @validation', () => {
 // Cross-Workflow Go Version Consistency
 // =============================================================================
 test.describe('Go Version Consistency @ci @validation', () => {
-  test('[P1] docker.yml GO_VERSION matches go.mod', () => {
-    // GIVEN: go.mod specifies a Go version
-    const goModVersion = goModContent.match(/^go\s+(\d+\.\d+)/m)?.[1];
-    // WHEN: Checking docker.yml env
-    const dockerGoVersion = dockerWorkflow.env?.GO_VERSION;
-    // THEN: Versions should match
-    expect(dockerGoVersion).toBe(goModVersion);
-  });
-
   test('[P1] test.yml GO_VERSION matches go.mod', () => {
     // GIVEN: go.mod specifies a Go version
     const goModVersion = goModContent.match(/^go\s+(\d+\.\d+)/m)?.[1];
@@ -383,11 +369,5 @@ test.describe('Go Version Consistency @ci @validation', () => {
     const testGoVersion = testWorkflow.env?.GO_VERSION;
     // THEN: Versions should match
     expect(testGoVersion).toBe(goModVersion);
-  });
-
-  test('[P1] docker.yml and test.yml GO_VERSION are identical', () => {
-    // GIVEN: Both workflow files
-    // THEN: GO_VERSION should be consistent across workflows
-    expect(dockerWorkflow.env?.GO_VERSION).toBe(testWorkflow.env?.GO_VERSION);
   });
 });
