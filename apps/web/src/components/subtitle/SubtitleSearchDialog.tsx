@@ -107,8 +107,8 @@ export function SubtitleSearchDialog({
 
   const handleSearch = useCallback(() => {
     search({
-      media_id: mediaId,
-      media_type: mediaType,
+      mediaId,
+      mediaType,
       providers: selectedProviders,
       query,
     });
@@ -118,13 +118,13 @@ export function SubtitleSearchDialog({
     (result: SubtitleSearchResult) => {
       download(
         {
-          media_id: mediaId,
-          media_type: mediaType,
-          media_file_path: mediaFilePath,
-          subtitle_id: result.id,
+          mediaId,
+          mediaType,
+          mediaFilePath,
+          subtitleId: result.id,
           provider: result.source,
           resolution: mediaResolution,
-          convert_to_traditional: convertToTraditional,
+          convertToTraditional,
           score: result.score,
         },
         {

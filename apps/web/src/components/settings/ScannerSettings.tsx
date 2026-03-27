@@ -58,7 +58,7 @@ export function ScannerSettings() {
     dismissTimerRef.current = setTimeout(() => setNotification(null), 5000);
   };
 
-  const isScanning = status?.is_scanning ?? false;
+  const isScanning = status?.isScanning ?? false;
 
   const handleScan = async () => {
     setNotification(null);
@@ -123,7 +123,7 @@ export function ScannerSettings() {
         <div className="space-y-3">
           <label className="text-sm font-medium text-slate-300">媒體資料夾</label>
           <div className="space-y-2" data-testid="folder-list">
-            {status?.last_scan_files !== undefined ? (
+            {status?.lastScanFiles !== undefined ? (
               <div className="flex items-center gap-2 rounded-md border border-slate-600 bg-slate-900 px-3 py-2.5">
                 <FolderOpen className="h-4 w-4 shrink-0 text-slate-400" />
                 <span className="font-mono text-sm text-slate-300">
@@ -172,11 +172,7 @@ export function ScannerSettings() {
           <label className="text-sm font-medium text-slate-300">上次掃描</label>
           <p className="font-mono text-sm text-slate-400" data-testid="last-scan-info">
             {status
-              ? formatLastScan(
-                  status.last_scan_at,
-                  status.last_scan_files,
-                  status.last_scan_duration
-                )
+              ? formatLastScan(status.lastScanAt, status.lastScanFiles, status.lastScanDuration)
               : '載入中...'}
           </p>
         </div>

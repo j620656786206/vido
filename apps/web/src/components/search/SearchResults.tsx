@@ -36,7 +36,7 @@ export function SearchResults({
       ...movieResults.map((item): MediaItem => ({ item, mediaType: 'movie' })),
       ...tvResults.map((item): MediaItem => ({ item, mediaType: 'tv' })),
     ];
-    sortedItems.sort((a, b) => b.item.vote_count - a.item.vote_count);
+    sortedItems.sort((a, b) => b.item.voteCount - a.item.voteCount);
     // Clear individual arrays since we're using unified items
     sortedMovies = [];
     sortedTvShows = [];
@@ -44,18 +44,18 @@ export function SearchResults({
 
   // Calculate totals
   const totalResults =
-    (type === 'all' || type === 'movie' ? movies?.total_results || 0 : 0) +
-    (type === 'all' || type === 'tv' ? tvShows?.total_results || 0 : 0);
+    (type === 'all' || type === 'movie' ? movies?.totalResults || 0 : 0) +
+    (type === 'all' || type === 'tv' ? tvShows?.totalResults || 0 : 0);
 
   // Calculate total pages based on type filter
   let totalPages = 1;
   if (type === 'movie') {
-    totalPages = movies?.total_pages || 1;
+    totalPages = movies?.totalPages || 1;
   } else if (type === 'tv') {
-    totalPages = tvShows?.total_pages || 1;
+    totalPages = tvShows?.totalPages || 1;
   } else {
     // For 'all' type, use the max of both
-    totalPages = Math.max(movies?.total_pages || 1, tvShows?.total_pages || 1);
+    totalPages = Math.max(movies?.totalPages || 1, tvShows?.totalPages || 1);
   }
 
   const hasResults = sortedItems

@@ -65,8 +65,8 @@ function SearchPage() {
             <MediaTypeTabs
               activeType={currentType}
               onTypeChange={handleTypeChange}
-              movieCount={moviesQuery.data?.total_results}
-              tvCount={tvQuery.data?.total_results}
+              movieCount={moviesQuery.data?.totalResults}
+              tvCount={tvQuery.data?.totalResults}
               className="mb-6"
             />
             <SearchResults

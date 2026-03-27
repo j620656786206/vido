@@ -36,29 +36,29 @@ function getItemData(item: LibraryItem) {
   if (item.type === 'movie' && item.movie) {
     const m = item.movie;
     return {
-      id: m.tmdb_id ?? 0,
+      id: m.tmdbId ?? 0,
       type: 'movie' as const,
       title: m.title,
-      originalTitle: m.original_title,
-      posterPath: m.poster_path,
-      releaseDate: m.release_date,
+      originalTitle: m.originalTitle,
+      posterPath: m.posterPath,
+      releaseDate: m.releaseDate,
       genres: m.genres ?? [],
-      rating: m.vote_average,
-      createdAt: m.created_at,
+      rating: m.voteAverage,
+      createdAt: m.createdAt,
     };
   }
   if (item.type === 'series' && item.series) {
     const s = item.series;
     return {
-      id: s.tmdb_id ?? 0,
+      id: s.tmdbId ?? 0,
       type: 'tv' as const,
       title: s.title,
-      originalTitle: s.original_title,
-      posterPath: s.poster_path,
-      releaseDate: s.first_air_date,
+      originalTitle: s.originalTitle,
+      posterPath: s.posterPath,
+      releaseDate: s.firstAirDate,
       genres: s.genres ?? [],
-      rating: s.vote_average,
-      createdAt: s.created_at,
+      rating: s.voteAverage,
+      createdAt: s.createdAt,
     };
   }
   return null;

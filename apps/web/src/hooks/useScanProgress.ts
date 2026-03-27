@@ -7,6 +7,7 @@
 import { useEffect, useReducer, useCallback, useRef } from 'react';
 import { scannerService } from '../services/scannerService';
 import type { ScanProgressEvent, ScanStatus } from '../services/scannerService';
+import { snakeToCamel } from '../utils/caseTransform';
 
 export interface ScanProgressState {
   isScanning: boolean;
@@ -54,21 +55,21 @@ function scanProgressReducer(
 ): ScanProgressState {
   switch (action.type) {
     case 'SSE_UPDATE': {
-      const pct = action.payload.percent_done;
-      const found = action.payload.files_found;
-      // Estimate filesProcessed from percent_done × filesFound when not provided by SSE
+      const pct = action.payload.percentDone;
+      const found = action.payload.filesFound;
+      // Estimate filesProcessed from percentDone × filesFound when not provided by SSE
       const estimatedProcessed = found > 0 ? Math.round((pct / 100) * found) : 0;
       return {
         ...state,
         isScanning: true,
         percentDone: pct,
-        currentFile: action.payload.current_file,
+        currentFile: action.payload.currentFile,
         filesFound: found,
-        filesProcessed: (action.payload as Record<string, unknown>).files_processed
-          ? Number((action.payload as Record<string, unknown>).files_processed)
+        filesProcessed: (action.payload as unknown as Record<string, unknown>).filesProcessed
+          ? Number((action.payload as unknown as Record<string, unknown>).filesProcessed)
           : estimatedProcessed,
-        errorCount: action.payload.error_count,
-        estimatedTime: action.payload.estimated_time,
+        errorCount: action.payload.errorCount,
+        estimatedTime: action.payload.estimatedTime,
         isComplete: false,
         isCancelled: false,
         isDismissed: false,
@@ -76,31 +77,31 @@ function scanProgressReducer(
     }
     case 'STATUS_UPDATE': {
       const p = action.payload;
-      if (!p.is_scanning && state.isScanning) {
+      if (!p.isScanning && state.isScanning) {
         // Scan just finished — mark complete
         return {
           ...state,
           isScanning: false,
           percentDone: 100,
-          filesFound: p.files_found,
-          filesProcessed: p.files_processed,
-          errorCount: p.error_count,
+          filesFound: p.filesFound,
+          filesProcessed: p.filesProcessed,
+          errorCount: p.errorCount,
           currentFile: '',
           estimatedTime: '',
           isComplete: true,
           isDismissed: false,
         };
       }
-      if (p.is_scanning) {
+      if (p.isScanning) {
         return {
           ...state,
           isScanning: true,
-          percentDone: p.percent_done,
-          currentFile: p.current_file,
-          filesFound: p.files_found,
-          filesProcessed: p.files_processed,
-          errorCount: p.error_count,
-          estimatedTime: p.estimated_time,
+          percentDone: p.percentDone,
+          currentFile: p.currentFile,
+          filesFound: p.filesFound,
+          filesProcessed: p.filesProcessed,
+          errorCount: p.errorCount,
+          estimatedTime: p.estimatedTime,
           isComplete: false,
           isCancelled: false,
           isDismissed: false,
@@ -210,7 +211,7 @@ export function useScanProgress() {
       resetSseTimeout();
       try {
         const event = JSON.parse(e.data);
-        const data: ScanProgressEvent = event.data || event;
+        const data = snakeToCamel<ScanProgressEvent>(event.data || event);
         dispatch({ type: 'SSE_UPDATE', payload: data });
       } catch {
         // Ignore parse errors
@@ -222,16 +223,16 @@ export function useScanProgress() {
       resetSseTimeout();
       try {
         const event = JSON.parse(e.data);
-        const data = event.data || event;
+        const raw = snakeToCamel<Record<string, unknown>>(event.data || event);
         // Update final counts then mark complete
         dispatch({
           type: 'SSE_UPDATE',
           payload: {
-            files_found: data.files_found ?? 0,
-            current_file: '',
-            percent_done: 100,
-            error_count: data.error_count ?? 0,
-            estimated_time: '',
+            filesFound: (raw.filesFound as number) ?? 0,
+            currentFile: '',
+            percentDone: 100,
+            errorCount: (raw.errorCount as number) ?? 0,
+            estimatedTime: '',
           },
         });
         dispatch({ type: 'SCAN_COMPLETE' });
@@ -261,7 +262,6 @@ export function useScanProgress() {
         if (mountedRef.current) connectSSE();
       }, SSE_RECONNECT_MS);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stopPolling, startPolling, resetSseTimeout]);
 
   // Keep a stable ref to connectSSE to avoid useEffect re-firing
@@ -277,7 +277,7 @@ export function useScanProgress() {
     try {
       const status = await scannerService.getScanStatus();
       if (!mountedRef.current) return;
-      if (status.is_scanning) {
+      if (status.isScanning) {
         dispatch({ type: 'STATUS_UPDATE', payload: status });
         // Stop idle polling, connect SSE for real-time updates
         if (idlePollRef.current) {

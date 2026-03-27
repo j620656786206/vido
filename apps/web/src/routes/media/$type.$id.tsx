@@ -108,18 +108,16 @@ function MediaDetailRoute() {
       id: String(id),
       mediaType: isMovie ? 'movie' : 'series',
       title: isMovie ? movieData!.title : tvData!.name,
-      titleEnglish: isMovie ? movieData!.original_title : tvData!.original_name,
+      titleEnglish: isMovie ? movieData!.originalTitle : tvData!.originalName,
       year: parseInt(
-        (isMovie ? movieData!.release_date : tvData!.first_air_date)?.slice(0, 4) || '0',
+        (isMovie ? movieData!.releaseDate : tvData!.firstAirDate)?.slice(0, 4) || '0',
         10
       ),
       genres: data.genres?.map((g) => g.name) || [],
       director: director?.name,
       cast: credits.data?.cast?.slice(0, 10).map((c) => c.name) || [],
       overview: data.overview,
-      posterUrl: data.poster_path
-        ? `https://image.tmdb.org/t/p/w500${data.poster_path}`
-        : undefined,
+      posterUrl: data.posterPath ? `https://image.tmdb.org/t/p/w500${data.posterPath}` : undefined,
     };
   }, [details.data, isMovie, id, director, credits.data]);
 
@@ -187,7 +185,7 @@ function MediaDetailRoute() {
             <CreditsSection
               director={director}
               cast={credits.data.cast?.slice(0, 6)}
-              createdBy={tvShowData?.created_by}
+              createdBy={tvShowData?.createdBy}
             />
           </div>
         )}

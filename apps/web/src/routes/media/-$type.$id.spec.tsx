@@ -64,7 +64,7 @@ const mockTVShowDetails: TVShowDetails = {
   type: 'Scripted',
   tagline: '',
   genres: [{ id: 3, name: '劇情' }],
-  created_by: [{ id: 1, name: '創作者', profile_path: null }],
+  createdBy: [{ id: 1, name: '創作者', profile_path: null }],
   networks: [{ id: 1, name: 'Netflix', logo_path: null }],
   in_production: true,
   seasons: [],
@@ -142,7 +142,7 @@ function TestMediaDetailRoute({
           <CreditsSection
             director={director}
             cast={credits.data.cast?.slice(0, 6)}
-            createdBy={tvShowData?.created_by}
+            createdBy={tvShowData?.createdBy}
           />
         </div>
       )}

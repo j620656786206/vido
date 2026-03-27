@@ -59,21 +59,20 @@ export function MediaDetailPanel({
   const tvShow = !isMovie ? (details as TVShowDetails) : null;
 
   const title = isMovie ? movie!.title : tvShow!.name;
-  const originalTitle = isMovie ? movie!.original_title : tvShow!.original_name;
+  const originalTitle = isMovie ? movie!.originalTitle : tvShow!.originalName;
 
-  const year = isMovie ? movie!.release_date?.slice(0, 4) : tvShow!.first_air_date?.slice(0, 4);
-  const runtime = isMovie ? movie!.runtime : tvShow!.episode_run_time?.[0];
+  const year = isMovie ? movie!.releaseDate?.slice(0, 4) : tvShow!.firstAirDate?.slice(0, 4);
+  const runtime = isMovie ? movie!.runtime : tvShow!.episodeRunTime?.[0];
 
-  const posterUrl = getImageUrl(details.poster_path, 'w500');
-  const backdropUrl = getImageUrl(details.backdrop_path, 'w780');
+  const posterUrl = getImageUrl(details.posterPath, 'w500');
+  const backdropUrl = getImageUrl(details.backdropPath, 'w780');
 
   const director = credits?.crew?.find((c) => c.job === 'Director');
   const topCast = credits?.cast?.slice(0, 5) ?? [];
 
   const hasContextMenu = onReparse && onExport && onDelete;
 
-  const productionCountryStr =
-    details.production_countries?.map((c) => c.iso_3166_1).join(',') ?? '';
+  const productionCountryStr = details.productionCountries?.map((c) => c.iso31661).join(',') ?? '';
 
   return (
     <div className="flex flex-col" data-testid="media-detail-panel">
@@ -118,12 +117,12 @@ export function MediaDetailPanel({
             <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-gray-300">
               {year && <span data-testid="detail-year">{year}</span>}
               {runtime && runtime > 0 && <span data-testid="detail-runtime">{runtime} 分鐘</span>}
-              {details.vote_average > 0 && (
+              {details.voteAverage > 0 && (
                 <span
                   className="flex items-center gap-1 text-yellow-400"
                   data-testid="detail-rating"
                 >
-                  ⭐ {details.vote_average.toFixed(1)}
+                  ⭐ {details.voteAverage.toFixed(1)}
                 </span>
               )}
             </div>
@@ -164,11 +163,11 @@ export function MediaDetailPanel({
             <span className="ml-2 text-sm text-white">{director.name}</span>
           </div>
         )}
-        {tvShow?.created_by && tvShow.created_by.length > 0 && (
+        {tvShow?.createdBy && tvShow.createdBy.length > 0 && (
           <div className="mt-4">
             <span className="text-sm text-gray-400">創作者：</span>
             <span className="ml-2 text-sm text-white">
-              {tvShow.created_by.map((c) => c.name).join(', ')}
+              {tvShow.createdBy.map((c) => c.name).join(', ')}
             </span>
           </div>
         )}
@@ -321,23 +320,23 @@ function TVShowSeasons({ tvShow }: { tvShow: TVShowDetails }) {
   return (
     <div className="mt-6" data-testid="tv-seasons">
       <h3 className="mb-2 text-sm font-semibold text-gray-400">
-        季數資訊 ({tvShow.number_of_seasons} 季 · {tvShow.number_of_episodes} 集)
+        季數資訊 ({tvShow.numberOfSeasons} 季 · {tvShow.numberOfEpisodes} 集)
       </h3>
-      {tvShow.production_countries && tvShow.production_countries.length > 0 && (
+      {tvShow.productionCountries && tvShow.productionCountries.length > 0 && (
         <p className="mb-2 text-xs text-gray-500">
-          製作國家：{tvShow.production_countries.map((c) => c.name).join(', ')}
+          製作國家：{tvShow.productionCountries.map((c) => c.name).join(', ')}
         </p>
       )}
       <div className="space-y-1">
         {tvShow.seasons
-          .filter((s) => s.season_number > 0)
+          .filter((s) => s.seasonNumber > 0)
           .map((season) => (
             <div
               key={season.id}
               className="flex items-center justify-between rounded bg-slate-800/50 px-3 py-1.5 text-sm"
             >
               <span className="text-gray-300">{season.name}</span>
-              <span className="text-gray-500">{season.episode_count} 集</span>
+              <span className="text-gray-500">{season.episodeCount} 集</span>
             </div>
           ))}
       </div>

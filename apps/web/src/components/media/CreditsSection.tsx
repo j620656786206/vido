@@ -30,7 +30,7 @@ export function CreditsSection({ director, cast, createdBy, className }: Credits
           <CreditPerson
             name={director.name}
             subtitle={director.department}
-            profilePath={director.profile_path}
+            profilePath={director.profilePath}
           />
         </div>
       )}
@@ -43,7 +43,7 @@ export function CreditsSection({ director, cast, createdBy, className }: Credits
               <CreditPerson
                 key={creator.id}
                 name={creator.name}
-                profilePath={creator.profile_path}
+                profilePath={creator.profilePath}
               />
             ))}
           </div>
@@ -60,7 +60,7 @@ export function CreditsSection({ director, cast, createdBy, className }: Credits
                 key={member.id}
                 name={member.name}
                 subtitle={member.character}
-                profilePath={member.profile_path}
+                profilePath={member.profilePath}
               />
             ))}
           </div>

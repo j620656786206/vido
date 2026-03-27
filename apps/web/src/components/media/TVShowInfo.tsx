@@ -43,16 +43,16 @@ export function TVShowInfo({ show, className }: TVShowInfoProps) {
 
       <div className="space-y-2 text-sm">
         {/* Task 6.2: Number of seasons and episodes */}
-        <InfoRow label="季數" value={`${show.number_of_seasons} 季`} testId="seasons-count" />
-        <InfoRow label="集數" value={`${show.number_of_episodes} 集`} testId="episodes-count" />
+        <InfoRow label="季數" value={`${show.numberOfSeasons} 季`} testId="seasons-count" />
+        <InfoRow label="集數" value={`${show.numberOfEpisodes} 集`} testId="episodes-count" />
 
         {/* Task 6.4: Status */}
         <InfoRow label="狀態" value={statusText} testId="show-status" />
 
         {/* Task 6.3: First air date and last air date */}
-        <InfoRow label="首播日期" value={formatDate(show.first_air_date)} testId="first-air-date" />
-        {show.last_air_date && (
-          <InfoRow label="最新集數" value={formatDate(show.last_air_date)} testId="last-air-date" />
+        <InfoRow label="首播日期" value={formatDate(show.firstAirDate)} testId="first-air-date" />
+        {show.lastAirDate && (
+          <InfoRow label="最新集數" value={formatDate(show.lastAirDate)} testId="last-air-date" />
         )}
 
         {/* Task 6.5: Networks/streaming platforms */}

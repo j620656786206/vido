@@ -7,21 +7,21 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 export type ScheduleFrequency = 'hourly' | 'daily' | 'manual';
 
 export interface ScanStatus {
-  is_scanning: boolean;
-  files_found: number;
-  files_processed: number;
-  current_file: string;
-  percent_done: number;
-  error_count: number;
-  estimated_time: string;
-  last_scan_at: string;
-  last_scan_files: number;
-  last_scan_duration: string;
+  isScanning: boolean;
+  filesFound: number;
+  filesProcessed: number;
+  currentFile: string;
+  percentDone: number;
+  errorCount: number;
+  estimatedTime: string;
+  lastScanAt: string;
+  lastScanFiles: number;
+  lastScanDuration: string;
 }
 
 export interface ScanResult {
-  files_found: number;
-  files_new: number;
+  filesFound: number;
+  filesNew: number;
   errors: number;
   duration: string;
 }
@@ -31,11 +31,11 @@ export interface ScheduleConfig {
 }
 
 export interface ScanProgressEvent {
-  files_found: number;
-  current_file: string;
-  percent_done: number;
-  error_count: number;
-  estimated_time: string;
+  filesFound: number;
+  currentFile: string;
+  percentDone: number;
+  errorCount: number;
+  estimatedTime: string;
 }
 
 interface ApiResponse<T> {

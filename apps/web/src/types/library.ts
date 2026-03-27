@@ -13,25 +13,25 @@ export type LibraryMediaType = 'all' | 'movie' | 'tv';
 export interface LibraryMovie {
   id: string;
   title: string;
-  original_title?: string;
-  release_date: string;
+  originalTitle?: string;
+  releaseDate: string;
   genres: string[];
   rating?: number;
-  vote_average?: number;
+  voteAverage?: number;
   overview?: string;
-  poster_path?: string;
-  backdrop_path?: string;
+  posterPath?: string;
+  backdropPath?: string;
   runtime?: number;
-  original_language?: string;
+  originalLanguage?: string;
   status?: string;
-  imdb_id?: string;
-  tmdb_id?: number;
-  file_path?: string;
-  file_size?: number;
-  parse_status: string;
-  metadata_source?: string;
-  created_at: string;
-  updated_at: string;
+  imdbId?: string;
+  tmdbId?: number;
+  filePath?: string;
+  fileSize?: number;
+  parseStatus: string;
+  metadataSource?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface TMDbVideo {
@@ -41,7 +41,7 @@ export interface TMDbVideo {
   site: string;
   type: string;
   official: boolean;
-  published_at: string;
+  publishedAt: string;
 }
 
 export interface VideosResponse {
@@ -52,28 +52,28 @@ export interface VideosResponse {
 export interface LibrarySeries {
   id: string;
   title: string;
-  original_title?: string;
-  first_air_date: string;
-  last_air_date?: string;
+  originalTitle?: string;
+  firstAirDate: string;
+  lastAirDate?: string;
   genres: string[];
   rating?: number;
-  vote_average?: number;
+  voteAverage?: number;
   overview?: string;
-  poster_path?: string;
-  backdrop_path?: string;
-  number_of_seasons?: number;
-  number_of_episodes?: number;
+  posterPath?: string;
+  backdropPath?: string;
+  numberOfSeasons?: number;
+  numberOfEpisodes?: number;
   status?: string;
-  original_language?: string;
-  imdb_id?: string;
-  tmdb_id?: number;
-  in_production?: boolean;
-  file_path?: string;
-  file_size?: number;
-  parse_status: string;
-  metadata_source?: string;
-  created_at: string;
-  updated_at: string;
+  originalLanguage?: string;
+  imdbId?: string;
+  tmdbId?: number;
+  inProduction?: boolean;
+  filePath?: string;
+  fileSize?: number;
+  parseStatus: string;
+  metadataSource?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface LibraryItem {
@@ -121,8 +121,8 @@ export interface LibrarySearchResponse {
 }
 
 export interface BatchResult {
-  success_count: number;
-  failed_count: number;
+  successCount: number;
+  failedCount: number;
   errors?: BatchError[];
 }
 

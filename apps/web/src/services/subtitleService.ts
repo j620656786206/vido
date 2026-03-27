@@ -19,11 +19,11 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
   return data.data as T;
 }
 
-// --- Types (snake_case JSON matching backend DTOs) ---
+// --- Types (camelCase frontend convention, transformed at API boundary) ---
 
 export interface SubtitleSearchParams {
-  media_id: string;
-  media_type: 'movie' | 'series';
+  mediaId: string;
+  mediaType: 'movie' | 'series';
   providers?: string[];
   query?: string;
 }
@@ -31,7 +31,7 @@ export interface SubtitleSearchParams {
 export interface SubtitleScoreBreakdown {
   language: number;
   resolution: number;
-  source_trust: number;
+  sourceTrust: number;
   group: number;
   downloads: number;
 }
@@ -41,34 +41,34 @@ export interface SubtitleSearchResult {
   source: string;
   filename: string;
   language: string;
-  download_url: string;
+  downloadUrl: string;
   downloads: number;
   group: string;
   resolution: string;
   format: string;
   score: number;
-  score_breakdown: SubtitleScoreBreakdown;
+  scoreBreakdown: SubtitleScoreBreakdown;
 }
 
 export interface SubtitleDownloadParams {
-  media_id: string;
-  media_type: 'movie' | 'series';
-  media_file_path: string;
-  subtitle_id: string;
+  mediaId: string;
+  mediaType: 'movie' | 'series';
+  mediaFilePath: string;
+  subtitleId: string;
   provider: string;
   resolution?: string;
-  convert_to_traditional?: boolean;
+  convertToTraditional?: boolean;
   score?: number;
 }
 
 export interface SubtitleDownloadResult {
-  subtitle_path: string;
+  subtitlePath: string;
   language: string;
   score: number;
 }
 
 export interface SubtitlePreviewParams {
-  subtitle_id: string;
+  subtitleId: string;
   provider: string;
 }
 

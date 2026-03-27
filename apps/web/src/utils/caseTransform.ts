@@ -15,3 +15,21 @@ export function snakeToCamel<T>(obj: unknown): T {
   }
   return result as T;
 }
+
+/**
+ * Recursively converts camelCase object keys to snake_case.
+ * Used at the API boundary to transform frontend request params (camelCase)
+ * into backend convention (snake_case).
+ */
+export function camelToSnake<T>(obj: unknown): T {
+  if (obj === null || obj === undefined) return obj as T;
+  if (Array.isArray(obj)) return obj.map((item) => camelToSnake(item)) as T;
+  if (typeof obj !== 'object') return obj as T;
+
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+    const snakeKey = key.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
+    result[snakeKey] = camelToSnake(value);
+  }
+  return result as T;
+}

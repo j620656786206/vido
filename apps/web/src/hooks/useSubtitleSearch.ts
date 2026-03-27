@@ -7,16 +7,17 @@ import {
   type SubtitleDownloadParams,
   type SubtitlePreviewResult,
 } from '../services/subtitleService';
+import { snakeToCamel } from '../utils/caseTransform';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
 export type SortField = 'score' | 'language' | 'source' | 'downloads' | 'group';
 export type SortOrder = 'asc' | 'desc';
 
-// SSE subtitle_progress event data shape
+// SSE subtitle_progress event data shape (camelCase after snakeToCamel transform)
 interface SubtitleProgressEvent {
-  media_id: string;
-  media_type: string;
+  mediaId: string;
+  mediaType: string;
   stage: string;
   message: string;
 }
@@ -58,7 +59,7 @@ export function useSubtitleSearch() {
     es.addEventListener('subtitle_progress', (e: MessageEvent) => {
       try {
         const parsed = JSON.parse(e.data);
-        const data: SubtitleProgressEvent = parsed.data || parsed;
+        const data = snakeToCamel<SubtitleProgressEvent>(parsed.data || parsed);
         setDownloadStage(data.stage);
       } catch {
         // Ignore parse errors
@@ -92,32 +93,32 @@ export function useSubtitleSearch() {
   const downloadMutation = useMutation({
     mutationFn: (params: SubtitleDownloadParams) => subtitleService.downloadSubtitle(params),
     onMutate: (variables) => {
-      setDownloadingIds((prev) => new Set(prev).add(variables.subtitle_id));
+      setDownloadingIds((prev) => new Set(prev).add(variables.subtitleId));
     },
     onSuccess: (_data, variables) => {
-      setDownloadedIds((prev) => new Set(prev).add(variables.subtitle_id));
+      setDownloadedIds((prev) => new Set(prev).add(variables.subtitleId));
       setDownloadingIds((prev) => {
         const next = new Set(prev);
-        next.delete(variables.subtitle_id);
+        next.delete(variables.subtitleId);
         return next;
       });
       // Clear any previous error for this row
       setDownloadErrorMap((prev) => {
         const next = { ...prev };
-        delete next[variables.subtitle_id];
+        delete next[variables.subtitleId];
         return next;
       });
     },
     onError: (error, variables) => {
       setDownloadingIds((prev) => {
         const next = new Set(prev);
-        next.delete(variables.subtitle_id);
+        next.delete(variables.subtitleId);
         return next;
       });
       // Track error per-row
       setDownloadErrorMap((prev) => ({
         ...prev,
-        [variables.subtitle_id]: error instanceof Error ? error.message : '下載失敗',
+        [variables.subtitleId]: error instanceof Error ? error.message : '下載失敗',
       }));
     },
   });
@@ -126,7 +127,7 @@ export function useSubtitleSearch() {
   const previewMutation = useMutation({
     mutationFn: (params: { subtitleId: string; provider: string }) =>
       subtitleService.previewSubtitle({
-        subtitle_id: params.subtitleId,
+        subtitleId: params.subtitleId,
         provider: params.provider,
       }),
     onMutate: (variables) => {

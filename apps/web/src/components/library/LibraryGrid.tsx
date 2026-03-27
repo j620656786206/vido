@@ -27,33 +27,33 @@ function getItemProps(item: LibraryItem) {
   if (item.type === 'movie' && item.movie) {
     const m = item.movie;
     return {
-      id: m.tmdb_id ?? 0,
+      id: m.tmdbId ?? 0,
       itemId: m.id,
       itemType: 'movie' as const,
       type: 'movie' as const,
       title: m.title,
-      originalTitle: m.original_title,
-      posterPath: m.poster_path ?? null,
-      releaseDate: m.release_date,
-      voteAverage: m.vote_average,
+      originalTitle: m.originalTitle,
+      posterPath: m.posterPath ?? null,
+      releaseDate: m.releaseDate,
+      voteAverage: m.voteAverage,
       overview: m.overview,
-      metadataSource: m.metadata_source,
+      metadataSource: m.metadataSource,
     };
   }
   if (item.type === 'series' && item.series) {
     const s = item.series;
     return {
-      id: s.tmdb_id ?? 0,
+      id: s.tmdbId ?? 0,
       itemId: s.id,
       itemType: 'series' as const,
       type: 'tv' as const,
       title: s.title,
-      originalTitle: s.original_title,
-      posterPath: s.poster_path ?? null,
-      releaseDate: s.first_air_date,
-      voteAverage: s.vote_average,
+      originalTitle: s.originalTitle,
+      posterPath: s.posterPath ?? null,
+      releaseDate: s.firstAirDate,
+      voteAverage: s.voteAverage,
       overview: s.overview,
-      metadataSource: s.metadata_source,
+      metadataSource: s.metadataSource,
     };
   }
   return null;

@@ -63,12 +63,12 @@ export function MediaGrid({
           id={movie.id}
           type="movie"
           title={movie.title}
-          originalTitle={movie.original_title}
-          posterPath={movie.poster_path}
-          releaseDate={movie.release_date}
-          voteAverage={movie.vote_average}
+          originalTitle={movie.originalTitle}
+          posterPath={movie.posterPath}
+          releaseDate={movie.releaseDate}
+          voteAverage={movie.voteAverage}
           overview={movie.overview}
-          genreIds={movie.genre_ids}
+          genreIds={movie.genreIds}
         />
       );
     } else {
@@ -79,12 +79,12 @@ export function MediaGrid({
           id={show.id}
           type="tv"
           title={show.name}
-          originalTitle={show.original_name}
-          posterPath={show.poster_path}
-          releaseDate={show.first_air_date}
-          voteAverage={show.vote_average}
+          originalTitle={show.originalName}
+          posterPath={show.posterPath}
+          releaseDate={show.firstAirDate}
+          voteAverage={show.voteAverage}
           overview={show.overview}
-          genreIds={show.genre_ids}
+          genreIds={show.genreIds}
         />
       );
     }
@@ -105,12 +105,12 @@ export function MediaGrid({
               id={movie.id}
               type="movie"
               title={movie.title}
-              originalTitle={movie.original_title}
-              posterPath={movie.poster_path}
-              releaseDate={movie.release_date}
-              voteAverage={movie.vote_average}
+              originalTitle={movie.originalTitle}
+              posterPath={movie.posterPath}
+              releaseDate={movie.releaseDate}
+              voteAverage={movie.voteAverage}
               overview={movie.overview}
-              genreIds={movie.genre_ids}
+              genreIds={movie.genreIds}
             />
           ))}
           {tvShows.map((show) => (
@@ -119,12 +119,12 @@ export function MediaGrid({
               id={show.id}
               type="tv"
               title={show.name}
-              originalTitle={show.original_name}
-              posterPath={show.poster_path}
-              releaseDate={show.first_air_date}
-              voteAverage={show.vote_average}
+              originalTitle={show.originalName}
+              posterPath={show.posterPath}
+              releaseDate={show.firstAirDate}
+              voteAverage={show.voteAverage}
               overview={show.overview}
-              genreIds={show.genre_ids}
+              genreIds={show.genreIds}
             />
           ))}
         </>
