@@ -1,284 +1,8 @@
 [
   {
-    "id": "TC001",
-    "title": "Dashboard renders key panels (active downloads, recent media, QB status)",
-    "description": "Verifies the home dashboard loads and shows the core sections a user expects to see.",
-    "category": "Dashboard",
-    "priority": "High",
-    "steps": [
-      {
-        "type": "action",
-        "description": "Navigate to /"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"Active downloads\" is visible"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"Recently added\" is visible"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"qBittorrent status indicator\" is visible"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"Active downloads\" panel is visible"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"Recently added\" panel is visible"
-      }
-    ],
-    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
-    "v4_reason": "v4 replaces Dashboard with TV Wall homepage (Epic 10, Phase 2). Current tests validate v3 Dashboard layout which will be completely redesigned.",
-    "v4_action": "DELETE when Epic 10 is implemented; regenerate from updated standard_prd.json"
-  },
-  {
-    "id": "TC002",
-    "title": "Open and dismiss qBittorrent connection history modal from dashboard",
-    "description": "Verifies the QB status indicator opens the connection history modal and it can be dismissed.",
-    "category": "Dashboard",
-    "priority": "High",
-    "steps": [
-      {
-        "type": "action",
-        "description": "Navigate to /"
-      },
-      {
-        "type": "action",
-        "description": "Click on the \"qBittorrent\" status indicator"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"Connection history\" modal is visible"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"Connection history\" is visible"
-      },
-      {
-        "type": "action",
-        "description": "Click on \"Close\" in the connection history modal"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"Connection history\" modal is not visible"
-      }
-    ],
-    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
-    "v4_reason": "v4 replaces Dashboard with TV Wall homepage (Epic 10, Phase 2). Current tests validate v3 Dashboard layout which will be completely redesigned.",
-    "v4_action": "DELETE when Epic 10 is implemented; regenerate from updated standard_prd.json"
-  },
-  {
-    "id": "TC003",
-    "title": "Connection history modal shows event list structure",
-    "description": "Verifies the connection history modal displays a list-like history (even if empty) with recognizable event information.",
-    "category": "Dashboard",
-    "priority": "Medium",
-    "steps": [
-      {
-        "type": "action",
-        "description": "Navigate to /"
-      },
-      {
-        "type": "action",
-        "description": "Click on the \"qBittorrent\" status indicator"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"Connection history\" modal is visible"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"Events\" is visible"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"connection history event list\" is visible"
-      },
-      {
-        "type": "action",
-        "description": "Click on \"Close\" in the connection history modal"
-      }
-    ],
-    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
-    "v4_reason": "v4 replaces Dashboard with TV Wall homepage (Epic 10, Phase 2). Current tests validate v3 Dashboard layout which will be completely redesigned.",
-    "v4_action": "DELETE when Epic 10 is implemented; regenerate from updated standard_prd.json"
-  },
-  {
-    "id": "TC004",
-    "title": "New media toast notification can be dismissed",
-    "description": "Verifies that when a new media toast is shown, the user can dismiss it and it disappears.",
-    "category": "Dashboard",
-    "priority": "Medium",
-    "steps": [
-      {
-        "type": "action",
-        "description": "Navigate to /"
-      },
-      {
-        "type": "action",
-        "description": "Wait for element \"new media\" toast notification to appear"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"new media\" toast notification is visible"
-      },
-      {
-        "type": "action",
-        "description": "Click on \"Dismiss\" on the toast notification"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"new media\" toast notification is not visible"
-      }
-    ],
-    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
-    "v4_reason": "v4 replaces Dashboard with TV Wall homepage (Epic 10, Phase 2). Current tests validate v3 Dashboard layout which will be completely redesigned.",
-    "v4_action": "DELETE when Epic 10 is implemented; regenerate from updated standard_prd.json"
-  },
-  {
-    "id": "TC005",
-    "title": "New media toast is visible and contains a recognizable title",
-    "description": "Verifies the new media notification toast presents human-readable content that identifies the media item.",
-    "category": "Dashboard",
-    "priority": "Low",
-    "steps": [
-      {
-        "type": "action",
-        "description": "Navigate to /"
-      },
-      {
-        "type": "action",
-        "description": "Wait for element \"new media\" toast notification to appear"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"new media\" toast notification is visible"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"toast title\" is visible"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"toast body\" is visible"
-      },
-      {
-        "type": "action",
-        "description": "Click on \"Dismiss\" on the toast notification"
-      }
-    ],
-    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
-    "v4_reason": "v4 replaces Dashboard with TV Wall homepage (Epic 10, Phase 2). Current tests validate v3 Dashboard layout which will be completely redesigned.",
-    "v4_action": "DELETE when Epic 10 is implemented; regenerate from updated standard_prd.json"
-  },
-  {
-    "id": "TC006",
-    "title": "Disconnected QB state shows error toast and provides Settings guidance text",
-    "description": "Verifies that when qBittorrent is disconnected, the dashboard surfaces an error state and a visible recommendation to check the qBittorrent settings page.",
-    "category": "Dashboard",
-    "priority": "High",
-    "steps": [
-      {
-        "type": "action",
-        "description": "Navigate to /"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"qBittorrent status indicator\" is visible"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"Disconnected\" is visible"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"Connection error\" is visible"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"/settings/qbittorrent\" is visible"
-      }
-    ],
-    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
-    "v4_reason": "v4 replaces Dashboard with TV Wall homepage (Epic 10, Phase 2). Current tests validate v3 Dashboard layout which will be completely redesigned.",
-    "v4_action": "DELETE when Epic 10 is implemented; regenerate from updated standard_prd.json"
-  },
-  {
-    "id": "TC007",
-    "title": "Disconnected QB state allows retry action and still shows persistent error on failure",
-    "description": "Verifies the retry control is present in the disconnected state and the UI still indicates failure when the connection remains down.",
-    "category": "Dashboard",
-    "priority": "High",
-    "steps": [
-      {
-        "type": "action",
-        "description": "Navigate to /"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"Connection error\" is visible"
-      },
-      {
-        "type": "action",
-        "description": "Click on \"Retry\""
-      },
-      {
-        "type": "action",
-        "description": "Wait for text \"Connection error\" to be visible"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"Connection error\" is visible"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"Check /settings/qbittorrent\" is visible"
-      }
-    ],
-    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
-    "v4_reason": "v4 replaces Dashboard with TV Wall homepage (Epic 10, Phase 2). Current tests validate v3 Dashboard layout which will be completely redesigned.",
-    "v4_action": "DELETE when Epic 10 is implemented; regenerate from updated standard_prd.json"
-  },
-  {
-    "id": "TC008",
-    "title": "Dashboard download panel supports basic status comprehension (counts/progress visible)",
-    "description": "Verifies the Active downloads area provides visible progress information and/or counts suitable for monitoring.",
-    "category": "Dashboard",
-    "priority": "Medium",
-    "steps": [
-      {
-        "type": "action",
-        "description": "Navigate to /"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"Active downloads\" is visible"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"download progress bar\" is visible"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"download item\" is visible"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"download counts\" is visible"
-      }
-    ],
-    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
-    "v4_reason": "v4 replaces Dashboard with TV Wall homepage (Epic 10, Phase 2). Current tests validate v3 Dashboard layout which will be completely redesigned.",
-    "v4_action": "DELETE when Epic 10 is implemented; regenerate from updated standard_prd.json"
-  },
-  {
     "id": "TC009",
-    "title": "Switch to list view, sort by Year, paginate, and verify item count updates",
-    "description": "Verifies the library supports view toggle, sorting in list view, and pagination with a visible item count change.",
+    "title": "Switch to list view, sort by Year, paginate and verify item count updates",
+    "description": "Verifies the user can switch to list view, sort by Year column, and paginate through results with visible item count.",
     "category": "Media Library",
     "priority": "High",
     "steps": [
@@ -288,7 +12,7 @@
       },
       {
         "type": "assertion",
-        "description": "Verify text \"Library\" is visible"
+        "description": "Verify a grid of media poster cards is visible"
       },
       {
         "type": "action",
@@ -296,7 +20,7 @@
       },
       {
         "type": "assertion",
-        "description": "Verify a table header row is visible"
+        "description": "Verify a media items table is visible"
       },
       {
         "type": "action",
@@ -315,9 +39,9 @@
         "description": "Verify the item count display text is visible"
       }
     ],
-    "v4_status": "VALID_WITH_UPDATES_NEEDED",
-    "v4_reason": "Core library browsing (Epic 5) is done and retained in v4. However, v4 adds context menu with 'Search Subtitles' option (Epic 8) and Scanner integration (Epic 7). Some test assertions about UI elements may need updating.",
-    "v4_action": "KEEP but update assertions after Epic 7/8 complete"
+    "v4_status": "VALID",
+    "v4_reason": "Core library browsing (Epic 5) is complete. Epic 7 scanner and Epic 8 subtitle integration are done. Context menu now includes 'Search Subtitles' option.",
+    "v4_action": "KEEP as-is"
   },
   {
     "id": "TC010",
@@ -359,9 +83,9 @@
         "description": "Verify text \"Deleted\" is visible"
       }
     ],
-    "v4_status": "VALID_WITH_UPDATES_NEEDED",
-    "v4_reason": "Core library browsing (Epic 5) is done and retained in v4. However, v4 adds context menu with 'Search Subtitles' option (Epic 8) and Scanner integration (Epic 7). Some test assertions about UI elements may need updating.",
-    "v4_action": "KEEP but update assertions after Epic 7/8 complete"
+    "v4_status": "VALID",
+    "v4_reason": "Core library browsing (Epic 5) is complete. Delete flow unchanged in v4.",
+    "v4_action": "KEEP as-is"
   },
   {
     "id": "TC011",
@@ -403,9 +127,9 @@
         "description": "Verify the media items table is still visible"
       }
     ],
-    "v4_status": "VALID_WITH_UPDATES_NEEDED",
-    "v4_reason": "Core library browsing (Epic 5) is done and retained in v4. However, v4 adds context menu with 'Search Subtitles' option (Epic 8) and Scanner integration (Epic 7). Some test assertions about UI elements may need updating.",
-    "v4_action": "KEEP but update assertions after Epic 7/8 complete"
+    "v4_status": "VALID",
+    "v4_reason": "Core library browsing (Epic 5) is complete. Cancel-delete flow unchanged in v4.",
+    "v4_action": "KEEP as-is"
   },
   {
     "id": "TC012",
@@ -439,9 +163,9 @@
         "description": "Verify text \"No media found\" is not visible"
       }
     ],
-    "v4_status": "VALID_WITH_UPDATES_NEEDED",
-    "v4_reason": "Core library browsing (Epic 5) is done and retained in v4. However, v4 adds context menu with 'Search Subtitles' option (Epic 8) and Scanner integration (Epic 7). Some test assertions about UI elements may need updating.",
-    "v4_action": "KEEP but update assertions after Epic 7/8 complete"
+    "v4_status": "VALID",
+    "v4_reason": "Core library filtering (Epic 5) is complete. Filter behavior unchanged in v4.",
+    "v4_action": "KEEP as-is"
   },
   {
     "id": "TC013",
@@ -475,9 +199,9 @@
         "description": "Verify text \"Success\" is visible"
       }
     ],
-    "v4_status": "VALID_WITH_UPDATES_NEEDED",
-    "v4_reason": "Core library browsing (Epic 5) is done and retained in v4. However, v4 adds context menu with 'Search Subtitles' option (Epic 8) and Scanner integration (Epic 7). Some test assertions about UI elements may need updating.",
-    "v4_action": "KEEP but update assertions after Epic 7/8 complete"
+    "v4_status": "VALID",
+    "v4_reason": "Export from library context menu (Epic 5/6) is complete. Flow unchanged in v4.",
+    "v4_action": "KEEP as-is"
   },
   {
     "id": "TC014",
@@ -515,785 +239,9 @@
         "description": "Verify the pagination control is visible"
       }
     ],
-    "v4_status": "VALID_WITH_UPDATES_NEEDED",
-    "v4_reason": "Core library browsing (Epic 5) is done and retained in v4. However, v4 adds context menu with 'Search Subtitles' option (Epic 8) and Scanner integration (Epic 7). Some test assertions about UI elements may need updating.",
-    "v4_action": "KEEP but update assertions after Epic 7/8 complete"
-  },
-  {
-    "id": "TC015",
-    "title": "Search for a Traditional Chinese query and view paginated results",
-    "description": "Verifies that a valid (>=2 characters) Traditional Chinese query returns visible, paginated results on the Search page.",
-    "category": "Search",
-    "priority": "High",
-    "steps": [
-      {
-        "type": "action",
-        "description": "Navigate to /search"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"Search\" is visible"
-      },
-      {
-        "type": "action",
-        "description": "Click on the search input"
-      },
-      {
-        "type": "action",
-        "description": "Type \"魔女宅急便\" into the search input"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"Search results list\" is visible"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"Pagination controls\" is visible"
-      },
-      {
-        "type": "action",
-        "description": "Click on \"Next\" in the pagination controls"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"Search results list\" is visible"
-      }
-    ],
-    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
-    "v4_reason": "v4 expands to Advanced Search with multi-facet filtering (Epic 11, Phase 2). Current basic search tests have some validity but query length changed from 2->1 char minimum, and UI will be significantly redesigned.",
-    "v4_action": "DELETE when Epic 11 is implemented; regenerate from updated standard_prd.json"
-  },
-  {
-    "id": "TC016",
-    "title": "Open a search result and verify media detail page shows key metadata",
-    "description": "Verifies that clicking a search result navigates to a media detail page and shows core metadata (Traditional Chinese title, poster, year, genres).",
-    "category": "Search",
-    "priority": "High",
-    "steps": [
-      {
-        "type": "action",
-        "description": "Navigate to /search"
-      },
-      {
-        "type": "action",
-        "description": "Click on the search input"
-      },
-      {
-        "type": "action",
-        "description": "Type \"魔女宅急便\" into the search input"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"Search results list\" is visible"
-      },
-      {
-        "type": "action",
-        "description": "Click on the first result in the search results list"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify URL contains \"/media/\""
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"Poster\" is visible"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"Genres\" is visible"
-      }
-    ],
-    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
-    "v4_reason": "v4 expands to Advanced Search with multi-facet filtering (Epic 11, Phase 2). Current basic search tests have some validity but query length changed from 2->1 char minimum, and UI will be significantly redesigned.",
-    "v4_action": "DELETE when Epic 11 is implemented; regenerate from updated standard_prd.json"
-  },
-  {
-    "id": "TC017",
-    "title": "Validate minimum query length (1 character) shows inline message and no results",
-    "description": "Verifies that entering fewer than 2 characters shows the validation message and prevents results from populating.",
-    "category": "Search",
-    "priority": "High",
-    "steps": [
-      {
-        "type": "action",
-        "description": "Navigate to /search"
-      },
-      {
-        "type": "action",
-        "description": "Click on the search input"
-      },
-      {
-        "type": "action",
-        "description": "Type \"a\" into the search input"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"Please enter at least 2 characters\" is visible"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"Search results list\" is not visible"
-      }
-    ],
-    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
-    "v4_reason": "v4 expands to Advanced Search with multi-facet filtering (Epic 11, Phase 2). Current basic search tests have some validity but query length changed from 2->1 char minimum, and UI will be significantly redesigned.",
-    "v4_action": "DELETE when Epic 11 is implemented; regenerate from updated standard_prd.json"
-  },
-  {
-    "id": "TC018",
-    "title": "Filter results by Movie type after searching",
-    "description": "Verifies that filtering to Movie updates the visible results set for a valid query.",
-    "category": "Search",
-    "priority": "Medium",
-    "steps": [
-      {
-        "type": "action",
-        "description": "Navigate to /search"
-      },
-      {
-        "type": "action",
-        "description": "Click on the search input"
-      },
-      {
-        "type": "action",
-        "description": "Type \"魔女宅急便\" into the search input"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"Search results list\" is visible"
-      },
-      {
-        "type": "action",
-        "description": "Click on the \"Movie\" type filter tab"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"Search results list\" is visible"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"Active type filter: Movie\" is visible"
-      }
-    ],
-    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
-    "v4_reason": "v4 expands to Advanced Search with multi-facet filtering (Epic 11, Phase 2). Current basic search tests have some validity but query length changed from 2->1 char minimum, and UI will be significantly redesigned.",
-    "v4_action": "DELETE when Epic 11 is implemented; regenerate from updated standard_prd.json"
-  },
-  {
-    "id": "TC019",
-    "title": "Filter results by TV type after searching",
-    "description": "Verifies that filtering to TV updates the visible results set for a valid query.",
-    "category": "Search",
-    "priority": "Medium",
-    "steps": [
-      {
-        "type": "action",
-        "description": "Navigate to /search"
-      },
-      {
-        "type": "action",
-        "description": "Click on the search input"
-      },
-      {
-        "type": "action",
-        "description": "Type \"魔女宅急便\" into the search input"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"Search results list\" is visible"
-      },
-      {
-        "type": "action",
-        "description": "Click on the \"TV\" type filter tab"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"Search results list\" is visible"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"Active type filter: TV\" is visible"
-      }
-    ],
-    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
-    "v4_reason": "v4 expands to Advanced Search with multi-facet filtering (Epic 11, Phase 2). Current basic search tests have some validity but query length changed from 2->1 char minimum, and UI will be significantly redesigned.",
-    "v4_action": "DELETE when Epic 11 is implemented; regenerate from updated standard_prd.json"
-  },
-  {
-    "id": "TC020",
-    "title": "Paginate within a filtered result set",
-    "description": "Verifies that pagination works after applying a type filter (e.g., Movie).",
-    "category": "Search",
-    "priority": "Medium",
-    "steps": [
-      {
-        "type": "action",
-        "description": "Navigate to /search"
-      },
-      {
-        "type": "action",
-        "description": "Click on the search input"
-      },
-      {
-        "type": "action",
-        "description": "Type \"魔女宅急便\" into the search input"
-      },
-      {
-        "type": "action",
-        "description": "Click on the \"Movie\" type filter tab"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"Pagination controls\" is visible"
-      },
-      {
-        "type": "action",
-        "description": "Click on \"Next\" in the pagination controls"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"Search results list\" is visible"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"Active type filter: Movie\" is visible"
-      }
-    ],
-    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
-    "v4_reason": "v4 expands to Advanced Search with multi-facet filtering (Epic 11, Phase 2). Current basic search tests have some validity but query length changed from 2->1 char minimum, and UI will be significantly redesigned.",
-    "v4_action": "DELETE when Epic 11 is implemented; regenerate from updated standard_prd.json"
-  },
-  {
-    "id": "TC021",
-    "title": "Filter to Downloading and view inline torrent details with ETA and speed",
-    "description": "Verifies that the downloads list can be filtered to Downloading and that clicking a row opens inline details showing ETA and speed metrics.",
-    "category": "Downloads Monitor",
-    "priority": "High",
-    "steps": [
-      {
-        "type": "action",
-        "description": "Navigate to /downloads"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"Downloads\" is visible"
-      },
-      {
-        "type": "action",
-        "description": "Click filter tab \"Downloading\""
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"Downloading\" is visible"
-      },
-      {
-        "type": "action",
-        "description": "Click the first torrent row in the list"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"ETA\" is visible"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"Speed\" is visible"
-      }
-    ],
-    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
-    "v4_reason": "v4 replaces polling with SSE for real-time updates (Epic 14, Phase 3). Download Management v2 adds Sonarr/Radarr integration. Current tests assume 5s polling model.",
-    "v4_action": "DELETE when Epic 14 is implemented; regenerate from updated standard_prd.json"
-  },
-  {
-    "id": "TC022",
-    "title": "Completed filter shows empty state with scan call-to-action",
-    "description": "Verifies that when there are no completed downloads, the Completed filter shows an empty state message and a Scan completed downloads call-to-action.",
-    "category": "Downloads Monitor",
-    "priority": "High",
-    "steps": [
-      {
-        "type": "action",
-        "description": "Navigate to /downloads"
-      },
-      {
-        "type": "action",
-        "description": "Click filter tab \"Completed\""
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"empty state\" is visible"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"No completed downloads\" is visible"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"Scan completed downloads\" is visible"
-      }
-    ],
-    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
-    "v4_reason": "v4 replaces polling with SSE for real-time updates (Epic 14, Phase 3). Download Management v2 adds Sonarr/Radarr integration. Current tests assume 5s polling model.",
-    "v4_action": "DELETE when Epic 14 is implemented; regenerate from updated standard_prd.json"
-  },
-  {
-    "id": "TC023",
-    "title": "Scan completed downloads shows 'No new completed downloads' toast",
-    "description": "Verifies that scanning from the Completed empty state triggers a toast indicating no newly found completed downloads.",
-    "category": "Downloads Monitor",
-    "priority": "High",
-    "steps": [
-      {
-        "type": "action",
-        "description": "Navigate to /downloads"
-      },
-      {
-        "type": "action",
-        "description": "Click filter tab \"Completed\""
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"Scan completed downloads\" is visible"
-      },
-      {
-        "type": "action",
-        "description": "Click \"Scan completed downloads\""
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"No new completed downloads\" is visible"
-      }
-    ],
-    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
-    "v4_reason": "v4 replaces polling with SSE for real-time updates (Epic 14, Phase 3). Download Management v2 adds Sonarr/Radarr integration. Current tests assume 5s polling model.",
-    "v4_action": "DELETE when Epic 14 is implemented; regenerate from updated standard_prd.json"
-  },
-  {
-    "id": "TC024",
-    "title": "Sort downloads by Name changes ordering",
-    "description": "Verifies that sorting by Name is available and results in a visibly re-ordered list.",
-    "category": "Downloads Monitor",
-    "priority": "Medium",
-    "steps": [
-      {
-        "type": "action",
-        "description": "Navigate to /downloads"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"downloads list\" is visible"
-      },
-      {
-        "type": "action",
-        "description": "Click sort control for \"Name\""
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"Name\" is visible"
-      },
-      {
-        "type": "action",
-        "description": "Click sort control for \"Name\" again"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"Name\" is visible"
-      }
-    ],
-    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
-    "v4_reason": "v4 replaces polling with SSE for real-time updates (Epic 14, Phase 3). Download Management v2 adds Sonarr/Radarr integration. Current tests assume 5s polling model.",
-    "v4_action": "DELETE when Epic 14 is implemented; regenerate from updated standard_prd.json"
-  },
-  {
-    "id": "TC025",
-    "title": "Sort downloads by Progress changes ordering",
-    "description": "Verifies that sorting by Progress is available and results in a visibly re-ordered list.",
-    "category": "Downloads Monitor",
-    "priority": "Medium",
-    "steps": [
-      {
-        "type": "action",
-        "description": "Navigate to /downloads"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"downloads list\" is visible"
-      },
-      {
-        "type": "action",
-        "description": "Click sort control for \"Progress\""
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"Progress\" is visible"
-      },
-      {
-        "type": "action",
-        "description": "Click sort control for \"Progress\" again"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"Progress\" is visible"
-      }
-    ],
-    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
-    "v4_reason": "v4 replaces polling with SSE for real-time updates (Epic 14, Phase 3). Download Management v2 adds Sonarr/Radarr integration. Current tests assume 5s polling model.",
-    "v4_action": "DELETE when Epic 14 is implemented; regenerate from updated standard_prd.json"
-  },
-  {
-    "id": "TC026",
-    "title": "Switch among multiple status filters without losing page stability",
-    "description": "Verifies that the user can switch between multiple status filter tabs and the UI remains responsive with a visible list or empty state each time.",
-    "category": "Downloads Monitor",
-    "priority": "Medium",
-    "steps": [
-      {
-        "type": "action",
-        "description": "Navigate to /downloads"
-      },
-      {
-        "type": "action",
-        "description": "Click filter tab \"All\""
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"downloads list\" is visible"
-      },
-      {
-        "type": "action",
-        "description": "Click filter tab \"Paused\""
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"downloads list\" is visible"
-      },
-      {
-        "type": "action",
-        "description": "Click filter tab \"Seeding\""
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"downloads list\" is visible"
-      }
-    ],
-    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
-    "v4_reason": "v4 replaces polling with SSE for real-time updates (Epic 14, Phase 3). Download Management v2 adds Sonarr/Radarr integration. Current tests assume 5s polling model.",
-    "v4_action": "DELETE when Epic 14 is implemented; regenerate from updated standard_prd.json"
-  },
-  {
-    "id": "TC027",
-    "title": "Empty state appears for a filter with no matching downloads",
-    "description": "Verifies that selecting a filter with no matching items shows an empty state rather than a broken or blank page.",
-    "category": "Downloads Monitor",
-    "priority": "Medium",
-    "steps": [
-      {
-        "type": "action",
-        "description": "Navigate to /downloads"
-      },
-      {
-        "type": "action",
-        "description": "Click filter tab \"Error\""
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"empty state\" is visible"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"No downloads\" is visible"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"Error\" is visible"
-      }
-    ],
-    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
-    "v4_reason": "v4 replaces polling with SSE for real-time updates (Epic 14, Phase 3). Download Management v2 adds Sonarr/Radarr integration. Current tests assume 5s polling model.",
-    "v4_action": "DELETE when Epic 14 is implemented; regenerate from updated standard_prd.json"
-  },
-  {
-    "id": "TC028",
-    "title": "Media detail side panel shows core metadata and credits (movie or TV)",
-    "description": "Verifies the media detail view renders key metadata fields and a visible credits section.",
-    "category": "Media Detail",
-    "priority": "High",
-    "steps": [
-      {
-        "type": "action",
-        "description": "Navigate to /search"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"Search\" is visible"
-      },
-      {
-        "type": "action",
-        "description": "Click on the first visible media result in the results list"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify URL contains \"/media/\""
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"media detail side panel\" is visible"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"poster\" is visible"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"Credits\" is visible"
-      }
-    ],
-    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
-    "v4_reason": "v4 creates Rich Media Detail Page (Epic 12, Phase 2) with dual ratings, season/episode list, streaming platforms. Current tests validate v3 side panel with metadata editor which is being restructured. Subtitle search integration (Epic 8) also changes the UI.",
-    "v4_action": "DELETE when Epic 12 is implemented; regenerate from updated standard_prd.json"
-  },
-  {
-    "id": "TC029",
-    "title": "Open metadata editor dialog from media detail",
-    "description": "Verifies the Edit action opens the metadata editor dialog from the media detail side panel.",
-    "category": "Media Detail",
-    "priority": "High",
-    "steps": [
-      {
-        "type": "action",
-        "description": "Navigate to /search"
-      },
-      {
-        "type": "action",
-        "description": "Click on the first visible media result in the results list"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"media detail side panel\" is visible"
-      },
-      {
-        "type": "action",
-        "description": "Click on \"Edit\""
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"Metadata editor\" is visible"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"Save\" is visible"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"Title\" field is visible"
-      }
-    ],
-    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
-    "v4_reason": "v4 creates Rich Media Detail Page (Epic 12, Phase 2) with dual ratings, season/episode list, streaming platforms. Current tests validate v3 side panel with metadata editor which is being restructured. Subtitle search integration (Epic 8) also changes the UI.",
-    "v4_action": "DELETE when Epic 12 is implemented; regenerate from updated standard_prd.json"
-  },
-  {
-    "id": "TC030",
-    "title": "Cancel/close metadata editor without saving",
-    "description": "Verifies the user can close the metadata editor and return to the media detail side panel without applying changes.",
-    "category": "Media Detail",
-    "priority": "Medium",
-    "steps": [
-      {
-        "type": "action",
-        "description": "Navigate to /search"
-      },
-      {
-        "type": "action",
-        "description": "Click on the first visible media result in the results list"
-      },
-      {
-        "type": "action",
-        "description": "Click on \"Edit\""
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"Metadata editor\" is visible"
-      },
-      {
-        "type": "action",
-        "description": "Click on \"Close\""
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"Metadata editor\" is not visible"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"media detail side panel\" is visible"
-      }
-    ],
-    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
-    "v4_reason": "v4 creates Rich Media Detail Page (Epic 12, Phase 2) with dual ratings, season/episode list, streaming platforms. Current tests validate v3 side panel with metadata editor which is being restructured. Subtitle search integration (Epic 8) also changes the UI.",
-    "v4_action": "DELETE when Epic 12 is implemented; regenerate from updated standard_prd.json"
-  },
-  {
-    "id": "TC031",
-    "title": "Inline validation: invalid year shows 'Invalid year' and blocks save",
-    "description": "Verifies Zod validation displays an inline error for an invalid year and prevents a successful save until corrected.",
-    "category": "Media Detail",
-    "priority": "High",
-    "steps": [
-      {
-        "type": "action",
-        "description": "Navigate to /search"
-      },
-      {
-        "type": "action",
-        "description": "Click on the first visible media result in the results list"
-      },
-      {
-        "type": "action",
-        "description": "Click on \"Edit\""
-      },
-      {
-        "type": "action",
-        "description": "Fill \"abcd\" into the \"Year\" field"
-      },
-      {
-        "type": "action",
-        "description": "Click on \"Save\""
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"Invalid year\" is visible"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"Metadata editor\" is visible"
-      }
-    ],
-    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
-    "v4_reason": "v4 creates Rich Media Detail Page (Epic 12, Phase 2) with dual ratings, season/episode list, streaming platforms. Current tests validate v3 side panel with metadata editor which is being restructured. Subtitle search integration (Epic 8) also changes the UI.",
-    "v4_action": "DELETE when Epic 12 is implemented; regenerate from updated standard_prd.json"
-  },
-  {
-    "id": "TC032",
-    "title": "Update metadata fields and save successfully (title + overview)",
-    "description": "Verifies saving edited title and overview updates the visible metadata in the side panel after a successful save.",
-    "category": "Media Detail",
-    "priority": "High",
-    "steps": [
-      {
-        "type": "action",
-        "description": "Navigate to /search"
-      },
-      {
-        "type": "action",
-        "description": "Click on the first visible media result in the results list"
-      },
-      {
-        "type": "action",
-        "description": "Click on \"Edit\""
-      },
-      {
-        "type": "action",
-        "description": "Fill \"Test Title Updated\" into the \"Title\" field"
-      },
-      {
-        "type": "action",
-        "description": "Fill \"Test overview updated by E2E.\" into the \"Overview\" field"
-      },
-      {
-        "type": "action",
-        "description": "Click on \"Save\""
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"Test Title Updated\" is visible"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"Test overview updated by E2E.\" is visible"
-      }
-    ],
-    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
-    "v4_reason": "v4 creates Rich Media Detail Page (Epic 12, Phase 2) with dual ratings, season/episode list, streaming platforms. Current tests validate v3 side panel with metadata editor which is being restructured. Subtitle search integration (Epic 8) also changes the UI.",
-    "v4_action": "DELETE when Epic 12 is implemented; regenerate from updated standard_prd.json"
-  },
-  {
-    "id": "TC033",
-    "title": "Upload poster via URL and save updates poster in side panel",
-    "description": "Verifies the poster can be set via URL in the metadata editor and the updated poster is visible after save.",
-    "category": "Media Detail",
-    "priority": "Medium",
-    "steps": [
-      {
-        "type": "action",
-        "description": "Navigate to /search"
-      },
-      {
-        "type": "action",
-        "description": "Click on the first visible media result in the results list"
-      },
-      {
-        "type": "action",
-        "description": "Click on \"Edit\""
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"Poster URL\" field is visible"
-      },
-      {
-        "type": "action",
-        "description": "Fill \"https://example.com/poster.jpg\" into the \"Poster URL\" field"
-      },
-      {
-        "type": "action",
-        "description": "Click on \"Save\""
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"poster\" is visible"
-      }
-    ],
-    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
-    "v4_reason": "v4 creates Rich Media Detail Page (Epic 12, Phase 2) with dual ratings, season/episode list, streaming platforms. Current tests validate v3 side panel with metadata editor which is being restructured. Subtitle search integration (Epic 8) also changes the UI.",
-    "v4_action": "DELETE when Epic 12 is implemented; regenerate from updated standard_prd.json"
-  },
-  {
-    "id": "TC034",
-    "title": "Close side panel returns to previous page",
-    "description": "Verifies closing the media detail side panel navigates back to the originating page (Search) without direct URL navigation.",
-    "category": "Media Detail",
-    "priority": "Medium",
-    "steps": [
-      {
-        "type": "action",
-        "description": "Navigate to /search"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"Search\" is visible"
-      },
-      {
-        "type": "action",
-        "description": "Click on the first visible media result in the results list"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element \"media detail side panel\" is visible"
-      },
-      {
-        "type": "action",
-        "description": "Click on \"Close\""
-      },
-      {
-        "type": "assertion",
-        "description": "Verify URL contains \"/search\""
-      },
-      {
-        "type": "assertion",
-        "description": "Verify text \"Search\" is visible"
-      }
-    ],
-    "v4_status": "DEPRECATED_PENDING_REPLACEMENT",
-    "v4_reason": "v4 creates Rich Media Detail Page (Epic 12, Phase 2) with dual ratings, season/episode list, streaming platforms. Current tests validate v3 side panel with metadata editor which is being restructured. Subtitle search integration (Epic 8) also changes the UI.",
-    "v4_action": "DELETE when Epic 12 is implemented; regenerate from updated standard_prd.json"
+    "v4_status": "VALID",
+    "v4_reason": "Pagination (Epic 5) is complete. Behavior unchanged in v4.",
+    "v4_action": "KEEP as-is"
   },
   {
     "id": "TC035",
@@ -1331,9 +279,9 @@
         "description": "Verify element \"Save\" is visible"
       }
     ],
-    "v4_status": "VALID_WITH_UPDATES_NEEDED",
-    "v4_reason": "QB settings core flow is retained. However, settings page restructured from single page to multi-section hub. Learned Patterns moved out of QB settings page.",
-    "v4_action": "KEEP but update route/navigation assertions"
+    "v4_status": "VALID",
+    "v4_reason": "QB settings (Epic 4/6) is complete. Settings hub restructuring done. Route /settings/qbittorrent still valid.",
+    "v4_action": "KEEP as-is"
   },
   {
     "id": "TC036",
@@ -1375,9 +323,9 @@
         "description": "Click on \"Save\""
       }
     ],
-    "v4_status": "VALID_WITH_UPDATES_NEEDED",
-    "v4_reason": "QB settings core flow is retained. However, settings page restructured from single page to multi-section hub. Learned Patterns moved out of QB settings page.",
-    "v4_action": "KEEP but update route/navigation assertions"
+    "v4_status": "VALID",
+    "v4_reason": "QB connection test flow (Epic 4/6) is complete and unchanged.",
+    "v4_action": "KEEP as-is"
   },
   {
     "id": "TC037",
@@ -1419,9 +367,9 @@
         "description": "Verify text \"Settings saved\" is visible"
       }
     ],
-    "v4_status": "VALID_WITH_UPDATES_NEEDED",
-    "v4_reason": "QB settings core flow is retained. However, settings page restructured from single page to multi-section hub. Learned Patterns moved out of QB settings page.",
-    "v4_action": "KEEP but update route/navigation assertions"
+    "v4_status": "VALID",
+    "v4_reason": "QB save confirmation flow (Epic 4/6) is complete and unchanged.",
+    "v4_action": "KEEP as-is"
   },
   {
     "id": "TC038",
@@ -1459,9 +407,9 @@
         "description": "Verify text \"credentials\" is visible"
       }
     ],
-    "v4_status": "VALID_WITH_UPDATES_NEEDED",
-    "v4_reason": "QB settings core flow is retained. However, settings page restructured from single page to multi-section hub. Learned Patterns moved out of QB settings page.",
-    "v4_action": "KEEP but update route/navigation assertions"
+    "v4_status": "VALID",
+    "v4_reason": "QB error handling flow (Epic 4/6) is complete and unchanged.",
+    "v4_action": "KEEP as-is"
   },
   {
     "id": "TC039",
@@ -1499,9 +447,9 @@
         "description": "Click on \"Save\""
       }
     ],
-    "v4_status": "VALID_WITH_UPDATES_NEEDED",
-    "v4_reason": "QB settings core flow is retained. However, settings page restructured from single page to multi-section hub. Learned Patterns moved out of QB settings page.",
-    "v4_action": "KEEP but update route/navigation assertions"
+    "v4_status": "VALID",
+    "v4_reason": "QB save-guard flow (Epic 4/6) is complete and unchanged.",
+    "v4_action": "KEEP as-is"
   },
   {
     "id": "TC040",
@@ -1531,9 +479,9 @@
         "description": "Verify text \"Connection failed\" is not visible"
       }
     ],
-    "v4_status": "VALID_WITH_UPDATES_NEEDED",
-    "v4_reason": "QB settings core flow is retained. However, settings page restructured from single page to multi-section hub. Learned Patterns moved out of QB settings page.",
-    "v4_action": "KEEP but update route/navigation assertions"
+    "v4_status": "VALID",
+    "v4_reason": "QB validation flow (Epic 4/6) is complete and unchanged.",
+    "v4_action": "KEEP as-is"
   },
   {
     "id": "TC041",
@@ -1559,9 +507,9 @@
         "description": "Verify text \"secret-password\" is not visible"
       }
     ],
-    "v4_status": "VALID_WITH_UPDATES_NEEDED",
-    "v4_reason": "QB settings core flow is retained. However, settings page restructured from single page to multi-section hub. Learned Patterns moved out of QB settings page.",
-    "v4_action": "KEEP but update route/navigation assertions"
+    "v4_status": "VALID",
+    "v4_reason": "QB password masking (Epic 4/6) is complete and unchanged.",
+    "v4_action": "KEEP as-is"
   },
   {
     "id": "TC042",
@@ -1599,9 +547,9 @@
         "description": "Verify text \"Connected\" is visible"
       }
     ],
-    "v4_status": "VALID_WITH_UPDATES_NEEDED",
-    "v4_reason": "QB settings core flow is retained. However, settings page restructured from single page to multi-section hub. Learned Patterns moved out of QB settings page.",
-    "v4_action": "KEEP but update route/navigation assertions"
+    "v4_status": "VALID",
+    "v4_reason": "QB retry flow (Epic 4/6) is complete and unchanged.",
+    "v4_action": "KEEP as-is"
   },
   {
     "id": "TC043",
@@ -1827,9 +775,9 @@
         "description": "Click \"Edit\""
       }
     ],
-    "v4_status": "VALID_WITH_UPDATES_NEEDED",
-    "v4_reason": "Manual metadata search (Epic 3) is done and retained. However, subtitle search integration (Epic 8) adds new search entry points and the manual search dialog component has been updated.",
-    "v4_action": "KEEP but verify UI element selectors still match"
+    "v4_status": "VALID",
+    "v4_reason": "Manual metadata search (Epic 3) is complete and retained. Subtitle search (Epic 8) adds new entry points but does not alter this flow.",
+    "v4_action": "KEEP as-is"
   },
   {
     "id": "TC050",
@@ -1871,9 +819,9 @@
         "description": "Verify text \"Source\" is visible"
       }
     ],
-    "v4_status": "VALID_WITH_UPDATES_NEEDED",
-    "v4_reason": "Manual metadata search (Epic 3) is done and retained. However, subtitle search integration (Epic 8) adds new search entry points and the manual search dialog component has been updated.",
-    "v4_action": "KEEP but verify UI element selectors still match"
+    "v4_status": "VALID",
+    "v4_reason": "Manual metadata search (Epic 3) is complete and retained.",
+    "v4_action": "KEEP as-is"
   },
   {
     "id": "TC051",
@@ -1915,9 +863,9 @@
         "description": "Verify element \"Manual search results\" is visible"
       }
     ],
-    "v4_status": "VALID_WITH_UPDATES_NEEDED",
-    "v4_reason": "Manual metadata search (Epic 3) is done and retained. However, subtitle search integration (Epic 8) adds new search entry points and the manual search dialog component has been updated.",
-    "v4_action": "KEEP but verify UI element selectors still match"
+    "v4_status": "VALID",
+    "v4_reason": "Manual metadata search (Epic 3) is complete and retained.",
+    "v4_action": "KEEP as-is"
   },
   {
     "id": "TC052",
@@ -1963,9 +911,9 @@
         "description": "Verify text \"Apply\" is visible"
       }
     ],
-    "v4_status": "VALID_WITH_UPDATES_NEEDED",
-    "v4_reason": "Manual metadata search (Epic 3) is done and retained. However, subtitle search integration (Epic 8) adds new search entry points and the manual search dialog component has been updated.",
-    "v4_action": "KEEP but verify UI element selectors still match"
+    "v4_status": "VALID",
+    "v4_reason": "Manual metadata search (Epic 3) is complete and retained.",
+    "v4_action": "KEEP as-is"
   },
   {
     "id": "TC053",
@@ -2015,9 +963,9 @@
         "description": "Verify text \"Applied\" is visible"
       }
     ],
-    "v4_status": "VALID_WITH_UPDATES_NEEDED",
-    "v4_reason": "Manual metadata search (Epic 3) is done and retained. However, subtitle search integration (Epic 8) adds new search entry points and the manual search dialog component has been updated.",
-    "v4_action": "KEEP but verify UI element selectors still match"
+    "v4_status": "VALID",
+    "v4_reason": "Manual metadata search (Epic 3) is complete and retained.",
+    "v4_action": "KEEP as-is"
   },
   {
     "id": "TC054",
@@ -2059,9 +1007,9 @@
         "description": "Verify text \"No matches found\" is visible"
       }
     ],
-    "v4_status": "VALID_WITH_UPDATES_NEEDED",
-    "v4_reason": "Manual metadata search (Epic 3) is done and retained. However, subtitle search integration (Epic 8) adds new search entry points and the manual search dialog component has been updated.",
-    "v4_action": "KEEP but verify UI element selectors still match"
+    "v4_status": "VALID",
+    "v4_reason": "Manual metadata search (Epic 3) is complete and retained.",
+    "v4_action": "KEEP as-is"
   },
   {
     "id": "TC055",
@@ -2107,9 +1055,9 @@
         "description": "Verify text \"Save\" is visible"
       }
     ],
-    "v4_status": "VALID_WITH_UPDATES_NEEDED",
-    "v4_reason": "Manual metadata search (Epic 3) is done and retained. However, subtitle search integration (Epic 8) adds new search entry points and the manual search dialog component has been updated.",
-    "v4_action": "KEEP but verify UI element selectors still match"
+    "v4_status": "VALID",
+    "v4_reason": "Manual metadata search (Epic 3) is complete and retained.",
+    "v4_action": "KEEP as-is"
   },
   {
     "id": "TC056",
@@ -2159,9 +1107,9 @@
         "description": "Click \"Save\""
       }
     ],
-    "v4_status": "VALID_WITH_UPDATES_NEEDED",
-    "v4_reason": "Manual metadata search (Epic 3) is done and retained. However, subtitle search integration (Epic 8) adds new search entry points and the manual search dialog component has been updated.",
-    "v4_action": "KEEP but verify UI element selectors still match"
+    "v4_status": "VALID",
+    "v4_reason": "Manual metadata search (Epic 3) is complete and retained.",
+    "v4_action": "KEEP as-is"
   },
   {
     "id": "TC057",
@@ -2374,5 +1322,629 @@
     "v4_status": "VALID",
     "v4_reason": "Pattern learning (Epic 3) is done and retained in v4. No significant changes planned.",
     "v4_action": "KEEP as-is"
+  },
+  {
+    "id": "TC063",
+    "title": "Scanner settings page loads with folder list, schedule selector, and last scan info",
+    "description": "Verifies the scanner settings page renders all key sections: configured media folders, schedule dropdown, last scan info, and scan trigger button.",
+    "category": "Scanner",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/scanner"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element with data-testid \"scanner-settings\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element with data-testid \"folder-list\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element with data-testid \"schedule-select\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element with data-testid \"last-scan-info\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element with data-testid \"scan-trigger-button\" is visible"
+      }
+    ],
+    "v4_status": "VALID",
+    "v4_reason": "Scanner settings (Epic 7) is complete. All components verified with data-testid attributes.",
+    "v4_action": "NEW — Epic 7 coverage"
+  },
+  {
+    "id": "TC064",
+    "title": "Trigger manual scan and verify progress card appears (desktop)",
+    "description": "Verifies clicking 'Scan Now' initiates a scan and the floating progress card appears at bottom-right with progress bar and file counters.",
+    "category": "Scanner",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/scanner"
+      },
+      {
+        "type": "action",
+        "description": "Click element with data-testid \"scan-trigger-button\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element with data-testid \"scan-progress-card\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element with data-testid \"scan-progress-bar\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element with data-testid \"scan-current-file\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element with data-testid \"scan-eta\" is visible"
+      }
+    ],
+    "v4_status": "VALID",
+    "v4_reason": "Scanner progress card (Epic 7, Story 7-4) is complete with SSE-driven real-time updates.",
+    "v4_action": "NEW — Epic 7 coverage"
+  },
+  {
+    "id": "TC065",
+    "title": "Minimize scan progress card to pill and expand back",
+    "description": "Verifies the scan progress card can be minimized to a compact pill indicator and expanded back to the full card.",
+    "category": "Scanner",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/scanner"
+      },
+      {
+        "type": "action",
+        "description": "Click element with data-testid \"scan-trigger-button\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element with data-testid \"scan-progress-card\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click element with data-testid \"scan-minimize-btn\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element with data-testid \"scan-progress-pill\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element with data-testid \"scan-progress-card\" is not visible"
+      },
+      {
+        "type": "action",
+        "description": "Click element with data-testid \"scan-progress-pill\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element with data-testid \"scan-progress-card\" is visible"
+      }
+    ],
+    "v4_status": "VALID",
+    "v4_reason": "Scanner minimize/expand (Epic 7, Story 7-4) is complete.",
+    "v4_action": "NEW — Epic 7 coverage"
+  },
+  {
+    "id": "TC066",
+    "title": "Cancel active scan with confirmation dialog",
+    "description": "Verifies the user can cancel an active scan through a confirmation dialog, and the scan stops.",
+    "category": "Scanner",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/scanner"
+      },
+      {
+        "type": "action",
+        "description": "Click element with data-testid \"scan-trigger-button\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element with data-testid \"scan-progress-card\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click element with data-testid \"scan-cancel-btn\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element with data-testid \"cancel-confirm-dialog\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click element with data-testid \"cancel-confirm-btn\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element with data-testid \"scan-progress-card\" is not visible or shows cancelled state"
+      }
+    ],
+    "v4_status": "VALID",
+    "v4_reason": "Scan cancellation (Epic 7, Story 7-4) is complete with confirmation dialog.",
+    "v4_action": "NEW — Epic 7 coverage"
+  },
+  {
+    "id": "TC067",
+    "title": "Cancel confirmation can be dismissed to continue scanning",
+    "description": "Verifies clicking 'Continue' in the cancel confirmation dialog dismisses the dialog and scanning continues.",
+    "category": "Scanner",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/scanner"
+      },
+      {
+        "type": "action",
+        "description": "Click element with data-testid \"scan-trigger-button\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element with data-testid \"scan-progress-card\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click element with data-testid \"scan-cancel-btn\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element with data-testid \"cancel-confirm-dialog\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click element with data-testid \"cancel-continue-btn\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element with data-testid \"cancel-confirm-dialog\" is not visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element with data-testid \"scan-progress-card\" is visible"
+      }
+    ],
+    "v4_status": "VALID",
+    "v4_reason": "Scan cancel-dismiss flow (Epic 7, Story 7-4) is complete.",
+    "v4_action": "NEW — Epic 7 coverage"
+  },
+  {
+    "id": "TC068",
+    "title": "Configure scan schedule to daily and verify selection persists",
+    "description": "Verifies changing the scan schedule dropdown to 'daily' saves the selection and it persists on page reload.",
+    "category": "Scanner",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/scanner"
+      },
+      {
+        "type": "action",
+        "description": "Select \"daily\" from element with data-testid \"schedule-select\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element with data-testid \"schedule-select\" shows \"daily\" as selected value"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /library"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /settings/scanner"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element with data-testid \"schedule-select\" shows \"daily\" as selected value"
+      }
+    ],
+    "v4_status": "VALID",
+    "v4_reason": "Scheduled scan (Epic 7, Story 7-2) is complete.",
+    "v4_action": "NEW — Epic 7 coverage"
+  },
+  {
+    "id": "TC069",
+    "title": "Scan progress visible on non-settings pages (global progress card)",
+    "description": "Verifies the scan progress card is visible on the library page during an active scan, since it renders in the root layout.",
+    "category": "Scanner",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/scanner"
+      },
+      {
+        "type": "action",
+        "description": "Click element with data-testid \"scan-trigger-button\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element with data-testid \"scan-progress-card\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /library"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element with data-testid \"scan-progress-wrapper\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element with data-testid \"scan-progress-card\" is visible"
+      }
+    ],
+    "v4_status": "VALID",
+    "v4_reason": "Global scan progress (Epic 7, Story 7-4) renders in __root.tsx for all pages.",
+    "v4_action": "NEW — Epic 7 coverage"
+  },
+  {
+    "id": "TC070",
+    "title": "Scan completion shows auto-dismiss card with results",
+    "description": "Verifies that when a scan completes, the progress card shows completion state with dismiss button and auto-dismiss animation.",
+    "category": "Scanner",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /settings/scanner"
+      },
+      {
+        "type": "action",
+        "description": "Click element with data-testid \"scan-trigger-button\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element with data-testid \"scan-progress-card\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Wait for scan to complete (scan-progress-bar reaches 100%)"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element with data-testid \"auto-dismiss-bar\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element with data-testid \"scan-dismiss-btn\" is visible"
+      }
+    ],
+    "v4_status": "VALID",
+    "v4_reason": "Scan completion with auto-dismiss (Epic 7, Story 7-4) is complete with CSS keyframe animation.",
+    "v4_action": "NEW — Epic 7 coverage"
+  },
+  {
+    "id": "TC071",
+    "title": "Open subtitle search dialog from library context menu",
+    "description": "Verifies a user can right-click a media item in the library, select 'Search Subtitles', and the subtitle search dialog opens with provider checkboxes and search input.",
+    "category": "Subtitle Search",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /library"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a grid of media poster cards is visible"
+      },
+      {
+        "type": "action",
+        "description": "Right-click the first media poster card to open context menu"
+      },
+      {
+        "type": "action",
+        "description": "Click \"Search Subtitles\" in the context menu"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element with data-testid \"subtitle-search-dialog\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element with data-testid \"subtitle-search-input\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element with data-testid \"subtitle-search-btn\" is visible"
+      }
+    ],
+    "v4_status": "VALID",
+    "v4_reason": "Subtitle search dialog (Epic 8, Story 8-8) is complete with multi-source provider integration.",
+    "v4_action": "NEW — Epic 8 coverage"
+  },
+  {
+    "id": "TC072",
+    "title": "Subtitle search shows provider checkboxes and returns scored results",
+    "description": "Verifies the subtitle search dialog shows provider selection checkboxes (Assrt, OpenSubtitles, Zimuku) and executing a search returns a results table with score badges.",
+    "category": "Subtitle Search",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /library"
+      },
+      {
+        "type": "action",
+        "description": "Right-click the first media poster card to open context menu"
+      },
+      {
+        "type": "action",
+        "description": "Click \"Search Subtitles\" in the context menu"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element with data-testid \"provider-assrt\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element with data-testid \"provider-opensubtitles\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element with data-testid \"provider-zimuku\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click element with data-testid \"subtitle-search-btn\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element with data-testid \"subtitle-results-table\" is visible"
+      }
+    ],
+    "v4_status": "VALID",
+    "v4_reason": "Subtitle provider selection and scored results (Epic 8, Stories 8-1/8-2/8-3/8-6) are complete.",
+    "v4_action": "NEW — Epic 8 coverage"
+  },
+  {
+    "id": "TC073",
+    "title": "Subtitle search shows empty state when no results found",
+    "description": "Verifies searching for subtitles with a query that yields no results shows the empty state message.",
+    "category": "Subtitle Search",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /library"
+      },
+      {
+        "type": "action",
+        "description": "Right-click the first media poster card to open context menu"
+      },
+      {
+        "type": "action",
+        "description": "Click \"Search Subtitles\" in the context menu"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element with data-testid \"subtitle-search-dialog\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Clear the search input and type \"zzzzz-no-subtitles-exist-99999\""
+      },
+      {
+        "type": "action",
+        "description": "Click element with data-testid \"subtitle-search-btn\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element with data-testid \"subtitle-empty-state\" is visible"
+      }
+    ],
+    "v4_status": "VALID",
+    "v4_reason": "Subtitle search empty state (Epic 8, Story 8-8) is complete.",
+    "v4_action": "NEW — Epic 8 coverage"
+  },
+  {
+    "id": "TC074",
+    "title": "Preview subtitle content before downloading",
+    "description": "Verifies clicking the preview button on a subtitle result shows the first lines of subtitle content with detected language.",
+    "category": "Subtitle Search",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /library"
+      },
+      {
+        "type": "action",
+        "description": "Right-click the first media poster card to open context menu"
+      },
+      {
+        "type": "action",
+        "description": "Click \"Search Subtitles\" in the context menu"
+      },
+      {
+        "type": "action",
+        "description": "Click element with data-testid \"subtitle-search-btn\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element with data-testid \"subtitle-results-table\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click the first visible element matching data-testid pattern \"preview-btn-*\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify subtitle preview content area is visible showing text lines"
+      }
+    ],
+    "v4_status": "VALID",
+    "v4_reason": "Subtitle preview (Epic 8, Story 8-8) is complete with language detection display.",
+    "v4_action": "NEW — Epic 8 coverage"
+  },
+  {
+    "id": "TC075",
+    "title": "Download subtitle with CN conversion toggle",
+    "description": "Verifies the CN conversion toggle is visible, and downloading a subtitle triggers the multi-stage SSE progress flow (downloading, converting, placing, complete).",
+    "category": "Subtitle Search",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /library"
+      },
+      {
+        "type": "action",
+        "description": "Right-click the first media poster card to open context menu"
+      },
+      {
+        "type": "action",
+        "description": "Click \"Search Subtitles\" in the context menu"
+      },
+      {
+        "type": "action",
+        "description": "Click element with data-testid \"subtitle-search-btn\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element with data-testid \"subtitle-results-table\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element with data-testid \"convert-toggle\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click the first visible element matching data-testid pattern \"download-btn-*\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify download progress indication is visible (downloading stage text or spinner)"
+      }
+    ],
+    "v4_status": "VALID",
+    "v4_reason": "Subtitle download with CN conversion (Epic 8, Stories 8-5/8-7/8-8/8-10) is complete with SSE multi-stage progress.",
+    "v4_action": "NEW — Epic 8 coverage"
+  },
+  {
+    "id": "TC076",
+    "title": "Close subtitle search dialog with Escape key",
+    "description": "Verifies the subtitle search dialog can be dismissed by pressing the Escape key.",
+    "category": "Subtitle Search",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /library"
+      },
+      {
+        "type": "action",
+        "description": "Right-click the first media poster card to open context menu"
+      },
+      {
+        "type": "action",
+        "description": "Click \"Search Subtitles\" in the context menu"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element with data-testid \"subtitle-search-dialog\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Press Escape key"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element with data-testid \"subtitle-search-dialog\" is not visible"
+      }
+    ],
+    "v4_status": "VALID",
+    "v4_reason": "Subtitle dialog dismiss (Epic 8, Story 8-8) is complete.",
+    "v4_action": "NEW — Epic 8 coverage"
+  },
+  {
+    "id": "TC077",
+    "title": "Open subtitle search from media detail panel",
+    "description": "Verifies the subtitle search dialog can be opened from the media detail panel's 'Search Subtitles' button.",
+    "category": "Subtitle Search",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /library"
+      },
+      {
+        "type": "action",
+        "description": "Click the first media poster card to open detail panel"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"media detail side panel\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click \"Search Subtitles\" button in the detail panel"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element with data-testid \"subtitle-search-dialog\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element with data-testid \"subtitle-search-input\" contains the media title as default value"
+      }
+    ],
+    "v4_status": "VALID",
+    "v4_reason": "Subtitle search from detail panel (Epic 8, Story 8-8) is complete. Dialog pre-fills media title.",
+    "v4_action": "NEW — Epic 8 coverage"
+  },
+  {
+    "id": "TC078",
+    "title": "Library context menu shows 'Search Subtitles' option alongside existing actions",
+    "description": "Verifies the library context menu includes 'Search Subtitles' as an action item alongside Re-parse and Delete.",
+    "category": "Subtitle Search",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /library"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a grid of media poster cards is visible"
+      },
+      {
+        "type": "action",
+        "description": "Right-click the first media poster card to open context menu"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Search Subtitles\" is visible in the context menu"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Re-parse\" is visible in the context menu"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Delete\" is visible in the context menu"
+      }
+    ],
+    "v4_status": "VALID",
+    "v4_reason": "Context menu with subtitle search (Epic 8 integration into Epic 5 library) is complete.",
+    "v4_action": "NEW — Epic 8 coverage"
   }
 ]

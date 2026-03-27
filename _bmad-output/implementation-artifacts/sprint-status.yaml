@@ -224,7 +224,7 @@ development_status:
   retro-8-TD6-auto-dismiss-css-animation:            done  # 2026-03-27 — QD: CSS keyframes replace setInterval, motion-reduce support
 
   # --- Testing ---
-  retro-8-TS1-testsprite-v4-regeneration:            backlog  # → TEA /bmad:bmm:workflows:testarch-automate: regenerate TestSprite tests for Epic 7+8 features
+  retro-8-TS1-testsprite-v4-regeneration:            done  # 2026-03-27 — TEA: v4 regeneration complete. 28 deprecated tests removed, 34 retained (all VALID), 16 new tests added (TC063-TC078) for Epic 7 Scanner + Epic 8 Subtitle Engine. Total: 50 tests.
 
   # --- Epic 9 Preparation ---
   retro-8-E9-1-split-c2-whisper-ai-translation:     backlog  # → SM /bmad:bmm:agents:sm: update epic-9 file to split C-2 → C-2a + C-2b

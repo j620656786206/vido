@@ -32,27 +32,30 @@
       "name": "Subtitle Search",
       "description": "Search subtitles from multiple sources (Assrt, Zimuku, OpenSubtitles) for a single movie or episode. Shows results with score badge, source, language, format, and hearing-impaired indicator. User can select and download the best subtitle.",
       "v4_feature_ids": ["P1-010", "P1-011", "P1-012", "P1-016", "P1-018"],
-      "v4_status": "IN PROGRESS (Epic 8)",
+      "v4_status": "DONE (Epic 8)",
       "user_flows": [
-        "From media library or detail panel -> Click 'Search Subtitles' -> Subtitle search dialog opens -> See search results from multiple sources -> Results show: score badge, source icon, title, language tag, format (SRT/ASS), HI badge -> Click a result to download -> See download confirmation",
+        "From media library or detail panel -> Click 'Search Subtitles' -> Subtitle search dialog opens -> Select providers (Assrt/Zimuku/OpenSubtitles) -> See search results with score badge, source icon, language tag, format -> Click a result to download -> See multi-stage SSE progress (downloading→detecting→converting→placing→complete)",
         "Open subtitle search for a media item -> No subtitles found -> See 'No subtitles found' empty state message",
-        "Open subtitle search for a TV series -> Select season/episode -> Search results appear for that specific episode"
+        "Open subtitle search -> Toggle CN conversion switch (auto-OFF for CN content, ON for others) -> Download subtitle with/without conversion",
+        "Open subtitle search -> Click preview button on a result -> See first 10 lines of subtitle content with detected language"
       ]
     },
     {
       "name": "Batch Subtitle Processing",
       "description": "Batch search and download subtitles for all episodes of a full season or entire library at once. Shows progress with status per episode.",
       "v4_feature_ids": ["P1-019"],
-      "v4_status": "IN PROGRESS (Epic 8)",
+      "v4_status": "DONE (Epic 8)",
       "user_flows": [
-        "From TV series detail -> Click 'Batch Search Subtitles' -> Processing begins for all episodes -> See progress indicator per episode -> See completion summary"
+        "From TV series detail -> Click 'Batch Search Subtitles' -> Select scope (season/library) -> Processing begins -> See SSE progress updates per episode -> See completion summary with processed/total/errors",
+        "Start batch subtitle processing -> Attempt second batch -> See 409 rejection (concurrent batch not allowed)",
+        "Start batch -> Cancel mid-processing -> See processing halt and partial results"
       ]
     },
     {
       "name": "Media Detail Panel",
       "description": "Side panel (desktop) or sheet (mobile) presenting full metadata for a movie or TV show: title, poster, genres, rating, overview, cast/crew credits. Includes context menu for actions and subtitle search entry point.",
       "v4_feature_ids": ["P1-007"],
-      "v4_status": "DONE (Epic 5), subtitle integration IN PROGRESS (Epic 8)",
+      "v4_status": "DONE (Epic 5+8)",
       "user_flows": [
         "Click a media item in library -> Side panel opens with title, poster, genres, rating, overview -> See cast/crew credits section -> See 'Search Subtitles' button -> Click to open subtitle search",
         "Open detail panel -> Right-click or click context menu -> See options: Search Subtitles, Re-parse Metadata, Delete",
@@ -105,10 +108,12 @@
       "name": "Scanner Settings",
       "description": "Configure media library scanner: set scan paths, trigger manual scan, view scan status and results.",
       "v4_feature_ids": ["P1-001", "P1-005", "P1-006"],
-      "v4_status": "Partially DONE (Epic 5 manual scan), scheduled scan NEW (Epic 7)",
+      "v4_status": "DONE (Epic 7)",
       "user_flows": [
-        "Navigate to /settings/scanner -> See configured scan paths -> Add a new path -> Click 'Scan Now' -> See scan progress -> See scan results (new files found, matched, errors)",
-        "Navigate to /settings/scanner -> Configure scheduled scan frequency (hourly/daily) -> Save settings"
+        "Navigate to /settings/scanner -> See configured media folder paths -> See last scan info (timestamp, file count, duration) -> Click 'Scan Now' -> See scan progress card (desktop) or bottom sheet (mobile) with real-time SSE updates -> See completion with auto-dismiss",
+        "Navigate to /settings/scanner -> Configure scheduled scan frequency (manual/hourly/daily) via dropdown -> Save settings -> Schedule persists",
+        "During scan -> Click cancel button on progress card -> Confirm cancellation -> See scan stopped",
+        "During scan -> Minimize progress card to pill -> Expand back to full card"
       ]
     },
     {
@@ -135,7 +140,7 @@
       "name": "Settings Hub",
       "description": "Centralized settings with multiple sections: Connection (API keys), qBittorrent, Scanner, Performance, Cache, Logs, System Status, Backup.",
       "v4_feature_ids": ["Settings"],
-      "v4_status": "Partially DONE (Epic 6, 9/11 stories complete)",
+      "v4_status": "DONE (Epic 6)",
       "user_flows": [
         "Navigate to /settings -> See settings navigation with sections -> Click into each section -> Configure and save",
         "Navigate to /settings/backup -> Export configuration -> Download backup file",
@@ -157,7 +162,7 @@
       "Vite 7.0.0",
       "lucide-react 0.562.0"
     ],
-    "backend_stack": ["Go (Gin framework)", "SQLite with WAL mode", "RESTful API + SSE (planned)"],
+    "backend_stack": ["Go (Gin framework)", "SQLite with WAL mode", "RESTful API + SSE"],
     "routes": [
       {
         "path": "/",
@@ -270,8 +275,9 @@
           "See empty state when no subtitles found"
         ],
         "api_calls": [
-          { "method": "GET", "endpoint": "/api/v1/subtitles/search" },
-          { "method": "POST", "endpoint": "/api/v1/subtitles/download" }
+          { "method": "POST", "endpoint": "/api/v1/subtitles/search" },
+          { "method": "POST", "endpoint": "/api/v1/subtitles/download" },
+          { "method": "POST", "endpoint": "/api/v1/subtitles/preview" }
         ],
         "auth_required": false
       },
@@ -439,11 +445,6 @@
       }
     ],
     "known_limitations": [
-      {
-        "issue": "Subtitle search UI is under active development (Epic 8 in progress)",
-        "location": "apps/web/src/components/subtitle/",
-        "impact": "Subtitle search dialog may change as remaining stories are implemented"
-      },
       {
         "issue": "Home page is still v3 dashboard; will be replaced by TV Wall in Phase 2",
         "location": "apps/web/src/routes/index.tsx",
