@@ -12,6 +12,10 @@ import { test, expect } from '../support/fixtures';
 
 const API_BASE_URL = process.env.API_URL || 'http://localhost:8080/api/v1';
 
+// For page.route() interception, use glob pattern that matches any origin
+// (frontend uses relative URLs like /api/v1/... which resolve to the dev server origin)
+const ROUTE_API = '**/api/v1';
+
 // =============================================================================
 // Mock Data
 // =============================================================================
@@ -88,7 +92,7 @@ const mockQBConfig = {
 test.describe('Dashboard Layout @dashboard @ui', () => {
   test.beforeEach(async ({ page }) => {
     // Mock all API endpoints
-    await page.route(`${API_BASE_URL}/downloads*`, (route) =>
+    await page.route(`${ROUTE_API}/downloads*`, (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -96,7 +100,7 @@ test.describe('Dashboard Layout @dashboard @ui', () => {
       })
     );
 
-    await page.route(`${API_BASE_URL}/media/recent*`, (route) =>
+    await page.route(`${ROUTE_API}/media/recent*`, (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -104,7 +108,7 @@ test.describe('Dashboard Layout @dashboard @ui', () => {
       })
     );
 
-    await page.route(`${API_BASE_URL}/settings/qbittorrent`, (route) =>
+    await page.route(`${ROUTE_API}/settings/qbittorrent`, (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -153,7 +157,7 @@ test.describe('Dashboard Disconnected State @dashboard @ui', () => {
     page,
   }) => {
     // Mock qBittorrent as not configured
-    await page.route(`${API_BASE_URL}/settings/qbittorrent`, (route) =>
+    await page.route(`${ROUTE_API}/settings/qbittorrent`, (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -165,7 +169,7 @@ test.describe('Dashboard Disconnected State @dashboard @ui', () => {
     );
 
     // Mock downloads to fail
-    await page.route(`${API_BASE_URL}/downloads*`, (route) =>
+    await page.route(`${ROUTE_API}/downloads*`, (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -174,7 +178,7 @@ test.describe('Dashboard Disconnected State @dashboard @ui', () => {
     );
 
     // Mock recent media to still work
-    await page.route(`${API_BASE_URL}/media/recent*`, (route) =>
+    await page.route(`${ROUTE_API}/media/recent*`, (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -200,7 +204,7 @@ test.describe('Dashboard Mobile Layout @dashboard @ui', () => {
     await page.setViewportSize({ width: 375, height: 812 });
 
     // Mock all API endpoints
-    await page.route(`${API_BASE_URL}/downloads*`, (route) =>
+    await page.route(`${ROUTE_API}/downloads*`, (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -208,7 +212,7 @@ test.describe('Dashboard Mobile Layout @dashboard @ui', () => {
       })
     );
 
-    await page.route(`${API_BASE_URL}/media/recent*`, (route) =>
+    await page.route(`${ROUTE_API}/media/recent*`, (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -216,7 +220,7 @@ test.describe('Dashboard Mobile Layout @dashboard @ui', () => {
       })
     );
 
-    await page.route(`${API_BASE_URL}/settings/qbittorrent`, (route) =>
+    await page.route(`${ROUTE_API}/settings/qbittorrent`, (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -246,7 +250,7 @@ test.describe('Dashboard Mobile Layout @dashboard @ui', () => {
 
 test.describe('Dashboard Quick Search @dashboard @ui', () => {
   test.beforeEach(async ({ page }) => {
-    await page.route(`${API_BASE_URL}/downloads*`, (route) =>
+    await page.route(`${ROUTE_API}/downloads*`, (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -254,7 +258,7 @@ test.describe('Dashboard Quick Search @dashboard @ui', () => {
       })
     );
 
-    await page.route(`${API_BASE_URL}/media/recent*`, (route) =>
+    await page.route(`${ROUTE_API}/media/recent*`, (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -262,7 +266,7 @@ test.describe('Dashboard Quick Search @dashboard @ui', () => {
       })
     );
 
-    await page.route(`${API_BASE_URL}/settings/qbittorrent`, (route) =>
+    await page.route(`${ROUTE_API}/settings/qbittorrent`, (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -281,7 +285,7 @@ test.describe('Dashboard Quick Search @dashboard @ui', () => {
 test.describe('Dashboard Quick Actions @dashboard @ui', () => {
   test.beforeEach(async ({ page }) => {
     // Network-first: intercept all routes BEFORE navigation
-    await page.route(`${API_BASE_URL}/downloads*`, (route) =>
+    await page.route(`${ROUTE_API}/downloads*`, (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -289,7 +293,7 @@ test.describe('Dashboard Quick Actions @dashboard @ui', () => {
       })
     );
 
-    await page.route(`${API_BASE_URL}/media/recent*`, (route) =>
+    await page.route(`${ROUTE_API}/media/recent*`, (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -297,7 +301,7 @@ test.describe('Dashboard Quick Actions @dashboard @ui', () => {
       })
     );
 
-    await page.route(`${API_BASE_URL}/settings/qbittorrent`, (route) =>
+    await page.route(`${ROUTE_API}/settings/qbittorrent`, (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -335,7 +339,7 @@ test.describe('Dashboard Quick Actions @dashboard @ui', () => {
 test.describe('Dashboard Panel Independence @dashboard @ui', () => {
   test('[P1] should show downloads when recent media API fails (AC3)', async ({ page }) => {
     // Network-first: intercept all routes BEFORE navigation
-    await page.route(`${API_BASE_URL}/settings/qbittorrent`, (route) =>
+    await page.route(`${ROUTE_API}/settings/qbittorrent`, (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -343,7 +347,7 @@ test.describe('Dashboard Panel Independence @dashboard @ui', () => {
       })
     );
 
-    await page.route(`${API_BASE_URL}/downloads*`, (route) =>
+    await page.route(`${ROUTE_API}/downloads*`, (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -352,7 +356,7 @@ test.describe('Dashboard Panel Independence @dashboard @ui', () => {
     );
 
     // Mock recent media API to return error
-    await page.route(`${API_BASE_URL}/media/recent*`, (route) =>
+    await page.route(`${ROUTE_API}/media/recent*`, (route) =>
       route.fulfill({
         status: 500,
         contentType: 'application/json',
@@ -378,7 +382,7 @@ test.describe('Dashboard Panel Independence @dashboard @ui', () => {
 
 test.describe('Dashboard Search Navigation @dashboard @ui', () => {
   test.beforeEach(async ({ page }) => {
-    await page.route(`${API_BASE_URL}/downloads*`, (route) =>
+    await page.route(`${ROUTE_API}/downloads*`, (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -386,7 +390,7 @@ test.describe('Dashboard Search Navigation @dashboard @ui', () => {
       })
     );
 
-    await page.route(`${API_BASE_URL}/media/recent*`, (route) =>
+    await page.route(`${ROUTE_API}/media/recent*`, (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -394,7 +398,7 @@ test.describe('Dashboard Search Navigation @dashboard @ui', () => {
       })
     );
 
-    await page.route(`${API_BASE_URL}/settings/qbittorrent`, (route) =>
+    await page.route(`${ROUTE_API}/settings/qbittorrent`, (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -426,7 +430,7 @@ test.describe('Dashboard Search Navigation @dashboard @ui', () => {
 test.describe('Dashboard Empty State @dashboard @ui', () => {
   test('[P2] should show empty states when connected but no data (AC1, AC3)', async ({ page }) => {
     // Network-first: intercept BEFORE navigation
-    await page.route(`${API_BASE_URL}/settings/qbittorrent`, (route) =>
+    await page.route(`${ROUTE_API}/settings/qbittorrent`, (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -434,7 +438,7 @@ test.describe('Dashboard Empty State @dashboard @ui', () => {
       })
     );
 
-    await page.route(`${API_BASE_URL}/downloads*`, (route) =>
+    await page.route(`${ROUTE_API}/downloads*`, (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -442,7 +446,7 @@ test.describe('Dashboard Empty State @dashboard @ui', () => {
       })
     );
 
-    await page.route(`${API_BASE_URL}/media/recent*`, (route) =>
+    await page.route(`${ROUTE_API}/media/recent*`, (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',

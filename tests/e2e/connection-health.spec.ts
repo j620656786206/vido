@@ -12,6 +12,9 @@ import { test, expect } from '../support/fixtures';
 
 const API_BASE_URL = process.env.API_URL || 'http://localhost:8080/api/v1';
 
+// For page.route() interception, use glob pattern that matches any origin
+const ROUTE_API = '**/api/v1';
+
 // =============================================================================
 // Mock Data
 // =============================================================================
@@ -110,7 +113,7 @@ const mockEmptyHistory = {
 
 // Common mock to silence dashboard API calls
 async function mockDashboardAPIs(page: import('@playwright/test').Page) {
-  await page.route(`${API_BASE_URL}/downloads*`, (route) =>
+  await page.route(`${ROUTE_API}/downloads*`, (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -118,7 +121,7 @@ async function mockDashboardAPIs(page: import('@playwright/test').Page) {
     })
   );
 
-  await page.route(`${API_BASE_URL}/media/recent*`, (route) =>
+  await page.route(`${ROUTE_API}/media/recent*`, (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -126,7 +129,7 @@ async function mockDashboardAPIs(page: import('@playwright/test').Page) {
     })
   );
 
-  await page.route(`${API_BASE_URL}/settings/qbittorrent`, (route) =>
+  await page.route(`${ROUTE_API}/settings/qbittorrent`, (route) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',

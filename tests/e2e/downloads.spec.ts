@@ -13,6 +13,9 @@ import { presetDownloads } from '../support/fixtures/factories/download-factory'
 
 const API_BASE_URL = process.env.API_URL || 'http://localhost:8080/api/v1';
 
+// For page.route() interception, use glob pattern that matches any origin
+const ROUTE_API = '**/api/v1';
+
 // =============================================================================
 // Mock Data
 // =============================================================================
@@ -46,7 +49,7 @@ test.describe('Downloads Page @downloads @ui', () => {
     page,
   }) => {
     // GIVEN: API returns a list of downloads
-    await page.route(`${API_BASE_URL}/downloads*`, (route) =>
+    await page.route(`${ROUTE_API}/downloads*`, (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -75,7 +78,7 @@ test.describe('Downloads Page @downloads @ui', () => {
 
   test('[P1] should expand torrent details on click (AC4)', async ({ page }) => {
     // GIVEN: API returns downloads and detail data
-    await page.route(`${API_BASE_URL}/downloads?*`, (route) =>
+    await page.route(`${ROUTE_API}/downloads?*`, (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -84,7 +87,7 @@ test.describe('Downloads Page @downloads @ui', () => {
     );
 
     const detailHash = presetDownloads.downloading.hash;
-    await page.route(`${API_BASE_URL}/downloads/${detailHash}`, (route) =>
+    await page.route(`${ROUTE_API}/downloads/${detailHash}`, (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -111,7 +114,7 @@ test.describe('Downloads Page @downloads @ui', () => {
     // GIVEN: Track API calls to verify sort parameters
     const apiCalls: string[] = [];
 
-    await page.route(`${API_BASE_URL}/downloads*`, (route) => {
+    await page.route(`${ROUTE_API}/downloads*`, (route) => {
       apiCalls.push(route.request().url());
       return route.fulfill({
         status: 200,
@@ -136,7 +139,7 @@ test.describe('Downloads Page @downloads @ui', () => {
 
   test('[P2] should display empty state when no downloads exist', async ({ page }) => {
     // GIVEN: API returns empty download list
-    await page.route(`${API_BASE_URL}/downloads*`, (route) =>
+    await page.route(`${ROUTE_API}/downloads*`, (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -154,7 +157,7 @@ test.describe('Downloads Page @downloads @ui', () => {
 
   test('[P2] should display error when qBittorrent is not configured', async ({ page }) => {
     // GIVEN: API returns QB_NOT_CONFIGURED error
-    await page.route(`${API_BASE_URL}/downloads*`, (route) =>
+    await page.route(`${ROUTE_API}/downloads*`, (route) =>
       route.fulfill({
         status: 400,
         contentType: 'application/json',
