@@ -15,12 +15,8 @@ function PendingPage() {
 
       <div className="rounded-xl bg-slate-800/50 p-8 text-center">
         <FileText className="mx-auto h-12 w-12 text-slate-500" />
-        <p className="mt-4 text-lg text-slate-400">
-          尚未有待解析的媒體檔案
-        </p>
-        <p className="mt-2 text-sm text-slate-500">
-          當有新的媒體檔案需要解析時，它們會顯示在這裡
-        </p>
+        <p className="mt-4 text-lg text-slate-400">尚未有待解析的媒體檔案</p>
+        <p className="mt-2 text-sm text-slate-500">當有新的媒體檔案需要解析時，它們會顯示在這裡</p>
       </div>
     </div>
   );
