@@ -1,6 +1,6 @@
 # Story: Polling & Session Optimization
 
-Status: review
+Status: done
 
 ## Story
 

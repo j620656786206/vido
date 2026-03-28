@@ -340,7 +340,7 @@ development_status:
 
   # --- Story 5: Polling & Session Optimization ---
   # Bugs: #7 scanner/status high-freq polling, #8 qBittorrent re-login every 5s
-  bugfix-5-polling-session-optimization:              review  # 2026-03-28 — All tasks done, lazy auth + SSE-only
+  bugfix-5-polling-session-optimization:              done  # 2026-03-28 — TA+CR passed
 
   # --- Story 6: Search Enhancement & Unimplemented Page Labels ---
   # Bugs: #9 search not synced with downloads, #10 unimplemented pages unlabeled

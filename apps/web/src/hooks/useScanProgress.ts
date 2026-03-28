@@ -220,10 +220,6 @@ export function useScanProgress() {
     };
   }, []);
 
-  // Keep a stable ref to connectSSE to avoid useEffect re-firing
-  const connectSSERef = useRef(connectSSE);
-  connectSSERef.current = connectSSE;
-
   useEffect(() => {
     mountedRef.current = true;
 
@@ -242,8 +238,9 @@ export function useScanProgress() {
   // Connect SSE on demand — called when a scan is triggered externally
   const startTracking = useCallback(() => {
     if (!eventSourceRef.current || eventSourceRef.current.readyState === 2) {
-      connectSSERef.current();
+      connectSSE();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const toggleMinimize = useCallback(() => {
