@@ -131,9 +131,40 @@ export function ScannerSettings() {
                 </span>
               </div>
             ) : (
-              <div className="flex items-center gap-2 rounded-md border border-slate-600 bg-slate-900 px-3 py-2.5">
-                <AlertCircle className="h-4 w-4 shrink-0 text-yellow-500" />
-                <span className="text-sm text-slate-400">尚未設定媒體資料夾</span>
+              <div
+                className="rounded-lg border border-blue-800/50 bg-blue-950/30 p-4 space-y-3"
+                data-testid="media-dir-setup-guide"
+              >
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="h-5 w-5 shrink-0 text-blue-400" />
+                  <h3 className="text-sm font-semibold text-blue-300">
+                    媒體資料夾尚未設定 / Media directories not configured
+                  </h3>
+                </div>
+                <p className="text-xs text-slate-400">
+                  Vido 預設掃描 <code className="rounded bg-slate-800 px-1 text-slate-300">/media</code>{' '}
+                  路徑。請透過 Docker volume mount 將您的媒體資料夾掛載到容器中。
+                </p>
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-slate-400">Docker run:</p>
+                  <pre className="rounded bg-slate-900 p-2 text-xs text-green-400 overflow-x-auto">
+                    docker run -v /path/to/your/media:/media ...
+                  </pre>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-slate-400">Docker Compose:</p>
+                  <pre className="rounded bg-slate-900 p-2 text-xs text-green-400 overflow-x-auto">
+{`volumes:
+  - /path/to/movies:/media/movies
+  - /path/to/tv:/media/tv
+environment:
+  - VIDO_MEDIA_DIRS=/media/movies,/media/tv`}
+                  </pre>
+                </div>
+                <p className="text-xs text-slate-500">
+                  <code className="rounded bg-slate-800 px-1 text-slate-300">VIDO_MEDIA_DIRS</code>{' '}
+                  設定多個路徑請以逗號分隔 / Separate multiple paths with commas
+                </p>
               </div>
             )}
           </div>

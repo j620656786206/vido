@@ -348,7 +348,7 @@ development_status:
 
   # --- Story 7: Media Directory Setup Guide ---
   # Bug: #11 VIDO_MEDIA_DIRS not configured, no guidance
-  bugfix-7-media-directory-setup-guide:               ready-for-dev  # 2026-03-28 — Story created
+  bugfix-7-media-directory-setup-guide:               done  # 2026-03-28 — TA+CR passed, setup guide card
 
 # ==============================================================================
 # Next priority

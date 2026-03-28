@@ -145,4 +145,30 @@ describe('ScannerSettings', () => {
     expect(btn.textContent).toContain('掃描進行中...');
     expect(btn).toBeDisabled();
   });
+
+  it('[P0] renders setup guide when media dirs not configured (bugfix-7)', async () => {
+    const { useScanStatus } = await import('../../hooks/useScanner');
+    vi.mocked(useScanStatus).mockReturnValue({
+      data: {
+        isScanning: false,
+        filesFound: 0,
+        filesProcessed: 0,
+        currentFile: '',
+        percentDone: 0,
+        errorCount: 0,
+        estimatedTime: '',
+        lastScanAt: '',
+        lastScanDuration: '',
+      },
+      isLoading: false,
+    } as ReturnType<typeof useScanStatus>);
+
+    renderWithProviders();
+    const guide = screen.getByTestId('media-dir-setup-guide');
+    expect(guide).toBeInTheDocument();
+    expect(guide).toHaveTextContent('VIDO_MEDIA_DIRS');
+    expect(guide).toHaveTextContent('Media directories not configured');
+    expect(guide).toHaveTextContent('docker run');
+    expect(guide).toHaveTextContent('Docker Compose');
+  });
 });
