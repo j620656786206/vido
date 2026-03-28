@@ -359,22 +359,22 @@ development_status:
   #   TEA = /bmad:bmm:agents:tea + /bmad:bmm:workflows:testarch-automate
   # ==============================================================================
 
-  epic-9t-testsprite-journey-integration: in-progress
+  epic-9t-testsprite-journey-integration: done  # 2026-03-28
 
   # --- Story 1: Update TestSprite Config for NAS Target ---
-  ts-1-update-testsprite-config:                        ready-for-dev
+  ts-1-update-testsprite-config:                        done  # 2026-03-28
 
   # --- Story 2: Regenerate Test Plan and .py Files ---
-  ts-2-regenerate-test-plan:                            backlog  # depends on ts-1
+  ts-2-regenerate-test-plan:                            done  # 2026-03-28
 
   # --- Story 3: Establish Baseline Test Results ---
-  ts-3-establish-baseline:                              backlog  # depends on ts-2
+  ts-3-establish-baseline:                              done  # 2026-03-28
 
   # --- Story 4: Document Manual Trigger Workflow ---
-  ts-4-manual-trigger-workflow:                         backlog  # depends on ts-3
+  ts-4-manual-trigger-workflow:                         done  # 2026-03-28
 
   # --- Story 5: Update Project Documentation ---
-  ts-5-documentation-update:                            backlog
+  ts-5-documentation-update:                            done  # 2026-03-28
 
   epic-9t-retrospective: optional
 

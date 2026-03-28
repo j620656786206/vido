@@ -1,6 +1,6 @@
 # Story: Establish Baseline Test Results
 
-Status: backlog
+Status: done
 
 ## Story
 
@@ -20,19 +20,19 @@ so that future regressions can be detected.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Execute all TCs (AC: #1)
-  - [ ] 1.1 Run all generated `.py` test files against NAS endpoint
-  - [ ] 1.2 Capture pass/fail results for each TC
+- [x] Task 1: Execute all TCs (AC: #1)
+  - [x] 1.1 Run all generated `.py` test files against NAS endpoint
+  - [x] 1.2 Capture pass/fail results for each TC
 
-- [ ] Task 2: Record results (AC: #2)
-  - [ ] 2.1 Save execution results to test_results.json
-  - [ ] 2.2 Record execution timestamp and environment info
+- [x] Task 2: Record results (AC: #2)
+  - [x] 2.1 Save execution results to test_results.json
+  - [x] 2.2 Record execution timestamp and environment info
 
-- [ ] Task 3: Categorize failures (AC: #3)
-  - [ ] 3.1 Review each failure and classify as known-bug, tc-issue, or new-bug
-  - [ ] 3.2 Annotate known-bug failures with references to bugfix stories
-  - [ ] 3.3 File tc-issue items for test plan correction
+- [x] Task 3: Categorize failures (AC: #3)
+  - [x] 3.1 Review each failure and classify as known-bug, tc-issue, or new-bug
+  - [x] 3.2 Annotate known-bug failures with references to bugfix stories
+  - [x] 3.3 File tc-issue items for test plan correction
 
-- [ ] Task 4: Create baseline report
-  - [ ] 4.1 Summarize pass/fail/skip counts
-  - [ ] 4.2 Document known-bug annotations for future comparison
+- [x] Task 4: Create baseline report
+  - [x] 4.1 Summarize pass/fail/skip counts
+  - [x] 4.2 Document known-bug annotations for future comparison
