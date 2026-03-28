@@ -212,3 +212,45 @@
 - Automatic update notifications
 - Database migration automation
 - Backward compatibility for configuration
+
+---
+
+## TestSprite Journey Test Strategy
+
+**Role in Test Pyramid:**
+TestSprite provides journey-level integration tests that fill the gap between unit tests and Playwright E2E tests. While unit tests validate individual functions and Playwright verifies feature-point interactions and API contracts, TestSprite validates complete user journeys against PRD acceptance criteria on the live deployed application.
+
+| Layer | Tool | Scope | Runs Against |
+|-------|------|-------|-------------|
+| Unit | Vitest / Go test | Functions, components | CI (in-process) |
+| Journey Integration | TestSprite | PRD AC-level complete flows | Live NAS deployment |
+| E2E | Playwright | Feature-point + API verification | CI or staging |
+
+**Target URL & Execution Environment:**
+- Target: `http://192.168.50.52:8088` (Unraid NAS direct LAN access)
+- No tunnel or external access required — TestSprite connects directly to the NAS
+- Tests execute against the actual production deployment with real data
+
+**Division of Responsibility with Playwright E2E:**
+- **TestSprite**: PRD acceptance-criteria-level complete journeys (e.g., "user scans library and sees metadata populated", "user searches for a movie and views detail page")
+- **Playwright**: Feature-point verification, API contract assertions, and regression checks that run in CI against ephemeral environments
+
+**Credits Budget & Regeneration Cadence:**
+- Free plan: 150 credits/month (resets monthly)
+- Budget sufficient for monthly full regeneration + 2–3 iteration cycles
+- Regenerate all test cases from scratch when:
+  - PRD acceptance criteria change
+  - Significant UI or API changes are deployed
+  - After a major bugfix sprint lands on NAS
+- Strategy: discard and regenerate rather than maintain stale test cases
+
+**Baseline Strategy:**
+1. Snapshot the current app state as the baseline after deployment
+2. After bugfix deployments, any intentional behavioral changes are marked as `intentional-change` in TestSprite
+3. Update the baseline to reflect the corrected behavior
+4. Unintentional regressions (not marked) surface as test failures
+
+**Manual Trigger Workflow:**
+- TestSprite runs are triggered manually after each bugfix deploy to NAS
+- No CI integration — tests validate the live NAS environment post-deployment
+- Workflow: deploy to NAS → trigger TestSprite run → review results → mark intentional changes → update baseline
