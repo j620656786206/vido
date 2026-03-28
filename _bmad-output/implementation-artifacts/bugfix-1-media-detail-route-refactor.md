@@ -156,5 +156,8 @@ Claude Opus 4.6 (1M context)
 - apps/web/src/services/libraryService.ts (modified — added getMovieById, getSeriesById)
 - apps/web/src/components/media/PosterCard.spec.tsx (modified — string ID mocks)
 - apps/web/src/components/library/LibraryGrid.spec.tsx (modified — UUID href assertion)
+<<<<<<< HEAD
 - apps/web/src/hooks/useMediaDetails.spec.tsx (modified — added local API hook tests)
 - apps/web/src/services/libraryService.spec.ts (modified — added getMovieById/getSeriesById tests)
+=======
+>>>>>>> 6167599 (fix(web): refactor media detail page to use UUID routing and local API (bugfix-1))
