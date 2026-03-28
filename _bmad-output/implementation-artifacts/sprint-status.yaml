@@ -386,4 +386,11 @@ development_status:
 # ==============================================================================
 # Next priority
 # ==============================================================================
+  # --- Known Issue: Backups API 500 ---
+  # Found during NAS API verification 2026-03-28
+  # GET /settings/backups returns 500 + empty body
+  # Likely: backup directory missing or permission issue on NAS container
+  # Not a frontend bug (bugfix-3 handles empty responses correctly)
+  backups-api-500-investigation:                      backlog  # 2026-03-28 — backend issue, needs investigation
+
 next_priority: epic-9  # Bugfix sprint complete (7 stories + 1 hotfix). Next: Epic 9 AI Subtitle Enhancement
