@@ -6,10 +6,14 @@ import {
   useTVShowDetails,
   useMovieCredits,
   useTVShowCredits,
+  useLocalMovieDetails,
+  useLocalSeriesDetails,
   detailKeys,
 } from './useMediaDetails';
 import { tmdbService } from '../services/tmdb';
+import { libraryService } from '../services/libraryService';
 import type { MovieDetails, TVShowDetails, Credits } from '../types/tmdb';
+import type { LibraryMovie, LibrarySeries } from '../types/library';
 
 // Mock the tmdb service
 vi.mock('../services/tmdb', () => ({
@@ -18,6 +22,30 @@ vi.mock('../services/tmdb', () => ({
     getTVShowDetails: vi.fn(),
     getMovieCredits: vi.fn(),
     getTVShowCredits: vi.fn(),
+  },
+}));
+
+// Mock the library service
+vi.mock('../services/libraryService', () => ({
+  libraryService: {
+    getMovieById: vi.fn(),
+    getSeriesById: vi.fn(),
+    listLibrary: vi.fn(),
+    searchLibrary: vi.fn(),
+    getStats: vi.fn(),
+    getGenres: vi.fn(),
+    getRecentlyAdded: vi.fn(),
+    deleteMovie: vi.fn(),
+    deleteSeries: vi.fn(),
+    reparseMovie: vi.fn(),
+    reparseSeries: vi.fn(),
+    exportMovie: vi.fn(),
+    exportSeries: vi.fn(),
+    getMovieVideos: vi.fn(),
+    getSeriesVideos: vi.fn(),
+    batchDelete: vi.fn(),
+    batchReparse: vi.fn(),
+    batchExport: vi.fn(),
   },
 }));
 
@@ -199,6 +227,130 @@ describe('useMediaDetails hooks', () => {
 
       expect(tmdbService.getTVShowCredits).toHaveBeenCalledWith(456);
       expect(result.current.data).toEqual(mockCredits);
+    });
+  });
+
+  describe('useLocalMovieDetails', () => {
+    const mockLocalMovie: LibraryMovie = {
+      id: '0ce73c75-a742-4fc0-955a-4d915a7ee465',
+      title: '全面啟動',
+      originalTitle: 'Inception',
+      releaseDate: '2010-07-15',
+      genres: ['動作', '科幻'],
+      posterPath: '/poster.jpg',
+      tmdbId: 27205,
+      overview: '偷技高超的神偷唐姆柯比...',
+      voteAverage: 8.4,
+      parseStatus: 'success',
+      metadataSource: 'tmdb',
+      createdAt: '2026-03-27T10:00:00Z',
+      updatedAt: '2026-03-27T10:00:00Z',
+    };
+
+    it('[P0] should fetch movie from local API by UUID', async () => {
+      vi.mocked(libraryService.getMovieById).mockResolvedValue(mockLocalMovie);
+
+      const { result } = renderHook(
+        () => useLocalMovieDetails('0ce73c75-a742-4fc0-955a-4d915a7ee465'),
+        { wrapper: createWrapper() }
+      );
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      expect(libraryService.getMovieById).toHaveBeenCalledWith(
+        '0ce73c75-a742-4fc0-955a-4d915a7ee465'
+      );
+      expect(result.current.data?.id).toBe('0ce73c75-a742-4fc0-955a-4d915a7ee465');
+      expect(result.current.data?.title).toBe('全面啟動');
+      expect(result.current.data?.tmdbId).toBe(27205);
+    });
+
+    it('[P0] should not fetch when id is empty string', () => {
+      const { result } = renderHook(() => useLocalMovieDetails(''), {
+        wrapper: createWrapper(),
+      });
+
+      expect(result.current.fetchStatus).toBe('idle');
+      expect(libraryService.getMovieById).not.toHaveBeenCalled();
+    });
+
+    it('[P1] should handle movie without TMDB metadata', async () => {
+      const unenrichedMovie: LibraryMovie = {
+        id: 'unenriched-uuid',
+        title: 'DASS-880.mp4',
+        releaseDate: '',
+        genres: [],
+        parseStatus: '',
+        createdAt: '2026-03-27T10:00:00Z',
+        updatedAt: '2026-03-27T10:00:00Z',
+      };
+      vi.mocked(libraryService.getMovieById).mockResolvedValue(unenrichedMovie);
+
+      const { result } = renderHook(() => useLocalMovieDetails('unenriched-uuid'), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.data?.tmdbId).toBeUndefined();
+      expect(result.current.data?.posterPath).toBeUndefined();
+      expect(result.current.data?.title).toBe('DASS-880.mp4');
+    });
+
+    it('[P1] should handle API error', async () => {
+      vi.mocked(libraryService.getMovieById).mockRejectedValue(new Error('Not found'));
+
+      const { result } = renderHook(() => useLocalMovieDetails('nonexistent'), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => expect(result.current.isError).toBe(true));
+      expect(result.current.error?.message).toBe('Not found');
+    });
+  });
+
+  describe('useLocalSeriesDetails', () => {
+    const mockLocalSeries: LibrarySeries = {
+      id: 'series-uuid-1',
+      title: 'Breaking Bad',
+      firstAirDate: '2008-01-20',
+      genres: ['劇情', '犯罪'],
+      posterPath: '/bb.jpg',
+      tmdbId: 1396,
+      parseStatus: 'success',
+      createdAt: '2026-03-27T10:00:00Z',
+      updatedAt: '2026-03-27T10:00:00Z',
+    };
+
+    it('[P0] should fetch series from local API by UUID', async () => {
+      vi.mocked(libraryService.getSeriesById).mockResolvedValue(mockLocalSeries);
+
+      const { result } = renderHook(() => useLocalSeriesDetails('series-uuid-1'), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      expect(libraryService.getSeriesById).toHaveBeenCalledWith('series-uuid-1');
+      expect(result.current.data?.title).toBe('Breaking Bad');
+    });
+
+    it('[P0] should not fetch when id is empty string', () => {
+      const { result } = renderHook(() => useLocalSeriesDetails(''), {
+        wrapper: createWrapper(),
+      });
+
+      expect(result.current.fetchStatus).toBe('idle');
+      expect(libraryService.getSeriesById).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('detailKeys (local)', () => {
+    it('should generate correct query keys for local movie', () => {
+      expect(detailKeys.localMovie('uuid-123')).toEqual(['details', 'local-movie', 'uuid-123']);
+    });
+
+    it('should generate correct query keys for local series', () => {
+      expect(detailKeys.localSeries('uuid-456')).toEqual(['details', 'local-series', 'uuid-456']);
     });
   });
 });

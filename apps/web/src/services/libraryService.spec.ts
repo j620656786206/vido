@@ -556,4 +556,90 @@ describe('libraryService', () => {
       expect(url).toContain('/library/recent?limit=10');
     });
   });
+
+  describe('getMovieById', () => {
+    it('[P0] calls GET /movies/:id with correct UUID', async () => {
+      const mockMovie = {
+        id: '0ce73c75-a742-4fc0-955a-4d915a7ee465',
+        title: 'Inception',
+        poster_path: '/poster.jpg',
+        tmdb_id: 27205,
+        parse_status: 'success',
+      };
+      mockFetch.mockResolvedValue(mockSuccessResponse(mockMovie));
+
+      const result = await libraryService.getMovieById('0ce73c75-a742-4fc0-955a-4d915a7ee465');
+
+      const url = mockFetch.mock.calls[0][0] as string;
+      expect(url).toBe(`${API_BASE}/movies/0ce73c75-a742-4fc0-955a-4d915a7ee465`);
+      expect(result.id).toBe('0ce73c75-a742-4fc0-955a-4d915a7ee465');
+    });
+
+    it('[P0] applies snakeToCamel transformation', async () => {
+      const mockMovie = {
+        id: 'movie-1',
+        title: 'Test',
+        poster_path: '/poster.jpg',
+        tmdb_id: 123,
+        parse_status: 'success',
+        release_date: '2024-01-01',
+        vote_average: 8.5,
+        metadata_source: 'tmdb',
+      };
+      mockFetch.mockResolvedValue(mockSuccessResponse(mockMovie));
+
+      const result = await libraryService.getMovieById('movie-1');
+
+      expect(result.posterPath).toBe('/poster.jpg');
+      expect(result.tmdbId).toBe(123);
+      expect(result.parseStatus).toBe('success');
+      expect(result.releaseDate).toBe('2024-01-01');
+      expect(result.voteAverage).toBe(8.5);
+      expect(result.metadataSource).toBe('tmdb');
+    });
+
+    it('[P1] throws on API error', async () => {
+      mockFetch.mockResolvedValue(mockErrorResponse(404, 'Movie not found'));
+
+      await expect(libraryService.getMovieById('nonexistent')).rejects.toThrow();
+    });
+  });
+
+  describe('getSeriesById', () => {
+    it('[P0] calls GET /series/:id with correct UUID', async () => {
+      const mockSeries = {
+        id: 'series-uuid-1',
+        title: 'Breaking Bad',
+        poster_path: '/bb.jpg',
+        tmdb_id: 1396,
+        parse_status: 'success',
+      };
+      mockFetch.mockResolvedValue(mockSuccessResponse(mockSeries));
+
+      const result = await libraryService.getSeriesById('series-uuid-1');
+
+      const url = mockFetch.mock.calls[0][0] as string;
+      expect(url).toBe(`${API_BASE}/series/series-uuid-1`);
+      expect(result.id).toBe('series-uuid-1');
+    });
+
+    it('[P0] applies snakeToCamel transformation', async () => {
+      const mockSeries = {
+        id: 'series-1',
+        title: 'Test Series',
+        poster_path: '/series.jpg',
+        tmdb_id: 456,
+        first_air_date: '2023-06-01',
+        number_of_seasons: 3,
+      };
+      mockFetch.mockResolvedValue(mockSuccessResponse(mockSeries));
+
+      const result = await libraryService.getSeriesById('series-1');
+
+      expect(result.posterPath).toBe('/series.jpg');
+      expect(result.tmdbId).toBe(456);
+      expect(result.firstAirDate).toBe('2023-06-01');
+      expect(result.numberOfSeasons).toBe(3);
+    });
+  });
 });
