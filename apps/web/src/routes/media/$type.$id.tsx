@@ -214,7 +214,9 @@ function MediaDetailRoute() {
 
                 {/* Meta line */}
                 <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-gray-400">
-                  {(isMovie ? localData.releaseDate : (localData as typeof localSeries.data)?.firstAirDate) && (
+                  {(isMovie
+                    ? localData.releaseDate
+                    : (localData as typeof localSeries.data)?.firstAirDate) && (
                     <span>
                       {(isMovie
                         ? localData.releaseDate
