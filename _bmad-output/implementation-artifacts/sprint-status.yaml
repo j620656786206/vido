@@ -350,6 +350,11 @@ development_status:
   # Bug: #11 VIDO_MEDIA_DIRS not configured, no guidance
   bugfix-7-media-directory-setup-guide:               done  # 2026-03-28 — TA+CR passed, setup guide card
 
+  # --- Post-Sprint Hotfix: camelToSnake + Setup Wizard Key Mismatch ---
+  # Found during API endpoint audit (curl NAS verification)
+  # Scope: 4 services missing camelToSnake on request bodies + setup_service.go password key mismatch
+  hotfix-cameltosnake-request-bodies:                 done  # 2026-03-28 — metadata, learning, qbittorrent, setupService + setup_service.go dual-key write
+
   # ==============================================================================
   # Epic 9-T: TestSprite Journey Test Integration
   # Runs parallel to bugfix sprint (separate worktree)
@@ -381,4 +386,4 @@ development_status:
 # ==============================================================================
 # Next priority
 # ==============================================================================
-next_priority: bugfix-sprint-post-deployment  # Post-deployment audit: 7 stories, 11 bugs, all P0-P2
+next_priority: epic-9  # Bugfix sprint complete (7 stories + 1 hotfix). Next: Epic 9 AI Subtitle Enhancement

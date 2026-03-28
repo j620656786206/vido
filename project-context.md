@@ -4,7 +4,7 @@
 
 **Full Documentation:** See `_bmad-output/planning-artifacts/architecture/index.md` for complete architectural decisions and patterns (sharded into ~20 focused files).
 
-**Last Updated:** 2026-03-27 (SSE lazy pattern docs)
+**Last Updated:** 2026-03-28 (Rule 18: API boundary case transformation)
 **Architecture Status:** ✅ Validated and Ready for Implementation (5,463 lines, 8 steps completed)
 
 ---
@@ -416,6 +416,31 @@ Translation Rules:
 Reference: Epic 8 Agreement 6
 ```
 
+### Rule 18: API Boundary Case Transformation
+
+```
+All frontend services MUST transform data at the API boundary:
+
+Response (backend → frontend):
+  ✅ snakeToCamel(data.data) on every API response
+  Already enforced via shared fetchApi in libraryService.ts
+
+Request (frontend → backend):
+  ✅ JSON.stringify(camelToSnake(params)) on every POST/PUT body
+  ❌ JSON.stringify(params) — sends camelCase keys, backend rejects or ignores
+
+Implementation:
+  import { snakeToCamel, camelToSnake } from '../utils/caseTransform';
+
+  // Response: always transform
+  return snakeToCamel<T>(data.data);
+
+  // Request: always transform body
+  body: JSON.stringify(camelToSnake(params))
+
+Reference: Bugfix sprint 2026-03-28 audit — 4 services found missing camelToSnake
+```
+
 ---
 
 ## 🏗️ Project Structure
@@ -791,6 +816,8 @@ Before committing code, verify:
 - [ ] Error codes follow `{SOURCE}_{ERROR_TYPE}` pattern
 - [ ] Dates are ISO 8601 strings in JSON
 - [ ] Naming conventions followed (see tables above)
+- [ ] Frontend service POST/PUT bodies use `camelToSnake()` (Rule 18)
+- [ ] Frontend service responses use `snakeToCamel()` (Rule 18)
 - [ ] No swallowed errors — every error propagated or logged+returned (Rule 13)
 - [ ] In-memory maps/caches have upper bounds (Rule 14)
 - [ ] Background goroutines honor context cancellation (Rule 14)
