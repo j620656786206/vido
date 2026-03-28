@@ -54,7 +54,7 @@ See `_bmad-output/planning-artifacts/architecture/consolidation-refactoring-plan
 - **Backend:** Go testing + testify (coverage >80%)
 - **Frontend:** Vitest + React Testing Library (coverage >70%)
 - **E2E Feature-level:** Playwright (328 tests, runs in CI/nightly)
-- **E2E Journey-level:** TestSprite MCP (50 test plan entries, 3 generated .py — see `testsprite_tests/`). Plan v4-regenerated 2026-03-27 for Epic 7+8. Next: run `generate-tests` to produce .py for TC063-TC078 (Scanner + Subtitle) when frontend+backend are running with seed data.
+- **E2E Journey-level:** TestSprite (journey tests against deployed NAS at `http://192.168.50.52:8088`, manual trigger after deploy). 62 test cases across 6 P0 journeys, production server mode. Plan v4-regenerated 2026-03-27 for Epic 7+8. Test plan: `testsprite_tests/`. Baseline strategy: regenerate on deploy, mark `intentional-change` for bugfix breaks.
 - **Pattern:** Co-located tests (`*_test.go`, `*.spec.tsx`)
 
 ### 3. Authentication — REMOVED (v4)
