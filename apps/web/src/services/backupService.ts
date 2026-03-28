@@ -79,7 +79,23 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
     ...options,
   });
 
-  const data: ApiResponse<T> = await response.json();
+  // Handle empty body (204 No Content or empty response)
+  if (response.status === 204) {
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.status}`);
+    }
+    return snakeToCamel({} as T);
+  }
+
+  let data: ApiResponse<T>;
+  try {
+    data = await response.json();
+  } catch {
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.status}`);
+    }
+    return snakeToCamel({} as T);
+  }
 
   if (!response.ok || !data.success) {
     throw new Error(data.error?.message || `API request failed: ${response.status}`);

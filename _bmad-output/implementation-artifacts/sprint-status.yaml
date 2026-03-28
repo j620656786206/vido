@@ -332,7 +332,7 @@ development_status:
 
   # --- Story 3: Fix Backup API Empty Response ---
   # Bug: #3 /settings/backup JSON parse error (empty body)
-  bugfix-3-backup-api-empty-response:                 ready-for-dev  # 2026-03-28 — Story created
+  bugfix-3-backup-api-empty-response:                 review  # 2026-03-28 — All tasks done, 1564 tests pass
 
   # --- Story 4: Library Grid Layout Fix ---
   # Bug: #4 grid only 2 columns, cards too large

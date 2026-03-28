@@ -195,4 +195,49 @@ describe('backupService', () => {
       expect(url).toContain('/settings/backups/b1/download');
     });
   });
+
+  describe('fetchApi resilience (bugfix-3)', () => {
+    it('[P0] does not throw on 204 No Content', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 204,
+        json: () => Promise.reject(new Error('Unexpected end of JSON input')),
+      });
+
+      const result = await backupService.listBackups();
+      expect(result).toBeDefined();
+    });
+
+    it('[P0] does not throw on malformed JSON response', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => Promise.reject(new SyntaxError('Unexpected token')),
+      });
+
+      const result = await backupService.listBackups();
+      expect(result).toBeDefined();
+    });
+
+    it('[P0] listBackups returns safe default on empty JSON body', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => Promise.reject(new SyntaxError('Unexpected end of JSON')),
+      });
+
+      const result = await backupService.listBackups();
+      expect(result).toBeDefined();
+    });
+
+    it('[P1] throws on non-ok status with unparseable body', async () => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 500,
+        json: () => Promise.reject(new Error('No body')),
+      });
+
+      await expect(backupService.listBackups()).rejects.toThrow('API request failed: 500');
+    });
+  });
 });
