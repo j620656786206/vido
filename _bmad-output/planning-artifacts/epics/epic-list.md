@@ -49,6 +49,15 @@ Optional AI-powered subtitle enhancements: terminology correction (簡→繁 wor
 
 ---
 
+### Epic 9-T: TestSprite Journey Test Integration
+**File:** [epic-9t-testsprite-journey-integration.md](./epic-9t-testsprite-journey-integration.md)
+
+Integrate TestSprite journey-level tests against the deployed NAS app to fill the gap between unit tests and Playwright E2E tests. Covers config setup, test plan regeneration, baseline establishment, and manual trigger workflow documentation.
+
+**Status:** IN PROGRESS (parallel to bugfix sprint)
+
+---
+
 ## Phase 2: Discovery & Browse Experience
 
 ### Epic 10: Homepage TV Wall
