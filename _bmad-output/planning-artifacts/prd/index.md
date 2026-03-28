@@ -19,6 +19,7 @@
     - [Risk Assessment & Mitigation](./technical-considerations.md#risk-assessment--mitigation)
     - [Integration & Extensibility](./technical-considerations.md#integration--extensibility)
     - [Operational Requirements](./technical-considerations.md#operational-requirements)
+    - [TestSprite Journey Test Strategy](./technical-considerations.md#testsprite-journey-test-strategy)
   - [Innovation & Novel Patterns](./innovation-novel-patterns.md)
     - [Detected Innovation Areas](./innovation-novel-patterns.md#detected-innovation-areas)
     - [Market Context & Competitive Landscape](./innovation-novel-patterns.md#market-context--competitive-landscape)
