@@ -188,17 +188,31 @@ The following architectural decisions were made collaboratively, prioritized by 
 
 **Decision:** Two-tier E2E testing — Playwright for feature-level tests, TestSprite for PRD acceptance-criteria journey tests
 
+**Testing Pyramid (bottom → top):**
+```
+Go Unit + React Vitest  →  Playwright E2E  →  TestSprite Journey
+(fast, isolated)           (feature-level)     (deployed NAS, end-to-end)
+```
+
 **Tier 1 — Playwright (Active, 328 test cases):**
 - Feature-level E2E tests co-located with stories
 - Cross-browser testing with auto-wait mechanisms
 - Runs in CI nightly or when related story changes
 - 25 spec files covering individual features (API + UI)
 
-**Tier 2 — TestSprite (Installed, deferred until Epic 5+6 complete):**
+**Tier 2 — TestSprite (Journey-level, complements Playwright):**
 - AI-powered journey-level testing via MCP server
-- Tests run in TestSprite cloud sandbox (requires external access to app)
+- **Complementary to Playwright, not a replacement** — Playwright validates individual features; TestSprite validates multi-step user journeys across the deployed application
+- **Execution environment:** Deployed NAS app at `http://192.168.50.52:8088` (not localhost). Tests run against the production-like deployment to validate real network paths and NAS-specific behavior.
+- **Server mode:** `production` (unlocks all test cases; `development` mode limits to 15)
+- **Trigger:** Manual only — run after deploy, no automatic CI loop
 - 62 test cases generated across 9 categories, mapping to 6 P0 user journeys
 - Test plan: `testsprite_tests/testsprite_frontend_test_plan.json`
+
+**Baseline Strategy (TestSprite):**
+- **Regenerate:** Snapshot the current deployed app state as the baseline. Run `regenerate` after each intentional UI or API change to update expected behavior.
+- **Bugfix breaks:** When a bugfix intentionally changes behavior that breaks existing baselines, mark those test cases as `intentional-change`, then run baseline update to accept the new behavior.
+- This ensures test stability while allowing the app to evolve without false failures.
 
 **6 P0 Critical User Journeys (TestSprite):**
 1. 搜尋 → 瀏覽 → 查看詳情
@@ -212,8 +226,8 @@ The following architectural decisions were made collaboratively, prioritized by 
 - [ ] Epic 5 (Media Library Management) fully complete
 - [ ] Epic 6 (System Config & Backup) complete
 - [ ] Seed data script (`scripts/seed-test-data.sh`) for test database
-- [ ] External access via ngrok/cloudflared tunnel or staging deployment
-- [ ] Run in production mode to unlock all 62 tests (dev mode limits to 15)
+- [ ] App deployed and accessible at NAS endpoint (`http://192.168.50.52:8088`)
+- [ ] Run in production server mode to unlock all 62 tests
 
 **Initial Test Run (2026-03-15):** 15/62 tests executed in dev mode, 3 passed, 12 failed due to infrastructure gaps (cloud sandbox cannot reach localhost, empty DB, zh-TW label mismatches). No app bugs identified.
 
