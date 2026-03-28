@@ -391,7 +391,7 @@ test.describe('Connection Health - API Integration @e2e @p1', () => {
     expect(body.success).toBe(true);
     expect(body.data.services.qbittorrent).toBeDefined();
     expect(body.data.services.qbittorrent.name).toBe('qbittorrent');
-    expect(body.data.services.qbittorrent.displayName).toBe('qBittorrent');
+    expect(body.data.services.qbittorrent.display_name).toBe('qBittorrent');
     expect(body.data.services.qbittorrent.status).toMatch(/^(healthy|degraded|down)$/);
   });
 
@@ -414,9 +414,9 @@ test.describe('Connection Health - API Integration @e2e @p1', () => {
     const qb = body.data.services.qbittorrent;
 
     expect(qb).toHaveProperty('status');
-    expect(qb).toHaveProperty('lastCheck');
-    expect(qb).toHaveProperty('lastSuccess');
-    expect(typeof qb.errorCount).toBe('number');
+    expect(qb).toHaveProperty('last_check');
+    expect(qb).toHaveProperty('last_success');
+    expect(typeof qb.error_count).toBe('number');
   });
 
   test('[P2] should respect limit parameter for connection history', async ({ request }) => {

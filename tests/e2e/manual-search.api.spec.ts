@@ -32,7 +32,7 @@ test.describe('Manual Search API @api @metadata', () => {
     expect(response.success).toBe(true);
     expect(response.data).toBeDefined();
     expect(response.data!.results).toBeDefined();
-    expect(response.data!.searchedSources).toContain('tmdb');
+    expect(response.data!.searched_sources).toContain('tmdb');
   });
 
   test('[P1] POST /metadata/manual-search - should search specific source (TMDb)', async ({
@@ -51,7 +51,7 @@ test.describe('Manual Search API @api @metadata', () => {
     // THEN: Should return results from TMDb only
     expect(response.success).toBe(true);
     expect(response.data).toBeDefined();
-    expect(response.data!.searchedSources).toEqual(['tmdb']);
+    expect(response.data!.searched_sources).toEqual(['tmdb']);
 
     // All results should be from TMDb
     if (response.data!.results.length > 0) {
@@ -169,7 +169,7 @@ test.describe('Manual Search API @api @metadata', () => {
     expect(response.success).toBe(true);
     expect(response.data).toBeDefined();
     // Should have searched at least TMDb
-    expect(response.data!.searchedSources.length).toBeGreaterThanOrEqual(1);
+    expect(response.data!.searched_sources.length).toBeGreaterThanOrEqual(1);
   });
 
   test('[P1] POST /metadata/manual-search - should include source indicator in results (AC4)', async ({
@@ -234,7 +234,7 @@ test.describe('Apply Metadata API @api @metadata', () => {
     const applyRequest = {
       media_id: 'test-movie-id',
       media_type: 'movie' as const,
-      selectedItem: {
+      selected_item: {
         id: 'tmdb-550',
         source: 'tmdb',
       },
@@ -258,7 +258,7 @@ test.describe('Apply Metadata API @api @metadata', () => {
     const applyRequest = {
       media_id: 'test-series-id',
       media_type: 'series' as const,
-      selectedItem: {
+      selected_item: {
         id: 'tmdb-1396',
         source: 'tmdb',
       },
@@ -278,7 +278,7 @@ test.describe('Apply Metadata API @api @metadata', () => {
     const applyRequest = {
       media_id: '',
       media_type: 'movie' as const,
-      selectedItem: {
+      selected_item: {
         id: 'tmdb-550',
         source: 'tmdb',
       },
@@ -304,7 +304,7 @@ test.describe('Apply Metadata API @api @metadata', () => {
     const applyRequest = {
       media_id: 'nonexistent-media-id-12345',
       media_type: 'movie' as const,
-      selectedItem: {
+      selected_item: {
         id: 'tmdb-550',
         source: 'tmdb',
       },
@@ -329,11 +329,11 @@ test.describe('Apply Metadata API @api @metadata', () => {
     const applyRequest = {
       media_id: 'test-movie-id',
       media_type: 'movie' as const,
-      selectedItem: {
+      selected_item: {
         id: 'tmdb-550',
         source: 'tmdb',
       },
-      learnPattern: true,
+      learn_pattern: true,
     };
 
     // WHEN: Applying the metadata with learn pattern

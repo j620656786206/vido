@@ -169,7 +169,7 @@ test.describe('Graceful Degradation - API Integration @e2e @p1', () => {
 
     const body = await response.json();
     expect(body.success).toBe(true);
-    expect(body.data.degradationLevel).toBeDefined();
+    expect(body.data.degradation_level).toBeDefined();
   });
 
   // [Downgraded to unit] healthy/degraded/offline banner display → ServiceHealthBanner.spec.tsx

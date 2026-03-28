@@ -16,37 +16,37 @@ import { faker } from '@faker-js/faker';
 
 export interface CreatePatternRequestData {
   filename: string;
-  metadataId: string;
-  metadataType: 'movie' | 'series';
-  tmdbId?: number;
+  metadata_id: string;
+  metadata_type: 'movie' | 'series';
+  tmdb_id?: number;
 }
 
 export interface LearnedPatternData {
   id: string;
   pattern: string;
-  patternType: string;
-  patternRegex?: string;
-  fansubGroup?: string;
-  titlePattern?: string;
-  metadataType: string;
-  metadataId: string;
-  tmdbId?: number;
+  pattern_type: string;
+  pattern_regex?: string;
+  fansub_group?: string;
+  title_pattern?: string;
+  metadata_type: string;
+  metadata_id: string;
+  tmdb_id?: number;
   confidence: number;
-  useCount: number;
-  createdAt: string;
-  lastUsedAt?: string;
+  use_count: number;
+  created_at: string;
+  last_used_at?: string;
 }
 
 export interface PatternStatsData {
-  totalPatterns: number;
-  totalApplied: number;
-  mostUsedPattern?: string;
-  mostUsedCount?: number;
+  total_patterns: number;
+  total_applied: number;
+  most_used_pattern?: string;
+  most_used_count?: number;
 }
 
 export interface PatternListResponseData {
   patterns: LearnedPatternData[];
-  totalCount: number;
+  total_count: number;
   stats?: PatternStatsData;
 }
 
@@ -63,7 +63,7 @@ let patternCounter = 0;
  *
  * @example
  * const request = createLearnPatternRequest();
- * const custom = createLearnPatternRequest({ metadataType: 'series' });
+ * const custom = createLearnPatternRequest({ metadata_type: 'series' });
  */
 export function createLearnPatternRequest(
   overrides: PartialCreatePatternRequest = {}
@@ -81,9 +81,9 @@ export function createLearnPatternRequest(
 
   return {
     filename: `[${fansubGroup}] ${title} - ${String(episode).padStart(2, '0')} (BD 1920x1080 x264 FLAC).mkv`,
-    metadataId: `series-${faker.string.alphanumeric(8)}`,
-    metadataType: 'series',
-    tmdbId: faker.number.int({ min: 10000, max: 999999 }),
+    metadata_id: `series-${faker.string.alphanumeric(8)}`,
+    metadata_type: 'series',
+    tmdb_id: faker.number.int({ min: 10000, max: 999999 }),
     ...overrides,
   };
 }
@@ -101,9 +101,9 @@ export function createMoviePatternRequest(
 
   return {
     filename: `Test.Movie.${patternCounter}.2024.1080p.BluRay.x264-GROUP.mkv`,
-    metadataId: `movie-${faker.string.alphanumeric(8)}`,
-    metadataType: 'movie',
-    tmdbId: faker.number.int({ min: 10000, max: 999999 }),
+    metadata_id: `movie-${faker.string.alphanumeric(8)}`,
+    metadata_type: 'movie',
+    tmdb_id: faker.number.int({ min: 10000, max: 999999 }),
     ...overrides,
   };
 }
@@ -122,29 +122,29 @@ export function resetLearningFactory(): void {
 export const presetPatternRequests = {
   fansubSeries: createLearnPatternRequest({
     filename: '[Leopard-Raws] Kimetsu no Yaiba - 26 (BD 1920x1080 x264 FLAC).mkv',
-    metadataId: 'series-kimetsu-001',
-    metadataType: 'series',
-    tmdbId: 85937,
+    metadata_id: 'series-kimetsu-001',
+    metadata_type: 'series',
+    tmdb_id: 85937,
   }),
 
   fansubSeriesEpisode2: createLearnPatternRequest({
     filename: '[Leopard-Raws] Kimetsu no Yaiba - 27 (BD 1920x1080 x264 FLAC).mkv',
-    metadataId: 'series-kimetsu-001',
-    metadataType: 'series',
-    tmdbId: 85937,
+    metadata_id: 'series-kimetsu-001',
+    metadata_type: 'series',
+    tmdb_id: 85937,
   }),
 
   standardMovie: createMoviePatternRequest({
     filename: 'Inception.2010.1080p.BluRay.x264-SPARKS.mkv',
-    metadataId: 'movie-inception-001',
-    metadataType: 'movie',
-    tmdbId: 27205,
+    metadata_id: 'movie-inception-001',
+    metadata_type: 'movie',
+    tmdb_id: 27205,
   }),
 
   chineseBrackets: createLearnPatternRequest({
     filename: '【字幕組】進擊的巨人 第01話.mp4',
-    metadataId: 'series-aot-001',
-    metadataType: 'series',
-    tmdbId: 1429,
+    metadata_id: 'series-aot-001',
+    metadata_type: 'series',
+    tmdb_id: 1429,
   }),
 } as const;

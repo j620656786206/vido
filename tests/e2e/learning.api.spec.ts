@@ -118,7 +118,7 @@ test.describe('Learning API - Create Pattern @api @learning @story-3-9', () => {
     const body = await response.json();
     expect(body.data.fansub_group).toBe('Leopard-Raws');
     expect(body.data.title_pattern).toContain('Kimetsu no Yaiba');
-    expect(body.data.patternRegex).toBeTruthy();
+    expect(body.data.pattern_regex).toBeTruthy();
 
     createdPatternIds.push(body.data.id);
   });

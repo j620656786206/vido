@@ -160,6 +160,6 @@ test.describe('Server Middleware @api', () => {
     expect(body.database).toBeDefined();
     expect(body.database).toHaveProperty('status');
     expect(body.database).toHaveProperty('latency');
-    expect(body.database).toHaveProperty('walEnabled');
+    expect(body.database).toHaveProperty('wal_enabled');
   });
 });

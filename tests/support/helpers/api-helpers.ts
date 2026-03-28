@@ -89,11 +89,11 @@ export interface HealthResponse {
   database?: {
     status: string;
     latency: number;
-    walEnabled: boolean;
-    walMode: string;
-    syncMode: string;
-    openConnections: number;
-    idleConnections: number;
+    wal_enabled: boolean;
+    wal_mode: string;
+    sync_mode: string;
+    open_connections: number;
+    idle_connections: number;
     error?: string;
   };
 }
@@ -106,11 +106,11 @@ export type DegradationLevel = 'normal' | 'partial' | 'minimal' | 'offline';
 
 export interface ServiceHealth {
   name: string;
-  displayName: string;
+  display_name: string;
   status: 'healthy' | 'degraded' | 'down';
-  lastCheck: string;
-  lastSuccess: string;
-  errorCount: number;
+  last_check: string;
+  last_success: string;
+  error_count: number;
   message?: string;
 }
 
@@ -122,7 +122,7 @@ export interface ServicesHealth {
 }
 
 export interface HealthStatusResponse {
-  degradationLevel: DegradationLevel;
+  degradation_level: DegradationLevel;
   services: ServicesHealth;
   message: string;
 }
@@ -199,7 +199,7 @@ export interface SearchResult {
 
 export interface ManualSearchRequest {
   query: string;
-  mediaType?: 'movie' | 'tv';
+  media_type?: 'movie' | 'tv';
   year?: number;
   source?: 'all' | 'tmdb' | 'douban' | 'wikipedia';
 }
@@ -208,34 +208,34 @@ export interface ManualSearchResultItem {
   id: string;
   source: 'tmdb' | 'douban' | 'wikipedia';
   title: string;
-  titleZhTW?: string;
+  title_zh_tw?: string;
   year: number;
-  mediaType: 'movie' | 'tv';
+  media_type: 'movie' | 'tv';
   overview?: string;
-  posterUrl?: string;
+  poster_url?: string;
   rating?: number;
 }
 
 export interface ManualSearchResponse {
   results: ManualSearchResultItem[];
-  totalCount: number;
-  searchedSources: string[];
+  total_count: number;
+  searched_sources: string[];
 }
 
 export interface ApplyMetadataRequest {
-  mediaId: string;
-  mediaType: 'movie' | 'series';
-  selectedItem: {
+  media_id: string;
+  media_type: 'movie' | 'series';
+  selected_item: {
     id: string;
     source: string;
   };
-  learnPattern?: boolean;
+  learn_pattern?: boolean;
 }
 
 export interface ApplyMetadataResponse {
   success: boolean;
-  mediaId: string;
-  mediaType: string;
+  media_id: string;
+  media_type: string;
   title: string;
   source: string;
 }
@@ -245,27 +245,27 @@ export interface ApplyMetadataResponse {
 // =============================================================================
 
 export interface UpdateMetadataRequest {
-  mediaType?: 'movie' | 'series';
+  media_type?: 'movie' | 'series';
   title: string;
-  titleEnglish?: string;
+  title_english?: string;
   year: number;
   genres?: string[];
   director?: string;
   cast?: string[];
   overview?: string;
-  posterUrl?: string;
+  poster_url?: string;
 }
 
 export interface UpdateMetadataResponse {
   id: string;
   title: string;
-  metadataSource: string;
-  updatedAt: string;
+  metadata_source: string;
+  updated_at: string;
 }
 
 export interface UploadPosterResponse {
-  posterUrl: string;
-  thumbnailUrl: string;
+  poster_url: string;
+  thumbnail_url: string;
 }
 
 // =============================================================================
@@ -274,37 +274,37 @@ export interface UploadPosterResponse {
 
 export interface CreatePatternRequest {
   filename: string;
-  metadataId: string;
-  metadataType: 'movie' | 'series';
-  tmdbId?: number;
+  metadata_id: string;
+  metadata_type: 'movie' | 'series';
+  tmdb_id?: number;
 }
 
 export interface LearnedPattern {
   id: string;
   pattern: string;
-  patternType: string;
-  patternRegex?: string;
-  fansubGroup?: string;
-  titlePattern?: string;
-  metadataType: string;
-  metadataId: string;
-  tmdbId?: number;
+  pattern_type: string;
+  pattern_regex?: string;
+  fansub_group?: string;
+  title_pattern?: string;
+  metadata_type: string;
+  metadata_id: string;
+  tmdb_id?: number;
   confidence: number;
-  useCount: number;
-  createdAt: string;
-  lastUsedAt?: string;
+  use_count: number;
+  created_at: string;
+  last_used_at?: string;
 }
 
 export interface PatternStats {
-  totalPatterns: number;
-  totalApplied: number;
-  mostUsedPattern?: string;
-  mostUsedCount?: number;
+  total_patterns: number;
+  total_applied: number;
+  most_used_pattern?: string;
+  most_used_count?: number;
 }
 
 export interface PatternListResponse {
   patterns: LearnedPattern[];
-  totalCount: number;
+  total_count: number;
   stats?: PatternStats;
 }
 

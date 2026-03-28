@@ -40,7 +40,7 @@ test.describe('Health API @api @smoke', () => {
     expect(body.database).toBeDefined();
     expect(body.database.status).toMatch(/healthy|degraded/);
     expect(body.database.latency).toBeGreaterThanOrEqual(0);
-    expect(body.database.walEnabled).toBeDefined();
+    expect(body.database.wal_enabled).toBeDefined();
   });
 
   test('[P1] should return service unavailable when database is unhealthy', async ({ request }) => {

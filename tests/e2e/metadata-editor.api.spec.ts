@@ -37,7 +37,7 @@ function createTestMovieData() {
 function createUpdateMetadataData() {
   return {
     title: `更新測試 ${Date.now()}`,
-    titleEnglish: 'Updated Test Movie',
+    title_english: 'Updated Test Movie',
     year: 2024,
     genres: ['動作', '冒險'],
     director: '李安',
@@ -197,7 +197,7 @@ test.describe('Update Metadata API @api @metadata-editor', () => {
     // GIVEN: Update data with both Chinese and English titles
     const updateData = {
       title: '臥虎藏龍',
-      titleEnglish: 'Crouching Tiger, Hidden Dragon',
+      title_english: 'Crouching Tiger, Hidden Dragon',
       year: 2000,
     };
 
@@ -258,7 +258,7 @@ test.describe('Update Series Metadata API @api @metadata-editor', () => {
     const updateData = {
       media_type: 'series' as const,
       title: '絕命毒師',
-      titleEnglish: 'Breaking Bad',
+      title_english: 'Breaking Bad',
       year: 2008,
       genres: ['劇情', '犯罪', '驚悚'],
       director: 'Vince Gilligan',
@@ -310,8 +310,8 @@ test.describe('Upload Poster API @api @metadata-editor', () => {
     // THEN: Should return success with poster URLs
     expect(response.success).toBe(true);
     expect(response.data).toBeDefined();
-    expect(response.data!.posterUrl).toBeDefined();
-    expect(response.data!.thumbnailUrl).toBeDefined();
+    expect(response.data!.poster_url).toBeDefined();
+    expect(response.data!.thumbnail_url).toBeDefined();
   });
 
   test('[P1] POST /media/{id}/poster - should upload PNG poster (AC3)', async ({ api }) => {
@@ -324,7 +324,7 @@ test.describe('Upload Poster API @api @metadata-editor', () => {
     // THEN: Should return success with poster URLs
     expect(response.success).toBe(true);
     expect(response.data).toBeDefined();
-    expect(response.data!.posterUrl).toBeDefined();
+    expect(response.data!.poster_url).toBeDefined();
   });
 
   test('[P1] POST /media/{id}/poster - should return 400 for invalid format', async ({ api }) => {
@@ -381,8 +381,8 @@ test.describe('Upload Poster API @api @metadata-editor', () => {
     // THEN: Should return both full poster and thumbnail URLs
     expect(response.success).toBe(true);
     // Note: The actual output format depends on image processor configuration
-    expect(response.data!.posterUrl).toBeDefined();
-    expect(response.data!.thumbnailUrl).toBeDefined();
+    expect(response.data!.poster_url).toBeDefined();
+    expect(response.data!.thumbnail_url).toBeDefined();
   });
 });
 
@@ -424,7 +424,7 @@ test.describe('Metadata Editor Integration @api @metadata-editor', () => {
 
     // THEN: Poster upload should succeed
     expect(posterResponse.success).toBe(true);
-    expect(posterResponse.data!.posterUrl).toBeDefined();
+    expect(posterResponse.data!.poster_url).toBeDefined();
 
     // VERIFY: Final state
     const getResponse = await api.getMovie(testMovieId);
