@@ -328,7 +328,7 @@ development_status:
 
   # --- Story 2: Fix Pending Page Not Found ---
   # Bug: #2 /pending route shows "Not Found"
-  bugfix-2-pending-page-not-found:                    ready-for-dev  # 2026-03-28 — Story created
+  bugfix-2-pending-page-not-found:                    review  # 2026-03-28 — All tasks done, 1560 tests pass
 
   # --- Story 3: Fix Backup API Empty Response ---
   # Bug: #3 /settings/backup JSON parse error (empty body)
