@@ -27,7 +27,7 @@ function getItemProps(item: LibraryItem) {
   if (item.type === 'movie' && item.movie) {
     const m = item.movie;
     return {
-      id: m.tmdbId ?? 0,
+      id: m.id,
       itemId: m.id,
       itemType: 'movie' as const,
       type: 'movie' as const,
@@ -43,7 +43,7 @@ function getItemProps(item: LibraryItem) {
   if (item.type === 'series' && item.series) {
     const s = item.series;
     return {
-      id: s.tmdbId ?? 0,
+      id: s.id,
       itemId: s.id,
       itemType: 'series' as const,
       type: 'tv' as const,

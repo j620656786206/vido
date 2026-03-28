@@ -7,7 +7,7 @@ import { HighlightText } from '../ui/HighlightText';
 import { HoverPreviewCard } from './HoverPreviewCard';
 
 export interface PosterCardProps {
-  id: number;
+  id: string;
   type: 'movie' | 'tv';
   title: string;
   originalTitle?: string;
@@ -66,7 +66,7 @@ export function PosterCard({
   return (
     <Link
       to="/media/$type/$id"
-      params={{ type, id: String(id) }}
+      params={{ type, id }}
       data-testid="poster-card"
       onClick={handleCardClick}
       className={cn(

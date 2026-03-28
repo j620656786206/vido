@@ -164,10 +164,10 @@ describe('LibraryGrid', () => {
     expect(screen.getByText('2024')).toBeInTheDocument();
   });
 
-  it('maps movie tmdbId to PosterCard id', () => {
+  it('maps movie internal id to PosterCard id', () => {
     renderWithQuery(<LibraryGrid items={[mockItems[0]]} />);
     const link = screen.getByRole('link');
-    expect(link).toHaveAttribute('href', '/media/movie/123');
+    expect(link).toHaveAttribute('href', '/media/movie/movie-1');
   });
 
   it('renders menu button on each poster card', () => {

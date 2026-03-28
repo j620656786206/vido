@@ -6,6 +6,8 @@ import type {
   LibraryListParams,
   LibrarySearchResponse,
   LibraryStats,
+  LibraryMovie,
+  LibrarySeries,
   VideosResponse,
   BatchResult,
 } from '../types/library';
@@ -111,6 +113,14 @@ export const libraryService = {
 
   async getStats(): Promise<LibraryStats> {
     return fetchApi<LibraryStats>('/library/stats');
+  },
+
+  async getMovieById(id: string): Promise<LibraryMovie> {
+    return fetchApi<LibraryMovie>(`/movies/${id}`);
+  },
+
+  async getSeriesById(id: string): Promise<LibrarySeries> {
+    return fetchApi<LibrarySeries>(`/series/${id}`);
   },
 
   async getMovieVideos(id: string): Promise<VideosResponse> {

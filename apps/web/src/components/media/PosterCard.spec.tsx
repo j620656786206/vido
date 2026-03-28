@@ -22,7 +22,7 @@ vi.mock('@tanstack/react-router', () => ({
 
 describe('PosterCard', () => {
   const defaultProps = {
-    id: 123,
+    id: 'movie-123',
     type: 'movie' as const,
     title: '鬼滅之刃',
     posterPath: '/test-poster.jpg',
@@ -141,13 +141,13 @@ describe('PosterCard', () => {
     it('links to correct movie detail page', () => {
       render(<PosterCard {...defaultProps} />);
       const link = screen.getByRole('link');
-      expect(link).toHaveAttribute('href', '/media/movie/123');
+      expect(link).toHaveAttribute('href', '/media/movie/movie-123');
     });
 
     it('links to correct tv detail page', () => {
       render(<PosterCard {...defaultProps} type="tv" />);
       const link = screen.getByRole('link');
-      expect(link).toHaveAttribute('href', '/media/tv/123');
+      expect(link).toHaveAttribute('href', '/media/tv/movie-123');
     });
   });
 
@@ -169,7 +169,7 @@ describe('PosterCard', () => {
       const link = screen.getByRole('link');
       // Link elements natively support Enter key for activation
       // Verify the link has correct href for keyboard navigation
-      expect(link).toHaveAttribute('href', '/media/movie/123');
+      expect(link).toHaveAttribute('href', '/media/movie/movie-123');
       // Verify focus is visible (focus-visible ring classes)
       expect(link).toHaveClass('focus-visible:ring-2');
     });
