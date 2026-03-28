@@ -1,6 +1,6 @@
 # Story: Document Manual Trigger Workflow
 
-Status: backlog
+Status: done
 
 ## Story
 
@@ -21,11 +21,11 @@ so that I can verify regressions efficiently.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Write workflow documentation (AC: #1, #2, #3, #4)
-  - [ ] 1.1 Document pre-requisites (NAS accessible, TestSprite MCP available)
-  - [ ] 1.2 Document trigger steps (which MCP commands to run)
-  - [ ] 1.3 Document result comparison process (diff against baseline)
-  - [ ] 1.4 Document baseline update process (when to update, how to annotate)
+- [x] Task 1: Write workflow documentation (AC: #1, #2, #3, #4)
+  - [x] 1.1 Document pre-requisites (NAS accessible, TestSprite MCP available)
+  - [x] 1.2 Document trigger steps (which MCP commands to run)
+  - [x] 1.3 Document result comparison process (diff against baseline)
+  - [x] 1.4 Document baseline update process (when to update, how to annotate)
 
-- [ ] Task 2: Add to project context (AC: #1)
-  - [ ] 2.1 Add TestSprite workflow reference to project-context.md
+- [x] Task 2: Add to project context (AC: #1)
+  - [x] 2.1 Add TestSprite workflow reference to project-context.md

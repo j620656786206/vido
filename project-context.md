@@ -740,6 +740,34 @@ pnpm run test:cleanup:all
 
 ---
 
+## 🧪 TestSprite Journey Test Workflow
+
+### Manual Trigger (After NAS Deploy)
+
+1. **Start localhost proxy:** `node -e "const n=require('net');const s=n.createServer(c=>{const r=n.connect(8088,'192.168.50.52');c.pipe(r);r.pipe(c);c.on('error',()=>r.destroy());r.on('error',()=>c.destroy())});s.listen(8088,'127.0.0.1',()=>console.log('Proxy ready'))" &`
+2. **Verify proxy:** `curl -s -o /dev/null -w "%{http_code}" http://localhost:8088/` (expect 200)
+3. **Run TestSprite:** `node $(npm root)/.cache/@testsprite/testsprite-mcp/dist/index.js generateCodeAndExecute` or use TestSprite MCP tools in Claude Code
+4. **Review results:** Check `testsprite_tests/tmp/raw_report.md` and TestSprite dashboard links
+5. **Compare with baseline:** Check `testsprite_tests/testsprite-mcp-test-report.md` for expected pass/fail
+6. **Kill proxy when done:** `kill $(lsof -ti:8088)`
+
+### Baseline Strategy
+
+- **Current baseline:** 2026-03-28, 14/30 passed (46.7%)
+- After bugfix-1 + bugfix-3: expected ~73%
+- When a previously-passing TC fails after a deploy → **regression**, investigate immediately
+- When a previously-failing TC passes after a bugfix → **intentional change**, update baseline report
+
+### Key Files
+
+- Test plan: `testsprite_tests/testsprite_frontend_test_plan.json` (40 TCs)
+- Test report: `testsprite_tests/testsprite-mcp-test-report.md`
+- Raw results: `testsprite_tests/tmp/raw_report.md`
+- Config: `testsprite_tests/tmp/config.json`
+- Credits: 150/month (Free plan), check via TestSprite MCP `testsprite_check_account_info`
+
+---
+
 ## ✅ Pre-Commit Checklist
 
 Before committing code, verify:
