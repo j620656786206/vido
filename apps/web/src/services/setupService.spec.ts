@@ -77,7 +77,7 @@ describe('setupService', () => {
         `${API_BASE}/setup/complete`,
         expect.objectContaining({
           method: 'POST',
-          body: JSON.stringify(config),
+          body: JSON.stringify({ language: 'zh-TW', media_folder_path: '/media' }),
         })
       );
     });

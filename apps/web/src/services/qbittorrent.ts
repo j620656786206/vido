@@ -2,7 +2,7 @@
  * qBittorrent settings service (Story 4.1)
  */
 
-import { snakeToCamel } from '../utils/caseTransform';
+import { snakeToCamel, camelToSnake } from '../utils/caseTransform';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
@@ -65,14 +65,14 @@ export const qbittorrentService = {
   async saveConfig(config: SaveQBConfigParams): Promise<void> {
     await fetchApi<{ message: string }>('/settings/qbittorrent', {
       method: 'PUT',
-      body: JSON.stringify(config),
+      body: JSON.stringify(camelToSnake(config)),
     });
   },
 
   async testConnection(config?: SaveQBConfigParams): Promise<QBVersionInfo> {
     return fetchApi<QBVersionInfo>('/settings/qbittorrent/test', {
       method: 'POST',
-      body: config ? JSON.stringify(config) : undefined,
+      body: config ? JSON.stringify(camelToSnake(config)) : undefined,
     });
   },
 };

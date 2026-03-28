@@ -68,18 +68,29 @@ func (s *SetupService) CompleteSetup(ctx context.Context, config models.SetupCon
 	}
 
 	// Save qBittorrent settings (optional)
+	// Store using both legacy (qbt_*) and canonical (qbittorrent.*) keys
+	// so both setup wizard and connection settings page can read them.
 	if config.QBTUrl != "" {
 		if err := s.settingsRepo.SetString(ctx, "qbt_url", config.QBTUrl); err != nil {
 			return fmt.Errorf("save qbt_url: %w", err)
+		}
+		if err := s.settingsRepo.SetString(ctx, SettingQBHost, config.QBTUrl); err != nil {
+			return fmt.Errorf("save qbittorrent.host: %w", err)
 		}
 		if config.QBTUsername != "" {
 			if err := s.settingsRepo.SetString(ctx, "qbt_username", config.QBTUsername); err != nil {
 				return fmt.Errorf("save qbt_username: %w", err)
 			}
+			if err := s.settingsRepo.SetString(ctx, SettingQBUsername, config.QBTUsername); err != nil {
+				return fmt.Errorf("save qbittorrent.username: %w", err)
+			}
 		}
 		if config.QBTPassword != "" && s.secretsService != nil {
 			if err := s.secretsService.Store(ctx, "qbt_password", config.QBTPassword); err != nil {
 				return fmt.Errorf("save qbt_password: %w", err)
+			}
+			if err := s.secretsService.Store(ctx, SettingQBPassword, config.QBTPassword); err != nil {
+				return fmt.Errorf("save qbittorrent.password: %w", err)
 			}
 		}
 	}

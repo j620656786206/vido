@@ -2,7 +2,7 @@
  * Learning service for filename pattern learning operations (Story 3.9)
  */
 
-import { snakeToCamel } from '../utils/caseTransform';
+import { snakeToCamel, camelToSnake } from '../utils/caseTransform';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
@@ -87,7 +87,7 @@ export const learningService = {
   async learnPattern(params: LearnPatternParams): Promise<LearnedPattern> {
     return fetchApi<LearnedPattern>('/learning/patterns', {
       method: 'POST',
-      body: JSON.stringify(params),
+      body: JSON.stringify(camelToSnake(params)),
     });
   },
 

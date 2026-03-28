@@ -2,7 +2,7 @@
  * Setup wizard API service (Story 6.1)
  */
 
-import { snakeToCamel } from '../utils/caseTransform';
+import { snakeToCamel, camelToSnake } from '../utils/caseTransform';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
@@ -58,14 +58,14 @@ export const setupService = {
   async completeSetup(config: SetupConfig): Promise<{ message: string }> {
     return fetchApi<{ message: string }>('/setup/complete', {
       method: 'POST',
-      body: JSON.stringify(config),
+      body: JSON.stringify(camelToSnake(config)),
     });
   },
 
   async validateStep(step: string, data: Record<string, unknown>): Promise<{ valid: boolean }> {
     return fetchApi<{ valid: boolean }>('/setup/validate-step', {
       method: 'POST',
-      body: JSON.stringify({ step, data }),
+      body: JSON.stringify(camelToSnake({ step, data })),
     });
   },
 };

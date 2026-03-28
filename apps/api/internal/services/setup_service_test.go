@@ -196,8 +196,11 @@ func TestSetupService_CompleteSetup(t *testing.T) {
 				// Save settings
 				repo.On("SetString", mock.Anything, "language", "zh-TW").Return(nil)
 				repo.On("SetString", mock.Anything, "qbt_url", "http://localhost:8080").Return(nil)
+				repo.On("SetString", mock.Anything, "qbittorrent.host", "http://localhost:8080").Return(nil)
 				repo.On("SetString", mock.Anything, "qbt_username", "admin").Return(nil)
+				repo.On("SetString", mock.Anything, "qbittorrent.username", "admin").Return(nil)
 				sec.On("Store", mock.Anything, "qbt_password", "secret").Return(nil)
+				sec.On("Store", mock.Anything, "qbittorrent.password", "secret").Return(nil)
 				repo.On("SetString", mock.Anything, "media_folder_path", "/media/videos").Return(nil)
 				sec.On("Store", mock.Anything, "tmdb_api_key", "abc123def456").Return(nil)
 				repo.On("SetString", mock.Anything, "ai_provider", "gemini").Return(nil)
@@ -315,6 +318,7 @@ func TestSetupService_CompleteSetup_PartialFailures(t *testing.T) {
 				repo.On("GetBool", mock.Anything, "setup_completed").Return(false, errors.New("setting with key setup_completed not found"))
 				repo.On("SetString", mock.Anything, "language", "zh-TW").Return(nil)
 				repo.On("SetString", mock.Anything, "qbt_url", "http://localhost:8080").Return(nil)
+				repo.On("SetString", mock.Anything, "qbittorrent.host", "http://localhost:8080").Return(nil)
 				repo.On("SetString", mock.Anything, "qbt_username", "admin").Return(errors.New("db error"))
 			},
 			errMsg: "save qbt_username",
@@ -330,6 +334,7 @@ func TestSetupService_CompleteSetup_PartialFailures(t *testing.T) {
 				repo.On("GetBool", mock.Anything, "setup_completed").Return(false, errors.New("setting with key setup_completed not found"))
 				repo.On("SetString", mock.Anything, "language", "zh-TW").Return(nil)
 				repo.On("SetString", mock.Anything, "qbt_url", "http://localhost:8080").Return(nil)
+				repo.On("SetString", mock.Anything, "qbittorrent.host", "http://localhost:8080").Return(nil)
 				sec.On("Store", mock.Anything, "qbt_password", "secret").Return(errors.New("encryption error"))
 			},
 			errMsg: "save qbt_password",
@@ -399,6 +404,7 @@ func TestSetupService_CompleteSetup_PartialFailures(t *testing.T) {
 				repo.On("GetBool", mock.Anything, "setup_completed").Return(false, errors.New("setting with key setup_completed not found"))
 				repo.On("SetString", mock.Anything, "language", "zh-TW").Return(nil)
 				repo.On("SetString", mock.Anything, "qbt_url", "http://localhost:8080").Return(nil)
+				repo.On("SetString", mock.Anything, "qbittorrent.host", "http://localhost:8080").Return(nil)
 				// No secrets call expected — nil secrets service
 				repo.On("SetBool", mock.Anything, "setup_completed", true).Return(nil)
 			},

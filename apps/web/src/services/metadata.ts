@@ -2,7 +2,7 @@
  * Metadata service for manual search and apply operations (Story 3.7)
  */
 
-import { snakeToCamel } from '../utils/caseTransform';
+import { snakeToCamel, camelToSnake } from '../utils/caseTransform';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
@@ -119,7 +119,7 @@ export const metadataService = {
   async manualSearch(params: ManualSearchParams): Promise<ManualSearchResponse> {
     return fetchApi<ManualSearchResponse>('/metadata/manual-search', {
       method: 'POST',
-      body: JSON.stringify(params),
+      body: JSON.stringify(camelToSnake(params)),
     });
   },
 
@@ -129,7 +129,7 @@ export const metadataService = {
   async applyMetadata(params: ApplyMetadataParams): Promise<ApplyMetadataResponse> {
     return fetchApi<ApplyMetadataResponse>('/metadata/apply', {
       method: 'POST',
-      body: JSON.stringify(params),
+      body: JSON.stringify(camelToSnake(params)),
     });
   },
 
@@ -139,7 +139,7 @@ export const metadataService = {
   async updateMetadata(params: UpdateMetadataParams): Promise<UpdateMetadataResponse> {
     return fetchApi<UpdateMetadataResponse>(`/media/${params.id}/metadata`, {
       method: 'PUT',
-      body: JSON.stringify(params),
+      body: JSON.stringify(camelToSnake(params)),
     });
   },
 
