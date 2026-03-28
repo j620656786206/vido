@@ -142,7 +142,8 @@ export function ScannerSettings() {
                   </h3>
                 </div>
                 <p className="text-xs text-slate-400">
-                  Vido 預設掃描 <code className="rounded bg-slate-800 px-1 text-slate-300">/media</code>{' '}
+                  Vido 預設掃描{' '}
+                  <code className="rounded bg-slate-800 px-1 text-slate-300">/media</code>{' '}
                   路徑。請透過 Docker volume mount 將您的媒體資料夾掛載到容器中。
                 </p>
                 <div className="space-y-2">
@@ -154,7 +155,7 @@ export function ScannerSettings() {
                 <div className="space-y-2">
                   <p className="text-xs font-medium text-slate-400">Docker Compose:</p>
                   <pre className="rounded bg-slate-900 p-2 text-xs text-green-400 overflow-x-auto">
-{`volumes:
+                    {`volumes:
   - /path/to/movies:/media/movies
   - /path/to/tv:/media/tv
 environment:
