@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useCallback } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { PosterCard } from '../media/PosterCard';
 import { PosterCardSkeleton } from '../media/PosterCardSkeleton';
@@ -21,6 +21,13 @@ const DENSITY_CONFIG = {
   small: { minWidth: 150, skeletonCount: 18 },
   medium: { minWidth: 200, skeletonCount: 12 },
   large: { minWidth: 250, skeletonCount: 8 },
+};
+
+// Static Tailwind classes — dynamic template literals get purged at build time
+const GRID_CLASS: Record<string, string> = {
+  small: 'grid grid-cols-2 gap-3 md:grid-cols-[repeat(auto-fill,minmax(150px,1fr))] md:gap-4',
+  medium: 'grid grid-cols-2 gap-3 md:grid-cols-[repeat(auto-fill,minmax(200px,1fr))] md:gap-4',
+  large: 'grid grid-cols-2 gap-3 md:grid-cols-[repeat(auto-fill,minmax(250px,1fr))] md:gap-4',
 };
 
 function getItemProps(item: LibraryItem) {
@@ -117,11 +124,7 @@ export function LibraryGrid({
     setMenuState(null);
   }, [menuState, deleteMutation]);
 
-  const gridStyle = useMemo(
-    () =>
-      `grid grid-cols-2 gap-3 md:grid-cols-[repeat(auto-fill,minmax(${config.minWidth}px,1fr))] md:gap-4`,
-    [config.minWidth]
-  );
+  const gridStyle = GRID_CLASS[density];
 
   if (isLoading) {
     return (
@@ -262,7 +265,7 @@ function VirtualGrid({
                 height: `${virtualRow.size}px`,
                 transform: `translateY(${virtualRow.start}px)`,
               }}
-              className={`grid grid-cols-2 gap-3 md:grid-cols-[repeat(auto-fill,minmax(${config.minWidth}px,1fr))] md:gap-4`}
+              className={GRID_CLASS[density]}
             >
               {rowItems.map((item, colIndex) => {
                 const props = getItemProps(item);
