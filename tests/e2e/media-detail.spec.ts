@@ -163,7 +163,7 @@ test.describe('Media Detail - Error Handling @e2e @media-detail', () => {
     await page.goto('/media/movie/00000000-0000-0000-0000-000000000000');
 
     // THEN: Should eventually show 404/error state (after query retries exhaust)
-    await expect(page.getByText('404').or(page.getByText('找不到該媒體內容'))).toBeVisible({
+    await expect(page.getByText('找不到該媒體內容')).toBeVisible({
       timeout: 30000,
     });
   });
