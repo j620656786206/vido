@@ -500,7 +500,7 @@ function LibraryPage() {
 
   return (
     <div>
-      <div className="container mx-auto px-4 py-8">
+      <div className="mx-auto max-w-7xl w-full px-4 py-8">
         {/* Selection toolbar */}
         {isSelectionMode && (
           <div className="mb-4">

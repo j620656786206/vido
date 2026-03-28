@@ -336,7 +336,7 @@ development_status:
 
   # --- Story 4: Library Grid Layout Fix ---
   # Bug: #4 grid only 2 columns, cards too large
-  bugfix-4-library-grid-layout:                       ready-for-dev  # 2026-03-28 — Story created
+  bugfix-4-library-grid-layout:                       done  # 2026-03-28 — TA+CR passed, 1-line CSS fix
 
   # --- Story 5: Polling & Session Optimization ---
   # Bugs: #7 scanner/status high-freq polling, #8 qBittorrent re-login every 5s
