@@ -32,12 +32,12 @@ test.describe('Media Search - Input @e2e @search', () => {
 
     // THEN: Search bar should be visible
     await expect(page.getByRole('heading', { name: /搜尋媒體/i })).toBeVisible();
-    await expect(page.locator('main').getByPlaceholder(/搜尋電影或影集/i)).toBeVisible();
+    await expect(page.locator('main').getByPlaceholder(/搜尋媒體庫/i)).toBeVisible();
   });
 
   test('[P0] should search for movies and display results', async ({ page }) => {
     // GIVEN: User is on search page
-    const searchInput = page.locator('main').getByPlaceholder(/搜尋電影或影集/i);
+    const searchInput = page.locator('main').getByPlaceholder(/搜尋媒體庫/i);
 
     // WHEN: User enters search query and submits
     await searchInput.fill('Inception');
@@ -63,7 +63,7 @@ test.describe('Media Search - Input @e2e @search', () => {
 
   test('[P1] should search with Chinese characters', async ({ page }) => {
     // GIVEN: User is on search page
-    const searchInput = page.locator('main').getByPlaceholder(/搜尋電影或影集/i);
+    const searchInput = page.locator('main').getByPlaceholder(/搜尋媒體庫/i);
 
     // WHEN: User searches with Chinese
     await searchInput.fill('全面啟動');
@@ -81,7 +81,7 @@ test.describe('Media Search - Input @e2e @search', () => {
     // WHEN: Page loads with query parameter
 
     // THEN: Search input should contain the query
-    const searchInput = page.locator('main').getByPlaceholder(/搜尋電影或影集/i);
+    const searchInput = page.locator('main').getByPlaceholder(/搜尋媒體庫/i);
     await expect(searchInput).toHaveValue('Matrix');
   });
 });
@@ -216,7 +216,7 @@ test.describe('Media Search - Edge Cases @e2e @search', () => {
     await page.goto('/search');
 
     // WHEN: User searches with special characters
-    const searchInput = page.locator('main').getByPlaceholder(/搜尋電影或影集/i);
+    const searchInput = page.locator('main').getByPlaceholder(/搜尋媒體庫/i);
     await searchInput.fill('Batman: The Dark Knight');
     await searchInput.press('Enter');
 
@@ -231,7 +231,7 @@ test.describe('Media Search - Edge Cases @e2e @search', () => {
     await page.goto('/search');
 
     // WHEN: User types rapidly
-    const searchInput = page.locator('main').getByPlaceholder(/搜尋電影或影集/i);
+    const searchInput = page.locator('main').getByPlaceholder(/搜尋媒體庫/i);
     await searchInput.pressSequentially('Inception', { delay: 50 });
     await searchInput.press('Enter');
 

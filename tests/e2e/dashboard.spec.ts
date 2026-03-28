@@ -410,7 +410,7 @@ test.describe('Dashboard Search Navigation @dashboard @ui', () => {
   test('[P1] should navigate to search page on form submit', async ({ page }) => {
     // GIVEN: User is on the dashboard
     await page.goto('/');
-    const input = page.getByPlaceholder('搜尋電影或影集...');
+    const input = page.getByPlaceholder('搜尋媒體庫...');
     await expect(input).toBeVisible();
 
     // WHEN: User types a query and presses Enter
