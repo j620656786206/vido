@@ -108,7 +108,7 @@ describe('AppShell', () => {
   it('shows search placeholder text', async () => {
     renderWithRouter();
     const searchInput = await screen.findByTestId('global-search-input');
-    expect(searchInput).toHaveAttribute('placeholder', '搜尋電影或影集...');
+    expect(searchInput).toHaveAttribute('placeholder', '搜尋媒體庫...');
   });
 
   it('[P0] navigates to /search with query on form submit', async () => {

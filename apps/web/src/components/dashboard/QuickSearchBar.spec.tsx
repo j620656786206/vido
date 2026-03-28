@@ -62,14 +62,14 @@ describe('QuickSearchBar', () => {
 
   it('[P1] renders search input with placeholder', async () => {
     renderSearchBar();
-    const input = await screen.findByPlaceholderText('搜尋電影或影集...');
+    const input = await screen.findByPlaceholderText('搜尋媒體庫...');
     expect(input).toBeTruthy();
   });
 
   it('[P1] accepts text input', async () => {
     const user = userEvent.setup();
     renderSearchBar();
-    const input = await screen.findByPlaceholderText('搜尋電影或影集...');
+    const input = await screen.findByPlaceholderText('搜尋媒體庫...');
     await user.type(input, '鬼滅之刃');
     expect((input as HTMLInputElement).value).toBe('鬼滅之刃');
   });
@@ -88,7 +88,7 @@ describe('QuickSearchBar', () => {
     // GIVEN: QuickSearchBar is rendered
     const user = userEvent.setup();
     renderSearchBar();
-    const input = await screen.findByPlaceholderText('搜尋電影或影集...');
+    const input = await screen.findByPlaceholderText('搜尋媒體庫...');
 
     // WHEN: User types a query and presses Enter
     await user.type(input, '鬼滅之刃');
@@ -105,7 +105,7 @@ describe('QuickSearchBar', () => {
     // GIVEN: QuickSearchBar is rendered
     const user = userEvent.setup();
     renderSearchBar();
-    const input = await screen.findByPlaceholderText('搜尋電影或影集...');
+    const input = await screen.findByPlaceholderText('搜尋媒體庫...');
 
     // WHEN: User presses Enter with empty input
     await user.click(input);
@@ -119,7 +119,7 @@ describe('QuickSearchBar', () => {
     // GIVEN: QuickSearchBar is rendered
     const user = userEvent.setup();
     renderSearchBar();
-    const input = await screen.findByPlaceholderText('搜尋電影或影集...');
+    const input = await screen.findByPlaceholderText('搜尋媒體庫...');
 
     // WHEN: User types whitespace and presses Enter
     await user.type(input, '   ');

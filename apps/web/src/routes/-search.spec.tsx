@@ -83,7 +83,7 @@ describe('SearchPage', () => {
     renderWithProviders();
 
     await waitFor(() => {
-      expect(screen.getByPlaceholderText('搜尋電影或影集...')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('搜尋媒體庫...')).toBeInTheDocument();
     });
   });
 
@@ -91,7 +91,7 @@ describe('SearchPage', () => {
     renderWithProviders();
 
     await waitFor(() => {
-      expect(screen.getByPlaceholderText('搜尋電影或影集...')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('搜尋媒體庫...')).toBeInTheDocument();
     });
   });
 
@@ -99,7 +99,7 @@ describe('SearchPage', () => {
     renderWithProviders({ q: '鬼滅之刃' });
 
     await waitFor(() => {
-      const input = screen.getByPlaceholderText('搜尋電影或影集...') as HTMLInputElement;
+      const input = screen.getByPlaceholderText('搜尋媒體庫...') as HTMLInputElement;
       expect(input.value).toBe('鬼滅之刃');
     });
   });

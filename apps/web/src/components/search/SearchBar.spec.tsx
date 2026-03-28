@@ -15,7 +15,7 @@ describe('SearchBar', () => {
     const onSearch = vi.fn();
     render(<SearchBar onSearch={onSearch} />);
 
-    expect(screen.getByPlaceholderText('搜尋電影或影集...')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('搜尋媒體庫...')).toBeInTheDocument();
   });
 
   it('should render with custom placeholder', () => {

@@ -220,18 +220,20 @@ describe('SettingsLayout', () => {
     expect(backupNav).toHaveClass('border-blue-400');
   });
 
-  it('highlights export sidebar item when navigated to /settings/export', async () => {
-    renderWithRouter('/settings/export');
+  it('renders disabled export sidebar item with Coming Soon badge', async () => {
+    renderWithRouter('/settings/connection');
     const exportNav = await screen.findByTestId('settings-nav-export');
-    expect(exportNav).toHaveClass('text-blue-400');
-    expect(exportNav).toHaveClass('border-blue-400');
+    expect(exportNav).toHaveClass('cursor-not-allowed');
+    expect(exportNav).toHaveClass('text-slate-600');
+    expect(exportNav).toHaveTextContent('Coming Soon');
   });
 
-  it('highlights performance sidebar item when navigated to /settings/performance', async () => {
-    renderWithRouter('/settings/performance');
+  it('renders disabled performance sidebar item with Coming Soon badge', async () => {
+    renderWithRouter('/settings/connection');
     const perfNav = await screen.findByTestId('settings-nav-performance');
-    expect(perfNav).toHaveClass('text-blue-400');
-    expect(perfNav).toHaveClass('border-blue-400');
+    expect(perfNav).toHaveClass('cursor-not-allowed');
+    expect(perfNav).toHaveClass('text-slate-600');
+    expect(perfNav).toHaveTextContent('Coming Soon');
   });
 
   // --- Mobile tab active states for each category ---
@@ -246,11 +248,11 @@ describe('SettingsLayout', () => {
     expect(connectionTab).toHaveClass('text-slate-400');
   });
 
-  it('highlights performance mobile tab when navigated to /settings/performance', async () => {
-    renderWithRouter('/settings/performance');
+  it('renders disabled performance mobile tab without active styling', async () => {
+    renderWithRouter('/settings/connection');
     const perfTab = await screen.findByTestId('settings-tab-performance');
-    expect(perfTab).toHaveClass('text-blue-400');
-    expect(perfTab).toHaveClass('border-blue-400');
+    expect(perfTab).toHaveClass('cursor-not-allowed');
+    expect(perfTab).toHaveClass('text-slate-600');
   });
 
   // --- All 7 categories have correct routes ---
@@ -266,11 +268,9 @@ describe('SettingsLayout', () => {
     expect(screen.getByTestId('settings-nav-logs')).toHaveAttribute('href', '/settings/logs');
     expect(screen.getByTestId('settings-nav-status')).toHaveAttribute('href', '/settings/status');
     expect(screen.getByTestId('settings-nav-backup')).toHaveAttribute('href', '/settings/backup');
-    expect(screen.getByTestId('settings-nav-export')).toHaveAttribute('href', '/settings/export');
-    expect(screen.getByTestId('settings-nav-performance')).toHaveAttribute(
-      'href',
-      '/settings/performance'
-    );
+    // export and performance are disabled — rendered as spans, no href
+    expect(screen.getByTestId('settings-nav-export').tagName).toBe('SPAN');
+    expect(screen.getByTestId('settings-nav-performance').tagName).toBe('SPAN');
   });
 
   it('mobile tab items link to correct routes', async () => {
@@ -284,11 +284,9 @@ describe('SettingsLayout', () => {
     expect(screen.getByTestId('settings-tab-logs')).toHaveAttribute('href', '/settings/logs');
     expect(screen.getByTestId('settings-tab-status')).toHaveAttribute('href', '/settings/status');
     expect(screen.getByTestId('settings-tab-backup')).toHaveAttribute('href', '/settings/backup');
-    expect(screen.getByTestId('settings-tab-export')).toHaveAttribute('href', '/settings/export');
-    expect(screen.getByTestId('settings-tab-performance')).toHaveAttribute(
-      'href',
-      '/settings/performance'
-    );
+    // export and performance are disabled — rendered as spans, no href
+    expect(screen.getByTestId('settings-tab-export').tagName).toBe('SPAN');
+    expect(screen.getByTestId('settings-tab-performance').tagName).toBe('SPAN');
   });
 
   // --- Mobile abbreviated labels vs desktop full labels ---

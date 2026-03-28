@@ -13,7 +13,7 @@ interface SearchBarProps {
 export function SearchBar({
   onSearch,
   initialQuery = '',
-  placeholder = '搜尋電影或影集...',
+  placeholder = '搜尋媒體庫...',
   className,
 }: SearchBarProps) {
   const [value, setValue] = useState(initialQuery);

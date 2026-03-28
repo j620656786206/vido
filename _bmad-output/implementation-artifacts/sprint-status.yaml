@@ -344,7 +344,7 @@ development_status:
 
   # --- Story 6: Search Enhancement & Unimplemented Page Labels ---
   # Bugs: #9 search not synced with downloads, #10 unimplemented pages unlabeled
-  bugfix-6-search-enhancement-page-labels:            ready-for-dev  # 2026-03-28 — Story created
+  bugfix-6-search-enhancement-page-labels:            done  # 2026-03-28 — TA+CR passed
 
   # --- Story 7: Media Directory Setup Guide ---
   # Bug: #11 VIDO_MEDIA_DIRS not configured, no guidance

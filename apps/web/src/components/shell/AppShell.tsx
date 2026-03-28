@@ -47,7 +47,7 @@ export function AppShell({ children }: AppShellProps) {
                   type="text"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="搜尋電影或影集..."
+                  placeholder="搜尋媒體庫..."
                   className="w-full rounded-full border border-slate-600/50 bg-slate-800/60 py-1.5 pl-9 pr-4 text-sm text-slate-200 placeholder-slate-500 transition-colors focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   autoComplete="off"
                   data-testid="global-search-input"
@@ -89,7 +89,7 @@ export function AppShell({ children }: AppShellProps) {
                   type="text"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="搜尋電影或影集..."
+                  placeholder="搜尋媒體庫..."
                   className="w-full rounded-full border border-slate-600/50 bg-slate-800/60 py-1.5 pl-9 pr-4 text-sm text-slate-200 placeholder-slate-500 transition-colors focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   autoComplete="off"
                   autoFocus

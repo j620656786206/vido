@@ -18,6 +18,7 @@ interface SettingsCategory {
   shortLabel: string;
   icon: LucideIcon;
   to: string;
+  enabled?: boolean;
 }
 
 const SETTINGS_CATEGORIES: SettingsCategory[] = [
@@ -51,6 +52,7 @@ const SETTINGS_CATEGORIES: SettingsCategory[] = [
     shortLabel: '匯出',
     icon: ArrowUpDown,
     to: '/settings/export',
+    enabled: false,
   },
   {
     key: 'performance',
@@ -58,6 +60,7 @@ const SETTINGS_CATEGORIES: SettingsCategory[] = [
     shortLabel: '效能',
     icon: Gauge,
     to: '/settings/performance',
+    enabled: false,
   },
 ];
 
@@ -80,22 +83,37 @@ export function SettingsLayout({ children }: SettingsLayoutProps) {
         <ul className="py-4">
           {SETTINGS_CATEGORIES.map((cat) => {
             const isActive = currentPath.startsWith(cat.to);
+            const isEnabled = cat.enabled !== false;
             const Icon = cat.icon;
             return (
               <li key={cat.key}>
-                <Link
-                  to={cat.to}
-                  className={cn(
-                    'flex items-center gap-3 border-l-2 px-4 py-2.5 text-sm font-medium transition-colors',
-                    isActive
-                      ? 'border-blue-400 bg-slate-700 text-blue-400'
-                      : 'border-transparent text-slate-400 hover:bg-slate-800 hover:text-slate-200'
-                  )}
-                  data-testid={`settings-nav-${cat.key}`}
-                >
-                  <Icon className="h-4 w-4 shrink-0" />
-                  {cat.label}
-                </Link>
+                {isEnabled ? (
+                  <Link
+                    to={cat.to}
+                    className={cn(
+                      'flex items-center gap-3 border-l-2 px-4 py-2.5 text-sm font-medium transition-colors',
+                      isActive
+                        ? 'border-blue-400 bg-slate-700 text-blue-400'
+                        : 'border-transparent text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                    )}
+                    data-testid={`settings-nav-${cat.key}`}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    {cat.label}
+                  </Link>
+                ) : (
+                  <span
+                    className="flex cursor-not-allowed items-center gap-3 border-l-2 border-transparent px-4 py-2.5 text-sm font-medium text-slate-600"
+                    data-testid={`settings-nav-${cat.key}`}
+                    title="此功能尚未實作"
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    {cat.label}
+                    <span className="ml-auto rounded bg-slate-700 px-1.5 py-0.5 text-[10px] text-slate-500">
+                      Coming Soon
+                    </span>
+                  </span>
+                )}
               </li>
             );
           })}
@@ -111,8 +129,9 @@ export function SettingsLayout({ children }: SettingsLayoutProps) {
         <div className="flex gap-1 px-4 py-2">
           {SETTINGS_CATEGORIES.map((cat) => {
             const isActive = currentPath.startsWith(cat.to);
+            const isEnabled = cat.enabled !== false;
             const Icon = cat.icon;
-            return (
+            return isEnabled ? (
               <Link
                 key={cat.key}
                 to={cat.to}
@@ -127,6 +146,16 @@ export function SettingsLayout({ children }: SettingsLayoutProps) {
                 <Icon className="h-3.5 w-3.5 shrink-0" />
                 {cat.shortLabel}
               </Link>
+            ) : (
+              <span
+                key={cat.key}
+                className="flex shrink-0 cursor-not-allowed items-center gap-1.5 rounded-full border border-transparent px-3 py-1.5 text-xs font-medium text-slate-600"
+                data-testid={`settings-tab-${cat.key}`}
+                title="此功能尚未實作"
+              >
+                <Icon className="h-3.5 w-3.5 shrink-0" />
+                {cat.shortLabel}
+              </span>
             );
           })}
         </div>
