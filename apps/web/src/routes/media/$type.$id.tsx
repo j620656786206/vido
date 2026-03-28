@@ -1,9 +1,7 @@
 import { useState, useCallback } from 'react';
 import { createFileRoute, notFound, useNavigate, Link } from '@tanstack/react-router';
 import { Pencil, ArrowLeft, Film, Search, Loader2, FileText, HardDrive, Clock } from 'lucide-react';
-import { MediaDetailPanel } from '../../components/media/MediaDetailPanel';
 import { CreditsSection } from '../../components/media/CreditsSection';
-import { TVShowInfo } from '../../components/media/TVShowInfo';
 import { MetadataEditorDialog } from '../../components/metadata-editor';
 import type { MediaMetadata } from '../../components/metadata-editor';
 import {
@@ -148,7 +146,7 @@ function MediaDetailRoute() {
 
   return (
     <>
-      <div className="min-h-screen bg-gray-900">
+      <div className="relative min-h-screen bg-gray-900">
         {/* Backdrop image */}
         {localData.backdropPath && (
           <div className="absolute inset-x-0 top-0 h-[400px] overflow-hidden">
@@ -216,7 +214,14 @@ function MediaDetailRoute() {
 
                 {/* Meta line */}
                 <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-gray-400">
-                  {localData.releaseDate && <span>{localData.releaseDate.slice(0, 4)}</span>}
+                  {(isMovie ? localData.releaseDate : (localData as typeof localSeries.data)?.firstAirDate) && (
+                    <span>
+                      {(isMovie
+                        ? localData.releaseDate
+                        : (localData as typeof localSeries.data)?.firstAirDate
+                      )?.slice(0, 4)}
+                    </span>
+                  )}
                   {localData.voteAverage != null && localData.voteAverage > 0 && (
                     <span className="text-yellow-400">⭐ {localData.voteAverage.toFixed(1)}</span>
                   )}

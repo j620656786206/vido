@@ -324,7 +324,7 @@ development_status:
   # --- Story 1: Media Detail Page Route Refactor (方案 A) ---
   # Bugs: #1 card click 404 (tmdbId=0), #5 detail only sidebar, #6 poster fallback
   # Scope: UUID routing, local API data source, fallback UI, full-page layout
-  bugfix-1-media-detail-route-refactor:               review  # 2026-03-28 — All 7 tasks done, 1545 tests pass
+  bugfix-1-media-detail-route-refactor:               done  # 2026-03-28 — CR passed: series year fix, unused imports removed, 1558 tests pass
 
   # --- Story 2: Fix Pending Page Not Found ---
   # Bug: #2 /pending route shows "Not Found"

@@ -1,6 +1,6 @@
 # Story: Media Detail Page Route Refactor (方案 A)
 
-Status: review
+Status: done
 
 ## Story
 
@@ -156,3 +156,5 @@ Claude Opus 4.6 (1M context)
 - apps/web/src/services/libraryService.ts (modified — added getMovieById, getSeriesById)
 - apps/web/src/components/media/PosterCard.spec.tsx (modified — string ID mocks)
 - apps/web/src/components/library/LibraryGrid.spec.tsx (modified — UUID href assertion)
+- apps/web/src/hooks/useMediaDetails.spec.tsx (modified — added local API hook tests)
+- apps/web/src/services/libraryService.spec.ts (modified — added getMovieById/getSeriesById tests)
