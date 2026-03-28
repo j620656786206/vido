@@ -1,6 +1,6 @@
 # Story: Harden Backup API Response Handling
 
-Status: review
+Status: done
 
 ## Story
 

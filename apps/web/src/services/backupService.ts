@@ -79,11 +79,8 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
     ...options,
   });
 
-  // Handle empty body (204 No Content or empty response)
+  // Handle 204 No Content (empty response body)
   if (response.status === 204) {
-    if (!response.ok) {
-      throw new Error(`API request failed: ${response.status}`);
-    }
     return snakeToCamel({} as T);
   }
 

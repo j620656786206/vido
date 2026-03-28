@@ -1,6 +1,6 @@
 # Story: Fix Pending Page Not Found
 
-Status: review
+Status: done
 
 ## Story
 

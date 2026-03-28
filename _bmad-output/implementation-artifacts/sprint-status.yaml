@@ -328,11 +328,11 @@ development_status:
 
   # --- Story 2: Fix Pending Page Not Found ---
   # Bug: #2 /pending route shows "Not Found"
-  bugfix-2-pending-page-not-found:                    review  # 2026-03-28 — All tasks done, 1560 tests pass
+  bugfix-2-pending-page-not-found:                    done  # 2026-03-28 — TA+CR passed, test rewritten
 
   # --- Story 3: Fix Backup API Empty Response ---
   # Bug: #3 /settings/backup JSON parse error (empty body)
-  bugfix-3-backup-api-empty-response:                 review  # 2026-03-28 — All tasks done, 1564 tests pass
+  bugfix-3-backup-api-empty-response:                 done  # 2026-03-28 — TA+CR passed, dead code removed
 
   # --- Story 4: Library Grid Layout Fix ---
   # Bug: #4 grid only 2 columns, cards too large
