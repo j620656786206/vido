@@ -144,57 +144,19 @@ function scanProgressReducer(
   }
 }
 
-const SSE_TIMEOUT_MS = 5000;
-const POLL_INTERVAL_MS = 3000;
 const SSE_RECONNECT_MS = 10000;
 
 export function useScanProgress() {
   const [state, dispatch] = useReducer(scanProgressReducer, initialState);
   const eventSourceRef = useRef<EventSource | null>(null);
-  const pollTimerRef = useRef<ReturnType<typeof setInterval>>();
-  const sseTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const sseReconnectRef = useRef<ReturnType<typeof setTimeout>>();
   const mountedRef = useRef(true);
-
-  const stopPolling = useCallback(() => {
-    if (pollTimerRef.current) {
-      clearInterval(pollTimerRef.current);
-      pollTimerRef.current = undefined;
-    }
-  }, []);
-
-  const pollStatus = useCallback(async () => {
-    try {
-      const status = await scannerService.getScanStatus();
-      if (!mountedRef.current) return;
-      dispatch({ type: 'STATUS_UPDATE', payload: status });
-    } catch {
-      // Ignore poll errors — will retry on next interval
-    }
-  }, []);
-
-  const startPolling = useCallback(() => {
-    stopPolling();
-    dispatch({ type: 'SET_CONNECTION', payload: 'polling' });
-    // Immediate first poll
-    pollStatus();
-    pollTimerRef.current = setInterval(pollStatus, POLL_INTERVAL_MS);
-  }, [stopPolling, pollStatus]);
-
-  const resetSseTimeout = useCallback(() => {
-    if (sseTimeoutRef.current) clearTimeout(sseTimeoutRef.current);
-    sseTimeoutRef.current = setTimeout(() => {
-      // SSE silent for too long — fall back to polling
-      startPolling();
-    }, SSE_TIMEOUT_MS);
-  }, [startPolling]);
 
   const connectSSE = useCallback(() => {
     // Close existing connection
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
     }
-    stopPolling();
 
     const url = scannerService.getSSEUrl();
     const es = new EventSource(url);
@@ -203,12 +165,10 @@ export function useScanProgress() {
     es.addEventListener('connected', () => {
       if (!mountedRef.current) return;
       dispatch({ type: 'SET_CONNECTION', payload: 'sse' });
-      resetSseTimeout();
     });
 
     es.addEventListener('scan_progress', (e: MessageEvent) => {
       if (!mountedRef.current) return;
-      resetSseTimeout();
       try {
         const event = JSON.parse(e.data);
         const data = snakeToCamel<ScanProgressEvent>(event.data || event);
@@ -220,11 +180,9 @@ export function useScanProgress() {
 
     es.addEventListener('scan_complete', (e: MessageEvent) => {
       if (!mountedRef.current) return;
-      resetSseTimeout();
       try {
         const event = JSON.parse(e.data);
         const raw = snakeToCamel<Record<string, unknown>>(event.data || event);
-        // Update final counts then mark complete
         dispatch({
           type: 'SSE_UPDATE',
           payload: {
@@ -243,64 +201,33 @@ export function useScanProgress() {
 
     es.addEventListener('scan_cancelled', () => {
       if (!mountedRef.current) return;
-      resetSseTimeout();
       dispatch({ type: 'SCAN_CANCELLED' });
     });
 
     es.addEventListener('ping', () => {
-      if (!mountedRef.current) return;
-      resetSseTimeout();
+      // Keep-alive — no action needed
     });
 
     es.onerror = () => {
       if (!mountedRef.current) return;
-      // SSE connection lost — fall back to polling, schedule reconnect
+      // SSE connection lost — schedule reconnect (no polling fallback)
       es.close();
-      startPolling();
+      dispatch({ type: 'SET_CONNECTION', payload: 'disconnected' });
       if (sseReconnectRef.current) clearTimeout(sseReconnectRef.current);
       sseReconnectRef.current = setTimeout(() => {
         if (mountedRef.current) connectSSE();
       }, SSE_RECONNECT_MS);
     };
-  }, [stopPolling, startPolling, resetSseTimeout]);
+  }, []);
 
   // Keep a stable ref to connectSSE to avoid useEffect re-firing
   const connectSSERef = useRef(connectSSE);
   connectSSERef.current = connectSSE;
 
-  // Lazy SSE: only connect when scan is active (avoids persistent SSE connection
-  // that blocks Playwright networkidle detection in E2E tests).
-  // When idle, poll every 10s to detect if a scan started elsewhere.
-  const idlePollRef = useRef<ReturnType<typeof setInterval>>();
-
-  const checkAndConnect = useCallback(async () => {
-    try {
-      const status = await scannerService.getScanStatus();
-      if (!mountedRef.current) return;
-      if (status.isScanning) {
-        dispatch({ type: 'STATUS_UPDATE', payload: status });
-        // Stop idle polling, connect SSE for real-time updates
-        if (idlePollRef.current) {
-          clearInterval(idlePollRef.current);
-          idlePollRef.current = undefined;
-        }
-        if (!eventSourceRef.current || eventSourceRef.current.readyState === 2) {
-          connectSSERef.current();
-        }
-      }
-    } catch {
-      // Ignore — will retry on next poll
-    }
-  }, []);
-
   useEffect(() => {
     mountedRef.current = true;
 
-    // Initial check — connect SSE only if scan is already running
-    checkAndConnect();
-
-    // Light idle poll (10s) to detect scan triggered from settings or schedule
-    idlePollRef.current = setInterval(checkAndConnect, 10000);
+    // No polling — SSE only. Connect on demand via startTracking().
 
     return () => {
       mountedRef.current = false;
@@ -308,18 +235,8 @@ export function useScanProgress() {
         eventSourceRef.current.close();
         eventSourceRef.current = null;
       }
-      if (pollTimerRef.current) {
-        clearInterval(pollTimerRef.current);
-        pollTimerRef.current = undefined;
-      }
-      if (idlePollRef.current) {
-        clearInterval(idlePollRef.current);
-        idlePollRef.current = undefined;
-      }
-      if (sseTimeoutRef.current) clearTimeout(sseTimeoutRef.current);
       if (sseReconnectRef.current) clearTimeout(sseReconnectRef.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Connect SSE on demand — called when a scan is triggered externally

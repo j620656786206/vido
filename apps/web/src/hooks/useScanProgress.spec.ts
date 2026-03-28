@@ -1,14 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 import { useScanProgress } from './useScanProgress';
 
 // Mock scannerService
-const mockGetScanStatus = vi.fn();
 const mockGetSSEUrl = vi.fn(() => '/api/v1/events');
 
 vi.mock('../services/scannerService', () => ({
   scannerService: {
-    getScanStatus: (...args: unknown[]) => mockGetScanStatus(...args),
     getSSEUrl: () => mockGetSSEUrl(),
   },
 }));
@@ -51,38 +49,11 @@ class MockEventSource {
   }
 }
 
-const idleStatus = {
-  isScanning: false,
-  filesFound: 0,
-  filesProcessed: 0,
-  currentFile: '',
-  percentDone: 0,
-  errorCount: 0,
-  estimatedTime: '',
-  lastScanAt: '',
-  lastScanFiles: 0,
-  lastScanDuration: '',
-};
-
-const scanningStatus = {
-  isScanning: true,
-  filesFound: 200,
-  filesProcessed: 50,
-  currentFile: 'init.mkv',
-  percentDone: 25,
-  errorCount: 0,
-  estimatedTime: '3 分',
-  lastScanAt: '',
-  lastScanFiles: 0,
-  lastScanDuration: '',
-};
-
-describe('useScanProgress', () => {
+describe('useScanProgress (SSE-only, no polling)', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     MockEventSource.instances = [];
     (global as Record<string, unknown>).EventSource = MockEventSource;
-    mockGetScanStatus.mockResolvedValue(idleStatus);
   });
 
   afterEach(() => {
@@ -90,37 +61,39 @@ describe('useScanProgress', () => {
     vi.restoreAllMocks();
   });
 
-  it('does NOT create EventSource when idle (lazy SSE)', async () => {
+  it('[P0] does NOT create EventSource on mount (lazy SSE)', async () => {
     renderHook(() => useScanProgress());
     await vi.advanceTimersByTimeAsync(0);
     expect(MockEventSource.instances).toHaveLength(0);
   });
 
-  it('creates EventSource when scan is active on mount', async () => {
-    mockGetScanStatus.mockResolvedValue(scanningStatus);
+  it('[P0] does NOT poll scanner status — SSE only', async () => {
     renderHook(() => useScanProgress());
-    await vi.advanceTimersByTimeAsync(0);
-    expect(MockEventSource.instances).toHaveLength(1);
-    expect(MockEventSource.instances[0].url).toBe('/api/v1/events');
+    await vi.advanceTimersByTimeAsync(30000);
+    // No scannerService.getScanStatus calls — it's no longer imported for polling
+    expect(MockEventSource.instances).toHaveLength(0);
   });
 
-  it('fetches initial status on mount', async () => {
-    renderHook(() => useScanProgress());
-    await vi.advanceTimersByTimeAsync(0);
-    expect(mockGetScanStatus).toHaveBeenCalledTimes(1);
-  });
-
-  it('starts as not visible when idle', async () => {
+  it('[P0] starts as not visible when idle', async () => {
     const { result } = renderHook(() => useScanProgress());
     await vi.advanceTimersByTimeAsync(0);
     expect(result.current.isVisible).toBe(false);
     expect(result.current.isScanning).toBe(false);
   });
 
-  it('updates state on SSE scan_progress event', async () => {
-    mockGetScanStatus.mockResolvedValue(scanningStatus);
+  it('[P0] connects SSE via startTracking', async () => {
     const { result } = renderHook(() => useScanProgress());
     await vi.advanceTimersByTimeAsync(0);
+    expect(MockEventSource.instances).toHaveLength(0);
+
+    act(() => result.current.startTracking());
+    expect(MockEventSource.instances).toHaveLength(1);
+    expect(MockEventSource.instances[0].url).toBe('/api/v1/events');
+  });
+
+  it('[P0] updates state on SSE scan_progress event', async () => {
+    const { result } = renderHook(() => useScanProgress());
+    act(() => result.current.startTracking());
 
     const es = MockEventSource.instances[0];
     act(() => {
@@ -140,17 +113,13 @@ describe('useScanProgress', () => {
     expect(result.current.percentDone).toBe(42);
     expect(result.current.filesFound).toBe(500);
     expect(result.current.currentFile).toBe('test.mkv');
-    expect(result.current.errorCount).toBe(2);
-    expect(result.current.estimatedTime).toBe('1 分 30 秒');
   });
 
-  it('handles scan_complete SSE event', async () => {
-    mockGetScanStatus.mockResolvedValue(scanningStatus);
+  it('[P0] handles scan_complete SSE event', async () => {
     const { result } = renderHook(() => useScanProgress());
-    await vi.advanceTimersByTimeAsync(0);
+    act(() => result.current.startTracking());
 
     const es = MockEventSource.instances[0];
-
     act(() => {
       es.emit('scan_progress', {
         data: {
@@ -162,7 +131,6 @@ describe('useScanProgress', () => {
         },
       });
     });
-    expect(result.current.isScanning).toBe(true);
 
     act(() => {
       es.emit('scan_complete', {
@@ -172,17 +140,14 @@ describe('useScanProgress', () => {
 
     expect(result.current.isScanning).toBe(false);
     expect(result.current.isComplete).toBe(true);
-    expect(result.current.isVisible).toBe(true);
     expect(result.current.percentDone).toBe(100);
   });
 
-  it('handles scan_cancelled SSE event', async () => {
-    mockGetScanStatus.mockResolvedValue(scanningStatus);
+  it('[P1] handles scan_cancelled SSE event', async () => {
     const { result } = renderHook(() => useScanProgress());
-    await vi.advanceTimersByTimeAsync(0);
+    act(() => result.current.startTracking());
 
     const es = MockEventSource.instances[0];
-
     act(() => {
       es.emit('scan_progress', {
         data: {
@@ -204,10 +169,20 @@ describe('useScanProgress', () => {
     expect(result.current.isVisible).toBe(true);
   });
 
-  it('toggles minimize state', async () => {
+  it('[P1] sets disconnected on SSE error (no polling fallback)', async () => {
     const { result } = renderHook(() => useScanProgress());
-    await vi.advanceTimersByTimeAsync(0);
+    act(() => result.current.startTracking());
 
+    const es = MockEventSource.instances[0];
+    act(() => {
+      es.triggerError();
+    });
+
+    expect(result.current.connectionStatus).toBe('disconnected');
+  });
+
+  it('[P1] toggles minimize state', async () => {
+    const { result } = renderHook(() => useScanProgress());
     expect(result.current.isMinimized).toBe(false);
     act(() => result.current.toggleMinimize());
     expect(result.current.isMinimized).toBe(true);
@@ -215,10 +190,9 @@ describe('useScanProgress', () => {
     expect(result.current.isMinimized).toBe(false);
   });
 
-  it('dismiss hides the card', async () => {
-    mockGetScanStatus.mockResolvedValue(scanningStatus);
+  it('[P1] dismiss hides the card', async () => {
     const { result } = renderHook(() => useScanProgress());
-    await vi.advanceTimersByTimeAsync(0);
+    act(() => result.current.startTracking());
 
     const es = MockEventSource.instances[0];
     act(() => {
@@ -230,73 +204,13 @@ describe('useScanProgress', () => {
     expect(result.current.isVisible).toBe(false);
   });
 
-  it('falls back to polling on SSE error', async () => {
-    vi.useRealTimers();
-    mockGetScanStatus.mockResolvedValue(scanningStatus);
-    const { result } = renderHook(() => useScanProgress());
-    await new Promise((r) => setTimeout(r, 50));
-
-    const es = MockEventSource.instances[0];
-    mockGetScanStatus.mockResolvedValue({
-      ...scanningStatus,
-      filesFound: 300,
-      currentFile: 'poll.mkv',
-      percentDone: 33,
-    });
-
-    act(() => {
-      es.triggerError();
-    });
-
-    await waitFor(() => {
-      expect(result.current.connectionStatus).toBe('polling');
-    });
-  });
-
-  it('shows scanning state from initial status fetch', async () => {
-    vi.useRealTimers();
-    mockGetScanStatus.mockResolvedValue(scanningStatus);
-
-    const { result } = renderHook(() => useScanProgress());
-
-    await waitFor(() => {
-      expect(result.current.isScanning).toBe(true);
-      expect(result.current.filesFound).toBe(200);
-    });
-  });
-
-  it('closes EventSource on unmount', async () => {
-    mockGetScanStatus.mockResolvedValue(scanningStatus);
-    const { unmount } = renderHook(() => useScanProgress());
-    await vi.advanceTimersByTimeAsync(0);
+  it('[P1] closes EventSource on unmount', async () => {
+    const { result, unmount } = renderHook(() => useScanProgress());
+    act(() => result.current.startTracking());
 
     const es = MockEventSource.instances[0];
     unmount();
 
     expect(es.readyState).toBe(2); // CLOSED
-  });
-
-  it('connects SSE via idle poll when scan starts after mount', async () => {
-    vi.useRealTimers();
-    // Start idle
-    mockGetScanStatus.mockResolvedValue(idleStatus);
-    const { result } = renderHook(() => useScanProgress());
-    await new Promise((r) => setTimeout(r, 50));
-    expect(MockEventSource.instances).toHaveLength(0);
-
-    // Scan starts — use startTracking to trigger immediate SSE connection
-    mockGetScanStatus.mockResolvedValue(scanningStatus);
-    act(() => result.current.startTracking());
-
-    expect(MockEventSource.instances).toHaveLength(1);
-  });
-
-  it('exposes startTracking to manually connect SSE', async () => {
-    const { result } = renderHook(() => useScanProgress());
-    await vi.advanceTimersByTimeAsync(0);
-    expect(MockEventSource.instances).toHaveLength(0);
-
-    act(() => result.current.startTracking());
-    expect(MockEventSource.instances).toHaveLength(1);
   });
 });

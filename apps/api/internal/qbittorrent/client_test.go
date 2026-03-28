@@ -408,3 +408,89 @@ func TestClient_TestConnection_VersionEndpointFailure(t *testing.T) {
 	assert.Nil(t, info)
 	assert.Error(t, err)
 }
+
+func TestClient_EnsureAuth_SkipsLoginWhenSessionFresh(t *testing.T) {
+	loginCallCount := 0
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v2/auth/login", func(w http.ResponseWriter, r *http.Request) {
+		loginCallCount++
+		http.SetCookie(w, &http.Cookie{Name: "SID", Value: "session"})
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, "Ok.")
+	})
+	mux.HandleFunc("/api/v2/torrents/info", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, "[]")
+	})
+
+	server := newTestServer(t, mux)
+	defer server.Close()
+
+	client := NewClient(&Config{
+		Host:     server.URL,
+		Username: "admin",
+		Password: "password",
+	})
+
+	ctx := context.Background()
+
+	// First call — should login (no session yet)
+	_, err := client.GetTorrents(ctx, nil)
+	require.NoError(t, err)
+	assert.Equal(t, 1, loginCallCount, "first call should trigger login")
+
+	// Second call — should skip login (session still fresh)
+	_, err = client.GetTorrents(ctx, nil)
+	require.NoError(t, err)
+	assert.Equal(t, 1, loginCallCount, "second call should NOT trigger login — session is fresh")
+
+	// Third call — still fresh
+	_, err = client.GetTorrents(ctx, nil)
+	require.NoError(t, err)
+	assert.Equal(t, 1, loginCallCount, "third call should NOT trigger login")
+}
+
+func TestClient_DoWithAuth_RetriesOn401(t *testing.T) {
+	apiCallCount := 0
+	loginCallCount := 0
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v2/auth/login", func(w http.ResponseWriter, r *http.Request) {
+		loginCallCount++
+		http.SetCookie(w, &http.Cookie{Name: "SID", Value: fmt.Sprintf("session-%d", loginCallCount)})
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, "Ok.")
+	})
+	mux.HandleFunc("/api/v2/torrents/info", func(w http.ResponseWriter, r *http.Request) {
+		apiCallCount++
+		if apiCallCount == 1 {
+			// First API call returns 401 (session expired)
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		// Subsequent calls succeed
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, "[]")
+	})
+
+	server := newTestServer(t, mux)
+	defer server.Close()
+
+	client := NewClient(&Config{
+		Host:     server.URL,
+		Username: "admin",
+		Password: "password",
+	})
+
+	// Pre-set lastLoginAt so ensureAuth doesn't trigger initial login
+	client.lastLoginAt = time.Now()
+
+	ctx := context.Background()
+	torrents, err := client.GetTorrents(ctx, nil)
+	require.NoError(t, err)
+	assert.Empty(t, torrents)
+
+	// Should have: 1 initial login (from doWithAuth retry), 2 API calls (first 401, second ok)
+	assert.Equal(t, 1, loginCallCount, "should re-login once after 401")
+	assert.Equal(t, 2, apiCallCount, "should retry API call after re-auth")
+}

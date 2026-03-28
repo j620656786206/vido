@@ -13,10 +13,14 @@ import (
 	"time"
 )
 
+// Default session TTL — skip re-login if last login was within this duration.
+const defaultAuthTTL = 30 * time.Minute
+
 // Client communicates with the qBittorrent Web API v2.x.
 type Client struct {
-	config     *Config
-	httpClient *http.Client
+	config      *Config
+	httpClient  *http.Client
+	lastLoginAt time.Time
 }
 
 // NewClient creates a new qBittorrent API client.
@@ -99,7 +103,42 @@ func (c *Client) Login(ctx context.Context) error {
 	}
 
 	slog.Info("qBittorrent login successful", "host", c.config.Host)
+	c.lastLoginAt = time.Now()
 	return nil
+}
+
+// ensureAuth checks if the session is still valid and logs in if needed.
+// Skips login if last successful login was within the auth TTL.
+func (c *Client) ensureAuth(ctx context.Context) error {
+	if !c.lastLoginAt.IsZero() && time.Since(c.lastLoginAt) < defaultAuthTTL {
+		return nil // Session still fresh
+	}
+	return c.Login(ctx)
+}
+
+// doWithAuth executes an HTTP request with automatic retry on 401/403.
+// If the initial request returns 401 or 403, re-authenticates and retries once.
+func (c *Client) doWithAuth(ctx context.Context, req *http.Request) (*http.Response, error) {
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+		resp.Body.Close()
+		// Re-authenticate and retry
+		if authErr := c.Login(ctx); authErr != nil {
+			return nil, authErr
+		}
+		// Rebuild request (original body may be consumed)
+		retryReq, err := http.NewRequestWithContext(ctx, req.Method, req.URL.String(), nil)
+		if err != nil {
+			return nil, fmt.Errorf("create retry request: %w", err)
+		}
+		return c.httpClient.Do(retryReq)
+	}
+
+	return resp, nil
 }
 
 // Ping checks if qBittorrent is reachable and authenticated.
@@ -187,7 +226,7 @@ func (c *Client) getVersion(ctx context.Context, path string) (string, error) {
 
 // GetTorrents retrieves all torrents from qBittorrent.
 func (c *Client) GetTorrents(ctx context.Context, opts *ListTorrentsOptions) ([]Torrent, error) {
-	if err := c.Login(ctx); err != nil {
+	if err := c.ensureAuth(ctx); err != nil {
 		return nil, err
 	}
 
@@ -218,7 +257,7 @@ func (c *Client) GetTorrents(ctx context.Context, opts *ListTorrentsOptions) ([]
 		}
 	}
 
-	resp, err := c.httpClient.Do(req)
+	resp, err := c.doWithAuth(ctx, req)
 	if err != nil {
 		return nil, &ConnectionError{
 			Code:    ErrCodeConnectionFailed,
@@ -255,7 +294,7 @@ func (c *Client) GetTorrents(ctx context.Context, opts *ListTorrentsOptions) ([]
 // GetTorrentDetails retrieves detailed information for a specific torrent.
 // Uses the hashes filter to fetch only the target torrent instead of the full list.
 func (c *Client) GetTorrentDetails(ctx context.Context, hash string) (*TorrentDetails, error) {
-	if err := c.Login(ctx); err != nil {
+	if err := c.ensureAuth(ctx); err != nil {
 		return nil, err
 	}
 
@@ -270,7 +309,7 @@ func (c *Client) GetTorrentDetails(ctx context.Context, hash string) (*TorrentDe
 		}
 	}
 
-	resp, err := c.httpClient.Do(req)
+	resp, err := c.doWithAuth(ctx, req)
 	if err != nil {
 		return nil, &ConnectionError{
 			Code:    ErrCodeConnectionFailed,
