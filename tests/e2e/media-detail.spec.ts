@@ -159,12 +159,12 @@ test.describe('Media Detail - Error Handling @e2e @media-detail', () => {
     // GIVEN: A UUID that doesn't exist in the database
 
     // WHEN: Navigating to a non-existent movie
+    // Note: react-query retries 3x with exponential backoff before isError=true
     await page.goto('/media/movie/00000000-0000-0000-0000-000000000000');
 
-    // THEN: Should show 404/error state
-    await page.waitForLoadState('networkidle');
+    // THEN: Should eventually show 404/error state (after query retries exhaust)
     await expect(page.getByText('404').or(page.getByText('找不到該媒體內容'))).toBeVisible({
-      timeout: 15000,
+      timeout: 30000,
     });
   });
 
