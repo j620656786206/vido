@@ -74,6 +74,28 @@ SCREENS = {
     "GZ294": ("flow-i-subtitle-mobile", "i3-subtitle-search-dialog-mobile"),
     "fUtqO": ("flow-i-subtitle-mobile", "i5-batch-progress-mobile"),
     "ogQ6Y": ("flow-i-subtitle-mobile", "i6-subtitle-preview-mobile"),
+    # Flow J - Setup Wizard (Desktop)
+    "uqz0V": ("flow-j-setup-wizard-desktop", "setup-01-welcome-desktop"),
+    "eWpZl": ("flow-j-setup-wizard-desktop", "setup-02-qbittorrent-desktop"),
+    "i6SqW": ("flow-j-setup-wizard-desktop", "setup-03-mediafolder-desktop"),
+    "URcJR": ("flow-j-setup-wizard-desktop", "setup-04-apikeys-desktop"),
+    "0YdAa": ("flow-j-setup-wizard-desktop", "setup-05-complete-desktop"),
+    # Flow J - Setup Wizard (Mobile)
+    "XtMeX": ("flow-j-setup-wizard-mobile", "setup-01-welcome-mobile"),
+    "IsWkJ": ("flow-j-setup-wizard-mobile", "setup-02-qbittorrent-mobile"),
+    "JO8Kr": ("flow-j-setup-wizard-mobile", "setup-03-mediafolder-mobile"),
+    "87JmL": ("flow-j-setup-wizard-mobile", "setup-04-apikeys-mobile"),
+    "o2xD5": ("flow-j-setup-wizard-mobile", "setup-05-complete-mobile"),
+    # Flow K - Multi-Library Setup & Modals
+    "ilSTz": ("flow-k-multi-library", "setup-03b-medialibrary-desktop"),
+    "Wyyps": ("flow-k-multi-library", "setup-03b-medialibrary-mobile"),
+    "Ht0AY": ("flow-k-multi-library", "library-edit-modal-desktop"),
+    "cDvWQ": ("flow-k-multi-library", "library-edit-modal-mobile"),
+    "w6E8i": ("flow-k-multi-library", "library-delete-modal-desktop"),
+    "hlUkm": ("flow-k-multi-library", "library-delete-modal-mobile"),
+    # Flow K - Multi-Library Settings Scanner
+    "ATjDd": ("flow-k-multi-library", "h1b-settings-scanner-multi-library-desktop"),
+    "iOjxf": ("flow-k-multi-library", "h4b-settings-scanner-multi-library-mobile"),
 }
 
 
