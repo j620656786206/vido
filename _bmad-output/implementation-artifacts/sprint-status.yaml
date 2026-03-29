@@ -232,6 +232,21 @@ development_status:
   retro-8-E9-1-split-c2-whisper-ai-translation:     done  # 2026-03-27 — SM: split C-2 into C-2a (Whisper transcription) + C-2b (AI translation), added split rationale and Whisper WER success criterion
 
   # ==============================================================================
+  # Epic 7b: Multi-Library Media Management (PRD v4 Amendment)
+  # Phase: Phase 1 — Core Media Pipeline (Amendment)
+  # FRs: P1-001-A–E
+  # ADR: architecture/adr-multi-library-media-management.md
+  # Decision: Route 2 — multi-folder + manual type, schema reserves auto-detect
+  # ==============================================================================
+  epic-7b: backlog
+  7b-1-db-migration-models-repository: backlog   # DB migration #020, models, MediaLibraryRepository
+  7b-2-library-crud-api: backlog                  # REST endpoints for library + path management
+  7b-3-setup-wizard-multi-library: backlog        # Replace MediaFolderStep, update SetupService
+  7b-4-settings-media-library-manager: backlog    # LibraryCard, EditModal, DeleteConfirm in Settings
+  7b-5-scanner-library-integration: backlog       # MediaService + ScannerService read from DB, env var fallback
+  epic-7b-retrospective: optional
+
+  # ==============================================================================
   # Epic 9: AI Subtitle Enhancement (PRD v4)
   # Phase: Phase 1 — Core Library
   # FRs: P1-020–P1-021

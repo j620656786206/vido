@@ -31,6 +31,15 @@ Users can configure media library paths, trigger recursive scanning, have filena
 
 ---
 
+### Epic 7b: Multi-Library Media Management
+**File:** [epic-7b-multi-library-media-management.md](./epic-7b-multi-library-media-management.md)
+
+Users can create multiple media libraries with per-folder content type assignment (movie/series), manage libraries from Setup Wizard and Settings page, and scanner uses DB-based configuration instead of environment variables.
+
+**v4 Feature IDs:** P1-001-A, P1-001-B, P1-001-C, P1-001-D, P1-001-E
+
+---
+
 ### Epic 8: Subtitle Engine
 **File:** [epic-8-subtitle-engine.md](./epic-8-subtitle-engine.md)
 
