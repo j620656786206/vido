@@ -291,6 +291,63 @@ func TestMediaLibraryRepository_GetAllWithPathsAndCounts(t *testing.T) {
 	assert.Len(t, results[0].Paths, 1)
 }
 
+func TestMediaLibraryRepository_Delete_NotFound(t *testing.T) {
+	db := setupLibraryTestDB(t)
+	repo := NewMediaLibraryRepository(db)
+	err := repo.Delete(context.Background(), "nonexistent")
+	assert.True(t, errors.Is(err, ErrLibraryNotFound))
+}
+
+func TestMediaLibraryRepository_Update_Nil(t *testing.T) {
+	db := setupLibraryTestDB(t)
+	repo := NewMediaLibraryRepository(db)
+	err := repo.Update(context.Background(), nil)
+	assert.Error(t, err)
+}
+
+func TestMediaLibraryRepository_AddPath_Nil(t *testing.T) {
+	db := setupLibraryTestDB(t)
+	repo := NewMediaLibraryRepository(db)
+	err := repo.AddPath(context.Background(), nil)
+	assert.Error(t, err)
+}
+
+func TestMediaLibraryRepository_UpdatePathStatus_NotFound(t *testing.T) {
+	db := setupLibraryTestDB(t)
+	repo := NewMediaLibraryRepository(db)
+	err := repo.UpdatePathStatus(context.Background(), "nonexistent", models.PathStatusAccessible)
+	assert.True(t, errors.Is(err, ErrLibraryPathNotFound))
+}
+
+func TestMediaLibraryRepository_GetAllWithPathsAndCounts_Series(t *testing.T) {
+	db := setupLibraryTestDB(t)
+	repo := NewMediaLibraryRepository(db)
+	ctx := context.Background()
+
+	lib := &models.MediaLibrary{Name: "TV", ContentType: models.ContentTypeSeries}
+	require.NoError(t, repo.Create(ctx, lib))
+	require.NoError(t, repo.AddPath(ctx, &models.MediaLibraryPath{LibraryID: lib.ID, Path: "/media/tv"}))
+
+	_, err := db.ExecContext(ctx, `INSERT INTO series (id, title, library_id) VALUES ('s1', 'Test Show', ?)`, lib.ID)
+	require.NoError(t, err)
+	// Insert a removed series — should NOT be counted
+	_, err = db.ExecContext(ctx, `INSERT INTO series (id, title, library_id, is_removed) VALUES ('s2', 'Removed', ?, 1)`, lib.ID)
+	require.NoError(t, err)
+
+	results, err := repo.GetAllWithPathsAndCounts(ctx)
+	require.NoError(t, err)
+	require.Len(t, results, 1)
+	assert.Equal(t, 1, results[0].MediaCount, "should exclude is_removed=1")
+}
+
+func TestMediaLibraryRepository_GetAll_Empty(t *testing.T) {
+	db := setupLibraryTestDB(t)
+	repo := NewMediaLibraryRepository(db)
+	libs, err := repo.GetAll(context.Background())
+	require.NoError(t, err)
+	assert.Empty(t, libs)
+}
+
 func TestMediaLibraryRepository_GetAllPaths(t *testing.T) {
 	db := setupLibraryTestDB(t)
 	repo := NewMediaLibraryRepository(db)
