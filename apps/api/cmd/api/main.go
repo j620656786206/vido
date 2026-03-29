@@ -149,6 +149,7 @@ func main() {
 	qbittorrentService := services.NewQBittorrentService(repos.Settings, secretsService)
 	downloadService := services.NewDownloadService(qbittorrentService, slog.Default())
 	mediaService := services.NewMediaService(cfg.MediaDirs)
+	mediaLibraryService := services.NewMediaLibraryService(repos.MediaLibraries)
 
 	// Initialize log service (Story 6.3)
 	logService := services.NewLogService(repos.Logs)
@@ -405,6 +406,7 @@ func main() {
 	downloadHandler := handlers.NewDownloadHandler(downloadService)
 	libraryService := services.NewLibraryService(repos.Movies, repos.Series, repos.Episodes, services.WithTMDbVideos(tmdbService.VideosProvider()))
 	libraryHandler := handlers.NewLibraryHandler(libraryService)
+	mediaLibrariesHandler := handlers.NewMediaLibrariesHandler(mediaLibraryService)
 	recentMediaHandler := handlers.NewRecentMediaHandler(movieService, seriesService)
 	logHandler := handlers.NewLogHandler(logService)
 	cacheHandler := handlers.NewCacheHandler(cacheStatsService, cacheCleanupService)
@@ -472,6 +474,7 @@ func main() {
 		qbittorrentHandler.RegisterRoutes(apiV1)
 		downloadHandler.RegisterRoutes(apiV1)
 		libraryHandler.RegisterRoutes(apiV1)
+		mediaLibrariesHandler.RegisterRoutes(apiV1) // /api/v1/libraries CRUD (Story 7b-2)
 		recentMediaHandler.RegisterRoutes(apiV1)
 		scannerHandler.RegisterRoutes(apiV1)
 		subtitleHandler.RegisterRoutes(apiV1)

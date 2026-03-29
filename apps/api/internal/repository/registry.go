@@ -21,6 +21,7 @@ type Repositories struct {
 	ConnectionHistory ConnectionHistoryRepositoryInterface
 	Logs              LogRepositoryInterface
 	Backups           BackupRepositoryInterface
+	MediaLibraries    MediaLibraryRepositoryInterface
 }
 
 // NewRepositories creates all repository implementations for the given database connection.
@@ -47,6 +48,7 @@ func NewRepositories(db *sql.DB) *Repositories {
 		ConnectionHistory: NewConnectionHistoryRepository(db),
 		Logs:              NewLogRepository(db),
 		Backups:           NewBackupRepository(db),
+		MediaLibraries:    NewMediaLibraryRepository(db),
 	}
 }
 
@@ -72,5 +74,6 @@ func NewRepositoriesWithCache(db *sql.DB) *Repositories {
 		ParseJobs:         NewParseJobRepository(db),
 		ConnectionHistory: NewConnectionHistoryRepository(db),
 		Logs:              NewLogRepository(db),
+		MediaLibraries:    NewMediaLibraryRepository(db),
 	}
 }
