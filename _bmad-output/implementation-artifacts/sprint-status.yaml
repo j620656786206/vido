@@ -238,8 +238,8 @@ development_status:
   # ADR: architecture/adr-multi-library-media-management.md
   # Decision: Route 2 — multi-folder + manual type, schema reserves auto-detect
   # ==============================================================================
-  epic-7b: backlog
-  7b-1-db-migration-models-repository: backlog   # DB migration #020, models, MediaLibraryRepository
+  epic-7b: in-progress
+  7b-1-db-migration-models-repository: review  # DB migration #020, models, MediaLibraryRepository — 16 tests pass
   7b-2-library-crud-api: backlog                  # REST endpoints for library + path management
   7b-3-setup-wizard-multi-library: backlog        # Replace MediaFolderStep, update SetupService
   7b-4-settings-media-library-manager: backlog    # LibraryCard, EditModal, DeleteConfirm in Settings
