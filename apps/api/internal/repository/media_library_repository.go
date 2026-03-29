@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -222,6 +223,9 @@ func (r *MediaLibraryRepository) AddPath(ctx context.Context, path *models.Media
 	if path.ID == "" {
 		path.ID = uuid.New().String()
 	}
+	if path.Status == "" {
+		path.Status = models.PathStatusUnknown
+	}
 	path.CreatedAt = time.Now()
 
 	query := `
@@ -327,19 +331,10 @@ func (r *MediaLibraryRepository) UpdatePathStatus(ctx context.Context, pathID st
 
 // isUniqueConstraintError checks if the error is a UNIQUE constraint violation.
 func isUniqueConstraintError(err error) bool {
-	return err != nil && (errors.Is(err, sql.ErrNoRows) == false) &&
-		(contains(err.Error(), "UNIQUE constraint failed") || contains(err.Error(), "unique constraint"))
-}
-
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && searchString(s, substr)
-}
-
-func searchString(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
+	if err == nil {
+		return false
 	}
-	return false
+	msg := err.Error()
+	return strings.Contains(msg, "UNIQUE constraint failed") ||
+		strings.Contains(msg, "unique constraint")
 }

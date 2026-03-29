@@ -54,8 +54,22 @@ func (ml *MediaLibrary) Validate() error {
 	if ml.Name == "" {
 		return &ValidationError{Field: "name", Message: "library name is required"}
 	}
+	if len(ml.Name) > 255 {
+		return &ValidationError{Field: "name", Message: "library name must be 255 characters or fewer"}
+	}
 	if ml.ContentType != ContentTypeMovie && ml.ContentType != ContentTypeSeries {
 		return &ValidationError{Field: "content_type", Message: "content type must be 'movie' or 'series'"}
+	}
+	return nil
+}
+
+// Validate validates the media library path fields.
+func (p *MediaLibraryPath) Validate() error {
+	if p.LibraryID == "" {
+		return &ValidationError{Field: "library_id", Message: "library ID is required"}
+	}
+	if p.Path == "" {
+		return &ValidationError{Field: "path", Message: "path is required"}
 	}
 	return nil
 }

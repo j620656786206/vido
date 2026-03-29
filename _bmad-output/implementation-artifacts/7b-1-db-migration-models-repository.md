@@ -1,6 +1,6 @@
 # Story 7b-1: DB Migration, Models & Repository
 
-Status: review
+Status: done
 
 ## Story
 

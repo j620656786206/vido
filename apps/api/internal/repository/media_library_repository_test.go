@@ -36,7 +36,7 @@ func setupLibraryTestDB(t *testing.T) *sql.DB {
 			id TEXT PRIMARY KEY,
 			library_id TEXT NOT NULL,
 			path TEXT NOT NULL UNIQUE,
-			status TEXT NOT NULL DEFAULT 'unknown',
+			status TEXT NOT NULL DEFAULT 'unknown' CHECK(status IN ('unknown', 'accessible', 'not_found', 'not_readable', 'not_directory')),
 			last_checked_at TIMESTAMP,
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			FOREIGN KEY (library_id) REFERENCES media_libraries(id) ON DELETE CASCADE
