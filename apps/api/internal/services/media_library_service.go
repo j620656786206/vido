@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 
 	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/repository"
@@ -18,7 +19,7 @@ type MediaLibraryServiceInterface interface {
 	UpdateLibrary(ctx context.Context, id string, req UpdateLibraryRequest) (*models.MediaLibrary, error)
 	DeleteLibrary(ctx context.Context, id string, removeMedia bool) error
 	AddPath(ctx context.Context, libraryID string, path string) (*models.MediaLibraryPath, error)
-	RemovePath(ctx context.Context, pathID string) error
+	RemovePath(ctx context.Context, libraryID string, pathID string) error
 	RefreshPathStatuses(ctx context.Context, libraryID string) ([]models.MediaLibraryPath, error)
 }
 
@@ -149,9 +150,15 @@ func (s *MediaLibraryService) AddPath(ctx context.Context, libraryID string, pat
 }
 
 func (s *MediaLibraryService) addPathInternal(ctx context.Context, libraryID string, pathStr string) (*models.MediaLibraryPath, error) {
+	// Sanitize and validate path
+	cleaned := filepath.Clean(pathStr)
+	if !filepath.IsAbs(cleaned) {
+		return nil, fmt.Errorf("validation: path must be absolute")
+	}
+
 	p := &models.MediaLibraryPath{
 		LibraryID: libraryID,
-		Path:      pathStr,
+		Path:      cleaned,
 	}
 
 	if err := p.Validate(); err != nil {
@@ -169,7 +176,24 @@ func (s *MediaLibraryService) addPathInternal(ctx context.Context, libraryID str
 	return p, nil
 }
 
-func (s *MediaLibraryService) RemovePath(ctx context.Context, pathID string) error {
+func (s *MediaLibraryService) RemovePath(ctx context.Context, libraryID string, pathID string) error {
+	// Verify path belongs to the specified library
+	paths, err := s.repo.GetPathsByLibraryID(ctx, libraryID)
+	if err != nil {
+		return fmt.Errorf("get paths for ownership check: %w", err)
+	}
+
+	found := false
+	for _, p := range paths {
+		if p.ID == pathID {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return fmt.Errorf("path %s does not belong to library %s: %w", pathID, libraryID, repository.ErrLibraryPathNotFound)
+	}
+
 	if err := s.repo.RemovePath(ctx, pathID); err != nil {
 		return fmt.Errorf("remove path: %w", err)
 	}

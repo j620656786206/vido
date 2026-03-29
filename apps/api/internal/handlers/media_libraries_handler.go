@@ -3,9 +3,9 @@ package handlers
 import (
 	"errors"
 	"log/slog"
-	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/repository"
 	"github.com/vido/api/internal/services"
 )
@@ -25,6 +25,7 @@ func (h *MediaLibrariesHandler) RegisterRoutes(rg *gin.RouterGroup) {
 	libs := rg.Group("/libraries")
 	{
 		libs.GET("", h.ListLibraries)
+		libs.GET("/:id", h.GetLibrary)
 		libs.POST("", h.CreateLibrary)
 		libs.PUT("/:id", h.UpdateLibrary)
 		libs.DELETE("/:id", h.DeleteLibrary)
@@ -43,6 +44,20 @@ func (h *MediaLibrariesHandler) ListLibraries(c *gin.Context) {
 		return
 	}
 	SuccessResponse(c, gin.H{"libraries": libraries})
+}
+
+// GetLibrary handles GET /api/v1/libraries/:id
+func (h *MediaLibrariesHandler) GetLibrary(c *gin.Context) {
+	id := c.Param("id")
+
+	library, err := h.service.GetLibrary(c.Request.Context(), id)
+	if err != nil {
+		slog.Error("Failed to get library", "id", id, "error", err)
+		handleMediaLibraryError(c, err)
+		return
+	}
+
+	SuccessResponse(c, library)
 }
 
 // CreateLibrary handles POST /api/v1/libraries
@@ -121,9 +136,10 @@ func (h *MediaLibrariesHandler) AddPath(c *gin.Context) {
 
 // RemovePath handles DELETE /api/v1/libraries/:id/paths/:pathId
 func (h *MediaLibrariesHandler) RemovePath(c *gin.Context) {
+	libraryID := c.Param("id")
 	pathID := c.Param("pathId")
 
-	if err := h.service.RemovePath(c.Request.Context(), pathID); err != nil {
+	if err := h.service.RemovePath(c.Request.Context(), libraryID, pathID); err != nil {
 		slog.Error("Failed to remove path", "path_id", pathID, "error", err)
 		handleMediaLibraryError(c, err)
 		return
@@ -160,10 +176,10 @@ func handleMediaLibraryError(c *gin.Context, err error) {
 		ErrorResponse(c, 409, "LIBRARY_DUPLICATE_PATH", "Path already exists in a library", "Use a different path")
 		return
 	}
-	errMsg := err.Error()
-	if strings.Contains(errMsg, "validation:") || strings.Contains(errMsg, "is required") || strings.Contains(errMsg, "must be") {
-		BadRequestError(c, "VALIDATION_FAILED", errMsg)
+	var validationErr *models.ValidationError
+	if errors.As(err, &validationErr) {
+		BadRequestError(c, "VALIDATION_FAILED", err.Error())
 		return
 	}
-	InternalServerError(c, errMsg)
+	InternalServerError(c, err.Error())
 }

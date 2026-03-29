@@ -1,6 +1,6 @@
 # Story 7b-2: Library CRUD API
 
-Status: in-progress
+Status: done
 
 ## Story
 

@@ -74,6 +74,7 @@ func NewRepositoriesWithCache(db *sql.DB) *Repositories {
 		ParseJobs:         NewParseJobRepository(db),
 		ConnectionHistory: NewConnectionHistoryRepository(db),
 		Logs:              NewLogRepository(db),
+		Backups:           NewBackupRepository(db),
 		MediaLibraries:    NewMediaLibraryRepository(db),
 	}
 }
