@@ -21,6 +21,7 @@ var ErrSetupAlreadyCompleted = errors.New("setup already completed")
 type SetupService struct {
 	settingsRepo   repository.SettingsRepositoryInterface
 	secretsService secrets.SecretsServiceInterface
+	libraryService MediaLibraryServiceInterface
 }
 
 // NewSetupService creates a new SetupService.
@@ -29,6 +30,11 @@ func NewSetupService(settingsRepo repository.SettingsRepositoryInterface, secret
 		settingsRepo:   settingsRepo,
 		secretsService: secretsSvc,
 	}
+}
+
+// SetLibraryService sets the media library service for creating libraries during setup.
+func (s *SetupService) SetLibraryService(libraryService MediaLibraryServiceInterface) {
+	s.libraryService = libraryService
 }
 
 // IsFirstRun checks if the setup wizard has been completed.
@@ -95,8 +101,30 @@ func (s *SetupService) CompleteSetup(ctx context.Context, config models.SetupCon
 		}
 	}
 
-	// Save media folder path
-	if config.MediaFolderPath != "" {
+	// Save media libraries (Story 7b-3: multi-library support)
+	if len(config.Libraries) > 0 && s.libraryService != nil {
+		for _, entry := range config.Libraries {
+			name := entry.Path
+			// Derive name from last path component
+			parts := strings.Split(strings.TrimRight(entry.Path, "/"), "/")
+			if len(parts) > 0 {
+				name = parts[len(parts)-1]
+			}
+			contentType := entry.ContentType
+			if contentType == "" {
+				contentType = "movie"
+			}
+			_, err := s.libraryService.CreateLibrary(ctx, CreateLibraryRequest{
+				Name:        name,
+				ContentType: contentType,
+				Paths:       []string{entry.Path},
+			})
+			if err != nil {
+				slog.Warn("Failed to create library during setup", "path", entry.Path, "error", err)
+			}
+		}
+	} else if config.MediaFolderPath != "" {
+		// Backward compatibility: single path (deprecated)
 		if err := s.settingsRepo.SetString(ctx, "media_folder_path", config.MediaFolderPath); err != nil {
 			return fmt.Errorf("save media_folder_path: %w", err)
 		}
@@ -176,11 +204,37 @@ func (s *SetupService) validateQBittorrentStep(ctx context.Context, data map[str
 }
 
 func (s *SetupService) validateMediaFolderStep(data map[string]interface{}) error {
+	// Try new multi-library format first
+	if libraries, ok := data["libraries"].([]interface{}); ok && len(libraries) > 0 {
+		for i, lib := range libraries {
+			libMap, ok := lib.(map[string]interface{})
+			if !ok {
+				return fmt.Errorf("library entry %d is invalid", i)
+			}
+			path, _ := libMap["path"].(string)
+			if path == "" {
+				return fmt.Errorf("library entry %d: path is required", i)
+			}
+			info, err := os.Stat(path)
+			if err != nil {
+				return fmt.Errorf("library entry %d: path does not exist: %s", i, path)
+			}
+			if !info.IsDir() {
+				return fmt.Errorf("library entry %d: path is not a directory: %s", i, path)
+			}
+			contentType, _ := libMap["content_type"].(string)
+			if contentType != "" && contentType != "movie" && contentType != "series" {
+				return fmt.Errorf("library entry %d: content_type must be 'movie' or 'series'", i)
+			}
+		}
+		return nil
+	}
+
+	// Backward compatibility: single path
 	path, ok := data["mediaFolderPath"].(string)
 	if !ok || path == "" {
 		return fmt.Errorf("media folder path is required")
 	}
-	// Check if the path exists
 	info, err := os.Stat(path)
 	if err != nil {
 		return fmt.Errorf("media folder path does not exist: %s", path)

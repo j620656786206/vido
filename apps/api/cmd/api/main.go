@@ -150,6 +150,7 @@ func main() {
 	downloadService := services.NewDownloadService(qbittorrentService, slog.Default())
 	mediaService := services.NewMediaService(cfg.MediaDirs)
 	mediaLibraryService := services.NewMediaLibraryService(repos.MediaLibraries)
+	setupService.SetLibraryService(mediaLibraryService) // Story 7b-3: wire library creation into setup
 
 	// Initialize log service (Story 6.3)
 	logService := services.NewLogService(repos.Logs)

@@ -38,34 +38,34 @@ So that **the Setup Wizard and Settings UI can create, read, update, and delete 
 ## Tasks / Subtasks
 
 ### Task 1: Create Library Service (AC: #1–#6)
-- [ ] 1.1 Create `apps/api/internal/services/media_library_service.go`
-- [ ] 1.2 Define `MediaLibraryServiceInterface` with: CreateLibrary, GetAllLibraries, GetLibrary, UpdateLibrary, DeleteLibrary, AddPath, RemovePath, RefreshPathStatuses
-- [ ] 1.3 Implement path validation (os.Stat check for directory existence and readability)
-- [ ] 1.4 Implement duplicate path check across all libraries
-- [ ] 1.5 Implement media count aggregation per library
+- [x]1.1 Create `apps/api/internal/services/media_library_service.go`
+- [x]1.2 Define `MediaLibraryServiceInterface` with: CreateLibrary, GetAllLibraries, GetLibrary, UpdateLibrary, DeleteLibrary, AddPath, RemovePath, RefreshPathStatuses
+- [x]1.3 Implement path validation (os.Stat check for directory existence and readability)
+- [x]1.4 Implement duplicate path check across all libraries
+- [x]1.5 Implement media count aggregation per library
 
 ### Task 2: Create Library Handler (AC: #1–#6)
-- [ ] 2.1 Create `apps/api/internal/handlers/library_handler.go`
-- [ ] 2.2 `POST /api/v1/libraries` — CreateLibrary
-- [ ] 2.3 `GET /api/v1/libraries` — GetAllLibraries (with paths, counts)
-- [ ] 2.4 `PUT /api/v1/libraries/:id` — UpdateLibrary
-- [ ] 2.5 `DELETE /api/v1/libraries/:id` — DeleteLibrary (?remove_media query param)
-- [ ] 2.6 `POST /api/v1/libraries/:id/paths` — AddPath
-- [ ] 2.7 `DELETE /api/v1/libraries/:id/paths/:pathId` — RemovePath
-- [ ] 2.8 `POST /api/v1/libraries/:id/paths/refresh` — RefreshPathStatuses
+- [x]2.1 Create `apps/api/internal/handlers/library_handler.go`
+- [x]2.2 `POST /api/v1/libraries` — CreateLibrary
+- [x]2.3 `GET /api/v1/libraries` — GetAllLibraries (with paths, counts)
+- [x]2.4 `PUT /api/v1/libraries/:id` — UpdateLibrary
+- [x]2.5 `DELETE /api/v1/libraries/:id` — DeleteLibrary (?remove_media query param)
+- [x]2.6 `POST /api/v1/libraries/:id/paths` — AddPath
+- [x]2.7 `DELETE /api/v1/libraries/:id/paths/:pathId` — RemovePath
+- [x]2.8 `POST /api/v1/libraries/:id/paths/refresh` — RefreshPathStatuses
 
 ### Task 3: Wire into main.go (AC: all)
-- [ ] 3.1 Register `MediaLibraryRepository` in dependency injection
-- [ ] 3.2 Register `MediaLibraryService` with repository dependency
-- [ ] 3.3 Register `LibraryHandler` with service dependency
-- [ ] 3.4 Add all 7 routes to router under `/api/v1/libraries`
+- [x]3.1 Register `MediaLibraryRepository` in dependency injection
+- [x]3.2 Register `MediaLibraryService` with repository dependency
+- [x]3.3 Register `LibraryHandler` with service dependency
+- [x]3.4 Add all 7 routes to router under `/api/v1/libraries`
 
 ### Task 4: Write Tests (AC: #1–#6)
-- [ ] 4.1 Service unit tests (mock repository)
-- [ ] 4.2 Handler unit tests (mock service)
-- [ ] 4.3 Test validation error responses (empty name, invalid type, duplicate path)
-- [ ] 4.4 Test path refresh with mock filesystem
-- [ ] 4.5 Test error codes: LIBRARY_NOT_FOUND, LIBRARY_DUPLICATE_PATH, LIBRARY_PATH_NOT_ACCESSIBLE
+- [x]4.1 Service unit tests (mock repository)
+- [x]4.2 Handler unit tests (mock service)
+- [x]4.3 Test validation error responses (empty name, invalid type, duplicate path)
+- [x]4.4 Test path refresh with mock filesystem
+- [x]4.5 Test error codes: LIBRARY_NOT_FOUND, LIBRARY_DUPLICATE_PATH, LIBRARY_PATH_NOT_ACCESSIBLE
 
 ## Dev Notes
 

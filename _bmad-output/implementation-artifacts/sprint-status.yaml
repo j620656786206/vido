@@ -241,7 +241,7 @@ development_status:
   epic-7b: in-progress
   7b-1-db-migration-models-repository: done  # DB migration #020, models, MediaLibraryRepository — CR 9 findings, all fixed
   7b-2-library-crud-api: done                        # REST endpoints for library + path management — CR 8 findings, all fixed
-  7b-3-setup-wizard-multi-library: backlog        # Replace MediaFolderStep, update SetupService
+  7b-3-setup-wizard-multi-library: review           # Replace MediaFolderStep, update SetupService
   7b-4-settings-media-library-manager: backlog    # LibraryCard, EditModal, DeleteConfirm in Settings
   7b-5-scanner-library-integration: backlog       # MediaService + ScannerService read from DB, env var fallback
   epic-7b-retrospective: optional

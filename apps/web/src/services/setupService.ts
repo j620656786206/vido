@@ -10,12 +10,18 @@ export interface SetupStatus {
   needsSetup: boolean;
 }
 
+export interface SetupLibraryEntry {
+  path: string;
+  contentType: 'movie' | 'series';
+}
+
 export interface SetupConfig {
   language: string;
   qbtUrl?: string;
   qbtUsername?: string;
   qbtPassword?: string;
-  mediaFolderPath: string;
+  mediaFolderPath?: string; // Deprecated: use libraries
+  libraries?: SetupLibraryEntry[];
   tmdbApiKey?: string;
   aiProvider?: string;
   aiApiKey?: string;

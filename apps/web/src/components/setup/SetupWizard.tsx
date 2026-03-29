@@ -6,7 +6,7 @@ import { setupService, type SetupConfig } from '../../services/setupService';
 import { StepProgress } from './StepProgress';
 import { WelcomeStep } from './WelcomeStep';
 import { QBittorrentStep } from './QBittorrentStep';
-import { MediaFolderStep } from './MediaFolderStep';
+import { MediaLibrarySetupStep } from './MediaLibrarySetupStep';
 import { ApiKeysStep } from './ApiKeysStep';
 import { CompleteStep } from './CompleteStep';
 
@@ -31,7 +31,7 @@ interface WizardStep {
 const WIZARD_STEPS: WizardStep[] = [
   { id: 'welcome', title: '歡迎', component: WelcomeStep },
   { id: 'qbittorrent', title: 'qBittorrent', component: QBittorrentStep, optional: true },
-  { id: 'media-folder', title: '媒體資料夾', component: MediaFolderStep },
+  { id: 'media-folder', title: '媒體庫', component: MediaLibrarySetupStep },
   { id: 'api-keys', title: 'API 金鑰', component: ApiKeysStep, optional: true },
   { id: 'complete', title: '完成', component: CompleteStep },
 ];
@@ -59,7 +59,7 @@ export function SetupWizard() {
       const stepData: Record<string, unknown> = {};
       if (step.id === 'welcome') stepData.language = formData.language;
       if (step.id === 'qbittorrent') stepData.qbtUrl = formData.qbtUrl || '';
-      if (step.id === 'media-folder') stepData.mediaFolderPath = formData.mediaFolderPath;
+      if (step.id === 'media-folder') stepData.libraries = formData.libraries;
       if (step.id === 'api-keys') stepData.tmdbApiKey = formData.tmdbApiKey || '';
 
       await setupService.validateStep(step.id, stepData);
@@ -96,7 +96,7 @@ export function SetupWizard() {
         qbtUrl: formData.qbtUrl,
         qbtUsername: formData.qbtUsername,
         qbtPassword: formData.qbtPassword,
-        mediaFolderPath: formData.mediaFolderPath || '',
+        libraries: formData.libraries as SetupConfig['libraries'],
         tmdbApiKey: formData.tmdbApiKey,
         aiProvider: formData.aiProvider,
         aiApiKey: formData.aiApiKey,

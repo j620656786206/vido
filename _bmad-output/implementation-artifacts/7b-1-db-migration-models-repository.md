@@ -31,32 +31,32 @@ So that **the application has the data foundation to support multi-library manag
 ## Tasks / Subtasks
 
 ### Task 1: Create Migration #020 (AC: #1, #2, #3)
-- [ ] 1.1 Create `apps/api/internal/database/migrations/020_create_media_libraries.go`
-- [ ] 1.2 CREATE TABLE `media_libraries` (id TEXT PK, name TEXT, content_type TEXT, auto_detect BOOLEAN DEFAULT false, sort_order INTEGER DEFAULT 0, created_at, updated_at)
-- [ ] 1.3 CREATE TABLE `media_library_paths` (id TEXT PK, library_id TEXT FK CASCADE, path TEXT UNIQUE, status TEXT DEFAULT 'unknown', last_checked_at, created_at)
-- [ ] 1.4 ALTER TABLE `movies` ADD COLUMN library_id, detected_type, override_type
-- [ ] 1.5 ALTER TABLE `series` ADD COLUMN library_id, detected_type, override_type
-- [ ] 1.6 Data migration: read `settings.media_folder_path` + `VIDO_MEDIA_DIRS`, create library records, backfill `library_id`
+- [x] 1.1 Create `apps/api/internal/database/migrations/020_create_media_libraries.go`
+- [x]1.2 CREATE TABLE `media_libraries` (id TEXT PK, name TEXT, content_type TEXT, auto_detect BOOLEAN DEFAULT false, sort_order INTEGER DEFAULT 0, created_at, updated_at)
+- [x]1.3 CREATE TABLE `media_library_paths` (id TEXT PK, library_id TEXT FK CASCADE, path TEXT UNIQUE, status TEXT DEFAULT 'unknown', last_checked_at, created_at)
+- [x]1.4 ALTER TABLE `movies` ADD COLUMN library_id, detected_type, override_type
+- [x]1.5 ALTER TABLE `series` ADD COLUMN library_id, detected_type, override_type
+- [x]1.6 Data migration: read `settings.media_folder_path` + `VIDO_MEDIA_DIRS`, create library records, backfill `library_id`
 
 ### Task 2: Create Go Models (AC: #4)
-- [ ] 2.1 Create `apps/api/internal/models/media_library.go`
-- [ ] 2.2 Define `MediaLibrary` struct: ID, Name, ContentType, AutoDetect, SortOrder, CreatedAt, UpdatedAt
-- [ ] 2.3 Define `MediaLibraryPath` struct: ID, LibraryID, Path, Status, LastCheckedAt, CreatedAt
-- [ ] 2.4 Define `MediaLibraryWithPaths` struct (joined view with paths and media_count)
+- [x]2.1 Create `apps/api/internal/models/media_library.go`
+- [x]2.2 Define `MediaLibrary` struct: ID, Name, ContentType, AutoDetect, SortOrder, CreatedAt, UpdatedAt
+- [x]2.3 Define `MediaLibraryPath` struct: ID, LibraryID, Path, Status, LastCheckedAt, CreatedAt
+- [x]2.4 Define `MediaLibraryWithPaths` struct (joined view with paths and media_count)
 
 ### Task 3: Create Repository Interface (AC: #4)
-- [ ] 3.1 Create `apps/api/internal/repository/media_library_repository.go`
-- [ ] 3.2 Define `MediaLibraryRepositoryInterface` with: Create, GetByID, GetAll, Update, Delete, AddPath, RemovePath, GetPathsByLibraryID, UpdatePathStatus, GetAllPaths
-- [ ] 3.3 Implement SQLite version `SQLiteMediaLibraryRepository`
-- [ ] 3.4 Implement `GetAllWithPathsAndCounts()` for Settings UI (joined query)
+- [x]3.1 Create `apps/api/internal/repository/media_library_repository.go`
+- [x]3.2 Define `MediaLibraryRepositoryInterface` with: Create, GetByID, GetAll, Update, Delete, AddPath, RemovePath, GetPathsByLibraryID, UpdatePathStatus, GetAllPaths
+- [x]3.3 Implement SQLite version `SQLiteMediaLibraryRepository`
+- [x]3.4 Implement `GetAllWithPathsAndCounts()` for Settings UI (joined query)
 
 ### Task 4: Write Tests (AC: #1, #2, #3, #4)
-- [ ] 4.1 Test migration #020 creates tables with correct schema
-- [ ] 4.2 Test data migration from existing settings
-- [ ] 4.3 Test clean install (no existing data)
-- [ ] 4.4 Test all repository CRUD operations
-- [ ] 4.5 Test CASCADE delete (library delete removes paths)
-- [ ] 4.6 Test UNIQUE constraint on path
+- [x]4.1 Test migration #020 creates tables with correct schema
+- [x]4.2 Test data migration from existing settings
+- [x]4.3 Test clean install (no existing data)
+- [x]4.4 Test all repository CRUD operations
+- [x]4.5 Test CASCADE delete (library delete removes paths)
+- [x]4.6 Test UNIQUE constraint on path
 
 ## Dev Notes
 

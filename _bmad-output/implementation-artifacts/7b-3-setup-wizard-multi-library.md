@@ -1,6 +1,6 @@
 # Story 7b-3: Setup Wizard Multi-Library Step
 
-Status: backlog
+Status: review
 
 ## Story
 
