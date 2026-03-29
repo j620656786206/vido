@@ -133,7 +133,38 @@ See `_bmad-output/planning-artifacts/architecture/consolidation-refactoring-plan
 - `Run()` goroutine fans out each broadcast to all registered clients via `select...default` — drops per-client if that client's channel is full
 - `Close()` uses `atomic.Bool` for once-only shutdown, signals via `done` channel, closes all client channels
 
-### 9. Subtitle Engine Pipeline
+### 9a. Media Library Management (ADR 2026-03-29)
+
+**Decision:** Multi-library system with per-folder content type assignment (Route 2 — Progressive Enhancement).
+
+**Data Model:**
+
+- `media_libraries` table: id, name, content_type (movie|series), auto_detect (Phase 2 reserve), sort_order
+- `media_library_paths` table: id, library_id (FK), path (UNIQUE), status, last_checked_at
+- `movies`/`series` tables: +library_id (FK), +detected_type (Phase 2), +override_type (Phase 2)
+- Migration: #020
+
+**API Endpoints:**
+
+- `GET/POST /api/v1/libraries` — list/create libraries
+- `PUT/DELETE /api/v1/libraries/:id` — update/delete library
+- `POST/DELETE /api/v1/libraries/:id/paths` — add/remove paths
+- `POST /api/v1/libraries/:id/paths/refresh` — refresh path statuses
+
+**Service Changes:**
+
+- `MediaService`: reads from `MediaLibraryRepository` (DB), fallback to `VIDO_MEDIA_DIRS` env var
+- `ScannerService`: iterates libraries (not raw paths), assigns `library_id` + uses `content_type` for movie/series classification
+- `SetupService`: creates library records instead of storing single `media_folder_path`
+
+**Deprecation:**
+
+- `settings.media_folder_path` → replaced by `media_libraries`
+- `VIDO_MEDIA_DIRS` → demoted to fallback (log deprecation warning)
+
+**ADR:** `architecture/adr-multi-library-media-management.md`
+
+### 9b. Subtitle Engine Pipeline
 
 **Decision:** Multi-source subtitle search with content-based language detection and OpenCC conversion.
 
@@ -239,6 +270,8 @@ SUBTITLE_NOT_FOUND, SUBTITLE_DOWNLOAD_FAILED, SUBTITLE_CONVERT_FAILED
 PLUGIN_INIT_FAILED, PLUGIN_HEALTH_CHECK_FAILED, PLUGIN_NOT_CONFIGURED
 SCANNER_PERMISSION_DENIED, SCANNER_PARSE_FAILED
 SSE_CONNECTION_FAILED
+LIBRARY_NOT_FOUND, LIBRARY_DUPLICATE_PATH, LIBRARY_PATH_NOT_ACCESSIBLE
+LIBRARY_PATH_NOT_DIRECTORY, LIBRARY_DELETE_HAS_MEDIA
 ```
 
 ### Rule 8: Date/Time Format
