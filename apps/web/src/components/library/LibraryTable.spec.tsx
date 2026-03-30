@@ -189,7 +189,7 @@ describe('LibraryTable', () => {
     render(<LibraryTable items={mockItems} />);
     const links = screen.getAllByRole('link');
     // Each row has 2 links (poster + title) = 4 total
-    const movieLinks = links.filter((l) => l.getAttribute('href') === '/media/movie/123');
+    const movieLinks = links.filter((l) => l.getAttribute('href') === '/media/movie/movie-1');
     expect(movieLinks.length).toBeGreaterThanOrEqual(1);
   });
 
@@ -212,7 +212,7 @@ describe('LibraryTable', () => {
   it('links series items to /media/tv/ path', () => {
     render(<LibraryTable items={mockItems} />);
     const links = screen.getAllByRole('link');
-    const seriesLinks = links.filter((l) => l.getAttribute('href') === '/media/tv/456');
+    const seriesLinks = links.filter((l) => l.getAttribute('href') === '/media/tv/series-1');
     expect(seriesLinks.length).toBeGreaterThanOrEqual(1);
   });
 

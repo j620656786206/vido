@@ -14,7 +14,7 @@ function getCardProps(item: LibraryItem) {
   if (item.type === 'movie' && item.movie) {
     const m = item.movie;
     return {
-      id: m.tmdbId ?? 0,
+      id: m.id,
       type: 'movie' as const,
       title: m.title,
       originalTitle: m.originalTitle,
@@ -29,7 +29,7 @@ function getCardProps(item: LibraryItem) {
   if (item.type === 'series' && item.series) {
     const s = item.series;
     return {
-      id: s.tmdbId ?? 0,
+      id: s.id,
       type: 'tv' as const,
       title: s.title,
       originalTitle: s.originalTitle,
