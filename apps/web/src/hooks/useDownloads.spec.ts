@@ -74,9 +74,17 @@ function createWrapper() {
   };
 }
 
+const mockPaginatedResponse = {
+  items: mockDownloads,
+  page: 1,
+  pageSize: 100,
+  totalItems: 1,
+  totalPages: 1,
+};
+
 describe('useDownloads', () => {
   beforeEach(() => {
-    mockGetDownloads.mockResolvedValue(mockDownloads);
+    mockGetDownloads.mockResolvedValue(mockPaginatedResponse);
   });
 
   afterEach(() => {
@@ -88,11 +96,13 @@ describe('useDownloads', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(result.current.data).toEqual(mockDownloads);
+    expect(result.current.data).toEqual(mockPaginatedResponse);
     expect(mockGetDownloads).toHaveBeenCalledWith({
       filter: 'all',
       sort: 'added_on',
       order: 'desc',
+      page: 1,
+      pageSize: 100,
     });
   });
 
@@ -107,6 +117,8 @@ describe('useDownloads', () => {
       filter: 'downloading',
       sort: 'added_on',
       order: 'desc',
+      page: 1,
+      pageSize: 100,
     });
   });
 
@@ -121,6 +133,8 @@ describe('useDownloads', () => {
       filter: 'paused',
       sort: 'name',
       order: 'asc',
+      page: 1,
+      pageSize: 100,
     });
   });
 
@@ -229,24 +243,28 @@ describe('useDownloadCounts - error handling', () => {
 describe('downloadKeys', () => {
   it('[P2] generates correct query keys', () => {
     expect(downloadKeys.all).toEqual(['downloads']);
-    expect(downloadKeys.list('all', 'name', 'asc')).toEqual([
+    expect(downloadKeys.list('all', 'name', 'asc', 1, 100)).toEqual([
       'downloads',
       'list',
       'all',
       'name',
       'asc',
+      1,
+      100,
     ]);
     expect(downloadKeys.counts()).toEqual(['downloads', 'counts']);
     expect(downloadKeys.detail('abc123')).toEqual(['downloads', 'detail', 'abc123']);
   });
 
   it('[P2] generates unique keys per filter combination', () => {
-    const key1 = downloadKeys.list('downloading', 'name', 'asc');
-    const key2 = downloadKeys.list('paused', 'name', 'asc');
-    const key3 = downloadKeys.list('downloading', 'size', 'desc');
+    const key1 = downloadKeys.list('downloading', 'name', 'asc', 1, 100);
+    const key2 = downloadKeys.list('paused', 'name', 'asc', 1, 100);
+    const key3 = downloadKeys.list('downloading', 'size', 'desc', 1, 100);
+    const key4 = downloadKeys.list('downloading', 'name', 'asc', 2, 100);
 
-    // Keys should differ when filter or sort params differ
+    // Keys should differ when filter, sort, or page params differ
     expect(key1).not.toEqual(key2);
     expect(key1).not.toEqual(key3);
+    expect(key1).not.toEqual(key4);
   });
 });

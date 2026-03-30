@@ -137,7 +137,13 @@ function mockConnected(downloads = mockDownloads) {
     error: null,
   } as ReturnType<typeof useQBittorrentConfig>);
   mockUseDownloads.mockReturnValue({
-    data: downloads,
+    data: {
+      items: downloads,
+      page: 1,
+      pageSize: 100,
+      totalItems: downloads.length,
+      totalPages: 1,
+    },
     isLoading: false,
     isSuccess: true,
     error: null,
