@@ -120,7 +120,7 @@ func (s *SetupService) CompleteSetup(ctx context.Context, config models.SetupCon
 				Paths:       []string{entry.Path},
 			})
 			if err != nil {
-				slog.Warn("Failed to create library during setup", "path", entry.Path, "error", err)
+				return fmt.Errorf("create library %q: %w", entry.Path, err)
 			}
 		}
 	} else if config.MediaFolderPath != "" {
@@ -191,7 +191,7 @@ func (s *SetupService) validateWelcomeStep(data map[string]interface{}) error {
 }
 
 func (s *SetupService) validateQBittorrentStep(ctx context.Context, data map[string]interface{}) error {
-	url, _ := data["qbtUrl"].(string)
+	url, _ := data["qbt_url"].(string)
 	if url == "" {
 		// Skip is allowed
 		return nil
@@ -231,7 +231,7 @@ func (s *SetupService) validateMediaFolderStep(data map[string]interface{}) erro
 	}
 
 	// Backward compatibility: single path
-	path, ok := data["mediaFolderPath"].(string)
+	path, ok := data["media_folder_path"].(string)
 	if !ok || path == "" {
 		return fmt.Errorf("media folder path is required")
 	}
@@ -246,7 +246,7 @@ func (s *SetupService) validateMediaFolderStep(data map[string]interface{}) erro
 }
 
 func (s *SetupService) validateApiKeysStep(data map[string]interface{}) error {
-	tmdbKey, _ := data["tmdbApiKey"].(string)
+	tmdbKey, _ := data["tmdb_api_key"].(string)
 	if tmdbKey != "" {
 		// TMDb API keys are 32 character hex strings
 		if len(tmdbKey) < 16 {

@@ -1,22 +1,38 @@
-import { Film, Tv, Plus, X } from 'lucide-react';
+import { useEffect } from 'react';
+import { Plus, X } from 'lucide-react';
 import type { StepProps } from './SetupWizard';
 
 interface LibraryEntry {
+  id: string;
   path: string;
   contentType: 'movie' | 'series';
 }
 
 export function MediaLibrarySetupStep({ data, onUpdate, onNext, onBack }: StepProps) {
+  const defaultLibrary: LibraryEntry = {
+    id: globalThis.crypto.randomUUID(),
+    path: '',
+    contentType: 'movie',
+  };
   const libraries: LibraryEntry[] = (data.libraries as LibraryEntry[] | undefined) || [
-    { path: '', contentType: 'movie' },
+    defaultLibrary,
   ];
+
+  useEffect(() => {
+    if (!data.libraries) {
+      onUpdate({ libraries: [defaultLibrary] } as Record<string, unknown>);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const updateLibraries = (updated: LibraryEntry[]) => {
     onUpdate({ libraries: updated } as Record<string, unknown>);
   };
 
   const addLibrary = () => {
-    updateLibraries([...libraries, { path: '', contentType: 'movie' }]);
+    updateLibraries([
+      ...libraries,
+      { id: globalThis.crypto.randomUUID(), path: '', contentType: 'movie' },
+    ]);
   };
 
   const removeLibrary = (index: number) => {
@@ -41,7 +57,7 @@ export function MediaLibrarySetupStep({ data, onUpdate, onNext, onBack }: StepPr
       <div className="mb-4 space-y-3">
         {libraries.map((lib, index) => (
           <div
-            key={index}
+            key={lib.id}
             className="rounded-lg border border-slate-600/50 bg-slate-800/60 p-4"
             data-testid={`library-entry-${index}`}
           >
