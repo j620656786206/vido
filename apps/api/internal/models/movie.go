@@ -130,6 +130,9 @@ type Movie struct {
 	// Soft-delete flag for removed files (Story 7-2)
 	IsRemoved bool `db:"is_removed" json:"is_removed"`
 
+	// Library association (Story 7b-5)
+	LibraryID NullString `db:"library_id" json:"library_id,omitempty"`
+
 	// Timestamps
 	CreatedAt time.Time `db:"created_at" json:"created_at"`
 	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`

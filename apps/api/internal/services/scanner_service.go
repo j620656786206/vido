@@ -60,11 +60,12 @@ type ScanResult struct {
 
 // ScannerService handles recursive folder scanning and video file discovery
 type ScannerService struct {
-	movieRepo  repository.MovieRepositoryInterface
-	seriesRepo repository.SeriesRepositoryInterface
-	mediaDirs  []string
-	sseHub     *sse.Hub
-	logger     *slog.Logger
+	movieRepo   repository.MovieRepositoryInterface
+	seriesRepo  repository.SeriesRepositoryInterface
+	libraryRepo repository.MediaLibraryRepositoryInterface
+	mediaDirs   []string // Fallback dirs from VIDO_MEDIA_DIRS env var
+	sseHub      *sse.Hub
+	logger      *slog.Logger
 
 	mu              sync.Mutex
 	isScanning      bool
@@ -98,6 +99,12 @@ func NewScannerService(
 	}
 }
 
+// SetLibraryRepo sets the media library repository for DB-based directory reading.
+// When set, the scanner reads libraries from DB instead of mediaDirs.
+func (s *ScannerService) SetLibraryRepo(repo repository.MediaLibraryRepositoryInterface) {
+	s.libraryRepo = repo
+}
+
 // StartScan initiates a recursive scan of all configured media directories.
 // Returns SCANNER_ALREADY_RUNNING error if a scan is already in progress.
 func (s *ScannerService) StartScan(ctx context.Context) (*ScanResult, error) {
@@ -122,13 +129,55 @@ func (s *ScannerService) StartScan(ctx context.Context) (*ScanResult, error) {
 	}()
 
 	startedAt := time.Now()
-	s.logger.Info("scan started", "media_dirs", s.mediaDirs)
+
+	// Resolve scan directories from DB libraries or fallback to env var
+	type scanDir struct {
+		path        string
+		libraryID   string
+		contentType string
+	}
+	var dirs []scanDir
+
+	if s.libraryRepo != nil {
+		libraries, err := s.libraryRepo.GetAllWithPathsAndCounts(ctx)
+		if err != nil {
+			s.logger.Error("failed to read libraries from DB, falling back to env var", "error", err)
+		} else {
+			for _, lib := range libraries {
+				for _, p := range lib.Paths {
+					dirs = append(dirs, scanDir{path: p.Path, libraryID: lib.ID, contentType: string(lib.ContentType)})
+				}
+			}
+		}
+	}
+	if len(dirs) == 0 {
+		// Fallback to env var
+		for _, d := range s.mediaDirs {
+			dirs = append(dirs, scanDir{path: d})
+		}
+		if len(dirs) > 0 {
+			s.logger.Warn("Using VIDO_MEDIA_DIRS fallback — configure libraries in Settings for per-folder content type")
+		}
+	}
+
+	s.logger.Info("scan started", "dir_count", len(dirs))
+
+	// Check cancellation after library resolution
+	select {
+	case <-s.cancelChan:
+		s.logger.Info("scan cancelled before directory walk")
+		result := s.buildResult(startedAt)
+		s.broadcastScanCancelled(result)
+		return result, nil
+	default:
+	}
 
 	// Track seen resolved paths to deduplicate across directories
 	seenPaths := make(map[string]bool)
 	var pendingMovies []*models.Movie
 
-	for _, dir := range s.mediaDirs {
+	for _, sd := range dirs {
+		dir := sd.path
 		// Check cancellation
 		select {
 		case <-s.cancelChan:
@@ -168,7 +217,7 @@ func (s *ScannerService) StartScan(ctx context.Context) (*ScanResult, error) {
 			continue
 		}
 
-		err = s.walkDirectory(ctx, dir, seenPaths, &pendingMovies)
+		err = s.walkDirectory(ctx, dir, sd.libraryID, seenPaths, &pendingMovies)
 		if err != nil {
 			s.logger.Error("SCANNER_PARSE_FAILED: error walking directory", "path", dir, "error", err)
 			s.mu.Lock()
@@ -256,7 +305,7 @@ func (s *ScannerService) GetProgress() ScanProgress {
 }
 
 // walkDirectory recursively walks a directory and discovers video files
-func (s *ScannerService) walkDirectory(ctx context.Context, root string, seenPaths map[string]bool, pendingMovies *[]*models.Movie) error {
+func (s *ScannerService) walkDirectory(ctx context.Context, root string, libraryID string, seenPaths map[string]bool, pendingMovies *[]*models.Movie) error {
 	return filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		// Check cancellation
 		select {
@@ -331,7 +380,7 @@ func (s *ScannerService) walkDirectory(ctx context.Context, root string, seenPat
 		}
 
 		// Process the video file
-		err = s.processVideoFile(ctx, resolvedPath, pendingMovies)
+		err = s.processVideoFile(ctx, resolvedPath, libraryID, pendingMovies)
 		if err != nil {
 			s.logger.Error("failed to process video file", "path", resolvedPath, "error", err)
 			s.mu.Lock()
@@ -353,7 +402,7 @@ func isVideoFile(path string) bool {
 // Note: All scanned files are initially created as Movie records regardless of whether
 // they are movies or TV series. The parser service (Stories 2-3, 3-1) is responsible
 // for determining the media type and converting to Series records if needed.
-func (s *ScannerService) processVideoFile(ctx context.Context, resolvedPath string, pendingMovies *[]*models.Movie) error {
+func (s *ScannerService) processVideoFile(ctx context.Context, resolvedPath string, libraryID string, pendingMovies *[]*models.Movie) error {
 	// Get file info for size
 	info, err := os.Stat(resolvedPath)
 	if err != nil {
@@ -402,6 +451,9 @@ func (s *ScannerService) processVideoFile(ctx context.Context, resolvedPath stri
 		SubtitleStatus: models.SubtitleStatusNotSearched,
 		CreatedAt:      time.Now(),
 		UpdatedAt:      time.Now(),
+	}
+	if libraryID != "" {
+		movie.LibraryID = models.NewNullString(libraryID)
 	}
 
 	*pendingMovies = append(*pendingMovies, movie)

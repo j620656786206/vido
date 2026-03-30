@@ -443,10 +443,11 @@ func TestScannerService_SSEBroadcast_ScanCancelled(t *testing.T) {
 	client := hub.Register()
 	time.Sleep(10 * time.Millisecond)
 
-	// Start scan and immediately cancel
+	// Start scan and cancel quickly — use 1ms to catch the early cancel check
+	// added in Story 7b-5 (before directory walk)
 	ctx := context.Background()
 	go func() {
-		time.Sleep(5 * time.Millisecond)
+		time.Sleep(1 * time.Millisecond)
 		svc.CancelScan()
 	}()
 

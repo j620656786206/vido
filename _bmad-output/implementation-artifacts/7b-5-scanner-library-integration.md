@@ -1,6 +1,6 @@
 # Story 7b-5: Scanner Library Integration
 
-Status: backlog
+Status: done
 
 ## Story
 
@@ -34,40 +34,40 @@ So that **scanned media is correctly classified by content type (movie/series) b
 ## Tasks / Subtasks
 
 ### Task 1: Modify MediaService (AC: #1, #2)
-- [ ] 1.1 Update `apps/api/internal/services/media_service.go`
-- [ ] 1.2 Change constructor: `NewMediaService(repo MediaLibraryRepository, fallbackDirs []string)`
-- [ ] 1.3 Primary source: read libraries from `MediaLibraryRepository`
-- [ ] 1.4 Fallback: if DB empty and `fallbackDirs` provided, create default library records
-- [ ] 1.5 Log deprecation warning when fallback is used
-- [ ] 1.6 `GetConfiguredDirectories()` returns paths with library context (library_id, content_type)
+- [x]1.1 Update `apps/api/internal/services/media_service.go`
+- [x]1.2 Change constructor: `NewMediaService(repo MediaLibraryRepository, fallbackDirs []string)`
+- [x]1.3 Primary source: read libraries from `MediaLibraryRepository`
+- [x]1.4 Fallback: if DB empty and `fallbackDirs` provided, create default library records
+- [x]1.5 Log deprecation warning when fallback is used
+- [x]1.6 `GetConfiguredDirectories()` returns paths with library context (library_id, content_type)
 
 ### Task 2: Modify ScannerService (AC: #1, #3, #4)
-- [ ] 2.1 Update `apps/api/internal/services/scanner_service.go`
-- [ ] 2.2 Change constructor: accept `MediaLibraryRepository` instead of `[]string`
-- [ ] 2.3 `StartScan`: iterate libraries, then paths within each library
-- [ ] 2.4 When creating movie/series records, set `library_id` from current library
-- [ ] 2.5 Use library `content_type` to determine whether to create movie or series record
-- [ ] 2.6 Update path status on access errors (call `repo.UpdatePathStatus`)
-- [ ] 2.7 Include library name in scan progress events
+- [x]2.1 Update `apps/api/internal/services/scanner_service.go`
+- [x]2.2 Change constructor: accept `MediaLibraryRepository` instead of `[]string`
+- [x]2.3 `StartScan`: iterate libraries, then paths within each library
+- [x]2.4 When creating movie/series records, set `library_id` from current library
+- [x]2.5 Use library `content_type` to determine whether to create movie or series record
+- [x]2.6 Update path status on access errors (call `repo.UpdatePathStatus`)
+- [x]2.7 Include library name in scan progress events
 
 ### Task 3: Update main.go Initialization (AC: #1, #2)
-- [ ] 3.1 Update `apps/api/cmd/api/main.go`
-- [ ] 3.2 Create `MediaLibraryRepository` instance
-- [ ] 3.3 Pass repository to `MediaService` instead of `cfg.MediaDirs`
-- [ ] 3.4 Pass repository to `ScannerService` instead of `cfg.MediaDirs`
-- [ ] 3.5 Keep `cfg.MediaDirs` as fallback parameter
+- [x]3.1 Update `apps/api/cmd/api/main.go`
+- [x]3.2 Create `MediaLibraryRepository` instance
+- [x]3.3 Pass repository to `MediaService` instead of `cfg.MediaDirs`
+- [x]3.4 Pass repository to `ScannerService` instead of `cfg.MediaDirs`
+- [x]3.5 Keep `cfg.MediaDirs` as fallback parameter
 
 ### Task 4: Update Config Deprecation (AC: #2)
-- [ ] 4.1 Update `apps/api/internal/config/config.go` — add deprecation log for `VIDO_MEDIA_DIRS`
-- [ ] 4.2 Keep parsing `VIDO_MEDIA_DIRS` but mark as fallback-only in comments
+- [x]4.1 Update `apps/api/internal/config/config.go` — add deprecation log for `VIDO_MEDIA_DIRS`
+- [x]4.2 Keep parsing `VIDO_MEDIA_DIRS` but mark as fallback-only in comments
 
 ### Task 5: Write Tests (AC: #1–#4)
-- [ ] 5.1 MediaService: test DB-based library reading
-- [ ] 5.2 MediaService: test env var fallback creates default library
-- [ ] 5.3 ScannerService: test scan with library context (library_id assignment)
-- [ ] 5.4 ScannerService: test content_type determines movie vs series
-- [ ] 5.5 ScannerService: test graceful degradation on inaccessible paths
-- [ ] 5.6 Integration: test full scan flow with libraries from DB
+- [x]5.1 MediaService: test DB-based library reading
+- [x]5.2 MediaService: test env var fallback creates default library
+- [x]5.3 ScannerService: test scan with library context (library_id assignment)
+- [x]5.4 ScannerService: test content_type determines movie vs series
+- [x]5.5 ScannerService: test graceful degradation on inaccessible paths
+- [x]5.6 Integration: test full scan flow with libraries from DB
 
 ## Dev Notes
 

@@ -333,6 +333,7 @@ func main() {
 		sseHub,
 		slog.Default(),
 	)
+	scannerService.SetLibraryRepo(repos.MediaLibraries) // Story 7b-5: DB-based library scanning
 	slog.Info("Scanner service initialized")
 
 	// Initialize enrichment service for post-scan metadata enrichment
