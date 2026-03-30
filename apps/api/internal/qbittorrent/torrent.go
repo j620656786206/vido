@@ -1,6 +1,9 @@
 package qbittorrent
 
-import "time"
+import (
+	"log/slog"
+	"time"
+)
 
 // TorrentStatus represents the normalized status of a torrent.
 type TorrentStatus string
@@ -17,25 +20,44 @@ const (
 )
 
 // MapQBState maps qBittorrent internal state strings to our normalized TorrentStatus enum.
+// Covers both qBittorrent 4.x (pausedDL/pausedUP) and 5.0+ (stoppedDL/stoppedUP) states.
+// Mapping follows the Sonarr/Radarr industry standard.
+//
+// Reference: https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)
 func MapQBState(state string) TorrentStatus {
 	switch state {
-	case "downloading", "forcedDL", "metaDL":
+	// Downloading: actively transferring or fetching metadata
+	case "downloading", "forcedDL", "metaDL", "allocating":
 		return StatusDownloading
-	case "pausedDL", "pausedUP":
+	// Paused: download not complete, user stopped the torrent
+	case "pausedDL",  // qBT 4.x
+		"stoppedDL": // qBT 5.0+
 		return StatusPaused
+	// Completed: download finished, no longer actively seeding
+	case "pausedUP",  // qBT 4.x — paused after completing download
+		"stoppedUP", // qBT 5.0+ — stopped after completing download
+		"stalledUP": // seeding but no peer connections → effectively complete
+		return StatusCompleted
+	// Seeding: actively uploading to peers
 	case "uploading", "forcedUP":
 		return StatusSeeding
-	case "stalledUP":
-		return StatusCompleted
+	// Stalled: download in progress but no peer connections
 	case "stalledDL":
 		return StatusStalled
+	// Queued: waiting in queue
 	case "queuedDL", "queuedUP":
 		return StatusQueued
+	// Checking: verifying data integrity
 	case "checkingDL", "checkingUP", "checkingResumeData":
 		return StatusChecking
+	// Error: torrent has errors or missing files
 	case "error", "missingFiles":
 		return StatusError
+	// Moving: torrent data being relocated (qBT 5.0+)
+	case "moving":
+		return StatusChecking
 	default:
+		slog.Warn("Unknown qBittorrent state, defaulting to downloading", "state", state)
 		return StatusDownloading
 	}
 }

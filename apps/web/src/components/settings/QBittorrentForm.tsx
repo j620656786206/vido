@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Loader2, Plug, Save } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import {
@@ -24,17 +24,17 @@ export function QBittorrentForm() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [basePath, setBasePath] = useState('');
-  const [initialized, setInitialized] = useState(false);
   const [testResult, setTestResult] = useState<TestResult | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   // Populate form when config loads
-  if (config && !initialized) {
-    setHost(config.host || '');
-    setUsername(config.username || '');
-    setBasePath(config.basePath || '');
-    setInitialized(true);
-  }
+  useEffect(() => {
+    if (config) {
+      setHost(config.host || '');
+      setUsername(config.username || '');
+      setBasePath(config.basePath || '');
+    }
+  }, [config]);
 
   const handleTestConnection = () => {
     setTestResult(null);

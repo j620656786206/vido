@@ -17,19 +17,22 @@ func TestMapQBState(t *testing.T) {
 		state    string
 		expected TorrentStatus
 	}{
-		// Downloading states
+		// Downloading: actively transferring or allocating
 		{"downloading", StatusDownloading},
 		{"forcedDL", StatusDownloading},
 		{"metaDL", StatusDownloading},
-		// Paused states
+		{"allocating", StatusDownloading},
+		// Paused: download incomplete, user stopped (qBT 4.x + 5.0+)
 		{"pausedDL", StatusPaused},
-		{"pausedUP", StatusPaused},
-		// Seeding states
+		{"stoppedDL", StatusPaused},
+		// Completed: download finished, not actively seeding (qBT 4.x + 5.0+)
+		{"pausedUP", StatusCompleted},
+		{"stoppedUP", StatusCompleted},
+		{"stalledUP", StatusCompleted},
+		// Seeding: actively uploading to peers
 		{"uploading", StatusSeeding},
 		{"forcedUP", StatusSeeding},
-		// Completed
-		{"stalledUP", StatusCompleted},
-		// Stalled
+		// Stalled: download in progress but no peers
 		{"stalledDL", StatusStalled},
 		// Queued
 		{"queuedDL", StatusQueued},
@@ -38,6 +41,8 @@ func TestMapQBState(t *testing.T) {
 		{"checkingDL", StatusChecking},
 		{"checkingUP", StatusChecking},
 		{"checkingResumeData", StatusChecking},
+		// Moving (qBT 5.0+)
+		{"moving", StatusChecking},
 		// Error
 		{"error", StatusError},
 		{"missingFiles", StatusError},

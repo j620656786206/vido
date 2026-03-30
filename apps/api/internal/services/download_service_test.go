@@ -225,7 +225,7 @@ func TestDownloadService_GetDownloadCounts_AggregatesCorrectly(t *testing.T) {
 	assert.Equal(t, 8, counts.All)
 	assert.Equal(t, 2, counts.Downloading) // downloading + forcedDL
 	assert.Equal(t, 1, counts.Paused)      // pausedDL
-	assert.Equal(t, 3, counts.Completed)   // stalledUP → completed
+	assert.Equal(t, 3, counts.Completed)   // stalledUP×3 → completed
 	assert.Equal(t, 1, counts.Seeding)     // uploading → seeding
 	assert.Equal(t, 1, counts.Error)       // error
 	mockQB.AssertExpectations(t)
@@ -265,17 +265,17 @@ func TestDownloadService_GetDownloadCounts_UnmappedStatusesNotCounted(t *testing
 	// WHEN: GetDownloadCounts is called
 	counts, err := service.GetDownloadCounts(context.Background())
 
-	// THEN: all=4 but individual sum < all because stalled/queued/checking aren't counted
+	// THEN: all=4 and stalled/queued/checking are counted into appropriate categories
 	require.NoError(t, err)
 	assert.Equal(t, 4, counts.All)
-	assert.Equal(t, 1, counts.Downloading)
-	assert.Equal(t, 0, counts.Paused)
+	assert.Equal(t, 3, counts.Downloading) // downloading + stalledDL + checkingDL
+	assert.Equal(t, 1, counts.Paused)      // queuedDL → paused
 	assert.Equal(t, 0, counts.Completed)
 	assert.Equal(t, 0, counts.Seeding)
 	assert.Equal(t, 0, counts.Error)
-	// Sum of individual < All (3 unmapped statuses not counted)
+	// Sum of individual == All (all statuses are now counted)
 	sum := counts.Downloading + counts.Paused + counts.Completed + counts.Seeding + counts.Error
-	assert.Less(t, sum, counts.All)
+	assert.Equal(t, sum, counts.All)
 	mockQB.AssertExpectations(t)
 }
 
