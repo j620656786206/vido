@@ -4,7 +4,8 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
-import { ScanLine, Loader, FolderOpen, AlertCircle } from 'lucide-react';
+import { ScanLine, Loader, AlertCircle } from 'lucide-react';
+import { MediaLibraryManager } from './MediaLibraryManager';
 import { cn } from '../../lib/utils';
 import {
   useScanStatus,
@@ -119,60 +120,8 @@ export function ScannerSettings() {
 
       {/* Settings card */}
       <div className="space-y-6 rounded-lg border border-slate-700 bg-slate-800 p-6">
-        {/* Media folders */}
-        <div className="space-y-3">
-          <label className="text-sm font-medium text-slate-300">媒體資料夾</label>
-          <div className="space-y-2" data-testid="folder-list">
-            {status?.lastScanFiles !== undefined ? (
-              <div className="flex items-center gap-2 rounded-md border border-slate-600 bg-slate-900 px-3 py-2.5">
-                <FolderOpen className="h-4 w-4 shrink-0 text-slate-400" />
-                <span className="font-mono text-sm text-slate-300">
-                  已設定的媒體資料夾（由環境變數 VIDO_MEDIA_DIRS 管理）
-                </span>
-              </div>
-            ) : (
-              <div
-                className="rounded-lg border border-blue-800/50 bg-blue-950/30 p-4 space-y-3"
-                data-testid="media-dir-setup-guide"
-              >
-                <div className="flex items-center gap-2">
-                  <AlertCircle className="h-5 w-5 shrink-0 text-blue-400" />
-                  <h3 className="text-sm font-semibold text-blue-300">
-                    媒體資料夾尚未設定 / Media directories not configured
-                  </h3>
-                </div>
-                <p className="text-xs text-slate-400">
-                  Vido 預設掃描{' '}
-                  <code className="rounded bg-slate-800 px-1 text-slate-300">/media</code>{' '}
-                  路徑。請透過 Docker volume mount 將您的媒體資料夾掛載到容器中。
-                </p>
-                <div className="space-y-2">
-                  <p className="text-xs font-medium text-slate-400">Docker run:</p>
-                  <pre className="rounded bg-slate-900 p-2 text-xs text-green-400 overflow-x-auto">
-                    docker run -v /path/to/your/media:/media ...
-                  </pre>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-xs font-medium text-slate-400">Docker Compose:</p>
-                  <pre className="rounded bg-slate-900 p-2 text-xs text-green-400 overflow-x-auto">
-                    {`volumes:
-  - /path/to/movies:/media/movies
-  - /path/to/tv:/media/tv
-environment:
-  - VIDO_MEDIA_DIRS=/media/movies,/media/tv`}
-                  </pre>
-                </div>
-                <p className="text-xs text-slate-500">
-                  <code className="rounded bg-slate-800 px-1 text-slate-300">VIDO_MEDIA_DIRS</code>{' '}
-                  設定多個路徑請以逗號分隔 / Separate multiple paths with commas
-                </p>
-              </div>
-            )}
-          </div>
-          <p className="text-xs text-slate-500">
-            媒體資料夾路徑透過環境變數 VIDO_MEDIA_DIRS 設定，需重啟服務生效
-          </p>
-        </div>
+        {/* Media Libraries (Story 7b-4) */}
+        <MediaLibraryManager />
 
         <hr className="border-slate-700" />
 

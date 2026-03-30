@@ -1,6 +1,6 @@
 # Story 7b-4: Settings Media Library Manager
 
-Status: backlog
+Status: done
 
 ## Story
 
@@ -36,38 +36,38 @@ So that **I can manage my library configuration after initial setup without re-r
 ## Tasks / Subtasks
 
 ### Task 1: Create Frontend Service (AC: #2, #3, #4)
-- [ ] 1.1 Create `apps/web/src/services/mediaLibraryService.ts`
-- [ ] 1.2 Implement: getLibraries, createLibrary, updateLibrary, deleteLibrary, addPath, removePath, refreshPaths
-- [ ] 1.3 Create TanStack Query hooks in `apps/web/src/hooks/useMediaLibrary.ts`
+- [x]1.1 Create `apps/web/src/services/mediaLibraryService.ts`
+- [x]1.2 Implement: getLibraries, createLibrary, updateLibrary, deleteLibrary, addPath, removePath, refreshPaths
+- [x]1.3 Create TanStack Query hooks in `apps/web/src/hooks/useMediaLibrary.ts`
 
 ### Task 2: Create LibraryCard Component (AC: #1, #5)
-- [ ] 2.1 Create `apps/web/src/components/settings/LibraryCard.tsx`
-- [ ] 2.2 Card header: type icon (Film/Tv from lucide) + name + overflow menu (⋮)
-- [ ] 2.3 Card body: path list with status indicators (green/red/gray dot + text)
-- [ ] 2.4 Card footer: folder count + media item count
-- [ ] 2.5 Overflow menu: 編輯, 新增路徑, 刪除
+- [x]2.1 Create `apps/web/src/components/settings/LibraryCard.tsx`
+- [x]2.2 Card header: type icon (Film/Tv from lucide) + name + overflow menu (⋮)
+- [x]2.3 Card body: path list with status indicators (green/red/gray dot + text)
+- [x]2.4 Card footer: folder count + media item count
+- [x]2.5 Overflow menu: 編輯, 新增路徑, 刪除
 
 ### Task 3: Create LibraryEditModal Component (AC: #2, #3)
-- [ ] 3.1 Create `apps/web/src/components/settings/LibraryEditModal.tsx`
-- [ ] 3.2 Shared modal for create + edit (mode prop)
-- [ ] 3.3 Fields: name input, type dropdown, paths list with add/remove
-- [ ] 3.4 Validation: required name, at least one path, no duplicate paths
-- [ ] 3.5 Submit calls createLibrary or updateLibrary based on mode
+- [x]3.1 Create `apps/web/src/components/settings/LibraryEditModal.tsx`
+- [x]3.2 Shared modal for create + edit (mode prop)
+- [x]3.3 Fields: name input, type dropdown, paths list with add/remove
+- [x]3.4 Validation: required name, at least one path, no duplicate paths
+- [x]3.5 Submit calls createLibrary or updateLibrary based on mode
 
 ### Task 4: Create Delete Confirmation (AC: #4)
-- [ ] 4.1 Delete confirmation dialog with checkbox "同時移除已掃描的媒體資料"
-- [ ] 4.2 Calls deleteLibrary with `?remove_media=true/false`
+- [x]4.1 Delete confirmation dialog with checkbox "同時移除已掃描的媒體資料"
+- [x]4.2 Calls deleteLibrary with `?remove_media=true/false`
 
 ### Task 5: Create MediaLibraryManager Component (AC: #1)
-- [ ] 5.1 Create `apps/web/src/components/settings/MediaLibraryManager.tsx`
-- [ ] 5.2 Lists all LibraryCards + "+ 新增媒體庫" button
-- [ ] 5.3 Integrate into `ScannerSettings.tsx` — replace env var display section
+- [x]5.1 Create `apps/web/src/components/settings/MediaLibraryManager.tsx`
+- [x]5.2 Lists all LibraryCards + "+ 新增媒體庫" button
+- [x]5.3 Integrate into `ScannerSettings.tsx` — replace env var display section
 
 ### Task 6: Write Tests (AC: #1–#5)
-- [ ] 6.1 LibraryCard renders with correct status indicators
-- [ ] 6.2 LibraryEditModal validates required fields
-- [ ] 6.3 MediaLibraryManager fetches and displays libraries
-- [ ] 6.4 Delete confirmation sends correct query param
+- [x]6.1 LibraryCard renders with correct status indicators
+- [x]6.2 LibraryEditModal validates required fields
+- [x]6.3 MediaLibraryManager fetches and displays libraries
+- [x]6.4 Delete confirmation sends correct query param
 
 ## Dev Notes
 
