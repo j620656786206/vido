@@ -108,7 +108,7 @@ describe('SetupWizard', () => {
     renderWithProviders();
     fireEvent.click(await screen.findByTestId('next-button'));
     fireEvent.click(await screen.findByTestId('skip-button'));
-    expect(await screen.findByTestId('media-folder-step')).toBeInTheDocument();
+    expect(await screen.findByTestId('media-library-step')).toBeInTheDocument();
   });
 
   it('shows all 5 step dots', async () => {
@@ -130,9 +130,9 @@ describe('SetupWizard', () => {
     // Step 2: qBittorrent → Skip
     fireEvent.click(await screen.findByTestId('skip-button'));
 
-    // Step 3: Media Folder → enter path then Next
-    const folderInput = await screen.findByTestId('media-folder-input');
-    fireEvent.change(folderInput, { target: { value: '/media/videos' } });
+    // Step 3: Media Library → enter path then Next
+    const libraryPath = await screen.findByTestId('library-path-0');
+    fireEvent.change(libraryPath, { target: { value: '/media/videos' } });
     fireEvent.click(screen.getByTestId('next-button'));
 
     // Step 4: API Keys → Skip
@@ -149,9 +149,9 @@ describe('SetupWizard', () => {
 
     // Navigate to complete
     fireEvent.click(await screen.findByTestId('next-button')); // → qbt
-    fireEvent.click(await screen.findByTestId('skip-button')); // → media
-    const folderInput = await screen.findByTestId('media-folder-input');
-    fireEvent.change(folderInput, { target: { value: '/media' } });
+    fireEvent.click(await screen.findByTestId('skip-button')); // → media library
+    const libraryPath = await screen.findByTestId('library-path-0');
+    fireEvent.change(libraryPath, { target: { value: '/media' } });
     fireEvent.click(screen.getByTestId('next-button')); // → api-keys
     fireEvent.click(await screen.findByTestId('skip-button')); // → complete
 
@@ -166,8 +166,8 @@ describe('SetupWizard', () => {
     // Navigate to complete
     fireEvent.click(await screen.findByTestId('next-button'));
     fireEvent.click(await screen.findByTestId('skip-button'));
-    const folderInput = await screen.findByTestId('media-folder-input');
-    fireEvent.change(folderInput, { target: { value: '/media' } });
+    const libraryPath = await screen.findByTestId('library-path-0');
+    fireEvent.change(libraryPath, { target: { value: '/media' } });
     fireEvent.click(screen.getByTestId('next-button'));
     fireEvent.click(await screen.findByTestId('skip-button'));
 
@@ -178,7 +178,9 @@ describe('SetupWizard', () => {
       expect(setupService.completeSetup).toHaveBeenCalledWith(
         expect.objectContaining({
           language: 'zh-TW',
-          mediaFolderPath: '/media',
+          libraries: expect.arrayContaining([
+            expect.objectContaining({ path: '/media', contentType: 'movie' }),
+          ]),
         })
       );
     });
@@ -201,9 +203,9 @@ describe('SetupWizard', () => {
     renderWithProviders();
 
     fireEvent.click(await screen.findByTestId('next-button')); // → qbt
-    fireEvent.click(await screen.findByTestId('skip-button')); // → media
-    const folderInput = await screen.findByTestId('media-folder-input');
-    fireEvent.change(folderInput, { target: { value: '/media' } });
+    fireEvent.click(await screen.findByTestId('skip-button')); // → media library
+    const libraryPath = await screen.findByTestId('library-path-0');
+    fireEvent.change(libraryPath, { target: { value: '/media' } });
     fireEvent.click(screen.getByTestId('next-button')); // → api-keys
 
     expect(await screen.findByTestId('skip-warning')).toBeInTheDocument();

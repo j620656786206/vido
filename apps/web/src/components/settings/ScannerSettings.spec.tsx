@@ -6,6 +6,39 @@ import { ScannerSettings } from './ScannerSettings';
 const mockTriggerScan = vi.fn();
 const mockUpdateSchedule = vi.fn();
 
+const mockDeleteLibrary = vi.fn();
+const mockCreateLibrary = vi.fn();
+const mockUpdateLibrary = vi.fn();
+const mockAddPath = vi.fn();
+const mockRemovePath = vi.fn();
+const mockRefreshPaths = vi.fn();
+
+vi.mock('../../hooks/useMediaLibrary', () => ({
+  useMediaLibraries: vi.fn(() => ({
+    data: {
+      libraries: [
+        {
+          id: '1',
+          name: '電影庫',
+          contentType: 'movie',
+          paths: [{ path: '/media/movies' }],
+          mediaCount: 42,
+        },
+      ],
+    },
+    isLoading: false,
+    error: null,
+  })),
+  useMediaLibrary: vi.fn(() => ({ data: null, isLoading: false })),
+  useCreateLibrary: vi.fn(() => ({ mutateAsync: mockCreateLibrary, isPending: false })),
+  useUpdateLibrary: vi.fn(() => ({ mutateAsync: mockUpdateLibrary, isPending: false })),
+  useDeleteLibrary: vi.fn(() => ({ mutateAsync: mockDeleteLibrary, isPending: false })),
+  useAddLibraryPath: vi.fn(() => ({ mutateAsync: mockAddPath, isPending: false })),
+  useRemoveLibraryPath: vi.fn(() => ({ mutateAsync: mockRemovePath, isPending: false })),
+  useRefreshLibraryPaths: vi.fn(() => ({ mutateAsync: mockRefreshPaths, isPending: false })),
+  libraryKeys: { all: ['libraries'], detail: (id: string) => ['libraries', id] },
+}));
+
 vi.mock('../../hooks/useScanner', () => ({
   useScanStatus: vi.fn(() => ({
     data: {
@@ -57,9 +90,9 @@ describe('ScannerSettings', () => {
     expect(screen.getByTestId('scanner-settings')).toBeInTheDocument();
   });
 
-  it('displays media folder info', () => {
+  it('displays media library manager', () => {
     renderWithProviders();
-    expect(screen.getByTestId('folder-list')).toBeInTheDocument();
+    expect(screen.getByTestId('media-library-manager')).toBeInTheDocument();
   });
 
   it('renders schedule selector with current value', () => {
@@ -146,29 +179,16 @@ describe('ScannerSettings', () => {
     expect(btn).toBeDisabled();
   });
 
-  it('[P0] renders setup guide when media dirs not configured (bugfix-7)', async () => {
-    const { useScanStatus } = await import('../../hooks/useScanner');
-    vi.mocked(useScanStatus).mockReturnValue({
-      data: {
-        isScanning: false,
-        filesFound: 0,
-        filesProcessed: 0,
-        currentFile: '',
-        percentDone: 0,
-        errorCount: 0,
-        estimatedTime: '',
-        lastScanAt: '',
-        lastScanDuration: '',
-      },
+  it('[P0] renders empty state when no media libraries configured (bugfix-7)', async () => {
+    const { useMediaLibraries } = await import('../../hooks/useMediaLibrary');
+    vi.mocked(useMediaLibraries).mockReturnValue({
+      data: { libraries: [] },
       isLoading: false,
-    } as ReturnType<typeof useScanStatus>);
+      error: null,
+    } as unknown as ReturnType<typeof useMediaLibraries>);
 
     renderWithProviders();
-    const guide = screen.getByTestId('media-dir-setup-guide');
-    expect(guide).toBeInTheDocument();
-    expect(guide).toHaveTextContent('VIDO_MEDIA_DIRS');
-    expect(guide).toHaveTextContent('Media directories not configured');
-    expect(guide).toHaveTextContent('docker run');
-    expect(guide).toHaveTextContent('Docker Compose');
+    expect(screen.getByTestId('media-library-manager')).toBeInTheDocument();
+    expect(screen.getByText('尚未設定任何媒體庫。請新增媒體庫以開始掃描。')).toBeInTheDocument();
   });
 });
