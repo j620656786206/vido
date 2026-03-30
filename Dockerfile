@@ -34,7 +34,8 @@ COPY nx.json tsconfig.base.json ./
 
 # Build the web application using Nx
 # Output: dist/apps/web
-RUN npx nx build web --configuration=production
+# NX_DAEMON=false prevents Nx daemon crashes under QEMU arm64 emulation
+RUN NX_DAEMON=false npx nx build web --configuration=production
 
 # Stage 2: Build backend
 # ------------------------------------------------------------------------------
