@@ -19,7 +19,8 @@ export function DownloadPanel({ className }: DownloadPanelProps) {
 
   const isConnected = config?.configured === true;
   const isLoading = configLoading || (isConnected && downloadsLoading);
-  const downloadCount = isConnected && downloads ? downloads.length : 0;
+  const downloadItems = downloads?.items ?? [];
+  const downloadCount = isConnected && downloads ? downloads.totalItems : 0;
 
   return (
     <div
@@ -77,11 +78,11 @@ export function DownloadPanel({ className }: DownloadPanelProps) {
             </div>
           ) : !isConnected ? (
             <DisconnectedState />
-          ) : downloads?.length === 0 ? (
+          ) : downloadItems.length === 0 ? (
             <div className="py-6 text-center text-sm text-slate-400">目前沒有下載任務</div>
           ) : (
             <div className="space-y-2">
-              {downloads?.slice(0, 5).map((download) => (
+              {downloadItems.slice(0, 5).map((download) => (
                 <CompactDownloadItem key={download.hash} download={download} />
               ))}
             </div>

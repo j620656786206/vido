@@ -6,7 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useSyncExternalStore } from 'react';
 import {
   downloadService,
-  type Download,
+  type PaginatedDownloads,
   type DownloadDetails,
   type DownloadCounts,
   type FilterStatus,
@@ -16,8 +16,8 @@ import {
 
 export const downloadKeys = {
   all: ['downloads'] as const,
-  list: (filter: FilterStatus, sort: SortField, order: SortOrder) =>
-    [...downloadKeys.all, 'list', filter, sort, order] as const,
+  list: (filter: FilterStatus, sort: SortField, order: SortOrder, page: number, pageSize: number) =>
+    [...downloadKeys.all, 'list', filter, sort, order, page, pageSize] as const,
   counts: () => [...downloadKeys.all, 'counts'] as const,
   detail: (hash: string) => [...downloadKeys.all, 'detail', hash] as const,
 };
@@ -44,13 +44,15 @@ function usePageVisibility() {
 export function useDownloads(
   filter: FilterStatus = 'all',
   sort: SortField = 'added_on',
-  order: SortOrder = 'desc'
+  order: SortOrder = 'desc',
+  page: number = 1,
+  pageSize: number = 100
 ) {
   const isVisible = usePageVisibility();
 
-  return useQuery<Download[], Error>({
-    queryKey: downloadKeys.list(filter, sort, order),
-    queryFn: () => downloadService.getDownloads({ filter, sort, order }),
+  return useQuery<PaginatedDownloads, Error>({
+    queryKey: downloadKeys.list(filter, sort, order, page, pageSize),
+    queryFn: () => downloadService.getDownloads({ filter, sort, order, page, pageSize }),
     refetchInterval: isVisible ? 5000 : false,
     refetchOnWindowFocus: true,
   });

@@ -78,7 +78,7 @@ export function DownloadItem({ download, expanded, onToggleExpand }: DownloadIte
 
           {/* Expand indicator */}
           <svg
-            className={cn('h-4 w-4 text-slate-400 transition-transform', expanded && 'rotate-180')}
+            className={cn('h-5 w-5 text-slate-300 transition-transform', expanded && 'rotate-180')}
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"

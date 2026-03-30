@@ -74,6 +74,16 @@ export interface GetDownloadsParams {
   filter?: FilterStatus;
   sort?: SortField;
   order?: SortOrder;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface PaginatedDownloads {
+  items: Download[];
+  page: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
 }
 
 interface ApiResponse<T> {
@@ -108,12 +118,14 @@ async function fetchApi<T>(endpoint: string): Promise<T> {
 }
 
 export const downloadService = {
-  async getDownloads(params?: GetDownloadsParams): Promise<Download[]> {
+  async getDownloads(params?: GetDownloadsParams): Promise<PaginatedDownloads> {
     const filter = params?.filter || 'all';
     const sort = params?.sort || 'added_on';
     const order = params?.order || 'desc';
-    const searchParams = new URLSearchParams({ filter, sort, order });
-    return fetchApi<Download[]>(`/downloads?${searchParams.toString()}`);
+    const page = String(params?.page || 1);
+    const pageSize = String(params?.pageSize || 100);
+    const searchParams = new URLSearchParams({ filter, sort, order, page, pageSize });
+    return fetchApi<PaginatedDownloads>(`/downloads?${searchParams.toString()}`);
   },
 
   async getDownloadDetails(hash: string): Promise<DownloadDetails> {

@@ -5,6 +5,7 @@ import { DownloadDetails } from './DownloadDetails';
 
 interface DownloadListProps {
   downloads: Download[];
+  totalItems?: number;
   sortField: SortField;
   sortOrder: SortOrder;
   onSortChange: (field: SortField) => void;
@@ -20,6 +21,7 @@ const sortOptions: { value: SortField; label: string }[] = [
 
 export function DownloadList({
   downloads,
+  totalItems,
   sortField,
   sortOrder,
   onSortChange,
@@ -34,31 +36,35 @@ export function DownloadList({
   return (
     <div>
       {/* Sort Controls */}
-      <div className="mb-4 flex items-center gap-3">
-        <label htmlFor="sort-select" className="text-sm text-slate-400">
-          排序：
-        </label>
-        <select
-          id="sort-select"
-          value={sortField}
-          onChange={(e) => onSortChange(e.target.value as SortField)}
-          className="rounded-md border border-slate-600 bg-slate-700 px-3 py-1.5 text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
-        >
-          {sortOptions.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-        <button
-          type="button"
-          onClick={() => onOrderChange(sortOrder === 'asc' ? 'desc' : 'asc')}
-          className="rounded-md border border-slate-600 bg-slate-700 px-3 py-1.5 text-sm text-slate-200 hover:border-slate-500"
-          title={sortOrder === 'asc' ? '升冪' : '降冪'}
-        >
-          {sortOrder === 'asc' ? '↑' : '↓'}
-        </button>
-        <span className="ml-auto text-sm text-slate-400">{downloads.length} 個項目</span>
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <label htmlFor="sort-select" className="text-sm text-slate-400">
+            排序：
+          </label>
+          <select
+            id="sort-select"
+            value={sortField}
+            onChange={(e) => onSortChange(e.target.value as SortField)}
+            className="rounded-md border border-slate-600/50 bg-slate-800 px-3 py-1.5 text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
+          >
+            {sortOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={() => onOrderChange(sortOrder === 'asc' ? 'desc' : 'asc')}
+            className="rounded-md border border-slate-600/50 bg-slate-800 p-1.5 text-slate-300 hover:border-slate-500"
+            title={sortOrder === 'asc' ? '升冪' : '降冪'}
+          >
+            {sortOrder === 'asc' ? '↑' : '↓'}
+          </button>
+        </div>
+        <span className="text-sm text-slate-400">
+          {(totalItems ?? downloads.length).toLocaleString()} 個項目
+        </span>
       </div>
 
       {/* Download Items */}
