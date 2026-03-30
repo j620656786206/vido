@@ -96,7 +96,16 @@ test.describe('Dashboard Layout @dashboard @ui', () => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ success: true, data: mockDownloads }),
+        body: JSON.stringify({
+          success: true,
+          data: {
+            items: mockDownloads,
+            page: 1,
+            pageSize: 100,
+            totalItems: mockDownloads.length,
+            totalPages: 1,
+          },
+        }),
       })
     );
 
@@ -208,7 +217,16 @@ test.describe('Dashboard Mobile Layout @dashboard @ui', () => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ success: true, data: mockDownloads }),
+        body: JSON.stringify({
+          success: true,
+          data: {
+            items: mockDownloads,
+            page: 1,
+            pageSize: 100,
+            totalItems: mockDownloads.length,
+            totalPages: 1,
+          },
+        }),
       })
     );
 
@@ -289,7 +307,16 @@ test.describe('Dashboard Quick Actions @dashboard @ui', () => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ success: true, data: mockDownloads }),
+        body: JSON.stringify({
+          success: true,
+          data: {
+            items: mockDownloads,
+            page: 1,
+            pageSize: 100,
+            totalItems: mockDownloads.length,
+            totalPages: 1,
+          },
+        }),
       })
     );
 
@@ -351,7 +378,16 @@ test.describe('Dashboard Panel Independence @dashboard @ui', () => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ success: true, data: mockDownloads }),
+        body: JSON.stringify({
+          success: true,
+          data: {
+            items: mockDownloads,
+            page: 1,
+            pageSize: 100,
+            totalItems: mockDownloads.length,
+            totalPages: 1,
+          },
+        }),
       })
     );
 

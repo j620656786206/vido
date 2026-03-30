@@ -117,7 +117,10 @@ async function mockDashboardAPIs(page: import('@playwright/test').Page) {
     route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ success: true, data: [] }),
+      body: JSON.stringify({
+        success: true,
+        data: { items: [], page: 1, pageSize: 100, totalItems: 0, totalPages: 0 },
+      }),
     })
   );
 

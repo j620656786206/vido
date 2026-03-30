@@ -53,7 +53,16 @@ test.describe('Downloads Page @downloads @ui', () => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ success: true, data: mockDownloadList }),
+        body: JSON.stringify({
+          success: true,
+          data: {
+            items: mockDownloadList,
+            page: 1,
+            pageSize: 100,
+            totalItems: mockDownloadList.length,
+            totalPages: 1,
+          },
+        }),
       })
     );
 
@@ -82,7 +91,16 @@ test.describe('Downloads Page @downloads @ui', () => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ success: true, data: mockDownloadList }),
+        body: JSON.stringify({
+          success: true,
+          data: {
+            items: mockDownloadList,
+            page: 1,
+            pageSize: 100,
+            totalItems: mockDownloadList.length,
+            totalPages: 1,
+          },
+        }),
       })
     );
 
@@ -119,7 +137,16 @@ test.describe('Downloads Page @downloads @ui', () => {
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ success: true, data: mockDownloadList }),
+        body: JSON.stringify({
+          success: true,
+          data: {
+            items: mockDownloadList,
+            page: 1,
+            pageSize: 100,
+            totalItems: mockDownloadList.length,
+            totalPages: 1,
+          },
+        }),
       });
     });
 
@@ -143,7 +170,10 @@ test.describe('Downloads Page @downloads @ui', () => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ success: true, data: [] }),
+        body: JSON.stringify({
+          success: true,
+          data: { items: [], page: 1, pageSize: 100, totalItems: 0, totalPages: 0 },
+        }),
       })
     );
 
