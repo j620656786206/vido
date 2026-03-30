@@ -107,3 +107,18 @@ This document maps all 50 completed stories from v3 Epics 1-6 to their correspon
 | Epic 5 | 11 | P1-007 |
 | Epic 6 | 10 | Settings, P4-020 (partial) |
 | **Total** | **50** | |
+
+---
+
+## Post-Completion Fixes: Epic 4 (2026-03-30)
+
+| Fix | Files | Description |
+|-----|-------|-------------|
+| qBT 5.0 state mapping | `torrent.go` | Added `stoppedUP`, `stoppedDL`, `allocating`, `moving` states for qBT 5.0+ compatibility. `stalledUP` → completed (was seeding). Follows Sonarr/Radarr standard. |
+| Filter tab counts | `download_service.go` | `stalled`, `queued`, `checking` states were not counted in any tab, causing all counts to show 0. Now mapped to downloading/paused. |
+| Migration 020 idempotent | `020_create_media_libraries.go` | Split multi-statement ALTER TABLE into individual calls with `columnExists()` check to prevent SQLite retry failures. |
+| Settings form init | `QBittorrentForm.tsx` | Fixed React render timing bug — saved qBT config wasn't loading into settings form. Changed from if-guard to useEffect. |
+| Docker arm64 build | `Dockerfile` | `NX_DAEMON=false` prevents Nx daemon OOM crash under QEMU arm64 emulation. |
+| Vite dev proxy | `vite.config.mts` | Added `/api` proxy to localhost:8080 for local development. |
+| Download pagination | `download_handler.go`, `downloadService.ts`, `downloads.tsx` | Backend page+pageSize API + frontend Pagination component with pageSize selector (50/100/200/500). |
+| Download page design | `ux-design.pen` | Added Flow G with 4 screens: G1-G4 covering desktop/mobile download management UI. |

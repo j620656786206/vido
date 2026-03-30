@@ -205,6 +205,18 @@
 | P3-013 | 下載完成通知 | P1 | 下載完成時透過 Web UI 通知（未來可擴展 Telegram/Discord） |
 | P3-014 | 內建 BT 引擎（未來） | P3 | 使用 Go BT library（anacrolix/torrent）內建下載功能，消除 qBittorrent 依賴 |
 
+#### 3.8.1 下載任務管理 — 技術需求補充 (2026-03-30)
+
+| ID | 需求 | 優先級 | 說明 |
+|----|------|--------|------|
+| P3-010a | qBittorrent 4.x/5.0+ 相容性 | P0 | 支援 qBT 4.x (pausedDL/pausedUP) 和 5.0+ (stoppedDL/stoppedUP) 雙版本 state mapping，遵循 Sonarr/Radarr 業界標準 |
+| P3-010b | 下載列表分頁 | P0 | 後端分頁 API (page + pageSize)，預設每頁 100 筆，可選 50/100/200/500，避免一次回傳所有種子造成效能問題 |
+| P3-010c | 下載頁設計稿 | P0 | UX 設計稿 Flow G 已補齊：G1 下載列表 Desktop、G2 展開詳情 Desktop、G3 列表 Mobile、G4 空狀態 Mobile |
+
+**參考資料：**
+- qBittorrent 5.0 API 文件：https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-5.0)
+- State mapping 遵循 Sonarr 標準：stoppedUP/pausedUP/stalledUP → completed, stoppedDL/pausedDL → paused
+
 #### 3.9 Indexer 管理
 
 | ID | 功能 | 優先級 | 說明 |
