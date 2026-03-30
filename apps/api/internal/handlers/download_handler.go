@@ -3,6 +3,7 @@ package handlers
 import (
 	"errors"
 	"log/slog"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/vido/api/internal/models"
@@ -39,14 +40,16 @@ func NewDownloadHandler(service services.DownloadServiceInterface, parseQueueSvc
 }
 
 // ListDownloads handles GET /api/v1/downloads
-// @Summary List all downloads
-// @Description Retrieves all torrents from qBittorrent with optional filtering and sorting
+// @Summary List downloads with pagination
+// @Description Retrieves torrents from qBittorrent with filtering, sorting, and pagination
 // @Tags downloads
 // @Accept json
 // @Produce json
 // @Param filter query string false "Filter by status (all, downloading, paused, completed, seeding, error)" default(all)
 // @Param sort query string false "Sort field (added_on, name, progress, size)" default(added_on)
 // @Param order query string false "Sort order (asc, desc)" default(desc)
+// @Param page query int false "Page number (1-based)" default(1)
+// @Param pageSize query int false "Items per page (50, 100, 200, 500)" default(100)
 // @Success 200 {object} APIResponse
 // @Failure 400 {object} APIResponse
 // @Failure 500 {object} APIResponse
@@ -55,6 +58,18 @@ func (h *DownloadHandler) ListDownloads(c *gin.Context) {
 	filter := c.DefaultQuery("filter", "all")
 	sort := c.DefaultQuery("sort", "added_on")
 	order := c.DefaultQuery("order", "desc")
+	page := parseIntQuery(c, "page", 1)
+	pageSize := parseIntQuery(c, "pageSize", 100)
+
+	// Clamp pageSize to allowed values
+	if pageSize < 1 {
+		pageSize = 100
+	} else if pageSize > 500 {
+		pageSize = 500
+	}
+	if page < 1 {
+		page = 1
+	}
 
 	torrents, err := h.service.GetAllDownloads(c.Request.Context(), filter, sort, order)
 	if err != nil {
@@ -78,13 +93,14 @@ func (h *DownloadHandler) ListDownloads(c *gin.Context) {
 	}
 
 	// Enrich with parse status if service is available
+	var allItems []DownloadItem
 	if h.parseQueueSvc != nil {
-		items := make([]DownloadItem, len(torrents))
+		allItems = make([]DownloadItem, len(torrents))
 		for i, t := range torrents {
-			items[i] = DownloadItem{Torrent: t}
+			allItems[i] = DownloadItem{Torrent: t}
 			if t.Status == qbittorrent.StatusCompleted || t.Status == qbittorrent.StatusSeeding {
 				if job, err := h.parseQueueSvc.GetJobStatus(c.Request.Context(), t.Hash); err == nil && job != nil {
-					items[i].ParseStatus = &DownloadParseStatus{
+					allItems[i].ParseStatus = &DownloadParseStatus{
 						Status:       job.Status,
 						ErrorMessage: job.ErrorMessage,
 						MediaID:      job.MediaID,
@@ -92,11 +108,45 @@ func (h *DownloadHandler) ListDownloads(c *gin.Context) {
 				}
 			}
 		}
-		SuccessResponse(c, items)
-		return
+	} else {
+		allItems = make([]DownloadItem, len(torrents))
+		for i, t := range torrents {
+			allItems[i] = DownloadItem{Torrent: t}
+		}
 	}
 
-	SuccessResponse(c, torrents)
+	// Apply pagination
+	total := len(allItems)
+	totalPages := (total + pageSize - 1) / pageSize
+	start := (page - 1) * pageSize
+	end := start + pageSize
+	if start > total {
+		start = total
+	}
+	if end > total {
+		end = total
+	}
+
+	SuccessResponse(c, PaginatedResponse{
+		Items:      allItems[start:end],
+		Page:       page,
+		PageSize:   pageSize,
+		TotalItems: total,
+		TotalPages: totalPages,
+	})
+}
+
+// parseIntQuery parses an integer query parameter with a default value.
+func parseIntQuery(c *gin.Context, key string, defaultVal int) int {
+	val := c.Query(key)
+	if val == "" {
+		return defaultVal
+	}
+	n, err := strconv.Atoi(val)
+	if err != nil {
+		return defaultVal
+	}
+	return n
 }
 
 // GetDownloadDetails handles GET /api/v1/downloads/:hash
