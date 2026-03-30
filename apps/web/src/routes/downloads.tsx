@@ -82,7 +82,7 @@ function DownloadsPage() {
   };
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 lg:px-8">
+    <div className="mx-auto max-w-[1400px] px-6 py-8 lg:px-10">
       <h1 className="mb-2 text-2xl font-bold text-slate-100">下載管理</h1>
       <p className="mb-6 text-sm text-slate-400">
         即時監控 qBittorrent 下載狀態，每 5 秒自動更新。
