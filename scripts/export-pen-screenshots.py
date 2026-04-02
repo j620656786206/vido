@@ -19,7 +19,7 @@ import signal
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PEN_FILE = os.path.join(PROJECT_ROOT, "ux-design.pen")
 OUT_DIR = os.path.join(PROJECT_ROOT, "_bmad-output", "screenshots")
-MCP_BIN = "/Applications/Pencil.app/Contents/Resources/app.asar.unpacked/out/mcp-server-darwin-x64"
+MCP_BIN = "/Applications/Pencil.app/Contents/Resources/app.asar.unpacked/out/mcp-server-darwin-arm64"
 MCP_PORT = 9876
 
 # Screen ID -> (flow_folder, filename)
@@ -35,6 +35,8 @@ SCREENS = {
     "RgSxQ": ("flow-b-hover-detail-desktop", "04-detail-panel-movie-desktop"),
     "407vK": ("flow-b-hover-detail-desktop", "04b-detail-panel-tv-series-desktop"),
     "7mdTJ": ("flow-b-hover-detail-desktop", "04c-detail-panel-context-menu"),
+    "2ltBl": ("flow-b-hover-detail-desktop", "04d-detail-fallback-failed-desktop"),
+    "wQOkg": ("flow-b-hover-detail-desktop", "04e-detail-fallback-pending-desktop"),
     # Flow C - Desktop search/filter/settings
     "rsAxf": ("flow-c-search-filter-settings-desktop", "07-search-filter-desktop"),
     "dcf67": ("flow-c-search-filter-settings-desktop", "08-batch-operations-desktop"),
@@ -49,6 +51,8 @@ SCREENS = {
     "1UHzI": ("flow-e-interaction-mobile", "04a-m-postercard-context-menu-mobile"),
     "kcn1v": ("flow-e-interaction-mobile", "05-detail-panel-mobile"),
     "APfjC": ("flow-e-interaction-mobile", "04c-m-detail-context-menu-mobile"),
+    "2m1Pv": ("flow-e-interaction-mobile", "05b-detail-fallback-failed-mobile"),
+    "7UnDy": ("flow-e-interaction-mobile", "05c-detail-fallback-pending-mobile"),
     # Flow F - Mobile batch/settings
     "0KOE7": ("flow-f-batch-settings-mobile", "08-m-batch-operations-mobile"),
     "IfrPQ": ("flow-f-batch-settings-mobile", "01a-m-settings-bottom-sheet-mobile"),
