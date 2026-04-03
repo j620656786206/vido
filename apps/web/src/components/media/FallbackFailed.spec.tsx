@@ -26,6 +26,7 @@ vi.mock('@tanstack/react-router', () => ({
 
 const defaultProps = {
   title: '[Leopard-Raws] Kimi no Na wa (BD)',
+  mediaType: 'movie' as const,
   filePath: '/volume1/Movies/Anime/[Leopard-Raws] Kimi no Na wa (BD).mkv',
   fileSize: 4509715660, // ~4.2 GB
   createdAt: '2026-03-28T14:32:00Z',
@@ -34,10 +35,17 @@ const defaultProps = {
 };
 
 describe('FallbackFailed', () => {
-  it('renders search-x icon and title message', () => {
+  it('renders search-x icon and title message for movie', () => {
     render(<FallbackFailed {...defaultProps} />);
     expect(screen.getByTestId('fallback-failed-title')).toHaveTextContent(
       '我們找不到這部電影的資料'
+    );
+  });
+
+  it('renders correct title message for TV show', () => {
+    render(<FallbackFailed {...defaultProps} mediaType="tv" />);
+    expect(screen.getByTestId('fallback-failed-title')).toHaveTextContent(
+      '我們找不到這部電視節目的資料'
     );
   });
 
@@ -85,11 +93,11 @@ describe('FallbackFailed', () => {
   });
 
   // AC #5: CTA buttons
-  it('renders "搜尋 Metadata" primary CTA with correct link', () => {
+  it('renders "搜尋 Metadata" primary CTA with correct link including q= param', () => {
     render(<FallbackFailed {...defaultProps} />);
     const link = screen.getByTestId('cta-search-metadata');
     expect(link).toHaveTextContent('搜尋 Metadata');
-    expect(link.getAttribute('href')).toContain('/search');
+    expect(link.getAttribute('href')).toMatch(/\/search\?q=.+/);
   });
 
   it('renders "手動編輯" secondary action', () => {

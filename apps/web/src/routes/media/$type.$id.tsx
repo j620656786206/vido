@@ -269,6 +269,7 @@ function MediaDetailRoute() {
               ) : (
                 <FallbackFailed
                   title={localData.title}
+                  mediaType={type}
                   filePath={localData.filePath}
                   fileSize={localData.fileSize}
                   createdAt={localData.createdAt}

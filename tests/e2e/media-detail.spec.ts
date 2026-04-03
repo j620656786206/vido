@@ -221,8 +221,8 @@ test.describe('Media Detail - Fallback UI @e2e @media-detail @story-5-11', () =>
     await expect(searchBtn).toBeVisible({ timeout: 15000 });
     await searchBtn.click();
 
-    // THEN: Should navigate to search page with query
-    await expect(page).toHaveURL(/\/search/, { timeout: 10000 });
+    // THEN: Should navigate to search page with query parameter
+    await expect(page).toHaveURL(/\/search\?q=.+/, { timeout: 10000 });
   });
 });
 

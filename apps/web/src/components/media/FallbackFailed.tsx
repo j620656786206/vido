@@ -3,6 +3,7 @@ import { SearchX, File, Folder, HardDrive, Clock3, CircleAlert, Search } from 'l
 
 interface FallbackFailedProps {
   title: string;
+  mediaType?: 'movie' | 'tv';
   filePath?: string;
   fileSize?: number;
   createdAt?: string;
@@ -21,6 +22,7 @@ function parseStatusLabel(status: string | undefined): string {
 
 export function FallbackFailed({
   title,
+  mediaType = 'movie',
   filePath,
   fileSize,
   createdAt,
@@ -40,7 +42,7 @@ export function FallbackFailed({
       <div className="flex items-center gap-3">
         <SearchX className="h-6 w-6 flex-shrink-0 text-gray-400" />
         <h2 className="text-lg font-semibold text-white" data-testid="fallback-failed-title">
-          我們找不到這部電影的資料
+          {mediaType === 'tv' ? '我們找不到這部電視節目的資料' : '我們找不到這部電影的資料'}
         </h2>
       </div>
 

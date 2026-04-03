@@ -1,6 +1,6 @@
 # Story 5.11: Fallback UI Enhancement for Media Detail Page
 
-Status: review
+Status: done
 
 ## Story
 
@@ -15,7 +15,8 @@ So that **I understand the system status and can take action to search for metad
    - When the detail panel opens
    - Then a color placeholder is displayed using a hash of the filename to generate a gradient background color
    - And the first character of the title is displayed as a large centered letter (Gmail avatar style)
-   - And the placeholder maintains 2:3 aspect ratio consistent with real poster cards
+   - And when used as a standalone poster card, the placeholder maintains 2:3 aspect ratio (pass `height` prop)
+   - And when used in backdrop mode (detail page header area), the placeholder renders full-width as a banner (pass `className` with height, no `height` prop)
    - And the visual style matches the existing detail panel backdrop area
 
 2. **AC2: Pending State (Enrichment In-Progress)**
@@ -201,13 +202,14 @@ Claude Opus 4.6 (1M context)
 - Task 1: Created `ColorPlaceholder` with djb2-style hash → HSL gradient. Optional `height` prop; when omitted, uses CSS classes for responsive sizing. 11 unit tests.
 - Task 2: Created `FallbackPending` with Loader2 spinner, progress bar, zh-TW copy, filename hint. 6 unit tests.
 - Task 3: Created `FallbackFailed` with SearchX icon, file info section (5 rows with icons), CTA hierarchy (primary Link + secondary button). 13 unit tests.
-- Task 4: Replaced lines 251-320 in `$type.$id.tsx`. Removed unused icon imports (Search, Loader2, FileText, HardDrive, Clock). Added imports for 3 new components.
+- Task 4: Replaced lines 251-320 in `$type.$id.tsx`. Removed unused icon imports (Search, FileText, HardDrive, Clock) — `Loader2` was retained (still used in page-level loading spinner at line 141). Added imports for 3 new components.
 - Task 5: Responsive height: mobile 200px (`h-[200px]`), desktop 240px (`md:h-[240px]`). ColorPlaceholder renders full-width with no fixed aspect ratio in backdrop mode.
 - Task 6: Added 4 E2E tests to existing `media-detail.spec.ts` — fallback UI describe block. Uses `toBeAttached()` per project convention for animated elements.
 - All 1593 unit tests pass. Zero regressions. TypeScript compiles with zero errors.
 
 ### Change Log
 - 2026-04-03: Story 5-11 implementation complete. Created 3 new components (ColorPlaceholder, FallbackPending, FallbackFailed), refactored detail page fallback, added 30 unit tests + 4 E2E tests.
+- 2026-04-03: CR fixes — H1: added `mediaType` prop to FallbackFailed for correct TV show copy; M1: corrected dev record (Loader2 not removed); M2: added playbook to File List; M3: unit test now verifies `?q=` param in search CTA href; M4: AC1 clarified poster vs backdrop aspect ratio; L3: E2E URL assertion verifies `?q=` param.
 
 ### File List
 - `apps/web/src/components/media/ColorPlaceholder.tsx` (new)
@@ -219,4 +221,5 @@ Claude Opus 4.6 (1M context)
 - `apps/web/src/routes/media/$type.$id.tsx` (modified — fallback block replaced)
 - `tests/e2e/media-detail.spec.ts` (modified — added fallback UI test section)
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` (modified — status update)
+- `_bmad-output/planning-artifacts/graceful-degradation-execution-playbook.md` (modified — updated with 5-11 implementation notes)
 - `_bmad-output/implementation-artifacts/5-11-fallback-ui-enhancement.md` (modified — task checkboxes, dev record)
