@@ -37,6 +37,7 @@ SCREENS = {
     "7mdTJ": ("flow-b-hover-detail-desktop", "04c-detail-panel-context-menu"),
     "2ltBl": ("flow-b-hover-detail-desktop", "04d-detail-fallback-failed-desktop"),
     "wQOkg": ("flow-b-hover-detail-desktop", "04e-detail-fallback-pending-desktop"),
+    "vlL6O": ("flow-b-hover-detail-desktop", "04f-detail-tech-badges-desktop"),
     # Flow C - Desktop search/filter/settings
     "rsAxf": ("flow-c-search-filter-settings-desktop", "07-search-filter-desktop"),
     "dcf67": ("flow-c-search-filter-settings-desktop", "08-batch-operations-desktop"),
@@ -53,6 +54,7 @@ SCREENS = {
     "APfjC": ("flow-e-interaction-mobile", "04c-m-detail-context-menu-mobile"),
     "2m1Pv": ("flow-e-interaction-mobile", "05b-detail-fallback-failed-mobile"),
     "7UnDy": ("flow-e-interaction-mobile", "05c-detail-fallback-pending-mobile"),
+    "6OR3z": ("flow-e-interaction-mobile", "05d-detail-tech-badges-mobile"),
     # Flow F - Mobile batch/settings
     "0KOE7": ("flow-f-batch-settings-mobile", "08-m-batch-operations-mobile"),
     "IfrPQ": ("flow-f-batch-settings-mobile", "01a-m-settings-bottom-sheet-mobile"),
