@@ -67,6 +67,15 @@ Integrate TestSprite journey-level tests against the deployed NAS app to fill th
 
 ---
 
+### Epic 9c: Media Technical Info & NFO Integration
+**File:** [epic-9c-media-tech-info-nfo-integration.md](./epic-9c-media-tech-info-nfo-integration.md)
+
+Users can see technical information badges (codec, resolution, audio format) on media detail pages, leverage existing NFO sidecar files for precise TMDB matching when migrating from Kodi/Jellyfin, and filter unmatched media in the library view. Data source priority chain ensures automated re-scans never overwrite user corrections.
+
+**v4 Feature IDs:** P1-030, P1-031, P1-032, P1-033, P2-030
+
+---
+
 ## Phase 2: Discovery & Browse Experience
 
 ### Epic 10: Homepage TV Wall
