@@ -262,11 +262,11 @@ development_status:
   # ADR: architecture/adr-media-info-nfo-pipeline.md
   # Decision: Extend scan pipeline with NFO reader + FFprobe + data source priority
   # ==============================================================================
-  epic-9c: backlog
-  9c-1-db-schema-migration: backlog             # Migration #021, tech info columns, series file_size, MetadataSource constants, ShouldOverwrite()
-  9c-2-nfo-sidecar-reader: backlog              # NFO detection in enrichment pipeline, XML/URL parser, uniqueid TMDB matching
-  9c-3-ffprobe-integration: backlog             # Docker ffprobe, Go service with semaphore/timeout, tech info extraction
-  9c-4-tech-badges-ui-unmatched-filter: backlog # TechBadge components, detail page integration, unmatched filter API + UI
+  epic-9c: in-progress  # 2026-04-04
+  9c-1-db-schema-migration: ready-for-dev             # Migration #021, tech info columns, series file_size, MetadataSource constants, ShouldOverwrite()
+  9c-2-nfo-sidecar-reader: ready-for-dev              # NFO detection in enrichment pipeline, XML/URL parser, uniqueid TMDB matching
+  9c-3-ffprobe-integration: ready-for-dev             # Docker ffprobe, Go service with semaphore/timeout, tech info extraction
+  9c-4-tech-badges-ui-unmatched-filter: ready-for-dev # TechBadge components, detail page integration, unmatched filter API + UI
   epic-9c-retrospective: optional
 
   # ==============================================================================
