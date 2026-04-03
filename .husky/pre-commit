@@ -1,2 +1,5 @@
 #!/usr/bin/env sh
-pnpm exec lint-staged
+# Support git worktrees: resolve main repo root via git-common-dir
+GIT_COMMON_DIR=$(git rev-parse --git-common-dir 2>/dev/null)
+MAIN_ROOT=$(cd "$GIT_COMMON_DIR/.." && pwd)
+PATH="$MAIN_ROOT/node_modules/.bin:$PATH" lint-staged --config "$MAIN_ROOT/.lintstagedrc.mjs"
