@@ -4,7 +4,7 @@
 
 **Full Documentation:** See `_bmad-output/planning-artifacts/architecture/index.md` for complete architectural decisions and patterns (sharded into ~20 focused files).
 
-**Last Updated:** 2026-03-28 (Rule 18: API boundary case transformation)
+**Last Updated:** 2026-04-03 (Rule 12: pre-commit hook disabled, lint/format moved to CI)
 **Architecture Status:** ✅ Validated and Ready for Implementation (5,463 lines, 8 steps completed)
 
 ---
@@ -310,13 +310,15 @@ Display:  toLocaleDateString('zh-TW') → "2024年1月15日"
 ❌ Never define service interfaces in handlers package
 ```
 
-### Rule 12: Pre-commit Hooks (--no-verify Forbidden)
+### Rule 12: Code Quality Checks (CI-based)
 
 ```
-✅ If a pre-commit hook fails, fix the issue and commit normally
-✅ Only Alexyu can authorize --no-verify after reviewing the specific error
-❌ Dev agents MUST NOT use --no-verify when committing
-❌ NEVER bypass pre-commit hooks without explicit user approval
+⚠️  Pre-commit hook DISABLED (2026-04-03) — Zed editor's background
+    `git status` races with lint-staged's git stash, causing persistent
+    index.lock conflicts. Attempted fixes: 87c85dd, c560311 — neither resolved.
+✅ Lint and format checks run in CI instead
+✅ Run `pnpm run lint` and `pnpm run format:check` locally before pushing
+❌ Do NOT re-enable the pre-commit hook until the Zed lock race is resolved
 ```
 
 ### Rule 13: Error Handling Completeness
