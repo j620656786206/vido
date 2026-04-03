@@ -423,4 +423,4 @@ development_status:
   # Not a frontend bug (bugfix-3 handles empty responses correctly)
   backups-api-500-investigation:                      backlog  # 2026-03-28 — backend issue, needs investigation
 
-next_priority: epic-9  # Bugfix sprint complete (7 stories + 1 hotfix). Next: Epic 9 AI Subtitle Enhancement
+next_priority: epic-9c  # Epic 9c before 9: contains P0 requirement (P1-032 data source priority), foundational ShouldOverwrite() logic, competitive feature parity (NFO/tech info). Epic 9 (AI subtitle, P2/P3) deferred until after 9c.
