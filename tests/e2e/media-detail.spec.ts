@@ -139,6 +139,94 @@ test.describe('Media Detail - Navigation @e2e @media-detail', () => {
 });
 
 // =============================================================================
+// Fallback UI Tests (Story 5-11)
+// =============================================================================
+
+test.describe('Media Detail - Fallback UI @e2e @media-detail @story-5-11', () => {
+  test('[P0] should display color placeholder for media without poster', async ({ page, api }) => {
+    // GIVEN: Find a movie without TMDB metadata (tmdbId = 0)
+    const moviesRes = await api.listMovies({ page: 1, pageSize: 50 });
+    const noMetadataMovie = moviesRes.data?.items?.find(
+      (m: { tmdb_id?: number }) => !m.tmdb_id || m.tmdb_id === 0
+    );
+    test.skip(!noMetadataMovie, 'No movies without metadata available');
+
+    // WHEN: Navigate to the detail page
+    await page.goto(`/media/movie/${noMetadataMovie!.id}`);
+    await page.waitForLoadState('networkidle');
+
+    // THEN: Color placeholder should be rendered (not the Film icon placeholder)
+    const placeholder = page.getByTestId('color-placeholder');
+    await expect(placeholder).toBeAttached({ timeout: 15000 });
+  });
+
+  test('[P0] should display failed state with file info and CTAs', async ({ page, api }) => {
+    // GIVEN: Find a movie with failed/empty parse status
+    const moviesRes = await api.listMovies({ page: 1, pageSize: 50 });
+    const failedMovie = moviesRes.data?.items?.find(
+      (m: { tmdb_id?: number; parse_status?: string }) =>
+        (!m.tmdb_id || m.tmdb_id === 0) && (m.parse_status === 'failed' || m.parse_status === '')
+    );
+    test.skip(!failedMovie, 'No movies with failed parse status available');
+
+    // WHEN: Navigate to the detail page
+    await page.goto(`/media/movie/${failedMovie!.id}`);
+    await page.waitForLoadState('networkidle');
+
+    // THEN: Failed state UI should be visible
+    await expect(page.getByTestId('fallback-failed')).toBeAttached({ timeout: 15000 });
+    await expect(page.getByText('我們找不到這部電影的資料')).toBeVisible();
+    await expect(page.getByText('檔案資訊')).toBeVisible();
+
+    // AND: CTA buttons should be present
+    await expect(page.getByTestId('cta-search-metadata')).toBeVisible();
+    await expect(page.getByTestId('cta-manual-edit')).toBeVisible();
+  });
+
+  test('[P1] should display pending state with spinner', async ({ page, api }) => {
+    // GIVEN: Find a movie with pending parse status
+    const moviesRes = await api.listMovies({ page: 1, pageSize: 50 });
+    const pendingMovie = moviesRes.data?.items?.find(
+      (m: { tmdb_id?: number; parse_status?: string }) =>
+        (!m.tmdb_id || m.tmdb_id === 0) && m.parse_status === 'pending'
+    );
+    test.skip(!pendingMovie, 'No movies with pending parse status available');
+
+    // WHEN: Navigate to the detail page
+    await page.goto(`/media/movie/${pendingMovie!.id}`);
+    await page.waitForLoadState('networkidle');
+
+    // THEN: Pending state UI should be rendered
+    // Use toBeAttached() for animated elements per project gotcha
+    await expect(page.getByTestId('fallback-pending')).toBeAttached({ timeout: 15000 });
+    await expect(page.getByTestId('pending-spinner')).toBeAttached();
+    await expect(page.getByText('正在搜尋電影資訊⋯')).toBeVisible();
+    await expect(page.getByTestId('pending-progress')).toBeAttached();
+  });
+
+  test('[P1] search metadata CTA should navigate to search page', async ({ page, api }) => {
+    // GIVEN: A movie with failed status on detail page
+    const moviesRes = await api.listMovies({ page: 1, pageSize: 50 });
+    const failedMovie = moviesRes.data?.items?.find(
+      (m: { tmdb_id?: number; parse_status?: string }) =>
+        (!m.tmdb_id || m.tmdb_id === 0) && (m.parse_status === 'failed' || m.parse_status === '')
+    );
+    test.skip(!failedMovie, 'No movies with failed parse status available');
+
+    await page.goto(`/media/movie/${failedMovie!.id}`);
+    await page.waitForLoadState('networkidle');
+
+    // WHEN: Click the search metadata button
+    const searchBtn = page.getByTestId('cta-search-metadata');
+    await expect(searchBtn).toBeVisible({ timeout: 15000 });
+    await searchBtn.click();
+
+    // THEN: Should navigate to search page with query parameter
+    await expect(page).toHaveURL(/\/search\?q=.+/, { timeout: 10000 });
+  });
+});
+
+// =============================================================================
 // Error Handling Tests
 // =============================================================================
 

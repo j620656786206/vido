@@ -29,20 +29,7 @@
 
 - [x] **Action: 建立 Story** — Bob 建立 Story 5-11 Fallback UI Enhancement，屬 Epic 5 增強。純前端改動，7 條 AC、6 個 Tasks。（完成：`5-11-fallback-ui-enhancement.md` ready-for-dev 2026-04-02）
 
-- [ ] **Action: 執行 Story** — Amelia 執行 `/bmad:bmm:workflows:dev-story`，基於 bugfix-1 後的 code，實作 ColorPlaceholder component、Pending/Failed 狀態 UI、繁中文案、響應式佈局，完成後對照設計稿截圖做 UX 驗證。
-
-  **提示詞**：
-  ```
-  請執行 Phase 1 的 Fallback UI Enhancement Story。
-
-  Story 檔案位置：_bmad-output/implementation-artifacts/5-11-fallback-ui-enhancement.md
-
-  重點注意事項：
-  1. 基於 bugfix-1 cherry-pick 後的 code（apps/web/src/routes/media/$type.$id.tsx）
-  2. ColorPlaceholder component 用檔名做 hash 生成 HSL 色相，白色首字母
-  3. 文案全部繁體中文
-  4. 完成後對照 Sally 的設計稿截圖做 UX 驗證
-  ```
+- [x] **Action: 執行 Story** — Amelia 執行 `/bmad:bmm:workflows:dev-story`，基於 bugfix-1 後的 code，實作 ColorPlaceholder component、Pending/Failed 狀態 UI、繁中文案、響應式佈局，完成後對照設計稿截圖做 UX 驗證。（完成：Story 5-11 review 2026-04-03，3 new components + 30 unit tests + 4 E2E tests，1593 total tests pass）
 
 ---
 
