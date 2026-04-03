@@ -43,7 +43,7 @@
 
 - [x] **Action: 拆 Epic & Stories** — Bob 使用 `/bmad:bmm:workflows:create-epics-and-stories`，建立 Epic 9c（Media Technical Info & NFO Integration），拆 4 stories：9c-1 DB Schema Migration → 9c-2 NFO Reader → 9c-3 FFprobe Integration → 9c-4 Badges UI + Unmatched Filter。（完成：commit `54b03a2` 2026-04-03，epic file + epic-list + sprint-status 已更新）
 
-- [ ] **Action: 實作準備度檢查** — 使用 `/bmad:bmm:workflows:check-implementation-readiness`，確認 PRD、架構、設計稿、Stories 齊備且一致。特別注意 Story 2/3 平行開發 conflict、DB migration 完整性、Data Source Priority 一致性。
+- [x] **Action: 實作準備度檢查** — 使用 `/bmad:bmm:workflows:check-implementation-readiness`，結果 READY。5/5 FRs 100% 覆蓋、UX 全對齊、0 critical/0 major/2 minor。Report: `implementation-readiness-report-epic-9c.md`。（完成：2026-04-03）
 
 - [ ] **Action: 逐 Story 開發** — 對每個 Story 執行 `/bmad:bmm:workflows:dev-story`，遵循 project-context.md 規範，每個 task 完成後跑測試，涉及前端時對照設計稿，DB migration 使用 SQLite 相容語法。
 
