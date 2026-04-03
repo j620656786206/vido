@@ -39,41 +39,7 @@
 
 - [x] **Action: Architect 更新架構** — Winston 建立 ADR `adr-media-info-nfo-pipeline.md`，涵蓋五項決策：(1) Scan pipeline NFO→AI→TMDB→FFprobe 串行流程 (2) 直接擴充 movies/series tables，Migration 021 (3) FFprobe via `os/exec` + semaphore(3) + 10s timeout (4) NFO XML/URL 雙格式 parser (5) metadata_source 優先級鏈 manual>nfo>tmdb>douban>wikipedia>ai。（完成：ADR accepted 2026-04-03）
 
-- [ ] **Action: UX 設計稿** — Sally 出技術資訊 badges（video/audio/subtitle pill badges）和 Unmatched Filter UI（Library 頁面篩選列），Desktop + Mobile，放 ux-design.pen Flow A/B 附近。
-
-  <details><summary>提示詞</summary>
-
-  ```
-  我需要為 Phase 2 設計兩個 UI 元素。
-
-  ## 1. 視覺 Badges（技術資訊標籤）
-  設計 Detail 頁面上的技術資訊 badges，參考 Infuse 的做法：
-  - Video：codec badge（H.264 / H.265 / AV1）+ resolution badge（4K / 1080p / 720p）
-  - Audio：codec badge（DTS / Atmos / AAC）+ channels（5.1 / 7.1 / Stereo）
-  - HDR badge（HDR10 / Dolby Vision / SDR — SDR 不顯示）
-  - Subtitle：語言 badges（繁中 / 簡中 / 英文 / 日文）
-
-  位置：Detail 頁面的 title 下方，年份和 runtime 同一列
-  風格：小型 pill badges，用顏色區分類別（video=藍、audio=紫、subtitle=綠）
-
-  ## 2. Unmatched Filter
-  Library 頁面的篩選列新增「未匹配」選項：
-  - Filter chip 或 toggle
-  - 顯示未匹配數量（如 「未匹配 (12)」）
-  - 啟用後只顯示 tmdb_id 為空的媒體
-
-  ## 設計稿位置
-  在 ux-design.pen 中：
-  - Badges 設計放在 Flow B（Detail）的現有畫面旁邊
-  - Unmatched filter 放在 Flow A（Browse）的現有畫面旁邊
-
-  ## 參考
-  - 現有設計：ux-design.pen 的 Flow A 和 Flow B
-  - 色彩系統：_bmad-output/planning-artifacts/ux-design-specification.md
-  - Infuse badges 風格：小型 pill shape，半透明背景
-  ```
-
-  </details>
+- [x] **Action: UX 設計稿** — Sally 建立 4 個 reusable badge 元件（TechBadge-Video 藍/Audio 紫/Subtitle 綠/HDR 金）+ Screen 4f（Desktop）和 5d（Mobile）展示 tech badges 整合效果。Unmatched Filter 已在 Flow H（H7/H8）設計完成，無需重做。（完成：commit `c5b36e1` 2026-04-03）
 
 - [ ] **Action: 拆 Epic & Stories** — Bob 使用 `/bmad:bmm:workflows:create-epics-and-stories`，建立新 Epic（Media Technical Info & NFO Integration），拆 4 stories：DB Schema Migration → NFO Reader → FFprobe Integration → Badges UI + Unmatched Filter。
 
