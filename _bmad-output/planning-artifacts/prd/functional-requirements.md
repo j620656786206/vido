@@ -16,7 +16,7 @@ Source of truth: `prd-v4-source.md` Section 3 — 功能規格.
 | FR5–FR8 | Library search, sort, filter, views | P1-007 | DONE (Epic 5) |
 | FR9–FR10 | Smart recommendations, similar titles | P2-022 | NEW |
 | FR11–FR14 | Filename parsing, metadata retrieval | P1-002, P1-003 | DONE (Epic 2–3) |
-| FR15–FR26 | AI parsing, multi-source fallback, manual edit | P1-002, P1-004 | DONE (Epic 3) |
+| FR15–FR26 | AI parsing, multi-source fallback, manual edit | P1-002, P1-004, P1-032 | DONE (Epic 3); P1-032 NEW |
 | FR27–FR33 | qBittorrent monitoring | P3-010 | DONE (Epic 4) |
 | FR34–FR37 | Advanced download control | P3-010–P3-014 | NEW |
 | FR38–FR42 | Media library management | P1-007 | DONE (Epic 5) |
@@ -71,6 +71,17 @@ Source of truth: `prd-v4-source.md` Section 3 — 功能規格.
 | P1-020 | AI 用語校正 | P2 | Use Claude API to fine-tune cross-strait terminology in Simplified→Traditional conversion results (requires user-provided API key). | NEW |
 | P1-021 | MKV 英文軌翻譯 | P3 | No-subtitle fallback: extract English audio track from MKV → Whisper transcription → DeepL/Claude translation to Traditional Chinese (requires user-provided API keys). | NEW |
 
+### 3.4 媒體 Metadata 強化
+
+> **Background:** Gap analysis against mainstream NAS media tools (Plex, Jellyfin, Emby, Infuse, Kodi). Technical information and NFO reading are standard features across all major tools. NFO support is critical for users migrating from other tools — it dramatically accelerates onboarding.
+
+| ID | 功能 | Priority | Description | Status |
+|----|------|----------|-------------|--------|
+| P1-030 | 媒體技術資訊 | P1 | Extract video technical details during scan: video codec, resolution, audio codec, audio channels, subtitle tracks. Display as visual badges on detail page (e.g., H.265 · 4K · DTS). Data source priority: NFO `streamdetails` > FFprobe extraction. Supported formats: MKV, MP4, AVI. | NEW |
+| P1-031 | NFO Sidecar 讀取（唯讀） | P1 | Detect same-name `.nfo` sidecar files during scan. Support two NFO formats: full Kodi-style XML and single-line TMDB URL. NFO-provided metadata takes priority over AI parsing and TMDB enrichment. Use `uniqueid` fields (tmdb/imdb) for precise TMDB matching. Read-only — Vido never writes to NFO files. | NEW |
+| P1-032 | 資料來源優先級鏈 | P0 | Establish explicit metadata priority: User manual correction > NFO > TMDB enrichment > AI parsing. Each media record stores a `metadata_source` field indicating the origin of its current metadata. Foundational infrastructure — all metadata resolution logic depends on this. | NEW |
+| P1-033 | 劇集檔案大小 | P1 | Add `file_size` field to Series model (currently only Movie has it). Calculate total file size per season and per series during scan. | NEW |
+
 ---
 
 ## Phase 2: 媒體探索
@@ -99,7 +110,13 @@ Source of truth: `prd-v4-source.md` Section 3 — 功能規格.
 | P2-014 | 繁中搜尋優先 | P1 | Search queries simultaneously match TMDB Chinese titles and original titles; Traditional Chinese results ranked first. | Partially DONE (Epic 2 search) |
 | P2-015 | 儲存篩選條件 | P2 | Users can save frequently-used filter combinations (e.g., "Korean dramas after 2024") for quick access. | NEW |
 
-### 3.6 媒體詳情頁
+### 3.6 媒體庫強化
+
+| ID | 功能 | Priority | Description | Status |
+|----|------|----------|-------------|--------|
+| P2-030 | 未匹配媒體篩選 | P1 | Add "Unmatched" filter to library page; batch-review all media without TMDB metadata. Display unmatched count as a badge on the filter option. | NEW |
+
+### 3.7 媒體詳情頁
 
 | ID | 功能 | Priority | Description | Status |
 |----|------|----------|-------------|--------|
@@ -116,7 +133,7 @@ Source of truth: `prd-v4-source.md` Section 3 — 功能規格.
 
 > Goal: One-click request → auto-download → auto-fetch subtitles — fully automated pipeline.
 
-### 3.7 請求系統
+### 3.8 請求系統
 
 | ID | 功能 | Priority | Description | Status |
 |----|------|----------|-------------|--------|
@@ -126,7 +143,7 @@ Source of truth: `prd-v4-source.md` Section 3 — 功能規格.
 | P3-004 | Sonarr/Radarr 串接（可選） | P0 | When Sonarr/Radarr is configured, route requests via their API; otherwise use Vido's built-in flow. | NEW |
 | P3-005 | 自動字幕觸發 | P1 | Automatically trigger subtitle search (Phase 1 subtitle engine) upon download completion. | NEW |
 
-### 3.8 下載任務管理
+### 3.9 下載任務管理
 
 | ID | 功能 | Priority | Description | Status |
 |----|------|----------|-------------|--------|
@@ -136,7 +153,7 @@ Source of truth: `prd-v4-source.md` Section 3 — 功能規格.
 | P3-013 | 下載完成通知 | P1 | Web UI notification on download completion (future: extend to Telegram/Discord). | NEW |
 | P3-014 | 內建 BT 引擎（未來） | P3 | Built-in BT download using Go BT library (anacrolix/torrent), eliminating qBittorrent dependency. | NEW |
 
-### 3.9 Indexer 管理
+### 3.10 Indexer 管理
 
 | ID | 功能 | Priority | Description | Status |
 |----|------|----------|-------------|--------|
@@ -149,7 +166,7 @@ Source of truth: `prd-v4-source.md` Section 3 — 功能規格.
 
 > Goal: A single interface to monitor the full state of the NAS media system.
 
-### 3.10 媒體庫統計
+### 3.11 媒體庫統計
 
 | ID | 功能 | Priority | Description | Status |
 |----|------|----------|-------------|--------|
@@ -158,7 +175,7 @@ Source of truth: `prd-v4-source.md` Section 3 — 功能規格.
 | P4-003 | 類型分佈 | P1 | Charts showing genre, region, and year distribution of the collection. | NEW |
 | P4-004 | 最近新增 | P0 | List of media added in the last 7/30 days. | NEW |
 
-### 3.11 Plex/Jellyfin 串接
+### 3.12 Plex/Jellyfin 串接
 
 | ID | 功能 | Priority | Description | Status |
 |----|------|----------|-------------|--------|
@@ -166,7 +183,7 @@ Source of truth: `prd-v4-source.md` Section 3 — 功能規格.
 | P4-011 | 正在觀看 | P1 | Home page "Continue Watching" section based on Plex/Jellyfin watch progress. | NEW |
 | P4-012 | 庫存同步 | P0 | Periodically scan Plex/Jellyfin libraries to mark content as already owned. | NEW |
 
-### 3.12 服務健康監控
+### 3.13 服務健康監控
 
 | ID | 功能 | Priority | Description | Status |
 |----|------|----------|-------------|--------|

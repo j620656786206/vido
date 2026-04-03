@@ -32,7 +32,7 @@ Vido's MVP is no longer about fansub filename parsing alone. The v4 vision expan
 | Frontend | React 19, TypeScript, Vite, TanStack Router/Query |
 | Backend | Go, Gin framework, SQLite (WAL mode) |
 | Deployment | Docker (single container) |
-| Time estimate | 8-10 weeks for Phase 1 MVP |
+| Time estimate | 10-13 weeks for Phase 1 MVP |
 
 ---
 
@@ -59,7 +59,7 @@ These completed epics map directly to several v4 feature IDs:
 
 ---
 
-## Phase 1: 字幕核心穩定 (MVP) — 8-10 Weeks
+## Phase 1: 字幕核心穩定 (MVP) — 10-13 Weeks
 
 **Goal:** 可獨立運作的繁中字幕管理工具 — A self-contained Traditional Chinese subtitle management tool that replaces Bazarr for the target audience.
 
@@ -97,7 +97,16 @@ These completed epics map directly to several v4 feature IDs:
 | P1-020 | AI terminology correction | P2 | Use Claude API for fine-tuned cross-strait terminology review on 簡→繁 output (user-provided API key) |
 | P1-021 | MKV English track translation | P3 | No-subtitle fallback: extract English audio → Whisper transcription → DeepL/Claude translation to zh-TW (user-provided API keys) |
 
-### 1.4 Milestones
+### 1.4 Media Metadata Enrichment
+
+| ID | Feature | Priority | Description | Status |
+|----|---------|----------|-------------|--------|
+| P1-030 | Media technical information | P1 | Extract video technical details during scan: video codec, resolution, audio codec, audio channels, subtitle tracks. Display as visual badges on detail page (e.g., H.265 · 4K · DTS). Data source priority: NFO streamdetails > FFprobe extraction. Supported formats: MKV, MP4, AVI. | New |
+| P1-031 | NFO sidecar reading (read-only) | P1 | Detect same-name `.nfo` sidecar files during scan. Support two NFO formats: full Kodi-style XML and single-line TMDB URL. NFO-provided metadata takes priority over AI parsing and TMDB enrichment. Use `uniqueid` fields (tmdb/imdb) for precise TMDB matching. Read-only — Vido never writes to NFO files. | New |
+| P1-032 | Data source priority chain | P0 | Establish explicit metadata priority: User manual correction > NFO > TMDB enrichment > AI parsing. Each media record stores a `metadata_source` field indicating the origin of its current metadata. This is foundational infrastructure — all metadata resolution logic depends on it. | New |
+| P1-033 | Series file size | P1 | Add `file_size` field to Series model (currently only Movie has it). Calculate total file size per season and per series during scan. | New |
+
+### 1.5 Milestones
 
 | Milestone | Content | Weeks |
 |-----------|---------|-------|
@@ -106,9 +115,10 @@ These completed epics map directly to several v4 feature IDs:
 | M1.3 | TMDB matching + zh-TW metadata | 1-2 |
 | M1.4 | Subtitle engine (Assrt fix + 簡繁 identification + conversion) | 2-3 |
 | M1.5 | React 19 frontend + media library browsing + subtitle management UI | 2-3 |
-| M1.6 | Docker packaging + first public release | 1 |
+| M1.6 | NFO sidecar reading + data source priority chain + metadata enrichment | 1-2 |
+| M1.7 | Docker packaging + first public release | 1 |
 
-### 1.5 Validation Metrics
+### 1.6 Validation Metrics
 
 | Metric | Target |
 |--------|--------|
@@ -164,7 +174,13 @@ These completed epics map directly to several v4 feature IDs:
 | P2-024 | Trailer playback | P2 | Embedded YouTube trailer (when available) |
 | P2-025 | Douban link | P2 | Direct link to Douban page for Chinese reviews |
 
-### 2.4 Milestones
+### 2.4 Media Library Enhancements
+
+| ID | Feature | Priority | Description |
+|----|---------|----------|-------------|
+| P2-030 | Unmatched media filter | P1 | Add "Unmatched" filter to library page; lets users batch-review all media without TMDB metadata. Display unmatched count as a badge. |
+
+### 2.5 Milestones
 
 | Milestone | Content | Weeks |
 |-----------|---------|-------|
@@ -173,7 +189,7 @@ These completed epics map directly to several v4 feature IDs:
 | M2.3 | Advanced search + multi-dimensional filters | 2-3 |
 | M2.4 | Media detail page (dual ratings + streaming platforms + subtitle status) | 1-2 |
 
-### 2.5 Validation Metrics
+### 2.6 Validation Metrics
 
 | Metric | Target |
 |--------|--------|
@@ -306,7 +322,7 @@ The following are **explicitly excluded** from all v4 phases:
 | **TMDB API rate limits** | Medium | Server-side caching (TTL 1 hour) + request debounce + batch queries. Free tier limits manageable for single-user deployment |
 | **Fansub naming format diversity** | Medium | Configurable regex engine + community-contributed format definitions. AI parsing (already implemented) handles edge cases |
 | **Go BT library maturity** | Medium | Phase 3 integrates qBittorrent first (already done). Built-in BT engine (anacrolix/torrent) is P3 priority — only pursued after qBit integration is proven stable |
-| **Single developer bandwidth** | High | Strict phase ordering — each phase is independently usable and shippable. Phase 1 MVP is absolute priority. Four phases at 8-10 + 6-8 + 6-8 + 4-6 weeks = ~30 weeks total; realistic for single developer with no deadline pressure |
+| **Single developer bandwidth** | High | Strict phase ordering — each phase is independently usable and shippable. Phase 1 MVP is absolute priority. Four phases at 10-13 + 6-8 + 6-8 + 4-6 weeks = ~32 weeks total; realistic for single developer with no deadline pressure |
 
 ### Competition Risks
 
