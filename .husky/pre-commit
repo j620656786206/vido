@@ -1,2 +1,4 @@
 #!/usr/bin/env sh
-pnpm exec lint-staged
+# Pre-commit hook disabled — lint/format checks moved to CI.
+# Reason: Zed editor's background `git status` races with lint-staged's
+# git stash, causing persistent index.lock conflicts (see 87c85dd, c560311).
