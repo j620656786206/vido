@@ -35,48 +35,7 @@
 
 ## Phase 2：Media Info Pipeline + NFO 讀取（新 Epic）
 
-- [ ] **Action: PM 更新 PRD** — John 使用 `/bmad:bmm:workflows:prd`（Edit 模式），新增 P2-001~P2-005 需求（Media Technical Info、NFO Sidecar 讀取、Data Source Priority、Unmatched Filter、Series File Size）。
-
-  <details><summary>提示詞</summary>
-
-  ```
-  我需要在現有 PRD 中新增 Phase 2 的需求。PRD 位置：_bmad-output/planning-artifacts/prd/
-
-  ## 新增需求
-
-  ### P2-001: Media Technical Information（媒體技術資訊）
-  - 系統應在 scan 時提取影片的技術資訊：video codec、resolution、audio codec、audio channels、subtitle tracks
-  - 技術資訊應顯示在 Detail 頁面，以視覺 badges 形式呈現（如 H.265 · 4K · DTS）
-  - 資料來源優先級：NFO streamdetails > FFprobe 提取
-  - 必須支援的格式：MKV、MP4、AVI
-
-  ### P2-002: NFO Sidecar 讀取（唯讀）
-  - 系統應在 scan 時偵測影片同名 .nfo 檔案
-  - 支援兩種 NFO 格式：完整 XML 和單行 TMDB URL
-  - NFO 提供的 metadata 優先級高於 AI parsing 和 TMDB enrichment
-  - NFO 中的 uniqueid（tmdb/imdb）應用於精準 TMDB match
-  - 只讀取，不寫入 NFO
-
-  ### P2-003: Data Source Priority（資料來源優先級）
-  - 建立明確的 metadata 優先級：使用者手動修正 > NFO > TMDB enrichment > AI parsing
-  - 每筆媒體記錄應標記 metadata_source 欄位
-
-  ### P2-004: Unmatched Media Filter（未匹配媒體篩選）
-  - Library 頁面新增「未匹配」篩選條件
-  - 讓使用者可以批量檢視所有沒有 TMDB metadata 的媒體
-  - 顯示未匹配數量 badge
-
-  ### P2-005: Series File Size（劇集檔案大小）
-  - Series model 補齊 file_size 欄位（目前只有 Movie 有）
-  - Scan 時計算整季/整部劇集的總檔案大小
-
-  ## 產品背景
-  這些需求來自與主流 NAS 媒體管理工具（Plex、Jellyfin、Emby、Infuse、Kodi）的差距分析。
-  技術資訊和 NFO 讀取是所有主流工具的標配功能。
-  NFO 讀取特別重要：可大幅加速從其他工具遷移來的使用者的 onboarding 體驗。
-  ```
-
-  </details>
+- [x] **Action: PM 更新 PRD** — John 使用 `/bmad:bmm:agents:pm`（Edit PRD），將 5 個需求重新分配：P1-030~033（Media Tech Info、NFO Sidecar、Data Source Priority P0、Series File Size）放 Phase 1 Section 1.4；P2-030（Unmatched Filter）放 Phase 2 Section 2.4。Phase 1 時程調整為 10-13 週。（完成：commit `4b1ab5f` 2026-04-03）
 
 - [ ] **Action: Architect 更新架構** — Winston 使用 `/bmad:bmm:workflows:create-architecture`，決策 Scan Pipeline 擴充順序、DB Schema（media_info 新 table 或現有 table 擴充）、FFprobe Docker 整合、NFO Parser、Data Source Priority 實作。
 
@@ -179,7 +138,7 @@
   ## Epic 資訊
   - 名稱建議：Epic N — Media Technical Info & NFO Integration
   - 編號：接在現有 epic-list.md 最後一個 epic 之後
-  - 涵蓋 PRD 需求：P2-001 ~ P2-005
+  - 涵蓋 PRD 需求：P1-030 ~ P1-033, P2-030
 
   ## 建議的 Story 拆分（依賴順序）
 
