@@ -1,6 +1,6 @@
 # Story 5.11: Fallback UI Enhancement for Media Detail Page
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -68,44 +68,44 @@ So that **I understand the system status and can take action to search for metad
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create `ColorPlaceholder` component (AC: #1)
-  - [ ] 1.1 Create `apps/web/src/components/media/ColorPlaceholder.tsx`
-  - [ ] 1.2 Implement filename-to-color hash function (deterministic gradient from string)
-  - [ ] 1.3 Render gradient background with centered initial letter
-  - [ ] 1.4 Support configurable size via props (desktop vs mobile dimensions)
-  - [ ] 1.5 Write unit tests in `ColorPlaceholder.spec.tsx`
+- [x] Task 1: Create `ColorPlaceholder` component (AC: #1)
+  - [x] 1.1 Create `apps/web/src/components/media/ColorPlaceholder.tsx`
+  - [x] 1.2 Implement filename-to-color hash function (deterministic gradient from string)
+  - [x] 1.3 Render gradient background with centered initial letter
+  - [x] 1.4 Support configurable size via props (desktop vs mobile dimensions)
+  - [x] 1.5 Write unit tests in `ColorPlaceholder.spec.tsx`
 
-- [ ] Task 2: Create `FallbackPending` sub-component (AC: #2)
-  - [ ] 2.1 Create pending state UI with spinner + progress bar + messages
-  - [ ] 2.2 Use `Loader2` with `animate-spin` for spinner (already used in codebase)
-  - [ ] 2.3 Display filename hint at bottom
-  - [ ] 2.4 Write unit test
+- [x] Task 2: Create `FallbackPending` sub-component (AC: #2)
+  - [x] 2.1 Create pending state UI with spinner + progress bar + messages
+  - [x] 2.2 Use `Loader2` with `animate-spin` for spinner (already used in codebase)
+  - [x] 2.3 Display filename hint at bottom
+  - [x] 2.4 Write unit test
 
-- [ ] Task 3: Create `FallbackFailed` sub-component (AC: #3, #4, #5)
-  - [ ] 3.1 Create failed state with inline icon + title row
-  - [ ] 3.2 Implement file info section with icon rows (AC #4)
-  - [ ] 3.3 Implement CTA section: primary button + secondary link (AC #5)
-  - [ ] 3.4 Wire "搜尋 Metadata" to `/search?q={title}` using `<Link>`
-  - [ ] 3.5 Wire "手動編輯" to open `MetadataEditorDialog` via existing `setIsEditorOpen`
-  - [ ] 3.6 Write unit tests
+- [x] Task 3: Create `FallbackFailed` sub-component (AC: #3, #4, #5)
+  - [x] 3.1 Create failed state with inline icon + title row
+  - [x] 3.2 Implement file info section with icon rows (AC #4)
+  - [x] 3.3 Implement CTA section: primary button + secondary link (AC #5)
+  - [x] 3.4 Wire "搜尋 Metadata" to `/search?q={title}` using `<Link>`
+  - [x] 3.5 Wire "手動編輯" to open `MetadataEditorDialog` via existing `setIsEditorOpen`
+  - [x] 3.6 Write unit tests
 
-- [ ] Task 4: Replace existing fallback in detail page (AC: #1-7)
-  - [ ] 4.1 Refactor `apps/web/src/routes/media/$type.$id.tsx` lines 251-320
-  - [ ] 4.2 Replace gray placeholder with `ColorPlaceholder` in backdrop area
-  - [ ] 4.3 Replace inline pending/failed blocks with `FallbackPending`/`FallbackFailed`
-  - [ ] 4.4 Ensure desktop detail panel layout preserved (460px side-panel)
-  - [ ] 4.5 Ensure mobile bottom-sheet layout preserved
+- [x] Task 4: Replace existing fallback in detail page (AC: #1-7)
+  - [x] 4.1 Refactor `apps/web/src/routes/media/$type.$id.tsx` lines 251-320
+  - [x] 4.2 Replace gray placeholder with `ColorPlaceholder` in backdrop area
+  - [x] 4.3 Replace inline pending/failed blocks with `FallbackPending`/`FallbackFailed`
+  - [x] 4.4 Ensure desktop detail panel layout preserved (460px side-panel)
+  - [x] 4.5 Ensure mobile bottom-sheet layout preserved
 
-- [ ] Task 5: Responsive styling (AC: #7)
-  - [ ] 5.1 Desktop: color poster in 460px panel backdrop (240px height)
-  - [ ] 5.2 Mobile: color poster in bottom-sheet backdrop (200px height)
-  - [ ] 5.3 Verify both layouts match UX design screenshots
+- [x] Task 5: Responsive styling (AC: #7)
+  - [x] 5.1 Desktop: color poster in 460px panel backdrop (240px height)
+  - [x] 5.2 Mobile: color poster in bottom-sheet backdrop (200px height)
+  - [x] 5.3 Verify both layouts match UX design screenshots
 
-- [ ] Task 6: E2E smoke test (AC: #1-7)
-  - [ ] 6.1 Add/update Playwright test for detail page fallback states
-  - [ ] 6.2 Test pending state renders spinner + message (use `toBeAttached()` not `toBeVisible()` for animations)
-  - [ ] 6.3 Test failed state renders file info + CTAs
-  - [ ] 6.4 Test color placeholder renders (check for gradient background)
+- [x] Task 6: E2E smoke test (AC: #1-7)
+  - [x] 6.1 Add/update Playwright test for detail page fallback states
+  - [x] 6.2 Test pending state renders spinner + message (use `toBeAttached()` not `toBeVisible()` for animations)
+  - [x] 6.3 Test failed state renders file info + CTAs
+  - [x] 6.4 Test color placeholder renders (check for gradient background)
 
 ## Dev Notes
 
@@ -191,9 +191,32 @@ Recent commits show:
 ## Dev Agent Record
 
 ### Agent Model Used
+Claude Opus 4.6 (1M context)
 
 ### Debug Log References
+- jsdom strips `linear-gradient` from inline styles — tested gradient function separately, render test uses `getAttribute('style')` fallback
+- TanStack Router `<Link>` requires router context in tests — used `vi.mock()` pattern from existing PosterCard.spec.tsx
 
 ### Completion Notes List
+- Task 1: Created `ColorPlaceholder` with djb2-style hash → HSL gradient. Optional `height` prop; when omitted, uses CSS classes for responsive sizing. 11 unit tests.
+- Task 2: Created `FallbackPending` with Loader2 spinner, progress bar, zh-TW copy, filename hint. 6 unit tests.
+- Task 3: Created `FallbackFailed` with SearchX icon, file info section (5 rows with icons), CTA hierarchy (primary Link + secondary button). 13 unit tests.
+- Task 4: Replaced lines 251-320 in `$type.$id.tsx`. Removed unused icon imports (Search, Loader2, FileText, HardDrive, Clock). Added imports for 3 new components.
+- Task 5: Responsive height: mobile 200px (`h-[200px]`), desktop 240px (`md:h-[240px]`). ColorPlaceholder renders full-width with no fixed aspect ratio in backdrop mode.
+- Task 6: Added 4 E2E tests to existing `media-detail.spec.ts` — fallback UI describe block. Uses `toBeAttached()` per project convention for animated elements.
+- All 1593 unit tests pass. Zero regressions. TypeScript compiles with zero errors.
+
+### Change Log
+- 2026-04-03: Story 5-11 implementation complete. Created 3 new components (ColorPlaceholder, FallbackPending, FallbackFailed), refactored detail page fallback, added 30 unit tests + 4 E2E tests.
 
 ### File List
+- `apps/web/src/components/media/ColorPlaceholder.tsx` (new)
+- `apps/web/src/components/media/ColorPlaceholder.spec.tsx` (new)
+- `apps/web/src/components/media/FallbackPending.tsx` (new)
+- `apps/web/src/components/media/FallbackPending.spec.tsx` (new)
+- `apps/web/src/components/media/FallbackFailed.tsx` (new)
+- `apps/web/src/components/media/FallbackFailed.spec.tsx` (new)
+- `apps/web/src/routes/media/$type.$id.tsx` (modified — fallback block replaced)
+- `tests/e2e/media-detail.spec.ts` (modified — added fallback UI test section)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (modified — status update)
+- `_bmad-output/implementation-artifacts/5-11-fallback-ui-enhancement.md` (modified — task checkboxes, dev record)

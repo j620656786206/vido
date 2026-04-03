@@ -1,6 +1,9 @@
 import { useState, useCallback } from 'react';
-import { createFileRoute, notFound, useNavigate, Link } from '@tanstack/react-router';
-import { Pencil, ArrowLeft, Film, Search, Loader2, FileText, HardDrive, Clock } from 'lucide-react';
+import { createFileRoute, notFound, useNavigate } from '@tanstack/react-router';
+import { Pencil, ArrowLeft, Film, Loader2 } from 'lucide-react';
+import { ColorPlaceholder } from '../../components/media/ColorPlaceholder';
+import { FallbackPending } from '../../components/media/FallbackPending';
+import { FallbackFailed } from '../../components/media/FallbackFailed';
 import { CreditsSection } from '../../components/media/CreditsSection';
 import { MetadataEditorDialog } from '../../components/metadata-editor';
 import type { MediaMetadata } from '../../components/metadata-editor';
@@ -249,73 +252,30 @@ function MediaDetailRoute() {
               </div>
             </div>
           ) : (
-            /* Fallback UI — no TMDB metadata */
-            <div className="rounded-xl bg-gray-800/50 p-8">
-              <div className="flex flex-col items-center gap-6 md:flex-row md:items-start">
-                {/* Placeholder poster */}
-                <div className="flex aspect-[2/3] w-[200px] flex-shrink-0 items-center justify-center rounded-lg bg-gray-700">
-                  <Film className="h-16 w-16 text-gray-500" />
-                </div>
+            /* Fallback UI — no TMDB metadata (Story 5-11) */
+            <div className="overflow-hidden rounded-xl bg-gray-800/50">
+              {/* Color placeholder poster as backdrop */}
+              <ColorPlaceholder
+                filename={localData.filePath ?? localData.title}
+                initial={localData.title.charAt(0) || '?'}
+                className="h-[200px] w-full rounded-none md:h-[240px]"
+              />
 
-                <div className="flex-1">
-                  <h1 className="text-2xl font-bold text-white">{localData.title}</h1>
-
-                  {localData.parseStatus === 'pending' && (
-                    <div className="mt-3 flex items-center gap-2 rounded-lg bg-blue-900/30 px-4 py-2 text-blue-300">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      正在取得媒體資訊...
-                    </div>
-                  )}
-
-                  {(localData.parseStatus === 'failed' || localData.parseStatus === '') && (
-                    <div className="mt-3 rounded-lg bg-yellow-900/20 px-4 py-2 text-yellow-300">
-                      尚未取得媒體資訊
-                    </div>
-                  )}
-
-                  {/* File info */}
-                  <div className="mt-6 space-y-3">
-                    <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-400">
-                      檔案資訊
-                    </h2>
-                    {localData.filePath && (
-                      <div className="flex items-center gap-2 text-sm text-gray-300">
-                        <FileText className="h-4 w-4 text-gray-500" />
-                        <span className="break-all">{localData.filePath}</span>
-                      </div>
-                    )}
-                    {localData.fileSize != null && localData.fileSize > 0 && (
-                      <div className="flex items-center gap-2 text-sm text-gray-300">
-                        <HardDrive className="h-4 w-4 text-gray-500" />
-                        <span>{(localData.fileSize / (1024 * 1024 * 1024)).toFixed(2)} GB</span>
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2 text-sm text-gray-300">
-                      <Clock className="h-4 w-4 text-gray-500" />
-                      <span>新增於 {new Date(localData.createdAt).toLocaleString('zh-TW')}</span>
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="mt-6 flex gap-3">
-                    <Link
-                      to="/search"
-                      search={{ q: localData.title.replace(/\.\w{2,4}$/, '') }}
-                      className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 transition-colors"
-                    >
-                      <Search className="h-4 w-4" />
-                      搜尋元資料
-                    </Link>
-                    <button
-                      onClick={() => setIsEditorOpen(true)}
-                      className="flex items-center gap-2 rounded-lg bg-gray-700 px-4 py-2 text-sm text-white hover:bg-gray-600 transition-colors"
-                    >
-                      <Pencil className="h-4 w-4" />
-                      手動編輯
-                    </button>
-                  </div>
-                </div>
-              </div>
+              {/* Conditional content based on parseStatus */}
+              {localData.parseStatus === 'pending' ? (
+                <FallbackPending
+                  filename={localData.filePath?.split('/').pop() ?? localData.title}
+                />
+              ) : (
+                <FallbackFailed
+                  title={localData.title}
+                  filePath={localData.filePath}
+                  fileSize={localData.fileSize}
+                  createdAt={localData.createdAt}
+                  parseStatus={localData.parseStatus}
+                  onEditClick={() => setIsEditorOpen(true)}
+                />
+              )}
             </div>
           )}
         </div>
