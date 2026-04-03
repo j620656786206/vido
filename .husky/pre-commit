@@ -1,18 +1,2 @@
 #!/usr/bin/env sh
-
-# Wait for any external git process (e.g., Zed editor's background git status)
-# to release index.lock before lint-staged runs.
-LOCK_FILE="$(git rev-parse --git-dir)/index.lock"
-RETRIES=0
-while [ -f "$LOCK_FILE" ] && [ "$RETRIES" -lt 10 ]; do
-  sleep 0.3
-  RETRIES=$((RETRIES + 1))
-done
-if [ -f "$LOCK_FILE" ]; then
-  # Stale lock — no process holds it, safe to remove
-  if ! lsof "$LOCK_FILE" >/dev/null 2>&1; then
-    rm -f "$LOCK_FILE"
-  fi
-fi
-
 pnpm exec lint-staged
