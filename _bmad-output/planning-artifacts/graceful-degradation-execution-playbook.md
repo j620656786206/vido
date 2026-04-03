@@ -29,7 +29,7 @@
 
 - [x] **Action: 建立 Story** — Bob 建立 Story 5-11 Fallback UI Enhancement，屬 Epic 5 增強。純前端改動，7 條 AC、6 個 Tasks。（完成：`5-11-fallback-ui-enhancement.md` ready-for-dev 2026-04-02）
 
-- [x] **Action: 執行 Story** — Amelia 執行 `/bmad:bmm:workflows:dev-story`，基於 bugfix-1 後的 code，實作 ColorPlaceholder component、Pending/Failed 狀態 UI、繁中文案、響應式佈局，完成後對照設計稿截圖做 UX 驗證。（完成：Story 5-11 review 2026-04-03，3 new components + 30 unit tests + 4 E2E tests，1593 total tests pass）
+- [x] **Action: 執行 Story** — Amelia 執行 `/bmad:bmm:workflows:dev-story`，基於 bugfix-1 後的 code，實作 ColorPlaceholder component、Pending/Failed 狀態 UI、繁中文案、響應式佈局，完成後對照設計稿截圖做 UX 驗證。（完成：Story 5-11 done 2026-04-03，CR fixes applied: mediaType prop, test assertions, file list, AC1 clarification）
 
 ---
 
@@ -41,55 +41,7 @@
 
 - [x] **Action: UX 設計稿** — Sally 建立 4 個 reusable badge 元件（TechBadge-Video 藍/Audio 紫/Subtitle 綠/HDR 金）+ Screen 4f（Desktop）和 5d（Mobile）展示 tech badges 整合效果。Unmatched Filter 已在 Flow H（H7/H8）設計完成，無需重做。（完成：commit `c5b36e1` 2026-04-03）
 
-- [ ] **Action: 拆 Epic & Stories** — Bob 使用 `/bmad:bmm:workflows:create-epics-and-stories`，建立新 Epic（Media Technical Info & NFO Integration），拆 4 stories：DB Schema Migration → NFO Reader → FFprobe Integration → Badges UI + Unmatched Filter。
-
-  <details><summary>提示詞</summary>
-
-  ```
-  請根據更新後的 PRD 和架構文件，為 Phase 2 建立一個新 Epic 並拆分 Stories。
-
-  ## Epic 資訊
-  - 名稱建議：Epic N — Media Technical Info & NFO Integration
-  - 編號：接在現有 epic-list.md 最後一個 epic 之後
-  - 涵蓋 PRD 需求：P1-030 ~ P1-033, P2-030
-
-  ## 建議的 Story 拆分（依賴順序）
-
-  ### Story 1: DB Schema Migration
-  - 新增 video_codec, video_resolution, audio_codec, audio_channels, subtitle_tracks 欄位
-  - Series 補 file_size
-  - metadata_source 支援 "nfo" 值
-  - 純 backend，無前端
-
-  ### Story 2: NFO Sidecar Reader
-  - Scan pipeline 新增 NFO 偵測 stage
-  - Go XML parser 讀取 NFO
-  - 支援完整 XML 和單行 URL 兩種格式
-  - NFO 的 uniqueid 用於 TMDB 精準 match
-  - 前置：Story 1
-
-  ### Story 3: FFprobe Integration
-  - Docker image 加入 ffprobe
-  - Go service 呼叫 FFprobe 提取技術資訊
-  - 寫入 DB 新欄位
-  - Media Info API endpoint
-  - 前置：Story 1
-  - 可與 Story 2 平行開發
-
-  ### Story 4: Technical Info Badges UI + Unmatched Filter
-  - 前端 Badge components
-  - Detail 頁面整合 badges
-  - Library 頁面 Unmatched filter
-  - 前置：Story 2, Story 3（需要 API 有資料）
-
-  ## 參考文件
-  - PRD：_bmad-output/planning-artifacts/prd/
-  - 架構：_bmad-output/planning-artifacts/architecture/
-  - 設計稿：ux-design.pen + _bmad-output/screenshots/
-  - 現有 epic list：_bmad-output/planning-artifacts/epics/epic-list.md
-  ```
-
-  </details>
+- [x] **Action: 拆 Epic & Stories** — Bob 使用 `/bmad:bmm:workflows:create-epics-and-stories`，建立 Epic 9c（Media Technical Info & NFO Integration），拆 4 stories：9c-1 DB Schema Migration → 9c-2 NFO Reader → 9c-3 FFprobe Integration → 9c-4 Badges UI + Unmatched Filter。（完成：commit `54b03a2` 2026-04-03，epic file + epic-list + sprint-status 已更新）
 
 - [ ] **Action: 實作準備度檢查** — 使用 `/bmad:bmm:workflows:check-implementation-readiness`，確認 PRD、架構、設計稿、Stories 齊備且一致。特別注意 Story 2/3 平行開發 conflict、DB migration 完整性、Data Source Priority 一致性。
 

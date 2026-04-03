@@ -106,7 +106,7 @@ development_status:
   # Epic 5: Media Library Management (PRD v3)
   # Phase: 1.0 — Completed 2026-03-15
   # ==============================================================================
-  epic-5: in-progress  # 2026-03-15, reopened 2026-04-02 for fallback UI enhancement
+  epic-5: done  # 2026-03-15, reopened 2026-04-02 for 5-11, re-closed 2026-04-03
   5-0-global-navigation-shell: done
   5-1-media-library-grid-view: done
   5-8-recently-added-section: done
