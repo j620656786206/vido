@@ -63,6 +63,15 @@ type Series struct {
 
 	// File tracking fields
 	FilePath NullString `db:"file_path" json:"file_path,omitempty"`
+	FileSize NullInt64  `db:"file_size" json:"file_size,omitempty"`
+
+	// Technical info fields (Story 9c-1)
+	VideoCodec      NullString `db:"video_codec" json:"video_codec,omitempty"`
+	VideoResolution NullString `db:"video_resolution" json:"video_resolution,omitempty"`
+	AudioCodec      NullString `db:"audio_codec" json:"audio_codec,omitempty"`
+	AudioChannels   NullInt64  `db:"audio_channels" json:"audio_channels,omitempty"`
+	SubtitleTracks  NullString `db:"subtitle_tracks" json:"subtitle_tracks,omitempty"`
+	HDRFormat       NullString `db:"hdr_format" json:"hdr_format,omitempty"`
 
 	// Parse tracking fields
 	ParseStatus    ParseStatus    `db:"parse_status" json:"parse_status"`

@@ -38,6 +38,7 @@ func setupSeriesTestDB(t *testing.T) *sql.DB {
 			tmdb_id INTEGER,
 			in_production INTEGER,
 			file_path TEXT,
+			file_size INTEGER,
 			parse_status TEXT NOT NULL DEFAULT 'pending',
 			metadata_source TEXT,
 			subtitle_status TEXT NOT NULL DEFAULT 'not_searched',
@@ -47,6 +48,12 @@ func setupSeriesTestDB(t *testing.T) *sql.DB {
 			subtitle_search_score REAL,
 			vote_average REAL,
 			is_removed INTEGER NOT NULL DEFAULT 0,
+			video_codec TEXT,
+			video_resolution TEXT,
+			audio_codec TEXT,
+			audio_channels INTEGER,
+			subtitle_tracks TEXT,
+			hdr_format TEXT,
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 		)

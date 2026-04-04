@@ -45,6 +45,12 @@ func setupTestDB(t *testing.T) *sql.DB {
 			subtitle_search_score REAL,
 			vote_average REAL,
 			is_removed INTEGER NOT NULL DEFAULT 0,
+			video_codec TEXT,
+			video_resolution TEXT,
+			audio_codec TEXT,
+			audio_channels INTEGER,
+			subtitle_tracks TEXT,
+			hdr_format TEXT,
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 		)

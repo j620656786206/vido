@@ -24,7 +24,29 @@ const (
 	MetadataSourceDouban    MetadataSource = "douban"
 	MetadataSourceWikipedia MetadataSource = "wikipedia"
 	MetadataSourceManual    MetadataSource = "manual"
+	MetadataSourceNFO       MetadataSource = "nfo"
+	MetadataSourceAI        MetadataSource = "ai"
 )
+
+// metadataSourcePriority defines the priority of each metadata source.
+// Higher value = higher priority. Manual corrections always win.
+var metadataSourcePriority = map[MetadataSource]int{
+	MetadataSourceManual:    100,
+	MetadataSourceNFO:       80,
+	MetadataSourceTMDb:      60,
+	MetadataSourceDouban:    50,
+	MetadataSourceWikipedia: 40,
+	MetadataSourceAI:        20,
+}
+
+// ShouldOverwrite returns true if the incoming metadata source may overwrite the current source.
+// Returns true when current is empty (first data) or incoming priority >= current priority.
+func ShouldOverwrite(current, incoming MetadataSource) bool {
+	if current == "" {
+		return true
+	}
+	return metadataSourcePriority[incoming] >= metadataSourcePriority[current]
+}
 
 // SubtitleStatus represents the subtitle search status of a media file
 type SubtitleStatus string
@@ -126,6 +148,14 @@ type Movie struct {
 	SubtitleLanguage     NullString  `db:"subtitle_language" json:"subtitle_language,omitempty"`
 	SubtitleLastSearched NullTime    `db:"subtitle_last_searched" json:"subtitle_last_searched,omitempty"`
 	SubtitleSearchScore  NullFloat64 `db:"subtitle_search_score" json:"subtitle_search_score,omitempty"`
+
+	// Technical info fields (Story 9c-1)
+	VideoCodec      NullString `db:"video_codec" json:"video_codec,omitempty"`
+	VideoResolution NullString `db:"video_resolution" json:"video_resolution,omitempty"`
+	AudioCodec      NullString `db:"audio_codec" json:"audio_codec,omitempty"`
+	AudioChannels   NullInt64  `db:"audio_channels" json:"audio_channels,omitempty"`
+	SubtitleTracks  NullString `db:"subtitle_tracks" json:"subtitle_tracks,omitempty"`
+	HDRFormat       NullString `db:"hdr_format" json:"hdr_format,omitempty"`
 
 	// Soft-delete flag for removed files (Story 7-2)
 	IsRemoved bool `db:"is_removed" json:"is_removed"`

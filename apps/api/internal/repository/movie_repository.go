@@ -45,8 +45,11 @@ func (r *MovieRepository) Create(ctx context.Context, movie *models.Movie) error
 			overview, poster_path, backdrop_path, runtime, original_language,
 			status, imdb_id, tmdb_id,
 			file_path, file_size, parse_status, metadata_source, vote_average,
-			is_removed, created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			is_removed,
+			video_codec, video_resolution, audio_codec, audio_channels,
+			subtitle_tracks, hdr_format,
+			created_at, updated_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
 	_, err = r.db.ExecContext(ctx, query,
@@ -70,6 +73,12 @@ func (r *MovieRepository) Create(ctx context.Context, movie *models.Movie) error
 		movie.MetadataSource,
 		movie.VoteAverage,
 		movie.IsRemoved,
+		movie.VideoCodec,
+		movie.VideoResolution,
+		movie.AudioCodec,
+		movie.AudioChannels,
+		movie.SubtitleTracks,
+		movie.HDRFormat,
 		movie.CreatedAt,
 		movie.UpdatedAt,
 	)
@@ -277,6 +286,12 @@ func (r *MovieRepository) Update(ctx context.Context, movie *models.Movie) error
 			file_size = ?,
 			parse_status = ?,
 			is_removed = ?,
+			video_codec = ?,
+			video_resolution = ?,
+			audio_codec = ?,
+			audio_channels = ?,
+			subtitle_tracks = ?,
+			hdr_format = ?,
 			updated_at = ?
 		WHERE id = ?
 	`
@@ -299,6 +314,12 @@ func (r *MovieRepository) Update(ctx context.Context, movie *models.Movie) error
 		movie.FileSize,
 		movie.ParseStatus,
 		movie.IsRemoved,
+		movie.VideoCodec,
+		movie.VideoResolution,
+		movie.AudioCodec,
+		movie.AudioChannels,
+		movie.SubtitleTracks,
+		movie.HDRFormat,
 		movie.UpdatedAt,
 		movie.ID,
 	)
@@ -639,6 +660,7 @@ const movieSelectColumns = `
 	file_path, parse_status, metadata_source,
 	subtitle_status, subtitle_path, subtitle_language, subtitle_last_searched, subtitle_search_score,
 	vote_average, is_removed,
+	video_codec, video_resolution, audio_codec, audio_channels, subtitle_tracks, hdr_format,
 	created_at, updated_at
 `
 
@@ -672,6 +694,12 @@ func scanMovie(scanner interface{ Scan(dest ...interface{}) error }) (models.Mov
 		&movie.SubtitleSearchScore,
 		&movie.VoteAverage,
 		&movie.IsRemoved,
+		&movie.VideoCodec,
+		&movie.VideoResolution,
+		&movie.AudioCodec,
+		&movie.AudioChannels,
+		&movie.SubtitleTracks,
+		&movie.HDRFormat,
 		&movie.CreatedAt,
 		&movie.UpdatedAt,
 	)
@@ -704,8 +732,11 @@ func (r *MovieRepository) BulkCreate(ctx context.Context, movies []*models.Movie
 			overview, poster_path, backdrop_path, runtime, original_language,
 			status, imdb_id, tmdb_id,
 			file_path, file_size, parse_status, metadata_source, vote_average,
-			is_removed, created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			is_removed,
+			video_codec, video_resolution, audio_codec, audio_channels,
+			subtitle_tracks, hdr_format,
+			created_at, updated_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
 	stmt, err := tx.PrepareContext(ctx, query)
@@ -749,6 +780,12 @@ func (r *MovieRepository) BulkCreate(ctx context.Context, movies []*models.Movie
 			movie.MetadataSource,
 			movie.VoteAverage,
 			movie.IsRemoved,
+			movie.VideoCodec,
+			movie.VideoResolution,
+			movie.AudioCodec,
+			movie.AudioChannels,
+			movie.SubtitleTracks,
+			movie.HDRFormat,
 			movie.CreatedAt,
 			movie.UpdatedAt,
 		)

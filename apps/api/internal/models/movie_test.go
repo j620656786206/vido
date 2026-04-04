@@ -281,4 +281,51 @@ func TestMetadataSource_Constants(t *testing.T) {
 	assert.Equal(t, MetadataSource("douban"), MetadataSourceDouban)
 	assert.Equal(t, MetadataSource("wikipedia"), MetadataSourceWikipedia)
 	assert.Equal(t, MetadataSource("manual"), MetadataSourceManual)
+	assert.Equal(t, MetadataSource("nfo"), MetadataSourceNFO)
+	assert.Equal(t, MetadataSource("ai"), MetadataSourceAI)
+}
+
+func TestShouldOverwrite(t *testing.T) {
+	tests := []struct {
+		name     string
+		current  MetadataSource
+		incoming MetadataSource
+		want     bool
+	}{
+		// Empty current — always accept
+		{"empty current accepts ai", "", MetadataSourceAI, true},
+		{"empty current accepts nfo", "", MetadataSourceNFO, true},
+		{"empty current accepts manual", "", MetadataSourceManual, true},
+
+		// Same source — accept (idempotent)
+		{"nfo overwrites nfo", MetadataSourceNFO, MetadataSourceNFO, true},
+		{"tmdb overwrites tmdb", MetadataSourceTMDb, MetadataSourceTMDb, true},
+		{"ai overwrites ai", MetadataSourceAI, MetadataSourceAI, true},
+
+		// Higher priority overwrites lower
+		{"nfo overwrites ai", MetadataSourceAI, MetadataSourceNFO, true},
+		{"nfo overwrites tmdb", MetadataSourceTMDb, MetadataSourceNFO, true},
+		{"tmdb overwrites ai", MetadataSourceAI, MetadataSourceTMDb, true},
+		{"manual overwrites nfo", MetadataSourceNFO, MetadataSourceManual, true},
+		{"manual overwrites tmdb", MetadataSourceTMDb, MetadataSourceManual, true},
+
+		// Lower priority does NOT overwrite higher
+		{"ai cannot overwrite nfo", MetadataSourceNFO, MetadataSourceAI, false},
+		{"ai cannot overwrite tmdb", MetadataSourceTMDb, MetadataSourceAI, false},
+		{"tmdb cannot overwrite nfo", MetadataSourceNFO, MetadataSourceTMDb, false},
+		{"nfo cannot overwrite manual", MetadataSourceManual, MetadataSourceNFO, false},
+		{"tmdb cannot overwrite manual", MetadataSourceManual, MetadataSourceTMDb, false},
+
+		// Full priority chain verification
+		{"douban overwrites wikipedia", MetadataSourceWikipedia, MetadataSourceDouban, true},
+		{"wikipedia cannot overwrite douban", MetadataSourceDouban, MetadataSourceWikipedia, false},
+		{"douban overwrites ai", MetadataSourceAI, MetadataSourceDouban, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ShouldOverwrite(tt.current, tt.incoming)
+			assert.Equal(t, tt.want, got)
+		})
+	}
 }

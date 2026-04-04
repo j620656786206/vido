@@ -43,8 +43,12 @@ func (r *SeriesRepository) Create(ctx context.Context, series *models.Series) er
 		INSERT INTO series (
 			id, title, original_title, first_air_date, last_air_date, genres, rating,
 			overview, poster_path, backdrop_path, number_of_seasons, number_of_episodes,
-			status, original_language, imdb_id, tmdb_id, in_production, created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			status, original_language, imdb_id, tmdb_id, in_production,
+			file_size,
+			video_codec, video_resolution, audio_codec, audio_channels,
+			subtitle_tracks, hdr_format,
+			created_at, updated_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
 	_, err = r.db.ExecContext(ctx, query,
@@ -65,6 +69,13 @@ func (r *SeriesRepository) Create(ctx context.Context, series *models.Series) er
 		series.IMDbID,
 		series.TMDbID,
 		series.InProduction,
+		series.FileSize,
+		series.VideoCodec,
+		series.VideoResolution,
+		series.AudioCodec,
+		series.AudioChannels,
+		series.SubtitleTracks,
+		series.HDRFormat,
 		series.CreatedAt,
 		series.UpdatedAt,
 	)
@@ -264,10 +275,17 @@ func (r *SeriesRepository) Update(ctx context.Context, series *models.Series) er
 			tmdb_id = ?,
 			in_production = ?,
 			file_path = ?,
+			file_size = ?,
 			parse_status = ?,
 			metadata_source = ?,
 			vote_average = ?,
 			is_removed = ?,
+			video_codec = ?,
+			video_resolution = ?,
+			audio_codec = ?,
+			audio_channels = ?,
+			subtitle_tracks = ?,
+			hdr_format = ?,
 			updated_at = ?
 		WHERE id = ?
 	`
@@ -290,10 +308,17 @@ func (r *SeriesRepository) Update(ctx context.Context, series *models.Series) er
 		series.TMDbID,
 		series.InProduction,
 		series.FilePath,
+		series.FileSize,
 		series.ParseStatus,
 		series.MetadataSource,
 		series.VoteAverage,
 		series.IsRemoved,
+		series.VideoCodec,
+		series.VideoResolution,
+		series.AudioCodec,
+		series.AudioChannels,
+		series.SubtitleTracks,
+		series.HDRFormat,
 		series.UpdatedAt,
 		series.ID,
 	)
@@ -638,9 +663,11 @@ const seriesSelectColumns = `
 	id, title, original_title, first_air_date, last_air_date, genres, rating,
 	overview, poster_path, backdrop_path, number_of_seasons, number_of_episodes,
 	status, original_language, imdb_id, tmdb_id, in_production,
-	file_path, parse_status, metadata_source,
+	file_path, file_size, parse_status, metadata_source,
 	subtitle_status, subtitle_path, subtitle_language, subtitle_last_searched, subtitle_search_score,
 	vote_average,
+	video_codec, video_resolution, audio_codec, audio_channels,
+	subtitle_tracks, hdr_format,
 	created_at, updated_at
 `
 
@@ -668,6 +695,7 @@ func scanSeries(scanner interface{ Scan(dest ...interface{}) error }) (models.Se
 		&s.TMDbID,
 		&s.InProduction,
 		&s.FilePath,
+		&s.FileSize,
 		&s.ParseStatus,
 		&s.MetadataSource,
 		&s.SubtitleStatus,
@@ -676,6 +704,12 @@ func scanSeries(scanner interface{ Scan(dest ...interface{}) error }) (models.Se
 		&s.SubtitleLastSearched,
 		&s.SubtitleSearchScore,
 		&s.VoteAverage,
+		&s.VideoCodec,
+		&s.VideoResolution,
+		&s.AudioCodec,
+		&s.AudioChannels,
+		&s.SubtitleTracks,
+		&s.HDRFormat,
 		&s.CreatedAt,
 		&s.UpdatedAt,
 	)
@@ -706,8 +740,12 @@ func (r *SeriesRepository) BulkCreate(ctx context.Context, seriesList []*models.
 		INSERT INTO series (
 			id, title, original_title, first_air_date, last_air_date, genres, rating,
 			overview, poster_path, backdrop_path, number_of_seasons, number_of_episodes,
-			status, original_language, imdb_id, tmdb_id, in_production, created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			status, original_language, imdb_id, tmdb_id, in_production,
+			file_size,
+			video_codec, video_resolution, audio_codec, audio_channels,
+			subtitle_tracks, hdr_format,
+			created_at, updated_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
 	stmt, err := tx.PrepareContext(ctx, query)
@@ -748,6 +786,13 @@ func (r *SeriesRepository) BulkCreate(ctx context.Context, seriesList []*models.
 			series.IMDbID,
 			series.TMDbID,
 			series.InProduction,
+			series.FileSize,
+			series.VideoCodec,
+			series.VideoResolution,
+			series.AudioCodec,
+			series.AudioChannels,
+			series.SubtitleTracks,
+			series.HDRFormat,
 			series.CreatedAt,
 			series.UpdatedAt,
 		)
