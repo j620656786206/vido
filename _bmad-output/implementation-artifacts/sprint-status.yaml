@@ -251,11 +251,18 @@ development_status:
   # Epic 9: AI Subtitle Enhancement (PRD v4)
   # Phase: Phase 1 — Core Library
   # FRs: P1-020–P1-021
+  #
+  # UX DESIGN DEPENDENCY:
+  #   Current subtitle dialog (i1/i2 screens) only covers search/download.
+  #   AI enhancement features need new modals/panels in ux-design.pen.
+  #   Backend stories (9-1, 9-2a, 9-2b) have NO design dependency.
+  #   Priority: LOW — design can be done after Epic 10/11 design work.
   # ==============================================================================
   epic-9: in-progress  # 2026-04-04
   9-1-ai-terminology-correction: ready-for-dev       # Claude API post-OpenCC terminology fix (P2, P1-020)
   9-2a-whisper-audio-transcription: ready-for-dev     # FFmpeg audio extraction + OpenAI Whisper API (P3, P1-021)
   9-2b-ai-subtitle-translation: ready-for-dev         # Claude translation of Whisper SRT to zh-Hant (P3, P1-021, depends on 9-2a)
+  9-UX-ai-subtitle-enhancement-design: backlog        # → UX /ux-designer: design AI term correction preview modal, Whisper progress UI, translation confirm dialog. Modify existing subtitle dialog screens in ux-design.pen. ~2-3 new screens. Priority: after Epic 10+11 design.
   epic-9-retrospective: optional
 
   # ==============================================================================
@@ -264,6 +271,10 @@ development_status:
   # FRs: P1-030, P1-031, P1-032, P1-033, P2-030
   # ADR: architecture/adr-media-info-nfo-pipeline.md
   # Decision: Extend scan pipeline with NFO reader + FFprobe + data source priority
+  #
+  # UX DESIGN STATUS: ✅ READY
+  #   Tech badges already designed (04f-detail-tech-badges-desktop, 05d-detail-tech-badges-mobile).
+  #   9c-4 unmatched filter is a minor addition to existing filter UI — no new screen needed.
   # ==============================================================================
   epic-9c: in-progress  # 2026-04-04
   9c-1-db-schema-migration: done             # Migration #021, tech info columns, series file_size, MetadataSource constants, ShouldOverwrite() — CR 2026-04-04
@@ -276,25 +287,42 @@ development_status:
   # Epic 10: Homepage TV Wall (PRD v4)
   # Phase: Phase 2 — Browse & Discover
   # FRs: P2-001–P2-006
+  #
+  # 🔴 UX DESIGN DEPENDENCY: BLOCKING
+  #   NO homepage design exists in ux-design.pen. Frontend stories (10-2, 10-3,
+  #   10-4, 10-5) CANNOT start without design. Only 10-1 (backend API) is unblocked.
+  #   Priority: HIGHEST — design must complete before frontend dev starts.
+  #
+  # AGENT ROUTING KEY:
+  #   UX  = /bmad:bmm:agents:ux-designer (Sally) — create new homepage screens
+  #   DEV = /bmad:bmm:agents:dev + /bmad:bmm:workflows:dev-story
   # ==============================================================================
   epic-10: in-progress  # 2026-04-04
-  10-1-tmdb-trending-discover-api: ready-for-dev      # Trending + Discover endpoints, server-side filtering (P2-001,P2-003,P2-004,P2-005)
-  10-2-hero-banner-component: ready-for-dev            # Full-width hero carousel with trailer modal (P2-001)
-  10-3-custom-explore-blocks: ready-for-dev            # CRUD explore blocks + TMDB discover integration (P2-002)
-  10-4-availability-badges: ready-for-dev              # 已有/已請求 badges on poster cards (P2-006)
-  10-5-homepage-layout-responsive: ready-for-dev       # Layout engine, responsive design, LCP <2s (P2-001)
+  10-UX-homepage-design: backlog               # 🔴 BLOCKER → UX /ux-designer: design full homepage in ux-design.pen. Screens needed: (1) Hero Banner carousel desktop+mobile, (2) Explore blocks grid desktop+mobile, (3) Block CRUD admin modal, (4) 已有/已請求 availability badges on poster cards, (5) Empty state, (6) Loading skeleton. ~6-8 new screens. MUST complete before 10-2/10-3/10-4/10-5.
+  10-1-tmdb-trending-discover-api: ready-for-dev      # Trending + Discover endpoints, server-side filtering (P2-001,P2-003,P2-004,P2-005) — NO design dependency
+  10-2-hero-banner-component: ready-for-dev            # Full-width hero carousel with trailer modal (P2-001) — ⚠️ BLOCKED by 10-UX
+  10-3-custom-explore-blocks: ready-for-dev            # CRUD explore blocks + TMDB discover integration (P2-002) — ⚠️ BLOCKED by 10-UX
+  10-4-availability-badges: ready-for-dev              # 已有/已請求 badges on poster cards (P2-006) — ⚠️ BLOCKED by 10-UX
+  10-5-homepage-layout-responsive: ready-for-dev       # Layout engine, responsive design, LCP <2s (P2-001) — ⚠️ BLOCKED by 10-UX
   epic-10-retrospective: optional
 
   # ==============================================================================
   # Epic 11: Advanced Search (PRD v4)
   # Phase: Phase 2 — Browse & Discover
   # FRs: P2-010–P2-015
+  #
+  # ⚠️ UX DESIGN DEPENDENCY: PARTIAL BLOCK
+  #   Existing search UI (07-search-filter-desktop) covers basic search only.
+  #   11-1 (backend) has NO design dependency.
+  #   11-2 (chip UI), 11-3 (search suggestions), 11-4 (presets) need new/expanded designs.
+  #   Priority: HIGH — design after Epic 10, before frontend stories start.
   # ==============================================================================
   epic-11: in-progress  # 2026-04-04
-  11-1-multi-dimensional-filter-engine: ready-for-dev   # Filter engine + compound sort + watch providers (P2-010, P2-012)
-  11-2-persistent-filter-chip-ui: ready-for-dev         # Chip UI + filter panel + mobile bottom sheet (P2-011)
-  11-3-instant-search-zh-tw-priority: ready-for-dev     # Debounced suggestions + dual-language + zh-TW boost (P2-013, P2-014)
-  11-4-saved-filter-presets: ready-for-dev               # Save/load/delete filter presets in DB (P2-015)
+  11-UX-advanced-search-design: backlog         # ⚠️ BLOCKER for 11-2/11-3/11-4 → UX /ux-designer: expand search screens in ux-design.pen. New elements: (1) Persistent filter chip bar with genre/year/region/rating/platform chips, (2) Multi-key sort drag-reorder UI, (3) Search suggestion dropdown with dual-language results, (4) Filter preset save/load/delete modal, (5) Mobile bottom sheet filter panel. ~3-4 new screens + modify existing 07-search-filter. Priority: after Epic 10 design.
+  11-1-multi-dimensional-filter-engine: ready-for-dev   # Filter engine + compound sort + watch providers (P2-010, P2-012) — NO design dependency
+  11-2-persistent-filter-chip-ui: ready-for-dev         # Chip UI + filter panel + mobile bottom sheet (P2-011) — ⚠️ BLOCKED by 11-UX
+  11-3-instant-search-zh-tw-priority: ready-for-dev     # Debounced suggestions + dual-language + zh-TW boost (P2-013, P2-014) — ⚠️ BLOCKED by 11-UX
+  11-4-saved-filter-presets: ready-for-dev               # Save/load/delete filter presets in DB (P2-015) — ⚠️ BLOCKED by 11-UX
   epic-11-retrospective: optional
 
   # ==============================================================================
