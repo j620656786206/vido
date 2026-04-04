@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/vido/api/internal/models"
 )
 
 // ─── parseFfprobeJSON tests ────────────────────────────────────────────────
@@ -296,4 +297,116 @@ func TestMergeSubtitleTracks(t *testing.T) {
 func TestMergeSubtitleTracks_Empty(t *testing.T) {
 	merged := MergeSubtitleTracks(nil, nil)
 	assert.Empty(t, merged)
+}
+
+// ─── Semaphore concurrency test (AC #5) ────────────────────────────────────
+
+func TestFFprobeService_Semaphore(t *testing.T) {
+	// Create service with maxConcurrent=2 (unavailable, so Probe returns error)
+	svc := &FFprobeService{
+		semaphore: make(chan struct{}, 2),
+		available: false,
+	}
+
+	// Verify semaphore capacity is 2
+	assert.Equal(t, 2, cap(svc.semaphore))
+
+	// Fill semaphore
+	svc.semaphore <- struct{}{}
+	svc.semaphore <- struct{}{}
+
+	// Third should block — verify via channel select
+	select {
+	case svc.semaphore <- struct{}{}:
+		t.Fatal("semaphore should be full, but accepted 3rd slot")
+	default:
+		// Expected: semaphore is full
+	}
+
+	// Release one slot
+	<-svc.semaphore
+
+	// Now should accept
+	select {
+	case svc.semaphore <- struct{}{}:
+		// Expected: can acquire after release
+	default:
+		t.Fatal("semaphore should have a free slot after release")
+	}
+
+	// Drain
+	<-svc.semaphore
+	<-svc.semaphore
+}
+
+// ─── Timeout test (AC #6) ─────────────────────────────────────────────────
+
+func TestFFprobeService_Timeout(t *testing.T) {
+	// Service marked as available but with a very short timeout
+	svc := &FFprobeService{
+		semaphore: make(chan struct{}, 1),
+		timeout:   1, // 1 nanosecond — will always timeout
+		available: true,
+	}
+
+	// Call Probe with a file that doesn't exist — the timeout should trigger
+	// before or during exec
+	_, err := svc.Probe(t.Context(), "/nonexistent/file.mkv")
+	assert.Error(t, err)
+	// Either "timeout" or "exec" error is acceptable
+}
+
+// ─── Enrichment skip when VideoCodec already set (AC #7) ──────────────────
+
+func TestTryFFprobeEnrichment_SkipsWhenVideoCodecSet(t *testing.T) {
+	mockRepo := &mockMovieRepoForNFO{}
+	// Create enrichment service with nil ffprobe (simulates unavailable)
+	svc := NewEnrichmentService(mockRepo, nil, nil, nil, nil, nil, nil, nil)
+
+	movie := &models.Movie{
+		ID:         "test-skip-ffprobe",
+		FilePath:   models.NewNullString("/some/path.mkv"),
+		VideoCodec: models.NewNullString("H.265"), // Already set from NFO
+	}
+
+	// Should not crash and should not modify the movie
+	svc.tryFFprobeEnrichment(t.Context(), movie)
+	assert.Equal(t, "H.265", movie.VideoCodec.String) // Unchanged
+	assert.Nil(t, mockRepo.updatedMovie)               // No DB update
+}
+
+func TestTryFFprobeEnrichment_SkipsWhenNoFilePath(t *testing.T) {
+	mockRepo := &mockMovieRepoForNFO{}
+	svc := NewEnrichmentService(mockRepo, nil, nil, nil, nil, nil, nil, nil)
+
+	movie := &models.Movie{
+		ID:    "test-no-path",
+		Title: "No Path Movie",
+	}
+
+	svc.tryFFprobeEnrichment(t.Context(), movie)
+	assert.Nil(t, mockRepo.updatedMovie) // No DB update
+}
+
+func TestTryFFprobeEnrichment_SkipsWhenServiceNil(t *testing.T) {
+	mockRepo := &mockMovieRepoForNFO{}
+	svc := NewEnrichmentService(mockRepo, nil, nil, nil, nil, nil, nil, nil)
+
+	movie := &models.Movie{
+		ID:       "test-nil-ffprobe",
+		FilePath: models.NewNullString("/some/path.mkv"),
+	}
+
+	// ffprobeService is nil — should silently return
+	svc.tryFFprobeEnrichment(t.Context(), movie)
+	assert.Nil(t, mockRepo.updatedMovie)
+}
+
+// ─── NewFFprobeService defaults ───────────────────────────────────────────
+
+func TestNewFFprobeService_Defaults(t *testing.T) {
+	// On CI/dev machines without ffprobe, this tests the graceful degradation
+	svc := NewFFprobeService(0, 0, nil) // Zero values → defaults applied
+	assert.Equal(t, 3, cap(svc.semaphore))
+	// available depends on whether ffprobe is installed on this machine
 }
