@@ -145,8 +145,20 @@ func (s *NFOReaderService) FindNFOSidecar(videoPath string) string {
 	return ""
 }
 
+// maxNFOFileSize is the maximum size of an NFO file we'll read (1MB).
+// NFO files are typically small XML or single-line URLs; anything larger is suspect.
+const maxNFOFileSize = 1 << 20 // 1MB
+
 // Parse reads and parses an NFO file, detecting format (XML or URL).
 func (s *NFOReaderService) Parse(nfoPath string) (*NFOData, error) {
+	info, err := os.Stat(nfoPath)
+	if err != nil {
+		return nil, fmt.Errorf("read nfo: %w", err)
+	}
+	if info.Size() > maxNFOFileSize {
+		return nil, fmt.Errorf("nfo file too large (%d bytes, max %d): %s", info.Size(), maxNFOFileSize, nfoPath)
+	}
+
 	content, err := os.ReadFile(nfoPath)
 	if err != nil {
 		return nil, fmt.Errorf("read nfo: %w", err)
@@ -294,18 +306,23 @@ func extractStreamDetails(fi *nfoXMLFileInfo, data *NFOData) {
 	}
 }
 
-// resolveResolution converts width×height to a standard resolution label
+// resolveResolution converts width×height to a standard resolution label.
+// Uses height as the primary indicator, with width as a secondary check
+// for standard aspect ratios. This avoids misclassifying ultra-wide formats.
 func resolveResolution(width, height int) string {
+	if width <= 0 && height <= 0 {
+		return ""
+	}
 	switch {
-	case width >= 3840 || height >= 2160:
+	case height >= 2160 || (width >= 3840 && height >= 1080):
 		return "4K"
-	case width >= 2560 || height >= 1440:
+	case height >= 1440 || (width >= 2560 && height >= 1080):
 		return "1440p"
-	case width >= 1920 || height >= 1080:
+	case height >= 1080:
 		return "1080p"
-	case width >= 1280 || height >= 720:
+	case height >= 720:
 		return "720p"
-	case width >= 720 || height >= 480:
+	case height >= 480:
 		return "480p"
 	default:
 		return strconv.Itoa(height) + "p"

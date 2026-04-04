@@ -318,6 +318,11 @@ func (s *EnrichmentService) tryNFOEnrichment(ctx context.Context, movie *models.
 	// Apply technical info from NFO streamdetails (AC #5)
 	s.applyNFOTechInfo(movie, nfoData)
 
+	// Persist IMDB ID from NFO if available (before TMDB lookup may overwrite)
+	if nfoData.IMDbID != "" {
+		movie.IMDbID = models.NewNullString(nfoData.IMDbID)
+	}
+
 	// Try TMDB direct lookup using NFO uniqueid (AC #2, #3)
 	if s.tmdbService != nil {
 		if err := s.enrichFromNFOWithTMDb(ctx, movie, nfoData); err != nil {
@@ -383,6 +388,13 @@ func (s *EnrichmentService) applyNFOTechInfo(movie *models.Movie, nfoData *NFODa
 	if nfoData.AudioChannels > 0 {
 		movie.AudioChannels = models.NewNullInt64(int64(nfoData.AudioChannels))
 	}
+	if len(nfoData.Subtitles) > 0 {
+		langs := make([]string, len(nfoData.Subtitles))
+		for i, sub := range nfoData.Subtitles {
+			langs[i] = sub.Language
+		}
+		movie.SubtitleTracks = models.NewNullString(strings.Join(langs, ","))
+	}
 }
 
 // applyTMDbMovieDetails applies TMDB movie details to a movie record
@@ -391,7 +403,7 @@ func (s *EnrichmentService) applyTMDbMovieDetails(movie *models.Movie, details *
 		return
 	}
 
-	movie.TMDbID = models.NullInt64{NullInt64: sql.NullInt64{Int64: int64(details.ID), Valid: true}}
+	movie.TMDbID = models.NewNullInt64(int64(details.ID))
 
 	if details.Title != "" {
 		movie.Title = details.Title

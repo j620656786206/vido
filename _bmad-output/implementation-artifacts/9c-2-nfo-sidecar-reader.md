@@ -1,6 +1,6 @@
 # Story 9c-2: NFO Sidecar Reader
 
-Status: review
+Status: done
 
 ## Story
 
@@ -184,5 +184,22 @@ Claude Opus 4.6 (1M context)
 - `apps/api/cmd/api/main.go` — MODIFIED: wire NFOReaderService + tmdbService into enrichment
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` — MODIFIED: 9c-2 status
 
+## Senior Developer Review (AI)
+
+**Date:** 2026-04-04
+**Reviewer:** Amelia (Dev Agent CR workflow)
+**Outcome:** Changes Requested → All Fixed
+
+### Action Items (7 total, 7 resolved)
+
+- [x] [H1] `resolveResolution()` OR→AND logic fix — misclassified non-standard aspect ratios
+- [x] [H2] `FindByExternalID` nil-client guard — prevented panic via `NewTMDbServiceWithCacheService`
+- [x] [H3] NFO file size limit (1MB cap) — prevented OOM on malicious/corrupted files
+- [x] [M1] `applyTMDbMovieDetails` TMDbID — use `models.NewNullInt64()` for consistency
+- [x] [M2] NFO subtitle tracks persisted to `movie.SubtitleTracks` — was dead data
+- [x] [M3] IMDB ID from NFO persisted before TMDB lookup — prevented losing known ID
+- [x] [L1] `resolveResolution` returns `""` for 0×0 — defensive guard
+
 ## Change Log
 - 2026-04-04: Story 9c-2 implemented — NFO sidecar reader service with XML/URL parsing, TMDB direct lookup via uniqueid, streamdetails tech info extraction, ShouldOverwrite priority gate, integrated into enrichment pipeline. 35 tests added.
+- 2026-04-04: CR fixes — 3 High + 3 Medium + 1 Low issues resolved. resolveResolution AND logic, nil-client guard, 1MB file limit, subtitle track persistence, IMDB ID preservation.

@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"strings"
 	"time"
@@ -217,6 +218,9 @@ func (s *TMDbService) GetTVShowDetails(ctx context.Context, tvID int) (*tmdb.TVS
 func (s *TMDbService) FindByExternalID(ctx context.Context, externalID string, externalSource string) (*tmdb.FindByExternalIDResponse, error) {
 	if externalID == "" {
 		return nil, tmdb.NewBadRequestError("external ID cannot be empty")
+	}
+	if s.client == nil {
+		return nil, fmt.Errorf("TMDb client not initialized")
 	}
 
 	slog.Debug("Finding by external ID",
