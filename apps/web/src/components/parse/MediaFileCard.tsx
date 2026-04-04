@@ -50,12 +50,12 @@ export function MediaFileCard({ file, isParsing = false, onClick, className }: M
   return (
     <div
       className={cn(
-        'relative flex flex-col rounded-lg border bg-slate-800/50 overflow-hidden',
-        'cursor-pointer hover:bg-slate-800 transition-colors',
+        'relative flex flex-col rounded-lg border bg-[var(--bg-secondary)]/50 overflow-hidden',
+        'cursor-pointer hover:bg-[var(--bg-secondary)] transition-colors',
         file.parseStatus === 'failed' && 'border-red-500/30',
         file.parseStatus === 'needs_ai' && 'border-yellow-500/30',
-        file.parseStatus === 'success' && 'border-slate-700',
-        file.parseStatus === 'pending' && 'border-slate-700',
+        file.parseStatus === 'success' && 'border-[var(--border-subtle)]',
+        file.parseStatus === 'pending' && 'border-[var(--border-subtle)]',
         className
       )}
       onClick={onClick}
@@ -72,13 +72,13 @@ export function MediaFileCard({ file, isParsing = false, onClick, className }: M
       </div>
 
       {/* Poster Area */}
-      <div className="aspect-[2/3] bg-slate-700/50 flex items-center justify-center">
+      <div className="aspect-[2/3] bg-[var(--bg-tertiary)]/50 flex items-center justify-center">
         {file.posterPath ? (
           <img src={file.posterPath} alt={displayTitle} className="w-full h-full object-cover" />
         ) : (
-          <div className="flex flex-col items-center text-slate-500">
+          <div className="flex flex-col items-center text-[var(--text-muted)]">
             {isParsing ? (
-              <Loader2 className="h-12 w-12 animate-spin text-blue-500" />
+              <Loader2 className="h-12 w-12 animate-spin text-[var(--accent-primary)]" />
             ) : isTV ? (
               <Tv className="h-12 w-12" />
             ) : (
@@ -96,7 +96,7 @@ export function MediaFileCard({ file, isParsing = false, onClick, className }: M
         </h3>
 
         {/* Metadata line */}
-        <div className="flex items-center gap-2 text-xs text-slate-400 mb-1">
+        <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)] mb-1">
           {year && <span>{year}</span>}
           {file.mediaType && <span>{file.mediaType === 'tv' ? '影集' : '電影'}</span>}
           {file.parsedInfo?.season && <span>S{file.parsedInfo.season}</span>}
@@ -104,7 +104,7 @@ export function MediaFileCard({ file, isParsing = false, onClick, className }: M
         </div>
 
         {/* File size */}
-        <div className="text-xs text-slate-500">{formatFileSize(file.size)}</div>
+        <div className="text-xs text-[var(--text-muted)]">{formatFileSize(file.size)}</div>
 
         {/* Error summary for failed parses */}
         {file.parseStatus === 'failed' && file.parseSteps && (
@@ -126,8 +126,8 @@ export function MediaFileRow({ file, isParsing = false, onClick, className }: Me
     <div
       className={cn(
         'flex items-center gap-4 px-4 py-3 rounded-lg',
-        'cursor-pointer hover:bg-slate-800 transition-colors',
-        'border-b border-slate-700/50 last:border-0',
+        'cursor-pointer hover:bg-[var(--bg-secondary)] transition-colors',
+        'border-b border-[var(--border-subtle)]/50 last:border-0',
         className
       )}
       onClick={onClick}
@@ -147,13 +147,17 @@ export function MediaFileRow({ file, isParsing = false, onClick, className }: Me
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-medium text-white truncate">{displayTitle}</h3>
-          {year && <span className="text-xs text-slate-400 flex-shrink-0">{year}</span>}
+          {year && (
+            <span className="text-xs text-[var(--text-secondary)] flex-shrink-0">{year}</span>
+          )}
         </div>
-        <div className="text-xs text-slate-500 truncate">{file.filename}</div>
+        <div className="text-xs text-[var(--text-muted)] truncate">{file.filename}</div>
       </div>
 
       {/* File size */}
-      <div className="text-xs text-slate-400 flex-shrink-0">{formatFileSize(file.size)}</div>
+      <div className="text-xs text-[var(--text-secondary)] flex-shrink-0">
+        {formatFileSize(file.size)}
+      </div>
     </div>
   );
 }

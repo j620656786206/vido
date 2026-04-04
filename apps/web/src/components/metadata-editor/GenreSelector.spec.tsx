@@ -33,9 +33,9 @@ describe('GenreSelector', () => {
     const dramaButton = screen.getByRole('button', { name: '劇情' });
     const comedyButton = screen.getByRole('button', { name: '喜劇' });
 
-    expect(actionButton.className).toContain('bg-blue-600');
-    expect(dramaButton.className).toContain('bg-blue-600');
-    expect(comedyButton.className).not.toContain('bg-blue-600');
+    expect(actionButton.className).toContain('bg-[var(--accent-primary)]');
+    expect(dramaButton.className).toContain('bg-[var(--accent-primary)]');
+    expect(comedyButton.className).not.toContain('bg-[var(--accent-primary)]');
   });
 
   it('calls onToggle when genre is clicked', async () => {

@@ -12,16 +12,22 @@ export function SettingsPlaceholder({ icon: Icon, title, description }: Settings
       className="flex flex-col items-center justify-center py-20 text-center"
       data-testid="settings-placeholder"
     >
-      <div className="mb-4 rounded-full bg-slate-800 p-4">
-        <Icon className="h-8 w-8 text-slate-500" data-testid="placeholder-icon" />
+      <div className="mb-4 rounded-full bg-[var(--bg-secondary)] p-4">
+        <Icon className="h-8 w-8 text-[var(--text-muted)]" data-testid="placeholder-icon" />
       </div>
-      <h2 className="mb-2 text-xl font-semibold text-slate-200" data-testid="placeholder-title">
+      <h2
+        className="mb-2 text-xl font-semibold text-[var(--text-primary)]"
+        data-testid="placeholder-title"
+      >
         {title}
       </h2>
-      <p className="max-w-sm text-sm text-slate-400" data-testid="placeholder-description">
+      <p
+        className="max-w-sm text-sm text-[var(--text-secondary)]"
+        data-testid="placeholder-description"
+      >
         {description}
       </p>
-      <span className="mt-4 rounded-full bg-slate-800 px-3 py-1 text-xs text-slate-500">
+      <span className="mt-4 rounded-full bg-[var(--bg-secondary)] px-3 py-1 text-xs text-[var(--text-muted)]">
         此功能將在後續版本中提供
       </span>
     </div>

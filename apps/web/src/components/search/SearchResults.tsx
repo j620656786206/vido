@@ -66,7 +66,7 @@ export function SearchResults({
     <div className={className}>
       {/* Results count */}
       {!isLoading && hasResults && (
-        <div className="mb-4 text-sm text-slate-400">找到 {totalResults} 個結果</div>
+        <div className="mb-4 text-sm text-[var(--text-secondary)]">找到 {totalResults} 個結果</div>
       )}
 
       {/* Grid results */}

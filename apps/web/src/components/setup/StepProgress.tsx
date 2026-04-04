@@ -10,7 +10,7 @@ export function StepProgress({ steps, currentStep }: StepProgressProps) {
         <div key={step.id} className="flex items-center gap-2">
           <div
             className={`h-2.5 w-2.5 rounded-full transition-colors ${
-              index <= currentStep ? 'bg-blue-500' : 'bg-slate-600'
+              index <= currentStep ? 'bg-[var(--accent-primary)]' : 'bg-[var(--bg-tertiary)]'
             }`}
             aria-label={`${step.title}${index === currentStep ? ' (目前)' : ''}`}
             data-testid={`step-dot-${step.id}`}
@@ -18,7 +18,7 @@ export function StepProgress({ steps, currentStep }: StepProgressProps) {
           {index < steps.length - 1 && (
             <div
               className={`h-0.5 w-6 transition-colors ${
-                index < currentStep ? 'bg-blue-500' : 'bg-slate-600'
+                index < currentStep ? 'bg-[var(--accent-primary)]' : 'bg-[var(--bg-tertiary)]'
               }`}
             />
           )}

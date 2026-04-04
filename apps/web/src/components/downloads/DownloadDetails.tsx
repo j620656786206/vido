@@ -9,12 +9,16 @@ export function DownloadDetails({ hash }: DownloadDetailsProps) {
   const { data: details, isLoading, error } = useDownloadDetails(hash);
 
   if (isLoading) {
-    return <div className="py-4 text-center text-sm text-slate-400">載入詳細資料中...</div>;
+    return (
+      <div className="py-4 text-center text-sm text-[var(--text-secondary)]">載入詳細資料中...</div>
+    );
   }
 
   if (error) {
     return (
-      <div className="py-4 text-center text-sm text-red-400">無法載入詳細資料：{error.message}</div>
+      <div className="py-4 text-center text-sm text-[var(--error)]">
+        無法載入詳細資料：{error.message}
+      </div>
     );
   }
 
@@ -46,8 +50,10 @@ export function DownloadDetails({ hash }: DownloadDetailsProps) {
     <div className="grid grid-cols-2 gap-x-8 gap-y-2 pt-3 text-sm" data-testid="download-details">
       {fields.map((field) => (
         <div key={field.label} className="flex justify-between">
-          <span className="text-slate-400">{field.label}</span>
-          <span className="text-slate-200 truncate ml-2 max-w-[60%] text-right">{field.value}</span>
+          <span className="text-[var(--text-secondary)]">{field.label}</span>
+          <span className="text-[var(--text-primary)] truncate ml-2 max-w-[60%] text-right">
+            {field.value}
+          </span>
         </div>
       ))}
     </div>

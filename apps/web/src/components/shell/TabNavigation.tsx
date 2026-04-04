@@ -20,7 +20,7 @@ export function TabNavigation() {
 
   return (
     <nav
-      className="-mb-px flex gap-6 overflow-x-auto border-b border-slate-800/50"
+      className="-mb-px flex gap-6 overflow-x-auto border-b border-[var(--border-subtle)]/50"
       aria-label="主要導航"
       data-testid="tab-navigation"
     >
@@ -35,7 +35,7 @@ export function TabNavigation() {
               'relative shrink-0 border-b-2 px-1 py-2 text-sm font-medium transition-colors',
               isActive
                 ? 'border-blue-400 text-white'
-                : 'border-transparent text-slate-500 hover:text-slate-300'
+                : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
             )}
             data-testid={`tab-${tab.label}`}
           >

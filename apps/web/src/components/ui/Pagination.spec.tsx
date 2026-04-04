@@ -36,7 +36,7 @@ describe('Pagination', () => {
 
     const currentPageButton = screen.getByLabelText('第 3 頁');
     expect(currentPageButton).toHaveAttribute('aria-current', 'page');
-    expect(currentPageButton).toHaveClass('bg-blue-600');
+    expect(currentPageButton).toHaveClass('bg-[var(--accent-primary)]');
   });
 
   it('should call onPageChange when clicking page number', () => {

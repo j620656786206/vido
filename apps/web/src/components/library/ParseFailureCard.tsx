@@ -54,7 +54,7 @@ export function ParseFailureCard({ file, onMetadataApplied, className }: ParseFa
     <>
       <div
         className={cn(
-          'relative flex flex-col rounded-lg border border-amber-500/30 bg-slate-800/50 overflow-hidden',
+          'relative flex flex-col rounded-lg border border-amber-500/30 bg-[var(--bg-secondary)]/50 overflow-hidden',
           className
         )}
         data-testid="parse-failure-card"
@@ -68,11 +68,11 @@ export function ParseFailureCard({ file, onMetadataApplied, className }: ParseFa
         </div>
 
         {/* Poster placeholder */}
-        <div className="aspect-[2/3] bg-slate-700/50 flex items-center justify-center">
+        <div className="aspect-[2/3] bg-[var(--bg-tertiary)]/50 flex items-center justify-center">
           {file.parsedInfo?.mediaType === 'tv' ? (
-            <Tv className="h-16 w-16 text-slate-500" />
+            <Tv className="h-16 w-16 text-[var(--text-muted)]" />
           ) : (
-            <Film className="h-16 w-16 text-slate-500" />
+            <Film className="h-16 w-16 text-[var(--text-muted)]" />
           )}
         </div>
 
@@ -85,7 +85,7 @@ export function ParseFailureCard({ file, onMetadataApplied, className }: ParseFa
 
           {/* Parsed info if available */}
           {file.parsedInfo && (
-            <div className="flex items-center gap-2 text-xs text-slate-400 mb-2">
+            <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)] mb-2">
               {file.parsedInfo.year && <span>{file.parsedInfo.year}</span>}
               {file.parsedInfo.mediaType && (
                 <span className="capitalize">
@@ -101,18 +101,20 @@ export function ParseFailureCard({ file, onMetadataApplied, className }: ParseFa
           {file.fallbackStatus &&
             file.fallbackStatus.attempts &&
             file.fallbackStatus.attempts.length > 0 && (
-              <div className="text-xs text-slate-500 mb-2">
+              <div className="text-xs text-[var(--text-muted)] mb-2">
                 已嘗試 {file.fallbackStatus.attempts.length} 個來源
               </div>
             )}
 
           {/* UX-4: Guidance message */}
-          <p className="text-xs text-slate-400 mb-3">自動識別失敗，請手動搜尋正確的 Metadata</p>
+          <p className="text-xs text-[var(--text-secondary)] mb-3">
+            自動識別失敗，請手動搜尋正確的 Metadata
+          </p>
 
           {/* Manual Search button (AC1: Manual Search Dialog) */}
           <button
             onClick={() => setIsDialogOpen(true)}
-            className="w-full flex items-center justify-center gap-2 rounded-lg bg-blue-600 hover:bg-blue-700 px-3 py-2 text-sm font-medium text-white transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full flex items-center justify-center gap-2 rounded-lg bg-[var(--accent-primary)] hover:bg-[var(--accent-pressed)] px-3 py-2 text-sm font-medium text-white transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
             data-testid="manual-search-button"
           >
             <Search className="h-4 w-4" />

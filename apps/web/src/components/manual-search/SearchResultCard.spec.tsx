@@ -76,7 +76,7 @@ describe('SearchResultCard', () => {
     // Card should have ring styling
     const card = screen.getByTestId('search-result-card');
     expect(card).toHaveClass('ring-2');
-    expect(card).toHaveClass('ring-blue-500');
+    expect(card).toHaveClass('ring-[var(--accent-primary)]');
   });
 
   it('shows overview on hover', async () => {

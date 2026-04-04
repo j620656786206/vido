@@ -20,8 +20,8 @@ const eventTypeConfig: Record<
   { label: string; Icon: React.ComponentType<{ className?: string }>; color: string }
 > = {
   connected: { label: '已連線', Icon: Wifi, color: 'text-emerald-400' },
-  disconnected: { label: '已斷線', Icon: WifiOff, color: 'text-red-400' },
-  error: { label: '錯誤', Icon: AlertTriangle, color: 'text-yellow-400' },
+  disconnected: { label: '已斷線', Icon: WifiOff, color: 'text-[var(--error)]' },
+  error: { label: '錯誤', Icon: AlertTriangle, color: 'text-[var(--warning)]' },
   recovered: { label: '已恢復', Icon: RefreshCw, color: 'text-emerald-400' },
 };
 
@@ -44,8 +44,8 @@ export function ConnectionHistoryPanel({ isOpen, onClose }: ConnectionHistoryPan
             className={cn(
               'rounded-full px-2.5 py-1 text-xs transition-colors',
               filterType === 'all'
-                ? 'bg-blue-600 text-white'
-                : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
+                ? 'bg-[var(--accent-primary)] text-white'
+                : 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'
             )}
           >
             全部
@@ -59,8 +59,8 @@ export function ConnectionHistoryPanel({ isOpen, onClose }: ConnectionHistoryPan
                 className={cn(
                   'rounded-full px-2.5 py-1 text-xs transition-colors',
                   filterType === type
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
+                    ? 'bg-[var(--accent-primary)] text-white'
+                    : 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'
                 )}
               >
                 {config.label}
@@ -72,11 +72,11 @@ export function ConnectionHistoryPanel({ isOpen, onClose }: ConnectionHistoryPan
         {/* Content */}
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
-            <span className="ml-2 text-sm text-slate-400">載入中...</span>
+            <Loader2 className="h-5 w-5 animate-spin text-[var(--text-secondary)]" />
+            <span className="ml-2 text-sm text-[var(--text-secondary)]">載入中...</span>
           </div>
         ) : !filteredHistory || filteredHistory.length === 0 ? (
-          <div className="py-8 text-center text-sm text-slate-500">沒有連線記錄</div>
+          <div className="py-8 text-center text-sm text-[var(--text-muted)]">沒有連線記錄</div>
         ) : (
           <div className="flex flex-col gap-1" role="list" aria-label="連線記錄列表">
             {filteredHistory.map((event) => (
@@ -94,13 +94,18 @@ function ConnectionEventItem({ event }: { event: ConnectionEvent }) {
   const { Icon } = config;
 
   return (
-    <div className="flex items-start gap-3 rounded-lg p-2.5 hover:bg-slate-800/50" role="listitem">
+    <div
+      className="flex items-start gap-3 rounded-lg p-2.5 hover:bg-[var(--bg-secondary)]/50"
+      role="listitem"
+    >
       <Icon className={cn('mt-0.5 h-4 w-4 shrink-0', config.color)} aria-hidden="true" />
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-slate-200">{config.label}</p>
-        {event.message && <p className="truncate text-xs text-slate-500">{event.message}</p>}
+        <p className="text-sm font-medium text-[var(--text-primary)]">{config.label}</p>
+        {event.message && (
+          <p className="truncate text-xs text-[var(--text-muted)]">{event.message}</p>
+        )}
       </div>
-      <time className="shrink-0 text-xs text-slate-500">
+      <time className="shrink-0 text-xs text-[var(--text-muted)]">
         {formatRelativeTimeZh(event.createdAt)}
       </time>
     </div>

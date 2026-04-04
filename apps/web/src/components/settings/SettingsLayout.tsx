@@ -76,7 +76,7 @@ export function SettingsLayout({ children }: SettingsLayoutProps) {
     <div className="mx-auto flex max-w-7xl flex-col md:flex-row" data-testid="settings-layout">
       {/* Desktop sidebar */}
       <nav
-        className="hidden w-56 shrink-0 border-r border-slate-700 md:block"
+        className="hidden w-56 shrink-0 border-r border-[var(--border-subtle)] md:block"
         aria-label="設定分類導航"
         data-testid="settings-sidebar"
       >
@@ -93,8 +93,8 @@ export function SettingsLayout({ children }: SettingsLayoutProps) {
                     className={cn(
                       'flex items-center gap-3 border-l-2 px-4 py-2.5 text-sm font-medium transition-colors',
                       isActive
-                        ? 'border-blue-400 bg-slate-700 text-blue-400'
-                        : 'border-transparent text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                        ? 'border-blue-400 bg-[var(--bg-tertiary)] text-[var(--accent-primary)]'
+                        : 'border-transparent text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'
                     )}
                     data-testid={`settings-nav-${cat.key}`}
                   >
@@ -103,13 +103,13 @@ export function SettingsLayout({ children }: SettingsLayoutProps) {
                   </Link>
                 ) : (
                   <span
-                    className="flex cursor-not-allowed items-center gap-3 border-l-2 border-transparent px-4 py-2.5 text-sm font-medium text-slate-600"
+                    className="flex cursor-not-allowed items-center gap-3 border-l-2 border-transparent px-4 py-2.5 text-sm font-medium text-[var(--text-muted)]"
                     data-testid={`settings-nav-${cat.key}`}
                     title="此功能尚未實作"
                   >
                     <Icon className="h-4 w-4 shrink-0" />
                     {cat.label}
-                    <span className="ml-auto rounded bg-slate-700 px-1.5 py-0.5 text-[10px] text-slate-500">
+                    <span className="ml-auto rounded bg-[var(--bg-tertiary)] px-1.5 py-0.5 text-[10px] text-[var(--text-muted)]">
                       Coming Soon
                     </span>
                   </span>
@@ -122,7 +122,7 @@ export function SettingsLayout({ children }: SettingsLayoutProps) {
 
       {/* Mobile horizontal tabs */}
       <nav
-        className="overflow-x-auto border-b border-slate-700 md:hidden"
+        className="overflow-x-auto border-b border-[var(--border-subtle)] md:hidden"
         aria-label="設定分類標籤"
         data-testid="settings-tabs"
       >
@@ -138,8 +138,8 @@ export function SettingsLayout({ children }: SettingsLayoutProps) {
                 className={cn(
                   'flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
                   isActive
-                    ? 'border border-blue-400 text-blue-400'
-                    : 'border border-transparent text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                    ? 'border border-blue-400 text-[var(--accent-primary)]'
+                    : 'border border-transparent text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]'
                 )}
                 data-testid={`settings-tab-${cat.key}`}
               >
@@ -149,7 +149,7 @@ export function SettingsLayout({ children }: SettingsLayoutProps) {
             ) : (
               <span
                 key={cat.key}
-                className="flex shrink-0 cursor-not-allowed items-center gap-1.5 rounded-full border border-transparent px-3 py-1.5 text-xs font-medium text-slate-600"
+                className="flex shrink-0 cursor-not-allowed items-center gap-1.5 rounded-full border border-transparent px-3 py-1.5 text-xs font-medium text-[var(--text-muted)]"
                 data-testid={`settings-tab-${cat.key}`}
                 title="此功能尚未實作"
               >

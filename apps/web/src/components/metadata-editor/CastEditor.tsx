@@ -40,18 +40,18 @@ export function CastEditor({
 
   return (
     <div>
-      <label className="block text-sm font-medium text-slate-300 mb-1">{label}</label>
+      <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">{label}</label>
       <div className="flex flex-wrap gap-2 mb-2" data-testid="cast-list">
         {cast.map((actor) => (
           <span
             key={actor}
-            className="inline-flex items-center gap-1 px-2 py-1 bg-slate-800 text-white rounded-lg text-sm"
+            className="inline-flex items-center gap-1 px-2 py-1 bg-[var(--bg-secondary)] text-white rounded-lg text-sm"
           >
             {actor}
             <button
               type="button"
               onClick={() => onRemove(actor)}
-              className="text-slate-400 hover:text-red-400 transition-colors"
+              className="text-[var(--text-secondary)] hover:text-[var(--error)] transition-colors"
               aria-label={`移除 ${actor}`}
             >
               <X className="h-3 w-3" />
@@ -67,9 +67,9 @@ export function CastEditor({
         placeholder={placeholder}
         className={cn(
           'w-full px-4 py-2',
-          'bg-slate-800 border border-slate-700 rounded-lg',
-          'text-white placeholder-slate-400',
-          'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+          'bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-lg',
+          'text-white placeholder-[var(--text-muted)]',
+          'focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent',
           'transition-colors'
         )}
         data-testid="cast-input"

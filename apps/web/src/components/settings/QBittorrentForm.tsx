@@ -73,7 +73,7 @@ export function QBittorrentForm() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+        <Loader2 className="h-6 w-6 animate-spin text-[var(--text-secondary)]" />
       </div>
     );
   }
@@ -84,7 +84,10 @@ export function QBittorrentForm() {
     <form onSubmit={handleSave} data-testid="qbittorrent-form">
       <div className="space-y-5">
         <div>
-          <label htmlFor="qb-host" className="mb-1.5 block text-sm font-medium text-slate-300">
+          <label
+            htmlFor="qb-host"
+            className="mb-1.5 block text-sm font-medium text-[var(--text-secondary)]"
+          >
             主機位址
           </label>
           <input
@@ -93,13 +96,16 @@ export function QBittorrentForm() {
             value={host}
             onChange={(e) => setHost(e.target.value)}
             placeholder="http://192.168.1.100:8080"
-            className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:border-[var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"
             required
           />
         </div>
 
         <div>
-          <label htmlFor="qb-username" className="mb-1.5 block text-sm font-medium text-slate-300">
+          <label
+            htmlFor="qb-username"
+            className="mb-1.5 block text-sm font-medium text-[var(--text-secondary)]"
+          >
             使用者名稱
           </label>
           <input
@@ -108,13 +114,16 @@ export function QBittorrentForm() {
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             placeholder="admin"
-            className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:border-[var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"
             required
           />
         </div>
 
         <div>
-          <label htmlFor="qb-password" className="mb-1.5 block text-sm font-medium text-slate-300">
+          <label
+            htmlFor="qb-password"
+            className="mb-1.5 block text-sm font-medium text-[var(--text-secondary)]"
+          >
             密碼
           </label>
           <input
@@ -123,14 +132,17 @@ export function QBittorrentForm() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
-            className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:border-[var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"
             required
           />
         </div>
 
         <div>
-          <label htmlFor="qb-basepath" className="mb-1.5 block text-sm font-medium text-slate-300">
-            Base Path <span className="text-slate-500">（選填，反向代理用）</span>
+          <label
+            htmlFor="qb-basepath"
+            className="mb-1.5 block text-sm font-medium text-[var(--text-secondary)]"
+          >
+            Base Path <span className="text-[var(--text-muted)]">（選填，反向代理用）</span>
           </label>
           <input
             id="qb-basepath"
@@ -138,17 +150,19 @@ export function QBittorrentForm() {
             value={basePath}
             onChange={(e) => setBasePath(e.target.value)}
             placeholder="/qbittorrent"
-            className="w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full rounded-md border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:border-[var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"
           />
         </div>
       </div>
 
       {testResult && <ConnectionTestResult {...testResult} />}
 
-      {saveSuccess && !testResult && <p className="mt-4 text-sm text-green-400">設定已儲存</p>}
+      {saveSuccess && !testResult && (
+        <p className="mt-4 text-sm text-[var(--success)]">設定已儲存</p>
+      )}
 
       {saveMutation.isError && !testResult && (
-        <p className="mt-4 text-sm text-red-400">{saveMutation.error.message}</p>
+        <p className="mt-4 text-sm text-[var(--error)]">{saveMutation.error.message}</p>
       )}
 
       <div className="mt-6 flex flex-col gap-3 md:flex-row md:justify-end">
@@ -159,8 +173,8 @@ export function QBittorrentForm() {
           className={cn(
             'flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors',
             isSubmitting || !host || !username || !password
-              ? 'cursor-not-allowed bg-slate-700 text-slate-500'
-              : 'bg-slate-700 text-slate-200 hover:bg-slate-600'
+              ? 'cursor-not-allowed bg-[var(--bg-tertiary)] text-[var(--text-muted)]'
+              : 'bg-[var(--bg-tertiary)] text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]'
           )}
         >
           {testMutation.isPending ? (
@@ -177,8 +191,8 @@ export function QBittorrentForm() {
           className={cn(
             'flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors',
             isSubmitting || !host || !username || !password
-              ? 'cursor-not-allowed bg-blue-800 text-blue-400'
-              : 'bg-blue-600 text-white hover:bg-blue-500'
+              ? 'cursor-not-allowed bg-blue-800 text-[var(--accent-primary)]'
+              : 'bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-hover)]'
           )}
         >
           {saveMutation.isPending ? (

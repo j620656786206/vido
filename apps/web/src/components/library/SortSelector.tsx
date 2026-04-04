@@ -64,7 +64,7 @@ export function SortSelector({ sortBy, sortOrder, onSortChange }: SortSelectorPr
     <div ref={dropdownRef} className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="inline-flex items-center gap-2 rounded-lg bg-slate-800 px-3 py-2 text-sm text-slate-300 transition-colors hover:bg-slate-700 hover:text-white"
+        className="inline-flex items-center gap-2 rounded-lg bg-[var(--bg-secondary)] px-3 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-white"
         aria-label="排序方式"
         data-testid="sort-selector-button"
       >
@@ -78,7 +78,7 @@ export function SortSelector({ sortBy, sortOrder, onSortChange }: SortSelectorPr
       {isOpen && (
         <div
           data-testid="sort-dropdown"
-          className="absolute left-0 top-full z-30 mt-1 w-48 rounded-lg bg-slate-800 py-1 shadow-xl ring-1 ring-slate-700"
+          className="absolute left-0 top-full z-30 mt-1 w-48 rounded-lg bg-[var(--bg-secondary)] py-1 shadow-xl ring-1 ring-[var(--border-subtle)]"
           role="listbox"
           aria-label="排序選項"
         >
@@ -92,8 +92,8 @@ export function SortSelector({ sortBy, sortOrder, onSortChange }: SortSelectorPr
               className={cn(
                 'flex w-full items-center justify-between px-4 py-2 text-sm transition-colors',
                 sortBy === option.field
-                  ? 'bg-blue-600 text-white'
-                  : 'text-slate-300 hover:bg-slate-700 hover:text-white'
+                  ? 'bg-[var(--accent-primary)] text-white'
+                  : 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-white'
               )}
             >
               <span>{option.label}</span>

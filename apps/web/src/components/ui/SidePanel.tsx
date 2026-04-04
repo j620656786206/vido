@@ -76,7 +76,7 @@ export function SidePanel({ isOpen, onClose, children, title, className }: SideP
           // Task 3.3: Width - full on mobile, 450px on desktop
           'w-full sm:w-[450px]',
           // Background and shadow
-          'bg-slate-900 shadow-2xl',
+          'bg-[var(--bg-primary)] shadow-2xl',
           // Task 3.2: Slide-in animation from right (300ms)
           'transform transition-transform duration-300 ease-out',
           isOpen ? 'translate-x-0' : 'translate-x-full',
@@ -85,7 +85,7 @@ export function SidePanel({ isOpen, onClose, children, title, className }: SideP
         data-testid="side-panel"
       >
         {/* Header with close button */}
-        <div className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
+        <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-4 py-3">
           {title && (
             <h2 id="side-panel-title" className="text-lg font-semibold text-white">
               {title}
@@ -95,9 +95,9 @@ export function SidePanel({ isOpen, onClose, children, title, className }: SideP
           <button
             onClick={onClose}
             className={cn(
-              'rounded-lg p-2 text-gray-400',
-              'hover:bg-slate-800 hover:text-white',
-              'focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500',
+              'rounded-lg p-2 text-[var(--text-secondary)]',
+              'hover:bg-[var(--bg-secondary)] hover:text-white',
+              'focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]',
               'transition-colors',
               // Position close button on the right if no title
               !title && 'ml-auto'

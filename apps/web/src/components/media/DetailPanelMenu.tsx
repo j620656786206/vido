@@ -33,7 +33,7 @@ export function DetailPanelMenu({ onReparse, onExport, onDelete }: DetailPanelMe
           setIsOpen(nextOpen);
           if (!nextOpen) setShowConfirm(false);
         }}
-        className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-slate-700 hover:text-white"
+        className="rounded-lg p-1.5 text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-white"
         aria-label="更多操作"
         aria-expanded={isOpen}
         aria-haspopup="menu"
@@ -44,7 +44,7 @@ export function DetailPanelMenu({ onReparse, onExport, onDelete }: DetailPanelMe
 
       {isOpen && (
         <div
-          className="absolute right-0 top-full z-50 mt-1 w-48 rounded-lg border border-slate-700 bg-slate-800 py-1 shadow-xl"
+          className="absolute right-0 top-full z-50 mt-1 w-48 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)] py-1 shadow-xl"
           role="menu"
           data-testid="detail-menu-dropdown"
         >
@@ -53,7 +53,7 @@ export function DetailPanelMenu({ onReparse, onExport, onDelete }: DetailPanelMe
               onReparse();
               setIsOpen(false);
             }}
-            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:bg-slate-700"
+            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]"
             role="menuitem"
             data-testid="menu-reparse"
           >
@@ -65,18 +65,18 @@ export function DetailPanelMenu({ onReparse, onExport, onDelete }: DetailPanelMe
               onExport();
               setIsOpen(false);
             }}
-            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:bg-slate-700"
+            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]"
             role="menuitem"
             data-testid="menu-export"
           >
             <Download size={16} />
             匯出中繼資料
           </button>
-          <div className="my-1 border-t border-slate-700" role="separator" />
+          <div className="my-1 border-t border-[var(--border-subtle)]" role="separator" />
           {!showConfirm ? (
             <button
               onClick={() => setShowConfirm(true)}
-              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-slate-700"
+              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-[var(--error)] hover:bg-[var(--bg-tertiary)]"
               role="menuitem"
               data-testid="menu-delete"
             >
@@ -85,7 +85,7 @@ export function DetailPanelMenu({ onReparse, onExport, onDelete }: DetailPanelMe
             </button>
           ) : (
             <div className="px-3 py-2">
-              <p className="mb-2 text-xs text-gray-400">確定要刪除嗎？</p>
+              <p className="mb-2 text-xs text-[var(--text-secondary)]">確定要刪除嗎？</p>
               <div className="flex gap-2">
                 <button
                   onClick={() => {
@@ -93,14 +93,14 @@ export function DetailPanelMenu({ onReparse, onExport, onDelete }: DetailPanelMe
                     setIsOpen(false);
                     setShowConfirm(false);
                   }}
-                  className="rounded bg-red-600 px-3 py-1 text-xs text-white hover:bg-red-500"
+                  className="rounded bg-[var(--error)] px-3 py-1 text-xs text-white hover:bg-[var(--error)]"
                   data-testid="confirm-delete"
                 >
                   確定
                 </button>
                 <button
                   onClick={() => setShowConfirm(false)}
-                  className="rounded bg-slate-700 px-3 py-1 text-xs text-gray-300 hover:bg-slate-600"
+                  className="rounded bg-[var(--bg-tertiary)] px-3 py-1 text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]"
                   data-testid="cancel-delete"
                 >
                   取消

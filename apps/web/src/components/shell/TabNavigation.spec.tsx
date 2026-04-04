@@ -82,14 +82,14 @@ describe('TabNavigation', () => {
     const libraryTab = await screen.findByTestId('tab-媒體庫');
     expect(libraryTab).toHaveClass('text-white');
     expect(libraryTab).toHaveClass('border-blue-400');
-    expect(screen.getByTestId('tab-下載中')).toHaveClass('text-slate-500');
+    expect(screen.getByTestId('tab-下載中')).toHaveClass('text-[var(--text-muted)]');
   });
 
   it('highlights the active tab for downloads route', async () => {
     renderWithRouter('/downloads');
     const downloadsTab = await screen.findByTestId('tab-下載中');
     expect(downloadsTab).toHaveClass('text-white');
-    expect(screen.getByTestId('tab-媒體庫')).toHaveClass('text-slate-500');
+    expect(screen.getByTestId('tab-媒體庫')).toHaveClass('text-[var(--text-muted)]');
   });
 
   it('highlights the active tab for settings route', async () => {
@@ -119,7 +119,7 @@ describe('TabNavigation', () => {
     // THEN: Pending tab is active with correct styles
     expect(pendingTab).toHaveClass('text-white');
     expect(pendingTab).toHaveClass('border-blue-400');
-    expect(screen.getByTestId('tab-媒體庫')).toHaveClass('text-slate-500');
+    expect(screen.getByTestId('tab-媒體庫')).toHaveClass('text-[var(--text-muted)]');
   });
 
   it('[P2] shows no active tab on non-tab route', async () => {
@@ -129,9 +129,9 @@ describe('TabNavigation', () => {
     await screen.findByTestId('tab-navigation');
 
     // THEN: No tab has active styling
-    expect(screen.getByTestId('tab-媒體庫')).toHaveClass('text-slate-500');
-    expect(screen.getByTestId('tab-下載中')).toHaveClass('text-slate-500');
-    expect(screen.getByTestId('tab-待解析')).toHaveClass('text-slate-500');
-    expect(screen.getByTestId('tab-設定')).toHaveClass('text-slate-500');
+    expect(screen.getByTestId('tab-媒體庫')).toHaveClass('text-[var(--text-muted)]');
+    expect(screen.getByTestId('tab-下載中')).toHaveClass('text-[var(--text-muted)]');
+    expect(screen.getByTestId('tab-待解析')).toHaveClass('text-[var(--text-muted)]');
+    expect(screen.getByTestId('tab-設定')).toHaveClass('text-[var(--text-muted)]');
   });
 });

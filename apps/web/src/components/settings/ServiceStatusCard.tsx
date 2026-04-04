@@ -20,32 +20,32 @@ const statusConfig: Record<
   }
 > = {
   connected: {
-    color: 'text-green-400',
+    color: 'text-[var(--success)]',
     bg: 'bg-green-400/10',
     icon: CheckCircle,
     label: '已連線',
   },
   rate_limited: {
-    color: 'text-yellow-400',
+    color: 'text-[var(--warning)]',
     bg: 'bg-yellow-400/10',
     icon: AlertTriangle,
     label: '速率限制',
   },
   error: {
-    color: 'text-red-400',
+    color: 'text-[var(--error)]',
     bg: 'bg-red-400/10',
     icon: XCircle,
     label: '錯誤',
   },
   disconnected: {
-    color: 'text-red-400',
+    color: 'text-[var(--error)]',
     bg: 'bg-red-400/10',
     icon: WifiOff,
     label: '已斷線',
   },
   unconfigured: {
-    color: 'text-gray-400',
-    bg: 'bg-gray-400/10',
+    color: 'text-[var(--text-secondary)]',
+    bg: 'bg-[var(--text-muted)]/10',
     icon: Settings,
     label: '未設定',
   },
@@ -66,7 +66,7 @@ export function ServiceStatusCard({ service, onTest, isTesting }: ServiceStatusC
 
   return (
     <div
-      className="rounded-lg border border-slate-700 bg-slate-800 p-4"
+      className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-4"
       data-testid={`service-card-${service.name}`}
     >
       <div className="flex items-center justify-between">
@@ -75,11 +75,11 @@ export function ServiceStatusCard({ service, onTest, isTesting }: ServiceStatusC
             <StatusIcon className={`h-5 w-5 ${config.color}`} />
           </div>
           <div>
-            <h3 className="font-medium text-slate-200">{service.displayName}</h3>
+            <h3 className="font-medium text-[var(--text-primary)]">{service.displayName}</h3>
             <div className="flex items-center gap-2 text-sm">
               <span className={config.color}>{config.label}</span>
               {service.responseTimeMs > 0 && service.status === 'connected' && (
-                <span className="text-slate-500">{service.responseTimeMs}ms</span>
+                <span className="text-[var(--text-muted)]">{service.responseTimeMs}ms</span>
               )}
             </div>
           </div>
@@ -88,7 +88,7 @@ export function ServiceStatusCard({ service, onTest, isTesting }: ServiceStatusC
         <button
           onClick={() => onTest(service.name)}
           disabled={isTesting}
-          className="flex items-center gap-1.5 rounded-lg bg-slate-700 px-3 py-1.5 text-xs font-medium text-slate-300 transition-colors hover:bg-slate-600 disabled:opacity-50"
+          className="flex items-center gap-1.5 rounded-lg bg-[var(--bg-tertiary)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] disabled:opacity-50"
           data-testid={`test-btn-${service.name}`}
         >
           {isTesting ? (
@@ -104,7 +104,7 @@ export function ServiceStatusCard({ service, onTest, isTesting }: ServiceStatusC
       {showDetail && (
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="mt-2 text-xs text-slate-500 hover:text-slate-400"
+          className="mt-2 text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
           data-testid={`detail-toggle-${service.name}`}
         >
           {isExpanded ? '隱藏詳情' : '顯示詳情'}
@@ -113,22 +113,22 @@ export function ServiceStatusCard({ service, onTest, isTesting }: ServiceStatusC
 
       {isExpanded && (
         <div
-          className="mt-3 space-y-1 rounded-md bg-slate-900/50 p-3 text-xs text-slate-400"
+          className="mt-3 space-y-1 rounded-md bg-[var(--bg-primary)]/50 p-3 text-xs text-[var(--text-secondary)]"
           data-testid={`detail-panel-${service.name}`}
         >
           {service.errorMessage && (
             <p>
-              <span className="text-slate-500">錯誤訊息：</span> {service.errorMessage}
+              <span className="text-[var(--text-muted)]">錯誤訊息：</span> {service.errorMessage}
             </p>
           )}
           {service.lastSuccessAt && (
             <p>
-              <span className="text-slate-500">最後成功：</span>{' '}
+              <span className="text-[var(--text-muted)]">最後成功：</span>{' '}
               {new Date(service.lastSuccessAt).toLocaleString('zh-TW')}
             </p>
           )}
           <p>
-            <span className="text-slate-500">最後檢查：</span>{' '}
+            <span className="text-[var(--text-muted)]">最後檢查：</span>{' '}
             {service.lastCheckAt
               ? new Date(service.lastCheckAt).toLocaleString('zh-TW')
               : '尚未檢查'}

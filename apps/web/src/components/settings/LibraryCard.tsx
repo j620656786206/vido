@@ -14,11 +14,11 @@ interface LibraryCardProps {
 }
 
 const STATUS_CONFIG = {
-  accessible: { color: 'text-green-400', bg: 'bg-green-400', label: '已連線' },
-  not_found: { color: 'text-red-400', bg: 'bg-red-400', label: '無法存取' },
-  not_readable: { color: 'text-red-400', bg: 'bg-red-400', label: '無法讀取' },
-  not_directory: { color: 'text-red-400', bg: 'bg-red-400', label: '非目錄' },
-  unknown: { color: 'text-slate-400', bg: 'bg-slate-400', label: '未檢查' },
+  accessible: { color: 'text-[var(--success)]', bg: 'bg-green-400', label: '已連線' },
+  not_found: { color: 'text-[var(--error)]', bg: 'bg-red-400', label: '無法存取' },
+  not_readable: { color: 'text-[var(--error)]', bg: 'bg-red-400', label: '無法讀取' },
+  not_directory: { color: 'text-[var(--error)]', bg: 'bg-red-400', label: '非目錄' },
+  unknown: { color: 'text-[var(--text-secondary)]', bg: 'bg-[var(--text-muted)]', label: '未檢查' },
 } as const;
 
 export function LibraryCard({ library, onEdit }: LibraryCardProps) {
@@ -37,15 +37,15 @@ export function LibraryCard({ library, onEdit }: LibraryCardProps) {
 
   return (
     <div
-      className="rounded-lg border border-slate-700 bg-slate-800 p-4"
+      className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-4"
       data-testid={`library-card-${library.id}`}
     >
       {/* Header */}
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <TypeIcon className="h-4 w-4 text-slate-400" />
-          <span className="text-sm font-medium text-slate-200">{library.name}</span>
-          <span className="rounded bg-slate-700 px-1.5 py-0.5 text-xs text-slate-400">
+          <TypeIcon className="h-4 w-4 text-[var(--text-secondary)]" />
+          <span className="text-sm font-medium text-[var(--text-primary)]">{library.name}</span>
+          <span className="rounded bg-[var(--bg-tertiary)] px-1.5 py-0.5 text-xs text-[var(--text-secondary)]">
             {typeLabel}
           </span>
         </div>
@@ -53,20 +53,20 @@ export function LibraryCard({ library, onEdit }: LibraryCardProps) {
           <button
             type="button"
             onClick={() => setMenuOpen(!menuOpen)}
-            className="rounded p-1 text-slate-500 transition-colors hover:bg-slate-700 hover:text-slate-300"
+            className="rounded p-1 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-secondary)]"
             data-testid="library-menu-button"
           >
             <MoreVertical className="h-4 w-4" />
           </button>
           {menuOpen && (
-            <div className="absolute right-0 z-10 mt-1 w-32 rounded-md border border-slate-600 bg-slate-800 py-1 shadow-lg">
+            <div className="absolute right-0 z-10 mt-1 w-32 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-secondary)] py-1 shadow-lg">
               <button
                 type="button"
                 onClick={() => {
                   setMenuOpen(false);
                   onEdit();
                 }}
-                className="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-700"
+                className="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]"
               >
                 <Pencil className="h-3 w-3" /> 編輯
               </button>
@@ -76,7 +76,7 @@ export function LibraryCard({ library, onEdit }: LibraryCardProps) {
                   setMenuOpen(false);
                   setConfirmDelete(true);
                 }}
-                className="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-red-400 hover:bg-slate-700"
+                className="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-[var(--error)] hover:bg-[var(--bg-tertiary)]"
               >
                 <Trash2 className="h-3 w-3" /> 刪除
               </button>
@@ -91,8 +91,10 @@ export function LibraryCard({ library, onEdit }: LibraryCardProps) {
           const statusCfg = STATUS_CONFIG[p.status] || STATUS_CONFIG.unknown;
           return (
             <div key={p.id} className="flex items-center gap-2 text-sm">
-              <FolderOpen className="h-3.5 w-3.5 shrink-0 text-slate-500" />
-              <span className="flex-1 truncate font-mono text-xs text-slate-400">{p.path}</span>
+              <FolderOpen className="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" />
+              <span className="flex-1 truncate font-mono text-xs text-[var(--text-secondary)]">
+                {p.path}
+              </span>
               <span className={cn('flex items-center gap-1 text-xs', statusCfg.color)}>
                 <span className={cn('inline-block h-1.5 w-1.5 rounded-full', statusCfg.bg)} />
                 {statusCfg.label}
@@ -103,7 +105,7 @@ export function LibraryCard({ library, onEdit }: LibraryCardProps) {
       </div>
 
       {/* Footer */}
-      <div className="text-xs text-slate-500">
+      <div className="text-xs text-[var(--text-muted)]">
         {(library.paths || []).length} 個資料夾 · {library.mediaCount} 個項目
       </div>
 
@@ -111,12 +113,12 @@ export function LibraryCard({ library, onEdit }: LibraryCardProps) {
       {confirmDelete && (
         <div className="mt-3 rounded-lg border border-red-800/50 bg-red-950/30 p-3">
           <p className="mb-2 text-sm text-red-300">確定要刪除「{library.name}」嗎？</p>
-          <label className="mb-3 flex items-center gap-2 text-xs text-slate-400">
+          <label className="mb-3 flex items-center gap-2 text-xs text-[var(--text-secondary)]">
             <input
               type="checkbox"
               checked={removeMedia}
               onChange={(e) => setRemoveMedia(e.target.checked)}
-              className="rounded border-slate-600"
+              className="rounded border-[var(--border-subtle)]"
             />
             同時移除已掃描的媒體資料
           </label>
@@ -124,7 +126,7 @@ export function LibraryCard({ library, onEdit }: LibraryCardProps) {
             <button
               type="button"
               onClick={() => setConfirmDelete(false)}
-              className="rounded px-3 py-1 text-xs text-slate-400 hover:bg-slate-700"
+              className="rounded px-3 py-1 text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]"
             >
               取消
             </button>
@@ -132,7 +134,7 @@ export function LibraryCard({ library, onEdit }: LibraryCardProps) {
               type="button"
               onClick={handleDelete}
               disabled={deleteLibrary.isPending}
-              className="rounded bg-red-600 px-3 py-1 text-xs text-white hover:bg-red-700 disabled:opacity-50"
+              className="rounded bg-[var(--error)] px-3 py-1 text-xs text-white hover:bg-red-700 disabled:opacity-50"
               data-testid="confirm-delete-button"
             >
               {deleteLibrary.isPending ? '刪除中...' : '確認刪除'}

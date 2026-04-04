@@ -30,14 +30,14 @@ describe('ViewToggle', () => {
   it('applies active styling to grid button when grid is selected', () => {
     render(<ViewToggle view="grid" onViewChange={vi.fn()} />);
     const gridButton = screen.getByLabelText('格狀檢視');
-    expect(gridButton.className).toContain('bg-blue-600');
+    expect(gridButton.className).toContain('bg-[var(--accent-primary)]');
     expect(gridButton.className).toContain('text-white');
   });
 
   it('applies inactive styling to list button when grid is selected', () => {
     render(<ViewToggle view="grid" onViewChange={vi.fn()} />);
     const listButton = screen.getByLabelText('列表檢視');
-    expect(listButton.className).toContain('text-slate-400');
+    expect(listButton.className).toContain('text-[var(--text-secondary)]');
   });
 
   it('calls onViewChange with "list" when list button clicked', () => {

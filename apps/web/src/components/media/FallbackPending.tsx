@@ -11,18 +11,23 @@ export function FallbackPending({ filename }: FallbackPendingProps) {
       className="flex flex-col items-center px-6 py-8 text-center"
     >
       {/* Spinner */}
-      <Loader2 className="h-10 w-10 animate-spin text-blue-400" data-testid="pending-spinner" />
+      <Loader2
+        className="h-10 w-10 animate-spin text-[var(--accent-primary)]"
+        data-testid="pending-spinner"
+      />
 
       {/* Primary message */}
       <h2 className="mt-5 text-lg font-semibold text-white">正在搜尋電影資訊⋯</h2>
 
       {/* Secondary description */}
-      <p className="mt-2 text-sm text-gray-400">系統正在比對檔案名稱與 TMDb 資料庫</p>
+      <p className="mt-2 text-sm text-[var(--text-secondary)]">
+        系統正在比對檔案名稱與 TMDb 資料庫
+      </p>
 
       {/* Progress bar */}
-      <div className="mt-5 h-1 w-full max-w-xs overflow-hidden rounded-full bg-gray-700">
+      <div className="mt-5 h-1 w-full max-w-xs overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
         <div
-          className="h-full animate-pulse rounded-full bg-blue-500"
+          className="h-full animate-pulse rounded-full bg-[var(--accent-primary)]"
           style={{ width: '60%' }}
           data-testid="pending-progress"
         />
@@ -30,7 +35,7 @@ export function FallbackPending({ filename }: FallbackPendingProps) {
 
       {/* Filename hint */}
       <p
-        className="mt-4 max-w-xs truncate font-mono text-xs text-gray-500"
+        className="mt-4 max-w-xs truncate font-mono text-xs text-[var(--text-muted)]"
         title={filename}
         data-testid="pending-filename"
       >

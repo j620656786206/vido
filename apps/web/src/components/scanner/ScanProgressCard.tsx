@@ -94,12 +94,14 @@ export function ScanProgressCard({
       <button
         type="button"
         onClick={onToggleMinimize}
-        className="flex items-center gap-2 rounded-full bg-slate-800 px-4 py-2 shadow-lg"
+        className="flex items-center gap-2 rounded-full bg-[var(--bg-secondary)] px-4 py-2 shadow-lg"
         data-testid="scan-progress-pill"
       >
-        <Loader className="h-4 w-4 animate-spin text-blue-400" />
-        <span className="text-sm font-medium text-slate-200">掃描中 {state.percentDone}%</span>
-        <ChevronUp className="h-3.5 w-3.5 text-slate-400" />
+        <Loader className="h-4 w-4 animate-spin text-[var(--accent-primary)]" />
+        <span className="text-sm font-medium text-[var(--text-primary)]">
+          掃描中 {state.percentDone}%
+        </span>
+        <ChevronUp className="h-3.5 w-3.5 text-[var(--text-secondary)]" />
       </button>
     );
   }
@@ -108,7 +110,7 @@ export function ScanProgressCard({
   if (state.isComplete || state.isCancelled) {
     return (
       <div
-        className="w-[480px] max-w-[calc(100vw-2rem)] rounded-lg bg-slate-800 p-4 shadow-xl"
+        className="w-[480px] max-w-[calc(100vw-2rem)] rounded-lg bg-[var(--bg-secondary)] p-4 shadow-xl"
         data-testid="scan-progress-card"
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
@@ -118,20 +120,20 @@ export function ScanProgressCard({
         <div className="mb-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             {state.isCancelled ? (
-              <XCircle className="h-5 w-5 text-slate-400" />
+              <XCircle className="h-5 w-5 text-[var(--text-secondary)]" />
             ) : state.errorCount > 0 ? (
-              <AlertTriangle className="h-5 w-5 text-yellow-400" />
+              <AlertTriangle className="h-5 w-5 text-[var(--warning)]" />
             ) : (
-              <CheckCircle className="h-5 w-5 text-green-400" />
+              <CheckCircle className="h-5 w-5 text-[var(--success)]" />
             )}
-            <span className="text-sm font-semibold text-slate-100">
+            <span className="text-sm font-semibold text-[var(--text-primary)]">
               {state.isCancelled ? '掃描已取消' : '掃描完成'}
             </span>
           </div>
           <button
             type="button"
             onClick={onDismiss}
-            className="rounded p-1 text-slate-400 transition-colors hover:text-slate-200"
+            className="rounded p-1 text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
             aria-label="關閉"
             data-testid="scan-dismiss-btn"
           >
@@ -140,16 +142,22 @@ export function ScanProgressCard({
         </div>
 
         {/* Stats summary */}
-        <p className="mb-3 text-sm text-slate-300">
-          <span className="font-mono text-slate-100">{state.filesFound.toLocaleString()}</span> 檔案
-          · 比對成功{' '}
-          <span className="font-mono text-slate-100">{state.filesProcessed.toLocaleString()}</span>{' '}
+        <p className="mb-3 text-sm text-[var(--text-secondary)]">
+          <span className="font-mono text-[var(--text-primary)]">
+            {state.filesFound.toLocaleString()}
+          </span>{' '}
+          檔案 · 比對成功{' '}
+          <span className="font-mono text-[var(--text-primary)]">
+            {state.filesProcessed.toLocaleString()}
+          </span>{' '}
           · 未比對{' '}
-          <span className="font-mono text-slate-100">
+          <span className="font-mono text-[var(--text-primary)]">
             {Math.max(0, state.filesFound - state.filesProcessed).toLocaleString()}
           </span>{' '}
           · 錯誤{' '}
-          <span className="font-mono text-slate-100">{state.errorCount.toLocaleString()}</span>
+          <span className="font-mono text-[var(--text-primary)]">
+            {state.errorCount.toLocaleString()}
+          </span>
         </p>
 
         {/* Action links */}
@@ -160,7 +168,7 @@ export function ScanProgressCard({
               onDismiss();
               navigate({ to: '/', search: { status: 'unmatched' } });
             }}
-            className="text-sm text-blue-400 underline-offset-2 hover:underline"
+            className="text-sm text-[var(--accent-primary)] underline-offset-2 hover:underline"
             data-testid="view-unmatched-link"
           >
             查看未比對項目
@@ -172,7 +180,7 @@ export function ScanProgressCard({
                 onDismiss();
                 navigate({ to: '/', search: { status: 'error' } });
               }}
-              className="text-sm text-blue-400 underline-offset-2 hover:underline"
+              className="text-sm text-[var(--accent-primary)] underline-offset-2 hover:underline"
               data-testid="view-errors-link"
             >
               查看錯誤
@@ -181,10 +189,10 @@ export function ScanProgressCard({
         </div>
 
         {/* Auto-dismiss progress bar */}
-        <div className="mt-3 h-0.5 w-full overflow-hidden rounded-full bg-slate-700">
+        <div className="mt-3 h-0.5 w-full overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
           <div
             className={cn(
-              'h-full bg-slate-500 motion-reduce:animate-none',
+              'h-full bg-[var(--text-muted)] motion-reduce:animate-none',
               isAutoDismissing && 'animate-shrink'
             )}
             style={isPaused ? { animationPlayState: 'paused' } : undefined}
@@ -198,18 +206,18 @@ export function ScanProgressCard({
   // Active scanning state
   return (
     <div
-      className="w-[400px] rounded-xl bg-slate-800 p-4 shadow-xl"
+      className="w-[400px] rounded-xl bg-[var(--bg-secondary)] p-4 shadow-xl"
       data-testid="scan-progress-card"
       role="status"
     >
       {/* Header */}
       <div className="mb-3 flex items-center justify-between">
-        <span className="text-sm font-semibold text-slate-100">媒體庫掃描中</span>
+        <span className="text-sm font-semibold text-[var(--text-primary)]">媒體庫掃描中</span>
         <div className="flex items-center gap-1">
           <button
             type="button"
             onClick={onToggleMinimize}
-            className="rounded p-1 text-slate-400 transition-colors hover:text-slate-200"
+            className="rounded p-1 text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
             aria-label="最小化"
             data-testid="scan-minimize-btn"
           >
@@ -218,7 +226,7 @@ export function ScanProgressCard({
           <button
             type="button"
             onClick={handleCancelClick}
-            className="rounded p-1 text-slate-400 transition-colors hover:text-slate-200"
+            className="rounded p-1 text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
             aria-label="取消"
             data-testid="scan-close-btn"
           >
@@ -230,41 +238,52 @@ export function ScanProgressCard({
       {/* Progress bar */}
       <div className="mb-3">
         <div className="mb-1 flex items-center justify-between">
-          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-700">
+          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
             <div
-              className="h-full rounded-full bg-blue-500 transition-[width] duration-300"
+              className="h-full rounded-full bg-[var(--accent-primary)] transition-[width] duration-300"
               style={{ width: `${state.percentDone}%` }}
               data-testid="scan-progress-bar"
             />
           </div>
-          <span className="ml-3 min-w-[3ch] text-right font-mono text-sm text-slate-200">
+          <span className="ml-3 min-w-[3ch] text-right font-mono text-sm text-[var(--text-primary)]">
             {state.percentDone}%
           </span>
         </div>
       </div>
 
       {/* Stats row — 4 counters per design spec H2 */}
-      <div className="mb-3 flex items-center gap-3 text-xs text-slate-400">
+      <div className="mb-3 flex items-center gap-3 text-xs text-[var(--text-secondary)]">
         <span className="flex items-center gap-1">
           <File className="h-3.5 w-3.5" />
           <span>找到</span>
-          <span className="font-mono text-slate-200">{state.filesFound.toLocaleString()}</span>
+          <span className="font-mono text-[var(--text-primary)]">
+            {state.filesFound.toLocaleString()}
+          </span>
         </span>
         <span className="flex items-center gap-1">
           <FileCheck className="h-3.5 w-3.5" />
           <span>解析</span>
-          <span className="font-mono text-slate-200">{state.filesProcessed.toLocaleString()}</span>
+          <span className="font-mono text-[var(--text-primary)]">
+            {state.filesProcessed.toLocaleString()}
+          </span>
         </span>
         <span className="flex items-center gap-1">
           <Link className="h-3.5 w-3.5" />
           <span>比對</span>
-          <span className="font-mono text-slate-200">{state.filesProcessed.toLocaleString()}</span>
+          <span className="font-mono text-[var(--text-primary)]">
+            {state.filesProcessed.toLocaleString()}
+          </span>
         </span>
         <span className="flex items-center gap-1">
-          <AlertTriangle className={cn('h-3.5 w-3.5', state.errorCount > 0 && 'text-red-400')} />
+          <AlertTriangle
+            className={cn('h-3.5 w-3.5', state.errorCount > 0 && 'text-[var(--error)]')}
+          />
           <span>錯誤</span>
           <span
-            className={cn('font-mono', state.errorCount > 0 ? 'text-red-400' : 'text-slate-200')}
+            className={cn(
+              'font-mono',
+              state.errorCount > 0 ? 'text-[var(--error)]' : 'text-[var(--text-primary)]'
+            )}
           >
             {state.errorCount}
           </span>
@@ -274,9 +293,9 @@ export function ScanProgressCard({
       {/* Current file */}
       {state.currentFile && (
         <div className="mb-3">
-          <p className="text-xs text-slate-500">正在處理:</p>
+          <p className="text-xs text-[var(--text-muted)]">正在處理:</p>
           <p
-            className="truncate font-mono text-xs text-slate-400"
+            className="truncate font-mono text-xs text-[var(--text-secondary)]"
             title={state.currentFile}
             data-testid="scan-current-file"
           >
@@ -287,20 +306,22 @@ export function ScanProgressCard({
 
       {/* ETA */}
       {state.estimatedTime && (
-        <p className="mb-3 text-xs text-slate-500" data-testid="scan-eta">
+        <p className="mb-3 text-xs text-[var(--text-muted)]" data-testid="scan-eta">
           預估剩餘: {state.estimatedTime}
         </p>
       )}
 
       {/* Cancel button / Cancel confirmation */}
       {showCancelConfirm ? (
-        <div className="rounded-lg bg-slate-900 p-3" data-testid="cancel-confirm-dialog">
-          <p className="mb-3 text-sm text-slate-300">確定要取消掃描嗎？已處理的結果會保留。</p>
+        <div className="rounded-lg bg-[var(--bg-primary)] p-3" data-testid="cancel-confirm-dialog">
+          <p className="mb-3 text-sm text-[var(--text-secondary)]">
+            確定要取消掃描嗎？已處理的結果會保留。
+          </p>
           <div className="flex justify-end gap-2">
             <button
               type="button"
               onClick={() => setShowCancelConfirm(false)}
-              className="rounded-md px-3 py-1.5 text-sm text-slate-300 transition-colors hover:bg-slate-700"
+              className="rounded-md px-3 py-1.5 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)]"
               data-testid="cancel-continue-btn"
             >
               繼續掃描
@@ -309,7 +330,7 @@ export function ScanProgressCard({
               type="button"
               onClick={handleCancelConfirm}
               disabled={isCancelling}
-              className="rounded-md bg-red-600 px-3 py-1.5 text-sm text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+              className="rounded-md bg-[var(--error)] px-3 py-1.5 text-sm text-white transition-colors hover:bg-red-700 disabled:opacity-50"
               data-testid="cancel-confirm-btn"
             >
               {isCancelling ? '取消中...' : '取消掃描'}
@@ -321,7 +342,7 @@ export function ScanProgressCard({
           <button
             type="button"
             onClick={handleCancelClick}
-            className="text-sm text-slate-400 transition-colors hover:text-slate-200"
+            className="text-sm text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
             data-testid="scan-cancel-btn"
           >
             取消掃描

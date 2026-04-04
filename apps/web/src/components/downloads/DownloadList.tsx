@@ -38,14 +38,14 @@ export function DownloadList({
       {/* Sort Controls */}
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <label htmlFor="sort-select" className="text-sm text-slate-400">
+          <label htmlFor="sort-select" className="text-sm text-[var(--text-secondary)]">
             排序：
           </label>
           <select
             id="sort-select"
             value={sortField}
             onChange={(e) => onSortChange(e.target.value as SortField)}
-            className="rounded-md border border-slate-600/50 bg-slate-800 px-3 py-1.5 text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
+            className="rounded-md border border-[var(--border-subtle)]/50 bg-[var(--bg-secondary)] px-3 py-1.5 text-sm text-[var(--text-primary)] focus:border-[var(--accent-primary)] focus:outline-none"
           >
             {sortOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -56,20 +56,20 @@ export function DownloadList({
           <button
             type="button"
             onClick={() => onOrderChange(sortOrder === 'asc' ? 'desc' : 'asc')}
-            className="rounded-md border border-slate-600/50 bg-slate-800 p-1.5 text-slate-300 hover:border-slate-500"
+            className="rounded-md border border-[var(--border-subtle)]/50 bg-[var(--bg-secondary)] p-1.5 text-[var(--text-secondary)] hover:border-[var(--text-muted)]"
             title={sortOrder === 'asc' ? '升冪' : '降冪'}
           >
             {sortOrder === 'asc' ? '↑' : '↓'}
           </button>
         </div>
-        <span className="text-sm text-slate-400">
+        <span className="text-sm text-[var(--text-secondary)]">
           {(totalItems ?? downloads.length).toLocaleString()} 個項目
         </span>
       </div>
 
       {/* Download Items */}
       {downloads.length === 0 ? (
-        <div className="rounded-lg border border-slate-700 bg-slate-800/50 py-12 text-center text-slate-400">
+        <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/50 py-12 text-center text-[var(--text-secondary)]">
           <p className="text-lg">目前沒有下載任務</p>
           <p className="mt-1 text-sm">在 qBittorrent 中新增種子後會自動顯示</p>
         </div>
@@ -83,7 +83,7 @@ export function DownloadList({
                 onToggleExpand={() => handleToggleExpand(download.hash)}
               />
               {expandedHash === download.hash && (
-                <div className="mt-px rounded-b-lg border border-t-0 border-slate-700 bg-slate-800/30 px-4 pb-4">
+                <div className="mt-px rounded-b-lg border border-t-0 border-[var(--border-subtle)] bg-[var(--bg-secondary)]/30 px-4 pb-4">
                   <DownloadDetails hash={download.hash} />
                 </div>
               )}

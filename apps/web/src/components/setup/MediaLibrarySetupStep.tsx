@@ -49,8 +49,8 @@ export function MediaLibrarySetupStep({ data, onUpdate, onNext, onBack }: StepPr
 
   return (
     <div data-testid="media-library-step">
-      <h2 className="mb-2 text-lg font-semibold text-slate-100">媒體庫設定</h2>
-      <p className="mb-6 text-sm text-slate-400">
+      <h2 className="mb-2 text-lg font-semibold text-[var(--text-primary)]">媒體庫設定</h2>
+      <p className="mb-6 text-sm text-[var(--text-secondary)]">
         設定您的媒體資料夾路徑和類型。至少需要一個媒體庫。
       </p>
 
@@ -58,28 +58,30 @@ export function MediaLibrarySetupStep({ data, onUpdate, onNext, onBack }: StepPr
         {libraries.map((lib, index) => (
           <div
             key={lib.id}
-            className="rounded-lg border border-slate-600/50 bg-slate-800/60 p-4"
+            className="rounded-lg border border-[var(--border-subtle)]/50 bg-[var(--bg-secondary)]/60 p-4"
             data-testid={`library-entry-${index}`}
           >
             <div className="mb-3">
-              <label className="mb-1 block text-xs font-medium text-slate-400">資料夾路徑</label>
+              <label className="mb-1 block text-xs font-medium text-[var(--text-secondary)]">
+                資料夾路徑
+              </label>
               <input
                 type="text"
                 value={lib.path}
                 onChange={(e) => updateEntry(index, 'path', e.target.value)}
                 placeholder="/media/movies"
-                className="w-full rounded-md border border-slate-600/50 bg-slate-900/60 px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="w-full rounded-md border border-[var(--border-subtle)]/50 bg-[var(--bg-primary)]/60 px-3 py-2 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:border-[var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"
                 data-testid={`library-path-${index}`}
               />
             </div>
 
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <label className="text-xs font-medium text-slate-400">類型</label>
+                <label className="text-xs font-medium text-[var(--text-secondary)]">類型</label>
                 <select
                   value={lib.contentType}
                   onChange={(e) => updateEntry(index, 'contentType', e.target.value)}
-                  className="rounded-md border border-slate-600/50 bg-slate-900/60 px-3 py-1.5 text-sm text-slate-200 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="rounded-md border border-[var(--border-subtle)]/50 bg-[var(--bg-primary)]/60 px-3 py-1.5 text-sm text-[var(--text-primary)] focus:border-[var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"
                   data-testid={`library-type-${index}`}
                 >
                   <option value="movie">🎬 電影</option>
@@ -91,7 +93,7 @@ export function MediaLibrarySetupStep({ data, onUpdate, onNext, onBack }: StepPr
                 <button
                   type="button"
                   onClick={() => removeLibrary(index)}
-                  className="rounded-md p-1 text-slate-500 transition-colors hover:bg-slate-700 hover:text-red-400"
+                  className="rounded-md p-1 text-[var(--text-muted)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--error)]"
                   data-testid={`library-remove-${index}`}
                   aria-label="移除此媒體庫"
                 >
@@ -106,7 +108,7 @@ export function MediaLibrarySetupStep({ data, onUpdate, onNext, onBack }: StepPr
       <button
         type="button"
         onClick={addLibrary}
-        className="mb-6 flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-slate-600/50 py-2.5 text-sm text-slate-400 transition-colors hover:border-blue-500/50 hover:text-blue-400"
+        className="mb-6 flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-[var(--border-subtle)]/50 py-2.5 text-sm text-[var(--text-secondary)] transition-colors hover:border-[var(--accent-primary)]/50 hover:text-[var(--accent-primary)]"
         data-testid="add-library-button"
       >
         <Plus className="h-4 w-4" />
@@ -117,7 +119,7 @@ export function MediaLibrarySetupStep({ data, onUpdate, onNext, onBack }: StepPr
         <button
           type="button"
           onClick={onBack}
-          className="rounded-lg border border-slate-600/50 px-4 py-2.5 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-800"
+          className="rounded-lg border border-[var(--border-subtle)]/50 px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)]"
           data-testid="back-button"
         >
           上一步
@@ -126,7 +128,7 @@ export function MediaLibrarySetupStep({ data, onUpdate, onNext, onBack }: StepPr
           type="button"
           onClick={onNext}
           disabled={hasEmptyPath}
-          className="flex-1 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex-1 rounded-lg bg-[var(--accent-primary)] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--accent-pressed)] disabled:cursor-not-allowed disabled:opacity-50"
           data-testid="next-button"
         >
           下一步

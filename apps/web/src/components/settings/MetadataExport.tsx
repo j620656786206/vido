@@ -38,12 +38,12 @@ export function MetadataExport() {
 
   return (
     <div
-      className="rounded-lg border border-slate-700 bg-slate-800 p-4"
+      className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-4"
       data-testid="metadata-export"
     >
       <div className="flex items-center gap-2 mb-4">
-        <FileDown className="h-4 w-4 text-slate-400" />
-        <span className="text-sm font-medium text-slate-200">匯出媒體資料</span>
+        <FileDown className="h-4 w-4 text-[var(--text-secondary)]" />
+        <span className="text-sm font-medium text-[var(--text-primary)]">匯出媒體資料</span>
       </div>
 
       <div className="space-y-3">
@@ -54,8 +54,8 @@ export function MetadataExport() {
               key={opt.value}
               className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors ${
                 format === opt.value
-                  ? 'border-blue-500 bg-blue-500/10'
-                  : 'border-slate-700 hover:border-slate-600'
+                  ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)]/10'
+                  : 'border-[var(--border-subtle)] hover:border-[var(--border-subtle)]'
               }`}
               data-testid={`export-format-${opt.value}`}
             >
@@ -68,8 +68,8 @@ export function MetadataExport() {
                 className="accent-blue-500"
               />
               <div>
-                <span className="text-sm font-medium text-slate-200">{opt.label}</span>
-                <p className="text-xs text-slate-500">{opt.description}</p>
+                <span className="text-sm font-medium text-[var(--text-primary)]">{opt.label}</span>
+                <p className="text-xs text-[var(--text-muted)]">{opt.description}</p>
               </div>
             </label>
           ))}
@@ -79,7 +79,7 @@ export function MetadataExport() {
         <button
           onClick={handleExport}
           disabled={exportMutation.isPending}
-          className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+          className="flex items-center gap-2 rounded-lg bg-[var(--accent-primary)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--accent-hover)] disabled:opacity-50"
           data-testid="export-btn"
         >
           {exportMutation.isPending ? (
@@ -92,7 +92,7 @@ export function MetadataExport() {
 
         {/* Message */}
         {message && (
-          <p className="text-xs text-slate-400" data-testid="export-message">
+          <p className="text-xs text-[var(--text-secondary)]" data-testid="export-message">
             {message}
           </p>
         )}
@@ -101,7 +101,7 @@ export function MetadataExport() {
         {downloadId && (
           <a
             href={backupService.getExportDownloadUrl(downloadId)}
-            className="inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300"
+            className="inline-flex items-center gap-1 text-xs text-[var(--accent-primary)] hover:text-blue-300"
             data-testid="export-download-link"
           >
             <Download className="h-3 w-3" />

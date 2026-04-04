@@ -101,7 +101,7 @@ export function LibraryTable({
     return (
       <div data-testid="library-table-loading" className="space-y-2">
         {Array.from({ length: 8 }).map((_, i) => (
-          <div key={i} className="h-14 animate-pulse rounded bg-slate-800" />
+          <div key={i} className="h-14 animate-pulse rounded bg-[var(--bg-secondary)]" />
         ))}
       </div>
     );
@@ -115,7 +115,7 @@ export function LibraryTable({
     <div data-testid="library-table" className="overflow-x-auto">
       <table className="w-full border-collapse">
         <thead>
-          <tr className="border-b border-slate-700 bg-slate-800/50 text-left text-sm text-slate-400">
+          <tr className="border-b border-[var(--border-subtle)] bg-[var(--bg-secondary)]/50 text-left text-sm text-[var(--text-secondary)]">
             {selectionMode && <th className="w-10 px-3 py-2" />}
             {COLUMNS.map((col) => (
               <th key={col.key} className={cn('px-3 py-2 font-medium', col.className)}>
@@ -151,9 +151,9 @@ export function LibraryTable({
                 key={`${data.type}-${data.id}-${index}`}
                 data-testid="library-table-row"
                 className={cn(
-                  'border-b border-slate-800 transition-colors hover:bg-slate-800/50',
+                  'border-b border-[var(--border-subtle)] transition-colors hover:bg-[var(--bg-secondary)]/50',
                   selectionMode && 'cursor-pointer',
-                  isSelected && 'bg-blue-600/10'
+                  isSelected && 'bg-[var(--accent-primary)]/10'
                 )}
                 onClick={selectionMode && itemId ? (e) => onSelect?.(itemId, e) : undefined}
               >
@@ -164,8 +164,8 @@ export function LibraryTable({
                       className={cn(
                         'flex h-5 w-5 items-center justify-center rounded border-2 transition-colors',
                         isSelected
-                          ? 'border-blue-500 bg-blue-500 text-white'
-                          : 'border-slate-500 bg-transparent'
+                          ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)] text-white'
+                          : 'border-[var(--border-subtle)] bg-transparent'
                       )}
                     >
                       {isSelected && <Check className="h-3 w-3" />}
@@ -182,7 +182,7 @@ export function LibraryTable({
                         loading="lazy"
                       />
                     ) : (
-                      <div className="flex h-[72px] w-12 items-center justify-center rounded bg-slate-700 text-xs text-slate-500">
+                      <div className="flex h-[72px] w-12 items-center justify-center rounded bg-[var(--bg-tertiary)] text-xs text-[var(--text-muted)]">
                         N/A
                       </div>
                     )}
@@ -194,17 +194,17 @@ export function LibraryTable({
                     params={{ type: data.type, id: String(data.id) }}
                     className="block"
                   >
-                    <div className="text-sm font-medium text-white hover:text-blue-400">
+                    <div className="text-sm font-medium text-white hover:text-[var(--accent-primary)]">
                       <HighlightText text={data.title} query={highlightQuery} />
                     </div>
                     {data.originalTitle && data.originalTitle !== data.title && (
-                      <div className="text-xs text-slate-500">
+                      <div className="text-xs text-[var(--text-muted)]">
                         <HighlightText text={data.originalTitle} query={highlightQuery} />
                       </div>
                     )}
                   </Link>
                 </td>
-                <td className="px-3 py-2 text-center text-sm text-slate-400">
+                <td className="px-3 py-2 text-center text-sm text-[var(--text-secondary)]">
                   {formatYear(data.releaseDate)}
                 </td>
                 <td className="px-3 py-2">
@@ -212,7 +212,7 @@ export function LibraryTable({
                     {data.genres.slice(0, 3).map((genre) => (
                       <span
                         key={genre}
-                        className="rounded bg-slate-700 px-1.5 py-0.5 text-xs text-slate-300"
+                        className="rounded bg-[var(--bg-tertiary)] px-1.5 py-0.5 text-xs text-[var(--text-secondary)]"
                       >
                         {genre}
                       </span>
@@ -221,12 +221,12 @@ export function LibraryTable({
                 </td>
                 <td className="px-3 py-2 text-center text-sm">
                   {data.rating != null ? (
-                    <span className="text-yellow-400">★ {data.rating.toFixed(1)}</span>
+                    <span className="text-[var(--warning)]">★ {data.rating.toFixed(1)}</span>
                   ) : (
-                    <span className="text-slate-600">-</span>
+                    <span className="text-[var(--text-muted)]">-</span>
                   )}
                 </td>
-                <td className="px-3 py-2 text-right text-sm text-slate-400">
+                <td className="px-3 py-2 text-right text-sm text-[var(--text-secondary)]">
                   {formatDate(data.createdAt)}
                 </td>
               </tr>

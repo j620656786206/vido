@@ -80,18 +80,18 @@ function NewMediaToastItem({ notification, onDismiss }: NewMediaToastItemProps) 
   return (
     <div
       className={cn(
-        'flex items-center gap-3 rounded-lg border border-emerald-500/20 bg-slate-800 p-3 shadow-lg transition-all duration-300',
+        'flex items-center gap-3 rounded-lg border border-emerald-500/20 bg-[var(--bg-secondary)] p-3 shadow-lg transition-all duration-300',
         isVisible ? 'translate-x-0 opacity-100' : 'translate-x-4 opacity-0'
       )}
       data-testid={`new-media-toast-${notification.id}`}
       role="status"
     >
       {/* Poster thumbnail */}
-      <div className="h-12 w-8 shrink-0 overflow-hidden rounded bg-slate-700">
+      <div className="h-12 w-8 shrink-0 overflow-hidden rounded bg-[var(--bg-tertiary)]">
         {media.posterUrl ? (
           <img src={media.posterUrl} alt={media.title} className="h-full w-full object-cover" />
         ) : (
-          <div className="flex h-full items-center justify-center text-slate-500">
+          <div className="flex h-full items-center justify-center text-[var(--text-muted)]">
             <span className="text-xs">🎬</span>
           </div>
         )}
@@ -100,14 +100,16 @@ function NewMediaToastItem({ notification, onDismiss }: NewMediaToastItemProps) 
       {/* Content */}
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-emerald-400">已新增至媒體庫</p>
-        <p className="truncate text-xs text-slate-300">{media.title}</p>
-        <span className="text-[10px] text-slate-400">{mediaTypeLabels[media.mediaType]}</span>
+        <p className="truncate text-xs text-[var(--text-secondary)]">{media.title}</p>
+        <span className="text-[10px] text-[var(--text-secondary)]">
+          {mediaTypeLabels[media.mediaType]}
+        </span>
       </div>
 
       {/* Close button */}
       <button
         onClick={handleDismiss}
-        className="shrink-0 text-slate-400 transition-colors hover:text-slate-300"
+        className="shrink-0 text-[var(--text-secondary)] transition-colors hover:text-[var(--text-secondary)]"
         aria-label="關閉通知"
       >
         <X className="h-4 w-4" />

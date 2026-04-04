@@ -12,25 +12,25 @@ const levelConfig: Record<
   { color: string; bgColor: string; label: string; icon: string }
 > = {
   normal: {
-    color: 'text-green-400',
+    color: 'text-[var(--success)]',
     bgColor: 'bg-green-400/10',
     label: '正常',
     icon: '✓',
   },
   partial: {
-    color: 'text-yellow-400',
+    color: 'text-[var(--warning)]',
     bgColor: 'bg-yellow-400/10',
     label: '部分降級',
     icon: '⚠',
   },
   minimal: {
-    color: 'text-orange-400',
+    color: 'text-[var(--warning)]',
     bgColor: 'bg-orange-400/10',
     label: '功能受限',
     icon: '⚡',
   },
   offline: {
-    color: 'text-red-400',
+    color: 'text-[var(--error)]',
     bgColor: 'bg-red-400/10',
     label: '離線模式',
     icon: '⚫',

@@ -81,7 +81,7 @@ export function ServiceStatusDashboard() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20" data-testid="status-loading">
-        <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+        <Loader2 className="h-8 w-8 animate-spin text-[var(--text-secondary)]" />
       </div>
     );
   }
@@ -89,8 +89,8 @@ export function ServiceStatusDashboard() {
   if (error) {
     return (
       <div className="py-10 text-center" data-testid="status-error">
-        <p className="text-red-400">無法載入服務狀態</p>
-        <p className="mt-1 text-sm text-slate-500">{error.message}</p>
+        <p className="text-[var(--error)]">無法載入服務狀態</p>
+        <p className="mt-1 text-sm text-[var(--text-muted)]">{error.message}</p>
       </div>
     );
   }
@@ -99,10 +99,10 @@ export function ServiceStatusDashboard() {
     <div className="space-y-6" data-testid="service-status-dashboard">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Activity className="h-5 w-5 text-slate-400" />
+        <Activity className="h-5 w-5 text-[var(--text-secondary)]" />
         <div>
-          <h2 className="text-lg font-semibold text-slate-200">服務狀態</h2>
-          <p className="text-sm text-slate-400">監控外部服務連線狀態</p>
+          <h2 className="text-lg font-semibold text-[var(--text-primary)]">服務狀態</h2>
+          <p className="text-sm text-[var(--text-secondary)]">監控外部服務連線狀態</p>
         </div>
       </div>
 
@@ -114,7 +114,7 @@ export function ServiceStatusDashboard() {
           aria-live="polite"
           data-testid="status-change-notification"
         >
-          <Bell className="mt-0.5 h-4 w-4 shrink-0 text-blue-400" />
+          <Bell className="mt-0.5 h-4 w-4 shrink-0 text-[var(--accent-primary)]" />
           <div className="space-y-1 text-sm text-blue-300">
             {statusChanges.map((change, i) => (
               <p key={i}>
@@ -124,7 +124,7 @@ export function ServiceStatusDashboard() {
           </div>
           <button
             onClick={() => setStatusChanges([])}
-            className="ml-auto shrink-0 text-xs text-slate-500 hover:text-slate-400"
+            className="ml-auto shrink-0 text-xs text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
             data-testid="dismiss-notification"
           >
             關閉
@@ -146,7 +146,7 @@ export function ServiceStatusDashboard() {
 
       {testError && (
         <div
-          className="rounded-lg border border-red-800 bg-red-900/20 px-4 py-3 text-sm text-red-400"
+          className="rounded-lg border border-red-800 bg-red-900/20 px-4 py-3 text-sm text-[var(--error)]"
           role="alert"
           data-testid="test-error"
         >
@@ -155,7 +155,10 @@ export function ServiceStatusDashboard() {
       )}
 
       {services.length === 0 && (
-        <div className="py-10 text-center text-sm text-slate-500" data-testid="status-empty">
+        <div
+          className="py-10 text-center text-sm text-[var(--text-muted)]"
+          data-testid="status-empty"
+        >
           沒有已設定的服務
         </div>
       )}

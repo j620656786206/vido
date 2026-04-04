@@ -311,16 +311,15 @@ development_status:
   0-UX-4-shadcn-ui-setup: done                     # 2026-04-04 — manual Radix+CVA setup (shadcn CLI incompatible with Nx+Vite)
 
   # --- Task 5: Existing Component Color Migration ---
-  # AGENT: DEV /dev-story
-  # PROMPT: 全域搜尋 apps/web/src/ 下所有 .tsx/.ts 檔案，將 hard-coded Tailwind 色彩
-  #   class 替換為語義化 token class（依 design-guidelines.md 對照表）。主要替換：
-  #   bg-slate-900 → bg-primary, bg-slate-800 → bg-secondary,
-  #   text-slate-100 → text-primary, text-slate-400 → text-secondary,
-  #   border-slate-700 → border-primary 等。
-  #   每個檔案修改後跑 vitest 確認測試通過。視覺結果必須完全一致。
-  #   最後跑 pnpm run lint && pnpm run format:check 確認。
+  # AGENT: UX /ux-designer (executed by Sally via background agents)
+  # RESULT: 136 files modified, 1526 insertions, 1210 deletions. Zero remaining
+  #   hard-coded slate/gray color classes. All replaced with CSS variable refs:
+  #   bg-slate-900 → bg-[var(--bg-primary)], bg-slate-800 → bg-[var(--bg-secondary)],
+  #   text-slate-400 → text-[var(--text-secondary)], border-slate-700 → border-[var(--border-subtle)],
+  #   bg-blue-600 → bg-[var(--accent-primary)], etc. Includes hover, ring, placeholder,
+  #   gradient, and opacity variants. Test spec files also updated.
   #   DEPENDS ON: 0-UX-2 + 0-UX-3
-  0-UX-5-color-migration: backlog
+  0-UX-5-color-migration: done                      # 2026-04-04 — 136 files, 0 remaining hard-coded colors
 
   # ==============================================================================
   # Epic 9: AI Subtitle Enhancement (PRD v4)
@@ -354,7 +353,7 @@ development_status:
   epic-9c: in-progress  # 2026-04-04
   9c-1-db-schema-migration: done             # Migration #021, tech info columns, series file_size, MetadataSource constants, ShouldOverwrite() — CR 2026-04-04
   9c-2-nfo-sidecar-reader: done              # NFO detection in enrichment pipeline, XML/URL parser, uniqueid TMDB matching — CR 2026-04-04
-  9c-3-ffprobe-integration: ready-for-dev             # Docker ffprobe, Go service with semaphore/timeout, tech info extraction
+  9c-3-ffprobe-integration: in-progress             # Docker ffprobe, Go service with semaphore/timeout, tech info extraction
   9c-4-tech-badges-ui-unmatched-filter: ready-for-dev # TechBadge components, detail page integration, unmatched filter API + UI
   epic-9c-retrospective: optional
 

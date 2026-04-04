@@ -71,7 +71,7 @@ export function PosterCard({
       onClick={handleCardClick}
       className={cn(
         'group relative block rounded-lg',
-        'focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500',
+        'focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]',
         // Minimum touch target size (44px) ensured by aspect-ratio and grid min-width
         'min-h-[44px]',
         selectable && 'cursor-pointer'
@@ -81,14 +81,14 @@ export function PosterCard({
     >
       <div
         className={cn(
-          'relative aspect-[2/3] overflow-hidden rounded-lg bg-gray-800',
+          'relative aspect-[2/3] overflow-hidden rounded-lg bg-[var(--bg-secondary)]',
           'transition-all duration-300 ease-out',
           // Hover effects only on desktop (lg breakpoint) — disabled in selection mode
           !selectable && 'lg:group-hover:scale-105 lg:group-hover:shadow-2xl',
           // Active state for touch feedback on mobile
           'active:scale-[0.98] active:opacity-90',
           // Selection mode styling
-          selectable && selected && 'ring-2 ring-blue-500',
+          selectable && selected && 'ring-2 ring-[var(--accent-primary)]',
           selectable && !selected && 'opacity-70'
         )}
       >
@@ -96,7 +96,7 @@ export function PosterCard({
         {showSkeleton && (
           <div
             data-testid="poster-skeleton"
-            className="absolute inset-0 animate-pulse bg-gray-700"
+            className="absolute inset-0 animate-pulse bg-[var(--bg-tertiary)]"
           />
         )}
 
@@ -118,9 +118,9 @@ export function PosterCard({
         {showFallback && (
           <div
             data-testid="poster-fallback"
-            className="flex h-full w-full items-center justify-center bg-gray-700"
+            className="flex h-full w-full items-center justify-center bg-[var(--bg-tertiary)]"
           >
-            <span role="img" aria-label="無海報圖片" className="text-4xl text-gray-500">
+            <span role="img" aria-label="無海報圖片" className="text-4xl text-[var(--text-muted)]">
               🎬
             </span>
           </div>
@@ -132,7 +132,9 @@ export function PosterCard({
             data-testid="selection-checkbox"
             className={cn(
               'absolute left-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded border-2 transition-colors',
-              selected ? 'border-blue-500 bg-blue-500 text-white' : 'border-white/60 bg-black/40'
+              selected
+                ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)] text-white'
+                : 'border-white/60 bg-black/40'
             )}
           >
             {selected && <Check className="h-4 w-4" />}
@@ -150,7 +152,7 @@ export function PosterCard({
             </span>
           )}
           {metadataSource && (
-            <span className="rounded bg-blue-600/80 px-1.5 py-0.5 text-[10px] font-medium text-white opacity-0 transition-opacity lg:group-hover:opacity-100">
+            <span className="rounded bg-[var(--accent-primary)]/80 px-1.5 py-0.5 text-[10px] font-medium text-white opacity-0 transition-opacity lg:group-hover:opacity-100">
               {metadataSource}
             </span>
           )}
@@ -178,7 +180,7 @@ export function PosterCard({
         {/* Rating badge */}
         {voteAverage !== undefined && voteAverage > 0 && (
           <div className="absolute bottom-2 left-2">
-            <span className="flex items-center gap-1 rounded bg-black/70 px-2 py-0.5 text-xs text-yellow-400">
+            <span className="flex items-center gap-1 rounded bg-black/70 px-2 py-0.5 text-xs text-[var(--warning)]">
               ⭐ {voteAverage.toFixed(1)}
             </span>
           </div>
@@ -190,7 +192,7 @@ export function PosterCard({
         <h3 className="truncate text-sm font-medium text-white">
           <HighlightText text={title} query={highlightQuery} />
         </h3>
-        {year && <p className="text-xs text-gray-400">{year}</p>}
+        {year && <p className="text-xs text-[var(--text-secondary)]">{year}</p>}
       </div>
 
       {/* Hover preview (desktop only) */}

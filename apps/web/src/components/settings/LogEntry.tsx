@@ -4,10 +4,10 @@ import { cn } from '../../lib/utils';
 import type { SystemLog } from '../../services/logService';
 
 const LEVEL_STYLES: Record<string, string> = {
-  ERROR: 'text-red-400 bg-red-400/10',
-  WARN: 'text-yellow-400 bg-yellow-400/10',
-  INFO: 'text-blue-400 bg-blue-400/10',
-  DEBUG: 'text-gray-400 bg-gray-400/10',
+  ERROR: 'text-[var(--error)] bg-red-400/10',
+  WARN: 'text-[var(--warning)] bg-yellow-400/10',
+  INFO: 'text-[var(--accent-primary)] bg-blue-400/10',
+  DEBUG: 'text-[var(--text-secondary)] bg-[var(--text-muted)]/10',
 };
 
 interface LogEntryProps {
@@ -30,14 +30,14 @@ export function LogEntry({ log }: LogEntryProps) {
 
   return (
     <div
-      className="border-b border-slate-700/50 px-4 py-2.5 transition-colors hover:bg-slate-800/50"
+      className="border-b border-[var(--border-subtle)]/50 px-4 py-2.5 transition-colors hover:bg-[var(--bg-secondary)]/50"
       data-testid="log-entry"
     >
       <div className="flex items-start gap-3">
         {/* Expand toggle */}
         <button
           onClick={() => setExpanded(!expanded)}
-          className="mt-0.5 text-slate-500 hover:text-slate-300"
+          className="mt-0.5 text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
           disabled={!hasContext && !hasHint}
           aria-label={expanded ? '收合' : '展開'}
           data-testid="log-expand-btn"
@@ -63,11 +63,11 @@ export function LogEntry({ log }: LogEntryProps) {
         {/* Main content */}
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-2">
-            <span className="text-sm text-slate-200" data-testid="log-message">
+            <span className="text-sm text-[var(--text-primary)]" data-testid="log-message">
               {log.message}
             </span>
             {log.source && (
-              <span className="shrink-0 text-xs text-slate-500" data-testid="log-source">
+              <span className="shrink-0 text-xs text-[var(--text-muted)]" data-testid="log-source">
                 [{log.source}]
               </span>
             )}
@@ -75,7 +75,7 @@ export function LogEntry({ log }: LogEntryProps) {
         </div>
 
         {/* Timestamp */}
-        <span className="shrink-0 text-xs text-slate-500" data-testid="log-timestamp">
+        <span className="shrink-0 text-xs text-[var(--text-muted)]" data-testid="log-timestamp">
           {timestamp}
         </span>
       </div>
@@ -91,7 +91,7 @@ export function LogEntry({ log }: LogEntryProps) {
           )}
           {hasContext && (
             <pre
-              className="overflow-x-auto rounded bg-slate-900 px-3 py-2 text-xs text-slate-400"
+              className="overflow-x-auto rounded bg-[var(--bg-primary)] px-3 py-2 text-xs text-[var(--text-secondary)]"
               data-testid="log-context"
             >
               {JSON.stringify(log.context, null, 2)}

@@ -20,14 +20,14 @@ export function ParseFailedActions({
 }: ParseFailedActionsProps) {
   return (
     <div className={cn('flex flex-col gap-2', className)} data-testid="parse-failed-actions">
-      {errorMessage && <p className="text-xs text-red-400">{errorMessage}</p>}
+      {errorMessage && <p className="text-xs text-[var(--error)]">{errorMessage}</p>}
       <div className="flex gap-2">
         <button
           type="button"
           className={cn(
             'inline-flex items-center gap-1 rounded px-2 py-1 text-xs',
-            'border border-slate-600 text-slate-300 transition-colors',
-            'hover:border-slate-500 hover:text-white',
+            'border border-[var(--border-subtle)] text-[var(--text-secondary)] transition-colors',
+            'hover:border-[var(--text-muted)] hover:text-white',
             'disabled:cursor-not-allowed disabled:opacity-50'
           )}
           onClick={onRetry}
@@ -42,8 +42,8 @@ export function ParseFailedActions({
             type="button"
             className={cn(
               'inline-flex items-center gap-1 rounded px-2 py-1 text-xs',
-              'border border-slate-600 text-slate-300 transition-colors',
-              'hover:border-slate-500 hover:text-white'
+              'border border-[var(--border-subtle)] text-[var(--text-secondary)] transition-colors',
+              'hover:border-[var(--text-muted)] hover:text-white'
             )}
             onClick={() => onManualSearch(torrentHash)}
             aria-label="手動搜尋"

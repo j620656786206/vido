@@ -39,7 +39,7 @@ export function TVShowInfo({ show, className }: TVShowInfoProps) {
 
   return (
     <div className={cn('mt-6', className)} data-testid="tv-show-info">
-      <h3 className="mb-3 text-sm font-semibold text-gray-400">影集資訊</h3>
+      <h3 className="mb-3 text-sm font-semibold text-[var(--text-secondary)]">影集資訊</h3>
 
       <div className="space-y-2 text-sm">
         {/* Task 6.2: Number of seasons and episodes */}
@@ -80,7 +80,7 @@ interface InfoRowProps {
 function InfoRow({ label, value, testId }: InfoRowProps) {
   return (
     <div className="flex justify-between" data-testid={testId}>
-      <span className="text-gray-400">{label}</span>
+      <span className="text-[var(--text-secondary)]">{label}</span>
       <span className="text-white">{value}</span>
     </div>
   );

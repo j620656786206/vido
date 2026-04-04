@@ -73,8 +73,8 @@ export function FloatingParseProgressCard({
   return (
     <div
       className={cn(
-        'fixed bottom-6 right-6 w-[420px] bg-slate-800 rounded-xl shadow-2xl',
-        'border border-slate-700',
+        'fixed bottom-6 right-6 w-[420px] bg-[var(--bg-secondary)] rounded-xl shadow-2xl',
+        'border border-[var(--border-subtle)]',
         'animate-in slide-in-from-right-5 duration-300',
         isMinimized && 'h-auto',
         className
@@ -84,11 +84,11 @@ export function FloatingParseProgressCard({
       data-testid="floating-parse-progress-card"
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-subtle)]">
         <div className="flex items-center gap-2">
-          {isParsing && <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />}
-          {isSuccess && <CheckCircle className="h-4 w-4 text-green-500" />}
-          {isFailed && <XCircle className="h-4 w-4 text-red-500" />}
+          {isParsing && <Loader2 className="h-4 w-4 text-[var(--accent-primary)] animate-spin" />}
+          {isSuccess && <CheckCircle className="h-4 w-4 text-[var(--success)]" />}
+          {isFailed && <XCircle className="h-4 w-4 text-[var(--error)]" />}
           <span className="font-medium text-white">
             {isParsing && '正在解析...'}
             {isSuccess && '✅ 解析完成！'}
@@ -99,7 +99,7 @@ export function FloatingParseProgressCard({
         <div className="flex items-center gap-1">
           <button
             onClick={() => setIsMinimized(!isMinimized)}
-            className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+            className="p-1.5 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-white transition-colors"
             aria-label={isMinimized ? '展開' : '縮小'}
             data-testid="minimize-button"
           >
@@ -107,7 +107,7 @@ export function FloatingParseProgressCard({
           </button>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+            className="p-1.5 rounded-lg hover:bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-white transition-colors"
             aria-label="關閉進度卡片"
             data-testid="close-button"
           >
@@ -122,11 +122,11 @@ export function FloatingParseProgressCard({
           {/* Overall Progress Bar */}
           <div className="space-y-1.5">
             <div className="flex justify-between text-sm">
-              <span className="text-slate-400">進度</span>
+              <span className="text-[var(--text-secondary)]">進度</span>
               <span className="text-white">{progress.percentage}%</span>
             </div>
             <div
-              className="h-2 bg-slate-700 rounded-full overflow-hidden"
+              className="h-2 bg-[var(--bg-tertiary)] rounded-full overflow-hidden"
               role="progressbar"
               aria-valuenow={progress.percentage}
               aria-valuemin={0}
@@ -136,9 +136,9 @@ export function FloatingParseProgressCard({
               <div
                 className={cn(
                   'h-full rounded-full transition-all duration-500 ease-out',
-                  isSuccess && 'bg-green-500',
-                  isFailed && 'bg-red-500',
-                  isParsing && 'bg-blue-500'
+                  isSuccess && 'bg-[var(--success)]',
+                  isFailed && 'bg-[var(--error)]',
+                  isParsing && 'bg-[var(--accent-primary)]'
                 )}
                 style={{ width: `${progress.percentage}%` }}
               />
@@ -149,7 +149,7 @@ export function FloatingParseProgressCard({
           <LayeredProgressIndicator steps={progress.steps} currentStep={progress.currentStep} />
 
           {/* Filename */}
-          <div className="text-sm text-slate-400 truncate" title={progress.filename}>
+          <div className="text-sm text-[var(--text-secondary)] truncate" title={progress.filename}>
             檔案：{progress.filename}
           </div>
 
@@ -166,13 +166,13 @@ export function FloatingParseProgressCard({
 
           {/* Success Message */}
           {isSuccess && progress.result && (
-            <div className="bg-green-500/10 rounded-lg p-3 text-sm">
-              <div className="text-green-400 font-medium">
+            <div className="bg-[var(--success)]/10 rounded-lg p-3 text-sm">
+              <div className="text-[var(--success)] font-medium">
                 {progress.result.title}
                 {progress.result.year && ` (${progress.result.year})`}
               </div>
               {progress.result.metadataSource && (
-                <div className="text-slate-400 text-xs mt-1">
+                <div className="text-[var(--text-secondary)] text-xs mt-1">
                   來源：{getSourceDisplayName(progress.result.metadataSource)}
                 </div>
               )}
@@ -187,14 +187,16 @@ export function FloatingParseProgressCard({
       {/* Minimized View */}
       {isMinimized && progress && (
         <div className="px-4 py-2 flex items-center justify-between text-sm">
-          <span className="text-slate-400 truncate flex-1 mr-2">{progress.filename}</span>
+          <span className="text-[var(--text-secondary)] truncate flex-1 mr-2">
+            {progress.filename}
+          </span>
           <span className="text-white font-medium">{progress.percentage}%</span>
         </div>
       )}
 
       {/* Connection Error */}
       {error && (
-        <div className="px-4 py-2 text-sm text-yellow-400 border-t border-slate-700">
+        <div className="px-4 py-2 text-sm text-[var(--warning)] border-t border-[var(--border-subtle)]">
           ⚠️ 連線中斷，嘗試重新連線...
         </div>
       )}

@@ -19,7 +19,7 @@ export function TrailerEmbed({ videoKey, title }: TrailerEmbedProps) {
     return (
       <button
         onClick={() => setShowPlayer(true)}
-        className="flex w-full items-center justify-center gap-2 rounded-lg bg-slate-800 px-4 py-3 text-sm text-white transition-colors hover:bg-slate-700"
+        className="flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--bg-secondary)] px-4 py-3 text-sm text-white transition-colors hover:bg-[var(--bg-tertiary)]"
         data-testid="trailer-button"
       >
         <span className="text-lg">▶</span>

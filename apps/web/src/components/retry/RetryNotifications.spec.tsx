@@ -101,10 +101,10 @@ describe('RetryNotifications', () => {
 
     render(<RetryNotifications notifications={notifications} onDismiss={onDismiss} />);
 
-    expect(screen.getByTestId('notification-success')).toHaveClass('bg-green-500/10');
-    expect(screen.getByTestId('notification-error')).toHaveClass('bg-red-500/10');
-    expect(screen.getByTestId('notification-warning')).toHaveClass('bg-yellow-500/10');
-    expect(screen.getByTestId('notification-info')).toHaveClass('bg-blue-500/10');
+    expect(screen.getByTestId('notification-success')).toHaveClass('bg-[var(--success)]/10');
+    expect(screen.getByTestId('notification-error')).toHaveClass('bg-[var(--error)]/10');
+    expect(screen.getByTestId('notification-warning')).toHaveClass('bg-[var(--warning)]/10');
+    expect(screen.getByTestId('notification-info')).toHaveClass('bg-[var(--accent-primary)]/10');
   });
 
   it('applies custom className', () => {

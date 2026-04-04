@@ -23,7 +23,7 @@ export function CacheManagement() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20" data-testid="cache-loading">
-        <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+        <Loader2 className="h-8 w-8 animate-spin text-[var(--text-secondary)]" />
       </div>
     );
   }
@@ -31,8 +31,8 @@ export function CacheManagement() {
   if (error) {
     return (
       <div className="py-10 text-center" data-testid="cache-error">
-        <p className="text-red-400">無法載入快取資訊</p>
-        <p className="mt-1 text-sm text-slate-500">{error.message}</p>
+        <p className="text-[var(--error)]">無法載入快取資訊</p>
+        <p className="mt-1 text-sm text-[var(--text-muted)]">{error.message}</p>
       </div>
     );
   }
@@ -42,10 +42,10 @@ export function CacheManagement() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Database className="h-5 w-5 text-slate-400" />
+          <Database className="h-5 w-5 text-[var(--text-secondary)]" />
           <div>
-            <h2 className="text-lg font-semibold text-slate-200">快取管理</h2>
-            <p className="text-sm text-slate-400">
+            <h2 className="text-lg font-semibold text-[var(--text-primary)]">快取管理</h2>
+            <p className="text-sm text-[var(--text-secondary)]">
               總計 {stats ? formatBytes(stats.totalSizeBytes) : '—'}
             </p>
           </div>
@@ -54,7 +54,7 @@ export function CacheManagement() {
         <button
           onClick={handleClearOld}
           disabled={clearByAge.isPending}
-          className="flex items-center gap-2 rounded-lg bg-slate-700 px-4 py-2 text-sm font-medium text-slate-200 transition-colors hover:bg-slate-600 disabled:opacity-50"
+          className="flex items-center gap-2 rounded-lg bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-tertiary)] disabled:opacity-50"
           data-testid="clear-old-cache-btn"
         >
           {clearByAge.isPending ? (

@@ -20,7 +20,7 @@ export function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[var(--bg-primary)]">
       <NxWelcome title="web" />
       {/* Types are working: {exampleResponse.data?.title} */}
     </div>

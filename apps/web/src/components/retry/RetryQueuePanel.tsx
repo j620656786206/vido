@@ -35,7 +35,7 @@ export function RetryQueuePanel({ className }: RetryQueuePanelProps) {
   if (isLoading) {
     return (
       <div className={cn('p-4', className)} data-testid="retry-queue-loading">
-        <div className="flex items-center justify-center gap-2 text-slate-400">
+        <div className="flex items-center justify-center gap-2 text-[var(--text-secondary)]">
           <Loader2 className="h-5 w-5 animate-spin" />
           <span>載入中...</span>
         </div>
@@ -46,14 +46,16 @@ export function RetryQueuePanel({ className }: RetryQueuePanelProps) {
   if (isError) {
     return (
       <div className={cn('p-4', className)} data-testid="retry-queue-error">
-        <div className="flex items-center gap-2 text-red-400 mb-2">
+        <div className="flex items-center gap-2 text-[var(--error)] mb-2">
           <AlertCircle className="h-5 w-5" />
           <span>載入失敗</span>
         </div>
-        <p className="text-sm text-slate-400 mb-3">{error?.message || '無法取得重試隊列'}</p>
+        <p className="text-sm text-[var(--text-secondary)] mb-3">
+          {error?.message || '無法取得重試隊列'}
+        </p>
         <button
           onClick={() => refetch()}
-          className="text-sm text-blue-400 hover:text-blue-300 flex items-center gap-1"
+          className="text-sm text-[var(--accent-primary)] hover:text-blue-300 flex items-center gap-1"
         >
           <RefreshCw className="h-4 w-4" />
           重試
@@ -74,7 +76,7 @@ export function RetryQueuePanel({ className }: RetryQueuePanelProps) {
           重試隊列
         </h3>
         {stats && (
-          <span className="text-sm text-slate-400" data-testid="retry-stats">
+          <span className="text-sm text-[var(--text-secondary)]" data-testid="retry-stats">
             {stats.totalPending} 個待重試
           </span>
         )}
@@ -82,8 +84,11 @@ export function RetryQueuePanel({ className }: RetryQueuePanelProps) {
 
       {/* Empty state */}
       {items.length === 0 && (
-        <div className="py-8 text-center text-slate-400" data-testid="retry-queue-empty">
-          <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-green-500" />
+        <div
+          className="py-8 text-center text-[var(--text-secondary)]"
+          data-testid="retry-queue-empty"
+        >
+          <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-[var(--success)]" />
           <p>目前沒有待重試項目</p>
         </div>
       )}
@@ -129,21 +134,21 @@ function RetryItemCard({
 
   return (
     <div
-      className="rounded-lg border border-slate-700 bg-slate-800/50 p-3 space-y-2"
+      className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/50 p-3 space-y-2"
       data-testid={`retry-item-${item.id}`}
     >
       {/* Task info row */}
       <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="text-xs px-1.5 py-0.5 rounded bg-slate-700 text-slate-300">
+            <span className="text-xs px-1.5 py-0.5 rounded bg-[var(--bg-tertiary)] text-[var(--text-secondary)]">
               {getTaskTypeLabel(item.taskType)}
             </span>
-            <span className="text-xs text-slate-500">
+            <span className="text-xs text-[var(--text-muted)]">
               {item.attemptCount}/{item.maxAttempts} 次
             </span>
           </div>
-          <p className="text-sm text-slate-300 truncate mt-1" title={item.taskId}>
+          <p className="text-sm text-[var(--text-secondary)] truncate mt-1" title={item.taskId}>
             {item.taskId}
           </p>
         </div>
@@ -152,7 +157,9 @@ function RetryItemCard({
 
       {/* Error message if present */}
       {item.lastError && (
-        <div className="text-xs text-red-400 bg-red-500/10 rounded px-2 py-1">{item.lastError}</div>
+        <div className="text-xs text-[var(--error)] bg-[var(--error)]/10 rounded px-2 py-1">
+          {item.lastError}
+        </div>
       )}
 
       {/* Action buttons */}
@@ -163,7 +170,7 @@ function RetryItemCard({
           className={cn(
             'flex-1 flex items-center justify-center gap-1.5',
             'rounded px-3 py-1.5 text-sm font-medium',
-            'bg-blue-600 hover:bg-blue-700 text-white',
+            'bg-[var(--accent-primary)] hover:bg-[var(--accent-pressed)] text-white',
             'disabled:opacity-50 disabled:cursor-not-allowed',
             'transition-colors'
           )}
@@ -182,7 +189,7 @@ function RetryItemCard({
           className={cn(
             'flex items-center justify-center gap-1.5',
             'rounded px-3 py-1.5 text-sm',
-            'border border-slate-600 text-slate-400 hover:text-slate-300 hover:border-slate-500',
+            'border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-secondary)] hover:border-[var(--text-muted)]',
             'disabled:opacity-50 disabled:cursor-not-allowed',
             'transition-colors'
           )}

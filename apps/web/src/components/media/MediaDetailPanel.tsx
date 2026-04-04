@@ -80,7 +80,7 @@ export function MediaDetailPanel({
       {backdropUrl && (
         <div className="relative h-48 w-full">
           <img src={backdropUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg-primary)] to-transparent" />
         </div>
       )}
 
@@ -108,18 +108,21 @@ export function MediaDetailPanel({
               {title}
             </h1>
             {originalTitle && originalTitle !== title && (
-              <p className="truncate text-sm text-gray-400" data-testid="detail-original-title">
+              <p
+                className="truncate text-sm text-[var(--text-secondary)]"
+                data-testid="detail-original-title"
+              >
                 {originalTitle}
               </p>
             )}
 
             {/* Year, runtime, rating */}
-            <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-gray-300">
+            <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-[var(--text-secondary)]">
               {year && <span data-testid="detail-year">{year}</span>}
               {runtime && runtime > 0 && <span data-testid="detail-runtime">{runtime} 分鐘</span>}
               {details.voteAverage > 0 && (
                 <span
-                  className="flex items-center gap-1 text-yellow-400"
+                  className="flex items-center gap-1 text-[var(--warning)]"
                   data-testid="detail-rating"
                 >
                   ⭐ {details.voteAverage.toFixed(1)}
@@ -132,7 +135,7 @@ export function MediaDetailPanel({
               {details.genres?.map((genre) => (
                 <span
                   key={genre.id}
-                  className="rounded-full bg-slate-800 px-3 py-1 text-xs text-gray-300"
+                  className="rounded-full bg-[var(--bg-secondary)] px-3 py-1 text-xs text-[var(--text-secondary)]"
                 >
                   {genre.name}
                 </span>
@@ -150,8 +153,11 @@ export function MediaDetailPanel({
 
         {/* Overview */}
         <div className="mt-6">
-          <h3 className="mb-2 text-sm font-semibold text-gray-400">劇情簡介</h3>
-          <p className="text-sm leading-relaxed text-gray-300" data-testid="detail-overview">
+          <h3 className="mb-2 text-sm font-semibold text-[var(--text-secondary)]">劇情簡介</h3>
+          <p
+            className="text-sm leading-relaxed text-[var(--text-secondary)]"
+            data-testid="detail-overview"
+          >
             {details.overview || '暫無簡介'}
           </p>
         </div>
@@ -159,13 +165,13 @@ export function MediaDetailPanel({
         {/* Director / Created by */}
         {director && (
           <div className="mt-4">
-            <span className="text-sm text-gray-400">導演：</span>
+            <span className="text-sm text-[var(--text-secondary)]">導演：</span>
             <span className="ml-2 text-sm text-white">{director.name}</span>
           </div>
         )}
         {tvShow?.createdBy && tvShow.createdBy.length > 0 && (
           <div className="mt-4">
-            <span className="text-sm text-gray-400">創作者：</span>
+            <span className="text-sm text-[var(--text-secondary)]">創作者：</span>
             <span className="ml-2 text-sm text-white">
               {tvShow.createdBy.map((c) => c.name).join(', ')}
             </span>
@@ -175,7 +181,7 @@ export function MediaDetailPanel({
         {/* Cast (AC2) */}
         {topCast.length > 0 && (
           <div className="mt-4" data-testid="detail-cast">
-            <span className="text-sm text-gray-400">主演：</span>
+            <span className="text-sm text-[var(--text-secondary)]">主演：</span>
             <span className="ml-2 text-sm text-white">{topCast.map((c) => c.name).join('、')}</span>
           </div>
         )}
@@ -195,7 +201,7 @@ export function MediaDetailPanel({
             {onAddToList && (
               <button
                 onClick={onAddToList}
-                className="flex-1 rounded-lg border border-blue-500 px-4 py-2.5 text-sm font-medium text-blue-400 transition-colors hover:bg-blue-500/10"
+                className="flex-1 rounded-lg border border-[var(--accent-primary)] px-4 py-2.5 text-sm font-medium text-[var(--accent-primary)] transition-colors hover:bg-[var(--accent-hover)]/10"
                 data-testid="detail-add-to-list-button"
               >
                 加入清單
@@ -209,7 +215,7 @@ export function MediaDetailPanel({
           <div className="mt-3">
             <button
               onClick={() => setSubtitleDialogOpen(true)}
-              className="w-full rounded-lg border border-slate-600 px-4 py-2 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-700"
+              className="w-full rounded-lg border border-[var(--border-subtle)] px-4 py-2 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)]"
               data-testid="search-subtitles-button"
             >
               搜尋字幕
@@ -235,14 +241,14 @@ export function MediaDetailPanel({
         {/* File info section (AC4) */}
         {(filePath || fileSize) && (
           <div className="mt-6">
-            <h3 className="mb-2 text-sm font-semibold text-gray-400">檔案資訊</h3>
+            <h3 className="mb-2 text-sm font-semibold text-[var(--text-secondary)]">檔案資訊</h3>
             <FileInfo filePath={filePath} fileSize={fileSize} />
           </div>
         )}
 
         {/* Date added */}
         {createdAt && (
-          <div className="mt-4 text-sm text-gray-500" data-testid="detail-date-added">
+          <div className="mt-4 text-sm text-[var(--text-muted)]" data-testid="detail-date-added">
             加入日期：{new Date(createdAt).toLocaleDateString('zh-TW')}
           </div>
         )}
@@ -282,7 +288,7 @@ function TrailerSection({
       <div className="mt-6">
         <button
           onClick={() => setShowTrailers(true)}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-slate-800 px-4 py-3 text-sm text-white transition-colors hover:bg-slate-700"
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--bg-secondary)] px-4 py-3 text-sm text-white transition-colors hover:bg-[var(--bg-tertiary)]"
           data-testid="load-trailers-button"
         >
           <span className="text-lg">▶</span>
@@ -294,7 +300,7 @@ function TrailerSection({
 
   if (trailers.length === 0 && videosData) {
     return (
-      <div className="mt-6 text-center text-sm text-gray-500" data-testid="no-trailers">
+      <div className="mt-6 text-center text-sm text-[var(--text-muted)]" data-testid="no-trailers">
         暫無預告片
       </div>
     );
@@ -302,7 +308,7 @@ function TrailerSection({
 
   return (
     <div className="mt-6 space-y-3" data-testid="trailer-section">
-      <h3 className="text-sm font-semibold text-gray-400">預告片</h3>
+      <h3 className="text-sm font-semibold text-[var(--text-secondary)]">預告片</h3>
       {trailers.slice(0, 3).map((trailer) => (
         <TrailerEmbed
           key={trailer.id}
@@ -319,11 +325,11 @@ function TVShowSeasons({ tvShow }: { tvShow: TVShowDetails }) {
 
   return (
     <div className="mt-6" data-testid="tv-seasons">
-      <h3 className="mb-2 text-sm font-semibold text-gray-400">
+      <h3 className="mb-2 text-sm font-semibold text-[var(--text-secondary)]">
         季數資訊 ({tvShow.numberOfSeasons} 季 · {tvShow.numberOfEpisodes} 集)
       </h3>
       {tvShow.productionCountries && tvShow.productionCountries.length > 0 && (
-        <p className="mb-2 text-xs text-gray-500">
+        <p className="mb-2 text-xs text-[var(--text-muted)]">
           製作國家：{tvShow.productionCountries.map((c) => c.name).join(', ')}
         </p>
       )}
@@ -333,10 +339,10 @@ function TVShowSeasons({ tvShow }: { tvShow: TVShowDetails }) {
           .map((season) => (
             <div
               key={season.id}
-              className="flex items-center justify-between rounded bg-slate-800/50 px-3 py-1.5 text-sm"
+              className="flex items-center justify-between rounded bg-[var(--bg-secondary)]/50 px-3 py-1.5 text-sm"
             >
-              <span className="text-gray-300">{season.name}</span>
-              <span className="text-gray-500">{season.episodeCount} 集</span>
+              <span className="text-[var(--text-secondary)]">{season.name}</span>
+              <span className="text-[var(--text-muted)]">{season.episodeCount} 集</span>
             </div>
           ))}
       </div>
@@ -347,30 +353,30 @@ function TVShowSeasons({ tvShow }: { tvShow: TVShowDetails }) {
 function MediaDetailSkeleton() {
   return (
     <div className="animate-pulse" data-testid="media-detail-skeleton">
-      <div className="h-48 w-full bg-slate-700" />
+      <div className="h-48 w-full bg-[var(--bg-tertiary)]" />
       <div className="p-4">
         <div className="flex gap-4">
-          <div className="h-48 w-32 flex-shrink-0 rounded-lg bg-slate-700" />
+          <div className="h-48 w-32 flex-shrink-0 rounded-lg bg-[var(--bg-tertiary)]" />
           <div className="flex-1 space-y-3">
-            <div className="h-6 w-3/4 rounded bg-slate-700" />
-            <div className="h-4 w-1/2 rounded bg-slate-700" />
+            <div className="h-6 w-3/4 rounded bg-[var(--bg-tertiary)]" />
+            <div className="h-4 w-1/2 rounded bg-[var(--bg-tertiary)]" />
             <div className="flex gap-3">
-              <div className="h-4 w-12 rounded bg-slate-700" />
-              <div className="h-4 w-16 rounded bg-slate-700" />
-              <div className="h-4 w-10 rounded bg-slate-700" />
+              <div className="h-4 w-12 rounded bg-[var(--bg-tertiary)]" />
+              <div className="h-4 w-16 rounded bg-[var(--bg-tertiary)]" />
+              <div className="h-4 w-10 rounded bg-[var(--bg-tertiary)]" />
             </div>
             <div className="flex gap-2">
-              <div className="h-6 w-16 rounded-full bg-slate-700" />
-              <div className="h-6 w-20 rounded-full bg-slate-700" />
-              <div className="h-6 w-14 rounded-full bg-slate-700" />
+              <div className="h-6 w-16 rounded-full bg-[var(--bg-tertiary)]" />
+              <div className="h-6 w-20 rounded-full bg-[var(--bg-tertiary)]" />
+              <div className="h-6 w-14 rounded-full bg-[var(--bg-tertiary)]" />
             </div>
           </div>
         </div>
         <div className="mt-6 space-y-2">
-          <div className="h-4 w-20 rounded bg-slate-700" />
-          <div className="h-4 w-full rounded bg-slate-700" />
-          <div className="h-4 w-full rounded bg-slate-700" />
-          <div className="h-4 w-2/3 rounded bg-slate-700" />
+          <div className="h-4 w-20 rounded bg-[var(--bg-tertiary)]" />
+          <div className="h-4 w-full rounded bg-[var(--bg-tertiary)]" />
+          <div className="h-4 w-full rounded bg-[var(--bg-tertiary)]" />
+          <div className="h-4 w-2/3 rounded bg-[var(--bg-tertiary)]" />
         </div>
       </div>
     </div>

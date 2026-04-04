@@ -113,7 +113,7 @@ describe('FilterChips', () => {
     const chipSpans = container.querySelectorAll('span.rounded-full');
     expect(chipSpans.length).toBe(3); // 1 genre + yearMin + yearMax
     chipSpans.forEach((span) => {
-      expect(span.className).toContain('bg-blue-600/20');
+      expect(span.className).toContain('bg-[var(--accent-primary)]/20');
       expect(span.className).toContain('text-blue-300');
       expect(span.className).not.toContain('green');
     });

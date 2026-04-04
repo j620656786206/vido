@@ -40,7 +40,7 @@ describe('FallbackStatusDisplay', () => {
 
     // The span element contains the text and has the background class
     const tmdbBadge = screen.getByText('TMDb').closest('span');
-    expect(tmdbBadge).toHaveClass('bg-green-500/20');
+    expect(tmdbBadge).toHaveClass('bg-[var(--success)]/20');
   });
 
   it('shows failure indicator for failed sources', () => {
@@ -51,7 +51,7 @@ describe('FallbackStatusDisplay', () => {
     render(<FallbackStatusDisplay status={status} />);
 
     const tmdbBadge = screen.getByText('TMDb').closest('span');
-    expect(tmdbBadge).toHaveClass('bg-red-500/20');
+    expect(tmdbBadge).toHaveClass('bg-[var(--error)]/20');
   });
 
   it('shows skipped indicator for skipped sources', () => {
@@ -62,7 +62,7 @@ describe('FallbackStatusDisplay', () => {
     render(<FallbackStatusDisplay status={status} />);
 
     const doubanBadge = screen.getByText('豆瓣').closest('span');
-    expect(doubanBadge).toHaveClass('bg-slate-500/20');
+    expect(doubanBadge).toHaveClass('bg-[var(--text-muted)]/20');
   });
 
   it('shows guidance message when all failed (UX-4)', () => {

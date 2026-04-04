@@ -111,18 +111,18 @@ export const STANDARD_PARSE_STEPS: ParseStep[] = [
 // Status display configuration
 export const STATUS_CONFIG: Record<ParseStatus, { label: string; color: string; icon: string }> = {
   pending: { label: '等待中', color: 'text-muted-foreground', icon: 'clock' },
-  parsing: { label: '解析中', color: 'text-blue-500', icon: 'loader-2' },
-  success: { label: '已完成', color: 'text-green-500', icon: 'check-circle' },
-  needs_ai: { label: '需要處理', color: 'text-yellow-500', icon: 'alert-triangle' },
-  failed: { label: '失敗', color: 'text-red-500', icon: 'x-circle' },
+  parsing: { label: '解析中', color: 'text-[var(--accent-primary)]', icon: 'loader-2' },
+  success: { label: '已完成', color: 'text-[var(--success)]', icon: 'check-circle' },
+  needs_ai: { label: '需要處理', color: 'text-[var(--warning)]', icon: 'alert-triangle' },
+  failed: { label: '失敗', color: 'text-[var(--error)]', icon: 'x-circle' },
 };
 
 // Step status display configuration
 export const STEP_STATUS_CONFIG: Record<StepStatus, { label: string; color: string }> = {
   pending: { label: '等待中', color: 'text-muted-foreground' },
-  in_progress: { label: '進行中', color: 'text-blue-500' },
-  success: { label: '成功', color: 'text-green-500' },
-  failed: { label: '失敗', color: 'text-red-500' },
+  in_progress: { label: '進行中', color: 'text-[var(--accent-primary)]' },
+  success: { label: '成功', color: 'text-[var(--success)]' },
+  failed: { label: '失敗', color: 'text-[var(--error)]' },
   skipped: { label: '跳過', color: 'text-muted-foreground' },
 };
 

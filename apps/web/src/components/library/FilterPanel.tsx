@@ -114,7 +114,9 @@ export function FilterPanel({
 
       {/* Type Section */}
       <div className="mb-4">
-        <h4 className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">類型</h4>
+        <h4 className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">
+          類型
+        </h4>
         <div className="flex flex-wrap gap-1.5">
           {(['all', 'movie', 'tv'] as const).map((t) => (
             <button
@@ -124,8 +126,8 @@ export function FilterPanel({
               aria-pressed={mediaType === t}
               className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm transition-colors ${
                 mediaType === t
-                  ? 'border border-blue-500 bg-blue-500/15 text-blue-300'
-                  : 'border border-transparent bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  ? 'border border-[var(--accent-primary)] bg-[var(--accent-primary)]/15 text-blue-300'
+                  : 'border border-transparent bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'
               }`}
             >
               {mediaType === t && <Check className="h-3.5 w-3.5" />}
@@ -137,7 +139,9 @@ export function FilterPanel({
 
       {/* Genre Section */}
       <div className="mb-4">
-        <h4 className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">類別</h4>
+        <h4 className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">
+          類別
+        </h4>
         <div className="flex flex-wrap gap-1.5">
           {availableGenres.map((genre) => (
             <button
@@ -147,8 +151,8 @@ export function FilterPanel({
               aria-pressed={localGenres.includes(genre)}
               className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm transition-colors ${
                 localGenres.includes(genre)
-                  ? 'border border-blue-500 bg-blue-500/15 text-blue-300'
-                  : 'border border-transparent bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  ? 'border border-[var(--accent-primary)] bg-[var(--accent-primary)]/15 text-blue-300'
+                  : 'border border-transparent bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'
               }`}
             >
               {localGenres.includes(genre) && <Check className="h-3.5 w-3.5" />}
@@ -156,14 +160,16 @@ export function FilterPanel({
             </button>
           ))}
           {availableGenres.length === 0 && (
-            <span className="text-sm text-slate-500">無可用類別</span>
+            <span className="text-sm text-[var(--text-muted)]">無可用類別</span>
           )}
         </div>
       </div>
 
       {/* Year Section — Decade Chips */}
       <div className="mb-4">
-        <h4 className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">年份</h4>
+        <h4 className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">
+          年份
+        </h4>
         <div className="flex flex-wrap gap-1.5">
           {DECADE_OPTIONS.map((decade) => (
             <button
@@ -173,8 +179,8 @@ export function FilterPanel({
               aria-pressed={localDecades.includes(decade.label)}
               className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm transition-colors ${
                 localDecades.includes(decade.label)
-                  ? 'border border-blue-500 bg-blue-500/15 text-blue-300'
-                  : 'border border-transparent bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  ? 'border border-[var(--accent-primary)] bg-[var(--accent-primary)]/15 text-blue-300'
+                  : 'border border-transparent bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'
               }`}
             >
               {localDecades.includes(decade.label) && <Check className="h-3.5 w-3.5" />}
@@ -189,14 +195,14 @@ export function FilterPanel({
         <button
           onClick={handleApply}
           data-testid="filter-apply"
-          className="flex-1 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500"
+          className="flex-1 rounded-md bg-[var(--accent-primary)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--accent-hover)]"
         >
           套用
         </button>
         <button
           onClick={handleClear}
           data-testid="filter-reset"
-          className="flex-1 rounded-md border border-slate-600 px-4 py-2 text-sm text-slate-300 transition-colors hover:bg-slate-700"
+          className="flex-1 rounded-md border border-[var(--border-subtle)] px-4 py-2 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)]"
         >
           重置
         </button>

@@ -24,22 +24,25 @@ export function DownloadPanel({ className }: DownloadPanelProps) {
 
   return (
     <div
-      className={cn('rounded-lg border border-slate-700 bg-slate-800/50', className)}
+      className={cn(
+        'rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/50',
+        className
+      )}
       data-testid="download-panel"
     >
       {/* Collapsible Header (AC4) */}
       <button
         type="button"
         onClick={() => setIsExpanded(!isExpanded)}
-        className="flex w-full items-center justify-between border-b border-slate-700 px-4 py-3 text-left lg:cursor-default"
+        className="flex w-full items-center justify-between border-b border-[var(--border-subtle)] px-4 py-3 text-left lg:cursor-default"
         aria-expanded={isExpanded}
         aria-controls="download-panel-content"
       >
         <div className="flex items-center gap-2">
-          <DownloadIcon className="h-5 w-5 text-slate-300" />
-          <h2 className="text-lg font-semibold text-slate-100">下載中</h2>
+          <DownloadIcon className="h-5 w-5 text-[var(--text-secondary)]" />
+          <h2 className="text-lg font-semibold text-[var(--text-primary)]">下載中</h2>
           {isConnected && downloadCount > 0 && (
-            <span className="rounded-full bg-slate-700 px-2 py-0.5 text-xs text-slate-300">
+            <span className="rounded-full bg-[var(--bg-tertiary)] px-2 py-0.5 text-xs text-[var(--text-secondary)]">
               {downloadCount}
             </span>
           )}
@@ -49,7 +52,7 @@ export function DownloadPanel({ className }: DownloadPanelProps) {
           {/* Chevron only visible on mobile */}
           <ChevronDown
             className={cn(
-              'h-5 w-5 text-slate-400 transition-transform lg:hidden',
+              'h-5 w-5 text-[var(--text-secondary)] transition-transform lg:hidden',
               isExpanded && 'rotate-180'
             )}
           />
@@ -73,13 +76,15 @@ export function DownloadPanel({ className }: DownloadPanelProps) {
               className="flex items-center justify-center py-6"
               data-testid="download-panel-loading"
             >
-              <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
-              <span className="ml-2 text-sm text-slate-400">載入中...</span>
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--accent-primary)] border-t-transparent" />
+              <span className="ml-2 text-sm text-[var(--text-secondary)]">載入中...</span>
             </div>
           ) : !isConnected ? (
             <DisconnectedState />
           ) : downloadItems.length === 0 ? (
-            <div className="py-6 text-center text-sm text-slate-400">目前沒有下載任務</div>
+            <div className="py-6 text-center text-sm text-[var(--text-secondary)]">
+              目前沒有下載任務
+            </div>
           ) : (
             <div className="space-y-2">
               {downloadItems.slice(0, 5).map((download) => (
@@ -90,10 +95,10 @@ export function DownloadPanel({ className }: DownloadPanelProps) {
         </div>
 
         {/* Footer */}
-        <div className="border-t border-slate-700 px-4 py-2">
+        <div className="border-t border-[var(--border-subtle)] px-4 py-2">
           <Link
             to="/downloads"
-            className="text-sm text-blue-400 hover:text-blue-300 hover:underline"
+            className="text-sm text-[var(--accent-primary)] hover:text-blue-300 hover:underline"
           >
             查看全部下載 →
           </Link>
@@ -110,7 +115,7 @@ function ConnectionStatusBadge({ connected, loading }: { connected: boolean; loa
     <span
       className={cn(
         'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs',
-        connected ? 'bg-emerald-900/30 text-emerald-400' : 'bg-red-900/30 text-red-400'
+        connected ? 'bg-emerald-900/30 text-emerald-400' : 'bg-red-900/30 text-[var(--error)]'
       )}
     >
       <span
@@ -125,10 +130,10 @@ function DisconnectedState() {
   return (
     <div className="flex flex-col items-center py-6 text-center">
       <span className="mb-2 text-3xl">⚠</span>
-      <p className="text-sm text-slate-300">qBittorrent 未連線</p>
+      <p className="text-sm text-[var(--text-secondary)]">qBittorrent 未連線</p>
       <Link
         to="/settings/qbittorrent"
-        className="mt-2 text-sm text-blue-400 hover:text-blue-300 hover:underline"
+        className="mt-2 text-sm text-[var(--accent-primary)] hover:text-blue-300 hover:underline"
       >
         前往設定
       </Link>
@@ -138,19 +143,19 @@ function DisconnectedState() {
 
 function CompactDownloadItem({ download }: { download: Download }) {
   return (
-    <div className="group flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-slate-700/50">
+    <div className="group flex items-center gap-3 rounded-lg p-2 transition-colors hover:bg-[var(--bg-tertiary)]/50">
       <StatusIcon status={download.status} className="shrink-0 text-xs" />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm text-slate-200">{download.name}</p>
-        <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-700">
+        <p className="truncate text-sm text-[var(--text-primary)]">{download.name}</p>
+        <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
           <div
             className={cn(
               'h-full rounded-full transition-all',
               download.progress >= 1
                 ? 'bg-emerald-500'
                 : download.status === 'error'
-                  ? 'bg-red-500'
-                  : 'bg-blue-500'
+                  ? 'bg-[var(--error)]'
+                  : 'bg-[var(--accent-primary)]'
             )}
             style={{ width: `${Math.min(download.progress * 100, 100)}%` }}
             role="progressbar"
@@ -160,14 +165,16 @@ function CompactDownloadItem({ download }: { download: Download }) {
           />
         </div>
       </div>
-      <span className="shrink-0 text-xs text-slate-400">{formatProgress(download.progress)}</span>
+      <span className="shrink-0 text-xs text-[var(--text-secondary)]">
+        {formatProgress(download.progress)}
+      </span>
       <Link
         to="/downloads"
         className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
         aria-label={`查看 ${download.name} 詳情`}
       >
         <svg
-          className="h-4 w-4 text-slate-400"
+          className="h-4 w-4 text-[var(--text-secondary)]"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"

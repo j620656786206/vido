@@ -62,7 +62,7 @@ export function SettingsGearDropdown({
     <div ref={dropdownRef} className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
+        className="rounded-lg p-2 text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)] hover:text-white"
         aria-label="媒體庫設定"
         data-testid="settings-gear-button"
       >
@@ -72,11 +72,13 @@ export function SettingsGearDropdown({
       {isOpen && (
         <div
           data-testid="settings-dropdown"
-          className="absolute right-0 top-full z-30 mt-2 w-64 rounded-lg bg-slate-800 p-4 shadow-xl ring-1 ring-slate-700"
+          className="absolute right-0 top-full z-30 mt-2 w-64 rounded-lg bg-[var(--bg-secondary)] p-4 shadow-xl ring-1 ring-[var(--border-subtle)]"
         >
           {/* Poster Density */}
           <div className="mb-4">
-            <label className="mb-2 block text-xs font-medium text-slate-400">海報大小</label>
+            <label className="mb-2 block text-xs font-medium text-[var(--text-secondary)]">
+              海報大小
+            </label>
             <div className="flex gap-2">
               {(['small', 'medium', 'large'] as const).map((size) => (
                 <button
@@ -85,8 +87,8 @@ export function SettingsGearDropdown({
                   className={cn(
                     'flex-1 rounded-md px-3 py-1.5 text-sm transition-colors',
                     preferences.density === size
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                      ? 'bg-[var(--accent-primary)] text-white'
+                      : 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'
                   )}
                 >
                   {size === 'small' ? '小' : size === 'medium' ? '中' : '大'}
@@ -97,11 +99,13 @@ export function SettingsGearDropdown({
 
           {/* Default Sort */}
           <div className="mb-4">
-            <label className="mb-2 block text-xs font-medium text-slate-400">預設排序</label>
+            <label className="mb-2 block text-xs font-medium text-[var(--text-secondary)]">
+              預設排序
+            </label>
             <select
               value={preferences.defaultSort}
               onChange={(e) => updatePref({ defaultSort: e.target.value })}
-              className="w-full rounded-md bg-slate-700 px-3 py-2 text-sm text-white outline-none"
+              className="w-full rounded-md bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-white outline-none"
             >
               <option value="created_at">加入日期</option>
               <option value="title">標題</option>
@@ -112,7 +116,9 @@ export function SettingsGearDropdown({
 
           {/* Title Language */}
           <div>
-            <label className="mb-2 block text-xs font-medium text-slate-400">標題語言</label>
+            <label className="mb-2 block text-xs font-medium text-[var(--text-secondary)]">
+              標題語言
+            </label>
             <div className="flex gap-2">
               {(['zh-tw', 'original'] as const).map((lang) => (
                 <button
@@ -121,8 +127,8 @@ export function SettingsGearDropdown({
                   className={cn(
                     'flex-1 rounded-md px-3 py-1.5 text-sm transition-colors',
                     preferences.titleLanguage === lang
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                      ? 'bg-[var(--accent-primary)] text-white'
+                      : 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'
                   )}
                 >
                   {lang === 'zh-tw' ? '中文優先' : '原始語言'}

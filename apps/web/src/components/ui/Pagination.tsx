@@ -67,8 +67,8 @@ export function Pagination({ currentPage, totalPages, onPageChange, className }:
         className={cn(
           'flex items-center justify-center w-10 h-10 rounded-lg transition-colors',
           isFirstPage
-            ? 'text-slate-600 cursor-not-allowed'
-            : 'text-slate-400 hover:bg-slate-700 hover:text-white'
+            ? 'text-[var(--text-muted)] cursor-not-allowed'
+            : 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-white'
         )}
         aria-label="上一頁"
       >
@@ -81,7 +81,7 @@ export function Pagination({ currentPage, totalPages, onPageChange, className }:
           return (
             <span
               key={`ellipsis-${index}`}
-              className="w-10 h-10 flex items-center justify-center text-slate-500"
+              className="w-10 h-10 flex items-center justify-center text-[var(--text-muted)]"
             >
               ...
             </span>
@@ -96,8 +96,8 @@ export function Pagination({ currentPage, totalPages, onPageChange, className }:
             className={cn(
               'w-10 h-10 rounded-lg font-medium transition-colors',
               isActive
-                ? 'bg-blue-600 text-white'
-                : 'text-slate-400 hover:bg-slate-700 hover:text-white'
+                ? 'bg-[var(--accent-primary)] text-white'
+                : 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-white'
             )}
             aria-label={`第 ${page} 頁`}
             aria-current={isActive ? 'page' : undefined}
@@ -114,8 +114,8 @@ export function Pagination({ currentPage, totalPages, onPageChange, className }:
         className={cn(
           'flex items-center justify-center w-10 h-10 rounded-lg transition-colors',
           isLastPage
-            ? 'text-slate-600 cursor-not-allowed'
-            : 'text-slate-400 hover:bg-slate-700 hover:text-white'
+            ? 'text-[var(--text-muted)] cursor-not-allowed'
+            : 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-white'
         )}
         aria-label="下一頁"
       >

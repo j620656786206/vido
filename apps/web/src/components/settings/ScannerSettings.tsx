@@ -86,7 +86,10 @@ export function ScannerSettings() {
 
   if (statusLoading || scheduleLoading) {
     return (
-      <div className="flex items-center gap-2 text-slate-400" data-testid="scanner-loading">
+      <div
+        className="flex items-center gap-2 text-[var(--text-secondary)]"
+        data-testid="scanner-loading"
+      >
         <Loader className="h-4 w-4 animate-spin" />
         <span>載入中...</span>
       </div>
@@ -97,8 +100,10 @@ export function ScannerSettings() {
     <div className="space-y-6" data-testid="scanner-settings">
       {/* Header */}
       <div>
-        <h2 className="text-xl font-semibold text-slate-100">媒體庫掃描</h2>
-        <p className="mt-1 text-sm text-slate-400">設定掃描資料夾、排程，以及手動觸發媒體庫掃描</p>
+        <h2 className="text-xl font-semibold text-[var(--text-primary)]">媒體庫掃描</h2>
+        <p className="mt-1 text-sm text-[var(--text-secondary)]">
+          設定掃描資料夾、排程，以及手動觸發媒體庫掃描
+        </p>
       </div>
 
       {/* Notification */}
@@ -106,9 +111,9 @@ export function ScannerSettings() {
         <div
           className={cn(
             'flex items-center gap-2 rounded-lg px-4 py-3 text-sm',
-            notification.type === 'success' && 'bg-green-900/30 text-green-400',
-            notification.type === 'warning' && 'bg-yellow-900/30 text-yellow-400',
-            notification.type === 'error' && 'bg-red-900/30 text-red-400'
+            notification.type === 'success' && 'bg-green-900/30 text-[var(--success)]',
+            notification.type === 'warning' && 'bg-yellow-900/30 text-[var(--warning)]',
+            notification.type === 'error' && 'bg-red-900/30 text-[var(--error)]'
           )}
           data-testid="scanner-notification"
           role="alert"
@@ -119,15 +124,18 @@ export function ScannerSettings() {
       )}
 
       {/* Settings card */}
-      <div className="space-y-6 rounded-lg border border-slate-700 bg-slate-800 p-6">
+      <div className="space-y-6 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-6">
         {/* Media Libraries (Story 7b-4) */}
         <MediaLibraryManager />
 
-        <hr className="border-slate-700" />
+        <hr className="border-[var(--border-subtle)]" />
 
         {/* Schedule selector */}
         <div className="space-y-3">
-          <label htmlFor="scan-schedule" className="text-sm font-medium text-slate-300">
+          <label
+            htmlFor="scan-schedule"
+            className="text-sm font-medium text-[var(--text-secondary)]"
+          >
             掃描排程
           </label>
           <select
@@ -135,7 +143,7 @@ export function ScannerSettings() {
             value={schedule?.frequency ?? 'manual'}
             onChange={(e) => handleScheduleChange(e.target.value as ScheduleFrequency)}
             disabled={updateSchedule.isPending}
-            className="w-48 rounded-md border border-slate-600 bg-slate-900 px-3 py-2.5 text-sm text-slate-200 focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
+            className="w-48 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 py-2.5 text-sm text-[var(--text-primary)] focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
             data-testid="schedule-select"
           >
             {SCHEDULE_OPTIONS.map((opt) => (
@@ -146,19 +154,22 @@ export function ScannerSettings() {
           </select>
         </div>
 
-        <hr className="border-slate-700" />
+        <hr className="border-[var(--border-subtle)]" />
 
         {/* Last scan info */}
         <div className="space-y-2">
-          <label className="text-sm font-medium text-slate-300">上次掃描</label>
-          <p className="font-mono text-sm text-slate-400" data-testid="last-scan-info">
+          <label className="text-sm font-medium text-[var(--text-secondary)]">上次掃描</label>
+          <p
+            className="font-mono text-sm text-[var(--text-secondary)]"
+            data-testid="last-scan-info"
+          >
             {status
               ? formatLastScan(status.lastScanAt, status.lastScanFiles, status.lastScanDuration)
               : '載入中...'}
           </p>
         </div>
 
-        <hr className="border-slate-700" />
+        <hr className="border-[var(--border-subtle)]" />
 
         {/* Scan button */}
         <button
@@ -168,8 +179,8 @@ export function ScannerSettings() {
           className={cn(
             'flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3.5 text-sm font-semibold transition-colors',
             isScanning || triggerScan.isPending
-              ? 'cursor-not-allowed bg-blue-500/50 text-blue-200'
-              : 'bg-blue-500 text-white hover:bg-blue-600'
+              ? 'cursor-not-allowed bg-[var(--accent-primary)]/50 text-blue-200'
+              : 'bg-[var(--accent-primary)] text-white hover:bg-[var(--accent-primary)]'
           )}
           data-testid="scan-trigger-button"
         >

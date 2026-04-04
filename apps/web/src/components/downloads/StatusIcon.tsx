@@ -7,13 +7,13 @@ interface StatusIconProps {
 }
 
 const statusConfig: Record<TorrentStatus, { label: string; color: string; icon: string }> = {
-  downloading: { label: '下載中', color: 'text-green-400', icon: '↓' },
-  paused: { label: '已暫停', color: 'text-yellow-400', icon: '⏸' },
-  seeding: { label: '做種中', color: 'text-blue-400', icon: '↑' },
+  downloading: { label: '下載中', color: 'text-[var(--success)]', icon: '↓' },
+  paused: { label: '已暫停', color: 'text-[var(--warning)]', icon: '⏸' },
+  seeding: { label: '做種中', color: 'text-[var(--accent-primary)]', icon: '↑' },
   completed: { label: '已完成', color: 'text-emerald-400', icon: '✓' },
-  stalled: { label: '停滯中', color: 'text-orange-400', icon: '⏳' },
-  error: { label: '錯誤', color: 'text-red-400', icon: '✗' },
-  queued: { label: '排隊中', color: 'text-slate-400', icon: '⏱' },
+  stalled: { label: '停滯中', color: 'text-[var(--warning)]', icon: '⏳' },
+  error: { label: '錯誤', color: 'text-[var(--error)]', icon: '✗' },
+  queued: { label: '排隊中', color: 'text-[var(--text-secondary)]', icon: '⏱' },
   checking: { label: '檢查中', color: 'text-purple-400', icon: '⟳' },
 };
 

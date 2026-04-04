@@ -13,21 +13,21 @@ describe('PosterCardSkeleton', () => {
     const { container } = render(<PosterCardSkeleton />);
     const posterPlaceholder = container.querySelector('.aspect-\\[2\\/3\\]');
     expect(posterPlaceholder).toBeInTheDocument();
-    expect(posterPlaceholder).toHaveClass('rounded-lg', 'bg-gray-700');
+    expect(posterPlaceholder).toHaveClass('rounded-lg', 'bg-[var(--bg-tertiary)]');
   });
 
   it('renders title placeholder', () => {
     const { container } = render(<PosterCardSkeleton />);
     const titlePlaceholder = container.querySelector('.h-4.w-3\\/4');
     expect(titlePlaceholder).toBeInTheDocument();
-    expect(titlePlaceholder).toHaveClass('rounded', 'bg-gray-700');
+    expect(titlePlaceholder).toHaveClass('rounded', 'bg-[var(--bg-tertiary)]');
   });
 
   it('renders year placeholder', () => {
     const { container } = render(<PosterCardSkeleton />);
     const yearPlaceholder = container.querySelector('.h-3.w-1\\/4');
     expect(yearPlaceholder).toBeInTheDocument();
-    expect(yearPlaceholder).toHaveClass('rounded', 'bg-gray-700');
+    expect(yearPlaceholder).toHaveClass('rounded', 'bg-[var(--bg-tertiary)]');
   });
 
   it('has proper spacing between poster and text', () => {

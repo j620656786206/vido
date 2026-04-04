@@ -23,11 +23,11 @@ const STEP_ICON_CONFIG: Record<
   StepStatus,
   { icon: typeof Circle; color: string; animate?: boolean }
 > = {
-  pending: { icon: Circle, color: 'text-slate-500' },
-  in_progress: { icon: Loader2, color: 'text-blue-500', animate: true },
-  success: { icon: CheckCircle, color: 'text-green-500' },
-  failed: { icon: XCircle, color: 'text-red-500' },
-  skipped: { icon: MinusCircle, color: 'text-slate-400' },
+  pending: { icon: Circle, color: 'text-[var(--text-muted)]' },
+  in_progress: { icon: Loader2, color: 'text-[var(--accent-primary)]', animate: true },
+  success: { icon: CheckCircle, color: 'text-[var(--success)]' },
+  failed: { icon: XCircle, color: 'text-[var(--error)]' },
+  skipped: { icon: MinusCircle, color: 'text-[var(--text-secondary)]' },
 };
 
 /**
@@ -69,22 +69,22 @@ function ProgressStep({
           <span
             className={cn(
               'flex-1',
-              step.status === 'pending' && 'text-slate-400',
-              step.status === 'in_progress' && 'text-blue-400',
-              step.status === 'success' && 'text-slate-200',
-              step.status === 'failed' && 'text-red-400',
-              step.status === 'skipped' && 'text-slate-500'
+              step.status === 'pending' && 'text-[var(--text-secondary)]',
+              step.status === 'in_progress' && 'text-[var(--accent-primary)]',
+              step.status === 'success' && 'text-[var(--text-primary)]',
+              step.status === 'failed' && 'text-[var(--error)]',
+              step.status === 'skipped' && 'text-[var(--text-muted)]'
             )}
           >
             {step.label}
           </span>
 
           {step.status === 'in_progress' && (
-            <span className="text-sm text-blue-400 animate-pulse">搜尋中...</span>
+            <span className="text-sm text-[var(--accent-primary)] animate-pulse">搜尋中...</span>
           )}
 
           {step.status === 'failed' && step.error && (
-            <span className="text-sm text-red-400 truncate max-w-[150px]" title={step.error}>
+            <span className="text-sm text-[var(--error)] truncate max-w-[150px]" title={step.error}>
               {step.error}
             </span>
           )}
@@ -185,18 +185,20 @@ export function SourceChainIndicator({
         <div key={step.name} className="flex items-center">
           <span
             className={cn(
-              step.status === 'success' && 'text-green-500',
-              step.status === 'failed' && 'text-red-500',
-              step.status === 'skipped' && 'text-slate-500',
-              step.status === 'pending' && 'text-slate-400',
-              step.status === 'in_progress' && 'text-blue-500'
+              step.status === 'success' && 'text-[var(--success)]',
+              step.status === 'failed' && 'text-[var(--error)]',
+              step.status === 'skipped' && 'text-[var(--text-muted)]',
+              step.status === 'pending' && 'text-[var(--text-secondary)]',
+              step.status === 'in_progress' && 'text-[var(--accent-primary)]'
             )}
           >
             {getSourceName(step.name)}
             {step.status === 'success' && ' ✓'}
             {step.status === 'failed' && ' ✗'}
           </span>
-          {index < searchSteps.length - 1 && <span className="mx-1.5 text-slate-600">→</span>}
+          {index < searchSteps.length - 1 && (
+            <span className="mx-1.5 text-[var(--text-muted)]">→</span>
+          )}
         </div>
       ))}
     </div>

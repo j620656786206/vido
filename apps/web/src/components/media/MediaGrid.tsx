@@ -45,7 +45,7 @@ export function MediaGrid({
 
   if (!hasResults) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+      <div className="flex flex-col items-center justify-center py-16 text-[var(--text-secondary)]">
         <span className="mb-2 text-4xl">🔍</span>
         <p>{emptyMessage}</p>
       </div>

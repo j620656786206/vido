@@ -113,9 +113,9 @@ describe('ManualSearchDialog', () => {
     // Use getAllByText and check that FallbackStatusDisplay rendered the badges
     const tmdbElements = screen.getAllByText('TMDb');
     expect(tmdbElements.length).toBeGreaterThanOrEqual(1);
-    // The badge with bg-red-500/20 class is from FallbackStatusDisplay
+    // The badge with bg-[var(--error)]/20 class is from FallbackStatusDisplay
     const tmdbBadge = tmdbElements.find((el) =>
-      el.closest('span')?.classList.contains('bg-red-500/20')
+      el.closest('span')?.classList.contains('bg-[var(--error)]/20')
     );
     expect(tmdbBadge).toBeDefined();
   });

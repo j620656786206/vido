@@ -28,7 +28,7 @@ export function UnidentifiedFileCard({
   return (
     <div
       className={cn(
-        'rounded-lg border-2 border-dashed border-gray-600 bg-gray-900/50 p-6',
+        'rounded-lg border-2 border-dashed border-[var(--border-subtle)] bg-[var(--bg-primary)]/50 p-6',
         className
       )}
       role="article"
@@ -36,9 +36,9 @@ export function UnidentifiedFileCard({
     >
       <div className="flex flex-col items-center space-y-4 text-center">
         {/* File Icon */}
-        <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-gray-800">
+        <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-[var(--bg-secondary)]">
           <svg
-            className="h-8 w-8 text-gray-500"
+            className="h-8 w-8 text-[var(--text-muted)]"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -61,21 +61,26 @@ export function UnidentifiedFileCard({
 
         {/* Filename */}
         <div className="space-y-1">
-          <p className="max-w-[300px] truncate font-mono text-sm text-gray-400" title={filename}>
+          <p
+            className="max-w-[300px] truncate font-mono text-sm text-[var(--text-secondary)]"
+            title={filename}
+          >
             {filename}
           </p>
-          <p className="text-lg font-medium text-gray-200">無法自動識別</p>
+          <p className="text-lg font-medium text-[var(--text-primary)]">無法自動識別</p>
         </div>
 
         {/* Attempted Sources */}
         {attemptedSources.length > 0 && (
-          <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-gray-500">
+          <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-[var(--text-muted)]">
             <span>已嘗試：</span>
             {attemptedSources.map((source, index) => (
               <span key={source} className="flex items-center gap-1">
-                <span className="text-red-400">{sourceLabels[source] || source}</span>
-                <span className="text-red-500">✗</span>
-                {index < attemptedSources.length - 1 && <span className="text-gray-600">→</span>}
+                <span className="text-[var(--error)]">{sourceLabels[source] || source}</span>
+                <span className="text-[var(--error)]">✗</span>
+                {index < attemptedSources.length - 1 && (
+                  <span className="text-[var(--text-muted)]">→</span>
+                )}
               </span>
             ))}
           </div>
@@ -85,7 +90,7 @@ export function UnidentifiedFileCard({
         <div className="flex w-full max-w-[200px] flex-col gap-2">
           <button
             onClick={onManualSearch}
-            className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900"
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--accent-primary)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--accent-pressed)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)]"
           >
             <svg
               className="h-4 w-4"
@@ -106,7 +111,7 @@ export function UnidentifiedFileCard({
 
           <button
             onClick={onEditFilename}
-            className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-600 bg-transparent px-4 py-2 text-sm font-medium text-gray-300 transition-colors hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-gray-900"
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--border-subtle)] bg-transparent px-4 py-2 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--text-muted)] focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)]"
           >
             <svg
               className="h-4 w-4"
@@ -127,7 +132,7 @@ export function UnidentifiedFileCard({
 
           <button
             onClick={onSkip}
-            className="w-full px-4 py-2 text-sm text-gray-500 transition-colors hover:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-gray-900"
+            className="w-full px-4 py-2 text-sm text-[var(--text-muted)] transition-colors hover:text-[var(--text-secondary)] focus:outline-none focus:ring-2 focus:ring-[var(--text-muted)] focus:ring-offset-2 focus:ring-offset-[var(--bg-primary)]"
           >
             稍後處理
           </button>

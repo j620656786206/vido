@@ -521,7 +521,7 @@ function LibraryPage() {
                 <button
                   onClick={handleSelectAll}
                   data-testid="select-all-btn"
-                  className="text-sm text-blue-400 hover:text-blue-300"
+                  className="text-sm text-[var(--accent-primary)] hover:text-blue-300"
                 >
                   全選 ({items.length})
                 </button>
@@ -529,7 +529,7 @@ function LibraryPage() {
                   <button
                     onClick={() => setSelectedIds(new Set())}
                     data-testid="deselect-all-btn"
-                    className="text-sm text-slate-400 hover:text-slate-300"
+                    className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-secondary)]"
                   >
                     取消全選
                   </button>
@@ -556,7 +556,7 @@ function LibraryPage() {
             <div className="flex items-baseline gap-3">
               <h2 className="text-xl font-semibold text-white">全部媒體</h2>
               {hasActiveFilters && !isSearchActive && (
-                <span className="text-sm text-slate-400" data-testid="filter-count">
+                <span className="text-sm text-[var(--text-secondary)]" data-testid="filter-count">
                   顯示 {totalItems} / {libraryStats?.totalCount ?? totalItems} 項
                 </span>
               )}
@@ -572,7 +572,7 @@ function LibraryPage() {
               <button
                 onClick={enterSelectionMode}
                 data-testid="enter-selection-btn"
-                className="flex items-center gap-2 rounded-lg bg-slate-800 px-3 py-2 text-sm font-medium text-slate-400 transition-colors hover:bg-slate-700 hover:text-white"
+                className="flex items-center gap-2 rounded-lg bg-[var(--bg-secondary)] px-3 py-2 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-white"
               >
                 <CheckSquare size={16} />
                 選取
@@ -582,8 +582,8 @@ function LibraryPage() {
                 data-testid="filter-toggle"
                 className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                   isFilterOpen || hasActiveFilters
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'
+                    ? 'bg-[var(--accent-primary)] text-white'
+                    : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-white'
                 }`}
               >
                 <Filter size={16} />
@@ -622,7 +622,7 @@ function LibraryPage() {
             {isFilterOpen && (
               <aside
                 data-testid="filter-sidebar"
-                className="sticky top-16 mr-6 h-[calc(100vh-8rem)] w-[200px] flex-shrink-0 overflow-y-auto border-r border-slate-700 pr-4"
+                className="sticky top-16 mr-6 h-[calc(100vh-8rem)] w-[200px] flex-shrink-0 overflow-y-auto border-r border-[var(--border-subtle)] pr-4"
               >
                 <FilterPanel
                   filters={currentFilters}

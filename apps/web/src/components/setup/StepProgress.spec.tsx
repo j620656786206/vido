@@ -23,27 +23,27 @@ describe('StepProgress', () => {
   it('marks current and previous steps as active (blue)', () => {
     const { container } = render(<StepProgress steps={STEPS} currentStep={2} />);
     const dots = container.querySelectorAll('[data-testid^="step-dot-"]');
-    // Steps 0, 1, 2 should have bg-blue-500
-    expect(dots[0]).toHaveClass('bg-blue-500');
-    expect(dots[1]).toHaveClass('bg-blue-500');
-    expect(dots[2]).toHaveClass('bg-blue-500');
-    // Steps 3, 4 should have bg-slate-600
-    expect(dots[3]).toHaveClass('bg-slate-600');
-    expect(dots[4]).toHaveClass('bg-slate-600');
+    // Steps 0, 1, 2 should have bg-[var(--accent-primary)]
+    expect(dots[0]).toHaveClass('bg-[var(--accent-primary)]');
+    expect(dots[1]).toHaveClass('bg-[var(--accent-primary)]');
+    expect(dots[2]).toHaveClass('bg-[var(--accent-primary)]');
+    // Steps 3, 4 should have bg-[var(--bg-tertiary)]
+    expect(dots[3]).toHaveClass('bg-[var(--bg-tertiary)]');
+    expect(dots[4]).toHaveClass('bg-[var(--bg-tertiary)]');
   });
 
   it('marks only first dot active at step 0', () => {
     const { container } = render(<StepProgress steps={STEPS} currentStep={0} />);
     const dots = container.querySelectorAll('[data-testid^="step-dot-"]');
-    expect(dots[0]).toHaveClass('bg-blue-500');
-    expect(dots[1]).toHaveClass('bg-slate-600');
+    expect(dots[0]).toHaveClass('bg-[var(--accent-primary)]');
+    expect(dots[1]).toHaveClass('bg-[var(--bg-tertiary)]');
   });
 
   it('marks all dots active at last step', () => {
     const { container } = render(<StepProgress steps={STEPS} currentStep={4} />);
     const dots = container.querySelectorAll('[data-testid^="step-dot-"]');
     for (const dot of dots) {
-      expect(dot).toHaveClass('bg-blue-500');
+      expect(dot).toHaveClass('bg-[var(--accent-primary)]');
     }
   });
 

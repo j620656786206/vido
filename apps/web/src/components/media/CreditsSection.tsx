@@ -26,7 +26,7 @@ export function CreditsSection({ director, cast, createdBy, className }: Credits
       {/* Task 5.2: Director (for movies) or Created by (for TV) */}
       {director && (
         <div className="mb-4">
-          <h3 className="mb-2 text-sm font-semibold text-gray-400">導演</h3>
+          <h3 className="mb-2 text-sm font-semibold text-[var(--text-secondary)]">導演</h3>
           <CreditPerson
             name={director.name}
             subtitle={director.department}
@@ -37,7 +37,7 @@ export function CreditsSection({ director, cast, createdBy, className }: Credits
 
       {createdBy && createdBy.length > 0 && (
         <div className="mb-4">
-          <h3 className="mb-2 text-sm font-semibold text-gray-400">創作者</h3>
+          <h3 className="mb-2 text-sm font-semibold text-[var(--text-secondary)]">創作者</h3>
           <div className="flex flex-wrap gap-3">
             {createdBy.map((creator) => (
               <CreditPerson
@@ -53,7 +53,7 @@ export function CreditsSection({ director, cast, createdBy, className }: Credits
       {/* Task 5.3, 5.4, 5.5: Cast members with profile pictures and character names */}
       {displayCast.length > 0 && (
         <div>
-          <h3 className="mb-3 text-sm font-semibold text-gray-400">演員陣容</h3>
+          <h3 className="mb-3 text-sm font-semibold text-[var(--text-secondary)]">演員陣容</h3>
           <div className="grid grid-cols-3 gap-3" data-testid="cast-grid">
             {displayCast.map((member) => (
               <CreditPerson
@@ -86,11 +86,11 @@ function CreditPerson({ name, subtitle, profilePath }: CreditPersonProps) {
   return (
     <div className="flex flex-col items-center text-center" data-testid="credit-person">
       {/* Profile image or fallback */}
-      <div className="mb-2 h-16 w-16 overflow-hidden rounded-full bg-slate-700">
+      <div className="mb-2 h-16 w-16 overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
         {profileUrl ? (
           <img src={profileUrl} alt={name} className="h-full w-full object-cover" loading="lazy" />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-2xl text-slate-500">
+          <div className="flex h-full w-full items-center justify-center text-2xl text-[var(--text-muted)]">
             👤
           </div>
         )}
@@ -100,7 +100,7 @@ function CreditPerson({ name, subtitle, profilePath }: CreditPersonProps) {
         {name}
       </p>
       {subtitle && (
-        <p className="text-xs text-gray-400 truncate w-full" title={subtitle}>
+        <p className="text-xs text-[var(--text-secondary)] truncate w-full" title={subtitle}>
           {subtitle}
         </p>
       )}

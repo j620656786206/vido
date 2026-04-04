@@ -4,11 +4,11 @@ import { backupService } from '../../services/backupService';
 import { formatBytes } from '../../utils/formatBytes';
 
 const statusConfig: Record<BackupStatus, { label: string; color: string; bg: string }> = {
-  completed: { label: '完成', color: 'text-green-400', bg: 'bg-green-400/10' },
-  running: { label: '執行中', color: 'text-blue-400', bg: 'bg-blue-400/10' },
-  pending: { label: '等待中', color: 'text-yellow-400', bg: 'bg-yellow-400/10' },
-  failed: { label: '失敗', color: 'text-red-400', bg: 'bg-red-400/10' },
-  corrupted: { label: '已損壞', color: 'text-orange-400', bg: 'bg-orange-400/10' },
+  completed: { label: '完成', color: 'text-[var(--success)]', bg: 'bg-green-400/10' },
+  running: { label: '執行中', color: 'text-[var(--accent-primary)]', bg: 'bg-blue-400/10' },
+  pending: { label: '等待中', color: 'text-[var(--warning)]', bg: 'bg-yellow-400/10' },
+  failed: { label: '失敗', color: 'text-[var(--error)]', bg: 'bg-red-400/10' },
+  corrupted: { label: '已損壞', color: 'text-[var(--warning)]', bg: 'bg-orange-400/10' },
 };
 
 function formatDate(dateStr: string): string {
@@ -36,11 +36,11 @@ export function BackupTable({
 }: BackupTableProps) {
   return (
     <div
-      className="overflow-hidden rounded-lg border border-slate-700 bg-slate-800"
+      className="overflow-hidden rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)]"
       data-testid="backup-table"
     >
       {/* Header */}
-      <div className="flex items-center bg-slate-800/80 px-4 py-2.5 text-xs font-semibold text-slate-400">
+      <div className="flex items-center bg-[var(--bg-secondary)]/80 px-4 py-2.5 text-xs font-semibold text-[var(--text-secondary)]">
         <span className="w-[320px]">檔案名稱</span>
         <span className="w-[80px]">大小</span>
         <span className="w-[140px]">建立時間</span>
@@ -56,14 +56,21 @@ export function BackupTable({
         return (
           <div
             key={backup.id}
-            className={`flex items-center px-4 py-2.5 text-xs ${!isLast ? 'border-b border-slate-700' : ''}`}
+            className={`flex items-center px-4 py-2.5 text-xs ${!isLast ? 'border-b border-[var(--border-subtle)]' : ''}`}
             data-testid={`backup-row-${backup.id}`}
           >
-            <span className="w-[320px] truncate font-medium text-slate-200" title={backup.filename}>
+            <span
+              className="w-[320px] truncate font-medium text-[var(--text-primary)]"
+              title={backup.filename}
+            >
               {backup.filename}
             </span>
-            <span className="w-[80px] text-slate-400">{formatBytes(backup.sizeBytes)}</span>
-            <span className="w-[140px] text-slate-400">{formatDate(backup.createdAt)}</span>
+            <span className="w-[80px] text-[var(--text-secondary)]">
+              {formatBytes(backup.sizeBytes)}
+            </span>
+            <span className="w-[140px] text-[var(--text-secondary)]">
+              {formatDate(backup.createdAt)}
+            </span>
             <span className="w-[70px]">
               <span
                 className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-medium ${config.bg} ${config.color}`}
@@ -80,7 +87,7 @@ export function BackupTable({
                   <button
                     onClick={() => onRestore(backup.id)}
                     disabled={isRestoring}
-                    className="text-slate-400 transition-colors hover:text-amber-400 disabled:opacity-50"
+                    className="text-[var(--text-secondary)] transition-colors hover:text-amber-400 disabled:opacity-50"
                     data-testid={`restore-btn-${backup.id}`}
                     title="還原"
                   >
@@ -89,7 +96,7 @@ export function BackupTable({
                   <button
                     onClick={() => onVerify(backup.id)}
                     disabled={isVerifying}
-                    className="text-slate-400 transition-colors hover:text-blue-400 disabled:opacity-50"
+                    className="text-[var(--text-secondary)] transition-colors hover:text-[var(--accent-primary)] disabled:opacity-50"
                     data-testid={`verify-btn-${backup.id}`}
                     title="驗證完整性"
                   >
@@ -97,7 +104,7 @@ export function BackupTable({
                   </button>
                   <a
                     href={backupService.getDownloadUrl(backup.id)}
-                    className="text-slate-400 transition-colors hover:text-slate-200"
+                    className="text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
                     data-testid={`download-btn-${backup.id}`}
                     title="下載"
                   >
@@ -108,7 +115,7 @@ export function BackupTable({
               <button
                 onClick={() => onDelete(backup.id)}
                 disabled={isDeleting}
-                className="text-slate-400 transition-colors hover:text-red-400 disabled:opacity-50"
+                className="text-[var(--text-secondary)] transition-colors hover:text-[var(--error)] disabled:opacity-50"
                 data-testid={`delete-btn-${backup.id}`}
                 title="刪除"
               >

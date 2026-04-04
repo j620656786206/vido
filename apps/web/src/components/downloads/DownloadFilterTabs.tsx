@@ -47,9 +47,9 @@ export function DownloadFilterTabs({
             className={cn(
               'inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors',
               isActive
-                ? 'border-blue-500 bg-blue-500/20 text-blue-300'
-                : 'border-slate-600 bg-slate-700/50 text-slate-300 hover:border-slate-500 hover:text-slate-200',
-              f.value === 'error' && count > 0 && !isActive && 'border-red-700 text-red-400'
+                ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)]/20 text-blue-300'
+                : 'border-[var(--border-subtle)] bg-[var(--bg-tertiary)]/50 text-[var(--text-secondary)] hover:border-[var(--text-muted)] hover:text-[var(--text-primary)]',
+              f.value === 'error' && count > 0 && !isActive && 'border-red-700 text-[var(--error)]'
             )}
           >
             <span>{f.icon}</span>
@@ -57,7 +57,9 @@ export function DownloadFilterTabs({
             <span
               className={cn(
                 'ml-0.5 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-xs',
-                isActive ? 'bg-blue-500/30 text-blue-200' : 'bg-slate-600/50 text-slate-400'
+                isActive
+                  ? 'bg-[var(--accent-primary)]/30 text-blue-200'
+                  : 'bg-[var(--bg-tertiary)]/50 text-[var(--text-secondary)]'
               )}
             >
               {count}

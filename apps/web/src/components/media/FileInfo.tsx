@@ -37,20 +37,20 @@ export function FileInfo({ filePath, fileSize }: FileInfoProps) {
   return (
     <div className="space-y-1 text-sm" data-testid="file-info">
       {filename && (
-        <div className="flex items-center gap-2 text-gray-400" title={filePath}>
+        <div className="flex items-center gap-2 text-[var(--text-secondary)]" title={filePath}>
           <span className="flex-shrink-0">📁</span>
           <span className="truncate" data-testid="file-name">
             {filename}
           </span>
         </div>
       )}
-      <div className="flex items-center gap-3 text-gray-400">
+      <div className="flex items-center gap-3 text-[var(--text-secondary)]">
         {fileSize != null && fileSize > 0 && (
           <span data-testid="file-size">{formatFileSize(fileSize)}</span>
         )}
         {quality && (
           <span
-            className="rounded bg-slate-700 px-1.5 py-0.5 text-xs font-medium text-gray-300"
+            className="rounded bg-[var(--bg-tertiary)] px-1.5 py-0.5 text-xs font-medium text-[var(--text-secondary)]"
             data-testid="file-quality"
           >
             {quality}

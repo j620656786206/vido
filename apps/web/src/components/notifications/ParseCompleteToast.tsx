@@ -25,16 +25,16 @@ export function ParseCompleteToast({
 
   return (
     <div
-      className="flex items-center gap-3 rounded-lg bg-slate-800 p-3 shadow-lg"
+      className="flex items-center gap-3 rounded-lg bg-[var(--bg-secondary)] p-3 shadow-lg"
       data-testid="parse-complete-toast"
     >
       {/* Poster thumbnail */}
-      <div className="h-12 w-8 shrink-0 overflow-hidden rounded bg-slate-700">
+      <div className="h-12 w-8 shrink-0 overflow-hidden rounded bg-[var(--bg-tertiary)]">
         {posterUrl ? (
           <img src={posterUrl} alt={title} className="h-full w-full object-cover" />
         ) : (
           <div
-            className="flex h-full items-center justify-center text-slate-500"
+            className="flex h-full items-center justify-center text-[var(--text-muted)]"
             data-testid="parse-complete-poster-placeholder"
           >
             <span className="text-xs">🎬</span>
@@ -44,20 +44,27 @@ export function ParseCompleteToast({
 
       {/* Content */}
       <div className="min-w-0 flex-1">
-        <p className={cn('text-sm font-medium', isFailed ? 'text-red-400' : 'text-slate-100')}>
+        <p
+          className={cn(
+            'text-sm font-medium',
+            isFailed ? 'text-[var(--error)]' : 'text-[var(--text-primary)]'
+          )}
+        >
           {isFailed ? '解析失敗' : '解析完成'}
         </p>
-        <p className="truncate text-xs text-slate-300">{title}</p>
+        <p className="truncate text-xs text-[var(--text-secondary)]">{title}</p>
         {isFailed && errorMessage ? (
-          <p className="truncate text-[10px] text-red-400/70">{errorMessage}</p>
+          <p className="truncate text-[10px] text-[var(--error)]/70">{errorMessage}</p>
         ) : (
-          <span className="text-[10px] text-slate-400">{mediaTypeLabels[mediaType]}</span>
+          <span className="text-[10px] text-[var(--text-secondary)]">
+            {mediaTypeLabels[mediaType]}
+          </span>
         )}
       </div>
 
       {/* Status indicator */}
       {isFailed ? (
-        <XCircle className="h-5 w-5 shrink-0 text-red-400" />
+        <XCircle className="h-5 w-5 shrink-0 text-[var(--error)]" />
       ) : (
         <CheckCircle className="h-5 w-5 shrink-0 text-emerald-400" />
       )}

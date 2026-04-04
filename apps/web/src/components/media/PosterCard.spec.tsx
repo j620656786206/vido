@@ -300,7 +300,7 @@ describe('PosterCard', () => {
       );
       const posterWrapper = container.querySelector('.aspect-\\[2\\/3\\]');
       expect(posterWrapper?.className).toContain('ring-2');
-      expect(posterWrapper?.className).toContain('ring-blue-500');
+      expect(posterWrapper?.className).toContain('ring-[var(--accent-primary)]');
     });
 
     it('[P1] applies opacity-70 when selectable but not selected', () => {

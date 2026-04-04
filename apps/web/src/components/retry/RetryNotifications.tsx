@@ -103,12 +103,14 @@ function NotificationToast({ notification, onDismiss }: NotificationToastProps) 
         <div className="flex-1 min-w-0">
           <p className={cn('font-medium text-sm', colors.text)}>{notification.message}</p>
           {notification.description && (
-            <p className="text-xs text-slate-400 mt-0.5">{notification.description}</p>
+            <p className="text-xs text-[var(--text-secondary)] mt-0.5">
+              {notification.description}
+            </p>
           )}
         </div>
         <button
           onClick={handleDismiss}
-          className="text-slate-400 hover:text-slate-300 transition-colors"
+          className="text-[var(--text-secondary)] hover:text-[var(--text-secondary)] transition-colors"
           aria-label="關閉通知"
         >
           <X className="h-4 w-4" />
@@ -140,31 +142,31 @@ function getColorsForType(type: NotificationType) {
   switch (type) {
     case 'success':
       return {
-        bg: 'bg-green-500/10',
+        bg: 'bg-[var(--success)]/10',
         border: 'border-green-500/20',
-        icon: 'text-green-500',
-        text: 'text-green-400',
+        icon: 'text-[var(--success)]',
+        text: 'text-[var(--success)]',
       };
     case 'error':
       return {
-        bg: 'bg-red-500/10',
+        bg: 'bg-[var(--error)]/10',
         border: 'border-red-500/20',
-        icon: 'text-red-500',
-        text: 'text-red-400',
+        icon: 'text-[var(--error)]',
+        text: 'text-[var(--error)]',
       };
     case 'warning':
       return {
-        bg: 'bg-yellow-500/10',
+        bg: 'bg-[var(--warning)]/10',
         border: 'border-yellow-500/20',
-        icon: 'text-yellow-500',
-        text: 'text-yellow-400',
+        icon: 'text-[var(--warning)]',
+        text: 'text-[var(--warning)]',
       };
     default:
       return {
-        bg: 'bg-blue-500/10',
-        border: 'border-blue-500/20',
-        icon: 'text-blue-500',
-        text: 'text-blue-400',
+        bg: 'bg-[var(--accent-primary)]/10',
+        border: 'border-[var(--accent-primary)]/20',
+        icon: 'text-[var(--accent-primary)]',
+        text: 'text-[var(--accent-primary)]',
       };
   }
 }

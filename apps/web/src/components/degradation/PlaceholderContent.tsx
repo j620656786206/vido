@@ -40,7 +40,7 @@ export function PlaceholderContent({ field, className }: PlaceholderContentProps
 
   return (
     <span
-      className={cn('inline-block text-gray-500 italic', className)}
+      className={cn('inline-block text-[var(--text-muted)] italic', className)}
       title={`${config.label}暫時無法取得`}
     >
       {config.message}
@@ -63,7 +63,7 @@ export function PlaceholderPoster({ className, size = 'md' }: PlaceholderPosterP
   return (
     <div
       className={cn(
-        'flex items-center justify-center rounded-lg bg-gray-800',
+        'flex items-center justify-center rounded-lg bg-[var(--bg-secondary)]',
         sizeClasses[size],
         className
       )}
@@ -71,7 +71,7 @@ export function PlaceholderPoster({ className, size = 'md' }: PlaceholderPosterP
       aria-label="海報無法載入"
     >
       <svg
-        className="h-12 w-12 text-gray-600"
+        className="h-12 w-12 text-[var(--text-muted)]"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"

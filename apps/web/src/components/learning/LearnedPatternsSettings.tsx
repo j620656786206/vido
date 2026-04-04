@@ -47,7 +47,7 @@ export function LearnedPatternsSettings({ onError }: LearnedPatternsSettingsProp
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8" data-testid="patterns-loading">
-        <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+        <Loader2 className="h-6 w-6 animate-spin text-[var(--text-secondary)]" />
       </div>
     );
   }
@@ -60,7 +60,7 @@ export function LearnedPatternsSettings({ onError }: LearnedPatternsSettingsProp
           <Lightbulb className="h-5 w-5 text-amber-400" />
           <h3 className="text-lg font-medium text-white">自訂規則</h3>
         </div>
-        <span className="text-sm text-slate-400" data-testid="patterns-count">
+        <span className="text-sm text-[var(--text-secondary)]" data-testid="patterns-count">
           已記住 {stats?.totalPatterns ?? patterns.length} 個自訂規則
         </span>
       </div>
@@ -68,7 +68,7 @@ export function LearnedPatternsSettings({ onError }: LearnedPatternsSettingsProp
       {/* Stats summary */}
       {stats && stats.totalApplied > 0 && (
         <div
-          className="rounded-lg bg-slate-800/50 px-4 py-3 text-sm text-slate-300"
+          className="rounded-lg bg-[var(--bg-secondary)]/50 px-4 py-3 text-sm text-[var(--text-secondary)]"
           data-testid="patterns-stats"
         >
           <span>共套用 {stats.totalApplied} 次</span>
@@ -84,12 +84,12 @@ export function LearnedPatternsSettings({ onError }: LearnedPatternsSettingsProp
       {/* Patterns list */}
       {patterns.length === 0 ? (
         <div
-          className="rounded-lg border border-dashed border-slate-700 py-8 text-center"
+          className="rounded-lg border border-dashed border-[var(--border-subtle)] py-8 text-center"
           data-testid="empty-patterns"
         >
-          <Lightbulb className="mx-auto h-8 w-8 text-slate-600" />
-          <p className="mt-2 text-slate-500">尚無自訂規則</p>
-          <p className="mt-1 text-sm text-slate-600">
+          <Lightbulb className="mx-auto h-8 w-8 text-[var(--text-muted)]" />
+          <p className="mt-2 text-[var(--text-muted)]">尚無自訂規則</p>
+          <p className="mt-1 text-sm text-[var(--text-muted)]">
             在手動配對檔案後，可選擇學習規則以便未來自動套用
           </p>
         </div>
@@ -98,7 +98,7 @@ export function LearnedPatternsSettings({ onError }: LearnedPatternsSettingsProp
           {patterns.map((pattern) => (
             <div
               key={pattern.id}
-              className="rounded-lg bg-slate-800/50 overflow-hidden"
+              className="rounded-lg bg-[var(--bg-secondary)]/50 overflow-hidden"
               data-testid={`pattern-item-${pattern.id}`}
             >
               {/* Pattern header */}
@@ -106,7 +106,7 @@ export function LearnedPatternsSettings({ onError }: LearnedPatternsSettingsProp
                 onClick={() => toggleExpand(pattern.id)}
                 className={cn(
                   'flex w-full items-center justify-between px-4 py-3',
-                  'hover:bg-slate-700/50 transition-colors text-left'
+                  'hover:bg-[var(--bg-tertiary)]/50 transition-colors text-left'
                 )}
               >
                 <div className="flex-1 min-w-0">
@@ -116,23 +116,23 @@ export function LearnedPatternsSettings({ onError }: LearnedPatternsSettingsProp
                       className={cn(
                         'px-1.5 py-0.5 rounded text-xs',
                         pattern.patternType === 'fansub'
-                          ? 'bg-blue-500/20 text-blue-400'
+                          ? 'bg-[var(--accent-primary)]/20 text-[var(--accent-primary)]'
                           : pattern.patternType === 'standard'
-                            ? 'bg-green-500/20 text-green-400'
-                            : 'bg-slate-500/20 text-slate-400'
+                            ? 'bg-[var(--success)]/20 text-[var(--success)]'
+                            : 'bg-[var(--text-muted)]/20 text-[var(--text-secondary)]'
                       )}
                     >
                       {pattern.patternType}
                     </span>
                   </div>
-                  <div className="mt-1 text-xs text-slate-500">
+                  <div className="mt-1 text-xs text-[var(--text-muted)]">
                     {pattern.metadataType === 'series' ? '影集' : '電影'} · 套用 {pattern.useCount}{' '}
                     次
                   </div>
                 </div>
                 <ChevronRight
                   className={cn(
-                    'h-5 w-5 text-slate-500 transition-transform',
+                    'h-5 w-5 text-[var(--text-muted)] transition-transform',
                     expandedId === pattern.id && 'rotate-90'
                   )}
                 />
@@ -141,30 +141,30 @@ export function LearnedPatternsSettings({ onError }: LearnedPatternsSettingsProp
               {/* Expanded details */}
               {expandedId === pattern.id && (
                 <div
-                  className="border-t border-slate-700 px-4 py-3 space-y-2"
+                  className="border-t border-[var(--border-subtle)] px-4 py-3 space-y-2"
                   data-testid={`pattern-details-${pattern.id}`}
                 >
                   {pattern.fansubGroup && (
                     <div className="flex gap-2 text-sm">
-                      <span className="text-slate-500">字幕組：</span>
-                      <span className="text-blue-400">{pattern.fansubGroup}</span>
+                      <span className="text-[var(--text-muted)]">字幕組：</span>
+                      <span className="text-[var(--accent-primary)]">{pattern.fansubGroup}</span>
                     </div>
                   )}
                   {pattern.titlePattern && (
                     <div className="flex gap-2 text-sm">
-                      <span className="text-slate-500">標題：</span>
-                      <span className="text-green-400">{pattern.titlePattern}</span>
+                      <span className="text-[var(--text-muted)]">標題：</span>
+                      <span className="text-[var(--success)]">{pattern.titlePattern}</span>
                     </div>
                   )}
                   {pattern.tmdbId && (
                     <div className="flex gap-2 text-sm">
-                      <span className="text-slate-500">TMDb ID：</span>
-                      <span className="text-slate-300">{pattern.tmdbId}</span>
+                      <span className="text-[var(--text-muted)]">TMDb ID：</span>
+                      <span className="text-[var(--text-secondary)]">{pattern.tmdbId}</span>
                     </div>
                   )}
                   <div className="flex gap-2 text-sm">
-                    <span className="text-slate-500">建立時間：</span>
-                    <span className="text-slate-300">
+                    <span className="text-[var(--text-muted)]">建立時間：</span>
+                    <span className="text-[var(--text-secondary)]">
                       {new Date(pattern.createdAt).toLocaleDateString('zh-TW')}
                     </span>
                   </div>
@@ -175,8 +175,8 @@ export function LearnedPatternsSettings({ onError }: LearnedPatternsSettingsProp
                     disabled={deletingId === pattern.id}
                     className={cn(
                       'mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded',
-                      'bg-red-500/20 text-red-400 text-sm',
-                      'hover:bg-red-500/30 transition-colors',
+                      'bg-[var(--error)]/20 text-[var(--error)] text-sm',
+                      'hover:bg-[var(--error)]/30 transition-colors',
                       'disabled:opacity-50 disabled:cursor-not-allowed'
                     )}
                     data-testid={`delete-pattern-${pattern.id}`}

@@ -111,7 +111,9 @@ function TestManualSearchPage() {
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-white mb-4">Access Denied</h1>
-          <p className="text-slate-400">This page is only available in test environments.</p>
+          <p className="text-[var(--text-secondary)]">
+            This page is only available in test environments.
+          </p>
         </div>
       </div>
     );
@@ -130,7 +132,7 @@ function TestManualSearchPage() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-white mb-2">E2E Test: Manual Search Flow</h1>
-          <p className="text-slate-400">
+          <p className="text-[var(--text-secondary)]">
             This page provides test fixtures for E2E testing of Story 3-7 (Manual Metadata Search
             and Selection)
           </p>
@@ -138,16 +140,16 @@ function TestManualSearchPage() {
             <span className="text-amber-400" data-testid="pending-count">
               Pending: {availableFiles.length}
             </span>
-            <span className="text-green-400" data-testid="applied-count">
+            <span className="text-[var(--success)]" data-testid="applied-count">
               Applied: {completedFiles.length}
             </span>
           </div>
         </div>
 
         {/* Test Scenario Info */}
-        <div className="bg-slate-800/50 rounded-lg p-4 mb-8 text-sm">
+        <div className="bg-[var(--bg-secondary)]/50 rounded-lg p-4 mb-8 text-sm">
           <h2 className="text-white font-medium mb-2">Test Scenarios:</h2>
-          <ul className="text-slate-400 space-y-1 list-disc list-inside">
+          <ul className="text-[var(--text-secondary)] space-y-1 list-disc list-inside">
             <li>
               <code>test-movie-001</code>: Movie with parsed info (Fight Club 1999)
             </li>
@@ -179,10 +181,12 @@ function TestManualSearchPage() {
           </div>
         ) : (
           <div className="text-center py-12" data-testid="all-applied-message">
-            <p className="text-green-400 text-lg font-medium">All metadata applied successfully!</p>
+            <p className="text-[var(--success)] text-lg font-medium">
+              All metadata applied successfully!
+            </p>
             <button
               onClick={() => setAppliedItems([])}
-              className="mt-4 px-4 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors"
+              className="mt-4 px-4 py-2 bg-[var(--bg-tertiary)] text-white rounded-lg hover:bg-[var(--bg-tertiary)] transition-colors"
               data-testid="reset-test-data"
             >
               Reset Test Data
@@ -200,7 +204,7 @@ function TestManualSearchPage() {
               {completedFiles.map((file) => (
                 <span
                   key={file.id}
-                  className="px-3 py-1 bg-green-900/30 text-green-400 rounded-full text-sm"
+                  className="px-3 py-1 bg-green-900/30 text-[var(--success)] rounded-full text-sm"
                   data-testid={`completed-${file.id}`}
                 >
                   {file.parsedInfo?.title || file.filename}

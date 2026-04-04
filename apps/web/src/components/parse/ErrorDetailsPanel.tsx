@@ -45,25 +45,27 @@ export function ErrorDetailsPanel({
     <div className={cn('space-y-4', className)} data-testid="error-details-panel">
       {/* Filename display */}
       {filename && (
-        <div className="text-sm text-slate-400 truncate" title={filename}>
+        <div className="text-sm text-[var(--text-secondary)] truncate" title={filename}>
           檔案：{filename}
         </div>
       )}
       {/* Failed Steps Summary */}
       {failedSteps.length > 0 && (
-        <div className="bg-red-500/10 rounded-lg p-3 space-y-2">
-          <h4 className="font-medium text-red-400 flex items-center gap-2">
+        <div className="bg-[var(--error)]/10 rounded-lg p-3 space-y-2">
+          <h4 className="font-medium text-[var(--error)] flex items-center gap-2">
             <XCircle className="h-4 w-4" />
             失敗原因
           </h4>
           <ul className="space-y-1.5 text-sm" data-testid="failed-steps-list">
             {failedSteps.map((step) => (
               <li key={step.name} className="flex items-start gap-2">
-                <XCircle className="h-3.5 w-3.5 text-red-400 mt-0.5 flex-shrink-0" />
-                <span className="text-slate-300">
+                <XCircle className="h-3.5 w-3.5 text-[var(--error)] mt-0.5 flex-shrink-0" />
+                <span className="text-[var(--text-secondary)]">
                   {step.label}
-                  {step.error && <span className="text-slate-400">：{step.error}</span>}
-                  {!step.error && <span className="text-slate-400">：無回應</span>}
+                  {step.error && (
+                    <span className="text-[var(--text-secondary)]">：{step.error}</span>
+                  )}
+                  {!step.error && <span className="text-[var(--text-secondary)]">：無回應</span>}
                 </span>
               </li>
             ))}
@@ -77,11 +79,11 @@ export function ErrorDetailsPanel({
           <div key={step.name} className="flex items-center">
             <span
               className={cn(
-                step.status === 'success' && 'text-green-500',
-                step.status === 'failed' && 'text-red-500',
-                step.status === 'skipped' && 'text-slate-500',
-                step.status === 'pending' && 'text-slate-400',
-                step.status === 'in_progress' && 'text-blue-500'
+                step.status === 'success' && 'text-[var(--success)]',
+                step.status === 'failed' && 'text-[var(--error)]',
+                step.status === 'skipped' && 'text-[var(--text-muted)]',
+                step.status === 'pending' && 'text-[var(--text-secondary)]',
+                step.status === 'in_progress' && 'text-[var(--accent-primary)]'
               )}
             >
               {getSourceDisplayName(step.name)}
@@ -89,7 +91,7 @@ export function ErrorDetailsPanel({
               {step.status === 'failed' && ' ✗'}
             </span>
             {index < searchSteps.length - 1 && (
-              <ArrowRight className="h-3 w-3 text-slate-600 mx-1.5" />
+              <ArrowRight className="h-3 w-3 text-[var(--text-muted)] mx-1.5" />
             )}
           </div>
         ))}
@@ -99,7 +101,7 @@ export function ErrorDetailsPanel({
       <div className="flex flex-col gap-2" data-testid="action-buttons">
         <button
           onClick={onManualSearch}
-          className="w-full flex items-center justify-center gap-2 rounded-lg bg-blue-600 hover:bg-blue-700 px-4 py-2.5 text-sm font-medium text-white transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full flex items-center justify-center gap-2 rounded-lg bg-[var(--accent-primary)] hover:bg-[var(--accent-pressed)] px-4 py-2.5 text-sm font-medium text-white transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
           data-testid="manual-search-button"
         >
           <Search className="h-4 w-4" />
@@ -108,7 +110,7 @@ export function ErrorDetailsPanel({
 
         <button
           onClick={onEditFilename}
-          className="w-full flex items-center justify-center gap-2 rounded-lg border border-slate-600 bg-slate-700 hover:bg-slate-600 px-4 py-2.5 text-sm font-medium text-white transition-colors focus:outline-none focus:ring-2 focus:ring-slate-500"
+          className="w-full flex items-center justify-center gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-tertiary)] hover:bg-[var(--bg-tertiary)] px-4 py-2.5 text-sm font-medium text-white transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--text-muted)]"
           data-testid="edit-filename-button"
         >
           <Edit className="h-4 w-4" />
@@ -117,7 +119,7 @@ export function ErrorDetailsPanel({
 
         <button
           onClick={onSkip}
-          className="w-full flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm text-slate-400 hover:text-slate-300 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-500"
+          className="w-full flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-secondary)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--text-muted)]"
           data-testid="skip-button"
         >
           <SkipForward className="h-4 w-4" />
@@ -145,10 +147,13 @@ export function CompactErrorSummary({
   }
 
   return (
-    <div className={cn('text-xs text-red-400', className)} data-testid="compact-error-summary">
+    <div
+      className={cn('text-xs text-[var(--error)]', className)}
+      data-testid="compact-error-summary"
+    >
       <span>{failedSteps.length} 個來源失敗</span>
       {failedSteps.length > 0 && failedSteps[0].error && (
-        <span className="text-slate-400">：{failedSteps[0].error}</span>
+        <span className="text-[var(--text-secondary)]">：{failedSteps[0].error}</span>
       )}
     </div>
   );

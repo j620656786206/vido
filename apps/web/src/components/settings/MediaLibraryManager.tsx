@@ -17,7 +17,7 @@ export function MediaLibraryManager() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center gap-2 text-slate-400">
+      <div className="flex items-center gap-2 text-[var(--text-secondary)]">
         <Loader className="h-4 w-4 animate-spin" />
         <span>載入媒體庫...</span>
       </div>
@@ -26,7 +26,7 @@ export function MediaLibraryManager() {
 
   if (error) {
     return (
-      <div className="flex items-center gap-2 rounded-lg bg-red-900/30 px-4 py-3 text-sm text-red-400">
+      <div className="flex items-center gap-2 rounded-lg bg-red-900/30 px-4 py-3 text-sm text-[var(--error)]">
         <AlertCircle className="h-4 w-4 shrink-0" />
         無法載入媒體庫設定
       </div>
@@ -37,10 +37,10 @@ export function MediaLibraryManager() {
 
   return (
     <div className="space-y-3" data-testid="media-library-manager">
-      <label className="text-sm font-medium text-slate-300">媒體庫管理</label>
+      <label className="text-sm font-medium text-[var(--text-secondary)]">媒體庫管理</label>
 
       {libraries.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-slate-600/50 p-6 text-center text-sm text-slate-500">
+        <div className="rounded-lg border border-dashed border-[var(--border-subtle)]/50 p-6 text-center text-sm text-[var(--text-muted)]">
           尚未設定任何媒體庫。請新增媒體庫以開始掃描。
         </div>
       ) : (
@@ -58,7 +58,7 @@ export function MediaLibraryManager() {
       <button
         type="button"
         onClick={() => setEditModal({ open: true })}
-        className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-slate-600/50 py-2.5 text-sm text-slate-400 transition-colors hover:border-blue-500/50 hover:text-blue-400"
+        className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-[var(--border-subtle)]/50 py-2.5 text-sm text-[var(--text-secondary)] transition-colors hover:border-[var(--accent-primary)]/50 hover:text-[var(--accent-primary)]"
         data-testid="add-library-button"
       >
         <Plus className="h-4 w-4" />

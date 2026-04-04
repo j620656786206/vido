@@ -22,14 +22,14 @@ export function AppShell({ children }: AppShellProps) {
 
   return (
     <div className="flex min-h-screen flex-col" data-testid="app-shell">
-      <header className="sticky top-0 z-50 bg-slate-900/95 backdrop-blur-sm">
+      <header className="sticky top-0 z-50 bg-[var(--bg-primary)]/95 backdrop-blur-sm">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           {/* Row 1: logo | search | gear */}
           <div className="flex h-12 items-center">
             {/* Logo */}
             <Link
               to="/"
-              className="mr-6 shrink-0 text-lg font-bold text-blue-400"
+              className="mr-6 shrink-0 text-lg font-bold text-[var(--accent-primary)]"
               data-testid="app-logo"
             >
               vido
@@ -42,13 +42,13 @@ export function AppShell({ children }: AppShellProps) {
                 className="relative w-64"
                 data-testid="search-form"
               >
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500" />
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--text-muted)]" />
                 <input
                   type="text"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="搜尋媒體庫..."
-                  className="w-full rounded-full border border-slate-600/50 bg-slate-800/60 py-1.5 pl-9 pr-4 text-sm text-slate-200 placeholder-slate-500 transition-colors focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-full rounded-full border border-[var(--border-subtle)]/50 bg-[var(--bg-secondary)]/60 py-1.5 pl-9 pr-4 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] transition-colors focus:border-[var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"
                   autoComplete="off"
                   data-testid="global-search-input"
                 />
@@ -61,7 +61,7 @@ export function AppShell({ children }: AppShellProps) {
               <button
                 type="button"
                 onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
-                className="rounded-lg p-1.5 text-slate-400 transition-colors hover:text-slate-200 sm:hidden"
+                className="rounded-lg p-1.5 text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] sm:hidden"
                 aria-label="搜尋"
                 data-testid="mobile-search-toggle"
               >
@@ -71,7 +71,7 @@ export function AppShell({ children }: AppShellProps) {
               {/* Settings gear */}
               <Link
                 to="/settings"
-                className="rounded-lg p-1.5 text-slate-400 transition-colors hover:text-slate-200"
+                className="rounded-lg p-1.5 text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
                 aria-label="設定"
                 data-testid="settings-link"
               >
@@ -84,13 +84,13 @@ export function AppShell({ children }: AppShellProps) {
           {mobileSearchOpen && (
             <form onSubmit={handleSearchSubmit} className="pb-3 sm:hidden">
               <div className="relative">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500" />
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--text-muted)]" />
                 <input
                   type="text"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="搜尋媒體庫..."
-                  className="w-full rounded-full border border-slate-600/50 bg-slate-800/60 py-1.5 pl-9 pr-4 text-sm text-slate-200 placeholder-slate-500 transition-colors focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  className="w-full rounded-full border border-[var(--border-subtle)]/50 bg-[var(--bg-secondary)]/60 py-1.5 pl-9 pr-4 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] transition-colors focus:border-[var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"
                   autoComplete="off"
                   autoFocus
                   data-testid="mobile-search-input"

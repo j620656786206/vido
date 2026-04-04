@@ -72,27 +72,27 @@ export function BackupScheduleConfig() {
   if (isLoading) {
     return (
       <div className="flex items-center gap-2 py-4" data-testid="schedule-loading">
-        <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
-        <span className="text-sm text-slate-400">載入排程設定...</span>
+        <Loader2 className="h-4 w-4 animate-spin text-[var(--text-secondary)]" />
+        <span className="text-sm text-[var(--text-secondary)]">載入排程設定...</span>
       </div>
     );
   }
 
   return (
     <div
-      className="rounded-lg border border-slate-700 bg-slate-800 p-4"
+      className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-4"
       data-testid="backup-schedule-config"
     >
       {/* Header with toggle */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Clock className="h-4 w-4 text-slate-400" />
-          <span className="text-sm font-medium text-slate-200">自動備份</span>
+          <Clock className="h-4 w-4 text-[var(--text-secondary)]" />
+          <span className="text-sm font-medium text-[var(--text-primary)]">自動備份</span>
         </div>
         <button
           onClick={handleToggle}
           disabled={updateSchedule.isPending}
-          className={`relative h-6 w-11 rounded-full transition-colors ${enabled ? 'bg-blue-600' : 'bg-slate-600'}`}
+          className={`relative h-6 w-11 rounded-full transition-colors ${enabled ? 'bg-[var(--accent-primary)]' : 'bg-[var(--bg-tertiary)]'}`}
           data-testid="schedule-toggle"
           role="switch"
           aria-checked={enabled}
@@ -106,7 +106,7 @@ export function BackupScheduleConfig() {
       {/* Schedule options (visible when enabled) */}
       {enabled && (
         <div className="mt-4 space-y-3" data-testid="schedule-options">
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-[var(--text-muted)]">
             {schedule?.nextBackupAt
               ? `下次備份：${new Date(schedule.nextBackupAt).toLocaleString('zh-TW')}`
               : '系統會在指定時間自動執行備份'}
@@ -115,11 +115,11 @@ export function BackupScheduleConfig() {
           <div className="flex items-center gap-3">
             {/* Frequency */}
             <div className="flex-1">
-              <label className="mb-1 block text-xs text-slate-400">備份頻率</label>
+              <label className="mb-1 block text-xs text-[var(--text-secondary)]">備份頻率</label>
               <select
                 value={frequency}
                 onChange={(e) => setFrequency(e.target.value as 'daily' | 'weekly')}
-                className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-1.5 text-sm text-slate-200"
+                className="w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 py-1.5 text-sm text-[var(--text-primary)]"
                 data-testid="schedule-frequency"
               >
                 <option value="daily">每日</option>
@@ -129,11 +129,11 @@ export function BackupScheduleConfig() {
 
             {/* Time */}
             <div className="w-24">
-              <label className="mb-1 block text-xs text-slate-400">備份時間</label>
+              <label className="mb-1 block text-xs text-[var(--text-secondary)]">備份時間</label>
               <select
                 value={hour}
                 onChange={(e) => setHour(Number(e.target.value))}
-                className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-1.5 text-sm text-slate-200"
+                className="w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 py-1.5 text-sm text-[var(--text-primary)]"
                 data-testid="schedule-hour"
               >
                 {Array.from({ length: 24 }, (_, i) => (
@@ -147,11 +147,11 @@ export function BackupScheduleConfig() {
             {/* Day of week (only for weekly) */}
             {frequency === 'weekly' && (
               <div className="flex-1">
-                <label className="mb-1 block text-xs text-slate-400">備份日</label>
+                <label className="mb-1 block text-xs text-[var(--text-secondary)]">備份日</label>
                 <select
                   value={dayOfWeek}
                   onChange={(e) => setDayOfWeek(Number(e.target.value))}
-                  className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-1.5 text-sm text-slate-200"
+                  className="w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 py-1.5 text-sm text-[var(--text-primary)]"
                   data-testid="schedule-day"
                 >
                   {DAYS_OF_WEEK.map((day) => (
@@ -165,7 +165,7 @@ export function BackupScheduleConfig() {
           </div>
 
           {/* Retention info */}
-          <p className="text-xs text-slate-500" data-testid="retention-info">
+          <p className="text-xs text-[var(--text-muted)]" data-testid="retention-info">
             保留策略：最近 7 個每日備份 + 最近 4 個每週備份
           </p>
 
@@ -173,7 +173,7 @@ export function BackupScheduleConfig() {
           <button
             onClick={handleSave}
             disabled={updateSchedule.isPending}
-            className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+            className="flex items-center gap-2 rounded-lg bg-[var(--accent-primary)] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[var(--accent-hover)] disabled:opacity-50"
             data-testid="schedule-save-btn"
           >
             {updateSchedule.isPending && <Loader2 className="h-3 w-3 animate-spin" />}
@@ -184,7 +184,7 @@ export function BackupScheduleConfig() {
 
       {/* Message */}
       {message && (
-        <p className="mt-3 text-xs text-slate-400" data-testid="schedule-message">
+        <p className="mt-3 text-xs text-[var(--text-secondary)]" data-testid="schedule-message">
           {message}
         </p>
       )}

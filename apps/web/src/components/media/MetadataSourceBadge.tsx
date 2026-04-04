@@ -10,7 +10,12 @@ interface SourceConfig {
 const SOURCE_CONFIG: Record<MetadataSource, SourceConfig> = {
   tmdb: { icon: '🎬', label: 'TMDb', color: '#0d253f', bgColor: 'bg-blue-900/50' },
   douban: { icon: '📗', label: '豆瓣', color: '#00b51d', bgColor: 'bg-green-900/50' },
-  wikipedia: { icon: '📖', label: 'Wikipedia', color: '#636466', bgColor: 'bg-gray-700/50' },
+  wikipedia: {
+    icon: '📖',
+    label: 'Wikipedia',
+    color: '#636466',
+    bgColor: 'bg-[var(--bg-tertiary)]/50',
+  },
   ai: { icon: '🤖', label: 'AI 解析', color: '#7c3aed', bgColor: 'bg-purple-900/50' },
   manual: { icon: '✏️', label: '手動輸入', color: '#f59e0b', bgColor: 'bg-amber-900/50' },
 };
@@ -30,7 +35,7 @@ export function MetadataSourceBadge({ source, fetchDate }: MetadataSourceBadgePr
 
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${config.bgColor} text-gray-200`}
+      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${config.bgColor} text-[var(--text-primary)]`}
       title={tooltipText}
       data-testid="metadata-source-badge"
     >

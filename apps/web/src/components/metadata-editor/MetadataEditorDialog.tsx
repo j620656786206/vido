@@ -213,22 +213,22 @@ export function MetadataEditorDialog({
         className={cn(
           'fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2',
           'w-[90vw] max-w-2xl max-h-[85vh]',
-          'bg-slate-900 rounded-xl shadow-2xl',
+          'bg-[var(--bg-primary)] rounded-xl shadow-2xl',
           'flex flex-col overflow-hidden'
         )}
         data-testid="metadata-editor-dialog"
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-700 px-6 py-4">
+        <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-6 py-4">
           <h2 id="metadata-editor-title" className="text-xl font-semibold text-white">
             編輯媒體資訊
           </h2>
           <button
             onClick={onClose}
             className={cn(
-              'rounded-lg p-2 text-gray-400',
-              'hover:bg-slate-800 hover:text-white',
-              'focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500',
+              'rounded-lg p-2 text-[var(--text-secondary)]',
+              'hover:bg-[var(--bg-secondary)] hover:text-white',
+              'focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]',
               'transition-colors'
             )}
             aria-label="關閉"
@@ -244,36 +244,40 @@ export function MetadataEditorDialog({
         >
           {/* Title (Chinese) */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">
-              標題（中文）<span className="text-red-400">*</span>
+            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+              標題（中文）<span className="text-[var(--error)]">*</span>
             </label>
             <input
               type="text"
               {...register('title')}
               className={cn(
                 'w-full px-4 py-2',
-                'bg-slate-800 border rounded-lg',
-                'text-white placeholder-slate-400',
-                'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+                'bg-[var(--bg-secondary)] border rounded-lg',
+                'text-white placeholder-[var(--text-muted)]',
+                'focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent',
                 'transition-colors',
-                errors.title ? 'border-red-500' : 'border-slate-700'
+                errors.title ? 'border-red-500' : 'border-[var(--border-subtle)]'
               )}
               placeholder="輸入中文標題"
             />
-            {errors.title && <p className="mt-1 text-sm text-red-400">{errors.title.message}</p>}
+            {errors.title && (
+              <p className="mt-1 text-sm text-[var(--error)]">{errors.title.message}</p>
+            )}
           </div>
 
           {/* Title (English) */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">標題（英文）</label>
+            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+              標題（英文）
+            </label>
             <input
               type="text"
               {...register('titleEnglish')}
               className={cn(
                 'w-full px-4 py-2',
-                'bg-slate-800 border border-slate-700 rounded-lg',
-                'text-white placeholder-slate-400',
-                'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+                'bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-lg',
+                'text-white placeholder-[var(--text-muted)]',
+                'focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent',
                 'transition-colors'
               )}
               placeholder="輸入英文標題"
@@ -282,30 +286,34 @@ export function MetadataEditorDialog({
 
           {/* Year */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">
-              年份 <span className="text-red-400">*</span>
+            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+              年份 <span className="text-[var(--error)]">*</span>
             </label>
             <input
               type="number"
               {...register('year', { valueAsNumber: true })}
               className={cn(
                 'w-full px-4 py-2',
-                'bg-slate-800 border rounded-lg',
-                'text-white placeholder-slate-400',
-                'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+                'bg-[var(--bg-secondary)] border rounded-lg',
+                'text-white placeholder-[var(--text-muted)]',
+                'focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent',
                 'transition-colors',
-                errors.year ? 'border-red-500' : 'border-slate-700'
+                errors.year ? 'border-red-500' : 'border-[var(--border-subtle)]'
               )}
               placeholder="輸入年份"
               min={1900}
               max={2100}
             />
-            {errors.year && <p className="mt-1 text-sm text-red-400">{errors.year.message}</p>}
+            {errors.year && (
+              <p className="mt-1 text-sm text-[var(--error)]">{errors.year.message}</p>
+            )}
           </div>
 
           {/* Genres */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">類型</label>
+            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
+              類型
+            </label>
             <div className="flex flex-wrap gap-2">
               {GENRE_OPTIONS.map((genre) => (
                 <button
@@ -315,8 +323,8 @@ export function MetadataEditorDialog({
                   className={cn(
                     'px-3 py-1.5 rounded-full text-sm font-medium transition-colors',
                     selectedGenres?.includes(genre.value)
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'
+                      ? 'bg-[var(--accent-primary)] text-white'
+                      : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-white'
                   )}
                 >
                   {genre.label}
@@ -327,15 +335,17 @@ export function MetadataEditorDialog({
 
           {/* Director */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">導演</label>
+            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+              導演
+            </label>
             <input
               type="text"
               {...register('director')}
               className={cn(
                 'w-full px-4 py-2',
-                'bg-slate-800 border border-slate-700 rounded-lg',
-                'text-white placeholder-slate-400',
-                'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+                'bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-lg',
+                'text-white placeholder-[var(--text-muted)]',
+                'focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent',
                 'transition-colors'
               )}
               placeholder="輸入導演名稱"
@@ -344,18 +354,20 @@ export function MetadataEditorDialog({
 
           {/* Cast */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">演員</label>
+            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+              演員
+            </label>
             <div className="flex flex-wrap gap-2 mb-2">
               {castList?.map((actor) => (
                 <span
                   key={actor}
-                  className="inline-flex items-center gap-1 px-2 py-1 bg-slate-800 text-white rounded-lg text-sm"
+                  className="inline-flex items-center gap-1 px-2 py-1 bg-[var(--bg-secondary)] text-white rounded-lg text-sm"
                 >
                   {actor}
                   <button
                     type="button"
                     onClick={() => removeCastMember(actor)}
-                    className="text-slate-400 hover:text-red-400 transition-colors"
+                    className="text-[var(--text-secondary)] hover:text-[var(--error)] transition-colors"
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -367,9 +379,9 @@ export function MetadataEditorDialog({
               placeholder="輸入演員名稱後按 Enter"
               className={cn(
                 'w-full px-4 py-2',
-                'bg-slate-800 border border-slate-700 rounded-lg',
-                'text-white placeholder-slate-400',
-                'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+                'bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-lg',
+                'text-white placeholder-[var(--text-muted)]',
+                'focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent',
                 'transition-colors'
               )}
               onKeyDown={(e) => {
@@ -385,15 +397,17 @@ export function MetadataEditorDialog({
 
           {/* Overview */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">簡介</label>
+            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+              簡介
+            </label>
             <textarea
               {...register('overview')}
               rows={4}
               className={cn(
                 'w-full px-4 py-2',
-                'bg-slate-800 border border-slate-700 rounded-lg',
-                'text-white placeholder-slate-400',
-                'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+                'bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-lg',
+                'text-white placeholder-[var(--text-muted)]',
+                'focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent',
                 'transition-colors resize-none'
               )}
               placeholder="輸入媒體簡介"
@@ -402,15 +416,17 @@ export function MetadataEditorDialog({
 
           {/* Poster URL */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1">海報圖片網址</label>
+            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+              海報圖片網址
+            </label>
             <input
               type="text"
               {...register('posterUrl')}
               className={cn(
                 'w-full px-4 py-2',
-                'bg-slate-800 border border-slate-700 rounded-lg',
-                'text-white placeholder-slate-400',
-                'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+                'bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-lg',
+                'text-white placeholder-[var(--text-muted)]',
+                'focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent',
                 'transition-colors'
               )}
               placeholder="輸入海報圖片網址"
@@ -419,15 +435,15 @@ export function MetadataEditorDialog({
         </form>
 
         {/* Footer */}
-        <div className="flex items-center justify-between border-t border-slate-700 px-6 py-4">
+        <div className="flex items-center justify-between border-t border-[var(--border-subtle)] px-6 py-4">
           {updateMutation.error && (
-            <p className="text-sm text-red-400">更新失敗：{updateMutation.error.message}</p>
+            <p className="text-sm text-[var(--error)]">更新失敗：{updateMutation.error.message}</p>
           )}
           <div className="flex gap-3 ml-auto">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors"
+              className="px-4 py-2 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] transition-colors"
             >
               取消
             </button>
@@ -436,8 +452,8 @@ export function MetadataEditorDialog({
               onClick={handleSubmit(onSubmit)}
               disabled={updateMutation.isPending || !isDirty}
               className={cn(
-                'px-4 py-2 rounded-lg bg-blue-600 text-white',
-                'hover:bg-blue-700 transition-colors',
+                'px-4 py-2 rounded-lg bg-[var(--accent-primary)] text-white',
+                'hover:bg-[var(--accent-pressed)] transition-colors',
                 'disabled:opacity-50 disabled:cursor-not-allowed',
                 'flex items-center gap-2'
               )}

@@ -144,9 +144,9 @@ describe('PosterUploader', () => {
     const dropzone = screen.getByTestId('poster-dropzone');
 
     fireEvent.dragOver(dropzone);
-    expect(dropzone.className).toContain('border-blue-500');
+    expect(dropzone.className).toContain('border-[var(--accent-primary)]');
 
     fireEvent.dragLeave(dropzone);
-    expect(dropzone.className).not.toContain('border-blue-500');
+    expect(dropzone.className).not.toContain('border-[var(--accent-primary)]');
   });
 });

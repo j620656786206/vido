@@ -26,12 +26,12 @@ export function FilterChips({
       {filters.genres.map((genre) => (
         <span
           key={genre}
-          className="inline-flex items-center gap-1 rounded-full bg-blue-600/20 px-3 py-1 text-sm text-blue-300"
+          className="inline-flex items-center gap-1 rounded-full bg-[var(--accent-primary)]/20 px-3 py-1 text-sm text-blue-300"
         >
           {genre}
           <button
             onClick={() => onRemoveGenre(genre)}
-            className="ml-0.5 rounded-full p-0.5 hover:bg-blue-600/30"
+            className="ml-0.5 rounded-full p-0.5 hover:bg-[var(--accent-primary)]/30"
             aria-label={`移除 ${genre} 篩選`}
           >
             <X className="h-3 w-3" />
@@ -40,11 +40,11 @@ export function FilterChips({
       ))}
 
       {filters.yearMin !== undefined && (
-        <span className="inline-flex items-center gap-1 rounded-full bg-blue-600/20 px-3 py-1 text-sm text-blue-300">
+        <span className="inline-flex items-center gap-1 rounded-full bg-[var(--accent-primary)]/20 px-3 py-1 text-sm text-blue-300">
           {filters.yearMin} 年起
           <button
             onClick={onRemoveYearMin}
-            className="ml-0.5 rounded-full p-0.5 hover:bg-blue-600/30"
+            className="ml-0.5 rounded-full p-0.5 hover:bg-[var(--accent-primary)]/30"
             aria-label="移除最早年份篩選"
           >
             <X className="h-3 w-3" />
@@ -53,11 +53,11 @@ export function FilterChips({
       )}
 
       {filters.yearMax !== undefined && (
-        <span className="inline-flex items-center gap-1 rounded-full bg-blue-600/20 px-3 py-1 text-sm text-blue-300">
+        <span className="inline-flex items-center gap-1 rounded-full bg-[var(--accent-primary)]/20 px-3 py-1 text-sm text-blue-300">
           至 {filters.yearMax} 年
           <button
             onClick={onRemoveYearMax}
-            className="ml-0.5 rounded-full p-0.5 hover:bg-blue-600/30"
+            className="ml-0.5 rounded-full p-0.5 hover:bg-[var(--accent-primary)]/30"
             aria-label="移除最晚年份篩選"
           >
             <X className="h-3 w-3" />
@@ -67,7 +67,7 @@ export function FilterChips({
 
       <button
         onClick={onClearAll}
-        className="text-sm text-slate-400 underline-offset-2 hover:text-white hover:underline"
+        className="text-sm text-[var(--text-secondary)] underline-offset-2 hover:text-white hover:underline"
       >
         清除全部篩選
       </button>

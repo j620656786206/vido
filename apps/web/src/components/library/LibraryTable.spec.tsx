@@ -248,11 +248,11 @@ describe('LibraryTable', () => {
     expect(elements).toHaveLength(1);
   });
 
-  it('[P2] renders table header with bg-slate-800/50 background', () => {
+  it('[P2] renders table header with bg-[var(--bg-secondary)]/50 background', () => {
     const { container } = render(<LibraryTable items={mockItems} />);
     const headerRow = container.querySelector('thead tr');
     expect(headerRow).not.toBeNull();
-    expect(headerRow!.className).toContain('bg-slate-800/50');
+    expect(headerRow!.className).toContain('bg-[var(--bg-secondary)]/50');
   });
 
   it('[P2] shows 新增日期 label for createdAt column', () => {
@@ -272,7 +272,7 @@ describe('LibraryTable', () => {
     ];
     const { container } = render(<LibraryTable items={noGenreItems} />);
     const row = screen.getByTestId('library-table-row');
-    const genreSpans = row.querySelectorAll('.rounded.bg-slate-700');
+    const genreSpans = row.querySelectorAll('.rounded.bg-[var(--bg-tertiary)]');
     expect(genreSpans).toHaveLength(0);
   });
 });

@@ -111,16 +111,18 @@ export function PosterUploader({
 
   return (
     <div className="space-y-2">
-      <label className="block text-sm font-medium text-slate-300">海報圖片</label>
+      <label className="block text-sm font-medium text-[var(--text-secondary)]">海報圖片</label>
 
       {/* Method Toggle */}
-      <div className="flex rounded-lg bg-slate-800 p-1 w-fit">
+      <div className="flex rounded-lg bg-[var(--bg-secondary)] p-1 w-fit">
         <button
           type="button"
           onClick={() => setUploadMethod('file')}
           className={cn(
             'px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-1.5',
-            uploadMethod === 'file' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
+            uploadMethod === 'file'
+              ? 'bg-[var(--accent-primary)] text-white'
+              : 'text-[var(--text-secondary)] hover:text-white'
           )}
         >
           <Upload className="h-4 w-4" />
@@ -131,7 +133,9 @@ export function PosterUploader({
           onClick={() => setUploadMethod('url')}
           className={cn(
             'px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-1.5',
-            uploadMethod === 'url' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
+            uploadMethod === 'url'
+              ? 'bg-[var(--accent-primary)] text-white'
+              : 'text-[var(--text-secondary)] hover:text-white'
           )}
         >
           <Link className="h-4 w-4" />
@@ -148,8 +152,8 @@ export function PosterUploader({
           className={cn(
             'border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors',
             isDragOver
-              ? 'border-blue-500 bg-blue-500/10'
-              : 'border-slate-700 hover:border-slate-600',
+              ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)]/10'
+              : 'border-[var(--border-subtle)] hover:border-[var(--border-subtle)]',
             isUploading && 'opacity-50 pointer-events-none'
           )}
           data-testid="poster-dropzone"
@@ -164,8 +168,8 @@ export function PosterUploader({
           />
           {isUploading ? (
             <div className="flex flex-col items-center gap-2">
-              <Loader2 className="h-8 w-8 text-blue-400 animate-spin" />
-              <p className="text-slate-400">上傳中...</p>
+              <Loader2 className="h-8 w-8 text-[var(--accent-primary)] animate-spin" />
+              <p className="text-[var(--text-secondary)]">上傳中...</p>
             </div>
           ) : preview ? (
             <div className="relative inline-block">
@@ -176,17 +180,17 @@ export function PosterUploader({
                   e.stopPropagation();
                   clearPreview();
                 }}
-                className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                className="absolute -top-2 -right-2 p-1 bg-[var(--error)] text-white rounded-full hover:bg-[var(--error)] transition-colors"
                 aria-label="清除預覽"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
           ) : (
-            <div className="flex flex-col items-center gap-2 text-slate-400">
+            <div className="flex flex-col items-center gap-2 text-[var(--text-secondary)]">
               <Image className="h-10 w-10" />
               <p>拖放圖片或點擊選擇檔案</p>
-              <p className="text-xs text-slate-500">支援 JPG、PNG、WebP，最大 5MB</p>
+              <p className="text-xs text-[var(--text-muted)]">支援 JPG、PNG、WebP，最大 5MB</p>
             </div>
           )}
         </div>
@@ -199,9 +203,9 @@ export function PosterUploader({
             placeholder="輸入海報圖片網址"
             className={cn(
               'flex-1 px-4 py-2',
-              'bg-slate-800 border border-slate-700 rounded-lg',
-              'text-white placeholder-slate-400',
-              'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent',
+              'bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-lg',
+              'text-white placeholder-[var(--text-muted)]',
+              'focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)] focus:border-transparent',
               'transition-colors'
             )}
             data-testid="poster-url-input"
@@ -211,8 +215,8 @@ export function PosterUploader({
             onClick={handleUrlSubmit}
             disabled={!urlInput.trim()}
             className={cn(
-              'px-4 py-2 rounded-lg bg-blue-600 text-white',
-              'hover:bg-blue-700 transition-colors',
+              'px-4 py-2 rounded-lg bg-[var(--accent-primary)] text-white',
+              'hover:bg-[var(--accent-pressed)] transition-colors',
               'disabled:opacity-50 disabled:cursor-not-allowed'
             )}
           >
@@ -223,7 +227,7 @@ export function PosterUploader({
 
       {/* Error Display */}
       {(validationError || error) && (
-        <p className="text-sm text-red-400">{validationError || error}</p>
+        <p className="text-sm text-[var(--error)]">{validationError || error}</p>
       )}
     </div>
   );

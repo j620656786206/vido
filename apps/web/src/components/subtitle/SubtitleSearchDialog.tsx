@@ -153,9 +153,9 @@ export function SubtitleSearchDialog({
   }, []);
 
   const scoreColor = (score: number) => {
-    if (score > 0.7) return 'text-green-400 bg-green-400/10 border-green-400/40';
-    if (score > 0.4) return 'text-yellow-400 bg-yellow-400/10 border-yellow-400/40';
-    return 'text-red-400 bg-red-400/10 border-red-400/40';
+    if (score > 0.7) return 'text-[var(--success)] bg-green-400/10 border-green-400/40';
+    if (score > 0.4) return 'text-[var(--warning)] bg-yellow-400/10 border-yellow-400/40';
+    return 'text-[var(--error)] bg-red-400/10 border-red-400/40';
   };
 
   if (!open) return null;
@@ -173,16 +173,16 @@ export function SubtitleSearchDialog({
     >
       <div
         ref={dialogRef}
-        className="mx-4 w-full max-w-4xl max-h-[80vh] overflow-y-auto rounded-xl bg-slate-800 shadow-2xl"
+        className="mx-4 w-full max-w-4xl max-h-[80vh] overflow-y-auto rounded-xl bg-[var(--bg-secondary)] shadow-2xl"
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-700 px-6 py-4">
+        <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-6 py-4">
           <h2 id="subtitle-search-title" className="text-lg font-semibold text-white">
             搜尋字幕
           </h2>
           <button
             onClick={() => onOpenChange(false)}
-            className="rounded-lg p-1 text-slate-400 hover:bg-slate-700 hover:text-white"
+            className="rounded-lg p-1 text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-white"
             aria-label="關閉"
           >
             <X className="h-5 w-5" />
@@ -196,14 +196,14 @@ export function SubtitleSearchDialog({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="輸入搜尋關鍵字..."
-              className="flex-1 rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white placeholder-slate-400 focus:border-blue-500 focus:outline-none"
+              className="flex-1 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-white placeholder-[var(--text-muted)] focus:border-[var(--accent-primary)] focus:outline-none"
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               data-testid="subtitle-search-input"
             />
             <button
               onClick={handleSearch}
               disabled={isSearching}
-              className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
+              className="flex items-center gap-2 rounded-lg bg-[var(--accent-primary)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--accent-pressed)] disabled:opacity-50"
               data-testid="subtitle-search-btn"
             >
               {isSearching ? (
@@ -224,24 +224,24 @@ export function SubtitleSearchDialog({
                     type="checkbox"
                     checked={selectedProviders.includes(p.id)}
                     onChange={() => toggleProvider(p.id)}
-                    className="rounded border-slate-600 bg-slate-700 text-blue-600 focus:ring-blue-500"
+                    className="rounded border-[var(--border-subtle)] bg-[var(--bg-tertiary)] text-blue-600 focus:ring-[var(--accent-primary)]"
                     data-testid={`provider-${p.id}`}
                   />
-                  <span className="text-sm text-slate-300">{p.label}</span>
+                  <span className="text-sm text-[var(--text-secondary)]">{p.label}</span>
                 </label>
               ))}
             </div>
 
             {/* 繁體轉換 Toggle (AC #9, #10, #11) */}
             <label className="flex items-center gap-2 cursor-pointer" data-testid="convert-toggle">
-              <span className="text-sm text-slate-300">繁體轉換</span>
+              <span className="text-sm text-[var(--text-secondary)]">繁體轉換</span>
               <button
                 role="switch"
                 aria-checked={convertToTraditional}
                 onClick={() => setConvertToTraditional((v) => !v)}
                 className={cn(
                   'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
-                  convertToTraditional ? 'bg-blue-600' : 'bg-slate-600'
+                  convertToTraditional ? 'bg-[var(--accent-primary)]' : 'bg-[var(--bg-tertiary)]'
                 )}
               >
                 <span
@@ -256,7 +256,7 @@ export function SubtitleSearchDialog({
 
           {/* Search Error (M8) */}
           {searchError && (
-            <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">
+            <div className="rounded-lg border border-red-500/30 bg-[var(--error)]/10 p-3 text-sm text-[var(--error)]">
               搜尋失敗：{searchError.message}
             </div>
           )}
@@ -264,42 +264,42 @@ export function SubtitleSearchDialog({
           {/* Results Table */}
           {resultCount > 0 && (
             <div>
-              <p className="mb-2 text-sm text-slate-400">找到 {resultCount} 個結果</p>
-              <div className="overflow-x-auto rounded-lg border border-slate-700">
+              <p className="mb-2 text-sm text-[var(--text-secondary)]">找到 {resultCount} 個結果</p>
+              <div className="overflow-x-auto rounded-lg border border-[var(--border-subtle)]">
                 <table className="w-full text-sm" data-testid="subtitle-results-table">
                   <thead>
-                    <tr className="border-b border-slate-700 bg-slate-800/50">
+                    <tr className="border-b border-[var(--border-subtle)] bg-[var(--bg-secondary)]/50">
                       <th
-                        className="cursor-pointer px-3 py-2 text-left text-xs font-medium text-slate-400 hover:text-white"
+                        className="cursor-pointer px-3 py-2 text-left text-xs font-medium text-[var(--text-secondary)] hover:text-white"
                         onClick={() => toggleSort('source')}
                       >
                         來源 <SortIcon sortBy={sortBy} sortOrder={sortOrder} field="source" />
                       </th>
                       <th
-                        className="cursor-pointer px-3 py-2 text-left text-xs font-medium text-slate-400 hover:text-white"
+                        className="cursor-pointer px-3 py-2 text-left text-xs font-medium text-[var(--text-secondary)] hover:text-white"
                         onClick={() => toggleSort('language')}
                       >
                         語言 <SortIcon sortBy={sortBy} sortOrder={sortOrder} field="language" />
                       </th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-slate-400">
+                      <th className="px-3 py-2 text-left text-xs font-medium text-[var(--text-secondary)]">
                         字幕名稱
                       </th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-slate-400">
+                      <th className="px-3 py-2 text-left text-xs font-medium text-[var(--text-secondary)]">
                         格式
                       </th>
                       <th
-                        className="cursor-pointer px-3 py-2 text-center text-xs font-medium text-slate-400 hover:text-white"
+                        className="cursor-pointer px-3 py-2 text-center text-xs font-medium text-[var(--text-secondary)] hover:text-white"
                         onClick={() => toggleSort('score')}
                       >
                         評分 <SortIcon sortBy={sortBy} sortOrder={sortOrder} field="score" />
                       </th>
                       <th
-                        className="cursor-pointer px-3 py-2 text-right text-xs font-medium text-slate-400 hover:text-white"
+                        className="cursor-pointer px-3 py-2 text-right text-xs font-medium text-[var(--text-secondary)] hover:text-white"
                         onClick={() => toggleSort('downloads')}
                       >
                         下載數 <SortIcon sortBy={sortBy} sortOrder={sortOrder} field="downloads" />
                       </th>
-                      <th className="px-3 py-2 text-right text-xs font-medium text-slate-400">
+                      <th className="px-3 py-2 text-right text-xs font-medium text-[var(--text-secondary)]">
                         操作
                       </th>
                     </tr>
@@ -308,18 +308,22 @@ export function SubtitleSearchDialog({
                     {results.map((result) => (
                       <tr
                         key={`${result.source}-${result.id}`}
-                        className="border-b border-slate-700/50 hover:bg-slate-700/30"
+                        className="border-b border-[var(--border-subtle)]/50 hover:bg-[var(--bg-tertiary)]/30"
                         data-testid={`subtitle-row-${result.id}`}
                       >
-                        <td className="px-3 py-2 font-medium text-slate-200">{result.source}</td>
-                        <td className="px-3 py-2 text-slate-300">{result.language}</td>
+                        <td className="px-3 py-2 font-medium text-[var(--text-primary)]">
+                          {result.source}
+                        </td>
+                        <td className="px-3 py-2 text-[var(--text-secondary)]">
+                          {result.language}
+                        </td>
                         <td
-                          className="max-w-[200px] truncate px-3 py-2 text-slate-300"
+                          className="max-w-[200px] truncate px-3 py-2 text-[var(--text-secondary)]"
                           title={result.filename}
                         >
                           {result.filename}
                         </td>
-                        <td className="px-3 py-2 text-xs uppercase text-slate-500">
+                        <td className="px-3 py-2 text-xs uppercase text-[var(--text-muted)]">
                           {result.format || '-'}
                         </td>
                         <td className="px-3 py-2 text-center">
@@ -332,7 +336,9 @@ export function SubtitleSearchDialog({
                             {(result.score * 100).toFixed(0)}%
                           </span>
                         </td>
-                        <td className="px-3 py-2 text-right text-slate-400">{result.downloads}</td>
+                        <td className="px-3 py-2 text-right text-[var(--text-secondary)]">
+                          {result.downloads}
+                        </td>
                         <td className="px-3 py-2 text-right">
                           <div className="flex items-center justify-end gap-1">
                             {/* Preview */}
@@ -350,7 +356,7 @@ export function SubtitleSearchDialog({
                                   }
                                 }}
                                 disabled={previewingId === result.id}
-                                className="rounded-md border border-slate-600 px-2 py-1 text-xs text-slate-300 transition-colors hover:bg-slate-700 disabled:opacity-50"
+                                className="rounded-md border border-[var(--border-subtle)] px-2 py-1 text-xs text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] disabled:opacity-50"
                                 data-testid={`preview-btn-${result.id}`}
                               >
                                 {previewingId === result.id ? (
@@ -361,12 +367,15 @@ export function SubtitleSearchDialog({
                               </button>
                               {/* Preview Popover */}
                               {previewOpen === result.id && previewDataMap[result.id] && (
-                                <div className="absolute right-0 top-8 z-10 w-80 rounded-lg border border-slate-600 bg-slate-800 p-3 shadow-xl">
-                                  <p className="mb-2 text-xs font-medium text-slate-300">
+                                <div className="absolute right-0 top-8 z-10 w-80 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-3 shadow-xl">
+                                  <p className="mb-2 text-xs font-medium text-[var(--text-secondary)]">
                                     字幕預覽
                                   </p>
                                   {previewDataMap[result.id].lines.map((line, i) => (
-                                    <p key={i} className="font-mono text-xs text-slate-400">
+                                    <p
+                                      key={i}
+                                      className="font-mono text-xs text-[var(--text-secondary)]"
+                                    >
                                       {line}
                                     </p>
                                   ))}
@@ -378,7 +387,7 @@ export function SubtitleSearchDialog({
                             {downloadedIds.has(result.id) ? (
                               <button
                                 disabled
-                                className="rounded-md border border-green-600/40 bg-green-600/10 px-2 py-1 text-xs text-green-400"
+                                className="rounded-md border border-green-600/40 bg-[var(--success)]/10 px-2 py-1 text-xs text-[var(--success)]"
                               >
                                 <Check className="h-3 w-3" />
                               </button>
@@ -386,7 +395,7 @@ export function SubtitleSearchDialog({
                               <button
                                 onClick={() => handleDownload(result)}
                                 disabled={downloadingIds.has(result.id)}
-                                className="rounded-md bg-blue-600 px-2 py-1 text-xs text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
+                                className="rounded-md bg-[var(--accent-primary)] px-2 py-1 text-xs text-white transition-colors hover:bg-[var(--accent-pressed)] disabled:opacity-50"
                                 data-testid={`download-btn-${result.id}`}
                               >
                                 {downloadingIds.has(result.id) ? (
@@ -399,7 +408,7 @@ export function SubtitleSearchDialog({
                           </div>
                           {/* Per-row download error (Task 9.5) */}
                           {downloadErrorMap[result.id] && (
-                            <p className="mt-1 text-xs text-red-400">
+                            <p className="mt-1 text-xs text-[var(--error)]">
                               {downloadErrorMap[result.id]}
                             </p>
                           )}
@@ -414,7 +423,10 @@ export function SubtitleSearchDialog({
 
           {/* Empty state */}
           {resultCount === 0 && !isSearching && !searchError && (
-            <div className="py-8 text-center text-slate-500" data-testid="subtitle-empty-state">
+            <div
+              className="py-8 text-center text-[var(--text-muted)]"
+              data-testid="subtitle-empty-state"
+            >
               點擊「搜尋」開始查找字幕
             </div>
           )}
@@ -423,7 +435,7 @@ export function SubtitleSearchDialog({
 
       {/* Toast notification (Task 9.6) */}
       {toast && (
-        <div className="fixed bottom-6 right-6 z-[60] rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-lg">
+        <div className="fixed bottom-6 right-6 z-[60] rounded-lg bg-[var(--success)] px-4 py-2 text-sm font-medium text-white shadow-lg">
           {toast}
         </div>
       )}

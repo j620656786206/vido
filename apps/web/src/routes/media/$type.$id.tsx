@@ -51,10 +51,10 @@ function NotFoundComponent() {
     <div className="flex min-h-screen items-center justify-center">
       <div className="text-center">
         <h1 className="mb-4 text-4xl font-bold text-white">404</h1>
-        <p className="mb-6 text-gray-400">找不到該媒體內容</p>
+        <p className="mb-6 text-[var(--text-secondary)]">找不到該媒體內容</p>
         <button
           onClick={() => navigate({ to: '/library' })}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+          className="rounded-lg bg-[var(--accent-primary)] px-4 py-2 text-white hover:bg-[var(--accent-pressed)]"
         >
           返回媒體庫
         </button>
@@ -137,7 +137,7 @@ function MediaDetailRoute() {
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-[var(--accent-primary)]" />
       </div>
     );
   }
@@ -149,7 +149,7 @@ function MediaDetailRoute() {
 
   return (
     <>
-      <div className="relative min-h-screen bg-gray-900">
+      <div className="relative min-h-screen bg-[var(--bg-primary)]">
         {/* Backdrop image */}
         {localData.backdropPath && (
           <div className="absolute inset-x-0 top-0 h-[400px] overflow-hidden">
@@ -158,7 +158,7 @@ function MediaDetailRoute() {
               alt=""
               className="h-full w-full object-cover opacity-30"
             />
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent to-gray-900" />
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[var(--bg-primary)]" />
           </div>
         )}
 
@@ -167,7 +167,7 @@ function MediaDetailRoute() {
           {/* Back button */}
           <button
             onClick={handleBack}
-            className="mb-6 flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+            className="mb-6 flex items-center gap-2 text-[var(--text-secondary)] hover:text-white transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
             返回媒體庫
@@ -185,8 +185,8 @@ function MediaDetailRoute() {
                     className="w-full rounded-lg shadow-2xl"
                   />
                 ) : (
-                  <div className="flex aspect-[2/3] w-full items-center justify-center rounded-lg bg-gray-800">
-                    <Film className="h-16 w-16 text-gray-600" />
+                  <div className="flex aspect-[2/3] w-full items-center justify-center rounded-lg bg-[var(--bg-secondary)]">
+                    <Film className="h-16 w-16 text-[var(--text-muted)]" />
                   </div>
                 )}
               </div>
@@ -197,15 +197,17 @@ function MediaDetailRoute() {
                   <div>
                     <h1 className="text-3xl font-bold text-white">{localData.title}</h1>
                     {localData.originalTitle && localData.originalTitle !== localData.title && (
-                      <p className="mt-1 text-lg text-gray-400">{localData.originalTitle}</p>
+                      <p className="mt-1 text-lg text-[var(--text-secondary)]">
+                        {localData.originalTitle}
+                      </p>
                     )}
                   </div>
                   <button
                     onClick={() => setIsEditorOpen(true)}
                     className={cn(
                       'flex items-center gap-1.5 px-3 py-1.5 rounded-lg',
-                      'bg-slate-800/80 text-white text-sm',
-                      'hover:bg-slate-700 transition-colors'
+                      'bg-[var(--bg-secondary)]/80 text-white text-sm',
+                      'hover:bg-[var(--bg-tertiary)] transition-colors'
                     )}
                     aria-label="編輯媒體資訊"
                     data-testid="edit-metadata-button"
@@ -216,7 +218,7 @@ function MediaDetailRoute() {
                 </div>
 
                 {/* Meta line */}
-                <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-gray-400">
+                <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-[var(--text-secondary)]">
                   {(isMovie
                     ? localData.releaseDate
                     : (localData as typeof localSeries.data)?.firstAirDate) && (
@@ -228,11 +230,13 @@ function MediaDetailRoute() {
                     </span>
                   )}
                   {localData.voteAverage != null && localData.voteAverage > 0 && (
-                    <span className="text-yellow-400">⭐ {localData.voteAverage.toFixed(1)}</span>
+                    <span className="text-[var(--warning)]">
+                      ⭐ {localData.voteAverage.toFixed(1)}
+                    </span>
                   )}
                   {localData.genres?.length > 0 && <span>{localData.genres.join(' / ')}</span>}
                   {localData.metadataSource && (
-                    <span className="rounded bg-blue-600/30 px-2 py-0.5 text-xs text-blue-300">
+                    <span className="rounded bg-[var(--accent-primary)]/30 px-2 py-0.5 text-xs text-blue-300">
                       {localData.metadataSource}
                     </span>
                   )}
@@ -240,7 +244,9 @@ function MediaDetailRoute() {
 
                 {/* Overview */}
                 {localData.overview && (
-                  <p className="mt-4 leading-relaxed text-gray-300">{localData.overview}</p>
+                  <p className="mt-4 leading-relaxed text-[var(--text-secondary)]">
+                    {localData.overview}
+                  </p>
                 )}
 
                 {/* Credits */}
@@ -253,7 +259,7 @@ function MediaDetailRoute() {
             </div>
           ) : (
             /* Fallback UI — no TMDB metadata (Story 5-11) */
-            <div className="overflow-hidden rounded-xl bg-gray-800/50">
+            <div className="overflow-hidden rounded-xl bg-[var(--bg-secondary)]/50">
               {/* Color placeholder poster as backdrop */}
               <ColorPlaceholder
                 filename={localData.filePath ?? localData.title}
@@ -299,7 +305,7 @@ function MediaDetailRoute() {
         <div
           className={cn(
             'fixed bottom-6 left-1/2 -translate-x-1/2 z-50',
-            'px-4 py-2 rounded-lg bg-green-600 text-white',
+            'px-4 py-2 rounded-lg bg-[var(--success)] text-white',
             'shadow-lg animate-in fade-in slide-in-from-bottom-4'
           )}
           role="status"

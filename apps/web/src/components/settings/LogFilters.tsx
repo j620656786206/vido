@@ -7,19 +7,23 @@ const LOG_LEVELS = ['ERROR', 'WARN', 'INFO', 'DEBUG'] as const;
 const LEVEL_CHIP_STYLES: Record<string, { active: string; inactive: string }> = {
   ERROR: {
     active: 'border-red-400 bg-red-400/20 text-red-300',
-    inactive: 'border-slate-600 text-slate-400 hover:border-red-400/50 hover:text-red-300',
+    inactive:
+      'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-red-400/50 hover:text-red-300',
   },
   WARN: {
     active: 'border-yellow-400 bg-yellow-400/20 text-yellow-300',
-    inactive: 'border-slate-600 text-slate-400 hover:border-yellow-400/50 hover:text-yellow-300',
+    inactive:
+      'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-yellow-400/50 hover:text-yellow-300',
   },
   INFO: {
     active: 'border-blue-400 bg-blue-400/20 text-blue-300',
-    inactive: 'border-slate-600 text-slate-400 hover:border-blue-400/50 hover:text-blue-300',
+    inactive:
+      'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-blue-400/50 hover:text-blue-300',
   },
   DEBUG: {
-    active: 'border-gray-400 bg-gray-400/20 text-gray-300',
-    inactive: 'border-slate-600 text-slate-400 hover:border-gray-400/50 hover:text-gray-300',
+    active: 'border-[var(--border-subtle)] bg-[var(--text-muted)]/20 text-[var(--text-secondary)]',
+    inactive:
+      'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--text-muted)]/50 hover:text-[var(--text-secondary)]',
   },
 };
 
@@ -53,8 +57,8 @@ export function LogFilters({ level, keyword, onLevelChange, onKeywordChange }: L
           className={cn(
             'rounded-full border px-3 py-1 text-xs font-medium transition-colors',
             level === ''
-              ? 'border-slate-300 bg-slate-300/20 text-slate-200'
-              : 'border-slate-600 text-slate-400 hover:border-slate-400 hover:text-slate-300'
+              ? 'border-[var(--text-secondary)] bg-[var(--text-secondary)]/20 text-[var(--text-primary)]'
+              : 'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--text-muted)] hover:text-[var(--text-secondary)]'
           )}
           data-testid="log-filter-all"
         >
@@ -77,20 +81,20 @@ export function LogFilters({ level, keyword, onLevelChange, onKeywordChange }: L
 
       {/* Keyword search */}
       <div className="relative flex-1 sm:max-w-xs" data-testid="log-keyword-search">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" />
         <input
           type="text"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="搜尋關鍵字..."
-          className="w-full rounded-lg border border-slate-600 bg-slate-800 py-1.5 pl-9 pr-8 text-sm text-slate-200 placeholder-slate-500 focus:border-blue-400 focus:outline-none"
+          className="w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)] py-1.5 pl-9 pr-8 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:border-blue-400 focus:outline-none"
           data-testid="log-keyword-input"
         />
         {inputValue && (
           <button
             onClick={handleClearKeyword}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
             aria-label="清除搜尋"
             data-testid="log-keyword-clear"
           >

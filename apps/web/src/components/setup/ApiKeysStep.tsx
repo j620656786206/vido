@@ -9,13 +9,16 @@ const AI_PROVIDERS = [
 export function ApiKeysStep({ data, onUpdate, onNext, onBack, onSkip }: StepProps) {
   return (
     <div data-testid="api-keys-step">
-      <h2 className="mb-2 text-lg font-semibold text-slate-100">API 金鑰</h2>
-      <p className="mb-6 text-sm text-slate-400">
+      <h2 className="mb-2 text-lg font-semibold text-[var(--text-primary)]">API 金鑰</h2>
+      <p className="mb-6 text-sm text-[var(--text-secondary)]">
         設定 API 金鑰以啟用進階功能。可以稍後在設定頁面新增。
       </p>
 
       <div className="mb-4">
-        <label htmlFor="tmdb-api-key" className="mb-2 block text-sm font-medium text-slate-300">
+        <label
+          htmlFor="tmdb-api-key"
+          className="mb-2 block text-sm font-medium text-[var(--text-secondary)]"
+        >
           TMDb API 金鑰
         </label>
         <input
@@ -24,21 +27,24 @@ export function ApiKeysStep({ data, onUpdate, onNext, onBack, onSkip }: StepProp
           value={data.tmdbApiKey || ''}
           onChange={(e) => onUpdate({ tmdbApiKey: e.target.value })}
           placeholder="輸入 TMDb API 金鑰..."
-          className="w-full rounded-lg border border-slate-600/50 bg-slate-800/60 px-4 py-2.5 text-sm text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="w-full rounded-lg border border-[var(--border-subtle)]/50 bg-[var(--bg-secondary)]/60 px-4 py-2.5 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:border-[var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"
           data-testid="tmdb-key-input"
         />
-        <p className="mt-1 text-xs text-slate-500">用於取得電影和影集的中文元資料</p>
+        <p className="mt-1 text-xs text-[var(--text-muted)]">用於取得電影和影集的中文元資料</p>
       </div>
 
       <div className="mb-4">
-        <label htmlFor="ai-provider" className="mb-2 block text-sm font-medium text-slate-300">
+        <label
+          htmlFor="ai-provider"
+          className="mb-2 block text-sm font-medium text-[var(--text-secondary)]"
+        >
           AI 提供者
         </label>
         <select
           id="ai-provider"
           value={data.aiProvider || ''}
           onChange={(e) => onUpdate({ aiProvider: e.target.value })}
-          className="w-full rounded-lg border border-slate-600/50 bg-slate-800/60 px-4 py-2.5 text-sm text-slate-200 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          className="w-full rounded-lg border border-[var(--border-subtle)]/50 bg-[var(--bg-secondary)]/60 px-4 py-2.5 text-sm text-[var(--text-primary)] focus:border-[var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"
           data-testid="ai-provider-select"
         >
           {AI_PROVIDERS.map((provider) => (
@@ -51,7 +57,10 @@ export function ApiKeysStep({ data, onUpdate, onNext, onBack, onSkip }: StepProp
 
       {data.aiProvider && (
         <div className="mb-6">
-          <label htmlFor="ai-api-key" className="mb-2 block text-sm font-medium text-slate-300">
+          <label
+            htmlFor="ai-api-key"
+            className="mb-2 block text-sm font-medium text-[var(--text-secondary)]"
+          >
             AI API 金鑰
           </label>
           <input
@@ -60,7 +69,7 @@ export function ApiKeysStep({ data, onUpdate, onNext, onBack, onSkip }: StepProp
             value={data.aiApiKey || ''}
             onChange={(e) => onUpdate({ aiApiKey: e.target.value })}
             placeholder="輸入 AI API 金鑰..."
-            className="w-full rounded-lg border border-slate-600/50 bg-slate-800/60 px-4 py-2.5 text-sm text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="w-full rounded-lg border border-[var(--border-subtle)]/50 bg-[var(--bg-secondary)]/60 px-4 py-2.5 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:border-[var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"
             data-testid="ai-key-input"
           />
         </div>
@@ -79,7 +88,7 @@ export function ApiKeysStep({ data, onUpdate, onNext, onBack, onSkip }: StepProp
         <button
           type="button"
           onClick={onBack}
-          className="rounded-lg border border-slate-600/50 px-4 py-2.5 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-800"
+          className="rounded-lg border border-[var(--border-subtle)]/50 px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-secondary)]"
           data-testid="back-button"
         >
           上一步
@@ -87,7 +96,7 @@ export function ApiKeysStep({ data, onUpdate, onNext, onBack, onSkip }: StepProp
         <button
           type="button"
           onClick={onNext}
-          className="flex-1 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+          className="flex-1 rounded-lg bg-[var(--accent-primary)] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[var(--accent-pressed)]"
           data-testid="next-button"
         >
           下一步
@@ -96,7 +105,7 @@ export function ApiKeysStep({ data, onUpdate, onNext, onBack, onSkip }: StepProp
           <button
             type="button"
             onClick={onSkip}
-            className="rounded-lg px-4 py-2.5 text-sm font-medium text-slate-400 transition-colors hover:text-slate-200"
+            className="rounded-lg px-4 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
             data-testid="skip-button"
           >
             跳過

@@ -23,9 +23,9 @@ function SearchResultsSkeleton() {
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
       {Array.from({ length: 8 }).map((_, i) => (
         <div key={i} className="animate-pulse">
-          <div className="aspect-[2/3] bg-slate-700 rounded-lg" />
-          <div className="mt-2 h-4 bg-slate-700 rounded w-3/4" />
-          <div className="mt-1 h-3 bg-slate-700 rounded w-1/2" />
+          <div className="aspect-[2/3] bg-[var(--bg-tertiary)] rounded-lg" />
+          <div className="mt-2 h-4 bg-[var(--bg-tertiary)] rounded w-3/4" />
+          <div className="mt-1 h-3 bg-[var(--bg-tertiary)] rounded w-1/2" />
         </div>
       ))}
     </div>
@@ -38,11 +38,13 @@ function SearchResultsSkeleton() {
 function EmptyState({ searchedSources }: { searchedSources?: string[] }) {
   return (
     <div className="flex flex-col items-center justify-center py-12 text-center">
-      <Search className="h-12 w-12 text-slate-500 mb-4" />
+      <Search className="h-12 w-12 text-[var(--text-muted)] mb-4" />
       <h3 className="text-lg font-medium text-white mb-2">找不到結果</h3>
-      <p className="text-slate-400 max-w-md">試試其他關鍵字或選擇不同的來源</p>
+      <p className="text-[var(--text-secondary)] max-w-md">試試其他關鍵字或選擇不同的來源</p>
       {searchedSources && searchedSources.length > 0 && (
-        <p className="text-slate-500 text-sm mt-2">已搜尋：{searchedSources.join(', ')}</p>
+        <p className="text-[var(--text-muted)] text-sm mt-2">
+          已搜尋：{searchedSources.join(', ')}
+        </p>
       )}
     </div>
   );
@@ -54,9 +56,9 @@ function EmptyState({ searchedSources }: { searchedSources?: string[] }) {
 function InitialState() {
   return (
     <div className="flex flex-col items-center justify-center py-12 text-center">
-      <Search className="h-12 w-12 text-slate-500 mb-4" />
+      <Search className="h-12 w-12 text-[var(--text-muted)] mb-4" />
       <h3 className="text-lg font-medium text-white mb-2">搜尋 Metadata</h3>
-      <p className="text-slate-400">輸入至少 2 個字元開始搜尋</p>
+      <p className="text-[var(--text-secondary)]">輸入至少 2 個字元開始搜尋</p>
     </div>
   );
 }
@@ -73,8 +75,8 @@ export function SearchResultsGrid({
     return (
       <div className="relative">
         <SearchResultsSkeleton />
-        <div className="absolute inset-0 flex items-center justify-center bg-slate-900/50">
-          <Loader2 className="h-8 w-8 text-blue-400 animate-spin" />
+        <div className="absolute inset-0 flex items-center justify-center bg-[var(--bg-primary)]/50">
+          <Loader2 className="h-8 w-8 text-[var(--accent-primary)] animate-spin" />
         </div>
       </div>
     );
@@ -94,7 +96,7 @@ export function SearchResultsGrid({
   return (
     <div className="space-y-4">
       {/* Results count and sources */}
-      <div className="flex items-center justify-between text-sm text-slate-400">
+      <div className="flex items-center justify-between text-sm text-[var(--text-secondary)]">
         <span>找到 {results.length} 個結果</span>
         <span>來源：{searchedSources.join(', ')}</span>
       </div>

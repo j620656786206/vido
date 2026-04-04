@@ -32,20 +32,20 @@ export function RetryQueueSection({ className, detailed = false }: RetryQueueSec
 
   return (
     <div
-      className={cn('border-t border-slate-700 pt-3 mt-3', className)}
+      className={cn('border-t border-[var(--border-subtle)] pt-3 mt-3', className)}
       data-testid="retry-queue-section"
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2 text-sm">
-          <RefreshCw className="h-4 w-4 text-yellow-500" />
-          <span className="text-slate-300">重試隊列</span>
-          <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-500/20 text-yellow-400">
+          <RefreshCw className="h-4 w-4 text-[var(--warning)]" />
+          <span className="text-[var(--text-secondary)]">重試隊列</span>
+          <span className="text-xs px-1.5 py-0.5 rounded bg-[var(--warning)]/20 text-[var(--warning)]">
             {items.length}
           </span>
         </div>
         {stats && stats.totalSucceeded > 0 && (
-          <span className="text-xs text-green-400 flex items-center gap-1">
+          <span className="text-xs text-[var(--success)] flex items-center gap-1">
             <CheckCircle2 className="h-3 w-3" />
             {stats.totalSucceeded} 已成功
           </span>
@@ -57,13 +57,13 @@ export function RetryQueueSection({ className, detailed = false }: RetryQueueSec
         {items.slice(0, detailed ? items.length : 2).map((item) => (
           <div
             key={item.id}
-            className="flex items-center justify-between text-sm bg-slate-700/50 rounded px-2 py-1.5"
+            className="flex items-center justify-between text-sm bg-[var(--bg-tertiary)]/50 rounded px-2 py-1.5"
           >
             <div className="flex items-center gap-2 min-w-0 flex-1">
-              <span className="text-xs px-1.5 py-0.5 rounded bg-slate-600 text-slate-300">
+              <span className="text-xs px-1.5 py-0.5 rounded bg-[var(--bg-tertiary)] text-[var(--text-secondary)]">
                 {item.taskType === 'parse' ? '解析' : '元資料'}
               </span>
-              <span className="text-slate-400 truncate text-xs" title={item.taskId}>
+              <span className="text-[var(--text-secondary)] truncate text-xs" title={item.taskId}>
                 {item.attemptCount}/{item.maxAttempts}
               </span>
             </div>
@@ -71,13 +71,15 @@ export function RetryQueueSection({ className, detailed = false }: RetryQueueSec
           </div>
         ))}
         {!detailed && items.length > 2 && (
-          <div className="text-xs text-slate-500 text-center">還有 {items.length - 2} 項...</div>
+          <div className="text-xs text-[var(--text-muted)] text-center">
+            還有 {items.length - 2} 項...
+          </div>
         )}
       </div>
 
       {/* Warning for exhausted retries */}
       {stats && stats.totalFailed > 0 && (
-        <div className="mt-2 flex items-center gap-1.5 text-xs text-yellow-400">
+        <div className="mt-2 flex items-center gap-1.5 text-xs text-[var(--warning)]">
           <AlertTriangle className="h-3 w-3" />
           <span>{stats.totalFailed} 項需要手動處理</span>
         </div>

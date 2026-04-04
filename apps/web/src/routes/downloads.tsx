@@ -83,8 +83,8 @@ function DownloadsPage() {
 
   return (
     <div className="mx-auto max-w-[1400px] px-6 py-8 lg:px-10">
-      <h1 className="mb-2 text-2xl font-bold text-slate-100">下載管理</h1>
-      <p className="mb-6 text-sm text-slate-400">
+      <h1 className="mb-2 text-2xl font-bold text-[var(--text-primary)]">下載管理</h1>
+      <p className="mb-6 text-sm text-[var(--text-secondary)]">
         即時監控 qBittorrent 下載狀態，每 5 秒自動更新。
       </p>
 
@@ -96,15 +96,15 @@ function DownloadsPage() {
 
       {isLoading && (
         <div className="flex items-center justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
-          <span className="ml-3 text-slate-400">載入中...</span>
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--accent-primary)] border-t-transparent" />
+          <span className="ml-3 text-[var(--text-secondary)]">載入中...</span>
         </div>
       )}
 
       {error && (
         <div className="rounded-lg border border-red-800 bg-red-900/20 p-4 text-sm text-red-300">
           <p className="font-medium">無法載入下載清單</p>
-          <p className="mt-1 text-red-400">{error.message}</p>
+          <p className="mt-1 text-[var(--error)]">{error.message}</p>
         </div>
       )}
 
@@ -170,12 +170,12 @@ function Pagination({
 
   return (
     <div className="mt-6 flex items-center justify-between">
-      <div className="flex items-center gap-2 text-sm text-slate-400">
+      <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
         <span>每頁</span>
         <select
           value={pageSize}
           onChange={(e) => onPageSizeChange(Number(e.target.value))}
-          className="rounded-md border border-slate-600 bg-slate-700 px-2 py-1 text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
+          className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-tertiary)] px-2 py-1 text-sm text-[var(--text-primary)] focus:border-[var(--accent-primary)] focus:outline-none"
         >
           {PAGE_SIZE_OPTIONS.map((size) => (
             <option key={size} value={size}>
@@ -184,7 +184,9 @@ function Pagination({
           ))}
         </select>
         <span>筆</span>
-        {pageSize >= 500 && <span className="text-xs text-yellow-500">大量項目可能影響效能</span>}
+        {pageSize >= 500 && (
+          <span className="text-xs text-[var(--warning)]">大量項目可能影響效能</span>
+        )}
       </div>
 
       <div className="flex items-center gap-1">
@@ -192,14 +194,14 @@ function Pagination({
           type="button"
           onClick={() => onPageChange(page - 1)}
           disabled={page <= 1}
-          className="rounded-md border border-slate-600 bg-slate-700 p-1.5 text-slate-300 hover:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-40"
+          className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-tertiary)] p-1.5 text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] disabled:cursor-not-allowed disabled:opacity-40"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
 
         {getPageNumbers().map((p, i) =>
           p === '...' ? (
-            <span key={`dots-${i}`} className="px-2 text-sm text-slate-500">
+            <span key={`dots-${i}`} className="px-2 text-sm text-[var(--text-muted)]">
               ...
             </span>
           ) : (
@@ -209,8 +211,8 @@ function Pagination({
               onClick={() => onPageChange(p)}
               className={`min-w-[32px] rounded-md px-2 py-1 text-sm font-medium ${
                 p === page
-                  ? 'bg-blue-600 text-white'
-                  : 'border border-slate-600 bg-slate-700 text-slate-300 hover:bg-slate-600'
+                  ? 'bg-[var(--accent-primary)] text-white'
+                  : 'border border-[var(--border-subtle)] bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'
               }`}
             >
               {p}
@@ -222,7 +224,7 @@ function Pagination({
           type="button"
           onClick={() => onPageChange(page + 1)}
           disabled={page >= totalPages}
-          className="rounded-md border border-slate-600 bg-slate-700 p-1.5 text-slate-300 hover:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-40"
+          className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-tertiary)] p-1.5 text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] disabled:cursor-not-allowed disabled:opacity-40"
         >
           <ChevronRight className="h-4 w-4" />
         </button>
@@ -242,7 +244,7 @@ function EmptyFilterState({ filter }: { filter: FilterStatus }) {
   };
 
   return (
-    <div className="rounded-lg border border-slate-700 bg-slate-800/50 py-12 text-center text-slate-400">
+    <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/50 py-12 text-center text-[var(--text-secondary)]">
       <p className="text-lg">{messages[filter]}</p>
       {filter === 'all' ? (
         <p className="mt-1 text-sm">在 qBittorrent 中新增種子後會自動顯示</p>

@@ -40,14 +40,17 @@ export function CacheTypeCard({ cacheType, onClear }: CacheTypeCardProps) {
 
   return (
     <div
-      className="flex items-center justify-between rounded-lg border border-slate-700 bg-slate-800/50 px-4 py-3"
+      className="flex items-center justify-between rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/50 px-4 py-3"
       data-testid={`cache-type-${cacheType.type}`}
     >
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-slate-200" data-testid="cache-type-label">
+        <p
+          className="text-sm font-medium text-[var(--text-primary)]"
+          data-testid="cache-type-label"
+        >
           {cacheType.label}
         </p>
-        <p className="text-xs text-slate-400" data-testid="cache-type-size">
+        <p className="text-xs text-[var(--text-secondary)]" data-testid="cache-type-size">
           {formatBytes(cacheType.sizeBytes)} · {cacheType.entryCount.toLocaleString()} 筆
         </p>
       </div>
@@ -56,7 +59,7 @@ export function CacheTypeCard({ cacheType, onClear }: CacheTypeCardProps) {
         {confirming && !clearing && (
           <button
             onClick={handleCancel}
-            className="rounded px-2 py-1 text-xs text-slate-400 hover:text-slate-200"
+            className="rounded px-2 py-1 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
             data-testid="cache-cancel-btn"
           >
             取消
@@ -67,8 +70,8 @@ export function CacheTypeCard({ cacheType, onClear }: CacheTypeCardProps) {
           disabled={clearing}
           className={`flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium transition-colors ${
             confirming
-              ? 'bg-red-600 text-white hover:bg-red-700'
-              : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+              ? 'bg-[var(--error)] text-white hover:bg-red-700'
+              : 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'
           } disabled:opacity-50`}
           data-testid="cache-clear-btn"
         >

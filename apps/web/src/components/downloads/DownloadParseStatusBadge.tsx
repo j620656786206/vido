@@ -19,22 +19,22 @@ const STATUS_CONFIG: Record<
 > = {
   pending: {
     icon: Loader2,
-    color: 'text-blue-400',
-    bgColor: 'bg-blue-500/10',
+    color: 'text-[var(--accent-primary)]',
+    bgColor: 'bg-[var(--accent-primary)]/10',
     label: '解析中...',
     animate: true,
   },
   processing: {
     icon: Loader2,
-    color: 'text-blue-400',
-    bgColor: 'bg-blue-500/10',
+    color: 'text-[var(--accent-primary)]',
+    bgColor: 'bg-[var(--accent-primary)]/10',
     label: '解析中...',
     animate: true,
   },
   completed: {
     icon: CheckCircle,
-    color: 'text-green-500',
-    bgColor: 'bg-green-500/10',
+    color: 'text-[var(--success)]',
+    bgColor: 'bg-[var(--success)]/10',
     label: '已解析',
   },
   completed_with_media: {
@@ -45,14 +45,14 @@ const STATUS_CONFIG: Record<
   },
   failed: {
     icon: XCircle,
-    color: 'text-red-500',
-    bgColor: 'bg-red-500/10',
+    color: 'text-[var(--error)]',
+    bgColor: 'bg-[var(--error)]/10',
     label: '解析失敗',
   },
   skipped: {
     icon: SkipForward,
-    color: 'text-slate-400',
-    bgColor: 'bg-slate-500/10',
+    color: 'text-[var(--text-secondary)]',
+    bgColor: 'bg-[var(--text-muted)]/10',
     label: '已跳過',
   },
 };

@@ -70,19 +70,19 @@ export function LearnPatternPrompt({
         </div>
         <div className="flex-1 min-w-0">
           <h4 className="text-sm font-medium text-amber-200">學習此規則？</h4>
-          <p className="mt-1 text-sm text-slate-300">
+          <p className="mt-1 text-sm text-[var(--text-secondary)]">
             系統偵測到以下規則，是否記住以便未來自動套用？
           </p>
 
           {/* Pattern Preview */}
           <div
-            className="mt-3 rounded bg-slate-800/50 px-3 py-2 font-mono text-sm"
+            className="mt-3 rounded bg-[var(--bg-secondary)]/50 px-3 py-2 font-mono text-sm"
             data-testid="pattern-preview"
           >
             {extractedPattern.fansubGroup && (
-              <span className="text-blue-400">[{extractedPattern.fansubGroup}]</span>
+              <span className="text-[var(--accent-primary)]">[{extractedPattern.fansubGroup}]</span>
             )}{' '}
-            <span className="text-green-400">{extractedPattern.titlePattern}</span>
+            <span className="text-[var(--success)]">{extractedPattern.titlePattern}</span>
           </div>
 
           {/* Action Buttons */}
@@ -110,8 +110,8 @@ export function LearnPatternPrompt({
               disabled={isLoading}
               className={cn(
                 'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5',
-                'bg-slate-700 text-slate-300 text-sm',
-                'hover:bg-slate-600 transition-colors',
+                'bg-[var(--bg-tertiary)] text-[var(--text-secondary)] text-sm',
+                'hover:bg-[var(--bg-tertiary)] transition-colors',
                 'disabled:opacity-50 disabled:cursor-not-allowed'
               )}
               data-testid="skip-learn-button"
@@ -141,7 +141,7 @@ export function PatternAppliedToast({ patternTitle, onClose }: PatternAppliedToa
       className={cn(
         'fixed bottom-6 left-1/2 -translate-x-1/2 z-50',
         'flex items-center gap-2 px-4 py-2 rounded-lg',
-        'bg-green-600 text-white shadow-lg',
+        'bg-[var(--success)] text-white shadow-lg',
         'animate-in fade-in slide-in-from-bottom-4'
       )}
       role="status"
@@ -154,7 +154,7 @@ export function PatternAppliedToast({ patternTitle, onClose }: PatternAppliedToa
       {onClose && (
         <button
           onClick={onClose}
-          className="ml-2 p-0.5 hover:bg-green-500 rounded"
+          className="ml-2 p-0.5 hover:bg-[var(--success)] rounded"
           aria-label="關閉"
         >
           <X className="h-4 w-4" />
@@ -179,7 +179,7 @@ export function LearnSuccessToast({ pattern, onClose }: LearnSuccessToastProps) 
       className={cn(
         'fixed bottom-6 left-1/2 -translate-x-1/2 z-50',
         'flex items-center gap-2 px-4 py-2 rounded-lg',
-        'bg-blue-600 text-white shadow-lg',
+        'bg-[var(--accent-primary)] text-white shadow-lg',
         'animate-in fade-in slide-in-from-bottom-4'
       )}
       role="status"
@@ -192,7 +192,7 @@ export function LearnSuccessToast({ pattern, onClose }: LearnSuccessToastProps) 
       {onClose && (
         <button
           onClick={onClose}
-          className="ml-2 p-0.5 hover:bg-blue-500 rounded"
+          className="ml-2 p-0.5 hover:bg-[var(--accent-hover)] rounded"
           aria-label="關閉"
         >
           <X className="h-4 w-4" />

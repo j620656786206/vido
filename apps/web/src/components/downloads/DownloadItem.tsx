@@ -13,7 +13,7 @@ interface DownloadItemProps {
 export function DownloadItem({ download, expanded, onToggleExpand }: DownloadItemProps) {
   return (
     <div
-      className="rounded-lg border border-slate-700 bg-slate-800/50 transition-colors hover:border-slate-600"
+      className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/50 transition-colors hover:border-[var(--border-subtle)]"
       data-testid={`download-item-${download.hash}`}
     >
       <button
@@ -28,17 +28,17 @@ export function DownloadItem({ download, expanded, onToggleExpand }: DownloadIte
 
           {/* Name and Progress */}
           <div className="min-w-0 flex-1">
-            <p className="truncate font-medium text-slate-100">{download.name}</p>
+            <p className="truncate font-medium text-[var(--text-primary)]">{download.name}</p>
             {/* Progress Bar */}
-            <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-slate-700">
+            <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
               <div
                 className={cn(
                   'h-full rounded-full transition-all',
                   download.progress >= 1
                     ? 'bg-emerald-500'
                     : download.status === 'error'
-                      ? 'bg-red-500'
-                      : 'bg-blue-500'
+                      ? 'bg-[var(--error)]'
+                      : 'bg-[var(--accent-primary)]'
                 )}
                 style={{ width: `${Math.min(download.progress * 100, 100)}%` }}
                 role="progressbar"
@@ -47,7 +47,7 @@ export function DownloadItem({ download, expanded, onToggleExpand }: DownloadIte
                 aria-valuemax={100}
               />
             </div>
-            <div className="mt-1 flex gap-4 text-xs text-slate-400">
+            <div className="mt-1 flex gap-4 text-xs text-[var(--text-secondary)]">
               <span>{formatProgress(download.progress)}</span>
               <span>
                 {formatSize(download.downloaded)} / {formatSize(download.size)}
@@ -59,12 +59,12 @@ export function DownloadItem({ download, expanded, onToggleExpand }: DownloadIte
           <div className="text-right text-sm">
             {download.status === 'downloading' && (
               <>
-                <p className="text-green-400">↓ {formatSpeed(download.downloadSpeed)}</p>
-                <p className="text-slate-400">{formatETA(download.eta)}</p>
+                <p className="text-[var(--success)]">↓ {formatSpeed(download.downloadSpeed)}</p>
+                <p className="text-[var(--text-secondary)]">{formatETA(download.eta)}</p>
               </>
             )}
             {download.status === 'seeding' && (
-              <p className="text-blue-400">↑ {formatSpeed(download.uploadSpeed)}</p>
+              <p className="text-[var(--accent-primary)]">↑ {formatSpeed(download.uploadSpeed)}</p>
             )}
             {download.status === 'completed' &&
               (download.parseStatus ? (
@@ -72,13 +72,16 @@ export function DownloadItem({ download, expanded, onToggleExpand }: DownloadIte
               ) : (
                 <p className="text-emerald-400">完成</p>
               ))}
-            {download.status === 'paused' && <p className="text-yellow-400">已暫停</p>}
-            {download.status === 'error' && <p className="text-red-400">錯誤</p>}
+            {download.status === 'paused' && <p className="text-[var(--warning)]">已暫停</p>}
+            {download.status === 'error' && <p className="text-[var(--error)]">錯誤</p>}
           </div>
 
           {/* Expand indicator */}
           <svg
-            className={cn('h-5 w-5 text-slate-300 transition-transform', expanded && 'rotate-180')}
+            className={cn(
+              'h-5 w-5 text-[var(--text-secondary)] transition-transform',
+              expanded && 'rotate-180'
+            )}
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"

@@ -47,7 +47,7 @@ export function GenreSelector({
 }: GenreSelectorProps) {
   return (
     <div>
-      <label className="block text-sm font-medium text-slate-300 mb-2">{label}</label>
+      <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">{label}</label>
       <div className="flex flex-wrap gap-2" data-testid="genre-selector">
         {options.map((genre) => (
           <button
@@ -57,8 +57,8 @@ export function GenreSelector({
             className={cn(
               'px-3 py-1.5 rounded-full text-sm font-medium transition-colors',
               selectedGenres.includes(genre.value)
-                ? 'bg-blue-600 text-white'
-                : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'
+                ? 'bg-[var(--accent-primary)] text-white'
+                : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-white'
             )}
             aria-pressed={selectedGenres.includes(genre.value)}
           >

@@ -58,7 +58,7 @@ export function RecentlyAdded() {
         <Link
           to="/library"
           search={{ sortBy: 'created_at', sortOrder: 'desc' }}
-          className="text-sm text-blue-400 hover:underline"
+          className="text-sm text-[var(--accent-primary)] hover:underline"
         >
           查看全部 &gt;
         </Link>

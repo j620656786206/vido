@@ -18,7 +18,7 @@ describe('MediaTypeTabs', () => {
 
     const movieTab = screen.getByRole('tab', { name: /電影/ });
     expect(movieTab).toHaveAttribute('aria-selected', 'true');
-    expect(movieTab).toHaveClass('bg-blue-600');
+    expect(movieTab).toHaveClass('bg-[var(--accent-primary)]');
   });
 
   it('should call onTypeChange when clicking a tab', () => {

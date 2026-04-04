@@ -35,19 +35,19 @@ describe('LogEntry', () => {
     render(<LogEntry log={makeLog({ level: 'ERROR' })} />);
     const badge = screen.getByTestId('log-level');
     expect(badge).toHaveTextContent('ERROR');
-    expect(badge.className).toContain('text-red-400');
+    expect(badge.className).toContain('text-[var(--error)]');
   });
 
   it('renders color-coded badge for WARN level', () => {
     render(<LogEntry log={makeLog({ level: 'WARN' })} />);
     const badge = screen.getByTestId('log-level');
-    expect(badge.className).toContain('text-yellow-400');
+    expect(badge.className).toContain('text-[var(--warning)]');
   });
 
   it('renders color-coded badge for DEBUG level', () => {
     render(<LogEntry log={makeLog({ level: 'DEBUG' })} />);
     const badge = screen.getByTestId('log-level');
-    expect(badge.className).toContain('text-gray-400');
+    expect(badge.className).toContain('text-[var(--text-secondary)]');
   });
 
   it('disables expand button when no context or hint', () => {

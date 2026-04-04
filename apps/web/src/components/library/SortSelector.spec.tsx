@@ -76,7 +76,7 @@ describe('SortSelector', () => {
     await userEvent.click(screen.getByTestId('sort-selector-button'));
 
     const titleOption = screen.getByTestId('sort-option-title');
-    expect(titleOption.className).toContain('bg-blue-600');
+    expect(titleOption.className).toContain('bg-[var(--accent-primary)]');
   });
 
   it('closes dropdown after selection', async () => {

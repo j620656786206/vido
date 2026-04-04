@@ -34,30 +34,32 @@ export function BatchProgress({
       role="dialog"
       aria-modal="true"
     >
-      <div className="mx-4 w-full max-w-sm rounded-xl bg-slate-800 p-6 shadow-2xl">
+      <div className="mx-4 w-full max-w-sm rounded-xl bg-[var(--bg-secondary)] p-6 shadow-2xl">
         <h3 className="mb-4 text-lg font-semibold text-white">
           {isComplete ? '操作完成' : action}
         </h3>
 
         {/* Progress bar */}
-        <div className="mb-2 h-2 overflow-hidden rounded-full bg-slate-700">
+        <div className="mb-2 h-2 overflow-hidden rounded-full bg-[var(--bg-tertiary)]">
           <div
             data-testid="progress-bar"
-            className="h-full rounded-full bg-blue-500 transition-all duration-300"
+            className="h-full rounded-full bg-[var(--accent-primary)] transition-all duration-300"
             style={{ width: `${progress}%` }}
           />
         </div>
 
-        <p className="mb-4 text-sm text-slate-300" data-testid="progress-text">
+        <p className="mb-4 text-sm text-[var(--text-secondary)]" data-testid="progress-text">
           {isComplete ? `已完成 ${current} / ${total}` : `處理中 ${current} / ${total}...`}
         </p>
 
         {/* Error list */}
         {hasErrors && (
-          <div className="mb-4 max-h-32 overflow-y-auto rounded-lg bg-slate-900 p-3">
-            <p className="mb-2 text-xs font-medium text-red-400">{errors.length} 個項目失敗：</p>
+          <div className="mb-4 max-h-32 overflow-y-auto rounded-lg bg-[var(--bg-primary)] p-3">
+            <p className="mb-2 text-xs font-medium text-[var(--error)]">
+              {errors.length} 個項目失敗：
+            </p>
             {errors.map((err) => (
-              <p key={err.id} className="text-xs text-slate-400">
+              <p key={err.id} className="text-xs text-[var(--text-secondary)]">
                 {err.id}: {err.message}
               </p>
             ))}
@@ -69,7 +71,7 @@ export function BatchProgress({
             <button
               onClick={onCancel}
               data-testid="progress-cancel-btn"
-              className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm text-slate-400 transition-colors hover:bg-slate-700 hover:text-white"
+              className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-white"
             >
               <X size={14} />
               取消
@@ -79,7 +81,7 @@ export function BatchProgress({
             <button
               onClick={onClose}
               data-testid="progress-close-btn"
-              className="rounded-lg bg-slate-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-600"
+              className="rounded-lg bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--bg-tertiary)]"
             >
               關閉
             </button>

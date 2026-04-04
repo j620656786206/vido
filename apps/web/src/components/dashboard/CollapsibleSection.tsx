@@ -32,20 +32,23 @@ export function CollapsibleSection({
 
   return (
     <div
-      className={cn('rounded-lg border border-slate-700 bg-slate-800/50', className)}
+      className={cn(
+        'rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)]/50',
+        className
+      )}
       data-testid={testId}
     >
       {/* Collapsible Header - clickable on mobile */}
       <button
         type="button"
         onClick={() => setIsExpanded(!isExpanded)}
-        className="flex w-full items-center justify-between border-b border-slate-700 px-4 py-3 text-left lg:cursor-default"
+        className="flex w-full items-center justify-between border-b border-[var(--border-subtle)] px-4 py-3 text-left lg:cursor-default"
         aria-expanded={isExpanded}
         aria-controls={`${testId}-content`}
       >
         <div className="flex items-center gap-2">
           {icon}
-          <h2 className="text-lg font-semibold text-slate-100">{title}</h2>
+          <h2 className="text-lg font-semibold text-[var(--text-primary)]">{title}</h2>
           {badge}
         </div>
         <div className="flex items-center gap-2">
@@ -53,7 +56,7 @@ export function CollapsibleSection({
           {/* Chevron only visible on mobile */}
           <ChevronDown
             className={cn(
-              'h-5 w-5 text-slate-400 transition-transform lg:hidden',
+              'h-5 w-5 text-[var(--text-secondary)] transition-transform lg:hidden',
               isExpanded && 'rotate-180'
             )}
           />

@@ -86,7 +86,7 @@ export function BackupManagement() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20" data-testid="backup-loading">
-        <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+        <Loader2 className="h-8 w-8 animate-spin text-[var(--text-secondary)]" />
       </div>
     );
   }
@@ -94,8 +94,8 @@ export function BackupManagement() {
   if (error) {
     return (
       <div className="py-10 text-center" data-testid="backup-error">
-        <p className="text-red-400">無法載入備份資料</p>
-        <p className="mt-1 text-sm text-slate-500">{error.message}</p>
+        <p className="text-[var(--error)]">無法載入備份資料</p>
+        <p className="mt-1 text-sm text-[var(--text-muted)]">{error.message}</p>
       </div>
     );
   }
@@ -107,24 +107,26 @@ export function BackupManagement() {
     <div className="space-y-6" data-testid="backup-management">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <HardDrive className="h-5 w-5 text-slate-400" />
+        <HardDrive className="h-5 w-5 text-[var(--text-secondary)]" />
         <div>
-          <h2 className="text-lg font-semibold text-slate-200">備份與還原</h2>
-          <p className="text-sm text-slate-400">建立與管理 Vido 資料庫備份，確保資料安全</p>
+          <h2 className="text-lg font-semibold text-[var(--text-primary)]">備份與還原</h2>
+          <p className="text-sm text-[var(--text-secondary)]">
+            建立與管理 Vido 資料庫備份，確保資料安全
+          </p>
         </div>
       </div>
 
       {/* Action bar */}
       <div className="flex items-center justify-between">
         <div className="space-y-1">
-          <p className="text-sm text-slate-300" data-testid="backup-summary">
+          <p className="text-sm text-[var(--text-secondary)]" data-testid="backup-summary">
             已使用 {formatBytes(totalSize)}（{backups.length} 個備份）
           </p>
         </div>
         <button
           onClick={handleCreate}
           disabled={createBackup.isPending}
-          className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+          className="flex items-center gap-2 rounded-lg bg-[var(--accent-primary)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--accent-hover)] disabled:opacity-50"
           data-testid="create-backup-btn"
         >
           {createBackup.isPending ? (
@@ -139,7 +141,7 @@ export function BackupManagement() {
       {/* Error display */}
       {createError && (
         <div
-          className="rounded-lg border border-red-800 bg-red-900/20 px-4 py-3 text-sm text-red-400"
+          className="rounded-lg border border-red-800 bg-red-900/20 px-4 py-3 text-sm text-[var(--error)]"
           role="alert"
           data-testid="create-error"
         >
@@ -169,7 +171,7 @@ export function BackupManagement() {
 
       {deleteError && (
         <div
-          className="rounded-lg border border-red-800 bg-red-900/20 px-4 py-3 text-sm text-red-400"
+          className="rounded-lg border border-red-800 bg-red-900/20 px-4 py-3 text-sm text-[var(--error)]"
           role="alert"
           data-testid="delete-error"
         >
@@ -190,7 +192,7 @@ export function BackupManagement() {
         />
       ) : (
         <div
-          className="rounded-lg border border-slate-700 bg-slate-800 py-16 text-center text-sm text-slate-500"
+          className="rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)] py-16 text-center text-sm text-[var(--text-muted)]"
           data-testid="backup-empty"
         >
           尚未建立任何備份

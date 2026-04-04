@@ -24,8 +24,8 @@ export function ViewToggle({ view, onViewChange }: ViewToggleProps) {
         className={cn(
           'rounded p-2 transition-colors',
           view === 'grid'
-            ? 'bg-blue-600 text-white'
-            : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+            ? 'bg-[var(--accent-primary)] text-white'
+            : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-white'
         )}
       >
         <LayoutGrid size={18} />
@@ -38,8 +38,8 @@ export function ViewToggle({ view, onViewChange }: ViewToggleProps) {
         className={cn(
           'rounded p-2 transition-colors',
           view === 'list'
-            ? 'bg-blue-600 text-white'
-            : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+            ? 'bg-[var(--accent-primary)] text-white'
+            : 'text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-white'
         )}
       >
         <List size={18} />

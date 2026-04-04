@@ -201,6 +201,6 @@ describe('SettingsPlaceholder', () => {
     const icon = screen.getByTestId('placeholder-icon');
     const wrapper = icon.parentElement;
     expect(wrapper).toHaveClass('rounded-full');
-    expect(wrapper).toHaveClass('bg-slate-800');
+    expect(wrapper).toHaveClass('bg-[var(--bg-secondary)]');
   });
 });

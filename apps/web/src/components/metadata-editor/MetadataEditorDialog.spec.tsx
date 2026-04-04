@@ -155,15 +155,15 @@ describe('MetadataEditorDialog', () => {
 
     // Find the 動畫 genre button (should be selected)
     const animationButton = screen.getByRole('button', { name: '動畫' });
-    expect(animationButton.className).toContain('bg-blue-600');
+    expect(animationButton.className).toContain('bg-[var(--accent-primary)]');
 
     // Click to deselect
     await userEvent.click(animationButton);
-    expect(animationButton.className).not.toContain('bg-blue-600');
+    expect(animationButton.className).not.toContain('bg-[var(--accent-primary)]');
 
     // Click to select again
     await userEvent.click(animationButton);
-    expect(animationButton.className).toContain('bg-blue-600');
+    expect(animationButton.className).toContain('bg-[var(--accent-primary)]');
   });
 
   it('adds and removes cast members', async () => {

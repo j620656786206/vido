@@ -28,14 +28,14 @@ function RootComponent() {
   // On setup page, render without AppShell or ScanProgress
   if (isSetupPage) {
     return (
-      <div className="text-slate-100">
+      <div className="text-[var(--text-primary)]">
         <Outlet />
       </div>
     );
   }
 
   return (
-    <div className="text-slate-100">
+    <div className="text-[var(--text-primary)]">
       <AppShell>
         <Outlet />
       </AppShell>

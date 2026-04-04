@@ -119,12 +119,12 @@ export function SetupWizard() {
 
   return (
     <div
-      className="w-full max-w-lg rounded-2xl border border-slate-700/50 bg-slate-900 p-8 shadow-2xl"
+      className="w-full max-w-lg rounded-2xl border border-[var(--border-subtle)]/50 bg-[var(--bg-primary)] p-8 shadow-2xl"
       data-testid="setup-wizard"
     >
       <div className="mb-8 text-center">
-        <h1 className="text-2xl font-bold text-slate-100">Vido 設定精靈</h1>
-        <p className="mt-1 text-sm text-slate-400">
+        <h1 className="text-2xl font-bold text-[var(--text-primary)]">Vido 設定精靈</h1>
+        <p className="mt-1 text-sm text-[var(--text-secondary)]">
           步驟 {currentStep + 1} / {WIZARD_STEPS.length}
         </p>
       </div>
@@ -133,7 +133,7 @@ export function SetupWizard() {
 
       {error && (
         <div
-          className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400"
+          className="mb-4 rounded-lg border border-red-500/30 bg-[var(--error)]/10 px-4 py-3 text-sm text-[var(--error)]"
           role="alert"
           data-testid="setup-error"
         >

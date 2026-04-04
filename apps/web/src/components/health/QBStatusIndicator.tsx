@@ -21,14 +21,14 @@ const statusConfig = {
   },
   degraded: {
     dotColor: 'bg-yellow-400',
-    textColor: 'text-yellow-400',
+    textColor: 'text-[var(--warning)]',
     bgColor: 'bg-yellow-900/30',
     label: 'qBittorrent 連線不穩定',
     Icon: AlertTriangle,
   },
   down: {
     dotColor: 'bg-red-400',
-    textColor: 'text-red-400',
+    textColor: 'text-[var(--error)]',
     bgColor: 'bg-red-900/30',
     label: 'qBittorrent 未連線',
     Icon: WifiOff,
@@ -44,8 +44,8 @@ export function QBStatusIndicator({ onClick }: QBStatusIndicatorProps) {
         className="flex items-center gap-1.5 rounded-full px-2 py-0.5"
         aria-label="載入連線狀態中"
       >
-        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-slate-500" />
-        <span className="text-xs text-slate-500">連線中...</span>
+        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--text-muted)]" />
+        <span className="text-xs text-[var(--text-muted)]">連線中...</span>
       </div>
     );
   }
