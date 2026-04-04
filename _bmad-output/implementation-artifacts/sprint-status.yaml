@@ -281,7 +281,7 @@ development_status:
   #   (5) 響應式斷點與 grid 策略
   #   (6) shadcn/ui 引入評估與建議（列出 Epic 10/11 需要的元件）
   #   輸出到 _bmad-output/planning-artifacts/design-guidelines.md
-  0-UX-1-design-guidelines-doc: backlog
+  0-UX-1-design-guidelines-doc: done              # 2026-04-04 — design-guidelines.md: 13 sections, color/typo/spacing tokens, shadcn/ui recommended, tailwind config target, migration cheat sheet
 
   # --- Task 2: Tailwind Config Alignment ---
   # AGENT: QD /quick-dev
