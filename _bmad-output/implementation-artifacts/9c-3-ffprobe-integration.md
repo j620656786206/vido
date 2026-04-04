@@ -1,6 +1,6 @@
 # Story 9c-3: FFprobe Integration
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -59,54 +59,54 @@ So that **I can see what quality my media files are in and make informed decisio
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Update Dockerfile (AC: #1)
-  - [ ] 1.1 Add `RUN apk add --no-cache ffmpeg` to runtime stage in `Dockerfile` (root, the unified image)
-  - [ ] 1.2 Also update `apps/api/Dockerfile` if still used for dev
+- [x] Task 1: Update Dockerfile (AC: #1)
+  - [x] 1.1 Add `RUN apk add --no-cache ffmpeg` to runtime stage in `Dockerfile` (root, the unified image)
+  - [x] 1.2 Also update `apps/api/Dockerfile` if still used for dev
 
-- [ ] Task 2: Create FFprobe service (AC: #2, #3, #4, #5, #6)
-  - [ ] 2.1 Create `apps/api/internal/services/ffprobe_service.go`
-  - [ ] 2.2 Define `FFprobeService` struct with semaphore channel, timeout, available bool
-  - [ ] 2.3 Implement `NewFFprobeService(maxConcurrent int, timeout time.Duration)` — `exec.LookPath` check
-  - [ ] 2.4 Implement `Probe(ctx context.Context, filePath string) (*MediaTechInfo, error)` — semaphore + exec + JSON parse
-  - [ ] 2.5 Define `MediaTechInfo` struct: VideoCodec, VideoResolution, AudioCodec, AudioChannels, HDRFormat, SubtitleTracks
-  - [ ] 2.6 Define `ErrFFprobeNotAvailable` sentinel error
+- [x] Task 2: Create FFprobe service (AC: #2, #3, #4, #5, #6)
+  - [x] 2.1 Create `apps/api/internal/services/ffprobe_service.go`
+  - [x] 2.2 Define `FFprobeService` struct with semaphore channel, timeout, available bool
+  - [x] 2.3 Implement `NewFFprobeService(maxConcurrent int, timeout time.Duration)` — `exec.LookPath` check
+  - [x] 2.4 Implement `Probe(ctx context.Context, filePath string) (*MediaTechInfo, error)` — semaphore + exec + JSON parse
+  - [x] 2.5 Define `MediaTechInfo` struct: VideoCodec, VideoResolution, AudioCodec, AudioChannels, HDRFormat, SubtitleTracks
+  - [x] 2.6 Define `ErrFFprobeNotAvailable` sentinel error
 
-- [ ] Task 3: Implement FFprobe JSON parser (AC: #4)
-  - [ ] 3.1 Implement `parseFfprobeJSON(output []byte) (*MediaTechInfo, error)`
-  - [ ] 3.2 Extract video stream: codec_name → normalized (h264→H.264, hevc→H.265, av1→AV1)
-  - [ ] 3.3 Extract video stream: width × height → "3840x2160"
-  - [ ] 3.4 Extract audio stream: codec_name → normalized (dts→DTS, aac→AAC, truehd→TrueHD)
-  - [ ] 3.5 Extract audio stream: channels count
-  - [ ] 3.6 Implement HDR detection: color_transfer (smpte2084=HDR10, arib-std-b67=HLG) + side_data (DolbyVision)
+- [x] Task 3: Implement FFprobe JSON parser (AC: #4)
+  - [x] 3.1 Implement `parseFfprobeJSON(output []byte) (*MediaTechInfo, error)`
+  - [x] 3.2 Extract video stream: codec_name → normalized (h264→H.264, hevc→H.265, av1→AV1)
+  - [x] 3.3 Extract video stream: width × height → "3840x2160"
+  - [x] 3.4 Extract audio stream: codec_name → normalized (dts→DTS, aac→AAC, truehd→TrueHD)
+  - [x] 3.5 Extract audio stream: channels count
+  - [x] 3.6 Implement HDR detection: color_transfer (smpte2084=HDR10, arib-std-b67=HLG) + side_data (DolbyVision)
 
-- [ ] Task 4: Implement external subtitle detection (AC: #9)
-  - [ ] 4.1 Scan filesystem for sidecar files: `.srt`, `.ass`, `.ssa`, `.sub` with language tags
-  - [ ] 4.2 Merge embedded tracks (from FFprobe) + external tracks into `subtitle_tracks` JSON array
+- [x] Task 4: Implement external subtitle detection (AC: #9)
+  - [x] 4.1 Scan filesystem for sidecar files: `.srt`, `.ass`, `.ssa`, `.sub` with language tags
+  - [x] 4.2 Merge embedded tracks (from FFprobe) + external tracks into `subtitle_tracks` JSON array
 
-- [ ] Task 5: Integrate into enrichment pipeline (AC: #7, #10)
-  - [ ] 5.1 Add `FFprobeService` dependency to `EnrichmentService`
-  - [ ] 5.2 Add FFprobe stage AFTER TMDB enrichment in `enrichMovie()` (append at bottom)
-  - [ ] 5.3 Skip if `movie.VideoCodec` already set (NFO streamdetails from 9c-2)
-  - [ ] 5.4 Apply `MediaTechInfo` to movie model fields
+- [x] Task 5: Integrate into enrichment pipeline (AC: #7, #10)
+  - [x] 5.1 Add `FFprobeService` dependency to `EnrichmentService`
+  - [x] 5.2 Add FFprobe stage AFTER TMDB enrichment in `enrichMovie()` (append at bottom)
+  - [x] 5.3 Skip if `movie.VideoCodec` already set (NFO streamdetails from 9c-2)
+  - [x] 5.4 Apply `MediaTechInfo` to movie model fields
 
-- [ ] Task 6: Implement series file_size aggregation (AC: #8)
-  - [ ] 6.1 In scanner service, after scanning all files for a series, sum file sizes
-  - [ ] 6.2 Update `series.file_size` with total bytes
-  - [ ] 6.3 Recalculate on each scan (not additive)
+- [x] Task 6: Implement series file_size aggregation (AC: #8)
+  - [x] 6.1 In scanner service, after scanning all files for a series, sum file sizes
+  - [x] 6.2 Update `series.file_size` with total bytes
+  - [x] 6.3 Recalculate on each scan (not additive)
 
-- [ ] Task 7: Wire in main.go (AC: all)
-  - [ ] 7.1 Create `FFprobeService` instance with maxConcurrent=3, timeout=10s
-  - [ ] 7.2 Pass to `NewEnrichmentService()` constructor
+- [x] Task 7: Wire in main.go (AC: all)
+  - [x] 7.1 Create `FFprobeService` instance with maxConcurrent=3, timeout=10s
+  - [x] 7.2 Pass to `NewEnrichmentService()` constructor
 
-- [ ] Task 8: Write tests (AC: #1-10)
-  - [ ] 8.1 FFprobe JSON parsing tests: H.265/4K/DTS sample, H.264/1080p/AAC sample
-  - [ ] 8.2 HDR detection tests: HDR10, DolbyVision, SDR (no HDR)
-  - [ ] 8.3 Semaphore tests: verify concurrency limiting
-  - [ ] 8.4 Graceful degradation test: ffprobe not found → ErrFFprobeNotAvailable
-  - [ ] 8.5 Timeout test: context cancellation after deadline
-  - [ ] 8.6 Enrichment integration: skip when VideoCodec already set
-  - [ ] 8.7 Series file_size calculation tests
-  - [ ] 8.8 External subtitle detection tests
+- [x] Task 8: Write tests (AC: #1-10)
+  - [x] 8.1 FFprobe JSON parsing tests: H.265/4K/DTS sample, H.264/1080p/AAC sample
+  - [x] 8.2 HDR detection tests: HDR10, DolbyVision, SDR (no HDR)
+  - [x] 8.3 Semaphore tests: verify concurrency limiting
+  - [x] 8.4 Graceful degradation test: ffprobe not found → ErrFFprobeNotAvailable
+  - [x] 8.5 Timeout test: context cancellation after deadline
+  - [x] 8.6 Enrichment integration: skip when VideoCodec already set
+  - [x] 8.7 Series file_size calculation tests
+  - [x] 8.8 External subtitle detection tests
 
 ## Dev Notes
 
@@ -162,9 +162,32 @@ So that **I can see what quality my media files are in and make informed decisio
 ## Dev Agent Record
 
 ### Agent Model Used
+Claude Opus 4.6 (1M context)
 
 ### Debug Log References
+- 63 tests passing (FFprobe + NFO + enrichment)
+- Full build clean (`go build ./...`)
+- TMDB + handler tests pass, no regressions
 
 ### Completion Notes List
+- FFprobeService: semaphore concurrency control, per-call timeout, exec.LookPath availability check
+- JSON parser: codec normalization (H.264/H.265/AV1/DTS/AAC/TrueHD etc.), HDR detection (HDR10/HLG/Dolby Vision)
+- External subtitle detection: scans for .srt/.ass/.ssa/.sub sidecar files, extracts language tags
+- Enrichment pipeline: FFprobe stage appended after TMDB enrichment, skips if VideoCodec already set (NFO)
+- Series file_size aggregation: post-scan step sums episode file sizes per series
+- Dockerfile: ffmpeg added to both root and apps/api runtime stages
+- 🎨 UX Verification: SKIPPED — no UI changes in this story
 
 ### File List
+- `apps/api/internal/services/ffprobe_service.go` — NEW: FFprobe service + JSON parser + external subtitle detection
+- `apps/api/internal/services/ffprobe_service_test.go` — NEW: 22 unit tests
+- `apps/api/internal/services/enrichment_service.go` — MODIFIED: FFprobeService dependency, tryFFprobeEnrichment()
+- `apps/api/internal/services/enrichment_nfo_test.go` — MODIFIED: updated NewEnrichmentService calls for new parameter
+- `apps/api/internal/services/scanner_service.go` — MODIFIED: episodeRepo, aggregateSeriesFileSizes()
+- `apps/api/cmd/api/main.go` — MODIFIED: wire FFprobeService + episodeRepo
+- `Dockerfile` — MODIFIED: add ffmpeg to runtime stage
+- `apps/api/Dockerfile` — MODIFIED: add ffmpeg to runtime stage
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — MODIFIED: 9c-3 status
+
+## Change Log
+- 2026-04-04: Story 9c-3 implemented — FFprobe service with semaphore/timeout, JSON parser with codec normalization + HDR detection, external subtitle detection, enrichment pipeline integration, series file_size aggregation, Docker ffmpeg. 22 tests added.

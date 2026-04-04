@@ -334,11 +334,16 @@ func main() {
 		slog.Default(),
 	)
 	scannerService.SetLibraryRepo(repos.MediaLibraries) // Story 7b-5: DB-based library scanning
+	scannerService.SetEpisodeRepo(repos.Episodes) // Story 9c-3: series file_size aggregation
 	slog.Info("Scanner service initialized")
 
 	// Initialize NFO reader service for .nfo sidecar parsing (Story 9c-2)
 	nfoReaderService := services.NewNFOReaderService(slog.Default())
 	slog.Info("NFO reader service initialized")
+
+	// Initialize FFprobe service for video technical info extraction (Story 9c-3)
+	ffprobeService := services.NewFFprobeService(3, 10*time.Second, slog.Default())
+	slog.Info("FFprobe service initialized", "available", ffprobeService.IsAvailable())
 
 	// Initialize enrichment service for post-scan metadata enrichment
 	enrichmentService := services.NewEnrichmentService(
@@ -347,6 +352,7 @@ func main() {
 		metadataService,
 		nfoReaderService,
 		tmdbService,
+		ffprobeService,
 		sseHub,
 		slog.Default(),
 	)

@@ -44,7 +44,7 @@ FROM alpine:3.21
 # Install runtime dependencies
 # - ca-certificates: for HTTPS requests to TMDb API
 # - tzdata: for timezone support
-RUN apk add --no-cache ca-certificates tzdata
+RUN apk add --no-cache ca-certificates tzdata ffmpeg
 
 # Create non-root user for security
 # Using fixed UID/GID for consistent permissions across hosts

@@ -62,6 +62,7 @@ type ScanResult struct {
 type ScannerService struct {
 	movieRepo   repository.MovieRepositoryInterface
 	seriesRepo  repository.SeriesRepositoryInterface
+	episodeRepo repository.EpisodeRepositoryInterface
 	libraryRepo repository.MediaLibraryRepositoryInterface
 	mediaDirs   []string // Fallback dirs from VIDO_MEDIA_DIRS env var
 	sseHub      *sse.Hub
@@ -103,6 +104,11 @@ func NewScannerService(
 // When set, the scanner reads libraries from DB instead of mediaDirs.
 func (s *ScannerService) SetLibraryRepo(repo repository.MediaLibraryRepositoryInterface) {
 	s.libraryRepo = repo
+}
+
+// SetEpisodeRepo sets the episode repository for series file_size aggregation (Story 9c-3)
+func (s *ScannerService) SetEpisodeRepo(repo repository.EpisodeRepositoryInterface) {
+	s.episodeRepo = repo
 }
 
 // StartScan initiates a recursive scan of all configured media directories.
@@ -242,6 +248,11 @@ func (s *ScannerService) StartScan(ctx context.Context) (*ScanResult, error) {
 		s.progress.FilesRemoved = removedCount
 		s.mu.Unlock()
 		s.logger.Info("detected removed files", "count", removedCount)
+	}
+
+	// Aggregate series file sizes (Story 9c-3 AC #8)
+	if err := s.aggregateSeriesFileSizes(ctx); err != nil {
+		s.logger.Error("failed to aggregate series file sizes", "error", err)
 	}
 
 	result := s.buildResult(startedAt)
@@ -598,4 +609,55 @@ func (s *ScannerService) buildResult(startedAt time.Time) *ScanResult {
 		StartedAt:    startedAt,
 		CompletedAt:  completedAt,
 	}
+}
+
+// aggregateSeriesFileSizes recalculates file_size for all series by summing
+// their episode file sizes from the filesystem. (Story 9c-3 AC #8)
+func (s *ScannerService) aggregateSeriesFileSizes(ctx context.Context) error {
+	if s.episodeRepo == nil || s.seriesRepo == nil {
+		return nil
+	}
+
+	// Get all series
+	allSeries, _, err := s.seriesRepo.List(ctx, repository.ListParams{Page: 1, PageSize: 10000})
+	if err != nil {
+		return fmt.Errorf("list series: %w", err)
+	}
+
+	updated := 0
+	for i := range allSeries {
+		series := &allSeries[i]
+		episodes, err := s.episodeRepo.FindBySeriesID(ctx, series.ID)
+		if err != nil {
+			s.logger.Warn("failed to get episodes for series file_size",
+				"series_id", series.ID, "error", err)
+			continue
+		}
+
+		var totalSize int64
+		for _, ep := range episodes {
+			if ep.FilePath.Valid && ep.FilePath.String != "" {
+				info, err := os.Stat(ep.FilePath.String)
+				if err == nil {
+					totalSize += info.Size()
+				}
+			}
+		}
+
+		if totalSize > 0 {
+			series.FileSize = models.NewNullInt64(totalSize)
+			series.UpdatedAt = time.Now()
+			if err := s.seriesRepo.Update(ctx, series); err != nil {
+				s.logger.Warn("failed to update series file_size",
+					"series_id", series.ID, "error", err)
+			} else {
+				updated++
+			}
+		}
+	}
+
+	if updated > 0 {
+		s.logger.Info("series file sizes aggregated", "updated", updated)
+	}
+	return nil
 }

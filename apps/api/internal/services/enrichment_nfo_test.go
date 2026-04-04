@@ -149,7 +149,7 @@ func TestEnrichMovie_NFO_TMDbDirectLookup(t *testing.T) {
 	mockRepo := &mockMovieRepoForNFO{}
 	nfoReader := NewNFOReaderService(nil)
 
-	svc := NewEnrichmentService(mockRepo, nil, nil, nfoReader, mockTMDb, nil, nil)
+	svc := NewEnrichmentService(mockRepo, nil, nil, nfoReader, mockTMDb, nil, nil, nil)
 
 	movie := &models.Movie{
 		ID:       "test-id",
@@ -204,7 +204,7 @@ func TestEnrichMovie_NFO_IMDbLookup(t *testing.T) {
 
 	mockRepo := &mockMovieRepoForNFO{}
 	nfoReader := NewNFOReaderService(nil)
-	svc := NewEnrichmentService(mockRepo, nil, nil, nfoReader, mockTMDb, nil, nil)
+	svc := NewEnrichmentService(mockRepo, nil, nil, nfoReader, mockTMDb, nil, nil, nil)
 
 	movie := &models.Movie{
 		ID:       "test-id-2",
@@ -232,7 +232,7 @@ func TestEnrichMovie_NFO_ManualBlocksOverwrite(t *testing.T) {
 	mockRepo := &mockMovieRepoForNFO{}
 	nfoReader := NewNFOReaderService(nil)
 	mockTMDb := &mockTMDbServiceForNFO{}
-	svc := NewEnrichmentService(mockRepo, nil, nil, nfoReader, mockTMDb, nil, nil)
+	svc := NewEnrichmentService(mockRepo, nil, nil, nfoReader, mockTMDb, nil, nil, nil)
 
 	movie := &models.Movie{
 		ID:             "test-id-3",
@@ -257,7 +257,7 @@ func TestEnrichMovie_NoNFO_FallsThrough(t *testing.T) {
 
 	mockRepo := &mockMovieRepoForNFO{}
 	nfoReader := NewNFOReaderService(nil)
-	svc := NewEnrichmentService(mockRepo, nil, nil, nfoReader, nil, nil, nil)
+	svc := NewEnrichmentService(mockRepo, nil, nil, nfoReader, nil, nil, nil, nil)
 
 	movie := &models.Movie{
 		ID:       "test-id-4",
@@ -289,7 +289,7 @@ func TestEnrichMovie_NFO_RescanIdempotent(t *testing.T) {
 
 	mockRepo := &mockMovieRepoForNFO{}
 	nfoReader := NewNFOReaderService(nil)
-	svc := NewEnrichmentService(mockRepo, nil, nil, nfoReader, mockTMDb, nil, nil)
+	svc := NewEnrichmentService(mockRepo, nil, nil, nfoReader, mockTMDb, nil, nil, nil)
 
 	movie := &models.Movie{
 		ID:             "test-id-5",
@@ -317,7 +317,7 @@ func TestEnrichMovie_NFO_MalformedFallsBack(t *testing.T) {
 
 	mockRepo := &mockMovieRepoForNFO{}
 	nfoReader := NewNFOReaderService(nil)
-	svc := NewEnrichmentService(mockRepo, nil, nil, nfoReader, nil, nil, nil)
+	svc := NewEnrichmentService(mockRepo, nil, nil, nfoReader, nil, nil, nil, nil)
 
 	movie := &models.Movie{
 		ID:       "test-id-6",
@@ -348,7 +348,7 @@ func TestEnrichMovie_NFO_URLFormat(t *testing.T) {
 
 	mockRepo := &mockMovieRepoForNFO{}
 	nfoReader := NewNFOReaderService(nil)
-	svc := NewEnrichmentService(mockRepo, nil, nil, nfoReader, mockTMDb, nil, nil)
+	svc := NewEnrichmentService(mockRepo, nil, nil, nfoReader, mockTMDb, nil, nil, nil)
 
 	movie := &models.Movie{
 		ID:       "test-id-7",
@@ -381,7 +381,7 @@ func TestEnrichMovie_NFO_IMDbNoMovieResults(t *testing.T) {
 
 	mockRepo := &mockMovieRepoForNFO{}
 	nfoReader := NewNFOReaderService(nil)
-	svc := NewEnrichmentService(mockRepo, nil, nil, nfoReader, mockTMDb, nil, nil)
+	svc := NewEnrichmentService(mockRepo, nil, nil, nfoReader, mockTMDb, nil, nil, nil)
 
 	movie := &models.Movie{
 		ID:       "test-imdb-empty",
@@ -409,7 +409,7 @@ func TestEnrichMovie_NFO_InvalidTMDbID(t *testing.T) {
 	mockTMDb := &mockTMDbServiceForNFO{}
 	mockRepo := &mockMovieRepoForNFO{}
 	nfoReader := NewNFOReaderService(nil)
-	svc := NewEnrichmentService(mockRepo, nil, nil, nfoReader, mockTMDb, nil, nil)
+	svc := NewEnrichmentService(mockRepo, nil, nil, nfoReader, mockTMDb, nil, nil, nil)
 
 	movie := &models.Movie{
 		ID:       "test-bad-tmdb",
@@ -428,7 +428,7 @@ func TestEnrichMovie_NFO_InvalidTMDbID(t *testing.T) {
 func TestEnrichMovie_NFO_NoFilePath(t *testing.T) {
 	mockRepo := &mockMovieRepoForNFO{}
 	nfoReader := NewNFOReaderService(nil)
-	svc := NewEnrichmentService(mockRepo, nil, nil, nfoReader, nil, nil, nil)
+	svc := NewEnrichmentService(mockRepo, nil, nil, nfoReader, nil, nil, nil, nil)
 
 	movie := &models.Movie{
 		ID:    "test-no-filepath",
@@ -461,7 +461,7 @@ func TestEnrichMovie_NFO_OverwritesTMDb(t *testing.T) {
 
 	mockRepo := &mockMovieRepoForNFO{}
 	nfoReader := NewNFOReaderService(nil)
-	svc := NewEnrichmentService(mockRepo, nil, nil, nfoReader, mockTMDb, nil, nil)
+	svc := NewEnrichmentService(mockRepo, nil, nil, nfoReader, mockTMDb, nil, nil, nil)
 
 	movie := &models.Movie{
 		ID:             "test-overwrite-tmdb",
@@ -504,7 +504,7 @@ func TestEnrichMovie_NFO_PartialStreamDetails(t *testing.T) {
 
 	mockRepo := &mockMovieRepoForNFO{}
 	nfoReader := NewNFOReaderService(nil)
-	svc := NewEnrichmentService(mockRepo, nil, nil, nfoReader, mockTMDb, nil, nil)
+	svc := NewEnrichmentService(mockRepo, nil, nil, nfoReader, mockTMDb, nil, nil, nil)
 
 	movie := &models.Movie{
 		ID:       "test-partial-stream",

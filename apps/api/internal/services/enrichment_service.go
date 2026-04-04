@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"strconv"
@@ -47,6 +48,7 @@ type EnrichmentService struct {
 	metadataService MetadataServiceInterface
 	nfoReader       *NFOReaderService
 	tmdbService     TMDbServiceInterface
+	ffprobeService  *FFprobeService
 	sseHub          *sse.Hub
 	logger          *slog.Logger
 
@@ -63,6 +65,7 @@ func NewEnrichmentService(
 	metadataService MetadataServiceInterface,
 	nfoReader *NFOReaderService,
 	tmdbService TMDbServiceInterface,
+	ffprobeService *FFprobeService,
 	sseHub *sse.Hub,
 	logger *slog.Logger,
 ) *EnrichmentService {
@@ -75,6 +78,7 @@ func NewEnrichmentService(
 		metadataService: metadataService,
 		nfoReader:       nfoReader,
 		tmdbService:     tmdbService,
+		ffprobeService:  ffprobeService,
 		sseHub:          sseHub,
 		logger:          logger.With("service", "enrichment"),
 	}
@@ -286,7 +290,69 @@ func (s *EnrichmentService) enrichMovie(ctx context.Context, movie *models.Movie
 		"tmdb_id", movie.TMDbID.Int64,
 	)
 
+	// Step 6: FFprobe technical info extraction (AC #7: skip if already set from NFO)
+	s.tryFFprobeEnrichment(ctx, movie)
+
 	return nil
+}
+
+// tryFFprobeEnrichment extracts technical info via FFprobe if not already present.
+// Skips if VideoCodec is already set (from NFO streamdetails).
+// Errors are logged but never propagate — FFprobe failure does not block enrichment.
+func (s *EnrichmentService) tryFFprobeEnrichment(ctx context.Context, movie *models.Movie) {
+	if s.ffprobeService == nil || !s.ffprobeService.IsAvailable() {
+		return
+	}
+	if !movie.FilePath.Valid || movie.FilePath.String == "" {
+		return
+	}
+	// AC #7: Skip if tech info already set (from NFO)
+	if movie.VideoCodec.Valid && movie.VideoCodec.String != "" {
+		s.logger.Debug("ffprobe skipped: tech info already set",
+			"id", movie.ID, "source", "nfo")
+		return
+	}
+
+	info, err := s.ffprobeService.Probe(ctx, movie.FilePath.String)
+	if err != nil {
+		s.logger.Warn("ffprobe failed, skipping tech info",
+			"id", movie.ID, "file", movie.FilePath.String, "error", err)
+		return
+	}
+
+	// Apply tech info
+	if info.VideoCodec != "" {
+		movie.VideoCodec = models.NewNullString(info.VideoCodec)
+	}
+	if info.VideoResolution != "" {
+		movie.VideoResolution = models.NewNullString(info.VideoResolution)
+	}
+	if info.AudioCodec != "" {
+		movie.AudioCodec = models.NewNullString(info.AudioCodec)
+	}
+	if info.AudioChannels > 0 {
+		movie.AudioChannels = models.NewNullInt64(int64(info.AudioChannels))
+	}
+	if info.HDRFormat != "" {
+		movie.HDRFormat = models.NewNullString(info.HDRFormat)
+	}
+
+	// Merge embedded + external subtitles (AC #9)
+	externalSubs := DetectExternalSubtitles(movie.FilePath.String)
+	allSubs := MergeSubtitleTracks(info.SubtitleTracks, externalSubs)
+	if len(allSubs) > 0 {
+		subsJSON, err := json.Marshal(allSubs)
+		if err == nil {
+			movie.SubtitleTracks = models.NewNullString(string(subsJSON))
+		}
+	}
+
+	// Update DB with tech info
+	movie.UpdatedAt = time.Now()
+	if err := s.movieRepo.Update(ctx, movie); err != nil {
+		s.logger.Warn("failed to save ffprobe tech info",
+			"id", movie.ID, "error", err)
+	}
 }
 
 // tryNFOEnrichment attempts to enrich a movie from its NFO sidecar file.

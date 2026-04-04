@@ -66,7 +66,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
 FROM alpine:3.21
 
 # Install runtime dependencies
-RUN apk add --no-cache ca-certificates tzdata
+RUN apk add --no-cache ca-certificates tzdata ffmpeg
 
 # Create non-root user (matching existing API Dockerfile)
 RUN addgroup -g 1000 vido && \
