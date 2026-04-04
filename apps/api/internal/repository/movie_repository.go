@@ -92,36 +92,10 @@ func (r *MovieRepository) Create(ctx context.Context, movie *models.Movie) error
 
 // FindByID retrieves a movie by its primary key
 func (r *MovieRepository) FindByID(ctx context.Context, id string) (*models.Movie, error) {
-	query := `
-		SELECT
-			id, title, original_title, release_date, genres, rating,
-			overview, poster_path, backdrop_path, runtime, original_language,
-			status, imdb_id, tmdb_id, created_at, updated_at
-		FROM movies
-		WHERE id = ?
-	`
+	query := fmt.Sprintf(`SELECT %s FROM movies WHERE id = ?`, movieSelectColumns)
 
-	movie := &models.Movie{}
-	var genresJSON string
-
-	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&movie.ID,
-		&movie.Title,
-		&movie.OriginalTitle,
-		&movie.ReleaseDate,
-		&genresJSON,
-		&movie.Rating,
-		&movie.Overview,
-		&movie.PosterPath,
-		&movie.BackdropPath,
-		&movie.Runtime,
-		&movie.OriginalLanguage,
-		&movie.Status,
-		&movie.IMDbID,
-		&movie.TMDbID,
-		&movie.CreatedAt,
-		&movie.UpdatedAt,
-	)
+	row := r.db.QueryRowContext(ctx, query, id)
+	movie, err := scanMovie(row)
 
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("movie with id %s not found", id)
@@ -130,46 +104,15 @@ func (r *MovieRepository) FindByID(ctx context.Context, id string) (*models.Movi
 		return nil, fmt.Errorf("failed to find movie: %w", err)
 	}
 
-	// Parse genres from JSON
-	if err := movie.ScanGenres(genresJSON); err != nil {
-		return nil, fmt.Errorf("failed to parse genres: %w", err)
-	}
-
-	return movie, nil
+	return &movie, nil
 }
 
 // FindByTMDbID retrieves a movie by its TMDb ID
 func (r *MovieRepository) FindByTMDbID(ctx context.Context, tmdbID int64) (*models.Movie, error) {
-	query := `
-		SELECT
-			id, title, original_title, release_date, genres, rating,
-			overview, poster_path, backdrop_path, runtime, original_language,
-			status, imdb_id, tmdb_id, created_at, updated_at
-		FROM movies
-		WHERE tmdb_id = ?
-	`
+	query := fmt.Sprintf(`SELECT %s FROM movies WHERE tmdb_id = ?`, movieSelectColumns)
 
-	movie := &models.Movie{}
-	var genresJSON string
-
-	err := r.db.QueryRowContext(ctx, query, tmdbID).Scan(
-		&movie.ID,
-		&movie.Title,
-		&movie.OriginalTitle,
-		&movie.ReleaseDate,
-		&genresJSON,
-		&movie.Rating,
-		&movie.Overview,
-		&movie.PosterPath,
-		&movie.BackdropPath,
-		&movie.Runtime,
-		&movie.OriginalLanguage,
-		&movie.Status,
-		&movie.IMDbID,
-		&movie.TMDbID,
-		&movie.CreatedAt,
-		&movie.UpdatedAt,
-	)
+	row := r.db.QueryRowContext(ctx, query, tmdbID)
+	movie, err := scanMovie(row)
 
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("movie with tmdb_id %d not found", tmdbID)
@@ -178,46 +121,15 @@ func (r *MovieRepository) FindByTMDbID(ctx context.Context, tmdbID int64) (*mode
 		return nil, fmt.Errorf("failed to find movie by tmdb_id: %w", err)
 	}
 
-	// Parse genres from JSON
-	if err := movie.ScanGenres(genresJSON); err != nil {
-		return nil, fmt.Errorf("failed to parse genres: %w", err)
-	}
-
-	return movie, nil
+	return &movie, nil
 }
 
 // FindByIMDbID retrieves a movie by its IMDb ID
 func (r *MovieRepository) FindByIMDbID(ctx context.Context, imdbID string) (*models.Movie, error) {
-	query := `
-		SELECT
-			id, title, original_title, release_date, genres, rating,
-			overview, poster_path, backdrop_path, runtime, original_language,
-			status, imdb_id, tmdb_id, created_at, updated_at
-		FROM movies
-		WHERE imdb_id = ?
-	`
+	query := fmt.Sprintf(`SELECT %s FROM movies WHERE imdb_id = ?`, movieSelectColumns)
 
-	movie := &models.Movie{}
-	var genresJSON string
-
-	err := r.db.QueryRowContext(ctx, query, imdbID).Scan(
-		&movie.ID,
-		&movie.Title,
-		&movie.OriginalTitle,
-		&movie.ReleaseDate,
-		&genresJSON,
-		&movie.Rating,
-		&movie.Overview,
-		&movie.PosterPath,
-		&movie.BackdropPath,
-		&movie.Runtime,
-		&movie.OriginalLanguage,
-		&movie.Status,
-		&movie.IMDbID,
-		&movie.TMDbID,
-		&movie.CreatedAt,
-		&movie.UpdatedAt,
-	)
+	row := r.db.QueryRowContext(ctx, query, imdbID)
+	movie, err := scanMovie(row)
 
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("movie with imdb_id %s not found", imdbID)
@@ -226,12 +138,7 @@ func (r *MovieRepository) FindByIMDbID(ctx context.Context, imdbID string) (*mod
 		return nil, fmt.Errorf("failed to find movie by imdb_id: %w", err)
 	}
 
-	// Parse genres from JSON
-	if err := movie.ScanGenres(genresJSON); err != nil {
-		return nil, fmt.Errorf("failed to parse genres: %w", err)
-	}
-
-	return movie, nil
+	return &movie, nil
 }
 
 // FindByFilePath retrieves a movie by its file path (for duplicate detection)
@@ -285,6 +192,15 @@ func (r *MovieRepository) Update(ctx context.Context, movie *models.Movie) error
 			file_path = ?,
 			file_size = ?,
 			parse_status = ?,
+			metadata_source = ?,
+			vote_average = ?,
+			vote_count = ?,
+			popularity = ?,
+			subtitle_status = ?,
+			subtitle_path = ?,
+			subtitle_language = ?,
+			subtitle_last_searched = ?,
+			subtitle_search_score = ?,
 			is_removed = ?,
 			video_codec = ?,
 			video_resolution = ?,
@@ -292,6 +208,7 @@ func (r *MovieRepository) Update(ctx context.Context, movie *models.Movie) error
 			audio_channels = ?,
 			subtitle_tracks = ?,
 			hdr_format = ?,
+			library_id = ?,
 			updated_at = ?
 		WHERE id = ?
 	`
@@ -313,6 +230,15 @@ func (r *MovieRepository) Update(ctx context.Context, movie *models.Movie) error
 		movie.FilePath,
 		movie.FileSize,
 		movie.ParseStatus,
+		movie.MetadataSource,
+		movie.VoteAverage,
+		movie.VoteCount,
+		movie.Popularity,
+		movie.SubtitleStatus,
+		movie.SubtitlePath,
+		movie.SubtitleLanguage,
+		movie.SubtitleLastSearched,
+		movie.SubtitleSearchScore,
 		movie.IsRemoved,
 		movie.VideoCodec,
 		movie.VideoResolution,
@@ -320,6 +246,7 @@ func (r *MovieRepository) Update(ctx context.Context, movie *models.Movie) error
 		movie.AudioChannels,
 		movie.SubtitleTracks,
 		movie.HDRFormat,
+		movie.LibraryID,
 		movie.UpdatedAt,
 		movie.ID,
 	)

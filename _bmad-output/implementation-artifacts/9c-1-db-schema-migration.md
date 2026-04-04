@@ -1,6 +1,6 @@
 # Story 9c-1: DB Schema Migration — Tech Info Fields & Data Source Priority
 
-Status: review
+Status: done
 
 ## Story
 
@@ -147,6 +147,7 @@ Claude Opus 4.6 (1M context)
 ### Change Log
 
 - 2026-04-04: Story 9c-1 implemented — migration 021, MetadataSource constants, ShouldOverwrite(), model fields, repository SQL updates, 19 new test cases
+- 2026-04-04: CR fixes — H-1: FindByID/TMDbID/IMDbID refactored to use movieSelectColumns/scanMovie (movie+series), H-2+M-1: movie Update() now includes all model fields (metadata_source, vote_count, popularity, subtitle fields, library_id), L-1: File List updated with migration test file
 
 ### File List
 
@@ -155,6 +156,7 @@ Claude Opus 4.6 (1M context)
 - `apps/api/internal/models/movie_test.go` (MODIFIED — ShouldOverwrite tests, constant tests)
 - `apps/api/internal/models/series.go` (MODIFIED — Series struct fields)
 - `apps/api/internal/repository/movie_repository.go` (MODIFIED — Create, Update, BulkCreate, movieSelectColumns, scanMovie)
-- `apps/api/internal/repository/series_repository.go` (MODIFIED — Create, Update, BulkCreate, seriesSelectColumns, scanSeries)
+- `apps/api/internal/repository/series_repository.go` (MODIFIED — Create, Update, BulkCreate, seriesSelectColumns, scanSeries, FindByID/TMDbID/IMDbID)
 - `apps/api/internal/repository/movie_repository_test.go` (MODIFIED — test DB schema)
 - `apps/api/internal/repository/series_repository_test.go` (MODIFIED — test DB schema)
+- `apps/api/internal/database/migrations/021_media_tech_info_test.go` (NEW — migration tests)

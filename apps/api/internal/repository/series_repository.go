@@ -89,39 +89,10 @@ func (r *SeriesRepository) Create(ctx context.Context, series *models.Series) er
 
 // FindByID retrieves a series by its primary key
 func (r *SeriesRepository) FindByID(ctx context.Context, id string) (*models.Series, error) {
-	query := `
-		SELECT
-			id, title, original_title, first_air_date, last_air_date, genres, rating,
-			overview, poster_path, backdrop_path, number_of_seasons, number_of_episodes,
-			status, original_language, imdb_id, tmdb_id, in_production, created_at, updated_at
-		FROM series
-		WHERE id = ?
-	`
+	query := fmt.Sprintf(`SELECT %s FROM series WHERE id = ?`, seriesSelectColumns)
 
-	series := &models.Series{}
-	var genresJSON string
-
-	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&series.ID,
-		&series.Title,
-		&series.OriginalTitle,
-		&series.FirstAirDate,
-		&series.LastAirDate,
-		&genresJSON,
-		&series.Rating,
-		&series.Overview,
-		&series.PosterPath,
-		&series.BackdropPath,
-		&series.NumberOfSeasons,
-		&series.NumberOfEpisodes,
-		&series.Status,
-		&series.OriginalLanguage,
-		&series.IMDbID,
-		&series.TMDbID,
-		&series.InProduction,
-		&series.CreatedAt,
-		&series.UpdatedAt,
-	)
+	row := r.db.QueryRowContext(ctx, query, id)
+	series, err := scanSeries(row)
 
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("series with id %s not found", id)
@@ -130,49 +101,15 @@ func (r *SeriesRepository) FindByID(ctx context.Context, id string) (*models.Ser
 		return nil, fmt.Errorf("failed to find series: %w", err)
 	}
 
-	// Parse genres from JSON
-	if err := series.ScanGenres(genresJSON); err != nil {
-		return nil, fmt.Errorf("failed to parse genres: %w", err)
-	}
-
-	return series, nil
+	return &series, nil
 }
 
 // FindByTMDbID retrieves a series by its TMDb ID
 func (r *SeriesRepository) FindByTMDbID(ctx context.Context, tmdbID int64) (*models.Series, error) {
-	query := `
-		SELECT
-			id, title, original_title, first_air_date, last_air_date, genres, rating,
-			overview, poster_path, backdrop_path, number_of_seasons, number_of_episodes,
-			status, original_language, imdb_id, tmdb_id, in_production, created_at, updated_at
-		FROM series
-		WHERE tmdb_id = ?
-	`
+	query := fmt.Sprintf(`SELECT %s FROM series WHERE tmdb_id = ?`, seriesSelectColumns)
 
-	series := &models.Series{}
-	var genresJSON string
-
-	err := r.db.QueryRowContext(ctx, query, tmdbID).Scan(
-		&series.ID,
-		&series.Title,
-		&series.OriginalTitle,
-		&series.FirstAirDate,
-		&series.LastAirDate,
-		&genresJSON,
-		&series.Rating,
-		&series.Overview,
-		&series.PosterPath,
-		&series.BackdropPath,
-		&series.NumberOfSeasons,
-		&series.NumberOfEpisodes,
-		&series.Status,
-		&series.OriginalLanguage,
-		&series.IMDbID,
-		&series.TMDbID,
-		&series.InProduction,
-		&series.CreatedAt,
-		&series.UpdatedAt,
-	)
+	row := r.db.QueryRowContext(ctx, query, tmdbID)
+	series, err := scanSeries(row)
 
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("series with tmdb_id %d not found", tmdbID)
@@ -181,49 +118,15 @@ func (r *SeriesRepository) FindByTMDbID(ctx context.Context, tmdbID int64) (*mod
 		return nil, fmt.Errorf("failed to find series by tmdb_id: %w", err)
 	}
 
-	// Parse genres from JSON
-	if err := series.ScanGenres(genresJSON); err != nil {
-		return nil, fmt.Errorf("failed to parse genres: %w", err)
-	}
-
-	return series, nil
+	return &series, nil
 }
 
 // FindByIMDbID retrieves a series by its IMDb ID
 func (r *SeriesRepository) FindByIMDbID(ctx context.Context, imdbID string) (*models.Series, error) {
-	query := `
-		SELECT
-			id, title, original_title, first_air_date, last_air_date, genres, rating,
-			overview, poster_path, backdrop_path, number_of_seasons, number_of_episodes,
-			status, original_language, imdb_id, tmdb_id, in_production, created_at, updated_at
-		FROM series
-		WHERE imdb_id = ?
-	`
+	query := fmt.Sprintf(`SELECT %s FROM series WHERE imdb_id = ?`, seriesSelectColumns)
 
-	series := &models.Series{}
-	var genresJSON string
-
-	err := r.db.QueryRowContext(ctx, query, imdbID).Scan(
-		&series.ID,
-		&series.Title,
-		&series.OriginalTitle,
-		&series.FirstAirDate,
-		&series.LastAirDate,
-		&genresJSON,
-		&series.Rating,
-		&series.Overview,
-		&series.PosterPath,
-		&series.BackdropPath,
-		&series.NumberOfSeasons,
-		&series.NumberOfEpisodes,
-		&series.Status,
-		&series.OriginalLanguage,
-		&series.IMDbID,
-		&series.TMDbID,
-		&series.InProduction,
-		&series.CreatedAt,
-		&series.UpdatedAt,
-	)
+	row := r.db.QueryRowContext(ctx, query, imdbID)
+	series, err := scanSeries(row)
 
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("series with imdb_id %s not found", imdbID)
@@ -232,12 +135,7 @@ func (r *SeriesRepository) FindByIMDbID(ctx context.Context, imdbID string) (*mo
 		return nil, fmt.Errorf("failed to find series by imdb_id: %w", err)
 	}
 
-	// Parse genres from JSON
-	if err := series.ScanGenres(genresJSON); err != nil {
-		return nil, fmt.Errorf("failed to parse genres: %w", err)
-	}
-
-	return series, nil
+	return &series, nil
 }
 
 // Update modifies an existing series in the database
