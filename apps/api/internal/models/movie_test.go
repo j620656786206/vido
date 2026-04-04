@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -328,4 +329,53 @@ func TestShouldOverwrite(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+func TestMovie_TechInfoJSON_SnakeCase(t *testing.T) {
+	movie := Movie{
+		ID:    "test-1",
+		Title: "Test Movie",
+		VideoCodec:      NewNullString("H.265"),
+		VideoResolution: NewNullString("3840x2160"),
+		AudioCodec:      NewNullString("DTS"),
+		AudioChannels:   NewNullInt64(6),
+		SubtitleTracks:  NewNullString(`[{"language":"zh-Hant"}]`),
+		HDRFormat:       NewNullString("HDR10"),
+	}
+
+	data, err := json.Marshal(movie)
+	require.NoError(t, err)
+
+	jsonStr := string(data)
+	assert.Contains(t, jsonStr, `"video_codec"`)
+	assert.Contains(t, jsonStr, `"video_resolution"`)
+	assert.Contains(t, jsonStr, `"audio_codec"`)
+	assert.Contains(t, jsonStr, `"audio_channels"`)
+	assert.Contains(t, jsonStr, `"subtitle_tracks"`)
+	assert.Contains(t, jsonStr, `"hdr_format"`)
+
+	// Verify values
+	assert.Contains(t, jsonStr, `"H.265"`)
+	assert.Contains(t, jsonStr, `"3840x2160"`)
+	assert.Contains(t, jsonStr, `"DTS"`)
+	assert.Contains(t, jsonStr, `"HDR10"`)
+}
+
+func TestMovie_TechInfoJSON_NullWhenEmpty(t *testing.T) {
+	movie := Movie{
+		ID:    "test-2",
+		Title: "Minimal Movie",
+	}
+
+	data, err := json.Marshal(movie)
+	require.NoError(t, err)
+
+	jsonStr := string(data)
+	// NullString/NullInt64 marshal to null (not omitted) — consistent with existing fields
+	assert.Contains(t, jsonStr, `"video_codec":null`)
+	assert.Contains(t, jsonStr, `"video_resolution":null`)
+	assert.Contains(t, jsonStr, `"audio_codec":null`)
+	assert.Contains(t, jsonStr, `"audio_channels":null`)
+	assert.Contains(t, jsonStr, `"subtitle_tracks":null`)
+	assert.Contains(t, jsonStr, `"hdr_format":null`)
 }
