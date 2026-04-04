@@ -275,9 +275,14 @@ development_status:
   # ==============================================================================
   # Epic 10: Homepage TV Wall (PRD v4)
   # Phase: Phase 2 — Browse & Discover
-  # FRs: P2-010–P2-015
+  # FRs: P2-001–P2-006
   # ==============================================================================
-  epic-10: backlog
+  epic-10: in-progress  # 2026-04-04
+  10-1-tmdb-trending-discover-api: ready-for-dev      # Trending + Discover endpoints, server-side filtering (P2-001,P2-003,P2-004,P2-005)
+  10-2-hero-banner-component: ready-for-dev            # Full-width hero carousel with trailer modal (P2-001)
+  10-3-custom-explore-blocks: ready-for-dev            # CRUD explore blocks + TMDB discover integration (P2-002)
+  10-4-availability-badges: ready-for-dev              # 已有/已請求 badges on poster cards (P2-006)
+  10-5-homepage-layout-responsive: ready-for-dev       # Layout engine, responsive design, LCP <2s (P2-001)
   epic-10-retrospective: optional
 
   # ==============================================================================
