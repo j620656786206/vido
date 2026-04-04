@@ -362,3 +362,164 @@ func TestEnrichMovie_NFO_URLFormat(t *testing.T) {
 	assert.Equal(t, string(models.MetadataSourceNFO), mockRepo.updatedMovie.MetadataSource.String)
 	assert.Equal(t, int64(12345), mockRepo.updatedMovie.TMDbID.Int64)
 }
+
+// ─── Test: IMDB find returns no movie results (AC #3 edge case) ────────────
+
+func TestEnrichMovie_NFO_IMDbNoMovieResults(t *testing.T) {
+	dir := t.TempDir()
+	videoPath := filepath.Join(dir, "Movie.mkv")
+	nfoPath := filepath.Join(dir, "Movie.nfo")
+
+	nfoContent := `<movie><title>Ghost</title><uniqueid type="imdb">tt0000001</uniqueid></movie>`
+	require.NoError(t, os.WriteFile(nfoPath, []byte(nfoContent), 0o644))
+
+	mockTMDb := &mockTMDbServiceForNFO{
+		findByExtResp: &tmdb.FindByExternalIDResponse{
+			MovieResults: []tmdb.Movie{}, // No results
+		},
+	}
+
+	mockRepo := &mockMovieRepoForNFO{}
+	nfoReader := NewNFOReaderService(nil)
+	svc := NewEnrichmentService(mockRepo, nil, nil, nfoReader, mockTMDb, nil, nil)
+
+	movie := &models.Movie{
+		ID:       "test-imdb-empty",
+		Title:    "Movie.mkv",
+		FilePath: models.NewNullString(videoPath),
+	}
+
+	// tryNFOEnrichment still succeeds (NFO was parsed), but TMDB lookup logged a warning
+	enriched, err := svc.tryNFOEnrichment(context.Background(), movie)
+	require.NoError(t, err)
+	assert.True(t, enriched) // NFO data still applied (metadata_source=nfo)
+	assert.Equal(t, string(models.MetadataSourceNFO), mockRepo.updatedMovie.MetadataSource.String)
+}
+
+// ─── Test: Invalid TMDB ID in NFO (non-numeric) ───────────────────────────
+
+func TestEnrichMovie_NFO_InvalidTMDbID(t *testing.T) {
+	dir := t.TempDir()
+	videoPath := filepath.Join(dir, "Movie.mkv")
+	nfoPath := filepath.Join(dir, "Movie.nfo")
+
+	nfoContent := `<movie><title>Bad ID</title><uniqueid type="tmdb">not-a-number</uniqueid></movie>`
+	require.NoError(t, os.WriteFile(nfoPath, []byte(nfoContent), 0o644))
+
+	mockTMDb := &mockTMDbServiceForNFO{}
+	mockRepo := &mockMovieRepoForNFO{}
+	nfoReader := NewNFOReaderService(nil)
+	svc := NewEnrichmentService(mockRepo, nil, nil, nfoReader, mockTMDb, nil, nil)
+
+	movie := &models.Movie{
+		ID:       "test-bad-tmdb",
+		Title:    "Movie.mkv",
+		FilePath: models.NewNullString(videoPath),
+	}
+
+	// TMDB lookup fails due to invalid ID, but NFO enrichment still succeeds with warning
+	enriched, err := svc.tryNFOEnrichment(context.Background(), movie)
+	require.NoError(t, err)
+	assert.True(t, enriched) // Still succeeds — NFO data applied, TMDB lookup failure is non-fatal
+}
+
+// ─── Test: Movie with no FilePath skips NFO ─────────��──────────────────────
+
+func TestEnrichMovie_NFO_NoFilePath(t *testing.T) {
+	mockRepo := &mockMovieRepoForNFO{}
+	nfoReader := NewNFOReaderService(nil)
+	svc := NewEnrichmentService(mockRepo, nil, nil, nfoReader, nil, nil, nil)
+
+	movie := &models.Movie{
+		ID:    "test-no-filepath",
+		Title: "Movie.mkv",
+		// FilePath is not set (zero value NullString)
+	}
+
+	// tryNFOEnrichment should not be called when FilePath is empty
+	// Test the enrichMovie guard: s.nfoReader != nil && movie.FilePath.Valid
+	enriched, err := svc.tryNFOEnrichment(context.Background(), movie)
+	assert.NoError(t, err)
+	assert.False(t, enriched) // FindNFOSidecar("") returns ""
+}
+
+// ─── Test: NFO overwriting tmdb source (nfo priority > tmdb) ───────────────
+
+func TestEnrichMovie_NFO_OverwritesTMDb(t *testing.T) {
+	dir := t.TempDir()
+	videoPath := filepath.Join(dir, "Movie.mkv")
+	nfoPath := filepath.Join(dir, "Movie.nfo")
+
+	nfoContent := `<movie><title>Better Data</title><uniqueid type="tmdb">999</uniqueid></movie>`
+	require.NoError(t, os.WriteFile(nfoPath, []byte(nfoContent), 0o644))
+
+	mockTMDb := &mockTMDbServiceForNFO{
+		getMovieDetailsResp: &tmdb.MovieDetails{
+			Movie: tmdb.Movie{ID: 999, Title: "Better Data (TMDB)"},
+		},
+	}
+
+	mockRepo := &mockMovieRepoForNFO{}
+	nfoReader := NewNFOReaderService(nil)
+	svc := NewEnrichmentService(mockRepo, nil, nil, nfoReader, mockTMDb, nil, nil)
+
+	movie := &models.Movie{
+		ID:             "test-overwrite-tmdb",
+		Title:          "Movie.mkv",
+		FilePath:       models.NewNullString(videoPath),
+		MetadataSource: models.NewNullString("tmdb"), // Previously from TMDB
+	}
+
+	// ShouldOverwrite("tmdb", "nfo") → true (nfo priority 80 > tmdb priority 60)
+	enriched, err := svc.tryNFOEnrichment(context.Background(), movie)
+	require.NoError(t, err)
+	assert.True(t, enriched)
+	assert.Equal(t, string(models.MetadataSourceNFO), mockRepo.updatedMovie.MetadataSource.String)
+}
+
+// ─── Test: applyNFOTechInfo with partial data ────────────��─────────────────
+
+func TestEnrichMovie_NFO_PartialStreamDetails(t *testing.T) {
+	dir := t.TempDir()
+	videoPath := filepath.Join(dir, "Movie.mkv")
+	nfoPath := filepath.Join(dir, "Movie.nfo")
+
+	// Only video codec, no audio, no resolution
+	nfoContent := `<movie>
+  <title>Partial</title>
+  <uniqueid type="tmdb">111</uniqueid>
+  <fileinfo>
+    <streamdetails>
+      <video><codec>av1</codec></video>
+    </streamdetails>
+  </fileinfo>
+</movie>`
+	require.NoError(t, os.WriteFile(nfoPath, []byte(nfoContent), 0o644))
+
+	mockTMDb := &mockTMDbServiceForNFO{
+		getMovieDetailsResp: &tmdb.MovieDetails{
+			Movie: tmdb.Movie{ID: 111, Title: "Partial"},
+		},
+	}
+
+	mockRepo := &mockMovieRepoForNFO{}
+	nfoReader := NewNFOReaderService(nil)
+	svc := NewEnrichmentService(mockRepo, nil, nil, nfoReader, mockTMDb, nil, nil)
+
+	movie := &models.Movie{
+		ID:       "test-partial-stream",
+		Title:    "Movie.mkv",
+		FilePath: models.NewNullString(videoPath),
+	}
+
+	enriched, err := svc.tryNFOEnrichment(context.Background(), movie)
+	require.NoError(t, err)
+	assert.True(t, enriched)
+
+	// Only video codec should be set
+	assert.Equal(t, "av1", mockRepo.updatedMovie.VideoCodec.String)
+	assert.True(t, mockRepo.updatedMovie.VideoCodec.Valid)
+	assert.False(t, mockRepo.updatedMovie.VideoResolution.Valid) // No width/height → no resolution
+	assert.False(t, mockRepo.updatedMovie.AudioCodec.Valid)      // No audio element
+	assert.False(t, mockRepo.updatedMovie.AudioChannels.Valid)   // No audio channels
+}

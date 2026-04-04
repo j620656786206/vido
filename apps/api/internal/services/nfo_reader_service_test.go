@@ -426,3 +426,123 @@ func TestNFOReaderService_Parse_XMLMovie_IMDbOnly(t *testing.T) {
 	assert.Equal(t, "tt9876543", data.IMDbID)
 	assert.Equal(t, "movie", data.MediaType)
 }
+
+// ─── XML with whitespace in uniqueid values ───────���────────────────────────
+
+func TestNFOReaderService_Parse_XMLMovie_WhitespaceUniqueID(t *testing.T) {
+	dir := t.TempDir()
+	nfoPath := filepath.Join(dir, "movie.nfo")
+	content := `<movie>
+  <title>Whitespace Test</title>
+  <uniqueid type="tmdb">  12345  </uniqueid>
+  <uniqueid type="imdb">  tt0000001  </uniqueid>
+</movie>`
+	require.NoError(t, os.WriteFile(nfoPath, []byte(content), 0o644))
+
+	svc := NewNFOReaderService(nil)
+	data, err := svc.Parse(nfoPath)
+	require.NoError(t, err)
+
+	assert.Equal(t, "12345", data.TMDbID)     // Trimmed
+	assert.Equal(t, "tt0000001", data.IMDbID)  // Trimmed
+}
+
+// ──�� XML with both TMDB and IMDB — both extracted ─────────────────────────
+
+func TestNFOReaderService_Parse_XMLMovie_BothIDs(t *testing.T) {
+	dir := t.TempDir()
+	nfoPath := filepath.Join(dir, "movie.nfo")
+	content := `<movie>
+  <title>Both IDs</title>
+  <uniqueid type="tmdb">42</uniqueid>
+  <uniqueid type="imdb">tt0042</uniqueid>
+</movie>`
+	require.NoError(t, os.WriteFile(nfoPath, []byte(content), 0o644))
+
+	svc := NewNFOReaderService(nil)
+	data, err := svc.Parse(nfoPath)
+	require.NoError(t, err)
+
+	// Both IDs should be extracted — enrichment service decides precedence
+	assert.Equal(t, "42", data.TMDbID)
+	assert.Equal(t, "tt0042", data.IMDbID)
+}
+
+// ─── XML with case-insensitive uniqueid type ──────────────────────────────
+
+func TestNFOReaderService_Parse_XMLMovie_CaseInsensitiveType(t *testing.T) {
+	dir := t.TempDir()
+	nfoPath := filepath.Join(dir, "movie.nfo")
+	content := `<movie>
+  <title>Case Test</title>
+  <uniqueid type="TMDB">777</uniqueid>
+  <uniqueid type="IMDB">tt0000777</uniqueid>
+</movie>`
+	require.NoError(t, os.WriteFile(nfoPath, []byte(content), 0o644))
+
+	svc := NewNFOReaderService(nil)
+	data, err := svc.Parse(nfoPath)
+	require.NoError(t, err)
+
+	assert.Equal(t, "777", data.TMDbID)
+	assert.Equal(t, "tt0000777", data.IMDbID)
+}
+
+// ─── 480p resolution boundary ─────────────────────────────────────────────
+
+func TestNFOReaderService_Parse_StreamDetails_480p(t *testing.T) {
+	dir := t.TempDir()
+	nfoPath := filepath.Join(dir, "movie.nfo")
+	content := `<movie>
+  <title>SD</title>
+  <fileinfo>
+    <streamdetails>
+      <video><codec>mpeg4</codec><width>720</width><height>480</height></video>
+    </streamdetails>
+  </fileinfo>
+</movie>`
+	require.NoError(t, os.WriteFile(nfoPath, []byte(content), 0o644))
+
+	svc := NewNFOReaderService(nil)
+	data, err := svc.Parse(nfoPath)
+	require.NoError(t, err)
+
+	assert.Equal(t, "480p", data.VideoResolution)
+}
+
+// ─── XML with no uniqueid at all ──────────────────────────────────────────
+
+func TestNFOReaderService_Parse_XMLMovie_NoUniqueID(t *testing.T) {
+	dir := t.TempDir()
+	nfoPath := filepath.Join(dir, "movie.nfo")
+	content := `<movie>
+  <title>No IDs Movie</title>
+  <year>2020</year>
+</movie>`
+	require.NoError(t, os.WriteFile(nfoPath, []byte(content), 0o644))
+
+	svc := NewNFOReaderService(nil)
+	data, err := svc.Parse(nfoPath)
+	require.NoError(t, err)
+
+	assert.Empty(t, data.TMDbID)
+	assert.Empty(t, data.IMDbID)
+	assert.Equal(t, "No IDs Movie", data.Title)
+	assert.Equal(t, "2020", data.Year)
+}
+
+// ─── URL format with blank lines ──────────────────────────────────────────
+
+func TestNFOReaderService_Parse_URLFormat_BlankLines(t *testing.T) {
+	dir := t.TempDir()
+	nfoPath := filepath.Join(dir, "movie.nfo")
+	content := "\n\n  https://www.themoviedb.org/movie/54321  \n\n"
+	require.NoError(t, os.WriteFile(nfoPath, []byte(content), 0o644))
+
+	svc := NewNFOReaderService(nil)
+	data, err := svc.Parse(nfoPath)
+	require.NoError(t, err)
+
+	assert.Equal(t, "54321", data.TMDbID)
+	assert.Equal(t, NFOSourceFormatURL, data.SourceFormat)
+}
