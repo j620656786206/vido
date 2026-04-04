@@ -269,19 +269,19 @@ development_status:
   #   DEV = /bmad:bmm:agents:dev + /bmad:bmm:workflows:dev-story
   # ==============================================================================
 
-  # --- Task 1: Design Guidelines Document ---
+  # --- Task 1: Design System Reference (in Pencil) ---
   # AGENT: UX /ux-designer
-  # PROMPT: 從 _bmad-output/planning-artifacts/ux-design-specification.md 擷取 Design System
-  #   相關章節（Color System, Typography, Spacing, Component Strategy, CVA variants,
-  #   Iconography），精簡為一份開發者導向的 design-guidelines.md。格式要求：
-  #   (1) Tailwind token 對照表（CSS variable name → Tailwind class → 用途）
-  #   (2) 字型規範 + font-display 策略
-  #   (3) 間距規則（card padding, section spacing, grid gaps）
-  #   (4) 元件命名慣例與變體定義（CVA pattern）
-  #   (5) 響應式斷點與 grid 策略
-  #   (6) shadcn/ui 引入評估與建議（列出 Epic 10/11 需要的元件）
-  #   輸出到 _bmad-output/planning-artifacts/design-guidelines.md
-  0-UX-1-design-guidelines-doc: done              # 2026-04-04 — design-guidelines.md: 13 sections, color/typo/spacing tokens, shadcn/ui recommended, tailwind config target, migration cheat sheet
+  # DELIVERABLE: Design System Reference screen in ux-design.pen (node 8SSzc)
+  #   Visual single source of truth — NOT a markdown file.
+  #   Screenshot: _bmad-output/screenshots/flow-z-design-system/design-system-reference.png
+  #   Contains: (1) Color palette swatches (bg, accent, semantic, text)
+  #   (2) Typography scale (H1-Caption with zh-TW samples)
+  #   (3) Spacing scale (4px base, visual bars)
+  #   (4) Border radius showcase (sm/md/lg/xl/pill)
+  #   (5) Component library (buttons, badges, tags, tabs, form elements, poster cards)
+  #   (6) Shadow elevation guide
+  #   Pencil design tokens (bg-primary, accent-primary, etc.) already configured.
+  0-UX-1-design-system-reference: done             # 2026-04-04 — Design System page built in ux-design.pen with 6 sections, design-guidelines.md removed (visual > markdown)
 
   # --- Task 2: Tailwind Config Alignment ---
   # AGENT: QD /quick-dev

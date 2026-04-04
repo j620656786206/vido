@@ -102,6 +102,8 @@ SCREENS = {
     # Flow K - Multi-Library Settings Scanner
     "ATjDd": ("flow-k-multi-library", "h1b-settings-scanner-multi-library-desktop"),
     "iOjxf": ("flow-k-multi-library", "h4b-settings-scanner-multi-library-mobile"),
+    # Flow Z - Design System Reference
+    "8SSzc": ("flow-z-design-system", "design-system-reference"),
 }
 
 
