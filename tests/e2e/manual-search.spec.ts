@@ -356,7 +356,7 @@ test.describe('Apply Metadata Complete Flow @e2e @manual-search @story-3-7', () 
     await tvButton.click();
 
     // THEN: TV button should be active
-    await expect(tvButton).toHaveClass(/bg-blue-600/);
+    await expect(tvButton).toHaveClass(/bg-\[var\(--accent-primary\)\]/);
   });
 
   test('[P1] should close dialog on escape key', async ({ page }) => {
