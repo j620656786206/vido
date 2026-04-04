@@ -152,7 +152,7 @@ describe('DetailPanelMenu', () => {
     fireEvent.click(screen.getByTestId('detail-menu-trigger'));
 
     const deleteBtn = screen.getByTestId('menu-delete');
-    expect(deleteBtn.className).toContain('text-red');
+    expect(deleteBtn.className).toContain('text-[var(--error)]');
   });
 
   it('[P1] has separator between export and delete', () => {

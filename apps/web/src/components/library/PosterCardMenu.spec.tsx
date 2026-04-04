@@ -92,7 +92,7 @@ describe('PosterCardMenu', () => {
   it('applies danger styling to delete button', () => {
     render(<PosterCardMenu {...defaultProps} />);
     const deleteButton = screen.getByText('刪除').closest('button');
-    expect(deleteButton?.className).toContain('text-red');
+    expect(deleteButton?.className).toContain('text-[var(--error)]');
   });
 
   it('renders desktop dropdown by default (not fixed)', () => {

@@ -272,7 +272,8 @@ describe('LibraryTable', () => {
     ];
     const { container } = render(<LibraryTable items={noGenreItems} />);
     const row = screen.getByTestId('library-table-row');
-    const genreSpans = row.querySelectorAll('.rounded.bg-[var(--bg-tertiary)]');
+    const genreCell = row.querySelectorAll('td')[3]; // genre is 4th column
+    const genreSpans = genreCell?.querySelectorAll('span') ?? [];
     expect(genreSpans).toHaveLength(0);
   });
 });

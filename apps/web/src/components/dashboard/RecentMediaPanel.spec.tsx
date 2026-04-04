@@ -256,7 +256,7 @@ describe('RecentMediaPanel', () => {
     await screen.findByText('無年份電影');
     // Should only have the title text, not any year text
     const panel = screen.getByTestId('recent-media-panel');
-    const yearElements = panel.querySelectorAll('.text-[var(--text-secondary)]');
+    const yearElements = panel.querySelectorAll('p');
     // No year paragraph should be rendered for this item
     const yearTexts = Array.from(yearElements)
       .map((el) => el.textContent)
