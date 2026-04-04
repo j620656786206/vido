@@ -288,9 +288,13 @@ development_status:
   # ==============================================================================
   # Epic 11: Advanced Search (PRD v4)
   # Phase: Phase 2 — Browse & Discover
-  # FRs: P2-016–P2-019
+  # FRs: P2-010–P2-015
   # ==============================================================================
-  epic-11: backlog
+  epic-11: in-progress  # 2026-04-04
+  11-1-multi-dimensional-filter-engine: ready-for-dev   # Filter engine + compound sort + watch providers (P2-010, P2-012)
+  11-2-persistent-filter-chip-ui: ready-for-dev         # Chip UI + filter panel + mobile bottom sheet (P2-011)
+  11-3-instant-search-zh-tw-priority: ready-for-dev     # Debounced suggestions + dual-language + zh-TW boost (P2-013, P2-014)
+  11-4-saved-filter-presets: ready-for-dev               # Save/load/delete filter presets in DB (P2-015)
   epic-11-retrospective: optional
 
   # ==============================================================================
