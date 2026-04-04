@@ -252,7 +252,10 @@ development_status:
   # Phase: Phase 1 — Core Library
   # FRs: P1-020–P1-021
   # ==============================================================================
-  epic-9: backlog
+  epic-9: in-progress  # 2026-04-04
+  9-1-ai-terminology-correction: ready-for-dev       # Claude API post-OpenCC terminology fix (P2, P1-020)
+  9-2a-whisper-audio-transcription: ready-for-dev     # FFmpeg audio extraction + OpenAI Whisper API (P3, P1-021)
+  9-2b-ai-subtitle-translation: ready-for-dev         # Claude translation of Whisper SRT to zh-Hant (P3, P1-021, depends on 9-2a)
   epic-9-retrospective: optional
 
   # ==============================================================================
@@ -263,7 +266,7 @@ development_status:
   # Decision: Extend scan pipeline with NFO reader + FFprobe + data source priority
   # ==============================================================================
   epic-9c: in-progress  # 2026-04-04
-  9c-1-db-schema-migration: ready-for-dev             # Migration #021, tech info columns, series file_size, MetadataSource constants, ShouldOverwrite()
+  9c-1-db-schema-migration: in-progress             # Migration #021, tech info columns, series file_size, MetadataSource constants, ShouldOverwrite()
   9c-2-nfo-sidecar-reader: ready-for-dev              # NFO detection in enrichment pipeline, XML/URL parser, uniqueid TMDB matching
   9c-3-ffprobe-integration: ready-for-dev             # Docker ffprobe, Go service with semaphore/timeout, tech info extraction
   9c-4-tech-badges-ui-unmatched-filter: ready-for-dev # TechBadge components, detail page integration, unmatched filter API + UI
