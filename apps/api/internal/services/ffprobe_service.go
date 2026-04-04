@@ -239,8 +239,9 @@ func DetectExternalSubtitles(videoPath string) []SubtitleTrack {
 		}
 
 		// Check if subtitle belongs to this video (same base name)
+		// Must match exactly or have a '.' separator after base (e.g., Movie.eng.srt)
 		nameNoExt := strings.TrimSuffix(name, ext)
-		if !strings.HasPrefix(nameNoExt, base) {
+		if nameNoExt != base && !strings.HasPrefix(nameNoExt, base+".") {
 			continue
 		}
 
@@ -289,7 +290,7 @@ var audioCodecMap = map[string]string{
 	"aac":     "AAC",
 	"ac3":     "AC-3",
 	"eac3":    "E-AC-3",
-	"truehd":  "TrueHD Atmos",
+	"truehd":  "TrueHD",
 	"flac":    "FLAC",
 	"pcm_s16le": "PCM",
 	"pcm_s24le": "PCM",

@@ -634,6 +634,17 @@ func (s *ScannerService) aggregateSeriesFileSizes(ctx context.Context) error {
 			continue
 		}
 
+		// Count episodes with file paths first to avoid unnecessary filesystem calls
+		var pathCount int
+		for _, ep := range episodes {
+			if ep.FilePath.Valid && ep.FilePath.String != "" {
+				pathCount++
+			}
+		}
+		if pathCount == 0 {
+			continue
+		}
+
 		var totalSize int64
 		for _, ep := range episodes {
 			if ep.FilePath.Valid && ep.FilePath.String != "" {

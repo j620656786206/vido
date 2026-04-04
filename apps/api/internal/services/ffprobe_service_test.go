@@ -85,7 +85,7 @@ func TestParseFfprobeJSON_AudioCodecs(t *testing.T) {
 	}{
 		{"ac3", "AC-3"},
 		{"eac3", "E-AC-3"},
-		{"truehd", "TrueHD Atmos"},
+		{"truehd", "TrueHD"},
 		{"flac", "FLAC"},
 		{"mp3", "MP3"},
 		{"opus", "Opus"},

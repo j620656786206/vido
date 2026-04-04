@@ -277,7 +277,11 @@ func (s *EnrichmentService) enrichMovie(ctx context.Context, movie *models.Movie
 	best := searchResult.Items[0]
 	s.applyMetadataToMovie(movie, best, searchResult.Source)
 
-	// Step 5: Update DB
+	// Step 5: FFprobe technical info extraction (AC #7: skip if already set from NFO)
+	// Runs BEFORE DB update to consolidate into a single write
+	s.applyFFprobeTechInfo(ctx, movie)
+
+	// Step 6: Update DB (single write with metadata + tech info)
 	movie.UpdatedAt = time.Now()
 	if err := s.movieRepo.Update(ctx, movie); err != nil {
 		return fmt.Errorf("update movie: %w", err)
@@ -290,16 +294,14 @@ func (s *EnrichmentService) enrichMovie(ctx context.Context, movie *models.Movie
 		"tmdb_id", movie.TMDbID.Int64,
 	)
 
-	// Step 6: FFprobe technical info extraction (AC #7: skip if already set from NFO)
-	s.tryFFprobeEnrichment(ctx, movie)
-
 	return nil
 }
 
-// tryFFprobeEnrichment extracts technical info via FFprobe if not already present.
+// applyFFprobeTechInfo extracts technical info via FFprobe and applies it to the movie in-memory.
+// Does NOT write to DB — caller is responsible for persisting.
 // Skips if VideoCodec is already set (from NFO streamdetails).
 // Errors are logged but never propagate — FFprobe failure does not block enrichment.
-func (s *EnrichmentService) tryFFprobeEnrichment(ctx context.Context, movie *models.Movie) {
+func (s *EnrichmentService) applyFFprobeTechInfo(ctx context.Context, movie *models.Movie) {
 	if s.ffprobeService == nil || !s.ffprobeService.IsAvailable() {
 		return
 	}
@@ -344,15 +346,17 @@ func (s *EnrichmentService) tryFFprobeEnrichment(ctx context.Context, movie *mod
 		subsJSON, err := json.Marshal(allSubs)
 		if err == nil {
 			movie.SubtitleTracks = models.NewNullString(string(subsJSON))
+		} else {
+			s.logger.Warn("failed to marshal subtitle tracks",
+				"id", movie.ID, "error", err)
 		}
 	}
+}
 
-	// Update DB with tech info
-	movie.UpdatedAt = time.Now()
-	if err := s.movieRepo.Update(ctx, movie); err != nil {
-		s.logger.Warn("failed to save ffprobe tech info",
-			"id", movie.ID, "error", err)
-	}
+// tryFFprobeEnrichment is a convenience wrapper that applies FFprobe tech info
+// and persists to DB. Used by the NFO enrichment path which needs its own DB write.
+func (s *EnrichmentService) tryFFprobeEnrichment(ctx context.Context, movie *models.Movie) {
+	s.applyFFprobeTechInfo(ctx, movie)
 }
 
 // tryNFOEnrichment attempts to enrich a movie from its NFO sidecar file.

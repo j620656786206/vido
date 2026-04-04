@@ -1,6 +1,6 @@
 # Story 9c-3: FFprobe Integration
 
-Status: review
+Status: done
 
 ## Story
 
@@ -189,5 +189,20 @@ Claude Opus 4.6 (1M context)
 - `apps/api/Dockerfile` — MODIFIED: add ffmpeg to runtime stage
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` — MODIFIED: 9c-3 status
 
+## Senior Developer Review (AI)
+
+**Date:** 2026-04-04
+**Reviewer:** Amelia (Dev Agent CR workflow)
+**Outcome:** Changes Requested → All Fixed
+
+### Action Items (5 total, 5 resolved)
+
+- [x] [H1] Double DB write — moved FFprobe before Update, consolidated into single write via applyFFprobeTechInfo()
+- [x] [M1] Series aggregation skip — early-exit when no episodes have file paths
+- [x] [M2] Subtitle prefix matching too greedy — require '.' separator after base name
+- [x] [M3] json.Marshal error silently swallowed — added warning log
+- [x] [L1] truehd "TrueHD Atmos" → "TrueHD" — Atmos needs separate detection
+
 ## Change Log
 - 2026-04-04: Story 9c-3 implemented — FFprobe service with semaphore/timeout, JSON parser with codec normalization + HDR detection, external subtitle detection, enrichment pipeline integration, series file_size aggregation, Docker ffmpeg. 22 tests added.
+- 2026-04-04: CR fixes — 1 High + 3 Medium + 1 Low. Single DB write, subtitle prefix fix, TrueHD normalization, error logging.
