@@ -102,6 +102,12 @@ SCREENS = {
     # Flow K - Multi-Library Settings Scanner
     "ATjDd": ("flow-k-multi-library", "h1b-settings-scanner-multi-library-desktop"),
     "iOjxf": ("flow-k-multi-library", "h4b-settings-scanner-multi-library-mobile"),
+    # Flow G - Homepage TV Wall (Desktop)
+    "sAaCR": ("flow-g-homepage-desktop", "hp1-homepage-desktop"),
+    "Paqlk": ("flow-g-homepage-desktop", "hp3-block-crud-modal"),
+    "g6p38": ("flow-g-homepage-desktop", "hp4-loading-skeleton-desktop"),
+    # Flow G - Homepage TV Wall (Mobile)
+    "g5LFD": ("flow-g-homepage-mobile", "hp2-homepage-mobile"),
     # Flow Z - Design System Reference
     "8SSzc": ("flow-z-design-system", "design-system-reference"),
 }

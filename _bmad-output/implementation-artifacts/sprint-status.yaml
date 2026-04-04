@@ -372,12 +372,12 @@ development_status:
   #   DEV = /bmad:bmm:agents:dev + /bmad:bmm:workflows:dev-story
   # ==============================================================================
   epic-10: in-progress  # 2026-04-04
-  10-UX-homepage-design: backlog               # 🔴 BLOCKER → UX /ux-designer: design full homepage in ux-design.pen. Screens needed: (1) Hero Banner carousel desktop+mobile, (2) Explore blocks grid desktop+mobile, (3) Block CRUD admin modal, (4) 已有/已請求 availability badges on poster cards, (5) Empty state, (6) Loading skeleton. ~6-8 new screens. MUST complete before 10-2/10-3/10-4/10-5.
+  10-UX-homepage-design: done                    # 2026-04-04 — 4 screens: HP-1 desktop (hero+3 blocks+badges), HP-2 mobile (compact hero+scroll blocks), HP-3 block CRUD modal, HP-4 loading skeleton. Screenshots in flow-g-homepage-desktop/ + flow-g-homepage-mobile/
   10-1-tmdb-trending-discover-api: ready-for-dev      # Trending + Discover endpoints, server-side filtering (P2-001,P2-003,P2-004,P2-005) — NO design dependency
-  10-2-hero-banner-component: ready-for-dev            # Full-width hero carousel with trailer modal (P2-001) — ⚠️ BLOCKED by 10-UX
-  10-3-custom-explore-blocks: ready-for-dev            # CRUD explore blocks + TMDB discover integration (P2-002) — ⚠️ BLOCKED by 10-UX
-  10-4-availability-badges: ready-for-dev              # 已有/已請求 badges on poster cards (P2-006) — ⚠️ BLOCKED by 10-UX
-  10-5-homepage-layout-responsive: ready-for-dev       # Layout engine, responsive design, LCP <2s (P2-001) — ⚠️ BLOCKED by 10-UX
+  10-2-hero-banner-component: ready-for-dev            # Full-width hero carousel with trailer modal (P2-001) — ✅ UNBLOCKED by 10-UX
+  10-3-custom-explore-blocks: ready-for-dev            # CRUD explore blocks + TMDB discover integration (P2-002) — ✅ UNBLOCKED by 10-UX
+  10-4-availability-badges: ready-for-dev              # 已有/已請求 badges on poster cards (P2-006) — ✅ UNBLOCKED by 10-UX
+  10-5-homepage-layout-responsive: ready-for-dev       # Layout engine, responsive design, LCP <2s (P2-001) — ✅ UNBLOCKED by 10-UX
   epic-10-retrospective: optional
 
   # ==============================================================================
