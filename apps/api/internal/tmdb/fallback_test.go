@@ -85,6 +85,10 @@ func (m *MockClient) GetTVShowVideos(ctx context.Context, tvID int) (*VideosResp
 	return &VideosResponse{ID: tvID, Results: []Video{}}, nil
 }
 
+func (m *MockClient) FindByExternalID(ctx context.Context, externalID string, externalSource string) (*FindByExternalIDResponse, error) {
+	return &FindByExternalIDResponse{}, nil
+}
+
 func TestNewLanguageFallbackClient(t *testing.T) {
 	tests := []struct {
 		name      string

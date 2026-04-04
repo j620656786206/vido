@@ -28,6 +28,8 @@ type TMDbServiceInterface interface {
 	GetMovieDetails(ctx context.Context, movieID int) (*tmdb.MovieDetails, error)
 	// GetTVShowDetails retrieves TV show details by ID
 	GetTVShowDetails(ctx context.Context, tvID int) (*tmdb.TVShowDetails, error)
+	// FindByExternalID finds movies/TV shows by an external ID (e.g., IMDB)
+	FindByExternalID(ctx context.Context, externalID string, externalSource string) (*tmdb.FindByExternalIDResponse, error)
 }
 
 // TMDbService implements TMDbServiceInterface
@@ -206,6 +208,30 @@ func (s *TMDbService) GetTVShowDetails(ctx context.Context, tvID int) (*tmdb.TVS
 		"tv_id", tvID,
 		"name", result.Name,
 	)
+
+	return result, nil
+}
+
+// FindByExternalID finds movies/TV shows by an external ID (e.g., IMDB).
+// This bypasses the cache layer and calls the client directly since find results are not cacheable.
+func (s *TMDbService) FindByExternalID(ctx context.Context, externalID string, externalSource string) (*tmdb.FindByExternalIDResponse, error) {
+	if externalID == "" {
+		return nil, tmdb.NewBadRequestError("external ID cannot be empty")
+	}
+
+	slog.Debug("Finding by external ID",
+		"external_id", externalID,
+		"source", externalSource,
+	)
+
+	result, err := s.client.FindByExternalID(ctx, externalID, externalSource)
+	if err != nil {
+		slog.Error("Failed to find by external ID",
+			"external_id", externalID,
+			"error", err,
+		)
+		return nil, err
+	}
 
 	return result, nil
 }

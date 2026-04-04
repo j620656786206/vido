@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"github.com/vido/api/internal/parser"
 	"github.com/vido/api/internal/repository"
 	"github.com/vido/api/internal/sse"
+	"github.com/vido/api/internal/tmdb"
 )
 
 // EnrichmentProgress represents the current state of an active enrichment
@@ -43,6 +45,8 @@ type EnrichmentService struct {
 	movieRepo       repository.MovieRepositoryInterface
 	parserService   ParserServiceInterface
 	metadataService MetadataServiceInterface
+	nfoReader       *NFOReaderService
+	tmdbService     TMDbServiceInterface
 	sseHub          *sse.Hub
 	logger          *slog.Logger
 
@@ -57,6 +61,8 @@ func NewEnrichmentService(
 	movieRepo repository.MovieRepositoryInterface,
 	parserService ParserServiceInterface,
 	metadataService MetadataServiceInterface,
+	nfoReader *NFOReaderService,
+	tmdbService TMDbServiceInterface,
 	sseHub *sse.Hub,
 	logger *slog.Logger,
 ) *EnrichmentService {
@@ -67,6 +73,8 @@ func NewEnrichmentService(
 		movieRepo:       movieRepo,
 		parserService:   parserService,
 		metadataService: metadataService,
+		nfoReader:       nfoReader,
+		tmdbService:     tmdbService,
 		sseHub:          sseHub,
 		logger:          logger.With("service", "enrichment"),
 	}
@@ -200,9 +208,19 @@ func (s *EnrichmentService) findUnenrichedMovies(ctx context.Context) ([]models.
 	return append(pending, empty...), nil
 }
 
-// enrichMovie processes a single movie: parse filename → search TMDB → update record.
+// enrichMovie processes a single movie: NFO sidecar → parse filename → search TMDB → update record.
 func (s *EnrichmentService) enrichMovie(ctx context.Context, movie *models.Movie) error {
 	filename := movie.Title
+
+	// Step 0: NFO sidecar detection — runs BEFORE filename parsing
+	if s.nfoReader != nil && movie.FilePath.Valid && movie.FilePath.String != "" {
+		if nfoEnriched, err := s.tryNFOEnrichment(ctx, movie); err != nil {
+			s.logger.Warn("NFO parse failed, falling back to AI parse",
+				"file", movie.FilePath.String, "error", err)
+		} else if nfoEnriched {
+			return nil // NFO enrichment succeeded, skip AI parse
+		}
+	}
 
 	// Step 1: Parse filename
 	parseResult := s.parserService.ParseFilenameWithContext(ctx, filename)
@@ -269,6 +287,174 @@ func (s *EnrichmentService) enrichMovie(ctx context.Context, movie *models.Movie
 	)
 
 	return nil
+}
+
+// tryNFOEnrichment attempts to enrich a movie from its NFO sidecar file.
+// Returns (true, nil) if NFO was found, accepted, and enrichment succeeded.
+// Returns (false, nil) if no NFO found or ShouldOverwrite rejected it.
+// Returns (false, err) if NFO was found but parsing failed.
+func (s *EnrichmentService) tryNFOEnrichment(ctx context.Context, movie *models.Movie) (bool, error) {
+	nfoPath := s.nfoReader.FindNFOSidecar(movie.FilePath.String)
+	if nfoPath == "" {
+		return false, nil
+	}
+
+	// Check ShouldOverwrite gate before applying NFO data
+	currentSource := models.MetadataSource("")
+	if movie.MetadataSource.Valid {
+		currentSource = models.MetadataSource(movie.MetadataSource.String)
+	}
+	if !models.ShouldOverwrite(currentSource, models.MetadataSourceNFO) {
+		s.logger.Debug("NFO skipped: current source has higher priority",
+			"id", movie.ID, "current_source", currentSource)
+		return false, nil
+	}
+
+	nfoData, err := s.nfoReader.Parse(nfoPath)
+	if err != nil {
+		return false, fmt.Errorf("parse %s: %w", nfoPath, err)
+	}
+
+	// Apply technical info from NFO streamdetails (AC #5)
+	s.applyNFOTechInfo(movie, nfoData)
+
+	// Try TMDB direct lookup using NFO uniqueid (AC #2, #3)
+	if s.tmdbService != nil {
+		if err := s.enrichFromNFOWithTMDb(ctx, movie, nfoData); err != nil {
+			s.logger.Warn("TMDB lookup from NFO failed, applying NFO data only",
+				"id", movie.ID, "error", err)
+			// Still apply basic NFO data below
+		}
+	}
+
+	// Set metadata source and parse status
+	movie.MetadataSource = models.NewNullString(string(models.MetadataSourceNFO))
+	movie.ParseStatus = models.ParseStatusSuccess
+	movie.UpdatedAt = time.Now()
+
+	if err := s.movieRepo.Update(ctx, movie); err != nil {
+		return false, fmt.Errorf("update movie after NFO: %w", err)
+	}
+
+	s.logger.Debug("movie enriched from NFO",
+		"id", movie.ID,
+		"nfo", nfoPath,
+		"tmdb_id", movie.TMDbID.Int64,
+	)
+
+	return true, nil
+}
+
+// enrichFromNFOWithTMDb uses NFO uniqueid to do a direct TMDB lookup
+func (s *EnrichmentService) enrichFromNFOWithTMDb(ctx context.Context, movie *models.Movie, nfoData *NFOData) error {
+	// AC #2: Direct TMDB ID lookup
+	if nfoData.TMDbID != "" {
+		tmdbID, err := strconv.Atoi(nfoData.TMDbID)
+		if err != nil {
+			return fmt.Errorf("invalid tmdb id %q: %w", nfoData.TMDbID, err)
+		}
+		details, err := s.tmdbService.GetMovieDetails(ctx, tmdbID)
+		if err != nil {
+			return fmt.Errorf("tmdb get movie %d: %w", tmdbID, err)
+		}
+		s.applyTMDbMovieDetails(movie, details)
+		return nil
+	}
+
+	// AC #3: IMDB ID → TMDB find by external ID
+	if nfoData.IMDbID != "" {
+		return s.enrichFromIMDbID(ctx, movie, nfoData.IMDbID)
+	}
+
+	return nil
+}
+
+// applyNFOTechInfo applies streamdetails from NFO to movie tech info fields
+func (s *EnrichmentService) applyNFOTechInfo(movie *models.Movie, nfoData *NFOData) {
+	if nfoData.VideoCodec != "" {
+		movie.VideoCodec = models.NewNullString(nfoData.VideoCodec)
+	}
+	if nfoData.VideoResolution != "" {
+		movie.VideoResolution = models.NewNullString(nfoData.VideoResolution)
+	}
+	if nfoData.AudioCodec != "" {
+		movie.AudioCodec = models.NewNullString(nfoData.AudioCodec)
+	}
+	if nfoData.AudioChannels > 0 {
+		movie.AudioChannels = models.NewNullInt64(int64(nfoData.AudioChannels))
+	}
+}
+
+// applyTMDbMovieDetails applies TMDB movie details to a movie record
+func (s *EnrichmentService) applyTMDbMovieDetails(movie *models.Movie, details *tmdb.MovieDetails) {
+	if details == nil {
+		return
+	}
+
+	movie.TMDbID = models.NullInt64{NullInt64: sql.NullInt64{Int64: int64(details.ID), Valid: true}}
+
+	if details.Title != "" {
+		movie.Title = details.Title
+	}
+	if details.OriginalTitle != "" {
+		movie.OriginalTitle = models.NewNullString(details.OriginalTitle)
+	}
+	if details.Overview != "" {
+		movie.Overview = models.NewNullString(details.Overview)
+	}
+	if details.ReleaseDate != "" {
+		movie.ReleaseDate = details.ReleaseDate
+	}
+	if details.PosterPath != nil && *details.PosterPath != "" {
+		movie.PosterPath = models.NewNullString(*details.PosterPath)
+	}
+	if details.BackdropPath != nil && *details.BackdropPath != "" {
+		movie.BackdropPath = models.NewNullString(*details.BackdropPath)
+	}
+	if details.VoteAverage > 0 {
+		movie.VoteAverage = models.NewNullFloat64(details.VoteAverage)
+	}
+	if details.VoteCount > 0 {
+		movie.VoteCount = models.NewNullInt64(int64(details.VoteCount))
+	}
+	if details.Popularity > 0 {
+		movie.Popularity = models.NewNullFloat64(details.Popularity)
+	}
+	if details.Runtime > 0 {
+		movie.Runtime = models.NewNullInt64(int64(details.Runtime))
+	}
+	if details.ImdbID != "" {
+		movie.IMDbID = models.NewNullString(details.ImdbID)
+	}
+	if len(details.Genres) > 0 {
+		genres := make([]string, len(details.Genres))
+		for i, g := range details.Genres {
+			genres[i] = g.Name
+		}
+		movie.Genres = genres
+	}
+}
+
+// enrichFromIMDbID uses IMDB ID to find the movie on TMDB via /find endpoint
+func (s *EnrichmentService) enrichFromIMDbID(ctx context.Context, movie *models.Movie, imdbID string) error {
+	findResult, err := s.tmdbService.FindByExternalID(ctx, imdbID, "imdb_id")
+	if err != nil {
+		return fmt.Errorf("tmdb find by imdb %s: %w", imdbID, err)
+	}
+
+	if len(findResult.MovieResults) > 0 {
+		// Use the first movie result's ID to get full details
+		tmdbID := findResult.MovieResults[0].ID
+		details, err := s.tmdbService.GetMovieDetails(ctx, tmdbID)
+		if err != nil {
+			return fmt.Errorf("tmdb get movie %d (from imdb %s): %w", tmdbID, imdbID, err)
+		}
+		s.applyTMDbMovieDetails(movie, details)
+		return nil
+	}
+
+	// No movie results — might be a TV show, but we're enriching a movie record
+	return fmt.Errorf("no TMDB movie found for IMDB ID %s", imdbID)
 }
 
 // applyMetadataToMovie updates movie fields from a MetadataItem.

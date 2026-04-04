@@ -248,6 +248,89 @@ development_status:
   epic-7b-retrospective: optional
 
   # ==============================================================================
+  # Epic 0-UX: Design System & Guidelines (Pre-requisite for Phase 2)
+  # Phase: Cross-cutting — Must complete before Epic 10/11 frontend stories
+  #
+  # CONTEXT:
+  #   UX spec (ux-design-specification.md) already defines complete Design System
+  #   (colors, typography, spacing, shadcn/ui, CVA variants) but NONE of it is
+  #   implemented in tailwind.config.js or code. All colors are hard-coded
+  #   Tailwind defaults (slate-900, slate-100). This gap must be closed before
+  #   Phase 2 frontend work begins, or every new Epic will diverge visually.
+  #
+  # SOURCE REFERENCE:
+  #   UX Spec sections: "Design System Foundation" (line ~868),
+  #   "Visual Design Foundation" (line ~1457), "Color System", "Typography System",
+  #   "Spacing & Layout Foundation", "Design System Integration Summary" (line ~5166)
+  #
+  # AGENT ROUTING KEY:
+  #   UX  = /bmad:bmm:agents:ux-designer (Sally)
+  #   QD  = /bmad:bmm:workflows:quick-dev (Barry)
+  #   DEV = /bmad:bmm:agents:dev + /bmad:bmm:workflows:dev-story
+  # ==============================================================================
+
+  # --- Task 1: Design Guidelines Document ---
+  # AGENT: UX /ux-designer
+  # PROMPT: 從 _bmad-output/planning-artifacts/ux-design-specification.md 擷取 Design System
+  #   相關章節（Color System, Typography, Spacing, Component Strategy, CVA variants,
+  #   Iconography），精簡為一份開發者導向的 design-guidelines.md。格式要求：
+  #   (1) Tailwind token 對照表（CSS variable name → Tailwind class → 用途）
+  #   (2) 字型規範 + font-display 策略
+  #   (3) 間距規則（card padding, section spacing, grid gaps）
+  #   (4) 元件命名慣例與變體定義（CVA pattern）
+  #   (5) 響應式斷點與 grid 策略
+  #   (6) shadcn/ui 引入評估與建議（列出 Epic 10/11 需要的元件）
+  #   輸出到 _bmad-output/planning-artifacts/design-guidelines.md
+  0-UX-1-design-guidelines-doc: backlog
+
+  # --- Task 2: Tailwind Config Alignment ---
+  # AGENT: QD /quick-dev
+  # PROMPT: 根據 _bmad-output/planning-artifacts/design-guidelines.md 的 token 對照表，
+  #   更新 apps/web/tailwind.config.js：
+  #   (1) extend.colors: bg-primary/secondary/tertiary, accent/hover/pressed,
+  #       success/error/warning/info, text-primary/secondary/muted/inverse
+  #   (2) extend.fontFamily: sans → Noto Sans TC stack, mono → JetBrains Mono stack
+  #   (3) extend.borderRadius: 自訂圓角 token（如 UX spec 有定義）
+  #   (4) extend.boxShadow: 卡片陰影 token
+  #   確保不破壞現有 shrink animation。跑 pnpm run lint 確認無錯誤。
+  #   DEPENDS ON: 0-UX-1
+  0-UX-2-tailwind-config-tokens: backlog
+
+  # --- Task 3: CSS Variables Base Layer ---
+  # AGENT: QD /quick-dev
+  # PROMPT: 根據 design-guidelines.md，更新 apps/web/src/styles.css：
+  #   (1) 在 @layer base 的 :root 中定義所有 CSS variables（--bg-primary, --accent-primary 等）
+  #   (2) 將現有寫死的 #0f172a 和 #f1f5f9 替換為 var(--bg-primary) 和 var(--text-primary)
+  #   (3) 保留 fadeIn keyframe 不動
+  #   (4) 預留 [data-theme="light"] 區塊（內容留空註解即可）
+  #   視覺結果必須與修改前完全一致。
+  #   DEPENDS ON: 0-UX-2
+  0-UX-3-css-variables-base: backlog
+
+  # --- Task 4: shadcn/ui Decision & Setup ---
+  # AGENT: QD /quick-dev
+  # PROMPT: 根據 design-guidelines.md 的 shadcn/ui 評估結論執行：
+  #   若決定引入：(1) npx shadcn-ui@latest init，選 New York style + Tailwind CSS
+  #   (2) 設定 components.json 指向 apps/web/src/components/ui
+  #   (3) 安裝 Epic 10 必需元件：carousel, dialog, badge, skeleton, card, button
+  #   (4) 用 design-guidelines.md 的色彩 token 覆蓋 shadcn 預設主題
+  #   若決定不引入：在 design-guidelines.md 補充手刻元件規範。
+  #   DEPENDS ON: 0-UX-2 + 0-UX-3
+  0-UX-4-shadcn-ui-setup: backlog
+
+  # --- Task 5: Existing Component Color Migration ---
+  # AGENT: DEV /dev-story
+  # PROMPT: 全域搜尋 apps/web/src/ 下所有 .tsx/.ts 檔案，將 hard-coded Tailwind 色彩
+  #   class 替換為語義化 token class（依 design-guidelines.md 對照表）。主要替換：
+  #   bg-slate-900 → bg-primary, bg-slate-800 → bg-secondary,
+  #   text-slate-100 → text-primary, text-slate-400 → text-secondary,
+  #   border-slate-700 → border-primary 等。
+  #   每個檔案修改後跑 vitest 確認測試通過。視覺結果必須完全一致。
+  #   最後跑 pnpm run lint && pnpm run format:check 確認。
+  #   DEPENDS ON: 0-UX-2 + 0-UX-3
+  0-UX-5-color-migration: backlog
+
+  # ==============================================================================
   # Epic 9: AI Subtitle Enhancement (PRD v4)
   # Phase: Phase 1 — Core Library
   # FRs: P1-020–P1-021
@@ -278,7 +361,7 @@ development_status:
   # ==============================================================================
   epic-9c: in-progress  # 2026-04-04
   9c-1-db-schema-migration: done             # Migration #021, tech info columns, series file_size, MetadataSource constants, ShouldOverwrite() — CR 2026-04-04
-  9c-2-nfo-sidecar-reader: ready-for-dev              # NFO detection in enrichment pipeline, XML/URL parser, uniqueid TMDB matching
+  9c-2-nfo-sidecar-reader: review              # NFO detection in enrichment pipeline, XML/URL parser, uniqueid TMDB matching
   9c-3-ffprobe-integration: ready-for-dev             # Docker ffprobe, Go service with semaphore/timeout, tech info extraction
   9c-4-tech-badges-ui-unmatched-filter: ready-for-dev # TechBadge components, detail page integration, unmatched filter API + UI
   epic-9c-retrospective: optional
@@ -463,4 +546,4 @@ development_status:
   # Not a frontend bug (bugfix-3 handles empty responses correctly)
   backups-api-500-investigation:                      backlog  # 2026-03-28 — backend issue, needs investigation
 
-next_priority: epic-9c  # Epic 9c before 9: contains P0 requirement (P1-032 data source priority), foundational ShouldOverwrite() logic, competitive feature parity (NFO/tech info). Epic 9 (AI subtitle, P2/P3) deferred until after 9c.
+next_priority: epic-9c + 0-UX  # Epic 9c (backend, no design dep) runs parallel with 0-UX Design System tasks. 0-UX MUST complete before Epic 10/11 frontend stories. Sequence: 0-UX-1 (UX) → 0-UX-2/3 (QD) → 0-UX-4 (QD) → 0-UX-5 (DEV). Epic 9 (AI subtitle, P2/P3) deferred.

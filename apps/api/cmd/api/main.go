@@ -336,11 +336,17 @@ func main() {
 	scannerService.SetLibraryRepo(repos.MediaLibraries) // Story 7b-5: DB-based library scanning
 	slog.Info("Scanner service initialized")
 
+	// Initialize NFO reader service for .nfo sidecar parsing (Story 9c-2)
+	nfoReaderService := services.NewNFOReaderService(slog.Default())
+	slog.Info("NFO reader service initialized")
+
 	// Initialize enrichment service for post-scan metadata enrichment
 	enrichmentService := services.NewEnrichmentService(
 		repos.Movies,
 		parserService,
 		metadataService,
+		nfoReaderService,
+		tmdbService,
 		sseHub,
 		slog.Default(),
 	)

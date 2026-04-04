@@ -181,6 +181,12 @@ type VideosResponse struct {
 	Results []Video `json:"results"`
 }
 
+// FindByExternalIDResponse represents the response from /find/{external_id}
+type FindByExternalIDResponse struct {
+	MovieResults  []Movie  `json:"movie_results"`
+	TVResults     []TVShow `json:"tv_results"`
+}
+
 // ErrorResponse represents a TMDb API error response
 type ErrorResponse struct {
 	StatusCode    int    `json:"status_code" example:"7"`

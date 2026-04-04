@@ -53,6 +53,10 @@ func (m *MockTMDbService) GetTVShowDetails(ctx context.Context, tvID int) (*tmdb
 	return m.GetTVShowDetailsResponse, nil
 }
 
+func (m *MockTMDbService) FindByExternalID(ctx context.Context, externalID string, externalSource string) (*tmdb.FindByExternalIDResponse, error) {
+	return &tmdb.FindByExternalIDResponse{}, nil
+}
+
 func setupTMDbRouter(handler *TMDbHandler) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()

@@ -1,6 +1,6 @@
 # Story 9c-2: NFO Sidecar Reader
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -56,40 +56,40 @@ So that **my media gets precise TMDB matching using NFO uniqueid and I don't nee
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create NFO reader service (AC: #2, #3, #4, #5, #6)
-  - [ ] 1.1 Create `apps/api/internal/services/nfo_reader_service.go`
-  - [ ] 1.2 Define structs: `NFOReaderService`, `NFOData`, `NFOUniqueID`, `NFOStreamDetails`, `NFOSubtitle`
-  - [ ] 1.3 Implement `Parse(nfoPath string) (*NFOData, error)` — format detection (XML prefix / URL)
-  - [ ] 1.4 Implement `parseXML(content []byte) (*NFOData, error)` — Go `encoding/xml` for `<movie>`, `<tvshow>`, `<episodedetails>`
-  - [ ] 1.5 Implement `findNFOSidecar(videoPath string) string` — same-name .nfo path check
+- [x] Task 1: Create NFO reader service (AC: #2, #3, #4, #5, #6)
+  - [x] 1.1 Create `apps/api/internal/services/nfo_reader_service.go`
+  - [x] 1.2 Define structs: `NFOReaderService`, `NFOData`, `NFOUniqueID`, `NFOStreamDetails`, `NFOSubtitle`
+  - [x] 1.3 Implement `Parse(nfoPath string) (*NFOData, error)` — format detection (XML prefix / URL)
+  - [x] 1.4 Implement `parseXML(content []byte) (*NFOData, error)` — Go `encoding/xml` for `<movie>`, `<tvshow>`, `<episodedetails>`
+  - [x] 1.5 Implement `findNFOSidecar(videoPath string) string` — same-name .nfo path check
 
-- [ ] Task 2: Implement URL format extractors (AC: #4)
-  - [ ] 2.1 Implement `extractTMDbID(line string) (string, bool)` — parse TMDB URLs
-  - [ ] 2.2 Implement `extractIMDbID(line string) (string, bool)` — parse IMDB URLs/IDs
+- [x] Task 2: Implement URL format extractors (AC: #4)
+  - [x] 2.1 Implement `extractTMDbID(line string) (string, bool)` — parse TMDB URLs
+  - [x] 2.2 Implement `extractIMDbID(line string) (string, bool)` — parse IMDB URLs/IDs
 
-- [ ] Task 3: Integrate into enrichment pipeline (AC: #1, #7, #8, #9)
-  - [ ] 3.1 Add `NFOReaderService` dependency to `EnrichmentService` struct and constructor
-  - [ ] 3.2 Modify `enrichMovie()` — insert NFO detection BEFORE Step 1 (Parse filename)
-  - [ ] 3.3 Call `ShouldOverwrite()` gate before applying NFO data
-  - [ ] 3.4 If NFO found and accepted: set `metadata_source = "nfo"`, skip AI parse
-  - [ ] 3.5 If NFO not found or rejected: continue existing AI parse flow unchanged
+- [x] Task 3: Integrate into enrichment pipeline (AC: #1, #7, #8, #9)
+  - [x] 3.1 Add `NFOReaderService` dependency to `EnrichmentService` struct and constructor
+  - [x] 3.2 Modify `enrichMovie()` — insert NFO detection BEFORE Step 1 (Parse filename)
+  - [x] 3.3 Call `ShouldOverwrite()` gate before applying NFO data
+  - [x] 3.4 If NFO found and accepted: set `metadata_source = "nfo"`, skip AI parse
+  - [x] 3.5 If NFO not found or rejected: continue existing AI parse flow unchanged
 
-- [ ] Task 4: Enhance TMDB enrichment with direct lookup (AC: #2, #3)
-  - [ ] 4.1 Modify TMDB enrichment to accept optional TMDB ID for direct `GetMovieDetails(id)` lookup
-  - [ ] 4.2 Modify TMDB enrichment to accept optional IMDB ID for `FindByExternalID(imdbID)` lookup
-  - [ ] 4.3 When NFO provides uniqueid, bypass search and use direct lookup
+- [x] Task 4: Enhance TMDB enrichment with direct lookup (AC: #2, #3)
+  - [x] 4.1 Modify TMDB enrichment to accept optional TMDB ID for direct `GetMovieDetails(id)` lookup
+  - [x] 4.2 Modify TMDB enrichment to accept optional IMDB ID for `FindByExternalID(imdbID)` lookup
+  - [x] 4.3 When NFO provides uniqueid, bypass search and use direct lookup
 
-- [ ] Task 5: Wire in main.go (AC: all)
-  - [ ] 5.1 Create `NFOReaderService` instance in `main.go`
-  - [ ] 5.2 Pass to `NewEnrichmentService()` constructor
+- [x] Task 5: Wire in main.go (AC: all)
+  - [x] 5.1 Create `NFOReaderService` instance in `main.go`
+  - [x] 5.2 Pass to `NewEnrichmentService()` constructor
 
-- [ ] Task 6: Write tests (AC: #1-9)
-  - [ ] 6.1 NFO parser unit tests: XML movie format, XML tvshow format, URL format (TMDB, IMDB)
-  - [ ] 6.2 NFO parser unit tests: malformed XML, empty file, unrecognized format
-  - [ ] 6.3 NFO parser unit tests: streamdetails extraction (video codec, resolution, audio)
-  - [ ] 6.4 `findNFOSidecar()` tests: exists, doesn't exist, various extensions
-  - [ ] 6.5 Enrichment integration tests: NFO priority over AI, manual priority over NFO
-  - [ ] 6.6 Enrichment integration tests: fallback on parse failure, no NFO file
+- [x] Task 6: Write tests (AC: #1-9)
+  - [x] 6.1 NFO parser unit tests: XML movie format, XML tvshow format, URL format (TMDB, IMDB)
+  - [x] 6.2 NFO parser unit tests: malformed XML, empty file, unrecognized format
+  - [x] 6.3 NFO parser unit tests: streamdetails extraction (video codec, resolution, audio)
+  - [x] 6.4 `findNFOSidecar()` tests: exists, doesn't exist, various extensions
+  - [x] 6.5 Enrichment integration tests: NFO priority over AI, manual priority over NFO
+  - [x] 6.6 Enrichment integration tests: fallback on parse failure, no NFO file
 
 ## Dev Notes
 
@@ -149,9 +149,40 @@ So that **my media gets precise TMDB matching using NFO uniqueid and I don't nee
 ## Dev Agent Record
 
 ### Agent Model Used
+Claude Opus 4.6 (1M context)
 
 ### Debug Log References
+- All 35 NFO-related tests pass (unit + integration)
+- Full build clean (`go build ./...` — no errors)
+- TMDB package tests pass, handler tests pass
+- Pre-existing failures in setup_service_test.go and download_handler_test.go unrelated to this story
 
 ### Completion Notes List
+- Created NFOReaderService with Parse(), parseXML(), parseURL(), FindNFOSidecar()
+- Supports 3 XML root elements: `<movie>`, `<tvshow>`, `<episodedetails>`
+- URL format supports both TMDB and IMDB URLs
+- Streamdetails extraction: video codec, resolution (4K/1440p/1080p/720p/480p), audio codec, channels, subtitle tracks
+- Integrated NFO detection at TOP of enrichMovie() — before AI parse (Step 0)
+- ShouldOverwrite() gate: manual > nfo > tmdb > ai
+- Added FindByExternalID to TMDB client + service for IMDB→TMDB lookup
+- Direct TMDB ID lookup when NFO provides `<uniqueid type="tmdb">`
+- IMDB ID → `/find/{external_id}` → GetMovieDetails chain for `<uniqueid type="imdb">`
+- Malformed NFO logs warning and falls back to AI parse (no crash)
+- 🎨 UX Verification: SKIPPED — no UI changes in this story
 
 ### File List
+- `apps/api/internal/services/nfo_reader_service.go` — NEW: NFO reader service
+- `apps/api/internal/services/nfo_reader_service_test.go` — NEW: 28 unit tests
+- `apps/api/internal/services/enrichment_nfo_test.go` — NEW: 7 integration tests
+- `apps/api/internal/services/enrichment_service.go` — MODIFIED: NFO stage in enrichMovie(), tryNFOEnrichment(), applyTMDbMovieDetails(), enrichFromIMDbID()
+- `apps/api/internal/services/tmdb_service.go` — MODIFIED: FindByExternalID method + interface
+- `apps/api/internal/tmdb/client.go` — MODIFIED: FindByExternalID in ClientInterface
+- `apps/api/internal/tmdb/movies.go` — MODIFIED: FindByExternalID implementation
+- `apps/api/internal/tmdb/types.go` — MODIFIED: FindByExternalIDResponse type
+- `apps/api/internal/tmdb/fallback_test.go` — MODIFIED: MockClient FindByExternalID
+- `apps/api/internal/handlers/tmdb_handler_test.go` — MODIFIED: MockTMDbService FindByExternalID
+- `apps/api/cmd/api/main.go` — MODIFIED: wire NFOReaderService + tmdbService into enrichment
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — MODIFIED: 9c-2 status
+
+## Change Log
+- 2026-04-04: Story 9c-2 implemented — NFO sidecar reader service with XML/URL parsing, TMDB direct lookup via uniqueid, streamdetails tech info extraction, ShouldOverwrite priority gate, integrated into enrichment pipeline. 35 tests added.

@@ -72,6 +72,30 @@ func (c *Client) GetMovieDetailsWithLanguage(ctx context.Context, movieID int, l
 	return &result, nil
 }
 
+// FindByExternalID finds movies/TV shows using an external ID (e.g., IMDB ID).
+// externalSource should be "imdb_id", "tvdb_id", etc.
+func (c *Client) FindByExternalID(ctx context.Context, externalID string, externalSource string) (*FindByExternalIDResponse, error) {
+	if externalID == "" {
+		return nil, NewBadRequestError("external ID cannot be empty")
+	}
+	if externalSource == "" {
+		return nil, NewBadRequestError("external source cannot be empty")
+	}
+
+	endpoint := fmt.Sprintf("/find/%s", url.QueryEscape(externalID))
+	queryParams := url.Values{
+		"external_source": []string{externalSource},
+		"language":        []string{c.language},
+	}
+
+	var result FindByExternalIDResponse
+	if err := c.Get(ctx, endpoint, queryParams, &result); err != nil {
+		return nil, fmt.Errorf("failed to find by external ID: %w", err)
+	}
+
+	return &result, nil
+}
+
 // GetMovieVideos retrieves videos (trailers, teasers, etc.) for a movie
 func (c *Client) GetMovieVideos(ctx context.Context, movieID int) (*VideosResponse, error) {
 	if movieID <= 0 {

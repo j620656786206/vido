@@ -53,6 +53,8 @@ type ClientInterface interface {
 	GetMovieVideos(ctx context.Context, movieID int) (*VideosResponse, error)
 	// GetTVShowVideos retrieves videos (trailers, teasers) for a TV show
 	GetTVShowVideos(ctx context.Context, tvID int) (*VideosResponse, error)
+	// FindByExternalID finds movies/TV shows by an external ID (e.g., IMDB)
+	FindByExternalID(ctx context.Context, externalID string, externalSource string) (*FindByExternalIDResponse, error)
 }
 
 // Client represents a TMDb API client
