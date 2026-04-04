@@ -297,16 +297,18 @@ development_status:
   0-UX-2-tailwind-config-tokens: done              # 2026-04-04 — merged with 0-UX-3, Tailwind v4 CSS-first approach
   0-UX-3-css-variables-base: done                  # 2026-04-04 — merged into 0-UX-2, all tokens in styles.css :root
 
-  # --- Task 4: shadcn/ui Decision & Setup ---
-  # AGENT: QD /quick-dev
-  # PROMPT: 根據 design-guidelines.md 的 shadcn/ui 評估結論執行：
-  #   若決定引入：(1) npx shadcn-ui@latest init，選 New York style + Tailwind CSS
-  #   (2) 設定 components.json 指向 apps/web/src/components/ui
-  #   (3) 安裝 Epic 10 必需元件：carousel, dialog, badge, skeleton, card, button
-  #   (4) 用 design-guidelines.md 的色彩 token 覆蓋 shadcn 預設主題
-  #   若決定不引入：在 design-guidelines.md 補充手刻元件規範。
+  # --- Task 4: Radix UI + CVA Component Primitives (shadcn-style) ---
+  # AGENT: UX /ux-designer (executed by Sally)
+  # RESULT: shadcn CLI incompatible with Nx+Vite monorepo — manual setup instead.
+  #   Installed: class-variance-authority, @radix-ui/react-dialog, @radix-ui/react-slot,
+  #   @radix-ui/react-tooltip, @radix-ui/react-popover, @radix-ui/react-select,
+  #   @radix-ui/react-dropdown-menu. Added @/* path alias to tsconfig.base.json.
+  #   Created shadcn-style components in apps/web/src/components/ui/:
+  #   Button (6 variants + 4 sizes, CVA), Badge (7 variants), Card (6 sub-components),
+  #   Dialog (Radix-based, 8 exports), Skeleton. All use Midnight Blue design tokens.
+  #   cn() utility already existed at @/lib/utils.
   #   DEPENDS ON: 0-UX-2 + 0-UX-3
-  0-UX-4-shadcn-ui-setup: backlog
+  0-UX-4-shadcn-ui-setup: done                     # 2026-04-04 — manual Radix+CVA setup (shadcn CLI incompatible with Nx+Vite)
 
   # --- Task 5: Existing Component Color Migration ---
   # AGENT: DEV /dev-story

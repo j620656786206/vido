@@ -15,7 +15,8 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@vido/shared-types": ["libs/shared-types/src/index.ts"]
+      "@vido/shared-types": ["libs/shared-types/src/index.ts"],
+      "@/*": ["apps/web/src/*"]
     }
   },
   "exclude": ["node_modules", "tmp"]
