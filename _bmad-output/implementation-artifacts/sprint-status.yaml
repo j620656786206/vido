@@ -283,29 +283,19 @@ development_status:
   #   Pencil design tokens (bg-primary, accent-primary, etc.) already configured.
   0-UX-1-design-system-reference: done             # 2026-04-04 — Design System page built in ux-design.pen with 6 sections, design-guidelines.md removed (visual > markdown)
 
-  # --- Task 2: Tailwind Config Alignment ---
-  # AGENT: QD /quick-dev
-  # PROMPT: 根據 _bmad-output/planning-artifacts/design-guidelines.md 的 token 對照表，
-  #   更新 apps/web/tailwind.config.js：
-  #   (1) extend.colors: bg-primary/secondary/tertiary, accent/hover/pressed,
-  #       success/error/warning/info, text-primary/secondary/muted/inverse
-  #   (2) extend.fontFamily: sans → Noto Sans TC stack, mono → JetBrains Mono stack
-  #   (3) extend.borderRadius: 自訂圓角 token（如 UX spec 有定義）
-  #   (4) extend.boxShadow: 卡片陰影 token
-  #   確保不破壞現有 shrink animation。跑 pnpm run lint 確認無錯誤。
-  #   DEPENDS ON: 0-UX-1
-  0-UX-2-tailwind-config-tokens: backlog
-
-  # --- Task 3: CSS Variables Base Layer ---
-  # AGENT: QD /quick-dev
-  # PROMPT: 根據 design-guidelines.md，更新 apps/web/src/styles.css：
-  #   (1) 在 @layer base 的 :root 中定義所有 CSS variables（--bg-primary, --accent-primary 等）
-  #   (2) 將現有寫死的 #0f172a 和 #f1f5f9 替換為 var(--bg-primary) 和 var(--text-primary)
-  #   (3) 保留 fadeIn keyframe 不動
-  #   (4) 預留 [data-theme="light"] 區塊（內容留空註解即可）
-  #   視覺結果必須與修改前完全一致。
-  #   DEPENDS ON: 0-UX-2
-  0-UX-3-css-variables-base: backlog
+  # --- Task 2+3: Design Tokens in CSS (merged — Tailwind v4 uses CSS-first config) ---
+  # AGENT: UX /ux-designer (executed by Sally)
+  # RESULT: Tailwind v4 does NOT use tailwind.config.js for theme — uses :root CSS variables.
+  #   Updated apps/web/src/styles.css with:
+  #   (1) :root block with all design tokens from ux-design.pen (bg, accent, semantic, text, radius, shadow, spacing)
+  #   (2) Hard-coded #0f172a/#f1f5f9 replaced with var(--bg-primary)/var(--text-primary)
+  #   (3) Font utility classes in @layer base: .font-primary (Noto Sans TC), .font-mono (JetBrains Mono)
+  #   (4) :focus-visible ring with accent color, prefers-reduced-motion support
+  #   (5) Light theme placeholder reserved as comment
+  #   tailwind.config.js unchanged (only needed for content paths + shrink animation in v4)
+  #   Usage: bg-[var(--bg-primary)], text-[var(--text-primary)], rounded-[var(--radius-lg)], etc.
+  0-UX-2-tailwind-config-tokens: done              # 2026-04-04 — merged with 0-UX-3, Tailwind v4 CSS-first approach
+  0-UX-3-css-variables-base: done                  # 2026-04-04 — merged into 0-UX-2, all tokens in styles.css :root
 
   # --- Task 4: shadcn/ui Decision & Setup ---
   # AGENT: QD /quick-dev
