@@ -1,6 +1,6 @@
 # Story 9c-4: Technical Info Badges UI + Unmatched Filter
 
-Status: review
+Status: done
 
 ## Story
 
@@ -176,17 +176,20 @@ Claude Opus 4.6
 - 2026-04-05: Task 1 — Backend unmatched filter API implemented with repository filters, handler param parsing, and tests
 - 2026-04-05: Task 2 — Backend stats endpoints with unmatched_count, MediaStats struct, service + handler + repo + tests
 - 2026-04-05: Tasks 3-8 — Frontend TechBadge components, detail page integration, unmatched filter UI, API service layer, all tests
+- 2026-04-05: CR fixes — 22 issues fixed (2C/4H/9M/7L): badge colors -400→-500 per UX spec, subtitle external/embedded distinction (AC3), is_removed filter on unmatched/stats queries, List query tech columns added, MediaStats.Unmatched→UnmatchedCount, activeFilterCount includes unmatched, aria-label on badges, rollback error logging, resolution/channel mappings expanded, searchLibrary forwards unmatched param, onRemoveUnmatched made required, malformed JSON logged, test edge cases added
 
 ### File List
-- apps/api/internal/repository/movie_repository.go (modified — unmatched filter)
-- apps/api/internal/repository/series_repository.go (modified — unmatched filter)
+- apps/api/internal/repository/movie_repository.go (modified — unmatched filter, List tech columns, GetStats is_removed, slog import)
+- apps/api/internal/repository/series_repository.go (modified — unmatched filter, List tech columns, GetStats is_removed, slog import)
 - apps/api/internal/handlers/movie_handler.go (modified — unmatched param parsing)
 - apps/api/internal/handlers/series_handler.go (modified — unmatched param parsing)
 - apps/api/internal/handlers/library_handler.go (modified — unmatched param parsing)
-- apps/api/internal/repository/movie_repository_test.go (modified — TestMovieListUnmatchedFilter)
-- apps/api/internal/repository/series_repository_test.go (modified — TestSeriesListUnmatchedFilter)
-- apps/api/internal/handlers/movie_handler_test.go (modified — TestMovieHandler_ListWithUnmatchedFilter, TestMovieHandler_Stats)
-- apps/api/internal/repository/repository.go (modified — MediaStats struct)
+- apps/api/internal/repository/movie_repository_test.go (modified — TestMovieGetStats, TestMovieGetStatsEmpty, TestMovieListUnmatchedFilter)
+- apps/api/internal/repository/series_repository_test.go (modified — TestSeriesGetStats, TestSeriesGetStatsEmpty, TestSeriesListUnmatchedFilter)
+- apps/api/internal/handlers/movie_handler_test.go (modified — Stats/UnmatchedFilter/UnmatchedFalse/Pagination tests, json.Unmarshal checks)
+- apps/api/internal/handlers/series_handler_test.go (modified — Stats test, json.Unmarshal checks)
+- apps/api/internal/handlers/library_handler_test.go (modified — unmatched filter tests)
+- apps/api/internal/repository/repository.go (modified — MediaStats.UnmatchedCount rename, rollback error logging, slog import)
 - apps/api/internal/repository/interfaces.go (modified — GetStats in both interfaces)
 - apps/api/internal/services/movie_service.go (modified — GetStats)
 - apps/api/internal/services/series_service.go (modified — GetStats)
@@ -194,15 +197,17 @@ Claude Opus 4.6
 - apps/api/internal/services/parse_queue_service_test.go (modified — GetStats mock stubs)
 - apps/api/internal/services/enrichment_nfo_test.go (modified — GetStats mock stub)
 - apps/web/src/types/library.ts (modified — tech info fields, MediaStats type, unmatched param)
-- apps/web/src/components/media/TechBadge.tsx (new — single tech badge component)
-- apps/web/src/components/media/TechBadge.spec.tsx (new — TechBadge tests)
-- apps/web/src/components/media/TechBadgeGroup.tsx (new — badge group component)
-- apps/web/src/components/media/TechBadgeGroup.spec.tsx (new — TechBadgeGroup tests)
-- apps/web/src/utils/resolutionLabel.ts (new — resolution/channel label utilities)
-- apps/web/src/utils/resolutionLabel.spec.ts (new — utility tests)
+- apps/web/src/components/media/TechBadge.tsx (new — badge with aria-label, text-*-500 colors)
+- apps/web/src/components/media/TechBadge.spec.tsx (new — TechBadge tests incl. aria-label)
+- apps/web/src/components/media/TechBadgeGroup.tsx (new — badge group with external/embedded subtitle distinction)
+- apps/web/src/components/media/TechBadgeGroup.spec.tsx (new — TechBadgeGroup tests incl. subtitle source distinction)
+- apps/web/src/utils/resolutionLabel.ts (new — resolution/channel label utilities incl. Mono, 480p, ultrawide)
+- apps/web/src/utils/resolutionLabel.spec.ts (new — utility tests incl. edge cases)
 - apps/web/src/routes/media/$type.$id.tsx (modified — TechBadgeGroup integration)
-- apps/web/src/services/libraryService.ts (modified — getMovieStats, getSeriesStats, unmatched param)
+- apps/web/src/services/libraryService.ts (modified — getMovieStats, getSeriesStats, searchLibrary unmatched param)
 - apps/web/src/hooks/useLibrary.ts (modified — useMovieStats, useSeriesStats hooks)
-- apps/web/src/routes/library.tsx (modified — unmatched filter wiring)
+- apps/web/src/routes/library.tsx (modified — unmatched filter wiring, activeFilterCount includes unmatched)
 - apps/web/src/components/library/FilterPanel.tsx (modified — unmatched toggle with count)
-- apps/web/src/components/library/FilterChips.tsx (modified — unmatched chip removal)
+- apps/web/src/components/library/FilterPanel.spec.tsx (modified — unmatched filter tests)
+- apps/web/src/components/library/FilterChips.tsx (modified — onRemoveUnmatched required)
+- apps/web/src/components/library/FilterChips.spec.tsx (modified — onRemoveUnmatched required prop)

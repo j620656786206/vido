@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"log/slog"
 )
 
 // Repository defines the base interface for data access operations
@@ -112,8 +113,8 @@ func NewPaginationResult(params ListParams, totalResults int) *PaginationResult 
 
 // MediaStats contains aggregate statistics for a media type (movies or series)
 type MediaStats struct {
-	Total    int `json:"total"`
-	Unmatched int `json:"unmatched_count"`
+	Total         int `json:"total"`
+	UnmatchedCount int `json:"unmatched_count"`
 }
 
 // Transactor defines the interface for types that support database transactions
@@ -136,13 +137,17 @@ func WithTransaction(ctx context.Context, db Transactor, fn TransactionFunc) err
 
 	defer func() {
 		if p := recover(); p != nil {
-			tx.Rollback()
+			if rbErr := tx.Rollback(); rbErr != nil {
+				slog.Error("Failed to rollback transaction after panic", "error", rbErr)
+			}
 			panic(p) // re-throw panic after rollback
 		}
 	}()
 
 	if err := fn(tx); err != nil {
-		tx.Rollback()
+		if rbErr := tx.Rollback(); rbErr != nil {
+			slog.Error("Failed to rollback transaction", "error", rbErr)
+		}
 		return err
 	}
 

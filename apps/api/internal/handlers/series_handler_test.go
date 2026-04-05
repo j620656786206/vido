@@ -527,7 +527,7 @@ func TestSeriesHandler_Stats(t *testing.T) {
 	t.Run("success - returns stats", func(t *testing.T) {
 		mockService := new(MockSeriesService)
 		mockService.On("GetStats", mock.Anything).Return(
-			&repository.MediaStats{Total: 50, Unmatched: 8},
+			&repository.MediaStats{Total: 50, UnmatchedCount: 8},
 			nil,
 		)
 
@@ -547,10 +547,11 @@ func TestSeriesHandler_Stats(t *testing.T) {
 
 		dataBytes, _ := json.Marshal(response.Data)
 		var stats repository.MediaStats
-		json.Unmarshal(dataBytes, &stats)
+		err = json.Unmarshal(dataBytes, &stats)
+		assert.NoError(t, err)
 
 		assert.Equal(t, 50, stats.Total)
-		assert.Equal(t, 8, stats.Unmatched)
+		assert.Equal(t, 8, stats.UnmatchedCount)
 
 		mockService.AssertExpectations(t)
 	})

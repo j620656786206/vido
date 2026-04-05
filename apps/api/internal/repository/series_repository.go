@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/vido/api/internal/models"
@@ -309,7 +310,7 @@ func (r *SeriesRepository) List(ctx context.Context, params ListParams) ([]model
 	}
 
 	if unmatched, ok := params.Filters["unmatched"].(bool); ok && unmatched {
-		conditions = append(conditions, "(tmdb_id IS NULL OR tmdb_id = 0)")
+		conditions = append(conditions, "(tmdb_id IS NULL OR tmdb_id = 0) AND (is_removed = 0 OR is_removed IS NULL)")
 	}
 
 	whereClause := ""
@@ -333,7 +334,9 @@ func (r *SeriesRepository) List(ctx context.Context, params ListParams) ([]model
 		SELECT
 			id, title, original_title, first_air_date, last_air_date, genres, rating,
 			overview, poster_path, backdrop_path, number_of_seasons, number_of_episodes,
-			status, original_language, imdb_id, tmdb_id, in_production, created_at, updated_at
+			status, original_language, imdb_id, tmdb_id, in_production,
+			video_codec, video_resolution, audio_codec, audio_channels, subtitle_tracks, hdr_format,
+			created_at, updated_at
 		FROM series
 		%s
 		ORDER BY %s %s
@@ -372,6 +375,12 @@ func (r *SeriesRepository) List(ctx context.Context, params ListParams) ([]model
 			&s.IMDbID,
 			&s.TMDbID,
 			&s.InProduction,
+			&s.VideoCodec,
+			&s.VideoResolution,
+			&s.AudioCodec,
+			&s.AudioChannels,
+			&s.SubtitleTracks,
+			&s.HDRFormat,
 			&s.CreatedAt,
 			&s.UpdatedAt,
 		)
@@ -514,7 +523,8 @@ func (r *SeriesRepository) GetDistinctGenres(ctx context.Context) ([]string, err
 
 		var genres []string
 		if err := json.Unmarshal([]byte(genresJSON), &genres); err != nil {
-			continue // skip malformed JSON
+			slog.Warn("Skipping malformed genre JSON in series", "json", genresJSON, "error", err)
+			continue
 		}
 
 		for _, g := range genres {
@@ -565,8 +575,9 @@ func (r *SeriesRepository) GetStats(ctx context.Context) (*MediaStats, error) {
 	err := r.db.QueryRowContext(ctx,
 		`SELECT COUNT(*) as total,
 		        COUNT(CASE WHEN tmdb_id IS NULL OR tmdb_id = 0 THEN 1 END) as unmatched
-		 FROM series`,
-	).Scan(&stats.Total, &stats.Unmatched)
+		 FROM series
+		 WHERE is_removed = 0 OR is_removed IS NULL`,
+	).Scan(&stats.Total, &stats.UnmatchedCount)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get series stats: %w", err)
 	}

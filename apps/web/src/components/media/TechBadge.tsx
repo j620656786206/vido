@@ -3,10 +3,10 @@ import { cn } from '@/lib/utils';
 export type TechBadgeCategory = 'video' | 'audio' | 'hdr' | 'subtitle';
 
 const CATEGORY_CLASSES: Record<TechBadgeCategory, string> = {
-  video: 'bg-blue-500/20 text-blue-400',
-  audio: 'bg-purple-500/20 text-purple-400',
-  hdr: 'bg-amber-500/20 text-amber-400',
-  subtitle: 'bg-emerald-500/20 text-emerald-400',
+  video: 'bg-blue-500/20 text-blue-500',
+  audio: 'bg-purple-500/20 text-purple-500',
+  hdr: 'bg-amber-500/20 text-amber-500',
+  subtitle: 'bg-emerald-500/20 text-emerald-500',
 };
 
 export interface TechBadgeProps {
@@ -14,6 +14,13 @@ export interface TechBadgeProps {
   category: TechBadgeCategory;
   className?: string;
 }
+
+const CATEGORY_LABELS: Record<TechBadgeCategory, string> = {
+  video: 'Video',
+  audio: 'Audio',
+  hdr: 'HDR',
+  subtitle: 'Subtitle',
+};
 
 export function TechBadge({ label, category, className }: TechBadgeProps) {
   return (
@@ -24,6 +31,7 @@ export function TechBadge({ label, category, className }: TechBadgeProps) {
         className
       )}
       data-testid="tech-badge"
+      aria-label={`${CATEGORY_LABELS[category]}: ${label}`}
     >
       {label}
     </span>

@@ -7,12 +7,14 @@ describe('FilterChips', () => {
   let onRemoveGenre: ReturnType<typeof vi.fn>;
   let onRemoveYearMin: ReturnType<typeof vi.fn>;
   let onRemoveYearMax: ReturnType<typeof vi.fn>;
+  let onRemoveUnmatched: ReturnType<typeof vi.fn>;
   let onClearAll: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     onRemoveGenre = vi.fn();
     onRemoveYearMin = vi.fn();
     onRemoveYearMax = vi.fn();
+    onRemoveUnmatched = vi.fn();
     onClearAll = vi.fn();
   });
 
@@ -23,6 +25,7 @@ describe('FilterChips', () => {
         onRemoveGenre={onRemoveGenre}
         onRemoveYearMin={onRemoveYearMin}
         onRemoveYearMax={onRemoveYearMax}
+        onRemoveUnmatched={onRemoveUnmatched}
         onClearAll={onClearAll}
       />
     );
@@ -36,6 +39,7 @@ describe('FilterChips', () => {
         onRemoveGenre={onRemoveGenre}
         onRemoveYearMin={onRemoveYearMin}
         onRemoveYearMax={onRemoveYearMax}
+        onRemoveUnmatched={onRemoveUnmatched}
         onClearAll={onClearAll}
       />
     );
@@ -50,6 +54,7 @@ describe('FilterChips', () => {
         onRemoveGenre={onRemoveGenre}
         onRemoveYearMin={onRemoveYearMin}
         onRemoveYearMax={onRemoveYearMax}
+        onRemoveUnmatched={onRemoveUnmatched}
         onClearAll={onClearAll}
       />
     );
@@ -64,6 +69,7 @@ describe('FilterChips', () => {
         onRemoveGenre={onRemoveGenre}
         onRemoveYearMin={onRemoveYearMin}
         onRemoveYearMax={onRemoveYearMax}
+        onRemoveUnmatched={onRemoveUnmatched}
         onClearAll={onClearAll}
       />
     );
@@ -78,6 +84,7 @@ describe('FilterChips', () => {
         onRemoveGenre={onRemoveGenre}
         onRemoveYearMin={onRemoveYearMin}
         onRemoveYearMax={onRemoveYearMax}
+        onRemoveUnmatched={onRemoveUnmatched}
         onClearAll={onClearAll}
       />
     );
@@ -92,6 +99,7 @@ describe('FilterChips', () => {
         onRemoveGenre={onRemoveGenre}
         onRemoveYearMin={onRemoveYearMin}
         onRemoveYearMax={onRemoveYearMax}
+        onRemoveUnmatched={onRemoveUnmatched}
         onClearAll={onClearAll}
       />
     );
@@ -106,6 +114,7 @@ describe('FilterChips', () => {
         onRemoveGenre={onRemoveGenre}
         onRemoveYearMin={onRemoveYearMin}
         onRemoveYearMax={onRemoveYearMax}
+        onRemoveUnmatched={onRemoveUnmatched}
         onClearAll={onClearAll}
       />
     );
@@ -126,6 +135,7 @@ describe('FilterChips', () => {
         onRemoveGenre={onRemoveGenre}
         onRemoveYearMin={onRemoveYearMin}
         onRemoveYearMax={onRemoveYearMax}
+        onRemoveUnmatched={onRemoveUnmatched}
         onClearAll={onClearAll}
       />
     );
@@ -155,6 +165,7 @@ describe('FilterChips', () => {
         onRemoveGenre={onRemoveGenre}
         onRemoveYearMin={onRemoveYearMin}
         onRemoveYearMax={onRemoveYearMax}
+        onRemoveUnmatched={onRemoveUnmatched}
         onClearAll={onClearAll}
       />
     );

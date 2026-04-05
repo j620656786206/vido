@@ -1088,8 +1088,8 @@ func TestMovieGetStats(t *testing.T) {
 	if stats.Total != 4 {
 		t.Errorf("Expected total 4, got %d", stats.Total)
 	}
-	if stats.Unmatched != 2 {
-		t.Errorf("Expected unmatched 2, got %d", stats.Unmatched)
+	if stats.UnmatchedCount != 2 {
+		t.Errorf("Expected unmatched 2, got %d", stats.UnmatchedCount)
 	}
 }
 
@@ -1109,8 +1109,8 @@ func TestMovieGetStatsEmpty(t *testing.T) {
 	if stats.Total != 0 {
 		t.Errorf("Expected total 0, got %d", stats.Total)
 	}
-	if stats.Unmatched != 0 {
-		t.Errorf("Expected unmatched 0, got %d", stats.Unmatched)
+	if stats.UnmatchedCount != 0 {
+		t.Errorf("Expected unmatched 0, got %d", stats.UnmatchedCount)
 	}
 }
 

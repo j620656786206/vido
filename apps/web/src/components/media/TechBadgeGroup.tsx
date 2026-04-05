@@ -45,7 +45,24 @@ export function TechBadgeGroup({
     try {
       const tracks = JSON.parse(subtitleTracks);
       if (Array.isArray(tracks) && tracks.length > 0) {
-        badges.push({ label: `${tracks.length} 字幕`, category: 'subtitle' });
+        const external = tracks.filter(
+          (t) => typeof t === 'object' && t !== null && t.source === 'external'
+        ).length;
+        const embedded = tracks.filter(
+          (t) => typeof t === 'object' && t !== null && t.source === 'embedded'
+        ).length;
+        const hasSourceInfo = external > 0 || embedded > 0;
+
+        if (hasSourceInfo && external > 0 && embedded > 0) {
+          badges.push({ label: `${embedded} 內嵌`, category: 'subtitle' });
+          badges.push({ label: `${external} 外掛`, category: 'subtitle' });
+        } else if (hasSourceInfo && external > 0) {
+          badges.push({ label: `${external} 外掛字幕`, category: 'subtitle' });
+        } else if (hasSourceInfo && embedded > 0) {
+          badges.push({ label: `${embedded} 內嵌字幕`, category: 'subtitle' });
+        } else {
+          badges.push({ label: `${tracks.length} 字幕`, category: 'subtitle' });
+        }
       }
     } catch {
       // If not JSON, treat as a simple label
@@ -58,8 +75,8 @@ export function TechBadgeGroup({
   return (
     <div className={className} data-testid="tech-badge-group">
       <div className="flex flex-wrap gap-1.5">
-        {badges.map((badge) => (
-          <TechBadge key={`${badge.category}-${badge.label}`} {...badge} />
+        {badges.map((badge, i) => (
+          <TechBadge key={`${badge.category}-${badge.label}-${i}`} {...badge} />
         ))}
       </div>
     </div>

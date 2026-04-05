@@ -19,7 +19,19 @@ describe('resolutionLabel', () => {
   });
 
   it('returns raw value for unknown resolution', () => {
-    expect(resolutionLabel('720x480')).toBe('720x480');
+    expect(resolutionLabel('800x600')).toBe('800x600');
+  });
+
+  it('returns empty string for empty string input', () => {
+    expect(resolutionLabel('')).toBe('');
+  });
+
+  it('maps 3840x1600 to 4K UW (ultrawide)', () => {
+    expect(resolutionLabel('3840x1600')).toBe('4K UW');
+  });
+
+  it('maps 720x480 to 480p (SD)', () => {
+    expect(resolutionLabel('720x480')).toBe('480p');
   });
 });
 
@@ -38,5 +50,13 @@ describe('audioChannelLabel', () => {
 
   it('returns raw number for unknown channels', () => {
     expect(audioChannelLabel(4)).toBe('4');
+  });
+
+  it('maps 1 to Mono', () => {
+    expect(audioChannelLabel(1)).toBe('Mono');
+  });
+
+  it('returns string fallback for zero channels', () => {
+    expect(audioChannelLabel(0)).toBe('0');
   });
 });

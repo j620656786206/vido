@@ -156,7 +156,8 @@ func TestMovieHandler_List(t *testing.T) {
 				// Parse the data as PaginatedResponse
 				dataBytes, _ := json.Marshal(response.Data)
 				var paginated PaginatedResponse
-				json.Unmarshal(dataBytes, &paginated)
+				err = json.Unmarshal(dataBytes, &paginated)
+				assert.NoError(t, err)
 
 				items, ok := paginated.Items.([]interface{})
 				if ok {
@@ -173,7 +174,7 @@ func TestMovieHandler_Stats(t *testing.T) {
 	t.Run("success - returns stats", func(t *testing.T) {
 		mockService := new(MockMovieService)
 		mockService.On("GetStats", mock.Anything).Return(
-			&repository.MediaStats{Total: 100, Unmatched: 15},
+			&repository.MediaStats{Total: 100, UnmatchedCount: 15},
 			nil,
 		)
 
@@ -193,10 +194,11 @@ func TestMovieHandler_Stats(t *testing.T) {
 
 		dataBytes, _ := json.Marshal(response.Data)
 		var stats repository.MediaStats
-		json.Unmarshal(dataBytes, &stats)
+		err = json.Unmarshal(dataBytes, &stats)
+		assert.NoError(t, err)
 
 		assert.Equal(t, 100, stats.Total)
-		assert.Equal(t, 15, stats.Unmatched)
+		assert.Equal(t, 15, stats.UnmatchedCount)
 
 		mockService.AssertExpectations(t)
 	})
@@ -251,6 +253,46 @@ func TestMovieHandler_ListWithUnmatchedFilter(t *testing.T) {
 	items, ok := paginated.Items.([]interface{})
 	assert.True(t, ok)
 	assert.Equal(t, 1, len(items))
+
+	mockService.AssertExpectations(t)
+}
+
+func TestMovieHandler_ListWithUnmatchedFalse(t *testing.T) {
+	mockService := new(MockMovieService)
+	mockService.On("List", mock.Anything, mock.MatchedBy(func(p repository.ListParams) bool {
+		unmatched, ok := p.Filters["unmatched"].(bool)
+		return !ok || !unmatched
+	})).Return(
+		[]models.Movie{
+			{ID: "1", Title: "Matched Movie", ReleaseDate: "2024-01-01"},
+			{ID: "2", Title: "Another Movie", ReleaseDate: "2024-02-01"},
+			{ID: "unmatched-1", Title: "Unmatched Movie", ReleaseDate: "2024-03-01"},
+		},
+		&repository.PaginationResult{Page: 1, PageSize: 20, TotalResults: 3, TotalPages: 1},
+		nil,
+	)
+
+	handler := NewMovieHandler(mockService)
+	router := setupTestRouter(handler)
+
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/movies?unmatched=false", nil)
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+
+	var response APIResponse
+	err := json.Unmarshal(resp.Body.Bytes(), &response)
+	assert.NoError(t, err)
+	assert.True(t, response.Success)
+
+	dataBytes, _ := json.Marshal(response.Data)
+	var paginated PaginatedResponse
+	json.Unmarshal(dataBytes, &paginated)
+
+	items, ok := paginated.Items.([]interface{})
+	assert.True(t, ok)
+	assert.Equal(t, 3, len(items))
 
 	mockService.AssertExpectations(t)
 }
@@ -635,7 +677,7 @@ func TestMovieHandler_ListWithPaginationParams(t *testing.T) {
 	router := setupTestRouter(handler)
 
 	// Request with pagination params
-	req, _ := http.NewRequest(http.MethodGet, "/api/v1/movies?page=2&pageSize=10", nil)
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/movies?page=2&page_size=10", nil)
 	resp := httptest.NewRecorder()
 	router.ServeHTTP(resp, req)
 

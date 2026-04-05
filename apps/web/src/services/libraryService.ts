@@ -65,6 +65,7 @@ export const libraryService = {
     if (params.type && params.type !== 'all') searchParams.set('type', params.type);
     if (params.sortBy) searchParams.set('sort_by', params.sortBy);
     if (params.sortOrder) searchParams.set('sort_order', params.sortOrder);
+    if (params.unmatched) searchParams.set('unmatched', 'true');
 
     return fetchApi<LibrarySearchResponse>(`/library/search?${searchParams.toString()}`);
   },

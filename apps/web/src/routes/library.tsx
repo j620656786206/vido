@@ -341,7 +341,8 @@ function LibraryPage() {
   const activeFilterCount =
     currentFilters.genres.length +
     (currentFilters.yearMin !== undefined ? 1 : 0) +
-    (currentFilters.yearMax !== undefined ? 1 : 0);
+    (currentFilters.yearMax !== undefined ? 1 : 0) +
+    (unmatchedParam === true ? 1 : 0);
 
   // Selection handlers
   const enterSelectionMode = useCallback(() => {

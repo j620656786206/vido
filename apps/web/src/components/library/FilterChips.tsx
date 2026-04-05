@@ -6,7 +6,7 @@ interface FilterChipsProps {
   onRemoveGenre: (genre: string) => void;
   onRemoveYearMin: () => void;
   onRemoveYearMax: () => void;
-  onRemoveUnmatched?: () => void;
+  onRemoveUnmatched: () => void;
   onClearAll: () => void;
 }
 

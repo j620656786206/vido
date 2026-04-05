@@ -57,4 +57,15 @@ describe('TechBadgeGroup', () => {
     const badges = screen.getAllByTestId('tech-badge');
     expect(badges).toHaveLength(1);
   });
+
+  it('distinguishes external and embedded subtitles', () => {
+    const tracks = JSON.stringify([
+      { language: 'zh', source: 'embedded' },
+      { language: 'en', source: 'external' },
+      { language: 'ja', source: 'embedded' },
+    ]);
+    render(<TechBadgeGroup subtitleTracks={tracks} />);
+    expect(screen.getByText('2 內嵌')).toBeInTheDocument();
+    expect(screen.getByText('1 外掛')).toBeInTheDocument();
+  });
 });

@@ -952,8 +952,29 @@ func TestSeriesGetStats(t *testing.T) {
 	if stats.Total != 2 {
 		t.Errorf("Expected total 2, got %d", stats.Total)
 	}
-	if stats.Unmatched != 1 {
-		t.Errorf("Expected unmatched 1, got %d", stats.Unmatched)
+	if stats.UnmatchedCount != 1 {
+		t.Errorf("Expected unmatched 1, got %d", stats.UnmatchedCount)
+	}
+}
+
+// TestSeriesGetStatsEmpty verifies GetStats works with empty table
+func TestSeriesGetStatsEmpty(t *testing.T) {
+	db := setupSeriesTestDB(t)
+	defer db.Close()
+
+	repo := NewSeriesRepository(db)
+	ctx := context.Background()
+
+	stats, err := repo.GetStats(ctx)
+	if err != nil {
+		t.Fatalf("Failed to get stats: %v", err)
+	}
+
+	if stats.Total != 0 {
+		t.Errorf("Expected total 0, got %d", stats.Total)
+	}
+	if stats.UnmatchedCount != 0 {
+		t.Errorf("Expected unmatched 0, got %d", stats.UnmatchedCount)
 	}
 }
 

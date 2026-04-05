@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/vido/api/internal/models"
@@ -338,7 +339,7 @@ func (r *MovieRepository) List(ctx context.Context, params ListParams) ([]models
 	}
 
 	if unmatched, ok := params.Filters["unmatched"].(bool); ok && unmatched {
-		conditions = append(conditions, "(tmdb_id IS NULL OR tmdb_id = 0)")
+		conditions = append(conditions, "(tmdb_id IS NULL OR tmdb_id = 0) AND (is_removed = 0 OR is_removed IS NULL)")
 	}
 
 	whereClause := ""
@@ -362,7 +363,9 @@ func (r *MovieRepository) List(ctx context.Context, params ListParams) ([]models
 		SELECT
 			id, title, original_title, release_date, genres, rating,
 			overview, poster_path, backdrop_path, runtime, original_language,
-			status, imdb_id, tmdb_id, created_at, updated_at
+			status, imdb_id, tmdb_id,
+			video_codec, video_resolution, audio_codec, audio_channels, subtitle_tracks, hdr_format,
+			created_at, updated_at
 		FROM movies
 		%s
 		ORDER BY %s %s
@@ -398,6 +401,12 @@ func (r *MovieRepository) List(ctx context.Context, params ListParams) ([]models
 			&movie.Status,
 			&movie.IMDbID,
 			&movie.TMDbID,
+			&movie.VideoCodec,
+			&movie.VideoResolution,
+			&movie.AudioCodec,
+			&movie.AudioChannels,
+			&movie.SubtitleTracks,
+			&movie.HDRFormat,
 			&movie.CreatedAt,
 			&movie.UpdatedAt,
 		)
@@ -537,7 +546,8 @@ func (r *MovieRepository) GetDistinctGenres(ctx context.Context) ([]string, erro
 
 		var genres []string
 		if err := json.Unmarshal([]byte(genresJSON), &genres); err != nil {
-			continue // skip malformed JSON
+			slog.Warn("Skipping malformed genre JSON in movies", "json", genresJSON, "error", err)
+			continue
 		}
 
 		for _, g := range genres {
@@ -588,8 +598,9 @@ func (r *MovieRepository) GetStats(ctx context.Context) (*MediaStats, error) {
 	err := r.db.QueryRowContext(ctx,
 		`SELECT COUNT(*) as total,
 		        COUNT(CASE WHEN tmdb_id IS NULL OR tmdb_id = 0 THEN 1 END) as unmatched
-		 FROM movies`,
-	).Scan(&stats.Total, &stats.Unmatched)
+		 FROM movies
+		 WHERE is_removed = 0 OR is_removed IS NULL`,
+	).Scan(&stats.Total, &stats.UnmatchedCount)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get movie stats: %w", err)
 	}
