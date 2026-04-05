@@ -78,6 +78,10 @@ type MovieRepositoryInterface interface {
 	// FindAllWithFilePath retrieves all movies that have a non-null file_path and are not removed
 	// Needed by: Story 7-2 (detect removed files during incremental scan)
 	FindAllWithFilePath(ctx context.Context) ([]models.Movie, error)
+
+	// GetStats returns aggregate statistics including total and unmatched counts
+	// Needed by: Story 9c-4 (unmatched filter count badge)
+	GetStats(ctx context.Context) (*MediaStats, error)
 }
 
 // SeriesRepositoryInterface defines the contract for TV series data access operations.
@@ -143,6 +147,10 @@ type SeriesRepositoryInterface interface {
 	// FindNeedingSubtitleSearch retrieves series not yet searched or last searched before threshold
 	// Needed by: Epic 8 (batch subtitle search scheduler)
 	FindNeedingSubtitleSearch(ctx context.Context, olderThan time.Time) ([]models.Series, error)
+
+	// GetStats returns aggregate statistics including total and unmatched counts
+	// Needed by: Story 9c-4 (unmatched filter count badge)
+	GetStats(ctx context.Context) (*MediaStats, error)
 }
 
 // SeasonRepositoryInterface defines the contract for season data access operations.

@@ -6,6 +6,7 @@ import type {
   LibraryListParams,
   LibrarySearchResponse,
   LibraryStats,
+  MediaStats,
   LibraryMovie,
   LibrarySeries,
   VideosResponse,
@@ -42,6 +43,7 @@ export const libraryService = {
     if (params.genres) searchParams.set('genres', params.genres);
     if (params.yearMin) searchParams.set('year_min', String(params.yearMin));
     if (params.yearMax) searchParams.set('year_max', String(params.yearMax));
+    if (params.unmatched) searchParams.set('unmatched', 'true');
 
     const qs = searchParams.toString();
     return fetchApi<LibraryListResponse>(`/library${qs ? `?${qs}` : ''}`);
@@ -113,6 +115,14 @@ export const libraryService = {
 
   async getStats(): Promise<LibraryStats> {
     return fetchApi<LibraryStats>('/library/stats');
+  },
+
+  async getMovieStats(): Promise<MediaStats> {
+    return fetchApi<MediaStats>('/movies/stats');
+  },
+
+  async getSeriesStats(): Promise<MediaStats> {
+    return fetchApi<MediaStats>('/series/stats');
   },
 
   async getMovieById(id: string): Promise<LibraryMovie> {

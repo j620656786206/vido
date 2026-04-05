@@ -160,3 +160,13 @@ func (s *SeriesService) SearchByTitle(ctx context.Context, title string, params 
 
 	return series, pagination, nil
 }
+
+// GetStats returns aggregate statistics for series
+func (s *SeriesService) GetStats(ctx context.Context) (*repository.MediaStats, error) {
+	stats, err := s.repo.GetStats(ctx)
+	if err != nil {
+		slog.Error("Failed to get series stats", "error", err)
+		return nil, fmt.Errorf("failed to get series stats: %w", err)
+	}
+	return stats, nil
+}

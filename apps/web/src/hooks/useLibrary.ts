@@ -3,6 +3,7 @@ import { libraryService } from '../services/libraryService';
 import type {
   LibraryListParams,
   LibraryStats,
+  MediaStats,
   VideosResponse,
   BatchResult,
 } from '../types/library';
@@ -17,6 +18,8 @@ export const libraryKeys = {
     [...libraryKeys.searches(), query, params] as const,
   genres: () => [...libraryKeys.all, 'genres'] as const,
   stats: () => [...libraryKeys.all, 'stats'] as const,
+  movieStats: () => [...libraryKeys.all, 'movie-stats'] as const,
+  seriesStats: () => [...libraryKeys.all, 'series-stats'] as const,
   videos: (type: 'movie' | 'series', id: string) =>
     [...libraryKeys.all, type, id, 'videos'] as const,
 };
@@ -61,6 +64,22 @@ export function useLibraryStats() {
     queryKey: libraryKeys.stats(),
     queryFn: () => libraryService.getStats(),
     staleTime: 60 * 1000, // 1min
+  });
+}
+
+export function useMovieStats() {
+  return useQuery({
+    queryKey: libraryKeys.movieStats(),
+    queryFn: () => libraryService.getMovieStats(),
+    staleTime: 60 * 1000,
+  });
+}
+
+export function useSeriesStats() {
+  return useQuery({
+    queryKey: libraryKeys.seriesStats(),
+    queryFn: () => libraryService.getSeriesStats(),
+    staleTime: 60 * 1000,
   });
 }
 

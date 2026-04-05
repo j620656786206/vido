@@ -112,6 +112,9 @@ func (m *mockMovieRepoForNFO) FindNeedingSubtitleSearch(ctx context.Context, old
 func (m *mockMovieRepoForNFO) FindAllWithFilePath(ctx context.Context) ([]models.Movie, error) {
 	return nil, nil
 }
+func (m *mockMovieRepoForNFO) GetStats(ctx context.Context) (*repository.MediaStats, error) {
+	return &repository.MediaStats{}, nil
+}
 
 // ─── Test: NFO enrichment — TMDB direct lookup (AC #2) ─────────────────────
 

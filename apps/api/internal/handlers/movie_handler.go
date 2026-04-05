@@ -20,6 +20,7 @@ type MovieServiceInterface interface {
 	Delete(ctx context.Context, id string) error
 	List(ctx context.Context, params repository.ListParams) ([]models.Movie, *repository.PaginationResult, error)
 	SearchByTitle(ctx context.Context, title string, params repository.ListParams) ([]models.Movie, *repository.PaginationResult, error)
+	GetStats(ctx context.Context) (*repository.MediaStats, error)
 }
 
 // MovieHandler handles HTTP requests for movie operations.
@@ -65,6 +66,10 @@ type UpdateMovieRequest struct {
 // Returns a paginated list of movies
 func (h *MovieHandler) List(c *gin.Context) {
 	params := parseListParams(c)
+
+	if c.Query("unmatched") == "true" {
+		params.Filters["unmatched"] = true
+	}
 
 	movies, pagination, err := h.service.List(c.Request.Context(), params)
 	if err != nil {
@@ -258,12 +263,26 @@ func (h *MovieHandler) Search(c *gin.Context) {
 	})
 }
 
+// Stats handles GET /api/v1/movies/stats
+// Returns aggregate statistics for movies including unmatched count
+func (h *MovieHandler) Stats(c *gin.Context) {
+	stats, err := h.service.GetStats(c.Request.Context())
+	if err != nil {
+		slog.Error("Failed to get movie stats", "error", err)
+		InternalServerError(c, "Failed to retrieve movie stats")
+		return
+	}
+
+	SuccessResponse(c, stats)
+}
+
 // RegisterRoutes registers all movie routes on the given router group
 func (h *MovieHandler) RegisterRoutes(rg *gin.RouterGroup) {
 	movies := rg.Group("/movies")
 	{
 		movies.GET("", h.List)
 		movies.GET("/search", h.Search)
+		movies.GET("/stats", h.Stats)
 		movies.GET("/:id", h.GetByID)
 		movies.POST("", h.Create)
 		movies.PUT("/:id", h.Update)

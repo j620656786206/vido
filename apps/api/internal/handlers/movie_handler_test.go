@@ -68,6 +68,14 @@ func (m *MockMovieService) SearchByTitle(ctx context.Context, title string, para
 	return args.Get(0).([]models.Movie), args.Get(1).(*repository.PaginationResult), args.Error(2)
 }
 
+func (m *MockMovieService) GetStats(ctx context.Context) (*repository.MediaStats, error) {
+	args := m.Called(ctx)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*repository.MediaStats), args.Error(1)
+}
+
 // Verify mock implements interface
 var _ MovieServiceInterface = (*MockMovieService)(nil)
 
@@ -159,6 +167,92 @@ func TestMovieHandler_List(t *testing.T) {
 			mockService.AssertExpectations(t)
 		})
 	}
+}
+
+func TestMovieHandler_Stats(t *testing.T) {
+	t.Run("success - returns stats", func(t *testing.T) {
+		mockService := new(MockMovieService)
+		mockService.On("GetStats", mock.Anything).Return(
+			&repository.MediaStats{Total: 100, Unmatched: 15},
+			nil,
+		)
+
+		handler := NewMovieHandler(mockService)
+		router := setupTestRouter(handler)
+
+		req, _ := http.NewRequest(http.MethodGet, "/api/v1/movies/stats", nil)
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+
+		assert.Equal(t, http.StatusOK, resp.Code)
+
+		var response APIResponse
+		err := json.Unmarshal(resp.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		assert.True(t, response.Success)
+
+		dataBytes, _ := json.Marshal(response.Data)
+		var stats repository.MediaStats
+		json.Unmarshal(dataBytes, &stats)
+
+		assert.Equal(t, 100, stats.Total)
+		assert.Equal(t, 15, stats.Unmatched)
+
+		mockService.AssertExpectations(t)
+	})
+
+	t.Run("error - service failure", func(t *testing.T) {
+		mockService := new(MockMovieService)
+		mockService.On("GetStats", mock.Anything).Return(nil, errors.New("db error"))
+
+		handler := NewMovieHandler(mockService)
+		router := setupTestRouter(handler)
+
+		req, _ := http.NewRequest(http.MethodGet, "/api/v1/movies/stats", nil)
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+
+		assert.Equal(t, http.StatusInternalServerError, resp.Code)
+		mockService.AssertExpectations(t)
+	})
+}
+
+func TestMovieHandler_ListWithUnmatchedFilter(t *testing.T) {
+	mockService := new(MockMovieService)
+	mockService.On("List", mock.Anything, mock.MatchedBy(func(p repository.ListParams) bool {
+		unmatched, ok := p.Filters["unmatched"].(bool)
+		return ok && unmatched
+	})).Return(
+		[]models.Movie{
+			{ID: "unmatched-1", Title: "Unmatched Movie", ReleaseDate: "2024-01-01"},
+		},
+		&repository.PaginationResult{Page: 1, PageSize: 20, TotalResults: 1, TotalPages: 1},
+		nil,
+	)
+
+	handler := NewMovieHandler(mockService)
+	router := setupTestRouter(handler)
+
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/movies?unmatched=true", nil)
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+
+	var response APIResponse
+	err := json.Unmarshal(resp.Body.Bytes(), &response)
+	assert.NoError(t, err)
+	assert.True(t, response.Success)
+
+	dataBytes, _ := json.Marshal(response.Data)
+	var paginated PaginatedResponse
+	json.Unmarshal(dataBytes, &paginated)
+
+	items, ok := paginated.Items.([]interface{})
+	assert.True(t, ok)
+	assert.Equal(t, 1, len(items))
+
+	mockService.AssertExpectations(t)
 }
 
 func TestMovieHandler_GetByID(t *testing.T) {

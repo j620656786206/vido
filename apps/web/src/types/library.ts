@@ -30,6 +30,12 @@ export interface LibraryMovie {
   fileSize?: number;
   parseStatus: string;
   metadataSource?: string;
+  videoCodec?: string;
+  videoResolution?: string;
+  audioCodec?: string;
+  audioChannels?: number;
+  subtitleTracks?: string;
+  hdrFormat?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -72,6 +78,12 @@ export interface LibrarySeries {
   fileSize?: number;
   parseStatus: string;
   metadataSource?: string;
+  videoCodec?: string;
+  videoResolution?: string;
+  audioCodec?: string;
+  audioChannels?: number;
+  subtitleTracks?: string;
+  hdrFormat?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -99,6 +111,12 @@ export interface LibraryListParams {
   genres?: string;
   yearMin?: number;
   yearMax?: number;
+  unmatched?: boolean;
+}
+
+export interface MediaStats {
+  total: number;
+  unmatchedCount: number;
 }
 
 export interface LibraryStats {

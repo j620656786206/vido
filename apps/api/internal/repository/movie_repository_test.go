@@ -1058,6 +1058,145 @@ func TestMovieFullTextSearchWithPagination(t *testing.T) {
 	}
 }
 
+// TestMovieGetStats verifies GetStats returns correct total and unmatched counts
+func TestMovieGetStats(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	// Create matched and unmatched movies
+	movies := []*models.Movie{
+		{ID: "m1", Title: "Matched 1", ReleaseDate: "2020-01-01", Genres: []string{}, TMDbID: models.NewNullInt64(100)},
+		{ID: "m2", Title: "Matched 2", ReleaseDate: "2020-01-01", Genres: []string{}, TMDbID: models.NewNullInt64(200)},
+		{ID: "m3", Title: "Unmatched Null", ReleaseDate: "2020-01-01", Genres: []string{}},
+		{ID: "m4", Title: "Unmatched Zero", ReleaseDate: "2020-01-01", Genres: []string{}, TMDbID: models.NewNullInt64(0)},
+	}
+
+	for _, m := range movies {
+		if err := repo.Create(ctx, m); err != nil {
+			t.Fatalf("Failed to create movie: %v", err)
+		}
+	}
+
+	stats, err := repo.GetStats(ctx)
+	if err != nil {
+		t.Fatalf("Failed to get stats: %v", err)
+	}
+
+	if stats.Total != 4 {
+		t.Errorf("Expected total 4, got %d", stats.Total)
+	}
+	if stats.Unmatched != 2 {
+		t.Errorf("Expected unmatched 2, got %d", stats.Unmatched)
+	}
+}
+
+// TestMovieGetStatsEmpty verifies GetStats works with empty table
+func TestMovieGetStatsEmpty(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	stats, err := repo.GetStats(ctx)
+	if err != nil {
+		t.Fatalf("Failed to get stats: %v", err)
+	}
+
+	if stats.Total != 0 {
+		t.Errorf("Expected total 0, got %d", stats.Total)
+	}
+	if stats.Unmatched != 0 {
+		t.Errorf("Expected unmatched 0, got %d", stats.Unmatched)
+	}
+}
+
+// TestMovieListUnmatchedFilter verifies unmatched filter returns only movies without TMDb ID
+func TestMovieListUnmatchedFilter(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	// Create matched movies (have tmdb_id)
+	matched1 := &models.Movie{
+		ID:          "movie-matched-1",
+		Title:       "Matched Movie 1",
+		ReleaseDate: "2020-01-01",
+		Genres:      []string{"Action"},
+		TMDbID:      models.NewNullInt64(12345),
+	}
+	matched2 := &models.Movie{
+		ID:          "movie-matched-2",
+		Title:       "Matched Movie 2",
+		ReleaseDate: "2020-01-01",
+		Genres:      []string{"Drama"},
+		TMDbID:      models.NewNullInt64(67890),
+	}
+
+	// Create unmatched movies (no tmdb_id or tmdb_id=0)
+	unmatchedNull := &models.Movie{
+		ID:          "movie-unmatched-null",
+		Title:       "Unmatched Null",
+		ReleaseDate: "2020-01-01",
+		Genres:      []string{"Horror"},
+		// TMDbID not set (NULL)
+	}
+	unmatchedZero := &models.Movie{
+		ID:          "movie-unmatched-zero",
+		Title:       "Unmatched Zero",
+		ReleaseDate: "2020-01-01",
+		Genres:      []string{"Comedy"},
+		TMDbID:      models.NewNullInt64(0),
+	}
+
+	for _, m := range []*models.Movie{matched1, matched2, unmatchedNull, unmatchedZero} {
+		if err := repo.Create(ctx, m); err != nil {
+			t.Fatalf("Failed to create movie: %v", err)
+		}
+	}
+
+	// List with unmatched filter
+	params := NewListParams()
+	params.Filters["unmatched"] = true
+
+	movies, pagination, err := repo.List(ctx, params)
+	if err != nil {
+		t.Fatalf("Failed to list unmatched movies: %v", err)
+	}
+
+	if len(movies) != 2 {
+		t.Errorf("Expected 2 unmatched movies, got %d", len(movies))
+	}
+	if pagination.TotalResults != 2 {
+		t.Errorf("Expected total results 2, got %d", pagination.TotalResults)
+	}
+
+	// Verify only unmatched movies returned
+	for _, m := range movies {
+		if m.ID != "movie-unmatched-null" && m.ID != "movie-unmatched-zero" {
+			t.Errorf("Unexpected matched movie in results: %s", m.ID)
+		}
+	}
+
+	// Without filter should return all 4
+	paramsAll := NewListParams()
+	allMovies, allPagination, err := repo.List(ctx, paramsAll)
+	if err != nil {
+		t.Fatalf("Failed to list all movies: %v", err)
+	}
+	if len(allMovies) != 4 {
+		t.Errorf("Expected 4 total movies, got %d", len(allMovies))
+	}
+	if allPagination.TotalResults != 4 {
+		t.Errorf("Expected total results 4, got %d", allPagination.TotalResults)
+	}
+}
+
 // TestMovieFullTextSearchNoResults verifies empty results handling
 func TestMovieFullTextSearchNoResults(t *testing.T) {
 	db := setupTestDBWithFTS(t)

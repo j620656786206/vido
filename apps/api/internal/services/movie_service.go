@@ -160,3 +160,13 @@ func (s *MovieService) SearchByTitle(ctx context.Context, title string, params r
 
 	return movies, pagination, nil
 }
+
+// GetStats returns aggregate statistics for movies
+func (s *MovieService) GetStats(ctx context.Context) (*repository.MediaStats, error) {
+	stats, err := s.repo.GetStats(ctx)
+	if err != nil {
+		slog.Error("Failed to get movie stats", "error", err)
+		return nil, fmt.Errorf("failed to get movie stats: %w", err)
+	}
+	return stats, nil
+}

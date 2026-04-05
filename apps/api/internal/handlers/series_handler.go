@@ -19,6 +19,7 @@ type SeriesServiceInterface interface {
 	Delete(ctx context.Context, id string) error
 	List(ctx context.Context, params repository.ListParams) ([]models.Series, *repository.PaginationResult, error)
 	SearchByTitle(ctx context.Context, title string, params repository.ListParams) ([]models.Series, *repository.PaginationResult, error)
+	GetStats(ctx context.Context) (*repository.MediaStats, error)
 }
 
 // SeriesHandler handles HTTP requests for TV series operations.
@@ -69,6 +70,10 @@ type UpdateSeriesRequest struct {
 // Returns a paginated list of series
 func (h *SeriesHandler) List(c *gin.Context) {
 	params := parseListParams(c)
+
+	if c.Query("unmatched") == "true" {
+		params.Filters["unmatched"] = true
+	}
 
 	series, pagination, err := h.service.List(c.Request.Context(), params)
 	if err != nil {
@@ -282,12 +287,26 @@ func (h *SeriesHandler) Search(c *gin.Context) {
 	})
 }
 
+// Stats handles GET /api/v1/series/stats
+// Returns aggregate statistics for series including unmatched count
+func (h *SeriesHandler) Stats(c *gin.Context) {
+	stats, err := h.service.GetStats(c.Request.Context())
+	if err != nil {
+		slog.Error("Failed to get series stats", "error", err)
+		InternalServerError(c, "Failed to retrieve series stats")
+		return
+	}
+
+	SuccessResponse(c, stats)
+}
+
 // RegisterRoutes registers all series routes on the given router group
 func (h *SeriesHandler) RegisterRoutes(rg *gin.RouterGroup) {
 	series := rg.Group("/series")
 	{
 		series.GET("", h.List)
 		series.GET("/search", h.Search)
+		series.GET("/stats", h.Stats)
 		series.GET("/:id", h.GetByID)
 		series.POST("", h.Create)
 		series.PUT("/:id", h.Update)

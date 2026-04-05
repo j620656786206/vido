@@ -110,6 +110,12 @@ func NewPaginationResult(params ListParams, totalResults int) *PaginationResult 
 	}
 }
 
+// MediaStats contains aggregate statistics for a media type (movies or series)
+type MediaStats struct {
+	Total    int `json:"total"`
+	Unmatched int `json:"unmatched_count"`
+}
+
 // Transactor defines the interface for types that support database transactions
 type Transactor interface {
 	// BeginTx starts a new database transaction

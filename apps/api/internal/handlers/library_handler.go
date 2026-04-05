@@ -71,6 +71,10 @@ func (h *LibraryHandler) ListLibrary(c *gin.Context) {
 		return
 	}
 
+	if c.Query("unmatched") == "true" {
+		params.Filters["unmatched"] = true
+	}
+
 	result, err := h.service.ListLibrary(c.Request.Context(), params, mediaType)
 	if err != nil {
 		slog.Error("Failed to list library", "error", err, "type", mediaType)

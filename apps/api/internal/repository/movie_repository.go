@@ -337,6 +337,10 @@ func (r *MovieRepository) List(ctx context.Context, params ListParams) ([]models
 		args = append(args, yearMax)
 	}
 
+	if unmatched, ok := params.Filters["unmatched"].(bool); ok && unmatched {
+		conditions = append(conditions, "(tmdb_id IS NULL OR tmdb_id = 0)")
+	}
+
 	whereClause := ""
 	if len(conditions) > 0 {
 		whereClause = "WHERE " + conditions[0]
@@ -576,6 +580,20 @@ func (r *MovieRepository) Count(ctx context.Context) (int, error) {
 		return 0, fmt.Errorf("failed to count movies: %w", err)
 	}
 	return count, nil
+}
+
+// GetStats returns aggregate statistics including total and unmatched counts
+func (r *MovieRepository) GetStats(ctx context.Context) (*MediaStats, error) {
+	var stats MediaStats
+	err := r.db.QueryRowContext(ctx,
+		`SELECT COUNT(*) as total,
+		        COUNT(CASE WHEN tmdb_id IS NULL OR tmdb_id = 0 THEN 1 END) as unmatched
+		 FROM movies`,
+	).Scan(&stats.Total, &stats.Unmatched)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get movie stats: %w", err)
+	}
+	return &stats, nil
 }
 
 // movieSelectColumns defines the column list used by multi-row scan queries.

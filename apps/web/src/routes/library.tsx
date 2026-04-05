@@ -5,6 +5,8 @@ import {
   useLibraryList,
   useLibrarySearch,
   useLibraryStats,
+  useMovieStats,
+  useSeriesStats,
   useBatchDelete,
   useBatchReparse,
   useBatchExport,
@@ -85,6 +87,7 @@ interface LibrarySearchParams {
   genres?: string;
   yearMin?: number;
   yearMax?: number;
+  unmatched?: boolean;
 }
 
 export const Route = createFileRoute('/library')({
@@ -103,6 +106,7 @@ export const Route = createFileRoute('/library')({
     genres: typeof search.genres === 'string' ? search.genres : undefined,
     yearMin: typeof search.yearMin === 'number' ? search.yearMin : undefined,
     yearMax: typeof search.yearMax === 'number' ? search.yearMax : undefined,
+    unmatched: search.unmatched === true ? true : undefined,
   }),
   component: LibraryPage,
 });
@@ -119,6 +123,7 @@ function LibraryPage() {
     genres: genresParam,
     yearMin: yearMinParam,
     yearMax: yearMaxParam,
+    unmatched: unmatchedParam,
   } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
 
@@ -159,14 +164,16 @@ function LibraryPage() {
       genres: genresParam ? genresParam.split(',').filter(Boolean) : [],
       yearMin: yearMinParam,
       yearMax: yearMaxParam,
+      unmatched: unmatchedParam,
     }),
-    [genresParam, yearMinParam, yearMaxParam]
+    [genresParam, yearMinParam, yearMaxParam, unmatchedParam]
   );
 
   const hasActiveFilters =
     currentFilters.genres.length > 0 ||
     currentFilters.yearMin !== undefined ||
-    currentFilters.yearMax !== undefined;
+    currentFilters.yearMax !== undefined ||
+    unmatchedParam === true;
 
   // URL params > localStorage > default
   const storedSort = useMemo(() => getStoredSort(), []);
@@ -177,6 +184,10 @@ function LibraryPage() {
   const isCleanBrowse = !sortBy && !sortOrder && !isSearchActive && !hasActiveFilters;
 
   const { data: libraryStats } = useLibraryStats();
+  const { data: movieStats } = useMovieStats();
+  const { data: seriesStats } = useSeriesStats();
+  const totalUnmatchedCount =
+    (movieStats?.unmatchedCount ?? 0) + (seriesStats?.unmatchedCount ?? 0);
 
   const listQuery = useLibraryList({
     page: currentPage,
@@ -187,6 +198,7 @@ function LibraryPage() {
     genres: genresParam || undefined,
     yearMin: yearMinParam,
     yearMax: yearMaxParam,
+    unmatched: unmatchedParam || undefined,
   });
 
   const searchResult = useLibrarySearch(searchQuery, {
@@ -207,6 +219,8 @@ function LibraryPage() {
       genres: overrides.genres !== undefined ? overrides.genres : genresParam || undefined,
       yearMin: overrides.yearMin !== undefined ? overrides.yearMin : yearMinParam,
       yearMax: overrides.yearMax !== undefined ? overrides.yearMax : yearMaxParam,
+      unmatched:
+        overrides.unmatched !== undefined ? overrides.unmatched : unmatchedParam || undefined,
     }),
     [
       currentPage,
@@ -219,6 +233,7 @@ function LibraryPage() {
       genresParam,
       yearMinParam,
       yearMaxParam,
+      unmatchedParam,
     ]
   );
 
@@ -279,6 +294,7 @@ function LibraryPage() {
           genres: filters.genres.length > 0 ? filters.genres.join(',') : undefined,
           yearMin: filters.yearMin,
           yearMax: filters.yearMax,
+          unmatched: filters.unmatched || undefined,
         }),
       });
     },
@@ -292,6 +308,7 @@ function LibraryPage() {
         genres: undefined,
         yearMin: undefined,
         yearMax: undefined,
+        unmatched: undefined,
       }),
     });
   }, [navigate, buildSearchParams]);
@@ -315,6 +332,10 @@ function LibraryPage() {
 
   const handleRemoveYearMax = useCallback(() => {
     navigate({ search: buildSearchParams({ page: 1, yearMax: undefined }) });
+  }, [navigate, buildSearchParams]);
+
+  const handleRemoveUnmatched = useCallback(() => {
+    navigate({ search: buildSearchParams({ page: 1, unmatched: undefined }) });
   }, [navigate, buildSearchParams]);
 
   const activeFilterCount =
@@ -607,6 +628,7 @@ function LibraryPage() {
               onRemoveGenre={handleRemoveGenre}
               onRemoveYearMin={handleRemoveYearMin}
               onRemoveYearMax={handleRemoveYearMax}
+              onRemoveUnmatched={handleRemoveUnmatched}
               onClearAll={handleFilterClear}
             />
           </div>
@@ -627,6 +649,7 @@ function LibraryPage() {
                 <FilterPanel
                   filters={currentFilters}
                   mediaType={currentType}
+                  unmatchedCount={totalUnmatchedCount}
                   onApply={handleFilterApply}
                   onClear={handleFilterClear}
                   onTypeChange={handleTypeChange}

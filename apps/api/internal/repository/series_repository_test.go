@@ -925,6 +925,99 @@ func setupSeriesTestDBWithFTS(t *testing.T) *sql.DB {
 	return db
 }
 
+// TestSeriesGetStats verifies GetStats returns correct total and unmatched counts
+func TestSeriesGetStats(t *testing.T) {
+	db := setupSeriesTestDB(t)
+	defer db.Close()
+
+	repo := NewSeriesRepository(db)
+	ctx := context.Background()
+
+	series := []*models.Series{
+		{ID: "s1", Title: "Matched", FirstAirDate: "2020-01-01", Genres: []string{}, TMDbID: models.NewNullInt64(100)},
+		{ID: "s2", Title: "Unmatched", FirstAirDate: "2020-01-01", Genres: []string{}},
+	}
+
+	for _, s := range series {
+		if err := repo.Create(ctx, s); err != nil {
+			t.Fatalf("Failed to create series: %v", err)
+		}
+	}
+
+	stats, err := repo.GetStats(ctx)
+	if err != nil {
+		t.Fatalf("Failed to get stats: %v", err)
+	}
+
+	if stats.Total != 2 {
+		t.Errorf("Expected total 2, got %d", stats.Total)
+	}
+	if stats.Unmatched != 1 {
+		t.Errorf("Expected unmatched 1, got %d", stats.Unmatched)
+	}
+}
+
+// TestSeriesListUnmatchedFilter verifies unmatched filter returns only series without TMDb ID
+func TestSeriesListUnmatchedFilter(t *testing.T) {
+	db := setupSeriesTestDB(t)
+	defer db.Close()
+
+	repo := NewSeriesRepository(db)
+	ctx := context.Background()
+
+	// Create matched series (have tmdb_id)
+	matched := &models.Series{
+		ID:           "series-matched",
+		Title:        "Matched Series",
+		FirstAirDate: "2020-01-01",
+		Genres:       []string{"Drama"},
+		TMDbID:       models.NewNullInt64(55555),
+	}
+
+	// Create unmatched series (no tmdb_id or tmdb_id=0)
+	unmatchedNull := &models.Series{
+		ID:           "series-unmatched-null",
+		Title:        "Unmatched Null",
+		FirstAirDate: "2020-01-01",
+		Genres:       []string{"Horror"},
+	}
+	unmatchedZero := &models.Series{
+		ID:           "series-unmatched-zero",
+		Title:        "Unmatched Zero",
+		FirstAirDate: "2020-01-01",
+		Genres:       []string{"Comedy"},
+		TMDbID:       models.NewNullInt64(0),
+	}
+
+	for _, s := range []*models.Series{matched, unmatchedNull, unmatchedZero} {
+		if err := repo.Create(ctx, s); err != nil {
+			t.Fatalf("Failed to create series: %v", err)
+		}
+	}
+
+	// List with unmatched filter
+	params := NewListParams()
+	params.Filters["unmatched"] = true
+
+	series, pagination, err := repo.List(ctx, params)
+	if err != nil {
+		t.Fatalf("Failed to list unmatched series: %v", err)
+	}
+
+	if len(series) != 2 {
+		t.Errorf("Expected 2 unmatched series, got %d", len(series))
+	}
+	if pagination.TotalResults != 2 {
+		t.Errorf("Expected total results 2, got %d", pagination.TotalResults)
+	}
+
+	for _, s := range series {
+		if s.ID != "series-unmatched-null" && s.ID != "series-unmatched-zero" {
+			t.Errorf("Unexpected matched series in results: %s", s.ID)
+		}
+	}
+}
+
 // TestSeriesFullTextSearchEmptyQuery verifies empty query falls back to List
 func TestSeriesFullTextSearchEmptyQuery(t *testing.T) {
 	db := setupSeriesTestDBWithFTS(t)

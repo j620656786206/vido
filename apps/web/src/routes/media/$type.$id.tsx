@@ -5,6 +5,7 @@ import { ColorPlaceholder } from '../../components/media/ColorPlaceholder';
 import { FallbackPending } from '../../components/media/FallbackPending';
 import { FallbackFailed } from '../../components/media/FallbackFailed';
 import { CreditsSection } from '../../components/media/CreditsSection';
+import { TechBadgeGroup } from '../../components/media/TechBadgeGroup';
 import { MetadataEditorDialog } from '../../components/metadata-editor';
 import type { MediaMetadata } from '../../components/metadata-editor';
 import {
@@ -241,6 +242,17 @@ function MediaDetailRoute() {
                     </span>
                   )}
                 </div>
+
+                {/* Tech Badges */}
+                <TechBadgeGroup
+                  videoCodec={localData.videoCodec}
+                  videoResolution={localData.videoResolution}
+                  audioCodec={localData.audioCodec}
+                  audioChannels={localData.audioChannels}
+                  hdrFormat={localData.hdrFormat}
+                  subtitleTracks={localData.subtitleTracks}
+                  className="mt-3"
+                />
 
                 {/* Overview */}
                 {localData.overview && (

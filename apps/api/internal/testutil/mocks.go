@@ -156,6 +156,14 @@ func (m *MockMovieRepository) FindAllWithFilePath(ctx context.Context) ([]models
 	return args.Get(0).([]models.Movie), args.Error(1)
 }
 
+func (m *MockMovieRepository) GetStats(ctx context.Context) (*repository.MediaStats, error) {
+	args := m.Called(ctx)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*repository.MediaStats), args.Error(1)
+}
+
 // Compile-time interface check
 var _ repository.MovieRepositoryInterface = (*MockMovieRepository)(nil)
 
@@ -280,6 +288,14 @@ func (m *MockSeriesRepository) FindNeedingSubtitleSearch(ctx context.Context, ol
 	return args.Get(0).([]models.Series), args.Error(1)
 }
 
+func (m *MockSeriesRepository) GetStats(ctx context.Context) (*repository.MediaStats, error) {
+	args := m.Called(ctx)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*repository.MediaStats), args.Error(1)
+}
+
 // Compile-time interface check
 var _ repository.SeriesRepositoryInterface = (*MockSeriesRepository)(nil)
 
@@ -306,6 +322,7 @@ func SetupDefaultMovieExpectations(m *MockMovieRepository) {
 	m.On("FindBySubtitleStatus", mock.Anything, mock.Anything).Maybe().Return([]models.Movie(nil), nil)
 	m.On("FindNeedingSubtitleSearch", mock.Anything, mock.Anything).Maybe().Return([]models.Movie(nil), nil)
 	m.On("FindAllWithFilePath", mock.Anything).Maybe().Return([]models.Movie(nil), nil)
+	m.On("GetStats", mock.Anything).Maybe().Return((*repository.MediaStats)(nil), nil)
 }
 
 // SetupDefaultSeriesExpectations registers Maybe() expectations that return zero values
@@ -329,4 +346,5 @@ func SetupDefaultSeriesExpectations(m *MockSeriesRepository) {
 	m.On("UpdateSubtitleStatus", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Maybe().Return(nil)
 	m.On("FindBySubtitleStatus", mock.Anything, mock.Anything).Maybe().Return([]models.Series(nil), nil)
 	m.On("FindNeedingSubtitleSearch", mock.Anything, mock.Anything).Maybe().Return([]models.Series(nil), nil)
+	m.On("GetStats", mock.Anything).Maybe().Return((*repository.MediaStats)(nil), nil)
 }

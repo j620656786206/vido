@@ -6,6 +6,7 @@ interface FilterChipsProps {
   onRemoveGenre: (genre: string) => void;
   onRemoveYearMin: () => void;
   onRemoveYearMax: () => void;
+  onRemoveUnmatched?: () => void;
   onClearAll: () => void;
 }
 
@@ -14,10 +15,14 @@ export function FilterChips({
   onRemoveGenre,
   onRemoveYearMin,
   onRemoveYearMax,
+  onRemoveUnmatched,
   onClearAll,
 }: FilterChipsProps) {
   const hasFilters =
-    filters.genres.length > 0 || filters.yearMin !== undefined || filters.yearMax !== undefined;
+    filters.genres.length > 0 ||
+    filters.yearMin !== undefined ||
+    filters.yearMax !== undefined ||
+    filters.unmatched === true;
 
   if (!hasFilters) return null;
 
@@ -59,6 +64,19 @@ export function FilterChips({
             onClick={onRemoveYearMax}
             className="ml-0.5 rounded-full p-0.5 hover:bg-[var(--accent-primary)]/30"
             aria-label="移除最晚年份篩選"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </span>
+      )}
+
+      {filters.unmatched && (
+        <span className="inline-flex items-center gap-1 rounded-full bg-[var(--accent-primary)]/20 px-3 py-1 text-sm text-blue-300">
+          未匹配
+          <button
+            onClick={onRemoveUnmatched}
+            className="ml-0.5 rounded-full p-0.5 hover:bg-[var(--accent-primary)]/30"
+            aria-label="移除未匹配篩選"
           >
             <X className="h-3 w-3" />
           </button>

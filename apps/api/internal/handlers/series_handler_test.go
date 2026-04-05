@@ -68,6 +68,14 @@ func (m *MockSeriesService) SearchByTitle(ctx context.Context, title string, par
 	return args.Get(0).([]models.Series), args.Get(1).(*repository.PaginationResult), args.Error(2)
 }
 
+func (m *MockSeriesService) GetStats(ctx context.Context) (*repository.MediaStats, error) {
+	args := m.Called(ctx)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*repository.MediaStats), args.Error(1)
+}
+
 // Verify mock implements interface
 var _ SeriesServiceInterface = (*MockSeriesService)(nil)
 

@@ -7,6 +7,7 @@ export interface FilterValues {
   genres: string[];
   yearMin?: number;
   yearMax?: number;
+  unmatched?: boolean;
 }
 
 const DECADE_OPTIONS = [
@@ -20,6 +21,7 @@ const DECADE_OPTIONS = [
 interface FilterPanelProps {
   filters: FilterValues;
   mediaType: LibraryMediaType;
+  unmatchedCount?: number;
   onApply: (filters: FilterValues) => void;
   onClear: () => void;
   onTypeChange: (type: LibraryMediaType) => void;
@@ -63,6 +65,7 @@ function normalizeDecadeSelection(decades: string[]): string[] {
 export function FilterPanel({
   filters,
   mediaType,
+  unmatchedCount,
   onApply,
   onClear,
   onTypeChange,
@@ -71,6 +74,7 @@ export function FilterPanel({
   const [localDecades, setLocalDecades] = useState<string[]>(() =>
     getSelectedDecades(filters.yearMin, filters.yearMax)
   );
+  const [localUnmatched, setLocalUnmatched] = useState(filters.unmatched ?? false);
 
   const { data: availableGenres = [] } = useLibraryGenres();
 
@@ -78,7 +82,8 @@ export function FilterPanel({
   useEffect(() => {
     setLocalGenres(filters.genres);
     setLocalDecades(getSelectedDecades(filters.yearMin, filters.yearMax));
-  }, [filters.genres, filters.yearMin, filters.yearMax]);
+    setLocalUnmatched(filters.unmatched ?? false);
+  }, [filters.genres, filters.yearMin, filters.yearMax, filters.unmatched]);
 
   const handleGenreToggle = useCallback((genre: string) => {
     setLocalGenres((prev) =>
@@ -99,12 +104,14 @@ export function FilterPanel({
       genres: localGenres,
       yearMin: yearRange.yearMin,
       yearMax: yearRange.yearMax,
+      unmatched: localUnmatched || undefined,
     });
-  }, [localGenres, localDecades, onApply]);
+  }, [localGenres, localDecades, localUnmatched, onApply]);
 
   const handleClear = useCallback(() => {
     setLocalGenres([]);
     setLocalDecades([]);
+    setLocalUnmatched(false);
     onClear();
   }, [onClear]);
 
@@ -162,6 +169,28 @@ export function FilterPanel({
           {availableGenres.length === 0 && (
             <span className="text-sm text-[var(--text-muted)]">無可用類別</span>
           )}
+        </div>
+      </div>
+
+      {/* Status Section */}
+      <div className="mb-4">
+        <h4 className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--text-secondary)]">
+          狀態
+        </h4>
+        <div className="flex flex-wrap gap-1.5">
+          <button
+            onClick={() => setLocalUnmatched(!localUnmatched)}
+            data-testid="filter-unmatched"
+            aria-pressed={localUnmatched}
+            className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm transition-colors ${
+              localUnmatched
+                ? 'border border-[var(--accent-primary)] bg-[var(--accent-primary)]/15 text-blue-300'
+                : 'border border-transparent bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'
+            }`}
+          >
+            {localUnmatched && <Check className="h-3.5 w-3.5" />}
+            未匹配{unmatchedCount != null ? ` (${unmatchedCount})` : ''}
+          </button>
         </div>
       </div>
 
