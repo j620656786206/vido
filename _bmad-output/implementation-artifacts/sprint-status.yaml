@@ -354,7 +354,7 @@ development_status:
   9c-1-db-schema-migration: done             # Migration #021, tech info columns, series file_size, MetadataSource constants, ShouldOverwrite() — CR 2026-04-04
   9c-2-nfo-sidecar-reader: done              # NFO detection in enrichment pipeline, XML/URL parser, uniqueid TMDB matching — CR 2026-04-04
   9c-3-ffprobe-integration: done             # Docker ffprobe, Go service with semaphore/timeout, tech info extraction — CR 2026-04-04
-  9c-4-tech-badges-ui-unmatched-filter: review # TechBadge components, detail page integration, unmatched filter API + UI
+  9c-4-tech-badges-ui-unmatched-filter: done   # TechBadge components, detail page integration, unmatched filter API + UI — CR 2026-04-05
   epic-9c-retrospective: optional
 
   # ==============================================================================
@@ -404,7 +404,13 @@ development_status:
   # Phase: Phase 2 — Browse & Discover
   # FRs: P2-020–P2-023
   # ==============================================================================
-  epic-12: backlog
+  epic-12: in-progress
+  12-1-dual-rating-display: ready-for-dev           # TMDB + Douban ratings side-by-side with vote counts (P2-020)
+  12-2-season-episode-list: backlog                  # Expandable season accordion with episode list + subtitle status (P2-021)
+  12-3-related-content-recommendations: backlog      # TMDB similar/recommended with "已有" badges (P2-022)
+  12-4-streaming-platform-availability: backlog      # TMDB Watch Providers API integration (P2-023)
+  12-5-trailer-embeds: backlog                       # YouTube trailer embed with fallback (P2-024)
+  12-6-douban-integration: backlog                   # Direct Douban links + user review summary (P2-025)
   epic-12-retrospective: optional
 
   # ==============================================================================
