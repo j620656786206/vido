@@ -392,11 +392,11 @@ development_status:
   #   Priority: HIGH — design after Epic 10, before frontend stories start.
   # ==============================================================================
   epic-11: in-progress  # 2026-04-04
-  11-UX-advanced-search-design: backlog         # ⚠️ BLOCKER for 11-2/11-3/11-4 → UX /ux-designer: expand search screens in ux-design.pen. New elements: (1) Persistent filter chip bar with genre/year/region/rating/platform chips, (2) Multi-key sort drag-reorder UI, (3) Search suggestion dropdown with dual-language results, (4) Filter preset save/load/delete modal, (5) Mobile bottom sheet filter panel. ~3-4 new screens + modify existing 07-search-filter. Priority: after Epic 10 design.
+  11-UX-advanced-search-design: done              # 2026-04-05 — 4 screens: AS-1 filter chips+panel+results desktop, AS-2 search suggestions dropdown (電影/影集/人物), AS-3 save preset modal, AS-4 mobile filter bottom sheet. Screenshots in flow-g-search-desktop/ + flow-g-search-mobile/
   11-1-multi-dimensional-filter-engine: ready-for-dev   # Filter engine + compound sort + watch providers (P2-010, P2-012) — NO design dependency
-  11-2-persistent-filter-chip-ui: ready-for-dev         # Chip UI + filter panel + mobile bottom sheet (P2-011) — ⚠️ BLOCKED by 11-UX
-  11-3-instant-search-zh-tw-priority: ready-for-dev     # Debounced suggestions + dual-language + zh-TW boost (P2-013, P2-014) — ⚠️ BLOCKED by 11-UX
-  11-4-saved-filter-presets: ready-for-dev               # Save/load/delete filter presets in DB (P2-015) — ⚠️ BLOCKED by 11-UX
+  11-2-persistent-filter-chip-ui: ready-for-dev         # Chip UI + filter panel + mobile bottom sheet (P2-011) — ✅ UNBLOCKED by 11-UX
+  11-3-instant-search-zh-tw-priority: ready-for-dev     # Debounced suggestions + dual-language + zh-TW boost (P2-013, P2-014) — ✅ UNBLOCKED by 11-UX
+  11-4-saved-filter-presets: ready-for-dev               # Save/load/delete filter presets in DB (P2-015) — ✅ UNBLOCKED by 11-UX
   epic-11-retrospective: optional
 
   # ==============================================================================

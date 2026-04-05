@@ -108,6 +108,12 @@ SCREENS = {
     "g6p38": ("flow-g-homepage-desktop", "hp4-loading-skeleton-desktop"),
     # Flow G - Homepage TV Wall (Mobile)
     "g5LFD": ("flow-g-homepage-mobile", "hp2-homepage-mobile"),
+    # Flow G - Advanced Search & Filter (Desktop)
+    "NWxok": ("flow-g-search-desktop", "as1-advanced-filter-chips-desktop"),
+    "TMaw5": ("flow-g-search-desktop", "as2-search-suggestions-dropdown"),
+    "i74p2": ("flow-g-search-desktop", "as3-save-filter-preset-modal"),
+    # Flow G - Advanced Search & Filter (Mobile)
+    "pjKVZ": ("flow-g-search-mobile", "as4-filter-bottom-sheet-mobile"),
     # Flow Z - Design System Reference
     "8SSzc": ("flow-z-design-system", "design-system-reference"),
 }
