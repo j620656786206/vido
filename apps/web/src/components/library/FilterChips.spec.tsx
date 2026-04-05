@@ -119,6 +119,35 @@ describe('FilterChips', () => {
     });
   });
 
+  it('[P1] renders unmatched chip when filter is active', () => {
+    render(
+      <FilterChips
+        filters={{ genres: [], unmatched: true }}
+        onRemoveGenre={onRemoveGenre}
+        onRemoveYearMin={onRemoveYearMin}
+        onRemoveYearMax={onRemoveYearMax}
+        onClearAll={onClearAll}
+      />
+    );
+    expect(screen.getByText('未匹配')).toBeInTheDocument();
+  });
+
+  it('[P1] calls onRemoveUnmatched when clicking X on unmatched chip', async () => {
+    const onRemoveUnmatched = vi.fn();
+    render(
+      <FilterChips
+        filters={{ genres: [], unmatched: true }}
+        onRemoveGenre={onRemoveGenre}
+        onRemoveYearMin={onRemoveYearMin}
+        onRemoveYearMax={onRemoveYearMax}
+        onRemoveUnmatched={onRemoveUnmatched}
+        onClearAll={onClearAll}
+      />
+    );
+    await userEvent.click(screen.getByLabelText('移除未匹配篩選'));
+    expect(onRemoveUnmatched).toHaveBeenCalled();
+  });
+
   it('shows clear all button and calls onClearAll', async () => {
     render(
       <FilterChips

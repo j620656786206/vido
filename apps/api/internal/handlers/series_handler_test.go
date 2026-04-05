@@ -523,6 +523,92 @@ func TestSeriesHandler_UpdateWithAllOptionalFields(t *testing.T) {
 	mockService.AssertExpectations(t)
 }
 
+func TestSeriesHandler_Stats(t *testing.T) {
+	t.Run("success - returns stats", func(t *testing.T) {
+		mockService := new(MockSeriesService)
+		mockService.On("GetStats", mock.Anything).Return(
+			&repository.MediaStats{Total: 50, Unmatched: 8},
+			nil,
+		)
+
+		handler := NewSeriesHandler(mockService)
+		router := setupSeriesTestRouter(handler)
+
+		req, _ := http.NewRequest(http.MethodGet, "/api/v1/series/stats", nil)
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+
+		assert.Equal(t, http.StatusOK, resp.Code)
+
+		var response APIResponse
+		err := json.Unmarshal(resp.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		assert.True(t, response.Success)
+
+		dataBytes, _ := json.Marshal(response.Data)
+		var stats repository.MediaStats
+		json.Unmarshal(dataBytes, &stats)
+
+		assert.Equal(t, 50, stats.Total)
+		assert.Equal(t, 8, stats.Unmatched)
+
+		mockService.AssertExpectations(t)
+	})
+
+	t.Run("error - service failure", func(t *testing.T) {
+		mockService := new(MockSeriesService)
+		mockService.On("GetStats", mock.Anything).Return(nil, errors.New("db error"))
+
+		handler := NewSeriesHandler(mockService)
+		router := setupSeriesTestRouter(handler)
+
+		req, _ := http.NewRequest(http.MethodGet, "/api/v1/series/stats", nil)
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+
+		assert.Equal(t, http.StatusInternalServerError, resp.Code)
+		mockService.AssertExpectations(t)
+	})
+}
+
+func TestSeriesHandler_ListWithUnmatchedFilter(t *testing.T) {
+	mockService := new(MockSeriesService)
+	mockService.On("List", mock.Anything, mock.MatchedBy(func(p repository.ListParams) bool {
+		unmatched, ok := p.Filters["unmatched"].(bool)
+		return ok && unmatched
+	})).Return(
+		[]models.Series{
+			{ID: "unmatched-1", Title: "Unmatched Series", FirstAirDate: "2024-01-01"},
+		},
+		&repository.PaginationResult{Page: 1, PageSize: 20, TotalResults: 1, TotalPages: 1},
+		nil,
+	)
+
+	handler := NewSeriesHandler(mockService)
+	router := setupSeriesTestRouter(handler)
+
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/series?unmatched=true", nil)
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+
+	var response APIResponse
+	err := json.Unmarshal(resp.Body.Bytes(), &response)
+	assert.NoError(t, err)
+	assert.True(t, response.Success)
+
+	dataBytes, _ := json.Marshal(response.Data)
+	var paginated PaginatedResponse
+	json.Unmarshal(dataBytes, &paginated)
+
+	items, ok := paginated.Items.([]interface{})
+	assert.True(t, ok)
+	assert.Equal(t, 1, len(items))
+
+	mockService.AssertExpectations(t)
+}
+
 func TestSeriesHandler_UpdateInvalidJSON(t *testing.T) {
 	mockService := new(MockSeriesService)
 	mockService.On("GetByID", mock.Anything, "series-123").Return(

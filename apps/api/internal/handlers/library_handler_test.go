@@ -758,6 +758,26 @@ func TestLibraryHandler_ListLibrary_WithFilters(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, w.Code)
 	})
 
+	t.Run("unmatched filter passed to service", func(t *testing.T) {
+		expectedResult := &services.LibraryListResult{
+			Items: []services.LibraryItem{},
+			Pagination: &repository.PaginationResult{
+				Page: 1, PageSize: 20, TotalResults: 0, TotalPages: 0,
+			},
+		}
+
+		mockService.On("ListLibrary", mock.Anything, mock.MatchedBy(func(p repository.ListParams) bool {
+			unmatched, ok := p.Filters["unmatched"].(bool)
+			return ok && unmatched
+		}), "all").Return(expectedResult, nil).Once()
+
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest("GET", "/api/v1/library?unmatched=true", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
 	mockService.AssertExpectations(t)
 }
 

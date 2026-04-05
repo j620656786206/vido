@@ -335,6 +335,87 @@ describe('FilterPanel', () => {
     expect(decade2010s.querySelector('svg')).not.toBeNull();
   });
 
+  it('[P1] renders unmatched toggle with count badge', () => {
+    renderWithProvider(
+      <FilterPanel
+        filters={emptyFilters}
+        mediaType="all"
+        unmatchedCount={5}
+        onApply={onApply}
+        onClear={onClear}
+        onTypeChange={onTypeChange}
+      />
+    );
+    expect(screen.getByTestId('filter-unmatched')).toBeInTheDocument();
+    expect(screen.getByText('未匹配 (5)')).toBeInTheDocument();
+  });
+
+  it('[P1] toggles unmatched filter and passes to onApply', async () => {
+    renderWithProvider(
+      <FilterPanel
+        filters={emptyFilters}
+        mediaType="all"
+        onApply={onApply}
+        onClear={onClear}
+        onTypeChange={onTypeChange}
+      />
+    );
+
+    await userEvent.click(screen.getByTestId('filter-unmatched'));
+    await userEvent.click(screen.getByTestId('filter-apply'));
+
+    expect(onApply).toHaveBeenCalledWith(expect.objectContaining({ unmatched: true }));
+  });
+
+  it('[P1] resets unmatched filter on clear', async () => {
+    renderWithProvider(
+      <FilterPanel
+        filters={{ genres: [], unmatched: true }}
+        mediaType="all"
+        onApply={onApply}
+        onClear={onClear}
+        onTypeChange={onTypeChange}
+      />
+    );
+
+    await userEvent.click(screen.getByTestId('filter-reset'));
+    expect(onClear).toHaveBeenCalled();
+  });
+
+  it('[P2] syncs unmatched state when external filters prop changes', () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const { rerender } = render(
+      <QueryClientProvider client={queryClient}>
+        <FilterPanel
+          filters={emptyFilters}
+          mediaType="all"
+          onApply={onApply}
+          onClear={onClear}
+          onTypeChange={onTypeChange}
+        />
+      </QueryClientProvider>
+    );
+
+    // Rerender with unmatched=true
+    rerender(
+      <QueryClientProvider client={queryClient}>
+        <FilterPanel
+          filters={{ genres: [], unmatched: true }}
+          mediaType="all"
+          onApply={onApply}
+          onClear={onClear}
+          onTypeChange={onTypeChange}
+        />
+      </QueryClientProvider>
+    );
+
+    // Unmatched chip should show as selected (has check icon)
+    const unmatchedButton = screen.getByTestId('filter-unmatched');
+    expect(unmatchedButton.querySelector('svg')).not.toBeNull();
+  });
+
   it('[P2] selects 更早 decade for pre-1990 year range', async () => {
     renderWithProvider(
       <FilterPanel
