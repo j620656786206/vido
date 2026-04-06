@@ -406,7 +406,7 @@ development_status:
   # ==============================================================================
   epic-12: in-progress
   12-1-dual-rating-display: ready-for-dev           # TMDB + Douban ratings side-by-side with vote counts (P2-020)
-  12-2-season-episode-list: backlog                  # Expandable season accordion with episode list + subtitle status (P2-021)
+  12-2-season-episode-list: ready-for-dev             # Expandable season accordion with episode list + subtitle status (P2-021)
   12-3-related-content-recommendations: backlog      # TMDB similar/recommended with "已有" badges (P2-022)
   12-4-streaming-platform-availability: backlog      # TMDB Watch Providers API integration (P2-023)
   12-5-trailer-embeds: backlog                       # YouTube trailer embed with fallback (P2-024)
