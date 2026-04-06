@@ -39,6 +39,8 @@ func (r *BackupRepository) Create(ctx context.Context, backup *models.Backup) er
 }
 
 // isTableMissing checks if a SQLite error indicates a missing table.
+// This relies on the error message format from modernc.org/sqlite (production driver).
+// Validated by TestIsTableMissing and TestBackupRepository_List_MissingTable integration tests.
 func isTableMissing(err error) bool {
 	return err != nil && strings.Contains(err.Error(), "no such table")
 }

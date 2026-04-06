@@ -718,7 +718,7 @@ func (s *BackupService) readManifest(path string) (*backupManifest, error) {
 // replaceDatabase replaces the current database with the backup database using SQLite backup API
 func (s *BackupService) replaceDatabase(ctx context.Context, backupDBPath string) error {
 	// Open the backup database
-	backupDB, err := sql.Open("sqlite3", backupDBPath+"?mode=ro")
+	backupDB, err := sql.Open("sqlite", backupDBPath+"?mode=ro")
 	if err != nil {
 		return fmt.Errorf("open backup db: %w", err)
 	}

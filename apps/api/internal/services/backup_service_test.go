@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -69,7 +69,7 @@ func createTestDB(t *testing.T) (*sql.DB, string) {
 	t.Helper()
 	tmpDir := t.TempDir()
 	dbPath := filepath.Join(tmpDir, "test.db")
-	db, err := sql.Open("sqlite3", dbPath)
+	db, err := sql.Open("sqlite", dbPath)
 	require.NoError(t, err)
 
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS test_data (id TEXT PRIMARY KEY, name TEXT)`)
@@ -87,7 +87,7 @@ func createTestBackupArchive(t *testing.T, dir string, schemaVersion int64, dbDa
 
 	// Create a test database file
 	tmpDBPath := filepath.Join(dir, "temp.db")
-	testDB, err := sql.Open("sqlite3", tmpDBPath)
+	testDB, err := sql.Open("sqlite", tmpDBPath)
 	require.NoError(t, err)
 	_, err = testDB.Exec(`CREATE TABLE test_data (id TEXT PRIMARY KEY, name TEXT)`)
 	require.NoError(t, err)

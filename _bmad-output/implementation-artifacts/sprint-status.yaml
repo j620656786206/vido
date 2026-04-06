@@ -366,7 +366,7 @@ development_status:
   #
   retro-9c-AI1-enforce-cross-stack-split: done         # 2026-04-06 — create-story workflow now BLOCKS (not advises) when BE>3 AND FE>3, mandatory split into a/b stories
   retro-9c-AI2-fix-or-file-test-failures: done         # 2026-04-06 — dev-story step 7 now mandates fix (quick) or file (backlog entry) for pre-existing test failures
-  retro-9c-AI3-mock-generation-tool: backlog           # LOW — QD: evaluate mockery/go-generate for reducing mock maintenance burden
+  retro-9c-AI3-mock-generation-tool: done               # 2026-04-06 — ADR written: recommend mockery gradual adoption, defer until natural trigger. 57 mocks, 357 methods analyzed
   retro-9c-AI4-document-sse-lazy-pattern: backlog      # MEDIUM — QD: add lazy SSE connection pattern to project-context.md (carried from Epic 8 TD2)
 
   # ==============================================================================
@@ -553,6 +553,6 @@ development_status:
   # GET /settings/backups returns 500 + empty body
   # Likely: backup directory missing or permission issue on NAS container
   # Not a frontend bug (bugfix-3 handles empty responses correctly)
-  backups-api-500-investigation:                      review  # 2026-03-28 — defensive fix implemented 2026-04-06
+  backups-api-500-investigation:                      done    # 2026-03-28 — defensive fix implemented, code review passed 2026-04-06
 
 next_priority: epic-9c + 0-UX  # Epic 9c (backend, no design dep) runs parallel with 0-UX Design System tasks. 0-UX MUST complete before Epic 10/11 frontend stories. Sequence: 0-UX-1 (UX) → 0-UX-2/3 (QD) → 0-UX-4 (QD) → 0-UX-5 (DEV). Epic 9 (AI subtitle, P2/P3) deferred.

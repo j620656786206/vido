@@ -1,6 +1,6 @@
 # Story: Bugfix 8 — Backups API 500 Investigation & Fix
 
-Status: review
+Status: done
 
 ## Story
 
@@ -20,8 +20,8 @@ so that I can see my backup history (or an empty state) without errors.
 ## Tasks / Subtasks
 
 - [x] Task 1: Reproduce and diagnose root cause on NAS (AC: #1, #2, #4)
-  - [x] 1.1 SSH into NAS container — **DEFERRED**: API not running locally; local DB verified migration 017 ran and `backups` table exists with 0 rows. NAS verification deferred to deployment.
-  - [x] 1.2 Check API stdout/stderr logs — **N/A locally**: enhanced logging added in Task 3 will provide diagnostic context on NAS
+  - [-] 1.1 SSH into NAS container — **DEFERRED**: API not running locally; local DB verified migration 017 ran and `backups` table exists with 0 rows. NAS verification deferred to deployment.
+  - [-] 1.2 Check API stdout/stderr logs — **N/A locally**: enhanced logging added in Task 3 will provide diagnostic context on NAS
   - [x] 1.3 Verify migration status: local DB confirmed migration 017 ran (`SELECT version FROM schema_migrations` shows version 17)
   - [x] 1.4 Local `SELECT COUNT(*) FROM backups` returns 0 — table is accessible
   - [x] 1.5 Document root cause in Dev Agent Record — see below
@@ -115,10 +115,12 @@ Claude Opus 4.6 (1M context)
 ### Change Log
 
 - 2026-04-06: Implemented defensive error handling for missing backups table (AC #1-#6)
+- 2026-04-06: Code review fixes — unified SQLite driver to `modernc.org/sqlite` across prod+tests; fixed `replaceDatabase` using wrong driver `"sqlite3"` (would crash restore in prod); added driver documentation comment to `isTableMissing`; corrected deferred task markers
 
 ### File List
 
-- apps/api/internal/repository/backup_repository.go (modified — added `ErrTableMissing`, `isTableMissing()`, wrap errors in `List()` and `TotalSizeBytes()`)
-- apps/api/internal/services/backup_service.go (modified — added `ErrDatabaseIncomplete`, translate `ErrTableMissing` in `ListBackups()`)
+- apps/api/internal/repository/backup_repository.go (modified — added `ErrTableMissing`, `isTableMissing()`, wrap errors in `List()` and `TotalSizeBytes()`, driver doc comment)
+- apps/api/internal/services/backup_service.go (modified — added `ErrDatabaseIncomplete`, translate `ErrTableMissing` in `ListBackups()`, fixed `replaceDatabase` driver `"sqlite3"` → `"sqlite"`)
+- apps/api/internal/services/backup_service_test.go (modified — switched from `mattn/go-sqlite3` to `modernc.org/sqlite` for driver consistency)
 - apps/api/internal/handlers/backup_handler.go (modified — added `ErrDatabaseIncomplete` check in `ListBackups()`, returns 503 with `DB_MIGRATION_INCOMPLETE`)
 - apps/api/internal/handlers/backup_handler_test.go (modified — added 3 `TestBackupHandler_ListBackups` test cases)
