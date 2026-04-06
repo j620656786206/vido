@@ -269,6 +269,11 @@
     <action>Validate implementation meets ALL story acceptance criteria; enforce quantitative thresholds explicitly</action>
     <action if="regression tests fail">STOP and fix before continuing - identify breaking changes immediately</action>
     <action if="new tests fail">STOP and fix before continuing - ensure implementation correctness</action>
+    <action critical="MANDATORY" if="pre-existing test failures detected (tests that fail BEFORE your changes)">PRE-EXISTING FAILURE — FIX OR FILE (Epic 9c Retro AI-2):
+      1. If the fix is quick (under ~15 min, e.g., missing mock stub, stale assertion): FIX IT in-place and note in Dev Agent Record as "Pre-existing fix: {description}"
+      2. If the fix is non-trivial (architecture issue, unrelated feature bug, large refactor): FILE a tracked backlog entry in sprint-status.yaml using format: `preexisting-fail-{short-name}: backlog  # {test file} — {failure description}`
+      3. NEVER write "pre-existing failure, not in scope" without creating a tracking entry
+      4. Document which option was chosen in the story's Dev Agent Record → Completion Notes</action>
     <critical>After EVERY test execution, verify no orphaned test processes remain.
       Run the project's test cleanup command (e.g., `test:cleanup`) to check for residual workers.
       If orphaned processes are found, kill them immediately before proceeding.

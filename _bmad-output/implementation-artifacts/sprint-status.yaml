@@ -365,7 +365,7 @@ development_status:
   #   QD  = /bmad:bmm:workflows:quick-dev
   #
   retro-9c-AI1-enforce-cross-stack-split: done         # 2026-04-06 — create-story workflow now BLOCKS (not advises) when BE>3 AND FE>3, mandatory split into a/b stories
-  retro-9c-AI2-fix-or-file-test-failures: backlog     # MEDIUM — SM: add "fix or file" rule to dev-story workflow for pre-existing test failures
+  retro-9c-AI2-fix-or-file-test-failures: done         # 2026-04-06 — dev-story step 7 now mandates fix (quick) or file (backlog entry) for pre-existing test failures
   retro-9c-AI3-mock-generation-tool: backlog           # LOW — QD: evaluate mockery/go-generate for reducing mock maintenance burden
   retro-9c-AI4-document-sse-lazy-pattern: backlog      # MEDIUM — QD: add lazy SSE connection pattern to project-context.md (carried from Epic 8 TD2)
 
