@@ -350,12 +350,24 @@ development_status:
   #   Tech badges already designed (04f-detail-tech-badges-desktop, 05d-detail-tech-badges-mobile).
   #   9c-4 unmatched filter is a minor addition to existing filter UI — no new screen needed.
   # ==============================================================================
-  epic-9c: in-progress  # 2026-04-04
+  epic-9c: done  # 2026-04-06 — 4/4 stories, 78+ tests, 30+ CR issues fixed, zero blockers
   9c-1-db-schema-migration: done             # Migration #021, tech info columns, series file_size, MetadataSource constants, ShouldOverwrite() — CR 2026-04-04
   9c-2-nfo-sidecar-reader: done              # NFO detection in enrichment pipeline, XML/URL parser, uniqueid TMDB matching — CR 2026-04-04
   9c-3-ffprobe-integration: done             # Docker ffprobe, Go service with semaphore/timeout, tech info extraction — CR 2026-04-04
   9c-4-tech-badges-ui-unmatched-filter: done   # TechBadge components, detail page integration, unmatched filter API + UI — CR 2026-04-05
-  epic-9c-retrospective: optional
+  epic-9c-retrospective: done                  # 2026-04-06 — retro completed, 4 action items
+
+  # --- Epic 9c Retro Action Items (2026-04-06) ---
+  #
+  # AGENT ROUTING KEY:
+  #   SM  = /bmad:bmm:agents:sm (process rules, workflow updates)
+  #   DEV = /bmad:bmm:agents:dev + /bmad:bmm:workflows:dev-story
+  #   QD  = /bmad:bmm:workflows:quick-dev
+  #
+  retro-9c-AI1-enforce-cross-stack-split: backlog     # HIGH — SM: enforce (not advise) split in create-story when BE>3 AND FE>3
+  retro-9c-AI2-fix-or-file-test-failures: backlog     # MEDIUM — SM: add "fix or file" rule to dev-story workflow for pre-existing test failures
+  retro-9c-AI3-mock-generation-tool: backlog           # LOW — QD: evaluate mockery/go-generate for reducing mock maintenance burden
+  retro-9c-AI4-document-sse-lazy-pattern: backlog      # MEDIUM — QD: add lazy SSE connection pattern to project-context.md (carried from Epic 8 TD2)
 
   # ==============================================================================
   # Epic 10: Homepage TV Wall (PRD v4)
@@ -541,6 +553,6 @@ development_status:
   # GET /settings/backups returns 500 + empty body
   # Likely: backup directory missing or permission issue on NAS container
   # Not a frontend bug (bugfix-3 handles empty responses correctly)
-  backups-api-500-investigation:                      backlog  # 2026-03-28 — backend issue, needs investigation
+  backups-api-500-investigation:                      review  # 2026-03-28 — defensive fix implemented 2026-04-06
 
 next_priority: epic-9c + 0-UX  # Epic 9c (backend, no design dep) runs parallel with 0-UX Design System tasks. 0-UX MUST complete before Epic 10/11 frontend stories. Sequence: 0-UX-1 (UX) → 0-UX-2/3 (QD) → 0-UX-4 (QD) → 0-UX-5 (DEV). Epic 9 (AI subtitle, P2/P3) deferred.
