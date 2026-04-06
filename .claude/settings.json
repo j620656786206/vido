@@ -9,6 +9,35 @@
           }
         ]
       }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash(git add:*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/scripts/git-clean-lock.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash(git commit:*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/scripts/git-clean-lock.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash(rm -f*index.lock*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/scripts/git-clean-lock.sh"
+          }
+        ]
+      }
     ]
   },
   "$schema": "https://json.schemastore.org/claude-code-settings.json"
