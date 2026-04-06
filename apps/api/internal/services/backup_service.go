@@ -31,6 +31,9 @@ var ErrBackupNotFound = errors.New("backup not found")
 // ErrRestoreInProgress is returned when a restore is already running
 var ErrRestoreInProgress = errors.New("restore in progress")
 
+// ErrDatabaseIncomplete is returned when required tables are missing (migration not run)
+var ErrDatabaseIncomplete = errors.New("database migration incomplete")
+
 // ErrIncompatibleVersion is returned when the backup schema version is newer than current
 var ErrIncompatibleVersion = errors.New("incompatible schema version")
 
@@ -167,11 +170,17 @@ func (s *BackupService) CreateBackup(ctx context.Context) (*models.Backup, error
 func (s *BackupService) ListBackups(ctx context.Context) (*models.BackupListResponse, error) {
 	backups, err := s.repo.List(ctx)
 	if err != nil {
+		if errors.Is(err, repository.ErrTableMissing) {
+			return nil, ErrDatabaseIncomplete
+		}
 		return nil, fmt.Errorf("list backups: %w", err)
 	}
 
 	totalSize, err := s.repo.TotalSizeBytes(ctx)
 	if err != nil {
+		if errors.Is(err, repository.ErrTableMissing) {
+			return nil, ErrDatabaseIncomplete
+		}
 		return nil, fmt.Errorf("get total size: %w", err)
 	}
 

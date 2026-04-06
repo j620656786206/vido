@@ -121,6 +121,70 @@ func setupBackupRouterWithScheduler(svc services.BackupServiceInterface, schedul
 	return router
 }
 
+func TestBackupHandler_ListBackups(t *testing.T) {
+	t.Run("returns 200 with empty backup list", func(t *testing.T) {
+		mockSvc := new(MockBackupService)
+		mockSvc.On("ListBackups", mock.Anything).Return(&models.BackupListResponse{
+			Backups:        []models.Backup{},
+			TotalSizeBytes: 0,
+		}, nil)
+
+		router := setupBackupRouter(mockSvc)
+		req, _ := http.NewRequest(http.MethodGet, "/api/v1/settings/backups", nil)
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+
+		assert.Equal(t, http.StatusOK, resp.Code)
+
+		var body struct {
+			Success bool `json:"success"`
+			Data    struct {
+				Backups        []interface{} `json:"backups"`
+				TotalSizeBytes int64         `json:"total_size_bytes"`
+			} `json:"data"`
+		}
+		require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &body))
+		assert.True(t, body.Success)
+		assert.Empty(t, body.Data.Backups)
+		assert.Equal(t, int64(0), body.Data.TotalSizeBytes)
+		mockSvc.AssertExpectations(t)
+	})
+
+	t.Run("returns 500 with proper error JSON on service error", func(t *testing.T) {
+		mockSvc := new(MockBackupService)
+		mockSvc.On("ListBackups", mock.Anything).Return(nil, assert.AnError)
+
+		router := setupBackupRouter(mockSvc)
+		req, _ := http.NewRequest(http.MethodGet, "/api/v1/settings/backups", nil)
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+
+		assert.Equal(t, http.StatusInternalServerError, resp.Code)
+
+		var body APIResponse
+		require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &body))
+		assert.False(t, body.Success)
+		assert.Equal(t, "INTERNAL_ERROR", body.Error.Code)
+	})
+
+	t.Run("returns 503 with DB_MIGRATION_INCOMPLETE on missing table", func(t *testing.T) {
+		mockSvc := new(MockBackupService)
+		mockSvc.On("ListBackups", mock.Anything).Return(nil, services.ErrDatabaseIncomplete)
+
+		router := setupBackupRouter(mockSvc)
+		req, _ := http.NewRequest(http.MethodGet, "/api/v1/settings/backups", nil)
+		resp := httptest.NewRecorder()
+		router.ServeHTTP(resp, req)
+
+		assert.Equal(t, http.StatusServiceUnavailable, resp.Code)
+
+		var body APIResponse
+		require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &body))
+		assert.False(t, body.Success)
+		assert.Equal(t, "DB_MIGRATION_INCOMPLETE", body.Error.Code)
+	})
+}
+
 func TestBackupHandler_RestoreBackup(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		mockSvc := new(MockBackupService)

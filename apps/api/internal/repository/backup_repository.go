@@ -3,10 +3,15 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/vido/api/internal/models"
 )
+
+// ErrTableMissing is returned when a required database table does not exist.
+var ErrTableMissing = errors.New("table missing")
 
 // BackupRepository provides data access operations for backup records.
 type BackupRepository struct {
@@ -33,6 +38,11 @@ func (r *BackupRepository) Create(ctx context.Context, backup *models.Backup) er
 	return nil
 }
 
+// isTableMissing checks if a SQLite error indicates a missing table.
+func isTableMissing(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "no such table")
+}
+
 // List retrieves all backups ordered by creation time descending.
 func (r *BackupRepository) List(ctx context.Context) ([]models.Backup, error) {
 	query := `SELECT id, filename, size_bytes, schema_version, checksum, status, error_message, created_at
@@ -40,6 +50,9 @@ func (r *BackupRepository) List(ctx context.Context) ([]models.Backup, error) {
 
 	rows, err := r.db.QueryContext(ctx, query)
 	if err != nil {
+		if isTableMissing(err) {
+			return nil, fmt.Errorf("query backups: %w: %w", ErrTableMissing, err)
+		}
 		return nil, fmt.Errorf("query backups: %w", err)
 	}
 	defer rows.Close()
@@ -104,6 +117,9 @@ func (r *BackupRepository) TotalSizeBytes(ctx context.Context) (int64, error) {
 	var total sql.NullInt64
 	err := r.db.QueryRowContext(ctx, `SELECT SUM(size_bytes) FROM backups WHERE status = 'completed'`).Scan(&total)
 	if err != nil {
+		if isTableMissing(err) {
+			return 0, fmt.Errorf("sum backup sizes: %w: %w", ErrTableMissing, err)
+		}
 		return 0, fmt.Errorf("sum backup sizes: %w", err)
 	}
 	if total.Valid {

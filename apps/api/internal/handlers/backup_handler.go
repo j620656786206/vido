@@ -63,6 +63,13 @@ func (h *BackupHandler) CreateBackup(c *gin.Context) {
 func (h *BackupHandler) ListBackups(c *gin.Context) {
 	result, err := h.backupService.ListBackups(c.Request.Context())
 	if err != nil {
+		if errors.Is(err, services.ErrDatabaseIncomplete) {
+			slog.Error("Backups table missing — migration 017 may not have run", "error", err)
+			ErrorResponse(c, 503, "DB_MIGRATION_INCOMPLETE",
+				"Backup database table is not available",
+				"The database migration may not have completed. Please restart the application or check logs.")
+			return
+		}
 		slog.Error("Failed to list backups", "error", err)
 		InternalServerError(c, "Failed to retrieve backups")
 		return
