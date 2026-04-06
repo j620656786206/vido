@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -19,6 +20,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/vido/api/internal/models"
+	"github.com/vido/api/internal/repository"
 )
 
 // MockBackupRepo implements BackupRepositoryInterface for testing
@@ -596,6 +598,109 @@ func TestBackupService_ExtractTarGz_InvalidArchive(t *testing.T) {
 		err := svc.extractTarGz("/nonexistent/file.tar.gz", t.TempDir())
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "open archive")
+	})
+}
+
+func TestBackupService_ListBackups(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("returns ErrDatabaseIncomplete when repo List returns ErrTableMissing", func(t *testing.T) {
+		repo := new(MockBackupRepo)
+		db, _ := createTestDB(t)
+		defer db.Close()
+
+		svc := NewBackupService(db, repo, t.TempDir(), 17)
+
+		repo.On("List", ctx).Return(nil, fmt.Errorf("query backups: %w: no such table: backups", repository.ErrTableMissing))
+
+		result, err := svc.ListBackups(ctx)
+		assert.Nil(t, result)
+		assert.ErrorIs(t, err, ErrDatabaseIncomplete)
+	})
+
+	t.Run("returns ErrDatabaseIncomplete when repo TotalSizeBytes returns ErrTableMissing", func(t *testing.T) {
+		repo := new(MockBackupRepo)
+		db, _ := createTestDB(t)
+		defer db.Close()
+
+		svc := NewBackupService(db, repo, t.TempDir(), 17)
+
+		repo.On("List", ctx).Return([]models.Backup{}, nil)
+		repo.On("TotalSizeBytes", ctx).Return(int64(0), fmt.Errorf("sum backup sizes: %w: no such table: backups", repository.ErrTableMissing))
+
+		result, err := svc.ListBackups(ctx)
+		assert.Nil(t, result)
+		assert.ErrorIs(t, err, ErrDatabaseIncomplete)
+	})
+
+	t.Run("returns generic error for non-table-missing repo errors", func(t *testing.T) {
+		repo := new(MockBackupRepo)
+		db, _ := createTestDB(t)
+		defer db.Close()
+
+		svc := NewBackupService(db, repo, t.TempDir(), 17)
+
+		repo.On("List", ctx).Return(nil, assert.AnError)
+
+		result, err := svc.ListBackups(ctx)
+		assert.Nil(t, result)
+		assert.Error(t, err)
+		assert.NotErrorIs(t, err, ErrDatabaseIncomplete)
+	})
+
+	t.Run("returns valid response with empty backups", func(t *testing.T) {
+		repo := new(MockBackupRepo)
+		db, _ := createTestDB(t)
+		defer db.Close()
+
+		svc := NewBackupService(db, repo, t.TempDir(), 17)
+
+		repo.On("List", ctx).Return([]models.Backup{}, nil)
+		repo.On("TotalSizeBytes", ctx).Return(int64(0), nil)
+
+		result, err := svc.ListBackups(ctx)
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.Empty(t, result.Backups)
+		assert.Equal(t, int64(0), result.TotalSizeBytes)
+	})
+
+	t.Run("returns valid response with backups and total size", func(t *testing.T) {
+		repo := new(MockBackupRepo)
+		db, _ := createTestDB(t)
+		defer db.Close()
+
+		svc := NewBackupService(db, repo, t.TempDir(), 17)
+
+		backups := []models.Backup{
+			{ID: "b1", Filename: "backup-1.tar.gz", SizeBytes: 1024, Status: models.BackupStatusCompleted},
+			{ID: "b2", Filename: "backup-2.tar.gz", SizeBytes: 2048, Status: models.BackupStatusCompleted},
+		}
+		repo.On("List", ctx).Return(backups, nil)
+		repo.On("TotalSizeBytes", ctx).Return(int64(3072), nil)
+
+		result, err := svc.ListBackups(ctx)
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.Len(t, result.Backups, 2)
+		assert.Equal(t, int64(3072), result.TotalSizeBytes)
+	})
+
+	t.Run("returns empty slice not nil when repo returns nil backups", func(t *testing.T) {
+		repo := new(MockBackupRepo)
+		db, _ := createTestDB(t)
+		defer db.Close()
+
+		svc := NewBackupService(db, repo, t.TempDir(), 17)
+
+		repo.On("List", ctx).Return(nil, nil)
+		repo.On("TotalSizeBytes", ctx).Return(int64(0), nil)
+
+		result, err := svc.ListBackups(ctx)
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.NotNil(t, result.Backups)
+		assert.Empty(t, result.Backups)
 	})
 }
 
