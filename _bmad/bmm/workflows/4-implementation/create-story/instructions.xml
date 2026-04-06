@@ -303,17 +303,20 @@
     <template-output file="{default_output_file}">
     story_completion_status</template-output>
 
-    <!-- CROSS-STACK SPLIT CHECK (Agreement 5, Epic 8 Retro) -->
-    <action critical="MANDATORY">STORY SIZE VALIDATION — Cross-Stack Split Check:
+    <!-- CROSS-STACK SPLIT CHECK (Agreement 5, Epic 8 Retro + Epic 9c Retro AI-1: ENFORCED) -->
+    <action critical="MANDATORY">STORY SIZE VALIDATION — Cross-Stack Split Check (BLOCKING):
     Count the number of tasks that are primarily BACKEND work (Go handlers, services, repos, middleware, DB).
     Count the number of tasks that are primarily FRONTEND work (React components, hooks, services, tests).
     If BOTH counts are greater than 3:
-      - WARN the user: "⚠️ This story has {{backend_count}} backend tasks and {{frontend_count}} frontend tasks."
-      - RECOMMEND splitting: "Per Agreement 5 (Epic 8 Retro), cross-stack stories with >3 tasks on each side should be split into separate backend and frontend stories for more predictable delivery."
-      - SUGGEST split: "Recommended split: {{story_key}}a (Backend: API endpoints + services) + {{story_key}}b (Frontend: UI components + hooks)"
-      - ASK: "Split into two stories? [yes/no]"
-      - If yes: Create two story files with clear dependency annotation
-      - If no: Add a warning note in Dev Notes: "⚠️ This is a large cross-stack story. Consider splitting if implementation proves complex."
+      - BLOCK: "🚫 CROSS-STACK SPLIT REQUIRED — This story has {{backend_count}} backend tasks and {{frontend_count}} frontend tasks (threshold: >3 each side)."
+      - MANDATORY SPLIT: Create TWO story files:
+        1. {{story_key}}a — Backend: API endpoints, services, repositories, migrations, backend tests
+        2. {{story_key}}b — Frontend: UI components, hooks, services, frontend tests (depends on {{story_key}}a)
+      - Each file gets its own acceptance criteria, tasks, and dev notes
+      - Add dependency annotation in {{story_key}}b: "Depends on: {{story_key}}a (backend API must be ready)"
+      - Update sprint-status.yaml with both story entries
+      - DO NOT proceed with a single combined story — this is NOT optional
+    If EITHER count is 3 or fewer: proceed normally as a single story.
     </action>
 
     <!-- CRITICAL: Set status to ready-for-dev -->
