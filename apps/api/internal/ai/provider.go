@@ -40,6 +40,12 @@ type Provider interface {
 	Name() ProviderName
 }
 
+// TextCompleter defines the interface for AI text completion (non-JSON output).
+// Used by services that need raw text responses (e.g., terminology correction).
+type TextCompleter interface {
+	CompleteText(ctx context.Context, systemPrompt, userPrompt string, maxTokens int) (string, error)
+}
+
 // ProviderConfig contains common configuration for AI providers.
 type ProviderConfig struct {
 	// APIKey is the authentication key for the provider.

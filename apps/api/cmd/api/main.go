@@ -12,6 +12,7 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
+	"github.com/vido/api/internal/ai"
 	"github.com/vido/api/internal/config"
 	"github.com/vido/api/internal/database"
 	"github.com/vido/api/internal/database/migrations"
@@ -392,7 +393,12 @@ func main() {
 		sseHub, repos.Movies, repos.Series,
 	)
 	// Initialize AI terminology correction (Story 9.1)
-	terminologyService := services.NewTerminologyCorrectionService(cfg)
+	// Uses TextCompleter interface — provider created once here, not inside the service
+	var terminologyService *services.TerminologyCorrectionService
+	if cfg.HasClaudeKey() {
+		terminologyProvider := ai.NewClaudeProvider(cfg.GetClaudeAPIKey())
+		terminologyService = services.NewTerminologyCorrectionService(terminologyProvider)
+	}
 	if terminologyService != nil {
 		subtitleEngine.SetTerminologyService(terminologyService)
 		slog.Info("AI terminology correction enabled")

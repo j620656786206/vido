@@ -334,9 +334,10 @@ func TestEngine_Process_AICorrection_Applied(t *testing.T) {
 		downloadData: subContent,
 	}
 
+	correctedText := "1\n00:00:01,000 --> 00:00:03,000\n這個軟體很好用\n"
 	mockTermSvc := &mockTerminologyService{
 		configured:    true,
-		correctResult: "1\n00:00:01,000 --> 00:00:03,000\n這個軟體很好用\n",
+		correctResult: correctedText,
 	}
 	engine, mediaPath := newTestEngine(t, []providers.SubtitleProvider{prov}, nil)
 	engine.SetTerminologyService(mockTermSvc)
@@ -346,6 +347,11 @@ func TestEngine_Process_AICorrection_Applied(t *testing.T) {
 
 	assert.True(t, result.Success)
 	assert.Equal(t, 1, mockTermSvc.callCount, "AI correction should be called once")
+
+	// M2 fix: verify the placed file actually contains the AI-corrected content
+	placedContent, err := os.ReadFile(result.SubtitlePath)
+	require.NoError(t, err, "should read placed subtitle file")
+	assert.Equal(t, correctedText, string(placedContent), "placed file should contain AI-corrected content, not just OpenCC output")
 }
 
 // Story 9.1: AI correction failure falls back to OpenCC output (AC #4)
@@ -447,6 +453,43 @@ func TestEngine_Process_AICorrection_AppliesTraditionalChinese(t *testing.T) {
 
 	assert.True(t, result.Success)
 	assert.Equal(t, 1, mockTermSvc.callCount, "AI correction should apply to Traditional Chinese content")
+}
+
+// Story 9.1 CR-M4: AI correction applies to ambiguous Chinese (LangAmbiguous path)
+// When converter is nil and content has only shared CJK characters, detector returns LangAmbiguous.
+// The AI correction condition includes LangAmbiguous, so correction should still trigger.
+func TestEngine_Process_AICorrection_AppliesAmbiguousChinese(t *testing.T) {
+	// Content with only shared CJK characters (common to both variants) → detector returns LangAmbiguous
+	subContent := []byte("1\n00:00:01,000 --> 00:00:03,000\n大家好我是人工作上的問題\n")
+
+	prov := &mockProvider{
+		name: "assrt",
+		searchResult: []providers.SubtitleResult{
+			{ID: "1", Source: "assrt", Language: "zh", Filename: "sub.srt", Format: "srt", Downloads: 100},
+		},
+		downloadData: subContent,
+	}
+
+	correctedText := "1\n00:00:01,000 --> 00:00:03,000\n大家好我是人工作上的問題\n"
+	mockTermSvc := &mockTerminologyService{
+		configured:    true,
+		correctResult: correctedText,
+	}
+
+	// Engine WITHOUT converter — finalLang stays as detector output (LangAmbiguous)
+	dir := t.TempDir()
+	mediaPath := filepath.Join(dir, "Movie.2024.1080p.mkv")
+	os.WriteFile(mediaPath, []byte("fake"), 0644)
+	scorer := NewScorer(NewDefaultScorerConfig())
+	placer := NewPlacer(DefaultPlacerConfig())
+	engine := NewEngine([]providers.SubtitleProvider{prov}, scorer, nil, placer, nil, &mockStatusUpdater{}, &mockStatusUpdater{})
+	engine.SetTerminologyService(mockTermSvc)
+
+	result := engine.Process(context.Background(), "movie-1", "movie", mediaPath,
+		providers.SubtitleQuery{Title: "Test"}, "1080p")
+
+	assert.True(t, result.Success)
+	assert.Equal(t, 1, mockTermSvc.callCount, "AI correction should trigger for LangAmbiguous content")
 }
 
 // Story 9.1 TA: SetTerminologyService allows late binding

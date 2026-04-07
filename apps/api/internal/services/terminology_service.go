@@ -7,7 +7,6 @@ import (
 
 	"github.com/vido/api/internal/ai"
 	"github.com/vido/api/internal/ai/prompts"
-	"github.com/vido/api/internal/config"
 )
 
 const (
@@ -27,34 +26,24 @@ type TerminologyCorrectionServiceInterface interface {
 	IsConfigured() bool
 }
 
-// TerminologyCorrectionService uses Claude to fix cross-strait Chinese terminology.
+// TerminologyCorrectionService uses AI to fix cross-strait Chinese terminology.
 type TerminologyCorrectionService struct {
-	provider *ai.ClaudeProvider
-	cfg      *config.Config
+	provider ai.TextCompleter
 }
 
 // Compile-time interface verification.
 var _ TerminologyCorrectionServiceInterface = (*TerminologyCorrectionService)(nil)
 
 // NewTerminologyCorrectionService creates a new terminology correction service.
-// Returns nil if no Claude API key is configured (graceful degradation per AC #2).
-func NewTerminologyCorrectionService(cfg *config.Config) *TerminologyCorrectionService {
-	if !cfg.HasClaudeKey() {
-		slog.Info("Terminology correction service not configured - no Claude API key set")
+// Returns nil if provider is nil (graceful degradation per AC #2).
+// The caller is responsible for creating the provider only when an API key is configured.
+func NewTerminologyCorrectionService(provider ai.TextCompleter) *TerminologyCorrectionService {
+	if provider == nil {
+		slog.Info("Terminology correction service not configured - no AI provider")
 		return nil
 	}
 
-	provider := ai.NewClaudeProvider(cfg.GetClaudeAPIKey())
-
 	slog.Info("Terminology correction service initialized")
-	return &TerminologyCorrectionService{
-		provider: provider,
-		cfg:      cfg,
-	}
-}
-
-// NewTerminologyCorrectionServiceWithProvider creates a service with a specific provider (for testing).
-func NewTerminologyCorrectionServiceWithProvider(provider *ai.ClaudeProvider) *TerminologyCorrectionService {
 	return &TerminologyCorrectionService{
 		provider: provider,
 	}

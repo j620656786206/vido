@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/vido/api/internal/ai"
-	"github.com/vido/api/internal/config"
 )
 
 // newTestClaudeProvider creates a ClaudeProvider backed by a test HTTP server.
@@ -43,7 +42,7 @@ func TestTerminologyCorrectionService_Correct_Success(t *testing.T) {
 	})
 	defer server.Close()
 
-	svc := NewTerminologyCorrectionServiceWithProvider(provider)
+	svc := NewTerminologyCorrectionService(provider)
 	result, err := svc.Correct(context.Background(), "這個軟件很好用")
 
 	require.NoError(t, err)
@@ -56,7 +55,7 @@ func TestTerminologyCorrectionService_Correct_EmptyContent(t *testing.T) {
 	})
 	defer server.Close()
 
-	svc := NewTerminologyCorrectionServiceWithProvider(provider)
+	svc := NewTerminologyCorrectionService(provider)
 	result, err := svc.Correct(context.Background(), "")
 
 	require.NoError(t, err)
@@ -78,7 +77,7 @@ func TestTerminologyCorrectionService_Correct_APIError_FallsBack(t *testing.T) {
 	})
 	defer server.Close()
 
-	svc := NewTerminologyCorrectionServiceWithProvider(provider)
+	svc := NewTerminologyCorrectionService(provider)
 	original := "這個軟件很好用"
 	result, err := svc.Correct(context.Background(), original)
 
@@ -94,7 +93,7 @@ func TestTerminologyCorrectionService_Correct_Timeout_FallsBack(t *testing.T) {
 	})
 	defer server.Close()
 
-	svc := NewTerminologyCorrectionServiceWithProvider(provider)
+	svc := NewTerminologyCorrectionService(provider)
 
 	// Use a short timeout to trigger deadline exceeded
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
@@ -114,7 +113,7 @@ func TestTerminologyCorrectionService_Correct_QuotaExceeded_FallsBack(t *testing
 	})
 	defer server.Close()
 
-	svc := NewTerminologyCorrectionServiceWithProvider(provider)
+	svc := NewTerminologyCorrectionService(provider)
 	original := "視頻播放器"
 	result, err := svc.Correct(context.Background(), original)
 
@@ -137,23 +136,26 @@ func TestTerminologyCorrectionService_IsConfigured(t *testing.T) {
 	t.Run("with provider returns true", func(t *testing.T) {
 		provider, server := newTestClaudeProvider(nil)
 		defer server.Close()
-		svc := NewTerminologyCorrectionServiceWithProvider(provider)
+		svc := NewTerminologyCorrectionService(provider)
 		assert.True(t, svc.IsConfigured())
 	})
 }
 
-func TestNewTerminologyCorrectionService_NoKey(t *testing.T) {
-	cfg := &config.Config{ClaudeAPIKey: ""}
-	svc := NewTerminologyCorrectionService(cfg)
-	assert.Nil(t, svc, "should return nil when no Claude key configured (AC #2)")
+func TestNewTerminologyCorrectionService_NilProvider(t *testing.T) {
+	svc := NewTerminologyCorrectionService(nil)
+	assert.Nil(t, svc, "should return nil when no provider given (AC #2)")
 }
 
-func TestNewTerminologyCorrectionService_WithKey(t *testing.T) {
-	cfg := &config.Config{ClaudeAPIKey: "test-key-123"}
-	svc := NewTerminologyCorrectionService(cfg)
+func TestNewTerminologyCorrectionService_WithProvider(t *testing.T) {
+	provider, server := newTestClaudeProvider(nil)
+	defer server.Close()
+	svc := NewTerminologyCorrectionService(provider)
 	require.NotNil(t, svc)
 	assert.True(t, svc.IsConfigured())
 }
+
+// Verify TextCompleter interface is satisfied by ClaudeProvider at compile time.
+var _ ai.TextCompleter = (*ai.ClaudeProvider)(nil)
 
 func TestTerminologyCorrectionService_Correct_SendsSystemPrompt(t *testing.T) {
 	var receivedBody map[string]interface{}
@@ -165,7 +167,7 @@ func TestTerminologyCorrectionService_Correct_SendsSystemPrompt(t *testing.T) {
 	})
 	defer server.Close()
 
-	svc := NewTerminologyCorrectionServiceWithProvider(provider)
+	svc := NewTerminologyCorrectionService(provider)
 	_, err := svc.Correct(context.Background(), "test content")
 	require.NoError(t, err)
 
