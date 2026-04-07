@@ -219,6 +219,172 @@ func TestClaudeProvider_Parse_EmptyResponse(t *testing.T) {
 	assert.ErrorIs(t, err, ErrAIInvalidResponse)
 }
 
+// --- CompleteText tests (Story 9-1) ---
+
+func TestClaudeProvider_CompleteText_Success(t *testing.T) {
+	var receivedReq map[string]interface{}
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodPost, r.Method)
+		assert.Equal(t, "test-api-key", r.Header.Get("x-api-key"))
+		assert.Equal(t, ClaudeAPIVersion, r.Header.Get("anthropic-version"))
+		assert.Equal(t, "application/json", r.Header.Get("Content-Type"))
+
+		json.NewDecoder(r.Body).Decode(&receivedReq)
+
+		resp := claudeResponse{
+			Content:    []claudeContentBlock{{Type: "text", Text: "這個軟體很好用"}},
+			StopReason: "end_turn",
+		}
+		json.NewEncoder(w).Encode(resp)
+	}))
+	defer server.Close()
+
+	p := NewClaudeProvider("test-api-key", WithClaudeBaseURL(server.URL))
+	result, err := p.CompleteText(context.Background(), "system prompt", "user prompt", 2048)
+
+	require.NoError(t, err)
+	assert.Equal(t, "這個軟體很好用", result)
+
+	// Verify system prompt is in the request
+	assert.Equal(t, "system prompt", receivedReq["system"])
+	// Verify max_tokens
+	assert.Equal(t, float64(2048), receivedReq["max_tokens"])
+	// Verify messages
+	messages := receivedReq["messages"].([]interface{})
+	assert.Len(t, messages, 1)
+	msg := messages[0].(map[string]interface{})
+	assert.Equal(t, "user", msg["role"])
+	assert.Equal(t, "user prompt", msg["content"])
+}
+
+func TestClaudeProvider_CompleteText_SystemFieldSerialization(t *testing.T) {
+	t.Run("system field included when non-empty", func(t *testing.T) {
+		req := claudeRequest{
+			Model:     "test-model",
+			MaxTokens: 1024,
+			System:    "You are a helpful assistant",
+			Messages:  []claudeMessage{{Role: "user", Content: "hello"}},
+		}
+		data, err := json.Marshal(req)
+		require.NoError(t, err)
+		assert.Contains(t, string(data), `"system":"You are a helpful assistant"`)
+	})
+
+	t.Run("system field omitted when empty", func(t *testing.T) {
+		req := claudeRequest{
+			Model:     "test-model",
+			MaxTokens: 1024,
+			System:    "",
+			Messages:  []claudeMessage{{Role: "user", Content: "hello"}},
+		}
+		data, err := json.Marshal(req)
+		require.NoError(t, err)
+		assert.NotContains(t, string(data), `"system"`)
+	})
+}
+
+func TestClaudeProvider_CompleteText_MaxTokensDefaulting(t *testing.T) {
+	var receivedReq map[string]interface{}
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		json.NewDecoder(r.Body).Decode(&receivedReq)
+		resp := claudeResponse{
+			Content:    []claudeContentBlock{{Type: "text", Text: "ok"}},
+			StopReason: "end_turn",
+		}
+		json.NewEncoder(w).Encode(resp)
+	}))
+	defer server.Close()
+
+	p := NewClaudeProvider("test-key", WithClaudeBaseURL(server.URL))
+
+	t.Run("zero defaults to ClaudeMaxTokens", func(t *testing.T) {
+		_, err := p.CompleteText(context.Background(), "sys", "usr", 0)
+		require.NoError(t, err)
+		assert.Equal(t, float64(ClaudeMaxTokens), receivedReq["max_tokens"])
+	})
+
+	t.Run("negative defaults to ClaudeMaxTokens", func(t *testing.T) {
+		_, err := p.CompleteText(context.Background(), "sys", "usr", -1)
+		require.NoError(t, err)
+		assert.Equal(t, float64(ClaudeMaxTokens), receivedReq["max_tokens"])
+	})
+}
+
+func TestClaudeProvider_CompleteText_Timeout(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(200 * time.Millisecond)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	p := NewClaudeProvider("test-key",
+		WithClaudeBaseURL(server.URL),
+		WithClaudeTimeout(50*time.Millisecond),
+	)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+
+	_, err := p.CompleteText(ctx, "sys", "usr", 1024)
+
+	assert.Error(t, err)
+	assert.ErrorIs(t, err, ErrAITimeout)
+}
+
+func TestClaudeProvider_CompleteText_QuotaExceeded(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusTooManyRequests)
+		w.Write([]byte(`{"error":"rate_limited"}`))
+	}))
+	defer server.Close()
+
+	p := NewClaudeProvider("test-key", WithClaudeBaseURL(server.URL))
+	_, err := p.CompleteText(context.Background(), "sys", "usr", 1024)
+
+	assert.ErrorIs(t, err, ErrAIQuotaExceeded)
+}
+
+func TestClaudeProvider_CompleteText_ServerError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{"error":"internal"}`))
+	}))
+	defer server.Close()
+
+	p := NewClaudeProvider("test-key", WithClaudeBaseURL(server.URL))
+	_, err := p.CompleteText(context.Background(), "sys", "usr", 1024)
+
+	assert.ErrorIs(t, err, ErrAIProviderError)
+}
+
+func TestClaudeProvider_CompleteText_EmptyResponse(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		resp := claudeResponse{Content: []claudeContentBlock{}, StopReason: "end_turn"}
+		json.NewEncoder(w).Encode(resp)
+	}))
+	defer server.Close()
+
+	p := NewClaudeProvider("test-key", WithClaudeBaseURL(server.URL))
+	_, err := p.CompleteText(context.Background(), "sys", "usr", 1024)
+
+	assert.ErrorIs(t, err, ErrAIInvalidResponse)
+}
+
+func TestClaudeProvider_CompleteText_MalformedJSON(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`not json at all`))
+	}))
+	defer server.Close()
+
+	p := NewClaudeProvider("test-key", WithClaudeBaseURL(server.URL))
+	_, err := p.CompleteText(context.Background(), "sys", "usr", 1024)
+
+	assert.ErrorIs(t, err, ErrAIInvalidResponse)
+}
+
 func TestClaudeResponse_GetText(t *testing.T) {
 	tests := []struct {
 		name     string

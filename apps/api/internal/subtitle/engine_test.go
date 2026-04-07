@@ -398,3 +398,63 @@ func TestEngine_Process_AICorrection_SkippedForCNContent(t *testing.T) {
 	assert.True(t, result.Success)
 	assert.Equal(t, 0, mockTermSvc.callCount, "AI correction should be skipped for CN content")
 }
+
+// Story 9.1 TA: AI correction is skipped for non-Chinese content (English subs)
+func TestEngine_Process_AICorrection_SkippedForNonChinese(t *testing.T) {
+	subContent := []byte("1\n00:00:01,000 --> 00:00:03,000\nThis is English subtitle text\n")
+
+	prov := &mockProvider{
+		name: "assrt",
+		searchResult: []providers.SubtitleResult{
+			{ID: "1", Source: "assrt", Language: "en", Filename: "sub.srt", Format: "srt", Downloads: 100},
+		},
+		downloadData: subContent,
+	}
+
+	mockTermSvc := &mockTerminologyService{configured: true}
+	engine, mediaPath := newTestEngine(t, []providers.SubtitleProvider{prov}, nil)
+	engine.SetTerminologyService(mockTermSvc)
+
+	result := engine.Process(context.Background(), "movie-1", "movie", mediaPath,
+		providers.SubtitleQuery{Title: "Test"}, "1080p")
+
+	assert.True(t, result.Success)
+	assert.Equal(t, 0, mockTermSvc.callCount, "AI correction should be skipped for non-Chinese content")
+}
+
+// Story 9.1 TA: AI correction applies to Traditional Chinese content (post-OpenCC)
+func TestEngine_Process_AICorrection_AppliesTraditionalChinese(t *testing.T) {
+	// Content already in Traditional Chinese (from OpenCC or original)
+	subContent := []byte("1\n00:00:01,000 --> 00:00:03,000\n這個軟件在操作系統上運行\n")
+
+	prov := &mockProvider{
+		name: "assrt",
+		searchResult: []providers.SubtitleResult{
+			{ID: "1", Source: "assrt", Language: "zh-Hant", Filename: "sub.srt", Format: "srt", Downloads: 100},
+		},
+		downloadData: subContent,
+	}
+
+	mockTermSvc := &mockTerminologyService{
+		configured:    true,
+		correctResult: "1\n00:00:01,000 --> 00:00:03,000\n這個軟體在作業系統上運行\n",
+	}
+	engine, mediaPath := newTestEngine(t, []providers.SubtitleProvider{prov}, nil)
+	engine.SetTerminologyService(mockTermSvc)
+
+	result := engine.Process(context.Background(), "movie-1", "movie", mediaPath,
+		providers.SubtitleQuery{Title: "Test"}, "1080p")
+
+	assert.True(t, result.Success)
+	assert.Equal(t, 1, mockTermSvc.callCount, "AI correction should apply to Traditional Chinese content")
+}
+
+// Story 9.1 TA: SetTerminologyService allows late binding
+func TestEngine_SetTerminologyService(t *testing.T) {
+	engine := &Engine{}
+	assert.Nil(t, engine.terminologyService)
+
+	svc := &mockTerminologyService{configured: true}
+	engine.SetTerminologyService(svc)
+	assert.Equal(t, svc, engine.terminologyService)
+}
