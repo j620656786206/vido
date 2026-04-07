@@ -11,6 +11,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/vido/api/internal/models"
+	"github.com/vido/api/internal/services"
 	"github.com/vido/api/internal/sse"
 	"github.com/vido/api/internal/subtitle/providers"
 )
@@ -29,6 +30,7 @@ const (
 	StageScoring     PipelineStage = "scoring"
 	StageDownloading PipelineStage = "downloading"
 	StageConverting  PipelineStage = "converting"
+	StageCorrecting  PipelineStage = "correcting"
 	StagePlacing     PipelineStage = "placing"
 	StageComplete    PipelineStage = "complete"
 	StageFailed      PipelineStage = "failed"
@@ -50,15 +52,16 @@ type EngineResult struct {
 	ProviderUsed string
 }
 
-// Engine orchestrates the subtitle pipeline: Search → Score → Download → Convert → Place.
+// Engine orchestrates the subtitle pipeline: Search → Score → Download → Convert → AI Correct → Place.
 type Engine struct {
-	providers  []providers.SubtitleProvider
-	scorer     *Scorer
-	converter  *Converter
-	placer     *Placer
-	sseHub     *sse.Hub
-	movieRepo  SubtitleStatusUpdater
-	seriesRepo SubtitleStatusUpdater
+	providers          []providers.SubtitleProvider
+	scorer             *Scorer
+	converter          *Converter
+	placer             *Placer
+	terminologyService services.TerminologyCorrectionServiceInterface
+	sseHub             *sse.Hub
+	movieRepo          SubtitleStatusUpdater
+	seriesRepo         SubtitleStatusUpdater
 }
 
 // NewEngine creates a subtitle pipeline engine with all dependencies injected.
@@ -80,6 +83,12 @@ func NewEngine(
 		movieRepo:  movieRepo,
 		seriesRepo: seriesRepo,
 	}
+}
+
+// SetTerminologyService sets the optional AI terminology correction service.
+// When set and configured, the engine applies post-OpenCC AI correction.
+func (e *Engine) SetTerminologyService(svc services.TerminologyCorrectionServiceInterface) {
+	e.terminologyService = svc
 }
 
 // ConversionPolicy controls how the engine handles simplified→traditional conversion.
@@ -156,6 +165,23 @@ func (e *Engine) Process(ctx context.Context, mediaID, mediaType, mediaFilePath 
 		slog.Warn("Conversion failed, using original", "error", err, "mediaID", mediaID)
 		// convertIfNeeded already returns original data on failure;
 		// keep finalLang from detector (not provider metadata, which is often inaccurate).
+	}
+
+	// Stage 4.5: AI terminology correction (optional, post-OpenCC)
+	// Only applies when: service is configured, conversion policy allows it (not CN content),
+	// and we have Chinese content that was converted or is already Traditional.
+	if e.terminologyService != nil && e.terminologyService.IsConfigured() &&
+		conversionPolicy != ConvertNever &&
+		(finalLang == LangTraditional || finalLang == LangSimplified || finalLang == LangAmbiguous) {
+		e.broadcastStatus(mediaID, mediaType, StageCorrecting, "Applying AI terminology correction...")
+		corrected, corrErr := e.terminologyService.Correct(ctx, string(convertedData))
+		if corrErr != nil {
+			slog.Warn("AI terminology correction failed, using OpenCC output",
+				"error", corrErr, "mediaID", mediaID)
+			// Graceful degradation: keep convertedData as-is (AC #4)
+		} else {
+			convertedData = []byte(corrected)
+		}
 	}
 
 	// Stage 5: Place

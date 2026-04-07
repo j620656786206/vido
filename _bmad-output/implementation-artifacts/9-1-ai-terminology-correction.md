@@ -1,6 +1,6 @@
 # Story 9.1: AI Terminology Correction
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -19,29 +19,29 @@ so that cross-strait terminology differences (e.g., 軟件→軟體, 內存→�
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Create terminology correction prompt (AC: #5)
-  - [ ] 1.1 Create `apps/api/internal/ai/prompts/terminology_corrector.go` with system prompt and user prompt template
-  - [ ] 1.2 Prompt must instruct Claude to: only fix cross-strait terms, preserve proper nouns, return corrected text in same format
-  - [ ] 1.3 Add prompt unit tests with known 簡繁 edge cases (at least 10 test pairs)
+- [x] Task 1: Create terminology correction prompt (AC: #5)
+  - [x] 1.1 Create `apps/api/internal/ai/prompts/terminology_corrector.go` with system prompt and user prompt template
+  - [x] 1.2 Prompt must instruct Claude to: only fix cross-strait terms, preserve proper nouns, return corrected text in same format
+  - [x] 1.3 Add prompt unit tests with known 簡繁 edge cases (at least 10 test pairs)
 
-- [ ] Task 2: Create TerminologyCorrectionService (AC: #1, #2, #4)
-  - [ ] 2.1 Create `apps/api/internal/services/terminology_service.go`
-  - [ ] 2.2 Interface: `TerminologyCorrectionServiceInterface` with `Correct(ctx, subtitleContent string) (string, error)`
-  - [ ] 2.3 Use existing `ai.Provider` (via factory) — do NOT create new Claude client
-  - [ ] 2.4 Implement `IsConfigured() bool` — delegates to `config.HasClaudeKey()`
-  - [ ] 2.5 Add 30-second context timeout (AC: #6)
-  - [ ] 2.6 On error/timeout: return original content unchanged + log warning (AC: #4)
+- [x] Task 2: Create TerminologyCorrectionService (AC: #1, #2, #4)
+  - [x] 2.1 Create `apps/api/internal/services/terminology_service.go`
+  - [x] 2.2 Interface: `TerminologyCorrectionServiceInterface` with `Correct(ctx, subtitleContent string) (string, error)`
+  - [x] 2.3 Use existing `ai.Provider` (via factory) — do NOT create new Claude client
+  - [x] 2.4 Implement `IsConfigured() bool` — delegates to `config.HasClaudeKey()`
+  - [x] 2.5 Add 30-second context timeout (AC: #6)
+  - [x] 2.6 On error/timeout: return original content unchanged + log warning (AC: #4)
 
-- [ ] Task 3: Integrate into subtitle pipeline (AC: #1, #2)
-  - [ ] 3.1 Modify `apps/api/internal/subtitle/converter.go` — add optional post-OpenCC AI correction step
-  - [ ] 3.2 Pipeline flow: Download → OpenCC s2twp → (if AI configured) Claude correction → Place
-  - [ ] 3.3 Skip AI step entirely if `!terminologyService.IsConfigured()` (AC: #2)
+- [x] Task 3: Integrate into subtitle pipeline (AC: #1, #2)
+  - [x] 3.1 Modify `apps/api/internal/subtitle/engine.go` — add optional post-OpenCC AI correction step (engine, not converter — converter is for OpenCC only)
+  - [x] 3.2 Pipeline flow: Download → OpenCC s2twp → (if AI configured) Claude correction → Place
+  - [x] 3.3 Skip AI step entirely if `!terminologyService.IsConfigured()` (AC: #2)
 
-- [ ] Task 4: Unit tests (AC: #1-6)
-  - [ ] 4.1 Test terminology service with mock AI provider (success, timeout, error cases)
-  - [ ] 4.2 Test pipeline integration: verify AI step is skipped when not configured
-  - [ ] 4.3 Test known edge cases: 軟件→軟體, 內存→記憶體, 數據→資料, 視頻→影片
-  - [ ] 4.4 Test proper noun preservation: 人名, 電影名 should not be altered
+- [x] Task 4: Unit tests (AC: #1-6)
+  - [x] 4.1 Test terminology service with mock AI provider (success, timeout, error cases)
+  - [x] 4.2 Test pipeline integration: verify AI step is skipped when not configured
+  - [x] 4.3 Test known edge cases: 軟件→軟體, 內存→記憶體, 數據→資料, 視頻→影片
+  - [x] 4.4 Test proper noun preservation: 人名, 電影名 should not be altered
 
 ## Dev Notes
 
@@ -84,8 +84,36 @@ so that cross-strait terminology differences (e.g., 軟件→軟體, 內存→�
 
 ### Agent Model Used
 
+Claude Opus 4.6 (1M context)
+
 ### Debug Log References
+
+None — all tests passed on first run.
 
 ### Completion Notes List
 
+- **Task 1:** Created `terminology_corrector.go` with system prompt (16 cross-strait term examples), user prompt builder, and 12 known test pairs (10 tech terms + 2 proper noun preservation). 10 unit tests all pass.
+- **Task 2:** Created `TerminologyCorrectionService` with `Correct()` and `IsConfigured()`. Uses `ClaudeProvider.CompleteText()` — a new method added to support system+user prompt text completion (non-JSON). 30s timeout enforced via context (AC #6). Graceful degradation on error/timeout returns original content (AC #4). 9 unit tests covering success, empty, nil, API error, timeout, quota exceeded, IsConfigured variants, and system prompt verification.
+- **Task 3:** Integrated AI correction into `engine.go` (not `converter.go` — converter is OpenCC-only). Added `StageCorrecting` pipeline stage and `SetTerminologyService()` setter. AI step runs after OpenCC and before Place, skipped when: service nil, not configured, or CN content (ConvertNever policy). Wired in `main.go` gated by `config.HasClaudeKey()`.
+- **Task 4:** 5 new engine integration tests: skip when not configured, skip when nil service, applied when configured, fallback on error, skip for CN content. Combined with prompt and service tests = 24 new tests total.
+- **Pre-existing fix filed:** `library_service_test.go` has "no such column: video_codec" — non-trivial migration drift, filed as `preexisting-fail-library-service-video-codec: backlog` in sprint-status.yaml.
+- 🎨 UX Verification: SKIPPED — no UI changes in this story
+
 ### File List
+
+**New files:**
+- `apps/api/internal/ai/prompts/terminology_corrector.go`
+- `apps/api/internal/ai/prompts/terminology_corrector_test.go`
+- `apps/api/internal/services/terminology_service.go`
+- `apps/api/internal/services/terminology_service_test.go`
+
+**Modified files:**
+- `apps/api/internal/ai/claude.go` (added `CompleteText()` method, `System` field in `claudeRequest`)
+- `apps/api/internal/subtitle/engine.go` (added `StageCorrecting`, `terminologyService` field, `SetTerminologyService()`, AI correction step in `Process()`)
+- `apps/api/internal/subtitle/engine_test.go` (5 new AI correction integration tests)
+- `apps/api/cmd/api/main.go` (wired `TerminologyCorrectionService`)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (status update + pre-existing failure entry)
+
+## Change Log
+
+- **2026-04-07:** Implemented Story 9.1 — AI terminology correction service. Added Claude-powered post-OpenCC terminology correction for cross-strait Chinese differences (軟件→軟體, etc.). Integrated into subtitle pipeline with graceful degradation, 30s timeout, CN content bypass. 24 new tests across prompt, service, and engine layers.

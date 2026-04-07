@@ -391,6 +391,12 @@ func main() {
 		subtitleProviders, subtitleScorer, subtitleConverter, subtitlePlacer,
 		sseHub, repos.Movies, repos.Series,
 	)
+	// Initialize AI terminology correction (Story 9.1)
+	terminologyService := services.NewTerminologyCorrectionService(cfg)
+	if terminologyService != nil {
+		subtitleEngine.SetTerminologyService(terminologyService)
+		slog.Info("AI terminology correction enabled")
+	}
 	slog.Info("Subtitle engine initialized", "providers", len(subtitleProviders))
 
 	// Initialize event emitter for real-time parse progress (Story 3.10)

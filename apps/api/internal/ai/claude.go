@@ -221,11 +221,86 @@ func (p *ClaudeProvider) Parse(ctx context.Context, req *ParseRequest) (*ParseRe
 	return result, nil
 }
 
+// CompleteText sends a system+user prompt pair to Claude and returns the raw text response.
+// Unlike Parse, this does not expect JSON output — it returns the text as-is.
+// The caller controls the timeout via the provided context.
+func (p *ClaudeProvider) CompleteText(ctx context.Context, systemPrompt, userPrompt string, maxTokens int) (string, error) {
+	if maxTokens <= 0 {
+		maxTokens = ClaudeMaxTokens
+	}
+
+	claudeReq := claudeRequest{
+		Model:     p.model,
+		MaxTokens: maxTokens,
+		System:    systemPrompt,
+		Messages: []claudeMessage{
+			{
+				Role:    "user",
+				Content: userPrompt,
+			},
+		},
+	}
+
+	body, err := json.Marshal(claudeReq)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	url := fmt.Sprintf("%s/messages", p.baseURL)
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %w", err)
+	}
+
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("x-api-key", p.apiKey)
+	httpReq.Header.Set("anthropic-version", ClaudeAPIVersion)
+
+	slog.Debug("Claude CompleteText request", "model", p.model)
+
+	resp, err := p.httpClient.Do(httpReq)
+	if err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			slog.Warn("Claude CompleteText timeout")
+			return "", ErrAITimeout
+		}
+		return "", fmt.Errorf("%w: %v", ErrAIProviderError, err)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read response: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		slog.Warn("Claude CompleteText error", "status_code", resp.StatusCode, "body", string(respBody))
+		if resp.StatusCode == http.StatusTooManyRequests {
+			return "", ErrAIQuotaExceeded
+		}
+		return "", fmt.Errorf("%w: status %d", ErrAIProviderError, resp.StatusCode)
+	}
+
+	var claudeResp claudeResponse
+	if err := json.Unmarshal(respBody, &claudeResp); err != nil {
+		return "", fmt.Errorf("%w: %v", ErrAIInvalidResponse, err)
+	}
+
+	text := claudeResp.GetText()
+	if text == "" {
+		return "", ErrAIInvalidResponse
+	}
+
+	return text, nil
+}
+
 // Claude API types
 
 type claudeRequest struct {
 	Model     string          `json:"model"`
 	MaxTokens int             `json:"max_tokens"`
+	System    string          `json:"system,omitempty"`
 	Messages  []claudeMessage `json:"messages"`
 }
 
