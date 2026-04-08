@@ -407,16 +407,22 @@ func main() {
 		slog.Info("Transcription service initialized (disabled — missing OPENAI_API_KEY or FFmpeg)")
 	}
 
-	// Initialize AI terminology correction (Story 9.1)
+	// Initialize AI terminology correction (Story 9.1) + subtitle translation (Story 9.2b)
 	// Uses TextCompleter interface — provider created once here, not inside the service
 	var terminologyService *services.TerminologyCorrectionService
+	var translationService *services.TranslationService
 	if cfg.HasClaudeKey() {
-		terminologyProvider := ai.NewClaudeProvider(cfg.GetClaudeAPIKey())
-		terminologyService = services.NewTerminologyCorrectionService(terminologyProvider)
+		claudeProvider := ai.NewClaudeProvider(cfg.GetClaudeAPIKey())
+		terminologyService = services.NewTerminologyCorrectionService(claudeProvider)
+		translationService = services.NewTranslationService(claudeProvider, sseHub)
 	}
 	if terminologyService != nil {
 		subtitleEngine.SetTerminologyService(terminologyService)
 		slog.Info("AI terminology correction enabled")
+	}
+	if translationService != nil {
+		transcriptionService.SetTranslationService(translationService)
+		slog.Info("AI subtitle translation enabled (Story 9.2b)")
 	}
 	slog.Info("Subtitle engine initialized", "providers", len(subtitleProviders))
 

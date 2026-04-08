@@ -28,10 +28,11 @@ func (m *mockTranscriptionMovieGetter) GetByID(_ context.Context, _ string) (*mo
 }
 
 type mockTranscriptionService struct {
-	available  bool
-	inProgress bool
-	jobID      string
-	startErr   error
+	available    bool
+	inProgress   bool
+	jobID        string
+	startErr     error
+	receivedOpts []services.TranscriptionOption
 }
 
 func (m *mockTranscriptionService) IsAvailable() bool {
@@ -42,7 +43,8 @@ func (m *mockTranscriptionService) IsInProgress(_ int64) bool {
 	return m.inProgress
 }
 
-func (m *mockTranscriptionService) StartTranscription(_ context.Context, _ int64, _ string, _ string) (string, error) {
+func (m *mockTranscriptionService) StartTranscription(_ context.Context, _ int64, _ string, _ string, opts ...services.TranscriptionOption) (string, error) {
+	m.receivedOpts = opts
 	return m.jobID, m.startErr
 }
 
@@ -93,6 +95,54 @@ func TestTranscribeMovie_Success(t *testing.T) {
 
 	data := resp.Data.(map[string]interface{})
 	assert.Equal(t, "job-123", data["job_id"])
+}
+
+func TestTranscribeMovie_WithTranslateParam(t *testing.T) {
+	tmpPath := createTempMediaFile(t)
+
+	movie := &models.Movie{
+		FilePath: models.NewNullString(tmpPath),
+	}
+	movie.ID = "42"
+
+	mockSvc := &mockTranscriptionService{available: true, jobID: "job-456"}
+	h := NewTranscriptionHandler(
+		&mockTranscriptionMovieGetter{movie: movie},
+		mockSvc,
+	)
+
+	r := setupTranscriptionRouter(h)
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodPost, "/api/v1/movies/42/transcribe?translate=true", nil)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusAccepted, w.Code)
+	// Verify that translation option was passed
+	assert.Len(t, mockSvc.receivedOpts, 1, "should pass WithTranslation option")
+}
+
+func TestTranscribeMovie_WithoutTranslateParam(t *testing.T) {
+	tmpPath := createTempMediaFile(t)
+
+	movie := &models.Movie{
+		FilePath: models.NewNullString(tmpPath),
+	}
+	movie.ID = "42"
+
+	mockSvc := &mockTranscriptionService{available: true, jobID: "job-789"}
+	h := NewTranscriptionHandler(
+		&mockTranscriptionMovieGetter{movie: movie},
+		mockSvc,
+	)
+
+	r := setupTranscriptionRouter(h)
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodPost, "/api/v1/movies/42/transcribe", nil)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusAccepted, w.Code)
+	// Verify no translation option was passed
+	assert.Empty(t, mockSvc.receivedOpts, "should not pass translation option when param absent")
 }
 
 func TestTranscribeMovie_ServiceUnavailable(t *testing.T) {

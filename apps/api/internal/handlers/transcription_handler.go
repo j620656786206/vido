@@ -23,7 +23,7 @@ type TranscriptionMovieGetter interface {
 type TranscriptionServiceInterface interface {
 	IsAvailable() bool
 	IsInProgress(mediaID int64) bool
-	StartTranscription(ctx context.Context, mediaID int64, filePath string, mediaDir string) (string, error)
+	StartTranscription(ctx context.Context, mediaID int64, filePath string, mediaDir string, opts ...services.TranscriptionOption) (string, error)
 }
 
 // TranscriptionHandler handles transcription API requests.
@@ -93,9 +93,15 @@ func (h *TranscriptionHandler) TranscribeMovie(c *gin.Context) {
 		return
 	}
 
+	// Check for translate=true query param (Story 9-2b)
+	var opts []services.TranscriptionOption
+	if c.Query("translate") == "true" {
+		opts = append(opts, services.WithTranslation())
+	}
+
 	// Start async transcription
 	mediaDir := filepath.Dir(movie.FilePath.String)
-	jobID, err := h.transcriptionService.StartTranscription(c.Request.Context(), id, movie.FilePath.String, mediaDir)
+	jobID, err := h.transcriptionService.StartTranscription(c.Request.Context(), id, movie.FilePath.String, mediaDir, opts...)
 	if err != nil {
 		if errors.Is(err, services.ErrTranscriptionInProgress) {
 			ErrorResponse(c, http.StatusConflict, "TRANSCRIPTION_IN_PROGRESS",

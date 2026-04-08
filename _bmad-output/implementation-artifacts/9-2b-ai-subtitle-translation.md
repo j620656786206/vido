@@ -1,6 +1,6 @@
 # Story 9.2b: AI Subtitle Translation
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -19,36 +19,36 @@ so that I can watch content with no existing Chinese subtitles in my native lang
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Translation prompt (AC: #2)
-  - [ ] 1.1 Create `apps/api/internal/ai/prompts/subtitle_translator.go`
-  - [ ] 1.2 System prompt: translate English dialogue to natural Traditional Chinese (Taiwan usage), preserve speaker tone, keep proper nouns in original
-  - [ ] 1.3 Context window: send 5 previous blocks as context for each batch to maintain consistency (AC: #2)
-  - [ ] 1.4 Unit tests with sample SRT dialogue
+- [x] Task 1: Translation prompt (AC: #2)
+  - [x] 1.1 Create `apps/api/internal/ai/prompts/subtitle_translator.go`
+  - [x] 1.2 System prompt: translate English dialogue to natural Traditional Chinese (Taiwan usage), preserve speaker tone, keep proper nouns in original
+  - [x] 1.3 Context window: send 5 previous blocks as context for each batch to maintain consistency (AC: #2)
+  - [x] 1.4 Unit tests with sample SRT dialogue
 
-- [ ] Task 2: SRT parser utility (AC: #3)
-  - [ ] 2.1 Create `apps/api/internal/subtitle/srt_parser.go` — parse SRT into `[]SubtitleBlock{Index, Start, End, Text}`
-  - [ ] 2.2 Serialize back to SRT format preserving exact timestamps (AC: #3)
-  - [ ] 2.3 Unit tests with edge cases: multi-line blocks, HTML tags, empty lines
+- [x] Task 2: SRT parser utility (AC: #3)
+  - [x] 2.1 Create `apps/api/internal/subtitle/srt_parser.go` — parse SRT into `[]SubtitleBlock{Index, Start, End, Text}`
+  - [x] 2.2 Serialize back to SRT format preserving exact timestamps (AC: #3)
+  - [x] 2.3 Unit tests with edge cases: multi-line blocks, HTML tags, empty lines
 
-- [ ] Task 3: Translation service (AC: #1, #4, #5, #6)
-  - [ ] 3.1 Create `apps/api/internal/services/translation_service.go`
-  - [ ] 3.2 Batch processing: send 10 subtitle blocks per Claude request (balance cost vs context)
-  - [ ] 3.3 Use existing `ai.Provider` — reuse factory, do NOT create new client
-  - [ ] 3.4 Graceful degradation: on error, keep English text for failed blocks (AC: #5)
-  - [ ] 3.5 SSE progress: `translation_progress` with percentage (AC: #6)
-  - [ ] 3.6 Output: `{media_dir}/{filename}.zh-Hant.srt`
-  - [ ] 3.7 Skip if `!config.HasClaudeKey()` (AC: #4)
+- [x] Task 3: Translation service (AC: #1, #4, #5, #6)
+  - [x] 3.1 Create `apps/api/internal/services/translation_service.go`
+  - [x] 3.2 Batch processing: send 10 subtitle blocks per Claude request (balance cost vs context)
+  - [x] 3.3 Use existing `ai.Provider` — reuse factory, do NOT create new client
+  - [x] 3.4 Graceful degradation: on error, keep English text for failed blocks (AC: #5)
+  - [x] 3.5 SSE progress: `translation_progress` with percentage (AC: #6)
+  - [x] 3.6 Output: `{media_dir}/{filename}.zh-Hant.srt`
+  - [x] 3.7 Skip if `!config.HasClaudeKey()` (AC: #4)
 
-- [ ] Task 4: Wire into transcription pipeline (AC: #1)
-  - [ ] 4.1 Extend `POST /api/v1/movies/:id/transcribe` — add optional `translate=true` query param
-  - [ ] 4.2 Pipeline: Extract audio → Whisper → English SRT → (if translate) Claude → zh-Hant SRT
-  - [ ] 4.3 Both English and zh-Hant SRT are kept (user may want both)
+- [x] Task 4: Wire into transcription pipeline (AC: #1)
+  - [x] 4.1 Extend `POST /api/v1/movies/:id/transcribe` — add optional `translate=true` query param
+  - [x] 4.2 Pipeline: Extract audio → Whisper → English SRT → (if translate) Claude → zh-Hant SRT
+  - [x] 4.3 Both English and zh-Hant SRT are kept (user may want both)
 
-- [ ] Task 5: Tests (AC: #1-6)
-  - [ ] 5.1 Translation service: mock Claude, verify batch processing and context passing
-  - [ ] 5.2 SRT parser round-trip: parse → serialize → compare
-  - [ ] 5.3 Partial failure: verify English fallback for failed blocks
-  - [ ] 5.4 API integration: test translate=true parameter
+- [x] Task 5: Tests (AC: #1-6)
+  - [x] 5.1 Translation service: mock Claude, verify batch processing and context passing
+  - [x] 5.2 SRT parser round-trip: parse → serialize → compare
+  - [x] 5.3 Partial failure: verify English fallback for failed blocks
+  - [x] 5.4 API integration: test translate=true parameter
 
 ## Dev Notes
 
@@ -88,9 +88,34 @@ so that I can watch content with no existing Chinese subtitles in my native lang
 ## Dev Agent Record
 
 ### Agent Model Used
+Claude Opus 4.6 (1M context)
 
 ### Debug Log References
 
 ### Completion Notes List
+- Task 1: Created subtitle_translator.go with system prompt for EN→zh-Hant translation. Constants: ContextWindow=5, BatchSize=10. Prompt uses block index format [N] for output parsing. 6 unit tests passing.
+- Task 2: Created srt_parser.go with ParseSRT/SerializeSRT. Handles BOM, Windows line endings, multi-line blocks, HTML tags, extra blank lines. Round-trip preserves timestamps exactly (AC #3). 12 unit tests passing.
+- Task 3: Created translation_service.go with batch processing (10 blocks/batch), context window (5 blocks), partial failure fallback (AC #5), progress callback (AC #6), cancellation support. Uses TranslationBlock type (avoids circular import with subtitle pkg). 10 unit tests passing.
+- Task 4: Wired translation into transcription pipeline. Added `translate=true` query param to handler, TranscriptionOption pattern for backward compat, SetTranslationService setter, translateSRT method with inline SRT parsing (avoids circular dep), SSE progress events. Shared ClaudeProvider between terminology+translation services. All 9 existing handler tests pass.
+- Task 5: Added handler tests for translate=true param (2 tests). Full regression: 40 story-related tests pass. Pre-existing failures filed: setup_service_test.go (panic), download_handler_test.go (4 tests).
+- 🎨 UX Verification: SKIPPED — no UI changes in this story
 
 ### File List
+- apps/api/internal/ai/prompts/subtitle_translator.go (new)
+- apps/api/internal/ai/prompts/subtitle_translator_test.go (new)
+- apps/api/internal/subtitle/srt_parser.go (new)
+- apps/api/internal/subtitle/srt_parser_test.go (new)
+- apps/api/internal/services/translation_service.go (new)
+- apps/api/internal/services/translation_service_test.go (new)
+- apps/api/internal/services/transcription_service.go (modified)
+- apps/api/internal/handlers/transcription_handler.go (modified)
+- apps/api/internal/handlers/transcription_handler_test.go (modified)
+- apps/api/cmd/api/main.go (modified)
+- _bmad-output/implementation-artifacts/sprint-status.yaml (modified)
+
+### Change Log
+- 2026-04-08: Task 1 — Translation prompt with system prompt, context window, batch constants, and 6 unit tests
+- 2026-04-08: Task 2 — SRT parser utility with parse/serialize, edge case handling, 12 unit tests
+- 2026-04-08: Task 3 — Translation service with batch processing, context passing, partial failure fallback, 10 unit tests
+- 2026-04-08: Task 4 — Pipeline integration: translate=true query param, TranscriptionOption, SetTranslationService, main.go wiring
+- 2026-04-08: Task 5 — Handler integration tests for translate param + regression verification. Pre-existing failures tracked.

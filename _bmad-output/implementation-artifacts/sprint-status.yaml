@@ -335,9 +335,11 @@ development_status:
   epic-9: in-progress  # 2026-04-04
   9-1-ai-terminology-correction: done                  # Claude API post-OpenCC terminology fix (P2, P1-020)
   9-2a-whisper-audio-transcription: done                # FFmpeg audio extraction + OpenAI Whisper API (P3, P1-021)
-  9-2b-ai-subtitle-translation: ready-for-dev         # Claude translation of Whisper SRT to zh-Hant (P3, P1-021, depends on 9-2a)
+  9-2b-ai-subtitle-translation: review                  # Claude translation of Whisper SRT to zh-Hant (P3, P1-021, depends on 9-2a)
   9-UX-ai-subtitle-enhancement-design: backlog        # → UX /ux-designer: design AI term correction preview modal, Whisper progress UI, translation confirm dialog. Modify existing subtitle dialog screens in ux-design.pen. ~2-3 new screens. Priority: after Epic 10+11 design.
   preexisting-fail-library-service-video-codec: backlog  # library_service_test.go — "no such column: video_codec" migration drift
+  preexisting-fail-setup-service-edge-cases: backlog  # setup_service_test.go — TMDb key 15 chars validation panic + media-folder path-is-file assertion mismatch
+  preexisting-fail-download-handler-parse-status: backlog  # download_handler_test.go — ListDownloads WithParseStatus tests fail (4 tests)
   epic-9-retrospective: optional
 
   # ==============================================================================
