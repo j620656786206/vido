@@ -96,6 +96,10 @@ func (s *LogService) GetLogs(ctx context.Context, filter models.LogFilter) (*Log
 		}
 	}
 
+	if logs == nil {
+		logs = []models.SystemLog{}
+	}
+
 	return &LogsResponse{
 		Logs:    logs,
 		Total:   total,
