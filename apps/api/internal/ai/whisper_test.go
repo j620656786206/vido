@@ -284,6 +284,60 @@ func min(a, b uint32) uint32 {
 	return b
 }
 
+func TestWhisperClient_Transcribe_RateLimit(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusTooManyRequests)
+		w.Write([]byte(`{"error": {"message": "rate limit exceeded"}}`))
+	}))
+	defer server.Close()
+
+	client := NewWhisperClient("test-key", WithWhisperBaseURL(server.URL))
+
+	tmpFile, err := os.CreateTemp("", "whisper-rate-*.wav")
+	require.NoError(t, err)
+	defer os.Remove(tmpFile.Name())
+	tmpFile.Write([]byte("fake"))
+	tmpFile.Close()
+
+	_, err = client.Transcribe(context.Background(), tmpFile.Name())
+	assert.ErrorIs(t, err, ErrWhisperAPIError)
+	assert.Contains(t, err.Error(), "429")
+}
+
+func TestWhisperClient_Transcribe_AlreadyCancelledContext(t *testing.T) {
+	// Pre-cancelled context should fail immediately without hitting server
+	client := NewWhisperClient("test-key",
+		WithWhisperBaseURL("http://127.0.0.1:1"), // unreachable, but context is already done
+	)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // cancel immediately
+
+	tmpFile, err := os.CreateTemp("", "whisper-cancel-*.wav")
+	require.NoError(t, err)
+	defer os.Remove(tmpFile.Name())
+	tmpFile.Write([]byte("fake"))
+	tmpFile.Close()
+
+	_, err = client.Transcribe(ctx, tmpFile.Name())
+	assert.Error(t, err)
+}
+
+func TestMergeSRTChunks_ThreeChunks(t *testing.T) {
+	chunk1 := "1\n00:00:01,000 --> 00:00:03,000\nA\n\n"
+	chunk2 := "1\n00:00:02,000 --> 00:00:05,000\nB\n\n"
+	chunk3 := "1\n00:00:01,500 --> 00:00:04,000\nC\n\n"
+
+	result := MergeSRTChunks([]string{chunk1, chunk2, chunk3}, 600)
+
+	// chunk1: seq 1, no offset
+	assert.Contains(t, result, "1\n00:00:01,000 --> 00:00:03,000\nA\n")
+	// chunk2: seq 2, +600s offset
+	assert.Contains(t, result, "2\n00:10:02,000 --> 00:10:05,000\nB\n")
+	// chunk3: seq 3, +1200s offset
+	assert.Contains(t, result, "3\n00:20:01,500 --> 00:20:04,000\nC\n")
+}
+
 func TestSplitAudioChunks_InvalidWAV(t *testing.T) {
 	tmpFile, err := os.CreateTemp("", "bad-*.wav")
 	require.NoError(t, err)

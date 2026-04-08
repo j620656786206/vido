@@ -104,3 +104,15 @@ func TestAudioExtractorService_NotAvailable(t *testing.T) {
 	}
 	assert.False(t, svc.IsAvailable())
 }
+
+func TestAudioExtractorService_ExtractAudio_NotAvailable(t *testing.T) {
+	svc := &AudioExtractorService{available: false}
+	_, err := svc.ExtractAudio(nil, "/test.mkv", 0)
+	assert.ErrorIs(t, err, ErrFFmpegNotAvailable)
+}
+
+func TestAudioExtractorService_ListAudioTracks_NotAvailable(t *testing.T) {
+	svc := &AudioExtractorService{available: false}
+	_, err := svc.ListAudioTracks(nil, "/test.mkv")
+	assert.ErrorIs(t, err, ErrFFmpegNotAvailable)
+}
