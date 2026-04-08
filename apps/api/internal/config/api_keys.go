@@ -15,6 +15,16 @@ func (c *Config) HasClaudeKey() bool {
 	return c.ClaudeAPIKey != ""
 }
 
+// HasOpenAIKey returns true if an OpenAI API key is configured
+func (c *Config) HasOpenAIKey() bool {
+	return c.OpenAIAPIKey != ""
+}
+
+// GetOpenAIAPIKey returns the OpenAI API key or empty string if not set
+func (c *Config) GetOpenAIAPIKey() string {
+	return c.OpenAIAPIKey
+}
+
 // HasEncryptionKey returns true if an encryption key is configured
 func (c *Config) HasEncryptionKey() bool {
 	return c.EncryptionKey != ""

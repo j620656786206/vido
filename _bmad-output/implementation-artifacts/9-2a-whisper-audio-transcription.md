@@ -1,6 +1,6 @@
 # Story 9.2a: Whisper Audio Transcription
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -20,39 +20,39 @@ so that I have a raw English SRT file that can later be translated to Traditiona
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Audio extraction service (AC: #1, #2, #4)
-  - [ ] 1.1 Create `apps/api/internal/services/audio_extractor_service.go`
-  - [ ] 1.2 Use `os/exec` to call `ffmpeg -i input.mkv -vn -acodec pcm_s16le -ar 16000 -ac 1 output.wav`
-  - [ ] 1.3 Track selection: parse `ffprobe -show_streams` output, find stream with `language=eng`, fall back to first audio stream (AC: #2)
-  - [ ] 1.4 Graceful degradation: check `exec.LookPath("ffmpeg")` on startup (AC: #4)
-  - [ ] 1.5 Temp file management: extract to OS temp dir, cleanup after transcription
+- [x] Task 1: Audio extraction service (AC: #1, #2, #4)
+  - [x] 1.1 Create `apps/api/internal/services/audio_extractor_service.go`
+  - [x] 1.2 Use `os/exec` to call `ffmpeg -i input.mkv -vn -acodec pcm_s16le -ar 16000 -ac 1 output.wav`
+  - [x] 1.3 Track selection: parse `ffprobe -show_streams` output, find stream with `language=eng`, fall back to first audio stream (AC: #2)
+  - [x] 1.4 Graceful degradation: check `exec.LookPath("ffmpeg")` on startup (AC: #4)
+  - [x] 1.5 Temp file management: extract to OS temp dir, cleanup after transcription
 
-- [ ] Task 2: Whisper API client (AC: #5, #7)
-  - [ ] 2.1 Create `apps/api/internal/ai/whisper.go` — OpenAI Whisper API client
-  - [ ] 2.2 Endpoint: `POST https://api.openai.com/v1/audio/transcriptions`
-  - [ ] 2.3 Model: `whisper-1`, response_format: `srt`
-  - [ ] 2.4 Auth: `Authorization: Bearer {OPENAI_API_KEY}` from config
-  - [ ] 2.5 Add `OPENAI_API_KEY` to `config/api_keys.go`: `HasOpenAIKey()`, `GetOpenAIAPIKey()`
-  - [ ] 2.6 Implement audio chunking for files >25MB: split WAV by duration (10-minute chunks), transcribe each, merge SRT with timestamp offset correction (AC: #7)
+- [x] Task 2: Whisper API client (AC: #5, #7)
+  - [x] 2.1 Create `apps/api/internal/ai/whisper.go` — OpenAI Whisper API client
+  - [x] 2.2 Endpoint: `POST https://api.openai.com/v1/audio/transcriptions`
+  - [x] 2.3 Model: `whisper-1`, response_format: `srt`
+  - [x] 2.4 Auth: `Authorization: Bearer {OPENAI_API_KEY}` from config
+  - [x] 2.5 Add `OPENAI_API_KEY` to `config/api_keys.go`: `HasOpenAIKey()`, `GetOpenAIAPIKey()`
+  - [x] 2.6 Implement audio chunking for files >25MB: split WAV by duration (10-minute chunks), transcribe each, merge SRT with timestamp offset correction (AC: #7)
 
-- [ ] Task 3: Transcription orchestrator service (AC: #1, #6)
-  - [ ] 3.1 Create `apps/api/internal/services/transcription_service.go`
-  - [ ] 3.2 Pipeline: Extract audio → (optional chunk) → Whisper API → Merge SRT → Save
-  - [ ] 3.3 SSE progress events: `transcription_extracting`, `transcription_progress`, `transcription_complete`, `transcription_failed` (AC: #6)
-  - [ ] 3.4 Output SRT path: `{media_dir}/{filename}.en.srt` (English transcription)
-  - [ ] 3.5 Timeout: 5 minutes per transcription (long audio files need time)
+- [x] Task 3: Transcription orchestrator service (AC: #1, #6)
+  - [x] 3.1 Create `apps/api/internal/services/transcription_service.go`
+  - [x] 3.2 Pipeline: Extract audio → (optional chunk) → Whisper API → Merge SRT → Save
+  - [x] 3.3 SSE progress events: `transcription_extracting`, `transcription_progress`, `transcription_complete`, `transcription_failed` (AC: #6)
+  - [x] 3.4 Output SRT path: `{media_dir}/{filename}.en.srt` (English transcription)
+  - [x] 3.5 Timeout: 5 minutes per transcription (long audio files need time)
 
-- [ ] Task 4: API endpoint (AC: #1)
-  - [ ] 4.1 `POST /api/v1/movies/:id/transcribe` — trigger transcription for a movie
-  - [ ] 4.2 Returns 202 Accepted with job ID (async operation)
-  - [ ] 4.3 Validate: movie exists, has file_path, file is accessible
-  - [ ] 4.4 Reject if transcription already in progress for this media
+- [x] Task 4: API endpoint (AC: #1)
+  - [x] 4.1 `POST /api/v1/movies/:id/transcribe` — trigger transcription for a movie
+  - [x] 4.2 Returns 202 Accepted with job ID (async operation)
+  - [x] 4.3 Validate: movie exists, has file_path, file is accessible
+  - [x] 4.4 Reject if transcription already in progress for this media
 
-- [ ] Task 5: Unit & integration tests (AC: #1-7)
-  - [ ] 5.1 Audio extractor: mock ffmpeg exec, test track selection logic
-  - [ ] 5.2 Whisper client: mock HTTP server, test success/error/chunking
-  - [ ] 5.3 Orchestrator: end-to-end mock test with SSE event verification
-  - [ ] 5.4 API endpoint: handler tests with mock service
+- [x] Task 5: Unit & integration tests (AC: #1-7)
+  - [x] 5.1 Audio extractor: mock ffmpeg exec, test track selection logic
+  - [x] 5.2 Whisper client: mock HTTP server, test success/error/chunking
+  - [x] 5.3 Orchestrator: end-to-end mock test with SSE event verification
+  - [x] 5.4 API endpoint: handler tests with mock service
 
 ## Dev Notes
 
@@ -95,9 +95,35 @@ so that I have a raw English SRT file that can later be translated to Traditiona
 ## Dev Agent Record
 
 ### Agent Model Used
+Claude Opus 4.6 (1M context)
 
 ### Debug Log References
+- Pre-existing test failures (not caused by this story):
+  - `TestLibraryService_*` — "no such column: video_codec" migration drift (tracked as `preexisting-fail-library-service-video-codec: backlog`)
+  - `TestDownloadHandler_ListDownloads_WithParseStatus*` — pre-existing parse status assertion failure
+  - `TestSetupService_ValidateStep_EdgeCases` — pre-existing validation test issue
 
 ### Completion Notes List
+- Task 1: AudioExtractorService — FFprobeService pattern (semaphore, LookPath, graceful degradation). Track selection via ffprobe `-select_streams a` + language tag matching. 9 tests.
+- Task 2: WhisperClient — OpenAI multipart API, SRT response, chunking for >25MB files. Full SRT timestamp parser/formatter/merger. Config: `OPENAI_API_KEY` env var + `HasOpenAIKey()`/`GetOpenAIAPIKey()` helpers. 19 tests.
+- Task 3: TranscriptionService — Pipeline orchestrator with SSE events (4 event types). Mutex-based in-progress tracking per mediaID. Background goroutine execution. 8 tests.
+- Task 4: TranscriptionHandler — `POST /api/v1/movies/:id/transcribe`, 202 Accepted, mock-based handler tests. Wired in main.go. 8 tests.
+- Task 5: All 44 tests passing across ai, services, handlers, config packages. Zero regressions.
+- 🎨 UX Verification: SKIPPED — no UI changes in this story
 
 ### File List
+- `apps/api/internal/services/audio_extractor_service.go` (new)
+- `apps/api/internal/services/audio_extractor_service_test.go` (new)
+- `apps/api/internal/ai/whisper.go` (new)
+- `apps/api/internal/ai/whisper_test.go` (new)
+- `apps/api/internal/services/transcription_service.go` (new)
+- `apps/api/internal/services/transcription_service_test.go` (new)
+- `apps/api/internal/handlers/transcription_handler.go` (new)
+- `apps/api/internal/handlers/transcription_handler_test.go` (new)
+- `apps/api/internal/config/config.go` (modified — added OpenAIAPIKey field + env loading + log)
+- `apps/api/internal/config/api_keys.go` (modified — added HasOpenAIKey/GetOpenAIAPIKey)
+- `apps/api/cmd/api/main.go` (modified — wired AudioExtractor, WhisperClient, TranscriptionService, TranscriptionHandler)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (modified — 9-2a status update)
+
+### Change Log
+- 2026-04-08: Implemented Story 9.2a — Whisper Audio Transcription pipeline (Tasks 1-5)

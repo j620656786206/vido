@@ -392,6 +392,21 @@ func main() {
 		subtitleProviders, subtitleScorer, subtitleConverter, subtitlePlacer,
 		sseHub, repos.Movies, repos.Series,
 	)
+	// Initialize audio extractor service (Story 9.2a)
+	audioExtractorService := services.NewAudioExtractorService(1, 5*time.Minute, slog.Default())
+	slog.Info("Audio extractor service initialized", "available", audioExtractorService.IsAvailable())
+
+	// Initialize Whisper client and transcription service (Story 9.2a)
+	var transcriptionService *services.TranscriptionService
+	if cfg.HasOpenAIKey() && audioExtractorService.IsAvailable() {
+		whisperClient := ai.NewWhisperClient(cfg.GetOpenAIAPIKey())
+		transcriptionService = services.NewTranscriptionService(audioExtractorService, whisperClient, sseHub, slog.Default())
+		slog.Info("Transcription service initialized (Whisper API enabled)")
+	} else {
+		transcriptionService = services.NewTranscriptionService(audioExtractorService, nil, sseHub, slog.Default())
+		slog.Info("Transcription service initialized (disabled — missing OPENAI_API_KEY or FFmpeg)")
+	}
+
 	// Initialize AI terminology correction (Story 9.1)
 	// Uses TextCompleter interface — provider created once here, not inside the service
 	var terminologyService *services.TerminologyCorrectionService
@@ -444,6 +459,7 @@ func main() {
 	scannerHandler := handlers.NewScannerHandler(scannerService)
 	scannerHandler.SetScheduler(scanScheduler)
 	scannerHandler.SetEnrichmentService(enrichmentService)
+	transcriptionHandler := handlers.NewTranscriptionHandler(movieService, transcriptionService)
 	subtitleHandler := handlers.NewSubtitleHandler(
 		subtitleProviders, subtitleScorer, subtitleConverter, subtitlePlacer,
 		sseHub, repos.Movies, repos.Series,
@@ -504,6 +520,7 @@ func main() {
 		recentMediaHandler.RegisterRoutes(apiV1)
 		scannerHandler.RegisterRoutes(apiV1)
 		subtitleHandler.RegisterRoutes(apiV1)
+		transcriptionHandler.RegisterRoutes(apiV1)
 		// SSE event stream endpoint
 		apiV1.GET("/events", sse.Handler(sseHub))
 		// Health services endpoint (Story 3.12 - Graceful Degradation)

@@ -50,6 +50,7 @@ type Config struct {
 	TMDbAPIKey    string
 	GeminiAPIKey  string
 	ClaudeAPIKey  string
+	OpenAIAPIKey  string
 	EncryptionKey string
 
 	// AI Provider configuration (Story 3.1)
@@ -103,6 +104,7 @@ func Load() (*Config, error) {
 	cfg.TMDbAPIKey = cfg.loadString("TMDB_API_KEY", "")
 	cfg.GeminiAPIKey = cfg.loadString("GEMINI_API_KEY", "")
 	cfg.ClaudeAPIKey = cfg.loadString("CLAUDE_API_KEY", "")
+	cfg.OpenAIAPIKey = cfg.loadString("OPENAI_API_KEY", "")
 	cfg.EncryptionKey = cfg.loadString("ENCRYPTION_KEY", "")
 
 	// AI Provider configuration (Story 3.1) - defaults to "gemini" if not set
@@ -251,6 +253,8 @@ func (c *Config) LogConfigSources() {
 		"GEMINI_API_KEY_source", c.Sources["GEMINI_API_KEY"].String(),
 		"CLAUDE_API_KEY", maskSecret(c.ClaudeAPIKey),
 		"CLAUDE_API_KEY_source", c.Sources["CLAUDE_API_KEY"].String(),
+		"OPENAI_API_KEY", maskSecret(c.OpenAIAPIKey),
+		"OPENAI_API_KEY_source", c.Sources["OPENAI_API_KEY"].String(),
 		"AI_PROVIDER", c.AIProvider,
 		"AI_PROVIDER_source", c.Sources["AI_PROVIDER"].String(),
 		"ENCRYPTION_KEY", maskSecret(c.EncryptionKey),
