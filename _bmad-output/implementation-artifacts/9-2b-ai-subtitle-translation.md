@@ -99,6 +99,7 @@ Claude Opus 4.6 (1M context)
 - Task 4: Wired translation into transcription pipeline. Added `translate=true` query param to handler, TranscriptionOption pattern for backward compat, SetTranslationService setter, translateSRT method with inline SRT parsing (avoids circular dep), SSE progress events. Shared ClaudeProvider between terminology+translation services. All 9 existing handler tests pass.
 - Task 5: Added handler tests for translate=true param (2 tests). Full regression: 40 story-related tests pass. Pre-existing failures filed: setup_service_test.go (panic), download_handler_test.go (4 tests).
 - 🎨 UX Verification: SKIPPED — no UI changes in this story
+- TA: Test Automation expansion — 20 new tests covering parseSRTToTranslationBlocks (7), serializeTranslationBlocksToSRT (3), round-trip (1), SetTranslationService (2), WithTranslation (1), translateSRT integration (5), event type (1). Total: 60 story tests.
 
 ### File List
 - apps/api/internal/ai/prompts/subtitle_translator.go (new)
@@ -107,6 +108,7 @@ Claude Opus 4.6 (1M context)
 - apps/api/internal/subtitle/srt_parser_test.go (new)
 - apps/api/internal/services/translation_service.go (new)
 - apps/api/internal/services/translation_service_test.go (new)
+- apps/api/internal/services/transcription_translation_test.go (new — TA expansion)
 - apps/api/internal/services/transcription_service.go (modified)
 - apps/api/internal/handlers/transcription_handler.go (modified)
 - apps/api/internal/handlers/transcription_handler_test.go (modified)
@@ -119,3 +121,4 @@ Claude Opus 4.6 (1M context)
 - 2026-04-08: Task 3 — Translation service with batch processing, context passing, partial failure fallback, 10 unit tests
 - 2026-04-08: Task 4 — Pipeline integration: translate=true query param, TranscriptionOption, SetTranslationService, main.go wiring
 - 2026-04-08: Task 5 — Handler integration tests for translate param + regression verification. Pre-existing failures tracked.
+- 2026-04-08: TA — 20 additional tests for inline SRT parser, serializer, translateSRT integration, partial failure file output, filename convention
