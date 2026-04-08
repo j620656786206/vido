@@ -80,6 +80,14 @@ SCREENS = {
     "GZ294": ("flow-i-subtitle-mobile", "i3-subtitle-search-dialog-mobile"),
     "fUtqO": ("flow-i-subtitle-mobile", "i5-batch-progress-mobile"),
     "ogQ6Y": ("flow-i-subtitle-mobile", "i6-subtitle-preview-mobile"),
+    # Flow AI - AI Subtitle Enhancement (Desktop)
+    "TIIRl": ("flow-ai-subtitle-desktop", "ai1-correction-preview-modal-desktop"),
+    "kzhNP": ("flow-ai-subtitle-desktop", "ai2-transcription-progress-desktop"),
+    "22bcv": ("flow-ai-subtitle-desktop", "ai3-translation-confirm-dialog-desktop"),
+    # Flow AI - AI Subtitle Enhancement (Mobile)
+    "mgRJA": ("flow-ai-subtitle-mobile", "ai4-correction-bottom-sheet-mobile"),
+    "yNAHK": ("flow-ai-subtitle-mobile", "ai5-transcription-progress-mobile"),
+    "8Wsez": ("flow-ai-subtitle-mobile", "ai6-translation-confirm-mobile"),
     # Flow J - Setup Wizard (Desktop)
     "uqz0V": ("flow-j-setup-wizard-desktop", "setup-01-welcome-desktop"),
     "eWpZl": ("flow-j-setup-wizard-desktop", "setup-02-qbittorrent-desktop"),
