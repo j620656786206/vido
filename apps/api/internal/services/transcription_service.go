@@ -100,8 +100,12 @@ func (s *TranscriptionService) StartTranscription(ctx context.Context, mediaID i
 	s.inProgress[mediaID] = jobID
 	s.mu.Unlock()
 
-	// Run transcription pipeline in background goroutine
-	go s.runPipeline(context.Background(), jobID, mediaID, filePath, mediaDir)
+	// Run transcription pipeline in background goroutine with timeout
+	go func() {
+		pipelineCtx, pipelineCancel := context.WithTimeout(context.Background(), s.timeout)
+		defer pipelineCancel()
+		s.runPipeline(pipelineCtx, jobID, mediaID, filePath, mediaDir)
+	}()
 
 	return jobID, nil
 }

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -45,6 +46,16 @@ func (m *mockTranscriptionService) StartTranscription(_ context.Context, _ int64
 	return m.jobID, m.startErr
 }
 
+// createTempMediaFile creates a temp file that satisfies os.Stat for handler tests.
+func createTempMediaFile(t *testing.T) string {
+	t.Helper()
+	f, err := os.CreateTemp("", "transcribe-test-*.mkv")
+	require.NoError(t, err)
+	f.Close()
+	t.Cleanup(func() { os.Remove(f.Name()) })
+	return f.Name()
+}
+
 // ─── Tests ────────────────────────────────────────────────────────────────
 
 func setupTranscriptionRouter(h *TranscriptionHandler) *gin.Engine {
@@ -56,8 +67,10 @@ func setupTranscriptionRouter(h *TranscriptionHandler) *gin.Engine {
 }
 
 func TestTranscribeMovie_Success(t *testing.T) {
+	tmpPath := createTempMediaFile(t)
+
 	movie := &models.Movie{
-		FilePath: models.NewNullString("/media/movies/test.mkv"),
+		FilePath: models.NewNullString(tmpPath),
 	}
 	movie.ID = "42"
 
@@ -143,9 +156,29 @@ func TestTranscribeMovie_NoFilePath(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
-func TestTranscribeMovie_AlreadyInProgress(t *testing.T) {
+func TestTranscribeMovie_FileNotAccessible(t *testing.T) {
 	movie := &models.Movie{
-		FilePath: models.NewNullString("/media/test.mkv"),
+		FilePath: models.NewNullString("/nonexistent/path/movie.mkv"),
+	}
+	movie.ID = "1"
+
+	h := NewTranscriptionHandler(
+		&mockTranscriptionMovieGetter{movie: movie},
+		&mockTranscriptionService{available: true},
+	)
+
+	r := setupTranscriptionRouter(h)
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest(http.MethodPost, "/api/v1/movies/1/transcribe", nil)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestTranscribeMovie_AlreadyInProgress(t *testing.T) {
+	tmpPath := createTempMediaFile(t)
+	movie := &models.Movie{
+		FilePath: models.NewNullString(tmpPath),
 	}
 	movie.ID = "1"
 
@@ -163,8 +196,9 @@ func TestTranscribeMovie_AlreadyInProgress(t *testing.T) {
 }
 
 func TestTranscribeMovie_StartError(t *testing.T) {
+	tmpPath := createTempMediaFile(t)
 	movie := &models.Movie{
-		FilePath: models.NewNullString("/media/test.mkv"),
+		FilePath: models.NewNullString(tmpPath),
 	}
 	movie.ID = "1"
 
@@ -185,8 +219,9 @@ func TestTranscribeMovie_StartError(t *testing.T) {
 }
 
 func TestTranscribeMovie_InternalError(t *testing.T) {
+	tmpPath := createTempMediaFile(t)
 	movie := &models.Movie{
-		FilePath: models.NewNullString("/media/test.mkv"),
+		FilePath: models.NewNullString(tmpPath),
 	}
 	movie.ID = "1"
 

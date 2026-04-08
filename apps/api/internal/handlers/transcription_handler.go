@@ -2,8 +2,10 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 
@@ -77,6 +79,12 @@ func (h *TranscriptionHandler) TranscribeMovie(c *gin.Context) {
 		return
 	}
 
+	// Validate file is accessible on disk (AC #1, task 4.3)
+	if _, err := os.Stat(movie.FilePath.String); err != nil {
+		BadRequestError(c, "VALIDATION_REQUIRED_FIELD", "Movie file not accessible — check if the file exists on disk")
+		return
+	}
+
 	// Check if transcription is already running
 	if h.transcriptionService.IsInProgress(id) {
 		ErrorResponse(c, http.StatusConflict, "TRANSCRIPTION_IN_PROGRESS",
@@ -89,7 +97,7 @@ func (h *TranscriptionHandler) TranscribeMovie(c *gin.Context) {
 	mediaDir := filepath.Dir(movie.FilePath.String)
 	jobID, err := h.transcriptionService.StartTranscription(c.Request.Context(), id, movie.FilePath.String, mediaDir)
 	if err != nil {
-		if err == services.ErrTranscriptionInProgress {
+		if errors.Is(err, services.ErrTranscriptionInProgress) {
 			ErrorResponse(c, http.StatusConflict, "TRANSCRIPTION_IN_PROGRESS",
 				"Transcription is already running for this movie",
 				"Wait for the current transcription to complete.")

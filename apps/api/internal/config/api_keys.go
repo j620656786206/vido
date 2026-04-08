@@ -30,7 +30,8 @@ func (c *Config) HasEncryptionKey() bool {
 	return c.EncryptionKey != ""
 }
 
-// HasAIProvider returns true if any AI provider key is configured
+// HasAIProvider returns true if any text AI provider key is configured (Gemini or Claude).
+// Note: OpenAI key (for Whisper audio transcription) is checked separately via HasOpenAIKey().
 func (c *Config) HasAIProvider() bool {
 	return c.HasGeminiKey() || c.HasClaudeKey()
 }

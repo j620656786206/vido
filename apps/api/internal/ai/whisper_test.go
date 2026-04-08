@@ -277,13 +277,6 @@ func writeTestWAV(t *testing.T, f *os.File, dataSize uint32) {
 	f.Close()
 }
 
-func min(a, b uint32) uint32 {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 func TestWhisperClient_Transcribe_RateLimit(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusTooManyRequests)
@@ -336,6 +329,16 @@ func TestMergeSRTChunks_ThreeChunks(t *testing.T) {
 	assert.Contains(t, result, "2\n00:10:02,000 --> 00:10:05,000\nB\n")
 	// chunk3: seq 3, +1200s offset
 	assert.Contains(t, result, "3\n00:20:01,500 --> 00:20:04,000\nC\n")
+}
+
+func TestParseSRTTimestamp_MalformedInput(t *testing.T) {
+	// Non-digit characters should return 0 instead of garbage
+	assert.Equal(t, 0, parseSRTTimestamp("XX:XX:XX,XXX"))
+	assert.Equal(t, 0, parseSRTTimestamp("ab:cd:ef,ghi"))
+	// Short input
+	assert.Equal(t, 0, parseSRTTimestamp("00:00"))
+	// Empty
+	assert.Equal(t, 0, parseSRTTimestamp(""))
 }
 
 func TestSplitAudioChunks_InvalidWAV(t *testing.T) {

@@ -1,6 +1,6 @@
 # Story 9.2a: Whisper Audio Transcription
 
-Status: review
+Status: done
 
 ## Story
 
@@ -121,9 +121,11 @@ Claude Opus 4.6 (1M context)
 - `apps/api/internal/handlers/transcription_handler.go` (new)
 - `apps/api/internal/handlers/transcription_handler_test.go` (new)
 - `apps/api/internal/config/config.go` (modified — added OpenAIAPIKey field + env loading + log)
-- `apps/api/internal/config/api_keys.go` (modified — added HasOpenAIKey/GetOpenAIAPIKey)
+- `apps/api/internal/config/api_keys.go` (modified — added HasOpenAIKey/GetOpenAIAPIKey, clarified HasAIProvider scope)
+- `apps/api/internal/config/api_keys_test.go` (modified — added HasOpenAIKey/GetOpenAIAPIKey tests)
 - `apps/api/cmd/api/main.go` (modified — wired AudioExtractor, WhisperClient, TranscriptionService, TranscriptionHandler)
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` (modified — 9-2a status update)
 
 ### Change Log
 - 2026-04-08: Implemented Story 9.2a — Whisper Audio Transcription pipeline (Tasks 1-5)
+- 2026-04-08: Code Review fixes — 4H/4M/3L issues: file accessibility check (H1), response size limit (H2), pipeline timeout context (H3), bounded file read (H4), errors.Is convention (M1), remove shadowed min (M2), story file list (M3), unused timeout field (M4), HasAIProvider comment (L1), SRT timestamp validation (L2), SRT cleanup non-issue (L3)

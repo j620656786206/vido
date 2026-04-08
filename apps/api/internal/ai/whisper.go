@@ -25,6 +25,8 @@ const (
 	WhisperMaxFileSize = 25 * 1024 * 1024
 	// WhisperChunkDuration is the duration of each audio chunk in seconds (10 minutes).
 	WhisperChunkDuration = 600
+	// WhisperMaxResponseSize is the maximum Whisper API response body we'll read (10MB).
+	WhisperMaxResponseSize = 10 * 1024 * 1024
 )
 
 // Whisper API errors
@@ -113,7 +115,9 @@ func (c *WhisperClient) Transcribe(ctx context.Context, audioPath string) (strin
 	if err != nil {
 		return "", fmt.Errorf("whisper: create form file: %w", err)
 	}
-	if _, err := io.Copy(part, file); err != nil {
+	// Bounded read: enforce WhisperMaxFileSize limit per chunk.
+	// Files >25MB are pre-split by SplitAudioChunks before reaching here.
+	if _, err := io.Copy(part, io.LimitReader(file, WhisperMaxFileSize)); err != nil {
 		return "", fmt.Errorf("whisper: copy audio data: %w", err)
 	}
 
@@ -150,7 +154,7 @@ func (c *WhisperClient) Transcribe(ctx context.Context, audioPath string) (strin
 	}
 	defer resp.Body.Close()
 
-	respBody, err := io.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(io.LimitReader(resp.Body, WhisperMaxResponseSize))
 	if err != nil {
 		return "", fmt.Errorf("whisper: read response: %w", err)
 	}
@@ -392,6 +396,12 @@ func offsetTimestampLine(line string, offsetSeconds int) string {
 func parseSRTTimestamp(ts string) int {
 	if len(ts) < 12 {
 		return 0
+	}
+	// Validate digit positions to prevent garbage output from malformed SRT
+	for _, i := range []int{0, 1, 3, 4, 6, 7, 9, 10, 11} {
+		if ts[i] < '0' || ts[i] > '9' {
+			return 0
+		}
 	}
 	h := int(ts[0]-'0')*10 + int(ts[1]-'0')
 	m := int(ts[3]-'0')*10 + int(ts[4]-'0')
