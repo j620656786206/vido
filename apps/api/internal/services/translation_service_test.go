@@ -245,6 +245,18 @@ func TestTranslationService_ParseTranslationResponse(t *testing.T) {
 			indices:  []int{1, 2},
 			want:     map[int]string{1: "你好"},
 		},
+		{
+			name:     "multi-line block",
+			response: "[1] 第一行\n第二行\n[2] 世界",
+			indices:  []int{1, 2},
+			want:     map[int]string{1: "第一行\n第二行", 2: "世界"},
+		},
+		{
+			name:     "multi-line last block",
+			response: "[1] 你好\n[2] 第一行\n第二行\n第三行",
+			indices:  []int{1, 2},
+			want:     map[int]string{1: "你好", 2: "第一行\n第二行\n第三行"},
+		},
 	}
 
 	for _, tt := range tests {
@@ -272,7 +284,7 @@ func TestTranslationService_Translate_ProgressCallback(t *testing.T) {
 		{Index: 1, Start: "00:00:01,000", End: "00:00:04,000", Text: "Hello"},
 	}
 
-	_, err := svc.TranslateWithProgress(context.Background(), blocks, progressFn)
+	_, err := svc.Translate(context.Background(), blocks, progressFn)
 	require.NoError(t, err)
 
 	// Should have at least one progress update

@@ -1,6 +1,6 @@
 # Story 9.2b: AI Subtitle Translation
 
-Status: review
+Status: done
 
 ## Story
 
@@ -115,6 +115,20 @@ Claude Opus 4.6 (1M context)
 - apps/api/cmd/api/main.go (modified)
 - _bmad-output/implementation-artifacts/sprint-status.yaml (modified)
 
+### Senior Developer Review (AI)
+
+**Reviewer:** Amelia (Dev Agent) — 2026-04-08
+**Issues Found:** 2 High, 3 Medium, 1 Low — **All Fixed**
+
+| # | Severity | Issue | Fix |
+|---|----------|-------|-----|
+| H1 | HIGH | `parseTranslationResponse` silently dropped multi-line subtitle translations (only first line captured) | Added continuation-line accumulation to parser; 2 new test cases for multi-line response parsing |
+| H2 | HIGH | System prompt lacked multi-line block format instructions; input/output format mismatch risk | Updated system prompt with explicit multi-line block examples; 2 new prompt tests |
+| M1 | MEDIUM | Dead `TranslationServiceInterface` — defined but never consumed | Removed interface and compile-time check |
+| M2 | MEDIUM | Redundant `Translate` / `TranslateWithProgress` — identical signatures | Collapsed into single `Translate` method; updated all callers |
+| M3 | MEDIUM | Inline SRT parser used `strings.SplitN` — no timestamp format validation | Replaced with regex validation matching canonical `subtitle.ParseSRT`; used `strconv.Atoi` for index parsing |
+| L1 | LOW | Circular import constraint undocumented — future devs may attempt "cleanup" | Added explanatory comments on `TranslationBlock` and `parseSRTToTranslationBlocks` documenting `subtitle.Engine → services` dependency chain |
+
 ### Change Log
 - 2026-04-08: Task 1 — Translation prompt with system prompt, context window, batch constants, and 6 unit tests
 - 2026-04-08: Task 2 — SRT parser utility with parse/serialize, edge case handling, 12 unit tests
@@ -122,3 +136,4 @@ Claude Opus 4.6 (1M context)
 - 2026-04-08: Task 4 — Pipeline integration: translate=true query param, TranscriptionOption, SetTranslationService, main.go wiring
 - 2026-04-08: Task 5 — Handler integration tests for translate param + regression verification. Pre-existing failures tracked.
 - 2026-04-08: TA — 20 additional tests for inline SRT parser, serializer, translateSRT integration, partial failure file output, filename convention
+- 2026-04-08: CR — Code review fixed 6 issues (2H/3M/1L): multi-line subtitle handling, dead interface, redundant method, parser hardening, architecture docs

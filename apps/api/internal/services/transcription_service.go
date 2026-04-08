@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -331,7 +333,7 @@ func (s *TranscriptionService) translateSRT(ctx context.Context, jobID string, m
 		})
 	}
 
-	translated, err := s.translationService.TranslateWithProgress(ctx, blocks, progressFn)
+	translated, err := s.translationService.Translate(ctx, blocks, progressFn)
 	if err != nil {
 		return "", fmt.Errorf("translate: %w", err)
 	}
@@ -357,8 +359,13 @@ func (s *TranscriptionService) translateSRT(ctx context.Context, jobID string, m
 	return zhSRTPath, nil
 }
 
+// srtTimestampPattern matches SRT timestamp lines: 00:00:01,000 --> 00:00:04,000
+// Mirrors subtitle.ParseSRT's validation to reject malformed timestamps.
+var srtTimestampPattern = regexp.MustCompile(`^(\d{2}:\d{2}:\d{2},\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2},\d{3})`)
+
 // parseSRTToTranslationBlocks parses SRT content into TranslationBlocks.
-// Inline implementation to avoid circular import with subtitle package.
+// Inline implementation — cannot import subtitle package due to circular dependency:
+// subtitle.Engine imports services.TerminologyCorrectionServiceInterface.
 func parseSRTToTranslationBlocks(content string) ([]TranslationBlock, error) {
 	if content == "" {
 		return nil, nil
@@ -380,24 +387,24 @@ func parseSRTToTranslationBlocks(content string) ([]TranslationBlock, error) {
 		}
 
 		// Parse block index
-		var index int
-		if _, err := fmt.Sscanf(line, "%d", &index); err != nil {
+		index, err := strconv.Atoi(line)
+		if err != nil {
 			i++
 			continue
 		}
 		i++
 
-		// Parse timestamp line
+		// Parse timestamp line with regex validation
 		if i >= len(lines) {
 			break
 		}
 		tsLine := strings.TrimSpace(lines[i])
-		parts := strings.SplitN(tsLine, " --> ", 2)
-		if len(parts) != 2 {
+		matches := srtTimestampPattern.FindStringSubmatch(tsLine)
+		if matches == nil {
 			continue
 		}
-		start := strings.TrimSpace(parts[0])
-		end := strings.TrimSpace(parts[1])
+		start := matches[1]
+		end := matches[2]
 		i++
 
 		// Collect text lines

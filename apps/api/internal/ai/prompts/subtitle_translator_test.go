@@ -100,3 +100,27 @@ func TestSubtitleTranslatorBatchSize(t *testing.T) {
 		t.Errorf("batch size should be 10, got %d", SubtitleTranslatorBatchSize)
 	}
 }
+
+func TestBuildSubtitleTranslatorPrompt_MultiLineBlock(t *testing.T) {
+	blocks := []SubtitleTranslatorBlock{
+		{Index: 1, Text: "Line one\nLine two"},
+		{Index: 2, Text: "Single line"},
+	}
+
+	prompt := BuildSubtitleTranslatorPrompt(blocks, nil)
+
+	// Multi-line text should be preserved in prompt
+	if !strings.Contains(prompt, "Line one\nLine two") {
+		t.Error("prompt should preserve multi-line block text")
+	}
+	if !strings.Contains(prompt, "[1]") && !strings.Contains(prompt, "[2]") {
+		t.Error("prompt should contain block indices")
+	}
+}
+
+func TestSubtitleTranslatorSystemPrompt_MultiLineInstructions(t *testing.T) {
+	// System prompt must instruct Claude on multi-line block handling
+	if !strings.Contains(SubtitleTranslatorSystemPrompt, "multi-line") {
+		t.Error("system prompt must mention multi-line block handling")
+	}
+}

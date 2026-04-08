@@ -32,10 +32,14 @@ Translate English subtitle dialogue into natural, fluent Traditional Chinese as 
 7. Keep translations concise — subtitles have limited screen time
 
 ## Output format:
-Return ONLY the translated text for each block, one per line, prefixed with the block index in square brackets.
-Example:
+Return ONLY the translated text for each block, prefixed with the block index in square brackets.
+For single-line blocks, output one line per block:
 [1] 你好，最近怎麼樣？
 [2] 我很好，謝謝。
+
+For multi-line blocks (e.g., two speakers), preserve the line breaks — only the first line gets the index prefix:
+[3] 你先走吧。
+我隨後就到。
 
 Do NOT include any explanation, notes, or annotations. ONLY translated lines with indices.`
 

@@ -28,7 +28,9 @@ const (
 )
 
 // TranslationBlock represents a subtitle block for the translation service.
-// Uses its own type to avoid circular imports with subtitle package.
+// Mirrors subtitle.SubtitleBlock but is a separate type because subtitle.Engine
+// imports services (for TerminologyCorrectionServiceInterface), creating a cycle
+// if services also imported subtitle.
 type TranslationBlock struct {
 	Index int
 	Start string
@@ -36,21 +38,11 @@ type TranslationBlock struct {
 	Text  string
 }
 
-// TranslationServiceInterface defines the contract for subtitle translation.
-type TranslationServiceInterface interface {
-	Translate(ctx context.Context, blocks []TranslationBlock, progressFn func(float64)) ([]TranslationBlock, error)
-	TranslateWithProgress(ctx context.Context, blocks []TranslationBlock, progressFn func(float64)) ([]TranslationBlock, error)
-	IsConfigured() bool
-}
-
 // TranslationService uses Claude API to translate English subtitles to Traditional Chinese.
 type TranslationService struct {
 	provider ai.TextCompleter
 	sseHub   *sse.Hub
 }
-
-// Compile-time interface verification.
-var _ TranslationServiceInterface = (*TranslationService)(nil)
 
 // NewTranslationService creates a new translation service.
 // Returns nil if provider is nil (graceful degradation per AC #4).
@@ -73,14 +65,10 @@ func (s *TranslationService) IsConfigured() bool {
 }
 
 // Translate translates subtitle blocks from English to Traditional Chinese.
+// progressFn (optional) receives percentage updates per batch.
 // On partial failure, translated blocks are returned with untranslated blocks
 // retaining their original English text (AC #5).
 func (s *TranslationService) Translate(ctx context.Context, blocks []TranslationBlock, progressFn func(float64)) ([]TranslationBlock, error) {
-	return s.TranslateWithProgress(ctx, blocks, progressFn)
-}
-
-// TranslateWithProgress translates with a progress callback.
-func (s *TranslationService) TranslateWithProgress(ctx context.Context, blocks []TranslationBlock, progressFn func(float64)) ([]TranslationBlock, error) {
 	if len(blocks) == 0 {
 		return nil, nil
 	}
@@ -208,6 +196,8 @@ var responseLinePattern = regexp.MustCompile(`^\[(\d+)\]\s*(.+)$`)
 
 // parseTranslationResponse extracts translated text from Claude's response.
 // Response format: "[1] 翻譯文字\n[2] 翻譯文字"
+// Handles multi-line blocks: continuation lines (no [N] prefix) are appended
+// to the most recent indexed block.
 func parseTranslationResponse(response string, indices []int) map[int]string {
 	result := make(map[int]string)
 
@@ -218,6 +208,9 @@ func parseTranslationResponse(response string, indices []int) map[int]string {
 	}
 
 	lines := strings.Split(strings.TrimSpace(response), "\n")
+	var lastIdx int
+	hasLast := false
+
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		if line == "" {
@@ -225,17 +218,19 @@ func parseTranslationResponse(response string, indices []int) map[int]string {
 		}
 
 		matches := responseLinePattern.FindStringSubmatch(line)
-		if matches == nil {
-			continue
-		}
-
-		idx, err := strconv.Atoi(matches[1])
-		if err != nil {
-			continue
-		}
-
-		if validIndices[idx] {
-			result[idx] = strings.TrimSpace(matches[2])
+		if matches != nil {
+			idx, err := strconv.Atoi(matches[1])
+			if err != nil {
+				continue
+			}
+			if validIndices[idx] {
+				result[idx] = strings.TrimSpace(matches[2])
+				lastIdx = idx
+				hasLast = true
+			}
+		} else if hasLast && validIndices[lastIdx] {
+			// Continuation line for multi-line subtitle block
+			result[lastIdx] += "\n" + line
 		}
 	}
 
