@@ -7,6 +7,9 @@
 # TestSprite temp files (contains API keys and session data)
 testsprite_tests/tmp/
 
+# API runtime data (posters cache, DB files)
+apps/api/vido-data/
+
 # See https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
 
 # compiled output
