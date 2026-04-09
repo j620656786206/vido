@@ -2389,39 +2389,174 @@
                 },
                 {
                   "type": "frame",
-                  "id": "HNHDk",
-                  "name": "subtitle-action",
+                  "id": "uSfbf",
+                  "name": "subtitle-section",
                   "width": "fill_container",
-                  "height": 37,
-                  "fill": "$bg-tertiary",
-                  "cornerRadius": 8,
-                  "stroke": {
-                    "thickness": 1,
-                    "fill": "$border-subtle"
-                  },
+                  "layout": "vertical",
                   "gap": 8,
-                  "justifyContent": "center",
-                  "alignItems": "center",
                   "children": [
                     {
-                      "type": "icon_font",
-                      "id": "vSss5",
-                      "name": "subBtn1i",
-                      "width": 16,
-                      "height": 16,
-                      "iconFontName": "captions",
-                      "iconFontFamily": "lucide",
-                      "fill": "$accent-primary"
+                      "type": "text",
+                      "id": "BzkWb",
+                      "name": "sub-sec-label",
+                      "fill": "$text-muted",
+                      "content": "字幕",
+                      "fontFamily": "DM Sans",
+                      "fontSize": 13,
+                      "fontWeight": "600"
                     },
                     {
-                      "type": "text",
-                      "id": "mnEzb",
-                      "name": "subBtn1t",
-                      "fill": "$text-primary",
-                      "content": "搜尋字幕",
-                      "fontFamily": "Noto Sans TC",
-                      "fontSize": 14,
-                      "fontWeight": "normal"
+                      "type": "frame",
+                      "id": "bkiM0",
+                      "name": "sub-status-row",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon_font",
+                          "id": "frcJk",
+                          "name": "subStatusIco",
+                          "width": 14,
+                          "height": 14,
+                          "iconFontName": "circle-check",
+                          "iconFontFamily": "lucide",
+                          "fill": "$success"
+                        },
+                        {
+                          "type": "text",
+                          "id": "ftVdH",
+                          "name": "subStatusTxt",
+                          "fill": "$success",
+                          "content": "繁體中文字幕已就緒",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "VOvSe",
+                      "name": "sub-buttons",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "5KW1N",
+                          "name": "search-sub-btn",
+                          "width": "fill_container",
+                          "height": 34,
+                          "fill": "$bg-tertiary",
+                          "cornerRadius": 8,
+                          "stroke": {
+                            "thickness": 1,
+                            "fill": "$border-subtle"
+                          },
+                          "gap": 6,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon_font",
+                              "id": "EzJSB",
+                              "name": "subSearchI",
+                              "width": 14,
+                              "height": 14,
+                              "iconFontName": "captions",
+                              "iconFontFamily": "lucide",
+                              "fill": "$accent-primary"
+                            },
+                            {
+                              "type": "text",
+                              "id": "aHbhh",
+                              "name": "subSearchT",
+                              "fill": "$text-primary",
+                              "content": "搜尋字幕",
+                              "fontFamily": "Noto Sans TC",
+                              "fontSize": 12,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "3lyBV",
+                          "name": "ai-correct-btn",
+                          "width": "fill_container",
+                          "height": 34,
+                          "fill": "$bg-tertiary",
+                          "cornerRadius": 8,
+                          "stroke": {
+                            "thickness": 1,
+                            "fill": "$border-subtle"
+                          },
+                          "gap": 6,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon_font",
+                              "id": "GuVdl",
+                              "name": "aiCorrI",
+                              "width": 14,
+                              "height": 14,
+                              "iconFontName": "sparkles",
+                              "iconFontFamily": "lucide",
+                              "fill": "$accent-primary"
+                            },
+                            {
+                              "type": "text",
+                              "id": "QDq9K",
+                              "name": "aiCorrT",
+                              "fill": "$text-primary",
+                              "content": "AI 校正",
+                              "fontFamily": "Noto Sans TC",
+                              "fontSize": 12,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "yKHEF",
+                      "name": "transcribe-btn",
+                      "width": "fill_container",
+                      "height": 34,
+                      "fill": "$bg-tertiary",
+                      "cornerRadius": 8,
+                      "stroke": {
+                        "thickness": 1,
+                        "fill": "$border-subtle"
+                      },
+                      "gap": 6,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon_font",
+                          "id": "I0fQ5",
+                          "name": "transI",
+                          "width": 14,
+                          "height": 14,
+                          "iconFontName": "mic",
+                          "iconFontFamily": "lucide",
+                          "fill": "$accent-primary"
+                        },
+                        {
+                          "type": "text",
+                          "id": "2BOS3",
+                          "name": "transT",
+                          "fill": "$text-primary",
+                          "content": "轉錄英文音軌",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
                     }
                   ]
                 },
@@ -8928,39 +9063,174 @@
                 },
                 {
                   "type": "frame",
-                  "id": "5UKg0",
-                  "name": "subtitle-action",
+                  "id": "AbP4Z",
+                  "name": "m-subtitle-section",
                   "width": "fill_container",
-                  "height": 40,
-                  "fill": "$bg-tertiary",
-                  "cornerRadius": 8,
-                  "stroke": {
-                    "thickness": 1,
-                    "fill": "$border-subtle"
-                  },
+                  "layout": "vertical",
                   "gap": 8,
-                  "justifyContent": "center",
-                  "alignItems": "center",
                   "children": [
                     {
-                      "type": "icon_font",
-                      "id": "lwYd6",
-                      "name": "subBtn3i",
-                      "width": 16,
-                      "height": 16,
-                      "iconFontName": "captions",
-                      "iconFontFamily": "lucide",
-                      "fill": "$accent-primary"
+                      "type": "text",
+                      "id": "bbCtg",
+                      "name": "m-sub-label",
+                      "fill": "$text-muted",
+                      "content": "字幕",
+                      "fontFamily": "DM Sans",
+                      "fontSize": 12,
+                      "fontWeight": "600"
                     },
                     {
-                      "type": "text",
-                      "id": "h2CCg",
-                      "name": "subBtn3t",
-                      "fill": "$text-primary",
-                      "content": "搜尋字幕",
-                      "fontFamily": "Noto Sans TC",
-                      "fontSize": 14,
-                      "fontWeight": "normal"
+                      "type": "frame",
+                      "id": "oqA1U",
+                      "name": "m-sub-status",
+                      "width": "fill_container",
+                      "gap": 6,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon_font",
+                          "id": "wyeWX",
+                          "name": "mSubStatusI",
+                          "width": 14,
+                          "height": 14,
+                          "iconFontName": "circle-check",
+                          "iconFontFamily": "lucide",
+                          "fill": "$success"
+                        },
+                        {
+                          "type": "text",
+                          "id": "Lz4BF",
+                          "name": "mSubStatusT",
+                          "fill": "$success",
+                          "content": "繁體中文字幕已就緒",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "l8V24",
+                      "name": "m-sub-btns",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "0lVD7",
+                          "name": "m-search-btn",
+                          "width": "fill_container",
+                          "height": 36,
+                          "fill": "$bg-tertiary",
+                          "cornerRadius": 8,
+                          "stroke": {
+                            "thickness": 1,
+                            "fill": "$border-subtle"
+                          },
+                          "gap": 6,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon_font",
+                              "id": "eqspL",
+                              "name": "mSearchI",
+                              "width": 14,
+                              "height": 14,
+                              "iconFontName": "captions",
+                              "iconFontFamily": "lucide",
+                              "fill": "$accent-primary"
+                            },
+                            {
+                              "type": "text",
+                              "id": "wUZyt",
+                              "name": "mSearchT",
+                              "fill": "$text-primary",
+                              "content": "搜尋字幕",
+                              "fontFamily": "Noto Sans TC",
+                              "fontSize": 12,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "lsjUP",
+                          "name": "m-ai-btn",
+                          "width": "fill_container",
+                          "height": 36,
+                          "fill": "$bg-tertiary",
+                          "cornerRadius": 8,
+                          "stroke": {
+                            "thickness": 1,
+                            "fill": "$border-subtle"
+                          },
+                          "gap": 6,
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon_font",
+                              "id": "fnKGj",
+                              "name": "mAiI",
+                              "width": 14,
+                              "height": 14,
+                              "iconFontName": "sparkles",
+                              "iconFontFamily": "lucide",
+                              "fill": "$accent-primary"
+                            },
+                            {
+                              "type": "text",
+                              "id": "j7MOC",
+                              "name": "mAiT",
+                              "fill": "$text-primary",
+                              "content": "AI 校正",
+                              "fontFamily": "Noto Sans TC",
+                              "fontSize": 12,
+                              "fontWeight": "500"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "sEU4j",
+                      "name": "m-trans-btn",
+                      "width": "fill_container",
+                      "height": 36,
+                      "fill": "$bg-tertiary",
+                      "cornerRadius": 8,
+                      "stroke": {
+                        "thickness": 1,
+                        "fill": "$border-subtle"
+                      },
+                      "gap": 6,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon_font",
+                          "id": "6XBFO",
+                          "name": "mTransI",
+                          "width": 14,
+                          "height": 14,
+                          "iconFontName": "mic",
+                          "iconFontFamily": "lucide",
+                          "fill": "$accent-primary"
+                        },
+                        {
+                          "type": "text",
+                          "id": "eQDz6",
+                          "name": "mTransT",
+                          "fill": "$text-primary",
+                          "content": "轉錄英文音軌",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 12,
+                          "fontWeight": "500"
+                        }
+                      ]
                     }
                   ]
                 }
@@ -44907,7 +45177,7 @@
       "type": "frame",
       "id": "8SSzc",
       "x": 0,
-      "y": 13600,
+      "y": 15700,
       "name": "Design System Reference",
       "width": 1440,
       "fill": "$bg-primary",
@@ -47070,7 +47340,7 @@
       "type": "frame",
       "id": "sAaCR",
       "x": 0,
-      "y": 16950,
+      "y": 19050,
       "name": "Screen HP-1 - Homepage Desktop",
       "clip": true,
       "width": 1440,
@@ -48133,7 +48403,7 @@
       "type": "frame",
       "id": "g5LFD",
       "x": 1540,
-      "y": 16950,
+      "y": 19050,
       "name": "Screen HP-2 - Homepage Mobile",
       "clip": true,
       "width": 390,
@@ -48626,7 +48896,7 @@
       "type": "frame",
       "id": "Paqlk",
       "x": 2030,
-      "y": 16950,
+      "y": 19050,
       "name": "Screen HP-3 - Block CRUD Modal",
       "width": 520,
       "fill": "$bg-secondary",
@@ -49212,7 +49482,7 @@
       "type": "frame",
       "id": "g6p38",
       "x": 0,
-      "y": 19215,
+      "y": 21315,
       "name": "Screen HP-4 - Homepage Loading Skeleton",
       "clip": true,
       "width": 1440,
@@ -49584,7 +49854,7 @@
       "type": "text",
       "id": "xCFqj",
       "x": 0,
-      "y": 16920,
+      "y": 19020,
       "name": "label1",
       "fill": "$text-secondary",
       "content": "HP-1: Homepage Desktop",
@@ -49596,7 +49866,7 @@
       "type": "text",
       "id": "dvO0g",
       "x": 1540,
-      "y": 16920,
+      "y": 19020,
       "name": "label2",
       "fill": "$text-secondary",
       "content": "HP-2: Homepage Mobile",
@@ -49608,7 +49878,7 @@
       "type": "text",
       "id": "kbklD",
       "x": 2030,
-      "y": 16920,
+      "y": 19020,
       "name": "label3",
       "fill": "$text-secondary",
       "content": "HP-3: Block CRUD Modal",
@@ -49620,7 +49890,7 @@
       "type": "text",
       "id": "RawwQ",
       "x": 0,
-      "y": 19185,
+      "y": 21285,
       "name": "label4",
       "fill": "$text-secondary",
       "content": "HP-4: Loading Skeleton",
@@ -49632,7 +49902,7 @@
       "type": "text",
       "id": "vuos5",
       "x": 0,
-      "y": 20700,
+      "y": 22800,
       "name": "s11label",
       "fill": "$text-secondary",
       "content": "AS-1: Advanced Search + Filter Chips Desktop",
@@ -49644,7 +49914,7 @@
       "type": "frame",
       "id": "NWxok",
       "x": 0,
-      "y": 20730,
+      "y": 22830,
       "name": "Screen AS-1 - Advanced Search Filter Desktop",
       "clip": true,
       "width": 1440,
@@ -51012,7 +51282,7 @@
       "type": "text",
       "id": "Mempp",
       "x": 1540,
-      "y": 20700,
+      "y": 22800,
       "name": "s11label2",
       "fill": "$text-secondary",
       "content": "AS-2: Search Suggestions Dropdown",
@@ -51024,7 +51294,7 @@
       "type": "frame",
       "id": "TMaw5",
       "x": 1540,
-      "y": 20730,
+      "y": 22830,
       "name": "Screen AS-2 - Search Suggestions Dropdown",
       "width": 520,
       "fill": "$bg-secondary",
@@ -51434,7 +51704,7 @@
       "type": "text",
       "id": "j5nqs",
       "x": 2160,
-      "y": 20700,
+      "y": 22800,
       "name": "s11label3",
       "fill": "$text-secondary",
       "content": "AS-3: Save Filter Preset Modal",
@@ -51446,7 +51716,7 @@
       "type": "frame",
       "id": "i74p2",
       "x": 2160,
-      "y": 20730,
+      "y": 22830,
       "name": "Screen AS-3 - Save Filter Preset Modal",
       "width": 420,
       "fill": "$bg-secondary",
@@ -51714,7 +51984,7 @@
       "type": "text",
       "id": "G7ci1",
       "x": 2680,
-      "y": 20700,
+      "y": 22800,
       "name": "s11label4",
       "fill": "$text-secondary",
       "content": "AS-4: Mobile Filter Bottom Sheet",
@@ -51726,7 +51996,7 @@
       "type": "frame",
       "id": "pjKVZ",
       "x": 2680,
-      "y": 20730,
+      "y": 22830,
       "name": "Screen AS-4 - Mobile Filter Bottom Sheet",
       "clip": true,
       "width": 390,
@@ -52336,7 +52606,7 @@
       "type": "text",
       "id": "SPwJr",
       "x": 0,
-      "y": 12200,
+      "y": 13510,
       "name": "Flow I Label",
       "fill": "#222222",
       "content": "Flow I — AI 字幕增強 AI Subtitle Enhancement",
@@ -52348,7 +52618,7 @@
       "type": "text",
       "id": "B0Ep8",
       "x": 0,
-      "y": 12240,
+      "y": 13550,
       "name": "Flow I Desc",
       "fill": "#666666",
       "content": "AI 用語校正預覽 → Whisper 轉錄進度 → 翻譯確認 (Desktop) · AI 校正 Bottom Sheet → 轉錄進度 → 翻譯確認 (Mobile)",
@@ -52360,7 +52630,7 @@
       "type": "frame",
       "id": "TIIRl",
       "x": 0,
-      "y": 12300,
+      "y": 13610,
       "name": "Screen I1 - AI Correction Modal Desktop",
       "clip": true,
       "width": 1440,
@@ -53122,7 +53392,7 @@
       "type": "frame",
       "id": "kzhNP",
       "x": 1540,
-      "y": 12300,
+      "y": 13610,
       "name": "Screen I2 - Transcription Progress Desktop",
       "clip": true,
       "width": 1440,
@@ -53672,7 +53942,7 @@
       "type": "frame",
       "id": "22bcv",
       "x": 3080,
-      "y": 12300,
+      "y": 13610,
       "name": "Screen I3 - Translation Confirm Desktop",
       "clip": true,
       "width": 1440,
@@ -53931,7 +54201,7 @@
       "type": "text",
       "id": "aNVLp",
       "x": 0,
-      "y": 13210,
+      "y": 14520,
       "name": "Label I1",
       "fill": "#888888",
       "content": "I1. AI 用語校正預覽 (Desktop)",
@@ -53943,7 +54213,7 @@
       "type": "text",
       "id": "ew6JY",
       "x": 1540,
-      "y": 13210,
+      "y": 14520,
       "name": "Label I2",
       "fill": "#888888",
       "content": "I2. Whisper 轉錄進度 (Desktop)",
@@ -53955,7 +54225,7 @@
       "type": "text",
       "id": "4uGjv",
       "x": 3080,
-      "y": 13210,
+      "y": 14520,
       "name": "Label I3",
       "fill": "#888888",
       "content": "I3. 翻譯確認對話框 (Desktop)",
@@ -53967,7 +54237,7 @@
       "type": "frame",
       "id": "mgRJA",
       "x": 0,
-      "y": 13300,
+      "y": 14610,
       "name": "Screen I4 - AI Correction Mobile",
       "clip": true,
       "width": 390,
@@ -54562,7 +54832,7 @@
       "type": "frame",
       "id": "yNAHK",
       "x": 490,
-      "y": 13300,
+      "y": 14610,
       "name": "Screen I5 - Transcription Progress Mobile",
       "clip": true,
       "width": 390,
@@ -55016,7 +55286,7 @@
       "type": "frame",
       "id": "8Wsez",
       "x": 980,
-      "y": 13300,
+      "y": 14610,
       "name": "Screen I6 - Translation Confirm Mobile",
       "clip": true,
       "width": 390,
@@ -55203,7 +55473,7 @@
       "type": "text",
       "id": "Q7ndh",
       "x": 0,
-      "y": 14154,
+      "y": 15464,
       "name": "Label I4",
       "fill": "#888888",
       "content": "I4. AI 校正 (Mobile)",
@@ -55215,7 +55485,7 @@
       "type": "text",
       "id": "KIhWF",
       "x": 490,
-      "y": 14154,
+      "y": 15464,
       "name": "Label I5",
       "fill": "#888888",
       "content": "I5. 轉錄進度 (Mobile)",
@@ -55227,7 +55497,7 @@
       "type": "text",
       "id": "vrahu",
       "x": 980,
-      "y": 14154,
+      "y": 15464,
       "name": "Label I6",
       "fill": "#888888",
       "content": "I6. 翻譯確認 (Mobile)",
