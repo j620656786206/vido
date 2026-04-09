@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/vido/api/internal/database/migrations"
 	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/repository"
 	"github.com/vido/api/internal/tmdb"
@@ -17,200 +18,25 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-// setupTestDB creates a temporary SQLite database with the required schema
+// setupTestDB creates a temporary SQLite database with schema from production migrations
 func setupTestDB(t *testing.T) *sql.DB {
-	// Use a temp file instead of :memory: for better FTS5 external content support
 	tmpFile, err := os.CreateTemp("", "test_library_*.db")
 	require.NoError(t, err)
 	tmpFile.Close()
 
-	// Register cleanup
 	t.Cleanup(func() {
 		os.Remove(tmpFile.Name())
 	})
 
 	db, err := sql.Open("sqlite", tmpFile.Name()+"?_pragma=foreign_keys(1)")
 	require.NoError(t, err)
+	t.Cleanup(func() { db.Close() })
 
-	// Create movies table with FTS support
-	_, err = db.Exec(`
-		CREATE TABLE IF NOT EXISTS movies (
-			id TEXT PRIMARY KEY,
-			title TEXT NOT NULL,
-			original_title TEXT,
-			release_date TEXT,
-			genres TEXT DEFAULT '[]',
-			rating REAL,
-			vote_average REAL,
-			vote_count INTEGER,
-			popularity REAL,
-			overview TEXT,
-			poster_path TEXT,
-			backdrop_path TEXT,
-			runtime INTEGER,
-			original_language TEXT,
-			status TEXT,
-			imdb_id TEXT,
-			tmdb_id INTEGER UNIQUE,
-			credits TEXT,
-			production_countries TEXT,
-			spoken_languages TEXT,
-			file_path TEXT,
-			file_size INTEGER,
-			parse_status TEXT DEFAULT 'pending',
-			metadata_source TEXT,
-			subtitle_status TEXT NOT NULL DEFAULT 'not_searched',
-			subtitle_path TEXT,
-			subtitle_language TEXT,
-			subtitle_last_searched TIMESTAMP,
-			subtitle_search_score REAL,
-			is_removed INTEGER NOT NULL DEFAULT 0,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-		)
-	`)
+	runner, err := migrations.NewRunner(db)
 	require.NoError(t, err)
-
-	// Create movies FTS virtual table with external content
-	_, err = db.Exec(`
-		CREATE VIRTUAL TABLE IF NOT EXISTS movies_fts USING fts5(
-			title,
-			original_title,
-			overview,
-			content='movies',
-			content_rowid='rowid'
-		)
-	`)
+	err = runner.RegisterAll(migrations.GetAll())
 	require.NoError(t, err)
-
-	// Create triggers to keep FTS in sync
-	_, err = db.Exec(`
-		CREATE TRIGGER movies_fts_ai AFTER INSERT ON movies BEGIN
-			INSERT INTO movies_fts(rowid, title, original_title, overview)
-			VALUES (NEW.rowid, NEW.title, NEW.original_title, NEW.overview);
-		END
-	`)
-	require.NoError(t, err)
-
-	_, err = db.Exec(`
-		CREATE TRIGGER movies_fts_ad AFTER DELETE ON movies BEGIN
-			INSERT INTO movies_fts(movies_fts, rowid, title, original_title, overview)
-			VALUES ('delete', OLD.rowid, OLD.title, OLD.original_title, OLD.overview);
-		END
-	`)
-	require.NoError(t, err)
-
-	_, err = db.Exec(`
-		CREATE TRIGGER movies_fts_au AFTER UPDATE ON movies BEGIN
-			INSERT INTO movies_fts(movies_fts, rowid, title, original_title, overview)
-			VALUES ('delete', OLD.rowid, OLD.title, OLD.original_title, OLD.overview);
-			INSERT INTO movies_fts(rowid, title, original_title, overview)
-			VALUES (NEW.rowid, NEW.title, NEW.original_title, NEW.overview);
-		END
-	`)
-	require.NoError(t, err)
-
-	// Create series table with FTS support
-	_, err = db.Exec(`
-		CREATE TABLE IF NOT EXISTS series (
-			id TEXT PRIMARY KEY,
-			title TEXT NOT NULL,
-			original_title TEXT,
-			first_air_date TEXT,
-			last_air_date TEXT,
-			genres TEXT DEFAULT '[]',
-			rating REAL,
-			vote_average REAL,
-			vote_count INTEGER,
-			popularity REAL,
-			overview TEXT,
-			poster_path TEXT,
-			backdrop_path TEXT,
-			number_of_seasons INTEGER,
-			number_of_episodes INTEGER,
-			status TEXT,
-			original_language TEXT,
-			imdb_id TEXT,
-			tmdb_id INTEGER UNIQUE,
-			in_production INTEGER,
-			credits TEXT,
-			seasons TEXT,
-			networks TEXT,
-			file_path TEXT,
-			parse_status TEXT DEFAULT 'pending',
-			metadata_source TEXT,
-			subtitle_status TEXT NOT NULL DEFAULT 'not_searched',
-			subtitle_path TEXT,
-			subtitle_language TEXT,
-			subtitle_last_searched TIMESTAMP,
-			subtitle_search_score REAL,
-			is_removed INTEGER NOT NULL DEFAULT 0,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-		)
-	`)
-	require.NoError(t, err)
-
-	// Create series FTS virtual table with external content
-	_, err = db.Exec(`
-		CREATE VIRTUAL TABLE IF NOT EXISTS series_fts USING fts5(
-			title,
-			original_title,
-			overview,
-			content='series',
-			content_rowid='rowid'
-		)
-	`)
-	require.NoError(t, err)
-
-	// Create triggers for series FTS
-	_, err = db.Exec(`
-		CREATE TRIGGER series_fts_ai AFTER INSERT ON series BEGIN
-			INSERT INTO series_fts(rowid, title, original_title, overview)
-			VALUES (NEW.rowid, NEW.title, NEW.original_title, NEW.overview);
-		END
-	`)
-	require.NoError(t, err)
-
-	_, err = db.Exec(`
-		CREATE TRIGGER series_fts_ad AFTER DELETE ON series BEGIN
-			INSERT INTO series_fts(series_fts, rowid, title, original_title, overview)
-			VALUES ('delete', OLD.rowid, OLD.title, OLD.original_title, OLD.overview);
-		END
-	`)
-	require.NoError(t, err)
-
-	_, err = db.Exec(`
-		CREATE TRIGGER series_fts_au AFTER UPDATE ON series BEGIN
-			INSERT INTO series_fts(series_fts, rowid, title, original_title, overview)
-			VALUES ('delete', OLD.rowid, OLD.title, OLD.original_title, OLD.overview);
-			INSERT INTO series_fts(rowid, title, original_title, overview)
-			VALUES (NEW.rowid, NEW.title, NEW.original_title, NEW.overview);
-		END
-	`)
-	require.NoError(t, err)
-
-	// Create episodes table
-	_, err = db.Exec(`
-		CREATE TABLE IF NOT EXISTS episodes (
-			id TEXT PRIMARY KEY,
-			series_id TEXT NOT NULL,
-			tmdb_id INTEGER,
-			season_number INTEGER NOT NULL,
-			episode_number INTEGER NOT NULL,
-			title TEXT,
-			overview TEXT,
-			air_date TEXT,
-			runtime INTEGER,
-			still_path TEXT,
-			vote_average REAL,
-			file_path TEXT,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			UNIQUE(series_id, season_number, episode_number),
-			FOREIGN KEY (series_id) REFERENCES series(id) ON DELETE CASCADE
-		)
-	`)
+	err = runner.Up(context.Background())
 	require.NoError(t, err)
 
 	return db

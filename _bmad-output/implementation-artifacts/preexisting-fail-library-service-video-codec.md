@@ -1,6 +1,6 @@
 # Story: Fix library_service_test.go Migration Drift
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -18,20 +18,20 @@ so that all 14 tests pass without "no such column" errors from migration drift.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Replace hardcoded schema with migration runner (AC: #1, #2, #3)
-  - [ ] 1.1 Refactor `setupTestDB()` in `apps/api/internal/services/library_service_test.go` to use `migrations.NewRunner(db)` + `runner.Up(ctx)` instead of hardcoded CREATE TABLE statements
-  - [ ] 1.2 Add import: `"github.com/vido/api/internal/database/migrations"` and blank import `_ "github.com/vido/api/internal/database/migrations"` (to trigger init() registration of all migrations including 021)
-  - [ ] 1.3 Remove the entire hardcoded schema block (lines ~36-217): CREATE TABLE movies, CREATE TABLE series, CREATE VIRTUAL TABLE movies_fts, series_fts, all triggers, all indexes
-  - [ ] 1.4 Replace with: `runner, err := migrations.NewRunner(db)` → `require.NoError(t, err)` → `err = runner.Up(context.Background())` → `require.NoError(t, err)`
+- [x] Task 1: Replace hardcoded schema with migration runner (AC: #1, #2, #3)
+  - [x] 1.1 Refactor `setupTestDB()` in `apps/api/internal/services/library_service_test.go` to use `migrations.NewRunner(db)` + `runner.Up(ctx)` instead of hardcoded CREATE TABLE statements
+  - [x] 1.2 Add import: `"github.com/vido/api/internal/database/migrations"` and blank import `_ "github.com/vido/api/internal/database/migrations"` (to trigger init() registration of all migrations including 021)
+  - [x] 1.3 Remove the entire hardcoded schema block (lines ~36-217): CREATE TABLE movies, CREATE TABLE series, CREATE VIRTUAL TABLE movies_fts, series_fts, all triggers, all indexes
+  - [x] 1.4 Replace with: `runner, err := migrations.NewRunner(db)` → `require.NoError(t, err)` → `err = runner.Up(context.Background())` → `require.NoError(t, err)`
 
-- [ ] Task 2: Verify all 14 tests pass (AC: #1, #4, #5)
-  - [ ] 2.1 Run: `cd apps/api && go test ./internal/services/ -run TestLibraryService -v`
-  - [ ] 2.2 Verify all 14 pass: SaveMovieFromTMDb, SearchLibrary, GetMovieByID, ListLibrary, DeleteMovie, GetRecentlyAdded, FilterByGenre, FilterByYearRange, GetDistinctGenres, GetLibraryStats, CombinedFilters, SaveSeriesFromTMDb, DeleteSeries, GetSeriesByID
-  - [ ] 2.3 Verify FTS5 search still works (SearchLibrary test exercises FTS)
+- [x] Task 2: Verify all 14 tests pass (AC: #1, #4, #5)
+  - [x] 2.1 Run: `cd apps/api && go test ./internal/services/ -run TestLibraryService -v`
+  - [x] 2.2 Verify all 14 pass: SaveMovieFromTMDb, SearchLibrary, GetMovieByID, ListLibrary, DeleteMovie, GetRecentlyAdded, FilterByGenre, FilterByYearRange, GetDistinctGenres, GetLibraryStats, CombinedFilters, SaveSeriesFromTMDb, DeleteSeries, GetSeriesByID
+  - [x] 2.3 Verify FTS5 search still works (SearchLibrary test exercises FTS)
 
-- [ ] Task 3: Verify no regressions (AC: #5)
-  - [ ] 3.1 Run full services test suite: `cd apps/api && go test ./internal/services/ -v`
-  - [ ] 3.2 Run full test suite: `cd apps/api && go test ./...`
+- [x] Task 3: Verify no regressions (AC: #5)
+  - [x] 3.1 Run full services test suite: `cd apps/api && go test ./internal/services/ -v`
+  - [x] 3.2 Run full test suite: `cd apps/api && go test ./...`
 
 ## Dev Notes
 
@@ -122,6 +122,15 @@ Claude Opus 4.6 (1M context) — SM agent (Bob) create-story workflow, YOLO mode
 - Recommended fix: use migration runner instead of hardcoded DDL (drift-proof)
 - 14 tests affected (11 movie, 3 series)
 - Simple 1-file fix, minimal risk
+- ✅ Replaced 200-line hardcoded DDL with 4-line migration runner call
+- ✅ Key discovery: `NewRunner()` creates empty runner — must call `runner.RegisterAll(migrations.GetAll())` to load global registry migrations
+- ✅ All 14 LibraryService tests pass, FTS5 search verified
+- ✅ Full `go test ./...` regression: only pre-existing failures (download_handler 4 tests, setup_service 1 test), zero new regressions
+- 🎨 UX Verification: SKIPPED — no UI changes in this story
+
+### Change Log
+
+- 2026-04-09: Replaced hardcoded DDL in `setupTestDB()` with migration runner (`migrations.NewRunner` + `RegisterAll` + `Up`). Removed ~200 lines of manual CREATE TABLE/FTS/trigger SQL, replaced with drift-proof migration runner. All 14 tests pass.
 
 ### File List
 
