@@ -1,6 +1,6 @@
 # Story: Fix library_service_test.go Migration Drift
 
-Status: review
+Status: done
 
 ## Story
 
