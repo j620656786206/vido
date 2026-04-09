@@ -160,11 +160,11 @@ func TestSetupService_IsFirstRun(t *testing.T) {
 			result, err := svc.IsFirstRun(context.Background())
 
 			if tt.wantErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
+				assert.Equal(t, tt.expected, result)
 			}
-			assert.Equal(t, tt.expected, result)
 			mockRepo.AssertExpectations(t)
 		})
 	}
@@ -173,11 +173,12 @@ func TestSetupService_IsFirstRun(t *testing.T) {
 // TestSetupService_CompleteSetup tests the CompleteSetup method
 func TestSetupService_CompleteSetup(t *testing.T) {
 	tests := []struct {
-		name    string
-		config  SetupConfig
-		setup   func(*MockSettingsRepo, *MockSecretsService)
-		wantErr bool
-		errMsg  string
+		name        string
+		config      SetupConfig
+		setup       func(*MockSettingsRepo, *MockSecretsService)
+		wantErr     bool
+		errMsg      string
+		sentinelErr error
 	}{
 		{
 			name: "success - full config",
@@ -232,8 +233,9 @@ func TestSetupService_CompleteSetup(t *testing.T) {
 			setup: func(repo *MockSettingsRepo, sec *MockSecretsService) {
 				repo.On("GetBool", mock.Anything, "setup_completed").Return(true, nil)
 			},
-			wantErr: true,
-			errMsg:  "setup already completed",
+			wantErr:     true,
+			errMsg:      "setup already completed",
+			sentinelErr: ErrSetupAlreadyCompleted,
 		},
 		{
 			name: "error - save language fails",
@@ -275,6 +277,9 @@ func TestSetupService_CompleteSetup(t *testing.T) {
 
 			if tt.wantErr {
 				require.Error(t, err)
+				if tt.sentinelErr != nil {
+					assert.ErrorIs(t, err, tt.sentinelErr)
+				}
 				if tt.errMsg != "" {
 					assert.Contains(t, err.Error(), tt.errMsg)
 				}
@@ -290,10 +295,11 @@ func TestSetupService_CompleteSetup(t *testing.T) {
 // TestSetupService_CompleteSetup_PartialFailures tests individual field save failures
 func TestSetupService_CompleteSetup_PartialFailures(t *testing.T) {
 	tests := []struct {
-		name   string
-		config SetupConfig
-		setup  func(*MockSettingsRepo, *MockSecretsService)
-		errMsg string
+		name          string
+		config        SetupConfig
+		setup         func(*MockSettingsRepo, *MockSecretsService)
+		errMsg        string
+		useNilSecrets bool
 	}{
 		{
 			name: "error - save qbt_url fails",
@@ -409,7 +415,8 @@ func TestSetupService_CompleteSetup_PartialFailures(t *testing.T) {
 				// No secrets call expected — nil secrets service
 				repo.On("SetBool", mock.Anything, "setup_completed", true).Return(nil)
 			},
-			errMsg: "", // no error — password silently skipped when no secrets service
+			errMsg:        "", // no error — password silently skipped when no secrets service
+			useNilSecrets: true,
 		},
 	}
 
@@ -419,9 +426,8 @@ func TestSetupService_CompleteSetup_PartialFailures(t *testing.T) {
 			mockSecrets := new(MockSecretsService)
 			tt.setup(mockRepo, mockSecrets)
 
-			// Use nil secrets service for the "skipped" test case
 			var svc *SetupService
-			if tt.errMsg == "" && tt.name == "success - qbt password skipped when no secrets service" {
+			if tt.useNilSecrets {
 				svc = NewSetupService(mockRepo, nil)
 			} else {
 				svc = NewSetupService(mockRepo, mockSecrets)
@@ -436,6 +442,9 @@ func TestSetupService_CompleteSetup_PartialFailures(t *testing.T) {
 				assert.NoError(t, err)
 			}
 			mockRepo.AssertExpectations(t)
+			if !tt.useNilSecrets {
+				mockSecrets.AssertExpectations(t)
+			}
 		})
 	}
 }
@@ -503,7 +512,7 @@ func TestSetupService_ValidateStep_EdgeCases(t *testing.T) {
 			errMsg:  "invalid TMDb API key format",
 		},
 		{
-			name: "qbittorrent - URL exactly 7 chars (valid)",
+			name: "qbittorrent - URL exactly 7 chars passes length check",
 			step: "qbittorrent",
 			data: map[string]interface{}{
 				"qbt_url": "http://",
