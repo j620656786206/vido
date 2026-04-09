@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"github.com/vido/api/internal/models"
 )
 
@@ -273,7 +274,7 @@ func TestSetupService_CompleteSetup(t *testing.T) {
 			err := svc.CompleteSetup(context.Background(), tt.config)
 
 			if tt.wantErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 				if tt.errMsg != "" {
 					assert.Contains(t, err.Error(), tt.errMsg)
 				}
@@ -429,7 +430,7 @@ func TestSetupService_CompleteSetup_PartialFailures(t *testing.T) {
 			err := svc.CompleteSetup(context.Background(), tt.config)
 
 			if tt.errMsg != "" {
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.Contains(t, err.Error(), tt.errMsg)
 			} else {
 				assert.NoError(t, err)
@@ -471,8 +472,12 @@ func TestSetupService_ValidateStep_EdgeCases(t *testing.T) {
 			step: "media-folder",
 			data: func() map[string]interface{} {
 				// Create a temp file (not directory)
-				f, _ := os.CreateTemp("", "testfile")
+				f, err := os.CreateTemp("", "testfile")
+				if err != nil {
+					t.Fatalf("failed to create temp file: %v", err)
+				}
 				f.Close()
+				t.Cleanup(func() { os.Remove(f.Name()) })
 				return map[string]interface{}{
 					"media_folder_path": f.Name(),
 				}
@@ -524,7 +529,7 @@ func TestSetupService_ValidateStep_EdgeCases(t *testing.T) {
 			err := svc.ValidateStep(context.Background(), tt.step, tt.data)
 
 			if tt.wantErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 				if tt.errMsg != "" {
 					assert.Contains(t, err.Error(), tt.errMsg)
 				}
@@ -652,7 +657,7 @@ func TestSetupService_ValidateStep(t *testing.T) {
 			err := svc.ValidateStep(context.Background(), tt.step, tt.data)
 
 			if tt.wantErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 				if tt.errMsg != "" {
 					assert.Contains(t, err.Error(), tt.errMsg)
 				}
