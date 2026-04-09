@@ -116,6 +116,7 @@ func TestSetupService_IsFirstRun(t *testing.T) {
 		setup    func(*MockSettingsRepo)
 		expected bool
 		wantErr  bool
+		errMsg   string
 	}{
 		{
 			name: "first run - key not found",
@@ -148,6 +149,7 @@ func TestSetupService_IsFirstRun(t *testing.T) {
 			},
 			expected: false,
 			wantErr:  true,
+			errMsg:   "check setup status",
 		},
 	}
 
@@ -161,6 +163,9 @@ func TestSetupService_IsFirstRun(t *testing.T) {
 
 			if tt.wantErr {
 				require.Error(t, err)
+				if tt.errMsg != "" {
+					assert.Contains(t, err.Error(), tt.errMsg)
+				}
 			} else {
 				require.NoError(t, err)
 				assert.Equal(t, tt.expected, result)
@@ -284,7 +289,7 @@ func TestSetupService_CompleteSetup(t *testing.T) {
 					assert.Contains(t, err.Error(), tt.errMsg)
 				}
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 			mockRepo.AssertExpectations(t)
 			mockSecrets.AssertExpectations(t)
@@ -345,6 +350,54 @@ func TestSetupService_CompleteSetup_PartialFailures(t *testing.T) {
 				sec.On("Store", mock.Anything, "qbt_password", "secret").Return(errors.New("encryption error"))
 			},
 			errMsg: "save qbt_password",
+		},
+		{
+			name: "error - save qbittorrent.host fails",
+			config: SetupConfig{
+				Language: "zh-TW",
+				QBTUrl:   "http://localhost:8080",
+			},
+			setup: func(repo *MockSettingsRepo, sec *MockSecretsService) {
+				repo.On("GetBool", mock.Anything, "setup_completed").Return(false, errors.New("setting with key setup_completed not found"))
+				repo.On("SetString", mock.Anything, "language", "zh-TW").Return(nil)
+				repo.On("SetString", mock.Anything, "qbt_url", "http://localhost:8080").Return(nil)
+				repo.On("SetString", mock.Anything, "qbittorrent.host", "http://localhost:8080").Return(errors.New("db error"))
+			},
+			errMsg: "save qbittorrent.host",
+		},
+		{
+			name: "error - save qbittorrent.username fails",
+			config: SetupConfig{
+				Language:    "zh-TW",
+				QBTUrl:      "http://localhost:8080",
+				QBTUsername: "admin",
+			},
+			setup: func(repo *MockSettingsRepo, sec *MockSecretsService) {
+				repo.On("GetBool", mock.Anything, "setup_completed").Return(false, errors.New("setting with key setup_completed not found"))
+				repo.On("SetString", mock.Anything, "language", "zh-TW").Return(nil)
+				repo.On("SetString", mock.Anything, "qbt_url", "http://localhost:8080").Return(nil)
+				repo.On("SetString", mock.Anything, "qbittorrent.host", "http://localhost:8080").Return(nil)
+				repo.On("SetString", mock.Anything, "qbt_username", "admin").Return(nil)
+				repo.On("SetString", mock.Anything, "qbittorrent.username", "admin").Return(errors.New("db error"))
+			},
+			errMsg: "save qbittorrent.username",
+		},
+		{
+			name: "error - save qbittorrent.password fails",
+			config: SetupConfig{
+				Language:    "zh-TW",
+				QBTUrl:      "http://localhost:8080",
+				QBTPassword: "secret",
+			},
+			setup: func(repo *MockSettingsRepo, sec *MockSecretsService) {
+				repo.On("GetBool", mock.Anything, "setup_completed").Return(false, errors.New("setting with key setup_completed not found"))
+				repo.On("SetString", mock.Anything, "language", "zh-TW").Return(nil)
+				repo.On("SetString", mock.Anything, "qbt_url", "http://localhost:8080").Return(nil)
+				repo.On("SetString", mock.Anything, "qbittorrent.host", "http://localhost:8080").Return(nil)
+				sec.On("Store", mock.Anything, "qbt_password", "secret").Return(nil)
+				sec.On("Store", mock.Anything, "qbittorrent.password", "secret").Return(errors.New("encryption error"))
+			},
+			errMsg: "save qbittorrent.password",
 		},
 		{
 			name: "error - save media_folder_path fails",
@@ -439,7 +492,7 @@ func TestSetupService_CompleteSetup_PartialFailures(t *testing.T) {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), tt.errMsg)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 			mockRepo.AssertExpectations(t)
 			if !tt.useNilSecrets {
@@ -543,7 +596,7 @@ func TestSetupService_ValidateStep_EdgeCases(t *testing.T) {
 					assert.Contains(t, err.Error(), tt.errMsg)
 				}
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}
@@ -671,7 +724,7 @@ func TestSetupService_ValidateStep(t *testing.T) {
 					assert.Contains(t, err.Error(), tt.errMsg)
 				}
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}

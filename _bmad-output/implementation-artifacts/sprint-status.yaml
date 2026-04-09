@@ -338,7 +338,7 @@ development_status:
   9-2b-ai-subtitle-translation: done                    # Claude translation of Whisper SRT to zh-Hant (P3, P1-021, depends on 9-2a)
   9-UX-ai-subtitle-enhancement-design: done             # 6 new screens (AI1-AI6) + updated Screen 4/5 with AI buttons. Committed 456f42d.
   preexisting-fail-library-service-video-codec: done            # library_service_test.go — "no such column: video_codec" migration drift
-  preexisting-fail-setup-service-edge-cases: in-progress    # setup_service_test.go — TMDb key 15 chars validation panic + media-folder path-is-file assertion mismatch
+  preexisting-fail-setup-service-edge-cases: done            # setup_service_test.go — TMDb key 15 chars validation panic + media-folder path-is-file assertion mismatch
   preexisting-fail-download-handler-parse-status: ready-for-dev  # download_handler_test.go — ListDownloads WithParseStatus tests fail (4 tests)
   epic-9-retrospective: optional
 

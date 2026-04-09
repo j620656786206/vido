@@ -1,6 +1,6 @@
 # Story: Fix setup_service_test.go Key Name Mismatches
 
-Status: review
+Status: done
 
 ## Story
 
@@ -111,6 +111,16 @@ Claude Opus 4.6 (1M context) — SM agent (Bob) create-story workflow, YOLO mode
 - Additionally 5 tests pass coincidentally due to optional field semantics hiding the key mismatch
 - Fix is test-only: 3 search-and-replace operations in 1 file
 - Go implementation is correct — matches production snake_case format from frontend camelToSnake conversion
+- TA: Upgraded assert.Error→require.Error to prevent nil dereference on test failure (4x); added t.Cleanup for temp file in edge case
+- CR-1: Added mockSecrets.AssertExpectations, useNilSecrets field, ErrorIs sentinel check for ErrSetupAlreadyCompleted
+- CR-2: Upgraded assert.NoError→require.NoError on success paths (4x); added 3 canonical key failure tests (qbittorrent.host/username/password); added errMsg check to IsFirstRun error test
+
+### Change Log
+
+- 2026-04-09 (DS): Replaced camelCase keys with snake_case in 17 test data map entries across TestSetupService_ValidateStep and TestSetupService_ValidateStep_EdgeCases
+- 2026-04-09 (TA): Upgraded assert.Error to require.Error on failure paths; added t.Cleanup for temp file in edge case test
+- 2026-04-09 (CR-1): Added mockSecrets.AssertExpectations, useNilSecrets field for nil-secrets dispatch, ErrorIs sentinel check
+- 2026-04-09 (CR-2): require.NoError on success paths, 3 canonical key error path tests, IsFirstRun error message verification
 
 ### File List
 
