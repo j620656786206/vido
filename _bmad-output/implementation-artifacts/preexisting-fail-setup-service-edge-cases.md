@@ -1,6 +1,6 @@
 # Story: Fix setup_service_test.go Key Name Mismatches
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -18,23 +18,23 @@ so that all ValidateStep tests pass without panics or assertion mismatches.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Fix key name mismatches in TestSetupService_ValidateStep (AC: #1, #2, #3)
-  - [ ] 1.1 In `apps/api/internal/services/setup_service_test.go`, find all test cases in `TestSetupService_ValidateStep` (line ~538) that use camelCase keys
-  - [ ] 1.2 Replace `"mediaFolderPath"` → `"media_folder_path"` in: "media-folder - valid path" (line ~589), "media-folder - nonexistent path" (line ~604)
-  - [ ] 1.3 Replace `"tmdbApiKey"` → `"tmdb_api_key"` in: "api-keys - valid TMDb key" (line ~613), "api-keys - invalid TMDb key (too short)" (line ~627)
-  - [ ] 1.4 Replace `"qbtUrl"` → `"qbt_url"` in: "qbittorrent - valid URL" (line ~563), "qbittorrent - invalid URL" (line ~578)
+- [x] Task 1: Fix key name mismatches in TestSetupService_ValidateStep (AC: #1, #2, #3)
+  - [x] 1.1 In `apps/api/internal/services/setup_service_test.go`, find all test cases in `TestSetupService_ValidateStep` (line ~538) that use camelCase keys
+  - [x] 1.2 Replace `"mediaFolderPath"` → `"media_folder_path"` in: "media-folder - valid path" (line ~589), "media-folder - nonexistent path" (line ~604)
+  - [x] 1.3 Replace `"tmdbApiKey"` → `"tmdb_api_key"` in: "api-keys - valid TMDb key" (line ~613), "api-keys - invalid TMDb key (too short)" (line ~627)
+  - [x] 1.4 Replace `"qbtUrl"` → `"qbt_url"` in: "qbittorrent - valid URL" (line ~563), "qbittorrent - invalid URL" (line ~578)
 
-- [ ] Task 2: Fix key name mismatches in TestSetupService_ValidateStep_EdgeCases (AC: #1, #2, #4)
-  - [ ] 2.1 In the same file, find all test cases in `TestSetupService_ValidateStep_EdgeCases` (line ~420) that use camelCase keys
-  - [ ] 2.2 Replace `"mediaFolderPath"` → `"media_folder_path"` in: "media-folder - path is a file not directory" (line ~477)
-  - [ ] 2.3 Replace `"tmdbApiKey"` → `"tmdb_api_key"` in: "api-keys - TMDb key exactly 16 chars (valid)" (line ~487), "api-keys - TMDb key 15 chars (invalid)" (line ~495)
-  - [ ] 2.4 Replace `"qbtUrl"` → `"qbt_url"` in: "qbittorrent - URL exactly 7 chars (valid)" (line ~503), "qbittorrent - URL 6 chars (invalid)" (line ~511)
+- [x] Task 2: Fix key name mismatches in TestSetupService_ValidateStep_EdgeCases (AC: #1, #2, #4)
+  - [x] 2.1 In the same file, find all test cases in `TestSetupService_ValidateStep_EdgeCases` (line ~420) that use camelCase keys
+  - [x] 2.2 Replace `"mediaFolderPath"` → `"media_folder_path"` in: "media-folder - path is a file not directory" (line ~477)
+  - [x] 2.3 Replace `"tmdbApiKey"` → `"tmdb_api_key"` in: "api-keys - TMDb key exactly 16 chars (valid)" (line ~487), "api-keys - TMDb key 15 chars (invalid)" (line ~495)
+  - [x] 2.4 Replace `"qbtUrl"` → `"qbt_url"` in: "qbittorrent - URL exactly 7 chars (valid)" (line ~503), "qbittorrent - URL 6 chars (invalid)" (line ~511)
 
-- [ ] Task 3: Verify all tests pass (AC: #3, #4, #5)
-  - [ ] 3.1 Run: `cd apps/api && go test ./internal/services/ -run TestSetupService_ValidateStep -v`
-  - [ ] 3.2 Verify all test cases pass including edge cases (previously: 4 panics + 3 assertion failures)
-  - [ ] 3.3 Run full services suite: `cd apps/api && go test ./internal/services/ -v`
-  - [ ] 3.4 Run full test suite: `cd apps/api && go test ./...`
+- [x] Task 3: Verify all tests pass (AC: #3, #4, #5)
+  - [x] 3.1 Run: `cd apps/api && go test ./internal/services/ -run TestSetupService_ValidateStep -v`
+  - [x] 3.2 Verify all test cases pass including edge cases (previously: 4 panics + 3 assertion failures)
+  - [x] 3.3 Run full services suite: `cd apps/api && go test ./internal/services/ -v`
+  - [x] 3.4 Run full test suite: `cd apps/api && go test ./...`
 
 ## Dev Notes
 

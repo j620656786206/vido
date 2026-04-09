@@ -474,7 +474,7 @@ func TestSetupService_ValidateStep_EdgeCases(t *testing.T) {
 				f, _ := os.CreateTemp("", "testfile")
 				f.Close()
 				return map[string]interface{}{
-					"mediaFolderPath": f.Name(),
+					"media_folder_path": f.Name(),
 				}
 			}(),
 			wantErr: true,
@@ -484,7 +484,7 @@ func TestSetupService_ValidateStep_EdgeCases(t *testing.T) {
 			name: "api-keys - TMDb key exactly 16 chars (valid)",
 			step: "api-keys",
 			data: map[string]interface{}{
-				"tmdbApiKey": "1234567890123456",
+				"tmdb_api_key": "1234567890123456",
 			},
 			wantErr: false,
 		},
@@ -492,7 +492,7 @@ func TestSetupService_ValidateStep_EdgeCases(t *testing.T) {
 			name: "api-keys - TMDb key 15 chars (invalid)",
 			step: "api-keys",
 			data: map[string]interface{}{
-				"tmdbApiKey": "123456789012345",
+				"tmdb_api_key": "123456789012345",
 			},
 			wantErr: true,
 			errMsg:  "invalid TMDb API key format",
@@ -501,7 +501,7 @@ func TestSetupService_ValidateStep_EdgeCases(t *testing.T) {
 			name: "qbittorrent - URL exactly 7 chars (valid)",
 			step: "qbittorrent",
 			data: map[string]interface{}{
-				"qbtUrl": "http://",
+				"qbt_url": "http://",
 			},
 			wantErr: false,
 		},
@@ -509,7 +509,7 @@ func TestSetupService_ValidateStep_EdgeCases(t *testing.T) {
 			name: "qbittorrent - URL 6 chars (invalid)",
 			step: "qbittorrent",
 			data: map[string]interface{}{
-				"qbtUrl": "ftp://",
+				"qbt_url": "ftp://",
 			},
 			wantErr: true,
 			errMsg:  "invalid qBittorrent URL",
@@ -563,7 +563,7 @@ func TestSetupService_ValidateStep(t *testing.T) {
 			name: "qbittorrent - valid URL",
 			step: "qbittorrent",
 			data: map[string]interface{}{
-				"qbtUrl": "http://localhost:8080",
+				"qbt_url": "http://localhost:8080",
 			},
 			wantErr: false,
 		},
@@ -577,7 +577,7 @@ func TestSetupService_ValidateStep(t *testing.T) {
 			name: "qbittorrent - invalid URL",
 			step: "qbittorrent",
 			data: map[string]interface{}{
-				"qbtUrl": "bad",
+				"qbt_url": "bad",
 			},
 			wantErr: true,
 			errMsg:  "invalid qBittorrent URL",
@@ -586,7 +586,7 @@ func TestSetupService_ValidateStep(t *testing.T) {
 			name: "media-folder - valid path",
 			step: "media-folder",
 			data: map[string]interface{}{
-				"mediaFolderPath": os.TempDir(),
+				"media_folder_path": os.TempDir(),
 			},
 			wantErr: false,
 		},
@@ -601,7 +601,7 @@ func TestSetupService_ValidateStep(t *testing.T) {
 			name: "media-folder - nonexistent path",
 			step: "media-folder",
 			data: map[string]interface{}{
-				"mediaFolderPath": "/nonexistent/path/xyz",
+				"media_folder_path": "/nonexistent/path/xyz",
 			},
 			wantErr: true,
 			errMsg:  "does not exist",
@@ -610,7 +610,7 @@ func TestSetupService_ValidateStep(t *testing.T) {
 			name: "api-keys - valid TMDb key",
 			step: "api-keys",
 			data: map[string]interface{}{
-				"tmdbApiKey": "abcdef1234567890abcdef1234567890",
+				"tmdb_api_key": "abcdef1234567890abcdef1234567890",
 			},
 			wantErr: false,
 		},
@@ -624,7 +624,7 @@ func TestSetupService_ValidateStep(t *testing.T) {
 			name: "api-keys - invalid TMDb key (too short)",
 			step: "api-keys",
 			data: map[string]interface{}{
-				"tmdbApiKey": "short",
+				"tmdb_api_key": "short",
 			},
 			wantErr: true,
 			errMsg:  "invalid TMDb API key format",
