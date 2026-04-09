@@ -44,7 +44,6 @@ func setupTestDB(t *testing.T) *sql.DB {
 
 func TestLibraryService_SaveMovieFromTMDb(t *testing.T) {
 	db := setupTestDB(t)
-	defer db.Close()
 
 	movieRepo := repository.NewMovieRepository(db)
 	seriesRepo := repository.NewSeriesRepository(db)
@@ -127,7 +126,6 @@ func TestLibraryService_SaveMovieFromTMDb(t *testing.T) {
 
 func TestLibraryService_SaveSeriesFromTMDb(t *testing.T) {
 	db := setupTestDB(t)
-	defer db.Close()
 
 	movieRepo := repository.NewMovieRepository(db)
 	seriesRepo := repository.NewSeriesRepository(db)
@@ -210,7 +208,6 @@ func TestLibraryService_SaveSeriesFromTMDb(t *testing.T) {
 
 func TestLibraryService_SearchLibrary(t *testing.T) {
 	db := setupTestDB(t)
-	defer db.Close()
 
 	movieRepo := repository.NewMovieRepository(db)
 	seriesRepo := repository.NewSeriesRepository(db)
@@ -361,7 +358,7 @@ func TestLibraryService_SearchLibrary(t *testing.T) {
 		}, "all")
 		require.NoError(t, err)
 		require.NotNil(t, results)
-		assert.Equal(t, 0, len(results.Results))
+		assert.Empty(t, results.Results)
 		assert.Equal(t, 0, results.TotalCount)
 	})
 
@@ -381,7 +378,6 @@ func TestLibraryService_SearchLibrary(t *testing.T) {
 
 func TestLibraryService_GetMovieByID(t *testing.T) {
 	db := setupTestDB(t)
-	defer db.Close()
 
 	movieRepo := repository.NewMovieRepository(db)
 	seriesRepo := repository.NewSeriesRepository(db)
@@ -428,7 +424,6 @@ func TestLibraryService_GetMovieByID(t *testing.T) {
 
 func TestLibraryService_ListLibrary(t *testing.T) {
 	db := setupTestDB(t)
-	defer db.Close()
 
 	movieRepo := repository.NewMovieRepository(db)
 	seriesRepo := repository.NewSeriesRepository(db)
@@ -467,7 +462,7 @@ func TestLibraryService_ListLibrary(t *testing.T) {
 		result, err := service.ListLibrary(ctx, repository.NewListParams(), "all")
 		require.NoError(t, err)
 		require.NotNil(t, result)
-		assert.Equal(t, 6, len(result.Items))
+		assert.Len(t, result.Items, 6)
 		assert.Equal(t, 6, result.Pagination.TotalResults)
 	})
 
@@ -475,7 +470,7 @@ func TestLibraryService_ListLibrary(t *testing.T) {
 		result, err := service.ListLibrary(ctx, repository.NewListParams(), "movie")
 		require.NoError(t, err)
 		require.NotNil(t, result)
-		assert.Equal(t, 3, len(result.Items))
+		assert.Len(t, result.Items, 3)
 		for _, item := range result.Items {
 			assert.Equal(t, "movie", item.Type)
 			assert.NotNil(t, item.Movie)
@@ -487,7 +482,7 @@ func TestLibraryService_ListLibrary(t *testing.T) {
 		result, err := service.ListLibrary(ctx, repository.NewListParams(), "tv")
 		require.NoError(t, err)
 		require.NotNil(t, result)
-		assert.Equal(t, 3, len(result.Items))
+		assert.Len(t, result.Items, 3)
 		for _, item := range result.Items {
 			assert.Equal(t, "series", item.Type)
 			assert.NotNil(t, item.Series)
@@ -501,7 +496,7 @@ func TestLibraryService_ListLibrary(t *testing.T) {
 		params.Page = 1
 		result, err := service.ListLibrary(ctx, params, "movie")
 		require.NoError(t, err)
-		assert.Equal(t, 2, len(result.Items))
+		assert.Len(t, result.Items, 2)
 		assert.Equal(t, 3, result.Pagination.TotalResults)
 		assert.Equal(t, 2, result.Pagination.TotalPages)
 	})
@@ -550,7 +545,6 @@ func TestLibraryService_ListLibrary(t *testing.T) {
 
 func TestLibraryService_DeleteMovie(t *testing.T) {
 	db := setupTestDB(t)
-	defer db.Close()
 
 	movieRepo := repository.NewMovieRepository(db)
 	seriesRepo := repository.NewSeriesRepository(db)
@@ -585,7 +579,6 @@ func TestLibraryService_DeleteMovie(t *testing.T) {
 
 func TestLibraryService_DeleteSeries(t *testing.T) {
 	db := setupTestDB(t)
-	defer db.Close()
 
 	movieRepo := repository.NewMovieRepository(db)
 	seriesRepo := repository.NewSeriesRepository(db)
@@ -620,7 +613,6 @@ func TestLibraryService_DeleteSeries(t *testing.T) {
 
 func TestLibraryService_GetRecentlyAdded(t *testing.T) {
 	db := setupTestDB(t)
-	defer db.Close()
 
 	movieRepo := repository.NewMovieRepository(db)
 	seriesRepo := repository.NewSeriesRepository(db)
@@ -661,7 +653,7 @@ func TestLibraryService_GetRecentlyAdded(t *testing.T) {
 		result, err := service.GetRecentlyAdded(ctx, 20)
 		require.NoError(t, err)
 		require.NotNil(t, result)
-		assert.Equal(t, 5, len(result.Items))
+		assert.Len(t, result.Items, 5)
 
 		// Verify items contain both movies and series
 		movieCount := 0
@@ -683,7 +675,7 @@ func TestLibraryService_GetRecentlyAdded(t *testing.T) {
 		result, err := service.GetRecentlyAdded(ctx, 3)
 		require.NoError(t, err)
 		require.NotNil(t, result)
-		assert.Equal(t, 3, len(result.Items))
+		assert.Len(t, result.Items, 3)
 	})
 
 	t.Run("defaults to 20 when limit is zero", func(t *testing.T) {
@@ -698,13 +690,12 @@ func TestLibraryService_GetRecentlyAdded(t *testing.T) {
 		result, err := service.GetRecentlyAdded(ctx, -1)
 		require.NoError(t, err)
 		require.NotNil(t, result)
-		assert.Equal(t, 5, len(result.Items))
+		assert.Len(t, result.Items, 5)
 	})
 }
 
 func TestLibraryService_FilterByGenre(t *testing.T) {
 	db := setupTestDB(t)
-	defer db.Close()
 
 	movieRepo := repository.NewMovieRepository(db)
 	seriesRepo := repository.NewSeriesRepository(db)
@@ -739,7 +730,7 @@ func TestLibraryService_FilterByGenre(t *testing.T) {
 		params.Filters["genres"] = []string{"Action"}
 		result, err := service.ListLibrary(ctx, params, "movie")
 		require.NoError(t, err)
-		assert.Equal(t, 2, len(result.Items)) // Sci-Fi Action + Action Drama
+		assert.Len(t, result.Items, 2) // Sci-Fi Action + Action Drama
 	})
 
 	t.Run("filter by multiple genres uses AND logic", func(t *testing.T) {
@@ -747,7 +738,7 @@ func TestLibraryService_FilterByGenre(t *testing.T) {
 		params.Filters["genres"] = []string{"Action", "Drama"}
 		result, err := service.ListLibrary(ctx, params, "movie")
 		require.NoError(t, err)
-		assert.Equal(t, 1, len(result.Items)) // Only Action Drama
+		assert.Len(t, result.Items, 1) // Only Action Drama
 		assert.Equal(t, "Action Drama Movie", result.Items[0].Movie.Title)
 	})
 
@@ -756,13 +747,12 @@ func TestLibraryService_FilterByGenre(t *testing.T) {
 		params.Filters["genres"] = []string{"Horror"}
 		result, err := service.ListLibrary(ctx, params, "movie")
 		require.NoError(t, err)
-		assert.Equal(t, 0, len(result.Items))
+		assert.Empty(t, result.Items)
 	})
 }
 
 func TestLibraryService_FilterByYearRange(t *testing.T) {
 	db := setupTestDB(t)
-	defer db.Close()
 
 	movieRepo := repository.NewMovieRepository(db)
 	seriesRepo := repository.NewSeriesRepository(db)
@@ -795,7 +785,7 @@ func TestLibraryService_FilterByYearRange(t *testing.T) {
 		params.Filters["year_min"] = "2010"
 		result, err := service.ListLibrary(ctx, params, "movie")
 		require.NoError(t, err)
-		assert.Equal(t, 3, len(result.Items)) // 2010, 2020, 2023
+		assert.Len(t, result.Items, 3) // 2010, 2020, 2023
 	})
 
 	t.Run("filter by year_max", func(t *testing.T) {
@@ -803,7 +793,7 @@ func TestLibraryService_FilterByYearRange(t *testing.T) {
 		params.Filters["year_max"] = "2010"
 		result, err := service.ListLibrary(ctx, params, "movie")
 		require.NoError(t, err)
-		assert.Equal(t, 2, len(result.Items)) // 1999, 2010
+		assert.Len(t, result.Items, 2) // 1999, 2010
 	})
 
 	t.Run("filter by year range", func(t *testing.T) {
@@ -812,13 +802,12 @@ func TestLibraryService_FilterByYearRange(t *testing.T) {
 		params.Filters["year_max"] = "2020"
 		result, err := service.ListLibrary(ctx, params, "movie")
 		require.NoError(t, err)
-		assert.Equal(t, 2, len(result.Items)) // 2010, 2020
+		assert.Len(t, result.Items, 2) // 2010, 2020
 	})
 }
 
 func TestLibraryService_GetDistinctGenres(t *testing.T) {
 	db := setupTestDB(t)
-	defer db.Close()
 
 	movieRepo := repository.NewMovieRepository(db)
 	seriesRepo := repository.NewSeriesRepository(db)
@@ -857,7 +846,6 @@ func TestLibraryService_GetDistinctGenres(t *testing.T) {
 
 func TestLibraryService_GetLibraryStats(t *testing.T) {
 	db := setupTestDB(t)
-	defer db.Close()
 
 	movieRepo := repository.NewMovieRepository(db)
 	seriesRepo := repository.NewSeriesRepository(db)
@@ -898,7 +886,6 @@ func TestLibraryService_GetLibraryStats(t *testing.T) {
 
 func TestLibraryService_CombinedFilters(t *testing.T) {
 	db := setupTestDB(t)
-	defer db.Close()
 
 	movieRepo := repository.NewMovieRepository(db)
 	seriesRepo := repository.NewSeriesRepository(db)
@@ -934,7 +921,7 @@ func TestLibraryService_CombinedFilters(t *testing.T) {
 		params.Filters["year_min"] = "2020"
 		result, err := service.ListLibrary(ctx, params, "movie")
 		require.NoError(t, err)
-		assert.Equal(t, 1, len(result.Items))
+		assert.Len(t, result.Items, 1)
 		assert.Equal(t, "New Action", result.Items[0].Movie.Title)
 	})
 
@@ -943,13 +930,12 @@ func TestLibraryService_CombinedFilters(t *testing.T) {
 		params.Filters["genres"] = []string{"Action"}
 		result, err := service.ListLibrary(ctx, params, "movie")
 		require.NoError(t, err)
-		assert.Equal(t, 2, len(result.Items))
+		assert.Len(t, result.Items, 2)
 	})
 }
 
 func TestLibraryService_GetSeriesByID(t *testing.T) {
 	db := setupTestDB(t)
-	defer db.Close()
 
 	movieRepo := repository.NewMovieRepository(db)
 	seriesRepo := repository.NewSeriesRepository(db)
