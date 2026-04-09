@@ -25,7 +25,9 @@ func setupTestDB(t *testing.T) *sql.DB {
 	tmpFile.Close()
 
 	t.Cleanup(func() {
-		os.Remove(tmpFile.Name())
+		if err := os.Remove(tmpFile.Name()); err != nil {
+			t.Logf("warning: failed to remove temp db: %v", err)
+		}
 	})
 
 	db, err := sql.Open("sqlite", tmpFile.Name()+"?_pragma=foreign_keys(1)")
@@ -42,14 +44,18 @@ func setupTestDB(t *testing.T) *sql.DB {
 	return db
 }
 
-func TestLibraryService_SaveMovieFromTMDb(t *testing.T) {
+// setupTestService creates a test DB, repos, and LibraryService in one call
+func setupTestService(t *testing.T) (*LibraryService, context.Context) {
 	db := setupTestDB(t)
-
 	movieRepo := repository.NewMovieRepository(db)
 	seriesRepo := repository.NewSeriesRepository(db)
 	episodeRepo := repository.NewEpisodeRepository(db)
-
 	service := NewLibraryService(movieRepo, seriesRepo, episodeRepo)
+	return service, context.Background()
+}
+
+func TestLibraryService_SaveMovieFromTMDb(t *testing.T) {
+	service, ctx := setupTestService(t)
 
 	posterPath := "/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg"
 	backdropPath := "/fCayJrkfRaCRCTh8GqN30f8oyQF.jpg"
@@ -76,8 +82,6 @@ func TestLibraryService_SaveMovieFromTMDb(t *testing.T) {
 			{ID: 53, Name: "Thriller"},
 		},
 	}
-
-	ctx := context.Background()
 
 	t.Run("save new movie", func(t *testing.T) {
 		movie, err := service.SaveMovieFromTMDb(ctx, tmdbMovie, "/movies/fight_club.mkv")
@@ -119,19 +123,13 @@ func TestLibraryService_SaveMovieFromTMDb(t *testing.T) {
 
 	t.Run("nil tmdb movie returns error", func(t *testing.T) {
 		movie, err := service.SaveMovieFromTMDb(ctx, nil, "")
-		assert.Error(t, err)
+		assert.ErrorContains(t, err, "tmdb movie cannot be nil")
 		assert.Nil(t, movie)
 	})
 }
 
 func TestLibraryService_SaveSeriesFromTMDb(t *testing.T) {
-	db := setupTestDB(t)
-
-	movieRepo := repository.NewMovieRepository(db)
-	seriesRepo := repository.NewSeriesRepository(db)
-	episodeRepo := repository.NewEpisodeRepository(db)
-
-	service := NewLibraryService(movieRepo, seriesRepo, episodeRepo)
+	service, ctx := setupTestService(t)
 
 	posterPath := "/ggFHVNu6YYI5L9pCfOacjizRGt.jpg"
 	backdropPath := "/tsRy63Mu5cu8etL1X7ZLyf7UP1M.jpg"
@@ -160,8 +158,6 @@ func TestLibraryService_SaveSeriesFromTMDb(t *testing.T) {
 			{ID: 80, Name: "Crime"},
 		},
 	}
-
-	ctx := context.Background()
 
 	t.Run("save new series", func(t *testing.T) {
 		series, err := service.SaveSeriesFromTMDb(ctx, tmdbSeries, "/series/breaking_bad")
@@ -201,21 +197,13 @@ func TestLibraryService_SaveSeriesFromTMDb(t *testing.T) {
 
 	t.Run("nil tmdb series returns error", func(t *testing.T) {
 		series, err := service.SaveSeriesFromTMDb(ctx, nil, "")
-		assert.Error(t, err)
+		assert.ErrorContains(t, err, "tmdb series cannot be nil")
 		assert.Nil(t, series)
 	})
 }
 
 func TestLibraryService_SearchLibrary(t *testing.T) {
-	db := setupTestDB(t)
-
-	movieRepo := repository.NewMovieRepository(db)
-	seriesRepo := repository.NewSeriesRepository(db)
-	episodeRepo := repository.NewEpisodeRepository(db)
-
-	service := NewLibraryService(movieRepo, seriesRepo, episodeRepo)
-
-	ctx := context.Background()
+	service, ctx := setupTestService(t)
 
 	// Insert test movies
 	posterPath := "/poster.jpg"
@@ -363,6 +351,9 @@ func TestLibraryService_SearchLibrary(t *testing.T) {
 	})
 
 	t.Run("search performance under 500ms", func(t *testing.T) {
+		if testing.Short() {
+			t.Skip("skipping performance test in short mode")
+		}
 		// NFR-SC8: Search should complete within 500ms
 		start := time.Now()
 		_, err := service.SearchLibrary(ctx, "dark", repository.ListParams{
@@ -377,15 +368,7 @@ func TestLibraryService_SearchLibrary(t *testing.T) {
 }
 
 func TestLibraryService_GetMovieByID(t *testing.T) {
-	db := setupTestDB(t)
-
-	movieRepo := repository.NewMovieRepository(db)
-	seriesRepo := repository.NewSeriesRepository(db)
-	episodeRepo := repository.NewEpisodeRepository(db)
-
-	service := NewLibraryService(movieRepo, seriesRepo, episodeRepo)
-
-	ctx := context.Background()
+	service, ctx := setupTestService(t)
 
 	// Save a movie first
 	posterPath := "/poster.jpg"
@@ -417,24 +400,17 @@ func TestLibraryService_GetMovieByID(t *testing.T) {
 
 	t.Run("empty ID returns error", func(t *testing.T) {
 		movie, err := service.GetMovieByID(ctx, "")
-		assert.Error(t, err)
+		assert.ErrorContains(t, err, "movie ID cannot be empty")
 		assert.Nil(t, movie)
 	})
 }
 
 func TestLibraryService_ListLibrary(t *testing.T) {
-	db := setupTestDB(t)
+	service, ctx := setupTestService(t)
 
-	movieRepo := repository.NewMovieRepository(db)
-	seriesRepo := repository.NewSeriesRepository(db)
-	episodeRepo := repository.NewEpisodeRepository(db)
-
-	service := NewLibraryService(movieRepo, seriesRepo, episodeRepo)
-
-	ctx := context.Background()
-
-	// Insert test data
+	// Insert test data with distinct VoteAverage for sort testing
 	posterPath := "/poster.jpg"
+	movieRatings := []float64{7.5, 8.0, 9.2}
 	for i := 1; i <= 3; i++ {
 		_, err := service.SaveMovieFromTMDb(ctx, &tmdb.MovieDetails{
 			Movie: tmdb.Movie{
@@ -442,6 +418,7 @@ func TestLibraryService_ListLibrary(t *testing.T) {
 				Title:       fmt.Sprintf("Movie %d", i),
 				ReleaseDate: "2023-01-01",
 				PosterPath:  &posterPath,
+				VoteAverage: movieRatings[i-1],
 			},
 		}, "")
 		require.NoError(t, err)
@@ -533,26 +510,21 @@ func TestLibraryService_ListLibrary(t *testing.T) {
 		assert.Equal(t, "Movie 1", result.Items[2].Movie.Title)
 	})
 
-	t.Run("sort by vote_average supported", func(t *testing.T) {
+	t.Run("sort by vote_average DESC", func(t *testing.T) {
 		params := repository.NewListParams()
 		params.SortBy = "vote_average"
 		params.SortOrder = "desc"
 		result, err := service.ListLibrary(ctx, params, "movie")
 		require.NoError(t, err)
-		assert.NotNil(t, result)
+		require.GreaterOrEqual(t, len(result.Items), 3)
+		// Verify descending order: Movie 3 (9.2) > Movie 2 (8.0) > Movie 1 (7.5)
+		assert.Equal(t, "Movie 3", result.Items[0].Movie.Title)
+		assert.Equal(t, "Movie 1", result.Items[2].Movie.Title)
 	})
 }
 
 func TestLibraryService_DeleteMovie(t *testing.T) {
-	db := setupTestDB(t)
-
-	movieRepo := repository.NewMovieRepository(db)
-	seriesRepo := repository.NewSeriesRepository(db)
-	episodeRepo := repository.NewEpisodeRepository(db)
-
-	service := NewLibraryService(movieRepo, seriesRepo, episodeRepo)
-
-	ctx := context.Background()
+	service, ctx := setupTestService(t)
 
 	posterPath := "/poster.jpg"
 	movie, err := service.SaveMovieFromTMDb(ctx, &tmdb.MovieDetails{
@@ -571,22 +543,19 @@ func TestLibraryService_DeleteMovie(t *testing.T) {
 		assert.Error(t, err)
 	})
 
+	t.Run("delete non-existent movie returns error", func(t *testing.T) {
+		err := service.DeleteMovie(ctx, "non-existent-id")
+		assert.Error(t, err)
+	})
+
 	t.Run("empty ID returns error", func(t *testing.T) {
 		err := service.DeleteMovie(ctx, "")
-		assert.Error(t, err)
+		assert.ErrorContains(t, err, "movie ID cannot be empty")
 	})
 }
 
 func TestLibraryService_DeleteSeries(t *testing.T) {
-	db := setupTestDB(t)
-
-	movieRepo := repository.NewMovieRepository(db)
-	seriesRepo := repository.NewSeriesRepository(db)
-	episodeRepo := repository.NewEpisodeRepository(db)
-
-	service := NewLibraryService(movieRepo, seriesRepo, episodeRepo)
-
-	ctx := context.Background()
+	service, ctx := setupTestService(t)
 
 	posterPath := "/poster.jpg"
 	series, err := service.SaveSeriesFromTMDb(ctx, &tmdb.TVShowDetails{
@@ -605,22 +574,19 @@ func TestLibraryService_DeleteSeries(t *testing.T) {
 		assert.Error(t, err)
 	})
 
+	t.Run("delete non-existent series returns error", func(t *testing.T) {
+		err := service.DeleteSeries(ctx, "non-existent-id")
+		assert.Error(t, err)
+	})
+
 	t.Run("empty ID returns error", func(t *testing.T) {
 		err := service.DeleteSeries(ctx, "")
-		assert.Error(t, err)
+		assert.ErrorContains(t, err, "series ID cannot be empty")
 	})
 }
 
 func TestLibraryService_GetRecentlyAdded(t *testing.T) {
-	db := setupTestDB(t)
-
-	movieRepo := repository.NewMovieRepository(db)
-	seriesRepo := repository.NewSeriesRepository(db)
-	episodeRepo := repository.NewEpisodeRepository(db)
-
-	service := NewLibraryService(movieRepo, seriesRepo, episodeRepo)
-
-	ctx := context.Background()
+	service, ctx := setupTestService(t)
 
 	// Insert movies with different created_at timestamps
 	posterPath := "/poster.jpg"
@@ -695,15 +661,7 @@ func TestLibraryService_GetRecentlyAdded(t *testing.T) {
 }
 
 func TestLibraryService_FilterByGenre(t *testing.T) {
-	db := setupTestDB(t)
-
-	movieRepo := repository.NewMovieRepository(db)
-	seriesRepo := repository.NewSeriesRepository(db)
-	episodeRepo := repository.NewEpisodeRepository(db)
-
-	service := NewLibraryService(movieRepo, seriesRepo, episodeRepo)
-
-	ctx := context.Background()
+	service, ctx := setupTestService(t)
 	posterPath := "/poster.jpg"
 
 	// Insert movies with different genres
@@ -752,15 +710,7 @@ func TestLibraryService_FilterByGenre(t *testing.T) {
 }
 
 func TestLibraryService_FilterByYearRange(t *testing.T) {
-	db := setupTestDB(t)
-
-	movieRepo := repository.NewMovieRepository(db)
-	seriesRepo := repository.NewSeriesRepository(db)
-	episodeRepo := repository.NewEpisodeRepository(db)
-
-	service := NewLibraryService(movieRepo, seriesRepo, episodeRepo)
-
-	ctx := context.Background()
+	service, ctx := setupTestService(t)
 	posterPath := "/poster.jpg"
 
 	// Insert movies with different years
@@ -807,15 +757,7 @@ func TestLibraryService_FilterByYearRange(t *testing.T) {
 }
 
 func TestLibraryService_GetDistinctGenres(t *testing.T) {
-	db := setupTestDB(t)
-
-	movieRepo := repository.NewMovieRepository(db)
-	seriesRepo := repository.NewSeriesRepository(db)
-	episodeRepo := repository.NewEpisodeRepository(db)
-
-	service := NewLibraryService(movieRepo, seriesRepo, episodeRepo)
-
-	ctx := context.Background()
+	service, ctx := setupTestService(t)
 	posterPath := "/poster.jpg"
 
 	// Insert movies and series with various genres
@@ -845,15 +787,7 @@ func TestLibraryService_GetDistinctGenres(t *testing.T) {
 }
 
 func TestLibraryService_GetLibraryStats(t *testing.T) {
-	db := setupTestDB(t)
-
-	movieRepo := repository.NewMovieRepository(db)
-	seriesRepo := repository.NewSeriesRepository(db)
-	episodeRepo := repository.NewEpisodeRepository(db)
-
-	service := NewLibraryService(movieRepo, seriesRepo, episodeRepo)
-
-	ctx := context.Background()
+	service, ctx := setupTestService(t)
 	posterPath := "/poster.jpg"
 
 	// Insert movies
@@ -885,15 +819,7 @@ func TestLibraryService_GetLibraryStats(t *testing.T) {
 }
 
 func TestLibraryService_CombinedFilters(t *testing.T) {
-	db := setupTestDB(t)
-
-	movieRepo := repository.NewMovieRepository(db)
-	seriesRepo := repository.NewSeriesRepository(db)
-	episodeRepo := repository.NewEpisodeRepository(db)
-
-	service := NewLibraryService(movieRepo, seriesRepo, episodeRepo)
-
-	ctx := context.Background()
+	service, ctx := setupTestService(t)
 	posterPath := "/poster.jpg"
 
 	// Insert diverse test data
@@ -935,15 +861,7 @@ func TestLibraryService_CombinedFilters(t *testing.T) {
 }
 
 func TestLibraryService_GetSeriesByID(t *testing.T) {
-	db := setupTestDB(t)
-
-	movieRepo := repository.NewMovieRepository(db)
-	seriesRepo := repository.NewSeriesRepository(db)
-	episodeRepo := repository.NewEpisodeRepository(db)
-
-	service := NewLibraryService(movieRepo, seriesRepo, episodeRepo)
-
-	ctx := context.Background()
+	service, ctx := setupTestService(t)
 
 	// Save a series first
 	posterPath := "/poster.jpg"
@@ -975,7 +893,7 @@ func TestLibraryService_GetSeriesByID(t *testing.T) {
 
 	t.Run("empty ID returns error", func(t *testing.T) {
 		series, err := service.GetSeriesByID(ctx, "")
-		assert.Error(t, err)
+		assert.ErrorContains(t, err, "series ID cannot be empty")
 		assert.Nil(t, series)
 	})
 }
