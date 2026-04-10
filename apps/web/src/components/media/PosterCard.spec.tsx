@@ -280,9 +280,7 @@ describe('PosterCard', () => {
     });
 
     it('[P1] shows check icon when selected', () => {
-      render(
-        <PosterCard {...defaultProps} selectable={true} selected={true} />
-      );
+      render(<PosterCard {...defaultProps} selectable={true} selected={true} />);
       // Check icon rendered inside selection-checkbox
       const checkbox = screen.getByTestId('selection-checkbox');
       expect(checkbox.querySelector('svg')).toBeInTheDocument();

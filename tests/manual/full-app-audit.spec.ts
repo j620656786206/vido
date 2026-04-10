@@ -750,7 +750,15 @@ test.describe('UI Navigation Audit', () => {
       .isVisible()
       .catch(() => false);
     if (has404) {
-      reportBug('major', 'UI', '/settings', 'Settings page shows 404', 'settings form', '404', _img);
+      reportBug(
+        'major',
+        'UI',
+        '/settings',
+        'Settings page shows 404',
+        'settings form',
+        '404',
+        _img
+      );
     }
   });
 

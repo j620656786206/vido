@@ -140,10 +140,12 @@ Any persistent connection (SSE, WebSocket) in a globally-mounted or root-level c
 **Pattern:** Expose a `startTracking()` / `connect()` trigger; only open `EventSource` when the feature is actually needed.
 
 **Existing implementations:**
+
 - `useScanProgress.ts` — SSE connects via `startTracking()`, called only when a scan is triggered. No connection on mount.
 - `useParseProgress.ts` — SSE connects only when `taskId` is non-null (conditional `useEffect`).
 
 **Rules for new SSE consumers:**
+
 1. NEVER call `new EventSource()` in `useEffect` with `[]` deps (mount-time)
 2. Use a gating condition (user action, non-null ID, active status) before connecting
 3. Always clean up `EventSource.close()` in `useEffect` return
