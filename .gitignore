@@ -91,3 +91,6 @@ test-results/
 playwright-report/
 playwright/.cache/
 blob-report/
+.nx/polygraph
+.claude/worktrees
+.claude/settings.local.json
