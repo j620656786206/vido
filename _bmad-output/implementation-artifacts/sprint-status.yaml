@@ -367,7 +367,7 @@ development_status:
   retro-9-AI6-security-checklist:            done  # 2026-04-10 — SM: added Security Validation section (3 items) to dev-story checklist.md
 
   # --- Technical Debt ---
-  retro-9-AI3-dead-code-detection-ci:        backlog  # MEDIUM — QD: add staticcheck + ESLint no-unused-vars to CI pipeline
+  retro-9-AI3-dead-code-detection-ci:        ready-for-dev  # MEDIUM — DEV /dev-story: add staticcheck + go vet to CI lint job, upgrade ESLint no-unused-vars to error
   retro-9-AI4-local-lint-command:            backlog  # MEDIUM — QD: document `nx run-many -t lint` in project-context.md
   retro-9-AI5-package-dependency-boundaries: backlog  # LOW — QD: document subtitle↔engine↔ai import boundaries in project-context.md
 
