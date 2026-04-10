@@ -738,6 +738,7 @@ func TestDownloadHandler_ListDownloads_WithParseStatus(t *testing.T) {
 
 	// Verify pagination metadata
 	assert.Equal(t, float64(1), dataMap["page"])
+	assert.Equal(t, float64(100), dataMap["page_size"])
 	assert.Equal(t, float64(2), dataMap["total_items"])
 	assert.Equal(t, float64(1), dataMap["total_pages"])
 
@@ -790,6 +791,7 @@ func TestDownloadHandler_ListDownloads_WithParseStatus_NoJob(t *testing.T) {
 	var response APIResponse
 	err := json.Unmarshal(w.Body.Bytes(), &response)
 	require.NoError(t, err)
+	assert.True(t, response.Success)
 
 	dataMap, ok := response.Data.(map[string]interface{})
 	require.True(t, ok, "response.Data should be a PaginatedResponse map")
@@ -799,6 +801,7 @@ func TestDownloadHandler_ListDownloads_WithParseStatus_NoJob(t *testing.T) {
 
 	// Verify pagination metadata
 	assert.Equal(t, float64(1), dataMap["page"])
+	assert.Equal(t, float64(100), dataMap["page_size"])
 	assert.Equal(t, float64(1), dataMap["total_items"])
 	assert.Equal(t, float64(1), dataMap["total_pages"])
 
@@ -846,14 +849,17 @@ func TestDownloadHandler_ListDownloads_WithParseStatus_Failed(t *testing.T) {
 	var response APIResponse
 	err := json.Unmarshal(w.Body.Bytes(), &response)
 	require.NoError(t, err)
+	assert.True(t, response.Success)
 
 	dataMap, ok := response.Data.(map[string]interface{})
 	require.True(t, ok, "response.Data should be a PaginatedResponse map")
 	dataSlice, ok := dataMap["items"].([]interface{})
 	require.True(t, ok, "items should be a slice")
+	require.Len(t, dataSlice, 1)
 
 	// Verify pagination metadata
 	assert.Equal(t, float64(1), dataMap["page"])
+	assert.Equal(t, float64(100), dataMap["page_size"])
 	assert.Equal(t, float64(1), dataMap["total_items"])
 	assert.Equal(t, float64(1), dataMap["total_pages"])
 
@@ -907,6 +913,7 @@ func TestDownloadHandler_ListDownloads_WithoutParseQueueService(t *testing.T) {
 
 	// Verify pagination metadata
 	assert.Equal(t, float64(1), dataMap["page"])
+	assert.Equal(t, float64(100), dataMap["page_size"])
 	assert.Equal(t, float64(1), dataMap["total_items"])
 	assert.Equal(t, float64(1), dataMap["total_pages"])
 

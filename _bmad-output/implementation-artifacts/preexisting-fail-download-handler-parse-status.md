@@ -1,6 +1,6 @@
 # Story: Fix download_handler_test.go PaginatedResponse Mismatch
 
-Status: review
+Status: done
 
 ## Story
 
@@ -137,6 +137,7 @@ Claude Opus 4.6 (1M context) — SM agent (Bob) create-story workflow, YOLO mode
 ### Change Log
 
 - 2026-04-10: Fixed response parsing in 4 WithParseStatus download handler tests — unwrap PaginatedResponse envelope, add pagination metadata assertions (Task 1, 2, 3)
+- 2026-04-10: Code review fixes — added missing `require.Len` in Failed test, added `response.Success` assertions in NoJob+Failed tests, added `page_size` assertions in all 4 tests
 
 ### File List
 
