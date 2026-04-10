@@ -2,9 +2,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { libraryService } from '../services/libraryService';
 import type {
   LibraryListParams,
-  LibraryStats,
-  MediaStats,
-  VideosResponse,
   BatchResult,
 } from '../types/library';
 

@@ -115,31 +115,6 @@ func (p *InfoboxParser) findAllInfoboxPositions(wikitext string) []infoboxPositi
 	return positions
 }
 
-// extractInfobox finds and extracts the Infobox template content
-func (p *InfoboxParser) extractInfobox(wikitext string) (content string, templateType string) {
-	// Try each supported template
-	for _, template := range p.supportedTemplates {
-		// Build regex pattern for this template
-		// Handle case-insensitive matching for the template name
-		pattern := `(?i)\{\{\s*` + regexp.QuoteMeta(template) + `\s*\n`
-		re := regexp.MustCompile(pattern)
-
-		loc := re.FindStringIndex(wikitext)
-		if loc == nil {
-			continue
-		}
-
-		// Found the start of the Infobox, now find the matching closing }}
-		startPos := loc[0]
-		content := p.extractBalancedBraces(wikitext[startPos:])
-		if content != "" {
-			return content, p.normalizeTemplateType(template)
-		}
-	}
-
-	return "", ""
-}
-
 // extractBalancedBraces extracts content with balanced {{ and }}
 func (p *InfoboxParser) extractBalancedBraces(text string) string {
 	if len(text) < 2 || text[0:2] != "{{" {

@@ -191,7 +191,6 @@ func (bp *BatchProcessor) process(ctx context.Context, batchID string, items []B
 	var (
 		successCount int
 		failCount    int
-		failedItems  []FailedItem
 	)
 
 	for i, item := range items {
@@ -245,12 +244,6 @@ func (bp *BatchProcessor) process(ctx context.Context, batchID string, items []B
 			if result.Error != nil {
 				errMsg = result.Error.Error()
 			}
-			failedItems = append(failedItems, FailedItem{
-				MediaID:   item.MediaID,
-				MediaType: item.MediaType,
-				Title:     item.Title,
-				Error:     errMsg,
-			})
 			slog.Warn("Batch item failed",
 				"batch_id", batchID,
 				"index", i+1,

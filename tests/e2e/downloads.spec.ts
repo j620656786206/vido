@@ -11,8 +11,6 @@
 import { test, expect } from '../support/fixtures';
 import { presetDownloads } from '../support/fixtures/factories/download-factory';
 
-const API_BASE_URL = process.env.API_URL || 'http://localhost:8080/api/v1';
-
 // For page.route() interception, use glob pattern that matches any origin
 const ROUTE_API = '**/api/v1';
 

@@ -301,7 +301,7 @@ func extractStreamDetails(fi *nfoXMLFileInfo, data *NFOData) {
 
 	for _, sub := range sd.Subtitle {
 		if sub.Language != "" {
-			data.Subtitles = append(data.Subtitles, NFOSubtitleTrack{Language: sub.Language})
+			data.Subtitles = append(data.Subtitles, NFOSubtitleTrack(sub))
 		}
 	}
 }

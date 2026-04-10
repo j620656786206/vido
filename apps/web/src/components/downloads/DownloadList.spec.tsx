@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { DownloadList } from './DownloadList';
-import type { Download, SortField, SortOrder } from '../../services/downloadService';
+import type { Download } from '../../services/downloadService';
 
 // Mock the useDownloadDetails hook used by DownloadDetails
 vi.mock('../../hooks/useDownloads', () => ({

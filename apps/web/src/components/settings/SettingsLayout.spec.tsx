@@ -437,7 +437,7 @@ describe('SettingsLayout', () => {
       component: () =>
         React.createElement('div', { 'data-testid': 'connection-page' }, 'Connection'),
     });
-    const routeTree = rootRoute.addChildren([
+    const _routeTree = rootRoute.addChildren([
       settingsRoute.addChildren([indexRoute, connectionRoute]),
     ]);
     // Verify the redirect route file uses beforeLoad with redirect

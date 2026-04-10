@@ -280,7 +280,7 @@ describe('PosterCard', () => {
     });
 
     it('[P1] shows check icon when selected', () => {
-      const { container } = render(
+      render(
         <PosterCard {...defaultProps} selectable={true} selected={true} />
       );
       // Check icon rendered inside selection-checkbox

@@ -106,11 +106,6 @@ const mockConnectionHistory = {
   ],
 };
 
-const mockEmptyHistory = {
-  success: true,
-  data: [],
-};
-
 // Common mock to silence dashboard API calls
 async function mockDashboardAPIs(page: import('@playwright/test').Page) {
   await page.route(`${ROUTE_API}/downloads*`, (route) =>

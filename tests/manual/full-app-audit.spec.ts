@@ -10,7 +10,7 @@
  * Or headless: npx playwright test tests/manual/full-app-audit.spec.ts --project=chromium
  */
 
-import { test, expect, type Page } from '@playwright/test';
+import { test, type Page } from '@playwright/test';
 import fs from 'fs';
 import path from 'path';
 
@@ -114,7 +114,7 @@ test.describe('API Endpoint Audit', () => {
   test('Health check', async ({ request }) => {
     const res = await request.get(`${BASE_URL}/health`);
     const data = await res.json();
-    const img = undefined;
+    const _img = undefined;
 
     if (res.status() !== 200) {
       reportBug(
@@ -359,7 +359,7 @@ test.describe('API Endpoint Audit', () => {
 
   test('SSE events endpoint', async ({ request }) => {
     // Just check it's accessible (don't hold connection)
-    const res = await request.get(`${API_URL}/events`, { timeout: 3000 }).catch(() => null);
+    const _res = await request.get(`${API_URL}/events`, { timeout: 3000 }).catch(() => null);
     // SSE may timeout which is fine — it's a streaming endpoint
   });
 
@@ -390,7 +390,7 @@ test.describe('API Endpoint Audit', () => {
 
   test('Non-existent endpoint returns proper error', async ({ request }) => {
     const res = await request.get(`${API_URL}/nonexistent`);
-    const json = await res.json();
+    const _json = await res.json();
 
     if (res.status() !== 404) {
       reportBug(
@@ -411,10 +411,10 @@ test.describe('API Endpoint Audit', () => {
 test.describe('UI Navigation Audit', () => {
   test('Homepage / Library page loads', async ({ page }) => {
     await page.goto(BASE_URL, { waitUntil: 'networkidle', timeout: 30000 });
-    const img = await screenshot(page, '01-homepage');
+    const _img = await screenshot(page, '01-homepage');
 
     // Check page title or header
-    const title = await page.title();
+    const _title = await page.title();
     const headerText = await page
       .locator('text=vido')
       .first()
@@ -429,7 +429,7 @@ test.describe('UI Navigation Audit', () => {
         'App header/logo not visible on homepage',
         'vido logo visible',
         'not found',
-        img
+        _img
       );
     }
 
@@ -444,7 +444,7 @@ test.describe('UI Navigation Audit', () => {
         'Navigation has fewer than 2 links',
         '>=2 navigation items',
         `${navCount}`,
-        img
+        _img
       );
     }
   });
@@ -665,7 +665,7 @@ test.describe('UI Navigation Audit', () => {
       }
     }
 
-    const img = await screenshot(page, '05-search-page');
+    const _img = await screenshot(page, '05-search-page');
   });
 
   test('Search — perform a search', async ({ page }) => {
@@ -741,8 +741,8 @@ test.describe('UI Navigation Audit', () => {
     }
 
     await page.waitForTimeout(1000);
-    const img = await screenshot(page, '07-settings-page');
-    const currentUrl = page.url();
+    const _img = await screenshot(page, '07-settings-page');
+    const _currentUrl = page.url();
 
     // Check settings page loaded
     const has404 = await page
@@ -750,7 +750,7 @@ test.describe('UI Navigation Audit', () => {
       .isVisible()
       .catch(() => false);
     if (has404) {
-      reportBug('major', 'UI', '/settings', 'Settings page shows 404', 'settings form', '404', img);
+      reportBug('major', 'UI', '/settings', 'Settings page shows 404', 'settings form', '404', _img);
     }
   });
 
@@ -945,10 +945,10 @@ test.describe('UI Navigation Audit', () => {
         timeout: 30000,
       }
     );
-    const img = await screenshot(page, '12-library-movies-filter');
+    const _img = await screenshot(page, '12-library-movies-filter');
 
     const cards = page.locator('[data-testid="poster-card"]');
-    const cardCount = await cards.count();
+    const _cardCount = await cards.count();
     // Just screenshot — visual check
   });
 
@@ -960,6 +960,6 @@ test.describe('UI Navigation Audit', () => {
         timeout: 30000,
       }
     );
-    const img = await screenshot(page, '13-library-tv-filter');
+    const _img = await screenshot(page, '13-library-tv-filter');
   });
 });

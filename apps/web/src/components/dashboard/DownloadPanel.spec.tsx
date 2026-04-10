@@ -25,40 +25,6 @@ import { useQBittorrentConfig } from '../../hooks/useQBittorrent';
 const mockUseDownloads = vi.mocked(useDownloads);
 const mockUseQBConfig = vi.mocked(useQBittorrentConfig);
 
-function createWrapper() {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-
-  const rootRoute = createRootRoute({
-    component: () => React.createElement(DownloadPanel),
-  });
-  const downloadsRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/downloads',
-    component: () => React.createElement('div', null, 'Downloads'),
-  });
-  const settingsRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/settings/qbittorrent',
-    component: () => React.createElement('div', null, 'Settings'),
-  });
-
-  const routeTree = rootRoute.addChildren([downloadsRoute, settingsRoute]);
-  const router = createRouter({
-    routeTree,
-    history: createMemoryHistory({ initialEntries: ['/'] }),
-  });
-
-  return function Wrapper({ children }: { children: React.ReactNode }) {
-    return React.createElement(
-      QueryClientProvider,
-      { client: queryClient },
-      React.createElement(RouterProvider, { router } as any)
-    );
-  };
-}
-
 function renderPanel() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },

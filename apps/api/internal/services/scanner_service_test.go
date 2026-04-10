@@ -279,11 +279,6 @@ func TestScannerService_StartScan_SymlinkFollowing(t *testing.T) {
 
 func TestScannerService_IsScanActive(t *testing.T) {
 	dir := t.TempDir()
-	// Create many files so the scan takes a moment
-	var names []string
-	for i := 0; i < 5; i++ {
-		names = append(names, filepath.Join("sub", strings.Repeat("a", 5)+".mkv"))
-	}
 
 	svc, movieRepo, _ := setupScannerService(t, []string{dir})
 	movieRepo.On("FindByFilePath", mock.Anything, mock.AnythingOfType("string")).Return(nil, nil)
@@ -300,11 +295,6 @@ func TestScannerService_IsScanActive(t *testing.T) {
 
 func TestScannerService_ConcurrentScanPrevention(t *testing.T) {
 	dir := t.TempDir()
-	// Create files that will take time to scan
-	var names []string
-	for i := 0; i < 200; i++ {
-		names = append(names, filepath.Join("dir", "movie"+strings.Repeat("x", 3)+".mkv"))
-	}
 
 	svc, movieRepo, _ := setupScannerService(t, []string{dir})
 	movieRepo.On("FindByFilePath", mock.Anything, mock.AnythingOfType("string")).Return(nil, nil)

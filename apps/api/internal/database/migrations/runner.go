@@ -9,9 +9,6 @@ import (
 )
 
 const (
-	// schemaMigrationsTable is the name of the table that tracks applied migrations
-	schemaMigrationsTable = "schema_migrations"
-
 	// createSchemaMigrationsTableSQL is the SQL to create the schema_migrations table
 	createSchemaMigrationsTableSQL = `
 		CREATE TABLE IF NOT EXISTS schema_migrations (

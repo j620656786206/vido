@@ -21,48 +21,6 @@ const API_BASE_URL = 'http://localhost:8080/api/v1';
 // Mock Data for Degradation Scenarios
 // =============================================================================
 
-const mockHealthyResponse = {
-  success: true,
-  data: {
-    degradationLevel: 'normal',
-    services: {
-      tmdb: {
-        name: 'tmdb',
-        displayName: 'TMDb API',
-        status: 'healthy',
-        lastCheck: new Date().toISOString(),
-        lastSuccess: new Date().toISOString(),
-        errorCount: 0,
-      },
-      douban: {
-        name: 'douban',
-        displayName: 'Douban Scraper',
-        status: 'healthy',
-        lastCheck: new Date().toISOString(),
-        lastSuccess: new Date().toISOString(),
-        errorCount: 0,
-      },
-      wikipedia: {
-        name: 'wikipedia',
-        displayName: 'Wikipedia API',
-        status: 'healthy',
-        lastCheck: new Date().toISOString(),
-        lastSuccess: new Date().toISOString(),
-        errorCount: 0,
-      },
-      ai: {
-        name: 'ai',
-        displayName: 'AI Parser',
-        status: 'healthy',
-        lastCheck: new Date().toISOString(),
-        lastSuccess: new Date().toISOString(),
-        errorCount: 0,
-      },
-    },
-    message: '',
-  },
-};
-
 const mockPartialDegradedResponse = {
   success: true,
   data: {
@@ -206,7 +164,7 @@ test.describe('Graceful Degradation - Core Functionality @e2e @p1', () => {
 
   test('[P1] should keep local data accessible during degradation', async ({ page, api }) => {
     // GIVEN: Some movies exist in local database
-    const movies = await api.listMovies();
+    const _movies = await api.listMovies();
 
     // WHEN: External services are degraded
     await page.route('**/api/v1/health/services', (route) => {

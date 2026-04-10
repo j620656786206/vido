@@ -208,27 +208,6 @@ func (p *MovieParser) parseParensFormat(filename string, result *ParseResult) bo
 	return true
 }
 
-// extractTitleWithEmbeddedYear handles movies with years in their title.
-// For example, "2001.A.Space.Odyssey.1968" or "Blade.Runner.2049.2017"
-func (p *MovieParser) extractTitleWithEmbeddedYear(filename string, releaseYear int) string {
-	// Find all year occurrences
-	matches := yearPattern.FindAllStringSubmatchIndex(filename, -1)
-	if len(matches) < 2 {
-		return ""
-	}
-
-	// If there are multiple years, the last one is likely the release year
-	// Everything before that (including embedded years) is the title
-	lastMatch := matches[len(matches)-1]
-	yearStartIdx := lastMatch[2] // Start of the year capture group
-
-	// Extract title portion (everything before the release year)
-	titlePart := filename[:yearStartIdx]
-	titlePart = strings.TrimRight(titlePart, ".-_ ")
-
-	return cleanTitleSeparators(titlePart)
-}
-
 // extractQualityInfo extracts quality, source, codec, and release group from filename
 func (p *MovieParser) extractQualityInfo(filename string, result *ParseResult) {
 	// Extract quality

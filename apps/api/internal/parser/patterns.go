@@ -59,15 +59,6 @@ var (
 			`(?:\.[a-z0-9]{2,4})?$`, // Extension
 	)
 
-	// Anime: [Group] Show Name - 01 [1080p].mkv
-	tvPatternAnime = regexp.MustCompile(
-		`(?i)^\[(?P<group>[^\]]+)\]\s*` + // [Group]
-			`(?P<title>.+?)` + // Title
-			`\s*-\s*` + // Separator
-			`(?P<episode>\d{1,3})` + // Episode
-			`(?:[.\s_\[\]-]+.+)?` + // Optional rest
-			`(?:\.[a-z0-9]{2,4})?$`, // Extension
-	)
 )
 
 // Quality patterns

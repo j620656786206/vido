@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { DownloadFilterTabs } from './DownloadFilterTabs';
-import type { DownloadCounts, FilterStatus } from '../../services/downloadService';
+import type { DownloadCounts } from '../../services/downloadService';
 
 const mockCounts: DownloadCounts = {
   all: 10,

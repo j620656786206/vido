@@ -31,9 +31,6 @@ var (
 	// cornerBracketPattern matches corner brackets:「字幕組」.
 	cornerBracketPattern = regexp.MustCompile(`^\s*「[^」]+」`)
 
-	// anyBracketStartPattern matches any bracket type at the start.
-	anyBracketStartPattern = regexp.MustCompile(`^\s*[\[【「]`)
-
 	// chineseEpisodePattern matches Chinese episode notation: 第XX話, 第XX集, 第XX话.
 	chineseEpisodePattern = regexp.MustCompile(`第\s*\d+\s*[話集话]`)
 

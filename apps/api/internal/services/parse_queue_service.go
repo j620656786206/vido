@@ -218,9 +218,9 @@ func (s *ParseQueueService) createMovieFromMatch(
 	movie := &models.Movie{
 		ID:         mediaID,
 		Title:      bestMatch.Title,
-		TMDbID:     models.NullInt64{sql.NullInt64{Int64: parseProviderID(bestMatch.ID), Valid: bestMatch.ID != ""}},
-		PosterPath: models.NullString{sql.NullString{String: bestMatch.PosterURL, Valid: bestMatch.PosterURL != ""}},
-		Overview:   models.NullString{sql.NullString{String: bestMatch.Overview, Valid: bestMatch.Overview != ""}},
+		TMDbID:     models.NullInt64{NullInt64: sql.NullInt64{Int64: parseProviderID(bestMatch.ID), Valid: bestMatch.ID != ""}},
+		PosterPath: models.NullString{NullString: sql.NullString{String: bestMatch.PosterURL, Valid: bestMatch.PosterURL != ""}},
+		Overview:   models.NullString{NullString: sql.NullString{String: bestMatch.Overview, Valid: bestMatch.Overview != ""}},
 		Genres:     bestMatch.Genres,
 		FilePath:   models.NewNullString(job.FilePath),
 		ParseStatus:    models.ParseStatusSuccess,
@@ -275,7 +275,7 @@ func (s *ParseQueueService) createTVEntryFromMatch(
 		SeasonID:      models.NewNullString(seasonID),
 		SeasonNumber:  seasonNumber,
 		EpisodeNumber: episodeNumber,
-		Title:         models.NullString{sql.NullString{String: bestMatch.Title, Valid: bestMatch.Title != ""}},
+		Title:         models.NullString{NullString: sql.NullString{String: bestMatch.Title, Valid: bestMatch.Title != ""}},
 		FilePath:      models.NewNullString(job.FilePath),
 	}
 
@@ -313,9 +313,9 @@ func (s *ParseQueueService) upsertSeries(
 	series := &models.Series{
 		ID:         seriesID,
 		Title:      bestMatch.Title,
-		TMDbID:     models.NullInt64{sql.NullInt64{Int64: tmdbID, Valid: tmdbID > 0}},
-		PosterPath: models.NullString{sql.NullString{String: bestMatch.PosterURL, Valid: bestMatch.PosterURL != ""}},
-		Overview:   models.NullString{sql.NullString{String: bestMatch.Overview, Valid: bestMatch.Overview != ""}},
+		TMDbID:     models.NullInt64{NullInt64: sql.NullInt64{Int64: tmdbID, Valid: tmdbID > 0}},
+		PosterPath: models.NullString{NullString: sql.NullString{String: bestMatch.PosterURL, Valid: bestMatch.PosterURL != ""}},
+		Overview:   models.NullString{NullString: sql.NullString{String: bestMatch.Overview, Valid: bestMatch.Overview != ""}},
 		Genres:     bestMatch.Genres,
 		ParseStatus:    models.ParseStatusSuccess,
 		MetadataSource: models.NewNullString(string(searchResult.Source)),
@@ -374,12 +374,12 @@ func (s *ParseQueueService) upsertSeason(
 	}
 
 	if seasonSummary != nil {
-		season.TMDbID = models.NullInt64{sql.NullInt64{Int64: int64(seasonSummary.ID), Valid: seasonSummary.ID > 0}}
-		season.Name = models.NullString{sql.NullString{String: seasonSummary.Name, Valid: seasonSummary.Name != ""}}
-		season.Overview = models.NullString{sql.NullString{String: seasonSummary.Overview, Valid: seasonSummary.Overview != ""}}
-		season.PosterPath = models.NullString{sql.NullString{String: seasonSummary.PosterPath, Valid: seasonSummary.PosterPath != ""}}
-		season.AirDate = models.NullString{sql.NullString{String: seasonSummary.AirDate, Valid: seasonSummary.AirDate != ""}}
-		season.EpisodeCount = models.NullInt64{sql.NullInt64{Int64: int64(seasonSummary.EpisodeCount), Valid: seasonSummary.EpisodeCount > 0}}
+		season.TMDbID = models.NullInt64{NullInt64: sql.NullInt64{Int64: int64(seasonSummary.ID), Valid: seasonSummary.ID > 0}}
+		season.Name = models.NullString{NullString: sql.NullString{String: seasonSummary.Name, Valid: seasonSummary.Name != ""}}
+		season.Overview = models.NullString{NullString: sql.NullString{String: seasonSummary.Overview, Valid: seasonSummary.Overview != ""}}
+		season.PosterPath = models.NullString{NullString: sql.NullString{String: seasonSummary.PosterPath, Valid: seasonSummary.PosterPath != ""}}
+		season.AirDate = models.NullString{NullString: sql.NullString{String: seasonSummary.AirDate, Valid: seasonSummary.AirDate != ""}}
+		season.EpisodeCount = models.NullInt64{NullInt64: sql.NullInt64{Int64: int64(seasonSummary.EpisodeCount), Valid: seasonSummary.EpisodeCount > 0}}
 	}
 
 	if err := s.seasonRepo.Create(ctx, season); err != nil {

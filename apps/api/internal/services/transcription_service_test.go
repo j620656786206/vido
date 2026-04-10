@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -41,7 +42,7 @@ func TestTranscriptionService_IsInProgress_Set(t *testing.T) {
 
 func TestTranscriptionService_StartTranscription_Disabled(t *testing.T) {
 	svc := NewTranscriptionService(nil, nil, nil, nil)
-	_, err := svc.StartTranscription(nil, 1, "/test.mkv", "/media")
+	_, err := svc.StartTranscription(context.TODO(), 1, "/test.mkv", "/media")
 	assert.ErrorIs(t, err, ErrTranscriptionDisabled)
 }
 
@@ -59,7 +60,7 @@ func TestTranscriptionService_StartTranscription_AlreadyInProgress(t *testing.T)
 	svc.inProgress[42] = "existing-job"
 	svc.mu.Unlock()
 
-	_, err := svc.StartTranscription(nil, 42, "/test.mkv", "/media")
+	_, err := svc.StartTranscription(context.TODO(), 42, "/test.mkv", "/media")
 	assert.ErrorIs(t, err, ErrTranscriptionInProgress)
 }
 

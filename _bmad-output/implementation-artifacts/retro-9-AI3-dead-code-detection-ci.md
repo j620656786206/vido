@@ -1,6 +1,6 @@
 # Story: Add Dead Code Detection to CI Pipeline
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -18,24 +18,24 @@ so that dead code from DS/CR/TA stages is caught before merge instead of accumul
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add Go static analysis to CI pipeline (AC: #1, #4, #5)
-  - [ ] 1.1 Install `staticcheck` in CI lint job: add `go install honnef.co/go/tools/cmd/staticcheck@latest` step after Go setup
-  - [ ] 1.2 Add `staticcheck ./...` step to lint job, running from `apps/api/` working directory
-  - [ ] 1.3 Add `go vet ./...` step to lint job (if not already present), running from `apps/api/` working directory
-  - [ ] 1.4 Verify existing Go code passes both checks; fix any legitimate findings before merging
+- [x] Task 1: Add Go static analysis to CI pipeline (AC: #1, #4, #5)
+  - [x] 1.1 Install `staticcheck` in CI lint job: add `go install honnef.co/go/tools/cmd/staticcheck@latest` step after Go setup
+  - [x] 1.2 Add `staticcheck ./...` step to lint job, running from `apps/api/` working directory
+  - [x] 1.3 Add `go vet ./...` step to lint job (if not already present), running from `apps/api/` working directory
+  - [x] 1.4 Verify existing Go code passes both checks; fix any legitimate findings before merging
 
-- [ ] Task 2: Upgrade ESLint unused detection severity (AC: #2, #3, #5)
-  - [ ] 2.1 In `eslint.config.mjs`, change `@typescript-eslint/no-unused-vars` from `warn` to `error`
-  - [ ] 2.2 Run `pnpm run lint` locally to verify no new failures from severity upgrade (existing `warn` items are already fixed or need fixing now)
-  - [ ] 2.3 If existing violations found: fix them (they are dead code by definition)
+- [x] Task 2: Upgrade ESLint unused detection severity (AC: #2, #3, #5)
+  - [x] 2.1 In `eslint.config.mjs`, change `@typescript-eslint/no-unused-vars` from `warn` to `error`
+  - [x] 2.2 Run `pnpm run lint` locally to verify no new failures from severity upgrade (existing `warn` items are already fixed or need fixing now)
+  - [x] 2.3 If existing violations found: fix them (they are dead code by definition)
 
-- [ ] Task 3: Add Go setup to CI lint job (AC: #1, #4)
-  - [ ] 3.1 The current CI lint job only has Node.js setup. Add Go setup step (`actions/setup-go@v5` with `go-version: ${{ env.GO_VERSION }}`) so `staticcheck` and `go vet` can run
-  - [ ] 3.2 Add `go mod download` step with `working-directory: apps/api` for dependency caching
+- [x] Task 3: Add Go setup to CI lint job (AC: #1, #4)
+  - [x] 3.1 The current CI lint job only has Node.js setup. Add Go setup step (`actions/setup-go@v5` with `go-version: ${{ env.GO_VERSION }}`) so `staticcheck` and `go vet` can run
+  - [x] 3.2 Add `go mod download` step with `working-directory: apps/api` for dependency caching
 
-- [ ] Task 4: Verify CI pipeline end-to-end (AC: #5)
-  - [ ] 4.1 Run full lint locally: `pnpm run lint` (ESLint) + `cd apps/api && staticcheck ./... && go vet ./...` (Go)
-  - [ ] 4.2 Verify all existing tests still pass: `pnpm nx test api` + `pnpm nx test web`
+- [x] Task 4: Verify CI pipeline end-to-end (AC: #5)
+  - [x] 4.1 Run full lint locally: `pnpm run lint` (ESLint) + `cd apps/api && staticcheck ./... && go vet ./...` (Go)
+  - [x] 4.2 Verify all existing tests still pass: `pnpm nx test api` + `pnpm nx test web`
 
 ## Dev Notes
 
@@ -87,10 +87,48 @@ The lint job needs:
 
 ### Agent Model Used
 
+Claude Opus 4.6 (1M context)
+
 ### Debug Log References
 
 ### Completion Notes List
 
+- Task 3+1: Added Go setup, go vet, and staticcheck to CI lint job in test.yml
+- Task 1.4: Fixed 15 staticcheck findings — 5 dead code (U1000), 2 error capitalization (ST1005), 4 nil context (SA1012), 1 struct conversion (S1016), 3 unused append (SA4010)
+- Task 1.4: Fixed 13 go vet findings — unkeyed struct literals in parse_queue_service.go (NullInt64/NullString)
+- Task 2: Upgraded ESLint no-unused-vars from warn → error, fixed 26 violations (deleted dead code, removed unused imports, prefixed side-effect vars with _)
+- Task 4: All verification passed — go vet clean, staticcheck clean, ESLint 0 errors, pnpm nx test api PASS, pnpm nx test web PASS
+- 🎨 UX Verification: SKIPPED — no UI changes in this story
+
 ### Change Log
 
+- 2026-04-10: Added Go static analysis (go vet + staticcheck) to CI lint job, fixed 28 existing findings across Go and TypeScript codebases, upgraded ESLint no-unused-vars to error severity (Task 1, 2, 3, 4)
+
 ### File List
+
+- `.github/workflows/test.yml` — Added Go setup, go mod download, go vet, staticcheck steps to lint job
+- `eslint.config.mjs` — Changed @typescript-eslint/no-unused-vars from warn to error
+- `apps/api/internal/services/parse_queue_service.go` — Fixed unkeyed struct literals (go vet)
+- `apps/api/internal/ai/fansub_detector.go` — Removed unused var anyBracketStartPattern
+- `apps/api/internal/database/migrations/runner.go` — Removed unused const schemaMigrationsTable
+- `apps/api/internal/health/checker.go` — Lowercased error strings
+- `apps/api/internal/parser/movie_parser.go` — Removed unused func extractTitleWithEmbeddedYear
+- `apps/api/internal/parser/patterns.go` — Removed unused var tvPatternAnime
+- `apps/api/internal/services/audio_extractor_service_test.go` — Replaced nil context with context.TODO()
+- `apps/api/internal/services/nfo_reader_service.go` — Used struct conversion instead of literal
+- `apps/api/internal/services/scanner_service_test.go` — Removed unused append results
+- `apps/api/internal/services/transcription_service_test.go` — Replaced nil context with context.TODO()
+- `apps/api/internal/subtitle/batch.go` — Removed unused failedItems append
+- `apps/api/internal/wikipedia/infobox.go` — Removed unused func extractInfobox
+- `apps/web/src/components/dashboard/DownloadPanel.spec.tsx` — Removed unused createWrapper function
+- `apps/web/src/components/downloads/DownloadFilterTabs.spec.tsx` — Removed unused FilterStatus import
+- `apps/web/src/components/downloads/DownloadList.spec.tsx` — Removed unused SortField, SortOrder imports
+- `apps/web/src/components/library/LibraryTable.spec.tsx` — Removed unused container destructure
+- `apps/web/src/components/media/PosterCard.spec.tsx` — Removed unused container destructure
+- `apps/web/src/components/settings/SettingsLayout.spec.tsx` — Prefixed unused routeTree with _
+- `apps/web/src/hooks/useLibrary.ts` — Removed unused type imports
+- `tests/e2e/connection-health.spec.ts` — Removed unused mockEmptyHistory
+- `tests/e2e/downloads.spec.ts` — Removed unused API_BASE_URL
+- `tests/e2e/graceful-degradation.spec.ts` — Removed unused mockHealthyResponse, prefixed movies with _
+- `tests/manual/full-app-audit.spec.ts` — Removed unused expect import, prefixed side-effect vars with _
+- `tests/support/global-setup.ts` — Prefixed unused config param with _

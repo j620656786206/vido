@@ -270,7 +270,7 @@ describe('LibraryTable', () => {
         },
       },
     ];
-    const { container } = render(<LibraryTable items={noGenreItems} />);
+    render(<LibraryTable items={noGenreItems} />);
     const row = screen.getByTestId('library-table-row');
     const genreCell = row.querySelectorAll('td')[3]; // genre is 4th column
     const genreSpans = genreCell?.querySelectorAll('span') ?? [];

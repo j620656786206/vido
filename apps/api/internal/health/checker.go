@@ -45,7 +45,7 @@ func (c *ServiceHealthChecker) CheckTMDb(ctx context.Context) error {
 // CheckDouban checks the health of Douban scraper
 func (c *ServiceHealthChecker) CheckDouban(ctx context.Context) error {
 	if c.douban == nil {
-		return errors.New("Douban scraper not configured")
+		return errors.New("douban scraper not configured")
 	}
 	return c.douban.Ping(ctx)
 }
@@ -53,7 +53,7 @@ func (c *ServiceHealthChecker) CheckDouban(ctx context.Context) error {
 // CheckWikipedia checks the health of Wikipedia API
 func (c *ServiceHealthChecker) CheckWikipedia(ctx context.Context) error {
 	if c.wikipedia == nil {
-		return errors.New("Wikipedia client not configured")
+		return errors.New("wikipedia client not configured")
 	}
 	return c.wikipedia.Ping(ctx)
 }
