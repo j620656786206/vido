@@ -133,6 +133,23 @@ See `_bmad-output/planning-artifacts/architecture/consolidation-refactoring-plan
 - `Run()` goroutine fans out each broadcast to all registered clients via `select...default` — drops per-client if that client's channel is full
 - `Close()` uses `atomic.Bool` for once-only shutdown, signals via `done` channel, closes all client channels
 
+**Frontend Lazy SSE Connection Pattern** (CRITICAL — Epic 7 retro lesson):
+
+Any persistent connection (SSE, WebSocket) in a globally-mounted or root-level component **MUST** be lazy-initialized — never connect on mount. Eager SSE connections break Playwright E2E tests because `networkidle` waits for 0 open connections, which is impossible with a persistent SSE stream.
+
+**Pattern:** Expose a `startTracking()` / `connect()` trigger; only open `EventSource` when the feature is actually needed.
+
+**Existing implementations:**
+- `useScanProgress.ts` — SSE connects via `startTracking()`, called only when a scan is triggered. No connection on mount.
+- `useParseProgress.ts` — SSE connects only when `taskId` is non-null (conditional `useEffect`).
+
+**Rules for new SSE consumers:**
+1. NEVER call `new EventSource()` in `useEffect` with `[]` deps (mount-time)
+2. Use a gating condition (user action, non-null ID, active status) before connecting
+3. Always clean up `EventSource.close()` in `useEffect` return
+4. Reconnect with backoff on error — do NOT fall back to polling (SSE reconnect is sufficient)
+5. Guard all dispatches with `mountedRef.current` to prevent updates after unmount
+
 ### 9a. Media Library Management (ADR 2026-03-29)
 
 **Decision:** Multi-library system with per-folder content type assignment (Route 2 — Progressive Enhancement).
