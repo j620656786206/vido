@@ -353,9 +353,9 @@ development_status:
   # ==============================================================================
 
   # --- Process Improvements ---
-  retro-9-AI1-full-regression-gate:          backlog  # HIGH — SM: add mandatory `go test ./...` + `nx run web:test` to dev-story completion step
+  retro-9-AI1-full-regression-gate:          done  # 2026-04-10 — SM: added FULL REGRESSION GATE to dev-story instructions.xml Step 7
   retro-9-AI2-ux-story-status-convention:    backlog  # LOW — SM: define UX story status in sprint-status.yaml STATUS DEFINITIONS
-  retro-9-AI6-security-checklist:            backlog  # MEDIUM — SM: add bounded I/O, context lifecycle, error wrapping to dev-story checklist
+  retro-9-AI6-security-checklist:            done  # 2026-04-10 — SM: added Security Validation section (3 items) to dev-story checklist.md
 
   # --- Technical Debt ---
   retro-9-AI3-dead-code-detection-ci:        backlog  # MEDIUM — QD: add staticcheck + ESLint no-unused-vars to CI pipeline

@@ -263,9 +263,14 @@
 
   <step n="7" goal="Run validations and tests">
     <action>Determine how to run tests for this repo (infer test framework from project structure)</action>
-    <action>Run all existing tests to ensure no regressions</action>
     <action>Run the new tests to verify implementation correctness</action>
     <action>Run linting and code quality checks if configured in project</action>
+    <action critical="MANDATORY">FULL REGRESSION GATE (Epic 9 Retro AI-1):
+      Run the COMPLETE test suite across the entire repository — not just the package you changed.
+      For this project: `pnpm nx test api` (Go backend) AND `pnpm nx test web` (React frontend).
+      ALL tests must pass. Do NOT skip this step or limit to a single package.
+      This prevents the Epic 9 pattern where pre-existing failures in other packages went
+      undetected until the next epic because only the changed package was tested.</action>
     <action>Validate implementation meets ALL story acceptance criteria; enforce quantitative thresholds explicitly</action>
     <action if="regression tests fail">STOP and fix before continuing - identify breaking changes immediately</action>
     <action if="new tests fail">STOP and fix before continuing - ensure implementation correctness</action>

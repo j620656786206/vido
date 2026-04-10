@@ -48,6 +48,12 @@ validation-rules:
 - [ ] **Code Quality:** Linting and static checks pass when configured in project
 - [ ] **Test Framework Compliance:** Tests use project's testing frameworks and patterns from Dev Notes
 
+## 🔒 Security Validation (Epic 9 Retro AI-6)
+
+- [ ] **Bounded I/O:** All file reads, HTTP response bodies, and buffer allocations have explicit size limits. No unbounded `io.ReadAll` or unlimited `[]byte` growth.
+- [ ] **Context Lifecycle:** All goroutines, HTTP requests, and database queries accept and honor `context.Context`. No fire-and-forget goroutines without cancellation support.
+- [ ] **Error Wrapping:** Errors are wrapped with `fmt.Errorf("%w", err)` or sentinel errors. No raw `err.Error()` string comparisons. Internal details are not leaked to API responses.
+
 ## 📝 Documentation & Tracking
 
 - [ ] **File List Complete:** File List includes EVERY new, modified, or deleted file (paths relative to repo root)
