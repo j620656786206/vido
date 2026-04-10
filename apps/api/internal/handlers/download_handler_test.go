@@ -729,9 +729,16 @@ func TestDownloadHandler_ListDownloads_WithParseStatus(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, response.Success)
 
-	dataSlice, ok := response.Data.([]interface{})
-	require.True(t, ok)
+	dataMap, ok := response.Data.(map[string]interface{})
+	require.True(t, ok, "response.Data should be a PaginatedResponse map")
+	dataSlice, ok := dataMap["items"].([]interface{})
+	require.True(t, ok, "items should be a slice")
 	require.Len(t, dataSlice, 2)
+
+	// Verify pagination metadata
+	assert.Equal(t, float64(1), dataMap["page"])
+	assert.Equal(t, float64(2), dataMap["total_items"])
+	assert.Equal(t, float64(1), dataMap["total_pages"])
 
 	// First item (completed) should have parseStatus
 	item0, ok := dataSlice[0].(map[string]interface{})
@@ -783,9 +790,16 @@ func TestDownloadHandler_ListDownloads_WithParseStatus_NoJob(t *testing.T) {
 	err := json.Unmarshal(w.Body.Bytes(), &response)
 	require.NoError(t, err)
 
-	dataSlice, ok := response.Data.([]interface{})
-	require.True(t, ok)
+	dataMap, ok := response.Data.(map[string]interface{})
+	require.True(t, ok, "response.Data should be a PaginatedResponse map")
+	dataSlice, ok := dataMap["items"].([]interface{})
+	require.True(t, ok, "items should be a slice")
 	require.Len(t, dataSlice, 1)
+
+	// Verify pagination metadata
+	assert.Equal(t, float64(1), dataMap["page"])
+	assert.Equal(t, float64(1), dataMap["total_items"])
+	assert.Equal(t, float64(1), dataMap["total_pages"])
 
 	item, ok := dataSlice[0].(map[string]interface{})
 	require.True(t, ok)
@@ -832,8 +846,16 @@ func TestDownloadHandler_ListDownloads_WithParseStatus_Failed(t *testing.T) {
 	err := json.Unmarshal(w.Body.Bytes(), &response)
 	require.NoError(t, err)
 
-	dataSlice, ok := response.Data.([]interface{})
-	require.True(t, ok)
+	dataMap, ok := response.Data.(map[string]interface{})
+	require.True(t, ok, "response.Data should be a PaginatedResponse map")
+	dataSlice, ok := dataMap["items"].([]interface{})
+	require.True(t, ok, "items should be a slice")
+
+	// Verify pagination metadata
+	assert.Equal(t, float64(1), dataMap["page"])
+	assert.Equal(t, float64(1), dataMap["total_items"])
+	assert.Equal(t, float64(1), dataMap["total_pages"])
+
 	item, ok := dataSlice[0].(map[string]interface{})
 	require.True(t, ok)
 
@@ -875,10 +897,17 @@ func TestDownloadHandler_ListDownloads_WithoutParseQueueService(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, response.Success)
 
-	// Should still work, returning plain torrent data
-	dataSlice, ok := response.Data.([]interface{})
-	require.True(t, ok)
+	// Should still work, returning plain torrent data in paginated format
+	dataMap, ok := response.Data.(map[string]interface{})
+	require.True(t, ok, "response.Data should be a PaginatedResponse map")
+	dataSlice, ok := dataMap["items"].([]interface{})
+	require.True(t, ok, "items should be a slice")
 	require.Len(t, dataSlice, 1)
+
+	// Verify pagination metadata
+	assert.Equal(t, float64(1), dataMap["page"])
+	assert.Equal(t, float64(1), dataMap["total_items"])
+	assert.Equal(t, float64(1), dataMap["total_pages"])
 
 	mockDLService.AssertExpectations(t)
 }

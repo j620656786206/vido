@@ -1,6 +1,6 @@
 # Story: Fix download_handler_test.go PaginatedResponse Mismatch
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -18,20 +18,20 @@ so that parse_status enrichment logic is properly tested after the pagination AP
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Fix response parsing in all 4 WithParseStatus tests (AC: #1, #2, #3)
-  - [ ] 1.1 In `apps/api/internal/handlers/download_handler_test.go`, update `TestDownloadHandler_ListDownloads_WithParseStatus` (line ~688): replace `response.Data.([]interface{})` with `response.Data.(map[string]interface{})["items"].([]interface{})`
-  - [ ] 1.2 Update `TestDownloadHandler_ListDownloads_WithParseStatus_NoJob` (line ~757): same response parsing fix
-  - [ ] 1.3 Update `TestDownloadHandler_ListDownloads_WithParseStatus_Failed` (line ~799): same response parsing fix
-  - [ ] 1.4 Update `TestDownloadHandler_ListDownloads_WithoutParseQueueService` (line ~849): same response parsing fix
+- [x] Task 1: Fix response parsing in all 4 WithParseStatus tests (AC: #1, #2, #3)
+  - [x] 1.1 In `apps/api/internal/handlers/download_handler_test.go`, update `TestDownloadHandler_ListDownloads_WithParseStatus` (line ~688): replace `response.Data.([]interface{})` with `response.Data.(map[string]interface{})["items"].([]interface{})`
+  - [x] 1.2 Update `TestDownloadHandler_ListDownloads_WithParseStatus_NoJob` (line ~757): same response parsing fix
+  - [x] 1.3 Update `TestDownloadHandler_ListDownloads_WithParseStatus_Failed` (line ~799): same response parsing fix
+  - [x] 1.4 Update `TestDownloadHandler_ListDownloads_WithoutParseQueueService` (line ~849): same response parsing fix
 
-- [ ] Task 2: Add pagination metadata assertions (AC: #4)
-  - [ ] 2.1 In each of the 4 tests, after extracting the `map[string]interface{}`, assert `page` == 1, `total_items` matches expected count, `total_pages` == 1
+- [x] Task 2: Add pagination metadata assertions (AC: #4)
+  - [x] 2.1 In each of the 4 tests, after extracting the `map[string]interface{}`, assert `page` == 1, `total_items` matches expected count, `total_pages` == 1
 
-- [ ] Task 3: Verify all tests pass (AC: #3, #5)
-  - [ ] 3.1 Run: `cd apps/api && go test ./internal/handlers/ -run TestDownloadHandler_ListDownloads -v`
-  - [ ] 3.2 Verify all 4 WithParseStatus tests pass
-  - [ ] 3.3 Run full handler test suite: `cd apps/api && go test ./internal/handlers/ -v`
-  - [ ] 3.4 Run full test suite: `cd apps/api && go test ./...`
+- [x] Task 3: Verify all tests pass (AC: #3, #5)
+  - [x] 3.1 Run: `cd apps/api && go test ./internal/handlers/ -run TestDownloadHandler_ListDownloads -v`
+  - [x] 3.2 Verify all 4 WithParseStatus tests pass
+  - [x] 3.3 Run full handler test suite: `cd apps/api && go test ./internal/handlers/ -v`
+  - [x] 3.4 Run full test suite: `cd apps/api && go test ./...`
 
 ## Dev Notes
 
@@ -129,8 +129,15 @@ Claude Opus 4.6 (1M context) — SM agent (Bob) create-story workflow, YOLO mode
 - All 4 tests fail at the same line pattern: `response.Data.([]interface{})` type assertion
 - Fix is mechanical: unwrap PaginatedResponse map then access `["items"]`
 - Other ListDownloads tests in the same file already use the correct pattern — copy it
-- 1 file, 4 identical fixes + optional pagination metadata assertions
+- 1 file, 4 identical fixes + pagination metadata assertions
+- Pre-existing fix: Updated 4 WithParseStatus tests to unwrap PaginatedResponse envelope (`dataMap["items"]`) and added `page`, `total_items`, `total_pages` assertions
+- 🎨 UX Verification: SKIPPED — no UI changes in this story
+- All 4 targeted tests PASS; full handler suite PASS; full `go test ./...` PASS with zero regressions
+
+### Change Log
+
+- 2026-04-10: Fixed response parsing in 4 WithParseStatus download handler tests — unwrap PaginatedResponse envelope, add pagination metadata assertions (Task 1, 2, 3)
 
 ### File List
 
-- `apps/api/internal/handlers/download_handler_test.go` — Fix response.Data parsing in 4 WithParseStatus tests
+- `apps/api/internal/handlers/download_handler_test.go` — Fix response.Data parsing in 4 WithParseStatus tests + pagination metadata assertions
