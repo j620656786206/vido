@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -910,4 +911,194 @@ func TestDownloadHandler_ListDownloads_WithoutParseQueueService(t *testing.T) {
 	assert.Equal(t, float64(1), dataMap["total_pages"])
 
 	mockDLService.AssertExpectations(t)
+}
+
+// --- Pagination Boundary Tests ---
+
+func TestDownloadHandler_ListDownloads_PaginationBoundary_PageSizeClamping(t *testing.T) {
+	mockService := new(MockDownloadService)
+	addedOn := time.Date(2026, 1, 15, 10, 0, 0, 0, time.UTC)
+
+	torrents := []qbittorrent.Torrent{
+		{Hash: "t1", Name: "Movie1.mkv", Status: qbittorrent.StatusCompleted, AddedOn: addedOn},
+	}
+	mockService.On("GetAllDownloads", mock.Anything, "all", "added_on", "desc").Return(torrents, nil)
+
+	handler := NewDownloadHandler(mockService)
+	router := setupDownloadRouter(handler)
+
+	tests := []struct {
+		name             string
+		query            string
+		expectedPage     float64
+		expectedPageSize float64
+	}{
+		{"pageSize below 1 clamps to 100", "?pageSize=0", 1, 100},
+		{"pageSize above 500 clamps to 500", "?pageSize=999", 1, 500},
+		{"page below 1 clamps to 1", "?page=0", 1, 100},
+		{"negative page clamps to 1", "?page=-5", 1, 100},
+		{"negative pageSize clamps to 100", "?pageSize=-10", 1, 100},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequest("GET", "/api/v1/downloads"+tc.query, nil)
+			router.ServeHTTP(w, req)
+
+			assert.Equal(t, http.StatusOK, w.Code)
+
+			var response APIResponse
+			err := json.Unmarshal(w.Body.Bytes(), &response)
+			require.NoError(t, err)
+
+			dataMap, ok := response.Data.(map[string]interface{})
+			require.True(t, ok, "response.Data should be a PaginatedResponse map")
+
+			assert.Equal(t, tc.expectedPage, dataMap["page"])
+			assert.Equal(t, tc.expectedPageSize, dataMap["page_size"])
+		})
+	}
+	mockService.AssertExpectations(t)
+}
+
+func TestDownloadHandler_ListDownloads_PaginationBoundary_PageBeyondTotal(t *testing.T) {
+	mockService := new(MockDownloadService)
+	addedOn := time.Date(2026, 1, 15, 10, 0, 0, 0, time.UTC)
+
+	torrents := []qbittorrent.Torrent{
+		{Hash: "t1", Name: "Movie1.mkv", Status: qbittorrent.StatusCompleted, AddedOn: addedOn},
+	}
+	mockService.On("GetAllDownloads", mock.Anything, "all", "added_on", "desc").Return(torrents, nil)
+
+	handler := NewDownloadHandler(mockService)
+	router := setupDownloadRouter(handler)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/api/v1/downloads?page=999", nil)
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var response APIResponse
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+
+	dataMap, ok := response.Data.(map[string]interface{})
+	require.True(t, ok)
+	items, ok := dataMap["items"].([]interface{})
+	require.True(t, ok)
+
+	// Page beyond total returns empty items but valid metadata
+	assert.Empty(t, items)
+	assert.Equal(t, float64(999), dataMap["page"])
+	assert.Equal(t, float64(1), dataMap["total_items"])
+	assert.Equal(t, float64(1), dataMap["total_pages"])
+
+	mockService.AssertExpectations(t)
+}
+
+// --- Parse Status: Seeding Status Enrichment ---
+
+func TestDownloadHandler_ListDownloads_WithParseStatus_SeedingAlsoEnriched(t *testing.T) {
+	mockDLService := new(MockDownloadService)
+	mockPQService := new(MockParseQueueService)
+
+	addedOn := time.Date(2026, 1, 15, 10, 0, 0, 0, time.UTC)
+	torrents := []qbittorrent.Torrent{
+		{
+			Hash:    "seeding-hash",
+			Name:    "Movie.mkv",
+			Status:  qbittorrent.StatusSeeding,
+			AddedOn: addedOn,
+		},
+	}
+	mockDLService.On("GetAllDownloads", mock.Anything, "all", "added_on", "desc").Return(torrents, nil)
+
+	mediaID := "media-456"
+	mockPQService.On("GetJobStatus", mock.Anything, "seeding-hash").Return(&models.ParseJob{
+		ID:          "job-3",
+		TorrentHash: "seeding-hash",
+		Status:      models.ParseJobCompleted,
+		MediaID:     &mediaID,
+	}, nil)
+
+	handler := NewDownloadHandler(mockDLService, mockPQService)
+	router := setupDownloadRouterWithParseQueue(handler)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/api/v1/downloads", nil)
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var response APIResponse
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+
+	dataMap, ok := response.Data.(map[string]interface{})
+	require.True(t, ok, "response.Data should be a PaginatedResponse map")
+	dataSlice, ok := dataMap["items"].([]interface{})
+	require.True(t, ok, "items should be a slice")
+	require.Len(t, dataSlice, 1)
+
+	// Seeding torrent should also get parseStatus enrichment
+	item, ok := dataSlice[0].(map[string]interface{})
+	require.True(t, ok)
+	assert.Equal(t, "seeding-hash", item["hash"])
+	parseStatus, ok := item["parse_status"].(map[string]interface{})
+	require.True(t, ok, "seeding torrent should have parse_status")
+	assert.Equal(t, "completed", parseStatus["status"])
+	assert.Equal(t, "media-456", parseStatus["media_id"])
+
+	mockDLService.AssertExpectations(t)
+	mockPQService.AssertExpectations(t)
+}
+
+// --- Parse Status: GetJobStatus Error Path ---
+
+func TestDownloadHandler_ListDownloads_WithParseStatus_GetJobStatusError(t *testing.T) {
+	mockDLService := new(MockDownloadService)
+	mockPQService := new(MockParseQueueService)
+
+	addedOn := time.Date(2026, 1, 15, 10, 0, 0, 0, time.UTC)
+	torrents := []qbittorrent.Torrent{
+		{
+			Hash:    "error-hash",
+			Name:    "Movie.mkv",
+			Status:  qbittorrent.StatusCompleted,
+			AddedOn: addedOn,
+		},
+	}
+	mockDLService.On("GetAllDownloads", mock.Anything, "all", "added_on", "desc").Return(torrents, nil)
+
+	// GetJobStatus returns an error — handler should gracefully skip enrichment
+	mockPQService.On("GetJobStatus", mock.Anything, "error-hash").Return(nil, errors.New("database connection failed"))
+
+	handler := NewDownloadHandler(mockDLService, mockPQService)
+	router := setupDownloadRouterWithParseQueue(handler)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/api/v1/downloads", nil)
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var response APIResponse
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+
+	dataMap, ok := response.Data.(map[string]interface{})
+	require.True(t, ok, "response.Data should be a PaginatedResponse map")
+	dataSlice, ok := dataMap["items"].([]interface{})
+	require.True(t, ok, "items should be a slice")
+	require.Len(t, dataSlice, 1)
+
+	// GetJobStatus error → parse_status should be nil (graceful degradation)
+	item, ok := dataSlice[0].(map[string]interface{})
+	require.True(t, ok)
+	assert.Nil(t, item["parse_status"], "parse_status should be nil when GetJobStatus errors")
+
+	mockDLService.AssertExpectations(t)
+	mockPQService.AssertExpectations(t)
 }
