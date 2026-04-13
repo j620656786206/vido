@@ -307,7 +307,7 @@ func (s *TranscriptionService) transcribeAudio(ctx context.Context, audioPath st
 // Returns the path to the translated SRT file.
 func (s *TranscriptionService) translateSRT(ctx context.Context, jobID string, mediaID int64, srtContent string, filePath string, mediaDir string) (string, error) {
 	// Parse SRT into translation blocks (inline to avoid circular import with subtitle pkg)
-	blocks, err := parseSRTToTranslationBlocks(srtContent)
+	blocks, err := ParseSRTToTranslationBlocks(srtContent)
 	if err != nil {
 		return "", fmt.Errorf("parse SRT for translation: %w", err)
 	}
@@ -363,9 +363,9 @@ func (s *TranscriptionService) translateSRT(ctx context.Context, jobID string, m
 // Mirrors subtitle.ParseSRT's validation to reject malformed timestamps.
 var srtTimestampPattern = regexp.MustCompile(`^(\d{2}:\d{2}:\d{2},\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2},\d{3})`)
 
-// parseSRTToTranslationBlocks parses SRT content into TranslationBlocks.
+// ParseSRTToTranslationBlocks parses SRT content into TranslationBlocks.
 // Inline SRT parser. services ↛ subtitle — see project-context.md Rule 19. Mirrors subtitle.ParseSRT validation.
-func parseSRTToTranslationBlocks(content string) ([]TranslationBlock, error) {
+func ParseSRTToTranslationBlocks(content string) ([]TranslationBlock, error) {
 	if content == "" {
 		return nil, nil
 	}

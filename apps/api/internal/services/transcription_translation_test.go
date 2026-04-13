@@ -12,12 +12,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// ─── parseSRTToTranslationBlocks Tests (P0) ─────────────────────────────────
+// ─── ParseSRTToTranslationBlocks Tests (P0) ─────────────────────────────────
 
 func TestParseSRTToTranslationBlocks_Basic(t *testing.T) {
 	input := "1\n00:00:01,000 --> 00:00:04,000\nHello world\n\n2\n00:00:05,000 --> 00:00:08,000\nGoodbye\n"
 
-	blocks, err := parseSRTToTranslationBlocks(input)
+	blocks, err := ParseSRTToTranslationBlocks(input)
 	require.NoError(t, err)
 	require.Len(t, blocks, 2)
 
@@ -33,7 +33,7 @@ func TestParseSRTToTranslationBlocks_Basic(t *testing.T) {
 }
 
 func TestParseSRTToTranslationBlocks_Empty(t *testing.T) {
-	blocks, err := parseSRTToTranslationBlocks("")
+	blocks, err := ParseSRTToTranslationBlocks("")
 	require.NoError(t, err)
 	assert.Nil(t, blocks)
 }
@@ -41,7 +41,7 @@ func TestParseSRTToTranslationBlocks_Empty(t *testing.T) {
 func TestParseSRTToTranslationBlocks_BOM(t *testing.T) {
 	input := "\xEF\xBB\xBF1\n00:00:01,000 --> 00:00:04,000\nHello\n"
 
-	blocks, err := parseSRTToTranslationBlocks(input)
+	blocks, err := ParseSRTToTranslationBlocks(input)
 	require.NoError(t, err)
 	require.Len(t, blocks, 1)
 	assert.Equal(t, 1, blocks[0].Index)
@@ -51,7 +51,7 @@ func TestParseSRTToTranslationBlocks_BOM(t *testing.T) {
 func TestParseSRTToTranslationBlocks_WindowsCRLF(t *testing.T) {
 	input := "1\r\n00:00:01,000 --> 00:00:04,000\r\nHello\r\n\r\n2\r\n00:00:05,000 --> 00:00:08,000\r\nWorld\r\n"
 
-	blocks, err := parseSRTToTranslationBlocks(input)
+	blocks, err := ParseSRTToTranslationBlocks(input)
 	require.NoError(t, err)
 	require.Len(t, blocks, 2)
 	assert.Equal(t, "Hello", blocks[0].Text)
@@ -61,7 +61,7 @@ func TestParseSRTToTranslationBlocks_WindowsCRLF(t *testing.T) {
 func TestParseSRTToTranslationBlocks_MultiLineText(t *testing.T) {
 	input := "1\n00:00:01,000 --> 00:00:04,000\nLine one\nLine two\n\n"
 
-	blocks, err := parseSRTToTranslationBlocks(input)
+	blocks, err := ParseSRTToTranslationBlocks(input)
 	require.NoError(t, err)
 	require.Len(t, blocks, 1)
 	assert.Equal(t, "Line one\nLine two", blocks[0].Text)
@@ -70,7 +70,7 @@ func TestParseSRTToTranslationBlocks_MultiLineText(t *testing.T) {
 func TestParseSRTToTranslationBlocks_ExtraBlankLines(t *testing.T) {
 	input := "\n\n1\n00:00:01,000 --> 00:00:04,000\nHello\n\n\n\n2\n00:00:05,000 --> 00:00:08,000\nWorld\n"
 
-	blocks, err := parseSRTToTranslationBlocks(input)
+	blocks, err := ParseSRTToTranslationBlocks(input)
 	require.NoError(t, err)
 	require.Len(t, blocks, 2)
 }
@@ -79,7 +79,7 @@ func TestParseSRTToTranslationBlocks_TimestampPreservation(t *testing.T) {
 	// AC #3: timestamps must be preserved exactly
 	input := "1\n01:23:45,678 --> 01:23:50,999\nTest\n"
 
-	blocks, err := parseSRTToTranslationBlocks(input)
+	blocks, err := ParseSRTToTranslationBlocks(input)
 	require.NoError(t, err)
 	require.Len(t, blocks, 1)
 	assert.Equal(t, "01:23:45,678", blocks[0].Start)
@@ -118,12 +118,12 @@ func TestParseSerialize_RoundTrip(t *testing.T) {
 	// P0: Parse SRT → serialize → re-parse must produce identical blocks
 	original := "1\n00:00:01,000 --> 00:00:04,500\nHello world\n\n2\n00:00:05,000 --> 00:00:09,200\nLine one\nLine two\n\n3\n01:30:00,000 --> 01:30:05,500\nThe end\n"
 
-	blocks1, err := parseSRTToTranslationBlocks(original)
+	blocks1, err := ParseSRTToTranslationBlocks(original)
 	require.NoError(t, err)
 
 	serialized := serializeTranslationBlocksToSRT(blocks1)
 
-	blocks2, err := parseSRTToTranslationBlocks(serialized)
+	blocks2, err := ParseSRTToTranslationBlocks(serialized)
 	require.NoError(t, err)
 
 	require.Len(t, blocks2, len(blocks1))

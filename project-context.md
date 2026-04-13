@@ -4,7 +4,7 @@
 
 **Full Documentation:** See `_bmad-output/planning-artifacts/architecture/index.md` for complete architectural decisions and patterns (sharded into ~20 focused files).
 
-**Last Updated:** 2026-04-13 (Rule 19: Package Dependency Boundaries — services ↛ subtitle cycle constraint + mirror-types workaround, enforced via boundaries_test.go)
+**Last Updated:** 2026-04-13 (Rule 19 hardening — corrected leaf list, added enforcement for 3 more forbidden edges + leaf invariant + Mirror-Types parity, all in boundaries_test.go)
 **Architecture Status:** ✅ Validated and Ready for Implementation (5,463 lines, 8 steps completed)
 
 ---
@@ -523,7 +523,7 @@ Allowed (single-direction layering, extends Rule 4):
   Handler  → Service    → Repository → Database
   Handler  → Subtitle   → Service              (subtitle uses services.TerminologyCorrectionServiceInterface)
   Handler  → Repository                        (read-only paths)
-  *        → ai, models, sse, retry, cache, secrets, errors, logger  (leaf packages)
+  *        → ai, models, sse, retry, cache  (leaf packages — see list below)
 
 FORBIDDEN:
   Service ↛ Subtitle    (would cycle: subtitle already imports services)
@@ -539,7 +539,15 @@ Known Cycle Points (verified 2026-04-13):
   "import cycle not allowed".
 
 Leaf packages (zero internal deps — always safe to import from anywhere):
-  ai, models, sse, retry, cache, secrets, errors, logger
+  ai, models, sse, retry, cache
+
+Verified 2026-04-13 via `go list -deps ./internal/<pkg>`. The list is
+enforced by boundaries_test.go::TestLeafPackagesHaveNoInternalDeps so it
+cannot silently rot. Notable non-leaves (do NOT add to this list without
+re-verifying):
+  - secrets  → depends on internal/crypto
+  - logger   → depends on internal/{models, retry, repository}
+  - errors   → not present (no such package today)
 
 Workaround Pattern: Mirror Types
   When a service needs subtitle-package logic (parse SRT, format blocks, etc.):
@@ -558,13 +566,15 @@ Reference Implementation (already in production as of Epic 9):
   - apps/api/internal/services/translation_service.go:30-39
       → TranslationBlock mirrors subtitle.SubtitleBlock
   - apps/api/internal/services/transcription_service.go:362-369
-      → parseSRTToTranslationBlocks inlines subtitle.ParseSRT validation
+      → ParseSRTToTranslationBlocks inlines subtitle.ParseSRT validation
+        (exported so the parity test in boundaries_test.go can call it)
 
-Enforcement:
-  apps/api/internal/boundaries_test.go::TestServicesMustNotImportSubtitle
-  walks internal/services/ via stdlib go/parser and fails CI on violation.
-  Sanity test confirms the rule fires on synthetic violations
-  (so the test cannot pass vacuously).
+Enforcement (apps/api/internal/boundaries_test.go, stdlib-only):
+  - TestServicesMustNotImportSubtitle              — primary cycle gate
+  - TestServicesMustNotImportSubtitle_detectsViolation — sanity (non-vacuous)
+  - TestForbiddenImportEdges                       — services↛handlers, repository↛{services,subtitle}
+  - TestLeafPackagesHaveNoInternalDeps             — keeps the leaf list above honest
+  - TestParseSRT_ParityWithSubtitle (services pkg) — Mirror-Types drift detector
 
 Reference: Epic 9 retro AI-5 (insight #3) — surfaced during 9-2b implementation.
 ```

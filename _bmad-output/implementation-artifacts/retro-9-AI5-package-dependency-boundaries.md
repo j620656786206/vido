@@ -246,12 +246,19 @@ claude-opus-4-6 (1M context) — BMM dev agent "Amelia"
 
 ### File List
 
-- `project-context.md` — added Rule 19 section (~60 lines after Rule 18); updated `Last Updated` header on line 7
+- `project-context.md` — added Rule 19 section (~60 lines after Rule 18); updated `Last Updated` header on line 7. TA pass: corrected leaf list (removed 3 wrong entries), updated Enforcement subsection to list all 5 invariant tests, exported function name reference
 - `apps/api/internal/services/translation_service.go` — slimmed `TranslationBlock` cycle comment from 4 lines to 1 (line 30)
-- `apps/api/internal/services/transcription_service.go` — slimmed `parseSRTToTranslationBlocks` cycle comment from 3 lines to 1 (lines 362-363)
-- `apps/api/internal/boundaries_test.go` — NEW; `package internal` with `TestServicesMustNotImportSubtitle` + `TestServicesMustNotImportSubtitle_detectsViolation`
+- `apps/api/internal/services/transcription_service.go` — slimmed `parseSRTToTranslationBlocks` cycle comment from 3 lines to 1 (lines 362-363); TA pass: exported `parseSRTToTranslationBlocks` → `ParseSRTToTranslationBlocks` so the parity test can call it from package internal
+- `apps/api/internal/services/transcription_translation_test.go` — TA pass: updated 8 callsites for the export rename
+- `apps/api/internal/boundaries_test.go` — NEW; `package internal` with `TestServicesMustNotImportSubtitle` + `TestServicesMustNotImportSubtitle_detectsViolation`. TA pass: added `TestForbiddenImportEdges` (3 subtests) + `TestLeafPackagesHaveNoInternalDeps` (5 subtests), refactored to share `assertNoImport` helper
+- `apps/api/internal/srt_parity_test.go` — NEW (TA pass); `package internal` with `TestParseSRT_ParityWithSubtitle` (10 fixture subtests)
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` — `retro-9-AI5-package-dependency-boundaries`: ready-for-dev → in-progress → review
 
 ### Change Log
 
 - 2026-04-13: Implemented retro-9-AI5 — Package Dependency Boundaries (Rule 19) + AST-based enforcement test (`services ↛ subtitle`). All 6 ACs satisfied. Lint + full Go/web regression green.
+- 2026-04-13: TA (Master Test Architect Murat) expansion on top of base story:
+  - **R1 (HIGH):** Risk scan caught a documentation bug — Rule 19's leaf list contained `secrets` (depends on `crypto`), `logger` (depends on `models`/`retry`/`repository`), and `errors` (no such package). Corrected the leaf list to the verified 5 (`ai`, `models`, `sse`, `retry`, `cache`) and added `TestLeafPackagesHaveNoInternalDeps` (uses `go list -deps` per claimed leaf, self-skips if `go` binary unavailable) so the doc claim cannot silently rot.
+  - **R2 (MEDIUM):** Added `TestParseSRT_ParityWithSubtitle` in `apps/api/internal/srt_parity_test.go` (`package internal`) — runs both `subtitle.ParseSRT` and `services.ParseSRTToTranslationBlocks` against 10 shared fixtures (basic/empty/multi-line/BOM/CRLF/CR/blank-lines/unicode/malformed-timestamp). Exported `parseSRTToTranslationBlocks` → `ParseSRTToTranslationBlocks` to enable the cross-package call (Mirror-Types parity inherently requires importing both packages, only possible at the `internal` package level). Catches Mirror-Types drift that Rule 19 Step 4 currently relies on human review for.
+  - **R3 (LOW):** Added `TestForbiddenImportEdges` (3 subtests) covering the other forbidden directions documented in Rule 19 (`services↛handlers`, `repository↛services`, `repository↛subtitle`). Today blocked transitively by Go's import-cycle compiler check, but the test encodes the architectural intent for future-proofing.
+  - All 19 new test cases (5 funcs across 2 files) pass; lint:all + full Go/web regression remain green; refactored `boundaries_test.go` to share an `assertNoImport` helper.
