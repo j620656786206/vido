@@ -1,6 +1,6 @@
 # Story: Document Package Dependency Boundaries
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -19,46 +19,46 @@ so that I don't waste time rediscovering circular import constraints or attempt 
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add "Rule 19: Package Dependency Boundaries" to `project-context.md` (AC: #1, #2, #3)
-  - [ ] 1.1 Insert a new Rule 19 after Rule 18 (API Boundary Case Transformation, lines ~473-498). Keep the existing Rule 19+ numbering stable by only appending
-  - [ ] 1.2 Open with a summary import-direction rule:
+- [x] Task 1: Add "Rule 19: Package Dependency Boundaries" to `project-context.md` (AC: #1, #2, #3)
+  - [x] 1.1 Insert a new Rule 19 after Rule 18 (API Boundary Case Transformation, lines ~473-498). Keep the existing Rule 19+ numbering stable by only appending
+  - [x] 1.2 Open with a summary import-direction rule:
     ```
     Handler → Service → Repository → Database (Rule 4 already)
     Handler → Subtitle → Service (allowed, single-direction)
     Service ↛ Subtitle    (FORBIDDEN — would cycle with subtitle → services.TerminologyCorrectionServiceInterface)
     ```
-  - [ ] 1.3 Include a "Known Cycle Points" subsection listing the real cycle in the codebase today:
+  - [x] 1.3 Include a "Known Cycle Points" subsection listing the real cycle in the codebase today:
     - `subtitle/engine.go:61,90` imports `services.TerminologyCorrectionServiceInterface`
     - Therefore no file under `internal/services/` may `import "github.com/vido/api/internal/subtitle"`
-  - [ ] 1.4 Add "Workaround Pattern: Mirror Types" subsection with:
+  - [x] 1.4 Add "Workaround Pattern: Mirror Types" subsection with:
     - Step 1: Define a minimal local type in `services/` (e.g., `TranslationBlock`) that mirrors only the fields you need from the `subtitle` type
     - Step 2: Inline the minimum logic you need (e.g., `parseSRTToTranslationBlocks`). Match the source package's validation rules (regex, error handling) so behavior stays identical
     - Step 3: Add a comment citing the cycle and project-context.md Rule 19
     - Step 4: Reference implementation: `apps/api/internal/services/translation_service.go:30-39` (type mirror) and `apps/api/internal/services/transcription_service.go:362-369` (inline parser)
-  - [ ] 1.5 Add a brief list of "Leaf packages (no internal deps — safe to import from anywhere):" → `ai`, `models`, `sse`, `retry`, `cache`, `secrets`, `errors`, `logger`. These are always safe targets
-  - [ ] 1.6 Update the "Last Updated" header (line ~7) to mention Rule 19 addition
+  - [x] 1.5 Add a brief list of "Leaf packages (no internal deps — safe to import from anywhere):" → `ai`, `models`, `sse`, `retry`, `cache`, `secrets`, `errors`, `logger`. These are always safe targets
+  - [x] 1.6 Update the "Last Updated" header (line ~7) to mention Rule 19 addition
 
-- [ ] Task 2: Slim existing cycle comments to reference the new rule (AC: #4)
-  - [ ] 2.1 In `apps/api/internal/services/translation_service.go:30-33`, shorten to: `// TranslationBlock mirrors subtitle.SubtitleBlock. services ↛ subtitle — see project-context.md Rule 19.`
-  - [ ] 2.2 In `apps/api/internal/services/transcription_service.go:362-368`, shorten the `parseSRTToTranslationBlocks` comment block similarly: `// Inline SRT parser. services ↛ subtitle — see project-context.md Rule 19. Mirrors subtitle.ParseSRT validation.`
-  - [ ] 2.3 Keep the `srtTimestampPattern` regex comment (line 363) — it explains the WHY of validation, not the cycle
+- [x] Task 2: Slim existing cycle comments to reference the new rule (AC: #4)
+  - [x] 2.1 In `apps/api/internal/services/translation_service.go:30-33`, shorten to: `// TranslationBlock mirrors subtitle.SubtitleBlock. services ↛ subtitle — see project-context.md Rule 19.`
+  - [x] 2.2 In `apps/api/internal/services/transcription_service.go:362-368`, shorten the `parseSRTToTranslationBlocks` comment block similarly: `// Inline SRT parser. services ↛ subtitle — see project-context.md Rule 19. Mirrors subtitle.ParseSRT validation.`
+  - [x] 2.3 Keep the `srtTimestampPattern` regex comment (line 363) — it explains the WHY of validation, not the cycle
 
-- [ ] Task 3: Add a Go test enforcing the `services ↛ subtitle` rule (AC: #5, #6)
-  - [ ] 3.1 Create `apps/api/internal/boundaries_test.go` in the `internal` package. Use a package-level test because import rules span the whole module
-  - [ ] 3.2 Implementation approach: use `golang.org/x/tools/go/packages` OR — simpler and dependency-free — walk `internal/services/` with `go/parser.ParseDir`, iterate each file's import specs, and fail if any path equals `github.com/vido/api/internal/subtitle`
-  - [ ] 3.3 Prefer the dependency-free approach: `go/parser` + `go/ast` are in the stdlib, no new `go.mod` entries needed
-  - [ ] 3.4 Test name: `TestServicesMustNotImportSubtitle`. On violation, report the offending file + import line with a message pointing at project-context.md Rule 19
-  - [ ] 3.5 Run the test locally: `cd apps/api && go test ./internal/ -run TestServicesMustNotImportSubtitle` → MUST pass (no current violation)
-  - [ ] 3.6 Add a second negative-path sanity test `TestServicesMustNotImportSubtitle_detectsViolation` using an inline synthetic fileset (via `go/parser.ParseFile` with source string) to confirm the rule triggers when the bad import IS present — proves the test isn't vacuously passing
+- [x] Task 3: Add a Go test enforcing the `services ↛ subtitle` rule (AC: #5, #6)
+  - [x] 3.1 Create `apps/api/internal/boundaries_test.go` in the `internal` package. Use a package-level test because import rules span the whole module
+  - [x] 3.2 Implementation approach: use `golang.org/x/tools/go/packages` OR — simpler and dependency-free — walk `internal/services/` with `go/parser.ParseDir`, iterate each file's import specs, and fail if any path equals `github.com/vido/api/internal/subtitle`
+  - [x] 3.3 Prefer the dependency-free approach: `go/parser` + `go/ast` are in the stdlib, no new `go.mod` entries needed
+  - [x] 3.4 Test name: `TestServicesMustNotImportSubtitle`. On violation, report the offending file + import line with a message pointing at project-context.md Rule 19
+  - [x] 3.5 Run the test locally: `cd apps/api && go test ./internal/ -run TestServicesMustNotImportSubtitle` → MUST pass (no current violation)
+  - [x] 3.6 Add a second negative-path sanity test `TestServicesMustNotImportSubtitle_detectsViolation` using an inline synthetic fileset (via `go/parser.ParseFile` with source string) to confirm the rule triggers when the bad import IS present — proves the test isn't vacuously passing
 
-- [ ] Task 4: Verify docs + test end-to-end (AC: #6)
-  - [ ] 4.1 Run `pnpm lint:all` (post retro-9-AI4) — MUST pass
-  - [ ] 4.2 Run `cd apps/api && go test ./...` — MUST pass including new boundaries test
-  - [ ] 4.3 Run `cd apps/api && staticcheck ./...` — MUST pass (no new warnings from the test file)
-  - [ ] 4.4 Sanity-check docs: in a fresh terminal, `grep -n "Rule 19" project-context.md` — should return two matches (the header + "Last Updated" reference)
+- [x] Task 4: Verify docs + test end-to-end (AC: #6)
+  - [x] 4.1 Run `pnpm lint:all` (post retro-9-AI4) — PASS (0 errors; 108 pre-existing warnings unchanged; Prettier clean; `nx run api:lint` covers go vet + staticcheck@2026.1)
+  - [x] 4.2 Run `pnpm nx test api` — PASS (full Go regression, all packages incl. new `internal/boundaries_test.go`)
+  - [x] 4.3 staticcheck verified via `pnpm lint:all` (`nx run api:lint` chain) — PASS (refactored from deprecated `parser.ParseDir` (SA1019) to `os.ReadDir` + `parser.ParseFile` to satisfy staticcheck@2026.1)
+  - [x] 4.4 `grep -n "Rule 19" project-context.md` → 3 matches (line 7 Last Updated, line 517 section heading, line 552 in-line workaround example) — exceeds the spec's "two matches" expectation in a benign way (the third is the literal comment shown in the workaround code block)
 
-- [ ] Task 5: Update sprint-status.yaml (AC: #1)
-  - [ ] 5.1 Change `retro-9-AI5-package-dependency-boundaries: backlog` → `done` with completion note and date once Tasks 1-4 are verified green
+- [x] Task 5: Update sprint-status.yaml (AC: #1)
+  - [x] 5.1 Marked `retro-9-AI5-package-dependency-boundaries: in-progress` at start; will move to `review` at completion (final `done` belongs to /code-review per dev-story workflow)
 
 ## Dev Notes
 
@@ -228,8 +228,30 @@ SKIPPED — no UI changes in this story.
 
 ### Agent Model Used
 
+claude-opus-4-6 (1M context) — BMM dev agent "Amelia"
+
 ### Debug Log References
+
+- staticcheck@2026.1 SA1019 deprecation hit on first commit of `boundaries_test.go` (used `parser.ParseDir` per story sketch). Refactored to `os.ReadDir` + `parser.ParseFile` per file — still stdlib-only (no `golang.org/x/tools/go/packages` dep), no deprecation, behaviorally identical. Both tests still pass.
 
 ### Completion Notes List
 
+- ✅ Rule 19 added to `project-context.md` after Rule 18; `Last Updated` header revised to call out Rule 19. New section covers: import-direction summary, `services ↛ subtitle` FORBIDDEN line, Known Cycle Points (with `subtitle/engine.go:61,90` citations), Workaround Pattern (mirror types, 4 steps, with reference impl line numbers), Leaf packages list, Enforcement subsection pointing at `boundaries_test.go`.
+- ✅ Cycle comments slimmed to single-line cross-refs in `translation_service.go:30` and `transcription_service.go:362-363`. `srtTimestampPattern` regex comment preserved (validation rationale, separate concern).
+- ✅ `boundaries_test.go` created at `apps/api/internal/boundaries_test.go` (`package internal`). Two tests: `TestServicesMustNotImportSubtitle` (positive — walks `internal/services/` via stdlib `os.ReadDir` + `go/parser`, fails on `github.com/vido/api/internal/subtitle` import) and `TestServicesMustNotImportSubtitle_detectsViolation` (sanity — synthetic source proves the rule fires, prevents vacuous pass). Both PASS on current main.
+- ✅ Lint gate: `pnpm lint:all` → 0 errors (108 pre-existing warnings unchanged). Includes `go vet`, staticcheck@2026.1, ESLint, Prettier.
+- ✅ Regression gate (Epic 9 retro AI-1): `pnpm nx test api` (Go) and `pnpm nx test web` (132 files / 1629 tests) — ALL PASS. Test cleanup auto-ran successfully (no orphaned vitest workers).
+- ⚠️ One deviation from story spec: story sketch used `parser.ParseDir` (SA1019-deprecated in Go 1.25). Changed to `os.ReadDir` + `parser.ParseFile` per-file walk — same outcome, satisfies staticcheck. Documented in Debug Log.
+- 🎨 UX Verification: SKIPPED — no UI changes in this story.
+
 ### File List
+
+- `project-context.md` — added Rule 19 section (~60 lines after Rule 18); updated `Last Updated` header on line 7
+- `apps/api/internal/services/translation_service.go` — slimmed `TranslationBlock` cycle comment from 4 lines to 1 (line 30)
+- `apps/api/internal/services/transcription_service.go` — slimmed `parseSRTToTranslationBlocks` cycle comment from 3 lines to 1 (lines 362-363)
+- `apps/api/internal/boundaries_test.go` — NEW; `package internal` with `TestServicesMustNotImportSubtitle` + `TestServicesMustNotImportSubtitle_detectsViolation`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — `retro-9-AI5-package-dependency-boundaries`: ready-for-dev → in-progress → review
+
+### Change Log
+
+- 2026-04-13: Implemented retro-9-AI5 — Package Dependency Boundaries (Rule 19) + AST-based enforcement test (`services ↛ subtitle`). All 6 ACs satisfied. Lint + full Go/web regression green.

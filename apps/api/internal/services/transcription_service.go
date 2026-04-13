@@ -364,8 +364,7 @@ func (s *TranscriptionService) translateSRT(ctx context.Context, jobID string, m
 var srtTimestampPattern = regexp.MustCompile(`^(\d{2}:\d{2}:\d{2},\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2},\d{3})`)
 
 // parseSRTToTranslationBlocks parses SRT content into TranslationBlocks.
-// Inline implementation — cannot import subtitle package due to circular dependency:
-// subtitle.Engine imports services.TerminologyCorrectionServiceInterface.
+// Inline SRT parser. services ↛ subtitle — see project-context.md Rule 19. Mirrors subtitle.ParseSRT validation.
 func parseSRTToTranslationBlocks(content string) ([]TranslationBlock, error) {
 	if content == "" {
 		return nil, nil

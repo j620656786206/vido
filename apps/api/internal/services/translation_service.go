@@ -27,10 +27,7 @@ const (
 	TranslationMaxTokens = 4096
 )
 
-// TranslationBlock represents a subtitle block for the translation service.
-// Mirrors subtitle.SubtitleBlock but is a separate type because subtitle.Engine
-// imports services (for TerminologyCorrectionServiceInterface), creating a cycle
-// if services also imported subtitle.
+// TranslationBlock mirrors subtitle.SubtitleBlock. services ↛ subtitle — see project-context.md Rule 19.
 type TranslationBlock struct {
 	Index int
 	Start string

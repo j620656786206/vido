@@ -4,7 +4,7 @@
 
 **Full Documentation:** See `_bmad-output/planning-artifacts/architecture/index.md` for complete architectural decisions and patterns (sharded into ~20 focused files).
 
-**Last Updated:** 2026-04-13 (Rule 12: `pnpm lint:all` — CR fixes: repo-wide ESLint coverage, version-pinned staticcheck binary, sequential execution)
+**Last Updated:** 2026-04-13 (Rule 19: Package Dependency Boundaries — services ↛ subtitle cycle constraint + mirror-types workaround, enforced via boundaries_test.go)
 **Architecture Status:** ✅ Validated and Ready for Implementation (5,463 lines, 8 steps completed)
 
 ---
@@ -512,6 +512,61 @@ Implementation:
   body: JSON.stringify(camelToSnake(params))
 
 Reference: Bugfix sprint 2026-03-28 audit — 4 services found missing camelToSnake
+```
+
+### Rule 19: Package Dependency Boundaries
+
+```
+Go internal package import direction (apps/api/internal/):
+
+Allowed (single-direction layering, extends Rule 4):
+  Handler  → Service    → Repository → Database
+  Handler  → Subtitle   → Service              (subtitle uses services.TerminologyCorrectionServiceInterface)
+  Handler  → Repository                        (read-only paths)
+  *        → ai, models, sse, retry, cache, secrets, errors, logger  (leaf packages)
+
+FORBIDDEN:
+  Service ↛ Subtitle    (would cycle: subtitle already imports services)
+  Service ↛ Handler     (Rule 4 — never reach back up the request stack)
+  Repository ↛ Service  (Rule 4)
+  Repository ↛ Subtitle (Rule 4 — repository sits below services)
+
+Known Cycle Points (verified 2026-04-13):
+  - subtitle/engine.go:61  → services.TerminologyCorrectionServiceInterface (field)
+  - subtitle/engine.go:90  → services.TerminologyCorrectionServiceInterface (setter)
+  Therefore: NO file under internal/services/ may import
+  "github.com/vido/api/internal/subtitle" — `go build` will reject with
+  "import cycle not allowed".
+
+Leaf packages (zero internal deps — always safe to import from anywhere):
+  ai, models, sse, retry, cache, secrets, errors, logger
+
+Workaround Pattern: Mirror Types
+  When a service needs subtitle-package logic (parse SRT, format blocks, etc.):
+
+  Step 1: Mirror the minimal type in services/ — only the fields you need.
+          Do NOT re-export or alias from subtitle. Keep it a separate type.
+  Step 2: Inline the minimum logic. Match the source's validation rules
+          (same regex, same error handling) so behavior stays identical.
+  Step 3: Add a one-line comment citing this rule:
+            // services ↛ subtitle — see project-context.md Rule 19.
+  Step 4: Keep the two implementations in sync via code review.
+          When subtitle.SubtitleBlock fields change, update the mirror.
+          When subtitle.ParseSRT validation changes, update the inline parser.
+
+Reference Implementation (already in production as of Epic 9):
+  - apps/api/internal/services/translation_service.go:30-39
+      → TranslationBlock mirrors subtitle.SubtitleBlock
+  - apps/api/internal/services/transcription_service.go:362-369
+      → parseSRTToTranslationBlocks inlines subtitle.ParseSRT validation
+
+Enforcement:
+  apps/api/internal/boundaries_test.go::TestServicesMustNotImportSubtitle
+  walks internal/services/ via stdlib go/parser and fails CI on violation.
+  Sanity test confirms the rule fires on synthetic violations
+  (so the test cannot pass vacuously).
+
+Reference: Epic 9 retro AI-5 (insight #3) — surfaced during 9-2b implementation.
 ```
 
 ---
