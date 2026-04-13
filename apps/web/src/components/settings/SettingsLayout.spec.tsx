@@ -437,9 +437,7 @@ describe('SettingsLayout', () => {
       component: () =>
         React.createElement('div', { 'data-testid': 'connection-page' }, 'Connection'),
     });
-    const _routeTree = rootRoute.addChildren([
-      settingsRoute.addChildren([indexRoute, connectionRoute]),
-    ]);
+    rootRoute.addChildren([settingsRoute.addChildren([indexRoute, connectionRoute])]);
     // Verify the redirect route file uses beforeLoad with redirect
     // (structural test — TanStack Router redirect throws are hard to test in unit context)
     const { Route: IndexRoute } = await import('../../routes/settings/index');

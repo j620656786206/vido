@@ -26,6 +26,9 @@ on:
 env:
   CI: true
   GO_VERSION: '1.25'
+  # Pinned for CI reproducibility — new staticcheck releases can add checks
+  # that would break main unexpectedly. Bump deliberately.
+  STATICCHECK_VERSION: '2026.1'
 
 jobs:
   # =============================================================================
@@ -53,12 +56,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run ESLint
-        run: pnpm run lint
-
-      - name: Check formatting
-        run: pnpm run format:check
-
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
@@ -69,15 +66,32 @@ jobs:
         working-directory: apps/api
         run: go mod download
 
+      # Go checks run before JS checks so a JS failure does not mask Go issues
+      # in the same PR (both surface together on first run).
       - name: Run go vet
         working-directory: apps/api
         run: go vet ./...
 
-      - name: Install and run staticcheck
+      - name: Cache staticcheck binary
+        id: staticcheck-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/go/bin/staticcheck
+          key: staticcheck-${{ runner.os }}-${{ env.GO_VERSION }}-${{ env.STATICCHECK_VERSION }}
+
+      - name: Install staticcheck
+        if: steps.staticcheck-cache.outputs.cache-hit != 'true'
+        run: go install honnef.co/go/tools/cmd/staticcheck@${{ env.STATICCHECK_VERSION }}
+
+      - name: Run staticcheck
         working-directory: apps/api
-        run: |
-          go install honnef.co/go/tools/cmd/staticcheck@latest
-          staticcheck ./...
+        run: staticcheck ./...
+
+      - name: Run ESLint
+        run: pnpm run lint
+
+      - name: Check formatting
+        run: pnpm run format:check
 
       - name: Verify git hook permissions
         run: |

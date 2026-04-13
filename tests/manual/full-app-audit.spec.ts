@@ -411,10 +411,10 @@ test.describe('API Endpoint Audit', () => {
 test.describe('UI Navigation Audit', () => {
   test('Homepage / Library page loads', async ({ page }) => {
     await page.goto(BASE_URL, { waitUntil: 'networkidle', timeout: 30000 });
-    const _img = await screenshot(page, '01-homepage');
+    const img = await screenshot(page, '01-homepage');
 
     // Check page title or header
-    const _title = await page.title();
+    await page.title();
     const headerText = await page
       .locator('text=vido')
       .first()
@@ -429,7 +429,7 @@ test.describe('UI Navigation Audit', () => {
         'App header/logo not visible on homepage',
         'vido logo visible',
         'not found',
-        _img
+        img
       );
     }
 
@@ -444,7 +444,7 @@ test.describe('UI Navigation Audit', () => {
         'Navigation has fewer than 2 links',
         '>=2 navigation items',
         `${navCount}`,
-        _img
+        img
       );
     }
   });
@@ -741,8 +741,8 @@ test.describe('UI Navigation Audit', () => {
     }
 
     await page.waitForTimeout(1000);
-    const _img = await screenshot(page, '07-settings-page');
-    const _currentUrl = page.url();
+    const img = await screenshot(page, '07-settings-page');
+    page.url();
 
     // Check settings page loaded
     const has404 = await page
@@ -750,15 +750,7 @@ test.describe('UI Navigation Audit', () => {
       .isVisible()
       .catch(() => false);
     if (has404) {
-      reportBug(
-        'major',
-        'UI',
-        '/settings',
-        'Settings page shows 404',
-        'settings form',
-        '404',
-        _img
-      );
+      reportBug('major', 'UI', '/settings', 'Settings page shows 404', 'settings form', '404', img);
     }
   });
 

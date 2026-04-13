@@ -108,12 +108,12 @@ func TestAudioExtractorService_NotAvailable(t *testing.T) {
 
 func TestAudioExtractorService_ExtractAudio_NotAvailable(t *testing.T) {
 	svc := &AudioExtractorService{available: false}
-	_, err := svc.ExtractAudio(context.TODO(), "/test.mkv", 0)
+	_, err := svc.ExtractAudio(context.Background(), "/test.mkv", 0)
 	assert.ErrorIs(t, err, ErrFFmpegNotAvailable)
 }
 
 func TestAudioExtractorService_ListAudioTracks_NotAvailable(t *testing.T) {
 	svc := &AudioExtractorService{available: false}
-	_, err := svc.ListAudioTracks(context.TODO(), "/test.mkv")
+	_, err := svc.ListAudioTracks(context.Background(), "/test.mkv")
 	assert.ErrorIs(t, err, ErrFFmpegNotAvailable)
 }

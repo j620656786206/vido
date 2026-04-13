@@ -1,6 +1,6 @@
 # Story: Add Dead Code Detection to CI Pipeline
 
-Status: review
+Status: done
 
 ## Story
 
@@ -34,7 +34,7 @@ so that dead code from DS/CR/TA stages is caught before merge instead of accumul
   - [x] 3.2 Add `go mod download` step with `working-directory: apps/api` for dependency caching
 
 - [x] Task 4: Verify CI pipeline end-to-end (AC: #5)
-  - [x] 4.1 Run full lint locally: `pnpm run lint` (ESLint) + `cd apps/api && staticcheck ./... && go vet ./...` (Go)
+  - [x] 4.1 Run full lint locally: `pnpm run lint` (ESLint) + `pnpm run format:check` (Prettier) + `cd apps/api && staticcheck ./... && go vet ./...` (Go)
   - [x] 4.2 Verify all existing tests still pass: `pnpm nx test api` + `pnpm nx test web`
 
 ## Dev Notes
@@ -83,6 +83,14 @@ The lint job needs:
 - [Source: _bmad-output/implementation-artifacts/epic-9-retro-2026-04-10.md] — AI-3 action item
 - [Source: project-context.md] — Rule 12: pre-commit disabled, lint in CI only
 
+### Follow-up risks from dead code removal
+
+The following functions/vars were removed as truly dead in `apps/api/` per staticcheck, but represent designed-but-never-wired features. If their behavior is ever needed, reimplement rather than revert:
+
+- `apps/api/internal/parser/movie_parser.go:extractTitleWithEmbeddedYear` — handled filenames with embedded years ("2001.A.Space.Odyssey.1968", "Blade.Runner.2049.2017"). The deprecated root backend (`/internal/parser/`) has working tests for these cases; apps/api had the scaffold but no call site.
+- `apps/api/internal/wikipedia/infobox.go:extractInfobox` — Infobox template extraction. Only `findAllInfoboxPositions` + `extractBalancedBraces` are used now.
+- `apps/api/internal/parser/patterns.go:tvPatternAnime` — anime `[Group] Show - 01 [1080p].mkv` pattern. `tv_parser.go` uses different `tvPatternAnimeEp`/`tvPatternAnimeDash` patterns (different module).
+
 ## Dev Agent Record
 
 ### Agent Model Used
@@ -93,20 +101,25 @@ Claude Opus 4.6 (1M context)
 
 ### Completion Notes List
 
-- Task 3+1: Added Go setup, go vet, and staticcheck to CI lint job in test.yml
+- Task 3+1: Added Go setup, go vet, and staticcheck (pinned `@2026.1`, cached binary) to CI lint job in test.yml. Go checks run before JS checks so one does not mask the other.
 - Task 1.4: Fixed 15 staticcheck findings — 5 dead code (U1000), 2 error capitalization (ST1005), 4 nil context (SA1012), 1 struct conversion (S1016), 3 unused append (SA4010)
 - Task 1.4: Fixed 13 go vet findings — unkeyed struct literals in parse_queue_service.go (NullInt64/NullString)
-- Task 2: Upgraded ESLint no-unused-vars from warn → error, fixed 26 violations (deleted dead code, removed unused imports, prefixed side-effect vars with _)
-- Task 4: All verification passed — go vet clean, staticcheck clean, ESLint 0 errors, pnpm nx test api PASS, pnpm nx test web PASS
+- Task 2: Upgraded ESLint no-unused-vars from warn → error, fixed 26 violations (deleted dead code, removed unused imports, prefixed intentionally-unused vars with _)
+- Task 4: Verified go vet clean, staticcheck clean, ESLint 0 errors, pnpm nx test api PASS, pnpm nx test web PASS
+- Follow-up commit `1d97082` fixed 4 files for Prettier formatting — initial commit missed `pnpm run format:check` locally; Task 4.1 updated to include it
+- Code review follow-up: reverted misapplied `_` prefix on used vars in full-app-audit.spec.ts; switched test `context.TODO()` → `context.Background()`; removed unused `_routeTree` binding in SettingsLayout.spec.tsx
 - 🎨 UX Verification: SKIPPED — no UI changes in this story
 
 ### Change Log
 
 - 2026-04-10: Added Go static analysis (go vet + staticcheck) to CI lint job, fixed 28 existing findings across Go and TypeScript codebases, upgraded ESLint no-unused-vars to error severity (Task 1, 2, 3, 4)
+- 2026-04-10: Follow-up Prettier fix (commit `1d97082`) — reformatted 4 files that initial commit missed
+- 2026-04-13: Code review fixes — pinned staticcheck to `@2026.1` with binary caching, reordered lint job so Go runs before JS, reverted misapplied `_` prefixes on used vars, normalized test contexts to `context.Background()`, removed unused `_routeTree` binding, added follow-up-risk notes for removed dead functions
 
 ### File List
 
-- `.github/workflows/test.yml` — Added Go setup, go mod download, go vet, staticcheck steps to lint job
+- `.github/workflows/test.yml` — Added Go setup, go mod download, go vet, staticcheck steps to lint job; pinned staticcheck version with binary cache; reordered so Go runs before JS
+- `project-context.md` — Markdown list formatting (Prettier follow-up from commit `1d97082`)
 - `eslint.config.mjs` — Changed @typescript-eslint/no-unused-vars from warn to error
 - `apps/api/internal/services/parse_queue_service.go` — Fixed unkeyed struct literals (go vet)
 - `apps/api/internal/ai/fansub_detector.go` — Removed unused var anyBracketStartPattern
