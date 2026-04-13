@@ -368,8 +368,10 @@ development_status:
 
   # --- Technical Debt ---
   retro-9-AI3-dead-code-detection-ci:        done  # MEDIUM — DEV /dev-story: staticcheck + go vet in CI, ESLint no-unused-vars error, 28 findings fixed; CR fixes applied 2026-04-13
-  retro-9-AI4-local-lint-command:            ready-for-dev  # 2026-04-13 — SM: story created. QD: add `pnpm lint:all` root script + staticcheck to api:lint target + project-context.md Rule 12 docs
+  retro-9-AI4-local-lint-command:            review  # 2026-04-13 — DEV /dev-story: added `pnpm lint:all` root script + extended api:lint with auto-install guard + full GOPATH path + project-context.md Rule 12 & Pre-Commit Checklist updates; full regression PASS; 2 pre-existing lint config items filed as backlog
   retro-9-AI5-package-dependency-boundaries: ready-for-dev  # 2026-04-13 — SM: story created. QD: add Rule 19 (Package Dependency Boundaries) to project-context.md + boundaries_test.go enforcement for services ↛ subtitle
+  preexisting-fail-shared-types-eslint-cjs:  backlog  # LOW — libs/shared-types/eslint.config.cjs requires non-existent ../../.eslintrc.json (legacy pre-flat-config). Masked by root `pnpm run lint` which uses eslint.config.mjs. Surfaced by retro-9-AI4 `nx run shared-types:lint`. Fix: delete cjs or port to flat config
+  preexisting-fail-root-lint-target:         backlog  # LOW — @nx/eslint/plugin auto-infers `eslint ./src` for root @vido/source project, but root has no ./src — `nx run @vido/source:lint` always fails. Masked by root `pnpm run lint` (runs `eslint .`). Surfaced by retro-9-AI4. Fix: exclude root from @nx/eslint inference or add explicit no-op lint target
 
   # ==============================================================================
   # Epic 9c: Media Technical Info & NFO Integration (PRD v4)

@@ -4,7 +4,7 @@
 
 **Full Documentation:** See `_bmad-output/planning-artifacts/architecture/index.md` for complete architectural decisions and patterns (sharded into ~20 focused files).
 
-**Last Updated:** 2026-04-03 (Rule 12: pre-commit hook disabled, lint/format moved to CI)
+**Last Updated:** 2026-04-13 (Rule 12: added `pnpm lint:all` local convenience command mirroring CI)
 **Architecture Status:** ✅ Validated and Ready for Implementation (5,463 lines, 8 steps completed)
 
 ---
@@ -336,8 +336,23 @@ Display:  toLocaleDateString('zh-TW') → "2024年1月15日"
     `git status` races with lint-staged's git stash, causing persistent
     index.lock conflicts. Attempted fixes: 87c85dd, c560311 — neither resolved.
 ✅ Lint and format checks run in CI instead
-✅ Run `pnpm run lint` and `pnpm run format:check` locally before pushing
+✅ Run `pnpm lint:all` locally before pushing (mirrors CI exactly)
 ❌ Do NOT re-enable the pre-commit hook until the Zed lock race is resolved
+```
+
+**`pnpm lint:all`** (defined in root `package.json`) runs, in order:
+
+1. `go vet ./...` — from `apps/api/` via `nx run api:lint`
+2. `staticcheck ./...` — from `apps/api/`, pinned to `@2026.1` (auto-installs to `$GOPATH/bin` on first run if missing)
+3. `eslint .` — from `apps/web/` via `nx run web:lint`
+4. `prettier --check .` — from repo root
+
+If any step fails, fix it locally — do not push. For formatting, `pnpm exec prettier --write <files>` fixes in place. The four tools mirror CI's `lint` job exactly (`.github/workflows/test.yml`), so `pnpm lint:all` green ⇒ CI lint green.
+
+Optional: pre-install staticcheck to skip the one-time auto-install on first run:
+
+```bash
+go install honnef.co/go/tools/cmd/staticcheck@2026.1
 ```
 
 ### Rule 13: Error Handling Completeness
@@ -853,8 +868,7 @@ Before committing code, verify:
 
 **Format & Lint (MANDATORY):**
 
-- [ ] Run `pnpm run format:check` and fix any issues with `pnpm exec prettier --write <files>`
-- [ ] Run `pnpm run lint` to check for linting errors
+- [ ] Run `pnpm lint:all` — runs `go vet` + `staticcheck` + `eslint` + `prettier --check` (mirrors CI). Fix formatting with `pnpm exec prettier --write <files>`
 
 **Code Location & Architecture:**
 

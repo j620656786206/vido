@@ -30,7 +30,7 @@
     "lint": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "go vet ./...",
+        "command": "go vet ./... && { [ -x \"$(go env GOPATH)/bin/staticcheck\" ] || go install honnef.co/go/tools/cmd/staticcheck@2026.1; } && \"$(go env GOPATH)/bin/staticcheck\" ./...",
         "cwd": "apps/api"
       }
     },
