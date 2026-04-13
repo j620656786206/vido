@@ -4,7 +4,7 @@
 
 **Full Documentation:** See `_bmad-output/planning-artifacts/architecture/index.md` for complete architectural decisions and patterns (sharded into ~20 focused files).
 
-**Last Updated:** 2026-04-13 (Rule 12: added `pnpm lint:all` local convenience command mirroring CI)
+**Last Updated:** 2026-04-13 (Rule 12: `pnpm lint:all` — CR fixes: repo-wide ESLint coverage, version-pinned staticcheck binary, sequential execution)
 **Architecture Status:** ✅ Validated and Ready for Implementation (5,463 lines, 8 steps completed)
 
 ---
@@ -340,19 +340,23 @@ Display:  toLocaleDateString('zh-TW') → "2024年1月15日"
 ❌ Do NOT re-enable the pre-commit hook until the Zed lock race is resolved
 ```
 
-**`pnpm lint:all`** (defined in root `package.json`) runs, in order:
+**`pnpm lint:all`** (defined in root `package.json`) runs these four checks **sequentially** — each step must pass before the next runs, matching CI's `lint` job order exactly:
 
-1. `go vet ./...` — from `apps/api/` via `nx run api:lint`
-2. `staticcheck ./...` — from `apps/api/`, pinned to `@2026.1` (auto-installs to `$GOPATH/bin` on first run if missing)
-3. `eslint .` — from `apps/web/` via `nx run web:lint`
-4. `prettier --check .` — from repo root
+1. `go vet ./...` — from `apps/api/` (via `nx run api:lint`)
+2. `staticcheck ./...` — from `apps/api/`, pinned to `@2026.1` via a versioned binary at `$GOPATH/bin/staticcheck-2026.1` (auto-installs on first run if the versioned binary is missing; pre-existing unversioned `staticcheck` binaries from other projects are NOT used, preventing silent version drift)
+3. `eslint .` — from repo root (via `pnpm run lint`; covers `apps/web/`, `libs/shared-types/`, and `tests/` — same scope as CI)
+4. `prettier --check .` — from repo root (via `pnpm run format:check`)
 
 If any step fails, fix it locally — do not push. For formatting, `pnpm exec prettier --write <files>` fixes in place. The four tools mirror CI's `lint` job exactly (`.github/workflows/test.yml`), so `pnpm lint:all` green ⇒ CI lint green.
 
-Optional: pre-install staticcheck to skip the one-time auto-install on first run:
+If `go install` fails (e.g., no network), pre-install staticcheck manually:
 
 ```bash
-go install honnef.co/go/tools/cmd/staticcheck@2026.1
+# Installs to versioned path used by lint:all
+STATICCHECK_TMP=$(mktemp -d) && GOBIN="$STATICCHECK_TMP" \
+  go install honnef.co/go/tools/cmd/staticcheck@2026.1 && \
+  mv "$STATICCHECK_TMP/staticcheck" "$(go env GOPATH)/bin/staticcheck-2026.1" && \
+  rmdir "$STATICCHECK_TMP"
 ```
 
 ### Rule 13: Error Handling Completeness

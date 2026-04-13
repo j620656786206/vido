@@ -1,6 +1,6 @@
 # Story: Add Local Lint Convenience Command
 
-Status: review
+Status: done
 
 ## Story
 
@@ -184,10 +184,10 @@ Claude Opus 4.6 (1M context)
 
 ### File List
 
-- `apps/api/project.json` — `lint` target command extended from `go vet ./...` to include auto-install guard and `staticcheck ./...` via full GOPATH path (Task 1)
-- `package.json` (root) — added `"lint:all": "pnpm nx run-many -t lint --projects=api,web && pnpm run format:check"` (Task 2)
-- `project-context.md` — updated "Last Updated" header; replaced Rule 12 lint instructions; added expanded lint:all sub-block and optional pre-install hint; replaced Pre-Commit Checklist two-bullet Format & Lint section with single `pnpm lint:all` bullet (Task 3)
-- `_bmad-output/implementation-artifacts/sprint-status.yaml` — flipped retro-9-AI4 `ready-for-dev` → `in-progress` → `review`; added two `preexisting-fail-*` backlog entries for surfaced config debt (Tasks 5, and dev-workflow step 7 AI-2 protocol)
+- `apps/api/project.json` — `lint` target: now uses version-pinned staticcheck binary `$GOPATH/bin/staticcheck-2026.1` via `mktemp -d` + `GOBIN` + `mv` (prevents silent version drift from pre-existing user installs). First-run output: `→ Installing staticcheck@2026.1 (first-time setup, ~10s)...` (CR fixes: F2, F5, F7)
+- `package.json` (root) — `lint:all` now chains `pnpm nx run api:lint && pnpm run lint && pnpm run format:check` (CR fix F1: swapped `nx run-many -t lint --projects=api,web` for `pnpm run lint` to match CI's repo-wide eslint scope — closes coverage gap on `libs/shared-types/` and `tests/`)
+- `project-context.md` — Last Updated header revised; Rule 12 block rewritten to describe **sequential** 4-step execution (not parallel), correct ESLint scope (repo root, not apps/web), versioned staticcheck binary pattern, and clearer pre-install snippet matching the new binary path (CR fixes: F1, F4, F6)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — flipped retro-9-AI4 `ready-for-dev` → `in-progress` → `review` → `done`; added two `preexisting-fail-*` backlog entries for surfaced config debt (Tasks 5, dev-workflow step 7 AI-2 protocol, CR step 5)
 
 ### Change Log
 
@@ -196,3 +196,11 @@ Claude Opus 4.6 (1M context)
 - 2026-04-13: Task 3 — Updated project-context.md Rule 12 + Pre-Commit Checklist + Last Updated header to document the new single lint command
 - 2026-04-13: Task 4 — Verified `pnpm lint:all` exit 0, all four tools visible in output; full regression gate (api + web tests) PASS; zero orphaned test processes
 - 2026-04-13: Dev protocol — Filed two pre-existing lint config debt items (`preexisting-fail-shared-types-eslint-cjs`, `preexisting-fail-root-lint-target`) per Epic 9c retro AI-2 protocol
+- 2026-04-13: **CR fixes (Amelia /code-review)** — Fixed 7 findings from adversarial review:
+  - **F1 (HIGH)**: Closed ESLint coverage gap. `lint:all` previously used `nx run-many --projects=api,web`, whose `web:lint` target runs `eslint .` with `cwd=apps/web`, missing `libs/shared-types/` and `tests/`. CI's `pnpm run lint` runs `eslint .` from repo root and covers everything. Changed chain to `nx run api:lint && pnpm run lint && pnpm run format:check` to match CI scope exactly. Restores AC #1 and AC #6.
+  - **F2 (MEDIUM)**: Version pin now enforced via filesystem. Old guard checked only `[ -x $GOPATH/bin/staticcheck ]`, so any pre-existing version silently satisfied it. New approach installs to temp dir → moves to `$GOPATH/bin/staticcheck-2026.1` → invokes the versioned binary. Pre-existing unversioned `staticcheck` binaries are never invoked.
+  - **F3 (MEDIUM)**: Ran all 3 fault injections. (1) Go unused func `func unusedFuncForAI4Verification()` → staticcheck U1000 → `api:lint` fails → `lint:all` fails at step 1. (2) TS `const unusedInternalAI4 = 'should fail'` in `libs/shared-types/` → eslint `no-unused-vars: error` → `pnpm run lint` fails → `lint:all` fails at step 3. (3) Unformatted `.md` at repo root → `prettier --check` fails → `format:check` fails → `lint:all` fails at step 4. All injection files removed; clean main returns exit 0.
+  - **F4 (MEDIUM)**: Rule 12 reworded from "runs, in order" (misleading for old `nx run-many` parallel behavior) to "runs these four checks **sequentially** — each step must pass before the next runs". Now truthful for the new `&&`-chained lint:all.
+  - **F5 (LOW)**: Eliminated duplicate `$(go env GOPATH)` invocations by assigning `STATICCHECK_BIN` once.
+  - **F6 (LOW)**: Install failure mode now has a clear hint in Rule 12 — pre-install snippet included with explicit `mv` to the versioned path (matches the lint target's own install flow).
+  - **F7 (LOW)**: First-run install now prints `→ Installing staticcheck@2026.1 (first-time setup, ~10s)...` to stderr so users don't mistake Go module fetch logs for lint errors.

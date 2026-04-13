@@ -30,7 +30,7 @@
     "lint": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "go vet ./... && { [ -x \"$(go env GOPATH)/bin/staticcheck\" ] || go install honnef.co/go/tools/cmd/staticcheck@2026.1; } && \"$(go env GOPATH)/bin/staticcheck\" ./...",
+        "command": "go vet ./... && STATICCHECK_BIN=\"$(go env GOPATH)/bin/staticcheck-2026.1\" && { [ -x \"$STATICCHECK_BIN\" ] || { echo '→ Installing staticcheck@2026.1 (first-time setup, ~10s)...' >&2 && STATICCHECK_TMP=$(mktemp -d) && GOBIN=\"$STATICCHECK_TMP\" go install honnef.co/go/tools/cmd/staticcheck@2026.1 && mv \"$STATICCHECK_TMP/staticcheck\" \"$STATICCHECK_BIN\" && rmdir \"$STATICCHECK_TMP\"; }; } && \"$STATICCHECK_BIN\" ./...",
         "cwd": "apps/api"
       }
     },
