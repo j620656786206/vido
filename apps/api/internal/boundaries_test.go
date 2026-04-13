@@ -4,6 +4,7 @@
 package internal
 
 import (
+	"bytes"
 	"go/parser"
 	"go/token"
 	"os"
@@ -21,40 +22,13 @@ const (
 )
 
 // TestServicesMustNotImportSubtitle enforces project-context.md Rule 19:
-// no file under apps/api/internal/services/ may import the subtitle package.
-// subtitle.Engine already imports services.TerminologyCorrectionServiceInterface,
-// so adding the reverse direction would create an import cycle that the Go
-// compiler rejects with "import cycle not allowed".
+// no production file under apps/api/internal/services/ may import the
+// subtitle package. subtitle.Engine already imports
+// services.TerminologyCorrectionServiceInterface, so adding the reverse
+// direction would create an import cycle that the Go compiler rejects
+// with "import cycle not allowed".
 func TestServicesMustNotImportSubtitle(t *testing.T) {
 	assertNoImport(t, "services", importSubtitle, "Rule 19 (services ↛ subtitle). Use the mirror-types workaround.")
-}
-
-// TestServicesMustNotImportSubtitle_detectsViolation proves the rule fires when
-// the forbidden import IS present, so the positive-path tests cannot pass
-// vacuously (e.g., if the file walk silently inspected nothing).
-func TestServicesMustNotImportSubtitle_detectsViolation(t *testing.T) {
-	const violatingSrc = `package services
-
-import (
-	_ "github.com/vido/api/internal/subtitle"
-)
-`
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, "synthetic.go", violatingSrc, parser.ImportsOnly)
-	if err != nil {
-		t.Fatalf("parse synthetic source failed: %v", err)
-	}
-
-	found := false
-	for _, imp := range file.Imports {
-		if strings.Trim(imp.Path.Value, `"`) == importSubtitle {
-			found = true
-			break
-		}
-	}
-	if !found {
-		t.Errorf("rule check failed to detect synthetic violation of %s — sanity check broken", importSubtitle)
-	}
 }
 
 // TestForbiddenImportEdges enforces the remaining Rule 19 forbidden directions.
@@ -84,14 +58,9 @@ func TestForbiddenImportEdges(t *testing.T) {
 // this test, the documented list will silently rot the moment someone adds
 // an import to a "leaf" package and a downstream dev trusts the doc claim.
 //
-// Runs `go list -deps` per package; the test self-skips if the `go` binary
-// isn't on PATH (e.g., in a stripped-down container) rather than failing
-// spuriously.
+// Executes `go list -deps` per package via the `go` binary that is, by
+// definition, running this test.
 func TestLeafPackagesHaveNoInternalDeps(t *testing.T) {
-	if _, err := exec.LookPath("go"); err != nil {
-		t.Skip("go binary not on PATH; cannot verify leaf invariant")
-	}
-
 	leaves := []string{"ai", "models", "sse", "retry", "cache"}
 
 	for _, leaf := range leaves {
@@ -101,13 +70,16 @@ func TestLeafPackagesHaveNoInternalDeps(t *testing.T) {
 				t.Fatalf("leaf %q listed in project-context.md Rule 19 but directory %s does not exist", leaf, leaf)
 			}
 
-			out, err := exec.Command(
+			cmd := exec.Command(
 				"go", "list", "-deps",
 				"-f", "{{if not .Standard}}{{.ImportPath}}{{end}}",
 				pkgPath,
-			).Output()
+			)
+			var stderr bytes.Buffer
+			cmd.Stderr = &stderr
+			out, err := cmd.Output()
 			if err != nil {
-				t.Fatalf("go list -deps %s failed: %v", pkgPath, err)
+				t.Fatalf("go list -deps %s failed: %v\nstderr: %s", pkgPath, err, stderr.String())
 			}
 
 			ownPath := importPathPrefix + leaf
@@ -135,39 +107,109 @@ func TestLeafPackagesHaveNoInternalDeps(t *testing.T) {
 	}
 }
 
-// assertNoImport scans every .go file (including _test.go) directly under
-// apps/api/internal/<dirRel>/ and fails if any imports `forbidden`. Sub-
-// packages are intentionally skipped — Rule 19 talks about the top-level
-// package boundary; sub-packages have their own context.
-func assertNoImport(t *testing.T, dirRel, forbidden, why string) {
-	t.Helper()
+// TestScanImports_DetectsViolation proves that the real enforcement helper
+// (scanImports) actually flags bad imports in production files AND correctly
+// ignores external test packages. Without this, the production TestXxx tests
+// could pass vacuously if scanImports silently inspected nothing or if the
+// external-test-package skip regressed.
+//
+// This replaces the previous tautological sanity check that re-implemented
+// parser.ParseFile inline and therefore did not exercise scanImports at all.
+func TestScanImports_DetectsViolation(t *testing.T) {
+	tmp := t.TempDir()
 
+	must := func(name, body string) {
+		t.Helper()
+		if err := os.WriteFile(filepath.Join(tmp, name), []byte(body), 0o600); err != nil {
+			t.Fatalf("write %s: %v", name, err)
+		}
+	}
+
+	// Production file, no forbidden import — should be scanned but not flagged.
+	must("good.go", "package x\nimport _ \"fmt\"\n")
+	// Production file with the forbidden import — MUST be flagged.
+	must("bad.go", "package x\nimport _ \""+importSubtitle+"\"\n")
+	// External test package (name ends in _test). Same forbidden import, but
+	// external test packages are a separate compilation unit and CAN import
+	// peer/child packages without creating a cycle. MUST be skipped.
+	must("x_test.go", "package x_test\nimport _ \""+importSubtitle+"\"\n")
+	// A non-.go file in the same dir — must be ignored by the walker.
+	must("README.md", "not a go file\n")
+
+	violations, scanned, err := scanImports(tmp, importSubtitle)
+	if err != nil {
+		t.Fatalf("scanImports returned error: %v", err)
+	}
+
+	// scanned should count good.go + bad.go = 2 (README.md filtered by extension,
+	// x_test.go filtered by external-test-pkg skip).
+	if scanned != 2 {
+		t.Errorf("expected scanned=2 (good.go + bad.go), got %d", scanned)
+	}
+
+	if len(violations) != 1 {
+		t.Fatalf("expected exactly 1 violation (bad.go), got %d: %v", len(violations), violations)
+	}
+	if filepath.Base(violations[0]) != "bad.go" {
+		t.Errorf("expected bad.go to be flagged, got %s", violations[0])
+	}
+}
+
+// scanImports walks every .go file directly under dirRel and returns the
+// paths of files that import `forbidden`. It skips:
+//   - directories (sub-packages are out of scope — Rule 19 talks about
+//     direct-package boundaries; if sub-packages are ever added under
+//     services/handlers/repository, revisit this)
+//   - non-.go files
+//   - files whose package name ends in "_test" (external test packages;
+//     they are a separate compilation unit and may legitimately import
+//     peer packages that the production code cannot)
+//
+// Returning violations (rather than calling t.Errorf directly) is what makes
+// this helper testable on its own — see TestScanImports_DetectsViolation.
+func scanImports(dirRel, forbidden string) (violations []string, scanned int, err error) {
 	entries, err := os.ReadDir(dirRel)
 	if err != nil {
-		t.Fatalf("read internal/%s failed: %v", dirRel, err)
+		return nil, 0, err
 	}
 
 	fset := token.NewFileSet()
-	scanned := 0
 	for _, entry := range entries {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".go") {
 			continue
 		}
 		path := filepath.Join(dirRel, entry.Name())
-		file, err := parser.ParseFile(fset, path, nil, parser.ImportsOnly)
-		if err != nil {
-			t.Fatalf("parse %s failed: %v", path, err)
+		file, perr := parser.ParseFile(fset, path, nil, parser.ImportsOnly)
+		if perr != nil {
+			return nil, 0, perr
+		}
+		if strings.HasSuffix(file.Name.Name, "_test") {
+			continue
 		}
 		scanned++
 
 		for _, imp := range file.Imports {
 			if strings.Trim(imp.Path.Value, `"`) == forbidden {
-				t.Errorf("%s imports %s — violates %s. See project-context.md Rule 19.", path, forbidden, why)
+				violations = append(violations, path)
 			}
 		}
 	}
+	return violations, scanned, nil
+}
 
+// assertNoImport is the t.Helper adapter around scanImports used by the
+// production Rule-19 tests.
+func assertNoImport(t *testing.T, dirRel, forbidden, why string) {
+	t.Helper()
+
+	violations, scanned, err := scanImports(dirRel, forbidden)
+	if err != nil {
+		t.Fatalf("scanImports(internal/%s) failed: %v", dirRel, err)
+	}
 	if scanned == 0 {
 		t.Fatalf("no .go files scanned in internal/%s/ — wrong working directory?", dirRel)
+	}
+	for _, v := range violations {
+		t.Errorf("%s imports %s — violates %s. See project-context.md Rule 19.", v, forbidden, why)
 	}
 }

@@ -4,7 +4,7 @@
 
 **Full Documentation:** See `_bmad-output/planning-artifacts/architecture/index.md` for complete architectural decisions and patterns (sharded into ~20 focused files).
 
-**Last Updated:** 2026-04-13 (Rule 19 hardening — corrected leaf list, added enforcement for 3 more forbidden edges + leaf invariant + Mirror-Types parity, all in boundaries_test.go)
+**Last Updated:** 2026-04-13 (Rule 19 CR follow-up — removed conflict with Rule 4, refactored assertNoImport → scanImports so sanity test actually exercises enforcement, skipped external test packages, moved parity test to services_test)
 **Architecture Status:** ✅ Validated and Ready for Implementation (5,463 lines, 8 steps completed)
 
 ---
@@ -522,8 +522,10 @@ Go internal package import direction (apps/api/internal/):
 Allowed (single-direction layering, extends Rule 4):
   Handler  → Service    → Repository → Database
   Handler  → Subtitle   → Service              (subtitle uses services.TerminologyCorrectionServiceInterface)
-  Handler  → Repository                        (read-only paths)
   *        → ai, models, sse, retry, cache  (leaf packages — see list below)
+
+  NOTE: Handler → Repository is FORBIDDEN by Rule 4. Rule 19 does not
+  introduce an exception. Go through a service.
 
 FORBIDDEN:
   Service ↛ Subtitle    (would cycle: subtitle already imports services)
@@ -567,14 +569,24 @@ Reference Implementation (already in production as of Epic 9):
       → TranslationBlock mirrors subtitle.SubtitleBlock
   - apps/api/internal/services/transcription_service.go:362-369
       → ParseSRTToTranslationBlocks inlines subtitle.ParseSRT validation
-        (exported so the parity test in boundaries_test.go can call it)
+        (exported only so the external-test-package parity check can
+         call it cross-package — see srt_parity_test.go)
 
-Enforcement (apps/api/internal/boundaries_test.go, stdlib-only):
-  - TestServicesMustNotImportSubtitle              — primary cycle gate
-  - TestServicesMustNotImportSubtitle_detectsViolation — sanity (non-vacuous)
-  - TestForbiddenImportEdges                       — services↛handlers, repository↛{services,subtitle}
-  - TestLeafPackagesHaveNoInternalDeps             — keeps the leaf list above honest
-  - TestParseSRT_ParityWithSubtitle (services pkg) — Mirror-Types drift detector
+Enforcement (stdlib-only):
+  boundaries_test.go (apps/api/internal/, package internal):
+  - TestServicesMustNotImportSubtitle   — primary cycle gate
+  - TestScanImports_DetectsViolation    — sanity that actually exercises the
+                                          scanImports helper (tempdir with a
+                                          violating file + an external test
+                                          file that must be skipped)
+  - TestForbiddenImportEdges            — services↛handlers, repository↛{services,subtitle}
+  - TestLeafPackagesHaveNoInternalDeps  — keeps the leaf list above honest
+
+  srt_parity_test.go (apps/api/internal/services/, package services_test):
+  - TestParseSRT_ParityWithSubtitle     — Mirror-Types drift detector;
+                                          lives in an external test package so
+                                          it can import both services and
+                                          subtitle without creating a cycle
 
 Reference: Epic 9 retro AI-5 (insight #3) — surfaced during 9-2b implementation.
 ```

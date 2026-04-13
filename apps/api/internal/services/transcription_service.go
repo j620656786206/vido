@@ -364,7 +364,10 @@ func (s *TranscriptionService) translateSRT(ctx context.Context, jobID string, m
 var srtTimestampPattern = regexp.MustCompile(`^(\d{2}:\d{2}:\d{2},\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2},\d{3})`)
 
 // ParseSRTToTranslationBlocks parses SRT content into TranslationBlocks.
-// Inline SRT parser. services ↛ subtitle — see project-context.md Rule 19. Mirrors subtitle.ParseSRT validation.
+// Inline SRT parser. services ↛ subtitle — see project-context.md Rule 19.
+// Mirrors subtitle.ParseSRT validation. Exported (rather than kept private)
+// only so the external-test-package parity check in srt_parity_test.go can
+// call it cross-package; external runtime callers should use subtitle.ParseSRT.
 func ParseSRTToTranslationBlocks(content string) ([]TranslationBlock, error) {
 	if content == "" {
 		return nil, nil
