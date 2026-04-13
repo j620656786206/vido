@@ -368,8 +368,8 @@ development_status:
 
   # --- Technical Debt ---
   retro-9-AI3-dead-code-detection-ci:        done  # MEDIUM — DEV /dev-story: staticcheck + go vet in CI, ESLint no-unused-vars error, 28 findings fixed; CR fixes applied 2026-04-13
-  retro-9-AI4-local-lint-command:            backlog  # MEDIUM — QD: document `nx run-many -t lint` in project-context.md
-  retro-9-AI5-package-dependency-boundaries: backlog  # LOW — QD: document subtitle↔engine↔ai import boundaries in project-context.md
+  retro-9-AI4-local-lint-command:            ready-for-dev  # 2026-04-13 — SM: story created. QD: add `pnpm lint:all` root script + staticcheck to api:lint target + project-context.md Rule 12 docs
+  retro-9-AI5-package-dependency-boundaries: ready-for-dev  # 2026-04-13 — SM: story created. QD: add Rule 19 (Package Dependency Boundaries) to project-context.md + boundaries_test.go enforcement for services ↛ subtitle
 
   # ==============================================================================
   # Epic 9c: Media Technical Info & NFO Integration (PRD v4)
