@@ -204,3 +204,23 @@ Claude Opus 4.6 (1M context)
   - **F5 (LOW)**: Eliminated duplicate `$(go env GOPATH)` invocations by assigning `STATICCHECK_BIN` once.
   - **F6 (LOW)**: Install failure mode now has a clear hint in Rule 12 — pre-install snippet included with explicit `mv` to the versioned path (matches the lint target's own install flow).
   - **F7 (LOW)**: First-run install now prints `→ Installing staticcheck@2026.1 (first-time setup, ~10s)...` to stderr so users don't mistake Go module fetch logs for lint errors.
+
+---
+
+## Errata — 2026-04-14
+
+**Re: `preexisting-fail-root-lint-target` backlog entry filed under "Task 2 deviation" above (line 166).**
+
+The description "`@nx/eslint/plugin` auto-infers `eslint ./src` for the root project, but repo root has no `./src`. ESLint exits non-zero with 'No files matching `./src`'" is **technically inaccurate** and the failure mode is **not reproducible** on this codebase.
+
+Root cause investigation (SM party-mode session with Winston/Amelia/Murat, 2026-04-14):
+
+- `@nx/eslint@22.3.3` → `node_modules/@nx/eslint/src/plugins/plugin.js:184-195` explicitly returns `null` for `projectRoot === '.'` when neither `./src` nor `./lib` exists. The plugin **cannot** emit `eslint ./src` when `./src` is absent — the preceding guard short-circuits before any target is constructed.
+- Verified: `pnpm nx reset && pnpm nx show projects --with-target=lint` returns exactly `shared-types, api, web` (root correctly excluded). `pnpm nx run @vido/source:lint` returns `Cannot find configuration for task` — the target simply does not exist.
+- `pnpm nx run-many -t lint` attempts only the three projects above; `@vido/source` is never in the failed-tasks list.
+
+Closure: sprint-status entry `preexisting-fail-root-lint-target` flipped `backlog → done` with reason "NOT REPRODUCIBLE" on 2026-04-14. A lightweight CI breadcrumb (`.github/workflows/test.yml` lint job) asserts the lint-target project count remains at 3, so if Nx plugin upstream behavior changes in a future version bump, CI will surface the drift immediately rather than letting it masquerade as a "real" failure.
+
+The companion entry `preexisting-fail-shared-types-eslint-cjs` was **correctly** triaged and is being fixed in its own story — this errata applies only to the root-lint-target entry.
+
+Process lesson: when triaging a multi-project lint failure (e.g., `nx run-many -t lint` exits non-zero), verify which specific project's target is failing via `pnpm nx run <project>:lint` in isolation before attributing the error to a specific project. Aggregate error messages from `run-many` can obscure which target actually produced them.

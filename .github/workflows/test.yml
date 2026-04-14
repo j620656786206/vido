@@ -87,6 +87,26 @@ jobs:
         working-directory: apps/api
         run: staticcheck ./...
 
+      # Breadcrumb: monitors @nx/eslint/plugin inference for drift.
+      # Current behavior (@nx/eslint@22.3.3, plugin.js:184-195): plugin skips
+      # workspace-root project when `./src` and `./lib` are absent, so only
+      # shared-types, api, web have inferred lint targets. If Nx upstream
+      # changes this behavior — or someone creates `./src`/`./lib` at repo root —
+      # this count drifts and CI flags it before a silent regression.
+      # Context: sprint-status preexisting-fail-root-lint-target (closed 2026-04-14).
+      - name: Verify Nx lint target inference (drift breadcrumb)
+        run: |
+          EXPECTED=3
+          ACTUAL=$(pnpm nx show projects --with-target=lint | wc -l | tr -d ' ')
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "::error::Nx lint target inference drifted: expected $EXPECTED projects, got $ACTUAL"
+            echo "Investigate before updating this assertion. Context:"
+            echo "  _bmad-output/implementation-artifacts/retro-9-AI4-local-lint-command.md (Errata section)"
+            echo "Current lint-target projects:"
+            pnpm nx show projects --with-target=lint
+            exit 1
+          fi
+
       - name: Run ESLint
         run: pnpm run lint
 
