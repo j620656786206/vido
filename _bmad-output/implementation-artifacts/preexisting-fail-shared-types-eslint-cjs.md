@@ -1,6 +1,6 @@
 # Story: Fix libs/shared-types ESLint Config — Port Legacy CJS to Flat Config
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -23,11 +23,11 @@ so that `nx run shared-types:lint` succeeds without requiring a non-existent leg
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Remove legacy broken CJS config (AC: #1)
-  - [ ] 1.1 Delete `libs/shared-types/eslint.config.cjs`
+- [x] Task 1: Remove legacy broken CJS config (AC: #1)
+  - [x] 1.1 Delete `libs/shared-types/eslint.config.cjs`
 
-- [ ] Task 2: Create new flat-config `eslint.config.mjs` (AC: #2)
-  - [ ] 2.1 Create `libs/shared-types/eslint.config.mjs` with the following contents:
+- [x] Task 2: Create new flat-config `eslint.config.mjs` (AC: #2)
+  - [x] 2.1 Create `libs/shared-types/eslint.config.mjs` with the following contents:
     ```js
     import rootConfig from '../../eslint.config.mjs';
     import jsoncParser from 'jsonc-eslint-parser';
@@ -50,31 +50,31 @@ so that `nx run shared-types:lint` succeeds without requiring a non-existent leg
       },
     ];
     ```
-  - [ ] 2.2 Verify `jsonc-eslint-parser` resolves — it is already available under `libs/shared-types/node_modules/` and also in the root workspace. If resolution fails, run `pnpm add -D -w jsonc-eslint-parser` (workspace root) rather than adding a per-lib dep.
-  - [ ] 2.3 Verify `@nx/eslint-plugin` is installed at the root (it provides the `@nx/dependency-checks` rule). It is — no action needed unless the rule reports unknown-plugin.
+  - [x] 2.2 Verify `jsonc-eslint-parser` resolves — it resolves via pnpm hoist from root `node_modules/jsonc-eslint-parser/` (no per-lib copy under `libs/shared-types/node_modules/`; pnpm's hoisted layout is sufficient for ESLint's module resolution from the library cwd). If resolution fails, run `pnpm add -D -w jsonc-eslint-parser` (workspace root) rather than adding a per-lib dep.
+  - [x] 2.3 Verify `@nx/eslint-plugin` is installed at the root (it provides the `@nx/dependency-checks` rule). It is — no action needed unless the rule reports unknown-plugin. **ACTION TAKEN:** Rule reported unknown-plugin (story anticipated this contingency). Installed `@nx/eslint-plugin@22.3.3` via `pnpm add -D -w` and registered it in the config's `plugins` block (keyed as `'@nx'`).
 
-- [ ] Task 3: Verify the inferred Nx lint target still resolves (AC: #3)
-  - [ ] 3.1 Run `pnpm nx show project shared-types --json | grep -o '"lint"'` — confirm `@nx/eslint/plugin` still infers a `lint` target because `eslint.config.mjs` is present.
-  - [ ] 3.2 Run `pnpm nx run shared-types:lint` — expect exit 0.
-  - [ ] 3.3 If the inputs list in the inferred target still mentions the old `.cjs` path, that is harmless (stale cache). Clear with `pnpm nx reset` if needed.
+- [x] Task 3: Verify the inferred Nx lint target still resolves (AC: #3)
+  - [x] 3.1 Run `pnpm nx show project shared-types --json | grep -o '"lint"'` — confirm `@nx/eslint/plugin` still infers a `lint` target because `eslint.config.mjs` is present.
+  - [x] 3.2 Run `pnpm nx run shared-types:lint` — expect exit 0.
+  - [x] 3.3 If the inputs list in the inferred target still mentions the old `.cjs` path, that is harmless (stale cache). Clear with `pnpm nx reset` if needed. Ran `pnpm nx reset` once after adding the plugin dep.
 
-- [ ] Task 4: Fault-injection test — prove `@nx/dependency-checks` is live (AC: #4)
-  - [ ] 4.1 In `libs/shared-types/src/index.ts` (or any `.ts` file that is part of the library barrel), temporarily add `import 'lodash';` (a package NOT listed in `libs/shared-types/package.json` dependencies).
-  - [ ] 4.2 Run `pnpm nx run shared-types:lint` — it MUST fail with a `@nx/dependency-checks` error naming `lodash`.
-  - [ ] 4.3 Revert the injected import. Run lint again — it MUST pass.
-  - [ ] 4.4 Do NOT commit the injected import. This step only verifies the rule runs.
+- [x] Task 4: Fault-injection test — prove `@nx/dependency-checks` is live (AC: #4)
+  - [x] 4.1 In `libs/shared-types/src/index.ts` (or any `.ts` file that is part of the library barrel), temporarily add `import 'lodash';` (a package NOT listed in `libs/shared-types/package.json` dependencies).
+  - [x] 4.2 Run `pnpm nx run shared-types:lint` — it MUST fail with a `@nx/dependency-checks` error naming `lodash`. **RESULT:** `error: The "shared-types" project uses the following packages, but they are missing from "dependencies": - lodash  @nx/dependency-checks` — rule is live.
+  - [x] 4.3 Revert the injected import. Run lint again — it MUST pass. Confirmed pass.
+  - [x] 4.4 Do NOT commit the injected import. This step only verifies the rule runs. `src/index.ts` reverted to original contents (single `export * from './lib/shared-types';`).
 
-- [ ] Task 5: Root-lint and lint:all regression check (AC: #5, #6)
-  - [ ] 5.1 Run `pnpm run lint` from repo root — expect exit 0.
-  - [ ] 5.2 Run `pnpm run lint:all` from repo root — expect exit 0.
-  - [ ] 5.3 If root lint now flags `libs/shared-types/eslint.config.mjs` itself, extend the root `eslint.config.mjs` ignores to include `**/eslint.config.{js,cjs,mjs,ts,cts,mts}` (root already ignores `*.config.js` / `*.config.ts` but NOT `.mjs` — verify against current root config before editing). Prefer NOT modifying root ignores unless a concrete error appears.
+- [x] Task 5: Root-lint and lint:all regression check (AC: #5, #6)
+  - [x] 5.1 Run `pnpm run lint` from repo root — expect exit 0. **RESULT:** 0 errors, 108 warnings, exit 0.
+  - [x] 5.2 Run `pnpm run lint:all` from repo root — expect exit 0. **RESULT:** exit 0 (api:lint + root lint + format:check all pass).
+  - [x] 5.3 If root lint now flags `libs/shared-types/eslint.config.mjs` itself, extend the root `eslint.config.mjs` ignores to include `**/eslint.config.{js,cjs,mjs,ts,cts,mts}` (root already ignores `*.config.js` / `*.config.ts` but NOT `.mjs` — verify against current root config before editing). Prefer NOT modifying root ignores unless a concrete error appears. **NO ACTION NEEDED** — no flag on the new `.mjs` file; root ignores untouched.
 
-- [ ] Task 6: Build + broader affected regression (AC: #7, #8)
-  - [ ] 6.1 Run `pnpm nx run shared-types:build` — expect exit 0.
-  - [ ] 6.2 Run `pnpm nx affected -t lint` — expect no new failures (compare to pre-change baseline from `main`).
-  - [ ] 6.3 Run `pnpm nx affected -t test` if shared-types is a dep of any testable project — expect no new failures.
+- [x] Task 6: Build + broader affected regression (AC: #7, #8)
+  - [x] 6.1 Run `pnpm nx run shared-types:build` — expect exit 0. **PASS**.
+  - [x] 6.2 Run `pnpm nx affected -t lint` — expect no new failures. **PASS** (3 projects: api + shared-types + web; 0 errors, 107 warnings = same as pre-change baseline).
+  - [x] 6.3 Run `pnpm nx affected -t test` if shared-types is a dep of any testable project — expect no new failures. **PASS** (2 projects — `api:test` + `web:test`; `shared-types` has no `test` target, only `lint`/`build`/`nx-release-publish`, so it is not picked up by `affected -t test`).
 
-- [ ] Task 7: Update sprint-status.yaml (done by SM create-story — devs do NOT re-edit)
+- [x] Task 7: Update sprint-status.yaml (done by SM create-story — devs do NOT re-edit)
   - [x] 7.1 `preexisting-fail-shared-types-eslint-cjs` updated from `backlog` → `ready-for-dev` (SM workflow step 6).
 
 ## Dev Notes
@@ -187,15 +187,71 @@ export default [
 
 ### Agent Model Used
 
-Claude Opus 4.6 (1M context) — SM agent (Bob) create-story workflow, YOLO mode
+- SM story creation: Claude Opus 4.6 (1M context), YOLO mode
+- DEV implementation: Claude Opus 4.6 (1M context) — Amelia /dev-story, 2026-04-14
 
 ### Debug Log References
 
+- Baseline failure reproduced: `pnpm nx run shared-types:lint` → `Cannot find module '../../.eslintrc.json'`
+- Post-fix first run: `@nx/dependency-checks` rule reports plugin `@nx` not found → added plugin import + registration
+- Fault-injection (`import 'lodash'` into `src/index.ts`): rule correctly flagged `lodash` missing from `package.json` → proves rule is live
+- Post-revert: lint exits 0 (cached after Nx detected file reverted to prior content)
+
 ### Completion Notes List
+
+- All 6 tasks + subtasks complete; all 8 ACs satisfied.
+- **Pre-existing fix (inline)**: Created `$(go env GOPATH)/bin` directory (`/Users/tvbs/go/bin`) so `api:lint`'s staticcheck auto-install step (added in retro-9-AI3) can complete its `mv` from `$STATICCHECK_TMP`. Without this, `api:lint` fails on any machine that has never had a `go install` run. Unrelated to the shared-types ESLint change; surfaced because `lint:all` (required by AC #6) runs `api:lint` as its first step. One-time machine-local setup, no repo files modified for this fix.
+- **Dependency added**: `@nx/eslint-plugin@22.3.3` (workspace devDep). Story's Dev Notes anticipated this contingency ("no action needed unless the rule reports unknown-plugin"). Version pinned to match `@nx/js` / `nx` / `@nx/web` at `22.3.3`.
+- **Flat-config tweak vs story template**: Story provided a 15-LOC template that omits explicit plugin registration. Added `plugins: { '@nx': nxEslintPlugin }` inside the JSON override block — this is a hard requirement of ESLint flat config (no implicit plugin resolution from rule names, unlike the legacy `.eslintrc` world). Net effect: ~18 LOC, still trivial.
+- Build output format unchanged (CJS, per `"type": "commonjs"`).
+- No source-file changes to `src/**` (index.ts reverted verbatim after fault injection).
+
+### UX Verification
+
+🎨 UX Verification: SKIPPED — no UI changes in this story (build-tool config only).
 
 ### Change Log
 
+| Date       | Change                                                                                                                                                                                                                                                                                                                                                  |
+|------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 2026-04-14 | Replaced `libs/shared-types/eslint.config.cjs` (broken legacy CJS require of non-existent `.eslintrc.json`) with `libs/shared-types/eslint.config.mjs` (flat config extending root + `@nx/dependency-checks`).                                                                                                                                           |
+| 2026-04-14 | Added `@nx/eslint-plugin@22.3.3` to root `devDependencies` (pnpm-lock.yaml regenerated). Needed to satisfy `@nx/dependency-checks` rule; story Dev Notes pre-authorized this contingency ("unless the rule reports unknown-plugin"). Plugin registered via `plugins: { '@nx': nxEslintPlugin }` in the new `.mjs` config.                                  |
+| 2026-04-14 | Fault-injection test confirmed `@nx/dependency-checks` is live: temporary `import 'lodash'` in `src/index.ts` → rule errors on missing dep → import reverted → rule green. Proves the published-lib safety net is now active (previously silently off because the broken CJS never loaded).                                                              |
+| 2026-04-14 | **CR fix (Amelia /code-review, M1):** Extended `lint:all` in `package.json` — replaced `pnpm nx run api:lint && pnpm run lint && pnpm run format:check` with `pnpm nx run-many -t lint && pnpm run lint && pnpm run format:check`. Reason: the pre-fix `lint:all` never invoked `shared-types:lint`, so the `@nx/dependency-checks` safety net this story just resurrected would NOT be exercised by CI-parity gate — silent-regression risk identical to the one that produced this story. Verified via fault-injection: `import 'lodash'` in `src/index.ts` → `lint:all` exits 1 with `@nx/dependency-checks` error → reverted → `lint:all` exits 0. |
+| 2026-04-14 | **CR fix (M2/L1):** Corrected two narrative inaccuracies in this story file — Task 6.3's "api Go tests + shared-types" claim (shared-types has no `test` target; actual run hits `api:test` + `web:test`), and Task 2.2's "already available under `libs/shared-types/node_modules/`" claim (pnpm hoisted, only at root). No functional change.                  |
+
 ### File List
 
-- `libs/shared-types/eslint.config.cjs` — DELETE (broken legacy transitional file)
-- `libs/shared-types/eslint.config.mjs` — CREATE (new flat config extending root + `@nx/dependency-checks` for `package.json`)
+- `libs/shared-types/eslint.config.cjs` — **DELETED** (broken legacy transitional file)
+- `libs/shared-types/eslint.config.mjs` — **CREATED** (new flat config extending root + `@nx/dependency-checks` for `package.json`, with explicit `@nx` plugin registration)
+- `package.json` — **MODIFIED** — two changes: (1) added `@nx/eslint-plugin@22.3.3` to `devDependencies` (dev), and (2) **CR M1:** widened `lint:all` script from `pnpm nx run api:lint && …` to `pnpm nx run-many -t lint && …` so `shared-types:lint` (and any future per-project lint targets) participate in the CI-parity regression gate.
+- `pnpm-lock.yaml` — **MODIFIED** (regenerated by `pnpm add -D -w @nx/eslint-plugin@22.3.3`)
+
+## Senior Developer Review (AI)
+
+**Reviewer:** Amelia (Claude Opus 4.6 /code-review) on 2026-04-14
+**Outcome:** **APPROVED WITH FIXES APPLIED**
+
+**AC verification (independent, re-ran from clean cache where possible):**
+
+| AC | Check | Result |
+|----|-------|--------|
+| #1 | `libs/shared-types/eslint.config.cjs` absent | ✅ (`ls` confirms only `.mjs`) |
+| #2 | `.mjs` imports root + adds `@nx/dependency-checks` | ✅ (file inspected) |
+| #3 | `nx run shared-types:lint` exits 0 | ✅ (re-run, cache hit) |
+| #4 | Fault injection (`import 'lodash'`) fires the rule | ✅ (reviewer independently injected + reverted) |
+| #5 | `pnpm run lint` exits 0 | ✅ (0 errors, 108 warnings) |
+| #6 | `pnpm run lint:all` exits 0 | ✅ (green under both original and CR-widened command) |
+| #7 | `nx run shared-types:build` exits 0 | ✅ |
+| #8 | `nx affected -t lint` and `-t test` clean | ✅ (`api:lint` + `shared-types:lint` + `web:lint` green; `api:test` + `web:test` green) |
+
+**Findings & fixes applied (via option [1] auto-fix):**
+
+- **M1 (regression-gate gap) — FIXED**: `lint:all` widened to `nx run-many -t lint` so `@nx/dependency-checks` is exercised on every CI-parity run, not just explicit `nx run shared-types:lint`. Fault-injection confirmed the widened command now fails on undeclared imports. Net risk eliminated: silent drift between a published lib's runtime imports and its declared deps can no longer slip past `lint:all`.
+- **M2 (Task 6.3 narrative) — FIXED**: Corrected the claim that `affected -t test` hits "api + shared-types" — actual targets are `api:test` + `web:test` (shared-types has no test target).
+- **L1 (Task 2.2 wording) — FIXED**: Replaced the false "already available under `libs/shared-types/node_modules/`" with the accurate pnpm-hoist explanation.
+- **L2 (Change Log scope bleed) — FIXED**: The `$GOPATH/bin` machine-local fix was removed from the Change Log table (retained in Completion Notes, where it belongs — it's environmental, not a repo change).
+
+**Net new repo change from CR:** `package.json` (single-line `lint:all` script edit); zero code changes in `libs/shared-types/`.
+
+**Status transition:** `review` → `done` (all ACs satisfied, all CR findings addressed).
