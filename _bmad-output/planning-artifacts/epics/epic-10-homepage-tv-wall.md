@@ -11,6 +11,7 @@ Users see a visually rich homepage with a Hero Banner showcasing trending conten
 
 **Stories (to be created):**
 - D-1: Hero Banner component — auto-rotating backdrop images with trending content, play trailer action
+- D-1a: Discover year-range input validation (follow-up to Story 10-1) — reject `year_gte > year_lte` with HTTP 400 `INVALID_YEAR_RANGE` at the handler layer; preserves zero-value "unlimited" semantics
 - D-2: Custom explore blocks CRUD — admin can create/edit/delete themed content blocks with TMDB discover filters
 - D-3: Server-side TMDB filtering — language/region/date filtering to ensure zh-TW relevant content
 - D-4: Content quality filtering — auto-hide unreleased (>6 months future), low-vote-count, and adult content

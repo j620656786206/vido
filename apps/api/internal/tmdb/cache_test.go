@@ -14,11 +14,11 @@ import (
 
 // MockCacheRepository is a mock implementation of CacheRepositoryInterface
 type MockCacheRepository struct {
-	data       map[string]*repository.CacheEntry
-	setError   error
-	getError   error
-	setCalled  int
-	getCalled  int
+	data      map[string]*repository.CacheEntry
+	setError  error
+	getError  error
+	setCalled int
+	getCalled int
 	// lastSetTTL captures the TTL passed to the most recent Set() call,
 	// used by Story 10-1 tests to verify 1-hour trending/discover TTL.
 	lastSetTTL time.Duration
@@ -78,15 +78,15 @@ func (m *MockCacheRepository) ClearByType(ctx context.Context, cacheType string)
 
 // MockFallbackClient is a mock implementation of LanguageFallbackClientInterface
 type MockFallbackClient struct {
-	SearchMoviesResponse    *SearchResultMovies
-	SearchMoviesError       error
-	SearchMoviesCalled      int
-	SearchTVShowsResponse   *SearchResultTVShows
-	SearchTVShowsError      error
-	SearchTVShowsCalled     int
-	GetMovieDetailsResponse *MovieDetails
-	GetMovieDetailsError    error
-	GetMovieDetailsCalled   int
+	SearchMoviesResponse     *SearchResultMovies
+	SearchMoviesError        error
+	SearchMoviesCalled       int
+	SearchTVShowsResponse    *SearchResultTVShows
+	SearchTVShowsError       error
+	SearchTVShowsCalled      int
+	GetMovieDetailsResponse  *MovieDetails
+	GetMovieDetailsError     error
+	GetMovieDetailsCalled    int
 	GetTVShowDetailsResponse *TVShowDetails
 	GetTVShowDetailsError    error
 	GetTVShowDetailsCalled   int
@@ -239,16 +239,16 @@ func TestNewCacheService(t *testing.T) {
 
 func TestCacheService_SearchMovies(t *testing.T) {
 	tests := []struct {
-		name           string
-		query          string
-		page           int
-		cachedData     *SearchResultMovies
-		apiResponse    *SearchResultMovies
-		apiError       error
-		wantFromCache  bool
-		wantAPICall    bool
-		wantCacheSet   bool
-		wantErr        bool
+		name          string
+		query         string
+		page          int
+		cachedData    *SearchResultMovies
+		apiResponse   *SearchResultMovies
+		apiError      error
+		wantFromCache bool
+		wantAPICall   bool
+		wantCacheSet  bool
+		wantErr       bool
 	}{
 		{
 			name:  "cache hit",
@@ -608,4 +608,76 @@ func TestCacheService_DiscoverTVShows_Error_Propagates(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "upstream boom")
 	assert.Equal(t, 0, repo.setCalled, "error must NOT write to cache")
+}
+
+// TestCacheService_TrendingDiscover_RateLimitNotCached verifies that when
+// upstream returns a TMDb 429 (rate-limit) or 5xx server error, none of the
+// four trending/discover methods write a poisoned cache entry. This protects
+// against accidental "negative caching" — the next request must be free to
+// retry upstream once the rate-limit window passes.
+func TestCacheService_TrendingDiscover_RateLimitNotCached(t *testing.T) {
+	cases := []struct {
+		name string
+		err  error
+		call func(svc *CacheService) error
+		set  func(cfg *storyTenOneFallbackConfig)
+	}{
+		{
+			name: "GetTrendingMovies/rate-limit",
+			err:  NewRateLimitError(),
+			call: func(s *CacheService) error {
+				_, err := s.GetTrendingMovies(context.Background(), "week", 1)
+				return err
+			},
+			set: func(c *storyTenOneFallbackConfig) { c.trendingMoviesError = NewRateLimitError() },
+		},
+		{
+			name: "GetTrendingTVShows/server-5xx",
+			err:  NewServerError(errors.New("HTTP 503")),
+			call: func(s *CacheService) error {
+				_, err := s.GetTrendingTVShows(context.Background(), "day", 1)
+				return err
+			},
+			set: func(c *storyTenOneFallbackConfig) { c.trendingTVShowsError = NewServerError(errors.New("HTTP 503")) },
+		},
+		{
+			name: "DiscoverMovies/rate-limit",
+			err:  NewRateLimitError(),
+			call: func(s *CacheService) error {
+				_, err := s.DiscoverMovies(context.Background(), DiscoverParams{Genre: "28"})
+				return err
+			},
+			set: func(c *storyTenOneFallbackConfig) { c.discoverMoviesError = NewRateLimitError() },
+		},
+		{
+			name: "DiscoverTVShows/server-5xx",
+			err:  NewServerError(errors.New("HTTP 502")),
+			call: func(s *CacheService) error {
+				_, err := s.DiscoverTVShows(context.Background(), DiscoverParams{Region: "TW"})
+				return err
+			},
+			set: func(c *storyTenOneFallbackConfig) { c.discoverTVShowsError = NewServerError(errors.New("HTTP 502")) },
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			for k := range storyTenOneConfigs {
+				delete(storyTenOneConfigs, k)
+			}
+
+			repo := NewMockCacheRepository()
+			fbClient := &MockFallbackClient{}
+			tc.set(cfgFor(fbClient))
+			svc := NewCacheService(fbClient, repo, CacheServiceConfig{})
+
+			err := tc.call(svc)
+			require.Error(t, err, "upstream error must surface")
+
+			var tmdbErr *TMDbError
+			require.ErrorAs(t, err, &tmdbErr, "error must remain a *TMDbError so handler can map to correct HTTP status")
+
+			assert.Equal(t, 0, repo.setCalled, "rate-limit / server error MUST NOT poison cache")
+		})
+	}
 }

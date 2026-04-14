@@ -364,8 +364,8 @@ func TestTMDbService_GetTrendingMovies_AppliesContentFilters(t *testing.T) {
 			Results: []tmdb.Movie{
 				{ID: 1, Title: "Good", VoteAverage: 8.0, VoteCount: 1000, ReleaseDate: "2026-01-01"},
 				{ID: 2, Title: "BadObscure", VoteAverage: 2.0, VoteCount: 10, ReleaseDate: "2026-01-01"}, // low quality → drop
-				{ID: 3, Title: "Future", VoteAverage: 7.5, VoteCount: 500, ReleaseDate: horizonCrosser},   // far future → drop
-				{ID: 4, Title: "Kept", VoteAverage: 6.0, VoteCount: 200, ReleaseDate: "2026-10-01"},       // within 6mo → keep
+				{ID: 3, Title: "Future", VoteAverage: 7.5, VoteCount: 500, ReleaseDate: horizonCrosser},  // far future → drop
+				{ID: 4, Title: "Kept", VoteAverage: 6.0, VoteCount: 200, ReleaseDate: "2026-10-01"},      // within 6mo → keep
 			},
 			TotalResults: 4,
 		},
@@ -393,7 +393,7 @@ func TestTMDbService_DiscoverTVShows_AppliesContentFilters(t *testing.T) {
 			Page: 1,
 			Results: []tmdb.TVShow{
 				{ID: 1, Name: "ok", VoteAverage: 7.0, VoteCount: 300, FirstAirDate: "2025-03-01"},
-				{ID: 2, Name: "unwatchable", VoteAverage: 1.0, VoteCount: 5, FirstAirDate: "2025-01-01"}, // low quality
+				{ID: 2, Name: "unwatchable", VoteAverage: 1.0, VoteCount: 5, FirstAirDate: "2025-01-01"},      // low quality
 				{ID: 3, Name: "far future show", VoteAverage: 8.0, VoteCount: 50, FirstAirDate: "2028-01-01"}, // far future
 			},
 			TotalResults: 3,
@@ -417,6 +417,46 @@ func TestTMDbService_Trending_ErrorPropagatesFromCacheLayer(t *testing.T) {
 	_, err := svc.GetTrendingMovies(context.Background(), "week", 1)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "cache layer boom")
+}
+
+// TestTMDbService_GetTrendingMovies_ItemFailingBothFiltersDroppedOnce verifies
+// that a single item violating BOTH FarFuture AND LowQuality is dropped and
+// does not appear in the output (i.e., the FarFuture → LowQuality pipeline
+// composes correctly without the same item being skipped, double-processed, or
+// resurrected). Also asserts that items violating only one predicate are still
+// dropped, and that clean items survive both stages.
+func TestTMDbService_GetTrendingMovies_ItemFailingBothFiltersDroppedOnce(t *testing.T) {
+	now := mustParseDate(t, "2026-04-14")
+
+	mockCache := &MockCacheService{
+		GetTrendingMoviesResponse: &tmdb.SearchResultMovies{
+			Page: 1,
+			Results: []tmdb.Movie{
+				{ID: 1, Title: "clean", VoteAverage: 7.5, VoteCount: 500, ReleaseDate: "2026-03-01"},
+				{ID: 2, Title: "low quality only", VoteAverage: 1.5, VoteCount: 5, ReleaseDate: "2025-12-01"},
+				{ID: 3, Title: "far future only", VoteAverage: 9.0, VoteCount: 2000, ReleaseDate: "2028-06-01"},
+				{ID: 4, Title: "fails both", VoteAverage: 1.0, VoteCount: 3, ReleaseDate: "2028-06-01"},
+				{ID: 5, Title: "also clean", VoteAverage: 6.0, VoteCount: 100, ReleaseDate: "2026-09-01"},
+			},
+			TotalResults: 5,
+		},
+	}
+
+	svc := NewTMDbServiceWithCacheService(mockCache)
+	svc.SetContentFilter(NewContentFilterServiceWithClock(func() time.Time { return now }))
+
+	result, err := svc.GetTrendingMovies(context.Background(), "week", 1)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+
+	var ids []int
+	for _, m := range result.Results {
+		ids = append(ids, m.ID)
+	}
+
+	assert.Equal(t, []int{1, 5}, ids,
+		"only items passing BOTH filters survive; ID 4 fails both and must appear zero times")
+	assert.NotContains(t, ids, 4, "item failing both predicates must be dropped, not resurrected by second filter")
 }
 
 func mustParseDate(t *testing.T, s string) time.Time {

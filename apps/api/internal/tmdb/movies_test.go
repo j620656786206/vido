@@ -3,9 +3,11 @@ package tmdb
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -283,6 +285,67 @@ func TestClient_GetTrendingMoviesWithLanguage(t *testing.T) {
 	client := NewClient(ClientConfig{APIKey: "k", BaseURL: server.URL, Language: "zh-TW"})
 	_, err := client.GetTrendingMoviesWithLanguage(context.Background(), "week", "en", 1)
 	require.NoError(t, err)
+}
+
+// TestClient_TrendingDiscover_ContextCancellation verifies that the new
+// trending/discover endpoints respect ctx.Done(). A slow upstream + cancelled
+// context must surface context.Canceled (or DeadlineExceeded) instead of
+// hanging until the server eventually responds.
+func TestClient_TrendingDiscover_ContextCancellation(t *testing.T) {
+	cases := []struct {
+		name string
+		call func(ctx context.Context, c *Client) error
+	}{
+		{
+			name: "GetTrendingMovies",
+			call: func(ctx context.Context, c *Client) error {
+				_, err := c.GetTrendingMovies(ctx, "week", 1)
+				return err
+			},
+		},
+		{
+			name: "DiscoverMovies",
+			call: func(ctx context.Context, c *Client) error {
+				_, err := c.DiscoverMovies(ctx, DiscoverParams{Genre: "28"})
+				return err
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Server holds the response until the client's context cancels it.
+			released := make(chan struct{})
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				select {
+				case <-r.Context().Done():
+				case <-released:
+				}
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(SearchResultMovies{Page: 1})
+			}))
+			defer func() {
+				close(released)
+				server.Close()
+			}()
+
+			client := NewClient(ClientConfig{APIKey: "k", BaseURL: server.URL, Language: "zh-TW"})
+
+			ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+			defer cancel()
+
+			start := time.Now()
+			err := tc.call(ctx, client)
+			elapsed := time.Since(start)
+
+			require.Error(t, err, "cancelled context must surface as error")
+			assert.True(t, elapsed < 2*time.Second, "must not block indefinitely after cancel; took %s", elapsed)
+
+			isCancel := errors.Is(err, context.Canceled) ||
+				errors.Is(err, context.DeadlineExceeded)
+			assert.True(t, isCancel, "error must wrap context.Canceled / DeadlineExceeded; got %v", err)
+		})
+	}
 }
 
 func TestClient_DiscoverMovies(t *testing.T) {
