@@ -670,3 +670,46 @@ func TestFallback_GetTrendingTVShows_AllEmpty(t *testing.T) {
 	assert.Empty(t, result.Results)
 	assert.Equal(t, []string{"zh-TW", "zh-CN", "en"}, m.trendingTVCalls)
 }
+
+// TestFallback_Discover_CallerLanguageEmpty_DoesNotRetryChain verifies that
+// when the caller provides an explicit Language and upstream returns zero
+// results (e.g. mistyped locale like "zz"), the fallback chain is still NOT
+// consulted — the caller's language is authoritative. A warning log is emitted
+// so operators can detect this case. This is the behavioral half of the
+// caller-language empty-result contract; log capture is intentionally not
+// asserted (slog is a global; observability-only).
+func TestFallback_Discover_CallerLanguageEmpty_DoesNotRetryChain(t *testing.T) {
+	cases := []struct {
+		name string
+		run  func(t *testing.T, fb *LanguageFallbackClient, m *trackingMockClient)
+	}{
+		{
+			name: "movies",
+			run: func(t *testing.T, fb *LanguageFallbackClient, m *trackingMockClient) {
+				_, lang, err := fb.DiscoverMoviesWithFallback(context.Background(),
+					DiscoverParams{Language: "zz", Genre: "28"})
+				require.NoError(t, err)
+				assert.Equal(t, "zz", lang, "caller language preserved even when upstream returns empty")
+				assert.Equal(t, []string{"zz"}, m.discoverMovieCalls, "chain must not be retried")
+			},
+		},
+		{
+			name: "tv",
+			run: func(t *testing.T, fb *LanguageFallbackClient, m *trackingMockClient) {
+				_, lang, err := fb.DiscoverTVShowsWithFallback(context.Background(),
+					DiscoverParams{Language: "zz", Region: "TW"})
+				require.NoError(t, err)
+				assert.Equal(t, "zz", lang)
+				assert.Equal(t, []string{"zz"}, m.discoverTVCalls)
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			m := &trackingMockClient{} // empty result maps → all languages return empty
+			fb := NewLanguageFallbackClient(m, []string{"zh-TW", "zh-CN", "en"})
+			tc.run(t, fb, m)
+		})
+	}
+}

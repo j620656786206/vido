@@ -98,6 +98,12 @@ func (s *TMDbService) VideosProvider() TMDbVideosProvider {
 // NewTMDbServiceWithCacheService creates a TMDb service with a custom cache service.
 // Used by tests with mock dependencies. Content filter uses the real clock — pass
 // a ContentFilterService via the dedicated setter if you need a fixed clock.
+//
+// NOTE: the resulting *TMDbService has a nil `client` field. Methods that bypass
+// the cache and call the client directly (VideosProvider, FindByExternalID) are
+// therefore NOT safe on mock-constructed services — FindByExternalID returns
+// "TMDb client not initialized" and VideosProvider returns nil. If a test needs
+// those paths, use NewTMDbService with a real (or test-server-backed) client.
 func NewTMDbServiceWithCacheService(cacheService tmdb.CacheServiceInterface) *TMDbService {
 	return &TMDbService{
 		cacheService:  cacheService,

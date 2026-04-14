@@ -337,11 +337,24 @@ func (c *LanguageFallbackClient) GetTrendingTVShowsWithFallback(ctx context.Cont
 // and the chain is only consulted if subsequent localization checks fail — but because
 // discover results are already language-filtered by the caller's intent, we treat a
 // caller-provided language as authoritative and skip the chain in that case.
+//
+// If a caller-provided language yields zero results (e.g. an unsupported locale
+// like "zz" or a locale with no catalog coverage), we log a warning so operators
+// can detect mistyped language codes without the request silently degrading.
 func (c *LanguageFallbackClient) DiscoverMoviesWithFallback(ctx context.Context, params DiscoverParams) (*SearchResultMovies, string, error) {
 	if params.Language != "" {
 		result, err := c.client.DiscoverMovies(ctx, params)
 		if err != nil {
 			return nil, "", err
+		}
+		if result != nil && len(result.Results) == 0 {
+			slog.Warn("Discover movies: caller-provided language returned empty results (fallback chain skipped)",
+				"language", params.Language,
+				"genre", params.Genre,
+				"year_gte", params.YearGte,
+				"year_lte", params.YearLte,
+				"region", params.Region,
+			)
 		}
 		return result, params.Language, nil
 	}
@@ -382,12 +395,22 @@ func (c *LanguageFallbackClient) DiscoverMoviesWithFallback(ctx context.Context,
 }
 
 // DiscoverTVShowsWithFallback runs /discover/tv across the language fallback chain
-// (see DiscoverMoviesWithFallback for semantics).
+// (see DiscoverMoviesWithFallback for semantics, including the empty-result warning
+// when a caller-provided language yields nothing).
 func (c *LanguageFallbackClient) DiscoverTVShowsWithFallback(ctx context.Context, params DiscoverParams) (*SearchResultTVShows, string, error) {
 	if params.Language != "" {
 		result, err := c.client.DiscoverTVShows(ctx, params)
 		if err != nil {
 			return nil, "", err
+		}
+		if result != nil && len(result.Results) == 0 {
+			slog.Warn("Discover TV shows: caller-provided language returned empty results (fallback chain skipped)",
+				"language", params.Language,
+				"genre", params.Genre,
+				"year_gte", params.YearGte,
+				"year_lte", params.YearLte,
+				"region", params.Region,
+			)
 		}
 		return result, params.Language, nil
 	}

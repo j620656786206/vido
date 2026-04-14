@@ -1,6 +1,6 @@
 # Story 10.1: TMDB Trending & Discover API with Server-Side Filtering
 
-Status: review
+Status: done
 
 ## Story
 
@@ -49,7 +49,7 @@ so that I see content relevant to my region without far-future or low-quality no
   - [x] 5.1 TMDB client unit tests: 9 test functions (4 tables + singles) covering trending day/week/unknown window, page normalization, language fallback, and discover query-param mapping (including the TV-specific `first_air_date.*` keys vs movies' `primary_release_date.*`).
   - [x] 5.2 Content filter unit tests: 6 test functions covering boundary conditions — exactly-on-horizon keep, 1-day-past horizon drop, rating exactly 3.0 keep, votes exactly 50 keep, 2.9+49 drop, empty/unparseable dates retained, plus a constants-guard test.
   - [x] 5.3 Handler tests: 7 test functions verifying default time_window, explicit day, unknown fallback, error→502, query-param mapping for all 7 discover params, empty defaults, and the APIResponse envelope `success/data/error` shape (Rule 18 boundary check).
-  - [x] 5.4 Additional inter-layer: cache tests (1-hour TTL assertion, cache-miss-then-hit, distinct param keys, error non-cache) and service-layer tests (filter pipeline applied after cache fetch).
+  - [x] 5.4 Additional inter-layer: cache tests (1-hour TTL assertion, cache-miss-then-hit, distinct param keys, error non-cache) and service-layer tests (filter pipeline applied after cache fetch). Plus `tests/e2e/tmdb-trending-discover.api.spec.ts` — live smoke (5 cases) against the running API on port 8080 that asserts the ApiResponse envelope + zh-TW filtering end-to-end when `TMDB_API_KEY` is set.
 
 ## Dev Notes
 
@@ -107,6 +107,21 @@ so that I see content relevant to my region without far-future or low-quality no
 - **Response format (AC #6)**: all 4 new endpoints use the existing `SuccessResponse` / `handleTMDbError` helpers, so responses are wrapped in `APIResponse{success, data, error}` with snake_case JSON keys per Rule 18. Verified by `TestTMDbHandler_ResponseIsApiResponseWrapped`.
 - **Mock churn**: 4 existing mock implementations (`MockClient`, `MockFallbackClient`, `MockCacheService`, `mockTMDbServiceForNFO`) gained pass-through stubs for the new interface methods. One existing helper (`MockCacheRepository.lastSetTTL`) was added to enable TTL assertions.
 
+### AI Code Review Follow-ups (2026-04-14)
+
+Adversarial code review (dev agent Amelia, Opus 4.6) found 0 HIGH, 3 MEDIUM, 5 LOW. All 8 findings fixed:
+
+- **M1 (file-list hygiene):** `tests/e2e/tmdb-trending-discover.api.spec.ts` added to File List and Task 5.4 note — previously omitted.
+- **M2 (UTC-anchor FarFuture horizon):** `content_filter_service.go` now computes horizon via `s.now().UTC().AddDate(...)`. Idempotent for UTC clocks (no behavior change); defensive against non-UTC server zones. New `TestContentFilterService_FarFuture_UTCAnchor` exercises the Asia/Taipei path.
+- **M3 (caller-language empty-result warning):** `fallback.go` `Discover{Movies,TVShows}WithFallback` now emit `slog.Warn` when a caller-provided language yields zero results (the fallback chain is still skipped — caller is authoritative — but operators can now detect mistyped `?language=` codes). `TestFallback_Discover_CallerLanguageEmpty_DoesNotRetryChain` covers the behavioral contract.
+- **L1 (receiver shadowing):** renamed `for _, s := range shows` → `for _, show := range shows` in `FilterFarFutureTVShows` and `FilterLowQualityTVShows` — eliminates the stylistic shadow of the `*ContentFilterService` receiver.
+- **L2 (stale `RegisterRoutes` test):** `TestTMDbHandler_RegisterRoutes` now enumerates all 8 routes (4 legacy + 4 Story 10-1). A regression in new-route registration will now fail the test.
+- **L3 (global-state anti-pattern):** removed the package-global `storyTenOneConfigs` map + `cfgFor` helper. Fields live directly on `MockFallbackClient` now (13 new exported fields: `{Trending,Discover}{Movies,TVShows}{Response,Error,Called}`), making `t.Parallel()` safe and removing the per-test reset loop.
+- **L4 (nil-client invariant):** docstring on `NewTMDbServiceWithCacheService` now warns that `client` is nil on mock-constructed services, so `VideosProvider()` / `FindByExternalID` are not safe paths.
+- **L5 (untested generic error branch):** added `TestTMDbHandler_GenericError_Returns500` — a raw non-`*TMDbError` now verifiably maps to HTTP 500 + `TMDB_INTERNAL_ERROR` code.
+
+**New regression coverage:** +3 test functions (`FarFuture_UTCAnchor`, `Discover_CallerLanguageEmpty_DoesNotRetryChain` with 2 sub-cases, `GenericError_Returns500`) — 26 Story 10-1 test functions total across 5 files.
+
 ### UX Verification
 
 🎨 UX Verification: SKIPPED — no UI changes in this story (pure backend: TMDb client extension + content filter + HTTP handlers).
@@ -122,6 +137,7 @@ so that I see content relevant to my region without far-future or low-quality no
 | 2026-04-14 | Extended `services.TMDbServiceInterface` + `TMDbService` with 4 trending/discover methods that pipe cached results through `ContentFilterService`.                                                           |
 | 2026-04-14 | Added 4 HTTP endpoints: `GET /api/v1/tmdb/trending/{movies,tv}` and `GET /api/v1/tmdb/discover/{movies,tv}`. Local handler-level `TMDbServiceInterface` extended; 3 query-param helpers.                    |
 | 2026-04-14 | 23 new test functions across 4 files (client, fallback, cache, services, handlers) covering ACs #1–#6 end-to-end.                                                                                            |
+| 2026-04-14 | **AI Code Review (CR) fixes:** M1 File-List completeness (E2E spec listed); M2 UTC-anchor on FarFuture horizon + Taipei regression test; M3 warning log + test when caller-provided language yields empty results; L1 renamed shadowed loop var `s`→`show` in TVShow filters; L2 extended `RegisterRoutes` test with 4 new trending/discover routes; L3 removed `storyTenOneConfigs` global map (fields embedded on `MockFallbackClient`, `t.Parallel()`-safe); L4 documented nil-`client` invariant on `NewTMDbServiceWithCacheService`; L5 added test for generic `handleTMDbError` branch (500 `TMDB_INTERNAL_ERROR`). Full regression: `pnpm nx test api` PASS, `pnpm run lint:all` PASS (0 errors, 108 warnings baseline). |
 
 ### File List
 
@@ -142,3 +158,4 @@ so that I see content relevant to my region without far-future or low-quality no
 - `apps/api/internal/services/enrichment_nfo_test.go` — **MODIFIED** (added 4 pass-through stubs on `mockTMDbServiceForNFO` for the extended `TMDbServiceInterface`)
 - `apps/api/internal/handlers/tmdb_handler.go` — **MODIFIED** (extended handler-local `TMDbServiceInterface` with 4 methods; added 4 handler methods + 3 query-param helpers; extended `RegisterRoutes` with `/tmdb/trending` and `/tmdb/discover` groups)
 - `apps/api/internal/handlers/tmdb_handler_test.go` — **MODIFIED** (extended `MockTMDbService` with 4 stubs + capture fields; added 7 Story 10-1 test functions; added `errors` import)
+- `tests/e2e/tmdb-trending-discover.api.spec.ts` — **CREATED** (Playwright API smoke: 5 tests covering trending movies/tv + discover movies/tv + unknown time_window fallback; skipped when `TMDB_API_KEY` unset)

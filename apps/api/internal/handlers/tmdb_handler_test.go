@@ -377,10 +377,14 @@ func TestTMDbHandler_RegisterRoutes(t *testing.T) {
 	routes := router.Routes()
 
 	expectedRoutes := map[string]string{
-		"/api/v1/tmdb/search/movies": http.MethodGet,
-		"/api/v1/tmdb/search/tv":     http.MethodGet,
-		"/api/v1/tmdb/movies/:id":    http.MethodGet,
-		"/api/v1/tmdb/tv/:id":        http.MethodGet,
+		"/api/v1/tmdb/search/movies":   http.MethodGet,
+		"/api/v1/tmdb/search/tv":       http.MethodGet,
+		"/api/v1/tmdb/movies/:id":      http.MethodGet,
+		"/api/v1/tmdb/tv/:id":          http.MethodGet,
+		"/api/v1/tmdb/trending/movies": http.MethodGet, // Story 10-1
+		"/api/v1/tmdb/trending/tv":     http.MethodGet, // Story 10-1
+		"/api/v1/tmdb/discover/movies": http.MethodGet, // Story 10-1
+		"/api/v1/tmdb/discover/tv":     http.MethodGet, // Story 10-1
 	}
 
 	for path, method := range expectedRoutes {
@@ -561,6 +565,32 @@ func TestTMDbHandler_DiscoverMovies_ErrorPropagates(t *testing.T) {
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
 	assert.False(t, body.Success)
 	assert.NotNil(t, body.Error)
+}
+
+// TestTMDbHandler_GenericError_Returns500 verifies that when a non-*TMDbError
+// bubbles up from the service (defensive path — no current code produces this,
+// but handleTMDbError has a generic fallback branch), the handler emits
+// HTTP 500 with TMDB_INTERNAL_ERROR code. This keeps the generic branch at
+// tmdb_handler.go:349-355 covered.
+func TestTMDbHandler_GenericError_Returns500(t *testing.T) {
+	mockSvc := &MockTMDbService{
+		GetTrendingMoviesError: errors.New("unexpected non-TMDb error"),
+	}
+	handler := NewTMDbHandler(mockSvc)
+	router := setupTMDbRouter(handler)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/tmdb/trending/movies", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusInternalServerError, w.Code,
+		"non-TMDbError must surface as 500 via handleTMDbError generic branch")
+
+	var body APIResponse
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+	assert.False(t, body.Success)
+	require.NotNil(t, body.Error)
+	assert.Equal(t, "TMDB_INTERNAL_ERROR", body.Error.Code)
 }
 
 func TestTMDbHandler_ResponseIsApiResponseWrapped(t *testing.T) {

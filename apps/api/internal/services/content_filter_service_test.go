@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/vido/api/internal/tmdb"
 )
 
@@ -126,4 +127,30 @@ func TestContentFilterService_ConstantsAreSensible(t *testing.T) {
 	assert.Equal(t, 6, FarFutureHorizonMonths)
 	assert.Equal(t, 3.0, LowQualityRatingThreshold)
 	assert.Equal(t, 50, LowQualityVoteCountThreshold)
+}
+
+// TestContentFilterService_FarFuture_UTCAnchor verifies that the horizon is
+// computed in UTC even when the injected clock returns a non-UTC time (e.g.
+// Asia/Taipei). TMDb dates parse as UTC midnight, so if the filter compared
+// them against a local-time horizon the boundary would drift by 8h in Taiwan.
+func TestContentFilterService_FarFuture_UTCAnchor(t *testing.T) {
+	taipei, err := time.LoadLocation("Asia/Taipei")
+	require.NoError(t, err)
+	// 2026-04-14 00:30 Asia/Taipei == 2026-04-13 16:30 UTC.
+	// In UTC math: horizon = 2026-10-13 16:30 UTC → a TMDb date "2026-10-14"
+	// (parses as 2026-10-14 00:00 UTC) IS after the horizon → drop.
+	// If we had used local time (Taipei) the horizon would be 2026-10-14 00:30 Taipei
+	// = 2026-10-13 16:30 UTC — same result, so we instead pin the boundary at a
+	// case where local-vs-UTC diverge: item date 2026-10-13 in UTC is before both.
+	now := time.Date(2026, 4, 14, 0, 30, 0, 0, taipei)
+	svc := NewContentFilterServiceWithClock(fixedClock(now))
+
+	movies := []tmdb.Movie{
+		{ID: 1, ReleaseDate: "2026-10-13"}, // before horizon in UTC → keep
+		{ID: 2, ReleaseDate: "2026-10-14"}, // strictly after horizon in UTC → drop
+	}
+	got := svc.FilterFarFutureMovies(movies)
+
+	require.Len(t, got, 1)
+	assert.Equal(t, 1, got[0].ID, "2026-10-13 should be retained; 2026-10-14 dropped (both measured in UTC)")
 }

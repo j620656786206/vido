@@ -60,7 +60,7 @@ func (s *ContentFilterService) FilterFarFutureMovies(movies []tmdb.Movie) []tmdb
 	if len(movies) == 0 {
 		return movies
 	}
-	horizon := s.now().AddDate(0, FarFutureHorizonMonths, 0)
+	horizon := s.now().UTC().AddDate(0, FarFutureHorizonMonths, 0)
 	out := make([]tmdb.Movie, 0, len(movies))
 	for _, m := range movies {
 		if isWithinHorizon(m.ReleaseDate, horizon) {
@@ -76,11 +76,11 @@ func (s *ContentFilterService) FilterFarFutureTVShows(shows []tmdb.TVShow) []tmd
 	if len(shows) == 0 {
 		return shows
 	}
-	horizon := s.now().AddDate(0, FarFutureHorizonMonths, 0)
+	horizon := s.now().UTC().AddDate(0, FarFutureHorizonMonths, 0)
 	out := make([]tmdb.TVShow, 0, len(shows))
-	for _, s := range shows {
-		if isWithinHorizon(s.FirstAirDate, horizon) {
-			out = append(out, s)
+	for _, show := range shows {
+		if isWithinHorizon(show.FirstAirDate, horizon) {
+			out = append(out, show)
 		}
 	}
 	return out
@@ -106,16 +106,18 @@ func (s *ContentFilterService) FilterLowQualityTVShows(shows []tmdb.TVShow) []tm
 		return shows
 	}
 	out := make([]tmdb.TVShow, 0, len(shows))
-	for _, s := range shows {
-		if !isLowQuality(s.VoteAverage, s.VoteCount) {
-			out = append(out, s)
+	for _, show := range shows {
+		if !isLowQuality(show.VoteAverage, show.VoteCount) {
+			out = append(out, show)
 		}
 	}
 	return out
 }
 
 // isWithinHorizon returns true when dateStr is empty, unparseable, or on/before
-// the horizon. Parseable dates strictly AFTER the horizon are excluded.
+// the horizon. Parseable dates strictly AFTER the horizon are excluded. Both
+// parsed date and horizon must be in UTC so the comparison has no timezone drift
+// on servers running in non-UTC local time (e.g. Asia/Taipei).
 func isWithinHorizon(dateStr string, horizon time.Time) bool {
 	if dateStr == "" {
 		return true

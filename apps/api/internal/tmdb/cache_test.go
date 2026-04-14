@@ -90,6 +90,21 @@ type MockFallbackClient struct {
 	GetTVShowDetailsResponse *TVShowDetails
 	GetTVShowDetailsError    error
 	GetTVShowDetailsCalled   int
+	// Story 10-1 trending/discover fields — embedded directly on the mock
+	// (previously stored in a package-global map keyed by pointer; moved here
+	// to remove the global-state anti-pattern and make t.Parallel() safe).
+	TrendingMoviesResponse  *SearchResultMovies
+	TrendingMoviesError     error
+	TrendingMoviesCalled    int
+	TrendingTVShowsResponse *SearchResultTVShows
+	TrendingTVShowsError    error
+	TrendingTVShowsCalled   int
+	DiscoverMoviesResponse  *SearchResultMovies
+	DiscoverMoviesError     error
+	DiscoverMoviesCalled    int
+	DiscoverTVShowsResponse *SearchResultTVShows
+	DiscoverTVShowsError    error
+	DiscoverTVShowsCalled   int
 }
 
 func (m *MockFallbackClient) SearchMoviesWithFallback(ctx context.Context, query string, page int) (*SearchResultMovies, string, error) {
@@ -126,82 +141,49 @@ func (m *MockFallbackClient) GetTVShowDetailsWithFallback(ctx context.Context, t
 
 // Story 10-1: LanguageFallbackClientInterface additions — configurable stubs
 // with call counters so Story 10-1 cache tests can assert cache-hit vs cache-miss.
-
-// Story 10-1 response/count fields are attached to MockFallbackClient directly
-// via a pointer-receiver method set; we declare a small helper below so tests
-// can configure them without mutating the existing struct layout (keeps diff
-// minimal for Story 10-1 scope).
-
-type storyTenOneFallbackConfig struct {
-	trendingMoviesResult  *SearchResultMovies
-	trendingMoviesCalled  int
-	trendingMoviesError   error
-	trendingTVShowsResult *SearchResultTVShows
-	trendingTVShowsCalled int
-	trendingTVShowsError  error
-	discoverMoviesResult  *SearchResultMovies
-	discoverMoviesCalled  int
-	discoverMoviesError   error
-	discoverTVShowsResult *SearchResultTVShows
-	discoverTVShowsCalled int
-	discoverTVShowsError  error
-}
-
-var storyTenOneConfigs = map[*MockFallbackClient]*storyTenOneFallbackConfig{}
-
-func cfgFor(m *MockFallbackClient) *storyTenOneFallbackConfig {
-	c, ok := storyTenOneConfigs[m]
-	if !ok {
-		c = &storyTenOneFallbackConfig{}
-		storyTenOneConfigs[m] = c
-	}
-	return c
-}
+// Fields live directly on MockFallbackClient (see struct above) so each test
+// owns its own state — no package-global map, safe for t.Parallel().
 
 func (m *MockFallbackClient) GetTrendingMoviesWithFallback(ctx context.Context, timeWindow string, page int) (*SearchResultMovies, string, error) {
-	c := cfgFor(m)
-	c.trendingMoviesCalled++
-	if c.trendingMoviesError != nil {
-		return nil, "", c.trendingMoviesError
+	m.TrendingMoviesCalled++
+	if m.TrendingMoviesError != nil {
+		return nil, "", m.TrendingMoviesError
 	}
-	if c.trendingMoviesResult != nil {
-		return c.trendingMoviesResult, "zh-TW", nil
+	if m.TrendingMoviesResponse != nil {
+		return m.TrendingMoviesResponse, "zh-TW", nil
 	}
 	return &SearchResultMovies{Page: page, Results: []Movie{}}, "zh-TW", nil
 }
 
 func (m *MockFallbackClient) GetTrendingTVShowsWithFallback(ctx context.Context, timeWindow string, page int) (*SearchResultTVShows, string, error) {
-	c := cfgFor(m)
-	c.trendingTVShowsCalled++
-	if c.trendingTVShowsError != nil {
-		return nil, "", c.trendingTVShowsError
+	m.TrendingTVShowsCalled++
+	if m.TrendingTVShowsError != nil {
+		return nil, "", m.TrendingTVShowsError
 	}
-	if c.trendingTVShowsResult != nil {
-		return c.trendingTVShowsResult, "zh-TW", nil
+	if m.TrendingTVShowsResponse != nil {
+		return m.TrendingTVShowsResponse, "zh-TW", nil
 	}
 	return &SearchResultTVShows{Page: page, Results: []TVShow{}}, "zh-TW", nil
 }
 
 func (m *MockFallbackClient) DiscoverMoviesWithFallback(ctx context.Context, params DiscoverParams) (*SearchResultMovies, string, error) {
-	c := cfgFor(m)
-	c.discoverMoviesCalled++
-	if c.discoverMoviesError != nil {
-		return nil, "", c.discoverMoviesError
+	m.DiscoverMoviesCalled++
+	if m.DiscoverMoviesError != nil {
+		return nil, "", m.DiscoverMoviesError
 	}
-	if c.discoverMoviesResult != nil {
-		return c.discoverMoviesResult, "zh-TW", nil
+	if m.DiscoverMoviesResponse != nil {
+		return m.DiscoverMoviesResponse, "zh-TW", nil
 	}
 	return &SearchResultMovies{Page: 1, Results: []Movie{}}, "zh-TW", nil
 }
 
 func (m *MockFallbackClient) DiscoverTVShowsWithFallback(ctx context.Context, params DiscoverParams) (*SearchResultTVShows, string, error) {
-	c := cfgFor(m)
-	c.discoverTVShowsCalled++
-	if c.discoverTVShowsError != nil {
-		return nil, "", c.discoverTVShowsError
+	m.DiscoverTVShowsCalled++
+	if m.DiscoverTVShowsError != nil {
+		return nil, "", m.DiscoverTVShowsError
 	}
-	if c.discoverTVShowsResult != nil {
-		return c.discoverTVShowsResult, "zh-TW", nil
+	if m.DiscoverTVShowsResponse != nil {
+		return m.DiscoverTVShowsResponse, "zh-TW", nil
 	}
 	return &SearchResultTVShows{Page: 1, Results: []TVShow{}}, "zh-TW", nil
 }
@@ -527,18 +509,14 @@ func TestCacheService_InterfaceCompliance(t *testing.T) {
 // --- Story 10-1 cache tests ---
 
 func TestCacheService_GetTrendingMovies_CacheMissThenHit(t *testing.T) {
-	// Reset config map for isolation
-	for k := range storyTenOneConfigs {
-		delete(storyTenOneConfigs, k)
-	}
-
 	repo := NewMockCacheRepository()
-	fbClient := &MockFallbackClient{}
-	cfgFor(fbClient).trendingMoviesResult = &SearchResultMovies{
-		Page:         1,
-		Results:      []Movie{{ID: 42, Title: "Hot"}},
-		TotalPages:   1,
-		TotalResults: 1,
+	fbClient := &MockFallbackClient{
+		TrendingMoviesResponse: &SearchResultMovies{
+			Page:         1,
+			Results:      []Movie{{ID: 42, Title: "Hot"}},
+			TotalPages:   1,
+			TotalResults: 1,
+		},
 	}
 	svc := NewCacheService(fbClient, repo, CacheServiceConfig{TTL: 24 * time.Hour})
 
@@ -547,7 +525,7 @@ func TestCacheService_GetTrendingMovies_CacheMissThenHit(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, r1)
 	assert.Equal(t, 42, r1.Results[0].ID)
-	assert.Equal(t, 1, cfgFor(fbClient).trendingMoviesCalled)
+	assert.Equal(t, 1, fbClient.TrendingMoviesCalled)
 	assert.Equal(t, 1, repo.setCalled)
 	assert.Equal(t, TrendingDiscoverCacheTTL, repo.lastSetTTL, "cache TTL must be 1 hour for trending (AC #5)")
 
@@ -555,17 +533,14 @@ func TestCacheService_GetTrendingMovies_CacheMissThenHit(t *testing.T) {
 	r2, err := svc.GetTrendingMovies(context.Background(), "week", 1)
 	require.NoError(t, err)
 	assert.Equal(t, 42, r2.Results[0].ID)
-	assert.Equal(t, 1, cfgFor(fbClient).trendingMoviesCalled, "cache hit should not call upstream again")
+	assert.Equal(t, 1, fbClient.TrendingMoviesCalled, "cache hit should not call upstream again")
 }
 
 func TestCacheService_DiscoverMovies_DifferentParamsDifferentKeys(t *testing.T) {
-	for k := range storyTenOneConfigs {
-		delete(storyTenOneConfigs, k)
-	}
-
 	repo := NewMockCacheRepository()
-	fbClient := &MockFallbackClient{}
-	cfgFor(fbClient).discoverMoviesResult = &SearchResultMovies{Page: 1, Results: []Movie{{ID: 1}}}
+	fbClient := &MockFallbackClient{
+		DiscoverMoviesResponse: &SearchResultMovies{Page: 1, Results: []Movie{{ID: 1}}},
+	}
 	svc := NewCacheService(fbClient, repo, CacheServiceConfig{TTL: 24 * time.Hour})
 
 	_, err := svc.DiscoverMovies(context.Background(), DiscoverParams{Genre: "28", YearGte: 2024})
@@ -574,16 +549,12 @@ func TestCacheService_DiscoverMovies_DifferentParamsDifferentKeys(t *testing.T) 
 	require.NoError(t, err)
 
 	// Two distinct param sets → two upstream calls (different cache keys)
-	assert.Equal(t, 2, cfgFor(fbClient).discoverMoviesCalled)
+	assert.Equal(t, 2, fbClient.DiscoverMoviesCalled)
 	assert.Equal(t, 2, repo.setCalled)
 	assert.Equal(t, TrendingDiscoverCacheTTL, repo.lastSetTTL)
 }
 
 func TestCacheService_GetTrendingTVShows_TTLIsOneHour(t *testing.T) {
-	for k := range storyTenOneConfigs {
-		delete(storyTenOneConfigs, k)
-	}
-
 	repo := NewMockCacheRepository()
 	fbClient := &MockFallbackClient{}
 	svc := NewCacheService(fbClient, repo, CacheServiceConfig{TTL: DefaultCacheTTL})
@@ -595,13 +566,10 @@ func TestCacheService_GetTrendingTVShows_TTLIsOneHour(t *testing.T) {
 }
 
 func TestCacheService_DiscoverTVShows_Error_Propagates(t *testing.T) {
-	for k := range storyTenOneConfigs {
-		delete(storyTenOneConfigs, k)
-	}
-
 	repo := NewMockCacheRepository()
-	fbClient := &MockFallbackClient{}
-	cfgFor(fbClient).discoverTVShowsError = errors.New("upstream boom")
+	fbClient := &MockFallbackClient{
+		DiscoverTVShowsError: errors.New("upstream boom"),
+	}
 	svc := NewCacheService(fbClient, repo, CacheServiceConfig{})
 
 	_, err := svc.DiscoverTVShows(context.Background(), DiscoverParams{Genre: "18"})
@@ -618,57 +586,48 @@ func TestCacheService_DiscoverTVShows_Error_Propagates(t *testing.T) {
 func TestCacheService_TrendingDiscover_RateLimitNotCached(t *testing.T) {
 	cases := []struct {
 		name string
-		err  error
 		call func(svc *CacheService) error
-		set  func(cfg *storyTenOneFallbackConfig)
+		set  func(m *MockFallbackClient)
 	}{
 		{
 			name: "GetTrendingMovies/rate-limit",
-			err:  NewRateLimitError(),
 			call: func(s *CacheService) error {
 				_, err := s.GetTrendingMovies(context.Background(), "week", 1)
 				return err
 			},
-			set: func(c *storyTenOneFallbackConfig) { c.trendingMoviesError = NewRateLimitError() },
+			set: func(m *MockFallbackClient) { m.TrendingMoviesError = NewRateLimitError() },
 		},
 		{
 			name: "GetTrendingTVShows/server-5xx",
-			err:  NewServerError(errors.New("HTTP 503")),
 			call: func(s *CacheService) error {
 				_, err := s.GetTrendingTVShows(context.Background(), "day", 1)
 				return err
 			},
-			set: func(c *storyTenOneFallbackConfig) { c.trendingTVShowsError = NewServerError(errors.New("HTTP 503")) },
+			set: func(m *MockFallbackClient) { m.TrendingTVShowsError = NewServerError(errors.New("HTTP 503")) },
 		},
 		{
 			name: "DiscoverMovies/rate-limit",
-			err:  NewRateLimitError(),
 			call: func(s *CacheService) error {
 				_, err := s.DiscoverMovies(context.Background(), DiscoverParams{Genre: "28"})
 				return err
 			},
-			set: func(c *storyTenOneFallbackConfig) { c.discoverMoviesError = NewRateLimitError() },
+			set: func(m *MockFallbackClient) { m.DiscoverMoviesError = NewRateLimitError() },
 		},
 		{
 			name: "DiscoverTVShows/server-5xx",
-			err:  NewServerError(errors.New("HTTP 502")),
 			call: func(s *CacheService) error {
 				_, err := s.DiscoverTVShows(context.Background(), DiscoverParams{Region: "TW"})
 				return err
 			},
-			set: func(c *storyTenOneFallbackConfig) { c.discoverTVShowsError = NewServerError(errors.New("HTTP 502")) },
+			set: func(m *MockFallbackClient) { m.DiscoverTVShowsError = NewServerError(errors.New("HTTP 502")) },
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			for k := range storyTenOneConfigs {
-				delete(storyTenOneConfigs, k)
-			}
-
 			repo := NewMockCacheRepository()
 			fbClient := &MockFallbackClient{}
-			tc.set(cfgFor(fbClient))
+			tc.set(fbClient)
 			svc := NewCacheService(fbClient, repo, CacheServiceConfig{})
 
 			err := tc.call(svc)
