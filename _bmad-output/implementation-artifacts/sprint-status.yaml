@@ -419,7 +419,7 @@ development_status:
   # ==============================================================================
   epic-10: in-progress  # 2026-04-04
   10-UX-homepage-design: done                    # 2026-04-04 — 4 screens: HP-1 desktop (hero+3 blocks+badges), HP-2 mobile (compact hero+scroll blocks), HP-3 block CRUD modal, HP-4 loading skeleton. Screenshots in flow-g-homepage-desktop/ + flow-g-homepage-mobile/
-  10-1-tmdb-trending-discover-api: ready-for-dev      # Trending + Discover endpoints, server-side filtering (P2-001,P2-003,P2-004,P2-005) — NO design dependency
+  10-1-tmdb-trending-discover-api: review              # 2026-04-14 — DEV Amelia /dev-story — Trending + Discover endpoints with server-side filtering (P2-001,P2-003,P2-004,P2-005). All 6 ACs satisfied: 4 new /api/v1/tmdb/{trending,discover}/{movies,tv} routes; 1h TrendingDiscoverCacheTTL independent of service default; zh-TW → zh-CN → en fallback; ContentFilterService (FarFuture 6mo horizon + LowQuality rating<3 AND votes<50 AND semantics). 23 new tests across 4 packages. Full api + web regression + lint:all PASS.
   10-2-hero-banner-component: ready-for-dev            # Full-width hero carousel with trailer modal (P2-001) — ✅ UNBLOCKED by 10-UX
   10-3-custom-explore-blocks: ready-for-dev            # CRUD explore blocks + TMDB discover integration (P2-002) — ✅ UNBLOCKED by 10-UX
   10-4-availability-badges: ready-for-dev              # 已有/已請求 badges on poster cards (P2-006) — ✅ UNBLOCKED by 10-UX

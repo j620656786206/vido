@@ -51,6 +51,24 @@ func (m *mockTMDbServiceForNFO) FindByExternalID(ctx context.Context, externalID
 	return m.findByExtResp, nil
 }
 
+// Story 10-1 additions — this mock is not exercising trending/discover paths;
+// pass-through nils are fine.
+func (m *mockTMDbServiceForNFO) GetTrendingMovies(ctx context.Context, timeWindow string, page int) (*tmdb.SearchResultMovies, error) {
+	return nil, nil
+}
+
+func (m *mockTMDbServiceForNFO) GetTrendingTVShows(ctx context.Context, timeWindow string, page int) (*tmdb.SearchResultTVShows, error) {
+	return nil, nil
+}
+
+func (m *mockTMDbServiceForNFO) DiscoverMovies(ctx context.Context, params tmdb.DiscoverParams) (*tmdb.SearchResultMovies, error) {
+	return nil, nil
+}
+
+func (m *mockTMDbServiceForNFO) DiscoverTVShows(ctx context.Context, params tmdb.DiscoverParams) (*tmdb.SearchResultTVShows, error) {
+	return nil, nil
+}
+
 // ─── Mock movie repo for enrichment tests ───────────────────────────────────
 
 type mockMovieRepoForNFO struct {

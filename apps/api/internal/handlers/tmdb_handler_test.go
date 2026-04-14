@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -15,14 +16,27 @@ import (
 
 // MockTMDbService is a mock implementation of TMDbServiceInterface
 type MockTMDbService struct {
-	SearchMoviesResponse      *tmdb.SearchResultMovies
-	SearchMoviesError         error
-	SearchTVShowsResponse     *tmdb.SearchResultTVShows
-	SearchTVShowsError        error
-	GetMovieDetailsResponse   *tmdb.MovieDetails
-	GetMovieDetailsError      error
-	GetTVShowDetailsResponse  *tmdb.TVShowDetails
-	GetTVShowDetailsError     error
+	SearchMoviesResponse     *tmdb.SearchResultMovies
+	SearchMoviesError        error
+	SearchTVShowsResponse    *tmdb.SearchResultTVShows
+	SearchTVShowsError       error
+	GetMovieDetailsResponse  *tmdb.MovieDetails
+	GetMovieDetailsError     error
+	GetTVShowDetailsResponse *tmdb.TVShowDetails
+	GetTVShowDetailsError    error
+	// Story 10-1
+	GetTrendingMoviesResponse  *tmdb.SearchResultMovies
+	GetTrendingMoviesError     error
+	GetTrendingMoviesCalls     []string // captured time_window values
+	GetTrendingTVShowsResponse *tmdb.SearchResultTVShows
+	GetTrendingTVShowsError    error
+	GetTrendingTVShowsCalls    []string
+	DiscoverMoviesResponse     *tmdb.SearchResultMovies
+	DiscoverMoviesError        error
+	DiscoverMoviesCalls        []tmdb.DiscoverParams
+	DiscoverTVShowsResponse    *tmdb.SearchResultTVShows
+	DiscoverTVShowsError       error
+	DiscoverTVShowsCalls       []tmdb.DiscoverParams
 }
 
 func (m *MockTMDbService) SearchMovies(ctx context.Context, query string, page int) (*tmdb.SearchResultMovies, error) {
@@ -55,6 +69,40 @@ func (m *MockTMDbService) GetTVShowDetails(ctx context.Context, tvID int) (*tmdb
 
 func (m *MockTMDbService) FindByExternalID(ctx context.Context, externalID string, externalSource string) (*tmdb.FindByExternalIDResponse, error) {
 	return &tmdb.FindByExternalIDResponse{}, nil
+}
+
+// Story 10-1 additions
+
+func (m *MockTMDbService) GetTrendingMovies(ctx context.Context, timeWindow string, page int) (*tmdb.SearchResultMovies, error) {
+	m.GetTrendingMoviesCalls = append(m.GetTrendingMoviesCalls, timeWindow)
+	if m.GetTrendingMoviesError != nil {
+		return nil, m.GetTrendingMoviesError
+	}
+	return m.GetTrendingMoviesResponse, nil
+}
+
+func (m *MockTMDbService) GetTrendingTVShows(ctx context.Context, timeWindow string, page int) (*tmdb.SearchResultTVShows, error) {
+	m.GetTrendingTVShowsCalls = append(m.GetTrendingTVShowsCalls, timeWindow)
+	if m.GetTrendingTVShowsError != nil {
+		return nil, m.GetTrendingTVShowsError
+	}
+	return m.GetTrendingTVShowsResponse, nil
+}
+
+func (m *MockTMDbService) DiscoverMovies(ctx context.Context, params tmdb.DiscoverParams) (*tmdb.SearchResultMovies, error) {
+	m.DiscoverMoviesCalls = append(m.DiscoverMoviesCalls, params)
+	if m.DiscoverMoviesError != nil {
+		return nil, m.DiscoverMoviesError
+	}
+	return m.DiscoverMoviesResponse, nil
+}
+
+func (m *MockTMDbService) DiscoverTVShows(ctx context.Context, params tmdb.DiscoverParams) (*tmdb.SearchResultTVShows, error) {
+	m.DiscoverTVShowsCalls = append(m.DiscoverTVShowsCalls, params)
+	if m.DiscoverTVShowsError != nil {
+		return nil, m.DiscoverTVShowsError
+	}
+	return m.DiscoverTVShowsResponse, nil
 }
 
 func setupTMDbRouter(handler *TMDbHandler) *gin.Engine {
@@ -345,4 +393,195 @@ func TestTMDbHandler_RegisterRoutes(t *testing.T) {
 		}
 		assert.True(t, found, "Route %s %s should be registered", method, path)
 	}
+}
+
+// --- Story 10-1 handler tests ---
+
+func TestTMDbHandler_GetTrendingMovies(t *testing.T) {
+	tests := []struct {
+		name             string
+		queryParams      string
+		mockResp         *tmdb.SearchResultMovies
+		mockErr          error
+		wantStatus       int
+		wantSuccess      bool
+		wantResultsLen   int
+		wantTimeWindow   string
+	}{
+		{
+			name:        "default time_window is week",
+			queryParams: "",
+			mockResp: &tmdb.SearchResultMovies{
+				Page: 1, Results: []tmdb.Movie{{ID: 1, Title: "Hot"}},
+			},
+			wantStatus:     http.StatusOK,
+			wantSuccess:    true,
+			wantResultsLen: 1,
+			wantTimeWindow: "week",
+		},
+		{
+			name:           "explicit day",
+			queryParams:    "time_window=day&page=2",
+			mockResp:       &tmdb.SearchResultMovies{Page: 2, Results: []tmdb.Movie{}},
+			wantStatus:     http.StatusOK,
+			wantSuccess:    true,
+			wantTimeWindow: "day",
+		},
+		{
+			name:           "unknown time_window falls back to week",
+			queryParams:    "time_window=year",
+			mockResp:       &tmdb.SearchResultMovies{Page: 1, Results: []tmdb.Movie{}},
+			wantStatus:     http.StatusOK,
+			wantSuccess:    true,
+			wantTimeWindow: "week",
+		},
+		{
+			name:        "upstream error surfaces as 500",
+			queryParams: "",
+			mockErr:     tmdb.NewServerError(errors.New("upstream down")),
+			wantStatus:  http.StatusBadGateway,
+			wantSuccess: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockSvc := &MockTMDbService{
+				GetTrendingMoviesResponse: tt.mockResp,
+				GetTrendingMoviesError:    tt.mockErr,
+			}
+			handler := NewTMDbHandler(mockSvc)
+			router := setupTMDbRouter(handler)
+
+			req := httptest.NewRequest(http.MethodGet, "/api/v1/tmdb/trending/movies?"+tt.queryParams, nil)
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+
+			assert.Equal(t, tt.wantStatus, w.Code)
+
+			var body APIResponse
+			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+			assert.Equal(t, tt.wantSuccess, body.Success)
+			if tt.wantTimeWindow != "" {
+				assert.Contains(t, mockSvc.GetTrendingMoviesCalls, tt.wantTimeWindow)
+			}
+		})
+	}
+}
+
+func TestTMDbHandler_GetTrendingTVShows_RoutesCorrectly(t *testing.T) {
+	mockSvc := &MockTMDbService{
+		GetTrendingTVShowsResponse: &tmdb.SearchResultTVShows{Page: 1},
+	}
+	handler := NewTMDbHandler(mockSvc)
+	router := setupTMDbRouter(handler)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/tmdb/trending/tv?time_window=day", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, []string{"day"}, mockSvc.GetTrendingTVShowsCalls)
+}
+
+func TestTMDbHandler_DiscoverMovies_QueryParamMapping(t *testing.T) {
+	mockSvc := &MockTMDbService{
+		DiscoverMoviesResponse: &tmdb.SearchResultMovies{Page: 1},
+	}
+	handler := NewTMDbHandler(mockSvc)
+	router := setupTMDbRouter(handler)
+
+	// Exercise all 7 query params — matches the story's example request
+	req := httptest.NewRequest(http.MethodGet,
+		"/api/v1/tmdb/discover/movies?genre=28,12&year_gte=2024&year_lte=2026&region=TW&language=zh&sort=popularity.desc&page=3",
+		nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	require.Len(t, mockSvc.DiscoverMoviesCalls, 1)
+	got := mockSvc.DiscoverMoviesCalls[0]
+	assert.Equal(t, "28,12", got.Genre)
+	assert.Equal(t, 2024, got.YearGte)
+	assert.Equal(t, 2026, got.YearLte)
+	assert.Equal(t, "TW", got.Region)
+	assert.Equal(t, "zh", got.Language)
+	assert.Equal(t, "popularity.desc", got.SortBy)
+	assert.Equal(t, 3, got.Page)
+}
+
+func TestTMDbHandler_DiscoverMovies_DefaultsWhenEmpty(t *testing.T) {
+	mockSvc := &MockTMDbService{DiscoverMoviesResponse: &tmdb.SearchResultMovies{}}
+	handler := NewTMDbHandler(mockSvc)
+	router := setupTMDbRouter(handler)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/tmdb/discover/movies", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	require.Len(t, mockSvc.DiscoverMoviesCalls, 1)
+	got := mockSvc.DiscoverMoviesCalls[0]
+	assert.Equal(t, "", got.Genre)
+	assert.Equal(t, 0, got.YearGte)
+	assert.Equal(t, 1, got.Page, "empty page query defaults to 1")
+}
+
+func TestTMDbHandler_DiscoverTVShows_RoutesCorrectly(t *testing.T) {
+	mockSvc := &MockTMDbService{DiscoverTVShowsResponse: &tmdb.SearchResultTVShows{}}
+	handler := NewTMDbHandler(mockSvc)
+	router := setupTMDbRouter(handler)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/tmdb/discover/tv?genre=18&language=zh&sort=popularity.desc", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	require.Len(t, mockSvc.DiscoverTVShowsCalls, 1)
+	got := mockSvc.DiscoverTVShowsCalls[0]
+	assert.Equal(t, "18", got.Genre)
+	assert.Equal(t, "zh", got.Language)
+	assert.Equal(t, "popularity.desc", got.SortBy)
+}
+
+func TestTMDbHandler_DiscoverMovies_ErrorPropagates(t *testing.T) {
+	mockSvc := &MockTMDbService{
+		DiscoverMoviesError: tmdb.NewServerError(errors.New("down")),
+	}
+	handler := NewTMDbHandler(mockSvc)
+	router := setupTMDbRouter(handler)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/tmdb/discover/movies?genre=28", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadGateway, w.Code, "TMDb server errors surface as 502 via handleTMDbError")
+
+	var body APIResponse
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+	assert.False(t, body.Success)
+	assert.NotNil(t, body.Error)
+}
+
+func TestTMDbHandler_ResponseIsApiResponseWrapped(t *testing.T) {
+	// AC #6: responses follow the existing ApiResponse<T> wrapper format with
+	// snake_case fields (success, data, error).
+	mockSvc := &MockTMDbService{
+		GetTrendingMoviesResponse: &tmdb.SearchResultMovies{Page: 1, TotalResults: 0},
+	}
+	handler := NewTMDbHandler(mockSvc)
+	router := setupTMDbRouter(handler)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/tmdb/trending/movies", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	var raw map[string]any
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &raw))
+	// Rule 18: snake_case at JSON boundary — here we just verify the top-level
+	// wrapper keys exist and no PascalCase leakage occurred.
+	_, ok := raw["success"]
+	assert.True(t, ok, "response must include `success` field")
+	_, ok = raw["data"]
+	assert.True(t, ok, "response must include `data` field")
 }

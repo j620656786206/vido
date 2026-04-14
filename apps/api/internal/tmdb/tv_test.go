@@ -232,3 +232,62 @@ func TestClient_GetTVShowDetailsWithLanguage(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotNil(t, result)
 }
+
+// --- Story 10-1 additions ---
+
+func TestClient_GetTrendingTVShows(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "/trending/tv/week", r.URL.Path)
+		assert.NotEmpty(t, r.URL.Query().Get("language"))
+		assert.Equal(t, "1", r.URL.Query().Get("page"))
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(SearchResultTVShows{Page: 1, Results: []TVShow{{ID: 1, Name: "Trend"}}})
+	}))
+	defer server.Close()
+
+	client := NewClient(ClientConfig{APIKey: "k", BaseURL: server.URL})
+	result, err := client.GetTrendingTVShows(context.Background(), "week", 1)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+	assert.Len(t, result.Results, 1)
+}
+
+func TestClient_GetTrendingTVShowsWithLanguage(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "/trending/tv/day", r.URL.Path)
+		assert.Equal(t, "zh-CN", r.URL.Query().Get("language"))
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(SearchResultTVShows{Page: 1})
+	}))
+	defer server.Close()
+
+	client := NewClient(ClientConfig{APIKey: "k", BaseURL: server.URL, Language: "zh-TW"})
+	_, err := client.GetTrendingTVShowsWithLanguage(context.Background(), "day", "zh-CN", 1)
+	require.NoError(t, err)
+}
+
+func TestClient_DiscoverTVShows(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "/discover/tv", r.URL.Path)
+		q := r.URL.Query()
+		assert.Equal(t, "2024-01-01", q.Get("first_air_date.gte"))
+		assert.Equal(t, "2026-12-31", q.Get("first_air_date.lte"))
+		assert.Equal(t, "", q.Get("primary_release_date.gte"))
+		assert.Equal(t, "18", q.Get("with_genres"))
+		assert.Equal(t, "popularity.desc", q.Get("sort_by"))
+		assert.Equal(t, "zh", q.Get("language"))
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(SearchResultTVShows{Page: 1})
+	}))
+	defer server.Close()
+
+	client := NewClient(ClientConfig{APIKey: "k", BaseURL: server.URL, Language: "zh-TW"})
+	_, err := client.DiscoverTVShows(context.Background(), DiscoverParams{
+		Genre:    "18",
+		YearGte:  2024,
+		YearLte:  2026,
+		Language: "zh",
+		SortBy:   "popularity.desc",
+	})
+	require.NoError(t, err)
+}

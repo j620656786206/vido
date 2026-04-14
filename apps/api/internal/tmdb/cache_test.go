@@ -19,6 +19,9 @@ type MockCacheRepository struct {
 	getError   error
 	setCalled  int
 	getCalled  int
+	// lastSetTTL captures the TTL passed to the most recent Set() call,
+	// used by Story 10-1 tests to verify 1-hour trending/discover TTL.
+	lastSetTTL time.Duration
 }
 
 func NewMockCacheRepository() *MockCacheRepository {
@@ -40,6 +43,7 @@ func (m *MockCacheRepository) Get(ctx context.Context, key string) (*repository.
 
 func (m *MockCacheRepository) Set(ctx context.Context, key string, value string, cacheType string, ttl time.Duration) error {
 	m.setCalled++
+	m.lastSetTTL = ttl
 	if m.setError != nil {
 		return m.setError
 	}
@@ -118,6 +122,88 @@ func (m *MockFallbackClient) GetTVShowDetailsWithFallback(ctx context.Context, t
 		return nil, "", m.GetTVShowDetailsError
 	}
 	return m.GetTVShowDetailsResponse, "zh-TW", nil
+}
+
+// Story 10-1: LanguageFallbackClientInterface additions — configurable stubs
+// with call counters so Story 10-1 cache tests can assert cache-hit vs cache-miss.
+
+// Story 10-1 response/count fields are attached to MockFallbackClient directly
+// via a pointer-receiver method set; we declare a small helper below so tests
+// can configure them without mutating the existing struct layout (keeps diff
+// minimal for Story 10-1 scope).
+
+type storyTenOneFallbackConfig struct {
+	trendingMoviesResult  *SearchResultMovies
+	trendingMoviesCalled  int
+	trendingMoviesError   error
+	trendingTVShowsResult *SearchResultTVShows
+	trendingTVShowsCalled int
+	trendingTVShowsError  error
+	discoverMoviesResult  *SearchResultMovies
+	discoverMoviesCalled  int
+	discoverMoviesError   error
+	discoverTVShowsResult *SearchResultTVShows
+	discoverTVShowsCalled int
+	discoverTVShowsError  error
+}
+
+var storyTenOneConfigs = map[*MockFallbackClient]*storyTenOneFallbackConfig{}
+
+func cfgFor(m *MockFallbackClient) *storyTenOneFallbackConfig {
+	c, ok := storyTenOneConfigs[m]
+	if !ok {
+		c = &storyTenOneFallbackConfig{}
+		storyTenOneConfigs[m] = c
+	}
+	return c
+}
+
+func (m *MockFallbackClient) GetTrendingMoviesWithFallback(ctx context.Context, timeWindow string, page int) (*SearchResultMovies, string, error) {
+	c := cfgFor(m)
+	c.trendingMoviesCalled++
+	if c.trendingMoviesError != nil {
+		return nil, "", c.trendingMoviesError
+	}
+	if c.trendingMoviesResult != nil {
+		return c.trendingMoviesResult, "zh-TW", nil
+	}
+	return &SearchResultMovies{Page: page, Results: []Movie{}}, "zh-TW", nil
+}
+
+func (m *MockFallbackClient) GetTrendingTVShowsWithFallback(ctx context.Context, timeWindow string, page int) (*SearchResultTVShows, string, error) {
+	c := cfgFor(m)
+	c.trendingTVShowsCalled++
+	if c.trendingTVShowsError != nil {
+		return nil, "", c.trendingTVShowsError
+	}
+	if c.trendingTVShowsResult != nil {
+		return c.trendingTVShowsResult, "zh-TW", nil
+	}
+	return &SearchResultTVShows{Page: page, Results: []TVShow{}}, "zh-TW", nil
+}
+
+func (m *MockFallbackClient) DiscoverMoviesWithFallback(ctx context.Context, params DiscoverParams) (*SearchResultMovies, string, error) {
+	c := cfgFor(m)
+	c.discoverMoviesCalled++
+	if c.discoverMoviesError != nil {
+		return nil, "", c.discoverMoviesError
+	}
+	if c.discoverMoviesResult != nil {
+		return c.discoverMoviesResult, "zh-TW", nil
+	}
+	return &SearchResultMovies{Page: 1, Results: []Movie{}}, "zh-TW", nil
+}
+
+func (m *MockFallbackClient) DiscoverTVShowsWithFallback(ctx context.Context, params DiscoverParams) (*SearchResultTVShows, string, error) {
+	c := cfgFor(m)
+	c.discoverTVShowsCalled++
+	if c.discoverTVShowsError != nil {
+		return nil, "", c.discoverTVShowsError
+	}
+	if c.discoverTVShowsResult != nil {
+		return c.discoverTVShowsResult, "zh-TW", nil
+	}
+	return &SearchResultTVShows{Page: 1, Results: []TVShow{}}, "zh-TW", nil
 }
 
 func TestNewCacheService(t *testing.T) {
@@ -436,4 +522,90 @@ func TestCacheService_CacheSetError(t *testing.T) {
 
 func TestCacheService_InterfaceCompliance(t *testing.T) {
 	var _ CacheServiceInterface = (*CacheService)(nil)
+}
+
+// --- Story 10-1 cache tests ---
+
+func TestCacheService_GetTrendingMovies_CacheMissThenHit(t *testing.T) {
+	// Reset config map for isolation
+	for k := range storyTenOneConfigs {
+		delete(storyTenOneConfigs, k)
+	}
+
+	repo := NewMockCacheRepository()
+	fbClient := &MockFallbackClient{}
+	cfgFor(fbClient).trendingMoviesResult = &SearchResultMovies{
+		Page:         1,
+		Results:      []Movie{{ID: 42, Title: "Hot"}},
+		TotalPages:   1,
+		TotalResults: 1,
+	}
+	svc := NewCacheService(fbClient, repo, CacheServiceConfig{TTL: 24 * time.Hour})
+
+	// Miss → upstream call
+	r1, err := svc.GetTrendingMovies(context.Background(), "week", 1)
+	require.NoError(t, err)
+	require.NotNil(t, r1)
+	assert.Equal(t, 42, r1.Results[0].ID)
+	assert.Equal(t, 1, cfgFor(fbClient).trendingMoviesCalled)
+	assert.Equal(t, 1, repo.setCalled)
+	assert.Equal(t, TrendingDiscoverCacheTTL, repo.lastSetTTL, "cache TTL must be 1 hour for trending (AC #5)")
+
+	// Hit → no upstream call
+	r2, err := svc.GetTrendingMovies(context.Background(), "week", 1)
+	require.NoError(t, err)
+	assert.Equal(t, 42, r2.Results[0].ID)
+	assert.Equal(t, 1, cfgFor(fbClient).trendingMoviesCalled, "cache hit should not call upstream again")
+}
+
+func TestCacheService_DiscoverMovies_DifferentParamsDifferentKeys(t *testing.T) {
+	for k := range storyTenOneConfigs {
+		delete(storyTenOneConfigs, k)
+	}
+
+	repo := NewMockCacheRepository()
+	fbClient := &MockFallbackClient{}
+	cfgFor(fbClient).discoverMoviesResult = &SearchResultMovies{Page: 1, Results: []Movie{{ID: 1}}}
+	svc := NewCacheService(fbClient, repo, CacheServiceConfig{TTL: 24 * time.Hour})
+
+	_, err := svc.DiscoverMovies(context.Background(), DiscoverParams{Genre: "28", YearGte: 2024})
+	require.NoError(t, err)
+	_, err = svc.DiscoverMovies(context.Background(), DiscoverParams{Genre: "28", YearGte: 2025})
+	require.NoError(t, err)
+
+	// Two distinct param sets → two upstream calls (different cache keys)
+	assert.Equal(t, 2, cfgFor(fbClient).discoverMoviesCalled)
+	assert.Equal(t, 2, repo.setCalled)
+	assert.Equal(t, TrendingDiscoverCacheTTL, repo.lastSetTTL)
+}
+
+func TestCacheService_GetTrendingTVShows_TTLIsOneHour(t *testing.T) {
+	for k := range storyTenOneConfigs {
+		delete(storyTenOneConfigs, k)
+	}
+
+	repo := NewMockCacheRepository()
+	fbClient := &MockFallbackClient{}
+	svc := NewCacheService(fbClient, repo, CacheServiceConfig{TTL: DefaultCacheTTL})
+
+	_, err := svc.GetTrendingTVShows(context.Background(), "day", 1)
+	require.NoError(t, err)
+	// TTL for trending/discover is hardcoded to 1h, NOT the service's DefaultCacheTTL
+	assert.Equal(t, 1*time.Hour, repo.lastSetTTL)
+}
+
+func TestCacheService_DiscoverTVShows_Error_Propagates(t *testing.T) {
+	for k := range storyTenOneConfigs {
+		delete(storyTenOneConfigs, k)
+	}
+
+	repo := NewMockCacheRepository()
+	fbClient := &MockFallbackClient{}
+	cfgFor(fbClient).discoverTVShowsError = errors.New("upstream boom")
+	svc := NewCacheService(fbClient, repo, CacheServiceConfig{})
+
+	_, err := svc.DiscoverTVShows(context.Background(), DiscoverParams{Genre: "18"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "upstream boom")
+	assert.Equal(t, 0, repo.setCalled, "error must NOT write to cache")
 }

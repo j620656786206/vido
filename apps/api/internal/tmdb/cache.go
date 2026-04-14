@@ -16,6 +16,12 @@ const (
 
 	// DefaultCacheTTL is the default cache duration (24 hours as per NFR-I7)
 	DefaultCacheTTL = 24 * time.Hour
+
+	// TrendingDiscoverCacheTTL is the cache duration for /trending/* and /discover/*
+	// endpoints (Story 10-1 AC #5). Shorter than DefaultCacheTTL because these
+	// lists change frequently and we want homepage content to stay fresh while
+	// still respecting TMDb's 40-req/10s rate limit.
+	TrendingDiscoverCacheTTL = 1 * time.Hour
 )
 
 // CacheServiceConfig holds configuration for the cache service
@@ -40,6 +46,14 @@ type CacheServiceInterface interface {
 	GetMovieDetails(ctx context.Context, movieID int) (*MovieDetails, error)
 	// GetTVShowDetails gets TV show details with caching
 	GetTVShowDetails(ctx context.Context, tvID int) (*TVShowDetails, error)
+	// GetTrendingMovies returns trending movies cached at TrendingDiscoverCacheTTL
+	GetTrendingMovies(ctx context.Context, timeWindow string, page int) (*SearchResultMovies, error)
+	// GetTrendingTVShows returns trending TV shows cached at TrendingDiscoverCacheTTL
+	GetTrendingTVShows(ctx context.Context, timeWindow string, page int) (*SearchResultTVShows, error)
+	// DiscoverMovies queries /discover/movie with caching at TrendingDiscoverCacheTTL
+	DiscoverMovies(ctx context.Context, params DiscoverParams) (*SearchResultMovies, error)
+	// DiscoverTVShows queries /discover/tv with caching at TrendingDiscoverCacheTTL
+	DiscoverTVShows(ctx context.Context, params DiscoverParams) (*SearchResultTVShows, error)
 }
 
 // Compile-time interface verification
@@ -212,6 +226,152 @@ func (s *CacheService) GetMovieDetails(ctx context.Context, movieID int) (*Movie
 	}
 
 	return result, nil
+}
+
+// GetTrendingMovies returns trending movies with caching (1-hour TTL).
+// Cache key format: tmdb:trending/movie:{window}:{page}
+func (s *CacheService) GetTrendingMovies(ctx context.Context, timeWindow string, page int) (*SearchResultMovies, error) {
+	if page < 1 {
+		page = 1
+	}
+	cacheKey := fmt.Sprintf("tmdb:trending/movie:%s:%d", timeWindow, page)
+
+	cached, err := s.cache.Get(ctx, cacheKey)
+	if err == nil && cached != nil {
+		var result SearchResultMovies
+		if err := json.Unmarshal([]byte(cached.Value), &result); err == nil {
+			slog.Debug("Cache hit", "key", cacheKey, "type", CacheTypeTMDb)
+			return &result, nil
+		}
+	}
+
+	slog.Debug("Cache miss", "key", cacheKey, "type", CacheTypeTMDb)
+	result, lang, err := s.client.GetTrendingMoviesWithFallback(ctx, timeWindow, page)
+	if err != nil {
+		return nil, err
+	}
+	slog.Debug("TMDb trending movies completed",
+		"time_window", timeWindow,
+		"language", lang,
+		"results", len(result.Results),
+	)
+
+	if data, err := json.Marshal(result); err == nil {
+		if err := s.cache.Set(ctx, cacheKey, string(data), CacheTypeTMDb, TrendingDiscoverCacheTTL); err != nil {
+			slog.Warn("Failed to cache trending movies", "key", cacheKey, "error", err)
+		}
+	}
+	return result, nil
+}
+
+// GetTrendingTVShows returns trending TV shows with caching (1-hour TTL).
+// Cache key format: tmdb:trending/tv:{window}:{page}
+func (s *CacheService) GetTrendingTVShows(ctx context.Context, timeWindow string, page int) (*SearchResultTVShows, error) {
+	if page < 1 {
+		page = 1
+	}
+	cacheKey := fmt.Sprintf("tmdb:trending/tv:%s:%d", timeWindow, page)
+
+	cached, err := s.cache.Get(ctx, cacheKey)
+	if err == nil && cached != nil {
+		var result SearchResultTVShows
+		if err := json.Unmarshal([]byte(cached.Value), &result); err == nil {
+			slog.Debug("Cache hit", "key", cacheKey, "type", CacheTypeTMDb)
+			return &result, nil
+		}
+	}
+
+	slog.Debug("Cache miss", "key", cacheKey, "type", CacheTypeTMDb)
+	result, lang, err := s.client.GetTrendingTVShowsWithFallback(ctx, timeWindow, page)
+	if err != nil {
+		return nil, err
+	}
+	slog.Debug("TMDb trending TV shows completed",
+		"time_window", timeWindow,
+		"language", lang,
+		"results", len(result.Results),
+	)
+
+	if data, err := json.Marshal(result); err == nil {
+		if err := s.cache.Set(ctx, cacheKey, string(data), CacheTypeTMDb, TrendingDiscoverCacheTTL); err != nil {
+			slog.Warn("Failed to cache trending TV shows", "key", cacheKey, "error", err)
+		}
+	}
+	return result, nil
+}
+
+// DiscoverMovies queries /discover/movie with caching (1-hour TTL).
+// Cache key includes all filter params so different queries get distinct entries.
+func (s *CacheService) DiscoverMovies(ctx context.Context, params DiscoverParams) (*SearchResultMovies, error) {
+	cacheKey := discoverCacheKey("movie", params)
+
+	cached, err := s.cache.Get(ctx, cacheKey)
+	if err == nil && cached != nil {
+		var result SearchResultMovies
+		if err := json.Unmarshal([]byte(cached.Value), &result); err == nil {
+			slog.Debug("Cache hit", "key", cacheKey, "type", CacheTypeTMDb)
+			return &result, nil
+		}
+	}
+
+	slog.Debug("Cache miss", "key", cacheKey, "type", CacheTypeTMDb)
+	result, lang, err := s.client.DiscoverMoviesWithFallback(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+	slog.Debug("TMDb discover movies completed",
+		"language", lang,
+		"results", len(result.Results),
+	)
+
+	if data, err := json.Marshal(result); err == nil {
+		if err := s.cache.Set(ctx, cacheKey, string(data), CacheTypeTMDb, TrendingDiscoverCacheTTL); err != nil {
+			slog.Warn("Failed to cache discover movies", "key", cacheKey, "error", err)
+		}
+	}
+	return result, nil
+}
+
+// DiscoverTVShows queries /discover/tv with caching (1-hour TTL).
+func (s *CacheService) DiscoverTVShows(ctx context.Context, params DiscoverParams) (*SearchResultTVShows, error) {
+	cacheKey := discoverCacheKey("tv", params)
+
+	cached, err := s.cache.Get(ctx, cacheKey)
+	if err == nil && cached != nil {
+		var result SearchResultTVShows
+		if err := json.Unmarshal([]byte(cached.Value), &result); err == nil {
+			slog.Debug("Cache hit", "key", cacheKey, "type", CacheTypeTMDb)
+			return &result, nil
+		}
+	}
+
+	slog.Debug("Cache miss", "key", cacheKey, "type", CacheTypeTMDb)
+	result, lang, err := s.client.DiscoverTVShowsWithFallback(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+	slog.Debug("TMDb discover TV shows completed",
+		"language", lang,
+		"results", len(result.Results),
+	)
+
+	if data, err := json.Marshal(result); err == nil {
+		if err := s.cache.Set(ctx, cacheKey, string(data), CacheTypeTMDb, TrendingDiscoverCacheTTL); err != nil {
+			slog.Warn("Failed to cache discover TV shows", "key", cacheKey, "error", err)
+		}
+	}
+	return result, nil
+}
+
+// discoverCacheKey builds a deterministic cache key from DiscoverParams.
+// Field order is fixed so the same logical query always maps to the same key.
+func discoverCacheKey(kind string, p DiscoverParams) string {
+	page := p.Page
+	if page < 1 {
+		page = 1
+	}
+	return fmt.Sprintf("tmdb:discover/%s:g=%s:yg=%d:yl=%d:r=%s:lang=%s:sort=%s:p=%d",
+		kind, p.Genre, p.YearGte, p.YearLte, p.Region, p.Language, p.SortBy, page)
 }
 
 // GetTVShowDetails gets TV show details with caching

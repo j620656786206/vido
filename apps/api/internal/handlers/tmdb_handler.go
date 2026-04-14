@@ -17,6 +17,10 @@ type TMDbServiceInterface interface {
 	SearchTVShows(ctx context.Context, query string, page int) (*tmdb.SearchResultTVShows, error)
 	GetMovieDetails(ctx context.Context, movieID int) (*tmdb.MovieDetails, error)
 	GetTVShowDetails(ctx context.Context, tvID int) (*tmdb.TVShowDetails, error)
+	GetTrendingMovies(ctx context.Context, timeWindow string, page int) (*tmdb.SearchResultMovies, error)
+	GetTrendingTVShows(ctx context.Context, timeWindow string, page int) (*tmdb.SearchResultTVShows, error)
+	DiscoverMovies(ctx context.Context, params tmdb.DiscoverParams) (*tmdb.SearchResultMovies, error)
+	DiscoverTVShows(ctx context.Context, params tmdb.DiscoverParams) (*tmdb.SearchResultTVShows, error)
 }
 
 // TMDbHandler handles HTTP requests for TMDb operations.
@@ -187,6 +191,116 @@ func (h *TMDbHandler) GetTVShowDetails(c *gin.Context) {
 	SuccessResponse(c, result)
 }
 
+// GetTrendingMovies handles GET /api/v1/tmdb/trending/movies?time_window=week&page=1
+// Returns trending movies with zh-TW content filtering (Story 10-1 AC #1, #3, #4, #5).
+func (h *TMDbHandler) GetTrendingMovies(c *gin.Context) {
+	timeWindow := parseTrendingWindow(c.Query("time_window"))
+	page := parsePageQuery(c.Query("page"))
+
+	result, err := h.service.GetTrendingMovies(c.Request.Context(), timeWindow, page)
+	if err != nil {
+		handleTMDbError(c, err, "get trending movies",
+			slog.String("time_window", timeWindow),
+			slog.Int("page", page),
+		)
+		return
+	}
+	SuccessResponse(c, result)
+}
+
+// GetTrendingTVShows handles GET /api/v1/tmdb/trending/tv?time_window=week&page=1
+func (h *TMDbHandler) GetTrendingTVShows(c *gin.Context) {
+	timeWindow := parseTrendingWindow(c.Query("time_window"))
+	page := parsePageQuery(c.Query("page"))
+
+	result, err := h.service.GetTrendingTVShows(c.Request.Context(), timeWindow, page)
+	if err != nil {
+		handleTMDbError(c, err, "get trending TV shows",
+			slog.String("time_window", timeWindow),
+			slog.Int("page", page),
+		)
+		return
+	}
+	SuccessResponse(c, result)
+}
+
+// DiscoverMovies handles GET /api/v1/tmdb/discover/movies with filter params
+// (genre, year_gte, year_lte, region, language, sort, page).
+func (h *TMDbHandler) DiscoverMovies(c *gin.Context) {
+	params := parseDiscoverParams(c)
+	result, err := h.service.DiscoverMovies(c.Request.Context(), params)
+	if err != nil {
+		handleTMDbError(c, err, "discover movies", slog.Any("params", params))
+		return
+	}
+	SuccessResponse(c, result)
+}
+
+// DiscoverTVShows handles GET /api/v1/tmdb/discover/tv with the same filter params.
+func (h *TMDbHandler) DiscoverTVShows(c *gin.Context) {
+	params := parseDiscoverParams(c)
+	result, err := h.service.DiscoverTVShows(c.Request.Context(), params)
+	if err != nil {
+		handleTMDbError(c, err, "discover TV shows", slog.Any("params", params))
+		return
+	}
+	SuccessResponse(c, result)
+}
+
+// parseTrendingWindow normalizes the time_window query param; unknown / empty
+// values default to "week" (TMDb's most useful default for a homepage feed).
+func parseTrendingWindow(raw string) string {
+	switch raw {
+	case "day", "week":
+		return raw
+	default:
+		return "week"
+	}
+}
+
+// parsePageQuery converts a `?page=N` string to an int; returns 1 on parse failure
+// or non-positive values.
+func parsePageQuery(raw string) int {
+	if raw == "" {
+		return 1
+	}
+	n, err := strconv.Atoi(raw)
+	if err != nil || n < 1 {
+		return 1
+	}
+	return n
+}
+
+// parseDiscoverParams maps the handler's query-string parameters to a
+// tmdb.DiscoverParams struct. Keys use snake_case per Rule 18:
+//   - genre       → DiscoverParams.Genre (comma-separated IDs)
+//   - year_gte    → DiscoverParams.YearGte
+//   - year_lte    → DiscoverParams.YearLte
+//   - region      → DiscoverParams.Region
+//   - language    → DiscoverParams.Language
+//   - sort        → DiscoverParams.SortBy
+//   - page        → DiscoverParams.Page
+func parseDiscoverParams(c *gin.Context) tmdb.DiscoverParams {
+	p := tmdb.DiscoverParams{
+		Genre:    c.Query("genre"),
+		Region:   c.Query("region"),
+		Language: c.Query("language"),
+		SortBy:   c.Query("sort"),
+		Page:     parsePageQuery(c.Query("page")),
+	}
+	if v := c.Query("year_gte"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			p.YearGte = n
+		}
+	}
+	if v := c.Query("year_lte"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			p.YearLte = n
+		}
+	}
+	return p
+}
+
 // RegisterRoutes registers all TMDb routes on the given router group
 func (h *TMDbHandler) RegisterRoutes(rg *gin.RouterGroup) {
 	tmdbGroup := rg.Group("/tmdb")
@@ -196,6 +310,20 @@ func (h *TMDbHandler) RegisterRoutes(rg *gin.RouterGroup) {
 		{
 			search.GET("/movies", h.SearchMovies)
 			search.GET("/tv", h.SearchTVShows)
+		}
+
+		// Trending endpoints (Story 10-1)
+		trending := tmdbGroup.Group("/trending")
+		{
+			trending.GET("/movies", h.GetTrendingMovies)
+			trending.GET("/tv", h.GetTrendingTVShows)
+		}
+
+		// Discover endpoints (Story 10-1)
+		discover := tmdbGroup.Group("/discover")
+		{
+			discover.GET("/movies", h.DiscoverMovies)
+			discover.GET("/tv", h.DiscoverTVShows)
 		}
 
 		// Details endpoints

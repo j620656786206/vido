@@ -55,6 +55,18 @@ type ClientInterface interface {
 	GetTVShowVideos(ctx context.Context, tvID int) (*VideosResponse, error)
 	// FindByExternalID finds movies/TV shows by an external ID (e.g., IMDB)
 	FindByExternalID(ctx context.Context, externalID string, externalSource string) (*FindByExternalIDResponse, error)
+	// GetTrendingMovies retrieves the trending movies for a time window ("day" or "week")
+	GetTrendingMovies(ctx context.Context, timeWindow string, page int) (*SearchResultMovies, error)
+	// GetTrendingMoviesWithLanguage retrieves trending movies with a specific language
+	GetTrendingMoviesWithLanguage(ctx context.Context, timeWindow string, language string, page int) (*SearchResultMovies, error)
+	// GetTrendingTVShows retrieves the trending TV shows for a time window ("day" or "week")
+	GetTrendingTVShows(ctx context.Context, timeWindow string, page int) (*SearchResultTVShows, error)
+	// GetTrendingTVShowsWithLanguage retrieves trending TV shows with a specific language
+	GetTrendingTVShowsWithLanguage(ctx context.Context, timeWindow string, language string, page int) (*SearchResultTVShows, error)
+	// DiscoverMovies queries /discover/movie with the given filter params
+	DiscoverMovies(ctx context.Context, params DiscoverParams) (*SearchResultMovies, error)
+	// DiscoverTVShows queries /discover/tv with the given filter params
+	DiscoverTVShows(ctx context.Context, params DiscoverParams) (*SearchResultTVShows, error)
 }
 
 // Client represents a TMDb API client

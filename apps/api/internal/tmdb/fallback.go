@@ -27,6 +27,14 @@ type LanguageFallbackClientInterface interface {
 	GetMovieDetailsWithFallback(ctx context.Context, movieID int) (*MovieDetails, string, error)
 	// GetTVShowDetailsWithFallback gets TV show details, trying each language in the fallback chain
 	GetTVShowDetailsWithFallback(ctx context.Context, tvID int) (*TVShowDetails, string, error)
+	// GetTrendingMoviesWithFallback gets trending movies using the language fallback chain
+	GetTrendingMoviesWithFallback(ctx context.Context, timeWindow string, page int) (*SearchResultMovies, string, error)
+	// GetTrendingTVShowsWithFallback gets trending TV shows using the language fallback chain
+	GetTrendingTVShowsWithFallback(ctx context.Context, timeWindow string, page int) (*SearchResultTVShows, string, error)
+	// DiscoverMoviesWithFallback queries /discover/movie across the language fallback chain
+	DiscoverMoviesWithFallback(ctx context.Context, params DiscoverParams) (*SearchResultMovies, string, error)
+	// DiscoverTVShowsWithFallback queries /discover/tv across the language fallback chain
+	DiscoverTVShowsWithFallback(ctx context.Context, params DiscoverParams) (*SearchResultTVShows, string, error)
 }
 
 // Compile-time interface verification
@@ -246,6 +254,176 @@ func (c *LanguageFallbackClient) GetTVShowDetailsWithFallback(ctx context.Contex
 		return nil, "", lastErr
 	}
 
+	return lastResult, lastLang, nil
+}
+
+// GetTrendingMoviesWithFallback gets trending movies, trying each language in the fallback chain.
+// Trending lists themselves don't depend on language (same global popularity list), but result
+// titles/overviews are language-specific — so we fall back if the first language returns items
+// without localized content, matching the existing search/detail behavior.
+func (c *LanguageFallbackClient) GetTrendingMoviesWithFallback(ctx context.Context, timeWindow string, page int) (*SearchResultMovies, string, error) {
+	var lastResult *SearchResultMovies
+	var lastLang string
+	var lastErr error
+
+	for _, lang := range c.languages {
+		result, err := c.client.GetTrendingMoviesWithLanguage(ctx, timeWindow, lang, page)
+		if err != nil {
+			slog.Debug("Language fallback: trending movies failed",
+				"language", lang,
+				"time_window", timeWindow,
+				"error", err,
+			)
+			lastErr = err
+			continue
+		}
+
+		lastResult = result
+		lastLang = lang
+		lastErr = nil
+
+		if len(result.Results) > 0 && hasLocalizedMovieContent(result.Results) {
+			return result, lang, nil
+		}
+	}
+
+	if lastErr != nil {
+		return nil, "", lastErr
+	}
+	if lastResult == nil {
+		return &SearchResultMovies{Page: page, Results: []Movie{}}, c.languages[len(c.languages)-1], nil
+	}
+	return lastResult, lastLang, nil
+}
+
+// GetTrendingTVShowsWithFallback gets trending TV shows using the language fallback chain.
+func (c *LanguageFallbackClient) GetTrendingTVShowsWithFallback(ctx context.Context, timeWindow string, page int) (*SearchResultTVShows, string, error) {
+	var lastResult *SearchResultTVShows
+	var lastLang string
+	var lastErr error
+
+	for _, lang := range c.languages {
+		result, err := c.client.GetTrendingTVShowsWithLanguage(ctx, timeWindow, lang, page)
+		if err != nil {
+			slog.Debug("Language fallback: trending TV shows failed",
+				"language", lang,
+				"time_window", timeWindow,
+				"error", err,
+			)
+			lastErr = err
+			continue
+		}
+
+		lastResult = result
+		lastLang = lang
+		lastErr = nil
+
+		if len(result.Results) > 0 && hasLocalizedTVShowContent(result.Results) {
+			return result, lang, nil
+		}
+	}
+
+	if lastErr != nil {
+		return nil, "", lastErr
+	}
+	if lastResult == nil {
+		return &SearchResultTVShows{Page: page, Results: []TVShow{}}, c.languages[len(c.languages)-1], nil
+	}
+	return lastResult, lastLang, nil
+}
+
+// DiscoverMoviesWithFallback runs /discover/movie across the language fallback chain.
+// When params.Language is set explicitly by the caller, it is honored on the first attempt
+// and the chain is only consulted if subsequent localization checks fail — but because
+// discover results are already language-filtered by the caller's intent, we treat a
+// caller-provided language as authoritative and skip the chain in that case.
+func (c *LanguageFallbackClient) DiscoverMoviesWithFallback(ctx context.Context, params DiscoverParams) (*SearchResultMovies, string, error) {
+	if params.Language != "" {
+		result, err := c.client.DiscoverMovies(ctx, params)
+		if err != nil {
+			return nil, "", err
+		}
+		return result, params.Language, nil
+	}
+
+	var lastResult *SearchResultMovies
+	var lastLang string
+	var lastErr error
+
+	for _, lang := range c.languages {
+		p := params
+		p.Language = lang
+		result, err := c.client.DiscoverMovies(ctx, p)
+		if err != nil {
+			slog.Debug("Language fallback: discover movies failed",
+				"language", lang,
+				"error", err,
+			)
+			lastErr = err
+			continue
+		}
+
+		lastResult = result
+		lastLang = lang
+		lastErr = nil
+
+		if len(result.Results) > 0 && hasLocalizedMovieContent(result.Results) {
+			return result, lang, nil
+		}
+	}
+
+	if lastErr != nil {
+		return nil, "", lastErr
+	}
+	if lastResult == nil {
+		return &SearchResultMovies{Page: 1, Results: []Movie{}}, c.languages[len(c.languages)-1], nil
+	}
+	return lastResult, lastLang, nil
+}
+
+// DiscoverTVShowsWithFallback runs /discover/tv across the language fallback chain
+// (see DiscoverMoviesWithFallback for semantics).
+func (c *LanguageFallbackClient) DiscoverTVShowsWithFallback(ctx context.Context, params DiscoverParams) (*SearchResultTVShows, string, error) {
+	if params.Language != "" {
+		result, err := c.client.DiscoverTVShows(ctx, params)
+		if err != nil {
+			return nil, "", err
+		}
+		return result, params.Language, nil
+	}
+
+	var lastResult *SearchResultTVShows
+	var lastLang string
+	var lastErr error
+
+	for _, lang := range c.languages {
+		p := params
+		p.Language = lang
+		result, err := c.client.DiscoverTVShows(ctx, p)
+		if err != nil {
+			slog.Debug("Language fallback: discover TV shows failed",
+				"language", lang,
+				"error", err,
+			)
+			lastErr = err
+			continue
+		}
+
+		lastResult = result
+		lastLang = lang
+		lastErr = nil
+
+		if len(result.Results) > 0 && hasLocalizedTVShowContent(result.Results) {
+			return result, lang, nil
+		}
+	}
+
+	if lastErr != nil {
+		return nil, "", lastErr
+	}
+	if lastResult == nil {
+		return &SearchResultTVShows{Page: 1, Results: []TVShow{}}, c.languages[len(c.languages)-1], nil
+	}
 	return lastResult, lastLang, nil
 }
 

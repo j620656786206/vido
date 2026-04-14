@@ -31,12 +31,21 @@ type TMDbServiceInterface interface {
 	GetTVShowDetails(ctx context.Context, tvID int) (*tmdb.TVShowDetails, error)
 	// FindByExternalID finds movies/TV shows by an external ID (e.g., IMDB)
 	FindByExternalID(ctx context.Context, externalID string, externalSource string) (*tmdb.FindByExternalIDResponse, error)
+	// GetTrendingMovies returns trending movies (cached 1h, server-side filtered for zh-TW relevance).
+	GetTrendingMovies(ctx context.Context, timeWindow string, page int) (*tmdb.SearchResultMovies, error)
+	// GetTrendingTVShows returns trending TV shows (cached 1h, server-side filtered).
+	GetTrendingTVShows(ctx context.Context, timeWindow string, page int) (*tmdb.SearchResultTVShows, error)
+	// DiscoverMovies queries /discover/movie (cached 1h, server-side filtered).
+	DiscoverMovies(ctx context.Context, params tmdb.DiscoverParams) (*tmdb.SearchResultMovies, error)
+	// DiscoverTVShows queries /discover/tv (cached 1h, server-side filtered).
+	DiscoverTVShows(ctx context.Context, params tmdb.DiscoverParams) (*tmdb.SearchResultTVShows, error)
 }
 
 // TMDbService implements TMDbServiceInterface
 type TMDbService struct {
-	cacheService tmdb.CacheServiceInterface
-	client       tmdb.ClientInterface
+	cacheService  tmdb.CacheServiceInterface
+	client        tmdb.ClientInterface
+	contentFilter *ContentFilterService
 }
 
 // Compile-time interface verification
@@ -75,8 +84,9 @@ func NewTMDbService(cfg TMDbConfig, cacheRepo repository.CacheRepositoryInterfac
 	)
 
 	return &TMDbService{
-		cacheService: cacheService,
-		client:       client,
+		cacheService:  cacheService,
+		client:        client,
+		contentFilter: NewContentFilterService(),
 	}
 }
 
@@ -85,12 +95,20 @@ func (s *TMDbService) VideosProvider() TMDbVideosProvider {
 	return s.client
 }
 
-// NewTMDbServiceWithCacheService creates a TMDb service with a custom cache service
-// This is useful for testing with mock dependencies
+// NewTMDbServiceWithCacheService creates a TMDb service with a custom cache service.
+// Used by tests with mock dependencies. Content filter uses the real clock — pass
+// a ContentFilterService via the dedicated setter if you need a fixed clock.
 func NewTMDbServiceWithCacheService(cacheService tmdb.CacheServiceInterface) *TMDbService {
 	return &TMDbService{
-		cacheService: cacheService,
+		cacheService:  cacheService,
+		contentFilter: NewContentFilterService(),
 	}
+}
+
+// SetContentFilter swaps the content filter service. Intended for tests that
+// need deterministic FarFuture horizon math.
+func (s *TMDbService) SetContentFilter(cf *ContentFilterService) {
+	s.contentFilter = cf
 }
 
 // SearchMovies searches for movies by query
@@ -237,6 +255,72 @@ func (s *TMDbService) FindByExternalID(ctx context.Context, externalID string, e
 		return nil, err
 	}
 
+	return result, nil
+}
+
+// GetTrendingMovies returns trending movies with zh-TW content filtering applied.
+// Filters: far-future (> 6 months out) and low-quality (rating<3 AND votes<50).
+// The underlying cache layer gives a 1-hour TTL per AC #5.
+func (s *TMDbService) GetTrendingMovies(ctx context.Context, timeWindow string, page int) (*tmdb.SearchResultMovies, error) {
+	slog.Debug("Getting trending movies", "time_window", timeWindow, "page", page)
+
+	result, err := s.cacheService.GetTrendingMovies(ctx, timeWindow, page)
+	if err != nil {
+		slog.Error("Failed to get trending movies", "time_window", timeWindow, "error", err)
+		return nil, err
+	}
+
+	filtered := s.contentFilter.FilterFarFutureMovies(result.Results)
+	filtered = s.contentFilter.FilterLowQualityMovies(filtered)
+	result.Results = filtered
+	return result, nil
+}
+
+// GetTrendingTVShows returns trending TV shows with zh-TW content filtering applied.
+func (s *TMDbService) GetTrendingTVShows(ctx context.Context, timeWindow string, page int) (*tmdb.SearchResultTVShows, error) {
+	slog.Debug("Getting trending TV shows", "time_window", timeWindow, "page", page)
+
+	result, err := s.cacheService.GetTrendingTVShows(ctx, timeWindow, page)
+	if err != nil {
+		slog.Error("Failed to get trending TV shows", "time_window", timeWindow, "error", err)
+		return nil, err
+	}
+
+	filtered := s.contentFilter.FilterFarFutureTVShows(result.Results)
+	filtered = s.contentFilter.FilterLowQualityTVShows(filtered)
+	result.Results = filtered
+	return result, nil
+}
+
+// DiscoverMovies runs /discover/movie with caching + server-side filtering.
+func (s *TMDbService) DiscoverMovies(ctx context.Context, params tmdb.DiscoverParams) (*tmdb.SearchResultMovies, error) {
+	slog.Debug("Discovering movies", "params", params)
+
+	result, err := s.cacheService.DiscoverMovies(ctx, params)
+	if err != nil {
+		slog.Error("Failed to discover movies", "error", err)
+		return nil, err
+	}
+
+	filtered := s.contentFilter.FilterFarFutureMovies(result.Results)
+	filtered = s.contentFilter.FilterLowQualityMovies(filtered)
+	result.Results = filtered
+	return result, nil
+}
+
+// DiscoverTVShows runs /discover/tv with caching + server-side filtering.
+func (s *TMDbService) DiscoverTVShows(ctx context.Context, params tmdb.DiscoverParams) (*tmdb.SearchResultTVShows, error) {
+	slog.Debug("Discovering TV shows", "params", params)
+
+	result, err := s.cacheService.DiscoverTVShows(ctx, params)
+	if err != nil {
+		slog.Error("Failed to discover TV shows", "error", err)
+		return nil, err
+	}
+
+	filtered := s.contentFilter.FilterFarFutureTVShows(result.Results)
+	filtered = s.contentFilter.FilterLowQualityTVShows(filtered)
+	result.Results = filtered
 	return result, nil
 }
 

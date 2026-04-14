@@ -89,6 +89,34 @@ func (m *MockClient) FindByExternalID(ctx context.Context, externalID string, ex
 	return &FindByExternalIDResponse{}, nil
 }
 
+// Story 10-1 additions — trending + discover methods.
+// The mock implementations are passthrough stubs (existing tests don't exercise
+// these paths); call tracking is added in the fallback additions below.
+
+func (m *MockClient) GetTrendingMovies(ctx context.Context, timeWindow string, page int) (*SearchResultMovies, error) {
+	return m.GetTrendingMoviesWithLanguage(ctx, timeWindow, "zh-TW", page)
+}
+
+func (m *MockClient) GetTrendingMoviesWithLanguage(ctx context.Context, timeWindow string, language string, page int) (*SearchResultMovies, error) {
+	return &SearchResultMovies{Page: page, Results: []Movie{}}, nil
+}
+
+func (m *MockClient) GetTrendingTVShows(ctx context.Context, timeWindow string, page int) (*SearchResultTVShows, error) {
+	return m.GetTrendingTVShowsWithLanguage(ctx, timeWindow, "zh-TW", page)
+}
+
+func (m *MockClient) GetTrendingTVShowsWithLanguage(ctx context.Context, timeWindow string, language string, page int) (*SearchResultTVShows, error) {
+	return &SearchResultTVShows{Page: page, Results: []TVShow{}}, nil
+}
+
+func (m *MockClient) DiscoverMovies(ctx context.Context, params DiscoverParams) (*SearchResultMovies, error) {
+	return &SearchResultMovies{Page: 1, Results: []Movie{}}, nil
+}
+
+func (m *MockClient) DiscoverTVShows(ctx context.Context, params DiscoverParams) (*SearchResultTVShows, error) {
+	return &SearchResultTVShows{Page: 1, Results: []TVShow{}}, nil
+}
+
 func TestNewLanguageFallbackClient(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -516,4 +544,129 @@ func TestHasLocalizedTVShowContent(t *testing.T) {
 
 func TestLanguageFallbackClient_InterfaceCompliance(t *testing.T) {
 	var _ LanguageFallbackClientInterface = (*LanguageFallbackClient)(nil)
+}
+
+// --- Story 10-1 fallback additions ---
+
+// trackingMockClient captures per-language call sequences for trending/discover fallback.
+type trackingMockClient struct {
+	MockClient
+	trendingMovieCalls  []string
+	trendingTVCalls     []string
+	discoverMovieCalls  []string
+	discoverTVCalls     []string
+	trendingMovieResult map[string]*SearchResultMovies
+	trendingTVResult    map[string]*SearchResultTVShows
+	discoverMovieResult map[string]*SearchResultMovies
+	discoverTVResult    map[string]*SearchResultTVShows
+}
+
+func (m *trackingMockClient) GetTrendingMoviesWithLanguage(ctx context.Context, timeWindow, language string, page int) (*SearchResultMovies, error) {
+	m.trendingMovieCalls = append(m.trendingMovieCalls, language)
+	if r, ok := m.trendingMovieResult[language]; ok {
+		return r, nil
+	}
+	return &SearchResultMovies{Page: page, Results: []Movie{}}, nil
+}
+
+func (m *trackingMockClient) GetTrendingTVShowsWithLanguage(ctx context.Context, timeWindow, language string, page int) (*SearchResultTVShows, error) {
+	m.trendingTVCalls = append(m.trendingTVCalls, language)
+	if r, ok := m.trendingTVResult[language]; ok {
+		return r, nil
+	}
+	return &SearchResultTVShows{Page: page, Results: []TVShow{}}, nil
+}
+
+func (m *trackingMockClient) DiscoverMovies(ctx context.Context, params DiscoverParams) (*SearchResultMovies, error) {
+	m.discoverMovieCalls = append(m.discoverMovieCalls, params.Language)
+	if r, ok := m.discoverMovieResult[params.Language]; ok {
+		return r, nil
+	}
+	return &SearchResultMovies{Page: 1, Results: []Movie{}}, nil
+}
+
+func (m *trackingMockClient) DiscoverTVShows(ctx context.Context, params DiscoverParams) (*SearchResultTVShows, error) {
+	m.discoverTVCalls = append(m.discoverTVCalls, params.Language)
+	if r, ok := m.discoverTVResult[params.Language]; ok {
+		return r, nil
+	}
+	return &SearchResultTVShows{Page: 1, Results: []TVShow{}}, nil
+}
+
+func TestFallback_GetTrendingMovies_StopsAtFirstLocalized(t *testing.T) {
+	m := &trackingMockClient{
+		trendingMovieResult: map[string]*SearchResultMovies{
+			"zh-TW": {Page: 1, Results: []Movie{{ID: 1, Title: "鬼滅", Overview: "故事"}}},
+		},
+	}
+	fb := NewLanguageFallbackClient(m, []string{"zh-TW", "zh-CN", "en"})
+
+	result, lang, err := fb.GetTrendingMoviesWithFallback(context.Background(), "week", 1)
+
+	require.NoError(t, err)
+	assert.Equal(t, "zh-TW", lang)
+	assert.Len(t, result.Results, 1)
+	assert.Equal(t, []string{"zh-TW"}, m.trendingMovieCalls)
+}
+
+func TestFallback_GetTrendingMovies_FallsThroughChain(t *testing.T) {
+	m := &trackingMockClient{
+		trendingMovieResult: map[string]*SearchResultMovies{
+			// zh-TW and zh-CN return items without localized title/overview → keep falling
+			"zh-TW": {Page: 1, Results: []Movie{{ID: 1}}},
+			"zh-CN": {Page: 1, Results: []Movie{{ID: 2}}},
+			"en":    {Page: 1, Results: []Movie{{ID: 3, Title: "Title", Overview: "Plot"}}},
+		},
+	}
+	fb := NewLanguageFallbackClient(m, []string{"zh-TW", "zh-CN", "en"})
+
+	_, lang, err := fb.GetTrendingMoviesWithFallback(context.Background(), "week", 1)
+
+	require.NoError(t, err)
+	assert.Equal(t, "en", lang)
+	assert.Equal(t, []string{"zh-TW", "zh-CN", "en"}, m.trendingMovieCalls)
+}
+
+func TestFallback_DiscoverMovies_HonorsExplicitLanguage(t *testing.T) {
+	m := &trackingMockClient{
+		discoverMovieResult: map[string]*SearchResultMovies{
+			"ja": {Page: 1, Results: []Movie{{ID: 1, Title: "JP", Overview: "ok"}}},
+		},
+	}
+	fb := NewLanguageFallbackClient(m, []string{"zh-TW", "zh-CN", "en"})
+
+	_, lang, err := fb.DiscoverMoviesWithFallback(context.Background(), DiscoverParams{Language: "ja"})
+
+	require.NoError(t, err)
+	assert.Equal(t, "ja", lang)
+	// When caller explicitly sets Language, fallback chain is NOT consulted
+	assert.Equal(t, []string{"ja"}, m.discoverMovieCalls)
+}
+
+func TestFallback_DiscoverTVShows_UsesChainWhenLanguageBlank(t *testing.T) {
+	m := &trackingMockClient{
+		discoverTVResult: map[string]*SearchResultTVShows{
+			"zh-CN": {Page: 1, Results: []TVShow{{ID: 1, Name: "name", Overview: "ov"}}},
+		},
+	}
+	fb := NewLanguageFallbackClient(m, []string{"zh-TW", "zh-CN", "en"})
+
+	_, lang, err := fb.DiscoverTVShowsWithFallback(context.Background(), DiscoverParams{Genre: "18"})
+
+	require.NoError(t, err)
+	assert.Equal(t, "zh-CN", lang)
+	assert.Equal(t, []string{"zh-TW", "zh-CN"}, m.discoverTVCalls)
+}
+
+func TestFallback_GetTrendingTVShows_AllEmpty(t *testing.T) {
+	m := &trackingMockClient{} // all languages return empty results
+	fb := NewLanguageFallbackClient(m, []string{"zh-TW", "zh-CN", "en"})
+
+	result, lang, err := fb.GetTrendingTVShowsWithFallback(context.Background(), "week", 1)
+
+	require.NoError(t, err)
+	// All three languages tried; last is returned with 0 results
+	assert.Equal(t, "en", lang)
+	assert.Empty(t, result.Results)
+	assert.Equal(t, []string{"zh-TW", "zh-CN", "en"}, m.trendingTVCalls)
 }

@@ -187,6 +187,41 @@ type FindByExternalIDResponse struct {
 	TVResults     []TVShow `json:"tv_results"`
 }
 
+// DiscoverParams holds the parameters for TMDb /discover/{movie,tv} endpoints.
+//
+// Mapping to TMDb query params:
+//   - Genre    → with_genres (comma-separated genre IDs)
+//   - YearGte  → primary_release_date.gte (movies) / first_air_date.gte (TV)
+//   - YearLte  → primary_release_date.lte (movies) / first_air_date.lte (TV)
+//   - Region   → region (ISO 3166-1, e.g. "TW")
+//   - Language → language (per-call override of the client default)
+//   - SortBy   → sort_by (e.g. "popularity.desc", "vote_average.desc")
+//   - Page     → page (1-indexed; values < 1 are normalized to 1)
+//
+// Zero-valued fields are omitted from the outgoing query string so TMDb
+// applies its own defaults.
+type DiscoverParams struct {
+	Genre    string
+	YearGte  int
+	YearLte  int
+	Region   string
+	Language string
+	SortBy   string
+	Page     int
+}
+
+// TrendingResult is a discriminated wrapper reserved for consumers that want
+// a single type regardless of media kind. The underlying TMDb trending
+// endpoints are already split (/trending/movie/{window} and /trending/tv/{window}),
+// so the TMDb client returns the concrete SearchResultMovies / SearchResultTVShows
+// shapes rather than this wrapper. Kept here to satisfy the story's Task 1.5
+// type-documentation requirement and in case a future endpoint merges them.
+type TrendingResult struct {
+	MediaType string      `json:"media_type"`
+	Movies    []Movie     `json:"movies,omitempty"`
+	TVShows   []TVShow    `json:"tv_shows,omitempty"`
+}
+
 // ErrorResponse represents a TMDb API error response
 type ErrorResponse struct {
 	StatusCode    int    `json:"status_code" example:"7"`

@@ -233,3 +233,117 @@ func TestClient_GetMovieDetailsWithLanguage(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotNil(t, result)
 }
+
+// --- Story 10-1 additions ---
+
+func TestClient_GetTrendingMovies(t *testing.T) {
+	tests := []struct {
+		name         string
+		timeWindow   string
+		page         int
+		wantPath     string
+		wantLanguage string
+	}{
+		{name: "week window", timeWindow: "week", page: 1, wantPath: "/trending/movie/week", wantLanguage: "zh-TW"},
+		{name: "day window", timeWindow: "day", page: 2, wantPath: "/trending/movie/day", wantLanguage: "zh-TW"},
+		{name: "unknown window defaults to week", timeWindow: "invalid", page: 1, wantPath: "/trending/movie/week", wantLanguage: "zh-TW"},
+		{name: "negative page normalized to 1", timeWindow: "week", page: -5, wantPath: "/trending/movie/week", wantLanguage: "zh-TW"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, tt.wantPath, r.URL.Path)
+				assert.Equal(t, tt.wantLanguage, r.URL.Query().Get("language"))
+				assert.NotEmpty(t, r.URL.Query().Get("page"))
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(SearchResultMovies{Page: 1, Results: []Movie{{ID: 1, Title: "Trending"}}})
+			}))
+			defer server.Close()
+
+			client := NewClient(ClientConfig{APIKey: "k", BaseURL: server.URL})
+			result, err := client.GetTrendingMovies(context.Background(), tt.timeWindow, tt.page)
+
+			require.NoError(t, err)
+			require.NotNil(t, result)
+			assert.Len(t, result.Results, 1)
+		})
+	}
+}
+
+func TestClient_GetTrendingMoviesWithLanguage(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "/trending/movie/week", r.URL.Path)
+		assert.Equal(t, "en", r.URL.Query().Get("language"))
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(SearchResultMovies{Page: 1})
+	}))
+	defer server.Close()
+
+	client := NewClient(ClientConfig{APIKey: "k", BaseURL: server.URL, Language: "zh-TW"})
+	_, err := client.GetTrendingMoviesWithLanguage(context.Background(), "week", "en", 1)
+	require.NoError(t, err)
+}
+
+func TestClient_DiscoverMovies(t *testing.T) {
+	tests := []struct {
+		name   string
+		params DiscoverParams
+		check  func(t *testing.T, q map[string][]string)
+	}{
+		{
+			name: "with genre + date range + region + sort",
+			params: DiscoverParams{
+				Genre: "28,12", YearGte: 2024, YearLte: 2026,
+				Region: "TW", SortBy: "popularity.desc", Page: 3,
+			},
+			check: func(t *testing.T, q map[string][]string) {
+				assert.Equal(t, "28,12", q["with_genres"][0])
+				assert.Equal(t, "TW", q["region"][0])
+				assert.Equal(t, "popularity.desc", q["sort_by"][0])
+				assert.Equal(t, "2024-01-01", q["primary_release_date.gte"][0])
+				assert.Equal(t, "2026-12-31", q["primary_release_date.lte"][0])
+				assert.Equal(t, "3", q["page"][0])
+			},
+		},
+		{
+			name:   "empty params omits optional fields but keeps page+language",
+			params: DiscoverParams{},
+			check: func(t *testing.T, q map[string][]string) {
+				assert.Equal(t, "1", q["page"][0])
+				assert.NotEmpty(t, q["language"][0])
+				_, hasGenre := q["with_genres"]
+				_, hasRegion := q["region"]
+				_, hasSort := q["sort_by"]
+				_, hasDateGte := q["primary_release_date.gte"]
+				assert.False(t, hasGenre)
+				assert.False(t, hasRegion)
+				assert.False(t, hasSort)
+				assert.False(t, hasDateGte)
+			},
+		},
+		{
+			name:   "per-call language overrides client default",
+			params: DiscoverParams{Language: "ja"},
+			check: func(t *testing.T, q map[string][]string) {
+				assert.Equal(t, "ja", q["language"][0])
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, "/discover/movie", r.URL.Path)
+				tt.check(t, r.URL.Query())
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(SearchResultMovies{Page: 1})
+			}))
+			defer server.Close()
+
+			client := NewClient(ClientConfig{APIKey: "k", BaseURL: server.URL, Language: "zh-TW"})
+			_, err := client.DiscoverMovies(context.Background(), tt.params)
+			require.NoError(t, err)
+		})
+	}
+}
