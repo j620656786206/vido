@@ -61,5 +61,8 @@ export function useTrendingHero(timeWindow: 'day' | 'week' = 'week') {
       return merged.slice(0, HERO_BANNER_LIMIT);
     },
     staleTime: 60 * 60 * 1000, // 1h — matches backend cache TTL for trending
+    // Banner must hide gracefully (AC #5) within ~1s, not after the default
+    // 3-retry exponential backoff (~4s+ silent failure). (Code review L1.)
+    retry: 1,
   });
 }

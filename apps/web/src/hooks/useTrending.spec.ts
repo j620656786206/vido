@@ -150,7 +150,9 @@ describe('useTrendingHero', () => {
 
     const { result } = renderHook(() => useTrendingHero(), { wrapper: createWrapper() });
 
-    await waitFor(() => expect(result.current.isError).toBe(true));
+    // L1 fix changed retry from default (3 retries, ~6s) to 1 retry. Timeout
+    // bumped above the default 1000ms so the second attempt + backoff fits.
+    await waitFor(() => expect(result.current.isError).toBe(true), { timeout: 3000 });
     expect(result.current.error?.message).toBe('Network down');
   });
 

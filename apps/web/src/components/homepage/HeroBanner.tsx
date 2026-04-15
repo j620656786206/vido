@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
 import { Play, Star } from 'lucide-react';
 import { useTrendingHero } from '../../hooks/useTrending';
-import { getImageUrl } from '../../lib/image';
+import { getImageUrl, getBackdropSrcSet, getBackdropSizes } from '../../lib/image';
 import { cn } from '../../lib/utils';
 import { TrailerModal } from './TrailerModal';
 import type { HeroBannerItem } from '../../types/tmdb';
@@ -19,28 +19,53 @@ interface HeroBannerSlideProps {
   item: HeroBannerItem;
   active: boolean;
   onPlayClick: (item: HeroBannerItem) => void;
+  onSlideActivate: (item: HeroBannerItem) => void;
 }
 
-function HeroBannerSlide({ item, active, onPlayClick }: HeroBannerSlideProps) {
-  const backdropUrl = getImageUrl(item.backdropPath, 'original');
+function HeroBannerSlide({ item, active, onPlayClick, onSlideActivate }: HeroBannerSlideProps) {
+  // w1280 src is the safe baseline; srcset upgrades to original for desktop and
+  // downgrades to w780 for mobile so we don't push 3–5MB images at handsets.
+  const fallbackBackdrop = getImageUrl(item.backdropPath, 'w1280');
+  const backdropSrcSet = getBackdropSrcSet(item.backdropPath);
+  const backdropSizes = getBackdropSizes();
   const year = getYear(item.releaseDate);
+  const [imageBroken, setImageBroken] = useState(false);
 
   return (
+    // M3 fix: whole slide is now a navigable surface. M1 fix: inert removes
+    // inactive slides from a11y tree + tab order without ad-hoc tabIndex hacks.
     <div
       data-testid="hero-banner-slide"
       data-active={active ? 'true' : 'false'}
-      aria-hidden={!active}
+      // React 19 forwards the `inert` boolean attribute natively. When true,
+      // the browser removes the subtree from focus order, hit-testing, and
+      // the accessibility tree (M1 fix).
+      inert={!active}
+      role="link"
+      aria-label={`查看 ${item.title}`}
+      tabIndex={active ? 0 : -1}
+      onClick={() => onSlideActivate(item)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onSlideActivate(item);
+        }
+      }}
       className={cn(
-        'absolute inset-0 transition-opacity duration-700 ease-in-out',
+        'absolute inset-0 cursor-pointer transition-opacity duration-700 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black',
         active ? 'opacity-100' : 'pointer-events-none opacity-0'
       )}
     >
-      {backdropUrl && (
+      {fallbackBackdrop && !imageBroken && (
         <img
-          src={backdropUrl}
+          src={fallbackBackdrop}
+          srcSet={backdropSrcSet ?? undefined}
+          sizes={backdropSizes}
           alt={item.title}
           className="h-full w-full object-cover"
           loading={active ? 'eager' : 'lazy'}
+          decoding="async"
+          onError={() => setImageBroken(true)}
           data-testid="hero-banner-backdrop"
         />
       )}
@@ -95,6 +120,7 @@ function HeroBannerSlide({ item, active, onPlayClick }: HeroBannerSlideProps) {
             <Link
               to="/media/$type/$id"
               params={{ type: item.mediaType, id: String(item.id) }}
+              onClick={(e) => e.stopPropagation()}
               data-testid="hero-banner-detail-link"
               className="rounded-full bg-white/20 px-5 py-2 text-sm font-semibold text-white backdrop-blur transition-colors hover:bg-white/30"
             >
@@ -113,6 +139,7 @@ export function HeroBanner() {
   const [isPaused, setIsPaused] = useState(false);
   const [trailerItem, setTrailerItem] = useState<HeroBannerItem | null>(null);
   const intervalRef = useRef<number | null>(null);
+  const navigate = useNavigate();
 
   const items = data ?? [];
   const hasItems = items.length > 0;
@@ -155,6 +182,13 @@ export function HeroBanner() {
     return null;
   }
 
+  const handleSlideActivate = (item: HeroBannerItem) => {
+    navigate({
+      to: '/media/$type/$id',
+      params: { type: item.mediaType, id: String(item.id) },
+    });
+  };
+
   return (
     <>
       <section
@@ -170,6 +204,7 @@ export function HeroBanner() {
             item={item}
             active={idx === activeIndex}
             onPlayClick={setTrailerItem}
+            onSlideActivate={handleSlideActivate}
           />
         ))}
 

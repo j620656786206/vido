@@ -336,9 +336,9 @@ func (s *TMDbService) DiscoverTVShows(ctx context.Context, params tmdb.DiscoverP
 
 // GetMovieVideos returns trailers/teasers for a movie. Bypasses the cache layer —
 // videos are a small payload and consumers (trailer modals) fetch on-demand only.
-// Returns tmdb.NewBadRequestError for non-positive IDs and
-// tmdb.NewNotInitializedError when constructed via NewTMDbServiceWithCacheService
-// (where s.client is nil).
+// Returns tmdb.NewBadRequestError for non-positive IDs, and a generic
+// "TMDb client not initialized" error when constructed via
+// NewTMDbServiceWithCacheService (test-only path where s.client is nil).
 func (s *TMDbService) GetMovieVideos(ctx context.Context, movieID int) (*tmdb.VideosResponse, error) {
 	if movieID <= 0 {
 		return nil, tmdb.NewBadRequestError("movie ID must be greater than 0")

@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { X } from 'lucide-react';
 import tmdbService from '../../services/tmdb';
@@ -32,7 +32,15 @@ export function pickBestTrailer(results: Video[] | undefined): Video | null {
   })[0];
 }
 
+// Selector for elements eligible for keyboard focus inside the dialog.
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), iframe, [tabindex]:not([tabindex="-1"])';
+
 export function TrailerModal({ open, onClose, mediaType, tmdbId, title }: TrailerModalProps) {
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+
   const { data, isLoading, isError } = useQuery<VideosResponse, Error>({
     queryKey: ['tmdb', 'videos', mediaType, tmdbId],
     queryFn: () =>
@@ -41,15 +49,53 @@ export function TrailerModal({ open, onClose, mediaType, tmdbId, title }: Traile
         : tmdbService.getTVShowVideos(tmdbId),
     enabled: open && tmdbId > 0,
     staleTime: 30 * 60 * 1000, // 30m
+    // Keep failures snappy — empty-state fallback should appear within ~1 retry,
+    // not 4+ seconds of silent backoff. (Code review L1.)
+    retry: 1,
   });
 
   const trailer = useMemo(() => pickBestTrailer(data?.results), [data]);
 
-  // Escape-key close (AC #6).
+  // H2 fix: focus management for aria-modal dialog.
+  // 1. On open: remember the trigger and move focus into the dialog.
+  // 2. While open: trap Tab cycles inside the dialog.
+  // 3. On close: restore focus to the original trigger.
+  useEffect(() => {
+    if (!open) return;
+    previousFocusRef.current = document.activeElement as HTMLElement | null;
+    // Move focus to the close button as a safe initial target.
+    closeButtonRef.current?.focus();
+    return () => {
+      previousFocusRef.current?.focus?.();
+    };
+  }, [open]);
+
+  // Escape-key close + focus trap (AC #6 + H2).
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (e.key !== 'Tab' || !dialogRef.current) return;
+      const focusable = Array.from(
+        dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+      ).filter((el) => !el.hasAttribute('disabled'));
+      if (focusable.length === 0) {
+        e.preventDefault();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+      if (e.shiftKey && active === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
@@ -59,6 +105,7 @@ export function TrailerModal({ open, onClose, mediaType, tmdbId, title }: Traile
 
   return (
     <div
+      ref={dialogRef}
       role="dialog"
       aria-modal="true"
       aria-label={`${title} 預告片`}
@@ -70,6 +117,7 @@ export function TrailerModal({ open, onClose, mediaType, tmdbId, title }: Traile
     >
       <div className="relative w-full max-w-4xl">
         <button
+          ref={closeButtonRef}
           onClick={onClose}
           aria-label="關閉預告片"
           data-testid="trailer-modal-close"

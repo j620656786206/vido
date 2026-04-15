@@ -194,7 +194,11 @@ describe('TrailerModal', () => {
 
     renderModal();
 
-    expect(await screen.findByTestId('trailer-modal-empty')).toBeInTheDocument();
+    // L1 fix changed retry from default (3 retries) to 1, so the empty state
+    // surfaces after roughly one retry's backoff. Bumped from default 1000ms.
+    expect(
+      await screen.findByTestId('trailer-modal-empty', {}, { timeout: 3000 })
+    ).toBeInTheDocument();
   });
 
   it('[P2] dialog has aria-modal and accessible label', async () => {
@@ -205,5 +209,86 @@ describe('TrailerModal', () => {
     const dialog = await screen.findByRole('dialog');
     expect(dialog.getAttribute('aria-modal')).toBe('true');
     expect(dialog.getAttribute('aria-label')).toBe('鬥陣俱樂部 預告片');
+  });
+
+  // H2 fix — focus management for aria-modal dialog (WCAG 2.4.3).
+
+  it('[P1] moves focus to close button when dialog opens (H2 fix)', async () => {
+    mockGetMovieVideos.mockResolvedValue({ id: 550, results: [video()] });
+    renderModal();
+    const closeBtn = await screen.findByTestId('trailer-modal-close');
+    await waitFor(() => expect(document.activeElement).toBe(closeBtn));
+  });
+
+  it('[P1] restores focus to the previously-focused element on close (H2 fix)', async () => {
+    mockGetMovieVideos.mockResolvedValue({ id: 550, results: [video()] });
+    // Set up an external trigger that "owns" focus before the modal opens.
+    const trigger = document.createElement('button');
+    trigger.textContent = 'Open';
+    document.body.appendChild(trigger);
+    trigger.focus();
+    expect(document.activeElement).toBe(trigger);
+
+    const { rerender } = render(
+      React.createElement(
+        QueryClientProvider,
+        { client: new QueryClient({ defaultOptions: { queries: { retry: false } } }) },
+        React.createElement(TrailerModal, {
+          open: true,
+          onClose: vi.fn(),
+          mediaType: 'movie',
+          tmdbId: 550,
+          title: 'X',
+        })
+      )
+    );
+
+    await screen.findByTestId('trailer-modal-close');
+    // Close the modal by re-rendering with open=false.
+    rerender(
+      React.createElement(
+        QueryClientProvider,
+        { client: new QueryClient({ defaultOptions: { queries: { retry: false } } }) },
+        React.createElement(TrailerModal, {
+          open: false,
+          onClose: vi.fn(),
+          mediaType: 'movie',
+          tmdbId: 550,
+          title: 'X',
+        })
+      )
+    );
+
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
+    document.body.removeChild(trigger);
+  });
+
+  it('[P1] traps Tab forward at the last focusable element (H2 fix)', async () => {
+    mockGetMovieVideos.mockResolvedValue({ id: 550, results: [video()] });
+    renderModal();
+    const closeBtn = await screen.findByTestId('trailer-modal-close');
+    const iframe = await screen.findByTestId('trailer-modal-iframe');
+
+    // Move focus to the LAST focusable element (iframe), then Tab forward.
+    iframe.focus();
+    expect(document.activeElement).toBe(iframe);
+
+    fireEvent.keyDown(document, { key: 'Tab' });
+    // Trap should send focus back to the first focusable element (close button).
+    await waitFor(() => expect(document.activeElement).toBe(closeBtn));
+  });
+
+  it('[P1] traps Shift+Tab backward at the first focusable element (H2 fix)', async () => {
+    mockGetMovieVideos.mockResolvedValue({ id: 550, results: [video()] });
+    renderModal();
+    const closeBtn = await screen.findByTestId('trailer-modal-close');
+    const iframe = await screen.findByTestId('trailer-modal-iframe');
+
+    // Currently on first focusable (close); Shift+Tab should wrap to last (iframe).
+    closeBtn.focus();
+    expect(document.activeElement).toBe(closeBtn);
+
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
+    await waitFor(() => expect(document.activeElement).toBe(iframe));
   });
 });

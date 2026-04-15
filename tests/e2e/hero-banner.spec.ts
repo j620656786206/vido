@@ -142,13 +142,9 @@ const jsonErr = (status: number, code: string, message: string) => ({
  */
 async function stubHomepageBaseline(page: import('@playwright/test').Page) {
   await page.route(`${ROUTE_API}/downloads*`, (route: Route) =>
-    route.fulfill(
-      jsonOk({ items: [], page: 1, pageSize: 100, totalItems: 0, totalPages: 1 })
-    )
+    route.fulfill(jsonOk({ items: [], page: 1, pageSize: 100, totalItems: 0, totalPages: 1 }))
   );
-  await page.route(`${ROUTE_API}/media/recent*`, (route: Route) =>
-    route.fulfill(jsonOk([]))
-  );
+  await page.route(`${ROUTE_API}/media/recent*`, (route: Route) => route.fulfill(jsonOk([])));
   await page.route(`${ROUTE_API}/settings/qbittorrent`, (route: Route) =>
     route.fulfill(jsonOk(mockQBConfig))
   );
@@ -185,9 +181,15 @@ test.describe('HeroBanner Display @ui @hero-banner @story-10-2', () => {
     await expect(firstSlide.getByTestId('hero-banner-year')).toHaveText('2024');
     await expect(firstSlide.getByTestId('hero-banner-rating')).toContainText('8.2');
     await expect(firstSlide.getByTestId('hero-banner-overview')).toContainText('炭治郎');
+    // H1 fix: w1280 is the safe baseline; srcset upgrades to original on
+    // wide viewports and downgrades to w780 on mobile.
     await expect(firstSlide.getByTestId('hero-banner-backdrop')).toHaveAttribute(
       'src',
-      /\/t\/p\/original\/movie1\.jpg$/
+      /\/t\/p\/w1280\/movie1\.jpg$/
+    );
+    await expect(firstSlide.getByTestId('hero-banner-backdrop')).toHaveAttribute(
+      'srcset',
+      /\/t\/p\/w780\/movie1\.jpg 780w/
     );
   });
 
@@ -279,8 +281,7 @@ test.describe('HeroBanner Auto-Rotation @ui @hero-banner @story-10-2', () => {
     await page.clock.runFor(500);
 
     // Initial active slide = movie #101.
-    const activeSlide = () =>
-      page.locator('[data-testid="hero-banner-slide"][data-active="true"]');
+    const activeSlide = () => page.locator('[data-testid="hero-banner-slide"][data-active="true"]');
     await expect(activeSlide().getByTestId('hero-banner-title')).toHaveText('鬼滅之刃：無限城篇');
 
     // Advance virtual time by the full rotation interval.

@@ -1,6 +1,6 @@
 # Story 10.2: Hero Banner Carousel Component
 
-Status: review
+Status: done
 
 ## Story
 
@@ -120,17 +120,23 @@ Compared the implementation against `_bmad-output/screenshots/flow-g-homepage-de
 **Frontend (React/TS):**
 - `apps/web/src/types/tmdb.ts` — added `Video`, `VideosResponse`, `HeroBannerItem` types (modified)
 - `apps/web/src/services/tmdb.ts` — added `getTrendingMovies`, `getTrendingTVShows`, `getMovieVideos`, `getTVShowVideos` (modified)
-- `apps/web/src/hooks/useTrending.ts` — new (created)
-- `apps/web/src/hooks/useTrending.spec.ts` — new (created, 6 tests)
-- `apps/web/src/components/homepage/HeroBanner.tsx` — new (created)
-- `apps/web/src/components/homepage/HeroBanner.spec.tsx` — new (created, 14 tests)
-- `apps/web/src/components/homepage/TrailerModal.tsx` — new (created)
-- `apps/web/src/components/homepage/TrailerModal.spec.tsx` — new (created, 16 tests — 6 for `pickBestTrailer` + 10 for the modal)
+- `apps/web/src/lib/image.ts` — added `getBackdropSrcSet` + `getBackdropSizes` for responsive hero backdrops (code-review H1) (modified)
+- `apps/web/src/hooks/useTrending.ts` — new + `retry: 1` (code-review L1) (created)
+- `apps/web/src/hooks/useTrending.spec.ts` — new (created, 6 tests; +1 timeout adjust for L1)
+- `apps/web/src/components/homepage/HeroBanner.tsx` — new + slide-click navigation, `inert` for inactive slides, responsive `srcset`, `onError`, `decoding="async"` (code-review H1/M1/M3/L2) (created)
+- `apps/web/src/components/homepage/HeroBanner.spec.tsx` — new (created, 19 tests — 14 original + 5 added for code-review fixes)
+- `apps/web/src/components/homepage/TrailerModal.tsx` — new + focus management (initial focus + restore + Tab trap), `retry: 1` (code-review H2/L1) (created)
+- `apps/web/src/components/homepage/TrailerModal.spec.tsx` — new (created, 20 tests — 16 original + 4 added for focus management)
 - `apps/web/src/routes/index.tsx` — wire `HeroBanner` as first section (modified)
 
-**Sprint tracking:**
-- `_bmad-output/implementation-artifacts/sprint-status.yaml` — `10-2-hero-banner-component: ready-for-dev` → `in-progress` → (next: `review`) (modified)
-- `_bmad-output/implementation-artifacts/10-2-hero-banner-component.md` — story file updates (modified)
+**E2E tests (Playwright):**
+- `tests/e2e/hero-banner.spec.ts` — 14 UI tests covering AC #1–#6 with route interception + virtual `page.clock` (created)
+- `tests/e2e/tmdb-videos.api.spec.ts` — 5 contract tests for the `/videos` endpoints (created)
+
+**Sprint tracking + planning artifacts:**
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — `10-2-hero-banner-component: ready-for-dev` → `in-progress` → `review` → `done` (modified)
+- `_bmad-output/implementation-artifacts/10-2-hero-banner-component.md` — story file updates incl. Senior Developer Review (modified)
+- `_bmad-output/automation-summary-10-2.md` — automation harness summary for the 19 E2E tests added (created)
 
 ## Change Log
 
@@ -138,4 +144,34 @@ Compared the implementation against `_bmad-output/screenshots/flow-g-homepage-de
 |------|-------------|
 | 2026-04-15 | Story 10-2 implementation complete: HeroBanner carousel + useTrendingHero hook + TrailerModal — frontend Tasks 1-5. |
 | 2026-04-15 | Backend HTTP exposure for `/api/v1/tmdb/movies/:id/videos` and `/api/v1/tmdb/tv/:id/videos` (Task 3.3 prerequisite — Go client existed, REST route did not). |
+| 2026-04-15 | E2E coverage added: 14 UI tests (`tests/e2e/hero-banner.spec.ts`) + 5 API contract tests (`tests/e2e/tmdb-videos.api.spec.ts`). |
 | 2026-04-15 | Full regression gate PASS: `nx test api` all green; `nx test web` 1665/1665 PASS (+36 new tests); `pnpm lint:all` 0 errors. |
+| 2026-04-15 | Code review (Amelia /CR) — fixes: H1 responsive backdrop `srcset` (mobile no longer downloads `original`), H2 trailer-modal focus management (initial focus + restore + Tab trap), M1 inactive slides marked `inert`, M3 entire slide is now keyboard-navigable to detail page, M4 backend comment corrected, L1 query retry capped at 1, L2 backdrop `onError` fallback + `decoding="async"`. New tests: HeroBanner +5 (slide click, keyboard Enter, inert, onError, no-bubble), TrailerModal +4 (focus init/restore/trap forward/backward). Final regression gate PASS: `nx test web` 1674/1674; `nx test api` all green; `pnpm lint:all` 0 errors. |
+
+## Senior Developer Review (AI)
+
+**Reviewer:** Amelia (Developer Agent, /CR adversarial mode)
+**Date:** 2026-04-15
+**Outcome:** Approved (post-fix)
+
+### Findings (8 total: 2 HIGH / 4 MEDIUM / 2 LOW — all fixed)
+
+| ID | Sev | Area | Issue | Resolution |
+|----|-----|------|-------|------------|
+| H1 | HIGH | a11y/perf | `getImageUrl(..., 'original')` shipped 3–5 MB images on mobile — violated AC #4 (smaller backdrop) | Added `getBackdropSrcSet` (w780/w1280/original) + `getBackdropSizes` helpers; `<img>` now uses `srcSet` + `sizes` with `w1280` as the safe baseline `src`. |
+| H2 | HIGH | a11y | `TrailerModal` declared `aria-modal="true"` but had no focus management — focus stayed on trigger, Tab escaped to background | Refactored modal: open → move focus to close button + remember trigger; Tab handler traps cycle (forward wraps last→first, Shift+Tab wraps first→last); close → restore focus to trigger. |
+| M1 | MED | a11y | Inactive slides used `pointer-events-none` but inner `<button>` / `<Link>` remained tabbable | Replaced with React 19 `inert={!active}` boolean attribute on slide root — removes from focus order, hit testing, and a11y tree in one shot. |
+| M2 | MED | docs | E2E spec files + automation summary committed but missing from File List | File List now lists `tests/e2e/hero-banner.spec.ts`, `tests/e2e/tmdb-videos.api.spec.ts`, and `_bmad-output/automation-summary-10-2.md`. |
+| M3 | MED | UX/AC | AC #3 says "click on an item" but only `查看詳情` button was clickable | Slide root now `role="link"` + `tabIndex` + `onClick` + Enter/Space keydown → `useNavigate` to detail page. Inner buttons `e.stopPropagation()` to prevent double-fire. |
+| M4 | MED | docs | `TMDbService.GetMovieVideos` comment claimed `tmdb.NewNotInitializedError` but code returns plain `fmt.Errorf` (and that constructor doesn't exist) | Comment corrected to describe actual behaviour ("generic 'TMDb client not initialized' error"). |
+| L1 | LOW | UX | Default 3-retry exponential backoff = ~4 s of silent failure before banner hides | `useTrendingHero` and `TrailerModal` queries now use `retry: 1`. |
+| L2 | LOW | UX | `<img>` had no `onError` fallback nor `decoding="async"` | Added `onError` → `imageBroken` state → unmount image; added `decoding="async"`. |
+
+### Validation
+- **Backend:** `go test ./internal/services/ ./internal/handlers/` — all PASS (incl. new videos tests).
+- **Frontend:** `nx test web` — 1674/1674 PASS (was 1665; +9 from this CR pass).
+- **Lint:** `pnpm lint:all` — 0 errors (109 pre-existing warnings unchanged).
+- **Format:** Prettier + gofmt clean on all touched files.
+
+### Items left for future work
+- None. All HIGH/MEDIUM issues fixed. UX pixel-perfect verification still pending against the live NAS dev server (out of scope for this story).

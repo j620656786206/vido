@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   createMemoryHistory,
@@ -7,6 +7,7 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  Outlet,
 } from '@tanstack/react-router';
 import React from 'react';
 import { HeroBanner } from './HeroBanner';
@@ -47,7 +48,16 @@ function renderBanner() {
     defaultOptions: { queries: { retry: false } },
   });
 
+  // Root must render <Outlet /> so child routes have somewhere to mount.
+  // Otherwise navigate({ to: '/media/...' }) updates the URL but no detail
+  // component appears, and tests for slide-click navigation can't observe
+  // the result.
   const rootRoute = createRootRoute({
+    component: () => React.createElement(React.Fragment, null, React.createElement(Outlet)),
+  });
+  const indexRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/',
     component: () => React.createElement(HeroBanner),
   });
   const mediaRoute = createRoute({
@@ -56,7 +66,7 @@ function renderBanner() {
     component: () => React.createElement('div', null, 'Media Detail'),
   });
 
-  const routeTree = rootRoute.addChildren([mediaRoute]);
+  const routeTree = rootRoute.addChildren([indexRoute, mediaRoute]);
   const router = createRouter({
     routeTree,
     history: createMemoryHistory({ initialEntries: ['/'] }),
@@ -124,7 +134,21 @@ describe('HeroBanner', () => {
     expect(screen.getByTestId('hero-banner-rating')).toHaveTextContent('8.4');
     expect(screen.getByTestId('hero-banner-overview')).toHaveTextContent('一段關於失眠者');
     const backdrop = screen.getByTestId('hero-banner-backdrop') as HTMLImageElement;
-    expect(backdrop.src).toContain('/original/backdrop.jpg');
+    // H1 fix: w1280 baseline + responsive srcset (no longer downloads `original`
+    // unconditionally on mobile).
+    expect(backdrop.src).toContain('/w1280/backdrop.jpg');
+    expect(backdrop.srcset).toContain('/w780/backdrop.jpg 780w');
+    expect(backdrop.srcset).toContain('/w1280/backdrop.jpg 1280w');
+    expect(backdrop.srcset).toContain('/original/backdrop.jpg 1920w');
+    expect(backdrop.getAttribute('decoding')).toBe('async');
+  });
+
+  it('[P1] hides backdrop image when load fails (L2 fix)', async () => {
+    mockHook({ data: [item()] });
+    renderBanner();
+    const backdrop = (await screen.findByTestId('hero-banner-backdrop')) as HTMLImageElement;
+    fireEvent.error(backdrop);
+    expect(screen.queryByTestId('hero-banner-backdrop')).toBeNull();
   });
 
   it('[P1] detail link points at /media/$type/$id with TMDb id (AC #3)', async () => {
@@ -133,6 +157,55 @@ describe('HeroBanner', () => {
 
     const link = (await screen.findByTestId('hero-banner-detail-link')) as HTMLAnchorElement;
     expect(link.href).toMatch(/\/media\/tv\/1396$/);
+  });
+
+  it('[P1] clicking the slide navigates to detail page (AC #3 / M3 fix)', async () => {
+    mockHook({ data: [item({ id: 7, mediaType: 'movie', title: 'Slide Click Test' })] });
+    renderBanner();
+    const slide = await screen.findByTestId('hero-banner-slide');
+    expect(slide).toHaveAttribute('role', 'link');
+    expect(slide).toHaveAttribute('aria-label', '查看 Slide Click Test');
+
+    fireEvent.click(slide);
+    await waitFor(() => expect(screen.getByText('Media Detail')).toBeInTheDocument());
+  });
+
+  it('[P1] play button click does NOT bubble into slide navigation', async () => {
+    mockGetMovieVideos.mockResolvedValue({ id: 1, results: [] });
+    mockHook({ data: [item({ id: 99 })] });
+    renderBanner();
+    const slide = await screen.findByTestId('hero-banner-slide');
+    const playBtn = screen.getByTestId('hero-banner-play-trailer');
+    fireEvent.click(playBtn);
+    // Modal opens, slide remains (no navigation away).
+    expect(await screen.findByTestId('trailer-modal')).toBeInTheDocument();
+    expect(slide).toBeInTheDocument();
+    expect(screen.queryByText('Media Detail')).toBeNull();
+  });
+
+  it('[P1] inactive slides are inert and removed from tab order (M1 fix)', async () => {
+    mockHook({
+      data: [item({ id: 1 }), item({ id: 2 }), item({ id: 3 })],
+    });
+    renderBanner();
+    await screen.findByTestId('hero-banner');
+    const slides = screen.getAllByTestId('hero-banner-slide');
+
+    expect(slides[0]).not.toHaveAttribute('inert');
+    expect(slides[0].getAttribute('tabindex')).toBe('0');
+
+    expect(slides[1]).toHaveAttribute('inert');
+    expect(slides[1].getAttribute('tabindex')).toBe('-1');
+    expect(slides[2]).toHaveAttribute('inert');
+    expect(slides[2].getAttribute('tabindex')).toBe('-1');
+  });
+
+  it('[P2] keyboard Enter on slide navigates to detail (M3 keyboard support)', async () => {
+    mockHook({ data: [item({ id: 13, mediaType: 'movie' })] });
+    renderBanner();
+    const slide = await screen.findByTestId('hero-banner-slide');
+    fireEvent.keyDown(slide, { key: 'Enter' });
+    await waitFor(() => expect(screen.getByText('Media Detail')).toBeInTheDocument());
   });
 
   it('[P1] auto-rotates every 8s (AC #2)', async () => {
