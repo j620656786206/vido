@@ -20,8 +20,9 @@ const (
 	ErrCodeServerError = "TMDB_SERVER_ERROR"
 	// ErrCodeBadRequest indicates invalid request parameters
 	ErrCodeBadRequest = "TMDB_BAD_REQUEST"
-	// ErrCodeInvalidYearRange indicates year_gte > year_lte in a discover query (Story 10-1a)
-	ErrCodeInvalidYearRange = "INVALID_YEAR_RANGE"
+	// ErrCodeInvalidYearRange indicates year_gte > year_lte in a discover query (Story 10-1a).
+	// Follows Rule 7 SOURCE_ERROR_TYPE format — every code in this package is prefixed TMDB_.
+	ErrCodeInvalidYearRange = "TMDB_INVALID_YEAR_RANGE"
 )
 
 // TMDb API status codes from their documentation

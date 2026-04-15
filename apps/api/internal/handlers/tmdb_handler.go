@@ -226,10 +226,26 @@ func (h *TMDbHandler) GetTrendingTVShows(c *gin.Context) {
 
 // DiscoverMovies handles GET /api/v1/tmdb/discover/movies with filter params
 // (genre, year_gte, year_lte, region, language, sort, page).
+// @Summary Discover movies on TMDb
+// @Description Discover movies using TMDb Discover API with zh-TW language priority
+// @Tags tmdb
+// @Accept json
+// @Produce json
+// @Param genre query string false "Comma-separated genre IDs"
+// @Param year_gte query int false "Minimum release year (0 = unlimited)"
+// @Param year_lte query int false "Maximum release year (0 = unlimited)"
+// @Param region query string false "ISO 3166-1 region code"
+// @Param language query string false "BCP 47 language code"
+// @Param sort query string false "Sort by (e.g. popularity.desc)"
+// @Param page query int false "Page number" default(1)
+// @Success 200 {object} APIResponse{data=tmdb.SearchResultMovies}
+// @Failure 400 {object} APIResponse{error=APIError} "TMDB_INVALID_YEAR_RANGE when year_gte > year_lte (Story 10-1a)"
+// @Failure 500 {object} APIResponse{error=APIError}
+// @Router /api/v1/tmdb/discover/movies [get]
 func (h *TMDbHandler) DiscoverMovies(c *gin.Context) {
 	params, err := parseDiscoverParams(c)
 	if err != nil {
-		handleTMDbError(c, err, "discover movies", slog.Any("params", params))
+		handleValidationError(c, err, "discover movies", slog.Any("params", params))
 		return
 	}
 	result, err := h.service.DiscoverMovies(c.Request.Context(), params)
@@ -241,10 +257,26 @@ func (h *TMDbHandler) DiscoverMovies(c *gin.Context) {
 }
 
 // DiscoverTVShows handles GET /api/v1/tmdb/discover/tv with the same filter params.
+// @Summary Discover TV shows on TMDb
+// @Description Discover TV shows using TMDb Discover API with zh-TW language priority
+// @Tags tmdb
+// @Accept json
+// @Produce json
+// @Param genre query string false "Comma-separated genre IDs"
+// @Param year_gte query int false "Minimum first-air year (0 = unlimited)"
+// @Param year_lte query int false "Maximum first-air year (0 = unlimited)"
+// @Param region query string false "ISO 3166-1 region code"
+// @Param language query string false "BCP 47 language code"
+// @Param sort query string false "Sort by (e.g. popularity.desc)"
+// @Param page query int false "Page number" default(1)
+// @Success 200 {object} APIResponse{data=tmdb.SearchResultTVShows}
+// @Failure 400 {object} APIResponse{error=APIError} "TMDB_INVALID_YEAR_RANGE when year_gte > year_lte (Story 10-1a)"
+// @Failure 500 {object} APIResponse{error=APIError}
+// @Router /api/v1/tmdb/discover/tv [get]
 func (h *TMDbHandler) DiscoverTVShows(c *gin.Context) {
 	params, err := parseDiscoverParams(c)
 	if err != nil {
-		handleTMDbError(c, err, "discover TV shows", slog.Any("params", params))
+		handleValidationError(c, err, "discover TV shows", slog.Any("params", params))
 		return
 	}
 	result, err := h.service.DiscoverTVShows(c.Request.Context(), params)
@@ -345,6 +377,30 @@ func (h *TMDbHandler) RegisterRoutes(rg *gin.RouterGroup) {
 		tmdbGroup.GET("/movies/:id", h.GetMovieDetails)
 		tmdbGroup.GET("/tv/:id", h.GetTVShowDetails)
 	}
+}
+
+// handleValidationError handles request-parsing errors produced inside the
+// handler layer (validation only — TMDb was never called). Logged at WARN
+// level with a non-"TMDb ... failed" message so log-based TMDb failure
+// alerts stay accurate (Story 10-1a code-review M2). The HTTP response
+// mirrors handleTMDbError so AC #5's ApiResponse<T> envelope is preserved.
+func handleValidationError(c *gin.Context, err error, operation string, attrs ...any) {
+	if tmdbErr, ok := err.(*tmdb.TMDbError); ok {
+		logAttrs := append([]any{
+			"error_code", tmdbErr.Code,
+			"error", tmdbErr.Message,
+		}, attrs...)
+		slog.Warn(operation+" request validation failed", logAttrs...)
+
+		ErrorResponse(c, tmdbErr.StatusCode, tmdbErr.Code, tmdbErr.Message, tmdbErr.Suggestion)
+		return
+	}
+
+	// Defensive fallback — parseDiscoverParams currently only returns *tmdb.TMDbError.
+	logAttrs := append([]any{"error", err}, attrs...)
+	slog.Warn(operation+" request validation failed", logAttrs...)
+
+	ErrorResponse(c, http.StatusBadRequest, tmdb.ErrCodeBadRequest, err.Error(), "Please check your request parameters")
 }
 
 // handleTMDbError handles TMDb-specific errors and returns appropriate HTTP responses

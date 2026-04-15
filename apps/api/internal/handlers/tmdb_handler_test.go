@@ -609,7 +609,7 @@ func TestTMDbHandler_DiscoverMovies_YearRangeValidation(t *testing.T) {
 		wantYearLte    int
 	}{
 		{
-			name:          "reversed range rejects with 400 INVALID_YEAR_RANGE (AC #1)",
+			name:          "reversed range rejects with 400 TMDB_INVALID_YEAR_RANGE (AC #1)",
 			query:         "year_gte=2030&year_lte=2020",
 			wantStatus:    http.StatusBadRequest,
 			wantErrorCode: tmdb.ErrCodeInvalidYearRange,

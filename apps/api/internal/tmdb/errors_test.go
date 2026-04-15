@@ -164,10 +164,14 @@ func TestNewInvalidYearRangeError(t *testing.T) {
 	err := NewInvalidYearRangeError()
 
 	assert.Equal(t, ErrCodeInvalidYearRange, err.Code)
-	assert.Equal(t, "INVALID_YEAR_RANGE", err.Code, "error code constant value must match the documented wire value in Story 10-1a AC #1/#2")
+	// Wire-contract lock: AC #1/#2 pin the error code to this literal string.
+	// Rule 7 SOURCE_ERROR_TYPE — TMDB_ prefix MUST stay; renaming breaks clients.
+	assert.Equal(t, "TMDB_INVALID_YEAR_RANGE", err.Code, "error code constant value must match the documented wire value in Story 10-1a AC #1/#2")
 	assert.Equal(t, http.StatusBadRequest, err.StatusCode)
-	assert.Contains(t, err.Message, "year_gte")
-	assert.Contains(t, err.Message, "year_lte")
+	// AC #5 exact-message wire contract — clients MAY display this verbatim.
+	assert.Equal(t, "year_gte must be <= year_lte", err.Message)
+	// User-facing Suggestion is part of the error envelope (Rule 7 + response.go APIError).
+	assert.Equal(t, "Swap the bounds or omit one of them to leave that side unlimited", err.Suggestion)
 	assert.Nil(t, err.Cause, "validation errors have no underlying cause")
 }
 

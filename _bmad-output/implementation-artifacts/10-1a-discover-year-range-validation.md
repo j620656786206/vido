@@ -1,6 +1,6 @@
 # Story 10.1a: Discover YearRange Input Validation
 
-Status: review
+Status: done
 
 ## Story
 
@@ -11,24 +11,24 @@ transparent to TMDb (where behavior is undefined) or being cached as empty resul
 
 ## Acceptance Criteria
 
-1. Given `GET /api/v1/tmdb/discover/movies` with `year_gte > year_lte` (both non-zero), when the handler parses query params, then the response is HTTP 400 with error code `INVALID_YEAR_RANGE`.
-2. Given `GET /api/v1/tmdb/discover/tv` with `year_gte > year_lte` (both non-zero), when the handler parses query params, then the response is HTTP 400 with error code `INVALID_YEAR_RANGE`.
+1. Given `GET /api/v1/tmdb/discover/movies` with `year_gte > year_lte` (both non-zero), when the handler parses query params, then the response is HTTP 400 with error code `TMDB_INVALID_YEAR_RANGE`.
+2. Given `GET /api/v1/tmdb/discover/tv` with `year_gte > year_lte` (both non-zero), when the handler parses query params, then the response is HTTP 400 with error code `TMDB_INVALID_YEAR_RANGE`.
 3. Given `year_gte=0` or `year_lte=0` (either or both), when the handler parses query params, then validation is SKIPPED and the request proceeds — zero retains the existing "unlimited" semantics from Story 10-1.
 4. Given `year_gte == year_lte` (same year, both non-zero), when the handler parses query params, then the request proceeds — same-year is valid (maps to single calendar year).
-5. Given the 400 response, when the client inspects it, then the body follows the existing `ApiResponse<T>` envelope: `{success: false, error: {code: "INVALID_YEAR_RANGE", message: "year_gte must be <= year_lte"}}`.
+5. Given the 400 response, when the client inspects it, then the body follows the existing `ApiResponse<T>` envelope: `{success: false, error: {code: "TMDB_INVALID_YEAR_RANGE", message: "year_gte must be <= year_lte", suggestion: "Swap the bounds or omit one of them to leave that side unlimited"}}` (Rule 7 SOURCE_ERROR_TYPE — `TMDB_` prefix required).
 6. Given the validation, when it fires, then it runs in the HTTP handler layer (`parseDiscoverParams`) — NOT in TMDb client, service, or cache layers. Client/service remain permissive for internal callers.
 
 ## Tasks / Subtasks
 
 - [x] Task 1: Error code + validation (AC: #1, #2, #5)
-  - [x] 1.1 Add `ErrCodeInvalidYearRange = "INVALID_YEAR_RANGE"` to `apps/api/internal/tmdb/errors.go` alongside existing codes.
+  - [x] 1.1 Add `ErrCodeInvalidYearRange = "TMDB_INVALID_YEAR_RANGE"` to `apps/api/internal/tmdb/errors.go` alongside existing codes.
   - [x] 1.2 Add helper `NewInvalidYearRangeError()` returning `*TMDbError` with `StatusCode: 400`, message `"year_gte must be <= year_lte"` (mirror `NewBadRequestError` shape).
   - [x] 1.3 In `apps/api/internal/handlers/tmdb_handler.go::parseDiscoverParams`, after parsing `year_gte`/`year_lte`, validate: if both > 0 AND `year_gte > year_lte`, return the error.
   - [x] 1.4 Update `DiscoverMovies` and `DiscoverTVShows` handler methods to surface parse errors via existing `handleTMDbError` helper.
 
 - [x] Task 2: Tests (AC: #1–6)
-  - [x] 2.1 Handler test (movies): `year_gte=2030&year_lte=2020` → 400 + code `INVALID_YEAR_RANGE`.
-  - [x] 2.2 Handler test (tv): `year_gte=2030&year_lte=2020` → 400 + code `INVALID_YEAR_RANGE`. (Separate test confirms both handlers route through the shared `parseDiscoverParams` validation — guards against future regressions where only one handler enforces it.)
+  - [x] 2.1 Handler test (movies): `year_gte=2030&year_lte=2020` → 400 + code `TMDB_INVALID_YEAR_RANGE`.
+  - [x] 2.2 Handler test (tv): `year_gte=2030&year_lte=2020` → 400 + code `TMDB_INVALID_YEAR_RANGE`. (Separate test confirms both handlers route through the shared `parseDiscoverParams` validation — guards against future regressions where only one handler enforces it.)
   - [x] 2.3 Handler test: `year_gte=2024&year_lte=2024` → 200 (same-year boundary is valid).
   - [x] 2.4 Handler test: `year_gte=0&year_lte=2024` → 200 (zero-gte = unlimited lower bound).
   - [x] 2.5 Handler test: `year_gte=2024&year_lte=0` → 200 (zero-lte = unlimited upper bound).
@@ -70,7 +70,7 @@ transparent to TMDb (where behavior is undefined) or being cached as empty resul
 ### Implementation Plan (2026-04-15)
 
 - **Validation site:** single branch inside `parseDiscoverParams` after the existing `year_gte`/`year_lte` parse blocks. Condition: `p.YearGte > 0 && p.YearLte > 0 && p.YearGte > p.YearLte`. This is the only code location that needs to change to satisfy ACs #1, #2, #6 — the existing `strconv.Atoi(v)` guard already discards `year_gte=0` into `p.YearGte=0` (same for `year_lte`), so "unlimited" semantics fall out for free.
-- **Signature change:** `parseDiscoverParams` returns `(tmdb.DiscoverParams, error)` instead of `tmdb.DiscoverParams`. Both callers (`DiscoverMovies`, `DiscoverTVShows`) check the error and call the existing `handleTMDbError(c, err, ...)` helper, which translates `*tmdb.TMDbError`'s `StatusCode: 400` + `Code: INVALID_YEAR_RANGE` into the `ApiResponse<T>` error envelope (AC #5). No new error-translation plumbing added.
+- **Signature change:** `parseDiscoverParams` returns `(tmdb.DiscoverParams, error)` instead of `tmdb.DiscoverParams`. Both callers (`DiscoverMovies`, `DiscoverTVShows`) check the error and call the existing `handleTMDbError(c, err, ...)` helper, which translates `*tmdb.TMDbError`'s `StatusCode: 400` + `Code: TMDB_INVALID_YEAR_RANGE` into the `ApiResponse<T>` error envelope (AC #5). No new error-translation plumbing added.
 - **Service / client / cache layers untouched** — enforces AC #6 structurally (not by convention): validation cannot be duplicated lower in the stack because the lower layers never see the request.
 - **Test structure:** 1 new table-driven test in `tmdb_handler_test.go` covering movies (ACs #1, #3, #4, #5, #6 on the movies path); 1 dedicated test for the TV handler (AC #2 — kept separate by design so a regression wiring only one handler through the error return cannot silently pass); 1 new constructor test in `errors_test.go` (Task 2.7).
 
@@ -99,6 +99,7 @@ transparent to TMDb (where behavior is undefined) or being cached as empty resul
 
 | Date       | Change |
 |------------|--------|
-| 2026-04-14 | Story drafted in party-mode follow-up to Story 10-1 review. Decision: option (A) 400 + `INVALID_YEAR_RANGE` over (B) auto-swap / (C) passthrough. Validation restricted to handler layer. Zero-value "unlimited" semantics preserved from Story 10-1. |
+| 2026-04-14 | Story drafted in party-mode follow-up to Story 10-1 review. Decision: option (A) 400 + `TMDB_INVALID_YEAR_RANGE` over (B) auto-swap / (C) passthrough. Validation restricted to handler layer. Zero-value "unlimited" semantics preserved from Story 10-1. |
 | 2026-04-15 | **Task 1 complete** — `ErrCodeInvalidYearRange` constant + `NewInvalidYearRangeError()` added to `tmdb/errors.go`; `parseDiscoverParams` signature changed to `(DiscoverParams, error)` with the 3-condition guard (`YearGte > 0 && YearLte > 0 && YearGte > YearLte`); both `DiscoverMovies` and `DiscoverTVShows` thread the parse error through `handleTMDbError`. |
 | 2026-04-15 | **Task 2 complete** — 7 new test cases: `TestNewInvalidYearRangeError` (errors package, 2.7) + table-driven `TestTMDbHandler_DiscoverMovies_YearRangeValidation` (2.1, 2.3-2.6) + dedicated `TestTMDbHandler_DiscoverTVShows_YearRangeValidation_Reversed` (2.2, kept separate by design). All 6 ACs covered; full regression suite PASS; lint:all PASS; Status → `review`. |
+| 2026-04-15 | **Code-review fixes (Amelia CR pass, 5 issues)** — **H1** Rule 7 violation: renamed `ErrCodeInvalidYearRange` wire value `INVALID_YEAR_RANGE` → `TMDB_INVALID_YEAR_RANGE` (all TMDb codes now prefixed `TMDB_`). **M1** locked AC #5 exact message + suggestion in `TestNewInvalidYearRangeError` (was `Contains` → now `Equal`). **M2** added `handleValidationError` helper in `tmdb_handler.go`; `DiscoverMovies`/`DiscoverTVShows` now route parse errors through it (WARN log with `"request validation failed"` message, not misleading `"TMDb ... failed"` ERROR — keeps TMDb-failure SLO filters accurate). **L1** constructor test now also asserts the user-facing `Suggestion` field. **L2** added full Swagger annotations (`@Summary`/`@Param`/`@Success`/`@Failure 400`) for both Discover handlers documenting the new `TMDB_INVALID_YEAR_RANGE` 400 case. All tests pass + lint:all PASS (0 errors). |
