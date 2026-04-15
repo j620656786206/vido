@@ -5,6 +5,7 @@ import { NewMediaNotifications } from '../components/notifications/NewMediaNotif
 import { useNewMediaNotifications } from '../hooks/useNewMediaNotifications';
 import { QBStatusIndicator, ConnectionHistoryPanel } from '../components/health';
 import { HeroBanner } from '../components/homepage/HeroBanner';
+import { ExploreBlocksList } from '../components/homepage/ExploreBlocksList';
 
 export const Route = createFileRoute('/')({
   component: DashboardPage,
@@ -18,6 +19,9 @@ function DashboardPage() {
     <div>
       {/* Hero Banner — Story 10-2 (P2-001) */}
       <HeroBanner />
+
+      {/* Custom explore blocks — Story 10.3 (P2-002) */}
+      <ExploreBlocksList />
 
       {/* Connection Health Status */}
       <div className="mx-auto max-w-7xl px-4 pt-4 sm:px-6">

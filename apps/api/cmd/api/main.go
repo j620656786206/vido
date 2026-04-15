@@ -184,6 +184,12 @@ func main() {
 		CacheTTLHours:     cfg.TMDbCacheTTLHours,
 	}, repos.Cache)
 
+	// Initialize explore block service (Story 10.3 — homepage custom discover blocks)
+	exploreBlockService := services.NewExploreBlockService(repos.ExploreBlocks, tmdbService, repos.Cache)
+	if err := exploreBlockService.SeedDefaultsIfEmpty(context.Background()); err != nil {
+		slog.Warn("Failed to seed default explore blocks", "error", err)
+	}
+
 	// Initialize AI service for AI-powered filename parsing (Story 3.1)
 	aiService, err := services.NewAIService(cfg, db.Conn())
 	if err != nil {
@@ -454,6 +460,7 @@ func main() {
 	libraryService := services.NewLibraryService(repos.Movies, repos.Series, repos.Episodes, services.WithTMDbVideos(tmdbService.VideosProvider()))
 	libraryHandler := handlers.NewLibraryHandler(libraryService)
 	mediaLibrariesHandler := handlers.NewMediaLibrariesHandler(mediaLibraryService)
+	exploreBlocksHandler := handlers.NewExploreBlocksHandler(exploreBlockService) // Story 10.3
 	recentMediaHandler := handlers.NewRecentMediaHandler(movieService, seriesService)
 	logHandler := handlers.NewLogHandler(logService)
 	cacheHandler := handlers.NewCacheHandler(cacheStatsService, cacheCleanupService)
@@ -523,6 +530,7 @@ func main() {
 		downloadHandler.RegisterRoutes(apiV1)
 		libraryHandler.RegisterRoutes(apiV1)
 		mediaLibrariesHandler.RegisterRoutes(apiV1) // /api/v1/libraries CRUD (Story 7b-2)
+		exploreBlocksHandler.RegisterRoutes(apiV1)  // /api/v1/explore-blocks CRUD + content (Story 10.3)
 		recentMediaHandler.RegisterRoutes(apiV1)
 		scannerHandler.RegisterRoutes(apiV1)
 		subtitleHandler.RegisterRoutes(apiV1)

@@ -22,6 +22,7 @@ type Repositories struct {
 	Logs              LogRepositoryInterface
 	Backups           BackupRepositoryInterface
 	MediaLibraries    MediaLibraryRepositoryInterface
+	ExploreBlocks     ExploreBlockRepositoryInterface
 }
 
 // NewRepositories creates all repository implementations for the given database connection.
@@ -49,6 +50,7 @@ func NewRepositories(db *sql.DB) *Repositories {
 		Logs:              NewLogRepository(db),
 		Backups:           NewBackupRepository(db),
 		MediaLibraries:    NewMediaLibraryRepository(db),
+		ExploreBlocks:     NewExploreBlockRepository(db),
 	}
 }
 
@@ -76,5 +78,6 @@ func NewRepositoriesWithCache(db *sql.DB) *Repositories {
 		Logs:              NewLogRepository(db),
 		Backups:           NewBackupRepository(db),
 		MediaLibraries:    NewMediaLibraryRepository(db),
+		ExploreBlocks:     NewExploreBlockRepository(db),
 	}
 }

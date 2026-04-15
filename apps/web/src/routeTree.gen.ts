@@ -23,6 +23,7 @@ import { Route as SettingsScannerRouteImport } from './routes/settings/scanner'
 import { Route as SettingsQbittorrentRouteImport } from './routes/settings/qbittorrent'
 import { Route as SettingsPerformanceRouteImport } from './routes/settings/performance'
 import { Route as SettingsLogsRouteImport } from './routes/settings/logs'
+import { Route as SettingsHomepageRouteImport } from './routes/settings/homepage'
 import { Route as SettingsExportRouteImport } from './routes/settings/export'
 import { Route as SettingsConnectionRouteImport } from './routes/settings/connection'
 import { Route as SettingsCacheRouteImport } from './routes/settings/cache'
@@ -99,6 +100,11 @@ const SettingsLogsRoute = SettingsLogsRouteImport.update({
   path: '/logs',
   getParentRoute: () => SettingsRoute,
 } as any)
+const SettingsHomepageRoute = SettingsHomepageRouteImport.update({
+  id: '/homepage',
+  path: '/homepage',
+  getParentRoute: () => SettingsRoute,
+} as any)
 const SettingsExportRoute = SettingsExportRouteImport.update({
   id: '/export',
   path: '/export',
@@ -137,6 +143,7 @@ export interface FileRoutesByFullPath {
   '/settings/cache': typeof SettingsCacheRoute
   '/settings/connection': typeof SettingsConnectionRoute
   '/settings/export': typeof SettingsExportRoute
+  '/settings/homepage': typeof SettingsHomepageRoute
   '/settings/logs': typeof SettingsLogsRoute
   '/settings/performance': typeof SettingsPerformanceRoute
   '/settings/qbittorrent': typeof SettingsQbittorrentRoute
@@ -157,6 +164,7 @@ export interface FileRoutesByTo {
   '/settings/cache': typeof SettingsCacheRoute
   '/settings/connection': typeof SettingsConnectionRoute
   '/settings/export': typeof SettingsExportRoute
+  '/settings/homepage': typeof SettingsHomepageRoute
   '/settings/logs': typeof SettingsLogsRoute
   '/settings/performance': typeof SettingsPerformanceRoute
   '/settings/qbittorrent': typeof SettingsQbittorrentRoute
@@ -179,6 +187,7 @@ export interface FileRoutesById {
   '/settings/cache': typeof SettingsCacheRoute
   '/settings/connection': typeof SettingsConnectionRoute
   '/settings/export': typeof SettingsExportRoute
+  '/settings/homepage': typeof SettingsHomepageRoute
   '/settings/logs': typeof SettingsLogsRoute
   '/settings/performance': typeof SettingsPerformanceRoute
   '/settings/qbittorrent': typeof SettingsQbittorrentRoute
@@ -202,6 +211,7 @@ export interface FileRouteTypes {
     | '/settings/cache'
     | '/settings/connection'
     | '/settings/export'
+    | '/settings/homepage'
     | '/settings/logs'
     | '/settings/performance'
     | '/settings/qbittorrent'
@@ -222,6 +232,7 @@ export interface FileRouteTypes {
     | '/settings/cache'
     | '/settings/connection'
     | '/settings/export'
+    | '/settings/homepage'
     | '/settings/logs'
     | '/settings/performance'
     | '/settings/qbittorrent'
@@ -243,6 +254,7 @@ export interface FileRouteTypes {
     | '/settings/cache'
     | '/settings/connection'
     | '/settings/export'
+    | '/settings/homepage'
     | '/settings/logs'
     | '/settings/performance'
     | '/settings/qbittorrent'
@@ -365,6 +377,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsLogsRouteImport
       parentRoute: typeof SettingsRoute
     }
+    '/settings/homepage': {
+      id: '/settings/homepage'
+      path: '/homepage'
+      fullPath: '/settings/homepage'
+      preLoaderRoute: typeof SettingsHomepageRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/settings/export': {
       id: '/settings/export'
       path: '/export'
@@ -408,6 +427,7 @@ interface SettingsRouteChildren {
   SettingsCacheRoute: typeof SettingsCacheRoute
   SettingsConnectionRoute: typeof SettingsConnectionRoute
   SettingsExportRoute: typeof SettingsExportRoute
+  SettingsHomepageRoute: typeof SettingsHomepageRoute
   SettingsLogsRoute: typeof SettingsLogsRoute
   SettingsPerformanceRoute: typeof SettingsPerformanceRoute
   SettingsQbittorrentRoute: typeof SettingsQbittorrentRoute
@@ -421,6 +441,7 @@ const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsCacheRoute: SettingsCacheRoute,
   SettingsConnectionRoute: SettingsConnectionRoute,
   SettingsExportRoute: SettingsExportRoute,
+  SettingsHomepageRoute: SettingsHomepageRoute,
   SettingsLogsRoute: SettingsLogsRoute,
   SettingsPerformanceRoute: SettingsPerformanceRoute,
   SettingsQbittorrentRoute: SettingsQbittorrentRoute,

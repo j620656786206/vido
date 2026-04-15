@@ -8,6 +8,7 @@ import {
   ArrowUpDown,
   Gauge,
   ScanLine,
+  LayoutGrid,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '../../lib/utils';
@@ -35,6 +36,13 @@ const SETTINGS_CATEGORIES: SettingsCategory[] = [
     shortLabel: '掃描',
     icon: ScanLine,
     to: '/settings/scanner',
+  },
+  {
+    key: 'homepage',
+    label: '自訂首頁',
+    shortLabel: '首頁',
+    icon: LayoutGrid,
+    to: '/settings/homepage',
   },
   { key: 'cache', label: '快取管理', shortLabel: '快取', icon: Database, to: '/settings/cache' },
   { key: 'logs', label: '系統日誌', shortLabel: '日誌', icon: FileText, to: '/settings/logs' },
