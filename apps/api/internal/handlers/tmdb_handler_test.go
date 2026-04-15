@@ -593,6 +593,120 @@ func TestTMDbHandler_GenericError_Returns500(t *testing.T) {
 	assert.Equal(t, "TMDB_INTERNAL_ERROR", body.Error.Code)
 }
 
+// TestTMDbHandler_DiscoverMovies_YearRangeValidation covers Story 10-1a
+// ACs #1, #3, #4, #5, #6 against the movies endpoint. AC #2 (TV endpoint)
+// lives in TestTMDbHandler_DiscoverTVShows_YearRangeValidation_Reversed
+// below — intentionally separate so a regression where only one handler
+// wires parseDiscoverParams' error return cannot silently pass.
+func TestTMDbHandler_DiscoverMovies_YearRangeValidation(t *testing.T) {
+	tests := []struct {
+		name           string
+		query          string
+		wantStatus     int
+		wantErrorCode  string // empty for 200 cases
+		wantSvcCalled  bool
+		wantYearGte    int
+		wantYearLte    int
+	}{
+		{
+			name:          "reversed range rejects with 400 INVALID_YEAR_RANGE (AC #1)",
+			query:         "year_gte=2030&year_lte=2020",
+			wantStatus:    http.StatusBadRequest,
+			wantErrorCode: tmdb.ErrCodeInvalidYearRange,
+			wantSvcCalled: false,
+		},
+		{
+			name:          "same-year range is valid (AC #4)",
+			query:         "year_gte=2024&year_lte=2024",
+			wantStatus:    http.StatusOK,
+			wantSvcCalled: true,
+			wantYearGte:   2024,
+			wantYearLte:   2024,
+		},
+		{
+			name:          "zero-gte keeps unlimited lower bound (AC #3)",
+			query:         "year_gte=0&year_lte=2024",
+			wantStatus:    http.StatusOK,
+			wantSvcCalled: true,
+			wantYearGte:   0,
+			wantYearLte:   2024,
+		},
+		{
+			name:          "zero-lte keeps unlimited upper bound (AC #3)",
+			query:         "year_gte=2024&year_lte=0",
+			wantStatus:    http.StatusOK,
+			wantSvcCalled: true,
+			wantYearGte:   2024,
+			wantYearLte:   0,
+		},
+		{
+			name:          "normal ascending range proceeds (sanity baseline)",
+			query:         "year_gte=2024&year_lte=2025",
+			wantStatus:    http.StatusOK,
+			wantSvcCalled: true,
+			wantYearGte:   2024,
+			wantYearLte:   2025,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockSvc := &MockTMDbService{DiscoverMoviesResponse: &tmdb.SearchResultMovies{}}
+			handler := NewTMDbHandler(mockSvc)
+			router := setupTMDbRouter(handler)
+
+			req := httptest.NewRequest(http.MethodGet, "/api/v1/tmdb/discover/movies?"+tt.query, nil)
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+
+			require.Equal(t, tt.wantStatus, w.Code)
+
+			if tt.wantErrorCode != "" {
+				// AC #5: error body follows ApiResponse envelope with code+message.
+				var body APIResponse
+				require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+				assert.False(t, body.Success)
+				require.NotNil(t, body.Error)
+				assert.Equal(t, tt.wantErrorCode, body.Error.Code)
+				assert.Contains(t, body.Error.Message, "year_gte")
+			}
+
+			if tt.wantSvcCalled {
+				require.Len(t, mockSvc.DiscoverMoviesCalls, 1, "service must be invoked for valid ranges")
+				got := mockSvc.DiscoverMoviesCalls[0]
+				assert.Equal(t, tt.wantYearGte, got.YearGte)
+				assert.Equal(t, tt.wantYearLte, got.YearLte)
+			} else {
+				// AC #6: validation lives in the handler layer — no service/cache/client call on rejection.
+				assert.Empty(t, mockSvc.DiscoverMoviesCalls, "service must NOT be called when handler-layer validation fails")
+			}
+		})
+	}
+}
+
+// TestTMDbHandler_DiscoverTVShows_YearRangeValidation_Reversed covers AC #2.
+// Kept separate from the movies table so a future regression where only one
+// handler threads parseDiscoverParams' error cannot silently pass.
+func TestTMDbHandler_DiscoverTVShows_YearRangeValidation_Reversed(t *testing.T) {
+	mockSvc := &MockTMDbService{DiscoverTVShowsResponse: &tmdb.SearchResultTVShows{}}
+	handler := NewTMDbHandler(mockSvc)
+	router := setupTMDbRouter(handler)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/tmdb/discover/tv?year_gte=2030&year_lte=2020", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Empty(t, mockSvc.DiscoverTVShowsCalls, "TV service must NOT be called when handler-layer validation fails")
+
+	var body APIResponse
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+	assert.False(t, body.Success)
+	require.NotNil(t, body.Error)
+	assert.Equal(t, tmdb.ErrCodeInvalidYearRange, body.Error.Code)
+	assert.Contains(t, body.Error.Message, "year_gte")
+}
+
 func TestTMDbHandler_ResponseIsApiResponseWrapped(t *testing.T) {
 	// AC #6: responses follow the existing ApiResponse<T> wrapper format with
 	// snake_case fields (success, data, error).

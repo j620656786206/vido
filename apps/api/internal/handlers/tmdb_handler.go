@@ -227,7 +227,11 @@ func (h *TMDbHandler) GetTrendingTVShows(c *gin.Context) {
 // DiscoverMovies handles GET /api/v1/tmdb/discover/movies with filter params
 // (genre, year_gte, year_lte, region, language, sort, page).
 func (h *TMDbHandler) DiscoverMovies(c *gin.Context) {
-	params := parseDiscoverParams(c)
+	params, err := parseDiscoverParams(c)
+	if err != nil {
+		handleTMDbError(c, err, "discover movies", slog.Any("params", params))
+		return
+	}
 	result, err := h.service.DiscoverMovies(c.Request.Context(), params)
 	if err != nil {
 		handleTMDbError(c, err, "discover movies", slog.Any("params", params))
@@ -238,7 +242,11 @@ func (h *TMDbHandler) DiscoverMovies(c *gin.Context) {
 
 // DiscoverTVShows handles GET /api/v1/tmdb/discover/tv with the same filter params.
 func (h *TMDbHandler) DiscoverTVShows(c *gin.Context) {
-	params := parseDiscoverParams(c)
+	params, err := parseDiscoverParams(c)
+	if err != nil {
+		handleTMDbError(c, err, "discover TV shows", slog.Any("params", params))
+		return
+	}
 	result, err := h.service.DiscoverTVShows(c.Request.Context(), params)
 	if err != nil {
 		handleTMDbError(c, err, "discover TV shows", slog.Any("params", params))
@@ -280,7 +288,11 @@ func parsePageQuery(raw string) int {
 //   - language    → DiscoverParams.Language
 //   - sort        → DiscoverParams.SortBy
 //   - page        → DiscoverParams.Page
-func parseDiscoverParams(c *gin.Context) tmdb.DiscoverParams {
+//
+// Returns a non-nil *tmdb.TMDbError when both year bounds are non-zero
+// and year_gte > year_lte (Story 10-1a). Zero values for either bound
+// retain the "unlimited" semantics from Story 10-1 and skip validation.
+func parseDiscoverParams(c *gin.Context) (tmdb.DiscoverParams, error) {
 	p := tmdb.DiscoverParams{
 		Genre:    c.Query("genre"),
 		Region:   c.Query("region"),
@@ -298,7 +310,10 @@ func parseDiscoverParams(c *gin.Context) tmdb.DiscoverParams {
 			p.YearLte = n
 		}
 	}
-	return p
+	if p.YearGte > 0 && p.YearLte > 0 && p.YearGte > p.YearLte {
+		return p, tmdb.NewInvalidYearRangeError()
+	}
+	return p, nil
 }
 
 // RegisterRoutes registers all TMDb routes on the given router group

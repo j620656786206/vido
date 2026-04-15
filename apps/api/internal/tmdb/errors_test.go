@@ -160,6 +160,17 @@ func TestNewBadRequestError(t *testing.T) {
 	}
 }
 
+func TestNewInvalidYearRangeError(t *testing.T) {
+	err := NewInvalidYearRangeError()
+
+	assert.Equal(t, ErrCodeInvalidYearRange, err.Code)
+	assert.Equal(t, "INVALID_YEAR_RANGE", err.Code, "error code constant value must match the documented wire value in Story 10-1a AC #1/#2")
+	assert.Equal(t, http.StatusBadRequest, err.StatusCode)
+	assert.Contains(t, err.Message, "year_gte")
+	assert.Contains(t, err.Message, "year_lte")
+	assert.Nil(t, err.Cause, "validation errors have no underlying cause")
+}
+
 func TestParseAPIError(t *testing.T) {
 	tests := []struct {
 		name          string

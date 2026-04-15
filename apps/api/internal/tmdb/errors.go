@@ -20,6 +20,8 @@ const (
 	ErrCodeServerError = "TMDB_SERVER_ERROR"
 	// ErrCodeBadRequest indicates invalid request parameters
 	ErrCodeBadRequest = "TMDB_BAD_REQUEST"
+	// ErrCodeInvalidYearRange indicates year_gte > year_lte in a discover query (Story 10-1a)
+	ErrCodeInvalidYearRange = "INVALID_YEAR_RANGE"
 )
 
 // TMDb API status codes from their documentation
@@ -132,6 +134,18 @@ func NewBadRequestError(message string) *TMDbError {
 		Code:       ErrCodeBadRequest,
 		Message:    message,
 		Suggestion: "Please check your request parameters",
+		StatusCode: http.StatusBadRequest,
+	}
+}
+
+// NewInvalidYearRangeError creates a 400 error for reversed year filters
+// on discover endpoints (year_gte > year_lte). Zero values for either bound
+// skip validation — see Story 10-1a AC #3.
+func NewInvalidYearRangeError() *TMDbError {
+	return &TMDbError{
+		Code:       ErrCodeInvalidYearRange,
+		Message:    "year_gte must be <= year_lte",
+		Suggestion: "Swap the bounds or omit one of them to leave that side unlimited",
 		StatusCode: http.StatusBadRequest,
 	}
 }
