@@ -37,6 +37,13 @@ type MockTMDbService struct {
 	DiscoverTVShowsResponse    *tmdb.SearchResultTVShows
 	DiscoverTVShowsError       error
 	DiscoverTVShowsCalls       []tmdb.DiscoverParams
+	// Story 10-2
+	GetMovieVideosResponse  *tmdb.VideosResponse
+	GetMovieVideosError     error
+	GetMovieVideosCalls     []int
+	GetTVShowVideosResponse *tmdb.VideosResponse
+	GetTVShowVideosError    error
+	GetTVShowVideosCalls    []int
 }
 
 func (m *MockTMDbService) SearchMovies(ctx context.Context, query string, page int) (*tmdb.SearchResultMovies, error) {
@@ -103,6 +110,24 @@ func (m *MockTMDbService) DiscoverTVShows(ctx context.Context, params tmdb.Disco
 		return nil, m.DiscoverTVShowsError
 	}
 	return m.DiscoverTVShowsResponse, nil
+}
+
+// Story 10-2 additions
+
+func (m *MockTMDbService) GetMovieVideos(ctx context.Context, movieID int) (*tmdb.VideosResponse, error) {
+	m.GetMovieVideosCalls = append(m.GetMovieVideosCalls, movieID)
+	if m.GetMovieVideosError != nil {
+		return nil, m.GetMovieVideosError
+	}
+	return m.GetMovieVideosResponse, nil
+}
+
+func (m *MockTMDbService) GetTVShowVideos(ctx context.Context, tvID int) (*tmdb.VideosResponse, error) {
+	m.GetTVShowVideosCalls = append(m.GetTVShowVideosCalls, tvID)
+	if m.GetTVShowVideosError != nil {
+		return nil, m.GetTVShowVideosError
+	}
+	return m.GetTVShowVideosResponse, nil
 }
 
 func setupTMDbRouter(handler *TMDbHandler) *gin.Engine {
@@ -385,6 +410,8 @@ func TestTMDbHandler_RegisterRoutes(t *testing.T) {
 		"/api/v1/tmdb/trending/tv":     http.MethodGet, // Story 10-1
 		"/api/v1/tmdb/discover/movies": http.MethodGet, // Story 10-1
 		"/api/v1/tmdb/discover/tv":     http.MethodGet, // Story 10-1
+		"/api/v1/tmdb/movies/:id/videos": http.MethodGet, // Story 10-2
+		"/api/v1/tmdb/tv/:id/videos":     http.MethodGet, // Story 10-2
 	}
 
 	for path, method := range expectedRoutes {
@@ -728,4 +755,118 @@ func TestTMDbHandler_ResponseIsApiResponseWrapped(t *testing.T) {
 	assert.True(t, ok, "response must include `success` field")
 	_, ok = raw["data"]
 	assert.True(t, ok, "response must include `data` field")
+}
+
+// --- Story 10-2 handler tests ---
+
+func TestTMDbHandler_GetMovieVideos(t *testing.T) {
+	tests := []struct {
+		name         string
+		movieID      string
+		mockResponse *tmdb.VideosResponse
+		mockError    error
+		wantStatus   int
+		wantCallID   int
+	}{
+		{
+			name:    "successful fetch returns trailers",
+			movieID: "550",
+			mockResponse: &tmdb.VideosResponse{
+				ID: 550,
+				Results: []tmdb.Video{
+					{Key: "SUXWAEX2jlg", Name: "Official Trailer", Site: "YouTube", Type: "Trailer", Official: true},
+				},
+			},
+			wantStatus: http.StatusOK,
+			wantCallID: 550,
+		},
+		{
+			name:       "invalid ID rejected as 400",
+			movieID:    "abc",
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "zero ID rejected as 400",
+			movieID:    "0",
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "negative ID rejected as 400",
+			movieID:    "-5",
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "upstream not found propagates 404",
+			movieID:    "999999",
+			mockError:  tmdb.NewNotFoundError(999999),
+			wantStatus: http.StatusNotFound,
+			wantCallID: 999999,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockSvc := &MockTMDbService{
+				GetMovieVideosResponse: tt.mockResponse,
+				GetMovieVideosError:    tt.mockError,
+			}
+			handler := NewTMDbHandler(mockSvc)
+			router := setupTMDbRouter(handler)
+
+			req := httptest.NewRequest(http.MethodGet, "/api/v1/tmdb/movies/"+tt.movieID+"/videos", nil)
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+
+			assert.Equal(t, tt.wantStatus, w.Code)
+
+			if tt.wantStatus == http.StatusOK {
+				var response APIResponse
+				require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
+				assert.True(t, response.Success)
+				assert.Equal(t, []int{tt.wantCallID}, mockSvc.GetMovieVideosCalls)
+			}
+			// Validation failures short-circuit before reaching the service.
+			if tt.wantStatus == http.StatusBadRequest && tt.mockError == nil {
+				assert.Empty(t, mockSvc.GetMovieVideosCalls, "validation failures must not call service")
+			}
+		})
+	}
+}
+
+func TestTMDbHandler_GetTVShowVideos(t *testing.T) {
+	// Smoke test: parallel shape to GetMovieVideos. Deep branches covered there.
+	mockSvc := &MockTMDbService{
+		GetTVShowVideosResponse: &tmdb.VideosResponse{
+			ID: 1396,
+			Results: []tmdb.Video{
+				{Key: "HhesaQXLuRY", Name: "Breaking Bad Trailer", Site: "YouTube", Type: "Trailer", Official: true},
+			},
+		},
+	}
+	handler := NewTMDbHandler(mockSvc)
+	router := setupTMDbRouter(handler)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/tmdb/tv/1396/videos", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, []int{1396}, mockSvc.GetTVShowVideosCalls)
+
+	var response APIResponse
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
+	assert.True(t, response.Success)
+}
+
+func TestTMDbHandler_GetTVShowVideos_InvalidID(t *testing.T) {
+	mockSvc := &MockTMDbService{}
+	handler := NewTMDbHandler(mockSvc)
+	router := setupTMDbRouter(handler)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/tmdb/tv/0/videos", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Empty(t, mockSvc.GetTVShowVideosCalls)
 }

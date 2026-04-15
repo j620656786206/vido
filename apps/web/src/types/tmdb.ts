@@ -214,3 +214,29 @@ export interface Credits {
   cast: CastMember[];
   crew: CrewMember[];
 }
+
+// Story 10-2 — TMDb /videos endpoint response (trailers, teasers, etc.)
+export interface Video {
+  key: string;
+  name: string;
+  site: string;
+  type: string;
+  official: boolean;
+  publishedAt: string;
+}
+
+export interface VideosResponse {
+  id: number;
+  results: Video[];
+}
+
+// Story 10-2 — Hero banner item (movie or TV) normalized for carousel display.
+export interface HeroBannerItem {
+  id: number;
+  mediaType: MediaType;
+  title: string;
+  overview: string;
+  backdropPath: string | null;
+  releaseDate: string; // movie release_date OR series first_air_date
+  voteAverage: number;
+}

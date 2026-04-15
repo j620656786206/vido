@@ -39,6 +39,10 @@ type TMDbServiceInterface interface {
 	DiscoverMovies(ctx context.Context, params tmdb.DiscoverParams) (*tmdb.SearchResultMovies, error)
 	// DiscoverTVShows queries /discover/tv (cached 1h, server-side filtered).
 	DiscoverTVShows(ctx context.Context, params tmdb.DiscoverParams) (*tmdb.SearchResultTVShows, error)
+	// GetMovieVideos returns TMDb videos (trailers, teasers) for a movie — no cache (small payload, ephemeral).
+	GetMovieVideos(ctx context.Context, movieID int) (*tmdb.VideosResponse, error)
+	// GetTVShowVideos returns TMDb videos for a TV show — no cache.
+	GetTVShowVideos(ctx context.Context, tvID int) (*tmdb.VideosResponse, error)
 }
 
 // TMDbService implements TMDbServiceInterface
@@ -327,6 +331,45 @@ func (s *TMDbService) DiscoverTVShows(ctx context.Context, params tmdb.DiscoverP
 	filtered := s.contentFilter.FilterFarFutureTVShows(result.Results)
 	filtered = s.contentFilter.FilterLowQualityTVShows(filtered)
 	result.Results = filtered
+	return result, nil
+}
+
+// GetMovieVideos returns trailers/teasers for a movie. Bypasses the cache layer —
+// videos are a small payload and consumers (trailer modals) fetch on-demand only.
+// Returns tmdb.NewBadRequestError for non-positive IDs and
+// tmdb.NewNotInitializedError when constructed via NewTMDbServiceWithCacheService
+// (where s.client is nil).
+func (s *TMDbService) GetMovieVideos(ctx context.Context, movieID int) (*tmdb.VideosResponse, error) {
+	if movieID <= 0 {
+		return nil, tmdb.NewBadRequestError("movie ID must be greater than 0")
+	}
+	if s.client == nil {
+		slog.Error("TMDb client not initialized for GetMovieVideos")
+		return nil, fmt.Errorf("TMDb client not initialized")
+	}
+	result, err := s.client.GetMovieVideos(ctx, movieID)
+	if err != nil {
+		slog.Error("Failed to get movie videos", "movie_id", movieID, "error", err)
+		return nil, err
+	}
+	return result, nil
+}
+
+// GetTVShowVideos returns trailers/teasers for a TV show. Same no-cache rationale
+// as GetMovieVideos.
+func (s *TMDbService) GetTVShowVideos(ctx context.Context, tvID int) (*tmdb.VideosResponse, error) {
+	if tvID <= 0 {
+		return nil, tmdb.NewBadRequestError("TV show ID must be greater than 0")
+	}
+	if s.client == nil {
+		slog.Error("TMDb client not initialized for GetTVShowVideos")
+		return nil, fmt.Errorf("TMDb client not initialized")
+	}
+	result, err := s.client.GetTVShowVideos(ctx, tvID)
+	if err != nil {
+		slog.Error("Failed to get TV show videos", "tv_id", tvID, "error", err)
+		return nil, err
+	}
 	return result, nil
 }
 

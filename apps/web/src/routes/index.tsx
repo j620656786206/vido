@@ -4,6 +4,7 @@ import { DashboardLayout, DownloadPanel, RecentMediaPanel } from '../components/
 import { NewMediaNotifications } from '../components/notifications/NewMediaNotifications';
 import { useNewMediaNotifications } from '../hooks/useNewMediaNotifications';
 import { QBStatusIndicator, ConnectionHistoryPanel } from '../components/health';
+import { HeroBanner } from '../components/homepage/HeroBanner';
 
 export const Route = createFileRoute('/')({
   component: DashboardPage,
@@ -15,6 +16,9 @@ function DashboardPage() {
 
   return (
     <div>
+      {/* Hero Banner — Story 10-2 (P2-001) */}
+      <HeroBanner />
+
       {/* Connection Health Status */}
       <div className="mx-auto max-w-7xl px-4 pt-4 sm:px-6">
         <div className="flex justify-end">

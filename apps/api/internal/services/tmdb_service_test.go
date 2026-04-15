@@ -465,3 +465,44 @@ func mustParseDate(t *testing.T, s string) time.Time {
 	require.NoError(t, err)
 	return parsed
 }
+
+// --- Story 10-2 service-layer tests ---
+
+func TestTMDbService_GetMovieVideos_RejectsInvalidID(t *testing.T) {
+	svc := NewTMDbServiceWithCacheService(&MockCacheService{})
+
+	for _, id := range []int{0, -1, -100} {
+		_, err := svc.GetMovieVideos(context.Background(), id)
+		require.Error(t, err, "id %d must be rejected", id)
+		var tmdbErr *tmdb.TMDbError
+		require.ErrorAs(t, err, &tmdbErr, "rejection must be a TMDbError so handlers map to 400")
+		assert.Equal(t, tmdb.ErrCodeBadRequest, tmdbErr.Code)
+	}
+}
+
+func TestTMDbService_GetMovieVideos_NilClientReturnsError(t *testing.T) {
+	// NewTMDbServiceWithCacheService leaves client=nil; GetMovieVideos must not panic.
+	svc := NewTMDbServiceWithCacheService(&MockCacheService{})
+
+	_, err := svc.GetMovieVideos(context.Background(), 550)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "TMDb client not initialized")
+}
+
+func TestTMDbService_GetTVShowVideos_RejectsInvalidID(t *testing.T) {
+	svc := NewTMDbServiceWithCacheService(&MockCacheService{})
+
+	_, err := svc.GetTVShowVideos(context.Background(), 0)
+	require.Error(t, err)
+	var tmdbErr *tmdb.TMDbError
+	require.ErrorAs(t, err, &tmdbErr)
+	assert.Equal(t, tmdb.ErrCodeBadRequest, tmdbErr.Code)
+}
+
+func TestTMDbService_GetTVShowVideos_NilClientReturnsError(t *testing.T) {
+	svc := NewTMDbServiceWithCacheService(&MockCacheService{})
+
+	_, err := svc.GetTVShowVideos(context.Background(), 1396)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "TMDb client not initialized")
+}

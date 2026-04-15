@@ -5,6 +5,7 @@ import type {
   MovieDetails,
   TVShowDetails,
   Credits,
+  VideosResponse,
 } from '../types/tmdb';
 import { snakeToCamel } from '../utils/caseTransform';
 
@@ -67,6 +68,32 @@ export const tmdbService = {
 
   async getTVShowCredits(tvId: number): Promise<Credits> {
     return fetchApi<Credits>(`/tmdb/tv/${tvId}/credits`);
+  },
+
+  // Story 10-2 — trending feeds for hero banner.
+  async getTrendingMovies(
+    timeWindow: 'day' | 'week' = 'week',
+    page = 1
+  ): Promise<MovieSearchResponse> {
+    const params = new URLSearchParams({ time_window: timeWindow, page: String(page) });
+    return fetchApi<MovieSearchResponse>(`/tmdb/trending/movies?${params}`);
+  },
+
+  async getTrendingTVShows(
+    timeWindow: 'day' | 'week' = 'week',
+    page = 1
+  ): Promise<TVShowSearchResponse> {
+    const params = new URLSearchParams({ time_window: timeWindow, page: String(page) });
+    return fetchApi<TVShowSearchResponse>(`/tmdb/trending/tv?${params}`);
+  },
+
+  // Story 10-2 — videos (trailers/teasers) for the trailer modal.
+  async getMovieVideos(movieId: number): Promise<VideosResponse> {
+    return fetchApi<VideosResponse>(`/tmdb/movies/${movieId}/videos`);
+  },
+
+  async getTVShowVideos(tvId: number): Promise<VideosResponse> {
+    return fetchApi<VideosResponse>(`/tmdb/tv/${tvId}/videos`);
   },
 };
 

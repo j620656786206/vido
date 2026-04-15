@@ -69,6 +69,15 @@ func (m *mockTMDbServiceForNFO) DiscoverTVShows(ctx context.Context, params tmdb
 	return nil, nil
 }
 
+// Story 10-2 additions — videos endpoint is not exercised by NFO enrichment.
+func (m *mockTMDbServiceForNFO) GetMovieVideos(ctx context.Context, movieID int) (*tmdb.VideosResponse, error) {
+	return nil, nil
+}
+
+func (m *mockTMDbServiceForNFO) GetTVShowVideos(ctx context.Context, tvID int) (*tmdb.VideosResponse, error) {
+	return nil, nil
+}
+
 // ─── Mock movie repo for enrichment tests ───────────────────────────────────
 
 type mockMovieRepoForNFO struct {

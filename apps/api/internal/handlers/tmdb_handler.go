@@ -21,6 +21,8 @@ type TMDbServiceInterface interface {
 	GetTrendingTVShows(ctx context.Context, timeWindow string, page int) (*tmdb.SearchResultTVShows, error)
 	DiscoverMovies(ctx context.Context, params tmdb.DiscoverParams) (*tmdb.SearchResultMovies, error)
 	DiscoverTVShows(ctx context.Context, params tmdb.DiscoverParams) (*tmdb.SearchResultTVShows, error)
+	GetMovieVideos(ctx context.Context, movieID int) (*tmdb.VideosResponse, error)
+	GetTVShowVideos(ctx context.Context, tvID int) (*tmdb.VideosResponse, error)
 }
 
 // TMDbHandler handles HTTP requests for TMDb operations.
@@ -287,6 +289,63 @@ func (h *TMDbHandler) DiscoverTVShows(c *gin.Context) {
 	SuccessResponse(c, result)
 }
 
+// GetMovieVideos handles GET /api/v1/tmdb/movies/:id/videos.
+// Returns trailers/teasers from TMDb for a movie (Story 10-2 AC #6).
+// @Summary Get movie videos from TMDb
+// @Description Retrieve trailers, teasers, and clips for a movie via TMDb videos endpoint
+// @Tags tmdb
+// @Accept json
+// @Produce json
+// @Param id path int true "TMDb movie ID"
+// @Success 200 {object} APIResponse{data=tmdb.VideosResponse}
+// @Failure 400 {object} APIResponse{error=APIError}
+// @Failure 404 {object} APIResponse{error=APIError}
+// @Failure 500 {object} APIResponse{error=APIError}
+// @Router /api/v1/tmdb/movies/{id}/videos [get]
+func (h *TMDbHandler) GetMovieVideos(c *gin.Context) {
+	movieID, err := strconv.Atoi(c.Param("id"))
+	if err != nil || movieID <= 0 {
+		ErrorResponse(c, http.StatusBadRequest, tmdb.ErrCodeBadRequest,
+			"Invalid movie ID",
+			"Movie ID must be a positive integer")
+		return
+	}
+	result, err := h.service.GetMovieVideos(c.Request.Context(), movieID)
+	if err != nil {
+		handleTMDbError(c, err, "get movie videos", slog.Int("movie_id", movieID))
+		return
+	}
+	SuccessResponse(c, result)
+}
+
+// GetTVShowVideos handles GET /api/v1/tmdb/tv/:id/videos.
+// @Summary Get TV show videos from TMDb
+// @Description Retrieve trailers, teasers, and clips for a TV show via TMDb videos endpoint
+// @Tags tmdb
+// @Accept json
+// @Produce json
+// @Param id path int true "TMDb TV show ID"
+// @Success 200 {object} APIResponse{data=tmdb.VideosResponse}
+// @Failure 400 {object} APIResponse{error=APIError}
+// @Failure 404 {object} APIResponse{error=APIError}
+// @Failure 500 {object} APIResponse{error=APIError}
+// @Router /api/v1/tmdb/tv/{id}/videos [get]
+func (h *TMDbHandler) GetTVShowVideos(c *gin.Context) {
+	tvID, err := strconv.Atoi(c.Param("id"))
+	if err != nil || tvID <= 0 {
+		ErrorResponse(c, http.StatusBadRequest, tmdb.ErrCodeBadRequest,
+			"Invalid TV show ID",
+			"TV show ID must be a positive integer")
+		return
+	}
+	result, err := h.service.GetTVShowVideos(c.Request.Context(), tvID)
+	if err != nil {
+		handleTMDbError(c, err, "get TV show videos", slog.Int("tv_id", tvID))
+		return
+	}
+	SuccessResponse(c, result)
+}
+
 // parseTrendingWindow normalizes the time_window query param; unknown / empty
 // values default to "week" (TMDb's most useful default for a homepage feed).
 func parseTrendingWindow(raw string) string {
@@ -376,6 +435,10 @@ func (h *TMDbHandler) RegisterRoutes(rg *gin.RouterGroup) {
 		// Details endpoints
 		tmdbGroup.GET("/movies/:id", h.GetMovieDetails)
 		tmdbGroup.GET("/tv/:id", h.GetTVShowDetails)
+
+		// Videos endpoints (Story 10-2 AC #6)
+		tmdbGroup.GET("/movies/:id/videos", h.GetMovieVideos)
+		tmdbGroup.GET("/tv/:id/videos", h.GetTVShowVideos)
 	}
 }
 
