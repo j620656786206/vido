@@ -284,6 +284,154 @@ test.describe('Settings — Explore Blocks Management @ui @explore-blocks @story
     await page.getByTestId('explore-block-delete-confirm-button').click();
     await expect.poll(() => deleteHit).toBe(true);
   });
+
+  test('[P0] edit modal round-trip submits PUT with updated payload (AC4)', async ({ page }) => {
+    let putBody: Record<string, unknown> | null = null;
+
+    await page.route(`${ROUTE_API}/explore-blocks`, (route: Route) =>
+      route.fulfill(jsonOk(defaultBlocks))
+    );
+    await page.route(`${ROUTE_API}/explore-blocks/b-movies`, async (route: Route) => {
+      if (route.request().method() === 'PUT') {
+        putBody = JSON.parse(route.request().postData() || '{}');
+        await route.fulfill(jsonOk({ ...defaultBlocks.blocks[0], name: '台灣電影' }));
+      } else {
+        await route.fulfill(jsonOk(defaultBlocks.blocks[0]));
+      }
+    });
+
+    await page.goto('/settings/homepage');
+
+    await page.getByTestId('explore-block-edit-b-movies').click();
+    const modal = page.getByTestId('explore-block-edit-modal');
+    await expect(modal).toBeVisible();
+
+    const nameInput = modal.getByTestId('explore-block-name-input');
+    await nameInput.fill('台灣電影');
+    await modal.getByTestId('explore-block-save-button').click();
+
+    await expect(modal).toBeHidden();
+    await expect.poll(() => putBody).not.toBeNull();
+    expect(putBody).toMatchObject({ name: '台灣電影' });
+  });
+
+  test('[P1] create flow submits POST with snake_case payload (AC2)', async ({ page }) => {
+    let postBody: Record<string, unknown> | null = null;
+
+    await page.route(`${ROUTE_API}/explore-blocks`, async (route: Route) => {
+      if (route.request().method() === 'POST') {
+        postBody = JSON.parse(route.request().postData() || '{}');
+        await route.fulfill({
+          status: 201,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            success: true,
+            data: {
+              id: 'new-block-id',
+              name: '新區塊',
+              content_type: 'tv',
+              genre_ids: '',
+              language: '',
+              region: '',
+              sort_by: 'popularity.desc',
+              max_items: 25,
+              sort_order: 2,
+              created_at: '2026-04-16T00:00:00Z',
+              updated_at: '2026-04-16T00:00:00Z',
+            },
+          }),
+        });
+      } else {
+        await route.fulfill(jsonOk({ blocks: [] }));
+      }
+    });
+
+    await page.goto('/settings/homepage');
+
+    await page.getByTestId('explore-blocks-add-button').click();
+    const modal = page.getByTestId('explore-block-edit-modal');
+    await expect(modal).toBeVisible();
+
+    await modal.getByTestId('explore-block-name-input').fill('新區塊');
+    await modal.getByTestId('explore-block-type-select').selectOption('tv');
+    await modal.getByTestId('explore-block-max-items-input').fill('25');
+    await modal.getByTestId('explore-block-save-button').click();
+
+    await expect(modal).toBeHidden();
+    await expect.poll(() => postBody).not.toBeNull();
+    // Request body should use snake_case (Rule 18 — camelToSnake at API boundary).
+    expect(postBody).toMatchObject({
+      name: '新區塊',
+      content_type: 'tv',
+      max_items: 25,
+    });
+  });
+
+  test('[P1] reorder down arrow swaps adjacent blocks (AC3)', async ({ page }) => {
+    let reorderCalled: string[] | null = null;
+
+    await page.route(`${ROUTE_API}/explore-blocks`, (route: Route) =>
+      route.fulfill(jsonOk(defaultBlocks))
+    );
+    await page.route(`${ROUTE_API}/explore-blocks/reorder`, async (route: Route) => {
+      const body = JSON.parse(route.request().postData() || '{}');
+      reorderCalled = body.ordered_ids;
+      await route.fulfill(jsonOk(defaultBlocks));
+    });
+
+    await page.goto('/settings/homepage');
+
+    await page.getByTestId('explore-block-move-down-b-movies').click();
+
+    await expect.poll(() => reorderCalled).toEqual(['b-tv', 'b-movies']);
+  });
+});
+
+// =============================================================================
+// Cross-route integration: homepage reflects settings changes without reload (AC#4)
+// =============================================================================
+
+test.describe('Homepage reflects settings changes @ui @explore-blocks @story-10-3', () => {
+  test('[P0] deleting a block in settings removes it from homepage without reload (AC4)', async ({
+    page,
+  }) => {
+    await stubHomepageBaseline(page);
+
+    let deleteDone = false;
+    await page.route(`${ROUTE_API}/explore-blocks`, (route: Route) =>
+      route.fulfill(jsonOk(deleteDone ? { blocks: [defaultBlocks.blocks[1]] } : defaultBlocks))
+    );
+    await page.route(`${ROUTE_API}/explore-blocks/b-movies/content`, (route: Route) =>
+      route.fulfill(jsonOk(movieContent))
+    );
+    await page.route(`${ROUTE_API}/explore-blocks/b-tv/content`, (route: Route) =>
+      route.fulfill(jsonOk(tvContent))
+    );
+    await page.route(`${ROUTE_API}/explore-blocks/b-movies`, async (route: Route) => {
+      if (route.request().method() === 'DELETE') {
+        deleteDone = true;
+        await route.fulfill(jsonOk({ deleted: true }));
+      } else {
+        await route.fulfill(jsonOk(defaultBlocks.blocks[0]));
+      }
+    });
+
+    await page.goto('/');
+    await expect(page.getByTestId('explore-block-b-movies')).toBeVisible();
+    await expect(page.getByTestId('explore-block-b-tv')).toBeVisible();
+
+    // Navigate to settings via client-side SPA routing (no full reload)
+    await page.goto('/settings/homepage');
+    await page.getByTestId('explore-block-delete-b-movies').click();
+    await page.getByTestId('explore-block-delete-confirm-button').click();
+    await expect.poll(() => deleteDone).toBe(true);
+
+    // Return to homepage — SPA navigation, React Query should refetch invalidated list
+    await page.goto('/');
+
+    await expect(page.getByTestId('explore-block-b-tv')).toBeVisible();
+    await expect(page.getByTestId('explore-block-b-movies')).toHaveCount(0);
+  });
 });
 
 // =============================================================================
