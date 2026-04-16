@@ -1,6 +1,6 @@
 # Story 10.3: Custom Explore Blocks CRUD
 
-Status: review
+Status: done
 
 ## Story
 
@@ -57,7 +57,7 @@ so that the homepage shows discovery content relevant to my interests.
 - [x] Task 6: Tests (AC: #1-6)
   - [x] 6.1 Backend: repository CRUD tests (13), handler tests (17), service tests (17), seed logic covered
   - [x] 6.2 Frontend: ExploreBlock render (7), ExploreBlocksList (4), ExploreBlocksSettings (7), ExploreBlockEditModal (4)
-  - [x] 6.3 Integration: 9 Playwright E2E — homepage render, settings CRUD, reorder, delete confirm, API contract
+  - [x] 6.3 Integration: 13 Playwright E2E — homepage render (3), settings CRUD (6), cross-route integration (1), API contract (2), plus reorder-down (1)
 
 ## Dev Notes
 
@@ -169,8 +169,9 @@ The two partial-parity items (genre chip picker, combined locale dropdown) are U
 
 **Tests (new)**
 
-- `tests/e2e/explore-blocks.spec.ts` — 9 Playwright scenarios tagged `@ui @explore-blocks @story-10-3` + `@api` for contract checks.
+- `tests/e2e/explore-blocks.spec.ts` — 13 Playwright scenarios tagged `@ui @explore-blocks @story-10-3` + `@api` for contract checks.
 
 ## Change Log
 
 - **2026-04-16** — Story 10.3 implementation complete. Backend: migration 022 `explore_blocks`, `ExploreBlockRepository` + `ExploreBlockService` + `ExploreBlocksHandler` (6 endpoints, 1h per-block cache, 3 seeded defaults). Frontend: `ExploreBlock` / `ExploreBlocksList` homepage components + `ExploreBlocksSettings` at `/settings/homepage` + `ExploreBlockEditModal`. All 6 ACs satisfied. Regression: `nx test api` 31 packages PASS, `nx test web` 1696/1696 PASS (+22 new), `pnpm lint:all` 0 errors, E2E 9/9 PASS. UX verification vs `flow-g-homepage-*/hp*` screenshots: structural parity for homepage and settings; 2 modal-UI polish items (genre chip picker, combined locale dropdown) deferred as pure-frontend follow-ups — no backend or contract change needed.
+- **2026-04-16** — Code review fixes (2 HIGH + 4 MED + 2 LOW). H1: sort options now filtered by content type (movie vs tv) — prevents silent TMDb fallback. H2+M1: `handleConfirmDelete` and `handleMove` wrapped in try/catch with inline error display. M2: both modals now have `role="dialog"` + `aria-modal="true"` + `aria-labelledby`. M3: `maxItems` clamped to 1–40 before submission. M4: story E2E count 9→13. L1: Escape key closes both edit and delete modals. L2: `ExploreBlocksList` shows min-height loading placeholder instead of null. Tests: 30/30 Vitest PASS (+8 new assertions covering all fixes).

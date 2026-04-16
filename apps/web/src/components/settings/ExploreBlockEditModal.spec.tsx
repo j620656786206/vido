@@ -107,4 +107,68 @@ describe('ExploreBlockEditModal', () => {
     fireEvent.click(screen.getByText('取消'));
     expect(onClose).toHaveBeenCalled();
   });
+
+  it('calls onClose when Escape key is pressed (L1 fix)', () => {
+    const { onClose } = renderModal();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('shows movie-only sort options when content type is movie (H1 fix)', () => {
+    renderModal();
+    const sortSelect = screen.getByTestId('explore-block-sort-select');
+    const options = Array.from(sortSelect.querySelectorAll('option'));
+    const values = options.map((o) => o.getAttribute('value'));
+    expect(values).toContain('primary_release_date.desc');
+    expect(values).toContain('revenue.desc');
+    expect(values).not.toContain('first_air_date.desc');
+  });
+
+  it('shows TV-only sort options when content type is tv (H1 fix)', () => {
+    renderModal();
+    fireEvent.change(screen.getByTestId('explore-block-type-select'), {
+      target: { value: 'tv' },
+    });
+    const sortSelect = screen.getByTestId('explore-block-sort-select');
+    const options = Array.from(sortSelect.querySelectorAll('option'));
+    const values = options.map((o) => o.getAttribute('value'));
+    expect(values).toContain('first_air_date.desc');
+    expect(values).not.toContain('primary_release_date.desc');
+    expect(values).not.toContain('revenue.desc');
+  });
+
+  it('resets sort to popularity.desc when switching to type that lacks current sort (H1 fix)', () => {
+    renderModal();
+    // Set movie-only sort
+    fireEvent.change(screen.getByTestId('explore-block-sort-select'), {
+      target: { value: 'revenue.desc' },
+    });
+    expect((screen.getByTestId('explore-block-sort-select') as HTMLSelectElement).value).toBe(
+      'revenue.desc'
+    );
+    // Switch to tv — revenue.desc is movie-only, should reset
+    fireEvent.change(screen.getByTestId('explore-block-type-select'), {
+      target: { value: 'tv' },
+    });
+    expect((screen.getByTestId('explore-block-sort-select') as HTMLSelectElement).value).toBe(
+      'popularity.desc'
+    );
+  });
+
+  it('clamps maxItems to valid range before submission (M3 fix)', async () => {
+    renderModal();
+    fireEvent.change(screen.getByTestId('explore-block-name-input'), {
+      target: { value: 'Test' },
+    });
+    fireEvent.change(screen.getByTestId('explore-block-max-items-input'), {
+      target: { value: '100' },
+    });
+    fireEvent.click(screen.getByTestId('explore-block-save-button'));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(createMutation.mutateAsync).toHaveBeenCalledWith(
+      expect.objectContaining({ maxItems: 40 })
+    );
+  });
 });

@@ -11,7 +11,18 @@ import { ExploreBlock } from './ExploreBlock';
 export function ExploreBlocksList() {
   const { data, isLoading, isError } = useExploreBlocks();
 
-  if (isLoading || isError) return null;
+  if (isError) return null;
+
+  // L2 fix: reserve vertical space during loading to prevent layout shift
+  if (isLoading) {
+    return (
+      <div
+        data-testid="explore-blocks-loading"
+        className="min-h-[200px] bg-[var(--bg-primary)]"
+        aria-busy="true"
+      />
+    );
+  }
 
   const blocks = data?.blocks ?? [];
   if (blocks.length === 0) return null;

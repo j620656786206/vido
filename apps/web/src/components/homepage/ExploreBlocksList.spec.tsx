@@ -60,11 +60,11 @@ describe('ExploreBlocksList', () => {
     vi.clearAllMocks();
   });
 
-  it('renders nothing while loading', async () => {
+  it('renders loading placeholder while loading (L2 fix)', async () => {
     mockList.mockReturnValue({ data: undefined, isLoading: true, isError: false } as any);
-    const { container } = renderList();
+    renderList();
     await Promise.resolve();
-    expect(container.querySelector('[data-testid="explore-blocks-list"]')).toBeNull();
+    expect(await screen.findByTestId('explore-blocks-loading')).toBeInTheDocument();
   });
 
   it('renders nothing on error', async () => {

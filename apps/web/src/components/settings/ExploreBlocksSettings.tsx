@@ -2,7 +2,7 @@
  * Settings → 自訂首頁 — Story 10.3 management UI.
  */
 
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Plus, Pencil, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
 import {
   useExploreBlocks,
@@ -21,6 +21,7 @@ export function ExploreBlocksSettings() {
     { type: 'closed' } | { type: 'create' } | { type: 'edit'; block: ExploreBlock }
   >({ type: 'closed' });
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [operationError, setOperationError] = useState<string | null>(null);
 
   const blocks = data?.blocks ?? [];
 
@@ -29,14 +30,39 @@ export function ExploreBlocksSettings() {
     if (targetIndex < 0 || targetIndex >= blocks.length) return;
     const reordered = [...blocks];
     [reordered[index], reordered[targetIndex]] = [reordered[targetIndex], reordered[index]];
-    await reorderBlocks.mutateAsync(reordered.map((b) => b.id));
+    try {
+      setOperationError(null);
+      await reorderBlocks.mutateAsync(reordered.map((b) => b.id));
+    } catch (err) {
+      setOperationError(err instanceof Error ? err.message : '排序失敗，請稍後再試');
+    }
   };
 
   const handleConfirmDelete = async () => {
     if (!confirmDeleteId) return;
-    await deleteBlock.mutateAsync(confirmDeleteId);
-    setConfirmDeleteId(null);
+    try {
+      setOperationError(null);
+      await deleteBlock.mutateAsync(confirmDeleteId);
+      setConfirmDeleteId(null);
+    } catch (err) {
+      setConfirmDeleteId(null);
+      setOperationError(err instanceof Error ? err.message : '刪除失敗，請稍後再試');
+    }
   };
+
+  // L1 fix: close delete confirmation on Escape key
+  const handleDeleteEscape = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && confirmDeleteId) setConfirmDeleteId(null);
+    },
+    [confirmDeleteId]
+  );
+  useEffect(() => {
+    if (confirmDeleteId) {
+      document.addEventListener('keydown', handleDeleteEscape);
+      return () => document.removeEventListener('keydown', handleDeleteEscape);
+    }
+  }, [confirmDeleteId, handleDeleteEscape]);
 
   return (
     <div className="space-y-6" data-testid="explore-blocks-settings">
@@ -68,6 +94,16 @@ export function ExploreBlocksSettings() {
         <p className="text-sm text-[var(--error)]" role="alert">
           無法載入區塊列表，請稍後再試。
         </p>
+      )}
+
+      {operationError && (
+        <div
+          role="alert"
+          data-testid="explore-blocks-operation-error"
+          className="rounded-lg bg-red-900/30 px-3 py-2 text-sm text-[var(--error)]"
+        >
+          {operationError}
+        </div>
       )}
 
       {!isLoading && !isError && blocks.length === 0 && (
@@ -149,9 +185,17 @@ export function ExploreBlocksSettings() {
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
           data-testid="explore-block-delete-confirm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-confirm-title"
         >
           <div className="w-full max-w-sm rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-6 shadow-xl">
-            <h3 className="text-lg font-semibold text-[var(--text-primary)]">確認刪除</h3>
+            <h3
+              id="delete-confirm-title"
+              className="text-lg font-semibold text-[var(--text-primary)]"
+            >
+              確認刪除
+            </h3>
             <p className="mt-2 text-sm text-[var(--text-secondary)]">
               刪除後此區塊將從首頁移除。此動作無法復原。
             </p>

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import { ExploreBlocksSettings } from './ExploreBlocksSettings';
@@ -146,5 +146,47 @@ describe('ExploreBlocksSettings', () => {
 
     expect(screen.getByTestId('explore-block-move-up-a')).toBeDisabled();
     expect(screen.getByTestId('explore-block-move-down-b')).toBeDisabled();
+  });
+
+  it('shows error when delete mutation fails (H2 fix)', async () => {
+    deleteMutation.mutateAsync = vi.fn(async () => {
+      throw new Error('刪除失敗');
+    });
+    listResult.data = { blocks: [makeBlock({ id: 'err', name: '失敗' })] };
+    renderSettings();
+
+    fireEvent.click(screen.getByTestId('explore-block-delete-err'));
+    fireEvent.click(screen.getByTestId('explore-block-delete-confirm-button'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('explore-blocks-operation-error')).toHaveTextContent('刪除失敗');
+    });
+  });
+
+  it('shows error when reorder mutation fails (M1 fix)', async () => {
+    reorderMutation.mutateAsync = vi.fn(async () => {
+      throw new Error('排序失敗');
+    });
+    listResult.data = {
+      blocks: [makeBlock({ id: 'a', sortOrder: 0 }), makeBlock({ id: 'b', sortOrder: 1 })],
+    };
+    renderSettings();
+
+    fireEvent.click(screen.getByTestId('explore-block-move-up-b'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('explore-blocks-operation-error')).toHaveTextContent('排序失敗');
+    });
+  });
+
+  it('closes delete confirmation on Escape key (L1 fix)', () => {
+    listResult.data = { blocks: [makeBlock({ id: 'esc', name: 'Esc' })] };
+    renderSettings();
+
+    fireEvent.click(screen.getByTestId('explore-block-delete-esc'));
+    expect(screen.getByTestId('explore-block-delete-confirm')).toBeInTheDocument();
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByTestId('explore-block-delete-confirm')).toBeNull();
   });
 });

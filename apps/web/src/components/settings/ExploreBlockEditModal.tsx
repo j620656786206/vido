@@ -12,13 +12,25 @@ interface ExploreBlockEditModalProps {
   onClose: () => void;
 }
 
-const SORT_OPTIONS: Array<{ value: string; label: string }> = [
+const SHARED_SORT_OPTIONS: Array<{ value: string; label: string }> = [
   { value: 'popularity.desc', label: '熱門度（高→低）' },
   { value: 'vote_average.desc', label: '評分（高→低）' },
+];
+
+const MOVIE_SORT_OPTIONS: Array<{ value: string; label: string }> = [
+  ...SHARED_SORT_OPTIONS,
   { value: 'primary_release_date.desc', label: '發行日期（新→舊）' },
-  { value: 'first_air_date.desc', label: '首播日期（新→舊）' },
   { value: 'revenue.desc', label: '票房（高→低）' },
 ];
+
+const TV_SORT_OPTIONS: Array<{ value: string; label: string }> = [
+  ...SHARED_SORT_OPTIONS,
+  { value: 'first_air_date.desc', label: '首播日期（新→舊）' },
+];
+
+function getSortOptions(ct: ExploreBlockContentType) {
+  return ct === 'tv' ? TV_SORT_OPTIONS : MOVIE_SORT_OPTIONS;
+}
 
 export function ExploreBlockEditModal({ block, onClose }: ExploreBlockEditModalProps) {
   const createBlock = useCreateExploreBlock();
@@ -48,8 +60,29 @@ export function ExploreBlockEditModal({ block, onClose }: ExploreBlockEditModalP
     }
   }, [block]);
 
+  // L1 fix: close modal on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  // H1 fix: reset sort when content type changes to avoid invalid TMDb sort_by
+  const handleContentTypeChange = (newType: ExploreBlockContentType) => {
+    setContentType(newType);
+    const validOptions = getSortOptions(newType);
+    if (!validOptions.some((opt) => opt.value === sortBy)) {
+      setSortBy('popularity.desc');
+    }
+  };
+
   const handleSave = async () => {
     setError(null);
+    // M3 fix: validate maxItems range before submitting
+    const clampedMaxItems = Math.max(1, Math.min(40, maxItems || 20));
+    if (clampedMaxItems !== maxItems) setMaxItems(clampedMaxItems);
     try {
       const payload = {
         name,
@@ -58,7 +91,7 @@ export function ExploreBlockEditModal({ block, onClose }: ExploreBlockEditModalP
         language,
         region,
         sortBy,
-        maxItems,
+        maxItems: clampedMaxItems,
       };
       if (isEditMode && block) {
         await updateBlock.mutateAsync({ id: block.id, ...payload });
@@ -74,13 +107,21 @@ export function ExploreBlockEditModal({ block, onClose }: ExploreBlockEditModalP
   const isSaving = createBlock.isPending || updateBlock.isPending;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="explore-block-modal-title"
+    >
       <div
         className="w-full max-w-md rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-6 shadow-xl"
         data-testid="explore-block-edit-modal"
       >
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-[var(--text-primary)]">
+          <h3
+            id="explore-block-modal-title"
+            className="text-lg font-semibold text-[var(--text-primary)]"
+          >
             {isEditMode ? '編輯探索區塊' : '新增探索區塊'}
           </h3>
           <button
@@ -117,7 +158,7 @@ export function ExploreBlockEditModal({ block, onClose }: ExploreBlockEditModalP
           <Field label="內容類型">
             <select
               value={contentType}
-              onChange={(e) => setContentType(e.target.value as ExploreBlockContentType)}
+              onChange={(e) => handleContentTypeChange(e.target.value as ExploreBlockContentType)}
               data-testid="explore-block-type-select"
               className="w-full rounded-md border border-[var(--border-subtle)]/50 bg-[var(--bg-secondary)]/60 px-3 py-2 text-sm text-[var(--text-primary)] focus:border-[var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"
             >
@@ -167,7 +208,7 @@ export function ExploreBlockEditModal({ block, onClose }: ExploreBlockEditModalP
               data-testid="explore-block-sort-select"
               className="w-full rounded-md border border-[var(--border-subtle)]/50 bg-[var(--bg-secondary)]/60 px-3 py-2 text-sm text-[var(--text-primary)] focus:border-[var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"
             >
-              {SORT_OPTIONS.map((opt) => (
+              {getSortOptions(contentType).map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
                 </option>
