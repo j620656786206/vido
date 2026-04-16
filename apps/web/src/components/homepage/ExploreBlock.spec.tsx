@@ -186,7 +186,9 @@ describe('ExploreBlock', () => {
 
     renderBlock(testBlock());
 
-    expect(await screen.findByTestId('explore-block-empty')).toHaveTextContent('沒有符合條件的內容');
+    expect(await screen.findByTestId('explore-block-empty')).toHaveTextContent(
+      '沒有符合條件的內容'
+    );
   });
 
   it('returns null (hides itself) when the content query errors', async () => {

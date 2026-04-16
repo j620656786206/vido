@@ -122,7 +122,10 @@ export function ExploreBlock({ block }: ExploreBlockProps) {
             ))}
 
           {!isLoading && items.length === 0 && (
-            <div className="py-8 text-sm text-[var(--text-muted)]" data-testid="explore-block-empty">
+            <div
+              className="py-8 text-sm text-[var(--text-muted)]"
+              data-testid="explore-block-empty"
+            >
               沒有符合條件的內容
             </div>
           )}
@@ -178,7 +181,10 @@ function getBlockItems(data: { movies?: Movie[]; tvShows?: TVShow[] } | undefine
 // "查看更多" routes into the main search view with filter pre-applied when
 // filter scaffolding (Epic 11) lands. For now, route to /search — the target
 // can be refined later without touching ExploreBlock call sites.
-function buildSeeMoreTarget(_block: ExploreBlockType): { to: string; search: Record<string, unknown> } {
+function buildSeeMoreTarget(_block: ExploreBlockType): {
+  to: string;
+  search: Record<string, unknown>;
+} {
   return {
     to: '/search',
     search: {},

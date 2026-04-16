@@ -4,14 +4,8 @@
 
 import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
-import {
-  useCreateExploreBlock,
-  useUpdateExploreBlock,
-} from '../../hooks/useExploreBlocks';
-import type {
-  ExploreBlock,
-  ExploreBlockContentType,
-} from '../../services/exploreBlockService';
+import { useCreateExploreBlock, useUpdateExploreBlock } from '../../hooks/useExploreBlocks';
+import type { ExploreBlock, ExploreBlockContentType } from '../../services/exploreBlockService';
 
 interface ExploreBlockEditModalProps {
   block?: ExploreBlock; // undefined = create mode
@@ -87,7 +81,7 @@ export function ExploreBlockEditModal({ block, onClose }: ExploreBlockEditModalP
       >
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-[var(--text-primary)]">
-            {isEditMode ? '編輯首頁區塊' : '新增首頁區塊'}
+            {isEditMode ? '編輯探索區塊' : '新增探索區塊'}
           </h3>
           <button
             type="button"
@@ -209,7 +203,7 @@ export function ExploreBlockEditModal({ block, onClose }: ExploreBlockEditModalP
             data-testid="explore-block-save-button"
             className="flex-1 rounded-lg bg-[var(--accent-primary)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--accent-pressed)] disabled:opacity-50"
           >
-            {isSaving ? '儲存中...' : isEditMode ? '儲存變更' : '建立'}
+            {isSaving ? '儲存中...' : isEditMode ? '儲存變更' : '儲存區塊'}
           </button>
         </div>
       </div>
@@ -220,9 +214,7 @@ export function ExploreBlockEditModal({ block, onClose }: ExploreBlockEditModalP
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="mb-1 block text-sm font-medium text-[var(--text-secondary)]">
-        {label}
-      </label>
+      <label className="mb-1 block text-sm font-medium text-[var(--text-secondary)]">{label}</label>
       {children}
     </div>
   );

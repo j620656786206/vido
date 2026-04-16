@@ -368,8 +368,10 @@ describe('SettingsLayout', () => {
 
   // --- SETTINGS_CATEGORIES export ---
 
-  it('exports SETTINGS_CATEGORIES with exactly 8 entries', () => {
-    expect(SETTINGS_CATEGORIES).toHaveLength(8);
+  it('exports SETTINGS_CATEGORIES with exactly 9 entries', () => {
+    // 9 entries: connection, scanner, homepage (Story 10.3), cache, logs,
+    // status, backup, export, performance.
+    expect(SETTINGS_CATEGORIES).toHaveLength(9);
   });
 
   it('SETTINGS_CATEGORIES entries have required fields', () => {
