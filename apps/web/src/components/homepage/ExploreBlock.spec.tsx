@@ -12,6 +12,7 @@ import {
 import React from 'react';
 import { ExploreBlock } from './ExploreBlock';
 import type { ExploreBlock as ExploreBlockType } from '../../services/exploreBlockService';
+import type { OwnedMediaState } from '../../hooks/useOwnedMedia';
 
 vi.mock('../../hooks/useExploreBlocks', () => ({
   useExploreBlockContent: vi.fn(),
@@ -20,6 +21,16 @@ vi.mock('../../hooks/useExploreBlocks', () => ({
 import { useExploreBlockContent } from '../../hooks/useExploreBlocks';
 
 const mockHook = vi.mocked(useExploreBlockContent);
+
+// Story 10-4: ownership state is now injected by ExploreBlocksList. Tests
+// supply a stub so the block renders independently of the parent.
+const stubOwnership: OwnedMediaState = {
+  owned: new Set<number>(),
+  isOwned: () => false,
+  isRequested: () => false,
+  isLoading: false,
+  error: null,
+};
 
 function testBlock(overrides: Partial<ExploreBlockType> = {}): ExploreBlockType {
   return {
@@ -47,7 +58,7 @@ function renderBlock(block: ExploreBlockType) {
   const indexRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/',
-    component: () => React.createElement(ExploreBlock, { block }),
+    component: () => React.createElement(ExploreBlock, { block, ownership: stubOwnership }),
   });
   const mediaRoute = createRoute({
     getParentRoute: () => rootRoute,

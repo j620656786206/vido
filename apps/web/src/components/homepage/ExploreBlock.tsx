@@ -2,7 +2,7 @@ import { useMemo, useRef } from 'react';
 import { Link } from '@tanstack/react-router';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 import { useExploreBlockContent } from '../../hooks/useExploreBlocks';
-import { useOwnedMedia } from '../../hooks/useOwnedMedia';
+import type { OwnedMediaState } from '../../hooks/useOwnedMedia';
 import type { ExploreBlock as ExploreBlockType } from '../../services/exploreBlockService';
 import type { Movie, TVShow } from '../../types/tmdb';
 import { PosterCard } from '../media/PosterCard';
@@ -11,6 +11,9 @@ import { cn } from '../../lib/utils';
 
 interface ExploreBlockProps {
   block: ExploreBlockType;
+  // Story 10-4 AC #4 — ownership state is owned by the parent
+  // ExploreBlocksList so a multi-block homepage issues one POST, not N.
+  ownership: OwnedMediaState;
 }
 
 /**
@@ -19,17 +22,12 @@ interface ExploreBlockProps {
  * Story 10.3 AC #1. Hides itself gracefully on empty / error to avoid
  * rendering a broken stub on the homepage (mirrors HeroBanner AC #5 pattern).
  */
-export function ExploreBlock({ block }: ExploreBlockProps) {
+export function ExploreBlock({ block, ownership }: ExploreBlockProps) {
   const { data, isLoading, isError } = useExploreBlockContent(block.id);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
 
-  // All hooks must run unconditionally — compute items + ownership BEFORE the
-  // early return so the ExploreBlock can be conditionally hidden without
-  // breaking React's rules of hooks.
   const items = useMemo(() => getBlockItems(data), [data]);
-  // Story 10-4 — batch-check ownership for all visible TMDb IDs in one shot.
-  const tmdbIds = useMemo(() => items.map((i) => i.id), [items]);
-  const { isOwned, isRequested } = useOwnedMedia(tmdbIds);
+  const { isOwned, isRequested } = ownership;
 
   if (isError) return null;
 

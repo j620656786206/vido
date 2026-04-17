@@ -51,15 +51,22 @@ func (s *AvailabilityService) CheckOwned(ctx context.Context, tmdbIDs []int64) (
 		return nil, fmt.Errorf("check owned movies: %w", err)
 	}
 
+	// Skip the series query if the client has already disconnected — no point
+	// doing more DB work for a response the caller will never read.
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
 	seriesIDs, err := s.series.FindOwnedTMDbIDs(ctx, tmdbIDs)
 	if err != nil {
 		slog.Error("Failed to check owned series", "error", err, "id_count", len(tmdbIDs))
 		return nil, fmt.Errorf("check owned series: %w", err)
 	}
 
-	// Dedupe union — a TMDb ID is unique per type but movies and series keep
-	// separate id-spaces, so collisions are only possible for ambiguous rows
-	// seeded during testing. Dedupe defensively to keep the contract clean.
+	// TMDb assigns ids independently per type, so tmdb_id 1 can legitimately
+	// identify both a movie and a TV show in the same library. Dedupe here so
+	// the contract returns each matching id exactly once regardless of which
+	// table(s) own it.
 	seen := make(map[int64]struct{}, len(movieIDs)+len(seriesIDs))
 	merged := make([]int64, 0, len(movieIDs)+len(seriesIDs))
 	for _, id := range movieIDs {

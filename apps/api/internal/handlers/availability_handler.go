@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"log/slog"
 
 	"github.com/gin-gonic/gin"
@@ -58,7 +59,7 @@ func (h *AvailabilityHandler) CheckOwned(c *gin.Context) {
 
 	if len(req.TMDbIDs) > availabilityCheckOwnedMaxIDs {
 		BadRequestError(c, "VALIDATION_INVALID_FORMAT",
-			"Too many TMDb IDs — max 500 per request")
+			fmt.Sprintf("Too many TMDb IDs — max %d per request", availabilityCheckOwnedMaxIDs))
 		return
 	}
 

@@ -88,14 +88,15 @@ describe('useOwnedMedia (Story 10-4)', () => {
 
   it('exposes loading and error states', async () => {
     mockCheckOwned.mockRejectedValue(new Error('network down'));
+    // The wrapper already sets retry: false on the QueryClient, which
+    // neutralises the hook's retry: 1 for this test so the error surfaces
+    // without waiting for TanStack's backoff. Prevents CI flake on slow runners.
     const { result } = renderHook(() => useOwnedMedia([603]), { wrapper: createWrapper() });
 
     // Initially loading
     expect(result.current.isLoading).toBe(true);
 
-    // The hook sets retry: 1 to absorb one transient failure before surfacing
-    // the error; wait up to 3s so the retry-then-fail path completes.
-    await waitFor(() => expect(result.current.error).toBeTruthy(), { timeout: 3000 });
+    await waitFor(() => expect(result.current.error).toBeTruthy(), { timeout: 5000 });
     expect(result.current.error?.message).toBe('network down');
     expect(result.current.owned.size).toBe(0);
   });

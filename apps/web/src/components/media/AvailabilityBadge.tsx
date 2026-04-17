@@ -41,6 +41,10 @@ export function AvailabilityBadge({ variant, className }: AvailabilityBadgeProps
         variantClasses[variant],
         className
       )}
+      // Badge appears async after the ownership POST resolves — announce it
+      // politely so screen-reader users hear the change without interrupting.
+      role="status"
+      aria-live="polite"
       aria-label={variantLabels[variant]}
     >
       {variantLabels[variant]}

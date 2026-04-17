@@ -1,3 +1,4 @@
+import { useCallback, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { availabilityService } from '../services/availabilityService';
 
@@ -39,12 +40,16 @@ const EMPTY: readonly number[] = Object.freeze([]);
  * consumers can pass raw trending lists without preprocessing.
  *
  * Returns a stable empty result while disabled or loading — callers can render
- * without null-checking the return value.
+ * without null-checking the return value. The returned object, its Set, and
+ * its predicate functions preserve reference identity across renders when the
+ * underlying data is unchanged, so `React.memo`'d consumers stay memoised.
  *
  * Story 10-4 (P2-006).
  */
 export function useOwnedMedia(tmdbIds: readonly number[] = EMPTY): OwnedMediaState {
-  const normalised = normaliseIds(tmdbIds);
+  // Memoise the normalised id list against the raw input — sorted+deduped so
+  // reorderings don't bust the cache.
+  const normalised = useMemo(() => normaliseIds(tmdbIds), [tmdbIds]);
   const enabled = normalised.length > 0;
 
   const query = useQuery({
@@ -58,15 +63,28 @@ export function useOwnedMedia(tmdbIds: readonly number[] = EMPTY): OwnedMediaSta
     retry: 1,
   });
 
-  const owned = new Set<number>(query.data ?? []);
+  // Rebuild the Set only when the query payload changes, not every render.
+  const owned = useMemo(() => new Set<number>(query.data ?? []), [query.data]);
 
-  return {
-    owned,
-    isOwned: (tmdbId) =>
+  const isOwned = useCallback(
+    (tmdbId: number | null | undefined) =>
       typeof tmdbId === 'number' && Number.isInteger(tmdbId) && tmdbId > 0 && owned.has(tmdbId),
-    // Stubbed per AC #5 — the request system (Epic 13) will flip this on.
-    isRequested: () => false,
-    isLoading: query.isLoading,
-    error: (query.error as Error | null) ?? null,
-  };
+    [owned]
+  );
+
+  // Stubbed per AC #5 — the request system (Epic 13) will flip this on.
+  const isRequested = useCallback((_tmdbId: number | null | undefined) => false, []);
+
+  const error = (query.error as Error | null) ?? null;
+
+  return useMemo<OwnedMediaState>(
+    () => ({
+      owned,
+      isOwned,
+      isRequested,
+      isLoading: query.isLoading,
+      error,
+    }),
+    [owned, isOwned, isRequested, query.isLoading, error]
+  );
 }
