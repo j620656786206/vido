@@ -33,9 +33,15 @@ interface ExploreBlockProps {
  */
 export function ExploreBlock({ block, ownership, eager = true, onVisible }: ExploreBlockProps) {
   const sectionRef = useRef<HTMLElement | null>(null);
-  // rootMargin trades a little bandwidth for a smoother reveal — by the time the
-  // user sees the block the posters are already in place.
-  const isInViewport = useInViewport(sectionRef, { rootMargin: '400px', once: true });
+  // Eager blocks already pass their own visibility assertion to parent; skip
+  // mounting a no-op observer for them. rootMargin trades a little bandwidth
+  // for a smoother reveal on lazy blocks — posters are in place by the time
+  // the user sees the block.
+  const isInViewport = useInViewport(sectionRef, {
+    rootMargin: '400px',
+    once: true,
+    disabled: eager,
+  });
   const shouldFetch = eager || isInViewport;
 
   const { data, isLoading, isError } = useExploreBlockContent(shouldFetch ? block.id : undefined);
@@ -76,7 +82,7 @@ export function ExploreBlock({ block, ownership, eager = true, onVisible }: Expl
     >
       <div className="mb-3 flex items-end justify-between">
         <h2
-          className="text-lg font-semibold text-[var(--text-primary)] sm:text-xl"
+          className="text-lg font-semibold text-[var(--text-primary)] md:text-xl"
           data-testid="explore-block-title"
         >
           {block.name}
@@ -174,33 +180,40 @@ interface DisplayItem {
 
 function getBlockItems(data: { movies?: Movie[]; tvShows?: TVShow[] } | undefined): DisplayItem[] {
   if (!data) return [];
-  if (data.movies && data.movies.length > 0) {
-    return data.movies.map((m) => ({
-      id: m.id,
-      type: 'movie' as const,
-      title: m.title,
-      originalTitle: m.originalTitle,
-      posterPath: m.posterPath,
-      releaseDate: m.releaseDate,
-      voteAverage: m.voteAverage,
-      overview: m.overview,
-      genreIds: m.genreIds,
-    }));
+  // Merge both arrays so mixed discover results render side-by-side. Backend
+  // today returns one type per block; this stays correct if that changes.
+  const items: DisplayItem[] = [];
+  if (data.movies?.length) {
+    for (const m of data.movies) {
+      items.push({
+        id: m.id,
+        type: 'movie' as const,
+        title: m.title,
+        originalTitle: m.originalTitle,
+        posterPath: m.posterPath,
+        releaseDate: m.releaseDate,
+        voteAverage: m.voteAverage,
+        overview: m.overview,
+        genreIds: m.genreIds,
+      });
+    }
   }
-  if (data.tvShows && data.tvShows.length > 0) {
-    return data.tvShows.map((t) => ({
-      id: t.id,
-      type: 'tv' as const,
-      title: t.name,
-      originalTitle: t.originalName,
-      posterPath: t.posterPath,
-      releaseDate: t.firstAirDate,
-      voteAverage: t.voteAverage,
-      overview: t.overview,
-      genreIds: t.genreIds,
-    }));
+  if (data.tvShows?.length) {
+    for (const t of data.tvShows) {
+      items.push({
+        id: t.id,
+        type: 'tv' as const,
+        title: t.name,
+        originalTitle: t.originalName,
+        posterPath: t.posterPath,
+        releaseDate: t.firstAirDate,
+        voteAverage: t.voteAverage,
+        overview: t.overview,
+        genreIds: t.genreIds,
+      });
+    }
   }
-  return [];
+  return items;
 }
 
 // "查看更多" routes into the main search view with filter pre-applied when

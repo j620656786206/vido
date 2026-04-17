@@ -1,6 +1,6 @@
 # Story 10.5: Homepage Layout Engine & Responsive Design
 
-Status: review
+Status: done
 
 ## Story
 
@@ -133,11 +133,67 @@ so that the browsing experience feels like a modern streaming app on both deskto
 - `apps/web/src/components/dashboard/DownloadPanel.spec.tsx` — `renderPanel` takes props, added 3 `hideWhenEmpty` tests (disconnected, empty-connected, loading-no-flash).
 - `apps/web/src/test-setup.ts` — added IntersectionObserver stub for jsdom.
 - `eslint.config.mjs` — added `IntersectionObserver` + `IntersectionObserverEntry` to global readonlies (DOM APIs used by new code).
-- `_bmad-output/implementation-artifacts/sprint-status.yaml` — 10-5 transitions `ready-for-dev` → `in-progress` → `review`.
-- `_bmad-output/implementation-artifacts/10-5-homepage-layout-responsive.md` — Status flipped to `review`, all tasks `[x]`, Dev Agent Record populated.
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — 10-5 transitions `ready-for-dev` → `in-progress` → `review` → `done`.
+- `_bmad-output/implementation-artifacts/10-5-homepage-layout-responsive.md` — Status flipped to `done`, all tasks `[x]`, Dev Agent Record populated, Senior Developer Review (AI) appended.
+
+**Test Architect expansion (commit 1be8ef4):**
+
+- `tests/e2e/homepage-layout.spec.ts` — 9 new E2E tests (6 P0, 3 P1) covering real-browser AC #1 section order, AC #2 lazy-load + route-loader prefetch, AC #3 hero pixel heights at 390/1440, AC #4 per-block skeleton during deferred fulfillment, AC #5 empty-section hide.
+- `tests/e2e/dashboard.spec.ts` — 4 rewrites updating from old `dashboard-layout` grid testids to Story 10-5's `homepage-root` + `hideWhenEmpty` empty-state behavior.
+- `_bmad-output/automation-summary-10-5.md` — TA automation summary.
+
+**Code Review fixes (commit pending):**
+
+- `apps/web/src/hooks/useTrending.ts` — extracted `fetchTrendingHero(timeWindow)` + exported `HERO_BANNER_STALE_TIME_MS` so the route loader and hook share one source of truth (fixes H2 DRY violation).
+- `apps/web/src/routes/index.tsx` — route loader now calls `fetchTrendingHero('week')` instead of duplicating the merge loop (H2).
+- `apps/web/src/components/homepage/ExploreBlocksList.tsx` — added `anyEnabledInflight` stability gate so ownership POST no longer fires with partial-batch ids during lazy reveal; comment rewritten to accurately describe "≤N POSTs bounded by lazy block count" (H1). `collectIds` now merges movies + tvShows (M4).
+- `apps/web/src/components/homepage/ExploreBlock.tsx` — `useInViewport` called with `disabled: eager` so above-the-fold blocks don't mount a no-op observer (M3); `getBlockItems` merges movies + tvShows (M4); title upgraded to `md:text-xl` at 768px (not `sm:` 640px) to match mobile/desktop spec (L2).
+- `apps/web/src/hooks/useInViewport.ts` — added `disabled?: boolean` option; eager callers skip observer mount entirely. `ref` in deps array documented as defensive (L1).
+- `tests/e2e/homepage-layout.spec.ts` — removed loose `hits.b4 <= 1` assertion that passed whether or not lazy-load worked (M1); b3 fetch-on-scroll remains the authoritative proof.
 
 ### Change Log
 
 | Date | Summary |
 |------|---------|
 | 2026-04-17 | Story 10-5 implemented end-to-end. Refactored homepage to vertical flex stack (Hero → Explore → Recent → Downloads, gap-6 md:gap-8); HeroBanner height moved from vh-based to story-prescribed `h-[250px] md:h-[400px]`; Intersection-Observer lazy-load for below-the-fold explore blocks (eager count 2); route-loader prefetch of trending hero via shared queryClient singleton; `hideWhenEmpty` prop on `RecentMediaPanel`/`DownloadPanel` implements AC #5 for homepage only. Extracted `ExploreBlockSkeleton` and `useInViewport` as reusable primitives. +17 new web tests, 1738/1738 Vitest PASS, full Go regression PASS, `lint:all` 0 errors. UX verification against hp1/hp2/hp4 Pencil mocks PASS. |
+| 2026-04-17 | TA expansion — +9 E2E tests (`tests/e2e/homepage-layout.spec.ts`) closing jsdom-observable gaps: real-router DOM section order, IntersectionObserver lazy-load proven at network layer, route-loader prefetch on Link hover, per-block skeleton during deferred-fetch, empty panels absent from live DOM. Updated 4 `tests/e2e/dashboard.spec.ts` tests that were structurally broken by Story 10-5's grid→flex + hideWhenEmpty changes. |
+| 2026-04-17 | Code review (Murat /code-review) — 2 HIGH + 4 MED + 2 LOW all fixed. **H1:** added `anyEnabledInflight` stability gate to ownership POST; comment rewritten (was falsely claiming "single POST" under lazy-load — actual bound is ≤N POSTs where N = lazy block count + 1). **H2:** extracted `fetchTrendingHero` + `HERO_BANNER_STALE_TIME_MS` so route-loader and hook share one source of truth — removes the byte-identical duplicate loop and the "remember to update both places" comment. **M1:** deleted loose b4 lazy-load assertion (accepted 0-or-1 hits, proved nothing). **M3:** `useInViewport` gains `disabled` option; eager blocks skip observer mount. **M4:** `collectIds` + `getBlockItems` merge movies + tvShows (was early-return picking only one type). **L1:** `ref` in useEffect deps documented as defensive exhaustive-deps pattern. **L2:** explore-block title uses `md:text-xl` (768px) to match mobile/desktop spec, not `sm:text-xl` (640px). 1738/1738 Vitest PASS, nx test api PASS, lint:all 0 errors. |
+
+---
+
+## Senior Developer Review (AI)
+
+**Reviewer:** Murat (Master Test Architect) — BMM `/code-review` workflow
+**Date:** 2026-04-17
+**Outcome:** **Approve (with fixes applied)**
+
+### Summary
+
+Implementation delivers every AC with coherent tests and strong UX alignment. Adversarial review surfaced 8 issues (2 HIGH, 4 MED, 2 LOW) — all fixed in this pass. The primary H1 concern was a mislabeled contract: the in-code comment and story claim asserted "single POST per homepage" for ownership lookup, but lazy-load inherently makes this a ≤N-POST bound. A stability gate was added so each POST covers a full settled batch (no partial-batch waste), and the claim was corrected.
+
+### Key Findings — All Resolved
+
+| # | Severity | Area | Resolution |
+|---|----------|------|-----------|
+| H1 | HIGH | Ownership contract accuracy | Added `anyEnabledInflight` gate + corrected contract comment (ExploreBlocksList.tsx) |
+| H2 | HIGH | DRY — route loader duplicated useTrendingHero queryFn byte-for-byte | Extracted `fetchTrendingHero` + `HERO_BANNER_STALE_TIME_MS` (useTrending.ts) |
+| M1 | MED | Flaky `hits.b4 <= 1` assertion | Removed; b3 fetch-on-scroll is the authoritative proof (homepage-layout.spec.ts) |
+| M2 | MED | Story File List incomplete (missing TA artifacts) | Added `tests/e2e/homepage-layout.spec.ts`, updated dashboard.spec.ts, automation-summary |
+| M3 | MED | No-op IntersectionObserver on eager blocks | `useInViewport({ disabled })` option; ExploreBlock passes `disabled: eager` |
+| M4 | MED | `collectIds` / `getBlockItems` silently drop mixed content | Both functions now merge movies + tvShows |
+| L1 | LOW | `ref` in useEffect deps | Documented as defensive exhaustive-deps pattern |
+| L2 | LOW | Title breakpoint `sm:` vs spec `md:` | Changed to `md:text-xl` |
+
+### AC Validation
+
+| AC | Status | Evidence |
+|----|--------|----------|
+| #1 Section order Hero→Explore→Recent→Downloads | ✅ | routes/index.tsx + routes/index.spec.tsx + homepage-layout.spec.ts |
+| #2 LCP < 2s | ✅ | Lazy-load + route prefetch + w1280 hero baseline; measured on NAS deploy |
+| #3 Mobile compact + responsive | ✅ | h-[250px] md:h-[400px]; homepage-layout.spec.ts pixel-verifies 390/1440 |
+| #4 Per-block skeleton | ✅ | ExploreBlockSkeleton + per-block isLoading gating |
+| #5 Empty sections hidden | ✅ | hideWhenEmpty prop + loading-no-flash coverage |
+
+### Gate Decision: PASS
+
+All HIGH and MED issues fixed; ACs fully implemented; regression gates green (Vitest 1738/1738, nx test api, lint:all 0 errors). Story transitions to `done`.

@@ -393,12 +393,8 @@ test.describe('Homepage lazy-load @ui @homepage @story-10-5', () => {
     // Scrolling b3 into view triggers its content fetch.
     await page.getByTestId('explore-block-b3').scrollIntoViewIfNeeded();
     await expect.poll(() => hits.b3).toBe(1);
-    // b4 still below the fold, still zero (rootMargin is 400px, one extra
-    // block height — but positioned far enough down that it stays untouched).
-    // Note: if the tester's block height is small enough that rootMargin
-    // picks up b4 too, this assertion may need loosening; adjust to `>=1` and
-    // keep the key assertion on b3.
-    expect(hits.b4).toBeLessThanOrEqual(1);
+    // (b4 behavior is not asserted — rootMargin + variable block height make
+    // it non-deterministic. b3's fetch-on-scroll is the authoritative proof.)
   });
 
   test('[P1] AC #2 — route loader prefetches trending hero BEFORE navigation when a Link to "/" is hovered', async ({

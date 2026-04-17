@@ -7,6 +7,9 @@ interface UseInViewportOptions {
   // Story 10-5 Task 2.3 — once a block becomes visible we never want to tear
   // down the query that was just fired, so "once" is the right default.
   once?: boolean;
+  // Caller already knows the node is in-viewport (e.g. an eager, above-the-
+  // fold block) — skip mounting an observer entirely and return true.
+  disabled?: boolean;
 }
 
 /**
@@ -23,11 +26,17 @@ interface UseInViewportOptions {
  */
 export function useInViewport(
   ref: RefObject<Element | null>,
-  { rootMargin = '0px', threshold = 0, once = true }: UseInViewportOptions = {}
+  { rootMargin = '0px', threshold = 0, once = true, disabled = false }: UseInViewportOptions = {}
 ): boolean {
-  const [isInViewport, setIsInViewport] = useState(false);
+  const [isInViewport, setIsInViewport] = useState(disabled);
 
   useEffect(() => {
+    // Caller already asserted visibility — skip observer entirely.
+    if (disabled) {
+      setIsInViewport(true);
+      return;
+    }
+
     const node = ref.current;
     if (!node) return;
     if (typeof IntersectionObserver === 'undefined') {
@@ -57,7 +66,9 @@ export function useInViewport(
 
     observer.observe(node);
     return () => observer.disconnect();
-  }, [ref, rootMargin, threshold, once]);
+    // `ref` is a stable RefObject — reading `ref.current` inside the effect
+    // is sufficient; including `ref` in deps would be a no-op.
+  }, [rootMargin, threshold, once, disabled, ref]);
 
   return isInViewport;
 }

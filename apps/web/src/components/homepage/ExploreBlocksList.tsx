@@ -19,18 +19,23 @@ const EAGER_BLOCK_COUNT = 2;
  *
  * Story 10.3 AC #1, #5.
  *
- * Story 10-4 AC #4 — availability lookup is hoisted here so a multi-block
- * homepage still issues a single `POST /media/check-owned`. The parent owns
- * the ownership query; children receive `isOwned` / `isRequested` predicates
- * as props instead of each running their own hook. Block content is observed
+ * Story 10-4 AC #4 — availability lookup is hoisted here so each visibility
+ * batch issues ONE `POST /media/check-owned` covering every enabled block,
+ * not one POST per block (the pre-10-4 N+1 pattern). Children receive
+ * `isOwned` / `isRequested` predicates as props; block content is observed
  * via `useQueries` with the same keys the children use, so TanStack Query
- * dedupes the fetches — no extra network traffic.
+ * dedupes the fetches.
  *
- * Story 10-5 Task 2.3 — below-the-fold blocks are lazy-loaded. The parent
- * tracks which indices have scrolled into view and enables each useQueries
- * slot only once its block is eager (above-the-fold) or visible. The shared
- * cache keys mean the child's useExploreBlockContent hook and the parent's
- * useQueries fetch once, never twice.
+ * Story 10-5 Task 2.3 — below-the-fold blocks are lazy-loaded. As lazy
+ * blocks reveal, each newly-settled batch expands the id list and triggers
+ * a fresh ownership POST (cumulative — includes every id seen so far). So a
+ * 4-block homepage (2 eager + 2 lazy, user scrolls to the end) issues up to
+ * 3 POSTs: one when eagers settle, one per lazy-block settle. Cannot be
+ * further reduced without giving up the lazy-load bandwidth win.
+ *
+ * The `tmdbIds` memo intentionally does NOT update while a currently-enabled
+ * content query is inflight — prevents firing a mid-fetch POST with only a
+ * partial batch, which would double-up when the remaining query settles.
  */
 export function ExploreBlocksList() {
   const { data, isLoading, isError } = useExploreBlocks();
@@ -84,13 +89,23 @@ function ExploreBlocksListInner({ blocks }: { blocks: ExploreBlockType[] }) {
     })),
   });
 
+  // Stability gate: if ANY currently-enabled content query is still inflight,
+  // skip the ownership recompute this render. Otherwise a lazy-block reveal
+  // would trigger one POST for the partial batch (just the eagers) and then a
+  // second POST once the lazy block resolves. Waiting for the full enabled
+  // batch to settle collapses that to one POST per batch.
+  const anyEnabledInflight = blocks.some(
+    (_, index) => isEager(index) && contentQueries[index]?.isLoading
+  );
+
   const tmdbIds = useMemo(() => {
+    if (anyEnabledInflight) return [];
     const ids: number[] = [];
     for (const q of contentQueries) {
       ids.push(...collectIds(q.data));
     }
     return ids;
-  }, [contentQueries]);
+  }, [contentQueries, anyEnabledInflight]);
 
   const ownership = useOwnedMedia(tmdbIds);
 
@@ -111,7 +126,10 @@ function ExploreBlocksListInner({ blocks }: { blocks: ExploreBlockType[] }) {
 
 function collectIds(data: { movies?: Movie[]; tvShows?: TVShow[] } | undefined): number[] {
   if (!data) return [];
-  if (data.movies?.length) return data.movies.map((m) => m.id);
-  if (data.tvShows?.length) return data.tvShows.map((t) => t.id);
-  return [];
+  // Merge both arrays — a block can in principle return both types (mixed
+  // discover results). `useOwnedMedia` dedupes anyway, so belt-and-braces.
+  const ids: number[] = [];
+  if (data.movies?.length) ids.push(...data.movies.map((m) => m.id));
+  if (data.tvShows?.length) ids.push(...data.tvShows.map((t) => t.id));
+  return ids;
 }
