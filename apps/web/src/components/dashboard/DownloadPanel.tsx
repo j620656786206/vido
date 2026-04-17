@@ -10,9 +10,13 @@ import { StatusIcon } from '../downloads/StatusIcon';
 
 interface DownloadPanelProps {
   className?: string;
+  // Story 10-5 AC #5 — on the homepage the panel must disappear when there are
+  // no active downloads (the "e.g., no downloads" case in the AC). Other
+  // surfaces (e.g. /downloads) keep the disconnected / empty states.
+  hideWhenEmpty?: boolean;
 }
 
-export function DownloadPanel({ className }: DownloadPanelProps) {
+export function DownloadPanel({ className, hideWhenEmpty = false }: DownloadPanelProps) {
   const { data: config, isLoading: configLoading } = useQBittorrentConfig();
   const { data: downloads, isLoading: downloadsLoading } = useDownloads();
   const [isExpanded, setIsExpanded] = useState(true);
@@ -21,6 +25,10 @@ export function DownloadPanel({ className }: DownloadPanelProps) {
   const isLoading = configLoading || (isConnected && downloadsLoading);
   const downloadItems = downloads?.items ?? [];
   const downloadCount = isConnected && downloads ? downloads.totalItems : 0;
+
+  if (hideWhenEmpty && !isLoading && (!isConnected || downloadItems.length === 0)) {
+    return null;
+  }
 
   return (
     <div

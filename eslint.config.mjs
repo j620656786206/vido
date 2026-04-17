@@ -91,6 +91,8 @@ export default [
         AbortSignal: 'readonly',
         EventSource: 'readonly',
         MessageEvent: 'readonly',
+        IntersectionObserver: 'readonly',
+        IntersectionObserverEntry: 'readonly',
         // Node globals
         process: 'readonly',
         __dirname: 'readonly',

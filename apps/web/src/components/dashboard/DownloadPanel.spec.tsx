@@ -25,13 +25,13 @@ import { useQBittorrentConfig } from '../../hooks/useQBittorrent';
 const mockUseDownloads = vi.mocked(useDownloads);
 const mockUseQBConfig = vi.mocked(useQBittorrentConfig);
 
-function renderPanel() {
+function renderPanel(props: { hideWhenEmpty?: boolean } = {}) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
 
   const rootRoute = createRootRoute({
-    component: () => React.createElement(DownloadPanel),
+    component: () => React.createElement(DownloadPanel, props),
   });
   const downloadsRoute = createRoute({
     getParentRoute: () => rootRoute,
@@ -269,6 +269,26 @@ describe('DownloadPanel', () => {
     const heading = screen.getByRole('heading', { name: '下載中' });
     // The badge would be a sibling span with a number — it should not exist
     expect(heading.parentElement?.querySelector('.rounded-full')).toBeNull();
+  });
+
+  it('[P1] Story 10-5 AC #5 — hideWhenEmpty hides the panel when disconnected', async () => {
+    mockDisconnected();
+    renderPanel({ hideWhenEmpty: true });
+    expect(screen.queryByTestId('download-panel')).toBeNull();
+    expect(screen.queryByText('qBittorrent 未連線')).toBeNull();
+  });
+
+  it('[P1] Story 10-5 AC #5 — hideWhenEmpty hides the panel when connected but no downloads', async () => {
+    mockConnected([]);
+    renderPanel({ hideWhenEmpty: true });
+    expect(screen.queryByTestId('download-panel')).toBeNull();
+    expect(screen.queryByText('目前沒有下載任務')).toBeNull();
+  });
+
+  it('[P1] Story 10-5 AC #5 — hideWhenEmpty still renders the panel during loading (no flash)', async () => {
+    mockLoading();
+    renderPanel({ hideWhenEmpty: true });
+    expect(await screen.findByTestId('download-panel-loading')).toBeInTheDocument();
   });
 
   it('[P2] each download item has detail link with aria-label', async () => {

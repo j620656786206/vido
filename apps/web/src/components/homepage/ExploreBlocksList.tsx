@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useQueries } from '@tanstack/react-query';
 import { useExploreBlocks, exploreBlockKeys } from '../../hooks/useExploreBlocks';
 import { useOwnedMedia } from '../../hooks/useOwnedMedia';
@@ -8,6 +8,9 @@ import type { ExploreBlock as ExploreBlockType } from '../../services/exploreBlo
 import type { Movie, TVShow } from '../../types/tmdb';
 
 const FIVE_MINUTES = 5 * 60 * 1000;
+// Story 10-5 Task 2.3 — above-the-fold blocks that MUST fetch immediately to
+// keep LCP under 2s. The rest wait until their IntersectionObserver fires.
+const EAGER_BLOCK_COUNT = 2;
 
 /**
  * ExploreBlocksList — renders every configured explore block in sort_order.
@@ -22,6 +25,12 @@ const FIVE_MINUTES = 5 * 60 * 1000;
  * as props instead of each running their own hook. Block content is observed
  * via `useQueries` with the same keys the children use, so TanStack Query
  * dedupes the fetches — no extra network traffic.
+ *
+ * Story 10-5 Task 2.3 — below-the-fold blocks are lazy-loaded. The parent
+ * tracks which indices have scrolled into view and enables each useQueries
+ * slot only once its block is eager (above-the-fold) or visible. The shared
+ * cache keys mean the child's useExploreBlockContent hook and the parent's
+ * useQueries fetch once, never twice.
  */
 export function ExploreBlocksList() {
   const { data, isLoading, isError } = useExploreBlocks();
@@ -46,15 +55,32 @@ export function ExploreBlocksList() {
 }
 
 function ExploreBlocksListInner({ blocks }: { blocks: ExploreBlockType[] }) {
+  const [visibleIndices, setVisibleIndices] = useState<Set<number>>(() => new Set());
+
+  const markVisible = useCallback((index: number) => {
+    setVisibleIndices((prev) => {
+      if (prev.has(index)) return prev;
+      const next = new Set(prev);
+      next.add(index);
+      return next;
+    });
+  }, []);
+
+  const isEager = useCallback(
+    (index: number) => index < EAGER_BLOCK_COUNT || visibleIndices.has(index),
+    [visibleIndices]
+  );
+
   // useQueries handles a dynamic number of queries safely (no rules-of-hooks
   // violation when block count changes). Shares keys with the child's
   // useExploreBlockContent so children hit the cache.
   const contentQueries = useQueries({
-    queries: blocks.map((block) => ({
+    queries: blocks.map((block, index) => ({
       queryKey: exploreBlockKeys.content(block.id),
       queryFn: () => exploreBlockService.getContent(block.id),
       staleTime: FIVE_MINUTES,
       retry: 1,
+      enabled: isEager(index),
     })),
   });
 
@@ -69,9 +95,15 @@ function ExploreBlocksListInner({ blocks }: { blocks: ExploreBlockType[] }) {
   const ownership = useOwnedMedia(tmdbIds);
 
   return (
-    <div data-testid="explore-blocks-list" className="bg-[var(--bg-primary)]">
-      {blocks.map((block) => (
-        <ExploreBlock key={block.id} block={block} ownership={ownership} />
+    <div data-testid="explore-blocks-list" className="flex flex-col gap-6 md:gap-8">
+      {blocks.map((block, index) => (
+        <ExploreBlock
+          key={block.id}
+          block={block}
+          ownership={ownership}
+          eager={index < EAGER_BLOCK_COUNT}
+          onVisible={() => markVisible(index)}
+        />
       ))}
     </div>
   );

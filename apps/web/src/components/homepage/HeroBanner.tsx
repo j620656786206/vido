@@ -171,7 +171,7 @@ export function HeroBanner() {
       <section
         data-testid="hero-banner-skeleton"
         aria-busy="true"
-        className="relative h-[40vh] w-full overflow-hidden bg-[var(--bg-secondary)] sm:h-[50vh] lg:h-[70vh]"
+        className="relative h-[250px] w-full overflow-hidden bg-[var(--bg-secondary)] md:h-[400px]"
       >
         <div className="h-full w-full animate-pulse bg-[var(--bg-tertiary)]" />
       </section>
@@ -194,7 +194,10 @@ export function HeroBanner() {
       <section
         data-testid="hero-banner"
         aria-label="熱門推薦輪播"
-        className="relative h-[40vh] w-full overflow-hidden bg-black sm:h-[50vh] lg:h-[70vh]"
+        // Story 10-5 Task 4.1 — hero uses fixed heights rather than vh so the
+        // layout is predictable across device classes (mobile compact 250px,
+        // desktop 400px at md+). Matches design tokens in hp1/hp2 Pencil mocks.
+        className="relative h-[250px] w-full overflow-hidden bg-black md:h-[400px]"
         onMouseEnter={() => setIsPaused(true)}
         onMouseLeave={() => setIsPaused(false)}
       >

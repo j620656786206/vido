@@ -19,13 +19,13 @@ import { useRecentMedia } from '../../hooks/useDashboardData';
 
 const mockUseRecentMedia = vi.mocked(useRecentMedia);
 
-function renderPanel() {
+function renderPanel(props: { hideWhenEmpty?: boolean } = {}) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
 
   const rootRoute = createRootRoute({
-    component: () => React.createElement(RecentMediaPanel),
+    component: () => React.createElement(RecentMediaPanel, props),
   });
   const libraryRoute = createRoute({
     getParentRoute: () => rootRoute,
@@ -233,6 +233,29 @@ describe('RecentMediaPanel', () => {
     expect(img).toBeTruthy();
     expect(img.getAttribute('loading')).toBe('lazy');
     expect((img as HTMLImageElement).src).toContain('poster1.jpg');
+  });
+
+  it('[P1] Story 10-5 AC #5 — hideWhenEmpty hides the panel entirely when media is empty', async () => {
+    mockUseRecentMedia.mockReturnValue({
+      data: [],
+      isLoading: false,
+      isSuccess: true,
+      error: null,
+    } as ReturnType<typeof useRecentMedia>);
+    renderPanel({ hideWhenEmpty: true });
+    expect(screen.queryByTestId('recent-media-panel')).toBeNull();
+    expect(screen.queryByText('媒體庫中還沒有內容')).toBeNull();
+  });
+
+  it('[P1] Story 10-5 AC #5 — hideWhenEmpty still renders the panel during loading (no flash)', async () => {
+    mockUseRecentMedia.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      isSuccess: false,
+      error: null,
+    } as ReturnType<typeof useRecentMedia>);
+    renderPanel({ hideWhenEmpty: true });
+    expect(await screen.findByTestId('recent-media-loading')).toBeInTheDocument();
   });
 
   it('[P2] does not show year when year is absent', async () => {

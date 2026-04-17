@@ -1,5 +1,33 @@
 import '@testing-library/jest-dom/vitest';
 
+// jsdom does not implement IntersectionObserver. Homepage explore blocks use it
+// to lazy-load below-the-fold content (Story 10-5 Task 2.3). Provide an inert
+// stub — tests that need to simulate intersection override it per-spec.
+if (typeof globalThis.IntersectionObserver === 'undefined') {
+  class MockIntersectionObserver {
+    root = null;
+    rootMargin = '';
+    thresholds: number[] = [];
+    observe(): void {
+      /* no-op */
+    }
+    unobserve(): void {
+      /* no-op */
+    }
+    disconnect(): void {
+      /* no-op */
+    }
+    takeRecords(): IntersectionObserverEntry[] {
+      return [];
+    }
+  }
+  Object.defineProperty(globalThis, 'IntersectionObserver', {
+    value: MockIntersectionObserver,
+    writable: true,
+    configurable: true,
+  });
+}
+
 // Mock URL.createObjectURL for jsdom environment
 if (typeof URL.createObjectURL === 'undefined') {
   URL.createObjectURL = () => 'blob:mock-url';

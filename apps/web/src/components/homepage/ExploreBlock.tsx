@@ -1,12 +1,13 @@
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { Link } from '@tanstack/react-router';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 import { useExploreBlockContent } from '../../hooks/useExploreBlocks';
+import { useInViewport } from '../../hooks/useInViewport';
 import type { OwnedMediaState } from '../../hooks/useOwnedMedia';
 import type { ExploreBlock as ExploreBlockType } from '../../services/exploreBlockService';
 import type { Movie, TVShow } from '../../types/tmdb';
 import { PosterCard } from '../media/PosterCard';
-import { PosterCardSkeleton } from '../media/PosterCardSkeleton';
+import { ExploreBlockSkeleton } from './ExploreBlockSkeleton';
 import { cn } from '../../lib/utils';
 
 interface ExploreBlockProps {
@@ -14,6 +15,14 @@ interface ExploreBlockProps {
   // Story 10-4 AC #4 — ownership state is owned by the parent
   // ExploreBlocksList so a multi-block homepage issues one POST, not N.
   ownership: OwnedMediaState;
+  // Story 10-5 Task 2.3 — above-the-fold blocks fetch immediately; below-the-fold
+  // blocks wait until they approach the viewport before firing their network
+  // request. Defaults to eager=true so existing single-block tests stay green.
+  eager?: boolean;
+  // Parent callback so ExploreBlocksList can enable its own useQueries slot
+  // once the block becomes visible (keeps hoisted ownership in sync — see
+  // Story 10-4 AC #4).
+  onVisible?: () => void;
 }
 
 /**
@@ -22,12 +31,24 @@ interface ExploreBlockProps {
  * Story 10.3 AC #1. Hides itself gracefully on empty / error to avoid
  * rendering a broken stub on the homepage (mirrors HeroBanner AC #5 pattern).
  */
-export function ExploreBlock({ block, ownership }: ExploreBlockProps) {
-  const { data, isLoading, isError } = useExploreBlockContent(block.id);
+export function ExploreBlock({ block, ownership, eager = true, onVisible }: ExploreBlockProps) {
+  const sectionRef = useRef<HTMLElement | null>(null);
+  // rootMargin trades a little bandwidth for a smoother reveal — by the time the
+  // user sees the block the posters are already in place.
+  const isInViewport = useInViewport(sectionRef, { rootMargin: '400px', once: true });
+  const shouldFetch = eager || isInViewport;
+
+  const { data, isLoading, isError } = useExploreBlockContent(shouldFetch ? block.id : undefined);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
 
   const items = useMemo(() => getBlockItems(data), [data]);
   const { isOwned, isRequested } = ownership;
+
+  // Notify the parent once per block so its useQueries slot enables — shared
+  // TanStack Query cache means only one network request is actually issued.
+  useEffect(() => {
+    if (isInViewport && !eager && onVisible) onVisible();
+  }, [isInViewport, eager, onVisible]);
 
   if (isError) return null;
 
@@ -42,11 +63,16 @@ export function ExploreBlock({ block, ownership }: ExploreBlockProps) {
     el.scrollBy({ left: delta, behavior: 'smooth' });
   };
 
+  // While waiting to enter the viewport (lazy) or while the query is inflight,
+  // we still want to reserve space so the page doesn't jitter as blocks pop in.
+  const showSkeleton = !shouldFetch || isLoading;
+
   return (
     <section
+      ref={sectionRef}
       data-testid={`explore-block-${block.id}`}
       aria-label={block.name}
-      className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6"
+      className="mx-auto w-full max-w-7xl px-4 sm:px-6"
     >
       <div className="mb-3 flex items-end justify-between">
         <h2
@@ -87,27 +113,18 @@ export function ExploreBlock({ block, ownership }: ExploreBlockProps) {
           <ChevronRight className="h-5 w-5" />
         </button>
 
-        <div
-          ref={scrollerRef}
-          data-testid="explore-block-scroller"
-          className={cn(
-            'flex gap-4 overflow-x-auto pb-2 snap-x',
-            'scrollbar-thin scrollbar-thumb-[var(--bg-tertiary)]'
-          )}
-        >
-          {isLoading &&
-            Array.from({ length: 6 }).map((_, i) => (
-              <div
-                key={`skeleton-${i}`}
-                className="w-[140px] shrink-0 snap-start sm:w-[160px]"
-                data-testid="explore-block-skeleton"
-              >
-                <PosterCardSkeleton />
-              </div>
-            ))}
-
-          {!isLoading &&
-            items.map((item) => (
+        {showSkeleton ? (
+          <ExploreBlockSkeleton />
+        ) : (
+          <div
+            ref={scrollerRef}
+            data-testid="explore-block-scroller"
+            className={cn(
+              'flex gap-4 overflow-x-auto pb-2 snap-x',
+              'scrollbar-thin scrollbar-thumb-[var(--bg-tertiary)]'
+            )}
+          >
+            {items.map((item) => (
               <div
                 key={`${item.type}-${item.id}`}
                 className="w-[140px] shrink-0 snap-start sm:w-[160px]"
@@ -128,15 +145,16 @@ export function ExploreBlock({ block, ownership }: ExploreBlockProps) {
               </div>
             ))}
 
-          {!isLoading && items.length === 0 && (
-            <div
-              className="py-8 text-sm text-[var(--text-muted)]"
-              data-testid="explore-block-empty"
-            >
-              沒有符合條件的內容
-            </div>
-          )}
-        </div>
+            {items.length === 0 && (
+              <div
+                className="py-8 text-sm text-[var(--text-muted)]"
+                data-testid="explore-block-empty"
+              >
+                沒有符合條件的內容
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </section>
   );

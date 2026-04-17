@@ -7,11 +7,19 @@ import type { RecentMedia } from '../../services/mediaService';
 
 interface RecentMediaPanelProps {
   className?: string;
+  // Story 10-5 AC #5 — when rendered on the homepage, a section with no data
+  // must disappear entirely (no empty-state UI). Non-homepage callers (if any
+  // later arise) keep the default "媒體庫中還沒有內容" placeholder.
+  hideWhenEmpty?: boolean;
 }
 
-export function RecentMediaPanel({ className }: RecentMediaPanelProps) {
+export function RecentMediaPanel({ className, hideWhenEmpty = false }: RecentMediaPanelProps) {
   const { data: recentMedia, isLoading } = useRecentMedia(8);
   const [isExpanded, setIsExpanded] = useState(true);
+
+  if (hideWhenEmpty && !isLoading && (!recentMedia || recentMedia.length === 0)) {
+    return null;
+  }
 
   return (
     <div
