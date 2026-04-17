@@ -230,6 +230,9 @@ func (m *mockPQMovieRepo) FindAllWithFilePath(_ context.Context) ([]models.Movie
 func (m *mockPQMovieRepo) GetStats(_ context.Context) (*repository.MediaStats, error) {
 	return &repository.MediaStats{}, nil
 }
+func (m *mockPQMovieRepo) FindOwnedTMDbIDs(_ context.Context, _ []int64) ([]int64, error) {
+	return nil, nil
+}
 
 var _ repository.MovieRepositoryInterface = (*mockPQMovieRepo)(nil)
 
@@ -303,6 +306,9 @@ func (m *mockPQSeriesRepo) FindNeedingSubtitleSearch(_ context.Context, _ time.T
 }
 func (m *mockPQSeriesRepo) GetStats(_ context.Context) (*repository.MediaStats, error) {
 	return &repository.MediaStats{}, nil
+}
+func (m *mockPQSeriesRepo) FindOwnedTMDbIDs(_ context.Context, _ []int64) ([]int64, error) {
+	return nil, nil
 }
 
 var _ repository.SeriesRepositoryInterface = (*mockPQSeriesRepo)(nil)

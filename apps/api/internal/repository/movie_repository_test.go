@@ -804,6 +804,101 @@ func TestMovieFindByTMDbIDNotFound(t *testing.T) {
 	}
 }
 
+// TestMovieFindOwnedTMDbIDs verifies batch ownership lookup semantics (Story 10-4).
+func TestMovieFindOwnedTMDbIDs(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	// Seed: owned (603), owned (157336), owned-but-removed (238), and nothing for 999999.
+	seedMovies := []*models.Movie{
+		{
+			ID:          "m-603",
+			Title:       "The Matrix",
+			ReleaseDate: "1999-03-31",
+			Genres:      []string{"Action"},
+			TMDbID:      models.NewNullInt64(603),
+			IsRemoved:   false,
+		},
+		{
+			ID:          "m-157336",
+			Title:       "Interstellar",
+			ReleaseDate: "2014-11-07",
+			Genres:      []string{"Drama"},
+			TMDbID:      models.NewNullInt64(157336),
+			IsRemoved:   false,
+		},
+		{
+			ID:          "m-238",
+			Title:       "The Godfather (soft-deleted)",
+			ReleaseDate: "1972-03-14",
+			Genres:      []string{"Drama"},
+			TMDbID:      models.NewNullInt64(238),
+			IsRemoved:   true,
+		},
+	}
+	for _, m := range seedMovies {
+		if err := repo.Create(ctx, m); err != nil {
+			t.Fatalf("seed failed for %s: %v", m.Title, err)
+		}
+	}
+
+	t.Run("returns subset of owned non-removed ids", func(t *testing.T) {
+		owned, err := repo.FindOwnedTMDbIDs(ctx, []int64{603, 157336, 238, 999999})
+		if err != nil {
+			t.Fatalf("FindOwnedTMDbIDs error: %v", err)
+		}
+		got := map[int64]bool{}
+		for _, id := range owned {
+			got[id] = true
+		}
+		if !got[603] || !got[157336] {
+			t.Errorf("expected 603 and 157336 owned, got %v", owned)
+		}
+		if got[238] {
+			t.Error("expected soft-deleted 238 to be excluded")
+		}
+		if got[999999] {
+			t.Error("expected non-existent 999999 to be excluded")
+		}
+	})
+
+	t.Run("empty input returns empty slice (not nil)", func(t *testing.T) {
+		owned, err := repo.FindOwnedTMDbIDs(ctx, nil)
+		if err != nil {
+			t.Fatalf("FindOwnedTMDbIDs error: %v", err)
+		}
+		if owned == nil {
+			t.Fatal("expected empty slice, got nil")
+		}
+		if len(owned) != 0 {
+			t.Errorf("expected empty slice, got %v", owned)
+		}
+	})
+
+	t.Run("deduplicates input ids", func(t *testing.T) {
+		owned, err := repo.FindOwnedTMDbIDs(ctx, []int64{603, 603, 603, 157336})
+		if err != nil {
+			t.Fatalf("FindOwnedTMDbIDs error: %v", err)
+		}
+		if len(owned) != 2 {
+			t.Errorf("expected 2 deduplicated ids, got %d (%v)", len(owned), owned)
+		}
+	})
+
+	t.Run("filters out non-positive ids", func(t *testing.T) {
+		owned, err := repo.FindOwnedTMDbIDs(ctx, []int64{0, -1, 603})
+		if err != nil {
+			t.Fatalf("FindOwnedTMDbIDs error: %v", err)
+		}
+		if len(owned) != 1 || owned[0] != 603 {
+			t.Errorf("expected only 603, got %v", owned)
+		}
+	})
+}
+
 // TestMovieFindByIMDbIDNotFound verifies error for non-existent IMDb ID
 func TestMovieFindByIMDbIDNotFound(t *testing.T) {
 	db := setupTestDB(t)

@@ -145,6 +145,7 @@ func main() {
 	// This layered architecture enables testing with mock repositories
 	movieService := services.NewMovieService(repos.Movies)
 	seriesService := services.NewSeriesService(repos.Series)
+	availabilityService := services.NewAvailabilityService(repos.Movies, repos.Series) // Story 10-4
 	settingsService := services.NewSettingsServiceWithSecrets(repos.Settings, secretsService)
 	setupService := services.NewSetupService(repos.Settings, secretsService)
 	qbittorrentService := services.NewQBittorrentService(repos.Settings, secretsService)
@@ -447,6 +448,7 @@ func main() {
 	settingsHandler := handlers.NewSettingsHandler(settingsService)
 	setupHandler := handlers.NewSetupHandler(setupService)
 	mediaHandler := handlers.NewMediaHandler(mediaService)
+	availabilityHandler := handlers.NewAvailabilityHandler(availabilityService) // Story 10-4
 	tmdbHandler := handlers.NewTMDbHandler(tmdbService)
 	parserHandler := handlers.NewParserHandler(parserService)
 	metadataHandler := handlers.NewMetadataHandler(metadataService)
@@ -520,6 +522,7 @@ func main() {
 		settingsHandler.RegisterRoutes(apiV1)
 		setupHandler.RegisterRoutes(apiV1)
 		mediaHandler.RegisterRoutes(apiV1)
+		availabilityHandler.RegisterRoutes(apiV1) // /api/v1/media/check-owned (Story 10-4)
 		tmdbHandler.RegisterRoutes(apiV1)
 		parserHandler.RegisterRoutes(apiV1)
 		metadataHandler.RegisterRoutes(apiV1)

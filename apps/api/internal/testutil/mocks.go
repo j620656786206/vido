@@ -164,6 +164,14 @@ func (m *MockMovieRepository) GetStats(ctx context.Context) (*repository.MediaSt
 	return args.Get(0).(*repository.MediaStats), args.Error(1)
 }
 
+func (m *MockMovieRepository) FindOwnedTMDbIDs(ctx context.Context, tmdbIDs []int64) ([]int64, error) {
+	args := m.Called(ctx, tmdbIDs)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]int64), args.Error(1)
+}
+
 // Compile-time interface check
 var _ repository.MovieRepositoryInterface = (*MockMovieRepository)(nil)
 
@@ -296,6 +304,14 @@ func (m *MockSeriesRepository) GetStats(ctx context.Context) (*repository.MediaS
 	return args.Get(0).(*repository.MediaStats), args.Error(1)
 }
 
+func (m *MockSeriesRepository) FindOwnedTMDbIDs(ctx context.Context, tmdbIDs []int64) ([]int64, error) {
+	args := m.Called(ctx, tmdbIDs)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]int64), args.Error(1)
+}
+
 // Compile-time interface check
 var _ repository.SeriesRepositoryInterface = (*MockSeriesRepository)(nil)
 
@@ -323,6 +339,7 @@ func SetupDefaultMovieExpectations(m *MockMovieRepository) {
 	m.On("FindNeedingSubtitleSearch", mock.Anything, mock.Anything).Maybe().Return([]models.Movie(nil), nil)
 	m.On("FindAllWithFilePath", mock.Anything).Maybe().Return([]models.Movie(nil), nil)
 	m.On("GetStats", mock.Anything).Maybe().Return((*repository.MediaStats)(nil), nil)
+	m.On("FindOwnedTMDbIDs", mock.Anything, mock.Anything).Maybe().Return([]int64(nil), nil)
 }
 
 // SetupDefaultSeriesExpectations registers Maybe() expectations that return zero values
@@ -347,4 +364,5 @@ func SetupDefaultSeriesExpectations(m *MockSeriesRepository) {
 	m.On("FindBySubtitleStatus", mock.Anything, mock.Anything).Maybe().Return([]models.Series(nil), nil)
 	m.On("FindNeedingSubtitleSearch", mock.Anything, mock.Anything).Maybe().Return([]models.Series(nil), nil)
 	m.On("GetStats", mock.Anything).Maybe().Return((*repository.MediaStats)(nil), nil)
+	m.On("FindOwnedTMDbIDs", mock.Anything, mock.Anything).Maybe().Return([]int64(nil), nil)
 }

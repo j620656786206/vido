@@ -823,6 +823,68 @@ func (r *SeriesRepository) FindBySubtitleStatus(ctx context.Context, status mode
 	return seriesList, nil
 }
 
+// FindOwnedTMDbIDs returns the subset of the input TMDb IDs that exist in the
+// series table and are not soft-deleted (is_removed = 0). Used by the homepage
+// availability badges (Story 10-4) to detect which trending/explore entries the
+// user already owns. Single query — no N+1.
+//
+// Returns an empty slice if tmdbIDs is empty. Deduplicates the input to keep
+// the SQL placeholder count bounded.
+func (r *SeriesRepository) FindOwnedTMDbIDs(ctx context.Context, tmdbIDs []int64) ([]int64, error) {
+	if len(tmdbIDs) == 0 {
+		return []int64{}, nil
+	}
+
+	seen := make(map[int64]struct{}, len(tmdbIDs))
+	args := make([]interface{}, 0, len(tmdbIDs))
+	placeholders := make([]byte, 0, len(tmdbIDs)*2)
+	for _, id := range tmdbIDs {
+		if id <= 0 {
+			continue
+		}
+		if _, dup := seen[id]; dup {
+			continue
+		}
+		seen[id] = struct{}{}
+		if len(args) > 0 {
+			placeholders = append(placeholders, ',')
+		}
+		placeholders = append(placeholders, '?')
+		args = append(args, id)
+	}
+
+	if len(args) == 0 {
+		return []int64{}, nil
+	}
+
+	query := fmt.Sprintf(
+		`SELECT DISTINCT tmdb_id FROM series WHERE tmdb_id IN (%s) AND is_removed = 0`,
+		string(placeholders),
+	)
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query owned series tmdb ids: %w", err)
+	}
+	defer rows.Close()
+
+	owned := make([]int64, 0, len(args))
+	for rows.Next() {
+		var id sql.NullInt64
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("failed to scan owned series tmdb id: %w", err)
+		}
+		if id.Valid {
+			owned = append(owned, id.Int64)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating owned series tmdb ids: %w", err)
+	}
+
+	return owned, nil
+}
+
 // FindNeedingSubtitleSearch retrieves series not yet searched or last searched before threshold
 func (r *SeriesRepository) FindNeedingSubtitleSearch(ctx context.Context, olderThan time.Time) ([]models.Series, error) {
 	query := fmt.Sprintf(`

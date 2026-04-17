@@ -1,7 +1,8 @@
-import { useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import { Link } from '@tanstack/react-router';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 import { useExploreBlockContent } from '../../hooks/useExploreBlocks';
+import { useOwnedMedia } from '../../hooks/useOwnedMedia';
 import type { ExploreBlock as ExploreBlockType } from '../../services/exploreBlockService';
 import type { Movie, TVShow } from '../../types/tmdb';
 import { PosterCard } from '../media/PosterCard';
@@ -22,9 +23,15 @@ export function ExploreBlock({ block }: ExploreBlockProps) {
   const { data, isLoading, isError } = useExploreBlockContent(block.id);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
 
-  if (isError) return null;
+  // All hooks must run unconditionally — compute items + ownership BEFORE the
+  // early return so the ExploreBlock can be conditionally hidden without
+  // breaking React's rules of hooks.
+  const items = useMemo(() => getBlockItems(data), [data]);
+  // Story 10-4 — batch-check ownership for all visible TMDb IDs in one shot.
+  const tmdbIds = useMemo(() => items.map((i) => i.id), [items]);
+  const { isOwned, isRequested } = useOwnedMedia(tmdbIds);
 
-  const items = getBlockItems(data);
+  if (isError) return null;
 
   // Match the "查看更多" destination to block content type — routes to
   // the matching TMDb discover view pre-scoped to this block's filters.
@@ -117,6 +124,8 @@ export function ExploreBlock({ block }: ExploreBlockProps) {
                   voteAverage={item.voteAverage}
                   overview={item.overview}
                   genreIds={item.genreIds}
+                  isOwned={isOwned(item.id)}
+                  isRequested={isRequested(item.id)}
                 />
               </div>
             ))}

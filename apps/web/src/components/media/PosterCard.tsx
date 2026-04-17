@@ -5,6 +5,7 @@ import { cn } from '../../lib/utils';
 import { getImageUrl, getImageSrcSet, getImageSizes } from '../../lib/image';
 import { HighlightText } from '../ui/HighlightText';
 import { HoverPreviewCard } from './HoverPreviewCard';
+import { AvailabilityBadge } from './AvailabilityBadge';
 
 export interface PosterCardProps {
   id: string;
@@ -18,6 +19,10 @@ export interface PosterCardProps {
   genreIds?: number[];
   metadataSource?: string;
   isNew?: boolean;
+  /** Story 10-4 — the user already owns this title. */
+  isOwned?: boolean;
+  /** Story 10-4 — the user has an open request for this title. Stubbed to false until Phase 3. */
+  isRequested?: boolean;
   highlightQuery?: string;
   onMenuClick?: (e: React.MouseEvent) => void;
   selectable?: boolean;
@@ -37,6 +42,8 @@ export function PosterCard({
   genreIds,
   metadataSource,
   isNew,
+  isOwned,
+  isRequested,
   highlightQuery,
   onMenuClick,
   selectable,
@@ -143,6 +150,13 @@ export function PosterCard({
 
         {/* Badges (top-right) */}
         <div className="absolute right-2 top-2 flex items-center gap-1">
+          {/* Story 10-4 — availability badges win position over 新增 so owners
+              see ownership first. Only one of owned/requested renders. */}
+          {isOwned ? (
+            <AvailabilityBadge variant="owned" />
+          ) : isRequested ? (
+            <AvailabilityBadge variant="requested" />
+          ) : null}
           {isNew && (
             <span
               data-testid="new-badge"

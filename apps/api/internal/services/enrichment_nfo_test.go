@@ -142,6 +142,9 @@ func (m *mockMovieRepoForNFO) FindAllWithFilePath(ctx context.Context) ([]models
 func (m *mockMovieRepoForNFO) GetStats(ctx context.Context) (*repository.MediaStats, error) {
 	return &repository.MediaStats{}, nil
 }
+func (m *mockMovieRepoForNFO) FindOwnedTMDbIDs(ctx context.Context, tmdbIDs []int64) ([]int64, error) {
+	return nil, nil
+}
 
 // ─── Test: NFO enrichment — TMDB direct lookup (AC #2) ─────────────────────
 

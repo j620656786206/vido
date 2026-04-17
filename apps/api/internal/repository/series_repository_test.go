@@ -836,6 +836,79 @@ func TestSeriesFindByIMDbIDNotFound(t *testing.T) {
 	}
 }
 
+// TestSeriesFindOwnedTMDbIDs verifies batch ownership lookup semantics (Story 10-4).
+func TestSeriesFindOwnedTMDbIDs(t *testing.T) {
+	db := setupSeriesTestDB(t)
+	defer db.Close()
+
+	repo := NewSeriesRepository(db)
+	ctx := context.Background()
+
+	seedSeries := []*models.Series{
+		{
+			ID:           "s-1396",
+			Title:        "Breaking Bad",
+			FirstAirDate: "2008-01-20",
+			Genres:       []string{"Drama"},
+			TMDbID:       models.NewNullInt64(1396),
+			IsRemoved:    false,
+		},
+		{
+			ID:           "s-66732",
+			Title:        "Stranger Things",
+			FirstAirDate: "2016-07-15",
+			Genres:       []string{"Drama"},
+			TMDbID:       models.NewNullInt64(66732),
+			IsRemoved:    false,
+		},
+		{
+			ID:           "s-removed",
+			Title:        "Lost (soft-deleted)",
+			FirstAirDate: "2004-09-22",
+			Genres:       []string{"Drama"},
+			TMDbID:       models.NewNullInt64(4607),
+			IsRemoved:    true,
+		},
+	}
+	for _, s := range seedSeries {
+		if err := repo.Create(ctx, s); err != nil {
+			t.Fatalf("seed failed for %s: %v", s.Title, err)
+		}
+	}
+	// SeriesRepository.Create does not write is_removed (relies on DB default 0).
+	// Flip the soft-deleted row manually to mirror production soft-delete flow.
+	if _, err := db.ExecContext(ctx, `UPDATE series SET is_removed = 1 WHERE id = 's-removed'`); err != nil {
+		t.Fatalf("seed soft-delete update failed: %v", err)
+	}
+
+	t.Run("returns subset of owned non-removed ids", func(t *testing.T) {
+		owned, err := repo.FindOwnedTMDbIDs(ctx, []int64{1396, 66732, 4607, 999999})
+		if err != nil {
+			t.Fatalf("FindOwnedTMDbIDs error: %v", err)
+		}
+		got := map[int64]bool{}
+		for _, id := range owned {
+			got[id] = true
+		}
+		if !got[1396] || !got[66732] {
+			t.Errorf("expected 1396 and 66732 owned, got %v", owned)
+		}
+		if got[4607] {
+			t.Error("expected soft-deleted 4607 to be excluded")
+		}
+	})
+
+	t.Run("empty input returns empty slice", func(t *testing.T) {
+		owned, err := repo.FindOwnedTMDbIDs(ctx, []int64{})
+		if err != nil {
+			t.Fatalf("FindOwnedTMDbIDs error: %v", err)
+		}
+		if owned == nil || len(owned) != 0 {
+			t.Errorf("expected empty slice, got %v", owned)
+		}
+	})
+}
+
 // TestSeriesEmptyGenres verifies empty genres handling
 func TestSeriesEmptyGenres(t *testing.T) {
 	db := setupSeriesTestDB(t)

@@ -82,6 +82,11 @@ type MovieRepositoryInterface interface {
 	// GetStats returns aggregate statistics including total and unmatched counts
 	// Needed by: Story 9c-4 (unmatched filter count badge)
 	GetStats(ctx context.Context) (*MediaStats, error)
+
+	// FindOwnedTMDbIDs returns the subset of input TMDb IDs that exist in the movies
+	// table and are not soft-deleted. Single batched query to avoid N+1.
+	// Needed by: Story 10-4 (homepage availability badges)
+	FindOwnedTMDbIDs(ctx context.Context, tmdbIDs []int64) ([]int64, error)
 }
 
 // SeriesRepositoryInterface defines the contract for TV series data access operations.
@@ -151,6 +156,11 @@ type SeriesRepositoryInterface interface {
 	// GetStats returns aggregate statistics including total and unmatched counts
 	// Needed by: Story 9c-4 (unmatched filter count badge)
 	GetStats(ctx context.Context) (*MediaStats, error)
+
+	// FindOwnedTMDbIDs returns the subset of input TMDb IDs that exist in the series
+	// table and are not soft-deleted. Single batched query to avoid N+1.
+	// Needed by: Story 10-4 (homepage availability badges)
+	FindOwnedTMDbIDs(ctx context.Context, tmdbIDs []int64) ([]int64, error)
 }
 
 // SeasonRepositoryInterface defines the contract for season data access operations.

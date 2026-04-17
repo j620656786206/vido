@@ -247,6 +247,40 @@ describe('PosterCard', () => {
     });
   });
 
+  describe('Availability Badges (Story 10-4)', () => {
+    it('renders 已有 badge when isOwned is true (AC #1)', () => {
+      render(<PosterCard {...defaultProps} isOwned={true} />);
+      expect(screen.getByTestId('availability-badge-owned')).toBeInTheDocument();
+      expect(screen.getByText('已有')).toBeInTheDocument();
+    });
+
+    it('renders 已請求 badge when isRequested is true (AC #2)', () => {
+      render(<PosterCard {...defaultProps} isRequested={true} />);
+      expect(screen.getByTestId('availability-badge-requested')).toBeInTheDocument();
+      expect(screen.getByText('已請求')).toBeInTheDocument();
+    });
+
+    it('does not render any availability badge when neither flag is set', () => {
+      render(<PosterCard {...defaultProps} />);
+      expect(screen.queryByTestId('availability-badge-owned')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('availability-badge-requested')).not.toBeInTheDocument();
+    });
+
+    it('prefers 已有 over 已請求 when both flags are set (owned wins)', () => {
+      render(<PosterCard {...defaultProps} isOwned={true} isRequested={true} />);
+      expect(screen.getByTestId('availability-badge-owned')).toBeInTheDocument();
+      expect(screen.queryByTestId('availability-badge-requested')).not.toBeInTheDocument();
+    });
+
+    it('availability badge coexists with isNew and type badges without overlap', () => {
+      render(<PosterCard {...defaultProps} isOwned={true} isNew={true} />);
+      // All three badges must be in the DOM — owned, new, and type.
+      expect(screen.getByTestId('availability-badge-owned')).toBeInTheDocument();
+      expect(screen.getByTestId('new-badge')).toBeInTheDocument();
+      expect(screen.getByText('電影')).toBeInTheDocument();
+    });
+  });
+
   describe('Selection Mode (Story 5-7)', () => {
     it('[P0] renders selection checkbox when selectable is true', () => {
       render(<PosterCard {...defaultProps} selectable={true} />);
