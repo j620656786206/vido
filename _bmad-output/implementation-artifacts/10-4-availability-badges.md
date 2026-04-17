@@ -122,8 +122,14 @@ None — no HALT conditions hit. Full regression gate green on first run after P
 - `apps/web/src/components/media/PosterCard.spec.tsx` — new `Availability Badges (Story 10-4)` describe block (5 tests: owned render, requested render, neither, priority when both, coexistence with isNew + type)
 - `apps/web/src/components/homepage/ExploreBlock.tsx` — wired `useOwnedMedia(tmdbIds)`, passes `isOwned` + `isRequested` to each `PosterCard`; reordered hooks so memoisation runs before the error early-return
 
+**E2E / Test Automation (TEA Murat `/testarch-automate` 2026-04-17) — new:**
+- `tests/e2e/availability-badges.spec.ts` — 6 browser scenarios × 3 projects (chromium + mobile-chrome + mobile-safari) = 18 runs. Closes P0/P1 gaps DEV's unit tests left: real wire roundtrip, snake_case POST body (Rule 18), N+1 batching at network layer, lazy empty-input guard, 500 graceful degradation, flow-g-homepage-mobile positional sanity
+- `tests/e2e/availability.api.spec.ts` — 4 API-level scenarios against the real running backend: contract shape, empty input, missing field (400), over-limit 500-cap guard
+- `_bmad-output/automation-summary-10-4.md` — gap analysis + coverage matrix + next steps
+
 ## Change Log
 
 | Date       | Change                                                                                                                                                                                    |
 | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 2026-04-17 | Story 10-4 implemented end-to-end: `POST /api/v1/media/check-owned` (Amelia `/dev-story`). Backend: new `AvailabilityService` + `AvailabilityHandler` + `FindOwnedTMDbIDs` on both repositories. Frontend: `AvailabilityBadge` component, `useOwnedMedia` hook, `PosterCard` props, `ExploreBlock` integration. 13 new Go tests + 47 new web tests (total web 1721/1721 PASS). Full regression gate green (nx test api + nx test web + lint:all). All 5 ACs satisfied. Story path adjusted `/movies/check-owned` → `/media/check-owned` for cross-type semantic clarity — rationale in Completion Notes. |
+| 2026-04-17 | TA expansion (Murat `/testarch-automate`). Added `tests/e2e/availability-badges.spec.ts` (6 browser scenarios × 3 projects = 18 runs) closing P0/P1 gaps DEV's unit tests couldn't cover: real wire roundtrip, Rule 18 snake_case POST body, N+1 batching at network layer, lazy empty-input guard, 500 graceful degradation, flow-g-homepage-mobile positional sanity. Added `tests/e2e/availability.api.spec.ts` (4 contract scenarios) against the real backend: shape, empty, missing field, 500-cap over-limit. All 22 new runs PASS; lint:all 0 errors. Automation summary at `_bmad-output/automation-summary-10-4.md`. |
