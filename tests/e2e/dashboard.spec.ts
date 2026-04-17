@@ -126,13 +126,15 @@ test.describe('Dashboard Layout @dashboard @ui', () => {
     );
   });
 
-  test('[P1] should display dashboard with download panel and recent media (AC1)', async ({
+  test('[P1] should display homepage with download panel and recent media (AC1)', async ({
     page,
   }) => {
     await page.goto('/');
 
-    // THEN: Dashboard layout is visible
-    await expect(page.getByTestId('dashboard-layout')).toBeVisible();
+    // THEN: Story 10-5 — `dashboard-layout` grid was replaced by the homepage
+    // vertical flex stack. When both panels have data neither `hideWhenEmpty`
+    // branch fires, so both remain visible in the real DOM.
+    await expect(page.getByTestId('homepage-root')).toBeVisible();
     await expect(page.getByTestId('download-panel')).toBeVisible();
     await expect(page.getByTestId('recent-media-panel')).toBeVisible();
     await expect(page.getByTestId('search-form')).toBeVisible();
@@ -162,7 +164,7 @@ test.describe('Dashboard Layout @dashboard @ui', () => {
 // =============================================================================
 
 test.describe('Dashboard Disconnected State @dashboard @ui', () => {
-  test('[P1] should show disconnected state when qBittorrent not configured (AC3)', async ({
+  test('[P1] Story 10-5 AC #5 — disconnected qBittorrent hides Download panel on homepage', async ({
     page,
   }) => {
     // Mock qBittorrent as not configured
@@ -197,8 +199,13 @@ test.describe('Dashboard Disconnected State @dashboard @ui', () => {
 
     await page.goto('/');
 
-    // THEN: Download panel shows disconnected, but recent media still works
-    await expect(page.getByText('qBittorrent 未連線')).toBeVisible();
+    // THEN: Story 10-5 replaces the dashboard-layout disconnected banner with
+    // the `hideWhenEmpty` branch — the disconnected `DownloadPanel` renders
+    // nothing on homepage. The disconnected UI itself is still covered by
+    // `DownloadPanel.spec.tsx` (unit) for the /downloads route. Recent media
+    // still renders because its query returned data.
+    await expect(page.getByTestId('download-panel')).toHaveCount(0);
+    await expect(page.getByText('qBittorrent 未連線')).toHaveCount(0);
     await expect(page.getByText('測試電影')).toBeVisible();
   });
 });
@@ -247,18 +254,32 @@ test.describe('Dashboard Mobile Layout @dashboard @ui', () => {
     );
   });
 
-  test('[P1] should stack panels vertically on mobile (AC4)', async ({ page }) => {
+  test('[P1] Story 10-5 — panels stack vertically on mobile via homepage flex column', async ({
+    page,
+  }) => {
     await page.goto('/');
 
-    // THEN: Both panels should be visible (stacked)
+    // THEN: Both panels are visible (populated mock data bypasses hideWhenEmpty).
     await expect(page.getByTestId('download-panel')).toBeVisible();
     await expect(page.getByTestId('recent-media-panel')).toBeVisible();
 
-    // Grid should be single column (stacked)
-    const grid = page.getByTestId('dashboard-grid');
-    const gridStyle = await grid.evaluate((el) => window.getComputedStyle(el).gridTemplateColumns);
-    // On mobile, grid-cols-1 means single column
-    expect(gridStyle).not.toContain('400px');
+    // Story 10-5 replaced `dashboard-grid` (grid-cols-[400px_1fr]) with a pure
+    // vertical flex stack on `homepage-root`. Check the computed flex-direction
+    // and that gap-6 resolves to 24px on the outer wrapper — both derived from
+    // Tailwind arbitrary classes so a browser is required to verify them.
+    const root = page.getByTestId('homepage-root');
+    const style = await root.evaluate((el) => {
+      const cs = window.getComputedStyle(el);
+      return {
+        display: cs.display,
+        flexDirection: cs.flexDirection,
+        rowGap: cs.rowGap || cs.gap,
+      };
+    });
+    expect(style.display).toBe('flex');
+    expect(style.flexDirection).toBe('column');
+    // gap-6 = 1.5rem = 24px in Tailwind's default scale.
+    expect(style.rowGap).toBe('24px');
   });
 });
 
@@ -464,7 +485,9 @@ test.describe('Dashboard Search Navigation @dashboard @ui', () => {
 // =============================================================================
 
 test.describe('Dashboard Empty State @dashboard @ui', () => {
-  test('[P2] should show empty states when connected but no data (AC1, AC3)', async ({ page }) => {
+  test('[P1] Story 10-5 AC #5 — homepage hides both panels entirely when connected but empty', async ({
+    page,
+  }) => {
     // Network-first: intercept BEFORE navigation
     await page.route(`${ROUTE_API}/settings/qbittorrent`, (route) =>
       route.fulfill({
@@ -478,7 +501,10 @@ test.describe('Dashboard Empty State @dashboard @ui', () => {
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ success: true, data: [] }),
+        body: JSON.stringify({
+          success: true,
+          data: { items: [], page: 1, pageSize: 100, totalItems: 0, totalPages: 0 },
+        }),
       })
     );
 
@@ -491,13 +517,18 @@ test.describe('Dashboard Empty State @dashboard @ui', () => {
     );
 
     await page.goto('/');
+    // Wait for the homepage root to mount before counting absent panels —
+    // otherwise `toHaveCount(0)` passes trivially before the page renders.
+    await expect(page.getByTestId('homepage-root')).toBeVisible();
 
-    // THEN: Both panels show their empty states
-    await expect(page.getByText('目前沒有下載任務')).toBeVisible();
-    await expect(page.getByText('媒體庫中還沒有內容')).toBeVisible();
-    // Navigation links still available
-    await expect(page.getByText('查看全部下載 →')).toBeVisible();
-    await expect(page.getByText('查看全部媒體庫 →')).toBeVisible();
+    // THEN: Story 10-5 AC #5 — no empty-state UI on homepage. Both panels
+    // and their "目前沒有下載任務" / "媒體庫中還沒有內容" placeholders are
+    // absent. (The default placeholders remain available on the /downloads
+    // and /library routes which render the panels without `hideWhenEmpty`.)
+    await expect(page.getByTestId('download-panel')).toHaveCount(0);
+    await expect(page.getByTestId('recent-media-panel')).toHaveCount(0);
+    await expect(page.getByText('目前沒有下載任務')).toHaveCount(0);
+    await expect(page.getByText('媒體庫中還沒有內容')).toHaveCount(0);
   });
 });
 
