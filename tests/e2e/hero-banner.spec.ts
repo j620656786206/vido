@@ -151,6 +151,19 @@ async function stubHomepageBaseline(page: import('@playwright/test').Page) {
   await page.route(`${ROUTE_API}/health/services*`, (route: Route) =>
     route.fulfill(jsonOk({ services: [] }))
   );
+  // TMDb image CDN — stub with a 1x1 PNG so `<img onError>` never fires and
+  // `imageBroken` never unmounts the backdrop in CI (image.tmdb.org
+  // unreachable on runners).
+  await page.route(/image\.tmdb\.org\/.*/, (route: Route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'image/png',
+      body: Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+        'base64'
+      ),
+    })
+  );
 }
 
 // =============================================================================
@@ -206,8 +219,10 @@ test.describe('HeroBanner Display @ui @hero-banner @story-10-2', () => {
 
     await page.goto('/');
 
-    // Dashboard still loads; banner section and skeleton are both absent.
-    await expect(page.getByTestId('dashboard-layout')).toBeVisible();
+    // Homepage root still mounts; banner section and skeleton are both absent.
+    // Story 10-5 replaced the dashboard-layout grid with the homepage-root
+    // vertical flex stack.
+    await expect(page.getByTestId('homepage-root')).toBeVisible();
     await expect(page.getByTestId('hero-banner')).toHaveCount(0);
     await expect(page.getByTestId('hero-banner-skeleton')).toHaveCount(0);
   });
@@ -223,8 +238,9 @@ test.describe('HeroBanner Display @ui @hero-banner @story-10-2', () => {
 
     await page.goto('/');
 
-    // Dashboard still renders independently (AC5 graceful degradation).
-    await expect(page.getByTestId('dashboard-layout')).toBeVisible();
+    // Homepage still renders independently (AC5 graceful degradation); Story
+    // 10-5 swapped `dashboard-layout` for `homepage-root`.
+    await expect(page.getByTestId('homepage-root')).toBeVisible();
     await expect(page.getByTestId('hero-banner')).toHaveCount(0);
   });
 
@@ -385,11 +401,11 @@ test.describe('HeroBanner Mobile Layout @ui @hero-banner @story-10-2', () => {
     const banner = page.getByTestId('hero-banner');
     await expect(banner).toBeVisible();
 
-    // Banner height on mobile (375px wide) uses the h-[40vh] breakpoint (812 × 0.4 ≈ 325).
+    // Story 10-5 replaced the vh-based mobile height with a fixed
+    // `h-[250px] md:h-[400px]`. Mobile viewport (<768px) → 250px.
     const box = await banner.boundingBox();
     expect(box).not.toBeNull();
-    expect(box!.height).toBeGreaterThan(300);
-    expect(box!.height).toBeLessThan(500);
+    expect(Math.round(box!.height)).toBe(250);
 
     // Overview has the mobile line-clamp (2 lines via `line-clamp-2` utility).
     const overview = page.getByTestId('hero-banner-overview').first();

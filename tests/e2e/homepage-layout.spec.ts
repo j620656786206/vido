@@ -197,24 +197,32 @@ const jsonOk = <T>(body: T) => ({
   body: JSON.stringify({ success: true, data: body }),
 });
 
-const jsonRaw = <T>(body: T) => ({
-  status: 200,
-  contentType: 'application/json',
-  body: JSON.stringify(body),
-});
-
 // =============================================================================
 // Baseline stub — all homepage-side API endpoints. Tests compose this then
 // override individual routes for scenario-specific behavior.
 // =============================================================================
 
 async function stubHomepageBaseline(page: import('@playwright/test').Page) {
-  // TMDb trending (HeroBanner)
+  // TMDb trending (HeroBanner). Uses jsonOk — the frontend's fetchApi
+  // unwraps `{success,data}` and throws when `.success` is absent.
   await page.route(`${ROUTE_API}/tmdb/trending/movies*`, (route: Route) =>
-    route.fulfill(jsonRaw(mockTrendingMovies))
+    route.fulfill(jsonOk(mockTrendingMovies))
   );
   await page.route(`${ROUTE_API}/tmdb/trending/tv*`, (route: Route) =>
-    route.fulfill(jsonRaw(mockTrendingTV))
+    route.fulfill(jsonOk(mockTrendingTV))
+  );
+  // TMDb image CDN — stub with a 1x1 PNG so `<img onError>` never fires and
+  // `imageBroken` never unmounts the backdrop in CI (where image.tmdb.org is
+  // unreachable).
+  await page.route(/image\.tmdb\.org\/.*/, (route: Route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'image/png',
+      body: Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+        'base64'
+      ),
+    })
   );
   // Explore blocks (list + content for all 4 blocks)
   await page.route(`${ROUTE_API}/explore-blocks`, (route: Route) =>
@@ -404,7 +412,7 @@ test.describe('Homepage lazy-load @ui @homepage @story-10-5', () => {
     let trendingMoviesHits = 0;
     await page.route(`${ROUTE_API}/tmdb/trending/movies*`, (route: Route) => {
       trendingMoviesHits += 1;
-      return route.fulfill(jsonRaw(mockTrendingMovies));
+      return route.fulfill(jsonOk(mockTrendingMovies));
     });
 
     // Start on a different route so the homepage loader has not yet run.
@@ -412,10 +420,11 @@ test.describe('Homepage lazy-load @ui @homepage @story-10-5', () => {
     await page.waitForLoadState('networkidle');
     const baselineHits = trendingMoviesHits;
 
-    // AppShell's nav houses a Link to "/" ("首頁"). Hover fires the router's
-    // intent-preload, which runs the index route loader (prefetchQuery for
-    // trending hero). The request should appear before we navigate.
-    const homeLink = page.getByRole('link', { name: /首頁/ }).first();
+    // AppShell houses a logo Link to "/" (text content "vido"). Hover fires
+    // the router's intent-preload, which runs the index route loader
+    // (prefetchQuery for trending hero). The request should appear before
+    // we navigate.
+    const homeLink = page.getByRole('link', { name: /^vido$/ }).first();
     await expect(homeLink).toBeVisible();
     await homeLink.hover();
 
@@ -473,10 +482,10 @@ test.describe('Homepage empty-section hide @ui @homepage @story-10-5', () => {
     await stubHomepageBaseline(page);
     // Override everything to empty (baseline uses populated trending).
     await page.route(`${ROUTE_API}/tmdb/trending/movies*`, (route: Route) =>
-      route.fulfill(jsonRaw({ page: 1, results: [], total_pages: 0, total_results: 0 }))
+      route.fulfill(jsonOk({ page: 1, results: [], total_pages: 0, total_results: 0 }))
     );
     await page.route(`${ROUTE_API}/tmdb/trending/tv*`, (route: Route) =>
-      route.fulfill(jsonRaw({ page: 1, results: [], total_pages: 0, total_results: 0 }))
+      route.fulfill(jsonOk({ page: 1, results: [], total_pages: 0, total_results: 0 }))
     );
     await page.route(`${ROUTE_API}/explore-blocks`, (route: Route) =>
       route.fulfill(jsonOk({ blocks: [] }))
