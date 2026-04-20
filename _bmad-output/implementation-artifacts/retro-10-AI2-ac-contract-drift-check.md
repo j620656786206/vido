@@ -1,6 +1,6 @@
 # Story: AC Contract Drift Check in dev-story Workflow
 
-Status: review
+Status: done
 
 ## Story
 
@@ -180,7 +180,7 @@ Claude Opus 4.7 (1M context) — `claude-opus-4-7[1m]`
 
 ### Completion Notes List
 
-- **🔗 AC Drift: N/A** (bootstrap — this story introduces the AC Drift Check itself; no prior check existed to drift against. All subsequent stories must record NONE or FOUND per the new rule.)
+- **🔗 AC Drift: N/A** (bootstrap of the drift check itself — grep `dev-story/instructions.xml` across `_bmad-output/implementation-artifacts/retro-9*.md` + `retro-10*.md` found 1 hit in `retro-9-AI5-package-dependency-boundaries.md` but it references unrelated Step/subject matter; retro-9-AI1 + retro-9c-AI2 both modified dev-story Step 7 (not Step 2) per sprint-status comments, so no contract collision with this story's Step 2 insertion. All subsequent stories must record NONE or FOUND per the new rule.) **[CR fix M2]**
 - **✅ AC #1 satisfied**: MANDATORY action inserted at Step 2 of `dev-story/instructions.xml` (lines 148–187). Check runs when the dev agent has full AC text in hand but has NOT yet written code (optimal placement, per story Dev Notes rationale).
 - **✅ AC #2 satisfied**: Documentation rule embedded — `🔗 AC Drift: {prior-story-key} AC #N — {old contract} → {new contract}` format prescribed; File List annotation `(AC drift reference — see Completion Notes)` also prescribed.
 - **✅ AC #3 satisfied**: `NONE` path explicit — dev agent MUST record grep pattern used + hit count + classification, so silence is impossible.
@@ -197,9 +197,11 @@ Claude Opus 4.7 (1M context) — `claude-opus-4-7[1m]`
 
 ### File List
 
-- `_bmad/bmm/workflows/4-implementation/dev-story/instructions.xml` (modified) — inserted `<!-- Epic 10 Retro AI-2 ... Agreement 4 -->` comment + `<action critical="MANDATORY">` AC Contract Drift Check block (~39 lines) between last pre-existing Step 2 `<action>` and `<output>` (lines 148–187); updated Step 2 `<output>` block to include `AC Drift Check: {{drift_check_result}}` line
-- `_bmad-output/implementation-artifacts/sprint-status.yaml` (modified) — `retro-10-AI2-ac-contract-drift-check` status: `ready-for-dev` → `in-progress` → `review`; comment appended with Amelia dev-story note + final placement line range `148–187`
-- `_bmad-output/implementation-artifacts/retro-10-AI2-ac-contract-drift-check.md` (self, modified) — all task checkboxes marked `[x]`, Dev Agent Record populated, Status `ready-for-dev` → `review`
+- `_bmad/bmm/workflows/4-implementation/dev-story/instructions.xml` (modified) — inserted `<!-- Epic 10 Retro AI-2 ... Agreement 4 -->` comment + `<action critical="MANDATORY">` AC Contract Drift Check block (~45 lines) between last pre-existing Step 2 `<action>` and `<output>` (lines 148–196 post-CR); added sibling `<action critical="MANDATORY">` that binds `{{drift_check_result}}` (line 198–201); updated Step 2 `<output>` block to include `AC Drift Check: {{drift_check_result}}` line
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (modified) — `retro-10-AI2-ac-contract-drift-check` status: `ready-for-dev` → `in-progress` → `review` → `done` (post-CR); comment appended with Amelia dev-story note + final placement line range + CR fix summary
+- `_bmad-output/implementation-artifacts/retro-10-AI2-ac-contract-drift-check.md` (self, modified) — all task checkboxes marked `[x]`, Dev Agent Record populated, Status `ready-for-dev` → `review` → `done`
+- `_bmad-output/implementation-artifacts/retro-9-AI1-full-regression-gate.md` (AC drift reference — see Completion Notes) **[CR fix L1]** — precedent for MANDATORY-action pattern at Step 7; confirmed by grep that it modifies Step 7 only, no Step 2 collision
+- `_bmad-output/implementation-artifacts/retro-9c-AI2-fix-or-file-test-failures.md` (AC drift reference — see Completion Notes) **[CR fix L1]** — precedent for conditional MANDATORY-action pattern at Step 7; same non-collision verified
 
 ### Change Log
 
@@ -209,3 +211,4 @@ Claude Opus 4.7 (1M context) — `claude-opus-4-7[1m]`
 | 2026-04-20 | **Task 2** — verification green: `pnpm lint:all` (0 errors, 129 pre-existing warnings), `pnpm nx test api` (all PASS), `pnpm nx test web` (144 files / 1738 tests PASS with auto-cleanup); XML well-formed, Step 1–11 numbering intact                                                                                                                                             | Amelia |
 | 2026-04-20 | **Task 3** — documentation discoverability: confirmed `project-context.md` deliberately unchanged (workflow-level concerns stay in workflow files; consistent with retro-9-AI1 precedent); confirmed `epic-10-retro-2026-04-20.md` already cites AI-2 at lines 44/83/129/187 — no retro edit needed                                                                                 | Amelia |
 | 2026-04-20 | **Task 4** — sprint-status transitions executed: `ready-for-dev` (SM Bob, create-story) → `in-progress` (Amelia, dev-story start, Step 4) → `review` (Amelia, dev-story complete, Step 10). Line-range note `148–187` recorded in sprint-status comment. Task 4.4 status-value flip (`review → done`) deferred to `/code-review` workflow per task spec                              | Amelia |
+| 2026-04-20 | **CR fixes** (Amelia /code-review adversarial self-review) — 7 findings (1 HIGH / 4 MED / 2 LOW) all fixed: **H1** `{{drift_check_result}}` now bound by sibling `<action critical="MANDATORY">` (lines 198–201) so Step 2 output renders concrete value, not unresolved placeholder; **M1** Documentation rule expanded from binary (FOUND/NONE) to ternary (FOUND/NONE/N/A) — N/A branch now has defined semantics with mandatory reason; **M2** bootstrap Completion Note now cites actual grep scope (retro-9*.md + retro-10*.md) + classification reasoning, no longer silent-skip; **M3** trigger condition (a) reworded from literal `"changes behavior of {feature X}"` to semantic `"changes the observable behavior... any phrasing"`; **M4** Precedent block now links `epic-10-retro-2026-04-20.md` section "Challenges → Pattern #2"; **L1** File List now annotates retro-9-AI1 + retro-9c-AI2 as `(AC drift reference — see Completion Notes)` — self-application of the new rule; **L2** keyword example list now abstraction-consistent (`"batch semantics"` + `"lazy-load"` replace the route-path example `"check-owned"`). XML well-formedness re-verified via `xmllint --noout` PASS. Status transitioned `review → done`. Final placement post-CR: `instructions.xml` lines 148–201 (original MANDATORY block + comment + binding action + output). | Amelia (CR) |

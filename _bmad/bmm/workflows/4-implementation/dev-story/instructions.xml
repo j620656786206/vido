@@ -152,8 +152,9 @@
       files for cross-references BEFORE writing code.
 
       Trigger conditions (run the check if ANY is true):
-        (a) A task description says "changes behavior of {feature X}" where X was
-            delivered in a previous story.
+        (a) A task changes the observable behavior of a feature delivered in a prior
+            story (any phrasing — do not pattern-match on literal words like "changes
+            behavior of"; read the task intent).
         (b) An AC in THIS story rephrases or contradicts an AC from a PRIOR story
             (e.g., "single POST" → "≤N POSTs").
         (c) A task touches a file already listed in a previous story's File List
@@ -163,20 +164,27 @@
       Check procedure:
         1. Identify the candidate prior story file(s) in _bmad-output/implementation-artifacts/.
         2. grep -rn "{AC-relevant keyword(s)}" _bmad-output/implementation-artifacts/*.md
-           Use keywords from the AC wording: e.g., "single POST", "batch", "check-owned",
-           "aria-modal", "focus trap", etc. Start broad, narrow if too many hits.
+           Use semantic keywords from the AC wording: e.g., "single POST", "batch
+           semantics", "aria-modal", "focus trap", "lazy-load". Start broad, narrow
+           if too many hits.
         3. For each hit, read the surrounding AC and decide: is my change a DRIFT
            (changes behavior the prior AC specified) or a REUSE (prior AC still holds).
 
-      Documentation rule:
-        - If drift found: add to Dev Agent Record → Completion Notes:
+      Documentation rule (three-state — silence is NEVER acceptable):
+        - If drift FOUND: add to Dev Agent Record → Completion Notes:
             "🔗 AC Drift: {prior-story-key} AC #N — {old contract} → {new contract}"
           AND append the prior story file path to this story's File List with the
           annotation "(AC drift reference — see Completion Notes)".
-        - If NO drift found: still record in Completion Notes:
+        - If hits exist but NONE are drift: record in Completion Notes:
             "🔗 AC Drift: NONE (checked: '{grep-pattern-used}' across
             _bmad-output/implementation-artifacts/*.md — N hits, all REUSE not DRIFT)"
-          The check is MANDATORY — silence is not an option.
+        - If no prior AC exists in scope (truly new subsystem, or bootstrap of a new
+          workflow rule with no prior coverage): record in Completion Notes:
+            "🔗 AC Drift: N/A ({specific reason} — e.g., 'new subsystem, no prior
+            story touches this file path' or 'bootstrap of the drift check itself,
+            no prior Step 2 modifications in retro-9*.md or retro-10*.md')"
+          N/A is NOT a silent-skip — the specific reason MUST be stated so an
+          auditor can later verify the exemption was legitimate.
 
       Precedent (Epic 10, Story 10-4 → 10-5):
         Story 10-4 AC #4 stated "single POST batch for all visible TMDb IDs".
@@ -184,7 +192,14 @@
         contract to "≤N POSTs (one per lazy-revealed batch)". The drift escaped
         internal review and was only caught by adversarial CR (10-5 CR H1).
         This check exists to catch that class of drift BEFORE CR.
+        Reference: _bmad-output/implementation-artifacts/epic-10-retro-2026-04-20.md
+        (section "Challenges" → Pattern #2)
     </action>
+
+    <action critical="MANDATORY">Set {{drift_check_result}} to exactly one of:
+      "NONE" | "FOUND — see Completion Notes" | "N/A ({specific reason})"
+      based on the AC Drift Check outcome above. This binding MUST execute so the
+      Step 2 output renders a concrete value, not an unresolved placeholder.</action>
 
     <output>✅ **Context Loaded**
       Story and project context available for implementation
