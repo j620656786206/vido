@@ -451,6 +451,46 @@ development_status:
   retro-10-CP2-ai1-checklist-before-11-2:       backlog  # CRITICAL — SM: confirm AI-1 (Frontend Perf+A11y Checklist) lands in dev-story workflow before Story 11-2 opens. Epic 11 is 100% frontend; Pattern #1 will repeat at higher cost without it.
 
   # ==============================================================================
+  # Bug Sprint: Epic 10 Local Smoke Test (2026-04-20)
+  # Source: Alexyu CP-1 local dev run at localhost:4200
+  # Context: Epic 10 core ACs passing (Hero carousel + 3 explore blocks +
+  #          downloads widget + responsive all working). These are 1 regression
+  #          + 1 Epic-4 tech debt + polish items — NOT blocking Epic 11 start.
+  #
+  # Scope decisions (2026-04-20 SM session):
+  # - 10-3 skeleton flicker → SPIKE FIRST (≤15 min React DevTools profile)
+  #   before committing to a story (may only be StrictMode dev-mode artifact).
+  # - 10-6 / 10-7 / 10-8 → BUNDLED into bugfix-10-6-polish-ux-visual-pass
+  #   (3 small UX calls share one design pass + one DEV commit + one CR).
+  #
+  # Investigation note on bugfix-10-2: confirmed NOT related to Epic 11 Advanced
+  # Search. Epic 11 scope is media-library filter, not /api/v1/downloads. The
+  # 400 burst is Epic 4 handler using HTTP 400 for qBT connection errors
+  # (should be 502/503) + init race where frontend polls before qBT session
+  # settles. Live curl to /downloads?filter=all and /downloads/counts both
+  # return 200 with full data (3164 items) — bug is transient init-window only.
+  #
+  # AGENT ROUTING KEY:
+  #   DEV = /bmad:bmm:agents:dev + /bmad:bmm:workflows:dev-story
+  #   QD  = /bmad:bmm:workflows:quick-dev (no story file, 1-line fixes)
+  #   UX  = /bmad:bmm:agents:ux-designer (design decisions in ux-design.pen)
+  # ==============================================================================
+
+  # --- CRITICAL (blocks core navigation) ---
+  bugfix-10-1-postercard-tmdb-id-404:       backlog  # → SM /create-story → DEV /dev-story: Epic 10 regression — homepage PosterCard click routes to /movies/{tmdbId} which expects internal UUID, so all homepage-sourced TMDb items return 404 from /api/v1/movies/{id} and /api/v1/series/{id} (e.g. 83533, 76479, 687163, 1523145 in console). Story must decide: TMDb-item vs library-item route branching, a TMDb-backed detail page, or disable click for un-owned. After fix, audit all PosterCard call sites (retro-10-AI2 AC drift case study).
+
+  # --- HIGH (console noise / runtime friction) ---
+  bugfix-10-2-qbt-downloads-http-status-semantics: backlog  # → SM /create-story → DEV /dev-story: Epic 4 tech debt. download_handler.go:80-87 & 210-218 return HTTP 400 for qBT not-configured / auth-failed / unreachable — semantically wrong (400 = client error). Should be 503 (not-configured, SETUP_REQUIRED) / 502 (auth-failed, unreachable upstream). Init-race makes console burst during app start; data path itself works (curl returns 200 + 3164 items). Fix status codes + ensure frontend polling gates on qBT connection state. Confirmed unrelated to Epic 11.
+  bugfix-10-3-skeleton-flicker-on-load:     backlog  # → DEV /dev-story OR QD /quick-dev (SPIKE-FIRST): homepage skeletons repeatedly re-mount/flicker during initial load. Step 1 (spike, ≤15 min): React DevTools Profiler to diagnose whether cause is Story 10-5 IntersectionObserver lazy-load + StrictMode double-mount + TanStack Query refetch interaction, OR a true regression. Step 2: if dev-mode artifact only → QD documents in project-context and closes. If real prod bug → SM /create-story with full AC + fix.
+
+  # --- MEDIUM (UX friction — UX decides design then SM creates story for DEV) ---
+  bugfix-10-4-hover-preview-viewport-flip:  backlog  # → UX /ux-designer → SM /create-story → DEV /dev-story: PosterCard hover preview floats below card, gets clipped/forces scroll. UX decides: (a) flip upward near viewport edge via @radix-ui/react-popover (already installed 0-UX-4) with collision avoidance, (b) click-to-expand model, (c) inline expansion. DEV implements after UX design committed to ux-design.pen.
+  bugfix-10-5-empty-library-onboarding:     backlog  # → UX /ux-designer → SM /create-story → DEV /dev-story: when qBT connected but no media-folder configured, library page shows misleading "請連接 qBittorrent" empty state. UX designs 3-state flow: (a) qBT disconnected, (b) qBT ok + no media folder, (c) all ok + truly empty library. DEV implements copy + route guidance to Setup Wizard or Settings→媒體庫 per state.
+
+  # --- BUNDLED (3 small UX polish items, 1 story — UX design pass + DEV commit + CR) ---
+  bugfix-10-6-polish-ux-visual-pass:        backlog  # → UX /ux-designer → SM /create-story → DEV /dev-story. Bundles 3 small UX decisions into one pass (was separately 10-6/10-7/10-8 before 2026-04-20 consolidation). AC 1: ExploreBlock chevron contrast on dark-theme bg (options: opacity / backdrop-blur+ring / hover-only reveal). AC 2: Empty-state "沒有符合條件的內容" text must not be clipped by left chevron (z-index / padding / hide-chevron-when-empty). AC 3: Replace default-block emoji icons (🎬📺🎬 in 自訂首頁) with lucide-react icons consistent with SettingsLayout — user feedback "AI感太重". Rationale for bundling: 3 single-digit-line CSS/copy changes sharing one UX design pass and one DEV commit is lighter than 3 separate stories.
+
+  # ==============================================================================
   # Epic 11: Advanced Search (PRD v4)
   # Phase: Phase 2 — Browse & Discover
   # FRs: P2-010–P2-015
