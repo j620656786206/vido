@@ -439,7 +439,7 @@ development_status:
   # ==============================================================================
 
   # --- Process Improvements ---
-  retro-10-AI1-frontend-perf-a11y-checklist:    backlog  # HIGH — SM: add Frontend Perf+A11y Pre-Flight Checklist to dev-story (image sizing/srcset, focus mgmt for aria-modal, aria-live for async reveals, lazy-load contract docs). Pattern #1: 4 of 4 frontend stories had perf/a11y findings.
+  retro-10-AI1-frontend-perf-a11y-checklist:    done  # 2026-04-20 — SM: added new "🎭 Frontend Performance + Accessibility Pre-Flight (Epic 10 Retro AI-1)" section to _bmad/bmm/workflows/4-implementation/dev-story/checklist.md with 4 items grounded in Epic 10 CR precedents: (1) Responsive image sizing / srcSet / no mobile `original` (Story 10-2 H1); (2) Modal focus trap + restore + `inert` for inactive carousel slides (Story 10-2 H2, M1); (3) `aria-live`/`role=status` on async-revealed content (Story 10-4 L1); (4) Lazy-load contract accuracy in AC text + request-site comment (Story 10-5 H1). Scope gate: applies to ANY story touching apps/web/; skip only if 100% backend. Includes 4 concrete DevTools/screen-reader verification steps.
   retro-10-AI2-ac-contract-drift-check:         backlog  # MEDIUM — SM: dev-story instructions: when modifying existing AC behavior, mandatory grep across previous story files for cross-references. Pattern #2: 10-4 → 10-5 contract drift escaped until CR.
   retro-10-AI3-rule7-wire-format-cr-check:      backlog  # MEDIUM — SM: code-review workflow grep for error code constants without source prefix; auto-fixable HIGH. Pattern #3: 10-1a INVALID_YEAR_RANGE shipped without TMDB_ prefix.
   retro-10-AI4-http-route-client-method-gap:    backlog  # LOW — SM: extend Rule 15 self-verification — when story task says "method exists in client", confirm RegisterRoutes entry too. Pattern #4: 10-2 needed unplanned HTTP route exposure mid-story.
@@ -448,7 +448,7 @@ development_status:
 
   # --- Critical Path (before Epic 11 frontend stories begin) ---
   retro-10-CP1-local-smoke-test-epic10:         backlog  # CRITICAL — Alexyu: smoke test homepage on local dev server at 390/768/1440. Validates AC #2 LCP, AC #3 mobile heights, AC #6 trailer playback. Tests-passing ≠ feature-verified.
-  retro-10-CP2-ai1-checklist-before-11-2:       backlog  # CRITICAL — SM: confirm AI-1 (Frontend Perf+A11y Checklist) lands in dev-story workflow before Story 11-2 opens. Epic 11 is 100% frontend; Pattern #1 will repeat at higher cost without it.
+  retro-10-CP2-ai1-checklist-before-11-2:       done  # 2026-04-20 — Satisfied by retro-10-AI1 completion. Checklist now lives in dev-story/checklist.md and will be applied by any dev-story invocation touching apps/web/ (including Story 11-2 and beyond). No separate gate needed.
 
   # ==============================================================================
   # Bug Sprint: Epic 10 Local Smoke Test (2026-04-20)

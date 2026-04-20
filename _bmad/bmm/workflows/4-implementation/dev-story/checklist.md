@@ -54,6 +54,27 @@ validation-rules:
 - [ ] **Context Lifecycle:** All goroutines, HTTP requests, and database queries accept and honor `context.Context`. No fire-and-forget goroutines without cancellation support.
 - [ ] **Error Wrapping:** Errors are wrapped with `fmt.Errorf("%w", err)` or sentinel errors. No raw `err.Error()` string comparisons. Internal details are not leaked to API responses.
 
+## 🎭 Frontend Performance + Accessibility Pre-Flight (Epic 10 Retro AI-1)
+
+**When this applies:** ANY story that touches `apps/web/` React components, hooks, or routes. Skip only if the story is 100% backend (no files under `apps/web/`).
+
+**Why this exists:** Epic 10 retro (2026-04-20) found that 4 of 4 frontend stories shipped first-pass implementations with perf or a11y HIGH/MEDIUM findings that CR caught and fixed. The skill is present — the checklist isn't. Each of the four items below maps to a specific Epic 10 story CR finding; citing the precedent makes the issue concrete rather than abstract.
+
+- [ ] **Responsive image sizing:** Any `<img>` fed from TMDb (or other CDN with size variants) MUST use `srcSet` + `sizes` with a sub-`original` baseline in `src`. On mobile the browser must NOT download a 3–5 MB `original` backdrop. Reference: Story 10-2 CR finding H1 — `getImageUrl(..., 'original')` shipped 3–5 MB backdrops to mobile; fixed by `getBackdropSrcSet` (w780/w1280/original) with `w1280` baseline in `src`. Helpers: `apps/web/src/lib/image.ts::getBackdropSrcSet`, `getBackdropSizes`.
+
+- [ ] **Modal focus management:** Any component declaring `aria-modal="true"` MUST trap focus (Tab/Shift+Tab cycles within modal), move focus on open to the modal's first focusable element (usually close button), and restore focus to the invoking trigger on close. Inactive siblings/slides in carousels MUST use React 19 `inert={!active}` to remove from focus order, hit testing, and a11y tree. Reference: Story 10-2 CR findings H2 (TrailerModal had `aria-modal` but no focus trap) + M1 (HeroBanner inactive slides were still tabbable).
+
+- [ ] **aria-live on async-revealed content:** Badges, status pills, or any content that appears asynchronously after load (e.g., ownership badges, download-status pills, availability indicators) MUST carry `role="status"` + `aria-live="polite"` so screen-reader users are notified when the state changes. Reference: Story 10-4 CR finding L1 — `AvailabilityBadge` rendered async after a TanStack Query resolve but had no live-region announcement.
+
+- [ ] **Lazy-load contract accuracy:** Any lazy-load / Intersection-Observer / pagination mechanism MUST have its network contract documented accurately in both (a) the AC text and (b) the code comment at the request site. If lazy-load means "≤N requests" rather than "1 request", say so — do NOT label it "single request". When adding lazy-load to a feature that already has a batching AC from a prior story, grep that prior story for contract references and update in lockstep (pairs with retro-10-AI2 AC contract drift check). Reference: Story 10-5 CR finding H1 — ownership POST claimed "single POST per homepage" but IntersectionObserver made it ≤N POSTs; comment was corrected and an `anyEnabledInflight` stability gate was added.
+
+**Verification steps before marking this section [x]:**
+
+1. Open DevTools Network panel, load the feature at 390px viewport width. Confirm no image request exceeds 1 MB.
+2. Tab through any modal/dialog introduced by the story. Confirm focus stays inside and restores correctly on close.
+3. Use macOS VoiceOver (or NVDA on Windows) to confirm any async-revealed status announces itself.
+4. If the story introduces or modifies lazy-load/pagination: confirm the comment at the request site and the AC text agree on the actual request count semantics.
+
 ## 📝 Documentation & Tracking
 
 - [ ] **File List Complete:** File List includes EVERY new, modified, or deleted file (paths relative to repo root)
