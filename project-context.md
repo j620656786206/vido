@@ -4,7 +4,7 @@
 
 **Full Documentation:** See `_bmad-output/planning-artifacts/architecture/index.md` for complete architectural decisions and patterns (sharded into ~20 focused files).
 
-**Last Updated:** 2026-04-13 (Rule 19 CR follow-up — removed conflict with Rule 4, refactored assertNoImport → scanImports so sanity test actually exercises enforcement, skipped external test packages, moved parity test to services_test)
+**Last Updated:** 2026-04-20 (Rule 7 expansion — added `QB_`, `METADATA_`, `DOUBAN_`, `WIKIPEDIA_` prefixes already in production use; surfaced by retro-10-AI3 CR grep on 2026-04-20)
 **Architecture Status:** ✅ Validated and Ready for Implementation (5,463 lines, 8 steps completed)
 
 ---
@@ -281,7 +281,7 @@ JSON Fields: snake_case (release_date, tmdb_id)
 ```
 Format: {SOURCE}_{ERROR_TYPE}
 
-TMDB_TIMEOUT, TMDB_NOT_FOUND, TMDB_RATE_LIMIT
+TMDB_TIMEOUT, TMDB_NOT_FOUND, TMDB_RATE_LIMIT, TMDB_INVALID_YEAR_RANGE
 AI_TIMEOUT, AI_QUOTA_EXCEEDED
 DB_NOT_FOUND, DB_QUERY_FAILED
 VALIDATION_REQUIRED_FIELD, VALIDATION_INVALID_FORMAT
@@ -291,7 +291,13 @@ SCANNER_PERMISSION_DENIED, SCANNER_PARSE_FAILED
 SSE_CONNECTION_FAILED
 LIBRARY_NOT_FOUND, LIBRARY_DUPLICATE_PATH, LIBRARY_PATH_NOT_ACCESSIBLE
 LIBRARY_PATH_NOT_DIRECTORY, LIBRARY_DELETE_HAS_MEDIA
+QB_TORRENT_NOT_FOUND, QB_CONNECTION_FAILED, QB_AUTH_FAILED, QB_TIMEOUT, QB_NOT_CONFIGURED
+METADATA_TIMEOUT, METADATA_RATE_LIMITED, METADATA_UNAVAILABLE, METADATA_NO_RESULTS, METADATA_CIRCUIT_OPEN, METADATA_INVALID_REQUEST, METADATA_ALL_FAILED
+DOUBAN_BLOCKED, DOUBAN_NOT_FOUND, DOUBAN_PARSE_ERROR, DOUBAN_RATE_LIMITED, DOUBAN_TIMEOUT
+WIKIPEDIA_NOT_FOUND, WIKIPEDIA_NO_INFOBOX, WIKIPEDIA_PARSE_ERROR, WIKIPEDIA_RATE_LIMITED, WIKIPEDIA_TIMEOUT, WIKIPEDIA_API_ERROR
 ```
+
+**Authoritative prefix set (13 sources):** `TMDB_`, `AI_`, `DB_`, `VALIDATION_`, `SUBTITLE_`, `PLUGIN_`, `SCANNER_`, `SSE_`, `LIBRARY_`, `QB_`, `METADATA_`, `DOUBAN_`, `WIKIPEDIA_`. When adding a new subsystem with its own error codes, extend this list AND sync `_bmad/bmm/workflows/4-implementation/code-review/instructions.xml` Step 3 "Rule 7 Wire Format Check" (both the HTML comment sync date and the inline prefix list).
 
 ### Rule 8: Date/Time Format
 

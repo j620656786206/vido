@@ -93,6 +93,106 @@
       These are story hygiene issues that indicate the dev workflow was not fully followed.
     </action>
 
+    <!-- Rule 7 Wire Format Check (Epic 10 Retro AI-3) -->
+    <!-- Last synced with project-context.md Rule 7 on 2026-04-20 -->
+    <action critical="MANDATORY">RULE 7 WIRE FORMAT CHECK:
+      Rule 7 of project-context.md mandates that every error code string constant
+      in the Go backend follow the format `{SOURCE}_{ERROR_TYPE}` where {SOURCE}
+      is a registered prefix. This check catches violations that ship as
+      wire-contract drift (what the frontend / API consumers see as error.code
+      in ApiResponse&lt;T&gt;.error).
+
+      Scope filter — run the check ONLY if the comprehensive review file list
+      contains at least one file under `apps/api/internal/**`. If pure-frontend
+      (apps/web/) or docs-only review, record:
+        "🔒 Rule 7 Wire Format: N/A (no Go error-code files in scope)"
+      and skip to the next action (Code Quality Deep Dive).
+
+      Known source prefixes (last synced with project-context.md Rule 7 on 2026-04-20):
+        TMDB_, AI_, DB_, VALIDATION_, SUBTITLE_, PLUGIN_, SCANNER_, SSE_, LIBRARY_,
+        QB_, METADATA_, DOUBAN_, WIKIPEDIA_
+        (13 sources total — keep in sync with project-context.md Rule 7 list)
+
+      Grep procedure (scoped to in-review Go files under apps/api/internal/**):
+        1. Run the regex below. Scope the command to the comprehensive review
+           file list — pass the list as grep arguments (files or dirs), not an
+           unquoted &lt;scope&gt; placeholder:
+             - File list:  grep -nE '&lt;regex&gt;' file1.go file2.go ...
+             - Dir scope:  grep -rnE '&lt;regex&gt;' apps/api/internal/
+           Regex (POSIX ERE): `Err[A-Z]\w*[^=]*= *"[A-Z][A-Z0-9_]*"`
+           (catches untyped `ErrCodeFoo = "FOO_BAR"` AND typed
+            `ErrCodeFoo MyType = "FOO_BAR"`; the `[^=]*` allows an optional
+            type token between the identifier and `=`.)
+        2. Extract the quoted string from each hit (e.g., "INVALID_YEAR_RANGE").
+        3. For each string, check: does it start with one of the known prefixes
+           above followed by `_`?
+        4. If NO → VIOLATION. Flag as HIGH severity, tagged "auto-fixable".
+        5. If string starts with an UNKNOWN prefix (e.g., a new subsystem prefix
+           not yet in Rule 7) → escalate to user: "prefix '{X}_' not in Rule 7.
+           Extend Rule 7 and re-run, or rename to use an existing prefix?"
+
+      Auto-fix procedure (when user picks [1] Fix them automatically in Step 4):
+        1. Determine correct prefix from file path. Rules are listed
+           MOST-SPECIFIC-FIRST — apply the first match; the trailing glob
+           patterns are only fallbacks for files not matched above:
+           - apps/api/internal/services/library_service.go   → LIBRARY_
+           - apps/api/internal/library/**                    → LIBRARY_
+           - apps/api/internal/tmdb/**                       → TMDB_
+           - apps/api/internal/subtitle/**                   → SUBTITLE_
+           - apps/api/internal/scanner/**                    → SCANNER_
+           - apps/api/internal/sse/**                        → SSE_
+           - apps/api/internal/plugins/**                    → PLUGIN_
+           - apps/api/internal/ai/**                         → AI_
+           - apps/api/internal/qbittorrent/**                → QB_
+           - apps/api/internal/douban/**                     → DOUBAN_
+           - apps/api/internal/wikipedia/**                  → WIKIPEDIA_
+           - apps/api/internal/metadata/** or retry/**       → METADATA_
+           - apps/api/internal/repository/**                 → DB_
+           - apps/api/internal/handlers/** or
+             apps/api/internal/services/**                   → VALIDATION_
+             (input-validation fallback; use only if no more-specific rule
+              above matches)
+           - Other → ask user which prefix applies
+        2. Rename the string literal (e.g., "INVALID_YEAR_RANGE" → "TMDB_INVALID_YEAR_RANGE").
+        3. Grep the repo for the OLD string (literal, case-sensitive) and update
+           ALL call sites. Known call-site classes:
+             - Go test assertions (_test.go)
+             - Swagger annotations (@Failure 400 responses in handler comments)
+             - Response-body matchers in apps/web/tests/ (e2e / integration)
+             - TypeScript error-code constants in libs/shared-types/ (if the
+               frontend mirrors backend codes — currently empty, defensive)
+             - Frontend error-handling switches in apps/web/src/ (rare)
+        4. Update the story's File List with every touched file.
+        5. Add Completion Notes entry:
+           "🔒 Rule 7 Wire Format Fix: {OLD} → {NEW} (N call sites updated)"
+
+      Pass recording (MANDATORY — silence is not an option):
+        Record in the review findings summary BEFORE Step 4 categorization one of:
+          "🔒 Rule 7 Wire Format: PASS (N error codes checked, all prefixed
+          correctly with known sources)"
+          "🔒 Rule 7 Wire Format: FAIL (N violations — auto-fixable HIGH)"
+          "🔒 Rule 7 Wire Format: N/A (no Go error-code files in scope)"
+        The `{{wire_format_check_result}}` binding is set by the sibling
+        MANDATORY action below.
+
+      Precedent (Epic 10, Story 10-1a H1):
+        `ErrCodeInvalidYearRange = "INVALID_YEAR_RANGE"` shipped without the
+        mandatory `TMDB_` prefix even though the code lives in tmdb/errors.go.
+        Caught by adversarial human CR, but at the cost of a wire-contract
+        re-commit: the test `TestNewInvalidYearRangeError` and response-body
+        expectation had to be resynced. This check exists to surface that class
+        of violation systematically in Step 3, not accidentally during per-file
+        review.
+        Reference: _bmad-output/implementation-artifacts/epic-10-retro-2026-04-20.md
+        (section "Challenges" → Pattern #3)
+    </action>
+
+    <action critical="MANDATORY">Set {{wire_format_check_result}} to exactly one of:
+      "PASS (N codes checked)" | "FAIL (N violations — auto-fixable HIGH)" | "N/A (no Go error-code files in scope)"
+      based on the RULE 7 WIRE FORMAT CHECK outcome above. This binding MUST
+      execute so the Step 4 findings summary output renders a concrete value,
+      not an unresolved placeholder.</action>
+
     <!-- Code Quality Deep Dive -->
     <action>For EACH file in comprehensive review list:
       1. **Security**: Look for injection risks, missing validation, auth issues
@@ -125,6 +225,7 @@
 
       **Story:** {{story_file}}
       **Git vs Story Discrepancies:** {{git_discrepancy_count}} found
+      **🔒 Rule 7 Wire Format:** {{wire_format_check_result}}
       **Issues Found:** {{high_count}} High, {{medium_count}} Medium, {{low_count}} Low
 
       ## 🔴 CRITICAL ISSUES

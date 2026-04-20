@@ -1,6 +1,6 @@
 # Story: Rule 7 Wire Format Auto-Check in Code Review Workflow
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -20,9 +20,9 @@ so that wire-format violations (e.g., `INVALID_YEAR_RANGE` without `TMDB_`) are 
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add "Rule 7 Wire Format Check" action to `_bmad/bmm/workflows/4-implementation/code-review/instructions.xml` (AC: #1, #2, #3, #4, #5)
-  - [ ] 1.1 Placement decision: insert a new action block in Step 3 "Execute adversarial review" AFTER the "Story File Integrity Audit" action (lines ~88–94) and BEFORE the "Code Quality Deep Dive" action (lines ~96–103). Rationale: Rule 7 check is a **contract-level** project-wide gate, not a per-file inspection — placing it ahead of the per-file deep dive means violations are caught systematically, not by happenstance while reviewing a specific file. Keeps Step 3's logical progression: git-vs-story → ACs → tasks → story hygiene → **wire contract** → per-file code quality → min-issues retry.
-  - [ ] 1.2 Draft the new action XML block with this shape:
+- [x] Task 1: Add "Rule 7 Wire Format Check" action to `_bmad/bmm/workflows/4-implementation/code-review/instructions.xml` (AC: #1, #2, #3, #4, #5)
+  - [x] 1.1 Placement decision: insert a new action block in Step 3 "Execute adversarial review" AFTER the "Story File Integrity Audit" action (lines ~88–94) and BEFORE the "Code Quality Deep Dive" action (lines ~96–103). Rationale: Rule 7 check is a **contract-level** project-wide gate, not a per-file inspection — placing it ahead of the per-file deep dive means violations are caught systematically, not by happenstance while reviewing a specific file. Keeps Step 3's logical progression: git-vs-story → ACs → tasks → story hygiene → **wire contract** → per-file code quality → min-issues retry.
+  - [x] 1.2 Draft the new action XML block with this shape:
     ```xml
     <!-- Rule 7 Wire Format Check (Epic 10 Retro AI-3) -->
     <action critical="MANDATORY">RULE 7 WIRE FORMAT CHECK:
@@ -88,9 +88,9 @@ so that wire-format violations (e.g., `INVALID_YEAR_RANGE` without `TMDB_`) are 
         review.
     </action>
     ```
-  - [ ] 1.3 Verify the inserted action does not break Step 3's existing sub-structure. Step 3 currently contains 5 named audits (git/story, AC, task, story-file-integrity, code-quality-deep-dive) plus a retry gate (`total_issues_found lt 3`). The new check inserts as a 6th audit between "story file integrity" and "code quality deep dive". Confirm all `<action>` and `<check>` tags remain balanced by reading lines 59–117 end-to-end after edit.
-  - [ ] 1.4 Cross-reference the new action's text from the step-level critical block if useful. Specifically, do NOT add a new `<critical>` at the top of Step 3 — the existing `<critical>VALIDATE EVERY CLAIM - Check git reality vs story claims</critical>` already covers the meta-intent. Adding a second critical would be noise.
-  - [ ] 1.5 Update the findings summary output block in Step 4 (currently lines 124–147) to include the wire-format line under the review summary header:
+  - [x] 1.3 Verify the inserted action does not break Step 3's existing sub-structure. Step 3 currently contains 5 named audits (git/story, AC, task, story-file-integrity, code-quality-deep-dive) plus a retry gate (`total_issues_found lt 3`). The new check inserts as a 6th audit between "story file integrity" and "code quality deep dive". Confirm all `<action>` and `<check>` tags remain balanced by reading lines 59–117 end-to-end after edit. ✅ xmllint --noout PASS, action block at lines 96–173, Code Quality Deep Dive now at line 175.
+  - [x] 1.4 Cross-reference the new action's text from the step-level critical block if useful. Specifically, do NOT add a new `<critical>` at the top of Step 3 — the existing `<critical>VALIDATE EVERY CLAIM - Check git reality vs story claims</critical>` already covers the meta-intent. Adding a second critical would be noise. ✅ No new `<critical>` added.
+  - [x] 1.5 Update the findings summary output block in Step 4 (currently lines 124–147) to include the wire-format line under the review summary header:
     ```
     **Story:** {{story_file}}
     **Git vs Story Discrepancies:** {{git_discrepancy_count}} found
@@ -99,28 +99,28 @@ so that wire-format violations (e.g., `INVALID_YEAR_RANGE` without `TMDB_`) are 
     ```
     Where `{{wire_format_check_result}}` is one of: "PASS (N codes checked)", "FAIL (N violations — auto-fixable HIGH)", or "N/A (no Go error-code files in scope)".
 
-- [ ] Task 2: Verify zero code regressions (AC: #6)
-  - [ ] 2.1 Run `pnpm lint:all` from repo root — PASS expected (the edited file is `.xml` under `_bmad/`, excluded from Prettier and ESLint; Go vet/staticcheck unaffected)
-  - [ ] 2.2 Run `pnpm nx test api` — PASS expected (zero Go code change)
-  - [ ] 2.3 Run `pnpm nx test web` — PASS expected (zero frontend code change)
-  - [ ] 2.4 Re-read the modified `instructions.xml` from Step 1 through Step 5 to confirm:
-    - Step numbering (1–5) preserved
-    - XML well-formed (no dangling tags, balanced `<check>` / `</check>`)
-    - The new action sits AFTER `<!-- Story File Integrity Audit -->` and BEFORE `<!-- Code Quality Deep Dive -->` comments
-    - The Step 4 `<output>` block still compiles (all `{{var}}` placeholders present)
+- [x] Task 2: Verify zero code regressions (AC: #6)
+  - [x] 2.1 Run `pnpm lint:all` from repo root — PASS expected (the edited file is `.xml` under `_bmad/`, excluded from Prettier and ESLint; Go vet/staticcheck unaffected) ✅ 0 errors, 129 pre-existing warnings, format:check clean.
+  - [x] 2.2 Run `pnpm nx test api` — PASS expected (zero Go code change) ✅ All Go tests PASS.
+  - [x] 2.3 Run `pnpm nx test web` — PASS expected (zero frontend code change) ✅ 144 files / 1738 tests PASS, test cleanup OK.
+  - [x] 2.4 Re-read the modified `instructions.xml` from Step 1 through Step 5 to confirm:
+    - Step numbering (1–5) preserved ✅
+    - XML well-formed (no dangling tags, balanced `<check>` / `</check>`) ✅ xmllint --noout PASS
+    - The new action sits AFTER `<!-- Story File Integrity Audit -->` and BEFORE `<!-- Code Quality Deep Dive -->` comments ✅ lines 88–94 → 96–173 → 175
+    - The Step 4 `<output>` block still compiles (all `{{var}}` placeholders present) ✅ `{{wire_format_check_result}}` bound by Step 3 sibling MANDATORY action (lines 169–173)
 
-- [ ] Task 3: Documentation discoverability — light touch (AC: #4)
-  - [ ] 3.1 Do NOT add a new Rule to project-context.md. Rationale: Rule 7 already defines the contract; this story just enforces it at CR time. Adding a sibling "Rule 7-CR" would fragment the Rule. Precedent: retro-9-AI1 (Full Regression Gate) and retro-10-AI2 (AC Drift Check) both live in workflow XML only, not in project-context.md.
-  - [ ] 3.2 Verify the Epic 10 retro document at `_bmad-output/implementation-artifacts/epic-10-retro-2026-04-20.md` already cites AI-3 Pattern #3 with enough detail. No edit needed — retro is frozen.
-  - [ ] 3.3 Add a cross-reference line in the new action's header comment: `<!-- Last synced with project-context.md Rule 7 on 2026-04-20 -->`. When Rule 7 gains a new prefix (e.g., a future DVR_ for plugins), the reviewer who adds the prefix should also update this file and bump the date.
+- [x] Task 3: Documentation discoverability — light touch (AC: #4)
+  - [x] 3.1 Do NOT add a new Rule to project-context.md. Rationale: Rule 7 already defines the contract; this story just enforces it at CR time. Adding a sibling "Rule 7-CR" would fragment the Rule. Precedent: retro-9-AI1 (Full Regression Gate) and retro-10-AI2 (AC Drift Check) both live in workflow XML only, not in project-context.md. ✅ No project-context.md change.
+  - [x] 3.2 Verify the Epic 10 retro document at `_bmad-output/implementation-artifacts/epic-10-retro-2026-04-20.md` already cites AI-3 Pattern #3 with enough detail. No edit needed — retro is frozen. ✅ Retro left untouched.
+  - [x] 3.3 Add a cross-reference line in the new action's header comment: `<!-- Last synced with project-context.md Rule 7 on 2026-04-20 -->`. When Rule 7 gains a new prefix (e.g., a future DVR_ for plugins), the reviewer who adds the prefix should also update this file and bump the date. ✅ Comment at line 97 of instructions.xml; inline `(last synced with project-context.md Rule 7 on 2026-04-20)` also inside the prefix list at line 111.
 
-- [ ] Task 4: Update sprint-status.yaml (AC: #7)
-  - [ ] 4.1 Mark `retro-10-AI3-rule7-wire-format-cr-check: ready-for-dev` at story creation time (handled by `/create-story` workflow — this step).
-  - [ ] 4.2 Transitions during execution:
-    - `/dev-story` start: `ready-for-dev → in-progress`
-    - `/dev-story` finish: `in-progress → review`
-    - `/code-review` pass: `review → done` with completion-note recording the final line range inside `instructions.xml` (e.g., "inserted Step 3 audit at lines 96–158")
-  - [ ] 4.3 Preserve sprint-status.yaml comment structure and the Agreement 4 tracking rule.
+- [x] Task 4: Update sprint-status.yaml (AC: #7)
+  - [x] 4.1 Mark `retro-10-AI3-rule7-wire-format-cr-check: ready-for-dev` at story creation time (handled by `/create-story` workflow — this step).
+  - [x] 4.2 Transitions during execution:
+    - `/dev-story` start: `ready-for-dev → in-progress` ✅ (sprint-status.yaml line 444 updated)
+    - `/dev-story` finish: `in-progress → review` ✅ (pending checkbox audit below)
+    - `/code-review` pass: `review → done` with completion-note recording the final line range inside `instructions.xml` (e.g., "inserted Step 3 audit at lines 96–173") — handled by `/code-review` workflow
+  - [x] 4.3 Preserve sprint-status.yaml comment structure and the Agreement 4 tracking rule. ✅ Only the status token and padding whitespace changed; the retro-10-AI3 completion note at end of line preserved.
 
 ## Dev Notes
 
@@ -242,16 +242,51 @@ This story is the same pattern, applied to `code-review/instructions.xml` Step 3
 
 ### Agent Model Used
 
-(populated by dev-story workflow)
+Claude Opus 4.7 (1M context) via `/bmad:bmm:agents:dev` + `/bmad:bmm:workflows:dev-story` (2026-04-20)
 
 ### Debug Log References
 
+- `xmllint --noout _bmad/bmm/workflows/4-implementation/code-review/instructions.xml` → PASS (no output)
+- `pnpm lint:all` → PASS (0 errors, 129 pre-existing warnings; `prettier --check .` → "All matched files use Prettier code style!")
+- `pnpm nx test api` → PASS (Go backend suite green, cached+fresh)
+- `pnpm nx test web` → PASS (144 files / 1738 tests green; test cleanup OK, no orphaned vitest workers)
+
 ### Completion Notes List
+
+- 🔒 **Code Review (2026-04-20, in-flow auto-fix option [1])** — adversarial self-CR found 1 HIGH + 1 MEDIUM + 4 LOW. All fixed:
+  - **H1 (Rule 7 stale vs codebase):** Meta-test of the new grep against `apps/api/internal/` revealed 4 production prefixes missing from Rule 7's authoritative list — `QB_` (5 codes), `METADATA_` (12 codes), `DOUBAN_` (5 codes), `WIKIPEDIA_` (6 codes). Added all 4 prefixes + representative codes to `project-context.md` Rule 7 (lines 279-297) AND to `instructions.xml` inline prefix list (lines 111-113). Authoritative count now 13 sources. Sync date kept at 2026-04-20. Follow-up for Winston (Architect): see separate Winston-prompt artifact for formal ADR review of the 4 new prefixes.
+  - **M1 (auto-fix prefix map ordering ambiguity):** Reordered `instructions.xml:126-147` so MOST-SPECIFIC-FIRST — `services/library_service.go` and `library/**` now appear BEFORE the `services/**` fallback. Added explicit "apply the first match" note + called `VALIDATION_` explicitly a fallback. New prefixes (QB_, DOUBAN_, WIKIPEDIA_, METADATA_) inserted in the specific-file section.
+  - **L1 (grep `-r` + `&lt;scope&gt;` ambiguity):** Rewrote grep procedure step 1 to show two distinct invocations — file-list form (`grep -nE … file1 file2`) vs dir-scope form (`grep -rnE … apps/api/internal/`) — removing the `-r` redundancy with file lists.
+  - **L2 (typed-var declarations missed):** Loosened regex from `Err[A-Z]\w* *= *"…"` to `Err[A-Z]\w*[^=]*= *"…"` — the `[^=]*` admits an optional type token between identifier and `=`, matching both `ErrCodeFoo = "FOO"` and `ErrCodeFoo MyType = "FOO"` while still anchoring on the `="STRING"` tail.
+  - **L3 (auto-fix missing call-site classes):** Step 3 rewritten as an enumerated class list including Go test assertions, Swagger annotations, apps/web/tests/ e2e+integration, libs/shared-types/ (defensive), and apps/web/src/ error-handling switches.
+  - **L4 (dual binding actions):** Removed the redundant "Bind the result to `{{wire_format_check_result}}`" sentence from the main action's Pass-recording section. The sibling MANDATORY binding action at lines 190-194 now owns the binding, and the main action references it explicitly ("The `{{wire_format_check_result}}` binding is set by the sibling MANDATORY action below."). Zero duplication; retro-10-AI2 sibling-action pattern preserved.
+- 🔗 AC Drift: NONE (checked: `code-review/instructions\.xml|Rule 7 Wire Format|wire-format-cr-check` across `_bmad-output/implementation-artifacts/*.md` — 2 hits, both REUSE not DRIFT: this story file itself + sibling `retro-10-AI4-http-route-client-method-gap.md` which references this story but does NOT modify `code-review/instructions.xml`). This is a new insertion into Step 3; no prior story has modified the Step 3 action sequence of code-review/instructions.xml.
+- ✅ Final placement inside `_bmad/bmm/workflows/4-implementation/code-review/instructions.xml`:
+  - Step 3 "Rule 7 Wire Format Check" MANDATORY action at lines 96–167 (main action block with grep + auto-fix + PASS-recording procedure).
+  - Step 3 `{{wire_format_check_result}}` binding MANDATORY action at lines 169–173 (three-state enum: PASS/FAIL/N/A) — mirrors the drift-check binding pattern from retro-10-AI2 to avoid unresolved placeholder in Step 4 output.
+  - Step 4 findings summary gained a new line: `**🔒 Rule 7 Wire Format:** {{wire_format_check_result}}` at line 207 (between `Git vs Story Discrepancies` and `Issues Found`).
+- ✅ Rule 7 source-prefix list synced 2026-04-20 against `project-context.md` lines 284–293: `TMDB_, AI_, DB_, VALIDATION_, SUBTITLE_, PLUGIN_, SCANNER_, SSE_, LIBRARY_`. Two in-file drift-date cues present — the HTML comment at line 97 and the inline parenthetical at line 111 — so a future editor updating Rule 7 sees the sync date in both the header and body of the action.
+- ✅ XML balance verified: new action inserts cleanly between `<!-- Story File Integrity Audit -->` and `<!-- Code Quality Deep Dive -->` comments. Step numbering 1–5 preserved. `xmllint --noout` PASS.
+- ✅ Zero code regressions: lint:all (0 errors), `nx test api` (all Go green), `nx test web` (1738/1738 green). This story modifies only the `_bmad/**/instructions.xml` workflow file — no Go or TS source touched. Post-change cleanup verified (SIGTERM to residual vitest workers PIDs 19909, 4379).
+- 🎨 UX Verification: SKIPPED — no UI changes in this story (100% docs/workflow story).
+- Pattern precedent: retro-9-AI1 (Full Regression Gate) + retro-9c-AI2 (Fix-or-File) + retro-10-AI2 (AC Drift Check) — this is the same `<action critical="MANDATORY">` inline insertion pattern, applied to `code-review/instructions.xml` Step 3 instead of `dev-story/instructions.xml`. Auto-fix procedure spec (file-path → prefix mapping) follows the 10-1a H1 precedent exactly.
 
 ### File List
 
-(populated by dev-story workflow — expected single file: `_bmad/bmm/workflows/4-implementation/code-review/instructions.xml`)
+**Modified:**
+
+- `_bmad/bmm/workflows/4-implementation/code-review/instructions.xml` — inserted "Rule 7 Wire Format Check" MANDATORY action + binding action at Step 3 (dev-story: lines 96–173). CR auto-fix refactor (code-review: H1+M1+L1-L4) expanded the action to span lines 96–194: prefix list extended to 13 sources, grep regex loosened for typed vars, grep command form disambiguated (file-list vs dir-scope), auto-fix prefix map reordered MOST-SPECIFIC-FIRST with new QB_/DOUBAN_/WIKIPEDIA_/METADATA_ entries, call-site class list expanded to 5 classes, redundant binding sentence removed from main action (sibling binding action now sole owner). Step 4 findings-summary output line unchanged (now at line 228 due to body growth).
+- `_bmad-output/implementation-artifacts/retro-10-AI3-rule7-wire-format-cr-check.md` — Status transitions (`ready-for-dev` → `in-progress` → `review` → `done`), Tasks/Subtasks all [x], Dev Agent Record populated, File List + Completion Notes + Change Log written. CR auto-fix entry added to Completion Notes documenting H1/M1/L1-L4 resolution.
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — `retro-10-AI3-rule7-wire-format-cr-check: ready-for-dev` → `in-progress` → `review` → `done`. Comment structure preserved.
+- `project-context.md` — Rule 7 prefix list extended from 9 to 13 sources (added QB_, METADATA_, DOUBAN_, WIKIPEDIA_ with representative codes). Header "Last Updated" bumped to 2026-04-20 with note citing retro-10-AI3 CR grep discovery. "Authoritative prefix set (13 sources)" line added for sync discipline. **Ownership note:** this edit was applied in-flow by Dev (Amelia) under CR auto-fix option [1] because the prefixes document existing production code (not a new architectural decision); formal ADR review delegated to Architect (Winston) via a follow-up prompt.
 
 ### Change Log
 
-(populated by dev-story workflow)
+| Date       | Change                                                                                                                                                                                                                                                                                                  |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-04-20 | Inserted "Rule 7 Wire Format Check" MANDATORY action + `{{wire_format_check_result}}` binding action into `code-review/instructions.xml` Step 3 (lines 96–173), between Story File Integrity Audit and Code Quality Deep Dive. Added `**🔒 Rule 7 Wire Format:**` line to Step 4 findings-summary output (line 207). Scope: Go-only (`apps/api/internal/**`), self-skips for pure-frontend/docs reviews. Three-state audit (PASS/FAIL/N/A) — silence not an option (retro-10-AI2 pattern). Ships with known-prefix list synced against project-context.md Rule 7 on 2026-04-20. |
+| 2026-04-20 | Full regression gate PASS: `pnpm lint:all` (0 errors, 129 pre-existing warnings + format:check clean), `pnpm nx test api` (all Go green), `pnpm nx test web` (1738/1738 green). Zero Go or TS source code changed.                                                                                     |
+| 2026-04-20 | Story transitions: ready-for-dev → in-progress → review. Sprint-status.yaml synced at each transition. All 4 tasks + 15 subtasks marked [x]. Mandatory checkbox audit (Agreement 5) PASS — 0 unchecked.                                                                                                  |
+| 2026-04-20 | Code Review (Amelia adversarial self-CR, in-flow auto-fix option [1]) — 1 HIGH + 1 MEDIUM + 4 LOW found, all fixed. H1: Rule 7 prefix list extended to 13 sources (added QB_/METADATA_/DOUBAN_/WIKIPEDIA_ discovered via meta-test of the new grep against apps/api/internal/) — touched both project-context.md (9→13 sources + header note + authoritative line) and instructions.xml inline list. M1: auto-fix prefix map reordered MOST-SPECIFIC-FIRST to disambiguate services/library_service.go match. L1: grep command split into file-list and dir-scope forms. L2: regex loosened from `Err… *= *"…"` to `Err…[^=]*= *"…"` to catch typed vars. L3: call-site class list expanded (5 classes incl. libs/shared-types/, apps/web/src/). L4: redundant binding sentence removed from main action (sibling action now sole owner). xmllint PASS post-edits. Story → done. Follow-up: Winston (Architect) to review Rule 7 prefix formalization via separate prompt. |
+| 2026-04-20 | Story transitions: review → done. Sprint-status.yaml synced. CR issues 1 HIGH + 1 MEDIUM + 4 LOW all fixed in-flow.                                                                                                                                                                                   |
+| 2026-04-20 | **🏗️ Architect (Winston) sign-off on CR H1 — Rule 7 prefix expansion.** Reviewed all 4 judgment calls from Amelia's Winston-prompt: **Item 2 (DOUBAN_/WIKIPEDIA_ per-source vs umbrella) — APPROVED AS SHIPPED.** Per-source matches TMDB_ precedent; consolidating to EXTERNAL_SOURCE_/SCRAPER_ would lose routing signal. **Item 4 (sync-discipline location) — APPROVED AS PLACED.** project-context.md is correct surface (Agreement 3 bible loads in every agent context; ADR is for decisions w/ alternatives, not process rules; 13 prefixes fits inline). **No ADR created.** **Item 1 (METADATA_ Rule 11 smell) — CONFIRMED, worse than described.** retry/metadata_integration.go not only mirrors 5 constants but introduces 4 retry-only wire codes (METADATA_GATEWAY_ERROR/NETWORK_ERROR/NOT_FOUND/UNKNOWN_ERROR) that silently expand the wire contract beyond provider.go. Filed backlog follow-up: `followup-metadata-prefix-dedup.md` (6 ACs, MEDIUM). **Item 3 (QB_ naming) — REVISION RECOMMENDED.** QB_ is the only prefix breaking the SOURCE=uppercase(package name) convention used by all other 12 prefixes. Filed backlog follow-up: `followup-qbittorrent-prefix-rename.md` (8 ACs, LOW). Both follow-ups registered in sprint-status.yaml. retro-10-AI3 itself remains closed; no edits to Rule 7 body or instructions.xml needed from this review — the as-shipped state is ratified. |
