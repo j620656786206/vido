@@ -16,7 +16,7 @@
     "serve": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "GIN_MODE=debug go run ./cmd/api/main.go",
+        "command": "GIN_MODE=debug go run ./cmd/api",
         "cwd": "apps/api"
       }
     },
