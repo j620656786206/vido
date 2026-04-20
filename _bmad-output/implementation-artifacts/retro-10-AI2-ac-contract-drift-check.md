@@ -1,6 +1,6 @@
 # Story: AC Contract Drift Check in dev-story Workflow
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -19,9 +19,9 @@ so that cross-story AC contract drift is caught at implementation time (not esca
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add "AC Contract Drift Check" action to `_bmad/bmm/workflows/4-implementation/dev-story/instructions.xml` (AC: #1, #2, #3, #4)
-  - [ ] 1.1 Decide placement: insert into Step 2 "Load project context and story information" AFTER the existing `<action>Load comprehensive context from story file's Dev Notes section</action>` line — this places the check AFTER story context is loaded but BEFORE any implementation decisions in Step 5 (optimal: dev agent has full AC text in hand, hasn't yet written code)
-  - [ ] 1.2 Draft the new action XML block (~25–35 lines) with the following shape:
+- [x] Task 1: Add "AC Contract Drift Check" action to `_bmad/bmm/workflows/4-implementation/dev-story/instructions.xml` (AC: #1, #2, #3, #4)
+  - [x] 1.1 Decide placement: insert into Step 2 "Load project context and story information" AFTER the existing `<action>Load comprehensive context from story file's Dev Notes section</action>` line — this places the check AFTER story context is loaded but BEFORE any implementation decisions in Step 5 (optimal: dev agent has full AC text in hand, hasn't yet written code)
+  - [x] 1.2 Draft the new action XML block (~25–35 lines) with the following shape:
     ```xml
     <action critical="MANDATORY">AC CONTRACT DRIFT CHECK (Epic 10 Retro AI-2):
       If this story's implementation modifies the observable behavior of an acceptance
@@ -63,35 +63,35 @@ so that cross-story AC contract drift is caught at implementation time (not esca
         This check exists to catch that class of drift BEFORE CR.
     </action>
     ```
-  - [ ] 1.3 Place the new action BETWEEN the existing Step 2 actions — specifically after `<action>Use enhanced story context to inform implementation decisions and approaches</action>` (currently the last action before the `<output>` tag in Step 2). The new action must execute before Step 5 (implementation) so the dev agent has already done the drift analysis by the time they write code.
-  - [ ] 1.4 Update the Step 2 `<output>` block to mention drift-check status:
+  - [x] 1.3 Place the new action BETWEEN the existing Step 2 actions — specifically after `<action>Use enhanced story context to inform implementation decisions and approaches</action>` (currently the last action before the `<output>` tag in Step 2). The new action must execute before Step 5 (implementation) so the dev agent has already done the drift analysis by the time they write code.
+  - [x] 1.4 Update the Step 2 `<output>` block to mention drift-check status:
     ```
     ✅ **Context Loaded**
       Story and project context available for implementation
       AC Drift Check: {{drift_check_result}}  <!-- new line -->
     ```
     Where `{{drift_check_result}}` is one of: "NONE", "FOUND — see Completion Notes", "N/A (new feature, no prior AC to drift from)".
-  - [ ] 1.5 Add a brief cross-reference comment at the top of the new action citing both Pattern #2 from the Epic 10 retro and Agreement 4 (retro action items become tracked entries) so the provenance is clear when a future SM reads the file.
+  - [x] 1.5 Add a brief cross-reference comment at the top of the new action citing both Pattern #2 from the Epic 10 retro and Agreement 4 (retro action items become tracked entries) so the provenance is clear when a future SM reads the file.
 
-- [ ] Task 2: Verify no regression in existing dev-story behavior (AC: #5)
-  - [ ] 2.1 Run `pnpm lint:all` from repo root — PASS expected (docs-only change; `.xml` files are not linted by ESLint/Prettier/go vet/staticcheck)
-  - [ ] 2.2 Run `pnpm nx test api` — PASS expected (zero code change)
-  - [ ] 2.3 Run `pnpm nx test web` — PASS expected (zero code change)
-  - [ ] 2.4 Read the modified `instructions.xml` end-to-end to confirm:
+- [x] Task 2: Verify no regression in existing dev-story behavior (AC: #5)
+  - [x] 2.1 Run `pnpm lint:all` from repo root — PASS expected (docs-only change; `.xml` files are not linted by ESLint/Prettier/go vet/staticcheck)
+  - [x] 2.2 Run `pnpm nx test api` — PASS expected (zero code change)
+  - [x] 2.3 Run `pnpm nx test web` — PASS expected (zero code change)
+  - [x] 2.4 Read the modified `instructions.xml` end-to-end to confirm:
     - Steps 1–11 numbering is preserved (no accidental renumbering)
     - All existing `<critical>` / `<action>` / `<check>` tags remain intact
     - The new action is nested INSIDE Step 2 (not accidentally closing Step 2 early)
     - XML is well-formed (no dangling tags, no `&` or `<` in content without escaping)
 
-- [ ] Task 3: Documentation discoverability — light touch (AC: #4)
-  - [ ] 3.1 Do NOT add Rule 20 to project-context.md. Rationale: project-context.md Rules govern code conventions (logging, layering, naming); workflow process rules belong in the workflow file itself. This is deliberate consistency with retro-9-AI1 (FULL REGRESSION GATE was added to dev-story/instructions.xml, NOT to project-context.md).
-  - [ ] 3.2 Verify the Epic 10 retro document `_bmad-output/implementation-artifacts/epic-10-retro-2026-04-20.md` already cites AI-2 with enough detail that a future reader can find this story. No edit needed to the retro — it's frozen.
+- [x] Task 3: Documentation discoverability — light touch (AC: #4)
+  - [x] 3.1 Do NOT add Rule 20 to project-context.md. Rationale: project-context.md Rules govern code conventions (logging, layering, naming); workflow process rules belong in the workflow file itself. This is deliberate consistency with retro-9-AI1 (FULL REGRESSION GATE was added to dev-story/instructions.xml, NOT to project-context.md).
+  - [x] 3.2 Verify the Epic 10 retro document `_bmad-output/implementation-artifacts/epic-10-retro-2026-04-20.md` already cites AI-2 with enough detail that a future reader can find this story. No edit needed to the retro — it's frozen.
 
-- [ ] Task 4: Update sprint-status.yaml (AC: #6)
-  - [ ] 4.1 Mark `retro-10-AI2-ac-contract-drift-check: ready-for-dev` at story creation time (this file's generation step, handled by `/create-story` workflow).
-  - [ ] 4.2 On `/dev-story` invocation, transition `ready-for-dev → in-progress`.
-  - [ ] 4.3 On `/dev-story` completion, transition `in-progress → review`.
-  - [ ] 4.4 On `/code-review` pass, transition `review → done` with a completion note in the sprint-status.yaml comment recording the final placement line range inside `instructions.xml` (e.g., "added Step 2 action at lines 147-180").
+- [x] Task 4: Update sprint-status.yaml (AC: #6)
+  - [x] 4.1 Mark `retro-10-AI2-ac-contract-drift-check: ready-for-dev` at story creation time (this file's generation step, handled by `/create-story` workflow).
+  - [x] 4.2 On `/dev-story` invocation, transition `ready-for-dev → in-progress`.
+  - [x] 4.3 On `/dev-story` completion, transition `in-progress → review`.
+  - [x] 4.4 On `/code-review` pass, transition `review → done` with a completion note in the sprint-status.yaml comment recording the final placement line range inside `instructions.xml` (e.g., "added Step 2 action at lines 147-180").
 
 ## Dev Notes
 
@@ -168,16 +168,44 @@ Confidence: HIGH. The pattern is well-trodden, the file is well-structured, the 
 
 ### Agent Model Used
 
-(populated by dev-story workflow)
+Claude Opus 4.7 (1M context) — `claude-opus-4-7[1m]`
 
 ### Debug Log References
 
+- `pnpm lint:all` → 0 errors, 129 pre-existing warnings (no-explicit-any + react-hooks/exhaustive-deps — baseline, unrelated to this story)
+- `pnpm nx test api` → all Go packages PASS
+- `pnpm nx test web` → 144 test files / 1738 tests PASS, auto-cleanup ran (2 PIDs killed)
+- Grep verification on `epic-10-retro-2026-04-20.md` → AI-2 cited at lines 44, 83, 129, 187 (row + Pattern #2 + action item + summary)
+- Structural verification on `dev-story/instructions.xml` → `<step n="1">` through `<step n="11">` numbering intact post-edit (Grep confirmed line positions: step 2 @ 139, step 3 @ 195, step 10 @ 437, step 11 @ 499)
+
 ### Completion Notes List
+
+- **🔗 AC Drift: N/A** (bootstrap — this story introduces the AC Drift Check itself; no prior check existed to drift against. All subsequent stories must record NONE or FOUND per the new rule.)
+- **✅ AC #1 satisfied**: MANDATORY action inserted at Step 2 of `dev-story/instructions.xml` (lines 148–187). Check runs when the dev agent has full AC text in hand but has NOT yet written code (optimal placement, per story Dev Notes rationale).
+- **✅ AC #2 satisfied**: Documentation rule embedded — `🔗 AC Drift: {prior-story-key} AC #N — {old contract} → {new contract}` format prescribed; File List annotation `(AC drift reference — see Completion Notes)` also prescribed.
+- **✅ AC #3 satisfied**: `NONE` path explicit — dev agent MUST record grep pattern used + hit count + classification, so silence is impossible.
+- **✅ AC #4 satisfied**: action tagged `critical="MANDATORY"`, cites "Epic 10 Retro AI-2" in tag title + "Pattern #2 (Story 10-4 → 10-5)" in precedent block, includes full concrete drift example ("single POST batch" → "≤N POSTs (one per lazy-revealed batch)", IntersectionObserver trigger, caught only by adversarial CR 10-5 H1). Precedent is narrated, not just linked — future dev agents see the story, not just a ceremony checkbox.
+- **✅ AC #5 satisfied**: docs-only change (modified `.xml` file); zero Go/TS code touched. All three gates green (lint + api test + web test). XML integrity re-verified via Read + Grep.
+- **✅ AC #6 status transitions executed**:
+  - `ready-for-dev` → `in-progress` (Step 4 of dev-story, Amelia)
+  - `in-progress` → `review` (Step 10 of dev-story, Amelia)
+  - `review` → `done` deferred to `/code-review` workflow (per Task 4.4 spec)
+  - Final placement line range `148–187` recorded in sprint-status.yaml comment now (the "completion note" part of 4.4); the status-value flip awaits CR.
+- **🎨 UX Verification: SKIPPED** — no UI changes in this story (pure workflow-docs).
+- **📦 Task 3.1 decision upheld**: `project-context.md` deliberately NOT modified. Rationale: project-context.md Rules govern code conventions (logging, layering, naming); workflow process rules belong inside the workflow file itself — consistent with retro-9-AI1 precedent (FULL REGRESSION GATE added to `dev-story/instructions.xml`, not to project-context.md).
+- **📦 Task 3.2 verified**: `epic-10-retro-2026-04-20.md` already cites AI-2 adequately (row, Pattern #2 narrative, action item, summary line); no retro edit required (retro docs are frozen once shipped).
 
 ### File List
 
-(populated by dev-story workflow — expected single file: `_bmad/bmm/workflows/4-implementation/dev-story/instructions.xml`)
+- `_bmad/bmm/workflows/4-implementation/dev-story/instructions.xml` (modified) — inserted `<!-- Epic 10 Retro AI-2 ... Agreement 4 -->` comment + `<action critical="MANDATORY">` AC Contract Drift Check block (~39 lines) between last pre-existing Step 2 `<action>` and `<output>` (lines 148–187); updated Step 2 `<output>` block to include `AC Drift Check: {{drift_check_result}}` line
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (modified) — `retro-10-AI2-ac-contract-drift-check` status: `ready-for-dev` → `in-progress` → `review`; comment appended with Amelia dev-story note + final placement line range `148–187`
+- `_bmad-output/implementation-artifacts/retro-10-AI2-ac-contract-drift-check.md` (self, modified) — all task checkboxes marked `[x]`, Dev Agent Record populated, Status `ready-for-dev` → `review`
 
 ### Change Log
 
-(populated by dev-story workflow)
+| Date       | Change                                                                                                                                                                                                                                                                                                                                                                             | Author |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| 2026-04-20 | **Task 1** — inserted AC Contract Drift Check as MANDATORY action in `dev-story/instructions.xml` Step 2 (lines 148–187); added cross-reference comment citing Pattern #2 + Agreement 4; updated Step 2 `<output>` block to include `AC Drift Check` status line                                                                                                                | Amelia |
+| 2026-04-20 | **Task 2** — verification green: `pnpm lint:all` (0 errors, 129 pre-existing warnings), `pnpm nx test api` (all PASS), `pnpm nx test web` (144 files / 1738 tests PASS with auto-cleanup); XML well-formed, Step 1–11 numbering intact                                                                                                                                             | Amelia |
+| 2026-04-20 | **Task 3** — documentation discoverability: confirmed `project-context.md` deliberately unchanged (workflow-level concerns stay in workflow files; consistent with retro-9-AI1 precedent); confirmed `epic-10-retro-2026-04-20.md` already cites AI-2 at lines 44/83/129/187 — no retro edit needed                                                                                 | Amelia |
+| 2026-04-20 | **Task 4** — sprint-status transitions executed: `ready-for-dev` (SM Bob, create-story) → `in-progress` (Amelia, dev-story start, Step 4) → `review` (Amelia, dev-story complete, Step 10). Line-range note `148–187` recorded in sprint-status comment. Task 4.4 status-value flip (`review → done`) deferred to `/code-review` workflow per task spec                              | Amelia |

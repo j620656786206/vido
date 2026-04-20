@@ -144,8 +144,51 @@
     <action>Load comprehensive context from story file's Dev Notes section</action>
     <action>Extract developer guidance from Dev Notes: architecture requirements, previous learnings, technical specifications</action>
     <action>Use enhanced story context to inform implementation decisions and approaches</action>
+
+    <!-- Epic 10 Retro AI-2 (Pattern #2: Story 10-4 → 10-5 AC contract drift) + Agreement 4 (retro items → tracked entries) -->
+    <action critical="MANDATORY">AC CONTRACT DRIFT CHECK (Epic 10 Retro AI-2):
+      If this story's implementation modifies the observable behavior of an acceptance
+      criterion already shipped in a prior story, you MUST grep across previous story
+      files for cross-references BEFORE writing code.
+
+      Trigger conditions (run the check if ANY is true):
+        (a) A task description says "changes behavior of {feature X}" where X was
+            delivered in a previous story.
+        (b) An AC in THIS story rephrases or contradicts an AC from a PRIOR story
+            (e.g., "single POST" → "≤N POSTs").
+        (c) A task touches a file already listed in a previous story's File List
+            in a way that alters its external contract (signatures, wire format,
+            timing guarantees, batch semantics).
+
+      Check procedure:
+        1. Identify the candidate prior story file(s) in _bmad-output/implementation-artifacts/.
+        2. grep -rn "{AC-relevant keyword(s)}" _bmad-output/implementation-artifacts/*.md
+           Use keywords from the AC wording: e.g., "single POST", "batch", "check-owned",
+           "aria-modal", "focus trap", etc. Start broad, narrow if too many hits.
+        3. For each hit, read the surrounding AC and decide: is my change a DRIFT
+           (changes behavior the prior AC specified) or a REUSE (prior AC still holds).
+
+      Documentation rule:
+        - If drift found: add to Dev Agent Record → Completion Notes:
+            "🔗 AC Drift: {prior-story-key} AC #N — {old contract} → {new contract}"
+          AND append the prior story file path to this story's File List with the
+          annotation "(AC drift reference — see Completion Notes)".
+        - If NO drift found: still record in Completion Notes:
+            "🔗 AC Drift: NONE (checked: '{grep-pattern-used}' across
+            _bmad-output/implementation-artifacts/*.md — N hits, all REUSE not DRIFT)"
+          The check is MANDATORY — silence is not an option.
+
+      Precedent (Epic 10, Story 10-4 → 10-5):
+        Story 10-4 AC #4 stated "single POST batch for all visible TMDb IDs".
+        Story 10-5 added IntersectionObserver lazy-load, which silently changed the
+        contract to "≤N POSTs (one per lazy-revealed batch)". The drift escaped
+        internal review and was only caught by adversarial CR (10-5 CR H1).
+        This check exists to catch that class of drift BEFORE CR.
+    </action>
+
     <output>✅ **Context Loaded**
       Story and project context available for implementation
+      AC Drift Check: {{drift_check_result}}
     </output>
   </step>
 
