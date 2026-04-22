@@ -37,6 +37,38 @@ validation-rules:
 - [ ] **No Ambiguous Implementation:** Clear, unambiguous implementation that meets story requirements
 - [ ] **Edge Cases Handled:** Error conditions and edge cases appropriately addressed
 - [ ] **Dependencies Within Scope:** Only uses dependencies specified in story or project-context.md
+- [ ] **HTTP Route ↔ Client Method Sync (Epic 10 Retro AI-4):** If a story task
+      references an "existing client method" or "existing endpoint" as a given,
+      do NOT assume the HTTP route is wired up — a Go client method or a frontend
+      service call can exist without a server-side route (the runtime result is a
+      404, silent in `go test` / unit tests, fatal in real use).
+
+      Verification procedure (run for EACH such task reference):
+        1. Find the client call's HTTP method + path. Examples:
+           - Go client: `apps/api/internal/tmdb/client.go::GetMovieVideos` →
+             `GET https://api.themoviedb.org/...` (external — OUT of scope for this
+             check; external routes are TMDb/qBT/etc.)
+           - Internal API client: `apps/api/internal/*/client.go` for plugin clients,
+             OR `apps/web/src/services/*.ts` for frontend services calling our own
+             backend → THIS is the in-scope case.
+        2. For in-scope (our backend) routes, grep: `grep -n "RegisterRoutes"
+           apps/api/cmd/api/main.go` to locate the handler registration, then
+           read the handler file's `RegisterRoutes` method for the exact method +
+           path match (e.g., `group.GET("/movies/:id/videos", h.GetMovieVideos)`).
+        3. Record result in Dev Agent Record → Completion Notes:
+           - If registered: `🔌 Route Sync: {METHOD} {path} verified at
+             {handler_file}:{line} (registered in main.go:{line})`
+           - If NOT registered: HALT. The task cannot be completed as written.
+             Expand story scope to include route registration, OR ask the user
+             whether to defer to a follow-up story.
+        4. If the story is 100% frontend OR 100% docs (no Go handler impact),
+           record: `🔌 Route Sync: N/A (no backend route touched)`.
+
+      Why this exists: Story 10-2 Task 3.3 said "videos endpoint already exists
+      in client". The Go client method `GetMovieVideos` existed; the HTTP route
+      `/movies/:id/videos` did NOT. DEV had to add backend route exposure
+      mid-story, silently expanding scope without a matching AC update. This
+      check surfaces that gap at task-complete time, not at CR time.
 
 ## 🧪 Testing & Quality Assurance
 

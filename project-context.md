@@ -4,7 +4,7 @@
 
 **Full Documentation:** See `_bmad-output/planning-artifacts/architecture/index.md` for complete architectural decisions and patterns (sharded into ~20 focused files).
 
-**Last Updated:** 2026-04-20 (Rule 7 expansion — added `QB_`, `METADATA_`, `DOUBAN_`, `WIKIPEDIA_` prefixes already in production use; surfaced by retro-10-AI3 CR grep on 2026-04-20)
+**Last Updated:** 2026-04-22 (Rule 15 HTTP Route ↔ Client Method Sync extension — retro-10-AI4; adds 4th sub-section guarding "client method exists ≠ HTTP route registered", Story 10-2 precedent). Prior: 2026-04-20 (Rule 7 expansion — added `QB_`, `METADATA_`, `DOUBAN_`, `WIKIPEDIA_` prefixes already in production use; surfaced by retro-10-AI3 CR grep on 2026-04-20)
 **Architecture Status:** ✅ Validated and Ready for Implementation (5,463 lines, 8 steps completed)
 
 ---
@@ -437,6 +437,16 @@ Swagger:
   ✅ New/changed endpoints have updated Swaggo annotations
   ✅ Run swag init if annotations changed
   ❌ Changing API contract without updating docs
+
+HTTP Route ↔ Client Method Sync (Epic 10 Retro AI-4):
+  ✅ If a task description says "endpoint already exists in client" or
+     "method already registered", grep apps/api/cmd/api/main.go for the
+     corresponding {handler}.RegisterRoutes(apiV1) call AND verify the
+     exact HTTP method + path in the handler file.
+  ✅ Client method existing ≠ HTTP route registered. Assume nothing.
+  ✅ If route is missing, expand story scope (new task + AC) before
+     continuing. Do not silently add it.
+  ❌ Trusting a client method's existence as proof the server route is wired.
 ```
 
 ### Rule 16: Test Assertion Quality

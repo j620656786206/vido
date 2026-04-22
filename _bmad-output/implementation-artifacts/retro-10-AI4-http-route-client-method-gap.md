@@ -1,6 +1,6 @@
 # Story: HTTP Route ↔ Client Method Sync Verification (Rule 15 Extension)
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -19,11 +19,11 @@ so that story scope doesn't silently expand mid-implementation like it did in St
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add "HTTP Route ↔ Client Method Sync" checklist item to `_bmad/bmm/workflows/4-implementation/dev-story/checklist.md` (AC: #1, #2, #3)
-  - [ ] 1.1 Placement: insert under the existing "## ✅ Implementation Completion" section (currently lines ~32–39), AFTER the "**Dependencies Within Scope**" item and BEFORE the "## 🧪 Testing & Quality Assurance" section. Rationale: this is a scope-completeness check, not a testing check. Keeps grouping clean.
-  - [ ] 1.2 Draft the new checklist item with this shape:
+- [x] Task 1: Add "HTTP Route ↔ Client Method Sync" checklist item to `_bmad/bmm/workflows/4-implementation/dev-story/checklist.md` (AC: #1, #2, #3)
+  - [x] 1.1 Placement: insert under the existing "## ✅ Implementation Completion" section (currently lines ~32–39), AFTER the "**Dependencies Within Scope**" item and BEFORE the "## 🧪 Testing & Quality Assurance" section. Rationale: this is a scope-completeness check, not a testing check. Keeps grouping clean.
+  - [x] 1.2 Draft the new checklist item with this shape:
     ```markdown
-    - [ ] **HTTP Route ↔ Client Method Sync (Epic 10 Retro AI-4):** If a story task
+    - [x] **HTTP Route ↔ Client Method Sync (Epic 10 Retro AI-4):** If a story task
       references an "existing client method" or "existing endpoint" as a given,
       do NOT assume the HTTP route is wired up — a Go client method or a frontend
       service call can exist without a server-side route (the runtime result is a
@@ -56,11 +56,11 @@ so that story scope doesn't silently expand mid-implementation like it did in St
       mid-story, silently expanding scope without a matching AC update. This
       check surfaces that gap at task-complete time, not at CR time.
     ```
-  - [ ] 1.3 Verify the new item renders correctly as rendered markdown (bullets, code spans, no unescaped angle brackets).
+  - [x] 1.3 Verify the new item renders correctly as rendered markdown (bullets, code spans, no unescaped angle brackets).
 
-- [ ] Task 2: Extend Rule 15 in `project-context.md` with the same gap + procedure (AC: #4)
-  - [ ] 2.1 Current Rule 15 has three sub-sections under the `Before marking a story task complete, verify:` header: **main.go Wiring**, **DB Column Sync**, **Swagger**. Insert a new fourth sub-section **HTTP Route ↔ Client Method Sync** AFTER the existing three, before Rule 15's closing code fence.
-  - [ ] 2.2 Draft the new sub-section:
+- [x] Task 2: Extend Rule 15 in `project-context.md` with the same gap + procedure (AC: #4)
+  - [x] 2.1 Current Rule 15 has three sub-sections under the `Before marking a story task complete, verify:` header: **main.go Wiring**, **DB Column Sync**, **Swagger**. Insert a new fourth sub-section **HTTP Route ↔ Client Method Sync** AFTER the existing three, before Rule 15's closing code fence.
+  - [x] 2.2 Draft the new sub-section:
     ```
     HTTP Route ↔ Client Method Sync (Epic 10 Retro AI-4):
       ✅ If a task description says "endpoint already exists in client" or
@@ -72,14 +72,14 @@ so that story scope doesn't silently expand mid-implementation like it did in St
          continuing. Do not silently add it.
       ❌ Trusting a client method's existence as proof the server route is wired.
     ```
-  - [ ] 2.3 Update the "Last Updated" header line at the top of `project-context.md` to note the Rule 15 extension (pattern: same as prior retro updates, e.g., "Rule 15 HTTP Route ↔ Client Method Sync extension (retro-10-AI4)").
-  - [ ] 2.4 Do NOT renumber rules. Just append the new sub-section inside Rule 15's existing block. Rule 16 and onward stay put.
+  - [x] 2.3 Update the "Last Updated" header line at the top of `project-context.md` to note the Rule 15 extension (pattern: same as prior retro updates, e.g., "Rule 15 HTTP Route ↔ Client Method Sync extension (retro-10-AI4)").
+  - [x] 2.4 Do NOT renumber rules. Just append the new sub-section inside Rule 15's existing block. Rule 16 and onward stay put.
 
-- [ ] Task 3: Verify zero code regressions + update sprint-status.yaml (AC: #5, #6)
-  - [ ] 3.1 Run `pnpm lint:all` — PASS expected (markdown files are not linted by ESLint/Prettier/go-vet/staticcheck per this repo's lint scope)
-  - [ ] 3.2 Run `pnpm nx test api` — PASS expected (zero Go code change)
-  - [ ] 3.3 Run `pnpm nx test web` — PASS expected (zero frontend code change)
-  - [ ] 3.4 Mark `retro-10-AI4-http-route-client-method-gap: ready-for-dev` at creation (this step). Transitions during execution: ready-for-dev → in-progress → review → done. On completion, record in sprint-status.yaml comment the final line ranges in both edited files (e.g., "checklist.md line 40, project-context.md Rule 15 sub-section added at lines X–Y").
+- [x] Task 3: Verify zero code regressions + update sprint-status.yaml (AC: #5, #6)
+  - [x] 3.1 Run `pnpm lint:all` — PASS expected (markdown files are not linted by ESLint/Prettier/go-vet/staticcheck per this repo's lint scope)
+  - [x] 3.2 Run `pnpm nx test api` — PASS expected (zero Go code change)
+  - [x] 3.3 Run `pnpm nx test web` — PASS expected (zero frontend code change)
+  - [x] 3.4 Mark `retro-10-AI4-http-route-client-method-gap: ready-for-dev` at creation (this step). Transitions during execution: ready-for-dev → in-progress → review → done. On completion, record in sprint-status.yaml comment the final line ranges in both edited files (e.g., "checklist.md line 40, project-context.md Rule 15 sub-section added at lines X–Y").
 
 ## Dev Notes
 
@@ -176,16 +176,38 @@ The new sub-section slots in after "Swagger:" and before the closing code fence.
 
 ### Agent Model Used
 
-(populated by dev-story workflow)
+Amelia (BMM Dev Agent) / Claude Opus 4.7 (1M context) — `/bmad:bmm:agents:dev` → `/bmad:bmm:workflows:dev-story`, invoked 2026-04-22.
 
 ### Debug Log References
 
+- `pnpm lint:all` (repo root, 2026-04-22): 0 errors, 129 pre-existing warnings (no new warnings — docs-only changes cannot introduce lint regressions); `prettier --check .` PASS.
+- `pnpm nx test api` (2026-04-22): PASS, Go backend green (partially cached per Nx).
+- `pnpm nx test web` (2026-04-22): 144 files / 1738 tests, all PASS; `test:cleanup:all` ran automatically, both spawned PIDs (19909, 4379) exited cleanly — no orphaned workers.
+
 ### Completion Notes List
+
+- 🔗 AC Drift: N/A (bootstrap of new workflow rule — no prior story AC covers the shape or count of Rule 15 sub-sections, the internal item set of `dev-story/checklist.md`, or HTTP Route ↔ Client Method Sync semantics; checked grep patterns `Rule 15` / `HTTP Route|Client Method|RegisterRoutes` / `Perf.A11y` across `_bmad-output/implementation-artifacts/*.md` — 24 hits across 13 unique files, all REUSE not DRIFT: prior Rule 15 citations are compliance checks against its existing 3-subsection contract, not specs on the count; prior RegisterRoutes mentions are implementation patterns, not AC contracts).
+- 🔌 Route Sync: N/A (no backend route touched — this is a 100% docs/workflow story modifying `_bmad/bmm/workflows/4-implementation/dev-story/checklist.md` and `project-context.md` only; no Go handler, service, or repository code was added or changed).
+- 🎨 UX Verification: SKIPPED — no UI changes in this story (zero files under `apps/web/`).
+- AC #1 satisfied: new checklist item inserted at `_bmad/bmm/workflows/4-implementation/dev-story/checklist.md:40–71`, under `## ✅ Implementation Completion`, directly after "Dependencies Within Scope" and before `## 🧪 Testing & Quality Assurance`. Content matches the story Task 1.2 template verbatim.
+- AC #2 satisfied: the new checklist item's step 3 explicitly mandates `🔌 Route Sync: {METHOD} {path} verified at {handler_file}:{line} (registered in main.go:{line})` in Completion Notes when a route is registered — non-silent, auditable, matches the retro-10-AI2 three-state audit rule.
+- AC #3 satisfied: step 3 branch for "NOT registered" explicitly directs the developer to HALT and either expand scope or ask the user — no silent scope expansion path.
+- AC #4 satisfied: Rule 15 in `project-context.md:421–450` now has a 4th sub-section `HTTP Route ↔ Client Method Sync (Epic 10 Retro AI-4):` at lines 441–449, matching the shape of existing main.go Wiring / DB Column Sync / Swagger blocks (3 ✅ bullets + 1 ❌ bullet). Rules 16+ unchanged (Rule 16 now at line 452). "Last Updated" header at line 7 updated to `2026-04-22` with retro-10-AI4 citation.
+- AC #5 satisfied: `pnpm lint:all` PASS (0 errors). Markdown files are not processed by `go vet` / `staticcheck` / ESLint; Prettier confirms all formatting compliant.
+- AC #6 satisfied: sprint-status.yaml entry `retro-10-AI4-http-route-client-method-gap` transitioned `ready-for-dev → in-progress` at dev-story start. After CR, target state is `review → done` (set by CR workflow). Final line ranges of edits recorded here for sprint-status comment.
 
 ### File List
 
-(populated by dev-story workflow — expected two files: `project-context.md` + `_bmad/bmm/workflows/4-implementation/dev-story/checklist.md`)
+- `_bmad/bmm/workflows/4-implementation/dev-story/checklist.md` — added new "HTTP Route ↔ Client Method Sync (Epic 10 Retro AI-4)" checklist item under `## ✅ Implementation Completion` (lines 40–71).
+- `project-context.md` — added 4th sub-section to Rule 15 at lines 441–449; updated "Last Updated" header at line 7.
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — entry `retro-10-AI4-http-route-client-method-gap` status `ready-for-dev → in-progress` (will transition to `review` after this story file is saved; set by dev-story Step 10).
+- `_bmad-output/implementation-artifacts/retro-10-AI4-http-route-client-method-gap.md` — this story file (all 14 Tasks/Subtasks checkboxes marked [x], Status → review, Dev Agent Record populated).
 
 ### Change Log
 
-(populated by dev-story workflow)
+| Date       | Change                                                                                                                                                                                                                           |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-04-22 | Added "HTTP Route ↔ Client Method Sync (Epic 10 Retro AI-4)" checklist item to `_bmad/bmm/workflows/4-implementation/dev-story/checklist.md` at lines 40–71, directly after "Dependencies Within Scope" and before Testing section. Item mandates grep `main.go` for `RegisterRoutes` when a task references "existing client method" / "existing endpoint" as a given, with three-state audit record (PASS / HALT / N/A) in Completion Notes. (AC #1, #2, #3) |
+| 2026-04-22 | Extended Rule 15 in `project-context.md` with new 4th sub-section "HTTP Route ↔ Client Method Sync (Epic 10 Retro AI-4)" at lines 441–449, matching existing sub-section shape (3 ✅ + 1 ❌). Rules 16+ unchanged. Updated "Last Updated" header at line 7. (AC #4)                                                                   |
+| 2026-04-22 | Full regression gate PASS: `pnpm lint:all` 0 errors, `pnpm nx test api` PASS, `pnpm nx test web` 1738/1738 PASS, cleanup verified. (AC #5)                                                                                                                                                                                                  |
+| 2026-04-22 | Sprint-status.yaml `retro-10-AI4-http-route-client-method-gap` entry transitioned `ready-for-dev → in-progress`; will transition to `review` as Step 10 saves. Final line ranges recorded in this Completion Notes list for CR comment backfill. (AC #6) |
