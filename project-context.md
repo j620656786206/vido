@@ -438,7 +438,7 @@ Swagger:
   ✅ Run swag init if annotations changed
   ❌ Changing API contract without updating docs
 
-HTTP Route ↔ Client Method Sync (Epic 10 Retro AI-4):
+HTTP Route ↔ Client Method Sync:
   ✅ If a task description says "endpoint already exists in client" or
      "method already registered", grep apps/api/cmd/api/main.go for the
      corresponding {handler}.RegisterRoutes(apiV1) call AND verify the
@@ -447,6 +447,11 @@ HTTP Route ↔ Client Method Sync (Epic 10 Retro AI-4):
   ✅ If route is missing, expand story scope (new task + AC) before
      continuing. Do not silently add it.
   ❌ Trusting a client method's existence as proof the server route is wired.
+  📌 Precedent (Epic 10 Retro AI-4, Story 10-2 Task 3.3): the Go client
+     method tmdb.GetMovieVideos in apps/api/internal/tmdb/client.go existed,
+     but the internal backend route GET /api/v1/tmdb/movies/:id/videos →
+     tmdbHandler.GetMovieVideos (apps/api/internal/handlers/tmdb_handler.go:440)
+     was never wired — DEV had to add it mid-story, silently expanding scope.
 ```
 
 ### Rule 16: Test Assertion Quality

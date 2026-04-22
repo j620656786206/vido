@@ -1,12 +1,12 @@
 # Story: HTTP Route ↔ Client Method Sync Verification (Rule 15 Extension)
 
-Status: review
+Status: done
 
 ## Story
 
 As a Dev Agent (Amelia) implementing a story that references an **existing client method** or **existing endpoint** as a given,
 I want Rule 15 self-verification (and the dev-story checklist that enforces it) to explicitly require confirming the server-side HTTP route is registered in `main.go`,
-so that story scope doesn't silently expand mid-implementation like it did in Story 10-2 (Go client had `GetMovieVideos`, but the `/movies/:id/videos` HTTP route was never wired — DEV had to add unplanned backend exposure).
+so that story scope doesn't silently expand mid-implementation like it did in Story 10-2 (Go client had `tmdb.GetMovieVideos`, but the `/api/v1/tmdb/movies/:id/videos` HTTP route on `tmdbHandler` was never wired — DEV had to add unplanned backend exposure).
 
 ## Acceptance Criteria
 
@@ -23,7 +23,7 @@ so that story scope doesn't silently expand mid-implementation like it did in St
   - [x] 1.1 Placement: insert under the existing "## ✅ Implementation Completion" section (currently lines ~32–39), AFTER the "**Dependencies Within Scope**" item and BEFORE the "## 🧪 Testing & Quality Assurance" section. Rationale: this is a scope-completeness check, not a testing check. Keeps grouping clean.
   - [x] 1.2 Draft the new checklist item with this shape:
     ```markdown
-    - [x] **HTTP Route ↔ Client Method Sync (Epic 10 Retro AI-4):** If a story task
+    - [ ] **HTTP Route ↔ Client Method Sync (Epic 10 Retro AI-4):** If a story task
       references an "existing client method" or "existing endpoint" as a given,
       do NOT assume the HTTP route is wired up — a Go client method or a frontend
       service call can exist without a server-side route (the runtime result is a
@@ -42,7 +42,7 @@ so that story scope doesn't silently expand mid-implementation like it did in St
            read the handler file's `RegisterRoutes` method for the exact method +
            path match (e.g., `group.GET("/movies/:id/videos", h.GetMovieVideos)`).
         3. Record result in Dev Agent Record → Completion Notes:
-           - If registered: `🔌 Route Sync: {METHOD} {path} verified at
+           - If registered: `🔌 Route Sync: {HTTP_METHOD} {path} verified at
              {handler_file}:{line} (registered in main.go:{line})`
            - If NOT registered: HALT. The task cannot be completed as written.
              Expand story scope to include route registration, OR ask the user
@@ -51,10 +51,14 @@ so that story scope doesn't silently expand mid-implementation like it did in St
            record: `🔌 Route Sync: N/A (no backend route touched)`.
 
       Why this exists: Story 10-2 Task 3.3 said "videos endpoint already exists
-      in client". The Go client method `GetMovieVideos` existed; the HTTP route
-      `/movies/:id/videos` did NOT. DEV had to add backend route exposure
-      mid-story, silently expanding scope without a matching AC update. This
-      check surfaces that gap at task-complete time, not at CR time.
+      in client". The Go client method `tmdb.GetMovieVideos` (in
+      `apps/api/internal/tmdb/client.go`) did exist — but the internal backend
+      route to expose it to the frontend,
+      `GET /api/v1/tmdb/movies/:id/videos` → `tmdbHandler.GetMovieVideos`
+      (`apps/api/internal/handlers/tmdb_handler.go:440`), was NOT registered.
+      DEV had to add the backend route exposure mid-story, silently expanding
+      scope without a matching AC update. This check surfaces that gap at
+      task-complete time, not at CR time.
     ```
   - [x] 1.3 Verify the new item renders correctly as rendered markdown (bullets, code spans, no unescaped angle brackets).
 
@@ -62,15 +66,20 @@ so that story scope doesn't silently expand mid-implementation like it did in St
   - [x] 2.1 Current Rule 15 has three sub-sections under the `Before marking a story task complete, verify:` header: **main.go Wiring**, **DB Column Sync**, **Swagger**. Insert a new fourth sub-section **HTTP Route ↔ Client Method Sync** AFTER the existing three, before Rule 15's closing code fence.
   - [x] 2.2 Draft the new sub-section:
     ```
-    HTTP Route ↔ Client Method Sync (Epic 10 Retro AI-4):
+    HTTP Route ↔ Client Method Sync:
       ✅ If a task description says "endpoint already exists in client" or
          "method already registered", grep apps/api/cmd/api/main.go for the
          corresponding {handler}.RegisterRoutes(apiV1) call AND verify the
          exact HTTP method + path in the handler file.
       ✅ Client method existing ≠ HTTP route registered. Assume nothing.
-      ✅ If route is missing, expand story scope (new task + Ac) before
+      ✅ If route is missing, expand story scope (new task + AC) before
          continuing. Do not silently add it.
       ❌ Trusting a client method's existence as proof the server route is wired.
+      📌 Precedent (Epic 10 Retro AI-4, Story 10-2 Task 3.3): the Go client
+         method tmdb.GetMovieVideos in apps/api/internal/tmdb/client.go existed,
+         but the internal backend route GET /api/v1/tmdb/movies/:id/videos →
+         tmdbHandler.GetMovieVideos (apps/api/internal/handlers/tmdb_handler.go:440)
+         was never wired — DEV had to add it mid-story, silently expanding scope.
     ```
   - [x] 2.3 Update the "Last Updated" header line at the top of `project-context.md` to note the Rule 15 extension (pattern: same as prior retro updates, e.g., "Rule 15 HTTP Route ↔ Client Method Sync extension (retro-10-AI4)").
   - [x] 2.4 Do NOT renumber rules. Just append the new sub-section inside Rule 15's existing block. Rule 16 and onward stay put.
@@ -87,7 +96,7 @@ so that story scope doesn't silently expand mid-implementation like it did in St
 
 Epic 10 retro (2026-04-20) Pattern #4: "Story scope drift — 'client method exists' ≠ 'HTTP route exists'". Two cases surfaced in Epic 10:
 
-- **Story 10-2 Task 3.3**: Wrote "/videos endpoint already exists in client". The Go client method `tmdb.GetMovieVideos` existed and could hit TMDb. But the **internal backend route** to expose that to the frontend (`GET /api/v1/movies/:id/videos` → `movieHandler.GetMovieVideos`) was not registered. DEV had to add the backend route as unplanned scope. Caught only because the frontend TrailerModal integration test 404'd in dev.
+- **Story 10-2 Task 3.3**: Wrote "/videos endpoint already exists in client". The Go client method `tmdb.GetMovieVideos` in `apps/api/internal/tmdb/client.go` existed and could hit TMDb. But the **internal backend route** to expose that to the frontend (`GET /api/v1/tmdb/movies/:id/videos` → `tmdbHandler.GetMovieVideos` at `apps/api/internal/handlers/tmdb_handler.go:440`) was not registered. DEV had to add the backend route as unplanned scope. Caught only because the frontend TrailerModal integration test 404'd in dev.
 
 - **Story 10-4 path rename** (different flavor): `/movies/check-owned` was renamed to `/media/check-owned` mid-implementation after realizing the endpoint queries both `movies` and `series` tables. This is a naming drift, not a wiring gap — handled separately via path-naming review. OUT of scope for THIS story; AI-4 targets the wiring gap specifically.
 
@@ -116,17 +125,19 @@ In this repo's pattern (Gin-based handlers registered through `{handler}.Registe
 grep -n "RegisterRoutes" apps/api/cmd/api/main.go
 
 # Step 2: Does the handler expose the specific method + path?
-# (Reader: adjust 'movie_handler.go' and 'videos' per your specific case)
+# (Reader: adjust 'tmdb_handler.go' and 'videos' per your specific case;
+#  for Story 10-2 the route lives on tmdbHandler, not movieHandler)
 grep -nE '(GET|POST|PUT|DELETE|PATCH).*"/(videos|movies|series)' \
-  apps/api/internal/handlers/movie_handler.go
+  apps/api/internal/handlers/tmdb_handler.go
 ```
 
 Example (Story 10-2 retrospective reconstruction):
 
 ```
-$ grep -n "videos" apps/api/internal/handlers/movie_handler.go
+$ grep -n "videos" apps/api/internal/handlers/tmdb_handler.go
 # BEFORE Story 10-2 fix: zero hits → route missing
-# AFTER Story 10-2 fix: 1 hit in RegisterRoutes + 1 in handler method
+# AFTER Story 10-2 fix: hits on the handler method (line 292), Swaggo @Router
+#   annotation (line 304), and the GET registration in RegisterRoutes (line 440)
 ```
 
 ### Rule 15 current state (from project-context.md lines 413–434)
@@ -183,6 +194,7 @@ Amelia (BMM Dev Agent) / Claude Opus 4.7 (1M context) — `/bmad:bmm:agents:dev`
 - `pnpm lint:all` (repo root, 2026-04-22): 0 errors, 129 pre-existing warnings (no new warnings — docs-only changes cannot introduce lint regressions); `prettier --check .` PASS.
 - `pnpm nx test api` (2026-04-22): PASS, Go backend green (partially cached per Nx).
 - `pnpm nx test web` (2026-04-22): 144 files / 1738 tests, all PASS; `test:cleanup:all` ran automatically, both spawned PIDs (19909, 4379) exited cleanly — no orphaned workers.
+- Task 1.3 rendering verification (post-CR M3 fix, 2026-04-22): the new checklist item at `checklist.md:40-71` was previewed via the IDE markdown preview and via `grep -nE 'escaped|<|>' checklist.md` to confirm no unescaped angle brackets broke the listing; bullets (✅/❌/📌 replacements), nested numbered list (1-4), and `↔` U+2194 character all render correctly.
 
 ### Completion Notes List
 
@@ -190,18 +202,28 @@ Amelia (BMM Dev Agent) / Claude Opus 4.7 (1M context) — `/bmad:bmm:agents:dev`
 - 🔌 Route Sync: N/A (no backend route touched — this is a 100% docs/workflow story modifying `_bmad/bmm/workflows/4-implementation/dev-story/checklist.md` and `project-context.md` only; no Go handler, service, or repository code was added or changed).
 - 🎨 UX Verification: SKIPPED — no UI changes in this story (zero files under `apps/web/`).
 - AC #1 satisfied: new checklist item inserted at `_bmad/bmm/workflows/4-implementation/dev-story/checklist.md:40–71`, under `## ✅ Implementation Completion`, directly after "Dependencies Within Scope" and before `## 🧪 Testing & Quality Assurance`. Content matches the story Task 1.2 template verbatim.
-- AC #2 satisfied: the new checklist item's step 3 explicitly mandates `🔌 Route Sync: {METHOD} {path} verified at {handler_file}:{line} (registered in main.go:{line})` in Completion Notes when a route is registered — non-silent, auditable, matches the retro-10-AI2 three-state audit rule.
+- AC #2 satisfied: the new checklist item's step 3 explicitly mandates `🔌 Route Sync: {HTTP_METHOD} {path} verified at {handler_file}:{line} (registered in main.go:{line})` in Completion Notes when a route is registered — non-silent, auditable, matches the retro-10-AI2 three-state audit rule. (Post-CR: `{METHOD}` tightened to `{HTTP_METHOD}` to disambiguate from Go receiver method — L3 fix.)
 - AC #3 satisfied: step 3 branch for "NOT registered" explicitly directs the developer to HALT and either expand scope or ask the user — no silent scope expansion path.
-- AC #4 satisfied: Rule 15 in `project-context.md:421–450` now has a 4th sub-section `HTTP Route ↔ Client Method Sync (Epic 10 Retro AI-4):` at lines 441–449, matching the shape of existing main.go Wiring / DB Column Sync / Swagger blocks (3 ✅ bullets + 1 ❌ bullet). Rules 16+ unchanged (Rule 16 now at line 452). "Last Updated" header at line 7 updated to `2026-04-22` with retro-10-AI4 citation.
+- AC #4 satisfied: Rule 15 in `project-context.md:421–455` now has a 4th sub-section `HTTP Route ↔ Client Method Sync:` at lines 441–454, matching the shape of existing main.go Wiring / DB Column Sync / Swagger blocks (3 ✅ bullets + 1 ❌ bullet) plus an explicit `📌 Precedent` line citing Story 10-2 Task 3.3 (added via CR H2 fix to satisfy AC #4's "Story 10-2 precedent" requirement). Rules 16+ unchanged (Rule 16 now at line 457). "Last Updated" header at line 7 updated to `2026-04-22` with retro-10-AI4 citation.
 - AC #5 satisfied: `pnpm lint:all` PASS (0 errors). Markdown files are not processed by `go vet` / `staticcheck` / ESLint; Prettier confirms all formatting compliant.
-- AC #6 satisfied: sprint-status.yaml entry `retro-10-AI4-http-route-client-method-gap` transitioned `ready-for-dev → in-progress` at dev-story start. After CR, target state is `review → done` (set by CR workflow). Final line ranges of edits recorded here for sprint-status comment.
+- AC #6 satisfied: sprint-status.yaml entry `retro-10-AI4-http-route-client-method-gap` transitioned `ready-for-dev → in-progress → review → done` across dev-story + CR. Final post-CR line ranges: `checklist.md:40–72` (item grew 1 line due to longer "Why this exists" paragraph with correct path), `project-context.md:441–454` (Rule 15 sub-section grew 5 lines due to precedent addition; Rule 16 now at line 457).
+- 🔥 CR Fix Round (Amelia self-review, 2026-04-22, adversarial): 2 HIGH + 3 MEDIUM + 3 LOW findings, all fixed via option [1] (L4 withdrawn — 6-space continuation aligns with `- [ ] ` prefix, standard markdown):
+  - **H1 Precedent path factually wrong in checklist "Why this exists" block.** Original cited `/movies/:id/videos` on `movieHandler.GetMovieVideos`; actual Story 10-2 route is `/api/v1/tmdb/movies/:id/videos` on `tmdbHandler.GetMovieVideos` at `apps/api/internal/handlers/tmdb_handler.go:440` (verified by grep — `movie_handler.go` has zero `videos` hits; `tmdb_handler.go` has the actual route). Fixed in `checklist.md:67-76`, story Root Cause at line 90, and story narrative at line 9. Meta-irony noted: the anti-precedent-drift story itself shipped a drifted precedent.
+  - **H2 AC #4 under-satisfied — Story 10-2 precedent missing from Rule 15 sub-section body.** AC #4 requires "the gap + the grep procedure + the Story 10-2 precedent" all inside the sub-section. Original landed 2 of 3 (gap + procedure). Fixed by adding `📌 Precedent (Epic 10 Retro AI-4, Story 10-2 Task 3.3): ...` line citing the real `tmdbHandler.GetMovieVideos` case at `project-context.md:450-454`; parity with `checklist.md` "Why this exists" block now holds per AC #4's "keeping the authoritative rule source consistent with the checklist" clause.
+  - **M1 Story Dev Notes concrete grep example used wrong file.** `grep ... apps/api/internal/handlers/movie_handler.go` returns 0 hits; fixed to `apps/api/internal/handlers/tmdb_handler.go` in story lines 120-131 (bash example + retrospective reconstruction block).
+  - **M2 Rule 15 sub-section heading broke sibling-symmetry.** Others: `main.go Wiring:`, `DB Column Sync:`, `Swagger:` (2-3 word labels). Original: `HTTP Route ↔ Client Method Sync (Epic 10 Retro AI-4):` (retro-tag appended). Fixed by dropping `(Epic 10 Retro AI-4)` from heading (retro citation recovered via the new `📌 Precedent` line inside the body). Matches sibling style.
+  - **M3 Task 1.3 "Verify renders correctly" marked [x] without evidence.** Fixed by adding rendering-verification entry to Debug Log References (2026-04-22 dated, per the audit pattern Epic 8 TD3/TD4 retro introduced).
+  - **L1 Story Task 1.2 draft showed `- [x]` placeholder; actual landed `- [ ]`.** Fixed draft at story line 26 to match landed implementation.
+  - **L2 Story Task 2.2 draft typo "Ac" (lowercase c).** Fixed to `AC` at story line 72; also synced draft to reflect dropped retro tag + new precedent line (M2 + H2 parity).
+  - **L3 `{METHOD}` placeholder ambiguous.** Fixed to `{HTTP_METHOD}` in `checklist.md:58` and story line 46 draft.
+  - **L4 Withdrawn:** 6-space continuation indent in the new checklist item aligns with text after `- [ ] ` (6-char prefix); it is the standard markdown list-item continuation, not a regression. No change needed.
 
 ### File List
 
-- `_bmad/bmm/workflows/4-implementation/dev-story/checklist.md` — added new "HTTP Route ↔ Client Method Sync (Epic 10 Retro AI-4)" checklist item under `## ✅ Implementation Completion` (lines 40–71).
-- `project-context.md` — added 4th sub-section to Rule 15 at lines 441–449; updated "Last Updated" header at line 7.
-- `_bmad-output/implementation-artifacts/sprint-status.yaml` — entry `retro-10-AI4-http-route-client-method-gap` status `ready-for-dev → in-progress` (will transition to `review` after this story file is saved; set by dev-story Step 10).
-- `_bmad-output/implementation-artifacts/retro-10-AI4-http-route-client-method-gap.md` — this story file (all 14 Tasks/Subtasks checkboxes marked [x], Status → review, Dev Agent Record populated).
+- `_bmad/bmm/workflows/4-implementation/dev-story/checklist.md` — added new "HTTP Route ↔ Client Method Sync (Epic 10 Retro AI-4)" checklist item under `## ✅ Implementation Completion` (lines 40–76 post-CR). Post-CR edits: `{METHOD}`→`{HTTP_METHOD}` (L3) and "Why this exists" paragraph rewritten with correct Story 10-2 path `/api/v1/tmdb/movies/:id/videos` on `tmdbHandler.GetMovieVideos` at `tmdb_handler.go:440` (H1).
+- `project-context.md` — added 4th sub-section to Rule 15 at lines 441–454 (grew from 9 → 14 lines due to CR H2 precedent line); updated "Last Updated" header at line 7. Post-CR edits: dropped `(Epic 10 Retro AI-4)` from sub-section heading for sibling symmetry (M2) and added explicit `📌 Precedent (Epic 10 Retro AI-4, Story 10-2 Task 3.3): ...` line inside the body to satisfy AC #4 "Story 10-2 precedent" literal text (H2). Rule 16 now at line 457 (was 452 pre-CR).
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — entry `retro-10-AI4-http-route-client-method-gap` status `ready-for-dev → in-progress → review → done` across dev-story + CR. Final comment records post-CR line ranges.
+- `_bmad-output/implementation-artifacts/retro-10-AI4-http-route-client-method-gap.md` — this story file: all 14 Tasks/Subtasks checkboxes marked [x], Status → done (post-CR), Dev Agent Record populated with dev + CR entries, Change Log records both landing + CR fix rounds. CR-round edits: Root Cause block (line 90), narrative story header (line 9), Task 1.2 + Task 2.2 drafts (lines 26, 46, 72), concrete grep example (lines 120-131), Completion Notes entries for AC #2/#4/#6 + a full CR Fix Round block, Debug Log M3 entry.
 
 ### Change Log
 
@@ -211,3 +233,5 @@ Amelia (BMM Dev Agent) / Claude Opus 4.7 (1M context) — `/bmad:bmm:agents:dev`
 | 2026-04-22 | Extended Rule 15 in `project-context.md` with new 4th sub-section "HTTP Route ↔ Client Method Sync (Epic 10 Retro AI-4)" at lines 441–449, matching existing sub-section shape (3 ✅ + 1 ❌). Rules 16+ unchanged. Updated "Last Updated" header at line 7. (AC #4)                                                                   |
 | 2026-04-22 | Full regression gate PASS: `pnpm lint:all` 0 errors, `pnpm nx test api` PASS, `pnpm nx test web` 1738/1738 PASS, cleanup verified. (AC #5)                                                                                                                                                                                                  |
 | 2026-04-22 | Sprint-status.yaml `retro-10-AI4-http-route-client-method-gap` entry transitioned `ready-for-dev → in-progress`; will transition to `review` as Step 10 saves. Final line ranges recorded in this Completion Notes list for CR comment backfill. (AC #6) |
+| 2026-04-22 | 🔥 **CR Fix Round (Amelia self-review, adversarial):** 2 HIGH + 3 MEDIUM + 3 LOW fixed (L4 withdrawn). **H1:** corrected Story 10-2 precedent path `/movies/:id/videos`→`/api/v1/tmdb/movies/:id/videos` and handler `movieHandler`→`tmdbHandler` in `checklist.md:67-76` + story Root Cause + narrative header (meta-irony: the anti-precedent-drift story itself shipped a drifted precedent). **H2:** added `📌 Precedent` line inside Rule 15 sub-section at `project-context.md:450-454` to satisfy AC #4's literal "Story 10-2 precedent" requirement. **M1:** concrete grep example `movie_handler.go`→`tmdb_handler.go` in story lines 120-131. **M2:** dropped `(Epic 10 Retro AI-4)` tag from Rule 15 sub-section heading for sibling symmetry (tag recovered via H2 precedent line). **M3:** added Task 1.3 rendering-verification entry to Debug Log (closes Epic 8 TD3/TD4 audit pattern). **L1:** story Task 1.2 draft `- [x]`→`- [ ]`. **L2:** story Task 2.2 draft "Ac"→"AC" + synced retro tag / precedent line removal/addition. **L3:** `{METHOD}`→`{HTTP_METHOD}` in `checklist.md:58` + draft. Final state: Rule 15 at `project-context.md:441-454`, Rule 16 at line 457. Story Status `review → done`. |
+| 2026-04-22 | Sprint-status.yaml `retro-10-AI4-http-route-client-method-gap` entry final transition `review → done` set by CR workflow. Comment updated with post-CR line ranges. (AC #6) |

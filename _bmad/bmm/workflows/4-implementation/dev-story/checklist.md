@@ -56,7 +56,7 @@ validation-rules:
            read the handler file's `RegisterRoutes` method for the exact method +
            path match (e.g., `group.GET("/movies/:id/videos", h.GetMovieVideos)`).
         3. Record result in Dev Agent Record → Completion Notes:
-           - If registered: `🔌 Route Sync: {METHOD} {path} verified at
+           - If registered: `🔌 Route Sync: {HTTP_METHOD} {path} verified at
              {handler_file}:{line} (registered in main.go:{line})`
            - If NOT registered: HALT. The task cannot be completed as written.
              Expand story scope to include route registration, OR ask the user
@@ -65,10 +65,14 @@ validation-rules:
            record: `🔌 Route Sync: N/A (no backend route touched)`.
 
       Why this exists: Story 10-2 Task 3.3 said "videos endpoint already exists
-      in client". The Go client method `GetMovieVideos` existed; the HTTP route
-      `/movies/:id/videos` did NOT. DEV had to add backend route exposure
-      mid-story, silently expanding scope without a matching AC update. This
-      check surfaces that gap at task-complete time, not at CR time.
+      in client". The Go client method `tmdb.GetMovieVideos` (in
+      `apps/api/internal/tmdb/client.go`) did exist — but the internal backend
+      route to expose it to the frontend,
+      `GET /api/v1/tmdb/movies/:id/videos` → `tmdbHandler.GetMovieVideos`
+      (`apps/api/internal/handlers/tmdb_handler.go:440`), was NOT registered.
+      DEV had to add the backend route exposure mid-story, silently expanding
+      scope without a matching AC update. This check surfaces that gap at
+      task-complete time, not at CR time.
 
 ## 🧪 Testing & Quality Assurance
 
