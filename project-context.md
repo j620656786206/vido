@@ -4,7 +4,7 @@
 
 **Full Documentation:** See `_bmad-output/planning-artifacts/architecture/index.md` for complete architectural decisions and patterns (sharded into ~20 focused files).
 
-**Last Updated:** 2026-04-22 (Rule 15 HTTP Route ↔ Client Method Sync extension — retro-10-AI4; adds 4th sub-section guarding "client method exists ≠ HTTP route registered", Story 10-2 precedent). Prior: 2026-04-20 (Rule 7 expansion — added `QB_`, `METADATA_`, `DOUBAN_`, `WIKIPEDIA_` prefixes already in production use; surfaced by retro-10-AI3 CR grep on 2026-04-20)
+**Last Updated:** 2026-04-22 (Rule 20 AC Contract Versioning — retro-10-AI5; introduces `[@contract-vN]` prefix + bump/ack protocol + forward-only retrofit, Pattern #2 from Epic 10 retro, spike doc committed as 4a598e5). Prior: 2026-04-22 (Rule 15 HTTP Route ↔ Client Method Sync extension — retro-10-AI4; adds 4th sub-section guarding "client method exists ≠ HTTP route registered", Story 10-2 precedent). Earlier: 2026-04-20 (Rule 7 expansion — added `QB_`, `METADATA_`, `DOUBAN_`, `WIKIPEDIA_` prefixes already in production use; surfaced by retro-10-AI3 CR grep on 2026-04-20)
 **Architecture Status:** ✅ Validated and Ready for Implementation (5,463 lines, 8 steps completed)
 
 ---
@@ -610,6 +610,28 @@ Enforcement (stdlib-only):
                                           subtitle without creating a cycle
 
 Reference: Epic 9 retro AI-5 (insight #3) — surfaced during 9-2b implementation.
+```
+
+### Rule 20: AC Contract Versioning
+
+```
+AC Contract Versioning:
+  ✅ Cross-story-referenced ACs MAY carry `[@contract-v1]` prefix.
+     Format: `AC #N [@contract-v1]: Given/When/Then...`
+  ✅ When changing a stamped AC's contract shape/semantics, bump
+     `[@contract-vN]` → `[@contract-v(N+1)]` AND add Change Log entry:
+     `| {Date} | [@contract-vN→v(N+1)] AC #N: {what changed} |`
+  ✅ Downstream stories referencing a stamped AC MUST record in Dev Notes:
+     `confirmed against [@contract-vN] (Story X-Y AC #N)`.
+  ✅ Historical unstamped ACs are implicitly `v0` (frozen); stamp only
+     when newly referenced by a forward story (forward-only retrofit).
+  ❌ Bumping a stamp without a Change Log entry or without notifying
+     downstream consumers via the ack rule.
+  📌 Precedent (Epic 10 Retro AI-5, spike 2026-04-22): Pattern #2 from
+     Epic 10 retro — cross-story AC drift recurred 3 times across 3 epics.
+     retro-10-AI2 AC Drift Check caught story-ID references; this rule
+     closes the contract-shape gap. Spike doc:
+     `_bmad-output/implementation-artifacts/spike-10-AI5-ac-contract-versioning.md`.
 ```
 
 ---

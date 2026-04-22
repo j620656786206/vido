@@ -1,6 +1,6 @@
 # Story: AC Contract Versioning (retro-10-AI5)
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -24,15 +24,15 @@ so that cross-story AC drift (Pattern #2 from Epic 10 retro) is caught at story-
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Extend `_bmad/bmm/workflows/4-implementation/dev-story/instructions.xml` Step 2 with Contract Stamp grep pass (AC #4, #5)
-  - [ ] 1.1 Locate the existing AC Drift Check MANDATORY action block at instructions.xml Step 2 (lines 148-201 per retro-10-AI2 final placement). Append a new MANDATORY action "Contract Stamp Check" AFTER the existing drift check action (keep both actions independent for clarity — mirrors retro-10-AI3 Rule 7 pattern with main action + sibling binding action).
-  - [ ] 1.2 New action runs `grep -nE '\[@contract-v[0-9]+\]' {{story_path}}` AND (if upstream story references are cited in Dev Notes) across each referenced upstream story file. Records in Completion Notes: `📎 Contract Stamps: FOUND ({count} across {n} files) | NONE | N/A (no stamped ACs in scope)`.
-  - [ ] 1.3 Add sibling MANDATORY binding action that sets `{{contract_stamps_result}}` variable explicitly (matches retro-10-AI2 H1 pattern + retro-10-AI3 final fix). Ensures the Step 2 output renders a concrete value, not an unresolved placeholder.
-  - [ ] 1.4 xmllint PASS verification on instructions.xml (matches retro-10-AI2/AI-3 regression gate).
+- [x] Task 1: Extend `_bmad/bmm/workflows/4-implementation/dev-story/instructions.xml` Step 2 with Contract Stamp grep pass (AC #4, #5)
+  - [x] 1.1 Locate the existing AC Drift Check MANDATORY action block at instructions.xml Step 2 (lines 148-201 per retro-10-AI2 final placement). Append a new MANDATORY action "Contract Stamp Check" AFTER the existing drift check action (keep both actions independent for clarity — mirrors retro-10-AI3 Rule 7 pattern with main action + sibling binding action).
+  - [x] 1.2 New action runs `grep -nE '\[@contract-v[0-9]+\]' {{story_path}}` AND (if upstream story references are cited in Dev Notes) across each referenced upstream story file. Records in Completion Notes: `📎 Contract Stamps: FOUND ({count} across {n} files) | NONE | N/A (no stamped ACs in scope)`.
+  - [x] 1.3 Add sibling MANDATORY binding action that sets `{{contract_stamps_result}}` variable explicitly (matches retro-10-AI2 H1 pattern + retro-10-AI3 final fix). Ensures the Step 2 output renders a concrete value, not an unresolved placeholder.
+  - [x] 1.4 xmllint PASS verification on instructions.xml (matches retro-10-AI2/AI-3 regression gate).
 
-- [ ] Task 2: Add new Rule 20 "AC Contract Versioning" to `project-context.md` (AC #1, #2, #3, #6)
-  - [ ] 2.1 Insert new Rule 20 section AFTER the current final rule (Rule 19 "Package Dependency Boundaries" at line 538) and its closing code fence. DO NOT renumber existing rules; Rule 19 stays put.
-  - [ ] 2.2 Draft Rule 20 following the shape of existing Rules (✅ / ❌ bullets, short code block, precedent line). Content:
+- [x] Task 2: Add new Rule 20 "AC Contract Versioning" to `project-context.md` (AC #1, #2, #3, #6)
+  - [x] 2.1 Insert new Rule 20 section AFTER the current final rule (Rule 19 "Package Dependency Boundaries" at line 538) and its closing code fence. DO NOT renumber existing rules; Rule 19 stays put.
+  - [x] 2.2 Draft Rule 20 following the shape of existing Rules (✅ / ❌ bullets, short code block, precedent line). Content:
     ```
     AC Contract Versioning:
       ✅ Cross-story-referenced ACs MAY carry `[@contract-v1]` prefix.
@@ -52,11 +52,11 @@ so that cross-story AC drift (Pattern #2 from Epic 10 retro) is caught at story-
          closes the contract-shape gap. Spike doc:
          `_bmad-output/implementation-artifacts/spike-10-AI5-ac-contract-versioning.md`.
     ```
-  - [ ] 2.3 Update "Last Updated" header at line 7 with Rule 20 addition citation (pattern: same as retro-10-AI4 Rule 15 extension note).
+  - [x] 2.3 Update "Last Updated" header at line 7 with Rule 20 addition citation (pattern: same as retro-10-AI4 Rule 15 extension note).
 
-- [ ] Task 3: Add Contract Stamp checklist item to `_bmad/bmm/workflows/4-implementation/dev-story/checklist.md` (AC #2, #3)
-  - [ ] 3.1 Insert new item under `## ✅ Implementation Completion` AFTER the "HTTP Route ↔ Client Method Sync" item (currently at checklist.md:40-76 post-retro-10-AI4-CR) and BEFORE `## 🧪 Testing & Quality Assurance`. Placement rationale: same scope-completeness group as retro-10-AI4's item.
-  - [ ] 3.2 Draft item content (pattern: same structure as retro-10-AI4's item — label, procedure, "Why this exists" block):
+- [x] Task 3: Add Contract Stamp checklist item to `_bmad/bmm/workflows/4-implementation/dev-story/checklist.md` (AC #2, #3)
+  - [x] 3.1 Insert new item under `## ✅ Implementation Completion` AFTER the "HTTP Route ↔ Client Method Sync" item (currently at checklist.md:40-76 post-retro-10-AI4-CR) and BEFORE `## 🧪 Testing & Quality Assurance`. Placement rationale: same scope-completeness group as retro-10-AI4's item.
+  - [x] 3.2 Draft item content (pattern: same structure as retro-10-AI4's item — label, procedure, "Why this exists" block):
     ```markdown
     - [ ] **AC Contract Versioning (Epic 10 Retro AI-5):** If any AC in this
           story carries `[@contract-vN]` stamp OR references an upstream stamped
@@ -81,11 +81,11 @@ so that cross-story AC drift (Pattern #2 from Epic 10 retro) is caught at story-
           story-completion time, not at CR/retro time.
     ```
 
-- [ ] Task 4: Full regression gate (AC #5 parity with retro-10-AI2/AI-3/AI-4 precedent)
-  - [ ] 4.1 `pnpm lint:all` — expected 0 errors (docs/XML-only changes; not processed by ESLint/Prettier/go-vet/staticcheck per repo's lint scope).
-  - [ ] 4.2 `pnpm nx test api` — expected PASS (zero Go code change).
-  - [ ] 4.3 `pnpm nx test web` — expected PASS (zero frontend code change).
-  - [ ] 4.4 Update `sprint-status.yaml` entry `retro-10-AI5-cross-story-contract-versioning`: `ready-for-dev → in-progress → review → done`. Final comment records line ranges: instructions.xml Step 2 Contract Stamp action block, project-context.md Rule 20 line range, checklist.md new item line range.
+- [x] Task 4: Full regression gate (AC #5 parity with retro-10-AI2/AI-3/AI-4 precedent)
+  - [x] 4.1 `pnpm lint:all` — expected 0 errors (docs/XML-only changes; not processed by ESLint/Prettier/go-vet/staticcheck per repo's lint scope).
+  - [x] 4.2 `pnpm nx test api` — expected PASS (zero Go code change).
+  - [x] 4.3 `pnpm nx test web` — expected PASS (zero frontend code change).
+  - [x] 4.4 Update `sprint-status.yaml` entry `retro-10-AI5-cross-story-contract-versioning`: `ready-for-dev → in-progress → review → done`. Final comment records line ranges: instructions.xml Step 2 Contract Stamp action block, project-context.md Rule 20 line range, checklist.md new item line range.
 
 ## Dev Notes
 
@@ -179,22 +179,43 @@ grep -rnE 'confirmed against \[@contract-v[0-9]+\]' _bmad-output/implementation-
 
 ### Agent Model Used
 
-_Pending — to be filled by Dev Agent Amelia on `/bmad:bmm:agents:dev` → `/bmad:bmm:workflows:dev-story` invocation._
+Amelia (BMM Dev Agent) / Claude Opus 4.7 (1M context) — invoked 2026-04-22 via `/bmad:bmm:agents:dev` → `/bmad:bmm:workflows:dev-story` with explicit story key `retro-10-AI5-cross-story-contract-versioning` (auto-discovery would have skipped `retro-*` pattern).
 
 ### Debug Log References
 
-_Pending._
+- `pnpm lint:all` (repo root, 2026-04-22): 0 errors, 129 pre-existing warnings (no new warnings — docs/XML/YAML-only changes cannot introduce lint regressions); `prettier --check .` PASS.
+- `xmllint --noout _bmad/bmm/workflows/4-implementation/dev-story/instructions.xml` (2026-04-22): PASS (XML well-formed after Contract Stamp Check action insertion).
+- `pnpm nx test api` (2026-04-22): PASS, Go backend green (Nx cache hit — zero Go code touched).
+- `pnpm nx test web` (2026-04-22): 144 files / 1738 tests, all PASS in 65.37s; `test:cleanup:all` ran automatically, both spawned PIDs (19909, 4379) exited cleanly — no orphaned workers.
 
 ### Completion Notes List
 
-_Pending._
+- 🔗 AC Drift: N/A (bootstrap of AC contract versioning system — grep `@contract-v|Contract Stamps|AC Contract Versioning` across `_bmad-output/implementation-artifacts/*.md` excluding self-refs (retro-10-AI5 + spike-10-AI5 files) returned 0 hits; prior stories carry no stamps, so no prior AC contract exists to drift against. This story establishes the convention.)
+- 📎 Contract Stamps: N/A (bootstrap — this story INTRODUCES the `[@contract-v*]` stamp convention via Rule 20. No upstream stamped AC exists yet to reference. Forward stories will be the first consumers.)
+- 🎨 UX Verification: SKIPPED — no UI changes in this story (zero files under `apps/web/`).
+- AC #1 satisfied: Rule 20 at `project-context.md:615-635` documents MAY-not-MUST convention with format `AC #N [@contract-v1]: Given/When/Then...`. Checklist item at `checklist.md:77-108` mirrors the rule for DoD verification.
+- AC #2 satisfied: Rule 20 documents bump protocol (`[@contract-vN]` → `[@contract-v(N+1)]`) + mandatory Change Log entry format. Checklist item Procedure step 3 enforces it. Contract Stamp Check action in `instructions.xml:205-257` flags bumps without matching Change Log entries via grep-and-verify.
+- AC #3 satisfied: Rule 20 includes downstream acknowledgement rule (`confirmed against [@contract-vN] (Story X-Y AC #N)`). Checklist item Procedure step 2 enforces it as HIGH-severity gap if missing.
+- AC #4 satisfied: grep helper `grep -nE '\[@contract-v[0-9]+\]' <story_file>` documented in Rule 20 body + checklist item Procedure step 1 + Contract Stamp Check action.
+- AC #5 satisfied: `instructions.xml` Step 2 Contract Stamp Check action added at lines 205-257 (main MANDATORY action) + 259-263 (sibling MANDATORY binding action setting `{{contract_stamps_result}}`) + Step 2 output updated at line 268 (`Contract Stamps: {{contract_stamps_result}}`). Three-state audit pattern (FOUND / NONE / N/A) matches retro-10-AI2 and retro-10-AI4 precedent. xmllint PASS verified.
+- AC #6 satisfied: Rule 20 documents forward-only retrofit (`Historical unstamped ACs are implicitly v0 (frozen); stamp only when newly referenced by a forward story`). Checklist item "Why this exists" block cites Epic 10 retro Pattern #2 recurrences as empirical justification. Avoids ~250+ retrofit stamps across Epic 1-10.
+- Sprint-status.yaml transitioned `backlog → ready-for-dev → in-progress → review` across spike, /create-story, and /dev-story workflows. Final transition to `done` is CR's responsibility.
 
 ### File List
 
-_Pending. Expected: `_bmad/bmm/workflows/4-implementation/dev-story/instructions.xml` (Task 1), `project-context.md` (Task 2), `_bmad/bmm/workflows/4-implementation/dev-story/checklist.md` (Task 3), `_bmad-output/implementation-artifacts/sprint-status.yaml` (Task 4), this story file._
+- `_bmad/bmm/workflows/4-implementation/dev-story/instructions.xml` — added Contract Stamp Check block at Step 2: comment line 204, main MANDATORY action lines 205-257, sibling MANDATORY binding action lines 259-263, Step 2 output updated line 268 (`Contract Stamps: {{contract_stamps_result}}`). xmllint PASS. (Task 1)
+- `project-context.md` — added Rule 20 "AC Contract Versioning" at lines 615-635 (header + 21-line code block with ✅/❌/📌 pattern matching sibling rules); "Last Updated" header at line 7 refreshed with Rule 20 citation. Rules 1-19 unchanged, no renumbering. (Task 2)
+- `_bmad/bmm/workflows/4-implementation/dev-story/checklist.md` — added new "AC Contract Versioning (Epic 10 Retro AI-5)" item at lines 77-108 under `## ✅ Implementation Completion`, directly AFTER "HTTP Route ↔ Client Method Sync" item (lines 40-75) and BEFORE `## 🧪 Testing & Quality Assurance` section (now starts at line 111). (Task 3)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — entry `retro-10-AI5-cross-story-contract-versioning` transitioned `ready-for-dev → in-progress` (Step 4 of dev-story) → `review` (Step 10 of dev-story). (Task 4)
+- `_bmad-output/implementation-artifacts/retro-10-AI5-ac-contract-versioning.md` — this story file: all 17 task/subtask checkboxes marked [x] (4 main + 13 subtasks), Status `ready-for-dev → review`, Dev Agent Record populated, Change Log extended. NOTE: SM's original draft cited "11 subtasks" but actual count is 13 (Task 1×4 + Task 2×3 + Task 3×2 + Task 4×4 = 13). Cosmetic discrepancy only; no content impact.
 
 ### Change Log
 
 | Date       | Change                                                                                                                                                                                                                                                                                            |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-04-22 | Story created by SM Bob via `/bmad:bmm:workflows:create-story` from spike `_bmad-output/implementation-artifacts/spike-10-AI5-ac-contract-versioning.md`. 6 ACs, 4 tasks, 11 subtasks. Cross-stack split check: 0 BE + 0 FE + 4 docs tasks → single story (within ≤3 threshold). Status: ready-for-dev. |
+| 2026-04-22 | Story created by SM Bob via `/bmad:bmm:workflows:create-story` from spike `_bmad-output/implementation-artifacts/spike-10-AI5-ac-contract-versioning.md`. 6 ACs, 4 tasks, 11 subtasks (actual: 13). Cross-stack split check: 0 BE + 0 FE + 4 docs tasks → single story (within ≤3 threshold). Status: ready-for-dev. |
+| 2026-04-22 | DEV Amelia: extended `_bmad/bmm/workflows/4-implementation/dev-story/instructions.xml` Step 2 with CONTRACT STAMP CHECK MANDATORY action (lines 205-257) + sibling MANDATORY binding action (lines 259-263) + Step 2 output extended (line 268 — `Contract Stamps: {{contract_stamps_result}}`). Matches retro-10-AI2/AI-3 main+binding pattern. xmllint PASS verified. (AC #4, #5) |
+| 2026-04-22 | DEV Amelia: added Rule 20 "AC Contract Versioning" to `project-context.md` at lines 615-635, AFTER Rule 19 "Package Dependency Boundaries" (lines 538-613). Content: 4 ✅ bullets (MAY stamp, bump protocol, downstream ack, forward-only retrofit) + 1 ❌ anti-pattern + 1 📌 precedent citing Epic 10 Retro AI-5 spike. "Last Updated" header at line 7 refreshed. Rules 1-19 unchanged. (AC #1, #2, #3, #6) |
+| 2026-04-22 | DEV Amelia: added new "AC Contract Versioning (Epic 10 Retro AI-5)" checklist item to `_bmad/bmm/workflows/4-implementation/dev-story/checklist.md` at lines 77-108, between retro-10-AI4 HTTP Route item (ends line 75) and `## 🧪 Testing & Quality Assurance` section (now line 111). Procedure mirrors Rule 20 + three-state audit record (retro-10-AI2 pattern). (AC #2, #3) |
+| 2026-04-22 | DEV Amelia: full regression gate PASS — `pnpm lint:all` 0 errors 129 pre-existing warnings + Prettier PASS; `xmllint --noout instructions.xml` PASS; `pnpm nx test api` PASS (Nx cache); `pnpm nx test web` 144 files / 1738 tests PASS in 65.37s + cleanup verified PIDs 19909/4379 exited cleanly. 🔗 AC Drift: N/A (bootstrap). 📎 Contract Stamps: N/A (bootstrap). 🎨 UX: SKIPPED. (AC #5) |
+| 2026-04-22 | DEV Amelia: sprint-status.yaml `retro-10-AI5-cross-story-contract-versioning` transitioned `ready-for-dev → in-progress → review`. Final transition to `done` is CR's responsibility. Story file all 17 checkboxes [x] (4 main + 13 subtasks), Status `ready-for-dev → review`. (AC #6) |

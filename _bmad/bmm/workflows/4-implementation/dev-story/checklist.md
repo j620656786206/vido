@@ -74,6 +74,40 @@ validation-rules:
       scope without a matching AC update. This check surfaces that gap at
       task-complete time, not at CR time.
 
+- [ ] **AC Contract Versioning (Epic 10 Retro AI-5):** If any AC in this
+      story carries a `[@contract-vN]` stamp OR references an upstream stamped
+      AC, run the contract stamp audit before marking the story complete.
+      Governed by project-context.md Rule 20.
+
+      Verification procedure:
+        1. Grep: `grep -nE '\[@contract-v[0-9]+\]' {story_file}` — list every
+           stamped AC in this story with line numbers.
+        2. For EACH upstream AC referenced in Dev Notes (phrasings like
+           "per Story X-Y AC #N", "confirmed against [@contract-vN]"), grep
+           the upstream story file for that AC's current stamp. Record in
+           Dev Notes: `confirmed against [@contract-vN] (Story X-Y AC #N)`.
+           A missing ack line when an upstream reference exists is a HIGH
+           CR finding (retro-10-AI5 AC #3).
+        3. If any stamped AC in THIS story has BUMPED its version (v1→v2),
+           verify the same story's Change Log carries a matching entry:
+           `| {Date} | [@contract-vN→v(N+1)] AC #N: {what changed, what breaks} |`.
+           A bump without a matching Change Log entry is a MEDIUM CR finding
+           (retro-10-AI5 AC #2).
+        4. Record result in Dev Agent Record → Completion Notes (three-state,
+           matches retro-10-AI2 + retro-10-AI4 audit pattern):
+           - `📎 Contract Stamps: FOUND ({count} across {n} files — {summary})`
+           - `📎 Contract Stamps: NONE (no [@contract-v*] stamps in this story
+             or upstream refs)`
+           - `📎 Contract Stamps: N/A ({specific reason})`
+
+      Why this exists: Epic 10 retro Pattern #2 — cross-story AC drift recurred
+      3 times across 3 epics. retro-10-AI2 AC Drift Check caught story-ID
+      references but missed contract-SHAPE drift (e.g., Story 10-4 "single POST"
+      → Story 10-5 "≤N POSTs" — same story ID, different wire contract).
+      Rule 20 + this check close the contract-shape gap at story-completion
+      time, not at CR/retro time. Spike:
+      `_bmad-output/implementation-artifacts/spike-10-AI5-ac-contract-versioning.md`.
+
 ## 🧪 Testing & Quality Assurance
 
 - [ ] **Unit Tests:** Unit tests added/updated for ALL core functionality introduced/changed by this story

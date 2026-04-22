@@ -201,9 +201,71 @@
       based on the AC Drift Check outcome above. This binding MUST execute so the
       Step 2 output renders a concrete value, not an unresolved placeholder.</action>
 
+    <!-- Epic 10 Retro AI-5: Contract Stamp Check (Pattern #2 second defense layer) -->
+    <action critical="MANDATORY">CONTRACT STAMP CHECK (Epic 10 Retro AI-5):
+      Extends the AC Drift Check above with AC contract versioning
+      (project-context.md Rule 20). The drift check catches story-ID cross-references;
+      this check catches contract-SHAPE drift via explicit `[@contract-vN]` stamps.
+
+      Scope: runs ALWAYS as a cheap grep, regardless of drift-check outcome. Cost
+      is a single grep over the story file + any upstream story files cited in
+      Dev Notes — O(files-referenced), not O(epic).
+
+      Check procedure:
+        1. Grep stamped ACs in THIS story:
+           `grep -nE '\[@contract-v[0-9]+\]' {{story_path}}`
+        2. If Dev Notes cite upstream AC references (phrased like "per Story X-Y AC #N",
+           "confirmed against [@contract-vN]", "AC #N of Story X-Y"), grep EACH
+           referenced upstream story file for stamps too. Compare versions: does
+           this story's acknowledged version match the upstream's current stamp?
+        3. If any stamped AC in THIS story has BUMPED (v1→v2, etc. — compare with
+           git history or prior version of the story file), verify the same story's
+           Change Log carries a matching entry:
+           `| {Date} | [@contract-vN→v(N+1)] AC #N: {what changed, what breaks} |`
+        4. If a downstream story references a stamped upstream AC but lacks the
+           mandatory `confirmed against [@contract-vN]` line in Dev Notes, this is
+           a HIGH-severity gap (AC #3 of retro-10-AI5).
+
+      Documentation rule (three-state — silence is NEVER acceptable):
+        - If stamps exist AND all versions reconcile: record in Completion Notes:
+            "📎 Contract Stamps: FOUND ({count} stamped ACs across {n} files —
+            {brief summary; e.g., 'this story v1×2; upstream Story X-Y v1 referenced,
+            ack line present'})"
+        - If no stamps in scope (story defines no contracts AND references none):
+            "📎 Contract Stamps: NONE (no [@contract-v*] stamps in this story or
+            upstream refs — this is normal for stories that do not define or
+            consume wire contracts)"
+        - If check does not apply (bootstrap of the versioning system itself, or
+          story explicitly 100% pre-Rule-20 scope):
+            "📎 Contract Stamps: N/A ({specific reason} — e.g., 'bootstrap of the
+            AC contract versioning system; no prior story carries stamps yet')"
+          N/A is NOT a silent-skip — the specific reason MUST be stated so an
+          auditor can later verify the exemption was legitimate.
+
+      Precedent (Epic 10 Retro AI-5 spike, 2026-04-22):
+        Pattern #2 (cross-story AC drift) recurred 3 times across 3 epics despite
+        retro-10-AI2's AC Drift Check. The drift-check caught story-ID references
+        but missed contract-SHAPE drift (e.g., Story 10-4 "single POST" vs Story
+        10-5 "≤N POSTs" — same story ID, different wire contract). AI-5 introduces
+        `[@contract-vN]` stamps (project-context.md Rule 20) as a second defense
+        layer: authors STAMP cross-referenced ACs, downstream stories ACK the
+        version, CR greps for drift.
+        Reference spike:
+          _bmad-output/implementation-artifacts/spike-10-AI5-ac-contract-versioning.md
+        Spec:
+          project-context.md Rule 20 (AC Contract Versioning)
+    </action>
+
+    <action critical="MANDATORY">Set {{contract_stamps_result}} to exactly one of:
+      "FOUND ({count} across {n} files — {summary})" | "NONE ({specific reason})"
+      | "N/A ({specific reason})"
+      based on the CONTRACT STAMP CHECK outcome above. This binding MUST execute so
+      the Step 2 output renders a concrete value, not an unresolved placeholder.</action>
+
     <output>✅ **Context Loaded**
       Story and project context available for implementation
       AC Drift Check: {{drift_check_result}}
+      Contract Stamps: {{contract_stamps_result}}
     </output>
   </step>
 
