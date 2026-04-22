@@ -83,16 +83,22 @@ validation-rules:
         1. Grep: `grep -nE '\[@contract-v[0-9]+\]' {story_file}` — list every
            stamped AC in this story with line numbers.
         2. For EACH upstream AC referenced in Dev Notes (phrasings like
-           "per Story X-Y AC #N", "confirmed against [@contract-vN]"), grep
-           the upstream story file for that AC's current stamp. Record in
-           Dev Notes: `confirmed against [@contract-vN] (Story X-Y AC #N)`.
-           A missing ack line when an upstream reference exists is a HIGH
+           "per Story X-Y AC #N", "confirmed against [@contract-vN]", or the
+           bare substring "Story X-Y AC #N"), grep the upstream story file
+           for that AC's current stamp. Record in Dev Notes:
+           `confirmed against [@contract-vN] (Story X-Y AC #N)`.
+           If the upstream grep returns 0 hits (upstream is pre-Rule-20 /
+           implicit v0), skip the ack requirement per Rule 20 forward-only
+           retrofit. A missing ack line when upstream IS stamped is a HIGH
            CR finding (retro-10-AI5 AC #3).
         3. If any stamped AC in THIS story has BUMPED its version (v1→v2),
            verify the same story's Change Log carries a matching entry:
-           `| {Date} | [@contract-vN→v(N+1)] AC #N: {what changed, what breaks} |`.
-           A bump without a matching Change Log entry is a MEDIUM CR finding
-           (retro-10-AI5 AC #2).
+           `| {Date} | [@contract-vN→v(N+1)] AC #N: {what changed, what breaks downstream} |`.
+           Two-stage verify: (a) row present via grep, (b) row body has ≥2
+           non-empty sub-tokens after `AC #N:` (both "what changed" AND "what
+           breaks downstream" populated). Degenerate entries like
+           `AC #3: tweak` pass (a) but fail (b). A missing row OR a row that
+           fails (b) is a MEDIUM CR finding (retro-10-AI5 AC #2).
         4. Record result in Dev Agent Record → Completion Notes (three-state,
            matches retro-10-AI2 + retro-10-AI4 audit pattern):
            - `📎 Contract Stamps: FOUND ({count} across {n} files — {summary})`

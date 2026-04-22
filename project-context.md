@@ -4,7 +4,7 @@
 
 **Full Documentation:** See `_bmad-output/planning-artifacts/architecture/index.md` for complete architectural decisions and patterns (sharded into ~20 focused files).
 
-**Last Updated:** 2026-04-22 (Rule 20 AC Contract Versioning — retro-10-AI5; introduces `[@contract-vN]` prefix + bump/ack protocol + forward-only retrofit, Pattern #2 from Epic 10 retro, spike doc committed as 4a598e5). Prior: 2026-04-22 (Rule 15 HTTP Route ↔ Client Method Sync extension — retro-10-AI4; adds 4th sub-section guarding "client method exists ≠ HTTP route registered", Story 10-2 precedent). Earlier: 2026-04-20 (Rule 7 expansion — added `QB_`, `METADATA_`, `DOUBAN_`, `WIKIPEDIA_` prefixes already in production use; surfaced by retro-10-AI3 CR grep on 2026-04-20)
+**Last Updated:** 2026-04-22 (Rule 20 AC Contract Versioning — retro-10-AI5; introduces `[@contract-vN]` prefix + bump/ack protocol + forward-only retrofit, Pattern #2 from Epic 10 retro, spike doc committed as 4a598e5; CR follow-up 2026-04-22 hoisted grep helpers into Rule 20 body, unified Change Log format to `{what changed, what breaks downstream}`, documented v0 fallback). Prior: 2026-04-22 (Rule 15 HTTP Route ↔ Client Method Sync extension — retro-10-AI4; adds 4th sub-section guarding "client method exists ≠ HTTP route registered", Story 10-2 precedent). Earlier: 2026-04-20 (Rule 7 expansion — added `QB_`, `METADATA_`, `DOUBAN_`, `WIKIPEDIA_` prefixes already in production use; surfaced by retro-10-AI3 CR grep on 2026-04-20)
 **Architecture Status:** ✅ Validated and Ready for Implementation (5,463 lines, 8 steps completed)
 
 ---
@@ -620,18 +620,35 @@ AC Contract Versioning:
      Format: `AC #N [@contract-v1]: Given/When/Then...`
   ✅ When changing a stamped AC's contract shape/semantics, bump
      `[@contract-vN]` → `[@contract-v(N+1)]` AND add Change Log entry:
-     `| {Date} | [@contract-vN→v(N+1)] AC #N: {what changed} |`
+     `| {Date} | [@contract-vN→v(N+1)] AC #N: {what changed, what breaks downstream} |`
+     Two-stage verify: (a) row present, (b) row body has ≥2 non-empty
+     sub-tokens after `AC #N:` (both "what changed" AND "what breaks
+     downstream" populated). Degenerate entries like `AC #N: tweak` pass
+     (a) but fail (b) — flag as MEDIUM CR finding.
   ✅ Downstream stories referencing a stamped AC MUST record in Dev Notes:
-     `confirmed against [@contract-vN] (Story X-Y AC #N)`.
+     `confirmed against [@contract-vN] (Story X-Y AC #N)`
   ✅ Historical unstamped ACs are implicitly `v0` (frozen); stamp only
      when newly referenced by a forward story (forward-only retrofit).
+     If a downstream→upstream grep returns 0 hits (upstream is pre-Rule-20),
+     treat the upstream as implicit v0 and skip the ack requirement.
   ❌ Bumping a stamp without a Change Log entry or without notifying
      downstream consumers via the ack rule.
+  🔎 Grep helpers (shared by DEV and CR workflows):
+       # List every stamped AC in a single story file
+       grep -nE '\[@contract-v[0-9]+\]' <story_file>
+       # List all stamped ACs across implementation artifacts
+       grep -rnE '\[@contract-v[0-9]+\]' _bmad-output/implementation-artifacts/
+       # Find downstream stories acknowledging upstream contracts
+       grep -rnE 'confirmed against \[@contract-v[0-9]+\]' _bmad-output/implementation-artifacts/
   📌 Precedent (Epic 10 Retro AI-5, spike 2026-04-22): Pattern #2 from
      Epic 10 retro — cross-story AC drift recurred 3 times across 3 epics.
      retro-10-AI2 AC Drift Check caught story-ID references; this rule
      closes the contract-shape gap. Spike doc:
      `_bmad-output/implementation-artifacts/spike-10-AI5-ac-contract-versioning.md`.
+     CR follow-up (2026-04-22): grep helpers hoisted into Rule 20 body
+     (was AC #4 partial), Change Log format unified to `{what changed, what
+     breaks downstream}` across all three canonical sources, v0 fallback
+     documented for pre-Rule-20 upstream references.
 ```
 
 ---

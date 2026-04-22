@@ -215,13 +215,23 @@
         1. Grep stamped ACs in THIS story:
            `grep -nE '\[@contract-v[0-9]+\]' {{story_path}}`
         2. If Dev Notes cite upstream AC references (phrased like "per Story X-Y AC #N",
-           "confirmed against [@contract-vN]", "AC #N of Story X-Y"), grep EACH
+           "confirmed against [@contract-vN]", "AC #N of Story X-Y", or the bare
+           substring "Story X-Y AC #N" in any surrounding context), grep EACH
            referenced upstream story file for stamps too. Compare versions: does
            this story's acknowledged version match the upstream's current stamp?
+           If the upstream grep returns 0 hits (upstream is pre-Rule-20 / implicit
+           v0 per the forward-only retrofit), skip the ack requirement and record
+           `📎 Contract Stamps: NONE (upstream Story X-Y pre-Rule-20, implicit v0)`
+           instead of flagging a gap.
         3. If any stamped AC in THIS story has BUMPED (v1→v2, etc. — compare with
            git history or prior version of the story file), verify the same story's
            Change Log carries a matching entry:
-           `| {Date} | [@contract-vN→v(N+1)] AC #N: {what changed, what breaks} |`
+           `| {Date} | [@contract-vN→v(N+1)] AC #N: {what changed, what breaks downstream} |`
+           Two-stage verification: (a) row presence via grep, (b) row body has ≥2
+           non-empty sub-tokens after the `AC #N:` prefix (both "what changed" AND
+           "what breaks downstream" populated). A degenerate entry like
+           `AC #3: tweak` passes (a) but fails (b) — flag as MEDIUM CR finding
+           (retro-10-AI5 CR M2 precedent).
         4. If a downstream story references a stamped upstream AC but lacks the
            mandatory `confirmed against [@contract-vN]` line in Dev Notes, this is
            a HIGH-severity gap (AC #3 of retro-10-AI5).
