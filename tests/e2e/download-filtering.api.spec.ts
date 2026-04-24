@@ -36,7 +36,7 @@ test.describe('Download Filtering API @api @downloads @filtering', () => {
       expect(json.success).toBe(true);
       expect(Array.isArray(json.data)).toBe(true);
     } else {
-      expect(json.error.code).toMatch(/^QB_/);
+      expect(json.error.code).toMatch(/^QBITTORRENT_/);
     }
   });
 
@@ -72,7 +72,7 @@ test.describe('Download Filtering API @api @downloads @filtering', () => {
       expect(json.success).toBe(true);
       expect(Array.isArray(json.data)).toBe(true);
     } else {
-      expect(json.error.code).toMatch(/^QB_/);
+      expect(json.error.code).toMatch(/^QBITTORRENT_/);
     }
   });
 
@@ -111,7 +111,7 @@ test.describe('Download Filtering API @api @downloads @filtering', () => {
       // Note: sum may be <= all because stalled/queued/checking statuses are not counted
       expect(sum).toBeLessThanOrEqual(json.data.all);
     } else {
-      expect(json.error.code).toMatch(/^QB_/);
+      expect(json.error.code).toMatch(/^QBITTORRENT_/);
     }
   });
 

@@ -4,7 +4,7 @@
 
 **Full Documentation:** See `_bmad-output/planning-artifacts/architecture/index.md` for complete architectural decisions and patterns (sharded into ~20 focused files).
 
-**Last Updated:** 2026-04-22 (Rule 20 AC Contract Versioning — retro-10-AI5; introduces `[@contract-vN]` prefix + bump/ack protocol + forward-only retrofit, Pattern #2 from Epic 10 retro, spike doc committed as 4a598e5; CR follow-up 2026-04-22 hoisted grep helpers into Rule 20 body, unified Change Log format to `{what changed, what breaks downstream}`, documented v0 fallback). Prior: 2026-04-22 (Rule 15 HTTP Route ↔ Client Method Sync extension — retro-10-AI4; adds 4th sub-section guarding "client method exists ≠ HTTP route registered", Story 10-2 precedent). Earlier: 2026-04-20 (Rule 7 expansion — added `QB_`, `METADATA_`, `DOUBAN_`, `WIKIPEDIA_` prefixes already in production use; surfaced by retro-10-AI3 CR grep on 2026-04-20)
+**Last Updated:** 2026-04-24 (Rule 7 prefix rename `QB_` → `QBITTORRENT_` via followup-qbittorrent-prefix-rename; restores `SOURCE = uppercase(package)` uniformity across all 13 registered prefixes — was the only outlier per Winston 2026-04-20 retro-10-AI3 Item 3 ruling). Prior: 2026-04-22 (Rule 20 AC Contract Versioning — retro-10-AI5; introduces `[@contract-vN]` prefix + bump/ack protocol + forward-only retrofit, Pattern #2 from Epic 10 retro, spike doc committed as 4a598e5; CR follow-up 2026-04-22 hoisted grep helpers into Rule 20 body, unified Change Log format to `{what changed, what breaks downstream}`, documented v0 fallback). Prior: 2026-04-22 (Rule 15 HTTP Route ↔ Client Method Sync extension — retro-10-AI4; adds 4th sub-section guarding "client method exists ≠ HTTP route registered", Story 10-2 precedent). Earlier: 2026-04-20 (Rule 7 expansion — added `QB_`, `METADATA_`, `DOUBAN_`, `WIKIPEDIA_` prefixes already in production use; surfaced by retro-10-AI3 CR grep on 2026-04-20)
 **Architecture Status:** ✅ Validated and Ready for Implementation (5,463 lines, 8 steps completed)
 
 ---
@@ -291,13 +291,13 @@ SCANNER_PERMISSION_DENIED, SCANNER_PARSE_FAILED
 SSE_CONNECTION_FAILED
 LIBRARY_NOT_FOUND, LIBRARY_DUPLICATE_PATH, LIBRARY_PATH_NOT_ACCESSIBLE
 LIBRARY_PATH_NOT_DIRECTORY, LIBRARY_DELETE_HAS_MEDIA
-QB_TORRENT_NOT_FOUND, QB_CONNECTION_FAILED, QB_AUTH_FAILED, QB_TIMEOUT, QB_NOT_CONFIGURED
+QBITTORRENT_TORRENT_NOT_FOUND, QBITTORRENT_CONNECTION_FAILED, QBITTORRENT_AUTH_FAILED, QBITTORRENT_TIMEOUT, QBITTORRENT_NOT_CONFIGURED
 METADATA_TIMEOUT, METADATA_RATE_LIMITED, METADATA_UNAVAILABLE, METADATA_NO_RESULTS, METADATA_CIRCUIT_OPEN, METADATA_INVALID_REQUEST, METADATA_ALL_FAILED, METADATA_GATEWAY_ERROR, METADATA_NETWORK_ERROR, METADATA_NOT_FOUND, METADATA_UNKNOWN_ERROR
 DOUBAN_BLOCKED, DOUBAN_NOT_FOUND, DOUBAN_PARSE_ERROR, DOUBAN_RATE_LIMITED, DOUBAN_TIMEOUT
 WIKIPEDIA_NOT_FOUND, WIKIPEDIA_NO_INFOBOX, WIKIPEDIA_PARSE_ERROR, WIKIPEDIA_RATE_LIMITED, WIKIPEDIA_TIMEOUT, WIKIPEDIA_API_ERROR
 ```
 
-**Authoritative prefix set (13 sources):** `TMDB_`, `AI_`, `DB_`, `VALIDATION_`, `SUBTITLE_`, `PLUGIN_`, `SCANNER_`, `SSE_`, `LIBRARY_`, `QB_`, `METADATA_`, `DOUBAN_`, `WIKIPEDIA_`. When adding a new subsystem with its own error codes, extend this list AND sync `_bmad/bmm/workflows/4-implementation/code-review/instructions.xml` Step 3 "Rule 7 Wire Format Check" (both the HTML comment sync date and the inline prefix list).
+**Authoritative prefix set (13 sources):** `TMDB_`, `AI_`, `DB_`, `VALIDATION_`, `SUBTITLE_`, `PLUGIN_`, `SCANNER_`, `SSE_`, `LIBRARY_`, `QBITTORRENT_`, `METADATA_`, `DOUBAN_`, `WIKIPEDIA_`. When adding a new subsystem with its own error codes, extend this list AND sync `_bmad/bmm/workflows/4-implementation/code-review/instructions.xml` Step 3 "Rule 7 Wire Format Check" (both the HTML comment sync date and the inline prefix list).
 
 ### Rule 8: Date/Time Format
 

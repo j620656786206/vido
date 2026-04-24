@@ -63,7 +63,7 @@ func TestConnectionError_Error(t *testing.T) {
 				Message: "login request failed",
 				Cause:   errors.New("connection refused"),
 			},
-			expected: "QB_CONNECTION_FAILED: login request failed: connection refused",
+			expected: "QBITTORRENT_CONNECTION_FAILED: login request failed: connection refused",
 		},
 		{
 			name: "error without cause",
@@ -71,7 +71,7 @@ func TestConnectionError_Error(t *testing.T) {
 				Code:    ErrCodeAuthFailed,
 				Message: "authentication failed: invalid credentials",
 			},
-			expected: "QB_AUTH_FAILED: authentication failed: invalid credentials",
+			expected: "QBITTORRENT_AUTH_FAILED: authentication failed: invalid credentials",
 		},
 	}
 
@@ -103,8 +103,8 @@ func TestConnectionError_Unwrap_NilCause(t *testing.T) {
 }
 
 func TestErrorCodeConstants(t *testing.T) {
-	assert.Equal(t, "QB_CONNECTION_FAILED", ErrCodeConnectionFailed)
-	assert.Equal(t, "QB_AUTH_FAILED", ErrCodeAuthFailed)
-	assert.Equal(t, "QB_TIMEOUT", ErrCodeTimeout)
-	assert.Equal(t, "QB_NOT_CONFIGURED", ErrCodeNotConfigured)
+	assert.Equal(t, "QBITTORRENT_CONNECTION_FAILED", ErrCodeConnectionFailed)
+	assert.Equal(t, "QBITTORRENT_AUTH_FAILED", ErrCodeAuthFailed)
+	assert.Equal(t, "QBITTORRENT_TIMEOUT", ErrCodeTimeout)
+	assert.Equal(t, "QBITTORRENT_NOT_CONFIGURED", ErrCodeNotConfigured)
 }

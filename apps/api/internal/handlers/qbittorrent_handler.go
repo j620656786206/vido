@@ -120,7 +120,7 @@ func (h *QBittorrentHandler) TestConnection(c *gin.Context) {
 	if err != nil {
 		slog.Error("qBittorrent connection test failed", "error", err)
 
-		code := "QB_CONNECTION_FAILED"
+		code := qbittorrent.ErrCodeConnectionFailed
 		var connErr *qbittorrent.ConnectionError
 		if errors.As(err, &connErr) {
 			code = connErr.Code

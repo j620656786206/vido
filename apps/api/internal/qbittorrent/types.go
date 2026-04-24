@@ -40,8 +40,8 @@ func (e *ConnectionError) Unwrap() error {
 
 // Error code constants for qBittorrent operations.
 const (
-	ErrCodeConnectionFailed = "QB_CONNECTION_FAILED"
-	ErrCodeAuthFailed       = "QB_AUTH_FAILED"
-	ErrCodeTimeout          = "QB_TIMEOUT"
-	ErrCodeNotConfigured    = "QB_NOT_CONFIGURED"
+	ErrCodeConnectionFailed = "QBITTORRENT_CONNECTION_FAILED"
+	ErrCodeAuthFailed       = "QBITTORRENT_AUTH_FAILED"
+	ErrCodeTimeout          = "QBITTORRENT_TIMEOUT"
+	ErrCodeNotConfigured    = "QBITTORRENT_NOT_CONFIGURED"
 )

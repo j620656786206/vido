@@ -259,7 +259,7 @@ func TestMapTorrentDetails(t *testing.T) {
 }
 
 func TestErrCodeTorrentNotFound(t *testing.T) {
-	assert.Equal(t, "QB_TORRENT_NOT_FOUND", ErrCodeTorrentNotFound)
+	assert.Equal(t, "QBITTORRENT_TORRENT_NOT_FOUND", ErrCodeTorrentNotFound)
 }
 
 // --- Client torrent method tests ---

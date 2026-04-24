@@ -184,7 +184,7 @@ test.describe('Downloads Page @downloads @ui', () => {
   });
 
   test('[P2] should display error when qBittorrent is not configured', async ({ page }) => {
-    // GIVEN: API returns QB_NOT_CONFIGURED error
+    // GIVEN: API returns QBITTORRENT_NOT_CONFIGURED error
     await page.route(`${ROUTE_API}/downloads*`, (route) =>
       route.fulfill({
         status: 400,
@@ -192,7 +192,7 @@ test.describe('Downloads Page @downloads @ui', () => {
         body: JSON.stringify({
           success: false,
           error: {
-            code: 'QB_NOT_CONFIGURED',
+            code: 'QBITTORRENT_NOT_CONFIGURED',
             message: 'qBittorrent 尚未設定',
             suggestion: '請先前往設定頁面設定 qBittorrent 連線。',
           },

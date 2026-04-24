@@ -1,6 +1,6 @@
 # Story: Rename `QB_` Error-Code Prefix to `QBITTORRENT_`
 
-Status: ready-for-dev
+Status: review
 
 **Origin:** Winston (Architect) architectural review of retro-10-AI3 Rule 7 expansion — 2026-04-20.
 **Priority:** LOW (cosmetic consistency; wire contract still functions as-is).
@@ -76,43 +76,43 @@ Across Rule 7's 13 registered prefixes, the convention is **`SOURCE = uppercase(
 
 > Red-green-refactor per project convention. Pure rename — no feature work. Cross-Stack Split Check: BE=3 tasks + FE/E2E=1 task + docs=1 + gate=1. Threshold (>3 on both sides) NOT triggered → single story OK.
 
-- [ ] **Task 1: Pre-flight audit (AC #1–#8)**
-  - [ ] 1.1 Run `rg -n '"QB_' apps/api/internal/ tests/ apps/web/ libs/` and verify the 15+ expected hits match this story's AC inventory (5 product-code + 8 test-code + 9 E2E-code + 4 docs/workflow sync points). Record any unexpected hits as follow-up findings.
-  - [ ] 1.2 Run `grep -n 'qbittorrent\.ErrCode' apps/api/internal/services/` and confirm services already use identifiers (no string changes needed there) — this is the insurance that the rename is compiler-safe on the consumer side.
-  - [ ] 1.3 Verify `qbittorrent` package is already imported by `apps/api/internal/handlers/qbittorrent_handler.go` (AC #3 refactor prerequisite — should be true because the handler already type-asserts `*qbittorrent.ConnectionError` at `~line 124`).
+- [x] **Task 1: Pre-flight audit (AC #1–#8)**
+  - [x] 1.1 `rg -n '"QB_' apps/api/internal/ tests/ apps/web/ libs/` confirmed inventory: 5 product-code (types.go:43-46, torrent.go:140, qbittorrent_handler.go:123) + 9 test-code (types_test.go:66,74,106-109 + torrent_test.go:262 + qbittorrent_handler_test.go:256,272) + 9 E2E-code (download-filtering.api.spec.ts:39,75,114 + qbittorrent-settings.api.spec.ts:212-213,235 + downloads.spec.ts:187,195 + downloads.api.spec.ts:71,74) + 4 sync points (project-context.md:294,300 + instructions.xml:113,146). Ghost note: 4-6 story doc mentions `QB_HEALTH_CHECK_FAILED` but zero hits in src — pre-existing doc ghost, unrelated.
+  - [x] 1.2 `grep -rn 'qbittorrent\.ErrCode' apps/api/internal/services/` → 8 hits across download_service.go:94,149 + qbittorrent_service.go:111,125 + their _test.go counterparts (3 in each test file). All use identifiers — compile-time rename is safe.
+  - [x] 1.3 `apps/api/internal/handlers/qbittorrent_handler.go:8` confirms `"github.com/vido/api/internal/qbittorrent"` import — prerequisite for AC #3 refactor satisfied.
 
-- [ ] **Task 2: Rename 5 constants — wire contract atomic flip (AC #1)**
-  - [ ] 2.1 TDD RED: update `apps/api/internal/qbittorrent/types_test.go:66, 74, 106-109` — change 6 `"QB_*"` assertions to `"QBITTORRENT_*"`. Tests fail (constants still have old values).
-  - [ ] 2.2 TDD RED: update `apps/api/internal/qbittorrent/torrent_test.go:262` — change `"QB_TORRENT_NOT_FOUND"` to `"QBITTORRENT_TORRENT_NOT_FOUND"`. Test fails.
-  - [ ] 2.3 TDD GREEN: update `apps/api/internal/qbittorrent/types.go:43-46` — 4 constants rename from `QB_*` to `QBITTORRENT_*`. Update `apps/api/internal/qbittorrent/torrent.go:140` — `ErrCodeTorrentNotFound` from `"QB_TORRENT_NOT_FOUND"` to `"QBITTORRENT_TORRENT_NOT_FOUND"`.
-  - [ ] 2.4 Run `go test ./internal/qbittorrent/...` → PASS.
+- [x] **Task 2: Rename 5 constants — wire contract atomic flip (AC #1)**
+  - [x] 2.1 TDD RED applied: `types_test.go:66, 74, 106-109` — 6 `"QB_*"` assertions updated to `"QBITTORRENT_*"`.
+  - [x] 2.2 TDD RED applied: `torrent_test.go:262` — `"QB_TORRENT_NOT_FOUND"` → `"QBITTORRENT_TORRENT_NOT_FOUND"`.
+  - [x] 2.3 TDD GREEN: `types.go:43-46` — 4 constants renamed; `torrent.go:140` — `ErrCodeTorrentNotFound = "QBITTORRENT_TORRENT_NOT_FOUND"`.
+  - [x] 2.4 `go test ./internal/qbittorrent/...` → PASS.
 
-- [ ] **Task 3: Fix handler Rule 11 violation + remaining test assertions (AC #3, #4)**
-  - [ ] 3.1 TDD RED: update `apps/api/internal/handlers/qbittorrent_handler_test.go:256, 272` — change `"QB_AUTH_FAILED"` and `"QB_NOT_CONFIGURED"` to `QBITTORRENT_*`. Tests may already pass due to constant rename upstream (Task 2), but these hard-coded strings are the drift detector — verify by re-running.
-  - [ ] 3.2 GREEN: update `apps/api/internal/handlers/qbittorrent_handler.go:123` — replace `code := "QB_CONNECTION_FAILED"` with `code := qbittorrent.ErrCodeConnectionFailed`. This fixes a pre-existing Rule 11 consumer-reference violation surfaced by this story's grep audit (not introduced by the rename itself; defensive Rule 11 coverage).
-  - [ ] 3.3 Run `go test ./internal/handlers/...` → PASS. Confirm `qbittorrent_handler_test.go:256, 272` wire-contract assertions match new values.
+- [x] **Task 3: Fix handler Rule 11 violation + remaining test assertions (AC #3, #4)**
+  - [x] 3.1 `qbittorrent_handler_test.go:256, 272` updated — `"QB_AUTH_FAILED"` → `"QBITTORRENT_AUTH_FAILED"`, `"QB_NOT_CONFIGURED"` → `"QBITTORRENT_NOT_CONFIGURED"`.
+  - [x] 3.2 `qbittorrent_handler.go:123` — `code := "QB_CONNECTION_FAILED"` → `code := qbittorrent.ErrCodeConnectionFailed` (Rule 11 compliance — pre-existing violation fixed in same commit).
+  - [x] 3.3 `go test ./internal/handlers/...` → PASS.
 
-- [ ] **Task 4: Update E2E spec assertions (AC #5)**
-  - [ ] 4.1 Update `tests/e2e/download-filtering.api.spec.ts:39, 75, 114` — 3 `/^QB_/` regex → `/^QBITTORRENT_/`.
-  - [ ] 4.2 Update `tests/e2e/qbittorrent-settings.api.spec.ts:212-213, 235` — 3 literal assertions (`'QB_NOT_CONFIGURED'`, `'QB_CONNECTION_FAILED'`) → `QBITTORRENT_*` variants.
-  - [ ] 4.3 Update `tests/e2e/downloads.spec.ts:187, 195` — 1 comment + 1 mock response `code: 'QB_NOT_CONFIGURED'` → QBITTORRENT_ variants.
-  - [ ] 4.4 Update `tests/e2e/downloads.api.spec.ts:71, 74` — 1 comment + 1 `/^QB_/` regex → QBITTORRENT_ variants.
+- [x] **Task 4: Update E2E spec assertions (AC #5)**
+  - [x] 4.1 `tests/e2e/download-filtering.api.spec.ts:39, 75, 114` — all 3 `/^QB_/` regex → `/^QBITTORRENT_/` (used `replace_all`).
+  - [x] 4.2 `tests/e2e/qbittorrent-settings.api.spec.ts:212-213, 235` — 3 literal assertions → `QBITTORRENT_*`.
+  - [x] 4.3 `tests/e2e/downloads.spec.ts:187, 195` — 1 comment + 1 mock `code: 'QBITTORRENT_NOT_CONFIGURED'`.
+  - [x] 4.4 `tests/e2e/downloads.api.spec.ts:71, 74` — comment + regex `/^QBITTORRENT_/`. **Bonus found**: lines 84 + 120 also had `QB_` (regex + 2 comments — missed by draft AC #5 which only listed lines 71/74). All fixed via targeted Edit calls.
 
-- [ ] **Task 5: Update Rule 7 registry + CR workflow sync (AC #6, #7)**
-  - [ ] 5.1 `project-context.md:294` — update the Rule 7 example line: `QB_TORRENT_NOT_FOUND, QB_CONNECTION_FAILED, QB_AUTH_FAILED, QB_TIMEOUT, QB_NOT_CONFIGURED` → the 5 `QBITTORRENT_*` variants.
-  - [ ] 5.2 `project-context.md:300` — authoritative prefix set: `QB_,` → `QBITTORRENT_,`.
-  - [ ] 5.3 `project-context.md:7` "Last Updated" header — append note: `2026-04-24 (Rule 7 prefix rename — QB_ → QBITTORRENT_ via followup-qbittorrent-prefix-rename; restores SOURCE=uppercase(package) uniformity across all 13 registered prefixes)`.
-  - [ ] 5.4 `_bmad/bmm/workflows/4-implementation/code-review/instructions.xml:113` — inline prefix list: `QB_,` → `QBITTORRENT_,`.
-  - [ ] 5.5 `_bmad/bmm/workflows/4-implementation/code-review/instructions.xml:146` — auto-fix map: `apps/api/internal/qbittorrent/** → QB_` → `apps/api/internal/qbittorrent/** → QBITTORRENT_`.
-  - [ ] 5.6 `_bmad/bmm/workflows/4-implementation/code-review/instructions.xml:97, 111` — bump `last synced with project-context.md Rule 7 on 2026-04-20` → `2026-04-24`.
+- [x] **Task 5: Update Rule 7 registry + CR workflow sync (AC #6, #7)**
+  - [x] 5.1 `project-context.md:294` — example line updated with 5 `QBITTORRENT_*` codes.
+  - [x] 5.2 `project-context.md:300` — authoritative prefix set: `QB_,` → `QBITTORRENT_,`.
+  - [x] 5.3 `project-context.md:7` — "Last Updated" header bumped to 2026-04-24 with full citation.
+  - [x] 5.4 `instructions.xml:113` — inline prefix list updated to `QBITTORRENT_`.
+  - [x] 5.5 `instructions.xml:146` — auto-fix map `qbittorrent/** → QBITTORRENT_`.
+  - [x] 5.6 `instructions.xml:97, 111` — sync dates bumped `2026-04-20 → 2026-04-24`.
 
-- [ ] **Task 6: Full regression gate (AC #8)**
-  - [ ] 6.1 `pnpm lint:all` — expect 0 errors, 129 pre-existing warnings baseline; Prettier PASS.
-  - [ ] 6.2 `pnpm nx test api` — expect PASS (services using `qbittorrent.ErrCode*` identifiers auto-pick up new wire values; hard-coded wire-string test assertions in Tasks 2/3 updated).
-  - [ ] 6.3 `pnpm nx test web` — expect PASS (no React/TS product code touched; only E2E spec files under `tests/e2e/` which run via Playwright, not Vitest).
-  - [ ] 6.4 (Optional) E2E smoke if NAS deploy slot available — run Playwright `tests/e2e/qbittorrent-*.spec.ts` and `tests/e2e/downloads*.spec.ts` against local or deployed backend to confirm wire contract flips atomically without stale cache.
-  - [ ] 6.5 Final grep verification: `rg -n '"QB_[A-Z]' apps/api/internal/ tests/` — expect **0 hits** in all non-`_bmad-output/` paths. `rg -n 'QB_,' project-context.md _bmad/bmm/workflows/` — expect **0 hits**.
-  - [ ] 6.6 Update `sprint-status.yaml` entry `followup-qbittorrent-prefix-rename: review` with DEV transition notes per precedent (retro-10-AI5 / followup-metadata-prefix-dedup format).
+- [x] **Task 6: Full regression gate (AC #8)**
+  - [x] 6.1 `pnpm lint:all` → 0 errors, 129 pre-existing warnings (identical baseline); Prettier PASS.
+  - [x] 6.2 Full Go suite `go test ./...` from apps/api → ALL 29 packages PASS (cached for unchanged packages; qbittorrent + handlers + services freshly executed).
+  - [x] 6.3 `pnpm nx test web` → PASS (cached; 1738 tests; cleanup verified PIDs 19909/4379 exited cleanly).
+  - [x] 6.4 OPTIONAL E2E deploy-slot smoke — SKIPPED (no NAS deploy in this session; unit + Go API tests cover the wire-contract; E2E specs updated but not executed against live backend).
+  - [x] 6.5 Final grep gate: `grep -rn '"QB_[A-Z]' apps tests/e2e libs` → 0 hits. `grep -nE 'QB_,|\bQB_\b' project-context.md instructions.xml` → only 1 hit in project-context.md:7 Last Updated header (historical reference, expected — it describes the rename itself).
+  - [x] 6.6 Sprint-status.yaml updated `in-progress → review` with detailed transition notes following retro-10-AI5 / followup-metadata-prefix-dedup precedent format.
 
 ## Dev Notes
 
@@ -223,44 +223,54 @@ All 6 tasks land in **one commit** to preserve the "wire-contract atomic flip" i
 
 ### Agent Model Used
 
-_To be filled by DEV Amelia on `/dev-story` invocation._
+Amelia (BMM Dev Agent) / Claude Opus 4.7 (1M context) — invoked 2026-04-24 via `/bmad:bmm:agents:dev` → `*dev-story followup-qbittorrent-prefix-rename`.
 
 ### Debug Log References
 
-_To be filled by DEV Amelia during implementation._
+- `go test ./internal/qbittorrent/...` (2026-04-24, post-Task 2): PASS — all 5 constants renamed, all 7 wire-string assertions green.
+- `go test ./internal/handlers/...` (2026-04-24, post-Task 3): PASS — 2 handler wire-string assertions updated, Rule 11 literal fix green.
+- `go test ./...` from `apps/api/` (2026-04-24, post-Task 6): PASS across all 29 Go packages.
+- `pnpm nx test web` (2026-04-24, post-Task 6): PASS (cached; 1738 tests; cleanup verified PIDs 19909, 4379 exited cleanly).
+- `pnpm lint:all` (2026-04-24, post-Task 6): 0 errors / 129 pre-existing warnings (identical baseline); `prettier --check .` PASS.
+- `grep -rn '"QB_[A-Z]' apps tests/e2e libs` (final gate): 0 hits.
+- `grep -nE 'QB_,|\bQB_\b' project-context.md _bmad/bmm/workflows/4-implementation/code-review/instructions.xml` (final gate): 1 hit — `project-context.md:7` Last Updated header historical reference (expected; describes this rename itself).
 
 ### Completion Notes List
 
-_To be filled by DEV Amelia at story transition to `review`. Expected entries:_
-
-- `🔗 AC Drift: {PENDING}` (expect N/A — no cross-story AC references in this story; pure refactor)
-- `🔒 Rule 7 Wire Format (self-result): {PENDING}` (expect PASS — the rename IS the Rule 7 fix; CR's Rule 7 check will see 5 QBITTORRENT_ constants, all correctly prefixed)
-- `📎 Contract Stamps: NONE` (no `[@contract-v*]` stamps; pure rename)
-- `🎨 UX Verification: SKIPPED` (zero files under `apps/web/`)
-- Per-AC satisfaction notes (AC #1–#8)
+- `🔗 AC Drift: FOUND (Stories 4-1 AC, 4-2 AC, 4-6 doc — documented QB_-prefixed wire codes as the contract payload; this story authorized drift per Winston 2026-04-20 retro-10-AI3 Item 3 ruling. Old contract: 'error.code starts with QB_'. New contract: 'error.code starts with QBITTORRENT_'. Consumers that matched on prefix must use QBITTORRENT_; no known such consumers exist in frontend or libs — grep confirmed. 4-6 ghost code QB_HEALTH_CHECK_FAILED pre-existed in doc but not in src — unrelated and unchanged.)`
+- `🔒 Rule 7 Wire Format (self-result): PASS (5 error codes checked — all QBITTORRENT_ prefix, matching the Rule 7 authoritative set as updated by Task 5.2. The rename IS the Rule 7 fix.)`
+- `📎 Contract Stamps: NONE (no [@contract-v*] stamps in this story or upstream refs — normal for a pure rename that does not define or consume wire contracts via Rule 20 protocol.)`
+- `🎨 UX Verification: SKIPPED (zero files under apps/web/).`
+- AC #1 satisfied: 5 constants in `qbittorrent/types.go:43-46` + `qbittorrent/torrent.go:140` all use `QBITTORRENT_*` prefix. `TestErrorCodeConstants` + `TestErrCodeTorrentNotFound` serve as regression guards.
+- AC #2 satisfied: repo-wide `"QB_[A-Z]` grep returns 0 hits in product code + tests + E2E + libs.
+- AC #3 satisfied: `handlers/qbittorrent_handler.go:123` uses `qbittorrent.ErrCodeConnectionFailed` identifier; pre-existing Rule 11 violation fixed in same commit.
+- AC #4 satisfied: 8 test assertions in `types_test.go`, `torrent_test.go`, `qbittorrent_handler_test.go` updated to `QBITTORRENT_*` wire strings; all PASS.
+- AC #5 satisfied: 4 E2E files updated (downloads-filtering, qbittorrent-settings, downloads, downloads.api) — **plus 2 bonus hits found beyond draft AC #5 scope** at downloads.api.spec.ts:84 (regex) + :120 (comment) — fixed for completeness per AC #2 zero-hit invariant.
+- AC #6 satisfied: `project-context.md:294` example line, `:300` authoritative prefix set, `:7` Last Updated header all updated.
+- AC #7 satisfied: `instructions.xml:97, 111, 113, 146` — sync dates bumped to 2026-04-24, inline prefix list + auto-fix map both use `QBITTORRENT_`.
+- AC #8 satisfied: full regression gate green (lint:all + Go 29 pkg + web 1738 tests + Prettier + final grep gate). Services using `qbittorrent.ErrCode*` identifiers (4 call sites in download_service.go + qbittorrent_service.go + their tests) auto-picked up new wire values via Go compiler — zero explicit changes there, confirming Risk Assessment "ZERO" for consumer regression.
 
 ### File List
 
-_To be filled by DEV Amelia. Expected touch-list:_
-
-- `apps/api/internal/qbittorrent/types.go` — modified (Task 2.3)
-- `apps/api/internal/qbittorrent/types_test.go` — modified (Task 2.1)
-- `apps/api/internal/qbittorrent/torrent.go` — modified (Task 2.3)
-- `apps/api/internal/qbittorrent/torrent_test.go` — modified (Task 2.2)
-- `apps/api/internal/handlers/qbittorrent_handler.go` — modified (Task 3.2)
-- `apps/api/internal/handlers/qbittorrent_handler_test.go` — modified (Task 3.1)
-- `tests/e2e/download-filtering.api.spec.ts` — modified (Task 4.1)
-- `tests/e2e/qbittorrent-settings.api.spec.ts` — modified (Task 4.2)
-- `tests/e2e/downloads.spec.ts` — modified (Task 4.3)
-- `tests/e2e/downloads.api.spec.ts` — modified (Task 4.4)
-- `project-context.md` — modified (Task 5.1–5.3)
-- `_bmad/bmm/workflows/4-implementation/code-review/instructions.xml` — modified (Task 5.4–5.6)
-- `_bmad-output/implementation-artifacts/sprint-status.yaml` — modified (Task 6.6)
-- `_bmad-output/implementation-artifacts/followup-qbittorrent-prefix-rename.md` — this file (status transitions + Change Log updates)
+- `apps/api/internal/qbittorrent/types.go` — **modified** (Task 2.3): 4 constants `QB_*` → `QBITTORRENT_*`.
+- `apps/api/internal/qbittorrent/types_test.go` — **modified** (Task 2.1): 6 wire-string assertions updated.
+- `apps/api/internal/qbittorrent/torrent.go` — **modified** (Task 2.3): `ErrCodeTorrentNotFound = "QBITTORRENT_TORRENT_NOT_FOUND"`.
+- `apps/api/internal/qbittorrent/torrent_test.go` — **modified** (Task 2.2): 1 wire-string assertion updated.
+- `apps/api/internal/handlers/qbittorrent_handler.go` — **modified** (Task 3.2): Rule 11 fix — raw literal → `qbittorrent.ErrCodeConnectionFailed`.
+- `apps/api/internal/handlers/qbittorrent_handler_test.go` — **modified** (Task 3.1): 2 wire-string assertions updated.
+- `tests/e2e/download-filtering.api.spec.ts` — **modified** (Task 4.1): 3 regex `/^QB_/` → `/^QBITTORRENT_/` via `replace_all`.
+- `tests/e2e/qbittorrent-settings.api.spec.ts` — **modified** (Task 4.2): 3 literal assertions updated.
+- `tests/e2e/downloads.spec.ts` — **modified** (Task 4.3): 1 comment + 1 mock response `code:` updated.
+- `tests/e2e/downloads.api.spec.ts` — **modified** (Task 4.4): 2 comments + 2 regex updated (lines 71, 74, 84, 120 — includes 2 sites beyond draft AC #5 scope, fixed for AC #2 zero-hit invariant).
+- `project-context.md` — **modified** (Task 5.1–5.3): Rule 7 example line (:294), authoritative prefix set (:300), Last Updated header (:7).
+- `_bmad/bmm/workflows/4-implementation/code-review/instructions.xml` — **modified** (Task 5.4–5.6): sync date HTML comment (:97) + inline "last synced" (:111) bumped to 2026-04-24, prefix list (:113) + auto-fix map (:146) use `QBITTORRENT_`.
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — **modified**: transition `ready-for-dev → in-progress → review` with per-transition audit notes.
+- `_bmad-output/implementation-artifacts/followup-qbittorrent-prefix-rename.md` — this story file: Status `ready-for-dev → in-progress → review`; 6 Tasks / 23 subtasks all [x]; Change Log documents AC Drift decision + implementation deltas.
 
 ## Change Log
 
 | Date       | Change                                                                                                                                                                                                                                                                                                                                                                                 |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 2026-04-20 | Story draft created by Winston (Architect) during retro-10-AI3 architectural review. Initial 8 ACs + Problem + Task Sketch + Out of Scope + References. Priority LOW, scope estimate ~30 LOC. Status: `backlog`.                                                                                                                                                                       |
+| 2026-04-24 | DEV Amelia `/dev-story` COMPLETE. Status `ready-for-dev → in-progress → review`. AC Drift Check: **FOUND** (Stories 4-1/4-2/4-6 documented QB_ wire values as the contract payload; authorized drift per Winston 2026-04-20 retro-10-AI3 Item 3). Contract Stamps: NONE. Ghost: 4-6 `QB_HEALTH_CHECK_FAILED` pre-existing doc-only code, not shipped to src, unrelated. **Task 2** (5 constants rename — `types.go` 4 + `torrent.go` 1): GREEN PASS. **Task 3** (handler Rule 11 fix: `qbittorrent_handler.go:123` `"QB_CONNECTION_FAILED"` literal → `qbittorrent.ErrCodeConnectionFailed` identifier; 2 handler_test assertions updated): GREEN PASS. **Task 4** (4 E2E files: download-filtering + qbittorrent-settings + downloads + downloads.api): done, **+2 bonus sites found** at `downloads.api.spec.ts:84, 120` beyond draft AC #5 scope — fixed for AC #2 zero-hit invariant. **Task 5** (Rule 7 sync: project-context.md:294,300,7 + instructions.xml:97,111,113,146): all 6 sync points updated; sync dates bumped 2026-04-20 → 2026-04-24. **Task 6** (full regression gate): `pnpm lint:all` 0 errors / 129 pre-existing warnings (identical baseline); Prettier PASS; Go suite 29 packages PASS; `pnpm nx test web` cached 1738 tests PASS + cleanup verified; final grep `"QB_[A-Z]` → 0 product/E2E hits; `QB_,|\bQB_\b` → 1 hit (project-context.md:7 historical Last Updated note, expected). Services using `qbittorrent.ErrCode*` identifiers (download_service.go, qbittorrent_service.go + tests — 8 call sites) auto-picked up new wire values via Go compiler — confirmed zero explicit consumer changes needed. 🔗 AC Drift: FOUND (authorized). 🔒 Rule 7 Wire Format: PASS (5 QBITTORRENT_ codes, all prefix-valid per updated Rule 7). 📎 Contract Stamps: NONE. 🎨 UX: SKIPPED. Sprint-status.yaml synced: `in-progress → review`. Final `review → done` is CR's responsibility. |
 | 2026-04-24 | Story bootstrapped to `ready-for-dev` by SM Bob via `/bmad:bmm:workflows:create-story` (yolo mode). Added: Story statement (As-a/I-want/So-that), 6 Tasks with 24 subtasks mapped to ACs #1–#8 (ACs revised by SM after exhaustive grep audit surfaced (a) 5th constant `ErrCodeTorrentNotFound` at `torrent.go:140` not in Winston's draft; (b) Rule 11 violation at `qbittorrent_handler.go:123` using raw literal — added as AC #3; (c) E2E scope understated — actual 4 files / 9 hits, enumerated in AC #5). Dev Notes with Root Cause + Why This is a Pure Wire-Contract Refactor + Architecture Constraint table + Cross-Stack Split Check (BE=3 + FE/E2E=1 + docs=1 → single story, pass) + Precedent Stories (retro-10-AI3 / followup-metadata-prefix-dedup / retro-10-AI5) + Grep Patterns (5 audit queries) + Risk Assessment (all 6 risk categories ZERO-LOW) + Ordering & Atomicity note. File List scaffolding (14 expected touch points). Dev Agent Record placeholder (retro-10-AI5 / followup-metadata-prefix-dedup audit-line pattern). Exhaustive artifact analysis: re-read `qbittorrent/types.go` + `torrent.go`, greped `apps/api/internal/`, `tests/e2e/`, `apps/web/`, `libs/` for `"QB_`, cross-checked services for identifier usage (4 consumer files, 8 hits, all already via `qbittorrent.ErrCode*` — compile-time rename is safe). Cross-Stack Split Check: 3 BE + 1 FE/E2E + 1 docs — single story OK. Sprint-status.yaml transition: `backlog → ready-for-dev`. |

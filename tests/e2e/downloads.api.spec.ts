@@ -68,10 +68,10 @@ test.describe('Downloads API @api @downloads', () => {
         ]).toContain(torrent.status);
       }
     } else {
-      // THEN: Should return QB_NOT_CONFIGURED if qBittorrent is not set up
+      // THEN: Should return QBITTORRENT_NOT_CONFIGURED if qBittorrent is not set up
       expect(json.success).toBe(false);
       expect(json.error).toBeDefined();
-      expect(json.error.code).toMatch(/^QB_/);
+      expect(json.error.code).toMatch(/^QBITTORRENT_/);
     }
   });
 
@@ -81,12 +81,12 @@ test.describe('Downloads API @api @downloads', () => {
 
     const json = await response.json();
 
-    // THEN: Should accept sort params without error (or return QB_NOT_CONFIGURED)
+    // THEN: Should accept sort params without error (or return QBITTORRENT_NOT_CONFIGURED)
     if (response.ok()) {
       expect(json.success).toBe(true);
       expect(Array.isArray(json.data)).toBe(true);
     } else {
-      expect(json.error.code).toMatch(/^QB_/);
+      expect(json.error.code).toMatch(/^QBITTORRENT_/);
     }
   });
 
@@ -117,7 +117,7 @@ test.describe('Downloads API @api @downloads', () => {
     // THEN: Should return error (either not found or not configured)
     expect(json.success).toBe(false);
     expect(json.error).toBeDefined();
-    // Could be QB_TORRENT_NOT_FOUND or QB_NOT_CONFIGURED
+    // Could be QBITTORRENT_TORRENT_NOT_FOUND or QBITTORRENT_NOT_CONFIGURED
     expect(json.error.code).toBeTruthy();
   });
 

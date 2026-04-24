@@ -94,7 +94,7 @@
     </action>
 
     <!-- Rule 7 Wire Format Check (Epic 10 Retro AI-3) -->
-    <!-- Last synced with project-context.md Rule 7 on 2026-04-20 -->
+    <!-- Last synced with project-context.md Rule 7 on 2026-04-24 -->
     <action critical="MANDATORY">RULE 7 WIRE FORMAT CHECK:
       Rule 7 of project-context.md mandates that every error code string constant
       in the Go backend follow the format `{SOURCE}_{ERROR_TYPE}` where {SOURCE}
@@ -108,9 +108,9 @@
         "🔒 Rule 7 Wire Format: N/A (no Go error-code files in scope)"
       and skip to the next action (Code Quality Deep Dive).
 
-      Known source prefixes (last synced with project-context.md Rule 7 on 2026-04-20):
+      Known source prefixes (last synced with project-context.md Rule 7 on 2026-04-24):
         TMDB_, AI_, DB_, VALIDATION_, SUBTITLE_, PLUGIN_, SCANNER_, SSE_, LIBRARY_,
-        QB_, METADATA_, DOUBAN_, WIKIPEDIA_
+        QBITTORRENT_, METADATA_, DOUBAN_, WIKIPEDIA_
         (13 sources total — keep in sync with project-context.md Rule 7 list)
 
       Grep procedure (scoped to in-review Go files under apps/api/internal/**):
@@ -143,7 +143,7 @@
            - apps/api/internal/sse/**                        → SSE_
            - apps/api/internal/plugins/**                    → PLUGIN_
            - apps/api/internal/ai/**                         → AI_
-           - apps/api/internal/qbittorrent/**                → QB_
+           - apps/api/internal/qbittorrent/**                → QBITTORRENT_
            - apps/api/internal/douban/**                     → DOUBAN_
            - apps/api/internal/wikipedia/**                  → WIKIPEDIA_
            - apps/api/internal/metadata/** or retry/**       → METADATA_

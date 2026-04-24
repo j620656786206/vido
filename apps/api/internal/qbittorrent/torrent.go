@@ -137,7 +137,7 @@ type DownloadCounts struct {
 }
 
 // Error code for torrent not found.
-const ErrCodeTorrentNotFound = "QB_TORRENT_NOT_FOUND"
+const ErrCodeTorrentNotFound = "QBITTORRENT_TORRENT_NOT_FOUND"
 
 // qbTorrentInfo is the internal representation of a torrent from the qBittorrent API.
 // Field names match the qBittorrent API JSON response (snake_case).

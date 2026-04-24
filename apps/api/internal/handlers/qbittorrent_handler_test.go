@@ -253,7 +253,7 @@ func TestQBittorrentHandler_TestConnection(t *testing.T) {
 			expectedStatus: http.StatusBadRequest,
 			checkResponse: func(t *testing.T, resp *APIResponse) {
 				assert.False(t, resp.Success)
-				assert.Equal(t, "QB_AUTH_FAILED", resp.Error.Code)
+				assert.Equal(t, "QBITTORRENT_AUTH_FAILED", resp.Error.Code)
 				assert.Equal(t, "無法連線到 qBittorrent", resp.Error.Message)
 			},
 		},
@@ -269,7 +269,7 @@ func TestQBittorrentHandler_TestConnection(t *testing.T) {
 			checkResponse: func(t *testing.T, resp *APIResponse) {
 				assert.False(t, resp.Success)
 				assert.NotNil(t, resp.Error)
-				assert.Equal(t, "QB_NOT_CONFIGURED", resp.Error.Code)
+				assert.Equal(t, "QBITTORRENT_NOT_CONFIGURED", resp.Error.Code)
 			},
 		},
 	}
