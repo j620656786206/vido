@@ -1,6 +1,6 @@
 # Story: Deduplicate METADATA_ Error Codes — Rule 11 Canonicalization
 
-Status: review
+Status: done
 
 **Origin:** Winston (Architect) architectural review of retro-10-AI3 Rule 7 expansion — 2026-04-20.
 **Priority:** MEDIUM (Rule 11 smell affecting live wire contract; not a user-visible bug).
@@ -65,7 +65,7 @@ The second item is the more serious defect: the retry package is silently expand
 
 - [x] **Task 3: Relocate classifier to `metadata/` package (AC #1, #2) — REVISED per party-mode**
   - [x] 3.1 Created `apps/api/internal/metadata/retry_classifier.go` (288 LOC). Package `metadata`. Imports: `errors`, `strings`, `github.com/vido/api/internal/retry` (for `*RetryableError` return type).
-  - [x] 3.2 All constants use local `ErrCode*` identifiers (no `metadata.` prefix — same package). All `strings.Contains(...)` pattern-match call sites correctly wrap uppercase constants via `strings.ToLower()` since outer `errStr` is already lowercased (fixed a subtle pre-existing bug where raw uppercase constant was compared against lowercased string — behavior preserved in relocation, not introduced).
+  - [x] 3.2 All constants use local `ErrCode*` identifiers (no `metadata.` prefix — same package). All `strings.Contains(...)` pattern-match call sites correctly wrap uppercase constants via `strings.ToLower()` since outer `errStr` is already lowercased — this is a **latent bug fix**: the pre-existing code compared raw uppercase `ErrCode*` constants against a lowercased `errStr` and therefore never matched via the constant path (only via fallback patterns like `"timeout"`). Wire contract values remain byte-identical; the internal classifier decision path now reliably matches via `ErrCode*` constants as originally intended. (Corrected wording per CR 2026-04-24 finding M3.)
   - [x] 3.3 `IsTemporaryError` moved to `metadata/retry_classifier.go` alongside classifier family. `retry/temporary.go` NOT created.
   - [x] 3.4 `git rm apps/api/internal/retry/metadata_integration.go` executed.
   - [x] 3.5 `go build ./internal/...` clean. Edges: `metadata → retry` (new); `retry → metadata` does NOT exist.
@@ -203,7 +203,7 @@ Amelia (BMM Dev Agent) / Claude Opus 4.7 (1M context) — invoked 2026-04-24 via
 - `🔒 Rule 7 Wire Format (self-result): N/A` (no new wire prefix introduced — METADATA_ already canonical per retro-10-AI3 expansion; 4 promoted codes fall under existing prefix.)
 - `📎 Contract Stamps: NONE` (no `[@contract-v*]` stamps in this story or upstream refs — normal for stories that don't define/consume wire contracts.)
 - `🎨 UX Verification: SKIPPED` (zero files under `apps/web/`.)
-- AC #1 satisfied: grep `"METADATA_` under `apps/api/internal/` returns hits ONLY in: `metadata/provider.go` (11 canonical constants), `metadata/retry_classifier_test.go` (exempt — test assertions), `metadata/retry_classifier.go` (via unqualified ErrCode* identifiers, not string literals — satisfies AC).
+- AC #1 satisfied (post-CR 2026-04-24): grep `"METADATA_` under `apps/api/internal/` returns hits ONLY in — `metadata/provider.go` (14 canonical constant declarations: 7 original + 4 promoted from retry + 3 promoted from handlers during CR fix); `metadata/provider_test.go`, `metadata/retry_classifier_test.go`, `handlers/metadata_handler_test.go` (all exempt — test assertions that serve as wire-contract drift detectors). Zero production string literals remain. Initial pre-CR claim was incorrect (sanitized to the story's own File List and missed pre-existing handler violations) — HIGH finding H1 repaired by fixing handlers/metadata_handler.go to use `metadata.ErrCode*` identifiers and adding 3 new `ErrCode*` constants to `provider.go`.
 - AC #2 satisfied: `retry/metadata_integration.go` DELETED (`git rm`). `metadata/retry_classifier.go` CREATED (288 LOC). `IsTemporaryError` relocated to metadata alongside classifier family.
 - AC #3 satisfied: 4 promoted constants (`ErrCodeGatewayError`, `ErrCodeNetworkError`, `ErrCodeNotFound`, `ErrCodeUnknownError`) added to `metadata/provider.go` lines 248–255. Classifier at `metadata/retry_classifier.go` references them via local unqualified identifiers.
 - AC #4 satisfied: wire contract byte-identical. `git log --follow` history preserved for test file via `git mv`. Full regression gate PASS (Go api + React web + lint).
@@ -213,15 +213,54 @@ Amelia (BMM Dev Agent) / Claude Opus 4.7 (1M context) — invoked 2026-04-24 via
 
 ### File List
 
-- `apps/api/internal/metadata/provider.go` — **modified** (Task 2): 4 new exported constants appended to `const (...)` block, lines 248–255 (new). Pre-existing 7 canonical constants unchanged.
-- `apps/api/internal/metadata/provider_test.go` — **modified** (Task 2): added `TestErrCodeConstants_WireValues` covering all 11 exported codes (7 pre-existing regression guard + 4 promoted). RED→GREEN cycle verified.
+- `apps/api/internal/metadata/provider.go` — **modified** (Task 2 + CR fix): 4 new exported constants appended to `const (...)` block at lines 248–255 (Task 2), then 3 more `ErrCodeUpdate*` constants appended at lines 256–261 during CR fix (M1) to eliminate silent wire-contract expansion in handlers. Pre-existing 7 canonical constants unchanged. Total: 14 canonical `METADATA_*` declarations.
+- `apps/api/internal/metadata/provider_test.go` — **modified** (Task 2 + CR fix): `TestErrCodeConstants_WireValues` now covers all 14 exported codes (7 pre-existing regression guard + 4 promoted from retry + 3 promoted from handlers). RED→GREEN cycle verified.
+- `apps/api/internal/handlers/metadata_handler.go` — **modified (CR fix M1+M2)**: 6 ErrorResponse call sites at lines 54, 87, 304, 312, 345, 350 switched from raw `"METADATA_*"` string literals to `metadata.ErrCode*` identifiers. `metadata` package was already imported. Wire contract values byte-identical (handler_test.go string assertions PASS unchanged).
 - `apps/api/internal/metadata/retry_classifier.go` — **new** (Task 3): 288 LOC. Migrated `IsRetryableMetadataError`, `ClassifyMetadataError`, `ExtractRetryableErrors`, `ShouldQueueRetry`, `WrapAsRetryable`, `IsTemporaryError`. Package `metadata`. Imports `errors`, `strings`, `github.com/vido/api/internal/retry` (for `*RetryableError` return type).
 - `apps/api/internal/metadata/retry_classifier_test.go` — **renamed via `git mv`** from `apps/api/internal/retry/metadata_integration_test.go` (Task 4). Package declaration changed to `metadata`. Added `github.com/vido/api/internal/retry` import for `*retry.RetryableError` type assertion at line 368. All 16+ hardcoded wire-contract string assertions UNCHANGED.
 - `apps/api/internal/retry/metadata_integration.go` — **DELETED** (`git rm`, Task 3.4). All logic relocated to `metadata/retry_classifier.go`.
 - `apps/api/internal/services/metadata_service.go` — **modified** (Task 5): lines 516, 530 — `retry.ShouldQueueRetry` → `metadata.ShouldQueueRetry`, `retry.IsRetryableMetadataError` → `metadata.IsRetryableMetadataError`. `retry` import retained (used by `retry.RetryPayload` at line 521).
+- `apps/api/internal/metadata/retry_classifier.go` — **modified (CR fix L1+L2+L3)**: package-level pre-lowered `errCode*Lower` vars + `retryableLoweredCodes` slice added to avoid repeated `strings.ToLower(ErrCode*)` allocations on hot path (L3); observationally-dead `nonRetryablePatterns` branch in `IsRetryableMetadataError` removed (L1); `IsTemporaryError` direct type assertion collapsed into `errors.As`-only path (L2). Behavior preserved in all three cases — LOW cleanups with zero wire-contract impact. Regression tests PASS.
 - `project-context.md` — **modified** (Task 2.4 housekeeping): Rule 7 example line at `:295` extended with 4 newly-promoted codes (`METADATA_GATEWAY_ERROR`, `METADATA_NETWORK_ERROR`, `METADATA_NOT_FOUND`, `METADATA_UNKNOWN_ERROR`) for doc completeness. Rule 7 authoritative prefix set (line 300) unchanged — METADATA_ prefix already listed.
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` — **modified**: transition `backlog → ready-for-dev → in-progress → review` with per-transition audit notes.
 - `_bmad-output/implementation-artifacts/followup-metadata-prefix-dedup.md` — this story file: ACs revised per 2026-04-24 party-mode; 6 Tasks / 26 subtasks all [x]; Status `ready-for-dev → in-progress → review`; Change Log documents party-mode decision.
+
+## Senior Developer Review (AI)
+
+**Reviewer:** Amelia (BMM Dev Agent) / Claude Opus 4.7 (1M context)
+**Date:** 2026-04-24
+**Outcome:** APPROVED (after auto-fix of 7 findings per user choice [1])
+**Scope:** Files modified in commit cd1e40d + pre-existing consumer files surfaced by AC #1 grep
+
+### Methodology
+- Git vs story File List cross-check (zero discrepancies)
+- AC #1–#6 implementation verification
+- 🔒 Rule 7 Wire Format Check: PASS (11 pre-fix → 14 post-fix error codes checked, all METADATA_ prefix)
+- Repo-wide grep `"METADATA_` across `apps/api/internal/` (not just story file list) — this surfaced H1/M1/M2
+- Code-quality deep dive on `retry_classifier.go` (L1/L2/L3)
+
+### Findings (7)
+
+| ID | Severity | Area | Finding | Fix |
+|----|----------|------|---------|-----|
+| H1 | HIGH | AC #1 claim accuracy | Completion Notes grep claim sanitized to own File List — missed pre-existing handler violations (6 string-literal sites) | Rewrote Completion Note; handler consumers now use `metadata.ErrCode*` identifiers; 3 new constants declared in `provider.go` |
+| M1 | MEDIUM | Wire-contract expansion | `METADATA_UPDATE_INVALID_REQUEST`/`METADATA_UPDATE_NOT_FOUND`/`METADATA_UPDATE_FAILED` silently expanded wire contract from `handlers/metadata_handler.go` — same anti-pattern the story aimed to eliminate | Promoted to `ErrCodeUpdateInvalidRequest`/`ErrCodeUpdateNotFound`/`ErrCodeUpdateFailed` in `provider.go` + extended `TestErrCodeConstants_WireValues` to 14 assertions |
+| M2 | MEDIUM | Rule 11 consumer rule (AC #1) | `handlers/metadata_handler.go:54, 87` used raw `"METADATA_INVALID_REQUEST"` instead of `metadata.ErrCodeInvalidRequest` | Switched to identifier; `metadata` package already imported so zero import churn |
+| M3 | MEDIUM | Story claim accuracy (AC #4) | Task 3.2 note "behavior preserved" misleading — actual latent bug fix changed internal classifier decision path (wire values still byte-identical) | Rewrote Task 3.2 + inline added explanatory comment |
+| L1 | LOW | Dead code | `nonRetryablePatterns` block in `IsRetryableMetadataError` was observationally dead (returned same value as default) | Removed block, replaced with explanatory comment |
+| L2 | LOW | Redundant assertion | Direct `err.(temporary)` at top of `IsTemporaryError` subsumed by subsequent `errors.As` call | Collapsed to single `errors.As` path |
+| L3 | LOW | Hot-path allocation | Repeated `strings.ToLower(ErrCodeXxx)` on every classifier call | Hoisted 5 pre-lowered package vars + `retryableLoweredCodes` slice |
+
+### Verification Gate (post-fix)
+- `go build ./...` clean
+- `go test ./...` PASS across 29 packages (metadata + handlers both green)
+- `pnpm lint:all` 0 errors / 129 pre-existing warnings (identical baseline); Prettier PASS
+- Repo-wide `grep '"METADATA_' apps/api/internal/` returns zero hits in product code — only `provider.go` (declarations), test files (exempt), and the canonical consumer paths via `metadata.ErrCode*` identifiers
+- `TestErrCodeConstants_WireValues` now covers 14 codes — wire contract byte-identical regression guard
+- Rule 19 leaf list UNCHANGED — retry stays a leaf (Option A preserved, Winston draft AC #5 remains superseded)
+
+### Outcome
+All 7 findings auto-fixed. AC #1 now legitimately satisfied (not just sanitized). Story transitions `review → done`.
 
 ## Change Log
 
@@ -236,3 +275,4 @@ Amelia (BMM Dev Agent) / Claude Opus 4.7 (1M context) — invoked 2026-04-24 via
 | 2026-04-24 | DEV Amelia Task 4: `git mv apps/api/internal/retry/metadata_integration_test.go apps/api/internal/metadata/retry_classifier_test.go` executed — preserves `git log --follow` history per Murat's TEA guidance. Package declaration `retry` → `metadata`. Added `github.com/vido/api/internal/retry` import for `*retry.RetryableError` type assertion at line 368. Test function signatures + 16+ hardcoded wire-contract string assertions unchanged. |
 | 2026-04-24 | DEV Amelia Task 5: updated `apps/api/internal/services/metadata_service.go` call sites — line 516 `retry.ShouldQueueRetry` → `metadata.ShouldQueueRetry`, line 530 `retry.IsRetryableMetadataError` → `metadata.IsRetryableMetadataError`. `retry` import retained (still used by `retry.RetryPayload` at line 521). |
 | 2026-04-24 | DEV Amelia Task 6 (full regression gate): `go build ./internal/...` clean. `go test ./internal/metadata/...` PASS (provider_test + retry_classifier_test green). `go test ./internal/retry/...` PASS. `go test ./internal/` (boundaries_test) PASS — `TestLeafPackagesHaveNoInternalDeps` green with retry still a leaf (Option A preserves leaf status; Rule 19 zero amendments). `pnpm nx test api` PASS (full suite). `pnpm nx test web` PASS (cached; 1738 tests; cleanup verified PIDs 19909, 4379 exited cleanly). `pnpm lint:all` 0 errors / 129 pre-existing warnings; Prettier PASS. 🔗 AC Drift: FOUND (retro-9-AI5 Rule 19 leaf list) — net zero after party-mode revision (contract preserved). 🔒 Rule 7 Wire Format: N/A. 📎 Contract Stamps: NONE. 🎨 UX: SKIPPED. Status: `in-progress → review`. Sprint-status.yaml synced. Final `review → done` is CR's responsibility. |
+| 2026-04-24 | CR (Amelia, adversarial pass) surfaced 7 findings: 1 HIGH (H1 — Completion Notes grep claim sanitized to own File List, missed pre-existing handler violations); 3 MEDIUM (M1 — silent wire-contract expansion `METADATA_UPDATE_*` in handlers/metadata_handler.go; M2 — handler uses raw `"METADATA_*"` literals instead of `metadata.ErrCode*` identifiers per AC #1 consumer rule; M3 — Task 3.2 "behavior preserved" description is misleading, actual latent bug fix); 3 LOW (L1 — dead `nonRetryablePatterns` branch in `IsRetryableMetadataError`; L2 — redundant direct type assertion in `IsTemporaryError` superseded by `errors.As`; L3 — repeated `strings.ToLower(ErrCode*)` allocations on hot path). Auto-fix applied for all 7 per user choice [1]. Delta: +3 `ErrCodeUpdate*` constants in provider.go (lines 256–261); 6 handler call sites switched to `metadata.ErrCode*` identifiers; `provider_test.go` extended to 14 wire-value assertions; `retry_classifier.go` — package-level pre-lowered `errCode*Lower` vars + `retryableLoweredCodes` slice hoisted (L3), dead non-retryable block removed (L1), `IsTemporaryError` simplified to `errors.As`-only (L2); story Task 3.2 note rewritten as "latent bug fix" (M3). Regression gate: `go build ./...` clean; `go test ./...` PASS across 29 packages; wire values byte-identical (handler_test METADATA_* string assertions PASS unchanged). |

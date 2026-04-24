@@ -407,6 +407,10 @@ func TestErrCodeConstants_WireValues(t *testing.T) {
 		{"ErrCodeNetworkError", ErrCodeNetworkError, "METADATA_NETWORK_ERROR"},
 		{"ErrCodeNotFound", ErrCodeNotFound, "METADATA_NOT_FOUND"},
 		{"ErrCodeUnknownError", ErrCodeUnknownError, "METADATA_UNKNOWN_ERROR"},
+		// Promoted from handlers/metadata_handler.go (CR follow-up M1+M2 2026-04-24)
+		{"ErrCodeUpdateInvalidRequest", ErrCodeUpdateInvalidRequest, "METADATA_UPDATE_INVALID_REQUEST"},
+		{"ErrCodeUpdateNotFound", ErrCodeUpdateNotFound, "METADATA_UPDATE_NOT_FOUND"},
+		{"ErrCodeUpdateFailed", ErrCodeUpdateFailed, "METADATA_UPDATE_FAILED"},
 	}
 
 	for _, tt := range tests {

@@ -51,7 +51,7 @@ type SearchMetadataResponse struct {
 func (h *MetadataHandler) SearchMetadata(c *gin.Context) {
 	query := c.Query("query")
 	if query == "" {
-		ErrorResponse(c, http.StatusBadRequest, "METADATA_INVALID_REQUEST",
+		ErrorResponse(c, http.StatusBadRequest, metadata.ErrCodeInvalidRequest,
 			"Search query is required",
 			"Please provide a 'query' parameter")
 		return
@@ -84,7 +84,7 @@ func (h *MetadataHandler) SearchMetadata(c *gin.Context) {
 
 	result, fallbackStatus, err := h.service.SearchMetadata(c.Request.Context(), req)
 	if err != nil {
-		ErrorResponse(c, http.StatusBadRequest, "METADATA_INVALID_REQUEST",
+		ErrorResponse(c, http.StatusBadRequest, metadata.ErrCodeInvalidRequest,
 			err.Error(),
 			"Please check your request parameters")
 		return
@@ -301,7 +301,7 @@ type UpdateMetadataRequestBody struct {
 func (h *MetadataHandler) UpdateMetadata(c *gin.Context) {
 	mediaID := c.Param("id")
 	if mediaID == "" {
-		ErrorResponse(c, http.StatusBadRequest, "METADATA_UPDATE_INVALID_REQUEST",
+		ErrorResponse(c, http.StatusBadRequest, metadata.ErrCodeUpdateInvalidRequest,
 			"Media ID is required",
 			"Please provide a valid media ID in the URL path")
 		return
@@ -309,7 +309,7 @@ func (h *MetadataHandler) UpdateMetadata(c *gin.Context) {
 
 	var req UpdateMetadataRequestBody
 	if err := c.ShouldBindJSON(&req); err != nil {
-		ErrorResponse(c, http.StatusBadRequest, "METADATA_UPDATE_INVALID_REQUEST",
+		ErrorResponse(c, http.StatusBadRequest, metadata.ErrCodeUpdateInvalidRequest,
 			"Invalid request body",
 			"Please provide a valid JSON request")
 		return
@@ -342,12 +342,12 @@ func (h *MetadataHandler) UpdateMetadata(c *gin.Context) {
 			return
 		}
 		if err == services.ErrUpdateMetadataNotFound {
-			ErrorResponse(c, http.StatusNotFound, "METADATA_UPDATE_NOT_FOUND",
+			ErrorResponse(c, http.StatusNotFound, metadata.ErrCodeUpdateNotFound,
 				"Media item not found",
 				"Please verify the media ID is correct")
 			return
 		}
-		ErrorResponse(c, http.StatusInternalServerError, "METADATA_UPDATE_FAILED",
+		ErrorResponse(c, http.StatusInternalServerError, metadata.ErrCodeUpdateFailed,
 			err.Error(),
 			"Please try again later")
 		return

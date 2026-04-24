@@ -7,6 +7,24 @@ import (
 	"github.com/vido/api/internal/retry"
 )
 
+// Pre-lowered ErrCode values used by the string-matching classifiers below.
+// Hoisted to package scope so the classifiers do not re-allocate on every call
+// (hot path: retry decisions during metadata fallback).
+var (
+	errCodeTimeoutLower     = strings.ToLower(ErrCodeTimeout)
+	errCodeRateLimitedLower = strings.ToLower(ErrCodeRateLimited)
+	errCodeUnavailableLower = strings.ToLower(ErrCodeUnavailable)
+	errCodeCircuitOpenLower = strings.ToLower(ErrCodeCircuitOpen)
+	errCodeNoResultsLower   = strings.ToLower(ErrCodeNoResults)
+
+	retryableLoweredCodes = []string{
+		errCodeTimeoutLower,
+		errCodeRateLimitedLower,
+		errCodeUnavailableLower,
+		errCodeCircuitOpenLower,
+	}
+)
+
 // IsRetryableMetadataError checks if an error from the metadata package is retryable.
 // This function recognizes ProviderError types from the metadata package.
 //
@@ -24,16 +42,8 @@ func IsRetryableMetadataError(err error) bool {
 	// Check error string for known retryable patterns
 	errStr := strings.ToLower(err.Error())
 
-	// Retryable error codes from metadata package
-	retryableCodes := []string{
-		ErrCodeTimeout,
-		ErrCodeRateLimited,
-		ErrCodeUnavailable,
-		ErrCodeCircuitOpen,
-	}
-
-	for _, code := range retryableCodes {
-		if strings.Contains(errStr, strings.ToLower(code)) {
+	for _, code := range retryableLoweredCodes {
+		if strings.Contains(errStr, code) {
 			return true
 		}
 	}
@@ -67,26 +77,9 @@ func IsRetryableMetadataError(err error) bool {
 		}
 	}
 
-	// Non-retryable error patterns
-	nonRetryablePatterns := []string{
-		"not found",
-		"no results",
-		"invalid",
-		"unauthorized",
-		"forbidden",
-		"400",
-		"401",
-		"403",
-		"404",
-	}
-
-	for _, pattern := range nonRetryablePatterns {
-		if strings.Contains(errStr, pattern) {
-			return false
-		}
-	}
-
-	// If we can't determine, default to not retryable for safety
+	// Default to not retryable for safety. A prior non-retryable-pattern pre-check
+	// was removed as observationally dead code (it returned the same value as this
+	// default); keeping the retryable checks above is sufficient.
 	return false
 }
 
@@ -101,7 +94,7 @@ func ClassifyMetadataError(err error) *retry.RetryableError {
 	// Check for timeout errors
 	if strings.Contains(errStr, "timeout") ||
 		strings.Contains(errStr, "i/o timeout") ||
-		strings.Contains(errStr, strings.ToLower(ErrCodeTimeout)) ||
+		strings.Contains(errStr, errCodeTimeoutLower) ||
 		strings.Contains(errStr, "context deadline exceeded") {
 		return &retry.RetryableError{
 			Code:      ErrCodeTimeout,
@@ -113,7 +106,7 @@ func ClassifyMetadataError(err error) *retry.RetryableError {
 	// Check for rate limit errors
 	if strings.Contains(errStr, "rate limit") ||
 		strings.Contains(errStr, "rate_limit") ||
-		strings.Contains(errStr, strings.ToLower(ErrCodeRateLimited)) ||
+		strings.Contains(errStr, errCodeRateLimitedLower) ||
 		strings.Contains(errStr, "429") ||
 		strings.Contains(errStr, "too many requests") {
 		return &retry.RetryableError{
@@ -126,7 +119,7 @@ func ClassifyMetadataError(err error) *retry.RetryableError {
 
 	// Check for service unavailable errors
 	if strings.Contains(errStr, "unavailable") ||
-		strings.Contains(errStr, strings.ToLower(ErrCodeUnavailable)) ||
+		strings.Contains(errStr, errCodeUnavailableLower) ||
 		strings.Contains(errStr, "503") ||
 		strings.Contains(errStr, "service unavailable") {
 		return &retry.RetryableError{
@@ -139,7 +132,7 @@ func ClassifyMetadataError(err error) *retry.RetryableError {
 
 	// Check for circuit breaker errors
 	if strings.Contains(errStr, "circuit") ||
-		strings.Contains(errStr, strings.ToLower(ErrCodeCircuitOpen)) {
+		strings.Contains(errStr, errCodeCircuitOpenLower) {
 		return &retry.RetryableError{
 			Code:      ErrCodeCircuitOpen,
 			Message:   err.Error(),
@@ -171,7 +164,7 @@ func ClassifyMetadataError(err error) *retry.RetryableError {
 
 	// Check for no results (not retryable)
 	if strings.Contains(errStr, "no results") ||
-		strings.Contains(errStr, strings.ToLower(ErrCodeNoResults)) {
+		strings.Contains(errStr, errCodeNoResultsLower) {
 		return &retry.RetryableError{
 			Code:      ErrCodeNoResults,
 			Message:   err.Error(),
@@ -231,7 +224,7 @@ func ShouldQueueRetry(attemptErrors []error) bool {
 
 		// Check if this is a "no results" error
 		errStr := strings.ToLower(err.Error())
-		if !strings.Contains(errStr, "no results") && !strings.Contains(errStr, strings.ToLower(ErrCodeNoResults)) {
+		if !strings.Contains(errStr, "no results") && !strings.Contains(errStr, errCodeNoResultsLower) {
 			allNoResults = false
 		}
 	}
@@ -264,16 +257,12 @@ func IsTemporaryError(err error) bool {
 		return false
 	}
 
-	// Check if it implements interface{ Temporary() bool }
+	// errors.As checks the direct error first before unwrapping, so it subsumes
+	// a direct type assertion for this interface.
 	type temporary interface {
 		Temporary() bool
 	}
 
-	if t, ok := err.(temporary); ok {
-		return t.Temporary()
-	}
-
-	// Check if wrapped error has Temporary()
 	var tempErr temporary
 	if errors.As(err, &tempErr) {
 		return tempErr.Temporary()

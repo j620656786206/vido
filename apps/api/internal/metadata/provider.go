@@ -252,4 +252,10 @@ const (
 	ErrCodeNotFound = "METADATA_NOT_FOUND"
 	// ErrCodeUnknownError indicates an unclassified provider error
 	ErrCodeUnknownError = "METADATA_UNKNOWN_ERROR"
+	// ErrCodeUpdateInvalidRequest indicates a manual metadata update request is malformed
+	ErrCodeUpdateInvalidRequest = "METADATA_UPDATE_INVALID_REQUEST"
+	// ErrCodeUpdateNotFound indicates the target media item does not exist during a manual update
+	ErrCodeUpdateNotFound = "METADATA_UPDATE_NOT_FOUND"
+	// ErrCodeUpdateFailed indicates a manual metadata update failed during persistence
+	ErrCodeUpdateFailed = "METADATA_UPDATE_FAILED"
 )
