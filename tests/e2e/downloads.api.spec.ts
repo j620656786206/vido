@@ -118,7 +118,7 @@ test.describe('Downloads API @api @downloads', () => {
     expect(json.success).toBe(false);
     expect(json.error).toBeDefined();
     // Could be QBITTORRENT_TORRENT_NOT_FOUND or QBITTORRENT_NOT_CONFIGURED
-    expect(json.error.code).toBeTruthy();
+    expect(json.error.code).toMatch(/^QBITTORRENT_/);
   });
 
   test('[P1] GET /downloads/:hash - should return details if torrent exists (AC4)', async ({
