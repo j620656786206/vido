@@ -384,6 +384,38 @@ func TestProviderError_Error_WithoutUnderlying(t *testing.T) {
 	assert.Equal(t, "Douban: Not implemented", errStr)
 }
 
+// TestErrCodeConstants_WireValues verifies the canonical wire-contract values
+// of all exported METADATA_ error codes. These strings are observed by frontend
+// and ops; byte-identical stability is enforced here.
+// (followup-metadata-prefix-dedup AC #1, #3, #4)
+func TestErrCodeConstants_WireValues(t *testing.T) {
+	tests := []struct {
+		name     string
+		constant string
+		expected string
+	}{
+		// Pre-existing canonical codes (regression guard)
+		{"ErrCodeNoResults", ErrCodeNoResults, "METADATA_NO_RESULTS"},
+		{"ErrCodeTimeout", ErrCodeTimeout, "METADATA_TIMEOUT"},
+		{"ErrCodeRateLimited", ErrCodeRateLimited, "METADATA_RATE_LIMITED"},
+		{"ErrCodeUnavailable", ErrCodeUnavailable, "METADATA_UNAVAILABLE"},
+		{"ErrCodeInvalidRequest", ErrCodeInvalidRequest, "METADATA_INVALID_REQUEST"},
+		{"ErrCodeAllFailed", ErrCodeAllFailed, "METADATA_ALL_FAILED"},
+		{"ErrCodeCircuitOpen", ErrCodeCircuitOpen, "METADATA_CIRCUIT_OPEN"},
+		// Promoted from retry package (followup-metadata-prefix-dedup Task 2)
+		{"ErrCodeGatewayError", ErrCodeGatewayError, "METADATA_GATEWAY_ERROR"},
+		{"ErrCodeNetworkError", ErrCodeNetworkError, "METADATA_NETWORK_ERROR"},
+		{"ErrCodeNotFound", ErrCodeNotFound, "METADATA_NOT_FOUND"},
+		{"ErrCodeUnknownError", ErrCodeUnknownError, "METADATA_UNKNOWN_ERROR"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, tt.constant)
+		})
+	}
+}
+
 // [P2] Tests NewProviderError creates correct error
 func TestNewProviderError(t *testing.T) {
 	// GIVEN: Error details

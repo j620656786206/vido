@@ -1,21 +1,21 @@
-package retry
+package metadata
 
 import (
 	"errors"
 	"strings"
+
+	"github.com/vido/api/internal/retry"
 )
 
-// Metadata error codes from provider.go
-const (
-	ErrCodeTimeout     = "METADATA_TIMEOUT"
-	ErrCodeRateLimited = "METADATA_RATE_LIMITED"
-	ErrCodeUnavailable = "METADATA_UNAVAILABLE"
-	ErrCodeNoResults   = "METADATA_NO_RESULTS"
-	ErrCodeCircuitOpen = "METADATA_CIRCUIT_OPEN"
-)
-
-// IsRetryableMetadataError checks if an error from the metadata package is retryable
-// This function recognizes ProviderError types from the metadata package
+// IsRetryableMetadataError checks if an error from the metadata package is retryable.
+// This function recognizes ProviderError types from the metadata package.
+//
+// Located in the metadata package (not retry) because the classification rules are
+// defined by the metadata wire contract (ErrCode* constants owned here). retry
+// remains a zero-internal-deps leaf per project-context.md Rule 19.
+// (followup-metadata-prefix-dedup 2026-04-24 party-mode decision; supersedes
+// Winston 2026-04-20 draft AC #5 — retry → metadata cycle blocked by
+// metadata → tmdb → repository → retry existing path.)
 func IsRetryableMetadataError(err error) bool {
 	if err == nil {
 		return false
@@ -91,7 +91,7 @@ func IsRetryableMetadataError(err error) bool {
 }
 
 // ClassifyMetadataError classifies a metadata error and returns the appropriate RetryableError
-func ClassifyMetadataError(err error) *RetryableError {
+func ClassifyMetadataError(err error) *retry.RetryableError {
 	if err == nil {
 		return nil
 	}
@@ -101,10 +101,10 @@ func ClassifyMetadataError(err error) *RetryableError {
 	// Check for timeout errors
 	if strings.Contains(errStr, "timeout") ||
 		strings.Contains(errStr, "i/o timeout") ||
-		strings.Contains(errStr, ErrCodeTimeout) ||
+		strings.Contains(errStr, strings.ToLower(ErrCodeTimeout)) ||
 		strings.Contains(errStr, "context deadline exceeded") {
-		return &RetryableError{
-			Code:      "METADATA_TIMEOUT",
+		return &retry.RetryableError{
+			Code:      ErrCodeTimeout,
 			Message:   err.Error(),
 			Retryable: true,
 		}
@@ -113,11 +113,11 @@ func ClassifyMetadataError(err error) *RetryableError {
 	// Check for rate limit errors
 	if strings.Contains(errStr, "rate limit") ||
 		strings.Contains(errStr, "rate_limit") ||
-		strings.Contains(errStr, ErrCodeRateLimited) ||
+		strings.Contains(errStr, strings.ToLower(ErrCodeRateLimited)) ||
 		strings.Contains(errStr, "429") ||
 		strings.Contains(errStr, "too many requests") {
-		return &RetryableError{
-			Code:       "METADATA_RATE_LIMITED",
+		return &retry.RetryableError{
+			Code:       ErrCodeRateLimited,
 			Message:    err.Error(),
 			Retryable:  true,
 			StatusCode: 429,
@@ -126,11 +126,11 @@ func ClassifyMetadataError(err error) *RetryableError {
 
 	// Check for service unavailable errors
 	if strings.Contains(errStr, "unavailable") ||
-		strings.Contains(errStr, ErrCodeUnavailable) ||
+		strings.Contains(errStr, strings.ToLower(ErrCodeUnavailable)) ||
 		strings.Contains(errStr, "503") ||
 		strings.Contains(errStr, "service unavailable") {
-		return &RetryableError{
-			Code:       "METADATA_UNAVAILABLE",
+		return &retry.RetryableError{
+			Code:       ErrCodeUnavailable,
 			Message:    err.Error(),
 			Retryable:  true,
 			StatusCode: 503,
@@ -139,9 +139,9 @@ func ClassifyMetadataError(err error) *RetryableError {
 
 	// Check for circuit breaker errors
 	if strings.Contains(errStr, "circuit") ||
-		strings.Contains(errStr, ErrCodeCircuitOpen) {
-		return &RetryableError{
-			Code:      "METADATA_CIRCUIT_OPEN",
+		strings.Contains(errStr, strings.ToLower(ErrCodeCircuitOpen)) {
+		return &retry.RetryableError{
+			Code:      ErrCodeCircuitOpen,
 			Message:   err.Error(),
 			Retryable: true,
 		}
@@ -152,8 +152,8 @@ func ClassifyMetadataError(err error) *RetryableError {
 		strings.Contains(errStr, "504") ||
 		strings.Contains(errStr, "bad gateway") ||
 		strings.Contains(errStr, "gateway timeout") {
-		return &RetryableError{
-			Code:      "METADATA_GATEWAY_ERROR",
+		return &retry.RetryableError{
+			Code:      ErrCodeGatewayError,
 			Message:   err.Error(),
 			Retryable: true,
 		}
@@ -162,8 +162,8 @@ func ClassifyMetadataError(err error) *RetryableError {
 	// Check for network errors
 	if strings.Contains(errStr, "connection") ||
 		strings.Contains(errStr, "network") {
-		return &RetryableError{
-			Code:      "METADATA_NETWORK_ERROR",
+		return &retry.RetryableError{
+			Code:      ErrCodeNetworkError,
 			Message:   err.Error(),
 			Retryable: true,
 		}
@@ -171,9 +171,9 @@ func ClassifyMetadataError(err error) *RetryableError {
 
 	// Check for no results (not retryable)
 	if strings.Contains(errStr, "no results") ||
-		strings.Contains(errStr, ErrCodeNoResults) {
-		return &RetryableError{
-			Code:      "METADATA_NO_RESULTS",
+		strings.Contains(errStr, strings.ToLower(ErrCodeNoResults)) {
+		return &retry.RetryableError{
+			Code:      ErrCodeNoResults,
 			Message:   err.Error(),
 			Retryable: false,
 		}
@@ -182,8 +182,8 @@ func ClassifyMetadataError(err error) *RetryableError {
 	// Check for not found (not retryable)
 	if strings.Contains(errStr, "not found") ||
 		strings.Contains(errStr, "404") {
-		return &RetryableError{
-			Code:       "METADATA_NOT_FOUND",
+		return &retry.RetryableError{
+			Code:       ErrCodeNotFound,
 			Message:    err.Error(),
 			Retryable:  false,
 			StatusCode: 404,
@@ -191,15 +191,15 @@ func ClassifyMetadataError(err error) *RetryableError {
 	}
 
 	// Default: unknown error, not retryable
-	return &RetryableError{
-		Code:      "METADATA_UNKNOWN_ERROR",
+	return &retry.RetryableError{
+		Code:      ErrCodeUnknownError,
 		Message:   err.Error(),
 		Retryable: false,
 	}
 }
 
-// ExtractRetryableErrors examines a list of source attempt errors and returns retryable ones
-// This is useful for processing FallbackStatus from the orchestrator
+// ExtractRetryableErrors examines a list of source attempt errors and returns retryable ones.
+// This is useful for processing FallbackStatus from the orchestrator.
 func ExtractRetryableErrors(attemptErrors []error) []error {
 	var retryable []error
 	for _, err := range attemptErrors {
@@ -210,8 +210,8 @@ func ExtractRetryableErrors(attemptErrors []error) []error {
 	return retryable
 }
 
-// ShouldQueueRetry determines if a metadata search failure should be queued for retry
-// It returns true only if there are retryable errors and not all errors are non-retryable
+// ShouldQueueRetry determines if a metadata search failure should be queued for retry.
+// It returns true only if there are retryable errors and not all errors are non-retryable.
 func ShouldQueueRetry(attemptErrors []error) bool {
 	if len(attemptErrors) == 0 {
 		return false
@@ -231,7 +231,7 @@ func ShouldQueueRetry(attemptErrors []error) bool {
 
 		// Check if this is a "no results" error
 		errStr := strings.ToLower(err.Error())
-		if !strings.Contains(errStr, "no results") && !strings.Contains(errStr, ErrCodeNoResults) {
+		if !strings.Contains(errStr, "no results") && !strings.Contains(errStr, strings.ToLower(ErrCodeNoResults)) {
 			allNoResults = false
 		}
 	}
@@ -244,7 +244,7 @@ func ShouldQueueRetry(attemptErrors []error) bool {
 	return hasRetryable
 }
 
-// WrapAsRetryable wraps an error as a RetryableError based on classification
+// WrapAsRetryable wraps an error as a RetryableError based on classification.
 func WrapAsRetryable(err error) error {
 	if err == nil {
 		return nil
@@ -258,7 +258,7 @@ func WrapAsRetryable(err error) error {
 	return err
 }
 
-// IsTemporaryError checks if an error is likely temporary (network issues, timeouts, etc.)
+// IsTemporaryError checks if an error is likely temporary (network issues, timeouts, etc.).
 func IsTemporaryError(err error) bool {
 	if err == nil {
 		return false

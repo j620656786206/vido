@@ -244,4 +244,12 @@ const (
 	ErrCodeAllFailed = "METADATA_ALL_FAILED"
 	// ErrCodeCircuitOpen indicates all providers have open circuit breakers
 	ErrCodeCircuitOpen = "METADATA_CIRCUIT_OPEN"
+	// ErrCodeGatewayError indicates a bad gateway or gateway timeout from the provider
+	ErrCodeGatewayError = "METADATA_GATEWAY_ERROR"
+	// ErrCodeNetworkError indicates a network-layer failure (connection refused/reset)
+	ErrCodeNetworkError = "METADATA_NETWORK_ERROR"
+	// ErrCodeNotFound indicates the requested resource was not found at the provider
+	ErrCodeNotFound = "METADATA_NOT_FOUND"
+	// ErrCodeUnknownError indicates an unclassified provider error
+	ErrCodeUnknownError = "METADATA_UNKNOWN_ERROR"
 )

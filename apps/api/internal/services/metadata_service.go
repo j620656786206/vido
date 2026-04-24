@@ -513,7 +513,7 @@ func (s *MetadataService) queueRetryIfNeeded(ctx context.Context, req *SearchMet
 	}
 
 	// Check if we should queue a retry
-	if !retry.ShouldQueueRetry(attemptErrors) {
+	if !metadata.ShouldQueueRetry(attemptErrors) {
 		return
 	}
 
@@ -527,7 +527,7 @@ func (s *MetadataService) queueRetryIfNeeded(ctx context.Context, req *SearchMet
 	// Use first retryable error for the retry queue
 	var retryErr error
 	for _, err := range attemptErrors {
-		if retry.IsRetryableMetadataError(err) {
+		if metadata.IsRetryableMetadataError(err) {
 			retryErr = err
 			break
 		}

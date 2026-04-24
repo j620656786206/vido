@@ -1,10 +1,11 @@
-package retry
+package metadata
 
 import (
 	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/vido/api/internal/retry"
 )
 
 func TestIsRetryableMetadataError(t *testing.T) {
@@ -365,8 +366,8 @@ func TestWrapAsRetryable(t *testing.T) {
 			}
 
 			if tt.isRetryErr {
-				_, ok := result.(*RetryableError)
-				assert.True(t, ok, "expected *RetryableError")
+				_, ok := result.(*retry.RetryableError)
+				assert.True(t, ok, "expected *retry.RetryableError")
 			}
 		})
 	}
