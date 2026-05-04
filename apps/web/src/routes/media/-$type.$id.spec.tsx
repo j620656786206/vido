@@ -1,3 +1,17 @@
+// bugfix-10-1 Task 5 — mock @tanstack/react-router AND useOwnedMedia at the
+// top of the file (vi.mock is hoisted) so importing the route module below
+// does not register the live route, and so TMDbDetailView's useNavigate call
+// resolves to a no-op stub. Existing tests in this file render presentational
+// components that do not touch router APIs, so the mock is safe.
+vi.mock('@tanstack/react-router', () => ({
+  createFileRoute: () => (opts: Record<string, unknown>) => opts,
+  notFound: () => new Error('notFound'),
+  useNavigate: () => vi.fn(),
+}));
+vi.mock('../../hooks/useOwnedMedia', () => ({
+  useOwnedMedia: vi.fn(),
+}));
+
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -13,6 +27,8 @@ import {
 } from '../../hooks/useMediaDetails';
 import { tmdbService } from '../../services/tmdb';
 import type { MovieDetails, TVShowDetails, Credits } from '../../types/tmdb';
+import { classifyId, TMDbDetailView } from './$type.$id';
+import { useOwnedMedia, type OwnedMediaState } from '../../hooks/useOwnedMedia';
 
 // Mock the tmdb service
 vi.mock('../../services/tmdb', () => ({
@@ -154,6 +170,61 @@ function renderWithQuery(ui: React.ReactElement) {
   const queryClient = createQueryClient();
   return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
 }
+
+// bugfix-10-1 Task 5 — fixture for the ownership hook (Story 10-4 read-through).
+const ownedFalse: OwnedMediaState = {
+  owned: new Set<number>(),
+  isOwned: () => false,
+  isRequested: () => false,
+  isLoading: false,
+  error: null,
+};
+const ownedTrue: OwnedMediaState = {
+  owned: new Set<number>([12345]),
+  isOwned: (id) => id === 12345,
+  isRequested: () => false,
+  isLoading: false,
+  error: null,
+};
+const ownedLoading: OwnedMediaState = {
+  owned: new Set<number>(),
+  isOwned: () => false,
+  isRequested: () => false,
+  isLoading: true,
+  error: null,
+};
+
+function renderTMDbView(
+  type: 'movie' | 'tv',
+  tmdbId: number,
+  ownership: OwnedMediaState = ownedFalse
+) {
+  vi.mocked(useOwnedMedia).mockReturnValue(ownership);
+  const queryClient = createQueryClient();
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <TMDbDetailView type={type} tmdbId={tmdbId} />
+    </QueryClientProvider>
+  );
+}
+
+describe('classifyId (bugfix-10-1 [@contract-v1] AC #2)', () => {
+  it.each([
+    // [input, expected, rationale]
+    ['movie-uuid-abc', 'local-uuid', 'arbitrary string with letters'],
+    ['83533', 'tmdb-numeric', 'pure positive integer (TMDb movie ID)'],
+    ['76479', 'tmdb-numeric', 'pure positive integer'],
+    ['687163', 'tmdb-numeric', 'pure positive integer (long form)'],
+    ['1', 'tmdb-numeric', 'positive integer boundary'],
+    ['0', 'local-uuid', 'numeric but non-positive — falls through to local handler'],
+    ['abc-123', 'local-uuid', 'alphanumeric mixed'],
+    ['550e8400-e29b-41d4-a716-446655440000', 'local-uuid', 'canonical UUID v4'],
+    ['12.5', 'local-uuid', 'decimal — not a pure integer'],
+    ['-5', 'local-uuid', 'negative — fails ^\\d+$ guard'],
+  ] as const)('classifyId(%j) = %j (%s)', (input, expected) => {
+    expect(classifyId(input)).toBe(expected);
+  });
+});
 
 describe('Media Detail Route', () => {
   beforeEach(() => {
@@ -345,6 +416,136 @@ describe('Media Detail Route', () => {
       await waitFor(() => {
         expect(screen.getByTestId('networks')).toHaveTextContent('Netflix');
       });
+    });
+  });
+});
+
+// =============================================================================
+// bugfix-10-1 Task 2/3/5 — TMDb-numeric branch coverage.
+// Verifies that a poster click from the homepage (TMDb numeric ID) renders a
+// TMDb-backed detail view, NOT a 404.
+// =============================================================================
+describe('TMDbDetailView (bugfix-10-1 AC #3, #4, #5, #6)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(tmdbService.getMovieDetails).mockResolvedValue(mockMovieDetails);
+    vi.mocked(tmdbService.getTVShowDetails).mockResolvedValue(mockTVShowDetails);
+    vi.mocked(tmdbService.getMovieCredits).mockResolvedValue(mockCredits);
+    vi.mocked(tmdbService.getTVShowCredits).mockResolvedValue(mockCredits);
+  });
+
+  describe('AC #3 — fetches via TMDb endpoints', () => {
+    it('renders movie title from TMDb mock for tmdb-numeric URL', async () => {
+      renderTMDbView('movie', 123);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('tmdb-detail-view')).toBeInTheDocument();
+      });
+      expect(screen.getByRole('heading', { name: '測試電影' })).toBeInTheDocument();
+      expect(tmdbService.getMovieDetails).toHaveBeenCalledWith(123);
+    });
+
+    it('renders tv show name from TMDb mock for tmdb-numeric URL', async () => {
+      renderTMDbView('tv', 456);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('tmdb-detail-view')).toBeInTheDocument();
+      });
+      expect(screen.getByRole('heading', { name: '測試影集' })).toBeInTheDocument();
+      expect(tmdbService.getTVShowDetails).toHaveBeenCalledWith(456);
+    });
+
+    it('renders director and cast from TMDb credits', async () => {
+      renderTMDbView('movie', 123);
+
+      await waitFor(() => {
+        expect(screen.getByText('演員一')).toBeInTheDocument();
+      });
+      expect(screen.getByText('演員二')).toBeInTheDocument();
+    });
+  });
+
+  describe('AC #4 — TMDb data shape rendered correctly', () => {
+    it('renders release year, vote, and genres from TMDb data', async () => {
+      renderTMDbView('movie', 123);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('tmdb-detail-view')).toBeInTheDocument();
+      });
+      expect(screen.getByText('2024')).toBeInTheDocument();
+      expect(screen.getByText(/8\.5/)).toBeInTheDocument();
+      expect(screen.getByText('動作')).toBeInTheDocument();
+    });
+
+    it('renders overview from TMDb data', async () => {
+      renderTMDbView('movie', 123);
+
+      await waitFor(() => {
+        expect(screen.getByText('這是測試劇情')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('AC #5 — error path falls through to NotFoundComponent', () => {
+    it('renders 404 NotFound when TMDb fetch errors (movie)', async () => {
+      vi.mocked(tmdbService.getMovieDetails).mockRejectedValueOnce(new Error('TMDB_TIMEOUT'));
+      renderTMDbView('movie', 999);
+
+      await waitFor(() => {
+        expect(screen.getByText('404')).toBeInTheDocument();
+      });
+      expect(screen.getByText('找不到該媒體內容')).toBeInTheDocument();
+      expect(screen.queryByTestId('tmdb-detail-view')).not.toBeInTheDocument();
+    });
+
+    it('renders 404 NotFound when TMDb fetch errors (tv)', async () => {
+      vi.mocked(tmdbService.getTVShowDetails).mockRejectedValueOnce(new Error('TMDB_TIMEOUT'));
+      renderTMDbView('tv', 999);
+
+      await waitFor(() => {
+        expect(screen.getByText('404')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('AC #6 — owned indicator (Story 10-4 read-through)', () => {
+    it('renders the 已在媒體庫 badge when isOwned returns true', async () => {
+      renderTMDbView('movie', 12345, ownedTrue);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('tmdb-detail-owned-badge')).toBeInTheDocument();
+      });
+      expect(screen.getByTestId('tmdb-detail-owned-badge')).toHaveTextContent('已在媒體庫');
+    });
+
+    it('hides the owned badge when isOwned returns false', async () => {
+      renderTMDbView('movie', 123, ownedFalse);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('tmdb-detail-view')).toBeInTheDocument();
+      });
+      expect(screen.queryByTestId('tmdb-detail-owned-badge')).not.toBeInTheDocument();
+    });
+
+    it('hides the owned badge while ownership query is loading', async () => {
+      renderTMDbView('movie', 12345, ownedLoading);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('tmdb-detail-view')).toBeInTheDocument();
+      });
+      expect(screen.queryByTestId('tmdb-detail-owned-badge')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('AC #4 / Task 2.6 — editor button is hidden (no local row)', () => {
+    it('does NOT render the 編輯 button in the TMDb branch', async () => {
+      renderTMDbView('movie', 123);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('tmdb-detail-view')).toBeInTheDocument();
+      });
+      expect(screen.queryByRole('button', { name: /編輯|edit/i })).not.toBeInTheDocument();
+      expect(screen.queryByTestId('edit-metadata-button')).not.toBeInTheDocument();
     });
   });
 });

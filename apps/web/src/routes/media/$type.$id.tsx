@@ -11,9 +11,13 @@ import type { MediaMetadata } from '../../components/metadata-editor';
 import {
   useLocalMovieDetails,
   useLocalSeriesDetails,
+  useMovieDetails,
+  useTVShowDetails,
   useMovieCredits,
   useTVShowCredits,
 } from '../../hooks/useMediaDetails';
+import { useOwnedMedia } from '../../hooks/useOwnedMedia';
+import type { MovieDetails, TVShowDetails } from '../../types/tmdb';
 import { getImageUrl } from '../../lib/image';
 import { cn } from '../../lib/utils';
 
@@ -22,6 +26,17 @@ type ValidMediaType = (typeof validMediaTypes)[number];
 
 function isValidMediaType(type: string): type is ValidMediaType {
   return validMediaTypes.includes(type as ValidMediaType);
+}
+
+export type IdKind = 'local-uuid' | 'tmdb-numeric';
+
+// bugfix-10-1 [@contract-v1] AC #2 — A pure positive-integer string is a TMDb
+// numeric ID; everything else (UUIDs, mixed strings) routes through the local
+// DB path. Widens bugfix-1 [@contract-v0] (UUID-only) to cover homepage TMDb
+// items surfaced by Story 10-3 ExploreBlock.
+export function classifyId(id: string): IdKind {
+  if (/^\d+$/.test(id) && parseInt(id, 10) > 0) return 'tmdb-numeric';
+  return 'local-uuid';
 }
 
 export const Route = createFileRoute('/media/$type/$id')({
@@ -39,6 +54,7 @@ export const Route = createFileRoute('/media/$type/$id')({
     return {
       type: type as ValidMediaType,
       id,
+      idKind: classifyId(id),
     };
   },
   notFoundComponent: NotFoundComponent,
@@ -65,7 +81,20 @@ function NotFoundComponent() {
 }
 
 function MediaDetailRoute() {
-  const { type, id } = Route.useLoaderData();
+  const { type, id, idKind } = Route.useLoaderData();
+
+  // bugfix-10-1 — Homepage / search PosterCards emit raw TMDb numeric IDs
+  // (Story 10-3 ExploreBlock + Story 2-3 search MediaGrid). Those never resolve
+  // against /api/v1/movies/:id (UUID-keyed). Branch off to the TMDb-backed
+  // detail render and skip the local-DB hooks entirely.
+  if (idKind === 'tmdb-numeric') {
+    return <TMDbDetailView type={type} tmdbId={parseInt(id, 10)} />;
+  }
+
+  return <LocalDetailView type={type} id={id} />;
+}
+
+function LocalDetailView({ type, id }: { type: ValidMediaType; id: string }) {
   const navigate = useNavigate();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
@@ -328,5 +357,127 @@ function MediaDetailRoute() {
         </div>
       )}
     </>
+  );
+}
+
+// bugfix-10-1 Task 2 — TMDb-backed detail render for posters whose `id` is a
+// raw TMDb numeric (homepage trending/discover, search results). No local DB
+// row exists, so we skip the editor and tech-badge UI and rely entirely on
+// the TMDb endpoints already wired by Story 10-1.
+// Exported for co-located unit tests; not consumed elsewhere in the app.
+export function TMDbDetailView({ type, tmdbId }: { type: ValidMediaType; tmdbId: number }) {
+  const navigate = useNavigate();
+  const isMovie = type === 'movie';
+
+  const movieDetails = useMovieDetails(isMovie ? tmdbId : 0);
+  const tvDetails = useTVShowDetails(!isMovie ? tmdbId : 0);
+  const movieCredits = useMovieCredits(isMovie ? tmdbId : 0);
+  const tvCredits = useTVShowCredits(!isMovie ? tmdbId : 0);
+
+  const detailsQuery = isMovie ? movieDetails : tvDetails;
+  const creditsQuery = isMovie ? movieCredits : tvCredits;
+  const data = detailsQuery.data;
+
+  // Story 10-4 ownership read-through; bi-directional redirect deferred —
+  // needs GET /api/v1/movies/by-tmdb/:tmdbId (out of scope for bugfix-10-1).
+  const ownership = useOwnedMedia([tmdbId]);
+
+  if (detailsQuery.isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-[var(--accent-primary)]" />
+      </div>
+    );
+  }
+
+  // AC #5 — any TMDb fetch failure surfaces the same NotFound UX as a missing
+  // local row. Avoids a half-rendered state when the upstream is down.
+  if (detailsQuery.isError || !data) {
+    return <NotFoundComponent />;
+  }
+
+  const movie = isMovie ? (data as MovieDetails) : null;
+  const show = isMovie ? null : (data as TVShowDetails);
+  const title = movie ? movie.title : show!.name;
+  const originalTitle = movie ? movie.originalTitle : show!.originalName;
+  const releaseDate = movie ? movie.releaseDate : show!.firstAirDate;
+  const genreNames = data.genres?.map((g) => g.name).filter(Boolean) ?? [];
+  const posterUrl = getImageUrl(data.posterPath ?? null, 'w500');
+  const backdropPath = data.backdropPath ?? null;
+  const director = isMovie ? creditsQuery.data?.crew?.find((c) => c.job === 'Director') : undefined;
+  const showOwnedBadge = !ownership.isLoading && ownership.isOwned(tmdbId);
+
+  return (
+    <div data-testid="tmdb-detail-view" className="relative min-h-screen bg-[var(--bg-primary)]">
+      {backdropPath && (
+        <div className="absolute inset-x-0 top-0 h-[400px] overflow-hidden">
+          <img
+            src={getImageUrl(backdropPath, 'w780') ?? ''}
+            alt=""
+            className="h-full w-full object-cover opacity-30"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[var(--bg-primary)]" />
+        </div>
+      )}
+
+      <div className="relative mx-auto max-w-5xl px-4 py-6">
+        <button
+          onClick={() => navigate({ to: '/library' })}
+          className="mb-6 flex items-center gap-2 text-[var(--text-secondary)] hover:text-white transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          返回媒體庫
+        </button>
+
+        <div className="flex flex-col gap-8 md:flex-row">
+          <div className="w-full flex-shrink-0 md:w-[300px]">
+            {posterUrl ? (
+              <img src={posterUrl} alt={title} className="w-full rounded-lg shadow-2xl" />
+            ) : (
+              <div className="flex aspect-[2/3] w-full items-center justify-center rounded-lg bg-[var(--bg-secondary)]">
+                <Film className="h-16 w-16 text-[var(--text-muted)]" />
+              </div>
+            )}
+          </div>
+
+          <div className="flex-1">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h1 className="text-3xl font-bold text-white">{title}</h1>
+                {originalTitle && originalTitle !== title && (
+                  <p className="mt-1 text-lg text-[var(--text-secondary)]">{originalTitle}</p>
+                )}
+              </div>
+              {showOwnedBadge && (
+                <span
+                  data-testid="tmdb-detail-owned-badge"
+                  className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-900/30 px-3 py-1 text-sm text-emerald-400"
+                >
+                  📁 已在媒體庫
+                </span>
+              )}
+            </div>
+
+            <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-[var(--text-secondary)]">
+              {releaseDate && <span>{releaseDate.slice(0, 4)}</span>}
+              {data.voteAverage != null && data.voteAverage > 0 && (
+                <span className="text-[var(--warning)]">⭐ {data.voteAverage.toFixed(1)}</span>
+              )}
+              {genreNames.length > 0 && <span>{genreNames.join(' / ')}</span>}
+            </div>
+
+            {data.overview && (
+              <p className="mt-4 leading-relaxed text-[var(--text-secondary)]">{data.overview}</p>
+            )}
+
+            {creditsQuery.data && (
+              <div className="mt-6">
+                <CreditsSection director={director} cast={creditsQuery.data.cast?.slice(0, 6)} />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

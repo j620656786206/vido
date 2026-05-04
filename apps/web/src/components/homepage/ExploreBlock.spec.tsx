@@ -216,6 +216,41 @@ describe('ExploreBlock', () => {
     expect(container.querySelector('[data-testid^="explore-block-"]')).toBeNull();
   });
 
+  // bugfix-10-1 Task 5.7 — verify the regression locus stays correct: an
+  // ExploreBlock poster's Link MUST encode the TMDb numeric id verbatim so the
+  // route's classifyId() can detect it and dispatch to the TMDb detail branch.
+  // Don't deep-render the detail page; assert the URL shape only.
+  it('poster card link encodes TMDb numeric id in /media/$type/$id', async () => {
+    mockHook.mockReturnValue({
+      data: {
+        blockId: 'block-1',
+        contentType: 'movie',
+        movies: [
+          {
+            id: 83533,
+            title: '熱門電影',
+            originalTitle: 'Trending Movie',
+            overview: '',
+            releaseDate: '2024-01-01',
+            posterPath: '/p.jpg',
+            backdropPath: null,
+            voteAverage: 8,
+            voteCount: 100,
+            genreIds: [28],
+          },
+        ],
+        totalItems: 1,
+      },
+      isLoading: false,
+      isError: false,
+    } as ReturnType<typeof useExploreBlockContent>);
+
+    renderBlock(testBlock());
+
+    const card = await screen.findByTestId('poster-card');
+    expect(card).toHaveAttribute('href', '/media/movie/83533');
+  });
+
   it('renders desktop scroll chevrons', async () => {
     mockHook.mockReturnValue({
       data: {

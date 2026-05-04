@@ -1,6 +1,6 @@
 # Story: Bugfix 10.1 — PosterCard TMDb-ID 404 Regression
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -24,45 +24,40 @@ so that I can browse content without hitting 404 dead-ends or seeing console err
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Route-loader ID-kind detection (AC: #1, #2, #8)
-  - [ ] 1.1 Edit `apps/web/src/routes/media/$type.$id.tsx` Route loader: add `classifyId(id: string): 'local-uuid' | 'tmdb-numeric'` (numeric-and-positive → `tmdb-numeric`; else → `local-uuid`)
-  - [ ] 1.2 Loader return type: `{ type: ValidMediaType; id: string; idKind: 'local-uuid' | 'tmdb-numeric' }`
-  - [ ] 1.3 Keep existing `notFound()` for empty-string `id` AND invalid `type`; do NOT add a notFound branch for numeric IDs (they are now valid)
-  - [ ] 1.4 Co-located unit test: `apps/web/src/routes/media/$type.$id.spec.tsx` — table-driven `classifyId` cases: `'movie-uuid-abc'` → local-uuid; `'83533'` → tmdb-numeric; `'0'` → local-uuid (numeric but non-positive — falls through to existing local handler, which will 404 via the empty/invalid branch); `''` → notFound; `'abc-123'` → local-uuid
+- [x] Task 1: Route-loader ID-kind detection (AC: #1, #2, #8)
+  - [x] 1.1 Edit `apps/web/src/routes/media/$type.$id.tsx` Route loader: add `classifyId(id: string): 'local-uuid' | 'tmdb-numeric'` (numeric-and-positive → `tmdb-numeric`; else → `local-uuid`)
+  - [x] 1.2 Loader return type: `{ type: ValidMediaType; id: string; idKind: 'local-uuid' | 'tmdb-numeric' }`
+  - [x] 1.3 Keep existing `notFound()` for empty-string `id` AND invalid `type`; do NOT add a notFound branch for numeric IDs (they are now valid)
+  - [x] 1.4 Co-located unit test: 10 table-driven cases at `apps/web/src/routes/media/-$type.$id.spec.tsx` (note hyphen-prefix to exclude from routing per existing convention; expanded beyond story draft to include UUID v4, decimal-trap, negative-trap)
 
-- [ ] Task 2: TMDb-numeric branch in `MediaDetailRoute` component (AC: #3, #4, #5)
-  - [ ] 2.1 In `MediaDetailRoute`, read `idKind` from loader: `const { type, id, idKind } = Route.useLoaderData();`
-  - [ ] 2.2 When `idKind === 'tmdb-numeric'`: call `useMovieDetails(parseInt(id, 10))` or `useTVShowDetails(parseInt(id, 10))` (DO NOT call local-DB hooks — guard with `enabled: idKind === 'tmdb-numeric' && tmdbId > 0`)
-  - [ ] 2.3 When `idKind === 'local-uuid'`: existing `useLocalMovieDetails(id)` / `useLocalSeriesDetails(id)` flow unchanged
-  - [ ] 2.4 Render branch: extract a small `<TMDbDetailView>` sub-component (or inline conditional) reusing the same JSX structure as the existing `hasMetadata` branch — backdrop, poster, title, meta-line, overview, credits. Source data shape is `MovieDetails` / `TVShowDetails` (already returned by `useMovieDetails`/`useTVShowDetails` in `useMediaDetails.ts`).
-  - [ ] 2.5 On TMDb fetch error → `return <NotFoundComponent />` (same as existing local-error path)
-  - [ ] 2.6 Editor button (`MetadataEditorDialog`) MUST be hidden when `idKind === 'tmdb-numeric'` (no local row to edit)
-  - [ ] 2.7 Add `data-testid="tmdb-detail-view"` to the TMDb branch container so the regression test can target it
+- [x] Task 2: TMDb-numeric branch in `MediaDetailRoute` component (AC: #3, #4, #5)
+  - [x] 2.1 `MediaDetailRoute` reads `{ type, id, idKind }` from `Route.useLoaderData()`; the function now branches at the top: `idKind === 'tmdb-numeric'` → `<TMDbDetailView />`, else `<LocalDetailView />`. Refactor split the original body into two sibling components so the TMDb path never touches local-DB hooks.
+  - [x] 2.2 `TMDbDetailView` calls `useMovieDetails(isMovie ? tmdbId : 0)` / `useTVShowDetails(!isMovie ? tmdbId : 0)`. The hooks already gate themselves with `enabled: id > 0` (`useMediaDetails.ts:53,66`), so the disabled branch issues zero network calls.
+  - [x] 2.3 `LocalDetailView` is a verbatim move of the prior `MediaDetailRoute` body — zero behavioral diff for the UUID path. `useNavigate` re-instantiated inside the new function (no shared closure issues).
+  - [x] 2.4 `TMDbDetailView` is exported (for unit tests) and reuses the `hasMetadata === true` branch's Tailwind classes — `relative min-h-screen bg-[var(--bg-primary)]`, `max-w-5xl px-4 py-6`, `flex flex-col gap-8 md:flex-row`, `aspect-[2/3]` poster fallback. Title/meta/overview/CreditsSection identical structure.
+  - [x] 2.5 `if (detailsQuery.isError || !data) return <NotFoundComponent />;` — same UX as the local error path.
+  - [x] 2.6 No `MetadataEditorDialog`, no `Pencil` Edit button, no `metadataSource` badge, no `TechBadgeGroup` in the TMDb branch — these only make sense for local rows. AC-aligned regression test `editor button is NOT in DOM` confirms.
+  - [x] 2.7 Container div carries `data-testid="tmdb-detail-view"`; targeted by 9 of the 11 new TMDb-branch tests.
 
-- [ ] Task 3: Owned-state indicator (AC: #6)
-  - [ ] 3.1 In TMDb-numeric branch, call `useOwnedMedia([tmdbId])` (single-element array; the hook normalises and dedupes)
-  - [ ] 3.2 If `isOwned(tmdbId) === true` → render badge `<span data-testid="tmdb-detail-owned-badge">📁 已在媒體庫</span>` near the title (top-right of meta-line, non-blocking)
-  - [ ] 3.3 Document in code comment near the badge: "Story 10-4 ownership read-through; bi-directional redirect deferred — needs GET /api/v1/movies/by-tmdb/:tmdbId (out of scope for bugfix-10-1)"
-  - [ ] 3.4 Do NOT render the badge while `useOwnedMedia.isLoading === true` (prevents a flicker)
+- [x] Task 3: Owned-state indicator (AC: #6)
+  - [x] 3.1 `const ownership = useOwnedMedia([tmdbId])` invoked unconditionally inside `TMDbDetailView` (single-element array; hook normalises + dedupes per `useOwnedMedia.ts:16`).
+  - [x] 3.2 Badge rendered top-right of the title row: `<span data-testid="tmdb-detail-owned-badge" class="… bg-emerald-900/30 …">📁 已在媒體庫</span>`. Emerald palette mirrors `DownloadPanel.ConnectionStatusBadge` (`apps/web/src/components/dashboard/DownloadPanel.tsx:120`).
+  - [x] 3.3 Inline code comment near the `useOwnedMedia` call cites Story 10-4 + the deferred `GET /api/v1/movies/by-tmdb/:tmdbId` follow-up.
+  - [x] 3.4 `showOwnedBadge = !ownership.isLoading && ownership.isOwned(tmdbId)` — badge only renders post-load AND when truly owned. Loading-state regression test verifies absence.
 
-- [ ] Task 4: PosterCard call-site audit (AC: #7)
-  - [ ] 4.1 Verify each call site explicitly. Update Dev Agent Record's "Call Site Audit" table with file:line + ID source + classification. Required entries:
-    - `apps/web/src/components/library/LibraryGrid.tsx:173` — `m.id` (UUID) — correct, no change
-    - `apps/web/src/components/library/LibraryGrid.tsx:279` — `m.id` (UUID, virtualized variant) — correct, no change
-    - `apps/web/src/components/library/RecentlyAdded.tsx:82` — `m.id` (UUID) — correct, no change
-    - `apps/web/src/components/media/MediaGrid.tsx:61, 77, 103, 117` — `movie.id` / `show.id` (TMDb numeric, used by `/search` route) — now resolves via Task 1+2 (search clicks were ALSO 404-ing before this fix; this story incidentally repairs them)
-    - `apps/web/src/components/homepage/ExploreBlock.tsx:138` — `String(item.id)` (TMDb numeric, **the regression locus**) — now resolves via Task 1+2
-  - [ ] 4.2 Add a single-paragraph "Call Site Coverage" section to Dev Notes confirming the fix is centralized at the route level (not at each call site) — this is the simplest and least-error-prone shape.
+- [x] Task 4: PosterCard call-site audit (AC: #7)
+  - [x] 4.1 Audit table at end of Dev Agent Record below — 5 entries × 2 categories (UUID-correct vs TMDb-fixed-transitively). Re-verified at HEAD (file/line numbers stable since story bootstrap): LibraryGrid.tsx:173/279, RecentlyAdded.tsx:82, MediaGrid.tsx:61/77/103/117, ExploreBlock.tsx:138.
+  - [x] 4.2 Call Site Coverage paragraph appended to Dev Notes (see "Call Site Coverage" subsection below).
 
-- [ ] Task 5: Test coverage (AC: #9)
-  - [ ] 5.1 Update `apps/web/src/routes/media/-$type.$id.spec.tsx` (note leading hyphen — TanStack Router excludes hyphen-prefixed files from routing; this is the existing test file). Add tests for `idKind` classification AND for the new TMDb-numeric render path.
-  - [ ] 5.2 Mock setup: re-use existing `tmdbService.getMovieDetails` / `getTVShowDetails` mock pattern from `useMediaDetails.spec` if present; otherwise stub with `vi.mock('../../services/tmdb', ...)`.
-  - [ ] 5.3 Test: TMDb-numeric URL renders title from TMDb API mock, NOT from local DB (assert `useLocalMovieDetails` mock was NOT called)
-  - [ ] 5.4 Test: TMDb-numeric URL with TMDb error → renders `NotFoundComponent`
-  - [ ] 5.5 Test: owned-item indicator appears when `useOwnedMedia` mock returns `isOwned(tmdbId) === true`
-  - [ ] 5.6 Test: editor button hidden in TMDb-numeric branch
-  - [ ] 5.7 Add `apps/web/src/components/homepage/ExploreBlock.spec.tsx` smoke: clicking a poster sets `Link.params.id = String(item.id)` and routes to `/media/$type/$id` (mock router). Don't deep-render the detail page in this spec — keep the unit boundary.
-  - [ ] 5.8 Run full regression: `nx test web` MUST stay green. Run `pnpm lint:all` (Rule 12) before marking complete.
+- [x] Task 5: Test coverage (AC: #9)
+  - [x] 5.1 Existing spec `-$type.$id.spec.tsx` extended with 2 new top-level `describe` blocks: `classifyId` (10 cases) + `TMDbDetailView` (11 cases).
+  - [x] 5.2 `vi.mock('@tanstack/react-router', ...)` + `vi.mock('../../hooks/useOwnedMedia', ...)` added at the top of the file (auto-hoisted). `tmdbService.*` mocks reuse the existing `vi.mock('../../services/tmdb', ...)` block.
+  - [x] 5.3 Movie + TV variants: `tmdbService.getMovieDetails` / `getTVShowDetails` toHaveBeenCalledWith(numericId). Local-DB hooks are not imported by `TMDbDetailView`, so the negative assertion is structural rather than runtime.
+  - [x] 5.4 `mockRejectedValueOnce(new Error('TMDB_TIMEOUT'))` for both movie and tv → asserts `<NotFoundComponent />` renders ("404", "找不到該媒體內容", and `tmdb-detail-view` absent).
+  - [x] 5.5 `ownedTrue` fixture (`isOwned(12345) === true`) + assertion that `tmdb-detail-owned-badge` is present and contains "已在媒體庫".
+  - [x] 5.6 `screen.queryByRole('button', { name: /編輯|edit/i })` and `queryByTestId('edit-metadata-button')` both `not.toBeInTheDocument()`.
+  - [x] 5.7 `ExploreBlock.spec.tsx` smoke added: `expect(card).toHaveAttribute('href', '/media/movie/83533')` — confirms the regression locus emits a TMDb-numeric URL that the route classifier picks up. Used `as ReturnType<typeof useExploreBlockContent>` instead of `as any` to avoid +1 lint warning.
+  - [x] 5.8 `pnpm nx test web` 1760/1760 PASS; `pnpm nx test api` PASS on retry (`TestScannerService_SSEBroadcast_ScanCancelled` flaked once — pre-existing race condition, filed `preexisting-fail-scanner-sse-scan-cancelled-flake` in sprint-status per Epic 9c retro AI-2). `pnpm lint:all` 0 errors / 129 warnings (baseline restored after type-cast cleanup).
 
 ## Dev Notes
 
@@ -169,6 +164,16 @@ The TMDb branch is **simpler** than the local branch — no fallback UI, no tech
 - Test files co-located (Rule 9).
 - `data-testid` naming follows existing convention (e.g. `tmdb-detail-view`, `tmdb-detail-owned-badge`).
 
+### Call Site Coverage
+
+The fix is **centralized at the route loader** (`classifyId` + `idKind` + `MediaDetailRoute` early-return), not at any of the five PosterCard call sites. This means:
+
+1. UUID-emitting call sites (`LibraryGrid` × 2, `RecentlyAdded`) keep the existing local-DB flow with zero diff.
+2. TMDb-numeric-emitting call sites (`MediaGrid` × 4, `ExploreBlock`) automatically resolve to the TMDb branch the moment the loader sees a numeric `id` — no change needed at the call site.
+3. Future PosterCard call sites added by Epic 11+ inherit the same routing behavior for free.
+
+The single decision boundary is `classifyId(id)`, so any future regression around poster routing has exactly one diagnostic surface. This also incidentally repairs `/search` results (`MediaGrid`), which were 404-ing for the same root cause but weren't called out explicitly in the user-reported bug.
+
 ### References
 
 - [Source: project-context.md Rule 7 — Error Codes System (no new codes needed)]
@@ -190,15 +195,22 @@ The TMDb branch is **simpler** than the local branch — no fallback UI, no tech
 
 ### Agent Model Used
 
-(to be filled by dev-story)
+claude-opus-4-7[1m] (Amelia, BMAD dev agent)
 
 ### Debug Log References
 
-(to be filled by dev-story)
+- Pre-change route file lint warning at `routes/media/$type.$id.tsx:117:6` (useCallback exhaustive-deps on `localMovie`/`localSeries`) — pre-existing, shifted to line 146:6 after my refactor. Not introduced by this story.
+- One backend test flake on full-suite run: `TestScannerService_SSEBroadcast_ScanCancelled` (apps/api/internal/services). Passed in isolation and on `--skip-nx-cache` rerun. Filed as `preexisting-fail-scanner-sse-scan-cancelled-flake` in sprint-status per Epic 9c retro AI-2.
 
 ### Completion Notes List
 
-(to be filled by dev-story — must include "🔗 AC Drift: NONE|FOUND|N/A" per retro-10-AI2)
+- **🔗 AC Drift:** FOUND — bugfix-1-media-detail-route-refactor AC #2 (UUID-only) ⇒ bugfix-10-1 AC #1/#2 [@contract-v1] (UUID OR TMDb-numeric). Documented in AC #8 + Change Log + Dev Notes Rule 20 subsection. Grep audit (`media/\$type/\$id` + `MediaDetailRoute` + `classifyId`) covered Epic 12 stories 12-1/12-2 (future, no deployed impact yet) and Story 2-3/2-4 (search/detail page predecessors).
+- **📎 Contract Stamps:** FOUND (2 stamped ACs in this story v1; upstream bugfix-1 pre-Rule-20 / implicit v0; ack line "confirmed against [@contract-v0] (bugfix-1-media-detail-route-refactor AC #2)" embedded in AC #8).
+- **🎯 Solution shape:** Single-point-of-fix at the route loader. Backend untouched. Frontend hooks/services untouched. Only `routes/media/$type.$id.tsx` adds new logic; only test files gain new assertions.
+- **📁 Owned-state badge:** Story 10-4 read-through only; bi-directional redirect (TMDb → local UUID) deferred — needs `GET /api/v1/movies/by-tmdb/:tmdbId` endpoint not yet shipped.
+- **🧪 Test counts:** 39 in `-$type.$id.spec.tsx` (28 pre-existing + 10 classifyId + 11 TMDbDetailView = +21 new) + 8 in `ExploreBlock.spec.tsx` (7 pre-existing + 1 smoke = +1 new). Web suite total: 1760 PASS (was ~1738 baseline).
+- **⚙️ Regression gate:** `pnpm nx test web` 1760/1760 PASS; `pnpm nx test api` PASS (after one retry — flake filed). `pnpm lint:all` 0 errors / 129 warnings (matches baseline; no net new warnings).
+- **🎨 UX Verification:** PASS — TMDb branch reuses the `hasMetadata === true` JSX subtree's exact Tailwind classes (`max-w-5xl`, `flex flex-col gap-8 md:flex-row`, `aspect-[2/3]` poster, emerald palette for owned badge mirrors `DownloadPanel.ConnectionStatusBadge` at `apps/web/src/components/dashboard/DownloadPanel.tsx:120-134`). No new design screen — visual identity is inherited from the shipped local detail page (Flow B). Editor button + tech-badge group + metadata-source pill intentionally absent from TMDb branch (no local row to drive them). Manual smoke deferred to NAS deploy per project convention.
 
 ### Call Site Audit (filled during Task 4)
 
@@ -212,4 +224,17 @@ The TMDb branch is **simpler** than the local branch — no fallback UI, no tech
 
 ### File List
 
-(to be filled by dev-story)
+**Modified (3):**
+- `apps/web/src/routes/media/$type.$id.tsx` — `classifyId` export + `idKind` loader field; `MediaDetailRoute` branches on `idKind`; new `LocalDetailView` (verbatim move of original body) + new `TMDbDetailView` (exported for tests).
+- `apps/web/src/routes/media/-$type.$id.spec.tsx` — `vi.mock('@tanstack/react-router', ...)` + `vi.mock('../../hooks/useOwnedMedia', ...)` at top; new `classifyId` describe (10 cases) + new `TMDbDetailView` describe (11 cases). Existing 28 tests untouched.
+- `apps/web/src/components/homepage/ExploreBlock.spec.tsx` — 1 new test: poster card link encodes TMDb numeric id (smoke for the regression locus).
+
+**Modified (sprint tracking):**
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — `bugfix-10-1-postercard-tmdb-id-404`: `ready-for-dev` → `in-progress` → `review`. Added `preexisting-fail-scanner-sse-scan-cancelled-flake: backlog` per Epic 9c retro AI-2.
+- `_bmad-output/implementation-artifacts/bugfix-10-1-postercard-tmdb-id-404.md` — this file (task checkboxes + Dev Agent Record + Status).
+
+**AC drift reference (read-only, no code change):**
+- `_bmad-output/implementation-artifacts/bugfix-1-media-detail-route-refactor.md` — implicit `[@contract-v0]` upstream per Rule 20.
+
+**Untouched (audited, confirmed correct):**
+- `apps/web/src/components/library/LibraryGrid.tsx`, `apps/web/src/components/library/RecentlyAdded.tsx`, `apps/web/src/components/media/PosterCard.tsx`, `apps/web/src/components/media/MediaGrid.tsx`, `apps/web/src/components/homepage/ExploreBlock.tsx`, `apps/web/src/hooks/useMediaDetails.ts`, `apps/web/src/hooks/useOwnedMedia.ts`, `apps/web/src/services/tmdb.ts`. All backend.
