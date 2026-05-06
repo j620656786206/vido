@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   createMemoryHistory,
@@ -95,7 +95,7 @@ describe('ExploreBlock', () => {
       data: undefined,
       isLoading: true,
       isError: false,
-    } as any);
+    } as ReturnType<typeof useExploreBlockContent>);
     renderBlock(testBlock());
 
     const skeletons = await screen.findAllByTestId('explore-block-skeleton');
@@ -107,7 +107,7 @@ describe('ExploreBlock', () => {
       data: { blockId: 'block-1', contentType: 'movie', movies: [], totalItems: 0 },
       isLoading: false,
       isError: false,
-    } as any);
+    } as ReturnType<typeof useExploreBlockContent>);
     renderBlock(testBlock({ name: '熱門韓劇' }));
 
     expect(await screen.findByTestId('explore-block-title')).toHaveTextContent('熱門韓劇');
@@ -149,7 +149,7 @@ describe('ExploreBlock', () => {
       },
       isLoading: false,
       isError: false,
-    } as any);
+    } as ReturnType<typeof useExploreBlockContent>);
 
     renderBlock(testBlock());
 
@@ -181,7 +181,7 @@ describe('ExploreBlock', () => {
       },
       isLoading: false,
       isError: false,
-    } as any);
+    } as ReturnType<typeof useExploreBlockContent>);
 
     renderBlock(testBlock({ id: 'block-tv', contentType: 'tv', name: '熱門劇集' }));
 
@@ -193,7 +193,7 @@ describe('ExploreBlock', () => {
       data: { blockId: 'block-1', contentType: 'movie', movies: [], totalItems: 0 },
       isLoading: false,
       isError: false,
-    } as any);
+    } as ReturnType<typeof useExploreBlockContent>);
 
     renderBlock(testBlock());
 
@@ -207,7 +207,7 @@ describe('ExploreBlock', () => {
       data: undefined,
       isLoading: false,
       isError: true,
-    } as any);
+    } as ReturnType<typeof useExploreBlockContent>);
 
     const { container } = renderBlock(testBlock());
 
@@ -219,8 +219,13 @@ describe('ExploreBlock', () => {
   // bugfix-10-1 Task 5.7 — verify the regression locus stays correct: an
   // ExploreBlock poster's Link MUST encode the TMDb numeric id verbatim so the
   // route's classifyId() can detect it and dispatch to the TMDb detail branch.
-  // Don't deep-render the detail page; assert the URL shape only.
-  it('poster card link encodes TMDb numeric id in /media/$type/$id', async () => {
+  //
+  // CR M1 — beyond the static href shape, fire an actual click and assert the
+  // router navigates AND mounts the registered media route stub. This covers
+  // AC #9(e) "navigates ... AND resolves (smoke)" — the prior version only
+  // verified the href attribute, which would still pass even if the Link were
+  // disabled or the route were unregistered.
+  it('poster card link encodes TMDb numeric id and resolves /media/$type/$id', async () => {
     mockHook.mockReturnValue({
       data: {
         blockId: 'block-1',
@@ -249,6 +254,12 @@ describe('ExploreBlock', () => {
 
     const card = await screen.findByTestId('poster-card');
     expect(card).toHaveAttribute('href', '/media/movie/83533');
+
+    // Smoke: actually navigate and confirm the route mounts.
+    fireEvent.click(card);
+    await waitFor(() => {
+      expect(screen.getByText('Media Detail')).toBeInTheDocument();
+    });
   });
 
   it('renders desktop scroll chevrons', async () => {
@@ -261,7 +272,7 @@ describe('ExploreBlock', () => {
       },
       isLoading: false,
       isError: false,
-    } as any);
+    } as ReturnType<typeof useExploreBlockContent>);
 
     renderBlock(testBlock());
 

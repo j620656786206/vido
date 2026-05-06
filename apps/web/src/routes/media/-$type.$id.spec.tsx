@@ -3,13 +3,27 @@
 // does not register the live route, and so TMDbDetailView's useNavigate call
 // resolves to a no-op stub. Existing tests in this file render presentational
 // components that do not touch router APIs, so the mock is safe.
+//
+// CR M2 — useNavigate returns a STABLE mock fn so tests can assert navigation
+// behavior (e.g. back-button → /library). vi.fn() is hoisted via the factory
+// closure so vi.mock's hoisting honours it.
+const mockNavigate = vi.fn();
 vi.mock('@tanstack/react-router', () => ({
   createFileRoute: () => (opts: Record<string, unknown>) => opts,
   notFound: () => new Error('notFound'),
-  useNavigate: () => vi.fn(),
+  useNavigate: () => mockNavigate,
 }));
 vi.mock('../../hooks/useOwnedMedia', () => ({
   useOwnedMedia: vi.fn(),
+}));
+// CR M3 — mock libraryService so AC #1 negative assertion ("the route MUST
+// NOT call /api/v1/movies/:id or /api/v1/series/:id") can be enforced at the
+// unit-test level instead of relying on a structural import argument.
+vi.mock('../../services/libraryService', () => ({
+  libraryService: {
+    getMovieById: vi.fn(),
+    getSeriesById: vi.fn(),
+  },
 }));
 
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
@@ -29,6 +43,7 @@ import { tmdbService } from '../../services/tmdb';
 import type { MovieDetails, TVShowDetails, Credits } from '../../types/tmdb';
 import { classifyId, TMDbDetailView } from './$type.$id';
 import { useOwnedMedia, type OwnedMediaState } from '../../hooks/useOwnedMedia';
+import { libraryService } from '../../services/libraryService';
 
 // Mock the tmdb service
 vi.mock('../../services/tmdb', () => ({
@@ -186,9 +201,13 @@ const ownedTrue: OwnedMediaState = {
   isLoading: false,
   error: null,
 };
+// CR H2 — `isOwned` returns true so the loading-state test actually exercises
+// the `!ownership.isLoading` guard. With the prior `() => false` fixture, the
+// test would have passed even if the guard were deleted (badge hidden by the
+// false isOwned alone).
 const ownedLoading: OwnedMediaState = {
-  owned: new Set<number>(),
-  isOwned: () => false,
+  owned: new Set<number>([12345]),
+  isOwned: (id) => id === 12345,
   isRequested: () => false,
   isLoading: true,
   error: null,
@@ -425,13 +444,50 @@ describe('Media Detail Route', () => {
 // Verifies that a poster click from the homepage (TMDb numeric ID) renders a
 // TMDb-backed detail view, NOT a 404.
 // =============================================================================
-describe('TMDbDetailView (bugfix-10-1 AC #3, #4, #5, #6)', () => {
+describe('TMDbDetailView (bugfix-10-1 AC #1, #3, #4, #5, #6)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(tmdbService.getMovieDetails).mockResolvedValue(mockMovieDetails);
     vi.mocked(tmdbService.getTVShowDetails).mockResolvedValue(mockTVShowDetails);
     vi.mocked(tmdbService.getMovieCredits).mockResolvedValue(mockCredits);
     vi.mocked(tmdbService.getTVShowCredits).mockResolvedValue(mockCredits);
+  });
+
+  // CR M3 — AC #1 explicit negative assertion: the TMDb branch MUST NOT touch
+  // the local-DB endpoints (/api/v1/movies/:id, /api/v1/series/:id) which are
+  // UUID-keyed. Structural argument ("doesn't import libraryService") is not
+  // future-proof; this test will fail loud if the import sneaks back in.
+  describe('AC #1 — TMDb branch never calls local-DB endpoints', () => {
+    it('does NOT call libraryService.getMovieById for movie type', async () => {
+      renderTMDbView('movie', 123);
+      await waitFor(() => {
+        expect(screen.getByTestId('tmdb-detail-view')).toBeInTheDocument();
+      });
+      expect(libraryService.getMovieById).not.toHaveBeenCalled();
+      expect(libraryService.getSeriesById).not.toHaveBeenCalled();
+    });
+
+    it('does NOT call libraryService.getSeriesById for tv type', async () => {
+      renderTMDbView('tv', 456);
+      await waitFor(() => {
+        expect(screen.getByTestId('tmdb-detail-view')).toBeInTheDocument();
+      });
+      expect(libraryService.getSeriesById).not.toHaveBeenCalled();
+      expect(libraryService.getMovieById).not.toHaveBeenCalled();
+    });
+  });
+
+  // CR M2 — back-button navigation: stable mockNavigate now lets us assert
+  // the click target. Adds coverage for handleBack (LocalDetailView parity).
+  describe('back button — navigates to /library', () => {
+    it('invokes navigate({ to: "/library" }) on click', async () => {
+      renderTMDbView('movie', 123);
+      await waitFor(() => {
+        expect(screen.getByTestId('tmdb-detail-view')).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByRole('button', { name: /返回媒體庫/ }));
+      expect(mockNavigate).toHaveBeenCalledWith({ to: '/library' });
+    });
   });
 
   describe('AC #3 — fetches via TMDb endpoints', () => {

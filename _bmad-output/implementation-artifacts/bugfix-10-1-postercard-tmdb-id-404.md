@@ -1,6 +1,6 @@
 # Story: Bugfix 10.1 — PosterCard TMDb-ID 404 Regression
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -212,6 +212,24 @@ claude-opus-4-7[1m] (Amelia, BMAD dev agent)
 - **⚙️ Regression gate:** `pnpm nx test web` 1760/1760 PASS; `pnpm nx test api` PASS (after one retry — flake filed). `pnpm lint:all` 0 errors / 129 warnings (matches baseline; no net new warnings).
 - **🎨 UX Verification:** PASS — TMDb branch reuses the `hasMetadata === true` JSX subtree's exact Tailwind classes (`max-w-5xl`, `flex flex-col gap-8 md:flex-row`, `aspect-[2/3]` poster, emerald palette for owned badge mirrors `DownloadPanel.ConnectionStatusBadge` at `apps/web/src/components/dashboard/DownloadPanel.tsx:120-134`). No new design screen — visual identity is inherited from the shipped local detail page (Flow B). Editor button + tech-badge group + metadata-source pill intentionally absent from TMDb branch (no local row to drive them). Manual smoke deferred to NAS deploy per project convention.
 
+### Code Review Fixes (2026-05-06)
+
+Adversarial CR by Amelia (BMAD dev agent) found 8 issues; all 8 fixed in this pass.
+
+| # | Sev | File | Fix |
+|---|-----|------|-----|
+| H1 | HIGH | `apps/web/src/components/media/MediaGrid.tsx` (4 sites: 63, 79, 105, 119) | Audit missed `Movie.id`/`TVShow.id` (number) → `PosterCard.id` (string) type errors. Cast: `id={String(movie.id)}` / `id={String(show.id)}`. Restores `tsc --noEmit` cleanliness at the regression locus. |
+| H2 | HIGH | `apps/web/src/routes/media/-$type.$id.spec.tsx:189-195` | `ownedLoading.isOwned` was `() => false`, making the loading-state test a tautology. Changed to `(id) => id === 12345` so the `!ownership.isLoading` guard at `$type.$id.tsx:408` is actually exercised. |
+| M1 | MED | `apps/web/src/components/homepage/ExploreBlock.spec.tsx:223-260` | AC #9(e) smoke now `fireEvent.click(card)` + `waitFor` for the registered `/media/$type/$id` stub to mount, instead of only asserting `href`. |
+| M2 | MED | `apps/web/src/routes/media/-$type.$id.spec.tsx:14-18` | `useNavigate: () => vi.fn()` (fresh fn per call) → hoisted stable `mockNavigate`. Added back-button regression test (`fireEvent.click → expect(mockNavigate).toHaveBeenCalledWith({ to: '/library' })`). |
+| M3 | MED | `apps/web/src/routes/media/-$type.$id.spec.tsx:24-30, 451-470` | AC #1 negative assertion: mocked `libraryService` and 2 new tests (`getMovieById`/`getSeriesById` `not.toHaveBeenCalled()` for movie+tv branches). Replaces structural import argument with a runtime guard. |
+| L1 | LOW | `apps/web/src/routes/media/$type.$id.tsx` | TMDbDetailView now uses `handleBack` helper, mirroring LocalDetailView's style (was inline arrow). |
+| L2 | LOW | `apps/web/src/components/homepage/ExploreBlock.spec.tsx` (7 sites) | Replaced `as any` with `as ReturnType<typeof useExploreBlockContent>` in all `mockHook.mockReturnValue` calls. Net `-7` baseline `no-explicit-any` warnings. |
+| L3 | LOW | `apps/web/src/routes/media/$type.$id.tsx:368-410` | Removed `data as MovieDetails` / `data as TVShowDetails` casts. Now narrows via per-type `movie: MovieDetails \| undefined` / `show: TVShowDetails \| undefined` from the active query result. |
+
+- **⚙️ Regression gate after CR fixes:** `pnpm exec vitest run` 1763/1763 PASS (was 1760, +3 from M2/M3); `pnpm exec eslint` on the 4 touched files: 0 errors / 2 baseline warnings (line 83:57 router-prop cast, line 146:6 useCallback exhaustive-deps — both pre-existing per Debug Log); `pnpm exec tsc --noEmit -p apps/web/tsconfig.app.json` no longer reports the 4 MediaGrid TS2322 errors. 2 pre-existing TS errors remain in `LocalDetailView` (`localData.releaseDate` lines 253/257) — predates this story (`bugfix-1` baseline), filed for future cleanup.
+- **🔁 Out-of-scope leftovers (filed):** `LocalDetailView` `releaseDate` union narrowing (`$type.$id.tsx:253, 257`) — pre-existing TS2339, not introduced by either bugfix-10-1 or this CR pass.
+
 ### Call Site Audit (filled during Task 4)
 
 | File | Line | ID source | Kind | Status |
@@ -224,10 +242,11 @@ claude-opus-4-7[1m] (Amelia, BMAD dev agent)
 
 ### File List
 
-**Modified (3):**
-- `apps/web/src/routes/media/$type.$id.tsx` — `classifyId` export + `idKind` loader field; `MediaDetailRoute` branches on `idKind`; new `LocalDetailView` (verbatim move of original body) + new `TMDbDetailView` (exported for tests).
-- `apps/web/src/routes/media/-$type.$id.spec.tsx` — `vi.mock('@tanstack/react-router', ...)` + `vi.mock('../../hooks/useOwnedMedia', ...)` at top; new `classifyId` describe (10 cases) + new `TMDbDetailView` describe (11 cases). Existing 28 tests untouched.
-- `apps/web/src/components/homepage/ExploreBlock.spec.tsx` — 1 new test: poster card link encodes TMDb numeric id (smoke for the regression locus).
+**Modified (4):**
+- `apps/web/src/routes/media/$type.$id.tsx` — `classifyId` export + `idKind` loader field; `MediaDetailRoute` branches on `idKind`; new `LocalDetailView` (verbatim move of original body) + new `TMDbDetailView` (exported for tests). **CR L1+L3:** TMDbDetailView now uses `handleBack` helper + narrows `movie`/`show` via per-type query result (no more `data as MovieDetails`/`data as TVShowDetails` casts).
+- `apps/web/src/routes/media/-$type.$id.spec.tsx` — `vi.mock('@tanstack/react-router', ...)` + `vi.mock('../../hooks/useOwnedMedia', ...)` at top; new `classifyId` describe (10 cases) + new `TMDbDetailView` describe (14 cases — was 11). Existing 28 tests untouched. **CR H2/M2/M3:** stable `mockNavigate` + libraryService mock + AC#1 negative-assertion describe (2 cases) + back-button regression test (1 case) + `ownedLoading` fixture flipped so the loading-guard test no longer tautologises.
+- `apps/web/src/components/homepage/ExploreBlock.spec.tsx` — smoke test for poster→detail navigation (regression locus). **CR M1+L2:** smoke now fires a click and `waitFor`s the route stub to mount; all 7 prior `mockHook.mockReturnValue(...) as any` sites swept to `as ReturnType<typeof useExploreBlockContent>` (net `-7` lint warnings).
+- `apps/web/src/components/media/MediaGrid.tsx` — **CR H1:** 4 PosterCard call sites (lines 63, 79, 105, 119) cast `id={movie.id}` → `id={String(movie.id)}` (and equivalent for shows). Removes `tsc` errors that the audit table missed. No runtime behavior change.
 
 **Modified (sprint tracking):**
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` — `bugfix-10-1-postercard-tmdb-id-404`: `ready-for-dev` → `in-progress` → `review`. Added `preexisting-fail-scanner-sse-scan-cancelled-flake: backlog` per Epic 9c retro AI-2.

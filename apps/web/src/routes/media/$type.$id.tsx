@@ -374,13 +374,20 @@ export function TMDbDetailView({ type, tmdbId }: { type: ValidMediaType; tmdbId:
   const movieCredits = useMovieCredits(isMovie ? tmdbId : 0);
   const tvCredits = useTVShowCredits(!isMovie ? tmdbId : 0);
 
+  // bugfix-10-1 CR L3 — narrow per branch via the per-type query result so we
+  // avoid the `data as MovieDetails` / `data as TVShowDetails` pair below.
+  const movie: MovieDetails | undefined = isMovie ? movieDetails.data : undefined;
+  const show: TVShowDetails | undefined = !isMovie ? tvDetails.data : undefined;
   const detailsQuery = isMovie ? movieDetails : tvDetails;
   const creditsQuery = isMovie ? movieCredits : tvCredits;
-  const data = detailsQuery.data;
 
   // Story 10-4 ownership read-through; bi-directional redirect deferred —
   // needs GET /api/v1/movies/by-tmdb/:tmdbId (out of scope for bugfix-10-1).
   const ownership = useOwnedMedia([tmdbId]);
+
+  const handleBack = () => {
+    navigate({ to: '/library' });
+  };
 
   if (detailsQuery.isLoading) {
     return (
@@ -392,12 +399,11 @@ export function TMDbDetailView({ type, tmdbId }: { type: ValidMediaType; tmdbId:
 
   // AC #5 — any TMDb fetch failure surfaces the same NotFound UX as a missing
   // local row. Avoids a half-rendered state when the upstream is down.
+  const data = movie ?? show;
   if (detailsQuery.isError || !data) {
     return <NotFoundComponent />;
   }
 
-  const movie = isMovie ? (data as MovieDetails) : null;
-  const show = isMovie ? null : (data as TVShowDetails);
   const title = movie ? movie.title : show!.name;
   const originalTitle = movie ? movie.originalTitle : show!.originalName;
   const releaseDate = movie ? movie.releaseDate : show!.firstAirDate;
@@ -422,7 +428,7 @@ export function TMDbDetailView({ type, tmdbId }: { type: ValidMediaType; tmdbId:
 
       <div className="relative mx-auto max-w-5xl px-4 py-6">
         <button
-          onClick={() => navigate({ to: '/library' })}
+          onClick={handleBack}
           className="mb-6 flex items-center gap-2 text-[var(--text-secondary)] hover:text-white transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />

@@ -60,7 +60,7 @@ export function MediaGrid({
       return (
         <PosterCard
           key={`movie-${movie.id}`}
-          id={movie.id}
+          id={String(movie.id)}
           type="movie"
           title={movie.title}
           originalTitle={movie.originalTitle}
@@ -76,7 +76,7 @@ export function MediaGrid({
       return (
         <PosterCard
           key={`tv-${show.id}`}
-          id={show.id}
+          id={String(show.id)}
           type="tv"
           title={show.name}
           originalTitle={show.originalName}
@@ -102,7 +102,7 @@ export function MediaGrid({
           {movies.map((movie) => (
             <PosterCard
               key={`movie-${movie.id}`}
-              id={movie.id}
+              id={String(movie.id)}
               type="movie"
               title={movie.title}
               originalTitle={movie.originalTitle}
@@ -116,7 +116,7 @@ export function MediaGrid({
           {tvShows.map((show) => (
             <PosterCard
               key={`tv-${show.id}`}
-              id={show.id}
+              id={String(show.id)}
               type="tv"
               title={show.name}
               originalTitle={show.originalName}
