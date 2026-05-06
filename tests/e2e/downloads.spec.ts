@@ -55,7 +55,12 @@ test.describe('Downloads Page @downloads @ui', () => {
         contentType: 'application/json',
         body: JSON.stringify({
           success: true,
-          data: { host: 'http://localhost:8080', username: 'admin', basePath: '', configured: true },
+          data: {
+            host: 'http://localhost:8080',
+            username: 'admin',
+            basePath: '',
+            configured: true,
+          },
         }),
       })
     );
@@ -212,7 +217,12 @@ test.describe('Downloads Page @downloads @ui', () => {
         contentType: 'application/json',
         body: JSON.stringify({
           success: true,
-          data: { host: 'http://localhost:8080', username: 'admin', basePath: '', configured: true },
+          data: {
+            host: 'http://localhost:8080',
+            username: 'admin',
+            basePath: '',
+            configured: true,
+          },
         }),
       })
     );
@@ -329,7 +339,12 @@ test.describe('Downloads qBittorrent config gate (bugfix-10-2) @downloads @ui', 
         contentType: 'application/json',
         body: JSON.stringify({
           success: true,
-          data: { host: 'http://localhost:8080', username: 'admin', basePath: '', configured: true },
+          data: {
+            host: 'http://localhost:8080',
+            username: 'admin',
+            basePath: '',
+            configured: true,
+          },
         }),
       })
     );
