@@ -14,11 +14,34 @@ vi.mock('../services/downloadService', () => ({
   },
 }));
 
+// bugfix-10-2: mock useQBittorrentConfig so the new gate inside useDownloads /
+// useDownloadCounts / useDownloadDetails can be exercised. Default returns
+// configured:true to keep existing happy-path tests green; gate-coverage tests
+// override with mockUseQBittorrentConfig.mockReturnValueOnce(...).
+vi.mock('./useQBittorrent', () => ({
+  useQBittorrentConfig: vi.fn(),
+}));
+
 // Import the mocked service for test control
 import { downloadService } from '../services/downloadService';
+import { useQBittorrentConfig } from './useQBittorrent';
 const mockGetDownloads = vi.mocked(downloadService.getDownloads);
 const mockGetDownloadDetails = vi.mocked(downloadService.getDownloadDetails);
 const mockGetDownloadCounts = vi.mocked(downloadService.getDownloadCounts);
+const mockUseQBittorrentConfig = vi.mocked(useQBittorrentConfig);
+
+// Helper to build a useQuery-shaped return for the qBT config mock.
+// Only the fields read by useDownloads (data) need to be present; the rest
+// satisfy the type signature.
+function qbtConfigResult(configured: boolean | undefined, isLoading = false) {
+  return {
+    data: configured === undefined ? undefined : { configured },
+    isLoading,
+    isError: false,
+    error: null,
+    isSuccess: !isLoading && configured !== undefined,
+  } as unknown as ReturnType<typeof useQBittorrentConfig>;
+}
 
 // Test data
 const mockDownloads = [
@@ -85,6 +108,8 @@ const mockPaginatedResponse = {
 describe('useDownloads', () => {
   beforeEach(() => {
     mockGetDownloads.mockResolvedValue(mockPaginatedResponse);
+    // bugfix-10-2: default to configured:true so existing tests keep firing requests
+    mockUseQBittorrentConfig.mockReturnValue(qbtConfigResult(true));
   });
 
   afterEach(() => {
@@ -150,6 +175,7 @@ describe('useDownloads', () => {
 describe('useDownloadCounts', () => {
   beforeEach(() => {
     mockGetDownloadCounts.mockResolvedValue(mockCounts);
+    mockUseQBittorrentConfig.mockReturnValue(qbtConfigResult(true));
   });
 
   afterEach(() => {
@@ -178,6 +204,7 @@ describe('useDownloadCounts', () => {
 describe('useDownloadDetails', () => {
   beforeEach(() => {
     mockGetDownloadDetails.mockResolvedValue(mockDetails);
+    mockUseQBittorrentConfig.mockReturnValue(qbtConfigResult(true));
   });
 
   afterEach(() => {
@@ -206,6 +233,10 @@ describe('useDownloadDetails', () => {
 });
 
 describe('useDownloads - error handling', () => {
+  beforeEach(() => {
+    mockUseQBittorrentConfig.mockReturnValue(qbtConfigResult(true));
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -224,19 +255,95 @@ describe('useDownloads - error handling', () => {
 });
 
 describe('useDownloadCounts - error handling', () => {
+  beforeEach(() => {
+    mockUseQBittorrentConfig.mockReturnValue(qbtConfigResult(true));
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
   it('[P1] exposes error state when counts service fails', async () => {
     // GIVEN: counts service rejects
-    mockGetDownloadCounts.mockRejectedValue(new Error('API request failed: 400'));
+    mockGetDownloadCounts.mockRejectedValue(new Error('API request failed: 502'));
 
     const { result } = renderHook(() => useDownloadCounts(), { wrapper: createWrapper() });
 
     // THEN: error state is exposed
     await waitFor(() => expect(result.current.isError).toBe(true));
-    expect(result.current.error?.message).toBe('API request failed: 400');
+    expect(result.current.error?.message).toBe('API request failed: 502');
+  });
+});
+
+// bugfix-10-2 [@contract-v1] AC #5/#6/#7: hooks MUST NOT fire requests until
+// useQBittorrentConfig().data?.configured === true. Both the loading branch
+// (data undefined, isLoading true) AND the false branch must suppress.
+describe('useDownloads - qBT config gate (bugfix-10-2)', () => {
+  beforeEach(() => {
+    mockGetDownloads.mockResolvedValue(mockPaginatedResponse);
+    mockGetDownloadCounts.mockResolvedValue(mockCounts);
+    mockGetDownloadDetails.mockResolvedValue(mockDetails);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('does NOT call getDownloads when qBT is not configured (configured: false)', async () => {
+    mockUseQBittorrentConfig.mockReturnValue(qbtConfigResult(false));
+    const { result } = renderHook(() => useDownloads(), { wrapper: createWrapper() });
+    // Wait long enough that any unintended fetch would have started
+    await new Promise((r) => setTimeout(r, 200));
+    expect(mockGetDownloads).not.toHaveBeenCalled();
+    expect(result.current.fetchStatus).toBe('idle');
+  });
+
+  it('does NOT call getDownloads while qBT config is still loading (data: undefined, isLoading: true)', async () => {
+    mockUseQBittorrentConfig.mockReturnValue(qbtConfigResult(undefined, true));
+    const { result } = renderHook(() => useDownloads(), { wrapper: createWrapper() });
+    await new Promise((r) => setTimeout(r, 200));
+    expect(mockGetDownloads).not.toHaveBeenCalled();
+    expect(result.current.fetchStatus).toBe('idle');
+  });
+
+  it('does NOT call getDownloadCounts when qBT is not configured', async () => {
+    mockUseQBittorrentConfig.mockReturnValue(qbtConfigResult(false));
+    const { result } = renderHook(() => useDownloadCounts(), { wrapper: createWrapper() });
+    await new Promise((r) => setTimeout(r, 200));
+    expect(mockGetDownloadCounts).not.toHaveBeenCalled();
+    expect(result.current.fetchStatus).toBe('idle');
+  });
+
+  it('does NOT call getDownloadCounts while qBT config is still loading', async () => {
+    mockUseQBittorrentConfig.mockReturnValue(qbtConfigResult(undefined, true));
+    const { result } = renderHook(() => useDownloadCounts(), { wrapper: createWrapper() });
+    await new Promise((r) => setTimeout(r, 200));
+    expect(mockGetDownloadCounts).not.toHaveBeenCalled();
+    expect(result.current.fetchStatus).toBe('idle');
+  });
+
+  it('AC #6: caller-supplied enabled=true is still suppressed when qBT not configured', async () => {
+    mockUseQBittorrentConfig.mockReturnValue(qbtConfigResult(false));
+    const { result } = renderHook(() => useDownloadCounts(true), { wrapper: createWrapper() });
+    await new Promise((r) => setTimeout(r, 200));
+    expect(mockGetDownloadCounts).not.toHaveBeenCalled();
+    expect(result.current.fetchStatus).toBe('idle');
+  });
+
+  it('does NOT call getDownloadDetails when qBT is not configured', async () => {
+    mockUseQBittorrentConfig.mockReturnValue(qbtConfigResult(false));
+    const { result } = renderHook(() => useDownloadDetails('abc123'), { wrapper: createWrapper() });
+    await new Promise((r) => setTimeout(r, 200));
+    expect(mockGetDownloadDetails).not.toHaveBeenCalled();
+    expect(result.current.fetchStatus).toBe('idle');
+  });
+
+  it('does NOT call getDownloadDetails while qBT config is still loading', async () => {
+    mockUseQBittorrentConfig.mockReturnValue(qbtConfigResult(undefined, true));
+    const { result } = renderHook(() => useDownloadDetails('abc123'), { wrapper: createWrapper() });
+    await new Promise((r) => setTimeout(r, 200));
+    expect(mockGetDownloadDetails).not.toHaveBeenCalled();
+    expect(result.current.fetchStatus).toBe('idle');
   });
 });
 

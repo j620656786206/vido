@@ -155,7 +155,10 @@ func TestDownloadHandler_ListDownloads_NotConfigured(t *testing.T) {
 	req, _ := http.NewRequest("GET", "/api/v1/downloads", nil)
 	router.ServeHTTP(w, req)
 
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	// bugfix-10-2 [@contract-v1]: NotConfigured → 503 Service Unavailable
+	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
+	// AC #3: suggestion field MUST end with SETUP_REQUIRED substring
+	assert.Contains(t, w.Body.String(), "SETUP_REQUIRED")
 
 	var response APIResponse
 	err := json.Unmarshal(w.Body.Bytes(), &response)
@@ -182,7 +185,8 @@ func TestDownloadHandler_ListDownloads_AuthFailure(t *testing.T) {
 	req, _ := http.NewRequest("GET", "/api/v1/downloads", nil)
 	router.ServeHTTP(w, req)
 
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	// bugfix-10-2 [@contract-v1]: AuthFailed → 502 Bad Gateway
+	assert.Equal(t, http.StatusBadGateway, w.Code)
 
 	var response APIResponse
 	err := json.Unmarshal(w.Body.Bytes(), &response)
@@ -308,7 +312,10 @@ func TestDownloadHandler_GetDownloadCounts_NotConfigured(t *testing.T) {
 	req, _ := http.NewRequest("GET", "/api/v1/downloads/counts", nil)
 	router.ServeHTTP(w, req)
 
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	// bugfix-10-2 [@contract-v1]: NotConfigured → 503 Service Unavailable
+	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
+	// AC #3: suggestion field MUST end with SETUP_REQUIRED substring
+	assert.Contains(t, w.Body.String(), "SETUP_REQUIRED")
 
 	var response APIResponse
 	err := json.Unmarshal(w.Body.Bytes(), &response)
@@ -335,7 +342,10 @@ func TestDownloadHandler_GetDownloadDetails_NotConfigured(t *testing.T) {
 	req, _ := http.NewRequest("GET", "/api/v1/downloads/abc123", nil)
 	router.ServeHTTP(w, req)
 
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	// bugfix-10-2 [@contract-v1]: NotConfigured → 503 Service Unavailable
+	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
+	// AC #3: suggestion field MUST end with SETUP_REQUIRED substring
+	assert.Contains(t, w.Body.String(), "SETUP_REQUIRED")
 
 	var response APIResponse
 	err := json.Unmarshal(w.Body.Bytes(), &response)
@@ -410,8 +420,8 @@ func TestDownloadHandler_GetDownloadCounts_AuthFailure(t *testing.T) {
 	req, _ := http.NewRequest("GET", "/api/v1/downloads/counts", nil)
 	router.ServeHTTP(w, req)
 
-	// THEN: returns 400 with auth error code
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	// THEN: returns 502 with auth error code (bugfix-10-2 [@contract-v1])
+	assert.Equal(t, http.StatusBadGateway, w.Code)
 
 	var response APIResponse
 	err := json.Unmarshal(w.Body.Bytes(), &response)
@@ -463,8 +473,8 @@ func TestDownloadHandler_ListDownloads_GenericConnectionError(t *testing.T) {
 	req, _ := http.NewRequest("GET", "/api/v1/downloads", nil)
 	router.ServeHTTP(w, req)
 
-	// THEN: returns 400 with connection error
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	// THEN: returns 502 with connection error (bugfix-10-2 [@contract-v1])
+	assert.Equal(t, http.StatusBadGateway, w.Code)
 
 	var response APIResponse
 	err := json.Unmarshal(w.Body.Bytes(), &response)
@@ -521,8 +531,8 @@ func TestDownloadHandler_GetDownloadDetails_AuthFailure(t *testing.T) {
 	req, _ := http.NewRequest("GET", "/api/v1/downloads/abc123", nil)
 	router.ServeHTTP(w, req)
 
-	// THEN: returns 400 with auth error code
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	// THEN: returns 502 with auth error code (bugfix-10-2 [@contract-v1])
+	assert.Equal(t, http.StatusBadGateway, w.Code)
 
 	var response APIResponse
 	err := json.Unmarshal(w.Body.Bytes(), &response)
@@ -574,8 +584,8 @@ func TestDownloadHandler_GetDownloadDetails_GenericConnectionError(t *testing.T)
 	req, _ := http.NewRequest("GET", "/api/v1/downloads/abc123", nil)
 	router.ServeHTTP(w, req)
 
-	// THEN: returns 400 with connection error
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	// THEN: returns 502 with connection error (bugfix-10-2 [@contract-v1])
+	assert.Equal(t, http.StatusBadGateway, w.Code)
 
 	var response APIResponse
 	err := json.Unmarshal(w.Body.Bytes(), &response)
@@ -602,8 +612,8 @@ func TestDownloadHandler_GetDownloadCounts_GenericConnectionError(t *testing.T) 
 	req, _ := http.NewRequest("GET", "/api/v1/downloads/counts", nil)
 	router.ServeHTTP(w, req)
 
-	// THEN: returns 400 with connection error
-	assert.Equal(t, http.StatusBadRequest, w.Code)
+	// THEN: returns 502 with connection error (bugfix-10-2 [@contract-v1])
+	assert.Equal(t, http.StatusBadGateway, w.Code)
 
 	var response APIResponse
 	err := json.Unmarshal(w.Body.Bytes(), &response)
@@ -1108,4 +1118,126 @@ func TestDownloadHandler_ListDownloads_WithParseStatus_GetJobStatusError(t *test
 
 	mockDLService.AssertExpectations(t)
 	mockPQService.AssertExpectations(t)
+}
+
+// --- bugfix-10-2 [@contract-v1]: qBT error → HTTP status mapping matrix ---
+//
+// AC #1 contract: NotConfigured→503, AuthFailed→502, Timeout→504,
+// ConnectionFailed→502 (default). AC #2: all three GET endpoints share the
+// same mapping via qbtErrorToHTTPStatus helper. AC #8: 4 codes × 3 endpoints
+// = 12 assertions, table-driven.
+
+var qbtStatusMatrix = []struct {
+	name           string
+	qbtCode        string
+	expectedStatus int
+}{
+	{"not_configured_503", qbittorrent.ErrCodeNotConfigured, http.StatusServiceUnavailable},
+	{"auth_failed_502", qbittorrent.ErrCodeAuthFailed, http.StatusBadGateway},
+	{"timeout_504", qbittorrent.ErrCodeTimeout, http.StatusGatewayTimeout},
+	{"conn_failed_502", qbittorrent.ErrCodeConnectionFailed, http.StatusBadGateway},
+}
+
+func TestDownloadHandler_ListDownloads_QBTErrorStatusMatrix(t *testing.T) {
+	for _, tt := range qbtStatusMatrix {
+		t.Run(tt.name, func(t *testing.T) {
+			mockService := new(MockDownloadService)
+			mockService.On("GetAllDownloads", mock.Anything, "all", "added_on", "desc").Return(
+				nil,
+				&qbittorrent.ConnectionError{Code: tt.qbtCode, Message: "test"},
+			)
+			handler := NewDownloadHandler(mockService)
+			router := setupDownloadRouter(handler)
+
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequest("GET", "/api/v1/downloads", nil)
+			router.ServeHTTP(w, req)
+
+			assert.Equal(t, tt.expectedStatus, w.Code)
+
+			var response APIResponse
+			err := json.Unmarshal(w.Body.Bytes(), &response)
+			require.NoError(t, err)
+			assert.False(t, response.Success)
+			assert.Equal(t, tt.qbtCode, response.Error.Code)
+			mockService.AssertExpectations(t)
+		})
+	}
+}
+
+func TestDownloadHandler_GetDownloadDetails_QBTErrorStatusMatrix(t *testing.T) {
+	for _, tt := range qbtStatusMatrix {
+		t.Run(tt.name, func(t *testing.T) {
+			mockService := new(MockDownloadService)
+			mockService.On("GetDownloadDetails", mock.Anything, "abc123").Return(
+				nil,
+				&qbittorrent.ConnectionError{Code: tt.qbtCode, Message: "test"},
+			)
+			handler := NewDownloadHandler(mockService)
+			router := setupDownloadRouter(handler)
+
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequest("GET", "/api/v1/downloads/abc123", nil)
+			router.ServeHTTP(w, req)
+
+			assert.Equal(t, tt.expectedStatus, w.Code)
+
+			var response APIResponse
+			err := json.Unmarshal(w.Body.Bytes(), &response)
+			require.NoError(t, err)
+			assert.False(t, response.Success)
+			assert.Equal(t, tt.qbtCode, response.Error.Code)
+			mockService.AssertExpectations(t)
+		})
+	}
+}
+
+func TestDownloadHandler_GetDownloadCounts_QBTErrorStatusMatrix(t *testing.T) {
+	for _, tt := range qbtStatusMatrix {
+		t.Run(tt.name, func(t *testing.T) {
+			mockService := new(MockDownloadService)
+			mockService.On("GetDownloadCounts", mock.Anything).Return(
+				nil,
+				&qbittorrent.ConnectionError{Code: tt.qbtCode, Message: "test"},
+			)
+			handler := NewDownloadHandler(mockService)
+			router := setupDownloadRouter(handler)
+
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequest("GET", "/api/v1/downloads/counts", nil)
+			router.ServeHTTP(w, req)
+
+			assert.Equal(t, tt.expectedStatus, w.Code)
+
+			var response APIResponse
+			err := json.Unmarshal(w.Body.Bytes(), &response)
+			require.NoError(t, err)
+			assert.False(t, response.Success)
+			assert.Equal(t, tt.qbtCode, response.Error.Code)
+			mockService.AssertExpectations(t)
+		})
+	}
+}
+
+// AC #2: TorrentNotFound branch in GetDownloadDetails MUST remain 404
+// (not part of the qbtErrorToHTTPStatus contract — handled inline as
+// NotFoundError). Regression guard.
+func TestDownloadHandler_GetDownloadDetails_TorrentNotFound_Unchanged(t *testing.T) {
+	mockService := new(MockDownloadService)
+	mockService.On("GetDownloadDetails", mock.Anything, "abc123").Return(
+		nil,
+		&qbittorrent.ConnectionError{
+			Code:    qbittorrent.ErrCodeTorrentNotFound,
+			Message: "not found",
+		},
+	)
+	handler := NewDownloadHandler(mockService)
+	router := setupDownloadRouter(handler)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/api/v1/downloads/abc123", nil)
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+	mockService.AssertExpectations(t)
 }

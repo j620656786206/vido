@@ -3,6 +3,7 @@ package handlers
 import (
 	"errors"
 	"log/slog"
+	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -10,6 +11,22 @@ import (
 	"github.com/vido/api/internal/qbittorrent"
 	"github.com/vido/api/internal/services"
 )
+
+// qbtErrorToHTTPStatus maps a qBittorrent ConnectionError.Code to the
+// semantically correct HTTP status. Used by the three GET endpoints in this
+// file to keep the contract single-sourced (bugfix-10-2 [@contract-v1]).
+func qbtErrorToHTTPStatus(code string) int {
+	switch code {
+	case qbittorrent.ErrCodeNotConfigured:
+		return http.StatusServiceUnavailable
+	case qbittorrent.ErrCodeTimeout:
+		return http.StatusGatewayTimeout
+	case qbittorrent.ErrCodeAuthFailed, qbittorrent.ErrCodeConnectionFailed:
+		return http.StatusBadGateway
+	default:
+		return http.StatusBadGateway
+	}
+}
 
 // DownloadItem extends Torrent with parse status information.
 type DownloadItem struct {
@@ -51,7 +68,9 @@ func NewDownloadHandler(service services.DownloadServiceInterface, parseQueueSvc
 // @Param page query int false "Page number (1-based)" default(1)
 // @Param pageSize query int false "Items per page (50, 100, 200, 500)" default(100)
 // @Success 200 {object} APIResponse
-// @Failure 400 {object} APIResponse
+// @Failure 502 {object} APIResponse
+// @Failure 503 {object} APIResponse
+// @Failure 504 {object} APIResponse
 // @Failure 500 {object} APIResponse
 // @Router /api/v1/downloads [get]
 func (h *DownloadHandler) ListDownloads(c *gin.Context) {
@@ -77,13 +96,14 @@ func (h *DownloadHandler) ListDownloads(c *gin.Context) {
 
 		var connErr *qbittorrent.ConnectionError
 		if errors.As(err, &connErr) {
+			status := qbtErrorToHTTPStatus(connErr.Code)
 			switch connErr.Code {
 			case qbittorrent.ErrCodeNotConfigured:
-				ErrorResponse(c, 400, connErr.Code, "qBittorrent 尚未設定", "請先設定 qBittorrent 連線。")
+				ErrorResponse(c, status, connErr.Code, "qBittorrent 尚未設定", "請先設定 qBittorrent 連線。SETUP_REQUIRED")
 			case qbittorrent.ErrCodeAuthFailed:
-				ErrorResponse(c, 400, connErr.Code, "qBittorrent 認證失敗", "請檢查帳號密碼是否正確。")
+				ErrorResponse(c, status, connErr.Code, "qBittorrent 認證失敗", "請檢查帳號密碼是否正確。")
 			default:
-				ErrorResponse(c, 400, connErr.Code, "無法連線到 qBittorrent", connErr.Error())
+				ErrorResponse(c, status, connErr.Code, "無法連線到 qBittorrent", connErr.Error())
 			}
 			return
 		}
@@ -157,8 +177,10 @@ func parseIntQuery(c *gin.Context, key string, defaultVal int) int {
 // @Produce json
 // @Param hash path string true "Torrent info hash"
 // @Success 200 {object} APIResponse
-// @Failure 400 {object} APIResponse
 // @Failure 404 {object} APIResponse
+// @Failure 502 {object} APIResponse
+// @Failure 503 {object} APIResponse
+// @Failure 504 {object} APIResponse
 // @Failure 500 {object} APIResponse
 // @Router /api/v1/downloads/{hash} [get]
 func (h *DownloadHandler) GetDownloadDetails(c *gin.Context) {
@@ -178,9 +200,9 @@ func (h *DownloadHandler) GetDownloadDetails(c *gin.Context) {
 			case qbittorrent.ErrCodeTorrentNotFound:
 				NotFoundError(c, "torrent")
 			case qbittorrent.ErrCodeNotConfigured:
-				ErrorResponse(c, 400, connErr.Code, "qBittorrent 尚未設定", "請先設定 qBittorrent 連線。")
+				ErrorResponse(c, qbtErrorToHTTPStatus(connErr.Code), connErr.Code, "qBittorrent 尚未設定", "請先設定 qBittorrent 連線。SETUP_REQUIRED")
 			default:
-				ErrorResponse(c, 400, connErr.Code, "無法連線到 qBittorrent", connErr.Error())
+				ErrorResponse(c, qbtErrorToHTTPStatus(connErr.Code), connErr.Code, "無法連線到 qBittorrent", connErr.Error())
 			}
 			return
 		}
@@ -198,7 +220,9 @@ func (h *DownloadHandler) GetDownloadDetails(c *gin.Context) {
 // @Tags downloads
 // @Produce json
 // @Success 200 {object} APIResponse
-// @Failure 400 {object} APIResponse
+// @Failure 502 {object} APIResponse
+// @Failure 503 {object} APIResponse
+// @Failure 504 {object} APIResponse
 // @Failure 500 {object} APIResponse
 // @Router /api/v1/downloads/counts [get]
 func (h *DownloadHandler) GetDownloadCounts(c *gin.Context) {
@@ -208,13 +232,14 @@ func (h *DownloadHandler) GetDownloadCounts(c *gin.Context) {
 
 		var connErr *qbittorrent.ConnectionError
 		if errors.As(err, &connErr) {
+			status := qbtErrorToHTTPStatus(connErr.Code)
 			switch connErr.Code {
 			case qbittorrent.ErrCodeNotConfigured:
-				ErrorResponse(c, 400, connErr.Code, "qBittorrent 尚未設定", "請先設定 qBittorrent 連線。")
+				ErrorResponse(c, status, connErr.Code, "qBittorrent 尚未設定", "請先設定 qBittorrent 連線。SETUP_REQUIRED")
 			case qbittorrent.ErrCodeAuthFailed:
-				ErrorResponse(c, 400, connErr.Code, "qBittorrent 認證失敗", "請檢查帳號密碼是否正確。")
+				ErrorResponse(c, status, connErr.Code, "qBittorrent 認證失敗", "請檢查帳號密碼是否正確。")
 			default:
-				ErrorResponse(c, 400, connErr.Code, "無法連線到 qBittorrent", connErr.Error())
+				ErrorResponse(c, status, connErr.Code, "無法連線到 qBittorrent", connErr.Error())
 			}
 			return
 		}

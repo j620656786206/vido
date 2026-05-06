@@ -13,6 +13,7 @@ import {
   type SortField,
   type SortOrder,
 } from '../services/downloadService';
+import { useQBittorrentConfig } from './useQBittorrent';
 
 export const downloadKeys = {
   all: ['downloads'] as const,
@@ -49,11 +50,15 @@ export function useDownloads(
   pageSize: number = 100
 ) {
   const isVisible = usePageVisibility();
+  const { data: qbtConfig } = useQBittorrentConfig();
+  const isConfigured = qbtConfig?.configured === true;
 
   return useQuery<PaginatedDownloads, Error>({
     queryKey: downloadKeys.list(filter, sort, order, page, pageSize),
     queryFn: () => downloadService.getDownloads({ filter, sort, order, page, pageSize }),
-    refetchInterval: isVisible ? 5000 : false,
+    // bugfix-10-2: skip polling until qBT config check confirms configured; prevents init-race 503 burst
+    enabled: isConfigured,
+    refetchInterval: isVisible && isConfigured ? 5000 : false,
     refetchOnWindowFocus: true,
   });
 }
@@ -64,12 +69,16 @@ export function useDownloads(
  */
 export function useDownloadCounts(enabled = true) {
   const isVisible = usePageVisibility();
+  const { data: qbtConfig } = useQBittorrentConfig();
+  const isConfigured = qbtConfig?.configured === true;
+  const effectiveEnabled = enabled && isConfigured;
 
   return useQuery<DownloadCounts, Error>({
     queryKey: downloadKeys.counts(),
     queryFn: () => downloadService.getDownloadCounts(),
-    enabled,
-    refetchInterval: isVisible ? 5000 : false,
+    // bugfix-10-2: skip polling until qBT config check confirms configured; prevents init-race 503 burst
+    enabled: effectiveEnabled,
+    refetchInterval: isVisible && effectiveEnabled ? 5000 : false,
     refetchOnWindowFocus: true,
   });
 }
@@ -78,9 +87,13 @@ export function useDownloadCounts(enabled = true) {
  * Hook for fetching download details (AC4)
  */
 export function useDownloadDetails(hash: string) {
+  const { data: qbtConfig } = useQBittorrentConfig();
+  const isConfigured = qbtConfig?.configured === true;
+
   return useQuery<DownloadDetails, Error>({
     queryKey: downloadKeys.detail(hash),
     queryFn: () => downloadService.getDownloadDetails(hash),
-    enabled: !!hash,
+    // bugfix-10-2: skip polling until qBT config check confirms configured; prevents init-race 503 burst
+    enabled: !!hash && isConfigured,
   });
 }
