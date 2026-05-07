@@ -1,0 +1,342 @@
+{
+  "base_url": "http://localhost:4200",
+  "spike_out": "dev",
+  "ts": "2026-05-07T01:42:07.733Z",
+  "tracked_testids": [
+    "hero-banner-skeleton",
+    "hero-banner",
+    "explore-blocks-loading",
+    "explore-blocks-list",
+    "explore-block-b1",
+    "explore-block-b2",
+    "explore-block-b3",
+    "explore-block-skeleton",
+    "recent-media-loading",
+    "recent-media-panel",
+    "download-panel",
+    "download-panel-loading"
+  ],
+  "observation_window_ms": 2500,
+  "events": [
+    {
+      "t_ms": 342.7999999523163,
+      "testid": "hero-banner-skeleton",
+      "action": "mount",
+      "count_after": 1
+    },
+    {
+      "t_ms": 342.7999999523163,
+      "testid": "explore-blocks-loading",
+      "action": "mount",
+      "count_after": 1
+    },
+    {
+      "t_ms": 342.7999999523163,
+      "testid": "recent-media-panel",
+      "action": "mount",
+      "count_after": 1
+    },
+    {
+      "t_ms": 342.7999999523163,
+      "testid": "recent-media-loading",
+      "action": "mount",
+      "count_after": 1
+    },
+    {
+      "t_ms": 342.7999999523163,
+      "testid": "download-panel",
+      "action": "mount",
+      "count_after": 1
+    },
+    {
+      "t_ms": 342.7999999523163,
+      "testid": "download-panel-loading",
+      "action": "mount",
+      "count_after": 1
+    },
+    {
+      "t_ms": 535.9000000953674,
+      "testid": "explore-blocks-loading",
+      "action": "unmount",
+      "count_after": 0
+    },
+    {
+      "t_ms": 536,
+      "testid": "explore-blocks-list",
+      "action": "mount",
+      "count_after": 1
+    },
+    {
+      "t_ms": 536,
+      "testid": "explore-block-b1",
+      "action": "mount",
+      "count_after": 1
+    },
+    {
+      "t_ms": 536,
+      "testid": "explore-block-skeleton",
+      "action": "mount",
+      "count_after": 18
+    },
+    {
+      "t_ms": 536,
+      "testid": "explore-block-skeleton",
+      "action": "mount",
+      "count_after": 18
+    },
+    {
+      "t_ms": 536,
+      "testid": "explore-block-skeleton",
+      "action": "mount",
+      "count_after": 18
+    },
+    {
+      "t_ms": 536,
+      "testid": "explore-block-skeleton",
+      "action": "mount",
+      "count_after": 18
+    },
+    {
+      "t_ms": 536,
+      "testid": "explore-block-skeleton",
+      "action": "mount",
+      "count_after": 18
+    },
+    {
+      "t_ms": 536,
+      "testid": "explore-block-skeleton",
+      "action": "mount",
+      "count_after": 18
+    },
+    {
+      "t_ms": 536,
+      "testid": "explore-block-b2",
+      "action": "mount",
+      "count_after": 1
+    },
+    {
+      "t_ms": 536,
+      "testid": "explore-block-skeleton",
+      "action": "mount",
+      "count_after": 18
+    },
+    {
+      "t_ms": 536,
+      "testid": "explore-block-skeleton",
+      "action": "mount",
+      "count_after": 18
+    },
+    {
+      "t_ms": 536,
+      "testid": "explore-block-skeleton",
+      "action": "mount",
+      "count_after": 18
+    },
+    {
+      "t_ms": 536,
+      "testid": "explore-block-skeleton",
+      "action": "mount",
+      "count_after": 18
+    },
+    {
+      "t_ms": 536,
+      "testid": "explore-block-skeleton",
+      "action": "mount",
+      "count_after": 18
+    },
+    {
+      "t_ms": 536,
+      "testid": "explore-block-skeleton",
+      "action": "mount",
+      "count_after": 18
+    },
+    {
+      "t_ms": 536,
+      "testid": "explore-block-b3",
+      "action": "mount",
+      "count_after": 1
+    },
+    {
+      "t_ms": 536,
+      "testid": "explore-block-skeleton",
+      "action": "mount",
+      "count_after": 18
+    },
+    {
+      "t_ms": 536,
+      "testid": "explore-block-skeleton",
+      "action": "mount",
+      "count_after": 18
+    },
+    {
+      "t_ms": 536,
+      "testid": "explore-block-skeleton",
+      "action": "mount",
+      "count_after": 18
+    },
+    {
+      "t_ms": 536,
+      "testid": "explore-block-skeleton",
+      "action": "mount",
+      "count_after": 18
+    },
+    {
+      "t_ms": 536,
+      "testid": "explore-block-skeleton",
+      "action": "mount",
+      "count_after": 18
+    },
+    {
+      "t_ms": 536,
+      "testid": "explore-block-skeleton",
+      "action": "mount",
+      "count_after": 18
+    },
+    {
+      "t_ms": 649.9000000953674,
+      "testid": "explore-block-skeleton",
+      "action": "unmount",
+      "count_after": 6
+    },
+    {
+      "t_ms": 649.9000000953674,
+      "testid": "explore-block-skeleton",
+      "action": "unmount",
+      "count_after": 6
+    },
+    {
+      "t_ms": 649.9000000953674,
+      "testid": "explore-block-skeleton",
+      "action": "unmount",
+      "count_after": 6
+    },
+    {
+      "t_ms": 649.9000000953674,
+      "testid": "explore-block-skeleton",
+      "action": "unmount",
+      "count_after": 6
+    },
+    {
+      "t_ms": 649.9000000953674,
+      "testid": "explore-block-skeleton",
+      "action": "unmount",
+      "count_after": 6
+    },
+    {
+      "t_ms": 649.9000000953674,
+      "testid": "explore-block-skeleton",
+      "action": "unmount",
+      "count_after": 6
+    },
+    {
+      "t_ms": 650,
+      "testid": "explore-block-skeleton",
+      "action": "unmount",
+      "count_after": 6
+    },
+    {
+      "t_ms": 650,
+      "testid": "explore-block-skeleton",
+      "action": "unmount",
+      "count_after": 6
+    },
+    {
+      "t_ms": 650,
+      "testid": "explore-block-skeleton",
+      "action": "unmount",
+      "count_after": 6
+    },
+    {
+      "t_ms": 650,
+      "testid": "explore-block-skeleton",
+      "action": "unmount",
+      "count_after": 6
+    },
+    {
+      "t_ms": 650,
+      "testid": "explore-block-skeleton",
+      "action": "unmount",
+      "count_after": 6
+    },
+    {
+      "t_ms": 650,
+      "testid": "explore-block-skeleton",
+      "action": "unmount",
+      "count_after": 6
+    }
+  ],
+  "per_testid_summary": {
+    "hero-banner-skeleton": {
+      "mount_count": 1,
+      "unmount_count": 0,
+      "first_mount_ms": 342.7999999523163,
+      "final_count": 1
+    },
+    "hero-banner": {
+      "mount_count": 0,
+      "unmount_count": 0,
+      "first_mount_ms": null,
+      "final_count": 0
+    },
+    "explore-blocks-loading": {
+      "mount_count": 1,
+      "unmount_count": 1,
+      "first_mount_ms": 342.7999999523163,
+      "final_count": 0
+    },
+    "explore-blocks-list": {
+      "mount_count": 1,
+      "unmount_count": 0,
+      "first_mount_ms": 536,
+      "final_count": 1
+    },
+    "explore-block-b1": {
+      "mount_count": 1,
+      "unmount_count": 0,
+      "first_mount_ms": 536,
+      "final_count": 1
+    },
+    "explore-block-b2": {
+      "mount_count": 1,
+      "unmount_count": 0,
+      "first_mount_ms": 536,
+      "final_count": 1
+    },
+    "explore-block-b3": {
+      "mount_count": 1,
+      "unmount_count": 0,
+      "first_mount_ms": 536,
+      "final_count": 1
+    },
+    "explore-block-skeleton": {
+      "mount_count": 18,
+      "unmount_count": 12,
+      "first_mount_ms": 536,
+      "final_count": 6
+    },
+    "recent-media-loading": {
+      "mount_count": 1,
+      "unmount_count": 0,
+      "first_mount_ms": 342.7999999523163,
+      "final_count": 1
+    },
+    "recent-media-panel": {
+      "mount_count": 1,
+      "unmount_count": 0,
+      "first_mount_ms": 342.7999999523163,
+      "final_count": 1
+    },
+    "download-panel": {
+      "mount_count": 1,
+      "unmount_count": 0,
+      "first_mount_ms": 342.7999999523163,
+      "final_count": 1
+    },
+    "download-panel-loading": {
+      "mount_count": 1,
+      "unmount_count": 0,
+      "first_mount_ms": 342.7999999523163,
+      "final_count": 1
+    }
+  }
+}

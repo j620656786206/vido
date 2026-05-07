@@ -653,6 +653,58 @@ AC Contract Versioning:
 
 ---
 
+## 🧪 Known dev-mode artifacts
+
+Behaviors that look like bugs in `pnpm nx serve web` but DO NOT reproduce in
+`pnpm nx run web:preview` (production build). Do not chase these in dev —
+verify in preview first. Each entry must link to a spike that proves the
+prod-vs-dev diff.
+
+### Homepage skeleton "flicker" on cold load
+
+```
+Symptom (dev only):
+  Homepage section skeletons (HeroBanner, ExploreBlocksList,
+  RecentMediaPanel, DownloadPanel) appear to flash twice during initial
+  load in `pnpm nx serve web`.
+
+Cause:
+  React 18 <StrictMode> wrapper at apps/web/src/main.tsx:11 intentionally
+  double-invokes component bodies, useState initializers, and useEffect
+  setup+cleanup in dev to surface side-effect bugs. The fiber-level
+  double-render can produce a visible double-paint of pre-commit elements.
+  StrictMode is a no-op at runtime in production builds.
+
+Verification:
+  Spike (2026-05-07) ran a Playwright probe with deterministic 100ms-mocked
+  endpoints against both `nx serve web` (port 4200, StrictMode active) and
+  `vite preview` (port 4201, prod build). Two probes:
+    1. 50-450ms snapshot poller of skeleton testid counts
+    2. Frame-level MutationObserver log of every mount/unmount
+  Result: every tracked testid showed IDENTICAL mount/unmount counts in
+  dev and prod (Δ=0). All skeleton sequences were monotonically
+  non-increasing (0→1→0, no re-mount) in BOTH modes. Verdict: Bucket A —
+  dev-mode-only artifact, no real prod regression.
+
+Fix:
+  None. This entry IS the fix per AC #10 of the spike-gated story.
+  Do not add a regression test for a non-existent prod bug — it would be
+  permanent dead weight.
+
+Reference:
+  _bmad-output/implementation-artifacts/spike-bugfix-10-3-findings.md
+  _bmad-output/implementation-artifacts/spike-bugfix-10-3-{dev,prod}-{snapshots,mutations}.json
+  _bmad-output/implementation-artifacts/bugfix-10-3-skeleton-flicker-on-load.md
+```
+
+How to add a new entry: when investigating a "looks like a bug" report,
+ALWAYS verify in `web:preview` before opening a story. If the symptom
+disappears in prod, file a doc entry here with a spike artifact and skip
+the fix code. Adding speculative fixes for dev-only artifacts pollutes the
+codebase with permanent test scaffolding for non-bugs.
+
+---
+
 ## 🏗️ Project Structure
 
 ```

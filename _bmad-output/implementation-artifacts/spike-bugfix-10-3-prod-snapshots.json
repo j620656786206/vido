@@ -1,0 +1,218 @@
+{
+  "base_url": "http://localhost:4201",
+  "spike_out": "prod",
+  "ts": "2026-05-07T01:39:41.192Z",
+  "sections": [
+    {
+      "key": "hero",
+      "skeleton": "hero-banner-skeleton",
+      "final": "hero-banner"
+    },
+    {
+      "key": "explore",
+      "skeleton": "explore-blocks-loading",
+      "final": "explore-blocks-list"
+    },
+    {
+      "key": "recent",
+      "skeleton": "recent-media-loading",
+      "final": "recent-media-panel"
+    },
+    {
+      "key": "download",
+      "skeleton": "download-panel",
+      "final": "download-panel"
+    }
+  ],
+  "snapshots": [
+    {
+      "t_ms": 50,
+      "counts": {
+        "hero": {
+          "skeleton": 1,
+          "final": 0
+        },
+        "explore": {
+          "skeleton": 1,
+          "final": 0
+        },
+        "recent": {
+          "skeleton": 1,
+          "final": 1
+        },
+        "download": {
+          "skeleton": 1,
+          "final": 1
+        }
+      }
+    },
+    {
+      "t_ms": 100,
+      "counts": {
+        "hero": {
+          "skeleton": 1,
+          "final": 0
+        },
+        "explore": {
+          "skeleton": 1,
+          "final": 0
+        },
+        "recent": {
+          "skeleton": 1,
+          "final": 1
+        },
+        "download": {
+          "skeleton": 1,
+          "final": 1
+        }
+      }
+    },
+    {
+      "t_ms": 200,
+      "counts": {
+        "hero": {
+          "skeleton": 1,
+          "final": 0
+        },
+        "explore": {
+          "skeleton": 1,
+          "final": 0
+        },
+        "recent": {
+          "skeleton": 1,
+          "final": 1
+        },
+        "download": {
+          "skeleton": 1,
+          "final": 1
+        }
+      }
+    },
+    {
+      "t_ms": 350,
+      "counts": {
+        "hero": {
+          "skeleton": 0,
+          "final": 1
+        },
+        "explore": {
+          "skeleton": 0,
+          "final": 1
+        },
+        "recent": {
+          "skeleton": 0,
+          "final": 1
+        },
+        "download": {
+          "skeleton": 1,
+          "final": 1
+        }
+      }
+    },
+    {
+      "t_ms": 500,
+      "counts": {
+        "hero": {
+          "skeleton": 0,
+          "final": 1
+        },
+        "explore": {
+          "skeleton": 0,
+          "final": 1
+        },
+        "recent": {
+          "skeleton": 0,
+          "final": 1
+        },
+        "download": {
+          "skeleton": 1,
+          "final": 1
+        }
+      }
+    },
+    {
+      "t_ms": 800,
+      "counts": {
+        "hero": {
+          "skeleton": 0,
+          "final": 1
+        },
+        "explore": {
+          "skeleton": 0,
+          "final": 1
+        },
+        "recent": {
+          "skeleton": 0,
+          "final": 1
+        },
+        "download": {
+          "skeleton": 1,
+          "final": 1
+        }
+      }
+    },
+    {
+      "t_ms": 1200,
+      "counts": {
+        "hero": {
+          "skeleton": 0,
+          "final": 1
+        },
+        "explore": {
+          "skeleton": 0,
+          "final": 1
+        },
+        "recent": {
+          "skeleton": 0,
+          "final": 1
+        },
+        "download": {
+          "skeleton": 1,
+          "final": 1
+        }
+      }
+    },
+    {
+      "t_ms": 1800,
+      "counts": {
+        "hero": {
+          "skeleton": 0,
+          "final": 1
+        },
+        "explore": {
+          "skeleton": 0,
+          "final": 1
+        },
+        "recent": {
+          "skeleton": 0,
+          "final": 1
+        },
+        "download": {
+          "skeleton": 1,
+          "final": 1
+        }
+      }
+    },
+    {
+      "t_ms": "networkidle",
+      "counts": {
+        "hero": {
+          "skeleton": 0,
+          "final": 1
+        },
+        "explore": {
+          "skeleton": 0,
+          "final": 1
+        },
+        "recent": {
+          "skeleton": 0,
+          "final": 1
+        },
+        "download": {
+          "skeleton": 1,
+          "final": 1
+        }
+      }
+    }
+  ]
+}
