@@ -39,8 +39,16 @@ function usePageVisibility() {
 }
 
 /**
- * Hook for fetching download list with 5-second polling (AC2, NFR-P8)
+ * Hook for fetching download list with 5-second polling (AC2, NFR-P8).
  * Polling stops when the page is not visible (AC3).
+ *
+ * Gate (bugfix-10-2): all three download hooks fail CLOSED on the qBT config
+ * signal — `configured !== true` (including `undefined` while loading OR if
+ * `/api/v1/settings/qbittorrent` itself errors) suppresses the fetch with no
+ * `error` surfaced from the hook. Intentional: an init-race or config-endpoint
+ * failure should NOT burst /downloads requests; the user-visible surface for
+ * a broken config endpoint lives in `useQBittorrentConfig` consumers
+ * (DownloadPanel, QBittorrentForm, etc.).
  */
 export function useDownloads(
   filter: FilterStatus = 'all',

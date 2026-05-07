@@ -158,7 +158,7 @@ func TestDownloadHandler_ListDownloads_NotConfigured(t *testing.T) {
 	// bugfix-10-2 [@contract-v1]: NotConfigured → 503 Service Unavailable
 	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
 	// AC #3: suggestion field MUST end with SETUP_REQUIRED substring
-	assert.Contains(t, w.Body.String(), "SETUP_REQUIRED")
+	assert.Contains(t, w.Body.String(), SetupRequiredMarker)
 
 	var response APIResponse
 	err := json.Unmarshal(w.Body.Bytes(), &response)
@@ -315,7 +315,7 @@ func TestDownloadHandler_GetDownloadCounts_NotConfigured(t *testing.T) {
 	// bugfix-10-2 [@contract-v1]: NotConfigured → 503 Service Unavailable
 	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
 	// AC #3: suggestion field MUST end with SETUP_REQUIRED substring
-	assert.Contains(t, w.Body.String(), "SETUP_REQUIRED")
+	assert.Contains(t, w.Body.String(), SetupRequiredMarker)
 
 	var response APIResponse
 	err := json.Unmarshal(w.Body.Bytes(), &response)
@@ -345,7 +345,7 @@ func TestDownloadHandler_GetDownloadDetails_NotConfigured(t *testing.T) {
 	// bugfix-10-2 [@contract-v1]: NotConfigured → 503 Service Unavailable
 	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
 	// AC #3: suggestion field MUST end with SETUP_REQUIRED substring
-	assert.Contains(t, w.Body.String(), "SETUP_REQUIRED")
+	assert.Contains(t, w.Body.String(), SetupRequiredMarker)
 
 	var response APIResponse
 	err := json.Unmarshal(w.Body.Bytes(), &response)
@@ -538,6 +538,12 @@ func TestDownloadHandler_GetDownloadDetails_AuthFailure(t *testing.T) {
 	err := json.Unmarshal(w.Body.Bytes(), &response)
 	require.NoError(t, err)
 	assert.False(t, response.Success)
+	assert.Equal(t, qbittorrent.ErrCodeAuthFailed, response.Error.Code)
+	// CR H1 regression guard: AuthFailed must yield the auth-specific friendly
+	// message + suggestion, not the generic "無法連線到 qBittorrent" fallback —
+	// matches the symmetry of ListDownloads and GetDownloadCounts.
+	assert.Equal(t, "qBittorrent 認證失敗", response.Error.Message)
+	assert.Equal(t, "請檢查帳號密碼是否正確。", response.Error.Suggestion)
 	mockService.AssertExpectations(t)
 }
 

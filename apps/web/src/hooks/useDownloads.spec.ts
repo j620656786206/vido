@@ -31,16 +31,21 @@ const mockGetDownloadCounts = vi.mocked(downloadService.getDownloadCounts);
 const mockUseQBittorrentConfig = vi.mocked(useQBittorrentConfig);
 
 // Helper to build a useQuery-shaped return for the qBT config mock.
-// Only the fields read by useDownloads (data) need to be present; the rest
-// satisfy the type signature.
-function qbtConfigResult(configured: boolean | undefined, isLoading = false) {
-  return {
+// CR M3: typed as Partial<UseQueryResult<...>> so a future `useQBittorrentConfig`
+// signature change (e.g. additional fields the hook reads) surfaces as a TS
+// error here rather than a silent runtime mismatch. The single cast at the
+// return site is intentional — UseQueryResult is a discriminated union and
+// constructing every variant by hand adds noise without raising the safety bar.
+type QBTConfigResult = ReturnType<typeof useQBittorrentConfig>;
+function qbtConfigResult(configured: boolean | undefined, isLoading = false): QBTConfigResult {
+  const partial: Partial<QBTConfigResult> = {
     data: configured === undefined ? undefined : { configured },
     isLoading,
     isError: false,
     error: null,
     isSuccess: !isLoading && configured !== undefined,
-  } as unknown as ReturnType<typeof useQBittorrentConfig>;
+  };
+  return partial as QBTConfigResult;
 }
 
 // Test data
@@ -289,61 +294,58 @@ describe('useDownloads - qBT config gate (bugfix-10-2)', () => {
     vi.restoreAllMocks();
   });
 
+  // CR L4: absence-assertion pattern. `enabled: false` makes TanStack Query
+  // never queue the queryFn — fetchStatus stays 'idle' across render + reactive
+  // cycle. waitFor returns on the first idle observation (typically <5ms),
+  // and any accidental fetch flips fetchStatus to 'fetching' so the assertion
+  // would fail loudly instead of waiting out a fixed sleep.
   it('does NOT call getDownloads when qBT is not configured (configured: false)', async () => {
     mockUseQBittorrentConfig.mockReturnValue(qbtConfigResult(false));
     const { result } = renderHook(() => useDownloads(), { wrapper: createWrapper() });
-    // Wait long enough that any unintended fetch would have started
-    await new Promise((r) => setTimeout(r, 200));
+    await waitFor(() => expect(result.current.fetchStatus).toBe('idle'));
     expect(mockGetDownloads).not.toHaveBeenCalled();
-    expect(result.current.fetchStatus).toBe('idle');
   });
 
   it('does NOT call getDownloads while qBT config is still loading (data: undefined, isLoading: true)', async () => {
     mockUseQBittorrentConfig.mockReturnValue(qbtConfigResult(undefined, true));
     const { result } = renderHook(() => useDownloads(), { wrapper: createWrapper() });
-    await new Promise((r) => setTimeout(r, 200));
+    await waitFor(() => expect(result.current.fetchStatus).toBe('idle'));
     expect(mockGetDownloads).not.toHaveBeenCalled();
-    expect(result.current.fetchStatus).toBe('idle');
   });
 
   it('does NOT call getDownloadCounts when qBT is not configured', async () => {
     mockUseQBittorrentConfig.mockReturnValue(qbtConfigResult(false));
     const { result } = renderHook(() => useDownloadCounts(), { wrapper: createWrapper() });
-    await new Promise((r) => setTimeout(r, 200));
+    await waitFor(() => expect(result.current.fetchStatus).toBe('idle'));
     expect(mockGetDownloadCounts).not.toHaveBeenCalled();
-    expect(result.current.fetchStatus).toBe('idle');
   });
 
   it('does NOT call getDownloadCounts while qBT config is still loading', async () => {
     mockUseQBittorrentConfig.mockReturnValue(qbtConfigResult(undefined, true));
     const { result } = renderHook(() => useDownloadCounts(), { wrapper: createWrapper() });
-    await new Promise((r) => setTimeout(r, 200));
+    await waitFor(() => expect(result.current.fetchStatus).toBe('idle'));
     expect(mockGetDownloadCounts).not.toHaveBeenCalled();
-    expect(result.current.fetchStatus).toBe('idle');
   });
 
   it('AC #6: caller-supplied enabled=true is still suppressed when qBT not configured', async () => {
     mockUseQBittorrentConfig.mockReturnValue(qbtConfigResult(false));
     const { result } = renderHook(() => useDownloadCounts(true), { wrapper: createWrapper() });
-    await new Promise((r) => setTimeout(r, 200));
+    await waitFor(() => expect(result.current.fetchStatus).toBe('idle'));
     expect(mockGetDownloadCounts).not.toHaveBeenCalled();
-    expect(result.current.fetchStatus).toBe('idle');
   });
 
   it('does NOT call getDownloadDetails when qBT is not configured', async () => {
     mockUseQBittorrentConfig.mockReturnValue(qbtConfigResult(false));
     const { result } = renderHook(() => useDownloadDetails('abc123'), { wrapper: createWrapper() });
-    await new Promise((r) => setTimeout(r, 200));
+    await waitFor(() => expect(result.current.fetchStatus).toBe('idle'));
     expect(mockGetDownloadDetails).not.toHaveBeenCalled();
-    expect(result.current.fetchStatus).toBe('idle');
   });
 
   it('does NOT call getDownloadDetails while qBT config is still loading', async () => {
     mockUseQBittorrentConfig.mockReturnValue(qbtConfigResult(undefined, true));
     const { result } = renderHook(() => useDownloadDetails('abc123'), { wrapper: createWrapper() });
-    await new Promise((r) => setTimeout(r, 200));
+    await waitFor(() => expect(result.current.fetchStatus).toBe('idle'));
     expect(mockGetDownloadDetails).not.toHaveBeenCalled();
-    expect(result.current.fetchStatus).toBe('idle');
   });
 });
 

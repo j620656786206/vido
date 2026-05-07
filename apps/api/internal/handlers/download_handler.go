@@ -12,9 +12,16 @@ import (
 	"github.com/vido/api/internal/services"
 )
 
+// SetupRequiredMarker is the substring appended to QBITTORRENT_NOT_CONFIGURED
+// suggestion fields so the frontend can branch programmatically without parsing
+// zh-TW copy. See bugfix-10-2 [@contract-v1] AC #3.
+const SetupRequiredMarker = "SETUP_REQUIRED"
+
 // qbtErrorToHTTPStatus maps a qBittorrent ConnectionError.Code to the
 // semantically correct HTTP status. Used by the three GET endpoints in this
 // file to keep the contract single-sourced (bugfix-10-2 [@contract-v1]).
+// Unknown codes fall through to 502 with a warn log so a future qBT error
+// code addition surfaces in observability rather than silently 502'ing.
 func qbtErrorToHTTPStatus(code string) int {
 	switch code {
 	case qbittorrent.ErrCodeNotConfigured:
@@ -24,6 +31,7 @@ func qbtErrorToHTTPStatus(code string) int {
 	case qbittorrent.ErrCodeAuthFailed, qbittorrent.ErrCodeConnectionFailed:
 		return http.StatusBadGateway
 	default:
+		slog.Warn("unknown qBT error code mapped to 502", "code", code)
 		return http.StatusBadGateway
 	}
 }
@@ -99,7 +107,7 @@ func (h *DownloadHandler) ListDownloads(c *gin.Context) {
 			status := qbtErrorToHTTPStatus(connErr.Code)
 			switch connErr.Code {
 			case qbittorrent.ErrCodeNotConfigured:
-				ErrorResponse(c, status, connErr.Code, "qBittorrent 尚未設定", "請先設定 qBittorrent 連線。SETUP_REQUIRED")
+				ErrorResponse(c, status, connErr.Code, "qBittorrent 尚未設定", "請先設定 qBittorrent 連線。"+SetupRequiredMarker)
 			case qbittorrent.ErrCodeAuthFailed:
 				ErrorResponse(c, status, connErr.Code, "qBittorrent 認證失敗", "請檢查帳號密碼是否正確。")
 			default:
@@ -196,13 +204,16 @@ func (h *DownloadHandler) GetDownloadDetails(c *gin.Context) {
 
 		var connErr *qbittorrent.ConnectionError
 		if errors.As(err, &connErr) {
+			status := qbtErrorToHTTPStatus(connErr.Code)
 			switch connErr.Code {
 			case qbittorrent.ErrCodeTorrentNotFound:
 				NotFoundError(c, "torrent")
 			case qbittorrent.ErrCodeNotConfigured:
-				ErrorResponse(c, qbtErrorToHTTPStatus(connErr.Code), connErr.Code, "qBittorrent 尚未設定", "請先設定 qBittorrent 連線。SETUP_REQUIRED")
+				ErrorResponse(c, status, connErr.Code, "qBittorrent 尚未設定", "請先設定 qBittorrent 連線。"+SetupRequiredMarker)
+			case qbittorrent.ErrCodeAuthFailed:
+				ErrorResponse(c, status, connErr.Code, "qBittorrent 認證失敗", "請檢查帳號密碼是否正確。")
 			default:
-				ErrorResponse(c, qbtErrorToHTTPStatus(connErr.Code), connErr.Code, "無法連線到 qBittorrent", connErr.Error())
+				ErrorResponse(c, status, connErr.Code, "無法連線到 qBittorrent", connErr.Error())
 			}
 			return
 		}
@@ -235,7 +246,7 @@ func (h *DownloadHandler) GetDownloadCounts(c *gin.Context) {
 			status := qbtErrorToHTTPStatus(connErr.Code)
 			switch connErr.Code {
 			case qbittorrent.ErrCodeNotConfigured:
-				ErrorResponse(c, status, connErr.Code, "qBittorrent 尚未設定", "請先設定 qBittorrent 連線。SETUP_REQUIRED")
+				ErrorResponse(c, status, connErr.Code, "qBittorrent 尚未設定", "請先設定 qBittorrent 連線。"+SetupRequiredMarker)
 			case qbittorrent.ErrCodeAuthFailed:
 				ErrorResponse(c, status, connErr.Code, "qBittorrent 認證失敗", "請檢查帳號密碼是否正確。")
 			default:
