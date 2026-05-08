@@ -1,10 +1,12 @@
+// Implements: Component/PosterCardHover (MQbvp)
+// Source: ux-design.pen (Pencil app)
+
 import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
-import { MoreHorizontal, Check } from 'lucide-react';
+import { MoreHorizontal, Check, Play } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { getImageUrl, getImageSrcSet, getImageSizes } from '../../lib/image';
 import { HighlightText } from '../ui/HighlightText';
-import { HoverPreviewCard } from './HoverPreviewCard';
 import { AvailabilityBadge } from './AvailabilityBadge';
 
 export interface PosterCardProps {
@@ -34,12 +36,9 @@ export function PosterCard({
   id,
   type,
   title,
-  originalTitle,
   posterPath,
   releaseDate,
   voteAverage,
-  overview,
-  genreIds,
   metadataSource,
   isNew,
   isOwned,
@@ -50,7 +49,6 @@ export function PosterCard({
   selected,
   onSelect,
 }: PosterCardProps) {
-  const [isHovered, setIsHovered] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
 
@@ -83,8 +81,6 @@ export function PosterCard({
         'min-h-[44px]',
         selectable && 'cursor-pointer'
       )}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
     >
       <div
         className={cn(
@@ -133,7 +129,7 @@ export function PosterCard({
           </div>
         )}
 
-        {/* Selection checkbox overlay (top-left) */}
+        {/* Selection checkbox overlay (top-left) — MQbvp: top-left circle slot, mode-gated */}
         {selectable && (
           <div
             data-testid="selection-checkbox"
@@ -148,8 +144,8 @@ export function PosterCard({
           </div>
         )}
 
-        {/* Badges (top-right) */}
-        <div className="absolute right-2 top-2 flex items-center gap-1">
+        {/* Top-right badge cluster — visible by default, fade out on hover so kebab takes over (MQbvp collision strategy per AC #1, AC #10) */}
+        <div className="absolute right-2 top-2 flex items-center gap-1 transition-opacity lg:group-hover:opacity-0">
           {/* Story 10-4 — availability badges win position over 新增 so owners
               see ownership first. Only one of owned/requested renders. */}
           {isOwned ? (
@@ -175,7 +171,7 @@ export function PosterCard({
           </span>
         </div>
 
-        {/* More menu button (visible on hover) */}
+        {/* Kebab menu — MQbvp: top-RIGHT slot (was top-LEFT in pre-bugfix-10-4), hover-only via group-hover */}
         {onMenuClick && (
           <button
             onClick={(e) => {
@@ -183,7 +179,7 @@ export function PosterCard({
               e.stopPropagation();
               onMenuClick(e);
             }}
-            className="absolute left-2 top-2 rounded-full bg-black/70 p-1.5 text-white opacity-0 transition-opacity hover:bg-black/90 lg:group-hover:opacity-100"
+            className="absolute right-2 top-2 z-20 rounded-full bg-black/70 p-1.5 text-white opacity-0 transition-opacity hover:bg-black/90 lg:group-hover:opacity-100"
             aria-label="更多選項"
             data-testid="poster-menu-button"
           >
@@ -191,9 +187,28 @@ export function PosterCard({
           </button>
         )}
 
-        {/* Rating badge */}
+        {/* Center play overlay — MQbvp: large circular ▶ play affordance, hover-only, decorative (no onClick — propagates to <Link>) */}
+        {!selectable && (
+          <div
+            data-testid="hover-play-overlay"
+            aria-hidden="true"
+            className="absolute inset-0 z-10 hidden items-center justify-center opacity-0 transition-opacity lg:flex lg:group-hover:opacity-100"
+          >
+            <div className="rounded-full bg-black/60 p-4 backdrop-blur-sm">
+              <Play className="h-8 w-8 fill-white text-white" />
+            </div>
+          </div>
+        )}
+
+        {/* Note: MQbvp design originally specified a bottom-left title/year overlay,
+            but Party Mode 2026-05-08 (Sally + Alexyu) determined this duplicates the
+            below-image title (RusTY) and has legibility issues against varying poster
+            backgrounds. Hover state is now action-trigger only (play + kebab + rating);
+            in-card info-density redesign deferred to feature-X-postercard-info-density. */}
+
+        {/* Rating badge — MQbvp: bottom-RIGHT slot (was bottom-LEFT in pre-bugfix-10-4), always visible when voteAverage > 0 */}
         {voteAverage !== undefined && voteAverage > 0 && (
-          <div className="absolute bottom-2 left-2">
+          <div className="absolute bottom-2 right-2 z-20">
             <span className="flex items-center gap-1 rounded bg-black/70 px-2 py-0.5 text-xs text-[var(--warning)]">
               ⭐ {voteAverage.toFixed(1)}
             </span>
@@ -201,23 +216,13 @@ export function PosterCard({
         )}
       </div>
 
-      {/* Title and year */}
+      {/* Title and year — default-state below-image affordance (kept for non-hover continuity per AC #1) */}
       <div className="mt-2">
         <h3 className="truncate text-sm font-medium text-white">
           <HighlightText text={title} query={highlightQuery} />
         </h3>
         {year && <p className="text-xs text-[var(--text-secondary)]">{year}</p>}
       </div>
-
-      {/* Hover preview (desktop only) */}
-      {isHovered && (
-        <HoverPreviewCard
-          title={title}
-          originalTitle={originalTitle}
-          overview={overview}
-          genreIds={genreIds}
-        />
-      )}
     </Link>
   );
 }

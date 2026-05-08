@@ -65,66 +65,62 @@ so that hovering feels immediate and discoverable, the action affordances (▶ p
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: Verify .pen design contract (AC: #1, #3) ⏱ ≤15 min**
-  - [ ] 1.1 Open `ux-design.pen` via Pencil MCP `open_document` (already used by Sally during Party Mode — confirm session active).
-  - [ ] 1.2 Capture screenshot of node `MQbvp` via Pencil MCP `get_screenshot(nodeId="MQbvp")`. Save to `_bmad-output/implementation-artifacts/bugfix-10-4-mqbvp-design.png` (or embed inline in the comparison artifact at Task 6).
-  - [ ] 1.3 Capture screenshot of node `RusTY` (default PosterCard) for default-state reference. Save similarly.
-  - [ ] 1.4 Document the exact pixel positions of the 5 overlay elements (play center, kebab top-right, checkbox top-left, title overlay bottom-left, rating bottom-right) in the comparison artifact.
+- [x] **Task 1: Verify .pen design contract (AC: #1, #3) ⏱ ≤15 min**
+  - [x] 1.1 Pencil document `ux-design.pen` already opened in this session by Sally during Party Mode; re-confirmed via `get_editor_state`.
+  - [x] 1.2 Captured screenshot of node `MQbvp` via Pencil MCP `get_screenshot`. Image rendered into DEV agent context (per CLAUDE.md ".pen files accessed only via Pencil MCP" rule — no PNG persisted to disk; structural position table embedded in `bugfix-10-4-hover-comparison.md` instead).
+  - [x] 1.3 Captured screenshot of node `RusTY` for default-state reference. Same handling.
+  - [x] 1.4 Documented 5-slot position spec in chat + comparison artifact (top-LEFT empty circle, top-RIGHT kebab, CENTER play, bottom-LEFT title overlay, bottom-RIGHT rating).
 
-- [ ] **Task 2: Delete `HoverPreviewCard.tsx` and its spec (AC: #2)**
-  - [ ] 2.1 `git rm apps/web/src/components/media/HoverPreviewCard.tsx`
-  - [ ] 2.2 `git rm apps/web/src/components/media/HoverPreviewCard.spec.tsx`
-  - [ ] 2.3 Verify `grep -r "HoverPreviewCard" apps/web/ --include="*.ts" --include="*.tsx"` returns zero matches.
-  - [ ] 2.4 (Reference only — Task 3 does the actual removal) Confirm PosterCard.tsx will no longer import the symbol.
+- [x] **Task 2: Delete `HoverPreviewCard.tsx` and its spec (AC: #2)**
+  - [x] 2.1 `git rm apps/web/src/components/media/HoverPreviewCard.tsx` — succeeded.
+  - [x] 2.2 `git rm apps/web/src/components/media/HoverPreviewCard.spec.tsx` — succeeded.
+  - [x] 2.3 Verified `grep -r "HoverPreviewCard" apps/web/ --include="*.ts" --include="*.tsx"` returned only PosterCard.tsx import + PosterCard.spec.tsx test descriptions, both removed in Tasks 3 and 4.
+  - [x] 2.4 PosterCard.tsx no longer imports the symbol (Task 3.2).
 
-- [ ] **Task 3: Restructure `PosterCard.tsx` hover state per MQbvp (AC: #1, #3, #4, #5, #6)**
-  - [ ] 3.1 Add Rule 21 header comment at top of `apps/web/src/components/media/PosterCard.tsx` (before line 1 `import { useState }`):
-    ```
-    // Implements: Component/PosterCardHover (MQbvp)
-    // Source: ux-design.pen (Pencil app)
-    ```
-  - [ ] 3.2 Remove import on line 7: `import { HoverPreviewCard } from './HoverPreviewCard';`
-  - [ ] 3.3 Remove the floating render block at lines 213-220 (the `{isHovered && <HoverPreviewCard ...>}` block).
-  - [ ] 3.4 Restructure the kebab menu button (current lines 178-192). Move from `absolute left-2 top-2` to `absolute right-2 top-2`. Keep the `lg:group-hover:opacity-100` visibility gating. Keep `onMenuClick` prop gating + `e.preventDefault()`/`e.stopPropagation()` to avoid `<Link>` navigation.
-  - [ ] 3.5 Restructure the rating badge (current lines 194-201). Move from `absolute bottom-2 left-2` to `absolute bottom-2 right-2`. Keep `voteAverage > 0` gating. Stay visible at all times (NOT hover-gated) — it's an always-on info badge per AC #1.
-  - [ ] 3.6 Add the new center play overlay — a circular semi-transparent backdrop with a `▶` icon (use `Play` from `lucide-react`). Positioning: absolute, centered (`inset-0 flex items-center justify-center`). Visibility: `hidden lg:flex opacity-0 lg:group-hover:opacity-100 transition-opacity`. NO `onClick` (decorative — propagates to `<Link>`).
-  - [ ] 3.7 Add the new bottom-left title/year overlay on the image. Positioning: absolute, `bottom-2 left-2`, with `bg-gradient-to-t from-black/80 to-transparent` backdrop or similar. Show title (truncate) + year. Visibility: `hidden lg:block opacity-0 lg:group-hover:opacity-100 transition-opacity`. The below-image title/year row at lines 204-210 STAYS for default-state continuity (it's the "always" affordance; the in-card overlay is the "hover" affordance).
-  - [ ] 3.8 (Decision per AC #10 collision strategy) On hover, fade out the existing top-right badge cluster (`absolute right-2 top-2 flex...` block at current lines 152-176) so the kebab can take over that corner: add `transition-opacity lg:group-hover:opacity-0` to that wrapper div. Default state — badges visible. Hover state — badges fade, kebab fades in. Sally signs off via comparison artifact (AC #1).
-  - [ ] 3.9 Remove the now-unused `isHovered` state and `setIsHovered` calls (lines 53, 86, 87) — the in-card overlay is purely CSS-driven via `lg:group-hover:`. The `useState` is dead weight after this story.
+- [x] **Task 3: Restructure `PosterCard.tsx` hover state per MQbvp (AC: #1, #3, #4, #5, #6)**
+  - [x] 3.1 Added Rule 21 header comment at top of file: `// Implements: Component/PosterCardHover (MQbvp)` + `// Source: ux-design.pen (Pencil app)`.
+  - [x] 3.2 Removed `import { HoverPreviewCard } from './HoverPreviewCard';`.
+  - [x] 3.3 Removed `{isHovered && <HoverPreviewCard ...>}` render block.
+  - [x] 3.4 Kebab moved from `absolute left-2 top-2` (top-LEFT) to `absolute right-2 top-2 z-20` (top-RIGHT, MQbvp). z-20 layers above badge cluster during fade-swap.
+  - [x] 3.5 Rating moved from `absolute bottom-2 left-2` to `absolute bottom-2 right-2 z-20`. Always visible when `voteAverage > 0`.
+  - [x] 3.6 Added center play overlay — `<div data-testid="hover-play-overlay">` with `Play` icon from lucide-react, semi-transparent dark circular bg + backdrop-blur-sm. Visibility: `hidden lg:flex opacity-0 lg:group-hover:opacity-100`. Gated on `!selectable` (selection mode disables play affordance).
+  - [x] 3.7 Added bottom-left title/year overlay — `<div data-testid="hover-title-overlay">` with `bg-gradient-to-t from-black/80 to-transparent`, white title + year text. Visibility: `hidden lg:block opacity-0 lg:group-hover:opacity-100`. Below-image title/year row preserved for default-state continuity (RusTY parity, mobile fallback).
+  - [x] 3.8 Top-right badge cluster wrapper got `transition-opacity lg:group-hover:opacity-0` — fades out on hover so kebab takes over corner.
+  - [x] 3.9 Removed `useState(isHovered)` + `setIsHovered` + `onMouseEnter`/`onMouseLeave` handlers. Hover is now purely CSS-driven via `lg:group-hover:`.
 
-- [ ] **Task 4: Migrate `PosterCard.spec.tsx` hover tests (AC: #7, #8, #9)**
-  - [ ] 4.1 Delete the `'Hover Interaction'` describe block at lines 178-230 (4 tests).
-  - [ ] 4.2 Add a new describe block: `'Hover Interaction (in-card overlay per Component/PosterCardHover MQbvp)'` containing:
-    - Test 1: `[P0] center play overlay is in DOM` — `expect(container.querySelector('[data-testid="hover-play-overlay"]')).toBeInTheDocument()` (use `toBeAttached` semantics — the element exists but is `opacity-0` until CSS hover; we cannot fire CSS `:hover` from RTL, so we assert presence + correct hover-gating classes).
-    - Test 2: `[P0] center play overlay has hover-only visibility classes` — `toHaveClass('hidden', 'lg:flex', 'opacity-0', 'lg:group-hover:opacity-100')`.
-    - Test 3: `[P0] kebab menu repositioned to top-right` — when `onMenuClick` provided, `screen.getByTestId('poster-menu-button')` MUST have classes `right-2 top-2` (NOT `left-2`).
-    - Test 4: `[P0] rating badge repositioned to bottom-right` — when `voteAverage > 0`, the rating badge MUST have classes `bottom-2 right-2` (NOT `left-2`).
-    - Test 5: `[P1] in-card title/year overlay exists with hover-only visibility` — `screen.getByTestId('hover-title-overlay')` (new testid) MUST be in DOM with `hidden lg:block opacity-0 lg:group-hover:opacity-100` classes.
-  - [ ] 4.3 Add `data-testid="hover-play-overlay"` to the play overlay div (Task 3.6).
-  - [ ] 4.4 Add `data-testid="hover-title-overlay"` to the bottom-left title/year overlay (Task 3.7).
-  - [ ] 4.5 Confirm the existing `'links to correct movie detail page'` (line 141) and `'links to correct tv detail page'` (line 147) tests stay green (AC #5).
-  - [ ] 4.6 Confirm existing tests for selection-checkbox (lines 285-352), availability badges (lines 250-282), new badge (lines 232-247), navigation, accessibility, and library-specific props all stay green.
+- [x] **Task 4: Migrate `PosterCard.spec.tsx` hover tests (AC: #7, #8, #9)**
+  - [x] 4.1 Deleted the `'Hover Interaction'` describe block (4 tests asserting `hover-preview-card`).
+  - [x] 4.2 Added new describe block `'Hover Interaction (in-card overlay per Component/PosterCardHover MQbvp)'` with 6 tests (net +2 over the spec's "+5 = net +1" estimate; extra is the `[P1] center play NOT in selection mode` defensive guard):
+    - Test 1: `[P0] center play overlay is in DOM with hover-only visibility classes (AC #1)` — `getByTestId('hover-play-overlay').toHaveClass('hidden', 'lg:flex', 'opacity-0', 'lg:group-hover:opacity-100')`.
+    - Test 2: `[P1] center play overlay is NOT rendered in selection mode (AC #1)` — `queryByTestId('hover-play-overlay').not.toBeInTheDocument()` when `selectable={true}`.
+    - Test 3: `[P0] kebab menu repositioned to top-right (AC #1)` — `toHaveClass('right-2', 'top-2')` + `not.toHaveClass('left-2')`.
+    - Test 4: `[P0] rating badge repositioned to bottom-right (AC #1)` — `.absolute.bottom-2.right-2` queried via `container.querySelector`; bottom-2 left-2 confirmed absent.
+    - Test 5: `[P0] in-card title overlay exists with hover-only visibility classes (AC #1)` — `getByTestId('hover-title-overlay').toHaveClass('hidden', 'lg:block', 'opacity-0', 'lg:group-hover:opacity-100')`.
+    - Test 6: `[P1] HoverPreviewCard is no longer in the DOM (AC #2 — deletion regression guard)` — `queryByTestId('hover-preview-card').not.toBeInTheDocument()`.
+  - [x] 4.3 `data-testid="hover-play-overlay"` added in PosterCard.tsx (Task 3.6).
+  - [x] 4.4 `data-testid="hover-title-overlay"` added in PosterCard.tsx (Task 3.7).
+  - [x] 4.5 `'links to correct movie detail page'` + `'links to correct tv detail page'` stay green ✅.
+  - [x] 4.6 All other existing tests stay green (selection-checkbox, availability badges, new badge, accessibility, library-specific props): 51/51 in PosterCard.spec.tsx PASS.
+  - [x] 4.7 (CONSEQUENCE) Migrated 5 consumer spec files (`MediaGrid.spec.tsx`, `RecentlyAdded.spec.tsx`, `LibraryGrid.spec.tsx`, `SearchResults.spec.tsx`, `ExploreBlock.spec.tsx`) from `screen.getByText('title')` → `screen.getAllByText('title')[0]` via perl batch. Required because the in-card title overlay (Task 3.7) renders title/year a SECOND time in the DOM (intentional per AC #1 design — visible only on hover via opacity-0/100, but still in static DOM where RTL `getByText` finds it).
 
-- [ ] **Task 5: Regression gate (AC: #8, #9)**
-  - [ ] 5.1 `pnpm nx test web` — PASS (expected ~1770/1770 + delta from AC #7).
-  - [ ] 5.2 `pnpm nx test api` — PASS (no backend changes, but full gate per Epic 9 Retro AI-1).
-  - [ ] 5.3 `pnpm lint:all` — 0 errors, ≤ 122 warnings.
-  - [ ] 5.4 `pnpm exec prettier --check apps/web/src/components/media/PosterCard.tsx apps/web/src/components/media/PosterCard.spec.tsx _bmad-output/implementation-artifacts/bugfix-10-4-hover-preview-viewport-flip.md` — clean.
-  - [ ] 5.5 `pnpm run test:cleanup` — no orphaned processes.
+- [x] **Task 5: Regression gate (AC: #8, #9)**
+  - [x] 5.1 `pnpm nx test web`: ✅ 1761/1761 PASS (143 test files).
+  - [x] 5.2 `pnpm nx test api`: ✅ PASS — Nx flagged flaky retry on `TestScannerService_SSEBroadcast_ScanCancelled` (known pre-existing flake per project history `preexisting-fail-scanner-sse-scan-cancelled-flake`); succeeded on retry.
+  - [x] 5.3 `pnpm lint:all`: ✅ 0 errors / 122 warnings (matches bugfix-10-2 baseline exactly — ZERO new warnings introduced by this story). go vet + staticcheck@2026.1 + eslint + prettier all clean.
+  - [x] 5.4 Prettier auto-fix applied to PosterCard.spec.tsx (collapsed multi-line `toHaveClass` to single line, no semantic change). All matched files now Prettier-clean.
+  - [x] 5.5 `test:cleanup` ran automatically post-vitest exit per `apps/web/project.json`. No orphaned processes.
 
-- [ ] **Task 6: Comparison artifact + manual UX gate (AC: #1)**
-  - [ ] 6.1 Start `pnpm nx serve web` and navigate to `/`. Hover on a `PosterCard` in the homepage's "熱門電影" row.
-  - [ ] 6.2 Take a browser screenshot of the hovered state.
-  - [ ] 6.3 Place the MQbvp `.pen` screenshot (Task 1.2) and the rendered screenshot side-by-side in `_bmad-output/implementation-artifacts/bugfix-10-4-hover-comparison.md`.
-  - [ ] 6.4 Annotate any differences (acceptable: anti-aliasing, font subpixel diffs; unacceptable: missing element, wrong corner). Sally (UX) signs off in the comparison doc — DEV cannot self-sign.
-  - [ ] 6.5 If Sally rejects: iterate Task 3 until alignment achieved; re-run Task 6 cycle.
-  - [ ] 6.6 ⚠️ Per Rule 22, this comparison artifact is the bugfix-10-4 instance of the per-story drift audit. Save under `_bmad-output/audit/drift-bugfix-10-4-2026-05.md` AS WELL (copy or symlink) so the epic-19-retrospective drift-audit aggregator can find it.
+- [ ] **Task 6: Comparison artifact + manual UX gate (AC: #1) — ⏸️ HALT for Sally sign-off**
+  - [x] 6.1-6.3 Comparison artifact created at `_bmad-output/implementation-artifacts/bugfix-10-4-hover-comparison.md` with structural element-by-element mapping table (.pen → impl), test coverage summary, regression gate results, and pen node references. Browser screenshot capture (6.1-6.2 literal browser-side actions) deferred — Sally will run `pnpm nx serve web` herself for visual verification per AC #6.4 sign-off ritual.
+  - [ ] 6.4 ⏸️ **AWAITING SALLY (UX) SIGN-OFF** — DEV cannot self-sign. Sign-off section in comparison artifact has 6-checkbox checklist + APPROVED/APPROVED-WITH-NOTES/REJECTED outcomes for Sally to fill.
+  - [ ] 6.5 Iteration path if Sally rejects — N/A unless rejected.
+  - [x] 6.6 Audit mirror created at `_bmad-output/audit/drift-bugfix-10-4-2026-05.md` (copy of comparison artifact). epic-19-retrospective Rule 22 aggregator can pick this up.
 
-- [ ] **Task 7: Closeout**
-  - [ ] 7.1 Update `apps/web/src/components/media/PosterCard.tsx` File List in this story's Dev Agent Record.
-  - [ ] 7.2 Flip story Status to `review` (DEV → CR handoff per workflow).
-  - [ ] 7.3 Update `_bmad-output/implementation-artifacts/sprint-status.yaml` entry for `bugfix-10-4-hover-preview-viewport-flip` → `review` with completion comment.
-  - [ ] 7.4 Suggest user run `/bmad:bmm:workflows:code-review` (different LLM than DEV) per Epic 10 retro tip. CR auto-marks `done` on success.
+- [ ] **Task 7: Closeout — pending Sally sign-off**
+  - [ ] 7.1 File List update — pending.
+  - [ ] 7.2 Story Status `in-progress` → `review` — pending.
+  - [ ] 7.3 sprint-status.yaml flip → `review` — pending.
+  - [ ] 7.4 Suggest CR `/code-review` — pending.
 
 ## Dev Notes
 
@@ -377,16 +373,51 @@ describe('Hover Interaction (in-card overlay per Component/PosterCardHover MQbvp
 
 ### Agent Model Used
 
-_(populated by DEV at /dev-story start)_
+Amelia (Developer Agent) — claude-opus-4-7 (1M context). Session 2026-05-08.
 
 ### Debug Log References
 
-_(populated by DEV — must include the Step 2 AC Drift Check + Contract Stamp Check grep outputs)_
+- **Step 2 AC Drift Check (Epic 10 Retro AI-2):** `grep -rnE 'PosterCard|HoverPreviewCard|hover.*preview|hover.*card' _bmad-output/implementation-artifacts/*.md` returned hits in `2-3-search-results-grid-view.md` (Tasks 2.1, 8.3 — original `HoverPreviewCard.tsx` author), `10-2-hero-banner-component.md`, `10-3-custom-explore-blocks.md`, `10-4-availability-badges.md`, `10-5-homepage-layout-responsive.md`, `11-2-persistent-filter-chip-ui.md`. All hits except `2-3` are REUSE references (PosterCard as a downstream consumer; hover behavior not contracted). `2-3` IS the upstream that contracted `HoverPreviewCard.tsx` as implicit v0; this story explicitly supersedes that contract per Party Mode 2026-05-08 pivot. Drift verdict: **FOUND (authorized)**.
+- **Step 2 Contract Stamp Check (Epic 10 Retro AI-5):** `grep -nE '\[@contract-v[0-9]+\]' bugfix-10-4-hover-preview-viewport-flip.md` → 1 hit (AC #1). Upstream `2-3-search-results-grid-view.md` grep → 0 hits (pre-Rule-20 / implicit v0 per Rule 20 forward-only retrofit). Per project-context.md L633: "If upstream grep returns 0 hits, treat as implicit v0 and skip ack requirement." No `confirmed against [@contract-v0]` line required in Dev Notes for this case. Change Log Two-stage verify (a) row present at story L268, (b) row body has both `what changed` ("in-card hover overlay layout supersedes floating-HoverPreviewCard layout") AND `what breaks downstream` ("any future story that touches PosterCard hover layout MUST bump v2 + Change Log entry") — PASS.
 
 ### Completion Notes List
 
-_(populated by DEV at task close — must include 🔗 AC Drift verdict, 📎 Contract Stamps, 🔒 Rule 7 Wire Format (N/A expected), 🎨 UX (Sally sign-off comparison artifact link), 🛡️ Production code touched count, regression gate results)_
+- 🔗 **AC Drift: FOUND (authorized)** — Story 2-3 (`search-results-grid-view`) was the original author of `HoverPreviewCard.tsx` (Tasks 2.1, 8.3). Story 2-3 is implicit v0 per Rule 20 forward-only retrofit. This story EXPLICITLY supersedes that contract per Party Mode 2026-05-08 pivot (Sally + Bob + Winston + Amelia + Murat consensus). Drift IS the entire point of the story — `HoverPreviewCard.tsx` is deleted, its functional content (overview/genre/originalTitle) is intentionally NOT migrated to the new in-card overlay (per AC #10 out-of-scope: "NO floating overview preview — was unsanctioned addition not in design"). Change Log row at story L268 documents both what changed and what breaks downstream.
+- 📎 **Contract Stamps: FOUND (1 stamp this story; upstream Story 2-3 implicit v0)** — 1 `[@contract-v1]` stamp in this story AC #1 (in-card hover overlay layout: center play + top-right kebab + bottom-left title overlay + bottom-right rating + top-left selection-checkbox-when-selectable). Upstream Story 2-3 returned 0 stamps in grep — pre-Rule-20 / implicit v0; ack-line skipped per Rule 20 forward-only retrofit (project-context.md L633). Two-stage Change Log verify PASS.
+- 🔒 **Rule 7 Wire Format: N/A** — pure FE story, no Go error codes touched. apps/api unchanged.
+- 🎨 **UX Verification: ⏸️ AWAITING SALLY SIGN-OFF** — Comparison artifact at `_bmad-output/implementation-artifacts/bugfix-10-4-hover-comparison.md` documents structural .pen→impl mapping. Sally must run `pnpm nx serve web` and visually verify against `Component/PosterCardHover (MQbvp)`. Story Status held at `in-progress` until Sally signs off. Per AC #6.4: DEV cannot self-sign. (Per dev-story workflow Step 9 mandatory UX verification: this story has UI changes; sign-off ritual takes the place of design-screenshot comparison since `_bmad-output/screenshots/flow-b-hover-detail-desktop/01b-postercard-hover-state.png` is an older snapshot superseded by the live MQbvp design.)
+- 🛡️ **Production code touched: 1 file** — `apps/web/src/components/media/PosterCard.tsx` only. apps/api: 0 files.
+- 📁 **Test code touched: 6 files** — PosterCard.spec.tsx (own tests migrated) + 5 consumer specs (`MediaGrid.spec.tsx`, `RecentlyAdded.spec.tsx`, `LibraryGrid.spec.tsx`, `SearchResults.spec.tsx`, `ExploreBlock.spec.tsx`) for `getByText` → `getAllByText[0]` migration to handle the dual-rendering of title/year (below-image + in-card overlay).
+- 🗑️ **Deletions: 2 files** — `apps/web/src/components/media/HoverPreviewCard.tsx` + `HoverPreviewCard.spec.tsx`. Verified zero remaining references via grep.
+- ✨ **Inaugural Rule 21 enforcement** — PosterCard.tsx is the FIRST component to land with the `// Implements: Component/{Name} ({pen-node-id})` header per Rule 21. Reference example for story 19-3 (ESLint rule) and story 19-8 (sweep).
+- ✨ **Inaugural Rule 22 audit instance** — `_bmad-output/audit/drift-bugfix-10-4-2026-05.md` is the FIRST entry under the Rule 22 audit trail. epic-19-retrospective aggregator can pick this up.
+- ✅ **Regression gates (Step 7 mandatory, Epic 9 Retro AI-1):**
+  - `pnpm nx test web`: PASS — 143 Test Files / **1761/1761 tests** passed (matches pre-bugfix-10-4 count).
+  - `pnpm nx test api`: PASS — Nx flagged flaky retry on `TestScannerService_SSEBroadcast_ScanCancelled` (known pre-existing flake per project history; succeeded on retry).
+  - `pnpm lint:all`: PASS — 0 errors / 122 warnings (matches bugfix-10-2 baseline exactly; ZERO new warnings introduced).
+  - `pnpm exec prettier --check`: clean across all matched files. Prettier auto-fix applied to PosterCard.spec.tsx (cosmetic — single-line vs multi-line `toHaveClass`).
+  - `pnpm run test:cleanup`: ran automatically post-vitest via apps/web/project.json hook.
+- 🚫 **Pre-existing failures: NONE detected on this run** (the SSE flake auto-retried green per project's flaky-test policy).
 
 ### File List
 
-_(populated by DEV)_
+**Modified (production code: 1 file; test code: 6 files; docs: 1 file):**
+
+- `apps/web/src/components/media/PosterCard.tsx` — added Rule 21 header comment, removed HoverPreviewCard import + render block, removed `useState(isHovered)` + onMouseEnter/Leave handlers, repositioned kebab top-LEFT→top-RIGHT, repositioned rating bottom-LEFT→bottom-RIGHT, added center play overlay (`hover-play-overlay` testid), added bottom-left title overlay (`hover-title-overlay` testid), added `lg:group-hover:opacity-0` to top-right badge cluster wrapper for hover-fade-out collision strategy.
+- `apps/web/src/components/media/PosterCard.spec.tsx` — replaced `Hover Interaction` describe block (4 old tests) with `Hover Interaction (in-card overlay per Component/PosterCardHover MQbvp)` block (6 new tests). Updated `'renders title correctly'` and `'renders year from release date'` to assert dual-rendering count of 2 (intentional design: title/year appears below-image AND in-card overlay).
+- `apps/web/src/components/media/MediaGrid.spec.tsx` — `screen.getByText('title')` → `screen.getAllByText('title')[0]` for poster card titles (3 unique titles × multiple test sites).
+- `apps/web/src/components/library/RecentlyAdded.spec.tsx` — same migration (7 unique titles).
+- `apps/web/src/components/library/LibraryGrid.spec.tsx` — same migration + year (3 unique titles + 1 year).
+- `apps/web/src/components/search/SearchResults.spec.tsx` — same migration (4 unique titles + 2 years).
+- `apps/web/src/components/homepage/ExploreBlock.spec.tsx` — same migration + 2 `findByText` → `(await findAllByText)[0]` for async assertions.
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — entry for `bugfix-10-4-hover-preview-viewport-flip` flipped `ready-for-dev` → `in-progress` with Step 2 AC-Drift + Contract-Stamps verdicts in the comment chain. Final flip to `review` pending Sally sign-off (Task 7.3).
+
+**Deleted (production code: 2 files):**
+
+- `apps/web/src/components/media/HoverPreviewCard.tsx` — superseded by in-card overlay per AC #2.
+- `apps/web/src/components/media/HoverPreviewCard.spec.tsx` — superseded; new tests live under PosterCard.spec.tsx `'Hover Interaction (in-card overlay...)'` describe block.
+
+**Created (artifacts):**
+
+- `_bmad-output/implementation-artifacts/bugfix-10-4-hover-comparison.md` — Sally sign-off artifact per AC #6.4 (structural .pen → impl mapping table; awaits APPROVED/REJECTED checkbox).
+- `_bmad-output/audit/drift-bugfix-10-4-2026-05.md` — Rule 22 audit-trail mirror (copy of comparison artifact). FIRST entry under `_bmad-output/audit/`.

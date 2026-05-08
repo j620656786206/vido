@@ -175,57 +175,51 @@ describe('PosterCard', () => {
     });
   });
 
-  describe('Hover Interaction', () => {
-    it('shows HoverPreviewCard on mouse enter', () => {
-      render(
-        <PosterCard {...defaultProps} overview="這是一部關於鬼殺隊的動畫" genreIds={[16, 28]} />
-      );
-      const link = screen.getByRole('link');
+  describe('Hover Interaction (in-card overlay per Component/PosterCardHover MQbvp)', () => {
+    // bugfix-10-4: hover state is now CSS-driven via lg:group-hover: classes (no React state).
+    // RTL cannot fire CSS :hover events, so we assert presence + correct hover-gating classes
+    // per Rule 16 (toBeAttached / toHaveClass over toBeVisible for hover-CSS-dependent elements).
 
-      // Initially, hover preview should not be visible
+    it('[P0] center play overlay is in DOM with hover-only visibility classes (AC #1)', () => {
+      render(<PosterCard {...defaultProps} />);
+      const overlay = screen.getByTestId('hover-play-overlay');
+      expect(overlay).toBeInTheDocument();
+      expect(overlay).toHaveClass('hidden', 'lg:flex', 'opacity-0', 'lg:group-hover:opacity-100');
+    });
+
+    it('[P1] center play overlay is NOT rendered in selection mode (AC #1)', () => {
+      render(<PosterCard {...defaultProps} selectable={true} />);
+      expect(screen.queryByTestId('hover-play-overlay')).not.toBeInTheDocument();
+    });
+
+    it('[P0] kebab menu repositioned to top-right (AC #1)', () => {
+      const onMenuClick = vi.fn();
+      render(<PosterCard {...defaultProps} onMenuClick={onMenuClick} />);
+      const kebab = screen.getByTestId('poster-menu-button');
+      expect(kebab).toHaveClass('right-2', 'top-2');
+      expect(kebab).not.toHaveClass('left-2');
+    });
+
+    it('[P0] rating badge repositioned to bottom-right (AC #1)', () => {
+      const { container } = render(<PosterCard {...defaultProps} voteAverage={8.5} />);
+      const ratingWrapper = container.querySelector('.absolute.bottom-2.right-2');
+      expect(ratingWrapper).toBeInTheDocument();
+      const ratingWrapperLeft = container.querySelector('.absolute.bottom-2.left-2');
+      expect(ratingWrapperLeft).not.toBeInTheDocument();
+    });
+
+    it('[P0] in-card title overlay is intentionally NOT rendered (Party Mode 2026-05-08 design correction)', () => {
+      // Note: MQbvp originally specified a bottom-left title/year overlay.
+      // Party Mode (Sally + Alexyu) determined this duplicates the below-image title
+      // and has legibility issues against varying poster backgrounds.
+      // In-card info-density redesign deferred to feature-X-postercard-info-density.
+      render(<PosterCard {...defaultProps} />);
+      expect(screen.queryByTestId('hover-title-overlay')).not.toBeInTheDocument();
+    });
+
+    it('[P1] HoverPreviewCard is no longer in the DOM (AC #2 — deletion regression guard)', () => {
+      render(<PosterCard {...defaultProps} />);
       expect(screen.queryByTestId('hover-preview-card')).not.toBeInTheDocument();
-
-      // Trigger mouse enter
-      fireEvent.mouseEnter(link);
-
-      // Hover preview should now be visible
-      expect(screen.getByTestId('hover-preview-card')).toBeInTheDocument();
-    });
-
-    it('hides HoverPreviewCard on mouse leave', () => {
-      render(
-        <PosterCard {...defaultProps} overview="這是一部關於鬼殺隊的動畫" genreIds={[16, 28]} />
-      );
-      const link = screen.getByRole('link');
-
-      // Show the hover preview
-      fireEvent.mouseEnter(link);
-      expect(screen.getByTestId('hover-preview-card')).toBeInTheDocument();
-
-      // Hide the hover preview
-      fireEvent.mouseLeave(link);
-      expect(screen.queryByTestId('hover-preview-card')).not.toBeInTheDocument();
-    });
-
-    it('displays overview in hover preview', () => {
-      render(
-        <PosterCard {...defaultProps} overview="這是一部關於鬼殺隊的動畫" genreIds={[16, 28]} />
-      );
-      const link = screen.getByRole('link');
-
-      fireEvent.mouseEnter(link);
-
-      expect(screen.getByText('這是一部關於鬼殺隊的動畫')).toBeInTheDocument();
-    });
-
-    it('displays genres in hover preview', () => {
-      render(<PosterCard {...defaultProps} overview="Test overview" genreIds={[16, 28]} />);
-      const link = screen.getByRole('link');
-
-      fireEvent.mouseEnter(link);
-
-      expect(screen.getByText('動畫')).toBeInTheDocument();
-      expect(screen.getByText('動作')).toBeInTheDocument();
     });
   });
 
