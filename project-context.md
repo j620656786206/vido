@@ -4,7 +4,7 @@
 
 **Full Documentation:** See `_bmad-output/planning-artifacts/architecture/index.md` for complete architectural decisions and patterns (sharded into ~20 focused files).
 
-**Last Updated:** 2026-04-24 (Rule 7 prefix rename `QB_` → `QBITTORRENT_` via followup-qbittorrent-prefix-rename; restores `SOURCE = uppercase(package)` uniformity across all 13 registered prefixes — was the only outlier per Winston 2026-04-20 retro-10-AI3 Item 3 ruling). Prior: 2026-04-22 (Rule 20 AC Contract Versioning — retro-10-AI5; introduces `[@contract-vN]` prefix + bump/ack protocol + forward-only retrofit, Pattern #2 from Epic 10 retro, spike doc committed as 4a598e5; CR follow-up 2026-04-22 hoisted grep helpers into Rule 20 body, unified Change Log format to `{what changed, what breaks downstream}`, documented v0 fallback). Prior: 2026-04-22 (Rule 15 HTTP Route ↔ Client Method Sync extension — retro-10-AI4; adds 4th sub-section guarding "client method exists ≠ HTTP route registered", Story 10-2 precedent). Earlier: 2026-04-20 (Rule 7 expansion — added `QB_`, `METADATA_`, `DOUBAN_`, `WIKIPEDIA_` prefixes already in production use; surfaced by retro-10-AI3 CR grep on 2026-04-20)
+**Last Updated:** 2026-05-08 (Rule 21 + Rule 22 added — Party Mode consensus on design-implementation drift prevention; Rule 21 requires every component file under `apps/web/src/components/` to header-reference its `.pen` node ID via `// Implements: Component/{Name} ({pen-node-id})`, Rule 22 mandates each epic retro samples ≥5 components for design-drift audit with exact/minor/material classification. Origin: bugfix-10-4 root cause discovery — `HoverPreviewCard.tsx` was independently invented and diverged from existing `.pen` `Component/PosterCardHover` (node `MQbvp`); drift hypothesized as systemic. `epic-19` (Design-Implementation Drift Audit) cross-cutting initiative — 8 stories (19-1…19-8) — tracks Phase-2 enforcement infrastructure: ESLint rule, Playwright visual baselines, GitHub Actions for visual regression + monthly TestSprite quota consumption + month-end quota warning. Sally + Bob + Winston + Amelia + Murat consensus). Prior: 2026-04-24 (Rule 7 prefix rename `QB_` → `QBITTORRENT_` via followup-qbittorrent-prefix-rename; restores `SOURCE = uppercase(package)` uniformity across all 13 registered prefixes — was the only outlier per Winston 2026-04-20 retro-10-AI3 Item 3 ruling). Prior: 2026-04-22 (Rule 20 AC Contract Versioning — retro-10-AI5; introduces `[@contract-vN]` prefix + bump/ack protocol + forward-only retrofit, Pattern #2 from Epic 10 retro, spike doc committed as 4a598e5; CR follow-up 2026-04-22 hoisted grep helpers into Rule 20 body, unified Change Log format to `{what changed, what breaks downstream}`, documented v0 fallback). Prior: 2026-04-22 (Rule 15 HTTP Route ↔ Client Method Sync extension — retro-10-AI4; adds 4th sub-section guarding "client method exists ≠ HTTP route registered", Story 10-2 precedent). Earlier: 2026-04-20 (Rule 7 expansion — added `QB_`, `METADATA_`, `DOUBAN_`, `WIKIPEDIA_` prefixes already in production use; surfaced by retro-10-AI3 CR grep on 2026-04-20)
 **Architecture Status:** ✅ Validated and Ready for Implementation (5,463 lines, 8 steps completed)
 
 ---
@@ -650,6 +650,90 @@ AC Contract Versioning:
      breaks downstream}` across all three canonical sources, v0 fallback
      documented for pre-Rule-20 upstream references.
 ```
+
+### Rule 21: Component-to-Design Node Traceability
+
+```typescript
+// ✅ CORRECT — component file header references .pen node
+// Implements: Component/PosterCardHover (MQbvp)
+// Source: ux-design.pen (Pencil app)
+export function PosterCard({ ... }: PosterCardProps) { ... }
+
+// ❌ WRONG — no link from code to design source of truth
+export function PosterCard({ ... }: PosterCardProps) { ... }
+```
+
+```
+Every file under apps/web/src/components/ that renders a designed UI
+element MUST include a header comment referencing its .pen node ID:
+
+  // Implements: Component/{Name} ({pen-node-id})
+
+Where:
+  {Name}        = the .pen reusable-component name (e.g., PosterCardHover)
+  {pen-node-id} = the unique Pencil node identifier (e.g., MQbvp)
+
+Lookup: query .pen via Pencil MCP `get_editor_state` — every reusable
+component is listed with its node ID under "Reusable Components".
+
+Exemptions (annotate explicitly so absence is intentional, not accidental):
+  - Pure layout/utility components: // Implements: <utility — no .pen counterpart>
+  - One-off route-level wrappers:    // Implements: <route-only>
+  - Tests, hooks, services, stores:  exempt (no annotation required)
+
+Enforcement:
+  Phase 1 (manual, ships with Rule 21): SM /create-story template REQUIRES
+  the Implements: line in story Dev Notes. Stories without it are bounced.
+  Phase 2 (automated, story 19-3): custom ESLint rule flags missing or
+  malformed headers under apps/web/src/components/.
+```
+
+📌 Precedent (Party Mode 2026-05-08, bugfix-10-4 root cause):
+HoverPreviewCard.tsx was independently invented, diverging from the
+.pen designed Component/PosterCardHover (node MQbvp). The drift went
+undetected for months because there was no link from code back to the
+design source of truth. Sally + Bob + Winston + Amelia + Murat
+consensus: epic-19 (cross-cutting Design-Implementation Drift Audit
+initiative) makes Rule 21 an enforceable code-level invariant. .pen
+file is the design contract; this rule is the bridge from code to that
+contract.
+
+### Rule 22: Epic Retro Design-Drift Audit
+
+```
+Every epic retrospective MUST include a Design-Drift Audit action item:
+
+  1. SAMPLE: pick ≥5 components changed during the epic
+  2. COMPARE: render each component (storybook/dev) → screenshot →
+     diff against .pen node via Pencil MCP `get_screenshot`
+  3. CLASSIFY each component:
+     - ✅ exact-match    : pixel diff < 0.5%
+     - ⚠️  minor drift    : 0.5–5% diff (typography, spacing micro-shifts)
+                          — log only
+     - ❌ material drift  : >5% diff OR structural change (different
+                          layout, missing elements) — file as bugfix-N-X
+  4. RECORD: write findings to `_bmad-output/audit/drift-{epic}-{YYYY-MM}.md`
+  5. ESCALATE: any material drift becomes a tracked bugfix story
+     (use `bugfix-10-6-polish-ux-visual-pass` precedent to bundle small drifts)
+
+Sample-pick policy:
+  - Always include the most-touched component of the epic
+  - Always include any component with hover/focus state changes
+  - Random-pick remaining slots from the epic's File List
+
+Audit history: each epic's audit doc is the durable record for
+post-mortem and trend tracking. If 3 consecutive epics show <2 material
+drifts, audit moves to spot-check mode (random 3 components per epic).
+
+Tooling: Playwright `toHaveScreenshot()` (story 19-4) automates diff
+calculation. Classification + escalation remain human judgment per Step 3.
+```
+
+📌 Precedent: Party Mode 2026-05-08. bugfix-10-4 root cause showed
+design-implementation drift was systemic, not isolated. Rule 22 turns
+drift detection from reactive (user reports a bug) to proactive
+(caught at retro). Mirrors retro-10-AI checklist precedents but
+specifically targets the design ↔ code gap.
 
 ---
 
