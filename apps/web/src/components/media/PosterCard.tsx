@@ -83,9 +83,14 @@ export function PosterCard({
       )}
     >
       <div
+        // bugfix-10-4 DIAGNOSTIC: inline style for clip-path to bypass any Tailwind
+        // arbitrary-value compilation issues. clipPath replaces overflow-hidden +
+        // rounded-lg to dodge the Chromium scale + overflow-hidden + border-radius bug.
+        style={{ clipPath: 'inset(0 round 0.5rem)' }}
         className={cn(
-          'relative aspect-[2/3] overflow-hidden rounded-lg bg-[var(--bg-secondary)]',
+          'relative aspect-[2/3] bg-[var(--bg-secondary)]',
           'transition-all duration-300 ease-out',
+          'transform-gpu',
           // Hover effects only on desktop (lg breakpoint) — disabled in selection mode
           !selectable && 'lg:group-hover:scale-105 lg:group-hover:shadow-2xl',
           // Active state for touch feedback on mobile
@@ -144,8 +149,9 @@ export function PosterCard({
           </div>
         )}
 
-        {/* Top-right badge cluster — visible by default, fade out on hover so kebab takes over (MQbvp collision strategy per AC #1, AC #10) */}
-        <div className="absolute right-2 top-2 flex items-center gap-1 transition-opacity lg:group-hover:opacity-0">
+        {/* Top-right badge cluster — visible by default, fade out on hover so kebab takes over (MQbvp collision strategy per AC #1, AC #10).
+            duration-300 syncs with image-wrapper scale-105 transition for unified feel. */}
+        <div className="absolute right-2 top-2 flex items-center gap-1 transition-opacity duration-300 lg:group-hover:opacity-0">
           {/* Story 10-4 — availability badges win position over 新增 so owners
               see ownership first. Only one of owned/requested renders. */}
           {isOwned ? (
@@ -179,7 +185,7 @@ export function PosterCard({
               e.stopPropagation();
               onMenuClick(e);
             }}
-            className="absolute right-2 top-2 z-20 rounded-full bg-black/70 p-1.5 text-white opacity-0 transition-opacity hover:bg-black/90 lg:group-hover:opacity-100"
+            className="absolute right-2 top-2 z-20 rounded-full bg-black/70 p-1.5 text-white opacity-0 transition-opacity duration-300 hover:bg-black/90 lg:group-hover:opacity-100"
             aria-label="更多選項"
             data-testid="poster-menu-button"
           >
@@ -192,7 +198,7 @@ export function PosterCard({
           <div
             data-testid="hover-play-overlay"
             aria-hidden="true"
-            className="absolute inset-0 z-10 hidden items-center justify-center opacity-0 transition-opacity lg:flex lg:group-hover:opacity-100"
+            className="absolute inset-0 z-10 hidden items-center justify-center opacity-0 transition-opacity duration-300 lg:flex lg:group-hover:opacity-100"
           >
             <div className="rounded-full bg-black/60 p-4 backdrop-blur-sm">
               <Play className="h-8 w-8 fill-white text-white" />
