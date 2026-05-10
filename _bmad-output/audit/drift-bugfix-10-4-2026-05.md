@@ -118,7 +118,7 @@ Captured via Pencil MCP `get_screenshot(nodeId="MQbvp")` on 2026-05-08 during DE
 | ESLint baseline maintained | ✅ no new warnings introduced |
 | Prettier clean | ✅ all matched files |
 
-**Test migration cost (RATIONALE AMENDED v1→v2):** 5 spec files updated to use `getAllByText(...)[0]` instead of `getByText(...)` for poster card titles. **Original rationale (now incorrect):** "titles/years now render twice (below-image + in-card overlay)." **Actual state:** the title overlay was reversed during dev, so titles render only once. The `getAllByText(...)[0]` migration is over-engineered but functional and was kept as-is to avoid post-closeout churn. Files: `MediaGrid.spec.tsx`, `RecentlyAdded.spec.tsx`, `LibraryGrid.spec.tsx`, `SearchResults.spec.tsx`, `ExploreBlock.spec.tsx`.
+**Test migration cost (CORRECTED 2026-05-10 by `/code-review` H1 — was previously a false claim):** ZERO consumer specs were touched. The original v1 plan was to migrate 5 spec files (`MediaGrid.spec.tsx`, `RecentlyAdded.spec.tsx`, `LibraryGrid.spec.tsx`, `SearchResults.spec.tsx`, `ExploreBlock.spec.tsx`) from `getByText` → `getAllByText[0]` on the assumption that title/year would render twice (below-image + in-card overlay). When the title overlay was reversed in Task 3.7, titles continued to render only once and the migration became unnecessary; it was then never executed. Earlier revisions of this paragraph claimed the migration had shipped — caught by `/code-review` (`git diff 2687ddb..fb0481f --name-only` shows zero touches; `grep getAllByText` on the 5 files returns no matches). Truthful state: only `apps/web/src/components/media/PosterCard.spec.tsx` was modified, plus the new E2E suite at `tests/e2e/poster-card-hover.spec.ts`.
 
 ---
 

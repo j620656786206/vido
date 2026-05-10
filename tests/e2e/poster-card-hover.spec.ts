@@ -154,6 +154,9 @@ test.describe('PosterCard Hover @ui @poster-card @bugfix-10-4', () => {
   // < lg behavior is exercised explicitly via setViewportSize in the
   // mobile-specific test below — running there in mobile projects would
   // duplicate that case. Skip the whole describe on mobile projects.
+  // The empty fixtures destructure `({}, testInfo)` is the Playwright pattern
+  // for accessing only the second positional `testInfo`.
+  // eslint-disable-next-line no-empty-pattern
   test.beforeEach(async ({}, testInfo) => {
     test.skip(
       testInfo.project.name.startsWith('mobile-'),

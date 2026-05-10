@@ -83,9 +83,9 @@ export function PosterCard({
       )}
     >
       <div
-        // bugfix-10-4 DIAGNOSTIC: inline style for clip-path to bypass any Tailwind
-        // arbitrary-value compilation issues. clipPath replaces overflow-hidden +
-        // rounded-lg to dodge the Chromium scale + overflow-hidden + border-radius bug.
+        // WORKAROUND (bugfix-10-4): Chromium drops border-radius clip when transform:scale
+        // and overflow-hidden combine on a GPU layer. Use clip-path so corners stay rounded
+        // throughout the hover scale-105 transition.
         style={{ clipPath: 'inset(0 round 0.5rem)' }}
         className={cn(
           'relative aspect-[2/3] bg-[var(--bg-secondary)]',
@@ -168,7 +168,7 @@ export function PosterCard({
             </span>
           )}
           {metadataSource && (
-            <span className="rounded bg-[var(--accent-primary)]/80 px-1.5 py-0.5 text-[10px] font-medium text-white opacity-0 transition-opacity lg:group-hover:opacity-100">
+            <span className="rounded bg-[var(--accent-primary)]/80 px-1.5 py-0.5 text-[10px] font-medium text-white">
               {metadataSource}
             </span>
           )}

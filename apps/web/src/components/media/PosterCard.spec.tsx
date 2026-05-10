@@ -178,7 +178,8 @@ describe('PosterCard', () => {
   describe('Hover Interaction (in-card overlay per Component/PosterCardHover MQbvp)', () => {
     // bugfix-10-4: hover state is now CSS-driven via lg:group-hover: classes (no React state).
     // RTL cannot fire CSS :hover events, so we assert presence + correct hover-gating classes
-    // per Rule 16 (toBeAttached / toHaveClass over toBeVisible for hover-CSS-dependent elements).
+    // per Rule 16 (toBeInTheDocument / toHaveClass over toBeVisible for hover-CSS-dependent
+    // elements). Runtime opacity transition is exercised by tests/e2e/poster-card-hover.spec.ts.
 
     it('[P0] center play overlay is in DOM with hover-only visibility classes (AC #1)', () => {
       render(<PosterCard {...defaultProps} />);
