@@ -129,8 +129,8 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
               className="w-full rounded-md border border-[var(--border-subtle)]/50 bg-[var(--bg-secondary)]/60 px-3 py-2 text-sm text-[var(--text-primary)] focus:border-[var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"
               data-testid="library-type-select"
             >
-              <option value="movie">🎬 電影</option>
-              <option value="series">📺 影集</option>
+              <option value="movie">電影</option>
+              <option value="series">影集</option>
             </select>
           </div>
 

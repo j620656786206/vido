@@ -162,8 +162,8 @@ export function ExploreBlockEditModal({ block, onClose }: ExploreBlockEditModalP
               data-testid="explore-block-type-select"
               className="w-full rounded-md border border-[var(--border-subtle)]/50 bg-[var(--bg-secondary)]/60 px-3 py-2 text-sm text-[var(--text-primary)] focus:border-[var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"
             >
-              <option value="movie">🎬 電影</option>
-              <option value="tv">📺 影集</option>
+              <option value="movie">電影</option>
+              <option value="tv">影集</option>
             </select>
           </Field>
 

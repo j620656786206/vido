@@ -30,6 +30,9 @@ interface ExploreBlockProps {
  *
  * Story 10.3 AC #1. Hides itself gracefully on empty / error to avoid
  * rendering a broken stub on the homepage (mirrors HeroBanner AC #5 pattern).
+ *
+ * Design ref: ux-design.pen Screen HP-5 (Y5XvRv) — bugfix-10-6 polish
+ * (section A FjisT = scroll-chevron treatment, section B MAwOp = empty state).
  */
 export function ExploreBlock({ block, ownership, eager = true, onVisible }: ExploreBlockProps) {
   const sectionRef = useRef<HTMLElement | null>(null);
@@ -72,6 +75,10 @@ export function ExploreBlock({ block, ownership, eager = true, onVisible }: Expl
   // While waiting to enter the viewport (lazy) or while the query is inflight,
   // we still want to reserve space so the page doesn't jitter as blocks pop in.
   const showSkeleton = !shouldFetch || isLoading;
+  // The desktop scroll affordance (edge scrims + chevrons) only exists when
+  // there is something to scroll — an empty block renders just the
+  // "沒有符合條件的內容" message, with no chevron over it (bugfix-10-6 AC #5).
+  const hasItems = !showSkeleton && items.length > 0;
 
   return (
     <section
@@ -98,26 +105,52 @@ export function ExploreBlock({ block, ownership, eager = true, onVisible }: Expl
         </Link>
       </div>
 
-      <div className="relative">
-        {/* Desktop scroll chevrons — hidden on touch */}
-        <button
-          type="button"
-          onClick={() => scroll('left')}
-          aria-label="向左捲動"
-          data-testid="explore-block-scroll-left"
-          className="absolute left-0 top-1/2 z-10 hidden -translate-x-1/2 -translate-y-1/2 rounded-full bg-black/70 p-2 text-white hover:bg-black/90 lg:block"
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </button>
-        <button
-          type="button"
-          onClick={() => scroll('right')}
-          aria-label="向右捲動"
-          data-testid="explore-block-scroll-right"
-          className="absolute right-0 top-1/2 z-10 hidden translate-x-1/2 -translate-y-1/2 rounded-full bg-black/70 p-2 text-white hover:bg-black/90 lg:block"
-        >
-          <ChevronRight className="h-5 w-5" />
-        </button>
+      <div className="group/scroller relative">
+        {/* Desktop scroll affordance — left/right edge gradient scrims + chevron
+            buttons. Only rendered when there are items to scroll (so the
+            empty-state message at the left edge can never be clipped), and
+            hidden on touch via `hidden lg:block` (native horizontal scroll
+            handles touch). Netflix/Disney+ style hover-reveal: the whole
+            affordance is opacity-0 and fades in only while the block is hovered
+            (`group-hover/scroller:opacity-100` — named group so it can't clash
+            with PosterCard's own `group` usage in the subtree; cf. bugfix-10-4
+            CR H2 cascade trap). `pointer-events-none` on the scrims so they
+            never eat a scroll/click.
+            TODO: optionally hide a side's chevron when that direction has no
+            scroll room (track scrollLeft/scrollWidth via onScroll + a
+            ResizeObserver). Intentionally skipped here (bugfix-10-6 AC #1
+            "OPTIONAL") to keep the diff small; if added, default to visible
+            when scroll metrics are 0/unavailable so jsdom tests stay green. */}
+        {hasItems && (
+          <>
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-y-0 left-0 z-[5] hidden w-14 bg-gradient-to-r from-[var(--bg-primary)] to-transparent opacity-0 transition-opacity group-hover/scroller:opacity-100 lg:block"
+            />
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-y-0 right-0 z-[5] hidden w-14 bg-gradient-to-l from-[var(--bg-primary)] to-transparent opacity-0 transition-opacity group-hover/scroller:opacity-100 lg:block"
+            />
+            <button
+              type="button"
+              onClick={() => scroll('left')}
+              aria-label="向左捲動"
+              data-testid="explore-block-scroll-left"
+              className="absolute left-0 top-1/2 z-10 hidden -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--bg-secondary)]/95 p-2 text-[var(--text-primary)] opacity-0 shadow-lg ring-1 ring-[var(--border-subtle)]/70 backdrop-blur-sm transition-opacity hover:bg-[var(--bg-tertiary)] group-hover/scroller:opacity-100 lg:block"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => scroll('right')}
+              aria-label="向右捲動"
+              data-testid="explore-block-scroll-right"
+              className="absolute right-0 top-1/2 z-10 hidden translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--bg-secondary)]/95 p-2 text-[var(--text-primary)] opacity-0 shadow-lg ring-1 ring-[var(--border-subtle)]/70 backdrop-blur-sm transition-opacity hover:bg-[var(--bg-tertiary)] group-hover/scroller:opacity-100 lg:block"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </>
+        )}
 
         {showSkeleton ? (
           <ExploreBlockSkeleton />

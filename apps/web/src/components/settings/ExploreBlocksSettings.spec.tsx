@@ -91,6 +91,16 @@ describe('ExploreBlocksSettings', () => {
     expect(screen.getByTestId('explore-block-row-b')).toBeInTheDocument();
     expect(screen.getByText('熱門電影')).toBeInTheDocument();
     expect(screen.getByText('熱門影集')).toBeInTheDocument();
+
+    // bugfix-10-6 AC #4 — the content-type marker is a lucide icon + plain
+    // label (Film/Tv), never the 🎬/📺 emoji.
+    const movieMeta = screen.getByText(/^電影 ·/);
+    const tvMeta = screen.getByText(/^影集 ·/);
+    expect(movieMeta).toBeInTheDocument();
+    expect(tvMeta).toBeInTheDocument();
+    expect(movieMeta.querySelector('svg')).not.toBeNull(); // lucide <Film> renders as inline svg
+    expect(tvMeta.querySelector('svg')).not.toBeNull(); // lucide <Tv> renders as inline svg
+    expect(screen.queryByText(/🎬|📺/)).toBeNull();
   });
 
   it('opens create modal when 新增區塊 clicked', () => {

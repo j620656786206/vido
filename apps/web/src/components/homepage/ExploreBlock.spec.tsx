@@ -262,13 +262,29 @@ describe('ExploreBlock', () => {
     });
   });
 
-  it('renders desktop scroll chevrons', async () => {
+  // bugfix-10-6 AC #2 — when the block has items, both scroll chevrons stay in
+  // the DOM (hidden lg:block, new contrast styling). Touch-visibility and the
+  // scroll() click handler are unchanged.
+  it('renders desktop scroll chevrons when the block has items (AC #2)', async () => {
     mockHook.mockReturnValue({
       data: {
         blockId: 'block-1',
         contentType: 'movie',
-        movies: [],
-        totalItems: 0,
+        movies: [
+          {
+            id: 1,
+            title: '電影 A',
+            originalTitle: 'Movie A',
+            overview: '',
+            releaseDate: '2024-01-01',
+            posterPath: '/p1.jpg',
+            backdropPath: null,
+            voteAverage: 8,
+            voteCount: 100,
+            genreIds: [28],
+          },
+        ],
+        totalItems: 1,
       },
       isLoading: false,
       isError: false,
@@ -278,5 +294,25 @@ describe('ExploreBlock', () => {
 
     expect(await screen.findByTestId('explore-block-scroll-left')).toBeInTheDocument();
     expect(screen.getByTestId('explore-block-scroll-right')).toBeInTheDocument();
+  });
+
+  // bugfix-10-6 AC #5 — an empty block (fetched OK, zero matching results)
+  // renders NO scroll chevrons, so the "沒有符合條件的內容" message at the left
+  // edge can never be clipped by a chevron. The block itself still renders
+  // (only isError makes ExploreBlock return null).
+  it('does not render scroll chevrons when the block is empty (AC #5)', async () => {
+    mockHook.mockReturnValue({
+      data: { blockId: 'block-1', contentType: 'movie', movies: [], tvShows: [], totalItems: 0 },
+      isLoading: false,
+      isError: false,
+    } as ReturnType<typeof useExploreBlockContent>);
+
+    renderBlock(testBlock());
+
+    expect(await screen.findByTestId('explore-block-empty')).toHaveTextContent(
+      '沒有符合條件的內容'
+    );
+    expect(screen.queryByTestId('explore-block-scroll-left')).toBeNull();
+    expect(screen.queryByTestId('explore-block-scroll-right')).toBeNull();
   });
 });

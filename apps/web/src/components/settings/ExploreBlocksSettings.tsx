@@ -1,9 +1,12 @@
 /**
  * Settings → 自訂首頁 — Story 10.3 management UI.
+ *
+ * Design ref: ux-design.pen Screen HP-5 (Y5XvRv), section C PhBJ8 — bugfix-10-6
+ * polish (lucide content-type icons in place of 🎬/📺 emoji).
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import { Plus, Pencil, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
+import { Plus, Pencil, Trash2, ArrowUp, ArrowDown, Film, Tv } from 'lucide-react';
 import {
   useExploreBlocks,
   useDeleteExploreBlock,
@@ -124,7 +127,24 @@ export function ExploreBlocksSettings() {
                 {block.name}
               </h3>
               <p className="mt-0.5 text-xs text-[var(--text-muted)]">
-                {block.contentType === 'movie' ? '🎬 電影' : '📺 影集'} · {block.maxItems} 個項目
+                {block.contentType === 'movie' ? (
+                  <>
+                    <Film
+                      className="inline h-3.5 w-3.5 text-[var(--text-muted)]"
+                      aria-hidden="true"
+                    />{' '}
+                    電影
+                  </>
+                ) : (
+                  <>
+                    <Tv
+                      className="inline h-3.5 w-3.5 text-[var(--text-muted)]"
+                      aria-hidden="true"
+                    />{' '}
+                    影集
+                  </>
+                )}{' '}
+                · {block.maxItems} 個項目
                 {block.genreIds && ` · 類型 ${block.genreIds}`}
                 {block.region && ` · 地區 ${block.region}`}
               </p>
