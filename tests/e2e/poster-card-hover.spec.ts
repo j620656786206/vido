@@ -248,6 +248,38 @@ test.describe('PosterCard Hover @ui @poster-card @bugfix-10-4', () => {
     await expect(badgeCluster).toHaveCSS('opacity', '0');
   });
 
+  test('[P2] hover at lg: viewport shrinks the top-right badge cluster (scale-95) as it fades — bugfix-10-7 AC #2 kinetic recede', async ({
+    page,
+  }) => {
+    // bugfix-10-7 AC #2: the cluster wrapper picked up `transition-all` +
+    // `origin-top-right` + `lg:group-hover:scale-95` so it RECEDES (opacity 1 → 0
+    // is covered by the sibling test above) rather than just dissolving in place.
+    // Unit tests assert the className; only a real browser can prove the CSS
+    // `:hover` actually drives the transform. Browser-pixel verification of the
+    // 300 ms timing/easing is deferred to NAS deploy per the story DoD — this is
+    // the deterministic regression guard for "scale-95 fires on hover".
+    await stubHomepageBaseline(page);
+    await stubExploreBlocksWith(page, movieContent, [603]);
+
+    await page.goto('/');
+
+    const card = page.getByTestId('poster-card').first();
+    await expect(card).toBeVisible();
+
+    const ownedBadge = card.getByTestId('availability-badge-owned');
+    await expect(ownedBadge).toBeVisible();
+    const badgeCluster = ownedBadge.locator('xpath=..');
+
+    // BEFORE hover: no transform — full size
+    await expect(badgeCluster).toHaveCSS('transform', 'none');
+
+    await card.hover();
+
+    // AFTER hover: `scale(0.95)` resolves to this computed matrix once the
+    // 300 ms transition settles (toHaveCSS polls up to expect.timeout).
+    await expect(badgeCluster).toHaveCSS('transform', 'matrix(0.95, 0, 0, 0.95, 0, 0)');
+  });
+
   test('[P1] mobile viewport (375x667) — hover overlay layer stays out of layout (AC #6)', async ({
     page,
   }) => {

@@ -520,4 +520,84 @@ describe('PosterCard', () => {
       );
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // TEA /testarch-automate pass (bugfix-10-7) — P2 regression guards for the
+  // hover-intent debounce timing logic (AC #1). The DEV story covered the happy
+  // path (enter → 200 ms → line resolves) + the no-fetch UUID case; these close
+  // the cancel-path, no-flicker, and Rule-14-cleanup gaps. All deterministic
+  // (fake timers + act), no hard waits, atomic — test-quality.md / test-priorities-matrix.md (P2: UI-polish edge cases).
+  // ---------------------------------------------------------------------------
+  describe('Hover-intent debounce edge cases (bugfix-10-7 AC #1 — TEA regression guards)', () => {
+    it('[P2] mouseLeave before the ~200 ms debounce fires ⇒ timer cancelled, no detail fetch, line stays year-only', () => {
+      vi.useFakeTimers();
+      mockUseMovieDetails.mockImplementation((id: number) => movieResult(id > 0 ? 139 : undefined));
+      render(<PosterCard {...defaultProps} type="movie" id="550" releaseDate="2022-03-25" />);
+      const card = screen.getByTestId('poster-card');
+
+      fireEvent.mouseEnter(card);
+      act(() => {
+        vi.advanceTimersByTime(100); // not yet — debounce is 200 ms
+      });
+      fireEvent.mouseLeave(card); // cancels the pending timer
+      act(() => {
+        vi.advanceTimersByTime(300); // well past when it would have fired
+      });
+
+      expect(screen.getByText('2022')).toBeInTheDocument();
+      expect(screen.queryByText(/小時/)).not.toBeInTheDocument();
+      // The detail hook was never asked for a real id ⇒ no network call would have happened.
+      expect(mockUseMovieDetails.mock.calls.every(([id]) => id === 0)).toBe(true);
+      vi.useRealTimers();
+    });
+
+    it('[P2] once the line has resolved, mouseLeave then re-enter does NOT flicker back to year-only', () => {
+      vi.useFakeTimers();
+      mockUseMovieDetails.mockImplementation((id: number) => movieResult(id > 0 ? 139 : undefined));
+      render(<PosterCard {...defaultProps} type="movie" id="550" releaseDate="2022-03-25" />);
+      const card = screen.getByTestId('poster-card');
+
+      fireEvent.mouseEnter(card);
+      act(() => {
+        vi.advanceTimersByTime(200);
+      });
+      expect(screen.getByText('2022 · 2 小時 19 分')).toBeInTheDocument();
+
+      // Leaving must NOT reset hoverIntent — the data is loaded, keep showing it.
+      fireEvent.mouseLeave(card);
+      expect(screen.getByText('2022 · 2 小時 19 分')).toBeInTheDocument();
+      expect(screen.queryByText('2022')).not.toBeInTheDocument(); // the bare year is gone — the composed line stuck
+
+      // Re-entering is idempotent — re-arms the (now-null) timer harmlessly, line unchanged.
+      fireEvent.mouseEnter(card);
+      act(() => {
+        vi.advanceTimersByTime(200);
+      });
+      expect(screen.getByText('2022 · 2 小時 19 分')).toBeInTheDocument();
+      vi.useRealTimers();
+    });
+
+    it('[P2] unmount with a pending hover-intent timer clears it (Rule 14 — no leaked timer)', () => {
+      vi.useFakeTimers();
+      const setSpy = vi.spyOn(globalThis, 'setTimeout');
+      const clearSpy = vi.spyOn(globalThis, 'clearTimeout');
+      mockUseMovieDetails.mockImplementation((id: number) => movieResult(id > 0 ? 139 : undefined));
+      const { unmount } = render(
+        <PosterCard {...defaultProps} type="movie" id="550" releaseDate="2022-03-25" />
+      );
+
+      fireEvent.mouseEnter(screen.getByTestId('poster-card')); // arms the 200 ms hover-intent timer
+      // handleMouseEnter is the only setTimeout caller triggered by mouseEnter (no re-render) ⇒ last call is ours.
+      const hoverTimerId = setSpy.mock.results[setSpy.mock.results.length - 1].value;
+
+      unmount();
+
+      // The useEffect cleanup must clearTimeout the still-pending hover-intent timer.
+      expect(clearSpy).toHaveBeenCalledWith(hoverTimerId);
+
+      setSpy.mockRestore();
+      clearSpy.mockRestore();
+      vi.useRealTimers();
+    });
+  });
 });
