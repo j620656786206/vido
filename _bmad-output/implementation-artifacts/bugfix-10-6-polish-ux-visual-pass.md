@@ -1,9 +1,10 @@
 # Story bugfix-10-6: ExploreBlock Polish Bundle — Scroll-Chevron Contrast, Empty State, lucide Icons
 
-Status: review
+Status: done
 
 <!-- Created 2026-05-11 by SM Bob /create-story (YOLO). Sally UX delivery committed 936fdb0 (Screen HP-5 spec). Bundles the 3 small UX calls that were filed separately as 10-6/10-7/10-8 before the 2026-04-20 consolidation. -->
 <!-- 2026-05-11 — DEV Amelia /dev-story COMPLETE. ready-for-dev → in-progress → review. All 6 tasks / 20 subtasks [x]. See Dev Agent Record. -->
+<!-- 2026-05-11 — CR Amelia /code-review (Opus 4.7). 5 findings (0 HIGH, 2 MEDIUM, 3 LOW) all auto-fixed. review → done. See Change Log + "Review Follow-ups (AI)" / Completion Notes. -->
 
 ## Story
 
@@ -101,6 +102,16 @@ These are 3 single-digit-line CSS/copy changes that share one UX design pass (Sa
   - [x] 6.4 `git status` shows only the 8 expected files (7 source/spec + sprint-status.yaml; `.claude/github-star-reminder.txt` was already dirty at session start). **No `.pen` changes, no `_bmad-output/screenshots/` changes, `scripts/export-pen-screenshots.py` not run.**
   - [x] 6.5 Manual browser smoke substituted by the AC #6 deterministic vitest assertions (CLI agent can't drive Chrome DevTools — bugfix-10-2/10-5 precedent). Browser-pixel verification of hover-fade timing / scrim contrast over poster art / Settings row icons at 390 & 1440 recommended on NAS deploy. Bonus: `pnpm exec tsc -p apps/web/tsconfig.app.json --noEmit` — ~17 pre-existing errors (RecentMediaPanel / HeroBanner / EmptyNo*/ScanProgress* / downloads / `media/$type.$id.tsx` route-type & arg-count errors — consistent with the known "tsc not in CI" state flagged by bugfix-10-5 CR as a retro candidate); **none in any file this story touched → ZERO new tsc errors.**
 
+### Review Follow-ups (AI)
+
+CR Amelia `/code-review` (Opus 4.7), 2026-05-11 — 5 findings (0 HIGH, 2 MEDIUM, 3 LOW), all auto-fixed in this pass; no findings deferred.
+
+- [x] [AI-Review][Medium] Keyboard a11y regression — the chevron `<button>`s are `opacity-0` by default + still focusable, so a Tab-focused chevron showed no visible focus ring. Added `focus-visible:opacity-100` to both buttons and `group-focus-within/scroller:opacity-100` to both buttons + both edge scrims so the whole affordance reveals on keyboard focus, not just hover. `apps/web/src/components/homepage/ExploreBlock.tsx:126-151`.
+- [x] [AI-Review][Medium] Story File List omitted the 3 files touched by the TEA `/testarch-automate` pass (commit `aafc9e0`) — only the TEA Change Log row mentioned them in prose. Added `apps/web/src/components/settings/ExploreBlockEditModal.spec.tsx`, `tests/e2e/explore-blocks.spec.ts`, and `_bmad-output/implementation-artifacts/automation-summary-bugfix-10-6.md` to the File List below (new "Modified (test automation — TEA pass)" / "Created" entries). Repeat of bugfix-10-5 CR M1.
+- [x] [AI-Review][Low] `z-[5]` on the edge scrims was an off-scale arbitrary z-index — unnecessary since the scroller is a non-positioned element (any `absolute z-0` scrim already paints above it). Changed to `z-0` (still below the `z-10` chevrons). `apps/web/src/components/homepage/ExploreBlock.tsx:128,132`.
+- [x] [AI-Review][Low] Chevron/scrim fade used the default `transition-opacity` (~150ms) while the homepage's other hover-reveal element (PosterCard hover overlay) uses `duration-300`. Added `duration-300` to all four elements for visual consistency. `apps/web/src/components/homepage/ExploreBlock.tsx:128-151`.
+- [x] [AI-Review][Low] `<option>` emoji-strip in `LibraryEditModal.tsx` / `MediaLibrarySetupStep.tsx` has no automated coverage (neither file has a `.spec.tsx`; the new e2e doesn't reach the 媒體庫 edit modal or the setup wizard step). Accepted as-is — the change is a literal string swap with near-zero risk, and the `ExploreBlockEditModal` `<option>` change (the only one of the three with a spec) IS covered by the new TEA `ExploreBlockEditModal.spec.tsx` test. Noted here for traceability; a dedicated `LibraryEditModal.spec.tsx` / `MediaLibrarySetupStep.spec.tsx` is out of scope for this polish bundle.
+
 ## Dev Notes
 
 ### Pre-flight confirmed by SM (sanity-check before edits, don't re-derive):
@@ -197,6 +208,7 @@ HP-5 also confirms HP-1's block titles dropped their decorative emoji prefixes �
 | 2026-05-11 | [@contract-v0→v1] AC #4 (new): Settings → 自訂首頁 block-row content-type marker uses lucide `<Film>` / `<Tv>` (matching SettingsLayout's lucide idiom, `h-3.5 w-3.5 text-[var(--text-muted)]`) instead of 🎬/📺 emoji; native `<option>` labels (ExploreBlockEditModal/LibraryEditModal/MediaLibrarySetupStep) drop the emoji to plain `電影`/`影集`. No downstream code/test breaks (no test asserts the `🎬 電影` string; `<select>` tests query by `value`/`data-testid`). |
 | 2026-05-11 | [@contract-v0→v1] AC #5 (new): ExploreBlock empty state (`items.length === 0`) renders NO scroll chevrons (nothing to scroll ⇒ no affordance ⇒ `沒有符合條件的內容` message can't be clipped). The message div keeps `text-[var(--text-muted)] py-8` left-aligned; block still renders when empty (only `isError` → `return null`). Future changes that re-introduce chevrons-when-empty must bump v2. |
 | 2026-05-11 | TEA (Murat /testarch-automate, BMad-Integrated, `critical-paths`): +4 regression-hardening tests (all P2) closing the AC #6 gaps. `ExploreBlock.spec.tsx` +1: chevron click → `scrollerRef.scrollBy({left, behavior:'smooth'})` (AC #2 "clicking MUST still call scrollBy" had only DOM-presence coverage). `ExploreBlockEditModal.spec.tsx` +1: `<option>` plain `電影`/`影集` labels, no 🎬/📺 (AC #3 regression guard). `tests/e2e/explore-blocks.spec.ts` +2: empty-block-renders-no-chevrons browser-level (AC #5), settings-rows-show-lucide-svg-not-emoji browser-level (AC #4). No production code, no `.pen`, no `as any`. Validation: `nx test web` 1788→**1790** PASS; targeted eslint 0 errors / 0 new warnings (the 1 reported warning is the pre-existing `RouterProvider … as any` at `ExploreBlock.spec.tsx:83`); prettier clean; orphan-check clean. Browser E2E run deferred per this story's own DoD (route-mocked + deterministic; runs in CI/nightly). Hover-fade timing not asserted (flaky — Rule 16 / `test-quality` KB). Record: `_bmad-output/implementation-artifacts/automation-summary-bugfix-10-6.md`. |
+| 2026-05-11 | CR (Amelia /code-review, Opus 4.7): 5 findings (0 HIGH, 2 MEDIUM, 3 LOW), all auto-fixed. **M1** — keyboard a11y: chevron `<button>`s were `opacity-0` + focusable ⇒ Tab-focus showed no focus ring; added `focus-visible:opacity-100` to both buttons and `group-focus-within/scroller:opacity-100` to both buttons + both scrims (whole affordance now reveals on keyboard focus, not just hover). **M2** — Story File List omitted the 3 TEA-pass files (commit `aafc9e0`): added `ExploreBlockEditModal.spec.tsx`, `tests/e2e/explore-blocks.spec.ts`, `automation-summary-bugfix-10-6.md` to the File List (repeat of bugfix-10-5 CR M1). **L1** — `z-[5]` on the scrims → `z-0` (off-scale arbitrary value; positioned scrim already paints above the static scroller). **L2** — chevron/scrim fade `transition-opacity` (~150ms) → `transition-opacity duration-300` to match PosterCard's hover overlay. **L3** — `<option>` emoji-strip in `LibraryEditModal.tsx`/`MediaLibrarySetupStep.tsx` has no spec coverage; accepted as-is (literal string swap, near-zero risk; the `ExploreBlockEditModal` one IS covered by the TEA spec) — noted in Review Follow-ups, no code change. Only file changed by the CR fixes: `apps/web/src/components/homepage/ExploreBlock.tsx` (class-only edits + comment). Gates: touched specs (`ExploreBlock.spec.tsx` 10 / `ExploreBlocksSettings.spec.tsx` / `ExploreBlockEditModal.spec.tsx`) = 30 PASS; targeted eslint `ExploreBlock.tsx` 0 errors / 0 warnings; prettier clean. No `.pen` changes. review → done. |
 | 2026-05-11 | DEV (Amelia /dev-story): implemented all 6 tasks. `ExploreBlock.tsx` — `group/scroller` named group on the scroller wrapper; both chevron `<button>`s restyled `bg-black/70 text-white` → `bg-[var(--bg-secondary)]/95 backdrop-blur-sm ring-1 ring-[var(--border-subtle)]/70 text-[var(--text-primary)] shadow-lg hover:bg-[var(--bg-tertiary)]` + `opacity-0 transition-opacity group-hover/scroller:opacity-100`; added two `pointer-events-none` edge gradient scrims (`w-14`, `bg-gradient-to-r/l from-[var(--bg-primary)] to-transparent`, `z-[5]`, fade with the chevrons); chevrons + scrims now gated behind `hasItems = !showSkeleton && items.length > 0` (empty block ⇒ no affordance); `data-testid`s / `aria-label`s / `scroll()` handler / `hidden lg:block` touch-suppression unchanged; optional overflow-awareness skipped (left a TODO). `ExploreBlocksSettings.tsx` — `Film, Tv` added to the lucide import; `🎬 電影` / `📺 影集` ternary at the block-row meta line → `<Film …>` / `<Tv …>` lucide icon (`inline h-3.5 w-3.5 text-[var(--text-muted)]`) + plain `電影`/`影集`, ` · {maxItems} 個項目` + genre/region suffixes kept. `ExploreBlockEditModal.tsx` / `LibraryEditModal.tsx` / `MediaLibrarySetupStep.tsx` — `<option>🎬 電影</option>` / `<option>📺 影集</option>` → `<option>電影</option>` / `<option>影集</option>` (value/data-testid unchanged). Specs: `ExploreBlock.spec.tsx` chevron test re-pointed at a populated block + new empty-block-no-chevrons test; `ExploreBlocksSettings.spec.tsx` row-list test extended (lucide svg present, no 🎬/📺, plain label). Both files also got an optional `// Design ref: ux-design.pen Screen HP-5 (Y5XvRv)` comment (AC #7 soft). Gates: `nx test web` 1788 PASS, `nx test api` PASS, `lint:all` 0/122, prettier clean, no orphans, no `.pen` changes. |
 
 ## Dev Agent Record
@@ -246,11 +258,23 @@ Modified (production):
 - `apps/web/src/components/settings/LibraryEditModal.tsx` — `<option>` labels `🎬 電影`/`📺 影集` → `電影`/`影集`.
 - `apps/web/src/components/setup/MediaLibrarySetupStep.tsx` — `<option>` labels `🎬 電影`/`📺 影集` → `電影`/`影集`.
 
-Modified (tests):
-- `apps/web/src/components/homepage/ExploreBlock.spec.tsx` — chevron test re-pointed at a populated block (renamed); new empty-block-no-chevrons test (AC #5).
+Modified (tests — DEV /dev-story):
+- `apps/web/src/components/homepage/ExploreBlock.spec.tsx` — chevron test re-pointed at a populated block (renamed); new empty-block-no-chevrons test (AC #5). (CR M1: subsequently the +`group-focus-within`/`focus-visible` class edits in `ExploreBlock.tsx` don't change any assertion here — re-ran, still green.)
 - `apps/web/src/components/settings/ExploreBlocksSettings.spec.tsx` — `renders a row per configured block` extended with lucide-svg / no-emoji / plain-label assertions (AC #4).
 
-Modified (process / tracking):
-- `_bmad-output/implementation-artifacts/sprint-status.yaml` — `bugfix-10-6-polish-ux-visual-pass`: `ready-for-dev` → `in-progress` (DEV start note) → will be `review` at closeout.
+Modified (tests — TEA /testarch-automate pass, commit `aafc9e0`):
+- `apps/web/src/components/homepage/ExploreBlock.spec.tsx` — +1: chevron click → `scrollerRef.scrollBy({left, behavior:'smooth'})` deterministic-delta test (AC #2).
+- `apps/web/src/components/settings/ExploreBlockEditModal.spec.tsx` — +1: `<option>` plain `電影`/`影集` labels, no 🎬/📺, `value` attrs unchanged (AC #3 regression guard).
+- `tests/e2e/explore-blocks.spec.ts` — +2 [P2]: empty-block-renders-no-chevrons browser-level (AC #5); settings-rows-show-lucide-svg-not-emoji browser-level (AC #4).
 
-No new files. No `.pen` edits. No `_bmad-output/screenshots/` changes. `scripts/export-pen-screenshots.py` not run.
+Created (TEA /testarch-automate pass, commit `aafc9e0`):
+- `_bmad-output/implementation-artifacts/automation-summary-bugfix-10-6.md` — TEA automation record.
+
+Modified (CR /code-review fixes — Amelia, Opus 4.7):
+- `apps/web/src/components/homepage/ExploreBlock.tsx` — M1: `focus-visible:opacity-100` on both chevron buttons + `group-focus-within/scroller:opacity-100` on both buttons + both scrims; L1: scrims `z-[5]` → `z-0`; L2: `transition-opacity` → `transition-opacity duration-300` on all four elements; affordance comment updated. (Class-only + comment; no JSX-structure / behaviour change.)
+
+Modified (process / tracking):
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — `bugfix-10-6-polish-ux-visual-pass`: `ready-for-dev` → `in-progress` (DEV start) → `review` (DEV closeout) → `done` (CR closeout).
+- `_bmad-output/implementation-artifacts/bugfix-10-6-polish-ux-visual-pass.md` — this story file (DEV record, TEA Change Log row, CR Review Follow-ups / Change Log / File List / Completion Notes).
+
+No new production files. No `.pen` edits. No `_bmad-output/screenshots/` changes. `scripts/export-pen-screenshots.py` not run.

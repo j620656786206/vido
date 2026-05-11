@@ -111,11 +111,15 @@ export function ExploreBlock({ block, ownership, eager = true, onVisible }: Expl
             empty-state message at the left edge can never be clipped), and
             hidden on touch via `hidden lg:block` (native horizontal scroll
             handles touch). Netflix/Disney+ style hover-reveal: the whole
-            affordance is opacity-0 and fades in only while the block is hovered
-            (`group-hover/scroller:opacity-100` — named group so it can't clash
-            with PosterCard's own `group` usage in the subtree; cf. bugfix-10-4
-            CR H2 cascade trap). `pointer-events-none` on the scrims so they
-            never eat a scroll/click.
+            affordance is opacity-0 and fades in while the block is hovered
+            (`group-hover/scroller:opacity-100`) OR while a chevron is keyboard-
+            focused (`group-focus-within/scroller:opacity-100` — bugfix-10-6 CR
+            M1: an opacity-0 focusable button hides its own focus ring, so the
+            keyboard path must reveal the affordance too). Named group so it
+            can't clash with PosterCard's own `group` usage in the subtree (cf.
+            bugfix-10-4 CR H2 cascade trap). `pointer-events-none` on the scrims
+            so they never eat a scroll/click. Fade duration matches PosterCard's
+            hover overlay (`duration-300`, bugfix-10-6 CR L2).
             TODO: optionally hide a side's chevron when that direction has no
             scroll room (track scrollLeft/scrollWidth via onScroll + a
             ResizeObserver). Intentionally skipped here (bugfix-10-6 AC #1
@@ -125,18 +129,18 @@ export function ExploreBlock({ block, ownership, eager = true, onVisible }: Expl
           <>
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute inset-y-0 left-0 z-[5] hidden w-14 bg-gradient-to-r from-[var(--bg-primary)] to-transparent opacity-0 transition-opacity group-hover/scroller:opacity-100 lg:block"
+              className="pointer-events-none absolute inset-y-0 left-0 z-0 hidden w-14 bg-gradient-to-r from-[var(--bg-primary)] to-transparent opacity-0 transition-opacity duration-300 group-hover/scroller:opacity-100 group-focus-within/scroller:opacity-100 lg:block"
             />
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute inset-y-0 right-0 z-[5] hidden w-14 bg-gradient-to-l from-[var(--bg-primary)] to-transparent opacity-0 transition-opacity group-hover/scroller:opacity-100 lg:block"
+              className="pointer-events-none absolute inset-y-0 right-0 z-0 hidden w-14 bg-gradient-to-l from-[var(--bg-primary)] to-transparent opacity-0 transition-opacity duration-300 group-hover/scroller:opacity-100 group-focus-within/scroller:opacity-100 lg:block"
             />
             <button
               type="button"
               onClick={() => scroll('left')}
               aria-label="向左捲動"
               data-testid="explore-block-scroll-left"
-              className="absolute left-0 top-1/2 z-10 hidden -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--bg-secondary)]/95 p-2 text-[var(--text-primary)] opacity-0 shadow-lg ring-1 ring-[var(--border-subtle)]/70 backdrop-blur-sm transition-opacity hover:bg-[var(--bg-tertiary)] group-hover/scroller:opacity-100 lg:block"
+              className="absolute left-0 top-1/2 z-10 hidden -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--bg-secondary)]/95 p-2 text-[var(--text-primary)] opacity-0 shadow-lg ring-1 ring-[var(--border-subtle)]/70 backdrop-blur-sm transition-opacity duration-300 hover:bg-[var(--bg-tertiary)] focus-visible:opacity-100 group-hover/scroller:opacity-100 group-focus-within/scroller:opacity-100 lg:block"
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
@@ -145,7 +149,7 @@ export function ExploreBlock({ block, ownership, eager = true, onVisible }: Expl
               onClick={() => scroll('right')}
               aria-label="向右捲動"
               data-testid="explore-block-scroll-right"
-              className="absolute right-0 top-1/2 z-10 hidden translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--bg-secondary)]/95 p-2 text-[var(--text-primary)] opacity-0 shadow-lg ring-1 ring-[var(--border-subtle)]/70 backdrop-blur-sm transition-opacity hover:bg-[var(--bg-tertiary)] group-hover/scroller:opacity-100 lg:block"
+              className="absolute right-0 top-1/2 z-10 hidden translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--bg-secondary)]/95 p-2 text-[var(--text-primary)] opacity-0 shadow-lg ring-1 ring-[var(--border-subtle)]/70 backdrop-blur-sm transition-opacity duration-300 hover:bg-[var(--bg-tertiary)] focus-visible:opacity-100 group-hover/scroller:opacity-100 group-focus-within/scroller:opacity-100 lg:block"
             >
               <ChevronRight className="h-5 w-5" />
             </button>
