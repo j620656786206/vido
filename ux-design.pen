@@ -57037,6 +57037,845 @@
           "fontWeight": "normal"
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "XlFIq",
+      "x": 2670,
+      "y": 20949,
+      "name": "Screen PC-1 - PosterCard Info-Density & Polish (bugfix-10-7)",
+      "clip": true,
+      "width": 1240,
+      "fill": "$bg-secondary",
+      "cornerRadius": 12,
+      "layout": "vertical",
+      "gap": 44,
+      "padding": 48,
+      "children": [
+        {
+          "type": "frame",
+          "id": "S3SWaZ",
+          "name": "pcHeader",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "children": [
+            {
+              "type": "text",
+              "id": "c7i1F",
+              "name": "hdrTitle",
+              "fill": "$text-primary",
+              "content": "PC-1 · PosterCard Info-Density & Polish — bugfix-10-7",
+              "fontFamily": "DM Sans",
+              "fontSize": 26,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "LLOFL",
+              "name": "hdrSub",
+              "fill": "$text-muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "4 個 UX 決策（Alexyu 2026-05-11 確認）— 給 SM /create-story 的設計合約。AC1 採 lazy-fetch-on-hover（純前端，不拆 BE）；AC4 維持現狀（零程式碼）。實機顏色另以瀏覽器驗收。",
+              "fontFamily": "DM Sans",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "rectangle",
+          "id": "llbVE",
+          "name": "div1",
+          "fill": "$border-subtle",
+          "width": "fill_container",
+          "height": 1
+        },
+        {
+          "type": "frame",
+          "id": "jWJgb",
+          "name": "secA-AC1-info-density",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 16,
+          "children": [
+            {
+              "type": "text",
+              "id": "zUfpk",
+              "name": "secAh",
+              "fill": "$text-primary",
+              "content": "AC1 — 海報下方資訊密度：年份旁加片長（電影）/ 季數 + 集數（影集）",
+              "fontFamily": "DM Sans",
+              "fontSize": 18,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "X1SWs",
+              "name": "secAc",
+              "fill": "$text-secondary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "目前卡片下方只有年份，看不出片長、也分不出是迷你影集還是長壽劇。加上這行 → 一眼判斷要不要點。資料來源：hover 該卡時 lazy-fetch 它的 detail（TanStack Query 快取住），N+1 從根本消失；未 hover 的卡片維持只顯示年份。",
+              "fontFamily": "DM Sans",
+              "fontSize": 13,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "iTyQ7",
+              "name": "baRowA",
+              "width": "fill_container",
+              "gap": 48,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "c0l4l",
+                  "name": "beforeColA",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 10,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "urIra",
+                      "name": "bLblA",
+                      "fill": "$text-muted",
+                      "content": "Before — 只有年份",
+                      "fontFamily": "DM Sans",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "VGcPB",
+                      "name": "bCardA",
+                      "width": 160,
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "CDNUr",
+                          "name": "bPosA",
+                          "width": 160,
+                          "height": 200,
+                          "fill": "$bg-tertiary",
+                          "cornerRadius": 8,
+                          "layout": "vertical",
+                          "justifyContent": "center",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon_font",
+                              "id": "Y2o468",
+                              "name": "bPosAIco",
+                              "width": 28,
+                              "height": 28,
+                              "iconFontName": "film",
+                              "iconFontFamily": "lucide",
+                              "fill": "$text-muted"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "text",
+                          "id": "w4sivs",
+                          "name": "bTitA",
+                          "fill": "$text-primary",
+                          "content": "媽的多重宇宙",
+                          "fontFamily": "DM Sans",
+                          "fontSize": 14,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "text",
+                          "id": "LXglp",
+                          "name": "bMetA",
+                          "fill": "$text-secondary",
+                          "content": "2022",
+                          "fontFamily": "DM Sans",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "wqGFm",
+                  "name": "afterColA",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 10,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "Zc44V",
+                      "name": "aLblA",
+                      "fill": "$text-muted",
+                      "content": "After — 年 · 片長 ／ 年 · 季 集",
+                      "fontFamily": "DM Sans",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "JoBq1",
+                      "name": "aCardsA",
+                      "gap": 24,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "UMPRm",
+                          "name": "aCardMovie",
+                          "width": 160,
+                          "layout": "vertical",
+                          "gap": 6,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "il2lb",
+                              "name": "aCMpos",
+                              "width": 160,
+                              "height": 200,
+                              "fill": "$bg-tertiary",
+                              "cornerRadius": 8,
+                              "layout": "vertical",
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon_font",
+                                  "id": "iJVN2",
+                                  "name": "aCMico",
+                                  "width": 28,
+                                  "height": 28,
+                                  "iconFontName": "film",
+                                  "iconFontFamily": "lucide",
+                                  "fill": "$text-muted"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "euOAV",
+                              "name": "aCMtit",
+                              "fill": "$text-primary",
+                              "content": "媽的多重宇宙",
+                              "fontFamily": "DM Sans",
+                              "fontSize": 14,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "text",
+                              "id": "j7RbwI",
+                              "name": "aCMmet",
+                              "fill": "$text-secondary",
+                              "content": "2022 · 2 小時 19 分",
+                              "fontFamily": "DM Sans",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "ZlewE",
+                          "name": "aCardTv",
+                          "width": 160,
+                          "layout": "vertical",
+                          "gap": 6,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "e3Bz4j",
+                              "name": "aCTpos",
+                              "width": 160,
+                              "height": 200,
+                              "fill": "$bg-tertiary",
+                              "cornerRadius": 8,
+                              "layout": "vertical",
+                              "justifyContent": "center",
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon_font",
+                                  "id": "IbSP6",
+                                  "name": "aCTico",
+                                  "width": 28,
+                                  "height": 28,
+                                  "iconFontName": "tv",
+                                  "iconFontFamily": "lucide",
+                                  "fill": "$text-muted"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "text",
+                              "id": "xPL0W",
+                              "name": "aCTtit",
+                              "fill": "$text-primary",
+                              "content": "怪奇物語",
+                              "fontFamily": "DM Sans",
+                              "fontSize": 14,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "text",
+                              "id": "ch43E",
+                              "name": "aCTmet",
+                              "fill": "$text-secondary",
+                              "content": "2016 · 4 季 34 集",
+                              "fontFamily": "DM Sans",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "n3PnC9",
+              "name": "specABox",
+              "width": "fill_container",
+              "fill": "$bg-primary",
+              "cornerRadius": 8,
+              "stroke": {
+                "thickness": 1,
+                "fill": "$border-subtle"
+              },
+              "layout": "vertical",
+              "gap": 8,
+              "padding": [
+                16,
+                20
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "W1Cut",
+                  "name": "specA1",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "(1) Hover intent：onMouseEnter 起 ~200ms 後才設 hover-intent 並觸發抓資料；mouse 在 200ms 內離開就不抓（onMouseLeave 清 timer）。視覺 hover（image scale-105 / play overlay / kebab）維持即時 — delay 只套在抓 detail。觸控不會觸發 onMouseEnter → 自然只顯示年份，符合預期。",
+                  "fontFamily": "DM Sans",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "hgPfz",
+                  "name": "specA2",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "(2) 資料：useQuery({ queryKey: ['tmdb', type, 'detail', id], queryFn: …, enabled: hoverIntent, staleTime: 24h（比照 project caching 設定）})。沿用 detail 頁已在用的端點 — 電影 GET /api/v1/tmdb/movies/:id → runtime；影集 GET /api/v1/tmdb/tv/:id → number_of_seasons / number_of_episodes。⚠️ Rule 15：DEV 先 grep apps/api/cmd/api/main.go 確認 route 已掛＋核對 handler 的 method+path（detail 頁有用 → 理應已掛；若沒 → 新增 task+AC 擴 scope，不要默默補）。資料只要在 TanStack 快取裡就顯示（即使是 detail 頁先載過的）— hover 只是把它載進來的觸發。",
+                  "fontFamily": "DM Sans",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "q5hhUB",
+                  "name": "specA3",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "(3) 文字組裝（zh-TW，建議抽純函數 formatRuntime / formatSeriesCount）：電影 runtime ≥ 60 → ${Math.floor(r/60)} 小時 ${r%60} 分，但 r%60===0 省略「0 分」→「2 小時」；runtime < 60 → ${r} 分鐘；runtime 為 0/null/undefined → extra 留空（只剩年份）。影集 seasons 與 episodes 都有 → ${seasons} 季 ${episodes} 集；只有 seasons → ${seasons} 季；都沒有 → extra 留空。",
+                  "fontFamily": "DM Sans",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "MTdF6",
+                  "name": "specA4",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "(4) 組合與排版：year 有 + extra 有 → ${year} · ${extra}；只有 year → ${year}；只有 extra（少見）→ ${extra}；都沒 → 不 render <p>（現狀）。維持單行 truncate、text-xs text-[var(--text-secondary)]、mt-2 區塊不變；資料到達後就地換字（可選給 <p> 加 transition-opacity duration-200 微淡入，非必要）。同一行字數變動不得推擠卡片版面。",
+                  "fontFamily": "DM Sans",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "Ihlnr",
+                  "name": "specA5",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "(5) 高亮：title 仍走 <HighlightText query={highlightQuery} />；metadata 行不需高亮。檔案：apps/web/src/components/media/PosterCard.tsx（＋新 util，例如 apps/web/src/lib/formatMedia.ts，附 formatMedia.spec.ts）。",
+                  "fontFamily": "DM Sans",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "rectangle",
+          "id": "p5gJgQ",
+          "name": "div2",
+          "fill": "$border-subtle",
+          "width": "fill_container",
+          "height": 1
+        },
+        {
+          "type": "frame",
+          "id": "jn1If",
+          "name": "secB-AC2-hover-scale",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 16,
+          "children": [
+            {
+              "type": "text",
+              "id": "P52u4N",
+              "name": "secBh",
+              "fill": "$text-primary",
+              "content": "AC2 — Hover 時右上角徽章群淡出 ＋ scale-95（被推到後面的層次感）",
+              "fontFamily": "DM Sans",
+              "fontSize": 18,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "LOZRT",
+              "name": "secBc",
+              "fill": "$text-secondary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "目前徽章群（owned/requested 徽章 + 新增 + metadataSource + 電影/影集 標）淡出只有 opacity 1→0。同步加 scale-95、origin 釘右上角 → 淡出時像往後縮、被淡入的 kebab 接手，過場更順、更有空間感。",
+              "fontFamily": "DM Sans",
+              "fontSize": 13,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "OL702",
+              "name": "secBn",
+              "fill": "$text-muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "（靜態圖看不出，這是過場行為；scale 數值已選 95 — 細微，與 image scale-105 ＋ duration-300 同步。）",
+              "fontFamily": "DM Sans",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "sQQyW",
+              "name": "specBBox",
+              "width": "fill_container",
+              "fill": "$bg-primary",
+              "cornerRadius": 8,
+              "stroke": {
+                "thickness": 1,
+                "fill": "$border-subtle"
+              },
+              "layout": "vertical",
+              "padding": [
+                14,
+                18
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "Sqj1p",
+                  "name": "specB",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "PosterCard.tsx —「Top-right badge cluster」那個外層 <div>（目前 className 含 transition-opacity duration-300 lg:group-hover:opacity-0）：｜ transition-opacity → transition-all（同時動 opacity ＋ transform）｜ 加 lg:group-hover:scale-95 ＋ origin-top-right（縮放錨點在右上，貼著它的位置往後退）｜ duration-300 / ease-out 不變 — 與 image-wrapper 的 scale-105 transition 同步 ｜ kebab（opacity-0 lg:group-hover:opacity-100）與 play overlay 維持現狀；可選讓 kebab 同步 scale-95 → scale-100 入場（非必要，本 AC 只要徽章群退場帶 scale）｜ 沿用 bugfix-10-4 CR H2 教訓：別在子節點放會互打的 group-hover opacity（metadataSource 子徽章已修，照舊）",
+                  "fontFamily": "DM Sans",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "rectangle",
+          "id": "REvTe",
+          "name": "div3",
+          "fill": "$border-subtle",
+          "width": "fill_container",
+          "height": 1
+        },
+        {
+          "type": "frame",
+          "id": "R9PWRe",
+          "name": "secC-AC3-star-svg",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 16,
+          "children": [
+            {
+              "type": "text",
+              "id": "m23XBk",
+              "name": "secCh",
+              "fill": "$text-primary",
+              "content": "AC3 — 評分星 ⭐ emoji → lucide-react <Star> SVG（跨 OS 一致）",
+              "fontFamily": "DM Sans",
+              "fontSize": 18,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "yYlFc",
+              "name": "secCc",
+              "fill": "$text-secondary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "目前用系統 emoji ⭐，不同 OS／字型下大小、顏色、垂直對齊都不一樣，跟 .pen 設計（MQbvp / RusTY 畫的是線條星）對不上。換成全站在用的 lucide 線條圖示。",
+              "fontFamily": "DM Sans",
+              "fontSize": 13,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "u1dloS",
+              "name": "baRowC",
+              "width": "fill_container",
+              "gap": 48,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "ppdgy",
+                  "name": "beforeColC",
+                  "layout": "vertical",
+                  "gap": 10,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "tOseA",
+                      "name": "bLblC",
+                      "fill": "$text-muted",
+                      "content": "Before — emoji ⭐",
+                      "fontFamily": "DM Sans",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "YazeN",
+                      "name": "bBadgeC",
+                      "fill": "#000000B2",
+                      "cornerRadius": 4,
+                      "gap": 4,
+                      "padding": [
+                        3,
+                        8
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "EA8AK",
+                          "name": "bStarC",
+                          "fill": "$warning",
+                          "content": "⭐",
+                          "fontFamily": "DM Sans",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "sRbcx",
+                          "name": "bRateC",
+                          "fill": "$warning",
+                          "content": "8.4",
+                          "fontFamily": "DM Sans",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ms2HX",
+                  "name": "afterColC",
+                  "layout": "vertical",
+                  "gap": 10,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "BKMtZ",
+                      "name": "aLblC",
+                      "fill": "$text-muted",
+                      "content": "After — lucide <Star> fill-warning",
+                      "fontFamily": "DM Sans",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "M154n9",
+                      "name": "aBadgeC",
+                      "fill": "#000000B2",
+                      "cornerRadius": 4,
+                      "gap": 4,
+                      "padding": [
+                        3,
+                        8
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon_font",
+                          "id": "qEmDw",
+                          "name": "aStarC",
+                          "width": 13,
+                          "height": 13,
+                          "iconFontName": "star",
+                          "iconFontFamily": "lucide",
+                          "fill": "$warning"
+                        },
+                        {
+                          "type": "text",
+                          "id": "r6jX1",
+                          "name": "aRateC",
+                          "fill": "$warning",
+                          "content": "8.4",
+                          "fontFamily": "DM Sans",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "aMIQy",
+              "name": "specCBox",
+              "width": "fill_container",
+              "fill": "$bg-primary",
+              "cornerRadius": 8,
+              "stroke": {
+                "thickness": 1,
+                "fill": "$border-subtle"
+              },
+              "layout": "vertical",
+              "padding": [
+                14,
+                18
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "jrAkq",
+                  "name": "specC",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "PosterCard.tsx — Rating badge（目前 bottom-2 right-2 的 <span>，內容 ⭐ {voteAverage.toFixed(1)}）：｜ import { Star } from 'lucide-react'（檔案已 import { MoreHorizontal, Check, Play }，加上 Star）｜ span 內容 → <Star className='h-3 w-3 fill-[var(--warning)] text-[var(--warning)]' aria-hidden /> {voteAverage.toFixed(1)} ｜ 容器 class 不變：flex items-center gap-1 rounded bg-black/70 px-2 py-0.5 text-xs text-[var(--warning)]，仍 voteAverage !== undefined ＆＆ voteAverage > 0 才 render ｜ 範圍：只動 PosterCard.tsx 這顆星；PosterCardMenu.tsx / detail 頁 / search 卡的 ⭐ 不在本次（要一起換 → 另列 task）",
+                  "fontFamily": "DM Sans",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "rectangle",
+          "id": "UEBB5",
+          "name": "div4",
+          "fill": "$border-subtle",
+          "width": "fill_container",
+          "height": 1
+        },
+        {
+          "type": "frame",
+          "id": "o91Cq",
+          "name": "secD-AC4-checkbox-decision",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 16,
+          "children": [
+            {
+              "type": "text",
+              "id": "dByr9",
+              "name": "secDh",
+              "fill": "$text-primary",
+              "content": "AC4 — 批次選取勾選框：維持只在「選取模式」出現（決策：不改 hover 顯示）",
+              "fontFamily": "DM Sans",
+              "fontSize": 18,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "k69LvV",
+              "name": "secDc",
+              "fill": "$text-secondary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "考慮過 Netflix 式「hover 就浮現勾選框」，但否決：hover 狀態已有中央播放鍵 + 右上 kebab + 右下評分，再塞左上勾選框會太擠；且要處理「點勾選框＝選取 vs 點卡片＝導航」的點擊歧義、四個 hover 元素的優先序、觸控裝置沒 hover 怎麼辦。批次選取本來就是明確的模式（Story 5-7 原設計）。本 AC ＝零程式碼改動，純粹把這個決策寫下來避免之後再吵一次。",
+              "fontFamily": "DM Sans",
+              "fontSize": 13,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "u3R7qM",
+              "name": "specDBox",
+              "width": "fill_container",
+              "fill": "$bg-primary",
+              "cornerRadius": 8,
+              "stroke": {
+                "thickness": 1,
+                "fill": "$border-subtle"
+              },
+              "layout": "vertical",
+              "padding": [
+                14,
+                18
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "k81OJV",
+                  "name": "specD",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "無程式碼改動。selection-checkbox 維持 selectable ＆＆ (...) gating（PosterCard.tsx 現狀，MQbvp 左上圓形 slot 也是 mode-gated）。｜ 決策記錄：hover 不揭露勾選框；要批次選取走既有選取模式入口 ｜ 若未來重啟「hover 揭露快捷選取」→ 另開故事，需一併設計：(a) 點擊歧義（checkbox 區 stopPropagation vs <Link> 導航）、(b) hover 狀態 4 元素排列優先序、(c) 觸控裝置的對應入口、(d) 與 AC2 徽章群淡出的疊放關係",
+                  "fontFamily": "DM Sans",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "rectangle",
+          "id": "KudtK",
+          "name": "div5",
+          "fill": "$border-subtle",
+          "width": "fill_container",
+          "height": 1
+        },
+        {
+          "type": "frame",
+          "id": "BZrw4",
+          "name": "footer",
+          "width": "fill_container",
+          "fill": "$bg-primary",
+          "cornerRadius": 8,
+          "stroke": {
+            "thickness": 1,
+            "fill": "$border-subtle"
+          },
+          "layout": "vertical",
+          "gap": 8,
+          "padding": [
+            16,
+            20
+          ],
+          "children": [
+            {
+              "type": "text",
+              "id": "g9AgUM",
+              "name": "footT",
+              "fill": "$text-primary",
+              "content": "給 SM / DEV 的交接備註",
+              "fontFamily": "DM Sans",
+              "fontSize": 14,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "kpIRF",
+              "name": "foot1",
+              "fill": "$text-secondary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "• 跨棧檢查：AC1 採 lazy-fetch-on-hover ＝純前端，AC2/AC3 純前端，AC4 零改動 → 整包是單一 FE 故事，不拆 bugfix-10-7a/b（sprint-status 原本提的拆法因 AC1 不碰 BE 而不需要）",
+              "fontFamily": "DM Sans",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "lwIn6",
+              "name": "foot2",
+              "fill": "$text-secondary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "• Rule 21：PosterCard.tsx 檔頭目前是 // Implements: Component/PosterCardHover (MQbvp)；本故事同時動到預設態（RusTY 的下方文字）→ DEV 更新為 // Implements: Component/PosterCard (RusTY) + Component/PosterCardHover (MQbvp)",
+              "fontFamily": "DM Sans",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "b7DIpN",
+              "name": "foot3",
+              "fill": "$text-secondary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "• Rule 22：PosterCard 有 hover 狀態變更 → 列入 Epic 10 retro 的 design-drift 抽樣（必含項）",
+              "fontFamily": "DM Sans",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "E4MOi",
+              "name": "foot4",
+              "fill": "$text-secondary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "• Rule 16 測試：metadata 組裝（formatRuntime / formatSeriesCount）要有純函數單元測試（邊界：59 / 60 / 120 / 125 分、1 季、0 集、null runtime）；PosterCard.spec.tsx 對渲染結果用 toBeInTheDocument / getByText",
+              "fontFamily": "DM Sans",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "EHdpr",
+              "name": "foot5",
+              "fill": "$text-secondary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "• 不在範圍：list view（LZ8Ds）的 metadata 欄、detail 頁、search 卡的 ⭐、favorite affordance、hover 狀態的其他重排",
+              "fontFamily": "DM Sans",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "U6sLg",
+              "name": "foot6",
+              "fill": "$text-secondary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "• 設計合約 = 本螢幕（Screen PC-1，frame ID 見 commit）。實機像素／顏色驗收延到 NAS 部署後（比照 bugfix-10-6）",
+              "fontFamily": "DM Sans",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            }
+          ]
+        }
+      ]
     }
   ],
   "variables": {

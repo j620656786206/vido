@@ -35,6 +35,8 @@ SCREENS = {
     "LZ8Ds": ("flow-a-browse-desktop", "06-list-view-desktop"),
     # Flow B - Desktop hover + detail
     "Qm662": ("flow-b-hover-detail-desktop", "01b-postercard-hover-state"),
+    # bugfix-10-7 — PosterCard info-density & polish design pass (PC-1 spec screen)
+    "XlFIq": ("flow-b-hover-detail-desktop", "pc1-postercard-info-density-polish-bugfix-10-7"),
     "auArc": ("flow-b-hover-detail-desktop", "04a-postercard-context-menu"),
     "RgSxQ": ("flow-b-hover-detail-desktop", "04-detail-panel-movie-desktop"),
     "407vK": ("flow-b-hover-detail-desktop", "04b-detail-panel-tv-series-desktop"),
