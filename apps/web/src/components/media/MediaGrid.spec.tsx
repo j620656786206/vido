@@ -21,6 +21,14 @@ vi.mock('@tanstack/react-router', () => ({
   ),
 }));
 
+// PosterCard (rendered by the grid) lazy-fetches TMDb detail via useMovieDetails/useTVShowDetails
+// (bugfix-10-7 AC #1) — disabled (id=0) until hover. Mock them so the rendered cards don't need a
+// QueryClientProvider ancestor here.
+vi.mock('../../hooks/useMediaDetails', () => ({
+  useMovieDetails: () => ({ data: undefined }),
+  useTVShowDetails: () => ({ data: undefined }),
+}));
+
 describe('MediaGrid', () => {
   const mockMovies: Movie[] = [
     {

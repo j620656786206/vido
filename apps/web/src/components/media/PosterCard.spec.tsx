@@ -1,6 +1,7 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PosterCard } from './PosterCard';
+import { useMovieDetails, useTVShowDetails } from '../../hooks/useMediaDetails';
 
 // Mock TanStack Router
 vi.mock('@tanstack/react-router', () => ({
@@ -20,6 +21,31 @@ vi.mock('@tanstack/react-router', () => ({
   ),
 }));
 
+// Mock the TMDb detail hooks — PosterCard calls useMovieDetails/useTVShowDetails for the
+// lazy-on-hover metadata line (bugfix-10-7 AC #1). They are disabled (id=0) until hover-intent.
+// Default per-test: no data (year-only). Per-test overrides via mockReturnValue/mockImplementation.
+// Typed-mock via double-cast through Partial (bugfix-10-2 CR M3 pattern) — ZERO `as any`.
+vi.mock('../../hooks/useMediaDetails', () => ({
+  useMovieDetails: vi.fn(),
+  useTVShowDetails: vi.fn(),
+}));
+
+const mockUseMovieDetails = vi.mocked(useMovieDetails);
+const mockUseTVShowDetails = vi.mocked(useTVShowDetails);
+
+type MovieDetailsResult = ReturnType<typeof useMovieDetails>;
+type TVShowDetailsResult = ReturnType<typeof useTVShowDetails>;
+
+const movieResult = (runtime?: number): MovieDetailsResult =>
+  ({
+    data: runtime === undefined ? undefined : { runtime },
+  }) as Partial<MovieDetailsResult> as MovieDetailsResult;
+
+const tvResult = (numberOfSeasons?: number, numberOfEpisodes?: number): TVShowDetailsResult =>
+  ({
+    data: numberOfSeasons === undefined ? undefined : { numberOfSeasons, numberOfEpisodes },
+  }) as Partial<TVShowDetailsResult> as TVShowDetailsResult;
+
 describe('PosterCard', () => {
   const defaultProps = {
     id: 'movie-123',
@@ -32,6 +58,10 @@ describe('PosterCard', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useRealTimers();
+    // Default: detail hooks disabled / no data → metadata line stays year-only.
+    mockUseMovieDetails.mockReturnValue(movieResult());
+    mockUseTVShowDetails.mockReturnValue(tvResult());
   });
 
   describe('Basic Rendering', () => {
@@ -381,6 +411,113 @@ describe('PosterCard', () => {
       const onMenuClick = vi.fn();
       render(<PosterCard {...defaultProps} onMenuClick={onMenuClick} />);
       expect(screen.getByLabelText('更多選項')).toBeInTheDocument();
+    });
+  });
+
+  describe('Metadata line (bugfix-10-7 AC #1 — info-density, lazy-on-hover)', () => {
+    it('[P0] shows year only before hover (movie — detail hook disabled with id=0)', () => {
+      render(<PosterCard {...defaultProps} type="movie" id="550" releaseDate="2022-03-25" />);
+      expect(screen.getByText('2022')).toBeInTheDocument();
+      expect(mockUseMovieDetails).toHaveBeenLastCalledWith(0);
+    });
+
+    it('[P0] shows year + runtime after the ~200 ms hover-intent debounce resolves (movie)', () => {
+      vi.useFakeTimers();
+      // Simulate the hooks' built-in `enabled: id > 0` gating: id=0 ⇒ no data, id>0 ⇒ runtime.
+      mockUseMovieDetails.mockImplementation((id: number) => movieResult(id > 0 ? 139 : undefined));
+      render(<PosterCard {...defaultProps} type="movie" id="550" releaseDate="2022-03-25" />);
+      // Before hover-intent fires, only the year is shown (hook called with id=0 ⇒ disabled).
+      expect(screen.getByText('2022')).toBeInTheDocument();
+      expect(mockUseMovieDetails).toHaveBeenLastCalledWith(0);
+      fireEvent.mouseEnter(screen.getByTestId('poster-card'));
+      act(() => {
+        vi.advanceTimersByTime(200);
+      });
+      expect(screen.getByText('2022 · 2 小時 19 分')).toBeInTheDocument();
+      expect(mockUseMovieDetails).toHaveBeenLastCalledWith(550);
+      vi.useRealTimers();
+    });
+
+    it('[P0] shows year + season/episode count after hover (tv)', () => {
+      vi.useFakeTimers();
+      mockUseTVShowDetails.mockImplementation((id: number) =>
+        id > 0 ? tvResult(4, 34) : tvResult()
+      );
+      render(
+        <PosterCard
+          {...defaultProps}
+          type="tv"
+          id="66732"
+          releaseDate="2016-07-15"
+          voteAverage={8.6}
+        />
+      );
+      expect(screen.getByText('2016')).toBeInTheDocument();
+      expect(mockUseTVShowDetails).toHaveBeenLastCalledWith(0);
+      fireEvent.mouseEnter(screen.getByTestId('poster-card'));
+      act(() => {
+        vi.advanceTimersByTime(200);
+      });
+      expect(screen.getByText('2016 · 4 季 34 集')).toBeInTheDocument();
+      expect(mockUseTVShowDetails).toHaveBeenLastCalledWith(66732);
+      vi.useRealTimers();
+    });
+
+    it('[P1] owned-library UUID id never triggers a detail fetch — stays year-only after hover', () => {
+      vi.useFakeTimers();
+      // Realistic mock: id=0 (disabled) returns no data, id>0 returns data. A UUID id derives to 0.
+      mockUseMovieDetails.mockImplementation((id: number) => movieResult(id > 0 ? 139 : undefined));
+      render(
+        <PosterCard
+          {...defaultProps}
+          type="movie"
+          id="0ce73c75-a742-4f3a-9b21-2c8e1f0a4d55"
+          releaseDate="2022-03-25"
+        />
+      );
+      fireEvent.mouseEnter(screen.getByTestId('poster-card'));
+      act(() => {
+        vi.advanceTimersByTime(200);
+      });
+      // hoverIntent flipped true, but fetchId stays 0 (UUID ⇒ tmdbId 0) ⇒ no enrichment.
+      expect(mockUseMovieDetails).toHaveBeenLastCalledWith(0);
+      expect(screen.getByText('2022')).toBeInTheDocument();
+      expect(screen.queryByText(/小時/)).not.toBeInTheDocument();
+      vi.useRealTimers();
+    });
+
+    it('[P1] does not render a metadata line when there is no year and no fetched extra', () => {
+      // No year (releaseDate undefined), no fetched runtime ⇒ formatPosterMeta(null, '') ⇒ '' ⇒ <p> not rendered.
+      const { container } = render(
+        <PosterCard {...defaultProps} type="movie" id="550" releaseDate={undefined} />
+      );
+      expect(container.querySelector('.mt-2 p')).toBeNull();
+    });
+  });
+
+  describe('Rating badge glyph (bugfix-10-7 AC #3 — lucide <Star>, not the ⭐ emoji)', () => {
+    it('[P0] renders a lucide <Star> SVG inside the rating chip and no ⭐ emoji', () => {
+      const { container } = render(<PosterCard {...defaultProps} voteAverage={8.4} />);
+      const ratingChip = container.querySelector('.absolute.bottom-2.right-2');
+      expect(ratingChip).not.toBeNull();
+      expect(ratingChip?.querySelector('svg')).not.toBeNull();
+      expect(screen.queryByText(/⭐/)).toBeNull();
+      expect(screen.getByText('8.4')).toBeInTheDocument();
+    });
+  });
+
+  describe('Hover badge-cluster recede (bugfix-10-7 AC #2 — scale-95 on fade)', () => {
+    it('[P1] top-right badge cluster carries transition-all + origin-top-right + lg:group-hover:scale-95', () => {
+      const { container } = render(<PosterCard {...defaultProps} />);
+      const badgeCluster = container.querySelector('.absolute.right-2.top-2.origin-top-right');
+      expect(badgeCluster).not.toBeNull();
+      expect(badgeCluster).toHaveClass(
+        'transition-all',
+        'duration-300',
+        'origin-top-right',
+        'lg:group-hover:scale-95',
+        'lg:group-hover:opacity-0'
+      );
     });
   });
 });

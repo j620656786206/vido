@@ -1,11 +1,14 @@
-// Implements: Component/PosterCardHover (MQbvp)
+// Implements: Component/PosterCard (RusTY) + Component/PosterCardHover (MQbvp)
+// Design ref: ux-design.pen Screen PC-1 (XlFIq) — bugfix-10-7 info-density & polish
 // Source: ux-design.pen (Pencil app)
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from '@tanstack/react-router';
-import { MoreHorizontal, Check, Play } from 'lucide-react';
+import { MoreHorizontal, Check, Play, Star } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { getImageUrl, getImageSrcSet, getImageSizes } from '../../lib/image';
+import { useMovieDetails, useTVShowDetails } from '../../hooks/useMediaDetails';
+import { formatPosterMeta, formatRuntime, formatSeriesCount } from '../../lib/formatMedia';
 import { HighlightText } from '../ui/HighlightText';
 import { AvailabilityBadge } from './AvailabilityBadge';
 
@@ -51,8 +54,32 @@ export function PosterCard({
 }: PosterCardProps) {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
+  // bugfix-10-7 AC1 — hover-intent debounce: only fetch the TMDb detail (runtime / season
+  // count) after the pointer dwells on the card for ~200 ms, so a mouse sweeping across a
+  // grid doesn't fire a burst of detail requests. The VISUAL hover effects (image scale-105,
+  // play overlay, kebab, badge-cluster fade) stay instant — they are CSS :hover, not gated.
+  const [hoverIntent, setHoverIntent] = useState(false);
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Numeric id ⇒ TMDb item (gets the runtime/episode-count line on hover); UUID ⇒ owned-library
+  // item ⇒ 0 ⇒ useMovieDetails/useTVShowDetails stay disabled via their built-in `enabled: id > 0`.
+  const tmdbId = /^\d+$/.test(id) ? Number(id) : 0;
+  const fetchId = hoverIntent ? tmdbId : 0;
+  const movieQuery = useMovieDetails(type === 'movie' ? fetchId : 0);
+  const tvQuery = useTVShowDetails(type === 'tv' ? fetchId : 0);
+
+  useEffect(() => {
+    return () => {
+      if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    };
+  }, []);
 
   const year = releaseDate ? new Date(releaseDate).getFullYear() : null;
+  const extraMeta =
+    type === 'movie'
+      ? formatRuntime(movieQuery.data?.runtime)
+      : formatSeriesCount(tvQuery.data?.numberOfSeasons, tvQuery.data?.numberOfEpisodes);
+  const metaLine = formatPosterMeta(year, extraMeta);
   const posterUrl = getImageUrl(posterPath, 'w342');
   const posterSrcSet = getImageSrcSet(posterPath);
   const posterSizes = getImageSizes();
@@ -68,12 +95,31 @@ export function PosterCard({
     }
   };
 
+  // Start the hover-intent timer on enter; cancel it on leave (but never reset hoverIntent
+  // once true — the data is already loaded, keep showing it and avoid a re-fetch flicker).
+  const handleMouseEnter = () => {
+    if (hoverTimerRef.current) return;
+    hoverTimerRef.current = setTimeout(() => {
+      hoverTimerRef.current = null;
+      setHoverIntent(true);
+    }, 200);
+  };
+
+  const handleMouseLeave = () => {
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
+  };
+
   return (
     <Link
       to="/media/$type/$id"
       params={{ type, id }}
       data-testid="poster-card"
       onClick={handleCardClick}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
       className={cn(
         'group relative block rounded-lg',
         'focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-primary)]',
@@ -149,9 +195,11 @@ export function PosterCard({
           </div>
         )}
 
-        {/* Top-right badge cluster — visible by default, fade out on hover so kebab takes over (MQbvp collision strategy per AC #1, AC #10).
-            duration-300 syncs with image-wrapper scale-105 transition for unified feel. */}
-        <div className="absolute right-2 top-2 flex items-center gap-1 transition-opacity duration-300 lg:group-hover:opacity-0">
+        {/* Top-right badge cluster — visible by default; on hover it RECEDES (opacity + scale-95,
+            anchored at its top-right corner) so the kebab takes over (MQbvp collision strategy per
+            bugfix-10-4 AC #1 / bugfix-10-7 AC #2). transition-all + duration-300 stays in sync with
+            the image-wrapper's lg:group-hover:scale-105 transition for a unified kinetic feel. */}
+        <div className="absolute right-2 top-2 flex origin-top-right items-center gap-1 transition-all duration-300 lg:group-hover:scale-95 lg:group-hover:opacity-0">
           {/* Story 10-4 — availability badges win position over 新增 so owners
               see ownership first. Only one of owned/requested renders. */}
           {isOwned ? (
@@ -210,24 +258,38 @@ export function PosterCard({
             but Party Mode 2026-05-08 (Sally + Alexyu) determined this duplicates the
             below-image title (RusTY) and has legibility issues against varying poster
             backgrounds. Hover state is now action-trigger only (play + kebab + rating);
-            in-card info-density redesign deferred to feature-X-postercard-info-density. */}
+            the in-card info-density was instead delivered below the image (year +
+            runtime/episode-count, lazy-fetched on hover) by bugfix-10-7 — see the mt-2 block. */}
 
-        {/* Rating badge — MQbvp: bottom-RIGHT slot (was bottom-LEFT in pre-bugfix-10-4), always visible when voteAverage > 0 */}
+        {/* Rating badge — MQbvp: bottom-RIGHT slot (was bottom-LEFT in pre-bugfix-10-4), always visible when voteAverage > 0.
+            bugfix-10-7 AC #3: lucide <Star> SVG (not the ⭐ emoji) for cross-OS rendering consistency. */}
         {voteAverage !== undefined && voteAverage > 0 && (
           <div className="absolute bottom-2 right-2 z-20">
             <span className="flex items-center gap-1 rounded bg-black/70 px-2 py-0.5 text-xs text-[var(--warning)]">
-              ⭐ {voteAverage.toFixed(1)}
+              <Star
+                className="h-3 w-3 fill-[var(--warning)] text-[var(--warning)]"
+                aria-hidden="true"
+              />
+              {voteAverage.toFixed(1)}
             </span>
           </div>
         )}
       </div>
 
-      {/* Title and year — default-state below-image affordance (kept for non-hover continuity per AC #1) */}
+      {/* Title + metadata line — below-image affordance. bugfix-10-7 AC #1: the metadata line
+          is `{year} · {extra}` where `extra` is the runtime (movies) or `{seasons} 季 {episodes} 集`
+          (series), lazy-fetched on hover. Stays year-only until the fetch resolves (and for
+          owned-library UUID cards / touch devices, which never fetch). `truncate` keeps it on
+          one line; only the title gets <HighlightText>. */}
       <div className="mt-2">
         <h3 className="truncate text-sm font-medium text-white">
           <HighlightText text={title} query={highlightQuery} />
         </h3>
-        {year && <p className="text-xs text-[var(--text-secondary)]">{year}</p>}
+        {metaLine && (
+          <p className="truncate text-xs text-[var(--text-secondary)] transition-opacity duration-200">
+            {metaLine}
+          </p>
+        )}
       </div>
     </Link>
   );
