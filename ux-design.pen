@@ -47768,7 +47768,7 @@
                       "id": "cMjVj",
                       "name": "block1Title",
                       "fill": "$text-primary",
-                      "content": "🎬 熱門電影",
+                      "content": "熱門電影",
                       "fontFamily": "DM Sans",
                       "fontSize": 20,
                       "fontWeight": "700"
@@ -47943,7 +47943,7 @@
                       "id": "Lbd31",
                       "name": "block2Title",
                       "fill": "$text-primary",
-                      "content": "📺 熱門影集",
+                      "content": "熱門影集",
                       "fontFamily": "DM Sans",
                       "fontSize": 20,
                       "fontWeight": "700"
@@ -48118,7 +48118,7 @@
                       "id": "VdTpO",
                       "name": "block3Title",
                       "fill": "$text-primary",
-                      "content": "🇹🇼 近期台灣院線",
+                      "content": "近期台灣院線",
                       "fontFamily": "DM Sans",
                       "fontSize": 20,
                       "fontWeight": "700"
@@ -55888,6 +55888,1153 @@
               ]
             }
           ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "Y5XvRv",
+      "x": 2670,
+      "y": 19050,
+      "name": "Screen HP-5 - ExploreBlock Polish (bugfix-10-6)",
+      "clip": true,
+      "width": 1240,
+      "fill": "$bg-secondary",
+      "cornerRadius": 12,
+      "layout": "vertical",
+      "gap": 44,
+      "padding": 48,
+      "children": [
+        {
+          "type": "frame",
+          "id": "tK0y5",
+          "name": "hp5Header",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 8,
+          "children": [
+            {
+              "type": "text",
+              "id": "Q1WDtP",
+              "name": "hdrTitle",
+              "fill": "$text-primary",
+              "content": "HP-5 · ExploreBlock Polish — bugfix-10-6",
+              "fontFamily": "DM Sans",
+              "fontSize": 26,
+              "fontWeight": "700"
+            },
+            {
+              "type": "text",
+              "id": "E4NHy",
+              "name": "hdrSub",
+              "fill": "$text-muted",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "3 個 UX 決策（Alexyu 2026-05-11 確認）— 給 SM /create-story 的設計合約。實機顏色另以瀏覽器驗收。",
+              "fontFamily": "DM Sans",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "rectangle",
+          "id": "fKoFI",
+          "name": "hp5HeaderDivider",
+          "fill": "$border-subtle",
+          "width": "fill_container",
+          "height": 1
+        },
+        {
+          "type": "frame",
+          "id": "FjisT",
+          "name": "secA-AC1-chevron",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 16,
+          "children": [
+            {
+              "type": "text",
+              "id": "CbcI4",
+              "name": "secAH",
+              "fill": "$text-primary",
+              "content": "AC1 — 水平捲動箭頭：深色背景對比",
+              "fontFamily": "DM Sans",
+              "fontSize": 18,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "nELpt",
+              "name": "secACap",
+              "fill": "$text-secondary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "目前 bg-black/70 圓鈕半身壓在近黑色頁面背景上 → 幾乎看不見。改用毛玻璃 + 細邊 + 邊緣漸層 scrim，並改成 hover block 時才淡入。",
+              "fontFamily": "DM Sans",
+              "fontSize": 13,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "se4Cf",
+              "name": "contrastRow",
+              "gap": 32,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "uBBYu",
+                  "name": "beforeWrap",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "MZ2OI",
+                      "name": "beforeLbl",
+                      "fill": "$text-muted",
+                      "content": "Before — bg-black/70（看不見）",
+                      "fontFamily": "DM Sans",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "ULdzQ",
+                      "name": "beforeBox",
+                      "clip": true,
+                      "width": 200,
+                      "height": 96,
+                      "fill": "$bg-primary",
+                      "cornerRadius": 8,
+                      "stroke": {
+                        "thickness": 1,
+                        "fill": "$border-subtle"
+                      },
+                      "layout": "none",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "JxULO",
+                          "layoutPosition": "absolute",
+                          "x": 12,
+                          "y": 28,
+                          "name": "bChev",
+                          "width": 40,
+                          "height": 40,
+                          "fill": "#000000B2",
+                          "cornerRadius": 999,
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "icon_font",
+                              "id": "u1ruv",
+                              "layoutPosition": "absolute",
+                              "x": 10,
+                              "y": 10,
+                              "name": "bChevI",
+                              "width": 20,
+                              "height": 20,
+                              "iconFontName": "chevron-left",
+                              "iconFontFamily": "lucide",
+                              "fill": "#FFFFFFCC"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "L3PMVX",
+                  "name": "afterWrap",
+                  "layout": "vertical",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "fs3li",
+                      "name": "afterLbl",
+                      "fill": "$text-muted",
+                      "content": "After — 毛玻璃 + ring + shadow + scrim",
+                      "fontFamily": "DM Sans",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "ST83Y",
+                      "name": "afterBox",
+                      "clip": true,
+                      "width": 200,
+                      "height": 96,
+                      "fill": "$bg-primary",
+                      "cornerRadius": 8,
+                      "stroke": {
+                        "thickness": 1,
+                        "fill": "$border-subtle"
+                      },
+                      "layout": "none",
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "id": "uO36W",
+                          "layoutPosition": "absolute",
+                          "x": 0,
+                          "y": 0,
+                          "name": "aScrim",
+                          "fill": {
+                            "type": "gradient",
+                            "gradientType": "linear",
+                            "enabled": true,
+                            "rotation": 270,
+                            "size": {
+                              "height": 1
+                            },
+                            "colors": [
+                              {
+                                "color": "#1B2336",
+                                "position": 0
+                              },
+                              {
+                                "color": "#1B233600",
+                                "position": 1
+                              }
+                            ]
+                          },
+                          "width": 110,
+                          "height": 96
+                        },
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 5,
+                          "id": "T7HBk1",
+                          "layoutPosition": "absolute",
+                          "x": 78,
+                          "y": 6,
+                          "name": "aPa",
+                          "fill": "#3B4A6B",
+                          "width": 60,
+                          "height": 84
+                        },
+                        {
+                          "type": "rectangle",
+                          "cornerRadius": 5,
+                          "id": "psjRv",
+                          "layoutPosition": "absolute",
+                          "x": 148,
+                          "y": 6,
+                          "name": "aPb",
+                          "fill": "#3B4A6B",
+                          "width": 60,
+                          "height": 84
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Ha5ox",
+                          "layoutPosition": "absolute",
+                          "x": 12,
+                          "y": 28,
+                          "name": "aChev",
+                          "width": 40,
+                          "height": 40,
+                          "fill": "$bg-secondary",
+                          "cornerRadius": 999,
+                          "stroke": {
+                            "thickness": 1,
+                            "fill": "$border-subtle"
+                          },
+                          "effect": {
+                            "type": "shadow",
+                            "shadowType": "outer",
+                            "color": "#00000080",
+                            "offset": {
+                              "x": 0,
+                              "y": 4
+                            },
+                            "blur": 14
+                          },
+                          "layout": "none",
+                          "children": [
+                            {
+                              "type": "icon_font",
+                              "id": "EXBiZ",
+                              "layoutPosition": "absolute",
+                              "x": 10,
+                              "y": 10,
+                              "name": "aChevI",
+                              "width": 20,
+                              "height": 20,
+                              "iconFontName": "chevron-left",
+                              "iconFontFamily": "lucide",
+                              "fill": "$text-primary"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "iievg",
+              "name": "chevronDemoCard",
+              "width": "fill_container",
+              "fill": "$bg-primary",
+              "cornerRadius": 8,
+              "stroke": {
+                "thickness": 1,
+                "fill": "$border-subtle"
+              },
+              "layout": "vertical",
+              "gap": 12,
+              "padding": [
+                16,
+                24
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "t1ZTg",
+                  "name": "dcHead",
+                  "width": "fill_container",
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "lvDfT",
+                      "name": "dcTitle",
+                      "fill": "$text-primary",
+                      "content": "動作冒險精選",
+                      "fontFamily": "DM Sans",
+                      "fontSize": 20,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "iO8A8",
+                      "name": "dcMore",
+                      "fill": "$accent-primary",
+                      "content": "查看更多 →",
+                      "fontFamily": "DM Sans",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "c91pl",
+                  "name": "scrollerStage",
+                  "clip": true,
+                  "width": 1096,
+                  "height": 200,
+                  "layout": "none",
+                  "children": [
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 6,
+                      "id": "d8UfP",
+                      "layoutPosition": "absolute",
+                      "x": 8,
+                      "y": 11,
+                      "name": "sp1",
+                      "fill": "#3B4A6B",
+                      "width": 118,
+                      "height": 178
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 6,
+                      "id": "bcuhQ",
+                      "layoutPosition": "absolute",
+                      "x": 142,
+                      "y": 11,
+                      "name": "sp2",
+                      "fill": "#3B4A6B",
+                      "width": 118,
+                      "height": 178
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 6,
+                      "id": "o9JUo",
+                      "layoutPosition": "absolute",
+                      "x": 276,
+                      "y": 11,
+                      "name": "sp3",
+                      "fill": "#3B4A6B",
+                      "width": 118,
+                      "height": 178
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 6,
+                      "id": "arl0j",
+                      "layoutPosition": "absolute",
+                      "x": 410,
+                      "y": 11,
+                      "name": "sp4",
+                      "fill": "#3B4A6B",
+                      "width": 118,
+                      "height": 178
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 6,
+                      "id": "M3SSOi",
+                      "layoutPosition": "absolute",
+                      "x": 544,
+                      "y": 11,
+                      "name": "sp5",
+                      "fill": "#3B4A6B",
+                      "width": 118,
+                      "height": 178
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 6,
+                      "id": "o4ow9w",
+                      "layoutPosition": "absolute",
+                      "x": 678,
+                      "y": 11,
+                      "name": "sp6",
+                      "fill": "#3B4A6B",
+                      "width": 118,
+                      "height": 178
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 6,
+                      "id": "e9ph1",
+                      "layoutPosition": "absolute",
+                      "x": 812,
+                      "y": 11,
+                      "name": "sp7",
+                      "fill": "#3B4A6B",
+                      "width": 118,
+                      "height": 178
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 6,
+                      "id": "IDpJs",
+                      "layoutPosition": "absolute",
+                      "x": 946,
+                      "y": 11,
+                      "name": "sp8",
+                      "fill": "#3B4A6B",
+                      "width": 118,
+                      "height": 178
+                    },
+                    {
+                      "type": "rectangle",
+                      "cornerRadius": 6,
+                      "id": "hmqlC",
+                      "layoutPosition": "absolute",
+                      "x": 1080,
+                      "y": 11,
+                      "name": "sp9",
+                      "fill": "#33405E",
+                      "width": 118,
+                      "height": 178
+                    },
+                    {
+                      "type": "rectangle",
+                      "id": "tLOP3",
+                      "layoutPosition": "absolute",
+                      "x": 0,
+                      "y": 0,
+                      "name": "leftScrim",
+                      "fill": {
+                        "type": "gradient",
+                        "gradientType": "linear",
+                        "enabled": true,
+                        "rotation": 270,
+                        "size": {
+                          "height": 1
+                        },
+                        "colors": [
+                          {
+                            "color": "#1B2336",
+                            "position": 0
+                          },
+                          {
+                            "color": "#1B233600",
+                            "position": 1
+                          }
+                        ]
+                      },
+                      "width": 96,
+                      "height": 200
+                    },
+                    {
+                      "type": "rectangle",
+                      "id": "rQ6T2",
+                      "layoutPosition": "absolute",
+                      "x": 1000,
+                      "y": 0,
+                      "name": "rightScrim",
+                      "fill": {
+                        "type": "gradient",
+                        "gradientType": "linear",
+                        "enabled": true,
+                        "rotation": 270,
+                        "size": {
+                          "height": 1
+                        },
+                        "colors": [
+                          {
+                            "color": "#1B233600",
+                            "position": 0
+                          },
+                          {
+                            "color": "#1B2336",
+                            "position": 1
+                          }
+                        ]
+                      },
+                      "width": 96,
+                      "height": 200
+                    },
+                    {
+                      "type": "frame",
+                      "id": "D3QcB",
+                      "layoutPosition": "absolute",
+                      "x": 12,
+                      "y": 80,
+                      "name": "leftChev",
+                      "width": 40,
+                      "height": 40,
+                      "fill": "$bg-secondary",
+                      "cornerRadius": 999,
+                      "stroke": {
+                        "thickness": 1,
+                        "fill": "$border-subtle"
+                      },
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "#00000080",
+                        "offset": {
+                          "x": 0,
+                          "y": 4
+                        },
+                        "blur": 14
+                      },
+                      "layout": "none",
+                      "children": [
+                        {
+                          "type": "icon_font",
+                          "id": "y1UM3",
+                          "layoutPosition": "absolute",
+                          "x": 10,
+                          "y": 10,
+                          "name": "lChevI",
+                          "width": 20,
+                          "height": 20,
+                          "iconFontName": "chevron-left",
+                          "iconFontFamily": "lucide",
+                          "fill": "$text-primary"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "AdqFx",
+                      "layoutPosition": "absolute",
+                      "x": 1044,
+                      "y": 80,
+                      "name": "rightChev",
+                      "width": 40,
+                      "height": 40,
+                      "fill": "$bg-secondary",
+                      "cornerRadius": 999,
+                      "stroke": {
+                        "thickness": 1,
+                        "fill": "$border-subtle"
+                      },
+                      "effect": {
+                        "type": "shadow",
+                        "shadowType": "outer",
+                        "color": "#00000080",
+                        "offset": {
+                          "x": 0,
+                          "y": 4
+                        },
+                        "blur": 14
+                      },
+                      "layout": "none",
+                      "children": [
+                        {
+                          "type": "icon_font",
+                          "id": "aMNoN",
+                          "layoutPosition": "absolute",
+                          "x": 10,
+                          "y": 10,
+                          "name": "rChevI",
+                          "width": 20,
+                          "height": 20,
+                          "iconFontName": "chevron-right",
+                          "iconFontFamily": "lucide",
+                          "fill": "$text-primary"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "JtaT0",
+                  "name": "dcCap",
+                  "fill": "$text-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "↑ hover 狀態：兩側箭頭淡入、坐在漸層 scrim 上保證對比，最右一張海報被切掉表示還能往右捲。預設（非 hover）兩側都 opacity-0。",
+                  "fontFamily": "DM Sans",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "ro1S5",
+              "name": "specA",
+              "fill": "$text-secondary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "ExploreBlock.tsx ~L101-120 — bg-black/70 → bg-[var(--bg-secondary)]/95 backdrop-blur-sm ring-1 ring-[var(--border-subtle)]/70 text-[var(--text-primary)] shadow-lg ｜ 左右邊緣加 bg-gradient-to-r / bg-gradient-to-l from-[var(--bg-primary)] (~w-14) scrim ｜ 外層包 group/scroller，箭頭 opacity-0 lg:group-hover:opacity-100 transition-opacity ｜ 監聽 onScroll + ResizeObserver，記 scrollLeft / scrollWidth / clientWidth：左箭頭只在 scrollLeft > 0 時掛、右箭頭只在 scrollLeft + clientWidth < scrollWidth 時掛 ｜ 維持 hidden lg:block（觸控裝置不出現箭頭，靠原生捲動）",
+              "fontFamily": "DM Sans",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "rectangle",
+          "id": "F5iaIK",
+          "name": "divAB",
+          "fill": "$border-subtle",
+          "width": "fill_container",
+          "height": 1
+        },
+        {
+          "type": "frame",
+          "id": "MAwOp",
+          "name": "secB-AC2-empty",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 16,
+          "children": [
+            {
+              "type": "text",
+              "id": "B7am80",
+              "name": "secBH",
+              "fill": "$text-primary",
+              "content": "AC2 — block 無符合條件的內容：不 render 捲動箭頭",
+              "fontFamily": "DM Sans",
+              "fontSize": 18,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "PaE49",
+              "name": "secBCap",
+              "fill": "$text-secondary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "沒東西可捲就不該有捲動鈕 → 重疊問題從根本消失（不是靠 z-index 或 padding 硬擠）。訊息維持顯示，對設了過窄篩選的人是有用回饋。",
+              "fontFamily": "DM Sans",
+              "fontSize": 13,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "tlzIv",
+              "name": "emptyDemoCard",
+              "width": "fill_container",
+              "fill": "$bg-primary",
+              "cornerRadius": 8,
+              "stroke": {
+                "thickness": 1,
+                "fill": "$border-subtle"
+              },
+              "layout": "vertical",
+              "gap": 16,
+              "padding": [
+                16,
+                24
+              ],
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "lGrBa",
+                  "name": "ecHead",
+                  "width": "fill_container",
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "x0bpet",
+                      "name": "ecTitle",
+                      "fill": "$text-primary",
+                      "content": "我的院線追蹤",
+                      "fontFamily": "DM Sans",
+                      "fontSize": 20,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "IY4YP",
+                      "name": "ecMore",
+                      "fill": "$accent-primary",
+                      "content": "查看更多 →",
+                      "fontFamily": "DM Sans",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "e9wxo",
+                  "name": "ecMsgRow",
+                  "width": "fill_container",
+                  "height": 140,
+                  "padding": [
+                    0,
+                    24
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "XWLNl",
+                      "name": "ecMsg",
+                      "fill": "$text-muted",
+                      "content": "沒有符合條件的內容",
+                      "fontFamily": "DM Sans",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "LPzCo",
+                  "name": "ecCap",
+                  "fill": "$text-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "↑ 沒有左右箭頭。訊息靠左、text-muted、上下 py-8。",
+                  "fontFamily": "DM Sans",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "TwaV0",
+          "name": "specB",
+          "fill": "$text-secondary",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "ExploreBlock.tsx ~L154-161 — items.length === 0 時：不掛 explore-block-scroll-left / explore-block-scroll-right 兩顆按鈕 ｜ 保留 explore-block-empty 訊息：text-[var(--text-muted)]、py-8、靠左 ｜ block 仍然 render（只有 isError 才整個 return null，維持現狀）",
+          "fontFamily": "DM Sans",
+          "fontSize": 12,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "rectangle",
+          "id": "LhPj0",
+          "name": "divBC",
+          "fill": "$border-subtle",
+          "width": "fill_container",
+          "height": 1
+        },
+        {
+          "type": "frame",
+          "id": "PhBJ8",
+          "name": "secC-AC3-icons",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 16,
+          "children": [
+            {
+              "type": "text",
+              "id": "kMtnh",
+              "name": "secCH",
+              "fill": "$text-primary",
+              "content": "AC3 — 設定 → 自訂首頁 區塊列：🎬 / 📺 emoji → lucide Film / Tv（比照 SettingsLayout）",
+              "fontFamily": "DM Sans",
+              "fontSize": 18,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "rX4hX",
+              "name": "secCCap",
+              "fill": "$text-secondary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "使用者回饋「AI 感太重」。換成 SettingsLayout 一路在用的 lucide 線條圖示，視覺統一。",
+              "fontFamily": "DM Sans",
+              "fontSize": 13,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "m56KW2",
+              "name": "beforeAfterRow",
+              "width": "fill_container",
+              "gap": 40,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "S1ZlPV",
+                  "name": "beforeCol",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 10,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "U6PARY",
+                      "name": "bcLbl",
+                      "fill": "$text-muted",
+                      "content": "Before — emoji",
+                      "fontFamily": "DM Sans",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "bi2G5",
+                      "name": "bRow1",
+                      "width": "fill_container",
+                      "fill": "$bg-secondary",
+                      "cornerRadius": 8,
+                      "stroke": {
+                        "thickness": 1,
+                        "fill": "$border-subtle"
+                      },
+                      "layout": "vertical",
+                      "gap": 4,
+                      "padding": 16,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Qh6is",
+                          "name": "bRow1N",
+                          "fill": "$text-primary",
+                          "content": "熱門電影",
+                          "fontFamily": "DM Sans",
+                          "fontSize": 14,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "text",
+                          "id": "AMXn7",
+                          "name": "bRow1M",
+                          "fill": "$text-muted",
+                          "content": "🎬 電影 · 20 個項目 · 熱門度",
+                          "fontFamily": "DM Sans",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "BaU1Z",
+                      "name": "bRow2",
+                      "width": "fill_container",
+                      "fill": "$bg-secondary",
+                      "cornerRadius": 8,
+                      "stroke": {
+                        "thickness": 1,
+                        "fill": "$border-subtle"
+                      },
+                      "layout": "vertical",
+                      "gap": 4,
+                      "padding": 16,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "m2qfnE",
+                          "name": "bRow2N",
+                          "fill": "$text-primary",
+                          "content": "熱門影集",
+                          "fontFamily": "DM Sans",
+                          "fontSize": 14,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "text",
+                          "id": "umYNO",
+                          "name": "bRow2M",
+                          "fill": "$text-muted",
+                          "content": "📺 影集 · 20 個項目 · 熱門度",
+                          "fontFamily": "DM Sans",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "lVkMg",
+                  "name": "afterCol",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 10,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "FN0R2",
+                      "name": "acLbl",
+                      "fill": "$text-muted",
+                      "content": "After — lucide Film / Tv",
+                      "fontFamily": "DM Sans",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "tRSco",
+                      "name": "aRow1",
+                      "width": "fill_container",
+                      "fill": "$bg-secondary",
+                      "cornerRadius": 8,
+                      "stroke": {
+                        "thickness": 1,
+                        "fill": "$border-subtle"
+                      },
+                      "padding": 16,
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "NWh3W",
+                          "name": "aRow1L",
+                          "layout": "vertical",
+                          "gap": 4,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "MLsQ0",
+                              "name": "aRow1N",
+                              "fill": "$text-primary",
+                              "content": "熱門電影",
+                              "fontFamily": "DM Sans",
+                              "fontSize": 14,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "SDlE3",
+                              "name": "aRow1M",
+                              "gap": 6,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon_font",
+                                  "id": "GbYO0",
+                                  "name": "aRow1Ico",
+                                  "width": 14,
+                                  "height": 14,
+                                  "iconFontName": "film",
+                                  "iconFontFamily": "lucide",
+                                  "fill": "$text-muted"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "x69gd",
+                                  "name": "aRow1Txt",
+                                  "fill": "$text-muted",
+                                  "content": "電影 · 20 個項目 · 熱門度",
+                                  "fontFamily": "DM Sans",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "v4QSQ",
+                          "name": "aRow1Act",
+                          "gap": 10,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon_font",
+                              "id": "U9RU6",
+                              "name": "aRow1a1",
+                              "width": 16,
+                              "height": 16,
+                              "iconFontName": "arrow-up",
+                              "iconFontFamily": "lucide",
+                              "fill": "$text-secondary"
+                            },
+                            {
+                              "type": "icon_font",
+                              "id": "l7Pntc",
+                              "name": "aRow1a2",
+                              "width": 16,
+                              "height": 16,
+                              "iconFontName": "pencil",
+                              "iconFontFamily": "lucide",
+                              "fill": "$text-secondary"
+                            },
+                            {
+                              "type": "icon_font",
+                              "id": "Qh0ab",
+                              "name": "aRow1a3",
+                              "width": 16,
+                              "height": 16,
+                              "iconFontName": "trash-2",
+                              "iconFontFamily": "lucide",
+                              "fill": "$text-secondary"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "ztixZ",
+                      "name": "aRow2",
+                      "width": "fill_container",
+                      "fill": "$bg-secondary",
+                      "cornerRadius": 8,
+                      "stroke": {
+                        "thickness": 1,
+                        "fill": "$border-subtle"
+                      },
+                      "padding": 16,
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "f9VVHC",
+                          "name": "aRow2L",
+                          "layout": "vertical",
+                          "gap": 4,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "g3rkjI",
+                              "name": "aRow2N",
+                              "fill": "$text-primary",
+                              "content": "熱門影集",
+                              "fontFamily": "DM Sans",
+                              "fontSize": 14,
+                              "fontWeight": "500"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "RRoEi",
+                              "name": "aRow2M",
+                              "gap": 6,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon_font",
+                                  "id": "xfv4g",
+                                  "name": "aRow2Ico",
+                                  "width": 14,
+                                  "height": 14,
+                                  "iconFontName": "tv",
+                                  "iconFontFamily": "lucide",
+                                  "fill": "$text-muted"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "mNyfn",
+                                  "name": "aRow2Txt",
+                                  "fill": "$text-muted",
+                                  "content": "影集 · 20 個項目 · 熱門度",
+                                  "fontFamily": "DM Sans",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "CiM1d",
+                          "name": "aRow2Act",
+                          "gap": 10,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "icon_font",
+                              "id": "ykrBB",
+                              "name": "aRow2a1",
+                              "width": 16,
+                              "height": 16,
+                              "iconFontName": "arrow-down",
+                              "iconFontFamily": "lucide",
+                              "fill": "$text-secondary"
+                            },
+                            {
+                              "type": "icon_font",
+                              "id": "E6Hzyf",
+                              "name": "aRow2a2",
+                              "width": 16,
+                              "height": 16,
+                              "iconFontName": "pencil",
+                              "iconFontFamily": "lucide",
+                              "fill": "$text-secondary"
+                            },
+                            {
+                              "type": "icon_font",
+                              "id": "r0s9li",
+                              "name": "aRow2a3",
+                              "width": 16,
+                              "height": 16,
+                              "iconFontName": "trash-2",
+                              "iconFontFamily": "lucide",
+                              "fill": "$text-secondary"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "W4PXa",
+          "name": "specC",
+          "fill": "$text-secondary",
+          "textGrowth": "fixed-width",
+          "width": "fill_container",
+          "content": "ExploreBlocksSettings.tsx L127 — {block.contentType === 'movie' ? <Film className=\"h-3.5 w-3.5 text-[var(--text-muted)]\" /> : <Tv className=\"h-3.5 w-3.5 text-[var(--text-muted)]\" />} 放在「電影 / 影集」文字前，import { Film, Tv } from 'lucide-react' ｜ 順帶把 ExploreBlockEditModal.tsx L165-166、LibraryEditModal.tsx L132-133、MediaLibrarySetupStep.tsx L87-88 的 <option>🎬 電影</option> / <option>📺 影集</option> 改成純文字「電影」「影集」（native <option> 不能放 SVG）｜ 不在本次範圍：RecentMediaPanel 海報 fallback 🎬、MetadataSourceBadge 🎬、通知 toast 🎬（不同情境）",
+          "fontFamily": "DM Sans",
+          "fontSize": 12,
+          "fontWeight": "normal"
         }
       ]
     }

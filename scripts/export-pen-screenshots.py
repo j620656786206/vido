@@ -118,6 +118,7 @@ SCREENS = {
     "sAaCR": ("flow-g-homepage-desktop", "hp1-homepage-desktop"),
     "Paqlk": ("flow-g-homepage-desktop", "hp3-block-crud-modal"),
     "g6p38": ("flow-g-homepage-desktop", "hp4-loading-skeleton-desktop"),
+    "Y5XvRv": ("flow-g-homepage-desktop", "hp5-exploreblock-polish-bugfix-10-6"),
     # Flow G - Homepage TV Wall (Mobile)
     "g5LFD": ("flow-g-homepage-mobile", "hp2-homepage-mobile"),
     # Flow G - Advanced Search & Filter (Desktop)
