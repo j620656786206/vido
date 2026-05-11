@@ -33,7 +33,9 @@ const mockQBTConfig = vi.fn(() => ({
   isLoading: false,
 }));
 const mockMediaLibraries = vi.fn(() => ({
-  data: [{ id: 'lib-1', name: 'Test Library', contentType: 'movie' }] as unknown[],
+  data: { libraries: [{ id: 'lib-1', name: 'Test Library', contentType: 'movie' }] } as {
+    libraries: unknown[];
+  },
   isLoading: false,
 }));
 vi.mock('../hooks/useQBittorrent', () => ({
@@ -188,7 +190,7 @@ describe('LibraryPage', () => {
       isLoading: false,
     });
     mockMediaLibraries.mockReturnValue({
-      data: [{ id: 'lib-1', name: 'Test Library', contentType: 'movie' }],
+      data: { libraries: [{ id: 'lib-1', name: 'Test Library', contentType: 'movie' }] },
       isLoading: false,
     });
     await setupMocks();
@@ -385,7 +387,7 @@ describe('LibraryPage', () => {
         data: { configured: true },
         isLoading: false,
       });
-      mockMediaLibraries.mockReturnValue({ data: [], isLoading: false });
+      mockMediaLibraries.mockReturnValue({ data: { libraries: [] }, isLoading: false });
       await setupMocks({ listEmpty: true });
 
       renderLibrary();
@@ -403,7 +405,7 @@ describe('LibraryPage', () => {
         isLoading: false,
       });
       mockMediaLibraries.mockReturnValue({
-        data: [{ id: 'lib-1', name: 'L', contentType: 'movie' }],
+        data: { libraries: [{ id: 'lib-1', name: 'L', contentType: 'movie' }] },
         isLoading: false,
       });
       await setupMocks({ listEmpty: true });

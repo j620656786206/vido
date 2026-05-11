@@ -650,7 +650,7 @@ function LibraryPage() {
             // bugfix-10-5 AC #1 [@contract-v1]: 3-state classifier branch
             const emptyState = classifyEmptyState({
               qbtConfigured: qbtConfigQuery.data?.configured,
-              mediaLibrariesCount: mediaLibrariesQuery.data?.length ?? 0,
+              mediaLibrariesCount: mediaLibrariesQuery.data?.libraries?.length ?? 0,
               itemsCount: items.length,
               isLoading: qbtConfigQuery.isLoading || mediaLibrariesQuery.isLoading,
             });
