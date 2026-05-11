@@ -97,8 +97,10 @@ export function PosterCard({
 
   // Start the hover-intent timer on enter; cancel it on leave (but never reset hoverIntent
   // once true — the data is already loaded, keep showing it and avoid a re-fetch flicker).
+  // Once hoverIntent is true there's nothing left to arm, so subsequent re-hovers are a no-op
+  // (don't spin up a pointless 200 ms timer on every mouseEnter — bugfix-10-7 CR L2).
   const handleMouseEnter = () => {
-    if (hoverTimerRef.current) return;
+    if (hoverIntent || hoverTimerRef.current) return;
     hoverTimerRef.current = setTimeout(() => {
       hoverTimerRef.current = null;
       setHoverIntent(true);
@@ -266,10 +268,8 @@ export function PosterCard({
         {voteAverage !== undefined && voteAverage > 0 && (
           <div className="absolute bottom-2 right-2 z-20">
             <span className="flex items-center gap-1 rounded bg-black/70 px-2 py-0.5 text-xs text-[var(--warning)]">
-              <Star
-                className="h-3 w-3 fill-[var(--warning)] text-[var(--warning)]"
-                aria-hidden="true"
-              />
+              {/* stroke inherits currentColor (var(--warning)) from the span — only `fill` needs setting */}
+              <Star className="h-3 w-3 fill-[var(--warning)]" aria-hidden="true" />
               {voteAverage.toFixed(1)}
             </span>
           </div>
@@ -279,17 +279,16 @@ export function PosterCard({
       {/* Title + metadata line — below-image affordance. bugfix-10-7 AC #1: the metadata line
           is `{year} · {extra}` where `extra` is the runtime (movies) or `{seasons} 季 {episodes} 集`
           (series), lazy-fetched on hover. Stays year-only until the fetch resolves (and for
-          owned-library UUID cards / touch devices, which never fetch). `truncate` keeps it on
-          one line; only the title gets <HighlightText>. */}
+          owned-library UUID cards / touch devices, which never fetch). The <p> is ALWAYS
+          rendered — falling back to a non-breaking space when there's nothing to show — so the
+          card height never changes: a year-less card mustn't grow a line when the runtime
+          resolves on hover (AC #1: "MUST NOT push the card layout" — bugfix-10-7 CR M1).
+          `truncate` keeps it on one line; only the title gets <HighlightText>. */}
       <div className="mt-2">
         <h3 className="truncate text-sm font-medium text-white">
           <HighlightText text={title} query={highlightQuery} />
         </h3>
-        {metaLine && (
-          <p className="truncate text-xs text-[var(--text-secondary)] transition-opacity duration-200">
-            {metaLine}
-          </p>
-        )}
+        <p className="truncate text-xs text-[var(--text-secondary)]">{metaLine || '\u00A0'}</p>
       </div>
     </Link>
   );

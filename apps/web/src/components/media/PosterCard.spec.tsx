@@ -486,12 +486,38 @@ describe('PosterCard', () => {
       vi.useRealTimers();
     });
 
-    it('[P1] does not render a metadata line when there is no year and no fetched extra', () => {
-      // No year (releaseDate undefined), no fetched runtime ⇒ formatPosterMeta(null, '') ⇒ '' ⇒ <p> not rendered.
+    it('[P1] renders a non-breaking-space placeholder line when there is no year and no fetched extra (reserves card height — AC #1 "MUST NOT push the card layout", bugfix-10-7 CR M1)', () => {
+      // No year (releaseDate undefined), no fetched runtime ⇒ metaLine === '' ⇒ the <p> still
+      // renders, falling back to a U+00A0 placeholder so the card height is identical whether or
+      // not the metadata line has visible content.
       const { container } = render(
         <PosterCard {...defaultProps} type="movie" id="550" releaseDate={undefined} />
       );
-      expect(container.querySelector('.mt-2 p')).toBeNull();
+      const metaP = container.querySelector('.mt-2 p');
+      expect(metaP).not.toBeNull();
+      expect(metaP?.textContent).toBe('\u00A0');
+    });
+
+    it('[P2] year-less card: the metadata <p> is present before hover (placeholder) and fills with the runtime after hover — no element mounts on hover, so no layout shift (bugfix-10-7 CR M1)', () => {
+      vi.useFakeTimers();
+      mockUseMovieDetails.mockImplementation((id: number) => movieResult(id > 0 ? 139 : undefined));
+      const { container } = render(
+        <PosterCard {...defaultProps} type="movie" id="550" releaseDate={undefined} />
+      );
+      // Before hover: the <p> already exists (placeholder) — it does NOT pop in on hover.
+      const before = container.querySelector('.mt-2 p');
+      expect(before).not.toBeNull();
+      expect(before?.textContent).toBe('\u00A0');
+
+      fireEvent.mouseEnter(screen.getByTestId('poster-card'));
+      act(() => {
+        vi.advanceTimersByTime(200);
+      });
+
+      // After hover: still a single <p>, now showing the runtime — content changed, element count didn't.
+      expect(container.querySelectorAll('.mt-2 p')).toHaveLength(1);
+      expect(screen.getByText('2 小時 19 分')).toBeInTheDocument();
+      vi.useRealTimers();
     });
   });
 

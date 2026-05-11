@@ -22,11 +22,15 @@ vi.mock('@tanstack/react-router', () => ({
 }));
 
 // PosterCard (rendered by the results grid) lazy-fetches TMDb detail via useMovieDetails/
-// useTVShowDetails (bugfix-10-7 AC #1) — disabled (id=0) until hover. Mock them so the rendered
-// cards don't need a QueryClientProvider ancestor here.
+// useTVShowDetails (bugfix-10-7 AC #1) — disabled (id=0) until hover. Stub them so the rendered
+// cards don't need a QueryClientProvider ancestor here. Return shape is typed (PosterCard only
+// reads `.data?.runtime` / `.data?.numberOf*`) — ZERO `as any`; the full UseQueryResult typing is
+// exercised in PosterCard.spec.tsx, which is the spec that actually drives these hooks.
 vi.mock('../../hooks/useMediaDetails', () => ({
-  useMovieDetails: () => ({ data: undefined }),
-  useTVShowDetails: () => ({ data: undefined }),
+  useMovieDetails: (): { data?: { runtime?: number } } => ({ data: undefined }),
+  useTVShowDetails: (): { data?: { numberOfSeasons?: number; numberOfEpisodes?: number } } => ({
+    data: undefined,
+  }),
 }));
 
 const mockMovies: MovieSearchResponse = {
