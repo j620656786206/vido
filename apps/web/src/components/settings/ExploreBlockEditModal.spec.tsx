@@ -114,6 +114,17 @@ describe('ExploreBlockEditModal', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
+  // bugfix-10-6 AC #3 — the native <option> content-type labels are plain text
+  // (no 🎬/📺 emoji); the value attributes (movie/tv) are unchanged.
+  it('content-type options render plain labels with no emoji (AC #3)', () => {
+    renderModal();
+    const typeSelect = screen.getByTestId('explore-block-type-select');
+    const options = Array.from(typeSelect.querySelectorAll('option'));
+    expect(options.map((o) => o.getAttribute('value'))).toEqual(['movie', 'tv']);
+    expect(options.map((o) => o.textContent)).toEqual(['電影', '影集']);
+    expect(screen.queryByText(/🎬|📺/)).toBeNull();
+  });
+
   it('shows movie-only sort options when content type is movie (H1 fix)', () => {
     renderModal();
     const sortSelect = screen.getByTestId('explore-block-sort-select');

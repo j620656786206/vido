@@ -201,6 +201,32 @@ test.describe('Homepage Explore Blocks @ui @explore-blocks @story-10-3', () => {
     await expect(firstCard).toBeVisible();
     await expect(firstCard).toHaveAttribute('href', /\/media\/movie\/1$/);
   });
+
+  // bugfix-10-6 AC#5 — a block whose content query resolves to zero results
+  // still renders (only an errored query hides it), shows the
+  // "沒有符合條件的內容" message, and renders NO scroll chevrons (nothing to
+  // scroll ⇒ no affordance ⇒ the left-edge message can never be clipped).
+  test('[P2] empty block shows the no-results message and no scroll chevrons (bugfix-10-6 AC#5)', async ({
+    page,
+  }) => {
+    await stubHomepageBaseline(page);
+    await page.route(`${ROUTE_API}/explore-blocks`, (route: Route) =>
+      route.fulfill(jsonOk({ blocks: [defaultBlocks.blocks[0]] }))
+    );
+    await page.route(`${ROUTE_API}/explore-blocks/b-movies/content`, (route: Route) =>
+      route.fulfill(
+        jsonOk({ block_id: 'b-movies', content_type: 'movie', movies: [], total_items: 0 })
+      )
+    );
+
+    await page.goto('/');
+
+    const block = page.getByTestId('explore-block-b-movies');
+    await expect(block).toBeVisible();
+    await expect(block.getByTestId('explore-block-empty')).toHaveText('沒有符合條件的內容');
+    await expect(block.getByTestId('explore-block-scroll-left')).toHaveCount(0);
+    await expect(block.getByTestId('explore-block-scroll-right')).toHaveCount(0);
+  });
 });
 
 // =============================================================================
@@ -384,6 +410,31 @@ test.describe('Settings — Explore Blocks Management @ui @explore-blocks @story
     await page.getByTestId('explore-block-move-down-b-movies').click();
 
     await expect.poll(() => reorderCalled).toEqual(['b-tv', 'b-movies']);
+  });
+
+  // bugfix-10-6 AC#4 — the block-row content-type marker is a lucide icon
+  // (<Film>/<Tv>, rendered as inline <svg>) followed by plain "電影"/"影集",
+  // never the 🎬/📺 emoji. Right-side action icons (ArrowUp/Pencil/Trash2) are
+  // unchanged.
+  test('[P2] block rows show lucide content-type icons, not 🎬/📺 emoji (bugfix-10-6 AC#4)', async ({
+    page,
+  }) => {
+    await page.route(`${ROUTE_API}/explore-blocks`, (route: Route) =>
+      route.fulfill(jsonOk(defaultBlocks))
+    );
+
+    await page.goto('/settings/homepage');
+
+    await expect(page.getByTestId('explore-blocks-settings')).toBeVisible();
+    await expect(page.getByText(/🎬|📺/)).toHaveCount(0);
+
+    const movieMeta = page.getByTestId('explore-block-row-b-movies').locator('p').first();
+    await expect(movieMeta).toContainText('電影 ·');
+    await expect(movieMeta.locator('svg')).toHaveCount(1);
+
+    const tvMeta = page.getByTestId('explore-block-row-b-tv').locator('p').first();
+    await expect(tvMeta).toContainText('影集 ·');
+    await expect(tvMeta.locator('svg')).toHaveCount(1);
   });
 });
 

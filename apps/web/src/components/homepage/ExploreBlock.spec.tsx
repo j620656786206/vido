@@ -296,6 +296,49 @@ describe('ExploreBlock', () => {
     expect(screen.getByTestId('explore-block-scroll-right')).toBeInTheDocument();
   });
 
+  // bugfix-10-6 AC #2 (TA pass) — beyond DOM presence, the chevron click
+  // handler must still drive scrollerRef.scrollBy() with a smooth, viewport-
+  // proportional delta (left = -80% width, right = +80% width). jsdom reports
+  // clientWidth 0, so pin a width to make the delta deterministic.
+  it('clicking a scroll chevron scrolls the scroller by 80% of its width (AC #2)', async () => {
+    mockHook.mockReturnValue({
+      data: {
+        blockId: 'block-1',
+        contentType: 'movie',
+        movies: [
+          {
+            id: 1,
+            title: '電影 A',
+            originalTitle: 'Movie A',
+            overview: '',
+            releaseDate: '2024-01-01',
+            posterPath: '/p1.jpg',
+            backdropPath: null,
+            voteAverage: 8,
+            voteCount: 100,
+            genreIds: [28],
+          },
+        ],
+        totalItems: 1,
+      },
+      isLoading: false,
+      isError: false,
+    } as ReturnType<typeof useExploreBlockContent>);
+
+    renderBlock(testBlock());
+
+    const scroller = await screen.findByTestId('explore-block-scroller');
+    Object.defineProperty(scroller, 'clientWidth', { configurable: true, value: 800 });
+    const scrollBy = vi.fn();
+    Object.defineProperty(scroller, 'scrollBy', { configurable: true, value: scrollBy });
+
+    fireEvent.click(screen.getByTestId('explore-block-scroll-left'));
+    expect(scrollBy).toHaveBeenCalledWith({ left: -640, behavior: 'smooth' });
+
+    fireEvent.click(screen.getByTestId('explore-block-scroll-right'));
+    expect(scrollBy).toHaveBeenCalledWith({ left: 640, behavior: 'smooth' });
+  });
+
   // bugfix-10-6 AC #5 — an empty block (fetched OK, zero matching results)
   // renders NO scroll chevrons, so the "沒有符合條件的內容" message at the left
   // edge can never be clipped by a chevron. The block itself still renders
