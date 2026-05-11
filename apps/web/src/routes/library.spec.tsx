@@ -26,6 +26,23 @@ vi.mock('../services/libraryService', () => ({
   },
 }));
 
+// bugfix-10-5: stub the 3-state classifier inputs so the empty-state branch
+// is deterministic. Default = Case C (qBT OK + 1 library + 0 items).
+const mockQBTConfig = vi.fn(() => ({
+  data: { configured: true } as { configured: boolean } | undefined,
+  isLoading: false,
+}));
+const mockMediaLibraries = vi.fn(() => ({
+  data: [{ id: 'lib-1', name: 'Test Library', contentType: 'movie' }] as unknown[],
+  isLoading: false,
+}));
+vi.mock('../hooks/useQBittorrent', () => ({
+  useQBittorrentConfig: () => mockQBTConfig(),
+}));
+vi.mock('../hooks/useMediaLibrary', () => ({
+  useMediaLibraries: () => mockMediaLibraries(),
+}));
+
 function getMockListResponse() {
   return {
     items: [
@@ -165,6 +182,15 @@ describe('LibraryPage', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     localStorage.clear();
+    // bugfix-10-5: reset hook mocks to Case C defaults each test (qBT OK + 1 library)
+    mockQBTConfig.mockReturnValue({
+      data: { configured: true },
+      isLoading: false,
+    });
+    mockMediaLibraries.mockReturnValue({
+      data: [{ id: 'lib-1', name: 'Test Library', contentType: 'movie' }],
+      isLoading: false,
+    });
     await setupMocks();
   });
 
@@ -326,15 +352,69 @@ describe('LibraryPage', () => {
     });
   });
 
-  describe('Empty state', () => {
-    it('[P1] renders EmptyLibrary when no items', async () => {
+  describe('Empty state (bugfix-10-5 — 3-state classifier branch)', () => {
+    it('[P1] renders an empty-state component when no items (default = Case C)', async () => {
       await setupMocks({ listEmpty: true });
 
       renderLibrary();
 
       await waitFor(() => {
-        expect(screen.getByText('你的媒體庫還是空的')).toBeInTheDocument();
+        // Default mocks: qBT OK + 1 library + 0 items → Case C ready-for-scan
+        expect(screen.getByTestId('empty-ready-for-scan')).toBeInTheDocument();
       });
+    });
+
+    it('[P1] AC #1 Case A — renders EmptyNoQBT when qBT disconnected', async () => {
+      mockQBTConfig.mockReturnValue({
+        data: { configured: false },
+        isLoading: false,
+      });
+      await setupMocks({ listEmpty: true });
+
+      renderLibrary();
+
+      await waitFor(() => {
+        expect(screen.getByTestId('empty-no-qbt')).toBeInTheDocument();
+      });
+      expect(screen.queryByTestId('empty-no-folder')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('empty-ready-for-scan')).not.toBeInTheDocument();
+    });
+
+    it('[P1] AC #1 Case B — renders EmptyNoFolder when qBT OK but zero libraries', async () => {
+      mockQBTConfig.mockReturnValue({
+        data: { configured: true },
+        isLoading: false,
+      });
+      mockMediaLibraries.mockReturnValue({ data: [], isLoading: false });
+      await setupMocks({ listEmpty: true });
+
+      renderLibrary();
+
+      await waitFor(() => {
+        expect(screen.getByTestId('empty-no-folder')).toBeInTheDocument();
+      });
+      expect(screen.queryByTestId('empty-no-qbt')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('empty-ready-for-scan')).not.toBeInTheDocument();
+    });
+
+    it('[P1] AC #1 Case C — renders EmptyReadyForScan when all OK + items empty', async () => {
+      mockQBTConfig.mockReturnValue({
+        data: { configured: true },
+        isLoading: false,
+      });
+      mockMediaLibraries.mockReturnValue({
+        data: [{ id: 'lib-1', name: 'L', contentType: 'movie' }],
+        isLoading: false,
+      });
+      await setupMocks({ listEmpty: true });
+
+      renderLibrary();
+
+      await waitFor(() => {
+        expect(screen.getByTestId('empty-ready-for-scan')).toBeInTheDocument();
+      });
+      expect(screen.queryByTestId('empty-no-qbt')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('empty-no-folder')).not.toBeInTheDocument();
     });
   });
 
@@ -396,7 +476,8 @@ describe('LibraryPage', () => {
       renderLibrary();
 
       await waitFor(() => {
-        expect(screen.getByText('你的媒體庫還是空的')).toBeInTheDocument();
+        // bugfix-10-5: default-mock state classifies to Case C
+        expect(screen.getByTestId('empty-ready-for-scan')).toBeInTheDocument();
       });
 
       expect(screen.queryByPlaceholderText('搜尋媒體標題...')).not.toBeInTheDocument();

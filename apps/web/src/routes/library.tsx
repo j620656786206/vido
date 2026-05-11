@@ -20,7 +20,12 @@ import type { FilterValues } from '../components/library/FilterPanel';
 import { FilterChips } from '../components/library/FilterChips';
 import { EmptySearchResults } from '../components/library/EmptySearchResults';
 import { RecentlyAdded } from '../components/library/RecentlyAdded';
-import { EmptyLibrary } from '../components/library/EmptyLibrary';
+import { EmptyNoQBT } from '../components/library/EmptyNoQBT';
+import { EmptyNoFolder } from '../components/library/EmptyNoFolder';
+import { EmptyReadyForScan } from '../components/library/EmptyReadyForScan';
+import { useQBittorrentConfig } from '../hooks/useQBittorrent';
+import { useMediaLibraries } from '../hooks/useMediaLibrary';
+import { classifyEmptyState } from '../utils/emptyLibraryState';
 import { ViewToggle } from '../components/library/ViewToggle';
 import type { ViewMode } from '../components/library/ViewToggle';
 import { SelectionToolbar } from '../components/library/SelectionToolbar';
@@ -186,6 +191,9 @@ function LibraryPage() {
   const { data: libraryStats } = useLibraryStats();
   const { data: movieStats } = useMovieStats();
   const { data: seriesStats } = useSeriesStats();
+  // bugfix-10-5: state-classifier inputs for the 3-state empty-library branch
+  const qbtConfigQuery = useQBittorrentConfig();
+  const mediaLibrariesQuery = useMediaLibraries();
   const totalUnmatchedCount =
     (movieStats?.unmatchedCount ?? 0) + (seriesStats?.unmatchedCount ?? 0);
 
@@ -638,7 +646,19 @@ function LibraryPage() {
         {isSearchEmpty ? (
           <EmptySearchResults query={searchQuery} onClear={() => handleSearch('')} />
         ) : isLibraryEmpty ? (
-          <EmptyLibrary />
+          (() => {
+            // bugfix-10-5 AC #1 [@contract-v1]: 3-state classifier branch
+            const emptyState = classifyEmptyState({
+              qbtConfigured: qbtConfigQuery.data?.configured,
+              mediaLibrariesCount: mediaLibrariesQuery.data?.length ?? 0,
+              itemsCount: items.length,
+              isLoading: qbtConfigQuery.isLoading || mediaLibrariesQuery.isLoading,
+            });
+            if (emptyState === 'loading') return null;
+            if (emptyState === 'no-qbt') return <EmptyNoQBT />;
+            if (emptyState === 'no-folder') return <EmptyNoFolder />;
+            return <EmptyReadyForScan />;
+          })()
         ) : (
           <div className="flex gap-0">
             {/* Filter sidebar */}

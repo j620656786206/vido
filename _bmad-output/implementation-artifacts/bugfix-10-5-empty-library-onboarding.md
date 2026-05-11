@@ -1,6 +1,6 @@
 # Story bugfix-10-5: Empty Library Onboarding — 3-State Diagnostic UI
 
-Status: ready-for-dev
+Status: review
 
 <!-- Created 2026-05-11 by SM Bob /create-story (YOLO). Sally UX delivery committed 5ebac6f. -->
 
@@ -73,52 +73,49 @@ Status: ready-for-dev
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Create `EmptyNoQBT.tsx` + spec** (AC: #2, #5, #8)
-  - [ ] 1.1 Create `apps/web/src/components/library/EmptyNoQBT.tsx` with Rule 21 header `// Implements: Component/EmptyLibrary-NoQBT (fSKuT)`.
-  - [ ] 1.2 Implement layout matching Sally's screenshot at `_bmad-output/screenshots/flow-a-browse-desktop/09a-1-empty-library-no-qbt.png` — `flex flex-col items-center justify-center py-24 text-center` container, icons row (Film + FolderOpen, gap-3), H2, subtitle, button row (gap-3).
-  - [ ] 1.3 Wire `<Link to="/settings/qbittorrent">` primary + `<Link to="/settings/libraries">` secondary with the testids from AC #2.
-  - [ ] 1.4 Create `EmptyNoQBT.spec.tsx` co-located, covering H2 text, both CTA hrefs + text content, Rule 16 matchers.
+- [x] **Task 1 — Create `EmptyNoQBT.tsx` + spec** (AC: #2, #5, #8) — DONE 2026-05-11. 5/5 spec PASS.
+  - [x] 1.1 Create `apps/web/src/components/library/EmptyNoQBT.tsx` with Rule 21 header `// Implements: Component/EmptyLibrary-NoQBT (fSKuT)`.
+  - [x] 1.2 Layout: `flex flex-col items-center justify-center py-24 text-center`, `<Film>`+`<FolderOpen>` 40px muted, H2 `text-xl font-semibold`, subtitle `text-sm text-[var(--text-secondary)]`, button row `gap-3`.
+  - [x] 1.3 Primary `<Link to="/settings/qbittorrent">` blue + secondary `<Link to="/settings/libraries">` outlined. Testids `empty-no-qbt`, `empty-no-qbt-connect-btn`, `empty-no-qbt-folder-btn`.
+  - [x] 1.4 `EmptyNoQBT.spec.tsx` — 5 cases: H2 text, subtitle text, primary href+text, secondary href+text, root testid. All Rule 16 (`toBeInTheDocument`, `toHaveAttribute`, `toHaveTextContent`).
 
-- [ ] **Task 2 — Create `EmptyNoFolder.tsx` + spec** (AC: #3, #5, #8)
-  - [ ] 2.1 Create `apps/web/src/components/library/EmptyNoFolder.tsx` with Rule 21 header `// Implements: Component/EmptyLibrary-NoFolder (U3SGxG)`.
-  - [ ] 2.2 Same layout pattern as Task 1, but single `<FolderOpen>` icon (no Film) and Case B copy.
-  - [ ] 2.3 Wire `<Link to="/settings/libraries">` primary + `<Link to="/setup">` secondary.
-  - [ ] 2.4 Create `EmptyNoFolder.spec.tsx` mirroring Task 1.4 structure with Case B assertions.
+- [x] **Task 2 — Create `EmptyNoFolder.tsx` + spec** (AC: #3, #5, #8) — DONE 2026-05-11. 5/5 spec PASS.
+  - [x] 2.1 Created with Rule 21 header `// Implements: Component/EmptyLibrary-NoFolder (U3SGxG)`.
+  - [x] 2.2 Single `<FolderOpen>` icon (no Film), Case B copy.
+  - [x] 2.3 Primary `<Link to="/settings/libraries">` + secondary `<Link to="/setup">`.
+  - [x] 2.4 `EmptyNoFolder.spec.tsx` — 5 cases mirroring Task 1.4 with Case B assertions.
 
-- [ ] **Task 3 — Create `EmptyReadyForScan.tsx` + spec** (AC: #4, #5, #8)
-  - [ ] 3.1 Create `apps/web/src/components/library/EmptyReadyForScan.tsx` with Rule 21 header `// Implements: Component/EmptyLibrary-ReadyForScan (mfKgm)`.
-  - [ ] 3.2 Same layout pattern, with `<ScanSearch>` (or `<FolderSearch>` if `ScanSearch` is not in installed lucide-react version — check `package.json`) icon and Case C copy.
-  - [ ] 3.3 Import `useTriggerScan` from `hooks/useScanner` and wire it to the primary `<button>` via `await triggerScan.mutateAsync()` — DO NOT use `<Link>` for the primary CTA (it's an action, not navigation).
-  - [ ] 3.4 Add `disabled={triggerScan.isPending}` + loading text swap on the button. Wire toast on success/error (reuse existing `sonner` toast pattern — check `apps/web/src/main.tsx` for `<Toaster />`).
-  - [ ] 3.5 Wire `<Link to="/downloads">` secondary CTA.
-  - [ ] 3.6 Create `EmptyReadyForScan.spec.tsx` with the deeper coverage from AC #8 (mock `useTriggerScan`, assert click→mutate, isPending disable, success+error paths).
+- [x] **Task 3 — Create `EmptyReadyForScan.tsx` + spec** (AC: #4, #5, #8) — DONE 2026-05-11. 9/9 spec PASS.
+  - [x] 3.1 Created with Rule 21 header `// Implements: Component/EmptyLibrary-ReadyForScan (mfKgm)`.
+  - [x] 3.2 `<ScanSearch>` icon (verified available in installed lucide-react via `lucide-react.d.ts` grep).
+  - [x] 3.3 `useTriggerScan` imported from `hooks/useScanner`; primary CTA is `<button onClick={handleScan}>` calling `await triggerScan.mutateAsync()`.
+  - [x] 3.4 `disabled={isPending}` + label swap to `「掃描中…」`. **🚧 Dev Notes correction**: story specified "sonner toast" but `sonner` is NOT installed (`grep "sonner"` in package.json returned zero). Adopted the EXISTING `ScannerSettings.tsx:43-60, 109-124` pattern instead — `useState<{type,message}> + setTimeout(5000) dismiss + inline AlertCircle render`. Functional outcome (success: "掃描已啟動"; error: `ScannerApiError.message` fallback "掃描觸發失敗") identical to AC #4 wording.
+  - [x] 3.5 Secondary `<Link to="/downloads">`.
+  - [x] 3.6 `EmptyReadyForScan.spec.tsx` — 9 cases: H2, subtitle, root testid, secondary href, primary is `<button>` (tagName assert), click→mutateAsync, isPending disables btn + swaps label, success notification text, error notification text from rejected mutation.
 
-- [ ] **Task 4 — Add state classifier helper** (AC: #1, #9)
-  - [ ] 4.1 Add a pure helper function `classifyEmptyState({ qbtConfigured, mediaLibrariesCount, itemsCount, isLoading })` returning `'loading' | 'no-qbt' | 'no-folder' | 'ready-for-scan'`. Place it either inline at the top of `library.tsx` (preferred, since it's the only caller) OR at `apps/web/src/utils/emptyLibraryState.ts` (only if DEV judges it worth co-testing in isolation). Decision criterion: if the helper >15 lines, hoist; else inline.
-  - [ ] 4.2 Add unit tests for the classifier (table-driven, ≥7 cases covering all 4 returns including the loading short-circuit and priority order Case A > B > C). If hoisted, put tests in `emptyLibraryState.spec.ts`; if inline, add `describe('classifyEmptyState')` to `library.spec.tsx`.
+- [x] **Task 4 — Add state classifier helper** (AC: #1, #9) — DONE 2026-05-11. 8/8 spec PASS.
+  - [x] 4.1 Hoisted to `apps/web/src/utils/emptyLibraryState.ts` (>15 LOC threshold met after type defs + jsdoc). Exports `EmptyLibraryState` type + `ClassifyEmptyStateInput` interface + `classifyEmptyState` function.
+  - [x] 4.2 `emptyLibraryState.spec.ts` — 8 table-driven cases: loading short-circuit (isLoading=true regardless), loading (qbtConfigured=undefined), Case A wins over folder/items, Case A absolute priority, Case B, Case B wins over C, Case C single library, Case C multiple libraries.
 
-- [ ] **Task 5 — Refactor `library.tsx` isLibraryEmpty branch** (AC: #7)
-  - [ ] 5.1 Import `useQBittorrentConfig` from `hooks/useQBittorrent` and `useMediaLibraries` from `hooks/useMediaLibrary`.
-  - [ ] 5.2 Call both hooks at the top of `LibraryPage()` (near the existing `useLibraryList`, `useLibraryStats` calls around lines 186-208). Capture `data?.configured`, `data` (library array).
-  - [ ] 5.3 At line 638-642 (or wherever the `isLibraryEmpty` branch lives post-refactor), replace `<EmptyLibrary />` with `switch (classifyEmptyState({...}))` rendering the 3 components. `loading` branch returns null (skeleton owns it).
-  - [ ] 5.4 Verify the `isSearchActive && isEmpty` path (line 638 `isSearchEmpty ? <EmptySearchResults>`) is UNTOUCHED.
-  - [ ] 5.5 Add 3+ new tests to `library.spec.tsx` (or co-located route spec) for the 3-state branch coverage. Mock `useQBittorrentConfig`, `useMediaLibraries`, `useLibraryList` per state combo.
+- [x] **Task 5 — Refactor `library.tsx` isLibraryEmpty branch** (AC: #7) — DONE 2026-05-11. 29/29 library.spec.tsx PASS.
+  - [x] 5.1 Imported `useQBittorrentConfig` from `hooks/useQBittorrent` and `useMediaLibraries` from `hooks/useMediaLibrary`. Imported `classifyEmptyState` + 3 components.
+  - [x] 5.2 Both hooks called after `useSeriesStats()` (lines ~188-191). Renamed locals `qbtConfigQuery`, `mediaLibrariesQuery` for clarity.
+  - [x] 5.3 Replaced `<EmptyLibrary />` at the `isLibraryEmpty ? ` branch with an IIFE switch over `classifyEmptyState(...)` returning `null | <EmptyNoQBT/> | <EmptyNoFolder/> | <EmptyReadyForScan/>`. `'loading'` → `null` so the skeleton (from earlier `isLoading` rows above) owns the frame.
+  - [x] 5.4 `isSearchEmpty ? <EmptySearchResults>` branch UNCHANGED — verified by grep + Edit boundary.
+  - [x] 5.5 Added 3 new Case A/B/C tests + updated 2 stale tests (`renders EmptyLibrary when no items` / `does not render search bar when library is empty`) to assert new testids. Added 2 `vi.mock` blocks for `useQBittorrent` + `useMediaLibrary` with per-test override pattern via `mockReturnValue` + beforeEach reset.
 
-- [ ] **Task 6 — Delete old `EmptyLibrary.tsx` + spec** (AC: #6)
-  - [ ] 6.1 Verify no remaining imports of `EmptyLibrary` (the old single-state component) anywhere in `apps/web/src/`. Use `grep -rn "EmptyLibrary[^N]" apps/web/src/` — match should be ZERO after Task 5.
-  - [ ] 6.2 `git rm apps/web/src/components/library/EmptyLibrary.tsx`.
-  - [ ] 6.3 `git rm apps/web/src/components/library/EmptyLibrary.spec.tsx`.
-  - [ ] 6.4 Confirm `pnpm nx test web` still passes (deleted spec's 4 tests are SUPERSEDED by the new 3 component specs + classifier tests).
+- [x] **Task 6 — Delete old `EmptyLibrary.tsx` + spec** (AC: #6) — DONE 2026-05-11.
+  - [x] 6.1 Grep confirmed: zero references to old `EmptyLibrary` outside the files being deleted (3 import-style grep variants returned only `EmptyLibrary.tsx:4` self-ref + spec self-refs).
+  - [x] 6.2 `git rm apps/web/src/components/library/EmptyLibrary.tsx` — staged for deletion.
+  - [x] 6.3 `git rm apps/web/src/components/library/EmptyLibrary.spec.tsx` — staged for deletion.
+  - [x] 6.4 Full `nx test web` verification deferred to Task 7.1.
 
-- [ ] **Task 7 — Regression gates + manual smoke** (AC: #10)
-  - [ ] 7.1 Run `pnpm nx test web` → expect green, count delta within ±10 of baseline 1761.
-  - [ ] 7.2 Run `pnpm lint:all` → expect 0 errors / 122 warnings (match bugfix-10-4 baseline). If ANY new warning appears, fix it (do NOT push baseline upward — Rule 12 / Agreement 2 left-shift).
-  - [ ] 7.3 Run `pnpm run test:cleanup` → expect no orphaned processes (Epic 9c retro AI-2 rule).
-  - [ ] 7.4 Manual smoke matrix:
-    - **Case A**: stop backend with VIDO_DISABLE_QBT or wipe qBT config in DB → start `pnpm nx serve web` → navigate `/library` → verify EmptyNoQBT renders, both CTAs route correctly.
-    - **Case B**: qBT connected but `media_libraries` table empty → verify EmptyNoFolder renders, both CTAs route.
-    - **Case C**: qBT connected, library exists, items empty → verify EmptyReadyForScan renders, click `「立即掃描」` and check network tab for `POST /api/v1/scanner/scan` 200 response + success toast.
-  - [ ] 7.5 Update sprint-status.yaml entry: `backlog → ready-for-dev → in-progress → review` (DEV will handle subsequent transitions per workflow).
+- [x] **Task 7 — Regression gates + manual smoke** (AC: #10) — DONE 2026-05-11.
+  - [x] 7.1 `pnpm nx test web` → **1787/1787 PASS** (Δ +26 vs baseline 1761: +5 EmptyNoQBT + +5 EmptyNoFolder + +9 EmptyReadyForScan + +8 classifier + +3 library route Case A/B/C − 4 old EmptyLibrary spec = +26 net).
+  - [x] 7.2 `pnpm lint:all` → **0 errors / 122 warnings** — matches bugfix-10-4 baseline EXACTLY. Zero new warnings introduced. Prettier clean.
+  - [x] 7.3 `pnpm run test:cleanup` → "No test processes found" ✅.
+  - [x] 7.4 **CLI substitution per bugfix-10-2 precedent**: deterministic test coverage replaces browser smoke (CLI agent cannot drive Chrome DevTools). The classifier+component contract is locked by 8 classifier unit tests + 3 route-level tests + 9 EmptyReadyForScan tests (mocked `useTriggerScan` asserts `mutateAsync` invocation, `isPending` disable+label-swap, success+error notification). User browser DevTools verification (POST `/api/v1/scanner/scan` network frame + visual responsive check at 390/1440) recommended on NAS deploy.
+  - [x] 7.5 Sprint-status flip handled at Step 10 closeout (workflow boundary; Step 10 owns `in-progress → review`).
 
 ## Dev Notes
 
@@ -238,19 +235,44 @@ Sally's design uses dark bg `#0F172A`, white H2 `font-semibold text-xl`, muted s
 
 ### Agent Model Used
 
-_To be filled by DEV during /dev-story._
+claude-opus-4-7 (1M context) — invoked as Amelia (`dev.agent.yaml`) via `/bmad:bmm:agents:dev` → `DS bugfix-10-5`.
 
 ### Debug Log References
 
-_To be filled by DEV._
+- vitest run `EmptyNoQBT.spec.tsx` → 5/5 PASS (89ms)
+- vitest run `EmptyNoFolder.spec.tsx` → 5/5 PASS (124ms)
+- vitest run `EmptyReadyForScan.spec.tsx` → 9/9 PASS (138ms)
+- vitest run `emptyLibraryState.spec.ts` → 8/8 PASS (5ms)
+- vitest run `library.spec.tsx` → 29/29 PASS (1204ms) — 2 stale tests updated + 3 new Case A/B/C tests added
+- `pnpm nx test web` → 1787/1787 PASS (40s, +26 net vs 1761 baseline)
+- `pnpm nx test api` → PASS (flaky retry on `TestScannerService_SSEBroadcast_ScanCancelled` — known issue per bugfix-10-1 precedent, filed as `preexisting-fail-scanner-sse-scan-cancelled-flake` in sprint-status line 352)
+- `pnpm lint:all` → 0 errors / 122 warnings (matches bugfix-10-4 baseline exactly, ZERO new warnings)
+- `pnpm run test:cleanup` → no orphans
 
 ### Completion Notes List
 
-_To be filled by DEV._
+- 🔗 **AC Drift**: FOUND-authorized — pre-existing `EmptyLibrary.tsx` implicit v0 → this story v1 3-state classifier per Rule 20 forward-only retrofit. Change Log row 1 (`[@contract-v0→v1] AC #1`) documents.
+- 📎 **Contract Stamps**: FOUND (2× `[@contract-v1]` in this story — AC #1 classifier signature + AC #5 Rule 21 header format; upstream pre-Rule-20 → ack-skipped per forward-only retrofit policy).
+- 🔒 **Rule 7 Wire Format**: N/A (no Go error codes touched; pure FE story).
+- 🛠️ **Dev Notes correction (Task 3.4)**: story specified "sonner toast" for success/error feedback but `sonner` is not in `package.json`. Adopted the existing `ScannerSettings.tsx:43-60, 109-124` pattern — `useState<{type,message}> + setTimeout(5000) dismiss + inline AlertCircle render`. Functional outcome identical to AC #4 wording ("掃描已啟動" success / `ScannerApiError.message` fallback "掃描觸發失敗" error).
+- 🎨 **UX Verification (Step 9)**: PASS via design-vs-code structural comparison (CLI agent cannot drive browser). See table below.
+- ✅ **Lint baseline**: 122 warnings exactly — matches bugfix-10-4 closeout. The 3 pre-existing `react-hooks/exhaustive-deps` warnings on `library.tsx:435` (lines 464, 504, 512) are NOT new — they reference pre-existing handlers I didn't touch (`handleSelect`, keyboard shortcut closure, `getAllItemIds`). My only library.tsx edits were imports + 2 hook calls + the empty-state branch rewrite — none added new exhaustive-deps cycles.
+- 🧪 **Manual smoke deferred** to user NAS verification (Task 7.4) — covered by 26 new deterministic tests; browser DevTools confirmation recommended post-deploy.
+
+### UX Design Verification Table (Step 9 — mandatory for UI stories)
+
+Comparing implementation against Sally's committed screenshots (`5ebac6f`):
+
+| Component | Design Spec (Sally `.pen` node) | Implementation | Match? | Fix Needed |
+|---|---|---|---|---|
+| EmptyNoQBT (fSKuT) | Dark bg `#0F172A`, Film+Folder 40px muted, H2 「連接 qBittorrent 開始下載」semibold white, subtitle `text-sm text-[var(--text-secondary)]`, primary blue `#3B82F6` "連接 qBittorrent" + secondary outlined "已有檔案？設定資料夾" | `bg-[var(--bg-primary)]` (parent `<LibraryPage>`), `<Film>`+`<FolderOpen>` h-10 w-10 `text-[var(--text-muted)]`, H2 `text-xl font-semibold text-[var(--text-primary)]`, subtitle `text-sm text-[var(--text-secondary)]`, primary `bg-[var(--accent-primary)]` + secondary `border border-[var(--border-subtle)]` | ✅ | None |
+| EmptyNoFolder (U3SGxG) | Single `<FolderOpen>` 40px muted, H2 「指定一個媒體資料夾即可開始」, subtitle 「Vido 會掃描資料夾中的影片並自動匹配 TMDb 資訊」, primary blue "設定媒體資料夾" → `/settings/libraries`, secondary outlined "開啟設定精靈" → `/setup` | Matches: single `<FolderOpen>` icon, exact H2 + subtitle, primary `<Link to="/settings/libraries">` blue, secondary `<Link to="/setup">` outlined | ✅ | None |
+| EmptyReadyForScan (mfKgm) | `<ScanSearch>` (Sally's `.pen` placeholder = 🔎 emoji; DEV per story Dev Notes picks closest lucide), H2 「準備好了，等待第一筆媒體」, subtitle 「下載完成或掃描到檔案後會自動出現在這裡」, primary `<button>` "立即掃描" + secondary `<Link to="/downloads">` "前往下載中" | Matches: `<ScanSearch>` lucide-react icon (verified available), exact copy, `<button onClick={handleScan}>` with `disabled={isPending}` + label swap, `<Link to="/downloads">` | ✅ | None |
+| Tailwind tokens | `bg-[var(--bg-primary)]`, `text-[var(--text-primary)]`, `text-[var(--text-secondary)]`, `text-[var(--text-muted)]`, `bg-[var(--accent-primary)]`, `border-[var(--border-subtle)]` (Sally used same tokens for color parity with old EmptyLibrary) | All 3 components use identical token set; no new color literals introduced | ✅ | None |
+
+Result: **🎨 UX Verification: PASS — 3 implementations match design contract**. Browser-pixel verification still recommended post-NAS-deploy but no structural discrepancies detected at code-level.
 
 ### File List
-
-_To be filled by DEV. Expected structure (DEV verify before marking review):_
 
 **Created:**
 - `apps/web/src/components/library/EmptyNoQBT.tsx`
@@ -259,11 +281,14 @@ _To be filled by DEV. Expected structure (DEV verify before marking review):_
 - `apps/web/src/components/library/EmptyNoFolder.spec.tsx`
 - `apps/web/src/components/library/EmptyReadyForScan.tsx`
 - `apps/web/src/components/library/EmptyReadyForScan.spec.tsx`
-- _(optional)_ `apps/web/src/utils/emptyLibraryState.ts` + spec
+- `apps/web/src/utils/emptyLibraryState.ts`
+- `apps/web/src/utils/emptyLibraryState.spec.ts`
 
 **Modified:**
-- `apps/web/src/routes/library.tsx`
-- `apps/web/src/routes/library.spec.tsx`
+- `apps/web/src/routes/library.tsx` (imports + 2 new hook calls + isLibraryEmpty branch replacement)
+- `apps/web/src/routes/library.spec.tsx` (2 hook mocks added, 2 stale tests updated, 3 new Case A/B/C tests added)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (status transitions)
+- `_bmad-output/implementation-artifacts/bugfix-10-5-empty-library-onboarding.md` (this file)
 
 **Deleted:**
 - `apps/web/src/components/library/EmptyLibrary.tsx`
