@@ -1,6 +1,6 @@
 # Story bugfix-10-5: Empty Library Onboarding — 3-State Diagnostic UI
 
-Status: review
+Status: done
 
 <!-- Created 2026-05-11 by SM Bob /create-story (YOLO). Sally UX delivery committed 5ebac6f. -->
 
@@ -106,8 +106,8 @@ Status: review
 
 - [x] **Task 6 — Delete old `EmptyLibrary.tsx` + spec** (AC: #6) — DONE 2026-05-11.
   - [x] 6.1 Grep confirmed: zero references to old `EmptyLibrary` outside the files being deleted (3 import-style grep variants returned only `EmptyLibrary.tsx:4` self-ref + spec self-refs).
-  - [x] 6.2 `git rm apps/web/src/components/library/EmptyLibrary.tsx` — staged for deletion.
-  - [x] 6.3 `git rm apps/web/src/components/library/EmptyLibrary.spec.tsx` — staged for deletion.
+  - [x] 6.2 Removed `apps/web/src/components/library/EmptyLibrary.tsx`. **Note**: git's rename detection recorded this as `EmptyLibrary.tsx → EmptyNoQBT.tsx` (content rewritten in the same commit), not a pure `git rm`+create. AC #6 intent ("no orphan old single-state component") is satisfied — `grep 'EmptyLibrary[^-]'` finds zero `<EmptyLibrary>` component refs (only the unrelated `EmptyLibraryState` type name in `emptyLibraryState.ts`).
+  - [x] 6.3 `git rm apps/web/src/components/library/EmptyLibrary.spec.tsx` — fully deleted (45 lines).
   - [x] 6.4 Full `nx test web` verification deferred to Task 7.1.
 
 - [x] **Task 7 — Regression gates + manual smoke** (AC: #10) — DONE 2026-05-11.
@@ -127,7 +127,7 @@ Status: review
 
 3. **`useQBittorrentConfig` returns**: `{ data: { configured: boolean, ... } | undefined, isLoading, isError }`. Verified by bugfix-10-2's `useDownloads.ts:16` import + gate pattern. Use `data?.configured === true` (explicit boolean compare, NOT truthy) to avoid race conditions during initial query — see bugfix-10-2 CR M3.
 
-4. **`useMediaLibraries` returns**: `{ data: MediaLibrary[] | undefined, isLoading, isError }`. Verified at `hooks/useMediaLibrary.ts:17-22`. Use `(data?.length ?? 0) === 0` for explicit no-folder check (handles both `undefined` and empty array).
+4. **`useMediaLibraries` returns**: `{ data: { libraries: MediaLibraryWithPaths[] } | undefined, isLoading, isError }` — ⚠️ note the **WRAPPER object**: `mediaLibraryService.getAll()` returns `{ libraries: [...] }`, NOT a bare array. Verified at `hooks/useMediaLibrary.ts:17-22` + `services/mediaLibraryService.ts:70-72`. Use `(data?.libraries?.length ?? 0) === 0` for the no-folder check (handles `undefined` data, missing `libraries`, and empty array). **CR-corrected 2026-05-11**: the original Pre-flight here said `MediaLibrary[]` (bare array) — that was wrong and directly caused the Case-C-unreachable bug; see Completion Notes List.
 
 5. **lucide-react `ScanSearch` icon**: If `ScanSearch` is not in the installed lucide-react version, fall back to `<FolderSearch>` (definitely available). Verify via `import { ScanSearch } from 'lucide-react'` — if TypeScript errors, switch to `FolderSearch`.
 
@@ -230,6 +230,7 @@ Sally's design uses dark bg `#0F172A`, white H2 `font-semibold text-xl`, muted s
 |---|---|
 | 2026-05-11 | [@contract-v0→v1] AC #1: single-state empty UI → 3-state classifier (no-qbt/no-folder/ready-for-scan), downstream callers that import EmptyLibrary will fail to resolve — replace with state-classifier branch in library.tsx |
 | 2026-05-11 | [@contract-v1] AC #5 (new): Rule 21 component header format `// Implements: Component/EmptyLibrary-{NoQBT,NoFolder,ReadyForScan} ({fSKuT,U3SGxG,mfKgm})` — DEV deviations from exact format break design-traceability audit |
+| 2026-05-11 | **TA pass + CR followup**: TEA (Murat) `*test-automate` added `tests/e2e/empty-library.spec.ts` (6 P0/P1 Playwright specs) + `_bmad-output/automation-summary-bugfix-10-5.md`. En route it found Case C (`ready-for-scan`) was **unreachable in production** — `library.tsx:653` read `mediaLibrariesQuery.data?.length` against a `{libraries:[...]}` wrapper → `mediaLibrariesCount` always `0`. Fixed: `library.tsx:653` → `data?.libraries?.length`; `library.spec.tsx` 3 mock sites → `{ data: { libraries: [...] } }` (locking the contract at the unit layer too). CR (Amelia) then hardened the loading E2E spec (deterministic `waitForResponse` instead of `waitForTimeout`), made the `/scanner/scan` route hermetic, and de-duped the search route. Gates: nx test web 1787/1787 PASS preserved · lint:all 0 errors / 122 warnings unchanged · E2E 6/6 PASS chromium · test:cleanup no orphans. |
 
 ## Dev Agent Record
 
@@ -258,6 +259,8 @@ claude-opus-4-7 (1M context) — invoked as Amelia (`dev.agent.yaml`) via `/bmad
 - 🎨 **UX Verification (Step 9)**: PASS via design-vs-code structural comparison (CLI agent cannot drive browser). See table below.
 - ✅ **Lint baseline**: 122 warnings exactly — matches bugfix-10-4 closeout. The 3 pre-existing `react-hooks/exhaustive-deps` warnings on `library.tsx:435` (lines 464, 504, 512) are NOT new — they reference pre-existing handlers I didn't touch (`handleSelect`, keyboard shortcut closure, `getAllItemIds`). My only library.tsx edits were imports + 2 hook calls + the empty-state branch rewrite — none added new exhaustive-deps cycles.
 - 🧪 **Manual smoke deferred** to user NAS verification (Task 7.4) — covered by 26 new deterministic tests; browser DevTools confirmation recommended post-deploy.
+- 🐛 **CR followup fix (2026-05-11)** — code review found **Case C (`ready-for-scan`) was unreachable in production**: `library.tsx:653` read `mediaLibrariesQuery.data?.length` against a `{ libraries: [...] }` wrapper object, so `mediaLibrariesCount` was always `0` → `classifyEmptyState` always returned `no-folder`. The 1787 unit tests passed only because `library.spec.tsx` mocked `useMediaLibraries().data` as a bare array (matching the buggy code, not the real hook). **Root cause**: SM Pre-flight #4 mis-stated the hook return shape (`MediaLibrary[]` instead of `{ libraries: MediaLibraryWithPaths[] }`); DEV trusted the brief. The two other call sites (`MediaLibraryManager.tsx:36`, `LibraryEditModal.tsx:28`) had it right. **Fix**: `library.tsx:653` → `data?.libraries?.length`; `library.spec.tsx` 3 mock sites → `{ data: { libraries: [...] } }`. **Locked** by `tests/e2e/empty-library.spec.ts` (6 P0/P1 specs, network-first, mocks the real `{success, data}` wire shape). **Lesson**: DEV must verify hook return shape against the *service implementation*, not just the hook signature. **Process gap**: `tsc --noEmit` would have caught this at commit time, but `pnpm lint:all` runs `go vet`+`staticcheck`+`eslint`+`prettier` only — candidate Epic 10 retro item.
+- 🔧 **CR test hardening (2026-05-11)** — adversarial CR also tightened the new E2E spec: loading test now uses deterministic `page.waitForResponse('**/api/v1/settings/qbittorrent')` instead of an arbitrary `waitForTimeout(600)` (and exercises the "one of N queries still pending" branch via a single held `/libraries` route); `/scanner/scan` route aborts non-POST requests instead of leaking them to the real backend; the `/library/search*` mock was de-duplicated into the baseline helper (removed the dead inner branch in the `/library*` catch-all).
 
 ### UX Design Verification Table (Step 9 — mandatory for UI stories)
 
@@ -283,13 +286,15 @@ Result: **🎨 UX Verification: PASS — 3 implementations match design contract
 - `apps/web/src/components/library/EmptyReadyForScan.spec.tsx`
 - `apps/web/src/utils/emptyLibraryState.ts`
 - `apps/web/src/utils/emptyLibraryState.spec.ts`
+- `tests/e2e/empty-library.spec.ts` (TA pass + CR followup — 6 P0/P1 Playwright specs)
+- `_bmad-output/automation-summary-bugfix-10-5.md` (TA pass summary, commit `2d1495f`)
 
 **Modified:**
-- `apps/web/src/routes/library.tsx` (imports + 2 new hook calls + isLibraryEmpty branch replacement)
-- `apps/web/src/routes/library.spec.tsx` (2 hook mocks added, 2 stale tests updated, 3 new Case A/B/C tests added)
+- `apps/web/src/routes/library.tsx` (imports + 2 new hook calls + isLibraryEmpty branch replacement; **CR followup**: line 653 `data?.length` → `data?.libraries?.length`)
+- `apps/web/src/routes/library.spec.tsx` (2 hook mocks added, 2 stale tests updated, 3 new Case A/B/C tests added; **CR followup**: 3 `useMediaLibraries` mock sites → `{ data: { libraries: [...] } }` wrapper shape)
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` (status transitions)
 - `_bmad-output/implementation-artifacts/bugfix-10-5-empty-library-onboarding.md` (this file)
 
 **Deleted:**
-- `apps/web/src/components/library/EmptyLibrary.tsx`
+- `apps/web/src/components/library/EmptyLibrary.tsx` (git recorded as rename → `EmptyNoQBT.tsx`; see Task 6.2 note)
 - `apps/web/src/components/library/EmptyLibrary.spec.tsx`

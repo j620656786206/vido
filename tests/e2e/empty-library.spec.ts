@@ -153,16 +153,19 @@ async function stubLibraryRouteBaseline(page: Page) {
   await page.route(`${ROUTE_API}/health/services*`, (route: Route) =>
     route.fulfill(jsonOk({ services: [] }))
   );
-  // Catch-all empty list for /library and /library?page=...
-  await page.route(`${ROUTE_API}/library*`, (route: Route, request) => {
-    // Don't capture /library/stats, /library/genres, /library/recent*
-    // — already routed above. Playwright matches first registered first,
-    // so this only fires for /library and /library?... query variants.
-    if (request.url().includes('/library/search')) {
-      return route.fulfill(jsonOk({ results: [], total_count: 0 }));
-    }
-    return route.fulfill(jsonOk(emptyLibraryList));
-  });
+  // Empty search results — registered BEFORE the /library* catch-all so it
+  // wins for /library/search?... A test that wants a non-empty search can
+  // still register its own /library/search* before calling this helper.
+  await page.route(`${ROUTE_API}/library/search*`, (route: Route) =>
+    route.fulfill(jsonOk({ results: [], total_count: 0 }))
+  );
+  // Catch-all empty list for /library and /library?page=... Everything
+  // more specific (/library/stats, /library/genres, /library/recent*,
+  // /library/search*) is routed above; Playwright matches first-registered
+  // first, so this only fires for bare /library and /library?... variants.
+  await page.route(`${ROUTE_API}/library*`, (route: Route) =>
+    route.fulfill(jsonOk(emptyLibraryList))
+  );
 }
 
 // =============================================================================
@@ -255,7 +258,9 @@ test.describe('Empty Library 3-State Classifier @ui @library @bugfix-10-5', () =
         scanPostCount += 1;
         return route.fulfill(jsonOk({ id: 'scan-task-1', status: 'started' }));
       }
-      return route.continue();
+      // Nothing GETs /scanner/scan today; abort rather than let an
+      // unexpected request leak through to the real backend.
+      return route.abort();
     });
     await stubLibraryRouteBaseline(page);
 
@@ -293,39 +298,42 @@ test.describe('Empty Library 3-State Classifier @ui @library @bugfix-10-5', () =
     );
   });
 
-  test('[P1] Loading — slow qBT + libraries queries keep empty-state hidden until they resolve', async ({
+  test('[P1] Loading — one pending query keeps the empty-state hidden until it resolves', async ({
     page,
   }) => {
-    // GIVEN: qBT and libraries respond slowly (1.2s) — the classifier must
-    // return 'loading' (rendering null), letting the existing skeleton own
-    // the frame instead of flashing an empty-state.
-    let qbtResolve: (() => void) | undefined;
+    // GIVEN: qBT resolves immediately, but /libraries is held pending. The
+    // classifier MUST still return 'loading' (rendering null) because
+    // mediaLibrariesQuery.isLoading is true even though qbtConfigured is
+    // already set — letting the existing skeleton own the frame instead of
+    // flashing an empty-state. Exercises the "one of N queries still
+    // pending" branch deterministically — no arbitrary timeouts.
     let libsResolve: (() => void) | undefined;
-    const qbtGate = new Promise<void>((r) => (qbtResolve = r));
     const libsGate = new Promise<void>((r) => (libsResolve = r));
 
-    await page.route(`${ROUTE_API}/settings/qbittorrent`, async (route: Route) => {
-      await qbtGate;
-      await route.fulfill(jsonOk(qbtConnected));
-    });
+    await page.route(`${ROUTE_API}/settings/qbittorrent`, (route: Route) =>
+      route.fulfill(jsonOk(qbtConnected))
+    );
     await page.route(`${ROUTE_API}/libraries`, async (route: Route) => {
       await libsGate;
       await route.fulfill(jsonOk(oneLibrary));
     });
     await stubLibraryRouteBaseline(page);
 
-    // WHEN: navigation starts; we don't await full load
-    void page.goto('/library');
+    // WHEN: navigate AND wait for the qBT query to round-trip — this proves
+    // the route mounted and fired its queries, so a missing empty-state
+    // below is meaningful (not just "the page hasn't rendered yet").
+    await Promise.all([
+      page.waitForResponse((resp) => resp.url().includes('/api/v1/settings/qbittorrent')),
+      page.goto('/library'),
+    ]);
 
-    // THEN: while the two gating queries are pending, NONE of the 3
-    // empty-state slots may render. Poll for ~600ms.
-    await page.waitForTimeout(600);
+    // THEN: with /libraries still pending, classifier === 'loading' → null.
+    // None of the 3 empty-state slots may render.
     await expect(page.getByTestId('empty-no-qbt')).toHaveCount(0);
     await expect(page.getByTestId('empty-no-folder')).toHaveCount(0);
     await expect(page.getByTestId('empty-ready-for-scan')).toHaveCount(0);
 
-    // WHEN: the gating queries finally resolve
-    qbtResolve!();
+    // WHEN: the pending query finally resolves
     libsResolve!();
 
     // THEN: the correct empty-state (Case C — qBT OK + 1 lib + 0 items)
@@ -362,14 +370,12 @@ test.describe('Empty Library 3-State Classifier @ui @library @bugfix-10-5', () =
     // GIVEN: all 3 classifier conditions would resolve to Case A (qBT off
     // + no libs + no items) — but search is active. The classifier branch
     // must NOT fire; EmptySearchResults owns the search-empty UX.
+    // (/library/search* → empty results is provided by the baseline helper.)
     await page.route(`${ROUTE_API}/settings/qbittorrent`, (route: Route) =>
       route.fulfill(jsonOk(qbtDisconnected))
     );
     await page.route(`${ROUTE_API}/libraries`, (route: Route) =>
       route.fulfill(jsonOk({ libraries: [] }))
-    );
-    await page.route(`${ROUTE_API}/library/search*`, (route: Route) =>
-      route.fulfill(jsonOk({ results: [], total_count: 0 }))
     );
     await stubLibraryRouteBaseline(page);
 
