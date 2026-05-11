@@ -26,6 +26,10 @@ MCP_PORT = 9876
 SCREENS = {
     # Flow A - Desktop browse
     "4VILE": ("flow-a-browse-desktop", "09a-empty-library-desktop"),
+    # bugfix-10-5 — 3-state empty-library design (Reusable Components, anchors for Rule 21)
+    "fSKuT": ("flow-a-browse-desktop", "09a-1-empty-library-no-qbt"),
+    "U3SGxG": ("flow-a-browse-desktop", "09a-2-empty-library-no-folder"),
+    "mfKgm": ("flow-a-browse-desktop", "09a-3-empty-library-ready-for-scan"),
     "IpZhv": ("flow-a-browse-desktop", "09b-loading-skeleton-desktop"),
     "KNI8F": ("flow-a-browse-desktop", "01-library-grid-desktop"),
     "LZ8Ds": ("flow-a-browse-desktop", "06-list-view-desktop"),
