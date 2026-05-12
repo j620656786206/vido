@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 import { Loader2, CheckCircle, XCircle, SkipForward } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import type { DownloadParseStatus } from '../../services/downloadService';

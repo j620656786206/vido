@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 /**
  * Media Library Manager component for Settings page (Story 7b-4)
  * Replaces the env var display section in ScannerSettings.

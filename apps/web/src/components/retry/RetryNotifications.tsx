@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 /**
  * RetryNotifications Component (Story 3.11 - Task 9)
  * Shows toast notifications for retry events

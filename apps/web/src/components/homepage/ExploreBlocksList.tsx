@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 import { useCallback, useMemo, useState } from 'react';
 import { useQueries } from '@tanstack/react-query';
 import { useExploreBlocks, exploreBlockKeys } from '../../hooks/useExploreBlocks';

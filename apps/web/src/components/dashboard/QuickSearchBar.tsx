@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 import { useNavigate } from '@tanstack/react-router';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Clock, X } from 'lucide-react';

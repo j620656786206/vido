@@ -1,3 +1,5 @@
+// Implements: Component/SearchInput (6MxLT)
+// Source: ux-design.pen (Pencil app)
 import { useState, useCallback } from 'react';
 import { useDebouncedCallback } from 'use-debounce';
 import { Search, X } from 'lucide-react';

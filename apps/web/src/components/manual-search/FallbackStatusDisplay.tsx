@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 /**
  * FallbackStatusDisplay Component (Story 3.7 - UX-4)
  * Shows the fallback chain status when automatic parsing fails

@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 import { useState } from 'react';
 import { HardDrive, Loader2, Plus } from 'lucide-react';
 import {

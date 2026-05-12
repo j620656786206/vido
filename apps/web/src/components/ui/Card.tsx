@@ -1,3 +1,4 @@
+// Implements: <utility — no .pen counterpart>
 import * as React from 'react';
 import { cn } from '@/lib/utils';
 

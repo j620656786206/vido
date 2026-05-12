@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 /**
  * Library Edit/Create Modal for Settings page (Story 7b-4)
  */

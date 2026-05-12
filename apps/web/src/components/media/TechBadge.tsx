@@ -1,3 +1,5 @@
+// Implements: Component/TechBadge-Video (L9m19) + Component/TechBadge-Audio (9iTW3) + Component/TechBadge-Subtitle (f84BM) + Component/TechBadge-HDR (cUjyv)
+// Source: ux-design.pen (Pencil app)
 import { cn } from '@/lib/utils';
 
 export type TechBadgeCategory = 'video' | 'audio' | 'hdr' | 'subtitle';

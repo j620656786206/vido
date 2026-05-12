@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 import { Link } from '@tanstack/react-router';
 import { SearchX, File, Folder, HardDrive, Clock3, CircleAlert, Search } from 'lucide-react';
 

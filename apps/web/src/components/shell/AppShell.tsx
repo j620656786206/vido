@@ -1,3 +1,4 @@
+// Implements: <utility — no .pen counterpart>
 import { useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { Search, Settings } from 'lucide-react';

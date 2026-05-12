@@ -1,3 +1,4 @@
+// Implements: <utility — no .pen counterpart>
 import type { TorrentStatus } from '../../services/downloadService';
 import { cn } from '../../lib/utils';
 

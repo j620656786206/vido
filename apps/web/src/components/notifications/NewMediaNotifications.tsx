@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 /**
  * New Media Notifications Container (Story 4.3 - Task 8)
  * Displays toast notifications when new media is added to the library

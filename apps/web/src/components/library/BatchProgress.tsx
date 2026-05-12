@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 import { X } from 'lucide-react';
 import type { BatchError } from '../../types/library';
 

@@ -1,3 +1,4 @@
+// Implements: <utility — no .pen counterpart>
 import { PosterCardSkeleton } from '../media/PosterCardSkeleton';
 
 interface ExploreBlockSkeletonProps {

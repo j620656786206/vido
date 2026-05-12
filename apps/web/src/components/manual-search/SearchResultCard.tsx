@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 /**
  * SearchResultCard Component (Story 3.7 - AC2)
  * Individual search result card with poster, title, year, and source badge

@@ -1,3 +1,4 @@
+// Implements: <utility — no .pen counterpart>
 import { TechBadge } from './TechBadge';
 import { resolutionLabel, audioChannelLabel } from '@/utils/resolutionLabel';
 

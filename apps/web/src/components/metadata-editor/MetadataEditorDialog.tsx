@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 /**
  * MetadataEditorDialog Component (Story 3.8 - AC1, AC4)
  * Dialog for manually editing metadata of movies and series

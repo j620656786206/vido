@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 /**
  * Settings → 自訂首頁 — Story 10.3 management UI.
  *

@@ -1,3 +1,5 @@
+// Implements: Component/TabActive (TboA7) + Component/TabInactive (j98G4)
+// Source: ux-design.pen (Pencil app)
 import { Link, useRouterState } from '@tanstack/react-router';
 import { cn } from '../../lib/utils';
 

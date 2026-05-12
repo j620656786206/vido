@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 import { Download, Trash2, ShieldCheck, RotateCcw } from 'lucide-react';
 import type { Backup, BackupStatus } from '../../services/backupService';
 import { backupService } from '../../services/backupService';

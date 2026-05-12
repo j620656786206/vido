@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 interface NewMediaToastProps {
   title: string;
   posterUrl?: string;

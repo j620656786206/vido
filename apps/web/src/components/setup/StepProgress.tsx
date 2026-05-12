@@ -1,3 +1,4 @@
+// Implements: <utility — no .pen counterpart>
 interface StepProgressProps {
   steps: { id: string; title: string }[];
   currentStep: number;

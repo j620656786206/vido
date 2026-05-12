@@ -1,3 +1,5 @@
+// Implements: Component/SortDropdown (955EZ)
+// Source: ux-design.pen (Pencil app)
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { cn } from '../../lib/utils';

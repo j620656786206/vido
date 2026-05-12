@@ -1,3 +1,4 @@
+// Implements: <utility — no .pen counterpart>
 import type { LucideIcon } from 'lucide-react';
 
 interface SettingsPlaceholderProps {

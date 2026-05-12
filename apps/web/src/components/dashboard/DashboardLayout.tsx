@@ -1,3 +1,4 @@
+// Implements: <utility — no .pen counterpart>
 import { cn } from '../../lib/utils';
 
 interface DashboardLayoutProps {

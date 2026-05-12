@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 /**
  * Scanner Settings component (Story 7.3)
  * Displays media folder paths, scan schedule, last scan info, and scan trigger button.

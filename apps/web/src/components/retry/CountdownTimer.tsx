@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 /**
  * CountdownTimer Component (Story 3.11 - Task 8.2)
  * Real-time countdown display for retry items

@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 import { cn } from '../../lib/utils';
 
 export type AvailabilityBadgeVariant = 'owned' | 'requested';

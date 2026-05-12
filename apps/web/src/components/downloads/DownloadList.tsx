@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 import { useState } from 'react';
 import type { Download, SortField, SortOrder } from '../../services/downloadService';
 import { DownloadItem } from './DownloadItem';

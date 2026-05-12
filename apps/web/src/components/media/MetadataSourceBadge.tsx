@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 export type MetadataSource = 'tmdb' | 'douban' | 'wikipedia' | 'ai' | 'manual';
 
 interface SourceConfig {

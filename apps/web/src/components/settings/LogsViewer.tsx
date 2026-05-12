@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 import { useState, useCallback } from 'react';
 import { FileText, Trash2, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useLogs, useClearLogs } from '../../hooks/useLogs';

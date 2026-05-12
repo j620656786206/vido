@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 import { Link } from '@tanstack/react-router';
 import { PosterCard } from '../media/PosterCard';
 import { PosterCardSkeleton } from '../media/PosterCardSkeleton';

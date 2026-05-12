@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 import type { FilterStatus, DownloadCounts } from '../../services/downloadService';
 import { cn } from '../../lib/utils';
 

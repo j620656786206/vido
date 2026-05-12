@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 import { useState } from 'react';
 
 const YOUTUBE_EMBED_BASE = 'https://www.youtube-nocookie.com/embed/';

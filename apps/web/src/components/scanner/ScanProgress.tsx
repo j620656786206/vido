@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 /**
  * Responsive scan progress wrapper (Story 7.4, Task 5)
  * ≥768px → ScanProgressCard (floating bottom-right)

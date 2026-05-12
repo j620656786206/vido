@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Search, X, ChevronDown, ChevronUp, Eye, Download, Check, Loader2 } from 'lucide-react';
 import { cn } from '../../lib/utils';

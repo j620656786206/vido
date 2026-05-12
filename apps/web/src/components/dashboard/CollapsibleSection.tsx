@@ -1,3 +1,4 @@
+// Implements: <utility — no .pen counterpart>
 /**
  * CollapsibleSection Component (Story 4.3 - AC4)
  * Provides collapsible behavior for dashboard panels on mobile

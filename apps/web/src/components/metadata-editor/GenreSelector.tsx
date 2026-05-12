@@ -1,3 +1,5 @@
+// Implements: Component/GenreTag (L1NP6)
+// Source: ux-design.pen (Pencil app)
 /**
  * GenreSelector Component (Story 3.8 - AC1)
  * Multi-select genre picker with toggle buttons

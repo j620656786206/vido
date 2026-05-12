@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 import { CheckCircle } from 'lucide-react';
 import type { StepProps } from './SetupWizard';
 

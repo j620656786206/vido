@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 /**
  * LearnedPatternsSettings Component (Story 3.9 - AC3)
  * Displays and manages learned filename patterns in settings

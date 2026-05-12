@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 /**
  * ParseFailureCard Component (Story 3.7 - Task 7)
  * Displays a media file that failed automatic parsing with manual search option

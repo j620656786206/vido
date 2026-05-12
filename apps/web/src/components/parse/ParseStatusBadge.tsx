@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 /**
  * ParseStatusBadge Component (Story 3.10 - Task 6)
  * Displays a status icon with tooltip for parse status

@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 import { useState } from 'react';
 import { Database, Trash2, Loader2, Clock } from 'lucide-react';
 import { useCacheStats, useClearCacheByType, useClearCacheByAge } from '../../hooks/useCacheStats';

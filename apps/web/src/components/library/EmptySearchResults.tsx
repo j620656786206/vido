@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 import { Search } from 'lucide-react';
 
 interface EmptySearchResultsProps {

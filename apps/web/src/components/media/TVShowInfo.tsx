@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 import type { TVShowDetails } from '../../types/tmdb';
 import { cn } from '../../lib/utils';
 

@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 import { useState, useRef, useEffect } from 'react';
 import { MoreHorizontal, RefreshCw, Download, Trash2 } from 'lucide-react';
 

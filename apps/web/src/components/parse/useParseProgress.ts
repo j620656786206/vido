@@ -1,3 +1,4 @@
+// Implements: <utility — no .pen counterpart>
 /**
  * useParseProgress Hook (Story 3.10 - Task 9)
  * React hook for subscribing to parse progress SSE events

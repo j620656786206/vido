@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 /**
  * Library Card component for displaying a media library in Settings (Story 7b-4)
  */

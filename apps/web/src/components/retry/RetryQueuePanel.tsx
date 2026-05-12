@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 /**
  * RetryQueuePanel Component (Story 3.11 - Task 8.1)
  * Displays pending retry items with countdown timers and action buttons

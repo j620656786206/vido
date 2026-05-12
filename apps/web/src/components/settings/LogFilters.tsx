@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 import { useState } from 'react';
 import { Search, X } from 'lucide-react';
 import { cn } from '../../lib/utils';

@@ -1,3 +1,5 @@
+// Implements: Component/FilterChip (jD7gF)
+// Source: ux-design.pen (Pencil app)
 import { X } from 'lucide-react';
 import type { FilterValues } from './FilterPanel';
 

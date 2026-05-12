@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 /**
  * LayeredProgressIndicator Component (Story 3.10 - Task 5)
  * Displays parse steps with status icons in a layered format

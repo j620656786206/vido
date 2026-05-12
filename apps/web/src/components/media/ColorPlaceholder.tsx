@@ -1,3 +1,4 @@
+// Implements: <utility — no .pen counterpart>
 /**
  * ColorPlaceholder — generates a deterministic gradient poster placeholder
  * from a filename, displaying the first character as a large centered letter.

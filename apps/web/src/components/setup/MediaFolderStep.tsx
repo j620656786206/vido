@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 import type { StepProps } from './SetupWizard';
 
 export function MediaFolderStep({ data, onUpdate, onNext, onBack }: StepProps) {

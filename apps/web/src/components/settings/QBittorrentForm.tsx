@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 import { useState, useEffect } from 'react';
 import { Loader2, Plug, Save } from 'lucide-react';
 import { cn } from '../../lib/utils';

@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 /**
  * Mobile bottom sheet scan progress (Story 7.4, Task 4)
  * Peek state: 64px, full width. Expanded: half screen with drag handle.

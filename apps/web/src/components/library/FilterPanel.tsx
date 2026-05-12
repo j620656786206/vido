@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 import { useState, useCallback, useEffect } from 'react';
 import { Check } from 'lucide-react';
 import { useLibraryGenres } from '../../hooks/useLibrary';

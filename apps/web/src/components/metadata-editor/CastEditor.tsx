@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 /**
  * CastEditor Component (Story 3.8 - AC1)
  * Add/remove cast members with input field

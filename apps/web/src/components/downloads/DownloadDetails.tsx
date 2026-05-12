@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 import { useDownloadDetails } from '../../hooks/useDownloads';
 import { formatSize, formatSpeed, formatDate } from './formatters';
 

@@ -1,3 +1,4 @@
+// Implements: <utility — no .pen counterpart>
 import { useState, useCallback } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useQueryClient } from '@tanstack/react-query';

@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 /**
  * RetryQueueSection Component (Story 3.11 - HIGH #4 Integration)
  * Shows retry queue status inline within the parse progress card

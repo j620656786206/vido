@@ -4,7 +4,7 @@
 
 **Full Documentation:** See `_bmad-output/planning-artifacts/architecture/index.md` for complete architectural decisions and patterns (sharded into ~20 focused files).
 
-**Last Updated:** 2026-05-08 (Rule 21 + Rule 22 added — Party Mode consensus on design-implementation drift prevention; Rule 21 requires every component file under `apps/web/src/components/` to header-reference its `.pen` node ID via `// Implements: Component/{Name} ({pen-node-id})`, Rule 22 mandates each epic retro samples ≥5 components for design-drift audit with exact/minor/material classification. Origin: bugfix-10-4 root cause discovery — `HoverPreviewCard.tsx` was independently invented and diverged from existing `.pen` `Component/PosterCardHover` (node `MQbvp`); drift hypothesized as systemic. `epic-19` (Design-Implementation Drift Audit) cross-cutting initiative — 8 stories (19-1…19-8) — tracks Phase-2 enforcement infrastructure: ESLint rule, Playwright visual baselines, GitHub Actions for visual regression + monthly TestSprite quota consumption + month-end quota warning. Sally + Bob + Winston + Amelia + Murat consensus). Prior: 2026-04-24 (Rule 7 prefix rename `QB_` → `QBITTORRENT_` via followup-qbittorrent-prefix-rename; restores `SOURCE = uppercase(package)` uniformity across all 13 registered prefixes — was the only outlier per Winston 2026-04-20 retro-10-AI3 Item 3 ruling). Prior: 2026-04-22 (Rule 20 AC Contract Versioning — retro-10-AI5; introduces `[@contract-vN]` prefix + bump/ack protocol + forward-only retrofit, Pattern #2 from Epic 10 retro, spike doc committed as 4a598e5; CR follow-up 2026-04-22 hoisted grep helpers into Rule 20 body, unified Change Log format to `{what changed, what breaks downstream}`, documented v0 fallback). Prior: 2026-04-22 (Rule 15 HTTP Route ↔ Client Method Sync extension — retro-10-AI4; adds 4th sub-section guarding "client method exists ≠ HTTP route registered", Story 10-2 precedent). Earlier: 2026-04-20 (Rule 7 expansion — added `QB_`, `METADATA_`, `DOUBAN_`, `WIKIPEDIA_` prefixes already in production use; surfaced by retro-10-AI3 CR grep on 2026-04-20)
+**Last Updated:** 2026-05-12 (story 19-3 — Rule 21 Phase-2 enforcement LIVE: custom ESLint rule `local/implements-pen-node-id` (`apps/web/src/eslint-rules/implements-pen-node-id.js`, wired in `eslint.config.mjs`) errors on missing/malformed `// Implements:` headers under `apps/web/src/components/**/*.{ts,tsx}`; all 131 component-dir files backfilled (12 mapped to real `.pen` Reusable Components, 25 `<utility — no .pen counterpart>`, 94 `<screen-section — pending epic-19-8 mapping>` — a NEW 4th accepted form added per Sally+Amelia+Bob Party Mode 2026-05-12 for components that render a section of a designed screen frame; canonical screen-frame mapping tracked by epic-19-8; audit doc `_bmad-output/audit/drift-19-3-2026-05.md`). Rule 21's accepted-marker grammar list updated to include the multi-component `+` form and the `<screen-section …>` placeholder. Prior: 2026-05-08 (Rule 21 + Rule 22 added — Party Mode consensus on design-implementation drift prevention; Rule 21 requires every component file under `apps/web/src/components/` to header-reference its `.pen` node ID via `// Implements: Component/{Name} ({pen-node-id})`, Rule 22 mandates each epic retro samples ≥5 components for design-drift audit with exact/minor/material classification. Origin: bugfix-10-4 root cause discovery — `HoverPreviewCard.tsx` was independently invented and diverged from existing `.pen` `Component/PosterCardHover` (node `MQbvp`); drift hypothesized as systemic. `epic-19` (Design-Implementation Drift Audit) cross-cutting initiative — 8 stories (19-1…19-8) — tracks Phase-2 enforcement infrastructure: ESLint rule, Playwright visual baselines, GitHub Actions for visual regression + monthly TestSprite quota consumption + month-end quota warning. Sally + Bob + Winston + Amelia + Murat consensus). Prior: 2026-04-24 (Rule 7 prefix rename `QB_` → `QBITTORRENT_` via followup-qbittorrent-prefix-rename; restores `SOURCE = uppercase(package)` uniformity across all 13 registered prefixes — was the only outlier per Winston 2026-04-20 retro-10-AI3 Item 3 ruling). Prior: 2026-04-22 (Rule 20 AC Contract Versioning — retro-10-AI5; introduces `[@contract-vN]` prefix + bump/ack protocol + forward-only retrofit, Pattern #2 from Epic 10 retro, spike doc committed as 4a598e5; CR follow-up 2026-04-22 hoisted grep helpers into Rule 20 body, unified Change Log format to `{what changed, what breaks downstream}`, documented v0 fallback). Prior: 2026-04-22 (Rule 15 HTTP Route ↔ Client Method Sync extension — retro-10-AI4; adds 4th sub-section guarding "client method exists ≠ HTTP route registered", Story 10-2 precedent). Earlier: 2026-04-20 (Rule 7 expansion — added `QB_`, `METADATA_`, `DOUBAN_`, `WIKIPEDIA_` prefixes already in production use; surfaced by retro-10-AI3 CR grep on 2026-04-20)
 **Architecture Status:** ✅ Validated and Ready for Implementation (5,463 lines, 8 steps completed)
 
 ---
@@ -676,16 +676,30 @@ Where:
 Lookup: query .pen via Pencil MCP `get_editor_state` — every reusable
 component is listed with its node ID under "Reusable Components".
 
-Exemptions (annotate explicitly so absence is intentional, not accidental):
-  - Pure layout/utility components: // Implements: <utility — no .pen counterpart>
-  - One-off route-level wrappers:    // Implements: <route-only>
-  - Tests, hooks, services, stores:  exempt (no annotation required)
+Multi-component: a file rendering more than one designed component joins
+them with ` + ` on one line:
+  // Implements: Component/PosterCard (RusTY) + Component/PosterCardHover (MQbvp)
+
+Exemptions / placeholders (annotate explicitly so absence is intentional, not accidental):
+  - Pure layout/utility components:  // Implements: <utility — no .pen counterpart>
+  - One-off route-level wrappers:     // Implements: <route-only>
+  - Renders a section of a designed *screen frame* (not a Reusable Component),
+    canonical screen-frame mapping pending the epic-19-8 sweep:
+                                      // Implements: <screen-section — pending epic-19-8 mapping>
+    (Phase-2 placeholder — epic-19-8 upgrades these to a `// Design ref: ux-design.pen
+    Screen {ID} ({nodeId})` soft comment or a real `// Implements:` header if the
+    design extracts the section as a Reusable Component. Do NOT use this form for
+    components that genuinely have no design — those are `<utility — no .pen counterpart>`.)
+  - Tests, hooks, services, stores:   exempt (no annotation required)
 
 Enforcement:
   Phase 1 (manual, ships with Rule 21): SM /create-story template REQUIRES
   the Implements: line in story Dev Notes. Stories without it are bounced.
-  Phase 2 (automated, story 19-3): custom ESLint rule flags missing or
-  malformed headers under apps/web/src/components/.
+  Phase 2 (automated, LIVE since story 19-3): the custom ESLint rule
+  `local/implements-pen-node-id` (apps/web/src/eslint-rules/implements-pen-node-id.js,
+  wired in eslint.config.mjs) errors on missing or malformed `// Implements:`
+  headers under apps/web/src/components/**/*.{ts,tsx} (spec/test files and
+  index.ts barrels excluded). Runs inside `eslint .` ⇒ `pnpm lint:all` ⇒ CI.
 ```
 
 📌 Precedent (Party Mode 2026-05-08, bugfix-10-4 root cause):

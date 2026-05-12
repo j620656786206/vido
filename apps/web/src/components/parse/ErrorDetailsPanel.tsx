@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 /**
  * ErrorDetailsPanel Component (Story 3.10 - Task 7)
  * Displays failure reasons and action buttons for failed parses

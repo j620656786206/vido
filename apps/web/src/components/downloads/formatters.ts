@@ -1,3 +1,4 @@
+// Implements: <utility — no .pen counterpart>
 /**
  * Formatting utilities for download display (Story 4.2)
  */

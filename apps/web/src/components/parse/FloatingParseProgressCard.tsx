@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 /**
  * FloatingParseProgressCard Component (Story 3.10 - Task 4)
  * Non-blocking floating card showing parse progress

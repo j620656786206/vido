@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { ChevronDown, Download as DownloadIcon } from 'lucide-react';

@@ -1,3 +1,4 @@
+// Implements: <utility — no .pen counterpart>
 // Degradation level enum matching backend
 export type DegradationLevel = 'normal' | 'partial' | 'minimal' | 'offline';
 

@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 import { PosterCard } from './PosterCard';
 import { PosterCardSkeleton } from './PosterCardSkeleton';
 import type { Movie, TVShow } from '../../types/tmdb';

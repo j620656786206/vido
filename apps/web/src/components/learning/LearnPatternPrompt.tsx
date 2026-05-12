@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 /**
  * LearnPatternPrompt Component (Story 3.9 - AC1, AC2)
  * Prompts user to learn a filename pattern after manual metadata correction

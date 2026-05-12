@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 import { AlertTriangle, Loader2 } from 'lucide-react';
 import type { Backup } from '../../services/backupService';
 

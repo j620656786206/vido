@@ -1,3 +1,4 @@
+// Implements: <utility — no .pen counterpart>
 export interface FileInfoProps {
   filePath?: string;
   fileSize?: number;

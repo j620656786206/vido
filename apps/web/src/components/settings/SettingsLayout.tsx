@@ -1,3 +1,4 @@
+// Implements: <utility — no .pen counterpart>
 import { Link, useRouterState } from '@tanstack/react-router';
 import {
   Plug,

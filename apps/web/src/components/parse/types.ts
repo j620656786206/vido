@@ -1,3 +1,4 @@
+// Implements: <utility — no .pen counterpart>
 /**
  * Parse Status Types (Story 3.10)
  * Types for parse progress tracking and SSE events

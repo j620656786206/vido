@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 import { useEffect, useRef } from 'react';
 import { AlertTriangle } from 'lucide-react';
 

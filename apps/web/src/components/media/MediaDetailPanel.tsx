@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 import { useState, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getImageUrl } from '../../lib/image';

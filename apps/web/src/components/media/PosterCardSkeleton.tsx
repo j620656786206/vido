@@ -1,3 +1,4 @@
+// Implements: <utility — no .pen counterpart>
 export function PosterCardSkeleton() {
   return (
     <div className="animate-pulse">

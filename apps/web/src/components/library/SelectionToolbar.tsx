@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 import { Trash2, RefreshCw, Download, X } from 'lucide-react';
 
 interface SelectionToolbarProps {

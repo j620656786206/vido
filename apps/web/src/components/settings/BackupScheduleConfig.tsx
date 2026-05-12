@@ -1,3 +1,4 @@
+// Implements: <screen-section — pending epic-19-8 mapping>
 import { useState, useEffect } from 'react';
 import { Clock, Loader2 } from 'lucide-react';
 import { useBackupSchedule, useUpdateSchedule } from '../../hooks/useBackups';
