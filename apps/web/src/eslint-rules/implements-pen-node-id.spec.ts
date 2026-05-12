@@ -5,7 +5,6 @@
  * `RuleTester` uses the ambient `describe`/`it` globals, which vitest provides
  * (`globals: true` in vite.config.ts).
  */
-import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { RuleTester } from 'eslint';
 import { describe, it, expect } from 'vitest';
@@ -82,6 +81,12 @@ ruleTester.run('implements-pen-node-id', rule, {
       code: '// Implements: <some other reason>\nexport const x = 1;\n',
       errors: [{ messageId: 'missing' }],
     },
+    // (e'''') malformed: node ID containing a hyphen — real .pen node IDs are
+    // letters/digits only; a `-` belongs in {Name}, not {nodeId} (AC #1)
+    {
+      code: '// Implements: Component/PosterCard (Rus-TY)\nexport const x = 1;\n',
+      errors: [{ messageId: 'missing' }],
+    },
     // (e'''') screen-section placeholder missing the `pending epic-N-M mapping` clause
     {
       code: '// Implements: <screen-section>\nexport const x = 1;\n',
@@ -97,23 +102,46 @@ ruleTester.run('implements-pen-node-id', rule, {
 
 // (g) Out-of-scope files (specs, hooks/services/stores/utils, route files,
 // index.ts barrels) are excluded by the flat-config `files`/`ignores` of the
-// config object in eslint.config.mjs, not by the rule body. Verify that wiring
-// is present so a refactor can't silently widen/narrow scope.
+// config object in eslint.config.mjs, not by the rule body. Load the *actual*
+// resolved config and assert the scoping object semantically (not via raw-text
+// substring matching) so a refactor can't silently widen/narrow scope.
 describe('eslint.config.mjs wiring for local/implements-pen-node-id', () => {
-  const configPath = resolve(__dirname, '../../../../eslint.config.mjs');
-  const configText = readFileSync(configPath, 'utf8');
+  // eslint.config.mjs is ESM at the repo root; import the resolved array.
+  let ruleConfig: {
+    files?: unknown;
+    ignores?: unknown;
+    rules?: Record<string, unknown>;
+    plugins?: Record<string, unknown>;
+  };
+
+  it('has exactly one config object enabling the rule', async () => {
+    const configPath = resolve(__dirname, '../../../../eslint.config.mjs');
+    const flatConfig = (await import(/* @vite-ignore */ configPath)).default as Array<{
+      rules?: Record<string, unknown>;
+    }>;
+    const matches = flatConfig.filter((c) => c.rules && 'local/implements-pen-node-id' in c.rules);
+    expect(matches).toHaveLength(1);
+    ruleConfig = matches[0] as typeof ruleConfig;
+  });
 
   it('registers the rule at error severity', () => {
-    expect(configText).toContain("'local/implements-pen-node-id': 'error'");
+    expect(ruleConfig.rules?.['local/implements-pen-node-id']).toBe('error');
+  });
+
+  it('registers the local plugin object that exposes the rule', () => {
+    const local = ruleConfig.plugins?.local as { rules?: Record<string, unknown> } | undefined;
+    expect(local?.rules?.['implements-pen-node-id']).toBe(rule);
   });
 
   it('scopes the rule to apps/web/src/components/**/*.{ts,tsx}', () => {
-    expect(configText).toContain('apps/web/src/components/**/*.{ts,tsx}');
+    expect(ruleConfig.files).toEqual(['apps/web/src/components/**/*.{ts,tsx}']);
   });
 
   it('ignores spec/test files and index.ts barrels under components/', () => {
-    expect(configText).toMatch(/apps\/web\/src\/components\/\*\*\/\*\.spec\.\{ts,tsx\}/);
-    expect(configText).toMatch(/apps\/web\/src\/components\/\*\*\/\*\.test\.\{ts,tsx\}/);
-    expect(configText).toContain('apps/web/src/components/**/index.ts');
+    expect(ruleConfig.ignores).toEqual([
+      'apps/web/src/components/**/*.spec.{ts,tsx}',
+      'apps/web/src/components/**/*.test.{ts,tsx}',
+      'apps/web/src/components/**/index.ts',
+    ]);
   });
 });

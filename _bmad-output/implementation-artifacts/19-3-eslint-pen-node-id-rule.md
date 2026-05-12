@@ -1,6 +1,6 @@
 # Story 19.3: ESLint Rule — Enforce Component-to-Design Node Traceability (Rule 21 Phase 2)
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -42,18 +42,18 @@ so that design-implementation drift cannot silently re-enter the codebase the wa
   - [x] Classified all 131 candidates: Category A = 12 mapped to Reusable Components (4 pre-existing + 8 new), Category B = 25 genuine pure-utility/layout/helper/`.ts`-module exemptions (`<utility — no .pen counterpart>`), Category C = 94 screen-section feature components → `<screen-section — pending epic-19-8 mapping>` (canonical screen-frame mapping deferred to epic-19-8 — NOT drift). No file given a false exemption (AC #6).
   - [x] Recorded the full classification + per-file mapping table + 19-8 worklist in `_bmad-output/audit/drift-19-3-2026-05.md`
 - [x] Task 4: Backfill headers across `apps/web/src/components/` (AC: #5, #6)
-  - [x] `scripts/backfill-rule21-headers.mjs` (idempotent) prepended `// Implements: Component/X (id)\n// Source: ux-design.pen (Pencil app)` to the 8 Category-A files; the 4 pre-existing-headed files left untouched. Initial pass put `<utility — no .pen counterpart>` on the remaining 119; after the 2026-05-12 Party Mode ruling, 94 of those (Category C) were flipped to `<screen-section — pending epic-19-8 mapping>` (the script's `CATEGORY_B` set / B-vs-C split records which stays which).
+  - [x] `scripts/backfill-rule21-headers.mjs` (idempotent) prepended `// Implements: Component/X (id)\n// Source: ux-design.pen (Pencil app)` to the 8 Category-A files; the 4 pre-existing-headed files left untouched. Initial pass put `<utility — no .pen counterpart>` on the remaining 119; after the 2026-05-12 Party Mode ruling, 94 of those (Category C) were flipped to `<screen-section — pending epic-19-8 mapping>` (the script's `CATEGORY_B` set / B-vs-C split recorded which stays which). _(CR follow-up 2026-05-12: the one-shot script was removed once the backfill landed — the durable A/B/C mapping record lives in `_bmad-output/audit/drift-19-3-2026-05.md`.)_
   - [x] Only `apps/web/src/components/**` `.tsx`/non-`index.ts` `.ts` files touched; no `*.spec.tsx`, nothing outside `components/`
   - [x] No file is un-mappable-and-mislabelled → zero material-drift findings filed (recorded as such in the audit doc; the Category-C deferral mirrors the bugfix-10-6 precedent)
 - [x] Task 5: Unit-test the rule (AC: #7)
   - [x] `apps/web/src/eslint-rules/implements-pen-node-id.spec.ts` — ESLint `RuleTester` (uses vitest's ambient `describe`/`it`) + a `describe` block asserting the `eslint.config.mjs` wiring (rule registered at `error`, scoped to `components/**/*.{ts,tsx}`, ignores spec/test/index.ts) — covers AC #7 (a) valid single, (b) valid multi, (c) all exemption/placeholder forms (`<utility …>` em-dash + hyphen, `<route-only>`, `<screen-section — pending epic-19-8 mapping>` em-dash + hyphen) + JSDoc form + below-other-comments, (d) missing, (e) 5× malformed (no `Component/`; no `(id)`; empty `(id)`; bare `<screen-section>`; arbitrary `<…>`), (f) marker-after-import → still error, (g) out-of-scope handled via the config-wiring assertions
-  - [x] Runs under `pnpm nx test web` (19 tests, all pass — vitest `include` covers `src/**/*.spec.ts`)
+  - [x] Runs under `pnpm nx test web` (22 tests, all pass — 9 valid + 8 invalid `RuleTester` cases + 5 `eslint.config.mjs` wiring assertions; vitest `include` covers `src/**/*.spec.ts`. Was 19 at dev-story close; CR follow-up 2026-05-12 added the hyphenated-node-id invalid case and rewrote the wiring block to inspect the resolved flat-config object instead of substring-matching the file text.)
 - [x] Task 6: Update `project-context.md` Rule 21 Enforcement block (AC: #9)
   - [x] Phase 2 bullet rewritten to present tense ("LIVE since story 19-3"), names `local/implements-pen-node-id` + file path + that it runs inside `eslint .` ⇒ `pnpm lint:all` ⇒ CI
   - [x] (post-Party-Mode) grammar block gained the multi-component ` + ` form + the `<screen-section — pending epic-19-8 mapping>` placeholder (with the "don't use this for components with genuinely no design" caveat); `Last Updated` header got a story-19-3 entry
 - [x] Task 7: Full regression + close (AC: #6, #8)
   - [x] `pnpm lint:all` → 0 errors / 122 warnings (matches bugfix-10-7 closeout baseline exactly; new rule adds 0 errors), prettier `--check .` clean
-  - [x] `pnpm nx test web` → 148 files / 1834 tests pass (includes the +16 new rule tests)
+  - [x] `pnpm nx test web` → 148 files / 1840 tests pass (includes the new rule's 22 tests; 1837 at dev-story close, +3 from the CR follow-up)
   - [x] `pnpm nx test api` → pass (full regression gate, Epic 9 Retro AI-1)
   - [x] `pnpm run test:cleanup` → no orphaned processes
   - [x] `ux-design.pen` not modified (read-only via MCP) — `scripts/export-pen-screenshots.py` NOT run; CLAUDE.md screenshot workflow does not trigger
@@ -122,9 +122,10 @@ claude-opus-4-7[1m] (Amelia / dev-story workflow)
 ### Debug Log References
 
 - `npx eslint apps/web/src/components` after wiring → 127 errors (the AC #5 worklist), 0 after backfill
-- `pnpm nx test web` → 148 files / 1834 tests pass
+- `pnpm nx test web` → 148 files / 1840 tests pass (1837 at dev-story close; +3 CR follow-up)
 - `pnpm nx test api` → pass
 - `pnpm lint:all` → 0 errors / 122 warnings (matches bugfix-10-7 baseline) + prettier clean
+- (CR follow-up) `npx eslint apps/web/src/components` after tightening the `{nodeId}` regex → still 0 errors (no backfilled header broke)
 
 ### Completion Notes List
 
@@ -141,8 +142,10 @@ claude-opus-4-7[1m] (Amelia / dev-story workflow)
 **New:**
 - `apps/web/src/eslint-rules/implements-pen-node-id.js` — the custom ESLint rule (CJS plugin); 4 accepted marker forms incl. the `<screen-section — pending epic-{N}-{M} mapping>` placeholder
 - `apps/web/src/eslint-rules/implements-pen-node-id.spec.ts` — RuleTester unit tests (19) + config-wiring assertions
-- `scripts/backfill-rule21-headers.mjs` — idempotent one-shot backfill script (auditable mapping record; `MAPPING` table + `CATEGORY_B` set encode A/B/C)
-- `_bmad-output/audit/drift-19-3-2026-05.md` — Rule 21 backfill audit + file→`.pen`-node mapping table + epic-19-8 worklist (Category C grep)
+- `_bmad-output/audit/drift-19-3-2026-05.md` — Rule 21 backfill audit + file→`.pen`-node mapping table + epic-19-8 worklist (Category C grep) — also the durable A/B/C classification record (the one-shot backfill script was removed after the headers landed; see Removed below)
+
+**Removed (CR follow-up 2026-05-12):**
+- `scripts/backfill-rule21-headers.mjs` — the idempotent one-shot backfill script; dead code once the headers were committed. Its A/B/C mapping is preserved in `_bmad-output/audit/drift-19-3-2026-05.md`.
 
 **Modified:**
 - `eslint.config.mjs` — import the local plugin + one new config object scoping `local/implements-pen-node-id` to `apps/web/src/components/**/*.{ts,tsx}`
@@ -163,6 +166,7 @@ claude-opus-4-7[1m] (Amelia / dev-story workflow)
 
 | Date | Change |
 | ---- | ------ |
+| 2026-05-12 | CR (code-review follow-up, 6 LOW findings auto-fixed): (1) `implements-pen-node-id.js` — tightened the `{nodeId}` capture from `[A-Za-z0-9-]+` to `[A-Za-z0-9]+` so a hyphen is only legal inside `{Name}` (e.g. `TechBadge-Video`), matching AC #1's "letters/digits" wording; re-ran `eslint apps/web/src/components` → still 0 errors (no real node ID contains `-`). (2) Rule spec gained an invalid case for a hyphenated node id. (3) Rewrote the `eslint.config.mjs`-wiring `describe` block to dynamic-`import()` the resolved flat-config array and assert the rule's config object semantically (`files`/`ignores`/`rules`/`plugins`) instead of substring-matching the raw file text — rule spec now 22 tests (was 19). (4) Removed `scripts/backfill-rule21-headers.mjs` (dead one-shot script; A/B/C mapping preserved in `drift-19-3-2026-05.md`). (5)/(6) Synced the test-count figures across this story (rule spec 22, `nx test web` 148 files / 1840 tests) — earlier draft said "16"/"19" and "1834" inconsistently; the 94 Category-C `<screen-section …>` deferral and the JSDoc-`*`-stripping regex were reviewed and left as-is (by-design / no real-world gap). Regression after fixes: `pnpm nx test web` 148 files / 1840 tests PASS, `eslint apps/web/src/components` 0 errors. No contract change (rule grammar is *narrower*, not wider — already-valid headers all still pass). |
 | 2026-05-12 | [@contract-v1→v2] AC #1 + AC #2 — what changed: added a 4th accepted marker form `// Implements: <screen-section — pending epic-{N}-{M} mapping>` (em-dash/hyphen tolerated) to the ESLint rule + Rule 21 grammar, for components that render a section of a designed *screen frame* (not a Reusable Component); also documented that `/* */`/JSDoc block comments are scanned. Origin: Sally + Amelia + Bob Party Mode 2026-05-12 — Sally flagged that the dev-story pass's `<utility — no .pen counterpart>` placeholder on ~94 screen-section components was inaccurate (the design exists, just as a screen-frame section). 94 Category-C files flipped from `<utility>` → `<screen-section …>`; rule message + project-context.md Rule 21 grammar list + `Last Updated` header + audit doc updated; rule spec gained the screen-section valid/invalid cases (19 tests). What breaks downstream: any future story adding a screen-section component under `apps/web/src/components/` may now use the `<screen-section …>` placeholder (and epic-19-8 will upgrade all 94 to canonical `// Design ref:` / `// Implements:` headers); downstream consumers must accept the 4-form grammar. No upstream stamp to ack (19-1 pre-Rule-20). |
 | 2026-05-12 | DEV (dev-story): implemented `local/implements-pen-node-id` ESLint rule + wired into `eslint.config.mjs` + backfilled Rule 21 `// Implements:` headers across all 131 `apps/web/src/components/` candidate files (8 newly mapped to `.pen` Reusable Components, 119 exemption headers, 4 pre-existing left as-is) + RuleTester unit tests (16, all pass) + audit doc `drift-19-3-2026-05.md` + `project-context.md` Rule 21 Phase-2 bullet → present tense. Regression: `pnpm nx test web` 148 files/1834 tests PASS, `pnpm nx test api` PASS, `pnpm lint:all` 0 errors/122 warnings (matches bugfix-10-7 baseline), prettier clean, no orphaned test procs. Status `ready-for-dev` → `in-progress` → `review`. |
 | 2026-05-12 | [@contract-v0→v1] AC #1, #2, #3 stamped on creation — what changed: defined the ESLint rule id (`local/implements-pen-node-id`), the accepted marker grammar (`Component/{Name} ({nodeId})` + ` + `-joined multi + two exemption forms), the "leading comment block" definition, and the scope/ignore set; what breaks downstream: 19-4 must consume the `drift-19-3-2026-05.md` mapping produced here, and any future story adding `components/` files inherits this lint error — header is now mandatory at CI time, not just SM-template time. Upstream 19-1 is pre-Rule-20 (no story file, done via Party Mode) → implicit v0, ack-skipped per Rule 20 forward-only retrofit. |
