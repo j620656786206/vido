@@ -39,6 +39,10 @@ relies on it.
 
 ## Tasks / Subtasks
 
+- [ ] Task 0: Harness-quality fixes carried over from the 19-4 Sally review (do these first — they affect every baseline 19-4b generates):
+  - [ ] **Focus-state baselines:** the visual spec focuses descendants programmatically (`locator.focus()`), which doesn't trigger Chromium's `:focus-visible` — so `focus-*.png` ≈ `default-*.png` for PosterCard/Button etc. Switch to keyboard-driven focus (e.g. focus a sentinel then `page.keyboard.press('Tab')` into the state div, or accept that only `:focus` (not `:focus-visible`) states are meaningful and document it). Regenerate the affected 19-4 focus baselines as part of this.
+  - [ ] **TabNavigation active state:** the gallery route `/test/gallery` matches no nav path, so the `TabActive (TboA7)` state is never exercised. Stub `useRouterState` in the fixture (or render TabNavigation under a matching route), so the active-tab baseline is real.
+  - [ ] **Interactive-open states:** add an optional per-fixture `interaction?: (stateDiv: Locator) => Promise<void>` (e.g. `loc.click()` to open `SortSelector`'s SortDropdown `955EZ`, a `PosterCardMenu`, a modal) and have the spec run it before the `hover` (or a new `open`) state's screenshot.
 - [ ] Task 1: Inventory the remaining components; bucket data-driven vs. presentational (AC: #1, #2)
 - [ ] Task 2: Add fixtures — presentational components first (AC: #1)
 - [ ] Task 3: Add fixtures — data-driven components (seed React-Query; `<GalleryQuerySeed>` helper) (AC: #1)

@@ -74,11 +74,18 @@ story — flagged optional in the Party Mode ruling; tracked for 19-5.)*
 **Coverage:** all 12 Category-A components (the canonical `.pen`-mapped set) + 13 high-value
 presentational components. No fixture rendered the error placeholder — all 25 render cleanly.
 
-**UX (Sally) review:** DEV captured & spot-checked sample baselines (`media-poster-card/hover`,
-`library-empty-no-folder/default`) — render correctly. Full gallery at `/test/gallery`
-(`pnpm nx serve web`). **Sally final sign-off on the rendered gallery is pending** before this
-baseline set is treated as accepted (per AC #5 / the Party Mode Sally-gate ruling: generate now,
-UX reviews before final acceptance; story is at `review` for that pass).
+**UX (Sally) review — ✅ APPROVED (2026-05-12).** Reviewed all 46 committed baselines: every one
+of the 25 components renders faithfully to the design intent (PosterCard default RusTY / hover MQbvp,
+ButtonPrimary, SearchInput, FilterChip, GenreTag, TabActive/Inactive, TechBadge-*, the EmptyLibrary
+trio, EmptySearchResults, AvailabilityBadge owned/requested, MetadataSourceBadge, DegradationBadge,
+ColorPlaceholder, Card, Skeleton/PosterCardSkeleton/ExploreBlockSkeleton, ViewToggle, Pagination).
+No broken/error renders; no misleading fixture states. **The baseline set is accepted** (AC #5
+"first-Sally-approved web rendering"). 3 **non-blocking** follow-ups → CR / 19-4b: (1) focus-state
+baselines need keyboard-tab focus (programmatic `locator.focus()` doesn't trigger `:focus-visible`,
+so several `focus-*.png` ≈ `default`); (2) the TabNavigation baseline shows no active tab (the
+gallery route `/test/gallery` matches no nav path — stub `useRouterState` or render under a matching
+route); (3) interactive-open states (SortDropdown 955EZ open; menus/modals) need a per-fixture
+`interaction` hook. Full gallery: `pnpm nx serve web` → `http://localhost:4200/test/gallery`.
 
 ---
 
