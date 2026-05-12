@@ -1,8 +1,13 @@
 # Story 19.4: Playwright Per-Component Visual-Snapshot Baselines (Design-Drift Audit — Phase 2 Tooling)
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
+<!-- 19-4 = harness + ~25 reference components (Party Mode 2026-05-12 re-cut); remaining ~99 → 19-4b. AC #3/#5 partial by design. Sally gallery sign-off (/test/gallery) is the open review-gate. -->
+<!-- Also fixes: drift-19-3-2026-05.md stale backfill-script sentence (script removed in 19-3 CR commit cf10b20). -->
+<!-- @contract-v1 on AC #1–#5 (harness contracts for 19-5/19-4b/19-8). -->
+<!-- 🔗 AC Drift: N/A (new subsystem) · 📎 Contract Stamps: FOUND (v1×5 this story; upstream 19-3 v2 not consumed → no ack) · 🔒 Rule 7: N/A · 🎨 UX: PARTIAL — Sally sign-off pending -->
+<!-- markers-block-end -->
 
 ## Story
 
@@ -45,32 +50,35 @@ so that design-implementation drift (the `HoverPreviewCard.tsx` ↔ `Component/P
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Playwright `visual` project + npm scripts (AC: #1, #2)
-  - [ ] Add the `visual` project to `playwright.config.ts` (`testDir`/`testMatch` → `tests/visual/**/*.visual.spec.ts`; `viewport` 1280×800; `colorScheme: 'dark'`; `reducedMotion: 'reduce'`; `expect.toHaveScreenshot` `{ maxDiffPixelRatio: 0.001, animations: 'disabled', caret: 'hide' }`). Do NOT alter existing projects.
-  - [ ] Confirm the feature-E2E invocation (root `test:e2e` script / CI job) does not pick up the `visual` project — if `playwright test` with no `--project` would now include it, make the feature run explicit (`--project=chromium --project=firefox …`) or move `visual` behind an opt-in. Document the decision in `tests/visual/README.md`.
-  - [ ] Add `package.json` scripts `test:visual` + `test:visual:update`.
-- [ ] Task 2: Gallery providers shell + fixtures module (AC: #3)
-  - [ ] `apps/web/src/routes/test/gallery.fixtures.ts` — one typed entry per in-scope component: `{ id, component, defaultProps, penNode, statesOnly? }`. Reuse mock shapes from each component's existing `*.spec.tsx` where one exists.
-  - [ ] `<GalleryProviders>` shell wrapping QueryClientProvider (test client, no retries), any required store providers, and a Router stub if a component calls `useNavigate`/`useRouter` (mock per the project-context "TanStack Router useNavigate in tests: mock it directly" note).
-  - [ ] Resolve every `penNode` from the source file's `// Implements:` header (Category A → real id; `<screen-section …>` → `'screen-section'`; `<utility …>` → `'utility'`). Cross-check against `drift-19-3-2026-05.md`.
-- [ ] Task 3: Gallery route (AC: #3, #8)
-  - [ ] `apps/web/src/routes/test/gallery.tsx` — iterates the fixtures module, renders each as the `<section data-gallery-id data-pen-node>` → 1–3 `<div data-gallery-state>` blocks (skip `hover`/`focus` blocks when `statesOnly` is set). Lazy-load the route; guard so it's inert (or 404s) under `import.meta.env.PROD` OR document why the `routes/test/` precedent makes that unnecessary.
-  - [ ] Visual sanity: `pnpm nx serve web`, open `http://localhost:4200/test/gallery`, eyeball that every component renders without crashing (broken fixtures show here).
-- [ ] Task 4: Visual spec (AC: #4)
-  - [ ] `tests/visual/components.visual.spec.ts` — navigate `/test/gallery`, enumerate `[data-gallery-id]`, for each owned `[data-gallery-state]`: scroll into view, hover/focus as appropriate, `await expect(stateLocator).toHaveScreenshot(['components', id, `${state}.png`])`. Worklist derived from the live DOM, not hard-coded. Tag `@visual @story-19-4`.
-- [ ] Task 5: Generate, review & commit baselines (AC: #5)
-  - [ ] `pnpm run test:visual:update` → PNG baselines under `tests/visual/components.visual.spec.ts-snapshots/`.
-  - [ ] **Sally / UX review** of the rendered gallery BEFORE committing — record in Completion Notes (gallery URL + that the review happened + any fixture fixes that resulted). Note the platform-suffix situation (`-darwin`/`-linux`) and the chosen handling (regenerate-on-CI vs. commit-dev-platform vs. Docker-generated Linux baselines — pick one; 19-5 will rely on it).
-  - [ ] `git add` every baseline PNG. Re-run `pnpm run test:visual` → all green.
-- [ ] Task 6: Docs & audit (AC: #6, #7, #10)
-  - [ ] `tests/visual/README.md` — update discipline + `data-gallery-id` ↔ `.pen`-node convention.
-  - [ ] `_bmad-output/audit/visual-baseline-19-4.md` — full in-scope component table (id, pen node, states, skips+reasons).
-  - [ ] Fix the stale `scripts/backfill-rule21-headers.mjs` sentence in `drift-19-3-2026-05.md` (script removed in commit `cf10b20`).
-  - [ ] `project-context.md` Rule 22 tooling line → present tense naming the harness; `Last Updated` header += story-19-4 entry.
-- [ ] Task 7: Full regression + close (AC: #8, #9)
-  - [ ] `pnpm lint:all` → 0 errors / 122 warnings; `prettier --check .` clean.
-  - [ ] `pnpm run test:visual` green; `pnpm nx test web` + `pnpm nx test api` pass; `pnpm test:e2e` count unchanged.
-  - [ ] `pnpm run test:cleanup` → no orphans. `ux-design.pen` untouched.
+> **⚠ Scope (Party Mode 2026-05-12 ruling — Sally + Bob + Murat + Winston + Amelia; Alexyu ratified):** 19-4 ships the **harness + ~25 reference components** (all 12 Category-A + 13 high-value presentational); the remaining ~99 (mostly data-driven, needing seeded React-Query fixtures) → **`19-4b-visual-baseline-bulk-fill`** (backlog, created this story). Tasks below are marked `[x]` against that re-scoped definition; AC #3 (every in-scope component) + AC #5 (≈80–100×3 baselines) are **partial** by design — see Change Log & Completion Notes.
+
+- [x] Task 1: Playwright `visual` project + npm scripts (AC: #1, #2)
+  - [x] Added the `visual` project to `playwright.config.ts` (`testDir` `tests/visual`; `viewport` 1280×800; `colorScheme: 'dark'`; `reducedMotion: 'reduce'`; `expect.toHaveScreenshot` `{ maxDiffPixelRatio: 0.001, animations: 'disabled', caret: 'hide' }`). Existing projects untouched.
+  - [x] Feature-E2E invocation made project-explicit (`test:e2e`/`:ui`/`:headed`/`:debug` now list `--project=chromium … --project=mobile-safari`; CI's `test.yml` already used `--project=chromium --project=webkit-core`). The `visual` project is never picked up by `pnpm test:e2e` — verified `playwright test --project=chromium…mobile-safari --list` → 0 `*.visual.spec` files (1663 feature tests, unchanged). Documented in `tests/visual/README.md`.
+  - [x] Added `package.json` scripts `test:visual` + `test:visual:update`.
+- [x] Task 2: Fixtures module (AC: #3 — **partial: ~25 of ~124, rest → 19-4b**)
+  - [x] `apps/web/src/routes/test/-gallery.fixtures.tsx` (`-` prefix keeps it out of the route tree per TanStack Router convention) — 25 typed entries `{ id, label, component, props?, penNode, statesOnly?, width? }`: all 12 Category-A + 13 high-value presentational. Reused each component's `*.spec.tsx` mock shapes / `// Implements:` header for `penNode`. **No `<GalleryProviders>` needed** — the QueryClient + Router context come from the app shell (`main.tsx` → `QueryClientProvider` → router), so the gallery route is already inside both.
+  - [x] `penNode` resolved from each source file's `// Implements:` header (Category-A → real id; `<screen-section …>` → `'screen-section'`; `<utility …>` → `'utility'`), cross-checked against `drift-19-3-2026-05.md`.
+- [x] Task 3: Gallery route (AC: #3, #8)
+  - [x] `apps/web/src/routes/test/gallery.tsx` — `createFileRoute('/test/gallery')` (mirrors `routes/test/manual-search.tsx` — a shipped dev aid; guarded inert under non-test env via the same `isTestEnvironment` check). Iterates the fixtures → `<section data-gallery-id data-pen-node>` → 1–3 `<div data-gallery-state="default|hover|focus">` blocks (only `statesOnly` states when set). **Per-component `FixtureErrorBoundary`** → a broken fixture renders `[data-gallery-error]` instead of crashing the page.
+  - [x] Visual sanity: ran `nx serve web` + Go API; `/test/gallery` renders all 25 components without crashing; spot-checked baselines (`media-poster-card/hover`, `library-empty-no-folder/default`) render correctly.
+- [x] Task 4: Visual spec (AC: #4)
+  - [x] `tests/visual/components.visual.spec.ts` — mocks `**/api/v1/setup/status` → `{needsSetup:false}` (so `__root` doesn't redirect to `/setup`), navigates `/test/gallery`, enumerates `section[data-gallery-id]`, for each owned `[data-gallery-state]`: skips `[data-gallery-error]` placeholders (annotation), scrolls into view, hover/focus as appropriate, `await expect(stateDiv).toHaveScreenshot(['components', id, `${state}.png`])`. Worklist derived from the live DOM. Tagged `@visual @story-19-4`.
+- [x] Task 5: Generate, review & commit baselines (AC: #5 — **partial: 46 PNGs for the 25, rest → 19-4b; Sally final sign-off pending**)
+  - [x] `pnpm run test:visual:update` → 46 PNG baselines under `tests/visual/components.visual.spec.ts-snapshots/components/{id}/{state}-visual-darwin.png` (10 components × 3 states + 16 default-only × 1; no fixture errored — all 25 render cleanly). Re-ran `pnpm run test:visual` ×4 → all green, 0 flake (burn-in OK — `reducedMotion`+`animations:'disabled'` makes the CSS hover/focus states deterministic).
+  - [x] DEV captured & spot-checked sample baselines (render correctly); full gallery at `/test/gallery`. **Sally / UX final sign-off on the rendered gallery is pending** before this baseline set is treated as accepted (per the Party Mode Sally-gate ruling — Alexyu picked "DEV generates now, UX reviews before final acceptance"; story is at `review` for that pass).
+  - [x] Platform suffix: committed set is `-darwin` (dev machine). 19-5's CI job (Linux) regenerates the `-linux` set via `pnpm run test:visual:update` in a one-off commit OR 19-4b adds `scripts/visual-baseline.sh` (CI-Docker-generated) — flagged optional in the Party Mode ruling; recorded in `tests/visual/README.md` + the audit doc.
+  - [x] All 46 baseline PNGs committed; `pnpm run test:visual` green.
+- [x] Task 6: Docs & audit (AC: #6, #7, #10)
+  - [x] `tests/visual/README.md` — harness overview, running, baseline-update discipline (regen only via `:update`, only after a reviewed change, own commit, UX sign-off, platform-suffix policy), `data-gallery-id` ↔ `.pen`-node convention, "Adding a component" steps.
+  - [x] `_bmad-output/audit/visual-baseline-19-4.md` — harness table + the 25 delivered components (id / pen node / states / notes) + the ~99 19-4b worklist (grouped, with the regenerate grep) + deliberate skips + "no material drift this story" (Rule 22). Durable handoff for 19-5/19-4b/19-8.
+  - [x] Fixed the stale `scripts/backfill-rule21-headers.mjs` sentence in `drift-19-3-2026-05.md` (script removed in 19-3 CR commit `cf10b20`; the A/B/C mapping is now solely in that doc).
+  - [x] `project-context.md` Rule 22 tooling line → present tense ("LIVE since story 19-4"), names the `visual` project + `pnpm run test:visual` + the gallery route + baseline path + the `data-pen-node` link + the 19-4/19-4b rollout; `Last Updated` header += story-19-4 entry.
+  - [x] Created `_bmad-output/implementation-artifacts/19-4b-visual-baseline-bulk-fill.md` (backlog) + sprint-status entry — the ~99-component bulk fill, depends on the 19-4 harness.
+- [x] Task 7: Full regression + close (AC: #8, #9)
+  - [x] `eslint .` → 0 errors / 122 warnings (matches the bugfix-10-7 / 19-3 baseline — removed a stray unused-disable directive in `gallery.tsx` that briefly bumped it to 123); `prettier --check .` clean.
+  - [x] `pnpm run test:visual` green (46/46); `pnpm nx test web` → 148 files / 1840 tests pass; `pnpm nx test api` → pass; `pnpm test:e2e` count unchanged (1663, `visual` project separate).
+  - [x] `pnpm run test:cleanup` → no orphans. `ux-design.pen` **not** modified (read the 19-3 audit-doc mapping only) → `scripts/export-pen-screenshots.py` not run; CLAUDE.md screenshot workflow not triggered.
 
 ## Dev Notes
 
@@ -127,15 +135,53 @@ so that design-implementation drift (the `HoverPreviewCard.tsx` ↔ `Component/P
 
 ### Agent Model Used
 
+claude-opus-4-7[1m] (Amelia / dev-story workflow; scope settled via Party Mode 2026-05-12)
+
 ### Debug Log References
+
+- `npx playwright test --project=chromium…mobile-safari --list` → 1663 feature tests / 36 files; 0 `*.visual.spec` (visual project excluded from `test:e2e`)
+- `pnpm run test:visual:update` → 46 baselines written under `tests/visual/components.visual.spec.ts-snapshots/components/{id}/` (`-visual-darwin` suffix)
+- `pnpm run test:visual` re-run ×4 (post-`:update`) → all green, 0 flake (burn-in)
+- `eslint .` → 0 errors / 122 warnings (baseline); `prettier --check .` clean
+- `pnpm nx test web` → 148 files / 1840 tests pass; `pnpm nx test api` → pass; `pnpm run test:cleanup` → no orphans
+- Spot-checked baseline PNGs: `media-poster-card/hover-visual-darwin.png` (play overlay + kebab + receded badge cluster + rating — MQbvp hover affordances render correctly), `library-empty-no-folder/default-visual-darwin.png` (folder icon + heading + 2 buttons — correct)
 
 ### Completion Notes List
 
+- **🔗 AC Drift: N/A** — new visual-regression subsystem; no prior story's AC observable behaviour changes. `playwright.config.ts` gets an additive new `visual` project (+ `test:e2e*` scripts made project-explicit, same 5-project set as before — feature-E2E count unchanged at 1663); `drift-19-3-2026-05.md` gets a one-sentence stale-reference fix; `project-context.md` Rule 22 tooling line was already a forward-ref to "story 19-4". Checked `grep -rn 'toHaveScreenshot\|aria-modal\|focus trap\|visual' _bmad-output/implementation-artifacts/*.md` → hits are 19-3's own out-of-scope note + the `poster-card-hover.spec.ts:32` comment this story fulfils + unrelated a11y findings — all REUSE, none DRIFT.
+- **📎 Contract Stamps: FOUND** — this story carries `[@contract-v1]` on AC #1–#5 (the harness contracts 19-5/19-4b/19-8 consume — Change Log row `[@contract-v0→v1]` present with what-changed + what-breaks). Upstream 19-3 carries `[@contract-v2]` on its `// Implements:` marker grammar — **not consumed here** (this story adds zero `components/` files / headers); the artifact consumed is the `drift-19-3-2026-05.md` mapping *doc* (not a versioned AC) → no ack required, implicit-v0 per Rule 20 v0-fallback. No downstream story consumes this story's stamps yet (19-4b/19-5 will).
+- **🔒 Rule 7 Wire Format: N/A** — pure frontend, no Go error codes touched.
+- **🎨 UX Verification: PARTIAL — DEV self-check done, Sally final sign-off pending.** DEV captured & spot-checked sample baselines (`media-poster-card/hover`, `library-empty-no-folder/default` — render correctly). Full rendered gallery at `/test/gallery` (`pnpm nx serve web`). Per the Party Mode Sally-gate ruling (Alexyu picked "DEV generates now, UX reviews before final acceptance"), Sally's review of the rendered gallery is a `review`-status gate before this baseline set is treated as accepted — that's why the story sits at `review`, not `done`. `ux-design.pen` was **not** modified (this story reads the 19-3 audit-doc `.pen`-node mapping only) → `scripts/export-pen-screenshots.py` not run; CLAUDE.md screenshot workflow does not trigger.
+- **⚖️ Scope re-cut (Party Mode 2026-05-12 — Sally + Bob + Murat + Winston + Amelia; Alexyu ratified):** 19-4 delivers the **full harness + ~25 reference components** (all 12 Category-A + 13 high-value presentational; 46 PNGs); the remaining ~99 components (mostly data-driven — HeroBanner, ExploreBlock, MediaDetailPanel, the `settings/*` family, etc., needing seeded React-Query fixtures) → **`19-4b-visual-baseline-bulk-fill`** (backlog, created this story, depends on this harness). AC #3 ("every in-scope component") + AC #5 ("≈80–100 × 3 baselines") are therefore **partial by design** — the harness contracts (AC #1, #2, #4) are 100%, the bulk-fill is carved out. Rationale: 19-5 (CI) depends on the harness landing atomically; grinding 124 fixtures + ~370 baselines in one pass would have produced half-baked fixtures and error-state baselines (Murat's flakiness concern). Burn-in (`test:visual` ×4) confirms the harness is stable before 19-4b inherits it.
+- **No `apps/web/src/components/` edits** — the only new app-source files are the gallery route + fixtures module under `routes/test/`; `routeTree.gen.ts` regenerated to register `/test/gallery`. ⇒ the 19-3 `local/implements-pen-node-id` ESLint rule stays trivially green. The gallery route carries `// Implements: <route-only>` (Rule 21 exemption — though routes aren't in the rule's scope; it's just self-documenting).
+- **No new dependencies** — `@playwright/test`, `@tanstack/react-router`, `@tanstack/react-query` all already present; explicitly did NOT add `@playwright/experimental-ct-react` (Party Mode decision — real-app render context + the `manual-search.tsx` precedent).
+- **Pre-existing test failures:** none detected — `pnpm nx test web` / `pnpm nx test api` both fully green.
+
 ### File List
+
+**New:**
+- `apps/web/src/routes/test/gallery.tsx` — DEV-only TanStack Router route `/test/gallery`; per-component `FixtureErrorBoundary`; renders `<section data-gallery-id data-pen-node>` → `<div data-gallery-state>` blocks
+- `apps/web/src/routes/test/-gallery.fixtures.tsx` — 25 typed gallery fixtures (12 Category-A + 13 high-value presentational); `-` prefix keeps it out of the route tree
+- `tests/visual/components.visual.spec.ts` — visual spec for the `visual` project (DOM-driven worklist; `@visual @story-19-4`)
+- `tests/visual/README.md` — harness overview, running, baseline-update discipline, `data-gallery-id`↔`.pen`-node convention, "Adding a component"
+- `tests/visual/components.visual.spec.ts-snapshots/components/**/*.png` — 46 committed baselines (`-visual-darwin`): 10 components × {default,hover,focus} + 16 default-only
+- `_bmad-output/audit/visual-baseline-19-4.md` — harness table + 25 delivered + ~99 19-4b worklist + skips + Rule-22 "no material drift this story" — durable handoff for 19-5/19-4b/19-8
+- `_bmad-output/implementation-artifacts/19-4b-visual-baseline-bulk-fill.md` — backlog story for the remaining ~99 components
+
+**Modified:**
+- `playwright.config.ts` — new `visual` project (Chromium, 1280×800, dark, reduced-motion); `expect.toHaveScreenshot` config (`maxDiffPixelRatio 0.001 / animations disabled / caret hide`)
+- `package.json` — `test:visual` + `test:visual:update` scripts; `test:e2e`/`:ui`/`:headed`/`:debug` made project-explicit (5 feature projects — same set as before, just no longer bare so the `visual` project isn't swept in)
+- `apps/web/src/routeTree.gen.ts` — auto-regenerated to register `/test/gallery`
+- `project-context.md` — Rule 22 tooling line → present tense naming the harness; `Last Updated` header += story-19-4 entry
+- `_bmad-output/audit/drift-19-3-2026-05.md` — fixed the stale "Kept in `scripts/`…" sentence (`scripts/backfill-rule21-headers.mjs` removed in 19-3 CR commit `cf10b20`; the A/B/C mapping is now solely in that doc)
+- `_bmad-output/implementation-artifacts/19-4-playwright-visual-snapshot-baseline.md` — this story file (tasks [x], Dev Agent Record, File List, Change Log, Status)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — 19-4 `ready-for-dev` → `in-progress` → `review`; new `19-4b-visual-baseline-bulk-fill: backlog` entry
 
 ## Change Log
 
 | Date | Change |
 | ---- | ------ |
+| 2026-05-12 | DEV (dev-story) — implemented the harness + ~25 reference components per the Party Mode scope re-cut (see below). NEW: `visual` Playwright project + `test:visual`/`test:visual:update` scripts + `test:e2e*` made project-explicit; dev-only `/test/gallery` route (`apps/web/src/routes/test/gallery.tsx`, `FixtureErrorBoundary` per component) + `-gallery.fixtures.tsx` (25 fixtures — all 12 Category-A + 13 high-value presentational; QueryClient/Router come from the app shell, no `<GalleryProviders>` needed); `tests/visual/components.visual.spec.ts` (DOM-driven, mocks `setup/status`, skips error placeholders); 46 committed baseline PNGs (`-visual-darwin`); `tests/visual/README.md`; `_bmad-output/audit/visual-baseline-19-4.md`; `19-4b-visual-baseline-bulk-fill.md` (backlog). MODIFIED: `playwright.config.ts`, `package.json`, `routeTree.gen.ts` (auto), `project-context.md` (Rule 22 tooling line + Last Updated), `drift-19-3-2026-05.md` (stale-sentence fix). Regression: `eslint .` 0 errors/122 warnings, `prettier --check .` clean, `pnpm run test:visual` 46/46 green (burn-in ×4 = 0 flake), `pnpm nx test web` 148 files/1840 tests PASS, `pnpm nx test api` PASS, `pnpm test:e2e` count unchanged (1663), `test:cleanup` no orphans, `ux-design.pen` untouched. Status `ready-for-dev` → `in-progress` → `review`. **AC #3 + AC #5 partial by design** (harness contracts AC #1/#2/#4 100%; the ~99-component bulk-fill is 19-4b). Sally final gallery sign-off pending (the `review`-status gate per AC #5). |
+| 2026-05-12 | ⚖️ SCOPE RE-CUT (Party Mode 2026-05-12 — Sally + Bob + Murat + Winston + Amelia; Alexyu ratified): the original "harness + fixtures + baselines for all ~80–124 components in one story" was judged unworkable in a single pass (would yield half-baked fixtures + error-state baselines; flakiness risk on an unproven harness). New plan: **19-4 = full harness + ~25 reference components (all 12 Category-A + 13 high-value), burn-in-verified; the remaining ~99 → new story `19-4b-visual-baseline-bulk-fill`** (backlog, depends on this harness). 19-5 (CI) depends only on the harness, which now lands atomically. AC #3/#5 are amended in spirit to "partial — reference set this story, bulk fill in 19-4b" (no AC text edit; documented here + in the audit doc + in the Scope note above Tasks). The Sally-gate (AC #5) is handled as: DEV generates baselines now → story sits at `review` → UX reviews the rendered gallery (`/test/gallery`) before final acceptance (Alexyu's choice). No contract bump — the harness contracts (AC #1/#2/#4, `[@contract-v1]`) are unchanged and fully delivered; only the *coverage* of the contract-free ACs is staged. |
 | 2026-05-12 | [@contract-v0→v1] AC #1–#5 stamped on creation — what's defined: the `visual` Playwright project (name `visual`, `testMatch` `tests/visual/**/*.visual.spec.ts`, deterministic `viewport`/`colorScheme`/`reducedMotion`, `maxDiffPixelRatio` 0.001), the `test:visual` / `test:visual:update` npm scripts, the dev-only `apps/web/src/routes/test/gallery.tsx` route + its `<section data-gallery-id data-pen-node>` wrapper contract + the `gallery.fixtures.ts` shape, the `tests/visual/components.visual.spec.ts` DOM-derived worklist, and the committed-baseline location (`tests/visual/components.visual.spec.ts-snapshots/components/{id}/{state}.png`). What breaks downstream: 19-5's CI job depends on the `test:visual` script + the `visual` project name + the baseline path; 19-8 depends on the `data-pen-node` attribute convention + `_bmad-output/audit/visual-baseline-19-4.md` + the gallery route existing; Rule 22 retros depend on `pnpm run test:visual` being the diff tool. Upstream 19-3 carries `[@contract-v2]` on its `// Implements:` marker grammar — not consumed here (this story adds no `components/` headers); the consumed artifact is the `drift-19-3-2026-05.md` mapping doc (not a versioned AC) → no ack, implicit-v0 per Rule 20. |
 | 2026-05-12 | SM Bob /create-story (YOLO) — story drafted ready-for-dev. ALL frontend / 0 backend → single story (cross-stack split check N/A). 10 ACs (#1–#5 stamped `[@contract-v1]`), 7 tasks. Key decision recorded in Dev Notes: dev-only TanStack Router gallery route + existing Playwright runner (NOT `@playwright/experimental-ct-react`) — `routes/test/manual-search.tsx` precedent + real-app render context. Depends on 19-3 (done). 🔒 Rule 7 Wire Format: N/A (pure FE). 🎨 UX: reads `ux-design.pen` mapping via the 19-3 audit doc only — no `.pen` modification, screenshot workflow not triggered; Sally/UX review of the rendered gallery is a story-close gate (AC #5). |

@@ -18,6 +18,7 @@ import { Route as DownloadsRouteImport } from './routes/downloads'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as TestManualSearchRouteImport } from './routes/test/manual-search'
+import { Route as TestGalleryRouteImport } from './routes/test/gallery'
 import { Route as SettingsStatusRouteImport } from './routes/settings/status'
 import { Route as SettingsScannerRouteImport } from './routes/settings/scanner'
 import { Route as SettingsQbittorrentRouteImport } from './routes/settings/qbittorrent'
@@ -73,6 +74,11 @@ const SettingsIndexRoute = SettingsIndexRouteImport.update({
 const TestManualSearchRoute = TestManualSearchRouteImport.update({
   id: '/test/manual-search',
   path: '/test/manual-search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TestGalleryRoute = TestGalleryRouteImport.update({
+  id: '/test/gallery',
+  path: '/test/gallery',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SettingsStatusRoute = SettingsStatusRouteImport.update({
@@ -149,6 +155,7 @@ export interface FileRoutesByFullPath {
   '/settings/qbittorrent': typeof SettingsQbittorrentRoute
   '/settings/scanner': typeof SettingsScannerRoute
   '/settings/status': typeof SettingsStatusRoute
+  '/test/gallery': typeof TestGalleryRoute
   '/test/manual-search': typeof TestManualSearchRoute
   '/settings/': typeof SettingsIndexRoute
   '/media/$type/$id': typeof MediaTypeIdRoute
@@ -170,6 +177,7 @@ export interface FileRoutesByTo {
   '/settings/qbittorrent': typeof SettingsQbittorrentRoute
   '/settings/scanner': typeof SettingsScannerRoute
   '/settings/status': typeof SettingsStatusRoute
+  '/test/gallery': typeof TestGalleryRoute
   '/test/manual-search': typeof TestManualSearchRoute
   '/settings': typeof SettingsIndexRoute
   '/media/$type/$id': typeof MediaTypeIdRoute
@@ -193,6 +201,7 @@ export interface FileRoutesById {
   '/settings/qbittorrent': typeof SettingsQbittorrentRoute
   '/settings/scanner': typeof SettingsScannerRoute
   '/settings/status': typeof SettingsStatusRoute
+  '/test/gallery': typeof TestGalleryRoute
   '/test/manual-search': typeof TestManualSearchRoute
   '/settings/': typeof SettingsIndexRoute
   '/media/$type/$id': typeof MediaTypeIdRoute
@@ -217,6 +226,7 @@ export interface FileRouteTypes {
     | '/settings/qbittorrent'
     | '/settings/scanner'
     | '/settings/status'
+    | '/test/gallery'
     | '/test/manual-search'
     | '/settings/'
     | '/media/$type/$id'
@@ -238,6 +248,7 @@ export interface FileRouteTypes {
     | '/settings/qbittorrent'
     | '/settings/scanner'
     | '/settings/status'
+    | '/test/gallery'
     | '/test/manual-search'
     | '/settings'
     | '/media/$type/$id'
@@ -260,6 +271,7 @@ export interface FileRouteTypes {
     | '/settings/qbittorrent'
     | '/settings/scanner'
     | '/settings/status'
+    | '/test/gallery'
     | '/test/manual-search'
     | '/settings/'
     | '/media/$type/$id'
@@ -273,6 +285,7 @@ export interface RootRouteChildren {
   SearchRoute: typeof SearchRoute
   SettingsRoute: typeof SettingsRouteWithChildren
   SetupRoute: typeof SetupRoute
+  TestGalleryRoute: typeof TestGalleryRoute
   TestManualSearchRoute: typeof TestManualSearchRoute
   MediaTypeIdRoute: typeof MediaTypeIdRoute
 }
@@ -340,6 +353,13 @@ declare module '@tanstack/react-router' {
       path: '/test/manual-search'
       fullPath: '/test/manual-search'
       preLoaderRoute: typeof TestManualSearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/test/gallery': {
+      id: '/test/gallery'
+      path: '/test/gallery'
+      fullPath: '/test/gallery'
+      preLoaderRoute: typeof TestGalleryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settings/status': {
@@ -462,6 +482,7 @@ const rootRouteChildren: RootRouteChildren = {
   SearchRoute: SearchRoute,
   SettingsRoute: SettingsRouteWithChildren,
   SetupRoute: SetupRoute,
+  TestGalleryRoute: TestGalleryRoute,
   TestManualSearchRoute: TestManualSearchRoute,
   MediaTypeIdRoute: MediaTypeIdRoute,
 }

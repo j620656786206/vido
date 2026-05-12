@@ -56,6 +56,14 @@ export default defineConfig({
   // Expect timeout: 10 seconds
   expect: {
     timeout: 10 * 1000,
+    // Visual-regression baselines (story 19-4). ≈0.1% tolerance — the loose end of the
+    // sprint-status 0.05–0.1% band; tighten once the harness proves stable. Only the
+    // `visual` project produces screenshots (testDir tests/visual); feature E2E never does.
+    toHaveScreenshot: {
+      maxDiffPixelRatio: 0.001,
+      animations: 'disabled',
+      caret: 'hide',
+    },
   },
 
   // Reporters — CI uses blob for cross-shard merge, local uses HTML
@@ -130,6 +138,22 @@ export default defineConfig({
     {
       name: 'mobile-safari',
       use: { ...devices['iPhone 13'] },
+    },
+
+    // Visual regression (story 19-4) — per-component default/hover/focus baselines.
+    // Single browser + pinned viewport + reduced motion = deterministic screenshots.
+    // testDir is tests/visual (NOT tests/e2e), so the feature-E2E projects above never
+    // pick up *.visual.spec.ts and the E2E count is unchanged. Run via `pnpm run test:visual`
+    // (regenerate baselines: `pnpm run test:visual:update`). 19-5 wires this into a PR CI job.
+    {
+      name: 'visual',
+      testDir: path.resolve(__dirname, './tests/visual'),
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 800 },
+        colorScheme: 'dark', // Vido's only theme — pin it so a future light theme can't silently rebaseline.
+        reducedMotion: 'reduce', // kill CSS transitions so hover/focus snapshots are stable.
+      },
     },
   ],
 
