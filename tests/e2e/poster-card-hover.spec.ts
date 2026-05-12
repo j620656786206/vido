@@ -258,6 +258,9 @@ test.describe('PosterCard Hover @ui @poster-card @bugfix-10-4', () => {
     // `:hover` actually drives the transform. Browser-pixel verification of the
     // 300 ms timing/easing is deferred to NAS deploy per the story DoD — this is
     // the deterministic regression guard for "scale-95 fires on hover".
+    // NOTE: Tailwind v4 compiles `scale-95` to the standalone CSS `scale`
+    // property (`scale: 95% 95%`), NOT a `transform: matrix(...)`. Assert on
+    // `scale` — `getComputedStyle().transform` stays `none` for `scale-*` in v4.
     await stubHomepageBaseline(page);
     await stubExploreBlocksWith(page, movieContent, [603]);
 
@@ -270,14 +273,14 @@ test.describe('PosterCard Hover @ui @poster-card @bugfix-10-4', () => {
     await expect(ownedBadge).toBeVisible();
     const badgeCluster = ownedBadge.locator('xpath=..');
 
-    // BEFORE hover: no transform — full size
-    await expect(badgeCluster).toHaveCSS('transform', 'none');
+    // BEFORE hover: no scale applied — full size
+    await expect(badgeCluster).toHaveCSS('scale', 'none');
 
     await card.hover();
 
-    // AFTER hover: `scale(0.95)` resolves to this computed matrix once the
-    // 300 ms transition settles (toHaveCSS polls up to expect.timeout).
-    await expect(badgeCluster).toHaveCSS('transform', 'matrix(0.95, 0, 0, 0.95, 0, 0)');
+    // AFTER hover: `scale-95` → computed `scale: 0.95` once the 300 ms
+    // transition settles (toHaveCSS polls up to expect.timeout).
+    await expect(badgeCluster).toHaveCSS('scale', '0.95');
   });
 
   test('[P1] mobile viewport (375x667) — hover overlay layer stays out of layout (AC #6)', async ({
