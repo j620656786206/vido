@@ -56,7 +56,7 @@ These fixes change spec/fixture behaviour and therefore every baseline 19-4b gen
 
 ### Task 1: Inventory remaining components & bucket data-driven vs. presentational (AC: #2, #4)
 
-- [ ] Generate the full in-scope list. Quick recipe (record exact commands run in Debug Log References):
+- [x] Generate the full in-scope list. Quick recipe (record exact commands run in Debug Log References):
   ```bash
   # All .tsx components, minus tests/index barrels
   find apps/web/src/components -name '*.tsx' ! -name '*.spec.tsx' ! -name '*.test.tsx' \
@@ -65,13 +65,13 @@ These fixes change spec/fixture behaviour and therefore every baseline 19-4b gen
   grep -oE "'[a-z][a-z0-9-]+'" apps/web/src/routes/test/-gallery.fixtures.tsx \
     | head -n 200 > /tmp/covered-ids.txt
   ```
-- [ ] For each not-yet-covered component, classify into one of FOUR buckets — record the bucket in a working notes section under "Debug Log References":
+- [x] For each not-yet-covered component, classify into one of FOUR buckets — record the bucket in a working notes section under "Debug Log References":
   - **P (Presentational)** — pure props-in, no `useQuery` / `useMutation` / store reads / router reads. → goes in Task 2.
   - **Q (Query-driven)** — needs React-Query data. → goes in Task 3 (seed via `seedQueries`).
   - **S (Store-driven)** — reads from a Zustand store (selection, library-filters, etc.). → goes in Task 3 (seed via `seedStore`).
   - **L (Layout shell / no isolated render)** — `AppShell`, `DashboardLayout`, `SettingsLayout`, `SetupWizard`, etc. → recorded as deliberate skip per AC #4 unless a trivial isolated fixture exists.
-- [ ] Confirm the four type/util-only files stay skipped (`parse/types.ts`, `degradation/types.ts`, `downloads/formatters.ts`, `parse/useParseProgress.ts`) — these were skipped in 19-4 and remain skipped here.
-- [ ] Cross-check the inventory against `_bmad-output/audit/drift-19-3-2026-05.md` Category-A/B/C tables — any newly-classified Category-A (real `.pen` Reusable-Component mapping) gets that node id in its fixture's `penNode`; everything else uses `'screen-section'` (the 19-3 Phase-2 placeholder) or `'utility'`.
+- [x] Confirm the four type/util-only files stay skipped (`parse/types.ts`, `degradation/types.ts`, `downloads/formatters.ts`, `parse/useParseProgress.ts`) — these were skipped in 19-4 and remain skipped here.
+- [x] Cross-check the inventory against `_bmad-output/audit/drift-19-3-2026-05.md` Category-A/B/C tables — any newly-classified Category-A (real `.pen` Reusable-Component mapping) gets that node id in its fixture's `penNode`; everything else uses `'screen-section'` (the 19-3 Phase-2 placeholder) or `'utility'`.
 
 ### Task 2: Add fixtures — Presentational bucket first (AC: #2)
 
@@ -259,6 +259,142 @@ claude-opus-4-7[1m] (Amelia / dev-story workflow; same session as the SM /create
 - `pnpm nx test api` → PASS (Nx flaky-flagged — the known `TestScannerService_SSEBroadcast_ScanCancelled` flake, tracked in sprint-status as `preexisting-fail-scanner-sse-scan-cancelled-flake`; passed on Nx retry; zero Go changes this story so the flake is unrelated)
 - `pnpm run test:cleanup` → no orphans (after `test:cleanup:all` killed 2 leftover Playwright nodes from the burn-in runs)
 
+#### Task 1 inventory (2026-05-13)
+
+**Commands run** (per Task 1's quick recipe):
+
+```bash
+find apps/web/src/components -name '*.tsx' ! -name '*.spec.tsx' ! -name '*.test.tsx' \
+  ! -name 'index.ts' | sort > /tmp/all-components.txt
+# → 127 .tsx files
+grep -oE "id: '[a-z][a-z0-9-]+'" apps/web/src/routes/test/-gallery.fixtures.tsx \
+  | sort -u > /tmp/covered-ids.txt
+# → 27 ids (= 25 unique components: AvailabilityBadge has owned/requested variants;
+#   `gallery-pc-uuid-0001` is a PosterCard prop value, not a fixture id; the grep
+#   over-includes by 2 — manual cross-check against the 19-4 closeout audit doc
+#   confirms 25 unique component source files / 26 fixture entries / 46 PNGs).
+```
+
+**Uncovered count:** `127 − 25 = 102` `.tsx` files for the bulk fill. The story header
+reads "~99"; the +3 margin is the marginal Category-B utilities (`ui/Dialog`,
+`ui/HighlightText`, `ui/SidePanel`) that 19-4 explicitly deferred to 19-4b.
+
+**Bucket assignments (P/Q/S/L per Task 1 definitions):**
+
+Signal-grep per file: `useQuery|useMutation|useInfiniteQuery|useQueryClient` (Q-direct);
+custom hook calls under `apps/web/src/hooks/` (Q-indirect — those hooks wrap RQ);
+`use[A-Z]*Store(` (S); `useRouterState|useParams|useSearch` (R — informational);
+`<Outlet`/`{children}`-shell (L candidate). Cross-checked against AC #4 layout-shell
+list. Final tallies:
+
+| Bucket | Count | Treatment in Tasks 2/3 |
+|---|---|---|
+| **L** (layout shell, deliberate skip) | **4** | Documented skip in audit doc per AC #4 (Task 6); no fixture entry. |
+| **S** (Zustand store-driven) | **0** | No `apps/web/src/stores/` consumer found under `components/`. The `seedStore?` infrastructure stays in place for future-proofing; no S work this story. |
+| **Q** (data-driven, wraps RQ via custom hook) | **35** | Task 3 — `seedQueries` for read hooks. Mutation-only consumers (e.g. `settings/LibraryCard` → `useDeleteLibrary` only) need no data seeding but stay in Q because they require `QueryClientProvider` (the gallery already provides one). |
+| **P** (presentational, props-in only) | **63** | Task 2 — straight fixture add, reuse each component's own `*.spec.tsx` mock-data shape. |
+| **Sum** | **102** | matches uncovered count ✓ |
+
+**L bucket (4 — deliberate skips, per AC #4):**
+
+| File | Lines | Reason |
+|---|---|---|
+| `shell/AppShell.tsx` | 111 | Wraps `TabNavigation` + `{children}`. TabNavigation is already covered as its own fixture; rendering AppShell standalone screenshots the same thing again. |
+| `dashboard/DashboardLayout.tsx` | 17 | Transparent `<div className=…>{children}</div>` — no isolated visual surface. |
+| `settings/SettingsLayout.tsx` | 182 | Sidebar nav driven by `useRouterState()`. *Has visual surface, but* re-rendering it requires nested memory router (Task 0 Fix B) + stub `{children}`. Cost/benefit weak — settings sub-routes will be covered when individual settings components get their own fixtures. **May reconsider in Task 2** if Sally flags the omission. |
+| `setup/SetupWizard.tsx` | 157 | Stateful multi-step controller (`useState` step machine + `useQueryClient`). No single static snapshot is meaningful; individual `*Step` components ARE in P-bucket and get baselined. |
+
+**Q bucket (35 — data-driven):**
+
+```
+dashboard/   DownloadPanel, RecentMediaPanel
+downloads/   DownloadDetails
+health/      ConnectionHistoryPanel, QBStatusIndicator
+homepage/    ExploreBlock, ExploreBlocksList, HeroBanner
+learning/    LearnedPatternsSettings
+library/     FilterPanel, LibraryGrid, RecentlyAdded
+manual-search/  ManualSearchDialog
+media/       MediaDetailPanel
+metadata-editor/  MetadataEditorDialog
+parse/       FloatingParseProgressCard, RetryQueueSection
+retry/       RetryNotifications, RetryQueuePanel, RetryQueueWithNotifications
+scanner/     ScanProgress
+settings/    BackupManagement, BackupScheduleConfig, CacheManagement,
+             ExploreBlockEditModal, ExploreBlocksSettings, LibraryCard,
+             LibraryEditModal, LogsViewer, MediaLibraryManager, MetadataExport,
+             QBittorrentForm, ScannerSettings, ServiceStatusDashboard
+subtitle/    SubtitleSearchDialog
+```
+
+SSE/progress-gated components (`parse/FloatingParseProgressCard`, `scanner/ScanProgress`) — render with `taskId={null}` / idle-state fixture rather than seeding SSE; if Sally wants an in-progress baseline, mock the progress state via a per-fixture override in Task 3.
+
+**P bucket (63 — presentational), grouped by `components/` subfolder (Task 2 ordering):**
+
+```
+ui/         (3)   Dialog, HighlightText, SidePanel
+media/      (8)   CreditsSection, DetailPanelMenu, FallbackFailed, FallbackPending,
+                  FileInfo, MediaGrid, TrailerEmbed, TVShowInfo
+degradation/(3)   PlaceholderContent, ServiceHealthBanner, UnidentifiedFileCard
+dashboard/  (2)   CollapsibleSection, QuickSearchBar
+downloads/  (6)   DownloadFilterTabs, DownloadItem, DownloadList,
+                  DownloadParseStatusBadge, ParseFailedActions, StatusIcon
+library/    (8)   BatchConfirmDialog, BatchProgress, LibrarySearchBar, LibraryTable,
+                  ParseFailureCard, PosterCardMenu, SelectionToolbar, SettingsGearDropdown
+homepage/   (1)   TrailerModal
+learning/   (1)   LearnPatternPrompt
+manual-search/ (3) FallbackStatusDisplay, SearchResultCard, SearchResultsGrid
+metadata-editor/ (2) CastEditor, PosterUploader
+notifications/ (3) NewMediaNotifications, NewMediaToast, ParseCompleteToast
+parse/      (4)   ErrorDetailsPanel, LayeredProgressIndicator, MediaFileCard, ParseStatusBadge
+retry/      (1)   CountdownTimer
+scanner/    (2)   ScanProgressCard, ScanProgressSheet
+search/     (1)   SearchResults
+settings/   (8)   BackupTable, CacheTypeCard, ConnectionTestResult, LogEntry,
+                  LogFilters, RestoreConfirmDialog, ServiceStatusCard, SettingsPlaceholder
+setup/      (7)   ApiKeysStep, CompleteStep, MediaFolderStep, MediaLibrarySetupStep,
+                  QBittorrentStep, StepProgress, WelcomeStep
+```
+
+Sub-folder sum: 3+8+3+2+6+8+1+1+3+2+3+4+1+2+1+8+7 = **63** ✓
+
+**S bucket investigation (zero hits, intentionally documented):**
+
+Spot-checked the obvious suspects against their grep'd imports:
+- `library/SelectionToolbar.tsx` — receives selection as props; no `stores/` import.
+- `notifications/NewMediaNotifications.tsx` — receives `notifications` array as prop; only imports the `NewMediaNotification` *type* from `useNewMediaNotifications.ts`.
+- `library/PosterCardMenu.tsx`, `library/SettingsGearDropdown.tsx` — props-in, no store.
+- `parse/ParseStatusBadge.tsx` — props-in.
+
+Project pattern aligns with `project-context.md` Rule 5 ("Use TanStack Query for server state; Zustand for UI state only"). Stores under `apps/web/src/stores/` (if any) are consumed by route-level components, not by leaf `components/` files. The story's additive `seedStore?` field on `GalleryFixture` stays in place for forward compatibility but produces no Task 3 work this story.
+
+**Type/util-only `.ts` files skip confirmation (Task 1 sub-bullet #3):**
+
+| File | Lines | Status |
+|---|---|---|
+| `apps/web/src/components/parse/types.ts` | 147 | Exists. Excluded by `-name '*.tsx'` filter. No JSX. |
+| `apps/web/src/components/degradation/types.ts` | 48 | Exists. Excluded. No JSX. |
+| `apps/web/src/components/downloads/formatters.ts` | 67 | Exists. Excluded. No JSX. |
+| `apps/web/src/components/parse/useParseProgress.ts` | 367 | Exists. Excluded. Misfiled hook — Category B per drift doc. |
+
+All 4 remain "no baseline ever" per `_bmad-output/audit/visual-baseline-19-4.md`.
+
+**Drift-doc cross-check (Task 1 sub-bullet #4) vs `_bmad-output/audit/drift-19-3-2026-05.md`:**
+
+- **Category A (12 files, real `.pen` Reusable-Component nodes):** ALL 12 already covered in `-gallery.fixtures.tsx` (delivered by 19-4). **0 new Category-A `penNode` values** to set in Tasks 2/3.
+- **Category B (21 `.tsx` + 4 `.ts` = 25 paths, `penNode='utility'`):** 8 already covered (`ui/{Badge,Card,Skeleton,Pagination}`, `media/{PosterCardSkeleton,ColorPlaceholder,TechBadgeGroup}`, `homepage/ExploreBlockSkeleton`). **13 `.tsx` remaining** get `penNode: 'utility'` in their new fixtures:
+  - `ui/Dialog`, `ui/HighlightText`, `ui/SidePanel` (P)
+  - `media/FileInfo` (P)
+  - `degradation/PlaceholderContent` (P)
+  - `settings/SettingsPlaceholder` (P)
+  - `setup/StepProgress` (P)
+  - `dashboard/CollapsibleSection` (P)
+  - `downloads/StatusIcon` (P)
+  - `shell/AppShell`, `dashboard/DashboardLayout`, `settings/SettingsLayout`, `setup/SetupWizard` (L — only get `penNode: 'utility'` *if* rendered; currently planned skip).
+- **Category C (94 files, `penNode='screen-section'`):** 5 already covered (`media/AvailabilityBadge` ×2 variants, `media/MetadataSourceBadge`, `degradation/DegradationBadge`, `library/ViewToggle`, `library/EmptySearchResults`). **89 remaining** get `penNode: 'screen-section'` — the rest of the P and Q bucket files.
+- Category arithmetic: `(102 − 13 Cat-B remaining = 89 Cat-C remaining)` ✓ matches.
+
+**Hand-off to Task 2 (Presentational fill):** the 63-file P bucket above, grouped by `components/` subfolder, is the worklist. The component's own `*.spec.tsx` mock-data shape is the authoritative props source (project-context.md rule). `penNode` for every file in this bucket except `ui/{Dialog,HighlightText,SidePanel}`, `media/FileInfo`, `degradation/PlaceholderContent`, `settings/SettingsPlaceholder`, `setup/StepProgress`, `dashboard/CollapsibleSection`, `downloads/StatusIcon` (Category B → `'utility'`) is **`'screen-section'`** (Category C).
+
 ### Completion Notes List
 
 - **🔗 AC Drift:** N/A (additive harness extension — 19-4 `[@contract-v1]` AC #1–#5 wrapper shape gains a NEW optional `'open'` state member + `data-gallery-open-trigger` attribute. SM CS pass classified this as a documented harness extension, NOT a stamped v1→v2 contract bump (rationale: the existing `default`/`hover`/`focus` shapes remain unchanged; `open` is opt-in via `openTrigger?` and emitted only when the fixture sets it). CR pass may re-classify as `[@contract-v1→v2]` AC #3 if it sees the gallery-wrapper grammar extension as in-scope of the v1 contract — if so, a v1→v2 bump row + ack in Dev Notes are owed.
@@ -298,6 +434,7 @@ claude-opus-4-7[1m] (Amelia / dev-story workflow; same session as the SM /create
 
 | Date | Change |
 | ---- | ------ |
+| 2026-05-13 | DEV Amelia /dev-story Task 1 inventory COMPLETE (user-scoped "task 1 only"). All 4 Task 1 sub-bullets [x]. **127** `.tsx` under `apps/web/src/components/` (find filter excludes `*.spec.tsx`/`*.test.tsx`/`index.ts`); minus the **25** unique components already in `-gallery.fixtures.tsx` (26 fixture entries / 46 PNGs at 19-4 closeout, +1 entry-state and +1 PNG from Task 0 = **26 fixture entries / 27 entry-state combinations / 47 PNGs** going into Task 1) = **102** files for the bulk fill (+3 margin over the story header's "~99": the `ui/{Dialog,HighlightText,SidePanel}` Category-B utilities 19-4 explicitly deferred). **Bucket assignments**: 4 L (deliberate skip per AC #4 — `shell/AppShell`, `dashboard/DashboardLayout`, `settings/SettingsLayout`, `setup/SetupWizard`; `SettingsLayout` may be reconsidered in Task 2 if Sally flags the omission, otherwise stays skipped), 0 S (no `apps/web/src/stores/` consumer under `components/` — selection / notification state flows via props per project-context Rule 5; `seedStore?` infra stays in place for forward compatibility), **35 Q** (custom-hook RQ consumers — see Debug Log References for the full sub-folder list), **63 P** (presentational, props-in only — grouped by `components/` subfolder in Debug Log). Sum = 4 + 0 + 35 + 63 = 102 ✓. **Type/util `.ts` skip confirmation**: all 4 files (`parse/types.ts` 147L, `degradation/types.ts` 48L, `downloads/formatters.ts` 67L, `parse/useParseProgress.ts` 367L) confirmed present and (by virtue of the `-name '*.tsx'` filter) absent from the inventory — remain "no baseline ever" per `visual-baseline-19-4.md`. **Drift-doc cross-check vs `drift-19-3-2026-05.md`**: 0 new Category-A `penNode` values to set (all 12 Cat-A components already covered by 19-4); 13 Cat-B `.tsx` remaining → `penNode: 'utility'`; 89 Cat-C `.tsx` remaining → `penNode: 'screen-section'`; arithmetic 0 + 13 + 89 = 102 ✓. **No code changes this task — story file only.** 🔗 AC Drift: N/A (inventory work product, no behavioral change). 📎 Contract Stamps: NONE (no `[@contract-v*]` in this story or upstream refs touched). 🔒 Rule 7: N/A. 🎨 UX: N/A (no UI changes — inventory only; Task 4 gate stands for the bulk-fill close). Regression gate: N/A (no code change, no test rerun needed). Tasks 2–6 remain `[ ]` — story stays `in-progress`. → Next session: Task 2 (presentational bucket fill — 63 P-bucket fixtures) on a different LLM context per workflow tip. |
 | 2026-05-13 | DEV Amelia /dev-story COMPLETE for Task 0 ONLY (user-scoped). ready-for-dev → in-progress. Task 0 lands all 3 Sally 2026-05-12 follow-ups. **Fix A (keyboard-Tab focus)**: `gallery.tsx` renders a hidden `<button data-gallery-sentinel="pre" tabIndex={0} className="sr-only">` immediately before each state div; the visual spec's `focus` branch focuses the sentinel then `page.keyboard.press('Tab')` so Chromium flips input modality to keyboard → `:focus-visible` rules paint. Of 10 existing 3-state focus baselines, only `search-search-bar/focus-visual-darwin.png` was pixel-different (SearchBar has the only `:focus-visible`-distinct rule); the other 9 re-tested as identical under the new mechanism and were re-blessed unchanged by Playwright. **Fix B (TabNavigation active tab via nested memory RouterProvider, Option B1)**: `gallery.tsx` adds `STUB_TAB_PATHS = ['/library', '/downloads', '/pending', '/settings'] as const` + `StubbedRouter` component which builds `createMemoryHistory({ initialEntries: [pathname] })` + a stub root + child routes for all 4 paths (with `<Outlet>` rendering the wrapped fixture). `GalleryFixture` gains `routePath?: StubRoutePath`; the `shell-tab-navigation` fixture sets `routePath: '/library'` and its FIXME block is removed. `useMemo` deps intentionally omit `children` (one-mount-per-snapshot, no re-render churn needed — `react-hooks/exhaustive-deps` suppressed with a deliberate comment); the `RouterProvider router={router as any}` cast is required because the stub router's typed tree is narrower than the main `routeTree.gen.ts` (runtime context lookup correct — `@typescript-eslint/no-explicit-any` suppressed with a rationale comment). Regenerated 3 baselines `shell-tab-navigation/{default,hover,focus}-visual-darwin.png` now show `媒體庫` styled active. **Fix C (interactive `open` state via `openTrigger`)**: `GalleryState` union gains `'open'`; `GalleryFixture` gains `openTrigger?: string`; `gallery.tsx` filters out the `open` state when `!fx.openTrigger` (silent drop) and emits `data-gallery-open-trigger={fx.openTrigger}` on the `open` state div. The visual spec's new `else if (state === 'open')` branch reads the attribute, clicks the trigger inside the state div, then **`waitFor([role="listbox|menu|dialog"])` with 1 s timeout + `.catch` fallback** (the burn-in stabilizer — pre-`waitFor`, 1 visual fail in 4 burn-in runs; post-`waitFor`, 0 visual fails in 4 consecutive runs). `library-sort-selector` opted in (`statesOnly: ['default', 'hover', 'focus', 'open']` + `openTrigger: '[data-testid="sort-selector-button"]'`); new baseline `library-sort-selector/open-visual-darwin.png` captures the open `SortDropdown 955EZ` panel. **Deltas vs 19-4 closeout**: 26 fixture entries → 26 fixture entries (no new fixtures; SortSelector gains a state) / 27 entry-state combinations / **47 PNGs** (was 46: +1 new `library-sort-selector/open`, +4 re-blessed `shell-tab-navigation/{default,hover,focus}` and `search-search-bar/focus`). Regression: `eslint .` 0 errors / 122 warnings (matches 19-4 closeout EXACTLY), `prettier --check` clean on all 3 touched code files, `playwright test --project=visual --list` 1 test/1 file, feature-E2E `--list` 1663 tests / 36 files unchanged, `pnpm nx test web` 148 files / 1840 tests PASS, `pnpm nx test api` PASS (Nx-flagged known SSE flake, retried green — preexisting-fail-scanner-sse-scan-cancelled-flake; zero Go changes this story), `test:cleanup` no orphans after `test:cleanup:all` reaped 2 leftover Playwright nodes. 🔗 AC Drift: N/A (additive harness extension — gallery wrapper grammar gains optional `'open'` state + `data-gallery-open-trigger` attribute; SM CS pass classified as documented harness extension not stamped `[@contract-v1→v2]` bump on 19-4 AC #3; CR may re-classify). 📎 Contract Stamps: NONE this story (per SM judgment). 🔒 Rule 7 Wire Format: N/A (pure FE). 🎨 UX: PENDING Sally /test/gallery review — deferred to the Task 4 closure once Tasks 1–3 land the bulk fill. DEV inspector confirmation: `/test/gallery` rendered all 26 fixtures cleanly (no error placeholders); TabNavigation visibly highlights `媒體庫`; SortSelector `open` state captures the expanded panel with selected indicator on `新增日期`. ⚠️ Tasks 1–6 remain `[ ]` — story stays `in-progress`, NOT bumped to `review`. Per user instruction "task 0 only" scope. Commit message: `feat(19-4b): Task 0 harness-quality fixes — Sally follow-ups 1/2/3`. → Next session: pick up Task 1 (inventory + bucket P/Q/S/L) on a different LLM context per workflow tip. |
 | 2026-05-13 | SM Bob /create-story (YOLO) COMPLETE. backlog → ready-for-dev. Story file: 19-4b-visual-baseline-bulk-fill.md (6 ACs; Task 0 with 3 fix sub-tasks + 6 numbered tasks covering inventory / presentational fill / data-driven fill / regen+UX-review+burn-in / Linux-baseline strategy / regression+close; ALL frontend / 0 backend → single story per cross-stack split check). Scope: (1) Task 0 lands the 3 Sally follow-ups from the 19-4 review — Fix A keyboard-Tab focus via sentinel, Fix B TabNavigation active-tab via nested memory `RouterProvider` (preferred) or sibling route, Fix C interactive `open` state via `openTrigger?` fixture field; regenerates the affected 19-4 focus baselines + adds `library-sort-selector/open`. (2) Tasks 1-3 inventory ~99 remaining `apps/web/src/components/**/*.tsx`, bucket into Presentational / Query-driven / Store-driven / Layout-shell, add fixture entries (reusing each component's `*.spec.tsx` mock shapes; `penNode` from the `// Implements:` header per `drift-19-3-2026-05.md`); extends the gallery infrastructure with `seedQueries?: Array<{ queryKey: readonly unknown[]; data: unknown }>` + `seedStore?: () => void` + `routePath?: string` additive fields on `GalleryFixture`. (3) Task 4 regenerates the full baseline set, Sally /ux-designer reviews `/test/gallery` (AC #3 close gate — mirrors 19-4's), burn-in `test:visual` ×5 = 0 flake. (4) Task 5 decides the Linux-baseline strategy 19-5 needs — `scripts/visual-baseline.sh` Docker helper OR documented CI-regen-on-first-run; updates `tests/visual/README.md` accordingly. (5) Task 6 updates `visual-baseline-19-4.md` "Delivered" table to the full set + closes the "Pending" section + full regression. 📎 Contract Stamps: NONE this story (the harness contracts are 19-4's `[@contract-v1]` AC #1–#5, consumed unchanged; `openTrigger?`/`seedQueries?`/`seedStore?`/`routePath?` are additive fixture-interface fields, not stamped contracts). 🔗 AC Drift: N/A (additive — no AC observable behaviour change on prior stories). 🔒 Rule 7 Wire Format: N/A (pure FE, no Go error codes). 🎨 UX: reads `ux-design.pen` mapping via the 19-3 audit doc only — no `.pen` modification, screenshot workflow not triggered. Depends on 19-4 (done — consumes harness; no Rule 20 ack needed, harness `[@contract-v1]` is consumed unchanged). Out of scope: CI workflow (19-5), component-vs-`.pen` diff sweep + `bugfix-N` filing (19-8), upgrading `<screen-section …>` placeholders (19-8), TestSprite (19-6/19-7), any `apps/web/src/components/` source edits. → DEV /dev-story next (use a different LLM than this SM session per workflow tip; run /code-review after with a third — and TEA *test-automate stays mostly N/A here since the visual spec IS the test). |
 | 2026-05-12 | Created by the Story 19-4 Party Mode ruling (2026-05-12) — split out the bulk fixture/baseline fill (~99 components) so 19-4 could land the harness + ~25 reference components atomically (19-5 depends on the harness). backlog. |
