@@ -1,13 +1,13 @@
 // Implements: <route-only>
 /**
- * Test Route: Component Gallery for Playwright visual baselines (Story 19-4).
+ * Test Route: Component Gallery for Playwright visual baselines (Story 19-4 + 19-4b Task 0).
  *
  * Path: /test/gallery — DEV / test only (blocked in production builds, mirroring
  * `apps/web/src/routes/test/manual-search.tsx`).
  *
  * Renders every in-scope `apps/web/src/components/` component (see
- * `gallery.fixtures.tsx`) inside a stable `<section data-gallery-id data-pen-node>`
- * wrapper with up to three `<div data-gallery-state="default|hover|focus">` blocks.
+ * `-gallery.fixtures.tsx`) inside a stable `<section data-gallery-id data-pen-node>`
+ * wrapper with up to four `<div data-gallery-state="default|hover|focus|open">` blocks.
  * The Playwright `visual` project (`tests/visual/components.visual.spec.ts`) navigates
  * here and screenshots each state div → committed baselines under
  * `tests/visual/components.visual.spec.ts-snapshots/`.
@@ -16,11 +16,34 @@
  * renders a labelled placeholder (`data-gallery-error`) instead of crashing the page;
  * the visual spec skips snapshotting error placeholders.
  *
+ * **19-4b Task 0 extensions** (Sally 2026-05-12 follow-ups):
+ *   - **Fix A (focus :focus-visible):** each state div is preceded by a hidden
+ *     `[data-gallery-sentinel="pre"]` focusable button. The spec focuses the sentinel
+ *     then presses `Tab` so Chromium flags input modality as keyboard → `:focus-visible`
+ *     rules paint on the subsequent in-state-div focus (programmatic `.focus()` did not).
+ *   - **Fix B (router-dependent fixtures):** fixtures declaring `routePath` are wrapped
+ *     in a nested memory `RouterProvider` whose history is pinned to that path. The
+ *     fixture's `useRouterState()` resolves through the nearest provider → reports the
+ *     stub path → router-state-driven UI (e.g. TabNavigation's active tab) paints.
+ *   - **Fix C (interactive `open` state):** fixtures setting `openTrigger?: string` get
+ *     an extra `<div data-gallery-state="open" data-gallery-open-trigger="…">` block;
+ *     the spec clicks that selector before screenshotting (captures e.g. the open
+ *     `SortDropdown 955EZ` panel of `library/SortSelector`).
+ *
  * @internal Test fixture route. The QueryClient and Router context come from the app
- * shell (`main.tsx` → `QueryClientProvider` → router), so no extra providers are needed.
+ * shell (`main.tsx` → `QueryClientProvider` → router), so no extra providers are needed
+ * for non-routePath fixtures.
  */
-import { Component, type ErrorInfo, type ReactNode } from 'react';
-import { createFileRoute } from '@tanstack/react-router';
+import { Component, type ErrorInfo, type ReactNode, useMemo } from 'react';
+import {
+  createFileRoute,
+  createMemoryHistory,
+  createRootRoute,
+  createRoute,
+  createRouter,
+  Outlet,
+  RouterProvider,
+} from '@tanstack/react-router';
 import { GALLERY_FIXTURES, type GalleryState } from './-gallery.fixtures';
 
 export const Route = createFileRoute('/test/gallery')({
@@ -37,7 +60,58 @@ const isTestEnvironment =
     import.meta.env.MODE === 'test' ||
     (typeof window !== 'undefined' && window.location.hostname === 'localhost'));
 
+// Default state set when a fixture doesn't pin `statesOnly`. `open` is opt-in only —
+// requires the fixture to also set `openTrigger` so the visual spec knows what to click.
 const ALL_STATES: GalleryState[] = ['default', 'hover', 'focus'];
+
+// 19-4b Task 0 Fix B: nested memory `RouterProvider` for fixtures whose components
+// read router state. We register stub routes for every TabNavigation `matchPaths`
+// entry (`/library`, `/downloads`, `/pending`, `/settings`) so `<Link>` resolution
+// inside the wrapped component stays happy regardless of which path the fixture pins.
+const STUB_TAB_PATHS = ['/library', '/downloads', '/pending', '/settings'] as const;
+export type StubRoutePath = (typeof STUB_TAB_PATHS)[number];
+
+/**
+ * Wraps `children` inside a nested TanStack Router `RouterProvider` whose memory
+ * history is pinned to `pathname`. `useRouterState()` inside `children` resolves
+ * via the nearest provider → reports our stub path. Used by Fix B for the
+ * `shell/TabNavigation` fixture and any future router-state-dependent fixture.
+ *
+ * `children` is captured into the `useMemo` closure at first render. Each fixture
+ * mounts once for the visual snapshot and does not update its rendered props, so
+ * a stale closure is benign here — re-creating the router on prop change would
+ * thrash history subscriptions for no observable benefit. The exhaustive-deps
+ * suppression below is deliberate.
+ */
+function StubbedRouter({ pathname, children }: { pathname: StubRoutePath; children: ReactNode }) {
+  const router = useMemo(
+    () => {
+      const rootRoute = createRootRoute({ component: () => <Outlet /> });
+      const stubChildren = STUB_TAB_PATHS.map((p) =>
+        createRoute({
+          getParentRoute: () => rootRoute,
+          path: p,
+          component: () => <>{children}</>,
+        })
+      );
+      rootRoute.addChildren(stubChildren);
+      return createRouter({
+        routeTree: rootRoute,
+        history: createMemoryHistory({ initialEntries: [pathname] }),
+      });
+    },
+    // Intentional: `children` is captured at first render (see fn docstring).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [pathname]
+  );
+
+  // The stub router's typed route tree is intentionally narrower than the main
+  // app's `routeTree.gen.ts` — TS complains about `Router<…>` generic-parameter
+  // mismatch; runtime is correct (RouterProvider provides its own router context,
+  // and useRouterState inside the wrapped fixture reads from the nearest one).
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return <RouterProvider router={router as any} />;
+}
 
 class FixtureErrorBoundary extends Component<
   { id: string; children: ReactNode },
@@ -98,7 +172,11 @@ function ComponentGalleryPage() {
 
         <div className="space-y-12">
           {GALLERY_FIXTURES.map((fx) => {
-            const states = fx.statesOnly ?? ALL_STATES;
+            // 19-4b Task 0 Fix C: `open` state is opt-in. Silently drop it if a
+            // fixture forgot to set `openTrigger` (the spec would otherwise click
+            // an undefined selector).
+            const requestedStates = fx.statesOnly ?? ALL_STATES;
+            const states = requestedStates.filter((s) => s !== 'open' || !!fx.openTrigger);
             const Comp = fx.component;
             const props = fx.props ?? {};
             return (
@@ -112,22 +190,48 @@ function ComponentGalleryPage() {
                   {fx.label} <span className="opacity-60">· {fx.penNode}</span>
                 </h2>
                 <div className="flex flex-wrap gap-8">
-                  {states.map((state) => (
-                    <div key={state} className="space-y-1">
-                      <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]/70">
-                        {state}
+                  {states.map((state) => {
+                    const renderedFixture = (
+                      <FixtureErrorBoundary id={`${fx.id}:${state}`}>
+                        <Comp {...props} />
+                      </FixtureErrorBoundary>
+                    );
+                    // 19-4b Task 0 Fix B: if the fixture declares `routePath`,
+                    // wrap the render in a nested memory `RouterProvider` so
+                    // `useRouterState()` inside the component reports that path.
+                    const innerContent = fx.routePath ? (
+                      <StubbedRouter pathname={fx.routePath}>{renderedFixture}</StubbedRouter>
+                    ) : (
+                      renderedFixture
+                    );
+                    return (
+                      <div key={state} className="space-y-1">
+                        <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]/70">
+                          {state}
+                        </div>
+                        {/* 19-4b Task 0 Fix A — sentinel before each state div.
+                            The visual spec focuses this then presses Tab to
+                            enter the state div via keyboard, so Chromium flags
+                            input modality as keyboard and `:focus-visible`
+                            paints on the subsequent in-state-div focus. */}
+                        <button
+                          type="button"
+                          data-gallery-sentinel="pre"
+                          aria-hidden="true"
+                          tabIndex={0}
+                          className="sr-only"
+                        />
+                        <div
+                          data-gallery-state={state}
+                          data-gallery-open-trigger={state === 'open' ? fx.openTrigger : undefined}
+                          className="inline-block"
+                          style={fx.width ? { width: fx.width } : undefined}
+                        >
+                          {innerContent}
+                        </div>
                       </div>
-                      <div
-                        data-gallery-state={state}
-                        className="inline-block"
-                        style={fx.width ? { width: fx.width } : undefined}
-                      >
-                        <FixtureErrorBoundary id={`${fx.id}:${state}`}>
-                          <Comp {...props} />
-                        </FixtureErrorBoundary>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </section>
             );

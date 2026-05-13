@@ -1,20 +1,35 @@
 /**
- * Per-component visual-regression baselines — story 19-4.
+ * Per-component visual-regression baselines — story 19-4 (+ 19-4b Task 0 harness fixes).
  *
  * Runs only under the Playwright `visual` project (`playwright.config.ts`):
  *   pnpm run test:visual              # verify against committed baselines
  *   pnpm run test:visual:update       # (re)generate baselines — see tests/visual/README.md
  *
  * Drives the dev-only gallery route (`apps/web/src/routes/test/gallery.tsx`): for every
- * `<section data-gallery-id>` and each owned `<div data-gallery-state>` (default/hover/focus),
- * applies the state and asserts `toHaveScreenshot(['components', <id>, <state>.png])`. The
- * worklist is derived from the live DOM, so adding a component = adding a fixture entry in
- * `gallery.fixtures.tsx` — nothing changes here.
+ * `<section data-gallery-id>` and each owned `<div data-gallery-state>`
+ * (`default` / `hover` / `focus` / `open`), applies the state and asserts
+ * `toHaveScreenshot(['components', <id>, <state>.png])`. The worklist is derived from
+ * the live DOM, so adding a component = adding a fixture entry in `-gallery.fixtures.tsx`.
  *
- * Snapshot tolerance, reduced-motion, viewport, dark colour scheme: configured on the `visual`
- * project + `expect.toHaveScreenshot` in `playwright.config.ts`.
+ * **19-4b Task 0 (Sally 2026-05-12 follow-ups, all three landed):**
+ *   - **Fix A (`:focus-visible`):** each state div is preceded by a hidden
+ *     `[data-gallery-sentinel="pre"]` focusable button in the gallery route. For
+ *     `focus` state the spec focuses that sentinel and presses `Tab` — Chromium then
+ *     flags input modality as keyboard so the subsequent focus inside the state div
+ *     triggers `:focus-visible` rules. Programmatic `locator.focus()` did not.
+ *   - **Fix B (router-state-dependent fixtures):** the gallery route wraps fixtures
+ *     declaring `routePath` (e.g. `shell-tab-navigation` → `/library`) in a nested
+ *     memory `RouterProvider`. `useRouterState()` inside the component reports the
+ *     stub path. No spec change needed — this is gallery-side.
+ *   - **Fix C (interactive `open` state):** fixtures setting `openTrigger` get an
+ *     extra `<div data-gallery-state="open" data-gallery-open-trigger="<selector>">`
+ *     block; the spec clicks that selector inside the state div before screenshotting,
+ *     capturing e.g. `library/SortSelector`'s open `SortDropdown 955EZ` panel.
  *
- * @tags @visual @story-19-4
+ * Snapshot tolerance, reduced-motion, viewport, dark colour scheme: configured on the
+ * `visual` project + `expect.toHaveScreenshot` in `playwright.config.ts`.
+ *
+ * @tags @visual @story-19-4 @story-19-4b
  */
 import { test, expect, type Locator } from '@playwright/test';
 
@@ -83,12 +98,40 @@ test.describe('@visual @story-19-4 component visual baselines', () => {
         if (state === 'hover') {
           await stateDiv.hover();
         } else if (state === 'focus') {
+          // 19-4b Task 0 Fix A: focus a hidden sentinel before the state div, then
+          // press Tab to enter it. Chromium flags the resulting focus as keyboard
+          // modality so `:focus-visible` rules paint correctly. Programmatic
+          // `locator.focus()` does not trigger `:focus-visible`.
+          const sentinel: Locator = stateDiv.locator(
+            'xpath=preceding-sibling::*[@data-gallery-sentinel="pre"][1]'
+          );
           const focusable: Locator = stateDiv.locator(FOCUSABLE).first();
-          if ((await focusable.count()) > 0) {
+          if ((await focusable.count()) > 0 && (await sentinel.count()) > 0) {
+            await sentinel.focus();
+            await page.keyboard.press('Tab');
+          } else if ((await focusable.count()) > 0) {
+            // Sentinel missing — fall back to programmatic focus (not :focus-visible).
             await focusable.focus();
           } else {
             // No focusable descendant — focus state is identical to default; still capture it.
             await stateDiv.evaluate((el: HTMLElement) => el.scrollIntoView({ block: 'center' }));
+          }
+        } else if (state === 'open') {
+          // 19-4b Task 0 Fix C: click the fixture-declared trigger selector inside
+          // the state div to open the interactive sub-UI (dropdown / menu / modal).
+          // After click, wait for the most common popup role to be visible so the
+          // screenshot doesn't race the popup paint. .catch keeps the wait
+          // tolerant for openers whose popup doesn't expose a standard role.
+          const trigger = await stateDiv.getAttribute('data-gallery-open-trigger');
+          if (trigger) {
+            await stateDiv.locator(trigger).first().click();
+            await stateDiv
+              .locator(':is([role="listbox"], [role="menu"], [role="dialog"])')
+              .first()
+              .waitFor({ state: 'visible', timeout: 1000 })
+              .catch(() => {
+                /* no role-bearing popup — screenshot whatever opened */
+              });
           }
         }
 

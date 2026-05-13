@@ -61,7 +61,13 @@ import { ExploreBlockSkeleton } from '../../components/homepage/ExploreBlockSkel
 
 const noop = () => {};
 
-export type GalleryState = 'default' | 'hover' | 'focus';
+export type GalleryState = 'default' | 'hover' | 'focus' | 'open';
+
+/**
+ * Memory-router pathnames a fixture can pin via `routePath` (19-4b Task 0 Fix B).
+ * Mirrors `apps/web/src/components/shell/TabNavigation.tsx` `TABS.matchPaths`.
+ */
+export type StubRoutePath = '/library' | '/downloads' | '/pending' | '/settings';
 
 export interface GalleryFixture {
   /** Stable kebab id derived from the component's import path (e.g. `media/PosterCard` → `media-poster-card`). */
@@ -69,14 +75,30 @@ export interface GalleryFixture {
   /** Human label shown above the card in the gallery (not screenshotted — outside the state divs). */
   label: string;
   component: ComponentType<Record<string, unknown>>;
-  /** Props for every state. The same props are used for default/hover/focus (the state is applied by Playwright). */
+  /** Props for every state. The same props are used for default/hover/focus/open (the state is applied by Playwright). */
   props?: Record<string, unknown>;
   /** `.pen` node id, or `'screen-section'` / `'utility'`. */
   penNode: string;
-  /** If set, only these states are rendered & snapshotted. Default: all three. */
+  /** If set, only these states are rendered & snapshotted. Default: `['default', 'hover', 'focus']`. */
   statesOnly?: GalleryState[];
   /** Wrap the component in a fixed-width box so badges/inline elements don't collapse to 0-width. */
   width?: number;
+  /**
+   * CSS selector (relative to the component's render — searched inside the state div) for
+   * the element that, when clicked, opens an interactive sub-UI (dropdown / menu / modal).
+   * If set, the gallery emits a `<div data-gallery-state="open">` and the visual spec clicks
+   * this selector before screenshotting that state — captures e.g. `library/SortSelector`'s
+   * open `SortDropdown 955EZ` panel. Combine with `statesOnly` to opt in. Added 19-4b Task 0 Fix C.
+   */
+  openTrigger?: string;
+  /**
+   * If set, the fixture renders inside a nested memory `RouterProvider` pinned to this path
+   * (`/library` etc.). Used by components whose render depends on `useRouterState()` —
+   * notably `shell/TabNavigation` for its active-tab state. The gallery route `/test/gallery`
+   * matches none of `TabNavigation`'s `TABS.matchPaths`, so without this stub the
+   * active-tab state never paints. Added 19-4b Task 0 Fix B.
+   */
+  routePath?: StubRoutePath;
 }
 
 export const GALLERY_FIXTURES: GalleryFixture[] = [
@@ -256,6 +278,11 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     component: SortSelector as ComponentType<Record<string, unknown>>,
     props: { sortBy: 'created_at', sortOrder: 'desc', onSortChange: noop },
     penNode: '955EZ', // Component/SortDropdown
+    // 19-4b Task 0 Fix C: the dropdown panel `955EZ` itself is only visible when
+    // the trigger button is clicked open. The visual spec clicks `openTrigger`
+    // for the `open` state and captures the opened panel.
+    statesOnly: ['default', 'hover', 'focus', 'open'],
+    openTrigger: '[data-testid="sort-selector-button"]',
   },
   {
     id: 'library-empty-no-qbt',
@@ -324,13 +351,13 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     id: 'shell-tab-navigation',
     label: 'shell/TabNavigation',
     component: TabNavigation as ComponentType<Record<string, unknown>>,
-    // FIXME(19-4b Task 0): TabNavigation reads active tab from useRouterState; the gallery
-    // route `/test/gallery` matches no nav path, so the committed baselines capture an
-    // unrepresentative "no active tab" state. 19-4b stubs useRouterState (or renders this
-    // fixture under a matching route) and regenerates these three baselines. Sally OK'd
-    // accepting the current state as a placeholder (non-blocking follow-up #2 of her 2026-05-12 review).
+    // 19-4b Task 0 Fix B: TabNavigation reads `useRouterState()` to decide the active tab.
+    // The gallery route `/test/gallery` matches none of `TABS.matchPaths`, so without a
+    // stub the active-tab state never paints. `routePath` wraps this fixture in a nested
+    // memory `RouterProvider` pinned to `/library` → the `TabActive (TboA7)` state paints.
     penNode: 'TboA7', // + j98G4 (TabActive / TabInactive)
     width: 480,
+    routePath: '/library',
   },
 
   // ----- homepage/ -----
