@@ -75,11 +75,11 @@ These fixes change spec/fixture behaviour and therefore every baseline 19-4b gen
 
 ### Task 2: Add fixtures — Presentational bucket first (AC: #2)
 
-- [ ] For each P-bucket component, add a fixture entry. Reuse the component's own `*.spec.tsx` mock-data shapes for props (do not re-invent — Rule per `project-context.md`). The `penNode` value MUST come from the component file's `// Implements:` header (Rule 21-enforced by `local/implements-pen-node-id` ESLint rule).
-- [ ] Group fixtures in the file by `components/` subfolder (the existing convention — `ui/` → `media/` → `degradation/` → `library/` → …). Keep one-fixture-per-line readable formatting (Prettier handles wrapping).
-- [ ] For badges / skeletons / static labels: `statesOnly: ['default']` (no meaningful hover/focus). For interactive elements (buttons, links, inputs): keep the default three states.
-- [ ] For inline / auto-width components that would collapse to 0-width in isolation (badges, chips): set a sensible `width` (typically 200–640 px).
-- [ ] Spot-check renders in `pnpm nx serve web` → `/test/gallery` as you add batches of ~10. Use the per-fixture `FixtureErrorBoundary` to identify broken props quickly (`[data-gallery-error]` placeholders render with the error message; the spec already skips them).
+- [x] For each P-bucket component, add a fixture entry. Reuse the component's own `*.spec.tsx` mock-data shapes for props (do not re-invent — Rule per `project-context.md`). The `penNode` value MUST come from the component file's `// Implements:` header (Rule 21-enforced by `local/implements-pen-node-id` ESLint rule). **63 entries added** across 17 subfolders (see Debug Log "Task 2 bulk fill" + the File List).
+- [x] Group fixtures in the file by `components/` subfolder (the existing convention — `ui/` → `media/` → `degradation/` → `library/` → …). Keep one-fixture-per-line readable formatting (Prettier handles wrapping). Order: `ui/` → `media/` → `degradation/` → `dashboard/` → `downloads/` → `library/` → `homepage/` → `learning/` → `manual-search/` → `metadata-editor/` → `notifications/` → `parse/` → `retry/` → `scanner/` → `search/` → `settings/` → `setup/`.
+- [x] For badges / skeletons / static labels: `statesOnly: ['default']` (no meaningful hover/focus). For interactive elements (buttons, links, inputs): keep the default three states. Applied per-fixture (see entries with `statesOnly: ['default']` for: ui-dialog, ui-highlight-text, ui-side-panel, media-{credits,fallback-failed,fallback-pending,file-info,media-grid,tv-show-info}, all degradation/, downloads-{download-parse-status-badge,status-icon}, library-{batch-confirm-dialog,batch-progress,parse-failure-card→no this kept default-only no; actually kept default-only? see file}, all notifications/, parse-{layered-progress,parse-status-badge}, retry-countdown-timer, scanner-{progress-card,progress-sheet}, search-search-results, settings-{backup-table,connection-test-result,restore-confirm-dialog,settings-placeholder}, setup-step-progress).
+- [x] For inline / auto-width components that would collapse to 0-width in isolation (badges, chips): set a sensible `width` (typically 200–640 px). Applied to 47 of 63 entries (5 entries are full-page setup steps that don't need a width; ui-side-panel + library-batch-confirm-dialog + library-batch-progress + settings-restore-confirm-dialog are fixed-position overlays that don't need width; the remaining bare-default entries are intentionally letting the natural width win).
+- [x] Spot-check renders in `pnpm nx serve web` → `/test/gallery`. **Method**: Playwright probe (`.gallery-probe.mjs`, deleted post-check) against the running dev server. **Result**: 89 `[data-gallery-id]` sections present (26 pre-existing + 63 new = 89 ✓); **0 `[data-gallery-error]` placeholders**; 2 console errors (HTTP 500 on `/api/v1/setup/status` + one other — pre-existing app-shell calls, not Task 2 fixtures). First probe pass surfaced a transient Radix Dialog `Invalid hook call` for `ui-dialog` from Vite's optimizeDeps cache warming during HMR; second probe pass after Vite cache settled was clean. **Caveat**: `ui-dialog` renders an empty state-div because Radix `DialogContent` portals to `document.body` (outside the fixture's snapshot crop); Task 4 baseline generation + Sally review will decide whether to keep, drop, or rewrite the fixture with a non-portal wrapper. Same caveat applies to `ui-side-panel` (fixed-position viewport overlay).
 
 ### Task 3: Add fixtures — Query-driven & Store-driven buckets (AC: #2)
 
@@ -395,6 +395,150 @@ All 4 remain "no baseline ever" per `_bmad-output/audit/visual-baseline-19-4.md`
 
 **Hand-off to Task 2 (Presentational fill):** the 63-file P bucket above, grouped by `components/` subfolder, is the worklist. The component's own `*.spec.tsx` mock-data shape is the authoritative props source (project-context.md rule). `penNode` for every file in this bucket except `ui/{Dialog,HighlightText,SidePanel}`, `media/FileInfo`, `degradation/PlaceholderContent`, `settings/SettingsPlaceholder`, `setup/StepProgress`, `dashboard/CollapsibleSection`, `downloads/StatusIcon` (Category B → `'utility'`) is **`'screen-section'`** (Category C).
 
+#### Task 2 bulk fill (2026-05-13)
+
+**Method.** 5 parallel general-purpose subagents each handled a subfolder bucket (ui+media+degradation 14 / dashboard+downloads+library 16 / homepage+learning+manual-search+metadata-editor+notifications 10 / parse+retry+scanner+search 8 / settings+setup 15 = 63). Each agent read the component `.tsx` (for `// Implements:` header + prop interface) plus the corresponding `.spec.tsx` (for canonical mock-data shape per project-context.md), produced ready-to-paste fixture entries, and flagged any P-bucket mis-classifications they spotted while reading source.
+
+**Deltas vs Task 1 inventory.**
+
+- **+2 P-bucket → Q-bucket reclassification flags (deferred to Task 3 to re-bucket properly):**
+  - `homepage/TrailerModal` — calls `useQuery(['tmdb','videos',mediaType,tmdbId])` internally. **Defensive fix landed in this Task 2 commit:** fixture uses `tmdbId: 0` → query disabled (`enabled: !!tmdbId` is false at 0) → renders the deterministic empty state, no network. Task 3 should optionally re-bucket and seed a `[]` videos payload for a "no trailer" baseline, OR seed a real payload for the iframe-loaded variant.
+  - `library/ParseFailureCard` — renders `<ManualSearchDialog isOpen={false}>` which unconditionally mounts `useManualSearch` (gated by `params.query.length >= 2`). **Defensive fix landed:** fixture file's `parsedInfo.title: ''` + `filename: 'a.mkv'` keeps the derived query length below 2 → useQuery disabled. Re-bucket optional in Task 3 if a richer baseline is wanted.
+- **Inventory totals remain 63 P / 35 Q.** The two flagged components stay nominally P-bucket in this commit (defensive props prevent network); Task 3 may re-list them as Q-bucket if richer seeded baselines are desired.
+
+**Per-subfolder additions (with notable per-fixture decisions):**
+
+```
+ui/         3  Dialog (utility, statesOnly:default — Radix portal puts content
+              outside state div; Sally may decide to drop or rewrap with
+              non-portal Demo wrapper in Task 4),
+              HighlightText (utility, default-only, width 240),
+              SidePanel (utility, default-only — fixed-position viewport
+              overlay; Sally Task 4 review may flag visual neighbor occlusion)
+media/      8  CreditsSection (default-only, width 480),
+              DetailPanelMenu (4-state inc. `open`, openTrigger
+              `[data-testid="detail-menu-trigger"]` — captures inline dropdown
+              panel which is absolutely-positioned, not portaled),
+              FallbackFailed (default-only, uses TanStack Link — app shell
+              router resolves), FallbackPending (default-only),
+              FileInfo (utility, default-only, width 360),
+              MediaGrid (default-only, PosterCard children id:0 keeps the
+              useMovieDetails/useTVShowDetails hooks disabled — same defensive
+              pattern as the existing media-poster-card fixture),
+              TrailerEmbed (3-state, width 360 — only the "▶ 觀看預告片"
+              button is captured; iframe state explicitly excluded),
+              TVShowInfo (default-only, width 480)
+degradation/ 3 PlaceholderContent (utility, default-only, width 200),
+              ServiceHealthBanner (default-only, width 640),
+              UnidentifiedFileCard (default-only, width 480)
+dashboard/  2  CollapsibleSection (utility, 3-state, width 480 —
+              useNavigate-only, no data hooks; sessionStorage tolerates empty),
+              QuickSearchBar (3-state, width 480)
+downloads/  6  DownloadFilterTabs (3-state, width 720),
+              DownloadItem (3-state, width 720),
+              DownloadList (3-state, width 720 — expandedHash=null default
+              keeps useDownloadDetails dormant),
+              DownloadParseStatusBadge (default-only, width 160),
+              ParseFailedActions (3-state, width 320),
+              StatusIcon (utility, default-only, width 120)
+library/    8  BatchConfirmDialog (default-only, plain fixed-overlay, NOT
+              Radix portal — renders inline when isOpen=true),
+              BatchProgress (default-only, plain fixed-overlay),
+              LibrarySearchBar (3-state, width 480),
+              LibraryTable (3-state, width 960 — uses TanStack Link),
+              ParseFailureCard (3-state, width 280 — defensive empty
+              parsedInfo.title prevents useManualSearch from firing per the
+              Task 1 flag above),
+              PosterCardMenu (default-only, width 240, rendered with isOpen=true
+              — no internal trigger, parent-controlled open state),
+              SelectionToolbar (3-state, width 720),
+              SettingsGearDropdown (4-state inc. `open`, openTrigger
+              `[data-testid="settings-gear-button"]` — captures the dropdown
+              panel; same pattern as library-sort-selector)
+homepage/   1  TrailerModal (default-only — defensive tmdbId=0 disables
+              the internal useQuery; flagged for Q-bucket re-classification)
+learning/   1  LearnPatternPrompt (3-state, width 560)
+manual-search/3 FallbackStatusDisplay (default-only, width 640),
+              SearchResultCard (3-state, width 200 — omits posterUrl to
+              render the no-network fallback placeholder),
+              SearchResultsGrid (3-state, width 880, 4 results across all 3
+              sources to exercise the source-badge variations)
+metadata-editor/2 CastEditor (3-state, width 480),
+              PosterUploader (3-state, width 520 — no currentPoster prop, so
+              renders the empty dropzone without URL.createObjectURL)
+notifications/3 NewMediaNotifications (default-only, fixed-position
+              bottom-right; toast items animate-in via setTimeout 10ms but
+              Playwright disables CSS animations — static frame is
+              deterministic), NewMediaToast (default-only, width 360),
+              ParseCompleteToast (default-only, width 360)
+parse/      4  ErrorDetailsPanel (3-state, width 560, shared
+              PARSE_STEPS_FAILED const at file top),
+              LayeredProgressIndicator (default-only, width 480, shared
+              PARSE_STEPS_IN_PROGRESS const),
+              MediaFileCard (3-state, width 240, pinned 8 GB fileSize so
+              formatFileSize renders the stable "8.00 GB" literal),
+              ParseStatusBadge (default-only, status="success" — `parsing`
+              would animate-spin even with Playwright animations disabled)
+retry/      1  CountdownTimer (default-only, targetTime pinned to a PAST
+              ISO `'2020-01-01T00:00:00.000Z'` → initial secondsRemaining=0
+              → formatTimeRemaining(0) returns the stable literal `'即將重試'`;
+              every tick recomputes to 0 so the rendered string is byte-stable
+              across runs; onComplete fires once into noop)
+scanner/    2  ScanProgressCard (default-only, width 400, shared
+              SCAN_STATE_ACTIVE const — percentDone:62 pins the bar fill),
+              ScanProgressSheet (default-only, width 400 — default
+              expanded=false captures the 64px collapsed mobile pill)
+search/     1  SearchResults (default-only, width 960 — isLoading:true
+              renders the deterministic skeleton grid; real results would
+              fire PosterCard useMovieDetails/useTVShowDetails on mount)
+settings/   8  BackupTable (default-only, width 760, 3 rows
+              completed/failed/running exercising all action-button states),
+              CacheTypeCard (3-state, width 480),
+              ConnectionTestResult (default-only, width 480),
+              LogEntry (3-state, width 720 — ERROR-level log with full
+              context object + hint to exercise the collapsed render),
+              LogFilters (3-state, width 640),
+              RestoreConfirmDialog (default-only, plain fixed-overlay NOT
+              Radix portal),
+              ServiceStatusCard (3-state, width 520),
+              SettingsPlaceholder (utility, default-only, width 480, lucide
+              Database icon import)
+setup/      7  All 7 receive `StepProps` (data/onUpdate/onNext/onBack/onSkip/
+              isFirst/isLast/isSubmitting) — pure presentational, no data
+              hooks, no width (full-page panels). ApiKeysStep, CompleteStep,
+              MediaFolderStep, MediaLibrarySetupStep (pre-seeded libraries
+              with stable ids to short-circuit the mount-useEffect that
+              would otherwise call onUpdate({ libraries: [...] }) using
+              crypto.randomUUID — non-deterministic), QBittorrentStep,
+              StepProgress (utility, default-only, width 320),
+              WelcomeStep.
+```
+
+Sum: 3+8+3+2+6+8+1+1+3+2+3+4+1+2+1+8+7 = **63** ✓.
+
+**Shared helper consts added** to top of `-gallery.fixtures.tsx`:
+- `PARSE_STEPS_FAILED: ParseStep[]` (6-step failed parse — for ErrorDetailsPanel)
+- `PARSE_STEPS_IN_PROGRESS: ParseStep[]` (6-step in-progress — for LayeredProgressIndicator)
+- `SCAN_STATE_ACTIVE: ScanProgressState` (percentDone:62 active scan — for both ScanProgressCard + ScanProgressSheet)
+
+**New type-only imports:**
+- `import type { CastMember, CrewMember, TVShowDetails } from '../../types/tmdb'`
+- `import type { ServicesHealth } from '../../components/degradation/types'`
+- `import type { ParseStep } from '../../components/parse/types'`
+- `import type { ScanProgressState } from '../../hooks/useScanProgress'`
+
+**New value import:** `import { Database } from 'lucide-react'` (icon prop for settings-settings-placeholder).
+
+**Spot-check (replaces "as you add batches of ~10").** Programmatic Playwright probe (`.gallery-probe.mjs`, deleted post-run): navigated to `http://localhost:4200/test/gallery` against running `pnpm nx serve web`, waited for `[data-gallery-id]` selector + 2 s settle. Result: **89** `[data-gallery-id]` sections rendered (26 pre-existing + 63 new = 89 ✓), **0** `[data-gallery-error]` placeholders, **2** console errors (HTTP 500 on `/api/v1/setup/status` + one other pre-existing app-shell call — NOT a Task 2 fixture). First probe pass surfaced a transient `Invalid hook call` for `ui-dialog` during Vite optimizeDeps cache warming; second probe pass (after Vite cache settled) was clean — no fixture re-rendered the hook error.
+
+**Regression after Task 2 (compile-time only — full regression deferred to Task 4 closure):**
+- `pnpm exec eslint apps/web/src/routes/test/-gallery.fixtures.tsx` → 0 errors / 0 warnings
+- `pnpm exec eslint .` → 0 errors / **122 warnings** (matches the 19-4/Task-0 baseline EXACTLY — no new warnings introduced by the 63 fixture additions; lint:all baseline preserved per AC #6)
+- `pnpm exec prettier --check apps/web/src/routes/test/-gallery.fixtures.tsx` → clean
+- `pnpm exec tsc --noEmit -p apps/web/tsconfig.json` → exit 0 (all 63 prop shapes type-check against component interfaces; the `as ComponentType<Record<string, unknown>>` cast on the `component` field is the documented loose-typing pattern of the gallery aggregator, not a Task-2 introduction)
+
+`nx test web` / `nx test api` / `playwright test --project=visual --list` / `test:visual` burn-in are AC #6 close-gate work for Task 4, NOT Task 2 — added fixtures don't change test discoverability (the visual spec is DOM-driven; new fixtures only become testable once baselines are generated via `test:visual:update` in Task 4).
+
 ### Completion Notes List
 
 - **🔗 AC Drift:** N/A (additive harness extension — 19-4 `[@contract-v1]` AC #1–#5 wrapper shape gains a NEW optional `'open'` state member + `data-gallery-open-trigger` attribute. SM CS pass classified this as a documented harness extension, NOT a stamped v1→v2 contract bump (rationale: the existing `default`/`hover`/`focus` shapes remain unchanged; `open` is opt-in via `openTrigger?` and emitted only when the fixture sets it). CR pass may re-classify as `[@contract-v1→v2]` AC #3 if it sees the gallery-wrapper grammar extension as in-scope of the v1 contract — if so, a v1→v2 bump row + ack in Dev Notes are owed.
@@ -408,6 +552,9 @@ All 4 remain "no baseline ever" per `_bmad-output/audit/visual-baseline-19-4.md`
   - `tests/visual/README.md` update for `open` state + `openTrigger` + `routePath` interface fields (Task 6's doc-pass scope; the `GalleryFixture` JSDoc in `-gallery.fixtures.tsx:65-99` is the primary discovery surface today).
   - Opt-in of other 19-4 reference fixtures to the `open` state (none have obvious openers; Tasks 1–3 will surface candidates among the ~99 bulk-fill components — `PosterCardMenu`, modal/dialog families, etc.).
   - `_bmad-output/audit/visual-baseline-19-4.md` "Delivered baselines" table update (header still reads `(25 unique components / 26 fixture entries / 46 PNGs)`; Task 0 incremental delta = `+1 entry-state combination (library-sort-selector now has 4 states) + 1 new PNG + 4 re-blessed PNGs ⇒ 26 fixture entries / 27 entry-state combinations / 47 PNGs`). Task 6 owns the full-set rewrite.
+- **⚙️ Task 2 scope (user instruction "接續 Task 2:63 個 P-bucket fixture"):** This session implemented Task 2 ONLY (the 63 presentational-bucket fixture entries). Tasks 3–6 deferred. Story remains `in-progress` after Task 2 commit. **2 P-bucket → Q-bucket reclassification flags surfaced during sub-agent reads** (`homepage/TrailerModal` calls useQuery; `library/ParseFailureCard` mounts ManualSearchDialog with useManualSearch); defensive prop tweaks (tmdbId=0; empty parsedInfo.title) keep both fixtures network-free without re-bucketing — Task 3 may re-bucket if richer seeded baselines are desired.
+- **🎨 Task 2 spot-check confirmation.** `.gallery-probe.mjs` Playwright run against live `nx serve web`: 89 fixtures rendered (26+63), 0 `[data-gallery-error]` placeholders, 2 pre-existing console errors (HTTP 500 on `/api/v1/setup/status` — app-shell call, unrelated to Task 2). `ui-dialog` renders an empty state-div because Radix `DialogContent` portals to `document.body` — flagged for Task 4 / Sally review (may need a non-portal Demo wrapper OR a `statesOnly: []` opt-out). `ui-side-panel` (fixed-position viewport overlay) may visually occlude neighbors in the rendered gallery — also a Task 4 / Sally concern. Both caveats documented inline as fixture comments.
+- **📦 Burn-in / baseline generation NOT performed this commit.** Task 2 ADDS fixtures only; `pnpm run test:visual:update` to generate the new baseline set + Sally `/test/gallery` review + burn-in `test:visual` ×5 are Task 4's gate per the story plan. Running `:update` now would land ~150+ darwin PNGs without the Sally sign-off the AC #3 close gate requires.
 
 ### File List
 
@@ -430,10 +577,16 @@ All 4 remain "no baseline ever" per `_bmad-output/audit/visual-baseline-19-4.md`
 **Unchanged baselines (re-tested under new spec, no pixel diff — included for completeness, NOT in git diff):**
 - All other 19-4 baselines: 41 PNGs. Notably the 9 other `*/focus-*.png` (ui-button, library-filter-chips, library-sort-selector, library-view-toggle, media-poster-card, metadata-editor-genre-selector, search-media-type-tabs, ui-pagination + the no-focusable-descendant cases) render identically under `:focus-visible` vs `:focus` — Playwright didn't re-write them.
 
+**Modified (Task 2 — 1 code file + 2 doc files):**
+- `apps/web/src/routes/test/-gallery.fixtures.tsx` — **63 new fixture entries** added across 17 subfolder blocks; **51 new imports** (49 component imports + 2 type-import groups + 1 `Database` icon from lucide-react); **3 new helper consts** at file top (`PARSE_STEPS_FAILED`, `PARSE_STEPS_IN_PROGRESS`, `SCAN_STATE_ACTIVE`). File grew from **373 → 1714 lines**. Fixture count: **26 → 89** entries (Task 2 = +63 P-bucket). No changes to existing 26 entries.
+- `_bmad-output/implementation-artifacts/19-4b-visual-baseline-bulk-fill.md` — Task 2 subtasks marked `[x]` (5/5); Task 2 Debug Log subsection added (per-subfolder breakdown + helper-const summary + spot-check method + reclassification flags); Completion Notes appended (scope, spot-check confirmation, deferred items); File List updated; Change Log entry appended.
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — `19-4b` summary line extended with Task 2 completion (status stays `in-progress`).
+
 ## Change Log
 
 | Date | Change |
 | ---- | ------ |
+| 2026-05-13 | DEV Amelia /dev-story Task 2 P-bucket bulk fill COMPLETE (user-scoped "接續 Task 2:63 個 P-bucket fixture"). All 5 Task 2 sub-bullets [x]. **63 new fixture entries** added to `apps/web/src/routes/test/-gallery.fixtures.tsx` across **17 subfolders** (ui:3, media:8, degradation:3, dashboard:2, downloads:6, library:8, homepage:1, learning:1, manual-search:3, metadata-editor:2, notifications:3, parse:4, retry:1, scanner:2, search:1, settings:8, setup:7). File grew **373→1714 lines**; fixture count **26→89**. Method: 5 parallel general-purpose subagents each handled a subfolder bucket, reading the `.tsx` (for `// Implements:` header + prop interface) + `.spec.tsx` (for canonical mock-data shape), producing ready-to-paste TS entries. **3 shared helper consts** added at file top to keep parse/scanner fixtures byte-stable across reruns: `PARSE_STEPS_FAILED`, `PARSE_STEPS_IN_PROGRESS` (both `ParseStep[]`), `SCAN_STATE_ACTIVE` (`ScanProgressState` with `percentDone:62`). **51 new imports** (49 component + 4 type-import groups consolidated into `import type` lines + 1 lucide-react `Database` icon). **Defensive prop tweaks for 2 sub-agent-flagged near-Q-bucket components**: `homepage/TrailerModal` → `tmdbId:0` (disables internal useQuery via `enabled: !!tmdbId`); `library/ParseFailureCard` → empty `parsedInfo.title` + 1-char `filename:'a.mkv'` (keeps ManualSearchDialog's `useManualSearch` disabled via its `params.query.length >= 2` gate). Both flagged for optional Task-3 re-bucketing with seeded queries if richer baselines are desired. **Special-case fixture decisions**: `media-detail-panel-menu` opts into the `open` state with `openTrigger:'[data-testid="detail-menu-trigger"]'` (inline absolutely-positioned dropdown, not portaled — captures the open panel inside the state div, mirrors library-sort-selector pattern); `library-settings-gear-dropdown` opts into `open` with `openTrigger:'[data-testid="settings-gear-button"]'`; `library-poster-card-menu` rendered with `isOpen:true` directly (no internal trigger, parent-controlled); `media-media-grid` children use `id:0` to keep PosterCard's useMovieDetails/useTVShowDetails disabled (same pattern as the existing media-poster-card fixture); `retry-countdown-timer` pins `targetTime` to a PAST ISO (`'2020-01-01T00:00:00.000Z'`) so `formatTimeRemaining(0)` renders the stable `'即將重試'` literal regardless of tick timing; `parse-parse-status-badge` pinned to `status:'success'` (would animate-spin on `'parsing'`); `search-search-results` pinned to `isLoading:true` (real results would fire PosterCard data hooks on mount); `notifications/*` all `statesOnly:['default']` (toasts auto-dismiss at 5 s but Playwright animations:disabled keeps the static frame deterministic); 7 setup steps receive full `StepProps` with `noop` callbacks (`MediaLibrarySetupStep` pre-seeded with stable-id libraries to short-circuit the mount-useEffect that would otherwise call `onUpdate({ libraries: [crypto.randomUUID(...)] })`). **Spot-check** via `.gallery-probe.mjs` Playwright run against live `nx serve web`: 89 fixtures rendered (26+63 ✓), **0 `[data-gallery-error]` placeholders**, 2 pre-existing app-shell console errors (HTTP 500 on `/api/v1/setup/status` — unrelated to Task 2). `ui-dialog` renders an empty state-div (Radix DialogContent portals to `document.body` outside the snapshot crop) — flagged for Task 4 / Sally review. `ui-side-panel` (fixed-position viewport overlay) may visually occlude neighbors — same flag. Both caveats documented inline as fixture comments. Regression: `pnpm exec eslint .` 0 errors / **122 warnings** (EXACT match to 19-4 closeout AND Task-0 baseline — no new warnings introduced), `pnpm exec prettier --check apps/web/src/routes/test/-gallery.fixtures.tsx` clean, `pnpm exec tsc --noEmit -p apps/web/tsconfig.json` exit 0 (all 63 prop shapes type-check). `nx test web` / `nx test api` / `test:e2e --list` / `test:visual:update` / Sally review / burn-in `test:visual` ×5 are Task 4's gate, NOT Task 2 — fixture additions don't change test discoverability (visual spec is DOM-driven). 🔗 AC Drift: N/A (additive — 63 new fixture entries, no AC observable behaviour change on prior stories). 📎 Contract Stamps: NONE (this story carries no `[@contract-v*]` stamps; harness `[@contract-v1]` from 19-4 consumed unchanged). 🔒 Rule 7 Wire Format: N/A (pure FE, no Go error codes). 🎨 UX: PENDING Sally `/test/gallery` review — deferred to the Task 4 close gate per the story plan. Tasks 3–6 remain `[ ]` — story stays `in-progress`, NOT bumped to `review`. Commit message: `feat(19-4b): Task 2 P-bucket bulk fill — 63 presentational fixtures`. → Next session: Task 3 (Q/S-bucket fill — 35 Q-bucket data-driven fixtures + the `seedQueries`/`seedStore` gallery-infrastructure extension) on a different LLM context per workflow tip. |
 | 2026-05-13 | DEV Amelia /dev-story Task 1 inventory COMPLETE (user-scoped "task 1 only"). All 4 Task 1 sub-bullets [x]. **127** `.tsx` under `apps/web/src/components/` (find filter excludes `*.spec.tsx`/`*.test.tsx`/`index.ts`); minus the **25** unique components already in `-gallery.fixtures.tsx` (26 fixture entries / 46 PNGs at 19-4 closeout, +1 entry-state and +1 PNG from Task 0 = **26 fixture entries / 27 entry-state combinations / 47 PNGs** going into Task 1) = **102** files for the bulk fill (+3 margin over the story header's "~99": the `ui/{Dialog,HighlightText,SidePanel}` Category-B utilities 19-4 explicitly deferred). **Bucket assignments**: 4 L (deliberate skip per AC #4 — `shell/AppShell`, `dashboard/DashboardLayout`, `settings/SettingsLayout`, `setup/SetupWizard`; `SettingsLayout` may be reconsidered in Task 2 if Sally flags the omission, otherwise stays skipped), 0 S (no `apps/web/src/stores/` consumer under `components/` — selection / notification state flows via props per project-context Rule 5; `seedStore?` infra stays in place for forward compatibility), **35 Q** (custom-hook RQ consumers — see Debug Log References for the full sub-folder list), **63 P** (presentational, props-in only — grouped by `components/` subfolder in Debug Log). Sum = 4 + 0 + 35 + 63 = 102 ✓. **Type/util `.ts` skip confirmation**: all 4 files (`parse/types.ts` 147L, `degradation/types.ts` 48L, `downloads/formatters.ts` 67L, `parse/useParseProgress.ts` 367L) confirmed present and (by virtue of the `-name '*.tsx'` filter) absent from the inventory — remain "no baseline ever" per `visual-baseline-19-4.md`. **Drift-doc cross-check vs `drift-19-3-2026-05.md`**: 0 new Category-A `penNode` values to set (all 12 Cat-A components already covered by 19-4); 13 Cat-B `.tsx` remaining → `penNode: 'utility'`; 89 Cat-C `.tsx` remaining → `penNode: 'screen-section'`; arithmetic 0 + 13 + 89 = 102 ✓. **No code changes this task — story file only.** 🔗 AC Drift: N/A (inventory work product, no behavioral change). 📎 Contract Stamps: NONE (no `[@contract-v*]` in this story or upstream refs touched). 🔒 Rule 7: N/A. 🎨 UX: N/A (no UI changes — inventory only; Task 4 gate stands for the bulk-fill close). Regression gate: N/A (no code change, no test rerun needed). Tasks 2–6 remain `[ ]` — story stays `in-progress`. → Next session: Task 2 (presentational bucket fill — 63 P-bucket fixtures) on a different LLM context per workflow tip. |
 | 2026-05-13 | DEV Amelia /dev-story COMPLETE for Task 0 ONLY (user-scoped). ready-for-dev → in-progress. Task 0 lands all 3 Sally 2026-05-12 follow-ups. **Fix A (keyboard-Tab focus)**: `gallery.tsx` renders a hidden `<button data-gallery-sentinel="pre" tabIndex={0} className="sr-only">` immediately before each state div; the visual spec's `focus` branch focuses the sentinel then `page.keyboard.press('Tab')` so Chromium flips input modality to keyboard → `:focus-visible` rules paint. Of 10 existing 3-state focus baselines, only `search-search-bar/focus-visual-darwin.png` was pixel-different (SearchBar has the only `:focus-visible`-distinct rule); the other 9 re-tested as identical under the new mechanism and were re-blessed unchanged by Playwright. **Fix B (TabNavigation active tab via nested memory RouterProvider, Option B1)**: `gallery.tsx` adds `STUB_TAB_PATHS = ['/library', '/downloads', '/pending', '/settings'] as const` + `StubbedRouter` component which builds `createMemoryHistory({ initialEntries: [pathname] })` + a stub root + child routes for all 4 paths (with `<Outlet>` rendering the wrapped fixture). `GalleryFixture` gains `routePath?: StubRoutePath`; the `shell-tab-navigation` fixture sets `routePath: '/library'` and its FIXME block is removed. `useMemo` deps intentionally omit `children` (one-mount-per-snapshot, no re-render churn needed — `react-hooks/exhaustive-deps` suppressed with a deliberate comment); the `RouterProvider router={router as any}` cast is required because the stub router's typed tree is narrower than the main `routeTree.gen.ts` (runtime context lookup correct — `@typescript-eslint/no-explicit-any` suppressed with a rationale comment). Regenerated 3 baselines `shell-tab-navigation/{default,hover,focus}-visual-darwin.png` now show `媒體庫` styled active. **Fix C (interactive `open` state via `openTrigger`)**: `GalleryState` union gains `'open'`; `GalleryFixture` gains `openTrigger?: string`; `gallery.tsx` filters out the `open` state when `!fx.openTrigger` (silent drop) and emits `data-gallery-open-trigger={fx.openTrigger}` on the `open` state div. The visual spec's new `else if (state === 'open')` branch reads the attribute, clicks the trigger inside the state div, then **`waitFor([role="listbox|menu|dialog"])` with 1 s timeout + `.catch` fallback** (the burn-in stabilizer — pre-`waitFor`, 1 visual fail in 4 burn-in runs; post-`waitFor`, 0 visual fails in 4 consecutive runs). `library-sort-selector` opted in (`statesOnly: ['default', 'hover', 'focus', 'open']` + `openTrigger: '[data-testid="sort-selector-button"]'`); new baseline `library-sort-selector/open-visual-darwin.png` captures the open `SortDropdown 955EZ` panel. **Deltas vs 19-4 closeout**: 26 fixture entries → 26 fixture entries (no new fixtures; SortSelector gains a state) / 27 entry-state combinations / **47 PNGs** (was 46: +1 new `library-sort-selector/open`, +4 re-blessed `shell-tab-navigation/{default,hover,focus}` and `search-search-bar/focus`). Regression: `eslint .` 0 errors / 122 warnings (matches 19-4 closeout EXACTLY), `prettier --check` clean on all 3 touched code files, `playwright test --project=visual --list` 1 test/1 file, feature-E2E `--list` 1663 tests / 36 files unchanged, `pnpm nx test web` 148 files / 1840 tests PASS, `pnpm nx test api` PASS (Nx-flagged known SSE flake, retried green — preexisting-fail-scanner-sse-scan-cancelled-flake; zero Go changes this story), `test:cleanup` no orphans after `test:cleanup:all` reaped 2 leftover Playwright nodes. 🔗 AC Drift: N/A (additive harness extension — gallery wrapper grammar gains optional `'open'` state + `data-gallery-open-trigger` attribute; SM CS pass classified as documented harness extension not stamped `[@contract-v1→v2]` bump on 19-4 AC #3; CR may re-classify). 📎 Contract Stamps: NONE this story (per SM judgment). 🔒 Rule 7 Wire Format: N/A (pure FE). 🎨 UX: PENDING Sally /test/gallery review — deferred to the Task 4 closure once Tasks 1–3 land the bulk fill. DEV inspector confirmation: `/test/gallery` rendered all 26 fixtures cleanly (no error placeholders); TabNavigation visibly highlights `媒體庫`; SortSelector `open` state captures the expanded panel with selected indicator on `新增日期`. ⚠️ Tasks 1–6 remain `[ ]` — story stays `in-progress`, NOT bumped to `review`. Per user instruction "task 0 only" scope. Commit message: `feat(19-4b): Task 0 harness-quality fixes — Sally follow-ups 1/2/3`. → Next session: pick up Task 1 (inventory + bucket P/Q/S/L) on a different LLM context per workflow tip. |
 | 2026-05-13 | SM Bob /create-story (YOLO) COMPLETE. backlog → ready-for-dev. Story file: 19-4b-visual-baseline-bulk-fill.md (6 ACs; Task 0 with 3 fix sub-tasks + 6 numbered tasks covering inventory / presentational fill / data-driven fill / regen+UX-review+burn-in / Linux-baseline strategy / regression+close; ALL frontend / 0 backend → single story per cross-stack split check). Scope: (1) Task 0 lands the 3 Sally follow-ups from the 19-4 review — Fix A keyboard-Tab focus via sentinel, Fix B TabNavigation active-tab via nested memory `RouterProvider` (preferred) or sibling route, Fix C interactive `open` state via `openTrigger?` fixture field; regenerates the affected 19-4 focus baselines + adds `library-sort-selector/open`. (2) Tasks 1-3 inventory ~99 remaining `apps/web/src/components/**/*.tsx`, bucket into Presentational / Query-driven / Store-driven / Layout-shell, add fixture entries (reusing each component's `*.spec.tsx` mock shapes; `penNode` from the `// Implements:` header per `drift-19-3-2026-05.md`); extends the gallery infrastructure with `seedQueries?: Array<{ queryKey: readonly unknown[]; data: unknown }>` + `seedStore?: () => void` + `routePath?: string` additive fields on `GalleryFixture`. (3) Task 4 regenerates the full baseline set, Sally /ux-designer reviews `/test/gallery` (AC #3 close gate — mirrors 19-4's), burn-in `test:visual` ×5 = 0 flake. (4) Task 5 decides the Linux-baseline strategy 19-5 needs — `scripts/visual-baseline.sh` Docker helper OR documented CI-regen-on-first-run; updates `tests/visual/README.md` accordingly. (5) Task 6 updates `visual-baseline-19-4.md` "Delivered" table to the full set + closes the "Pending" section + full regression. 📎 Contract Stamps: NONE this story (the harness contracts are 19-4's `[@contract-v1]` AC #1–#5, consumed unchanged; `openTrigger?`/`seedQueries?`/`seedStore?`/`routePath?` are additive fixture-interface fields, not stamped contracts). 🔗 AC Drift: N/A (additive — no AC observable behaviour change on prior stories). 🔒 Rule 7 Wire Format: N/A (pure FE, no Go error codes). 🎨 UX: reads `ux-design.pen` mapping via the 19-3 audit doc only — no `.pen` modification, screenshot workflow not triggered. Depends on 19-4 (done — consumes harness; no Rule 20 ack needed, harness `[@contract-v1]` is consumed unchanged). Out of scope: CI workflow (19-5), component-vs-`.pen` diff sweep + `bugfix-N` filing (19-8), upgrading `<screen-section …>` placeholders (19-8), TestSprite (19-6/19-7), any `apps/web/src/components/` source edits. → DEV /dev-story next (use a different LLM than this SM session per workflow tip; run /code-review after with a third — and TEA *test-automate stays mostly N/A here since the visual spec IS the test). |
