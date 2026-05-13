@@ -40,7 +40,12 @@ story — flagged optional in the Party Mode ruling; tracked for 19-5.)*
 
 ---
 
-## Delivered baselines (25 components, 46 PNGs)
+## Delivered baselines (25 unique components / 26 fixture entries / 46 PNGs)
+
+> **Count nuance**: 25 distinct component source files; `media/AvailabilityBadge.tsx` is rendered
+> twice (the `owned` and `requested` variants are visually distinct enough to baseline separately),
+> giving 26 fixture entries in `apps/web/src/routes/test/-gallery.fixtures.tsx`. 10 fixtures
+> snapshot all three states (default/hover/focus); 16 are `statesOnly: ['default']` — total 46 PNGs.
 
 | `data-gallery-id` | Component | `data-pen-node` | States | Notes |
 |---|---|---|---|---|

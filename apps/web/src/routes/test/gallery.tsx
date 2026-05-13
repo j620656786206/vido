@@ -27,11 +27,15 @@ export const Route = createFileRoute('/test/gallery')({
   component: ComponentGalleryPage,
 });
 
-// Mirror manual-search.tsx's environment guard — this route ships but is inert in prod.
+// Mirror manual-search.tsx's environment guard, with a PROD short-circuit on top so a
+// production build never enables the gallery — even when accessed via localhost (common
+// for NAS deployments behind SSH tunnels / port-forwards). The hostname check below is
+// the dev convenience the precedent route uses; it must not be reachable in a prod build.
 const isTestEnvironment =
-  import.meta.env.DEV ||
-  import.meta.env.MODE === 'test' ||
-  (typeof window !== 'undefined' && window.location.hostname === 'localhost');
+  !import.meta.env.PROD &&
+  (import.meta.env.DEV ||
+    import.meta.env.MODE === 'test' ||
+    (typeof window !== 'undefined' && window.location.hostname === 'localhost'));
 
 const ALL_STATES: GalleryState[] = ['default', 'hover', 'focus'];
 

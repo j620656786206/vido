@@ -47,13 +47,27 @@ test.describe('@visual @story-19-4 component visual baselines', () => {
 
     for (let i = 0; i < count; i++) {
       const section = sections.nth(i);
-      const id = (await section.getAttribute('data-gallery-id')) as string;
+      const id = await section.getAttribute('data-gallery-id');
+      if (!id) {
+        test.info().annotations.push({
+          type: 'gallery-skip',
+          description: `section[${i}] missing data-gallery-id`,
+        });
+        continue;
+      }
       const stateDivs = section.locator('[data-gallery-state]');
       const stateCount = await stateDivs.count();
 
       for (let j = 0; j < stateCount; j++) {
         const stateDiv = stateDivs.nth(j);
-        const state = (await stateDiv.getAttribute('data-gallery-state')) as string;
+        const state = await stateDiv.getAttribute('data-gallery-state');
+        if (!state) {
+          test.info().annotations.push({
+            type: 'gallery-skip',
+            description: `${id}: state div[${j}] missing data-gallery-state`,
+          });
+          continue;
+        }
 
         // Skip fixtures that rendered the error placeholder — an error state is not a valid baseline.
         if ((await stateDiv.locator('[data-gallery-error]').count()) > 0) {

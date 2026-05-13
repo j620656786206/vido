@@ -148,6 +148,11 @@ export default defineConfig({
     {
       name: 'visual',
       testDir: path.resolve(__dirname, './tests/visual'),
+      // testMatch is REDUNDANT today (tests/visual/ holds only *.visual.spec.ts) but
+      // the AC #1 [@contract-v1] mandates it explicitly: future non-visual specs added
+      // under tests/visual/ MUST NOT be swept into this project (would invalidate the
+      // "feature-E2E count unchanged" guarantee 19-5 relies on).
+      testMatch: ['**/*.visual.spec.ts'],
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 1280, height: 800 },

@@ -324,6 +324,11 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     id: 'shell-tab-navigation',
     label: 'shell/TabNavigation',
     component: TabNavigation as ComponentType<Record<string, unknown>>,
+    // FIXME(19-4b Task 0): TabNavigation reads active tab from useRouterState; the gallery
+    // route `/test/gallery` matches no nav path, so the committed baselines capture an
+    // unrepresentative "no active tab" state. 19-4b stubs useRouterState (or renders this
+    // fixture under a matching route) and regenerates these three baselines. Sally OK'd
+    // accepting the current state as a placeholder (non-blocking follow-up #2 of her 2026-05-12 review).
     penNode: 'TboA7', // + j98G4 (TabActive / TabInactive)
     width: 480,
   },
