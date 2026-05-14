@@ -33,10 +33,41 @@ Component node id (Category-A `// Implements: Component/X (id)` header), or the 
 Burn-in: `pnpm run test:visual` re-run ×4 (post-`:update`) — all green, 0 flake. (`reducedMotion`
 + `animations:'disabled'` makes the CSS-driven hover/focus states deterministic.)
 
-**Platform suffix:** baselines are `-darwin` (dev machine). 19-5's CI job (Linux) will either
-regenerate the `-linux` set via `pnpm run test:visual:update` in a one-off commit, or 19-4b/19-5
-adds `scripts/visual-baseline.sh` to generate the Linux set in the CI Docker image. *(Not done this
-story — flagged optional in the Party Mode ruling; tracked for 19-5.)*
+**Platform suffix — DECIDED 19-4b Task 5 (2026-05-14): Linux baselines are bootstrapped by 19-5's
+CI on first run (Option B).** Committed set is currently `-darwin` (dev machine). 19-5's CI
+workflow (`.github/workflows/visual-regression.yml`, Linux runner) will, on its first execution,
+detect the absent `-linux.png` files, run `pnpm run test:visual:update`, and open a one-off PR
+committing the `-linux` set. That PR MUST carry the `requires-manual-review` label so Sally can
+scan Linux-vs-darwin rendering before merge (content drift not expected — Sally already approved
+darwin content; only rendering drift from font / emoji / sub-pixel differences anticipated). After
+merge, CI runs in verify-only mode (`pnpm run test:visual`) on every PR thereafter.
+
+The one-off PR's body MUST append a bootstrap-marker line to this audit doc in the form
+`Linux baselines bootstrapped {YYYY-MM-DD} via CI image {full-digest-sha256:…}` so any future
+mass-rebless can be traced back to the image revision that produced the original `-linux` set.
+
+**Image pinning policy (19-5 owner — implement in CI workflow):** pin the **digest**, not just
+the tag. `mcr.microsoft.com/playwright:vX.Y.Z-jammy` is mutable — Ubuntu security updates to
+`fontconfig` / `freetype` will silently shift Linux glyph rendering and trigger mass-rebless
+without any source-code change. Resolve `sha256:…` at workflow-config time. Any image bump = a
+deliberate baseline-regeneration PR (`:update` + Sally gate + own commit — same discipline as
+any other reviewed-design-change rebless).
+
+**Rejected alternative (Option A) — local `scripts/visual-baseline.sh` Docker helper.** A thin
+wrapper that `docker run`s the Playwright image with the repo mounted, runs `:update` inside the
+container, producing `-linux` PNGs on the dev machine. Rejected by Party Mode 2026-05-14
+(Murat + Winston + Bob; Alexyu ratified) because: (i) creates a second authoritative baseline
+source (dev local + CI Linux) which violates "one authoritative environment" and risks
+"I produced locally vs CI produced" drift (Murat — test reliability); (ii) the `scripts/`-pinned
+image version bit-rots vs whatever 19-5's CI actually uses, especially under digest-pinning
+(Winston — pin tag not enough, must pin digest); (iii) 19-4b's bounded context is fixture +
+baseline coverage, not CI tooling — Option A crosses into 19-5's scope and duplicates the same
+"one story too big" failure mode that originally caused 19-4 → 19-4b to be split (Bob — story
+scope discipline). Re-considerable if 19-5 surfaces a concrete need for local Linux preview that
+the CI-regen path cannot serve.
+
+See `tests/visual/README.md` "Baseline-update discipline" → Platform suffix for the canonical
+CI first-run decision tree (the implementer-facing form of this decision).
 
 ---
 
