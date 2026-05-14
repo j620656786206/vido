@@ -2461,8 +2461,11 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
               attemptCount: 2,
               maxAttempts: 5,
               lastError: 'TMDb API timeout',
-              // Far-future timestamp keeps CountdownTimer at a stable large unit.
-              nextAttemptAt: '2099-01-01T00:00:30.000Z',
+              // 19-4b Task 4: past timestamp pins CountdownTimer at secondsRemaining=0
+              // → formatTimeRemaining(0) returns the stable '即將重試' literal across runs.
+              // Year-2099 produced "Mm Ss" with HUGE minute counts that ticked every second
+              // → 67-324 pixel diffs in burn-in. Past-time mirrors retry-countdown-timer.
+              nextAttemptAt: '2020-01-01T00:00:00.000Z',
               timeUntilRetry: '30s',
             },
             {
@@ -2472,7 +2475,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
               attemptCount: 1,
               maxAttempts: 3,
               lastError: '無法連線豆瓣',
-              nextAttemptAt: '2099-01-01T00:02:00.000Z',
+              nextAttemptAt: '2020-01-01T00:00:00.000Z',
               timeUntilRetry: '2m',
             },
           ],
@@ -2528,7 +2531,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
               attemptCount: 1,
               maxAttempts: 4,
               lastError: 'TMDb timeout',
-              nextAttemptAt: '2099-01-01T00:00:30.000Z',
+              nextAttemptAt: '2020-01-01T00:00:00.000Z',
               timeUntilRetry: '30s',
             },
             {
@@ -2538,7 +2541,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
               attemptCount: 2,
               maxAttempts: 4,
               lastError: 'Rate limited',
-              nextAttemptAt: '2099-01-01T00:02:00.000Z',
+              nextAttemptAt: '2020-01-01T00:00:00.000Z',
               timeUntilRetry: '2m',
             },
           ],
@@ -2568,7 +2571,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
               attemptCount: 1,
               maxAttempts: 4,
               lastError: 'TMDb timeout',
-              nextAttemptAt: '2099-01-01T00:00:30.000Z',
+              nextAttemptAt: '2020-01-01T00:00:00.000Z',
               timeUntilRetry: '30s',
             },
           ],

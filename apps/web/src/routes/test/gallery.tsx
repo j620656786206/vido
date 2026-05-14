@@ -40,6 +40,15 @@
  *     store state on first render. Currently no `components/` consumer reads a store
  *     directly (project-context.md Rule 5); the field stays for forward compatibility.
  *
+ * **19-4b Task 4 extensions** (single-fixture-per-page isolation):
+ *   - **`?fixture=<id>`:** renders only the matching fixture. The visual spec navigates
+ *     here per fixture so `fixed inset-0` overlays (ui/Dialog, ui/SidePanel, 10 custom
+ *     dialogs) can no longer intercept pointer events on OTHER fixtures globally. The
+ *     spec failure that prompted this change: Radix `Dialog.Portal` overlay from
+ *     `ui-dialog` (rendered with `open: true`) blocked the first fixture's hover.
+ *   - **`?manifest=1`:** renders just the ID list (no components mounted). Visual spec
+ *     hits this first to discover the worklist, then iterates `?fixture=<id>` per snapshot.
+ *
  * @internal Test fixture route. The QueryClient and Router context come from the app
  * shell (`main.tsx` → `QueryClientProvider` → router), so no extra providers are needed
  * for non-routePath fixtures.
@@ -57,8 +66,26 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { GALLERY_FIXTURES, type GalleryFixture, type GalleryState } from './-gallery.fixtures';
 
+type GallerySearchParams = {
+  fixture?: string;
+  manifest?: boolean;
+};
+
+// 19-4b Task 4: search params drive single-fixture-per-page isolation. Without
+// this, fixtures rendering `fixed inset-0` overlays (ui/Dialog, ui/SidePanel, and
+// 10 Task-2/3 custom dialogs) intercept pointer events globally and break every
+// other fixture's hover/focus. The visual spec now navigates to `?manifest=1`
+// to discover ids, then `?fixture=<id>` per snapshot. TanStack Router auto-parses
+// numeric-looking strings — accept '1', 1, and true to be tolerant of the parser.
 export const Route = createFileRoute('/test/gallery')({
   component: ComponentGalleryPage,
+  validateSearch: (search: Record<string, unknown>): GallerySearchParams => ({
+    fixture: typeof search.fixture === 'string' ? search.fixture : undefined,
+    manifest:
+      search.manifest === '1' || search.manifest === 1 || search.manifest === true
+        ? true
+        : undefined,
+  }),
 });
 
 // Mirror manual-search.tsx's environment guard, with a PROD short-circuit on top so a
@@ -189,6 +216,8 @@ class FixtureErrorBoundary extends Component<
 }
 
 function ComponentGalleryPage() {
+  const { fixture, manifest } = Route.useSearch();
+
   if (!isTestEnvironment) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -202,21 +231,57 @@ function ComponentGalleryPage() {
     );
   }
 
+  // 19-4b Task 4: manifest mode emits only the ID list (no components mounted).
+  // The visual spec hits this first to discover the fixture worklist, then
+  // navigates per fixture to `?fixture=<id>` — fixtures never co-render, so
+  // `fixed inset-0` overlays can no longer intercept pointer events globally.
+  if (manifest) {
+    return (
+      <div className="p-8" data-testid="component-gallery-manifest">
+        <h1 className="mb-2 text-2xl font-bold text-white">Component Gallery Manifest</h1>
+        <p className="mb-4 text-sm text-[var(--text-secondary)]">
+          {GALLERY_FIXTURES.length} fixtures. Visual spec consumes this list, then visits{' '}
+          <code>/test/gallery?fixture=&lt;id&gt;</code> per fixture.
+        </p>
+        <ul>
+          {GALLERY_FIXTURES.map((fx) => (
+            <li key={fx.id} data-gallery-id={fx.id} className="font-mono text-xs">
+              {fx.id}
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
+
+  // 19-4b Task 4: when `?fixture=<id>` is set, render only that fixture (isolated
+  // per-page snapshot). When unset, render the full gallery for dev browsing —
+  // overlay collisions are expected in browse mode but irrelevant to the spec.
+  const fixturesToRender = fixture
+    ? GALLERY_FIXTURES.filter((fx) => fx.id === fixture)
+    : GALLERY_FIXTURES;
+
   return (
     <div className="p-8" data-testid="component-gallery-page">
       <div className="mx-auto max-w-7xl">
         <h1 className="mb-2 text-2xl font-bold text-white">
-          Component Visual Gallery (story 19-4)
+          Component Visual Gallery (story 19-4 / 19-4b)
         </h1>
         <p className="mb-8 text-sm text-[var(--text-secondary)]">
           Each section below is screenshotted per state by{' '}
           <code>tests/visual/components.visual.spec.ts</code>. <code>data-pen-node</code> links it
           to its <code>ux-design.pen</code> node (or <code>screen-section</code> /{' '}
           <code>utility</code>). See <code>_bmad-output/audit/visual-baseline-19-4.md</code>.
+          {fixture && (
+            <>
+              {' '}
+              · <strong>Single-fixture mode:</strong> <code>{fixture}</code>
+            </>
+          )}
         </p>
 
         <div className="space-y-12">
-          {GALLERY_FIXTURES.map((fx) => {
+          {fixturesToRender.map((fx) => {
             // 19-4b Task 0 Fix C: `open` state is opt-in. Silently drop it if a
             // fixture forgot to set `openTrigger` (the spec would otherwise click
             // an undefined selector).
