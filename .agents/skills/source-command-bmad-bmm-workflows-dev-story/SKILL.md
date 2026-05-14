@@ -1,6 +1,6 @@
 ---
-name: "source-command-bmad-bmm-workflows-dev-story"
-description: "Execute a story by implementing tasks/subtasks, writing tests, validating, and updating the story file per acceptance criteria"
+name: 'source-command-bmad-bmm-workflows-dev-story'
+description: 'Execute a story by implementing tasks/subtasks, writing tests, validating, and updating the story file per acceptance criteria'
 ---
 
 # source-command-bmad-bmm-workflows-dev-story

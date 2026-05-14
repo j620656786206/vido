@@ -1,6 +1,6 @@
 ---
-name: "source-command-agent-vibes-set-speed"
-description: "Set TTS speech speed for Piper voices"
+name: 'source-command-agent-vibes-set-speed'
+description: 'Set TTS speech speed for Piper voices'
 ---
 
 # source-command-agent-vibes-set-speed

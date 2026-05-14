@@ -1,6 +1,6 @@
 ---
-name: "source-command-bmad-bmm-workflows-create-excalidraw-diagram"
-description: "Create system architecture diagrams, ERDs, UML diagrams, or general technical diagrams in Excalidraw format"
+name: 'source-command-bmad-bmm-workflows-create-excalidraw-diagram'
+description: 'Create system architecture diagrams, ERDs, UML diagrams, or general technical diagrams in Excalidraw format'
 ---
 
 # source-command-bmad-bmm-workflows-create-excalidraw-diagram

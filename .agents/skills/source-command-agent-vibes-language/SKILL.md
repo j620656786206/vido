@@ -1,6 +1,6 @@
 ---
-name: "source-command-agent-vibes-language"
-description: "Set your main/native language for learning mode"
+name: 'source-command-agent-vibes-language'
+description: 'Set your main/native language for learning mode'
 ---
 
 # source-command-agent-vibes-language

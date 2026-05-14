@@ -1,6 +1,6 @@
 ---
-name: "source-command-bmad-bmm-workflows-create-story"
-description: "Create the next user story from epics+stories with enhanced context analysis and direct ready-for-dev marking"
+name: 'source-command-bmad-bmm-workflows-create-story'
+description: 'Create the next user story from epics+stories with enhanced context analysis and direct ready-for-dev marking'
 ---
 
 # source-command-bmad-bmm-workflows-create-story

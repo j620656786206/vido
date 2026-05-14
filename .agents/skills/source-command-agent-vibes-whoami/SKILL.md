@@ -1,6 +1,6 @@
 ---
-name: "source-command-agent-vibes-whoami"
-description: "Show the current active voice and TTS provider"
+name: 'source-command-agent-vibes-whoami'
+description: 'Show the current active voice and TTS provider'
 ---
 
 # source-command-agent-vibes-whoami

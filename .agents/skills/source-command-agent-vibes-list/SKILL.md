@@ -1,6 +1,6 @@
 ---
-name: "source-command-agent-vibes-list"
-description: "List available Piper TTS TTS voices with optional filtering"
+name: 'source-command-agent-vibes-list'
+description: 'List available Piper TTS TTS voices with optional filtering'
 ---
 
 # source-command-agent-vibes-list

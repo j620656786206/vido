@@ -1,6 +1,6 @@
 ---
-name: "source-command-agent-vibes-sentiment"
-description: "Set sentiment/personality for your current voice"
+name: 'source-command-agent-vibes-sentiment'
+description: 'Set sentiment/personality for your current voice'
 ---
 
 # source-command-agent-vibes-sentiment

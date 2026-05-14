@@ -1,6 +1,6 @@
 ---
-name: "source-command-agent-vibes-translate"
-description: "Configure automatic TTS translation to speak in your preferred language"
+name: 'source-command-agent-vibes-translate'
+description: 'Configure automatic TTS translation to speak in your preferred language'
 ---
 
 # source-command-agent-vibes-translate

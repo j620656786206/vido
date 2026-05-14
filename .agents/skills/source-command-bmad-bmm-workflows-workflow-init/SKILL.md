@@ -1,6 +1,6 @@
 ---
-name: "source-command-bmad-bmm-workflows-workflow-init"
-description: "Initialize a new BMM project by determining level, type, and creating workflow path"
+name: 'source-command-bmad-bmm-workflows-workflow-init'
+description: 'Initialize a new BMM project by determining level, type, and creating workflow path'
 ---
 
 # source-command-bmad-bmm-workflows-workflow-init

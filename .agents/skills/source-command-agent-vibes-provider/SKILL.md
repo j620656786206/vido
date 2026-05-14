@@ -1,6 +1,6 @@
 ---
-name: "source-command-agent-vibes-provider"
-description: "Manage TTS providers (list, switch, info, test)"
+name: 'source-command-agent-vibes-provider'
+description: 'Manage TTS providers (list, switch, info, test)'
 ---
 
 # source-command-agent-vibes-provider

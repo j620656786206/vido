@@ -1,6 +1,6 @@
 ---
-name: "source-command-bmad-bmm-workflows-create-excalidraw-flowchart"
-description: "Create a flowchart visualization in Excalidraw format for processes, pipelines, or logic flows"
+name: 'source-command-bmad-bmm-workflows-create-excalidraw-flowchart'
+description: 'Create a flowchart visualization in Excalidraw format for processes, pipelines, or logic flows'
 ---
 
 # source-command-bmad-bmm-workflows-create-excalidraw-flowchart

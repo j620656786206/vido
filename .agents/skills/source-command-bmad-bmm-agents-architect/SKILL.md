@@ -1,6 +1,6 @@
 ---
-name: "source-command-bmad-bmm-agents-architect"
-description: "architect agent"
+name: 'source-command-bmad-bmm-agents-architect'
+description: 'architect agent'
 ---
 
 # source-command-bmad-bmm-agents-architect

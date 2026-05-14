@@ -1,6 +1,6 @@
 ---
-name: "source-command-agent-vibes-get"
-description: "Get the currently selected Piper TTS TTS voice"
+name: 'source-command-agent-vibes-get'
+description: 'Get the currently selected Piper TTS TTS voice'
 ---
 
 # source-command-agent-vibes-get

@@ -1,6 +1,6 @@
 ---
-name: "source-command-agent-vibes-replay"
-description: "Replay recently played TTS audio"
+name: 'source-command-agent-vibes-replay'
+description: 'Replay recently played TTS audio'
 ---
 
 # source-command-agent-vibes-replay

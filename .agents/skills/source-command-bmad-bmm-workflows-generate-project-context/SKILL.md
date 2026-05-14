@@ -1,6 +1,6 @@
 ---
-name: "source-command-bmad-bmm-workflows-generate-project-context"
-description: "Creates a concise project-context.md file with critical rules and patterns that AI agents must follow when implementing code. Optimized for LLM context efficiency."
+name: 'source-command-bmad-bmm-workflows-generate-project-context'
+description: 'Creates a concise project-context.md file with critical rules and patterns that AI agents must follow when implementing code. Optimized for LLM context efficiency.'
 ---
 
 # source-command-bmad-bmm-workflows-generate-project-context

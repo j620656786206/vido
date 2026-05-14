@@ -1,6 +1,6 @@
 ---
-name: "source-command-agent-vibes-switch"
-description: "Switch to a different TTS voice (provider-aware)"
+name: 'source-command-agent-vibes-switch'
+description: 'Switch to a different TTS voice (provider-aware)'
 ---
 
 # source-command-agent-vibes-switch

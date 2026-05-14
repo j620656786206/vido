@@ -1,6 +1,6 @@
 ---
-name: "source-command-bmad-bmm-workflows-testarch-ci"
-description: "Scaffold CI/CD quality pipeline with test execution, burn-in loops, and artifact collection"
+name: 'source-command-bmad-bmm-workflows-testarch-ci'
+description: 'Scaffold CI/CD quality pipeline with test execution, burn-in loops, and artifact collection'
 ---
 
 # source-command-bmad-bmm-workflows-testarch-ci

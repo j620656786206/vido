@@ -1,6 +1,6 @@
 ---
-name: "source-command-agent-vibes-personality"
-description: "Set or customize the personality style for TTS messages"
+name: 'source-command-agent-vibes-personality'
+description: 'Set or customize the personality style for TTS messages'
 ---
 
 # source-command-agent-vibes-personality

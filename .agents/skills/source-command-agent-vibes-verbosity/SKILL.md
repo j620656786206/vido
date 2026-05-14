@@ -1,6 +1,6 @@
 ---
-name: "source-command-agent-vibes-verbosity"
-description: "Get or set AgentVibes verbosity level (low/medium/high)"
+name: 'source-command-agent-vibes-verbosity'
+description: 'Get or set AgentVibes verbosity level (low/medium/high)'
 ---
 
 # source-command-agent-vibes-verbosity

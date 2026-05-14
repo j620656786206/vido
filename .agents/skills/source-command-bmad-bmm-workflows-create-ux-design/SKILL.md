@@ -1,6 +1,6 @@
 ---
-name: "source-command-bmad-bmm-workflows-create-ux-design"
-description: "Work with a peer UX Design expert to plan your applications UX patterns, look and feel."
+name: 'source-command-bmad-bmm-workflows-create-ux-design'
+description: 'Work with a peer UX Design expert to plan your applications UX patterns, look and feel.'
 ---
 
 # source-command-bmad-bmm-workflows-create-ux-design

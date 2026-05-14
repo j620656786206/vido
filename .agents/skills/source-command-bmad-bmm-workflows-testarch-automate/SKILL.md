@@ -1,6 +1,6 @@
 ---
-name: "source-command-bmad-bmm-workflows-testarch-automate"
-description: "Expand test automation coverage after implementation or analyze existing codebase to generate comprehensive test suite"
+name: 'source-command-bmad-bmm-workflows-testarch-automate'
+description: 'Expand test automation coverage after implementation or analyze existing codebase to generate comprehensive test suite'
 ---
 
 # source-command-bmad-bmm-workflows-testarch-automate

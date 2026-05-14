@@ -1,6 +1,6 @@
 ---
-name: "source-command-bmad-bmm-agents-ux-designer"
-description: "ux-designer agent"
+name: 'source-command-bmad-bmm-agents-ux-designer'
+description: 'ux-designer agent'
 ---
 
 # source-command-bmad-bmm-agents-ux-designer

@@ -1,6 +1,6 @@
 ---
-name: "source-command-agent-vibes-learn"
-description: "Enable or disable language learning mode"
+name: 'source-command-agent-vibes-learn'
+description: 'Enable or disable language learning mode'
 ---
 
 # source-command-agent-vibes-learn

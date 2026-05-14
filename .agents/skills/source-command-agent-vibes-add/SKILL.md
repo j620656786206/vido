@@ -1,6 +1,6 @@
 ---
-name: "source-command-agent-vibes-add"
-description: "Add a new custom Piper TTS TTS voice"
+name: 'source-command-agent-vibes-add'
+description: 'Add a new custom Piper TTS TTS voice'
 ---
 
 # source-command-agent-vibes-add

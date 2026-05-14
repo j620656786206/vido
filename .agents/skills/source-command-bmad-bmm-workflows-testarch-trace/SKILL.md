@@ -1,6 +1,6 @@
 ---
-name: "source-command-bmad-bmm-workflows-testarch-trace"
-description: "Generate requirements-to-tests traceability matrix, analyze coverage, and make quality gate decision (PASS/CONCERNS/FAIL/WAIVED)"
+name: 'source-command-bmad-bmm-workflows-testarch-trace'
+description: 'Generate requirements-to-tests traceability matrix, analyze coverage, and make quality gate decision (PASS/CONCERNS/FAIL/WAIVED)'
 ---
 
 # source-command-bmad-bmm-workflows-testarch-trace

@@ -1,6 +1,6 @@
 ---
-name: "source-command-bmad-bmm-agents-tech-writer"
-description: "tech-writer agent"
+name: 'source-command-bmad-bmm-agents-tech-writer'
+description: 'tech-writer agent'
 ---
 
 # source-command-bmad-bmm-agents-tech-writer

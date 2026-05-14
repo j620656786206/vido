@@ -1,6 +1,6 @@
 ---
-name: "source-command-agent-vibes-background-music"
-description: "Toggle background music for TTS (on/off/status)"
+name: 'source-command-agent-vibes-background-music'
+description: 'Toggle background music for TTS (on/off/status)'
 ---
 
 # source-command-agent-vibes-background-music

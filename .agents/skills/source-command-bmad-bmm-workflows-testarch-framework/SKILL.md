@@ -1,6 +1,6 @@
 ---
-name: "source-command-bmad-bmm-workflows-testarch-framework"
-description: "Initialize production-ready test framework architecture (Playwright or Cypress) with fixtures, helpers, and configuration"
+name: 'source-command-bmad-bmm-workflows-testarch-framework'
+description: 'Initialize production-ready test framework architecture (Playwright or Cypress) with fixtures, helpers, and configuration'
 ---
 
 # source-command-bmad-bmm-workflows-testarch-framework

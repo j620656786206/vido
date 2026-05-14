@@ -1,6 +1,6 @@
 ---
-name: "source-command-agent-vibes-preview"
-description: "Preview TTS voices by playing audio samples (provider-aware)"
+name: 'source-command-agent-vibes-preview'
+description: 'Preview TTS voices by playing audio samples (provider-aware)'
 ---
 
 # source-command-agent-vibes-preview

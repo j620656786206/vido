@@ -1,6 +1,6 @@
 ---
-name: "source-command-bmad-bmm-agents-sm"
-description: "sm agent"
+name: 'source-command-bmad-bmm-agents-sm'
+description: 'sm agent'
 ---
 
 # source-command-bmad-bmm-agents-sm

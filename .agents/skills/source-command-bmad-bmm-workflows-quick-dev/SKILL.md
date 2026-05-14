@@ -1,6 +1,6 @@
 ---
-name: "source-command-bmad-bmm-workflows-quick-dev"
-description: "Flexible development - execute tech-specs OR direct instructions with optional planning."
+name: 'source-command-bmad-bmm-workflows-quick-dev'
+description: 'Flexible development - execute tech-specs OR direct instructions with optional planning.'
 ---
 
 # source-command-bmad-bmm-workflows-quick-dev

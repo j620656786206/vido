@@ -1,6 +1,6 @@
 ---
-name: "source-command-agent-vibes-version"
-description: "Show the installed AgentVibes version"
+name: 'source-command-agent-vibes-version'
+description: 'Show the installed AgentVibes version'
 ---
 
 # source-command-agent-vibes-version

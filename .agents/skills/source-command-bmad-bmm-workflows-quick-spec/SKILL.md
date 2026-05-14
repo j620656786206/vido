@@ -1,6 +1,6 @@
 ---
-name: "source-command-bmad-bmm-workflows-quick-spec"
-description: "Conversational spec engineering - ask questions, investigate code, produce implementation-ready tech-spec."
+name: 'source-command-bmad-bmm-workflows-quick-spec'
+description: 'Conversational spec engineering - ask questions, investigate code, produce implementation-ready tech-spec.'
 ---
 
 # source-command-bmad-bmm-workflows-quick-spec

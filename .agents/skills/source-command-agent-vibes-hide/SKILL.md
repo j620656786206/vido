@@ -1,6 +1,6 @@
 ---
-name: "source-command-agent-vibes-hide"
-description: "Hide all AgentVibes slash commands from the command list (MCP users)"
+name: 'source-command-agent-vibes-hide'
+description: 'Hide all AgentVibes slash commands from the command list (MCP users)'
 ---
 
 # source-command-agent-vibes-hide

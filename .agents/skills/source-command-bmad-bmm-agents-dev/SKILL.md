@@ -1,6 +1,6 @@
 ---
-name: "source-command-bmad-bmm-agents-dev"
-description: "dev agent"
+name: 'source-command-bmad-bmm-agents-dev'
+description: 'dev agent'
 ---
 
 # source-command-bmad-bmm-agents-dev

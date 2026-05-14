@@ -1,6 +1,6 @@
 ---
-name: "source-command-agent-vibes-target"
-description: "Set the language you want to learn"
+name: 'source-command-agent-vibes-target'
+description: 'Set the language you want to learn'
 ---
 
 # source-command-agent-vibes-target

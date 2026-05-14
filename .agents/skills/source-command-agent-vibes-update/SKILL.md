@@ -1,6 +1,6 @@
 ---
-name: "source-command-agent-vibes-update"
-description: "Update AgentVibes to the latest version"
+name: 'source-command-agent-vibes-update'
+description: 'Update AgentVibes to the latest version'
 ---
 
 # source-command-agent-vibes-update

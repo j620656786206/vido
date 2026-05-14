@@ -1,6 +1,6 @@
 ---
-name: "source-command-bmad-bmm-agents-quick-flow-solo-dev"
-description: "quick-flow-solo-dev agent"
+name: 'source-command-bmad-bmm-agents-quick-flow-solo-dev'
+description: 'quick-flow-solo-dev agent'
 ---
 
 # source-command-bmad-bmm-agents-quick-flow-solo-dev

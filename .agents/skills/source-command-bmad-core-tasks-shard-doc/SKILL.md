@@ -1,6 +1,6 @@
 ---
-name: "source-command-bmad-core-tasks-shard-doc"
-description: "Splits large markdown documents into smaller, organized files based on level 2 (default) sections"
+name: 'source-command-bmad-core-tasks-shard-doc'
+description: 'Splits large markdown documents into smaller, organized files based on level 2 (default) sections'
 ---
 
 # source-command-bmad-core-tasks-shard-doc

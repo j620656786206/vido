@@ -1,6 +1,6 @@
 ---
-name: "source-command-bmad-bmm-workflows-testarch-nfr"
-description: "Assess non-functional requirements (performance, security, reliability, maintainability) before release with evidence-based validation"
+name: 'source-command-bmad-bmm-workflows-testarch-nfr'
+description: 'Assess non-functional requirements (performance, security, reliability, maintainability) before release with evidence-based validation'
 ---
 
 # source-command-bmad-bmm-workflows-testarch-nfr

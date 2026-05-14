@@ -1,6 +1,6 @@
 ---
-name: "source-command-agent-vibes-agent-vibes"
-description: "Piper TTS TTS voice management commands"
+name: 'source-command-agent-vibes-agent-vibes'
+description: 'Piper TTS TTS voice management commands'
 ---
 
 # source-command-agent-vibes-agent-vibes

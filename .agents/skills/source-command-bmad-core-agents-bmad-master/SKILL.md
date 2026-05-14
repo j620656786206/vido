@@ -1,6 +1,6 @@
 ---
-name: "source-command-bmad-core-agents-bmad-master"
-description: "bmad-master agent"
+name: 'source-command-bmad-core-agents-bmad-master'
+description: 'bmad-master agent'
 ---
 
 # source-command-bmad-core-agents-bmad-master

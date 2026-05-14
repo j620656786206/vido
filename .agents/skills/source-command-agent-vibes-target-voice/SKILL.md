@@ -1,6 +1,6 @@
 ---
-name: "source-command-agent-vibes-target-voice"
-description: "Set the voice for your target language"
+name: 'source-command-agent-vibes-target-voice'
+description: 'Set the voice for your target language'
 ---
 
 # source-command-agent-vibes-target-voice

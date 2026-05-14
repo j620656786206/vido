@@ -1,6 +1,6 @@
 ---
-name: "source-command-bmad-core-workflows-party-mode"
-description: "Orchestrates group discussions between all installed BMAD agents, enabling natural multi-agent conversations"
+name: 'source-command-bmad-core-workflows-party-mode'
+description: 'Orchestrates group discussions between all installed BMAD agents, enabling natural multi-agent conversations'
 ---
 
 # source-command-bmad-core-workflows-party-mode

@@ -1,6 +1,6 @@
 ---
-name: "source-command-agent-vibes-set-pretext"
-description: "Set a pretext word/phrase that prefixes all TTS announcements"
+name: 'source-command-agent-vibes-set-pretext'
+description: 'Set a pretext word/phrase that prefixes all TTS announcements'
 ---
 
 # source-command-agent-vibes-set-pretext

@@ -1,6 +1,6 @@
 ---
-name: "source-command-bmad-bmm-workflows-sprint-status"
-description: "Summarize sprint-status.yaml, surface risks, and route to the right implementation workflow."
+name: 'source-command-bmad-bmm-workflows-sprint-status'
+description: 'Summarize sprint-status.yaml, surface risks, and route to the right implementation workflow.'
 ---
 
 # source-command-bmad-bmm-workflows-sprint-status

@@ -1,6 +1,6 @@
 ---
-name: "source-command-agent-vibes-effects"
-description: "Configure voice effects (reverb, echo, pitch, EQ) for TTS output"
+name: 'source-command-agent-vibes-effects'
+description: 'Configure voice effects (reverb, echo, pitch, EQ) for TTS output'
 ---
 
 # source-command-agent-vibes-effects

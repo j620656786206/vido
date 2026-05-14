@@ -1,6 +1,6 @@
 ---
-name: "source-command-agent-vibes-replay-target"
-description: "Replay the last target language audio (for language learning mode)"
+name: 'source-command-agent-vibes-replay-target'
+description: 'Replay the last target language audio (for language learning mode)'
 ---
 
 # source-command-agent-vibes-replay-target

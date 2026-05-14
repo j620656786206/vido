@@ -1,6 +1,6 @@
 ---
-name: "source-command-bmad-bmm-workflows-testarch-atdd"
-description: "Generate failing acceptance tests before implementation using TDD red-green-refactor cycle"
+name: 'source-command-bmad-bmm-workflows-testarch-atdd'
+description: 'Generate failing acceptance tests before implementation using TDD red-green-refactor cycle'
 ---
 
 # source-command-bmad-bmm-workflows-testarch-atdd

@@ -1,6 +1,6 @@
 ---
-name: "source-command-bmad-bmm-agents-tea"
-description: "tea agent"
+name: 'source-command-bmad-bmm-agents-tea'
+description: 'tea agent'
 ---
 
 # source-command-bmad-bmm-agents-tea

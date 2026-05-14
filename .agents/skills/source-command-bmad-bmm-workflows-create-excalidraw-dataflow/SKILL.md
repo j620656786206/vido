@@ -1,6 +1,6 @@
 ---
-name: "source-command-bmad-bmm-workflows-create-excalidraw-dataflow"
-description: "Create data flow diagrams (DFD) in Excalidraw format"
+name: 'source-command-bmad-bmm-workflows-create-excalidraw-dataflow'
+description: 'Create data flow diagrams (DFD) in Excalidraw format'
 ---
 
 # source-command-bmad-bmm-workflows-create-excalidraw-dataflow

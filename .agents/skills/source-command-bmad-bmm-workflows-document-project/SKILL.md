@@ -1,6 +1,6 @@
 ---
-name: "source-command-bmad-bmm-workflows-document-project"
-description: "Analyzes and documents brownfield projects by scanning codebase, architecture, and patterns to create comprehensive reference documentation for AI-assisted development"
+name: 'source-command-bmad-bmm-workflows-document-project'
+description: 'Analyzes and documents brownfield projects by scanning codebase, architecture, and patterns to create comprehensive reference documentation for AI-assisted development'
 ---
 
 # source-command-bmad-bmm-workflows-document-project

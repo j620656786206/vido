@@ -1,6 +1,6 @@
 ---
-name: "source-command-bmad-bmm-workflows-correct-course"
-description: "Navigate significant changes during sprint execution by analyzing impact, proposing solutions, and routing for implementation"
+name: 'source-command-bmad-bmm-workflows-correct-course'
+description: 'Navigate significant changes during sprint execution by analyzing impact, proposing solutions, and routing for implementation'
 ---
 
 # source-command-bmad-bmm-workflows-correct-course

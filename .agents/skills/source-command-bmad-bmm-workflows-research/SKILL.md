@@ -1,6 +1,6 @@
 ---
-name: "source-command-bmad-bmm-workflows-research"
-description: "Conduct comprehensive research across multiple domains using current web data and verified sources - Market, Technical, Domain and other research types."
+name: 'source-command-bmad-bmm-workflows-research'
+description: 'Conduct comprehensive research across multiple domains using current web data and verified sources - Market, Technical, Domain and other research types.'
 ---
 
 # source-command-bmad-bmm-workflows-research

@@ -1,6 +1,6 @@
 ---
-name: "source-command-agent-vibes-set-favorite-voice"
-description: "Set or update the favorite voice for a personality"
+name: 'source-command-agent-vibes-set-favorite-voice'
+description: 'Set or update the favorite voice for a personality'
 ---
 
 # source-command-agent-vibes-set-favorite-voice

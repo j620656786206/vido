@@ -1,6 +1,6 @@
 ---
-name: "source-command-agent-vibes-mute"
-description: "Mute all AgentVibes TTS output (project-specific by default)"
+name: 'source-command-agent-vibes-mute'
+description: 'Mute all AgentVibes TTS output (project-specific by default)'
 ---
 
 # source-command-agent-vibes-mute

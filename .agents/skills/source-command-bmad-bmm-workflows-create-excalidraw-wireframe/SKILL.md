@@ -1,6 +1,6 @@
 ---
-name: "source-command-bmad-bmm-workflows-create-excalidraw-wireframe"
-description: "Create website or app wireframes in Excalidraw format"
+name: 'source-command-bmad-bmm-workflows-create-excalidraw-wireframe'
+description: 'Create website or app wireframes in Excalidraw format'
 ---
 
 # source-command-bmad-bmm-workflows-create-excalidraw-wireframe

@@ -1,6 +1,6 @@
 ---
-name: "source-command-agent-vibes-unmute"
-description: "Unmute AgentVibes TTS output (project-specific by default)"
+name: 'source-command-agent-vibes-unmute'
+description: 'Unmute AgentVibes TTS output (project-specific by default)'
 ---
 
 # source-command-agent-vibes-unmute

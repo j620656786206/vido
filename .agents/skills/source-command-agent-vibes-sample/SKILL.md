@@ -1,6 +1,6 @@
 ---
-name: "source-command-agent-vibes-sample"
-description: "Test a voice with sample text"
+name: 'source-command-agent-vibes-sample'
+description: 'Test a voice with sample text'
 ---
 
 # source-command-agent-vibes-sample

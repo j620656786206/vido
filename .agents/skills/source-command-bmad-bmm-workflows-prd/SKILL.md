@@ -1,6 +1,6 @@
 ---
-name: "source-command-bmad-bmm-workflows-prd"
-description: "PRD tri-modal workflow - Create, Validate, or Edit comprehensive PRDs"
+name: 'source-command-bmad-bmm-workflows-prd'
+description: 'PRD tri-modal workflow - Create, Validate, or Edit comprehensive PRDs'
 ---
 
 # source-command-bmad-bmm-workflows-prd

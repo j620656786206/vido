@@ -1,6 +1,6 @@
 ---
-name: "source-command-bmad-bmm-workflows-workflow-status"
-description: "Lightweight status checker - answers \"\"what should I do now?\"\" for any agent. Reads YAML status file for workflow tracking. Use workflow-init for new projects."
+name: 'source-command-bmad-bmm-workflows-workflow-status'
+description: 'Lightweight status checker - answers ""what should I do now?"" for any agent. Reads YAML status file for workflow tracking. Use workflow-init for new projects.'
 ---
 
 # source-command-bmad-bmm-workflows-workflow-status

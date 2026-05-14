@@ -1,6 +1,6 @@
 ---
-name: "source-command-agent-vibes-set-language"
-description: "Run the migrated source command `agent-vibes-set-language`."
+name: 'source-command-agent-vibes-set-language'
+description: 'Run the migrated source command `agent-vibes-set-language`.'
 ---
 
 # source-command-agent-vibes-set-language

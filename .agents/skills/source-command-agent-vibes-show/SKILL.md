@@ -1,6 +1,6 @@
 ---
-name: "source-command-agent-vibes-show"
-description: "Restore all hidden AgentVibes slash commands to the command list"
+name: 'source-command-agent-vibes-show'
+description: 'Restore all hidden AgentVibes slash commands to the command list'
 ---
 
 # source-command-agent-vibes-show

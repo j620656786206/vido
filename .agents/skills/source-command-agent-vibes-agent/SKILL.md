@@ -1,6 +1,6 @@
 ---
-name: "source-command-agent-vibes-agent"
-description: "Run the migrated source command `agent-vibes-agent`."
+name: 'source-command-agent-vibes-agent'
+description: 'Run the migrated source command `agent-vibes-agent`.'
 ---
 
 # source-command-agent-vibes-agent

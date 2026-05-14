@@ -1,6 +1,6 @@
 ---
-name: "source-command-bmad-bmm-workflows-testarch-test-review"
-description: "Review test quality using comprehensive knowledge base and best practices validation"
+name: 'source-command-bmad-bmm-workflows-testarch-test-review'
+description: 'Review test quality using comprehensive knowledge base and best practices validation'
 ---
 
 # source-command-bmad-bmm-workflows-testarch-test-review
