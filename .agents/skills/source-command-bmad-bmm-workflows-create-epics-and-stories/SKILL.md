@@ -1,0 +1,16 @@
+---
+name: "source-command-bmad-bmm-workflows-create-epics-and-stories"
+description: "Transform PRD requirements and Architecture decisions into comprehensive stories organized by user value. This workflow requires completed PRD + Architecture documents (UX recommended if UI exists) and breaks down requirements into implementation-ready epics and user stories that incorporate all available technical and design context. Creates detailed, actionable stories with complete acceptance criteria for development teams."
+---
+
+# source-command-bmad-bmm-workflows-create-epics-and-stories
+
+Use this skill when the user asks to run the migrated source command `bmad-bmm-workflows-create-epics-and-stories`.
+
+## Command Template
+
+IT IS CRITICAL THAT YOU FOLLOW THIS COMMAND: LOAD the FULL @\_bmad/bmm/workflows/3-solutioning/create-epics-and-stories/workflow.md, READ its entire contents and follow its directions exactly!
+
+## MANUAL MIGRATION REQUIRED
+
+Migrated from source command `bmad-bmm-workflows-create-epics-and-stories` into a Codex skill. Invoke it as `$source-command-bmad-bmm-workflows-create-epics-and-stories` and manually rewrite any slash-command behavior that depended on provider-specific runtime expansion.

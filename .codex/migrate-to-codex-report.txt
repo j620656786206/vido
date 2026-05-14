@@ -1,0 +1,194 @@
+Migration inventory:
+  active: instruction files - 2 found
+    - CLAUDE.md
+    - AGENTS.md
+  inactive: skills - none found
+  active: command sources - 79 found
+    provider: source command (79)
+      - agent-vibes/add
+      - agent-vibes/agent
+      - agent-vibes/agent-vibes
+      - agent-vibes/background-music
+      - agent-vibes/bmad
+      - agent-vibes/effects
+      - agent-vibes/get
+      - agent-vibes/hide
+      - agent-vibes/language
+      - agent-vibes/learn
+      - agent-vibes/list
+      - agent-vibes/mute
+      - agent-vibes/personality
+      - agent-vibes/preview
+      - agent-vibes/provider
+      - agent-vibes/replay
+      - agent-vibes/replay-target
+      - agent-vibes/sample
+      - agent-vibes/sentiment
+      - agent-vibes/set-favorite-voice
+      - agent-vibes/set-language
+      - agent-vibes/set-pretext
+      - agent-vibes/set-speed
+      - agent-vibes/show
+      - agent-vibes/switch
+      - agent-vibes/target
+      - agent-vibes/target-voice
+      - agent-vibes/translate
+      - agent-vibes/unmute
+      - agent-vibes/update
+      - agent-vibes/verbosity
+      - agent-vibes/version
+      - agent-vibes/whoami
+      - bmad/bmm/agents/analyst
+      - bmad/bmm/agents/architect
+      - bmad/bmm/agents/dev
+      - bmad/bmm/agents/pm
+      - bmad/bmm/agents/quick-flow-solo-dev
+      - bmad/bmm/agents/sm
+      - bmad/bmm/agents/tea
+      - bmad/bmm/agents/tech-writer
+      - bmad/bmm/agents/ux-designer
+      - bmad/bmm/workflows/check-implementation-readiness
+      - bmad/bmm/workflows/code-review
+      - bmad/bmm/workflows/correct-course
+      - bmad/bmm/workflows/create-architecture
+      - bmad/bmm/workflows/create-epics-and-stories
+      - bmad/bmm/workflows/create-excalidraw-dataflow
+      - bmad/bmm/workflows/create-excalidraw-diagram
+      - bmad/bmm/workflows/create-excalidraw-flowchart
+      - bmad/bmm/workflows/create-excalidraw-wireframe
+      - bmad/bmm/workflows/create-product-brief
+      - bmad/bmm/workflows/create-story
+      - bmad/bmm/workflows/create-ux-design
+      - bmad/bmm/workflows/dev-story
+      - bmad/bmm/workflows/document-project
+      - bmad/bmm/workflows/generate-project-context
+      - bmad/bmm/workflows/prd
+      - bmad/bmm/workflows/quick-dev
+      - bmad/bmm/workflows/quick-spec
+      - bmad/bmm/workflows/research
+      - bmad/bmm/workflows/retrospective
+      - bmad/bmm/workflows/sprint-planning
+      - bmad/bmm/workflows/sprint-status
+      - bmad/bmm/workflows/testarch-atdd
+      - bmad/bmm/workflows/testarch-automate
+      - bmad/bmm/workflows/testarch-ci
+      - bmad/bmm/workflows/testarch-framework
+      - bmad/bmm/workflows/testarch-nfr
+      - bmad/bmm/workflows/testarch-test-design
+      - bmad/bmm/workflows/testarch-test-review
+      - bmad/bmm/workflows/testarch-trace
+      - bmad/bmm/workflows/workflow-init
+      - bmad/bmm/workflows/workflow-status
+      - bmad/core/agents/bmad-master
+      - bmad/core/tasks/index-docs
+      - bmad/core/tasks/shard-doc
+      - bmad/core/workflows/brainstorming
+      - bmad/core/workflows/party-mode
+  inactive: subagents - none found
+Migration surfaces:
+  active: AGENTS.md - 1 instruction file(s) found.
+  active: skills - 79 skill(s) converted.
+  active: MCP config - 1 MCP server(s) converted into config.toml.
+  inactive: subagents - No subagents found.
+Migration report:
+  symlinked: AGENTS.md - Linked to CLAUDE.md.
+  rewritten: .codex/hooks.json - Rewritten for Codex hooks; review behavior before relying on it. Codex hooks require `[features].codex_hooks = true`, only execute `command` handlers, skip `async` / `prompt` / `agent` handlers, ignore `matcher` for `UserPromptSubmit` and `Stop`, and `PreToolUse` / `PostToolUse` currently run for shell commands only.
+  manual_fix_required: .agents/skills/source-command-agent-vibes-add/SKILL.md - Converted source command `agent-vibes-add` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-agent-vibes-agent-vibes/SKILL.md - Converted source command `agent-vibes-agent-vibes` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-agent-vibes-agent/SKILL.md - Converted source command `agent-vibes-agent` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-agent-vibes-background-music/SKILL.md - Converted source command `agent-vibes-background-music` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-agent-vibes-bmad/SKILL.md - Converted source command `agent-vibes-bmad` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-agent-vibes-effects/SKILL.md - Converted source command `agent-vibes-effects` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-agent-vibes-get/SKILL.md - Converted source command `agent-vibes-get` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-agent-vibes-hide/SKILL.md - Converted source command `agent-vibes-hide` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-agent-vibes-language/SKILL.md - Converted source command `agent-vibes-language` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-agent-vibes-learn/SKILL.md - Converted source command `agent-vibes-learn` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-agent-vibes-list/SKILL.md - Converted source command `agent-vibes-list` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-agent-vibes-mute/SKILL.md - Converted source command `agent-vibes-mute` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-agent-vibes-personality/SKILL.md - Converted source command `agent-vibes-personality` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-agent-vibes-preview/SKILL.md - Converted source command `agent-vibes-preview` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-agent-vibes-provider/SKILL.md - Converted source command `agent-vibes-provider` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-agent-vibes-replay-target/SKILL.md - Converted source command `agent-vibes-replay-target` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-agent-vibes-replay/SKILL.md - Converted source command `agent-vibes-replay` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-agent-vibes-sample/SKILL.md - Converted source command `agent-vibes-sample` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-agent-vibes-sentiment/SKILL.md - Converted source command `agent-vibes-sentiment` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-agent-vibes-set-favorite-voice/SKILL.md - Converted source command `agent-vibes-set-favorite-voice` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-agent-vibes-set-language/SKILL.md - Converted source command `agent-vibes-set-language` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-agent-vibes-set-pretext/SKILL.md - Converted source command `agent-vibes-set-pretext` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-agent-vibes-set-speed/SKILL.md - Converted source command `agent-vibes-set-speed` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-agent-vibes-show/SKILL.md - Converted source command `agent-vibes-show` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-agent-vibes-switch/SKILL.md - Converted source command `agent-vibes-switch` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-agent-vibes-target-voice/SKILL.md - Converted source command `agent-vibes-target-voice` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-agent-vibes-target/SKILL.md - Converted source command `agent-vibes-target` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-agent-vibes-translate/SKILL.md - Converted source command `agent-vibes-translate` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-agent-vibes-unmute/SKILL.md - Converted source command `agent-vibes-unmute` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-agent-vibes-update/SKILL.md - Converted source command `agent-vibes-update` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-agent-vibes-verbosity/SKILL.md - Converted source command `agent-vibes-verbosity` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-agent-vibes-version/SKILL.md - Converted source command `agent-vibes-version` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-agent-vibes-whoami/SKILL.md - Converted source command `agent-vibes-whoami` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-bmad-bmm-agents-analyst/SKILL.md - Converted source command `bmad-bmm-agents-analyst` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-bmad-bmm-agents-architect/SKILL.md - Converted source command `bmad-bmm-agents-architect` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-bmad-bmm-agents-dev/SKILL.md - Converted source command `bmad-bmm-agents-dev` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-bmad-bmm-agents-pm/SKILL.md - Converted source command `bmad-bmm-agents-pm` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-bmad-bmm-agents-quick-flow-solo-dev/SKILL.md - Converted source command `bmad-bmm-agents-quick-flow-solo-dev` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-bmad-bmm-agents-sm/SKILL.md - Converted source command `bmad-bmm-agents-sm` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-bmad-bmm-agents-tea/SKILL.md - Converted source command `bmad-bmm-agents-tea` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-bmad-bmm-agents-tech-writer/SKILL.md - Converted source command `bmad-bmm-agents-tech-writer` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-bmad-bmm-agents-ux-designer/SKILL.md - Converted source command `bmad-bmm-agents-ux-designer` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-bmad-bmm-workflows-check-implementation-readiness/SKILL.md - Converted source command `bmad-bmm-workflows-check-implementation-readiness` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-bmad-bmm-workflows-code-review/SKILL.md - Converted source command `bmad-bmm-workflows-code-review` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-bmad-bmm-workflows-correct-course/SKILL.md - Converted source command `bmad-bmm-workflows-correct-course` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-bmad-bmm-workflows-create-architecture/SKILL.md - Converted source command `bmad-bmm-workflows-create-architecture` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-bmad-bmm-workflows-create-epics-and-stories/SKILL.md - Converted source command `bmad-bmm-workflows-create-epics-and-stories` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-bmad-bmm-workflows-create-excalidraw-dataflow/SKILL.md - Converted source command `bmad-bmm-workflows-create-excalidraw-dataflow` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-bmad-bmm-workflows-create-excalidraw-diagram/SKILL.md - Converted source command `bmad-bmm-workflows-create-excalidraw-diagram` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-bmad-bmm-workflows-create-excalidraw-flowchart/SKILL.md - Converted source command `bmad-bmm-workflows-create-excalidraw-flowchart` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-bmad-bmm-workflows-create-excalidraw-wireframe/SKILL.md - Converted source command `bmad-bmm-workflows-create-excalidraw-wireframe` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-bmad-bmm-workflows-create-product-brief/SKILL.md - Converted source command `bmad-bmm-workflows-create-product-brief` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-bmad-bmm-workflows-create-story/SKILL.md - Converted source command `bmad-bmm-workflows-create-story` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-bmad-bmm-workflows-create-ux-design/SKILL.md - Converted source command `bmad-bmm-workflows-create-ux-design` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-bmad-bmm-workflows-dev-story/SKILL.md - Converted source command `bmad-bmm-workflows-dev-story` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-bmad-bmm-workflows-document-project/SKILL.md - Converted source command `bmad-bmm-workflows-document-project` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-bmad-bmm-workflows-generate-project-context/SKILL.md - Converted source command `bmad-bmm-workflows-generate-project-context` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-bmad-bmm-workflows-prd/SKILL.md - Converted source command `bmad-bmm-workflows-prd` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-bmad-bmm-workflows-quick-dev/SKILL.md - Converted source command `bmad-bmm-workflows-quick-dev` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-bmad-bmm-workflows-quick-spec/SKILL.md - Converted source command `bmad-bmm-workflows-quick-spec` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-bmad-bmm-workflows-research/SKILL.md - Converted source command `bmad-bmm-workflows-research` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-bmad-bmm-workflows-retrospective/SKILL.md - Converted source command `bmad-bmm-workflows-retrospective` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-bmad-bmm-workflows-sprint-planning/SKILL.md - Converted source command `bmad-bmm-workflows-sprint-planning` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-bmad-bmm-workflows-sprint-status/SKILL.md - Converted source command `bmad-bmm-workflows-sprint-status` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-bmad-bmm-workflows-testarch-atdd/SKILL.md - Converted source command `bmad-bmm-workflows-testarch-atdd` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-bmad-bmm-workflows-testarch-automate/SKILL.md - Converted source command `bmad-bmm-workflows-testarch-automate` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-bmad-bmm-workflows-testarch-ci/SKILL.md - Converted source command `bmad-bmm-workflows-testarch-ci` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-bmad-bmm-workflows-testarch-framework/SKILL.md - Converted source command `bmad-bmm-workflows-testarch-framework` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-bmad-bmm-workflows-testarch-nfr/SKILL.md - Converted source command `bmad-bmm-workflows-testarch-nfr` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-bmad-bmm-workflows-testarch-test-design/SKILL.md - Converted source command `bmad-bmm-workflows-testarch-test-design` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-bmad-bmm-workflows-testarch-test-review/SKILL.md - Converted source command `bmad-bmm-workflows-testarch-test-review` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-bmad-bmm-workflows-testarch-trace/SKILL.md - Converted source command `bmad-bmm-workflows-testarch-trace` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-bmad-bmm-workflows-workflow-init/SKILL.md - Converted source command `bmad-bmm-workflows-workflow-init` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-bmad-bmm-workflows-workflow-status/SKILL.md - Converted source command `bmad-bmm-workflows-workflow-status` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-bmad-core-agents-bmad-master/SKILL.md - Converted source command `bmad-core-agents-bmad-master` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-bmad-core-tasks-index-docs/SKILL.md - Converted source command `bmad-core-tasks-index-docs` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-bmad-core-tasks-shard-doc/SKILL.md - Converted source command `bmad-core-tasks-shard-doc` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-bmad-core-workflows-brainstorming/SKILL.md - Converted source command `bmad-core-workflows-brainstorming` to a single-file Codex skill; review invocation and template placeholder semantics.
+  manual_fix_required: .agents/skills/source-command-bmad-core-workflows-party-mode/SKILL.md - Converted source command `bmad-core-workflows-party-mode` to a single-file Codex skill; review invocation and template placeholder semantics.
+  rewritten: .codex/config.toml - Converted 1 MCP server entries.
+  overwritten: .agents/skills/source-command-agent-vibes-target-voice - Existing Codex skill will be replaced.
+  overwritten: .agents/skills/source-command-agent-vibes-whoami - Existing Codex skill will be replaced.
+  overwritten: .agents/skills/source-command-agent-vibes-show - Existing Codex skill will be replaced.
+  overwritten: .agents/skills/source-command-agent-vibes-agent-vibes - Existing Codex skill will be replaced.
+  overwritten: .agents/skills/source-command-agent-vibes-sentiment - Existing Codex skill will be replaced.
+  overwritten: .agents/skills/source-command-agent-vibes-get - Existing Codex skill will be replaced.
+  overwritten: .agents/skills/source-command-agent-vibes-background-music - Existing Codex skill will be replaced.
+  overwritten: .agents/skills/source-command-agent-vibes-learn - Existing Codex skill will be replaced.
+  overwritten: .agents/skills/source-command-agent-vibes-verbosity - Existing Codex skill will be replaced.
+  overwritten: .agents/skills/source-command-agent-vibes-hide - Existing Codex skill will be replaced.
+  overwritten: .agents/skills/source-command-agent-vibes-language - Existing Codex skill will be replaced.
+  overwritten: .agents/skills/source-command-agent-vibes-effects - Existing Codex skill will be replaced.
+  overwritten: .agents/skills/source-command-agent-vibes-replay-target - Existing Codex skill will be replaced.
+  overwritten: .agents/skills/source-command-agent-vibes-target - Existing Codex skill will be replaced.
+  overwritten: .agents/skills/source-command-agent-vibes-unmute - Existing Codex skill will be replaced.
+  overwritten: .agents/skills/source-command-agent-vibes-version - Existing Codex skill will be replaced.
+  overwritten: .agents/skills/source-command-agent-vibes-mute - Existing Codex skill will be replaced.
+  overwritten: .agents/skills/source-command-bmad-core-tasks-shard-doc - Existing Codex skill will be replaced.
+  overwritten: .agents/skills/source-command-bmad-core-tasks-index-docs - Existing Codex skill will be replaced.
