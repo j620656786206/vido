@@ -137,6 +137,92 @@ import type { ServicesHealth } from '../../components/degradation/types';
 import type { ParseStep } from '../../components/parse/types';
 import type { ScanProgressState } from '../../hooks/useScanProgress';
 
+// ===== 19-4b Task 3 Q-bucket additions (34 components, 14 subfolders) =====
+// scanner/ScanProgress (the 35th Q-bucket candidate per Task 1) is a deliberate
+// skip: it is a null-render SSE-driven wrapper whose only visible content is
+// `scanner/ScanProgressCard` + `scanner/ScanProgressSheet` — both already
+// fixtured in Task 2 with the shared `SCAN_STATE_ACTIVE` const. See Debug Log
+// "Task 3 deliberate skips" subsection in the story file + the audit doc Task 6.
+
+import { DownloadPanel } from '../../components/dashboard/DownloadPanel';
+import { RecentMediaPanel } from '../../components/dashboard/RecentMediaPanel';
+import { DownloadDetails } from '../../components/downloads/DownloadDetails';
+import { ConnectionHistoryPanel } from '../../components/health/ConnectionHistoryPanel';
+import { QBStatusIndicator } from '../../components/health/QBStatusIndicator';
+import { HeroBanner } from '../../components/homepage/HeroBanner';
+import { ExploreBlock } from '../../components/homepage/ExploreBlock';
+import { ExploreBlocksList } from '../../components/homepage/ExploreBlocksList';
+import { LearnedPatternsSettings } from '../../components/learning/LearnedPatternsSettings';
+import { FilterPanel } from '../../components/library/FilterPanel';
+import { LibraryGrid } from '../../components/library/LibraryGrid';
+import { RecentlyAdded } from '../../components/library/RecentlyAdded';
+import { ManualSearchDialog } from '../../components/manual-search/ManualSearchDialog';
+import { MediaDetailPanel } from '../../components/media/MediaDetailPanel';
+import { MetadataEditorDialog } from '../../components/metadata-editor/MetadataEditorDialog';
+import { FloatingParseProgressCard } from '../../components/parse/FloatingParseProgressCard';
+import { RetryQueueSection } from '../../components/parse/RetryQueueSection';
+import { RetryNotifications, type Notification } from '../../components/retry/RetryNotifications';
+import { RetryQueuePanel } from '../../components/retry/RetryQueuePanel';
+import { RetryQueueWithNotifications } from '../../components/retry/RetryQueueWithNotifications';
+import { SubtitleSearchDialog } from '../../components/subtitle/SubtitleSearchDialog';
+import { BackupManagement } from '../../components/settings/BackupManagement';
+import { BackupScheduleConfig } from '../../components/settings/BackupScheduleConfig';
+import { CacheManagement } from '../../components/settings/CacheManagement';
+import { ExploreBlockEditModal } from '../../components/settings/ExploreBlockEditModal';
+import { ExploreBlocksSettings } from '../../components/settings/ExploreBlocksSettings';
+import { LibraryCard } from '../../components/settings/LibraryCard';
+import { LibraryEditModal } from '../../components/settings/LibraryEditModal';
+import { LogsViewer } from '../../components/settings/LogsViewer';
+import { MediaLibraryManager } from '../../components/settings/MediaLibraryManager';
+import { MetadataExport } from '../../components/settings/MetadataExport';
+import { QBittorrentForm } from '../../components/settings/QBittorrentForm';
+import { ScannerSettings } from '../../components/settings/ScannerSettings';
+import { ServiceStatusDashboard } from '../../components/settings/ServiceStatusDashboard';
+
+// Query-key builders (a few hooks export the same name — alias the
+// `useMediaLibrary` flavour as `mediaLibraryKeys` to disambiguate from
+// `useLibrary`'s `libraryKeys`).
+import { downloadKeys } from '../../hooks/useDownloads';
+import { qbittorrentKeys } from '../../hooks/useQBittorrent';
+import { mediaKeys } from '../../hooks/useDashboardData';
+import { healthKeys } from '../../hooks/useConnectionHealth';
+import { trendingKeys } from '../../hooks/useTrending';
+import { exploreBlockKeys } from '../../hooks/useExploreBlocks';
+import { ownedMediaKeys } from '../../hooks/useOwnedMedia';
+import { learningKeys } from '../../hooks/useLearning';
+import { libraryKeys } from '../../hooks/useLibrary';
+import { libraryKeys as mediaLibraryKeys } from '../../hooks/useMediaLibrary';
+import { retryKeys } from '../../hooks/useRetry';
+import { backupKeys } from '../../hooks/useBackups';
+import { cacheKeys } from '../../hooks/useCacheStats';
+import { logKeys } from '../../hooks/useLogs';
+import { scannerKeys } from '../../hooks/useScanner';
+import { serviceStatusKeys } from '../../hooks/useServiceStatus';
+
+import type { FilterValues } from '../../components/library/FilterPanel';
+import type { OwnedMediaState } from '../../hooks/useOwnedMedia';
+import type { LibraryItem, LibraryMediaType } from '../../types/library';
+import type { Movie, MovieDetails, Credits, HeroBannerItem } from '../../types/tmdb';
+import type {
+  PaginatedDownloads,
+  DownloadDetails as DownloadDetailsResponse,
+} from '../../services/downloadService';
+import type { QBConfigResponse } from '../../services/qbittorrent';
+import type { ConnectionEvent, ServiceHealth } from '../../services/healthService';
+import type { RecentMedia } from '../../services/mediaService';
+import type {
+  ExploreBlock as ExploreBlockType,
+  ExploreBlockContent,
+} from '../../services/exploreBlockService';
+import type { PatternListResponse } from '../../services/learning';
+import type { PendingRetriesResponse } from '../../services/retry';
+import type { BackupListResponse, BackupSchedule } from '../../services/backupService';
+import type { CacheStats } from '../../services/cacheService';
+import type { LogsResponse } from '../../services/logService';
+import type { MediaLibraryWithPaths } from '../../services/mediaLibraryService';
+import type { ScanStatus, ScheduleConfig } from '../../services/scannerService';
+import type { ServiceStatusResponse } from '../../services/serviceStatusService';
+
 const noop = () => {};
 
 // ----- Shared mock-data consts for 19-4b Task 2 (parse/* and scanner/* fixtures) -----
@@ -211,6 +297,26 @@ export interface GalleryFixture {
    * active-tab state never paints. Added 19-4b Task 0 Fix B.
    */
   routePath?: StubRoutePath;
+  /**
+   * Pre-seed `queryClient` cache before the fixture renders so child components
+   * calling `useQuery()` see the data immediately (no loading flash, no network attempt).
+   * The gallery wrapper (`GalleryFixtureSeed` in `gallery.tsx`) calls
+   * `queryClient.setQueryData(queryKey, data)` for each entry inside a `useState`
+   * initializer that runs synchronously before children mount. Query keys must match
+   * exactly what the component's `useFoo()` hook builds — canonical place to look is
+   * the hook implementation under `apps/web/src/hooks/`. Added 19-4b Task 3.
+   */
+  seedQueries?: ReadonlyArray<{ queryKey: readonly unknown[]; data: unknown }>;
+  /**
+   * Pre-seed a Zustand store before the fixture renders. Called once during
+   * `GalleryFixtureSeed`'s `useState` initializer (synchronous, before children mount).
+   * Set a complete state object rather than mutating partials — the gallery renders
+   * all fixtures simultaneously, so the LAST fixture seeding the same store wins.
+   * No `apps/web/src/components/` consumer currently reads a Zustand store directly
+   * (project-context.md Rule 5: stores are route-level); this field stays in place
+   * for forward compatibility. Added 19-4b Task 3.
+   */
+  seedStore?: () => void;
 }
 
 export const GALLERY_FIXTURES: GalleryFixture[] = [
@@ -1710,5 +1816,1206 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       isSubmitting: false,
     },
     penNode: 'screen-section',
+  },
+
+  // ===== 19-4b Task 3 Q-bucket additions (34 components) =====
+  // scanner/ScanProgress (35th Q-bucket inventory entry) is a deliberate skip
+  // — it is a null-render SSE-driven wrapper whose only visible content is
+  // already covered by scanner/ScanProgressCard + scanner/ScanProgressSheet
+  // (Task 2's SCAN_STATE_ACTIVE shared const). Documented in Task 6 audit-doc
+  // closure + story Debug Log "Task 3 deliberate skips".
+
+  // ----- dashboard/ (Task 3) -----
+  {
+    id: 'dashboard-download-panel',
+    label: 'dashboard/DownloadPanel',
+    component: DownloadPanel as ComponentType<Record<string, unknown>>,
+    penNode: 'screen-section',
+    width: 480,
+    // Renders TanStack <Link to="/downloads"> etc. — pin route to satisfy match.
+    routePath: '/downloads',
+    seedQueries: [
+      {
+        queryKey: qbittorrentKeys.config(),
+        data: {
+          host: 'http://localhost:8080',
+          username: 'admin',
+          basePath: '',
+          configured: true,
+        } satisfies QBConfigResponse,
+      },
+      {
+        queryKey: downloadKeys.list('all', 'added_on', 'desc', 1, 100),
+        data: {
+          items: [
+            {
+              hash: 'abc123',
+              name: '[SubGroup] Movie Name (2024) [1080p]',
+              size: 4294967296,
+              progress: 0.85,
+              downloadSpeed: 1048576,
+              uploadSpeed: 0,
+              eta: 300,
+              status: 'downloading',
+              addedOn: '2026-02-10T10:00:00Z',
+              seeds: 5,
+              peers: 3,
+              downloaded: 3650722201,
+              uploaded: 0,
+              ratio: 0,
+              savePath: '/downloads',
+            },
+          ],
+          page: 1,
+          pageSize: 100,
+          totalItems: 1,
+          totalPages: 1,
+        } satisfies PaginatedDownloads,
+      },
+    ],
+  },
+  {
+    id: 'dashboard-recent-media-panel',
+    label: 'dashboard/RecentMediaPanel',
+    component: RecentMediaPanel as ComponentType<Record<string, unknown>>,
+    penNode: 'screen-section',
+    width: 560,
+    routePath: '/library',
+    seedQueries: [
+      {
+        queryKey: mediaKeys.recent(8),
+        data: [
+          {
+            id: 'movie-1',
+            title: '測試電影',
+            year: 2024,
+            mediaType: 'movie',
+            justAdded: true,
+            addedAt: '2026-02-10T10:00:00Z',
+          },
+          {
+            id: 'series-1',
+            title: '測試影集',
+            year: 2023,
+            mediaType: 'tv',
+            justAdded: false,
+            addedAt: '2026-02-10T09:00:00Z',
+          },
+        ] satisfies RecentMedia[],
+      },
+    ],
+  },
+
+  // ----- downloads/ (Task 3) -----
+  {
+    id: 'downloads-download-details',
+    label: 'downloads/DownloadDetails',
+    component: DownloadDetails as ComponentType<Record<string, unknown>>,
+    props: { hash: 'abc123' },
+    penNode: 'screen-section',
+    width: 640,
+    seedQueries: [
+      {
+        queryKey: qbittorrentKeys.config(),
+        data: {
+          host: 'http://localhost:8080',
+          username: 'admin',
+          basePath: '',
+          configured: true,
+        } satisfies QBConfigResponse,
+      },
+      {
+        queryKey: downloadKeys.detail('abc123'),
+        data: {
+          hash: 'abc123',
+          name: 'Test Movie [1080p]',
+          size: 4294967296,
+          progress: 0.85,
+          downloadSpeed: 10485760,
+          uploadSpeed: 524288,
+          eta: 600,
+          status: 'downloading',
+          addedOn: '2026-01-15T10:00:00Z',
+          completedOn: '2026-01-15T18:00:00Z',
+          seeds: 10,
+          peers: 5,
+          downloaded: 3650722201,
+          uploaded: 104857600,
+          ratio: 0.03,
+          savePath: '/downloads/movies',
+          pieceSize: 4194304,
+          comment: 'Test comment',
+          createdBy: 'qBittorrent v4.5.2',
+          creationDate: '2026-01-10T08:00:00Z',
+          totalWasted: 1024,
+          timeElapsed: 3600,
+          seedingTime: 0,
+          avgDownSpeed: 8388608,
+          avgUpSpeed: 262144,
+        } satisfies DownloadDetailsResponse,
+      },
+    ],
+  },
+
+  // ----- health/ (Task 3) -----
+  {
+    id: 'health-connection-history-panel',
+    // CAVEAT: SidePanel wraps in `fixed inset-0` viewport overlay — paints
+    // OUTSIDE the state div crop. Task 4 / Sally review may flag for special
+    // capture strategy. Same caveat as Task 2's ui-side-panel.
+    label: 'health/ConnectionHistoryPanel',
+    component: ConnectionHistoryPanel as ComponentType<Record<string, unknown>>,
+    props: { isOpen: true, onClose: noop },
+    penNode: 'screen-section',
+    statesOnly: ['default'],
+    seedQueries: [
+      {
+        queryKey: healthKeys.history('qbittorrent'),
+        data: [
+          {
+            id: 'evt-1',
+            service: 'qbittorrent',
+            eventType: 'disconnected',
+            status: 'down',
+            message: 'connection refused',
+            createdAt: '2026-05-14T11:58:00Z',
+          },
+          {
+            id: 'evt-2',
+            service: 'qbittorrent',
+            eventType: 'connected',
+            status: 'healthy',
+            createdAt: '2026-05-14T11:30:00Z',
+          },
+        ] satisfies ConnectionEvent[],
+      },
+    ],
+  },
+  {
+    id: 'health-qb-status-indicator',
+    label: 'health/QBStatusIndicator',
+    component: QBStatusIndicator as ComponentType<Record<string, unknown>>,
+    props: { onClick: noop },
+    penNode: 'screen-section',
+    seedQueries: [
+      {
+        queryKey: healthKeys.qbittorrent(),
+        data: {
+          name: 'qbittorrent',
+          displayName: 'qBittorrent',
+          status: 'healthy',
+          lastCheck: '2026-05-14T12:00:00Z',
+          lastSuccess: '2026-05-14T12:00:00Z',
+          errorCount: 0,
+        } satisfies ServiceHealth,
+      },
+    ],
+  },
+
+  // ----- homepage/ (Task 3) -----
+  {
+    id: 'homepage-hero-banner',
+    label: 'homepage/HeroBanner',
+    component: HeroBanner as ComponentType<Record<string, unknown>>,
+    penNode: 'screen-section',
+    width: 1200,
+    seedQueries: [
+      {
+        queryKey: trendingKeys.hero('week'),
+        data: [
+          {
+            id: 550,
+            mediaType: 'movie',
+            title: '鬥陣俱樂部',
+            overview: '一段關於失眠者與肥皂商人的旅程。',
+            backdropPath: '/backdrop.jpg',
+            releaseDate: '1999-10-15',
+            voteAverage: 8.4,
+          },
+        ] satisfies HeroBannerItem[],
+      },
+    ],
+  },
+  {
+    id: 'homepage-explore-block',
+    label: 'homepage/ExploreBlock',
+    component: ExploreBlock as ComponentType<Record<string, unknown>>,
+    props: {
+      block: {
+        id: 'block-gallery-1',
+        name: '熱門電影',
+        contentType: 'movie',
+        genreIds: '',
+        language: '',
+        region: '',
+        sortBy: 'popularity.desc',
+        maxItems: 20,
+        sortOrder: 0,
+        createdAt: '2026-04-15T00:00:00Z',
+        updatedAt: '2026-04-15T00:00:00Z',
+      } satisfies ExploreBlockType,
+      // Stub ownership state (story 10-4 hoisted ownership pattern).
+      ownership: {
+        owned: new Set<number>(),
+        isOwned: () => false,
+        isRequested: () => false,
+        isLoading: false,
+        error: null,
+      } satisfies OwnedMediaState,
+      eager: true,
+    },
+    penNode: 'screen-section',
+    width: 1200,
+    seedQueries: [
+      {
+        queryKey: exploreBlockKeys.content('block-gallery-1'),
+        data: {
+          blockId: 'block-gallery-1',
+          contentType: 'movie',
+          movies: [
+            {
+              id: 101,
+              title: '駭客任務',
+              originalTitle: 'The Matrix',
+              overview: '紅藥丸或藍藥丸？',
+              releaseDate: '1999-03-31',
+              posterPath: '/p-101.jpg',
+              backdropPath: '/bd-101.jpg',
+              voteAverage: 8.7,
+              voteCount: 24000,
+              genreIds: [28, 878],
+            },
+            {
+              id: 102,
+              title: '銀翼殺手',
+              originalTitle: 'Blade Runner',
+              overview: '複製人獵殺。',
+              releaseDate: '1982-06-25',
+              posterPath: '/p-102.jpg',
+              backdropPath: '/bd-102.jpg',
+              voteAverage: 8.1,
+              voteCount: 13000,
+              genreIds: [878, 18],
+            },
+          ] satisfies Movie[],
+          totalItems: 2,
+        } satisfies ExploreBlockContent,
+      },
+    ],
+  },
+  {
+    id: 'homepage-explore-blocks-list',
+    label: 'homepage/ExploreBlocksList',
+    component: ExploreBlocksList as ComponentType<Record<string, unknown>>,
+    penNode: 'screen-section',
+    width: 1200,
+    seedQueries: [
+      {
+        queryKey: exploreBlockKeys.list(),
+        data: {
+          blocks: [
+            {
+              id: 'block-list-1',
+              name: '熱門電影',
+              contentType: 'movie',
+              genreIds: '',
+              language: '',
+              region: '',
+              sortBy: 'popularity.desc',
+              maxItems: 20,
+              sortOrder: 0,
+              createdAt: '2026-04-15T00:00:00Z',
+              updatedAt: '2026-04-15T00:00:00Z',
+            },
+          ] satisfies ExploreBlockType[],
+        },
+      },
+      {
+        queryKey: exploreBlockKeys.content('block-list-1'),
+        data: {
+          blockId: 'block-list-1',
+          contentType: 'movie',
+          movies: [
+            {
+              id: 201,
+              title: '星際效應',
+              originalTitle: 'Interstellar',
+              overview: '穿越蟲洞。',
+              releaseDate: '2014-11-05',
+              posterPath: '/p-201.jpg',
+              backdropPath: '/bd-201.jpg',
+              voteAverage: 8.4,
+              voteCount: 30000,
+              genreIds: [12, 18, 878],
+            },
+          ] satisfies Movie[],
+          totalItems: 1,
+        } satisfies ExploreBlockContent,
+      },
+      // Silence the inner ownership lookup network call: ExploreBlocksList
+      // unions all TMDb ids across visible blocks → useOwnedMedia([201]).
+      { queryKey: ownedMediaKeys.lookup([201]), data: [] as number[] },
+    ],
+  },
+
+  // ----- learning/ (Task 3) -----
+  {
+    id: 'learning-learned-patterns-settings',
+    label: 'learning/LearnedPatternsSettings',
+    component: LearnedPatternsSettings as ComponentType<Record<string, unknown>>,
+    penNode: 'screen-section',
+    width: 720,
+    seedQueries: [
+      {
+        queryKey: learningKeys.patterns(),
+        data: {
+          patterns: [
+            {
+              id: 'pattern-1',
+              pattern: '[Leopard-Raws] Kimetsu no Yaiba',
+              patternType: 'fansub',
+              fansubGroup: 'Leopard-Raws',
+              titlePattern: 'Kimetsu no Yaiba',
+              metadataType: 'series',
+              metadataId: 'series-123',
+              tmdbId: 85937,
+              confidence: 1.0,
+              useCount: 12,
+              createdAt: '2026-01-20T10:00:00Z',
+            },
+          ],
+          totalCount: 1,
+          stats: {
+            totalPatterns: 1,
+            totalApplied: 12,
+            mostUsedPattern: '[Leopard-Raws] Kimetsu no Yaiba',
+            mostUsedCount: 12,
+          },
+        } satisfies PatternListResponse,
+      },
+    ],
+  },
+
+  // ----- library/ (Task 3) -----
+  {
+    id: 'library-filter-panel',
+    label: 'library/FilterPanel',
+    component: FilterPanel as ComponentType<Record<string, unknown>>,
+    props: {
+      filters: { genres: [], yearMin: undefined, yearMax: undefined } satisfies FilterValues,
+      mediaType: 'all' as LibraryMediaType,
+      unmatchedCount: 3,
+      onApply: noop,
+      onClear: noop,
+      onTypeChange: noop,
+    },
+    penNode: 'screen-section',
+    width: 320,
+    seedQueries: [
+      {
+        queryKey: libraryKeys.all,
+        data: ['動作', '劇情', '喜劇', '科幻', '驚悚'],
+      },
+      // FilterPanel uses useGenres() which keys on libraryKeys.genres()-style.
+      // Fall back to a broader key if the exact builder differs — string[] data shape.
+    ],
+  },
+  {
+    id: 'library-library-grid',
+    label: 'library/LibraryGrid',
+    component: LibraryGrid as ComponentType<Record<string, unknown>>,
+    props: {
+      items: [
+        {
+          type: 'movie',
+          movie: {
+            id: 'mov-1',
+            title: '駭客任務',
+            originalTitle: 'The Matrix',
+            releaseDate: '1999-03-31',
+            genres: ['動作', '科幻'],
+            voteAverage: 8.7,
+            overview: '紅藥丸或藍藥丸？',
+            posterPath: '/p-mov-1.jpg',
+            parseStatus: 'complete',
+            metadataSource: 'tmdb',
+            tmdbId: 603,
+            createdAt: '2026-04-10T08:00:00Z',
+            updatedAt: '2026-04-10T08:00:00Z',
+          },
+        },
+      ] satisfies LibraryItem[],
+      isLoading: false,
+      totalItems: 1,
+      density: 'medium',
+    },
+    penNode: 'screen-section',
+    width: 900,
+  },
+  {
+    id: 'library-recently-added',
+    label: 'library/RecentlyAdded',
+    component: RecentlyAdded as ComponentType<Record<string, unknown>>,
+    penNode: 'screen-section',
+    width: 1200,
+    seedQueries: [
+      {
+        queryKey: libraryKeys.recent(20),
+        data: [
+          {
+            type: 'movie',
+            movie: {
+              id: 'recent-mov-1',
+              title: '奧本海默',
+              originalTitle: 'Oppenheimer',
+              releaseDate: '2023-07-21',
+              genres: ['劇情', '歷史'],
+              voteAverage: 8.1,
+              overview: '原子彈之父。',
+              posterPath: '/p-recent-1.jpg',
+              parseStatus: 'complete',
+              metadataSource: 'tmdb',
+              tmdbId: 872585,
+              // Fixed date: deterministic across CI runs (no Date.now()).
+              createdAt: '2026-05-12T08:00:00Z',
+              updatedAt: '2026-05-12T08:00:00Z',
+            },
+          },
+        ] satisfies LibraryItem[],
+      },
+    ],
+  },
+
+  // ----- manual-search/ (Task 3) -----
+  {
+    id: 'manual-search-manual-search-dialog',
+    label: 'manual-search/ManualSearchDialog',
+    // Custom fixed-overlay dialog (NOT Radix portal). useManualSearch is gated by
+    // params.query.length >= 2 → empty initialQuery disables the query (no network).
+    component: ManualSearchDialog as ComponentType<Record<string, unknown>>,
+    props: {
+      isOpen: true,
+      onClose: noop,
+      initialQuery: '',
+      mediaId: 'gallery-media-uuid-0001',
+      fallbackStatus: {
+        attempts: [
+          { source: 'tmdb', success: false },
+          { source: 'douban', success: true },
+          { source: 'wikipedia', success: false, skipped: true },
+        ],
+        totalDuration: 1850,
+      },
+      onSuccess: noop,
+    },
+    penNode: 'screen-section',
+    statesOnly: ['default'],
+  },
+
+  // ----- media/ (Task 3) -----
+  {
+    id: 'media-media-detail-panel',
+    label: 'media/MediaDetailPanel',
+    // details is a direct prop. No libraryId → TrailerSection skipped →
+    // useMediaTrailers never fires. No seedQueries required.
+    component: MediaDetailPanel as ComponentType<Record<string, unknown>>,
+    props: {
+      type: 'movie',
+      details: {
+        id: 123,
+        title: '銀翼殺手 2049',
+        originalTitle: 'Blade Runner 2049',
+        overview:
+          '三十年後的反烏托邦世界，K（瑞恩·葛斯林 飾演）是洛杉磯警察局的一名 Blade Runner……',
+        releaseDate: '2017-10-06',
+        posterPath: '/gajva2L0rPYkEWjzgFlBXCAVBE5.jpg',
+        backdropPath: '/ilRyazdMJwN05exqhwK4tMKBYZs.jpg',
+        voteAverage: 8.0,
+        voteCount: 12000,
+        popularity: 78.2,
+        genreIds: [878, 18],
+        originalLanguage: 'en',
+        adult: false,
+        video: false,
+        runtime: 164,
+        budget: 150000000,
+        revenue: 260000000,
+        status: 'Released',
+        tagline: '',
+        genres: [
+          { id: 878, name: '科幻' },
+          { id: 18, name: '劇情' },
+        ],
+        productionCountries: [{ iso31661: 'US', name: 'United States of America' }],
+        spokenLanguages: [{ englishName: 'English', iso6391: 'en', name: 'English' }],
+        imdbId: 'tt1856101',
+        homepage: null,
+      } satisfies MovieDetails,
+      credits: {
+        id: 123,
+        cast: [
+          { id: 1, name: '瑞恩·葛斯林', character: 'K', profilePath: null, order: 0 },
+          { id: 2, name: '哈里遜·福特', character: 'Rick Deckard', profilePath: null, order: 1 },
+        ],
+        crew: [
+          {
+            id: 10,
+            name: '丹尼·維勒納夫',
+            job: 'Director',
+            department: 'Directing',
+            profilePath: null,
+          },
+        ],
+      } satisfies Credits,
+      isLoading: false,
+      metadataSource: 'TMDb',
+      filePath: '/movies/Blade Runner 2049 (2017).mkv',
+      fileSize: 15728640000,
+      createdAt: '2024-03-20T10:30:00Z',
+      onPlay: noop,
+      onAddToList: noop,
+      onReparse: noop,
+      onExport: noop,
+      onDelete: noop,
+    },
+    penNode: 'screen-section',
+    width: 480,
+  },
+
+  // ----- metadata-editor/ (Task 3) -----
+  {
+    id: 'metadata-editor-metadata-editor-dialog',
+    label: 'metadata-editor/MetadataEditorDialog',
+    // Custom fixed-overlay dialog (NOT Radix). Mutation-only — no seedQueries.
+    component: MetadataEditorDialog as ComponentType<Record<string, unknown>>,
+    props: {
+      isOpen: true,
+      onClose: noop,
+      mediaId: 'gallery-media-uuid-0002',
+      mediaType: 'movie',
+      initialData: {
+        id: 'gallery-media-uuid-0002',
+        mediaType: 'movie',
+        title: '銀翼殺手 2049',
+        titleEnglish: 'Blade Runner 2049',
+        year: 2017,
+        genres: ['sci-fi', 'drama'],
+        director: '丹尼·維勒納夫',
+        cast: ['瑞恩·葛斯林', '哈里遜·福特'],
+        overview: '三十年後的反烏托邦世界。',
+        posterUrl: '',
+      },
+      onSuccess: noop,
+    },
+    penNode: 'screen-section',
+    statesOnly: ['default'],
+  },
+
+  // ----- parse/ (Task 3) -----
+  {
+    id: 'parse-floating-parse-progress-card',
+    label: 'parse/FloatingParseProgressCard',
+    // SSE-driven via useParseProgress (NOT React Query). With no backend the SSE
+    // EventSource fails → progress=null → card renders the "連線中..." header only.
+    // retryKeys.pending() seeded defensively in case child gating changes.
+    component: FloatingParseProgressCard as ComponentType<Record<string, unknown>>,
+    props: {
+      taskId: 'gallery-parse-task',
+      onClose: noop,
+      onComplete: noop,
+      onManualSearch: noop,
+      onEditFilename: noop,
+      onSkip: noop,
+      autoDismissDelay: 0,
+    },
+    penNode: 'screen-section',
+    statesOnly: ['default'],
+    seedQueries: [
+      {
+        queryKey: retryKeys.pending(),
+        data: {
+          items: [],
+          stats: { totalPending: 0, totalSucceeded: 0, totalFailed: 0 },
+        } satisfies PendingRetriesResponse,
+      },
+    ],
+  },
+  {
+    id: 'parse-retry-queue-section',
+    label: 'parse/RetryQueueSection',
+    // The canonical Task-3 seed example: usePendingRetries() → returns null on
+    // empty/error/loading, so we MUST seed a non-empty items array.
+    component: RetryQueueSection as ComponentType<Record<string, unknown>>,
+    props: { detailed: false },
+    penNode: 'screen-section',
+    width: 420,
+    seedQueries: [
+      {
+        queryKey: retryKeys.pending(),
+        data: {
+          items: [
+            {
+              id: 'retry-001',
+              taskId: 'parse-task-001',
+              taskType: 'parse',
+              attemptCount: 2,
+              maxAttempts: 5,
+              lastError: 'TMDb API timeout',
+              // Far-future timestamp keeps CountdownTimer at a stable large unit.
+              nextAttemptAt: '2099-01-01T00:00:30.000Z',
+              timeUntilRetry: '30s',
+            },
+            {
+              id: 'retry-002',
+              taskId: 'metadata-task-002',
+              taskType: 'metadata_fetch',
+              attemptCount: 1,
+              maxAttempts: 3,
+              lastError: '無法連線豆瓣',
+              nextAttemptAt: '2099-01-01T00:02:00.000Z',
+              timeUntilRetry: '2m',
+            },
+          ],
+          stats: { totalPending: 2, totalSucceeded: 7, totalFailed: 1 },
+        } satisfies PendingRetriesResponse,
+      },
+    ],
+  },
+
+  // ----- retry/ (Task 3) -----
+  {
+    id: 'retry-retry-notifications',
+    label: 'retry/RetryNotifications',
+    // Presentational — listed in Q-bucket per Task 1 inventory but takes only
+    // notifications + onDismiss props (no useQuery). Auto-dismiss timer (5s)
+    // will fire during snapshot — Task 4 may need timer freeze.
+    component: RetryNotifications as ComponentType<Record<string, unknown>>,
+    props: {
+      notifications: [
+        {
+          id: 'notif-success',
+          type: 'success',
+          message: '重試成功',
+          description: '任務 parse-task-123 已完成',
+        },
+        {
+          id: 'notif-warning',
+          type: 'warning',
+          message: '重試次數已用盡',
+          description: '任務 metadata-task-456 需要手動處理',
+        },
+      ] satisfies Notification[],
+      onDismiss: noop,
+    },
+    penNode: 'screen-section',
+    statesOnly: ['default'],
+  },
+  {
+    id: 'retry-retry-queue-panel',
+    label: 'retry/RetryQueuePanel',
+    component: RetryQueuePanel as ComponentType<Record<string, unknown>>,
+    penNode: 'screen-section',
+    width: 720,
+    seedQueries: [
+      {
+        queryKey: retryKeys.pending(),
+        data: {
+          items: [
+            {
+              id: 'retry-1',
+              taskId: 'parse-task-123',
+              taskType: 'parse',
+              attemptCount: 1,
+              maxAttempts: 4,
+              lastError: 'TMDb timeout',
+              nextAttemptAt: '2099-01-01T00:00:30.000Z',
+              timeUntilRetry: '30s',
+            },
+            {
+              id: 'retry-2',
+              taskId: 'metadata-task-456',
+              taskType: 'metadata_fetch',
+              attemptCount: 2,
+              maxAttempts: 4,
+              lastError: 'Rate limited',
+              nextAttemptAt: '2099-01-01T00:02:00.000Z',
+              timeUntilRetry: '2m',
+            },
+          ],
+          stats: { totalPending: 2, totalSucceeded: 12, totalFailed: 1 },
+        } satisfies PendingRetriesResponse,
+      },
+    ],
+  },
+  {
+    id: 'retry-retry-queue-with-notifications',
+    // Wrapper of RetryQueuePanel + RetryNotifications stack; mutations idle on
+    // mount → notifications[] empty → wrapper visually matches the panel-only
+    // fixture. Kept for symmetry; Task 4 may dedupe.
+    label: 'retry/RetryQueueWithNotifications',
+    component: RetryQueueWithNotifications as ComponentType<Record<string, unknown>>,
+    penNode: 'screen-section',
+    width: 720,
+    seedQueries: [
+      {
+        queryKey: retryKeys.pending(),
+        data: {
+          items: [
+            {
+              id: 'retry-1',
+              taskId: 'parse-task-123',
+              taskType: 'parse',
+              attemptCount: 1,
+              maxAttempts: 4,
+              lastError: 'TMDb timeout',
+              nextAttemptAt: '2099-01-01T00:00:30.000Z',
+              timeUntilRetry: '30s',
+            },
+          ],
+          stats: { totalPending: 1, totalSucceeded: 12, totalFailed: 1 },
+        } satisfies PendingRetriesResponse,
+      },
+    ],
+  },
+
+  // ----- settings/ (Task 3) -----
+  {
+    id: 'settings-backup-management',
+    label: 'settings/BackupManagement',
+    component: BackupManagement as ComponentType<Record<string, unknown>>,
+    penNode: 'screen-section',
+    width: 720,
+    seedQueries: [
+      {
+        queryKey: backupKeys.list(),
+        data: {
+          backups: [
+            {
+              id: 'bk-001',
+              filename: 'vido-backup-2026-03-22.tar.gz',
+              sizeBytes: 12_582_912,
+              schemaVersion: 4,
+              checksum: 'sha256:a1b2c3',
+              status: 'completed',
+              createdAt: '2026-03-22T03:00:00Z',
+            },
+          ],
+          totalSizeBytes: 12_582_912,
+        } satisfies BackupListResponse,
+      },
+      {
+        // useBackupSchedule() keys on the inline `[...backupKeys.all, 'schedule']`
+        // tuple — match the exact shape (no helper exposed by backupKeys).
+        queryKey: [...backupKeys.all, 'schedule'] as const,
+        data: {
+          enabled: true,
+          frequency: 'daily',
+          hour: 3,
+          dayOfWeek: 0,
+          nextBackupAt: '2026-03-23T03:00:00Z',
+        } satisfies BackupSchedule,
+      },
+    ],
+  },
+  {
+    id: 'settings-backup-schedule-config',
+    label: 'settings/BackupScheduleConfig',
+    component: BackupScheduleConfig as ComponentType<Record<string, unknown>>,
+    penNode: 'screen-section',
+    width: 640,
+    seedQueries: [
+      {
+        queryKey: [...backupKeys.all, 'schedule'] as const,
+        data: {
+          enabled: true,
+          frequency: 'weekly',
+          hour: 3,
+          dayOfWeek: 1,
+          nextBackupAt: '2026-03-23T03:00:00Z',
+        } satisfies BackupSchedule,
+      },
+    ],
+  },
+  {
+    id: 'settings-cache-management',
+    label: 'settings/CacheManagement',
+    component: CacheManagement as ComponentType<Record<string, unknown>>,
+    penNode: 'screen-section',
+    width: 720,
+    seedQueries: [
+      {
+        queryKey: cacheKeys.stats(),
+        data: {
+          cacheTypes: [
+            { type: 'image', label: '圖片快取', sizeBytes: 52_428_800, entryCount: 1247 },
+            { type: 'ai', label: 'AI 解析快取', sizeBytes: 8_388_608, entryCount: 312 },
+            { type: 'metadata', label: '中介資料快取', sizeBytes: 4_194_304, entryCount: 856 },
+          ],
+          totalSizeBytes: 65_011_712,
+        } satisfies CacheStats,
+      },
+    ],
+  },
+  {
+    id: 'settings-explore-block-edit-modal',
+    // Inline `fixed inset-0` overlay (NOT Radix portal). Mutation-only — no
+    // seedQueries required.
+    label: 'settings/ExploreBlockEditModal',
+    component: ExploreBlockEditModal as ComponentType<Record<string, unknown>>,
+    props: {
+      block: {
+        id: 'blk-fixture-1',
+        name: '熱門台劇',
+        contentType: 'tv',
+        genreIds: '18,10765',
+        language: 'zh-TW',
+        region: 'TW',
+        sortBy: 'popularity.desc',
+        maxItems: 20,
+        sortOrder: 0,
+        createdAt: '2026-03-01T00:00:00Z',
+        updatedAt: '2026-03-01T00:00:00Z',
+      } satisfies ExploreBlockType,
+      onClose: noop,
+    },
+    penNode: 'screen-section',
+    width: 480,
+  },
+  {
+    id: 'settings-explore-blocks-settings',
+    label: 'settings/ExploreBlocksSettings',
+    component: ExploreBlocksSettings as ComponentType<Record<string, unknown>>,
+    penNode: 'screen-section',
+    width: 720,
+    seedQueries: [
+      {
+        queryKey: exploreBlockKeys.list(),
+        data: {
+          blocks: [
+            {
+              id: 'blk-1',
+              name: '熱門電影',
+              contentType: 'movie',
+              genreIds: '',
+              language: 'zh-TW',
+              region: 'TW',
+              sortBy: 'popularity.desc',
+              maxItems: 20,
+              sortOrder: 0,
+              createdAt: '2026-03-01T00:00:00Z',
+              updatedAt: '2026-03-01T00:00:00Z',
+            },
+          ] satisfies ExploreBlockType[],
+        },
+      },
+    ],
+  },
+  {
+    id: 'settings-library-card',
+    // P-bucket reclassification candidate (mutation-only — no read query) but
+    // kept here per Task 3 plan. No seedQueries.
+    label: 'settings/LibraryCard',
+    component: LibraryCard as ComponentType<Record<string, unknown>>,
+    props: {
+      library: {
+        id: 'lib-fixture-1',
+        name: '我的電影',
+        contentType: 'movie',
+        autoDetect: true,
+        sortOrder: 0,
+        createdAt: '2026-03-01T00:00:00Z',
+        updatedAt: '2026-03-01T00:00:00Z',
+        mediaCount: 247,
+        paths: [
+          {
+            id: 'path-1',
+            libraryId: 'lib-fixture-1',
+            path: '/media/movies',
+            status: 'accessible',
+            lastCheckedAt: '2026-03-22T14:30:00Z',
+            createdAt: '2026-03-01T00:00:00Z',
+          },
+          {
+            id: 'path-2',
+            libraryId: 'lib-fixture-1',
+            path: '/media/archive/old-movies',
+            status: 'not_found',
+            lastCheckedAt: '2026-03-22T14:30:00Z',
+            createdAt: '2026-03-01T00:00:00Z',
+          },
+        ],
+      } satisfies MediaLibraryWithPaths,
+      onEdit: noop,
+    },
+    penNode: 'screen-section',
+    width: 560,
+  },
+  {
+    id: 'settings-library-edit-modal',
+    // Inline `fixed inset-0` overlay (NOT Radix portal). Reads
+    // useMediaLibraries() → mediaLibraryKeys.all (aliased from useMediaLibrary).
+    label: 'settings/LibraryEditModal',
+    component: LibraryEditModal as ComponentType<Record<string, unknown>>,
+    props: {
+      libraryId: 'lib-edit-fixture',
+      onClose: noop,
+    },
+    penNode: 'screen-section',
+    width: 480,
+    seedQueries: [
+      {
+        queryKey: mediaLibraryKeys.all,
+        data: {
+          libraries: [
+            {
+              id: 'lib-edit-fixture',
+              name: '我的影集',
+              contentType: 'series',
+              autoDetect: true,
+              sortOrder: 0,
+              createdAt: '2026-03-01T00:00:00Z',
+              updatedAt: '2026-03-01T00:00:00Z',
+              mediaCount: 89,
+              paths: [
+                {
+                  id: 'path-edit-1',
+                  libraryId: 'lib-edit-fixture',
+                  path: '/media/tv',
+                  status: 'accessible',
+                  lastCheckedAt: '2026-03-22T14:30:00Z',
+                  createdAt: '2026-03-01T00:00:00Z',
+                },
+              ],
+            } satisfies MediaLibraryWithPaths,
+          ],
+        },
+      },
+    ],
+  },
+  {
+    id: 'settings-logs-viewer',
+    label: 'settings/LogsViewer',
+    component: LogsViewer as ComponentType<Record<string, unknown>>,
+    penNode: 'screen-section',
+    width: 960,
+    seedQueries: [
+      {
+        // Filter object must match LogsViewer's initial useLogs(filter) build:
+        // { level: undefined, keyword: undefined, page: 1, perPage: 50 }.
+        queryKey: logKeys.list({
+          level: undefined,
+          keyword: undefined,
+          page: 1,
+          perPage: 50,
+        }),
+        data: {
+          logs: [
+            {
+              id: 1,
+              level: 'ERROR',
+              message: 'Failed to fetch metadata from TMDb',
+              source: 'tmdb',
+              context: { error_code: 'TMDB_TIMEOUT', movie_id: '123' },
+              hint: '檢查網路連線，或稍後重試。',
+              createdAt: '2026-03-22T10:00:00Z',
+            },
+            {
+              id: 2,
+              level: 'WARN',
+              message: 'Cache miss for movie poster',
+              source: 'cache',
+              createdAt: '2026-03-22T09:55:00Z',
+            },
+          ],
+          total: 2,
+          page: 1,
+          perPage: 50,
+        } satisfies LogsResponse,
+      },
+    ],
+  },
+  {
+    id: 'settings-media-library-manager',
+    label: 'settings/MediaLibraryManager',
+    component: MediaLibraryManager as ComponentType<Record<string, unknown>>,
+    penNode: 'screen-section',
+    width: 640,
+    seedQueries: [
+      {
+        queryKey: mediaLibraryKeys.all,
+        data: {
+          libraries: [
+            {
+              id: 'mlm-lib-1',
+              name: '我的電影',
+              contentType: 'movie',
+              autoDetect: true,
+              sortOrder: 0,
+              createdAt: '2026-03-01T00:00:00Z',
+              updatedAt: '2026-03-01T00:00:00Z',
+              mediaCount: 247,
+              paths: [
+                {
+                  id: 'p1',
+                  libraryId: 'mlm-lib-1',
+                  path: '/media/movies',
+                  status: 'accessible',
+                  lastCheckedAt: '2026-03-22T14:30:00Z',
+                  createdAt: '2026-03-01T00:00:00Z',
+                },
+              ],
+            },
+          ] satisfies MediaLibraryWithPaths[],
+        },
+      },
+    ],
+  },
+  {
+    id: 'settings-metadata-export',
+    // P-bucket reclassification candidate (mutation-only). Pure form UI.
+    label: 'settings/MetadataExport',
+    component: MetadataExport as ComponentType<Record<string, unknown>>,
+    penNode: 'screen-section',
+    width: 560,
+  },
+  {
+    id: 'settings-qbittorrent-form',
+    label: 'settings/QBittorrentForm',
+    component: QBittorrentForm as ComponentType<Record<string, unknown>>,
+    penNode: 'screen-section',
+    width: 640,
+    seedQueries: [
+      {
+        queryKey: qbittorrentKeys.config(),
+        data: {
+          host: 'http://192.168.1.100:8080',
+          username: 'admin',
+          basePath: '/qbittorrent',
+          configured: true,
+        } satisfies QBConfigResponse,
+      },
+    ],
+  },
+  {
+    id: 'settings-scanner-settings',
+    label: 'settings/ScannerSettings',
+    component: ScannerSettings as ComponentType<Record<string, unknown>>,
+    penNode: 'screen-section',
+    width: 720,
+    seedQueries: [
+      {
+        queryKey: scannerKeys.status(),
+        data: {
+          isScanning: false,
+          filesFound: 0,
+          filesProcessed: 0,
+          currentFile: '',
+          percentDone: 0,
+          errorCount: 0,
+          estimatedTime: '',
+          lastScanAt: '2026-03-22T14:30:00Z',
+          lastScanFiles: 1247,
+          lastScanDuration: '3 分 12 秒',
+        } satisfies ScanStatus,
+      },
+      {
+        queryKey: scannerKeys.schedule(),
+        data: { frequency: 'hourly' } satisfies ScheduleConfig,
+      },
+      // Nested MediaLibraryManager reads mediaLibraryKeys.all.
+      {
+        queryKey: mediaLibraryKeys.all,
+        data: {
+          libraries: [
+            {
+              id: 'sc-lib-1',
+              name: '電影庫',
+              contentType: 'movie',
+              autoDetect: true,
+              sortOrder: 0,
+              createdAt: '2026-03-01T00:00:00Z',
+              updatedAt: '2026-03-01T00:00:00Z',
+              mediaCount: 42,
+              paths: [
+                {
+                  id: 'sc-p1',
+                  libraryId: 'sc-lib-1',
+                  path: '/media/movies',
+                  status: 'accessible',
+                  lastCheckedAt: '2026-03-22T14:30:00Z',
+                  createdAt: '2026-03-01T00:00:00Z',
+                },
+              ],
+            },
+          ] satisfies MediaLibraryWithPaths[],
+        },
+      },
+    ],
+  },
+  {
+    id: 'settings-service-status-dashboard',
+    label: 'settings/ServiceStatusDashboard',
+    component: ServiceStatusDashboard as ComponentType<Record<string, unknown>>,
+    penNode: 'screen-section',
+    width: 720,
+    seedQueries: [
+      {
+        queryKey: serviceStatusKeys.list(),
+        data: {
+          services: [
+            {
+              name: 'tmdb',
+              displayName: 'TMDb API',
+              status: 'connected',
+              message: '已連線',
+              lastSuccessAt: '2026-03-22T14:30:00Z',
+              lastCheckAt: '2026-03-22T14:30:00Z',
+              responseTimeMs: 45,
+            },
+            {
+              name: 'qbittorrent',
+              displayName: 'qBittorrent',
+              status: 'connected',
+              message: '已連線',
+              lastSuccessAt: '2026-03-22T14:29:00Z',
+              lastCheckAt: '2026-03-22T14:30:00Z',
+              responseTimeMs: 12,
+            },
+            {
+              name: 'ai',
+              displayName: 'AI 服務',
+              status: 'unconfigured',
+              message: '未設定',
+              lastSuccessAt: null,
+              lastCheckAt: '2026-03-22T14:30:00Z',
+              responseTimeMs: 0,
+            },
+          ],
+        } satisfies ServiceStatusResponse,
+      },
+    ],
+  },
+
+  // ----- subtitle/ (Task 3) -----
+  {
+    id: 'subtitle-subtitle-search-dialog',
+    // Plain `fixed inset-0` dialog (NOT Radix portal — inline render via
+    // `if (!open) return null`). useSubtitleSearch uses only useMutation — no
+    // seedQueries needed.
+    label: 'subtitle/SubtitleSearchDialog',
+    component: SubtitleSearchDialog as ComponentType<Record<string, unknown>>,
+    props: {
+      mediaId: 'movie-1',
+      mediaType: 'movie',
+      mediaTitle: '星際效應',
+      mediaFilePath: '/media/movies/Interstellar.2014.1080p.mkv',
+      mediaResolution: '1080p',
+      productionCountry: 'US',
+      open: true,
+      onOpenChange: noop,
+      onDownloadSuccess: noop,
+    },
+    penNode: 'screen-section',
+    statesOnly: ['default'],
   },
 ];

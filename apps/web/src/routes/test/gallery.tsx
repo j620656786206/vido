@@ -30,11 +30,21 @@
  *     the spec clicks that selector before screenshotting (captures e.g. the open
  *     `SortDropdown 955EZ` panel of `library/SortSelector`).
  *
+ * **19-4b Task 3 extensions** (Q-bucket / S-bucket infrastructure):
+ *   - **`seedQueries`:** fixtures listing `{ queryKey, data }` pairs get their entries
+ *     pre-loaded into the app-shell `queryClient` cache by `GalleryFixtureSeed` (below)
+ *     BEFORE children mount, so child components calling `useQuery()` see the data on
+ *     first render — no loading flash, no network attempt.
+ *   - **`seedStore`:** fixtures providing a `() => void` lambda get it invoked
+ *     synchronously (same `useState` init) so Zustand-backed components see seeded
+ *     store state on first render. Currently no `components/` consumer reads a store
+ *     directly (project-context.md Rule 5); the field stays for forward compatibility.
+ *
  * @internal Test fixture route. The QueryClient and Router context come from the app
  * shell (`main.tsx` → `QueryClientProvider` → router), so no extra providers are needed
  * for non-routePath fixtures.
  */
-import { Component, type ErrorInfo, type ReactNode, useMemo } from 'react';
+import { Component, type ErrorInfo, type ReactNode, useMemo, useState } from 'react';
 import {
   createFileRoute,
   createMemoryHistory,
@@ -44,7 +54,8 @@ import {
   Outlet,
   RouterProvider,
 } from '@tanstack/react-router';
-import { GALLERY_FIXTURES, type GalleryState } from './-gallery.fixtures';
+import { useQueryClient } from '@tanstack/react-query';
+import { GALLERY_FIXTURES, type GalleryFixture, type GalleryState } from './-gallery.fixtures';
 
 export const Route = createFileRoute('/test/gallery')({
   component: ComponentGalleryPage,
@@ -111,6 +122,40 @@ function StubbedRouter({ pathname, children }: { pathname: StubRoutePath; childr
   // and useRouterState inside the wrapped fixture reads from the nearest one).
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return <RouterProvider router={router as any} />;
+}
+
+/**
+ * 19-4b Task 3: Pre-seeds `queryClient` cache (and optionally a Zustand store) for
+ * Q-bucket / S-bucket fixtures before their children mount. The `useState` initializer
+ * runs once during the first render of this wrapper, BEFORE the children's render
+ * subtree commits, so `useQuery()` calls inside the children see the seeded data on
+ * their first read (no `isLoading` flash, no network attempt to fall back from).
+ *
+ * Idempotent across re-renders (each `<section>`'s `useState` initializer fires once);
+ * idempotent across fixtures (the LAST seeder of a shared `queryKey` wins, mirroring
+ * the documented `seedStore` "last fixture wins" semantics — story 19-4b Dev Notes).
+ *
+ * The wrapped `queryClient` is the app shell's instance (`main.tsx` →
+ * `QueryClientProvider`) — `useQueryClient()` reads from the nearest provider in
+ * context, and the gallery route is mounted under that provider.
+ */
+function GalleryFixtureSeed({ fx, children }: { fx: GalleryFixture; children: ReactNode }) {
+  const queryClient = useQueryClient();
+  // useState init runs synchronously on first render, before any descendant mounts.
+  // Return value is intentionally unused — we only need the side effects to fire
+  // exactly once per fixture mount.
+  useState(() => {
+    if (fx.seedQueries) {
+      for (const { queryKey, data } of fx.seedQueries) {
+        queryClient.setQueryData(queryKey, data);
+      }
+    }
+    if (fx.seedStore) {
+      fx.seedStore();
+    }
+    return null;
+  });
+  return <>{children}</>;
 }
 
 class FixtureErrorBoundary extends Component<
@@ -189,50 +234,57 @@ function ComponentGalleryPage() {
                 <h2 className="mb-3 text-sm font-medium text-[var(--text-muted)]">
                   {fx.label} <span className="opacity-60">· {fx.penNode}</span>
                 </h2>
-                <div className="flex flex-wrap gap-8">
-                  {states.map((state) => {
-                    const renderedFixture = (
-                      <FixtureErrorBoundary id={`${fx.id}:${state}`}>
-                        <Comp {...props} />
-                      </FixtureErrorBoundary>
-                    );
-                    // 19-4b Task 0 Fix B: if the fixture declares `routePath`,
-                    // wrap the render in a nested memory `RouterProvider` so
-                    // `useRouterState()` inside the component reports that path.
-                    const innerContent = fx.routePath ? (
-                      <StubbedRouter pathname={fx.routePath}>{renderedFixture}</StubbedRouter>
-                    ) : (
-                      renderedFixture
-                    );
-                    return (
-                      <div key={state} className="space-y-1">
-                        <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]/70">
-                          {state}
-                        </div>
-                        {/* 19-4b Task 0 Fix A — sentinel before each state div.
+                {/* 19-4b Task 3: seed queryClient cache + Zustand store for Q/S-bucket
+                    fixtures BEFORE the state divs render. No-op when neither
+                    seedQueries nor seedStore is set. */}
+                <GalleryFixtureSeed fx={fx}>
+                  <div className="flex flex-wrap gap-8">
+                    {states.map((state) => {
+                      const renderedFixture = (
+                        <FixtureErrorBoundary id={`${fx.id}:${state}`}>
+                          <Comp {...props} />
+                        </FixtureErrorBoundary>
+                      );
+                      // 19-4b Task 0 Fix B: if the fixture declares `routePath`,
+                      // wrap the render in a nested memory `RouterProvider` so
+                      // `useRouterState()` inside the component reports that path.
+                      const innerContent = fx.routePath ? (
+                        <StubbedRouter pathname={fx.routePath}>{renderedFixture}</StubbedRouter>
+                      ) : (
+                        renderedFixture
+                      );
+                      return (
+                        <div key={state} className="space-y-1">
+                          <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]/70">
+                            {state}
+                          </div>
+                          {/* 19-4b Task 0 Fix A — sentinel before each state div.
                             The visual spec focuses this then presses Tab to
                             enter the state div via keyboard, so Chromium flags
                             input modality as keyboard and `:focus-visible`
                             paints on the subsequent in-state-div focus. */}
-                        <button
-                          type="button"
-                          data-gallery-sentinel="pre"
-                          aria-hidden="true"
-                          tabIndex={0}
-                          className="sr-only"
-                        />
-                        <div
-                          data-gallery-state={state}
-                          data-gallery-open-trigger={state === 'open' ? fx.openTrigger : undefined}
-                          className="inline-block"
-                          style={fx.width ? { width: fx.width } : undefined}
-                        >
-                          {innerContent}
+                          <button
+                            type="button"
+                            data-gallery-sentinel="pre"
+                            aria-hidden="true"
+                            tabIndex={0}
+                            className="sr-only"
+                          />
+                          <div
+                            data-gallery-state={state}
+                            data-gallery-open-trigger={
+                              state === 'open' ? fx.openTrigger : undefined
+                            }
+                            className="inline-block"
+                            style={fx.width ? { width: fx.width } : undefined}
+                          >
+                            {innerContent}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                </GalleryFixtureSeed>
               </section>
             );
           })}
