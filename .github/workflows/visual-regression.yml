@@ -1,0 +1,330 @@
+# ============================================================================
+# Visual Regression — PR-blocking 視覺差異把關
+# ============================================================================
+#
+# Story 19-5 (epic-19 Design-Implementation Drift Audit) 將 19-4 + 19-4b 完成
+# 的視覺基準工具 (visual harness) 接上 PR 阻擋型 CI。源頭:bugfix-10-4 根因 ——
+# HoverPreviewCard.tsx 與 .pen Component/PosterCardHover (node MQbvp) 失同步
+# 多月未被察覺。project-context.md Rule 22 (Epic Retro Design-Drift Audit)
+# 指名本工作流為 Rule 22 的執行落點。
+#
+# 本工作流做什麼:
+#   - PR job 對著 tests/visual/components.visual.spec.ts-snapshots/ 下已提交
+#     的基準圖跑 `pnpm run test:visual`。失敗 → PR 顯示 ❌(配合擁有者另行
+#     在 branch protection 設為必須通過,即阻擋 merge)。差異產物
+#     (actual.png / diff.png / traces) 以 14 天保存上傳供審查。
+#   - Main job 跑同一個 verify-only 比對,並在「首次執行」時跑一次性的
+#     Linux baseline 引導分支(見下方「First-run bootstrap」)。
+#
+# Runner 版本固定 (AC #5):
+#   `runs-on: ubuntu-24.04` 是版本化標籤,而非 `ubuntu-latest`。Linux 的字體
+#   渲染 (fontconfig / freetype / DejaVu / Noto / Liberation glyphs) 是決定
+#   基準像素的關鍵變數;`-latest` 會自動換版而不經過 PR。當 GitHub 公告淘汰
+#   本標籤時(通常移除前 6~12 個月會先公告),升版要自成一個 PR:用
+#   `pnpm run test:visual:update` 重產基準、貼上 `requires-manual-review`
+#   標籤、單獨一個 commit,並在 _bmad-output/audit/visual-baseline-19-4.md
+#   追加 `Linux baselines re-blessed {YYYY-MM-DD} via {new} (previous:
+#   {old})` 一行。
+#
+# 引導決策樹 (AC #4):
+#   標準決策樹見 tests/visual/README.md §Platform-suffix L82–L96,本工作流
+#   即依此實作。在 main push 上,若 tests/visual/components.visual.spec.ts-snapshots/
+#   下沒有任何 `-linux.png` 基準,則 main job 會跑 `pnpm run test:visual:update`、
+#   在 _bmad-output/audit/visual-baseline-19-4.md 追加一行來源紀錄,並開出
+#   一個 `chore(visual): bootstrap Linux baselines` PR、貼上
+#   `requires-manual-review` 標籤(依 19-4b Task 5 規定的 Sally / UX 把關)。
+#   等該 bootstrap PR 合併後,引導路徑永久變成死碼 —— 之後每次都走
+#   verify-only 分支(冪等:find 計數本身就是唯一真相,不依賴任何外部狀態)。
+#
+# 為什麼用 `pnpm run test:visual` (AC #3),而不用 `nx affected -t e2e:visual`:
+#   原因記在 story 19-5 Dev Notes「Nx target vs npm script decision」:
+#   (1) 今天 apps/web 上根本沒有 `e2e:visual` target,做法等同 test.yml:284
+#   也是直接呼叫 `npx playwright test --shard=...`;(2) `nx affected` 只有
+#   當「圖上有理由可以跳過」時才有價值 —— 而下面的 `paths:` filter 已經在
+#   觸發層就做掉了(在 runner 開機前就跳過,可省約 30 秒,反觀 runner 跑起來
+#   後再判斷只省約 5 秒);(3) `nx affected` 需要在 `pull_request` 事件上
+#   接好 base/head SHA、且需要更深的 checkout。對 19-5 的預算而言,直接呼叫
+#   npm script 比較乾淨。若未來有 story 找到對 visual 真有 Nx cache 效益的
+#   場景,再回頭評估即可。
+#
+# 首次執行的順序邊界情況 (story Dev Notes):
+#   本 story 自身的 PR (PR-19-5) 才是工作流檔案首次出現的時機。它的
+#   `Visual Regression / PR` 檢查跑在 ubuntu-24.04 → Playwright 產出 -linux
+#   PNG;此時尚無 `-linux.png` 基準可比 → 測試會失敗(這是 Playwright 的
+#   正確語意:基準缺漏即視為失敗,不會放水)。本工作流設計上會在 PR-19-5
+#   合併後的「第一次」main push 自動引導。合併流程:覆寫該尚未為 required
+#   的檢查、合併、main job 觸發、bootstrap 分支觸發、bootstrap PR 合併,之
+#   後每次 PR 都會乾淨通過。把本檢查設為 `required`(經 branch protection)
+#   是擁有者合併後在 web UI 上一次點擊的事 (AC #2)。
+#
+# 依賴:
+#   tests/visual/components.visual.spec.ts (19-4) + 已提交的 262 張 `-darwin`
+#   基準 (19-4 + 19-4b) + 開發限定的 /test/gallery route + playwright.config.ts
+#   裡的 `visual` Playwright project。本工作流原樣消費以上契約
+#   ([@contract-v1] 於 19-4 AC #1/#2/#5)。
+#
+# 參考:
+#   - Story file: _bmad-output/implementation-artifacts/19-5-github-actions-visual-regression-pr.md
+#   - Audit doc:  _bmad-output/audit/visual-baseline-19-4.md
+#   - 決策樹:     tests/visual/README.md §Platform-suffix L82–L96
+#   - Rule 22:    project-context.md §「Rule 22 — Epic Retro Design-Drift Audit」
+# ============================================================================
+
+name: Visual Regression
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      # AC #1 — 只在「設計渲染」相關面動到時才觸發。
+      - 'apps/web/src/components/**'
+      - 'apps/web/src/routes/**'
+      - 'apps/web/src/styles/**'
+      - 'apps/web/tailwind.config.js'
+      - 'apps/web/src/index.css'
+      - 'apps/web/src/main.tsx'
+      - 'tests/visual/**'
+      - 'playwright.config.ts'
+      - 'package.json'
+      - '.github/workflows/visual-regression.yml'
+  push:
+    branches: [main, develop]
+    # AC #6 — main 一律跑全套(刻意「不掛 `paths:` filter」),目的是抓住
+    # 像 dependency 升版、Tailwind 傳遞性變更、或 runner image 的
+    # fontconfig+freetype 安全更新等不在元件路徑下的漂移。
+  workflow_dispatch: {}
+
+env:
+  CI: true
+
+jobs:
+  pr:
+    name: PR
+    if: github.event_name == 'pull_request'
+    # AC #5 — 不要改成 ubuntu-latest,見 story 19-5 AC #5。
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    # AC #7 — PR concurrency:同 PR 強制推送會自動取消前一輪。
+    concurrency:
+      group: visual-regression-${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+
+      - name: Install Node dependencies
+        run: pnpm install --frozen-lockfile
+
+      # 只裝 Chromium —— 不裝 webkit/firefox(每次省約 1 GB / 約 30 秒;
+      # `visual` Playwright project 本設計上就是 Chromium-only,見
+      # playwright.config.ts L148–L162)。
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      # 把 SPA 編出來,讓 /test/gallery 能從 `dist/apps/web/` 靜態取用。
+      # 不需要 Go 後端 —— visual project 透過 gallery fixtures mock 資料
+      # (依 19-4 Task 2「no network — props directly」原則)。
+      - name: Build frontend
+        run: npx nx build web --configuration=production
+        env:
+          NODE_ENV: production
+
+      # 沿用 test.yml:271-282 的前端伺服模式。`--single` 啟用 SPA 後備
+      # (未知路徑 → index.html) —— TanStack Router 的客戶端路由(包含
+      # /test/gallery)需要這個。
+      - name: Start frontend (static preview)
+        run: |
+          npx serve dist/apps/web -l 4200 --single &
+          for _ in {1..30}; do
+            if curl -s http://localhost:4200 > /dev/null 2>&1; then
+              echo "Frontend ready"
+              break
+            fi
+            sleep 1
+          done
+
+      # AC #3 — 用 npm script(不用 `nx affected -t e2e:visual`)。這個
+      # script 會對著已提交基準呼叫 `playwright test --project=visual`。
+      # AC #2 — 純驗證,失敗時絕對不可自動更新基準。
+      - name: Run visual regression (verify-only)
+        run: pnpm run test:visual
+
+      # AC #2 — 上傳 Playwright 差異產物(actual.png、diff.png、traces),
+      # 給審查者除錯失敗的 PR 檢查用。
+      - name: Upload diff artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-regression-diffs-pr-${{ github.run_id }}
+          path: test-results/
+          retention-days: 14
+          if-no-files-found: ignore
+
+  main:
+    name: Main
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    # AC #5 — 不要改成 ubuntu-latest,見 story 19-5 AC #5。
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    permissions:
+      # `contents: write` + `pull-requests: write` 只有「首次 Linux 基準
+      # 引導路徑」需要(peter-evans/create-pull-request 會 commit `-linux`
+      # PNG 並開出 bootstrap PR)。若未來移除 bootstrap 分支,請收緊回
+      # `{contents: read}`。
+      contents: write
+      pull-requests: write
+    # AC #7 — main concurrency:用獨立 group key,避免 PR 取消波及 main
+    # push;同 main 上連續 push 採排隊而不取消(`cancel-in-progress: false`)。
+    concurrency:
+      group: visual-regression-main
+      cancel-in-progress: false
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+
+      - name: Install Node dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Build frontend
+        run: npx nx build web --configuration=production
+        env:
+          NODE_ENV: production
+
+      - name: Start frontend (static preview)
+        run: |
+          npx serve dist/apps/web -l 4200 --single &
+          for _ in {1..30}; do
+            if curl -s http://localhost:4200 > /dev/null 2>&1; then
+              echo "Frontend ready"
+              break
+            fi
+            sleep 1
+          done
+
+      # AC #4 — Linux 基準存在性檢查。對「snapshot 資料夾不存在」做防禦
+      # (19-4b 之後正常情況下不會發生,但留著無害):`find` 退出碼非 0
+      # 就用 `2>/dev/null` 吞掉、用 `wc -l` 強制取數值。冪等:一旦
+      # `-linux.png` 出現,這個計數永遠 > 0,bootstrap 分支就是死碼。
+      - name: Check Linux baseline presence
+        id: check-linux
+        run: |
+          linux_count=$(find tests/visual/components.visual.spec.ts-snapshots -name '*-linux.png' 2>/dev/null | wc -l | tr -d ' ')
+          linux_count=${linux_count:-0}
+          echo "linux_baselines=$linux_count" >> "$GITHUB_OUTPUT"
+          echo "Linux baseline count: $linux_count"
+
+      # AC #4 verify-only 分支 —— bootstrap PR 合併後,每次 main push 都
+      # 走這條。
+      - name: Run visual regression (verify-only)
+        if: steps.check-linux.outputs.linux_baselines != '0'
+        run: pnpm run test:visual
+
+      # AC #4 bootstrap 分支 —— 本工作流落地後,第一次 main push「只跑
+      # 一次」。寫入完整 `-linux` PNG 集 + 在 _bmad-output/audit/visual-baseline-19-4.md
+      # 追加一行來源紀錄,格式精確比照 tests/visual/README.md L92。
+      - name: Bootstrap Linux baselines
+        if: steps.check-linux.outputs.linux_baselines == '0'
+        run: |
+          set -euo pipefail
+          pnpm run test:visual:update
+          DATE_UTC=$(date -u +%Y-%m-%d)
+          AUDIT_DOC=_bmad-output/audit/visual-baseline-19-4.md
+          if [ ! -f "$AUDIT_DOC" ]; then
+            echo "::error::Expected audit doc missing: $AUDIT_DOC"
+            exit 1
+          fi
+          {
+            echo ""
+            echo "Linux baselines bootstrapped ${DATE_UTC} via ubuntu-24.04"
+          } >> "$AUDIT_DOC"
+
+      # AC #4 — 透過 peter-evans/create-pull-request@v6 開出一次性 bootstrap
+      # PR。該 action 自動把「建分支 + commit + 開 PR」一次完成,且重跑時
+      # 具冪等性(同名 head 分支 → 更新既有 PR,而非重複開新的)。固定
+      # `@v6` 主版本(依該 action 建議;`@v7` 至 2026-05 仍在 beta)。
+      - name: Open Linux-baseline bootstrap PR
+        if: steps.check-linux.outputs.linux_baselines == '0'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: chore/bootstrap-linux-baselines-${{ github.run_id }}
+          base: ${{ github.ref_name }}
+          commit-message: 'chore(visual): bootstrap Linux baselines'
+          title: 'chore(visual): bootstrap Linux baselines'
+          labels: requires-manual-review
+          delete-branch: true
+          body: |
+            本 PR 由 `.github/workflows/visual-regression.yml` (story 19-5)
+            在首次執行時自動產生。它把 CI runner 產出的 `-linux` PNG 基準
+            commit 入庫,讓視覺基準從「`-darwin` 單平台」(dev 機器,story
+            19-4 + 19-4b)轉為「`-darwin` + `-linux`」(dev + CI)雙平台。
+
+            **為什麼會出現這個 PR**
+            - Story 19-4 + 19-4b 已 commit 262 張 `-darwin` PNG(Apple Core
+              Text 字體渲染,dev 機器產出)。
+            - Linux 字體渲染(fontconfig + freetype + DejaVu / Noto /
+              Liberation glyphs)在像素層級就不同。Sally 已於 19-4b 批准
+              `-darwin` 的「內容」;這裡只預期會看到「渲染」漂移(字體
+              hinting、emoji glyph、sub-pixel 定位)。
+            - 依 19-4b Task 5 Party Mode 2026-05-14 的裁決:由 CI 工作流
+              在首次執行時自動補齊 Linux 基準(Option B)。決策紀錄見
+              `tests/visual/README.md` §Platform-suffix 與
+              `_bmad-output/audit/visual-baseline-19-4.md`。
+
+            **為什麼貼上 `requires-manual-review`**
+            - Sally / UX 把關。請肉眼掃過 `-linux` 變體 vs 已提交的
+              `-darwin` 集合。預期只有「渲染漂移」,不該有「內容漂移」。
+            - Murat 在 19-4b Task 5 設下的條件:這個 PR 就是把 `-darwin`
+              從「primary」位置退場前,Sally 必須再參與一次的閘門。
+
+            **合併後**
+            - 工作流的 bootstrap 條件從此永遠為 false(一旦
+              `*-linux.png` 存在,該檢查就跳過)。之後每次 main push 都會
+              對著 `-darwin` (Mac dev) 與 `-linux` (CI) 兩套基準跑
+              verify-only —— Playwright 的 platform-suffix 慣例自然支援。
+
+            **參考**
+            - Story:`_bmad-output/implementation-artifacts/19-5-github-actions-visual-regression-pr.md` AC #4
+            - 19-4b Task 5:`_bmad-output/implementation-artifacts/19-4b-visual-baseline-bulk-fill.md`
+            - 決策樹:`tests/visual/README.md` §Platform-suffix L82–L96
+            - 稽核軌跡:`_bmad-output/audit/visual-baseline-19-4.md`
+              (這次執行追加的 `Linux baselines bootstrapped …` 行,就在
+              本 PR 的 diff 裡)。
+
+      # AC #2 — 失敗時上傳差異產物(bootstrap 之後,則是 verify-only 路徑
+      # 失敗時)。bootstrap 路徑不會產生 test-results/,有
+      # `if-no-files-found: ignore` 就不會出錯。
+      - name: Upload diff artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-regression-diffs-main-${{ github.run_id }}
+          path: test-results/
+          retention-days: 14
+          if-no-files-found: ignore

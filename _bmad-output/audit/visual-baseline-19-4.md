@@ -33,6 +33,42 @@ Component node id (Category-A `// Implements: Component/X (id)` header), or the 
 Burn-in: `pnpm run test:visual` re-run ×4 (post-`:update`) — all green, 0 flake. (`reducedMotion`
 + `animations:'disabled'` makes the CSS-driven hover/focus states deterministic.)
 
+## CI wiring (LIVE since story 19-5, 2026-05-18)
+
+**✅ DONE — see `.github/workflows/visual-regression.yml` + story
+`_bmad-output/implementation-artifacts/19-5-github-actions-visual-regression-pr.md`.**
+
+19-5 landed the `Visual Regression` GitHub Actions workflow:
+- **PR job** (`Visual Regression / PR`) runs `pnpm run test:visual` against the committed
+  baselines on every PR touching `apps/web/src/{components,routes,styles}/**` /
+  `tailwind.config.js` / `index.css` / `main.tsx` / `tests/visual/**` /
+  `playwright.config.ts` / `package.json` / the workflow file itself. Fail → ❌ check on
+  the PR; combined with the branch-protection "Required check" rule the owner enables
+  out-of-band, blocks merge. Diff artifacts (`actual.png`, `diff.png`, traces) uploaded
+  with 14-day retention as `visual-regression-diffs-pr-${{ github.run_id }}`.
+- **Main job** (`Visual Regression / Main`) runs on every push to `main`/`develop`
+  without a `paths:` filter (drift can enter via dependency bumps, transitive Tailwind
+  changes, or runner-image security patches that ship between deliberate-rebless PRs).
+- **Runner** pinned to `ubuntu-24.04` (NOT `ubuntu-latest`). Image bumps follow the
+  Baseline-update discipline below: deliberate-rebless PR labeled `requires-manual-review`,
+  own commit, audit-doc line append `Linux baselines re-blessed {YYYY-MM-DD} via {new}
+  (previous: {old})`.
+- **First-run bootstrap** (implemented per the decision tree below): on the first
+  main-push after the workflow lands, the main job detects no `-linux.png` baselines,
+  runs `pnpm run test:visual:update`, appends a `Linux baselines bootstrapped {YYYY-MM-DD}
+  via ubuntu-24.04` line to this doc, and opens a `chore(visual): bootstrap Linux baselines`
+  PR labeled `requires-manual-review` via `peter-evans/create-pull-request@v6`. Once
+  that PR merges, the bootstrap path is dead code forever (idempotent: the `find` count
+  of `-linux.png` files is the single source of truth).
+
+Operational follow-up the owner does post-merge (a single web-UI click): GitHub →
+Settings → Branches → Branch protection rule for `main`/`develop` → "Require status
+checks to pass before merging" → tick `Visual Regression / PR`. The workflow MAKES the
+check appear in PR UI; making it required is the policy click the workflow can't perform
+itself (story 19-5 AC #2 + Completion Notes follow-up).
+
+---
+
 **Platform suffix — DECIDED 19-4b Task 5 (2026-05-14): Linux baselines are bootstrapped by 19-5's
 CI on first run (Option B).** Committed set is currently `-darwin` (dev machine). 19-5's CI
 workflow (`.github/workflows/visual-regression.yml`, Linux runner) will, on its first execution,
