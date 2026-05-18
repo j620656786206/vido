@@ -62,8 +62,9 @@ useEffect(() => {
   BISECT_MODE=dev BASE_URL=http://localhost:4200 \
     pnpm exec playwright test tests/e2e/bisect-bugfix-19-4b-1.spec.ts --project=chromium
   ```
-  Outputs JSON to `bisect-bugfix-19-4b-1-${MODE}.json`. The spec re-attaches a `console.error` wrapper via `addInitScript` to capture `new Error().stack` (React 18's max-update-depth warning has no component-stack arg, so the JS call-site stack is the only signal). Kept post-fix as the AC #2 re-verification tool.
-- **Targeted one-shot used for this verdict:** `/tmp/probe-targeted.mjs` (inline `node -e`-style script, 6 fixtures × dev+preview). Phase B for the full 123-walk stalled in `page.evaluate` drain after ~5 min on multiple runs — the targeted form short-circuits to the answer in ~30 s.
+  Outputs JSON to `bisect-bugfix-19-4b-1-${MODE}.json`. The spec re-attaches a `console.error` wrapper via `addInitScript` to capture `new Error().stack` (React 18's max-update-depth warning has no component-stack arg, so the JS call-site stack is the only signal). Kept post-fix as the AC #2 regression gate (the spec now `expect`s `multi.warnCount === 0` and `offenderCount === 0`, hard-failing if the callback-identity loop ever returns).
+- **Targeted one-shot used for THIS verdict:** `/tmp/probe-targeted.mjs` (inline `node -e`-style script, 6 fixtures × dev). Phase B for the full 123-walk stalled in `page.evaluate` drain after ~5 min on multiple runs — the targeted form short-circuits to the answer in ~30 s.
+- **⚠️ Committed JSON vs spec output shape:** the committed `bisect-bugfix-19-4b-1-dev.json` in this folder was written by the `/tmp/probe-targeted.mjs` one-shot above, NOT by the Playwright spec, and carries fields the spec does not (`method`, `notes`, per-fixture `notes`). A fresh `pnpm exec playwright test …` run will OVERWRITE this file with the spec's leaner shape (top-10 `componentFrames` for Phase A, top-5 per fixture, no `method`/`notes`). The richer committed snapshot is intentionally preserved as the verdict-of-record; if you re-run the spec, copy or rename the prior file first to retain the original captures.
 
 ## Side-Discovery (out of scope, file follow-up)
 

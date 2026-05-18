@@ -388,4 +388,64 @@ describe('useParseProgress', () => {
 
     expect(onConnected).toHaveBeenCalled();
   });
+
+  // Regression test for bugfix-19-4b-1 — callback-prop-identity loop. If a future
+  // change re-introduces callbacks into the `handleEvent` / `connect` dep arrays,
+  // every render with a fresh inline `options` literal would re-construct the
+  // EventSource. The ref-stable refactor in useParseProgress.ts keeps `connect`
+  // identity-stable per mount, so reconnects only happen on taskId change or
+  // manual reconnect — NOT on every parent re-render.
+  it('does not reconnect on parent rerender with fresh inline options (bugfix-19-4b-1)', async () => {
+    let constructCount = 0;
+    class TrackingMockEventSource extends MockEventSource {
+      constructor(url: string) {
+        super(url);
+        constructCount++;
+      }
+    }
+    vi.stubGlobal('EventSource', TrackingMockEventSource);
+
+    // Hook callback rebuilds the options object on every render — matches
+    // `FloatingParseProgressCard.tsx:54` (the offender pattern this fix targets).
+    const { rerender } = renderHook(
+      ({ taskId }) =>
+        useParseProgress(taskId, {
+          onParseStarted: () => {},
+          onStepCompleted: () => {},
+          onParseCompleted: () => {},
+          onError: () => {},
+        }),
+      {
+        initialProps: { taskId: 'task-123' },
+      }
+    );
+
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+
+    const baselineConstructCount = constructCount;
+    expect(baselineConstructCount).toBeGreaterThan(0);
+
+    // Force 5 rerenders with the SAME taskId. Each render creates a fresh
+    // inline `{ onParseStarted, … }` literal. Pre-fix: callback identity
+    // churns → handleEvent identity churns → connect identity churns →
+    // main useEffect re-fires → EventSource reconstructed each rerender
+    // (would yield +5 constructions). Post-fix: callbacksRef + `[taskId]`
+    // deps keep connect identity stable → useEffect deps unchanged → no
+    // reconnect (yields +0).
+    for (let i = 0; i < 5; i++) {
+      rerender({ taskId: 'task-123' });
+      await act(async () => {
+        await vi.runAllTimersAsync();
+      });
+    }
+
+    expect(
+      constructCount - baselineConstructCount,
+      'EventSource must NOT be reconstructed when callbacks alone churn'
+    ).toBe(0);
+
+    vi.stubGlobal('EventSource', MockEventSource);
+  });
 });

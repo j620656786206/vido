@@ -16,21 +16,26 @@
  *     stack frames under `apps/web/src/components/`.
  *
  * Writes structured JSON to
- * `_bmad-output/implementation-artifacts/bisect-bugfix-19-4b-1-{dev,preview}.json`.
+ * `_bmad-output/implementation-artifacts/bisect-bugfix-19-4b-1-${MODE}.json`
+ * (default MODE=dev).
  *
- * Run twice — once against `nx serve web` (port 4200, React 18 StrictMode active)
- * and once against `nx run web:preview --port=4201` (prod build, StrictMode no-op):
+ * Run against `nx serve web` (port 4200, React 18 StrictMode active):
  *
- *   BISECT_MODE=dev      BASE_URL=http://localhost:4200 \
+ *   BISECT_MODE=dev BASE_URL=http://localhost:4200 \
  *     pnpm exec playwright test tests/e2e/bisect-bugfix-19-4b-1.spec.ts --project=chromium
  *
- *   BISECT_MODE=preview  BASE_URL=http://localhost:4201 \
- *     pnpm exec playwright test tests/e2e/bisect-bugfix-19-4b-1.spec.ts --project=chromium
+ * NOTE: a preview-mode (port 4201, prod build) probe is NOT supported because
+ * `apps/web/src/routes/test/gallery.tsx:90-97` gates the route on
+ * `!import.meta.env.PROD` — the gallery returns "Access Denied" in any prod
+ * build, so preview cannot render fixtures. Bucket D was therefore ruled out
+ * STRUCTURALLY (the loop is callback-prop-identity drift, StrictMode-
+ * independent), not empirically. See bisect-bugfix-19-4b-1.md § "Bucket D
+ * ruled out (preview probe limitation)".
  *
- * Bucket verdict matrix:
- *   - Phase A dev > 0  AND Phase A preview > 0  AND Phase B has offender(s) → A or B
- *   - Phase A dev > 0  AND Phase A preview > 0  AND Phase B per-id sum ≈ 0  → C (harness-only)
- *   - Phase A dev > 0  AND Phase A preview == 0                              → D (StrictMode artifact)
+ * Bucket verdict matrix (dev-only probe):
+ *   - Phase A dev > 0  AND Phase B has offender(s) → A (single) or B (cluster)
+ *   - Phase A dev > 0  AND Phase B per-id sum ≈ 0 → C (harness-only)
+ *   - Phase A dev == 0                            → resolved, no offender
  *
  * Skipped in non-chromium projects so a `pnpm test:e2e` run picks the spec up exactly
  * once (the per-fixture walk takes ~5 min; running it × 5 browsers would be wasteful
@@ -136,6 +141,17 @@ test.describe('@bisect-19-4b-1 max-update-depth probe', () => {
         return orig(...args);
       };
     });
+    // Playwright route handlers run in REVERSE order of registration (LIFO):
+    // the most-recently added matching handler wins. So the catch-all MUST be
+    // registered FIRST, and specific stubs registered AFTER it, for the
+    // specific stubs to win their patterns.
+    //
+    // Catch-all for any /api/v1/* — return empty 200 so dev (with vite proxy
+    // forwarding to API:8080) and preview (no proxy) see equivalent network
+    // behavior even when no specific stub matches.
+    await page.route('**/api/v1/**', (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
+    );
     // Setup-status stub so `__root.tsx` doesn't redirect to /setup before reaching the gallery.
     await page.route('**/api/v1/setup/status', (route) =>
       route.fulfill({
@@ -149,19 +165,13 @@ test.describe('@bisect-19-4b-1 max-update-depth probe', () => {
     // infrastructure pre-loads most fixture data, so most fixtures never hit the
     // network — these 3 endpoints are the ones whose consumers (ExploreBlock for
     // content, library filter UI for genres) read keys that fixtures didn't seed.
-    // Stubbing here keeps the dev/preview comparison identical regardless of API state.
+    // These MUST be registered AFTER the catch-all above so LIFO matching picks
+    // them first for their patterns.
     await page.route('**/api/v1/library/genres', (route) =>
       route.fulfill({ status: 500, contentType: 'application/json', body: '{"error":"stub"}' })
     );
     await page.route('**/api/v1/explore-blocks/*/content', (route) =>
       route.fulfill({ status: 500, contentType: 'application/json', body: '{"error":"stub"}' })
-    );
-    // Catch-all for any other /api/v1/* — return empty 200 so dev (with vite proxy
-    // forwarding to API:8080) and preview (no proxy) see equivalent network behavior.
-    // Routes added later match first (Playwright reverse-priority), so the specific
-    // 500 stubs above still win for their patterns.
-    await page.route('**/api/v1/**', (route) =>
-      route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
     );
   });
 
@@ -169,9 +179,11 @@ test.describe('@bisect-19-4b-1 max-update-depth probe', () => {
     page,
   }) => {
     // Multi-fixture render (~3 s settle for all 123) + 123 per-fixture nav × ~1.5 s
-    // settle each ⇒ ~3-5 min wall clock. 20 min budget covers worst case (slow Vite
-    // recompiles on dev mode after many sequential navigations).
-    test.setTimeout(20 * 60 * 1000);
+    // settle each ⇒ ~3-5 min wall clock. 10 min budget covers worst case (slow Vite
+    // recompiles on dev mode after many sequential navigations) without parking CI
+    // for a runaway 20 minutes — escalate manually if the budget is hit, since a
+    // hang likely indicates a probe regression worth surfacing fast.
+    test.setTimeout(10 * 60 * 1000);
 
     // ---------- Phase A: multi-fixture browse mode (also discovers fixture ids) ----------
     const phaseA = attachWarningCollector(page);
@@ -279,5 +291,22 @@ test.describe('@bisect-19-4b-1 max-update-depth probe', () => {
     const summary = `[bisect-${MODE}] multi=${multi.warnCount} · per-fixture sum=${perFixtureSum} · offenders=${offenderCount}/${results.length} · ${OUT_PATH}`;
     test.info().annotations.push({ type: 'bisect-summary', description: summary });
     console.log(summary);
+
+    // CI regression gate (AC #2): post-fix the loop must stay closed forever.
+    // Spec doubles as the regression assertion — if a future change re-introduces
+    // the callback-prop-identity churn, these expects fail loudly instead of
+    // silently leaving a stale JSON on disk.
+    expect(
+      multi.warnCount,
+      'Phase A multi-fixture browse must emit 0 "Maximum update depth exceeded" warnings'
+    ).toBe(0);
+    const offendersList = results
+      .filter((r) => r.warnCount > 0)
+      .map((r) => `${r.id}=${r.warnCount}`)
+      .join(', ');
+    expect(
+      offenderCount,
+      `Phase B per-fixture isolation must report 0 offenders; got: ${offendersList || 'none'}`
+    ).toBe(0);
   });
 });

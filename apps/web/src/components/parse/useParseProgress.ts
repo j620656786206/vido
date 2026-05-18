@@ -105,9 +105,12 @@ export function useParseProgress(
   // limiter trips at 50, emitting "Maximum update depth exceeded"). Stashing the
   // callbacks in a ref and reading them at call time keeps `handleEvent` / `connect`
   // identity-stable across render cycles while preserving the latest callback closure
-  // each render (the "stable function with mutable ref" idiom). The ref is written
-  // inside `useEffect` (no deps → runs after every commit) to satisfy React 19's
-  // `react-hooks/refs` rule that forbids ref assignment during render.
+  // each render (the "stable function with mutable ref" idiom — standard React 18
+  // pattern, also forward-compatible with React 19's pending `react-hooks/refs`
+  // rule that forbids in-render ref assignment). `useLayoutEffect` would tighten
+  // the write to before paint, but isn't needed here: every `callbacksRef.current`
+  // read happens inside async SSE event handlers, never in the same synchronous
+  // render that wrote the ref, so post-commit timing is safe.
   const callbacksRef = useRef({
     onConnected,
     onParseStarted,

@@ -80,13 +80,13 @@ type GallerySearchParams = {
 // bugfix-19-4b-1 (pre-existing failure fix, Epic 9c Retro AI-2): TanStack Router's
 // default JSON-based search parser DOES parse numeric-looking strings — `?manifest=1`
 // arrives as NUMBER 1, not STRING '1', so the strict `=== '1'` check introduced by
-// 19-4b Task 6 CR L2 silently broke manifest mode (validateSearch returned undefined
-// → router stripped the param → manifest never activated → `test:visual` timed out
-// on `[data-testid="component-gallery-manifest"]`). Accept all three observable
-// forms — string '1', number 1, boolean true — to be tolerant of TanStack Router
-// parser variations across versions. CR L2's tightening to `=== '1'` only was an
-// over-correction (the more permissive form is the correct contract for a boolean
-// query-string flag).
+// 19-4b Task 6 CR L2 (refs: commit `3547269`) silently broke manifest mode
+// (validateSearch returned undefined → router stripped the param → manifest never
+// activated → `test:visual` timed out on `[data-testid="component-gallery-manifest"]`).
+// Accept all three observable forms — string '1', number 1, boolean true — to be
+// tolerant of TanStack Router parser variations across versions. The permissive
+// form is the correct contract for a boolean query-string flag; CR L2's intent
+// was to tighten typing, but it missed that the parser's coercion target is NUMBER.
 export const Route = createFileRoute('/test/gallery')({
   component: ComponentGalleryPage,
   validateSearch: (search: Record<string, unknown>): GallerySearchParams => ({
