@@ -71,7 +71,19 @@ export function trackPid(pid: number): void {
  */
 async function completeSetupWizard(apiUrl: string): Promise<void> {
   // Check if setup is needed
-  const statusRes = await fetch(`${apiUrl}/setup/status`);
+  let statusRes: Response;
+  try {
+    statusRes = await fetch(`${apiUrl}/setup/status`);
+  } catch (err) {
+    // Backend unreachable (e.g., visual-regression CI doesn't start the Go API
+    // because gallery fixtures mock all data — see
+    // .github/workflows/visual-regression.yml). The root route's useSetupStatus
+    // query also fails and returns undefined data, so __root.tsx won't redirect
+    // to /setup. Safe to skip.
+    const msg = err instanceof Error ? err.message : String(err);
+    console.log(`   Setup status check unreachable (${msg}), skipping setup completion`);
+    return;
+  }
   if (!statusRes.ok) {
     console.log('   Setup status check failed, skipping setup completion');
     return;

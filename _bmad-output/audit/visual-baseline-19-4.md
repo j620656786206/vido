@@ -466,3 +466,5 @@ using this harness; material drift there → tracked `bugfix-N` stories.
 **None this story.** 19-4 builds the diff *tool*; it does not run the component-vs-`.pen` *diff*
 (that's 19-8). The delivered baselines were spot-checked and render correctly; the `screen-section`/
 `utility` `data-pen-node` values are carried straight from the 19-3 `// Implements:` headers.
+
+Linux baselines bootstrapped 2026-05-18 via ubuntu-24.04

@@ -122,6 +122,17 @@ test.describe('@bisect-19-4b-1 max-update-depth probe', () => {
       browserName !== 'chromium',
       'bisect probe is browser-agnostic (React internal warning) — run once in chromium only'
     );
+    // /test/gallery is gated behind `!import.meta.env.PROD` (gallery.tsx:105) so a
+    // production-build CI run returns "Access Denied". This bisect probe is for
+    // local development reproduction only — it relies on Vite dev mode where
+    // `import.meta.env.PROD === false`. CI E2E shard runs `nx build --configuration=production`
+    // + `npx serve dist`, which permanently triggers the prod gate and makes Phase A's
+    // `ids.length > 0` assertion impossible. Skip in CI (no value lost — the actual
+    // regression gate is the `useParseProgress.spec.ts` unit test added by 19-4b-1 CR M1).
+    test.skip(
+      process.env.CI === 'true',
+      'bisect probe is local-only — prod-build CI cannot reach /test/gallery (Access Denied gate)'
+    );
     // Seed an in-page wrapper around console.error that captures `new Error().stack`
     // every time a Maximum-update-depth warning fires. React 18 emits the message
     // string only (no component stack arg), so we synthesise a JS stack on the call
