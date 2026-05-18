@@ -190,6 +190,7 @@ Claude Opus 4.7 (1M context) — `claude-opus-4-7[1m]`
 - 🔒 **Rule 7 Wire Format: N/A** — pure CI / 0 Go / 0 error codes generated.
 - 🔗 **AC Drift Check: N/A** — new CI subsystem, no prior story implements this workflow.
 - 📎 **Contract Stamps: FOUND** — 5 stamped ACs in this story ([@contract-v1] on AC #1-#5); upstream 19-4 [@contract-v1] AC #1/#2/#5 acknowledged in Dev Notes Rule 20 section; no upstream contract bump.
+- 🔧 **Pre-existing fix (Epic 9c Retro AI-2 — inline option):** `tests/support/global-setup.ts` `completeSetupWizard()` did not wrap its `fetch()` call in try/catch — the `if (!statusRes.ok)` guard caught HTTP-error responses but NOT network/connection failures. Locally fine (Playwright's `webServer` config starts Go backend first) but CI for 19-5 deliberately omits the Go backend (visual fixtures mock all data; `__root.tsx`'s `useSetupStatus` query also fails and `setupStatus?.needsSetup` resolves to `undefined` → no `/setup` redirect → gallery renders cleanly). The unhandled `TypeError: fetch failed` crashed Playwright's globalSetup before any test ran (run `26027580453` — Bootstrap Linux baselines step, 2026-05-18T10:21:50Z). Fix: wrap the fetch in try/catch with a `console.log` skip + inline comment pointing back to the visual-regression workflow. 5-line surgical change, no test logic affected. Files: `tests/support/global-setup.ts` (1 modification, +11/-1 lines). ESLint clean, Prettier clean, tsc clean. Tracked here per Step 7 inline-fix option (no separate sprint-status backlog entry needed — fix landed in same story; visible in Files Modified above).
 
 ### File List
 
@@ -197,12 +198,13 @@ Claude Opus 4.7 (1M context) — `claude-opus-4-7[1m]`
 
 - `.github/workflows/visual-regression.yml` — the workflow file (322 lines).
 
-**Modified files (4):**
+**Modified files (5):**
 
 - `project-context.md` — Last Updated header (L7) extended with 2026-05-18 19-5 entry; Rule 22 tooling line (L742-L758) extended with CI-enforcement clause.
 - `_bmad-output/audit/visual-baseline-19-4.md` — new "## CI wiring (LIVE since story 19-5, 2026-05-18)" section added above the existing Platform-suffix block.
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` — L526 status bumped `ready-for-dev` → `in-progress` (at dev-story start) → `review` (at close-out); preserves SM-bootstrap log for traceability.
 - `_bmad-output/implementation-artifacts/19-5-github-actions-visual-regression-pr.md` — this story file: all 6 tasks + sub-tasks marked `[x]`; Status header bumped to `review`; Dev Agent Record sections populated (Agent Model, Debug Log, Completion Notes List, File List); Change Log appended below.
+- `tests/support/global-setup.ts` — pre-existing fix per Step 7 inline-fix option: wrapped `fetch()` in try/catch so workflows that don't start the Go backend (like 19-5's visual-regression workflow) don't crash Playwright's globalSetup. See "Pre-existing fix" entry in Completion Notes above.
 
 **Files NOT modified (zero-edit boundary preserved):**
 
