@@ -1,0 +1,199 @@
+# Story: Bugfix 19.4b-1 — `/test/gallery` Multi-Fixture Browse Emits "Maximum Update Depth" Warnings (BISECT-GATED)
+
+Status: ready-for-dev
+
+<!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
+<!-- SM Bob /create-story (YOLO) 2026-05-18 — filed by 19-4b Task 6 CR /code-review (Amelia, 2026-05-18) M4: a follow-up to Sally /ux-designer's Obs-3 from the 19-4b Task 4 review 2026-05-14 — not opened at the time because the warnings did NOT perturb committed visual baselines (burn-in v3 5/5 PASS proved PNG content byte-stable). CR's M4 flag: "ALL retro items become sprint-status entries, no exceptions" (memory: feedback_retro_action_items_tracking). -->
+<!-- ⚠️ BISECT-GATED STORY: Task 1 is a ≤30 min Playwright-driven bisection that walks the 123 fixture ids via the 19-4b Task 4 Plan-D `?fixture=<id>` infrastructure and counts console warnings per id. The bisection output dictates whether Tasks 2-3 (the fix) execute as-planned, get narrowed/widened, or close as a project-context.md note (bugfix-10-3 Bucket-A precedent). -->
+<!-- 🔗 AC Drift: N/A (the warnings are DX/code-quality, no behavioural contract changed — 19-4b Task 4 burn-in proved baselines unaffected). · 📎 Contract Stamps: NONE (no new [@contract-vN] on this story; harness contracts 19-4 [@contract-v1] AC #1–#5 untouched). · 🔒 Rule 7 Wire Format: N/A (pure FE — touches `apps/web/src/components/**/*.tsx` source; no Go error codes). · 🎨 UX: N/A — no visible UI change (warnings live in the console; PNG baselines stay byte-identical per AC #4); `ux-design.pen` untouched ⇒ CLAUDE.md screenshot workflow NOT triggered. -->
+<!-- markers-block-end -->
+
+## Story
+
+As a frontend maintainer running `/test/gallery` (live or via the visual spec),
+I want zero "Maximum update depth exceeded" warnings emitted while rendering the 123-fixture multi-fixture browse view,
+so that the gallery's console signal stays clean for future debugging — and so the eventual React 19 upgrade (where Max-update-depth becomes a hard error in some scenarios) does not surface a backlog of latent infinite-render loops as production crashes.
+
+## Acceptance Criteria
+
+1. **[AC #1 — BISECT OUTCOME, BLOCKING ALL OTHER ACs]** Given a Playwright bisection probe that iterates every fixture id in `GALLERY_FIXTURES` (read from `/test/gallery?manifest=1`, then navigates per id to `/test/gallery?fixture=<id>` with `await page.waitForLoadState('networkidle')` then a deterministic settle delay) AND counts `console.warn`/`console.error` messages whose text contains `Maximum update depth exceeded` per id, when the probe completes, then a per-id table MUST be recorded in `_bmad-output/implementation-artifacts/bisect-bugfix-19-4b-1.md` listing every id, its warning count, and the React stack frame topmost in `apps/web/src/components/` for any non-zero count. The bisection MUST classify the result into exactly one bucket and persist the verdict in the bisect doc:
+   - **Bucket A — `single offender` (most likely)**: one fixture id accounts for all warnings. → Tasks 2–3 execute, scoped to that offender. The warning's stack trace identifies the offending component file + line range.
+   - **Bucket B — `small cluster`**: 2–5 fixture ids each emit warnings, all rooted in a SHARED hook (e.g. `useExploreBlockContent`, `useOwnedMedia`) or shared pattern (e.g. inline `onVisible={() => markVisible(index)}` recreated each render). → Tasks 2–3 execute against the shared root cause, not per-fixture.
+   - **Bucket C — `harness-only`**: warnings only fire in MULTI-fixture browse mode (no `?fixture=` filter); each fixture is clean in isolation. → Root cause is overlay collision / cross-fixture state contention; fix lives in the gallery infrastructure, not the component sources. Tasks 2–3 re-targeted accordingly.
+   - **Bucket D — `dev-mode-only`**: warnings fire under `pnpm nx serve web` (React 18 StrictMode active) but NOT under `pnpm nx run web:preview` (prod build, StrictMode no-op). Mirrors the bugfix-10-3 Bucket-A precedent. → Tasks 2–3 collapse; close per AC #6 (project-context.md doc-only entry).
+   - The bisect doc MUST list the exact probe script used (committable under `tests/e2e/bisect-bugfix-19-4b-1.spec.ts` OR an inline `node -e` one-liner pasted into the doc), so a future re-bisection is reproducible. Cap: ≤30 min including write-up.
+
+2. **[applies if AC #1 = Bucket A, B, or C]** Given the offender(s) identified in AC #1, when the fix lands, then re-running the AC #1 bisection probe MUST report **0 "Maximum update depth exceeded" warnings across all 123 fixture ids** (both in single-fixture and multi-fixture browse mode). Other pre-existing `/test/gallery` console messages (e.g. the 3 HTTP 500s on `/api/v1/{library/genres,setup/status,explore-blocks/blk-1/content}` that pre-exist this story — they're network errors the gallery's `seedQueries` doesn't shield against, NOT in scope here) are unaffected.
+
+3. **[applies if AC #1 = Bucket A or B]** Given the canonical React patterns for breaking render→effect→setState loops, when the fix is implemented, then it MUST take ONE of these forms (in priority order — pick the lightest that works) and the choice MUST be documented in Completion Notes with a one-line rationale:
+   - **(a) Lift identity into `useMemo` / `useCallback`** — when an effect's dep array contains an inline lambda or freshly-built object that's stable in identity to the eye but new-on-every-render to React (e.g. `onVisible={() => markVisible(index)}` on `ExploreBlocksList.tsx:121` recreates per render; `ExploreBlock.tsx:59-61`'s `useEffect` re-fires every render as a result).
+   - **(b) Move state into `useState` initializer** — when state is computed from props/context on first mount only and re-deriving it triggers an effect that resets it (the "computed-state mirror" anti-pattern). Reference: bugfix-10-3 spike AC #3 (`useInViewport` lazy initializer pattern).
+   - **(c) Drop the dep with rationale** — when a dep is in the array purely for ESLint's sake but is provably stable (e.g. a Zustand action, a `useQueryClient()` instance). Suppress `react-hooks/exhaustive-deps` on a single line with a `// rationale: ...` comment per the project-context.md Rule-12-adjacent precedent already used in `apps/web/src/routes/test/gallery.tsx:140`.
+   - **(d) Memoise the unstable upstream value** — when an upstream hook returns a new reference each render (e.g. `useQueries` returns a fresh outer array; `tmdbIds = useMemo(..., [contentQueries, anyEnabledInflight])` on `ExploreBlocksList.tsx:102-109` rebuilds the array every render because `contentQueries`'s ref churns even when its `.data` doesn't). Replace with structural-equality memo or extract a stable signature.
+   - **NOT acceptable**: comment-out the failing component, set `enabled: false` on the query to silence the loop, or add a render-count guard like `if (renderCount > 10) return null`. These mask the problem.
+
+4. **[applies always]** Given the 19-4b Task 4 burn-in evidence (v3 5/5 PASS proves PNG content byte-stable), when the fix lands, then **`pnpm run test:visual` MUST stay green on a clean re-run** without re-blessing any of the 262 committed PNGs. Visual diff = 0 across all baselines. If a baseline IS re-blessed, that's a regression of AC #4 — investigate before committing (the warnings should be eliminable without altering rendered pixels because they're a render-cycle inefficiency, not a paint difference).
+
+5. **[applies always]** Given Rule 12 (CI Lint) + Rule 16 (Test Assertion Quality), when the story lands, then `pnpm lint:all` MUST stay **0 errors / 122 warnings** (the bugfix-10-7 / 19-3 / 19-4 / 19-4b baseline); `pnpm nx test web` + `pnpm nx test api` PASS; `pnpm test:e2e --list` MUST report 1663 tests / 36 files unchanged (or include the new `bisect-bugfix-19-4b-1.spec.ts` if it's committed under `tests/e2e/` — record the delta in Completion Notes); `pnpm run test:cleanup` no orphans; `ux-design.pen` untouched.
+
+6. **[applies if AC #1 = Bucket D only]** Given Bucket D (dev-mode-only artifact), when the bisection concludes, then the fix collapses to: (a) one entry appended to `project-context.md`'s `## 🧪 Known dev-mode artifacts` section (alongside the existing "Homepage skeleton flicker" bugfix-10-3 entry) documenting the StrictMode-double-invocation interaction + linking to the bisect doc; (b) sprint-status.yaml entry flipped to `done` with a note that no code changed; (c) close the story with Tasks 2–3 marked `~~[skipped — Bucket D]~~` and a Completion Notes entry referencing AC #6. NO regression test is added (per bugfix-10-3 AC #10 precedent: "permanent dead weight").
+
+7. **Out-of-scope (deferred to follow-ups):**
+   - The 3 pre-existing HTTP 500s on `/api/v1/{library/genres,setup/status,explore-blocks/blk-1/content}` surfaced in the gallery — those are gallery `seedQueries` gaps (specific fixtures don't seed every key their component reads), not max-update-depth offenders. File a separate ticket if Task 1 surfaces the 500s as a CONTRIBUTING factor (e.g. retry-on-error storm interacts with a setState loop). Do not pre-emptively seed every fixture's every key here.
+   - The two other Sally Obs from the 19-4b Task 4 review: Obs-1 (TrailerModal autofocus blurs default/focus baselines) and Obs-2 (HeroBanner image-fallback differs from PosterCard family) — both routed to **19-8** (component-vs-`.pen` diff sweep + `bugfix-N` filing). Touch ONLY if Task 1 finds them implicated in the warnings.
+   - Any `apps/web/src/components/` source edits beyond the specific offender(s) AC #1 identifies. Even if you spot a parallel anti-pattern in a non-warning-emitting component, file a separate bugfix (Rule per `project-context.md` "Don't add features, refactor, or introduce abstractions beyond what the task requires").
+   - React 19 upgrade evaluation. The forward-looking React 19 motivation is a one-line context point in the story summary; the upgrade itself is a separate epic.
+
+## Tasks / Subtasks
+
+> **Cross-Stack Split Check** (Agreement 5, Epic 8 + 9c Retro): Backend tasks = **0** / Frontend tasks = **3** → single story; the `>3 each side` threshold is not met.
+>
+> **Scope inheritance:** the 19-4b harness (Plan-D `?fixture=<id>` + `?manifest=1` route, `GalleryFixtureSeed` seed wrapper, `tests/visual/components.visual.spec.ts` baselines) is the diagnostic substrate this story relies on. No harness change is in scope unless AC #1 lands Bucket C (then a minimal gallery-route fix only). 19-4 `[@contract-v1]` AC #1–#5 are *consumed* unchanged.
+
+### Task 1: BISECT — Per-fixture warning probe (AC: #1) ⏱ ≤30 min — DO THIS FIRST
+
+The 19-4b Task 4 Plan-D infrastructure makes this trivial: each fixture is independently routable via `/test/gallery?fixture=<id>`, so we can isolate the offender(s) by walking the manifest and counting console warnings per id. Land the bisect doc BEFORE writing any fix code — its verdict (Bucket A/B/C/D) decides which of Tasks 2–3 execute and how they're scoped.
+
+- [ ] **1.1 Write the probe.** Two acceptable forms (pick whichever lands fastest):
+  - **(a) Committable Playwright spec** at `tests/e2e/bisect-bugfix-19-4b-1.spec.ts` (preferred if it's reusable for the AC #2 post-fix re-verification). Reads `/test/gallery?manifest=1` to discover ids, then iterates each id via `page.goto('/test/gallery?fixture=<id>')` with `await page.waitForLoadState('networkidle')` + a small settle delay (e.g. `await page.waitForTimeout(500)`). Hooks `page.on('console')` and `page.on('pageerror')`; filters for messages matching `/Maximum update depth exceeded/`; tallies per id. Writes `_bmad-output/implementation-artifacts/bisect-bugfix-19-4b-1.md` with the table at end. Add to `tests/e2e/` only if you decide to keep it post-fix; otherwise delete it on closeout (bugfix-10-3 precedent for "spike spec deleted post-closeout").
+  - **(b) Inline one-shot script** — a `node -e "..."` invocation against the running dev server, with the script body pasted verbatim into the bisect doc. Cheaper if you don't want a committable spec. Use Playwright's `@playwright/test` API directly (`chromium.launch()` → `browser.newPage()`) or fall back to `puppeteer`-style if already on hand.
+- [ ] **1.2 Run dev + prod.** Start `pnpm nx serve web` (port 4200, React 18 `<StrictMode>` active per `apps/web/src/main.tsx:11`) AND `pnpm nx run web:preview` (port 4201, prod build, StrictMode no-op). Run the probe against BOTH. The dev-vs-prod diff is what classifies Bucket D — if dev emits warnings and prod is silent, the verdict is Bucket D regardless of which fixture id "wins" in dev. Reference the bugfix-10-3 spike pattern for dual-mode probing: `_bmad-output/implementation-artifacts/spike-bugfix-10-3-findings.md` § "Methodology".
+- [ ] **1.3 Record per-id counts + stack-trace summaries.** Per fixture id, log: (a) warning count under dev, (b) warning count under prod, (c) for any non-zero dev count, the topmost stack frame whose source file lives under `apps/web/src/components/` (the React internal frames in `react-dom_client.js` are noise — the offender lives in your code). Hint: Playwright's `console.text()` may truncate long stacks; use `await msg.args()[0].jsonValue()` if you need the full stack object.
+- [ ] **1.4 Write the bisect doc.** Create `_bmad-output/implementation-artifacts/bisect-bugfix-19-4b-1.md` with: (a) the verdict (Bucket A/B/C/D), (b) the per-id table (123 rows OR a narrowed table if you can short-circuit once an offender's identified — but make sure you've checked ALL ids before claiming "single offender" status), (c) the topmost-component stack frames for non-zero ids, (d) the probe script reproducibility note (link to the spec OR paste the one-liner). Length: aim for ≤2 KB — this is a verdict doc, not an essay.
+- [ ] **1.5 HALT-AND-DECIDE GATE.** Surface the verdict to the user before continuing to Task 2. The user picks: (i) proceed with Tasks 2–3 against the identified offender; (ii) narrow scope (e.g. only fix the single hottest offender and defer the rest); (iii) Bucket D path → AC #6 doc-only close.
+
+### Task 2: Fix the offender (AC: #2, #3) — conditional on Task 1.5 verdict
+
+Run only if Task 1.5 = Bucket A, B, or C. The shape of this task depends on which bucket; the subtasks below cover the most likely branch (Bucket A/B with a component-source root cause). Adapt — and record the adaptation in Completion Notes — if Task 1 surfaced something different.
+
+- [ ] **2.1 Apply the fix in the smallest possible diff.** Pick one of AC #3's forms (a)–(d); favour (a) `useCallback`/`useMemo` lift before (b) state-init, before (c) dep drop, before (d) upstream memoisation — lightest fix first. If the offender is one of the prime suspects from "Prime suspects" below, the suspect's annotated line range is your starting probe — but the bisect doc's stack trace is the authoritative pointer.
+- [ ] **2.2 Update the affected component's `// Implements:` header doc-comment** if you altered hook ordering or pattern in a way that materially changes how the component participates in the render cycle. Most fixes (a)–(c) don't need this; fix (d) often does.
+- [ ] **2.3 No new test required UNLESS the fix is non-obvious.** Per bugfix-10-3 AC #10 spirit, a regression test for "this useEffect doesn't loop" is brittle and rarely catches real regressions. Skip it unless the AC #1 bisect surfaced a subtle root cause that future maintainers might re-introduce — in which case a focused `*.spec.tsx` test with `renderHook` + a render-counter (bugfix-10-3 Task 5.2 pattern) is acceptable. Document the skip/add decision in Completion Notes.
+
+### Task 3: Re-verify + regression + close (AC: #2, #4, #5)
+
+- [ ] **3.1 Re-run the AC #1 probe** against `pnpm nx serve web` AND `pnpm nx run web:preview`. Expected: 0 warnings across all 123 ids in both modes. If a warning persists for any id, the fix didn't fully address Task 1's verdict — narrow to that id and iterate, or escalate the verdict (e.g. Bucket A → Bucket B if a second offender was masked by the first).
+- [ ] **3.2 Visual regression** (AC #4): `pnpm run test:visual` clean re-run. Expected: 1 passed (or whatever the current pass count is); ZERO baselines re-blessed. If a baseline diff appears, do NOT re-bless — investigate why the fix changed rendered pixels (the warnings are a render-cycle inefficiency, not a paint difference; a baseline diff suggests the fix went beyond the intended scope).
+- [ ] **3.3 Lint + unit + e2e + cleanup gates** (AC #5): `pnpm lint:all` 0/122; `pnpm nx test web` + `pnpm nx test api` PASS; `pnpm test:e2e --list` 1663/36 (or +1 if you kept the bisect spec — note the delta in Completion Notes); `pnpm run test:cleanup` no orphans.
+- [ ] **3.4 Update sprint-status.yaml** entry transition: `bugfix-19-4b-1-gallery-max-update-depth-warnings: backlog → ready-for-dev → in-progress → review` with a full Completion Notes-style summary line (verdict, fix form picked, regression gate results, AC Drift / Contract Stamps / Rule 7 / UX bindings, commit message). Set Story Status to `review`. `/code-review` runs next on a different LLM context (workflow tip).
+
+## Dev Notes
+
+### Why this story exists / where it sits
+
+- **Origin chain:** Sally /ux-designer review of 19-4b Task 4 (2026-05-14) recorded Obs-3 — "~5-7 'Maximum update depth' console warnings in live multi-fixture browse mode". She flagged it as **DX-only, not a visual-baseline reliability issue** (burn-in v3 5/5 PASS proved PNG content byte-stable across runs; the warnings don't perturb committed baselines). Amelia /dev-story Task 4 closed without filing a follow-up; Amelia /code-review Task 6 CR M4 (2026-05-18) caught the missing sprint-status entry, filed the row (sprint-status.yaml `bugfix-19-4b-1-...`), and routed the bisect+fix work to this story.
+- **Why now, not 19-8:** 19-8 owns *visual* drift (component-vs-`.pen` diff + `bugfix-N` filing for material drift). These warnings are *render-cycle* drift — orthogonal scope. Bundling them into 19-8 would muddy the design-vs-code drift narrative and split this fix's review-context between two unrelated reviewers (UX vs DX). One small story, one tight scope.
+- **Forward-looking motivation:** React 19 tightens its render-cycle invariants — some "Max update depth exceeded" warnings that are currently *warnings* (silently caught by React 18's depth limiter) become hard errors. The longer we sit on a latent infinite-render loop, the more likely it surfaces as a real prod crash during the React 19 upgrade. Catch it now while the harness makes bisection cheap.
+- **Why BISECT-GATED, not "just fix the suspects":** Sally's narrative names 4 *likely* offenders (homepage-explore-block, homepage-explore-blocks-list, dashboard-recent-media-panel, library-library-grid) — these are intelligent guesses based on which fixtures consume the 3 500-failing endpoints. They are NOT empirically confirmed. Spending 30 min on a per-fixture probe via the Plan-D `?fixture=<id>` route is cheaper than spending 2-4 hours fixing a wrong component, then re-fixing. The bugfix-10-3 spike precedent applies: empirical verdict first, code change after.
+
+### Architecture / constraints — read before implementing
+
+- **Pure FE, no backend.** Zero Go files, zero migrations, zero swagger. Cross-stack split N/A.
+- **Source-of-change scope:** ONE (likely 1, possibly up to 3) component file under `apps/web/src/components/`. The fix is almost certainly a `useEffect` / `useMemo` / `useCallback` adjustment — single-line or single-block.
+- **Rule 21 (Implements: header).** The offending file already carries its `// Implements:` header (enforced by `local/implements-pen-node-id` ESLint rule since 19-3); your fix must preserve it. If your fix moves the file, update the header reference per the 19-3 sweep (`_bmad-output/audit/drift-19-3-2026-05.md`).
+- **Rule 22 + harness invariance.** The 19-4 / 19-4b visual-regression harness is your safety net here. AC #4 requires `pnpm run test:visual` to stay green WITHOUT re-blessing baselines — if your fix changes a rendered pixel, you've gone beyond scope. The Plan-D `?fixture=<id>` route is your bisection tool (AC #1) AND your post-fix re-verification tool (AC #2).
+- **Determinism.** Bisection probe MUST run with a stable settle delay (`page.waitForLoadState('networkidle')` + e.g. 500 ms timeout, NOT `waitForTimeout(50)`). Console warnings emitted during a React 18 StrictMode double-mount transient can be misleadingly attributed to a fixture if the probe samples before the render cycle stabilises. The 19-4b Task 4 v6→v8 flake-resolution pattern (raised `page.goto` timeout to 60s with `waitUntil: 'domcontentloaded'`) is the precedent.
+- **DON'T conflate the 3 pre-existing 500s with the warnings.** The 500s come from `/api/v1/{library/genres,setup/status,explore-blocks/blk-1/content}` — gallery `seedQueries` doesn't shield against them because not every fixture seeds every endpoint its component reads. They appear in the console as `[error]`, NOT as max-update-depth warnings. They MAY be a CONTRIBUTING factor (a retry-on-error storm interacting with a setState loop), but they're NOT the primary defect this story is fixing. AC #7 explicitly defers the 500s.
+- **`<StrictMode>` is the right default for dev.** Do NOT propose removing or weakening it as a fix — Bucket D path is "document the dev-only artifact + close" (AC #6), NOT "disable StrictMode". The bugfix-10-3 precedent is the canonical guidance.
+
+### Prime suspects (Sally's narrative; investigate FIRST during AC #1 — but trust the bisect, not the narrative)
+
+These are starting probes for the AC #1 bisection, NOT a pre-decided answer. The bisect doc's verdict is authoritative.
+
+1. **`apps/web/src/components/homepage/ExploreBlocksList.tsx:102-109`** — `useMemo` dep includes `contentQueries` (the array returned by `useQueries`). `useQueries` returns a **new outer array reference on every render** (well-documented React Query characteristic), so the `useMemo` re-runs every render and produces a new `ids: number[]` array each time. That feeds `useOwnedMedia(tmdbIds)` → `useMemo(() => normaliseIds(tmdbIds), [tmdbIds])` re-runs → new `normalised` array → `useQuery({ queryKey: ownedMediaKeys.lookup(normalised), ... })` may detect a "new" key shape each render. **Likely AC #3 fix:** form (d) — structural-equality memo on `tmdbIds` (compare the sorted-numeric signature, not the array ref), OR shape-stable extraction via `useMemo` on a derived primitive (e.g. `tmdbIds.join(',')`).
+2. **`apps/web/src/components/homepage/ExploreBlock.tsx:59-61`** — `useEffect` deps `[isInViewport, eager, onVisible]`. `onVisible` is `() => markVisible(index)` from `ExploreBlocksList.tsx:121` (inline lambda, recreated every render). So the effect's dep array sees a "new" function every render, re-fires the effect every render. The effect calls `markVisible(index)` → `setVisibleIndices((prev) => prev.has(index) ? prev : ...)` — the `prev.has(index)` bail-out *does* prevent a re-render in steady state, but in transient states (e.g. when StrictMode's double-mount races with the parent's re-render), it can trip. **Likely AC #3 fix:** form (a) — wrap the parent's `onVisible` in `useCallback(() => markVisible(index), [markVisible, index])`.
+3. **`apps/web/src/components/dashboard/RecentMediaPanel.tsx`** — quick scan suggests only `useState(true)` for collapsible state; unlikely to be the primary offender on its own. But its data-fetching hook chain (whatever `useRecentMedia` looks like) might exhibit smell #1's pattern.
+4. **`apps/web/src/components/library/LibraryGrid.tsx`** — uses `useState` for menu state + several `useCallback`s. The menu's `setMenuState(null)` is called inside event handlers, not effects — unlikely to loop. More suspicious: any hook chain that reads `/api/v1/library/genres` (the 500-failing endpoint) and re-fetches on error.
+5. **Shared hooks worth grepping:** `useExploreBlockContent` (`apps/web/src/hooks/useExploreBlocks.ts:29-37`, `retry: 1` on a 500 → one retry then error → if any consumer mirrors the error state into local state, that's a loop), `useOwnedMedia` (`apps/web/src/hooks/useOwnedMedia.ts:49-90`, `retry: 1` likewise; downstream `useMemo` chain returns a new `OwnedMediaState` object each time the `query.isLoading` flips, which it does on retry).
+
+### Anti-patterns to avoid
+
+- **Don't disable StrictMode.** It's the right default for dev (project-context.md § "Known dev-mode artifacts"). If the verdict is Bucket D, document the artifact and close.
+- **Don't `enabled: false` the query.** That hides the loop instead of fixing it; in prod the query is `enabled: true` and the loop comes back.
+- **Don't add `if (renderCount > 10) return null` guards.** This is a code smell that the underlying re-render trigger is unsolved.
+- **Don't pre-emptively seed every endpoint in every fixture.** The 500s are an orthogonal issue (AC #7); fixing them via `seedQueries` is plausible but is a separate change ("Don't add features beyond what the task requires", per `CLAUDE.md`).
+- **Don't add a regression test for a "this effect doesn't loop" assertion unless it's surgical.** Render-count tests are brittle; the bugfix-10-3 AC #10 precedent ("permanent dead weight") applies.
+- **Don't refactor adjacent code.** If you spot a parallel anti-pattern in a non-warning-emitting component during bisection, file a separate bugfix. Scope discipline.
+
+### Testing standards (project-context.md)
+
+- **Visual regression (AC #4):** `pnpm run test:visual` on a clean re-run. 0 baselines re-blessed expected.
+- **Lint gate (Rule 12, AC #5):** `pnpm lint:all` 0/122. Any new warning means the fix introduced an `as any` or skipped a hook dep without rationale comment.
+- **Unit / E2E (AC #5):** `pnpm nx test web` + `pnpm nx test api` PASS; `pnpm test:e2e --list` 1663/36 (or +1 if bisect spec is kept under `tests/e2e/`).
+- **Cleanup (project-context "Test Process Cleanup"):** `pnpm run test:cleanup` MUST report no orphans after each spec/probe run.
+- **Test assertion quality (Rule 16):** if a regression test IS added (Task 2.3), use `toBeInTheDocument` / specific matchers — no `toBeTruthy()` / `toBeFalsy()`.
+
+### Rule 20 / Rule 21 / Rule 22 linkage
+
+- **Rule 20 (Contract Stamps):** this story carries NO `[@contract-vN]` stamps. The warnings are a runtime defect, not a public-API contract. Upstream 19-4 `[@contract-v1]` AC #1–#5 are *consumed unchanged* — implicit-v1 ack, no Change Log row needed.
+- **Rule 21 (Implements: header):** the offender's `// Implements:` header is already in place (enforced since 19-3). Preserve it across the fix. Don't move the file; don't rename it.
+- **Rule 22 (Design-drift audit):** the visual baselines are the safety net (AC #4 — they must stay byte-identical). This story doesn't extend Rule 22's tooling; it benefits from it.
+
+### Cross-references
+
+- **bugfix-10-3 precedent** (`_bmad-output/implementation-artifacts/bugfix-10-3-skeleton-flicker-on-load.md`): spike-gated story format, Bucket-A → AC #10 doc-only close pattern. Mirror its discipline.
+- **19-4b Task 4 architectural fix** (`_bmad-output/implementation-artifacts/19-4b-visual-baseline-bulk-fill.md` § "Task 4"): the Plan-D `?fixture=<id>` + `?manifest=1` infrastructure this story uses for bisection.
+- **Sally Obs-3 source** (sprint-status.yaml line 524, dated 2026-05-14): the original observation.
+- **19-4b Task 6 CR M4** (sprint-status.yaml line 524, dated 2026-05-18): the formal filing that opened this row.
+- **`project-context.md` § "Known dev-mode artifacts"**: target for AC #6 (Bucket D) closure.
+
+### Project Structure Notes
+
+- **Modified (expected, AC #1 = Bucket A or B):**
+  - **1 file under `apps/web/src/components/`** — the AC #1-identified offender. Likely candidates per Prime Suspects #1–#4 above; final pick is per the bisect verdict.
+  - `_bmad-output/implementation-artifacts/sprint-status.yaml` — status transitions.
+  - `_bmad-output/implementation-artifacts/bugfix-19-4b-1-gallery-max-update-depth-warnings.md` — Tasks marked `[x]`; Dev Agent Record populated.
+- **Created (expected):**
+  - `_bmad-output/implementation-artifacts/bisect-bugfix-19-4b-1.md` — AC #1 verdict + per-id table.
+  - Optionally `tests/e2e/bisect-bugfix-19-4b-1.spec.ts` — kept if reusable, deleted on closeout if one-shot (bugfix-10-3 precedent).
+- **Out of scope (do NOT touch):**
+  - `apps/web/src/routes/test/gallery.tsx` (UNLESS AC #1 = Bucket C — gallery infrastructure root cause).
+  - `apps/web/src/routes/test/-gallery.fixtures.tsx` (UNLESS the fix requires a fixture prop tweak to defeat the loop — last resort; prefer fixing the component itself).
+  - `tests/visual/components.visual.spec.ts` (UNLESS AC #1 = Bucket C).
+  - `tests/visual/components.visual.spec.ts-snapshots/**/*.png` (UNLESS AC #4 fails — investigate before re-blessing).
+  - Any `apps/web/src/components/` source NOT identified by AC #1.
+  - `ux-design.pen` (UX-design source; CLAUDE.md workflow gates on its modification).
+  - `project-context.md` (UNLESS AC #1 = Bucket D — Known-dev-mode-artifacts entry).
+- **Bucket D close (AC #6 only):**
+  - `project-context.md` — appended entry under `## 🧪 Known dev-mode artifacts`.
+  - `_bmad-output/implementation-artifacts/sprint-status.yaml` — `done` directly (skip `review`).
+
+### References
+
+- [Source: _bmad-output/implementation-artifacts/sprint-status.yaml:525] — backlog entry that opened this story (filed by 19-4b Task 6 CR M4, 2026-05-18).
+- [Source: _bmad-output/implementation-artifacts/sprint-status.yaml:524] — 19-4b Task 4 review (Sally /ux-designer 2026-05-14) Obs-3 narrative — the originating observation.
+- [Source: _bmad-output/implementation-artifacts/19-4b-visual-baseline-bulk-fill.md § "Task 4"] — Plan-D `?fixture=<id>` + `?manifest=1` infrastructure (the bisection substrate).
+- [Source: _bmad-output/implementation-artifacts/bugfix-10-3-skeleton-flicker-on-load.md] — SPIKE-GATED format precedent; AC #10 Bucket-A doc-only close pattern.
+- [Source: project-context.md § "🧪 Known dev-mode artifacts"] — target for AC #6 (Bucket D) appendage; existing bugfix-10-3 entry is the format template.
+- [Source: project-context.md § "Rule 12 — Code Quality Checks (CI-based)"] — `pnpm lint:all` invocation + 0/122 baseline.
+- [Source: project-context.md § "Rule 16 — Test Assertion Quality"] — assertion-matcher discipline if a regression test is added.
+- [Source: project-context.md § "Rule 22 — Epic Retro Design-Drift Audit"] — visual baselines as safety net.
+- [Source: apps/web/src/routes/test/gallery.tsx:81-97] — `validateSearch` for `?fixture` / `?manifest` query params (the bisection invocation surface).
+- [Source: apps/web/src/routes/test/gallery.tsx:244-261] — manifest mode render (probe reads this first).
+- [Source: apps/web/src/routes/test/gallery.tsx:263-269] — single-fixture mode filter (probe reads each id from manifest, then navigates here).
+- [Source: apps/web/src/main.tsx:11] — `<StrictMode>` wrapper (Bucket D's root cause signal).
+- [Source: apps/web/src/components/homepage/ExploreBlocksList.tsx:102-109] — Prime Suspect #1 (`useQueries`-derived `useMemo` array-ref churn).
+- [Source: apps/web/src/components/homepage/ExploreBlock.tsx:59-61] — Prime Suspect #2 (`useEffect` with inline-lambda `onVisible` dep).
+- [Source: apps/web/src/hooks/useExploreBlocks.ts:29-37] — `useExploreBlockContent` retry semantics.
+- [Source: apps/web/src/hooks/useOwnedMedia.ts:49-90] — `useOwnedMedia` retry semantics + downstream `useMemo` chain.
+- [Source: _bmad-output/audit/visual-baseline-19-4.md] — committed-baselines table (the 262 PNGs that must stay byte-identical per AC #4).
+- [Source: tests/visual/README.md] — harness invocation + baseline-update discipline.
+
+### Change Log
+
+| Date | Change |
+|------|--------|
+| 2026-05-18 | bugfix-19-4b-1 filed in sprint-status.yaml as `backlog` by 19-4b Task 6 CR M4 (Amelia /code-review), per the `feedback_retro_action_items_tracking` memory ("ALL retro items become sprint-status entries, no exceptions"). Source: Sally /ux-designer Task 4 review 2026-05-14 Obs-3 — DX/code-quality, NOT visual-baseline reliability (burn-in 5/5 PASS proves PNG byte-stability). |
+| 2026-05-18 | SM Bob `/create-story` (YOLO) — `backlog → ready-for-dev`. Story structured as BISECT-GATED (mirrors bugfix-10-3 SPIKE-GATED precedent): Task 1 (≤30 min Playwright probe via 19-4b Task 4 Plan-D `?fixture=<id>`) produces a per-id warning table → classifies into Buckets A (single offender) / B (small cluster) / C (harness-only) / D (dev-mode-only). Tasks 2–3 are the fix + regression; conditional on Task 1.5 verdict. 6 ACs (5 conditional, 1 always); cross-stack split N/A (0 BE / 3 FE). Prime Suspects called out for the bisect to *probe first*, NOT to *trust as the answer*: ExploreBlocksList.tsx:102-109 `useMemo` on `useQueries`-derived array (form-d candidate fix), ExploreBlock.tsx:59-61 `useEffect` with inline-lambda `onVisible` dep (form-a candidate fix), plus shared retry-on-error hooks `useExploreBlockContent` / `useOwnedMedia`. 📎 Contract Stamps: NONE (warnings are runtime defect, not public API). 🔗 AC Drift: N/A (no observable behaviour change on prior stories — 19-4b burn-in already proved baselines unaffected). 🔒 Rule 7 Wire Format: N/A (pure FE). 🎨 UX: N/A (`ux-design.pen` untouched; visual baselines must stay byte-identical per AC #4 ⇒ no Sally review gate). → DEV Amelia `/dev-story` next (use a different LLM than this SM session per workflow tip; CR Amelia `/code-review` after with a third). |
+
+## Dev Agent Record
+
+### Agent Model Used
+
+{{agent_model_name_version}}
+
+### Debug Log References
+
+### Completion Notes List
+
+### File List
