@@ -172,29 +172,28 @@ jobs:
         if: steps.filter.outputs.visual == 'true'
         run: npx playwright install --with-deps chromium
 
-      # 把 SPA 編出來,讓 /test/gallery 能從 `dist/apps/web/` 靜態取用。
-      # 不需要 Go 後端 —— visual project 透過 gallery fixtures mock 資料
-      # (依 19-4 Task 2「no network — props directly」原則)。
-      - name: Build frontend
-        if: steps.filter.outputs.visual == 'true'
-        run: npx nx build web --configuration=production
-        env:
-          NODE_ENV: production
-
-      # 沿用 test.yml:271-282 的前端伺服模式。`--single` 啟用 SPA 後備
-      # (未知路徑 → index.html) —— TanStack Router 的客戶端路由(包含
-      # /test/gallery)需要這個。
-      - name: Start frontend (static preview)
+      # 啟用 Vite dev server (`nx serve web`),不是 `nx build` + `npx serve`。
+      # 原因:`/test/gallery` 在 production build 中被故意排除 ——
+      # `apps/web/src/routes/test/gallery.tsx` 用 `!import.meta.env.PROD && (...)`
+      # short-circuit 保證 NAS deployment 看不到 dev-only gallery(story 19-4
+      # CR closeout M1 的安全考量)。`nx build --configuration=production`
+      # 會讓 `import.meta.env.PROD === true` → gallery 永遠空白 → visual spec
+      # `waitForSelector('[data-testid="component-gallery-manifest"]')` 超時。
+      # 用 `nx serve web`(Vite dev,`PROD=false`)跟本地 `playwright.config.ts`
+      # webServer 的設定一致。背景啟動,迴圈等就緒。
+      - name: Start frontend (Vite dev server)
         if: steps.filter.outputs.visual == 'true'
         run: |
-          npx serve dist/apps/web -l 4200 --single &
-          for _ in {1..30}; do
+          npx nx serve web > /tmp/nx-serve.log 2>&1 &
+          for _ in {1..120}; do
             if curl -s http://localhost:4200 > /dev/null 2>&1; then
               echo "Frontend ready"
               break
             fi
             sleep 1
           done
+          # 印出最後 30 行 log 方便除錯(僅在超時情況下有意義;啟動成功時無害)
+          tail -n 30 /tmp/nx-serve.log || true
 
       # AC #3 — 用 npm script(不用 `nx affected -t e2e:visual`)。這個
       # script 會對著已提交基準呼叫 `playwright test --project=visual`。
@@ -254,21 +253,19 @@ jobs:
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Build frontend
-        run: npx nx build web --configuration=production
-        env:
-          NODE_ENV: production
-
-      - name: Start frontend (static preview)
+      # 跟 PR job 同樣理由用 Vite dev server —— `/test/gallery` 在 production
+      # build 中被 `!import.meta.env.PROD` guard 排除,只有 dev mode 渲染。
+      - name: Start frontend (Vite dev server)
         run: |
-          npx serve dist/apps/web -l 4200 --single &
-          for _ in {1..30}; do
+          npx nx serve web > /tmp/nx-serve.log 2>&1 &
+          for _ in {1..120}; do
             if curl -s http://localhost:4200 > /dev/null 2>&1; then
               echo "Frontend ready"
               break
             fi
             sleep 1
           done
+          tail -n 30 /tmp/nx-serve.log || true
 
       # AC #4 — Linux 基準存在性檢查。對「snapshot 資料夾不存在」做防禦
       # (19-4b 之後正常情況下不會發生,但留著無害):`find` 退出碼非 0
