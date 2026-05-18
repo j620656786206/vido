@@ -111,3 +111,55 @@ projects explicitly) — so the feature-E2E test count is unaffected.
 2. `pnpm run test:visual:update` → new baseline PNGs appear under
    `tests/visual/components.visual.spec.ts-snapshots/components/{id}/`.
 3. Eyeball `/test/gallery` (`pnpm nx serve web`), get UX sign-off, commit baselines + fixture together.
+
+## `GalleryFixture` optional fields (19-4b harness extensions)
+
+Beyond the core `{ id, label, component, props?, penNode, statesOnly?, width? }` shape, the fixture
+interface supports four opt-in extensions added by 19-4b. The authoritative source for prop types
+and JSDoc is the `GalleryFixture` interface in `-gallery.fixtures.tsx:65-99`; this section is a
+quick discovery overview.
+
+- **`openTrigger?: string`** (Task 0c). CSS selector for an `interactive` open state. When set, the
+  gallery emits an additional `<div data-gallery-state="open" data-gallery-open-trigger="…">`
+  block and the visual spec clicks the selector inside the state div before screenshotting, then
+  waits for `:is([role="listbox"], [role="menu"], [role="dialog"])` to be visible (1 s timeout +
+  `.catch` fallback for popups that don't carry one of those roles). Add `'open'` to `statesOnly`
+  to opt the fixture in. Reference fixture: `library-sort-selector` (4-state: default/hover/focus/
+  open; `openTrigger: '[data-testid="sort-selector-button"]'`).
+
+- **`routePath?: '/library' | '/downloads' | '/pending' | '/settings'`** (Task 0b). Renders the
+  fixture inside a nested memory `RouterProvider` (`createMemoryHistory({ initialEntries: [routePath] })`)
+  so `useRouterState()` consumers (e.g. `shell/TabNavigation` highlighting the active tab) paint
+  the right state. The four allowed pathnames match `TabNavigation`'s `TABS.matchPaths`. Reference
+  fixture: `shell-tab-navigation` (`routePath: '/library'` → `媒體庫` tab styled active).
+
+- **`seedQueries?: ReadonlyArray<{ queryKey: readonly unknown[]; data: unknown }>`** (Task 3 Step A).
+  Pre-populates the React-Query cache before the component mounts, so `useQuery()`-driven
+  fixtures see seeded data on first read (no `isLoading` flash, no network attempt). Seeds fire
+  synchronously inside a `useState(() => { ... })` initializer in `<GalleryFixtureSeed>`, which
+  runs once during the first render BEFORE children commit. Reference fixtures: any in the Q-bucket
+  (see `_bmad-output/audit/visual-baseline-19-4.md` Story-19-4b sub-tables — entries flagged
+  "Q-bucket — seeded …").
+
+- **`seedStore?: () => void`** (Task 3 Step A). Forward-compatibility hook for Zustand store-driven
+  fixtures (called inside the same `useState` init as `seedQueries`). NOT used by any fixture today
+  — `apps/web/src/components/` has no S-bucket consumers (stores live at the route level per
+  project-context Rule 5). Stays in the interface so a future route-level fixture can opt in.
+
+### Single-fixture-per-page architecture (Task 4 Plan-D)
+
+For fixtures with `position: fixed` overlays (Radix `Dialog.Portal`, custom `fixed inset-0`
+wrappers, side panels), multi-fixture rendering caused pointer-event collisions and made any
+neighbour hover/focus impossible. The gallery route therefore accepts two opt-in search params:
+
+- `?manifest=1` — renders a flat discovery list `<ul><li data-gallery-id>…</li></ul>` (no
+  components mounted, no seeds, no state-divs). The visual spec uses this to enumerate fixture
+  IDs once per run before navigating to each fixture individually.
+- `?fixture=<id>` — filters `GALLERY_FIXTURES` to a single entry. Each fixture renders on its own
+  page → zero cross-fixture interference.
+- Neither param set → full gallery (dev-browse mode).
+
+When a fixture's state-div has zero bbox (Radix portals escape to `document.body`; `position:fixed`
+children leave the inline flow), the spec falls back to a viewport screenshot
+(`expect(page).toHaveScreenshot(...)`) so the overlay paint is still captured. 12 fixtures hit
+this fallback path today (the 12 `fixed inset-0` overlays — see audit doc Plan-D note).
