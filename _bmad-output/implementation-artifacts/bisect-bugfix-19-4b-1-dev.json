@@ -1,0 +1,52 @@
+{
+  "mode": "dev",
+  "baseURL": "http://localhost:4200",
+  "method": "targeted probe (Phase A multi-fixture + 6-fixture isolation sample) — see bisect-bugfix-19-4b-1.md for rationale on short-circuiting the full 123-walk",
+  "totalIds": 6,
+  "multi": {
+    "warnCount": 265,
+    "componentFrames": [
+      "/src/components/parse/useParseProgress.ts:225:5",
+      "/src/components/parse/useParseProgress.ts:240:7"
+    ]
+  },
+  "perFixtureSum": 134,
+  "offenderCount": 2,
+  "notes": "ui-button's 39-warning bleed-through is cross-page leakage from the prior parse fixture's unmount cleanup — its componentFrames is empty (no useParseProgress.ts hit in stacks during ui-button settle). Sally's 4 prime suspects (homepage-explore-blocks-list/explore-block/dashboard-recent-media-panel/library-library-grid) are CLEAN at 0 warnings each — confirms the loop is NOT in those components.",
+  "results": [
+    {
+      "id": "parse-floating-parse-progress-card",
+      "warnCount": 95,
+      "componentFrames": [
+        "/src/components/parse/useParseProgress.ts:225:5",
+        "/src/components/parse/useParseProgress.ts:240:7"
+      ]
+    },
+    {
+      "id": "ui-button",
+      "warnCount": 39,
+      "componentFrames": [],
+      "notes": "Bleed-through from prior fixture's unmount; no useParseProgress.ts frame in stacks during this fixture's settle."
+    },
+    {
+      "id": "homepage-explore-blocks-list",
+      "warnCount": 0,
+      "componentFrames": []
+    },
+    {
+      "id": "homepage-explore-block",
+      "warnCount": 0,
+      "componentFrames": []
+    },
+    {
+      "id": "dashboard-recent-media-panel",
+      "warnCount": 0,
+      "componentFrames": []
+    },
+    {
+      "id": "library-library-grid",
+      "warnCount": 0,
+      "componentFrames": []
+    }
+  ]
+}

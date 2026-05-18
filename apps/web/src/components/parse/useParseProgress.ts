@@ -94,6 +94,43 @@ export function useParseProgress(
   const connectRef = useRef<(() => void) | null>(null);
   const reconnectAttemptsRef = useRef(0);
 
+  // bugfix-19-4b-1 (form-d ref-stable refactor): the 8 `on*` callbacks below are
+  // destructured from `options`, which callers typically pass as an INLINE object
+  // literal recreated each render (precedent: `FloatingParseProgressCard.tsx:54`).
+  // Without this ref, every render produced new callback identities → `handleEvent`
+  // (deps include `onConnected` …) was new each render → `connect` (deps include
+  // `handleEvent`) was new → the main useEffect (deps include `connect`) re-fired
+  // every render → `initializeProgress()` inside re-fired `setProgress({…NEW obj})`
+  // → React never bails out on object-identity → re-render → ∞ (React-18 depth
+  // limiter trips at 50, emitting "Maximum update depth exceeded"). Stashing the
+  // callbacks in a ref and reading them at call time keeps `handleEvent` / `connect`
+  // identity-stable across render cycles while preserving the latest callback closure
+  // each render (the "stable function with mutable ref" idiom). The ref is written
+  // inside `useEffect` (no deps → runs after every commit) to satisfy React 19's
+  // `react-hooks/refs` rule that forbids ref assignment during render.
+  const callbacksRef = useRef({
+    onConnected,
+    onParseStarted,
+    onStepStarted,
+    onStepCompleted,
+    onStepFailed,
+    onParseCompleted,
+    onParseFailed,
+    onError,
+  });
+  useEffect(() => {
+    callbacksRef.current = {
+      onConnected,
+      onParseStarted,
+      onStepStarted,
+      onStepCompleted,
+      onStepFailed,
+      onParseCompleted,
+      onParseFailed,
+      onError,
+    };
+  });
+
   // Initialize default progress
   const initializeProgress = useCallback(
     (filename = 'Unknown') => {
@@ -113,13 +150,16 @@ export function useParseProgress(
   );
 
   // Handle incoming SSE events
+  // Callbacks read from `callbacksRef.current` (see bugfix-19-4b-1 note above);
+  // deps shrink to `[taskId]` only, so handleEvent is identity-stable per mount.
   const handleEvent = useCallback(
     (eventType: ParseEventType, data: unknown) => {
+      const cb = callbacksRef.current;
       switch (eventType) {
         case 'connected':
           setIsConnected(true);
           setIsReconnecting(false);
-          onConnected?.();
+          cb.onConnected?.();
           break;
 
         case 'parse_started': {
@@ -135,7 +175,7 @@ export function useParseProgress(
           };
           setProgress(newProgress);
           setStatus('pending');
-          onParseStarted?.(startedData);
+          cb.onParseStarted?.(startedData);
           break;
         }
 
@@ -145,7 +185,7 @@ export function useParseProgress(
             setProgress(stepData.progress);
             setStatus(stepData.progress.status);
           }
-          onStepStarted?.(stepData);
+          cb.onStepStarted?.(stepData);
           break;
         }
 
@@ -155,7 +195,7 @@ export function useParseProgress(
             setProgress(stepData.progress);
             setStatus(stepData.progress.status);
           }
-          onStepCompleted?.(stepData);
+          cb.onStepCompleted?.(stepData);
           break;
         }
 
@@ -165,7 +205,7 @@ export function useParseProgress(
             setProgress(stepData.progress);
             setStatus(stepData.progress.status);
           }
-          onStepFailed?.(stepData);
+          cb.onStepFailed?.(stepData);
           break;
         }
 
@@ -182,7 +222,7 @@ export function useParseProgress(
           const completedData = data as ParseCompletedData;
           setProgress(completedData.progress);
           setStatus('success');
-          onParseCompleted?.(completedData);
+          cb.onParseCompleted?.(completedData);
           break;
         }
 
@@ -190,7 +230,7 @@ export function useParseProgress(
           const failedData = data as ParseFailedData;
           setProgress(failedData.progress);
           setStatus('failed');
-          onParseFailed?.(failedData);
+          cb.onParseFailed?.(failedData);
           break;
         }
 
@@ -211,16 +251,7 @@ export function useParseProgress(
           console.warn('Unknown parse event type:', eventType);
       }
     },
-    [
-      taskId,
-      onConnected,
-      onParseStarted,
-      onStepStarted,
-      onStepCompleted,
-      onStepFailed,
-      onParseCompleted,
-      onParseFailed,
-    ]
+    [taskId]
   );
 
   // Connect to SSE
@@ -282,10 +313,11 @@ export function useParseProgress(
 
     // Handle errors
     eventSource.onerror = () => {
+      const cb = callbacksRef.current;
       setIsConnected(false);
       const err = new Error('SSE connection failed');
       setError(err);
-      onError?.(err);
+      cb.onError?.(err);
 
       eventSource.close();
       eventSourceRef.current = null;
@@ -305,10 +337,10 @@ export function useParseProgress(
           `SSE connection failed after ${maxReconnectAttempts} attempts`
         );
         setError(maxRetriesErr);
-        onError?.(maxRetriesErr);
+        cb.onError?.(maxRetriesErr);
       }
     };
-  }, [taskId, handleEvent, onError, autoReconnect, reconnectDelay, maxReconnectAttempts]);
+  }, [taskId, handleEvent, autoReconnect, reconnectDelay, maxReconnectAttempts]);
 
   // Store connect function in ref for recursive reconnection
   useEffect(() => {

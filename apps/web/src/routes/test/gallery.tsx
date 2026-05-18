@@ -75,14 +75,26 @@ type GallerySearchParams = {
 // this, fixtures rendering `fixed inset-0` overlays (ui/Dialog, ui/SidePanel, and
 // 10 Task-2/3 custom dialogs) intercept pointer events globally and break every
 // other fixture's hover/focus. The visual spec navigates to `?manifest=1` to
-// discover ids, then `?fixture=<id>` per snapshot. URL query params arrive as
-// strings; the visual spec sets `?manifest=1` literally so a string-equality
-// check is sufficient.
+// discover ids, then `?fixture=<id>` per snapshot.
+//
+// bugfix-19-4b-1 (pre-existing failure fix, Epic 9c Retro AI-2): TanStack Router's
+// default JSON-based search parser DOES parse numeric-looking strings — `?manifest=1`
+// arrives as NUMBER 1, not STRING '1', so the strict `=== '1'` check introduced by
+// 19-4b Task 6 CR L2 silently broke manifest mode (validateSearch returned undefined
+// → router stripped the param → manifest never activated → `test:visual` timed out
+// on `[data-testid="component-gallery-manifest"]`). Accept all three observable
+// forms — string '1', number 1, boolean true — to be tolerant of TanStack Router
+// parser variations across versions. CR L2's tightening to `=== '1'` only was an
+// over-correction (the more permissive form is the correct contract for a boolean
+// query-string flag).
 export const Route = createFileRoute('/test/gallery')({
   component: ComponentGalleryPage,
   validateSearch: (search: Record<string, unknown>): GallerySearchParams => ({
     fixture: typeof search.fixture === 'string' ? search.fixture : undefined,
-    manifest: search.manifest === '1' ? true : undefined,
+    manifest:
+      search.manifest === '1' || search.manifest === 1 || search.manifest === true
+        ? true
+        : undefined,
   }),
 });
 
