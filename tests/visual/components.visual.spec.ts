@@ -119,23 +119,12 @@ test.describe('@visual @story-19-4 component visual baselines', () => {
       });
 
       const section = page.locator(`section[data-gallery-id="${id}"]`);
-      // Wait for the specific section to mount. `waitForLoadState('networkidle')` is
-      // NOT usable here — the app shell carries SSE / long-poll connections that
-      // never reach idle, so per-fixture networkidle would time out the test budget.
-      // Section visibility is the deterministic ready signal.
-      const sectionCount = await section.count();
-      if (sectionCount === 0) {
-        await section.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {
-          /* manifest drift — handled below by sectionCount==0 path */
-        });
-      }
-      if ((await section.count()) === 0) {
-        test.info().annotations.push({
-          type: 'gallery-skip',
-          description: `${id}: section not rendered in single-fixture mode (manifest drift?)`,
-        });
-        continue;
-      }
+      // The manifest is derived from the same `GALLERY_FIXTURES` array that the
+      // `?fixture=<id>` filter applies to, so the section is always rendered for
+      // any id surfaced by the manifest. Wait for visibility to ensure the section
+      // has committed before screenshotting; `waitForLoadState('networkidle')` is
+      // NOT usable — app-shell SSE / long-poll never reach idle.
+      await section.waitFor({ state: 'visible', timeout: 30_000 });
       // Settle web fonts before screenshot — deterministic and short-lived.
       await page.evaluate(() => document.fonts.ready);
 
@@ -186,16 +175,16 @@ test.describe('@visual @story-19-4 component visual baselines', () => {
           // press Tab to enter it. Chromium flags the resulting focus as keyboard
           // modality so `:focus-visible` rules paint correctly. Programmatic
           // `locator.focus()` does not trigger `:focus-visible`.
-          const sentinel: Locator = stateDiv.locator(
-            'xpath=preceding-sibling::*[@data-gallery-sentinel="pre"][1]'
-          );
+          // The gallery route ALWAYS renders the sentinel before each state-div,
+          // so the sentinel-missing branch was dead code (dropped in 19-4b Task 6
+          // CR fix). Zero-size fixtures fall through to the viewport screenshot.
           const focusable: Locator = stateDiv.locator(FOCUSABLE).first();
-          if ((await focusable.count()) > 0 && (await sentinel.count()) > 0 && !isZeroSize) {
+          if ((await focusable.count()) > 0 && !isZeroSize) {
+            const sentinel: Locator = stateDiv.locator(
+              'xpath=preceding-sibling::*[@data-gallery-sentinel="pre"][1]'
+            );
             await sentinel.focus();
             await page.keyboard.press('Tab');
-          } else if ((await focusable.count()) > 0 && !isZeroSize) {
-            // Sentinel missing — fall back to programmatic focus (not :focus-visible).
-            await focusable.focus();
           } else if (!isZeroSize) {
             // No focusable descendant — focus state is identical to default; still capture it.
             await stateDiv.evaluate((el: HTMLElement) => el.scrollIntoView({ block: 'center' }));

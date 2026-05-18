@@ -59,6 +59,17 @@ projects explicitly) — so the feature-E2E test count is unaffected.
    drift away from reality).
 3. A baseline regeneration is **its own commit** — never mixed with logic changes. Commit message:
    `test(visual): rebaseline {component(s)} — {what changed & why}`.
+
+   **Exception — architectural harness changes.** When a spec / gallery-route change _forces_ a
+   baseline regeneration (the new and old baselines can only be interpreted under one architecture
+   each), the spec/route change + the regenerated baselines MUST land atomically in one commit.
+   Reverting only one side would leave the harness broken. Precedents: 19-4b Task 0 (Sally
+   follow-ups A/B/C — spec sentinel/Tab + 4 re-blessed focus baselines + 1 new `open` baseline)
+   and 19-4b Task 4 (single-fixture-per-page Plan-D — spec + gallery search params + 215 new
+   baselines + 12 viewport-mode captures for `fixed inset-0` overlays). Document the exception in
+   the commit body and the story's Completion Notes — do NOT generalise this to pure-baseline
+   rebless work, which still follows the one-commit-per-rebless rule above.
+
 4. **UX (Sally) reviews the rendered gallery** (`/test/gallery`) before a baseline set is committed —
    "first-Sally-approved web rendering, NOT `.pen` export". Record the review in the relevant story's
    Completion Notes.
@@ -116,8 +127,8 @@ projects explicitly) — so the feature-E2E test count is unaffected.
 
 Beyond the core `{ id, label, component, props?, penNode, statesOnly?, width? }` shape, the fixture
 interface supports four opt-in extensions added by 19-4b. The authoritative source for prop types
-and JSDoc is the `GalleryFixture` interface in `-gallery.fixtures.tsx:65-99`; this section is a
-quick discovery overview.
+and JSDoc is the `GalleryFixture` interface in `-gallery.fixtures.tsx` (search for
+`export interface GalleryFixture`); this section is a quick discovery overview.
 
 - **`openTrigger?: string`** (Task 0c). CSS selector for an `interactive` open state. When set, the
   gallery emits an additional `<div data-gallery-state="open" data-gallery-open-trigger="…">`

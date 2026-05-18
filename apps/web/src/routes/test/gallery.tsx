@@ -53,7 +53,7 @@
  * shell (`main.tsx` → `QueryClientProvider` → router), so no extra providers are needed
  * for non-routePath fixtures.
  */
-import { Component, type ErrorInfo, type ReactNode, useMemo, useState } from 'react';
+import { Component, type ErrorInfo, type ReactNode, useMemo, useRef } from 'react';
 import {
   createFileRoute,
   createMemoryHistory,
@@ -74,17 +74,15 @@ type GallerySearchParams = {
 // 19-4b Task 4: search params drive single-fixture-per-page isolation. Without
 // this, fixtures rendering `fixed inset-0` overlays (ui/Dialog, ui/SidePanel, and
 // 10 Task-2/3 custom dialogs) intercept pointer events globally and break every
-// other fixture's hover/focus. The visual spec now navigates to `?manifest=1`
-// to discover ids, then `?fixture=<id>` per snapshot. TanStack Router auto-parses
-// numeric-looking strings — accept '1', 1, and true to be tolerant of the parser.
+// other fixture's hover/focus. The visual spec navigates to `?manifest=1` to
+// discover ids, then `?fixture=<id>` per snapshot. URL query params arrive as
+// strings; the visual spec sets `?manifest=1` literally so a string-equality
+// check is sufficient.
 export const Route = createFileRoute('/test/gallery')({
   component: ComponentGalleryPage,
   validateSearch: (search: Record<string, unknown>): GallerySearchParams => ({
     fixture: typeof search.fixture === 'string' ? search.fixture : undefined,
-    manifest:
-      search.manifest === '1' || search.manifest === 1 || search.manifest === true
-        ? true
-        : undefined,
+    manifest: search.manifest === '1' ? true : undefined,
   }),
 });
 
@@ -152,15 +150,21 @@ function StubbedRouter({ pathname, children }: { pathname: StubRoutePath; childr
 }
 
 /**
- * 19-4b Task 3: Pre-seeds `queryClient` cache (and optionally a Zustand store) for
- * Q-bucket / S-bucket fixtures before their children mount. The `useState` initializer
- * runs once during the first render of this wrapper, BEFORE the children's render
- * subtree commits, so `useQuery()` calls inside the children see the seeded data on
- * their first read (no `isLoading` flash, no network attempt to fall back from).
+ * 19-4b Task 3 (+ Task 6 CR fix): Pre-seeds `queryClient` cache (and optionally a
+ * Zustand store) for Q-bucket / S-bucket fixtures before their children mount.
+ * The seeding fires synchronously during the wrapper's first render — inside the
+ * render body but guarded by `useRef` so it runs exactly once per fixture mount.
+ * Children mount AFTER this render returns, so `useQuery()` calls inside them see
+ * the seeded data on their first read (no `isLoading` flash, no network attempt).
  *
- * Idempotent across re-renders (each `<section>`'s `useState` initializer fires once);
- * idempotent across fixtures (the LAST seeder of a shared `queryKey` wins, mirroring
- * the documented `seedStore` "last fixture wins" semantics — story 19-4b Dev Notes).
+ * Why a `useRef` guard and not `useState`-initializer-as-side-effect: under React 18
+ * StrictMode (active in dev), `useState` initializers are double-invoked, which
+ * would double-fire `seedStore` (caller-provided lambda — not guaranteed idempotent).
+ * `useRef` is the canonical "exactly once per mount" instance flag. `setQueryData`
+ * remains idempotent for the same key+data; the guard primarily protects `seedStore`.
+ *
+ * Idempotent across re-renders (the ref flag flips after first render); "last fixture
+ * wins" across siblings sharing a queryKey (documented `seedStore` semantics).
  *
  * The wrapped `queryClient` is the app shell's instance (`main.tsx` →
  * `QueryClientProvider`) — `useQueryClient()` reads from the nearest provider in
@@ -168,10 +172,13 @@ function StubbedRouter({ pathname, children }: { pathname: StubRoutePath; childr
  */
 function GalleryFixtureSeed({ fx, children }: { fx: GalleryFixture; children: ReactNode }) {
   const queryClient = useQueryClient();
-  // useState init runs synchronously on first render, before any descendant mounts.
-  // Return value is intentionally unused — we only need the side effects to fire
-  // exactly once per fixture mount.
-  useState(() => {
+  // React 19's `react-hooks/refs` rule allows the `ref.current == null` lazy-init
+  // pattern specifically — it's the canonical way to run a side effect "exactly
+  // once per mount" before children commit. The side effects below are the seed
+  // payload; the `null` sentinel flips to `true` so subsequent renders are no-ops.
+  const seededRef = useRef<true | null>(null);
+  if (seededRef.current === null) {
+    seededRef.current = true;
     if (fx.seedQueries) {
       for (const { queryKey, data } of fx.seedQueries) {
         queryClient.setQueryData(queryKey, data);
@@ -180,8 +187,7 @@ function GalleryFixtureSeed({ fx, children }: { fx: GalleryFixture; children: Re
     if (fx.seedStore) {
       fx.seedStore();
     }
-    return null;
-  });
+  }
   return <>{children}</>;
 }
 
@@ -282,10 +288,18 @@ function ComponentGalleryPage() {
 
         <div className="space-y-12">
           {fixturesToRender.map((fx) => {
-            // 19-4b Task 0 Fix C: `open` state is opt-in. Silently drop it if a
-            // fixture forgot to set `openTrigger` (the spec would otherwise click
-            // an undefined selector).
+            // 19-4b Task 0 Fix C: `open` state is opt-in. Drop it if a fixture
+            // forgot to set `openTrigger` (the spec would otherwise click an
+            // undefined selector). Warn in dev so developers notice the mismatch
+            // — 19-4b Task 6 CR fix: silent drop violated `statesOnly` contract.
             const requestedStates = fx.statesOnly ?? ALL_STATES;
+            if (import.meta.env.DEV && requestedStates.includes('open') && !fx.openTrigger) {
+              console.warn(
+                `[gallery] fixture "${fx.id}" requested 'open' state in statesOnly ` +
+                  `but no openTrigger selector — open state will be dropped. ` +
+                  `Either remove 'open' from statesOnly or add an openTrigger.`
+              );
+            }
             const states = requestedStates.filter((s) => s !== 'open' || !!fx.openTrigger);
             const Comp = fx.component;
             const props = fx.props ?? {};
