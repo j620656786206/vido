@@ -73,25 +73,25 @@
 name: Visual Regression
 
 on:
+  # AC #1 觀察契約演進 (2026-05-18):原本 `on.pull_request.paths:` 直接在
+  # trigger 層篩選 —— 但這跟「Branch ruleset 把 `Visual Regression / PR` 設為
+  # required check」相衝(PR 改的檔案不在 paths 內 → workflow 完全不觸發
+  # → check 永遠 "Expected — Waiting" → ruleset 永久 BLOCK)。
+  #
+  # 解法:workflow 在所有 PR 上「都觸發」,改用 job 內第一步的
+  # `dorny/paths-filter@v3` 判斷是否屬於視覺渲染面變更:
+  #   - 屬於 → 跑完整 visual diff 並回報結果
+  #   - 不屬於 → job 早退並回報 success(check 顯示 ✅ 帶 "skipped" 字樣)
+  # check 名稱不變(`Visual Regression / PR`);ruleset 必須通過的承諾不變;
+  # 唯一變化是「對不相關 PR 自動 pass」—— 對下游(ruleset、Rule 22 retros)
+  # 屬於放寬而非收緊,不需 Rule 20 contract bump。
   pull_request:
     branches: [main, develop]
-    paths:
-      # AC #1 — 只在「設計渲染」相關面動到時才觸發。
-      - 'apps/web/src/components/**'
-      - 'apps/web/src/routes/**'
-      - 'apps/web/src/styles/**'
-      - 'apps/web/tailwind.config.js'
-      - 'apps/web/src/index.css'
-      - 'apps/web/src/main.tsx'
-      - 'tests/visual/**'
-      - 'playwright.config.ts'
-      - 'package.json'
-      - '.github/workflows/visual-regression.yml'
   push:
     branches: [main, develop]
-    # AC #6 — main 一律跑全套(刻意「不掛 `paths:` filter」),目的是抓住
-    # 像 dependency 升版、Tailwind 傳遞性變更、或 runner image 的
-    # fontconfig+freetype 安全更新等不在元件路徑下的漂移。
+    # AC #6 — main 一律跑全套,目的是抓住像 dependency 升版、Tailwind
+    # 傳遞性變更、或 runner image 的 fontconfig+freetype 安全更新等不在
+    # 元件路徑下的漂移。
   workflow_dispatch: {}
 
 env:
@@ -114,30 +114,69 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # AC #1 路徑判斷(內部執行,取代原 `on.pull_request.paths:` filter)。
+      # 設計渲染面 = 原 AC #1 列的 10 個 pattern,完整列表見下方。
+      - name: Detect visual-rendering changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            visual:
+              - 'apps/web/src/components/**'
+              - 'apps/web/src/routes/**'
+              - 'apps/web/src/styles/**'
+              - 'apps/web/tailwind.config.js'
+              - 'apps/web/src/index.css'
+              - 'apps/web/src/main.tsx'
+              - 'tests/visual/**'
+              - 'playwright.config.ts'
+              - 'package.json'
+              - '.github/workflows/visual-regression.yml'
+
+      # 不相關 PR 的快速通道:check 直接 ✅,後續步驟全跳過。
+      # `exit 0` 確保 job 回報 success(GitHub ruleset 對「skipped」的解讀
+      # 不一致,但「success」一律算通過)。
+      - name: Skip notice (no visual paths changed)
+        if: steps.filter.outputs.visual == 'false'
+        run: |
+          echo "::notice::No visual-rendering surfaces changed in this PR — skipping visual diff."
+          echo "Paths watched:"
+          echo "  apps/web/src/{components,routes,styles}/**"
+          echo "  apps/web/{tailwind.config.js,src/index.css,src/main.tsx}"
+          echo "  tests/visual/**"
+          echo "  playwright.config.ts"
+          echo "  package.json"
+          echo "  .github/workflows/visual-regression.yml"
+
       - name: Install pnpm
+        if: steps.filter.outputs.visual == 'true'
         uses: pnpm/action-setup@v4
         with:
           version: 9
 
       - name: Setup Node.js
+        if: steps.filter.outputs.visual == 'true'
         uses: actions/setup-node@v4
         with:
           node-version-file: '.nvmrc'
           cache: 'pnpm'
 
       - name: Install Node dependencies
+        if: steps.filter.outputs.visual == 'true'
         run: pnpm install --frozen-lockfile
 
       # 只裝 Chromium —— 不裝 webkit/firefox(每次省約 1 GB / 約 30 秒;
       # `visual` Playwright project 本設計上就是 Chromium-only,見
       # playwright.config.ts L148–L162)。
       - name: Install Playwright Chromium
+        if: steps.filter.outputs.visual == 'true'
         run: npx playwright install --with-deps chromium
 
       # 把 SPA 編出來,讓 /test/gallery 能從 `dist/apps/web/` 靜態取用。
       # 不需要 Go 後端 —— visual project 透過 gallery fixtures mock 資料
       # (依 19-4 Task 2「no network — props directly」原則)。
       - name: Build frontend
+        if: steps.filter.outputs.visual == 'true'
         run: npx nx build web --configuration=production
         env:
           NODE_ENV: production
@@ -146,6 +185,7 @@ jobs:
       # (未知路徑 → index.html) —— TanStack Router 的客戶端路由(包含
       # /test/gallery)需要這個。
       - name: Start frontend (static preview)
+        if: steps.filter.outputs.visual == 'true'
         run: |
           npx serve dist/apps/web -l 4200 --single &
           for _ in {1..30}; do
@@ -160,12 +200,14 @@ jobs:
       # script 會對著已提交基準呼叫 `playwright test --project=visual`。
       # AC #2 — 純驗證,失敗時絕對不可自動更新基準。
       - name: Run visual regression (verify-only)
+        if: steps.filter.outputs.visual == 'true'
         run: pnpm run test:visual
 
       # AC #2 — 上傳 Playwright 差異產物(actual.png、diff.png、traces),
-      # 給審查者除錯失敗的 PR 檢查用。
+      # 給審查者除錯失敗的 PR 檢查用。only-when-visual 條件:不相關 PR 不會
+      # 產出 test-results/,連 artifact 步驟都省。
       - name: Upload diff artifacts
-        if: always()
+        if: always() && steps.filter.outputs.visual == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: visual-regression-diffs-pr-${{ github.run_id }}
