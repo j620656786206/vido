@@ -160,6 +160,40 @@ export default defineConfig({
         reducedMotion: 'reduce', // kill CSS transitions so hover/focus snapshots are stable.
       },
     },
+
+    // Bisect regression (bugfix-19-4b-1-followup) — dev-mode integration regression gate for
+    // the bugfix-19-4b-1 root cause (callback-prop-identity churn → setState loop → React-18
+    // "Maximum update depth exceeded" at /test/gallery). Sibling to `visual` per same
+    // dedicated-directory pattern; testDir is tests/bisect (NOT tests/e2e), so the feature-E2E
+    // projects above never sweep `bisect-*.spec.ts` and the E2E count discipline is preserved.
+    // No viewport / colorScheme / reducedMotion pins — bisect measures console-warning counts
+    // (multi.warnCount === 0, per-fixture offenderCount === 0), not pixels, so render-cycle
+    // defaults are fine. Chromium-only because the React-internal warning text is
+    // browser-agnostic; running ×5 browsers wastes ~15 min for zero signal gain (defence-in-depth
+    // browser-agnostic skip kept inside the spec). Run via `pnpm run test:bisect` against
+    // `nx serve web` (Vite dev mode — /test/gallery is gated behind `!import.meta.env.PROD`,
+    // story 19-4 CR M1 safety boundary, so prod-build CI cannot reach it). CI wiring:
+    // `.github/workflows/bisect-regression.yml` (separate from visual-regression for wall-clock
+    // + path-filter + signal-clarity reasons documented in the story Dev Notes). AC #2
+    // [@contract-v1] — silent rename / testMatch narrowing / webServer swap silently regresses
+    // coverage (same failure class as story 19-5 H2 path-filter dead-pattern).
+    {
+      name: 'bisect',
+      testDir: path.resolve(__dirname, './tests/bisect'),
+      // testMatch is REDUNDANT today (tests/bisect/ holds only bisect-*.spec.ts) but the
+      // AC #2 [@contract-v1] mandates it explicitly: future non-bisect specs added under
+      // tests/bisect/ MUST NOT be swept into this project (would dilute the regression-gate
+      // signal). Mirrors the `visual` project's defensive testMatch posture.
+      testMatch: ['**/bisect-*.spec.ts'],
+      // Per-project retry override (CR 2026-05-19 M2): the bisect spec is an integration
+      // regression gate (AC #2 [@contract-v1] surface) asserting render-cycle hygiene via
+      // strict equality (`multi.warnCount === 0`, `offenderCount === 0`). The global default
+      // `retries: process.env.CI ? 2 : 0` (L48) would silently retry a transient
+      // single-warning result to green, masking real callback-prop-identity regressions of
+      // the bugfix-19-4b-1 class. Pin to 0 so the gate's verdict is the first run's verdict.
+      retries: 0,
+      use: { ...devices['Desktop Chrome'] },
+    },
   ],
 
   // Web server configuration
