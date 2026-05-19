@@ -21,8 +21,12 @@
  *
  * Run against `nx serve web` (port 4200, React 18 StrictMode active):
  *
- *   BISECT_MODE=dev BASE_URL=http://localhost:4200 \
- *     pnpm exec playwright test tests/e2e/bisect-bugfix-19-4b-1.spec.ts --project=chromium
+ *   BISECT_MODE=dev BASE_URL=http://localhost:4200 pnpm run test:bisect
+ *
+ * (The npm script invokes `playwright test --project=bisect`; the project's
+ * config in `playwright.config.ts` pins testDir to `tests/bisect/` and
+ * testMatch to `**\/bisect-*.spec.ts`. CI wiring:
+ * `.github/workflows/bisect-regression.yml`.)
  *
  * NOTE: a preview-mode (port 4201, prod build) probe is NOT supported because
  * `apps/web/src/routes/test/gallery.tsx:90-97` gates the route on
@@ -37,9 +41,12 @@
  *   - Phase A dev > 0  AND Phase B per-id sum ≈ 0 → C (harness-only)
  *   - Phase A dev == 0                            → resolved, no offender
  *
- * Skipped in non-chromium projects so a `pnpm test:e2e` run picks the spec up exactly
- * once (the per-fixture walk takes ~5 min; running it × 5 browsers would be wasteful
- * and the warning is a React internal — browser-agnostic). Bugfix-10-3 spike precedent:
+ * Project-scoped to chromium via `playwright.config.ts` `bisect` project's
+ * `use: { ...devices['Desktop Chrome'] }`. The in-`beforeEach` `test.skip(browserName !==
+ * 'chromium', ...)` is kept as defence-in-depth — if a future config edit removes the
+ * project-level pin and reverts to multi-browser default, the in-spec guard ensures the
+ * spec doesn't silently start running on firefox / webkit (where the React-internal
+ * warning text may differ, leading to false negatives). Bugfix-10-3 spike precedent:
  * `_bmad-output/implementation-artifacts/spike-bugfix-10-3-findings.md` § "Methodology".
  *
  * @tags @bisect @story-19-4b-1
@@ -122,17 +129,10 @@ test.describe('@bisect-19-4b-1 max-update-depth probe', () => {
       browserName !== 'chromium',
       'bisect probe is browser-agnostic (React internal warning) — run once in chromium only'
     );
-    // /test/gallery is gated behind `!import.meta.env.PROD` (gallery.tsx:105) so a
-    // production-build CI run returns "Access Denied". This bisect probe is for
-    // local development reproduction only — it relies on Vite dev mode where
-    // `import.meta.env.PROD === false`. CI E2E shard runs `nx build --configuration=production`
-    // + `npx serve dist`, which permanently triggers the prod gate and makes Phase A's
-    // `ids.length > 0` assertion impossible. Skip in CI (no value lost — the actual
-    // regression gate is the `useParseProgress.spec.ts` unit test added by 19-4b-1 CR M1).
-    test.skip(
-      process.env.CI === 'true',
-      'bisect probe is local-only — prod-build CI cannot reach /test/gallery (Access Denied gate)'
-    );
+    // Runs under the `bisect` Playwright project (Vite dev-mode webServer — `/test/gallery`
+    // is gated behind `!import.meta.env.PROD` per story 19-4 CR M1). Does NOT run under the
+    // feature-E2E projects (chromium/firefox/mobile-*). CI wiring lives in
+    // `.github/workflows/bisect-regression.yml` (bugfix-19-4b-1-followup-bisect-spec-ci-coverage).
     // Seed an in-page wrapper around console.error that captures `new Error().stack`
     // every time a Maximum-update-depth warning fires. React 18 emits the message
     // string only (no component stack arg), so we synthesise a JS stack on the call

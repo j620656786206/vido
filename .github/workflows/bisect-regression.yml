@@ -1,0 +1,296 @@
+# ============================================================================
+# Bisect Regression — PR-blocking 整合層回歸閘
+# ============================================================================
+#
+# Bugfix 19-4b-1 follow-up (story `bugfix-19-4b-1-followup-bisect-spec-ci-coverage`)
+# 把 bugfix-19-4b-1 寫的 bisect spec (`tests/bisect/bisect-bugfix-19-4b-1.spec.ts`)
+# 接上 PR 阻擋型 CI。源頭:bugfix-19-4b-1 根因 —— `FloatingParseProgressCard` 把
+# 新的 `{ onConnected, … }` object literal 每次 render 都重新建立,使
+# `useParseProgress` 的 `handleEvent` deps 連帶換 identity → `useEffect` 反覆
+# re-fire → setProgress 迴圈 → React-18 「Maximum update depth exceeded」 50 次。
+# 已用 `useRef` 在 hook 內穩住 callback identity 修掉(已在 main),但僅靠
+# `useParseProgress.spec.ts` 單一 hook 單元測試保護;此工作流補上「123 fixture
+# 整合層」的 PR 級回歸閘。
+#
+# 本工作流做什麼:
+#   - PR job 在涉及 parse hook / gallery fixture / bisect spec / playwright config
+#     的 PR 上跑 `pnpm run test:bisect`(`playwright test --project=bisect`,
+#     chromium-only,Vite dev mode);失敗 → PR 顯示 ❌(配合擁有者另行在
+#     branch protection 設為必須通過,即阻擋 merge)。
+#   - Main job 在 main / develop push 上跑同一個 verify-only 比對。沒有任何
+#     bootstrap 分支(bisect 不產 snapshot,只 assert numeric counts:
+#     `multi.warnCount === 0`、`offenderCount === 0`)。
+#
+# 為什麼跟 Visual Regression 工作流分家(story Dev Notes):
+#   (i) 牆鐘預算 —— Visual ~45 s(1 spec × 123 fixtures × ~0.35 s/diff);
+#       Bisect ~3–5 min(1 spec × 123 fixtures × ~1.5 s/navigation+settle)。
+#       合併 ~5× 牆鐘,Visual 「視覺面 PR 即時回饋」價值會被吃掉。
+#   (ii) 觸發面分離 —— Visual 路徑 filter 涵蓋整個設計渲染面(components/**
+#        + routes/** + styles + Tailwind config + visual specs)。Bisect 路徑
+#        filter 收窄到 parse hook + gallery fixture stack + bisect specs。
+#        合併會把 bisect 拖進每個視覺 PR(約 10×),浪費 CI 分鐘。
+#   (iii) 失敗模式信號清晰度 —— Visual diff 失敗 = 「渲染變了不該變」→
+#         審查者看 PNG;Bisect 失敗 = 「render-cycle 效率回退」→ 審查者看
+#         console-warning stack。除錯心智模型不同,獨立檢查保信號雜訊比。
+#
+# Runner 版本固定 (沿用 story 19-5 AC #5 政策):
+#   `runs-on: ubuntu-24.04` 是版本化標籤,而非 `ubuntu-latest`。Bisect spec
+#   不依賴像素,但依賴 React DevTool 警告字串穩定 + Vite dev 模組路徑格式穩定
+#   (`/src/components/...`),這些都隨 runner 升版會變;版本化標籤保留升版的
+#   人工 PR 出口。當 GitHub 公告淘汰本標籤時,升版要自成一個 PR,並驗證
+#   `multi.warnCount === 0` 與 `offenderCount === 0` 都還站得住。
+#
+# 為什麼用 `pnpm run test:bisect`(直接 npm script,不用 `nx affected`):
+#   同 story 19-5 的決策依據 —— 觸發層的 `paths:` filter 已經做掉 affected
+#   判斷,在 runner 開機前就跳過;`nx affected` 在 runner 開機後再判斷只省
+#   ~5 秒,還需要更深的 checkout 與 base/head SHA 接線。直接 npm script 比較
+#   乾淨。
+#
+# 為什麼用 Vite dev server(`nx serve web`)而非 prod build(同 visual-regression):
+#   `apps/web/src/routes/test/gallery.tsx` 用 `!import.meta.env.PROD && (...)`
+#   short-circuit 把 `/test/gallery` 隱藏在任何 production build 後(story 19-4
+#   CR M1 的安全考量,NAS deployment 看不到 dev-only gallery)。Prod build CI 跑
+#   `nx build --configuration=production` + `npx serve dist` → `import.meta.env.PROD
+#   === true` → gallery 永遠 "Access Denied" → bisect spec 的
+#   `expect(ids.length).toBeGreaterThan(0)` 結構性無解。把 Playwright 全域
+#   `webServer:` 短路給 `process.env.CI === 'true'` 也是同樣設計
+#   (`playwright.config.ts:167`);dev server 在 workflow 層自己啟,跟
+#   visual-regression workflow 一致。
+#
+# 依賴:
+#   tests/bisect/bisect-bugfix-19-4b-1.spec.ts(bugfix-19-4b-1 撰寫)+ Vite dev
+#   server 可達 `/test/gallery` + playwright.config.ts 裡的 `bisect` Playwright
+#   project(bugfix-19-4b-1-followup AC #2 [@contract-v1] 釘版)。本工作流原樣
+#   消費以上契約;若 `bisect` project 改名 / 收窄 testMatch / 把 webServer 切到
+#   prod build,本工作流會跟著靜默失效(同 story 19-5 H2 path-filter dead-pattern
+#   class)。
+#
+# 第三方 action 釘版策略(沿用 story 19-5 L2 baseline):
+#   - actions/checkout + actions/setup-node + actions/upload-artifact:
+#       major-version tag(官方 GitHub-owned actions)。
+#   - pnpm/action-setup@v4: 官方 pnpm action,major-version tag。
+#   - dorny/paths-filter@v3: 只讀 git diff,無 write 權限。可接受 major-version
+#       tag。本工作流唯一的第三方 action,讓 follow-up SHA-pin 決策跟著 story
+#       19-5 L2 一起評估即可,本 story 不單獨升 baseline。
+#
+# 權限最小化:
+#   本工作流不開 PR、不 commit 任何檔案、無基準引導分支。PR + Main job 都用
+#   `{contents: read}`(沿用 story 19-5 AC #2 的 minimum-privilege 模式)。
+#
+# 操作層 follow-up(擁有者合併後手動點一次):
+#   把 `Bisect Regression / PR` 加入 Settings → Branches → Branch protection
+#   rules → "Require status checks to pass before merging" 必須通過清單。本
+#   workflow 讓 check 出現在 PR UI;設為 `required` 是 web-UI 上一次點擊的事
+#   (同 story 19-5 AC #2 的半 CI / 半政策模式)。
+#
+# 參考:
+#   - Story file: _bmad-output/implementation-artifacts/bugfix-19-4b-1-followup-bisect-spec-ci-coverage.md
+#   - 父 bugfix:  _bmad-output/implementation-artifacts/bugfix-19-4b-1-gallery-max-update-depth-warnings.md
+#   - 鏡像範本:  .github/workflows/visual-regression.yml(story 19-5)
+#   - Bisect spec: tests/bisect/bisect-bugfix-19-4b-1.spec.ts
+#   - Playwright project: playwright.config.ts(`bisect` block,AC #2 [@contract-v1])
+# ============================================================================
+
+name: Bisect Regression
+
+on:
+  # 沿用 story 19-5 AC #1 觀察契約演進的「always-trigger + 內部 paths-filter
+  # 早退」模式 —— PR 一律觸發、check 名稱穩定、ruleset 可安心設為 required
+  # 而不會因為 trigger 層 paths filter 漏掉某些 PR 變成永久 "Expected — Waiting"。
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+    # Main 一律跑全套;捕捉像 dependency 升版、Vite / React 內部行為變動等
+    # 不在元件路徑下的回退。
+  workflow_dispatch:
+
+env:
+  CI: true
+
+jobs:
+  pr:
+    name: PR
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04 # 沿用 story 19-5 AC #5 — do NOT change to ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    # 同 story 19-5 AC #7 — PR concurrency:同 PR 強制推送會自動取消前一輪。
+    concurrency:
+      group: bisect-regression-${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 路徑判斷(內部執行,取代 `on.pull_request.paths:` filter)。
+      # 收窄到 bugfix-19-4b-1 根因實際所在的面 —— parse hook + gallery fixture
+      # stack + bisect specs only。為什麼這麼窄(story Dev Notes):bisect spec
+      # 守的 bug class(callback-prop-identity churn → setState loop)目前只在
+      # parse 子系統出現(bugfix-19-4b-1 Bucket-A 判定:單一 offender =
+      # `FloatingParseProgressCard`)。未來若有另一個 component family 出現同
+      # 模式,等該 bugfix story 再 widen 此 path filter,本 story 不預先放寬。
+      - name: Detect bisect-relevant changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            bisect:
+              - 'apps/web/src/components/parse/**'
+              - 'apps/web/src/routes/test/gallery.tsx'
+              - 'apps/web/src/routes/test/-gallery.fixtures.tsx'
+              - 'tests/bisect/**'
+              - 'playwright.config.ts'
+              - 'package.json'
+              - '.github/workflows/bisect-regression.yml'
+
+      # 不相關 PR 的快速通道:check 直接 ✅,後續步驟全跳過。
+      - name: Skip notice (no bisect-relevant paths changed)
+        if: steps.filter.outputs.bisect == 'false'
+        run: |
+          echo "::notice::No parse-hook / gallery-fixture / bisect-spec surfaces changed in this PR — skipping bisect probe."
+          echo "Paths watched:"
+          echo "  apps/web/src/components/parse/**"
+          echo "  apps/web/src/routes/test/gallery.tsx"
+          echo "  apps/web/src/routes/test/-gallery.fixtures.tsx"
+          echo "  tests/bisect/**"
+          echo "  playwright.config.ts"
+          echo "  package.json"
+          echo "  .github/workflows/bisect-regression.yml"
+
+      - name: Install pnpm
+        if: steps.filter.outputs.bisect == 'true'
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        if: steps.filter.outputs.bisect == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+
+      - name: Install Node dependencies
+        if: steps.filter.outputs.bisect == 'true'
+        run: pnpm install --frozen-lockfile
+
+      # 只裝 Chromium —— `bisect` Playwright project 本設計上就是 chromium-only
+      # (`use: { ...devices['Desktop Chrome'] }`);spec 內部還有 defence-in-depth
+      # 的 `test.skip(browserName !== 'chromium', ...)`,雙重保險。
+      - name: Install Playwright Chromium
+        if: steps.filter.outputs.bisect == 'true'
+        run: npx playwright install --with-deps chromium
+
+      # 啟用 Vite dev server (`nx serve web`)而非 prod build —— `/test/gallery`
+      # 被 `!import.meta.env.PROD` guard 排除,只有 dev mode 渲染。背景啟動,
+      # 迴圈等就緒;fail-fast 沿用 story 19-5 M2 + L4 模式。
+      - name: Start frontend (Vite dev server)
+        if: steps.filter.outputs.bisect == 'true'
+        run: |
+          npx nx serve web > /tmp/nx-serve.log 2>&1 &
+          ready=0
+          for _ in {1..120}; do
+            if curl -s http://localhost:4200 > /dev/null 2>&1; then
+              echo "Frontend ready"
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ready" -ne 1 ]; then
+            echo "::error::Frontend failed to start within 120s — bisect probe cannot run."
+            echo "----- last 100 lines of /tmp/nx-serve.log -----"
+            tail -n 100 /tmp/nx-serve.log || echo "(log unavailable)"
+            exit 1
+          fi
+
+      # 用 npm script(對應 AC #4 — `test:bisect` = `playwright test --project=bisect`)。
+      # 純驗證:spec 用 `expect(multi.warnCount).toBe(0)` + `expect(offenderCount).toBe(0)`
+      # 當作 CI regression gate(bisect-bugfix-19-4b-1.spec.ts L310-L321)。
+      - name: Run bisect regression (verify-only)
+        if: steps.filter.outputs.bisect == 'true'
+        run: pnpm run test:bisect
+
+      # 上傳 Playwright trace / 偵錯產物 + bisect spec 自己寫出的 JSON 摘要,
+      # 供審查失敗的 PR 檢查用。
+      - name: Upload diff artifacts
+        if: always() && steps.filter.outputs.bisect == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: bisect-regression-results-pr-${{ github.run_id }}
+          path: |
+            test-results/
+            _bmad-output/implementation-artifacts/bisect-bugfix-19-4b-1-*.json
+          retention-days: 14
+          if-no-files-found: ignore
+
+  main:
+    name: Main
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04 # 沿用 story 19-5 AC #5 — do NOT change to ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      # Bisect 沒有 baseline bootstrap(spec assert numeric counts,不產 PNG),
+      # 不開 PR、不 commit 任何檔案,因此 main job 也是純 read。
+      contents: read
+    # 同 story 19-5 AC #7 — main concurrency:獨立 group key,避免 PR 取消波及
+    # main push;同 main 上連續 push 採排隊而不取消。
+    concurrency:
+      group: bisect-regression-main
+      cancel-in-progress: false
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+
+      - name: Install Node dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      # 跟 PR job 同樣理由用 Vite dev server。
+      - name: Start frontend (Vite dev server)
+        run: |
+          npx nx serve web > /tmp/nx-serve.log 2>&1 &
+          ready=0
+          for _ in {1..120}; do
+            if curl -s http://localhost:4200 > /dev/null 2>&1; then
+              echo "Frontend ready"
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ready" -ne 1 ]; then
+            echo "::error::Frontend failed to start within 120s — bisect probe cannot run."
+            echo "----- last 100 lines of /tmp/nx-serve.log -----"
+            tail -n 100 /tmp/nx-serve.log || echo "(log unavailable)"
+            exit 1
+          fi
+
+      - name: Run bisect regression (verify-only)
+        run: pnpm run test:bisect
+
+      - name: Upload diff artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bisect-regression-results-main-${{ github.run_id }}
+          path: |
+            test-results/
+            _bmad-output/implementation-artifacts/bisect-bugfix-19-4b-1-*.json
+          retention-days: 14
+          if-no-files-found: ignore
