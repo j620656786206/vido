@@ -143,6 +143,7 @@ jobs:
               - 'tests/bisect/**'
               - 'playwright.config.ts'
               - 'package.json'
+              - 'pnpm-lock.yaml'
               - '.github/workflows/bisect-regression.yml'
 
       # 不相關 PR 的快速通道:check 直接 ✅,後續步驟全跳過。
@@ -157,6 +158,7 @@ jobs:
           echo "  tests/bisect/**"
           echo "  playwright.config.ts"
           echo "  package.json"
+          echo "  pnpm-lock.yaml"
           echo "  .github/workflows/bisect-regression.yml"
 
       - name: Install pnpm

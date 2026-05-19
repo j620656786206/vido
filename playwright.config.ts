@@ -185,6 +185,13 @@ export default defineConfig({
       // tests/bisect/ MUST NOT be swept into this project (would dilute the regression-gate
       // signal). Mirrors the `visual` project's defensive testMatch posture.
       testMatch: ['**/bisect-*.spec.ts'],
+      // Per-project retry override (CR 2026-05-19 M2): the bisect spec is an integration
+      // regression gate (AC #2 [@contract-v1] surface) asserting render-cycle hygiene via
+      // strict equality (`multi.warnCount === 0`, `offenderCount === 0`). The global default
+      // `retries: process.env.CI ? 2 : 0` (L48) would silently retry a transient
+      // single-warning result to green, masking real callback-prop-identity regressions of
+      // the bugfix-19-4b-1 class. Pin to 0 so the gate's verdict is the first run's verdict.
+      retries: 0,
       use: { ...devices['Desktop Chrome'] },
     },
   ],
