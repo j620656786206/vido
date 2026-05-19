@@ -1,0 +1,522 @@
+# ============================================================================
+# TestSprite Monthly — 月度 journey 漂移把關 (cron 0 3 1 * *)
+# ============================================================================
+#
+# Story 19-6 (epic-19 Design-Implementation Drift Audit) 的 journey 半 ——
+# 19-5 視覺 PR 把關抓 pixel drift,本工作流抓 user-flow drift。每月一號早上
+# 03:00 UTC 起跑,讀 `_bmad-output/audit/testsprite-queue.yaml` 排隊清單,以
+# 80% quota cap (120/150 credits) + 30-credit reserve floor 雙重天花板跑下一
+# 批 TestSprite TC*.py 案例,把 queue 進度 commit 回 repo。
+#
+# 為什麼是月排程而不是每個 PR 都跑:
+#   TestSprite Free plan 是 150 credits/month,單一 journey 案例約 5 credits,
+#   62 案例全跑 = 310 credits/月,兩個月才夠跑一輪。把預算花在「single
+#   comprehensive monthly pass」(其他月走 30-credit ad-hoc 餘額即可)是
+#   signal-per-credit 最高的選擇。同時 2026-03-15 的 deferral 備忘已紀錄:
+#   未用完的 credits 在月底會默默歸零,所以「用早 vs 用晚」的差是後者的
+#   credits 直接過期 → 一號早上用 ≈ 給下游回頭 rebless 的 27 天 lead time。
+#
+# Queue rotation:
+#   `_bmad-output/audit/testsprite-queue.yaml` 有 `queue:` 與 `history:` 兩
+#   個區塊。每個月跑掉的案例從 `queue` 移到 `history`(`history` capped at
+#   200,FIFO prune);當 `queue` 空了,下次跑時從 `history` 最舊端搬回
+#   `queue`(繼續 FIFO 旋轉)—— 每個 case 約 2.5 個月被打到一次。
+#
+# 預算雙重天花板 (AC #3):
+#   - `consumption_cap_pct: 80` → 本次最多燒 120 credits(monthly_budget *
+#     consumption_cap_pct / 100),擋「runaway case 一直貴」的最壞情況。
+#   - `reserved_credits: 30` → 不管本次燒幾 credits,只要 remaining ≤ 30,
+#     就停;30 credits 是給「人工 ad-hoc post-deploy 驗證」的保留地板。
+#   兩條同時生效(whichever first),互不取代。
+#
+# 失敗語意分流 (AC #6):
+#   工作流退出碼 ≠ 0 (Actions UI ❌) 只用於「人類必須介入」:
+#     (i)   `TESTSPRITE_API_KEY` 失效或過期(`testsprite_check_account_info`
+#           丟 auth error)
+#     (ii)  `TESTSPRITE_TARGET_URL` 未設定或無法連通
+#     (iii) commit-back step 自己失敗(`git push` 被 branch protection 擋下
+#           或網路故障,3-retry rebase 後仍失敗)
+#   單一案例 `fail` 是「資料」不是「infra failure」—— 工作流退出 0、`fail`
+#   狀態記錄在 queue history 的 `last_status` 欄;將來 19-7 (`testsprite-
+#   quota-warning.yml`) 或一條獨立的「per-case-fail 觸發 GitHub Issue」工作
+#   流可以讀這份 history 開單。這個分流是有意的:Actions email 在 ❌ 時自
+#   動寄出,把它預留給「人類介入」場景,別讓「Vido 自己有回歸」混進來把
+#   信箱塞爆。
+#
+# Runner 版本固定 (AC #1 + 19-5 AC #5 同精神):
+#   `runs-on: ubuntu-24.04` 而非 `-latest`。TestSprite TC*.py 案例有可能
+#   依賴特定 fontconfig / freetype 字體渲染(若 testsprite 內部走 headless
+#   browser screenshot 比對),`-latest` 自動換版會引入靜默 drift。當 GitHub
+#   公告淘汰本標籤時,升版自成一個 PR,並在 `_bmad-output/audit/testsprite-
+#   queue.yaml` 的 `last_run.status` 不變但 history 條目新增 `image_version`
+#   欄(屆時 schema bump 為 v2,19-7 需要同步)—— 那是未來的故事。
+#
+# Direct push to main 而非 PR (AC #4):
+#   commit-back 是機械式的稽核 metadata(timestamps、test IDs 跑了哪些、
+#   credits 燒了多少)。PR review overhead 沒有審查價值,反而會讓 queue
+#   stale(下個月 cron rebase 在尚未合併的 PR 上 → conflict)。直接 push
+#   `main`,需要 branch-protection 允許 `github-actions[bot]` bypass 該規則
+#   —— 這是 owner 在 Settings → Branches 設一次的事(見 AC #9 Completion
+#   Notes follow-up)。
+#
+# Secret + Variable 設定 (AC #5 + AC #9 — 兩者皆 owner 在 Settings 操作):
+#   - `secrets.TESTSPRITE_API_KEY` (Repository Secret)
+#       值 = 本地 `testsprite_tests/tmp/config.json` 的
+#       `executionArgs.envs.API_KEY`(或從 TestSprite dashboard 重發)。
+#       該本地檔案被 `.gitignore:8` + `:74` 雙重保護,不會進 repo。
+#   - `vars.TESTSPRITE_TARGET_URL` (Repository Variable, NOT Secret)
+#       URL 不是敏感資料 → 用 Variable 而非 Secret,讓 owner 之後不改 code
+#       就能切換 target(下面三條決策樹)。
+#
+# `TESTSPRITE_TARGET_URL` 三條 operational 路徑(owner 二選一,工作流不挑):
+#   1. Cloudflared / ngrok tunnel pin 在 NAS (`http://192.168.50.52:8088`)
+#      — NAS 在 home LAN,GitHub Hosted Runner 直連不到。需要一條穩定的
+#      tunnel(cloudflared 帶 Cloudflare Tunnel token 最穩;ngrok 免費 URL
+#      會變,要付費 static URL)。優點:測 user 真實會打的那一座。缺點:
+#      tunnel 自己可能 drift / 被 rate-limit。
+#   2. Vido 部到 cloud staging(Fly.io / Render / Railway 免費 tier 之類)
+#      — `TESTSPRITE_TARGET_URL` 指向 staging URL。優點:純 cloud-resident,
+#      無 LAN 依賴。缺點:staging 跟 NAS 之間自己可能 drift。
+#   3. Runner 內 docker-compose 起 Vido(API + Vite preview),走 TestSprite
+#      自家 proxy(testsprite_tests/tmp/config.json 的 `proxy:` 欄)—— 最複雜
+#      但 zero LAN dependency。對 19-6 來說都是 owner 的事;工作流邏輯
+#      三條都不會改,只是 `TESTSPRITE_TARGET_URL` 變數內容換而已。
+#
+# CLI invocation (Dev Notes 提醒):
+#   `@testsprite/testsprite-mcp@0.0.37` 對外是 MCP server;本工作流以 `npx`
+#   叫 CLI binary,subcommand 名用「positional action」慣例(project-context
+#   .md L1142 — `node ... generateCodeAndExecute`)。如果首次 `workflow_
+#   dispatch` 驗證跑時發現 subcommand 拼法不一樣,在 Account-info / 主迴圈
+#   兩處的 `npx --yes @testsprite/testsprite-mcp@${VERSION} <subcommand>` 改
+#   實際拼法,並在本檔頭部追加 `# CLI verified 2026-MM-DD: <actual>` 一行
+#   作為 audit-trail。
+#
+# 參考:
+#   - Story: _bmad-output/implementation-artifacts/19-6-github-actions-testsprite-monthly.md
+#   - Queue source: _bmad-output/audit/testsprite-queue.yaml (schema_version 1)
+#   - 兄弟工作流: .github/workflows/visual-regression.yml (story 19-5 視覺半)
+#   - 兄弟工作流: .github/workflows/testsprite-quota-warning.yml (story 19-7 — 待 dev)
+#   - epic-19 全景: tests/visual/README.md(視覺半敘事 + Rule 22 落點;本工
+#     作流是 journey 半,跟視覺半同根異枝)
+#   - 文件: project-context.md §「TestSprite Journey Test Workflow」L1144
+# ============================================================================
+
+name: TestSprite Monthly
+
+on:
+  # AC #1 — 兩個 trigger(NO push/pull_request,本工作流不可在每個 push 上燒
+  # quota)。schedule 是「每月 1 號 03:00 UTC」(POSIX cron 五欄:minute hour
+  # day-of-month month day-of-week)。
+  schedule:
+    - cron: '0 3 1 * *'
+  workflow_dispatch:
+
+env:
+  # CLI 釘版 — 配本機 `~/.npm/_npx/8ddf6bea01b2519d/node_modules/@testsprite/
+  # testsprite-mcp/package.json` 的 0.0.37。升版自成 PR(由那條 PR 的
+  # workflow_dispatch 驗證新版 CLI 的 subcommand 名是否依然有效)。
+  TESTSPRITE_PACKAGE_VERSION: '0.0.37'
+  QUEUE_FILE: _bmad-output/audit/testsprite-queue.yaml
+  HISTORY_CAP: '200'
+
+# AC #7 — concurrency: `cancel-in-progress: false` 是有意的(跟 19-5 PR job
+# 的 `true` 相反)。中途取消會讓 queue 半變動(部分 credits 燒了但沒
+# commit-back 回 repo),下次 cron 再跑時讀到的是「半舊半新」的 queue,
+# 對下游 19-7 + Rule 22 retro 的 audit-trail 都是噪音。寧可排隊跑完。
+concurrency:
+  group: testsprite-monthly
+  cancel-in-progress: false
+
+jobs:
+  consume:
+    name: TestSprite Monthly / Consume
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      # AC #4 最低權限 — 只開啟 commit-back 必要的 `contents: write`;
+      # 不開 `pull-requests:` write、`issues:` write、`actions:` write —
+      # 本工作流不開 PR、不開 Issue、不改其他 workflow。
+      contents: write
+    env:
+      TESTSPRITE_API_KEY: ${{ secrets.TESTSPRITE_API_KEY }}
+      TESTSPRITE_TARGET_URL: ${{ vars.TESTSPRITE_TARGET_URL }}
+    steps:
+      - name: Checkout (full history for push)
+        uses: actions/checkout@v4
+        with:
+          # `git push origin main` 需要完整歷史才能正確 fast-forward(default
+          # `fetch-depth: 1` 是 shallow → push 會被拒)。
+          fetch-depth: 0
+
+      # AC #5 + AC #6 (i)/(ii) — 在燒任何 credit 之前先確認兩個變數都到位。
+      # 任一缺漏 = exit 1,Actions email 提醒 owner 補 Settings(這就是 AC #6
+      # 「人類必須介入」的場景)。
+      - name: Verify required Secret and Variable are set
+        run: |
+          if [ -z "${TESTSPRITE_API_KEY}" ]; then
+            echo "::error::TESTSPRITE_API_KEY secret is unset — wire it in Settings → Secrets and variables → Actions → Secrets (story 19-6 AC #5 / AC #9)"
+            exit 1
+          fi
+          if [ -z "${TESTSPRITE_TARGET_URL}" ]; then
+            echo "::error::TESTSPRITE_TARGET_URL variable is unset — wire it in Settings → Secrets and variables → Actions → Variables (story 19-6 AC #5 / AC #9; pick NAS-tunnel URL or cloud staging URL or runner-local URL)"
+            exit 1
+          fi
+          echo "::notice::Required Secret + Variable verified (key masked by Actions; target URL: ${TESTSPRITE_TARGET_URL})"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+
+      - name: Install Node dependencies
+        run: pnpm install --frozen-lockfile
+
+      # `yq`(mikefarah Go-based)在 ubuntu-24.04 GitHub-Hosted Runner 預裝
+      # — 用來解析 + in-place 修改 queue.yaml(comment-preserving)。理論上
+      # 不會缺,但 fail-fast 比較好除錯。
+      - name: Verify yq is on PATH
+        run: |
+          if ! command -v yq >/dev/null 2>&1; then
+            echo "::error::yq is not on PATH — expected mikefarah/yq pre-installed on ubuntu-24.04 runners"
+            exit 1
+          fi
+          yq --version
+
+      # AC #2 — schema pre-condition。拒絕對 schema_version != 1 的 queue 動手
+      # (萬一將來改 v2 但這份工作流沒同步,fail-closed 比靜默寫壞好)。
+      - name: Verify queue file schema_version
+        run: |
+          if ! yq -e '.schema_version == 1' "${QUEUE_FILE}" >/dev/null 2>&1; then
+            echo "::error::${QUEUE_FILE} schema_version is not 1 — refusing to mutate (bump this workflow + 19-7 first per Rule 20)"
+            exit 1
+          fi
+
+      # AC #3 LIVE account-info call — 在迴圈外抓 credits_at_start(本次預算
+      # 計算的基準)。`set -e` 是有意的:account-info 失敗 = AC #6 (i) auth
+      # 錯,直接 exit 1。回應 JSON 欄位名稱有歷史漂移(`credits_remaining`
+      # vs `remaining_credits` vs `available_credits`),用 jq 的 `//`
+      # fallback chain 兜一輪。
+      - name: Read TestSprite account info
+        id: account-info
+        run: |
+          set -euo pipefail
+          OUT=$(npx --yes "@testsprite/testsprite-mcp@${TESTSPRITE_PACKAGE_VERSION}" testsprite_check_account_info 2>&1) || {
+            echo "::error::testsprite_check_account_info failed (likely AC #6 (i) auth error or AC #6 (ii) target unreachable) — see story 19-6 AC #5 for Secret/Variable setup"
+            echo "----- last 40 lines of CLI output -----"
+            echo "$OUT" | tail -40
+            exit 1
+          }
+          echo "----- account-info raw output -----"
+          echo "$OUT"
+          echo "----- end -----"
+          # jq fallback chain — flat OR nested `.data.*`。最後 `// empty` 保
+          # 證 REMAINING 是空字串而非字面值 "null"(下面的字串比對才不會被
+          # "null" 誤判成有值)。
+          REMAINING=$(echo "$OUT" | jq -r '.credits_remaining // .remaining_credits // .available_credits // .credits // (.data.credits_remaining // .data.remaining_credits // .data.available_credits // .data.credits) // empty' 2>/dev/null || true)
+          if [ -z "$REMAINING" ] || [ "$REMAINING" = "null" ]; then
+            echo "::error::Could not extract remaining credits from account-info response — fail-closed per AC #3"
+            exit 1
+          fi
+          echo "credits_at_start=${REMAINING}" >> "$GITHUB_OUTPUT"
+          echo "::notice::credits_at_start=${REMAINING}"
+
+      # AC #3 主迴圈 + AC #6 失敗分流。`set +e` 包住單一案例執行 —— 案例
+      # `fail` 是資料不是 infra failure。每跑完一個案例,yq -i in-place
+      # 把該 entry 從 `queue` 移到 `history`,history 超 200 就 FIFO 砍
+      # 最舊。結束後把 status / ids_run / credits_at_end 寫到 GITHUB_OUTPUT
+      # 給 commit-back step 渲染 commit message。
+      - name: Consume queue (capped by 80%-per-run + 30-reserve floor)
+        id: consume
+        env:
+          CREDITS_AT_START: ${{ steps.account-info.outputs.credits_at_start }}
+        run: |
+          set -uo pipefail
+          # Quota constants 從 queue.yaml 讀(允許未來 owner 上 paid plan 時
+          # 直接改 yaml 不用碰本工作流)。
+          MONTHLY_BUDGET=$(yq '.quota.monthly_budget' "${QUEUE_FILE}")
+          CAP_PCT=$(yq '.quota.consumption_cap_pct' "${QUEUE_FILE}")
+          RESERVED=$(yq '.quota.reserved_credits' "${QUEUE_FILE}")
+          PER_RUN_CAP=$(( MONTHLY_BUDGET * CAP_PCT / 100 ))
+          STARTED_AT=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          echo "STARTED_AT=${STARTED_AT}" >> "$GITHUB_OUTPUT"
+          echo "RUN_URL=${RUN_URL}" >> "$GITHUB_OUTPUT"
+          echo "::notice::monthly_budget=${MONTHLY_BUDGET}, cap_pct=${CAP_PCT}%, per_run_cap=${PER_RUN_CAP}, reserved=${RESERVED}, started_at=${STARTED_AT}"
+
+          # 若 queue 是空的 → 從 history 最舊端搬 N 筆回來(N = per_run_cap /
+          # avg-credit ≈ PER_RUN_CAP / 5,保守上限 = history 全長)。每個
+          # entry 搬回時要把 `last_run_at` / `last_status` / `last_run_url`
+          # 重置為 null(它們在 history 裡是「上次紀錄」,搬回 queue 就是
+          # 「下次再跑」)。
+          QUEUE_LEN=$(yq '.queue | length' "${QUEUE_FILE}")
+          if [ "${QUEUE_LEN}" -eq 0 ]; then
+            HIST_LEN=$(yq '.history | length' "${QUEUE_FILE}")
+            if [ "${HIST_LEN}" -eq 0 ]; then
+              echo "::warning::queue AND history both empty — nothing to run (status will be 'budget-exhausted' with test_ids_run: [])"
+            else
+              REFILL_COUNT=$(( PER_RUN_CAP / 5 ))
+              if [ "${REFILL_COUNT}" -gt "${HIST_LEN}" ]; then
+                REFILL_COUNT="${HIST_LEN}"
+              fi
+              echo "::notice::queue empty — refilling ${REFILL_COUNT} oldest from history"
+              for _ in $(seq 1 "${REFILL_COUNT}"); do
+                yq -i '
+                  .queue += [(.history[0] | .last_run_at = null | .last_status = null | .last_run_url = null)]
+                  | del(.history[0])
+                ' "${QUEUE_FILE}"
+              done
+            fi
+          fi
+
+          # 主迴圈狀態變數。
+          TEST_IDS_RUN=()
+          ANY_FAILURE=false
+          BUDGET_HIT=false
+          REMAINING="${CREDITS_AT_START}"
+          CONSUMED_THIS_RUN=0
+
+          while :; do
+            QUEUE_LEN=$(yq '.queue | length' "${QUEUE_FILE}")
+            if [ "${QUEUE_LEN}" -eq 0 ]; then
+              echo "::notice::queue empty — main loop exit"
+              break
+            fi
+
+            # AC #3 雙重天花板:預估下一個 case 至少 5 credits;若預算扣完
+            # < reserved 或 per_run_cap 已達標,停。
+            if [ "${REMAINING}" -le "${RESERVED}" ]; then
+              echo "::notice::reserved floor hit (remaining=${REMAINING} ≤ reserved=${RESERVED}) — stopping"
+              BUDGET_HIT=true
+              break
+            fi
+            if [ "${CONSUMED_THIS_RUN}" -ge "${PER_RUN_CAP}" ]; then
+              echo "::notice::per-run cap hit (consumed=${CONSUMED_THIS_RUN} ≥ cap=${PER_RUN_CAP}) — stopping"
+              BUDGET_HIT=true
+              break
+            fi
+
+            TC_ID=$(yq '.queue[0].id' "${QUEUE_FILE}")
+            TC_FILE=$(yq '.queue[0].file' "${QUEUE_FILE}")
+            echo "::group::Running ${TC_ID} (${TC_FILE})"
+            CASE_STARTED_AT=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+
+            # `set +e` — 單一案例失敗是資料,不要中斷迴圈(AC #6)。
+            set +e
+            npx --yes "@testsprite/testsprite-mcp@${TESTSPRITE_PACKAGE_VERSION}" testsprite_generate_code_and_execute --test-file "${TC_FILE}" --target-url "${TESTSPRITE_TARGET_URL}" >/tmp/tc-output.log 2>&1
+            CASE_EXIT=$?
+            set -e
+            cat /tmp/tc-output.log
+
+            if [ ${CASE_EXIT} -eq 0 ]; then
+              CASE_STATUS=pass
+            else
+              CASE_STATUS=fail
+              ANY_FAILURE=true
+            fi
+            echo "::notice::${TC_ID} → ${CASE_STATUS} (exit=${CASE_EXIT})"
+            TEST_IDS_RUN+=("${TC_ID}")
+
+            # 用 STATUS 和 URL 環境變數塞給 yq(避免 GitHub Actions string
+            # interpolation 雙重展開)。
+            export YQ_TC_ID="${TC_ID}" YQ_STATUS="${CASE_STATUS}" YQ_URL="${RUN_URL}" YQ_TS="${CASE_STARTED_AT}"
+            yq -i '
+              .history += [(
+                .queue[0]
+                | .last_run_at = strenv(YQ_TS)
+                | .last_status = strenv(YQ_STATUS)
+                | .last_run_url = strenv(YQ_URL)
+              )]
+              | del(.queue[0])
+            ' "${QUEUE_FILE}"
+
+            # History prune (cap 200, FIFO)。
+            HIST_LEN=$(yq '.history | length' "${QUEUE_FILE}")
+            if [ "${HIST_LEN}" -gt "${HISTORY_CAP}" ]; then
+              EXCESS=$(( HIST_LEN - HISTORY_CAP ))
+              for _ in $(seq 1 "${EXCESS}"); do
+                yq -i 'del(.history[0])' "${QUEUE_FILE}"
+              done
+            fi
+            echo "::endgroup::"
+
+            # 重抓 LIVE remaining credits(estimate 是 informational,真值用
+            # API)。account-info 失敗 = AC #6 (i),exit 1。
+            set +e
+            OUT2=$(npx --yes "@testsprite/testsprite-mcp@${TESTSPRITE_PACKAGE_VERSION}" testsprite_check_account_info 2>&1)
+            INFO_EXIT=$?
+            set -e
+            if [ ${INFO_EXIT} -ne 0 ]; then
+              echo "::error::testsprite_check_account_info failed mid-loop — AC #6 (i) api-failure"
+              echo "$OUT2" | tail -20
+              # 寫一個 sentinel 給 commit-back step,讓它知道是 api-failure
+              # 還是其他情況。後續仍進 commit-back(AC #4: 即使 loop 出
+              # 錯,commit-back 在 if: always() 上跑,把已寫的 queue 變動
+              # 保住)。
+              echo "INNER_API_FAILURE=true" >> "$GITHUB_OUTPUT"
+              break
+            fi
+            REMAINING_NEW=$(echo "$OUT2" | jq -r '.credits_remaining // .remaining_credits // .available_credits // .credits // (.data.credits_remaining // .data.remaining_credits // .data.available_credits // .data.credits) // empty' 2>/dev/null || true)
+            if [ -z "${REMAINING_NEW}" ] || [ "${REMAINING_NEW}" = "null" ]; then
+              echo "::error::Could not extract remaining credits mid-loop — fail-closed per AC #3"
+              echo "INNER_API_FAILURE=true" >> "$GITHUB_OUTPUT"
+              break
+            fi
+            CONSUMED_THIS_RUN=$(( CREDITS_AT_START - REMAINING_NEW ))
+            REMAINING="${REMAINING_NEW}"
+            echo "::notice::remaining=${REMAINING}, consumed_this_run=${CONSUMED_THIS_RUN}"
+          done
+
+          # 結算狀態。優先序:api-failure > test-failures-only > budget-
+          # exhausted > success。實務上 api-failure 已在 inner loop 中
+          # break + 設 sentinel,本 step 退 0,讓 commit-back 在 if: always()
+          # 上跑;final exit 1 由 commit-back 後的「Surface api-failure」
+          # step 處理。
+          FINISHED_AT=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          IDS_JSON=$(printf '%s\n' "${TEST_IDS_RUN[@]}" | jq -R . | jq -sc .)
+          if [ "${#TEST_IDS_RUN[@]}" -eq 0 ]; then
+            IDS_JSON='[]'
+          fi
+          if [ "${ANY_FAILURE}" = "true" ]; then
+            STATUS=test-failures-only
+          elif [ "${BUDGET_HIT}" = "true" ]; then
+            STATUS=budget-exhausted
+          else
+            STATUS=success
+          fi
+          # CSV 給 commit message body 用(jq -r '.[]' 加 comma-join)。
+          TEST_IDS_CSV=$(echo "${IDS_JSON}" | jq -r '. | join(", ")')
+          {
+            echo "FINISHED_AT=${FINISHED_AT}"
+            echo "CREDITS_AT_END=${REMAINING}"
+            echo "CREDITS_CONSUMED=${CONSUMED_THIS_RUN}"
+            echo "STATUS=${STATUS}"
+            echo "TEST_IDS_JSON=${IDS_JSON}"
+            echo "TEST_IDS_COUNT=${#TEST_IDS_RUN[@]}"
+            echo "TEST_IDS_CSV=${TEST_IDS_CSV}"
+          } >> "$GITHUB_OUTPUT"
+          echo "::notice::final status=${STATUS}, ids=${TEST_IDS_CSV:-<none>}, credits=${CREDITS_AT_START}→${REMAINING} (Δ${CONSUMED_THIS_RUN})"
+
+      # AC #2 / AC #4 — 把 `last_run:` 區塊寫回 queue 檔。這 step 在
+      # `if: always()` 上跑,即使主迴圈中途 break(api-failure)也會把目前
+      # 為止的進度持久化。
+      - name: Write last_run block back to queue file
+        if: always()
+        env:
+          STARTED_AT: ${{ steps.consume.outputs.STARTED_AT }}
+          FINISHED_AT: ${{ steps.consume.outputs.FINISHED_AT }}
+          CREDITS_AT_START: ${{ steps.account-info.outputs.credits_at_start }}
+          CREDITS_AT_END: ${{ steps.consume.outputs.CREDITS_AT_END }}
+          CREDITS_CONSUMED: ${{ steps.consume.outputs.CREDITS_CONSUMED }}
+          STATUS: ${{ steps.consume.outputs.STATUS }}
+          INNER_API_FAILURE: ${{ steps.consume.outputs.INNER_API_FAILURE }}
+          TEST_IDS_JSON: ${{ steps.consume.outputs.TEST_IDS_JSON }}
+          RUN_URL: ${{ steps.consume.outputs.RUN_URL }}
+        run: |
+          set -uo pipefail
+          # 若 STARTED_AT 為空(consume step 在 account-info 失敗時根本沒跑),
+          # 直接跳過寫回 —— queue 還是上次 cron 的狀態,沒被破壞。
+          if [ -z "${STARTED_AT:-}" ]; then
+            echo "::notice::consume step did not produce STARTED_AT — skipping last_run write-back (queue file untouched)"
+            exit 0
+          fi
+          FINAL_STATUS="${STATUS:-}"
+          if [ -z "${FINAL_STATUS}" ] || [ "${INNER_API_FAILURE:-}" = "true" ]; then
+            FINAL_STATUS=api-failure
+          fi
+          export YQ_STARTED_AT="${STARTED_AT}"
+          export YQ_FINISHED_AT="${FINISHED_AT:-${STARTED_AT}}"
+          export YQ_CREDITS_START="${CREDITS_AT_START:-0}"
+          export YQ_CREDITS_END="${CREDITS_AT_END:-${CREDITS_AT_START:-0}}"
+          export YQ_CREDITS_CONSUMED="${CREDITS_CONSUMED:-0}"
+          export YQ_STATUS="${FINAL_STATUS}"
+          export YQ_RUN_URL="${RUN_URL:-}"
+          export YQ_IDS_JSON="${TEST_IDS_JSON:-[]}"
+          yq -i '
+            .last_run.started_at = strenv(YQ_STARTED_AT)
+            | .last_run.finished_at = strenv(YQ_FINISHED_AT)
+            | .last_run.credits_at_start = (strenv(YQ_CREDITS_START) | tonumber)
+            | .last_run.credits_at_end = (strenv(YQ_CREDITS_END) | tonumber)
+            | .last_run.credits_consumed = (strenv(YQ_CREDITS_CONSUMED) | tonumber)
+            | .last_run.status = strenv(YQ_STATUS)
+            | .last_run.run_url = strenv(YQ_RUN_URL)
+            | .last_run.test_ids_run = (strenv(YQ_IDS_JSON) | from_json)
+          ' "${QUEUE_FILE}"
+
+      # AC #4 — commit-back。`if: always()` 同上,confirms queue 進度
+      # 永遠落地。`git diff --quiet` 若沒變動就跳過 commit(空 cron 跑時
+      # last_run 應一定有變動,但保險起見有這檢查)。3-retry rebase loop
+      # 處理罕見 race(同 main 上有別的 commit 介入 → pull --rebase →
+      # 再 push)。
+      - name: Commit and push queue file
+        if: always()
+        env:
+          STATUS: ${{ steps.consume.outputs.STATUS }}
+          INNER_API_FAILURE: ${{ steps.consume.outputs.INNER_API_FAILURE }}
+          CREDITS_AT_START: ${{ steps.account-info.outputs.credits_at_start }}
+          CREDITS_AT_END: ${{ steps.consume.outputs.CREDITS_AT_END }}
+          CREDITS_CONSUMED: ${{ steps.consume.outputs.CREDITS_CONSUMED }}
+          TEST_IDS_CSV: ${{ steps.consume.outputs.TEST_IDS_CSV }}
+          TEST_IDS_COUNT: ${{ steps.consume.outputs.TEST_IDS_COUNT }}
+          RUN_URL: ${{ steps.consume.outputs.RUN_URL }}
+        run: |
+          set -uo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add "${QUEUE_FILE}"
+          if git diff --cached --quiet; then
+            echo "::notice::No queue file changes to commit (likely account-info failed before any case ran)"
+            exit 0
+          fi
+          FINAL_STATUS="${STATUS:-}"
+          if [ -z "${FINAL_STATUS}" ] || [ "${INNER_API_FAILURE:-}" = "true" ]; then
+            FINAL_STATUS=api-failure
+          fi
+          YEAR_MONTH=$(date -u +'%Y-%m')
+          N_CASES="${TEST_IDS_COUNT:-0}"
+          CREDITS_DELTA="${CREDITS_CONSUMED:-0}"
+          IDS_DISPLAY="${TEST_IDS_CSV:-<none>}"
+
+          COMMIT_MSG=$(cat <<EOF
+          chore(testsprite): monthly run ${YEAR_MONTH} — ${N_CASES} cases consumed, ${CREDITS_DELTA} credits
+
+          Status: ${FINAL_STATUS}
+          Test IDs run: ${IDS_DISPLAY}
+          Credits: ${CREDITS_AT_START:-0} → ${CREDITS_AT_END:-0} (Δ ${CREDITS_DELTA})
+          Run URL: ${RUN_URL}
+
+          Auto-generated by .github/workflows/testsprite-monthly.yml
+
+          Co-Authored-By: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
+          EOF
+          )
+
+          git commit -m "${COMMIT_MSG}"
+
+          # 3-retry rebase push。第 3 次仍失敗 = AC #6 (iii)。
+          for attempt in 1 2 3; do
+            if git push origin "HEAD:${GITHUB_REF_NAME}"; then
+              echo "::notice::Push succeeded on attempt ${attempt}"
+              exit 0
+            fi
+            echo "::warning::Push attempt ${attempt} failed — pulling --rebase and retrying"
+            if ! git pull --rebase origin "${GITHUB_REF_NAME}"; then
+              echo "::warning::Rebase failed on attempt ${attempt}"
+            fi
+          done
+          echo "::error::git push failed after 3 attempts — AC #6 (iii). Likely cause: branch-protection rule blocks github-actions[bot] from pushing to ${GITHUB_REF_NAME}. Owner action: add bot to branch-protection bypass (Settings → Branches → Branch protection rules)."
+          exit 1
+
+      # AC #6 (i) — 把「mid-loop api-failure」的 sentinel 變成 ❌。前面
+      # commit-back 已經把進度 / 狀態保住了,這 step 只負責「讓 Actions UI
+      # 顯示 ❌」+「email 寄出」—— 而非破壞前面的 commit。
+      - name: Surface mid-loop API failure as non-zero exit
+        if: always() && steps.consume.outputs.INNER_API_FAILURE == 'true'
+        run: |
+          echo "::error::Mid-loop testsprite_check_account_info failed — AC #6 (i) api-failure surfaced. Queue progress committed; status=api-failure recorded."
+          exit 1

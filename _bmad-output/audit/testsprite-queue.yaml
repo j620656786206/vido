@@ -1,0 +1,217 @@
+# _bmad-output/audit/testsprite-queue.yaml
+#
+# Single source of truth for the monthly TestSprite cron workflow
+# (`.github/workflows/testsprite-monthly.yml`, story 19-6). Schema_version
+# is the Rule 20 [@contract-v1] contract surface — bump on any shape change;
+# downstream 19-7 quota-warning workflow reads this file and depends on
+# `schema_version == 1` + the `last_run:` block shape + the `history:`
+# per-entry shape. Pruning rule: `history` capped at 200 entries, FIFO.
+#
+# Discovery note (2026-05-19): story AC #2 / Task 1 said "62 entries total
+# seeded from `ls testsprite_tests/TC*.py` at story-create time" but the
+# verification step (`ls testsprite_tests/TC*.py | wc -l`) yields 30 at
+# implementation time. The discrepancy is from deprecated cases pending v4
+# regen (MEMORY → project_testsprite_v4_regen.md). Task 1 explicitly
+# mandated runtime verification, so this seed contains the actual 30 (IDs:
+# TC001–023, TC027–029, TC033–034, TC037–038).
+schema_version: 1
+quota:
+  monthly_budget: 150 # TestSprite Free-plan ceiling; bump if user upgrades.
+  consumption_cap_pct: 80 # workflow's self-imposed per-run ceiling — never crosses.
+  reserved_credits: 30 # reserved_credits MUST equal monthly_budget * (100 - consumption_cap_pct) / 100 — keep in sync manually if any of the three change.
+last_run:
+  started_at: null # ISO 8601 UTC; null = never run
+  finished_at: null
+  credits_at_start: null # integer remaining from testsprite_check_account_info before the loop
+  credits_at_end: null
+  credits_consumed: null # = credits_at_start - credits_at_end
+  test_ids_run: [] # ordered list of TestSprite TC IDs run this execution
+  status: null # "success" | "budget-exhausted" | "api-failure" | "test-failures-only"
+  run_url: null # GitHub Actions run URL — back-link for triage
+queue:
+  # Ordered list — entry [0] runs next. After a successful execution the
+  # consumed entries are moved to `history` (below) and the next run picks
+  # up from the remaining queue. When the queue is empty, the workflow
+  # refills from `history` (oldest-first, simple FIFO rotation — this is
+  # the "continuous coverage" mode mentioned in the user story).
+  - id: TC001
+    file: testsprite_tests/TC001_Dashboard_loads_core_panels_and_status.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC002
+    file: testsprite_tests/TC002_Dashboard_quick_search_navigates_to_search_results.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC003
+    file: testsprite_tests/TC003_Dashboard_shows_qBittorrent_connection_status_indicator.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC004
+    file: testsprite_tests/TC004_Search_page_basic_query_returns_a_results_list.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC005
+    file: testsprite_tests/TC005_Search_results_show_expected_metadata_fields.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC006
+    file: testsprite_tests/TC006_Search_handles_empty_query_validation.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC007
+    file: testsprite_tests/TC007_Search_can_be_refined_and_re_submitted.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC008
+    file: testsprite_tests/TC008_Library_page_loads_and_shows_poster_wall_grid.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC009
+    file: testsprite_tests/TC009_Library_filter_by_type_updates_visible_items.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC010
+    file: testsprite_tests/TC010_Library_sort_order_changes_grid_ordering.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC011
+    file: testsprite_tests/TC011_Library_search_narrows_items_by_title.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC012
+    file: testsprite_tests/TC012_Library_context_menu_allows_re_parse_action.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC013
+    file: testsprite_tests/TC013_qBittorrent_settings_page_loads_primary_configuration_form.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC014
+    file: testsprite_tests/TC014_Test_connection_shows_success_feedback_with_valid_looking_connection_details.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC015
+    file: testsprite_tests/TC015_Test_connection_shows_authentication_failure_feedback_for_incorrect_credentials.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC016
+    file: testsprite_tests/TC016_Save_qBittorrent_settings_persists_the_latest_values_on_page_reload.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC017
+    file: testsprite_tests/TC017_Cross_page_workflow_Save_settings_then_verify_downloads_page_shows_connection_established_state.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC018
+    file: testsprite_tests/TC018_Port_field_validation_prevents_saving_with_invalid_port_value.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC019
+    file: testsprite_tests/TC019_Required_field_validation_prevents_testing_with_missing_host.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC020
+    file: testsprite_tests/TC020_Open_subtitle_search_from_library_and_run_a_search_to_see_results.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC021
+    file: testsprite_tests/TC021_Toggle_CN_conversion_and_preview_a_subtitle_result.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC022
+    file: testsprite_tests/TC022_Download_a_selected_subtitle_from_results.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC023
+    file: testsprite_tests/TC023_Change_provider_selection_and_re_run_search_updates_results.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC027
+    file: testsprite_tests/TC027_Export_database_backup_JSON_from_Backup_and_Restore_page.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC028
+    file: testsprite_tests/TC028_Import_a_valid_backup_JSON_and_complete_restore.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC029
+    file: testsprite_tests/TC029_Import_an_invalid_backup_JSON_shows_parse_error_guidance.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC033
+    file: testsprite_tests/TC033_Connection_Health_page_loads_aggregate_indicators.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC034
+    file: testsprite_tests/TC034_Open_connection_history_modal_and_filter_to_errors_only.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC037
+    file: testsprite_tests/TC037_Setup_Wizard_completes_with_required_configuration_and_redirects_to_dashboard.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC038
+    file: testsprite_tests/TC038_Setup_Wizard_blocks_completion_when_required_configuration_is_missing.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+history: []
