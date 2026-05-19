@@ -168,8 +168,8 @@ jobs:
 
       - name: Verify queue file schema_version
         run: |
-          if ! yq -e '.schema_version == 1' "${QUEUE_FILE}" >/dev/null 2>&1; then
-            echo "::error::${QUEUE_FILE} schema_version is not 1 — refusing to mutate (bump this workflow + 19-7 first per Rule 20)"
+          if ! yq -e '.schema_version == 2' "${QUEUE_FILE}" >/dev/null 2>&1; then
+            echo "::error::${QUEUE_FILE} schema_version is not 2 — refusing to mutate (bump this workflow + 19-7 first per Rule 20)"
             exit 1
           fi
 
@@ -342,13 +342,21 @@ jobs:
           STARTED_AT=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
           RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
 
-          # Default per-case status = unknown; override from report if we can.
-          # The report has per-case sections with "**Status:** ✅ Passed" or
-          # "**Status:** BLOCKED" / "**Status:** ❌ Failed" lines we can grep.
+          # Per-case status MUST be one of AC #2 [@contract-v1→v2] schema enum
+          # values: "pass" | "fail" | "error" | null. The bash empty string ""
+          # is the null sentinel (yq writes YAML null literal — see "Update
+          # queue.yaml" step's conditional below).
+          #   "BLOCKED" report state  → error (test ran but produced no verdict)
+          #   unparseable status line → error (report present, case section
+          #                             present, but no Passed/Failed/BLOCKED
+          #                             marker within 50 lines)
+          #   no report file at all   → null (CLI hard-fail upstream of report
+          #                             generation — STATUS will resolve to
+          #                             api-failure below via CLI_EXIT≠0)
           declare -A CASE_STATUS=()
           if [ -f "${REPORT}" ]; then
             for id in $(echo "${IDS_JSON}" | jq -r '.[]'); do
-              # Find the status line within ~30 lines after the TC id heading.
+              # Find the status line within ~50 lines after the TC id heading.
               STATUS_LINE=$(awk -v id="${id}" '
                 $0 ~ "Test " id " " {found=1; lc=0}
                 found && /\*\*Status:\*\*/ {print; exit}
@@ -356,29 +364,33 @@ jobs:
               ' "${REPORT}")
               case "${STATUS_LINE}" in
                 *"✅"*|*"Passed"*) CASE_STATUS[$id]=pass ;;
-                *"BLOCKED"*)       CASE_STATUS[$id]=blocked ;;
                 *"❌"*|*"Failed"*) CASE_STATUS[$id]=fail ;;
-                *)                  CASE_STATUS[$id]=unknown ;;
+                *"BLOCKED"*)       CASE_STATUS[$id]=error ;;
+                *)                  CASE_STATUS[$id]=error ;;
               esac
             done
           else
-            echo "::warning::report file ${REPORT} missing — marking all picked ids as unknown"
+            echo "::warning::report file ${REPORT} missing — leaving picked ids as null (last_status); STATUS will resolve to api-failure if CLI also exited non-zero"
             for id in $(echo "${IDS_JSON}" | jq -r '.[]'); do
-              CASE_STATUS[$id]=unknown
+              CASE_STATUS[$id]=
             done
           fi
 
-          # Determine overall status:
+          # Determine overall status (AC #6 four-state enum):
           # api-failure → CLI hard-fail (no report, or CLI exit != 0 AND no
           #               per-case results)
-          # test-failures-only → ≥1 case fail/blocked, CLI ran
+          # test-failures-only → ≥1 case fail/error (the BLOCKED → error
+          #                      mapping above means a blocked case lands here)
           # success → all cases pass
+          # budget-exhausted → emitted ONLY when queue+history both empty
+          #                    (see "Surface no IDs to run" branch below)
           ANY_BAD=false
           ANY_RESULT=false
           for id in "${!CASE_STATUS[@]}"; do
             case "${CASE_STATUS[$id]}" in
               pass) ANY_RESULT=true ;;
-              fail|blocked) ANY_BAD=true; ANY_RESULT=true ;;
+              fail|error) ANY_BAD=true; ANY_RESULT=true ;;
+              # empty string = null = no result for this case
             esac
           done
 
@@ -423,8 +435,10 @@ jobs:
           set -uo pipefail
           CASE_STATUS_JSON=$(echo "${CASE_STATUS_B64}" | base64 -d 2>/dev/null || echo "${CASE_STATUS_B64}" | base64 -D)
           # Move each consumed id from queue: → history: with its parsed status.
+          # Empty-string YQ_STATUS_VAL → YAML null literal (AC #2 [@contract-v1→v2]
+          # enum: "pass" | "fail" | "error" | null).
           for id in $(echo "${IDS_JSON}" | jq -r '.[]'); do
-            CASE_STATUS_VALUE=$(echo "${CASE_STATUS_JSON}" | jq -r --arg k "${id}" '.[$k] // "unknown"')
+            CASE_STATUS_VALUE=$(echo "${CASE_STATUS_JSON}" | jq -r --arg k "${id}" '.[$k] // ""')
             export YQ_ID="${id}"
             export YQ_TS="${STARTED_AT}"
             export YQ_STATUS_VAL="${CASE_STATUS_VALUE}"
@@ -433,7 +447,11 @@ jobs:
               .history += [(
                 (.queue[] | select(.id == strenv(YQ_ID)))
                 | .last_run_at = strenv(YQ_TS)
-                | .last_status = strenv(YQ_STATUS_VAL)
+                | .last_status = (
+                    if strenv(YQ_STATUS_VAL) == "" then null
+                    else strenv(YQ_STATUS_VAL)
+                    end
+                  )
                 | .last_run_url = strenv(YQ_URL)
               )]
               | del(.queue[] | select(.id == strenv(YQ_ID)))
@@ -473,13 +491,42 @@ jobs:
           # history. (gitignored already, defense-in-depth.)
           rm -f testsprite_tests/tmp/raw_report.md testsprite_tests/tmp/test_results.json testsprite_tests/tmp/mcp.log
 
+      - name: Record "budget-exhausted" (queue + history both empty)
+        id: noids
+        if: steps.pick.outputs.count == '0'
+        run: |
+          set -uo pipefail
+          STARTED_AT=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          FINISHED_AT="${STARTED_AT}"
+          RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          export YQ_STARTED_AT="${STARTED_AT}"
+          export YQ_FINISHED_AT="${FINISHED_AT}"
+          export YQ_RUN_URL="${RUN_URL}"
+          # AC #6 budget-exhausted = workflow stopped/no-op'd because no IDs
+          # available to run (queue + history both empty). Record it in the
+          # queue file so 19-7 can distinguish "we no-op'd" vs "we never ran".
+          yq -i '
+            .last_run.started_at = strenv(YQ_STARTED_AT)
+            | .last_run.finished_at = strenv(YQ_FINISHED_AT)
+            | .last_run.status = "budget-exhausted"
+            | .last_run.run_url = strenv(YQ_RUN_URL)
+            | .last_run.test_ids_run = []
+          ' "${QUEUE_FILE}"
+          {
+            echo "status=budget-exhausted"
+            echo "run_url=${RUN_URL}"
+          } >> "$GITHUB_OUTPUT"
+          echo "::notice::queue + history both empty — recorded last_run.status=budget-exhausted, test_ids_run=[]. Workflow exits 0 (cron self-throttling per AC #6)."
+
       - name: Commit and push queue + generated TC files
-        if: always() && steps.pick.outputs.count != '0'
+        if: always()
         env:
-          STATUS: ${{ steps.status.outputs.status }}
+          # status comes from the parse step (count != '0' path) OR from the
+          # noids step (count == '0' → budget-exhausted path).
+          STATUS: ${{ steps.status.outputs.status || steps.noids.outputs.status }}
           IDS_CSV: ${{ steps.pick.outputs.csv }}
           COUNT: ${{ steps.pick.outputs.count }}
-          RUN_URL: ${{ steps.status.outputs.run_url }}
+          RUN_URL: ${{ steps.status.outputs.run_url || steps.noids.outputs.run_url }}
         run: |
           set -uo pipefail
           git config user.name 'github-actions[bot]'
@@ -527,8 +574,3 @@ jobs:
         run: |
           echo "::error::status=api-failure — TestSprite CLI failed without producing per-case results. AC #6 (i) infra failure."
           exit 1
-
-      - name: Surface "no IDs to run" as a notice (not failure)
-        if: steps.pick.outputs.count == '0'
-        run: |
-          echo "::notice::queue + history both empty — nothing to run this month. Workflow exits 0 (this is a budget-exhausted-style outcome with N=0)."

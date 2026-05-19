@@ -2,10 +2,24 @@
 #
 # Single source of truth for the monthly TestSprite cron workflow
 # (`.github/workflows/testsprite-monthly.yml`, story 19-6). Schema_version
-# is the Rule 20 [@contract-v1] contract surface — bump on any shape change;
+# is the Rule 20 [@contract-v2] contract surface — bump on any shape change;
 # downstream 19-7 quota-warning workflow reads this file and depends on
-# `schema_version == 1` + the `last_run:` block shape + the `history:`
+# `schema_version == 2` + the `last_run:` block shape + the `history:`
 # per-entry shape. Pruning rule: `history` capped at 200 entries, FIFO.
+#
+# 2026-05-19 CR closeout — schema_version 1 → 2 ([@contract-v1→v2] AC #2):
+# the v1 schema declared `last_run.credits_at_start` / `credits_at_end` /
+# `credits_consumed` as part of the contract surface. Phase 2's CLI-shape
+# discovery (see [@contract-v1→v2] AC #3) revealed that the bare CLI does
+# not expose `testsprite_check_account_info` as a subcommand — only the
+# MCP server mode does — so these three fields cannot be populated without
+# a separate MCP-stdio dance the workflow does not implement. v2 keeps the
+# field NAMES (so 19-7 readers don't break on a missing key) but documents
+# them as "always null in v2 — implementer chose to defer live account-info
+# query to a follow-up story" (call it 19-7a if/when wanted). Also: per-case
+# `last_status` enum is now strictly `pass | fail | error | null` (the v1
+# workflow code path leaked `blocked` and `unknown` into the file — v2's
+# CR-time fix maps BLOCKED → error and missing-report → null).
 #
 # 2026-05-19 reseed (v3 → v4 catalog): the initial seed (committed
 # 2026-05-19 in PR #6) listed 30 TC IDs derived from `ls
@@ -30,7 +44,7 @@
 # all cases; 80%-cap-per-run = 120 credits = ~24 cases/run → full sweep
 # completes in ~3 runs (≈ 3 months); rotation via `history` keeps each
 # case exercised every 3 months on average.
-schema_version: 1
+schema_version: 2
 quota:
   monthly_budget: 150 # TestSprite Free-plan ceiling; bump if user upgrades.
   consumption_cap_pct: 80 # workflow's self-imposed per-run ceiling — never crosses.
@@ -38,9 +52,9 @@ quota:
 last_run:
   started_at: null # ISO 8601 UTC; null = never run
   finished_at: null
-  credits_at_start: null # integer remaining from TestSprite account-info before the loop
-  credits_at_end: null
-  credits_consumed: null # = credits_at_start - credits_at_end
+  credits_at_start: null # v2: always null — LIVE account-info unimplementable via bare CLI; field reserved for future MCP-stdio follow-up.
+  credits_at_end: null # v2: always null — see credits_at_start.
+  credits_consumed: null # v2: always null — = credits_at_start - credits_at_end once live query lands.
   test_ids_run: [] # ordered list of TestSprite TC IDs run this execution
   status: null # "success" | "budget-exhausted" | "api-failure" | "test-failures-only"
   run_url: null # GitHub Actions run URL — back-link for triage
