@@ -23,8 +23,20 @@
 #   本標籤時(通常移除前 6~12 個月會先公告),升版要自成一個 PR:用
 #   `pnpm run test:visual:update` 重產基準、貼上 `requires-manual-review`
 #   標籤、單獨一個 commit,並在 _bmad-output/audit/visual-baseline-19-4.md
-#   追加 `Linux baselines re-blessed {YYYY-MM-DD} via {new} (previous:
-#   {old})` 一行。
+#   追加 `Linux baselines re-blessed {YYYY-MM-DD} via {new-image-label}
+#   (ImageVersion: {value}, previous: {old-image-label})` 一行。
+#
+# 為什麼是 GitHub-Hosted Runner 標籤而非 Docker image digest (CR 2026-05-19 H1):
+#   tests/visual/README.md L98-103 與本 audit doc 的早期版本曾要求「pin the
+#   digest, not just the tag」並例示 `mcr.microsoft.com/playwright:vX.Y.Z-jammy`。
+#   實作走訪後選用 GitHub-Hosted Runner (`runs-on: ubuntu-24.04`) 而非
+#   `container:` + Playwright Docker image:GitHub 不暴露 runner image 的
+#   SHA digest(只有版本化標籤);而 `ImageVersion` 環境變數會在每次跑時印出
+#   `actions/runner-images` 發佈版本號 (例如 `20260512.1.0`),提供「現場式
+#   可追溯性」—— 雖非 cryptographic digest,但配合 `actions/runner-images`
+#   release notes 可逆推到 commit。本 audit-doc 追加格式因此把 `ImageVersion`
+#   納入,讓未來 mass-rebless 投查仍有指紋。Docker-digest 路徑作為被拒方案
+#   記錄於 audit doc 的 "Image pinning policy" 段。
 #
 # 引導決策樹 (AC #4):
 #   標準決策樹見 tests/visual/README.md §Platform-suffix L82–L96,本工作流
@@ -63,6 +75,17 @@
 #   裡的 `visual` Playwright project。本工作流原樣消費以上契約
 #   ([@contract-v1] 於 19-4 AC #1/#2/#5)。
 #
+# 第三方 action 釘版策略 (CR 2026-05-19 L2):
+#   - actions/checkout + actions/setup-node + actions/upload-artifact:
+#       major-version tag (官方 GitHub-owned actions;沿用 test.yml baseline)。
+#   - pnpm/action-setup@v4: 官方 pnpm action,major-version tag。
+#   - dorny/paths-filter@v3: 只讀 git diff,無 write 權限。可接受 major-version tag。
+#   - peter-evans/create-pull-request@v6: 握有 `contents: write` +
+#       `pull-requests: write`(本工作流唯一具寫入權限的 action)。安全強化
+#       建議改 commit-SHA pin;此處沿用 v6 是因為 (a) 觸發邊界限定在自家
+#       repo main push 而非外來 fork PR,(b) 該 action 由 GitHub Marketplace
+#       認證維護者長期維護。若日後受信任邊界擴大,follow-up story 升級為 SHA-pin。
+#
 # 參考:
 #   - Story file: _bmad-output/implementation-artifacts/19-5-github-actions-visual-regression-pr.md
 #   - Audit doc:  _bmad-output/audit/visual-baseline-19-4.md
@@ -92,7 +115,7 @@ on:
     # AC #6 — main 一律跑全套,目的是抓住像 dependency 升版、Tailwind
     # 傳遞性變更、或 runner image 的 fontconfig+freetype 安全更新等不在
     # 元件路徑下的漂移。
-  workflow_dispatch: {}
+  workflow_dispatch:
 
 env:
   CI: true
@@ -101,8 +124,7 @@ jobs:
   pr:
     name: PR
     if: github.event_name == 'pull_request'
-    # AC #5 — 不要改成 ubuntu-latest,見 story 19-5 AC #5。
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-24.04 # AC #5 — do NOT change to ubuntu-latest, see story 19-5 AC #5
     timeout-minutes: 25
     permissions:
       contents: read
@@ -115,7 +137,12 @@ jobs:
         uses: actions/checkout@v4
 
       # AC #1 路徑判斷(內部執行,取代原 `on.pull_request.paths:` filter)。
-      # 設計渲染面 = 原 AC #1 列的 10 個 pattern,完整列表見下方。
+      # 設計渲染面 — 與檔案系統實況同步 (CR 2026-05-19 H2 修正:原 AC #1
+      # 列出的 `apps/web/src/styles/**` 目錄不存在、`apps/web/src/index.css`
+      # 檔案不存在;真正的全域 CSS 是 `apps/web/src/styles.css`(由
+      # `apps/web/index.html` L10 載入)。同時補上 `apps/web/index.html`
+      # 本身(根 HTML 變動會影響 `<meta>`、root container 等渲染表面)。
+      # AC #1 因此 [@contract-v1→v2] 矯正路徑清單;觸發模型不變。
       - name: Detect visual-rendering changes
         id: filter
         uses: dorny/paths-filter@v3
@@ -124,10 +151,11 @@ jobs:
             visual:
               - 'apps/web/src/components/**'
               - 'apps/web/src/routes/**'
-              - 'apps/web/src/styles/**'
+              - 'apps/web/src/styles.css'
+              - 'apps/web/src/app/**'
               - 'apps/web/tailwind.config.js'
-              - 'apps/web/src/index.css'
               - 'apps/web/src/main.tsx'
+              - 'apps/web/index.html'
               - 'tests/visual/**'
               - 'playwright.config.ts'
               - 'package.json'
@@ -141,8 +169,9 @@ jobs:
         run: |
           echo "::notice::No visual-rendering surfaces changed in this PR — skipping visual diff."
           echo "Paths watched:"
-          echo "  apps/web/src/{components,routes,styles}/**"
-          echo "  apps/web/{tailwind.config.js,src/index.css,src/main.tsx}"
+          echo "  apps/web/src/{components,routes,app}/**"
+          echo "  apps/web/src/{styles.css,main.tsx}"
+          echo "  apps/web/{tailwind.config.js,index.html}"
           echo "  tests/visual/**"
           echo "  playwright.config.ts"
           echo "  package.json"
@@ -185,15 +214,25 @@ jobs:
         if: steps.filter.outputs.visual == 'true'
         run: |
           npx nx serve web > /tmp/nx-serve.log 2>&1 &
+          ready=0
           for _ in {1..120}; do
             if curl -s http://localhost:4200 > /dev/null 2>&1; then
               echo "Frontend ready"
+              ready=1
               break
             fi
             sleep 1
           done
-          # 印出最後 30 行 log 方便除錯(僅在超時情況下有意義;啟動成功時無害)
-          tail -n 30 /tmp/nx-serve.log || true
+          # CR 2026-05-19 M2 + L4 — fail-fast 若 120 秒內 Vite 仍未起來:
+          # 1) 印 log 末段方便除錯,2) `exit 1` 立刻中斷 job 而非燒滿
+          #    `timeout-minutes`(原本會讓後續 visual-diff 撞 connection refused
+          #    後 25 分鐘才 timeout)。啟動成功路徑無 log 噪音。
+          if [ "$ready" -ne 1 ]; then
+            echo "::error::Frontend failed to start within 120s — visual diff cannot run."
+            echo "----- last 100 lines of /tmp/nx-serve.log -----"
+            tail -n 100 /tmp/nx-serve.log || echo "(log unavailable)"
+            exit 1
+          fi
 
       # AC #3 — 用 npm script(不用 `nx affected -t e2e:visual`)。這個
       # script 會對著已提交基準呼叫 `playwright test --project=visual`。
@@ -217,8 +256,7 @@ jobs:
   main:
     name: Main
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-    # AC #5 — 不要改成 ubuntu-latest,見 story 19-5 AC #5。
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-24.04 # AC #5 — do NOT change to ubuntu-latest, see story 19-5 AC #5
     timeout-minutes: 40
     permissions:
       # `contents: write` + `pull-requests: write` 只有「首次 Linux 基準
@@ -258,14 +296,22 @@ jobs:
       - name: Start frontend (Vite dev server)
         run: |
           npx nx serve web > /tmp/nx-serve.log 2>&1 &
+          ready=0
           for _ in {1..120}; do
             if curl -s http://localhost:4200 > /dev/null 2>&1; then
               echo "Frontend ready"
+              ready=1
               break
             fi
             sleep 1
           done
-          tail -n 30 /tmp/nx-serve.log || true
+          # CR 2026-05-19 M2 + L4 — fail-fast 若 120 秒內 Vite 仍未起來。
+          if [ "$ready" -ne 1 ]; then
+            echo "::error::Frontend failed to start within 120s — visual diff cannot run."
+            echo "----- last 100 lines of /tmp/nx-serve.log -----"
+            tail -n 100 /tmp/nx-serve.log || echo "(log unavailable)"
+            exit 1
+          fi
 
       # AC #4 — Linux 基準存在性檢查。對「snapshot 資料夾不存在」做防禦
       # (19-4b 之後正常情況下不會發生,但留著無害):`find` 退出碼非 0
@@ -287,7 +333,9 @@ jobs:
 
       # AC #4 bootstrap 分支 —— 本工作流落地後,第一次 main push「只跑
       # 一次」。寫入完整 `-linux` PNG 集 + 在 _bmad-output/audit/visual-baseline-19-4.md
-      # 追加一行來源紀錄,格式精確比照 tests/visual/README.md L92。
+      # 追加一行來源紀錄。CR 2026-05-19 H1 修正:格式納入 `ImageVersion`
+      # 環境變數(actions/runner-images 發佈版本號,例如 `20260512.1.0`),
+      # 提供 GitHub-Hosted Runner 缺乏 SHA digest 情境下的最佳可追溯性。
       - name: Bootstrap Linux baselines
         if: steps.check-linux.outputs.linux_baselines == '0'
         run: |
@@ -299,9 +347,12 @@ jobs:
             echo "::error::Expected audit doc missing: $AUDIT_DOC"
             exit 1
           fi
+          # ImageVersion 由 actions/runner-images 注入(例如 `20260512.1.0`);
+          # 若該變數不存在(例如自架 runner),fallback 為 `unknown`。
+          IMG_VER="${ImageVersion:-unknown}"
           {
             echo ""
-            echo "Linux baselines bootstrapped ${DATE_UTC} via ubuntu-24.04"
+            echo "Linux baselines bootstrapped ${DATE_UTC} via runner ubuntu-24.04 (ImageVersion: ${IMG_VER})"
           } >> "$AUDIT_DOC"
 
       # AC #4 — 透過 peter-evans/create-pull-request@v6 開出一次性 bootstrap
@@ -318,6 +369,11 @@ jobs:
           title: 'chore(visual): bootstrap Linux baselines'
           labels: requires-manual-review
           delete-branch: true
+          # CR 2026-05-19 M1 — 顯式收斂 commit 範圍,避免日後新增「會寫
+          # worktree 的 step」時意外把無關檔案滑進 bootstrap PR。
+          add-paths: |
+            tests/visual/components.visual.spec.ts-snapshots/**
+            _bmad-output/audit/visual-baseline-19-4.md
           body: |
             本 PR 由 `.github/workflows/visual-regression.yml` (story 19-5)
             在首次執行時自動產生。它把 CI runner 產出的 `-linux` PNG 基準

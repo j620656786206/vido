@@ -51,12 +51,16 @@ Burn-in: `pnpm run test:visual` re-run ×4 (post-`:update`) — all green, 0 fla
   changes, or runner-image security patches that ship between deliberate-rebless PRs).
 - **Runner** pinned to `ubuntu-24.04` (NOT `ubuntu-latest`). Image bumps follow the
   Baseline-update discipline below: deliberate-rebless PR labeled `requires-manual-review`,
-  own commit, audit-doc line append `Linux baselines re-blessed {YYYY-MM-DD} via {new}
-  (previous: {old})`.
+  own commit, audit-doc line append `Linux baselines re-blessed {YYYY-MM-DD} via runner
+  {new-image-label} (ImageVersion: {value}, previous: {old-image-label})` (CR 2026-05-19
+  H1 — adds ImageVersion capture in lieu of Docker digest pin; see "Image pinning policy"
+  section below).
 - **First-run bootstrap** (implemented per the decision tree below): on the first
   main-push after the workflow lands, the main job detects no `-linux.png` baselines,
   runs `pnpm run test:visual:update`, appends a `Linux baselines bootstrapped {YYYY-MM-DD}
-  via ubuntu-24.04` line to this doc, and opens a `chore(visual): bootstrap Linux baselines`
+  via runner ubuntu-24.04 (ImageVersion: {value})` line to this doc (revised 2026-05-19
+  per CR H1 — captures the `actions/runner-images` release version since GitHub-Hosted
+  Runners don't expose a SHA digest), and opens a `chore(visual): bootstrap Linux baselines`
   PR labeled `requires-manual-review` via `peter-evans/create-pull-request@v6`. Once
   that PR merges, the bootstrap path is dead code forever (idempotent: the `find` count
   of `-linux.png` files is the single source of truth).
@@ -79,15 +83,38 @@ darwin content; only rendering drift from font / emoji / sub-pixel differences a
 merge, CI runs in verify-only mode (`pnpm run test:visual`) on every PR thereafter.
 
 The one-off PR's body MUST append a bootstrap-marker line to this audit doc in the form
-`Linux baselines bootstrapped {YYYY-MM-DD} via CI image {full-digest-sha256:…}` so any future
-mass-rebless can be traced back to the image revision that produced the original `-linux` set.
+`Linux baselines bootstrapped {YYYY-MM-DD} via runner {image-label} (ImageVersion: {value})` so
+any future mass-rebless can be correlated to the runner image revision that produced the original
+`-linux` set. (Revised 2026-05-19 per story 19-5 CR finding H1 — see "Image pinning policy" below
+for why this format replaced the original `via CI image {full-digest-sha256:…}` form.)
 
-**Image pinning policy (19-5 owner — implement in CI workflow):** pin the **digest**, not just
-the tag. `mcr.microsoft.com/playwright:vX.Y.Z-jammy` is mutable — Ubuntu security updates to
-`fontconfig` / `freetype` will silently shift Linux glyph rendering and trigger mass-rebless
-without any source-code change. Resolve `sha256:…` at workflow-config time. Any image bump = a
-deliberate baseline-regeneration PR (`:update` + Sally gate + own commit — same discipline as
-any other reviewed-design-change rebless).
+**Image pinning policy (revised 2026-05-19, story 19-5 CR H1):** Story 19-5 ships with
+`runs-on: ubuntu-24.04` (GitHub-Hosted Runner version-tag) rather than the originally-specified
+`mcr.microsoft.com/playwright:vX.Y.Z-jammy@sha256:…` Docker image digest pin. The pivot was
+forced by two implementation realities: (i) GitHub does not expose a SHA digest for hosted-runner
+images, so the original "pin the digest at workflow-config time" mandate is not satisfiable for
+hosted runners; (ii) switching to `container:` execution conflicts with the workflow's reliance
+on `nx serve web` to reach the `/test/gallery` dev-gated route. **Mitigations in place:** (1)
+each bootstrap audit line captures the `ImageVersion` env var (e.g. `20260512.1.0`, published by
+[`actions/runner-images`](https://github.com/actions/runner-images)) so future investigation can
+correlate baseline drift to a specific image revision; (2) the main-push job runs the full
+visual suite without a `paths:` filter, so a runner-image roll that silently shifts glyphs
+surfaces as a failing `Visual Regression / Main` check — the originally-feared mass-rebless still
+gets a CI signal, just on `main` rather than on the PR that triggered the roll. **Image-label
+upgrades (e.g. `24.04` → `26.04`) MUST be a deliberate-rebless PR** with the same discipline as
+any reviewed-design rebless: `pnpm run test:visual:update` + `requires-manual-review` label + own
+commit + audit-doc line append `Linux baselines re-blessed {YYYY-MM-DD} via runner {new-label}
+(ImageVersion: {value}, previous: {old-label})`. The Docker-image-digest pin path is recorded
+below as the rejected alternative; re-considerable if a future incident shows mutable-tag drift
+slipping past the main-push safety net.
+
+**Rejected alternative — Playwright Docker image with digest pin.** Originally specified in
+this audit doc's earlier draft and in `tests/visual/README.md` §Platform-suffix (`mcr.microsoft.com/playwright:vX.Y.Z-jammy@sha256:…`).
+Rejected during 19-5 implementation because (a) `container:` execution conflicts with `nx serve web`
+(the only way to reach `/test/gallery`, which is gated behind `!import.meta.env.PROD`), (b) the
+`ImageVersion`-based audit trail provides sufficient post-hoc traceability, (c) the main-push
+job's no-filter full-suite run catches silent runner-image drift as a CI failure rather than
+as silent baseline corruption.
 
 **Rejected alternative (Option A) — local `scripts/visual-baseline.sh` Docker helper.** A thin
 wrapper that `docker run`s the Playwright image with the repo mounted, runs `:update` inside the
@@ -467,4 +494,7 @@ using this harness; material drift there → tracked `bugfix-N` stories.
 (that's 19-8). The delivered baselines were spot-checked and render correctly; the `screen-section`/
 `utility` `data-pen-node` values are carried straight from the 19-3 `// Implements:` headers.
 
+<!-- Historical record — original workflow format (CR H1 revised this format on 2026-05-19;
+     this line predates the revision so ImageVersion is unknown from this record.
+     `actions/runner-images` release notes for 2026-05-18 can recover the version retroactively. -->
 Linux baselines bootstrapped 2026-05-18 via ubuntu-24.04

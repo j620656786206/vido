@@ -79,7 +79,7 @@ projects explicitly) — so the feature-E2E test count is unaffected.
    CI workflow on its first execution and committed back via a one-off PR. After that PR merges,
    CI runs in verify-only mode (`pnpm run test:visual`) on every PR thereafter.
 
-   **CI first-run decision tree** (for the 19-5 owner — implement in `.github/workflows/visual-regression.yml`):
+   **CI first-run decision tree** (implemented by `.github/workflows/visual-regression.yml`):
 
    ```text
    if no `-linux.png` baseline exists for any fixture:
@@ -90,17 +90,35 @@ projects explicitly) — so the feature-E2E test count is unaffected.
        — content drift unexpected (Sally already approved darwin content);
          expect only rendering drift (font hinting, emoji glyphs, sub-pixel)
      PR body MUST append a line to `_bmad-output/audit/visual-baseline-19-4.md`:
-       `Linux baselines bootstrapped {YYYY-MM-DD} via CI image {full-digest-sha256:…}`
+       `Linux baselines bootstrapped {YYYY-MM-DD} via runner {image-label} (ImageVersion: {value})`
    else:
      run `pnpm run test:visual` (verify-only — fail → block PR)
    ```
 
-   **Image pinning — pin the digest, not just the tag.** The Playwright Docker tag
-   (`mcr.microsoft.com/playwright:vX.Y.Z-jammy`) is mutable: Ubuntu security updates to
-   `fontconfig` / `freetype` will silently shift Linux glyph rendering and trigger mass-rebless.
-   The CI workflow MUST resolve and pin a `sha256:…` digest at workflow-config time, and any
-   image bump MUST be paired with a deliberate baseline-regeneration PR (same tag handling as
-   any other reviewed-design-change rebless — `:update` + Sally gate + own commit).
+   **Runner-image pinning — version-tag pin + ImageVersion capture (revised 2026-05-19 per
+   story 19-5 CR finding H1).** Story 19-5 chose `runs-on: ubuntu-24.04` (GitHub-Hosted
+   Runner version-tag) over the Playwright Docker image (`mcr.microsoft.com/playwright:vX.Y.Z-jammy`
+   with `sha256:…` digest pin). Rationale: GitHub-Hosted Runners do not expose a SHA digest at
+   workflow-config time, and switching to `container:`-style Docker execution would change the
+   job runtime model significantly (no `webServer` proxying, no system-Chromium reuse).
+   Trade-off: `ubuntu-24.04` IS mutable inside the version line — Ubuntu security updates to
+   `fontconfig` / `freetype` will roll forward inside the `24.04` label without a PR, exactly the
+   silent-drift risk the original digest-pin policy was guarding against. The workflow mitigates
+   this with two compensating controls: (1) the bootstrap audit line captures the
+   `ImageVersion` env var (e.g. `20260512.1.0`, published by [`actions/runner-images`](https://github.com/actions/runner-images))
+   so any future mass-rebless can be correlated to a specific runner image revision; (2) the
+   main-push job runs the full suite without `paths:` filter, so a runner-image roll that shifts
+   glyphs surfaces as a failing `Visual Regression / Main` check, not as silent drift into main.
+   Image-label upgrades (`24.04` → `26.04`, etc.) follow the same Baseline-update discipline as
+   any other reviewed-design rebless: `:update` + Sally gate + own commit + audit-doc line.
+
+   **Rejected alternative — Playwright Docker image with digest pin.** Initially specified in
+   this README's earlier draft (`mcr.microsoft.com/playwright:vX.Y.Z-jammy@sha256:…`). Rejected
+   during 19-5 implementation because (a) `container:` execution conflicts with the workflow's
+   `nx serve web` pattern (Vite dev server is the only way to reach `/test/gallery`, which is
+   gated behind `!import.meta.env.PROD`), (b) the `ImageVersion`-based audit trail provides
+   sufficient post-hoc traceability for the expected drift class. Re-considerable if a future
+   incident shows mutable-tag drift slipping past the main-push safety net.
 
    **Rejected alternative (Option A) — local `scripts/visual-baseline.sh` Docker helper.** A
    thin wrapper that `docker run`s `mcr.microsoft.com/playwright:vX.Y.Z-jammy` with the repo
