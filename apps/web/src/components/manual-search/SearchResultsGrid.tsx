@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen H7 Filtered Library Desktop (QTqcC)
 /**
  * SearchResultsGrid Component (Story 3.7 - AC2)
  * Grid display for manual search results

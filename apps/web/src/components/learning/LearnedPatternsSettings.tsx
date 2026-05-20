@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen 10 Settings Desktop (6UCtX)
 /**
  * LearnedPatternsSettings Component (Story 3.9 - AC3)
  * Displays and manages learned filename patterns in settings

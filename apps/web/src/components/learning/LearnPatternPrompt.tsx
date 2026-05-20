@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen — no current screen frame; learning feature postdates the .pen design (epic-19-8 sweep finding)
 /**
  * LearnPatternPrompt Component (Story 3.9 - AC1, AC2)
  * Prompts user to learn a filename pattern after manual metadata correction

@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen H7 Filtered Library Desktop (QTqcC)
 /**
  * FallbackStatusDisplay Component (Story 3.7 - UX-4)
  * Shows the fallback chain status when automatic parsing fails

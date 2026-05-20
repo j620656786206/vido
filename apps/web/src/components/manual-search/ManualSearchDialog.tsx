@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen H7 Filtered Library Desktop (QTqcC)
 /**
  * ManualSearchDialog Component (Story 3.7 - AC1, AC2, AC4)
  * Dialog for manual metadata search and selection

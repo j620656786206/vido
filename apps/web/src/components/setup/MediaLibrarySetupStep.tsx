@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen — no current screen frame; setup feature postdates the .pen design (epic-19-8 sweep finding)
 import { useEffect } from 'react';
 import { Plus, X } from 'lucide-react';
 import type { StepProps } from './SetupWizard';
