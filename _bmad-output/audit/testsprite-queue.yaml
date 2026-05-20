@@ -1,0 +1,372 @@
+# _bmad-output/audit/testsprite-queue.yaml
+#
+# Single source of truth for the monthly TestSprite cron workflow
+# (`.github/workflows/testsprite-monthly.yml`, story 19-6). Schema_version
+# is the Rule 20 [@contract-v2] contract surface — bump on any shape change;
+# downstream 19-7 quota-warning workflow reads this file and depends on
+# `schema_version == 2` + the `last_run:` block shape + the `history:`
+# per-entry shape. Pruning rule: `history` capped at 200 entries, FIFO.
+#
+# 2026-05-19 CR closeout — schema_version 1 → 2 ([@contract-v1→v2] AC #2):
+# the v1 schema declared `last_run.credits_at_start` / `credits_at_end` /
+# `credits_consumed` as part of the contract surface. Phase 2's CLI-shape
+# discovery (see [@contract-v1→v2] AC #3) revealed that the bare CLI does
+# not expose `testsprite_check_account_info` as a subcommand — only the
+# MCP server mode does — so these three fields cannot be populated without
+# a separate MCP-stdio dance the workflow does not implement. v2 keeps the
+# field NAMES (so 19-7 readers don't break on a missing key) but documents
+# them as "always null in v2 — implementer chose to defer live account-info
+# query to a follow-up story" (call it 19-7a if/when wanted). Also: per-case
+# `last_status` enum is now strictly `pass | fail | error | null` (the v1
+# workflow code path leaked `blocked` and `unknown` into the file — v2's
+# CR-time fix maps BLOCKED → error and missing-report → null).
+#
+# 2026-05-19 reseed (v3 → v4 catalog): the initial seed (committed
+# 2026-05-19 in PR #6) listed 30 TC IDs derived from `ls
+# testsprite_tests/TC*.py | wc -l` at impl-time. Investigation during the
+# follow-up local CLI run revealed that 22 of those 30 IDs were v3-catalog
+# orphans (TC001–008, TC015–023, TC027–029, TC033–034) that
+# `testsprite_frontend_test_plan.json` (v4, dated 2026-03-24) no longer
+# lists — running them in the monthly cron would test deprecated features
+# and produce false positives/negatives. The plan defines 50 v4 IDs total:
+# TC009–014, TC035–038, TC039–078 (gaps at TC024–026 / TC030–032 are
+# permanent — v4 reused some IDs and dropped others). This reseed replaces
+# the 30 v3-orphan entries with the canonical 50 v4 plan IDs.
+#
+# 2026-05-19 local generation: TC035's Python file was generated locally
+# via `npx @testsprite/testsprite-mcp@0.0.37 generateCodeAndExecute` and
+# committed; it passed when executed. TC036 retry was BLOCKED (needs real
+# qBittorrent reachable from Vido API; deferred). The remaining 48 IDs
+# have plan entries but no Python files yet — the monthly cron's first
+# pass over each will generate+execute them.
+#
+# Per-case cadence: 50 IDs × 5 credits-estimated/case = 250 credits across
+# all cases; 80%-cap-per-run = 120 credits = ~24 cases/run → full sweep
+# completes in ~3 runs (≈ 3 months); rotation via `history` keeps each
+# case exercised every 3 months on average.
+schema_version: 2
+quota:
+  monthly_budget: 150 # TestSprite Free-plan ceiling; bump if user upgrades.
+  consumption_cap_pct: 80 # workflow's self-imposed per-run ceiling — never crosses.
+  reserved_credits: 30 # reserved_credits MUST equal monthly_budget * (100 - consumption_cap_pct) / 100 — keep in sync manually if any of the three change.
+last_run:
+  started_at: null # ISO 8601 UTC; null = never run
+  finished_at: null
+  credits_at_start: null # v2: always null — LIVE account-info unimplementable via bare CLI; field reserved for future MCP-stdio follow-up.
+  credits_at_end: null # v2: always null — see credits_at_start.
+  credits_consumed: null # v2: always null — = credits_at_start - credits_at_end once live query lands.
+  test_ids_run: [] # ordered list of TestSprite TC IDs run this execution
+  status: null # "success" | "budget-exhausted" | "api-failure" | "test-failures-only"
+  run_url: null # GitHub Actions run URL — back-link for triage
+queue:
+  # Ordered list — entry [0] runs next. After a successful execution the
+  # consumed entries are moved to `history` (below) and the next run picks
+  # up from the remaining queue. When the queue is empty, the workflow
+  # refills from `history` (oldest-first, simple FIFO rotation — this is
+  # the "continuous coverage" mode mentioned in the story user-story).
+  # `file:` paths follow TestSprite's naming convention
+  # `TCxxx_{plan_title_with_spaces_to_underscores_special_chars_stripped}.py`;
+  # for IDs whose Python file does not yet exist locally, TestSprite's
+  # generateCodeAndExecute will create it on first cron pass (cost: gen +
+  # exec ≈ 5 credits per case).
+  - id: TC009
+    file: testsprite_tests/TC009_Switch_to_list_view_sort_by_Year_paginate_and_verify_item_count_updates.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC010
+    file: testsprite_tests/TC010_Delete_an_item_from_list_view_and_confirm_it_is_removed.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC011
+    file: testsprite_tests/TC011_Cancel_delete_from_item_action_menu_leaves_item_intact.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC012
+    file: testsprite_tests/TC012_Filter_media_by_type_TV_and_then_clear_filter_to_repopulate_results.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC013
+    file: testsprite_tests/TC013_Export_a_media_item_from_the_action_menu_shows_visible_confirmationfeedback.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC014
+    file: testsprite_tests/TC014_Pagination_previousnext_controls_behave_at_boundaries.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC035
+    file: testsprite_tests/TC035_Load_qBittorrent_settings_page_and_verify_form_is_visible.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC036
+    file: testsprite_tests/TC036_Successful_connection_test_and_save_settings.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC037
+    file: testsprite_tests/TC037_Verify_save_confirmation_after_successful_test.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC038
+    file: testsprite_tests/TC038_Connection_test_failure_shows_inline_error_and_guidance.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC039
+    file: testsprite_tests/TC039_Save_is_disabled_or_blocked_until_a_successful_test_occurs.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC040
+    file: testsprite_tests/TC040_Empty_host_validation_prevents_connection_test.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC041
+    file: testsprite_tests/TC041_Password_field_masks_input.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC042
+    file: testsprite_tests/TC042_Retest_after_failure_shows_updated_success_state.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC043
+    file: testsprite_tests/TC043_Dashboard_shows_qBittorrent_health_indicator_in_Connected_state_happy_path.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC044
+    file: testsprite_tests/TC044_Open_connection_history_modal_from_the_health_indicator.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC045
+    file: testsprite_tests/TC045_Connection_history_modal_shows_timestamped_events_list.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC046
+    file: testsprite_tests/TC046_Filter_connection_history_to_Errors_only.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC047
+    file: testsprite_tests/TC047_Dashboard_shows_Degraded_state_when_health_API_reports_degraded.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC048
+    file: testsprite_tests/TC048_Indicator_and_modal_remain_usable_after_switching_filters_multiple_times.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC049
+    file: testsprite_tests/TC049_Manual_metadata_search_returns_results_and_can_be_applied_successfully.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC050
+    file: testsprite_tests/TC050_Manual_search_supports_multisource_results_visibility.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC051
+    file: testsprite_tests/TC051_Manual_search_with_a_specific_query_returns_results_list.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC052
+    file: testsprite_tests/TC052_Selecting_a_manual_search_result_shows_a_confirmationpreview_before_apply.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC053
+    file: testsprite_tests/TC053_Applying_a_selected_manual_search_result_updates_metadata_shown_in_the_editor.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC054
+    file: testsprite_tests/TC054_Manual_search_shows_No_matches_found_for_a_rare_query.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC055
+    file: testsprite_tests/TC055_From_No_matches_found_user_can_choose_Edit_manually_entry_point.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC056
+    file: testsprite_tests/TC056_Manual_edits_can_be_saved_after_choosing_Edit_manually.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC057
+    file: testsprite_tests/TC057_Learned_Patterns_list_loads_and_shows_list_stats_sections.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC058
+    file: testsprite_tests/TC058_Learned_Patterns_list_supports_empty_state_when_no_patterns_exist.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC059
+    file: testsprite_tests/TC059_Learned_Patterns_row_renders_required_fields_pattern_usage_stats.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC060
+    file: testsprite_tests/TC060_Delete_learned_pattern_success_removes_it_from_the_list.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC061
+    file: testsprite_tests/TC061_Delete_action_can_be_cancelled_if_a_confirmation_is_shown.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC062
+    file: testsprite_tests/TC062_Learned_Patterns_statistics_updaterefresh_is_reflected_on_the_page.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC063
+    file: testsprite_tests/TC063_Scanner_settings_page_loads_with_folder_list_schedule_selector_and_last_scan_info.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC064
+    file: testsprite_tests/TC064_Trigger_manual_scan_and_verify_progress_card_appears_desktop.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC065
+    file: testsprite_tests/TC065_Minimize_scan_progress_card_to_pill_and_expand_back.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC066
+    file: testsprite_tests/TC066_Cancel_active_scan_with_confirmation_dialog.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC067
+    file: testsprite_tests/TC067_Cancel_confirmation_can_be_dismissed_to_continue_scanning.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC068
+    file: testsprite_tests/TC068_Configure_scan_schedule_to_daily_and_verify_selection_persists.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC069
+    file: testsprite_tests/TC069_Scan_progress_visible_on_nonsettings_pages_global_progress_card.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC070
+    file: testsprite_tests/TC070_Scan_completion_shows_autodismiss_card_with_results.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC071
+    file: testsprite_tests/TC071_Open_subtitle_search_dialog_from_library_context_menu.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC072
+    file: testsprite_tests/TC072_Subtitle_search_shows_provider_checkboxes_and_returns_scored_results.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC073
+    file: testsprite_tests/TC073_Subtitle_search_shows_empty_state_when_no_results_found.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC074
+    file: testsprite_tests/TC074_Preview_subtitle_content_before_downloading.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC075
+    file: testsprite_tests/TC075_Download_subtitle_with_CN_conversion_toggle.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC076
+    file: testsprite_tests/TC076_Close_subtitle_search_dialog_with_Escape_key.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC077
+    file: testsprite_tests/TC077_Open_subtitle_search_from_media_detail_panel.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC078
+    file: testsprite_tests/TC078_Library_context_menu_shows_Search_Subtitles_option_alongside_existing_actions.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+history: []

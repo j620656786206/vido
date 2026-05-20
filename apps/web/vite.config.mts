@@ -11,6 +11,13 @@ export default defineConfig(() => ({
   server: {
     port: 4200,
     host: 'localhost',
+    // Allow TestSprite cloud tunnel (`.tun.testsprite.com`) to reach this dev
+    // server. Required since Vite 7 enforces strict `allowedHosts` checks
+    // against the request `Host` header (CVE-2024-45811 hardening). Without
+    // this, TestSprite's tunnelled requests are rejected with a "Blocked
+    // request" page and the SPA never renders — every test case lands BLOCKED.
+    // Scope kept narrow (subdomain wildcard) so this isn't a blanket bypass.
+    allowedHosts: ['.tun.testsprite.com'],
     proxy: {
       '/api': {
         target: 'http://localhost:8080',

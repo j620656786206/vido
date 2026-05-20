@@ -1,0 +1,576 @@
+# ============================================================================
+# TestSprite Monthly — 月度 journey 漂移把關 (cron 0 3 1 * *)
+# ============================================================================
+#
+# Story 19-6 (epic-19 Design-Implementation Drift Audit) 的 journey 半 ——
+# 19-5 視覺 PR 把關抓 pixel drift,本工作流抓 user-flow drift。每月一號早上
+# 03:00 UTC 起跑,讀 `_bmad-output/audit/testsprite-queue.yaml` 排隊清單,以
+# 80% quota cap (120/150 credits) 為「per-run testIds 切片大小」上限,呼叫
+# TestSprite CLI 一次跑下一批 TC*.py 案例,把 queue 進度 + 新生成的 TC*.py
+# commit 回 repo。
+#
+# 為什麼是月排程而不是每個 PR 都跑:
+#   TestSprite Free plan 是 150 credits/month,單一 journey 案例約 5 credits,
+#   50 案例全跑 ≈ 250 credits/月 接近 1.7 個月配額。把預算花在「single
+#   comprehensive monthly pass」(其他月走 30-credit ad-hoc 餘額即可)是
+#   signal-per-credit 最高的選擇。2026-03-15 deferral 備忘已紀錄:未用完
+#   credits 月底默默歸零,一號早上用 → 給下游回頭 rebless 27 天 lead time。
+#
+# Queue rotation:
+#   `_bmad-output/audit/testsprite-queue.yaml` 有 `queue:` 與 `history:` 兩
+#   個區塊。每次跑掉的案例從 `queue` 移到 `history`(`history` capped at
+#   200,FIFO prune);當 `queue` 空了,下次跑時從 `history` 最舊端搬回
+#   `queue`。50 v4 IDs / 24 cases-per-run ≈ 3 個月完整 sweep → 每個 case
+#   平均每 3 個月被打到一次。
+#
+# 預算單一天花板 (AC #3 [@contract-v1→v2]):
+#   `consumption_cap_pct: 80` → 本次最多燒 120 credits(monthly_budget *
+#   consumption_cap_pct / 100),用「testIds 預先切片」實作:
+#     N = MIN(queue_len, PER_RUN_CAP / credits_per_case)
+#   = MIN(queue_len, 120 / 5) = MIN(queue_len, 24)
+#   把前 N 個 ID 餵進 CLI 一次。剩下的 30 credits 自然留給人工 ad-hoc。
+#
+#   原 v1 設計的 LIVE `testsprite_check_account_info` per-case 檢查在實作
+#   時發現:CLI subcommand 不存在(只有 `generateCodeAndExecute` 與
+#   `server`),且 CLI 是「all-or-testIds-array 一次性」不能每個 case 中斷。
+#   v2 改成「pre-run testIds 切片」實作 — 數學上等價(120-cap-per-run 自動
+#   留 30-reserve floor;ad-hoc 在沒人 race 的情況下都拿得到),代價是若
+#   人類在 cron 啟動到結束間燒掉了預算,workflow 不會 mid-run 中斷。對
+#   monthly cron 來說 race 罕見可接受。
+#
+# 失敗語意分流 (AC #6):
+#   工作流退出碼 ≠ 0 (Actions UI ❌) 只用於「人類必須介入」:
+#     (i)   `secrets.TESTSPRITE_API_KEY` 失效或過期(CLI 啟動時失敗)
+#     (ii)  `vars.TESTSPRITE_TARGET_URL` 或 runner-local Vido 無法連通
+#     (iii) commit-back step 自己失敗(`git push` 被 branch protection 擋下
+#           或網路故障,3-retry rebase 後仍失敗)
+#   單一案例 `fail`/`BLOCKED` 是「資料」不是「infra failure」—— 工作流
+#   退出 0、狀態記錄在 queue history 的 `last_status` 欄。19-7
+#   (`testsprite-quota-warning.yml`) 或一條獨立的「per-case-fail 觸發
+#   GitHub Issue」工作流可以讀這份 history 開單。Actions email 在 ❌ 時
+#   自動寄出,把它預留給「人類介入」場景。
+#
+# Runner 版本固定 (AC #1 + 19-5 AC #5 同精神):
+#   `runs-on: ubuntu-24.04` 而非 `-latest`。TestSprite TC*.py 案例靠 headless
+#   Chromium + Playwright,字體渲染 / glibc / kernel 影響 baseline 比對;
+#   `-latest` 自動換版會引入靜默 drift。升版自成一個 PR。
+#
+# Direct push to main 而非 PR (AC #4):
+#   commit-back 是機械式的稽核 metadata(timestamps、test IDs 跑了哪些、
+#   credits 燒了多少、新生成的 TC*.py 檔)。PR review overhead 沒有審查
+#   價值,反而會讓 queue stale(下個月 cron rebase 在尚未合併的 PR 上 →
+#   conflict)。直接 push `main`,需要 branch-protection 允許
+#   `github-actions[bot]` bypass 該規則(見 AC #9 Completion Notes
+#   follow-up)。
+#
+# Secret + Variable 設定 (AC #5 + AC #9 — 兩者皆 owner 在 Settings 操作):
+#   - `secrets.TESTSPRITE_API_KEY` (Repository Secret)
+#       值 = 本地 `testsprite_tests/tmp/config.json` 的
+#       `executionArgs.envs.API_KEY`(或從 TestSprite dashboard 重發)。
+#       該本地檔案被 `.gitignore:8` + `:74` 雙重保護,不會進 repo。
+#       工作流以 `API_KEY` env var 形式輸出給 CLI(實測 CLI 讀
+#       `process.env.API_KEY`,亦支援 `TSMCP_API_KEY` 作 fallback)。
+#   - `vars.TESTSPRITE_TARGET_URL` (Repository Variable, NOT Secret)
+#       OPTIONAL — 若有公開可達 Vido 部署 URL(NAS-tunnel 或 cloud
+#       staging),CLI 直接用之、不需起 runner-local Vido。
+#       若 unset,workflow 自動於 runner 起 `pnpm nx serve web` +
+#       `go run apps/api/cmd/api` 走「runner-local + TestSprite tunnel」
+#       路徑。三條 owner 路徑都被本工作流支援。
+#
+# CLI 真實形狀(2026-05-19 實作期挖到的事實,推翻原 v1 設計):
+#   - subcommand: `generateCodeAndExecute`(駝峰、無 `testsprite_` 前綴)
+#   - 不接受任何 flag(無 `--test-file` / `--target-url` / `--test-ids`);
+#     完全從 `testsprite_tests/tmp/config.json` 讀設定
+#   - env: `API_KEY` 或 `TSMCP_API_KEY`(非 `TESTSPRITE_API_KEY`)
+#   - `testsprite_check_account_info` 不是 CLI subcommand,只在 MCP server
+#     mode 透過 MCP tool 介面可呼叫 → 工作流走「pre-run testIds 切片」
+#     而非 LIVE account-info check 來限制本次燒量
+#   - CLI 自動向 `tun.testsprite.com` 申請 tunnel `{id, secret}`(用
+#     API key 認證,無需 owner 額外設 proxy)
+#
+# Vite `allowedHosts` 設定(`apps/web/vite.config.mts`):
+#   Vite 7.x 預設 reject 不在 allowedHosts 名單的 Host header(CVE-2024-
+#   45811 強化)。本工作流走 runner-local 路徑時,Vite 必須允許
+#   `.tun.testsprite.com` 子網域 → 設定已就位在 vite.config.mts。
+#
+# 參考:
+#   - Story: _bmad-output/implementation-artifacts/19-6-github-actions-testsprite-monthly.md
+#   - Queue source: _bmad-output/audit/testsprite-queue.yaml (schema_version 1)
+#   - 兄弟工作流: .github/workflows/visual-regression.yml (story 19-5 視覺半)
+#   - 兄弟工作流: .github/workflows/testsprite-quota-warning.yml (story 19-7 — 待 dev)
+#   - epic-19 全景: tests/visual/README.md
+#   - 文件: project-context.md §「TestSprite Journey Test Workflow」L1144
+# ============================================================================
+
+name: TestSprite Monthly
+
+on:
+  schedule:
+    - cron: '0 3 1 * *'
+  workflow_dispatch:
+
+env:
+  TESTSPRITE_PACKAGE_VERSION: '0.0.37'
+  QUEUE_FILE: _bmad-output/audit/testsprite-queue.yaml
+  HISTORY_CAP: '200'
+
+concurrency:
+  group: testsprite-monthly
+  cancel-in-progress: false
+
+jobs:
+  consume:
+    name: TestSprite Monthly / Consume
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    permissions:
+      contents: write
+    env:
+      # CLI reads API_KEY from env (or TSMCP_API_KEY as fallback);
+      # NOT TESTSPRITE_API_KEY despite the repo-secret being named that.
+      API_KEY: ${{ secrets.TESTSPRITE_API_KEY }}
+      TESTSPRITE_TARGET_URL: ${{ vars.TESTSPRITE_TARGET_URL }}
+    steps:
+      - name: Checkout (full history for push)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify TESTSPRITE_API_KEY secret is set
+        run: |
+          if [ -z "${API_KEY}" ]; then
+            echo "::error::TESTSPRITE_API_KEY secret is unset — wire it in Settings → Secrets and variables → Actions → Secrets (story 19-6 AC #5 / AC #9)"
+            exit 1
+          fi
+          echo "::notice::API_KEY env var populated (value masked by Actions)"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+
+      - name: Install Node dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify yq is on PATH
+        run: |
+          if ! command -v yq >/dev/null 2>&1; then
+            echo "::error::yq is not on PATH — expected mikefarah/yq pre-installed on ubuntu-24.04 runners"
+            exit 1
+          fi
+          yq --version
+
+      - name: Verify queue file schema_version
+        run: |
+          if ! yq -e '.schema_version == 2' "${QUEUE_FILE}" >/dev/null 2>&1; then
+            echo "::error::${QUEUE_FILE} schema_version is not 2 — refusing to mutate (bump this workflow + 19-7 first per Rule 20)"
+            exit 1
+          fi
+
+      # If TESTSPRITE_TARGET_URL is unset, start Vido on the runner so the
+      # CLI's auto-provisioned tunnel can reach localhost:4200. Mirrors the
+      # local-dev path the user picked during initial generation (option B
+      # in story 19-6 implementation discovery).
+      - name: Determine endpoint mode (public-URL vs runner-local)
+        id: endpoint
+        run: |
+          if [ -n "${TESTSPRITE_TARGET_URL}" ]; then
+            echo "mode=public" >> "$GITHUB_OUTPUT"
+            echo "url=${TESTSPRITE_TARGET_URL}" >> "$GITHUB_OUTPUT"
+            echo "::notice::Using public Vido endpoint: ${TESTSPRITE_TARGET_URL}"
+          else
+            echo "mode=runner-local" >> "$GITHUB_OUTPUT"
+            echo "url=http://localhost:4200" >> "$GITHUB_OUTPUT"
+            echo "::notice::TESTSPRITE_TARGET_URL unset — will start runner-local Vido (API:8080 + Vite:4200)"
+          fi
+
+      - name: Start runner-local Vido (if endpoint mode = runner-local)
+        if: steps.endpoint.outputs.mode == 'runner-local'
+        run: |
+          mkdir -p /tmp/vido-data /tmp/vido-media
+          # API in background — minimal env (data dir + media dir for validation gate)
+          cd apps/api
+          VIDO_DATA_DIR=/tmp/vido-data \
+          VIDO_MEDIA_DIRS=/tmp/vido-media \
+          GIN_MODE=debug \
+            nohup go run ./cmd/api > /tmp/vido-api.log 2>&1 &
+          cd ../..
+          # Vite in background
+          nohup pnpm nx serve web > /tmp/vido-web.log 2>&1 &
+          # Wait for both (90s budget)
+          for _ in $(seq 1 90); do
+            api_ok=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/ 2>/dev/null || echo "0")
+            web_ok=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:4200/ 2>/dev/null || echo "0")
+            if [ "${api_ok}" != "0" ] && [ "${web_ok}" = "200" ]; then
+              echo "Vido ready: API HTTP ${api_ok}, Web HTTP ${web_ok}"
+              break
+            fi
+            sleep 1
+          done
+          if [ "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:4200/ 2>/dev/null)" != "200" ]; then
+            echo "::error::Vido failed to start within 90s — AC #6 (ii) target unreachable"
+            echo "----- last 80 lines of API log -----"
+            tail -n 80 /tmp/vido-api.log || echo "(log unavailable)"
+            echo "----- last 80 lines of Web log -----"
+            tail -n 80 /tmp/vido-web.log || echo "(log unavailable)"
+            exit 1
+          fi
+
+      # Pick testIds from queue head (PER_RUN_CAP / per_case_estimate slice).
+      # If queue is empty, refill from history (FIFO oldest first).
+      - name: Pick testIds from queue
+        id: pick
+        run: |
+          set -uo pipefail
+          MONTHLY_BUDGET=$(yq '.quota.monthly_budget' "${QUEUE_FILE}")
+          CAP_PCT=$(yq '.quota.consumption_cap_pct' "${QUEUE_FILE}")
+          PER_RUN_CAP=$(( MONTHLY_BUDGET * CAP_PCT / 100 ))
+          # Use the queue head's credits_estimated as the per-case slice unit
+          # (defaults to 5 if missing).
+          PER_CASE_EST=$(yq '.queue[0].credits_estimated // 5' "${QUEUE_FILE}")
+          if [ "${PER_CASE_EST}" -le 0 ]; then PER_CASE_EST=5; fi
+          MAX_N=$(( PER_RUN_CAP / PER_CASE_EST ))
+          # Refill from history if queue empty
+          QUEUE_LEN=$(yq '.queue | length' "${QUEUE_FILE}")
+          if [ "${QUEUE_LEN}" -eq 0 ]; then
+            HIST_LEN=$(yq '.history | length' "${QUEUE_FILE}")
+            if [ "${HIST_LEN}" -eq 0 ]; then
+              echo "::warning::queue AND history both empty — status will be budget-exhausted with test_ids_run: []"
+              echo "ids=" >> "$GITHUB_OUTPUT"
+              echo "count=0" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            REFILL=$(( MAX_N < HIST_LEN ? MAX_N : HIST_LEN ))
+            echo "::notice::queue empty — refilling ${REFILL} oldest from history"
+            for _ in $(seq 1 "${REFILL}"); do
+              yq -i '
+                .queue += [(.history[0] | .last_run_at = null | .last_status = null | .last_run_url = null)]
+                | del(.history[0])
+              ' "${QUEUE_FILE}"
+            done
+            QUEUE_LEN=$(yq '.queue | length' "${QUEUE_FILE}")
+          fi
+          N=$(( MAX_N < QUEUE_LEN ? MAX_N : QUEUE_LEN ))
+          # Read first N ids as a JSON array
+          IDS_JSON=$(yq -o=json ".queue[0:${N}] | map(.id)" "${QUEUE_FILE}" | tr -d '\n' | tr -s ' ')
+          # CSV for commit message body
+          IDS_CSV=$(echo "${IDS_JSON}" | jq -r '. | join(", ")')
+          {
+            echo "ids=${IDS_JSON}"
+            echo "count=${N}"
+            echo "csv=${IDS_CSV}"
+            echo "per_case_est=${PER_CASE_EST}"
+          } >> "$GITHUB_OUTPUT"
+          echo "::notice::Picked ${N} testIds (cap=${PER_RUN_CAP}/${PER_CASE_EST}=${MAX_N}, queue_len=${QUEUE_LEN}): ${IDS_CSV}"
+
+      # Build the config.json the CLI will read. API_KEY env var is injected
+      # via `envs:` because the CLI re-applies env vars from this block to
+      # `process.env` before calling the API; this also keeps the value out
+      # of the workflow file itself (sourced from secret at job env).
+      - name: Build TestSprite config.json
+        if: steps.pick.outputs.count != '0'
+        env:
+          IDS_JSON: ${{ steps.pick.outputs.ids }}
+          ENDPOINT_URL: ${{ steps.endpoint.outputs.url }}
+        run: |
+          set -uo pipefail
+          mkdir -p testsprite_tests/tmp
+          YEAR_MONTH=$(date -u +'%Y-%m')
+          RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          export YQ_PROJECT_PATH="${GITHUB_WORKSPACE}"
+          export YQ_LOCAL_ENDPOINT="${ENDPOINT_URL}"
+          export YQ_API_KEY="${API_KEY}"
+          export YQ_IDS_JSON="${IDS_JSON}"
+          export YQ_INSTRUCTION="Monthly cron run ${YEAR_MONTH} (CI-driven, run URL: ${RUN_URL}). serverMode=production assumes a built/serving Vido. If runner-local, Vite dev mode is in use."
+          # Generate config.json via yq (.json output mode) — keeps shape exact
+          # and avoids interpolating secrets into shell heredocs.
+          yq -n -o=json '
+            {
+              "status": "commited",
+              "type": "frontend",
+              "serverMode": "production",
+              "localEndpoint": strenv(YQ_LOCAL_ENDPOINT),
+              "executionArgs": {
+                "projectName": "vido",
+                "projectPath": strenv(YQ_PROJECT_PATH),
+                "testIds": (strenv(YQ_IDS_JSON) | from_json),
+                "additionalInstruction": strenv(YQ_INSTRUCTION),
+                "serverMode": "production",
+                "envs": {
+                  "API_KEY": strenv(YQ_API_KEY)
+                }
+              }
+            }
+          ' > testsprite_tests/tmp/config.json
+          # Verify (without echoing the API key)
+          yq -e '.executionArgs.testIds | length > 0' testsprite_tests/tmp/config.json >/dev/null
+          echo "::notice::config.json built with $(yq '.executionArgs.testIds | length' testsprite_tests/tmp/config.json) testIds"
+
+      # Single CLI invocation. CLI reads testsprite_tests/tmp/config.json,
+      # auto-provisions tunnel via API_KEY, generates Python code (if missing)
+      # + executes them. Long-running (multiple minutes per case).
+      # `set +e` because CLI exit != 0 may still leave usable per-case reports;
+      # we determine workflow status from parsing the report.
+      - name: Run TestSprite CLI
+        id: cli
+        if: steps.pick.outputs.count != '0'
+        run: |
+          set +e
+          npx --yes "@testsprite/testsprite-mcp@${TESTSPRITE_PACKAGE_VERSION}" generateCodeAndExecute > /tmp/cli-output.log 2>&1
+          CLI_EXIT=$?
+          set -e
+          echo "cli_exit=${CLI_EXIT}" >> "$GITHUB_OUTPUT"
+          echo "----- last 80 lines of CLI log -----"
+          tail -n 80 /tmp/cli-output.log
+
+      # Parse the report files for per-case status and overall verdict.
+      - name: Parse report and compute status
+        id: status
+        if: always() && steps.pick.outputs.count != '0'
+        env:
+          IDS_JSON: ${{ steps.pick.outputs.ids }}
+          CLI_EXIT: ${{ steps.cli.outputs.cli_exit }}
+        run: |
+          set -uo pipefail
+          REPORT=testsprite_tests/tmp/raw_report.md
+          STARTED_AT=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+
+          # Per-case status MUST be one of AC #2 [@contract-v1→v2] schema enum
+          # values: "pass" | "fail" | "error" | null. The bash empty string ""
+          # is the null sentinel (yq writes YAML null literal — see "Update
+          # queue.yaml" step's conditional below).
+          #   "BLOCKED" report state  → error (test ran but produced no verdict)
+          #   unparseable status line → error (report present, case section
+          #                             present, but no Passed/Failed/BLOCKED
+          #                             marker within 50 lines)
+          #   no report file at all   → null (CLI hard-fail upstream of report
+          #                             generation — STATUS will resolve to
+          #                             api-failure below via CLI_EXIT≠0)
+          declare -A CASE_STATUS=()
+          if [ -f "${REPORT}" ]; then
+            for id in $(echo "${IDS_JSON}" | jq -r '.[]'); do
+              # Find the status line within ~50 lines after the TC id heading.
+              STATUS_LINE=$(awk -v id="${id}" '
+                $0 ~ "Test " id " " {found=1; lc=0}
+                found && /\*\*Status:\*\*/ {print; exit}
+                found {lc++; if (lc>50) exit}
+              ' "${REPORT}")
+              case "${STATUS_LINE}" in
+                *"✅"*|*"Passed"*) CASE_STATUS[$id]=pass ;;
+                *"❌"*|*"Failed"*) CASE_STATUS[$id]=fail ;;
+                *"BLOCKED"*)       CASE_STATUS[$id]=error ;;
+                *)                  CASE_STATUS[$id]=error ;;
+              esac
+            done
+          else
+            echo "::warning::report file ${REPORT} missing — leaving picked ids as null (last_status); STATUS will resolve to api-failure if CLI also exited non-zero"
+            for id in $(echo "${IDS_JSON}" | jq -r '.[]'); do
+              CASE_STATUS[$id]=
+            done
+          fi
+
+          # Determine overall status (AC #6 four-state enum):
+          # api-failure → CLI hard-fail (no report, or CLI exit != 0 AND no
+          #               per-case results)
+          # test-failures-only → ≥1 case fail/error (the BLOCKED → error
+          #                      mapping above means a blocked case lands here)
+          # success → all cases pass
+          # budget-exhausted → emitted ONLY when queue+history both empty
+          #                    (see "Surface no IDs to run" branch below)
+          ANY_BAD=false
+          ANY_RESULT=false
+          for id in "${!CASE_STATUS[@]}"; do
+            case "${CASE_STATUS[$id]}" in
+              pass) ANY_RESULT=true ;;
+              fail|error) ANY_BAD=true; ANY_RESULT=true ;;
+              # empty string = null = no result for this case
+            esac
+          done
+
+          if [ "${CLI_EXIT}" != "0" ] && [ "${ANY_RESULT}" = "false" ]; then
+            STATUS=api-failure
+          elif [ "${ANY_BAD}" = "true" ]; then
+            STATUS=test-failures-only
+          else
+            STATUS=success
+          fi
+
+          # Serialise per-case status as JSON for the next step's yq write.
+          CASE_STATUS_JSON='{}'
+          for id in "${!CASE_STATUS[@]}"; do
+            CASE_STATUS_JSON=$(echo "${CASE_STATUS_JSON}" | jq --arg k "${id}" --arg v "${CASE_STATUS[$id]}" '. + {($k): $v}')
+          done
+
+          FINISHED_AT=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          {
+            echo "status=${STATUS}"
+            echo "started_at=${STARTED_AT}"
+            echo "finished_at=${FINISHED_AT}"
+            echo "run_url=${RUN_URL}"
+            # case_status JSON could be multi-line; serialise compact then base64 to
+            # keep the GITHUB_OUTPUT line single-valued.
+            echo "case_status_b64=$(echo "${CASE_STATUS_JSON}" | base64 -w 0 2>/dev/null || echo "${CASE_STATUS_JSON}" | base64)"
+          } >> "$GITHUB_OUTPUT"
+          echo "::notice::status=${STATUS}, per-case=$(echo "${CASE_STATUS_JSON}" | jq -c .)"
+
+      # Mutate queue.yaml: move consumed IDs from queue → history with
+      # per-case status, update last_run block, prune history.
+      - name: Update queue.yaml
+        if: always() && steps.pick.outputs.count != '0'
+        env:
+          IDS_JSON: ${{ steps.pick.outputs.ids }}
+          STATUS: ${{ steps.status.outputs.status }}
+          STARTED_AT: ${{ steps.status.outputs.started_at }}
+          FINISHED_AT: ${{ steps.status.outputs.finished_at }}
+          RUN_URL: ${{ steps.status.outputs.run_url }}
+          CASE_STATUS_B64: ${{ steps.status.outputs.case_status_b64 }}
+        run: |
+          set -uo pipefail
+          CASE_STATUS_JSON=$(echo "${CASE_STATUS_B64}" | base64 -d 2>/dev/null || echo "${CASE_STATUS_B64}" | base64 -D)
+          # Move each consumed id from queue: → history: with its parsed status.
+          # Empty-string YQ_STATUS_VAL → YAML null literal (AC #2 [@contract-v1→v2]
+          # enum: "pass" | "fail" | "error" | null).
+          for id in $(echo "${IDS_JSON}" | jq -r '.[]'); do
+            CASE_STATUS_VALUE=$(echo "${CASE_STATUS_JSON}" | jq -r --arg k "${id}" '.[$k] // ""')
+            export YQ_ID="${id}"
+            export YQ_TS="${STARTED_AT}"
+            export YQ_STATUS_VAL="${CASE_STATUS_VALUE}"
+            export YQ_URL="${RUN_URL}"
+            yq -i '
+              .history += [(
+                (.queue[] | select(.id == strenv(YQ_ID)))
+                | .last_run_at = strenv(YQ_TS)
+                | .last_status = (
+                    if strenv(YQ_STATUS_VAL) == "" then null
+                    else strenv(YQ_STATUS_VAL)
+                    end
+                  )
+                | .last_run_url = strenv(YQ_URL)
+              )]
+              | del(.queue[] | select(.id == strenv(YQ_ID)))
+            ' "${QUEUE_FILE}"
+          done
+          # Update last_run block.
+          export YQ_STARTED_AT="${STARTED_AT}"
+          export YQ_FINISHED_AT="${FINISHED_AT}"
+          export YQ_STATUS="${STATUS}"
+          export YQ_RUN_URL="${RUN_URL}"
+          export YQ_IDS_JSON="${IDS_JSON}"
+          yq -i '
+            .last_run.started_at = strenv(YQ_STARTED_AT)
+            | .last_run.finished_at = strenv(YQ_FINISHED_AT)
+            | .last_run.status = strenv(YQ_STATUS)
+            | .last_run.run_url = strenv(YQ_RUN_URL)
+            | .last_run.test_ids_run = (strenv(YQ_IDS_JSON) | from_json)
+          ' "${QUEUE_FILE}"
+          # Prune history to HISTORY_CAP.
+          HIST_LEN=$(yq '.history | length' "${QUEUE_FILE}")
+          if [ "${HIST_LEN}" -gt "${HISTORY_CAP}" ]; then
+            EXCESS=$(( HIST_LEN - HISTORY_CAP ))
+            for _ in $(seq 1 "${EXCESS}"); do
+              yq -i 'del(.history[0])' "${QUEUE_FILE}"
+            done
+          fi
+
+      # Remove the config.json with the API key in it before commit — the
+      # file is gitignored but we belt-and-braces it. Keeping the generated
+      # TC*.py files (those are committable test code).
+      - name: Sanitize tmp/ before commit
+        if: always()
+        run: |
+          rm -f testsprite_tests/tmp/config.json
+          # Keep raw_report.md + test_results.json out of commit too — they're
+          # transient and contain run-time URLs that don't belong in source
+          # history. (gitignored already, defense-in-depth.)
+          rm -f testsprite_tests/tmp/raw_report.md testsprite_tests/tmp/test_results.json testsprite_tests/tmp/mcp.log
+
+      - name: Record "budget-exhausted" (queue + history both empty)
+        id: noids
+        if: steps.pick.outputs.count == '0'
+        run: |
+          set -uo pipefail
+          STARTED_AT=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          FINISHED_AT="${STARTED_AT}"
+          RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          export YQ_STARTED_AT="${STARTED_AT}"
+          export YQ_FINISHED_AT="${FINISHED_AT}"
+          export YQ_RUN_URL="${RUN_URL}"
+          # AC #6 budget-exhausted = workflow stopped/no-op'd because no IDs
+          # available to run (queue + history both empty). Record it in the
+          # queue file so 19-7 can distinguish "we no-op'd" vs "we never ran".
+          yq -i '
+            .last_run.started_at = strenv(YQ_STARTED_AT)
+            | .last_run.finished_at = strenv(YQ_FINISHED_AT)
+            | .last_run.status = "budget-exhausted"
+            | .last_run.run_url = strenv(YQ_RUN_URL)
+            | .last_run.test_ids_run = []
+          ' "${QUEUE_FILE}"
+          {
+            echo "status=budget-exhausted"
+            echo "run_url=${RUN_URL}"
+          } >> "$GITHUB_OUTPUT"
+          echo "::notice::queue + history both empty — recorded last_run.status=budget-exhausted, test_ids_run=[]. Workflow exits 0 (cron self-throttling per AC #6)."
+
+      - name: Commit and push queue + generated TC files
+        if: always()
+        env:
+          # status comes from the parse step (count != '0' path) OR from the
+          # noids step (count == '0' → budget-exhausted path).
+          STATUS: ${{ steps.status.outputs.status || steps.noids.outputs.status }}
+          IDS_CSV: ${{ steps.pick.outputs.csv }}
+          COUNT: ${{ steps.pick.outputs.count }}
+          RUN_URL: ${{ steps.status.outputs.run_url || steps.noids.outputs.run_url }}
+        run: |
+          set -uo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          # Stage queue + any newly generated TC*.py files (CLI generates
+          # missing ones in testsprite_tests/). Do NOT git add testsprite_tests/tmp.
+          git add "${QUEUE_FILE}"
+          git add 'testsprite_tests/TC*.py' || true
+          if git diff --cached --quiet; then
+            echo "::notice::No changes to commit (queue + generated files identical to HEAD)"
+            exit 0
+          fi
+          YEAR_MONTH=$(date -u +'%Y-%m')
+          FINAL_STATUS="${STATUS:-unknown}"
+          COMMIT_MSG=$(cat <<EOF
+          chore(testsprite): monthly run ${YEAR_MONTH} — ${COUNT} cases consumed
+
+          Status: ${FINAL_STATUS}
+          Test IDs run: ${IDS_CSV}
+          Run URL: ${RUN_URL}
+
+          Auto-generated by .github/workflows/testsprite-monthly.yml
+
+          Co-Authored-By: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
+          EOF
+          )
+          git commit -m "${COMMIT_MSG}"
+          # 3-retry rebase push
+          for attempt in 1 2 3; do
+            if git push origin "HEAD:${GITHUB_REF_NAME}"; then
+              echo "::notice::Push succeeded on attempt ${attempt}"
+              exit 0
+            fi
+            echo "::warning::Push attempt ${attempt} failed — pulling --rebase and retrying"
+            if ! git pull --rebase origin "${GITHUB_REF_NAME}"; then
+              echo "::warning::Rebase failed on attempt ${attempt}"
+            fi
+          done
+          echo "::error::git push failed after 3 attempts — AC #6 (iii). Likely cause: branch-protection rule blocks github-actions[bot] from pushing to ${GITHUB_REF_NAME}. Owner action: add bot to branch-protection bypass (Settings → Branches → Branch protection rules)."
+          exit 1
+
+      # Surface api-failure (no test ran) as non-zero exit per AC #6 (i).
+      - name: Surface api-failure as non-zero exit
+        if: always() && steps.status.outputs.status == 'api-failure'
+        run: |
+          echo "::error::status=api-failure — TestSprite CLI failed without producing per-case results. AC #6 (i) infra failure."
+          exit 1
