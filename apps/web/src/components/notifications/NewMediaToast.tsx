@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen H3 Scan Complete Toast Desktop (szzaW)
 interface NewMediaToastProps {
   title: string;
   posterUrl?: string;

@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen 10 Settings Desktop (6UCtX)
 import { useState } from 'react';
 import { FileDown, Loader2, Download } from 'lucide-react';
 import { useExport } from '../../hooks/useBackups';

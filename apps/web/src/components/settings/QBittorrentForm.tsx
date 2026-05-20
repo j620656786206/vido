@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen 10 Settings Desktop (6UCtX)
 import { useState, useEffect } from 'react';
 import { Loader2, Plug, Save } from 'lucide-react';
 import { cn } from '../../lib/utils';

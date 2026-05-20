@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen H2 Scan Progress Desktop (wyuhF)
 /**
  * MediaFileCard Component (Story 3.10 - Task 8)
  * Displays a local media file with parse status indicator

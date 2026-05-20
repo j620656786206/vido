@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen H2 Scan Progress Desktop (wyuhF)
 /**
  * LayeredProgressIndicator Component (Story 3.10 - Task 5)
  * Displays parse steps with status icons in a layered format

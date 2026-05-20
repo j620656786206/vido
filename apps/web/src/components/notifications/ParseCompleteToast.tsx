@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen H3 Scan Complete Toast Desktop (szzaW)
 import { CheckCircle, XCircle } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
