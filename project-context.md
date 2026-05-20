@@ -683,13 +683,19 @@ them with ` + ` on one line:
 Exemptions / placeholders (annotate explicitly so absence is intentional, not accidental):
   - Pure layout/utility components:  // Implements: <utility — no .pen counterpart>
   - One-off route-level wrappers:     // Implements: <route-only>
-  - Renders a section of a designed *screen frame* (not a Reusable Component),
-    canonical screen-frame mapping pending the epic-19-8 sweep:
-                                      // Implements: <screen-section — pending epic-19-8 mapping>
-    (Phase-2 placeholder — epic-19-8 upgrades these to a `// Design ref: ux-design.pen
-    Screen {ID} ({nodeId})` soft comment or a real `// Implements:` header if the
-    design extracts the section as a Reusable Component. Do NOT use this form for
-    components that genuinely have no design — those are `<utility — no .pen counterpart>`.)
+  - Renders a section of a designed *screen frame* (not a Reusable Component):
+                                      // Design ref: ux-design.pen Screen {ScreenName} ({nodeId})
+    (Phase-2 form, LIVE since story 19-8 — a 19-3 [@contract-v3] grammar bump; the
+    ESLint rule accepts it. A design-coverage-gap variant covers components whose
+    feature postdates the design:
+                                      // Design ref: ux-design.pen — no current screen frame; {reason})
+  - First-pass backfill placeholder (kept for any future backfill before a screen
+    mapping is decided):           // Implements: <screen-section — pending epic-{N}-{M} mapping>
+    As of story 19-8 (2026-05-20) NO `components/` file should still carry the
+    pending placeholder — the 19-8 sweep upgraded all 94 such files to the
+    `// Design ref:` form; see `_bmad-output/audit/drift-sweep-2026-05.md`.
+    Do NOT use either screen-section form for components that genuinely have no
+    design — those are `<utility — no .pen counterpart>`.
   - Tests, hooks, services, stores:   exempt (no annotation required)
 
 Enforcement:
@@ -734,6 +740,10 @@ Sample-pick policy:
   - Always include the most-touched component of the epic
   - Always include any component with hover/focus state changes
   - Random-pick remaining slots from the epic's File List
+  - OVERRIDE — full sweep: story 19-8 (2026-05-20) examined ALL 131
+    components/ files, not a ≥5 sample. Future retros MUST NOT cite 19-8
+    as the ≥5-sample precedent — it is the explicit full-sweep capstone
+    exception (see `_bmad-output/audit/drift-sweep-2026-05.md`).
 
 Audit history: each epic's audit doc is the durable record for
 post-mortem and trend tracking. If 3 consecutive epics show <2 material
@@ -756,7 +766,11 @@ visual diff (PR-blocking once the branch-protection rule is enabled), main
 push runs the full suite, first main-push self-bootstraps the `-linux`
 baseline set via a `requires-manual-review` PR (Sally re-engagement gate).
 Classification (exact / minor / material per Step 3) + escalation remain
-human judgment.
+human judgment. Full-sweep precedent: story 19-8 (2026-05-20) applied this
+tooling to ALL 131 `components/` files — audit doc
+`_bmad-output/audit/drift-sweep-2026-05.md`. Outcome: 0 material drift,
+2 minor (log-only) — confirming the bugfix-10-4 drift was isolated, not
+systemic.
 
 Rule 22 covers the SPATIAL dimension of visual-baseline correctness
 (design-vs-code). For the TEMPORAL dimension (clock-window-vs-fixture) see

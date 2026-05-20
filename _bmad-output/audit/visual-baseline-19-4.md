@@ -498,3 +498,28 @@ using this harness; material drift there → tracked `bugfix-N` stories.
      this line predates the revision so ImageVersion is unknown from this record.
      `actions/runner-images` release notes for 2026-05-18 can recover the version retroactively. -->
 Linux baselines bootstrapped 2026-05-18 via ubuntu-24.04
+
+---
+
+## 19-8 sweep classification (2026-05-20)
+
+Story 19-8 (comprehensive design-implementation drift sweep) ran the Rule 22 classification
+against the 262 baselines catalogued above. **Per-component classification is recorded in
+`_bmad-output/audit/drift-sweep-2026-05.md` `## Sweep findings table`** (the authoritative
+131-row table) — not duplicated here to avoid a second source of truth.
+
+Post-sweep tally across all 131 in-scope `components/` files:
+
+| Classification | Count | Notes |
+|----------------|-------|-------|
+| material drift | **0** | no `bugfix-N` story spawned |
+| minor drift | **2** | `homepage/HeroBanner` (image-fallback background), `homepage/TrailerModal` (close-button autofocus) — both carried from this doc's 19-4b Sally review "3 non-blocking observations"; log-only (< 3, no shared theme) |
+| exact-match | **97** | 12 Category-A (9 directly design-node-vs-baseline compared) + 85 Category-C |
+| N/A — utility-confirmed | **25** | Category-B; 0 re-classifications |
+| N/A — design-coverage gap | **7** | 6 `setup/*` wizard steps + `learning/LearnPatternPrompt` — no `.pen` screen frame |
+
+**Conclusion:** the Sally baseline approvals recorded above (19-4 2026-05-12 + 19-4b 2026-05-14
+— "every component renders faithfully to the design intent") are confirmed by the formal Rule 22
+sweep. The bugfix-10-4 `PosterCardHover` drift was isolated, not systemic. The 3rd 19-4b
+observation ("Max-update-depth warnings") is tracked separately by
+`bugfix-19-4b-1-gallery-max-update-depth-warnings.md` (a console-warning bug, not visual drift).
