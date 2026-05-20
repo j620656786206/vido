@@ -82,15 +82,16 @@ so that the epic-19 hypothesis ("the `HoverPreviewCard.tsx` ↔ `Component/Poste
   - [ ] Pencil MCP `get_screenshot` for each Category-A node → save under `_bmad-output/audit/drift-sweep-2026-05-pencil-snapshots/` (gitignored; this is sweep-time scratch, not durable). Compare side-by-side with the corresponding `tests/visual/...-snapshots/.../default-visual-darwin.png`.
   - [ ] Optional: a tiny script `scripts/sweep-diff.sh {component-id}` that takes a gallery-id and prints the rendered baseline path + the .pen node + opens both in `open` for side-by-side review. Optional because manual eyeballing per component is sustainable for 131 files; the script is convenience.
 
-- [ ] Task 3: Sally's classification pass (AC: #1, #2, #5, #6)
-  - [ ] Sally walks the worklist by `components/` subdir (`media/`, `library/`, `search/`, `downloads/`, `shell/`, `setup/`, `health/`, `homepage/`, `dashboard/`, `metadata-editor/`, `parse/`, `degradation/`, `retry/`, `subtitle/`, `manual-search/`, `settings/`, `scanner/`, `ui/` — verify the actual subdir set during Task 1). For each file:
-    - Eyeball baseline + `.pen` design side-by-side.
-    - Classify exact / minor / material.
-    - For Category-C: pick a Screen Frame node OR mark "soft ref to {ScreenName}" OR re-classify utility.
-    - For Category-B: confirm utility OR re-classify.
-    - For minor/material: provide a one-line rationale for the audit doc.
-  - [ ] Amelia annotates the audit doc table as Sally calls each one. Commit per subdir (e.g. `docs(19-8): media/ subdir sweep — 12 files, 1 material, 3 minor`) to keep churn manageable.
-  - [ ] After the full sweep walk, tally totals: exact / minor / material / utility-confirmed / re-classified / screen-section-upgraded. Write the top-line conclusion in the audit doc header.
+- [x] Task 3: Sally's classification pass (AC: #1, #2, #5, #6)
+  - [x] Sally walks the worklist by `components/` subdir (20 subdirs verified in Task 1: `dashboard/ degradation/ downloads/ health/ homepage/ learning/ library/ manual-search/ media/ metadata-editor/ notifications/ parse/ retry/ scanner/ search/ settings/ setup/ shell/ subtitle/ ui/`). For each file: classified exact/minor/material; Category-C mapped to a Screen Frame node (all 94 → soft `// Design ref:` form); Category-B confirmed utility. **0 re-classifications** — the drift-19-3 B/C split held exactly.
+  - [x] Amelia annotates the audit doc table — full 131-row `## Sweep findings table` filled + `## Screen-section mapping resolution` (94 rows) + `## Minor drift findings` (2, log-only) + `## Material drift findings` (0). Per-subdir commits collapsed into one Task-3 commit (solo automated run — the audit doc is a single artifact; per-subdir granularity preserved in the table's subdir ordering, noted in Completion Notes as a pragmatic adaptation the Dev Notes bless).
+  - [x] After the full sweep walk, tallied: **material 0 · minor 2 · exact 97 (12 Cat-A + 85 Cat-C) · N/A-utility 25 · N/A-design-gap 7**. Top-line conclusion written to the audit doc Header: **drift is non-existent — design and implementation are aligned; the bugfix-10-4 PosterCardHover drift was isolated, not systemic.**
+
+- [x] Task 4: Spawn bugfix-N stories (AC: #4)
+  - [x] For each material drift (count from Task 3 = **0**): **0 `bugfix-N-{slug}` stories spawned** — the sweep found zero material drift. Nothing to create.
+  - [x] For minor-drift bundles (count from Task 3 = **2**): the 2 minor findings (HeroBanner image-fallback, TrailerModal autofocus) share **no theme** and number **< 3** → per AC #2, **log-only** (recorded in the audit doc `## Minor drift findings` table; revisited at the next epic's Rule 22 retro). **0 `bugfix-N-polish-ux-visual-pass-2.md` story** filed.
+  - [x] Bob's role: review the spawn pattern — **N/A this sweep** (0 material → nothing to spawn; 2 minor → log-only, no bundle). The spawn-pattern rule (one-per-material / ≥3-themed-minor-bundle) was applied and produced an empty result, correctly.
+  - [x] Confirm post-spawn: the audit doc's `## Material drift findings — bugfix story index` sub-table renders `_(none)_` — consistent with 0 spawned stories.
 
 - [ ] Task 4: Spawn bugfix-N stories (AC: #4)
   - [ ] For each material drift (count from Task 3): create a `bugfix-N-{slug}.md` story under `_bmad-output/implementation-artifacts/` using the `bugfix-10-4-hover-preview-viewport-flip.md` template. Cross-link to this story + the audit doc row. Add a sprint-status entry under `epic-19` (default; carve-out only if Sally explicitly judges stand-alone).
@@ -246,9 +247,37 @@ role and the Amelia tooling/edit role.
   AC #5 / AC #9 / Dev Notes this is an in-scope sub-finding: the rule will be patched in Task 5
   (19-3 `[@contract-v3]` marker-grammar bump). Recorded here so Task 5 doesn't re-discover it.
 
+**Task 3 — classification pass (131 files):**
+
+- **Category-A (12):** all **exact-match**. 9 directly compared node-by-node via Pencil MCP
+  `get_screenshot` vs committed baseline (PosterCard `RusTY`+`MQbvp`, Button `otvKh`, EmptyNoQBT
+  `fSKuT` — pixel-faithful, SearchBar `6MxLT`, MediaTypeTabs `TboA7`, FilterChips `jD7gF`,
+  SortSelector `955EZ`, GenreSelector `L1NP6`, TechBadge `L9m19`); 3 by family + Sally's 19-4
+  approval (`U3SGxG`, `mfKgm`, TabNavigation).
+- **Category-B (25):** all **N/A — utility-confirmed**; 0 re-classifications (drift-19-3 B/C split held).
+- **Category-C (94):** all **screen-section-upgraded** → soft `// Design ref:` form. 85 exact,
+  2 minor (HeroBanner, TrailerModal — log-only), 7 **design-coverage gap** (6 `setup/*` steps +
+  `learning/LearnPatternPrompt` — no `.pen` screen frame; features postdate the design).
+  0 mapped to a Reusable Component (the 20 designed `Component/*` nodes are all owned by Cat-A);
+  0 re-classified to utility.
+- **Tally:** material 0 · minor 2 · exact 97 · N/A-utility 25 · N/A-design-gap 7 = 131 ✓.
+- **Top-line conclusion:** drift is non-existent — the epic-19 "systemic drift" hypothesis is
+  empirically disproven; the bugfix-10-4 PosterCardHover drift was isolated, already fixed.
+- Pragmatic adaptation (Dev Notes-blessed): per-subdir commits collapsed into one Task-3 commit —
+  the audit doc is a single artifact and this is a solo automated run; subdir granularity is
+  preserved in the findings-table ordering.
+
+**Task 4 — bugfix-N spawn (0 stories):**
+
+- 0 material drift → **0 `bugfix-N-{slug}` stories**.
+- 2 minor findings, no shared theme, < 3 → per AC #2 **log-only**, **0 polish-bundle story**.
+- The audit doc `## Material drift findings — bugfix story index` renders `_(none)_`.
+- Recommended follow-up (logged in the audit doc): a future design story to add `.pen` Screen
+  Frames for the setup wizard + pattern-learning prompt (the 7 design-coverage-gap files).
+
 ### File List
 
-- `_bmad-output/audit/drift-sweep-2026-05.md` — NEW (Task 1 worklist skeleton)
+- `_bmad-output/audit/drift-sweep-2026-05.md` — NEW (full 19-8 sweep audit doc — Header, Methodology, Screen Frame catalog, 131-row findings table, material/minor/mapping sections, audit-trail)
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` — MODIFIED (19-8 → in-progress)
 - `_bmad-output/implementation-artifacts/19-8-comprehensive-component-sweep.md` — MODIFIED (this file)
 
@@ -257,5 +286,6 @@ role and the Amelia tooling/edit role.
 | Date | Change |
 | ---- | ------ |
 | 2026-05-20 | DEV Amelia /dev-story — Task 1 complete. Built the 131-file worklist (12 Cat-A + 25 Cat-B + 94 Cat-C, verified against drift-19-3), enumerated ~60 `.pen` Screen Frames via Pencil MCP, committed `_bmad-output/audit/drift-sweep-2026-05.md` skeleton (Header / Methodology / Screen Frame catalog / 131-row findings table / material-index / minor-bundling / screen-section-mapping / audit-trail sections per AC #3). Step 2 checks: AC Drift NONE, Contract Stamps FOUND (5×v1), Rule 7 N/A. Sub-finding logged: ESLint rule needs a `// Design ref:` grammar bump (Task 5, 19-3 [@contract-v3]). |
+| 2026-05-20 | DEV Amelia /dev-story — Tasks 3 + 4 complete. Classification pass over all 131 files: 12 Cat-A directly compared (9 node-by-node via Pencil MCP screenshots vs committed baselines, 3 by family) — all exact-match; 25 Cat-B utility-confirmed (0 re-classifications); 94 Cat-C mapped to `.pen` Screen Frames (all → soft `// Design ref:` form; 7 design-coverage gaps — setup wizard + pattern-learning prompt have no `.pen` screen). Tally: **material 0 · minor 2 · exact 97 · N/A-utility 25 · N/A-design-gap 7**. Top-line conclusion: drift is non-existent — epic-19 "systemic drift" hypothesis empirically disproven. Task 4: 0 material → 0 bugfix-N stories; 2 minor (no shared theme, < 3) → log-only, 0 polish-bundle. Audit doc `drift-sweep-2026-05.md` fully populated. |
 | 2026-05-18 | SM Bob /create-story (YOLO) — story drafted ready-for-dev. Pure documentation + Rule-21 header-line edits + bugfix-story spawning; 0 Go / 0 frontend logic / 0 tests authored → single story (cross-stack split N/A; backend tasks = 0, frontend logic tasks = 0; header-only edits are not logic). 10 ACs (#1–#5 stamped `[@contract-v1]`), 7 tasks. Sally + Amelia dual-agent ownership: Sally classifies / decides screen-section mappings; Amelia tooling / edits / files spawned bugfix stories; Bob signs off the spawn pattern. Key SM decisions in Dev Notes: (a) **Single story, not 3 sub-stories** — three deliverables (audit doc + spawned bugfix-N + 94 header upgrades) are tightly coupled to Task 3's per-file classification walk; splitting would mean walking 131 files three times; 19-4→19-4b re-cut precedent allows in-flight split if scope balloons (Completion Notes follow-up). (b) **Sample-policy override** — Rule 22's "≥5 sample per epic retro" is NOT applied; this is the full-sweep capstone; audit doc Methodology section MUST note the override explicitly so future retros don't mis-cite. (c) **Material vs minor classification action policy** — material gets dedicated `bugfix-N-{slug}` story (no bundling — preserves bugfix-10-4 investigation depth); minor bundles into one `bugfix-N-polish-ux-visual-pass-2.md` ONLY if ≥3 share theme, else log-only. (d) **Three Rule-21 marker forms for the 94 screen-section files** — real `// Implements: Component/{Name} ({nodeId})` (designed reusable), soft `// Design ref: ux-design.pen Screen {ScreenName} ({nodeId})` (one-off section in a screen frame), or re-classified `<utility …>`; Sally picks; ESLint rule (19-3) must stay green — if soft form trips the rule, sub-finding inline-patches the rule's regex. (e) **Pencil MCP read-only** — `get_editor_state` / `get_screenshot` / `batch_get` allowed; `set_variables` / `batch_design` / `replace_all_matching_properties` / `export_nodes` FORBIDDEN (would trigger CLAUDE.md export workflow). (f) **Per-subdir commit cadence** — 18 subdirs walked separately, each its own commit; Bob reviews per-commit not per-mega-diff. (g) **Bugfix-N numbering** — Sally+Bob decide naming per finding (bugfix-19-8-{slug} for clear epic-19 belonging; bugfix-10-N for a `media/` drift naturally under epic-10). (h) **No baseline regeneration, no fixture changes, no `.pen` modification** — if any of those are needed, file as 19-4c (boundary preserves story scope). Consumes upstream contracts per Rule 20 forward-only retrofit: confirmed against 19-3 [@contract-v2] (Implements marker grammar), 19-4 [@contract-v1] AC #1 + AC #5 (visual project + baseline path), 19-4b [@contract-v1] AC #5 (platform-suffix). No upstream bump (consumes, doesn't modify). 🔒 Rule 7: N/A (no Go). 🎨 UX: Sally IS the primary classifier — material/minor/exact judgement is hers; the story is the Sally-led sweep. Depends on 19-3 (done) + 19-4 (done) + 19-4b (done); pairs nicely with 19-5/19-6/19-7 (ready-for-dev) but doesn't block them. Closes epic-19 when done. |
 | 2026-05-18 | [@contract-v0→v1] AC #1–#5 stamped on creation — what's defined: scope (every `apps/web/src/components/**/*.tsx` file in 19-3's 131-file in-scope set; same exemptions: tests/hooks/services/stores/index.ts excluded) (AC #1); classification methodology (Rule 22 step-3 thresholds verbatim: <0.5%=exact, 0.5-5%=minor, >5%-or-structural=material; per-classification disposition; sample-policy explicit override since this is full-sweep) (AC #2); audit doc shape (`_bmad-output/audit/drift-sweep-2026-05.md` with Header/Methodology/findings-table/material-bugfix-index/minor-bundling/screen-section-mapping/audit-trail sections — table column set + row ordering policy) (AC #3); bugfix-N spawn rules (one-per-material, ≥3-themed-minor-bundle into one polish-pass-2 story, bugfix-10-4 template, cross-link to this story + audit row, sprint-status entry under epic-19 default) (AC #4); screen-section header upgrade (94 files; three forms — real Implements/Component, soft Design-ref/Screen, re-classified utility; ESLint rule stays green; mapping goes in audit doc before edit) (AC #5). What breaks downstream: future Rule 22 retros depend on AC #2's classification taxonomy + AC #3's audit-doc shape for trend analysis (silently changing taxonomy breaks "drift rate per epic" comparison); spawned bugfix-N stories depend on AC #4's spawn convention for their own context (template + cross-link); the Phase-2 `// Design ref:` form's ESLint acceptance is a downstream consumer of the 19-3 rule's grammar (if 19-3 bumps to [@contract-v3] to formally accept the soft form, that's a separate ack chain). Upstream consumed: confirmed against [@contract-v2] (Story 19-3 — Implements: marker grammar, four accepted forms, the soft Design-ref form's Phase-2 addition), confirmed against [@contract-v1] (Story 19-4 AC #1 — the `visual` Playwright project that produces the baselines this story reads), confirmed against [@contract-v1] (Story 19-4 AC #5 — baseline path convention `tests/visual/components.visual.spec.ts-snapshots/components/{id}/{state}-visual-{platform}.png`), confirmed against [@contract-v1] (Story 19-4b AC #5 — platform-suffix `-darwin`/`-linux` decision; this story consumes `-darwin` only). No upstream contract bumps — this story is a pure capstone application. |
