@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen 8 Batch Operations Desktop (dcf67)
 import { Trash2, RefreshCw, Download, X } from 'lucide-react';
 
 interface SelectionToolbarProps {

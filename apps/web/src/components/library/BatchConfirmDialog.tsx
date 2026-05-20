@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen 8 Batch Operations Desktop (dcf67)
 import { useEffect, useRef } from 'react';
 import { AlertTriangle } from 'lucide-react';
 

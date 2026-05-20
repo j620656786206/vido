@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen 4 Detail Panel Desktop (RgSxQ)
 import { useState, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getImageUrl } from '../../lib/image';

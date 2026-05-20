@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen 7 Search + Filter Desktop (rsAxf)
 import { useState, useCallback, useEffect } from 'react';
 import { Check } from 'lucide-react';
 import { useLibraryGenres } from '../../hooks/useLibrary';

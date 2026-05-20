@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen 4a PosterCard Context Menu (auArc)
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Eye, RefreshCw, Download, Trash2 } from 'lucide-react';
 import { cn } from '../../lib/utils';

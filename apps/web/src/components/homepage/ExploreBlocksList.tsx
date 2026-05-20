@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen HP-1 Homepage Desktop (sAaCR)
 import { useCallback, useMemo, useState } from 'react';
 import { useQueries } from '@tanstack/react-query';
 import { useExploreBlocks, exploreBlockKeys } from '../../hooks/useExploreBlocks';

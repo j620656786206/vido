@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen HP-1 Homepage Desktop (sAaCR)
 import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { ChevronDown, Download as DownloadIcon } from 'lucide-react';

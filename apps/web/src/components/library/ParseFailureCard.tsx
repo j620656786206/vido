@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen 1 Library Grid Desktop (KNI8F)
 /**
  * ParseFailureCard Component (Story 3.7 - Task 7)
  * Displays a media file that failed automatic parsing with manual search option

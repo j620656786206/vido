@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen HP-5 ExploreBlock Polish (Y5XvRv)
 import { useEffect, useMemo, useRef } from 'react';
 import { Link } from '@tanstack/react-router';
 import { ChevronRight, ChevronLeft } from 'lucide-react';

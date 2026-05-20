@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen 4d Detail Fallback Desktop (Failed) (2ltBl)
 import { Link } from '@tanstack/react-router';
 import { SearchX, File, Folder, HardDrive, Clock3, CircleAlert, Search } from 'lucide-react';
 

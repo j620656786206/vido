@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen 4 Detail Panel Desktop (RgSxQ)
 export type MetadataSource = 'tmdb' | 'douban' | 'wikipedia' | 'ai' | 'manual';
 
 interface SourceConfig {

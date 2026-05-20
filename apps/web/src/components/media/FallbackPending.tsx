@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen 4e Detail Fallback Desktop (Pending) (wQOkg)
 import { Loader2 } from 'lucide-react';
 
 interface FallbackPendingProps {

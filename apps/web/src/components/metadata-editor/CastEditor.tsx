@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen 4 Detail Panel Desktop (RgSxQ)
 /**
  * CastEditor Component (Story 3.8 - AC1)
  * Add/remove cast members with input field
