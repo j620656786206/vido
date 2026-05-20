@@ -1,6 +1,6 @@
 # Story 19.8: Comprehensive Design-Implementation Drift Sweep (Design-Drift Audit — Phase 2 Application)
 
-Status: ready-for-dev
+Status: in-progress
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 <!-- This story is the CAPSTONE of epic-19: applies the 19-3 ESLint rule + 19-4/19-4b visual harness to do the full component-vs-`.pen` sweep, files material-drift bugfix-N stories, and upgrades the 94 <screen-section — pending epic-19-8 mapping> placeholders to canonical Rule-21 forms. -->
@@ -71,11 +71,11 @@ so that the epic-19 hypothesis ("the `HoverPreviewCard.tsx` ↔ `Component/Poste
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Build the worklist (AC: #1, #6)
-  - [ ] Amelia: regenerate the in-scope file list — `find apps/web/src/components -type f \( -name '*.tsx' -o -name '*.ts' \) -not -name '*.spec.*' -not -name 'index.ts' | sort` → should be 131 files; cross-check against `_bmad-output/audit/drift-19-3-2026-05.md` and reconcile any additions/removals since 19-3 closed.
-  - [ ] For each file, capture: (a) current Rule-21 marker (`head -3 {file} | grep 'Implements:'`); (b) committed baseline path (`tests/visual/components.visual.spec.ts-snapshots/components/{gallery-id}/{state}-visual-darwin.png` if rendered; absent if utility-only); (c) `.pen` node mapping if Category-A (already in the drift-19-3 doc).
-  - [ ] Amelia: open Pencil MCP via `get_editor_state` → enumerate all Screen Frames (their names + node IDs) → produce a CSV/table for Sally to map against during Task 3.
-  - [ ] Commit the worklist as a draft section of `_bmad-output/audit/drift-sweep-2026-05.md` (the `## Sweep findings table` skeleton with 131 rows, classification column blank). This is the visible artifact Sally annotates during Task 3.
+- [x] Task 1: Build the worklist (AC: #1, #6)
+  - [x] Amelia: regenerate the in-scope file list — `find apps/web/src/components -type f \( -name '*.tsx' -o -name '*.ts' \) -not -name '*.spec.*' -not -name 'index.ts' | sort` → should be 131 files; cross-check against `_bmad-output/audit/drift-19-3-2026-05.md` and reconcile any additions/removals since 19-3 closed. **Result: exactly 131 files — 12 Cat-A + 25 Cat-B + 94 Cat-C — counts match drift-19-3 exactly; no additions/removals since 19-3 closed.**
+  - [x] For each file, capture: (a) current Rule-21 marker (`head -3 {file} | grep 'Implements:'`); (b) committed baseline path (`tests/visual/components.visual.spec.ts-snapshots/components/{gallery-id}/{state}-visual-darwin.png` if rendered; absent if utility-only); (c) `.pen` node mapping if Category-A (already in the drift-19-3 doc). **Done — all 131 markers captured in the audit-doc table; baseline `gallery-id`s sourced from `visual-baseline-19-4.md` (262 PNGs / 122 components).**
+  - [x] Amelia: open Pencil MCP via `get_editor_state` → enumerate all Screen Frames (their names + node IDs) → produce a CSV/table for Sally to map against during Task 3. **Done — `## Screen Frame catalog` table in the audit doc (~60 Vido screens; Pencil.app launched + `ux-design.pen` opened to restore the MCP transport).**
+  - [x] Commit the worklist as a draft section of `_bmad-output/audit/drift-sweep-2026-05.md` (the `## Sweep findings table` skeleton with 131 rows, classification column blank). This is the visible artifact Sally annotates during Task 3.
 
 - [ ] Task 2: Tooling helper (AC: #2, #6)
   - [ ] If pixel-diff numbers are needed for borderline classifications (Sally requests on a per-file basis), use `npx playwright test --project=visual --update-snapshots --grep "{gallery-id}"` to regen a particular component's baseline, then `git diff` the PNGs via `git show :{path}` vs the working-tree to surface byte counts — note this is approximate (Playwright's `maxDiffPixelRatio 0.001` is the pass/fail gate; for the 0.5 % / 5 % bands, a manual visual comparison + Sally's judgement is the primary tool).
@@ -210,17 +210,52 @@ so that the epic-19 hypothesis ("the `HoverPreviewCard.tsx` ↔ `Component/Poste
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+`claude-opus-4-7` — Amelia (DEV agent), BMM `dev-story` workflow. Solo run elected by Alexyu
+(2026-05-20 `/dev-story` "Full solo sweep now") — DEV agent performs both the Sally classification
+role and the Amelia tooling/edit role.
 
 ### Debug Log References
 
+- Pencil MCP transport was initially disconnected ("transport not connected to app: desktop" —
+  only orphaned `mcp-server` processes, no UI). Fixed by `open -a Pencil ux-design.pen`; MCP
+  `get_editor_state` then succeeded.
+
 ### Completion Notes List
 
+**Step 2 — context checks (workflow-mandated):**
+
+- 🔗 AC Drift: NONE — grep `'screen-section — pending|Design ref:'` across
+  `_bmad-output/implementation-artifacts/*.md` returned 5 hits (19-3, 19-4, 19-4b, bugfix-10-6,
+  bugfix-10-7), all REUSE not DRIFT — 19-8 consumes the established Rule 21 marker grammar without
+  modifying any prior AC's observable behaviour; the 94 header upgrades are comment-line edits.
+- 📎 Contract Stamps: FOUND — 5 stamped ACs in this story (`[@contract-v1]` AC #1–#5, newly
+  created on story-create, not bumped). Upstream consumed: 19-3 `[@contract-v2]`, 19-4
+  `[@contract-v1]` AC #1+#5, 19-4b `[@contract-v1]` AC #5 — all three upstream stories carry
+  stamps; `confirmed against` acks present in this story's Dev Notes Rule 20 linkage.
+- 🔒 Rule 7: N/A — no Go code in scope (pure FE source headers + audit docs).
+
+**Task 1 — worklist:**
+
+- 131 in-scope files confirmed (12 Cat-A + 25 Cat-B + 94 Cat-C) — matches `drift-19-3-2026-05.md`
+  exactly; no drift in the file set since 19-3 closed.
+- `## Screen Frame catalog` built from Pencil MCP `get_editor_state` (~60 Vido Screen Frames).
+- Audit doc skeleton committed: `_bmad-output/audit/drift-sweep-2026-05.md`.
+- ⚠️ **Sub-finding discovered (Task 5 scope):** the ESLint rule `local/implements-pen-node-id`
+  (`apps/web/src/eslint-rules/implements-pen-node-id.js`) accepts only 4 marker forms — it does
+  NOT recognise the soft `// Design ref: …` form AC #5 requires for most Cat-C upgrades. Per
+  AC #5 / AC #9 / Dev Notes this is an in-scope sub-finding: the rule will be patched in Task 5
+  (19-3 `[@contract-v3]` marker-grammar bump). Recorded here so Task 5 doesn't re-discover it.
+
 ### File List
+
+- `_bmad-output/audit/drift-sweep-2026-05.md` — NEW (Task 1 worklist skeleton)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — MODIFIED (19-8 → in-progress)
+- `_bmad-output/implementation-artifacts/19-8-comprehensive-component-sweep.md` — MODIFIED (this file)
 
 ## Change Log
 
 | Date | Change |
 | ---- | ------ |
+| 2026-05-20 | DEV Amelia /dev-story — Task 1 complete. Built the 131-file worklist (12 Cat-A + 25 Cat-B + 94 Cat-C, verified against drift-19-3), enumerated ~60 `.pen` Screen Frames via Pencil MCP, committed `_bmad-output/audit/drift-sweep-2026-05.md` skeleton (Header / Methodology / Screen Frame catalog / 131-row findings table / material-index / minor-bundling / screen-section-mapping / audit-trail sections per AC #3). Step 2 checks: AC Drift NONE, Contract Stamps FOUND (5×v1), Rule 7 N/A. Sub-finding logged: ESLint rule needs a `// Design ref:` grammar bump (Task 5, 19-3 [@contract-v3]). |
 | 2026-05-18 | SM Bob /create-story (YOLO) — story drafted ready-for-dev. Pure documentation + Rule-21 header-line edits + bugfix-story spawning; 0 Go / 0 frontend logic / 0 tests authored → single story (cross-stack split N/A; backend tasks = 0, frontend logic tasks = 0; header-only edits are not logic). 10 ACs (#1–#5 stamped `[@contract-v1]`), 7 tasks. Sally + Amelia dual-agent ownership: Sally classifies / decides screen-section mappings; Amelia tooling / edits / files spawned bugfix stories; Bob signs off the spawn pattern. Key SM decisions in Dev Notes: (a) **Single story, not 3 sub-stories** — three deliverables (audit doc + spawned bugfix-N + 94 header upgrades) are tightly coupled to Task 3's per-file classification walk; splitting would mean walking 131 files three times; 19-4→19-4b re-cut precedent allows in-flight split if scope balloons (Completion Notes follow-up). (b) **Sample-policy override** — Rule 22's "≥5 sample per epic retro" is NOT applied; this is the full-sweep capstone; audit doc Methodology section MUST note the override explicitly so future retros don't mis-cite. (c) **Material vs minor classification action policy** — material gets dedicated `bugfix-N-{slug}` story (no bundling — preserves bugfix-10-4 investigation depth); minor bundles into one `bugfix-N-polish-ux-visual-pass-2.md` ONLY if ≥3 share theme, else log-only. (d) **Three Rule-21 marker forms for the 94 screen-section files** — real `// Implements: Component/{Name} ({nodeId})` (designed reusable), soft `// Design ref: ux-design.pen Screen {ScreenName} ({nodeId})` (one-off section in a screen frame), or re-classified `<utility …>`; Sally picks; ESLint rule (19-3) must stay green — if soft form trips the rule, sub-finding inline-patches the rule's regex. (e) **Pencil MCP read-only** — `get_editor_state` / `get_screenshot` / `batch_get` allowed; `set_variables` / `batch_design` / `replace_all_matching_properties` / `export_nodes` FORBIDDEN (would trigger CLAUDE.md export workflow). (f) **Per-subdir commit cadence** — 18 subdirs walked separately, each its own commit; Bob reviews per-commit not per-mega-diff. (g) **Bugfix-N numbering** — Sally+Bob decide naming per finding (bugfix-19-8-{slug} for clear epic-19 belonging; bugfix-10-N for a `media/` drift naturally under epic-10). (h) **No baseline regeneration, no fixture changes, no `.pen` modification** — if any of those are needed, file as 19-4c (boundary preserves story scope). Consumes upstream contracts per Rule 20 forward-only retrofit: confirmed against 19-3 [@contract-v2] (Implements marker grammar), 19-4 [@contract-v1] AC #1 + AC #5 (visual project + baseline path), 19-4b [@contract-v1] AC #5 (platform-suffix). No upstream bump (consumes, doesn't modify). 🔒 Rule 7: N/A (no Go). 🎨 UX: Sally IS the primary classifier — material/minor/exact judgement is hers; the story is the Sally-led sweep. Depends on 19-3 (done) + 19-4 (done) + 19-4b (done); pairs nicely with 19-5/19-6/19-7 (ready-for-dev) but doesn't block them. Closes epic-19 when done. |
 | 2026-05-18 | [@contract-v0→v1] AC #1–#5 stamped on creation — what's defined: scope (every `apps/web/src/components/**/*.tsx` file in 19-3's 131-file in-scope set; same exemptions: tests/hooks/services/stores/index.ts excluded) (AC #1); classification methodology (Rule 22 step-3 thresholds verbatim: <0.5%=exact, 0.5-5%=minor, >5%-or-structural=material; per-classification disposition; sample-policy explicit override since this is full-sweep) (AC #2); audit doc shape (`_bmad-output/audit/drift-sweep-2026-05.md` with Header/Methodology/findings-table/material-bugfix-index/minor-bundling/screen-section-mapping/audit-trail sections — table column set + row ordering policy) (AC #3); bugfix-N spawn rules (one-per-material, ≥3-themed-minor-bundle into one polish-pass-2 story, bugfix-10-4 template, cross-link to this story + audit row, sprint-status entry under epic-19 default) (AC #4); screen-section header upgrade (94 files; three forms — real Implements/Component, soft Design-ref/Screen, re-classified utility; ESLint rule stays green; mapping goes in audit doc before edit) (AC #5). What breaks downstream: future Rule 22 retros depend on AC #2's classification taxonomy + AC #3's audit-doc shape for trend analysis (silently changing taxonomy breaks "drift rate per epic" comparison); spawned bugfix-N stories depend on AC #4's spawn convention for their own context (template + cross-link); the Phase-2 `// Design ref:` form's ESLint acceptance is a downstream consumer of the 19-3 rule's grammar (if 19-3 bumps to [@contract-v3] to formally accept the soft form, that's a separate ack chain). Upstream consumed: confirmed against [@contract-v2] (Story 19-3 — Implements: marker grammar, four accepted forms, the soft Design-ref form's Phase-2 addition), confirmed against [@contract-v1] (Story 19-4 AC #1 — the `visual` Playwright project that produces the baselines this story reads), confirmed against [@contract-v1] (Story 19-4 AC #5 — baseline path convention `tests/visual/components.visual.spec.ts-snapshots/components/{id}/{state}-visual-{platform}.png`), confirmed against [@contract-v1] (Story 19-4b AC #5 — platform-suffix `-darwin`/`-linux` decision; this story consumes `-darwin` only). No upstream contract bumps — this story is a pure capstone application. |
