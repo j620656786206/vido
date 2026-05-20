@@ -132,13 +132,27 @@ jobs:
             REASON="The queue file's schema_version is '${SCHEMA}', but story 19-7 expects 2 (19-6 contract-v2). 19-6's queue-file contract has drifted — investigate before relying on the monthly cron again."
           fi
 
-          # AC #4 (b): 19-6's last run finished in a failure state.
+          # AC #4 (b): 19-6's last run finished in a failure state, OR reported
+          # a status outside the known enum. HEALTHY is a positive whitelist
+          # (success | budget-exhausted) per AC #4 — any other non-null value
+          # is a watchdog signal, not a pass. An unrecognised status means
+          # 19-6's last_run contract drifted (the queue header records v1
+          # leaking `blocked`/`unknown`), exactly the failure mode 19-7 exists
+          # to catch: fail loud, never silently treat an unknown status as OK.
           if [ "${UNHEALTHY}" = "false" ]; then
             case "${STATUS}" in
               api-failure | test-failures-only)
                 UNHEALTHY=true
                 REASON_SHORT="19-6 last run failed — ${STATUS}"
                 REASON="19-6's last monthly run finished with last_run.status '${STATUS}' — the run did not complete cleanly, so journey-test coverage did not happen this cycle."
+                ;;
+              success | budget-exhausted | null)
+                # Known-good or never-run — the staleness check below decides.
+                ;;
+              *)
+                UNHEALTHY=true
+                REASON_SHORT="19-6 last run reported an unrecognized status '${STATUS}'"
+                REASON="19-6's last monthly run finished with last_run.status '${STATUS}', which is not a recognised value (expected success / budget-exhausted / api-failure / test-failures-only). 19-6's last_run contract has drifted — investigate before relying on the monthly cron again."
                 ;;
             esac
           fi
@@ -172,6 +186,13 @@ jobs:
             echo "::notice::19-6 monthly run is HEALTHY (status=${STATUS}, finished_at=${FINISHED_AT})"
           fi
 
+          # Randomised heredoc delimiter for the multi-line `reason` output.
+          # `reason` embeds queue-file-derived values; a fixed delimiter could
+          # in principle be collided by crafted queue content and break output
+          # parsing — a per-run random token removes that vector (GitHub's
+          # documented multi-line-output guidance).
+          REASON_EOF="REASON_EOF_$(openssl rand -hex 16)"
+
           {
             echo "unhealthy=${UNHEALTHY}"
             echo "schema=${SCHEMA}"
@@ -180,9 +201,9 @@ jobs:
             echo "test_ids_count=${TEST_IDS_COUNT}"
             echo "run_url=${RUN_URL}"
             echo "reason_short=${REASON_SHORT}"
-            echo "reason<<__REASON_EOF__"
+            echo "reason<<${REASON_EOF}"
             echo "${REASON}"
-            echo "__REASON_EOF__"
+            echo "${REASON_EOF}"
           } >> "${GITHUB_OUTPUT}"
 
       - name: Open / update / close the watchdog Issue
@@ -196,8 +217,8 @@ jobs:
           TEST_IDS_COUNT: ${{ steps.health.outputs.test_ids_count }}
           RUN_URL: ${{ steps.health.outputs.run_url }}
           SCHEMA: ${{ steps.health.outputs.schema }}
-          WARN_LABEL: ${{ env.WARN_LABEL }}
-          QUEUE_FILE: ${{ env.QUEUE_FILE }}
+          # WARN_LABEL / QUEUE_FILE are NOT re-declared here — the workflow-level
+          # `env:` block already injects them into every step's process.env.
         with:
           script: |
             // Story 19-7 AC #2 / AC #3 — dedup decision tree + Issue body template.
@@ -221,14 +242,36 @@ jobs:
             const thisWorkflow = server + "/" + owner + "/" + repo + "/actions/workflows/testsprite-quota-warning.yml";
             const queuePermalink = server + "/" + owner + "/" + repo + "/blob/" + context.sha + "/" + process.env.QUEUE_FILE;
 
-            // Find the (at most one) open watchdog Issue — label is the dedup key.
-            const all = await github.paginate(github.rest.issues.listForRepo, {
+            // Find the (at most one) open watchdog Issue. The label is the
+            // primary dedup key (AC #2). The body marker comment (AC #3) is a
+            // fallback: if a maintainer hand-removed the label off a still-open
+            // warning, the label search misses it — grep the marker so this
+            // run re-uses that Issue instead of opening a duplicate.
+            const byLabel = await github.paginate(github.rest.issues.listForRepo, {
               owner, repo, state: "open", labels: label, per_page: 100,
             });
-            const openIssues = all.filter((i) => !i.pull_request);
+            let openIssues = byLabel.filter((i) => !i.pull_request);
+            if (openIssues.length === 0) {
+              const marker = "testsprite-quota-warning-marker";
+              const byMarker = await github.paginate(github.rest.search.issuesAndPullRequests, {
+                q: 'repo:' + owner + '/' + repo + ' is:issue is:open in:body "' + marker + '"',
+                per_page: 100,
+              });
+              openIssues = byMarker.filter((i) => !i.pull_request);
+              if (openIssues.length > 0) {
+                core.warning(
+                  "Found " + openIssues.length + " open Issue(s) via the body marker but NOT the '" +
+                  label + "' label — the label was likely hand-removed. Re-using #" +
+                  openIssues[0].number + " and re-applying the label to restore the fast path."
+                );
+                await github.rest.issues.addLabels({
+                  owner, repo, issue_number: openIssues[0].number, labels: [label],
+                });
+              }
+            }
             if (openIssues.length > 1) {
               core.warning(
-                "Found " + openIssues.length + " open '" + label + "' Issues — expected at most 1. " +
+                "Found " + openIssues.length + " open watchdog Issues — expected at most 1. " +
                 "Using #" + openIssues[0].number + "; investigate and close the rest manually: " +
                 openIssues.slice(1).map((i) => "#" + i.number).join(", ")
               );
