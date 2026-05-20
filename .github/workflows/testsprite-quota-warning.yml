@@ -1,0 +1,302 @@
+# ============================================================================
+# TestSprite Quota Warning — month-end watchdog for the 19-6 monthly cron
+# ============================================================================
+#
+# Story 19-7 (epic-19 Design-Implementation Drift Audit). Story 19-6
+# (`testsprite-monthly.yml`) runs the monthly TestSprite journey pass on the
+# 1st of each month and commits progress to
+# `_bmad-output/audit/testsprite-queue.yaml`. THIS workflow runs on the 28th
+# at 03:00 UTC, reads that queue file's `last_run` block, and opens a GitHub
+# Issue if 19-6's last monthly run was UNHEALTHY — giving the maintainer ~3
+# days of lead time, before month-end Free-plan credit expiry, to fire a
+# manual `workflow_dispatch` of 19-6 to catch up.
+#
+# Why a watchdog, not a live credit check (correct-course re-scope 2026-05-20):
+#   The original 19-7 design called `testsprite_check_account_info` to read a
+#   live remaining-credit count. The dev-story AC Contract Drift Check found,
+#   before any code was written, that the bare `@testsprite/testsprite-mcp`
+#   CLI exposes only `generateCodeAndExecute` + `server` — account-info is an
+#   MCP-server-mode tool, not a CLI subcommand (19-6 Phase 2 discovery). And
+#   19-6 [@contract-v2] leaves all `last_run.credits_*` fields permanently
+#   null. So no credit count is reachable from this workflow at all. 19-7 was
+#   re-scoped to judge 19-6's health from `last_run.status` + run staleness.
+#   Full rationale:
+#   `_bmad-output/planning-artifacts/sprint-change-proposal-2026-05-20.md`.
+#
+# Health rule (story 19-7 AC #4) — UNHEALTHY when ANY of:
+#   (a) queue `schema_version` != 2 (19-6's queue contract drifted);
+#   (b) `last_run.status` in {api-failure, test-failures-only};
+#   (c) `last_run.finished_at` is null (never run) OR older than 35 days
+#       (a monthly cycle was missed — cron skipped / workflow disabled /
+#        branch-protection blocked the commit-back so the queue never
+#        updated).
+#   Otherwise HEALTHY (status in {success, budget-exhausted} AND finished_at
+#   within 35 days). The 35-day window: 19-6 runs `0 3 1 * *`, this workflow
+#   runs `0 3 28 * *`, so within healthy operation 19-6's freshest run is
+#   <=27 days old when the watchdog fires; >35 days means a month was missed.
+#
+# Issue de-dup (story 19-7 AC #2) — label `testsprite-quota-warning` is the
+#   dedup key; at most ONE open watchdog Issue at any time. 4-branch tree:
+#     no Issue + UNHEALTHY -> open a new Issue
+#     Issue    + UNHEALTHY -> comment on the existing Issue (no duplicate)
+#     no Issue + HEALTHY   -> no-op
+#     Issue    + HEALTHY   -> post a "Resolved" comment and close the Issue
+#
+# Why the 28th: `0 3 31 * *` never fires in Feb / Apr / Jun / Sep / Nov, and
+#   `0 3 30 * *` never fires in Feb. The 28th fires every month (Feb has 28
+#   days every year) and still leaves 2-3 days before month-end.
+#
+# Permissions / secrets (story 19-7 AC #6): this workflow needs NO TestSprite
+#   secret — it makes no TestSprite API call. The only token used is the
+#   auto-issued `GITHUB_TOKEN`, job-scoped `{ contents: read, issues: write }`
+#   (checkout reads the queue file; Issue + label CRUD need issues: write).
+#
+# References:
+#   - Story:        _bmad-output/implementation-artifacts/19-7-github-actions-quota-warning.md
+#   - Re-scope:     _bmad-output/planning-artifacts/sprint-change-proposal-2026-05-20.md
+#   - Sibling:      .github/workflows/testsprite-monthly.yml (story 19-6 — the watched workflow)
+#   - Queue file:   _bmad-output/audit/testsprite-queue.yaml (schema_version 2, read-only here)
+# ============================================================================
+
+name: TestSprite Quota Warning
+
+on:
+  schedule:
+    - cron: '0 3 28 * *'
+  workflow_dispatch:
+
+concurrency:
+  group: testsprite-quota-warning
+  cancel-in-progress: false
+
+env:
+  QUEUE_FILE: _bmad-output/audit/testsprite-queue.yaml
+  WARN_LABEL: testsprite-quota-warning
+  STALE_DAYS: '35'
+
+jobs:
+  check:
+    name: TestSprite Quota Warning / Check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Checkout (queue file at HEAD)
+        uses: actions/checkout@v4
+
+      - name: Ensure the testsprite-quota-warning label exists
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh label create "${WARN_LABEL}" \
+            --color FFA500 \
+            --description "TestSprite monthly run watchdog (story 19-7)" \
+            --force
+
+      - name: Evaluate 19-6 monthly-run health
+        id: health
+        run: |
+          set -euo pipefail
+
+          if ! command -v yq >/dev/null 2>&1; then
+            echo "::error::yq is not on PATH — expected mikefarah/yq pre-installed on ubuntu-24.04 runners"
+            exit 1
+          fi
+
+          # AC #7 (b): queue file missing / unparseable = hard fail (exit != 0).
+          if [ ! -f "${QUEUE_FILE}" ]; then
+            echo "::error::Queue file ${QUEUE_FILE} not found — repo corruption (story 19-7 AC #7 (b))"
+            exit 1
+          fi
+          if ! yq -e 'tag == "!!map"' "${QUEUE_FILE}" >/dev/null 2>&1; then
+            echo "::error::Queue file ${QUEUE_FILE} is not a parseable YAML mapping (story 19-7 AC #7 (b))"
+            exit 1
+          fi
+
+          SCHEMA=$(yq '.schema_version // "missing"' "${QUEUE_FILE}")
+          STATUS=$(yq '.last_run.status // "null"' "${QUEUE_FILE}")
+          FINISHED_AT=$(yq '.last_run.finished_at // "null"' "${QUEUE_FILE}")
+          TEST_IDS_COUNT=$(yq '(.last_run.test_ids_run // []) | length' "${QUEUE_FILE}")
+          RUN_URL=$(yq '.last_run.run_url // "null"' "${QUEUE_FILE}")
+
+          UNHEALTHY=false
+          REASON=""
+          REASON_SHORT=""
+
+          # AC #4 (a): queue schema_version drift.
+          if [ "${SCHEMA}" != "2" ]; then
+            UNHEALTHY=true
+            REASON_SHORT="queue schema_version is '${SCHEMA}', expected 2"
+            REASON="The queue file's schema_version is '${SCHEMA}', but story 19-7 expects 2 (19-6 contract-v2). 19-6's queue-file contract has drifted — investigate before relying on the monthly cron again."
+          fi
+
+          # AC #4 (b): 19-6's last run finished in a failure state.
+          if [ "${UNHEALTHY}" = "false" ]; then
+            case "${STATUS}" in
+              api-failure | test-failures-only)
+                UNHEALTHY=true
+                REASON_SHORT="19-6 last run failed — ${STATUS}"
+                REASON="19-6's last monthly run finished with last_run.status '${STATUS}' — the run did not complete cleanly, so journey-test coverage did not happen this cycle."
+                ;;
+            esac
+          fi
+
+          # AC #4 (c): 19-6 never ran, or its last run is stale.
+          if [ "${UNHEALTHY}" = "false" ]; then
+            if [ "${FINISHED_AT}" = "null" ]; then
+              UNHEALTHY=true
+              REASON_SHORT="19-6 has never run"
+              REASON="19-6 has never recorded a completed run (last_run.finished_at is null). The monthly cron may not be wired up yet, is disabled, or has never fired."
+            elif FIN_EPOCH=$(date -u -d "${FINISHED_AT}" +%s 2>/dev/null); then
+              NOW_EPOCH=$(date -u +%s)
+              AGE_DAYS=$(( (NOW_EPOCH - FIN_EPOCH) / 86400 ))
+              if [ "${AGE_DAYS}" -gt "${STALE_DAYS}" ]; then
+                UNHEALTHY=true
+                REASON_SHORT="19-6 has not run in ${AGE_DAYS} days"
+                REASON="19-6's last run finished ${AGE_DAYS} days ago (${FINISHED_AT}), exceeding the ${STALE_DAYS}-day staleness window. A monthly cycle was missed — the cron may have been skipped, the workflow disabled, or the commit-back blocked by branch protection."
+              fi
+            else
+              UNHEALTHY=true
+              REASON_SHORT="19-6 last_run timestamp malformed"
+              REASON="19-6's last_run.finished_at ('${FINISHED_AT}') is not a parseable ISO-8601 timestamp — the queue data is malformed."
+            fi
+          fi
+
+          if [ "${UNHEALTHY}" = "true" ]; then
+            echo "::notice::19-6 monthly run is UNHEALTHY — ${REASON_SHORT}"
+          else
+            REASON_SHORT="19-6 last run healthy (${STATUS})"
+            REASON="19-6's last monthly run is healthy (last_run.status '${STATUS}', finished '${FINISHED_AT}')."
+            echo "::notice::19-6 monthly run is HEALTHY (status=${STATUS}, finished_at=${FINISHED_AT})"
+          fi
+
+          {
+            echo "unhealthy=${UNHEALTHY}"
+            echo "schema=${SCHEMA}"
+            echo "last_status=${STATUS}"
+            echo "finished_at=${FINISHED_AT}"
+            echo "test_ids_count=${TEST_IDS_COUNT}"
+            echo "run_url=${RUN_URL}"
+            echo "reason_short=${REASON_SHORT}"
+            echo "reason<<__REASON_EOF__"
+            echo "${REASON}"
+            echo "__REASON_EOF__"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Open / update / close the watchdog Issue
+        uses: actions/github-script@v7
+        env:
+          UNHEALTHY: ${{ steps.health.outputs.unhealthy }}
+          REASON: ${{ steps.health.outputs.reason }}
+          REASON_SHORT: ${{ steps.health.outputs.reason_short }}
+          LAST_STATUS: ${{ steps.health.outputs.last_status }}
+          FINISHED_AT: ${{ steps.health.outputs.finished_at }}
+          TEST_IDS_COUNT: ${{ steps.health.outputs.test_ids_count }}
+          RUN_URL: ${{ steps.health.outputs.run_url }}
+          SCHEMA: ${{ steps.health.outputs.schema }}
+          WARN_LABEL: ${{ env.WARN_LABEL }}
+          QUEUE_FILE: ${{ env.QUEUE_FILE }}
+        with:
+          script: |
+            // Story 19-7 AC #2 / AC #3 — dedup decision tree + Issue body template.
+            // Inputs arrive via env vars (not workflow-expression interpolation) to avoid script injection.
+            const unhealthy = process.env.UNHEALTHY === "true";
+            const reason = process.env.REASON || "(no reason recorded)";
+            const reasonShort = process.env.REASON_SHORT || "unknown";
+            const label = process.env.WARN_LABEL;
+            const lastStatus = process.env.LAST_STATUS || "null";
+            const finishedAt = process.env.FINISHED_AT || "null";
+            const { owner, repo } = context.repo;
+            const server = process.env.GITHUB_SERVER_URL || "https://github.com";
+
+            const now = new Date();
+            const iso = now.toISOString();
+            const ym = iso.slice(0, 7);
+            const lastDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0)).getUTCDate();
+            const daysLeft = lastDay - now.getUTCDate();
+            const thisRunUrl = server + "/" + owner + "/" + repo + "/actions/runs/" + context.runId;
+            const monthlyWorkflow = server + "/" + owner + "/" + repo + "/actions/workflows/testsprite-monthly.yml";
+            const thisWorkflow = server + "/" + owner + "/" + repo + "/actions/workflows/testsprite-quota-warning.yml";
+            const queuePermalink = server + "/" + owner + "/" + repo + "/blob/" + context.sha + "/" + process.env.QUEUE_FILE;
+
+            // Find the (at most one) open watchdog Issue — label is the dedup key.
+            const all = await github.paginate(github.rest.issues.listForRepo, {
+              owner, repo, state: "open", labels: label, per_page: 100,
+            });
+            const openIssues = all.filter((i) => !i.pull_request);
+            if (openIssues.length > 1) {
+              core.warning(
+                "Found " + openIssues.length + " open '" + label + "' Issues — expected at most 1. " +
+                "Using #" + openIssues[0].number + "; investigate and close the rest manually: " +
+                openIssues.slice(1).map((i) => "#" + i.number).join(", ")
+              );
+            }
+            const issue = openIssues[0];
+
+            const auditSnapshot = [
+              "## Audit trail snapshot",
+              "",
+              "- **19-6 last_run status:** `" + (lastStatus === "null" ? "null — never run" : lastStatus) + "`",
+              "- **19-6 last_run finished:** " + (finishedAt === "null" ? "never" : finishedAt),
+              "- **19-6 last_run test cases:** " + (process.env.TEST_IDS_COUNT || "0"),
+              "- **19-6 last_run URL:** " + (process.env.RUN_URL === "null" ? "n/a" : process.env.RUN_URL),
+              "- **Queue schema_version:** " + process.env.SCHEMA,
+              "- **Queue file:** [`" + process.env.QUEUE_FILE + "`](" + queuePermalink + ")",
+            ].join("\n");
+
+            const body = [
+              "## Why this Issue was opened",
+              "",
+              "The month-end watchdog (`testsprite-quota-warning.yml`, story 19-7) found story 19-6's monthly TestSprite cron in an UNHEALTHY state:",
+              "",
+              "**" + reason + "**",
+              "",
+              "19-6 spends the monthly TestSprite credit budget on journey-test coverage. An unhealthy `last_run` means that coverage did not happen this cycle — and Free-plan credits expire at calendar-month rollover (~" + daysLeft + " days from now) with no carry-forward.",
+              "",
+              "## What to do",
+              "",
+              "1. Fire `workflow_dispatch` on [TestSprite Monthly](" + monthlyWorkflow + ") to run the monthly pass now.",
+              "2. After it completes, re-fire `workflow_dispatch` on this workflow ([TestSprite Quota Warning](" + thisWorkflow + ")) to re-check — when 19-6's `last_run` is healthy again, this Issue auto-closes.",
+              "3. If 19-6's run fails, investigate root cause (most common: `TESTSPRITE_API_KEY` rotated / expired, `TESTSPRITE_TARGET_URL` unreachable, GitHub-Actions branch-protection blocking the commit-back push).",
+              "",
+              auditSnapshot,
+              "",
+              "## Workflow run",
+              "",
+              "This Issue was opened by [TestSprite Quota Warning run #" + context.runId + "](" + thisRunUrl + ").",
+              "",
+              "<!-- testsprite-quota-warning-marker: do not edit; consumed by 19-7's dedup logic -->",
+            ].join("\n");
+
+            const title = "[TestSprite] Monthly run watchdog: " + reasonShort + " (" + ym + ")";
+
+            if (unhealthy && !issue) {
+              const created = await github.rest.issues.create({ owner, repo, title, body, labels: [label] });
+              core.notice("Opened watchdog Issue #" + created.data.number + ": " + title);
+            } else if (unhealthy && issue) {
+              await github.rest.issues.createComment({
+                owner, repo, issue_number: issue.number,
+                body: [
+                  "### 🔁 Still unhealthy as of " + iso,
+                  "",
+                  "**" + reason + "**",
+                  "",
+                  auditSnapshot,
+                  "",
+                  "Re-checked by [TestSprite Quota Warning run #" + context.runId + "](" + thisRunUrl + ").",
+                ].join("\n"),
+              });
+              core.notice("19-6 still unhealthy — commented on existing Issue #" + issue.number + " (no duplicate opened).");
+            } else if (!unhealthy && !issue) {
+              core.info("19-6 monthly run is healthy and no watchdog Issue is open — nothing to do.");
+            } else {
+              await github.rest.issues.createComment({
+                owner, repo, issue_number: issue.number,
+                body: "✅ Resolved — 19-6's last_run is healthy again (" + lastStatus + ", finished " + finishedAt + "). Closing.\n\n" +
+                  "Re-checked by [TestSprite Quota Warning run #" + context.runId + "](" + thisRunUrl + ").",
+              });
+              await github.rest.issues.update({ owner, repo, issue_number: issue.number, state: "closed", state_reason: "completed" });
+              core.notice("19-6 healthy again — posted Resolved comment and closed Issue #" + issue.number + ".");
+            }
