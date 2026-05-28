@@ -114,10 +114,10 @@ Gallery fixture (two rows):
 ```
 
 Baselines (committed in 19-9):
-- `tests/visual/components.visual.spec.ts-snapshots/components/library-recently-added/recent/visual-darwin.png`
-- `tests/visual/components.visual.spec.ts-snapshots/components/library-recently-added/stale/visual-darwin.png`
+- `tests/visual/components.visual.spec.ts-snapshots/components/library-recently-added/recent/{default,hover,focus}-visual-darwin.png` (3 files — one per state-div the gallery emits)
+- `tests/visual/components.visual.spec.ts-snapshots/components/library-recently-added/stale/{default,hover,focus}-visual-darwin.png` (3 files — same per-state split)
 - `-linux` counterparts via CI bootstrap (`requires-manual-review` PR per 19-4b Task 5 + 19-5 workflow).
-- Old `default-visual-{darwin,linux}.png` removed (it represented neither state cleanly).
+- Old single-state baselines removed: `library-recently-added/{default,hover,focus}-visual-{darwin,linux}.png` (6 files — superseded by the recent/stale split).
 
 ## Exemption ledger
 
@@ -140,6 +140,6 @@ This audit complements:
 | Field | Value |
 | ----- | ----- |
 | Audit doc commit | (filled at story close — this audit doc is committed as part of story 19-9) |
-| Methodology grep regenerated | `grep -rln -E 'Date\.now\(\)\|new Date\(' apps/web/src/components/ --include='*.tsx' --include='*.ts' --exclude='*.spec.*'` (run 2026-05-28) |
+| Methodology grep regenerated | `grep -rln -E 'Date\.now\(\)|new Date\(' apps/web/src/components/ --include='*.tsx' --include='*.ts' --exclude='*.spec.*'` (run 2026-05-28) |
 | Sample policy | FULL audit — every component-dir `.ts` / `.tsx` AST-walked; this is the Rule 23 baseline audit (analogous to the 19-3 Rule 21 backfill), not a Rule 22 ≥5-sample retro |
 | Future re-scan trigger | Rule 23's ESLint rule prevents new AST trigger (a) hits from landing without a marker; this audit is the FIRST-PASS baseline. Future stories adding new time-bomb candidates either (a) include a Rule 23 marker in the same PR (ESLint forces it) or (b) get caught in the next Rule 22 retro |
