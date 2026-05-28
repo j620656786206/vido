@@ -32,6 +32,18 @@ so that {{benefit}}.
 - Alignment with unified project structure (paths, modules, naming)
 - Detected conflicts or variances (with rationale)
 
+### Time-dependent visual coverage
+
+<!-- Added by story 19-9 (Rule 23 — project-context.md). Forward-only: applies to stories
+     CREATED after 19-9 closes; in-flight stories are NOT retrofitted.
+     Delete this sub-section ONLY if you are POSITIVE every component the story touches
+     is wall-clock-independent. -->
+
+- **Does this story add/modify any `apps/web/src/components/**/*.{ts,tsx}` that reads `Date.now()` / `new Date()` / `Date.UTC()` / `Date.parse()`?**
+  - If **YES**: list the fixture state baseline paths the dev MUST capture (≥2 per Rule 23 AC #1d — typically `recent` + `stale`, but component-specific state names are allowed when branching is naturally named differently, e.g. `overdue` / `on-time`). Reference the AC #4 helper `withFixedClock(page, iso)` and the `clockTime` fixture-row field. Pair the component with one of the three accepted Rule 23 marker forms (`Clock-mocked` / `Clock-injected` / `Time-bomb-exempt`).
+  - If **NO**: explicitly state `N/A — no wall-clock-reading components touched`.
+- Reference: `project-context.md` Rule 23; audit doc `_bmad-output/audit/time-bomb-fixtures-2026-05.md`; canonical migration precedent: story 19-9 AC #5 (`library-recently-added` → `recent` + `stale`).
+
 ### References
 
 - Cite all technical details with source paths and sections, e.g. [Source: docs/<file>.md#Section]
