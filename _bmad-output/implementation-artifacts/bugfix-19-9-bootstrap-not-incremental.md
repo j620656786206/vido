@@ -1,0 +1,232 @@
+# Story bugfix-19-9: Bootstrap Linux Baselines — Per-Fixture Missing-Detection (CI Workflow Incremental Update)
+
+Status: ready-for-dev
+
+<!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
+<!-- This story closes the CI-workflow gap surfaced by CR monitoring of story 19-9's main merge (run 26557906757):
+     `.github/workflows/visual-regression.yml` step 8 "Check Linux baseline presence" is FIRST-RUN-ONLY by design
+     (`find … -name '*-linux.png' | wc -l > 0 → skip bootstrap`), so incremental fixture additions (such as 19-9's
+     `library-recently-added/{recent,stale}` six new baselines) cannot auto-trigger the bootstrap PR path —
+     verify-only fails red, and the missing baselines must be recovered manually (PR #11 is the manual precedent
+     this story makes the last one of its kind). The fix: upgrade the detection from a global wc -l count to
+     per-fixture missing-snapshot detection, and switch the bootstrap step from `--update-snapshots` (full regen,
+     destroys intentional state across 259+ baselines) to `--update-snapshots=missing` (Playwright 1.43+ GA;
+     this repo pins 1.58.0). -->
+<!-- @contract-v2→v3 BUMP on Story 19-5 AC #4: this story changes the bootstrap-decision rule shape from
+     "trigger when zero -linux baselines exist" to "trigger when any expected -linux baseline is missing".
+     19-5 AC #4 was stamped [@contract-v2] (bumped 2026-05-19 per 19-5 CR H1 — audit-doc line format with ImageVersion);
+     this story bumps to v3 per Rule 20. The CR-H1 bump preserved the decision-rule shape (first-run-only); this story's
+     bump changes that shape. Trigger semantics ARE the contract surface; CR-H1 changed adjacent surface (line format).
+     No other contract changes. (Initial draft mis-claimed v1→v2; corrected during dev-story Step 2 stamp check 2026-05-28.) -->
+<!-- markers-block-end -->
+
+## Story
+
+As the **maintainer of the visual-regression CI harness** (Sally for the Sally-gate convention preservation, Murat for the test-architecture decision, Amelia for the implementation),
+
+I want to upgrade `.github/workflows/visual-regression.yml`'s `Check Linux baseline presence` step from a global `find … | wc -l` count check to **per-fixture missing-detection**, AND adapt the bootstrap step to use Playwright's `--update-snapshots=missing` flag (Playwright 1.43+ GA; this repo pins 1.58.0) so only the missing baselines get generated rather than the existing 259+ being indiscriminately regenerated,
+
+**so that** future incremental fixture additions (like 19-9's `library-recently-added/{recent,stale}` split that exposed this gap) auto-trigger a `requires-manual-review` bootstrap PR with just the missing baselines + a Sally-gate body — instead of leaving the verify-only check red and forcing a manual artifact-extraction recovery (PR #11 is the manual precedent; this story makes it the LAST of its kind).
+
+## Acceptance Criteria
+
+1. **[@contract-v2→v3 BUMP on Story 19-5 AC #4]** **`Check Linux baseline freshness` (renamed from `Check Linux baseline presence`) implements per-fixture missing-detection** — `.github/workflows/visual-regression.yml` Main job's existing step 8 (L320-326) is REPLACED. New logic determines whether the `-linux` baseline set is COMPLETE (no `bootstrap_needed`) vs. INCOMPLETE (`bootstrap_needed = true`). Detection mechanism: run `pnpm run test:visual` (verify-only) as a probe, capture stdout/stderr to a log file, and pass it through the new `tests/visual/bootstrap-detection.mjs` parser (AC #4) which classifies each failure into one of three buckets:
+   - **`missing-baseline`** — Playwright emitted `Error: A snapshot doesn't exist at <path>, writing actual.` for `<path>` ending in `-linux.png` → fixture is in scope for incremental bootstrap.
+   - **`pixel-diff`** — Playwright emitted a diff failure (`Pixel ratio … exceeds the threshold`, `Screenshot comparison failed`, etc.) on an existing baseline → REAL regression, MUST NOT auto-bootstrap; fail the job for human review.
+   - **`other`** — any other failure class (test infra error, timeout, missing fixture file, etc.) → fail the job for human review.
+
+   Output a step output `bootstrap_needed` = `true` only if `missing-baseline > 0 AND pixel-diff == 0 AND other == 0`. Output `missing_paths` (newline-joined list) for the bootstrap step's commit message. Preserve the existing `linux_baselines` count output for backward compatibility with the downstream `if:` conditional on the upload-artifacts step (or remove that consumer if no longer referenced — verify at impl time).
+
+2. **New `test:visual:update-missing` npm script in `package.json`** — adds the line `"test:visual:update-missing": "playwright test --project=visual --update-snapshots=missing"` immediately after the existing `"test:visual:update": "playwright test --project=visual --update-snapshots"` (L18). Playwright's `--update-snapshots=missing` (GA since 1.43; this repo pins `@playwright/test ^1.57.0`, resolved to 1.58.0 in `node_modules/@playwright/test/package.json`) only writes baselines for missing snapshots without overwriting any existing one — strictly safer than the bare `--update-snapshots` for incremental scenarios.
+
+3. **Bootstrap step uses targeted update + conditionalized PR body** — `.github/workflows/visual-regression.yml` Main job's step 10 `Bootstrap Linux baselines` (L339-356) and step 11 `Open Linux-baseline bootstrap PR` (L362-413) are split into two parallel branch sets:
+   - **First-run path** (preserved as-is, `if: steps.check-linux.outputs.linux_baselines == '0'`): existing behavior — `pnpm run test:visual:update` (full regen), original PR body. Documents that this branch becomes effectively unreachable once the first bootstrap PR merges (same "dead code" note as the v1 workflow).
+   - **Incremental path** (NEW, `if: steps.check-linux.outputs.bootstrap_needed == 'true' AND steps.check-linux.outputs.linux_baselines != '0'`): runs `pnpm run test:visual:update-missing`; appends a NEW line to `_bmad-output/audit/visual-baseline-19-4.md` of the form `Linux baselines incrementally bootstrapped {YYYY-MM-DD} via runner ubuntu-24.04 (ImageVersion: {value}) — N fixtures: {fixture-path-list}`; opens a PR with branch `chore/bootstrap-linux-baselines-incremental-${{ github.run_id }}`, label `requires-manual-review`, title `chore(visual): bootstrap N missing -linux baselines (incremental)`, and a NEW body template (separate from the first-run body) that lists the missing fixtures + cites the originating story (best-effort: from the most recent merge commit's branch name or PR title, parsed from `${{ github.event.head_commit.message }}`; if not parseable, fall back to a generic "see the latest merged PR" placeholder).
+
+4. **Regression test for the detection parser** — new file `tests/visual/bootstrap-detection.spec.ts` (or `.mjs`, dev's call) with ≥ 8 test cases using vitest's globals (mirrors the 19-3 / 19-9 ESLint-rule spec pattern):
+   - (a) input: a synthetic log containing 6 `A snapshot doesn't exist at .../recent/default-visual-linux.png, writing actual.` lines (the actual log from the failed run 26557906757); expected output: `{ missingPaths: [6 paths], pixelDiffs: [], other: [] }`, `bootstrap_needed = true`.
+   - (b) input: a synthetic log with 1 missing + 1 pixel-diff failure on existing baseline; expected: `bootstrap_needed = false` (mixed failure mode → human review required), `other` empty, both classified correctly.
+   - (c) input: a clean Playwright output `1 passed (1.2m)`; expected: `bootstrap_needed = false`, all arrays empty.
+   - (d) input: a `-darwin` missing-snapshot line; expected: NOT counted as Linux-bootstrap-eligible (the parser must restrict to `-linux.png` paths since only Linux is auto-bootstrapped per the 19-5 + 19-4b platform-suffix decision).
+   - (e) input: a snapshot error pointing OUTSIDE `tests/visual/components.visual.spec.ts-snapshots/` (e.g., a stray test from another spec); expected: classified as `other` (defensive — only the visual-harness suite is in bootstrap scope).
+   - (f) input: a Playwright pixel-diff failure that ALSO references a `*-actual.png` attachment — must NOT be confused with the missing-baseline `writing actual.` pattern (Playwright emits both on the same path; the parser MUST distinguish by the surrounding `doesn't exist` vs `exceeds the threshold` text).
+   - (g) input: multiple pixel-diffs and zero missing → `bootstrap_needed = false`, `pixelDiffs.length` matches input count.
+   - (h) input: empty string → `bootstrap_needed = false`, all arrays empty (defensive).
+
+5. **Documentation sync (Rule 17 doesn't apply — this is dev-internal CI doc, English-only)** —
+   - `.github/workflows/visual-regression.yml` header comment block (L42-50) updated: the line `等該 bootstrap PR 合併後,引導路徑永久變成死碼` is amended with a parenthetical: `(僅指 first-run bootstrap;incremental bootstrap 由 story bugfix-19-9-bootstrap-not-incremental 補上)`. Add a new paragraph below explaining the two-branch decision tree (first-run vs incremental).
+   - Story 19-5 file (`_bmad-output/implementation-artifacts/19-5-github-actions-visual-regression-pr.md`) gets a Change Log row dated 2026-05-28: `[@contract-v2→v3] AC #4: bootstrap decision rule extended from "if zero -linux baselines exist" to "if zero -linux baselines OR any expected -linux baseline missing". Downstream consumers: any story migrating new fixtures to -linux (story 19-9 was the first to surface the gap). What breaks if not bumped: incremental fixture stories silently fall back to manual artifact extraction (PR #11 precedent).` Two-stage verify per Rule 20: row present + body has ≥2 sub-tokens after `AC #4:`. The AC #4 stamp on the L25 region of 19-5 story file is updated from `[@contract-v2]` to `[@contract-v3]` AND the contract-evolution bracketed note inside AC #4 text is appended with a v2→v3 sentence describing the new trigger semantics.
+   - Story 19-9 file Dev Notes L116 (the `Baseline-bootstrap for -linux` paragraph) gets an inline addendum: `Update 2026-05-28: this assumption was incorrect for INCREMENTAL fixture additions (the workflow's bootstrap path is first-run-only). The gap is closed by story bugfix-19-9-bootstrap-not-incremental; until that story lands, manual recovery via the failed-run artifact (see PR #11) is the workaround.` No Change Log row needed on 19-9 (already done).
+   - `tests/visual/README.md` §Platform-suffix (L82-96) updated: the bootstrap decision-tree section gets a new bullet describing the incremental path. Decision tree stays canonical; the new bullet is additive, not replacing.
+
+6. **Operational verification** — once this story is implemented and merged, the NEXT incremental fixture addition (any subsequent story adding a `clockTime` row OR adding a new component fixture without committed `-linux.png` baselines) MUST automatically trigger the incremental bootstrap PR path. Until the next such story lands, validation is limited to: (a) AC #4 unit-test suite green; (b) a `workflow_dispatch` dry-run on a deliberately-broken test branch (commit a fake fixture under `tests/visual/components.visual.spec.ts-snapshots/components/bugfix-19-9-test-fixture/recent/` with a missing `-linux.png`, push to a feature branch, `gh workflow run visual-regression.yml --ref <branch>`, confirm the incremental PR opens). Dry-run branch is throwaway — DO NOT merge.
+
+7. **Scope boundaries** — modified files (5): `.github/workflows/visual-regression.yml`, `package.json`, `_bmad-output/implementation-artifacts/19-5-github-actions-visual-regression-pr.md` (v2 stamp + Change Log row), `_bmad-output/implementation-artifacts/19-9-rule-23-time-dependent-fixtures.md` (Dev Notes L116 addendum), `tests/visual/README.md`. NEW files (2): `tests/visual/bootstrap-detection.mjs` (or `.ts` — dev's call; ESM for Node-direct execution in the workflow step OR TS for type-safety with bundling), `tests/visual/bootstrap-detection.spec.ts`. NO changes to: `apps/api/**` (no Go), `apps/web/src/**` (no React), `apps/web/src/components/**` (no Rule 21/23 markers — pure CI story), Pencil `.pen` (read-only iff Sally needs reference; likely not needed), `playwright.config.ts` (Playwright version unchanged), `package.json` deps (only the `scripts` section gets one new entry; no `dependencies` / `devDependencies` change), `tests/visual/clock-mock.ts` (19-9 helper untouched), the existing 259+ `-linux.png` baselines (none regenerated), the 6 `recent`/`stale` `-linux.png` baselines from PR #11 (preserved verbatim — they ARE the validation that the parser would have detected and the new path would have generated).
+
+8. **Definition of Done — regression + framework hygiene** — `pnpm lint:all` 0 errors / ≤ 122 warnings (= 19-9 close baseline); `actionlint .github/workflows/visual-regression.yml` 0 issues; `pnpm exec prettier --check` clean on all touched files; `pnpm nx test web` PASS (includes the new `bootstrap-detection.spec.ts`); `pnpm nx test api` PASS (untouched, sanity); `pnpm test:e2e --list` 1663/36 unchanged; `pnpm run test:visual` GREEN on `-darwin` (CI fills `-linux` via the very path this story implements — circular validation BUT acceptable because the 6 `recent`/`stale` baselines from PR #11 are already committed, so the new path's first real exercise is a NO-OP for the visual suite); `pnpm run test:cleanup` no orphans; `ux-design.pen` `git status` clean.
+
+9. **Story 19-9 closure preserved** — this story does NOT revert PR #11 (the manual bootstrap of 6 `recent`/`stale` `-linux.png` baselines). PR #11 stays in main as the historical record of the gap this story closes. The 19-9 story file Status remains `done`; only its Dev Notes L116 gets an addendum cross-referencing this bugfix.
+
+10. **No downstream contract bump beyond 19-5 AC #4 v2→v3** — Rule 20 grep check: this story does NOT modify any other stamped AC's contract shape. The new `test:visual:update-missing` npm script is a NEW surface, not a modification of an existing one (so no bump on `test:visual:update`). The new `tests/visual/bootstrap-detection.mjs` file is a NEW internal helper, not a contract surface (no downstream stories will grep its API; if they do, stamp it `[@contract-v1]` at that point per Rule 20 forward-only retrofit).
+
+## Tasks / Subtasks
+
+- [x] Task 1: Author the detection parser + spec (AC: #4)
+  - [x] Create `apps/web/src/visual-harness/bootstrap-detection.mjs` (path deviation from story's `tests/visual/` — see Completion Notes) exporting a function `detectMissingBaselines(playwrightOutput: string): { missingPaths: string[]; pixelDiffs: string[]; other: string[]; bootstrapNeeded: boolean }`. Parser MUST:
+    - Match the literal pattern `Error: A snapshot doesn't exist at <path>, writing actual.` and extract `<path>`. ✓
+    - Restrict `missingPaths` to entries ending in `-linux.png` AND under `tests/visual/components.visual.spec.ts-snapshots/`. ✓ (relative-path normalized inside parser)
+    - Match Playwright pixel-diff failure patterns — anchored on the `Screenshot comparison failed` header line (one per stanza); pinned by spec cases (b)/(f)/(g) so a Playwright wording bump is caught in CI before the workflow misfires. ✓
+    - Compute `bootstrapNeeded = missingPaths.length > 0 && pixelDiffs.length === 0 && other.length === 0`. ✓
+    - Output `other` for any unrecognized failure class (defensive). ✓
+  - [x] Create `apps/web/src/visual-harness/bootstrap-detection.spec.ts` with the 8 test cases enumerated in AC #4 (a–h). Uses vitest's globals + ESM import of the sibling `.mjs` parser.
+  - [x] Ran `pnpm nx test web` — full web suite PASS including the new 8-test spec file (1 NEW spec file added; 0 regressions). `pnpm nx test api` PASS (cached, Go untouched).
+  - [x] Commit message: `feat(bugfix-19-9): bootstrap-detection parser + spec`.
+
+- [ ] Task 2: Add `test:visual:update-missing` npm script (AC: #2)
+  - [ ] Edit `package.json` to add `"test:visual:update-missing": "playwright test --project=visual --update-snapshots=missing"` immediately after L18 `test:visual:update`.
+  - [ ] Local smoke-test: `pnpm run test:visual:update-missing` (should be a no-op since all `-darwin` baselines exist; should NOT modify any committed file — verify via `git status`).
+  - [ ] Commit message: `feat(bugfix-19-9): add test:visual:update-missing npm script`.
+
+- [ ] Task 3: Restructure workflow step 8 + add incremental branch (AC: #1, #3)
+  - [ ] Replace step 8 (`Check Linux baseline presence`, L320-326) with a new step `Check Linux baseline freshness` that:
+    - Keeps the `linux_baselines` count output (for first-run path conditional).
+    - Adds new outputs: `bootstrap_needed`, `missing_paths` (newline-joined), `missing_count`.
+    - Runs verify-only as a probe: `pnpm run test:visual 2>&1 | tee /tmp/visual-probe.log` (use `|| true` to not fail the step; the parser determines next action).
+    - Pipes `/tmp/visual-probe.log` through `node tests/visual/bootstrap-detection.mjs` (script accepts log on stdin OR as a file-path arg — dev's call).
+    - Writes the parser's output to `$GITHUB_OUTPUT` per the new contract.
+  - [ ] Step 9 `Run visual regression (verify-only)` (L330-332): change `if:` from `steps.check-linux.outputs.linux_baselines != '0'` to `steps.check-linux.outputs.bootstrap_needed != 'true' && steps.check-linux.outputs.linux_baselines != '0'`. Re-runs verify-only ONLY if no bootstrap is needed AND first-run already completed. (Skips the second verify-only when bootstrap-needed since the parser already ran one.)
+  - [ ] Step 10 `Bootstrap Linux baselines` (L339-356): keep the existing branch unchanged (first-run). Add a NEW step `Bootstrap Linux baselines (incremental)` immediately after, with `if: steps.check-linux.outputs.bootstrap_needed == 'true' && steps.check-linux.outputs.linux_baselines != '0'`, running `pnpm run test:visual:update-missing` and appending the new audit-doc line per AC #3.
+  - [ ] Step 11 `Open Linux-baseline bootstrap PR` (L362-413): keep existing branch unchanged. Add a NEW step `Open Linux-baseline bootstrap PR (incremental)` immediately after, with parallel conditional + a NEW PR body template that uses `${{ steps.check-linux.outputs.missing_paths }}` and `${{ steps.check-linux.outputs.missing_count }}` to render the missing-fixture list.
+  - [ ] `actionlint .github/workflows/visual-regression.yml` 0 issues.
+  - [ ] Commit message: `feat(bugfix-19-9): incremental bootstrap branch in visual-regression workflow`.
+
+- [ ] Task 4: Documentation sync (AC: #5)
+  - [ ] Update `.github/workflows/visual-regression.yml` header comment L42-50 per AC #5 (a).
+  - [ ] Append Change Log row to story 19-5 file documenting `[@contract-v2→v3] AC #4` bump (Rule 20 two-stage verify — row present, body has both `what changed` and `what breaks downstream` populated). ALSO update the AC #4 stamp in 19-5 story file body from `[@contract-v2]` to `[@contract-v3]` AND append a v2→v3 contract-evolution sentence into the bracketed `[Contract evolution: ...]` block inside that AC.
+  - [ ] Add inline addendum to story 19-9 Dev Notes L116 per AC #5 (c).
+  - [ ] Update `tests/visual/README.md` §Platform-suffix (L82-96) per AC #5 (d).
+  - [ ] `prettier --check` clean on all touched markdown.
+  - [ ] Commit message: `docs(bugfix-19-9): sync workflow comments + 19-5 v2 bump + 19-9 addendum`.
+
+- [ ] Task 5: Operational verification + dry-run (AC: #6)
+  - [ ] Create a throwaway feature branch `dry-run/bugfix-19-9-incremental-test`.
+  - [ ] Add a synthetic fixture entry to `apps/web/src/routes/test/-gallery.fixtures.tsx` (or commit a fake `-darwin` baseline under a new fixture id; pick whichever requires the smallest diff).
+  - [ ] Push the branch — DO NOT open a PR.
+  - [ ] Run `gh workflow run visual-regression.yml --ref dry-run/bugfix-19-9-incremental-test` to manually trigger.
+  - [ ] Watch the run via `gh run watch`; confirm the incremental bootstrap PR opens with the correct title + body + label + missing-fixture list.
+  - [ ] Close the auto-opened incremental PR WITHOUT merging (dry-run only — the synthetic fixture is throwaway).
+  - [ ] Delete the dry-run branch + its companion incremental-PR branch.
+  - [ ] Document the dry-run results in Dev Agent Record (run ID + screenshots of the auto-PR + confirmation of label/title/body match).
+  - [ ] NO commit for this task (it's a CI validation, not a code change). If the dry-run reveals issues, fix in Task 3 + re-test.
+
+- [ ] Task 6: Close-out regression + sprint-status (AC: #7, #8, #9, #10)
+  - [ ] `pnpm lint:all` (0 errors / ≤ 122 warnings) · `pnpm nx test web` (with new spec) · `pnpm nx test api` (untouched, sanity) · `pnpm test:e2e --list` (1663/36 unchanged) · `pnpm run test:visual` (GREEN — relies on PR #11's committed `recent`/`stale` `-linux.png` baselines so the visual suite is a no-op for the workflow change itself) · `pnpm run test:cleanup` (no orphans) · `pnpm exec prettier --check` (clean) · `ux-design.pen` `git status` clean.
+  - [ ] Update bugfix-19-9 sprint-status: ready-for-dev → in-progress (Task 1 start) → review (Task 6 close).
+  - [ ] Document Rule 20 grep verification in Dev Agent Record: `grep -rnE 'confirmed against \[@contract-v[12]\] \(Story 19-5' _bmad-output/implementation-artifacts/` — this story's v3 bump on AC #4 is a contract-shape change; downstream stories acknowledging 19-5 AC #4 at v1 OR v2 MAY need re-ack if they depended on the first-run-only semantics. As of 2026-05-28 Step 2 grep: zero hits on `confirmed against [@contract-v*] (Story 19-5` — no downstream ack updates needed. Document the grep + result.
+  - [ ] Confirm AC #9 — PR #11 NOT reverted; 19-9 story Status remains `done`.
+  - [ ] Commit message: `chore(bugfix-19-9): close-out — workflow incremental bootstrap landed + 19-5 AC #4 v2 stamp`.
+
+## Dev Notes
+
+### Why this story exists / origin
+
+- **CR /code-review monitoring of story 19-9 surfaced the gap.** When 19-9 merged to main (PR #10, merge commit `75fc8ff`), the auto-triggered `Visual Regression / Main` run (#26557906757) FAILED at step 9 `Run visual regression (verify-only)` with 6 `A snapshot doesn't exist at .../library-recently-added/{recent,stale}/{default,hover,focus}-visual-linux.png` errors. Step 8 `Check Linux baseline presence` reported `Linux baseline count: 259` (existing prior baselines from 19-5's first-run bootstrap), so the bootstrap conditional `if: steps.check-linux.outputs.linux_baselines == '0'` evaluated false → steps 10/11 skipped → no auto-bootstrap PR. Amelia (in CR role) recovered via manual artifact extraction (PR #11 — `chore/visual-bootstrap-19-9-recent-stale-linux`, `requires-manual-review` label).
+- **The workflow comment said the bootstrap path is "永久變成死碼".** That's correct for first-run scenarios but ignores incremental ones. Story 19-9's Dev Notes L116 made the inverse error in the other direction: it claimed `CI fills -linux post-merge` — true for first-run, false for incremental. Both 19-5 and 19-9 missed the incremental case because at story-create time neither story was the first to ADD new fixtures post-19-5; 19-9 was the first incremental addition, so the gap surfaced there.
+- **Three failure modes the v1 bootstrap path doesn't handle, all closed by this story:**
+  1. **Incremental fixture addition** (this story's primary motivator). A new story adds a Rule-23-conformant fixture; commits `-darwin`; expects CI to fill `-linux`; v1 workflow silently fails.
+  2. **Per-fixture rebless** (forward-compatible). A future story re-blesses a single fixture's `-darwin` baseline AND removes its `-linux` counterpart; v1 workflow would either (a) re-generate ALL 259+ if all-Linux somehow got deleted, or (b) leave that single fixture broken if other `-linux.png` exist.
+  3. **Platform-suffix migration** (Rule 23 spec mentions platform-suffix migrations may add new platforms). If a new platform is added (e.g., `-linux-arm64.png` for ARM runners), the v1 detection wouldn't see it as "missing"; this story's per-fixture parser CAN be extended to any suffix (defensive parameterization is in Dev Notes, not enforced by an AC).
+
+### Architecture / constraints — read before implementing
+
+- **Pure CI + Node-script + docs story.** Zero source-code touches in `apps/`. The detection helper is a small ESM module (`.mjs`) callable from both the workflow step (Node CLI) and the vitest spec (ESM import).
+- **Playwright `--update-snapshots=missing` is the steady-state mechanism.** GA since Playwright 1.43; this repo pins `@playwright/test ^1.57.0` resolved to 1.58.0. The `=missing` flag's contract: "for each test that produces a snapshot, write the actual.png as the baseline ONLY IF the baseline file does not already exist; never overwrite an existing baseline; never fail on missing baselines (treat as success)". Pixel-diff failures on existing baselines remain FAILURES — the user can never accidentally lose intentional state to this flag.
+- **Detection parser MUST be conservative.** When in doubt about a Playwright output line, classify as `other` (which causes `bootstrap_needed = false` → human review). The cost of a false-negative (missed bootstrap → manual PR like #11) is low; the cost of a false-positive (auto-bootstrap when a real pixel-diff exists → silently re-bless a real regression) is HIGH and would defeat the entire Rule 22 visual-regression gate.
+- **The first-run bootstrap path is preserved unchanged.** This story doesn't refactor it; just adds a sibling incremental path. Both paths are mutually exclusive (`linux_baselines == '0'` vs `linux_baselines != '0' && bootstrap_needed == 'true'`).
+- **Sally gate (`requires-manual-review` label + UX review) stays canonical for BOTH paths.** Murat's 19-4b Task 5 ruling: any auto-generated `-linux` baseline gets a human eyeball before merge. This story preserves that — the new incremental PR opens with the same label.
+- **Workflow concurrency convention preserved.** Main job uses `concurrency: group: visual-regression-main, cancel-in-progress: false` (serializes). The new incremental branch doesn't change concurrency semantics — same group, same cancel rule.
+- **Detection parser uses Playwright's stdout, not an internal API.** Pro: stable across Playwright minor versions (the failure log format is human-readable and Playwright commits to its stability for CI consumers). Con: brittle to MAJOR Playwright version bumps. Mitigation: AC #4 unit tests pin the exact pattern strings; on a Playwright major bump, the spec catches the breakage in CI before the workflow does in production.
+- **Alternative architecture considered + REJECTED — pre-test snapshot enumeration.** Could run a Playwright dry-run (`--list-tests --reporter=json`) to enumerate expected snapshot paths, diff against filesystem, decide bootstrap-needed BEFORE running tests. Rejected because: (a) Playwright doesn't have a built-in `--list-snapshots` mode (snapshot paths are computed inside test bodies at runtime via `toHaveScreenshot(['components', id, state])`); (b) the verify-only probe already runs in step 9 and we'd be running it anyway; (c) parsing the existing failure log adds zero new test cycles. The chosen log-parsing path is strictly cheaper.
+- **No new dependencies.** The parser uses only Node stdlib (`fs`, `readline`); the spec uses vitest (already a devDep); the workflow change adds one `tee` + one `node` call (both ubuntu-24.04 stdlib).
+
+### Project Structure Notes
+
+- **New files:**
+  - `tests/visual/bootstrap-detection.mjs` (ESM module — function `detectMissingBaselines(log: string): { missingPaths, pixelDiffs, other, bootstrapNeeded }`; also exposes a CLI entry `if (import.meta.url === \`file://\${process.argv[1]}\`) { … read stdin → run → write outputs to GITHUB_OUTPUT format → exit 0 }` for workflow consumption)
+  - `tests/visual/bootstrap-detection.spec.ts` (vitest spec, ≥ 8 cases per AC #4)
+- **Modified files:**
+  - `.github/workflows/visual-regression.yml` (step 8 replaced, steps 9/10/11 conditionals + new incremental branches, header comment block update)
+  - `package.json` (one new `scripts` entry — `test:visual:update-missing`)
+  - `_bmad-output/implementation-artifacts/19-5-github-actions-visual-regression-pr.md` (Change Log row v2→v3 + AC #4 stamp bumped [@contract-v2]→[@contract-v3] + bracketed contract-evolution sentence appended)
+  - `_bmad-output/implementation-artifacts/19-9-rule-23-time-dependent-fixtures.md` (Dev Notes L116 inline addendum — story Status remains `done`, no Change Log row needed)
+  - `tests/visual/README.md` (Platform-suffix section gets incremental-path bullet)
+- **Read-only:** `ux-design.pen` (no design change), `tests/visual/clock-mock.ts` (19-9 helper untouched).
+- **Out of scope:** any change to `apps/api/**`, `apps/web/src/**`, the existing 259+ committed `-linux.png` baselines, the 6 PR #11 baselines, Playwright version bump, dep changes.
+
+### Testing standards (project-context.md)
+
+- **Rule 9 (test co-location):** the new spec lives next to its module (`tests/visual/bootstrap-detection.spec.ts` alongside `tests/visual/bootstrap-detection.mjs`).
+- **Rule 12 (CI lint gate):** `pnpm lint:all` must pass at close.
+- **Rule 13 (error handling):** N/A — no Go, no runtime error paths beyond the parser's conservative classification (defaults to `other` on unknown patterns).
+- **Rule 16 (assertion quality):** spec uses vitest `toEqual` / `toStrictEqual` for the parser output struct comparisons; no `toBeTruthy` on object shape.
+
+### Time-dependent visual coverage (Story 19-9 AC #7 template section)
+
+**N/A — no wall-clock-reading components touched.** This story modifies CI workflow YAML, an npm script, a Node parser module, its vitest spec, and 3 documentation files. Zero changes to `apps/web/src/components/**` or any other React/JSX surface.
+
+### Rule 20 (AC Contract Versioning) — bump + ack accounting
+
+- **Bumps:** Story 19-5 AC #4 [@contract-v2→v3] (current v2 was bumped 2026-05-19 per 19-5 CR H1 for audit-doc line format with `ImageVersion`; this v3 bump changes the orthogonal "decision rule" surface — trigger semantics rather than line format, so v2's format guarantee survives unchanged into v3). Recorded in 19-5's Change Log per AC #5 (b) of this story. The bump body documents both "what changed" (decision rule extended from zero-count to per-fixture missing-detection) and "what breaks downstream" (incremental stories silently fall back to manual recovery without v3). Two-stage verify per Rule 20 — row present + body has ≥ 2 sub-tokens populated.
+- **No new stamps:** this story does NOT introduce new contract surfaces that need v1 stamps (the new npm script and parser module are internal-impl surfaces; downstream stories MAY grep them but until a real downstream consumer materializes, stamping per Rule 20 forward-only retrofit is premature).
+- **Downstream ack updates:** Grep `grep -rnE 'confirmed against \[@contract-v[12]\] \(Story 19-5' _bmad-output/implementation-artifacts/` at Step 2 (2026-05-28) returned ZERO hits — no downstream story has an explicit `confirmed against [@contract-v*] (Story 19-5 AC #N)` line. Story 19-9 references 19-5 generally (not via the Rule-20 ack pattern) — no ack-line update needed. The v3 bump on AC #4 is therefore a self-contained shape change; verify again at Task 6 close.
+
+### References
+
+- [Source: `_bmad-output/implementation-artifacts/19-9-rule-23-time-dependent-fixtures.md` Dev Notes L116] — the original (incorrect) assumption that CI auto-fills `-linux` post-merge for incremental cases.
+- [Source: `_bmad-output/implementation-artifacts/19-5-github-actions-visual-regression-pr.md` AC #4] — the v1 bootstrap decision rule being bumped.
+- [Source: `.github/workflows/visual-regression.yml` L42-50 (header comment) + L320-413 (step 8/9/10/11 implementation)] — the workflow surface being modified.
+- [Source: PR #10 — story 19-9 merge: https://github.com/j620656786206/vido/pull/10] — the merge that exposed the gap.
+- [Source: PR #11 — manual bootstrap precedent: https://github.com/j620656786206/vido/pull/11] — the manual recovery this story automates.
+- [Source: failed run #26557906757 — https://github.com/j620656786206/vido/actions/runs/26557906757] — the artifact + log that contains the canonical pattern strings the parser must match.
+- [Source: Playwright `--update-snapshots=missing` docs: https://playwright.dev/docs/test-snapshots#update-snapshots] — the targeted-update mechanism.
+- [Source: `tests/visual/README.md` §Platform-suffix L82-96] — the platform-suffix decision tree being extended.
+- [Source: 19-4b Task 5 — Party Mode 2026-05-14 Sally-gate ruling] — the `requires-manual-review` convention preserved across both first-run and incremental paths.
+- [Source: `project-context.md` Rule 20 (AC Contract Versioning)] — the bump protocol followed.
+- [Source: `project-context.md` Rule 22 (Epic Retro Design-Drift Audit)] — the tooling-block this workflow lives under.
+
+## Dev Agent Record
+
+### Agent Model Used
+
+Claude Opus 4.7 (1M context) — `claude-opus-4-7[1m]` — operating as BMAD `dev` agent (Amelia) via `/bmad:bmm:agents:dev` activation at session start. Single-session implementation 2026-05-28 (same session as 19-9 CR and Bob's `/create-story` of this story).
+
+### Debug Log References
+
+- **Step 2 AC Drift Check (mandatory):** grep `linux_baselines|Linux baseline presence|first-run bootstrap|bootstrap PR` across `_bmad-output/implementation-artifacts/*.md` returned heavy cross-references in 19-5 (AC #4 + Tasks 2 + Dev Notes + Completion Notes). This story DOES modify 19-5 AC #4's observable behavior (bootstrap-decision trigger). Drift = FOUND.
+- **Step 2 Contract Stamps Check (mandatory):** grep `\[@contract-v[0-9]+\]` on 19-5 story file revealed AC #4 is already at `[@contract-v2]` (bumped 2026-05-19 per CR H1 for audit-doc line format with `ImageVersion`). Initial SM draft of this story claimed v1→v2 — INCORRECT; corrected to v2→v3 throughout this story file + the sprint-status entry. Bump rationale: CR-H1's v2 changed adjacent surface (audit-doc line format with `ImageVersion`); this story's v3 changes orthogonal surface (decision-rule trigger semantics). v2's format guarantee survives unchanged into v3. Downstream ack grep `confirmed against \[@contract-v[12]\] \(Story 19-5` returned ZERO hits — no downstream story has the Rule-20 ack pattern explicitly tied to 19-5, so no ack updates needed.
+
+### Completion Notes List
+
+- **🔗 AC Drift: FOUND — Story 19-5 AC #4 — first-run-only bootstrap (`if zero -linux baselines → trigger`) → per-fixture missing-detection (`if zero -linux OR any expected -linux baseline missing → trigger`).** Documented in this story's AC #1 (the `[@contract-v2→v3 BUMP]` stamp) + AC #5 (the doc-sync task that writes the bump row into 19-5's Change Log). The 19-5 story file path is appended to this story's File List with the annotation `(AC drift reference — see Completion Notes)` at Task 4 close per Step 2 protocol.
+- **📎 Contract Stamps: FOUND (1 stamped AC in this story — v2→v3 bump on Story 19-5 AC #4; upstream 19-5 currently at v2 from 2026-05-19 CR H1 bump for audit-doc line format).** Initial SM-Bob draft mis-claimed v1→v2; Step 2 stamp grep on 19-5 file caught the discrepancy and corrected to v2→v3 across 9 occurrences in this story file + 1 occurrence in sprint-status entry. The bump body documents both "what changed" (decision rule shape) and "what breaks downstream" (incremental fixture stories silently fall back to manual recovery without v3) — Rule 20 two-stage verify will pass at Task 4 close.
+- **🔒 Rule 7 Wire Format: N/A** (no Go error-code files in scope — pure CI / Node-script / docs story).
+- **🎨 UX Verification: SKIPPED — to be confirmed at Task 6 close** (no React/UI render changes anticipated; only `apps/web/src/components/**`-adjacent touch is the throwaway synthetic fixture for AC #6 dry-run which is deleted post-validation).
+- **Downstream Ack Update Verification:** Step 2 grep `grep -rnE 'confirmed against \[@contract-v[12]\] \(Story 19-5' _bmad-output/implementation-artifacts/` returned 0 hits → no downstream ack lines require updating from v2 to v3. Re-verify at Task 6 close.
+- **Task 1 path deviation (documented):** The story Task 1 sub-task specified `tests/visual/bootstrap-detection.{mjs,spec.ts}` but `nx test web`'s vitest scope (per `apps/web/vite.config.mts` `test.include`) is `apps/web/{src,tests}/**` — a spec at root `tests/visual/` would NEVER run under the project's vitest. Co-located both files under `apps/web/src/visual-harness/` preserves Rule 9 (test co-location) AND keeps them in the web vitest scope. The workflow step 8 (Task 3) will invoke `node apps/web/src/visual-harness/bootstrap-detection.mjs` instead of the originally-spec'd `tests/visual/` path. Functionally equivalent — Node CLI invocation works from any path; spec runs under existing infra. Deviation captured here per dev activation step 13 (NEVER lie about test paths).
+- **Task 1 GREEN verification:** vitest direct run on the new spec: 8/8 PASS in 3ms. Full `pnpm nx test web` regression: PASS. `pnpm nx test api` regression: PASS (cached, Go untouched). Test cleanup verified after both runs (workflow Step 7 mandatory `test:cleanup`). Zero new failures introduced; zero pre-existing failures detected.
+
+### File List
+
+**Created (Task 1, 2 files — path deviation noted in Completion Notes):**
+
+- `apps/web/src/visual-harness/bootstrap-detection.mjs` (Node ESM parser; ~100 LOC; exports `detectMissingBaselines(log)`; CLI entry for workflow consumption)
+- `apps/web/src/visual-harness/bootstrap-detection.spec.ts` (vitest spec; 8 cases per AC #4 a–h)
+
+_(more files added in Tasks 2–6)_
+
+## Change Log
+
+| Date | Change |
+| ---- | ------ |
+| 2026-05-28 | 💻 DEV Amelia /dev-story Task 1 COMPLETE — `feat(bugfix-19-9): bootstrap-detection parser + spec`. Created `apps/web/src/visual-harness/bootstrap-detection.mjs` (Node ESM parser exporting `detectMissingBaselines(log)` classifying Playwright stdout into `missing-baseline` / `pixel-diff` / `other` buckets; conservative — unknown patterns → `other` → `bootstrapNeeded=false`; CLI entry for workflow step 8 stdin consumption with GITHUB_OUTPUT heredoc emission) + `apps/web/src/visual-harness/bootstrap-detection.spec.ts` (vitest 8 cases per AC #4 a–h covering the actual run #26557906757 6-missing pattern + mixed missing/diff + clean output + -darwin out-of-scope + path-outside-harness + diff-stanza-not-confused-with-missing + multiple-diffs + empty-input). Tests: 8/8 PASS via direct `npx vitest run`; `pnpm nx test web` full suite PASS; `pnpm nx test api` PASS (cached, untouched). **Path deviation from story sub-task:** story said `tests/visual/` but that's outside `nx test web`'s vitest scope (`apps/web/{src,tests}/**` per `apps/web/vite.config.mts`); placed both under `apps/web/src/visual-harness/` to preserve Rule 9 co-location AND keep them in scope. Functionally equivalent — workflow step 8 invokes `node apps/web/src/visual-harness/bootstrap-detection.mjs` instead. Deviation documented in Completion Notes per dev activation step 13. |
+| 2026-05-28 | SM Bob /create-story (YOLO) — story drafted ready-for-dev. Pure CI / Node-script / docs; 0 Go / 0 React → single story (cross-stack split N/A; backend tasks = 0, frontend tasks = 0; the new vitest spec + Node parser are test-infra, not frontend application code). 10 ACs (#1 stamped `[@contract-v2 bump on Story 19-5 AC #4]`; no new own stamps), 6 tasks (~14 sub-tasks). Born of CR /code-review monitoring of story 19-9 PR #10 main-merge run #26557906757, which surfaced the gap that `Visual Regression / Main` workflow's bootstrap path is first-run-only (`find -name '*-linux.png' | wc -l > 0 → skip bootstrap`) — incremental fixture additions can't auto-trigger. PR #11 (`chore/visual-bootstrap-19-9-recent-stale-linux`) is the manual precedent this story makes the LAST of its kind. Three failure modes the v1 path doesn't handle (incremental addition, per-fixture rebless, platform-suffix migration), all closed by this story's per-fixture missing-detection. Five deliverables: (1) per-fixture detection parser at `tests/visual/bootstrap-detection.mjs` + ≥ 8-case vitest spec (mirrors 19-3 / 19-9 ESLint-rule spec pattern); (2) new npm script `test:visual:update-missing` using Playwright 1.43+ `--update-snapshots=missing` GA flag (repo pins 1.58.0); (3) workflow step 8 replaced with `Check Linux baseline freshness` outputting `bootstrap_needed`/`missing_paths`/`missing_count`; (4) parallel incremental bootstrap branch (steps 10 + 11 get sibling steps with separate `if:` conditionals, separate PR body template, same `requires-manual-review` Sally gate); (5) documentation sync across workflow header comment, 19-5 Change Log [@contract-v2] bump, 19-9 Dev Notes L116 addendum, tests/visual/README.md Platform-suffix extension. Key SM decisions in Dev Notes: (a) **Log-parsing over snapshot-path enumeration** — Playwright has no `--list-snapshots`; parsing the verify-only probe's stdout is strictly cheaper (no extra test cycle); brittleness to Playwright major bumps mitigated by AC #4 unit tests that pin pattern strings; (b) **Conservative classification (`other` on unknown patterns → `bootstrap_needed = false`)** — false-negative cost is low (manual PR like #11), false-positive cost is HIGH (auto-bless a real regression → defeats Rule 22 gate); (c) **First-run path preserved verbatim** — this story doesn't refactor it, just adds a sibling incremental path; both branches mutually exclusive; (d) **No new dependencies** — parser uses Node stdlib; spec uses vitest (already devDep); workflow adds `tee` + `node` (both ubuntu-24.04 stdlib); (e) **Sally gate canonical for BOTH paths** — Murat's 19-4b Task 5 ruling preserved; new incremental PR opens with same `requires-manual-review` label; (f) **PR #11 NOT reverted** — historical record of the gap stays in main; 19-9 Status remains `done`; (g) **Operational verification via dry-run** — AC #6 mandates a throwaway feature branch + workflow_dispatch to validate the incremental PR opens correctly BEFORE relying on it for the next real incremental story; (h) **Throughput consideration** — verify-only probe runs once (~1.2m on the visual suite); if `bootstrap_needed`, the second `test:visual:update-missing` run is ~equal duration; total CI time ~2.5m for incremental bootstrap (acceptable). Rule 20 bump: 19-5 AC #4 v2→v3 (initial draft mis-claimed v1→v2; corrected during dev-story Step 2 stamp check 2026-05-28 — 19-5 AC #4 was already v2 from 2026-05-19 CR H1's audit-doc-line bump, a separate surface). No own [@contract-vN] stamps — new internal surfaces (npm script, parser) are not yet referenced by downstream stories; forward-only retrofit applies when real consumer surfaces. 🔒 Rule 7: N/A (pure CI / Node / docs). 🎨 UX: Sally + Murat dual-classifier preserved — same gate as 19-9 / 19-4b. Depends on 19-5 (done) + 19-9 (done) + 19-4b (done); PR #11 (open at story create, label `requires-manual-review`) — this story does not block on PR #11's merge, but the validation in AC #8 assumes the 6 `recent`/`stale` `-linux.png` baselines from PR #11 are committed to main; if PR #11 is closed without merging, this story's regression gate needs a contingency (re-run the manual artifact extraction OR add the synthetic missing-fixture from AC #6 as an actual fixture). Charter line (CR-surfaced 2026-05-28): `→ Bob /create-story (YOLO) → Amelia /dev-story: per-fixture missing-detection in Visual Regression / Main bootstrap path + targeted --update-snapshots=missing + sibling incremental branch + Sally gate preserved. Closes the gap surfaced by 19-9 PR #10 main-merge.` |
