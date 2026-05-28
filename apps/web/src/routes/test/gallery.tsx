@@ -263,8 +263,16 @@ function ComponentGalleryPage() {
         </p>
         <ul>
           {GALLERY_FIXTURES.map((fx) => (
-            <li key={fx.id} data-gallery-id={fx.id} className="font-mono text-xs">
+            <li
+              key={fx.id}
+              data-gallery-id={fx.id}
+              data-gallery-clock-time={fx.clockTime ?? undefined}
+              className="font-mono text-xs"
+            >
               {fx.id}
+              {fx.clockTime && (
+                <span className="ml-2 text-[var(--text-secondary)]">[clock: {fx.clockTime}]</span>
+              )}
             </li>
           ))}
         </ul>

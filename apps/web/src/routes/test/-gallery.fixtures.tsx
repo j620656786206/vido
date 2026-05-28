@@ -298,6 +298,18 @@ export interface GalleryFixture {
    */
   routePath?: StubRoutePath;
   /**
+   * ISO 8601 timestamp (e.g. `'2026-05-15T00:00:00Z'`). When present, the visual spec
+   * calls `withFixedClock(page, clockTime)` (helper: `tests/visual/clock-mock.ts`)
+   * BEFORE navigating to this fixture — pinning the in-page `Date.now()` /
+   * `new Date()` to a deterministic instant. Required by Rule 23 (project-context.md)
+   * for any component that reads ambient wall-clock time and renders a result that
+   * depends on it. Added story 19-9 AC #4 ([@contract-v1]).
+   *
+   * Backward-compatible: fixtures without `clockTime` continue to render against the
+   * real wall clock (existing 122 fixtures unaffected).
+   */
+  clockTime?: string;
+  /**
    * Pre-seed `queryClient` cache before the fixture renders so child components
    * calling `useQuery()` see the data immediately (no loading flash, no network attempt).
    * The gallery wrapper (`GalleryFixtureSeed` in `gallery.tsx`) calls
