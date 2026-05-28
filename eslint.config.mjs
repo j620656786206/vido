@@ -4,8 +4,24 @@ import tsparser from '@typescript-eslint/parser';
 import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
 import prettier from 'eslint-config-prettier';
-// Local custom rules (story 19-3) — CJS plugin, default-imported as its module.exports.
-import localRules from './apps/web/src/eslint-rules/implements-pen-node-id.js';
+// Local custom rules — CJS plugins, default-imported as their module.exports.
+// Each rule lives in its own file; they're merged here under one `local` plugin
+// namespace so a single `plugins: { local: localRules }` block surfaces every
+// `local/{rule-name}`. Merging inline (vs going through an index.js entry)
+// keeps the rule function references identity-equal to ESM consumers (spec
+// files), so `expect(...).toBe(rule)` checks pass.
+//
+// Story 19-3 added `local/implements-pen-node-id` (Rule 21); story 19-9 added
+// `local/time-dependent-fixture-stability` (Rule 23).
+import implementsPenNodeId from './apps/web/src/eslint-rules/implements-pen-node-id.js';
+import timeDependentFixtureStability from './apps/web/src/eslint-rules/time-dependent-fixture-stability.js';
+
+const localRules = {
+  rules: {
+    ...implementsPenNodeId.rules,
+    ...timeDependentFixtureStability.rules,
+  },
+};
 
 export default [
   // Global ignores
@@ -188,6 +204,11 @@ export default [
   // ({penNodeId})` header (or a documented exemption). Scoped here, not in the rule.
   // Hooks/services/stores/utils/route files are out of scope by virtue of not
   // matching `components/**`; spec/test files and index.ts barrels are ignored.
+  //
+  // Each rule gets its own config block so the spec-side `flatConfig.filter` test
+  // can assert "exactly one config block enables this rule". Both blocks share
+  // identical scoping and reference the same `localRules` plugin object — flat
+  // config dedup is a no-op when the value is the same identity.
   {
     files: ['apps/web/src/components/**/*.{ts,tsx}'],
     ignores: [
@@ -200,6 +221,27 @@ export default [
     },
     rules: {
       'local/implements-pen-node-id': 'error',
+    },
+  },
+
+  // Rule 23 enforcement (story 19-9) — every file under apps/web/src/components/
+  // whose source reads the wall clock (Date.now / Date.UTC / Date.parse / new Date())
+  // MUST carry a leading `// Clock-mocked:` / `// Clock-injected:` /
+  // `// Time-bomb-exempt:` header. Same scoping as Rule 21 (above) so a
+  // refactor of one block carries to the other; same `ignores` list for
+  // spec/test/barrel files.
+  {
+    files: ['apps/web/src/components/**/*.{ts,tsx}'],
+    ignores: [
+      'apps/web/src/components/**/*.spec.{ts,tsx}',
+      'apps/web/src/components/**/*.test.{ts,tsx}',
+      'apps/web/src/components/**/index.ts',
+    ],
+    plugins: {
+      local: localRules,
+    },
+    rules: {
+      'local/time-dependent-fixture-stability': 'error',
     },
   },
 
