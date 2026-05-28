@@ -1,3 +1,4 @@
+// Time-bomb-exempt: this is a custom hook (no JSX render); ambient new Date().toISOString() flows into emitted log payloads, never into visual baselines (Murat) — Rule 23 spec exemption (d)
 // Implements: <utility — no .pen counterpart>
 /**
  * useParseProgress Hook (Story 3.10 - Task 9)

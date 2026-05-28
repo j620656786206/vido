@@ -1,3 +1,4 @@
+// Time-bomb-exempt: new Date().getFullYear() is a fallback default for the year field; gallery fixture always passes initialData.year so the path is unreachable in baseline render (Sally)
 // Implements: <screen-section — pending epic-19-8 mapping>
 /**
  * MetadataEditorDialog Component (Story 3.8 - AC1, AC4)

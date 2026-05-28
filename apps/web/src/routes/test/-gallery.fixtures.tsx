@@ -298,6 +298,18 @@ export interface GalleryFixture {
    */
   routePath?: StubRoutePath;
   /**
+   * ISO 8601 timestamp (e.g. `'2026-05-15T00:00:00Z'`). When present, the visual spec
+   * calls `withFixedClock(page, clockTime)` (helper: `tests/visual/clock-mock.ts`)
+   * BEFORE navigating to this fixture — pinning the in-page `Date.now()` /
+   * `new Date()` to a deterministic instant. Required by Rule 23 (project-context.md)
+   * for any component that reads ambient wall-clock time and renders a result that
+   * depends on it. Added story 19-9 AC #4 ([@contract-v1]).
+   *
+   * Backward-compatible: fixtures without `clockTime` continue to render against the
+   * real wall clock (existing 122 fixtures unaffected).
+   */
+  clockTime?: string;
+  /**
    * Pre-seed `queryClient` cache before the fixture renders so child components
    * calling `useQuery()` see the data immediately (no loading flash, no network attempt).
    * The gallery wrapper (`GalleryFixtureSeed` in `gallery.tsx`) calls
@@ -2252,12 +2264,21 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     penNode: 'screen-section',
     width: 900,
   },
+  // Story 19-9 AC #5: dual-state baselines for the Rule 23 canonical migration.
+  // `RecentlyAdded.tsx` reads `Date.now()` to decide if `createdAt` is within the
+  // 7-day "recent" window — that boolean controls the green 「新增」 badge render.
+  // BEFORE 19-9: a single fixture row baselined ONE state, and the baseline silently
+  // staled the moment the wall clock crossed `createdAt + 7d`. AFTER 19-9: the
+  // fixture is split into two rows with `clockTime` pinning the in-page wall clock
+  // to either side of the boundary — both branches get committed baselines.
   {
-    id: 'library-recently-added',
-    label: 'library/RecentlyAdded',
+    id: 'library-recently-added/recent',
+    label: 'library/RecentlyAdded (recent — 新增 badge visible)',
     component: RecentlyAdded as ComponentType<Record<string, unknown>>,
     penNode: 'screen-section',
     width: 1200,
+    // 2026-05-15 is 3 days after createdAt 2026-05-12 → isWithin7Days = true → green badge renders.
+    clockTime: '2026-05-15T00:00:00Z',
     seedQueries: [
       {
         queryKey: libraryKeys.recent(20),
@@ -2276,7 +2297,44 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
               parseStatus: 'complete',
               metadataSource: 'tmdb',
               tmdbId: 872585,
-              // Fixed date: deterministic across CI runs (no Date.now()).
+              // Fixed createdAt — paired with clockTime above to deterministically place it
+              // INSIDE the 7-day "recent" window.
+              createdAt: '2026-05-12T08:00:00Z',
+              updatedAt: '2026-05-12T08:00:00Z',
+            },
+          },
+        ] satisfies LibraryItem[],
+      },
+    ],
+  },
+  {
+    id: 'library-recently-added/stale',
+    label: 'library/RecentlyAdded (stale — no badge)',
+    component: RecentlyAdded as ComponentType<Record<string, unknown>>,
+    penNode: 'screen-section',
+    width: 1200,
+    // 2026-05-30 is 18 days after createdAt 2026-05-12 → isWithin7Days = false → no badge.
+    clockTime: '2026-05-30T00:00:00Z',
+    seedQueries: [
+      {
+        queryKey: libraryKeys.recent(20),
+        data: [
+          {
+            type: 'movie',
+            movie: {
+              id: 'recent-mov-1',
+              title: '奧本海默',
+              originalTitle: 'Oppenheimer',
+              releaseDate: '2023-07-21',
+              genres: ['劇情', '歷史'],
+              voteAverage: 8.1,
+              overview: '原子彈之父。',
+              posterPath: '/p-recent-1.jpg',
+              parseStatus: 'complete',
+              metadataSource: 'tmdb',
+              tmdbId: 872585,
+              // Same createdAt as the `recent` fixture — paired with the later clockTime
+              // above to deterministically place it OUTSIDE the 7-day window.
               createdAt: '2026-05-12T08:00:00Z',
               updatedAt: '2026-05-12T08:00:00Z',
             },

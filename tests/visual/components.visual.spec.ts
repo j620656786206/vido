@@ -48,6 +48,7 @@
  * @tags @visual @story-19-4 @story-19-4b
  */
 import { test, expect, type Locator, type Page } from '@playwright/test';
+import { withFixedClock } from './clock-mock';
 
 const FOCUSABLE =
   ':is(a[href], button, input, select, textarea, [tabindex]):not([tabindex="-1"]):not([disabled])';
@@ -92,16 +93,28 @@ test.describe('@visual @story-19-4 component visual baselines', () => {
     // 19-4b Task 4: discover fixture ids from the manifest endpoint (no components mounted).
     await page.goto('/test/gallery?manifest=1');
     await page.waitForSelector('[data-testid="component-gallery-manifest"]', { state: 'visible' });
-    const ids = await page
-      .locator('li[data-gallery-id]')
-      .evaluateAll((els) =>
-        els
-          .map((el) => el.getAttribute('data-gallery-id'))
-          .filter((id): id is string => typeof id === 'string' && id.length > 0)
-      );
-    expect(ids.length, 'manifest returned at least one fixture id').toBeGreaterThan(0);
+    // 19-9 AC #4: harvest each fixture's optional clockTime alongside its id so we can
+    // pin the in-page wall clock (Rule 23) BEFORE the per-fixture goto. Fixtures
+    // without clockTime fall through the helper-not-called branch — backward-compat.
+    const fixtures = await page.locator('li[data-gallery-id]').evaluateAll((els) =>
+      els
+        .map((el) => ({
+          id: el.getAttribute('data-gallery-id'),
+          clockTime: el.getAttribute('data-gallery-clock-time'),
+        }))
+        .filter(
+          (f): f is { id: string; clockTime: string | null } =>
+            typeof f.id === 'string' && f.id.length > 0
+        )
+    );
+    expect(fixtures.length, 'manifest returned at least one fixture id').toBeGreaterThan(0);
 
-    for (const id of ids) {
+    for (const { id, clockTime } of fixtures) {
+      // 19-9 AC #4: Rule 23 clock-mock. Install BEFORE goto so `page.clock` init
+      // scripts run before any time-dependent JS in the fixture page evaluates.
+      if (clockTime) {
+        await withFixedClock(page, clockTime);
+      }
       // 19-4b Task 4: per-fixture isolated page load — only one fixture is mounted,
       // so `fixed inset-0` overlay components can no longer block neighbour fixtures.
       // `waitUntil: 'domcontentloaded'` is faster than the default `'load'` — Vite

@@ -1,3 +1,4 @@
+// Time-bomb-exempt: gallery fixture pins nextAttemptAt to far-past 2020 date; countdown displays a stable string regardless of ambient Date.now() (19-4b precedent) — Murat
 // Implements: <screen-section — pending epic-19-8 mapping>
 /**
  * CountdownTimer Component (Story 3.11 - Task 8.2)
