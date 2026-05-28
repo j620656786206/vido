@@ -1,6 +1,6 @@
 # Story 19.9: Rule 23 — Time-Dependent Component Fixture Stability (Visual-Harness Class-Level Hardening)
 
-Status: ready-for-dev
+Status: in-progress
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 <!-- This story is the epic-19 post-capstone hardening: bundles (a) immediate fix for the 19-8 PR #8 visual-regression blocker (`components/library-recently-added/default` baseline stale), (b) author Rule 23, (c) ESLint rule `local/time-dependent-fixture-stability` enforce, (d) audit + migrate all components/ files that read `Date.now()` / `new Date()`, (e) SM /create-story template extension per Sally. Born of party-mode consensus 2026-05-26 (Murat + Sally + Winston): the symptom is one stale fixture, the class is "any component reading the wall clock without an injectable clock = visual-baseline time bomb". -->
