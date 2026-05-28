@@ -38,15 +38,43 @@
 #   納入,讓未來 mass-rebless 投查仍有指紋。Docker-digest 路徑作為被拒方案
 #   記錄於 audit doc 的 "Image pinning policy" 段。
 #
-# 引導決策樹 (AC #4):
+# 引導決策樹 (AC #4 — bumped to [@contract-v3] by story bugfix-19-9 2026-05-28):
 #   標準決策樹見 tests/visual/README.md §Platform-suffix L82–L96,本工作流
-#   即依此實作。在 main push 上,若 tests/visual/components.visual.spec.ts-snapshots/
-#   下沒有任何 `-linux.png` 基準,則 main job 會跑 `pnpm run test:visual:update`、
-#   在 _bmad-output/audit/visual-baseline-19-4.md 追加一行來源紀錄,並開出
-#   一個 `chore(visual): bootstrap Linux baselines` PR、貼上
-#   `requires-manual-review` 標籤(依 19-4b Task 5 規定的 Sally / UX 把關)。
-#   等該 bootstrap PR 合併後,引導路徑永久變成死碼 —— 之後每次都走
-#   verify-only 分支(冪等:find 計數本身就是唯一真相,不依賴任何外部狀態)。
+#   即依此實作。**兩條 bootstrap 分支並存且互斥**:
+#
+#   (1) **First-run path** (linux_baselines == '0'): 在 main push 上,若
+#       tests/visual/components.visual.spec.ts-snapshots/ 下沒有任何 `-linux.png`
+#       基準,則 main job 會跑 `pnpm run test:visual:update`、在
+#       _bmad-output/audit/visual-baseline-19-4.md 追加一行來源紀錄,並開出
+#       一個 `chore(visual): bootstrap Linux baselines` PR、貼上
+#       `requires-manual-review` 標籤(依 19-4b Task 5 規定的 Sally / UX 把關)。
+#       本路徑在 19-5 落地後的第一次 main push 觸發過一次,從此「對於這個
+#       條件」變成死碼 —— 但**不是整條 bootstrap 邏輯死碼**(見路徑 2)。
+#
+#   (2) **Incremental path** (linux_baselines != '0' && bootstrap_needed == 'true',
+#       story bugfix-19-9): verify-only probe 偵測到一或多個 `-linux.png` 缺失
+#       (典型場景: 上游 PR 引入新 fixture/state,只 commit `-darwin` 沒
+#       commit `-linux`),且 parser 把所有失敗歸類為純 missing-baseline
+#       (無 pixel-diff / 無 other),則跑 `pnpm run test:visual:update-missing`
+#       (Playwright `--update-snapshots=missing`,只補缺失不覆寫現存),audit
+#       doc 追加 incremental 專屬格式行 (含 missing_count + 路徑清單),並開出
+#       `chore(visual): bootstrap N missing -linux baselines (incremental)` PR、
+#       同樣貼 `requires-manual-review` 標籤 (Sally gate 兩條 path 共用)。本路徑
+#       自 bugfix-19-9 後常駐,每次 incremental fixture addition 自動觸發。
+#
+#   (3) **Steady-state** (linux_baselines != '0' && bootstrap_needed != 'true'):
+#       verify-probe 對齊現存 -linux 基準,無 missing 無 diff → 兩條 bootstrap
+#       分支都跳過,job 通過。**或** probe 偵測到 pixel-diff (真實 regression),
+#       parser bootstrap_needed=false,final gate `Fail job on real regression`
+#       step 收尾失敗 (僅在 pixel-diff 觸發,missing-only 場景永遠走路徑 2)。
+#
+#   兩條 bootstrap path 共用同一 Sally gate (`requires-manual-review` 標籤)
+#   但用不同 PR branch 命名 (first-run: `chore/bootstrap-linux-baselines-${run_id}`;
+#   incremental: `chore/bootstrap-linux-baselines-incremental-${run_id}`) 與不同
+#   PR body 模板 (first-run 模板說明 darwin→darwin+linux 平台擴張; incremental
+#   模板列出缺失基線清單 + 觸發 commit message)。 audit doc 也用不同前綴行
+#   (`Linux baselines bootstrapped …` vs `Linux baselines incrementally
+#   bootstrapped …`) 讓後續 grep 可區分。
 #
 # 為什麼用 `pnpm run test:visual` (AC #3),而不用 `nx affected -t e2e:visual`:
 #   原因記在 story 19-5 Dev Notes「Nx target vs npm script decision」:

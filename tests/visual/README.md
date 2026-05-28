@@ -79,10 +79,11 @@ projects explicitly) — so the feature-E2E test count is unaffected.
    CI workflow on its first execution and committed back via a one-off PR. After that PR merges,
    CI runs in verify-only mode (`pnpm run test:visual`) on every PR thereafter.
 
-   **CI first-run decision tree** (implemented by `.github/workflows/visual-regression.yml`):
+   **CI bootstrap + verify decision tree** (implemented by `.github/workflows/visual-regression.yml`;
+   bumped to [@contract-v3] by story bugfix-19-9 2026-05-28):
 
    ```text
-   if no `-linux.png` baseline exists for any fixture:
+   if no `-linux.png` baseline exists for any fixture (FIRST-RUN, 19-5 v2 path):
      run `pnpm run test:visual:update`
      open a one-off PR committing the `-linux` set
      PR MUST be tagged `requires-manual-review` (no auto-merge)
@@ -91,9 +92,28 @@ projects explicitly) — so the feature-E2E test count is unaffected.
          expect only rendering drift (font hinting, emoji glyphs, sub-pixel)
      PR body MUST append a line to `_bmad-output/audit/visual-baseline-19-4.md`:
        `Linux baselines bootstrapped {YYYY-MM-DD} via runner {image-label} (ImageVersion: {value})`
-   else:
-     run `pnpm run test:visual` (verify-only — fail → block PR)
+   else (`-linux.png` set exists):
+     run `pnpm run test:visual` as verify-only PROBE (continue-on-error)
+     pipe stdout through `apps/web/src/visual-harness/bootstrap-detection.mjs`
+     if parser classifies all failures as pure `missing-baseline` (INCREMENTAL, bugfix-19-9 v3 path):
+       run `pnpm run test:visual:update-missing` (Playwright 1.43+ `=missing` flag)
+       open parallel PR `chore/bootstrap-linux-baselines-incremental-${run_id}`
+       SAME `requires-manual-review` Sally gate; SAME Murat 19-4b Task 5 ruling
+       audit-doc line uses distinct prefix so first-run vs incremental are greppable:
+         `Linux baselines incrementally bootstrapped {YYYY-MM-DD} via runner {image-label} (ImageVersion: {value}) — {N} fixtures: {paths}`
+     elif parser classifies any failure as `pixel-diff` or `other` (STEADY-STATE failure):
+       fail the job — real regression, surface for human review
+     else (zero missing, zero pixel-diff):
+       verify-only passed, job succeeds (STEADY-STATE pass)
    ```
+
+   The parser at `apps/web/src/visual-harness/bootstrap-detection.mjs` is the canonical
+   source for the classification logic; its companion vitest spec
+   (`bootstrap-detection.spec.ts`) pins the exact Playwright stdout patterns matched
+   (`A snapshot doesn't exist at <path>, writing actual.` for missing; `Screenshot
+comparison failed` for pixel-diff). A Playwright major-version bump that changes
+   these literal phrases would break the parser silently in production but is caught
+   in CI by the spec — `pnpm nx test web` includes the spec in its scope.
 
    **Runner-image pinning — version-tag pin + ImageVersion capture (revised 2026-05-19 per
    story 19-5 CR finding H1).** Story 19-5 chose `runs-on: ubuntu-24.04` (GitHub-Hosted

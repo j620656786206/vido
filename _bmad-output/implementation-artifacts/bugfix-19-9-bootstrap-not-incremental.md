@@ -99,13 +99,14 @@ I want to upgrade `.github/workflows/visual-regression.yml`'s `Check Linux basel
   - [x] `actionlint .github/workflows/visual-regression.yml` 0 issues ✓; `prettier --check` clean ✓.
   - [x] Commit message: `feat(bugfix-19-9): incremental bootstrap branch in visual-regression workflow`.
 
-- [ ] Task 4: Documentation sync (AC: #5)
-  - [ ] Update `.github/workflows/visual-regression.yml` header comment L42-50 per AC #5 (a).
-  - [ ] Append Change Log row to story 19-5 file documenting `[@contract-v2→v3] AC #4` bump (Rule 20 two-stage verify — row present, body has both `what changed` and `what breaks downstream` populated). ALSO update the AC #4 stamp in 19-5 story file body from `[@contract-v2]` to `[@contract-v3]` AND append a v2→v3 contract-evolution sentence into the bracketed `[Contract evolution: ...]` block inside that AC.
-  - [ ] Add inline addendum to story 19-9 Dev Notes L116 per AC #5 (c).
-  - [ ] Update `tests/visual/README.md` §Platform-suffix (L82-96) per AC #5 (d).
-  - [ ] `prettier --check` clean on all touched markdown.
-  - [ ] Commit message: `docs(bugfix-19-9): sync workflow comments + 19-5 v2 bump + 19-9 addendum`.
+- [x] Task 4: Documentation sync (AC: #5)
+  - [x] Updated `.github/workflows/visual-regression.yml` header comment (L42–50 block expanded to ~30 lines): replaced the "永久變成死碼" claim with a 3-path decision tree describing first-run / incremental / steady-state explicitly + cross-references both `chore/bootstrap-linux-baselines-{run_id}` vs `chore/bootstrap-linux-baselines-incremental-{run_id}` branch-name conventions + the audit-doc line prefix split.
+  - [x] Appended Change Log row to story 19-5 file documenting `[@contract-v2→v3] AC #4` bump (Rule 20 two-stage verify — row present, body has both `what changed: zero-count → per-fixture missing-detection + sibling incremental workflow steps` AND `what breaks downstream: incremental fixture stories silently fall back to manual recovery without v3 — story 19-9 was the first to surface the gap, PR #11 is the manual precedent` populated). ALSO updated the AC #4 stamp body in 19-5 from `[@contract-v2]` to `[@contract-v3]` AND appended a v2→v3 contract-evolution sentence into the bracketed `[Contract evolution: …]` block inside that AC.
+  - [x] Added inline addendum to story 19-9 Dev Notes L116 (the `Baseline-bootstrap for -linux` bullet) acknowledging the incorrect first-run-only assumption + cross-referencing bugfix-19-9 as the fix + PR #11 as the manual precedent.
+  - [x] Updated `tests/visual/README.md` §Platform-suffix (L82-117): expanded the bare first-run decision tree into a 3-branch (first-run / incremental / steady-state) decision tree with the parser invocation + Playwright `=missing` flag + Sally-gate preservation explicitly captured. Auto-formatted via `prettier --write` (minor wrap fixes on the new content).
+  - [x] `prettier --check` clean on all 4 touched files (workflow YAML + 19-5 + 19-9 + README) ✓.
+  - [x] `actionlint .github/workflows/visual-regression.yml` 0 issues ✓.
+  - [x] Commit message: `docs(bugfix-19-9): sync workflow comments + 19-5 [@contract-v3] bump + 19-9 addendum + README incremental path`.
 
 - [ ] Task 5: Operational verification + dry-run (AC: #6)
   - [ ] Create a throwaway feature branch `dry-run/bugfix-19-9-incremental-test`.
@@ -229,7 +230,14 @@ Claude Opus 4.7 (1M context) — `claude-opus-4-7[1m]` — operating as BMAD `de
 
 - `.github/workflows/visual-regression.yml` (step 8 header comment annotated; step 9 restructured to probe with `continue-on-error` + log capture; NEW step 9b parser invocation; NEW step 10b incremental bootstrap; NEW step 11b incremental PR open with separate body template; NEW final fail-on-regression gate)
 
-_(more files added in Tasks 4–6)_
+**Modified (Task 4, 3 files + further edits on workflow):**
+
+- `.github/workflows/visual-regression.yml` (header comment block L42-79 expanded — 3-branch decision tree replaces the "永久變成死碼" claim)
+- `_bmad-output/implementation-artifacts/19-5-github-actions-visual-regression-pr.md` (AC #4 stamp bumped v2→v3 + bracketed evolution block extended + 2 Change Log rows appended)
+- `_bmad-output/implementation-artifacts/19-9-rule-23-time-dependent-fixtures.md` (Dev Notes L116 addendum referencing bugfix-19-9 + PR #11 precedent; no Change Log row — 19-9 is `done`)
+- `tests/visual/README.md` (§Platform-suffix 3-branch decision tree + parser canonical-source note)
+
+_(more files added in Tasks 5–6 if any — Task 5 is operational-only)_
 
 ## Change Log
 
