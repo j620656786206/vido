@@ -33,6 +33,8 @@
 
 'use strict';
 
+import * as fs from 'node:fs';
+
 // Match Playwright's missing-baseline emission. Captured group is the absolute path.
 // Playwright emits this for EVERY missing snapshot during verify-only runs.
 const MISSING_RE = /A snapshot doesn't exist at (.+?), writing actual\./;
@@ -102,16 +104,13 @@ export function detectMissingBaselines(playwrightOutput) {
     //    is test-progress / banner / passing-test lines — not classifiable failures).
   }
 
-  const bootstrapNeeded =
-    missingPaths.length > 0 && pixelDiffs.length === 0 && other.length === 0;
+  const bootstrapNeeded = missingPaths.length > 0 && pixelDiffs.length === 0 && other.length === 0;
 
   return { missingPaths, pixelDiffs, other, bootstrapNeeded };
 }
 
 // CLI entry — only fires when this file is invoked directly (not when imported by the spec).
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const fs = await import('node:fs');
-
   // Read entire stdin synchronously. The workflow pipes the verify-only probe's
   // captured log file content here; size is bounded by Playwright's output for
   // ~123 visual fixtures (well under tens of MB even with diff details).
