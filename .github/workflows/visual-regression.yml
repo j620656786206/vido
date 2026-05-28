@@ -313,10 +313,15 @@ jobs:
             exit 1
           fi
 
-      # AC #4 — Linux 基準存在性檢查。對「snapshot 資料夾不存在」做防禦
+      # AC #4 — Linux 基準存在性快速計數。對「snapshot 資料夾不存在」做防禦
       # (19-4b 之後正常情況下不會發生,但留著無害):`find` 退出碼非 0
-      # 就用 `2>/dev/null` 吞掉、用 `wc -l` 強制取數值。冪等:一旦
-      # `-linux.png` 出現,這個計數永遠 > 0,bootstrap 分支就是死碼。
+      # 就用 `2>/dev/null` 吞掉、用 `wc -l` 強制取數值。
+      #
+      # 注意(story bugfix-19-9 2026-05-28):此 step 的 `linux_baselines > 0`
+      # 判斷只能區別「first-run」(尚未 bootstrap 任何 Linux 基準) vs「至少有
+      # 一個 Linux 基準」兩態。它無法察覺「已有 N 個 Linux 基準,但 fixture
+      # 新增後缺 6 個」這類 incremental 場景 —— 後者由下方 `check-freshness`
+      # step (story bugfix-19-9 AC #1, [@contract-v3] on 19-5 AC #4) 偵測。
       - name: Check Linux baseline presence
         id: check-linux
         run: |
@@ -325,11 +330,39 @@ jobs:
           echo "linux_baselines=$linux_count" >> "$GITHUB_OUTPUT"
           echo "Linux baseline count: $linux_count"
 
-      # AC #4 verify-only 分支 —— bootstrap PR 合併後,每次 main push 都
-      # 走這條。
-      - name: Run visual regression (verify-only)
+      # AC #4 verify-only / freshness probe 分支 —— bootstrap PR 合併後,每次 main
+      # push 都走這條。Story bugfix-19-9 ([@contract-v3] on 19-5 AC #4) 把此 step 從
+      # 「純 verify-only,失敗即 job 失敗」改為「verify-only 探針,擷取 stdout
+      # 給下游 parser 分類,exit code 不直接決定 job 命運」。
+      #
+      # 為何 `continue-on-error: true`: parser (step `check-freshness`) 解析 log
+      # 後可能歸類為:
+      #   - bootstrap_needed=true (純 missing-baseline,無 pixel-diff) → 下游觸發
+      #     incremental bootstrap branch
+      #   - bootstrap_needed=false 但 step 9 失敗 → 真的 pixel diff,job 必須失敗
+      #     (`Fail job on real regression` step 在 bootstrap branches 之後做這個收尾)
+      # `tee` 同時印到 console (CI log 可讀) 與 /tmp/visual-probe.log (parser 消費)。
+      - name: Run visual regression (verify-only freshness probe)
+        id: verify-probe
         if: steps.check-linux.outputs.linux_baselines != '0'
-        run: pnpm run test:visual
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          pnpm run test:visual 2>&1 | tee /tmp/visual-probe.log
+
+      # Story bugfix-19-9 AC #1 ([@contract-v3] on 19-5 AC #4) — verify-only log
+      # 解析 step。Node ESM parser 把 Playwright stdout 分類進三個 buckets:
+      #   - missing-baseline: `A snapshot doesn't exist at <path>, writing actual.`
+      #     for paths ending `-linux.png` under `tests/visual/components.visual.spec.ts-snapshots/`
+      #   - pixel-diff: `Screenshot comparison failed` header (one per failed stanza)
+      #   - other: out-of-scope (e.g. -darwin missing on Linux runner) → human review
+      # `bootstrap_needed` 設為 `true` 當且僅當 `missing > 0 && pixel-diff == 0 &&
+      # other == 0`(保守原則:未知 pattern → other → bootstrap_needed=false → 人工)。
+      # Parser 永遠 exit 0;workflow 用 step outputs 決定後續分支。
+      - name: Classify verify-only result via bootstrap-detection
+        id: check-freshness
+        if: steps.check-linux.outputs.linux_baselines != '0'
+        run: node apps/web/src/visual-harness/bootstrap-detection.mjs < /tmp/visual-probe.log
 
       # AC #4 bootstrap 分支 —— 本工作流落地後,第一次 main push「只跑
       # 一次」。寫入完整 `-linux` PNG 集 + 在 _bmad-output/audit/visual-baseline-19-4.md
@@ -411,6 +444,112 @@ jobs:
             - 稽核軌跡:`_bmad-output/audit/visual-baseline-19-4.md`
               (這次執行追加的 `Linux baselines bootstrapped …` 行,就在
               本 PR 的 diff 裡)。
+
+      # Story bugfix-19-9 ([@contract-v3] on 19-5 AC #4) — incremental bootstrap
+      # branch. Fires when verify-only probe (step `verify-probe`) classifies
+      # all failures as `missing-baseline` only (no pixel-diff / no other). This
+      # handles the case 19-5's first-run path can't: an existing -linux baseline
+      # set with one or more fixtures newly added (e.g. story 19-9's
+      # library-recently-added/{recent,stale} 6-fixture split).
+      #
+      # Uses `pnpm run test:visual:update-missing` (Playwright 1.43+ GA
+      # `--update-snapshots=missing`) — generates baselines ONLY for missing
+      # snapshots; never overwrites existing baselines; cannot accidentally
+      # re-bless a real regression (which would have been classified as pixel-
+      # diff by the parser and short-circuited bootstrap_needed to false).
+      #
+      # Audit-doc line format: distinct from first-run ("Linux baselines
+      # incrementally bootstrapped ...") so future mass-rebless investigations
+      # can grep both forms separately. `missing_count` + `missing_paths` come
+      # from the parser's GITHUB_OUTPUT (heredoc-encoded multiline). The shell
+      # flattens paths via `tr '\n' ' '` for a single audit line; the full
+      # path list lives in the PR body below.
+      - name: Bootstrap Linux baselines (incremental)
+        if: steps.check-linux.outputs.linux_baselines != '0' && steps.check-freshness.outputs.bootstrap_needed == 'true'
+        run: |
+          set -euo pipefail
+          pnpm run test:visual:update-missing
+          DATE_UTC=$(date -u +%Y-%m-%d)
+          AUDIT_DOC=_bmad-output/audit/visual-baseline-19-4.md
+          if [ ! -f "$AUDIT_DOC" ]; then
+            echo "::error::Expected audit doc missing: $AUDIT_DOC"
+            exit 1
+          fi
+          IMG_VER="${ImageVersion:-unknown}"
+          MISSING_COUNT="${{ steps.check-freshness.outputs.missing_count }}"
+          # Flatten heredoc-encoded multiline missing_paths into a space-separated list.
+          MISSING_PATHS_INLINE=$(printf '%s' "${{ steps.check-freshness.outputs.missing_paths }}" | tr '\n' ' ' | sed 's/  */ /g; s/ $//')
+          {
+            echo ""
+            echo "Linux baselines incrementally bootstrapped ${DATE_UTC} via runner ubuntu-24.04 (ImageVersion: ${IMG_VER}) — ${MISSING_COUNT} fixtures: ${MISSING_PATHS_INLINE}"
+          } >> "$AUDIT_DOC"
+
+      # Story bugfix-19-9 ([@contract-v3] on 19-5 AC #4) — incremental bootstrap PR.
+      # Parallel to the first-run PR step above; same Sally gate (label
+      # `requires-manual-review`, Murat 19-4b Task 5 ruling preserved), distinct
+      # branch name (incremental-${run_id} vs first-run's ${run_id}), distinct
+      # body template (lists the missing fixtures + cites the originating
+      # commit's message for tracing back to the surfacing story).
+      - name: Open Linux-baseline bootstrap PR (incremental)
+        if: steps.check-linux.outputs.linux_baselines != '0' && steps.check-freshness.outputs.bootstrap_needed == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: chore/bootstrap-linux-baselines-incremental-${{ github.run_id }}
+          base: ${{ github.ref_name }}
+          commit-message: 'chore(visual): bootstrap ${{ steps.check-freshness.outputs.missing_count }} missing -linux baselines (incremental)'
+          title: 'chore(visual): bootstrap ${{ steps.check-freshness.outputs.missing_count }} missing -linux baselines (incremental)'
+          labels: requires-manual-review
+          delete-branch: true
+          add-paths: |
+            tests/visual/components.visual.spec.ts-snapshots/**
+            _bmad-output/audit/visual-baseline-19-4.md
+          body: |
+            本 PR 由 `.github/workflows/visual-regression.yml` (story bugfix-19-9)
+            自動產生 —— **incremental bootstrap path**(非 first-run)。
+
+            **緣由**: verify-only probe 偵測到 ${{ steps.check-freshness.outputs.missing_count }} 個 `-linux` baseline 缺失,但 `-linux` 基準目錄並非空 (linux_baselines = ${{ steps.check-linux.outputs.linux_baselines }})。屬於 incremental fixture addition 情境(典型成因: 上游 PR 引入新 fixture/state 並 commit `-darwin` 而未提供 `-linux`)。bootstrap-detection 把所有失敗歸類為純 missing-baseline(無 pixel-diff / 無 other),才自動觸發本 PR;若 probe 偵測到任何真實 pixel-diff,job 失敗收尾於 `Fail job on real regression` step,不會走到這裡。
+
+            **缺失基線 (${{ steps.check-freshness.outputs.missing_count }} 個)**:
+            ```
+            ${{ steps.check-freshness.outputs.missing_paths }}
+            ```
+
+            **觸發 commit**:
+            ```
+            ${{ github.event.head_commit.message }}
+            ```
+
+            **為什麼貼上 `requires-manual-review`**
+            - Sally / UX 把關。請肉眼確認每張新基線符合對應元件 + 狀態的視覺預期 (e.g. `library-recently-added/recent` 應該有綠色「新增」badge / `stale` 不應該有)。
+            - Murat 在 19-4b Task 5 設下的條件對 incremental 與 first-run 同樣適用 (story bugfix-19-9 AC #3 保留此 gate)。
+            - 任何 doubt 即關閉本 PR,以手動 artifact extraction 流程處理 (參考: PR #11)。
+
+            **合併後**
+            - 後續 verify-only 對著新基線通過 → `Visual Regression / PR` 變綠。
+            - bootstrap-detection 偵測下個 incremental 場景時會再觸發本 path (這次不是死碼,是 steady-state branch)。
+
+            **參考**
+            - Story: `_bmad-output/implementation-artifacts/bugfix-19-9-bootstrap-not-incremental.md`
+            - Parser: `apps/web/src/visual-harness/bootstrap-detection.mjs` + spec (AC #4)
+            - 先例 (manual recovery for the originating gap): PR #11 (`chore/visual-bootstrap-19-9-recent-stale-linux`)
+            - Upstream contract: Story 19-5 AC #4 [@contract-v3] (bumped v2→v3 by this story)
+
+      # Story bugfix-19-9 — final gate: fail the job when verify-only probe found
+      # failures AND parser classified them as anything other than pure
+      # missing-baseline (i.e. real pixel diffs OR out-of-scope failures). The
+      # incremental bootstrap branches above intentionally SUCCEED in this case
+      # (they only fire when bootstrap_needed='true'), so without this gate, real
+      # regressions could ship green. First-run path (linux_baselines='0') skips
+      # verify-probe entirely (probe `if:` is gated) so probe outcome is 'skipped'
+      # not 'failure' → this gate also skips (correctly).
+      - name: Fail job on real regression
+        if: steps.verify-probe.outcome == 'failure' && steps.check-freshness.outputs.bootstrap_needed != 'true'
+        run: |
+          echo "::error::Visual regression verify-only failed AND parser did not classify as pure missing-baseline."
+          echo "::error::Likely cause: real pixel-diff against existing -linux baseline (true visual regression)."
+          echo "::error::See bootstrap-detection summary above for the missing/pixel-diff/other counts."
+          echo "::error::Inspect the uploaded diff artifacts for the actual.png / diff.png / expected.png trio."
+          exit 1
 
       # AC #2 — 失敗時上傳差異產物(bootstrap 之後,則是 verify-only 路徑
       # 失敗時)。bootstrap 路徑不會產生 test-results/,有

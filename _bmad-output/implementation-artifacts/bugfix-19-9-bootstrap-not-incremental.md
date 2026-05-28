@@ -87,18 +87,17 @@ I want to upgrade `.github/workflows/visual-regression.yml`'s `Check Linux basel
   - [x] Smoke-tested via `npx playwright test --update-snapshots=missing --list --project=visual` — Playwright 1.58.0 accepts the `=missing` argument value (lists 1 test, no flag rejection). Script parses via `pnpm run test:visual:update-missing --help` (resolves and forwards). Full visual run not executed locally (1.2 min suite would only validate Playwright's behavior, not the script entry — already validated by Playwright accepting the flag).
   - [x] Commit message: `feat(bugfix-19-9): add test:visual:update-missing npm script`.
 
-- [ ] Task 3: Restructure workflow step 8 + add incremental branch (AC: #1, #3)
-  - [ ] Replace step 8 (`Check Linux baseline presence`, L320-326) with a new step `Check Linux baseline freshness` that:
-    - Keeps the `linux_baselines` count output (for first-run path conditional).
-    - Adds new outputs: `bootstrap_needed`, `missing_paths` (newline-joined), `missing_count`.
-    - Runs verify-only as a probe: `pnpm run test:visual 2>&1 | tee /tmp/visual-probe.log` (use `|| true` to not fail the step; the parser determines next action).
-    - Pipes `/tmp/visual-probe.log` through `node tests/visual/bootstrap-detection.mjs` (script accepts log on stdin OR as a file-path arg — dev's call).
-    - Writes the parser's output to `$GITHUB_OUTPUT` per the new contract.
-  - [ ] Step 9 `Run visual regression (verify-only)` (L330-332): change `if:` from `steps.check-linux.outputs.linux_baselines != '0'` to `steps.check-linux.outputs.bootstrap_needed != 'true' && steps.check-linux.outputs.linux_baselines != '0'`. Re-runs verify-only ONLY if no bootstrap is needed AND first-run already completed. (Skips the second verify-only when bootstrap-needed since the parser already ran one.)
-  - [ ] Step 10 `Bootstrap Linux baselines` (L339-356): keep the existing branch unchanged (first-run). Add a NEW step `Bootstrap Linux baselines (incremental)` immediately after, with `if: steps.check-linux.outputs.bootstrap_needed == 'true' && steps.check-linux.outputs.linux_baselines != '0'`, running `pnpm run test:visual:update-missing` and appending the new audit-doc line per AC #3.
-  - [ ] Step 11 `Open Linux-baseline bootstrap PR` (L362-413): keep existing branch unchanged. Add a NEW step `Open Linux-baseline bootstrap PR (incremental)` immediately after, with parallel conditional + a NEW PR body template that uses `${{ steps.check-linux.outputs.missing_paths }}` and `${{ steps.check-linux.outputs.missing_count }}` to render the missing-fixture list.
-  - [ ] `actionlint .github/workflows/visual-regression.yml` 0 issues.
-  - [ ] Commit message: `feat(bugfix-19-9): incremental bootstrap branch in visual-regression workflow`.
+- [x] Task 3: Restructure workflow step 8 + add incremental branch (AC: #1, #3)
+  - [x] Step 8 `Check Linux baseline presence` (L320-326): KEPT as-is (still emits `linux_baselines` count; logic unchanged). Header comment annotated to clarify that this step distinguishes first-run vs ≥1-baseline-present but does NOT detect the incremental case (delegated to new `check-freshness` step below).
+  - [x] Step 9 RESTRUCTURED to `Run visual regression (verify-only freshness probe)` (id `verify-probe`): added `continue-on-error: true` + `tee /tmp/visual-probe.log` capture. Single verify-only run serves DUAL purpose (steady-state verify AND parser input) — no extra CI time. Exit code no longer directly fails the job; the new fail-gate at the end decides.
+  - [x] NEW step 9b `Classify verify-only result via bootstrap-detection` (id `check-freshness`): invokes `node apps/web/src/visual-harness/bootstrap-detection.mjs < /tmp/visual-probe.log`. Emits `bootstrap_needed` / `missing_count` / `missing_paths` / `pixel_diff_count` / `other_count` outputs. Always exits 0.
+  - [x] Step 10 `Bootstrap Linux baselines` (first-run, L339-356): UNCHANGED — still gated on `linux_baselines == '0'`. Behavior preserved verbatim.
+  - [x] NEW step 10b `Bootstrap Linux baselines (incremental)`: gated on `linux_baselines != '0' && bootstrap_needed == 'true'`. Runs `pnpm run test:visual:update-missing` (Task 2's new script). Appends a distinct audit-doc line (`Linux baselines incrementally bootstrapped ${DATE} via runner ubuntu-24.04 (ImageVersion: ${IMG_VER}) — ${N} fixtures: ${PATHS}`) so future mass-rebless investigations can grep first-run vs incremental separately. `missing_paths` heredoc flattened to single-line via `tr '\n' ' '` for audit-doc; full list lives in the PR body.
+  - [x] Step 11 `Open Linux-baseline bootstrap PR` (first-run, L362-413): UNCHANGED — same `if:` + same body.
+  - [x] NEW step 11b `Open Linux-baseline bootstrap PR (incremental)`: gated on `linux_baselines != '0' && bootstrap_needed == 'true'`. Branch `chore/bootstrap-linux-baselines-incremental-${{ github.run_id }}`. Label `requires-manual-review` (Sally gate preserved per AC #3 + Murat 19-4b Task 5 ruling). NEW body template lists missing fixtures verbatim (heredoc multi-line interpolation) + cites the triggering commit's message + cross-references PR #11 as the manual-recovery precedent.
+  - [x] NEW step `Fail job on real regression` (final gate before Upload diff artifacts): `if: steps.verify-probe.outcome == 'failure' && steps.check-freshness.outputs.bootstrap_needed != 'true'`. Exits 1 with an error message pointing at the bootstrap-detection summary + diff artifacts. First-run path skips this gate naturally (probe `if:` is gated so its outcome is `skipped` not `failure`).
+  - [x] `actionlint .github/workflows/visual-regression.yml` 0 issues ✓; `prettier --check` clean ✓.
+  - [x] Commit message: `feat(bugfix-19-9): incremental bootstrap branch in visual-regression workflow`.
 
 - [ ] Task 4: Documentation sync (AC: #5)
   - [ ] Update `.github/workflows/visual-regression.yml` header comment L42-50 per AC #5 (a).
@@ -226,7 +225,11 @@ Claude Opus 4.7 (1M context) — `claude-opus-4-7[1m]` — operating as BMAD `de
 
 - `package.json` (added `test:visual:update-missing` script at L19 — Playwright 1.43+ GA `=missing` flag)
 
-_(more files added in Tasks 3–6)_
+**Modified (Task 3, 1 file):**
+
+- `.github/workflows/visual-regression.yml` (step 8 header comment annotated; step 9 restructured to probe with `continue-on-error` + log capture; NEW step 9b parser invocation; NEW step 10b incremental bootstrap; NEW step 11b incremental PR open with separate body template; NEW final fail-on-regression gate)
+
+_(more files added in Tasks 4–6)_
 
 ## Change Log
 
