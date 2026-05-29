@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen 4 Detail Panel Desktop (RgSxQ)
 /**
  * PosterUploader Component (Story 3.8 - AC3)
  * Drag-drop and file picker for poster upload

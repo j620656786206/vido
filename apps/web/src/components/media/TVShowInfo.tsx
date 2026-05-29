@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen 4b Detail Panel Desktop (TV Series) (407vK)
 import type { TVShowDetails } from '../../types/tmdb';
 import { cn } from '../../lib/utils';
 

@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen 1 Library Grid Desktop (KNI8F)
 import { LayoutGrid, List } from 'lucide-react';
 import { cn } from '../../lib/utils';
 

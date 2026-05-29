@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen H7 Filtered Library Desktop (QTqcC)
 import { cn } from '../../lib/utils';
 
 export interface UnidentifiedFileCardProps {

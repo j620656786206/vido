@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen 10 Settings Desktop (6UCtX)
 /**
  * Library Edit/Create Modal for Settings page (Story 7b-4)
  */

@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen H2 Scan Progress Desktop (wyuhF)
 /**
  * FloatingParseProgressCard Component (Story 3.10 - Task 4)
  * Non-blocking floating card showing parse progress

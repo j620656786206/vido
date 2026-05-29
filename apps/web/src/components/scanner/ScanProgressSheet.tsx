@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen H5 Scan Progress Mobile (yezIo)
 /**
  * Mobile bottom sheet scan progress (Story 7.4, Task 4)
  * Peek state: 64px, full width. Expanded: half screen with drag handle.

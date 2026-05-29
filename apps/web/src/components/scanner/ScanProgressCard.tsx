@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen H2 Scan Progress Desktop (wyuhF)
 /**
  * Desktop floating scan progress card (Story 7.4, Tasks 1+3)
  * Fixed bottom-right, z-50, 400px width, dark theme.

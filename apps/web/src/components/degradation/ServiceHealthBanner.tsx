@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen 1 Library Grid Desktop (KNI8F)
 import { cn } from '../../lib/utils';
 import type { DegradationLevel, ServicesHealth } from './types';
 

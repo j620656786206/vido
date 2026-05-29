@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen 4c Detail Panel Context Menu (7mdTJ)
 import { useState, useRef, useEffect } from 'react';
 import { MoreHorizontal, RefreshCw, Download, Trash2 } from 'lucide-react';
 

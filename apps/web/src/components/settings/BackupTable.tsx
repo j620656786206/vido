@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen 11 Backup Management Desktop (uhAKd)
 import { Download, Trash2, ShieldCheck, RotateCcw } from 'lucide-react';
 import type { Backup, BackupStatus } from '../../services/backupService';
 import { backupService } from '../../services/backupService';

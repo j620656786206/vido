@@ -1,5 +1,5 @@
 // Clock-mocked: gallery fixture library-recently-added uses page.clock.setFixedTime
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen 1 Library Grid Desktop (KNI8F)
 import { Link } from '@tanstack/react-router';
 import { PosterCard } from '../media/PosterCard';
 import { PosterCardSkeleton } from '../media/PosterCardSkeleton';

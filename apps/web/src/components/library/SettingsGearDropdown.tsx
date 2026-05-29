@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen 1a Settings Gear Dropdown (7fE0b)
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Settings } from 'lucide-react';
 import { cn } from '../../lib/utils';

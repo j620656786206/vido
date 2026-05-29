@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen 4 Detail Panel Desktop (RgSxQ)
 import { getImageUrl } from '../../lib/image';
 import type { CastMember, CrewMember, Creator } from '../../types/tmdb';
 import { cn } from '../../lib/utils';

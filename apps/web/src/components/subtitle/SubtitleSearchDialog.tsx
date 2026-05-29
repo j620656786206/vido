@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen I1 Subtitle Search Dialog [8-8] Desktop (cOrOR)
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Search, X, ChevronDown, ChevronUp, Eye, Download, Check, Loader2 } from 'lucide-react';
 import { cn } from '../../lib/utils';

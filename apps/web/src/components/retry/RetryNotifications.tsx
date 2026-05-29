@@ -1,5 +1,5 @@
 // Time-bomb-exempt: Date.now used only in unique-ID generation for React keys + in-memory map keys; never visually rendered (Murat)
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen H2 Scan Progress Desktop (wyuhF)
 /**
  * RetryNotifications Component (Story 3.11 - Task 9)
  * Shows toast notifications for retry events

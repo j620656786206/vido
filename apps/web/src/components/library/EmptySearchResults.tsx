@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen 7 Search + Filter Desktop (rsAxf)
 import { Search } from 'lucide-react';
 
 interface EmptySearchResultsProps {

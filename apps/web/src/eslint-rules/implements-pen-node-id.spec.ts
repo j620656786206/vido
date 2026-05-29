@@ -46,6 +46,18 @@ ruleTester.run('implements-pen-node-id', rule, {
     {
       code: '// Implements: <screen-section - pending epic-19-8 mapping>\nexport const x = 1;\n',
     },
+    // (c''''') Phase-2 upgrade: soft `// Design ref:` to a designed screen frame (story 19-8, 19-3 [@contract-v3])
+    {
+      code: '// Design ref: ux-design.pen Screen HP-1 Homepage Desktop (sAaCR)\nexport const x = 1;\n',
+    },
+    // (c'''''') Design ref: screen name containing parens still resolves (greedy node-id group)
+    {
+      code: '// Design ref: ux-design.pen Screen 4d Detail Fallback Desktop (Failed) (2ltBl)\nexport const x = 1;\n',
+    },
+    // (c''''''') Design ref: design-coverage-gap variant (component feature postdates the .pen design)
+    {
+      code: '// Design ref: ux-design.pen — no current screen frame; setup feature postdates the .pen design (epic-19-8 sweep finding)\nexport const x = 1;\n',
+    },
     // header may sit below other leading comments / above imports
     {
       code: '/* eslint-disable */\n// Implements: Component/Foo (abc123)\nimport { y } from "z";\nexport const x = y;\n',
@@ -90,6 +102,16 @@ ruleTester.run('implements-pen-node-id', rule, {
     // (e'''') screen-section placeholder missing the `pending epic-N-M mapping` clause
     {
       code: '// Implements: <screen-section>\nexport const x = 1;\n',
+      errors: [{ messageId: 'missing' }],
+    },
+    // (e''''') Design ref: missing the `(nodeId)` parens
+    {
+      code: '// Design ref: ux-design.pen Screen HP-1 Homepage Desktop\nexport const x = 1;\n',
+      errors: [{ messageId: 'missing' }],
+    },
+    // (e'''''') Design ref: must reference ux-design.pen, not some other file
+    {
+      code: '// Design ref: other-file.pen Screen HP-1 (sAaCR)\nexport const x = 1;\n',
       errors: [{ messageId: 'missing' }],
     },
     // (f) a correctly-shaped marker that appears AFTER the first statement is NOT a leading comment

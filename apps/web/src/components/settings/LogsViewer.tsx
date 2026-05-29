@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen 10 Settings Desktop (6UCtX)
 import { useState, useCallback } from 'react';
 import { FileText, Trash2, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useLogs, useClearLogs } from '../../hooks/useLogs';

@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen H2 Scan Progress Desktop (wyuhF)
 /**
  * ErrorDetailsPanel Component (Story 3.10 - Task 7)
  * Displays failure reasons and action buttons for failed parses

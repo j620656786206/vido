@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen 1 Library Grid Desktop (KNI8F)
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useDebouncedCallback } from 'use-debounce';
 import { Search, X } from 'lucide-react';

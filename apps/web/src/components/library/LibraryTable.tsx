@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen 6 List View Desktop (LZ8Ds)
 import { Link } from '@tanstack/react-router';
 import { ArrowUp, ArrowDown, Check } from 'lucide-react';
 import { cn } from '../../lib/utils';

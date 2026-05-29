@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen G1 Download List Desktop (rWvuG)
 import { useState } from 'react';
 import type { Download, SortField, SortOrder } from '../../services/downloadService';
 import { DownloadItem } from './DownloadItem';

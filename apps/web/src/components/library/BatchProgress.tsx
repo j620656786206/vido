@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen 8 Batch Operations Desktop (dcf67)
 import { X } from 'lucide-react';
 import type { BatchError } from '../../types/library';
 

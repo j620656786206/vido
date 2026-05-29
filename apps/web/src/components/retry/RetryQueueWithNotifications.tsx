@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen H2 Scan Progress Desktop (wyuhF)
 /**
  * RetryQueueWithNotifications Component (Story 3.11 - Task 9)
  * Combines RetryQueuePanel with notification system

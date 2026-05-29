@@ -11,7 +11,14 @@
  *   // Implements: Component/{Name} ({penNodeId}) + Component/{Name2} ({penNodeId2})   // multi
  *   // Implements: <utility — no .pen counterpart>                                      // exemption
  *   // Implements: <route-only>                                                         // exemption
- *   // Implements: <screen-section — pending epic-19-8 mapping>                          // Phase-2 placeholder
+ *   // Implements: <screen-section — pending epic-19-8 mapping>                          // Phase-1 placeholder
+ *   // Design ref: ux-design.pen Screen {ScreenName} ({nodeId})                          // Phase-2 upgrade (story 19-8)
+ *
+ * The `// Design ref:` form (story 19-8, 19-3 [@contract-v3]) is the Phase-2 upgrade
+ * target for a component that renders a section of a designed *screen frame* (not a
+ * Reusable Component) — see project-context.md Rule 21 L688. It also accepts an
+ * honest design-coverage-gap variant for components whose feature postdates the
+ * `.pen` design: `// Design ref: ux-design.pen — no current screen frame; {reason}`.
  *
  * "Leading comment" = a comment that appears before the first non-comment,
  * non-whitespace token of the file (i.e. before the first import/export/statement).
@@ -43,6 +50,14 @@ const ROUTE_EXEMPTION_RE = /^Implements:\s*<route-only>$/;
 // canonical screen-frame mapping is tracked by epic-19-8. Accept em-dash or hyphen.
 const SCREEN_SECTION_PLACEHOLDER_RE =
   /^Implements:\s*<screen-section\s*[—–-]\s*pending epic-[0-9]+-[0-9]+ mapping>$/;
+// `// Design ref: ux-design.pen Screen {ScreenName} ({nodeId})` — Phase-2 upgrade of the
+// screen-section placeholder (story 19-8, 19-3 [@contract-v3]). A component that renders a
+// section of a designed *screen frame* references the frame softly (the section is not a
+// Reusable Component, so the strict `Implements: Component/X` form does not apply).
+// Also accepts the design-coverage-gap variant `ux-design.pen — no current screen frame; …`
+// for components whose feature postdates the `.pen` design. Accept em-dash or hyphen.
+const DESIGN_REF_RE =
+  /^Design ref:\s*ux-design\.pen\s+(Screen\s+.+\s+\([A-Za-z0-9]+\)|[—–-]\s*no current screen frame;.+)$/;
 
 /**
  * Split a comment into candidate marker lines, normalising both `//` line
@@ -59,7 +74,8 @@ function isAcceptedMarkerLine(line) {
     COMPONENT_MARKER_RE.test(line) ||
     UTILITY_EXEMPTION_RE.test(line) ||
     ROUTE_EXEMPTION_RE.test(line) ||
-    SCREEN_SECTION_PLACEHOLDER_RE.test(line)
+    SCREEN_SECTION_PLACEHOLDER_RE.test(line) ||
+    DESIGN_REF_RE.test(line)
   );
 }
 
@@ -75,7 +91,7 @@ const implementsPenNodeId = {
     schema: [],
     messages: {
       missing:
-        'Rule 21 (project-context.md): missing a leading `// Implements: Component/{Name} ({penNodeId})` header linking this component to its .pen design node. Acceptable forms: `// Implements: Component/Foo (nodeId)`, `// Implements: Component/Foo (id) + Component/Bar (id)`, the exemptions `// Implements: <utility — no .pen counterpart>` / `// Implements: <route-only>`, or the Phase-2 placeholder `// Implements: <screen-section — pending epic-19-8 mapping>` (for a component that renders a section of a designed screen frame). Look up the node ID via the Pencil MCP `get_editor_state` tool → "Reusable Components".',
+        'Rule 21 (project-context.md): missing a leading `// Implements: Component/{Name} ({penNodeId})` header linking this component to its .pen design node. Acceptable forms: `// Implements: Component/Foo (nodeId)`, `// Implements: Component/Foo (id) + Component/Bar (id)`, the exemptions `// Implements: <utility — no .pen counterpart>` / `// Implements: <route-only>`, the Phase-1 placeholder `// Implements: <screen-section — pending epic-19-8 mapping>`, or the Phase-2 upgrade `// Design ref: ux-design.pen Screen {ScreenName} ({nodeId})` (for a component that renders a section of a designed screen frame). Look up the node ID via the Pencil MCP `get_editor_state` tool → "Reusable Components" / Screen Frames.',
     },
   },
 

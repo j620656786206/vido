@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen 10 Settings Desktop (6UCtX)
 import { useEffect, useRef, useState } from 'react';
 import { Activity, Bell, Loader2 } from 'lucide-react';
 import { useServiceStatuses, useTestServiceConnection } from '../../hooks/useServiceStatus';

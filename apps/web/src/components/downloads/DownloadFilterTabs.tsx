@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen G1 Download List Desktop (rWvuG)
 import type { FilterStatus, DownloadCounts } from '../../services/downloadService';
 import { cn } from '../../lib/utils';
 

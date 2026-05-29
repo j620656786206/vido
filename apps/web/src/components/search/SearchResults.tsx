@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen 7 Search + Filter Desktop (rsAxf)
 import { MediaGrid, type MediaItem } from '../media/MediaGrid';
 import { Pagination } from '../ui/Pagination';
 import type { MovieSearchResponse, TVShowSearchResponse } from '../../types/tmdb';

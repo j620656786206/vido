@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen G2 Torrent Expanded Detail Desktop (3ULXd)
 import { useDownloadDetails } from '../../hooks/useDownloads';
 import { formatSize, formatSpeed, formatDate } from './formatters';
 

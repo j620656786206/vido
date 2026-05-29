@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen HP-3 Block CRUD Modal (Paqlk)
 /**
  * Explore block create/edit modal — Story 10.3.
  */

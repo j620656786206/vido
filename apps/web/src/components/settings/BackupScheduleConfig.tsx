@@ -1,4 +1,4 @@
-// Implements: <screen-section — pending epic-19-8 mapping>
+// Design ref: ux-design.pen Screen 11 Backup Management Desktop (uhAKd)
 import { useState, useEffect } from 'react';
 import { Clock, Loader2 } from 'lucide-react';
 import { useBackupSchedule, useUpdateSchedule } from '../../hooks/useBackups';
