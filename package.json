@@ -16,6 +16,7 @@
     "test:e2e:report": "playwright show-report",
     "test:visual": "playwright test --project=visual",
     "test:visual:update": "playwright test --project=visual --update-snapshots",
+    "test:visual:update-missing": "playwright test --project=visual --update-snapshots=missing",
     "test:bisect": "playwright test --project=bisect",
     "test:api": "playwright test --grep @api",
     "test:api:movies": "playwright test tests/e2e/movies.api.spec.ts",
