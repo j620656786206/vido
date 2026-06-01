@@ -64,6 +64,14 @@ func (db *DB) connect() error {
 }
 
 // configureSQLite applies SQLite-specific PRAGMA settings.
+//
+// NOTE: per-connection PRAGMAs (busy_timeout, foreign_keys, cache_size,
+// temp_store, synchronous) are authoritatively set via the DSN `_pragma=` params
+// in DatabaseConfig.GetConnectionString, which apply to EVERY pooled connection.
+// The Exec calls below run on the pool and only touch one arbitrary connection,
+// so they are kept solely to set/verify the database-level journal_mode and as
+// defense-in-depth — they must NOT be relied on for per-connection settings.
+//
 // When WALEnabled is true, configures Write-Ahead Logging (WAL) mode which provides:
 // - Concurrent read performance: Multiple readers can access the database while a writer is active
 // - Better write performance: Writes are appended to a WAL file instead of modifying the main database

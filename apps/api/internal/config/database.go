@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -14,9 +15,9 @@ type DatabaseConfig struct {
 	Path string
 
 	// WAL mode settings
-	WALEnabled     bool
-	WALSyncMode    string // OFF, NORMAL, FULL
-	WALCheckpoint  int    // Number of frames before auto-checkpoint
+	WALEnabled    bool
+	WALSyncMode   string // OFF, NORMAL, FULL
+	WALCheckpoint int    // Number of frames before auto-checkpoint
 
 	// Connection pool settings
 	MaxOpenConns    int           // Maximum number of open connections
@@ -74,20 +75,35 @@ func (c *DatabaseConfig) GetDatabaseDir() string {
 	return filepath.Dir(c.Path)
 }
 
-// GetConnectionString returns the SQLite connection string with parameters
+// GetConnectionString returns the SQLite connection string with parameters.
+//
+// Per-connection PRAGMAs (busy_timeout, foreign_keys, etc.) are passed via
+// modernc's `_pragma=` DSN mechanism so they are applied to EVERY connection the
+// pool opens. This is deliberate: applying them with `PRAGMA ...` via sql.DB.Exec
+// only configures one arbitrary pooled connection and leaves later-opened
+// connections without busy_timeout, which causes lock-contention hangs under
+// concurrent load (observed 2026-06-01).
 func (c *DatabaseConfig) GetConnectionString() string {
-	// SQLite connection string format: file:path?param=value&param=value
-	params := ""
-
-	if c.WALEnabled {
-		// WAL mode and related settings are applied via PRAGMA after connection
-		// The connection string itself is just the file path
-		params = "?cache=shared&mode=rwc"
-	} else {
-		params = "?cache=shared&mode=rwc"
+	// cache/mode are SQLite URI params (handled by the VFS); the rest are
+	// modernc `_pragma` params applied per connection.
+	params := []string{
+		"cache=shared",
+		"mode=rwc",
+		fmt.Sprintf("_pragma=busy_timeout(%d)", c.BusyTimeout.Milliseconds()),
+		fmt.Sprintf("_pragma=cache_size(%d)", c.CacheSize),
+		"_pragma=foreign_keys(on)",
+		"_pragma=temp_store(memory)",
 	}
 
-	return fmt.Sprintf("file:%s%s", c.Path, params)
+	if c.WALEnabled {
+		params = append(params,
+			"_pragma=journal_mode(WAL)",
+			fmt.Sprintf("_pragma=synchronous(%s)", c.WALSyncMode),
+			fmt.Sprintf("_pragma=wal_autocheckpoint(%d)", c.WALCheckpoint),
+		)
+	}
+
+	return fmt.Sprintf("file:%s?%s", c.Path, strings.Join(params, "&"))
 }
 
 // Helper functions for environment variable parsing
