@@ -40,6 +40,12 @@ async def run_test():
         except Exception:
             pass
         
+        # -> Click the '設定' (Settings) link (interactive element [12]) to open the settings page.
+        # link "設定"
+        elem = page.locator("xpath=/html/body/div/div/div/header/div/nav/a[4]").nth(0)
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.click()
+        
         # --> Test passed — verified by AI agent
         frame = context.pages[-1]
         current_url = await frame.evaluate("() => window.location.href")

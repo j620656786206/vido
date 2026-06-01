@@ -2,6 +2,17 @@
 # TestSprite Monthly — 月度 journey 漂移把關 (cron 0 3 1 * *)
 # ============================================================================
 #
+# ⏸️  DEFERRED (2026-06-01): 月度 cron 排程已停用 (見下方 `on:` 區塊)。
+#     原因: 本地測試套件仍在養成 (TestSprite v4 重生成中),且 runner-local
+#     endpoint 導致大量 error (上次手動跑 24 案中 15 個 error);加上把關產物
+#     commit 回受保護的 main 會被 branch-protection 擋 (git push 3-retry 全敗)。
+#     在套件 + 穩定 endpoint 就緒前,自動排程回報的是環境噪音而非真實漂移。
+#     目前改為「本地起 TestSprite 做測試開發」;workflow_dispatch 保留供手動驗證。
+#     復活條件: (1) 測試套件穩定 (2) 設定穩定 TESTSPRITE_TARGET_URL
+#               (3) 解決 bot 推 main 的 branch-protection (改推 side branch/PR)。
+#     復活方式: 取消 `on:` 區塊內 schedule 兩行的註解。
+#
+
 # Story 19-6 (epic-19 Design-Implementation Drift Audit) 的 journey 半 ——
 # 19-5 視覺 PR 把關抓 pixel drift,本工作流抓 user-flow drift。每月一號早上
 # 03:00 UTC 起跑,讀 `_bmad-output/audit/testsprite-queue.yaml` 排隊清單,以
@@ -105,9 +116,12 @@
 name: TestSprite Monthly
 
 on:
-  schedule:
-    - cron: '0 3 1 * *'
-  workflow_dispatch:
+  # DEFERRED (2026-06-01): 月度 cron 暫停 —— 見檔頭「DEFERRED」說明。
+  # 待本地 TestSprite 測試套件養穩 + 有穩定可達的 TESTSPRITE_TARGET_URL
+  # (取代 runner-local,降低 error 率) 後,取消下面兩行註解即可復活自動排程。
+  # schedule:
+  #   - cron: '0 3 1 * *'
+  workflow_dispatch: # 手動觸發保留 —— 需要時仍可從 Actions 頁 Run workflow
 
 env:
   TESTSPRITE_PACKAGE_VERSION: '0.0.37'

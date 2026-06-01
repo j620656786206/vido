@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -115,28 +116,28 @@ func TestLoad_NewFields(t *testing.T) {
 
 func TestLoad_PortBackwardCompatibility(t *testing.T) {
 	tests := []struct {
-		name        string
-		envVars     map[string]string
+		name         string
+		envVars      map[string]string
 		expectedPort string
 	}{
 		{
-			name:        "uses VIDO_PORT when set",
-			envVars:     map[string]string{"VIDO_PORT": "9000"},
+			name:         "uses VIDO_PORT when set",
+			envVars:      map[string]string{"VIDO_PORT": "9000"},
 			expectedPort: "9000",
 		},
 		{
-			name:        "falls back to PORT if VIDO_PORT not set",
-			envVars:     map[string]string{"PORT": "9001"},
+			name:         "falls back to PORT if VIDO_PORT not set",
+			envVars:      map[string]string{"PORT": "9001"},
 			expectedPort: "9001",
 		},
 		{
-			name:        "VIDO_PORT takes precedence over PORT",
-			envVars:     map[string]string{"VIDO_PORT": "9002", "PORT": "9003"},
+			name:         "VIDO_PORT takes precedence over PORT",
+			envVars:      map[string]string{"VIDO_PORT": "9002", "PORT": "9003"},
 			expectedPort: "9002",
 		},
 		{
-			name:        "uses default 8080 when neither is set",
-			envVars:     map[string]string{},
+			name:         "uses default 8080 when neither is set",
+			envVars:      map[string]string{},
 			expectedPort: "8080",
 		},
 	}
@@ -837,6 +838,11 @@ func TestGetDatabaseDir(t *testing.T) {
 }
 
 func TestGetConnectionString(t *testing.T) {
+	// Per-connection PRAGMAs are carried in the DSN via modernc's `_pragma=`
+	// mechanism so every pooled connection (not just one) gets busy_timeout etc.
+	const base = "?cache=shared&mode=rwc&_pragma=busy_timeout(5000)&_pragma=cache_size(-64000)&_pragma=foreign_keys(on)&_pragma=temp_store(memory)"
+	const walSuffix = "&_pragma=journal_mode(WAL)&_pragma=synchronous(NORMAL)&_pragma=wal_autocheckpoint(1000)"
+
 	tests := []struct {
 		name       string
 		path       string
@@ -847,27 +853,31 @@ func TestGetConnectionString(t *testing.T) {
 			name:       "WAL enabled",
 			path:       "/data/vido.db",
 			walEnabled: true,
-			expected:   "file:/data/vido.db?cache=shared&mode=rwc",
+			expected:   "file:/data/vido.db" + base + walSuffix,
 		},
 		{
 			name:       "WAL disabled",
 			path:       "/data/vido.db",
 			walEnabled: false,
-			expected:   "file:/data/vido.db?cache=shared&mode=rwc",
+			expected:   "file:/data/vido.db" + base,
 		},
 		{
 			name:       "relative path",
 			path:       "./data/test.db",
 			walEnabled: true,
-			expected:   "file:./data/test.db?cache=shared&mode=rwc",
+			expected:   "file:./data/test.db" + base + walSuffix,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := &DatabaseConfig{
-				Path:       tt.path,
-				WALEnabled: tt.walEnabled,
+				Path:          tt.path,
+				WALEnabled:    tt.walEnabled,
+				WALSyncMode:   "NORMAL",
+				WALCheckpoint: 1000,
+				BusyTimeout:   5 * time.Second,
+				CacheSize:     -64000,
 			}
 			assert.Equal(t, tt.expected, cfg.GetConnectionString())
 		})

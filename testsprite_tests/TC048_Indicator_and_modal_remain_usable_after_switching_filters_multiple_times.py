@@ -40,6 +40,24 @@ async def run_test():
         except Exception:
             pass
         
+        # -> Click the qBittorrent connection health indicator (interactive element [7]) to reveal connection details and the connection history events list.
+        # button "上次： 739767 天前" aria-label="qBittorrent 未連線"
+        elem = page.locator("xpath=/html/body/div/div/div/main/div/div[4]/div/button").nth(0)
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.click()
+        
+        # -> Click the '錯誤' (errors) filter button (interactive element index 171) to apply the filter and trigger rendering of the connection history events list.
+        # button "錯誤"
+        elem = page.locator("xpath=/html/body/div/div/div/main/div/div[5]/div[2]/div[2]/div/div/button[4]").nth(0)
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.click()
+        
+        # -> Verify the Connection history events list is visible by searching for the loading text '載入中...' (the list container), then click the '全部' filter (index 168) and verify the list is visible again.
+        # button "全部"
+        elem = page.locator("xpath=/html/body/div/div/div/main/div/div[5]/div[2]/div[2]/div/div/button").nth(0)
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.click()
+        
         # --> Test passed — verified by AI agent
         frame = context.pages[-1]
         current_url = await frame.evaluate("() => window.location.href")
