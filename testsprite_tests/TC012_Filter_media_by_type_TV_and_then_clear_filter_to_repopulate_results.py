@@ -40,6 +40,30 @@ async def run_test():
         except Exception:
             pass
         
+        # -> Click the '媒體庫' link (index 12) to open /library and then verify the type filter control is present.
+        # link "媒體庫"
+        elem = page.locator("xpath=/html/body/div/div/div/header/div/nav/a").nth(0)
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.click()
+        
+        # -> Open the filter panel by clicking the 篩選 (filter) button (index 204) so the type filter control can be verified.
+        # button "篩選"
+        elem = page.locator("xpath=/html/body/div/div/div/main/div/div/div[2]/div[2]/button[2]").nth(0)
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.click()
+        
+        # -> Click the '影集' (TV) type option (index 345) then click '套用' (Apply) (index 361) to apply the TV filter and trigger the results update.
+        # button "影集"
+        elem = page.locator("xpath=/html/body/div/div/div/main/div/div/div[3]/aside/div/div/div/button[3]").nth(0)
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.click()
+        
+        # -> Click the '影集' (TV) type option (index 345) then click '套用' (Apply) (index 361) to apply the TV filter and trigger the results update.
+        # button "套用"
+        elem = page.locator("xpath=/html/body/div/div/div/main/div/div/div[3]/aside/div/div[5]/button").nth(0)
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.click()
+        
         # --> Test passed — verified by AI agent
         frame = context.pages[-1]
         current_url = await frame.evaluate("() => window.location.href")

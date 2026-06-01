@@ -40,6 +40,24 @@ async def run_test():
         except Exception:
             pass
         
+        # -> click
+        # link "媒體庫"
+        elem = page.locator("xpath=/html/body/div/div/div/header/div/nav/a").nth(0)
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.click()
+        
+        # -> Click the list-view toggle (element index 201) to switch to list view so the media items table becomes visible.
+        # button aria-label="列表檢視"
+        elem = page.locator("xpath=/html/body/div/div/div/main/div/div/div[2]/div[2]/div[2]/button[2]").nth(0)
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.click()
+        
+        # -> Click the '查看全部 >' control (element index 209) to try loading the full media list or navigate to the comprehensive view so media items become visible.
+        # link "查看全部 >"
+        elem = page.locator("xpath=/html/body/div/div/div/main/div/div/div[3]/div/section/div/a").nth(0)
+        await elem.wait_for(state="visible", timeout=10000)
+        await elem.click()
+        
         # --> Test passed — verified by AI agent
         frame = context.pages[-1]
         current_url = await frame.evaluate("() => window.location.href")
