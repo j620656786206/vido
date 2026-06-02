@@ -193,6 +193,59 @@
       execute so the Step 4 findings summary output renders a concrete value,
       not an unresolved placeholder.</action>
 
+    <!-- Rule 20 Contract Bump Stale-Mark Check (Epic 19 Retro P2) -->
+    <!-- Last synced with project-context.md Rule 20 (🔁 bump-side block) on 2026-06-02 -->
+    <action critical="MANDATORY">RULE 20 CONTRACT BUMP STALE-MARK CHECK:
+      Rule 20 of project-context.md (🔁 bump-side obligation) mandates that WHEN a
+      story bumps an upstream AC's contract stamp `[@contract-vN]` → `[@contract-v(N+1)]`,
+      the SAME change MUST grep all downstream consumers of that AC and stale-mark every
+      not-done one. A Change-Log row alone is INSUFFICIENT. This check catches the exact
+      19-6 v1→v2 / 19-7 failure: a bump that orphans an already-drafted downstream story.
+
+      Scope filter — run ONLY if the review (story Change Log OR git diff of the
+      comprehensive review file list) contains at least one BUMP row, i.e. a token
+      matching `\[@contract-v[0-9]+→v[0-9]+\]` (an arrow between two versions; a plain
+      `[@contract-v1]` stamp is NOT a bump). If no bump in scope, record:
+        "🔒 Rule 20 Contract Bump: N/A (no stamp bumps in this review)"
+      and skip to the next action (Code Quality Deep Dive).
+
+      Procedure (for EACH bumped AC `{X}-{Y} AC #{N}` found):
+        1. Grep downstream consumers that acked the bumped contract:
+             grep -rnE 'confirmed against \[@contract-v[0-9]+\]' \
+               _bmad-output/implementation-artifacts/ | grep -E 'Story {X}-{Y}.*AC #{N}'
+           (loosen to the bare story-id or AC-number if ack wording varies.)
+        2. For each downstream hit, look up its state in sprint-status.yaml.
+        3. For every consumer whose state is NOT done (backlog / ready-for-dev /
+           in-progress / review), verify a stale-mark exists — a
+           `⚠️ STALE [@contract-vN→v(N+1)]: upstream {X}-{Y} AC #{N} ...` line in
+           BOTH that story's Dev Notes AND its sprint-status.yaml entry.
+        4. Any not-done consumer MISSING the stale-mark → HIGH severity finding,
+           tagged "auto-fixable" (the fix is to add the two stale-mark lines).
+        5. done consumers are FROZEN — do NOT flag them (forward-only).
+        6. If the grep returns 0 downstream consumers, the bump row must say
+           `no downstream consumers`; if it does not, flag MEDIUM (scan-not-recorded).
+
+      Pass recording (MANDATORY — silence is not an option):
+        Record in the review findings summary BEFORE Step 4 categorization one of:
+          "🔒 Rule 20 Contract Bump: PASS (N bumps, all downstream drafts stale-marked)"
+          "🔒 Rule 20 Contract Bump: FAIL (N not-done consumers missing stale-mark — HIGH)"
+          "🔒 Rule 20 Contract Bump: N/A (no stamp bumps in this review)"
+
+      Precedent (Epic 19 Retro P2):
+        19-6's `[@contract-v1→v2]` bump (live per-case credit check dropped for
+        pre-run slicing) silently stranded 19-7's already-drafted story, which had
+        acked 19-6 [@contract-v1] AC #2/#4/#5/#6. The stale draft surfaced only at
+        19-7 implementation → full pre-impl re-architecture via correct-course
+        (sprint-change-proposal-2026-05-20.md). The consumer-side ack rule could not
+        catch it because nothing re-scans a draft when ITS upstream moves; this
+        producer-side check closes the gap at review time.
+    </action>
+
+    <action critical="MANDATORY">Set {{contract_bump_check_result}} to exactly one of:
+      "PASS (N bumps checked)" | "FAIL (N consumers missing stale-mark — HIGH)" | "N/A (no stamp bumps in this review)"
+      based on the RULE 20 CONTRACT BUMP STALE-MARK CHECK outcome above. This binding
+      MUST execute so the Step 4 findings summary renders a concrete value.</action>
+
     <!-- Code Quality Deep Dive -->
     <action>For EACH file in comprehensive review list:
       1. **Security**: Look for injection risks, missing validation, auth issues
@@ -226,6 +279,7 @@
       **Story:** {{story_file}}
       **Git vs Story Discrepancies:** {{git_discrepancy_count}} found
       **🔒 Rule 7 Wire Format:** {{wire_format_check_result}}
+      **🔒 Rule 20 Contract Bump:** {{contract_bump_check_result}}
       **Issues Found:** {{high_count}} High, {{medium_count}} Medium, {{low_count}} Low
 
       ## 🔴 CRITICAL ISSUES
