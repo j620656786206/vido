@@ -350,7 +350,7 @@ func (c *LanguageFallbackClient) DiscoverMoviesWithFallback(ctx context.Context,
 		if result != nil && len(result.Results) == 0 {
 			slog.Warn("Discover movies: caller-provided language returned empty results (fallback chain skipped)",
 				"language", params.Language,
-				"genre", params.Genre,
+				"genre_ids", params.GenreIDs,
 				"year_gte", params.YearGte,
 				"year_lte", params.YearLte,
 				"region", params.Region,
@@ -406,7 +406,7 @@ func (c *LanguageFallbackClient) DiscoverTVShowsWithFallback(ctx context.Context
 		if result != nil && len(result.Results) == 0 {
 			slog.Warn("Discover TV shows: caller-provided language returned empty results (fallback chain skipped)",
 				"language", params.Language,
-				"genre", params.Genre,
+				"genre_ids", params.GenreIDs,
 				"year_gte", params.YearGte,
 				"year_lte", params.YearLte,
 				"region", params.Region,

@@ -532,13 +532,65 @@ func TestTMDbHandler_DiscoverMovies_QueryParamMapping(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 	require.Len(t, mockSvc.DiscoverMoviesCalls, 1)
 	got := mockSvc.DiscoverMoviesCalls[0]
-	assert.Equal(t, "28,12", got.Genre)
+	assert.Equal(t, []int{28, 12}, got.GenreIDs)
 	assert.Equal(t, 2024, got.YearGte)
 	assert.Equal(t, 2026, got.YearLte)
 	assert.Equal(t, "TW", got.Region)
 	assert.Equal(t, "zh", got.Language)
 	assert.Equal(t, "popularity.desc", got.SortBy)
 	assert.Equal(t, 3, got.Page)
+}
+
+// TestTMDbHandler_DiscoverMovies_FilterParamMapping covers the Story 11-1
+// additions: rating range (vote_gte/vote_lte) and platform filter
+// (watch_providers/watch_region) map onto DiscoverParams (AC #1, #2).
+func TestTMDbHandler_DiscoverMovies_FilterParamMapping(t *testing.T) {
+	mockSvc := &MockTMDbService{DiscoverMoviesResponse: &tmdb.SearchResultMovies{Page: 1}}
+	handler := NewTMDbHandler(mockSvc)
+	router := setupTMDbRouter(handler)
+
+	req := httptest.NewRequest(http.MethodGet,
+		"/api/v1/tmdb/discover/movies?genre=28,12&vote_gte=7.5&vote_lte=9&watch_providers=8,337&watch_region=TW",
+		nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	require.Len(t, mockSvc.DiscoverMoviesCalls, 1)
+	got := mockSvc.DiscoverMoviesCalls[0]
+	assert.Equal(t, []int{28, 12}, got.GenreIDs)
+	assert.InEpsilon(t, 7.5, got.VoteAverageGte, 1e-9)
+	assert.InEpsilon(t, 9.0, got.VoteAverageLte, 1e-9)
+	assert.Equal(t, []int{8, 337}, got.WatchProviders)
+	assert.Equal(t, "TW", got.WatchRegion)
+}
+
+// TestTMDbHandler_DiscoverMovies_MalformedFilterParams verifies the handler
+// degrades gracefully on unparseable filter values: a non-numeric genre /
+// watch_providers / vote bound must be silently dropped (→ zero value), NOT
+// surfaced as a 400/500. Only year_gte > year_lte is a hard validation error
+// (Story 10-1a); everything else is best-effort. This exercises the handler's
+// ParseFloat / ParseIntCSV error branches, which the unit tests cover in
+// isolation but were not integration-tested at the HTTP boundary. [P2]
+func TestTMDbHandler_DiscoverMovies_MalformedFilterParams(t *testing.T) {
+	mockSvc := &MockTMDbService{DiscoverMoviesResponse: &tmdb.SearchResultMovies{Page: 1}}
+	handler := NewTMDbHandler(mockSvc)
+	router := setupTMDbRouter(handler)
+
+	req := httptest.NewRequest(http.MethodGet,
+		"/api/v1/tmdb/discover/movies?genre=abc&vote_gte=notanumber&vote_lte=&watch_providers=foo&year_gte=xyz",
+		nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code, "malformed filter values must degrade gracefully, not error")
+	require.Len(t, mockSvc.DiscoverMoviesCalls, 1)
+	got := mockSvc.DiscoverMoviesCalls[0]
+	assert.Empty(t, got.GenreIDs, "unparseable genre dropped to empty")
+	assert.Empty(t, got.WatchProviders, "unparseable watch_providers dropped to empty")
+	assert.Zero(t, got.VoteAverageGte, "unparseable vote_gte dropped to 0 (unbounded)")
+	assert.Zero(t, got.VoteAverageLte)
+	assert.Zero(t, got.YearGte, "unparseable year_gte dropped to 0 (unbounded)")
 }
 
 func TestTMDbHandler_DiscoverMovies_DefaultsWhenEmpty(t *testing.T) {
@@ -553,7 +605,7 @@ func TestTMDbHandler_DiscoverMovies_DefaultsWhenEmpty(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 	require.Len(t, mockSvc.DiscoverMoviesCalls, 1)
 	got := mockSvc.DiscoverMoviesCalls[0]
-	assert.Equal(t, "", got.Genre)
+	assert.Empty(t, got.GenreIDs)
 	assert.Equal(t, 0, got.YearGte)
 	assert.Equal(t, 1, got.Page, "empty page query defaults to 1")
 }
@@ -570,7 +622,7 @@ func TestTMDbHandler_DiscoverTVShows_RoutesCorrectly(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 	require.Len(t, mockSvc.DiscoverTVShowsCalls, 1)
 	got := mockSvc.DiscoverTVShowsCalls[0]
-	assert.Equal(t, "18", got.Genre)
+	assert.Equal(t, []int{18}, got.GenreIDs)
 	assert.Equal(t, "zh", got.Language)
 	assert.Equal(t, "popularity.desc", got.SortBy)
 }

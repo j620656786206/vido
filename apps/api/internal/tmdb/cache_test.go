@@ -536,6 +536,44 @@ func TestCacheService_GetTrendingMovies_CacheMissThenHit(t *testing.T) {
 	assert.Equal(t, 1, fbClient.TrendingMoviesCalled, "cache hit should not call upstream again")
 }
 
+// TestCacheService_DiscoverMovies_CacheMissThenHit is the discover-side mirror
+// of TestCacheService_GetTrendingMovies_CacheMissThenHit. It directly exercises
+// the caching mechanism that delivers AC #4 (<500ms for any filter combination):
+// an identical second query for the same DiscoverParams must be served from
+// cache WITHOUT a second upstream call. [P1]
+func TestCacheService_DiscoverMovies_CacheMissThenHit(t *testing.T) {
+	repo := NewMockCacheRepository()
+	fbClient := &MockFallbackClient{
+		DiscoverMoviesResponse: &SearchResultMovies{
+			Page:         1,
+			Results:      []Movie{{ID: 99, Title: "Filtered"}},
+			TotalPages:   1,
+			TotalResults: 1,
+		},
+	}
+	svc := NewCacheService(fbClient, repo, CacheServiceConfig{TTL: 24 * time.Hour})
+
+	params := DiscoverParams{
+		GenreIDs: []int{28, 18}, YearGte: 2024, Region: "TW",
+		VoteAverageGte: 7, WatchProviders: []int{8}, WatchRegion: "TW",
+		SortBy: "popularity.desc", Page: 1,
+	}
+
+	// Miss → upstream call, cached at the 1-hour discover TTL.
+	r1, err := svc.DiscoverMovies(context.Background(), params)
+	require.NoError(t, err)
+	require.NotNil(t, r1)
+	assert.Equal(t, 99, r1.Results[0].ID)
+	assert.Equal(t, 1, fbClient.DiscoverMoviesCalled)
+	assert.Equal(t, TrendingDiscoverCacheTTL, repo.lastSetTTL, "discover cache TTL must be 1 hour (AC #4)")
+
+	// Hit → identical params served from cache, NO second upstream call.
+	r2, err := svc.DiscoverMovies(context.Background(), params)
+	require.NoError(t, err)
+	assert.Equal(t, 99, r2.Results[0].ID)
+	assert.Equal(t, 1, fbClient.DiscoverMoviesCalled, "identical filter query must hit cache, not re-call upstream")
+}
+
 func TestCacheService_DiscoverMovies_DifferentParamsDifferentKeys(t *testing.T) {
 	repo := NewMockCacheRepository()
 	fbClient := &MockFallbackClient{
@@ -543,15 +581,57 @@ func TestCacheService_DiscoverMovies_DifferentParamsDifferentKeys(t *testing.T) 
 	}
 	svc := NewCacheService(fbClient, repo, CacheServiceConfig{TTL: 24 * time.Hour})
 
-	_, err := svc.DiscoverMovies(context.Background(), DiscoverParams{Genre: "28", YearGte: 2024})
+	_, err := svc.DiscoverMovies(context.Background(), DiscoverParams{GenreIDs: []int{28}, YearGte: 2024})
 	require.NoError(t, err)
-	_, err = svc.DiscoverMovies(context.Background(), DiscoverParams{Genre: "28", YearGte: 2025})
+	_, err = svc.DiscoverMovies(context.Background(), DiscoverParams{GenreIDs: []int{28}, YearGte: 2025})
 	require.NoError(t, err)
 
 	// Two distinct param sets → two upstream calls (different cache keys)
 	assert.Equal(t, 2, fbClient.DiscoverMoviesCalled)
 	assert.Equal(t, 2, repo.setCalled)
 	assert.Equal(t, TrendingDiscoverCacheTTL, repo.lastSetTTL)
+}
+
+// TestDiscoverCacheKey_AllDimensionsDistinct verifies the cache key includes
+// every filter dimension, so two queries differing in a single dimension never
+// collide (Story 11-1 — Murat's cache-key concern). Each entry below differs
+// from the base in exactly one field.
+func TestDiscoverCacheKey_AllDimensionsDistinct(t *testing.T) {
+	base := DiscoverParams{
+		GenreIDs: []int{28}, YearGte: 2024, YearLte: 2025, Region: "TW",
+		VoteAverageGte: 7, VoteAverageLte: 9, WatchProviders: []int{8},
+		WatchRegion: "TW", Language: "zh-TW", SortBy: "popularity.desc", Page: 1,
+	}
+	variants := map[string]DiscoverParams{
+		"base":            base,
+		"genre":           withParam(base, func(p *DiscoverParams) { p.GenreIDs = []int{18} }),
+		"year_gte":        withParam(base, func(p *DiscoverParams) { p.YearGte = 2020 }),
+		"vote_gte":        withParam(base, func(p *DiscoverParams) { p.VoteAverageGte = 8 }),
+		"vote_lte":        withParam(base, func(p *DiscoverParams) { p.VoteAverageLte = 10 }),
+		"watch_providers": withParam(base, func(p *DiscoverParams) { p.WatchProviders = []int{337} }),
+		"watch_region":    withParam(base, func(p *DiscoverParams) { p.WatchRegion = "US" }),
+		"sort":            withParam(base, func(p *DiscoverParams) { p.SortBy = "vote_average.desc" }),
+		"page":            withParam(base, func(p *DiscoverParams) { p.Page = 2 }),
+	}
+
+	seen := make(map[string]string, len(variants))
+	for name, p := range variants {
+		key := discoverCacheKey("movie", p)
+		if other, dup := seen[key]; dup {
+			t.Fatalf("cache key collision: %q and %q produced the same key %q", name, other, key)
+		}
+		seen[key] = name
+	}
+
+	// Identical params must produce identical keys (determinism).
+	assert.Equal(t, discoverCacheKey("movie", base), discoverCacheKey("movie", base))
+}
+
+// withParam returns a copy of p mutated by fn — a tiny helper so each variant
+// above differs from base in exactly one dimension.
+func withParam(p DiscoverParams, fn func(*DiscoverParams)) DiscoverParams {
+	fn(&p)
+	return p
 }
 
 func TestCacheService_GetTrendingTVShows_TTLIsOneHour(t *testing.T) {
@@ -572,7 +652,7 @@ func TestCacheService_DiscoverTVShows_Error_Propagates(t *testing.T) {
 	}
 	svc := NewCacheService(fbClient, repo, CacheServiceConfig{})
 
-	_, err := svc.DiscoverTVShows(context.Background(), DiscoverParams{Genre: "18"})
+	_, err := svc.DiscoverTVShows(context.Background(), DiscoverParams{GenreIDs: []int{18}})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "upstream boom")
 	assert.Equal(t, 0, repo.setCalled, "error must NOT write to cache")
@@ -608,7 +688,7 @@ func TestCacheService_TrendingDiscover_RateLimitNotCached(t *testing.T) {
 		{
 			name: "DiscoverMovies/rate-limit",
 			call: func(s *CacheService) error {
-				_, err := s.DiscoverMovies(context.Background(), DiscoverParams{Genre: "28"})
+				_, err := s.DiscoverMovies(context.Background(), DiscoverParams{GenreIDs: []int{28}})
 				return err
 			},
 			set: func(m *MockFallbackClient) { m.DiscoverMoviesError = NewRateLimitError() },

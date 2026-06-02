@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"strconv"
 	"time"
 
 	"github.com/vido/api/internal/repository"
@@ -365,13 +366,20 @@ func (s *CacheService) DiscoverTVShows(ctx context.Context, params DiscoverParam
 
 // discoverCacheKey builds a deterministic cache key from DiscoverParams.
 // Field order is fixed so the same logical query always maps to the same key.
+// Every filter dimension is included so two queries differing in any single
+// dimension (genre, year, region, rating, watch provider, sort, page) map to
+// distinct cache entries.
 func discoverCacheKey(kind string, p DiscoverParams) string {
 	page := p.Page
 	if page < 1 {
 		page = 1
 	}
-	return fmt.Sprintf("tmdb:discover/%s:g=%s:yg=%d:yl=%d:r=%s:lang=%s:sort=%s:p=%d",
-		kind, p.Genre, p.YearGte, p.YearLte, p.Region, p.Language, p.SortBy, page)
+	return fmt.Sprintf("tmdb:discover/%s:g=%s:yg=%d:yl=%d:r=%s:vg=%s:vl=%s:wp=%s:wr=%s:lang=%s:sort=%s:p=%d",
+		kind, joinInts(p.GenreIDs, ","), p.YearGte, p.YearLte, p.Region,
+		strconv.FormatFloat(p.VoteAverageGte, 'f', -1, 64),
+		strconv.FormatFloat(p.VoteAverageLte, 'f', -1, 64),
+		joinInts(p.WatchProviders, ","), p.WatchRegion,
+		p.Language, p.SortBy, page)
 }
 
 // GetTVShowDetails gets TV show details with caching

@@ -283,7 +283,7 @@ func TestClient_DiscoverTVShows(t *testing.T) {
 
 	client := NewClient(ClientConfig{APIKey: "k", BaseURL: server.URL, Language: "zh-TW"})
 	_, err := client.DiscoverTVShows(context.Background(), DiscoverParams{
-		Genre:    "18",
+		GenreIDs: []int{18},
 		YearGte:  2024,
 		YearLte:  2026,
 		Language: "zh",
