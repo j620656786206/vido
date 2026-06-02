@@ -510,3 +510,38 @@ func TestJoinInts(t *testing.T) {
 	assert.Equal(t, "28,12", joinInts([]int{28, 12}, ","))
 	assert.Equal(t, "8|337", joinInts([]int{8, 337}, "|"))
 }
+
+// TestClient_DiscoverMovies_AllFiltersCombined is the AC #1 integration check:
+// when EVERY filter dimension is supplied at once, the outgoing TMDb query must
+// carry ALL of them simultaneously (combined AND semantics). Existing subtests
+// exercise dimensions in subsets; this asserts the full cross-product in a
+// single request so no dimension silently drops when others are present. [P1]
+func TestClient_DiscoverMovies_AllFiltersCombined(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "/discover/movie", r.URL.Path)
+		q := r.URL.Query()
+		assert.Equal(t, "28,18", q.Get("with_genres"))
+		assert.Equal(t, "2020-01-01", q.Get("primary_release_date.gte"))
+		assert.Equal(t, "2025-12-31", q.Get("primary_release_date.lte"))
+		assert.Equal(t, "TW", q.Get("region"))
+		assert.Equal(t, "7", q.Get("vote_average.gte"))
+		assert.Equal(t, "9.5", q.Get("vote_average.lte"))
+		assert.Equal(t, "8|337", q.Get("with_watch_providers"))
+		assert.Equal(t, "TW", q.Get("watch_region"))
+		assert.Equal(t, "popularity.desc", q.Get("sort_by"))
+		assert.Equal(t, "2", q.Get("page"))
+		assert.Equal(t, "zh-TW", q.Get("language"))
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(SearchResultMovies{Page: 2})
+	}))
+	defer server.Close()
+
+	client := NewClient(ClientConfig{APIKey: "k", BaseURL: server.URL, Language: "zh-TW"})
+	_, err := client.DiscoverMovies(context.Background(), DiscoverParams{
+		GenreIDs: []int{28, 18}, YearGte: 2020, YearLte: 2025, Region: "TW",
+		VoteAverageGte: 7, VoteAverageLte: 9.5,
+		WatchProviders: []int{8, 337}, WatchRegion: "TW",
+		SortBy: "popularity.desc", Page: 2,
+	})
+	require.NoError(t, err)
+}

@@ -565,6 +565,34 @@ func TestTMDbHandler_DiscoverMovies_FilterParamMapping(t *testing.T) {
 	assert.Equal(t, "TW", got.WatchRegion)
 }
 
+// TestTMDbHandler_DiscoverMovies_MalformedFilterParams verifies the handler
+// degrades gracefully on unparseable filter values: a non-numeric genre /
+// watch_providers / vote bound must be silently dropped (→ zero value), NOT
+// surfaced as a 400/500. Only year_gte > year_lte is a hard validation error
+// (Story 10-1a); everything else is best-effort. This exercises the handler's
+// ParseFloat / ParseIntCSV error branches, which the unit tests cover in
+// isolation but were not integration-tested at the HTTP boundary. [P2]
+func TestTMDbHandler_DiscoverMovies_MalformedFilterParams(t *testing.T) {
+	mockSvc := &MockTMDbService{DiscoverMoviesResponse: &tmdb.SearchResultMovies{Page: 1}}
+	handler := NewTMDbHandler(mockSvc)
+	router := setupTMDbRouter(handler)
+
+	req := httptest.NewRequest(http.MethodGet,
+		"/api/v1/tmdb/discover/movies?genre=abc&vote_gte=notanumber&vote_lte=&watch_providers=foo&year_gte=xyz",
+		nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code, "malformed filter values must degrade gracefully, not error")
+	require.Len(t, mockSvc.DiscoverMoviesCalls, 1)
+	got := mockSvc.DiscoverMoviesCalls[0]
+	assert.Empty(t, got.GenreIDs, "unparseable genre dropped to empty")
+	assert.Empty(t, got.WatchProviders, "unparseable watch_providers dropped to empty")
+	assert.Zero(t, got.VoteAverageGte, "unparseable vote_gte dropped to 0 (unbounded)")
+	assert.Zero(t, got.VoteAverageLte)
+	assert.Zero(t, got.YearGte, "unparseable year_gte dropped to 0 (unbounded)")
+}
+
 func TestTMDbHandler_DiscoverMovies_DefaultsWhenEmpty(t *testing.T) {
 	mockSvc := &MockTMDbService{DiscoverMoviesResponse: &tmdb.SearchResultMovies{}}
 	handler := NewTMDbHandler(mockSvc)

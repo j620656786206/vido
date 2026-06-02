@@ -536,6 +536,44 @@ func TestCacheService_GetTrendingMovies_CacheMissThenHit(t *testing.T) {
 	assert.Equal(t, 1, fbClient.TrendingMoviesCalled, "cache hit should not call upstream again")
 }
 
+// TestCacheService_DiscoverMovies_CacheMissThenHit is the discover-side mirror
+// of TestCacheService_GetTrendingMovies_CacheMissThenHit. It directly exercises
+// the caching mechanism that delivers AC #4 (<500ms for any filter combination):
+// an identical second query for the same DiscoverParams must be served from
+// cache WITHOUT a second upstream call. [P1]
+func TestCacheService_DiscoverMovies_CacheMissThenHit(t *testing.T) {
+	repo := NewMockCacheRepository()
+	fbClient := &MockFallbackClient{
+		DiscoverMoviesResponse: &SearchResultMovies{
+			Page:         1,
+			Results:      []Movie{{ID: 99, Title: "Filtered"}},
+			TotalPages:   1,
+			TotalResults: 1,
+		},
+	}
+	svc := NewCacheService(fbClient, repo, CacheServiceConfig{TTL: 24 * time.Hour})
+
+	params := DiscoverParams{
+		GenreIDs: []int{28, 18}, YearGte: 2024, Region: "TW",
+		VoteAverageGte: 7, WatchProviders: []int{8}, WatchRegion: "TW",
+		SortBy: "popularity.desc", Page: 1,
+	}
+
+	// Miss → upstream call, cached at the 1-hour discover TTL.
+	r1, err := svc.DiscoverMovies(context.Background(), params)
+	require.NoError(t, err)
+	require.NotNil(t, r1)
+	assert.Equal(t, 99, r1.Results[0].ID)
+	assert.Equal(t, 1, fbClient.DiscoverMoviesCalled)
+	assert.Equal(t, TrendingDiscoverCacheTTL, repo.lastSetTTL, "discover cache TTL must be 1 hour (AC #4)")
+
+	// Hit → identical params served from cache, NO second upstream call.
+	r2, err := svc.DiscoverMovies(context.Background(), params)
+	require.NoError(t, err)
+	assert.Equal(t, 99, r2.Results[0].ID)
+	assert.Equal(t, 1, fbClient.DiscoverMoviesCalled, "identical filter query must hit cache, not re-call upstream")
+}
+
 func TestCacheService_DiscoverMovies_DifferentParamsDifferentKeys(t *testing.T) {
 	repo := NewMockCacheRepository()
 	fbClient := &MockFallbackClient{
