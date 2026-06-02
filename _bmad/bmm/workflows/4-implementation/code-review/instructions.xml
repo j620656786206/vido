@@ -248,6 +248,57 @@
       based on the RULE 20 CONTRACT BUMP STALE-MARK CHECK outcome above. This binding
       MUST execute so the Step 4 findings summary renders a concrete value.</action>
 
+    <!-- Rule 25 Mega-line Merge Check (Epic 19 Retro P4) -->
+    <!-- Last synced with project-context.md Rule 25 on 2026-06-02 -->
+    <action critical="MANDATORY">RULE 25 MEGA-LINE MERGE CHECK:
+      Rule 25 of project-context.md BANS resolving a git rebase/merge conflict on the
+      project-context.md "Last Updated:" mega-line (L7) by whole-side takeover — every
+      branch PREPENDS its own entry, so accepting one side silently DROPS the other
+      side's entry. This check catches the exact 19-8 failure: a dropped mega-line
+      entry that survived to merge and was caught only by a later adversarial CR.
+
+      Scope filter — run ONLY if BOTH: (a) the review's git diff modifies
+      project-context.md's "Last Updated:" line, AND (b) the branch history shows a
+      rebase or merge (the change is not a clean fast-forward — e.g. the diff base
+      differs from origin/main HEAD, or the PR was rebased). If the mega-line is
+      untouched OR the change is a clean single-author prepend with no rebase/merge,
+      record:
+        "🔒 Rule 25 Mega-line: N/A (no mega-line change behind a rebase/merge)"
+      and skip to the next action (Code Quality Deep Dive).
+
+      Procedure:
+        1. Extract every story / retro / rule entry ID present on the mega-line at the
+           merge base (origin/main before this branch landed):
+             git show origin/main:project-context.md | grep -m1 'Last Updated:'
+        2. Extract every entry ID on the RESOLVED mega-line (this branch's "Last
+           Updated:" line).
+        3. Every ID present at the base MUST still be present after the merge — the set
+           difference (base − resolved) MUST be empty. Any missing ID = an entry
+           dropped during conflict resolution.
+        4. Confirm the entry count on the resolved line is ≥ the base count (it can
+           grow by this branch's new entry, never shrink).
+        5. Any dropped entry → HIGH severity finding, tagged "auto-fixable" (the fix is
+           to re-insert the dropped entry as a `Prior:` entry in newest-first order per
+           Rule 25's union rule).
+
+      Pass recording (MANDATORY — silence is not an option):
+        Record in the review findings summary BEFORE Step 4 categorization one of:
+          "🔒 Rule 25 Mega-line: PASS (all base entries survive the merge)"
+          "🔒 Rule 25 Mega-line: FAIL (N entries dropped during resolution — HIGH)"
+          "🔒 Rule 25 Mega-line: N/A (no mega-line change behind a rebase/merge)"
+
+      Precedent (Epic 19 Retro P4):
+        Story 19-8's "Last Updated" entry was silently dropped during a 2026-05-28
+        rebase-conflict resolution (whole-side takeover instead of a union merge),
+        surfacing only at a later adversarial CR (H1). This producer-side check closes
+        the gap at review time.
+    </action>
+
+    <action critical="MANDATORY">Set {{megaline_check_result}} to exactly one of:
+      "PASS (all base entries survive)" | "FAIL (N entries dropped — HIGH)" | "N/A (no mega-line change behind a rebase/merge)"
+      based on the RULE 25 MEGA-LINE MERGE CHECK outcome above. This binding MUST
+      execute so the Step 4 findings summary renders a concrete value.</action>
+
     <!-- Code Quality Deep Dive -->
     <action>For EACH file in comprehensive review list:
       1. **Security**: Look for injection risks, missing validation, auth issues
@@ -282,6 +333,7 @@
       **Git vs Story Discrepancies:** {{git_discrepancy_count}} found
       **🔒 Rule 7 Wire Format:** {{wire_format_check_result}}
       **🔒 Rule 20 Contract Bump:** {{contract_bump_check_result}}
+      **🔒 Rule 25 Mega-line:** {{megaline_check_result}}
       **Issues Found:** {{high_count}} High, {{medium_count}} Medium, {{low_count}} Low
 
       ## 🔴 CRITICAL ISSUES
