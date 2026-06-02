@@ -237,6 +237,10 @@ func (h *TMDbHandler) GetTrendingTVShows(c *gin.Context) {
 // @Param year_gte query int false "Minimum release year (0 = unlimited)"
 // @Param year_lte query int false "Maximum release year (0 = unlimited)"
 // @Param region query string false "ISO 3166-1 region code"
+// @Param vote_gte query number false "Minimum TMDb rating 0-10 (0 = unlimited)"
+// @Param vote_lte query number false "Maximum TMDb rating 0-10 (0 = unlimited)"
+// @Param watch_providers query string false "Comma-separated TMDb watch-provider IDs (e.g. 8 for Netflix)"
+// @Param watch_region query string false "ISO 3166-1 watch region (defaults to region, then TW)"
 // @Param language query string false "BCP 47 language code"
 // @Param sort query string false "Sort by (e.g. popularity.desc)"
 // @Param page query int false "Page number" default(1)
@@ -268,6 +272,10 @@ func (h *TMDbHandler) DiscoverMovies(c *gin.Context) {
 // @Param year_gte query int false "Minimum first-air year (0 = unlimited)"
 // @Param year_lte query int false "Maximum first-air year (0 = unlimited)"
 // @Param region query string false "ISO 3166-1 region code"
+// @Param vote_gte query number false "Minimum TMDb rating 0-10 (0 = unlimited)"
+// @Param vote_lte query number false "Maximum TMDb rating 0-10 (0 = unlimited)"
+// @Param watch_providers query string false "Comma-separated TMDb watch-provider IDs (e.g. 8 for Netflix)"
+// @Param watch_region query string false "ISO 3166-1 watch region (defaults to region, then TW)"
 // @Param language query string false "BCP 47 language code"
 // @Param sort query string false "Sort by (e.g. popularity.desc)"
 // @Param page query int false "Page number" default(1)
@@ -372,24 +380,30 @@ func parsePageQuery(raw string) int {
 
 // parseDiscoverParams maps the handler's query-string parameters to a
 // tmdb.DiscoverParams struct. Keys use snake_case per Rule 18:
-//   - genre       → DiscoverParams.Genre (comma-separated IDs)
-//   - year_gte    → DiscoverParams.YearGte
-//   - year_lte    → DiscoverParams.YearLte
-//   - region      → DiscoverParams.Region
-//   - language    → DiscoverParams.Language
-//   - sort        → DiscoverParams.SortBy
-//   - page        → DiscoverParams.Page
+//   - genre           → DiscoverParams.GenreIDs (comma-separated IDs, e.g. "28,12")
+//   - year_gte        → DiscoverParams.YearGte
+//   - year_lte        → DiscoverParams.YearLte
+//   - region          → DiscoverParams.Region
+//   - vote_gte        → DiscoverParams.VoteAverageGte (min rating, 0–10)
+//   - vote_lte        → DiscoverParams.VoteAverageLte (max rating, 0–10)
+//   - watch_providers → DiscoverParams.WatchProviders (comma-separated provider IDs)
+//   - watch_region    → DiscoverParams.WatchRegion (defaults to region, then TW)
+//   - language        → DiscoverParams.Language
+//   - sort            → DiscoverParams.SortBy
+//   - page            → DiscoverParams.Page
 //
 // Returns a non-nil *tmdb.TMDbError when both year bounds are non-zero
 // and year_gte > year_lte (Story 10-1a). Zero values for either bound
 // retain the "unlimited" semantics from Story 10-1 and skip validation.
 func parseDiscoverParams(c *gin.Context) (tmdb.DiscoverParams, error) {
 	p := tmdb.DiscoverParams{
-		Genre:    c.Query("genre"),
-		Region:   c.Query("region"),
-		Language: c.Query("language"),
-		SortBy:   c.Query("sort"),
-		Page:     parsePageQuery(c.Query("page")),
+		GenreIDs:       tmdb.ParseIntCSV(c.Query("genre")),
+		Region:         c.Query("region"),
+		WatchProviders: tmdb.ParseIntCSV(c.Query("watch_providers")),
+		WatchRegion:    c.Query("watch_region"),
+		Language:       c.Query("language"),
+		SortBy:         c.Query("sort"),
+		Page:           parsePageQuery(c.Query("page")),
 	}
 	if v := c.Query("year_gte"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil && n > 0 {
@@ -399,6 +413,16 @@ func parseDiscoverParams(c *gin.Context) (tmdb.DiscoverParams, error) {
 	if v := c.Query("year_lte"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil && n > 0 {
 			p.YearLte = n
+		}
+	}
+	if v := c.Query("vote_gte"); v != "" {
+		if f, err := strconv.ParseFloat(v, 64); err == nil && f > 0 {
+			p.VoteAverageGte = f
+		}
+	}
+	if v := c.Query("vote_lte"); v != "" {
+		if f, err := strconv.ParseFloat(v, 64); err == nil && f > 0 {
+			p.VoteAverageLte = f
 		}
 	}
 	if p.YearGte > 0 && p.YearLte > 0 && p.YearGte > p.YearLte {

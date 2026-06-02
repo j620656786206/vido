@@ -306,7 +306,7 @@ func TestClient_TrendingDiscover_ContextCancellation(t *testing.T) {
 		{
 			name: "DiscoverMovies",
 			call: func(ctx context.Context, c *Client) error {
-				_, err := c.DiscoverMovies(ctx, DiscoverParams{Genre: "28"})
+				_, err := c.DiscoverMovies(ctx, DiscoverParams{GenreIDs: []int{28}})
 				return err
 			},
 		},
@@ -357,7 +357,7 @@ func TestClient_DiscoverMovies(t *testing.T) {
 		{
 			name: "with genre + date range + region + sort",
 			params: DiscoverParams{
-				Genre: "28,12", YearGte: 2024, YearLte: 2026,
+				GenreIDs: []int{28, 12}, YearGte: 2024, YearLte: 2026,
 				Region: "TW", SortBy: "popularity.desc", Page: 3,
 			},
 			check: func(t *testing.T, q map[string][]string) {
@@ -379,10 +379,14 @@ func TestClient_DiscoverMovies(t *testing.T) {
 				_, hasRegion := q["region"]
 				_, hasSort := q["sort_by"]
 				_, hasDateGte := q["primary_release_date.gte"]
+				_, hasVoteGte := q["vote_average.gte"]
+				_, hasWatch := q["with_watch_providers"]
 				assert.False(t, hasGenre)
 				assert.False(t, hasRegion)
 				assert.False(t, hasSort)
 				assert.False(t, hasDateGte)
+				assert.False(t, hasVoteGte)
+				assert.False(t, hasWatch)
 			},
 		},
 		{
@@ -390,6 +394,68 @@ func TestClient_DiscoverMovies(t *testing.T) {
 			params: DiscoverParams{Language: "ja"},
 			check: func(t *testing.T, q map[string][]string) {
 				assert.Equal(t, "ja", q["language"][0])
+			},
+		},
+		{
+			// AC #1: multiple filters combine (genre + year + region + rating).
+			name: "vote average range maps to vote_average.gte/lte",
+			params: DiscoverParams{
+				GenreIDs: []int{28}, YearGte: 2024,
+				VoteAverageGte: 7, VoteAverageLte: 9.5,
+			},
+			check: func(t *testing.T, q map[string][]string) {
+				assert.Equal(t, "28", q["with_genres"][0])
+				assert.Equal(t, "2024-01-01", q["primary_release_date.gte"][0])
+				assert.Equal(t, "7", q["vote_average.gte"][0]) // whole number: no trailing .0
+				assert.Equal(t, "9.5", q["vote_average.lte"][0])
+			},
+		},
+		{
+			// AC #2: platform filter via TMDb Watch Providers for a region.
+			name: "watch providers map to with_watch_providers + watch_region",
+			params: DiscoverParams{
+				WatchProviders: []int{8, 337}, WatchRegion: "TW",
+			},
+			check: func(t *testing.T, q map[string][]string) {
+				assert.Equal(t, "8|337", q["with_watch_providers"][0]) // pipe = OR
+				assert.Equal(t, "TW", q["watch_region"][0])
+			},
+		},
+		{
+			// AC #2: watch_region defaults to region, then "TW", when providers set.
+			name: "watch_region defaults to region when WatchRegion blank",
+			params: DiscoverParams{
+				WatchProviders: []int{8}, Region: "US",
+			},
+			check: func(t *testing.T, q map[string][]string) {
+				assert.Equal(t, "8", q["with_watch_providers"][0])
+				assert.Equal(t, "US", q["watch_region"][0])
+			},
+		},
+		{
+			name: "watch_region defaults to TW when neither WatchRegion nor Region set",
+			params: DiscoverParams{
+				WatchProviders: []int{8},
+			},
+			check: func(t *testing.T, q map[string][]string) {
+				assert.Equal(t, "TW", q["watch_region"][0])
+			},
+		},
+		{
+			// AC #3 / Task 3.3: date_added is a local-library sort, never sent to TMDb.
+			name:   "local date_added sort is NOT forwarded to TMDb",
+			params: DiscoverParams{SortBy: SortByDateAdded},
+			check: func(t *testing.T, q map[string][]string) {
+				_, hasSort := q["sort_by"]
+				assert.False(t, hasSort, "date_added is a local sort; must not reach TMDb")
+			},
+		},
+		{
+			// AC #3 / Task 3.1+3.2: TMDb-native sort keys still pass through.
+			name:   "native sort key (vote_average.desc) is forwarded",
+			params: DiscoverParams{SortBy: "vote_average.desc"},
+			check: func(t *testing.T, q map[string][]string) {
+				assert.Equal(t, "vote_average.desc", q["sort_by"][0])
 			},
 		},
 	}
@@ -409,4 +475,38 @@ func TestClient_DiscoverMovies(t *testing.T) {
 			require.NoError(t, err)
 		})
 	}
+}
+
+func TestParseIntCSV(t *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+		want []int
+	}{
+		{name: "empty string", in: "", want: nil},
+		{name: "single id", in: "28", want: []int{28}},
+		{name: "multiple ids", in: "28,12,18", want: []int{28, 12, 18}},
+		{name: "trims whitespace", in: " 28 , 12 ", want: []int{28, 12}},
+		{name: "skips blank tokens", in: "28,,12,", want: []int{28, 12}},
+		{name: "skips non-numeric tokens", in: "28,abc,12", want: []int{28, 12}},
+		{name: "all-invalid yields nil", in: "abc,def", want: nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, ParseIntCSV(tt.in))
+		})
+	}
+}
+
+func TestFormatVote(t *testing.T) {
+	assert.Equal(t, "7", formatVote(7.0), "whole numbers drop the trailing .0")
+	assert.Equal(t, "7.5", formatVote(7.5))
+	assert.Equal(t, "9.25", formatVote(9.25))
+}
+
+func TestJoinInts(t *testing.T) {
+	assert.Equal(t, "", joinInts(nil, ","))
+	assert.Equal(t, "28", joinInts([]int{28}, ","))
+	assert.Equal(t, "28,12", joinInts([]int{28, 12}, ","))
+	assert.Equal(t, "8|337", joinInts([]int{8, 337}, "|"))
 }

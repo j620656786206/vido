@@ -651,7 +651,7 @@ func TestFallback_DiscoverTVShows_UsesChainWhenLanguageBlank(t *testing.T) {
 	}
 	fb := NewLanguageFallbackClient(m, []string{"zh-TW", "zh-CN", "en"})
 
-	_, lang, err := fb.DiscoverTVShowsWithFallback(context.Background(), DiscoverParams{Genre: "18"})
+	_, lang, err := fb.DiscoverTVShowsWithFallback(context.Background(), DiscoverParams{GenreIDs: []int{18}})
 
 	require.NoError(t, err)
 	assert.Equal(t, "zh-CN", lang)
@@ -687,7 +687,7 @@ func TestFallback_Discover_CallerLanguageEmpty_DoesNotRetryChain(t *testing.T) {
 			name: "movies",
 			run: func(t *testing.T, fb *LanguageFallbackClient, m *trackingMockClient) {
 				_, lang, err := fb.DiscoverMoviesWithFallback(context.Background(),
-					DiscoverParams{Language: "zz", Genre: "28"})
+					DiscoverParams{Language: "zz", GenreIDs: []int{28}})
 				require.NoError(t, err)
 				assert.Equal(t, "zz", lang, "caller language preserved even when upstream returns empty")
 				assert.Equal(t, []string{"zz"}, m.discoverMovieCalls, "chain must not be retried")

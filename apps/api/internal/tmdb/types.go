@@ -190,24 +190,34 @@ type FindByExternalIDResponse struct {
 // DiscoverParams holds the parameters for TMDb /discover/{movie,tv} endpoints.
 //
 // Mapping to TMDb query params:
-//   - Genre    → with_genres (comma-separated genre IDs)
-//   - YearGte  → primary_release_date.gte (movies) / first_air_date.gte (TV)
-//   - YearLte  → primary_release_date.lte (movies) / first_air_date.lte (TV)
-//   - Region   → region (ISO 3166-1, e.g. "TW")
-//   - Language → language (per-call override of the client default)
-//   - SortBy   → sort_by (e.g. "popularity.desc", "vote_average.desc")
-//   - Page     → page (1-indexed; values < 1 are normalized to 1)
+//   - GenreIDs       → with_genres (comma-joined genre IDs; comma = AND)
+//   - YearGte        → primary_release_date.gte (movies) / first_air_date.gte (TV)
+//   - YearLte        → primary_release_date.lte (movies) / first_air_date.lte (TV)
+//   - Region         → region (ISO 3166-1, e.g. "TW")
+//   - VoteAverageGte → vote_average.gte (minimum TMDb rating, 0–10)
+//   - VoteAverageLte → vote_average.lte (maximum TMDb rating, 0–10)
+//   - WatchProviders → with_watch_providers (pipe-joined provider IDs; pipe = OR).
+//     Requires a watch_region; see WatchRegion.
+//   - WatchRegion    → watch_region (ISO 3166-1; defaults to Region, then "TW",
+//     when WatchProviders is set)
+//   - Language       → language (per-call override of the client default)
+//   - SortBy         → sort_by (e.g. "popularity.desc", "vote_average.desc")
+//   - Page           → page (1-indexed; values < 1 are normalized to 1)
 //
-// Zero-valued fields are omitted from the outgoing query string so TMDb
-// applies its own defaults.
+// Zero-valued fields (empty slice/string, 0 number) are omitted from the
+// outgoing query string so TMDb applies its own defaults.
 type DiscoverParams struct {
-	Genre    string
-	YearGte  int
-	YearLte  int
-	Region   string
-	Language string
-	SortBy   string
-	Page     int
+	GenreIDs       []int
+	YearGte        int
+	YearLte        int
+	Region         string
+	VoteAverageGte float64
+	VoteAverageLte float64
+	WatchProviders []int
+	WatchRegion    string
+	Language       string
+	SortBy         string
+	Page           int
 }
 
 // TrendingResult is a discriminated wrapper reserved for consumers that want

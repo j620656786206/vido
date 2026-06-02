@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
+	"strings"
 )
 
 // SearchMovies searches for movies by title and returns paginated results
@@ -165,13 +166,18 @@ func discoverQueryParams(p DiscoverParams, forMovies bool, defaultLanguage strin
 	}
 	qp.Set("language", language)
 
-	if p.Genre != "" {
-		qp.Set("with_genres", p.Genre)
+	if len(p.GenreIDs) > 0 {
+		qp.Set("with_genres", joinInts(p.GenreIDs, ",")) // comma = AND
 	}
 	if p.Region != "" {
 		qp.Set("region", p.Region)
 	}
-	if p.SortBy != "" {
+	// Only TMDb-recognized sort keys are forwarded. The local-library
+	// "date added" sort (SortByDateAdded) has no TMDb equivalent — ordering by
+	// when a title was added to the user's library is applied in the
+	// application/library layer after fetch (Task 3.3; library sorting lives in
+	// Story 5-4), never sent to TMDb (which would 400 on an unknown sort_by).
+	if p.SortBy != "" && !isLocalSortKey(p.SortBy) {
 		qp.Set("sort_by", p.SortBy)
 	}
 
@@ -186,7 +192,87 @@ func discoverQueryParams(p DiscoverParams, forMovies bool, defaultLanguage strin
 		qp.Set(dateKeyLte, fmt.Sprintf("%04d-12-31", p.YearLte))
 	}
 
+	if p.VoteAverageGte > 0 {
+		qp.Set("vote_average.gte", formatVote(p.VoteAverageGte))
+	}
+	if p.VoteAverageLte > 0 {
+		qp.Set("vote_average.lte", formatVote(p.VoteAverageLte))
+	}
+
+	if len(p.WatchProviders) > 0 {
+		qp.Set("with_watch_providers", joinInts(p.WatchProviders, "|")) // pipe = OR
+		// TMDb only honors with_watch_providers alongside a watch_region.
+		watchRegion := p.WatchRegion
+		if watchRegion == "" {
+			watchRegion = p.Region
+		}
+		if watchRegion == "" {
+			watchRegion = "TW"
+		}
+		qp.Set("watch_region", watchRegion)
+	}
+
 	return qp
+}
+
+// SortByDateAdded is the compound-sort key for ordering by when a title was
+// added to the local library. It is a local-only sort applied in the
+// application layer after fetch — TMDb's /discover has no equivalent, so it is
+// never forwarded as sort_by. (Story 11-1 AC #3, Task 3.3)
+const SortByDateAdded = "date_added"
+
+// isLocalSortKey reports whether a sort key is handled in the application layer
+// rather than by TMDb (currently only the date-added family).
+func isLocalSortKey(sortBy string) bool {
+	switch sortBy {
+	case SortByDateAdded, SortByDateAdded + ".asc", SortByDateAdded + ".desc":
+		return true
+	default:
+		return false
+	}
+}
+
+// joinInts renders a slice of ints as a sep-delimited string (e.g. {28,12} →
+// "28,12"). Used to build with_genres (sep ",") and with_watch_providers
+// (sep "|") query values.
+func joinInts(ids []int, sep string) string {
+	strs := make([]string, len(ids))
+	for i, id := range ids {
+		strs[i] = strconv.Itoa(id)
+	}
+	return strings.Join(strs, sep)
+}
+
+// formatVote renders a TMDb rating bound without a trailing ".0" for whole
+// numbers (7.0 → "7", 7.5 → "7.5"), keeping query strings tidy.
+func formatVote(v float64) string {
+	return strconv.FormatFloat(v, 'f', -1, 64)
+}
+
+// ParseIntCSV parses a comma-separated list of integer IDs (e.g. "28,12") into
+// a []int, silently skipping blank or non-numeric tokens. Returns nil for an
+// empty/all-invalid input. Used by the HTTP handler and the explore-block
+// service to map the `genre`/`watch_providers` wire params (and stored CSV)
+// onto DiscoverParams.GenreIDs / DiscoverParams.WatchProviders.
+func ParseIntCSV(csv string) []int {
+	if csv == "" {
+		return nil
+	}
+	parts := strings.Split(csv, ",")
+	ids := make([]int, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		if n, err := strconv.Atoi(p); err == nil {
+			ids = append(ids, n)
+		}
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	return ids
 }
 
 // GetMovieVideos retrieves videos (trailers, teasers, etc.) for a movie

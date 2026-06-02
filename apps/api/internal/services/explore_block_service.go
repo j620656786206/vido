@@ -294,7 +294,7 @@ func (s *ExploreBlockService) GetBlockContent(ctx context.Context, id string) (*
 
 func (s *ExploreBlockService) fetchBlockContent(ctx context.Context, block *models.ExploreBlock) (*ExploreBlockContent, error) {
 	params := tmdb.DiscoverParams{
-		Genre:    block.GenreIDs,
+		GenreIDs: tmdb.ParseIntCSV(block.GenreIDs), // block.GenreIDs is a stored comma-separated CSV
 		Region:   block.Region,
 		Language: block.Language,
 		SortBy:   block.SortBy,

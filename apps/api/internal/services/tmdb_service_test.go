@@ -403,7 +403,7 @@ func TestTMDbService_DiscoverTVShows_AppliesContentFilters(t *testing.T) {
 	svc := NewTMDbServiceWithCacheService(mockCache)
 	svc.SetContentFilter(NewContentFilterServiceWithClock(func() time.Time { return now }))
 
-	result, err := svc.DiscoverTVShows(context.Background(), tmdb.DiscoverParams{Genre: "18"})
+	result, err := svc.DiscoverTVShows(context.Background(), tmdb.DiscoverParams{GenreIDs: []int{18}})
 
 	require.NoError(t, err)
 	require.Len(t, result.Results, 1)
