@@ -58,4 +58,23 @@ so that {{benefit}}.
 
 ### Completion Notes List
 
+### Discovery Triage
+
+<!-- Added by retro-19-P1 (Rule 24 — project-context.md, Discovery Triage). Forward-only:
+     applies to stories CREATED after retro-19-P1 closes; in-flight stories are NOT retrofitted.
+     RULE 24 BAN — "mentioned in prose but not in sprint-status": any out-of-scope finding
+     surfaced during this story (here, in Dev Notes, a PR description, a TODO comment, or
+     ANYWHERE in narrative) MUST be triaged into ONE lane below AND recorded with its tracked
+     sprint-status.yaml entry ID (lane ② / ③) or absorbed-AC # (lane ①) BEFORE this story is
+     marked done. A prose-only mention with no matching entry is a banned deferred-discovery
+     time-bomb and bounces the story at review. -->
+
+- **Did this story discover any work outside its current scope?**
+  - If **NO**: state `N/A — no out-of-scope work discovered`.
+  - If **YES**: list each discovery on its own row, classified into EXACTLY ONE lane:
+    - **① expand-scope-in-place** — absorbed into THIS story → cite the added AC # / sub-task that now tracks it (silently fixing it without an AC is NOT this lane — it is an untracked change).
+    - **② spawn-blocking-story** — blocks this story's correct completion → cite the new `sprint-status.yaml` story ID; this story is marked `blocked` (or `blocked-by: {id}`) and does NOT close until ② resolves.
+    - **③ backlog-with-carry-forward-link** — real but out-of-scope AND non-blocking → cite the `backlog` / `bugfix-N` `sprint-status.yaml` entry ID filed AT DISCOVERY TIME (bidirectional: the entry names this story; this row names the entry).
+- Reference: `project-context.md` Rule 24; origin retro-19-P1 (Alexyu pain point B — the find→fix gap spanned a whole story: 19-7/19-8 → 19-9 → bugfix-19-9). Generalizes retro-8-P1 ("ALL retro action items become tracked entries") from end-of-epic retros to the moment of mid-story discovery.
+
 ### File List
