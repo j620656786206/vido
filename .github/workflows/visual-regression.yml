@@ -171,6 +171,27 @@ jobs:
       # `apps/web/index.html` L10 載入)。同時補上 `apps/web/index.html`
       # 本身(根 HTML 變動會影響 `<meta>`、root container 等渲染表面)。
       # AC #1 因此 [@contract-v1→v2] 矯正路徑清單;觸發模型不變。
+      #
+      # retro-19-P3 (CI gate-integrity audit, 2026-06-02) — 補上 3 個漏網的
+      # 真實渲染面 (audit class (b) "missing real surfaces"):
+      #   - `pnpm-lock.yaml`: filter 原本只看 `package.json`,但 transitive
+      #     bump(`pnpm update` 或 caret-range 解析到新 minor)只動 lockfile、
+      #     不動 package.json → 視覺 PR 閘靜默跳過。這正是
+      #     bugfix-19-4b-1-followup CR M1 指認、明文 carry-forward 到本 P3 的
+      #     已知缺口(bisect-regression.yml 早已含本路徑)。
+      #   - `apps/web/postcss.config.js`: Tailwind→CSS 的 transform pipeline
+      #     (`@tailwindcss/postcss` + `autoprefixer`)。比 `tailwind.config.js`
+      #     更直接決定 render 後像素 —— 移掉 autoprefixer 即改變輸出。原 filter
+      #     看 tailwind.config.js 卻漏了驅動它的 postcss.config.js。
+      #   - `apps/web/vite.config.mts`: visual diff 跑在 `nx serve web`(Vite
+      #     dev server)上,本檔設定該 server 的 plugins / CSS 處理 / asset 行為,
+      #     是 gallery 渲染的決定面之一。
+      # 三者皆為「純加寬」(閘觸發更多 PR、絕不更少)→ 對下游(ruleset /
+      # Rule 22 retros)只強化 PR-time enforcement,沿用 always-trigger refactor
+      # 先例「放寬而非收緊,不需 Rule 20 contract bump」([@contract-v2] 保留;
+      # 19-5 AC #1 downstream-ack grep 回 0 consumers,即使走嚴格路徑也只記
+      # `no downstream consumers`)。audit class (a)「死路徑」掃描:0 命中 ——
+      # 本 filter + bisect-regression.yml filter 全部列出路徑經 P3 逐一驗證皆存在。
       - name: Detect visual-rendering changes
         id: filter
         uses: dorny/paths-filter@v3
@@ -182,11 +203,14 @@ jobs:
               - 'apps/web/src/styles.css'
               - 'apps/web/src/app/**'
               - 'apps/web/tailwind.config.js'
+              - 'apps/web/postcss.config.js'
+              - 'apps/web/vite.config.mts'
               - 'apps/web/src/main.tsx'
               - 'apps/web/index.html'
               - 'tests/visual/**'
               - 'playwright.config.ts'
               - 'package.json'
+              - 'pnpm-lock.yaml'
               - '.github/workflows/visual-regression.yml'
 
       # 不相關 PR 的快速通道:check 直接 ✅,後續步驟全跳過。
@@ -199,10 +223,11 @@ jobs:
           echo "Paths watched:"
           echo "  apps/web/src/{components,routes,app}/**"
           echo "  apps/web/src/{styles.css,main.tsx}"
-          echo "  apps/web/{tailwind.config.js,index.html}"
+          echo "  apps/web/{tailwind.config.js,postcss.config.js,vite.config.mts,index.html}"
           echo "  tests/visual/**"
           echo "  playwright.config.ts"
           echo "  package.json"
+          echo "  pnpm-lock.yaml"
           echo "  .github/workflows/visual-regression.yml"
 
       - name: Install pnpm

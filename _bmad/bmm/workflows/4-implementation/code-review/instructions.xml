@@ -210,8 +210,10 @@
       and skip to the next action (Code Quality Deep Dive).
 
       Procedure (for EACH bumped AC `{X}-{Y} AC #{N}` found):
-        1. Grep downstream consumers that acked the bumped contract:
-             grep -rnE 'confirmed against \[@contract-v[0-9]+\]' \
+        1. Grep downstream consumers that acked the bumped contract (backtick-tolerant
+           per project-context.md Rule 20 — `` `? `` absorbs a token wrapped in inline-code
+           backticks, e.g. `confirmed against `[@contract-v1]`; retro-19-P3 H1 sync):
+             grep -rnE 'confirmed against `?\[@contract-v[0-9]+\]' \
                _bmad-output/implementation-artifacts/ | grep -E 'Story {X}-{Y}.*AC #{N}'
            (loosen to the bare story-id or AC-number if ack wording varies.)
         2. For each downstream hit, look up its state in sprint-status.yaml.
