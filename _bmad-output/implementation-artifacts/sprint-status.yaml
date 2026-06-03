@@ -578,9 +578,10 @@ development_status:
   epic-11: in-progress  # 2026-04-04
   11-UX-advanced-search-design: done              # 2026-04-05 — 4 screens: AS-1 filter chips+panel+results desktop, AS-2 search suggestions dropdown (電影/影集/人物), AS-3 save preset modal, AS-4 mobile filter bottom sheet. Screenshots in flow-g-search-desktop/ + flow-g-search-mobile/
   11-1-multi-dimensional-filter-engine: done   # Filter engine + compound sort + watch providers (P2-010, P2-012) — NO design dependency
-  11-2-persistent-filter-chip-ui: ready-for-dev         # Chip UI + filter panel + mobile bottom sheet (P2-011) — ✅ UNBLOCKED by 11-UX
+  11-2-persistent-filter-chip-ui: review                # Chip UI + filter panel + mobile bottom sheet (P2-011) — ✅ UNBLOCKED by 11-UX
   11-3-instant-search-zh-tw-priority: ready-for-dev     # Debounced suggestions + dual-language + zh-TW boost (P2-013, P2-014) — ✅ UNBLOCKED by 11-UX
   11-4-saved-filter-presets: ready-for-dev               # Save/load/delete filter presets in DB (P2-015) — ✅ UNBLOCKED by 11-UX
+  disc-nav-entry-discover-route: backlog                 # Discovered by Story 11-2 (Rule 24 ③): /discover route has no AppShell top-nav entry (nav = logo+search+settings only). Non-blocking (reachable by URL). Add a 探索 nav link when nav IA is decided.
   epic-11-retrospective: optional
 
   # ==============================================================================
