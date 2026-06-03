@@ -1,6 +1,6 @@
 # Story 11.2: Persistent Filter Chip UI
 
-Status: review
+Status: done
 
 ## Story
 
@@ -127,6 +127,18 @@ No discrepancies requiring backend changes. `ux-design.pen` was NOT modified (re
 - Added 6 E2E integration tests (`tests/e2e/discover-filters.spec.ts`) covering the URL↔filter↔API↔chips↔results round trip + browser-back persistence (AC #4) + mobile bottom sheet (AC #6). Hermetic (discover API mocked — no `TMDB_API_KEY`). Coverage report: `_bmad-output/automation-summary-11-2.md`. All 6 pass (chromium); discover unit suite still green (20/20); ESLint + Prettier clean.
 - 🔍 Discovery Triage (Rule 24) — lane ① expand-scope-in-place: E2E surfaced a HIGH-severity bug in this story's own code — a single-value deep link (`?genre=16`/`?platform=8`) silently dropped the filter because TanStack Router JSON-parses a lone numeric query value into a `number`, which failed the route's `typeof === 'string'` guard. Fixed in place (`validateSearch` `toCsvString()` + `parseCsvInts` `String()` coercion) and guarded by the `[P2] deep link` E2E. Strengthens AC #4 (URL filter persistence). No separate backlog entry — the fix lives in the code this story shipped.
 
+**🔍 Adversarial Code Review (2026-06-03, Amelia /code-review) — 0 High, 3 Medium, 4 Low; all Medium + 1 Low auto-fixed:**
+
+- **M1 (FIXED)** — Mobile bottom sheet `套用篩選（N 部結果）` was wired to the **committed**-filter count (`totalResults` of the URL filters), so while the user edited the local draft the number was stale and did not reflect the drafted filters — contradicting the "live count" claim. Fix: `useDiscoverResults` gained an `enabled` gate; `FilterBottomSheet` now runs its own draft-scoped query (`useDiscoverResults(draft, mediaType, 1, isOpen)`) so the count is truly live and only queries while the sheet is open (no desktop/closed-sheet network). `discover.tsx` passes `mediaType` instead of the stale `resultCount`.
+- **M2 (FIXED)** — Bottom sheet declared `role="dialog" aria-modal="true"` but had no keyboard affordances. Added Escape-to-close + initial focus move into the sheet (`sheetRef.focus()` on open). Guarded by a new `closes on Escape` test.
+- **M3 (FIXED)** — The only count test passed a static `resultCount={48}`, so the stale-count behaviour was unguarded. Replaced with a mocked `useDiscoverResults` and a new `shows a LIVE result count that reflects the drafted filters` test that asserts the label changes (48 → 5) when a genre is drafted.
+- **L1 (FIXED)** — `buildDiscoverParams` now normalizes an inverted year range (e.g. 2024 — 2020 → gte 2020 / lte 2024) so the backend never receives `gte > lte`. New unit test added.
+- **L2 (noted, not fixed)** — Task 4.2's "condensed, horizontal scroll" mobile chips detail uses the shared `flex-wrap` chip bar instead; AC #6 (chips wrap) is satisfied, deviation logged here.
+- **L3 (noted)** — Multi-genre is AND semantics (`with_genres` comma = AND, intentional per `tmdb/movies.go:170`); no UI hint. UX consideration only.
+- **L4 (noted)** — File List has two phase-entries each for `discover.tsx` / `discoverFilters.ts` (new + later fix); intentional change-history, left as-is.
+
+Post-fix gate: discover unit suite 41/41 green (was 39 — +2 new tests), `pnpm nx build web` clean (typecheck), ESLint + Prettier clean on all touched files. E2E (`discover-filters.spec.ts`) not re-run in-review (requires live web:4200 + api:8080); its assertions don't touch the count label, so the M1/M2 changes are behaviour-compatible.
+
 ### File List
 
 - `apps/web/src/lib/discoverFilters.ts` (new — filter model, URL↔backend mapping, chip descriptors, sort mapping, `buildDiscoverParams`)
@@ -162,3 +174,7 @@ No discrepancies requiring backend changes. `ux-design.pen` was NOT modified (re
 | 2026-06-03 | Task 6: unit tests for chip bar, filter state, filter panel, bottom sheet, discover results (AC #1–6)                |
 | 2026-06-03 | TEA `*automate`: added 6 E2E integration tests (`tests/e2e/discover-filters.spec.ts`) — filter→chip→URL→re-query, browser-back persistence, remove/clear, deep-link, mobile sheet (AC #1–6) |
 | 2026-06-03 | TEA bug fix (E2E-surfaced, HIGH): single-value deep link `?genre=16`/`?platform=8` silently dropped the filter (numeric search param failed the `typeof === 'string'` guard). Fixed via `toCsvString()` in `validateSearch` + defensive `String()` in `parseCsvInts` (AC #4) |
+| 2026-06-03 | CR fix (M1): mobile sheet `套用篩選（N 部結果）` now reflects the live DRAFT count, not the committed filters — `useDiscoverResults` gained an `enabled` gate; `FilterBottomSheet` runs a draft-scoped query gated to `isOpen` (AC #6) |
+| 2026-06-03 | CR fix (M2): bottom sheet a11y — Escape-to-close + initial focus into the sheet for the `role="dialog"` modal |
+| 2026-06-03 | CR fix (M3): replaced static-count test with a live-draft-count test (48 → 5) + added Escape-close test; FilterBottomSheet spec now mocks `useDiscoverResults` |
+| 2026-06-03 | CR fix (L1): `buildDiscoverParams` normalizes an inverted year range so the backend never gets `gte > lte` (+ unit test) |

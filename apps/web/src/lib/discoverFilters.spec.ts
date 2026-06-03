@@ -163,4 +163,13 @@ describe('buildDiscoverParams', () => {
     expect(params.get('watch_providers')).toBeNull();
     expect(params.get('sort')).toBe('popularity.desc');
   });
+
+  it('normalizes an inverted year range so gte <= lte (L1)', () => {
+    const params = buildDiscoverParams(
+      { genre: [], platform: [], sortBy: 'popularity', yearGte: 2024, yearLte: 2020 },
+      'movie'
+    );
+    expect(params.get('year_gte')).toBe('2020');
+    expect(params.get('year_lte')).toBe('2024');
+  });
 });

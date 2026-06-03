@@ -57,14 +57,18 @@ export interface UseDiscoverResultsResult {
  * Runs the movie and/or TV discover queries based on the selected media type.
  * Disabled queries report `isLoading === false` (fetchStatus idle), so the
  * combined `isLoading` only reflects the queries that are actually active.
+ *
+ * `enabled` gates the whole hook off (no network) — used by the mobile filter
+ * sheet so it can live-count a draft only while open, and stays idle when closed.
  */
 export function useDiscoverResults(
   filters: DiscoverFilters,
   mediaType: DiscoverMediaType,
-  page = 1
+  page = 1,
+  enabled = true
 ): UseDiscoverResultsResult {
-  const wantMovies = mediaType === 'all' || mediaType === 'movie';
-  const wantTV = mediaType === 'all' || mediaType === 'tv';
+  const wantMovies = enabled && (mediaType === 'all' || mediaType === 'movie');
+  const wantTV = enabled && (mediaType === 'all' || mediaType === 'tv');
 
   const moviesQuery = useDiscoverMovies(filters, page, wantMovies);
   const tvQuery = useDiscoverTVShows(filters, page, wantTV);

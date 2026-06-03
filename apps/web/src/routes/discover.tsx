@@ -67,11 +67,7 @@ function DiscoverPage() {
   const currentType: MediaTypeFilter = type ?? 'all';
   const currentPage = page ?? 1;
 
-  const { moviesQuery, tvQuery, isLoading, totalResults } = useDiscoverResults(
-    filters,
-    currentType,
-    currentPage
-  );
+  const { moviesQuery, tvQuery, isLoading } = useDiscoverResults(filters, currentType, currentPage);
 
   const handleTypeChange = (newType: MediaTypeFilter) => {
     navigate({ search: (prev) => ({ ...prev, type: newType, page: 1 }) });
@@ -140,7 +136,7 @@ function DiscoverPage() {
         onClose={() => setSheetOpen(false)}
         filters={filters}
         onApply={handleFilterChange}
-        resultCount={totalResults}
+        mediaType={currentType}
       />
     </div>
   );

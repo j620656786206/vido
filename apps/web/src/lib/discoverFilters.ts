@@ -217,8 +217,14 @@ export function buildDiscoverParams(
 ): URLSearchParams {
   const params = new URLSearchParams();
   if (filters.genre.length) params.set('genre', filters.genre.join(','));
-  if (filters.yearGte !== undefined) params.set('year_gte', String(filters.yearGte));
-  if (filters.yearLte !== undefined) params.set('year_lte', String(filters.yearLte));
+  // Normalize an inverted year range (e.g. 2024 — 2020) so the backend never
+  // receives gte > lte (which would yield an empty result set).
+  let { yearGte, yearLte } = filters;
+  if (yearGte !== undefined && yearLte !== undefined && yearGte > yearLte) {
+    [yearGte, yearLte] = [yearLte, yearGte];
+  }
+  if (yearGte !== undefined) params.set('year_gte', String(yearGte));
+  if (yearLte !== undefined) params.set('year_lte', String(yearLte));
   if (filters.region) params.set('region', filters.region);
   if (filters.ratingGte !== undefined) params.set('vote_gte', String(filters.ratingGte));
   if (filters.platform.length) {
