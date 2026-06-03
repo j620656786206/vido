@@ -23,6 +23,13 @@ const (
 	// ErrCodeInvalidYearRange indicates year_gte > year_lte in a discover query (Story 10-1a).
 	// Follows Rule 7 SOURCE_ERROR_TYPE format — every code in this package is prefixed TMDB_.
 	ErrCodeInvalidYearRange = "TMDB_INVALID_YEAR_RANGE"
+	// ErrCodeInvalidVoteRange indicates vote_gte > vote_lte in a discover query (Story 11-1).
+	// Symmetric with ErrCodeInvalidYearRange. Follows Rule 7 SOURCE_ERROR_TYPE format.
+	ErrCodeInvalidVoteRange = "TMDB_INVALID_VOTE_RANGE"
+	// ErrCodeUnsupportedSort indicates a local-library-only sort key (e.g. date_added)
+	// was requested on the discover endpoint, which cannot honor it (Story 11-1 AC #3).
+	// Follows Rule 7 SOURCE_ERROR_TYPE format.
+	ErrCodeUnsupportedSort = "TMDB_UNSUPPORTED_SORT"
 )
 
 // TMDb API status codes from their documentation
@@ -147,6 +154,31 @@ func NewInvalidYearRangeError() *TMDbError {
 		Code:       ErrCodeInvalidYearRange,
 		Message:    "year_gte must be <= year_lte",
 		Suggestion: "Swap the bounds or omit one of them to leave that side unlimited",
+		StatusCode: http.StatusBadRequest,
+	}
+}
+
+// NewInvalidVoteRangeError creates a 400 error for reversed rating filters on
+// discover endpoints (vote_gte > vote_lte). Zero values for either bound skip
+// validation — symmetric with NewInvalidYearRangeError (Story 11-1 AC #1).
+func NewInvalidVoteRangeError() *TMDbError {
+	return &TMDbError{
+		Code:       ErrCodeInvalidVoteRange,
+		Message:    "vote_gte must be <= vote_lte",
+		Suggestion: "Swap the bounds or omit one of them to leave that side unbounded",
+		StatusCode: http.StatusBadRequest,
+	}
+}
+
+// NewUnsupportedSortError creates a 400 error for a local-library-only sort key
+// requested on the discover endpoint, which has no equivalent server-side sort
+// (e.g. date_added — ordering by local add-time is a library-layer concern,
+// Story 5-4). Returns an explicit signal instead of silently ignoring the key.
+func NewUnsupportedSortError(sortBy string) *TMDbError {
+	return &TMDbError{
+		Code:       ErrCodeUnsupportedSort,
+		Message:    fmt.Sprintf("sort key %q is not supported on the discover endpoint", sortBy),
+		Suggestion: "Use a TMDb-native sort (e.g. popularity.desc, vote_average.desc, primary_release_date.desc) or omit sort",
 		StatusCode: http.StatusBadRequest,
 	}
 }

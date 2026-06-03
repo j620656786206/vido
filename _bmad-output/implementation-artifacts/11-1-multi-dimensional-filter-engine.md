@@ -1,6 +1,6 @@
 # Story 11.1: Multi-Dimensional Filter Engine & Compound Sort
 
-Status: review
+Status: done
 
 ## Story
 
@@ -91,25 +91,34 @@ Task 1.1 specified `GenreIDs []int`, but Epic 10 already shipped `DiscoverParams
 **Notes for reviewer:**
 
 - First cold `nx test web` run reported 10 flaky failures (incl. a deterministic ESLint-config test) under heavy worker contention; two subsequent clean runs (`vitest run` + `nx test web --skip-nx-cache`) were fully green (1876/1876). No frontend files changed → not a regression, no backlog entry filed.
-- `GetWatchProviders` is a concrete `*Client` method (not added to `ClientInterface`) — no production layer consumes it via the interface, so interface membership + mock churn was avoided; it is tested directly against an httptest server.
+
+**🔍 Adversarial Code Review fixes (2026-06-03, Amelia CR workflow — user chose [1] auto-fix):**
+
+- **M3 (MEDIUM) — vote-average range had no validation, asymmetric with year range.** Added `ErrCodeInvalidVoteRange = "TMDB_INVALID_VOTE_RANGE"` + `NewInvalidVoteRangeError()` (Rule 7 `TMDB_` prefix) and a handler guard: `vote_gte > vote_lte` now returns 400 before the service is hit, mirroring the Story 10-1a year-range guard. Tests: `TestNewInvalidVoteRangeError`, `TestTMDbHandler_DiscoverMovies_VoteRangeValidation` (4 cases). AC #1 rating-range now validated.
+- **M2 (MEDIUM) — `sort=date_added` on the discover endpoint was a silent no-op** (key dropped, TMDb-default order returned, no signal). Per user decision, now **rejected at the discover boundary**: added `ErrCodeUnsupportedSort = "TMDB_UNSUPPORTED_SORT"` + `NewUnsupportedSortError()`; `parseDiscoverParams` returns 400 when `tmdb.IsLocalSortKey(sort)` is true. Exported `isLocalSortKey`→`IsLocalSortKey`; the `discoverQueryParams` guard is retained as defense-in-depth for any non-HTTP caller. Real date-added ordering remains a Story 5-4 (library-layer) concern. Tests: `TestNewUnsupportedSortError`, `TestTMDbHandler_DiscoverMovies_UnsupportedSortRejected` (3 keys), `TestTMDbHandler_DiscoverMovies_NativeSortAccepted`.
+- **M1 (MEDIUM) — `GetWatchProviders` + `TWWatchProviderIDs` were exported but consumed by no production path** (grep-confirmed: only their own file + tests). Per user decision, **removed** `watch_providers.go` and `watch_providers_test.go` entirely (strict YAGNI; re-add when a story actually consumes them). **AC #2 is unaffected** — platform filtering is delivered by the `with_watch_providers` + `watch_region` discover params (Task 2.2, in `movies.go`), which remain. Tasks 2.1 (`GetWatchProviders` client method) and 2.3 (`TWWatchProviderIDs` map) deliverables were withdrawn as unintegrated; the AC they served is met via Task 2.2.
+- Swagger updated: discover `@Failure 400` now enumerates all three `TMDB_*` validation codes; `@Param sort` documents the `TMDB_UNSUPPORTED_SORT` rejection.
+- Post-fix gate: `go build ./...` clean, `go vet ./...` clean, `go test ./internal/tmdb ./internal/handlers ./internal/services -count=1` all pass.
 
 ### File List
 
 - `apps/api/internal/tmdb/types.go` (modified — `DiscoverParams` refactor: `Genre string`→`GenreIDs []int`, +`VoteAverageGte/Lte`, +`WatchProviders`, +`WatchRegion`)
-- `apps/api/internal/tmdb/movies.go` (modified — `discoverQueryParams` maps new params; +`ParseIntCSV`, `joinInts`, `formatVote`, `SortByDateAdded`, `isLocalSortKey`)
+- `apps/api/internal/tmdb/movies.go` (modified — `discoverQueryParams` maps new params; +`ParseIntCSV`, `joinInts`, `formatVote`, `SortByDateAdded`, `IsLocalSortKey` [exported in CR for handler-boundary rejection])
+- `apps/api/internal/tmdb/errors.go` (modified — CR fix: +`ErrCodeInvalidVoteRange`/`NewInvalidVoteRangeError` (M3), +`ErrCodeUnsupportedSort`/`NewUnsupportedSortError` (M2))
 - `apps/api/internal/tmdb/cache.go` (modified — `discoverCacheKey` covers all filter dimensions)
 - `apps/api/internal/tmdb/fallback.go` (modified — log field `genre`→`genre_ids`)
-- `apps/api/internal/tmdb/watch_providers.go` (new — `GetWatchProviders`, `WatchProvidersResponse`/`WatchProvider`/`WatchProviderRegion`, `TWWatchProviderIDs`)
-- `apps/api/internal/handlers/tmdb_handler.go` (modified — `parseDiscoverParams` maps genre/vote/watch params; Swagger annotations)
+- `apps/api/internal/handlers/tmdb_handler.go` (modified — `parseDiscoverParams` maps genre/vote/watch params + CR vote-range & unsupported-sort 400 guards; Swagger annotations)
 - `apps/api/internal/services/explore_block_service.go` (modified — `GenreIDs: tmdb.ParseIntCSV(block.GenreIDs)`)
 - `apps/api/internal/tmdb/movies_test.go` (modified — discover serialization, vote/watch/sort subtests, `ParseIntCSV`/`formatVote`/`joinInts` tests)
-- `apps/api/internal/tmdb/watch_providers_test.go` (new — `GetWatchProviders` + `TWWatchProviderIDs` tests)
+- `apps/api/internal/tmdb/errors_test.go` (modified — CR fix: +`TestNewInvalidVoteRangeError`, +`TestNewUnsupportedSortError`)
 - `apps/api/internal/tmdb/cache_test.go` (modified — `GenreIDs` updates + `TestDiscoverCacheKey_AllDimensionsDistinct`)
 - `apps/api/internal/tmdb/tv_test.go` (modified — `GenreIDs` update)
 - `apps/api/internal/tmdb/fallback_test.go` (modified — `GenreIDs` updates)
-- `apps/api/internal/handlers/tmdb_handler_test.go` (modified — `GenreIDs` assertions + `TestTMDbHandler_DiscoverMovies_FilterParamMapping`)
+- `apps/api/internal/handlers/tmdb_handler_test.go` (modified — `GenreIDs` assertions + `TestTMDbHandler_DiscoverMovies_FilterParamMapping`; CR fix: +`VoteRangeValidation`, +`UnsupportedSortRejected`, +`NativeSortAccepted`)
 - `apps/api/internal/services/tmdb_service_test.go` (modified — `GenreIDs` update)
-- `_bmad-output/implementation-artifacts/sprint-status.yaml` (modified — story status ready-for-dev → in-progress → review)
+- ~~`apps/api/internal/tmdb/watch_providers.go`~~ (REMOVED in CR — M1, unintegrated dead code)
+- ~~`apps/api/internal/tmdb/watch_providers_test.go`~~ (REMOVED in CR — M1)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (modified — story status ready-for-dev → in-progress → review → done)
 
 ### Change Log
 
@@ -120,3 +129,6 @@ Task 1.1 specified `GenreIDs []int`, but Epic 10 already shipped `DiscoverParams
 | 2026-06-02 | Task 3: Compound sort passthrough for TMDb-native keys; `SortByDateAdded` guarded out of TMDb query as a local-library sort (AC #3)                                   |
 | 2026-06-02 | Task 4: Extended `discoverCacheKey` to cover every filter dimension; reuses existing 1-hour `CacheService` TTL (AC #4)                                                |
 | 2026-06-02 | Task 5: Added serialization, watch-provider, cache-key, and handler param-mapping tests (AC #1–5)                                                                     |
+| 2026-06-03 | CR M3: Added `TMDB_INVALID_VOTE_RANGE` validation (vote_gte > vote_lte → 400), symmetric with year-range guard (AC #1)                                                |
+| 2026-06-03 | CR M2: `sort=date_added` on discover now rejected with 400 `TMDB_UNSUPPORTED_SORT` instead of silent no-op; `IsLocalSortKey` exported (AC #3)                          |
+| 2026-06-03 | CR M1: Removed unintegrated `watch_providers.go`/`watch_providers_test.go` (`GetWatchProviders`, `TWWatchProviderIDs`) as dead code; AC #2 still met via `with_watch_providers` param |
