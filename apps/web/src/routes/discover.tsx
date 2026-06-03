@@ -29,14 +29,23 @@ function toOptionalNumber(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
 }
 
+// genre/platform are CSV strings, but the default search parser JSON-parses a
+// single numeric value (e.g. `genre=16`) into a number — coerce it back so a
+// one-element deep link is not silently dropped.
+function toCsvString(value: unknown): string | undefined {
+  if (typeof value === 'string') return value || undefined;
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  return undefined;
+}
+
 export const Route = createFileRoute('/discover')({
   validateSearch: (search: Record<string, unknown>): DiscoverSearchParams => ({
-    genre: typeof search.genre === 'string' ? search.genre : undefined,
+    genre: toCsvString(search.genre),
     year_gte: toOptionalNumber(search.year_gte),
     year_lte: toOptionalNumber(search.year_lte),
     region: typeof search.region === 'string' ? search.region : undefined,
     rating_gte: toOptionalNumber(search.rating_gte),
-    platform: typeof search.platform === 'string' ? search.platform : undefined,
+    platform: toCsvString(search.platform),
     sort_by: SORT_KEYS.includes(search.sort_by as SortKey)
       ? (search.sort_by as SortKey)
       : undefined,

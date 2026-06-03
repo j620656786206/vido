@@ -122,6 +122,11 @@ claude-opus-4-8[1m] (Amelia / BMM dev-story workflow)
 
 No discrepancies requiring backend changes. `ux-design.pen` was NOT modified (read-only via the design contract), so the CLAUDE.md screenshot-regeneration workflow does not apply.
 
+**🧪 TEA `*automate` (2026-06-03, Murat):**
+
+- Added 6 E2E integration tests (`tests/e2e/discover-filters.spec.ts`) covering the URL↔filter↔API↔chips↔results round trip + browser-back persistence (AC #4) + mobile bottom sheet (AC #6). Hermetic (discover API mocked — no `TMDB_API_KEY`). Coverage report: `_bmad-output/automation-summary-11-2.md`. All 6 pass (chromium); discover unit suite still green (20/20); ESLint + Prettier clean.
+- 🔍 Discovery Triage (Rule 24) — lane ① expand-scope-in-place: E2E surfaced a HIGH-severity bug in this story's own code — a single-value deep link (`?genre=16`/`?platform=8`) silently dropped the filter because TanStack Router JSON-parses a lone numeric query value into a `number`, which failed the route's `typeof === 'string'` guard. Fixed in place (`validateSearch` `toCsvString()` + `parseCsvInts` `String()` coercion) and guarded by the `[P2] deep link` E2E. Strengthens AC #4 (URL filter persistence). No separate backlog entry — the fix lives in the code this story shipped.
+
 ### File List
 
 - `apps/web/src/lib/discoverFilters.ts` (new — filter model, URL↔backend mapping, chip descriptors, sort mapping, `buildDiscoverParams`)
@@ -140,6 +145,10 @@ No discrepancies requiring backend changes. `ux-design.pen` was NOT modified (re
 - `apps/web/src/routes/discover.tsx` (new — Task 5.3: discover page integrating chips + panel + sheet + results)
 - `apps/web/src/routeTree.gen.ts` (regenerated — `/discover` route registered by TanStack Router Vite plugin)
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` (modified — 11-2 ready-for-dev → in-progress → review; + `disc-nav-entry-discover-route` backlog entry)
+- `tests/e2e/discover-filters.spec.ts` (new — TEA `*automate`: 6 E2E integration tests, AC #1-6)
+- `apps/web/src/routes/discover.tsx` (modified — TEA bug fix: `toCsvString()` coercion in `validateSearch` for single-value numeric `genre`/`platform` deep links)
+- `apps/web/src/lib/discoverFilters.ts` (modified — TEA bug fix: `parseCsvInts` defensively `String()`-coerces input)
+- `_bmad-output/automation-summary-11-2.md` (new — TEA `*automate` coverage report)
 
 ### Change Log
 
@@ -151,3 +160,5 @@ No discrepancies requiring backend changes. `ux-design.pen` was NOT modified (re
 | 2026-06-03 | Task 4: `FilterBottomSheet` — mobile slide-up sheet, local draft + `套用篩選 (N 部結果)` commit (AC #6)               |
 | 2026-06-03 | Task 5: `useDiscoverResults` + `tmdbService.discover*` + `/discover` route integrating filters with the grid (AC #1, #5) |
 | 2026-06-03 | Task 6: unit tests for chip bar, filter state, filter panel, bottom sheet, discover results (AC #1–6)                |
+| 2026-06-03 | TEA `*automate`: added 6 E2E integration tests (`tests/e2e/discover-filters.spec.ts`) — filter→chip→URL→re-query, browser-back persistence, remove/clear, deep-link, mobile sheet (AC #1–6) |
+| 2026-06-03 | TEA bug fix (E2E-surfaced, HIGH): single-value deep link `?genre=16`/`?platform=8` silently dropped the filter (numeric search param failed the `typeof === 'string'` guard). Fixed via `toCsvString()` in `validateSearch` + defensive `String()` in `parseCsvInts` (AC #4) |

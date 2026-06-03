@@ -83,9 +83,10 @@ export const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: 'rating', label: '評分' },
 ];
 
-function parseCsvInts(raw?: string): number[] {
-  if (!raw) return [];
-  return raw
+function parseCsvInts(raw?: string | number): number[] {
+  if (raw === undefined || raw === null || raw === '') return [];
+  // Defensive: the URL search parser may hand back a number for a single value.
+  return String(raw)
     .split(',')
     .map((x) => parseInt(x, 10))
     .filter((n) => Number.isFinite(n));
