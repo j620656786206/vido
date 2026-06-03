@@ -366,9 +366,9 @@ func TestTMDbHandler_GetTVShowDetails(t *testing.T) {
 			wantStatus: http.StatusBadRequest,
 		},
 		{
-			name:      "not found",
-			tvID:      "999999",
-			mockError: tmdb.NewNotFoundError(999999),
+			name:       "not found",
+			tvID:       "999999",
+			mockError:  tmdb.NewNotFoundError(999999),
 			wantStatus: http.StatusNotFound,
 		},
 	}
@@ -402,14 +402,14 @@ func TestTMDbHandler_RegisterRoutes(t *testing.T) {
 	routes := router.Routes()
 
 	expectedRoutes := map[string]string{
-		"/api/v1/tmdb/search/movies":   http.MethodGet,
-		"/api/v1/tmdb/search/tv":       http.MethodGet,
-		"/api/v1/tmdb/movies/:id":      http.MethodGet,
-		"/api/v1/tmdb/tv/:id":          http.MethodGet,
-		"/api/v1/tmdb/trending/movies": http.MethodGet, // Story 10-1
-		"/api/v1/tmdb/trending/tv":     http.MethodGet, // Story 10-1
-		"/api/v1/tmdb/discover/movies": http.MethodGet, // Story 10-1
-		"/api/v1/tmdb/discover/tv":     http.MethodGet, // Story 10-1
+		"/api/v1/tmdb/search/movies":     http.MethodGet,
+		"/api/v1/tmdb/search/tv":         http.MethodGet,
+		"/api/v1/tmdb/movies/:id":        http.MethodGet,
+		"/api/v1/tmdb/tv/:id":            http.MethodGet,
+		"/api/v1/tmdb/trending/movies":   http.MethodGet, // Story 10-1
+		"/api/v1/tmdb/trending/tv":       http.MethodGet, // Story 10-1
+		"/api/v1/tmdb/discover/movies":   http.MethodGet, // Story 10-1
+		"/api/v1/tmdb/discover/tv":       http.MethodGet, // Story 10-1
 		"/api/v1/tmdb/movies/:id/videos": http.MethodGet, // Story 10-2
 		"/api/v1/tmdb/tv/:id/videos":     http.MethodGet, // Story 10-2
 	}
@@ -430,14 +430,14 @@ func TestTMDbHandler_RegisterRoutes(t *testing.T) {
 
 func TestTMDbHandler_GetTrendingMovies(t *testing.T) {
 	tests := []struct {
-		name             string
-		queryParams      string
-		mockResp         *tmdb.SearchResultMovies
-		mockErr          error
-		wantStatus       int
-		wantSuccess      bool
-		wantResultsLen   int
-		wantTimeWindow   string
+		name           string
+		queryParams    string
+		mockResp       *tmdb.SearchResultMovies
+		mockErr        error
+		wantStatus     int
+		wantSuccess    bool
+		wantResultsLen int
+		wantTimeWindow string
 	}{
 		{
 			name:        "default time_window is week",
@@ -679,13 +679,13 @@ func TestTMDbHandler_GenericError_Returns500(t *testing.T) {
 // wires parseDiscoverParams' error return cannot silently pass.
 func TestTMDbHandler_DiscoverMovies_YearRangeValidation(t *testing.T) {
 	tests := []struct {
-		name           string
-		query          string
-		wantStatus     int
-		wantErrorCode  string // empty for 200 cases
-		wantSvcCalled  bool
-		wantYearGte    int
-		wantYearLte    int
+		name          string
+		query         string
+		wantStatus    int
+		wantErrorCode string // empty for 200 cases
+		wantSvcCalled bool
+		wantYearGte   int
+		wantYearLte   int
 	}{
 		{
 			name:          "reversed range rejects with 400 TMDB_INVALID_YEAR_RANGE (AC #1)",
@@ -761,6 +761,133 @@ func TestTMDbHandler_DiscoverMovies_YearRangeValidation(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestTMDbHandler_DiscoverMovies_VoteRangeValidation covers Story 11-1 AC #1
+// rating-range validation — symmetric with the year-range guard above. A
+// reversed vote range (vote_gte > vote_lte) must be rejected at the handler
+// layer with 400 TMDB_INVALID_VOTE_RANGE and never reach the service; zero
+// bounds retain "unbounded" semantics and skip validation.
+func TestTMDbHandler_DiscoverMovies_VoteRangeValidation(t *testing.T) {
+	tests := []struct {
+		name          string
+		query         string
+		wantStatus    int
+		wantErrorCode string // empty for 200 cases
+		wantSvcCalled bool
+		wantVoteGte   float64
+		wantVoteLte   float64
+	}{
+		{
+			name:          "reversed range rejects with 400 TMDB_INVALID_VOTE_RANGE",
+			query:         "vote_gte=9&vote_lte=7",
+			wantStatus:    http.StatusBadRequest,
+			wantErrorCode: tmdb.ErrCodeInvalidVoteRange,
+			wantSvcCalled: false,
+		},
+		{
+			name:          "equal bounds are valid",
+			query:         "vote_gte=7&vote_lte=7",
+			wantStatus:    http.StatusOK,
+			wantSvcCalled: true,
+			wantVoteGte:   7,
+			wantVoteLte:   7,
+		},
+		{
+			name:          "zero-lte keeps unbounded upper rating",
+			query:         "vote_gte=7&vote_lte=0",
+			wantStatus:    http.StatusOK,
+			wantSvcCalled: true,
+			wantVoteGte:   7,
+			wantVoteLte:   0,
+		},
+		{
+			name:          "normal ascending range proceeds",
+			query:         "vote_gte=6.5&vote_lte=9",
+			wantStatus:    http.StatusOK,
+			wantSvcCalled: true,
+			wantVoteGte:   6.5,
+			wantVoteLte:   9,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockSvc := &MockTMDbService{DiscoverMoviesResponse: &tmdb.SearchResultMovies{}}
+			handler := NewTMDbHandler(mockSvc)
+			router := setupTMDbRouter(handler)
+
+			req := httptest.NewRequest(http.MethodGet, "/api/v1/tmdb/discover/movies?"+tt.query, nil)
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+
+			require.Equal(t, tt.wantStatus, w.Code)
+
+			if tt.wantErrorCode != "" {
+				var body APIResponse
+				require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+				assert.False(t, body.Success)
+				require.NotNil(t, body.Error)
+				assert.Equal(t, tt.wantErrorCode, body.Error.Code)
+				assert.Contains(t, body.Error.Message, "vote_gte")
+			}
+
+			if tt.wantSvcCalled {
+				require.Len(t, mockSvc.DiscoverMoviesCalls, 1, "service must be invoked for valid ranges")
+				got := mockSvc.DiscoverMoviesCalls[0]
+				assert.InEpsilon(t, tt.wantVoteGte, got.VoteAverageGte, 1e-9)
+				if tt.wantVoteLte == 0 {
+					assert.Zero(t, got.VoteAverageLte)
+				} else {
+					assert.InEpsilon(t, tt.wantVoteLte, got.VoteAverageLte, 1e-9)
+				}
+			} else {
+				assert.Empty(t, mockSvc.DiscoverMoviesCalls, "service must NOT be called when handler-layer validation fails")
+			}
+		})
+	}
+}
+
+// TestTMDbHandler_DiscoverMovies_UnsupportedSortRejected covers Story 11-1 AC #3:
+// a local-library-only sort key (date_added) is rejected at the discover boundary
+// with 400 TMDB_UNSUPPORTED_SORT and never reaches the service — instead of the
+// prior silent no-op where the key was dropped and TMDb-default order returned.
+func TestTMDbHandler_DiscoverMovies_UnsupportedSortRejected(t *testing.T) {
+	for _, sortKey := range []string{"date_added", "date_added.asc", "date_added.desc"} {
+		t.Run(sortKey, func(t *testing.T) {
+			mockSvc := &MockTMDbService{DiscoverMoviesResponse: &tmdb.SearchResultMovies{}}
+			handler := NewTMDbHandler(mockSvc)
+			router := setupTMDbRouter(handler)
+
+			req := httptest.NewRequest(http.MethodGet, "/api/v1/tmdb/discover/movies?sort="+sortKey, nil)
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+
+			require.Equal(t, http.StatusBadRequest, w.Code)
+			var body APIResponse
+			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+			assert.False(t, body.Success)
+			require.NotNil(t, body.Error)
+			assert.Equal(t, tmdb.ErrCodeUnsupportedSort, body.Error.Code)
+			assert.Empty(t, mockSvc.DiscoverMoviesCalls, "service must NOT be called when a local-only sort is rejected")
+		})
+	}
+}
+
+// TestTMDbHandler_DiscoverMovies_NativeSortAccepted is the positive counterpart:
+// a TMDb-native sort key still passes validation and reaches the service.
+func TestTMDbHandler_DiscoverMovies_NativeSortAccepted(t *testing.T) {
+	mockSvc := &MockTMDbService{DiscoverMoviesResponse: &tmdb.SearchResultMovies{}}
+	handler := NewTMDbHandler(mockSvc)
+	router := setupTMDbRouter(handler)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/tmdb/discover/movies?sort=vote_average.desc", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	require.Len(t, mockSvc.DiscoverMoviesCalls, 1)
+	assert.Equal(t, "vote_average.desc", mockSvc.DiscoverMoviesCalls[0].SortBy)
 }
 
 // TestTMDbHandler_DiscoverTVShows_YearRangeValidation_Reversed covers AC #2.

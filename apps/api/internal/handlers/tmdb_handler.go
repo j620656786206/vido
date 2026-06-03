@@ -242,10 +242,10 @@ func (h *TMDbHandler) GetTrendingTVShows(c *gin.Context) {
 // @Param watch_providers query string false "Comma-separated TMDb watch-provider IDs (e.g. 8 for Netflix)"
 // @Param watch_region query string false "ISO 3166-1 watch region (defaults to region, then TW)"
 // @Param language query string false "BCP 47 language code"
-// @Param sort query string false "Sort by (e.g. popularity.desc)"
+// @Param sort query string false "TMDb-native sort key (e.g. popularity.desc, vote_average.desc); local-only keys like date_added are rejected with 400 TMDB_UNSUPPORTED_SORT"
 // @Param page query int false "Page number" default(1)
 // @Success 200 {object} APIResponse{data=tmdb.SearchResultMovies}
-// @Failure 400 {object} APIResponse{error=APIError} "TMDB_INVALID_YEAR_RANGE when year_gte > year_lte (Story 10-1a)"
+// @Failure 400 {object} APIResponse{error=APIError} "TMDB_INVALID_YEAR_RANGE (year_gte > year_lte, Story 10-1a), TMDB_INVALID_VOTE_RANGE (vote_gte > vote_lte), or TMDB_UNSUPPORTED_SORT (local-only sort key e.g. date_added) — Story 11-1"
 // @Failure 500 {object} APIResponse{error=APIError}
 // @Router /api/v1/tmdb/discover/movies [get]
 func (h *TMDbHandler) DiscoverMovies(c *gin.Context) {
@@ -277,10 +277,10 @@ func (h *TMDbHandler) DiscoverMovies(c *gin.Context) {
 // @Param watch_providers query string false "Comma-separated TMDb watch-provider IDs (e.g. 8 for Netflix)"
 // @Param watch_region query string false "ISO 3166-1 watch region (defaults to region, then TW)"
 // @Param language query string false "BCP 47 language code"
-// @Param sort query string false "Sort by (e.g. popularity.desc)"
+// @Param sort query string false "TMDb-native sort key (e.g. popularity.desc, vote_average.desc); local-only keys like date_added are rejected with 400 TMDB_UNSUPPORTED_SORT"
 // @Param page query int false "Page number" default(1)
 // @Success 200 {object} APIResponse{data=tmdb.SearchResultTVShows}
-// @Failure 400 {object} APIResponse{error=APIError} "TMDB_INVALID_YEAR_RANGE when year_gte > year_lte (Story 10-1a)"
+// @Failure 400 {object} APIResponse{error=APIError} "TMDB_INVALID_YEAR_RANGE (year_gte > year_lte, Story 10-1a), TMDB_INVALID_VOTE_RANGE (vote_gte > vote_lte), or TMDB_UNSUPPORTED_SORT (local-only sort key e.g. date_added) — Story 11-1"
 // @Failure 500 {object} APIResponse{error=APIError}
 // @Router /api/v1/tmdb/discover/tv [get]
 func (h *TMDbHandler) DiscoverTVShows(c *gin.Context) {
@@ -393,8 +393,9 @@ func parsePageQuery(raw string) int {
 //   - page            → DiscoverParams.Page
 //
 // Returns a non-nil *tmdb.TMDbError when both year bounds are non-zero
-// and year_gte > year_lte (Story 10-1a). Zero values for either bound
-// retain the "unlimited" semantics from Story 10-1 and skip validation.
+// and year_gte > year_lte (Story 10-1a), or when both vote bounds are
+// non-zero and vote_gte > vote_lte (Story 11-1). Zero values for either
+// bound retain the "unlimited/unbounded" semantics and skip validation.
 func parseDiscoverParams(c *gin.Context) (tmdb.DiscoverParams, error) {
 	p := tmdb.DiscoverParams{
 		GenreIDs:       tmdb.ParseIntCSV(c.Query("genre")),
@@ -427,6 +428,15 @@ func parseDiscoverParams(c *gin.Context) (tmdb.DiscoverParams, error) {
 	}
 	if p.YearGte > 0 && p.YearLte > 0 && p.YearGte > p.YearLte {
 		return p, tmdb.NewInvalidYearRangeError()
+	}
+	if p.VoteAverageGte > 0 && p.VoteAverageLte > 0 && p.VoteAverageGte > p.VoteAverageLte {
+		return p, tmdb.NewInvalidVoteRangeError()
+	}
+	if tmdb.IsLocalSortKey(p.SortBy) {
+		// date_added and friends are local-library sorts the discover endpoint
+		// cannot honor — reject explicitly rather than silently ignoring the key
+		// (Story 11-1 AC #3; real date-added ordering lives in Story 5-4).
+		return p, tmdb.NewUnsupportedSortError(p.SortBy)
 	}
 	return p, nil
 }

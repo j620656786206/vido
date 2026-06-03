@@ -177,7 +177,7 @@ func discoverQueryParams(p DiscoverParams, forMovies bool, defaultLanguage strin
 	// when a title was added to the user's library is applied in the
 	// application/library layer after fetch (Task 3.3; library sorting lives in
 	// Story 5-4), never sent to TMDb (which would 400 on an unknown sort_by).
-	if p.SortBy != "" && !isLocalSortKey(p.SortBy) {
+	if p.SortBy != "" && !IsLocalSortKey(p.SortBy) {
 		qp.Set("sort_by", p.SortBy)
 	}
 
@@ -221,9 +221,12 @@ func discoverQueryParams(p DiscoverParams, forMovies bool, defaultLanguage strin
 // never forwarded as sort_by. (Story 11-1 AC #3, Task 3.3)
 const SortByDateAdded = "date_added"
 
-// isLocalSortKey reports whether a sort key is handled in the application layer
-// rather than by TMDb (currently only the date-added family).
-func isLocalSortKey(sortBy string) bool {
+// IsLocalSortKey reports whether a sort key is handled in the application layer
+// rather than by TMDb (currently only the date-added family). The discover
+// HTTP boundary rejects such keys (the discover endpoint cannot honor a
+// local-library sort — see Story 11-1 AC #3, Task 3.3); discoverQueryParams
+// additionally guards against forwarding them to TMDb for any non-HTTP caller.
+func IsLocalSortKey(sortBy string) bool {
 	switch sortBy {
 	case SortByDateAdded, SortByDateAdded + ".asc", SortByDateAdded + ".desc":
 		return true

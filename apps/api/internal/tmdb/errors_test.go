@@ -10,9 +10,9 @@ import (
 
 func TestTMDbError_Error(t *testing.T) {
 	tests := []struct {
-		name     string
-		err      *TMDbError
-		wantStr  string
+		name    string
+		err     *TMDbError
+		wantStr string
 	}{
 		{
 			name: "error without cause",
@@ -172,6 +172,30 @@ func TestNewInvalidYearRangeError(t *testing.T) {
 	assert.Equal(t, "year_gte must be <= year_lte", err.Message)
 	// User-facing Suggestion is part of the error envelope (Rule 7 + response.go APIError).
 	assert.Equal(t, "Swap the bounds or omit one of them to leave that side unlimited", err.Suggestion)
+	assert.Nil(t, err.Cause, "validation errors have no underlying cause")
+}
+
+func TestNewInvalidVoteRangeError(t *testing.T) {
+	err := NewInvalidVoteRangeError()
+
+	assert.Equal(t, ErrCodeInvalidVoteRange, err.Code)
+	// Wire-contract lock: Story 11-1 pins the error code to this literal string.
+	// Rule 7 SOURCE_ERROR_TYPE — TMDB_ prefix MUST stay; renaming breaks clients.
+	assert.Equal(t, "TMDB_INVALID_VOTE_RANGE", err.Code, "error code constant value must match the documented wire value in Story 11-1 AC #1")
+	assert.Equal(t, http.StatusBadRequest, err.StatusCode)
+	assert.Equal(t, "vote_gte must be <= vote_lte", err.Message)
+	assert.Equal(t, "Swap the bounds or omit one of them to leave that side unbounded", err.Suggestion)
+	assert.Nil(t, err.Cause, "validation errors have no underlying cause")
+}
+
+func TestNewUnsupportedSortError(t *testing.T) {
+	err := NewUnsupportedSortError("date_added")
+
+	assert.Equal(t, ErrCodeUnsupportedSort, err.Code)
+	// Wire-contract lock: Rule 7 SOURCE_ERROR_TYPE — TMDB_ prefix MUST stay.
+	assert.Equal(t, "TMDB_UNSUPPORTED_SORT", err.Code, "error code constant value must match the documented wire value in Story 11-1 AC #3")
+	assert.Equal(t, http.StatusBadRequest, err.StatusCode)
+	assert.Contains(t, err.Message, "date_added", "message must name the rejected sort key")
 	assert.Nil(t, err.Cause, "validation errors have no underlying cause")
 }
 
