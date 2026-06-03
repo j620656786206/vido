@@ -95,6 +95,16 @@ export const tmdbService = {
   async getTVShowVideos(tvId: number): Promise<VideosResponse> {
     return fetchApi<VideosResponse>(`/tmdb/tv/${tvId}/videos`);
   },
+
+  // Story 11-2 — multi-dimensional discover (consumes the Story 11-1 filter
+  // engine). `params` are the backend-shaped query params from buildDiscoverParams.
+  async discoverMovies(params: URLSearchParams): Promise<MovieSearchResponse> {
+    return fetchApi<MovieSearchResponse>(`/tmdb/discover/movies?${params.toString()}`);
+  },
+
+  async discoverTVShows(params: URLSearchParams): Promise<TVShowSearchResponse> {
+    return fetchApi<TVShowSearchResponse>(`/tmdb/discover/tv?${params.toString()}`);
+  },
 };
 
 export default tmdbService;
