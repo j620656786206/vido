@@ -191,6 +191,9 @@ func main() {
 		slog.Warn("Failed to seed default explore blocks", "error", err)
 	}
 
+	// Initialize filter preset service (Story 11.4 — saved discover filter presets)
+	filterPresetService := services.NewFilterPresetService(repos.FilterPresets)
+
 	// Initialize AI service for AI-powered filename parsing (Story 3.1)
 	aiService, err := services.NewAIService(cfg, db.Conn())
 	if err != nil {
@@ -474,6 +477,7 @@ func main() {
 	libraryHandler := handlers.NewLibraryHandler(libraryService)
 	mediaLibrariesHandler := handlers.NewMediaLibrariesHandler(mediaLibraryService)
 	exploreBlocksHandler := handlers.NewExploreBlocksHandler(exploreBlockService) // Story 10.3
+	filterPresetsHandler := handlers.NewFilterPresetsHandler(filterPresetService) // Story 11.4
 	recentMediaHandler := handlers.NewRecentMediaHandler(movieService, seriesService)
 	logHandler := handlers.NewLogHandler(logService)
 	cacheHandler := handlers.NewCacheHandler(cacheStatsService, cacheCleanupService)
@@ -546,6 +550,7 @@ func main() {
 		libraryHandler.RegisterRoutes(apiV1)
 		mediaLibrariesHandler.RegisterRoutes(apiV1) // /api/v1/libraries CRUD (Story 7b-2)
 		exploreBlocksHandler.RegisterRoutes(apiV1)  // /api/v1/explore-blocks CRUD + content (Story 10.3)
+		filterPresetsHandler.RegisterRoutes(apiV1)  // /api/v1/filter-presets CRUD (Story 11.4)
 		recentMediaHandler.RegisterRoutes(apiV1)
 		scannerHandler.RegisterRoutes(apiV1)
 		subtitleHandler.RegisterRoutes(apiV1)

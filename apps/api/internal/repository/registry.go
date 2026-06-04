@@ -23,6 +23,7 @@ type Repositories struct {
 	Backups           BackupRepositoryInterface
 	MediaLibraries    MediaLibraryRepositoryInterface
 	ExploreBlocks     ExploreBlockRepositoryInterface
+	FilterPresets     FilterPresetRepositoryInterface
 }
 
 // NewRepositories creates all repository implementations for the given database connection.
@@ -35,11 +36,11 @@ type Repositories struct {
 //	movieService := services.NewMovieService(repos.Movies)
 func NewRepositories(db *sql.DB) *Repositories {
 	return &Repositories{
-		Movies:            NewMovieRepository(db),
-		Series:            NewSeriesRepository(db),
-		Seasons:           NewSeasonRepository(db),
-		Episodes:          NewEpisodeRepository(db),
-		Settings:          NewSettingsRepository(db),
+		Movies:   NewMovieRepository(db),
+		Series:   NewSeriesRepository(db),
+		Seasons:  NewSeasonRepository(db),
+		Episodes: NewEpisodeRepository(db),
+		Settings: NewSettingsRepository(db),
 		// Cache will be initialized after CacheRepository implementation in Task 4
 		Cache:             nil,
 		Secrets:           NewSecretsRepository(db),
@@ -51,6 +52,7 @@ func NewRepositories(db *sql.DB) *Repositories {
 		Backups:           NewBackupRepository(db),
 		MediaLibraries:    NewMediaLibraryRepository(db),
 		ExploreBlocks:     NewExploreBlockRepository(db),
+		FilterPresets:     NewFilterPresetRepository(db),
 	}
 }
 
@@ -79,5 +81,6 @@ func NewRepositoriesWithCache(db *sql.DB) *Repositories {
 		Backups:           NewBackupRepository(db),
 		MediaLibraries:    NewMediaLibraryRepository(db),
 		ExploreBlocks:     NewExploreBlockRepository(db),
+		FilterPresets:     NewFilterPresetRepository(db),
 	}
 }
