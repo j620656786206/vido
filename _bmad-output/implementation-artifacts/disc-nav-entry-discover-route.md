@@ -43,7 +43,7 @@ so that I can reach the discover/browse page without typing the URL and can see 
 - [~] Task 4 (DISCOVERED — Rule 24 ①, absorbed in this story per Alexyu 2026-06-04): Re-bless the `shell-tab-navigation` visual-regression baseline
   - [x] 4.1 Regenerated `-darwin` baselines via `pnpm run test:visual:update`: `shell-tab-navigation/{default,hover,focus}-visual-darwin.png`. Visually confirmed the new default baseline shows 媒體庫·**探索**·下載中·待解析·設定 (媒體庫 active). The update ALSO re-emitted `media-media-detail-panel/{default,focus}-visual-darwin.png` (unrelated surprise) → REVERTED (`git checkout`), NOT blessed; filed as `disc-flaky-visual-media-detail-panel` backlog (Rule 24 ③). Only the 3 `shell-tab-navigation` darwin PNGs remain changed.
   - [x] 4.1b Audit-doc line appended in `_bmad-output/audit/visual-baseline-19-4.md` (`shell-tab-navigation` row → "darwin re-blessed 2026-06-04 … `-linux` pending CI").
-  - [ ] 4.2 **UX (Sally) gallery review of `/test/gallery`** — MANDATED before the baseline is committed (`tests/visual/README.md` point 4). ⏳ HANDOFF: run the `ux-designer` (Sally) agent. Rebaseline must be its OWN commit + `requires-manual-review` label.
+  - [x] 4.2 **UX (Sally) gallery review** — ✅ APPROVED 2026-06-04 (Sally / ux-designer). Reviewed all 3 darwin states (default/hover/focus) against `Component/TabActive (TboA7)` + `TabInactive (j98G4)`: 探索 integrates faithfully — consistent font/weight/color tokens/gap, correct active(白字+藍底線)/inactive(muted) treatments, 2nd-position browse-IA grouping, no layout drift. Recorded on PR #28; `requires-manual-review` label removed.
   - [ ] 4.3 `-linux` re-bless via CI (delete-stale `-linux` → incremental bootstrap path 2, or the visual-regression.yml rebless flow) after the darwin/Sally commit lands.
 
 ## Dev Notes
@@ -114,7 +114,9 @@ claude-opus-4-8[1m] (Amelia / BMM dev-story workflow)
 - One data-driven entry added to `TABS` in `TabNavigation.tsx` (2nd position, after 媒體庫). Render loop, `Link`, active styling, and `data-testid` are unchanged — the `tab-探索` element and its active behavior fall out of the existing map. `matchPaths: ['/discover']` lights up on `/discover` and `/discover?…` (query string isn't part of `pathname`). Shared desktop+mobile nav (no separate mobile component) → one edit covers both.
 - Reuse / Rule 21: reuses `Component/TabActive (TboA7)` + `Component/TabInactive (j98G4)` — no new `.pen` node, no `ux-design.pen` edit, so the CLAUDE.md screenshot workflow does not apply.
 
-**🎨 UX Verification (dev Step 9):** the 探索 entry reuses `Component/TabActive (TboA7)` + `Component/TabInactive (j98G4)` (no new `.pen` node). Regenerated darwin baseline visually verified: nav reads 媒體庫·探索·下載中·待解析·設定, active-tab styling intact. The MANDATED **UX (Sally) gallery review** (`tests/visual/README.md` point 4) is NOT yet done — handed off (Task 4.2) before the baseline commit.
+**🎨 UX Verification (dev Step 9):** the 探索 entry reuses `Component/TabActive (TboA7)` + `Component/TabInactive (j98G4)` (no new `.pen` node). Regenerated darwin baseline visually verified: nav reads 媒體庫·探索·下載中·待解析·設定, active-tab styling intact.
+
+**🎨 UX (Sally) sign-off — APPROVED 2026-06-04:** reviewed the 3 regenerated darwin gallery renders (default/hover/focus). 探索 is faithful to TabActive/TabInactive design intent — identical typography/color-token/spacing to the 4 sibling tabs, correct active (white + blue underline) and inactive (muted) states, no layout break or overflow, "探索" is the correct zh-TW Discover term, 2nd-position placement matches browse-IA grouping. No drift. "First-Sally-approved web rendering" per `tests/visual/README.md` point 4. Approved on PR #28; `requires-manual-review` removed → merge unblocked. `-linux` rebless still delegated to CI (Task 4.3).
 
 **🔍 Discovery Triage (Rule 24):**
 
@@ -145,3 +147,4 @@ _Pending (Task 4.3):_ `shell-tab-navigation/{default,hover,focus}-visual-linux.p
 | 2026-06-04 | Discovery (Rule 24 ①): 探索 tab changes the `shell-tab-navigation` visual baseline → Task 4 filed |
 | 2026-06-04 | Task 4.1 (Rule 24 ① absorbed): regenerated `shell-tab-navigation` darwin baselines (3 PNGs) + audit-doc line. Reverted unrelated `media-media-detail-panel` darwin re-emit (flaky, not blessed) → filed `disc-flaky-visual-media-detail-panel` backlog (Rule 24 ③). Sally review + separate rebless commit + `-linux` CI rebless still pending (Task 4.2/4.3) |
 | 2026-06-04 | Go full-regression gate (`pnpm nx test api`) PASS — no Go changes, no regressions |
+| 2026-06-04 | Task 4.2: UX (Sally) gallery review APPROVED — darwin baselines blessed; `requires-manual-review` removed on PR #28 (merge unblocked); `-linux` rebless still via CI (Task 4.3) |
