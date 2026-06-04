@@ -42,11 +42,18 @@ export function PresetChips({ onApplyPreset, className }: PresetChipsProps) {
   const deletePreset = useDeleteFilterPreset();
   const [pendingDelete, setPendingDelete] = useState<FilterPreset | null>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Set when a long-press fires so the synthesized click that follows touchend
+  // is swallowed instead of also applying the preset (Task 3.4).
+  const didLongPress = useRef(false);
 
   if (!presets || presets.length === 0) return null;
 
   const startLongPress = (preset: FilterPreset) => {
-    longPressTimer.current = setTimeout(() => setPendingDelete(preset), LONG_PRESS_MS);
+    didLongPress.current = false;
+    longPressTimer.current = setTimeout(() => {
+      didLongPress.current = true;
+      setPendingDelete(preset);
+    }, LONG_PRESS_MS);
   };
   const cancelLongPress = () => {
     if (longPressTimer.current) {
@@ -75,7 +82,16 @@ export function PresetChips({ onApplyPreset, className }: PresetChipsProps) {
           <button
             key={preset.id}
             data-testid={`preset-chip-${preset.id}`}
-            onClick={() => onApplyPreset(parsePresetFilters(preset))}
+            onClick={() => {
+              // A long-press already opened the delete dialog; touchend still
+              // synthesizes this click — swallow it so we don't apply the preset
+              // underneath the dialog (Task 3.4).
+              if (didLongPress.current) {
+                didLongPress.current = false;
+                return;
+              }
+              onApplyPreset(parsePresetFilters(preset));
+            }}
             onContextMenu={(e) => {
               e.preventDefault();
               setPendingDelete(preset);

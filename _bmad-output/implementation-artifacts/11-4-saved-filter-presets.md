@@ -1,6 +1,6 @@
 # Story 11.4: Saved Filter Presets
 
-Status: review
+Status: done
 
 ## Story
 
@@ -75,6 +75,8 @@ The API boundary applies `snakeToCamel` (response) / `camelToSnake` (request) re
 
 📎 Contract Stamps: NONE (no `[@contract-v*]` stamps in this story; upstream Story 11-2 is pre-Rule-20 / implicit v0, so ack is not required per the forward-only retrofit).
 
+CR follow-up (LOW, deferred — not blocking): max-20 cap has a benign TOCTOU between `Count()`/`Create()` (single-user NAS); no size cap on the `filters` JSON string; `sort_order` can collide after a mid-list delete (resolved by `created_at` tiebreak); `useFilterPresets` query errors render an empty preset row silently. Logged here as known minor items.
+
 Error-code prefix note: handler uses resource-scoped codes `FILTER_PRESET_{NOT_FOUND,VALIDATION_FAILED,LIMIT_REACHED}`, mirroring the Story 10.3 `EXPLORE_BLOCK_*` precedent. Per that precedent these resource-level codes are NOT registered in the project-context Rule 7 authoritative prefix set (which tracks external integration *sources* like TMDB/SUBTITLE/LIBRARY), so no Rule 7 list/CR-sync change is made.
 
 ### File List
@@ -90,15 +92,17 @@ Error-code prefix note: handler uses resource-scoped codes `FILTER_PRESET_{NOT_F
 - `apps/api/internal/repository/registry.go` (modified — register FilterPresets repo)
 - `apps/api/cmd/api/main.go` (modified — DI + route registration)
 - `apps/web/src/services/filterPresetService.ts` (new)
+- `apps/web/src/services/filterPresetService.spec.ts` (new — caseTransform-safe service tests)
 - `apps/web/src/hooks/useFilterPresets.ts` (new — TanStack Query list + create/delete mutations)
 - `apps/web/src/components/search/SavePresetDialog.tsx` (new — Screen AS-3)
 - `apps/web/src/components/search/SavePresetDialog.spec.tsx` (new)
-- `apps/web/src/components/search/PresetChips.tsx` (new — Screen AS-1 presetBar)
-- `apps/web/src/components/search/PresetChips.spec.tsx` (new)
+- `apps/web/src/components/search/PresetChips.tsx` (new — Screen AS-1 presetBar; CR fix: swallow synthesized click after long-press)
+- `apps/web/src/components/search/PresetChips.spec.tsx` (new; CR fix: +2 touch long-press/tap tests)
 - `apps/web/src/components/search/FilterChipBar.tsx` (modified — optional `onSavePreset` 儲存篩選 button)
 - `apps/web/src/components/search/FilterChipBar.spec.tsx` (modified — save-button tests)
 - `apps/web/src/routes/discover.tsx` (modified — wire PresetChips + SavePresetDialog)
 - `tests/e2e/saved-filter-presets.spec.ts` (new — preset journey + persistence)
+- `tests/e2e/saved-filter-presets.api.spec.ts` (new — API + service-boundary coverage)
 
 ### UX Verification (Step 9)
 
@@ -124,3 +128,4 @@ Compared implementation against `ux-design.pen` Screen AS-3 (Save Filter Preset 
 | 2026-06-04 | Task 2 — Frontend save dialog: `filterPresetService` (filters as caseTransform-safe JSON string), `useFilterPresets` TanStack Query hooks, `SavePresetDialog` (Screen AS-3, name required ≤30), optional 儲存篩選 button in `FilterChipBar`. 14 web tests. |
 | 2026-06-04 | Task 3 — Frontend preset chips: `PresetChips` (Screen AS-1 presetBar) — click applies saved filters via `useFilterState`, right-click/long-press → delete confirmation; wired into `discover.tsx`. 7 web tests. |
 | 2026-06-04 | Task 4 — Tests + UX verify: full backend suite green (no regressions), full web suite 1952 pass, ESLint (Rule 21) + prettier + gofmt clean, 3 E2E preset-journey tests pass (incl. persistence-across-reload). UX Verification PASS vs Screen AS-3 + AS-1 presetBar. |
+| 2026-06-04 | CR fixes (adversarial review) — **M1:** `PresetChips` long-press no longer also applies the preset; touchend's synthesized click is swallowed via a `didLongPress` ref (Task 3.4). +2 touch tests (long-press swallow / short-tap apply) → `PresetChips.spec.tsx` 9 pass. **M2:** File List completed — added `filterPresetService.spec.ts` and `saved-filter-presets.api.spec.ts` (committed but previously undocumented). |

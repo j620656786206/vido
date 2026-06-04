@@ -580,7 +580,7 @@ development_status:
   11-1-multi-dimensional-filter-engine: done   # Filter engine + compound sort + watch providers (P2-010, P2-012) — NO design dependency
   11-2-persistent-filter-chip-ui: done                  # Chip UI + filter panel + mobile bottom sheet (P2-011) — ✅ UNBLOCKED by 11-UX; CR 2026-06-03 (0H/3M/4L, all M+1L fixed)
   11-3-instant-search-zh-tw-priority: done              # Debounced suggestions + dual-language + zh-TW boost (P2-013, P2-014) — ✅ UNBLOCKED by 11-UX; CR 2026-06-04 (0H/2M/4L, all fixed; backend + 99 web tests green)
-  11-4-saved-filter-presets: review               # Save/load/delete filter presets in DB (P2-015) — ✅ UNBLOCKED by 11-UX; impl 2026-06-04 (21 Go + 21 web + 3 E2E green)
+  11-4-saved-filter-presets: done                 # Save/load/delete filter presets in DB (P2-015) — ✅ UNBLOCKED by 11-UX; impl 2026-06-04 (21 Go + 21 web + 3 E2E green); CR 2026-06-04 (M1 long-press click-through + M2 File List fixed, +2 touch tests)
   disc-nav-entry-discover-route: backlog                 # Discovered by Story 11-2 (Rule 24 ③): /discover route has no AppShell top-nav entry (nav = logo+search+settings only). Non-blocking (reachable by URL). Add a 探索 nav link when nav IA is decided.
   epic-11-retrospective: optional
 

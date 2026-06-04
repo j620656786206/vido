@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PresetChips } from './PresetChips';
 import type { FilterPreset } from '../../services/filterPresetService';
@@ -85,6 +85,43 @@ describe('PresetChips', () => {
     fireEvent.click(screen.getByTestId('preset-delete-cancel'));
     expect(deleteMutateAsync).not.toHaveBeenCalled();
     expect(screen.queryByTestId('preset-delete-dialog')).not.toBeInTheDocument();
+  });
+
+  it('long-press opens delete dialog without applying the preset (AC #4, Task 3.4)', () => {
+    vi.useFakeTimers();
+    try {
+      const onApplyPreset = vi.fn();
+      render(<PresetChips onApplyPreset={onApplyPreset} />);
+      const chip = screen.getByTestId('preset-chip-p1');
+      fireEvent.touchStart(chip);
+      act(() => vi.advanceTimersByTime(500)); // long-press threshold
+      fireEvent.touchEnd(chip);
+      // The browser synthesizes a click after touchend — it must be swallowed.
+      fireEvent.click(chip);
+      expect(screen.getByTestId('preset-delete-dialog')).toBeInTheDocument();
+      expect(onApplyPreset).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('a short tap still applies the preset on touch devices (AC #3)', () => {
+    vi.useFakeTimers();
+    try {
+      const onApplyPreset = vi.fn();
+      render(<PresetChips onApplyPreset={onApplyPreset} />);
+      const chip = screen.getByTestId('preset-chip-p1');
+      fireEvent.touchStart(chip);
+      act(() => vi.advanceTimersByTime(100)); // below the long-press threshold
+      fireEvent.touchEnd(chip);
+      fireEvent.click(chip);
+      expect(onApplyPreset).toHaveBeenCalledWith(
+        expect.objectContaining({ region: 'KR', yearGte: 2024 })
+      );
+      expect(screen.queryByTestId('preset-delete-dialog')).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('falls back gracefully when a preset has corrupt filter JSON', () => {
