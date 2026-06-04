@@ -174,7 +174,7 @@ CI first-run decision tree (the implementer-facing form of this decision).
 | `metadata-editor-genre-selector` | `metadata-editor/GenreSelector.tsx` | `L1NP6` | default, hover, focus | Component/GenreTag — 2 selected |
 | `search-search-bar` | `search/SearchBar.tsx` | `6MxLT` | default, hover, focus | Component/SearchInput — `focus` re-blessed 19-4b Task 0 (sentinel+Tab → `:focus-visible` paints) |
 | `search-media-type-tabs` | `search/MediaTypeTabs.tsx` | `TboA7` (+`j98G4`) | default, hover, focus | TabActive/TabInactive — `movie` active, counts |
-| `shell-tab-navigation` | `shell/TabNavigation.tsx` | `TboA7` (+`j98G4`) | default, hover, focus | TabActive/TabInactive — all 3 baselines re-blessed 19-4b Task 0 (nested memory `RouterProvider` with `routePath: '/library'` ⇒ active tab now paints) |
+| `shell-tab-navigation` | `shell/TabNavigation.tsx` | `TboA7` (+`j98G4`) | default, hover, focus | TabActive/TabInactive — all 3 baselines re-blessed 19-4b Task 0 (nested memory `RouterProvider` with `routePath: '/library'` ⇒ active tab now paints); darwin re-blessed 2026-06-04 (disc-nav-entry-discover-route — added 探索 `/discover` tab, 2nd position: 媒體庫·探索·下載中·待解析·設定). `-linux` re-bless pending CI. |
 | `homepage-explore-block-skeleton` | `homepage/ExploreBlockSkeleton.tsx` | `utility` | default | 6 cards |
 
 **Coverage:** all 12 Category-A components (the canonical `.pen`-mapped set) + 13 high-value
