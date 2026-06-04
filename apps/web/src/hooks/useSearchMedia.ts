@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { tmdbService } from '../services/tmdb';
-import type { MovieSearchResponse, TVShowSearchResponse } from '../types/tmdb';
+import type { MovieSearchResponse, TVShowSearchResponse, UnifiedSearchResult } from '../types/tmdb';
 
 export const tmdbKeys = {
   all: ['tmdb'] as const,
@@ -8,6 +8,7 @@ export const tmdbKeys = {
   searchMovies: (query: string, page: number) =>
     [...tmdbKeys.searches(), 'movies', query, page] as const,
   searchTV: (query: string, page: number) => [...tmdbKeys.searches(), 'tv', query, page] as const,
+  instant: (query: string) => [...tmdbKeys.searches(), 'instant', query] as const,
 };
 
 export function useSearchMovies(query: string, page = 1) {
@@ -27,5 +28,18 @@ export function useSearchTVShows(query: string, page = 1) {
     enabled: query.length >= 2,
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 30 * 60 * 1000, // 30 minutes (formerly cacheTime)
+  });
+}
+
+// Story 11-3 — unified instant search powering the suggestions dropdown.
+// Gated on query.length >= 2 (AC #1). The caller is responsible for passing an
+// already-debounced query so we don't fire a request per keystroke.
+export function useInstantSearch(query: string) {
+  return useQuery<UnifiedSearchResult, Error>({
+    queryKey: tmdbKeys.instant(query),
+    queryFn: () => tmdbService.unifiedSearch(query),
+    enabled: query.length >= 2,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
   });
 }

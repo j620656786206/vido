@@ -34,6 +34,28 @@ export interface SearchResponse<T> {
 export type MovieSearchResponse = SearchResponse<Movie>;
 export type TVShowSearchResponse = SearchResponse<TVShow>;
 
+// Story 11-3 — a person (cast/crew) in the unified instant-search dropdown (人物).
+export interface Person {
+  id: number;
+  name: string;
+  originalName: string;
+  profilePath: string | null;
+  knownForDepartment: string;
+  popularity: number;
+  gender: number;
+}
+
+// Story 11-3 — the unified instant-search payload: three categories rendered as
+// separate sections (電影 / 影集 / 人物). Backend keys are snake_case and
+// transformed to camelCase at the API boundary (Rule 18), so `tv_shows` → `tvShows`.
+export interface UnifiedSearchResult {
+  query: string;
+  page: number;
+  movies: Movie[];
+  tvShows: TVShow[];
+  people: Person[];
+}
+
 export interface ApiResponse<T> {
   success: boolean;
   data?: T;

@@ -6,6 +6,7 @@ import type {
   TVShowDetails,
   Credits,
   VideosResponse,
+  UnifiedSearchResult,
 } from '../types/tmdb';
 import { snakeToCamel } from '../utils/caseTransform';
 
@@ -104,6 +105,13 @@ export const tmdbService = {
 
   async discoverTVShows(params: URLSearchParams): Promise<TVShowSearchResponse> {
     return fetchApi<TVShowSearchResponse>(`/tmdb/discover/tv?${params.toString()}`);
+  },
+
+  // Story 11-3 — unified instant search: dual-language (zh-TW + en) movies, TV,
+  // and people in one call, with zh-TW title matches boosted server-side.
+  async unifiedSearch(query: string, page = 1): Promise<UnifiedSearchResult> {
+    const params = new URLSearchParams({ q: query, page: String(page) });
+    return fetchApi<UnifiedSearchResult>(`/search?${params}`);
   },
 };
 

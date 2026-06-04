@@ -450,6 +450,8 @@ func main() {
 	mediaHandler := handlers.NewMediaHandler(mediaService)
 	availabilityHandler := handlers.NewAvailabilityHandler(availabilityService) // Story 10-4
 	tmdbHandler := handlers.NewTMDbHandler(tmdbService)
+	searchService := services.NewSearchService(tmdbService.SearchClient()) // Story 11-3 — unified dual-language instant search
+	searchHandler := handlers.NewSearchHandler(searchService)
 	parserHandler := handlers.NewParserHandler(parserService)
 	metadataHandler := handlers.NewMetadataHandler(metadataService)
 	learningHandler := handlers.NewLearningHandler(learningService)
@@ -524,6 +526,7 @@ func main() {
 		mediaHandler.RegisterRoutes(apiV1)
 		availabilityHandler.RegisterRoutes(apiV1) // /api/v1/media/check-owned (Story 10-4)
 		tmdbHandler.RegisterRoutes(apiV1)
+		searchHandler.RegisterRoutes(apiV1) // /api/v1/search — unified instant search (Story 11-3)
 		parserHandler.RegisterRoutes(apiV1)
 		metadataHandler.RegisterRoutes(apiV1)
 		learningHandler.RegisterRoutes(apiV1)

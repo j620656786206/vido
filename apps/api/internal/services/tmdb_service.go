@@ -99,6 +99,19 @@ func (s *TMDbService) VideosProvider() TMDbVideosProvider {
 	return s.client
 }
 
+// SearchClient exposes the underlying TMDb client as a SearchTMDbClient for the
+// unified instant-search service (Story 11-3). The unified search must query
+// both zh-TW and en simultaneously, so it talks to the raw client (which has
+// the *WithLanguage + SearchPeople methods) rather than the fallback/cache
+// layers. Returns nil for test-only services built via
+// NewTMDbServiceWithCacheService (s.client is nil there).
+func (s *TMDbService) SearchClient() SearchTMDbClient {
+	if c, ok := s.client.(SearchTMDbClient); ok {
+		return c
+	}
+	return nil
+}
+
 // NewTMDbServiceWithCacheService creates a TMDb service with a custom cache service.
 // Used by tests with mock dependencies. Content filter uses the real clock — pass
 // a ContentFilterService via the dedicated setter if you need a fixed clock.

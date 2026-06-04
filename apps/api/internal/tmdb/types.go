@@ -24,16 +24,16 @@ type Movie struct {
 // This includes additional fields not present in search results
 type MovieDetails struct {
 	Movie
-	Budget              int64     `json:"budget" example:"63000000"`
-	Revenue             int64     `json:"revenue" example:"100853753"`
-	Runtime             int       `json:"runtime" example:"139"`
-	Status              string    `json:"status" example:"Released"`
-	Tagline             string    `json:"tagline" example:"Mischief. Mayhem. Soap."`
-	Genres              []Genre   `json:"genres"`
-	ProductionCountries []Country `json:"production_countries"`
+	Budget              int64      `json:"budget" example:"63000000"`
+	Revenue             int64      `json:"revenue" example:"100853753"`
+	Runtime             int        `json:"runtime" example:"139"`
+	Status              string     `json:"status" example:"Released"`
+	Tagline             string     `json:"tagline" example:"Mischief. Mayhem. Soap."`
+	Genres              []Genre    `json:"genres"`
+	ProductionCountries []Country  `json:"production_countries"`
 	SpokenLanguages     []Language `json:"spoken_languages"`
-	ImdbID              string    `json:"imdb_id" example:"tt0137523"`
-	Homepage            *string   `json:"homepage"`
+	ImdbID              string     `json:"imdb_id" example:"tt0137523"`
+	Homepage            *string    `json:"homepage"`
 }
 
 // TVShow represents a TV show from TMDb API
@@ -56,20 +56,20 @@ type TVShow struct {
 // TVShowDetails represents detailed TV show information from TMDb API
 type TVShowDetails struct {
 	TVShow
-	CreatedBy           []Creator  `json:"created_by"`
-	EpisodeRunTime      []int      `json:"episode_run_time" example:"45,47"`
-	Genres              []Genre    `json:"genres"`
-	Homepage            *string    `json:"homepage"`
-	InProduction        bool       `json:"in_production" example:"false"`
-	Languages           []string   `json:"languages" example:"en"`
-	LastAirDate         string     `json:"last_air_date" example:"2013-09-29"`
-	NumberOfEpisodes    int        `json:"number_of_episodes" example:"62"`
-	NumberOfSeasons     int        `json:"number_of_seasons" example:"5"`
-	ProductionCountries []Country  `json:"production_countries"`
-	Seasons             []Season   `json:"seasons"`
-	Status              string     `json:"status" example:"Ended"`
-	Tagline             string     `json:"tagline" example:"Change the equation."`
-	Type                string     `json:"type" example:"Scripted"`
+	CreatedBy           []Creator `json:"created_by"`
+	EpisodeRunTime      []int     `json:"episode_run_time" example:"45,47"`
+	Genres              []Genre   `json:"genres"`
+	Homepage            *string   `json:"homepage"`
+	InProduction        bool      `json:"in_production" example:"false"`
+	Languages           []string  `json:"languages" example:"en"`
+	LastAirDate         string    `json:"last_air_date" example:"2013-09-29"`
+	NumberOfEpisodes    int       `json:"number_of_episodes" example:"62"`
+	NumberOfSeasons     int       `json:"number_of_seasons" example:"5"`
+	ProductionCountries []Country `json:"production_countries"`
+	Seasons             []Season  `json:"seasons"`
+	Status              string    `json:"status" example:"Ended"`
+	Tagline             string    `json:"tagline" example:"Change the equation."`
+	Type                string    `json:"type" example:"Scripted"`
 }
 
 // SearchResultMovies represents paginated movie search results from TMDb API
@@ -84,6 +84,26 @@ type SearchResultMovies struct {
 type SearchResultTVShows struct {
 	Page         int      `json:"page" example:"1"`
 	Results      []TVShow `json:"results"`
+	TotalPages   int      `json:"total_pages" example:"500"`
+	TotalResults int      `json:"total_results" example:"10000"`
+}
+
+// Person represents a person (cast/crew) from the TMDb /search/person endpoint.
+// Story 11-3 — surfaced as the 人物 category in the unified instant-search dropdown.
+type Person struct {
+	ID                 int     `json:"id" example:"5655"`
+	Name               string  `json:"name" example:"Makoto Shinkai"`
+	OriginalName       string  `json:"original_name" example:"新海誠"`
+	ProfilePath        *string `json:"profile_path" example:"/9quoYjK4kf6OW5Qbz9JmCDPD2dG.jpg"`
+	KnownForDepartment string  `json:"known_for_department" example:"Directing"`
+	Popularity         float64 `json:"popularity" example:"12.34"`
+	Gender             int     `json:"gender" example:"2"`
+}
+
+// SearchResultPeople represents paginated person search results from TMDb API.
+type SearchResultPeople struct {
+	Page         int      `json:"page" example:"1"`
+	Results      []Person `json:"results"`
 	TotalPages   int      `json:"total_pages" example:"500"`
 	TotalResults int      `json:"total_results" example:"10000"`
 }
@@ -183,8 +203,8 @@ type VideosResponse struct {
 
 // FindByExternalIDResponse represents the response from /find/{external_id}
 type FindByExternalIDResponse struct {
-	MovieResults  []Movie  `json:"movie_results"`
-	TVResults     []TVShow `json:"tv_results"`
+	MovieResults []Movie  `json:"movie_results"`
+	TVResults    []TVShow `json:"tv_results"`
 }
 
 // DiscoverParams holds the parameters for TMDb /discover/{movie,tv} endpoints.
@@ -227,9 +247,9 @@ type DiscoverParams struct {
 // shapes rather than this wrapper. Kept here to satisfy the story's Task 1.5
 // type-documentation requirement and in case a future endpoint merges them.
 type TrendingResult struct {
-	MediaType string      `json:"media_type"`
-	Movies    []Movie     `json:"movies,omitempty"`
-	TVShows   []TVShow    `json:"tv_shows,omitempty"`
+	MediaType string   `json:"media_type"`
+	Movies    []Movie  `json:"movies,omitempty"`
+	TVShows   []TVShow `json:"tv_shows,omitempty"`
 }
 
 // ErrorResponse represents a TMDb API error response
