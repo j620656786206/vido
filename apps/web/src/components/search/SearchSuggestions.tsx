@@ -12,6 +12,14 @@ export interface NavigableItem {
   id: number;
 }
 
+// searchOptionId returns the DOM id for the navigable option at a flat index
+// (movies first, then TV). Shared by the listbox options (the `id` attribute)
+// and the combobox input (`aria-activedescendant`) so screen readers announce
+// the keyboard-highlighted row.
+export function searchOptionId(index: number): string {
+  return `search-option-${index}`;
+}
+
 // buildNavigableItems flattens the movie + TV results into the order they are
 // rendered (movies first, then TV). Shared by the parent (for arrow-key state)
 // and exercised directly in tests.
@@ -75,9 +83,6 @@ export function SearchSuggestions({
 
   return (
     <div
-      role="listbox"
-      id={listboxId}
-      aria-label="搜尋建議"
       className={cn(
         'overflow-hidden bg-[var(--bg-secondary)]',
         floating
@@ -106,48 +111,62 @@ export function SearchSuggestions({
 
       {!isLoading && hasResults && (
         <>
-          {movies.length > 0 && (
-            <Section label="電影">
-              {movies.map((movie, i) => (
-                <MediaRow
-                  key={`movie-${movie.id}`}
-                  title={movie.title}
-                  originalTitle={movie.originalTitle}
-                  year={yearOf(movie.releaseDate)}
-                  rating={movie.voteAverage}
-                  posterPath={movie.posterPath}
-                  active={activeIndex === i}
-                  onSelect={() => onSelect({ type: 'movie', id: movie.id })}
-                  onHover={() => onActiveIndexChange(i)}
-                />
-              ))}
-            </Section>
+          {/* Only the keyboard-navigable options (movies + TV) live inside the
+              listbox so its descendants are valid `option`/`group` nodes that
+              `aria-activedescendant` can reference. */}
+          {(movies.length > 0 || tvShows.length > 0) && (
+            <div role="listbox" id={listboxId} aria-label="搜尋建議">
+              {movies.length > 0 && (
+                <Section label="電影">
+                  {movies.map((movie, i) => (
+                    <MediaRow
+                      key={`movie-${movie.id}`}
+                      id={searchOptionId(i)}
+                      title={movie.title}
+                      originalTitle={movie.originalTitle}
+                      year={yearOf(movie.releaseDate)}
+                      rating={movie.voteAverage}
+                      posterPath={movie.posterPath}
+                      active={activeIndex === i}
+                      onSelect={() => onSelect({ type: 'movie', id: movie.id })}
+                      onHover={() => onActiveIndexChange(i)}
+                    />
+                  ))}
+                </Section>
+              )}
+
+              {tvShows.length > 0 && (
+                <Section label="影集">
+                  {tvShows.map((show, i) => (
+                    <MediaRow
+                      key={`tv-${show.id}`}
+                      id={searchOptionId(movies.length + i)}
+                      title={show.name}
+                      originalTitle={show.originalName}
+                      year={yearOf(show.firstAirDate)}
+                      rating={show.voteAverage}
+                      posterPath={show.posterPath}
+                      active={activeIndex === movies.length + i}
+                      onSelect={() => onSelect({ type: 'tv', id: show.id })}
+                      onHover={() => onActiveIndexChange(movies.length + i)}
+                    />
+                  ))}
+                </Section>
+              )}
+            </div>
           )}
 
-          {tvShows.length > 0 && (
-            <Section label="影集">
-              {tvShows.map((show, i) => (
-                <MediaRow
-                  key={`tv-${show.id}`}
-                  title={show.name}
-                  originalTitle={show.originalName}
-                  year={yearOf(show.firstAirDate)}
-                  rating={show.voteAverage}
-                  posterPath={show.posterPath}
-                  active={activeIndex === movies.length + i}
-                  onSelect={() => onSelect({ type: 'tv', id: show.id })}
-                  onHover={() => onActiveIndexChange(movies.length + i)}
-                />
-              ))}
-            </Section>
-          )}
-
+          {/* People are not keyboard-navigable (no person detail page) so they
+              render outside the listbox as a plain, non-option section. */}
           {people.length > 0 && (
-            <Section label="人物">
+            <div className="py-2">
+              <div className="px-4 py-1 text-xs font-medium tracking-wide text-[var(--text-muted)]">
+                人物
+              </div>
               {people.map((person) => (
                 <PersonRow key={`person-${person.id}`} person={person} />
               ))}
-            </Section>
+            </div>
           )}
 
           <button
@@ -166,8 +185,11 @@ export function SearchSuggestions({
 
 function Section({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="py-2">
-      <div className="px-4 py-1 text-xs font-medium tracking-wide text-[var(--text-muted)]">
+    <div role="group" aria-label={label} className="py-2">
+      <div
+        aria-hidden="true"
+        className="px-4 py-1 text-xs font-medium tracking-wide text-[var(--text-muted)]"
+      >
         {label}
       </div>
       {children}
@@ -176,6 +198,7 @@ function Section({ label, children }: { label: string; children: React.ReactNode
 }
 
 interface MediaRowProps {
+  id: string;
   title: string;
   originalTitle: string;
   year: string | null;
@@ -187,6 +210,7 @@ interface MediaRowProps {
 }
 
 function MediaRow({
+  id,
   title,
   originalTitle,
   year,
@@ -207,6 +231,7 @@ function MediaRow({
   return (
     <button
       type="button"
+      id={id}
       role="option"
       aria-selected={active}
       onClick={onSelect}
@@ -248,7 +273,10 @@ function PersonRow({ person }: { person: Person }) {
     .join(' · ');
 
   return (
-    <div className="flex items-center gap-3 px-4 py-2" data-testid="search-suggestion-person">
+    <div
+      className="flex cursor-default items-center gap-3 px-4 py-2"
+      data-testid="search-suggestion-person"
+    >
       <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--bg-tertiary)] text-[var(--text-muted)]">
         {profile ? (
           <img src={profile} alt="" className="h-full w-full object-cover" loading="lazy" />

@@ -122,6 +122,20 @@ describe('SearchSuggestions', () => {
     expect(options[1]).toHaveAttribute('aria-selected', 'true'); // tv
   });
 
+  it('gives each option the searchOptionId id and keeps options inside the listbox', () => {
+    renderSuggestions();
+    const options = screen.getAllByRole('option'); // movies + TV only (people are non-options)
+    expect(options).toHaveLength(2);
+    expect(options[0]).toHaveAttribute('id', 'search-option-0'); // movie
+    expect(options[1]).toHaveAttribute('id', 'search-option-1'); // tv
+    // Every option is a descendant of the listbox so aria-activedescendant resolves.
+    const listbox = screen.getByRole('listbox');
+    options.forEach((opt) => expect(listbox).toContainElement(opt));
+    // The person row is rendered but is NOT an option inside the listbox.
+    const person = screen.getByTestId('search-suggestion-person');
+    expect(listbox).not.toContainElement(person);
+  });
+
   it('shows the loading state', () => {
     renderSuggestions({ isLoading: true, result: undefined });
     expect(screen.getByTestId('search-suggestions-loading')).toBeInTheDocument();

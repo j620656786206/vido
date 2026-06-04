@@ -1,6 +1,6 @@
 # Story 11.3: Instant Search with zh-TW Priority
 
-Status: review
+Status: done
 
 ## Story
 
@@ -125,6 +125,19 @@ claude-opus-4-8[1m] (Amelia — Dev Agent, dev-story workflow)
 - `apps/web/src/components/shell/AppShell.tsx` (M) — use `InstantSearchBar` desktop + mobile full-screen overlay
 - `apps/web/src/components/shell/AppShell.spec.tsx` (M) — updated for Enter-submit + mobile overlay
 
+**E2E (Playwright)**
+- `tests/e2e/instant-search.spec.ts` (A) — desktop dropdown journey (3 sections, click-nav, Enter→/search, arrow+Enter) + mobile full-screen view
+
+**CR fixes (2026-06-04, Senior Developer Review — AI)**
+- `apps/api/internal/services/search_service.go` (M) — people search now uses `SearchPeopleWithLanguage(zh-TW)` for zh-TW priority parity with movies/TV (narrow `SearchTMDbClient` interface updated)
+- `apps/api/internal/services/search_service_test.go` (M) — stub updated to `SearchPeopleWithLanguage`
+- `apps/api/cmd/api/main.go` (M) — fail-fast at startup if `SearchClient()` is nil (avoids per-request nil-panic)
+- `apps/web/src/hooks/useSearchMedia.ts` (M) — `placeholderData: keepPreviousData` on `useInstantSearch` (no dropdown flicker between queries)
+- `apps/web/src/components/search/SearchSuggestions.tsx` (M) — combobox a11y: options carry `searchOptionId` ids inside a listbox holding only `option`/`group` nodes; people render outside the listbox; person row `cursor-default`
+- `apps/web/src/components/search/InstantSearchBar.tsx` (M) — `aria-activedescendant` points the combobox at the highlighted option
+- `apps/web/src/components/search/SearchSuggestions.spec.tsx` (M) — option-id + listbox-containment assertions
+- `apps/web/src/components/search/InstantSearchBar.spec.tsx` (M) — `aria-activedescendant` assertions on arrow-key nav
+
 ### Change Log
 
 | Date | Change |
@@ -133,3 +146,5 @@ claude-opus-4-8[1m] (Amelia — Dev Agent, dev-story workflow)
 | 2026-06-04 | Task 3–4 (frontend): `SearchSuggestions` dropdown (電影/影集/人物, poster+title+year·rating, people w/ department), `InstantSearchBar` (300ms debounce, arrow+Enter keyboard nav, clear/Escape, desktop inline + mobile full-screen overlay); integrated into AppShell. `useInstantSearch` hook + `unifiedSearch` service. |
 | 2026-06-04 | Task 5 (tests): backend merge/boost/dedup/degradation + handler + client tests; frontend debounce/keyboard/click-nav + service + backward-compat tests. Full regression green (Go all packages; web 1935 tests); `pnpm lint:all` EXIT 0. |
 | 2026-06-04 | UX fix: removed section-label icons from `SearchSuggestions` to match Screen AS-2 design. |
+| 2026-06-04 | E2E: added `tests/e2e/instant-search.spec.ts` — hermetic (mocked `/api/v1/search`) desktop dropdown + mobile full-screen coverage. |
+| 2026-06-04 | CR fixes (AI review): people search zh-TW priority; startup fail-fast for nil search client; `keepPreviousData` (no flicker); combobox a11y (`aria-activedescendant`, listbox-only-options structure, `searchOptionId`); person-row affordance. Backend + 99 web tests green; gofmt/prettier clean. |

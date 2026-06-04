@@ -16,7 +16,10 @@ import (
 type SearchTMDbClient interface {
 	SearchMoviesWithLanguage(ctx context.Context, query string, language string, page int) (*tmdb.SearchResultMovies, error)
 	SearchTVShowsWithLanguage(ctx context.Context, query string, language string, page int) (*tmdb.SearchResultTVShows, error)
-	SearchPeople(ctx context.Context, query string, page int) (*tmdb.SearchResultPeople, error)
+	// SearchPeopleWithLanguage is used (not the language-defaulting SearchPeople)
+	// so person results honor the same zh-TW priority as movies/TV instead of the
+	// client's configured default language (Story 11-3 — zh-TW priority).
+	SearchPeopleWithLanguage(ctx context.Context, query string, language string, page int) (*tmdb.SearchResultPeople, error)
 }
 
 // UnifiedSearchResult is the response payload of the unified instant-search
@@ -102,7 +105,9 @@ func (s *SearchService) Search(ctx context.Context, query string, page int) (*Un
 	})
 	run(func() { zhTV, zhTVErr = s.client.SearchTVShowsWithLanguage(ctx, query, searchPrimaryLanguage, page) })
 	run(func() { enTV, enTVErr = s.client.SearchTVShowsWithLanguage(ctx, query, searchSecondaryLanguage, page) })
-	run(func() { people, peopleErr = s.client.SearchPeople(ctx, query, page) })
+	run(func() {
+		people, peopleErr = s.client.SearchPeopleWithLanguage(ctx, query, searchPrimaryLanguage, page)
+	})
 	wg.Wait()
 
 	// Per-category degradation: log a warning for any failed call but keep going

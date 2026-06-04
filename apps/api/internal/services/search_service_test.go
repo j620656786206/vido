@@ -24,7 +24,7 @@ func (s *stubSearchClient) SearchTVShowsWithLanguage(_ context.Context, _ string
 	return s.tv(lang)
 }
 
-func (s *stubSearchClient) SearchPeople(_ context.Context, _ string, _ int) (*tmdb.SearchResultPeople, error) {
+func (s *stubSearchClient) SearchPeopleWithLanguage(_ context.Context, _ string, _ string, _ int) (*tmdb.SearchResultPeople, error) {
 	return s.people()
 }
 

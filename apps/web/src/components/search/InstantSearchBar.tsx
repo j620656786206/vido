@@ -7,7 +7,12 @@ import { useDebounce } from 'use-debounce';
 import { Search, X } from 'lucide-react';
 import { useInstantSearch } from '../../hooks/useSearchMedia';
 import { cn } from '../../lib/utils';
-import { SearchSuggestions, buildNavigableItems, type NavigableItem } from './SearchSuggestions';
+import {
+  SearchSuggestions,
+  buildNavigableItems,
+  searchOptionId,
+  type NavigableItem,
+} from './SearchSuggestions';
 
 interface InstantSearchBarProps {
   variant?: 'desktop' | 'mobile';
@@ -142,6 +147,7 @@ export function InstantSearchBar({
           role="combobox"
           aria-expanded={open}
           aria-controls="search-suggestions"
+          aria-activedescendant={open && activeIndex >= 0 ? searchOptionId(activeIndex) : undefined}
           aria-autocomplete="list"
           className={cn(
             'w-full border border-[var(--border-subtle)]/50 bg-[var(--bg-secondary)]/60 text-[var(--text-primary)] placeholder-[var(--text-muted)] transition-colors focus:border-[var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]',

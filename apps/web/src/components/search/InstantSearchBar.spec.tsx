@@ -147,7 +147,11 @@ describe('InstantSearchBar', () => {
 
     // ArrowDown highlights the first navigable (the movie), ArrowDown again the TV show.
     fireEvent.keyDown(input, { key: 'ArrowDown' });
+    // aria-activedescendant points the combobox at the highlighted option so
+    // screen readers announce it (a11y — Story 11-3 CR fix).
+    expect(input).toHaveAttribute('aria-activedescendant', 'search-option-0');
     fireEvent.keyDown(input, { key: 'ArrowDown' });
+    expect(input).toHaveAttribute('aria-activedescendant', 'search-option-1');
     fireEvent.keyDown(input, { key: 'Enter' });
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/media/tv/2'));

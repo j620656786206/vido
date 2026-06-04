@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { tmdbService } from '../services/tmdb';
 import type { MovieSearchResponse, TVShowSearchResponse, UnifiedSearchResult } from '../types/tmdb';
 
@@ -39,6 +39,9 @@ export function useInstantSearch(query: string) {
     queryKey: tmdbKeys.instant(query),
     queryFn: () => tmdbService.unifiedSearch(query),
     enabled: query.length >= 2,
+    // Keep the prior result visible while the next debounced query loads so the
+    // dropdown does not flicker back to the "搜尋中…" state on every new query.
+    placeholderData: keepPreviousData,
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 30 * 60 * 1000, // 30 minutes
   });
