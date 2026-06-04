@@ -82,7 +82,7 @@ describe('AppShell', () => {
 
   it('renders desktop search bar', async () => {
     renderWithRouter();
-    expect(await screen.findByTestId('global-search-input')).toBeInTheDocument();
+    expect(await screen.findByTestId('instant-search-input')).toBeInTheDocument();
   });
 
   it('renders settings link', async () => {
@@ -107,11 +107,11 @@ describe('AppShell', () => {
 
   it('shows search placeholder text', async () => {
     renderWithRouter();
-    const searchInput = await screen.findByTestId('global-search-input');
+    const searchInput = await screen.findByTestId('instant-search-input');
     expect(searchInput).toHaveAttribute('placeholder', '搜尋媒體庫...');
   });
 
-  it('[P0] navigates to /search with query on form submit', async () => {
+  it('[P0] navigates to /search with query on Enter', async () => {
     const router = createTestRouter('/');
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
@@ -126,11 +126,11 @@ describe('AppShell', () => {
     );
 
     // GIVEN: Search input is available
-    const searchInput = await screen.findByTestId('global-search-input');
+    const searchInput = await screen.findByTestId('instant-search-input');
 
-    // WHEN: User types a query and submits the form
+    // WHEN: User types a query and presses Enter
     fireEvent.change(searchInput, { target: { value: '蜘蛛人' } });
-    fireEvent.submit(screen.getByTestId('search-form'));
+    fireEvent.keyDown(searchInput, { key: 'Enter' });
 
     // THEN: Router navigates to /search with query param
     await vi.waitFor(() => {
@@ -154,34 +154,34 @@ describe('AppShell', () => {
     );
 
     // GIVEN: Search input is empty
-    const searchInput = await screen.findByTestId('global-search-input');
+    const searchInput = await screen.findByTestId('instant-search-input');
     expect(searchInput).toHaveValue('');
 
-    // WHEN: User submits the form without typing
-    fireEvent.submit(screen.getByTestId('search-form'));
+    // WHEN: User presses Enter without typing
+    fireEvent.keyDown(searchInput, { key: 'Enter' });
 
     // THEN: Router stays on current page
     expect(router.state.location.pathname).toBe('/library');
   });
 
-  it('[P1] mobile search toggle shows and hides search input', async () => {
+  it('[P1] mobile search toggle opens and closes the full-screen search view', async () => {
     renderWithRouter();
 
-    // GIVEN: Mobile search is initially hidden
+    // GIVEN: Mobile search overlay is initially hidden
     await screen.findByTestId('mobile-search-toggle');
-    expect(screen.queryByTestId('mobile-search-input')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('mobile-search-overlay')).not.toBeInTheDocument();
 
     // WHEN: User clicks the mobile search toggle
     fireEvent.click(screen.getByTestId('mobile-search-toggle'));
 
-    // THEN: Mobile search input appears
-    expect(screen.getByTestId('mobile-search-input')).toBeInTheDocument();
+    // THEN: Mobile search overlay appears (AC #5 — dedicated full-width search view)
+    expect(screen.getByTestId('mobile-search-overlay')).toBeInTheDocument();
 
-    // WHEN: User clicks toggle again
-    fireEvent.click(screen.getByTestId('mobile-search-toggle'));
+    // WHEN: User clicks the close button
+    fireEvent.click(screen.getByTestId('mobile-search-close'));
 
-    // THEN: Mobile search input disappears
-    expect(screen.queryByTestId('mobile-search-input')).not.toBeInTheDocument();
+    // THEN: Mobile search overlay disappears
+    expect(screen.queryByTestId('mobile-search-overlay')).not.toBeInTheDocument();
   });
 
   it('[P1] app shell container has dark theme baseline', async () => {

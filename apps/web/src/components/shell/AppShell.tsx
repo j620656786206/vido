@@ -1,25 +1,16 @@
 // Implements: <utility — no .pen counterpart>
 import { useState } from 'react';
-import { Link, useNavigate } from '@tanstack/react-router';
-import { Search, Settings } from 'lucide-react';
+import { Link } from '@tanstack/react-router';
+import { ArrowLeft, Search, Settings } from 'lucide-react';
 import { TabNavigation } from './TabNavigation';
+import { InstantSearchBar } from '../search/InstantSearchBar';
 
 interface AppShellProps {
   children: React.ReactNode;
 }
 
 export function AppShell({ children }: AppShellProps) {
-  const navigate = useNavigate();
-  const [query, setQuery] = useState('');
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
-
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (query.trim()) {
-      navigate({ to: '/search', search: { q: query.trim() } });
-      setMobileSearchOpen(false);
-    }
-  };
 
   return (
     <div className="flex min-h-screen flex-col" data-testid="app-shell">
@@ -36,24 +27,9 @@ export function AppShell({ children }: AppShellProps) {
               vido
             </Link>
 
-            {/* Desktop: search bar centered via flex-1 wrappers */}
+            {/* Desktop: instant search bar centered via flex-1 wrappers */}
             <div className="hidden flex-1 justify-center sm:flex">
-              <form
-                onSubmit={handleSearchSubmit}
-                className="relative w-64"
-                data-testid="search-form"
-              >
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--text-muted)]" />
-                <input
-                  type="text"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="搜尋媒體庫..."
-                  className="w-full rounded-full border border-[var(--border-subtle)]/50 bg-[var(--bg-secondary)]/60 py-1.5 pl-9 pr-4 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] transition-colors focus:border-[var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"
-                  autoComplete="off"
-                  data-testid="global-search-input"
-                />
-              </form>
+              <InstantSearchBar variant="desktop" className="w-64" />
             </div>
 
             {/* Right: icons — ml-auto on mobile, natural position on desktop */}
@@ -61,7 +37,7 @@ export function AppShell({ children }: AppShellProps) {
               {/* Mobile search toggle */}
               <button
                 type="button"
-                onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
+                onClick={() => setMobileSearchOpen(true)}
                 className="rounded-lg p-1.5 text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] sm:hidden"
                 aria-label="搜尋"
                 data-testid="mobile-search-toggle"
@@ -81,29 +57,38 @@ export function AppShell({ children }: AppShellProps) {
             </div>
           </div>
 
-          {/* Mobile search (expandable) */}
-          {mobileSearchOpen && (
-            <form onSubmit={handleSearchSubmit} className="pb-3 sm:hidden">
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--text-muted)]" />
-                <input
-                  type="text"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="搜尋媒體庫..."
-                  className="w-full rounded-full border border-[var(--border-subtle)]/50 bg-[var(--bg-secondary)]/60 py-1.5 pl-9 pr-4 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] transition-colors focus:border-[var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"
-                  autoComplete="off"
-                  autoFocus
-                  data-testid="mobile-search-input"
-                />
-              </div>
-            </form>
-          )}
-
           {/* Row 2: Tab navigation */}
           <TabNavigation />
         </div>
       </header>
+
+      {/* Mobile: full-screen dedicated search view (AC #5) */}
+      {mobileSearchOpen && (
+        <div
+          className="fixed inset-0 z-[60] flex flex-col bg-[var(--bg-primary)] sm:hidden"
+          data-testid="mobile-search-overlay"
+        >
+          <div className="flex items-center gap-2 border-b border-[var(--border-subtle)] px-4 py-3">
+            <button
+              type="button"
+              onClick={() => setMobileSearchOpen(false)}
+              className="rounded-lg p-1 text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+              aria-label="返回"
+              data-testid="mobile-search-close"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <span className="text-sm font-medium text-[var(--text-primary)]">搜尋</span>
+          </div>
+          <div className="flex-1 overflow-hidden px-4 py-3">
+            <InstantSearchBar
+              variant="mobile"
+              autoFocus
+              onClose={() => setMobileSearchOpen(false)}
+            />
+          </div>
+        </div>
+      )}
 
       <main className="flex-1">{children}</main>
     </div>

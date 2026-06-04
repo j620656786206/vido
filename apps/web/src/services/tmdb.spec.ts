@@ -139,6 +139,56 @@ describe('tmdbService', () => {
       expect(result.results[0].name).toBe('進擊的巨人');
     });
   });
+
+  describe('unifiedSearch (Story 11-3)', () => {
+    it('calls the unified /search endpoint with q + page and camelCases the response', async () => {
+      const mockResponse = {
+        success: true,
+        data: {
+          query: '你的名字',
+          page: 1,
+          movies: [{ id: 1, title: '你的名字', original_title: 'Your Name', vote_average: 8.4 }],
+          tv_shows: [{ id: 2, name: '影集', original_name: 'Show' }],
+          people: [
+            {
+              id: 3,
+              name: '新海誠',
+              original_name: 'Makoto Shinkai',
+              known_for_department: 'Directing',
+            },
+          ],
+        },
+      };
+      mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(mockResponse) });
+
+      const result = await tmdbService.unifiedSearch('你的名字');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/search?q=%E4%BD%A0%E7%9A%84%E5%90%8D%E5%AD%97&page=1')
+      );
+      // snake_case → camelCase at the API boundary (Rule 18)
+      expect(result.tvShows).toHaveLength(1);
+      expect(result.movies[0].originalTitle).toBe('Your Name');
+      expect(result.people[0].knownForDepartment).toBe('Directing');
+    });
+
+    it('does not touch the legacy per-type search endpoints (backward compatibility — AC #6)', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            success: true,
+            data: { query: 'x', page: 1, movies: [], tv_shows: [], people: [] },
+          }),
+      });
+
+      await tmdbService.unifiedSearch('x');
+
+      const calledUrl = mockFetch.mock.calls[0][0] as string;
+      expect(calledUrl).toContain('/search?');
+      expect(calledUrl).not.toContain('/tmdb/search/');
+    });
+  });
 });
 
 describe('getImageUrl', () => {

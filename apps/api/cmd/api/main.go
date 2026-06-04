@@ -13,6 +13,7 @@ import (
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
 	"github.com/vido/api/internal/ai"
+	"github.com/vido/api/internal/cache"
 	"github.com/vido/api/internal/config"
 	"github.com/vido/api/internal/database"
 	"github.com/vido/api/internal/database/migrations"
@@ -28,7 +29,6 @@ import (
 	"github.com/vido/api/internal/sse"
 	"github.com/vido/api/internal/subtitle"
 	subtitleproviders "github.com/vido/api/internal/subtitle/providers"
-	"github.com/vido/api/internal/cache"
 
 	// Media config is loaded during service initialization
 	// and validates directories from VIDO_MEDIA_DIRS env var
@@ -342,7 +342,7 @@ func main() {
 		slog.Default(),
 	)
 	scannerService.SetLibraryRepo(repos.MediaLibraries) // Story 7b-5: DB-based library scanning
-	scannerService.SetEpisodeRepo(repos.Episodes) // Story 9c-3: series file_size aggregation
+	scannerService.SetEpisodeRepo(repos.Episodes)       // Story 9c-3: series file_size aggregation
 	slog.Info("Scanner service initialized")
 
 	// Initialize NFO reader service for .nfo sidecar parsing (Story 9c-2)
@@ -450,6 +450,17 @@ func main() {
 	mediaHandler := handlers.NewMediaHandler(mediaService)
 	availabilityHandler := handlers.NewAvailabilityHandler(availabilityService) // Story 10-4
 	tmdbHandler := handlers.NewTMDbHandler(tmdbService)
+	// Story 11-3 — unified dual-language instant search. SearchClient() returns nil
+	// if the underlying TMDb client does not satisfy SearchTMDbClient (e.g. a future
+	// caching decorator missing the *WithLanguage methods); fail fast at startup
+	// rather than panicking on the first /api/v1/search request.
+	searchClient := tmdbService.SearchClient()
+	if searchClient == nil {
+		slog.Error("Unified search client unavailable — TMDb client does not satisfy SearchTMDbClient")
+		os.Exit(1)
+	}
+	searchService := services.NewSearchService(searchClient)
+	searchHandler := handlers.NewSearchHandler(searchService)
 	parserHandler := handlers.NewParserHandler(parserService)
 	metadataHandler := handlers.NewMetadataHandler(metadataService)
 	learningHandler := handlers.NewLearningHandler(learningService)
@@ -515,7 +526,7 @@ func main() {
 		movieHandler.RegisterRoutes(apiV1)
 		seriesHandler.RegisterRoutes(apiV1)
 		logHandler.RegisterRoutes(apiV1)    // Must be before settingsHandler to avoid /settings/:key conflict
-		cacheHandler.RegisterRoutes(apiV1) // Must be before settingsHandler to avoid /settings/:key conflict
+		cacheHandler.RegisterRoutes(apiV1)  // Must be before settingsHandler to avoid /settings/:key conflict
 		statusHandler.RegisterRoutes(apiV1) // Must be before settingsHandler to avoid /settings/:key conflict
 		backupHandler.RegisterRoutes(apiV1) // Must be before settingsHandler to avoid /settings/:key conflict
 		exportHandler.RegisterRoutes(apiV1) // Must be before settingsHandler to avoid /settings/:key conflict
@@ -524,6 +535,7 @@ func main() {
 		mediaHandler.RegisterRoutes(apiV1)
 		availabilityHandler.RegisterRoutes(apiV1) // /api/v1/media/check-owned (Story 10-4)
 		tmdbHandler.RegisterRoutes(apiV1)
+		searchHandler.RegisterRoutes(apiV1) // /api/v1/search — unified instant search (Story 11-3)
 		parserHandler.RegisterRoutes(apiV1)
 		metadataHandler.RegisterRoutes(apiV1)
 		learningHandler.RegisterRoutes(apiV1)
