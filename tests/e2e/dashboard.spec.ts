@@ -137,7 +137,9 @@ test.describe('Dashboard Layout @dashboard @ui', () => {
     await expect(page.getByTestId('homepage-root')).toBeVisible();
     await expect(page.getByTestId('download-panel')).toBeVisible();
     await expect(page.getByTestId('recent-media-panel')).toBeVisible();
-    await expect(page.getByTestId('search-form')).toBeVisible();
+    // Story 11-3 replaced the toolbar SearchBar (`search-form`) with the
+    // InstantSearchBar (`instant-search-bar`) in the AppShell header.
+    await expect(page.getByTestId('instant-search-bar')).toBeVisible();
   });
 
   test('[P1] should display downloads in compact view (AC1)', async ({ page }) => {
