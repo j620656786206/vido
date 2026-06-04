@@ -44,7 +44,7 @@ so that I can reach the discover/browse page without typing the URL and can see 
   - [x] 4.1 Regenerated `-darwin` baselines via `pnpm run test:visual:update`: `shell-tab-navigation/{default,hover,focus}-visual-darwin.png`. Visually confirmed the new default baseline shows 媒體庫·**探索**·下載中·待解析·設定 (媒體庫 active). The update ALSO re-emitted `media-media-detail-panel/{default,focus}-visual-darwin.png` (unrelated surprise) → REVERTED (`git checkout`), NOT blessed; filed as `disc-flaky-visual-media-detail-panel` backlog (Rule 24 ③). Only the 3 `shell-tab-navigation` darwin PNGs remain changed.
   - [x] 4.1b Audit-doc line appended in `_bmad-output/audit/visual-baseline-19-4.md` (`shell-tab-navigation` row → "darwin re-blessed 2026-06-04 … `-linux` pending CI").
   - [x] 4.2 **UX (Sally) gallery review** — ✅ APPROVED 2026-06-04 (Sally / ux-designer). Reviewed all 3 darwin states (default/hover/focus) against `Component/TabActive (TboA7)` + `TabInactive (j98G4)`: 探索 integrates faithfully — consistent font/weight/color tokens/gap, correct active(白字+藍底線)/inactive(muted) treatments, 2nd-position browse-IA grouping, no layout drift. Recorded on PR #28; `requires-manual-review` label removed.
-  - [ ] 4.3 `-linux` re-bless via CI (delete-stale `-linux` → incremental bootstrap path 2, or the visual-regression.yml rebless flow) after the darwin/Sally commit lands.
+  - [x] 4.3 `-linux` re-bless engaged via **delete-stale→incremental-bootstrap**: CI's PR visual job is pure verify (`pnpm run test:visual`, no tolerance) and linux can't be regenerated from a darwin machine pre-merge; the incremental bootstrap only auto-regenerates *missing* `-linux` (not stale pixel-diffs). So deleted the 3 stale `shell-tab-navigation/*-linux.png` (commit `<linux-delete>`), converting stale→missing. PR #28 visual check stays ❌ by design (any appearance change is unverifiable on linux pre-merge → admin-merge); post-merge the **main** job sees 3 linux MISSING + 0 pixel-diff → `update-missing` regenerates them + opens a `chore(visual): bootstrap 3 missing -linux baselines (incremental)` PR with `requires-manual-review` → Sally blesses → main visual green. (Diagnosed from the failing PR run: `shell-tab-navigation/default` 386px / ratio 0.03 = the 探索 tab; only component affected, no real regression.)
 
 ## Dev Notes
 
@@ -133,7 +133,7 @@ claude-opus-4-8[1m] (Amelia / BMM dev-story workflow)
 - `tests/visual/components.visual.spec.ts-snapshots/components/shell-tab-navigation/focus-visual-darwin.png` (rebaselined — 探索 tab)
 - `_bmad-output/audit/visual-baseline-19-4.md` (modified — `shell-tab-navigation` darwin re-bless line, 2026-06-04)
 
-_Pending (Task 4.3):_ `shell-tab-navigation/{default,hover,focus}-visual-linux.png` re-bless via CI.
+- `tests/visual/components.visual.spec.ts-snapshots/components/shell-tab-navigation/{default,hover,focus}-visual-linux.png` (DELETED — stale→missing, so main's incremental bootstrap auto-regenerates them post-merge; see Task 4.3)
 
 > **⚠️ Commit discipline (`tests/visual/README.md` point 3):** the 3 `shell-tab-navigation` darwin PNGs + audit-doc line are a **separate `test(visual): rebaseline …` commit**, NOT mixed with the logic change (TabNavigation + spec). And that commit happens only **after** the Sally gallery review.
 
@@ -148,3 +148,4 @@ _Pending (Task 4.3):_ `shell-tab-navigation/{default,hover,focus}-visual-linux.p
 | 2026-06-04 | Task 4.1 (Rule 24 ① absorbed): regenerated `shell-tab-navigation` darwin baselines (3 PNGs) + audit-doc line. Reverted unrelated `media-media-detail-panel` darwin re-emit (flaky, not blessed) → filed `disc-flaky-visual-media-detail-panel` backlog (Rule 24 ③). Sally review + separate rebless commit + `-linux` CI rebless still pending (Task 4.2/4.3) |
 | 2026-06-04 | Go full-regression gate (`pnpm nx test api`) PASS — no Go changes, no regressions |
 | 2026-06-04 | Task 4.2: UX (Sally) gallery review APPROVED — darwin baselines blessed; `requires-manual-review` removed on PR #28 (merge unblocked); `-linux` rebless still via CI (Task 4.3) |
+| 2026-06-04 | Task 4.3: CI diagnosis — only Visual Regression red (stale `shell-tab-navigation` `-linux`, ratio 0.03 = 探索 tab; all other checks green). Deleted 3 stale `-linux` PNGs (stale→missing) to trigger main's incremental `update-missing` bootstrap post-merge (PR visual stays ❌ by design → admin-merge) |
