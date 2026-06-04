@@ -70,4 +70,54 @@ describe('FilterChipBar', () => {
     fireEvent.click(screen.getByTestId('clear-all-filters'));
     expect(onClearAll).toHaveBeenCalledTimes(1);
   });
+
+  it('shows 儲存篩選 only when onSavePreset is provided and ≥1 filter active (Story 11-4 AC #1)', () => {
+    // No callback → no save button.
+    const { rerender } = render(
+      <FilterChipBar
+        filters={{ ...baseFilters, genre: [16] }}
+        onChange={vi.fn()}
+        onClearAll={vi.fn()}
+      />
+    );
+    expect(screen.queryByTestId('save-preset-button')).not.toBeInTheDocument();
+
+    // Callback provided + active filter → save button visible.
+    rerender(
+      <FilterChipBar
+        filters={{ ...baseFilters, genre: [16] }}
+        onChange={vi.fn()}
+        onClearAll={vi.fn()}
+        onSavePreset={vi.fn()}
+      />
+    );
+    expect(screen.getByTestId('save-preset-button')).toBeInTheDocument();
+  });
+
+  it('儲存篩選 is hidden when no filters are active even if onSavePreset is set', () => {
+    const { container } = render(
+      <FilterChipBar
+        filters={baseFilters}
+        onChange={vi.fn()}
+        onClearAll={vi.fn()}
+        onSavePreset={vi.fn()}
+      />
+    );
+    // The bar renders nothing at all when there are no chips.
+    expect(container.firstChild).toBeNull();
+  });
+
+  it('儲存篩選 calls onSavePreset', () => {
+    const onSavePreset = vi.fn();
+    render(
+      <FilterChipBar
+        filters={{ ...baseFilters, genre: [16] }}
+        onChange={vi.fn()}
+        onClearAll={vi.fn()}
+        onSavePreset={onSavePreset}
+      />
+    );
+    fireEvent.click(screen.getByTestId('save-preset-button'));
+    expect(onSavePreset).toHaveBeenCalledTimes(1);
+  });
 });

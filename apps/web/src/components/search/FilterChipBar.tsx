@@ -1,7 +1,7 @@
 // Implements: Component/FilterChip (jD7gF)
 // Design ref: ux-design.pen Screen AS-1 Advanced Filter Chips Desktop (rsAxf)
 // Source: ux-design.pen (Pencil app)
-import { X } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { activeFilterChips, type DiscoverFilters } from '../../lib/discoverFilters';
 
@@ -11,6 +11,11 @@ interface FilterChipBarProps {
   onChange: (next: DiscoverFilters) => void;
   /** Called when "清除全部" is pressed (AC #3). */
   onClearAll: () => void;
+  /**
+   * Called when "儲存篩選" is pressed (Story 11-4 AC #1). When omitted, the save
+   * button is not rendered. Only shown while ≥1 filter is active (i.e. chips exist).
+   */
+  onSavePreset?: () => void;
   className?: string;
 }
 
@@ -19,7 +24,13 @@ interface FilterChipBarProps {
  * content area (AC #1). Each chip removes its own filter (AC #2); when ≥2 filters
  * are active a "清除全部" button removes them all at once (AC #3, Task 2.5).
  */
-export function FilterChipBar({ filters, onChange, onClearAll, className }: FilterChipBarProps) {
+export function FilterChipBar({
+  filters,
+  onChange,
+  onClearAll,
+  onSavePreset,
+  className,
+}: FilterChipBarProps) {
   const chips = activeFilterChips(filters);
 
   if (chips.length === 0) return null;
@@ -53,6 +64,19 @@ export function FilterChipBar({ filters, onChange, onClearAll, className }: Filt
           className="text-sm text-[var(--text-secondary)] underline-offset-2 hover:text-white hover:underline"
         >
           清除全部
+        </button>
+      )}
+
+      {/* "儲存篩選" — save the active filter combination as a preset (Story 11-4 AC #1). */}
+      {onSavePreset && (
+        <button
+          onClick={onSavePreset}
+          data-testid="save-preset-button"
+          aria-label="儲存篩選"
+          className="inline-flex items-center gap-1 rounded-full border border-[var(--border-subtle)] px-3 py-1 text-xs text-[var(--text-muted)] hover:border-[var(--accent-primary)] hover:text-white"
+        >
+          <Plus className="h-3 w-3" />
+          儲存篩選
         </button>
       )}
     </div>

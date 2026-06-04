@@ -6,10 +6,12 @@ import { MediaTypeTabs, type MediaTypeFilter } from '../components/search/MediaT
 import { FilterChipBar } from '../components/search/FilterChipBar';
 import { FilterPanel } from '../components/search/FilterPanel';
 import { FilterBottomSheet } from '../components/search/FilterBottomSheet';
+import { PresetChips } from '../components/search/PresetChips';
+import { SavePresetDialog } from '../components/search/SavePresetDialog';
 import { SearchResults } from '../components/search/SearchResults';
 import { useFilterState } from '../hooks/useFilterState';
 import { useDiscoverResults } from '../hooks/useDiscoverResults';
-import type { DiscoverFilters, SortKey } from '../lib/discoverFilters';
+import { hasActiveFilters, type DiscoverFilters, type SortKey } from '../lib/discoverFilters';
 
 interface DiscoverSearchParams {
   genre?: string;
@@ -63,6 +65,7 @@ function DiscoverPage() {
   const { filters, setFilters, clearAll } = useFilterState();
 
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
 
   const currentType: MediaTypeFilter = type ?? 'all';
   const currentPage = page ?? 1;
@@ -111,11 +114,15 @@ function DiscoverPage() {
 
         {/* Results */}
         <div className="min-w-0 flex-1">
-          {/* Persistent chip bar (AC #1-3) */}
+          {/* Saved filter presets — quick-access row (Story 11-4 AC #2, #3) */}
+          <PresetChips onApplyPreset={setFilters} className="mb-3" />
+
+          {/* Persistent chip bar (AC #1-3) + save-preset trigger (11-4 AC #1) */}
           <FilterChipBar
             filters={filters}
             onChange={handleFilterChange}
             onClearAll={clearAll}
+            onSavePreset={hasActiveFilters(filters) ? () => setSaveDialogOpen(true) : undefined}
             className="mb-4"
           />
 
@@ -138,6 +145,11 @@ function DiscoverPage() {
         onApply={handleFilterChange}
         mediaType={currentType}
       />
+
+      {/* Save current filters as a preset (Story 11-4 AC #1) */}
+      {saveDialogOpen && (
+        <SavePresetDialog filters={filters} onClose={() => setSaveDialogOpen(false)} />
+      )}
     </div>
   );
 }
