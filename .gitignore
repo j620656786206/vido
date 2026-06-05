@@ -95,3 +95,6 @@ blob-report/
 .claude/worktrees
 .claude/settings.local.json
 .claude/projects
+
+# Pencil auto-backups of the design file (e.g. ux-design.pen.bak-imports-YYYYMMDD-HHMMSS)
+ux-design.pen.bak-*

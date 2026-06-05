@@ -7,16 +7,23 @@
 ### Steps:
 
 1. Run `python3 scripts/export-pen-screenshots.py` (requires Pencil.app running)
-   - The script starts its own MCP HTTP connection — safe to run even when Pencil MCP is already active
-2. Screenshots are saved to `_bmad-output/screenshots/` organized by flow:
-   - `flow-a-browse-desktop/` — Empty → Loading → Grid → List
-   - `flow-b-hover-detail-desktop/` — Hover → Context Menu → Detail (Movie/TV) → Detail Context Menu
-   - `flow-c-search-filter-settings-desktop/` — Search+Filter → Batch Ops → Settings
-   - `flow-d-browse-mobile/` — Empty → Loading → Grid → Sort → Filter
-   - `flow-e-interaction-mobile/` — Context Menu → Detail → Detail Context Menu
-   - `flow-f-batch-settings-mobile/` — Batch Ops → Settings
-3. If new screens are added to the .pen file, update the `SCREENS` dict in `scripts/export-pen-screenshots.py`
+   - The script spawns its own Pencil MCP server in **stdio** mode (Pencil 1.1.61 removed the old `--http`/`--http-port` transport) — safe to run even when Pencil MCP is already active
+2. Screenshots are saved to `_bmad-output/screenshots/`, one folder per **user flow** (A–J merged-block convention, 2026-06-05 rework). Each flow folder holds both desktop (`-d`) and mobile (`-m`) screens; filenames are the canvas frame codes (e.g. `b3-d.png`, `b3-m.png`):
+   - `flow-a-browse/` — Empty / Loading / Grid / List / Sort / Filter
+   - `flow-b-detail-interaction/` — Hover / Context Menus / Detail (Movie/TV) / Fallbacks / Tech Badges / Image-load Fallback spec (B9)
+   - `flow-c-search-settings/` — Search+Filter / Batch Ops / Settings / Backup
+   - `flow-d-downloads/` — Download management
+   - `flow-e-scanner/` — Scanner settings / Scan progress / Complete toast / Filtered-unmatched
+   - `flow-f-subtitle/` — Subtitle search dialog / Preview-download / Batch progress
+   - `flow-g-ai-subtitle/` — AI correction / Transcription progress / Translation confirm
+   - `flow-h-homepage/` — Homepage TV Wall / Loading skeleton / Block CRUD modal / ExploreBlock spec
+   - `flow-i-advanced-search/` — Filter chips / Suggestions dropdown / Save preset / Filter sheet
+   - `flow-j-specs/` — Design-decision spec screens (e.g. PosterCard info-density)
+   - `design-system/` — Design System Reference + Component Library docs
+   - Canvas naming + block-layout convention: see `.claude/memory/project_pen_flow_layout_convention.md`
+3. If new screens are added to the .pen file, update the `SCREENS` dict in `scripts/export-pen-screenshots.py` (key = node ID, value = `(flow-folder, code)`)
 4. `git add` both the `.pen` file changes AND the updated screenshots, commit together
+   - ⚠️ **A full regen is non-deterministic** — every PNG re-renders with byte diffs at the same dimensions. Only stage the screenshots whose **design actually changed**; `git checkout` the rest to avoid committing re-render noise.
 
 ### Commit convention:
 
