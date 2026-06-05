@@ -523,3 +523,5 @@ Post-sweep tally across all 131 in-scope `components/` files:
 sweep. The bugfix-10-4 `PosterCardHover` drift was isolated, not systemic. The 3rd 19-4b
 observation ("Max-update-depth warnings") is tracked separately by
 `bugfix-19-4b-1-gallery-max-update-depth-warnings.md` (a console-warning bug, not visual drift).
+
+Linux baselines incrementally bootstrapped 2026-06-05 via runner ubuntu-24.04 (ImageVersion: 20260525.161.1) — 3 fixtures: tests/visual/components.visual.spec.ts-snapshots/components/shell-tab-navigation/default-visual-linux.png tests/visual/components.visual.spec.ts-snapshots/components/shell-tab-navigation/hover-visual-linux.png tests/visual/components.visual.spec.ts-snapshots/components/shell-tab-navigation/focus-visual-linux.png
