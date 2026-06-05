@@ -44,6 +44,8 @@ SCREENS = {
     "2ltBl": ("flow-b-hover-detail-desktop", "04d-detail-fallback-failed-desktop"),
     "wQOkg": ("flow-b-hover-detail-desktop", "04e-detail-fallback-pending-desktop"),
     "vlL6O": ("flow-b-hover-detail-desktop", "04f-detail-tech-badges-desktop"),
+    # disc-flaky-visual-media-detail-panel — case (B) image-load fallback spec (gradient backdrop + initial-letter circle)
+    "Tn4Gz": ("flow-b-hover-detail-desktop", "04g-detail-image-load-fallback-spec-desktop"),
     # Flow C - Desktop search/filter/settings
     "rsAxf": ("flow-c-search-filter-settings-desktop", "07-search-filter-desktop"),
     "dcf67": ("flow-c-search-filter-settings-desktop", "08-batch-operations-desktop"),
@@ -61,6 +63,8 @@ SCREENS = {
     "2m1Pv": ("flow-e-interaction-mobile", "05b-detail-fallback-failed-mobile"),
     "7UnDy": ("flow-e-interaction-mobile", "05c-detail-fallback-pending-mobile"),
     "6OR3z": ("flow-e-interaction-mobile", "05d-detail-tech-badges-mobile"),
+    # disc-flaky-visual-media-detail-panel — case (B) image-load fallback spec (mobile bottom-sheet variant)
+    "jH6rM": ("flow-e-interaction-mobile", "05e-detail-image-load-fallback-spec-mobile"),
     # Flow F - Mobile batch/settings
     "0KOE7": ("flow-f-batch-settings-mobile", "08-m-batch-operations-mobile"),
     "IfrPQ": ("flow-f-batch-settings-mobile", "01a-m-settings-bottom-sheet-mobile"),
@@ -135,36 +139,46 @@ SCREENS = {
 
 
 def start_mcp_server():
+    # Pencil 1.1.61 removed the `--http`/`--http-port` flags; the MCP server now
+    # only speaks newline-delimited JSON-RPC over stdio, connecting to the running
+    # Pencil.app as a named agent. Spawn it in stdio mode and talk over the pipes.
     proc = subprocess.Popen(
-        [MCP_BIN, "--app", "desktop", "--http", "--http-port", str(MCP_PORT)],
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        [MCP_BIN, "--app", "desktop", "--agent", "screenshot-export"],
+        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+        text=True, bufsize=1,
     )
-    time.sleep(2)
     return proc
 
 
-def mcp_call(session_id, req_id, method, params):
-    headers = [
-        "-H", "Content-Type: application/json",
-        "-H", "Accept: application/json, text/event-stream",
-    ]
-    if session_id:
-        headers += ["-H", f"Mcp-Session-Id: {session_id}"]
+def mcp_send(proc, req_id, method, params):
+    msg = {"jsonrpc": "2.0", "method": method, "params": params}
+    if req_id is not None:
+        msg["id"] = req_id
+    proc.stdin.write(json.dumps(msg) + "\n")
+    proc.stdin.flush()
 
-    req = json.dumps({"jsonrpc": "2.0", "id": req_id, "method": method, "params": params})
-    result = subprocess.run(
-        ["curl", "-s", "-i", "-X", "POST", f"http://localhost:{MCP_PORT}/mcp"] + headers + ["-d", req],
-        capture_output=True, text=True, timeout=30,
-    )
-    # Extract session ID from headers
-    new_session = session_id
-    body = ""
-    for line in result.stdout.split("\n"):
-        if line.lower().startswith("mcp-session-id:"):
-            new_session = line.split(":", 1)[1].strip()
-        if line.startswith("{"):
-            body = line
-    return new_session, json.loads(body) if body else None
+
+def mcp_call(proc, req_id, method, params, max_lines=500):
+    """Send a JSON-RPC request over stdio and return the matching response.
+
+    Reads newline-delimited JSON from stdout, skipping notifications/log lines
+    until the response whose `id` matches req_id is found.
+    """
+    mcp_send(proc, req_id, method, params)
+    for _ in range(max_lines):
+        line = proc.stdout.readline()
+        if not line:
+            return None
+        line = line.strip()
+        if not line.startswith("{"):
+            continue
+        try:
+            msg = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if msg.get("id") == req_id:
+            return msg
+    return None
 
 
 def main():
@@ -172,12 +186,12 @@ def main():
         print("ERROR: Pencil.app not found at /Applications/Pencil.app")
         sys.exit(1)
 
-    print("Starting Pencil MCP server...")
+    print("Starting Pencil MCP server (stdio)...")
     proc = start_mcp_server()
 
     try:
         # Initialize
-        session, resp = mcp_call(None, 1, "initialize", {
+        resp = mcp_call(proc, 1, "initialize", {
             "protocolVersion": "2024-11-05",
             "capabilities": {},
             "clientInfo": {"name": "screenshot-export", "version": "1.0"},
@@ -185,16 +199,10 @@ def main():
         if not resp:
             print("ERROR: Failed to connect to Pencil MCP server")
             sys.exit(1)
-        print(f"Connected (session: {session[:20]}...)")
+        print("Connected")
 
         # Send initialized notification
-        subprocess.run(
-            ["curl", "-s", "-X", "POST", f"http://localhost:{MCP_PORT}/mcp",
-             "-H", "Content-Type: application/json",
-             "-H", f"Mcp-Session-Id: {session}",
-             "-d", json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized"})],
-            capture_output=True, timeout=5,
-        )
+        mcp_send(proc, None, "notifications/initialized", {})
 
         # Create output directories
         for flow_dir, _ in SCREENS.values():
@@ -203,7 +211,7 @@ def main():
         # Export screenshots
         saved = 0
         for i, (node_id, (flow_dir, filename)) in enumerate(SCREENS.items()):
-            session, resp = mcp_call(session, i + 10, "tools/call", {
+            resp = mcp_call(proc, i + 10, "tools/call", {
                 "name": "get_screenshot",
                 "arguments": {"filePath": PEN_FILE, "nodeId": node_id},
             })
