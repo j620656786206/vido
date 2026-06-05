@@ -1,6 +1,6 @@
 # Story disc-flaky-visual-media-detail-panel: Deterministic Image-Load Fallback for MediaDetailPanel (fix flaky visual baseline)
 
-Status: ready-for-dev
+Status: in-progress — Dev implementation complete (Tasks 1, 2, 3.1–3.3); AC #1–#4 verified. HALTED at the Sally UX gallery gate (Task 4 / AC #5); baseline commit (3.4) + `-linux` CI rebless (Task 5 / AC #6) sequenced after sign-off.
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -50,28 +50,28 @@ Fallback tokens (deterministic — pure CSS + text, **no second network request*
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: Add deterministic `onError` fallback to MediaDetailPanel images** (AC: #1, #2, #3)
-  - [ ] 1.1 In `apps/web/src/components/media/MediaDetailPanel.tsx`, add `backdropError` + `posterError` state (mirror `PosterCard.tsx:55-56` `imageError` pattern). Hooks before any early return (rules-of-hooks; note the `isLoading || !details` early return at L54).
-  - [ ] 1.2 Backdrop (`MediaDetailPanel.tsx:81-86`): render the `<img onError={() => setBackdropError(true)}>` only while `backdropUrl && !backdropError`; otherwise render a `<div>` with the 135° gradient (`#4338CA → #6D28D9 → #7C3AED`) at the same `h-48 w-full` box. Keep the existing bottom gradient overlay.
-  - [ ] 1.3 Poster (`MediaDetailPanel.tsx:98-106`): render the `<img onError={() => setPosterError(true)}>` only while `posterUrl && !posterError`; otherwise render the deterministic initial-letter fallback (circle `#FFFFFF18` + first char of `title`, `#FFFFFFCC`, Noto Sans TC 700) sized to `h-48 w-32 rounded-lg`. `data-testid="detail-poster-fallback"`.
-  - [ ] 1.4 Keep `loading="lazy"` on the happy-path `<img>`. Do NOT add a second network request for the fallback (pure CSS/text only — that is what makes it deterministic).
-  - [ ] 1.5 Update the Rule 21 header comment (`MediaDetailPanel.tsx:1`) to also reference the fallback spec: `// Design ref: ux-design.pen B3-D Detail Panel (RgSxQ) + B9-D image-load fallback (Tn4Gz)`. Verify `local/implements-pen-node-id` ESLint rule still passes.
+- [x] **Task 1: Add deterministic `onError` fallback to MediaDetailPanel images** (AC: #1, #2, #3)
+  - [x] 1.1 In `apps/web/src/components/media/MediaDetailPanel.tsx`, add `backdropError` + `posterError` state (mirror `PosterCard.tsx:55-56` `imageError` pattern). Hooks before any early return (rules-of-hooks; note the `isLoading || !details` early return at L54). — added both `useState(false)` immediately after `subtitleDialogOpen`, before the L54 early return.
+  - [x] 1.2 Backdrop: render the `<img onError={() => setBackdropError(true)}>` only while `backdropUrl && !backdropError`; otherwise render a `<div>` with the 135° gradient (`#4338CA → #6D28D9 → #7C3AED`) at the same `h-48 w-full` box. Keep the existing bottom gradient overlay. — gradient encoded as module-level `IMAGE_FALLBACK_GRADIENT` inline-style (matches `ColorPlaceholder.tsx`); backdrop `<img>` got `data-testid="detail-backdrop"` for test targeting; fallback `data-testid="detail-backdrop-fallback"`.
+  - [x] 1.3 Poster: render the `<img onError={() => setPosterError(true)}>` only while `posterUrl && !posterError`; otherwise render the deterministic initial-letter fallback (circle `#FFFFFF18` + first char of `title`, `#FFFFFFCC`, 700) sized to `h-48 w-32 rounded-lg`. `data-testid="detail-poster-fallback"`. — outer `posterUrl &&` preserved so case-A (null path) still renders nothing; circle is `w-20 h-20`, `text-4xl` (36px) `font-bold`, painted over the same gradient slot bg.
+  - [x] 1.4 Keep `loading="lazy"` on the happy-path `<img>`. Do NOT add a second network request for the fallback (pure CSS/text only — that is what makes it deterministic). — both fallbacks are pure inline-style + text; happy-path imgs retain `loading="lazy"`.
+  - [x] 1.5 Update the Rule 21 header comment (`MediaDetailPanel.tsx:1`) to also reference the fallback spec. Verify `local/implements-pen-node-id` ESLint rule still passes. — ⚠️ DEVIATION: kept the literal `Screen ` token required by `DESIGN_REF_RE` (`implements-pen-node-id.js:60`) → header set to `// Design ref: ux-design.pen Screen B3-D Detail Panel (RgSxQ) + B9-D image-load fallback (Tn4Gz)`. The story's verbatim text (`ux-design.pen B3-D …`, no `Screen`) would FAIL the same ESLint rule this subtask mandates passing. ESLint exit 0 verified.
 
-- [ ] **Task 2: Unit tests** (AC: #1, #2, #3)
-  - [ ] 2.1 In `apps/web/src/components/media/MediaDetailPanel.spec.tsx`, add: firing `onError` on the backdrop hides the `<img>` and shows the gradient fallback; firing `onError` on the poster shows `detail-poster-fallback` with the title initial. Use specific matchers (`toBeInTheDocument`, `toHaveTextContent`) per Rule 16.
-  - [ ] 2.2 Assert the happy path unchanged: with images present and no error, `detail-poster` `<img>` is in the document and no fallback element is.
+- [x] **Task 2: Unit tests** (AC: #1, #2, #3)
+  - [x] 2.1 In `MediaDetailPanel.spec.tsx`, added: firing `onError` on the backdrop hides the `<img>` and shows the gradient fallback; firing `onError` on the poster shows `detail-poster-fallback` with the title initial (`測` of `測試電影`). Specific matchers (`toBeInTheDocument`, `queryBy…not.toBeInTheDocument`, `toHaveTextContent`) per Rule 16.
+  - [x] 2.2 Assert the happy path unchanged: with images present and no error, `detail-poster` + `detail-backdrop` `<img>` are in the document and no fallback element is. Plus a case-A guard (null posterPath → neither poster img nor fallback). 49/49 spec tests pass.
 
-- [ ] **Task 3: Visual fixture + baseline rebless** (AC: #4, #6)
-  - [ ] 3.1 Confirm the `media-media-detail-panel` fixture (`apps/web/src/routes/test/-gallery.fixtures.tsx:2375`) still feeds TMDb `posterPath`/`backdropPath`; under `abortTmdbImages()` they will now deterministically hit the new `onError` fallback. No fixture change expected (verify; if the fixture needs a tweak, keep it minimal).
-  - [ ] 3.2 **Burn-in (Murat):** run `pnpm run test:visual` 3–5× — must be zero-diff each run BEFORE blessing. If any diff, the fallback still has a non-deterministic element — fix before proceeding.
-  - [ ] 3.3 `pnpm run test:visual:update` to regenerate `components/media-media-detail-panel/{default,hover,focus}-visual-darwin.png`. Confirm ONLY this component's darwin baselines changed (revert any unrelated re-render noise — full regen is non-deterministic; see project-context Rule 22 tooling note + `.claude/memory` screenshot caveat).
-  - [ ] 3.4 Commit the darwin baselines as a **separate** `test(visual): rebaseline media-media-detail-panel …` commit (NOT mixed with the component logic), and only AFTER Sally's gallery sign-off (Task 4). `tests/visual/README.md` commit discipline.
+- [ ] **Task 3: Visual fixture + baseline rebless** (AC: #4, #6) — _3.1–3.3 done; 3.4 BLOCKED on Sally (Task 4)_
+  - [x] 3.1 Confirmed the `media-media-detail-panel` fixture (`-gallery.fixtures.tsx:2375`) still feeds TMDb `posterPath`/`backdropPath` (`/gajva2…jpg` + `/ilRyazd…jpg`); under `abortTmdbImages()` they now deterministically hit the new `onError` fallback. **No fixture change needed.**
+  - [x] 3.2 **Burn-in:** ran `pnpm run test:visual` **3×** consecutively — **zero-diff each run** (43.7s / 42.3s / 42.2s, all `1 passed`). Flake eliminated → AC #4 satisfied.
+  - [x] 3.3 `pnpm run test:visual:update` regenerated `components/media-media-detail-panel/{default,hover,focus}-visual-darwin.png`. **Only these 3 baselines changed** (`git status` = 3 files, ZERO unrelated re-render noise) → no revert needed.
+  - [ ] 3.4 Commit the darwin baselines as a **separate** `test(visual): rebaseline media-media-detail-panel …` commit — **BLOCKED: pending Sally's gallery sign-off (Task 4) per the story's own ordering. Baselines are regenerated + burn-in-proven in the working tree, uncommitted.**
 
-- [ ] **Task 4: UX (Sally) gallery review** (AC: #5)
-  - [ ] 4.1 Sally reviews the regenerated `B9-D`/`B9-M` + `media-media-detail-panel` darwin renders against the B9 spec tokens. APPROVE before any rebless commit. Remove `requires-manual-review` on the PR once approved.
+- [ ] **Task 4: UX (Sally) gallery review** (AC: #5) — _BLOCKED: requires the Sally (UX) persona / human gate_
+  - [ ] 4.1 Sally reviews the regenerated `B9-D`/`B9-M` + `media-media-detail-panel` darwin renders against the B9 spec tokens. APPROVE before any rebless commit. **Dev self-check (Step 9) PASS — see UX Verification table; poster-slot uses the same 135° gradient bg + translucent circle, the one reconciliation decision flagged for Sally's confirmation.**
 
-- [ ] **Task 5: `-linux` rebless via CI incremental bootstrap** (AC: #6)
-  - [ ] 5.1 The PR `Visual Regression / PR` job is verify-only and cannot regenerate `-linux` from a darwin machine. Delete the 3 stale `media-media-detail-panel/*-linux.png` (stale→missing) so main's `update-missing` incremental bootstrap regenerates them post-merge and opens a `chore(visual): bootstrap … -linux baselines (incremental)` PR with `requires-manual-review`. **Exact mechanism + precedent: `disc-nav-entry-discover-route.md` Task 4.3 / 4.3a–c.**
+- [ ] **Task 5: `-linux` rebless via CI incremental bootstrap** (AC: #6) — _BLOCKED: post-merge CI + owner admin-merge_
+  - [ ] 5.1 Delete the 3 stale `media-media-detail-panel/*-linux.png` so main's `update-missing` incremental bootstrap regenerates them post-merge. **Mechanism + precedent: `disc-nav-entry-discover-route.md` Task 4.3 / 4.3a–c.** (Not done — sequenced after Sally sign-off + PR.)
   - [ ] 5.2 Sally re-approves the CI-generated `-linux` PNGs; owner admin-merges; confirm main `Visual Regression` goes steady-state green.
 
 ## Dev Notes
@@ -116,9 +116,41 @@ Fallback tokens (deterministic — pure CSS + text, **no second network request*
 
 ### Agent Model Used
 
+Amelia (Developer Agent) — `claude-opus-4-8[1m]` via BMM `/dev-story` workflow, 2026-06-05.
+
 ### Debug Log References
 
+- Targeted spec: `vitest run MediaDetailPanel.spec.tsx` → **49/49 pass** (45 existing + 4 new).
+- Full web gate: `pnpm nx test web` → **1965/1965** (one transient `InstantSearchBar` debounce flake on the first run; passed 2/2 in isolation AND on a clean full re-run — filed `preexisting-fail-instant-search-debounce-flake: backlog`).
+- Full api gate: `pnpm nx test api` → **PASS**.
+- ESLint (`MediaDetailPanel.{tsx,spec.tsx}`) → exit 0 (Rule 21 header accepted). Prettier `--check` → clean.
+- Visual: `test:visual:update` → only the 3 `media-media-detail-panel` darwin baselines changed (zero unrelated noise). Burn-in `test:visual` ×3 → zero-diff each (43.7s / 42.3s / 42.2s). No orphaned processes (ports 4200/8080 clean, cleanup script clean).
+
 ### Completion Notes List
+
+- ✅ **AC #1 (backdrop fallback):** on `onError`, the backdrop `<img>` is replaced by a deterministic 135° gradient `<div>` (`#4338CA → #6D28D9 → #7C3AED`, `data-testid="detail-backdrop-fallback"`) — no network, no `alt`, no broken-image glyph.
+- ✅ **AC #2 (poster fallback):** on `onError`, the poster `<img>` is replaced by an initial-letter fallback (`data-testid="detail-poster-fallback"`) — a `w-20 h-20` circle (`#FFFFFF18`) with the title's first char (`#FFFFFFCC`, `text-4xl`/36px, `font-bold`) over the same gradient slot, sized `h-48 w-32 rounded-lg`. Case-A (null `posterPath`) still renders nothing (outer `posterUrl &&` preserved).
+- ✅ **AC #3 (happy path):** real images render exactly as before; `loading="lazy"` retained; the only added attr is `onError` + a `data-testid="detail-backdrop"` for test targeting.
+- ✅ **AC #4 (determinism):** burn-in ×3 zero-diff. The fallback is pure inline-style + text → no aborted-`<img>`-settle race (the bugfix-10-4 class).
+- ⏸️ **AC #5 (Sally gate):** Dev self-check PASS (table below); awaiting Sally's gallery sign-off (Task 4) — the only design judgment deferred is the poster-slot background (I used the same 135° gradient + translucent circle to match the B9-D illustration; per the story's design-reconciliation note Sally confirms the exact treatment).
+- ⏸️ **AC #6 (`-linux` CI):** not started — sequenced after Sally sign-off → baseline commit (3.4) → PR → main `update-missing` incremental bootstrap (Task 5).
+- ⚠️ **Header deviation (Task 1.5):** kept the literal `Screen ` token the ESLint `DESIGN_REF_RE` requires (`implements-pen-node-id.js:60`); the story's verbatim header text omitted it and would have failed the same rule the subtask mandates passing. Final header: `// Design ref: ux-design.pen Screen B3-D Detail Panel (RgSxQ) + B9-D image-load fallback (Tn4Gz)`.
+- 🔗 **AC Drift: NONE** (checked: `onError|imageError|posterError|backdropError|detail-poster-fallback` across `_bmad-output/implementation-artifacts/*.md` — hits are prior per-component fallbacks (PosterCard 2-3/bugfix-10-4/10-7, HeroBanner 10-2), all REUSE of the same `imageError` pattern; none alter `MediaDetailPanel`'s prior contract. Happy-path AC #3 explicitly preserves the existing render — this is additive error-path behavior on a component that previously had none).
+- 📎 **Contract Stamps: NONE** (no `[@contract-v*]` stamps in this story; upstream `disc-nav-entry-discover-route` + 19-4/19-5 baseline convention carry no stamps either — pre-Rule-20 / implicit v0. Normal for a baseline-rebless story that defines no wire contract).
+- 🔒 **Rule 7 Wire Format: N/A** (pure frontend; no Go error codes).
+- 🕑 **Rule 23: N/A** (no new wall-clock read; `MediaDetailPanel.tsx:253` `new Date(createdAt)` parses a fixed prop → wall-clock-independent; baseline date renders fixed `2024/3/20`).
+
+#### 🎨 UX Verification (Step 9 — Dev self-check vs `flow-b-detail-interaction/b9-d.png`)
+
+| Area | Design Spec (B9-D) | Implementation (regenerated darwin baseline) | Match? | Fix Needed |
+|------|--------------------|----------------------------------------------|--------|-----------|
+| Backdrop fail | 135° gradient `#4338CA→#6D28D9→#7C3AED` | gradient `<div>` via `IMAGE_FALLBACK_GRADIENT` inline style | ✅ | — |
+| Poster fail — circle | translucent circle `#FFFFFF18` | `w-20 h-20 rounded-full`, `backgroundColor:#FFFFFF18` | ✅ | — |
+| Poster fail — initial | first char, `#FFFFFFCC`, 36/700 | `銀` (of `銀翼殺手 2049`), `color:#FFFFFFCC`, `text-4xl font-bold` | ✅ | — |
+| Poster-slot bg | (B9 illustrates circle on gradient) | same 135° gradient slot bg | ⚠️ flag for Sally | confirm at AC #5 |
+| Happy path | unchanged | title/rating/genres/overview/cast/buttons/file-info all intact | ✅ | — |
+
+→ `🎨 UX Verification: PASS (Dev self-check)` — one reconciliation decision (poster-slot gradient bg) explicitly flagged for the Sally gate (AC #5).
 
 ### Discovery Triage
 
@@ -133,8 +165,16 @@ Fallback tokens (deterministic — pure CSS + text, **no second network request*
 
 ### File List
 
+- `apps/web/src/components/media/MediaDetailPanel.tsx` — modified (Rule 21 header → B3-D + B9-D; `IMAGE_FALLBACK_GRADIENT` const; `backdropError`/`posterError` state; backdrop + poster `onError` → deterministic gradient / initial-letter fallbacks; `data-testid` `detail-backdrop` / `detail-backdrop-fallback` / `detail-poster-fallback`).
+- `apps/web/src/components/media/MediaDetailPanel.spec.tsx` — modified (new `describe('Image-load fallback …')` block: 4 tests — backdrop fallback, poster fallback, happy path, case-A null path).
+- `tests/visual/components.visual.spec.ts-snapshots/components/media-media-detail-panel/default-visual-darwin.png` — regenerated (burn-in-proven; **uncommitted, pending Sally AC #5**).
+- `tests/visual/components.visual.spec.ts-snapshots/components/media-media-detail-panel/hover-visual-darwin.png` — regenerated (**uncommitted, pending Sally**).
+- `tests/visual/components.visual.spec.ts-snapshots/components/media-media-detail-panel/focus-visual-darwin.png` — regenerated (**uncommitted, pending Sally**).
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — modified (story → `in-progress`; filed `preexisting-fail-instant-search-debounce-flake: backlog`).
+
 ### Change Log
 
 | Date       | Change                                                                 |
 | ---------- | --------------------------------------------------------------------- |
+| 2026-06-05 | DEV Amelia `/dev-story`: implemented deterministic `onError` fallbacks on `MediaDetailPanel` backdrop (135° gradient) + poster (initial-letter circle) per B9-D spec; +4 unit tests (49/49 pass); regenerated 3 `media-media-detail-panel` darwin baselines; burn-in ×3 zero-diff (AC #1–#4 ✅). Full gates green (web 1965/1965, api PASS, ESLint+Prettier clean). Filed `preexisting-fail-instant-search-debounce-flake` backlog. **HALTED at Sally UX gate (Task 4 / AC #5)**; baseline commit (3.4) + `-linux` CI rebless (Task 5 / AC #6) pending. Header kept ESLint-required `Screen ` token (deviation noted). `ready-for-dev → in-progress`. |
 | 2026-06-05 | SM Bob `/create-story` (YOLO): authored ready-for-dev. Root cause = raw `<img>` no `onError` → non-deterministic aborted-image paint (bugfix-10-4 class, NOT Rule 23). Fix = deterministic `onError` fallback per B9-D/B9-M spec (gradient backdrop + initial-letter circle). Frontend-only, single story. backlog → ready-for-dev. |

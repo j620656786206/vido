@@ -265,6 +265,48 @@ describe('MediaDetailPanel', () => {
     });
   });
 
+  describe('Image-load fallback (disc-flaky-visual-media-detail-panel)', () => {
+    it('shows the gradient backdrop fallback when the backdrop image fails to load (AC #1)', () => {
+      render(<MediaDetailPanel type="movie" details={mockMovieDetails} />, {
+        wrapper: createWrapper(),
+      });
+      fireEvent.error(screen.getByTestId('detail-backdrop'));
+      expect(screen.queryByTestId('detail-backdrop')).not.toBeInTheDocument();
+      expect(screen.getByTestId('detail-backdrop-fallback')).toBeInTheDocument();
+    });
+
+    it('shows the initial-letter poster fallback when the poster image fails to load (AC #2)', () => {
+      render(<MediaDetailPanel type="movie" details={mockMovieDetails} />, {
+        wrapper: createWrapper(),
+      });
+      fireEvent.error(screen.getByTestId('detail-poster'));
+      expect(screen.queryByTestId('detail-poster')).not.toBeInTheDocument();
+      const fallback = screen.getByTestId('detail-poster-fallback');
+      expect(fallback).toBeInTheDocument();
+      // first character of the title '測試電影'
+      expect(fallback).toHaveTextContent('測');
+    });
+
+    it('keeps the real images and renders no fallback on the happy path (AC #3)', () => {
+      render(<MediaDetailPanel type="movie" details={mockMovieDetails} />, {
+        wrapper: createWrapper(),
+      });
+      expect(screen.getByTestId('detail-poster')).toBeInTheDocument();
+      expect(screen.getByTestId('detail-backdrop')).toBeInTheDocument();
+      expect(screen.queryByTestId('detail-poster-fallback')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('detail-backdrop-fallback')).not.toBeInTheDocument();
+    });
+
+    it('does not render the poster fallback when posterPath is null (case A — not this story)', () => {
+      const movieNoPoster = { ...mockMovieDetails, posterPath: null };
+      render(<MediaDetailPanel type="movie" details={movieNoPoster} />, {
+        wrapper: createWrapper(),
+      });
+      expect(screen.queryByTestId('detail-poster')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('detail-poster-fallback')).not.toBeInTheDocument();
+    });
+  });
+
   describe('Enhanced features (Story 5.6)', () => {
     it('renders metadata source badge (AC3)', () => {
       render(
