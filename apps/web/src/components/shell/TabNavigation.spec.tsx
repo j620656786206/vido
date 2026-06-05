@@ -21,6 +21,12 @@ function createTestRouter(initialPath = '/library') {
     component: () => React.createElement('div', null, 'Library'),
   });
 
+  const discoverRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/discover',
+    component: () => React.createElement('div', null, 'Discover'),
+  });
+
   const downloadsRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/downloads',
@@ -54,6 +60,7 @@ function createTestRouter(initialPath = '/library') {
   const routeTree = rootRoute.addChildren([
     indexRoute,
     libraryRoute,
+    discoverRoute,
     downloadsRoute,
     pendingRoute,
     settingsRoute.addChildren([settingsConnectionRoute]),
@@ -69,12 +76,34 @@ function renderWithRouter(initialPath = '/library') {
 }
 
 describe('TabNavigation', () => {
-  it('renders all four navigation tabs', async () => {
+  it('renders all five navigation tabs', async () => {
     renderWithRouter();
     expect(await screen.findByTestId('tab-媒體庫')).toBeInTheDocument();
+    expect(screen.getByTestId('tab-探索')).toBeInTheDocument();
     expect(screen.getByTestId('tab-下載中')).toBeInTheDocument();
     expect(screen.getByTestId('tab-待解析')).toBeInTheDocument();
     expect(screen.getByTestId('tab-設定')).toBeInTheDocument();
+  });
+
+  it('renders the 探索 tab linking to /discover', async () => {
+    renderWithRouter();
+    const discoverTab = await screen.findByTestId('tab-探索');
+    expect(discoverTab).toHaveAttribute('href', '/discover');
+  });
+
+  it('highlights the active tab for discover route', async () => {
+    renderWithRouter('/discover');
+    const discoverTab = await screen.findByTestId('tab-探索');
+    expect(discoverTab).toHaveClass('text-white');
+    expect(discoverTab).toHaveClass('border-blue-400');
+    expect(screen.getByTestId('tab-媒體庫')).toHaveClass('text-[var(--text-muted)]');
+  });
+
+  it('keeps the 探索 tab active when discover has filter query params', async () => {
+    renderWithRouter('/discover?genre=16');
+    const discoverTab = await screen.findByTestId('tab-探索');
+    expect(discoverTab).toHaveClass('text-white');
+    expect(discoverTab).toHaveClass('border-blue-400');
   });
 
   it('highlights the active tab for library route', async () => {
@@ -130,6 +159,7 @@ describe('TabNavigation', () => {
 
     // THEN: No tab has active styling
     expect(screen.getByTestId('tab-媒體庫')).toHaveClass('text-[var(--text-muted)]');
+    expect(screen.getByTestId('tab-探索')).toHaveClass('text-[var(--text-muted)]');
     expect(screen.getByTestId('tab-下載中')).toHaveClass('text-[var(--text-muted)]');
     expect(screen.getByTestId('tab-待解析')).toHaveClass('text-[var(--text-muted)]');
     expect(screen.getByTestId('tab-設定')).toHaveClass('text-[var(--text-muted)]');

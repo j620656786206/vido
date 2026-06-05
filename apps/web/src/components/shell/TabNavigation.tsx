@@ -11,6 +11,7 @@ interface NavTab {
 
 const TABS: NavTab[] = [
   { label: '媒體庫', to: '/library', matchPaths: ['/library'] },
+  { label: '探索', to: '/discover', matchPaths: ['/discover'] },
   { label: '下載中', to: '/downloads', matchPaths: ['/downloads'] },
   { label: '待解析', to: '/pending', matchPaths: ['/pending'] },
   { label: '設定', to: '/settings', matchPaths: ['/settings'] },
