@@ -4,8 +4,14 @@
 Usage:
     python3 scripts/export-pen-screenshots.py
 
-Requires Pencil.app to be running. Starts a temporary MCP HTTP server,
-captures all design screens, and saves PNGs to _bmad-output/screenshots/.
+Requires Pencil.app to be running. Spawns the Pencil MCP server in stdio mode
+(Pencil 1.1.61 removed the old `--http` transport), captures each design screen,
+and saves PNGs to _bmad-output/screenshots/.
+
+Layout convention (2026-06-05 A–J merged-block rework):
+  Screens are named with flow codes `{Flow}{seq}-{D|M}` (desktop/mobile) on the
+  canvas. Screenshots mirror that: one folder per flow, filename == lowercased code.
+  See .claude/memory/project_pen_flow_layout_convention.md.
 """
 
 import json
@@ -13,128 +19,95 @@ import base64
 import os
 import subprocess
 import sys
-import time
-import signal
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PEN_FILE = os.path.join(PROJECT_ROOT, "ux-design.pen")
 OUT_DIR = os.path.join(PROJECT_ROOT, "_bmad-output", "screenshots")
 MCP_BIN = "/Applications/Pencil.app/Contents/Resources/app.asar.unpacked/out/mcp-server-darwin-arm64"
-MCP_PORT = 9876
 
-# Screen ID -> (flow_folder, filename)
+# Screen node ID -> (flow_folder, filename). Filename == canvas frame code (lowercased).
 SCREENS = {
-    # Flow A - Desktop browse
-    "4VILE": ("flow-a-browse-desktop", "09a-empty-library-desktop"),
-    # bugfix-10-5 — 3-state empty-library design (Reusable Components, anchors for Rule 21)
-    "fSKuT": ("flow-a-browse-desktop", "09a-1-empty-library-no-qbt"),
-    "U3SGxG": ("flow-a-browse-desktop", "09a-2-empty-library-no-folder"),
-    "mfKgm": ("flow-a-browse-desktop", "09a-3-empty-library-ready-for-scan"),
-    "IpZhv": ("flow-a-browse-desktop", "09b-loading-skeleton-desktop"),
-    "KNI8F": ("flow-a-browse-desktop", "01-library-grid-desktop"),
-    "LZ8Ds": ("flow-a-browse-desktop", "06-list-view-desktop"),
-    # Flow B - Desktop hover + detail
-    "Qm662": ("flow-b-hover-detail-desktop", "01b-postercard-hover-state"),
-    # bugfix-10-7 — PosterCard info-density & polish design pass (PC-1 spec screen)
-    "XlFIq": ("flow-b-hover-detail-desktop", "pc1-postercard-info-density-polish-bugfix-10-7"),
-    "auArc": ("flow-b-hover-detail-desktop", "04a-postercard-context-menu"),
-    "RgSxQ": ("flow-b-hover-detail-desktop", "04-detail-panel-movie-desktop"),
-    "407vK": ("flow-b-hover-detail-desktop", "04b-detail-panel-tv-series-desktop"),
-    "7mdTJ": ("flow-b-hover-detail-desktop", "04c-detail-panel-context-menu"),
-    "2ltBl": ("flow-b-hover-detail-desktop", "04d-detail-fallback-failed-desktop"),
-    "wQOkg": ("flow-b-hover-detail-desktop", "04e-detail-fallback-pending-desktop"),
-    "vlL6O": ("flow-b-hover-detail-desktop", "04f-detail-tech-badges-desktop"),
-    # disc-flaky-visual-media-detail-panel — case (B) image-load fallback spec (gradient backdrop + initial-letter circle)
-    "Tn4Gz": ("flow-b-hover-detail-desktop", "04g-detail-image-load-fallback-spec-desktop"),
-    # Flow C - Desktop search/filter/settings
-    "rsAxf": ("flow-c-search-filter-settings-desktop", "07-search-filter-desktop"),
-    "dcf67": ("flow-c-search-filter-settings-desktop", "08-batch-operations-desktop"),
-    "7fE0b": ("flow-c-search-filter-settings-desktop", "01a-settings-gear-dropdown"),
-    # Flow D - Mobile browse
-    "OYqNo": ("flow-d-browse-mobile", "09a-m-empty-library-mobile"),
-    "RxdY5": ("flow-d-browse-mobile", "09b-m-loading-skeleton-mobile"),
-    "GOL63": ("flow-d-browse-mobile", "03-library-grid-mobile"),
-    "3aSCw": ("flow-d-browse-mobile", "03a-m-sort-bottom-sheet"),
-    "oypj1": ("flow-d-browse-mobile", "10-filter-bottom-sheet-mobile"),
-    # Flow E - Mobile interaction
-    "1UHzI": ("flow-e-interaction-mobile", "04a-m-postercard-context-menu-mobile"),
-    "kcn1v": ("flow-e-interaction-mobile", "05-detail-panel-mobile"),
-    "APfjC": ("flow-e-interaction-mobile", "04c-m-detail-context-menu-mobile"),
-    "2m1Pv": ("flow-e-interaction-mobile", "05b-detail-fallback-failed-mobile"),
-    "7UnDy": ("flow-e-interaction-mobile", "05c-detail-fallback-pending-mobile"),
-    "6OR3z": ("flow-e-interaction-mobile", "05d-detail-tech-badges-mobile"),
-    # disc-flaky-visual-media-detail-panel — case (B) image-load fallback spec (mobile bottom-sheet variant)
-    "jH6rM": ("flow-e-interaction-mobile", "05e-detail-image-load-fallback-spec-mobile"),
-    # Flow F - Mobile batch/settings
-    "0KOE7": ("flow-f-batch-settings-mobile", "08-m-batch-operations-mobile"),
-    "IfrPQ": ("flow-f-batch-settings-mobile", "01a-m-settings-bottom-sheet-mobile"),
-    # Flow G - Settings pages
-    "6UCtX": ("flow-c-search-filter-settings-desktop", "10-settings-desktop"),
-    "2H4OM": ("flow-f-batch-settings-mobile", "10-m-settings-mobile"),
-    "uhAKd": ("flow-c-search-filter-settings-desktop", "11-backup-management-desktop"),
-    # Flow H - Scanner UI (Desktop)
-    "KvZSc": ("flow-h-scanner-desktop", "h1-settings-scanner-desktop"),
-    "wyuhF": ("flow-h-scanner-desktop", "h2-scan-progress-desktop"),
-    "szzaW": ("flow-h-scanner-desktop", "h3-scan-complete-toast-desktop"),
-    "QTqcC": ("flow-h-scanner-desktop", "h7-filtered-library-unmatched-desktop"),
-    # Flow H - Scanner UI (Mobile)
-    "uABWl": ("flow-h-scanner-mobile", "h4-settings-scanner-mobile"),
-    "yezIo": ("flow-h-scanner-mobile", "h5-scan-progress-mobile"),
-    "ZjoEI": ("flow-h-scanner-mobile", "h6-scan-complete-toast-mobile"),
-    "n7jVF": ("flow-h-scanner-mobile", "h8-filtered-library-unmatched-mobile"),
-    # Flow I - Subtitle Search & Batch (Desktop)
-    "cOrOR": ("flow-i-subtitle-desktop", "i1-subtitle-search-dialog-desktop"),
-    "wy5Nx": ("flow-i-subtitle-desktop", "i2-search-preview-download-states-desktop"),
-    "NXijD": ("flow-i-subtitle-desktop", "i4-batch-progress-desktop"),
-    # Flow I - Subtitle Search & Batch (Mobile)
-    "GZ294": ("flow-i-subtitle-mobile", "i3-subtitle-search-dialog-mobile"),
-    "fUtqO": ("flow-i-subtitle-mobile", "i5-batch-progress-mobile"),
-    "ogQ6Y": ("flow-i-subtitle-mobile", "i6-subtitle-preview-mobile"),
-    # Flow AI - AI Subtitle Enhancement (Desktop)
-    "TIIRl": ("flow-ai-subtitle-desktop", "ai1-correction-preview-modal-desktop"),
-    "kzhNP": ("flow-ai-subtitle-desktop", "ai2-transcription-progress-desktop"),
-    "22bcv": ("flow-ai-subtitle-desktop", "ai3-translation-confirm-dialog-desktop"),
-    # Flow AI - AI Subtitle Enhancement (Mobile)
-    "mgRJA": ("flow-ai-subtitle-mobile", "ai4-correction-bottom-sheet-mobile"),
-    "yNAHK": ("flow-ai-subtitle-mobile", "ai5-transcription-progress-mobile"),
-    "8Wsez": ("flow-ai-subtitle-mobile", "ai6-translation-confirm-mobile"),
-    # Flow J - Setup Wizard (Desktop)
-    "uqz0V": ("flow-j-setup-wizard-desktop", "setup-01-welcome-desktop"),
-    "eWpZl": ("flow-j-setup-wizard-desktop", "setup-02-qbittorrent-desktop"),
-    "i6SqW": ("flow-j-setup-wizard-desktop", "setup-03-mediafolder-desktop"),
-    "URcJR": ("flow-j-setup-wizard-desktop", "setup-04-apikeys-desktop"),
-    "0YdAa": ("flow-j-setup-wizard-desktop", "setup-05-complete-desktop"),
-    # Flow J - Setup Wizard (Mobile)
-    "XtMeX": ("flow-j-setup-wizard-mobile", "setup-01-welcome-mobile"),
-    "IsWkJ": ("flow-j-setup-wizard-mobile", "setup-02-qbittorrent-mobile"),
-    "JO8Kr": ("flow-j-setup-wizard-mobile", "setup-03-mediafolder-mobile"),
-    "87JmL": ("flow-j-setup-wizard-mobile", "setup-04-apikeys-mobile"),
-    "o2xD5": ("flow-j-setup-wizard-mobile", "setup-05-complete-mobile"),
-    # Flow K - Multi-Library Setup & Modals
-    "ilSTz": ("flow-k-multi-library", "setup-03b-medialibrary-desktop"),
-    "Wyyps": ("flow-k-multi-library", "setup-03b-medialibrary-mobile"),
-    "Ht0AY": ("flow-k-multi-library", "library-edit-modal-desktop"),
-    "cDvWQ": ("flow-k-multi-library", "library-edit-modal-mobile"),
-    "w6E8i": ("flow-k-multi-library", "library-delete-modal-desktop"),
-    "hlUkm": ("flow-k-multi-library", "library-delete-modal-mobile"),
-    # Flow K - Multi-Library Settings Scanner
-    "ATjDd": ("flow-k-multi-library", "h1b-settings-scanner-multi-library-desktop"),
-    "iOjxf": ("flow-k-multi-library", "h4b-settings-scanner-multi-library-mobile"),
-    # Flow G - Homepage TV Wall (Desktop)
-    "sAaCR": ("flow-g-homepage-desktop", "hp1-homepage-desktop"),
-    "Paqlk": ("flow-g-homepage-desktop", "hp3-block-crud-modal"),
-    "g6p38": ("flow-g-homepage-desktop", "hp4-loading-skeleton-desktop"),
-    "Y5XvRv": ("flow-g-homepage-desktop", "hp5-exploreblock-polish-bugfix-10-6"),
-    # Flow G - Homepage TV Wall (Mobile)
-    "g5LFD": ("flow-g-homepage-mobile", "hp2-homepage-mobile"),
-    # Flow G - Advanced Search & Filter (Desktop)
-    "NWxok": ("flow-g-search-desktop", "as1-advanced-filter-chips-desktop"),
-    "TMaw5": ("flow-g-search-desktop", "as2-search-suggestions-dropdown"),
-    "i74p2": ("flow-g-search-desktop", "as3-save-filter-preset-modal"),
-    # Flow G - Advanced Search & Filter (Mobile)
-    "pjKVZ": ("flow-g-search-mobile", "as4-filter-bottom-sheet-mobile"),
-    # Flow Z - Design System Reference
-    "8SSzc": ("flow-z-design-system", "design-system-reference"),
+    # Flow A — 瀏覽主流程 (browse: empty / loading / grid / list / sort / filter)
+    "4VILE": ("flow-a-browse", "a1-d"),
+    "OYqNo": ("flow-a-browse", "a1-m"),
+    "IpZhv": ("flow-a-browse", "a2-d"),
+    "RxdY5": ("flow-a-browse", "a2-m"),
+    "KNI8F": ("flow-a-browse", "a3-d"),
+    "GOL63": ("flow-a-browse", "a3-m"),
+    "LZ8Ds": ("flow-a-browse", "a4-d"),
+    "3aSCw": ("flow-a-browse", "a5-m"),
+    "oypj1": ("flow-a-browse", "a6-m"),
+    # Flow B — 詳情與互動 (hover / context menus / detail panels / fallbacks / tech badges / image-load spec)
+    "Qm662": ("flow-b-detail-interaction", "b1-d"),
+    "auArc": ("flow-b-detail-interaction", "b2-d"),
+    "1UHzI": ("flow-b-detail-interaction", "b2-m"),
+    "RgSxQ": ("flow-b-detail-interaction", "b3-d"),
+    "kcn1v": ("flow-b-detail-interaction", "b3-m"),
+    "407vK": ("flow-b-detail-interaction", "b4-d"),
+    "7mdTJ": ("flow-b-detail-interaction", "b5-d"),
+    "APfjC": ("flow-b-detail-interaction", "b5-m"),
+    "2ltBl": ("flow-b-detail-interaction", "b6-d"),
+    "2m1Pv": ("flow-b-detail-interaction", "b6-m"),
+    "wQOkg": ("flow-b-detail-interaction", "b7-d"),
+    "7UnDy": ("flow-b-detail-interaction", "b7-m"),
+    "vlL6O": ("flow-b-detail-interaction", "b8-d"),
+    "6OR3z": ("flow-b-detail-interaction", "b8-m"),
+    # B9 = disc-flaky-visual-media-detail-panel case (B) image-load fallback spec
+    "Tn4Gz": ("flow-b-detail-interaction", "b9-d"),
+    "jH6rM": ("flow-b-detail-interaction", "b9-m"),
+    # Flow C — 搜尋 / 篩選 / 設定 (search-filter / batch ops / settings / backup)
+    "rsAxf": ("flow-c-search-settings", "c1-d"),
+    "dcf67": ("flow-c-search-settings", "c2-d"),
+    "0KOE7": ("flow-c-search-settings", "c2-m"),
+    "7fE0b": ("flow-c-search-settings", "c3-d"),
+    "IfrPQ": ("flow-c-search-settings", "c3-m"),
+    "6UCtX": ("flow-c-search-settings", "c4-d"),
+    "2H4OM": ("flow-c-search-settings", "c4-m"),
+    "uhAKd": ("flow-c-search-settings", "c5-d"),
+    # Flow D — 下載管理 (downloads)
+    "rWvuG": ("flow-d-downloads", "d1-d"),
+    "cZd7j": ("flow-d-downloads", "d1-m"),
+    "3ULXd": ("flow-d-downloads", "d2-d"),
+    "tqHK9": ("flow-d-downloads", "d3-m"),
+    # Flow E — 媒體庫掃描 (scanner settings / progress / complete toast / filtered-unmatched)
+    "KvZSc": ("flow-e-scanner", "e1-d"),
+    "uABWl": ("flow-e-scanner", "e1-m"),
+    "wyuhF": ("flow-e-scanner", "e2-d"),
+    "yezIo": ("flow-e-scanner", "e2-m"),
+    "szzaW": ("flow-e-scanner", "e3-d"),
+    "ZjoEI": ("flow-e-scanner", "e3-m"),
+    "QTqcC": ("flow-e-scanner", "e4-d"),
+    "n7jVF": ("flow-e-scanner", "e4-m"),
+    # Flow F — 字幕搜尋 / 批次 (subtitle search dialog / preview-download / batch progress)
+    "cOrOR": ("flow-f-subtitle", "f1-d"),
+    "GZ294": ("flow-f-subtitle", "f1-m"),
+    "wy5Nx": ("flow-f-subtitle", "f2-d"),
+    "ogQ6Y": ("flow-f-subtitle", "f2-m"),
+    "NXijD": ("flow-f-subtitle", "f3-d"),
+    "fUtqO": ("flow-f-subtitle", "f3-m"),
+    # Flow G — AI 字幕增強 (correction / transcription progress / translation confirm)
+    "TIIRl": ("flow-g-ai-subtitle", "g1-d"),
+    "mgRJA": ("flow-g-ai-subtitle", "g1-m"),
+    "kzhNP": ("flow-g-ai-subtitle", "g2-d"),
+    "yNAHK": ("flow-g-ai-subtitle", "g2-m"),
+    "22bcv": ("flow-g-ai-subtitle", "g3-d"),
+    "8Wsez": ("flow-g-ai-subtitle", "g3-m"),
+    # Flow H — 首頁 TV Wall (homepage / loading skeleton / block CRUD modal / exploreblock spec)
+    "sAaCR": ("flow-h-homepage", "h1-d"),
+    "g5LFD": ("flow-h-homepage", "h2-m"),
+    "Paqlk": ("flow-h-homepage", "h3"),
+    "g6p38": ("flow-h-homepage", "h4-d"),
+    "Y5XvRv": ("flow-h-homepage", "h5-d"),
+    # Flow I — 進階搜尋 / 篩選 (filter chips / suggestions dropdown / save preset / filter sheet)
+    "NWxok": ("flow-i-advanced-search", "i1-d"),
+    "TMaw5": ("flow-i-advanced-search", "i2"),
+    "i74p2": ("flow-i-advanced-search", "i3"),
+    "pjKVZ": ("flow-i-advanced-search", "i4-m"),
+    # Flow J — 設計決策 spec (PosterCard info-density & polish)
+    "XlFIq": ("flow-j-specs", "j1-d"),
+    # Design system reference docs (top of canvas, no flow code)
+    "8SSzc": ("design-system", "design-system-reference"),
+    "sJzat": ("design-system", "component-library"),
 }
 
 
