@@ -265,6 +265,106 @@ describe('MediaDetailPanel', () => {
     });
   });
 
+  describe('Image-load fallback (disc-flaky-visual-media-detail-panel)', () => {
+    it('shows the gradient backdrop fallback when the backdrop image fails to load (AC #1)', () => {
+      render(<MediaDetailPanel type="movie" details={mockMovieDetails} />, {
+        wrapper: createWrapper(),
+      });
+      fireEvent.error(screen.getByTestId('detail-backdrop'));
+      expect(screen.queryByTestId('detail-backdrop')).not.toBeInTheDocument();
+      const fallback = screen.getByTestId('detail-backdrop-fallback');
+      expect(fallback).toBeInTheDocument();
+      // CR L1 — AC #1 mandates a deterministic 135° gradient with NO <img>, NO alt, NO
+      // native broken-image glyph. Lock the actual token, not just the element's presence.
+      expect(fallback.tagName).toBe('DIV');
+      expect(fallback).not.toHaveAttribute('src');
+      expect(fallback).not.toHaveAttribute('alt');
+      expect(fallback).toHaveStyle({
+        background: 'linear-gradient(135deg, #4338CA 0%, #6D28D9 50%, #7C3AED 100%)',
+      });
+    });
+
+    it('shows the initial-letter poster fallback when the poster image fails to load (AC #2)', () => {
+      render(<MediaDetailPanel type="movie" details={mockMovieDetails} />, {
+        wrapper: createWrapper(),
+      });
+      fireEvent.error(screen.getByTestId('detail-poster'));
+      expect(screen.queryByTestId('detail-poster')).not.toBeInTheDocument();
+      const fallback = screen.getByTestId('detail-poster-fallback');
+      expect(fallback).toBeInTheDocument();
+      // first character of the title '測試電影'
+      expect(fallback).toHaveTextContent('測');
+      // CR L1 — lock the AC #2 / Sally-AC#5 design tokens (not just presence): the slot is the
+      // neutral --bg-tertiary token (Sally's ruling — gradient stays backdrop-only), sized to
+      // the h-48 w-32 poster box; the monogram sits in a translucent #FFFFFF18 circle.
+      expect(fallback).toHaveClass('bg-[var(--bg-tertiary)]', 'h-48', 'w-32', 'rounded-lg');
+      const circle = fallback.querySelector('span');
+      expect(circle).toHaveClass('rounded-full', 'h-20', 'w-20', 'text-4xl', 'font-bold');
+      expect(circle).toHaveStyle({ backgroundColor: '#FFFFFF18', color: '#FFFFFFCC' });
+      // CR M1 — the failed poster must keep an accessible name (mirrors PosterCard's
+      // role="img" + aria-label precedent), and the decorative monogram is hidden from AT.
+      expect(fallback).toHaveAttribute('role', 'img');
+      expect(fallback).toHaveAttribute('aria-label', expect.stringContaining('測試電影'));
+      expect(circle).toHaveAttribute('aria-hidden', 'true');
+    });
+
+    it('keeps the real images and renders no fallback on the happy path (AC #3)', () => {
+      render(<MediaDetailPanel type="movie" details={mockMovieDetails} />, {
+        wrapper: createWrapper(),
+      });
+      expect(screen.getByTestId('detail-poster')).toBeInTheDocument();
+      expect(screen.getByTestId('detail-backdrop')).toBeInTheDocument();
+      expect(screen.queryByTestId('detail-poster-fallback')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('detail-backdrop-fallback')).not.toBeInTheDocument();
+    });
+
+    it('does not render the poster fallback when posterPath is null (case A — not this story)', () => {
+      const movieNoPoster = { ...mockMovieDetails, posterPath: null };
+      render(<MediaDetailPanel type="movie" details={movieNoPoster} />, {
+        wrapper: createWrapper(),
+      });
+      expect(screen.queryByTestId('detail-poster')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('detail-poster-fallback')).not.toBeInTheDocument();
+    });
+
+    it('uses the TV show name initial for the poster fallback (AC #2 — tv path, CR L4)', () => {
+      render(<MediaDetailPanel type="tv" details={mockTVShowDetails} />, {
+        wrapper: createWrapper(),
+      });
+      fireEvent.error(screen.getByTestId('detail-poster'));
+      const fallback = screen.getByTestId('detail-poster-fallback');
+      // first character of the TV name '測試影集' (derives from tvShow.name, a different branch)
+      expect(fallback).toHaveTextContent('測');
+      expect(fallback).toHaveAttribute('aria-label', expect.stringContaining('測試影集'));
+    });
+
+    it('resets the fallback when a new media item is swapped into the same instance (CR L3)', () => {
+      const { rerender } = render(<MediaDetailPanel type="movie" details={mockMovieDetails} />, {
+        wrapper: createWrapper(),
+      });
+      // Both images fail for the first item → fallbacks render.
+      fireEvent.error(screen.getByTestId('detail-backdrop'));
+      fireEvent.error(screen.getByTestId('detail-poster'));
+      expect(screen.getByTestId('detail-backdrop-fallback')).toBeInTheDocument();
+      expect(screen.getByTestId('detail-poster-fallback')).toBeInTheDocument();
+
+      // Swap in a different item (new poster/backdrop paths) WITHOUT remounting.
+      const otherMovie = {
+        ...mockMovieDetails,
+        title: '另一部電影',
+        posterPath: '/other-poster.jpg',
+        backdropPath: '/other-backdrop.jpg',
+      };
+      rerender(<MediaDetailPanel type="movie" details={otherMovie} />);
+
+      // Error flags must reset so the new item's valid artwork shows, not the stale fallback.
+      expect(screen.queryByTestId('detail-backdrop-fallback')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('detail-poster-fallback')).not.toBeInTheDocument();
+      expect(screen.getByTestId('detail-backdrop')).toBeInTheDocument();
+      expect(screen.getByTestId('detail-poster')).toBeInTheDocument();
+    });
+  });
+
   describe('Enhanced features (Story 5.6)', () => {
     it('renders metadata source badge (AC3)', () => {
       render(

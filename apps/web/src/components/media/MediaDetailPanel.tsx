@@ -1,5 +1,5 @@
-// Design ref: ux-design.pen Screen 4 Detail Panel Desktop (RgSxQ)
-import { useState, useCallback } from 'react';
+// Design ref: ux-design.pen Screen B3-D Detail Panel (RgSxQ) + B9-D image-load fallback (Tn4Gz)
+import { useState, useCallback, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getImageUrl } from '../../lib/image';
 import { TrailerEmbed } from './TrailerEmbed';
@@ -10,6 +10,16 @@ import { SubtitleSearchDialog } from '../subtitle/SubtitleSearchDialog';
 import { useMediaTrailers, libraryKeys } from '../../hooks/useLibrary';
 import type { MovieDetails, TVShowDetails, Credits } from '../../types/tmdb';
 import type { TMDbVideo } from '../../types/library';
+
+// disc-flaky-visual-media-detail-panel: deterministic image-load fallback (B9-D/B9-M spec).
+// Pure CSS/text — NO second network request — so the visual baseline can't race an aborted
+// <img> settle (the bugfix-10-4 async-image flake class that motivated this story). Backdrop
+// fail → this fixed 135° gradient (Screen B7 pending-fallback token). Poster fail → an
+// initial-letter circle on a neutral `--bg-tertiary` slot (Sally AC #5 ruling: gradient stays
+// backdrop-only so the small placeholder doesn't out-shout the backdrop; the slot reuses the
+// skeleton/PosterCard fallback token). Inline-style hex keeps the exact B9 tokens deterministic
+// (matches ColorPlaceholder.tsx's inline-gradient approach).
+const IMAGE_FALLBACK_GRADIENT = 'linear-gradient(135deg, #4338CA 0%, #6D28D9 50%, #7C3AED 100%)';
 
 export interface MediaDetailPanelProps {
   type: 'movie' | 'tv';
@@ -47,6 +57,19 @@ export function MediaDetailPanel({
   // Hooks must be called before any early return (rules-of-hooks)
   const queryClient = useQueryClient();
   const [subtitleDialogOpen, setSubtitleDialogOpen] = useState(false);
+  // disc-flaky-visual-media-detail-panel: track per-image load failure so the broken <img>
+  // is swapped for a deterministic CSS/text fallback (mirrors PosterCard.tsx imageError).
+  const [backdropError, setBackdropError] = useState(false);
+  const [posterError, setPosterError] = useState(false);
+  // disc-flaky CR L3: reset the per-image error flags when the underlying media changes, so a
+  // reused panel instance (new `details` swapped in without a remount) cannot leak a prior
+  // item's broken-image fallback onto the next item's valid artwork. Keyed on the image paths
+  // (not the whole object) so a re-render with the same media is a no-op and never clobbers a
+  // genuine error that just fired.
+  useEffect(() => {
+    setBackdropError(false);
+    setPosterError(false);
+  }, [details?.posterPath, details?.backdropPath]);
   const handleSubtitleDownloadSuccess = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: libraryKeys.all });
   }, [queryClient]);
@@ -80,7 +103,23 @@ export function MediaDetailPanel({
       {/* Backdrop header */}
       {backdropUrl && (
         <div className="relative h-48 w-full">
-          <img src={backdropUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
+          {backdropError ? (
+            // AC #1 — deterministic gradient fallback (no <img>, no alt, no broken-image glyph)
+            <div
+              className="h-full w-full"
+              style={{ background: IMAGE_FALLBACK_GRADIENT }}
+              data-testid="detail-backdrop-fallback"
+            />
+          ) : (
+            <img
+              src={backdropUrl}
+              alt=""
+              className="h-full w-full object-cover"
+              loading="lazy"
+              onError={() => setBackdropError(true)}
+              data-testid="detail-backdrop"
+            />
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg-primary)] to-transparent" />
         </div>
       )}
@@ -95,15 +134,37 @@ export function MediaDetailPanel({
 
         {/* Poster and basic info */}
         <div className="flex gap-4">
-          {posterUrl && (
-            <img
-              src={posterUrl}
-              alt={title}
-              className="h-48 w-32 flex-shrink-0 rounded-lg object-cover shadow-lg"
-              loading="lazy"
-              data-testid="detail-poster"
-            />
-          )}
+          {posterUrl &&
+            (posterError ? (
+              // AC #2 — deterministic initial-letter fallback (B9 tokens) in the h-48 w-32 slot.
+              // Outer `posterUrl &&` keeps case-A (null path) rendering nothing, as before.
+              <div
+                className="flex h-48 w-32 flex-shrink-0 items-center justify-center rounded-lg bg-[var(--bg-tertiary)] shadow-lg"
+                data-testid="detail-poster-fallback"
+                role="img"
+                aria-label={`${title}（海報暫無法載入）`}
+              >
+                <span
+                  className="flex h-20 w-20 items-center justify-center rounded-full text-4xl font-bold leading-none"
+                  style={{ backgroundColor: '#FFFFFF18', color: '#FFFFFFCC' }}
+                  aria-hidden="true"
+                >
+                  {/* disc-flaky CR L2: spread-then-index takes the first whole code point (an
+                      astral-plane glyph stays intact, unlike charAt(0)'s half-surrogate); the
+                      🎬 guard covers an empty title so the circle never renders blank. */}
+                  {[...title][0] ?? '🎬'}
+                </span>
+              </div>
+            ) : (
+              <img
+                src={posterUrl}
+                alt={title}
+                className="h-48 w-32 flex-shrink-0 rounded-lg object-cover shadow-lg"
+                loading="lazy"
+                onError={() => setPosterError(true)}
+                data-testid="detail-poster"
+              />
+            ))}
           <div className="min-w-0 flex-1">
             <h1 className="text-xl font-bold text-white" data-testid="detail-title">
               {title}
