@@ -1,6 +1,6 @@
 # Story disc-flaky-visual-media-detail-panel: Deterministic Image-Load Fallback for MediaDetailPanel (fix flaky visual baseline)
 
-Status: review — Tasks 1–4 + 3.4 + 5.1 DONE and committed on branch `story/disc-flaky-visual-media-detail-panel` (b91c524 → 5ce8daa → 9e79199 → 0fae737 → docs). AC #1–#5 satisfied (Sally APPROVED). Only **Task 5.2** remains: it is structurally post-merge — push → PR → owner admin-merge → main `update-missing` regenerates `-linux` → Sally re-approves the CI PNGs → main visual steady-state green. Not pushed yet (awaiting Alexyu's go-ahead on the outward push/PR).
+Status: done — All tasks complete. Story branch merged to main as **PR #32** (`a0bb41c`); the merge triggered the CI incremental-bootstrap which regenerated the 3 `-linux` baselines (**PR #33**, `08b80a4`, Sally-approved + owner admin-merged). AC #1–#6 satisfied. CR (`/code-review` 2026-06-07) fixed 1 MED + 4 LOW, no HIGH defects. main `Visual Regression` steady-state green.
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -70,9 +70,9 @@ Fallback tokens (deterministic — pure CSS + text, **no second network request*
 - [x] **Task 4: UX (Sally) gallery review** (AC: #5) — ✅ **APPROVED by Sally 2026-06-05** (after one CHANGES-REQUESTED round: poster slot gradient → neutral `--bg-tertiary`)
   - [x] 4.1 Sally reviews the regenerated `B9-D`/`B9-M` + `media-media-detail-panel` darwin renders against the B9 spec tokens. APPROVE before any rebless commit. **Dev self-check (Step 9) PASS — see UX Verification table; poster-slot uses the same 135° gradient bg + translucent circle, the one reconciliation decision flagged for Sally's confirmation.** → 🎨 **SALLY VERDICT 2026-06-05: CHANGES REQUESTED** — poster slot → **neutral dark** `bg-[var(--bg-tertiary)]` (NOT the backdrop gradient); keep the gradient on the backdrop only, and keep the `#FFFFFF18` circle + `#FFFFFFCC` initial. See "## UX Review (Sally)" section for rationale. Needs Amelia to apply the 1-line slot-bg swap + regenerate the 3 darwin baselines, then Sally re-reviews & approves. → ✅ **AMELIA APPLIED 2026-06-05**: poster-slot bg → `bg-[var(--bg-tertiary)]` (gradient kept backdrop-only); const + comments updated; 3 darwin baselines regenerated (only those 3 changed); burn-in ×3 zero-diff (43.3 / 47.3 / 44.1s); spec 49/49, ESLint 0, Prettier clean. → 🎨 **SALLY RE-REVIEW 2026-06-05: ✅ APPROVED** — checked all 3 states (default/hover/focus): neutral `--bg-tertiary` slot + legible `銀` monogram, backdrop is the single brand surface, hierarchy correct. Baseline blessed. Unblocks Task 3.4 + Task 5. (`requires-manual-review` removal applies once a PR exists.)
 
-- [ ] **Task 5: `-linux` rebless via CI incremental bootstrap** (AC: #6) — _BLOCKED: post-merge CI + owner admin-merge_
+- [x] **Task 5: `-linux` rebless via CI incremental bootstrap** (AC: #6) — ✅ DONE post-merge
   - [x] 5.1 Deleted the 3 stale `media-media-detail-panel/*-linux.png` (commit `0fae737`) so main's `update-missing` incremental bootstrap regenerates them post-merge. **Mechanism + precedent: `disc-nav-entry-discover-route.md` Task 4.3 / 4.3a–c.**
-  - [ ] 5.2 Sally re-approves the CI-generated `-linux` PNGs; owner admin-merges; confirm main `Visual Regression` goes steady-state green.
+  - [x] 5.2 ✅ 2026-06-07: PR #32 merged → main run `27085516193` classified the 3 missing `-linux` as bootstrap-needed → `update-missing` regenerated them → opened **PR #33** (`requires-manual-review`). Sally formally re-reviewed all 3 states (default/hover/focus) `-linux` vs approved `-darwin`: **APPROVED — render-drift-only** (CJK font hinting + ⭐/📁 emoji glyphs + uniform +1px line-box rounding 834→835px; zero content drift). Dev self-check concurred (side-by-side image diff). Owner admin-merged PR #33 (`08b80a4`); steady-state main `Visual Regression` green confirmed (run `27086817689`).
 
 ## Dev Notes
 
@@ -177,6 +177,7 @@ Amelia (Developer Agent) — `claude-opus-4-8[1m]` via BMM `/dev-story` workflow
 
 | Date       | Change                                                                 |
 | ---------- | --------------------------------------------------------------------- |
+| 2026-06-07 | DEV Amelia (Task 5.2 post-merge closeout): PR #32 merged to main (`a0bb41c`) → CI main run `27085516193` ran incremental `update-missing` → opened bootstrap **PR #33** (3 `media-media-detail-panel/*-linux.png` + audit-doc line). Sally (ux-designer agent) formally re-reviewed `-linux` vs `-darwin` across default/hover/focus → **APPROVED, render-drift-only** (font hinting + ⭐/📁 emoji glyphs + uniform 834→835px line-box rounding; 0 content drift); dev side-by-side self-check concurred. Owner admin-merged PR #33 (`08b80a4`); steady-state main `Visual Regression` green (run `27086817689`). **Task 5 + 5.2 [x]; AC #6 ✅; Status review → done.** |
 | 2026-06-07 | CR Amelia (`/code-review` adversarial, user chose [1] auto-fix): 0 HIGH code defects; fixed 1 MEDIUM + 4 LOW. **M1** poster fallback gained `role="img"` + `aria-label` (mirrors PosterCard a11y precedent) + circle `aria-hidden`. **L1** unit tests now lock the AC tokens (backdrop `toHaveStyle` 135° gradient + not-an-img/no-alt; poster `bg-[var(--bg-tertiary)]`/`h-48 w-32`/circle `#FFFFFF18`+`#FFFFFFCC`), not just element presence. **L2** monogram `title.charAt(0)` → `[...title][0] ?? '🎬'` (astral-safe + empty-title guard). **L3** added `useEffect` resetting `backdropError`/`posterError` on `details` path change (latent state-leak if panel is reused without remount — not currently reachable: prod route uses TMDbDetailView/LocalDetailView). **L4** added TV-path poster-fallback test. **M2** AC #6 remains post-merge (Task 5.2) — not a code defect, cannot fix pre-push. Spec 49→51 (2 new), all pass; ESLint 0; Prettier clean; full web suite 1966/1967 (1 = preexisting InstantSearchBar debounce flake, 6/6 in isolation). Non-visual changes → `-darwin` baselines unchanged (no rebless). Status stays `review`. |
 | 2026-06-05 | DEV Amelia (post-Sally commit sequence): Sally APPROVED on re-review → committed `5ce8daa` (neutral-slot fix), `9e79199` (rebaseline 3 darwin baselines, separate per Task 3.4), `0fae737` (drop 3 stale `-linux` for CI bootstrap, Task 5.1). Tasks 3 + 4 + 3.4 + 5.1 [x]. Status `in-progress → review`. Remaining Task 5.2 is post-merge (push → PR → owner admin-merge → main `update-missing` regenerates `-linux` → Sally re-approves). Not pushed yet (awaiting go-ahead). |
 | 2026-06-05 | DEV Amelia (Sally AC #5 follow-up): poster-slot bg gradient → neutral `bg-[var(--bg-tertiary)]` per Sally's gallery ruling (gradient kept backdrop-only so the placeholder doesn't out-shout the backdrop; slot now matches the skeleton/PosterCard fallback token). Circle/initial tokens unchanged. Regenerated 3 darwin baselines (only those changed), burn-in ×3 zero-diff, spec 49/49, ESLint 0, Prettier clean. Awaiting Sally re-review before baseline commit (3.4). |
@@ -213,6 +214,14 @@ Amelia (Developer Agent) — `claude-opus-4-8[1m]` via BMM `/dev-story` workflow
 ### Re-review condition
 
 Amelia applies the 1-line slot-bg swap (`style={{ background: IMAGE_FALLBACK_GRADIENT }}` → `className=… bg-[var(--bg-tertiary)]` on the `detail-poster-fallback` div), regenerates the 3 darwin baselines, re-runs burn-in. Sally then approves → unblocks Task 3.4 (baseline commit) + Task 5 (`-linux` CI). The backdrop + circle + initial are **already approved** and need no change.
+
+### `-linux` re-review (AC #6 / Task 5.2) — 2026-06-07
+
+**Reviewed:** the 3 CI-regenerated `media-media-detail-panel/{default,hover,focus}-visual-linux.png` (PR #33) vs the approved `-darwin` set. **Verdict: ✅ APPROVED — render-drift-only.**
+
+- **default / hover / focus** — all content-faithful: gradient backdrop fallback, neutral `--bg-tertiary` poster slot, `銀` monogram in its `#FFFFFF18` circle, genre chips, CTA buttons, file-info, the hover search-bar pill, and the focus ring on the `⋯` button all match `-darwin`.
+- **Only platform render drift:** CJK font hinting, the ⭐/📁 emoji glyphs (Apple Color Emoji vs Noto/Liberation), a one-character synopsis re-wrap, and a uniform +1px height (834→835px, identical width) from Linux sub-pixel line-box rounding. No content/layout/colour/token drift.
+- Dev side-by-side self-check concurred before the gate. Owner admin-merged PR #33 (`08b80a4`); main `Visual Regression` steady-state green (run `27086817689`). **AC #6 satisfied.**
 
 ## Senior Developer Review (AI) — Code Review
 
