@@ -235,7 +235,7 @@ development_status:
 
   # --- Testing ---
   retro-8-TS1-testsprite-v4-regeneration:            done  # 2026-03-27 — TEA: v4 regeneration complete. 28 deprecated tests removed, 34 retained (all VALID), 16 new tests added (TC063-TC078) for Epic 7 Scanner + Epic 8 Subtitle Engine. Total: 50 tests.
-  retro-8-TS2-testsprite-generate-executable-tests:  backlog  # → TEA: run TestSprite MCP generate-tests to produce .py files for TC063-TC078. Requires frontend+backend running with seed data + subtitle provider access/mocks.
+  retro-8-TS2-testsprite-generate-executable-tests:  backlog  # → TEA: run TestSprite MCP generate-tests to produce .py files for TC063-TC078. Requires frontend+backend running with seed data + subtitle provider access/mocks. 2026-06-07: scripts/seed-test-data.sh added — seeds DB-backed media (TC084-086, owned/pending/failed) via SQLite; downloads (TC079-083) + degraded-health (TC088) still need qBT-side setup (see script header).
   retro-8-TD7-api-json-naming-convention:            done  # 2026-03-28 — Tasks 1-5 complete. E2E tests updated for snake_case, CI VITE_API_BASE_URL fix.
 
   # --- Discovery Triage (Rule 24) — 2026-06-07, TEA (Murat) ---
