@@ -1,0 +1,136 @@
+[
+  {
+    "id": "TC079",
+    "title": "Downloads page loads with filter tabs, list, and per-page count",
+    "description": "Verifies the downloads monitor page renders its status filter tabs, the download list panel, and the per-page item count.",
+    "category": "Downloads Monitor",
+    "priority": "High",
+    "steps": [
+      { "type": "action", "description": "Navigate to /downloads" },
+      { "type": "assertion", "description": "Verify a status filter tab control is visible (tabs: all, downloading, paused, completed, seeding, error)" },
+      { "type": "assertion", "description": "Verify element with id \"download-list\" (role=tabpanel) is visible" },
+      { "type": "assertion", "description": "Verify the per-page count display containing text \"筆\" is visible" }
+    ],
+    "v4_status": "NEW",
+    "v4_reason": "Downloads Monitor (route /downloads, 256 LOC) is implemented but had zero TestSprite coverage. P0 journey #3.",
+    "v4_action": "ADD — Tier 1 P0 gap"
+  },
+  {
+    "id": "TC080",
+    "title": "Filter downloads by status tab updates the visible list and count",
+    "description": "Verifies selecting a status filter tab narrows the visible downloads and that an empty filter shows the matching empty-state message.",
+    "category": "Downloads Monitor",
+    "priority": "High",
+    "steps": [
+      { "type": "action", "description": "Navigate to /downloads" },
+      { "type": "action", "description": "Click the \"downloading\" filter tab" },
+      { "type": "assertion", "description": "Verify the download list updates to reflect the downloading filter" },
+      { "type": "action", "description": "Click the \"error\" filter tab" },
+      { "type": "assertion", "description": "Verify the empty-state text \"沒有發生錯誤的任務\" is visible when no error tasks exist" }
+    ],
+    "v4_status": "NEW",
+    "v4_reason": "Status filtering (DownloadFilterTabs: all/downloading/paused/completed/seeding/error) had no coverage.",
+    "v4_action": "ADD — Tier 1 P0 gap"
+  },
+  {
+    "id": "TC081",
+    "title": "Expand a download item to view its details",
+    "description": "Verifies clicking a download row reveals the download details panel for that item.",
+    "category": "Downloads Monitor",
+    "priority": "High",
+    "steps": [
+      { "type": "action", "description": "Navigate to /downloads" },
+      { "type": "action", "description": "Click the first visible element matching data-testid pattern \"download-item-*\"" },
+      { "type": "assertion", "description": "Verify element with data-testid \"download-details\" is visible" }
+    ],
+    "v4_status": "NEW",
+    "v4_reason": "Download detail expansion (DownloadDetails) had no coverage. Part of P0 journey #3 (expand detail).",
+    "v4_action": "ADD — Tier 1 P0 gap"
+  },
+  {
+    "id": "TC083",
+    "title": "Parse-failed download surfaces status badge and recovery actions",
+    "description": "Verifies a download whose filename parsing failed shows the parse-status badge and the parse-failed recovery actions (re-parse / manual entry).",
+    "category": "Downloads Monitor",
+    "priority": "High",
+    "steps": [
+      { "type": "action", "description": "Navigate to /downloads" },
+      { "type": "assertion", "description": "Verify element with data-testid \"download-parse-status-badge\" is visible for a parse-failed item" },
+      { "type": "action", "description": "Click the first visible element matching data-testid pattern \"download-item-*\" that is parse-failed" },
+      { "type": "assertion", "description": "Verify element with data-testid \"parse-failed-actions\" is visible" }
+    ],
+    "v4_status": "NEW",
+    "v4_reason": "Parse-failed recovery (ParseFailedActions, DownloadParseStatusBadge) had no coverage. Connects download monitoring to the parse→match journey.",
+    "v4_action": "ADD — Tier 1 P0 gap (needs parse-failed seed fixture)"
+  },
+  {
+    "id": "TC084",
+    "title": "Click a poster opens the media detail panel with core metadata",
+    "description": "Verifies clicking a poster card in the library opens the media detail side panel showing title, year, and rating.",
+    "category": "Media Detail Panel",
+    "priority": "High",
+    "steps": [
+      { "type": "action", "description": "Navigate to /library" },
+      { "type": "assertion", "description": "Verify a grid of media poster cards is visible" },
+      { "type": "action", "description": "Click the first element with data-testid \"poster-card\"" },
+      { "type": "assertion", "description": "Verify element with data-testid \"media-detail-panel\" is visible" },
+      { "type": "assertion", "description": "Verify element with data-testid \"detail-title\" is visible" },
+      { "type": "assertion", "description": "Verify element with data-testid \"detail-year\" is visible" },
+      { "type": "assertion", "description": "Verify element with data-testid \"detail-rating\" is visible" }
+    ],
+    "v4_status": "NEW",
+    "v4_reason": "Media Detail Panel (40+ testids) was only grazed by TC077 (subtitle entry). P0 journey #1 (search→browse→detail).",
+    "v4_action": "ADD — Tier 1 P0 gap"
+  },
+  {
+    "id": "TC085",
+    "title": "Detail panel renders tech badges and file info for an owned item",
+    "description": "Verifies the detail panel for a library-owned item shows technical badges (resolution/codec) and the file information block.",
+    "category": "Media Detail Panel",
+    "priority": "High",
+    "steps": [
+      { "type": "action", "description": "Navigate to /library" },
+      { "type": "action", "description": "Click the first element with data-testid \"poster-card\"" },
+      { "type": "assertion", "description": "Verify element with data-testid \"media-detail-panel\" is visible" },
+      { "type": "assertion", "description": "Verify element with data-testid \"file-info\" is visible" },
+      { "type": "assertion", "description": "Verify a technical badge (e.g. resolution/codec) is visible within the detail panel" },
+      { "type": "assertion", "description": "Verify element with data-testid \"file-info-name\" is visible" }
+    ],
+    "v4_status": "NEW",
+    "v4_reason": "Tech badges (TechBadgeGroup) and FileInfo block had no journey coverage.",
+    "v4_action": "ADD — Tier 1 P0 gap (needs owned-item-with-file seed fixture)"
+  },
+  {
+    "id": "TC086",
+    "title": "Metadata fallback states render with a recovery CTA",
+    "description": "Verifies an item with pending or failed metadata shows the appropriate fallback state and offers a recovery action (search metadata / manual edit).",
+    "category": "Media Detail Panel",
+    "priority": "High",
+    "steps": [
+      { "type": "action", "description": "Navigate to /library" },
+      { "type": "action", "description": "Open the detail panel for an item whose metadata is pending or failed" },
+      { "type": "assertion", "description": "Verify one of the following is visible: data-testid \"fallback-pending\" or data-testid \"fallback-failed\"" },
+      { "type": "assertion", "description": "Verify a recovery CTA is visible (data-testid \"fallback-cta\" or \"cta-search-metadata\" or \"cta-manual-edit\")" }
+    ],
+    "v4_status": "NEW",
+    "v4_reason": "Fallback/empty metadata states (FallbackPending, FallbackFailed) had no coverage — they are the failure half of the parse→match journey.",
+    "v4_action": "ADD — Tier 1 P0 gap (needs unmatched/failed-metadata seed fixture)"
+  },
+  {
+    "id": "TC088",
+    "title": "Degraded health state shows banner and core navigation stays usable",
+    "description": "Verifies that when the connection health API reports degraded, the dashboard shows the degraded indicator and the user can still navigate to the library and see media (graceful degradation).",
+    "category": "Connection Health Monitoring",
+    "priority": "High",
+    "steps": [
+      { "type": "action", "description": "Navigate to /" },
+      { "type": "assertion", "description": "Verify element \"degraded state indicator\" is visible" },
+      { "type": "assertion", "description": "Verify text \"degraded\" is visible" },
+      { "type": "action", "description": "Navigate to /library" },
+      { "type": "assertion", "description": "Verify a grid of media poster cards is still visible (core feature unaffected by degradation)" }
+    ],
+    "v4_status": "NEW",
+    "v4_reason": "TC047 asserts the degraded state renders; this adds the graceful-degradation slice of P0 journey #4. The degrade→recover TRANSITION is routed to Playwright (mock health API), out of TestSprite scope.",
+    "v4_action": "ADD — Tier 1 P0 gap (needs health API in degraded state)"
+  }
+]
