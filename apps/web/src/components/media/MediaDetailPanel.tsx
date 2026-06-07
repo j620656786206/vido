@@ -14,9 +14,11 @@ import type { TMDbVideo } from '../../types/library';
 // disc-flaky-visual-media-detail-panel: deterministic image-load fallback (B9-D/B9-M spec).
 // Pure CSS/text — NO second network request — so the visual baseline can't race an aborted
 // <img> settle (the bugfix-10-4 async-image flake class that motivated this story). Backdrop
-// fail → this fixed 135° gradient (Screen B7 pending-fallback token); poster fail → an
-// initial-letter circle painted over the same gradient. Inline-style hex keeps the exact B9
-// tokens deterministic (matches ColorPlaceholder.tsx's inline-gradient approach).
+// fail → this fixed 135° gradient (Screen B7 pending-fallback token). Poster fail → an
+// initial-letter circle on a neutral `--bg-tertiary` slot (Sally AC #5 ruling: gradient stays
+// backdrop-only so the small placeholder doesn't out-shout the backdrop; the slot reuses the
+// skeleton/PosterCard fallback token). Inline-style hex keeps the exact B9 tokens deterministic
+// (matches ColorPlaceholder.tsx's inline-gradient approach).
 const IMAGE_FALLBACK_GRADIENT = 'linear-gradient(135deg, #4338CA 0%, #6D28D9 50%, #7C3AED 100%)';
 
 export interface MediaDetailPanelProps {
@@ -128,8 +130,7 @@ export function MediaDetailPanel({
               // AC #2 — deterministic initial-letter fallback (B9 tokens) in the h-48 w-32 slot.
               // Outer `posterUrl &&` keeps case-A (null path) rendering nothing, as before.
               <div
-                className="flex h-48 w-32 flex-shrink-0 items-center justify-center rounded-lg shadow-lg"
-                style={{ background: IMAGE_FALLBACK_GRADIENT }}
+                className="flex h-48 w-32 flex-shrink-0 items-center justify-center rounded-lg bg-[var(--bg-tertiary)] shadow-lg"
                 data-testid="detail-poster-fallback"
               >
                 <span
