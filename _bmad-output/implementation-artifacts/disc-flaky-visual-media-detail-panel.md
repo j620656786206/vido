@@ -165,8 +165,8 @@ Amelia (Developer Agent) — `claude-opus-4-8[1m]` via BMM `/dev-story` workflow
 
 ### File List
 
-- `apps/web/src/components/media/MediaDetailPanel.tsx` — modified (Rule 21 header → B3-D + B9-D; `IMAGE_FALLBACK_GRADIENT` const; `backdropError`/`posterError` state; backdrop + poster `onError` → deterministic gradient / initial-letter fallbacks; `data-testid` `detail-backdrop` / `detail-backdrop-fallback` / `detail-poster-fallback`).
-- `apps/web/src/components/media/MediaDetailPanel.spec.tsx` — modified (new `describe('Image-load fallback …')` block: 4 tests — backdrop fallback, poster fallback, happy path, case-A null path).
+- `apps/web/src/components/media/MediaDetailPanel.tsx` — modified (Rule 21 header → B3-D + B9-D; `IMAGE_FALLBACK_GRADIENT` const; `backdropError`/`posterError` state; backdrop + poster `onError` → deterministic gradient / initial-letter fallbacks; `data-testid` `detail-backdrop` / `detail-backdrop-fallback` / `detail-poster-fallback`. **CR 2026-06-07:** poster fallback `role="img"`+`aria-label` & circle `aria-hidden` (M1); monogram `[...title][0] ?? '🎬'` (L2); `useEffect` resetting error flags on `details` path change (L3); `useEffect` added to imports).
+- `apps/web/src/components/media/MediaDetailPanel.spec.tsx` — modified (`describe('Image-load fallback …')` block. **CR 2026-06-07:** backdrop/poster tests now assert AC tokens via `toHaveStyle`/`toHaveClass`/a11y attrs (L1+M1); +2 tests — TV-path poster fallback (L4) + same-instance media-swap error reset (L3). 49→**51 tests, all pass**).
 - `tests/visual/components.visual.spec.ts-snapshots/components/media-media-detail-panel/{default,hover,focus}-visual-darwin.png` — reblessed for the neutral-slot fallback (committed `9e79199`, Sally-approved).
 - `tests/visual/components.visual.spec.ts-snapshots/components/media-media-detail-panel/{default,hover,focus}-visual-linux.png` — **deleted** (committed `0fae737`) for the post-merge `update-missing` CI bootstrap (Task 5.1).
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` — modified (story `ready-for-dev → in-progress → review`; filed `preexisting-fail-instant-search-debounce-flake: backlog`).
@@ -177,6 +177,7 @@ Amelia (Developer Agent) — `claude-opus-4-8[1m]` via BMM `/dev-story` workflow
 
 | Date       | Change                                                                 |
 | ---------- | --------------------------------------------------------------------- |
+| 2026-06-07 | CR Amelia (`/code-review` adversarial, user chose [1] auto-fix): 0 HIGH code defects; fixed 1 MEDIUM + 4 LOW. **M1** poster fallback gained `role="img"` + `aria-label` (mirrors PosterCard a11y precedent) + circle `aria-hidden`. **L1** unit tests now lock the AC tokens (backdrop `toHaveStyle` 135° gradient + not-an-img/no-alt; poster `bg-[var(--bg-tertiary)]`/`h-48 w-32`/circle `#FFFFFF18`+`#FFFFFFCC`), not just element presence. **L2** monogram `title.charAt(0)` → `[...title][0] ?? '🎬'` (astral-safe + empty-title guard). **L3** added `useEffect` resetting `backdropError`/`posterError` on `details` path change (latent state-leak if panel is reused without remount — not currently reachable: prod route uses TMDbDetailView/LocalDetailView). **L4** added TV-path poster-fallback test. **M2** AC #6 remains post-merge (Task 5.2) — not a code defect, cannot fix pre-push. Spec 49→51 (2 new), all pass; ESLint 0; Prettier clean; full web suite 1966/1967 (1 = preexisting InstantSearchBar debounce flake, 6/6 in isolation). Non-visual changes → `-darwin` baselines unchanged (no rebless). Status stays `review`. |
 | 2026-06-05 | DEV Amelia (post-Sally commit sequence): Sally APPROVED on re-review → committed `5ce8daa` (neutral-slot fix), `9e79199` (rebaseline 3 darwin baselines, separate per Task 3.4), `0fae737` (drop 3 stale `-linux` for CI bootstrap, Task 5.1). Tasks 3 + 4 + 3.4 + 5.1 [x]. Status `in-progress → review`. Remaining Task 5.2 is post-merge (push → PR → owner admin-merge → main `update-missing` regenerates `-linux` → Sally re-approves). Not pushed yet (awaiting go-ahead). |
 | 2026-06-05 | DEV Amelia (Sally AC #5 follow-up): poster-slot bg gradient → neutral `bg-[var(--bg-tertiary)]` per Sally's gallery ruling (gradient kept backdrop-only so the placeholder doesn't out-shout the backdrop; slot now matches the skeleton/PosterCard fallback token). Circle/initial tokens unchanged. Regenerated 3 darwin baselines (only those changed), burn-in ×3 zero-diff, spec 49/49, ESLint 0, Prettier clean. Awaiting Sally re-review before baseline commit (3.4). |
 | 2026-06-05 | DEV Amelia `/dev-story`: implemented deterministic `onError` fallbacks on `MediaDetailPanel` backdrop (135° gradient) + poster (initial-letter circle) per B9-D spec; +4 unit tests (49/49 pass); regenerated 3 `media-media-detail-panel` darwin baselines; burn-in ×3 zero-diff (AC #1–#4 ✅). Full gates green (web 1965/1965, api PASS, ESLint+Prettier clean). Filed `preexisting-fail-instant-search-debounce-flake` backlog. **HALTED at Sally UX gate (Task 4 / AC #5)**; baseline commit (3.4) + `-linux` CI rebless (Task 5 / AC #6) pending. Header kept ESLint-required `Screen ` token (deviation noted). `ready-for-dev → in-progress`. |
@@ -212,3 +213,31 @@ Amelia (Developer Agent) — `claude-opus-4-8[1m]` via BMM `/dev-story` workflow
 ### Re-review condition
 
 Amelia applies the 1-line slot-bg swap (`style={{ background: IMAGE_FALLBACK_GRADIENT }}` → `className=… bg-[var(--bg-tertiary)]` on the `detail-poster-fallback` div), regenerates the 3 darwin baselines, re-runs burn-in. Sally then approves → unblocks Task 3.4 (baseline commit) + Task 5 (`-linux` CI). The backdrop + circle + initial are **already approved** and need no change.
+
+## Senior Developer Review (AI) — Code Review
+
+**Date:** 2026-06-07 · **Reviewer:** Amelia (`/code-review` adversarial) · **Model:** `claude-opus-4-8[1m]` · **Outcome:** user chose **[1] auto-fix**.
+
+**Scope reviewed:** `MediaDetailPanel.{tsx,spec.tsx}` + the 6 visual baselines on branch (`main...HEAD`). Story File List ↔ git reality: **0 discrepancies**. Rule 7 / Rule 20 / Rule 25 checks: **all N/A** (pure frontend, no contract bumps, project-context.md untouched). Independently re-ran + verified the dev's gate claims (spec, ESLint, Prettier) rather than trusting them.
+
+### Findings (0 HIGH · 2 MEDIUM · 4 LOW)
+
+| ID | Sev | Finding | Resolution |
+|----|-----|---------|------------|
+| M1 | MEDIUM | Poster fallback `<div>` had no `role`/`aria-label` — diverged from the cited `PosterCard.tsx:179` (`role="img" aria-label`) precedent; AT users got a bare `銀` with no context. | **FIXED** — `role="img"` + `aria-label={`${title}（海報暫無法載入）`}`; decorative circle `aria-hidden="true"`. |
+| M2 | MEDIUM | AC #6 not fully implemented — `-linux` baselines deleted-not-regenerated; CI not green on main; Task 5.2 `[ ]`. | **NOT a code defect / cannot fix pre-push.** Verified the delete→`update-missing` incremental-bootstrap path in `visual-regression.yml` is the *correct* mechanism (routes through missing-baseline, not pixel-diff fail). Structurally post-merge. Gates `done`. |
+| L1 | LOW | New unit tests asserted only fallback *presence*, not the AC #1/#2 visual tokens (Rule 16 depth) — a gradient→solid-red regression would have passed. | **FIXED** — backdrop test asserts `toHaveStyle` 135° gradient + not-an-img/no-alt; poster test asserts `bg-[var(--bg-tertiary)]`/`h-48 w-32`/circle `#FFFFFF18`+`#FFFFFFCC` (jsdom preserves these). |
+| L2 | LOW | Monogram `title.charAt(0)` breaks on astral-plane first char (half-surrogate) and renders blank for an empty title. | **FIXED** — `[...title][0] ?? '🎬'` (whole code point + emoji guard). Identical output `銀` for the fixture → no baseline change. |
+| L3 | LOW | `backdropError`/`posterError` derived state never reset on `details` change → latent leak if the panel is reused without remount. Not currently reachable (prod route renders `TMDbDetailView`/`LocalDetailView`, not this panel). | **FIXED** — `useEffect` resets both flags on `details?.posterPath`/`backdropPath` change; +regression test. |
+| L4 | LOW | Fallback tests covered only `type="movie"`; the TV `title=tvShow.name` branch was untested. | **FIXED** — added a `type="tv"` poster-fallback test. |
+
+### Verification of fixes
+
+- `vitest run MediaDetailPanel.spec.tsx` → **51/51 pass** (49 + 2 new).
+- ESLint (both files) → **exit 0**. Prettier `--check` → **clean**.
+- `pnpm nx test web` → **1966/1967** (the 1 fail = preexisting `InstantSearchBar` debounce flake, **6/6 in isolation**, already filed `preexisting-fail-instant-search-debounce-flake: backlog`; unrelated — only `MediaDetailPanel.{tsx,spec.tsx}` touched).
+- **Visual:** all CR changes are non-painting (ARIA attrs; `[...title][0]` ≡ `銀`; mount-effect no-op for a single render) → committed `-darwin` baselines remain valid, **no rebless**. The PR's verify-only Visual Regression check is the authoritative confirmation.
+
+### Status
+
+No blocking code defects. Remaining work is **only** Task 5.2 (post-merge `-linux` incremental-bootstrap + Sally re-approval + main green) — unchanged by this review. Story stays **`review`**.

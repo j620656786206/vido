@@ -1,5 +1,5 @@
 // Design ref: ux-design.pen Screen B3-D Detail Panel (RgSxQ) + B9-D image-load fallback (Tn4Gz)
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getImageUrl } from '../../lib/image';
 import { TrailerEmbed } from './TrailerEmbed';
@@ -61,6 +61,15 @@ export function MediaDetailPanel({
   // is swapped for a deterministic CSS/text fallback (mirrors PosterCard.tsx imageError).
   const [backdropError, setBackdropError] = useState(false);
   const [posterError, setPosterError] = useState(false);
+  // disc-flaky CR L3: reset the per-image error flags when the underlying media changes, so a
+  // reused panel instance (new `details` swapped in without a remount) cannot leak a prior
+  // item's broken-image fallback onto the next item's valid artwork. Keyed on the image paths
+  // (not the whole object) so a re-render with the same media is a no-op and never clobbers a
+  // genuine error that just fired.
+  useEffect(() => {
+    setBackdropError(false);
+    setPosterError(false);
+  }, [details?.posterPath, details?.backdropPath]);
   const handleSubtitleDownloadSuccess = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: libraryKeys.all });
   }, [queryClient]);
@@ -132,12 +141,18 @@ export function MediaDetailPanel({
               <div
                 className="flex h-48 w-32 flex-shrink-0 items-center justify-center rounded-lg bg-[var(--bg-tertiary)] shadow-lg"
                 data-testid="detail-poster-fallback"
+                role="img"
+                aria-label={`${title}（海報暫無法載入）`}
               >
                 <span
                   className="flex h-20 w-20 items-center justify-center rounded-full text-4xl font-bold leading-none"
                   style={{ backgroundColor: '#FFFFFF18', color: '#FFFFFFCC' }}
+                  aria-hidden="true"
                 >
-                  {title.charAt(0)}
+                  {/* disc-flaky CR L2: spread-then-index takes the first whole code point (an
+                      astral-plane glyph stays intact, unlike charAt(0)'s half-surrogate); the
+                      🎬 guard covers an empty title so the circle never renders blank. */}
+                  {[...title][0] ?? '🎬'}
                 </span>
               </div>
             ) : (
