@@ -46,9 +46,13 @@ PRD `P1-019 批次字幕處理` is **P2** ("whole season or whole library, queue
 
 ---
 
+## ✅ PM Decision (2026-06-08): build in v4
+
+Alexyu (acting PM) chose **v4 — build now**. Rationale: backend is done + tested (sunk cost paid) and the design already exists (`subtitle-engine-design-brief.md` G4 desktop + G6 mobile; screenshots in `flow-f-subtitle/`), so the marginal cost is **frontend implementation only** (~1 story), and the design brief frames this as the v4 core differentiator. Deferring would ship a feature whose engine + design exist but users can't reach. **Next action: SM `/create-story`** (see routing below).
+
 ## Routing — what each agent should do
 
-- **🧭 PM (John):** **Decision needed first.** Is the batch-subtitle UI in scope for **v4**, or deferred to **v5**? P1-019 is P2 — the backend is sunk cost already paid, so the marginal cost is frontend-only. If v4: promote to a real story; if v5: keep `backlog` but annotate the deferral so it's not re-discovered.
+- **🧭 PM (John):** ✅ DONE — decided v4 (2026-06-08). No further PM action.
 - **🏃 SM (Bob):** On PM go, `/create-story` a frontend story — "Batch Subtitle UI trigger + progress" — with a **carry-forward link to 8-9 / P1-019**. Likely surface: library selection-mode batch action ("Search Subtitles") + a season-level action on the series/season detail, consuming `POST /subtitles/batch` and the `subtitle_batch_progress` SSE (reuse the scan-progress card pattern). Apply Rule 20 ack: confirm against 8-9's API contract.
 - **🎨 UX (Sally):** Confirm whether the `.pen` design already has a batch-subtitle screen (the subtitle-engine design brief mentions "batch processing for library-wide subtitle acquisition"). If a screen exists, the gap is purely implementation; if not, a design screen is needed first (per the standalone-spec-screen rule).
 - **💻 DEV:** No action until the story exists. When it does: SSE consumer must follow the **lazy-connection pattern** (project-context §8 — never connect on mount; gate on an active batchId) to avoid breaking Playwright `networkidle`.
