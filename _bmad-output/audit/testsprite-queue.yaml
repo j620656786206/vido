@@ -93,12 +93,6 @@ queue:
     last_run_at: null
     last_status: null
     last_run_url: null
-  - id: TC013
-    file: testsprite_tests/TC013_Export_a_media_item_from_the_action_menu_shows_visible_confirmationfeedback.py
-    credits_estimated: 5
-    last_run_at: null
-    last_status: null
-    last_run_url: null
   - id: TC014
     file: testsprite_tests/TC014_Pagination_previousnext_controls_behave_at_boundaries.py
     credits_estimated: 5
@@ -183,12 +177,6 @@ queue:
     last_run_at: null
     last_status: null
     last_run_url: null
-  - id: TC048
-    file: testsprite_tests/TC048_Indicator_and_modal_remain_usable_after_switching_filters_multiple_times.py
-    credits_estimated: 5
-    last_run_at: null
-    last_status: null
-    last_run_url: null
   - id: TC049
     file: testsprite_tests/TC049_Manual_metadata_search_returns_results_and_can_be_applied_successfully.py
     credits_estimated: 5
@@ -257,18 +245,6 @@ queue:
     last_run_url: null
   - id: TC060
     file: testsprite_tests/TC060_Delete_learned_pattern_success_removes_it_from_the_list.py
-    credits_estimated: 5
-    last_run_at: null
-    last_status: null
-    last_run_url: null
-  - id: TC061
-    file: testsprite_tests/TC061_Delete_action_can_be_cancelled_if_a_confirmation_is_shown.py
-    credits_estimated: 5
-    last_run_at: null
-    last_status: null
-    last_run_url: null
-  - id: TC062
-    file: testsprite_tests/TC062_Learned_Patterns_statistics_updaterefresh_is_reflected_on_the_page.py
     credits_estimated: 5
     last_run_at: null
     last_status: null
@@ -369,4 +345,70 @@ queue:
     last_run_at: null
     last_status: null
     last_run_url: null
+  # 2026-06-07 — TEA coverage expansion (test-design-testsprite-coverage-2026-06.md):
+  # 8 new P0-journey cases (Downloads Monitor, Media Detail Panel, Connection
+  # graceful-degradation). Plan entries appended to testsprite_frontend_test_plan.json.
+  # NOTE: file: paths are lazy-gen pointers — TestSprite generateCodeAndExecute
+  # names the actual .py on first cron pass; do not hand-create.
+  - id: TC079
+    file: testsprite_tests/TC079_Downloads_page_loads_with_filter_tabs_list_and_perpage_count.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC080
+    file: testsprite_tests/TC080_Filter_downloads_by_status_tab_updates_the_visible_list_and_count.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC081
+    file: testsprite_tests/TC081_Expand_a_download_item_to_view_its_details.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC083
+    file: testsprite_tests/TC083_Parsefailed_download_surfaces_status_badge_and_recovery_actions.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC084
+    file: testsprite_tests/TC084_Click_a_poster_opens_the_media_detail_panel_with_core_metadata.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC085
+    file: testsprite_tests/TC085_Detail_panel_renders_tech_badges_and_file_info_for_an_owned_item.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC086
+    file: testsprite_tests/TC086_Metadata_fallback_states_render_with_a_recovery_CTA.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
+  - id: TC088
+    file: testsprite_tests/TC088_Degraded_health_state_shows_banner_and_core_navigation_stays_usable.py
+    credits_estimated: 5
+    last_run_at: null
+    last_status: null
+    last_run_url: null
 history: []
+# parked: cases demoted out of the active rotation to keep the catalog within the
+# Free-plan budget (50 - 4 + 8 = 54). All are Low-priority. Re-promote into `queue:`
+# if the plan is upgraded. NOT consumed by the cron or by 19-7 (sibling key, ignored
+# by path reads). See test-design-testsprite-coverage-2026-06.md §5.
+parked:
+  - id: TC013
+    reason: "Low — Export confirmation happy-path; export covered structurally"
+  - id: TC048
+    reason: "Low — indicator/modal stability after filter toggles (pure UI-stability)"
+  - id: TC061
+    reason: "Low — pattern delete cancel-if-confirmation (conditional)"
+  - id: TC062
+    reason: "Low — pattern stats refresh"

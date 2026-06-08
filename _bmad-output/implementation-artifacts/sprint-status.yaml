@@ -235,8 +235,14 @@ development_status:
 
   # --- Testing ---
   retro-8-TS1-testsprite-v4-regeneration:            done  # 2026-03-27 — TEA: v4 regeneration complete. 28 deprecated tests removed, 34 retained (all VALID), 16 new tests added (TC063-TC078) for Epic 7 Scanner + Epic 8 Subtitle Engine. Total: 50 tests.
-  retro-8-TS2-testsprite-generate-executable-tests:  backlog  # → TEA: run TestSprite MCP generate-tests to produce .py files for TC063-TC078. Requires frontend+backend running with seed data + subtitle provider access/mocks.
+  retro-8-TS2-testsprite-generate-executable-tests:  backlog  # → TEA: run TestSprite MCP generate-tests to produce .py files for TC063-TC078. Requires frontend+backend running with seed data + subtitle provider access/mocks. 2026-06-07: scripts/seed-test-data.sh added — seeds DB-backed media (TC084-086, owned/pending/failed) via SQLite; downloads (TC079-083) + degraded-health (TC088) still need qBT-side setup (see script header).
   retro-8-TD7-api-json-naming-convention:            done  # 2026-03-28 — Tasks 1-5 complete. E2E tests updated for snake_case, CI VITE_API_BASE_URL fix.
+
+  # --- Discovery Triage (Rule 24) — 2026-06-07, TEA (Murat) ---
+  # Surfaced during a TestSprite coverage-gap analysis. Full evidence + routing:
+  # _bmad-output/discovery-triage-2026-06-07-batch-subtitle-ui.md
+  disc-2026-06-batch-subtitle-frontend-ui:           backlog  # 🔴 GAP — classification: 未開發 (not-yet-developed), NOT a regression. Backend Story 8-9 + retro-8-TD4 are DONE and backend-only BY AC DESIGN: POST /api/v1/subtitles/batch (scope season|library) + GET /subtitles/batch/status + subtitle_batch_progress SSE are all REGISTERED (subtitle_handler.go:67-68, main.go:497-500) + 28 Go tests (batch_test.go). But NO frontend story ever scoped a batch-subtitle UI trigger — Story 8-8 shipped single-item UI only; library batch = delete/reparse/export (Story 5-7); zero web consumer of the batch API/SSE. P1-019 is P2. This is the INVERSE of Rule 15's precedent (API route registered ≠ UI built). → PM: priority call (v4 vs v5?). Then SM /create-story linked to 8-9 / P1-019. Lane ③ backlog-with-carry-forward-link.
+  disc-2026-06-testsprite-coverage-expansion:        done     # 2026-06-07 — TEA: Tier-0 cleanup removed 30 v3-orphan .py files (this also EXECUTES retro-8-TS1's claimed-but-never-actually-done "28 deprecated removed" — they were still on disk). Tier-1 added 8 new P0 cases TC079-088 (Downloads Monitor, Media Detail Panel, Connection graceful-degradation) to testsprite_frontend_test_plan.json + testsprite-queue.yaml; parked 4 Low cases (TC013/048/061/062) → 54 active, within Free-150 budget. Design doc: test-design-testsprite-coverage-2026-06.md. New .py generation still gated on retro-8-TS2 (seed data).
 
   # --- Epic 9 Preparation ---
   retro-8-E9-1-split-c2-whisper-ai-translation:     done  # 2026-03-27 — SM: split C-2 into C-2a (Whisper transcription) + C-2b (AI translation), added split rationale and Whisper WER success criterion
