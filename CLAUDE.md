@@ -1,5 +1,25 @@
 # Vido - NAS Media Management Platform
 
+## Git Workflow & Working Agreements
+
+These apply to **every** session, not just `/ship`.
+
+- **Never commit to `main`.** Create a NEW feature branch first, based off `main` — never off another feature/skill branch.
+- **Never use git worktrees.** Use a direct `git checkout -b`.
+- **Commits are conventional** with a scope: `<type>(<scope>): <summary>` (e.g. `feat(retro-11): ...`, `fix(media-detail): ...`, `chore(visual): ...`). PRs squash-merge with the `(#NN)` number appended.
+- **gh account is `j620656786206`.** Verify with `gh auth status` before any PR/CI op; if active account is `alexyu-tvbs`, run `gh auth switch --user j620656786206`.
+- **`-linux` visual baselines cannot be generated locally** (this machine is darwin; CI is ubuntu). Never run `test:visual:update` and commit `-linux.png` to fix a visual-regression failure — the CI `Visual Regression` workflow auto-opens a `chore(visual): bootstrap N missing -linux baselines` PR for that; merge it instead.
+
+## Confirm Before Coding (no premature assumptions)
+
+Before implementing, **state and confirm** any of these you're relying on rather than guessing:
+
+- Exact JSON field names and response shapes (don't invent field names).
+- Whether a ticket actually exists — if no ClickUp/Jira ticket exists, say so; don't fabricate one.
+- Required test guidelines and any utils extraction the change should follow.
+
+For non-trivial features, work **architecture-first**: outline the design and validate it before reading/exploring code or writing implementation.
+
 ## UX Design Screenshots Workflow
 
 **IMPORTANT:** After ANY modification to `ux-design.pen` (whether via Pencil MCP tools in this session, or externally), you MUST regenerate and commit screenshots before finishing.
