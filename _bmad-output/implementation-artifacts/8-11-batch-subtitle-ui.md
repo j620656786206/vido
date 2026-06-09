@@ -1,6 +1,6 @@
 # Story 8.11: Batch Subtitle Search UI (frontend trigger + progress)
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -251,3 +251,5 @@ claude-opus-4-8[1m] (Amelia / dev-story, party-mode 2026-06-09)
 - 2026-06-08: Story created (SM Bob, *create-story *yolo). Frontend-only; backend 8-9 done. Scoped to 8-9 contract; Pause + converted-stat triaged to backend backlog (Rule 24). Status → ready-for-dev.
 - 2026-06-09: Implemented (Amelia, dev-story, party-mode). Tasks 1–5 + **Task 6 (backend cancel route, Rule 24 ① scope expansion, PM-approved)**. Contract reconciled vs actual 8-9 backend (`season_id` string; `/status` returns `{running,progress}`). AC #6 deep-link filter triaged ③ → backlog `disc-2026-06-library-subtitle-status-filter`. UX verified vs G4 (PASS). Regression: api 31 pkgs + web 1994 tests + visual suite all green. Status → review.
 - 2026-06-09: Code review (Amelia, code-review). Findings: 1 HIGH / 3 MED / 3 LOW. Fixed in-scope — **M1**: wired `getBatchStatus()` (was dead code) into `BatchSubtitleDialog` open effect so an already-running batch is recovered on open, not only via a 409 on start (closes AC #7 UX gap; +2 specs, 13 total). **M2**: File List now lists the TEA e2e + automation-summary. **L1**: terminal `error` status now shows 「發生錯誤 ·」 in the summary (was indistinguishable from success). **L2**: close-btn no-op `hover:bg` → `hover:opacity-80`. **L3**: hardcoded `hover:text-blue-300` → `hover:text-[var(--accent-hover)]`. **H1 (AC #6 inert deep-link) and M3 (mobile peek) NOT fixed — out-of-scope backend/interaction work, already PM-triaged to backlog; force-fixing would expand this frontend-only story.** Status remains `review` (H1 carried as accepted triage).
+- 2026-06-09: TEA `*automate` (Murat) — added wire-level E2E `tests/e2e/batch-subtitle.spec.ts` (6 cases) + `automation-summary-8-11-batch-subtitle.md`; codified the [[e2e-sse-testing-convention]] (E2E never mocks `/events` SSE; wire-level + optimistic `startTracking` only).
+- 2026-06-09: Merged + closed (Amelia). PR **#38** (feature + cancel route + review fixes) merged → `main` (`ce7c38e`). Visual `-linux` baselines bootstrapped via PR **#39** (`26fef0b`), Sally UX content-gate APPROVED (zero content drift, rendering-only). CI on the branch: Tests / Docker / Bisect green; Visual was the expected missing-`-linux` red, now sealed on main. Status → **done**. Open follow-ups (PM backlog): `disc-2026-06-batch-subtitle-pause`, `disc-2026-06-library-subtitle-status-filter`.

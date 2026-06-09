@@ -192,7 +192,7 @@ development_status:
   8-8-manual-subtitle-search-ui: done  # CR pass 3 2026-03-25: 9 issues fixed
   8-9-batch-subtitle-processing: done
   8-10-subtitle-file-management: done  # CR 2026-03-24: 7 findings, 5 auto-fixed
-  8-11-batch-subtitle-ui: review  # 2026-06-09 — Amelia dev-story (party-mode). Tasks 1-5 + Task 6 (backend cancel route POST /subtitles/batch/cancel, Rule 24 ① scope expansion, PM-approved — Cancel() existed but had no HTTP route). Contract reconciled vs actual 8-9 backend (season_id string; /status returns {running,progress}). Lazy-SSE per §8. Regression: api 31 pkgs + web 1994 tests + visual suite green; -linux baselines pending CI rebless. AC #6 deep-link filter triaged → disc-2026-06-library-subtitle-status-filter. Story: 8-11-batch-subtitle-ui.md.
+  8-11-batch-subtitle-ui: done  # 2026-06-09 — DONE. Merged via PR #38 (ce7c38e) + visual -linux bootstrap PR #39 (26fef0b, Sally UX-approved). Amelia dev-story (party-mode): Tasks 1-5 + Task 6 (backend cancel route POST /subtitles/batch/cancel, Rule 24 ① scope expansion, PM-approved — Cancel() existed but had no HTTP route). Contract reconciled vs actual 8-9 backend (season_id string; /status returns {running,progress}). Lazy-SSE per §8. Code-review: 1H/3M/3L, M1/M2/L1-L3 fixed, H1+M3 accepted backlog triage. Regression: api 31 pkgs + web 1996 tests + 6 E2E + visual suite green. Follow-ups (PM backlog): disc-2026-06-batch-subtitle-pause, disc-2026-06-library-subtitle-status-filter. Story: 8-11-batch-subtitle-ui.md.
   epic-8-retrospective: done  # 2026-03-25
 
   # ==============================================================================
