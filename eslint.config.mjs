@@ -3,6 +3,7 @@ import tseslint from '@typescript-eslint/eslint-plugin';
 import tsparser from '@typescript-eslint/parser';
 import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
+import jsxA11y from 'eslint-plugin-jsx-a11y';
 import prettier from 'eslint-config-prettier';
 // Local custom rules — CJS plugins, default-imported as their module.exports.
 // Each rule lives in its own file; they're merged here under one `local` plugin
@@ -243,6 +244,29 @@ export default [
     rules: {
       'local/time-dependent-fixture-stability': 'error',
     },
+  },
+
+  // Epic 11 Retro AI-1 — eslint-plugin-jsx-a11y enforcement. Scope mirrors the
+  // Rule 21/23 component blocks (same files/ignores) so a scope refactor of one
+  // carries intent to all three. WARN (not error) preserves the `lint:all`
+  // 0-errors gate while the existing component a11y-violation batch surfaces as
+  // warnings for retro-11-AI1b to clear; the warn→error ratchet is AI1b's
+  // closing move, NOT this story.
+  //
+  // jsx-a11y's recommended ruleset ships at 'error'; remap every recommended
+  // rule key to 'warn' rather than hand-listing rules, so the enabled set stays
+  // current with the plugin version.
+  {
+    files: ['apps/web/src/components/**/*.{ts,tsx}'],
+    ignores: [
+      'apps/web/src/components/**/*.spec.{ts,tsx}',
+      'apps/web/src/components/**/*.test.{ts,tsx}',
+      'apps/web/src/components/**/index.ts',
+    ],
+    plugins: { 'jsx-a11y': jsxA11y },
+    rules: Object.fromEntries(
+      Object.keys(jsxA11y.flatConfigs.recommended.rules).map((r) => [r, 'warn'])
+    ),
   },
 
   // Prettier config (must be last)
