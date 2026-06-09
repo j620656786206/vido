@@ -218,7 +218,7 @@ export function BatchSubtitlePanel({
                 className="text-sm text-[var(--text-secondary)]"
                 data-testid="batch-subtitle-summary"
               >
-                {status === 'cancelled' ? '已取消 · ' : ''}
+                {status === 'error' ? '發生錯誤 · ' : status === 'cancelled' ? '已取消 · ' : ''}
                 找到 {progress.successCount} · 未找到 {progress.failCount} · 共{' '}
                 {progress.totalItems}
               </p>
@@ -227,14 +227,14 @@ export function BatchSubtitlePanel({
                 <button
                   onClick={onViewNotFound}
                   data-testid="batch-subtitle-view-notfound"
-                  className="text-sm text-[var(--accent-primary)] hover:text-blue-300"
+                  className="text-sm text-[var(--accent-primary)] hover:text-[var(--accent-hover)]"
                 >
                   查看未找到項目
                 </button>
                 <button
                   onClick={onClose}
                   data-testid="batch-subtitle-close-btn"
-                  className="rounded-lg bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[var(--bg-tertiary)]"
+                  className="rounded-lg bg-[var(--bg-tertiary)] px-4 py-2 text-sm font-medium text-white transition hover:opacity-80"
                 >
                   關閉
                 </button>
@@ -273,6 +273,27 @@ export function BatchSubtitleDialog({ open, onOpenChange, seasonId }: BatchSubti
     setStartError(null);
     onOpenChange(false);
   }, [reset, onOpenChange]);
+
+  // On open, recover an already-running batch (AC #7 recovery path). Without
+  // this, opening the dialog while a batch is mid-run shows the idle state; the
+  // GET /batch/status snapshot lets us jump straight into the processing view
+  // (and connect the SSE stream) instead of only discovering it via a 409.
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    subtitleService
+      .getBatchStatus()
+      .then((s) => {
+        if (cancelled) return;
+        if (s.running && s.progress) startTracking(s.progress);
+      })
+      .catch(() => {
+        // Best-effort recovery — a failed status probe just leaves the panel idle.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, startTracking]);
 
   // Escape closes only when not mid-run (AC #5/#8).
   useEffect(() => {

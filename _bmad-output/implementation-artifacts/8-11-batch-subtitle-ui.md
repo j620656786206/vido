@@ -236,6 +236,11 @@ claude-opus-4-8[1m] (Amelia / dev-story, party-mode 2026-06-09)
 - `apps/web/src/routes/library.tsx` (modified — dialog state/render + `subtitleStatus` search param)
 - `apps/web/src/routes/test/-gallery.fixtures.tsx` (modified — `BatchSubtitlePanel` import + 3 fixtures; `SelectionToolbar` fixture prop)
 
+**Tests (TEA `*automate`, commit 9803ef8):**
+
+- `tests/e2e/batch-subtitle.spec.ts` (new — wire-level E2E for the batch subtitle UI)
+- `_bmad-output/automation-summary-8-11-batch-subtitle.md` (new — TEA automation summary)
+
 **Visual baselines (`-darwin` generated locally; `-linux` via CI rebless):**
 
 - `tests/visual/.../components/subtitle-batch-subtitle-panel-{idle,processing,complete}/default-visual-darwin.png` (new)
@@ -245,3 +250,4 @@ claude-opus-4-8[1m] (Amelia / dev-story, party-mode 2026-06-09)
 
 - 2026-06-08: Story created (SM Bob, *create-story *yolo). Frontend-only; backend 8-9 done. Scoped to 8-9 contract; Pause + converted-stat triaged to backend backlog (Rule 24). Status → ready-for-dev.
 - 2026-06-09: Implemented (Amelia, dev-story, party-mode). Tasks 1–5 + **Task 6 (backend cancel route, Rule 24 ① scope expansion, PM-approved)**. Contract reconciled vs actual 8-9 backend (`season_id` string; `/status` returns `{running,progress}`). AC #6 deep-link filter triaged ③ → backlog `disc-2026-06-library-subtitle-status-filter`. UX verified vs G4 (PASS). Regression: api 31 pkgs + web 1994 tests + visual suite all green. Status → review.
+- 2026-06-09: Code review (Amelia, code-review). Findings: 1 HIGH / 3 MED / 3 LOW. Fixed in-scope — **M1**: wired `getBatchStatus()` (was dead code) into `BatchSubtitleDialog` open effect so an already-running batch is recovered on open, not only via a 409 on start (closes AC #7 UX gap; +2 specs, 13 total). **M2**: File List now lists the TEA e2e + automation-summary. **L1**: terminal `error` status now shows 「發生錯誤 ·」 in the summary (was indistinguishable from success). **L2**: close-btn no-op `hover:bg` → `hover:opacity-80`. **L3**: hardcoded `hover:text-blue-300` → `hover:text-[var(--accent-hover)]`. **H1 (AC #6 inert deep-link) and M3 (mobile peek) NOT fixed — out-of-scope backend/interaction work, already PM-triaged to backlog; force-fixing would expand this frontend-only story.** Status remains `review` (H1 carried as accepted triage).

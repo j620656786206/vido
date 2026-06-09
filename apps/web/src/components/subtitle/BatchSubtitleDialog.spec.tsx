@@ -11,10 +11,12 @@ vi.mock('@tanstack/react-router', () => ({
 
 const mockStartBatch = vi.fn();
 const mockCancelBatch = vi.fn();
+const mockGetBatchStatus = vi.fn();
 vi.mock('../../services/subtitleService', () => ({
   subtitleService: {
     startBatch: (...args: unknown[]) => mockStartBatch(...args),
     cancelBatch: (...args: unknown[]) => mockCancelBatch(...args),
+    getBatchStatus: (...args: unknown[]) => mockGetBatchStatus(...args),
   },
 }));
 
@@ -42,6 +44,8 @@ const baseProgress: BatchProgressState = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // Default: no batch running, so the open-time recovery probe is a no-op.
+  mockGetBatchStatus.mockResolvedValue({ running: false });
   hookState = {
     progress: { ...baseProgress, status: 'idle', currentIndex: 0, successCount: 0, failCount: 0 },
     status: 'idle',
@@ -152,6 +156,24 @@ describe('BatchSubtitleDialog (container wiring)', () => {
     await waitFor(() =>
       expect(mockStartTracking).toHaveBeenCalledWith({ batchId: 'b-99', totalItems: 25 })
     );
+  });
+
+  it('recovers an already-running batch on open via getBatchStatus (AC #7)', async () => {
+    const running = { ...baseProgress, batchId: 'b-live' };
+    mockGetBatchStatus.mockResolvedValueOnce({ running: true, progress: running });
+
+    render(<BatchSubtitleDialog open onOpenChange={vi.fn()} />);
+
+    await waitFor(() => expect(mockStartTracking).toHaveBeenCalledWith(running));
+  });
+
+  it('does not recover when no batch is running on open', async () => {
+    mockGetBatchStatus.mockResolvedValueOnce({ running: false });
+
+    render(<BatchSubtitleDialog open onOpenChange={vi.fn()} />);
+
+    await waitFor(() => expect(mockGetBatchStatus).toHaveBeenCalledOnce());
+    expect(mockStartTracking).not.toHaveBeenCalled();
   });
 
   it('start: recovers from a 409 conflict by tracking the in-progress batch', async () => {
