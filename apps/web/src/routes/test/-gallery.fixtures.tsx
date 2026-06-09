@@ -165,6 +165,7 @@ import { RetryNotifications, type Notification } from '../../components/retry/Re
 import { RetryQueuePanel } from '../../components/retry/RetryQueuePanel';
 import { RetryQueueWithNotifications } from '../../components/retry/RetryQueueWithNotifications';
 import { SubtitleSearchDialog } from '../../components/subtitle/SubtitleSearchDialog';
+import { BatchSubtitlePanel } from '../../components/subtitle/BatchSubtitleDialog';
 import { BackupManagement } from '../../components/settings/BackupManagement';
 import { BackupScheduleConfig } from '../../components/settings/BackupScheduleConfig';
 import { CacheManagement } from '../../components/settings/CacheManagement';
@@ -1194,6 +1195,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       onDelete: noop,
       onReparse: noop,
       onExport: noop,
+      onBatchSubtitle: noop,
       onCancel: noop,
       isProcessing: false,
     },
@@ -3075,6 +3077,77 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       open: true,
       onOpenChange: noop,
       onDownloadSuccess: noop,
+    },
+    penNode: 'screen-section',
+    statesOnly: ['default'],
+  },
+  // BatchSubtitlePanel — presentational; 3 states for visual baselines (Story 8-11).
+  {
+    id: 'subtitle-batch-subtitle-panel-idle',
+    label: 'subtitle/BatchSubtitlePanel (idle)',
+    component: BatchSubtitlePanel as ComponentType<Record<string, unknown>>,
+    props: {
+      status: 'idle',
+      progress: {
+        batchId: '',
+        totalItems: 0,
+        currentIndex: 0,
+        currentItem: '',
+        successCount: 0,
+        failCount: 0,
+        status: 'idle',
+      },
+      seasonId: 'season-1',
+      onStart: noop,
+      onConfirmCancel: noop,
+      onViewNotFound: noop,
+      onClose: noop,
+    },
+    penNode: 'screen-section',
+    statesOnly: ['default'],
+  },
+  {
+    id: 'subtitle-batch-subtitle-panel-processing',
+    label: 'subtitle/BatchSubtitlePanel (processing)',
+    component: BatchSubtitlePanel as ComponentType<Record<string, unknown>>,
+    props: {
+      status: 'running',
+      progress: {
+        batchId: 'b-1',
+        totalItems: 120,
+        currentIndex: 47,
+        currentItem: '進擊的巨人 S04E12.mkv',
+        successCount: 38,
+        failCount: 9,
+        status: 'running',
+      },
+      onStart: noop,
+      onConfirmCancel: noop,
+      onViewNotFound: noop,
+      onClose: noop,
+    },
+    penNode: 'screen-section',
+    statesOnly: ['default'],
+  },
+  {
+    id: 'subtitle-batch-subtitle-panel-complete',
+    label: 'subtitle/BatchSubtitlePanel (complete)',
+    component: BatchSubtitlePanel as ComponentType<Record<string, unknown>>,
+    props: {
+      status: 'complete',
+      progress: {
+        batchId: 'b-1',
+        totalItems: 120,
+        currentIndex: 120,
+        currentItem: '',
+        successCount: 103,
+        failCount: 17,
+        status: 'complete',
+      },
+      onStart: noop,
+      onConfirmCancel: noop,
+      onViewNotFound: noop,
+      onClose: noop,
     },
     penNode: 'screen-section',
     statesOnly: ['default'],

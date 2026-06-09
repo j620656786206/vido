@@ -31,6 +31,7 @@ import type { ViewMode } from '../components/library/ViewToggle';
 import { SelectionToolbar } from '../components/library/SelectionToolbar';
 import { BatchConfirmDialog } from '../components/library/BatchConfirmDialog';
 import { BatchProgress } from '../components/library/BatchProgress';
+import { BatchSubtitleDialog } from '../components/subtitle/BatchSubtitleDialog';
 import { Pagination } from '../components/ui/Pagination';
 import type { LibraryMediaType, LibraryItem, SortField, SortOrder } from '../types/library';
 import { VALID_SORT_FIELDS } from '../types/library';
@@ -93,6 +94,12 @@ interface LibrarySearchParams {
   yearMin?: number;
   yearMax?: number;
   unmatched?: boolean;
+  /**
+   * Forward-compatible deep-link target for the batch-subtitle "查看未找到項目"
+   * link (Story 8-11 AC #6). Preserved here so the URL is valid; backend list
+   * filtering by subtitle_status is a tracked follow-up (not yet wired).
+   */
+  subtitleStatus?: string;
 }
 
 export const Route = createFileRoute('/library')({
@@ -112,6 +119,7 @@ export const Route = createFileRoute('/library')({
     yearMin: typeof search.yearMin === 'number' ? search.yearMin : undefined,
     yearMax: typeof search.yearMax === 'number' ? search.yearMax : undefined,
     unmatched: search.unmatched === true ? true : undefined,
+    subtitleStatus: typeof search.subtitleStatus === 'string' ? search.subtitleStatus : undefined,
   }),
   component: LibraryPage,
 });
@@ -151,6 +159,8 @@ function LibraryPage() {
     isComplete: boolean;
     errors?: { id: string; message: string }[];
   }>({ isOpen: false, current: 0, total: 0, action: '', isComplete: false });
+  // Batch subtitle search dialog (Story 8-11)
+  const [isBatchSubtitleOpen, setIsBatchSubtitleOpen] = useState(false);
 
   const lastSelectedIndexRef = useRef<number>(-1);
 
@@ -539,6 +549,7 @@ function LibraryPage() {
               onDelete={() => setConfirmAction('delete')}
               onReparse={() => setConfirmAction('reparse')}
               onExport={() => setConfirmAction('export')}
+              onBatchSubtitle={() => setIsBatchSubtitleOpen(true)}
               onCancel={exitSelectionMode}
               isProcessing={
                 batchDeleteMutation.isPending ||
@@ -734,6 +745,9 @@ function LibraryPage() {
         isComplete={batchProgress.isComplete}
         onClose={closeBatchProgress}
       />
+
+      {/* Batch subtitle search (Story 8-11) */}
+      <BatchSubtitleDialog open={isBatchSubtitleOpen} onOpenChange={setIsBatchSubtitleOpen} />
     </div>
   );
 }

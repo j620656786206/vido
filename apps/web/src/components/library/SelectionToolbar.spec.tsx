@@ -8,6 +8,7 @@ describe('SelectionToolbar', () => {
     onDelete: vi.fn(),
     onReparse: vi.fn(),
     onExport: vi.fn(),
+    onBatchSubtitle: vi.fn(),
     onCancel: vi.fn(),
   };
 
