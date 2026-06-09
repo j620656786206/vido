@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"os"
 	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
 
@@ -978,6 +978,80 @@ func TestSubtitleHandler_StartBatch_NoBatchProcessor(t *testing.T) {
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/subtitles/batch", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}
+
+// --- Cancel Batch Tests (Story 8-11 — backend cancel route, Rule 24 scope expansion) ---
+
+// POST /batch/cancel while a batch is running cancels it and returns cancelled=true.
+func TestSubtitleHandler_CancelBatch_Running(t *testing.T) {
+	_, router := setupBatchHandlerWithItems(t)
+
+	// Start a batch first
+	body, _ := json.Marshal(BatchStartRequest{Scope: "library"})
+	w1 := httptest.NewRecorder()
+	req1 := httptest.NewRequest(http.MethodPost, "/api/v1/subtitles/batch", bytes.NewReader(body))
+	req1.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w1, req1)
+	require.Equal(t, 202, w1.Code)
+
+	// Brief wait for background processing to start
+	time.Sleep(20 * time.Millisecond)
+
+	// Cancel
+	w2 := httptest.NewRecorder()
+	req2 := httptest.NewRequest(http.MethodPost, "/api/v1/subtitles/batch/cancel", nil)
+	router.ServeHTTP(w2, req2)
+
+	assert.Equal(t, http.StatusOK, w2.Code)
+
+	var resp map[string]interface{}
+	require.NoError(t, json.Unmarshal(w2.Body.Bytes(), &resp))
+	data := resp["data"].(map[string]interface{})
+	assert.Equal(t, true, data["cancelled"])
+
+	// After cancellation propagates, no batch should be running
+	time.Sleep(200 * time.Millisecond)
+	w3 := httptest.NewRecorder()
+	req3 := httptest.NewRequest(http.MethodGet, "/api/v1/subtitles/batch/status", nil)
+	router.ServeHTTP(w3, req3)
+	var statusResp map[string]interface{}
+	require.NoError(t, json.Unmarshal(w3.Body.Bytes(), &statusResp))
+	statusData := statusResp["data"].(map[string]interface{})
+	assert.Equal(t, false, statusData["running"])
+}
+
+// POST /batch/cancel when no batch is running is idempotent (200, cancelled=false).
+func TestSubtitleHandler_CancelBatch_Idle(t *testing.T) {
+	_, router := setupBatchHandler(t)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/subtitles/batch/cancel", nil)
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var resp map[string]interface{}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	data := resp["data"].(map[string]interface{})
+	assert.Equal(t, false, data["cancelled"])
+}
+
+// POST /batch/cancel with no batch processor configured returns 500.
+func TestSubtitleHandler_CancelBatch_NoBatchProcessor(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	handler := NewSubtitleHandler(nil, nil, nil, nil, nil, nil, nil)
+	// Don't set batch processor
+
+	router := gin.New()
+	api := router.Group("/api/v1")
+	handler.RegisterRoutes(api)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/subtitles/batch/cancel", nil)
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusInternalServerError, w.Code)

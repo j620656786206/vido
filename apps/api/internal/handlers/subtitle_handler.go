@@ -66,6 +66,7 @@ func (h *SubtitleHandler) RegisterRoutes(rg *gin.RouterGroup) {
 		subtitles.POST("/preview", h.PreviewSubtitle)
 		subtitles.POST("/batch", h.StartBatch)
 		subtitles.GET("/batch/status", h.GetBatchStatus)
+		subtitles.POST("/batch/cancel", h.CancelBatch)
 	}
 }
 
@@ -105,11 +106,11 @@ type SubtitleScoreBreakdownDTO struct {
 
 // SubtitleDownloadRequest is the request body for subtitle download.
 type SubtitleDownloadRequest struct {
-	MediaID              string `json:"media_id" binding:"required"`
-	MediaType            string `json:"media_type" binding:"required,oneof=movie series"`
-	MediaFilePath        string `json:"media_file_path" binding:"required"`
-	SubtitleID           string `json:"subtitle_id" binding:"required"`
-	Provider             string `json:"provider" binding:"required"`
+	MediaID              string  `json:"media_id" binding:"required"`
+	MediaType            string  `json:"media_type" binding:"required,oneof=movie series"`
+	MediaFilePath        string  `json:"media_file_path" binding:"required"`
+	SubtitleID           string  `json:"subtitle_id" binding:"required"`
+	Provider             string  `json:"provider" binding:"required"`
 	Resolution           string  `json:"resolution"`
 	ConvertToTraditional *bool   `json:"convert_to_traditional"`
 	Score                float64 `json:"score"`
@@ -386,7 +387,7 @@ func (h *SubtitleHandler) updateSubtitleDB(ctx context.Context, mediaID, mediaTy
 
 // BatchStartRequest is the request body for starting a batch.
 type BatchStartRequest struct {
-	Scope    string `json:"scope" binding:"required,oneof=season library"`
+	Scope    string  `json:"scope" binding:"required,oneof=season library"`
 	SeasonID *string `json:"season_id"`
 }
 
@@ -468,6 +469,32 @@ func (h *SubtitleHandler) GetBatchStatus(c *gin.Context) {
 	SuccessResponse(c, map[string]interface{}{
 		"running":  true,
 		"progress": progress,
+	})
+}
+
+// CancelBatch handles POST /api/v1/subtitles/batch/cancel.
+// Story 8-11 (frontend trigger): exposes the existing BatchProcessor.Cancel()
+// (context-cancellation path) over HTTP so the UI can stop an in-flight batch.
+// Idempotent: cancelling when no batch is running returns 200 with cancelled=false.
+func (h *SubtitleHandler) CancelBatch(c *gin.Context) {
+	if h.batchProcessor == nil {
+		ErrorResponse(c, 500, "SUBTITLE_BATCH_NOT_CONFIGURED",
+			"Batch processing not configured",
+			"Check server configuration for batch subtitle processing.")
+		return
+	}
+
+	if !h.batchProcessor.IsRunning() {
+		SuccessResponse(c, map[string]interface{}{
+			"cancelled": false,
+			"running":   false,
+		})
+		return
+	}
+
+	h.batchProcessor.Cancel()
+	SuccessResponse(c, map[string]interface{}{
+		"cancelled": true,
 	})
 }
 

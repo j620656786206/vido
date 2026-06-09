@@ -78,6 +78,54 @@ export interface SubtitlePreviewResult {
   language: string;
 }
 
+// --- Batch types (Story 8-11) ---
+// NOTE: contract reconciled against the ACTUAL Story 8-9 backend (Rule 20 ack):
+//  - `season_id` is a STRING on the wire (subtitle_handler.go BatchStartRequest), not a number.
+//  - GET /batch/status returns { running, progress? } — NOT a bare progress object.
+
+export type BatchScope = 'library' | 'season';
+
+export interface BatchStartParams {
+  scope: BatchScope;
+  /** Required when scope === 'season'. String id per backend contract. */
+  seasonId?: string;
+}
+
+export interface BatchStartResult {
+  batchId: string;
+  totalItems: number;
+}
+
+/** Live progress shape mirrored from the `subtitle_batch_progress` SSE payload. */
+export interface BatchProgress {
+  batchId: string;
+  totalItems: number;
+  currentIndex: number;
+  currentItem: string;
+  successCount: number;
+  failCount: number;
+  status: 'running' | 'complete' | 'cancelled' | 'error';
+}
+
+/** GET /subtitles/batch/status response (camelCase). */
+export interface BatchStatusResponse {
+  running: boolean;
+  progress?: BatchProgress;
+}
+
+/**
+ * Outcome of startBatch: either the batch started (202) or one was already
+ * running (409), in which case the in-progress snapshot is surfaced instead of
+ * throwing (AC #7).
+ */
+export type StartBatchOutcome =
+  | { conflict: false; result: BatchStartResult }
+  | { conflict: true; progress: BatchProgress };
+
+export interface BatchCancelResult {
+  cancelled: boolean;
+}
+
 // --- Service ---
 
 export const subtitleService = {
@@ -102,6 +150,51 @@ export const subtitleService = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(camelToSnake(params)),
+    });
+  },
+
+  // --- Batch (Story 8-11, consumes Story 8-9 backend) ---
+
+  /**
+   * POST /subtitles/batch. Returns the started batch on 202, or the in-progress
+   * snapshot on 409 (AC #7) — never throws on a conflict. Other non-2xx throw.
+   */
+  async startBatch(params: BatchStartParams): Promise<StartBatchOutcome> {
+    const response = await fetch(`${API_BASE_URL}/subtitles/batch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(camelToSnake(params)),
+    });
+
+    const json = await response.json().catch(() => ({}) as Record<string, unknown>);
+
+    if (response.status === 409) {
+      return {
+        conflict: true,
+        progress: snakeToCamel<BatchProgress>((json as ApiResponse<unknown>).data),
+      };
+    }
+
+    if (!response.ok || !(json as ApiResponse<unknown>).success) {
+      const err = (json as ApiResponse<unknown>).error;
+      throw new Error(err?.message || `API request failed: ${response.status}`);
+    }
+
+    return {
+      conflict: false,
+      result: snakeToCamel<BatchStartResult>((json as ApiResponse<unknown>).data),
+    };
+  },
+
+  /** GET /subtitles/batch/status — current batch status (AC #7 recovery path). */
+  async getBatchStatus(): Promise<BatchStatusResponse> {
+    return fetchApi<BatchStatusResponse>('/subtitles/batch/status');
+  },
+
+  /** POST /subtitles/batch/cancel — stops the active batch (AC #5). Idempotent. */
+  async cancelBatch(): Promise<BatchCancelResult> {
+    return fetchApi<BatchCancelResult>('/subtitles/batch/cancel', {
+      method: 'POST',
     });
   },
 };
