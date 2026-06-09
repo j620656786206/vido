@@ -36,6 +36,9 @@
 - [Let User Demo Before Proposing](feedback_let_user_demo_before_proposing.md) — Don't anchor on bug-title literal framing; wait for user's demo + narrative before recommending
 - [Respond in zh-TW](feedback_respond_in_zh_tw.md) — Reply in Traditional Chinese (config sets `communication_language: zh-tw`); don't drift to English even in long technical summaries
 
+## Infrastructure
+- [GitHub Account](project_gh_account.md) — push/PR with `j620656786206` (personal); switch before any PR/CI op (work repos use `tvbstw`)
+
 ## Technical Decisions
 - [qBittorrent State Mapping](project_qbt_state_mapping.md) — qBT 4.x+5.0+ state→Vido status follows Sonarr/Radarr standard
 
