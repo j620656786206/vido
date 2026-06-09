@@ -1,6 +1,6 @@
 # Story: A11y Enforcement Mechanism — jsx-a11y Lint + MANDATORY dev-story Pre-Flight
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -120,7 +120,7 @@ so that a11y issues are caught by automation + an enforced workflow gate (the sa
 - [x] **Task 5: sprint-status transitions** (AC: #7)
   - [x] 5.1 `retro-11-AI1-a11y-enforcement-mechanism: ready-for-dev` at story creation (this `/create-story` step).
   - [x] 5.2 `ready-for-dev → in-progress` on `/dev-story` start; `in-progress → review` on completion.
-  - [ ] 5.3 `review → done` on `/code-review` pass; append a completion note recording the final `instructions.xml` Step 7 line range + the new lint:all warnings count, and re-confirm the AI1b hand-off (warning batch NOT cleared here).
+  - [x] 5.3 `review → done` on `/code-review` pass; append a completion note recording the final `instructions.xml` Step 7 line range + the new lint:all warnings count, and re-confirm the AI1b hand-off (warning batch NOT cleared here).
 
 ## Dev Notes
 
@@ -200,6 +200,13 @@ claude-opus-4-8[1m] (Amelia / Dev Agent, /dev-story)
 - 🎨 **UX Verification: SKIPPED** — no UI changes in this story (tooling config + wiring spec + workflow docs; zero React components added or modified).
 - **Checkbox audit (Step 10):** all task checkboxes 1.1–5.2 marked `[x]`. Task **5.3** (`review → done` on `/code-review` pass) is intentionally **deferred** — it transitions at the next workflow (`/code-review`), not at dev-story completion; the dev-story workflow terminates at `review` status. Justified deferral, not an incomplete task.
 
+### Code Review (2026-06-09, /code-review — 3rd-LLM adversarial pass, Amelia)
+
+- **Verdict:** PASS — 0 High, 0 Medium, 3 Low. Every AC + Task independently re-verified against git reality, not story claims. `pnpm lint:all` re-run live → `268 problems (0 errors, 268 warnings)`; the new `jsx-a11y-config.spec.ts` re-run live → 5/5 green; the Debug-Log `+146` warning breakdown re-counted via scoped `eslint . | grep jsx-a11y/` → **exact match** (46 `label-has-for` / 37 `control-has-associated-label` / 24 `label-has-associated-control` / 16 `no-noninteractive-element-interactions` / 14 `click-events-have-key-events` / 5 `no-static-element-interactions` / 4 `no-autofocus`). AI1b hand-off count is authoritative.
+- **Rule checks:** 🔒 Rule 7 Wire Format **N/A** (no `apps/api/internal/**` Go files in scope) · 🔒 Rule 20 Contract Bump **N/A** (no `[@contract-vN→v(N+1)]` bumps) · 🔒 Rule 25 Mega-line **N/A** (`project-context.md` mega-line untouched). Git vs File List: **0 discrepancies** (all 8 changed files documented).
+- **CR fix applied (Low #2):** Added a CAVEAT line to the MANDATORY a11y action's step 1 in `instructions.xml` — the jsx-a11y eslint block is scoped to `apps/web/src/components/**` ONLY, so JSX outside `components/` (routes/app) is covered only by the manual item-2 backstop, not lint. Action now spans lines 408–441; sibling `{{a11y_preflight_result}}` binding at 445; Step 8 shifts 453 → 457. `xmllint --noout` re-confirmed PASS; steps 1–11 intact.
+- **Low #1 (4-vs-4+1 a11y classes) & Low #3 (`{{a11y_preflight_result}}` has no `<output>` echo):** acknowledged as intentional design / AC-compliant (item-2's keyboard-widget class is the 11-2/11-3 enrichment the retro exists for; AC #6 requires only Completion-Notes recording). No code change.
+
 ### Discovery Triage
 
 - **Did this story discover any work outside its current scope?**
@@ -226,3 +233,4 @@ claude-opus-4-8[1m] (Amelia / Dev Agent, /dev-story)
 | 2026-06-09 | Task 2 — added jsx-a11y-config.spec.ts wiring spec (5 assertions: single block, files scope, ignores triple, plugin registered, all rules at warn). nx test web green (2001 tests). | Amelia (Dev) |
 | 2026-06-09 | Task 3 — promoted a11y pre-flight to MANDATORY action in instructions.xml Step 7 (lines 408–431) + sibling {{a11y_preflight_result}} binding (432–437); replaced checklist.md section body with one-line pointer. xmllint PASS, steps 1–11 intact. | Amelia (Dev) |
 | 2026-06-09 | Task 4 — verification: lint:all 0 errors, nx test api PASS, nx test web 2001 PASS, prettier --check clean, test:cleanup no orphans. Task 5 — sprint-status ready-for-dev → in-progress → review. 5.3 (review → done) deferred to /code-review. | Amelia (Dev) |
+| 2026-06-09 | /code-review (3rd-LLM adversarial) — PASS (0 High, 0 Med, 3 Low). Re-verified live: lint:all 0 errors/268 warns, jsx-a11y-config.spec 5/5, +146 warning breakdown exact match. Rule 7/20/25 all N/A. CR fix (Low#2): added lint-scope CAVEAT to a11y action step 1 (instructions.xml; action now 408–441, Step 8 → 457; xmllint PASS). Task 5.3 done; review → done. AI1b boundary re-confirmed (warning batch NOT cleared; warn→error ratchet is AI1b's). | Amelia (CR) |

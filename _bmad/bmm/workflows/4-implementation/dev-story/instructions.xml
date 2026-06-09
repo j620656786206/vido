@@ -413,6 +413,10 @@
            warnings for files THIS story added or modified; resolve any introduced by
            this story's own new/changed code (pre-existing batch belongs to retro-11-AI1b,
            do NOT expand scope to clear it — note its count only).
+           CAVEAT: the jsx-a11y eslint block is scoped to apps/web/src/components/**
+           ONLY. If this story touches JSX OUTSIDE components/ (e.g. apps/web/src/routes/**,
+           apps/web/src/app/**), lint will NOT flag a11y violations there — the manual
+           item 2 below is your only backstop for those files.
         2. Manually confirm the 4 recurring a11y classes for any component this story
            touches (each maps to a real Epic-10 CR finding — concrete, not abstract):
            - Responsive image sizing: TMDb &lt;img&gt; uses srcSet + sizes, sub-original
