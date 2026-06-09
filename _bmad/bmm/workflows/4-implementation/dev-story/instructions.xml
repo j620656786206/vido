@@ -401,6 +401,40 @@
       ALL tests must pass. Do NOT skip this step or limit to a single package.
       This prevents the Epic 9 pattern where pre-existing failures in other packages went
       undetected until the next epic because only the changed package was tested.</action>
+    <!-- Epic 11 Retro AI-1 (a11y kept slipping to CR: 11-2 bottom sheet, 11-3 combobox).
+         Promotes the Epic-10-Retro-AI-1 a11y pre-flight from a passive checklist.md [ ]
+         to a MANDATORY recorded gate — mirrors the AC-Drift / Contract-Stamp pattern that
+         demonstrably stuck through Epic 11. Pairs with eslint-plugin-jsx-a11y (warn). -->
+    <action critical="MANDATORY" if="story touches any file under apps/web/">A11Y PRE-FLIGHT (Epic 11 Retro AI-1):
+      Skip ONLY if the story is 100% backend (no apps/web/ files). Otherwise you MUST,
+      before marking the story review-ready:
+        1. Run jsx-a11y lint over the touched components (pnpm lint:all, or a scoped
+           eslint on the changed apps/web/src/components/** files). Read the jsx-a11y
+           warnings for files THIS story added or modified; resolve any introduced by
+           this story's own new/changed code (pre-existing batch belongs to retro-11-AI1b,
+           do NOT expand scope to clear it — note its count only).
+        2. Manually confirm the 4 recurring a11y classes for any component this story
+           touches (each maps to a real Epic-10 CR finding — concrete, not abstract):
+           - Responsive image sizing: TMDb &lt;img&gt; uses srcSet + sizes, sub-original
+             baseline in src (Story 10-2 CR H1).
+           - Modal focus management: aria-modal components trap focus, move focus on
+             open, restore on close; inactive carousel slides inert (Story 10-2 H2/M1;
+             repeat class = 11-2 bottom sheet had aria-modal w/ no keyboard).
+           - aria-live on async-revealed content: status pills/badges carry role=status
+             + aria-live=polite (Story 10-4 L1).
+           - Keyboard + ARIA semantics for custom widgets: comboboxes expose
+             aria-activedescendant + listbox-only options (11-3 CR), bottom sheets close
+             on Escape + take initial focus (11-2 CR M2).
+        3. Lazy-load contract accuracy: any IntersectionObserver/pagination request-count
+           is described accurately in BOTH the AC text and the request-site comment
+           (Story 10-5 H1) — pairs with the retro-10-AI2 AC drift check.
+    </action>
+    <action critical="MANDATORY">Set {{a11y_preflight_result}} to exactly one of:
+      "PASS ({n} components checked, {w} jsx-a11y warnings on touched files, 0 introduced
+       by this story)" | "FOUND — see Completion Notes" | "N/A (100% backend — no apps/web/
+      files touched)". Record it in Dev Agent Record → Completion Notes as
+      "🎭 A11y Pre-Flight: {{a11y_preflight_result}}". This binding MUST execute so the
+      result is auditable (a future retro can grep "🎭 A11y Pre-Flight:" across stories).</action>
     <action>Validate implementation meets ALL story acceptance criteria; enforce quantitative thresholds explicitly</action>
     <action if="regression tests fail">STOP and fix before continuing - identify breaking changes immediately</action>
     <action if="new tests fail">STOP and fix before continuing - ensure implementation correctness</action>

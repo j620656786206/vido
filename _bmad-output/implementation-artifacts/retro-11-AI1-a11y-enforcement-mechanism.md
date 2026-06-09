@@ -1,6 +1,6 @@
 # Story: A11y Enforcement Mechanism — jsx-a11y Lint + MANDATORY dev-story Pre-Flight
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -28,10 +28,10 @@ so that a11y issues are caught by automation + an enforced workflow gate (the sa
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 (Prong 1 — DEV/ESLint): Install + wire `eslint-plugin-jsx-a11y`** (AC: #1, #2, #3)
-  - [ ] 1.1 Add `eslint-plugin-jsx-a11y` (`^6.10.2`) to root `package.json` `devDependencies` (next to `eslint-plugin-react` / `eslint-plugin-react-hooks`); run `pnpm install` and confirm the lockfile updates cleanly.
-  - [ ] 1.2 In `eslint.config.mjs`, add the import: `import jsxA11y from 'eslint-plugin-jsx-a11y';` (top, with the other plugin imports).
-  - [ ] 1.3 Build a `warn`-severity rule map from the recommended ruleset rather than hand-listing rules, so the set stays current with the plugin:
+- [x] **Task 1 (Prong 1 — DEV/ESLint): Install + wire `eslint-plugin-jsx-a11y`** (AC: #1, #2, #3)
+  - [x] 1.1 Add `eslint-plugin-jsx-a11y` (`^6.10.2`) to root `package.json` `devDependencies` (next to `eslint-plugin-react` / `eslint-plugin-react-hooks`); run `pnpm install` and confirm the lockfile updates cleanly.
+  - [x] 1.2 In `eslint.config.mjs`, add the import: `import jsxA11y from 'eslint-plugin-jsx-a11y';` (top, with the other plugin imports).
+  - [x] 1.3 Build a `warn`-severity rule map from the recommended ruleset rather than hand-listing rules, so the set stays current with the plugin:
     ```js
     // jsx-a11y recommended ships at 'error'; remap to 'warn' so the existing
     // lint:all 0-errors gate stays green while the existing component batch
@@ -41,7 +41,7 @@ so that a11y issues are caught by automation + an enforced workflow gate (the sa
       Object.keys(jsxA11y.flatConfigs.recommended.rules).map((r) => [r, 'warn'])
     );
     ```
-  - [ ] 1.4 Add a NEW flat-config object immediately AFTER the Rule 23 block and BEFORE the `prettier` config (mirror the Rule 21 / Rule 23 block shape exactly):
+  - [x] 1.4 Add a NEW flat-config object immediately AFTER the Rule 23 block and BEFORE the `prettier` config (mirror the Rule 21 / Rule 23 block shape exactly):
     ```js
     // Epic 11 Retro AI-1 — eslint-plugin-jsx-a11y enforcement. Scope mirrors the
     // Rule 21/23 component blocks. WARN (not error) preserves the 0-errors gate;
@@ -57,17 +57,17 @@ so that a11y issues are caught by automation + an enforced workflow gate (the sa
       rules: jsxA11yWarn,
     },
     ```
-  - [ ] 1.5 Sanity-run `pnpm lint:all` — confirm **0 errors** still (warnings count may rise; that is expected and is AI1b's input). Record the new warnings delta in Dev Agent Record.
+  - [x] 1.5 Sanity-run `pnpm lint:all` — confirm **0 errors** still (warnings count may rise; that is expected and is AI1b's input). Record the new warnings delta in Dev Agent Record.
 
-- [ ] **Task 2 (Prong 1 — DEV/ESLint): Wiring spec** (AC: #4)
-  - [ ] 2.1 Add `apps/web/src/eslint-rules/jsx-a11y-config.spec.ts` (or extend an existing config-wiring spec). Import the resolved flat config exactly as `time-dependent-fixture-stability.spec.ts` does (`resolve(__dirname, '../../../../eslint.config.mjs')` → dynamic `import`).
-  - [ ] 2.2 Assert: exactly one config object has a `rules` map containing a `jsx-a11y/*` key (`flatConfig.filter((c) => c.rules && Object.keys(c.rules).some((k) => k.startsWith('jsx-a11y/')))` → `toHaveLength(1)`).
-  - [ ] 2.3 Assert that block's `files` equals `['apps/web/src/components/**/*.{ts,tsx}']` and `ignores` equals the spec/test/index triple.
-  - [ ] 2.4 Assert the `jsx-a11y` plugin object is registered in `plugins` and that a spot-checked recommended rule (e.g. `jsx-a11y/alt-text`) is present at `'warn'`.
-  - [ ] 2.5 Run `pnpm nx test web` filtered to this spec; confirm green.
+- [x] **Task 2 (Prong 1 — DEV/ESLint): Wiring spec** (AC: #4)
+  - [x] 2.1 Add `apps/web/src/eslint-rules/jsx-a11y-config.spec.ts` (or extend an existing config-wiring spec). Import the resolved flat config exactly as `time-dependent-fixture-stability.spec.ts` does (`resolve(__dirname, '../../../../eslint.config.mjs')` → dynamic `import`).
+  - [x] 2.2 Assert: exactly one config object has a `rules` map containing a `jsx-a11y/*` key (`flatConfig.filter((c) => c.rules && Object.keys(c.rules).some((k) => k.startsWith('jsx-a11y/')))` → `toHaveLength(1)`).
+  - [x] 2.3 Assert that block's `files` equals `['apps/web/src/components/**/*.{ts,tsx}']` and `ignores` equals the spec/test/index triple.
+  - [x] 2.4 Assert the `jsx-a11y` plugin object is registered in `plugins` and that a spot-checked recommended rule (e.g. `jsx-a11y/alt-text`) is present at `'warn'`.
+  - [x] 2.5 Run `pnpm nx test web` filtered to this spec; confirm green.
 
-- [ ] **Task 3 (Prong 2 — SM/workflow): Promote a11y pre-flight to MANDATORY action** (AC: #5, #6)
-  - [ ] 3.1 In `dev-story/instructions.xml`, add the a11y MANDATORY action to **Step 7 (Run validations and tests)**, immediately after the FULL REGRESSION GATE action — Step 7 is where lint runs (so jsx-a11y warnings surface) and is the established home for validation gates (retro-9-AI1 regression gate + retro-9c-AI2 fix-or-file both live at Step 7). Draft shape:
+- [x] **Task 3 (Prong 2 — SM/workflow): Promote a11y pre-flight to MANDATORY action** (AC: #5, #6)
+  - [x] 3.1 In `dev-story/instructions.xml`, add the a11y MANDATORY action to **Step 7 (Run validations and tests)**, immediately after the FULL REGRESSION GATE action — Step 7 is where lint runs (so jsx-a11y warnings surface) and is the established home for validation gates (retro-9-AI1 regression gate + retro-9c-AI2 fix-or-file both live at Step 7). Draft shape:
     ```xml
     <!-- Epic 11 Retro AI-1 (a11y kept slipping to CR: 11-2 bottom sheet, 11-3 combobox).
          Promotes the Epic-10-Retro-AI-1 a11y pre-flight from a passive checklist.md [ ]
@@ -98,7 +98,7 @@ so that a11y issues are caught by automation + an enforced workflow gate (the sa
            (Story 10-5 H1) — pairs with the retro-10-AI2 AC drift check.
     </action>
     ```
-  - [ ] 3.2 Add the sibling binding action so the result renders as a concrete, auditable value (mirror the `{{drift_check_result}}` binding at lines 199–202):
+  - [x] 3.2 Add the sibling binding action so the result renders as a concrete, auditable value (mirror the `{{drift_check_result}}` binding at lines 199–202):
     ```xml
     <action critical="MANDATORY">Set {{a11y_preflight_result}} to exactly one of:
       "PASS ({n} components checked, {w} jsx-a11y warnings on touched files, 0 introduced
@@ -107,19 +107,19 @@ so that a11y issues are caught by automation + an enforced workflow gate (the sa
       "🎭 A11y Pre-Flight: {{a11y_preflight_result}}". This binding MUST execute so the
       result is auditable (a future retro can grep "🎭 A11y Pre-Flight:" across stories).</action>
     ```
-  - [ ] 3.3 In `dev-story/checklist.md`, REMOVE the body of the `## 🎭 Frontend Performance + Accessibility Pre-Flight (Epic 10 Retro AI-1)` section (the 4 `[ ]` items + verification steps) and replace it with a one-line pointer:
+  - [x] 3.3 In `dev-story/checklist.md`, REMOVE the body of the `## 🎭 Frontend Performance + Accessibility Pre-Flight (Epic 10 Retro AI-1)` section (the 4 `[ ]` items + verification steps) and replace it with a one-line pointer:
     > **Now enforced as a MANDATORY gate in `dev-story/instructions.xml` Step 7 (Epic 11 Retro AI-1).** Result recorded as `🎭 A11y Pre-Flight:` in Completion Notes. Do not re-add passive checkboxes here — single source of truth lives in the workflow action.
-  - [ ] 3.4 Read the modified `instructions.xml` end-to-end: confirm Step 1–11 numbering is preserved, the new actions nest INSIDE Step 7 (do not close it early), and the XML is well-formed (`xmllint --noout` PASS). Confirm `checklist.md` still parses (frontmatter + section headers intact).
+  - [x] 3.4 Read the modified `instructions.xml` end-to-end: confirm Step 1–11 numbering is preserved, the new actions nest INSIDE Step 7 (do not close it early), and the XML is well-formed (`xmllint --noout` PASS). Confirm `checklist.md` still parses (frontmatter + section headers intact).
 
-- [ ] **Task 4: Verification — zero regressions** (AC: #7)
-  - [ ] 4.1 `pnpm lint:all` — 0 errors (warnings may increase from jsx-a11y; record the delta vs the last-known baseline of 122 warnings).
-  - [ ] 4.2 `pnpm nx test api` — all Go packages PASS (zero Go change expected).
-  - [ ] 4.3 `pnpm nx test web` — all PASS incl. the new wiring spec; run `pnpm run test:cleanup` to confirm no orphaned workers.
-  - [ ] 4.4 `pnpm prettier --check` on the touched `.ts`/`.mjs`/`.md` files.
+- [x] **Task 4: Verification — zero regressions** (AC: #7)
+  - [x] 4.1 `pnpm lint:all` — 0 errors (warnings may increase from jsx-a11y; record the delta vs the last-known baseline of 122 warnings).
+  - [x] 4.2 `pnpm nx test api` — all Go packages PASS (zero Go change expected).
+  - [x] 4.3 `pnpm nx test web` — all PASS incl. the new wiring spec; run `pnpm run test:cleanup` to confirm no orphaned workers.
+  - [x] 4.4 `pnpm prettier --check` on the touched `.ts`/`.mjs`/`.md` files.
 
-- [ ] **Task 5: sprint-status transitions** (AC: #7)
-  - [ ] 5.1 `retro-11-AI1-a11y-enforcement-mechanism: ready-for-dev` at story creation (this `/create-story` step).
-  - [ ] 5.2 `ready-for-dev → in-progress` on `/dev-story` start; `in-progress → review` on completion.
+- [x] **Task 5: sprint-status transitions** (AC: #7)
+  - [x] 5.1 `retro-11-AI1-a11y-enforcement-mechanism: ready-for-dev` at story creation (this `/create-story` step).
+  - [x] 5.2 `ready-for-dev → in-progress` on `/dev-story` start; `in-progress → review` on completion.
   - [ ] 5.3 `review → done` on `/code-review` pass; append a completion note recording the final `instructions.xml` Step 7 line range + the new lint:all warnings count, and re-confirm the AI1b hand-off (warning batch NOT cleared here).
 
 ## Dev Notes
@@ -178,11 +178,27 @@ Backend tasks: **0** (no Go). Frontend/code tasks: the eslint block + wiring spe
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+claude-opus-4-8[1m] (Amelia / Dev Agent, /dev-story)
 
 ### Debug Log References
 
+- `pnpm lint` after wiring jsx-a11y: `268 problems (0 errors, 268 warnings)` — 0-errors gate preserved.
+- jsx-a11y warning delta: **+146** (baseline ~122 → 268). Breakdown: 46 `label-has-for`, 37 `control-has-associated-label`, 24 `label-has-associated-control`, 16 `no-noninteractive-element-interactions`, 14 `click-events-have-key-events`, 5 `no-static-element-interactions`, 4 `no-autofocus`.
+- `pnpm nx test web`: 164 files / 2001 tests passed (incl. new `jsx-a11y-config.spec.ts`).
+- `pnpm nx test api`: PASS (no Go change).
+- `xmllint --noout` on `instructions.xml`: PASS; steps 1–11 intact; a11y actions at lines 408 + 432 nest inside Step 7 (394) before Step 8 (453).
+
 ### Completion Notes List
+
+- **Prong 1 (DEV/ESLint):** Added `eslint-plugin-jsx-a11y@^6.10.2` (current stable) to root `devDependencies`; `pnpm install` resolved cleanly. New scoped flat-config block in `eslint.config.mjs` (after Rule 23, before `prettier`) enables the **recommended** ruleset remapped to `warn` via `Object.fromEntries(Object.keys(jsxA11y.flatConfigs.recommended.rules).map((r) => [r, 'warn']))`. Scope + ignores triple mirror the Rule 21/23 blocks exactly. The 0-errors `lint:all` gate is preserved; the existing component a11y batch (146 warnings) now surfaces for retro-11-AI1b — **NOT cleared here** (AI1b boundary preserved).
+- **Wiring spec:** `apps/web/src/eslint-rules/jsx-a11y-config.spec.ts` imports the resolved flat config and asserts (a) exactly one block enables `jsx-a11y/*`, (b) `files` scope, (c) `ignores` triple, (d) plugin registered, (e) every registered jsx-a11y rule (spot-check `alt-text`) at `warn`. The `warn` assertion is the load-bearing line AI1b flips to `error`.
+- **Prong 2 (SM/workflow):** Promoted the Epic-10-Retro-AI-1 a11y pre-flight from a passive `checklist.md` `[ ]` to an `<action critical="MANDATORY" if="story touches any file under apps/web/">` in `instructions.xml` **Step 7** (immediately after the FULL REGRESSION GATE, lines 408–431), plus a sibling binding `<action critical="MANDATORY">` (lines 432–437) setting `{{a11y_preflight_result}}` — mirroring the `{{drift_check_result}}`/`{{contract_stamps_result}}` pattern. `checklist.md` section body replaced with a one-line pointer (single source of truth; no drift-prone duplicate). `<img>` in the action text encoded as `&lt;img&gt;` to keep the XML well-formed.
+- 🔗 **AC Drift: N/A** (workflow-docs + tooling change; re-homes the Epic-10-AI-1 a11y pre-flight from passive `checklist.md` to a MANDATORY `instructions.xml` action — an AC-mandated promotion, not a silent behavior drift of any shipped codebase AC. Grep `'Frontend Performance + Accessibility Pre-Flight|a11y pre-flight|jsx-a11y'` across `_bmad-output/implementation-artifacts/*.md` + dev-story workflow files returned only the retro, this story, AI1b, and the section being re-homed).
+- 📎 **Contract Stamps: NONE** (no `[@contract-v*]` stamps in this story or upstream refs — normal for a tooling/workflow story; `grep -nE '\[@contract-v[0-9]+\]'` on the story file → 0 hits).
+- 🎭 **A11y Pre-Flight: N/A** (this story adds/edits zero React components — only `eslint.config.mjs` tooling config, a wiring `.spec.ts`, and two BMAD workflow docs; no `apps/web/src/components/**` component touched. The new gate it installs applies to *future* frontend stories, not itself.)
+- 🔌 **Route Sync: N/A** (no backend route touched — zero Go change).
+- 🎨 **UX Verification: SKIPPED** — no UI changes in this story (tooling config + wiring spec + workflow docs; zero React components added or modified).
+- **Checkbox audit (Step 10):** all task checkboxes 1.1–5.2 marked `[x]`. Task **5.3** (`review → done` on `/code-review` pass) is intentionally **deferred** — it transitions at the next workflow (`/code-review`), not at dev-story completion; the dev-story workflow terminates at `review` status. Justified deferral, not an incomplete task.
 
 ### Discovery Triage
 
@@ -192,8 +208,21 @@ Backend tasks: **0** (no Go). Frontend/code tasks: the eslint block + wiring spe
 
 ### File List
 
+- `package.json` (modified — added `eslint-plugin-jsx-a11y@^6.10.2` devDependency)
+- `pnpm-lock.yaml` (modified — lockfile updated by `pnpm install`)
+- `eslint.config.mjs` (modified — import + new scoped jsx-a11y `warn` flat-config block)
+- `apps/web/src/eslint-rules/jsx-a11y-config.spec.ts` (new — flat-config wiring spec)
+- `_bmad/bmm/workflows/4-implementation/dev-story/instructions.xml` (modified — MANDATORY a11y pre-flight action + binding action in Step 7)
+- `_bmad/bmm/workflows/4-implementation/dev-story/checklist.md` (modified — a11y section body replaced with one-line pointer)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (modified — status transitions)
+- `_bmad-output/implementation-artifacts/retro-11-AI1-a11y-enforcement-mechanism.md` (this story file — task checkboxes, Dev Agent Record, Change Log, Status)
+
 ## Change Log
 
 | Date | Change | Author |
 | ---- | ------ | ------ |
 | 2026-06-09 | Story created (SM Bob /create-story, YOLO) — backlog → ready-for-dev. Two prongs: (1) install + scope eslint-plugin-jsx-a11y at warn; (2) promote a11y pre-flight from checklist.md [ ] to MANDATORY dev-story Step 7 action with {{a11y_preflight_result}} binding. AI1b boundary preserved. | Bob (SM) |
+| 2026-06-09 | Task 1 — installed eslint-plugin-jsx-a11y ^6.10.2; added import + scoped warn-severity recommended-ruleset block to eslint.config.mjs (same files/ignores as Rule 21/23). lint:all stays 0 errors; +146 jsx-a11y warnings surfaced for AI1b. | Amelia (Dev) |
+| 2026-06-09 | Task 2 — added jsx-a11y-config.spec.ts wiring spec (5 assertions: single block, files scope, ignores triple, plugin registered, all rules at warn). nx test web green (2001 tests). | Amelia (Dev) |
+| 2026-06-09 | Task 3 — promoted a11y pre-flight to MANDATORY action in instructions.xml Step 7 (lines 408–431) + sibling {{a11y_preflight_result}} binding (432–437); replaced checklist.md section body with one-line pointer. xmllint PASS, steps 1–11 intact. | Amelia (Dev) |
+| 2026-06-09 | Task 4 — verification: lint:all 0 errors, nx test api PASS, nx test web 2001 PASS, prettier --check clean, test:cleanup no orphans. Task 5 — sprint-status ready-for-dev → in-progress → review. 5.3 (review → done) deferred to /code-review. | Amelia (Dev) |
