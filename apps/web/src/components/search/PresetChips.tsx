@@ -1,6 +1,6 @@
 // Design ref: ux-design.pen Screen AS-1 - Advanced Search Filter Desktop (NWxok)
 // Source: ux-design.pen (Pencil app) — presetBar (dPbq2)
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   parseFiltersFromSearch,
   type DiscoverFilters,
@@ -45,6 +45,16 @@ export function PresetChips({ onApplyPreset, className }: PresetChipsProps) {
   // Set when a long-press fires so the synthesized click that follows touchend
   // is swallowed instead of also applying the preset (Task 3.4).
   const didLongPress = useRef(false);
+
+  // Escape dismisses the delete-confirm dialog (11-2 CR M2 keyboard-dismiss class).
+  useEffect(() => {
+    if (!pendingDelete) return;
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setPendingDelete(null);
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [pendingDelete]);
 
   if (!presets || presets.length === 0) return null;
 
@@ -114,11 +124,15 @@ export function PresetChips({ onApplyPreset, className }: PresetChipsProps) {
           aria-modal="true"
           aria-labelledby="preset-delete-title"
           data-testid="preset-delete-dialog"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setPendingDelete(null);
-          }}
         >
-          <div className="mx-4 w-full max-w-sm rounded-xl bg-[var(--bg-secondary)] p-6 shadow-2xl">
+          {/* Mouse-only dismiss affordance; keyboard users close via Escape. */}
+          <div
+            aria-hidden="true"
+            data-testid="preset-delete-backdrop"
+            className="absolute inset-0"
+            onClick={() => setPendingDelete(null)}
+          />
+          <div className="relative mx-4 w-full max-w-sm rounded-xl bg-[var(--bg-secondary)] p-6 shadow-2xl">
             <h3
               id="preset-delete-title"
               className="mb-2 text-center text-lg font-semibold text-white"

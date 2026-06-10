@@ -159,6 +159,7 @@ export function QuickSearchBar({ className }: QuickSearchBarProps) {
           onFocus={handleInputFocus}
           onKeyDown={handleKeyDown}
           placeholder="搜尋媒體庫..."
+          aria-label="搜尋媒體庫"
           className="w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)] py-2.5 pl-10 pr-4 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] transition-colors focus:border-[var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"
           autoComplete="off"
         />

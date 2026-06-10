@@ -83,7 +83,7 @@ export function AppShell({ children }: AppShellProps) {
           <div className="flex-1 overflow-hidden px-4 py-3">
             <InstantSearchBar
               variant="mobile"
-              autoFocus
+              focusOnMount
               onClose={() => setMobileSearchOpen(false)}
             />
           </div>

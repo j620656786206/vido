@@ -3,7 +3,7 @@
  * Explore block create/edit modal — Story 10.3.
  */
 
-import { useEffect, useState } from 'react';
+import { cloneElement, useEffect, useId, useState } from 'react';
 import { X } from 'lucide-react';
 import { useCreateExploreBlock, useUpdateExploreBlock } from '../../hooks/useExploreBlocks';
 import type { ExploreBlock, ExploreBlockContentType } from '../../services/exploreBlockService';
@@ -253,11 +253,22 @@ export function ExploreBlockEditModal({ block, onClose }: ExploreBlockEditModalP
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactElement<{ id?: string }>;
+}) {
+  // Associate the visible label with its (single) form control so screen
+  // readers announce the field name (jsx-a11y/label-has-associated-control).
+  const id = useId();
   return (
     <div>
-      <label className="mb-1 block text-sm font-medium text-[var(--text-secondary)]">{label}</label>
-      {children}
+      <label htmlFor={id} className="mb-1 block text-sm font-medium text-[var(--text-secondary)]">
+        {label}
+      </label>
+      {cloneElement(children, { id })}
     </div>
   );
 }

@@ -4,7 +4,7 @@
  * Add/remove cast members with input field
  */
 
-import { useState, useCallback } from 'react';
+import { useId, useState, useCallback } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -24,6 +24,7 @@ export function CastEditor({
   placeholder = '輸入演員名稱後按 Enter',
 }: CastEditorProps) {
   const [inputValue, setInputValue] = useState('');
+  const inputId = useId();
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -41,7 +42,12 @@ export function CastEditor({
 
   return (
     <div>
-      <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">{label}</label>
+      <label
+        htmlFor={inputId}
+        className="block text-sm font-medium text-[var(--text-secondary)] mb-1"
+      >
+        {label}
+      </label>
       <div className="flex flex-wrap gap-2 mb-2" data-testid="cast-list">
         {cast.map((actor) => (
           <span
@@ -61,6 +67,7 @@ export function CastEditor({
         ))}
       </div>
       <input
+        id={inputId}
         type="text"
         value={inputValue}
         onChange={(e) => setInputValue(e.target.value)}

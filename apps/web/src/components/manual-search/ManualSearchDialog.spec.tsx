@@ -63,6 +63,11 @@ describe('ManualSearchDialog', () => {
     expect(input).toHaveValue('Demon Slayer');
   });
 
+  it('focuses the search input on open via ref (retro-11-AI1b — replaces autoFocus)', () => {
+    renderWithProviders(<ManualSearchDialog {...defaultProps} />);
+    expect(screen.getByLabelText('搜尋電影或影集')).toHaveFocus();
+  });
+
   it('calls onClose when close button is clicked', async () => {
     const onClose = vi.fn();
     renderWithProviders(<ManualSearchDialog {...defaultProps} onClose={onClose} />);

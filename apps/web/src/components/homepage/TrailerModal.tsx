@@ -112,10 +112,14 @@ export function TrailerModal({ open, onClose, mediaType, tmdbId, title }: Traile
       aria-label={`${title} 預告片`}
       data-testid="trailer-modal"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
     >
+      {/* Mouse-only dismiss affordance; keyboard users close via Escape. */}
+      <div
+        aria-hidden="true"
+        data-testid="trailer-modal-backdrop"
+        className="absolute inset-0"
+        onClick={onClose}
+      />
       <div className="relative w-full max-w-4xl">
         <button
           ref={closeButtonRef}

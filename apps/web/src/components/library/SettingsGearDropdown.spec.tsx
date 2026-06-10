@@ -32,6 +32,17 @@ describe('SettingsGearDropdown', () => {
     expect(screen.getByTestId('settings-dropdown')).toBeInTheDocument();
   });
 
+  it('labels every dropdown control accessibly (retro-11-AI1b)', () => {
+    render(<SettingsGearDropdown preferences={defaultPrefs} onPreferencesChange={onChange} />);
+    fireEvent.click(screen.getByTestId('settings-gear-button'));
+
+    // 預設排序 select is associated via htmlFor/id.
+    expect(screen.getByLabelText('預設排序')).toHaveValue('created_at');
+    // Button groups are labelled via role=group + aria-labelledby.
+    expect(screen.getByRole('group', { name: '海報大小' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: '標題語言' })).toBeInTheDocument();
+  });
+
   it('shows density options', () => {
     render(<SettingsGearDropdown preferences={defaultPrefs} onPreferencesChange={onChange} />);
     fireEvent.click(screen.getByTestId('settings-gear-button'));

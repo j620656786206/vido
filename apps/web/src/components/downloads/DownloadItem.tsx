@@ -43,6 +43,7 @@ export function DownloadItem({ download, expanded, onToggleExpand }: DownloadIte
                 )}
                 style={{ width: `${Math.min(download.progress * 100, 100)}%` }}
                 role="progressbar"
+                aria-label={`${download.name} 下載進度`}
                 aria-valuenow={Math.round(download.progress * 100)}
                 aria-valuemin={0}
                 aria-valuemax={100}

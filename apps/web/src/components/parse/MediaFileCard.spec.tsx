@@ -118,6 +118,22 @@ describe('MediaFileCard', () => {
     expect(onClick).toHaveBeenCalledTimes(1);
   });
 
+  it('activates via Enter and Space keyboard (retro-11-AI1b keyboard affordance)', async () => {
+    const onClick = vi.fn();
+    const user = userEvent.setup();
+
+    render(<MediaFileCard file={mockFile} onClick={onClick} />);
+
+    const card = screen.getByTestId('media-file-card');
+    expect(card).toHaveAttribute('role', 'button');
+    expect(card).toHaveAttribute('tabindex', '0');
+    card.focus();
+    await user.keyboard('{Enter}');
+    expect(onClick).toHaveBeenCalledTimes(1);
+    await user.keyboard(' ');
+    expect(onClick).toHaveBeenCalledTimes(2);
+  });
+
   it('applies custom className', () => {
     render(<MediaFileCard file={mockFile} className="custom-class" />);
 
@@ -165,6 +181,20 @@ describe('MediaFileRow', () => {
 
     await user.click(screen.getByTestId('media-file-row'));
     expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('activates via Enter and Space keyboard (retro-11-AI1b keyboard affordance)', async () => {
+    const onClick = vi.fn();
+    const user = userEvent.setup();
+
+    render(<MediaFileRow file={mockFile} onClick={onClick} />);
+
+    const row = screen.getByTestId('media-file-row');
+    row.focus();
+    await user.keyboard('{Enter}');
+    expect(onClick).toHaveBeenCalledTimes(1);
+    await user.keyboard(' ');
+    expect(onClick).toHaveBeenCalledTimes(2);
   });
 });
 

@@ -164,17 +164,21 @@ export function SubtitleSearchDialog({
   return (
     <div
       className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 pt-[10vh]"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onOpenChange(false);
-      }}
       role="dialog"
       aria-modal="true"
       aria-labelledby="subtitle-search-title"
       data-testid="subtitle-search-dialog"
     >
+      {/* Mouse-only dismiss affordance; keyboard users close via Escape. */}
+      <div
+        aria-hidden="true"
+        data-testid="subtitle-search-backdrop"
+        className="absolute inset-0"
+        onClick={() => onOpenChange(false)}
+      />
       <div
         ref={dialogRef}
-        className="mx-4 w-full max-w-4xl max-h-[80vh] overflow-y-auto rounded-xl bg-[var(--bg-secondary)] shadow-2xl"
+        className="relative mx-4 w-full max-w-4xl max-h-[80vh] overflow-y-auto rounded-xl bg-[var(--bg-secondary)] shadow-2xl"
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-6 py-4">
@@ -197,6 +201,7 @@ export function SubtitleSearchDialog({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="輸入搜尋關鍵字..."
+              aria-label="搜尋關鍵字"
               className="flex-1 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-white placeholder-[var(--text-muted)] focus:border-[var(--accent-primary)] focus:outline-none"
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               data-testid="subtitle-search-input"
@@ -234,9 +239,17 @@ export function SubtitleSearchDialog({
             </div>
 
             {/* 繁體轉換 Toggle (AC #9, #10, #11) */}
-            <label className="flex items-center gap-2 cursor-pointer" data-testid="convert-toggle">
-              <span className="text-sm text-[var(--text-secondary)]">繁體轉換</span>
+            <div className="flex items-center gap-2 cursor-pointer" data-testid="convert-toggle">
+              {/* label htmlFor → button keeps native text-click forwarding AND
+                  names the switch (a button is a labelable element). */}
+              <label
+                htmlFor="convert-toggle-switch"
+                className="cursor-pointer text-sm text-[var(--text-secondary)]"
+              >
+                繁體轉換
+              </label>
               <button
+                id="convert-toggle-switch"
                 role="switch"
                 aria-checked={convertToTraditional}
                 onClick={() => setConvertToTraditional((v) => !v)}
@@ -252,7 +265,7 @@ export function SubtitleSearchDialog({
                   )}
                 />
               </button>
-            </label>
+            </div>
           </div>
 
           {/* Search Error (M8) */}

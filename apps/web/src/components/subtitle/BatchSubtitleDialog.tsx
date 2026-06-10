@@ -49,16 +49,22 @@ export function BatchSubtitlePanel({
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 sm:items-center"
-      onClick={(e) => {
-        // Backdrop click closes only when not mid-run.
-        if (e.target === e.currentTarget && !isProcessing) onClose();
-      }}
       role="dialog"
       aria-modal="true"
       aria-labelledby="batch-subtitle-title"
       data-testid="batch-subtitle-dialog"
     >
-      <div className="w-full rounded-t-2xl bg-[var(--bg-secondary)] shadow-2xl sm:mx-4 sm:max-w-md sm:rounded-xl">
+      {/* Backdrop click closes only when not mid-run (mouse-only affordance;
+          keyboard users close via the Escape handler below or the 關閉 button). */}
+      <div
+        aria-hidden="true"
+        data-testid="batch-subtitle-backdrop"
+        className="absolute inset-0"
+        onClick={() => {
+          if (!isProcessing) onClose();
+        }}
+      />
+      <div className="relative w-full rounded-t-2xl bg-[var(--bg-secondary)] shadow-2xl sm:mx-4 sm:max-w-md sm:rounded-xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-5 py-4">
           <h2 id="batch-subtitle-title" className="text-base font-semibold text-white">

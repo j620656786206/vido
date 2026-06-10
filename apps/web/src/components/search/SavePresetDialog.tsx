@@ -1,6 +1,6 @@
 // Design ref: ux-design.pen Screen AS-3 - Save Filter Preset Modal (i74p2)
 // Source: ux-design.pen (Pencil app)
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { useCreateFilterPreset } from '../../hooks/useFilterPresets';
 import {
@@ -37,6 +37,14 @@ export function SavePresetDialog({ filters, onClose }: SavePresetDialogProps) {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
+  // Focus the name field on open — a11y-correct replacement for the former
+  // autoFocus prop (jsx-a11y/no-autofocus): same focus-on-open dialog behavior,
+  // applied programmatically.
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    nameInputRef.current?.focus();
+  }, []);
+
   const previewChips = activeFilterChips(filters);
 
   const handleSave = async () => {
@@ -70,12 +78,16 @@ export function SavePresetDialog({ filters, onClose }: SavePresetDialogProps) {
       role="dialog"
       aria-modal="true"
       aria-labelledby="save-preset-modal-title"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
     >
+      {/* Mouse-only dismiss affordance; keyboard users close via Escape. */}
       <div
-        className="mx-4 w-full max-w-md rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-6 shadow-xl"
+        aria-hidden="true"
+        data-testid="save-preset-backdrop"
+        className="absolute inset-0"
+        onClick={onClose}
+      />
+      <div
+        className="relative mx-4 w-full max-w-md rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-6 shadow-xl"
         data-testid="save-preset-dialog"
       >
         {/* Header */}
@@ -117,6 +129,7 @@ export function SavePresetDialog({ filters, onClose }: SavePresetDialogProps) {
           </label>
           <input
             id="preset-name-input"
+            ref={nameInputRef}
             type="text"
             value={name}
             maxLength={PRESET_NAME_MAX_LENGTH}
@@ -125,7 +138,6 @@ export function SavePresetDialog({ filters, onClose }: SavePresetDialogProps) {
               if (e.key === 'Enter') handleSave();
             }}
             placeholder="例：高評分韓劇"
-            autoFocus
             data-testid="preset-name-input"
             className="w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:border-[var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"
           />

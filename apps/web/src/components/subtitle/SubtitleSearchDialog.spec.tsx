@@ -112,7 +112,9 @@ describe('SubtitleSearchDialog', () => {
   it('calls onOpenChange on backdrop click', () => {
     const onOpenChange = vi.fn();
     renderDialog({ onOpenChange });
-    fireEvent.click(screen.getByTestId('subtitle-search-dialog'));
+    // The dismiss affordance is a dedicated aria-hidden backdrop layer
+    // (retro-11-AI1b); keyboard users close via Escape.
+    fireEvent.click(screen.getByTestId('subtitle-search-backdrop'));
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
@@ -121,6 +123,20 @@ describe('SubtitleSearchDialog', () => {
     const toggle = screen.getByRole('switch');
     expect(toggle.getAttribute('aria-checked')).toBe('true');
     fireEvent.click(toggle);
+    expect(toggle.getAttribute('aria-checked')).toBe('false');
+  });
+
+  it('names the 繁體轉換 switch and search input accessibly (retro-11-AI1b)', () => {
+    renderDialog();
+    expect(screen.getByRole('switch', { name: '繁體轉換' })).toBeInTheDocument();
+    expect(screen.getByLabelText('搜尋關鍵字')).toBe(screen.getByTestId('subtitle-search-input'));
+  });
+
+  it('clicking the 繁體轉換 text toggles the switch (label htmlFor forwarding preserved)', () => {
+    renderDialog({ productionCountry: 'US' });
+    const toggle = screen.getByRole('switch');
+    expect(toggle.getAttribute('aria-checked')).toBe('true');
+    fireEvent.click(screen.getByText('繁體轉換'));
     expect(toggle.getAttribute('aria-checked')).toBe('false');
   });
 });

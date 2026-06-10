@@ -164,12 +164,6 @@ export function MetadataEditorDialog({
     };
   }, [isOpen, handleKeyDown]);
 
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
-  };
-
   const toggleGenre = (genre: string) => {
     const current = selectedGenres || [];
     if (current.includes(genre)) {
@@ -202,12 +196,13 @@ export function MetadataEditorDialog({
   return (
     <div
       className="fixed inset-0 z-50"
-      onClick={handleBackdropClick}
       role="dialog"
       aria-modal="true"
       aria-labelledby="metadata-editor-title"
     >
-      {/* Backdrop */}
+      {/* Backdrop — deliberately NOT click-to-dismiss: this is an edit form
+          and an accidental backdrop click would discard unsaved changes.
+          Keyboard users close via Escape; mouse users via the 關閉 button. */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
 
       {/* Dialog */}
@@ -246,10 +241,14 @@ export function MetadataEditorDialog({
         >
           {/* Title (Chinese) */}
           <div>
-            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+            <label
+              htmlFor="metadata-title"
+              className="block text-sm font-medium text-[var(--text-secondary)] mb-1"
+            >
               標題（中文）<span className="text-[var(--error)]">*</span>
             </label>
             <input
+              id="metadata-title"
               type="text"
               {...register('title')}
               className={cn(
@@ -269,10 +268,14 @@ export function MetadataEditorDialog({
 
           {/* Title (English) */}
           <div>
-            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+            <label
+              htmlFor="metadata-title-english"
+              className="block text-sm font-medium text-[var(--text-secondary)] mb-1"
+            >
               標題（英文）
             </label>
             <input
+              id="metadata-title-english"
               type="text"
               {...register('titleEnglish')}
               className={cn(
@@ -288,10 +291,14 @@ export function MetadataEditorDialog({
 
           {/* Year */}
           <div>
-            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+            <label
+              htmlFor="metadata-year"
+              className="block text-sm font-medium text-[var(--text-secondary)] mb-1"
+            >
               年份 <span className="text-[var(--error)]">*</span>
             </label>
             <input
+              id="metadata-year"
               type="number"
               {...register('year', { valueAsNumber: true })}
               className={cn(
@@ -313,10 +320,17 @@ export function MetadataEditorDialog({
 
           {/* Genres */}
           <div>
-            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">
+            <span
+              id="metadata-genres-label"
+              className="block text-sm font-medium text-[var(--text-secondary)] mb-2"
+            >
               類型
-            </label>
-            <div className="flex flex-wrap gap-2">
+            </span>
+            <div
+              className="flex flex-wrap gap-2"
+              role="group"
+              aria-labelledby="metadata-genres-label"
+            >
               {GENRE_OPTIONS.map((genre) => (
                 <button
                   key={genre.value}
@@ -337,10 +351,14 @@ export function MetadataEditorDialog({
 
           {/* Director */}
           <div>
-            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+            <label
+              htmlFor="metadata-director"
+              className="block text-sm font-medium text-[var(--text-secondary)] mb-1"
+            >
               導演
             </label>
             <input
+              id="metadata-director"
               type="text"
               {...register('director')}
               className={cn(
@@ -356,7 +374,10 @@ export function MetadataEditorDialog({
 
           {/* Cast */}
           <div>
-            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+            <label
+              htmlFor="metadata-cast-input"
+              className="block text-sm font-medium text-[var(--text-secondary)] mb-1"
+            >
               演員
             </label>
             <div className="flex flex-wrap gap-2 mb-2">
@@ -369,6 +390,7 @@ export function MetadataEditorDialog({
                   <button
                     type="button"
                     onClick={() => removeCastMember(actor)}
+                    aria-label={`移除 ${actor}`}
                     className="text-[var(--text-secondary)] hover:text-[var(--error)] transition-colors"
                   >
                     <X className="h-3 w-3" />
@@ -377,6 +399,7 @@ export function MetadataEditorDialog({
               ))}
             </div>
             <input
+              id="metadata-cast-input"
               type="text"
               placeholder="輸入演員名稱後按 Enter"
               className={cn(
@@ -399,10 +422,14 @@ export function MetadataEditorDialog({
 
           {/* Overview */}
           <div>
-            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+            <label
+              htmlFor="metadata-overview"
+              className="block text-sm font-medium text-[var(--text-secondary)] mb-1"
+            >
               簡介
             </label>
             <textarea
+              id="metadata-overview"
               {...register('overview')}
               rows={4}
               className={cn(
@@ -418,10 +445,14 @@ export function MetadataEditorDialog({
 
           {/* Poster URL */}
           <div>
-            <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+            <label
+              htmlFor="metadata-poster-url"
+              className="block text-sm font-medium text-[var(--text-secondary)] mb-1"
+            >
               海報圖片網址
             </label>
             <input
+              id="metadata-poster-url"
               type="text"
               {...register('posterUrl')}
               className={cn(

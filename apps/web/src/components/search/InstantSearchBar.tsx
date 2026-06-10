@@ -16,7 +16,12 @@ import {
 
 interface InstantSearchBarProps {
   variant?: 'desktop' | 'mobile';
-  autoFocus?: boolean;
+  /**
+   * Focus the input on mount (used by the mobile full-screen search overlay).
+   * Implemented via ref + effect — the a11y-correct focus-on-open pattern
+   * (jsx-a11y/no-autofocus) that keeps the dialog-style behavior.
+   */
+  focusOnMount?: boolean;
   /** Called after a navigation occurs (used to close the mobile overlay). */
   onClose?: () => void;
   className?: string;
@@ -26,7 +31,7 @@ const MIN_QUERY_LENGTH = 2;
 
 export function InstantSearchBar({
   variant = 'desktop',
-  autoFocus = false,
+  focusOnMount = false,
   onClose,
   className,
 }: InstantSearchBarProps) {
@@ -35,6 +40,11 @@ export function InstantSearchBar({
   const [focused, setFocused] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const blurTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (focusOnMount) inputRef.current?.focus();
+  }, [focusOnMount]);
 
   // 300ms client-side debounce — the server is never asked to debounce.
   const [debouncedQuery] = useDebounce(value.trim(), 300);
@@ -134,13 +144,13 @@ export function InstantSearchBar({
           aria-hidden="true"
         />
         <input
+          ref={inputRef}
           type="text"
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={handleKeyDown}
           onFocus={handleFocus}
           onBlur={handleBlur}
-          autoFocus={autoFocus}
           autoComplete="off"
           placeholder="搜尋媒體庫..."
           aria-label="搜尋"

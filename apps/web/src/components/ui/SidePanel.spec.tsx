@@ -50,10 +50,9 @@ describe('SidePanel', () => {
     const onClose = vi.fn();
     render(<SidePanel {...defaultProps} onClose={onClose} />);
 
-    // Click on the dialog container (which wraps both backdrop and panel)
-    // The backdrop click handler is on the container, not the backdrop element itself
-    const dialog = screen.getByRole('dialog');
-    fireEvent.click(dialog);
+    // The dismiss affordance is the dedicated aria-hidden backdrop layer
+    // (retro-11-AI1b); keyboard users close via Escape.
+    fireEvent.click(screen.getByTestId('side-panel-backdrop'));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 

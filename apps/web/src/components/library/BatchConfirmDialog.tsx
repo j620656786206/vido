@@ -60,16 +60,20 @@ export function BatchConfirmDialog({
     <div
       data-testid="batch-confirm-dialog"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onCancel();
-      }}
       role="dialog"
       aria-modal="true"
       aria-labelledby="batch-confirm-title"
     >
+      {/* Mouse-only dismiss affordance; keyboard users close via Escape. */}
+      <div
+        aria-hidden="true"
+        data-testid="batch-confirm-backdrop"
+        className="absolute inset-0"
+        onClick={onCancel}
+      />
       <div
         ref={dialogRef}
-        className="mx-4 w-full max-w-sm rounded-xl bg-[var(--bg-secondary)] p-6 shadow-2xl"
+        className="relative mx-4 w-full max-w-sm rounded-xl bg-[var(--bg-secondary)] p-6 shadow-2xl"
       >
         {action === 'delete' && (
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--error)]/20">

@@ -65,6 +65,19 @@ describe('BackupScheduleConfig', () => {
     expect(screen.getByTestId('retention-info')).toBeInTheDocument();
   });
 
+  it('labels the toggle and selects accessibly (retro-11-AI1b)', () => {
+    mockUseBackupSchedule.mockReturnValue({
+      data: { enabled: true, frequency: 'weekly', hour: 3, dayOfWeek: 1 },
+      isLoading: false,
+    } as any);
+
+    renderWithQuery(React.createElement(BackupScheduleConfig));
+    expect(screen.getByRole('switch', { name: '自動備份' })).toBeInTheDocument();
+    expect(screen.getByLabelText('備份頻率')).toBe(screen.getByTestId('schedule-frequency'));
+    expect(screen.getByLabelText('備份時間')).toBe(screen.getByTestId('schedule-hour'));
+    expect(screen.getByLabelText('備份日')).toBe(screen.getByTestId('schedule-day'));
+  });
+
   it('shows day selector for weekly frequency', () => {
     mockUseBackupSchedule.mockReturnValue({
       data: { enabled: true, frequency: 'weekly', hour: 3, dayOfWeek: 1 },

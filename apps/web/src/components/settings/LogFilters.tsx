@@ -89,6 +89,7 @@ export function LogFilters({ level, keyword, onLevelChange, onKeywordChange }: L
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="搜尋關鍵字..."
+          aria-label="搜尋關鍵字"
           className="w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)] py-1.5 pl-9 pr-8 text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:border-blue-400 focus:outline-none"
           data-testid="log-keyword-input"
         />

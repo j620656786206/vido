@@ -22,6 +22,20 @@ describe('PosterCardMenu', () => {
     expect(screen.queryByTestId('poster-card-menu')).not.toBeInTheDocument();
   });
 
+  it('closes on Escape key (retro-11-AI1b keyboard-dismiss)', () => {
+    const onClose = vi.fn();
+    render(<PosterCardMenu {...defaultProps} onClose={onClose} />);
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes the mobile bottom sheet on Escape key (retro-11-AI1b keyboard-dismiss)', () => {
+    const onClose = vi.fn();
+    render(<PosterCardMenu {...defaultProps} onClose={onClose} isMobile />);
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   it('renders all menu items', () => {
     render(<PosterCardMenu {...defaultProps} />);
     expect(screen.getByText('查看詳情')).toBeInTheDocument();
@@ -54,6 +68,20 @@ describe('PosterCardMenu', () => {
     // Second click executes delete
     fireEvent.click(screen.getByText('確認刪除'));
     expect(defaultProps.onDelete).toHaveBeenCalled();
+  });
+
+  it('Escape first disarms the delete confirm, second Escape closes (retro-11-AI1b)', () => {
+    const onClose = vi.fn();
+    render(<PosterCardMenu {...defaultProps} onClose={onClose} />);
+    fireEvent.click(screen.getByText('刪除'));
+    expect(screen.getByText('確認刪除')).toBeInTheDocument();
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByText('刪除')).toBeInTheDocument();
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it('renders as bottom sheet on mobile', () => {

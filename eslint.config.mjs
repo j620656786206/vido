@@ -248,14 +248,15 @@ export default [
 
   // Epic 11 Retro AI-1 — eslint-plugin-jsx-a11y enforcement. Scope mirrors the
   // Rule 21/23 component blocks (same files/ignores) so a scope refactor of one
-  // carries intent to all three. WARN (not error) preserves the `lint:all`
-  // 0-errors gate while the existing component a11y-violation batch surfaces as
-  // warnings for retro-11-AI1b to clear; the warn→error ratchet is AI1b's
-  // closing move, NOT this story.
+  // carries intent to all three.
   //
-  // jsx-a11y's recommended ruleset ships at 'error'; remap every recommended
-  // rule key to 'warn' rather than hand-listing rules, so the enabled set stays
-  // current with the plugin version.
+  // retro-11-AI1b ratchet (warn → error): the recommended ruleset now applies
+  // at its NATIVE severities — enabled rules at error (each with its
+  // recommended options), and the rules recommended deliberately ships as
+  // 'off' (e.g. the deprecated label-has-for) stay off. The AI1-era warn
+  // remap is gone; it had also accidentally enabled those off rules and
+  // dropped every rule's options, which is why the surfaced warn batch (146)
+  // exceeded the true recommended violation set (56) cleared by AI1b.
   {
     files: ['apps/web/src/components/**/*.{ts,tsx}'],
     ignores: [
@@ -264,9 +265,7 @@ export default [
       'apps/web/src/components/**/index.ts',
     ],
     plugins: { 'jsx-a11y': jsxA11y },
-    rules: Object.fromEntries(
-      Object.keys(jsxA11y.flatConfigs.recommended.rules).map((r) => [r, 'warn'])
-    ),
+    rules: jsxA11y.flatConfigs.recommended.rules,
   },
 
   // Prettier config (must be last)
