@@ -158,6 +158,89 @@ jobs:
           if-no-files-found: ignore
 
   # =============================================================================
+  # Stage 2b: Serve Smoke Gate (runtime regression net for `nx serve api`)
+  # =============================================================================
+  # Catches the class-of-bug where a sibling .go file added to apps/api/cmd/api/
+  # compiles under `go build`/`go test` (package mode) but breaks `go run` if the
+  # nx target ever regresses to single-file mode. Probes a full startup path
+  # (SQLite migrations + handler registration + DB query) via the explore-blocks
+  # LIST endpoint, which is TMDb-free (no secret needed).
+  # Spec: _bmad-output/implementation-artifacts/tech-spec-ci-smoke-gate-nx-serve.md
+  serve-smoke:
+    name: Serve Smoke Gate (nx serve api)
+    needs: [lint, test-unit]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+
+      - name: Install Node dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: apps/api/go.sum
+
+      - name: Download Go dependencies
+        working-directory: apps/api
+        run: go mod download
+
+      # Warm the Go build cache BEFORE the timed probe so compile time is not
+      # charged against the 60s curl budget (a cold ~/.cache/go-build can exceed
+      # 60s on ubuntu-latest). `go run ./cmd/api` below then reuses these objects,
+      # so the probe budget covers only startup (migrations + bind), not compile.
+      - name: Warm Go build cache
+        working-directory: apps/api
+        run: go build -o /dev/null ./cmd/api
+
+      - name: Create data directory
+        run: mkdir -p ${{ github.workspace }}/vido-data
+
+      - name: Start nx serve api (background) and probe smoke endpoint
+        run: |
+          # `set -m` puts the backgrounded job in its own process group so its
+          # PGID equals $!. The trap below then signals the WHOLE tree
+          # (pnpm → nx → go run → compiled binary). A plain `kill $!` would hit
+          # only pnpm and leak the grandchild server, because `go run` does not
+          # forward SIGTERM to the binary it exec's.
+          set -m
+          pnpm exec nx serve api > /tmp/nx-serve.log 2>&1 &
+          SERVER_PID=$!
+          trap "kill -- -$SERVER_PID 2>/dev/null || kill $SERVER_PID 2>/dev/null || true" EXIT
+
+          echo "Started nx serve api (PGID=$SERVER_PID); probing /api/v1/explore-blocks..."
+          for i in {1..60}; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/v1/explore-blocks || echo "000")
+            if [ "$code" = "200" ]; then
+              echo "✓ Smoke passed on iteration $i (HTTP $code)"
+              exit 0
+            fi
+            sleep 1
+          done
+
+          echo "::error::Smoke timeout after 60s. Last HTTP code: $code"
+          echo "===== nx serve api log (tail -100) ====="
+          tail -100 /tmp/nx-serve.log || echo "(no log captured)"
+          exit 1
+        env:
+          VIDO_DATA_DIR: ${{ github.workspace }}/vido-data
+          VIDO_PORT: 8080
+
+  # =============================================================================
   # Stage 3a: Build (Single build, shared with all shards)
   # =============================================================================
   build:
