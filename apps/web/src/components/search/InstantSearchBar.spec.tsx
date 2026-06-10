@@ -50,9 +50,9 @@ const sample: UnifiedSearchResult = {
   people: [],
 };
 
-function setup(initialPath = '/') {
+function setup(initialPath = '/', barProps: { focusOnMount?: boolean } = {}) {
   const rootRoute = createRootRoute({
-    component: () => <InstantSearchBar variant="desktop" />,
+    component: () => <InstantSearchBar variant="desktop" {...barProps} />,
   });
   const indexRoute = createRoute({
     getParentRoute: () => rootRoute,
@@ -88,6 +88,18 @@ describe('InstantSearchBar', () => {
   beforeEach(() => {
     vi.mocked(tmdbService.unifiedSearch).mockReset();
     vi.mocked(tmdbService.unifiedSearch).mockResolvedValue(sample);
+  });
+
+  it('focuses the input on mount when focusOnMount is set (retro-11-AI1b — replaces autoFocus)', async () => {
+    setup('/', { focusOnMount: true });
+    const input = await screen.findByTestId('instant-search-input');
+    await waitFor(() => expect(input).toHaveFocus());
+  });
+
+  it('does not steal focus on mount by default', async () => {
+    setup();
+    const input = await screen.findByTestId('instant-search-input');
+    expect(input).not.toHaveFocus();
   });
 
   it('debounces input — suggestions do not appear synchronously but do after the debounce window', async () => {

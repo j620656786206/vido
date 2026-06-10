@@ -93,6 +93,7 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
           <button
             type="button"
             onClick={onClose}
+            aria-label="關閉"
             className="rounded p-1 text-[var(--text-muted)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-secondary)]"
           >
             <X className="h-4 w-4" />
@@ -107,10 +108,14 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
 
         <div className="mb-4 space-y-4">
           <div>
-            <label className="mb-1 block text-sm font-medium text-[var(--text-secondary)]">
+            <label
+              htmlFor="library-name-input"
+              className="mb-1 block text-sm font-medium text-[var(--text-secondary)]"
+            >
               名稱
             </label>
             <input
+              id="library-name-input"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -121,10 +126,14 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-[var(--text-secondary)]">
+            <label
+              htmlFor="library-type-select"
+              className="mb-1 block text-sm font-medium text-[var(--text-secondary)]"
+            >
               類型
             </label>
             <select
+              id="library-type-select"
               value={contentType}
               onChange={(e) => setContentType(e.target.value as 'movie' | 'series')}
               className="w-full rounded-md border border-[var(--border-subtle)]/50 bg-[var(--bg-secondary)]/60 px-3 py-2 text-sm text-[var(--text-primary)] focus:border-[var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"
@@ -137,7 +146,10 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
 
           {/* Paths section (edit mode or single path for create) */}
           <div>
-            <label className="mb-1 block text-sm font-medium text-[var(--text-secondary)]">
+            <label
+              htmlFor="library-path-input"
+              className="mb-1 block text-sm font-medium text-[var(--text-secondary)]"
+            >
               資料夾路徑
             </label>
 
@@ -154,6 +166,7 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
                     <button
                       type="button"
                       onClick={() => handleRemovePath(p.id)}
+                      aria-label={`移除路徑 ${p.path}`}
                       className="ml-2 rounded p-0.5 text-[var(--text-muted)] hover:text-[var(--error)]"
                     >
                       <X className="h-3 w-3" />
@@ -165,6 +178,7 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
 
             <div className="flex gap-2">
               <input
+                id="library-path-input"
                 type="text"
                 value={newPath}
                 onChange={(e) => setNewPath(e.target.value)}
@@ -177,6 +191,7 @@ export function LibraryEditModal({ libraryId, onClose }: LibraryEditModalProps) 
                   type="button"
                   onClick={handleAddPath}
                   disabled={!newPath.trim() || addPath.isPending}
+                  aria-label="新增路徑"
                   className="rounded-md bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] disabled:opacity-50"
                 >
                   <Plus className="h-4 w-4" />

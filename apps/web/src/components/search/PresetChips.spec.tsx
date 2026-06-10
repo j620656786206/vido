@@ -68,6 +68,21 @@ describe('PresetChips', () => {
     expect(dialog).toHaveTextContent('高評分動畫');
   });
 
+  it('Escape dismisses the delete confirmation (retro-11-AI1b keyboard-dismiss)', () => {
+    render(<PresetChips onApplyPreset={vi.fn()} />);
+    fireEvent.contextMenu(screen.getByTestId('preset-chip-p2'));
+    expect(screen.getByTestId('preset-delete-dialog')).toBeInTheDocument();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByTestId('preset-delete-dialog')).not.toBeInTheDocument();
+  });
+
+  it('backdrop click dismisses the delete confirmation (retro-11-AI1b)', () => {
+    render(<PresetChips onApplyPreset={vi.fn()} />);
+    fireEvent.contextMenu(screen.getByTestId('preset-chip-p2'));
+    fireEvent.click(screen.getByTestId('preset-delete-backdrop'));
+    expect(screen.queryByTestId('preset-delete-dialog')).not.toBeInTheDocument();
+  });
+
   it('confirming delete calls the delete mutation (AC #4)', async () => {
     deleteMutateAsync.mockResolvedValue(undefined);
     render(<PresetChips onApplyPreset={vi.fn()} />);

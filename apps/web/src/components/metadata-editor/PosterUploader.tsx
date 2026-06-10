@@ -112,7 +112,11 @@ export function PosterUploader({
 
   return (
     <div className="space-y-2">
-      <label className="block text-sm font-medium text-[var(--text-secondary)]">海報圖片</label>
+      {/* Section heading, not a <label>: the file input only exists on the
+          file tab, so an htmlFor would dangle in URL mode (and label-click
+          would surprisingly open the OS picker). The controls name themselves
+          via aria-label instead. */}
+      <span className="block text-sm font-medium text-[var(--text-secondary)]">海報圖片</span>
 
       {/* Method Toggle */}
       <div className="flex rounded-lg bg-[var(--bg-secondary)] p-1 w-fit">
@@ -146,10 +150,19 @@ export function PosterUploader({
 
       {uploadMethod === 'file' ? (
         <div
+          role="button"
+          tabIndex={0}
+          aria-label="上傳海報圖片"
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onClick={() => fileInputRef.current?.click()}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              fileInputRef.current?.click();
+            }
+          }}
           className={cn(
             'border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors',
             isDragOver
@@ -161,9 +174,13 @@ export function PosterUploader({
         >
           <input
             ref={fileInputRef}
+            aria-label="海報圖片檔案"
             type="file"
             accept=".jpg,.jpeg,.png,.webp"
             onChange={handleFileSelect}
+            // Programmatic .click() bubbles back to the dropzone's onClick,
+            // which would re-trigger the file picker — stop it at the source.
+            onClick={(e) => e.stopPropagation()}
             className="hidden"
             data-testid="poster-file-input"
           />
@@ -202,6 +219,7 @@ export function PosterUploader({
             value={urlInput}
             onChange={(e) => setUrlInput(e.target.value)}
             placeholder="輸入海報圖片網址"
+            aria-label="海報圖片網址"
             className={cn(
               'flex-1 px-4 py-2',
               'bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-lg',

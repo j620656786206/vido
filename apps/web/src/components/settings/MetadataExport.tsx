@@ -53,6 +53,11 @@ export function MetadataExport() {
           {FORMAT_OPTIONS.map((opt) => (
             <label
               key={opt.value}
+              // The visible text sits at depth 3 (label > div > span), beyond the
+              // rule's accessible-text scan depth — mirror it as an aria-label.
+              // Include the description so the radio's computed name keeps the
+              // full visible copy (aria-label overrides subtree text in accname).
+              aria-label={`${opt.label}：${opt.description}`}
               className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors ${
                 format === opt.value
                   ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)]/10'

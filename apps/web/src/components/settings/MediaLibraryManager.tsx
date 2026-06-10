@@ -38,7 +38,7 @@ export function MediaLibraryManager() {
 
   return (
     <div className="space-y-3" data-testid="media-library-manager">
-      <label className="text-sm font-medium text-[var(--text-secondary)]">媒體庫管理</label>
+      <span className="text-sm font-medium text-[var(--text-secondary)]">媒體庫管理</span>
 
       {libraries.length === 0 ? (
         <div className="rounded-lg border border-dashed border-[var(--border-subtle)]/50 p-6 text-center text-sm text-[var(--text-muted)]">

@@ -4,7 +4,7 @@
  * Dialog for manual metadata search and selection
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { X, Search, Loader2 } from 'lucide-react';
 import { useDebouncedCallback } from 'use-debounce';
 import { cn } from '../../lib/utils';
@@ -148,26 +148,27 @@ export function ManualSearchDialog({
     };
   }, [isOpen, handleKeyDown]);
 
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    // Close when clicking on backdrop (not inside the dialog)
-    const target = e.target as HTMLElement;
-    if (!target.closest('[data-testid="manual-search-dialog"]')) {
-      onClose();
-    }
-  };
+  // Focus the search input on open — a11y-correct replacement for the former
+  // autoFocus prop (jsx-a11y/no-autofocus): same focus-on-open dialog behavior,
+  // applied programmatically.
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (isOpen) searchInputRef.current?.focus();
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
   return (
     <div
       className="fixed inset-0 z-50"
-      onClick={handleBackdropClick}
       role="dialog"
       aria-modal="true"
       aria-labelledby="manual-search-title"
     >
-      {/* Backdrop - clicking this closes the dialog */}
+      {/* Backdrop - clicking this closes the dialog (mouse-only affordance;
+          keyboard users close via Escape) */}
       <div
+        aria-hidden="true"
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         data-testid="dialog-backdrop"
         onClick={onClose}
@@ -214,11 +215,12 @@ export function ManualSearchDialog({
               aria-hidden="true"
             />
             <input
+              ref={searchInputRef}
               type="text"
               value={query}
               onChange={handleQueryChange}
               placeholder="輸入電影或影集名稱..."
-              autoFocus
+              aria-label="搜尋電影或影集"
               className={cn(
                 'w-full pl-10 pr-4 py-3',
                 'bg-[var(--bg-secondary)] border border-[var(--border-subtle)] rounded-lg',

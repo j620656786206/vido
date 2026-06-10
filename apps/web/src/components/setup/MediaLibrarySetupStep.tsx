@@ -63,10 +63,14 @@ export function MediaLibrarySetupStep({ data, onUpdate, onNext, onBack }: StepPr
             data-testid={`library-entry-${index}`}
           >
             <div className="mb-3">
-              <label className="mb-1 block text-xs font-medium text-[var(--text-secondary)]">
+              <label
+                htmlFor={`library-path-input-${index}`}
+                className="mb-1 block text-xs font-medium text-[var(--text-secondary)]"
+              >
                 資料夾路徑
               </label>
               <input
+                id={`library-path-input-${index}`}
                 type="text"
                 value={lib.path}
                 onChange={(e) => updateEntry(index, 'path', e.target.value)}
@@ -78,8 +82,14 @@ export function MediaLibrarySetupStep({ data, onUpdate, onNext, onBack }: StepPr
 
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <label className="text-xs font-medium text-[var(--text-secondary)]">類型</label>
+                <label
+                  htmlFor={`library-type-select-${index}`}
+                  className="text-xs font-medium text-[var(--text-secondary)]"
+                >
+                  類型
+                </label>
                 <select
+                  id={`library-type-select-${index}`}
                   value={lib.contentType}
                   onChange={(e) => updateEntry(index, 'contentType', e.target.value)}
                   className="rounded-md border border-[var(--border-subtle)]/50 bg-[var(--bg-primary)]/60 px-3 py-1.5 text-sm text-[var(--text-primary)] focus:border-[var(--accent-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-primary)]"

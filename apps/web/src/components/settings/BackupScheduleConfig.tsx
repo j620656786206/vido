@@ -97,6 +97,7 @@ export function BackupScheduleConfig() {
           data-testid="schedule-toggle"
           role="switch"
           aria-checked={enabled}
+          aria-label="自動備份"
         >
           <span
             className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${enabled ? 'translate-x-5' : 'translate-x-0'}`}
@@ -116,8 +117,14 @@ export function BackupScheduleConfig() {
           <div className="flex items-center gap-3">
             {/* Frequency */}
             <div className="flex-1">
-              <label className="mb-1 block text-xs text-[var(--text-secondary)]">備份頻率</label>
+              <label
+                htmlFor="schedule-frequency"
+                className="mb-1 block text-xs text-[var(--text-secondary)]"
+              >
+                備份頻率
+              </label>
               <select
+                id="schedule-frequency"
                 value={frequency}
                 onChange={(e) => setFrequency(e.target.value as 'daily' | 'weekly')}
                 className="w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 py-1.5 text-sm text-[var(--text-primary)]"
@@ -130,8 +137,14 @@ export function BackupScheduleConfig() {
 
             {/* Time */}
             <div className="w-24">
-              <label className="mb-1 block text-xs text-[var(--text-secondary)]">備份時間</label>
+              <label
+                htmlFor="schedule-hour"
+                className="mb-1 block text-xs text-[var(--text-secondary)]"
+              >
+                備份時間
+              </label>
               <select
+                id="schedule-hour"
                 value={hour}
                 onChange={(e) => setHour(Number(e.target.value))}
                 className="w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 py-1.5 text-sm text-[var(--text-primary)]"
@@ -148,8 +161,14 @@ export function BackupScheduleConfig() {
             {/* Day of week (only for weekly) */}
             {frequency === 'weekly' && (
               <div className="flex-1">
-                <label className="mb-1 block text-xs text-[var(--text-secondary)]">備份日</label>
+                <label
+                  htmlFor="schedule-day"
+                  className="mb-1 block text-xs text-[var(--text-secondary)]"
+                >
+                  備份日
+                </label>
                 <select
+                  id="schedule-day"
                   value={dayOfWeek}
                   onChange={(e) => setDayOfWeek(Number(e.target.value))}
                   className="w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 py-1.5 text-sm text-[var(--text-primary)]"

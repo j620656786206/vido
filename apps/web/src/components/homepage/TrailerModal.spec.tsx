@@ -155,8 +155,9 @@ describe('TrailerModal', () => {
     const { onClose } = renderModal();
 
     await screen.findByTestId('trailer-modal-iframe');
-    const modal = screen.getByTestId('trailer-modal');
-    fireEvent.click(modal);
+    // The dismiss affordance is a dedicated aria-hidden backdrop layer
+    // (retro-11-AI1b); keyboard users close via Escape.
+    fireEvent.click(screen.getByTestId('trailer-modal-backdrop'));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 

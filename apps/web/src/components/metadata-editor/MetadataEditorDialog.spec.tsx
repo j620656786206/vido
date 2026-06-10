@@ -88,6 +88,22 @@ describe('MetadataEditorDialog', () => {
     expect(screen.getByText('鬼頭明里')).toBeTruthy();
   });
 
+  it('associates every form label with its control (retro-11-AI1b htmlFor/id)', () => {
+    renderWithProviders(<MetadataEditorDialog {...defaultProps} />);
+
+    expect(screen.getByLabelText(/標題（中文）/)).toHaveValue('鬼滅之刃');
+    expect(screen.getByLabelText('標題（英文）')).toHaveValue('Demon Slayer');
+    expect(screen.getByLabelText(/年份/)).toHaveValue(2019);
+    expect(screen.getByLabelText('導演')).toHaveValue('外崎春雄');
+    expect(screen.getByLabelText('演員')).toHaveAttribute('placeholder', '輸入演員名稱後按 Enter');
+    expect(screen.getByLabelText('簡介')).toHaveValue(defaultInitialData.overview);
+    expect(screen.getByLabelText('海報圖片網址')).toHaveValue('https://example.com/poster.jpg');
+    // 類型 button group is labelled via role=group + aria-labelledby.
+    expect(screen.getByRole('group', { name: '類型' })).toBeTruthy();
+    // Cast remove buttons carry accessible names.
+    expect(screen.getByRole('button', { name: '移除 花江夏樹' })).toBeTruthy();
+  });
+
   it('calls onClose when close button is clicked', async () => {
     const onClose = vi.fn();
     renderWithProviders(<MetadataEditorDialog {...defaultProps} onClose={onClose} />);

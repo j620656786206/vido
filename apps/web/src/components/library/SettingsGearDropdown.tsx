@@ -77,10 +77,13 @@ export function SettingsGearDropdown({
         >
           {/* Poster Density */}
           <div className="mb-4">
-            <label className="mb-2 block text-xs font-medium text-[var(--text-secondary)]">
+            <span
+              id="gear-density-label"
+              className="mb-2 block text-xs font-medium text-[var(--text-secondary)]"
+            >
               海報大小
-            </label>
-            <div className="flex gap-2">
+            </span>
+            <div className="flex gap-2" role="group" aria-labelledby="gear-density-label">
               {(['small', 'medium', 'large'] as const).map((size) => (
                 <button
                   key={size}
@@ -100,10 +103,14 @@ export function SettingsGearDropdown({
 
           {/* Default Sort */}
           <div className="mb-4">
-            <label className="mb-2 block text-xs font-medium text-[var(--text-secondary)]">
+            <label
+              htmlFor="gear-default-sort"
+              className="mb-2 block text-xs font-medium text-[var(--text-secondary)]"
+            >
               預設排序
             </label>
             <select
+              id="gear-default-sort"
               value={preferences.defaultSort}
               onChange={(e) => updatePref({ defaultSort: e.target.value })}
               className="w-full rounded-md bg-[var(--bg-tertiary)] px-3 py-2 text-sm text-white outline-none"
@@ -117,10 +124,13 @@ export function SettingsGearDropdown({
 
           {/* Title Language */}
           <div>
-            <label className="mb-2 block text-xs font-medium text-[var(--text-secondary)]">
+            <span
+              id="gear-title-language-label"
+              className="mb-2 block text-xs font-medium text-[var(--text-secondary)]"
+            >
               標題語言
-            </label>
-            <div className="flex gap-2">
+            </span>
+            <div className="flex gap-2" role="group" aria-labelledby="gear-title-language-label">
               {(['zh-tw', 'original'] as const).map((lang) => (
                 <button
                   key={lang}

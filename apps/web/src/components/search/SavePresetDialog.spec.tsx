@@ -46,6 +46,16 @@ describe('SavePresetDialog', () => {
     expect(input.maxLength).toBe(30);
   });
 
+  it('focuses the name field on open via ref (retro-11-AI1b — replaces autoFocus)', () => {
+    render(<SavePresetDialog filters={filters} onClose={vi.fn()} />);
+    expect(screen.getByTestId('preset-name-input')).toHaveFocus();
+  });
+
+  it('associates the 預設名稱 label with the name input (retro-11-AI1b)', () => {
+    render(<SavePresetDialog filters={filters} onClose={vi.fn()} />);
+    expect(screen.getByLabelText('預設名稱')).toBe(screen.getByTestId('preset-name-input'));
+  });
+
   it('saves the current filters serialized as a JSON string and closes (AC #1)', async () => {
     mutateAsync.mockResolvedValue({ id: 'p1' });
     const onClose = vi.fn();

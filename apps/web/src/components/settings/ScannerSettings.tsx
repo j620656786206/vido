@@ -159,7 +159,7 @@ export function ScannerSettings() {
 
         {/* Last scan info */}
         <div className="space-y-2">
-          <label className="text-sm font-medium text-[var(--text-secondary)]">上次掃描</label>
+          <span className="text-sm font-medium text-[var(--text-secondary)]">上次掃描</span>
           <p
             className="font-mono text-sm text-[var(--text-secondary)]"
             data-testid="last-scan-info"

@@ -50,6 +50,22 @@ export function PosterCardMenu({
     }
   }, [isOpen, handleClickOutside]);
 
+  // Escape closes the menu / bottom sheet (11-2 CR M2 keyboard-dismiss class).
+  // When the destructive delete-confirm is armed, Escape first disarms it so
+  // keyboard users can back out of the confirm without losing the menu.
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      setShowConfirm((armed) => {
+        if (!armed) onClose();
+        return false;
+      });
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const handleDelete = () => {
@@ -99,8 +115,8 @@ export function PosterCardMenu({
   if (isMobile) {
     return (
       <>
-        {/* Backdrop */}
-        <div className="fixed inset-0 z-40 bg-black/50" onClick={onClose} />
+        {/* Backdrop — mouse-only dismiss affordance; keyboard users close via Escape. */}
+        <div aria-hidden="true" className="fixed inset-0 z-40 bg-black/50" onClick={onClose} />
         {/* Bottom sheet */}
         <div
           ref={menuRef}

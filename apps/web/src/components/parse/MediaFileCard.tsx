@@ -60,6 +60,20 @@ export function MediaFileCard({ file, isParsing = false, onClick, className }: M
         className
       )}
       onClick={onClick}
+      // Interactive semantics only when the card actually does something —
+      // a focusable role=button with no action is itself an a11y defect.
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
       data-testid="media-file-card"
       data-status={file.parseStatus}
     >
@@ -132,6 +146,18 @@ export function MediaFileRow({ file, isParsing = false, onClick, className }: Me
         className
       )}
       onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
       data-testid="media-file-row"
       data-status={file.parseStatus}
     >

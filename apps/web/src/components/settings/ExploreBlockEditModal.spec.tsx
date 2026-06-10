@@ -108,6 +108,18 @@ describe('ExploreBlockEditModal', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
+  it('associates every Field label with its control (retro-11-AI1b useId+cloneElement)', () => {
+    renderModal();
+    expect(screen.getByLabelText('區塊名稱')).toBe(screen.getByTestId('explore-block-name-input'));
+    expect(screen.getByLabelText('內容類型')).toBe(screen.getByTestId('explore-block-type-select'));
+    expect(screen.getByLabelText('類型 ID（逗號分隔 TMDb genre IDs，可留空）')).toBe(
+      screen.getByTestId('explore-block-genre-input')
+    );
+    expect(screen.getByLabelText('語言')).toBe(screen.getByTestId('explore-block-language-input'));
+    expect(screen.getByLabelText('排序')).toBeInTheDocument();
+    expect(screen.getByLabelText('最大項目數（1–40）')).toBeInTheDocument();
+  });
+
   it('calls onClose when Escape key is pressed (L1 fix)', () => {
     const { onClose } = renderModal();
     fireEvent.keyDown(document, { key: 'Escape' });

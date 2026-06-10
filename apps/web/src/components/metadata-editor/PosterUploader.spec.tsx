@@ -20,6 +20,27 @@ describe('PosterUploader', () => {
     expect(screen.getByText('拖放圖片或點擊選擇檔案')).toBeTruthy();
   });
 
+  it('opens the file picker via Enter/Space on the dropzone (retro-11-AI1b keyboard affordance)', () => {
+    render(<PosterUploader {...defaultProps} />);
+
+    const dropzone = screen.getByTestId('poster-dropzone');
+    expect(dropzone).toHaveAttribute('role', 'button');
+    expect(dropzone).toHaveAttribute('tabindex', '0');
+
+    const fileInput = screen.getByTestId('poster-file-input') as HTMLInputElement;
+    const clickSpy = vi.spyOn(fileInput, 'click');
+    fireEvent.keyDown(dropzone, { key: 'Enter' });
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+    fireEvent.keyDown(dropzone, { key: ' ' });
+    expect(clickSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('names the file input and dropzone accessibly (retro-11-AI1b)', () => {
+    render(<PosterUploader {...defaultProps} />);
+    expect(screen.getByLabelText('海報圖片檔案')).toBe(screen.getByTestId('poster-file-input'));
+    expect(screen.getByLabelText('上傳海報圖片')).toBe(screen.getByTestId('poster-dropzone'));
+  });
+
   it('switches to URL input tab', async () => {
     render(<PosterUploader {...defaultProps} onUrlSubmit={vi.fn()} />);
 

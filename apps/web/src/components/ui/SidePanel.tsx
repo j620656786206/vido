@@ -41,31 +41,26 @@ export function SidePanel({ isOpen, onClose, children, title, className }: SideP
     };
   }, [isOpen, handleKeyDown]);
 
-  // Task 3.4: Click outside to close
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
-  };
-
   if (!isOpen) return null;
 
   return (
     <div
       className="fixed inset-0 z-[60]"
-      onClick={handleBackdropClick}
       role="dialog"
       aria-modal="true"
       aria-labelledby={title ? 'side-panel-title' : undefined}
     >
-      {/* Task 3.6: Backdrop overlay with blur */}
+      {/* Task 3.6: Backdrop overlay with blur. Task 3.4: click outside to
+          close (mouse-only affordance; keyboard users close via Escape). */}
       <div
+        aria-hidden="true"
         className={cn(
           'absolute inset-0 bg-black/50 backdrop-blur-sm',
           'transition-opacity duration-200',
           isOpen ? 'opacity-100' : 'opacity-0'
         )}
         data-testid="side-panel-backdrop"
+        onClick={onClose}
       />
 
       {/* Task 3.2 & 3.3: Panel with slide-in animation, 450px width on desktop */}
