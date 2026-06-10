@@ -190,6 +190,8 @@ describe('MediaFileRow', () => {
     render(<MediaFileRow file={mockFile} onClick={onClick} />);
 
     const row = screen.getByTestId('media-file-row');
+    expect(row).toHaveAttribute('role', 'button');
+    expect(row).toHaveAttribute('tabindex', '0');
     row.focus();
     await user.keyboard('{Enter}');
     expect(onClick).toHaveBeenCalledTimes(1);
