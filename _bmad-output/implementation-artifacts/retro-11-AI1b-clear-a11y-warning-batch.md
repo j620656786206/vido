@@ -1,6 +1,6 @@
 # Story: Clear the existing component a11y warning batch + ratchet jsx-a11y warn → error
 
-Status: review
+Status: done
 
 **⛔ Depends on: `retro-11-AI1` (backend gate)** — `eslint-plugin-jsx-a11y` must be installed and wired at `warn` (AI1 prong 1) BEFORE this story can run. The warning batch this story clears does not exist until AI1 lands. sprint-status entry is `blocked` until AI1 is `done`; flip to `ready-for-dev` then.
 
@@ -57,7 +57,7 @@ so that the automation backstop AI1 installed actually blocks future a11y regres
 - [x] **Task 5: sprint-status transitions** (AC: #6)
   - [x] 5.1 Entry stays `blocked` until `retro-11-AI1` is `done`; on AI1 close, flip `blocked → ready-for-dev`. *(Done by AI1 close on 2026-06-09.)*
   - [x] 5.2 `ready-for-dev → in-progress` on `/dev-story` start; `in-progress → review` on completion (record the final jsx-a11y warning count = 0 + the warn→error bump confirmation).
-  - [ ] 5.3 `review → done` on `/code-review` pass. *(Deferred by design — transitions at the next workflow (`/code-review`), not at dev-story completion; AI1 precedent.)*
+  - [x] 5.3 `review → done` on `/code-review` pass. *(2026-06-10 adversarial CR PASS: 0H/3M/3L, all M + L1 fixed in-review — see Change Log.)*
 
 ## Dev Notes
 
@@ -155,6 +155,7 @@ claude-fable-5 (Fable 5) — DEV Amelia /dev-story 2026-06-10
 - **Did this story discover any work outside its current scope?**
   - **One discovery, triaged lane ① (expand-scope-in-place):** the AI1 warn-remap implementation artifact — `Object.keys(recommended.rules).map(r => [r,'warn'])` accidentally enabled 2 natively-`off` rules and dropped all rule options, making the literal AC #3 "zero under warn-remap" unsatisfiable (deprecated `label-has-for` demands nesting+id simultaneously). Surfaced at Task 1, escalated to Alexyu 2026-06-10 → ruling recorded above (measure AC #3 against the AC #5 native end-state + fix genuine icon-button/aria-label gaps among the off-rule hits). Absorbed into this story per Rule 24 lane ① — the tracking artifact is the ruling note + this entry (the fix IS this story's Task 2/3 work; no separate sprint-status entry needed since no work leaves this story).
   - Also absorbed under lane ① (same surface, tiny): `PosterUploader` double-`click()` bubbling micro-bug; Escape-dismiss for `PosterCardMenu`/`PresetChips` (pre-flight class-4 gap on touched dialogs).
+  - **Two lane ③ entries formalized at /code-review 2026-06-10 (CR M3 — they were prose-only "Deferred (noted for PR body)" in the /ship self-review row, the exact Rule 24 banned pattern):** `disc-2026-06-shared-dialog-dismiss-layer` (L7 — extract the 7×-duplicated aria-hidden dismiss-backdrop pattern into a shared layer/hook) and `disc-2026-06-component-id-useid-hygiene` (L9 — migrate hardcoded htmlFor/id literals to `useId`, matching CastEditor/ExploreBlockEditModal). Both filed `backlog` P3 in sprint-status.yaml with bidirectional links back to this story.
 - Reference: `project-context.md` Rule 24.
 
 ### File List
@@ -208,6 +209,7 @@ claude-fable-5 (Fable 5) — DEV Amelia /dev-story 2026-06-10
 - `apps/web/src/components/search/PresetChips.spec.tsx`
 - `apps/web/src/components/search/SavePresetDialog.spec.tsx`
 - `apps/web/src/components/settings/BackupScheduleConfig.spec.tsx`
+- `apps/web/src/components/settings/ExploreBlockEditModal.spec.tsx` *(was missing from this list — CR 2026-06-10 M1)*
 - `apps/web/src/components/subtitle/SubtitleSearchDialog.spec.tsx`
 - `apps/web/src/components/ui/SidePanel.spec.tsx`
 
@@ -226,6 +228,7 @@ claude-fable-5 (Fable 5) — DEV Amelia /dev-story 2026-06-10
 
 | Date | Change | Author |
 | ---- | ------ | ------ |
+| 2026-06-10 | /code-review adversarial CR (post-merge vs 24431d4) PASS → done. All 6 ACs verified with live evidence (scoped eslint 0 errors / 0 jsx-a11y; wiring spec 6/6; 16 touched spec files 200/200; Rule 7/20/25 all N/A). Findings 0H/3M/3L, fixed in-review: M1 File List was missing ExploreBlockEditModal.spec.tsx (added); M2 PosterCardMenu Escape handler called onClose inside the setShowConfirm updater — impure updater double-invoked under StrictMode (main.tsx wraps the app) → rewritten to read showConfirm via effect deps; M3 Rule 24 violation — /ship-deferred L7/L9 existed only as PR-body prose → formalized as lane ③ backlog entries disc-2026-06-shared-dialog-dismiss-layer + disc-2026-06-component-id-useid-hygiene (bidirectional links recorded in Discovery Triage); L1 MediaFileRow keyboard spec now also asserts role/tabindex (parity with Card variant). L2/L3 folded into the two new backlog entries. Re-verified post-fix: PosterCardMenu + MediaFileCard specs green, scoped lint 0 errors, prettier clean. | Amelia (DEV /code-review) |
 | 2026-06-10 | /ship adversarial self-review (clean-context subagent, 12 findings: 1H/6M/5L) — ALL in-scope findings fixed: H1 繁體轉換 text-click forwarding restored (label htmlFor → button id, + forwarding test); M4 MediaFileCard/Row role/tabIndex now conditional on onClick (no actionless tab-stops); M3 PosterUploader 海報圖片 reverted to span heading (dangling htmlFor in URL mode + surprise label-click→picker), file input aria-label'd; M5 LibraryEditModal 新增路徑 Plus button aria-label + test; M6 wiring spec now pins rules toEqual(recommended.rules) (anti-shrinkage) + header comment rot fixed; M7 PosterCardMenu Escape disarms delete-confirm before closing (+ test); M2 MetadataEditorDialog no-backdrop-dismiss documented as deliberate (edit form, was dead code before); L8 MetadataExport aria-label keeps description in accname; L11 BatchSubtitleDialog comment corrected (Escape exists); L10 ExploreBlockEditModal Field association test added; L12 implementation-detail assertion swapped. Deferred (noted for PR body): L9 hardcoded ids in singleton components (useId churn), L7 global shared dismiss-layer utility (cross-cutting). Re-verified: lint:all 0 errors, 0 jsx-a11y, web 2025/2025, api PASS, test:visual 0 diffs, cleanup clean. | Amelia (DEV /ship) |
 | 2026-06-10 | Tasks 2–5 complete (DEV Amelia /dev-story): 56 native-recommended violations fixed across 28 components (0 suppressions) — htmlFor/id+group labels, dedicated aria-hidden backdrop layers, role/tabIndex/Enter-Space keyboardization, autoFocus→ref+effect (focus-on-open preserved; InstantSearchBar prop renamed focusOnMount); icon-button/progressbar/switch aria-labels per Alexyu ruling; Escape-dismiss added to PosterCardMenu + PresetChips delete-confirm. Ratchet: eslint.config.mjs → native recommended @ error (off rules stay off, options restored); wiring spec flipped to error assertion. Gates: lint:all 0 errors (123 warns = 122 baseline +1 spec-pattern `as any`), web 2021/2021 (incl. 17 new a11y tests + 2 new spec files), api PASS, test:visual 1 passed / 0 pixel diffs, test:cleanup clean. 🎭 A11y Pre-Flight PASS. Status → review (5.3 deferred to /code-review per AI1 precedent). | Amelia (DEV) |
 | 2026-06-10 | Task 1 complete (DEV Amelia /dev-story): AI1 gate confirmed (jsx-a11y 6.10.2, AI1 done); authoritative 146-warning inventory captured (exact match to AI1 CR breakdown); end-state measurement run → 56 native-recommended errors; Alexyu ruling: clear-to-zero basis = native recommended @ error + icon-button aria-labels (Rule 24 lane ①, recorded in Completion Notes). | Amelia (DEV) |

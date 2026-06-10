@@ -53,18 +53,21 @@ export function PosterCardMenu({
   // Escape closes the menu / bottom sheet (11-2 CR M2 keyboard-dismiss class).
   // When the destructive delete-confirm is armed, Escape first disarms it so
   // keyboard users can back out of the confirm without losing the menu.
+  // showConfirm is read directly (not via an updater) — calling onClose inside
+  // a setState updater is a side effect StrictMode double-invokes.
   useEffect(() => {
     if (!isOpen) return;
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
-      setShowConfirm((armed) => {
-        if (!armed) onClose();
-        return false;
-      });
+      if (showConfirm) {
+        setShowConfirm(false);
+      } else {
+        onClose();
+      }
     };
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
-  }, [isOpen, onClose]);
+  }, [isOpen, showConfirm, onClose]);
 
   if (!isOpen) return null;
 
