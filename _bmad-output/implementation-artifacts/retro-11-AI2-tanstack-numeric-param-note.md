@@ -1,6 +1,6 @@
 # Story: project-context.md Rule 26 — TanStack Router Search-Param Coercion (lone-numeric trap)
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -26,26 +26,26 @@ so that the next route author coerces with `String()` / a `toCsvString`-style he
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: Author Rule 26 in `project-context.md`** (AC: #1, #2, #3, #4)
-  - [ ] 1.1 Locate the insertion point: end of Rule 25 (`### Rule 25: Mega-line Rebase Conflict Resolution`, body + `📌 Precedent` block) and the `---` separator before `## 🧪 Known dev-mode artifacts`. Insert Rule 26 between the Rule 25 precedent block and that `---`.
-  - [ ] 1.2 Add the Rule 26 section using the draft in Dev Notes → "Proposed Rule 26 text" (adjust wording as needed but preserve every AC #2–#4 requirement). Match the `### Rule N:` + fenced-block + `✅`/`❌` + `📌 Precedent:` house format of Rules 5 / 18 / 25.
-  - [ ] 1.3 Verify the code in the `✅ CORRECT` block matches the REAL canonical helper at `apps/web/src/routes/discover.tsx:37-41` (`toCsvString` — `typeof === 'string'` early return, `typeof === 'number' && Number.isFinite` → `String(value)`, else `undefined`). Do not invent a divergent signature.
+- [x] **Task 1: Author Rule 26 in `project-context.md`** (AC: #1, #2, #3, #4)
+  - [x] 1.1 Locate the insertion point: end of Rule 25 (`### Rule 25: Mega-line Rebase Conflict Resolution`, body + `📌 Precedent` block) and the `---` separator before `## 🧪 Known dev-mode artifacts`. Insert Rule 26 between the Rule 25 precedent block and that `---`.
+  - [x] 1.2 Add the Rule 26 section using the draft in Dev Notes → "Proposed Rule 26 text" (adjust wording as needed but preserve every AC #2–#4 requirement). Match the `### Rule N:` + fenced-block + `✅`/`❌` + `📌 Precedent:` house format of Rules 5 / 18 / 25.
+  - [x] 1.3 Verify the code in the `✅ CORRECT` block matches the REAL canonical helper at `apps/web/src/routes/discover.tsx:37-41` (`toCsvString` — `typeof === 'string'` early return, `typeof === 'number' && Number.isFinite` → `String(value)`, else `undefined`). Do not invent a divergent signature.
 
-- [ ] **Task 2: Update the `Last Updated` mega-line per Rule 25** (AC: #5)
-  - [ ] 2.1 PREPEND a new English-only `(...)` entry to L7 leading the `**Last Updated:**` line, e.g.: `2026-06-09 (retro-11-AI2 — Epic 11 retro action item (MED): SM Bob + DEV authored **Rule 26 (TanStack Router Search-Param Coercion)** … lone-numeric `?genre=16` JSON-parsed to number fails `typeof==='string'` guard → silently dropped; coerce via toCsvString/String(). Precedents 11-2 + 8-11. Pure docs — 0 Go, 0 FE, 0 ESLint, 0 baseline.)`.
-  - [ ] 2.2 Demote the former lead entry (retro-19-P4) to a `Prior:` entry immediately after the new lead; keep the shared older `Prior:`/`Earlier:` tail exactly once (do NOT duplicate or drop any existing entry).
-  - [ ] 2.3 Entry text is English-only (no CJK anywhere on the mega-line — Rule 25 + the known prettier+CJK reflow gotcha).
+- [x] **Task 2: Update the `Last Updated` mega-line per Rule 25** (AC: #5)
+  - [x] 2.1 PREPEND a new English-only `(...)` entry to L7 leading the `**Last Updated:**` line, e.g.: `2026-06-09 (retro-11-AI2 — Epic 11 retro action item (MED): SM Bob + DEV authored **Rule 26 (TanStack Router Search-Param Coercion)** … lone-numeric `?genre=16` JSON-parsed to number fails `typeof==='string'` guard → silently dropped; coerce via toCsvString/String(). Precedents 11-2 + 8-11. Pure docs — 0 Go, 0 FE, 0 ESLint, 0 baseline.)`.
+  - [x] 2.2 Demote the former lead entry (retro-19-P4) to a `Prior:` entry immediately after the new lead; keep the shared older `Prior:`/`Earlier:` tail exactly once (do NOT duplicate or drop any existing entry).
+  - [x] 2.3 Entry text is English-only (no CJK anywhere on the mega-line — Rule 25 + the known prettier+CJK reflow gotcha).
 
-- [ ] **Task 3: Verification** (AC: #6)
-  - [ ] 3.1 `pnpm exec prettier --check project-context.md` → PASS (if it reflows, a CJK char or formatting slip leaked in — fix and re-check).
-  - [ ] 3.2 Confirm Rule numbering is contiguous (… 24, 25, 26) and the `## 🧪 Known dev-mode artifacts` section still follows immediately after Rule 26 + `---`.
-  - [ ] 3.3 Grep the mega-line for both `retro-11-AI2` (new) and `retro-19-P4` (demoted-but-present) to prove no entry was dropped; entry count ≥ prior count.
-  - [ ] 3.4 Run the standard regression gate (`pnpm lint:all`, `pnpm nx test api`, `pnpm nx test web`) — all green; this story changes no code so the result must match the prior baseline (0 errors / ~122 warnings).
+- [x] **Task 3: Verification** (AC: #6)
+  - [x] 3.1 `pnpm exec prettier --check project-context.md` → PASS (if it reflows, a CJK char or formatting slip leaked in — fix and re-check).
+  - [x] 3.2 Confirm Rule numbering is contiguous (… 24, 25, 26) and the `## 🧪 Known dev-mode artifacts` section still follows immediately after Rule 26 + `---`.
+  - [x] 3.3 Grep the mega-line for both `retro-11-AI2` (new) and `retro-19-P4` (demoted-but-present) to prove no entry was dropped; entry count ≥ prior count.
+  - [x] 3.4 Run the standard regression gate (`pnpm lint:all`, `pnpm nx test api`, `pnpm nx test web`) — all green; this story changes no code so the result must match the prior baseline (0 errors / ~122 warnings).
 
-- [ ] **Task 4: sprint-status transitions** (AC: #6)
-  - [ ] 4.1 `retro-11-AI2-tanstack-numeric-param-note: ready-for-dev` at story creation (this `/create-story` step).
-  - [ ] 4.2 `ready-for-dev → in-progress` on `/dev-story` start; `in-progress → review` on completion (note final Rule 26 line range).
-  - [ ] 4.3 `review → done` on `/code-review` pass.
+- [x] **Task 4: sprint-status transitions** (AC: #6)
+  - [x] 4.1 `retro-11-AI2-tanstack-numeric-param-note: ready-for-dev` at story creation (this `/create-story` step).
+  - [x] 4.2 `ready-for-dev → in-progress` on `/dev-story` start; `in-progress → review` on completion (note final Rule 26 line range).
+  - [x] 4.3 `review → done` on `/code-review` pass.
 
 ## Dev Notes
 
@@ -139,22 +139,39 @@ L7 is a single physical line. The new entry MUST be prepended English-only; a CJ
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Opus 4.8 (claude-opus-4-8, 1M context) — /dev-story
 
 ### Debug Log References
 
+- `pnpm exec prettier --check project-context.md` → "All matched files use Prettier code style!"
+- `pnpm lint:all` → 123 problems (0 errors, 123 warnings); repo-wide `prettier --check .` PASS
+- `pnpm nx test web` → Test Files 166 passed, Tests 2025 passed (the non-zero wrapper exit is `scripts/cleanup-test-processes.sh` SIGTERM, not a test failure)
+- `pnpm nx test api` → "Successfully ran target test for project api", 0 `FAIL` (the `ERROR ... context deadline exceeded` lines are intentional negative-path test cases)
+
 ### Completion Notes List
+
+- Authored **Rule 26: TanStack Router Search-Param Coercion (lone-numeric trap)** in `project-context.md` at L1056 — inserted between the Rule 25 `📌 Precedent` block and the `---` before `## 🧪 Known dev-mode artifacts`, so the numbered-rule block stays contiguous (24 → 25 → 26). House format matches Rules 5/18/25: `### Rule N:` heading + ```typescript fenced block carrying the mechanism comment + `✅ CORRECT`/`❌ WRONG` examples, then an "Applies to…" scope paragraph and a `📌 Precedent:` line outside the fence.
+- The `✅ CORRECT` block reproduces the REAL canonical helper verbatim from `apps/web/src/routes/discover.tsx:37-41` (`toCsvString` — `string` early return, `number && Number.isFinite` → `String(value)`, else `undefined`); no divergent signature invented.
+- L7 mega-line updated per Rule 25: prepended the new `retro-11-AI2` `(...)` lead entry (English-only, no CJK), demoted the former lead `retro-19-P4` to the first `Prior:` entry, kept the shared older `Prior:`/`Earlier:` tail exactly once. Semantic entry-head count 16 → 17 (lead + `Prior:`/`Earlier:` heads; the raw `grep -c '(Prior|Earlier):'` marker count is 18 → 19 — the 2 extra markers are nested inside quoted historical entry narrative, not entry starts); grew by one, no entry dropped. Both `retro-11-AI2` and `retro-19-P4` confirmed present on L7 via grep.
+- Pure docs change — only `project-context.md` edited (Rule 26 body + L7) plus the `sprint-status.yaml` + this story's bookkeeping. 0 Go, 0 TS/FE, 0 ESLint rule, 0 visual baseline. Regression gate matches baseline (the lint 123 vs spec ~122 is pre-existing code, untouched here).
+- Per AC scope: NO ESLint rule (false-positive-prone on genuine string enums) and NO `code-review/instructions.xml` CR-workflow sync (Rule 26 is a self-contained frontend convention caught by the route's own E2E, not a cross-story contract like Rules 20/24/25).
 
 ### Discovery Triage
 
 - **Did this story discover any work outside its current scope?**
-  - Expected default: `N/A — no out-of-scope work discovered`. If, while authoring Rule 26, the DEV greps `apps/web/src/routes/**` and finds a `validateSearch` guard that IS vulnerable to the lone-numeric drop (a numeric-writable CSV/id param still using a bare `typeof === 'string'` guard), file it per Rule 24 lane ③ (`backlog`/`bugfix-N` entry, bidirectional link) at discovery time — do NOT silently fix it inside this docs story.
+  - `N/A — no out-of-scope work discovered`. No new grep of `apps/web/src/routes/**` was performed beyond confirming the canonical `discover.tsx::toCsvString` helper; per the story's own Out of Scope note, retrofitting/auditing existing `validateSearch` guards is explicitly forward-looking and `library.tsx::subtitleStatus` is a string-enum (values like `missing`/`none`, never all-digits) so it is safe as-is. No vulnerable guard surfaced.
 - Reference: `project-context.md` Rule 24.
 
 ### File List
+
+- `project-context.md` (Rule 26 added at L1056; L7 `**Last Updated:**` mega-line updated)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (retro-11-AI2 entry: ready-for-dev → review)
+- `_bmad-output/implementation-artifacts/retro-11-AI2-tanstack-numeric-param-note.md` (this story: status, tasks, Dev Agent Record, Change Log)
 
 ## Change Log
 
 | Date | Change | Author |
 | ---- | ------ | ------ |
 | 2026-06-09 | Story created (SM Bob /create-story, YOLO) — backlog → ready-for-dev. Pure docs: add `project-context.md` Rule 26 (TanStack Router lone-numeric search-param coercion trap) + L7 mega-line update per Rule 25. Precedents 11-2 + 8-11. No code / no ESLint / no CR sync. | Bob (SM) |
+| 2026-06-09 | /dev-story → review. Rule 26 authored at project-context.md L1056 (contiguous 24→25→26, house format, ✅ block = real `discover.tsx::toCsvString`); L7 mega-line prepended (retro-11-AI2 lead, retro-19-P4 demoted to Prior:, English-only, count 16→17). Gate green: prettier PASS, lint:all 0 errors/123 warnings, nx test web 2025 passed, nx test api 0 fail. Pure docs (0 Go/0 FE/0 ESLint/0 baseline). sprint-status → review. | DEV (Amelia) |
+| 2026-06-10 | /code-review → done. Adversarial CR: 0 git-vs-story discrepancies; Rule 7/20/25 checks all scope-filtered N/A (docs-only, no NEW bump, no rebase/merge); Rule 25 union invariant verified (16 base entry-heads all survive → prepend = 17, 0 dropped). All 6 ACs IMPLEMENTED, all done-tasks truly done. 0 High / 0 Medium / 3 Low. Fixed L1 (AC #3 `::` citation: `discover.tsx::toCsvString`) + L2 (count-label clarified semantic-head 16→17 vs raw marker 18→19); L3 (pre-existing CJK `新增` on L7) left as observation (not introduced here). prettier PASS post-fix. Status review → done. | CR (Amelia) |
