@@ -663,6 +663,67 @@ func TestCacheService_GetTVSimilar_CacheKeyAndMissThenHit(t *testing.T) {
 	assert.Equal(t, 1, fbClient.TVSimilarCalled) // served from cache
 }
 
+// --- Story 12-4 watch-providers cache tests ---
+
+func TestCacheService_GetWatchProviders_CacheMissThenHit_24hTTL(t *testing.T) {
+	repo := NewMockCacheRepository()
+	rawClient := &MockClient{
+		WatchProvidersResponse: &WatchProvidersResponse{
+			ID: 550,
+			Results: map[string]WatchProviderRegion{
+				"TW": {Link: "https://example/tw", Flatrate: []WatchProvider{{ProviderID: 8, ProviderName: "Netflix"}}},
+			},
+		},
+	}
+	svc := NewCacheService(&MockFallbackClient{}, repo, CacheServiceConfig{TTL: DefaultCacheTTL})
+	svc.SetProvidersClient(rawClient)
+
+	// Miss → fetch from raw client (bypassing language fallback) + store under the
+	// region-keyed v1 key at 24h TTL.
+	r1, err := svc.GetWatchProviders(context.Background(), "movie", 550, "TW")
+	require.NoError(t, err)
+	require.NotNil(t, r1)
+	require.Contains(t, r1.Results, "TW")
+	assert.Equal(t, 1, rawClient.WatchProvidersCalled)
+	assert.Equal(t, DefaultCacheTTL, repo.lastSetTTL, "watch providers must cache at 24h (ADR Pillar 2)")
+
+	cached, _ := repo.Get(context.Background(), "tmdb:watchproviders:movie:550:TW:v1")
+	require.NotNil(t, cached, "expected entry under tmdb:watchproviders:movie:550:TW:v1 (region in key)")
+
+	// Hit → no second upstream call.
+	r2, err := svc.GetWatchProviders(context.Background(), "movie", 550, "TW")
+	require.NoError(t, err)
+	require.Contains(t, r2.Results, "TW")
+	assert.Equal(t, 1, rawClient.WatchProvidersCalled, "cache hit must not call upstream again")
+}
+
+func TestCacheService_GetWatchProviders_RegionInKey(t *testing.T) {
+	repo := NewMockCacheRepository()
+	rawClient := &MockClient{WatchProvidersResponse: &WatchProvidersResponse{ID: 550, Results: map[string]WatchProviderRegion{}}}
+	svc := NewCacheService(&MockFallbackClient{}, repo, CacheServiceConfig{})
+	svc.SetProvidersClient(rawClient)
+
+	_, err := svc.GetWatchProviders(context.Background(), "tv", 1396, "TW")
+	require.NoError(t, err)
+	_, err = svc.GetWatchProviders(context.Background(), "tv", 1396, "US")
+	require.NoError(t, err)
+
+	// Distinct regions → distinct cache entries → two upstream calls.
+	assert.Equal(t, 2, rawClient.WatchProvidersCalled)
+	tw, _ := repo.Get(context.Background(), "tmdb:watchproviders:tv:1396:TW:v1")
+	us, _ := repo.Get(context.Background(), "tmdb:watchproviders:tv:1396:US:v1")
+	require.NotNil(t, tw)
+	require.NotNil(t, us)
+}
+
+func TestCacheService_GetWatchProviders_NilClient(t *testing.T) {
+	repo := NewMockCacheRepository()
+	svc := NewCacheService(&MockFallbackClient{}, repo, CacheServiceConfig{})
+	// SetProvidersClient deliberately NOT called.
+	_, err := svc.GetWatchProviders(context.Background(), "movie", 550, "TW")
+	require.Error(t, err, "must error (not panic) when the providers client is unset")
+}
+
 func TestCacheService_CacheSetError(t *testing.T) {
 	// Test that cache set errors don't fail the request
 	cache := NewMockCacheRepository()

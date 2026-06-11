@@ -53,6 +53,8 @@ type TMDbServiceInterface interface {
 	GetTVRecommendations(ctx context.Context, tvID int) (*tmdb.SearchResultTVShows, error)
 	// GetTVSimilar returns similar TV shows for a TV show (cached 24h; recommendations fallback). Story 12-3.
 	GetTVSimilar(ctx context.Context, tvID int) (*tmdb.SearchResultTVShows, error)
+	// GetWatchProviders returns streaming/rent/buy providers for a title in a region (cached 24h). Story 12-4.
+	GetWatchProviders(ctx context.Context, mediaType string, id int, region string) (*tmdb.WatchProvidersResponse, error)
 }
 
 // TMDbService implements TMDbServiceInterface
@@ -90,6 +92,9 @@ func NewTMDbService(cfg TMDbConfig, cacheRepo repository.CacheRepositoryInterfac
 	cacheService := tmdb.NewCacheService(fallbackClient, cacheRepo, tmdb.CacheServiceConfig{
 		TTL: ttl,
 	})
+	// Watch providers (Story 12-4) bypass the language-fallback layer — the data
+	// is language-neutral — so the cache service talks to the raw client directly.
+	cacheService.SetProvidersClient(client)
 
 	slog.Info("TMDb service initialized",
 		"default_language", cfg.DefaultLanguage,
@@ -480,6 +485,32 @@ func (s *TMDbService) GetTVSimilar(ctx context.Context, tvID int) (*tmdb.SearchR
 	result, err := s.cacheService.GetTVSimilar(ctx, tvID)
 	if err != nil {
 		slog.Error("Failed to get similar TV shows", "tv_id", tvID, "error", err)
+		return nil, err
+	}
+	return result, nil
+}
+
+// GetWatchProviders returns streaming/rent/buy providers for a movie or TV show
+// in a region (cached 24h via the cache layer). Region defaults to "TW" when the
+// caller passes an empty string — the single tuning point for the product locale.
+// Story 12-4 (F-4).
+func (s *TMDbService) GetWatchProviders(ctx context.Context, mediaType string, id int, region string) (*tmdb.WatchProvidersResponse, error) {
+	if mediaType != "movie" && mediaType != "tv" {
+		return nil, tmdb.NewBadRequestError("media type must be 'movie' or 'tv'")
+	}
+	if id <= 0 {
+		return nil, tmdb.NewBadRequestError("id must be greater than 0")
+	}
+	if region == "" {
+		region = "TW"
+	}
+	// Normalize to uppercase: TMDb's Results map is keyed by uppercase ISO 3166-1
+	// codes, so a lowercase `?region=tw` would otherwise miss the region filter
+	// (silent empty result) AND pollute the cache under a distinct lowercase key.
+	region = strings.ToUpper(region)
+	result, err := s.cacheService.GetWatchProviders(ctx, mediaType, id, region)
+	if err != nil {
+		slog.Error("Failed to get watch providers", "media_type", mediaType, "id", id, "region", region, "error", err)
 		return nil, err
 	}
 	return result, nil

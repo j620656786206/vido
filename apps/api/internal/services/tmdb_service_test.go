@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -41,6 +42,10 @@ type MockCacheService struct {
 	TVRecommendationsError       error
 	TVSimilarResponse            *tmdb.SearchResultTVShows
 	TVSimilarError               error
+	// Story 12-4
+	WatchProvidersResponse *tmdb.WatchProvidersResponse
+	WatchProvidersError    error
+	WatchProvidersCalls    []string // "{mediaType}:{id}:{region}" per call
 }
 
 func (m *MockCacheService) GetMovieRecommendations(ctx context.Context, movieID int) (*tmdb.SearchResultMovies, error) {
@@ -69,6 +74,14 @@ func (m *MockCacheService) GetTVSimilar(ctx context.Context, tvID int) (*tmdb.Se
 		return nil, m.TVSimilarError
 	}
 	return m.TVSimilarResponse, nil
+}
+
+func (m *MockCacheService) GetWatchProviders(ctx context.Context, mediaType string, id int, region string) (*tmdb.WatchProvidersResponse, error) {
+	m.WatchProvidersCalls = append(m.WatchProvidersCalls, fmt.Sprintf("%s:%d:%s", mediaType, id, region))
+	if m.WatchProvidersError != nil {
+		return nil, m.WatchProvidersError
+	}
+	return m.WatchProvidersResponse, nil
 }
 
 func (m *MockCacheService) SearchMovies(ctx context.Context, query string, page int) (*tmdb.SearchResultMovies, error) {
@@ -551,4 +564,67 @@ func TestTMDbService_GetTVShowVideos_NilClientReturnsError(t *testing.T) {
 	_, err := svc.GetTVShowVideos(context.Background(), 1396)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "TMDb client not initialized")
+}
+
+// --- Story 12-4 service-layer tests ---
+
+func TestTMDbService_GetWatchProviders_DefaultsRegionToTW(t *testing.T) {
+	mockCache := &MockCacheService{WatchProvidersResponse: &tmdb.WatchProvidersResponse{ID: 550}}
+	svc := NewTMDbServiceWithCacheService(mockCache)
+
+	_, err := svc.GetWatchProviders(context.Background(), "movie", 550, "")
+	require.NoError(t, err)
+	require.Len(t, mockCache.WatchProvidersCalls, 1)
+	assert.Equal(t, "movie:550:TW", mockCache.WatchProvidersCalls[0], "empty region must default to TW")
+}
+
+func TestTMDbService_GetWatchProviders_PassesThroughExplicitRegion(t *testing.T) {
+	mockCache := &MockCacheService{WatchProvidersResponse: &tmdb.WatchProvidersResponse{ID: 1396}}
+	svc := NewTMDbServiceWithCacheService(mockCache)
+
+	_, err := svc.GetWatchProviders(context.Background(), "tv", 1396, "US")
+	require.NoError(t, err)
+	require.Len(t, mockCache.WatchProvidersCalls, 1)
+	assert.Equal(t, "tv:1396:US", mockCache.WatchProvidersCalls[0])
+}
+
+// CR 12-4 MEDIUM #1 — a lowercase region must be normalized to uppercase so the
+// TMDb region filter (uppercase ISO keys) hits and the cache key is canonical.
+func TestTMDbService_GetWatchProviders_NormalizesRegionToUpper(t *testing.T) {
+	mockCache := &MockCacheService{WatchProvidersResponse: &tmdb.WatchProvidersResponse{ID: 550}}
+	svc := NewTMDbServiceWithCacheService(mockCache)
+
+	_, err := svc.GetWatchProviders(context.Background(), "movie", 550, "tw")
+	require.NoError(t, err)
+	require.Len(t, mockCache.WatchProvidersCalls, 1)
+	assert.Equal(t, "movie:550:TW", mockCache.WatchProvidersCalls[0], "lowercase region must be normalized to uppercase")
+}
+
+func TestTMDbService_GetWatchProviders_RejectsInvalidArgs(t *testing.T) {
+	svc := NewTMDbServiceWithCacheService(&MockCacheService{})
+
+	cases := []struct {
+		mediaType string
+		id        int
+	}{
+		{"person", 550}, // bad media type
+		{"movie", 0},    // non-positive id
+		{"movie", -5},
+	}
+	for _, c := range cases {
+		_, err := svc.GetWatchProviders(context.Background(), c.mediaType, c.id, "TW")
+		require.Error(t, err, "mediaType=%q id=%d must be rejected", c.mediaType, c.id)
+		var tmdbErr *tmdb.TMDbError
+		require.ErrorAs(t, err, &tmdbErr, "rejection must be a TMDbError so handlers map to 400")
+		assert.Equal(t, tmdb.ErrCodeBadRequest, tmdbErr.Code)
+	}
+}
+
+func TestTMDbService_GetWatchProviders_ErrorPropagatesFromCacheLayer(t *testing.T) {
+	mockCache := &MockCacheService{WatchProvidersError: errors.New("cache layer boom")}
+	svc := NewTMDbServiceWithCacheService(mockCache)
+
+	_, err := svc.GetWatchProviders(context.Background(), "movie", 550, "TW")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "cache layer boom")
 }

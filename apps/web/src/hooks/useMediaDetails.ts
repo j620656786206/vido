@@ -8,6 +8,7 @@ import type {
   SeasonSummary,
   SeasonEpisodesResponse,
   RecommendationsResponse,
+  WatchProvidersResponse,
 } from '../types/library';
 
 // Query key factory for media details
@@ -24,6 +25,8 @@ export const detailKeys = {
     [...detailKeys.all, 'season-episodes', seriesId, seasonNumber] as const,
   recommendations: (tmdbId: number, type: 'movie' | 'tv') =>
     [...detailKeys.all, 'recommendations', type, tmdbId] as const,
+  watchProviders: (tmdbId: number, type: 'movie' | 'tv', region: string) =>
+    [...detailKeys.all, 'watch-providers', type, tmdbId, region] as const,
 };
 
 /**
@@ -69,6 +72,33 @@ export function useRecommendations(tmdbId: number, type: 'movie' | 'tv', enabled
       type === 'movie'
         ? libraryService.getMovieRecommendations(tmdbId)
         : libraryService.getTVRecommendations(tmdbId),
+    staleTime: 24 * 60 * 60 * 1000, // 24h — matches backend cache TTL
+    enabled: enabled && tmdbId > 0,
+  });
+}
+
+/**
+ * Hook to fetch streaming-platform availability (TMDB watch providers) for a
+ * title in a region (Story 12-4). Keyed by the TMDB numeric id + region; both
+ * detail views have the id. 24h staleTime matches the backend cache TTL. Gated
+ * on a valid TMDB id so library items without a tmdbId never fetch.
+ * @param tmdbId - TMDB numeric id
+ * @param type - 'movie' | 'tv'
+ * @param enabled - extra gate (e.g. only when the section is on a detail page)
+ * @param region - ISO 3166-1 region code (default TW)
+ */
+export function useWatchProviders(
+  tmdbId: number,
+  type: 'movie' | 'tv',
+  enabled: boolean,
+  region = 'TW'
+) {
+  return useQuery<WatchProvidersResponse, Error>({
+    queryKey: detailKeys.watchProviders(tmdbId, type, region),
+    queryFn: () =>
+      type === 'movie'
+        ? libraryService.getMovieWatchProviders(tmdbId, region)
+        : libraryService.getTVWatchProviders(tmdbId, region),
     staleTime: 24 * 60 * 60 * 1000, // 24h — matches backend cache TTL
     enabled: enabled && tmdbId > 0,
   });

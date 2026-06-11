@@ -1,6 +1,6 @@
 # Story 12.4: Streaming Platform Availability — TMDB Watch Providers
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -25,43 +25,43 @@ so that I can decide where to watch it without leaving the app.
 
 ### Backend
 
-- [ ] **Task 1: Re-add TMDB `GetWatchProviders` client method + types + cache (24h)** (AC: #1, #2, #3, #8)
-  - [ ] 1.1 Re-create `apps/api/internal/tmdb/watch_providers.go` faithfully restoring the code **removed in commit `fdbf249` (Story 11-1 dead-code deletion)** — now that F-4 is the real consumer (ADR Decision 2 / Risk row). Restore: `WatchProvider` (`ProviderID`, `ProviderName`, `LogoPath *string`, `DisplayPriority`), `WatchProviderRegion` (`Link`, `Flatrate`, `Rent`, `Buy`), `WatchProvidersResponse` (`ID`, `Results map[string]WatchProviderRegion`), and `GetWatchProviders(ctx, mediaType string, id int, region string) (*WatchProvidersResponse, error)` (endpoint `/{media_type}/{id}/watch/providers`, validates `mediaType ∈ {movie,tv}` + `id>0`, filters `Results` to the single `region` when non-empty). **DO NOT** restore the dead `TWWatchProviderIDs` hardcoded map — providers resolve dynamically (ADR "add only what F-4 renders"; YAGNI).
-  - [ ] 1.2 Add `GetWatchProviders` to `ClientInterface` (`client.go`, alongside `GetMovieVideos` at `:56`).
-  - [ ] 1.3 **Caching (Rule 27 Pillar 2 — diverges from `GetMovieVideos` which is uncached):** thread a cached wrapper through `cache.go` at **24h TTL** (`DefaultCacheTTL`) — ADR Pillar 2 table mandates 24h for watch providers (catalogs change daily at most). Cache key `tmdb:watchproviders:{movie|tv}:{id}:{region}:v1` (include region — provider availability is region-specific). Cache checked BEFORE `limiter.Wait`.
-  - [ ] 1.4 **NOT** added to `LanguageFallbackClient` (`fallback.go`) — watch-provider names/data are language-neutral (same call as `GetMovieVideos`); no language fallback needed.
-  - [ ] 1.5 Add `GetWatchProviders` to `TMDbServiceInterface` + `TMDbService` impl (`services/tmdb_service.go`, mirror `GetMovieVideos` at `:385-407`): nil-client guard, `slog` error logging, returns the cached result. Region defaults to **"TW"** when caller passes empty (single tuning point).
-  - [ ] 1.6 Restore + adapt tests from the removed `watch_providers_test.go` (region filtering, bad media-type/id validation) + cache test (24h) + service test. Reuse `TMDB_*` Rule-7 error codes (Pillar 4 — **no new prefix**).
+- [x] **Task 1: Re-add TMDB `GetWatchProviders` client method + types + cache (24h)** (AC: #1, #2, #3, #8)
+  - [x] 1.1 Re-create `apps/api/internal/tmdb/watch_providers.go` faithfully restoring the code **removed in commit `fdbf249` (Story 11-1 dead-code deletion)** — now that F-4 is the real consumer (ADR Decision 2 / Risk row). Restore: `WatchProvider` (`ProviderID`, `ProviderName`, `LogoPath *string`, `DisplayPriority`), `WatchProviderRegion` (`Link`, `Flatrate`, `Rent`, `Buy`), `WatchProvidersResponse` (`ID`, `Results map[string]WatchProviderRegion`), and `GetWatchProviders(ctx, mediaType string, id int, region string) (*WatchProvidersResponse, error)` (endpoint `/{media_type}/{id}/watch/providers`, validates `mediaType ∈ {movie,tv}` + `id>0`, filters `Results` to the single `region` when non-empty). **DO NOT** restore the dead `TWWatchProviderIDs` hardcoded map — providers resolve dynamically (ADR "add only what F-4 renders"; YAGNI). ✅ Restored minus `TWWatchProviderIDs`.
+  - [x] 1.2 Add `GetWatchProviders` to `ClientInterface` (`client.go`, alongside `GetMovieVideos` at `:56`).
+  - [x] 1.3 **Caching (Rule 27 Pillar 2 — diverges from `GetMovieVideos` which is uncached):** thread a cached wrapper through `cache.go` at **24h TTL** (`DefaultCacheTTL`) — ADR Pillar 2 table mandates 24h for watch providers (catalogs change daily at most). Cache key `tmdb:watchproviders:{movie|tv}:{id}:{region}:v1` (include region — provider availability is region-specific). Cache checked BEFORE `limiter.Wait`. ✅ Raw client injected via `SetProvidersClient` (bypasses fallback).
+  - [x] 1.4 **NOT** added to `LanguageFallbackClient` (`fallback.go`) — watch-provider names/data are language-neutral (same call as `GetMovieVideos`); no language fallback needed.
+  - [x] 1.5 Add `GetWatchProviders` to `TMDbServiceInterface` + `TMDbService` impl (`services/tmdb_service.go`, mirror `GetMovieVideos` at `:385-407`): nil-client guard, `slog` error logging, returns the cached result. Region defaults to **"TW"** when caller passes empty (single tuning point).
+  - [x] 1.6 Restore + adapt tests from the removed `watch_providers_test.go` (region filtering, bad media-type/id validation) + cache test (24h) + service test. Reuse `TMDB_*` Rule-7 error codes (Pillar 4 — **no new prefix**).
 
-- [ ] **Task 2: Handler endpoints + routes + wiring** (AC: #1, #4, #5)
-  - [ ] 2.1 Add handler methods to `apps/api/internal/handlers/tmdb_handler.go` (sibling to `GetMovieVideos` at `:300-327`): `GetMovieWatchProviders`, `GetTVWatchProviders`. Parse `:id` (TMDB numeric, validate `>0`), read optional `?region=` query (default "TW"), call `service.GetWatchProviders(ctx, "movie"|"tv", id, region)`, return `{ "success": true, "data": { ...WatchProvidersResponse } }` (Rule 3). On TMDB error, map via the existing `handleTMDbError` helper so the section can fail-soft.
-  - [ ] 2.2 Register routes alongside the existing videos routes (`tmdb_handler.go:473-475`): `GET /api/v1/tmdb/movies/:id/watch/providers` and `GET /api/v1/tmdb/tv/:id/watch/providers`. **Rule 15 self-check**: confirm the exact existing `/tv/:id/videos` group prefix and match it (client method existing ≠ route registered — the Epic-10 `GetMovieVideos` precedent).
-  - [ ] 2.3 Add `GetWatchProviders` to the handler's `TMDbServiceInterface` (`tmdb_handler.go:13-26`). Swaggo annotations on both endpoints (Rule 15 Swagger sync). Wiring in `cmd/api/main.go` is already satisfied (the existing `TMDbService`/`TMDbHandler` are wired) — verify, add nothing new unless a dep is missing.
-  - [ ] 2.4 Handler tests: success (region populated), region-empty→empty-state, TMDB-error→fail-soft mapping.
+- [x] **Task 2: Handler endpoints + routes + wiring** (AC: #1, #4, #5)
+  - [x] 2.1 Add handler methods to `apps/api/internal/handlers/tmdb_handler.go` (sibling to `GetMovieVideos` at `:300-327`): `GetMovieWatchProviders`, `GetTVWatchProviders`. Parse `:id` (TMDB numeric, validate `>0`), read optional `?region=` query (default "TW"), call `service.GetWatchProviders(ctx, "movie"|"tv", id, region)`, return `{ "success": true, "data": { ...WatchProvidersResponse } }` (Rule 3). On TMDB error, map via the existing `handleTMDbError` helper so the section can fail-soft. ✅ Region default applied at the service layer (single tuning point); handler forwards the raw query.
+  - [x] 2.2 Register routes alongside the existing videos routes (`tmdb_handler.go:473-475`): `GET /api/v1/tmdb/movies/:id/watch/providers` and `GET /api/v1/tmdb/tv/:id/watch/providers`. **Rule 15 self-check**: confirm the exact existing `/tv/:id/videos` group prefix and match it. ✅ Registered inside the same `tmdbGroup` block; route-registration test asserts both paths.
+  - [x] 2.3 Add `GetWatchProviders` to the handler's `TMDbServiceInterface` (`tmdb_handler.go:13-26`). Swaggo annotations on both endpoints (Rule 15 Swagger sync). Wiring in `cmd/api/main.go` is already satisfied. ✅ No new DI — no generated swagger artifacts are committed (annotations source-only).
+  - [x] 2.4 Handler tests: success (region populated), region-empty→empty-state, TMDB-error→fail-soft mapping. ✅ Plus invalid-id→400.
 
 ### Frontend
 
-- [ ] **Task 3: Types + service method** (AC: #1, #2, #3)
-  - [ ] 3.1 Add to `apps/web/src/types/library.ts` (or `types/tmdb.ts`): `WatchProvider { providerId: number; providerName: string; logoPath: string | null; displayPriority: number }`, `WatchProviderRegion { link: string; flatrate?: WatchProvider[]; rent?: WatchProvider[]; buy?: WatchProvider[] }`, `WatchProvidersResponse { id: number; results: Record<string, WatchProviderRegion> }`.
-  - [ ] 3.2 Add to `apps/web/src/services/libraryService.ts` (mirror `getSeasonEpisodes` at `:165`): `getMovieWatchProviders(tmdbId: number, region = 'TW')` → `fetchApi('/tmdb/movies/${tmdbId}/watch/providers?region=${region}')` and `getTVWatchProviders(tmdbId, region = 'TW')` → `/tmdb/tv/...`. Case-transform auto via `fetchApi`/`snakeToCamel` (Rule 18).
+- [x] **Task 3: Types + service method** (AC: #1, #2, #3)
+  - [x] 3.1 Add to `apps/web/src/types/library.ts` (or `types/tmdb.ts`): `WatchProvider { providerId: number; providerName: string; logoPath: string | null; displayPriority: number }`, `WatchProviderRegion { link: string; flatrate?: WatchProvider[]; rent?: WatchProvider[]; buy?: WatchProvider[] }`, `WatchProvidersResponse { id: number; results: Record<string, WatchProviderRegion> }`. ✅ Added to `types/library.ts`.
+  - [x] 3.2 Add to `apps/web/src/services/libraryService.ts` (mirror `getSeasonEpisodes` at `:165`): `getMovieWatchProviders(tmdbId: number, region = 'TW')` → `fetchApi('/tmdb/movies/${tmdbId}/watch/providers?region=${region}')` and `getTVWatchProviders(tmdbId, region = 'TW')` → `/tmdb/tv/...`. Case-transform auto via `fetchApi`/`snakeToCamel` (Rule 18). ✅ **Rule 18 caveat VERIFIED:** `snakeToCamel`'s `_([a-z])` rewrite leaves uppercase region map keys ("TW"/"US") untouched → `results` stays a faithful `Record<string, WatchProviderRegion>`; inner `provider_id`/`logo_path`/`display_priority` camelCase correctly.
 
-- [ ] **Task 4: `useWatchProviders` hook** (AC: #1, #8)
-  - [ ] 4.1 Add to `apps/web/src/hooks/useMediaDetails.ts` (mirror `useSeriesSeasons` at `:29`): `useWatchProviders(tmdbId: number, type: 'movie' | 'tv', enabled: boolean, region = 'TW')` → `useQuery` calling the matching service method.
-  - [ ] 4.2 Add `detailKeys.watchProviders(tmdbId, type, region)` to the query-key factory (`useMediaDetails.ts:12-24`).
-  - [ ] 4.3 `staleTime: 24 * 60 * 60 * 1000` (24h — matches backend cache). `enabled: enabled && tmdbId > 0`.
+- [x] **Task 4: `useWatchProviders` hook** (AC: #1, #8)
+  - [x] 4.1 Add to `apps/web/src/hooks/useMediaDetails.ts` (mirror `useSeriesSeasons` at `:29`): `useWatchProviders(tmdbId, type, enabled, region = 'TW')` → `useQuery` calling the matching service method.
+  - [x] 4.2 Add `detailKeys.watchProviders(tmdbId, type, region)` to the query-key factory.
+  - [x] 4.3 `staleTime: 24 * 60 * 60 * 1000` (24h — matches backend cache). `enabled: enabled && tmdbId > 0`.
 
-- [ ] **Task 5: `StreamingAvailability` section component** (AC: #1, #2, #3, #4, #6, #7)
-  - [ ] 5.1 Create `apps/web/src/components/media/StreamingAvailability.tsx`. Props: `region?: WatchProviderRegion | undefined`, `regionCode?: string`, `isLoading`, `isError`, `onRetry`. Header: "可在哪裡觀看".
-  - [ ] 5.2 Model on `TechBadgeGroup` (`components/media/TechBadgeGroup.tsx`) — flex-wrap rows. Group flatrate / rent / buy with `訂閱` / `租借` / `購買` sub-labels; render each provider logo via `getImageUrl(logoPath, 'w92')` (`lib/image.ts`) with `alt={providerName}` (a11y). Sort each group by `displayPriority`.
-  - [ ] 5.3 The `link` → "前往 TMDB 觀看頁" outbound `<a target="_blank" rel="noopener noreferrer">` (AC #3).
-  - [ ] 5.4 **JustWatch attribution (AC #6):** render "資料來源：JustWatch" beneath the providers (TMDB watch data is JustWatch-sourced; attribution is a licensing requirement).
-  - [ ] 5.5 Loading skeleton; error → quiet `role="alert"` empty-state with retry (AC #5); no providers → muted "此區域暫無串流資訊" or render nothing (AC #4). Never throw.
-  - [ ] 5.6 Rule 21 header (feature postdates the `.pen` design — Epic 12 not in `ux-design.pen`): design-coverage-gap form `// Design ref: ux-design.pen — no current screen frame; Epic 12 detail-page streaming-availability section postdates the .pen design`.
-  - [ ] 5.7 Write `StreamingAvailability.spec.tsx` (renders flatrate/rent/buy logos, outbound link present, JustWatch attribution present, skeleton while loading, retry on error, empty-state). Rule 16 matchers (`toBeInTheDocument`, `toBeAttached` for any hover/transition).
+- [x] **Task 5: `StreamingAvailability` section component** (AC: #1, #2, #3, #4, #6, #7)
+  - [x] 5.1 Create `apps/web/src/components/media/StreamingAvailability.tsx`. Props: `region?`, `regionCode?`, `isLoading`, `isError`, `onRetry`. Header: "可在哪裡觀看".
+  - [x] 5.2 Flex-wrap rows (modeled on `TechBadgeGroup`). Group flatrate / rent / buy with `訂閱` / `租借` / `購買` sub-labels; logos via `getImageUrl(logoPath, 'w92')` with `alt={providerName}`. Sort each group by `displayPriority`. ✅ Logo-missing → readable name chip (never a broken image).
+  - [x] 5.3 The `link` → "前往 TMDB 觀看頁" outbound `<a target="_blank" rel="noopener noreferrer">` (AC #3).
+  - [x] 5.4 **JustWatch attribution (AC #6):** "資料來源：JustWatch" rendered beneath the providers.
+  - [x] 5.5 Loading skeleton; error → quiet `role="alert"` empty-state with retry (AC #5); no providers → muted "此區域暫無串流資訊" (AC #4). Never throws (region undefined → empty-state).
+  - [x] 5.6 Rule 21 header — design-coverage-gap `// Design ref:` form present.
+  - [x] 5.7 Write `StreamingAvailability.spec.tsx` — 10 tests (groups/logos, displayPriority sort, logo fallback, outbound link rel/target, JustWatch attribution, skeleton, retry on error, empty-state, undefined region). Rule 16 matchers (`toBeInTheDocument`).
 
-- [ ] **Task 6: Integrate into the detail page** (AC: #1)
-  - [ ] 6.1 In `apps/web/src/routes/media/$type.$id.tsx`, render `<StreamingAvailability />` **below the overview, above `CreditsSection`** in BOTH `LocalDetailView` (~`:305→307`) AND `TMDbDetailView` (~`:505→507`) — consistent placement in both views.
-  - [ ] 6.2 Resolve the TMDB id + type per view: `LocalDetailView` → `movie.tmdbId`/`series.tmdbId` + `type`; `TMDbDetailView` → numeric route id + `type`. Pass to `useWatchProviders(tmdbId, type, enabled, 'TW')` (enable only when `tmdbId > 0`). Extract `data?.results?.['TW']` (the region object) to pass into the component.
+- [x] **Task 6: Integrate into the detail page** (AC: #1)
+  - [x] 6.1 In `apps/web/src/routes/media/$type.$id.tsx`, render `<StreamingAvailability />` **below the overview, above `CreditsSection`** in BOTH `LocalDetailView` AND `TMDbDetailView` — consistent placement.
+  - [x] 6.2 Resolve the TMDB id + type per view (LocalDetailView `localData.tmdbId`; TMDbDetailView numeric route id). `useWatchProviders(tmdbId, type, tmdbId > 0, 'TW')`; extract `data?.results?.['TW']` for the component.
 
 ## Dev Notes
 
@@ -159,13 +159,36 @@ Epic 12 has **no `ux-design.pen` screen** for the streaming-availability section
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+claude-opus-4-8[1m] (Amelia / BMM dev-story workflow)
 
 ### Debug Log References
 
+- Full Go backend suite green: `go test ./...` (all packages pass).
+- Full web suite green: `nx test web` — 173 files / 2073 tests pass, no orphaned processes.
+- `StreamingAvailability.spec.tsx` — 10/10 pass.
+
 ### Completion Notes List
 
+- 🔗 AC Drift: NONE (checked: `watch.provider`/`WatchProvider`/`watch/providers`/`fdbf249` across `_bmad-output/implementation-artifacts/*.md` — only Story 11-1 references the symbol, and that was the dead-code DELETION this story deliberately reverses. The external HTTP wire contract was never shipped to a consumer in 11-1, so re-adding it is not a behavior DRIFT of any prior shipped AC. ADR Risk row explicitly sanctions the re-introduction: "It now has a real consumer (F-4); YAGNI is satisfied.")
+- ♻️ Re-introduced dead code (NOT a discovery — flagged per Critical Detail #1): restoring `GetWatchProviders` + its types/tests reverses Story 11-1 CR-M1's deletion (commit `fdbf249`). This is ADR-sanctioned (Decision 2 F-4 row + Risk row). The ONLY intentional omission is the dead `TWWatchProviderIDs` hardcoded map (+ its `TestTWWatchProviderIDs`) — providers resolve dynamically from the live response (YAGNI). A future dead-code/drift audit should NOT re-flag `GetWatchProviders`.
+- 📎 Contract Stamps: NONE (no `[@contract-v*]` stamps in this story or in the upstream Story 11-1 it references — 11-1 is pre-Rule-20 / implicit v0. This story defines a passthrough TMDB wire shape consumed only by its own frontend; no cross-story contract versioning applies.)
+- 🎭 A11y Pre-Flight: PASS (2 components checked — `StreamingAvailability.tsx` + the `$type.$id.tsx` render sites; `eslint` on both → 0 jsx-a11y warnings introduced, 1 pre-existing `react-hooks/exhaustive-deps` warning at `$type.$id.tsx:171` unrelated to this story. The 4 recurring a11y classes: (1) responsive images — N/A, provider logos are fixed 40×40 `w92` thumbnails, not responsive hero images; srcSet would be over-engineering for tiny logos; (2) modal focus — N/A, no modal; (3) aria-live — error state carries `role="alert"`; the provider grid mirrors the sibling 12-3 RelatedContent which intentionally omits aria-live on the result grid; (4) custom-widget keyboard/ARIA — N/A, only native `<a>`/`<img>`/`<button>`. Section uses `aria-labelledby` to the visible `<h2>`; outbound link has `rel="noopener noreferrer"`; logos have `alt={providerName}`.)
+- 🎨 UX Verification: design-coverage-gap (Rule 21) — Epic 12 has **no `ux-design.pen` screen** for the streaming-availability section, so there is no design screenshot to diff against. `StreamingAvailability.tsx` carries the `// Design ref:` design-gap header; visual approach follows the documented patterns (heading consistent with sibling detail sections, flex-wrap logo rows modeled on `TechBadgeGroup`, muted "資料來源：JustWatch" attribution). No discrepancies possible against a non-existent screen.
+- 🧱 Pre-existing failures observed (NOT introduced by this story): (a) `nx typecheck web` fails with ~90 errors in `routes/test/-gallery.fixtures.tsx` + `releaseDate`-on-union errors in `$type.$id.tsx` — all present on `main` (verified via `git stash`); typecheck is not a CI gate (main itself does not pass it). (b) Three touched Go files (`tmdb/client.go`, `tmdb/fallback_test.go`, `services/enrichment_nfo_test.go`) were already gofmt-dirty on `HEAD` (verified) — the project does not enforce gofmt; `gofmt -w` was deliberately NOT run to avoid injecting unrelated struct-realignment churn. My added lines are internally gofmt-consistent. Per Epic-9c Retro AI-2: these are large/unrelated pre-existing conditions — documented here, not silently skipped; no new tracking entry filed because they are platform-wide and outside this story's scope.
+- 🔌 Caching design note: `CacheService` gained a raw `providersClient ClientInterface` injected via the new exported `SetProvidersClient` setter (wired in `NewTMDbService`). This mirrors the existing `SetContentFilter` injection precedent and keeps the 16 existing `NewCacheService` test call-sites unchanged. Watch providers deliberately bypass `LanguageFallbackClient` (Task 1.4 — data is language-neutral) while still being cached 24h (Task 1.3, diverging from the uncached `GetMovieVideos`).
+- 🔍 Adversarial CR (2026-06-11, Amelia) — fixes applied (auto-fix path):
+  - **MEDIUM #1 — region case normalization:** `TMDbService.GetWatchProviders` now `strings.ToUpper`s the region after the empty→TW default. A lowercase `?region=tw` previously missed TMDb's uppercase `Results` keys (silent empty) AND polluted the cache under a distinct lowercase key. Added `TestTMDbService_GetWatchProviders_NormalizesRegionToUpper`.
+  - **LOW #2/#3 — dead prop + multi-source 'TW' literal:** removed the never-destructured `regionCode?` prop from `StreamingAvailability` (ironic dead code in a restore story); introduced a single module-level `WATCH_REGION = 'TW'` const in `$type.$id.tsx` used for BOTH the `useWatchProviders` arg AND the `results?.[WATCH_REGION]` lookup in both detail views — no more drift between hook region and lookup key.
+  - **LOW #4 — halfwidth comma in error string:** NOT changed — `無法載入串流資訊,請稍後再試。` matches its direct siblings (`SeasonAccordion`/`RelatedContent`); deferred to a future codebase-wide punctuation sweep, not this story.
+  - Verification: Go `tmdb`/`services`/`handlers` green (5/5 watch-provider service tests incl. new normalization test); `StreamingAvailability.spec.tsx` 10/10; prettier + gofmt clean on touched files. Pre-existing flaky `TestScannerService_SSEBroadcast_ScanCancelled` (order-dependent, passes in isolation) is unrelated to this story.
+
 ### Discovery Triage
+
+- **Did this story discover any work outside its current scope?**
+  - **Region picker (anticipated lane ③):** Region is hardcoded to **TW** (service-layer default, single tuning point; `?region=` is already plumbed end-to-end). Product has NOT requested a user-selectable region picker, so per the authoring guidance this is recorded as **N/A** (TW-only accepted for Epic 12). The plumbing (`region` param on client/service/handler/hook/service-method + region in cache key) means a future region-picker story is a pure-frontend add with no backend change.
+  - **Re-introduced dead code:** see Completion Notes ♻️ — ADR-sanctioned, not a discovery.
+  - No other out-of-scope work discovered.
+- Reference: `project-context.md` Rule 24.
 
 - **Did this story discover any work outside its current scope?**
   - **Anticipated at authoring time (dev to confirm/triage during implementation):**
@@ -176,8 +199,41 @@ Epic 12 has **no `ux-design.pen` screen** for the streaming-availability section
 
 ### File List
 
+**Backend — created:**
+- `apps/api/internal/tmdb/watch_providers.go` (restored from `fdbf249^`, minus `TWWatchProviderIDs`)
+- `apps/api/internal/tmdb/watch_providers_test.go` (restored, minus `TestTWWatchProviderIDs`)
+
+**Backend — modified:**
+- `apps/api/internal/tmdb/client.go` (`ClientInterface.GetWatchProviders`)
+- `apps/api/internal/tmdb/cache.go` (`providersClient` field + `SetProvidersClient` setter + cached `GetWatchProviders` + interface method)
+- `apps/api/internal/tmdb/cache_test.go` (3 watch-providers cache tests: miss-then-hit/24h-TTL, region-in-key, nil-client)
+- `apps/api/internal/tmdb/fallback_test.go` (`MockClient.GetWatchProviders` + configurable fields/counter)
+- `apps/api/internal/services/tmdb_service.go` (`TMDbServiceInterface` + impl + `SetProvidersClient` wiring in `NewTMDbService`)
+- `apps/api/internal/services/tmdb_service_test.go` (`MockCacheService.GetWatchProviders` + 4 service tests; `fmt` import)
+- `apps/api/internal/services/enrichment_nfo_test.go` (`mockTMDbServiceForNFO.GetWatchProviders`)
+- `apps/api/internal/services/explore_block_service_test.go` (`mockTMDbServiceForExplore.GetWatchProviders`)
+- `apps/api/internal/handlers/tmdb_handler.go` (interface method + `GetMovieWatchProviders`/`GetTVWatchProviders` handlers + routes + Swaggo)
+- `apps/api/internal/handlers/tmdb_handler_test.go` (`MockTMDbService.GetWatchProviders` + 5 handler tests + route assertions; `fmt` import)
+
+**Frontend — created:**
+- `apps/web/src/components/media/StreamingAvailability.tsx`
+- `apps/web/src/components/media/StreamingAvailability.spec.tsx`
+
+**Frontend — modified:**
+- `apps/web/src/types/library.ts` (`WatchProvider`, `WatchProviderRegion`, `WatchProvidersResponse`)
+- `apps/web/src/services/libraryService.ts` (`getMovieWatchProviders`, `getTVWatchProviders`)
+- `apps/web/src/hooks/useMediaDetails.ts` (`useWatchProviders` + `detailKeys.watchProviders`)
+- `apps/web/src/routes/media/$type.$id.tsx` (`useWatchProviders` + `<StreamingAvailability />` in both detail views)
+
+**AC drift reference:**
+- `_bmad-output/implementation-artifacts/11-1-multi-dimensional-filter-engine.md` (dead-code deletion reversed — see Completion Notes ♻️; not a drift)
+
 ## Change Log
 
 | Date | Change |
 |------|--------|
+| 2026-06-11 | Task 1 (backend client+cache+service): **restored** `GetWatchProviders` + types + tests from commit `fdbf249^` (minus dead `TWWatchProviderIDs`); threaded a 24h region-keyed cache through `CacheService` (raw client injected via new `SetProvidersClient`, bypassing language fallback). Tests: client (restored), cache (miss→hit/24h/region-key/nil-client), service (region-default-TW, validation, error propagation). |
+| 2026-06-11 | Task 2 (handler): added `GetMovieWatchProviders`/`GetTVWatchProviders` + routes `/tmdb/{movies,tv}/:id/watch/providers` + handler `TMDbServiceInterface` method + Swaggo. Tests: success (movie/tv), empty-region forward, invalid-id→400, TMDB-error→mapped status, route registration. Full Go suite green. |
+| 2026-06-11 | Tasks 3–6 (frontend): added `WatchProvider*` types, `getMovie/TVWatchProviders` service methods, `useWatchProviders` hook + `detailKeys.watchProviders`, `StreamingAvailability` section (flatrate/rent/buy logo groups via `getImageUrl w92`, displayPriority sort, TMDB watch link, mandatory JustWatch attribution, loading/error/empty fail-soft states) rendered below overview / above credits in both detail views. Region TW. `StreamingAvailability.spec.tsx` 10 tests; full web suite (2073) green. Rule 18 region-key caveat verified safe. |
+| 2026-06-11 | Adversarial CR (Amelia, code-review workflow): fixed MEDIUM region case-normalization (`strings.ToUpper` + test) and LOW dead-prop/multi-source cleanup (removed `regionCode`, single `WATCH_REGION` const). Status → done. Go + web tests green; prettier/gofmt clean. |
 | 2026-06-11 | Story drafted (SM Bob, create-story yolo). F-4 — TMDB Watch Providers streaming availability. Backend: **restore** `GetWatchProviders` + types + tests removed in commit fdbf249 (Story 11-1), thread through cache (24h, region-keyed) → `TMDbService` → TMDB handler routes (`/tmdb/{movies,tv}/:id/watch/providers?region=TW`). Frontend: `useWatchProviders` hook + `StreamingAvailability` section (provider logos via `getImageUrl`, flatrate/rent/buy groups, TMDB watch link, mandatory JustWatch attribution), rendered below overview in both detail views. Region default TW. Rule 27 Five-Pillars compliant (rides existing TMDB limiter, 24h cache per ADR Pillar 2, reuse `TMDB_*` — no new infra/secret/prefix). Cross-stack split: backend 2 / frontend 4 → single story. |

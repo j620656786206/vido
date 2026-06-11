@@ -35,6 +35,11 @@ type CacheService struct {
 	client LanguageFallbackClientInterface
 	cache  repository.CacheRepositoryInterface
 	ttl    time.Duration
+	// providersClient is the raw (non-language-fallback) client used for the
+	// language-neutral watch-providers call (Story 12-4 Task 1.4). Injected via
+	// SetProvidersClient — mirrors the SetContentFilter injection pattern so the
+	// existing NewCacheService callers (16 test sites) need no signature change.
+	providersClient ClientInterface
 }
 
 // CacheServiceInterface defines the contract for cached TMDb operations
@@ -65,6 +70,10 @@ type CacheServiceInterface interface {
 	GetTVRecommendations(ctx context.Context, tvID int) (*SearchResultTVShows, error)
 	// GetTVSimilar returns similar TV shows with caching (24h TTL)
 	GetTVSimilar(ctx context.Context, tvID int) (*SearchResultTVShows, error)
+	// GetWatchProviders returns streaming/rent/buy providers for a title, filtered
+	// to a single region and cached 24h (Story 12-4). Bypasses the language-fallback
+	// layer — watch-provider data is language-neutral.
+	GetWatchProviders(ctx context.Context, mediaType string, id int, region string) (*WatchProvidersResponse, error)
 }
 
 // Compile-time interface verification
@@ -82,6 +91,15 @@ func NewCacheService(client LanguageFallbackClientInterface, cache repository.Ca
 		cache:  cache,
 		ttl:    ttl,
 	}
+}
+
+// SetProvidersClient injects the raw TMDb client used by GetWatchProviders.
+// Watch-provider data is language-neutral, so it bypasses the language-fallback
+// layer and talks to the raw client directly (Story 12-4 Task 1.4). Wired by
+// NewTMDbService in production; tests that exercise GetWatchProviders set a
+// mock ClientInterface here.
+func (s *CacheService) SetProvidersClient(c ClientInterface) {
+	s.providersClient = c
 }
 
 // SearchMovies searches for movies with caching
@@ -605,6 +623,44 @@ func (s *CacheService) GetTVSimilar(ctx context.Context, tvID int) (*SearchResul
 	if data, err := json.Marshal(result); err == nil {
 		if err := s.cache.Set(ctx, cacheKey, string(data), CacheTypeTMDb, s.ttl); err != nil {
 			slog.Warn("Failed to cache similar TV shows", "key", cacheKey, "error", err)
+		}
+	}
+	return result, nil
+}
+
+// GetWatchProviders returns streaming/rent/buy providers for a movie or TV show,
+// filtered to a single region and cached at 24h (Rule 27 Pillar 2 — the ADR
+// Pillar 2 table mandates 24h for watch providers; catalogs change daily at most).
+// Cache key format: tmdb:watchproviders:{movie|tv}:{id}:{region}:v1 — region is
+// part of the key because availability is region-specific. The cache is checked
+// BEFORE the client (which fronts the rate limiter), per Rule 27 Pillar 2.
+// Bypasses the language-fallback layer (watch-provider data is language-neutral).
+func (s *CacheService) GetWatchProviders(ctx context.Context, mediaType string, id int, region string) (*WatchProvidersResponse, error) {
+	cacheKey := fmt.Sprintf("tmdb:watchproviders:%s:%d:%s:v1", mediaType, id, region)
+
+	cached, err := s.cache.Get(ctx, cacheKey)
+	if err == nil && cached != nil {
+		var result WatchProvidersResponse
+		if err := json.Unmarshal([]byte(cached.Value), &result); err == nil {
+			slog.Debug("Cache hit", "key", cacheKey, "type", CacheTypeTMDb)
+			return &result, nil
+		}
+		slog.Warn("Failed to unmarshal cached data", "key", cacheKey, "error", err)
+	}
+
+	slog.Debug("Cache miss", "key", cacheKey, "type", CacheTypeTMDb)
+	if s.providersClient == nil {
+		return nil, fmt.Errorf("watch-providers client not initialized")
+	}
+	result, err := s.providersClient.GetWatchProviders(ctx, mediaType, id, region)
+	if err != nil {
+		return nil, err
+	}
+	slog.Debug("TMDb watch providers completed", "media_type", mediaType, "id", id, "region", region)
+
+	if data, err := json.Marshal(result); err == nil {
+		if err := s.cache.Set(ctx, cacheKey, string(data), CacheTypeTMDb, s.ttl); err != nil {
+			slog.Warn("Failed to cache watch providers", "key", cacheKey, "error", err)
 		}
 	}
 	return result, nil

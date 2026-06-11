@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -45,6 +46,10 @@ type MockTMDbService struct {
 	GetTVShowVideosResponse *tmdb.VideosResponse
 	GetTVShowVideosError    error
 	GetTVShowVideosCalls    []int
+	// Story 12-4
+	GetWatchProvidersResponse *tmdb.WatchProvidersResponse
+	GetWatchProvidersError    error
+	GetWatchProvidersCalls    []string // "{mediaType}:{id}:{region}" per call
 }
 
 func (m *MockTMDbService) SearchMovies(ctx context.Context, query string, page int) (*tmdb.SearchResultMovies, error) {
@@ -133,6 +138,16 @@ func (m *MockTMDbService) GetTVShowVideos(ctx context.Context, tvID int) (*tmdb.
 		return nil, m.GetTVShowVideosError
 	}
 	return m.GetTVShowVideosResponse, nil
+}
+
+// Story 12-4 additions
+
+func (m *MockTMDbService) GetWatchProviders(ctx context.Context, mediaType string, id int, region string) (*tmdb.WatchProvidersResponse, error) {
+	m.GetWatchProvidersCalls = append(m.GetWatchProvidersCalls, fmt.Sprintf("%s:%d:%s", mediaType, id, region))
+	if m.GetWatchProvidersError != nil {
+		return nil, m.GetWatchProvidersError
+	}
+	return m.GetWatchProvidersResponse, nil
 }
 
 func setupTMDbRouter(handler *TMDbHandler) *gin.Engine {
@@ -417,6 +432,9 @@ func TestTMDbHandler_RegisterRoutes(t *testing.T) {
 		"/api/v1/tmdb/discover/tv":       http.MethodGet, // Story 10-1
 		"/api/v1/tmdb/movies/:id/videos": http.MethodGet, // Story 10-2
 		"/api/v1/tmdb/tv/:id/videos":     http.MethodGet, // Story 10-2
+
+		"/api/v1/tmdb/movies/:id/watch/providers": http.MethodGet, // Story 12-4
+		"/api/v1/tmdb/tv/:id/watch/providers":     http.MethodGet, // Story 12-4
 	}
 
 	for path, method := range expectedRoutes {
@@ -1187,4 +1205,92 @@ func TestTMDbHandler_GetMovieRecommendations_InvalidID(t *testing.T) {
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 	assert.Empty(t, recs.MovieCalls)
+}
+
+// --- Story 12-4 watch-providers handler tests ---
+
+func TestTMDbHandler_GetMovieWatchProviders_Success(t *testing.T) {
+	mock := &MockTMDbService{
+		GetWatchProvidersResponse: &tmdb.WatchProvidersResponse{
+			ID: 550,
+			Results: map[string]tmdb.WatchProviderRegion{
+				"TW": {Link: "https://example/tw", Flatrate: []tmdb.WatchProvider{{ProviderID: 8, ProviderName: "Netflix"}}},
+			},
+		},
+	}
+	handler := NewTMDbHandler(mock)
+	router := setupTMDbRouter(handler)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/tmdb/movies/550/watch/providers?region=TW", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	var response APIResponse
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &response))
+	assert.True(t, response.Success)
+	require.Len(t, mock.GetWatchProvidersCalls, 1)
+	assert.Equal(t, "movie:550:TW", mock.GetWatchProvidersCalls[0])
+}
+
+func TestTMDbHandler_GetTVWatchProviders_Success(t *testing.T) {
+	mock := &MockTMDbService{
+		GetWatchProvidersResponse: &tmdb.WatchProvidersResponse{ID: 1396, Results: map[string]tmdb.WatchProviderRegion{"US": {Link: "x"}}},
+	}
+	handler := NewTMDbHandler(mock)
+	router := setupTMDbRouter(handler)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/tmdb/tv/1396/watch/providers?region=US", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	require.Len(t, mock.GetWatchProvidersCalls, 1)
+	assert.Equal(t, "tv:1396:US", mock.GetWatchProvidersCalls[0])
+}
+
+// Region-empty → handler forwards the empty region untouched (the service layer
+// defaults it to TW); response is a normal 200 with whatever results the service
+// returns (here an empty map = the fail-soft empty-state, AC #4).
+func TestTMDbHandler_GetMovieWatchProviders_EmptyRegionForwardedAndEmptyState(t *testing.T) {
+	mock := &MockTMDbService{
+		GetWatchProvidersResponse: &tmdb.WatchProvidersResponse{ID: 550, Results: map[string]tmdb.WatchProviderRegion{}},
+	}
+	handler := NewTMDbHandler(mock)
+	router := setupTMDbRouter(handler)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/tmdb/movies/550/watch/providers", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	require.Len(t, mock.GetWatchProvidersCalls, 1)
+	assert.Equal(t, "movie:550:", mock.GetWatchProvidersCalls[0], "handler must forward the raw (empty) region; service defaults to TW")
+}
+
+func TestTMDbHandler_GetMovieWatchProviders_InvalidID(t *testing.T) {
+	mock := &MockTMDbService{}
+	handler := NewTMDbHandler(mock)
+	router := setupTMDbRouter(handler)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/tmdb/movies/0/watch/providers", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Empty(t, mock.GetWatchProvidersCalls, "invalid id must not reach the service")
+}
+
+// TMDB-error → mapped to the proper HTTP status via handleTMDbError, so the
+// frontend section can fail soft.
+func TestTMDbHandler_GetMovieWatchProviders_ServiceErrorMapped(t *testing.T) {
+	mock := &MockTMDbService{GetWatchProvidersError: tmdb.NewRateLimitError()}
+	handler := NewTMDbHandler(mock)
+	router := setupTMDbRouter(handler)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/tmdb/movies/550/watch/providers?region=TW", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusTooManyRequests, rec.Code)
 }

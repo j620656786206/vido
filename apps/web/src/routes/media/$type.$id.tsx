@@ -18,9 +18,11 @@ import {
   useTVShowCredits,
   useSeriesSeasons,
   useRecommendations,
+  useWatchProviders,
 } from '../../hooks/useMediaDetails';
 import { SeasonAccordion } from '../../components/media/SeasonAccordion';
 import { RelatedContent } from '../../components/media/RelatedContent';
+import { StreamingAvailability } from '../../components/media/StreamingAvailability';
 import { useOwnedMedia } from '../../hooks/useOwnedMedia';
 import { useDoubanRating } from '../../hooks/useDoubanRating';
 import type { MovieDetails, TVShowDetails } from '../../types/tmdb';
@@ -29,6 +31,10 @@ import { cn } from '../../lib/utils';
 
 const validMediaTypes = ['movie', 'tv'] as const;
 type ValidMediaType = (typeof validMediaTypes)[number];
+
+// Story 12-4 — single source of truth for the watch-providers region (TW-only for
+// Epic 12). Used for the hook arg AND the results-map lookup so they never drift.
+const WATCH_REGION = 'TW';
 
 function isValidMediaType(type: string): type is ValidMediaType {
   return validMediaTypes.includes(type as ValidMediaType);
@@ -132,6 +138,15 @@ function LocalDetailView({ type, id }: { type: ValidMediaType; id: string }) {
   // with the page but as its own query so a slow/failed fetch never blocks the
   // core metadata render (per-section isolation, AC #6/#9).
   const recsQuery = useRecommendations(tmdbId, isMovie ? 'movie' : 'tv', tmdbId > 0);
+
+  // Story 12-4 — streaming-platform availability (TMDB watch providers, region TW).
+  // Its own query so a slow/failed fetch never blocks the page (per-section isolation).
+  const watchProvidersQuery = useWatchProviders(
+    tmdbId,
+    isMovie ? 'movie' : 'tv',
+    tmdbId > 0,
+    WATCH_REGION
+  );
 
   const hasMetadata = !!localData?.tmdbId && localData.tmdbId > 0;
   const posterUrl = getImageUrl(localData?.posterPath ?? null, 'w500');
@@ -311,6 +326,18 @@ function LocalDetailView({ type, id }: { type: ValidMediaType; id: string }) {
                   </p>
                 )}
 
+                {/* Streaming-platform availability (Story 12-4) — below overview, above credits */}
+                {tmdbId > 0 && (
+                  <div className="mt-6">
+                    <StreamingAvailability
+                      region={watchProvidersQuery.data?.results?.[WATCH_REGION]}
+                      isLoading={watchProvidersQuery.isLoading}
+                      isError={watchProvidersQuery.isError}
+                      onRetry={() => watchProvidersQuery.refetch()}
+                    />
+                  </div>
+                )}
+
                 {/* Credits */}
                 {credits.data && (
                   <div className="mt-6">
@@ -424,6 +451,14 @@ export function TMDbDetailView({ type, tmdbId }: { type: ValidMediaType; tmdbId:
   // Story 12-3 — related-content recommendations for this TMDB title.
   const recsQuery = useRecommendations(tmdbId, isMovie ? 'movie' : 'tv', tmdbId > 0);
 
+  // Story 12-4 — streaming-platform availability (TMDB watch providers, region TW).
+  const watchProvidersQuery = useWatchProviders(
+    tmdbId,
+    isMovie ? 'movie' : 'tv',
+    tmdbId > 0,
+    WATCH_REGION
+  );
+
   // bugfix-10-1 CR L3 — narrow per branch via the per-type query result so we
   // avoid the `data as MovieDetails` / `data as TVShowDetails` pair below.
   const movie: MovieDetails | undefined = isMovie ? movieDetails.data : undefined;
@@ -524,6 +559,18 @@ export function TMDbDetailView({ type, tmdbId }: { type: ValidMediaType; tmdbId:
 
             {data.overview && (
               <p className="mt-4 leading-relaxed text-[var(--text-secondary)]">{data.overview}</p>
+            )}
+
+            {/* Streaming-platform availability (Story 12-4) — below overview, above credits */}
+            {tmdbId > 0 && (
+              <div className="mt-6">
+                <StreamingAvailability
+                  region={watchProvidersQuery.data?.results?.[WATCH_REGION]}
+                  isLoading={watchProvidersQuery.isLoading}
+                  isError={watchProvidersQuery.isError}
+                  onRetry={() => watchProvidersQuery.refetch()}
+                />
+              </div>
             )}
 
             {creditsQuery.data && (

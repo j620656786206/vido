@@ -83,6 +83,9 @@ func (m *mockTMDbServiceForExplore) GetTVRecommendations(ctx context.Context, id
 func (m *mockTMDbServiceForExplore) GetTVSimilar(ctx context.Context, id int) (*tmdb.SearchResultTVShows, error) {
 	return &tmdb.SearchResultTVShows{}, nil
 }
+func (m *mockTMDbServiceForExplore) GetWatchProviders(ctx context.Context, mediaType string, id int, region string) (*tmdb.WatchProvidersResponse, error) {
+	return &tmdb.WatchProvidersResponse{}, nil
+}
 
 var _ TMDbServiceInterface = (*mockTMDbServiceForExplore)(nil)
 
