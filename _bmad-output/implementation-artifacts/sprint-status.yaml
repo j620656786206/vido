@@ -623,8 +623,8 @@ development_status:
   12-2-season-episode-list: done               # Expandable season accordion with episode list + subtitle status (P2-021)
   12-3-related-content-recommendations: ready-for-dev      # TMDB similar/recommended with "已有" badges (P2-022)
   12-4-streaming-platform-availability: ready-for-dev      # TMDB Watch Providers API integration (P2-023)
-  12-5-trailer-embeds: backlog                       # YouTube trailer embed with fallback (P2-024)
-  12-6-douban-integration: backlog                   # Direct Douban links + user review summary (P2-025)
+  12-5-trailer-embeds: ready-for-dev                       # YouTube trailer embed with fallback (P2-024)
+  12-6-douban-integration: ready-for-dev                   # Direct Douban links + user review summary (P2-025)
   epic-12-retrospective: optional
 
   # ==============================================================================
