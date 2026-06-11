@@ -99,7 +99,7 @@ func (r *MovieRepository) FindByID(ctx context.Context, id string) (*models.Movi
 	movie, err := scanMovie(row)
 
 	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("movie with id %s not found", id)
+		return nil, fmt.Errorf("movie with id %s not found: %w", id, sql.ErrNoRows)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to find movie: %w", err)
@@ -615,8 +615,9 @@ const movieSelectColumns = `
 	status, imdb_id, tmdb_id,
 	file_path, parse_status, metadata_source,
 	subtitle_status, subtitle_path, subtitle_language, subtitle_last_searched, subtitle_search_score,
-	vote_average, is_removed,
+	vote_average, vote_count, is_removed,
 	video_codec, video_resolution, audio_codec, audio_channels, subtitle_tracks, hdr_format,
+	douban_id, douban_rating, douban_vote_count,
 	created_at, updated_at
 `
 
@@ -649,6 +650,7 @@ func scanMovie(scanner interface{ Scan(dest ...interface{}) error }) (models.Mov
 		&movie.SubtitleLastSearched,
 		&movie.SubtitleSearchScore,
 		&movie.VoteAverage,
+		&movie.VoteCount,
 		&movie.IsRemoved,
 		&movie.VideoCodec,
 		&movie.VideoResolution,
@@ -656,6 +658,9 @@ func scanMovie(scanner interface{ Scan(dest ...interface{}) error }) (models.Mov
 		&movie.AudioChannels,
 		&movie.SubtitleTracks,
 		&movie.HDRFormat,
+		&movie.DoubanID,
+		&movie.DoubanRating,
+		&movie.DoubanVoteCount,
 		&movie.CreatedAt,
 		&movie.UpdatedAt,
 	)
@@ -668,6 +673,30 @@ func scanMovie(scanner interface{ Scan(dest ...interface{}) error }) (models.Mov
 	}
 
 	return movie, nil
+}
+
+// UpdateDoubanRating persists denormalized Douban rating fields for a movie
+// (Story 12-1). It is the dedicated write path for background enrichment so a
+// normal Update does not need to round-trip the Douban columns.
+func (r *MovieRepository) UpdateDoubanRating(ctx context.Context, id, doubanID string, rating float64, voteCount int) error {
+	query := `
+		UPDATE movies
+		SET douban_id = ?, douban_rating = ?, douban_vote_count = ?, updated_at = ?
+		WHERE id = ?
+	`
+	result, err := r.db.ExecContext(ctx, query, doubanID, rating, voteCount, time.Now(), id)
+	if err != nil {
+		return fmt.Errorf("failed to update douban rating: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("movie with id %s not found", id)
+	}
+	return nil
 }
 
 // BulkCreate inserts multiple movies in a single transaction

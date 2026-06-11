@@ -87,6 +87,10 @@ type MovieRepositoryInterface interface {
 	// table and are not soft-deleted. Single batched query to avoid N+1.
 	// Needed by: Story 10-4 (homepage availability badges)
 	FindOwnedTMDbIDs(ctx context.Context, tmdbIDs []int64) ([]int64, error)
+
+	// UpdateDoubanRating persists denormalized Douban rating fields for a movie
+	// Needed by: Story 12-1 (dual rating display enrichment)
+	UpdateDoubanRating(ctx context.Context, id, doubanID string, rating float64, voteCount int) error
 }
 
 // SeriesRepositoryInterface defines the contract for TV series data access operations.
@@ -161,6 +165,10 @@ type SeriesRepositoryInterface interface {
 	// table and are not soft-deleted. Single batched query to avoid N+1.
 	// Needed by: Story 10-4 (homepage availability badges)
 	FindOwnedTMDbIDs(ctx context.Context, tmdbIDs []int64) ([]int64, error)
+
+	// UpdateDoubanRating persists denormalized Douban rating fields for a series
+	// Needed by: Story 12-1 (dual rating display enrichment)
+	UpdateDoubanRating(ctx context.Context, id, doubanID string, rating float64, voteCount int) error
 }
 
 // SeasonRepositoryInterface defines the contract for season data access operations.

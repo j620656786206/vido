@@ -54,6 +54,9 @@ func setupTestDB(t *testing.T) *sql.DB {
 			audio_channels INTEGER,
 			subtitle_tracks TEXT,
 			hdr_format TEXT,
+			douban_id TEXT,
+			douban_rating REAL,
+			douban_vote_count INTEGER,
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 		)
@@ -125,6 +128,66 @@ func TestMovieCreate(t *testing.T) {
 	}
 	if count != 1 {
 		t.Errorf("Expected 1 movie, got %d", count)
+	}
+}
+
+// TestMovieUpdateDoubanRating verifies Douban rating persistence + scan round-trip (Story 12-1)
+func TestMovieUpdateDoubanRating(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	movie := &models.Movie{
+		ID:          "movie-douban",
+		Title:       "Farewell My Concubine",
+		ReleaseDate: "1993-01-01",
+		Genres:      []string{"Drama"},
+		TMDbID:      models.NewNullInt64(19913),
+	}
+	if err := repo.Create(ctx, movie); err != nil {
+		t.Fatalf("Failed to create movie: %v", err)
+	}
+
+	// Before enrichment, Douban fields are null
+	before, err := repo.FindByID(ctx, "movie-douban")
+	if err != nil {
+		t.Fatalf("FindByID failed: %v", err)
+	}
+	if before.DoubanRating.Valid {
+		t.Error("Expected DoubanRating to be null before enrichment")
+	}
+
+	// Persist Douban rating
+	if err := repo.UpdateDoubanRating(ctx, "movie-douban", "1291546", 9.6, 1500000); err != nil {
+		t.Fatalf("UpdateDoubanRating failed: %v", err)
+	}
+
+	// Round-trip via scan (uses movieSelectColumns + scanMovie)
+	after, err := repo.FindByID(ctx, "movie-douban")
+	if err != nil {
+		t.Fatalf("FindByID failed: %v", err)
+	}
+	if !after.DoubanID.Valid || after.DoubanID.String != "1291546" {
+		t.Errorf("DoubanID = %v, want 1291546", after.DoubanID)
+	}
+	if !after.DoubanRating.Valid || after.DoubanRating.Float64 != 9.6 {
+		t.Errorf("DoubanRating = %v, want 9.6", after.DoubanRating)
+	}
+	if !after.DoubanVoteCount.Valid || after.DoubanVoteCount.Int64 != 1500000 {
+		t.Errorf("DoubanVoteCount = %v, want 1500000", after.DoubanVoteCount)
+	}
+}
+
+// TestMovieUpdateDoubanRatingNotFound verifies a missing movie returns an error
+func TestMovieUpdateDoubanRatingNotFound(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+	repo := NewMovieRepository(db)
+	err := repo.UpdateDoubanRating(context.Background(), "nonexistent", "1", 9.0, 100)
+	if err == nil {
+		t.Error("Expected error for nonexistent movie")
 	}
 }
 

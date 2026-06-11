@@ -233,6 +233,9 @@ func (m *mockPQMovieRepo) GetStats(_ context.Context) (*repository.MediaStats, e
 func (m *mockPQMovieRepo) FindOwnedTMDbIDs(_ context.Context, _ []int64) ([]int64, error) {
 	return nil, nil
 }
+func (m *mockPQMovieRepo) UpdateDoubanRating(_ context.Context, _, _ string, _ float64, _ int) error {
+	return nil
+}
 
 var _ repository.MovieRepositoryInterface = (*mockPQMovieRepo)(nil)
 
@@ -309,6 +312,9 @@ func (m *mockPQSeriesRepo) GetStats(_ context.Context) (*repository.MediaStats, 
 }
 func (m *mockPQSeriesRepo) FindOwnedTMDbIDs(_ context.Context, _ []int64) ([]int64, error) {
 	return nil, nil
+}
+func (m *mockPQSeriesRepo) UpdateDoubanRating(_ context.Context, _, _ string, _ float64, _ int) error {
+	return nil
 }
 
 var _ repository.SeriesRepositoryInterface = (*mockPQSeriesRepo)(nil)

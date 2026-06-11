@@ -23,6 +23,9 @@ vi.mock('../../services/libraryService', () => ({
   libraryService: {
     getMovieById: vi.fn(),
     getSeriesById: vi.fn(),
+    // Story 12-1 — useDoubanRating gates on tmdbId > 0; stub so it never hits undefined.
+    getMovieDoubanRating: vi.fn().mockResolvedValue(null),
+    getSeriesDoubanRating: vi.fn().mockResolvedValue(null),
   },
 }));
 

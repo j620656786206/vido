@@ -18,6 +18,11 @@ export interface LibraryMovie {
   genres: string[];
   rating?: number;
   voteAverage?: number;
+  voteCount?: number;
+  // Douban rating fields (Story 12-1) — populated lazily via the douban-rating endpoint.
+  doubanId?: string;
+  doubanRating?: number;
+  doubanVoteCount?: number;
   overview?: string;
   posterPath?: string;
   backdropPath?: string;
@@ -64,6 +69,11 @@ export interface LibrarySeries {
   genres: string[];
   rating?: number;
   voteAverage?: number;
+  voteCount?: number;
+  // Douban rating fields (Story 12-1) — populated lazily via the douban-rating endpoint.
+  doubanId?: string;
+  doubanRating?: number;
+  doubanVoteCount?: number;
   overview?: string;
   posterPath?: string;
   backdropPath?: string;
@@ -87,6 +97,16 @@ export interface LibrarySeries {
   createdAt: string;
   updatedAt: string;
 }
+
+// Douban rating enrichment payload (Story 12-1). The endpoint returns
+// `data: null` when no Douban rating is available (graceful degradation).
+export interface DoubanRating {
+  doubanId: string;
+  doubanRating: number;
+  doubanVoteCount: number;
+}
+
+export type DoubanRatingResponse = DoubanRating | null;
 
 export interface LibraryItem {
   type: 'movie' | 'series';

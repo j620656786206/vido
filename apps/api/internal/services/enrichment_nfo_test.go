@@ -146,6 +146,10 @@ func (m *mockMovieRepoForNFO) FindOwnedTMDbIDs(ctx context.Context, tmdbIDs []in
 	return nil, nil
 }
 
+func (m *mockMovieRepoForNFO) UpdateDoubanRating(ctx context.Context, id, doubanID string, rating float64, voteCount int) error {
+	return nil
+}
+
 // ─── Test: NFO enrichment — TMDB direct lookup (AC #2) ─────────────────────
 
 func TestEnrichMovie_NFO_TMDbDirectLookup(t *testing.T) {

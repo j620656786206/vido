@@ -6,6 +6,7 @@ import { FallbackPending } from '../../components/media/FallbackPending';
 import { FallbackFailed } from '../../components/media/FallbackFailed';
 import { CreditsSection } from '../../components/media/CreditsSection';
 import { TechBadgeGroup } from '../../components/media/TechBadgeGroup';
+import { DualRatingDisplay } from '../../components/media/DualRatingDisplay';
 import { MetadataEditorDialog } from '../../components/metadata-editor';
 import type { MediaMetadata } from '../../components/metadata-editor';
 import {
@@ -17,6 +18,7 @@ import {
   useTVShowCredits,
 } from '../../hooks/useMediaDetails';
 import { useOwnedMedia } from '../../hooks/useOwnedMedia';
+import { useDoubanRating } from '../../hooks/useDoubanRating';
 import type { MovieDetails, TVShowDetails } from '../../types/tmdb';
 import { getImageUrl } from '../../lib/image';
 import { cn } from '../../lib/utils';
@@ -113,6 +115,10 @@ function LocalDetailView({ type, id }: { type: ValidMediaType; id: string }) {
   const movieCredits = useMovieCredits(isMovie && tmdbId > 0 ? tmdbId : 0);
   const tvCredits = useTVShowCredits(!isMovie && tmdbId > 0 ? tmdbId : 0);
   const credits = isMovie ? movieCredits : tvCredits;
+
+  // Story 12-1 — lazily enrich with the Douban rating. Gated on tmdbId > 0:
+  // an unmatched record cannot be reliably matched on Douban either.
+  const doubanQuery = useDoubanRating(id, isMovie ? 'movie' : 'series', tmdbId > 0);
 
   const hasMetadata = !!localData?.tmdbId && localData.tmdbId > 0;
   const posterUrl = getImageUrl(localData?.posterPath ?? null, 'w500');
@@ -259,11 +265,13 @@ function LocalDetailView({ type, id }: { type: ValidMediaType; id: string }) {
                       )?.slice(0, 4)}
                     </span>
                   )}
-                  {localData.voteAverage != null && localData.voteAverage > 0 && (
-                    <span className="text-[var(--warning)]">
-                      ⭐ {localData.voteAverage.toFixed(1)}
-                    </span>
-                  )}
+                  <DualRatingDisplay
+                    tmdbRating={localData.voteAverage}
+                    tmdbVoteCount={localData.voteCount}
+                    doubanRating={doubanQuery.data?.doubanRating}
+                    doubanVoteCount={doubanQuery.data?.doubanVoteCount}
+                    doubanLoading={doubanQuery.isLoading}
+                  />
                   {localData.genres?.length > 0 && <span>{localData.genres.join(' / ')}</span>}
                   {localData.metadataSource && (
                     <span className="rounded bg-[var(--accent-primary)]/30 px-2 py-0.5 text-xs text-blue-300">
@@ -466,9 +474,9 @@ export function TMDbDetailView({ type, tmdbId }: { type: ValidMediaType; tmdbId:
 
             <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-[var(--text-secondary)]">
               {releaseDate && <span>{releaseDate.slice(0, 4)}</span>}
-              {data.voteAverage != null && data.voteAverage > 0 && (
-                <span className="text-[var(--warning)]">⭐ {data.voteAverage.toFixed(1)}</span>
-              )}
+              {/* TMDb-numeric items are not in the local library, so no Douban
+                  enrichment is possible (the endpoint is keyed by local UUID). */}
+              <DualRatingDisplay tmdbRating={data.voteAverage} tmdbVoteCount={data.voteCount} />
               {genreNames.length > 0 && <span>{genreNames.join(' / ')}</span>}
             </div>
 

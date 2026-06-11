@@ -172,6 +172,11 @@ func (m *MockMovieRepository) FindOwnedTMDbIDs(ctx context.Context, tmdbIDs []in
 	return args.Get(0).([]int64), args.Error(1)
 }
 
+func (m *MockMovieRepository) UpdateDoubanRating(ctx context.Context, id, doubanID string, rating float64, voteCount int) error {
+	args := m.Called(ctx, id, doubanID, rating, voteCount)
+	return args.Error(0)
+}
+
 // Compile-time interface check
 var _ repository.MovieRepositoryInterface = (*MockMovieRepository)(nil)
 
@@ -312,6 +317,11 @@ func (m *MockSeriesRepository) FindOwnedTMDbIDs(ctx context.Context, tmdbIDs []i
 	return args.Get(0).([]int64), args.Error(1)
 }
 
+func (m *MockSeriesRepository) UpdateDoubanRating(ctx context.Context, id, doubanID string, rating float64, voteCount int) error {
+	args := m.Called(ctx, id, doubanID, rating, voteCount)
+	return args.Error(0)
+}
+
 // Compile-time interface check
 var _ repository.SeriesRepositoryInterface = (*MockSeriesRepository)(nil)
 
@@ -340,6 +350,7 @@ func SetupDefaultMovieExpectations(m *MockMovieRepository) {
 	m.On("FindAllWithFilePath", mock.Anything).Maybe().Return([]models.Movie(nil), nil)
 	m.On("GetStats", mock.Anything).Maybe().Return((*repository.MediaStats)(nil), nil)
 	m.On("FindOwnedTMDbIDs", mock.Anything, mock.Anything).Maybe().Return([]int64(nil), nil)
+	m.On("UpdateDoubanRating", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Maybe().Return(nil)
 }
 
 // SetupDefaultSeriesExpectations registers Maybe() expectations that return zero values
@@ -365,4 +376,5 @@ func SetupDefaultSeriesExpectations(m *MockSeriesRepository) {
 	m.On("FindNeedingSubtitleSearch", mock.Anything, mock.Anything).Maybe().Return([]models.Series(nil), nil)
 	m.On("GetStats", mock.Anything).Maybe().Return((*repository.MediaStats)(nil), nil)
 	m.On("FindOwnedTMDbIDs", mock.Anything, mock.Anything).Maybe().Return([]int64(nil), nil)
+	m.On("UpdateDoubanRating", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Maybe().Return(nil)
 }

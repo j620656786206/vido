@@ -448,6 +448,17 @@ func main() {
 	// Following Handler → Service → Repository → Database architecture
 	movieHandler := handlers.NewMovieHandler(movieService)
 	seriesHandler := handlers.NewSeriesHandler(seriesService)
+	// Story 12-1 — dual rating display. Reuses the SAME Douban provider that the
+	// metadata service owns (single rate limiter / circuit breaker for douban.com).
+	// When Douban is disabled DoubanProvider() returns a nil *DoubanProvider; keep
+	// the searcher a genuine nil interface (avoid the typed-nil-in-interface trap)
+	// so the service takes its graceful-degradation path instead of dereferencing.
+	var doubanSearcher services.DoubanSearcher
+	if dp := metadataService.DoubanProvider(); dp != nil {
+		doubanSearcher = dp
+	}
+	doubanRatingService := services.NewDoubanRatingService(doubanSearcher, repos.Movies, repos.Series)
+	doubanRatingHandler := handlers.NewDoubanRatingHandler(doubanRatingService)
 	settingsHandler := handlers.NewSettingsHandler(settingsService)
 	setupHandler := handlers.NewSetupHandler(setupService)
 	mediaHandler := handlers.NewMediaHandler(mediaService)
@@ -529,6 +540,7 @@ func main() {
 	{
 		movieHandler.RegisterRoutes(apiV1)
 		seriesHandler.RegisterRoutes(apiV1)
+		doubanRatingHandler.RegisterRoutes(apiV1) // /movies/:id/douban-rating, /series/:id/douban-rating (Story 12-1)
 		logHandler.RegisterRoutes(apiV1)    // Must be before settingsHandler to avoid /settings/:key conflict
 		cacheHandler.RegisterRoutes(apiV1)  // Must be before settingsHandler to avoid /settings/:key conflict
 		statusHandler.RegisterRoutes(apiV1) // Must be before settingsHandler to avoid /settings/:key conflict

@@ -319,6 +319,7 @@ type PosterUploader interface {
 type MetadataService struct {
 	orchestrator     *metadata.Orchestrator
 	tmdbProvider     *metadata.TMDbProvider
+	doubanProvider   *metadata.DoubanProvider // Story 12-1: shared with DoubanRatingService (single rate limiter)
 	movieUpdater     MediaUpdater
 	seriesUpdater    MediaUpdater
 	movieEditor      MetadataEditor
@@ -373,9 +374,12 @@ func NewMetadataService(cfg MetadataServiceConfig, tmdbSearcher metadata.TMDbSea
 	tmdbProvider := metadata.NewTMDbProvider(tmdbSearcher, tmdbConfig)
 	orch.RegisterProvider(tmdbProvider)
 
-	// Register Douban provider if enabled
+	// Register Douban provider if enabled. Capture the instance so it can be
+	// shared with the Douban rating enrichment service (Story 12-1) — a single
+	// provider means a single rate limiter / circuit breaker for douban.com.
+	var doubanProvider *metadata.DoubanProvider
 	if cfg.EnableDouban {
-		doubanProvider := metadata.NewDoubanProvider(metadata.DoubanProviderConfig{
+		doubanProvider = metadata.NewDoubanProvider(metadata.DoubanProviderConfig{
 			Enabled: true,
 		})
 		orch.RegisterProvider(doubanProvider)
@@ -398,9 +402,18 @@ func NewMetadataService(cfg MetadataServiceConfig, tmdbSearcher metadata.TMDbSea
 	)
 
 	return &MetadataService{
-		orchestrator: orch,
-		tmdbProvider: tmdbProvider,
+		orchestrator:   orch,
+		tmdbProvider:   tmdbProvider,
+		doubanProvider: doubanProvider,
 	}
+}
+
+// DoubanProvider returns the Douban provider instance, or nil if Douban is
+// disabled. Exposed so the Douban rating enrichment service (Story 12-1) can
+// share the SAME provider instance — single rate limiter / circuit breaker /
+// cache for douban.com (project-context Rule 27 ① / Rule 14).
+func (s *MetadataService) DoubanProvider() *metadata.DoubanProvider {
+	return s.doubanProvider
 }
 
 // SearchMetadata searches for metadata using the fallback chain
