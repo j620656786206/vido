@@ -96,7 +96,7 @@ func (r *SeriesRepository) FindByID(ctx context.Context, id string) (*models.Ser
 	series, err := scanSeries(row)
 
 	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("series with id %s not found", id)
+		return nil, fmt.Errorf("series with id %s not found: %w", id, sql.ErrNoRows)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to find series: %w", err)
@@ -592,9 +592,10 @@ const seriesSelectColumns = `
 	status, original_language, imdb_id, tmdb_id, in_production,
 	file_path, file_size, parse_status, metadata_source,
 	subtitle_status, subtitle_path, subtitle_language, subtitle_last_searched, subtitle_search_score,
-	vote_average,
+	vote_average, vote_count,
 	video_codec, video_resolution, audio_codec, audio_channels,
 	subtitle_tracks, hdr_format,
+	douban_id, douban_rating, douban_vote_count,
 	created_at, updated_at
 `
 
@@ -631,12 +632,16 @@ func scanSeries(scanner interface{ Scan(dest ...interface{}) error }) (models.Se
 		&s.SubtitleLastSearched,
 		&s.SubtitleSearchScore,
 		&s.VoteAverage,
+		&s.VoteCount,
 		&s.VideoCodec,
 		&s.VideoResolution,
 		&s.AudioCodec,
 		&s.AudioChannels,
 		&s.SubtitleTracks,
 		&s.HDRFormat,
+		&s.DoubanID,
+		&s.DoubanRating,
+		&s.DoubanVoteCount,
 		&s.CreatedAt,
 		&s.UpdatedAt,
 	)
@@ -649,6 +654,30 @@ func scanSeries(scanner interface{ Scan(dest ...interface{}) error }) (models.Se
 	}
 
 	return s, nil
+}
+
+// UpdateDoubanRating persists denormalized Douban rating fields for a series
+// (Story 12-1). It is the dedicated write path for background enrichment so a
+// normal Update does not need to round-trip the Douban columns.
+func (r *SeriesRepository) UpdateDoubanRating(ctx context.Context, id, doubanID string, rating float64, voteCount int) error {
+	query := `
+		UPDATE series
+		SET douban_id = ?, douban_rating = ?, douban_vote_count = ?, updated_at = ?
+		WHERE id = ?
+	`
+	result, err := r.db.ExecContext(ctx, query, doubanID, rating, voteCount, time.Now(), id)
+	if err != nil {
+		return fmt.Errorf("failed to update douban rating: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("series with id %s not found", id)
+	}
+	return nil
 }
 
 // BulkCreate inserts multiple series in a single transaction

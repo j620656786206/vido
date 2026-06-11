@@ -47,6 +47,7 @@ func setupSeriesTestDB(t *testing.T) *sql.DB {
 			subtitle_last_searched TIMESTAMP,
 			subtitle_search_score REAL,
 			vote_average REAL,
+			vote_count INTEGER,
 			is_removed INTEGER NOT NULL DEFAULT 0,
 			video_codec TEXT,
 			video_resolution TEXT,
@@ -54,6 +55,9 @@ func setupSeriesTestDB(t *testing.T) *sql.DB {
 			audio_channels INTEGER,
 			subtitle_tracks TEXT,
 			hdr_format TEXT,
+			douban_id TEXT,
+			douban_rating REAL,
+			douban_vote_count INTEGER,
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 		)

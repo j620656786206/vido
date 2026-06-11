@@ -11,6 +11,7 @@ import type {
   LibrarySeries,
   VideosResponse,
   BatchResult,
+  DoubanRatingResponse,
 } from '../types/library';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
@@ -140,6 +141,16 @@ export const libraryService = {
 
   async getSeriesVideos(id: string): Promise<VideosResponse> {
     return fetchApi<VideosResponse>(`/library/series/${id}/videos`);
+  },
+
+  // Story 12-1 — lazy Douban rating enrichment. Returns null when no Douban
+  // rating is available (graceful degradation; detail page falls back to TMDb-only).
+  async getMovieDoubanRating(id: string): Promise<DoubanRatingResponse> {
+    return fetchApi<DoubanRatingResponse>(`/movies/${id}/douban-rating`);
+  },
+
+  async getSeriesDoubanRating(id: string): Promise<DoubanRatingResponse> {
+    return fetchApi<DoubanRatingResponse>(`/series/${id}/douban-rating`);
   },
 
   async batchDelete(ids: string[], type: 'movie' | 'series'): Promise<BatchResult> {

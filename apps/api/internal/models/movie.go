@@ -157,6 +157,12 @@ type Movie struct {
 	SubtitleTracks  NullString `db:"subtitle_tracks" json:"subtitle_tracks,omitempty"`
 	HDRFormat       NullString `db:"hdr_format" json:"hdr_format,omitempty"`
 
+	// Douban rating fields (Story 12-1) — denormalized from douban_cache for fast
+	// dual-rating reads on the detail page. Populated by background enrichment.
+	DoubanID        NullString  `db:"douban_id" json:"douban_id,omitempty"`
+	DoubanRating    NullFloat64 `db:"douban_rating" json:"douban_rating,omitempty"`
+	DoubanVoteCount NullInt64   `db:"douban_vote_count" json:"douban_vote_count,omitempty"`
+
 	// Soft-delete flag for removed files (Story 7-2)
 	IsRemoved bool `db:"is_removed" json:"is_removed"`
 
