@@ -72,6 +72,40 @@ func (c *Client) GetTVShowDetailsWithLanguage(ctx context.Context, tvID int, lan
 	return &result, nil
 }
 
+// GetSeasonDetails retrieves the full episode list for a specific season of a TV
+// show (GET /tv/{id}/season/{n}). Results are in the client's default language.
+func (c *Client) GetSeasonDetails(ctx context.Context, tvID int, seasonNumber int) (*SeasonDetails, error) {
+	return c.GetSeasonDetailsWithLanguage(ctx, tvID, seasonNumber, c.language)
+}
+
+// GetSeasonDetailsWithLanguage retrieves season details with a specific language.
+// This is used by the language fallback chain.
+func (c *Client) GetSeasonDetailsWithLanguage(ctx context.Context, tvID int, seasonNumber int, language string) (*SeasonDetails, error) {
+	// Validate input
+	if tvID <= 0 {
+		return nil, NewBadRequestError("TV show ID must be greater than 0")
+	}
+	if seasonNumber < 0 {
+		return nil, NewBadRequestError("season number must be non-negative")
+	}
+
+	// Build endpoint path
+	endpoint := fmt.Sprintf("/tv/%d/season/%d", tvID, seasonNumber)
+
+	// Build query parameters with language
+	queryParams := url.Values{
+		"language": []string{language},
+	}
+
+	// Make API request
+	var result SeasonDetails
+	if err := c.Get(ctx, endpoint, queryParams, &result); err != nil {
+		return nil, fmt.Errorf("failed to get season details: %w", err)
+	}
+
+	return &result, nil
+}
+
 // GetTrendingTVShows fetches the trending TV shows for a time window ("day" or "week").
 func (c *Client) GetTrendingTVShows(ctx context.Context, timeWindow string, page int) (*SearchResultTVShows, error) {
 	return c.GetTrendingTVShowsWithLanguage(ctx, timeWindow, c.language, page)

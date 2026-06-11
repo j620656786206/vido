@@ -420,7 +420,10 @@ func (m *mockPQEpisodeRepo) FindBySeriesSeasonEpisode(_ context.Context, seriesI
 }
 
 func (m *mockPQEpisodeRepo) Update(_ context.Context, _ *models.Episode) error { return nil }
-func (m *mockPQEpisodeRepo) Delete(_ context.Context, _ string) error          { return nil }
+func (m *mockPQEpisodeRepo) UpdateEpisodeSubtitleStatus(_ context.Context, _ string, _ models.SubtitleStatus, _, _ string) error {
+	return nil
+}
+func (m *mockPQEpisodeRepo) Delete(_ context.Context, _ string) error { return nil }
 func (m *mockPQEpisodeRepo) Upsert(_ context.Context, ep *models.Episode) error {
 	if m.err != nil {
 		return m.err

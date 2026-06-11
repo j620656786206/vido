@@ -47,6 +47,8 @@ type CacheServiceInterface interface {
 	GetMovieDetails(ctx context.Context, movieID int) (*MovieDetails, error)
 	// GetTVShowDetails gets TV show details with caching
 	GetTVShowDetails(ctx context.Context, tvID int) (*TVShowDetails, error)
+	// GetSeasonDetails gets a season's episode list with caching (24h TTL)
+	GetSeasonDetails(ctx context.Context, tvID int, seasonNumber int) (*SeasonDetails, error)
 	// GetTrendingMovies returns trending movies cached at TrendingDiscoverCacheTTL
 	GetTrendingMovies(ctx context.Context, timeWindow string, page int) (*SearchResultMovies, error)
 	// GetTrendingTVShows returns trending TV shows cached at TrendingDiscoverCacheTTL
@@ -223,6 +225,48 @@ func (s *CacheService) GetMovieDetails(ctx context.Context, movieID int) (*Movie
 				"key", cacheKey,
 				"error", err,
 			)
+		}
+	}
+
+	return result, nil
+}
+
+// GetSeasonDetails gets a season's full episode list with caching.
+// Cache key format: tmdb:tv/{id}/season/{n} — uses the default 24h TTL since
+// episode metadata changes infrequently (Story 12-2 Task 3.4).
+func (s *CacheService) GetSeasonDetails(ctx context.Context, tvID int, seasonNumber int) (*SeasonDetails, error) {
+	cacheKey := fmt.Sprintf("tmdb:tv/%d/season/%d", tvID, seasonNumber)
+
+	// Try cache first
+	cached, err := s.cache.Get(ctx, cacheKey)
+	if err == nil && cached != nil {
+		var result SeasonDetails
+		if err := json.Unmarshal([]byte(cached.Value), &result); err == nil {
+			slog.Debug("Cache hit", "key", cacheKey, "type", CacheTypeTMDb)
+			return &result, nil
+		}
+		slog.Warn("Failed to unmarshal cached data", "key", cacheKey, "error", err)
+	}
+
+	// Cache miss - fetch from API
+	slog.Debug("Cache miss", "key", cacheKey, "type", CacheTypeTMDb)
+
+	result, lang, err := s.client.GetSeasonDetailsWithFallback(ctx, tvID, seasonNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	slog.Debug("TMDb get season details completed",
+		"tv_id", tvID,
+		"season_number", seasonNumber,
+		"language", lang,
+		"episodes", len(result.Episodes),
+	)
+
+	// Store in cache
+	if data, err := json.Marshal(result); err == nil {
+		if err := s.cache.Set(ctx, cacheKey, string(data), CacheTypeTMDb, s.ttl); err != nil {
+			slog.Warn("Failed to cache TMDb response", "key", cacheKey, "error", err)
 		}
 	}
 

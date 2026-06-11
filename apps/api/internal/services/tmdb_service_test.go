@@ -21,6 +21,8 @@ type MockCacheService struct {
 	GetMovieDetailsError     error
 	GetTVShowDetailsResponse *tmdb.TVShowDetails
 	GetTVShowDetailsError    error
+	GetSeasonDetailsResponse *tmdb.SeasonDetails
+	GetSeasonDetailsError    error
 	// Story 10-1
 	GetTrendingMoviesResponse  *tmdb.SearchResultMovies
 	GetTrendingMoviesError     error
@@ -58,6 +60,13 @@ func (m *MockCacheService) GetTVShowDetails(ctx context.Context, tvID int) (*tmd
 		return nil, m.GetTVShowDetailsError
 	}
 	return m.GetTVShowDetailsResponse, nil
+}
+
+func (m *MockCacheService) GetSeasonDetails(ctx context.Context, tvID int, seasonNumber int) (*tmdb.SeasonDetails, error) {
+	if m.GetSeasonDetailsError != nil {
+		return nil, m.GetSeasonDetailsError
+	}
+	return m.GetSeasonDetailsResponse, nil
 }
 
 // Story 10-1 additions

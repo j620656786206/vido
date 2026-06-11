@@ -8,12 +8,12 @@ import (
 // Episode represents a TV series episode entity in the database
 type Episode struct {
 	// Core fields
-	ID            string         `db:"id" json:"id"`
-	SeriesID      string         `db:"series_id" json:"series_id"`
+	ID            string     `db:"id" json:"id"`
+	SeriesID      string     `db:"series_id" json:"series_id"`
 	SeasonID      NullString `db:"season_id" json:"season_id,omitempty"`
 	TMDbID        NullInt64  `db:"tmdb_id" json:"tmdb_id,omitempty"`
-	SeasonNumber  int            `db:"season_number" json:"season_number"`
-	EpisodeNumber int            `db:"episode_number" json:"episode_number"`
+	SeasonNumber  int        `db:"season_number" json:"season_number"`
+	EpisodeNumber int        `db:"episode_number" json:"episode_number"`
 
 	// Content fields
 	Title       NullString  `db:"title" json:"title,omitempty"`
@@ -25,6 +25,12 @@ type Episode struct {
 
 	// File tracking
 	FilePath NullString `db:"file_path" json:"file_path,omitempty"`
+
+	// Subtitle tracking (Story 12-2) — per-episode subtitle status, mirroring the
+	// movies/series trio added in migration 018. Added by migration 025.
+	SubtitleStatus   SubtitleStatus `db:"subtitle_status" json:"subtitle_status"`
+	SubtitlePath     NullString     `db:"subtitle_path" json:"subtitle_path,omitempty"`
+	SubtitleLanguage NullString     `db:"subtitle_language" json:"subtitle_language,omitempty"`
 
 	// Timestamps
 	CreatedAt time.Time `db:"created_at" json:"created_at"`
@@ -60,8 +66,8 @@ func formatSeasonEpisode(season, episode int) string {
 
 // Episode validation errors
 var (
-	ErrEpisodeIDRequired         = &ValidationError{Field: "id", Message: "episode ID is required"}
-	ErrEpisodeSeriesIDRequired   = &ValidationError{Field: "seriesId", Message: "episode series ID is required"}
+	ErrEpisodeIDRequired          = &ValidationError{Field: "id", Message: "episode ID is required"}
+	ErrEpisodeSeriesIDRequired    = &ValidationError{Field: "seriesId", Message: "episode series ID is required"}
 	ErrEpisodeSeasonNumberInvalid = &ValidationError{Field: "seasonNumber", Message: "episode season number must be non-negative"}
-	ErrEpisodeNumberInvalid      = &ValidationError{Field: "episodeNumber", Message: "episode number must be non-negative"}
+	ErrEpisodeNumberInvalid       = &ValidationError{Field: "episodeNumber", Message: "episode number must be non-negative"}
 )

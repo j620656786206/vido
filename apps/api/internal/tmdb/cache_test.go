@@ -90,6 +90,10 @@ type MockFallbackClient struct {
 	GetTVShowDetailsResponse *TVShowDetails
 	GetTVShowDetailsError    error
 	GetTVShowDetailsCalled   int
+	// Story 12-2 season details
+	GetSeasonDetailsResponse *SeasonDetails
+	GetSeasonDetailsError    error
+	GetSeasonDetailsCalled   int
 	// Story 10-1 trending/discover fields — embedded directly on the mock
 	// (previously stored in a package-global map keyed by pointer; moved here
 	// to remove the global-state anti-pattern and make t.Parallel() safe).
@@ -137,6 +141,14 @@ func (m *MockFallbackClient) GetTVShowDetailsWithFallback(ctx context.Context, t
 		return nil, "", m.GetTVShowDetailsError
 	}
 	return m.GetTVShowDetailsResponse, "zh-TW", nil
+}
+
+func (m *MockFallbackClient) GetSeasonDetailsWithFallback(ctx context.Context, tvID int, seasonNumber int) (*SeasonDetails, string, error) {
+	m.GetSeasonDetailsCalled++
+	if m.GetSeasonDetailsError != nil {
+		return nil, "", m.GetSeasonDetailsError
+	}
+	return m.GetSeasonDetailsResponse, "zh-TW", nil
 }
 
 // Story 10-1: LanguageFallbackClientInterface additions — configurable stubs
@@ -476,6 +488,71 @@ func TestCacheService_GetTVShowDetails(t *testing.T) {
 			}
 			if tt.wantAPICall {
 				assert.Equal(t, 1, client.GetTVShowDetailsCalled)
+			}
+		})
+	}
+}
+
+func TestCacheService_GetSeasonDetails(t *testing.T) {
+	tests := []struct {
+		name          string
+		tvID          int
+		seasonNumber  int
+		cachedData    *SeasonDetails
+		apiResponse   *SeasonDetails
+		wantFromCache bool
+		wantAPICall   bool
+	}{
+		{
+			name:         "cache hit",
+			tvID:         1396,
+			seasonNumber: 1,
+			cachedData: &SeasonDetails{
+				ID: 3572, Name: "Cached Season", SeasonNumber: 1,
+				Episodes: []EpisodeInfo{{ID: 1, EpisodeNumber: 1, Name: "Cached Ep"}},
+			},
+			wantFromCache: true,
+			wantAPICall:   false,
+		},
+		{
+			name:         "cache miss",
+			tvID:         1396,
+			seasonNumber: 1,
+			apiResponse: &SeasonDetails{
+				ID: 3572, Name: "API Season", SeasonNumber: 1,
+				Episodes: []EpisodeInfo{{ID: 1, EpisodeNumber: 1, Name: "API Ep"}},
+			},
+			wantFromCache: false,
+			wantAPICall:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cache := NewMockCacheRepository()
+			client := &MockFallbackClient{
+				GetSeasonDetailsResponse: tt.apiResponse,
+			}
+
+			if tt.cachedData != nil {
+				data, _ := json.Marshal(tt.cachedData)
+				cache.Set(context.Background(), "tmdb:tv/1396/season/1", string(data), CacheTypeTMDb, DefaultCacheTTL)
+			}
+
+			service := NewCacheService(client, cache, CacheServiceConfig{})
+			result, err := service.GetSeasonDetails(context.Background(), tt.tvID, tt.seasonNumber)
+
+			require.NoError(t, err)
+			require.NotNil(t, result)
+			assert.Len(t, result.Episodes, 1)
+
+			if tt.wantFromCache {
+				assert.Equal(t, 0, client.GetSeasonDetailsCalled)
+				assert.Equal(t, "Cached Ep", result.Episodes[0].Name)
+			}
+			if tt.wantAPICall {
+				assert.Equal(t, 1, client.GetSeasonDetailsCalled)
+				assert.Equal(t, "API Ep", result.Episodes[0].Name)
 			}
 		})
 	}

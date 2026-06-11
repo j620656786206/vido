@@ -67,6 +67,14 @@ func (m *MockClient) GetTVShowDetails(ctx context.Context, tvID int) (*TVShowDet
 	return m.GetTVShowDetailsWithLanguage(ctx, tvID, "zh-TW")
 }
 
+func (m *MockClient) GetSeasonDetails(ctx context.Context, tvID int, seasonNumber int) (*SeasonDetails, error) {
+	return m.GetSeasonDetailsWithLanguage(ctx, tvID, seasonNumber, "zh-TW")
+}
+
+func (m *MockClient) GetSeasonDetailsWithLanguage(ctx context.Context, tvID int, seasonNumber int, language string) (*SeasonDetails, error) {
+	return &SeasonDetails{}, nil
+}
+
 func (m *MockClient) GetTVShowDetailsWithLanguage(ctx context.Context, tvID int, language string) (*TVShowDetails, error) {
 	if err, ok := m.GetTVShowDetailsErrors[language]; ok {
 		return nil, err

@@ -1,10 +1,12 @@
 package models
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestEpisode_Validate(t *testing.T) {
@@ -172,6 +174,28 @@ func TestEpisode_FullModel(t *testing.T) {
 	assert.Equal(t, "/media/series/S02E08.mkv", episode.FilePath.String)
 	assert.Equal(t, "S02E08", episode.GetSeasonEpisodeCode())
 	assert.NoError(t, episode.Validate())
+}
+
+func TestEpisode_SubtitleFields(t *testing.T) {
+	episode := &Episode{
+		ID:               "ep-sub-1",
+		SeriesID:         "series-1",
+		SeasonNumber:     1,
+		EpisodeNumber:    3,
+		SubtitleStatus:   SubtitleStatusFound,
+		SubtitlePath:     NewNullString("/media/S01E03.zh-Hant.srt"),
+		SubtitleLanguage: NewNullString("zh-Hant"),
+	}
+
+	assert.Equal(t, SubtitleStatusFound, episode.SubtitleStatus)
+	assert.Equal(t, "/media/S01E03.zh-Hant.srt", episode.SubtitlePath.String)
+	assert.Equal(t, "zh-Hant", episode.SubtitleLanguage.String)
+
+	data, err := json.Marshal(episode)
+	require.NoError(t, err)
+	assert.Contains(t, string(data), `"subtitle_status":"found"`)
+	assert.Contains(t, string(data), `"subtitle_path":"/media/S01E03.zh-Hant.srt"`)
+	assert.Contains(t, string(data), `"subtitle_language":"zh-Hant"`)
 }
 
 func TestEpisodeValidationErrors(t *testing.T) {

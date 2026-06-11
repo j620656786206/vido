@@ -12,6 +12,8 @@ import type {
   VideosResponse,
   BatchResult,
   DoubanRatingResponse,
+  SeasonSummary,
+  SeasonEpisodesResponse,
 } from '../types/library';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
@@ -151,6 +153,17 @@ export const libraryService = {
 
   async getSeriesDoubanRating(id: string): Promise<DoubanRatingResponse> {
     return fetchApi<DoubanRatingResponse>(`/series/${id}/douban-rating`);
+  },
+
+  // Story 12-2 — season accordion. Season list comes from the series' cached
+  // SeasonsJSON (fast, no TMDB call); episodes merge TMDB metadata with local
+  // subtitle/file status and are fetched lazily on accordion expand.
+  async getSeriesSeasons(id: string): Promise<SeasonSummary[]> {
+    return fetchApi<SeasonSummary[]>(`/series/${id}/seasons`);
+  },
+
+  async getSeasonEpisodes(seriesId: string, seasonNumber: number): Promise<SeasonEpisodesResponse> {
+    return fetchApi<SeasonEpisodesResponse>(`/series/${seriesId}/seasons/${seasonNumber}/episodes`);
   },
 
   async batchDelete(ids: string[], type: 'movie' | 'series'): Promise<BatchResult> {

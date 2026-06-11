@@ -49,6 +49,10 @@ type ClientInterface interface {
 	GetTVShowDetails(ctx context.Context, tvID int) (*TVShowDetails, error)
 	// GetTVShowDetailsWithLanguage retrieves TV show details with a specific language
 	GetTVShowDetailsWithLanguage(ctx context.Context, tvID int, language string) (*TVShowDetails, error)
+	// GetSeasonDetails retrieves a season's full episode list
+	GetSeasonDetails(ctx context.Context, tvID int, seasonNumber int) (*SeasonDetails, error)
+	// GetSeasonDetailsWithLanguage retrieves season details with a specific language
+	GetSeasonDetailsWithLanguage(ctx context.Context, tvID int, seasonNumber int, language string) (*SeasonDetails, error)
 	// GetMovieVideos retrieves videos (trailers, teasers) for a movie
 	GetMovieVideos(ctx context.Context, movieID int) (*VideosResponse, error)
 	// GetTVShowVideos retrieves videos (trailers, teasers) for a TV show

@@ -16,7 +16,9 @@ import {
   useTVShowDetails,
   useMovieCredits,
   useTVShowCredits,
+  useSeriesSeasons,
 } from '../../hooks/useMediaDetails';
+import { SeasonAccordion } from '../../components/media/SeasonAccordion';
 import { useOwnedMedia } from '../../hooks/useOwnedMedia';
 import { useDoubanRating } from '../../hooks/useDoubanRating';
 import type { MovieDetails, TVShowDetails } from '../../types/tmdb';
@@ -119,6 +121,10 @@ function LocalDetailView({ type, id }: { type: ValidMediaType; id: string }) {
   // Story 12-1 — lazily enrich with the Douban rating. Gated on tmdbId > 0:
   // an unmatched record cannot be reliably matched on Douban either.
   const doubanQuery = useDoubanRating(id, isMovie ? 'movie' : 'series', tmdbId > 0);
+
+  // Story 12-2 — season summaries for the TV accordion (cached SeasonsJSON,
+  // no TMDB call). Gated on TV + tmdbId > 0 (AC #1).
+  const seasonsQuery = useSeriesSeasons(id, !isMovie && tmdbId > 0);
 
   const hasMetadata = !!localData?.tmdbId && localData.tmdbId > 0;
   const posterUrl = getImageUrl(localData?.posterPath ?? null, 'w500');
@@ -302,6 +308,20 @@ function LocalDetailView({ type, id }: { type: ValidMediaType; id: string }) {
                 {credits.data && (
                   <div className="mt-6">
                     <CreditsSection director={director} cast={credits.data.cast?.slice(0, 6)} />
+                  </div>
+                )}
+
+                {/* Season/Episode accordion (Story 12-2, TV only) */}
+                {!isMovie && (
+                  <div className="mt-8">
+                    <SeasonAccordion
+                      seasons={seasonsQuery.data ?? []}
+                      seriesId={id}
+                      tmdbId={tmdbId}
+                      isLoading={seasonsQuery.isLoading}
+                      isError={seasonsQuery.isError}
+                      onRetry={() => seasonsQuery.refetch()}
+                    />
                   </div>
                 )}
               </div>

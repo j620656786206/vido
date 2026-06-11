@@ -27,6 +27,8 @@ type LanguageFallbackClientInterface interface {
 	GetMovieDetailsWithFallback(ctx context.Context, movieID int) (*MovieDetails, string, error)
 	// GetTVShowDetailsWithFallback gets TV show details, trying each language in the fallback chain
 	GetTVShowDetailsWithFallback(ctx context.Context, tvID int) (*TVShowDetails, string, error)
+	// GetSeasonDetailsWithFallback gets season details, trying each language in the fallback chain
+	GetSeasonDetailsWithFallback(ctx context.Context, tvID int, seasonNumber int) (*SeasonDetails, string, error)
 	// GetTrendingMoviesWithFallback gets trending movies using the language fallback chain
 	GetTrendingMoviesWithFallback(ctx context.Context, timeWindow string, page int) (*SearchResultMovies, string, error)
 	// GetTrendingTVShowsWithFallback gets trending TV shows using the language fallback chain
@@ -255,6 +257,68 @@ func (c *LanguageFallbackClient) GetTVShowDetailsWithFallback(ctx context.Contex
 	}
 
 	return lastResult, lastLang, nil
+}
+
+// GetSeasonDetailsWithFallback gets season details, trying each language in the fallback chain.
+// A season is considered localized when at least one episode has a non-empty name, mirroring
+// the title/overview localization checks used for TV-show details.
+func (c *LanguageFallbackClient) GetSeasonDetailsWithFallback(ctx context.Context, tvID int, seasonNumber int) (*SeasonDetails, string, error) {
+	var lastResult *SeasonDetails
+	var lastLang string
+	var lastErr error
+
+	for _, lang := range c.languages {
+		result, err := c.client.GetSeasonDetailsWithLanguage(ctx, tvID, seasonNumber, lang)
+		if err != nil {
+			slog.Debug("Language fallback: get season details failed",
+				"language", lang,
+				"tv_id", tvID,
+				"season_number", seasonNumber,
+				"error", err,
+			)
+			lastErr = err
+			continue
+		}
+
+		lastResult = result
+		lastLang = lang
+		lastErr = nil
+
+		if hasLocalizedSeasonDetails(result) {
+			slog.Debug("Language fallback: found localized season details",
+				"language", lang,
+				"tv_id", tvID,
+				"season_number", seasonNumber,
+			)
+			return result, lang, nil
+		}
+
+		slog.Debug("Language fallback: no localized season details",
+			"language", lang,
+			"tv_id", tvID,
+			"season_number", seasonNumber,
+		)
+	}
+
+	if lastErr != nil {
+		return nil, "", lastErr
+	}
+
+	return lastResult, lastLang, nil
+}
+
+// hasLocalizedSeasonDetails reports whether a season-details response carries
+// localized content (at least one episode with a non-empty name).
+func hasLocalizedSeasonDetails(s *SeasonDetails) bool {
+	if s == nil {
+		return false
+	}
+	for _, ep := range s.Episodes {
+		if ep.Name != "" {
+			return true
+		}
+	}
+	return false
 }
 
 // GetTrendingMoviesWithFallback gets trending movies, trying each language in the fallback chain.

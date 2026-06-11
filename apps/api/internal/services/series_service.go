@@ -15,6 +15,11 @@ import (
 // testing with mock implementations and future database migrations.
 type SeriesService struct {
 	repo repository.SeriesRepositoryInterface
+	// Optional collaborators for the season/episode accordion (Story 12-2).
+	// Wired via setters so existing NewSeriesService(repo) callers/tests are
+	// unaffected; GetSeasonEpisodes returns an error if they are not set.
+	episodeRepo    repository.EpisodeRepositoryInterface
+	seasonProvider SeasonDetailsProvider
 }
 
 // NewSeriesService creates a new SeriesService with the given repository.
@@ -22,6 +27,14 @@ func NewSeriesService(repo repository.SeriesRepositoryInterface) *SeriesService 
 	return &SeriesService{
 		repo: repo,
 	}
+}
+
+// SetEpisodeDeps wires the episode repository and TMDb season-details provider
+// used by GetSeasonEpisodes (Story 12-2). Follows the established setter-based
+// optional-dependency pattern (e.g. scannerService.SetEpisodeRepo).
+func (s *SeriesService) SetEpisodeDeps(episodeRepo repository.EpisodeRepositoryInterface, seasonProvider SeasonDetailsProvider) {
+	s.episodeRepo = episodeRepo
+	s.seasonProvider = seasonProvider
 }
 
 // Create validates and creates a new series.

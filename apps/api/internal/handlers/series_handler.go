@@ -2,11 +2,17 @@ package handlers
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"log/slog"
+	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/repository"
+	"github.com/vido/api/internal/services"
+	"github.com/vido/api/internal/tmdb"
 )
 
 // SeriesServiceInterface defines the contract for series business operations.
@@ -20,6 +26,9 @@ type SeriesServiceInterface interface {
 	List(ctx context.Context, params repository.ListParams) ([]models.Series, *repository.PaginationResult, error)
 	SearchByTitle(ctx context.Context, title string, params repository.ListParams) ([]models.Series, *repository.PaginationResult, error)
 	GetStats(ctx context.Context) (*repository.MediaStats, error)
+	// Story 12-2 — season/episode accordion
+	GetSeasons(ctx context.Context, seriesID string) ([]models.SeasonSummary, error)
+	GetSeasonEpisodes(ctx context.Context, seriesID string, seasonNumber int) (*services.SeasonEpisodesResponse, error)
 }
 
 // SeriesHandler handles HTTP requests for TV series operations.
@@ -308,8 +317,80 @@ func (h *SeriesHandler) RegisterRoutes(rg *gin.RouterGroup) {
 		series.GET("/search", h.Search)
 		series.GET("/stats", h.Stats)
 		series.GET("/:id", h.GetByID)
+		series.GET("/:id/seasons", h.GetSeasons)
+		series.GET("/:id/seasons/:seasonNumber/episodes", h.GetSeasonEpisodes)
 		series.POST("", h.Create)
 		series.PUT("/:id", h.Update)
 		series.DELETE("/:id", h.Delete)
+	}
+}
+
+// GetSeasons handles GET /api/v1/series/:id/seasons
+// Returns the cached season summaries for a series (from SeasonsJSON, no TMDb call).
+func (h *SeriesHandler) GetSeasons(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		BadRequestError(c, "VALIDATION_REQUIRED_FIELD", "Series ID is required")
+		return
+	}
+
+	seasons, err := h.service.GetSeasons(c.Request.Context(), id)
+	if err != nil {
+		slog.Error("Failed to get series seasons", "error", err, "series_id", id)
+		NotFoundError(c, "Series")
+		return
+	}
+
+	SuccessResponse(c, seasons)
+}
+
+// GetSeasonEpisodes handles GET /api/v1/series/:id/seasons/:seasonNumber/episodes
+// Returns the season's episodes, merging TMDb metadata with local subtitle/file status.
+func (h *SeriesHandler) GetSeasonEpisodes(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		BadRequestError(c, "VALIDATION_REQUIRED_FIELD", "Series ID is required")
+		return
+	}
+
+	seasonNumber, err := strconv.Atoi(c.Param("seasonNumber"))
+	if err != nil || seasonNumber < 0 {
+		BadRequestError(c, "VALIDATION_INVALID_FIELD", "Season number must be a non-negative integer")
+		return
+	}
+
+	result, err := h.service.GetSeasonEpisodes(c.Request.Context(), id, seasonNumber)
+	if err != nil {
+		h.handleSeasonEpisodesError(c, id, seasonNumber, err)
+		return
+	}
+
+	SuccessResponse(c, result)
+}
+
+// handleSeasonEpisodesError maps GetSeasonEpisodes errors to HTTP responses.
+// TMDb upstream failures preserve their status code so the web client renders a
+// retry-able error inside the accordion body (AC #7).
+func (h *SeriesHandler) handleSeasonEpisodesError(c *gin.Context, id string, seasonNumber int, err error) {
+	slog.Error("Failed to get season episodes", "error", err, "series_id", id, "season_number", seasonNumber)
+
+	var tmdbErr *tmdb.TMDbError
+	if errors.As(err, &tmdbErr) {
+		ErrorResponse(c, tmdbErr.StatusCode, tmdbErr.Code, tmdbErr.Message, tmdbErr.Suggestion)
+		return
+	}
+
+	switch {
+	case errors.Is(err, services.ErrSeriesNotLinkedToTMDb):
+		ErrorResponse(c, http.StatusNotFound, "TMDB_SERIES_NOT_LINKED",
+			"Series is not linked to TMDb; episode list unavailable",
+			"Match this series to TMDb to view its episodes")
+	case errors.Is(err, sql.ErrNoRows):
+		NotFoundError(c, "Series")
+	default:
+		// Includes TMDb-down (non-typed) and dependency-config failures — return a
+		// retry-able 502 so the accordion can offer a retry.
+		ErrorResponse(c, http.StatusBadGateway, "TMDB_SEASON_UNAVAILABLE",
+			"Failed to fetch season episodes", "Please try again")
 	}
 }

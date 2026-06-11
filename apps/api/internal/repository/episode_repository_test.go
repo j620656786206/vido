@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"testing"
 	"time"
 
@@ -61,6 +62,9 @@ func setupEpisodeTestDB(t *testing.T) *sql.DB {
 			still_path TEXT,
 			vote_average REAL,
 			file_path TEXT,
+			subtitle_status TEXT DEFAULT 'not_searched',
+			subtitle_path TEXT,
+			subtitle_language TEXT,
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 		)
@@ -163,6 +167,65 @@ func TestEpisodeCreateNil(t *testing.T) {
 }
 
 // TestEpisodeFindByID verifies finding episode by ID
+// TestEpisodeSubtitleStatusDefaultAndUpdate verifies that a freshly created
+// episode reads back the 'not_searched' DEFAULT and that
+// UpdateEpisodeSubtitleStatus persists the subtitle columns (Story 12-2).
+func TestEpisodeSubtitleStatusDefaultAndUpdate(t *testing.T) {
+	db := setupEpisodeTestDB(t)
+	defer db.Close()
+
+	createTestSeries(t, db, "series-1")
+	repo := NewEpisodeRepository(db)
+	ctx := context.Background()
+
+	episode := &models.Episode{
+		ID:            "episode-sub-1",
+		SeriesID:      "series-1",
+		SeasonNumber:  1,
+		EpisodeNumber: 3,
+		Title:         models.NewNullString("Sub Episode"),
+	}
+	if err := repo.Create(ctx, episode); err != nil {
+		t.Fatalf("Failed to create episode: %v", err)
+	}
+
+	// Default status should be 'not_searched', path/language NULL.
+	found, err := repo.FindByID(ctx, "episode-sub-1")
+	if err != nil {
+		t.Fatalf("Failed to find episode: %v", err)
+	}
+	if found.SubtitleStatus != models.SubtitleStatusNotSearched {
+		t.Errorf("Expected default subtitle_status %q, got %q", models.SubtitleStatusNotSearched, found.SubtitleStatus)
+	}
+	if found.SubtitlePath.Valid {
+		t.Errorf("Expected subtitle_path NULL, got %q", found.SubtitlePath.String)
+	}
+
+	// Update to 'found' with path + language.
+	if err := repo.UpdateEpisodeSubtitleStatus(ctx, "episode-sub-1", models.SubtitleStatusFound, "/media/S01E03.zh-Hant.srt", "zh-Hant"); err != nil {
+		t.Fatalf("Failed to update subtitle status: %v", err)
+	}
+
+	updated, err := repo.FindByID(ctx, "episode-sub-1")
+	if err != nil {
+		t.Fatalf("Failed to re-find episode: %v", err)
+	}
+	if updated.SubtitleStatus != models.SubtitleStatusFound {
+		t.Errorf("Expected subtitle_status %q, got %q", models.SubtitleStatusFound, updated.SubtitleStatus)
+	}
+	if updated.SubtitlePath.String != "/media/S01E03.zh-Hant.srt" {
+		t.Errorf("Expected subtitle_path persisted, got %q", updated.SubtitlePath.String)
+	}
+	if updated.SubtitleLanguage.String != "zh-Hant" {
+		t.Errorf("Expected subtitle_language zh-Hant, got %q", updated.SubtitleLanguage.String)
+	}
+
+	// Updating a missing episode returns ErrEpisodeNotFound.
+	if err := repo.UpdateEpisodeSubtitleStatus(ctx, "missing", models.SubtitleStatusFound, "", ""); !errors.Is(err, ErrEpisodeNotFound) {
+		t.Errorf("Expected ErrEpisodeNotFound for missing episode, got %v", err)
+	}
+}
+
 func TestEpisodeFindByID(t *testing.T) {
 	db := setupEpisodeTestDB(t)
 	defer db.Close()

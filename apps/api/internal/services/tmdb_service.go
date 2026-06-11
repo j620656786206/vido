@@ -29,6 +29,8 @@ type TMDbServiceInterface interface {
 	GetMovieDetails(ctx context.Context, movieID int) (*tmdb.MovieDetails, error)
 	// GetTVShowDetails retrieves TV show details by ID
 	GetTVShowDetails(ctx context.Context, tvID int) (*tmdb.TVShowDetails, error)
+	// GetSeasonDetails retrieves a season's full episode list (cached 24h)
+	GetSeasonDetails(ctx context.Context, tvID int, seasonNumber int) (*tmdb.SeasonDetails, error)
 	// FindByExternalID finds movies/TV shows by an external ID (e.g., IMDB)
 	FindByExternalID(ctx context.Context, externalID string, externalSource string) (*tmdb.FindByExternalIDResponse, error)
 	// GetTrendingMovies returns trending movies (cached 1h, server-side filtered for zh-TW relevance).
@@ -249,6 +251,39 @@ func (s *TMDbService) GetTVShowDetails(ctx context.Context, tvID int) (*tmdb.TVS
 	slog.Debug("TV show details retrieved",
 		"tv_id", tvID,
 		"name", result.Name,
+	)
+
+	return result, nil
+}
+
+// GetSeasonDetails retrieves a season's full episode list (cached 24h).
+func (s *TMDbService) GetSeasonDetails(ctx context.Context, tvID int, seasonNumber int) (*tmdb.SeasonDetails, error) {
+	if tvID <= 0 {
+		return nil, tmdb.NewBadRequestError("TV show ID must be greater than 0")
+	}
+	if seasonNumber < 0 {
+		return nil, tmdb.NewBadRequestError("season number must be non-negative")
+	}
+
+	slog.Debug("Getting season details",
+		"tv_id", tvID,
+		"season_number", seasonNumber,
+	)
+
+	result, err := s.cacheService.GetSeasonDetails(ctx, tvID, seasonNumber)
+	if err != nil {
+		slog.Error("Failed to get season details",
+			"tv_id", tvID,
+			"season_number", seasonNumber,
+			"error", err,
+		)
+		return nil, err
+	}
+
+	slog.Debug("Season details retrieved",
+		"tv_id", tvID,
+		"season_number", seasonNumber,
+		"episodes", len(result.Episodes),
 	)
 
 	return result, nil

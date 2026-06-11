@@ -39,6 +39,9 @@ func (m *mockTMDbServiceForExplore) GetMovieDetails(ctx context.Context, id int)
 func (m *mockTMDbServiceForExplore) GetTVShowDetails(ctx context.Context, id int) (*tmdb.TVShowDetails, error) {
 	return &tmdb.TVShowDetails{}, nil
 }
+func (m *mockTMDbServiceForExplore) GetSeasonDetails(ctx context.Context, id int, seasonNumber int) (*tmdb.SeasonDetails, error) {
+	return &tmdb.SeasonDetails{}, nil
+}
 func (m *mockTMDbServiceForExplore) FindByExternalID(ctx context.Context, id, src string) (*tmdb.FindByExternalIDResponse, error) {
 	return &tmdb.FindByExternalIDResponse{}, nil
 }

@@ -13,6 +13,15 @@ import (
 // ErrEpisodeNotFound is returned when an episode lookup finds no matching record.
 var ErrEpisodeNotFound = errors.New("episode not found")
 
+// episodeSelectColumns is the canonical column list for episode SELECTs. The
+// subtitle_* columns (Story 12-2, migration 025) are included so every episode
+// read carries its per-episode subtitle status for the detail-page accordion.
+const episodeSelectColumns = `
+	id, series_id, season_id, tmdb_id, season_number, episode_number,
+	title, overview, air_date, runtime, still_path,
+	vote_average, file_path, subtitle_status, subtitle_path, subtitle_language,
+	created_at, updated_at`
+
 // EpisodeRepository provides data access operations for episodes
 type EpisodeRepository struct {
 	db *sql.DB
@@ -23,6 +32,31 @@ func NewEpisodeRepository(db *sql.DB) *EpisodeRepository {
 	return &EpisodeRepository{
 		db: db,
 	}
+}
+
+// scanEpisode scans a single row (from *sql.Row or *sql.Rows) into an Episode,
+// matching the column order of episodeSelectColumns.
+func scanEpisode(s interface{ Scan(...any) error }, episode *models.Episode) error {
+	return s.Scan(
+		&episode.ID,
+		&episode.SeriesID,
+		&episode.SeasonID,
+		&episode.TMDbID,
+		&episode.SeasonNumber,
+		&episode.EpisodeNumber,
+		&episode.Title,
+		&episode.Overview,
+		&episode.AirDate,
+		&episode.Runtime,
+		&episode.StillPath,
+		&episode.VoteAverage,
+		&episode.FilePath,
+		&episode.SubtitleStatus,
+		&episode.SubtitlePath,
+		&episode.SubtitleLanguage,
+		&episode.CreatedAt,
+		&episode.UpdatedAt,
+	)
 }
 
 // Create inserts a new episode into the database
@@ -71,33 +105,10 @@ func (r *EpisodeRepository) Create(ctx context.Context, episode *models.Episode)
 
 // FindByID retrieves an episode by its primary key
 func (r *EpisodeRepository) FindByID(ctx context.Context, id string) (*models.Episode, error) {
-	query := `
-		SELECT
-			id, series_id, season_id, tmdb_id, season_number, episode_number,
-			title, overview, air_date, runtime, still_path,
-			vote_average, file_path, created_at, updated_at
-		FROM episodes
-		WHERE id = ?
-	`
+	query := `SELECT ` + episodeSelectColumns + ` FROM episodes WHERE id = ?`
 
 	episode := &models.Episode{}
-	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&episode.ID,
-		&episode.SeriesID,
-		&episode.SeasonID,
-		&episode.TMDbID,
-		&episode.SeasonNumber,
-		&episode.EpisodeNumber,
-		&episode.Title,
-		&episode.Overview,
-		&episode.AirDate,
-		&episode.Runtime,
-		&episode.StillPath,
-		&episode.VoteAverage,
-		&episode.FilePath,
-		&episode.CreatedAt,
-		&episode.UpdatedAt,
-	)
+	err := scanEpisode(r.db.QueryRowContext(ctx, query, id), episode)
 
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("episode with id %s: %w", id, ErrEpisodeNotFound)
@@ -111,15 +122,10 @@ func (r *EpisodeRepository) FindByID(ctx context.Context, id string) (*models.Ep
 
 // FindBySeriesID retrieves all episodes for a series
 func (r *EpisodeRepository) FindBySeriesID(ctx context.Context, seriesID string) ([]models.Episode, error) {
-	query := `
-		SELECT
-			id, series_id, season_id, tmdb_id, season_number, episode_number,
-			title, overview, air_date, runtime, still_path,
-			vote_average, file_path, created_at, updated_at
+	query := `SELECT ` + episodeSelectColumns + `
 		FROM episodes
 		WHERE series_id = ?
-		ORDER BY season_number, episode_number
-	`
+		ORDER BY season_number, episode_number`
 
 	rows, err := r.db.QueryContext(ctx, query, seriesID)
 	if err != nil {
@@ -127,50 +133,15 @@ func (r *EpisodeRepository) FindBySeriesID(ctx context.Context, seriesID string)
 	}
 	defer rows.Close()
 
-	episodes := []models.Episode{}
-	for rows.Next() {
-		episode := models.Episode{}
-		err := rows.Scan(
-			&episode.ID,
-			&episode.SeriesID,
-			&episode.SeasonID,
-			&episode.TMDbID,
-			&episode.SeasonNumber,
-			&episode.EpisodeNumber,
-			&episode.Title,
-			&episode.Overview,
-			&episode.AirDate,
-			&episode.Runtime,
-			&episode.StillPath,
-			&episode.VoteAverage,
-			&episode.FilePath,
-			&episode.CreatedAt,
-			&episode.UpdatedAt,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("failed to scan episode: %w", err)
-		}
-		episodes = append(episodes, episode)
-	}
-
-	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating episodes: %w", err)
-	}
-
-	return episodes, nil
+	return scanEpisodeRows(rows)
 }
 
 // FindBySeasonNumber retrieves all episodes for a specific season of a series
 func (r *EpisodeRepository) FindBySeasonNumber(ctx context.Context, seriesID string, seasonNumber int) ([]models.Episode, error) {
-	query := `
-		SELECT
-			id, series_id, season_id, tmdb_id, season_number, episode_number,
-			title, overview, air_date, runtime, still_path,
-			vote_average, file_path, created_at, updated_at
+	query := `SELECT ` + episodeSelectColumns + `
 		FROM episodes
 		WHERE series_id = ? AND season_number = ?
-		ORDER BY episode_number
-	`
+		ORDER BY episode_number`
 
 	rows, err := r.db.QueryContext(ctx, query, seriesID, seasonNumber)
 	if err != nil {
@@ -178,50 +149,15 @@ func (r *EpisodeRepository) FindBySeasonNumber(ctx context.Context, seriesID str
 	}
 	defer rows.Close()
 
-	episodes := []models.Episode{}
-	for rows.Next() {
-		episode := models.Episode{}
-		err := rows.Scan(
-			&episode.ID,
-			&episode.SeriesID,
-			&episode.SeasonID,
-			&episode.TMDbID,
-			&episode.SeasonNumber,
-			&episode.EpisodeNumber,
-			&episode.Title,
-			&episode.Overview,
-			&episode.AirDate,
-			&episode.Runtime,
-			&episode.StillPath,
-			&episode.VoteAverage,
-			&episode.FilePath,
-			&episode.CreatedAt,
-			&episode.UpdatedAt,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("failed to scan episode: %w", err)
-		}
-		episodes = append(episodes, episode)
-	}
-
-	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating episodes: %w", err)
-	}
-
-	return episodes, nil
+	return scanEpisodeRows(rows)
 }
 
 // FindBySeasonID retrieves all episodes for a specific season
 func (r *EpisodeRepository) FindBySeasonID(ctx context.Context, seasonID string) ([]models.Episode, error) {
-	query := `
-		SELECT
-			id, series_id, season_id, tmdb_id, season_number, episode_number,
-			title, overview, air_date, runtime, still_path,
-			vote_average, file_path, created_at, updated_at
+	query := `SELECT ` + episodeSelectColumns + `
 		FROM episodes
 		WHERE season_id = ?
-		ORDER BY episode_number
-	`
+		ORDER BY episode_number`
 
 	rows, err := r.db.QueryContext(ctx, query, seasonID)
 	if err != nil {
@@ -229,33 +165,21 @@ func (r *EpisodeRepository) FindBySeasonID(ctx context.Context, seasonID string)
 	}
 	defer rows.Close()
 
+	return scanEpisodeRows(rows)
+}
+
+// scanEpisodeRows iterates a *sql.Rows result set into a slice of episodes.
+func scanEpisodeRows(rows *sql.Rows) ([]models.Episode, error) {
 	episodes := []models.Episode{}
 	for rows.Next() {
 		episode := models.Episode{}
-		err := rows.Scan(
-			&episode.ID,
-			&episode.SeriesID,
-			&episode.SeasonID,
-			&episode.TMDbID,
-			&episode.SeasonNumber,
-			&episode.EpisodeNumber,
-			&episode.Title,
-			&episode.Overview,
-			&episode.AirDate,
-			&episode.Runtime,
-			&episode.StillPath,
-			&episode.VoteAverage,
-			&episode.FilePath,
-			&episode.CreatedAt,
-			&episode.UpdatedAt,
-		)
-		if err != nil {
+		if err := scanEpisode(rows, &episode); err != nil {
 			return nil, fmt.Errorf("failed to scan episode: %w", err)
 		}
 		episodes = append(episodes, episode)
 	}
 
-	if err = rows.Err(); err != nil {
+	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("error iterating episodes: %w", err)
 	}
 
@@ -264,33 +188,12 @@ func (r *EpisodeRepository) FindBySeasonID(ctx context.Context, seasonID string)
 
 // FindBySeriesSeasonEpisode retrieves an episode by series ID, season, and episode number
 func (r *EpisodeRepository) FindBySeriesSeasonEpisode(ctx context.Context, seriesID string, season, episode int) (*models.Episode, error) {
-	query := `
-		SELECT
-			id, series_id, season_id, tmdb_id, season_number, episode_number,
-			title, overview, air_date, runtime, still_path,
-			vote_average, file_path, created_at, updated_at
+	query := `SELECT ` + episodeSelectColumns + `
 		FROM episodes
-		WHERE series_id = ? AND season_number = ? AND episode_number = ?
-	`
+		WHERE series_id = ? AND season_number = ? AND episode_number = ?`
 
 	ep := &models.Episode{}
-	err := r.db.QueryRowContext(ctx, query, seriesID, season, episode).Scan(
-		&ep.ID,
-		&ep.SeriesID,
-		&ep.SeasonID,
-		&ep.TMDbID,
-		&ep.SeasonNumber,
-		&ep.EpisodeNumber,
-		&ep.Title,
-		&ep.Overview,
-		&ep.AirDate,
-		&ep.Runtime,
-		&ep.StillPath,
-		&ep.VoteAverage,
-		&ep.FilePath,
-		&ep.CreatedAt,
-		&ep.UpdatedAt,
-	)
+	err := scanEpisode(r.db.QueryRowContext(ctx, query, seriesID, season, episode), ep)
 
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("episode S%02dE%02d for series %s: %w", season, episode, seriesID, ErrEpisodeNotFound)
@@ -361,6 +264,52 @@ func (r *EpisodeRepository) Update(ctx context.Context, episode *models.Episode)
 	}
 
 	return nil
+}
+
+// UpdateEpisodeSubtitleStatus updates only the subtitle tracking columns for an
+// episode (Story 12-2 Task 5.3). The subtitle engine (Epic 8, currently
+// series-level) will call this once per-episode subtitle search is implemented;
+// this story writes the status that the detail-page accordion displays.
+func (r *EpisodeRepository) UpdateEpisodeSubtitleStatus(ctx context.Context, episodeID string, status models.SubtitleStatus, path, language string) error {
+	if episodeID == "" {
+		return fmt.Errorf("episode id cannot be empty")
+	}
+
+	query := `
+		UPDATE episodes
+		SET subtitle_status = ?, subtitle_path = ?, subtitle_language = ?, updated_at = ?
+		WHERE id = ?
+	`
+
+	result, err := r.db.ExecContext(ctx, query,
+		string(status),
+		newNullableString(path),
+		newNullableString(language),
+		time.Now(),
+		episodeID,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to update episode subtitle status: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("episode with id %s: %w", episodeID, ErrEpisodeNotFound)
+	}
+
+	return nil
+}
+
+// newNullableString returns a sql-friendly value: NULL for empty strings, the
+// string otherwise. Keeps subtitle_path/subtitle_language NULL when unset.
+func newNullableString(s string) interface{} {
+	if s == "" {
+		return nil
+	}
+	return s
 }
 
 // Delete removes an episode from the database by ID
