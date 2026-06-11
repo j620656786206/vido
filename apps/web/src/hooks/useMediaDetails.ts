@@ -7,6 +7,7 @@ import type {
   LibrarySeries,
   SeasonSummary,
   SeasonEpisodesResponse,
+  RecommendationsResponse,
 } from '../types/library';
 
 // Query key factory for media details
@@ -21,6 +22,8 @@ export const detailKeys = {
   seasons: (seriesId: string) => [...detailKeys.all, 'seasons', seriesId] as const,
   seasonEpisodes: (seriesId: string, seasonNumber: number) =>
     [...detailKeys.all, 'season-episodes', seriesId, seasonNumber] as const,
+  recommendations: (tmdbId: number, type: 'movie' | 'tv') =>
+    [...detailKeys.all, 'recommendations', type, tmdbId] as const,
 };
 
 /**
@@ -47,6 +50,27 @@ export function useSeasonEpisodes(seriesId: string, seasonNumber: number, enable
     queryFn: () => libraryService.getSeasonEpisodes(seriesId, seasonNumber),
     staleTime: 60 * 60 * 1000, // 1h — episodes change infrequently
     enabled: enabled && !!seriesId,
+  });
+}
+
+/**
+ * Hook to fetch related-content recommendations for a title (Story 12-3).
+ * Keyed by the TMDB numeric id (available in both the local and TMDb detail
+ * views). 24h staleTime matches the backend cache TTL — recommendations are
+ * stable. Gated on a valid TMDB id so library items without a tmdbId never fetch.
+ * @param tmdbId - TMDB numeric id
+ * @param type - 'movie' | 'tv'
+ * @param enabled - extra gate (e.g. only when the section is on a detail page)
+ */
+export function useRecommendations(tmdbId: number, type: 'movie' | 'tv', enabled: boolean) {
+  return useQuery<RecommendationsResponse, Error>({
+    queryKey: detailKeys.recommendations(tmdbId, type),
+    queryFn: () =>
+      type === 'movie'
+        ? libraryService.getMovieRecommendations(tmdbId)
+        : libraryService.getTVRecommendations(tmdbId),
+    staleTime: 24 * 60 * 60 * 1000, // 24h — matches backend cache TTL
+    enabled: enabled && tmdbId > 0,
   });
 }
 

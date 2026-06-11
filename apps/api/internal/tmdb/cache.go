@@ -57,6 +57,14 @@ type CacheServiceInterface interface {
 	DiscoverMovies(ctx context.Context, params DiscoverParams) (*SearchResultMovies, error)
 	// DiscoverTVShows queries /discover/tv with caching at TrendingDiscoverCacheTTL
 	DiscoverTVShows(ctx context.Context, params DiscoverParams) (*SearchResultTVShows, error)
+	// GetMovieRecommendations returns recommended movies with caching (24h TTL)
+	GetMovieRecommendations(ctx context.Context, movieID int) (*SearchResultMovies, error)
+	// GetMovieSimilar returns similar movies with caching (24h TTL)
+	GetMovieSimilar(ctx context.Context, movieID int) (*SearchResultMovies, error)
+	// GetTVRecommendations returns recommended TV shows with caching (24h TTL)
+	GetTVRecommendations(ctx context.Context, tvID int) (*SearchResultTVShows, error)
+	// GetTVSimilar returns similar TV shows with caching (24h TTL)
+	GetTVSimilar(ctx context.Context, tvID int) (*SearchResultTVShows, error)
 }
 
 // Compile-time interface verification
@@ -474,5 +482,130 @@ func (s *CacheService) GetTVShowDetails(ctx context.Context, tvID int) (*TVShowD
 		}
 	}
 
+	return result, nil
+}
+
+// GetMovieRecommendations returns recommended movies with caching (24h TTL).
+// Cache key format: tmdb:recommendations:movie:{id}:v1 (Rule 27 Pillar 2 —
+// {source}:{type}:{id}:{version}; checked before the rate limiter).
+func (s *CacheService) GetMovieRecommendations(ctx context.Context, movieID int) (*SearchResultMovies, error) {
+	cacheKey := fmt.Sprintf("tmdb:recommendations:movie:%d:v1", movieID)
+
+	cached, err := s.cache.Get(ctx, cacheKey)
+	if err == nil && cached != nil {
+		var result SearchResultMovies
+		if err := json.Unmarshal([]byte(cached.Value), &result); err == nil {
+			slog.Debug("Cache hit", "key", cacheKey, "type", CacheTypeTMDb)
+			return &result, nil
+		}
+		slog.Warn("Failed to unmarshal cached data", "key", cacheKey, "error", err)
+	}
+
+	slog.Debug("Cache miss", "key", cacheKey, "type", CacheTypeTMDb)
+	result, lang, err := s.client.GetMovieRecommendationsWithFallback(ctx, movieID)
+	if err != nil {
+		return nil, err
+	}
+	slog.Debug("TMDb movie recommendations completed",
+		"movie_id", movieID, "language", lang, "results", len(result.Results))
+
+	if data, err := json.Marshal(result); err == nil {
+		if err := s.cache.Set(ctx, cacheKey, string(data), CacheTypeTMDb, s.ttl); err != nil {
+			slog.Warn("Failed to cache movie recommendations", "key", cacheKey, "error", err)
+		}
+	}
+	return result, nil
+}
+
+// GetMovieSimilar returns similar movies with caching (24h TTL).
+// Cache key format: tmdb:similar:movie:{id}:v1
+func (s *CacheService) GetMovieSimilar(ctx context.Context, movieID int) (*SearchResultMovies, error) {
+	cacheKey := fmt.Sprintf("tmdb:similar:movie:%d:v1", movieID)
+
+	cached, err := s.cache.Get(ctx, cacheKey)
+	if err == nil && cached != nil {
+		var result SearchResultMovies
+		if err := json.Unmarshal([]byte(cached.Value), &result); err == nil {
+			slog.Debug("Cache hit", "key", cacheKey, "type", CacheTypeTMDb)
+			return &result, nil
+		}
+		slog.Warn("Failed to unmarshal cached data", "key", cacheKey, "error", err)
+	}
+
+	slog.Debug("Cache miss", "key", cacheKey, "type", CacheTypeTMDb)
+	result, lang, err := s.client.GetMovieSimilarWithFallback(ctx, movieID)
+	if err != nil {
+		return nil, err
+	}
+	slog.Debug("TMDb similar movies completed",
+		"movie_id", movieID, "language", lang, "results", len(result.Results))
+
+	if data, err := json.Marshal(result); err == nil {
+		if err := s.cache.Set(ctx, cacheKey, string(data), CacheTypeTMDb, s.ttl); err != nil {
+			slog.Warn("Failed to cache similar movies", "key", cacheKey, "error", err)
+		}
+	}
+	return result, nil
+}
+
+// GetTVRecommendations returns recommended TV shows with caching (24h TTL).
+// Cache key format: tmdb:recommendations:tv:{id}:v1
+func (s *CacheService) GetTVRecommendations(ctx context.Context, tvID int) (*SearchResultTVShows, error) {
+	cacheKey := fmt.Sprintf("tmdb:recommendations:tv:%d:v1", tvID)
+
+	cached, err := s.cache.Get(ctx, cacheKey)
+	if err == nil && cached != nil {
+		var result SearchResultTVShows
+		if err := json.Unmarshal([]byte(cached.Value), &result); err == nil {
+			slog.Debug("Cache hit", "key", cacheKey, "type", CacheTypeTMDb)
+			return &result, nil
+		}
+		slog.Warn("Failed to unmarshal cached data", "key", cacheKey, "error", err)
+	}
+
+	slog.Debug("Cache miss", "key", cacheKey, "type", CacheTypeTMDb)
+	result, lang, err := s.client.GetTVRecommendationsWithFallback(ctx, tvID)
+	if err != nil {
+		return nil, err
+	}
+	slog.Debug("TMDb TV recommendations completed",
+		"tv_id", tvID, "language", lang, "results", len(result.Results))
+
+	if data, err := json.Marshal(result); err == nil {
+		if err := s.cache.Set(ctx, cacheKey, string(data), CacheTypeTMDb, s.ttl); err != nil {
+			slog.Warn("Failed to cache TV recommendations", "key", cacheKey, "error", err)
+		}
+	}
+	return result, nil
+}
+
+// GetTVSimilar returns similar TV shows with caching (24h TTL).
+// Cache key format: tmdb:similar:tv:{id}:v1
+func (s *CacheService) GetTVSimilar(ctx context.Context, tvID int) (*SearchResultTVShows, error) {
+	cacheKey := fmt.Sprintf("tmdb:similar:tv:%d:v1", tvID)
+
+	cached, err := s.cache.Get(ctx, cacheKey)
+	if err == nil && cached != nil {
+		var result SearchResultTVShows
+		if err := json.Unmarshal([]byte(cached.Value), &result); err == nil {
+			slog.Debug("Cache hit", "key", cacheKey, "type", CacheTypeTMDb)
+			return &result, nil
+		}
+		slog.Warn("Failed to unmarshal cached data", "key", cacheKey, "error", err)
+	}
+
+	slog.Debug("Cache miss", "key", cacheKey, "type", CacheTypeTMDb)
+	result, lang, err := s.client.GetTVSimilarWithFallback(ctx, tvID)
+	if err != nil {
+		return nil, err
+	}
+	slog.Debug("TMDb similar TV shows completed",
+		"tv_id", tvID, "language", lang, "results", len(result.Results))
+
+	if data, err := json.Marshal(result); err == nil {
+		if err := s.cache.Set(ctx, cacheKey, string(data), CacheTypeTMDb, s.ttl); err != nil {
+			slog.Warn("Failed to cache similar TV shows", "key", cacheKey, "error", err)
+		}
+	}
 	return result, nil
 }

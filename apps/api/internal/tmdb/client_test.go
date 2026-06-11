@@ -156,6 +156,51 @@ func TestClient_Get_Success(t *testing.T) {
 	assert.Empty(t, result.Results)
 }
 
+// Story 12-3 — client wrapper endpoint-path tests.
+func TestClient_GetMovieRecommendations_HitsEndpoint(t *testing.T) {
+	var gotPath string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"page":1,"results":[{"id":11,"title":"Rec"}],"total_pages":1,"total_results":1}`))
+	}))
+	defer server.Close()
+
+	client := NewClient(ClientConfig{APIKey: "k", BaseURL: server.URL})
+	result, err := client.GetMovieRecommendations(context.Background(), 603)
+
+	require.NoError(t, err)
+	assert.Equal(t, "/movie/603/recommendations", gotPath)
+	require.Len(t, result.Results, 1)
+	assert.Equal(t, 11, result.Results[0].ID)
+}
+
+func TestClient_GetTVSimilar_HitsEndpoint(t *testing.T) {
+	var gotPath string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"page":1,"results":[{"id":22,"name":"Sim"}],"total_pages":1,"total_results":1}`))
+	}))
+	defer server.Close()
+
+	client := NewClient(ClientConfig{APIKey: "k", BaseURL: server.URL})
+	result, err := client.GetTVSimilar(context.Background(), 1396)
+
+	require.NoError(t, err)
+	assert.Equal(t, "/tv/1396/similar", gotPath)
+	require.Len(t, result.Results, 1)
+	assert.Equal(t, 22, result.Results[0].ID)
+}
+
+func TestClient_GetMovieRecommendations_RejectsBadID(t *testing.T) {
+	client := NewClient(ClientConfig{APIKey: "k"})
+	_, err := client.GetMovieRecommendations(context.Background(), 0)
+	require.Error(t, err)
+}
+
 func TestClient_Get_HTTPError(t *testing.T) {
 	tests := []struct {
 		name           string

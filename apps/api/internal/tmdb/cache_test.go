@@ -109,6 +109,63 @@ type MockFallbackClient struct {
 	DiscoverTVShowsResponse *SearchResultTVShows
 	DiscoverTVShowsError    error
 	DiscoverTVShowsCalled   int
+	// Story 12-3 recommendations/similar
+	MovieRecommendationsResponse *SearchResultMovies
+	MovieRecommendationsError    error
+	MovieRecommendationsCalled   int
+	MovieSimilarResponse         *SearchResultMovies
+	MovieSimilarError            error
+	MovieSimilarCalled           int
+	TVRecommendationsResponse    *SearchResultTVShows
+	TVRecommendationsError       error
+	TVRecommendationsCalled      int
+	TVSimilarResponse            *SearchResultTVShows
+	TVSimilarError               error
+	TVSimilarCalled              int
+}
+
+func (m *MockFallbackClient) GetMovieRecommendationsWithFallback(ctx context.Context, movieID int) (*SearchResultMovies, string, error) {
+	m.MovieRecommendationsCalled++
+	if m.MovieRecommendationsError != nil {
+		return nil, "", m.MovieRecommendationsError
+	}
+	if m.MovieRecommendationsResponse != nil {
+		return m.MovieRecommendationsResponse, "zh-TW", nil
+	}
+	return &SearchResultMovies{Results: []Movie{}}, "zh-TW", nil
+}
+
+func (m *MockFallbackClient) GetMovieSimilarWithFallback(ctx context.Context, movieID int) (*SearchResultMovies, string, error) {
+	m.MovieSimilarCalled++
+	if m.MovieSimilarError != nil {
+		return nil, "", m.MovieSimilarError
+	}
+	if m.MovieSimilarResponse != nil {
+		return m.MovieSimilarResponse, "zh-TW", nil
+	}
+	return &SearchResultMovies{Results: []Movie{}}, "zh-TW", nil
+}
+
+func (m *MockFallbackClient) GetTVRecommendationsWithFallback(ctx context.Context, tvID int) (*SearchResultTVShows, string, error) {
+	m.TVRecommendationsCalled++
+	if m.TVRecommendationsError != nil {
+		return nil, "", m.TVRecommendationsError
+	}
+	if m.TVRecommendationsResponse != nil {
+		return m.TVRecommendationsResponse, "zh-TW", nil
+	}
+	return &SearchResultTVShows{Results: []TVShow{}}, "zh-TW", nil
+}
+
+func (m *MockFallbackClient) GetTVSimilarWithFallback(ctx context.Context, tvID int) (*SearchResultTVShows, string, error) {
+	m.TVSimilarCalled++
+	if m.TVSimilarError != nil {
+		return nil, "", m.TVSimilarError
+	}
+	if m.TVSimilarResponse != nil {
+		return m.TVSimilarResponse, "zh-TW", nil
+	}
+	return &SearchResultTVShows{Results: []TVShow{}}, "zh-TW", nil
 }
 
 func (m *MockFallbackClient) SearchMoviesWithFallback(ctx context.Context, query string, page int) (*SearchResultMovies, string, error) {
@@ -556,6 +613,54 @@ func TestCacheService_GetSeasonDetails(t *testing.T) {
 			}
 		})
 	}
+}
+
+// --- Story 12-3 recommendations/similar cache tests ---
+
+func TestCacheService_GetMovieRecommendations_CacheMissThenHit(t *testing.T) {
+	repo := NewMockCacheRepository()
+	fbClient := &MockFallbackClient{
+		MovieRecommendationsResponse: &SearchResultMovies{
+			Results: []Movie{{ID: 1, Title: "Rec", Overview: "ov"}},
+		},
+	}
+	service := NewCacheService(fbClient, repo, CacheServiceConfig{})
+
+	// Cache miss → fetch from fallback client + store under the v1 key.
+	r1, err := service.GetMovieRecommendations(context.Background(), 603)
+	require.NoError(t, err)
+	assert.Len(t, r1.Results, 1)
+	assert.Equal(t, 1, fbClient.MovieRecommendationsCalled)
+
+	cached, _ := repo.Get(context.Background(), "tmdb:recommendations:movie:603:v1")
+	require.NotNil(t, cached, "expected entry under tmdb:recommendations:movie:603:v1")
+
+	// Cache hit → no second fallback call.
+	r2, err := service.GetMovieRecommendations(context.Background(), 603)
+	require.NoError(t, err)
+	assert.Len(t, r2.Results, 1)
+	assert.Equal(t, 1, fbClient.MovieRecommendationsCalled)
+}
+
+func TestCacheService_GetTVSimilar_CacheKeyAndMissThenHit(t *testing.T) {
+	repo := NewMockCacheRepository()
+	fbClient := &MockFallbackClient{
+		TVSimilarResponse: &SearchResultTVShows{
+			Results: []TVShow{{ID: 7, Name: "Sim", Overview: "ov"}},
+		},
+	}
+	service := NewCacheService(fbClient, repo, CacheServiceConfig{})
+
+	_, err := service.GetTVSimilar(context.Background(), 1396)
+	require.NoError(t, err)
+	assert.Equal(t, 1, fbClient.TVSimilarCalled)
+
+	cached, _ := repo.Get(context.Background(), "tmdb:similar:tv:1396:v1")
+	require.NotNil(t, cached, "expected entry under tmdb:similar:tv:1396:v1")
+
+	_, err = service.GetTVSimilar(context.Background(), 1396)
+	require.NoError(t, err)
+	assert.Equal(t, 1, fbClient.TVSimilarCalled) // served from cache
 }
 
 func TestCacheService_CacheSetError(t *testing.T) {

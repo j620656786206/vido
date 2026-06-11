@@ -141,6 +141,25 @@ export interface SeasonEpisodesResponse {
   episodes: MergedEpisode[];
 }
 
+// Story 12-3 — related-content recommendations. A normalized tile shape shared
+// across movie/TV recommendations (backend RecommendationItem; camelCased via
+// snakeToCamel at the fetchApi boundary, Rule 18).
+export interface RecommendationItem {
+  id: number;
+  mediaType: 'movie' | 'tv';
+  title: string;
+  posterPath: string | null;
+  releaseDate?: string;
+  voteAverage?: number;
+  isOwned: boolean;
+}
+
+export interface RecommendationsResponse {
+  results: RecommendationItem[];
+  /** Which TMDB endpoint filled the list: "recommendations" | "similar" | "". */
+  source: string;
+}
+
 export interface LibraryItem {
   type: 'movie' | 'series';
   movie?: LibraryMovie;

@@ -17,8 +17,10 @@ import {
   useMovieCredits,
   useTVShowCredits,
   useSeriesSeasons,
+  useRecommendations,
 } from '../../hooks/useMediaDetails';
 import { SeasonAccordion } from '../../components/media/SeasonAccordion';
+import { RelatedContent } from '../../components/media/RelatedContent';
 import { useOwnedMedia } from '../../hooks/useOwnedMedia';
 import { useDoubanRating } from '../../hooks/useDoubanRating';
 import type { MovieDetails, TVShowDetails } from '../../types/tmdb';
@@ -125,6 +127,11 @@ function LocalDetailView({ type, id }: { type: ValidMediaType; id: string }) {
   // Story 12-2 — season summaries for the TV accordion (cached SeasonsJSON,
   // no TMDB call). Gated on TV + tmdbId > 0 (AC #1).
   const seasonsQuery = useSeriesSeasons(id, !isMovie && tmdbId > 0);
+
+  // Story 12-3 — related-content recommendations, keyed by the TMDB id. Loads
+  // with the page but as its own query so a slow/failed fetch never blocks the
+  // core metadata render (per-section isolation, AC #6/#9).
+  const recsQuery = useRecommendations(tmdbId, isMovie ? 'movie' : 'tv', tmdbId > 0);
 
   const hasMetadata = !!localData?.tmdbId && localData.tmdbId > 0;
   const posterUrl = getImageUrl(localData?.posterPath ?? null, 'w500');
@@ -311,6 +318,18 @@ function LocalDetailView({ type, id }: { type: ValidMediaType; id: string }) {
                   </div>
                 )}
 
+                {/* Related content recommendations (Story 12-3) */}
+                {tmdbId > 0 && (
+                  <div className="mt-8">
+                    <RelatedContent
+                      items={recsQuery.data?.results ?? []}
+                      isLoading={recsQuery.isLoading}
+                      isError={recsQuery.isError}
+                      onRetry={() => recsQuery.refetch()}
+                    />
+                  </div>
+                )}
+
                 {/* Season/Episode accordion (Story 12-2, TV only) */}
                 {!isMovie && (
                   <div className="mt-8">
@@ -401,6 +420,9 @@ export function TMDbDetailView({ type, tmdbId }: { type: ValidMediaType; tmdbId:
   const tvDetails = useTVShowDetails(!isMovie ? tmdbId : 0);
   const movieCredits = useMovieCredits(isMovie ? tmdbId : 0);
   const tvCredits = useTVShowCredits(!isMovie ? tmdbId : 0);
+
+  // Story 12-3 — related-content recommendations for this TMDB title.
+  const recsQuery = useRecommendations(tmdbId, isMovie ? 'movie' : 'tv', tmdbId > 0);
 
   // bugfix-10-1 CR L3 — narrow per branch via the per-type query result so we
   // avoid the `data as MovieDetails` / `data as TVShowDetails` pair below.
@@ -511,6 +533,18 @@ export function TMDbDetailView({ type, tmdbId }: { type: ValidMediaType; tmdbId:
             )}
           </div>
         </div>
+
+        {/* Related content recommendations (Story 12-3) — final full-width section */}
+        {tmdbId > 0 && (
+          <div className="mt-10">
+            <RelatedContent
+              items={recsQuery.data?.results ?? []}
+              isLoading={recsQuery.isLoading}
+              isError={recsQuery.isError}
+              onRetry={() => recsQuery.refetch()}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

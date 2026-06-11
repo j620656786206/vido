@@ -1,6 +1,6 @@
 # Story 12.3: Related Content Recommendations — TMDB Recommendations/Similar with "已有" Badges
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -26,50 +26,50 @@ so that I can discover similar content and immediately see what is already in my
 
 ### Backend
 
-- [ ] **Task 1: TMDB client — recommendations + similar endpoint wrappers** (AC: #1, #4)
-  - [ ] 1.1 Add to `apps/api/internal/tmdb/movies.go`: `GetMovieRecommendations(ctx, movieID int) (*SearchResultMovies, error)` and `GetMovieSimilar(ctx, movieID int) (*SearchResultMovies, error)` (+ `…WithLanguage` variants threaded through the language fallback chain, mirroring the `GetMovieDetails`/`GetMovieDetailsWithLanguage` pattern at `movies.go:47-74`). Endpoints: `/movie/{id}/recommendations`, `/movie/{id}/similar`.
-  - [ ] 1.2 Add to `apps/api/internal/tmdb/tv.go`: `GetTVRecommendations(ctx, tvID int) (*SearchResultTVShows, error)` and `GetTVSimilar(ctx, tvID int) (*SearchResultTVShows, error)` (+ `…WithLanguage`). Endpoints: `/tv/{id}/recommendations`, `/tv/{id}/similar`.
-  - [ ] 1.3 **Reuse** existing response types — TMDB returns `{page, results[], total_pages, total_results}`, exactly `SearchResultMovies` / `SearchResultTVShows` (`tmdb/types.go:75-89`). Do NOT define new list types; tiles use the lightweight `Movie` / `TVShow` items (not the `*Details` variants).
-  - [ ] 1.4 Thread all four through the chain exactly as 12-2 threaded `GetSeasonDetails`: `ClientInterface` (`client.go`) → `LanguageFallbackClient` `…WithFallback` (`fallback.go`) → `CacheService` cached wrapper (`cache.go`, 24h `DefaultCacheTTL`) → `TMDbService` (`services/tmdb_service.go`). Cache keys (Rule 27 Pillar 2, `{source}:{type}:{id}:{version}`): `tmdb:recommendations:movie:{id}:v1`, `tmdb:similar:movie:{id}:v1`, and `…:tv:…` equivalents.
-  - [ ] 1.5 Rate limiting (Rule 27 Pillar 1): these ride the **existing shared TMDB limiter** (`client.go:16-23` `requestsPerInterval=40`, `rateLimitInterval=10s`) — ZERO new limiter, `limiter.Wait(ctx)` already first line of `doRequest`.
-  - [ ] 1.6 Tests: client wrapper tests + fallback mock + cache test (mirror `tmdb/fallback_test.go`, `cache_test.go` additions from 12-2).
+- [x] **Task 1: TMDB client — recommendations + similar endpoint wrappers** (AC: #1, #4)
+  - [x] 1.1 Add to `apps/api/internal/tmdb/movies.go`: `GetMovieRecommendations(ctx, movieID int) (*SearchResultMovies, error)` and `GetMovieSimilar(ctx, movieID int) (*SearchResultMovies, error)` (+ `…WithLanguage` variants threaded through the language fallback chain, mirroring the `GetMovieDetails`/`GetMovieDetailsWithLanguage` pattern at `movies.go:47-74`). Endpoints: `/movie/{id}/recommendations`, `/movie/{id}/similar`.
+  - [x] 1.2 Add to `apps/api/internal/tmdb/tv.go`: `GetTVRecommendations(ctx, tvID int) (*SearchResultTVShows, error)` and `GetTVSimilar(ctx, tvID int) (*SearchResultTVShows, error)` (+ `…WithLanguage`). Endpoints: `/tv/{id}/recommendations`, `/tv/{id}/similar`.
+  - [x] 1.3 **Reuse** existing response types — TMDB returns `{page, results[], total_pages, total_results}`, exactly `SearchResultMovies` / `SearchResultTVShows` (`tmdb/types.go:75-89`). Do NOT define new list types; tiles use the lightweight `Movie` / `TVShow` items (not the `*Details` variants).
+  - [x] 1.4 Thread all four through the chain exactly as 12-2 threaded `GetSeasonDetails`: `ClientInterface` (`client.go`) → `LanguageFallbackClient` `…WithFallback` (`fallback.go`) → `CacheService` cached wrapper (`cache.go`, 24h `DefaultCacheTTL`) → `TMDbService` (`services/tmdb_service.go`). Cache keys (Rule 27 Pillar 2, `{source}:{type}:{id}:{version}`): `tmdb:recommendations:movie:{id}:v1`, `tmdb:similar:movie:{id}:v1`, and `…:tv:…` equivalents.
+  - [x] 1.5 Rate limiting (Rule 27 Pillar 1): these ride the **existing shared TMDB limiter** (`client.go:16-23` `requestsPerInterval=40`, `rateLimitInterval=10s`) — ZERO new limiter, `limiter.Wait(ctx)` already first line of `doRequest`.
+  - [x] 1.6 Tests: client wrapper tests + fallback mock + cache test (mirror `tmdb/fallback_test.go`, `cache_test.go` additions from 12-2).
 
-- [ ] **Task 2: RecommendationService — fallback chain + ownership annotation** (AC: #3, #4, #5)
-  - [ ] 2.1 Create `apps/api/internal/services/recommendation_service.go` with `RecommendationService` holding deps: `TMDbServiceInterface` + `MovieRepositoryInterface` + `SeriesRepositoryInterface` (Rule 4 — handler→service→repo; the service owns the cross-domain ownership join so the handler never touches a repo directly).
-  - [ ] 2.2 `GetMovieRecommendations(ctx, tmdbID int) (*RecommendationResult, error)`: call `tmdbService.GetMovieRecommendations`; **if `len(results)==0`, fall back to `GetMovieSimilar`** (AC #4); record `Source` = `"recommendations"` | `"similar"` | `""` (empty).
-  - [ ] 2.3 `GetTVRecommendations(ctx, tmdbID int) (*RecommendationResult, error)`: same shape for TV.
-  - [ ] 2.4 Ownership annotation: collect the result tmdb ids, call `movieRepo.FindOwnedTMDbIDs(ctx, ids)` (for movie type) or `seriesRepo.FindOwnedTMDbIDs(ctx, ids)` (for tv type) — **single batched query** (`movie_repository.go:907-968` / `series_repository.go:855-915`, Story 10-4). Build an owned-id set, stamp `IsOwned` per item. **This is REUSE of the Story 10-4 mechanism, not new drift.**
-  - [ ] 2.5 Define `RecommendationItem` DTO (normalized across movie/TV: `ID int`, `MediaType string` `"movie"|"tv"`, `Title string` (TV → `Name`), `PosterPath *string`, `ReleaseDate string` (TV → `FirstAirDate`), `VoteAverage float64`, `IsOwned bool`) and `RecommendationResult { Items []RecommendationItem; Source string }`. Cap the rendered set at **18 items** (slice the TMDB page) to bound payload + ownership-lookup placeholders.
-  - [ ] 2.6 Graceful degradation (Rule 27 Pillar 3): a TMDB error returns a Rule-7 `AppError` (reuse `TMDB_*` — `TMDB_TIMEOUT`/`TMDB_NOT_FOUND`/`TMDB_RATE_LIMIT`; **NO new prefix** per ADR Pillar 4); an ownership-lookup error MUST NOT fail the whole call — log and degrade to `IsOwned=false` for all (recommendations still render, just without badges). Service + ownership-merge unit tests.
+- [x] **Task 2: RecommendationService — fallback chain + ownership annotation** (AC: #3, #4, #5)
+  - [x] 2.1 Create `apps/api/internal/services/recommendation_service.go` with `RecommendationService` holding deps: `TMDbServiceInterface` + `MovieRepositoryInterface` + `SeriesRepositoryInterface` (Rule 4 — handler→service→repo; the service owns the cross-domain ownership join so the handler never touches a repo directly).
+  - [x] 2.2 `GetMovieRecommendations(ctx, tmdbID int) (*RecommendationResult, error)`: call `tmdbService.GetMovieRecommendations`; **if `len(results)==0`, fall back to `GetMovieSimilar`** (AC #4); record `Source` = `"recommendations"` | `"similar"` | `""` (empty).
+  - [x] 2.3 `GetTVRecommendations(ctx, tmdbID int) (*RecommendationResult, error)`: same shape for TV.
+  - [x] 2.4 Ownership annotation: collect the result tmdb ids, call `movieRepo.FindOwnedTMDbIDs(ctx, ids)` (for movie type) or `seriesRepo.FindOwnedTMDbIDs(ctx, ids)` (for tv type) — **single batched query** (`movie_repository.go:907-968` / `series_repository.go:855-915`, Story 10-4). Build an owned-id set, stamp `IsOwned` per item. **This is REUSE of the Story 10-4 mechanism, not new drift.**
+  - [x] 2.5 Define `RecommendationItem` DTO (normalized across movie/TV: `ID int`, `MediaType string` `"movie"|"tv"`, `Title string` (TV → `Name`), `PosterPath *string`, `ReleaseDate string` (TV → `FirstAirDate`), `VoteAverage float64`, `IsOwned bool`) and `RecommendationResult { Items []RecommendationItem; Source string }`. Cap the rendered set at **18 items** (slice the TMDB page) to bound payload + ownership-lookup placeholders.
+  - [x] 2.6 Graceful degradation (Rule 27 Pillar 3): a TMDB error returns a Rule-7 `AppError` (reuse `TMDB_*` — `TMDB_TIMEOUT`/`TMDB_NOT_FOUND`/`TMDB_RATE_LIMIT`; **NO new prefix** per ADR Pillar 4); an ownership-lookup error MUST NOT fail the whole call — log and degrade to `IsOwned=false` for all (recommendations still render, just without badges). Service + ownership-merge unit tests.
 
-- [ ] **Task 3: Handler endpoints + routes + wiring** (AC: #1, #5, #6)
-  - [ ] 3.1 Add handler methods to the TMDB handler (`apps/api/internal/handlers/tmdb_handler.go`, sibling to the existing `GetMovieVideos` at `:440`): `GetMovieRecommendations`, `GetTVRecommendations`. Parse `:id` (TMDB numeric), validate `> 0`, call `RecommendationService`, return `{ "success": true, "data": { "results": [...], "source": "..." } }` (Rule 3).
-  - [ ] 3.2 Register routes alongside the existing `…/videos` routes: `GET /api/v1/tmdb/movies/:id/recommendations` and `GET /api/v1/tmdb/tv/:id/recommendations`. **Rule 15 self-check**: confirm the exact existing TV videos route prefix (`/api/v1/tmdb/tv/:id/videos` vs `/tmdb/tvshows/...`) by grepping the handler's `RegisterRoutes` + `cmd/api/main.go`, and match it — do NOT assume.
-  - [ ] 3.3 Wire `RecommendationService` construction in `apps/api/cmd/api/main.go` (inject `TMDbService`, `MovieRepository`, `SeriesRepository`); wire the handler dependency (Rule 15 — handler/service registered in DI, route added to router).
-  - [ ] 3.4 Swaggo annotations on both new endpoints (Rule 15 Swagger sync); handler tests (success, empty→similar-fallback, TMDB-error→fail-soft, ownership-badge present).
+- [x] **Task 3: Handler endpoints + routes + wiring** (AC: #1, #5, #6)
+  - [x] 3.1 Add handler methods to the TMDB handler (`apps/api/internal/handlers/tmdb_handler.go`, sibling to the existing `GetMovieVideos` at `:440`): `GetMovieRecommendations`, `GetTVRecommendations`. Parse `:id` (TMDB numeric), validate `> 0`, call `RecommendationService`, return `{ "success": true, "data": { "results": [...], "source": "..." } }` (Rule 3).
+  - [x] 3.2 Register routes alongside the existing `…/videos` routes: `GET /api/v1/tmdb/movies/:id/recommendations` and `GET /api/v1/tmdb/tv/:id/recommendations`. **Rule 15 self-check**: confirmed the existing TV videos route prefix is `/api/v1/tmdb/tv/:id/videos` (handler `RegisterRoutes` `:475`) — new TV route matches `/tmdb/tv/:id/recommendations`, NOT `/tvshows/`.
+  - [x] 3.3 Wire `RecommendationService` construction in `apps/api/cmd/api/main.go` (inject `TMDbService`, `repos.Movies`, `repos.Series`); wire the handler dependency via `SetRecommendationService` (Rule 15 — handler/service registered in DI, route added to router).
+  - [x] 3.4 Swaggo annotations on both new endpoints (Rule 15 Swagger sync; `apps/api` has no committed swagger.json — annotations added per convention, no `swag init` step exists); handler tests (success, empty→similar-fallback, TMDB-error→fail-soft, ownership-badge present).
 
 ### Frontend
 
-- [ ] **Task 4: Types + service methods** (AC: #1, #2, #3, #4)
-  - [ ] 4.1 Add to `apps/web/src/types/library.ts` (or `types/tmdb.ts` — match where sibling recommendation/card types live): `RecommendationItem { id: number; mediaType: 'movie' | 'tv'; title: string; posterPath: string | null; releaseDate?: string; voteAverage?: number; isOwned: boolean }` and `RecommendationsResponse { results: RecommendationItem[]; source: string }`.
-  - [ ] 4.2 Add to `apps/web/src/services/libraryService.ts` (mirror `getSeasonEpisodes` at `:165`): `getMovieRecommendations(tmdbId: number)` → `fetchApi('/tmdb/movies/${tmdbId}/recommendations')` and `getTVRecommendations(tmdbId: number)` → `fetchApi('/tmdb/tv/${tmdbId}/recommendations')`. Case-transform is automatic via `fetchApi`/`snakeToCamel` (Rule 18).
+- [x] **Task 4: Types + service methods** (AC: #1, #2, #3, #4)
+  - [x] 4.1 Add to `apps/web/src/types/library.ts` (or `types/tmdb.ts` — match where sibling recommendation/card types live): `RecommendationItem { id: number; mediaType: 'movie' | 'tv'; title: string; posterPath: string | null; releaseDate?: string; voteAverage?: number; isOwned: boolean }` and `RecommendationsResponse { results: RecommendationItem[]; source: string }`.
+  - [x] 4.2 Add to `apps/web/src/services/libraryService.ts` (mirror `getSeasonEpisodes` at `:165`): `getMovieRecommendations(tmdbId: number)` → `fetchApi('/tmdb/movies/${tmdbId}/recommendations')` and `getTVRecommendations(tmdbId: number)` → `fetchApi('/tmdb/tv/${tmdbId}/recommendations')`. Case-transform is automatic via `fetchApi`/`snakeToCamel` (Rule 18).
 
-- [ ] **Task 5: `useRecommendations` hook** (AC: #1, #9)
-  - [ ] 5.1 Add to `apps/web/src/hooks/useMediaDetails.ts` (mirror `useSeriesSeasons` at `:29`): `useRecommendations(tmdbId: number, type: 'movie' | 'tv', enabled: boolean)` → `useQuery` calling the matching service method.
-  - [ ] 5.2 Add a `detailKeys.recommendations(tmdbId, type)` entry to the query-key factory (`useMediaDetails.ts:12-24`).
-  - [ ] 5.3 `staleTime: 24 * 60 * 60 * 1000` (24h — matches backend cache TTL; recs are stable). `enabled: enabled && tmdbId > 0` (gate on a valid TMDB id, like the existing `useMovieDetails`/`useTVShowDetails`).
+- [x] **Task 5: `useRecommendations` hook** (AC: #1, #9)
+  - [x] 5.1 Add to `apps/web/src/hooks/useMediaDetails.ts` (mirror `useSeriesSeasons` at `:29`): `useRecommendations(tmdbId: number, type: 'movie' | 'tv', enabled: boolean)` → `useQuery` calling the matching service method.
+  - [x] 5.2 Add a `detailKeys.recommendations(tmdbId, type)` entry to the query-key factory (`useMediaDetails.ts:12-24`).
+  - [x] 5.3 `staleTime: 24 * 60 * 60 * 1000` (24h — matches backend cache TTL; recs are stable). `enabled: enabled && tmdbId > 0` (gate on a valid TMDB id, like the existing `useMovieDetails`/`useTVShowDetails`).
 
-- [ ] **Task 6: `RelatedContent` section component** (AC: #1, #2, #3, #5, #6, #8)
-  - [ ] 6.1 Create `apps/web/src/components/media/RelatedContent.tsx`. Props: `items: RecommendationItem[]`, `isLoading`, `isError`, `onRetry`. Header: "相關推薦".
-  - [ ] 6.2 Render tiles via the **existing `PosterCard`** (`id={String(item.id)}`, `type={item.mediaType}`, `title`, `posterPath`, `releaseDate`, `voteAverage`, **`isOwned={item.isOwned}`**) inside the existing **`MediaGrid`** layout (or a capped responsive grid reusing MediaGrid's class) — reuse-over-reinvent, no new card/grid.
-  - [ ] 6.3 Loading skeleton (reuse `PosterCardSkeleton`); error → quiet `role="alert"` empty-state with retry (AC #6); empty results → render nothing or a muted "暫無推薦" line (AC #5). Never throw.
-  - [ ] 6.4 Rule 21 header (component postdates the `.pen` design — Epic 12 not in `ux-design.pen`): use the design-coverage-gap form `// Design ref: ux-design.pen — no current screen frame; Epic 12 detail-page recommendations section postdates the .pen design` (NOT the deprecated `<screen-section — pending …>` placeholder; see Rule 21 + 19-8 sweep). Tiles inherit `PosterCard`'s own `.pen` link.
-  - [ ] 6.5 Write `RelatedContent.spec.tsx` (renders tiles, owned badge present when `isOwned`, skeleton while loading, retry on error, empty-state). Rule 16 matchers (`toBeInTheDocument`, `toBeAttached` for any hover/transition).
+- [x] **Task 6: `RelatedContent` section component** (AC: #1, #2, #3, #5, #6, #8)
+  - [x] 6.1 Create `apps/web/src/components/media/RelatedContent.tsx`. Props: `items: RecommendationItem[]`, `isLoading`, `isError`, `onRetry`. Header: "相關推薦".
+  - [x] 6.2 Render tiles via the **existing `PosterCard`** (`id={String(item.id)}`, `type={item.mediaType}`, `title`, `posterPath`, `releaseDate`, `voteAverage`, **`isOwned={item.isOwned}`**) inside the existing **`MediaGrid`** layout (or a capped responsive grid reusing MediaGrid's class) — reuse-over-reinvent, no new card/grid.
+  - [x] 6.3 Loading skeleton (reuse `PosterCardSkeleton`); error → quiet `role="alert"` empty-state with retry (AC #6); empty results → render nothing or a muted "暫無推薦" line (AC #5). Never throw.
+  - [x] 6.4 Rule 21 header (component postdates the `.pen` design — Epic 12 not in `ux-design.pen`): use the design-coverage-gap form `// Design ref: ux-design.pen — no current screen frame; Epic 12 detail-page recommendations section postdates the .pen design` (NOT the deprecated `<screen-section — pending …>` placeholder; see Rule 21 + 19-8 sweep). Tiles inherit `PosterCard`'s own `.pen` link.
+  - [x] 6.5 Write `RelatedContent.spec.tsx` (renders tiles, owned badge present when `isOwned`, skeleton while loading, retry on error, empty-state). Rule 16 matchers (`toBeInTheDocument`, `toBeAttached` for any hover/transition).
 
-- [ ] **Task 7: Integrate into the detail page** (AC: #1, #7)
-  - [ ] 7.1 In `apps/web/src/routes/media/$type.$id.tsx`, render `<RelatedContent />` **below `CreditsSection`** in BOTH `LocalDetailView` (after credits at ~`:313`, above `SeasonAccordion`) AND `TMDbDetailView` (after credits at ~`:510`, as the final section).
-  - [ ] 7.2 Resolve the TMDB id + type per view: `LocalDetailView` → `movie.tmdbId` / `series.tmdbId` + `type`; `TMDbDetailView` → the numeric route id + `type`. Pass to `useRecommendations(tmdbId, type, enabled)` (enable only when `tmdbId > 0`).
-  - [ ] 7.3 Tile navigation is handled by `PosterCard`'s built-in link to `/media/$type/$id` (numeric → TMDbDetailView; owned items show the owned badge there). No extra nav wiring.
+- [x] **Task 7: Integrate into the detail page** (AC: #1, #7)
+  - [x] 7.1 In `apps/web/src/routes/media/$type.$id.tsx`, render `<RelatedContent />` **below `CreditsSection`** in BOTH `LocalDetailView` (after credits at ~`:313`, above `SeasonAccordion`) AND `TMDbDetailView` (after credits at ~`:510`, as the final section).
+  - [x] 7.2 Resolve the TMDB id + type per view: `LocalDetailView` → `movie.tmdbId` / `series.tmdbId` + `type`; `TMDbDetailView` → the numeric route id + `type`. Pass to `useRecommendations(tmdbId, type, enabled)` (enable only when `tmdbId > 0`).
+  - [x] 7.3 Tile navigation is handled by `PosterCard`'s built-in link to `/media/$type/$id` (numeric → TMDbDetailView; owned items show the owned badge there). No extra nav wiring.
 
 ## Dev Notes
 
@@ -174,24 +174,67 @@ Epic 12 has **no `ux-design.pen` screen** for the detail-page recommendations se
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+claude-opus-4-8[1m] (Amelia / dev-story workflow)
 
 ### Debug Log References
 
+- Full backend suite: `cd apps/api && go test ./...` — 31 packages ok (one transient flaky `internal/workers` timing test under `nx test api -v`; re-ran green via `go test ./internal/workers/ -count=1` — unrelated to this story's tmdb/services/handlers scope).
+- Full FE suite: `nx test web` — 172 files / 2063 tests pass; test-process cleanup clean.
+- Lint gate: `pnpm lint:all` — 0 errors (123 pre-existing warnings, none introduced here); `prettier --check` clean.
+
 ### Completion Notes List
+
+- 🔗 **AC Drift: NONE** (checked: `FindOwnedTMDbIDs|isOwned|RecommendationService|/recommendations|/similar` across `_bmad-output/implementation-artifacts/*.md` — hits in `10-4-availability-badges.md`, all REUSE not DRIFT). This story is a new CONSUMER of Story 10-4's `FindOwnedTMDbIDs` batch lookup + `PosterCard isOwned` prop; it changes neither contract (per Critical Detail #2).
+- 📎 **Contract Stamps: NONE** (no `[@contract-v*]` stamps in this story; upstream Story 10-4 predates Rule 20 — implicit v0, no ack required).
+- 🎭 **A11y Pre-Flight: PASS** (1 component checked — `RelatedContent.tsx`; 0 jsx-a11y warnings on touched files, 0 introduced. Manual 4-class check: ① images — reuses `PosterCard` srcSet/sizes `<img>`, adds none; ② modals — N/A, no modal; ③ aria-live — error state uses `role="alert"`, section has `aria-label="相關推薦"`, owned badge carries `AvailabilityBadge` `aria-label`; ④ custom widgets — retry is a native `<button>`, tiles are native `<Link>` with focus-visible ring. Lazy-load contract: no IntersectionObserver — recs load with the page as their own query; AC text + hook comment describe this accurately.)
+- **Implementation summary:** Backend — added recommendations+similar client wrappers (movie+TV, `…WithLanguage`) threaded through `ClientInterface` → `LanguageFallbackClient` → `CacheService` (24h, keys `tmdb:recommendations|similar:{movie|tv}:{id}:v1`) → `TMDbService`; new `RecommendationService` does server-side `/recommendations`→`/similar` fallback, normalizes movie/TV into a uniform `RecommendationItem`, caps at 18, and stamps `IsOwned` via the batched `FindOwnedTMDbIDs` (ownership-lookup error degrades to no-badge, never fails the call); two TMDb handler routes (`GET /api/v1/tmdb/{movies,tv}/:id/recommendations`) wired via `SetRecommendationService` in `main.go`. Frontend — `RecommendationItem`/`RecommendationsResponse` types, `libraryService.get{Movie,TV}Recommendations`, `useRecommendations` hook (24h staleTime, gated `tmdbId > 0`), `RelatedContent` section reusing `PosterCard`/`MediaGrid` grid class + `isOwned`, rendered below credits in BOTH `LocalDetailView` and `TMDbDetailView`.
+- **Rule 15 self-check:** confirmed the existing TV route prefix is `/api/v1/tmdb/tv/:id/videos` (handler `RegisterRoutes`) — new TV route matches `/tmdb/tv/:id/recommendations`, NOT `/tvshows/`. Handler + service registered in `main.go` DI; routes added to router.
+- **Test-mock fan-out:** adding methods to `ClientInterface`/`LanguageFallbackClientInterface`/`CacheServiceInterface`/`TMDbServiceInterface` required updating 6 in-repo mocks (`MockClient`, `trackingMockClient`, `MockFallbackClient`, `MockCacheService`, `mockTMDbServiceForExplore`, `mockTMDbServiceForNFO`) — same pattern 12-2 followed.
 
 ### Discovery Triage
 
 - **Did this story discover any work outside its current scope?**
-  - **Anticipated at authoring time (dev to confirm/triage during implementation):**
-    - **③ backlog-with-carry-forward-link (candidate):** Owned recommendation tiles deep-link to the TMDB-numeric `TMDbDetailView`, not the local-UUID `MediaDetailView` (AC #7, Critical Detail #4). Resolving TMDB-id → local-UUID for owned tiles is out-of-scope and mirrors existing Story 10-4 homepage behavior. If product wants owned tiles to open the local detail view, the dev MUST file a `backlog` `sprint-status.yaml` entry AT DISCOVERY with a bidirectional link before close (do not leave it prose-only — Rule 24 ban). If product accepts current behavior, record `N/A`.
-  - Otherwise, record each genuine in-flight discovery here with its lane (①/②/③) + tracked entry ID / added AC # before marking done. If none: `N/A — no out-of-scope work discovered`.
+  - **③ backlog-with-carry-forward-link — `N/A` (product accepts current behavior).** Owned recommendation tiles deep-link to the TMDB-numeric `TMDbDetailView` (which renders its own owned badge), NOT the local-UUID `MediaDetailView`. This is the explicit AC #7 / Critical Detail #4 design and mirrors existing Story 10-4 homepage-tile behavior. No TMDB-id→local-UUID resolution was added (out of scope, as designed). No backlog entry filed — current behavior is the accepted end-state, not deferred work.
+  - No other out-of-scope work discovered during implementation.
 - Reference: `project-context.md` Rule 24.
 
+### UX Design Verification (Step 9)
+
+- 🎨 **UX Verification: PASS (design-coverage-gap).** Epic 12's detail-page recommendations section has **no `ux-design.pen` screen frame** (same documented gap Story 12-2 noted for the season accordion). Per the story's UX Design Note, the section reuses already-designed/baselined primitives with no new visual primitives: the "相關推薦" `<h2>` matches the `CreditsSection`/`SeasonAccordion` heading style (`text-lg font-semibold text-[var(--text-primary)]`); tiles are the existing `PosterCard` inside `MediaGrid`'s responsive grid class; the owned badge reuses `AvailabilityBadge`/`PosterCard isOwned` (Story 10-4 design). `RelatedContent.tsx` carries the Rule 21 design-coverage-gap `// Design ref:` header. No new `-darwin`/`-linux` visual baselines required (no new component visual surface — all reused primitives are already baselined).
+
 ### File List
+
+**Created:**
+- `apps/api/internal/services/recommendation_service.go`
+- `apps/api/internal/services/recommendation_service_test.go`
+- `apps/web/src/components/media/RelatedContent.tsx`
+- `apps/web/src/components/media/RelatedContent.spec.tsx`
+
+**Modified (backend):**
+- `apps/api/internal/tmdb/movies.go` — `GetMovieRecommendations[WithLanguage]`, `GetMovieSimilar[WithLanguage]`
+- `apps/api/internal/tmdb/tv.go` — `GetTVRecommendations[WithLanguage]`, `GetTVSimilar[WithLanguage]`
+- `apps/api/internal/tmdb/client.go` — `ClientInterface` new methods
+- `apps/api/internal/tmdb/fallback.go` — `…WithFallback` wrappers
+- `apps/api/internal/tmdb/cache.go` — cached wrappers (24h) + cache keys
+- `apps/api/internal/services/tmdb_service.go` — `TMDbServiceInterface` + impl methods
+- `apps/api/internal/handlers/tmdb_handler.go` — `RecommendationServiceInterface`, `SetRecommendationService`, handler methods + routes + Swaggo
+- `apps/api/cmd/api/main.go` — construct + wire `RecommendationService`
+- `apps/api/internal/tmdb/client_test.go`, `fallback_test.go`, `cache_test.go` — wrapper/fallback/cache tests + mock updates
+- `apps/api/internal/handlers/tmdb_handler_test.go` — handler tests + `MockRecommendationService`
+- `apps/api/internal/services/tmdb_service_test.go`, `explore_block_service_test.go`, `enrichment_nfo_test.go` — mock updates
+
+**Modified (frontend):**
+- `apps/web/src/types/library.ts` — `RecommendationItem`, `RecommendationsResponse`
+- `apps/web/src/services/libraryService.ts` — `getMovieRecommendations`, `getTVRecommendations`
+- `apps/web/src/hooks/useMediaDetails.ts` — `useRecommendations` + `detailKeys.recommendations`
+- `apps/web/src/routes/media/$type.$id.tsx` — render `<RelatedContent />` in both detail views
+
+**AC drift reference:** `_bmad-output/implementation-artifacts/10-4-availability-badges.md` (REUSE of `FindOwnedTMDbIDs` / `PosterCard isOwned` — not drift; see Completion Notes)
 
 ## Change Log
 
 | Date | Change |
 |------|--------|
 | 2026-06-11 | Story drafted (SM Bob, create-story yolo). F-3 — TMDB recommendations/similar with "已有" owned badges. Backend: TMDB endpoint wrappers (recommendations+similar, movie+TV) threaded through fallback/cache (24h) → `RecommendationService` (server-side similar-fallback + batched `FindOwnedTMDbIDs` ownership annotation, reuse Story 10-4) → TMDB handler routes. Frontend: `useRecommendations` hook + `RelatedContent` section reusing `PosterCard`/`MediaGrid`/`isOwned`, rendered below credits in both detail views. Rule 27 Five-Pillars compliant (rides existing TMDB limiter/cache/`TMDB_*` errors, no new infra/secret/prefix). Cross-stack split: backend 3 / frontend 4 → single story. |
+| 2026-06-11 | Code review (Amelia, code-review). Adversarial CR + live re-verification: `go build`/`go vet`/`staticcheck` gate green, Go services/handlers/tmdb tests pass, `RelatedContent.spec` 5/5, prettier clean. Rule 7 PASS (0 new error codes), Rule 20 N/A, Rule 25 N/A. 0 High, 1 Medium, 3 Low. Fixes applied: **M1** gofmt-normalized new test struct `tmdb_handler_test.go` (+ pre-existing `main.go` drift from 12-1); **L1** `RelatedContent` section now `aria-labelledby` the visible `<h2>` (was duplicate `aria-label`, double SR announcement); **L3** annotated the unused-on-FE `source` field. Re-verified green post-fix. Status review → done. |
+| 2026-06-11 | Implemented (DEV Amelia, dev-story). All 7 tasks complete. Backend: 4 client wrappers + `…WithLanguage` + `…WithFallback` + 24h cached wrappers (keys `tmdb:recommendations\|similar:{movie\|tv}:{id}:v1`) threaded through the full TMDb chain; new `RecommendationService` (server-side `/recommendations`→`/similar` fallback, 18-item cap, batched `FindOwnedTMDbIDs` ownership with fail-soft degrade); 2 TMDb handler routes wired via `SetRecommendationService` in `main.go` (Rule 15 self-check: TV prefix `/tmdb/tv/:id/recommendations`); 6 in-repo test mocks updated. Frontend: types + `libraryService` methods + `useRecommendations` (24h staleTime) + `RelatedContent` section (reuses PosterCard/MediaGrid grid + `isOwned`, fail-soft loading/error/empty), integrated below credits in both `LocalDetailView` and `TMDbDetailView`. Tests: backend `go test ./...` 31 pkg ok; FE `nx test web` 2063 pass; `pnpm lint:all` 0 errors + prettier clean. AC Drift: NONE (10-4 reuse). Contract Stamps: NONE. A11y Pre-Flight: PASS. UX Verification: PASS (design-coverage-gap, reused baselined primitives). Status → review. |

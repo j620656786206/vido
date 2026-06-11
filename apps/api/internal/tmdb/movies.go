@@ -296,3 +296,57 @@ func (c *Client) GetMovieVideos(ctx context.Context, movieID int) (*VideosRespon
 
 	return &result, nil
 }
+
+// GetMovieRecommendations retrieves TMDb's behavior-aggregate recommendations for
+// a movie (GET /movie/{id}/recommendations). Results are in the client's default
+// language. Story 12-3 (F-3) — related-content section.
+func (c *Client) GetMovieRecommendations(ctx context.Context, movieID int) (*SearchResultMovies, error) {
+	return c.GetMovieRecommendationsWithLanguage(ctx, movieID, c.language)
+}
+
+// GetMovieRecommendationsWithLanguage retrieves movie recommendations with a
+// specific language. Used by the language fallback chain.
+func (c *Client) GetMovieRecommendationsWithLanguage(ctx context.Context, movieID int, language string) (*SearchResultMovies, error) {
+	if movieID <= 0 {
+		return nil, NewBadRequestError("movie ID must be greater than 0")
+	}
+
+	endpoint := fmt.Sprintf("/movie/%d/recommendations", movieID)
+	queryParams := url.Values{
+		"language": []string{language},
+	}
+
+	var result SearchResultMovies
+	if err := c.Get(ctx, endpoint, queryParams, &result); err != nil {
+		return nil, fmt.Errorf("failed to get movie recommendations: %w", err)
+	}
+
+	return &result, nil
+}
+
+// GetMovieSimilar retrieves TMDb's genre/keyword-based similar movies
+// (GET /movie/{id}/similar). Used as the fallback when /recommendations is empty
+// (Story 12-3 AC #4). Results are in the client's default language.
+func (c *Client) GetMovieSimilar(ctx context.Context, movieID int) (*SearchResultMovies, error) {
+	return c.GetMovieSimilarWithLanguage(ctx, movieID, c.language)
+}
+
+// GetMovieSimilarWithLanguage retrieves similar movies with a specific language.
+// Used by the language fallback chain.
+func (c *Client) GetMovieSimilarWithLanguage(ctx context.Context, movieID int, language string) (*SearchResultMovies, error) {
+	if movieID <= 0 {
+		return nil, NewBadRequestError("movie ID must be greater than 0")
+	}
+
+	endpoint := fmt.Sprintf("/movie/%d/similar", movieID)
+	queryParams := url.Values{
+		"language": []string{language},
+	}
+
+	var result SearchResultMovies
+	if err := c.Get(ctx, endpoint, queryParams, &result); err != nil {
+		return nil, fmt.Errorf("failed to get similar movies: %w", err)
+	}
+
+	return &result, nil
+}

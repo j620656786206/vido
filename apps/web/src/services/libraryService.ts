@@ -14,6 +14,7 @@ import type {
   DoubanRatingResponse,
   SeasonSummary,
   SeasonEpisodesResponse,
+  RecommendationsResponse,
 } from '../types/library';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
@@ -164,6 +165,17 @@ export const libraryService = {
 
   async getSeasonEpisodes(seriesId: string, seasonNumber: number): Promise<SeasonEpisodesResponse> {
     return fetchApi<SeasonEpisodesResponse>(`/series/${seriesId}/seasons/${seasonNumber}/episodes`);
+  },
+
+  // Story 12-3 — related-content recommendations (TMDB /recommendations with a
+  // server-side /similar fallback + "已有" ownership flag per tile). Keyed by the
+  // TMDB numeric id; case-transformed automatically via fetchApi/snakeToCamel.
+  async getMovieRecommendations(tmdbId: number): Promise<RecommendationsResponse> {
+    return fetchApi<RecommendationsResponse>(`/tmdb/movies/${tmdbId}/recommendations`);
+  },
+
+  async getTVRecommendations(tmdbId: number): Promise<RecommendationsResponse> {
+    return fetchApi<RecommendationsResponse>(`/tmdb/tv/${tmdbId}/recommendations`);
   },
 
   async batchDelete(ids: string[], type: 'movie' | 'series'): Promise<BatchResult> {
