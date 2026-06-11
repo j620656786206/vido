@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -12,8 +13,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/repository"
+	"github.com/vido/api/internal/services"
+	"github.com/vido/api/internal/tmdb"
 )
 
 // MockSeriesService is a mock implementation of SeriesServiceInterface
@@ -40,6 +44,22 @@ func (m *MockSeriesService) GetByTMDbID(ctx context.Context, tmdbID int64) (*mod
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*models.Series), args.Error(1)
+}
+
+func (m *MockSeriesService) GetSeasons(ctx context.Context, seriesID string) ([]models.SeasonSummary, error) {
+	args := m.Called(ctx, seriesID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]models.SeasonSummary), args.Error(1)
+}
+
+func (m *MockSeriesService) GetSeasonEpisodes(ctx context.Context, seriesID string, seasonNumber int) (*services.SeasonEpisodesResponse, error) {
+	args := m.Called(ctx, seriesID, seasonNumber)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*services.SeasonEpisodesResponse), args.Error(1)
 }
 
 func (m *MockSeriesService) Update(ctx context.Context, series *models.Series) error {
@@ -628,3 +648,144 @@ func TestSeriesHandler_UpdateInvalidJSON(t *testing.T) {
 
 	assert.Equal(t, http.StatusBadRequest, resp.Code)
 }
+
+func TestSeriesHandler_GetSeasons(t *testing.T) {
+	tests := []struct {
+		name           string
+		seriesID       string
+		setupMock      func(*MockSeriesService)
+		expectedStatus int
+		expectedCount  int
+	}{
+		{
+			name:     "success",
+			seriesID: "series-1",
+			setupMock: func(m *MockSeriesService) {
+				m.On("GetSeasons", mock.Anything, "series-1").Return([]models.SeasonSummary{
+					{ID: 1, SeasonNumber: 1, Name: "第 1 季", EpisodeCount: 12},
+					{ID: 2, SeasonNumber: 2, Name: "第 2 季", EpisodeCount: 10},
+				}, nil)
+			},
+			expectedStatus: http.StatusOK,
+			expectedCount:  2,
+		},
+		{
+			name:     "series not found",
+			seriesID: "missing",
+			setupMock: func(m *MockSeriesService) {
+				m.On("GetSeasons", mock.Anything, "missing").Return(nil, errors.New("not found"))
+			},
+			expectedStatus: http.StatusNotFound,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockService := new(MockSeriesService)
+			tt.setupMock(mockService)
+			router := setupSeriesTestRouter(NewSeriesHandler(mockService))
+
+			req, _ := http.NewRequest(http.MethodGet, "/api/v1/series/"+tt.seriesID+"/seasons", nil)
+			resp := httptest.NewRecorder()
+			router.ServeHTTP(resp, req)
+
+			assert.Equal(t, tt.expectedStatus, resp.Code)
+			if tt.expectedStatus == http.StatusOK {
+				var body APIResponse
+				require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &body))
+				assert.True(t, body.Success)
+				items, ok := body.Data.([]interface{})
+				require.True(t, ok)
+				assert.Len(t, items, tt.expectedCount)
+			}
+			mockService.AssertExpectations(t)
+		})
+	}
+}
+
+func TestSeriesHandler_GetSeasonEpisodes(t *testing.T) {
+	okResponse := &services.SeasonEpisodesResponse{
+		Season: models.SeasonSummary{ID: 1, SeasonNumber: 1, Name: "第 1 季", EpisodeCount: 2},
+		Episodes: []services.MergedEpisode{
+			{EpisodeNumber: 1, Name: "第一集", HasLocalFile: true, SubtitleStatus: "found", FilePath: "/m/S01E01.mkv"},
+			{EpisodeNumber: 2, Name: "第二集", HasLocalFile: false},
+		},
+	}
+
+	tests := []struct {
+		name           string
+		path           string
+		setupMock      func(*MockSeriesService)
+		expectedStatus int
+	}{
+		{
+			name: "success merges tmdb + local",
+			path: "/api/v1/series/series-1/seasons/1/episodes",
+			setupMock: func(m *MockSeriesService) {
+				m.On("GetSeasonEpisodes", mock.Anything, "series-1", 1).Return(okResponse, nil)
+			},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "invalid season number",
+			path:           "/api/v1/series/series-1/seasons/abc/episodes",
+			setupMock:      func(m *MockSeriesService) {},
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name: "series not linked to tmdb",
+			path: "/api/v1/series/series-1/seasons/1/episodes",
+			setupMock: func(m *MockSeriesService) {
+				m.On("GetSeasonEpisodes", mock.Anything, "series-1", 1).
+					Return(nil, services.ErrSeriesNotLinkedToTMDb)
+			},
+			expectedStatus: http.StatusNotFound,
+		},
+		{
+			name: "tmdb upstream error preserves status (retry-able)",
+			path: "/api/v1/series/series-1/seasons/1/episodes",
+			setupMock: func(m *MockSeriesService) {
+				wrapped := errorWrap(&tmdb.TMDbError{Code: tmdb.ErrCodeServerError, StatusCode: http.StatusServiceUnavailable, Message: "down"})
+				m.On("GetSeasonEpisodes", mock.Anything, "series-1", 1).Return(nil, wrapped)
+			},
+			expectedStatus: http.StatusServiceUnavailable,
+		},
+		{
+			name: "generic tmdb failure returns 502",
+			path: "/api/v1/series/series-1/seasons/1/episodes",
+			setupMock: func(m *MockSeriesService) {
+				m.On("GetSeasonEpisodes", mock.Anything, "series-1", 1).
+					Return(nil, errors.New("failed to fetch season episodes: boom"))
+			},
+			expectedStatus: http.StatusBadGateway,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockService := new(MockSeriesService)
+			tt.setupMock(mockService)
+			router := setupSeriesTestRouter(NewSeriesHandler(mockService))
+
+			req, _ := http.NewRequest(http.MethodGet, tt.path, nil)
+			resp := httptest.NewRecorder()
+			router.ServeHTTP(resp, req)
+
+			assert.Equal(t, tt.expectedStatus, resp.Code)
+			if tt.expectedStatus == http.StatusOK {
+				var body APIResponse
+				require.NoError(t, json.Unmarshal(resp.Body.Bytes(), &body))
+				assert.True(t, body.Success)
+				data, ok := body.Data.(map[string]interface{})
+				require.True(t, ok)
+				episodes, ok := data["episodes"].([]interface{})
+				require.True(t, ok)
+				assert.Len(t, episodes, 2)
+			}
+			mockService.AssertExpectations(t)
+		})
+	}
+}
+
+// errorWrap wraps an error so handler errors.As unwrapping is exercised.
+func errorWrap(err error) error { return fmt.Errorf("get season episodes: %w", err) }

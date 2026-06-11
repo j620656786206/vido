@@ -74,6 +74,10 @@ func (m *MockTMDbService) GetTVShowDetails(ctx context.Context, tvID int) (*tmdb
 	return m.GetTVShowDetailsResponse, nil
 }
 
+func (m *MockTMDbService) GetSeasonDetails(ctx context.Context, tvID int, seasonNumber int) (*tmdb.SeasonDetails, error) {
+	return &tmdb.SeasonDetails{}, nil
+}
+
 func (m *MockTMDbService) FindByExternalID(ctx context.Context, externalID string, externalSource string) (*tmdb.FindByExternalIDResponse, error) {
 	return &tmdb.FindByExternalIDResponse{}, nil
 }

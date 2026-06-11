@@ -185,6 +185,10 @@ func main() {
 		CacheTTLHours:     cfg.TMDbCacheTTLHours,
 	}, repos.Cache)
 
+	// Story 12-2: wire the season/episode accordion deps into the series service
+	// (episode repo for local subtitle/file status + TMDb for the canonical episode list).
+	seriesService.SetEpisodeDeps(repos.Episodes, tmdbService)
+
 	// Initialize explore block service (Story 10.3 — homepage custom discover blocks)
 	exploreBlockService := services.NewExploreBlockService(repos.ExploreBlocks, tmdbService, repos.Cache)
 	if err := exploreBlockService.SeedDefaultsIfEmpty(context.Background()); err != nil {

@@ -147,6 +147,31 @@ type Season struct {
 	SeasonNumber int     `json:"season_number" example:"1"`
 }
 
+// SeasonDetails represents the TMDb "season details" response, which is the
+// Season summary plus the full episode list (GET /tv/{id}/season/{n}).
+type SeasonDetails struct {
+	AirDate      *string       `json:"air_date" example:"2008-01-20"`
+	ID           int           `json:"id" example:"3572"`
+	Name         string        `json:"name" example:"Season 1"`
+	Overview     string        `json:"overview"`
+	PosterPath   *string       `json:"poster_path" example:"/1BP4xYv9ZG4ZVHkL7ocOziBbSYH.jpg"`
+	SeasonNumber int           `json:"season_number" example:"1"`
+	Episodes     []EpisodeInfo `json:"episodes"`
+}
+
+// EpisodeInfo represents a single episode within a TMDb season-details response.
+type EpisodeInfo struct {
+	ID            int     `json:"id" example:"62085"`
+	EpisodeNumber int     `json:"episode_number" example:"1"`
+	SeasonNumber  int     `json:"season_number" example:"1"`
+	Name          string  `json:"name" example:"Pilot"`
+	Overview      string  `json:"overview"`
+	AirDate       *string `json:"air_date" example:"2008-01-20"`
+	Runtime       *int    `json:"runtime" example:"58"`
+	StillPath     *string `json:"still_path" example:"/ydlY3iPfeOAvu8gVqrxPoMvzNCn.jpg"`
+	VoteAverage   float64 `json:"vote_average" example:"7.8"`
+}
+
 // ImageConfiguration represents TMDb image configuration
 // This is used to construct full image URLs
 type ImageConfiguration struct {

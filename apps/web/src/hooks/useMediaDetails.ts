@@ -2,7 +2,12 @@ import { useQuery } from '@tanstack/react-query';
 import { tmdbService } from '../services/tmdb';
 import { libraryService } from '../services/libraryService';
 import type { MovieDetails, TVShowDetails, Credits } from '../types/tmdb';
-import type { LibraryMovie, LibrarySeries } from '../types/library';
+import type {
+  LibraryMovie,
+  LibrarySeries,
+  SeasonSummary,
+  SeasonEpisodesResponse,
+} from '../types/library';
 
 // Query key factory for media details
 export const detailKeys = {
@@ -13,7 +18,37 @@ export const detailKeys = {
   tvCredits: (id: number) => [...detailKeys.tv(id), 'credits'] as const,
   localMovie: (id: string) => [...detailKeys.all, 'local-movie', id] as const,
   localSeries: (id: string) => [...detailKeys.all, 'local-series', id] as const,
+  seasons: (seriesId: string) => [...detailKeys.all, 'seasons', seriesId] as const,
+  seasonEpisodes: (seriesId: string, seasonNumber: number) =>
+    [...detailKeys.all, 'season-episodes', seriesId, seasonNumber] as const,
 };
+
+/**
+ * Hook to fetch a series' season summaries (from the cached SeasonsJSON — no
+ * TMDb call). Drives the collapsed accordion headers (Story 12-2 AC #2).
+ */
+export function useSeriesSeasons(seriesId: string, enabled: boolean) {
+  return useQuery<SeasonSummary[], Error>({
+    queryKey: detailKeys.seasons(seriesId),
+    queryFn: () => libraryService.getSeriesSeasons(seriesId),
+    staleTime: 60 * 60 * 1000, // 1h — season list rarely changes
+    enabled: enabled && !!seriesId,
+  });
+}
+
+/**
+ * Hook to lazily fetch a season's episodes (TMDb metadata merged with local
+ * subtitle/file status). Only fetches when `enabled` is true so the accordion
+ * fetches on expand (Story 12-2 Tasks 8.3/8.4).
+ */
+export function useSeasonEpisodes(seriesId: string, seasonNumber: number, enabled: boolean) {
+  return useQuery<SeasonEpisodesResponse, Error>({
+    queryKey: detailKeys.seasonEpisodes(seriesId, seasonNumber),
+    queryFn: () => libraryService.getSeasonEpisodes(seriesId, seasonNumber),
+    staleTime: 60 * 60 * 1000, // 1h — episodes change infrequently
+    enabled: enabled && !!seriesId,
+  });
+}
 
 /**
  * Hook to fetch movie details from local DB API

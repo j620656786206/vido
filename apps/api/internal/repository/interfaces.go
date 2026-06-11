@@ -218,6 +218,9 @@ type EpisodeRepositoryInterface interface {
 	// Update modifies an existing episode in the database
 	Update(ctx context.Context, episode *models.Episode) error
 
+	// UpdateEpisodeSubtitleStatus updates only the subtitle tracking columns for an episode
+	UpdateEpisodeSubtitleStatus(ctx context.Context, episodeID string, status models.SubtitleStatus, path, language string) error
+
 	// Delete removes an episode from the database by ID
 	Delete(ctx context.Context, id string) error
 

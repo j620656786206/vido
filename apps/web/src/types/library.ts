@@ -108,6 +108,39 @@ export interface DoubanRating {
 
 export type DoubanRatingResponse = DoubanRating | null;
 
+// Season/episode accordion types (Story 12-2). Field names are camelCase —
+// the API returns snake_case and libraryService transforms via snakeToCamel.
+export interface SeasonSummary {
+  id: number;
+  seasonNumber: number;
+  name?: string;
+  overview?: string;
+  posterPath?: string;
+  airDate?: string;
+  episodeCount?: number;
+}
+
+// MergedEpisode = TMDb episode metadata + local file/subtitle enrichment.
+// Subtitle fields are only meaningful when hasLocalFile is true (AC #5/#6).
+export interface MergedEpisode {
+  episodeNumber: number;
+  name: string;
+  overview?: string;
+  airDate?: string;
+  runtime?: number;
+  stillPath?: string;
+  voteAverage?: number;
+  hasLocalFile: boolean;
+  subtitleStatus?: string;
+  subtitleLanguage?: string;
+  filePath?: string;
+}
+
+export interface SeasonEpisodesResponse {
+  season: SeasonSummary;
+  episodes: MergedEpisode[];
+}
+
 export interface LibraryItem {
   type: 'movie' | 'series';
   movie?: LibraryMovie;
