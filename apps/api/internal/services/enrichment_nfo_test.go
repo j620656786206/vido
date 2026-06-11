@@ -99,6 +99,10 @@ func (m *mockTMDbServiceForNFO) GetTVSimilar(ctx context.Context, tvID int) (*tm
 	return nil, nil
 }
 
+func (m *mockTMDbServiceForNFO) GetWatchProviders(ctx context.Context, mediaType string, id int, region string) (*tmdb.WatchProvidersResponse, error) {
+	return nil, nil
+}
+
 // ─── Mock movie repo for enrichment tests ───────────────────────────────────
 
 type mockMovieRepoForNFO struct {

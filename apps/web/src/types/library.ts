@@ -160,6 +160,30 @@ export interface RecommendationsResponse {
   source: string;
 }
 
+// Story 12-4 — streaming-platform availability (TMDB watch providers, sourced
+// from JustWatch). camelCased via snakeToCamel at the fetchApi boundary (Rule 18).
+// NOTE: `results` is keyed by ISO 3166-1 region code (e.g. "TW", "US"). Those
+// keys are uppercase with no underscores, so snakeToCamel's `_([a-z])` rewrite
+// leaves them untouched — `results` stays a faithful Record<string, …>.
+export interface WatchProvider {
+  providerId: number;
+  providerName: string;
+  logoPath: string | null;
+  displayPriority: number;
+}
+
+export interface WatchProviderRegion {
+  link: string;
+  flatrate?: WatchProvider[];
+  rent?: WatchProvider[];
+  buy?: WatchProvider[];
+}
+
+export interface WatchProvidersResponse {
+  id: number;
+  results: Record<string, WatchProviderRegion>;
+}
+
 export interface LibraryItem {
   type: 'movie' | 'series';
   movie?: LibraryMovie;

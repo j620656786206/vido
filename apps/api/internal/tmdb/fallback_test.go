@@ -29,6 +29,11 @@ type MockClient struct {
 	TVRecommendationsErrors       map[string]error
 	TVSimilarResponses            map[string]*SearchResultTVShows
 	TVSimilarErrors               map[string]error
+
+	// Story 12-4 — watch providers (language-neutral, so not keyed by language).
+	WatchProvidersResponse *WatchProvidersResponse
+	WatchProvidersError    error
+	WatchProvidersCalled   int
 }
 
 func (m *MockClient) SearchMovies(ctx context.Context, query string, page int) (*SearchResultMovies, error) {
@@ -101,6 +106,17 @@ func (m *MockClient) GetMovieVideos(ctx context.Context, movieID int) (*VideosRe
 
 func (m *MockClient) GetTVShowVideos(ctx context.Context, tvID int) (*VideosResponse, error) {
 	return &VideosResponse{ID: tvID, Results: []Video{}}, nil
+}
+
+func (m *MockClient) GetWatchProviders(ctx context.Context, mediaType string, id int, region string) (*WatchProvidersResponse, error) {
+	m.WatchProvidersCalled++
+	if m.WatchProvidersError != nil {
+		return nil, m.WatchProvidersError
+	}
+	if m.WatchProvidersResponse != nil {
+		return m.WatchProvidersResponse, nil
+	}
+	return &WatchProvidersResponse{ID: id, Results: map[string]WatchProviderRegion{}}, nil
 }
 
 func (m *MockClient) FindByExternalID(ctx context.Context, externalID string, externalSource string) (*FindByExternalIDResponse, error) {

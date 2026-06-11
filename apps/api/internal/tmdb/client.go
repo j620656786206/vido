@@ -57,6 +57,9 @@ type ClientInterface interface {
 	GetMovieVideos(ctx context.Context, movieID int) (*VideosResponse, error)
 	// GetTVShowVideos retrieves videos (trailers, teasers) for a TV show
 	GetTVShowVideos(ctx context.Context, tvID int) (*VideosResponse, error)
+	// GetWatchProviders retrieves streaming/rent/buy providers for a movie or TV show,
+	// optionally filtered to a single region (Story 12-4)
+	GetWatchProviders(ctx context.Context, mediaType string, id int, region string) (*WatchProvidersResponse, error)
 	// GetMovieRecommendations retrieves recommended movies for a movie
 	GetMovieRecommendations(ctx context.Context, movieID int) (*SearchResultMovies, error)
 	// GetMovieRecommendationsWithLanguage retrieves recommended movies with a specific language

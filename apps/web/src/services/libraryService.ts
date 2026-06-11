@@ -15,6 +15,7 @@ import type {
   SeasonSummary,
   SeasonEpisodesResponse,
   RecommendationsResponse,
+  WatchProvidersResponse,
 } from '../types/library';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
@@ -176,6 +177,20 @@ export const libraryService = {
 
   async getTVRecommendations(tmdbId: number): Promise<RecommendationsResponse> {
     return fetchApi<RecommendationsResponse>(`/tmdb/tv/${tmdbId}/recommendations`);
+  },
+
+  // Story 12-4 — streaming-platform availability (TMDB watch providers, JustWatch-
+  // sourced). Keyed by the TMDB numeric id + region (default TW). Case-transformed
+  // automatically via fetchApi/snakeToCamel (Rule 18); region map keys are
+  // uppercase ISO codes and survive the transform untouched.
+  async getMovieWatchProviders(tmdbId: number, region = 'TW'): Promise<WatchProvidersResponse> {
+    return fetchApi<WatchProvidersResponse>(
+      `/tmdb/movies/${tmdbId}/watch/providers?region=${region}`
+    );
+  },
+
+  async getTVWatchProviders(tmdbId: number, region = 'TW'): Promise<WatchProvidersResponse> {
+    return fetchApi<WatchProvidersResponse>(`/tmdb/tv/${tmdbId}/watch/providers?region=${region}`);
   },
 
   async batchDelete(ids: string[], type: 'movie' | 'series'): Promise<BatchResult> {

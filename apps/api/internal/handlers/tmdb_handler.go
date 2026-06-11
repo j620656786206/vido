@@ -24,6 +24,7 @@ type TMDbServiceInterface interface {
 	DiscoverTVShows(ctx context.Context, params tmdb.DiscoverParams) (*tmdb.SearchResultTVShows, error)
 	GetMovieVideos(ctx context.Context, movieID int) (*tmdb.VideosResponse, error)
 	GetTVShowVideos(ctx context.Context, tvID int) (*tmdb.VideosResponse, error)
+	GetWatchProviders(ctx context.Context, mediaType string, id int, region string) (*tmdb.WatchProvidersResponse, error)
 }
 
 // RecommendationServiceInterface defines the contract for related-content lookups
@@ -441,6 +442,68 @@ func (h *TMDbHandler) GetTVRecommendations(c *gin.Context) {
 	SuccessResponse(c, result)
 }
 
+// GetMovieWatchProviders handles GET /api/v1/tmdb/movies/:id/watch/providers.
+// Returns the streaming/rent/buy providers for a movie in a region (default TW),
+// sourced from TMDb's JustWatch-backed watch/providers endpoint (Story 12-4).
+// @Summary Get movie streaming-platform availability from TMDb
+// @Description Retrieve watch providers (flatrate/rent/buy) for a movie, filtered to a region (default TW). Data sourced from JustWatch via TMDb.
+// @Tags tmdb
+// @Accept json
+// @Produce json
+// @Param id path int true "TMDb movie ID"
+// @Param region query string false "ISO 3166-1 region code" default(TW)
+// @Success 200 {object} APIResponse{data=tmdb.WatchProvidersResponse}
+// @Failure 400 {object} APIResponse{error=APIError}
+// @Failure 404 {object} APIResponse{error=APIError}
+// @Failure 500 {object} APIResponse{error=APIError}
+// @Router /api/v1/tmdb/movies/{id}/watch/providers [get]
+func (h *TMDbHandler) GetMovieWatchProviders(c *gin.Context) {
+	movieID, err := strconv.Atoi(c.Param("id"))
+	if err != nil || movieID <= 0 {
+		ErrorResponse(c, http.StatusBadRequest, tmdb.ErrCodeBadRequest,
+			"Invalid movie ID",
+			"Movie ID must be a positive integer")
+		return
+	}
+	region := c.Query("region")
+	result, err := h.service.GetWatchProviders(c.Request.Context(), "movie", movieID, region)
+	if err != nil {
+		handleTMDbError(c, err, "get movie watch providers", slog.Int("movie_id", movieID), slog.String("region", region))
+		return
+	}
+	SuccessResponse(c, result)
+}
+
+// GetTVWatchProviders handles GET /api/v1/tmdb/tv/:id/watch/providers.
+// @Summary Get TV streaming-platform availability from TMDb
+// @Description Retrieve watch providers (flatrate/rent/buy) for a TV show, filtered to a region (default TW). Data sourced from JustWatch via TMDb.
+// @Tags tmdb
+// @Accept json
+// @Produce json
+// @Param id path int true "TMDb TV show ID"
+// @Param region query string false "ISO 3166-1 region code" default(TW)
+// @Success 200 {object} APIResponse{data=tmdb.WatchProvidersResponse}
+// @Failure 400 {object} APIResponse{error=APIError}
+// @Failure 404 {object} APIResponse{error=APIError}
+// @Failure 500 {object} APIResponse{error=APIError}
+// @Router /api/v1/tmdb/tv/{id}/watch/providers [get]
+func (h *TMDbHandler) GetTVWatchProviders(c *gin.Context) {
+	tvID, err := strconv.Atoi(c.Param("id"))
+	if err != nil || tvID <= 0 {
+		ErrorResponse(c, http.StatusBadRequest, tmdb.ErrCodeBadRequest,
+			"Invalid TV show ID",
+			"TV show ID must be a positive integer")
+		return
+	}
+	region := c.Query("region")
+	result, err := h.service.GetWatchProviders(c.Request.Context(), "tv", tvID, region)
+	if err != nil {
+		handleTMDbError(c, err, "get TV watch providers", slog.Int("tv_id", tvID), slog.String("region", region))
+		return
+	}
+	SuccessResponse(c, result)
+}
+
 // parseTrendingWindow normalizes the time_window query param; unknown / empty
 // values default to "week" (TMDb's most useful default for a homepage feed).
 func parseTrendingWindow(raw string) string {
@@ -564,6 +627,10 @@ func (h *TMDbHandler) RegisterRoutes(rg *gin.RouterGroup) {
 		// Recommendations endpoints (Story 12-3 — related content)
 		tmdbGroup.GET("/movies/:id/recommendations", h.GetMovieRecommendations)
 		tmdbGroup.GET("/tv/:id/recommendations", h.GetTVRecommendations)
+
+		// Watch-providers endpoints (Story 12-4 — streaming-platform availability)
+		tmdbGroup.GET("/movies/:id/watch/providers", h.GetMovieWatchProviders)
+		tmdbGroup.GET("/tv/:id/watch/providers", h.GetTVWatchProviders)
 	}
 }
 
