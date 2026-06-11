@@ -468,6 +468,9 @@ func main() {
 	mediaHandler := handlers.NewMediaHandler(mediaService)
 	availabilityHandler := handlers.NewAvailabilityHandler(availabilityService) // Story 10-4
 	tmdbHandler := handlers.NewTMDbHandler(tmdbService)
+	// Story 12-3 — related-content recommendations (TMDb recs/similar + ownership join).
+	recommendationService := services.NewRecommendationService(tmdbService, repos.Movies, repos.Series)
+	tmdbHandler.SetRecommendationService(recommendationService)
 	// Story 11-3 — unified dual-language instant search. SearchClient() returns nil
 	// if the underlying TMDb client does not satisfy SearchTMDbClient (e.g. a future
 	// caching decorator missing the *WithLanguage methods); fail fast at startup
@@ -545,11 +548,11 @@ func main() {
 		movieHandler.RegisterRoutes(apiV1)
 		seriesHandler.RegisterRoutes(apiV1)
 		doubanRatingHandler.RegisterRoutes(apiV1) // /movies/:id/douban-rating, /series/:id/douban-rating (Story 12-1)
-		logHandler.RegisterRoutes(apiV1)    // Must be before settingsHandler to avoid /settings/:key conflict
-		cacheHandler.RegisterRoutes(apiV1)  // Must be before settingsHandler to avoid /settings/:key conflict
-		statusHandler.RegisterRoutes(apiV1) // Must be before settingsHandler to avoid /settings/:key conflict
-		backupHandler.RegisterRoutes(apiV1) // Must be before settingsHandler to avoid /settings/:key conflict
-		exportHandler.RegisterRoutes(apiV1) // Must be before settingsHandler to avoid /settings/:key conflict
+		logHandler.RegisterRoutes(apiV1)          // Must be before settingsHandler to avoid /settings/:key conflict
+		cacheHandler.RegisterRoutes(apiV1)        // Must be before settingsHandler to avoid /settings/:key conflict
+		statusHandler.RegisterRoutes(apiV1)       // Must be before settingsHandler to avoid /settings/:key conflict
+		backupHandler.RegisterRoutes(apiV1)       // Must be before settingsHandler to avoid /settings/:key conflict
+		exportHandler.RegisterRoutes(apiV1)       // Must be before settingsHandler to avoid /settings/:key conflict
 		settingsHandler.RegisterRoutes(apiV1)
 		setupHandler.RegisterRoutes(apiV1)
 		mediaHandler.RegisterRoutes(apiV1)

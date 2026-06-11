@@ -11,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/vido/api/internal/services"
 	"github.com/vido/api/internal/tmdb"
 )
 
@@ -1052,4 +1053,138 @@ func TestTMDbHandler_GetTVShowVideos_InvalidID(t *testing.T) {
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 	assert.Empty(t, mockSvc.GetTVShowVideosCalls)
+}
+
+// --- Story 12-3 recommendations handler tests ---
+
+type MockRecommendationService struct {
+	MovieResult *services.RecommendationResult
+	MovieErr    error
+	MovieCalls  []int
+	TVResult    *services.RecommendationResult
+	TVErr       error
+	TVCalls     []int
+}
+
+func (m *MockRecommendationService) GetMovieRecommendations(_ context.Context, tmdbID int) (*services.RecommendationResult, error) {
+	m.MovieCalls = append(m.MovieCalls, tmdbID)
+	if m.MovieErr != nil {
+		return nil, m.MovieErr
+	}
+	return m.MovieResult, nil
+}
+
+func (m *MockRecommendationService) GetTVRecommendations(_ context.Context, tmdbID int) (*services.RecommendationResult, error) {
+	m.TVCalls = append(m.TVCalls, tmdbID)
+	if m.TVErr != nil {
+		return nil, m.TVErr
+	}
+	return m.TVResult, nil
+}
+
+func TestTMDbHandler_GetMovieRecommendations_Success(t *testing.T) {
+	recs := &MockRecommendationService{
+		MovieResult: &services.RecommendationResult{
+			Source: "recommendations",
+			Items: []services.RecommendationItem{
+				{ID: 603, MediaType: "movie", Title: "The Matrix", VoteAverage: 8.2, IsOwned: true},
+				{ID: 604, MediaType: "movie", Title: "Reloaded"},
+			},
+		},
+	}
+	handler := NewTMDbHandler(&MockTMDbService{})
+	handler.SetRecommendationService(recs)
+	router := setupTMDbRouter(handler)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/tmdb/movies/100/recommendations", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, []int{100}, recs.MovieCalls)
+
+	var raw map[string]any
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &raw))
+	assert.Equal(t, true, raw["success"])
+	data := raw["data"].(map[string]any)
+	assert.Equal(t, "recommendations", data["source"])
+	results := data["results"].([]any)
+	require.Len(t, results, 2)
+	first := results[0].(map[string]any)
+	// Rule 18: snake_case at the JSON boundary.
+	assert.Equal(t, true, first["is_owned"], "owned badge flag present in response")
+	assert.Equal(t, "movie", first["media_type"])
+}
+
+func TestTMDbHandler_GetMovieRecommendations_EmptyToSimilarSourcePassthrough(t *testing.T) {
+	recs := &MockRecommendationService{
+		MovieResult: &services.RecommendationResult{
+			Source: "similar",
+			Items:  []services.RecommendationItem{{ID: 700, MediaType: "movie", Title: "Sim"}},
+		},
+	}
+	handler := NewTMDbHandler(&MockTMDbService{})
+	handler.SetRecommendationService(recs)
+	router := setupTMDbRouter(handler)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/tmdb/movies/100/recommendations", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var raw map[string]any
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &raw))
+	assert.Equal(t, "similar", raw["data"].(map[string]any)["source"])
+}
+
+func TestTMDbHandler_GetTVRecommendations_Success(t *testing.T) {
+	recs := &MockRecommendationService{
+		TVResult: &services.RecommendationResult{
+			Source: "recommendations",
+			Items:  []services.RecommendationItem{{ID: 1396, MediaType: "tv", Title: "Breaking Bad"}},
+		},
+	}
+	handler := NewTMDbHandler(&MockTMDbService{})
+	handler.SetRecommendationService(recs)
+	router := setupTMDbRouter(handler)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/tmdb/tv/55/recommendations", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, []int{55}, recs.TVCalls)
+}
+
+func TestTMDbHandler_GetMovieRecommendations_TMDBError_FailSoft(t *testing.T) {
+	recs := &MockRecommendationService{MovieErr: tmdb.NewTimeoutError(errors.New("timeout"))}
+	handler := NewTMDbHandler(&MockTMDbService{})
+	handler.SetRecommendationService(recs)
+	router := setupTMDbRouter(handler)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/tmdb/movies/100/recommendations", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	// Section-level error response (Rule 7 TMDB_* code); the frontend treats this
+	// as an isolated empty-state so the rest of the detail page is unaffected (AC #6).
+	var body APIResponse
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+	assert.False(t, body.Success)
+	require.NotNil(t, body.Error)
+	assert.Equal(t, tmdb.ErrCodeTimeout, body.Error.Code)
+}
+
+func TestTMDbHandler_GetMovieRecommendations_InvalidID(t *testing.T) {
+	recs := &MockRecommendationService{}
+	handler := NewTMDbHandler(&MockTMDbService{})
+	handler.SetRecommendationService(recs)
+	router := setupTMDbRouter(handler)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/tmdb/movies/0/recommendations", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Empty(t, recs.MovieCalls)
 }

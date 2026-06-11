@@ -71,6 +71,18 @@ func (m *mockTMDbServiceForExplore) GetMovieVideos(ctx context.Context, id int) 
 func (m *mockTMDbServiceForExplore) GetTVShowVideos(ctx context.Context, id int) (*tmdb.VideosResponse, error) {
 	return &tmdb.VideosResponse{}, nil
 }
+func (m *mockTMDbServiceForExplore) GetMovieRecommendations(ctx context.Context, id int) (*tmdb.SearchResultMovies, error) {
+	return &tmdb.SearchResultMovies{}, nil
+}
+func (m *mockTMDbServiceForExplore) GetMovieSimilar(ctx context.Context, id int) (*tmdb.SearchResultMovies, error) {
+	return &tmdb.SearchResultMovies{}, nil
+}
+func (m *mockTMDbServiceForExplore) GetTVRecommendations(ctx context.Context, id int) (*tmdb.SearchResultTVShows, error) {
+	return &tmdb.SearchResultTVShows{}, nil
+}
+func (m *mockTMDbServiceForExplore) GetTVSimilar(ctx context.Context, id int) (*tmdb.SearchResultTVShows, error) {
+	return &tmdb.SearchResultTVShows{}, nil
+}
 
 var _ TMDbServiceInterface = (*mockTMDbServiceForExplore)(nil)
 

@@ -19,6 +19,16 @@ type MockClient struct {
 	GetMovieDetailsErrors      map[string]error
 	GetTVShowDetailsResponses  map[string]*TVShowDetails
 	GetTVShowDetailsErrors     map[string]error
+
+	// Story 12-3 — recommendations/similar (keyed by language).
+	MovieRecommendationsResponses map[string]*SearchResultMovies
+	MovieRecommendationsErrors    map[string]error
+	MovieSimilarResponses         map[string]*SearchResultMovies
+	MovieSimilarErrors            map[string]error
+	TVRecommendationsResponses    map[string]*SearchResultTVShows
+	TVRecommendationsErrors       map[string]error
+	TVSimilarResponses            map[string]*SearchResultTVShows
+	TVSimilarErrors               map[string]error
 }
 
 func (m *MockClient) SearchMovies(ctx context.Context, query string, page int) (*SearchResultMovies, error) {
@@ -123,6 +133,64 @@ func (m *MockClient) DiscoverMovies(ctx context.Context, params DiscoverParams) 
 
 func (m *MockClient) DiscoverTVShows(ctx context.Context, params DiscoverParams) (*SearchResultTVShows, error) {
 	return &SearchResultTVShows{Page: 1, Results: []TVShow{}}, nil
+}
+
+// Story 12-3 — recommendations + similar (movie + TV).
+
+func (m *MockClient) GetMovieRecommendations(ctx context.Context, movieID int) (*SearchResultMovies, error) {
+	return m.GetMovieRecommendationsWithLanguage(ctx, movieID, "zh-TW")
+}
+
+func (m *MockClient) GetMovieRecommendationsWithLanguage(ctx context.Context, movieID int, language string) (*SearchResultMovies, error) {
+	if err, ok := m.MovieRecommendationsErrors[language]; ok {
+		return nil, err
+	}
+	if resp, ok := m.MovieRecommendationsResponses[language]; ok {
+		return resp, nil
+	}
+	return &SearchResultMovies{Results: []Movie{}}, nil
+}
+
+func (m *MockClient) GetMovieSimilar(ctx context.Context, movieID int) (*SearchResultMovies, error) {
+	return m.GetMovieSimilarWithLanguage(ctx, movieID, "zh-TW")
+}
+
+func (m *MockClient) GetMovieSimilarWithLanguage(ctx context.Context, movieID int, language string) (*SearchResultMovies, error) {
+	if err, ok := m.MovieSimilarErrors[language]; ok {
+		return nil, err
+	}
+	if resp, ok := m.MovieSimilarResponses[language]; ok {
+		return resp, nil
+	}
+	return &SearchResultMovies{Results: []Movie{}}, nil
+}
+
+func (m *MockClient) GetTVRecommendations(ctx context.Context, tvID int) (*SearchResultTVShows, error) {
+	return m.GetTVRecommendationsWithLanguage(ctx, tvID, "zh-TW")
+}
+
+func (m *MockClient) GetTVRecommendationsWithLanguage(ctx context.Context, tvID int, language string) (*SearchResultTVShows, error) {
+	if err, ok := m.TVRecommendationsErrors[language]; ok {
+		return nil, err
+	}
+	if resp, ok := m.TVRecommendationsResponses[language]; ok {
+		return resp, nil
+	}
+	return &SearchResultTVShows{Results: []TVShow{}}, nil
+}
+
+func (m *MockClient) GetTVSimilar(ctx context.Context, tvID int) (*SearchResultTVShows, error) {
+	return m.GetTVSimilarWithLanguage(ctx, tvID, "zh-TW")
+}
+
+func (m *MockClient) GetTVSimilarWithLanguage(ctx context.Context, tvID int, language string) (*SearchResultTVShows, error) {
+	if err, ok := m.TVSimilarErrors[language]; ok {
+		return nil, err
+	}
+	if resp, ok := m.TVSimilarResponses[language]; ok {
+		return resp, nil
+	}
+	return &SearchResultTVShows{Results: []TVShow{}}, nil
 }
 
 func TestNewLanguageFallbackClient(t *testing.T) {
@@ -567,6 +635,11 @@ type trackingMockClient struct {
 	trendingTVResult    map[string]*SearchResultTVShows
 	discoverMovieResult map[string]*SearchResultMovies
 	discoverTVResult    map[string]*SearchResultTVShows
+	// Story 12-3
+	recMovieCalls  []string
+	recTVCalls     []string
+	recMovieResult map[string]*SearchResultMovies
+	recTVResult    map[string]*SearchResultTVShows
 }
 
 func (m *trackingMockClient) GetTrendingMoviesWithLanguage(ctx context.Context, timeWindow, language string, page int) (*SearchResultMovies, error) {
@@ -599,6 +672,67 @@ func (m *trackingMockClient) DiscoverTVShows(ctx context.Context, params Discove
 		return r, nil
 	}
 	return &SearchResultTVShows{Page: 1, Results: []TVShow{}}, nil
+}
+
+// Story 12-3 — recommendations/similar per-language tracking.
+func (m *trackingMockClient) GetMovieRecommendationsWithLanguage(ctx context.Context, movieID int, language string) (*SearchResultMovies, error) {
+	m.recMovieCalls = append(m.recMovieCalls, language)
+	if r, ok := m.recMovieResult[language]; ok {
+		return r, nil
+	}
+	return &SearchResultMovies{Results: []Movie{}}, nil
+}
+
+func (m *trackingMockClient) GetTVRecommendationsWithLanguage(ctx context.Context, tvID int, language string) (*SearchResultTVShows, error) {
+	m.recTVCalls = append(m.recTVCalls, language)
+	if r, ok := m.recTVResult[language]; ok {
+		return r, nil
+	}
+	return &SearchResultTVShows{Results: []TVShow{}}, nil
+}
+
+func TestFallback_GetMovieRecommendations_StopsAtFirstLocalized(t *testing.T) {
+	m := &trackingMockClient{
+		recMovieResult: map[string]*SearchResultMovies{
+			"zh-TW": {Results: []Movie{{ID: 1, Title: "鬼滅", Overview: "故事"}}},
+		},
+	}
+	fb := NewLanguageFallbackClient(m, []string{"zh-TW", "zh-CN", "en"})
+
+	result, lang, err := fb.GetMovieRecommendationsWithFallback(context.Background(), 99)
+
+	require.NoError(t, err)
+	assert.Equal(t, "zh-TW", lang)
+	assert.Len(t, result.Results, 1)
+	assert.Equal(t, []string{"zh-TW"}, m.recMovieCalls)
+}
+
+func TestFallback_GetMovieRecommendations_FallsThroughChain(t *testing.T) {
+	m := &trackingMockClient{
+		recMovieResult: map[string]*SearchResultMovies{
+			"zh-TW": {Results: []Movie{{ID: 1}}}, // no localized title/overview
+			"en":    {Results: []Movie{{ID: 3, Title: "Title", Overview: "Plot"}}},
+		},
+	}
+	fb := NewLanguageFallbackClient(m, []string{"zh-TW", "zh-CN", "en"})
+
+	_, lang, err := fb.GetMovieRecommendationsWithFallback(context.Background(), 99)
+
+	require.NoError(t, err)
+	assert.Equal(t, "en", lang)
+	assert.Equal(t, []string{"zh-TW", "zh-CN", "en"}, m.recMovieCalls)
+}
+
+func TestFallback_GetTVRecommendations_AllEmpty(t *testing.T) {
+	m := &trackingMockClient{} // all languages return empty
+	fb := NewLanguageFallbackClient(m, []string{"zh-TW", "zh-CN", "en"})
+
+	result, lang, err := fb.GetTVRecommendationsWithFallback(context.Background(), 42)
+
+	require.NoError(t, err)
+	assert.Equal(t, "en", lang)
+	assert.Empty(t, result.Results)
+	assert.Equal(t, []string{"zh-TW", "zh-CN", "en"}, m.recTVCalls)
 }
 
 func TestFallback_GetTrendingMovies_StopsAtFirstLocalized(t *testing.T) {

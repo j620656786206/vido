@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/vido/api/internal/services"
 	"github.com/vido/api/internal/tmdb"
 )
 
@@ -25,11 +26,20 @@ type TMDbServiceInterface interface {
 	GetTVShowVideos(ctx context.Context, tvID int) (*tmdb.VideosResponse, error)
 }
 
+// RecommendationServiceInterface defines the contract for related-content lookups
+// (Story 12-3). Kept separate from TMDbServiceInterface because it owns the
+// cross-domain TMDb + ownership-repo join.
+type RecommendationServiceInterface interface {
+	GetMovieRecommendations(ctx context.Context, tmdbID int) (*services.RecommendationResult, error)
+	GetTVRecommendations(ctx context.Context, tmdbID int) (*services.RecommendationResult, error)
+}
+
 // TMDbHandler handles HTTP requests for TMDb operations.
 // It uses TMDbServiceInterface for business logic, following the
 // Handler → Service → Repository → Database architecture.
 type TMDbHandler struct {
-	service TMDbServiceInterface
+	service     TMDbServiceInterface
+	recsService RecommendationServiceInterface
 }
 
 // NewTMDbHandler creates a new TMDbHandler with the given service.
@@ -37,6 +47,13 @@ func NewTMDbHandler(service TMDbServiceInterface) *TMDbHandler {
 	return &TMDbHandler{
 		service: service,
 	}
+}
+
+// SetRecommendationService wires the related-content service (Story 12-3).
+// Optional dependency: the recommendations routes require it, but the rest of
+// the handler functions without it (mirrors TMDbService.SetContentFilter).
+func (h *TMDbHandler) SetRecommendationService(s RecommendationServiceInterface) {
+	h.recsService = s
 }
 
 // SearchMovies handles GET /api/v1/tmdb/search/movies
@@ -354,6 +371,76 @@ func (h *TMDbHandler) GetTVShowVideos(c *gin.Context) {
 	SuccessResponse(c, result)
 }
 
+// GetMovieRecommendations handles GET /api/v1/tmdb/movies/:id/recommendations.
+// Returns related movies (TMDb /recommendations, falling back to /similar) with
+// an "已有" ownership flag per tile (Story 12-3 AC #1, #3, #4).
+// @Summary Get related movies from TMDb
+// @Description Retrieve recommended/similar movies for a movie, annotated with local-library ownership
+// @Tags tmdb
+// @Accept json
+// @Produce json
+// @Param id path int true "TMDb movie ID"
+// @Success 200 {object} APIResponse{data=services.RecommendationResult}
+// @Failure 400 {object} APIResponse{error=APIError}
+// @Failure 404 {object} APIResponse{error=APIError}
+// @Failure 500 {object} APIResponse{error=APIError}
+// @Router /api/v1/tmdb/movies/{id}/recommendations [get]
+func (h *TMDbHandler) GetMovieRecommendations(c *gin.Context) {
+	movieID, err := strconv.Atoi(c.Param("id"))
+	if err != nil || movieID <= 0 {
+		ErrorResponse(c, http.StatusBadRequest, tmdb.ErrCodeBadRequest,
+			"Invalid movie ID",
+			"Movie ID must be a positive integer")
+		return
+	}
+	if h.recsService == nil {
+		ErrorResponse(c, http.StatusInternalServerError, tmdb.ErrCodeServerError,
+			"Recommendations unavailable",
+			"The recommendation service is not configured")
+		return
+	}
+	result, err := h.recsService.GetMovieRecommendations(c.Request.Context(), movieID)
+	if err != nil {
+		handleTMDbError(c, err, "get movie recommendations", slog.Int("movie_id", movieID))
+		return
+	}
+	SuccessResponse(c, result)
+}
+
+// GetTVRecommendations handles GET /api/v1/tmdb/tv/:id/recommendations.
+// @Summary Get related TV shows from TMDb
+// @Description Retrieve recommended/similar TV shows for a TV show, annotated with local-library ownership
+// @Tags tmdb
+// @Accept json
+// @Produce json
+// @Param id path int true "TMDb TV show ID"
+// @Success 200 {object} APIResponse{data=services.RecommendationResult}
+// @Failure 400 {object} APIResponse{error=APIError}
+// @Failure 404 {object} APIResponse{error=APIError}
+// @Failure 500 {object} APIResponse{error=APIError}
+// @Router /api/v1/tmdb/tv/{id}/recommendations [get]
+func (h *TMDbHandler) GetTVRecommendations(c *gin.Context) {
+	tvID, err := strconv.Atoi(c.Param("id"))
+	if err != nil || tvID <= 0 {
+		ErrorResponse(c, http.StatusBadRequest, tmdb.ErrCodeBadRequest,
+			"Invalid TV show ID",
+			"TV show ID must be a positive integer")
+		return
+	}
+	if h.recsService == nil {
+		ErrorResponse(c, http.StatusInternalServerError, tmdb.ErrCodeServerError,
+			"Recommendations unavailable",
+			"The recommendation service is not configured")
+		return
+	}
+	result, err := h.recsService.GetTVRecommendations(c.Request.Context(), tvID)
+	if err != nil {
+		handleTMDbError(c, err, "get TV recommendations", slog.Int("tv_id", tvID))
+		return
+	}
+	SuccessResponse(c, result)
+}
+
 // parseTrendingWindow normalizes the time_window query param; unknown / empty
 // values default to "week" (TMDb's most useful default for a homepage feed).
 func parseTrendingWindow(raw string) string {
@@ -473,6 +560,10 @@ func (h *TMDbHandler) RegisterRoutes(rg *gin.RouterGroup) {
 		// Videos endpoints (Story 10-2 AC #6)
 		tmdbGroup.GET("/movies/:id/videos", h.GetMovieVideos)
 		tmdbGroup.GET("/tv/:id/videos", h.GetTVShowVideos)
+
+		// Recommendations endpoints (Story 12-3 — related content)
+		tmdbGroup.GET("/movies/:id/recommendations", h.GetMovieRecommendations)
+		tmdbGroup.GET("/tv/:id/recommendations", h.GetTVRecommendations)
 	}
 }
 

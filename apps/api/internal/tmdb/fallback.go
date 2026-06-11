@@ -37,6 +37,14 @@ type LanguageFallbackClientInterface interface {
 	DiscoverMoviesWithFallback(ctx context.Context, params DiscoverParams) (*SearchResultMovies, string, error)
 	// DiscoverTVShowsWithFallback queries /discover/tv across the language fallback chain
 	DiscoverTVShowsWithFallback(ctx context.Context, params DiscoverParams) (*SearchResultTVShows, string, error)
+	// GetMovieRecommendationsWithFallback gets recommended movies using the language fallback chain
+	GetMovieRecommendationsWithFallback(ctx context.Context, movieID int) (*SearchResultMovies, string, error)
+	// GetMovieSimilarWithFallback gets similar movies using the language fallback chain
+	GetMovieSimilarWithFallback(ctx context.Context, movieID int) (*SearchResultMovies, string, error)
+	// GetTVRecommendationsWithFallback gets recommended TV shows using the language fallback chain
+	GetTVRecommendationsWithFallback(ctx context.Context, tvID int) (*SearchResultTVShows, string, error)
+	// GetTVSimilarWithFallback gets similar TV shows using the language fallback chain
+	GetTVSimilarWithFallback(ctx context.Context, tvID int) (*SearchResultTVShows, string, error)
 }
 
 // Compile-time interface verification
@@ -510,6 +518,152 @@ func (c *LanguageFallbackClient) DiscoverTVShowsWithFallback(ctx context.Context
 	}
 	if lastResult == nil {
 		return &SearchResultTVShows{Page: 1, Results: []TVShow{}}, c.languages[len(c.languages)-1], nil
+	}
+	return lastResult, lastLang, nil
+}
+
+// GetMovieRecommendationsWithFallback gets recommended movies, trying each language
+// in the fallback chain (titles/overviews are language-specific, so we fall back if
+// the first language returns items without localized content — mirrors trending).
+func (c *LanguageFallbackClient) GetMovieRecommendationsWithFallback(ctx context.Context, movieID int) (*SearchResultMovies, string, error) {
+	var lastResult *SearchResultMovies
+	var lastLang string
+	var lastErr error
+
+	for _, lang := range c.languages {
+		result, err := c.client.GetMovieRecommendationsWithLanguage(ctx, movieID, lang)
+		if err != nil {
+			slog.Debug("Language fallback: movie recommendations failed",
+				"language", lang,
+				"movie_id", movieID,
+				"error", err,
+			)
+			lastErr = err
+			continue
+		}
+
+		lastResult = result
+		lastLang = lang
+		lastErr = nil
+
+		if len(result.Results) > 0 && hasLocalizedMovieContent(result.Results) {
+			return result, lang, nil
+		}
+	}
+
+	if lastErr != nil {
+		return nil, "", lastErr
+	}
+	if lastResult == nil {
+		return &SearchResultMovies{Results: []Movie{}}, c.languages[len(c.languages)-1], nil
+	}
+	return lastResult, lastLang, nil
+}
+
+// GetMovieSimilarWithFallback gets similar movies using the language fallback chain.
+func (c *LanguageFallbackClient) GetMovieSimilarWithFallback(ctx context.Context, movieID int) (*SearchResultMovies, string, error) {
+	var lastResult *SearchResultMovies
+	var lastLang string
+	var lastErr error
+
+	for _, lang := range c.languages {
+		result, err := c.client.GetMovieSimilarWithLanguage(ctx, movieID, lang)
+		if err != nil {
+			slog.Debug("Language fallback: similar movies failed",
+				"language", lang,
+				"movie_id", movieID,
+				"error", err,
+			)
+			lastErr = err
+			continue
+		}
+
+		lastResult = result
+		lastLang = lang
+		lastErr = nil
+
+		if len(result.Results) > 0 && hasLocalizedMovieContent(result.Results) {
+			return result, lang, nil
+		}
+	}
+
+	if lastErr != nil {
+		return nil, "", lastErr
+	}
+	if lastResult == nil {
+		return &SearchResultMovies{Results: []Movie{}}, c.languages[len(c.languages)-1], nil
+	}
+	return lastResult, lastLang, nil
+}
+
+// GetTVRecommendationsWithFallback gets recommended TV shows using the language fallback chain.
+func (c *LanguageFallbackClient) GetTVRecommendationsWithFallback(ctx context.Context, tvID int) (*SearchResultTVShows, string, error) {
+	var lastResult *SearchResultTVShows
+	var lastLang string
+	var lastErr error
+
+	for _, lang := range c.languages {
+		result, err := c.client.GetTVRecommendationsWithLanguage(ctx, tvID, lang)
+		if err != nil {
+			slog.Debug("Language fallback: TV recommendations failed",
+				"language", lang,
+				"tv_id", tvID,
+				"error", err,
+			)
+			lastErr = err
+			continue
+		}
+
+		lastResult = result
+		lastLang = lang
+		lastErr = nil
+
+		if len(result.Results) > 0 && hasLocalizedTVShowContent(result.Results) {
+			return result, lang, nil
+		}
+	}
+
+	if lastErr != nil {
+		return nil, "", lastErr
+	}
+	if lastResult == nil {
+		return &SearchResultTVShows{Results: []TVShow{}}, c.languages[len(c.languages)-1], nil
+	}
+	return lastResult, lastLang, nil
+}
+
+// GetTVSimilarWithFallback gets similar TV shows using the language fallback chain.
+func (c *LanguageFallbackClient) GetTVSimilarWithFallback(ctx context.Context, tvID int) (*SearchResultTVShows, string, error) {
+	var lastResult *SearchResultTVShows
+	var lastLang string
+	var lastErr error
+
+	for _, lang := range c.languages {
+		result, err := c.client.GetTVSimilarWithLanguage(ctx, tvID, lang)
+		if err != nil {
+			slog.Debug("Language fallback: similar TV shows failed",
+				"language", lang,
+				"tv_id", tvID,
+				"error", err,
+			)
+			lastErr = err
+			continue
+		}
+
+		lastResult = result
+		lastLang = lang
+		lastErr = nil
+
+		if len(result.Results) > 0 && hasLocalizedTVShowContent(result.Results) {
+			return result, lang, nil
+		}
+	}
+
+	if lastErr != nil {
+		return nil, "", lastErr
+	}
+	if lastResult == nil {
+		return &SearchResultTVShows{Results: []TVShow{}}, c.languages[len(c.languages)-1], nil
 	}
 	return lastResult, lastLang, nil
 }

@@ -82,6 +82,23 @@ func (m *mockTMDbServiceForNFO) GetTVShowVideos(ctx context.Context, tvID int) (
 	return nil, nil
 }
 
+// Story 12-3 additions — recommendations/similar not exercised by NFO enrichment.
+func (m *mockTMDbServiceForNFO) GetMovieRecommendations(ctx context.Context, movieID int) (*tmdb.SearchResultMovies, error) {
+	return nil, nil
+}
+
+func (m *mockTMDbServiceForNFO) GetMovieSimilar(ctx context.Context, movieID int) (*tmdb.SearchResultMovies, error) {
+	return nil, nil
+}
+
+func (m *mockTMDbServiceForNFO) GetTVRecommendations(ctx context.Context, tvID int) (*tmdb.SearchResultTVShows, error) {
+	return nil, nil
+}
+
+func (m *mockTMDbServiceForNFO) GetTVSimilar(ctx context.Context, tvID int) (*tmdb.SearchResultTVShows, error) {
+	return nil, nil
+}
+
 // ─── Mock movie repo for enrichment tests ───────────────────────────────────
 
 type mockMovieRepoForNFO struct {

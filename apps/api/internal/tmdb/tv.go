@@ -161,3 +161,57 @@ func (c *Client) GetTVShowVideos(ctx context.Context, tvID int) (*VideosResponse
 
 	return &result, nil
 }
+
+// GetTVRecommendations retrieves TMDb's behavior-aggregate recommendations for a
+// TV show (GET /tv/{id}/recommendations). Results are in the client's default
+// language. Story 12-3 (F-3) — related-content section.
+func (c *Client) GetTVRecommendations(ctx context.Context, tvID int) (*SearchResultTVShows, error) {
+	return c.GetTVRecommendationsWithLanguage(ctx, tvID, c.language)
+}
+
+// GetTVRecommendationsWithLanguage retrieves TV recommendations with a specific
+// language. Used by the language fallback chain.
+func (c *Client) GetTVRecommendationsWithLanguage(ctx context.Context, tvID int, language string) (*SearchResultTVShows, error) {
+	if tvID <= 0 {
+		return nil, NewBadRequestError("TV show ID must be greater than 0")
+	}
+
+	endpoint := fmt.Sprintf("/tv/%d/recommendations", tvID)
+	queryParams := url.Values{
+		"language": []string{language},
+	}
+
+	var result SearchResultTVShows
+	if err := c.Get(ctx, endpoint, queryParams, &result); err != nil {
+		return nil, fmt.Errorf("failed to get TV recommendations: %w", err)
+	}
+
+	return &result, nil
+}
+
+// GetTVSimilar retrieves TMDb's genre/keyword-based similar TV shows
+// (GET /tv/{id}/similar). Used as the fallback when /recommendations is empty
+// (Story 12-3 AC #4). Results are in the client's default language.
+func (c *Client) GetTVSimilar(ctx context.Context, tvID int) (*SearchResultTVShows, error) {
+	return c.GetTVSimilarWithLanguage(ctx, tvID, c.language)
+}
+
+// GetTVSimilarWithLanguage retrieves similar TV shows with a specific language.
+// Used by the language fallback chain.
+func (c *Client) GetTVSimilarWithLanguage(ctx context.Context, tvID int, language string) (*SearchResultTVShows, error) {
+	if tvID <= 0 {
+		return nil, NewBadRequestError("TV show ID must be greater than 0")
+	}
+
+	endpoint := fmt.Sprintf("/tv/%d/similar", tvID)
+	queryParams := url.Values{
+		"language": []string{language},
+	}
+
+	var result SearchResultTVShows
+	if err := c.Get(ctx, endpoint, queryParams, &result); err != nil {
+		return nil, fmt.Errorf("failed to get similar TV shows: %w", err)
+	}
+
+	return &result, nil
+}

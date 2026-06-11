@@ -32,6 +32,43 @@ type MockCacheService struct {
 	DiscoverMoviesError        error
 	DiscoverTVShowsResponse    *tmdb.SearchResultTVShows
 	DiscoverTVShowsError       error
+	// Story 12-3
+	MovieRecommendationsResponse *tmdb.SearchResultMovies
+	MovieRecommendationsError    error
+	MovieSimilarResponse         *tmdb.SearchResultMovies
+	MovieSimilarError            error
+	TVRecommendationsResponse    *tmdb.SearchResultTVShows
+	TVRecommendationsError       error
+	TVSimilarResponse            *tmdb.SearchResultTVShows
+	TVSimilarError               error
+}
+
+func (m *MockCacheService) GetMovieRecommendations(ctx context.Context, movieID int) (*tmdb.SearchResultMovies, error) {
+	if m.MovieRecommendationsError != nil {
+		return nil, m.MovieRecommendationsError
+	}
+	return m.MovieRecommendationsResponse, nil
+}
+
+func (m *MockCacheService) GetMovieSimilar(ctx context.Context, movieID int) (*tmdb.SearchResultMovies, error) {
+	if m.MovieSimilarError != nil {
+		return nil, m.MovieSimilarError
+	}
+	return m.MovieSimilarResponse, nil
+}
+
+func (m *MockCacheService) GetTVRecommendations(ctx context.Context, tvID int) (*tmdb.SearchResultTVShows, error) {
+	if m.TVRecommendationsError != nil {
+		return nil, m.TVRecommendationsError
+	}
+	return m.TVRecommendationsResponse, nil
+}
+
+func (m *MockCacheService) GetTVSimilar(ctx context.Context, tvID int) (*tmdb.SearchResultTVShows, error) {
+	if m.TVSimilarError != nil {
+		return nil, m.TVSimilarError
+	}
+	return m.TVSimilarResponse, nil
 }
 
 func (m *MockCacheService) SearchMovies(ctx context.Context, query string, page int) (*tmdb.SearchResultMovies, error) {

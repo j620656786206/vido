@@ -45,6 +45,14 @@ type TMDbServiceInterface interface {
 	GetMovieVideos(ctx context.Context, movieID int) (*tmdb.VideosResponse, error)
 	// GetTVShowVideos returns TMDb videos for a TV show — no cache.
 	GetTVShowVideos(ctx context.Context, tvID int) (*tmdb.VideosResponse, error)
+	// GetMovieRecommendations returns recommended movies for a movie (cached 24h). Story 12-3.
+	GetMovieRecommendations(ctx context.Context, movieID int) (*tmdb.SearchResultMovies, error)
+	// GetMovieSimilar returns similar movies for a movie (cached 24h; recommendations fallback). Story 12-3.
+	GetMovieSimilar(ctx context.Context, movieID int) (*tmdb.SearchResultMovies, error)
+	// GetTVRecommendations returns recommended TV shows for a TV show (cached 24h). Story 12-3.
+	GetTVRecommendations(ctx context.Context, tvID int) (*tmdb.SearchResultTVShows, error)
+	// GetTVSimilar returns similar TV shows for a TV show (cached 24h; recommendations fallback). Story 12-3.
+	GetTVSimilar(ctx context.Context, tvID int) (*tmdb.SearchResultTVShows, error)
 }
 
 // TMDbService implements TMDbServiceInterface
@@ -416,6 +424,62 @@ func (s *TMDbService) GetTVShowVideos(ctx context.Context, tvID int) (*tmdb.Vide
 	result, err := s.client.GetTVShowVideos(ctx, tvID)
 	if err != nil {
 		slog.Error("Failed to get TV show videos", "tv_id", tvID, "error", err)
+		return nil, err
+	}
+	return result, nil
+}
+
+// GetMovieRecommendations returns recommended movies for a movie (cached 24h via
+// the cache layer). Story 12-3 (F-3).
+func (s *TMDbService) GetMovieRecommendations(ctx context.Context, movieID int) (*tmdb.SearchResultMovies, error) {
+	if movieID <= 0 {
+		return nil, tmdb.NewBadRequestError("movie ID must be greater than 0")
+	}
+	result, err := s.cacheService.GetMovieRecommendations(ctx, movieID)
+	if err != nil {
+		slog.Error("Failed to get movie recommendations", "movie_id", movieID, "error", err)
+		return nil, err
+	}
+	return result, nil
+}
+
+// GetMovieSimilar returns similar movies for a movie (cached 24h). Used as the
+// recommendations fallback in RecommendationService. Story 12-3 (F-3).
+func (s *TMDbService) GetMovieSimilar(ctx context.Context, movieID int) (*tmdb.SearchResultMovies, error) {
+	if movieID <= 0 {
+		return nil, tmdb.NewBadRequestError("movie ID must be greater than 0")
+	}
+	result, err := s.cacheService.GetMovieSimilar(ctx, movieID)
+	if err != nil {
+		slog.Error("Failed to get similar movies", "movie_id", movieID, "error", err)
+		return nil, err
+	}
+	return result, nil
+}
+
+// GetTVRecommendations returns recommended TV shows for a TV show (cached 24h).
+// Story 12-3 (F-3).
+func (s *TMDbService) GetTVRecommendations(ctx context.Context, tvID int) (*tmdb.SearchResultTVShows, error) {
+	if tvID <= 0 {
+		return nil, tmdb.NewBadRequestError("TV show ID must be greater than 0")
+	}
+	result, err := s.cacheService.GetTVRecommendations(ctx, tvID)
+	if err != nil {
+		slog.Error("Failed to get TV recommendations", "tv_id", tvID, "error", err)
+		return nil, err
+	}
+	return result, nil
+}
+
+// GetTVSimilar returns similar TV shows for a TV show (cached 24h). Used as the
+// recommendations fallback in RecommendationService. Story 12-3 (F-3).
+func (s *TMDbService) GetTVSimilar(ctx context.Context, tvID int) (*tmdb.SearchResultTVShows, error) {
+	if tvID <= 0 {
+		return nil, tmdb.NewBadRequestError("TV show ID must be greater than 0")
+	}
+	result, err := s.cacheService.GetTVSimilar(ctx, tvID)
+	if err != nil {
+		slog.Error("Failed to get similar TV shows", "tv_id", tvID, "error", err)
 		return nil, err
 	}
 	return result, nil

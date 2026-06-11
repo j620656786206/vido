@@ -57,6 +57,22 @@ type ClientInterface interface {
 	GetMovieVideos(ctx context.Context, movieID int) (*VideosResponse, error)
 	// GetTVShowVideos retrieves videos (trailers, teasers) for a TV show
 	GetTVShowVideos(ctx context.Context, tvID int) (*VideosResponse, error)
+	// GetMovieRecommendations retrieves recommended movies for a movie
+	GetMovieRecommendations(ctx context.Context, movieID int) (*SearchResultMovies, error)
+	// GetMovieRecommendationsWithLanguage retrieves recommended movies with a specific language
+	GetMovieRecommendationsWithLanguage(ctx context.Context, movieID int, language string) (*SearchResultMovies, error)
+	// GetMovieSimilar retrieves similar movies for a movie (recommendations fallback)
+	GetMovieSimilar(ctx context.Context, movieID int) (*SearchResultMovies, error)
+	// GetMovieSimilarWithLanguage retrieves similar movies with a specific language
+	GetMovieSimilarWithLanguage(ctx context.Context, movieID int, language string) (*SearchResultMovies, error)
+	// GetTVRecommendations retrieves recommended TV shows for a TV show
+	GetTVRecommendations(ctx context.Context, tvID int) (*SearchResultTVShows, error)
+	// GetTVRecommendationsWithLanguage retrieves recommended TV shows with a specific language
+	GetTVRecommendationsWithLanguage(ctx context.Context, tvID int, language string) (*SearchResultTVShows, error)
+	// GetTVSimilar retrieves similar TV shows for a TV show (recommendations fallback)
+	GetTVSimilar(ctx context.Context, tvID int) (*SearchResultTVShows, error)
+	// GetTVSimilarWithLanguage retrieves similar TV shows with a specific language
+	GetTVSimilarWithLanguage(ctx context.Context, tvID int, language string) (*SearchResultTVShows, error)
 	// FindByExternalID finds movies/TV shows by an external ID (e.g., IMDB)
 	FindByExternalID(ctx context.Context, externalID string, externalSource string) (*FindByExternalIDResponse, error)
 	// GetTrendingMovies retrieves the trending movies for a time window ("day" or "week")
