@@ -24,7 +24,9 @@ error states + Epic-12 detail features with no design coverage.
 - `pen-review-2026-06-12.md` — the 40-screen `.pen` review (4 parallel agents: A+C, B,
   D–G, H/I/J+Design System) + cross-cutting Tier 1–4 triage. **Primary evidence input for
   Phase 0.** Recorded in zh-TW (as conducted, preserves the Chinese UI strings & node IDs).
-- `00-redesign-brief.md` — *Phase 0 output (TBD)*
+- `00-redesign-brief.md` — **Phase 0 output (done 2026-06-12)**: evidence-backed pain-point
+  inventory (6 systemic root causes + 10 recurring failure modes + hotspot ranking),
+  2025–26 competitive scan, design principles N1–N6, open IA decisions D1–D4 for Phase 1.
 - `01-design-language-v2.md`, `01-nav-ia-decision-adr.md` — *Phase 1 output (TBD)*
 - `02-pilot-validation.md` — *Phase 2 output (TBD)*
 - See also `../../design-context-pack.md` — project primer (real design tokens from

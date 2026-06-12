@@ -9,6 +9,9 @@
 - Always commit screenshots alongside .pen changes
 - [Pen Flow Layout Convention](project_pen_flow_layout_convention.md) — canvas IA: merge same-flow desktop+mobile into one block (A–G), semantic naming, captions above frames
 
+## UX Redesign Initiative
+- [UX Redesign Initiative](project_ux_redesign_initiative.md) — Phase 0 brief done 2026-06-12; Phase 1 = design language v2 + nav IA ADR (D1–D4); strangler migration, fresh session per phase
+
 ## Project Structure
 - Monorepo managed with Nx
 - `apps/api/` — Go backend (Gin framework)
@@ -18,7 +21,7 @@
 
 ## TestSprite Integration
 - [TestSprite Integration Plan](project_testsprite_integration.md) — Installed but deferred until Epic 5+6 complete; 6 P0 journeys defined, prerequisites listed
-- [TestSprite v4 Regeneration Plan](project_testsprite_v4_regen.md) — Epic 8 完成後重新生成字幕引擎測試；standard_prd.json 已更新為 v4；28 個舊測試待刪除
+- [TestSprite v4 Regeneration Plan](project_testsprite_v4_regen.md) — 2026-06-07 清理+擴充：58 plan / 54 active；30 v3 孤兒已刪、+8 P0 案；批次字幕前端 UI 未開發(已 triage)；執行仍卡 seed data (retro-8-TS2)
 
 ## Development Workflow Feedback
 - [Design Verification Required](feedback_design_verification.md) — Dev must verify UI matches design screenshots after every story
@@ -41,6 +44,7 @@
 
 ## Technical Decisions
 - [qBittorrent State Mapping](project_qbt_state_mapping.md) — qBT 4.x+5.0+ state→Vido status follows Sonarr/Radarr standard
+- [gh Account for PRs](project_gh_account_for_prs.md) — `gh pr create` on vido needs active account `j620656786206` (default-active `alexyu-tvbs` isn't a collaborator); `gh auth switch` first
 
 ## Product Decisions
 - [CN Subtitle Policy](project_cn_subtitle_policy.md) — 大陸影片保留簡體字幕不轉換；用 TMDb production_countries 判斷；Epic 8 範圍內處理
