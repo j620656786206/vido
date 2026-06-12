@@ -40,7 +40,8 @@ func setupTestDB(t *testing.T) *sql.DB {
 			release_date TEXT,
 			imdb_id TEXT,
 			scraped_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-			expires_at TIMESTAMP NOT NULL
+			expires_at TIMESTAMP NOT NULL,
+			review_summary_json TEXT
 		);
 		CREATE INDEX IF NOT EXISTS idx_douban_cache_douban_id ON douban_cache(douban_id);
 		CREATE INDEX IF NOT EXISTS idx_douban_cache_title ON douban_cache(title);

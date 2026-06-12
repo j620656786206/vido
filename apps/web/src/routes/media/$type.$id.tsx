@@ -24,8 +24,10 @@ import { SeasonAccordion } from '../../components/media/SeasonAccordion';
 import { RelatedContent } from '../../components/media/RelatedContent';
 import { StreamingAvailability } from '../../components/media/StreamingAvailability';
 import { TrailerSection } from '../../components/media/TrailerSection';
+import { DoubanSection } from '../../components/media/DoubanSection';
 import { useOwnedMedia } from '../../hooks/useOwnedMedia';
 import { useDoubanRating } from '../../hooks/useDoubanRating';
+import { useDoubanReviewSummary } from '../../hooks/useDoubanReviewSummary';
 import type { MovieDetails, TVShowDetails } from '../../types/tmdb';
 import { getImageUrl } from '../../lib/image';
 import { cn } from '../../lib/utils';
@@ -130,6 +132,18 @@ function LocalDetailView({ type, id }: { type: ValidMediaType; id: string }) {
   // Story 12-1 — lazily enrich with the Douban rating. Gated on tmdbId > 0:
   // an unmatched record cannot be reliably matched on Douban either.
   const doubanQuery = useDoubanRating(id, isMovie ? 'movie' : 'series', tmdbId > 0);
+
+  // Story 12-6 — Douban review summary (短評). Gated on a RESOLVED doubanId (not
+  // merely tmdbId > 0): the summary only renders once the rating query has resolved
+  // a doubanId, so fetching before then would issue a Douban search scrape whose
+  // result is discarded for every unmatched title (CR M1). Gating here matches the
+  // render condition below and avoids that wasted, rate-limited scrape (Rule 27 ①).
+  // The direct link is built from doubanQuery's doubanId; this query supplies the comments.
+  const doubanReviewQuery = useDoubanReviewSummary(
+    id,
+    isMovie ? 'movie' : 'series',
+    Boolean(doubanQuery.data?.doubanId)
+  );
 
   // Story 12-2 — season summaries for the TV accordion (cached SeasonsJSON,
   // no TMDB call). Gated on TV + tmdbId > 0 (AC #1).
@@ -347,6 +361,21 @@ function LocalDetailView({ type, id }: { type: ValidMediaType; id: string }) {
                   </div>
                 )}
 
+                {/* Douban review summary (Story 12-6) — below trailer, above credits.
+                    Direct link + short comments, keyed off the doubanId the rating
+                    query already resolved. Gated on a known doubanId so there's no
+                    empty spacer when there's no Douban match (AC #4). */}
+                {doubanQuery.data?.doubanId && (
+                  <div className="mt-6">
+                    <DoubanSection
+                      doubanId={doubanQuery.data.doubanId}
+                      summary={doubanReviewQuery.data}
+                      isLoading={doubanReviewQuery.isLoading}
+                      isError={doubanReviewQuery.isError}
+                    />
+                  </div>
+                )}
+
                 {/* Credits */}
                 {credits.data && (
                   <div className="mt-6">
@@ -561,7 +590,9 @@ export function TMDbDetailView({ type, tmdbId }: { type: ValidMediaType; tmdbId:
             <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-[var(--text-secondary)]">
               {releaseDate && <span>{releaseDate.slice(0, 4)}</span>}
               {/* TMDb-numeric items are not in the local library, so no Douban
-                  enrichment is possible (the endpoint is keyed by local UUID). */}
+                  enrichment is possible (the rating AND the Story 12-6 review
+                  summary endpoints are both keyed by local UUID). DoubanSection is
+                  therefore LocalDetailView-only. */}
               <DualRatingDisplay tmdbRating={data.voteAverage} tmdbVoteCount={data.voteCount} />
               {genreNames.length > 0 && <span>{genreNames.join(' / ')}</span>}
             </div>

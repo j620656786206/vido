@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"github.com/vido/api/internal/douban"
 	"github.com/vido/api/internal/services"
 )
 
@@ -26,6 +27,14 @@ func (m *MockDoubanRatingService) EnrichDoubanRating(ctx context.Context, mediaI
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*services.DoubanRatingResult), args.Error(1)
+}
+
+func (m *MockDoubanRatingService) EnrichDoubanReviewSummary(ctx context.Context, mediaID, mediaType string) (*douban.ReviewSummaryResult, error) {
+	args := m.Called(ctx, mediaID, mediaType)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*douban.ReviewSummaryResult), args.Error(1)
 }
 
 var _ DoubanRatingServiceInterface = (*MockDoubanRatingService)(nil)

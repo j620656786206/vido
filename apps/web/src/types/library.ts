@@ -108,6 +108,24 @@ export interface DoubanRating {
 
 export type DoubanRatingResponse = DoubanRating | null;
 
+// A single Douban short comment (短評) — text is server-converted to Traditional
+// Chinese (Story 12-6 AC #3). rating is a 0–5 star score (0 when unrated).
+export interface ReviewComment {
+  author: string;
+  rating: number;
+  text: string;
+}
+
+// Douban review-summary enrichment payload (Story 12-6). The endpoint returns
+// `data: null` when no review summary is available (graceful degradation).
+export interface DoubanReviewSummary {
+  id: string;
+  totalComments: number;
+  topComments: ReviewComment[];
+}
+
+export type DoubanReviewSummaryResponse = DoubanReviewSummary | null;
+
 // Season/episode accordion types (Story 12-2). Field names are camelCase —
 // the API returns snake_case and libraryService transforms via snakeToCamel.
 export interface SeasonSummary {

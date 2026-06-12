@@ -52,7 +52,7 @@ func TestEnrichDoubanRating_CacheHit(t *testing.T) {
 	}
 	movieRepo.On("FindByID", mock.Anything, "m1").Return(cached, nil)
 
-	svc := NewDoubanRatingService(searcher, movieRepo, seriesRepo)
+	svc := NewDoubanRatingService(searcher, nil, movieRepo, seriesRepo)
 	result, err := svc.EnrichDoubanRating(context.Background(), "m1", "movie")
 
 	require.NoError(t, err)
@@ -73,7 +73,7 @@ func TestEnrichDoubanRating_CacheMissPersists(t *testing.T) {
 	movieRepo.On("FindByID", mock.Anything, "m1").Return(uncached, nil)
 	movieRepo.On("UpdateDoubanRating", mock.Anything, "m1", "1292052", 9.7, 2130000).Return(nil)
 
-	svc := NewDoubanRatingService(searcher, movieRepo, seriesRepo)
+	svc := NewDoubanRatingService(searcher, nil, movieRepo, seriesRepo)
 	result, err := svc.EnrichDoubanRating(context.Background(), "m1", "movie")
 
 	require.NoError(t, err)
@@ -95,7 +95,7 @@ func TestEnrichDoubanRating_SeriesCacheMissPersists(t *testing.T) {
 	seriesRepo.On("FindByID", mock.Anything, "s1").Return(uncached, nil)
 	seriesRepo.On("UpdateDoubanRating", mock.Anything, "s1", "26794435", 9.4, 880000).Return(nil)
 
-	svc := NewDoubanRatingService(searcher, movieRepo, seriesRepo)
+	svc := NewDoubanRatingService(searcher, nil, movieRepo, seriesRepo)
 	result, err := svc.EnrichDoubanRating(context.Background(), "s1", "series")
 
 	require.NoError(t, err)
@@ -112,7 +112,7 @@ func TestEnrichDoubanRating_SearchErrorDegrades(t *testing.T) {
 
 	movieRepo.On("FindByID", mock.Anything, "m1").Return(&models.Movie{ID: "m1", Title: "x"}, nil)
 
-	svc := NewDoubanRatingService(searcher, movieRepo, seriesRepo)
+	svc := NewDoubanRatingService(searcher, nil, movieRepo, seriesRepo)
 	result, err := svc.EnrichDoubanRating(context.Background(), "m1", "movie")
 
 	require.NoError(t, err, "Douban failure must degrade gracefully, not error")
@@ -127,7 +127,7 @@ func TestEnrichDoubanRating_NoResultsDegrades(t *testing.T) {
 
 	movieRepo.On("FindByID", mock.Anything, "m1").Return(&models.Movie{ID: "m1", Title: "x"}, nil)
 
-	svc := NewDoubanRatingService(searcher, movieRepo, seriesRepo)
+	svc := NewDoubanRatingService(searcher, nil, movieRepo, seriesRepo)
 	result, err := svc.EnrichDoubanRating(context.Background(), "m1", "movie")
 
 	require.NoError(t, err)
@@ -141,7 +141,7 @@ func TestEnrichDoubanRating_ZeroRatingDegrades(t *testing.T) {
 
 	movieRepo.On("FindByID", mock.Anything, "m1").Return(&models.Movie{ID: "m1", Title: "x"}, nil)
 
-	svc := NewDoubanRatingService(searcher, movieRepo, seriesRepo)
+	svc := NewDoubanRatingService(searcher, nil, movieRepo, seriesRepo)
 	result, err := svc.EnrichDoubanRating(context.Background(), "m1", "movie")
 
 	require.NoError(t, err)
@@ -154,7 +154,7 @@ func TestEnrichDoubanRating_NilSearcherDegrades(t *testing.T) {
 
 	movieRepo.On("FindByID", mock.Anything, "m1").Return(&models.Movie{ID: "m1", Title: "x"}, nil)
 
-	svc := NewDoubanRatingService(nil, movieRepo, seriesRepo)
+	svc := NewDoubanRatingService(nil, nil, movieRepo, seriesRepo)
 	result, err := svc.EnrichDoubanRating(context.Background(), "m1", "movie")
 
 	require.NoError(t, err)
@@ -168,7 +168,7 @@ func TestEnrichDoubanRating_SearcherUnavailableDegrades(t *testing.T) {
 
 	movieRepo.On("FindByID", mock.Anything, "m1").Return(&models.Movie{ID: "m1", Title: "x"}, nil)
 
-	svc := NewDoubanRatingService(searcher, movieRepo, seriesRepo)
+	svc := NewDoubanRatingService(searcher, nil, movieRepo, seriesRepo)
 	result, err := svc.EnrichDoubanRating(context.Background(), "m1", "movie")
 
 	require.NoError(t, err)
@@ -177,7 +177,7 @@ func TestEnrichDoubanRating_SearcherUnavailableDegrades(t *testing.T) {
 }
 
 func TestEnrichDoubanRating_InvalidMediaType(t *testing.T) {
-	svc := NewDoubanRatingService(&fakeDoubanSearcher{available: true}, new(testutil.MockMovieRepository), new(testutil.MockSeriesRepository))
+	svc := NewDoubanRatingService(&fakeDoubanSearcher{available: true}, nil, new(testutil.MockMovieRepository), new(testutil.MockSeriesRepository))
 	result, err := svc.EnrichDoubanRating(context.Background(), "x1", "person")
 	require.NoError(t, err)
 	assert.Nil(t, result)
@@ -188,7 +188,7 @@ func TestEnrichDoubanRating_RepoErrorPropagates(t *testing.T) {
 	seriesRepo := new(testutil.MockSeriesRepository)
 	movieRepo.On("FindByID", mock.Anything, "missing").Return((*models.Movie)(nil), errors.New("movie not found"))
 
-	svc := NewDoubanRatingService(&fakeDoubanSearcher{available: true}, movieRepo, seriesRepo)
+	svc := NewDoubanRatingService(&fakeDoubanSearcher{available: true}, nil, movieRepo, seriesRepo)
 	result, err := svc.EnrichDoubanRating(context.Background(), "missing", "movie")
 
 	require.Error(t, err, "a missing media record is a hard error (→ 404)")
@@ -212,7 +212,7 @@ func TestEnrichDoubanRating_PicksYearMatch(t *testing.T) {
 	movieRepo.On("FindByID", mock.Anything, "m1").Return(uncached, nil)
 	movieRepo.On("UpdateDoubanRating", mock.Anything, "m1", "right", 9.7, 2130000).Return(nil)
 
-	svc := NewDoubanRatingService(searcher, movieRepo, seriesRepo)
+	svc := NewDoubanRatingService(searcher, nil, movieRepo, seriesRepo)
 	result, err := svc.EnrichDoubanRating(context.Background(), "m1", "movie")
 
 	require.NoError(t, err)
@@ -239,7 +239,7 @@ func TestEnrichDoubanRating_NoYearFallsBackToFirstRated(t *testing.T) {
 	movieRepo.On("FindByID", mock.Anything, "m1").Return(uncached, nil)
 	movieRepo.On("UpdateDoubanRating", mock.Anything, "m1", "first", 8.2, 5000).Return(nil)
 
-	svc := NewDoubanRatingService(searcher, movieRepo, seriesRepo)
+	svc := NewDoubanRatingService(searcher, nil, movieRepo, seriesRepo)
 	result, err := svc.EnrichDoubanRating(context.Background(), "m1", "movie")
 
 	require.NoError(t, err)
@@ -263,7 +263,7 @@ func TestEnrichDoubanRating_SeriesCacheHit(t *testing.T) {
 	}
 	seriesRepo.On("FindByID", mock.Anything, "s1").Return(cached, nil)
 
-	svc := NewDoubanRatingService(searcher, movieRepo, seriesRepo)
+	svc := NewDoubanRatingService(searcher, nil, movieRepo, seriesRepo)
 	result, err := svc.EnrichDoubanRating(context.Background(), "s1", "series")
 
 	require.NoError(t, err)
@@ -283,7 +283,7 @@ func TestEnrichDoubanRating_NotFoundMapsToSentinel(t *testing.T) {
 	movieRepo.On("FindByID", mock.Anything, "missing").
 		Return((*models.Movie)(nil), fmt.Errorf("movie with id missing not found: %w", sql.ErrNoRows))
 
-	svc := NewDoubanRatingService(&fakeDoubanSearcher{available: true}, movieRepo, seriesRepo)
+	svc := NewDoubanRatingService(&fakeDoubanSearcher{available: true}, nil, movieRepo, seriesRepo)
 	result, err := svc.EnrichDoubanRating(context.Background(), "missing", "movie")
 
 	require.Error(t, err)
@@ -298,7 +298,7 @@ func TestEnrichDoubanRating_InfraErrorNotSentinel(t *testing.T) {
 	movieRepo.On("FindByID", mock.Anything, "m1").
 		Return((*models.Movie)(nil), errors.New("failed to find movie: db connection reset"))
 
-	svc := NewDoubanRatingService(&fakeDoubanSearcher{available: true}, movieRepo, seriesRepo)
+	svc := NewDoubanRatingService(&fakeDoubanSearcher{available: true}, nil, movieRepo, seriesRepo)
 	result, err := svc.EnrichDoubanRating(context.Background(), "m1", "movie")
 
 	require.Error(t, err)
