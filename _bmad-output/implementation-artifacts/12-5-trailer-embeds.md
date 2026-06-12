@@ -1,6 +1,6 @@
 # Story 12.5: Trailer Embeds — YouTube Trailer on the Detail Page (with TMDB Fallback)
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -26,27 +26,27 @@ so that I can preview the content without leaving the app or searching YouTube m
 
 ### Frontend
 
-- [ ] **Task 1: Extract `pickBestTrailer` into a shared util (de-dup before reuse)** (AC: #2)
-  - [ ] 1.1 Move the `pickBestTrailer(results)` function currently inlined in `apps/web/src/components/homepage/TrailerModal.tsx:19-34` into a shared module (e.g. `apps/web/src/lib/trailers.ts` or `utils/`), exporting `pickBestTrailer(videos): Video | null`.
-  - [ ] 1.2 Update `TrailerModal.tsx` to import the shared helper (behavior unchanged — single source of truth, prevents the detail page re-implementing selection and drifting).
-  - [ ] 1.3 Add a sibling helper `pickTmdbVideoFallbackUrl(tmdbId, type): string` returning the TMDB videos-page URL for AC #3 (`https://www.themoviedb.org/${type === 'tv' ? 'tv' : 'movie'}/${tmdbId}`).
-  - [ ] 1.4 Unit-test the shared helpers (official-first/newest ordering, null on no-YT-trailer, fallback URL shape).
+- [x] **Task 1: Extract `pickBestTrailer` into a shared util (de-dup before reuse)** (AC: #2)
+  - [x] 1.1 Move the `pickBestTrailer(results)` function currently inlined in `apps/web/src/components/homepage/TrailerModal.tsx:19-34` into a shared module (e.g. `apps/web/src/lib/trailers.ts` or `utils/`), exporting `pickBestTrailer(videos): Video | null`.
+  - [x] 1.2 Update `TrailerModal.tsx` to import the shared helper (behavior unchanged — single source of truth, prevents the detail page re-implementing selection and drifting).
+  - [x] 1.3 Add a sibling helper `pickTmdbVideoFallbackUrl(tmdbId, type): string` returning the TMDB videos-page URL for AC #3 (`https://www.themoviedb.org/${type === 'tv' ? 'tv' : 'movie'}/${tmdbId}`).
+  - [x] 1.4 Unit-test the shared helpers (official-first/newest ordering, null on no-YT-trailer, fallback URL shape).
 
-- [ ] **Task 2: `useMediaVideos` detail-level hook** (AC: #1, #3, #4)
-  - [ ] 2.1 Add to `apps/web/src/hooks/useMediaDetails.ts` (mirror `useSeriesSeasons` at `:29`): `useMediaVideos(tmdbId: number, type: 'movie' | 'tv', enabled: boolean)` → `useQuery` over the **existing** `tmdbService.getMovieVideos(tmdbId)` / `tmdbService.getTVShowVideos(tmdbId)` (TMDB-numeric endpoints, work for BOTH detail views since both have a `tmdbId`).
-  - [ ] 2.2 Add `detailKeys.videos(tmdbId, type)` to the query-key factory (`useMediaDetails.ts:12-24`).
-  - [ ] 2.3 `staleTime: 10 * 60 * 1000` (10min — matches the existing `useMediaTrailers` convention). `enabled: enabled && tmdbId > 0`.
+- [x] **Task 2: `useMediaVideos` detail-level hook** (AC: #1, #3, #4)
+  - [x] 2.1 Add to `apps/web/src/hooks/useMediaDetails.ts` (mirror `useSeriesSeasons` at `:29`): `useMediaVideos(tmdbId: number, type: 'movie' | 'tv', enabled: boolean)` → `useQuery` over the **existing** `tmdbService.getMovieVideos(tmdbId)` / `tmdbService.getTVShowVideos(tmdbId)` (TMDB-numeric endpoints, work for BOTH detail views since both have a `tmdbId`).
+  - [x] 2.2 Add `detailKeys.videos(tmdbId, type)` to the query-key factory (`useMediaDetails.ts:12-24`).
+  - [x] 2.3 `staleTime: 10 * 60 * 1000` (10min — matches the existing `useMediaTrailers` convention). `enabled: enabled && tmdbId > 0`.
 
-- [ ] **Task 3: `TrailerSection` detail-page component** (AC: #1, #3, #4, #5, #6)
-  - [ ] 3.1 Create `apps/web/src/components/media/TrailerSection.tsx`. Props: `tmdbId: number`, `type: 'movie' | 'tv'`, `title: string`. Fetches via `useMediaVideos(tmdbId, type, true)`.
-  - [ ] 3.2 Decision logic (ADR Decision 4 fallback chain): `const best = pickBestTrailer(data?.results)` → **if `best`**: render the existing `<TrailerEmbed videoKey={best.key} title={title} />` (button "▶ 觀看預告片" → inline youtube-nocookie iframe — reuse, no new embed). **Else if** `data?.results?.length` (videos exist but no YT trailer): render an outbound link "在 TMDB 觀看預告片" → `pickTmdbVideoFallbackUrl(tmdbId, type)` (`target="_blank" rel="noopener noreferrer"`). **Else** (no videos / loading / error): render nothing (or a muted empty-state). Never throw.
-  - [ ] 3.3 Heading "預告片" consistent with sibling detail-page section headings; loading is silent (no skeleton flash — the section simply appears when data arrives).
-  - [ ] 3.4 Rule 21 header (feature postdates the `.pen` design — Epic 12 not in `ux-design.pen`): design-coverage-gap form `// Design ref: ux-design.pen — no current screen frame; Epic 12 detail-page trailer section postdates the .pen design`. (`TrailerEmbed`/`TrailerModal` keep their own headers.)
-  - [ ] 3.5 Write `TrailerSection.spec.tsx`: YT trailer → `TrailerEmbed` rendered; videos-but-no-YT → fallback link present; no videos → nothing rendered; error → nothing rendered (fail-soft). Rule 16 matchers (`toBeInTheDocument`, `toBeAttached` for the pre-click button/transition).
+- [x] **Task 3: `TrailerSection` detail-page component** (AC: #1, #3, #4, #5, #6)
+  - [x] 3.1 Create `apps/web/src/components/media/TrailerSection.tsx`. Props: `tmdbId: number`, `type: 'movie' | 'tv'`, `title: string`. Fetches via `useMediaVideos(tmdbId, type, true)`.
+  - [x] 3.2 Decision logic (ADR Decision 4 fallback chain): `const best = pickBestTrailer(data?.results)` → **if `best`**: render the existing `<TrailerEmbed videoKey={best.key} title={title} />` (button "▶ 觀看預告片" → inline youtube-nocookie iframe — reuse, no new embed). **Else if** `data?.results?.length` (videos exist but no YT trailer): render an outbound link "在 TMDB 觀看預告片" → `pickTmdbVideoFallbackUrl(tmdbId, type)` (`target="_blank" rel="noopener noreferrer"`). **Else** (no videos / loading / error): render nothing (or a muted empty-state). Never throw.
+  - [x] 3.3 Heading "預告片" consistent with sibling detail-page section headings; loading is silent (no skeleton flash — the section simply appears when data arrives).
+  - [x] 3.4 Rule 21 header (feature postdates the `.pen` design — Epic 12 not in `ux-design.pen`): design-coverage-gap form `// Design ref: ux-design.pen — no current screen frame; Epic 12 detail-page trailer section postdates the .pen design`. (`TrailerEmbed`/`TrailerModal` keep their own headers.)
+  - [x] 3.5 Write `TrailerSection.spec.tsx`: YT trailer → `TrailerEmbed` rendered; videos-but-no-YT → fallback link present; no videos → nothing rendered; error → nothing rendered (fail-soft). Rule 16 matchers (`toBeInTheDocument`; `toBeAttached` is Playwright-only so the unit test uses `toBeInTheDocument`/`toHaveTextContent` + pre-click `trailer-player` absence to assert the pre-click button state).
 
-- [ ] **Task 4: Wire into the detail page** (AC: #1, #7)
-  - [ ] 4.1 In `apps/web/src/routes/media/$type.$id.tsx`, render `<TrailerSection />` **below the overview, above `CreditsSection`** in BOTH `LocalDetailView` (~`:305→307`) AND `TMDbDetailView` (~`:505→507`) — consistent with where 12-4's `StreamingAvailability` lands (sequence the detail sections coherently: ratings → tech badges → overview → **streaming** → **trailer** → credits → recommendations → seasons).
-  - [ ] 4.2 Resolve the TMDB id + type per view: `LocalDetailView` → `movie.tmdbId`/`series.tmdbId` + `type`; `TMDbDetailView` → the numeric route id + `type`. Only render when `tmdbId > 0`.
+- [x] **Task 4: Wire into the detail page** (AC: #1, #7)
+  - [x] 4.1 In `apps/web/src/routes/media/$type.$id.tsx`, render `<TrailerSection />` **below the overview, above `CreditsSection`** in BOTH `LocalDetailView` (~`:305→307`) AND `TMDbDetailView` (~`:505→507`) — consistent with where 12-4's `StreamingAvailability` lands (sequence the detail sections coherently: ratings → tech badges → overview → **streaming** → **trailer** → credits → recommendations → seasons).
+  - [x] 4.2 Resolve the TMDB id + type per view: `LocalDetailView` → `movie.tmdbId`/`series.tmdbId` + `type`; `TMDbDetailView` → the numeric route id + `type`. Only render when `tmdbId > 0`.
 
 ## Dev Notes
 
@@ -127,24 +127,75 @@ Epic 12 has **no `ux-design.pen` screen** for the detail-page trailer section. P
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+claude-opus-4-8[1m] (Amelia / dev-story workflow)
 
 ### Debug Log References
 
+- Full web regression: `vitest run` (apps/web) → 175 files / 2088 tests PASS (run directly; Nx wrapper's pnpm-install precheck is non-functional in this sandbox — `[ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY]` / `[ERR_PNPM_IGNORED_BUILDS]`).
+- Backend regression: `go test ./...` (apps/api) → all packages PASS (untouched by this FE-only story; run to satisfy the Epic-9 dual-package gate).
+- Lint: `eslint` on touched files → 0 errors, 1 PRE-EXISTING warning (`react-hooks/exhaustive-deps` on `buildMetadataForEditor` useCallback at `$type.$id.tsx:181` — not introduced by this story; the useCallback was untouched).
+- Prettier: 2 files auto-formatted (`trailers.spec.ts`, `useMediaDetails.ts`), re-checked clean.
+- Orphaned vitest workers after suite: 0.
+- Extra check: `tsc --noEmit` (NOT a project CI gate per Rule 12 — gate = go vet + staticcheck + eslint + prettier) surfaced only PRE-EXISTING errors in untouched files (`routes/test/-gallery.fixtures.tsx`, `routes/settings/*`, `visual-harness/*`, `vite.config.mts` moduleResolution). ZERO errors in any file this story touched. Not filed as backlog: not a gate failure, predates this story, unrelated to trailers.
+
 ### Completion Notes List
+
+- **AC #1/#7 (embed in both views):** `TrailerSection` wired below streaming / above credits in BOTH `LocalDetailView` and `TMDbDetailView`, keyed by the TMDB id present in each (`localData.tmdbId` / numeric route id), gated `tmdbId > 0`. Final detail-section order: ratings → tech badges → overview → streaming → **trailer** → credits → recommendations → seasons.
+- **AC #2:** selection reuses the SAME `pickBestTrailer` (extracted to `lib/trailers.ts`), so the homepage modal and the detail section can never drift. `TrailerModal` now imports it (inlined copy removed).
+- **AC #3 (fallback chain, ADR Decision 4):** videos exist but no embeddable YT trailer → outbound link "在 TMDB 觀看預告片" → `pickTmdbVideoFallbackUrl(tmdbId, type)` (`https://www.themoviedb.org/{movie|tv}/{tmdbId}`, `target=_blank rel="noopener noreferrer"`).
+- **AC #4 (fail-soft, Rule 27 Pillar 3):** loading / error / no-videos all render nothing — `TrailerSection` never throws or breaks the page. Verified by spec (error → empty DOM; no-videos → no section).
+- **AC #5 reconciliation:** the AC lists "autoplay, keyboard-accessible (Escape/close)" but explicitly says "reuse `TrailerEmbed`'s existing guard", and `TrailerEmbed.tsx` is in the story's "REUSE as-is (no change)" list. `TrailerEmbed` is the designated inline embed (button→iframe, key-regex guard `/^[a-zA-Z0-9_-]+$/`, `title`/`allow` set). An INLINE in-page embed (no overlay/focus-trap) does not need modal Escape-to-close — that affordance belongs to the homepage `TrailerModal`, not this section. Honored the explicit "no change" directive rather than modifying a shared, baseline-covered component; key-validation portion of AC #5 is satisfied by the reused guard.
+- **🔗 AC Drift: NONE** (checked grep `pickBestTrailer|TrailerEmbed|youtube-nocookie|/videos|getMovieVideos` across `_bmad-output/implementation-artifacts/*.md` — 10 hits; the substantive ones (Story 10-2) are **REUSE** not DRIFT: `pickBestTrailer` moved unchanged (behavior-identical refactor, single source of truth), `TrailerEmbed` reused as-is, the existing `/videos` endpoint read. No prior AC's observable contract changed.)
+- **📎 Contract Stamps: NONE** (no `[@contract-v*]` stamps in this story; upstream Story 10-2 is pre-Rule-20 → implicit v0, so no ack obligation. Normal for a FE wiring story consuming an implicit-v0 selection rule.)
+- **🎭 A11y Pre-Flight: PASS** (1 component checked — `TrailerSection.tsx`; eslint jsx-a11y over touched `apps/web/src/components/**` files = 0 warnings, 0 introduced by this story. Manual 4-class check: responsive image = N/A (no `<img>`; the reused TrailerEmbed iframe is 16:9 full-width); modal focus = N/A (inline embed, not a modal — Escape/focus-trap is TrailerModal's concern); aria-live = N/A (no async-revealed status pill); custom-widget keyboard/ARIA = `<section aria-labelledby>` + `<h2 id>` landmark, native `<button>` (reused) and native `<a>` fallback — no custom widget. The 1 pre-existing `exhaustive-deps` warning at `$type.$id.tsx:181` is unrelated (not jsx-a11y, not this story's code). CAVEAT: `$type.$id.tsx` is under `routes/`, outside the jsx-a11y eslint scope — manually confirmed the two inserted `<TrailerSection>` blocks add no a11y violations.)
+- **🎨 UX Verification: design-coverage-gap (PASS by pattern-match)** — Epic 12 has no `ux-design.pen` screen frame for the detail-page trailer section (feature postdates the `.pen` design; `TrailerSection.tsx` carries the Rule-21 design-coverage-gap `// Design ref:` header). No screenshot to diff against. Verified against sibling-section design patterns instead: "預告片" `<h2 text-lg font-semibold>` heading matches `StreamingAvailability`/`RelatedContent`; reuses `TrailerEmbed`'s already-designed button + 16:9 iframe; same `flex flex-col gap-3` section shell + `mt-6` spacing as the streaming block it sits beside.
 
 ### Discovery Triage
 
 - **Did this story discover any work outside its current scope?**
-  - **Anticipated at authoring time (dev to confirm/triage):**
-    - There exists a parallel, NOT-wired-up `MediaDetailPanel.tsx` (with its own `TrailerSection` + `useMediaTrailers` over the **library** endpoint) that is currently only used in the test gallery. If F-5 makes the route-level trailer section, `MediaDetailPanel`'s trailer code may become redundant. Do NOT delete it in this story — if it is genuinely dead after F-5, file a **③ backlog** `sprint-status.yaml` entry (dead-code cleanup) with a bidirectional link rather than a prose-only mention (Rule 24 ban). If it is still used, record `N/A`.
-  - Otherwise record each in-flight discovery with its lane (①/②/③) + tracked entry ID before marking done. If none: `N/A — no out-of-scope work discovered`.
+  - **MediaDetailPanel.tsx → `N/A` (still used, not made dead by F-5):** the parallel `MediaDetailPanel.tsx` (with its own trailer code over the library endpoint) is referenced by `routes/test/-gallery.fixtures.tsx` (dev test gallery) + its own spec + the `-$type.$id.spec.tsx` route spec. F-5 added the trailer section to the REAL route (`$type.$id.tsx`), which never consumed `MediaDetailPanel` — so F-5 does not make it dead; it remains gallery-used. No backlog cleanup entry filed (correctly — Rule 24: only file when genuinely dead).
+  - No other out-of-scope work discovered.
 - Reference: `project-context.md` Rule 24.
 
 ### File List
+
+**Created:**
+- `apps/web/src/lib/trailers.ts` — shared `pickBestTrailer` + `pickTmdbVideoFallbackUrl`
+- `apps/web/src/lib/trailers.spec.ts` — 9 unit tests for the shared helpers
+- `apps/web/src/components/media/TrailerSection.tsx` — detail-page trailer section (fallback chain)
+- `apps/web/src/components/media/TrailerSection.spec.tsx` — 6 component tests
+
+**Modified:**
+- `apps/web/src/components/media/TrailerEmbed.tsx` — **(CR H1)** add opt-in `autoPlay?: boolean` prop (appends `?autoplay=1`, default false → existing consumers unchanged)
+- `apps/web/src/components/media/TrailerEmbed.spec.tsx` — **(CR H1)** +2 tests (autoplay default-off / on)
+- `apps/web/src/components/homepage/TrailerModal.tsx` — import shared `pickBestTrailer` (inlined copy removed; `Video`/`VALID_VIDEO_KEY` no longer needed locally)
+- `apps/web/src/components/homepage/TrailerModal.spec.tsx` — drop the moved `pickBestTrailer` describe block + its import (now in `trailers.spec.ts`)
+- `apps/web/src/hooks/useMediaDetails.ts` — `useMediaVideos` hook + `detailKeys.videos` + `VideosResponse` import
+- `apps/web/src/hooks/useMediaDetails.spec.tsx` — +7 tests for `useMediaVideos` / `detailKeys.videos`
+- `apps/web/src/routes/media/$type.$id.tsx` — render `<TrailerSection />` in both detail views; import added
+- `apps/web/src/routes/media/-$type.$id.spec.tsx` — stub `getMovieVideos`/`getTVShowVideos` in the tmdbService mock (TMDbDetailView now self-fetches videos)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — 12-5 status ready-for-dev → in-progress → review
+
+## Senior Developer Review (AI)
+
+**Reviewer:** Alexyu (adversarial code-review workflow, Amelia) · **Date:** 2026-06-12 · **Outcome:** Approve (after fixes)
+
+Adversarial pass found 1 High + 2 Medium + 3 Low. Git-vs-File-List clean; Rule 7 / Rule 20 / Rule 25 wire-format checks all N/A (pure-frontend, no contract bumps). Affected tests re-run green (161 across 7 files).
+
+**Fixed (option 1 — auto-fix):**
+- **H1 (AC #5 autoplay):** the reused `TrailerEmbed` built its iframe `src` with no `?autoplay=1`, so activating the embed never autoplayed (AC #5 unmet; the dev's "AC #5 reconciliation" note covered Escape but was silent on autoplay). Fixed via an **opt-in** `autoPlay?: boolean` prop on `TrailerEmbed` (default false → `MediaDetailPanel` + all existing `TrailerEmbed` tests stay green, zero visual-baseline impact); `TrailerSection` passes `autoPlay`. `TrailerEmbed.tsx:35`, `TrailerSection.tsx`.
+- **M1 (AC #4 fail-soft robustness):** `TrailerSection` read `data.results.length` unguarded while defensively passing `data.results` to `pickBestTrailer`. Now `data.results?.length` so a malformed `/videos` body can never throw past the fail-soft guard. `TrailerSection.tsx`.
+- **M2 (limiter budget):** `useMediaVideos` used the TanStack default 3× retry; since the section renders nothing during retries, that silently burned the shared TMDB limiter budget (Rule 27 Pillar 1). Now `retry: 1` (mirrors `TrailerModal`). `useMediaDetails.ts`.
+- **L1 (fallback UX):** `pickTmdbVideoFallbackUrl` now appends `/videos` so the "在 TMDB 觀看預告片" link lands on the videos tab, not the title's main page. `trailers.ts`.
+- **L3 (DRY):** extracted a `SectionShell` wrapper in `TrailerSection` so the embed and fallback branches can't drift on heading/aria/spacing. `TrailerSection.tsx`.
+
+**Withdrawn on re-verification:**
+- **L2 (staleTime comment):** initially flagged the `useMediaVideos` comment "matches the existing useMediaTrailers convention" as inaccurate — but `useMediaTrailers` (`useLibrary.ts:101`) really is `10 * 60 * 1000`. The comment is correct; no change made.
 
 ## Change Log
 
 | Date | Change |
 |------|--------|
+| 2026-06-12 | **Code review (Amelia, adversarial CR)** — 1H/2M/3L found, auto-fixed H1+M1+M2+L1+L3, withdrew L2 (false positive). H1: `TrailerEmbed` opt-in `autoPlay` prop → AC #5 autoplay now satisfied on the detail section without touching gallery baselines. M1: `data.results?.length` fail-soft. M2: `useMediaVideos` `retry: 1`. L1: fallback URL → `/videos` tab. L3: `SectionShell` DRY. Tests: TrailerEmbed +2, TrailerSection +1; 161/161 affected green, eslint 0, prettier clean. Status review → done. |
+| 2026-06-12 | Implemented F-5 (Amelia, dev-story). Task 1: extracted `pickBestTrailer` → `lib/trailers.ts` (+ `pickTmdbVideoFallbackUrl`), `TrailerModal` re-imports it (behavior unchanged). Task 2: `useMediaVideos` hook + `detailKeys.videos`. Task 3: `TrailerSection.tsx` — ADR Decision 4 fallback chain (YT embed → TMDB videos-page link → omit), fail-soft on loading/error/no-videos. Task 4: wired into both `LocalDetailView` + `TMDbDetailView` below streaming / above credits. Tests: +9 (trailers) +7 (useMediaVideos) +6 (TrailerSection) +2 route-mock stubs; full web suite 2088/2088, `go test ./...` green, eslint 0 err (1 pre-existing warn), prettier clean. AC Drift NONE / Contract Stamps NONE / A11y Pre-Flight PASS / UX design-coverage-gap PASS. Discovery: MediaDetailPanel N/A (still gallery-used). |
 | 2026-06-11 | Story drafted (SM Bob, create-story yolo). F-5 — wire trailers onto the detail page. **Zero backend** (videos endpoint/types/services/`TrailerEmbed`/`pickBestTrailer` all ship from Story 10-2; gap is they're not on the detail route). Frontend: extract shared `pickBestTrailer`, add `useMediaVideos` detail hook, `TrailerSection` (ADR Decision 4 fallback chain: YT embed → TMDB videos-page link → omit), wire below overview in both detail views. Client-side youtube-nocookie embed — no YouTube Data API/key/quota (ADR Decision 4; exempt from Rule 27 Pillars 1/4/5). Cross-stack split: backend 0 / frontend 4 → single story. |

@@ -55,6 +55,11 @@ vi.mock('../../services/tmdb', () => ({
     getTVShowDetails: vi.fn(),
     getMovieCredits: vi.fn(),
     getTVShowCredits: vi.fn(),
+    // Story 12-5 — TMDbDetailView now renders the self-fetching TrailerSection.
+    // Stub the videos endpoints so it cleanly resolves to "no trailer" (renders
+    // nothing) for these fixtures rather than throwing on an undefined method.
+    getMovieVideos: vi.fn().mockResolvedValue({ id: 0, results: [] }),
+    getTVShowVideos: vi.fn().mockResolvedValue({ id: 0, results: [] }),
   },
 }));
 

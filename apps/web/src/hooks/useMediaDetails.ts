@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { tmdbService } from '../services/tmdb';
 import { libraryService } from '../services/libraryService';
-import type { MovieDetails, TVShowDetails, Credits } from '../types/tmdb';
+import type { MovieDetails, TVShowDetails, Credits, VideosResponse } from '../types/tmdb';
 import type {
   LibraryMovie,
   LibrarySeries,
@@ -27,6 +27,8 @@ export const detailKeys = {
     [...detailKeys.all, 'recommendations', type, tmdbId] as const,
   watchProviders: (tmdbId: number, type: 'movie' | 'tv', region: string) =>
     [...detailKeys.all, 'watch-providers', type, tmdbId, region] as const,
+  videos: (tmdbId: number, type: 'movie' | 'tv') =>
+    [...detailKeys.all, 'videos', type, tmdbId] as const,
 };
 
 /**
@@ -100,6 +102,31 @@ export function useWatchProviders(
         ? libraryService.getMovieWatchProviders(tmdbId, region)
         : libraryService.getTVWatchProviders(tmdbId, region),
     staleTime: 24 * 60 * 60 * 1000, // 24h — matches backend cache TTL
+    enabled: enabled && tmdbId > 0,
+  });
+}
+
+/**
+ * Hook to fetch a title's videos (trailers/teasers) from TMDB for the
+ * detail-page trailer section (Story 12-5). Keyed by the TMDB numeric id; both
+ * detail views have the id, so a single TMDB-numeric fetch serves both. The
+ * fetched results drive the AC #3 fallback chain (embed → TMDB link → omit).
+ * 10min staleTime matches the existing useMovieDetails/useMediaTrailers
+ * convention. Gated on a valid TMDB id so library items without a tmdbId never
+ * fetch.
+ * @param tmdbId - TMDB numeric id
+ * @param type - 'movie' | 'tv'
+ * @param enabled - extra gate (e.g. only when the section is on a detail page)
+ */
+export function useMediaVideos(tmdbId: number, type: 'movie' | 'tv', enabled: boolean) {
+  return useQuery<VideosResponse, Error>({
+    queryKey: detailKeys.videos(tmdbId, type),
+    queryFn: () =>
+      type === 'movie' ? tmdbService.getMovieVideos(tmdbId) : tmdbService.getTVShowVideos(tmdbId),
+    staleTime: 10 * 60 * 1000, // 10min — matches the existing trailers convention
+    // Fail-soft section renders nothing during retries, so don't burn the shared
+    // TMDB limiter budget on the default 3× backoff — fail fast (mirrors TrailerModal).
+    retry: 1,
     enabled: enabled && tmdbId > 0,
   });
 }

@@ -3,10 +3,10 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { X } from 'lucide-react';
 import tmdbService from '../../services/tmdb';
-import type { MediaType, Video, VideosResponse } from '../../types/tmdb';
+import type { MediaType, VideosResponse } from '../../types/tmdb';
+import { pickBestTrailer } from '../../lib/trailers';
 
 const YOUTUBE_EMBED_BASE = 'https://www.youtube-nocookie.com/embed/';
-const VALID_VIDEO_KEY = /^[a-zA-Z0-9_-]+$/;
 
 export interface TrailerModalProps {
   open: boolean;
@@ -14,23 +14,6 @@ export interface TrailerModalProps {
   mediaType: MediaType;
   tmdbId: number;
   title: string;
-}
-
-// Story 10-2 AC #6 — picks the best YouTube trailer (official → newest).
-// Returns null when no embeddable trailer exists.
-export function pickBestTrailer(results: Video[] | undefined): Video | null {
-  if (!results || results.length === 0) return null;
-
-  const youtubeTrailers = results.filter(
-    (v) => v.site === 'YouTube' && v.type === 'Trailer' && VALID_VIDEO_KEY.test(v.key)
-  );
-  if (youtubeTrailers.length === 0) return null;
-
-  // Prefer official; among the same officiality, prefer the most recent.
-  return [...youtubeTrailers].sort((a, b) => {
-    if (a.official !== b.official) return a.official ? -1 : 1;
-    return (b.publishedAt || '').localeCompare(a.publishedAt || '');
-  })[0];
 }
 
 // Selector for elements eligible for keyboard focus inside the dialog.

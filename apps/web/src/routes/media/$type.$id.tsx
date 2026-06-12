@@ -23,6 +23,7 @@ import {
 import { SeasonAccordion } from '../../components/media/SeasonAccordion';
 import { RelatedContent } from '../../components/media/RelatedContent';
 import { StreamingAvailability } from '../../components/media/StreamingAvailability';
+import { TrailerSection } from '../../components/media/TrailerSection';
 import { useOwnedMedia } from '../../hooks/useOwnedMedia';
 import { useDoubanRating } from '../../hooks/useDoubanRating';
 import type { MovieDetails, TVShowDetails } from '../../types/tmdb';
@@ -338,6 +339,14 @@ function LocalDetailView({ type, id }: { type: ValidMediaType; id: string }) {
                   </div>
                 )}
 
+                {/* Trailer (Story 12-5) — below streaming, above credits. Self-fetches
+                    its TMDB videos; renders nothing when there's no embeddable trailer. */}
+                {tmdbId > 0 && (
+                  <div className="mt-6">
+                    <TrailerSection tmdbId={tmdbId} type={type} title={localData.title} />
+                  </div>
+                )}
+
                 {/* Credits */}
                 {credits.data && (
                   <div className="mt-6">
@@ -570,6 +579,14 @@ export function TMDbDetailView({ type, tmdbId }: { type: ValidMediaType; tmdbId:
                   isError={watchProvidersQuery.isError}
                   onRetry={() => watchProvidersQuery.refetch()}
                 />
+              </div>
+            )}
+
+            {/* Trailer (Story 12-5) — below streaming, above credits. Self-fetches
+                its TMDB videos; renders nothing when there's no embeddable trailer. */}
+            {tmdbId > 0 && (
+              <div className="mt-6">
+                <TrailerSection tmdbId={tmdbId} type={type} title={title} />
               </div>
             )}
 
