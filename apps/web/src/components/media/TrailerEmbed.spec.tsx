@@ -77,6 +77,25 @@ describe('TrailerEmbed', () => {
     );
   });
 
+  it('[P1] does not autoplay by default (existing consumers unchanged)', () => {
+    render(<TrailerEmbed videoKey="abc123" title="No Autoplay" />);
+    fireEvent.click(screen.getByTestId('trailer-button'));
+
+    const iframe = screen.getByTitle('No Autoplay 預告片');
+    expect(iframe.getAttribute('src')).toBe('https://www.youtube-nocookie.com/embed/abc123');
+    expect(iframe.getAttribute('src')).not.toContain('autoplay');
+  });
+
+  it('[P1] appends autoplay=1 when autoPlay is set (AC #5 — Story 12-5)', () => {
+    render(<TrailerEmbed videoKey="abc123" title="Autoplay" autoPlay />);
+    fireEvent.click(screen.getByTestId('trailer-button'));
+
+    const iframe = screen.getByTitle('Autoplay 預告片');
+    expect(iframe.getAttribute('src')).toBe(
+      'https://www.youtube-nocookie.com/embed/abc123?autoplay=1'
+    );
+  });
+
   it('[P1] rejects invalid video keys with special characters', () => {
     const { container } = render(
       <TrailerEmbed videoKey="abc<script>alert(1)</script>" title="XSS Test" />

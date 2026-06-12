@@ -7,9 +7,15 @@ const VALID_VIDEO_KEY = /^[a-zA-Z0-9_-]+$/;
 export interface TrailerEmbedProps {
   videoKey: string;
   title: string;
+  /**
+   * Autoplay the video as soon as the embed is activated (AC #5 — Story 12-5).
+   * Opt-in (default false) so existing consumers (e.g. MediaDetailPanel) keep
+   * their click-then-press behaviour; the detail-page TrailerSection passes it.
+   */
+  autoPlay?: boolean;
 }
 
-export function TrailerEmbed({ videoKey, title }: TrailerEmbedProps) {
+export function TrailerEmbed({ videoKey, title, autoPlay = false }: TrailerEmbedProps) {
   const [showPlayer, setShowPlayer] = useState(false);
 
   if (!VALID_VIDEO_KEY.test(videoKey)) {
@@ -32,7 +38,7 @@ export function TrailerEmbed({ videoKey, title }: TrailerEmbedProps) {
   return (
     <div className="aspect-video w-full" data-testid="trailer-player">
       <iframe
-        src={`${YOUTUBE_EMBED_BASE}${videoKey}`}
+        src={`${YOUTUBE_EMBED_BASE}${videoKey}${autoPlay ? '?autoplay=1' : ''}`}
         title={`${title} 預告片`}
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope"
         allowFullScreen

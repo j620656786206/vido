@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
-import { TrailerModal, pickBestTrailer } from './TrailerModal';
+import { TrailerModal } from './TrailerModal';
 import type { Video } from '../../types/tmdb';
 
 vi.mock('../../services/tmdb', () => ({
@@ -53,52 +53,8 @@ function renderModal(props: Partial<React.ComponentProps<typeof TrailerModal>> =
   };
 }
 
-describe('pickBestTrailer', () => {
-  it('returns null for empty/undefined results', () => {
-    expect(pickBestTrailer(undefined)).toBeNull();
-    expect(pickBestTrailer([])).toBeNull();
-  });
-
-  it('filters out non-YouTube trailers', () => {
-    const results = [
-      video({ key: 'vimeo1', site: 'Vimeo' }),
-      video({ key: 'tt', site: 'YouTube' }),
-    ];
-    expect(pickBestTrailer(results)?.key).toBe('tt');
-  });
-
-  it('filters out non-Trailer types (Teaser, Featurette)', () => {
-    const results = [
-      video({ key: 'teaser1', type: 'Teaser' }),
-      video({ key: 'real-trailer', type: 'Trailer' }),
-    ];
-    expect(pickBestTrailer(results)?.key).toBe('real-trailer');
-  });
-
-  it('rejects keys with invalid characters (XSS guard)', () => {
-    const results = [
-      video({ key: '<script>', type: 'Trailer' }),
-      video({ key: 'safe_key-123', type: 'Trailer' }),
-    ];
-    expect(pickBestTrailer(results)?.key).toBe('safe_key-123');
-  });
-
-  it('prefers official over unofficial', () => {
-    const results = [
-      video({ key: 'fan', official: false, publishedAt: '2025-01-01' }),
-      video({ key: 'official', official: true, publishedAt: '2020-01-01' }),
-    ];
-    expect(pickBestTrailer(results)?.key).toBe('official');
-  });
-
-  it('among same officiality, prefers most recent', () => {
-    const results = [
-      video({ key: 'old', official: true, publishedAt: '2020-01-01' }),
-      video({ key: 'new', official: true, publishedAt: '2025-06-01' }),
-    ];
-    expect(pickBestTrailer(results)?.key).toBe('new');
-  });
-});
+// `pickBestTrailer` unit tests moved to src/lib/trailers.spec.ts (Story 12-5
+// Task 1 — extracted to a shared module; single source of truth).
 
 describe('TrailerModal', () => {
   beforeEach(() => {

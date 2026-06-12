@@ -8,11 +8,12 @@ import {
   useTVShowCredits,
   useLocalMovieDetails,
   useLocalSeriesDetails,
+  useMediaVideos,
   detailKeys,
 } from './useMediaDetails';
 import { tmdbService } from '../services/tmdb';
 import { libraryService } from '../services/libraryService';
-import type { MovieDetails, TVShowDetails, Credits } from '../types/tmdb';
+import type { MovieDetails, TVShowDetails, Credits, VideosResponse } from '../types/tmdb';
 import type { LibraryMovie, LibrarySeries } from '../types/library';
 
 // Mock the tmdb service
@@ -22,6 +23,8 @@ vi.mock('../services/tmdb', () => ({
     getTVShowDetails: vi.fn(),
     getMovieCredits: vi.fn(),
     getTVShowCredits: vi.fn(),
+    getMovieVideos: vi.fn(),
+    getTVShowVideos: vi.fn(),
   },
 }));
 
@@ -351,6 +354,74 @@ describe('useMediaDetails hooks', () => {
 
     it('should generate correct query keys for local series', () => {
       expect(detailKeys.localSeries('uuid-456')).toEqual(['details', 'local-series', 'uuid-456']);
+    });
+  });
+
+  // Story 12-5 — videos hook for the detail-page trailer section.
+  describe('useMediaVideos', () => {
+    const mockVideos: VideosResponse = {
+      id: 550,
+      results: [
+        {
+          key: 'SUXWAEX2jlg',
+          name: 'Trailer',
+          site: 'YouTube',
+          type: 'Trailer',
+          official: true,
+          publishedAt: '2024-01-01T00:00:00.000Z',
+        },
+      ],
+    };
+
+    it('should generate correct query key for movie videos', () => {
+      expect(detailKeys.videos(550, 'movie')).toEqual(['details', 'videos', 'movie', 550]);
+    });
+
+    it('should generate correct query key for tv videos', () => {
+      expect(detailKeys.videos(1396, 'tv')).toEqual(['details', 'videos', 'tv', 1396]);
+    });
+
+    it('[P1] fetches movie videos via the TMDB-numeric movie endpoint', async () => {
+      vi.mocked(tmdbService.getMovieVideos).mockResolvedValue(mockVideos);
+
+      const { result } = renderHook(() => useMediaVideos(550, 'movie', true), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(tmdbService.getMovieVideos).toHaveBeenCalledWith(550);
+      expect(tmdbService.getTVShowVideos).not.toHaveBeenCalled();
+      expect(result.current.data).toEqual(mockVideos);
+    });
+
+    it('[P1] fetches tv videos via the TMDB-numeric tv endpoint', async () => {
+      vi.mocked(tmdbService.getTVShowVideos).mockResolvedValue({ id: 1396, results: [] });
+
+      const { result } = renderHook(() => useMediaVideos(1396, 'tv', true), {
+        wrapper: createWrapper(),
+      });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(tmdbService.getTVShowVideos).toHaveBeenCalledWith(1396);
+      expect(tmdbService.getMovieVideos).not.toHaveBeenCalled();
+    });
+
+    it('[P1] does not fetch when tmdbId is 0', () => {
+      const { result } = renderHook(() => useMediaVideos(0, 'movie', true), {
+        wrapper: createWrapper(),
+      });
+
+      expect(result.current.fetchStatus).toBe('idle');
+      expect(tmdbService.getMovieVideos).not.toHaveBeenCalled();
+    });
+
+    it('[P1] does not fetch when enabled is false', () => {
+      const { result } = renderHook(() => useMediaVideos(550, 'movie', false), {
+        wrapper: createWrapper(),
+      });
+
+      expect(result.current.fetchStatus).toBe('idle');
+      expect(tmdbService.getMovieVideos).not.toHaveBeenCalled();
     });
   });
 });
