@@ -12,6 +12,7 @@ import type {
   VideosResponse,
   BatchResult,
   DoubanRatingResponse,
+  DoubanReviewSummaryResponse,
   SeasonSummary,
   SeasonEpisodesResponse,
   RecommendationsResponse,
@@ -155,6 +156,16 @@ export const libraryService = {
 
   async getSeriesDoubanRating(id: string): Promise<DoubanRatingResponse> {
     return fetchApi<DoubanRatingResponse>(`/series/${id}/douban-rating`);
+  },
+
+  // Story 12-6 — lazy Douban review summary (短評). Returns null when no review
+  // summary is available (graceful degradation; the review block is omitted).
+  async getMovieDoubanReviewSummary(id: string): Promise<DoubanReviewSummaryResponse> {
+    return fetchApi<DoubanReviewSummaryResponse>(`/movies/${id}/douban-review-summary`);
+  },
+
+  async getSeriesDoubanReviewSummary(id: string): Promise<DoubanReviewSummaryResponse> {
+    return fetchApi<DoubanReviewSummaryResponse>(`/series/${id}/douban-review-summary`);
   },
 
   // Story 12-2 — season accordion. Season list comes from the series' cached

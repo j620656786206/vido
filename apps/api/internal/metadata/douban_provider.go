@@ -332,6 +332,55 @@ func (p *DoubanProvider) Search(ctx context.Context, req *SearchRequest) (*Searc
 	}, nil
 }
 
+// ScrapeReviewSummary returns the Douban short-comment summary (短評) for a subject
+// id (Story 12-6). It serves a warm summary from the cache without a new scrape
+// (Rule 27 Pillar 2 / AC #6); on a miss it scrapes through the SAME client + circuit
+// breaker the rating path uses (single rate limiter — Rule 27 ①) and caches the
+// result for 7 days. Satisfies services.DoubanReviewScraper (wired in main.go).
+func (p *DoubanProvider) ScrapeReviewSummary(ctx context.Context, id string) (*douban.ReviewSummaryResult, error) {
+	p.mu.RLock()
+	enabled := p.enabled
+	p.mu.RUnlock()
+
+	if !enabled {
+		return nil, NewProviderError(p.Name(), p.Source(), ErrCodeUnavailable, "Douban provider is disabled", nil)
+	}
+	if p.circuitBreaker.State() == CircuitStateOpen {
+		return nil, NewProviderError(p.Name(), p.Source(), ErrCodeCircuitOpen, "Douban provider circuit breaker is open", ErrCircuitOpen)
+	}
+
+	// Cache BEFORE the limiter (Pillar 2): a warm summary needs no network request.
+	if p.cache != nil {
+		cached, cacheErr := p.cache.GetReviewSummary(ctx, id)
+		if cacheErr != nil {
+			p.logger.Warn("Review summary cache lookup failed", "id", id, "error", cacheErr)
+		} else if cached != nil {
+			p.logger.Debug("Review summary cache hit", "id", id, "comments", len(cached.TopComments))
+			return cached, nil
+		}
+	}
+
+	var summary *douban.ReviewSummaryResult
+	err := p.circuitBreaker.Execute(func() error {
+		var scrapeErr error
+		summary, scrapeErr = p.scraper.ScrapeReviewSummary(ctx, id)
+		return scrapeErr
+	})
+	if err != nil {
+		// The caller (DoubanRatingService) degrades any failure to an omitted
+		// review section (AC #5); return the raw error for its slog context.
+		return nil, err
+	}
+
+	if p.cache != nil && summary != nil {
+		if cacheErr := p.cache.SetReviewSummary(ctx, id, summary); cacheErr != nil {
+			p.logger.Warn("Failed to cache Douban review summary", "id", id, "error", cacheErr)
+		}
+	}
+
+	return summary, nil
+}
+
 // convertToMetadataItem converts a Douban detail result to a normalized MetadataItem
 func (p *DoubanProvider) convertToMetadataItem(detail *douban.DetailResult) MetadataItem {
 	item := MetadataItem{

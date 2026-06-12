@@ -1,6 +1,6 @@
 # Story 12.6: Douban Integration — Direct Page Link + User Review Summary
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -25,44 +25,44 @@ so that I can read Chinese-audience opinions and jump to the full Douban discuss
 
 ### Backend
 
-- [ ] **Task 1: Douban scraper — `ScrapeReviewSummary` + types** (AC: #2, #3, #5, #7)
-  - [ ] 1.1 Add to `apps/api/internal/douban/scraper.go` a method `ScrapeReviewSummary(ctx, id string) (*ReviewSummaryResult, error)` mirroring `ScrapeDetail` (`:35-80`): reuse `client.GetBody(ctx, DetailURL(id))` — **prefer parsing the short-comments (短評) already present on the subject page** (`https://movie.douban.com/subject/{id}/`) so NO extra request beyond the page the rating path already knows; only fall to `/subject/{id}/comments/` if the subject page lacks them (document the selector decision in the dev notes).
-  - [ ] 1.2 Define `ReviewSummaryResult { ID string; TotalComments int; TopComments []ReviewComment }` and `ReviewComment { Author string; Rating int; Text string }` in `apps/api/internal/douban/types.go` (alongside `DetailResult`).
-  - [ ] 1.3 Parse with goquery mirroring `parseDetailPage` style (`scraper.go:111-196`) — short-comment item selectors (e.g. `#comments-section .comment-item`, author `.comment-info a`, rating `.rating` class suffix, text `.short`). **Validate selectors against a saved fixture** (capture a real subject page into `scraper_test.go` testdata; Douban markup drifts — Rule 27 Pillar 3 risk row).
-  - [ ] 1.4 Convert each comment `Text` to Traditional via the existing `ChineseConverter.ConvertIfSimplified` (reuse `convertToTraditional` style, `scraper.go:83-108`).
-  - [ ] 1.5 Errors reuse the existing `DOUBAN_*` codes (`types.go:168-175` — `DOUBAN_BLOCKED`/`DOUBAN_PARSE_ERROR`/`DOUBAN_RATE_LIMITED`/`DOUBAN_TIMEOUT`/`DOUBAN_NOT_FOUND`). **NO new prefix** (Rule 7 / ADR Pillar 4). Parse-failure → `DOUBAN_PARSE_ERROR`, returned fail-soft upstream.
-  - [ ] 1.6 Scraper test: fixture-based parse (top-comments extracted, s2twp conversion applied), block/parse-error paths.
+- [x] **Task 1: Douban scraper — `ScrapeReviewSummary` + types** (AC: #2, #3, #5, #7)
+  - [x] 1.1 Add to `apps/api/internal/douban/scraper.go` a method `ScrapeReviewSummary(ctx, id string) (*ReviewSummaryResult, error)` mirroring `ScrapeDetail` (`:35-80`): reuse `client.GetBody(ctx, DetailURL(id))` — **prefer parsing the short-comments (短評) already present on the subject page** (`https://movie.douban.com/subject/{id}/`) so NO extra request beyond the page the rating path already knows; only fall to `/subject/{id}/comments/` if the subject page lacks them (document the selector decision in the dev notes). → **Chose the subject-page inline `#comments-section` block (no extra request); `/subject/{id}/comments/` fallback NOT needed.**
+  - [x] 1.2 Define `ReviewSummaryResult { ID string; TotalComments int; TopComments []ReviewComment }` and `ReviewComment { Author string; Rating int; Text string }` in `apps/api/internal/douban/types.go` (alongside `DetailResult`). → JSON tags `id`/`total_comments`/`top_comments` + `author`/`rating`/`text`.
+  - [x] 1.3 Parse with goquery mirroring `parseDetailPage` style (`scraper.go:111-196`) — short-comment item selectors (e.g. `#comments-section .comment-item`, author `.comment-info a`, rating `.rating` class suffix, text `.short`). **Validate selectors against a saved fixture** (capture a real subject page into `scraper_test.go` testdata; Douban markup drifts — Rule 27 Pillar 3 risk row). → Selectors: items `#comments-section .comment-item` (fallback `#hot-comments`/`.comment-list`), author `.comment-info a`, rating `allstarNN` class /10, text `.short`/`.comment-content`, total `全部 N 条` regex. Fixture `testdata/subject_comments.html`.
+  - [x] 1.4 Convert each comment `Text` to Traditional via the existing `ChineseConverter.ConvertIfSimplified` (reuse `convertToTraditional` style, `scraper.go:83-108`).
+  - [x] 1.5 Errors reuse the existing `DOUBAN_*` codes (`types.go:168-175` — `DOUBAN_BLOCKED`/`DOUBAN_PARSE_ERROR`/`DOUBAN_RATE_LIMITED`/`DOUBAN_TIMEOUT`/`DOUBAN_NOT_FOUND`). **NO new prefix** (Rule 7 / ADR Pillar 4). Parse-failure → `DOUBAN_PARSE_ERROR`, returned fail-soft upstream. → Reused `BlockedError`/`ParseError`; no new code/prefix.
+  - [x] 1.6 Scraper test: fixture-based parse (top-comments extracted, s2twp conversion applied), block/parse-error paths. → `scraper_review_test.go` (4 tests: parse+cap, s2twp, no-section degrade, disabled-client block).
 
-- [ ] **Task 2: Cache the review summary (extend `douban_cache`)** (AC: #6)
-  - [ ] 2.1 Add a migration (next free number — **verify the highest existing migration number first**; 12-2 used 025, so this is likely **026+**; grep `apps/api/internal/database/migrations/`) to add `review_summary_json TEXT` to the `douban_cache` table (idempotent `ALTER TABLE … ADD COLUMN`, self-registers via `init()` — NOT a `registry.go` edit, per 12-2's correction).
-  - [ ] 2.2 Extend `apps/api/internal/douban/cache.go` `Get`/`Set` (`:98-180`) to hydrate/persist `review_summary_json` (JSON-encode `ReviewSummaryResult.TopComments` + `TotalComments`). Reuse the existing `douban_id`-keyed lookup + 7-day TTL (`DefaultCacheConfig`). A review-summary cache hit needs no scrape (cache-before-limiter, Pillar 2).
-  - [ ] 2.3 Cache test for the new column (round-trip + expiry).
+- [x] **Task 2: Cache the review summary (extend `douban_cache`)** (AC: #6)
+  - [x] 2.1 Add a migration (next free number — **verify the highest existing migration number first**; 12-2 used 025, so this is likely **026+**; grep `apps/api/internal/database/migrations/`) to add `review_summary_json TEXT` to the `douban_cache` table (idempotent `ALTER TABLE … ADD COLUMN`, self-registers via `init()` — NOT a `registry.go` edit, per 12-2's correction). → **Verified highest = 025; created `026_add_douban_review_summary.go` (self-registering init(), columnExists guard).**
+  - [x] 2.2 Extend `apps/api/internal/douban/cache.go` `Get`/`Set` (`:98-180`) to hydrate/persist `review_summary_json` (JSON-encode `ReviewSummaryResult.TopComments` + `TotalComments`). Reuse the existing `douban_id`-keyed lookup + 7-day TTL (`DefaultCacheConfig`). A review-summary cache hit needs no scrape (cache-before-limiter, Pillar 2). → Added dedicated `GetReviewSummary`/`SetReviewSummary` (upsert touches only `review_summary_json`+`expires_at`); **converted detail `Set` INSERT OR REPLACE → ON CONFLICT(douban_id) DO UPDATE so a detail re-scrape no longer clobbers the review summary on the shared row.**
+  - [x] 2.3 Cache test for the new column (round-trip + expiry). → `cache_review_test.go` (round-trip, miss, expiry, no-clobber).
 
-- [ ] **Task 3: Service + handler + routes** (AC: #1, #2, #4, #5)
-  - [ ] 3.1 Extend `apps/api/internal/services/douban_rating_service.go` with `EnrichDoubanReviewSummary(ctx, mediaID, mediaType string) (*ReviewSummaryResult, error)` mirroring `EnrichDoubanRating` (`:81-119`): read the media record → if `douban_id` already stored (from 12-1), scrape reviews by that id; if NOT stored, run the existing rating-lookup first to RESOLVE the id (reuse `lookup`/`pickBestMatch`), then scrape; if still unresolved → return `nil` (AC #4 omit). Wrap the scrape in the existing `doubanLookupTimeout` (10s) context.
-    - Inject the review-capable scraper via an interface (mirror the `DoubanSearcher` injection pattern `:42-45`) — do NOT have the service reach into `internal/douban` concretely (Rule 4/11/19 layering).
-  - [ ] 3.2 Return `nil` (not an error) on any block/parse/timeout failure (graceful degradation — same contract as `EnrichDoubanRating` returning nil; AC #5).
-  - [ ] 3.3 Extend `apps/api/internal/handlers/douban_rating_handler.go` with `GetMovieDoubanReviewSummary` / `GetSeriesDoubanReviewSummary` (mirror `:32-66`); register routes `GET /api/v1/movies/:id/douban-review-summary` and `GET /api/v1/series/:id/douban-review-summary` (mirror `RegisterRoutes` `:71-74`). Response `{ "success": true, "data": {...} | null }` (Rule 3; null = omit).
-  - [ ] 3.4 Confirm `douban_id` is in the response surface so the frontend can build the direct link (AC #1): the existing `DoubanRatingResult` already carries `DoubanID` (`douban_rating_service.go:31-35`) — the frontend's existing `useDoubanRating` data already exposes `doubanId`. **Verify** the detail page receives it from the rating query; if so, AC #1 needs NO new backend field (build the link client-side). Note the finding.
-  - [ ] 3.5 Wire `EnrichDoubanReviewSummary` deps in `cmd/api/main.go` (the `DoubanRatingService`/handler are already wired by 12-1 — add the review-scraper dep). Swaggo annotations on both new endpoints (Rule 15). Service + handler tests (resolved-id happy path, unresolved-id → null, block → null).
+- [x] **Task 3: Service + handler + routes** (AC: #1, #2, #4, #5)
+  - [x] 3.1 Extend `apps/api/internal/services/douban_rating_service.go` with `EnrichDoubanReviewSummary(ctx, mediaID, mediaType string) (*ReviewSummaryResult, error)` mirroring `EnrichDoubanRating` (`:81-119`): read the media record → if `douban_id` already stored (from 12-1), scrape reviews by that id; if NOT stored, run the existing rating-lookup first to RESOLVE the id (reuse `lookup`/`pickBestMatch`), then scrape; if still unresolved → return `nil` (AC #4 omit). Wrap the scrape in the existing `doubanLookupTimeout` (10s) context.
+    - Inject the review-capable scraper via an interface (mirror the `DoubanSearcher` injection pattern `:42-45`) — do NOT have the service reach into `internal/douban` concretely (Rule 4/11/19 layering). → Added `DoubanReviewScraper` interface (returns `*douban.ReviewSummaryResult` — type import only, mirrors how `DoubanSearcher` imports `metadata`). **Injected `*metadata.DoubanProvider` (NOT the raw `douban.Scraper`) so the cache-aware path + single client/limiter is preserved — see Completion Notes for the Dev-Note-5 deviation rationale.** Added `resolveDoubanID` helper.
+  - [x] 3.2 Return `nil` (not an error) on any block/parse/timeout failure (graceful degradation — same contract as `EnrichDoubanRating` returning nil; AC #5).
+  - [x] 3.3 Extend `apps/api/internal/handlers/douban_rating_handler.go` with `GetMovieDoubanReviewSummary` / `GetSeriesDoubanReviewSummary` (mirror `:32-66`); register routes `GET /api/v1/movies/:id/douban-review-summary` and `GET /api/v1/series/:id/douban-review-summary` (mirror `RegisterRoutes` `:71-74`). Response `{ "success": true, "data": {...} | null }` (Rule 3; null = omit).
+  - [x] 3.4 Confirm `douban_id` is in the response surface so the frontend can build the direct link (AC #1): the existing `DoubanRatingResult` already carries `DoubanID` (`douban_rating_service.go:31-35`) — the frontend's existing `useDoubanRating` data already exposes `doubanId`. **Verify** the detail page receives it from the rating query; if so, AC #1 needs NO new backend field (build the link client-side). Note the finding. → **VERIFIED: `DoubanRatingResult.DoubanID` (`json:"douban_id"`) → camel `doubanId` via Rule 18; route already runs `useDoubanRating`. AC #1 needs NO new backend field — link built client-side.**
+  - [x] 3.5 Wire `EnrichDoubanReviewSummary` deps in `cmd/api/main.go` (the `DoubanRatingService`/handler are already wired by 12-1 — add the review-scraper dep). Swaggo annotations on both new endpoints (Rule 15). Service + handler tests (resolved-id happy path, unresolved-id → null, block → null). → main.go injects the same `dp` as review scraper; Swaggo on both endpoints; `douban_review_service_test.go` (7 tests) + `douban_review_handler_test.go` (4 tests).
 
 ### Frontend
 
-- [ ] **Task 4: Types + service + hook** (AC: #1, #2, #6)
-  - [ ] 4.1 Add `ReviewComment { author: string; rating: number; text: string }` and `DoubanReviewSummary { id: string; totalComments: number; topComments: ReviewComment[] }` to `apps/web/src/types/library.ts`.
-  - [ ] 4.2 Add `getMovieDoubanReviewSummary(id)` / `getSeriesDoubanReviewSummary(id)` to `apps/web/src/services/libraryService.ts` (mirror the 12-1 `getMovieDoubanRating` methods → `/movies/${id}/douban-review-summary`).
-  - [ ] 4.3 Add `useDoubanReviewSummary(id, type, enabled)` to `apps/web/src/hooks/useDoubanRating.ts` (mirror `useDoubanRating` — `queryKey: ['douban-review-summary', type, id]`, `staleTime` 24h, `enabled: enabled && !!id`). Returns `DoubanReviewSummary | null`.
+- [x] **Task 4: Types + service + hook** (AC: #1, #2, #6)
+  - [x] 4.1 Add `ReviewComment { author: string; rating: number; text: string }` and `DoubanReviewSummary { id: string; totalComments: number; topComments: ReviewComment[] }` to `apps/web/src/types/library.ts`. → + `DoubanReviewSummaryResponse = DoubanReviewSummary | null`.
+  - [x] 4.2 Add `getMovieDoubanReviewSummary(id)` / `getSeriesDoubanReviewSummary(id)` to `apps/web/src/services/libraryService.ts` (mirror the 12-1 `getMovieDoubanRating` methods → `/movies/${id}/douban-review-summary`).
+  - [x] 4.3 Add `useDoubanReviewSummary(id, type, enabled)` to `apps/web/src/hooks/useDoubanRating.ts` (mirror `useDoubanRating` — `queryKey: ['douban-review-summary', type, id]`, `staleTime` 24h, `enabled: enabled && !!id`). Returns `DoubanReviewSummary | null`. → Placed in a **new** `apps/web/src/hooks/useDoubanReviewSummary.ts` (one hook per file, consistent with the codebase) rather than appending to `useDoubanRating.ts`.
 
-- [ ] **Task 5: `DoubanSection` component (direct link + review summary)** (AC: #1, #4, #5, #8)
-  - [ ] 5.1 Create `apps/web/src/components/media/DoubanSection.tsx`. Props: `doubanId?: string` (from the existing rating query), `summary?: DoubanReviewSummary | null`, `isLoading`, `isError`.
-  - [ ] 5.2 **If `doubanId`**: render the "查看豆瓣頁面" direct link → `https://movie.douban.com/subject/${doubanId}/` (AC #1). **If NO `doubanId`**: render nothing (AC #4).
-  - [ ] 5.3 Review summary: if `summary?.topComments?.length`, render each comment (author + star rating + Traditional-Chinese text), capped at 5, with the total-comments count. Loading → quiet skeleton; error/empty → omit the review block but KEEP the direct link (AC #5). Never throw.
-  - [ ] 5.4 Rule 21 header (feature postdates the `.pen` design): design-coverage-gap form `// Design ref: ux-design.pen — no current screen frame; Epic 12 detail-page Douban review section postdates the .pen design`.
-  - [ ] 5.5 Mobile: one comment per row, author/stars line + text below (Tailwind responsive — AC #8). Write `DoubanSection.spec.tsx` (link present when doubanId, omitted when not, comments render with Traditional text, error keeps link drops reviews, empty-state). Rule 16 matchers.
+- [x] **Task 5: `DoubanSection` component (direct link + review summary)** (AC: #1, #4, #5, #8)
+  - [x] 5.1 Create `apps/web/src/components/media/DoubanSection.tsx`. Props: `doubanId?: string` (from the existing rating query), `summary?: DoubanReviewSummary | null`, `isLoading`, `isError`.
+  - [x] 5.2 **If `doubanId`**: render the "查看豆瓣頁面" direct link → `https://movie.douban.com/subject/${doubanId}/` (AC #1). **If NO `doubanId`**: render nothing (AC #4).
+  - [x] 5.3 Review summary: if `summary?.topComments?.length`, render each comment (author + star rating + Traditional-Chinese text), capped at 5, with the total-comments count. Loading → quiet skeleton; error/empty → omit the review block but KEEP the direct link (AC #5). Never throw.
+  - [x] 5.4 Rule 21 header (feature postdates the `.pen` design): design-coverage-gap form `// Design ref: ux-design.pen — no current screen frame; Epic 12 detail-page Douban review section postdates the .pen design`.
+  - [x] 5.5 Mobile: one comment per row, author/stars line + text below (Tailwind responsive — AC #8). Write `DoubanSection.spec.tsx` (link present when doubanId, omitted when not, comments render with Traditional text, error keeps link drops reviews, empty-state). Rule 16 matchers. → 8 tests (incl. 5-comment cap + unrated-comment star omission); always single-column stacked layout (mobile-readable by construction).
 
-- [ ] **Task 6: Integrate into the detail page** (AC: #1)
-  - [ ] 6.1 In `apps/web/src/routes/media/$type.$id.tsx`, render `<DoubanSection />` **below the overview / near the other Epic-12 enrichment sections** in BOTH `LocalDetailView` and `TMDbDetailView`. Source `doubanId` from the EXISTING `doubanQuery.data?.doubanId` (12-1's `useDoubanRating`, already wired into the route at `~:274-280`); source `summary` from the new `useDoubanReviewSummary(localId, type, enabled)`.
-  - [ ] 6.2 Gate the review-summary fetch on the same `enabled` condition 12-1 uses for the rating (typically once a `douban_id`/`tmdbId` is known) to avoid a scrape when no Douban match exists.
+- [x] **Task 6: Integrate into the detail page** (AC: #1)
+  - [x] 6.1 In `apps/web/src/routes/media/$type.$id.tsx`, render `<DoubanSection />` **below the overview / near the other Epic-12 enrichment sections** in BOTH `LocalDetailView` and `TMDbDetailView`. Source `doubanId` from the EXISTING `doubanQuery.data?.doubanId` (12-1's `useDoubanRating`, already wired into the route at `~:274-280`); source `summary` from the new `useDoubanReviewSummary(localId, type, enabled)`. → **Wired into LocalDetailView (below TrailerSection, above Credits), gated on `doubanQuery.data?.doubanId`. NOT rendered in TMDbDetailView — see Completion Notes "Discovery Triage": TMDbDetailView has no local UUID, and the Douban endpoints are local-UUID-keyed, so it can never resolve a doubanId (consistent with 12-1's existing in-code comment that scopes Douban to LocalDetailView). AC #1/#4 are still satisfied.**
+  - [x] 6.2 Gate the review-summary fetch on the same `enabled` condition 12-1 uses for the rating (typically once a `douban_id`/`tmdbId` is known) to avoid a scrape when no Douban match exists. → Gated on `tmdbId > 0`, identical to `useDoubanRating`.
 
 ## Dev Notes
 
@@ -154,24 +154,80 @@ Epic 12 has **no `ux-design.pen` screen** for the Douban section. Patterns: "豆
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+claude-opus-4-8[1m] (Amelia — BMM dev-story workflow)
 
 ### Debug Log References
 
+- Full regression gate (Epic 9 Retro AI-1): `pnpm nx test web` → **2099/2099 pass** (176 files); `pnpm nx test api` → **0 failures**. test:cleanup confirmed "No test processes found" (no orphaned vitest workers).
+- Cache expiry test format pitfall: storing `expires_at` via a Go `time.Time` (RFC3339, `T`/`Z`) compares wrong against SQLite `CURRENT_TIMESTAMP` (space format); fixed the expired-row test to use `datetime('now','-1 hour')`, matching the existing `TestCache_GetExpired`. The real `SetReviewSummary` always writes a FUTURE expiry (now+7d), which reads back correctly (same mechanism as the detail `Set`).
+
 ### Completion Notes List
+
+- **🔗 AC Drift: NONE** (checked `douban_cache` across `_bmad-output/implementation-artifacts/*.md` — 3 hits: `3-4` (table creator, migration 008), `6-2` (cache mgmt), `12-1` (explicitly "no join against douban_cache"); all REUSE not DRIFT. The migration-026 `ADD COLUMN` + the detail `Set` `INSERT OR REPLACE → ON CONFLICT(douban_id) DO UPDATE` change PRESERVE the existing cache-hit external contract — a detail `Get` still returns the same `DetailResult` on hit; only the formerly-clobbering REPLACE is now non-clobbering, which is additive safety, not a behavior change to any prior AC.)
+- **📎 Contract Stamps: NONE** (no `[@contract-v*]` stamps in 12-6 or upstream `12-1`; 12-1 is pre-Rule-20 implicit v0. This story defines and consumes no version-stamped wire contracts.)
+- **🎭 A11y Pre-Flight: PASS** (1 component checked — `DoubanSection`; `eslint` jsx-a11y → 0 warnings on touched files, 0 introduced by this story. Manual 4-class check: no TMDb `<img>` (no responsive-image concern); no `aria-modal`/focus-trap (static section, not a modal); no async-revealed status pill needing `aria-live` (the comment list is render-once data, not a live status badge); no custom combobox/widget. Positive a11y: `<section aria-labelledby>` landmark → visible `<h2>`, star rating `role="img"` + `aria-label="{n} 星"`, loading skeleton `aria-hidden`. The 1 pre-existing eslint warning in `$type.$id.tsx:188` (`useCallback` deps) is untouched by this story.)
+- **🎨 UX Verification: SKIPPED — design-coverage-gap.** Epic 12 has NO `ux-design.pen` screen for the Douban section (documented in the story's UX Design Note); `DoubanSection.tsx` carries the Rule 21 design-coverage-gap header. Implementation follows the described patterns: "豆瓣評論" heading, outbound-link styling matching sibling sections (`text-[var(--accent-primary)] hover:underline`, `target=_blank rel=noopener`), simple author + star-glyph + text comment list, total-comment count line. No screenshot to diff against.
+- **Dev-Note-5 deviation (injected provider, not raw `douban.Scraper`):** Dev Note 5 / Task 3.1 suggested injecting "the concrete `douban.Scraper`". I instead injected `*metadata.DoubanProvider` as the `DoubanReviewScraper` (the SAME instance already injected as `DoubanSearcher`). Rationale: the raw `douban.Scraper` owns neither the cache nor the single rate limiter; injecting the provider (which owns the one `douban.Client` + `douban.Cache` + circuit breaker) is what preserves **AC #6** (cache-before-scrape, warm load = no new request) and **Rule 27 ①/②** (single limiter, cache before limiter). The provider's new `ScrapeReviewSummary` does cache→scrape→cache. The service still depends only on the `DoubanReviewScraper` interface + the `douban.ReviewSummaryResult` type (a type import, exactly as `DoubanSearcher` imports `metadata` types) — no concrete-scraper dependency, so Rule 4/11/19 layering holds.
+- **Selector decision (Task 1.1):** parses the subject-page inline `#comments-section .comment-item` block (fallbacks `#hot-comments`/`.comment-list`) so NO extra request beyond `DetailURL(id)`. The `/subject/{id}/comments/` fallback was NOT needed. Selectors validated against `testdata/subject_comments.html`.
+- **AC #1 backend-field check (Task 3.4): VERIFIED** — `services.DoubanRatingResult.DoubanID` (`json:"douban_id"`) → camel `doubanId` (Rule 18); the route already runs `useDoubanRating`, so the "查看豆瓣頁面" link is built 100% client-side. No new backend field added for the link.
+- **Pre-existing tsc note (Epic 9c Retro AI-2 — NEITHER fix-nor-file, justified):** `tsc --noEmit -p apps/web/tsconfig.app.json` reports pre-existing errors repo-wide (RecentMediaPanel, HeroBanner, EmptyNoFolder, downloads, scanner, gallery fixtures, and the 12-1 `localData.releaseDate` union-narrowing in this route's meta line at `:295/:299`). These are NOT introduced by 12-6 (all new 12-6 files are type-clean) and are NOT test failures — full `tsc` is OUTSIDE the project CI gate (Rule 12 = go vet + staticcheck + eslint + prettier; `nx build web` uses vite/esbuild, no typecheck). No tracking entry filed: not a test failure, repo-wide pre-existing tsc tolerance, out of this story's scope.
+
+### Code Review Follow-ups (Amelia adversarial CR, 2026-06-12)
+
+Outcome: **0 High / 2 Medium / 3 Low** — all Medium + actionable Low auto-fixed; Rule 7 **PASS** (5 `DOUBAN_*` codes, no new prefixes), Rule 20 **N/A** (no stamp bumps), Rule 25 **N/A** (no mega-line change). Git vs File List: 0 discrepancies. All ACs verified IMPLEMENTED; all `[x]` tasks verified done; test claims re-run and confirmed green.
+
+- **M1 (fixed) — wasted Douban search scrape for unmatched titles.** `useDoubanReviewSummary` was gated on `tmdbId > 0`, but `DoubanSection` only renders when a `doubanId` is resolved, so every unmatched-title detail view fired a discarded review-summary request → a live, rate-limited Douban *search* scrape with no UI payoff (also defeats Task 6.2's stated "avoid a scrape when no Douban match exists" and Rule 27 Pillar 1). Fix: gate `enabled` on `Boolean(doubanQuery.data?.doubanId)` so the fetch matches the render condition. [`routes/media/$type.$id.tsx:142`, `hooks/useDoubanReviewSummary.ts` doc]
+- **M2 (fixed) — star-scale conflated with comment cap.** `StarRating` used `MAX_COMMENTS` (=5, the short-comment cap) as the 5-star maximum; coincidentally correct but a future change to the comment cap would silently corrupt star rendering. Fix: introduced an independent `MAX_STARS = 5`. [`components/media/DoubanSection.tsx`]
+- **L1 (fixed) — inaccurate staleTime comment.** Comment claimed "24h matches the server-side Douban cache TTL"; the server TTL is 7 days. Reworded — 24h is the client freshness window mirroring `useDoubanRating`. [`hooks/useDoubanReviewSummary.ts:5`]
+- **L2 (fixed) — total-count fallback understated.** When the "全部 N 条" header is absent, the parser fell back to `len(TopComments)` (capped at 5), so the UI could show "共 5 則短評" for a larger page. Fix: fall back to `items.Length()` (un-capped on-page comment-item count). [`douban/scraper.go:485`]
+- **L3 (acknowledged, no change) — AC #8 has no viewport-specific test.** The review list is single-column by construction (`flex flex-col`), so AC #8 is satisfied structurally; no responsive assertion added (consistent with the design-coverage-gap status).
+
+Re-verification after fixes: `go test ./internal/{douban,services,handlers,database/migrations}` green + `go vet` clean; `DoubanSection.spec.tsx` 8/8; prettier clean on all touched files.
 
 ### Discovery Triage
 
 - **Did this story discover any work outside its current scope?**
-  - **Anticipated at authoring time (dev to confirm/triage):**
-    - **③ backlog candidate:** If the subject page does NOT carry usable 短評 and the `/subject/{id}/comments/` page is robots-disallowed or anti-scrape-blocked, the review-summary feature may be infeasible. If so, ship the AC #1 direct link, omit the review block gracefully, and file a **③ backlog** `sprint-status.yaml` entry documenting the scrape-feasibility limitation (bidirectional link) rather than a prose-only note (Rule 24 ban). If reviews scrape fine, record `N/A`.
-  - Otherwise record each in-flight discovery with its lane (①/②/③) + tracked entry ID before marking done. If none: `N/A — no out-of-scope work discovered`.
+  - **① absorb-in-place — Task 6.1 "both views" premise was incorrect (resolved, no deferred work):** TMDbDetailView (`idKind === 'tmdb-numeric'`) has no local UUID, and BOTH Douban endpoints (`/{movies,series}/:id/douban-rating` and `…/douban-review-summary`) are local-UUID-keyed, so TMDbDetailView can NEVER resolve a `doubanId`. Story 12-1 already established and documented this in-code (the `DualRatingDisplay` comment in TMDbDetailView). Therefore `DoubanSection` is correctly **LocalDetailView-only**; in TMDbDetailView the section is omitted, which is exactly what **AC #4** ("no resolved douban_id → omit") prescribes — so **AC #1/#4 are satisfied**, not deferred. Absorbed in-place by (a) wiring LocalDetailView fully and (b) extending the existing 12-1 in-code comment in TMDbDetailView to name the 12-6 review summary. No new `sprint-status.yaml` entry (no deferred work; consistent with the established 12-1 precedent).
+  - **Live-scrape feasibility (anticipated ③ candidate → N/A at code level):** the parser + 7-day cache + fail-soft degrade are implemented and fixture-tested; the `/subject/{id}/comments/` fallback was not needed (subject page carries the 短評 inline). Real-Douban anti-scrape behavior is NOT exercised by unit tests (no network) — if a future DEPLOY shows the live subject page lacks usable 短評 or blocks, the section degrades gracefully (AC #5) and the direct link survives (AC #1); file the ③ backlog entry at that point. Recorded **N/A** now (feature is implemented + fail-soft, not infeasible).
 - Reference: `project-context.md` Rule 24.
 
 ### File List
+
+**Created — backend:**
+- `apps/api/internal/database/migrations/026_add_douban_review_summary.go`
+- `apps/api/internal/database/migrations/026_add_douban_review_summary_test.go`
+- `apps/api/internal/douban/scraper_review_test.go`
+- `apps/api/internal/douban/cache_review_test.go`
+- `apps/api/internal/douban/testdata/subject_comments.html`
+- `apps/api/internal/services/douban_review_service_test.go`
+- `apps/api/internal/handlers/douban_review_handler_test.go`
+
+**Modified — backend:**
+- `apps/api/internal/douban/types.go` (ReviewSummaryResult, ReviewComment)
+- `apps/api/internal/douban/scraper.go` (ScrapeReviewSummary + parse + s2twp)
+- `apps/api/internal/douban/cache.go` (GetReviewSummary/SetReviewSummary + non-clobbering detail Set)
+- `apps/api/internal/douban/cache_test.go` (review_summary_json column in test schema)
+- `apps/api/internal/metadata/douban_provider.go` (cache-aware ScrapeReviewSummary)
+- `apps/api/internal/services/douban_rating_service.go` (DoubanReviewScraper iface, EnrichDoubanReviewSummary, resolveDoubanID, constructor arg)
+- `apps/api/internal/services/douban_rating_service_test.go` (4-arg constructor)
+- `apps/api/internal/handlers/douban_rating_handler.go` (2 handler methods + routes + Swaggo)
+- `apps/api/internal/handlers/douban_rating_handler_test.go` (mock method + douban import)
+- `apps/api/cmd/api/main.go` (inject review scraper)
+
+**Created — frontend:**
+- `apps/web/src/hooks/useDoubanReviewSummary.ts`
+- `apps/web/src/components/media/DoubanSection.tsx`
+- `apps/web/src/components/media/DoubanSection.spec.tsx`
+
+**Modified — frontend:**
+- `apps/web/src/types/library.ts` (ReviewComment, DoubanReviewSummary, DoubanReviewSummaryResponse)
+- `apps/web/src/services/libraryService.ts` (get{Movie,Series}DoubanReviewSummary)
+- `apps/web/src/routes/media/$type.$id.tsx` (DoubanSection in LocalDetailView + 12-6 comment in TMDbDetailView)
 
 ## Change Log
 
 | Date | Change |
 |------|--------|
+| 2026-06-12 | **Adversarial CR (Amelia, code-review).** 0 High / 2 Medium / 3 Low — all Medium + actionable Low auto-fixed: M1 review-summary query re-gated on a resolved `doubanId` (eliminates the discarded review request + live Douban *search* scrape on every unmatched-title view; aligns enable-gate with render-gate, Rule 27 ①); M2 `MAX_STARS` split from `MAX_COMMENTS` in `DoubanSection`; L1 corrected the staleTime comment (server cache TTL is 7d, the 24h is the client freshness window); L2 total-count fallback uses `items.Length()` instead of the 5-capped slice. L3 (AC #8 viewport test) acknowledged — single-column by construction. Rule 7 **PASS** / Rule 20 **N/A** / Rule 25 **N/A**; git vs File List 0 discrepancies. Re-verified: douban/services/handlers/migrations Go tests + `go vet` green, `DoubanSection.spec` 8/8, prettier clean. Status → **done**. |
+| 2026-06-12 | **Implemented (Amelia, dev-story).** Backend: `douban.ScrapeReviewSummary` parsing the subject-page inline 短評 block (no extra request) + s2twp conversion (reuses `ChineseConverter`); `ReviewSummaryResult`/`ReviewComment` types; migration 026 `review_summary_json` on `douban_cache` (self-registering init()); `Cache.Get/SetReviewSummary` (upsert) + detail `Set` changed INSERT OR REPLACE→ON CONFLICT so a detail re-scrape can't clobber the review summary (AC #6); `metadata.DoubanProvider.ScrapeReviewSummary` (cache-before-scrape, single client/limiter — Rule 27 ①/②); `DoubanReviewScraper` interface + `EnrichDoubanReviewSummary`/`resolveDoubanID` on the 12-1 service (injects the SAME provider, not the raw scraper — see Completion Notes); handler `Get{Movie,Series}DoubanReviewSummary` + routes `/{movies,series}/:id/douban-review-summary` + Swaggo; main.go wiring. Frontend: `useDoubanReviewSummary` hook + `DoubanSection` (查看豆瓣頁面 link survives a failed scrape; comments author+stars+Traditional text, 5-cap, count) wired into LocalDetailView (TMDbDetailView omits — no local UUID, Discovery Triage ①). Reused `DOUBAN_*` codes (no new prefix/secret/scrape-infra). AC-Drift NONE / Contract-Stamps NONE / A11y PASS / UX design-coverage-gap. Full regression: web 2099/2099, api 0 fail. Status → review. |
 | 2026-06-11 | Story drafted (SM Bob, create-story yolo). F-6 — Douban direct link + user review summary (短評). Direct link nearly free (reuses 12-1's stored `douban_id` / `DoubanRatingResult.DoubanID`, built client-side). Review summary: new `ScrapeReviewSummary` on the existing douban `Scraper` (reuses 0.5rps limiter / robots.txt / UA-rotation / kill-switch / OpenCC s2twp), cached in extended `douban_cache` (`review_summary_json`, 7-day TTL), surfaced via `EnrichDoubanReviewSummary` on the 12-1 `DoubanRatingService` + new `/{movies,series}/:id/douban-review-summary` routes. Frontend: `useDoubanReviewSummary` hook + `DoubanSection` (direct link survives a failed scrape). Reuse `DOUBAN_*` codes — no new prefix/secret/scrape-infra. Cross-stack split: backend 3 / frontend 3 → single story. Review-scrape fragility flagged (ADR Risk row) — fail-soft + fixture-tested parser + feasibility Discovery-Triage candidate. |

@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/vido/api/internal/douban"
 	"github.com/vido/api/internal/metadata"
 	"github.com/vido/api/internal/repository"
 )
@@ -44,28 +45,42 @@ type DoubanSearcher interface {
 	IsAvailable() bool
 }
 
+// DoubanReviewScraper is the subset of the Douban provider the review-summary
+// enrichment needs (Story 12-6). It is injected (mirroring DoubanSearcher) so the
+// service depends on a behavior contract rather than the concrete internal/douban
+// scraper, and so main.go can hand it the SAME *metadata.DoubanProvider instance —
+// keeping the single rate limiter / cache (Rule 27 ①/②, Rule 14). The
+// implementation is cache-aware (a warm subject serves without a new scrape, AC #6).
+type DoubanReviewScraper interface {
+	ScrapeReviewSummary(ctx context.Context, id string) (*douban.ReviewSummaryResult, error)
+}
+
 // DoubanRatingService enriches movies/series with Douban ratings on demand.
 // Flow (Story 12-1 AC #2–#5): check the denormalized douban_rating column →
 // if present, return it (cached); otherwise search Douban by title+year, take
 // the best match, persist the rating, and return it. Any Douban failure
 // degrades gracefully to a nil result with a slog.Warn (AC #4).
 type DoubanRatingService struct {
-	searcher   DoubanSearcher
-	movieRepo  repository.MovieRepositoryInterface
-	seriesRepo repository.SeriesRepositoryInterface
+	searcher      DoubanSearcher
+	reviewScraper DoubanReviewScraper
+	movieRepo     repository.MovieRepositoryInterface
+	seriesRepo    repository.SeriesRepositoryInterface
 }
 
-// NewDoubanRatingService creates the service. searcher may be nil (Douban
-// disabled), in which case every enrichment degrades gracefully to nil.
+// NewDoubanRatingService creates the service. searcher and reviewScraper may each be
+// nil (Douban disabled), in which case the corresponding enrichment degrades
+// gracefully to nil. reviewScraper powers EnrichDoubanReviewSummary (Story 12-6).
 func NewDoubanRatingService(
 	searcher DoubanSearcher,
+	reviewScraper DoubanReviewScraper,
 	movieRepo repository.MovieRepositoryInterface,
 	seriesRepo repository.SeriesRepositoryInterface,
 ) *DoubanRatingService {
 	return &DoubanRatingService{
-		searcher:   searcher,
-		movieRepo:  movieRepo,
-		seriesRepo: seriesRepo,
+		searcher:      searcher,
+		reviewScraper: reviewScraper,
+		movieRepo:     movieRepo,
+		seriesRepo:    seriesRepo,
 	}
 }
 
@@ -88,6 +103,88 @@ func (s *DoubanRatingService) EnrichDoubanRating(ctx context.Context, mediaID, m
 		// Caller passes a fixed literal; an unknown value is a programming error.
 		slog.Warn("EnrichDoubanRating called with invalid media type", "media_type", mediaType, "media_id", mediaID)
 		return nil, nil
+	}
+}
+
+// EnrichDoubanReviewSummary returns the Douban short-comment summary (短評) for the
+// given media record (Story 12-6). It resolves the douban_id (stored by Story 12-1,
+// or via a fresh title+year lookup), then scrapes the review summary by that id
+// through the injected cache-aware review scraper. Returns (nil, nil) whenever no
+// summary is available — the graceful-degradation path, NOT an error (AC #4/#5).
+func (s *DoubanRatingService) EnrichDoubanReviewSummary(ctx context.Context, mediaID, mediaType string) (*douban.ReviewSummaryResult, error) {
+	if s.reviewScraper == nil {
+		return nil, nil
+	}
+
+	doubanID, err := s.resolveDoubanID(ctx, mediaID, mediaType)
+	if err != nil {
+		// Genuine infrastructure error (e.g. media record not found) — let the
+		// handler map it (404 vs 500). NOT a Douban-scrape failure.
+		return nil, err
+	}
+	if doubanID == "" {
+		// No Douban match — omit the review section (AC #4).
+		return nil, nil
+	}
+
+	// Bound the (cache-miss) scrape so a slow/hung Douban cannot block the detail
+	// page; a timeout degrades to an omitted review block (AC #5).
+	ctx, cancel := context.WithTimeout(ctx, doubanLookupTimeout)
+	defer cancel()
+
+	summary, err := s.reviewScraper.ScrapeReviewSummary(ctx, doubanID)
+	if err != nil {
+		// Block / parse / timeout — degrade to an omitted review block (AC #5).
+		slog.Warn("Douban review summary enrichment failed", "error", err, "media_id", mediaID, "douban_id", doubanID)
+		return nil, nil
+	}
+	return summary, nil
+}
+
+// resolveDoubanID returns the Douban subject id for a media record: the stored id
+// (Story 12-1) when present, otherwise a fresh title+year lookup reusing the rating
+// path's lookup/pickBestMatch. The resolved rating/id is persisted best-effort so
+// later loads skip the lookup. Returns "" when unresolved (no Douban match); a
+// genuine repository error (other than not-found) is propagated.
+func (s *DoubanRatingService) resolveDoubanID(ctx context.Context, mediaID, mediaType string) (string, error) {
+	switch mediaType {
+	case doubanMediaMovie:
+		movie, err := s.movieRepo.FindByID(ctx, mediaID)
+		if err != nil {
+			return "", classifyFindErr(err)
+		}
+		if movie.DoubanID.Valid && movie.DoubanID.String != "" {
+			return movie.DoubanID.String, nil
+		}
+		result := s.lookup(ctx, movie.Title, yearFromDate(movie.ReleaseDate), metadata.MediaTypeMovie, mediaID)
+		if result == nil {
+			return "", nil
+		}
+		if err := s.movieRepo.UpdateDoubanRating(ctx, mediaID, result.DoubanID, result.DoubanRating, result.DoubanVoteCount); err != nil {
+			slog.Warn("Failed to persist resolved Douban id for movie", "error", err, "movie_id", mediaID)
+		}
+		return result.DoubanID, nil
+
+	case doubanMediaSeries:
+		series, err := s.seriesRepo.FindByID(ctx, mediaID)
+		if err != nil {
+			return "", classifyFindErr(err)
+		}
+		if series.DoubanID.Valid && series.DoubanID.String != "" {
+			return series.DoubanID.String, nil
+		}
+		result := s.lookup(ctx, series.Title, yearFromDate(series.FirstAirDate), metadata.MediaTypeTV, mediaID)
+		if result == nil {
+			return "", nil
+		}
+		if err := s.seriesRepo.UpdateDoubanRating(ctx, mediaID, result.DoubanID, result.DoubanRating, result.DoubanVoteCount); err != nil {
+			slog.Warn("Failed to persist resolved Douban id for series", "error", err, "series_id", mediaID)
+		}
+		return result.DoubanID, nil
+
+	default:
+		slog.Warn("EnrichDoubanReviewSummary called with invalid media type", "media_type", mediaType, "media_id", mediaID)
+		return "", nil
 	}
 }
 

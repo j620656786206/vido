@@ -79,6 +79,31 @@ type DetailResult struct {
 	ScrapedAt time.Time
 }
 
+// ReviewComment is a single Douban short comment (短評) attached to a subject.
+// Text is already converted to Traditional Chinese (s2twp) by the scraper for the
+// zh-TW UI (Story 12-6 AC #3).
+type ReviewComment struct {
+	// Author is the commenter's display name.
+	Author string `json:"author"`
+	// Rating is the commenter's star rating on a 1-5 scale (0 when unrated).
+	Rating int `json:"rating"`
+	// Text is the comment body (Traditional Chinese).
+	Text string `json:"text"`
+}
+
+// ReviewSummaryResult is the scraped short-comment summary for a Douban subject
+// (Story 12-6). TopComments is capped at maxReviewComments; TotalComments is the
+// subject's full short-comment count when the page exposes it (else len of the
+// parsed comments).
+type ReviewSummaryResult struct {
+	// ID is the Douban subject ID.
+	ID string `json:"id"`
+	// TotalComments is the total number of short comments on the subject.
+	TotalComments int `json:"total_comments"`
+	// TopComments are the top short comments (Traditional Chinese), capped.
+	TopComments []ReviewComment `json:"top_comments"`
+}
+
 // ClientConfig holds configuration for the Douban client
 type ClientConfig struct {
 	// RequestsPerSecond is the rate limit (default: 0.5 = 1 req per 2 seconds)

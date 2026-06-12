@@ -146,14 +146,40 @@ func (c *Cache) Set(ctx context.Context, result *DetailResult) error {
 		return fmt.Errorf("failed to create cache entry: %w", err)
 	}
 
+	// Upsert keyed on the UNIQUE douban_id. ON CONFLICT DO UPDATE (rather than
+	// INSERT OR REPLACE) is deliberate: it updates only the detail columns and
+	// leaves review_summary_json (Story 12-6) untouched, so a detail re-scrape
+	// never clobbers a cached review summary on the same row (AC #6).
 	query := `
-		INSERT OR REPLACE INTO douban_cache (
+		INSERT INTO douban_cache (
 			id, douban_id, title, title_traditional, original_title, year,
 			rating, rating_count, director, cast_json, genres_json,
 			countries_json, languages_json, poster_url, summary,
 			summary_traditional, media_type, runtime, episodes,
 			release_date, imdb_id, scraped_at, expires_at
 		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		ON CONFLICT(douban_id) DO UPDATE SET
+			title = excluded.title,
+			title_traditional = excluded.title_traditional,
+			original_title = excluded.original_title,
+			year = excluded.year,
+			rating = excluded.rating,
+			rating_count = excluded.rating_count,
+			director = excluded.director,
+			cast_json = excluded.cast_json,
+			genres_json = excluded.genres_json,
+			countries_json = excluded.countries_json,
+			languages_json = excluded.languages_json,
+			poster_url = excluded.poster_url,
+			summary = excluded.summary,
+			summary_traditional = excluded.summary_traditional,
+			media_type = excluded.media_type,
+			runtime = excluded.runtime,
+			episodes = excluded.episodes,
+			release_date = excluded.release_date,
+			imdb_id = excluded.imdb_id,
+			scraped_at = excluded.scraped_at,
+			expires_at = excluded.expires_at
 	`
 
 	_, err = c.db.ExecContext(ctx, query,
@@ -176,6 +202,82 @@ func (c *Cache) Set(ctx context.Context, result *DetailResult) error {
 		"expires_at", entry.ExpiresAt,
 	)
 
+	return nil
+}
+
+// GetReviewSummary retrieves a cached Douban review summary by Douban ID
+// (Story 12-6 AC #6). Returns (nil, nil) on a miss / expired row / unset column so
+// a warm hit avoids a new scrape while a miss falls through to the scraper.
+func (c *Cache) GetReviewSummary(ctx context.Context, doubanID string) (*ReviewSummaryResult, error) {
+	if !c.config.Enabled || c.db == nil {
+		return nil, nil
+	}
+
+	var jsonStr sql.NullString
+	err := c.db.QueryRowContext(ctx, `
+		SELECT review_summary_json FROM douban_cache
+		WHERE douban_id = ? AND expires_at > CURRENT_TIMESTAMP
+	`, doubanID).Scan(&jsonStr)
+
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to query review summary cache: %w", err)
+	}
+	if !jsonStr.Valid || jsonStr.String == "" {
+		// Row exists (detail cached) but no review summary scraped yet.
+		return nil, nil
+	}
+
+	var result ReviewSummaryResult
+	if err := json.Unmarshal([]byte(jsonStr.String), &result); err != nil {
+		// Treat a corrupt cache entry as a miss rather than failing the request.
+		c.logger.Warn("Failed to unmarshal cached review summary",
+			"douban_id", doubanID,
+			"error", err,
+		)
+		return nil, nil
+	}
+	result.ID = doubanID
+
+	c.logger.Debug("Review summary cache hit",
+		"douban_id", doubanID,
+		"comments", len(result.TopComments),
+	)
+	return &result, nil
+}
+
+// SetReviewSummary upserts a review summary onto the douban_cache row for the given
+// Douban ID (Story 12-6 AC #6). It touches only review_summary_json + expires_at, so
+// it neither clobbers detail columns nor requires a detail row to pre-exist (a fresh
+// row is inserted with an empty title). 7-day TTL via DefaultCacheConfig.
+func (c *Cache) SetReviewSummary(ctx context.Context, doubanID string, summary *ReviewSummaryResult) error {
+	if !c.config.Enabled || c.db == nil || summary == nil || doubanID == "" {
+		return nil
+	}
+
+	payload, err := json.Marshal(summary)
+	if err != nil {
+		return fmt.Errorf("failed to marshal review summary: %w", err)
+	}
+
+	expiresAt := time.Now().Add(c.config.DefaultTTL)
+	_, err = c.db.ExecContext(ctx, `
+		INSERT INTO douban_cache (id, douban_id, title, scraped_at, expires_at, review_summary_json)
+		VALUES (?, ?, '', CURRENT_TIMESTAMP, ?, ?)
+		ON CONFLICT(douban_id) DO UPDATE SET
+			review_summary_json = excluded.review_summary_json,
+			expires_at = excluded.expires_at
+	`, uuid.New().String(), doubanID, expiresAt, string(payload))
+	if err != nil {
+		return fmt.Errorf("failed to upsert review summary: %w", err)
+	}
+
+	c.logger.Debug("Cached Douban review summary",
+		"douban_id", doubanID,
+		"expires_at", expiresAt,
+	)
 	return nil
 }
 

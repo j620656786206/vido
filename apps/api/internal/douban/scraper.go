@@ -369,6 +369,176 @@ func (s *Scraper) detectTVShow(doc *goquery.Document, result *DetailResult) bool
 	return false
 }
 
+// maxReviewComments caps how many short comments (短評) the review summary returns.
+const maxReviewComments = 5
+
+var (
+	// totalCommentsRe extracts the subject's full short-comment count from the
+	// section header (e.g. "全部 152340 条").
+	totalCommentsRe = regexp.MustCompile(`全部\s*(\d+)\s*条`)
+	// allstarRe extracts the star rating from a Douban "allstarNN" class
+	// (allstar40 → 4 stars). NN is a multiple of 10 on a 0-50 scale.
+	allstarRe = regexp.MustCompile(`allstar(\d+)`)
+	// whitespaceRe collapses runs of whitespace in comment text.
+	whitespaceRe = regexp.MustCompile(`\s+`)
+)
+
+// ScrapeReviewSummary scrapes the top short comments (短評) for a Douban subject
+// (Story 12-6 AC #2/#3). It reuses the subject page the rating path already knows
+// (DetailURL) because the short-comments block is rendered inline on
+// movie.douban.com/subject/{id}/ — no extra request. Comment text is converted to
+// Traditional Chinese (AC #3). A block/parse failure is returned so the caller can
+// degrade the review section to omitted while keeping the direct link (AC #5).
+func (s *Scraper) ScrapeReviewSummary(ctx context.Context, id string) (*ReviewSummaryResult, error) {
+	if !s.client.IsEnabled() {
+		return nil, &BlockedError{
+			Reason: "client is disabled",
+		}
+	}
+
+	url := DetailURL(id)
+	s.logger.Info("Scraping Douban review summary",
+		"id", id,
+		"url", url,
+	)
+
+	body, err := s.client.GetBody(ctx, url)
+	if err != nil {
+		s.logger.Error("Failed to fetch subject page for review summary",
+			"id", id,
+			"error", err,
+		)
+		return nil, fmt.Errorf("failed to fetch subject page: %w", err)
+	}
+
+	result, err := s.parseReviewSummary(id, body)
+	if err != nil {
+		s.logger.Error("Failed to parse review summary",
+			"id", id,
+			"error", err,
+		)
+		return nil, err
+	}
+
+	// Convert each comment to Traditional Chinese (AC #3) — reuses the same
+	// ChineseConverter the rating-title path uses (convertToTraditional style).
+	s.convertCommentsToTraditional(result)
+
+	s.logger.Info("Successfully scraped review summary",
+		"id", id,
+		"total_comments", result.TotalComments,
+		"top_comments", len(result.TopComments),
+	)
+
+	return result, nil
+}
+
+// parseReviewSummary extracts the short-comment summary from a Douban subject page.
+// Selectors mirror the inline #comments-section block (validated against the saved
+// testdata fixture). Markup drift degrades to an empty TopComments list rather than
+// an error (Rule 27 Pillar 3) — an empty summary omits the review block upstream.
+func (s *Scraper) parseReviewSummary(id string, html string) (*ReviewSummaryResult, error) {
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(html))
+	if err != nil {
+		return nil, &ParseError{
+			Field:  "document",
+			Reason: "failed to parse HTML: " + err.Error(),
+		}
+	}
+
+	result := &ReviewSummaryResult{ID: id}
+
+	// Total short-comment count from the section header ("全部 N 条").
+	section := doc.Find("#comments-section")
+	if section.Length() == 0 {
+		section = doc.Find("#hot-comments")
+	}
+	if section.Length() > 0 {
+		if m := totalCommentsRe.FindStringSubmatch(section.Text()); len(m) == 2 {
+			if n, convErr := strconv.Atoi(m[1]); convErr == nil {
+				result.TotalComments = n
+			}
+		}
+	}
+
+	// Top comment items (capped). Prefer the canonical #comments-section block,
+	// falling back to the older #hot-comments / .comment-list layouts.
+	items := doc.Find("#comments-section .comment-item")
+	if items.Length() == 0 {
+		items = doc.Find("#hot-comments .comment-item, .comment-list .comment-item")
+	}
+
+	items.EachWithBreak(func(_ int, sel *goquery.Selection) bool {
+		if len(result.TopComments) >= maxReviewComments {
+			return false
+		}
+		comment := parseReviewComment(sel)
+		// Skip empty rows (ads / placeholder items) — a comment with no text is
+		// not useful for the summary.
+		if comment.Text != "" {
+			result.TopComments = append(result.TopComments, comment)
+		}
+		return true
+	})
+
+	// Fall back to the on-page comment-item count when the "全部 N 条" header is
+	// absent. Use items.Length() (all comment rows on the page) rather than
+	// len(TopComments) — the latter is capped at maxReviewComments and would
+	// understate the count as exactly the cap (CR L2).
+	if result.TotalComments == 0 {
+		result.TotalComments = items.Length()
+	}
+
+	return result, nil
+}
+
+// parseReviewComment extracts a single short comment (author + star rating + text)
+// from a .comment-item selection.
+func parseReviewComment(sel *goquery.Selection) ReviewComment {
+	comment := ReviewComment{}
+
+	comment.Author = strings.TrimSpace(sel.Find(".comment-info a").First().Text())
+
+	// Star rating lives in an "allstarNN rating" class span inside .comment-info.
+	sel.Find(".comment-info span, span.rating").EachWithBreak(func(_ int, span *goquery.Selection) bool {
+		class, _ := span.Attr("class")
+		if m := allstarRe.FindStringSubmatch(class); len(m) == 2 {
+			if n, convErr := strconv.Atoi(m[1]); convErr == nil {
+				comment.Rating = n / 10 // allstar40 → 4 stars
+				return false
+			}
+		}
+		return true
+	})
+
+	text := strings.TrimSpace(sel.Find(".short").First().Text())
+	if text == "" {
+		text = strings.TrimSpace(sel.Find(".comment-content").First().Text())
+	}
+	comment.Text = strings.TrimSpace(whitespaceRe.ReplaceAllString(text, " "))
+
+	return comment
+}
+
+// convertCommentsToTraditional converts each comment's Simplified-Chinese text to
+// Traditional (AC #3), reusing the scraper's existing ChineseConverter.
+func (s *Scraper) convertCommentsToTraditional(result *ReviewSummaryResult) {
+	for i := range result.TopComments {
+		text := result.TopComments[i].Text
+		if text == "" {
+			continue
+		}
+		traditional, err := s.converter.ConvertIfSimplified(text)
+		if err != nil {
+			s.logger.Warn("Failed to convert comment to Traditional",
+				"error", err,
+			)
+			continue
+		}
+		result.TopComments[i].Text = traditional
+	}
+}
+
 // ScrapeByURL scrapes metadata from a direct Douban URL
 func (s *Scraper) ScrapeByURL(ctx context.Context, url string) (*DetailResult, error) {
 	id := extractSubjectID(url)

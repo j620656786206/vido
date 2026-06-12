@@ -457,11 +457,17 @@ func main() {
 	// When Douban is disabled DoubanProvider() returns a nil *DoubanProvider; keep
 	// the searcher a genuine nil interface (avoid the typed-nil-in-interface trap)
 	// so the service takes its graceful-degradation path instead of dereferencing.
+	// Story 12-6 — Douban review summary. The SAME *DoubanProvider also satisfies
+	// services.DoubanReviewScraper (cache-aware ScrapeReviewSummary), so the review
+	// scrape rides the existing client / limiter / cache (Rule 27 ①/②). Keep it a
+	// genuine nil interface when Douban is disabled (typed-nil-in-interface trap).
 	var doubanSearcher services.DoubanSearcher
+	var doubanReviewScraper services.DoubanReviewScraper
 	if dp := metadataService.DoubanProvider(); dp != nil {
 		doubanSearcher = dp
+		doubanReviewScraper = dp
 	}
-	doubanRatingService := services.NewDoubanRatingService(doubanSearcher, repos.Movies, repos.Series)
+	doubanRatingService := services.NewDoubanRatingService(doubanSearcher, doubanReviewScraper, repos.Movies, repos.Series)
 	doubanRatingHandler := handlers.NewDoubanRatingHandler(doubanRatingService)
 	settingsHandler := handlers.NewSettingsHandler(settingsService)
 	setupHandler := handlers.NewSetupHandler(setupService)
@@ -547,7 +553,7 @@ func main() {
 	{
 		movieHandler.RegisterRoutes(apiV1)
 		seriesHandler.RegisterRoutes(apiV1)
-		doubanRatingHandler.RegisterRoutes(apiV1) // /movies/:id/douban-rating, /series/:id/douban-rating (Story 12-1)
+		doubanRatingHandler.RegisterRoutes(apiV1) // /{movies,series}/:id/douban-rating (12-1) + /douban-review-summary (12-6)
 		logHandler.RegisterRoutes(apiV1)          // Must be before settingsHandler to avoid /settings/:key conflict
 		cacheHandler.RegisterRoutes(apiV1)        // Must be before settingsHandler to avoid /settings/:key conflict
 		statusHandler.RegisterRoutes(apiV1)       // Must be before settingsHandler to avoid /settings/:key conflict
