@@ -758,4 +758,15 @@ development_status:
   # Not a frontend bug (bugfix-3 handles empty responses correctly)
   bugfix-8-backups-api-500:                            done    # 2026-03-28 — defensive fix implemented, code review passed 2026-04-06 (was: backups-api-500-investigation)
 
+# ==============================================================================
+# UX Redesign — Phase 2 pilot (Browse + Detail vertical slices, behind new_shell_enabled)
+# Plan: _bmad-output/planning-artifacts/ux-redesign/ (00-brief, 01-nav-ia-adr, 01-design-language-v2)
+# Phase 0 #63 · Phase 1 (ADR + design-language v2) #64 · Phase 2 design #65. go/no-go gate after ux2-validation.
+# ==============================================================================
+  ux2-design-a-b-v2:        done            # 2026-06-13 — 16 v2 screens (.pen) + PosterCard-v2; PR #65
+  ux2-1-foundation-shell:   ready-for-dev   # FOUNDATION (BLOCKING): shell + new_shell_enabled flag + Base UI wrappers + LegacyContentContainer + ESLint ban + R3 token sweep. Do before ux2-2/ux2-3.
+  ux2-2-browse-v2:          ready-for-dev   # A′ Browse v2 (depends ux2-1): library layout+movies/tv/index, integrated toolbar+chips, 4 states, N1 badges, mobile merged sheet
+  ux2-3-detail-v2:          ready-for-dev   # B′ Detail v2 (depends ux2-1): full-page backdrop hero, restored CTAs (Rule-24 playback check), 4 states, per-section fail-soft, TV episodes
+  ux2-validation:           backlog         # 390/768/1440 browser-pixel verify + real-use → 02-pilot-validation.md (go/no-go for Phase 3)
+
 next_priority: epic-12  # Phase 2 — Rich Media Detail Page. Epic 11 CLOSED 2026-06-09 (retro done). Start with 12-1 dual-rating display (ready-for-dev; reads existing TMDB/Douban data, no blocking prereqs) → 12-2 season list. Epic-11 retro action items to fold in first: retro-11-AI1 (a11y enforcement mechanism — HIGH, do before more frontend stories) + retro-11-AI3 (external-API arch alignment — schedule before 12-3, NOT before 12-1). Backlog batch-subtitle items (disc-2026-06-batch-subtitle-pause, ...-library-subtitle-status-filter) remain P3.
