@@ -31,6 +31,9 @@ import { useDoubanReviewSummary } from '../../hooks/useDoubanReviewSummary';
 import type { MovieDetails, TVShowDetails } from '../../types/tmdb';
 import { getImageUrl } from '../../lib/image';
 import { cn } from '../../lib/utils';
+import { useShellVersion } from '../../components/shell/shellVersion';
+import { LocalDetailV2 } from '../../components/media/LocalDetailV2';
+import { TMDbDetailV2 } from '../../components/media/TMDbDetailV2';
 
 const validMediaTypes = ['movie', 'tv'] as const;
 type ValidMediaType = (typeof validMediaTypes)[number];
@@ -73,6 +76,8 @@ export const Route = createFileRoute('/media/$type/$id')({
     };
   },
   notFoundComponent: NotFoundComponent,
+  // UX2-3: migrated route — full-bleed under the v2 shell.
+  staticData: { shell: 'v2' },
   component: MediaDetailRoute,
 });
 
@@ -97,16 +102,29 @@ function NotFoundComponent() {
 
 function MediaDetailRoute() {
   const { type, id, idKind } = Route.useLoaderData();
+  // UX2-3: shell-version switch (the flag stays read-once in __root, F4). Under
+  // the v2 shell render the redesigned detail; under the legacy shell the
+  // existing views render pixel-unchanged (P3 strangler discipline).
+  const shell = useShellVersion();
 
   // bugfix-10-1 — Homepage / search PosterCards emit raw TMDb numeric IDs
   // (Story 10-3 ExploreBlock + Story 2-3 search MediaGrid). Those never resolve
   // against /api/v1/movies/:id (UUID-keyed). Branch off to the TMDb-backed
   // detail render and skip the local-DB hooks entirely.
   if (idKind === 'tmdb-numeric') {
-    return <TMDbDetailView type={type} tmdbId={parseInt(id, 10)} />;
+    const tmdbId = parseInt(id, 10);
+    return shell === 'v2' ? (
+      <TMDbDetailV2 type={type} tmdbId={tmdbId} />
+    ) : (
+      <TMDbDetailView type={type} tmdbId={tmdbId} />
+    );
   }
 
-  return <LocalDetailView type={type} id={id} />;
+  return shell === 'v2' ? (
+    <LocalDetailV2 type={type} id={id} />
+  ) : (
+    <LocalDetailView type={type} id={id} />
+  );
 }
 
 function LocalDetailView({ type, id }: { type: ValidMediaType; id: string }) {
