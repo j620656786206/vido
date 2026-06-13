@@ -108,6 +108,9 @@ SCREENS = {
     # Design system reference docs (top of canvas, no flow code)
     "8SSzc": ("design-system", "design-system-reference"),
     "sJzat": ("design-system", "component-library"),
+    # UX Redesign Phase 1b — Design Language v2 + Navigation Shell v2
+    "V2Kez": ("design-system", "design-language-v2"),
+    "CLo58": ("design-system", "navigation-shell-v2"),
 }
 
 
