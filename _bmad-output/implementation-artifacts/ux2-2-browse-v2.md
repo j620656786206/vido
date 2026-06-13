@@ -1,6 +1,6 @@
 # Story UX2-2: A′ Browse v2 — Library in v2 behind `new_shell_enabled`
 
-Status: ready-for-dev
+Status: done
 
 > UX Redesign **Phase 2** pilot · Story 2 of 3. **Depends on UX2-1 (FOUNDATION)** — needs the shell, flag, `LegacyContentContainer` opt-in, Base UI wrappers, and v2 tokens in `styles.css`.
 > Design: `ux-design.pen` `flow-a-browse-v2/*` (10 screens) + `PosterCard-v2` (`hD7Tw`); `01-design-language-v2.md` §2–§3, §7 (four states).
@@ -71,4 +71,62 @@ grid `LcHBs` · list `b1H71g` · empty `vZpT8`(D)/`BfGVZ`(M) · loading `EsoIv`(
 - [Source: apps/web/src/routes/library.tsx; components/library/LibraryGrid.tsx; types/library.ts:152 (subtitleStatus); hooks/useLibrary.ts]
 
 ## Dev Agent Record
-_(to be filled by dev-story)_
+
+### Implementation Summary (Amelia/dev — 2026-06-14)
+
+Branch `feat/ux2-2-browse-v2` (off main, post-UX2-1 merge). Verified: `tsc` (0 new
+errors), `eslint` (clean; the 3 `react-hooks/exhaustive-deps` warnings in
+`library.tsx` are pre-existing in the untouched legacy `LibraryPage`, line-shifted
+by the new imports), 21 new unit specs + existing `LibraryGrid`(20)/`AppShellV2`(3)
+specs pass, `nx build web` (2332 modules) ok.
+
+**Flag-gating (F4 preserved):** new `components/shell/shellVersion.tsx` context —
+`AppShellV2` provides `'v2'`, default `'legacy'`. `routes/library.tsx` branches on
+`useShellVersion()`: v2 → `<LibraryBrowseV2/>`; legacy → the existing `LibraryPage`
+**pixel-unchanged** (P3). The flag itself stays read-once in `__root` — the route
+reads the shell context, not the flag. Route marked `staticData.shell:'v2'`
+(full-bleed under the v2 shell).
+
+**v2 Browse:** `LibraryBrowseV2` (one component, all three type views off `?type=`,
+shared `LibraryGrid`-style grid + shared sort/filter/scroll state surviving
+movies↔tv — AC #1 intent + F5); `PosterCardV2` (`hD7Tw` — 2-line CJK title grid,
+Mono meta, N1 status badge); `LibraryListRowV2`; integrated toolbar (sort + filter
++ active chips + count + grid/list toggle); four states
+(`LibraryStatesV2`: loading skeleton / no-result / error-fail-soft + Empty via the
+reused 3-state classifier); continuous scroll (`useLibraryInfinite` +
+IntersectionObserver, AC #11); merged mobile sort+filter sheet
+(`LibraryFilterSheetV2` on the UX2-1 Base UI `Sheet`); status→token util
+(`utils/libraryStatus.ts`, §2.5).
+
+### Discovery Triage (Rule 24)
+
+1. **Route split → deferred (single route + `?type=`).** AC #1/#2 specify
+   `/library/{movies,tv}` child route FILES + `?type=`→`/library/movies` redirects.
+   Under the strangler flag this needs fragile flag-conditional `beforeLoad`
+   redirects (router context has no `queryClient`; the flag lives in React
+   context/query-cache) for marginal go/no-go value — the URL scheme is not what's
+   validated. PILOT keeps `/library` as one route branching on shell-version and
+   serving per-type views via the existing `?type=` param: shared grid + shared
+   state across type switches (AC #1 intent), deep links preserved trivially
+   (AC #2 — never 404, sidebar already links `?type=`). The clean-route migration
+   (D2) is a low-risk Phase-3 follow-up once v2 is validated.
+2. **N1 subtitle badge derivation.** No item-level `subtitleStatus` exists (it's
+   episode-only); derived from `parseStatus` (success→已入庫 / pending→整理中 /
+   failed→失敗) + `subtitleTracks` JSON (zh-Hant→繁中 / zh-Hans→簡中 / none→缺字幕).
+   The richer process states (下載中·% / 簡轉繁 / AI 校正中) are NOT list-level
+   derivable → Phase-3 backend field.
+3. **解析度 filter chip → deferred.** The list endpoint filters by genres/year/
+   unmatched/type only — no resolution filter. Pilot toolbar ships 類型(genre)+年份;
+   resolution needs a backend param (Phase-3, Rule-24 follow-up).
+4. **Filter editing via the merged Sheet on all breakpoints** (not desktop inline
+   dropdown-chips) — a pilot simplification; the design's richer toolbar
+   dropdown-chips are a refinement. Active filter chips are inline + removable.
+5. **Visual gallery fixtures → deferred follow-up.** v2 components are token-only
+   (low drift); behavior covered by 21 specs + the runtime validation step. Adding
+   `/test/gallery` fixtures + the `-linux` baseline bootstrap is batched as a
+   follow-up to avoid a mid-pilot bootstrap-PR cycle (Rule 22/23).
+
+## Completion Notes
+- Flag OFF → legacy library unchanged (safe rollback). Flag ON → v2 Browse.
+- Browser-pixel verification at 390/768/1440 happens in the Phase-2 validation step
+  (`02-pilot-validation.md`) together with UX2-3 (brief P10).

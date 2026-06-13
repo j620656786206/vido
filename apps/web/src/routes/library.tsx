@@ -35,6 +35,8 @@ import { BatchSubtitleDialog } from '../components/subtitle/BatchSubtitleDialog'
 import { Pagination } from '../components/ui/Pagination';
 import type { LibraryMediaType, LibraryItem, SortField, SortOrder } from '../types/library';
 import { VALID_SORT_FIELDS } from '../types/library';
+import { useShellVersion } from '../components/shell/shellVersion';
+import { LibraryBrowseV2 } from '../components/library/LibraryBrowseV2';
 
 const VIEW_STORAGE_KEY = 'vido:library:view';
 const SORT_STORAGE_KEY = 'vido:library:sort';
@@ -121,8 +123,21 @@ export const Route = createFileRoute('/library')({
     unmatched: search.unmatched === true ? true : undefined,
     subtitleStatus: typeof search.subtitleStatus === 'string' ? search.subtitleStatus : undefined,
   }),
-  component: LibraryPage,
+  // UX2-2: migrated route — full-bleed under the v2 shell (LegacyContentContainer
+  // opt-out). Content is gated by the shell version (NOT a second flag read, F4).
+  staticData: { shell: 'v2' },
+  component: LibraryRoute,
 });
+
+/**
+ * Shell-version switch (UX2-2): under the v2 shell render the redesigned Browse;
+ * under the legacy shell render the existing library page pixel-unchanged (P3
+ * strangler discipline — flag OFF leaves the current library exactly as-is).
+ */
+function LibraryRoute() {
+  const shell = useShellVersion();
+  return shell === 'v2' ? <LibraryBrowseV2 /> : <LibraryPage />;
+}
 
 function LibraryPage() {
   const {
