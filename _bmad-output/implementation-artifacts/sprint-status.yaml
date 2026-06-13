@@ -764,7 +764,7 @@ development_status:
 # Phase 0 #63 · Phase 1 (ADR + design-language v2) #64 · Phase 2 design #65. go/no-go gate after ux2-validation.
 # ==============================================================================
   ux2-design-a-b-v2:        done            # 2026-06-13 — 16 v2 screens (.pen) + PosterCard-v2; PR #65
-  ux2-1-foundation-shell:   ready-for-dev   # FOUNDATION (BLOCKING): shell + new_shell_enabled flag + Base UI wrappers + LegacyContentContainer + ESLint ban + R3 token sweep. Do before ux2-2/ux2-3.
+  ux2-1-foundation-shell:   done            # 2026-06-13 — v2 shell behind new_shell_enabled (default OFF); @base-ui/react@1.5.0 wrappers + F2 ban; R3 token sweep + text-muted fix; AppShellV2/sidebar/rail/mobile-tab/more-sheet/LegacyContentContainer; 25 specs. Expect deliberate -linux visual re-shoot (token sweep, AC #8).
   ux2-2-browse-v2:          ready-for-dev   # A′ Browse v2 (depends ux2-1): library layout+movies/tv/index, integrated toolbar+chips, 4 states, N1 badges, mobile merged sheet
   ux2-3-detail-v2:          ready-for-dev   # B′ Detail v2 (depends ux2-1): full-page backdrop hero, restored CTAs (Rule-24 playback check), 4 states, per-section fail-soft, TV episodes
   ux2-validation:           backlog         # 390/768/1440 browser-pixel verify + real-use → 02-pilot-validation.md (go/no-go for Phase 3)
