@@ -111,6 +111,24 @@ SCREENS = {
     # UX Redesign Phase 1b — Design Language v2 + Navigation Shell v2
     "V2Kez": ("design-system", "design-language-v2"),
     "CLo58": ("design-system", "navigation-shell-v2"),
+    # UX Redesign Phase 2 — A′ Browse v2 pilot (sidebar shell · integrated toolbar+chips · four states)
+    "vZpT8": ("flow-a-browse-v2", "a1p-d"),
+    "EsoIv": ("flow-a-browse-v2", "a2p-d"),
+    "LcHBs": ("flow-a-browse-v2", "a3p-d"),
+    "b1H71g": ("flow-a-browse-v2", "a4p-d"),
+    "R3FqJc": ("flow-a-browse-v2", "a7p-d"),
+    "dVGIa": ("flow-a-browse-v2", "a8p-d"),
+    "BfGVZ": ("flow-a-browse-v2", "a1p-m"),
+    "qBWQC": ("flow-a-browse-v2", "a2p-m"),
+    "h1v1U6": ("flow-a-browse-v2", "a3p-m"),
+    "Bz0YN": ("flow-a-browse-v2", "a6p-m"),
+    # UX Redesign Phase 2 — B′ Detail v2 pilot (full-page backdrop hero · four states · Epic 12 fail-soft)
+    "uRGu2": ("flow-b-detail-v2", "b3p-d"),
+    "N2fmG6": ("flow-b-detail-v2", "b4p-d"),
+    "Z42zy": ("flow-b-detail-v2", "b6p-d"),
+    "Tqy3E": ("flow-b-detail-v2", "b7p-d"),
+    "UH0sk": ("flow-b-detail-v2", "b8p-d"),
+    "SzNRb": ("flow-b-detail-v2", "b3p-m"),
 }
 
 
