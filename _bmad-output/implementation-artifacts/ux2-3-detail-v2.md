@@ -1,6 +1,6 @@
 # Story UX2-3: B′ Detail v2 — Full-page Detail in v2 behind `new_shell_enabled`
 
-Status: ready-for-dev
+Status: done
 
 > UX Redesign **Phase 2** pilot · Story 3 of 3. **Depends on UX2-1 (FOUNDATION)**; pairs with UX2-2 (shared `PosterCard-v2` for recommendations).
 > Design: `ux-design.pen` `flow-b-detail-v2/*` (6 screens); `01-design-language-v2.md` §2–§3, §7. Replaces the cramped 460px slide-over panel (brief hotspot #2) with a full-page **backdrop hero**.
@@ -68,4 +68,54 @@ movie `uRGu2` · TV `N2fmG6` · error/not-found `Z42zy` · loading `Tqy3E` · ex
 - [Source: apps/web/src/routes/media/$type.$id.tsx — LocalDetailView :112, TMDbDetailView :106, backdropPath :233, Epic-12 sections]
 
 ## Dev Agent Record
-_(to be filled by dev-story)_
+
+### Implementation Summary (Amelia/dev — 2026-06-14)
+
+Branch `feat/ux2-3-detail-v2` (off main, post-UX2-2). Verified: `tsc` (0 new
+errors), `eslint` (clean; the 1 `exhaustive-deps` warning in `$type.$id.tsx` is
+pre-existing in the untouched legacy `LocalDetailView`), 11 new specs + the
+existing detail-route spec (42 tests) pass, `nx build web` (2337 modules) ok.
+
+**Gating (F4 preserved):** `MediaDetailRoute` branches on `useShellVersion()` —
+v2 → `LocalDetailV2`/`TMDbDetailV2`; legacy → the existing views pixel-unchanged
+(P3). Route marked `staticData.shell:'v2'`. The flag stays read-once in `__root`.
+
+**v2 detail:** `DetailHeroV2` (`uRGu2` — full-page backdrop + scrim + back +
+poster + status badges → H1 → original → meta → action row); `DetailTechInfoV2`
+(檔案資訊 accent-tint badges + size/path facts — the hybrid differentiator);
+`DetailStatesV2` (loading skeleton `Tqy3E` + not-found `Z42zy`, brief P3).
+`LocalDetailV2` reuses every Epic-12 section (credits/trailer/providers/Douban/
+recommendations/seasons) + their hooks, each failing soft independently (F3,
+preserved). `TMDbDetailV2` = the lighter numeric-id variant (AC #8). N1 status via
+the §2.5 util. Both views responsive (shorter mobile hero).
+
+### Discovery Triage (Rule 24 / brief P8 — CRITICAL capability check)
+
+**Playback capability verified → NO `播放` button.** Grepped the codebase: Vido has
+**no media playback path** — no in-app player, no external-player launch, no
+Plex/Jellyfin deep-link, no stream/file-serve endpoint (the only "player" is the
+YouTube `TrailerEmbed`; `StreamingAvailability` shows external where-to-watch
+only). So no dead `播放` CTA. **Resolved action set** (hero action row):
+- **Primary `管理字幕`** — opens the existing `SubtitleSearchDialog` (the subtitle
+  differentiator); gated on a local `filePath` (the dialog requires it).
+- **Secondary `修改資訊`** — opens the existing `MetadataEditorDialog`.
+- **`複製檔案路徑`** — copies `filePath` to the clipboard.
+- The legacy `加入清單` button is **dropped** (vestigial — library items are
+  already owned; there is no watchlist/request feature, Epic 13 is backlog).
+
+Other triage:
+1. **Recommendations reuse `RelatedContent` (not `PosterCardV2`).** AC #4 suggests
+   recs use `PosterCard-v2`, but `RelatedContent` takes `RecommendationItem[]`
+   (not `LibraryItem`) and already renders + fails soft. Reused as-is; a
+   PosterCardV2-based recs tile is a Phase-3 refinement.
+2. **Overflow `⋯` menu (重新解析/刪除) → deferred.** The action row ships the three
+   real actions above; a Base UI Menu wrapper for reparse/delete (both single-item
+   mutations exist) is a refinement, not built to avoid a new primitive mid-pilot.
+3. **Visual gallery fixtures → deferred** (same rationale as UX2-2: token-only,
+   covered by specs + runtime validation; batched to avoid a `-linux` bootstrap).
+
+## Completion Notes
+- Flag OFF → legacy detail unchanged. Flag ON → v2 detail (both Local + TMDb views).
+- **Resolved CTA set recorded above** (Rule 24 mandate). No control is promised that
+  the backend can't honor.
+- Browser-pixel verification at 390/768/1440 happens in the Phase-2 validation step.
