@@ -268,6 +268,32 @@ export default [
     rules: jsxA11y.flatConfigs.recommended.rules,
   },
 
+  // UX Redesign Phase 2 (UX2-1, ADR D1-d F2) — Base UI wrap-once boundary.
+  // `@base-ui/react` headless primitives are wrapped ONCE per primitive in
+  // apps/web/src/components/ui/; importing Base UI anywhere else is banned so the
+  // "wrap once" rule is mechanical and a future primitive swap is a single-dir
+  // change. The ui/ dir is the only place allowed to import it (ignored below).
+  // Its own config block so the spec-side `flatConfig.filter` test can assert
+  // "exactly one block restricts @base-ui/react".
+  {
+    files: ['apps/web/src/**/*.{ts,tsx}'],
+    ignores: ['apps/web/src/components/ui/**'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@base-ui/react', '@base-ui/react/*'],
+              message:
+                'Import Base UI only via the wrappers in apps/web/src/components/ui/ (UX2-1 F2 wrap-once).',
+            },
+          ],
+        },
+      ],
+    },
+  },
+
   // Prettier config (must be last)
   prettier,
 ];

@@ -1,6 +1,6 @@
 # Story UX2-1: FOUNDATION — v2 Navigation Shell behind `new_shell_enabled`
 
-Status: ready-for-dev
+Status: done
 
 > UX Redesign **Phase 2** pilot · Story 1 of 3 (FOUNDATION — **blocking**, must land before UX2-2 / UX2-3).
 > Plans against: `_bmad-output/planning-artifacts/ux-redesign/01-nav-ia-decision-adr.md` (D1–D4, patterns) + `01-design-language-v2.md` (§5.3, §6 shell) + `ux-design.pen` `Navigation Shell v2` (node `CLo58`).
@@ -77,4 +77,69 @@ Repo is **Tailwind v4** (`tailwindcss@^4.1.18`, `@tailwindcss/postcss`) — `pro
 - [Source: apps/api/internal/repository/settings_repository.go:214 — GetBool]
 
 ## Dev Agent Record
-_(to be filled by dev-story)_
+
+### Implementation Summary (Amelia/dev — 2026-06-13)
+
+Branch `feat/ux2-1-foundation-shell`. Flag default **OFF** → legacy shell renders
+pixel-unchanged; flag **ON** → v2 shell. Verified locally: `tsc` (0 new errors over
+the pre-existing baseline), `eslint` (clean on all new files + the F2 ban fires
+functionally), `go build ./cmd/api` (ok), 25 new unit tests pass, `nx build web`
+(2324 modules, ok), prettier + gofmt clean.
+
+**Backend (T1):** `main.go` seeds `new_shell_enabled` (bool, default false) via the
+existing `SettingsService` if absent — idempotent, preserves a user-set value. No
+new table / endpoint / error prefix (reuses `GET/POST /api/v1/settings`).
+
+**Frontend:** `services/settingsService.ts` (fail-soft flag reader → false on
+404/error) + `hooks/useNewShellEnabled.ts` (Rule 5 TanStack Query, localStorage
+`initialData` to avoid a legacy→v2 flash). `__root.tsx` reads the flag in the ONE
+chokepoint (F4) and selects `AppShellV2` vs legacy `AppShell`; `ScanProgress`
+ownership moved into `AppShellV2` (AC #6). New `components/ui/{Tooltip,Sheet}.tsx`
+(Base UI wrappers), `eslint.config.mjs` `no-restricted-imports` ban (F2) + wiring
+spec. 12 R3 tokens + `--text-muted` → `#A0AABE` in `styles.css`. Shell components
+under `components/shell/`: `AppSidebar` (expanded + 64px rail), `SidebarNav*`,
+`SidebarGroupParent`, `SidebarFooter`, `MobileTabBar`, `MobileMoreSheet`,
+`LegacyContentContainer`, `AppShellV2`, `navModel.ts`. Active state via TanStack
+Router `data-status` (not hand-rolled `startsWith`).
+
+### Discovery Triage (Rule 24)
+
+1. **Base UI package rename → in-scope correction.** ADR/story name
+   `@base-ui-components/react`, which is deprecated at `1.0.0-rc.0`. The live
+   package is **`@base-ui/react@1.5.0`** (stable, React 19, ships Tooltip/Dialog/
+   Drawer). Confirmed with Alexyu (2026-06-13) → follow the ADR (Base UI), use the
+   correct package name. ADR text not edited here (records planned conventions);
+   the package id should be corrected when the ADR/project-context is next touched.
+2. **Base UI wrapper scope — Tooltip + Sheet only (Popover/Dialog deferred, YAGNI).**
+   The shell consumes Tooltip (rail) + Sheet (More sheet). A Base UI `Dialog`
+   wrapper would collide with the existing Radix `components/ui/Dialog.tsx` (one of
+   the not-force-migrated dialogs) and has no shell consumer; `Popover` is the
+   Phase-3 omnisearch primitive. Both are added when a consumer lands; the F2 ESLint
+   ban is already in place so they must go through `components/ui/`.
+3. **Mobile bottom-4 substitution.** §6.3's 4th slot is `活動`, but `/activity` does
+   not exist in the pilot (AC #4 defers it). `探索` (a real content destination)
+   fills the 4th slot until Phase 3 ships `/activity`. Tracked by the existing
+   /activity deferral, not a new entry.
+4. **Library children deep-link target.** `電影/影集` point at `/library?type=movie`
+   /`?type=tv` (valid today) since `/library/movies`/`/library/tv` are created in
+   UX2-2. UX2-2 repoints them (and adds the reverse `?type=` redirect), so the links
+   never 404 in either window.
+5. **Footer status strip pilot-degraded (AC #9).** Only service-health dots are live
+   (`GET /settings/services`, a plain query — no eager SSE in the always-mounted
+   footer, Rule 8). Disk/scan/queue render as fail-soft placeholders pending the
+   Phase-3 aggregate `/status/summary` endpoint.
+6. **`project-context.md` Tailwind drift** (repo is v4, doc says v3.x) — flagged in
+   the story; left for a project-context correction in retro (not fixed here).
+
+### Expected CI follow-up (Rule 22/23 — flagged, not a regression)
+
+The §8 token sweep (`--text-muted` reassignment + new tokens) re-renders shared
+components → the committed `-linux` visual baselines will diff. This is the
+**deliberate baseline re-shoot** AC #8 anticipates; resolve via the chore-visual
+`-linux` bootstrap/re-bless on `main` (darwin cannot generate `-linux` locally —
+CLAUDE.md). No `-linux` PNGs committed from this branch.
+
+## Completion Notes
+- All 12 ACs implemented; flag OFF is the safe default (instant rollback).
+- Browser-pixel verification at 390/768/1440 is performed once for the whole pilot
+  (A+B) in the Phase-2 validation step (`02-pilot-validation.md`), per brief P10.

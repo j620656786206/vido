@@ -147,6 +147,17 @@ func main() {
 	seriesService := services.NewSeriesService(repos.Series)
 	availabilityService := services.NewAvailabilityService(repos.Movies, repos.Series) // Story 10-4
 	settingsService := services.NewSettingsServiceWithSecrets(repos.Settings, secretsService)
+
+	// UX Redesign Phase 2 pilot — seed the `new_shell_enabled` feature flag (default
+	// OFF) if absent, so GET /api/v1/settings(/:key) surfaces it for the frontend
+	// shell-selection read in __root.tsx. Idempotent: a present value (incl. a
+	// user-toggled true) is left untouched. Toggle via the existing POST /settings.
+	if _, err := settingsService.Get(context.Background(), "new_shell_enabled"); err != nil {
+		if err := settingsService.SetBool(context.Background(), "new_shell_enabled", false); err != nil {
+			slog.Warn("Failed to seed new_shell_enabled flag", "error", err)
+		}
+	}
+
 	setupService := services.NewSetupService(repos.Settings, secretsService)
 	qbittorrentService := services.NewQBittorrentService(repos.Settings, secretsService)
 	downloadService := services.NewDownloadService(qbittorrentService, slog.Default())

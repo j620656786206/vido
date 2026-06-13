@@ -26,8 +26,27 @@
   /* Text */
   --text-primary: #f2f2f2;
   --text-secondary: #b3b3b3;
-  --text-muted: #808080;
+  /* R5 fix (design-language-v2 §2.2): #808080 failed WCAG AA (3.3–4.0:1).
+   * #A0AABE passes AA ≥4.5:1 on all three dark surfaces at any size. */
+  --text-muted: #a0aabe;
   --text-inverse: #1b2336;
+
+  /* -------------------------------------------------------------------------
+   * Design Language v2 — semantic tokens (R3 fix, design-language-v2 §2.4)
+   * Gives the 30+ hardcoded literals a single home. 8-digit hex = #RRGGBBAA.
+   * --------------------------------------------------------------------- */
+  --accent-subtle: #3b82f626; /* ~15% — active nav-item wash, selected-row tint */
+  --accent-tint: #3b82f61f; /* ~12% — accent badge / chip background */
+  --accent-text: #60a5fa; /* accent body text / active label (TC-2 AA-safe) */
+  --success-tint: #22c55e1f; /* success badge bg, 已入庫 pill */
+  --error-tint: #ef44441f; /* error badge bg, failed-state pill */
+  --error-text: #f87171; /* error body text (TC-2 AA-safe) */
+  --warning-tint: #f59e0b1f; /* warning badge bg, 整理中 pill */
+  --info-tint: #06b6d41f; /* info badge bg, 想要 pill */
+  --text-on-accent: #ffffff; /* label/icon on accent fills (buttons, pills) */
+  --text-disabled: #6e7891; /* disabled/decorative text — intentionally sub-AA (TC-1) */
+  --overlay-scrim: #000000b3; /* 70% — modal / bottom-sheet backdrop */
+  --focus-ring: #3b82f6; /* keyboard focus outline (= accent-primary, aliased) */
 
   /* Border Radius */
   --radius-sm: 4px;
@@ -94,9 +113,9 @@
     font-family: 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
   }
 
-  /* Focus ring */
+  /* Focus ring (design-language-v2 §2.4 — aliased to --focus-ring for tuning) */
   :focus-visible {
-    outline: 2px solid var(--accent-primary);
+    outline: 2px solid var(--focus-ring);
     outline-offset: 2px;
   }
 
