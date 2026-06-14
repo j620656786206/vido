@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import {
   createRootRoute,
@@ -90,5 +90,19 @@ describe('AppShellV2', () => {
     renderShell('/library');
     expect(await screen.findByTestId('browse-content')).toBeInTheDocument();
     expect(screen.queryByTestId('legacy-content-container')).not.toBeInTheDocument();
+  });
+
+  it('reveals the top header divider only once the page is scrolled', async () => {
+    renderShell('/');
+    const header = await screen.findByRole('banner');
+    // At rest: divider hidden (no floating line under a sparse bar).
+    expect(header).toHaveAttribute('data-scrolled', 'false');
+    expect(header.className).toContain('border-transparent');
+
+    Object.defineProperty(window, 'scrollY', { value: 120, configurable: true, writable: true });
+    fireEvent.scroll(window);
+
+    expect(header).toHaveAttribute('data-scrolled', 'true');
+    expect(header.className).toContain('border-[var(--border-subtle)]');
   });
 });
