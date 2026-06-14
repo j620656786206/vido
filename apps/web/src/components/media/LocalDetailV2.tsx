@@ -189,6 +189,19 @@ export function LocalDetailV2({ type, id }: { type: 'movie' | 'tv'; id: string }
           </section>
         )}
 
+        {/* TV: seasons/episodes are the core series content → placed high, right
+            after the overview (matches the .pen TV detail N2fmG6 body order). */}
+        {!isMovie && (
+          <SeasonAccordion
+            seasons={seasons.data ?? []}
+            seriesId={id}
+            tmdbId={tmdbId}
+            isLoading={seasons.isLoading}
+            isError={seasons.isError}
+            onRetry={() => seasons.refetch()}
+          />
+        )}
+
         <DetailTechInfoV2
           videoResolution={data.videoResolution}
           videoCodec={data.videoCodec}
@@ -230,17 +243,6 @@ export function LocalDetailV2({ type, id }: { type: 'movie' | 'tv'; id: string }
             isLoading={recs.isLoading}
             isError={recs.isError}
             onRetry={() => recs.refetch()}
-          />
-        )}
-
-        {!isMovie && (
-          <SeasonAccordion
-            seasons={seasons.data ?? []}
-            seriesId={id}
-            tmdbId={tmdbId}
-            isLoading={seasons.isLoading}
-            isError={seasons.isError}
-            onRetry={() => seasons.refetch()}
           />
         )}
       </div>
