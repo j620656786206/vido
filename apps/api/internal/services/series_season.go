@@ -57,20 +57,44 @@ func (s *SeriesService) GetSeasons(ctx context.Context, seriesID string) ([]mode
 	if seriesID == "" {
 		return nil, fmt.Errorf("series id cannot be empty")
 	}
-
-	series, err := s.repo.FindByID(ctx, seriesID)
-	if err != nil {
-		slog.Error("Failed to get series for seasons", "error", err, "series_id", seriesID)
-		return nil, err
+	if s.seasonRepo == nil {
+		return nil, ErrSeasonDepsNotConfigured
 	}
 
-	seasons, err := series.GetSeasons()
+	// bugfix-20-1: read the canonical `seasons` table (populated by the parse
+	// pipeline, parse_queue_service.go), NOT the dead `series.seasons` JSON column
+	// — which FindByID never even SELECTs, so the old path always returned [].
+	seasons, err := s.seasonRepo.FindBySeriesID(ctx, seriesID)
 	if err != nil {
-		slog.Error("Failed to parse seasons JSON", "error", err, "series_id", seriesID)
-		return nil, fmt.Errorf("failed to parse seasons: %w", err)
+		slog.Error("Failed to load seasons", "error", err, "series_id", seriesID)
+		return nil, fmt.Errorf("failed to load seasons: %w", err)
 	}
 
-	return seasons, nil
+	summaries := make([]models.SeasonSummary, 0, len(seasons))
+	for i := range seasons {
+		summaries = append(summaries, seasonToSummary(&seasons[i]))
+	}
+	return summaries, nil
+}
+
+// seasonToSummary maps a persisted Season (the `seasons` table) to the
+// SeasonSummary shape the accordion consumes. SeasonSummary.ID is the TMDb season
+// id (the FE keys off it). bugfix-20-1.
+func seasonToSummary(se *models.Season) models.SeasonSummary {
+	summary := models.SeasonSummary{
+		SeasonNumber: se.SeasonNumber,
+		Name:         se.Name.String,
+		Overview:     se.Overview.String,
+		PosterPath:   se.PosterPath.String,
+		AirDate:      se.AirDate.String,
+	}
+	if se.TMDbID.Valid {
+		summary.ID = int(se.TMDbID.Int64)
+	}
+	if se.EpisodeCount.Valid {
+		summary.EpisodeCount = int(se.EpisodeCount.Int64)
+	}
+	return summary
 }
 
 // GetSeasonEpisodes merges the canonical TMDb episode list for a season with the

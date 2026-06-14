@@ -27,12 +27,12 @@ type Network struct {
 // Series represents a TV series entity in the database
 type Series struct {
 	// Core fields
-	ID            string         `db:"id" json:"id"`
-	Title         string         `db:"title" json:"title"`
+	ID            string     `db:"id" json:"id"`
+	Title         string     `db:"title" json:"title"`
 	OriginalTitle NullString `db:"original_title" json:"original_title,omitempty"`
-	FirstAirDate  string         `db:"first_air_date" json:"first_air_date"`
+	FirstAirDate  string     `db:"first_air_date" json:"first_air_date"`
 	LastAirDate   NullString `db:"last_air_date" json:"last_air_date,omitempty"`
-	Genres        []string       `db:"genres" json:"genres"`
+	Genres        []string   `db:"genres" json:"genres"`
 
 	// Rating fields (kept for backward compatibility)
 	Rating NullFloat64 `db:"rating" json:"rating,omitempty"`
@@ -80,15 +80,15 @@ type Series struct {
 	DoubanVoteCount NullInt64   `db:"douban_vote_count" json:"douban_vote_count,omitempty"`
 
 	// Parse tracking fields
-	ParseStatus    ParseStatus    `db:"parse_status" json:"parse_status"`
-	MetadataSource NullString `db:"metadata_source" json:"metadata_source,omitempty"`
+	ParseStatus    ParseStatus `db:"parse_status" json:"parse_status"`
+	MetadataSource NullString  `db:"metadata_source" json:"metadata_source,omitempty"`
 
 	// Subtitle tracking fields
-	SubtitleStatus       SubtitleStatus  `db:"subtitle_status" json:"subtitle_status"`
-	SubtitlePath         NullString  `db:"subtitle_path" json:"subtitle_path,omitempty"`
-	SubtitleLanguage     NullString  `db:"subtitle_language" json:"subtitle_language,omitempty"`
-	SubtitleLastSearched NullTime    `db:"subtitle_last_searched" json:"subtitle_last_searched,omitempty"`
-	SubtitleSearchScore  NullFloat64 `db:"subtitle_search_score" json:"subtitle_search_score,omitempty"`
+	SubtitleStatus       SubtitleStatus `db:"subtitle_status" json:"subtitle_status"`
+	SubtitlePath         NullString     `db:"subtitle_path" json:"subtitle_path,omitempty"`
+	SubtitleLanguage     NullString     `db:"subtitle_language" json:"subtitle_language,omitempty"`
+	SubtitleLastSearched NullTime       `db:"subtitle_last_searched" json:"subtitle_last_searched,omitempty"`
+	SubtitleSearchScore  NullFloat64    `db:"subtitle_search_score" json:"subtitle_search_score,omitempty"`
 
 	// Soft-delete flag for removed files (Story 7-2)
 	IsRemoved bool `db:"is_removed" json:"is_removed"`
@@ -167,7 +167,13 @@ func (s *Series) SetCredits(credits *Credits) error {
 	return nil
 }
 
-// GetSeasons parses and returns the seasons from JSON
+// GetSeasons parses and returns the seasons from the `series.seasons` JSON column.
+//
+// DEPRECATED (bugfix-20-1): the `series.seasons` JSON column is dead — the series
+// repository's SELECT/scan never load it, so this always returns []. The canonical
+// season store is the `seasons` table; read it via SeriesService.GetSeasons →
+// SeasonRepository.FindBySeriesID. This method, SetSeasons, and the column are
+// scheduled for removal (sprint-status: drop-dead-series-seasons-column).
 func (s *Series) GetSeasons() ([]SeasonSummary, error) {
 	if !s.SeasonsJSON.Valid || s.SeasonsJSON.String == "" {
 		return []SeasonSummary{}, nil

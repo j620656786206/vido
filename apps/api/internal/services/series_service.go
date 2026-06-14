@@ -20,6 +20,10 @@ type SeriesService struct {
 	// unaffected; GetSeasonEpisodes returns an error if they are not set.
 	episodeRepo    repository.EpisodeRepositoryInterface
 	seasonProvider SeasonDetailsProvider
+	// seasonRepo is the canonical season store (the `seasons` table, populated by
+	// the parse pipeline). GetSeasons reads it — NOT the dead `series.seasons`
+	// JSON column. Wired via SetSeasonRepo (bugfix-20-1).
+	seasonRepo repository.SeasonRepositoryInterface
 }
 
 // NewSeriesService creates a new SeriesService with the given repository.
@@ -35,6 +39,13 @@ func NewSeriesService(repo repository.SeriesRepositoryInterface) *SeriesService 
 func (s *SeriesService) SetEpisodeDeps(episodeRepo repository.EpisodeRepositoryInterface, seasonProvider SeasonDetailsProvider) {
 	s.episodeRepo = episodeRepo
 	s.seasonProvider = seasonProvider
+}
+
+// SetSeasonRepo wires the canonical season repository (the `seasons` table) used
+// by GetSeasons (bugfix-20-1). Setter-based so existing NewSeriesService(repo)
+// callers/tests are unaffected; GetSeasons returns an error if it is not set.
+func (s *SeriesService) SetSeasonRepo(seasonRepo repository.SeasonRepositoryInterface) {
+	s.seasonRepo = seasonRepo
 }
 
 // Create validates and creates a new series.

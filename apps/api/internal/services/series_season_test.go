@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"testing"
 
@@ -9,8 +10,10 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/vido/api/internal/models"
+	"github.com/vido/api/internal/repository"
 	"github.com/vido/api/internal/testutil"
 	"github.com/vido/api/internal/tmdb"
+	_ "modernc.org/sqlite"
 )
 
 // stubEpisodeRepo implements repository.EpisodeRepositoryInterface; only
@@ -157,12 +160,52 @@ func TestSeriesService_GetSeasonEpisodes_LocalRepoErrorDegrades(t *testing.T) {
 	assert.False(t, resp.Episodes[0].HasLocalFile)
 }
 
-func TestSeriesService_GetSeasons(t *testing.T) {
-	series := newSeasonSeries(t, 1396)
-	svc := NewSeriesService(seriesRepoReturning(series))
-
-	seasons, err := svc.GetSeasons(context.Background(), "series-1")
+// TestSeriesService_GetSeasons_Integration exercises GetSeasons against a REAL
+// sqlite DB + the REAL SeasonRepository — the test that would have caught
+// bugfix-20-1. The prior unit test mocked the series repo's FindByID to return a
+// pre-populated SeasonsJSON, which hid that the real repo never selects/loads
+// that column (and that the canonical store is the `seasons` table).
+func TestSeriesService_GetSeasons_Integration(t *testing.T) {
+	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
-	require.Len(t, seasons, 1)
+	defer db.Close()
+	_, err = db.Exec(`CREATE TABLE seasons (
+		id TEXT PRIMARY KEY, series_id TEXT NOT NULL, tmdb_id INTEGER,
+		season_number INTEGER NOT NULL, name TEXT, overview TEXT, poster_path TEXT,
+		air_date TEXT, episode_count INTEGER, vote_average REAL,
+		created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		UNIQUE(series_id, season_number))`)
+	require.NoError(t, err)
+
+	repo := repository.NewSeasonRepository(db)
+	ctx := context.Background()
+	for _, s := range []models.Season{
+		{ID: "s2", SeriesID: "series-1", SeasonNumber: 2, TMDbID: models.NewNullInt64(3625),
+			Name: models.NewNullString("第 2 季"), EpisodeCount: models.NewNullInt64(10)},
+		{ID: "s1", SeriesID: "series-1", SeasonNumber: 1, TMDbID: models.NewNullInt64(3624),
+			Name: models.NewNullString("第 1 季"), EpisodeCount: models.NewNullInt64(2)},
+	} {
+		season := s
+		require.NoError(t, repo.Create(ctx, &season))
+	}
+
+	svc := NewSeriesService(nil) // GetSeasons no longer touches the series repo
+	svc.SetSeasonRepo(repo)
+
+	seasons, err := svc.GetSeasons(ctx, "series-1")
+	require.NoError(t, err)
+	require.Len(t, seasons, 2)
+	// Ordered by season_number; SeasonSummary.ID is the TMDb season id.
 	assert.Equal(t, 1, seasons[0].SeasonNumber)
+	assert.Equal(t, "第 1 季", seasons[0].Name)
+	assert.Equal(t, 3624, seasons[0].ID)
+	assert.Equal(t, 2, seasons[0].EpisodeCount)
+	assert.Equal(t, 2, seasons[1].SeasonNumber)
+}
+
+func TestSeriesService_GetSeasons_RepoNotConfigured(t *testing.T) {
+	svc := NewSeriesService(seriesRepoReturning(newSeasonSeries(t, 1396)))
+	_, err := svc.GetSeasons(context.Background(), "series-1")
+	assert.ErrorIs(t, err, ErrSeasonDepsNotConfigured)
 }
