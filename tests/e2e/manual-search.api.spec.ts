@@ -11,6 +11,7 @@
  */
 
 import { test, expect } from '../support/fixtures';
+import { seedMovie, seedSeries, deleteMovies, deleteSeries } from '../support/helpers/seed-helpers';
 
 // =============================================================================
 // Manual Search API Tests (AC1, AC4)
@@ -226,13 +227,29 @@ test.describe('Manual Search API @api @metadata', () => {
 // =============================================================================
 
 test.describe('Apply Metadata API @api @metadata', () => {
-  test.skip('[P1] POST /metadata/apply - should apply metadata to movie (AC3)', async ({ api }) => {
+  // Story 20-2: these were skipped "until we have proper test data seeding", but
+  // the real blocker was different — cmd/api/main.go never calls
+  // `SetMediaUpdaters`, so in the running backend `movieUpdater`/`seriesUpdater`
+  // are nil and ApplyMetadata takes the no-op branch (returns success, title
+  // "Unknown", no DB write). We still seed a REAL media row so `media_id` is
+  // genuine and the test stays correct once updaters get wired; for now these
+  // assert the request/response ENVELOPE contract (routing, binding, shape),
+  // not the DB-mutation path.
+  const movieIds: string[] = [];
+  const seriesIds: string[] = [];
+
+  test.afterEach(async ({ api }) => {
+    await deleteMovies(api, ...movieIds.splice(0));
+    await deleteSeries(api, ...seriesIds.splice(0));
+  });
+
+  test('[P1] POST /metadata/apply - should apply metadata to movie (AC3)', async ({ api }) => {
     // GIVEN: A movie exists and we have selected metadata
-    // Note: This test requires a movie to exist in the database
-    // Skip until we have proper test data seeding
+    const movie = await seedMovie(api, { tmdbId: 550 });
+    movieIds.push(movie.id);
 
     const applyRequest = {
-      media_id: 'test-movie-id',
+      media_id: movie.id,
       media_type: 'movie' as const,
       selected_item: {
         id: 'tmdb-550',
@@ -243,20 +260,20 @@ test.describe('Apply Metadata API @api @metadata', () => {
     // WHEN: Applying the metadata
     const response = await api.applyMetadata(applyRequest);
 
-    // THEN: Should return success
+    // THEN: Should return success with the request echoed back
     expect(response.success).toBe(true);
     expect(response.data).toBeDefined();
-    expect(response.data!.media_id).toBe('test-movie-id');
+    expect(response.data!.media_id).toBe(movie.id);
     expect(response.data!.source).toBe('tmdb');
   });
 
-  test.skip('[P1] POST /metadata/apply - should apply metadata to series', async ({ api }) => {
+  test('[P1] POST /metadata/apply - should apply metadata to series', async ({ api }) => {
     // GIVEN: A series exists and we have selected metadata
-    // Note: This test requires a series to exist in the database
-    // Skip until we have proper test data seeding
+    const series = await seedSeries(api, { tmdbId: 1396 });
+    seriesIds.push(series.id);
 
     const applyRequest = {
-      media_id: 'test-series-id',
+      media_id: series.id,
       media_type: 'series' as const,
       selected_item: {
         id: 'tmdb-1396',
@@ -296,9 +313,12 @@ test.describe('Apply Metadata API @api @metadata', () => {
   test.skip('[P1] POST /metadata/apply - should return error for non-existent media', async ({
     api,
   }) => {
-    // SKIP: This test requires mediaUpdater to be configured in the API.
-    // In CI, updaters aren't configured, so the API returns success instead of "not found".
-    // This test should be enabled when running with a fully configured backend.
+    // SKIP (Story 20-2, precise root cause): NOT_FOUND is only returned when a
+    // media updater is configured (metadata_service.go ApplyMetadata, the
+    // `updater != nil` branch). cmd/api/main.go never calls `SetMediaUpdaters`,
+    // so the running backend takes the nil/no-op branch and returns success
+    // regardless of whether the media exists — this assertion can't hold in CI.
+    // Enable once main.go wires SetMediaUpdaters (tracked in sprint-status).
 
     // GIVEN: A request for non-existent media
     const applyRequest = {
@@ -319,15 +339,15 @@ test.describe('Apply Metadata API @api @metadata', () => {
     expect(response.error!.code).toBe('APPLY_METADATA_NOT_FOUND');
   });
 
-  test.skip('[P2] POST /metadata/apply - should accept learnPattern flag for Story 3.9', async ({
+  test('[P2] POST /metadata/apply - should accept learnPattern flag for Story 3.9', async ({
     api,
   }) => {
-    // GIVEN: A valid apply request with learnPattern flag
-    // Note: This test requires a movie to exist in the database
-    // Skip until we have proper test data seeding
+    // GIVEN: A valid apply request with learnPattern flag, against a real movie
+    const movie = await seedMovie(api, { tmdbId: 550 });
+    movieIds.push(movie.id);
 
     const applyRequest = {
-      media_id: 'test-movie-id',
+      media_id: movie.id,
       media_type: 'movie' as const,
       selected_item: {
         id: 'tmdb-550',
