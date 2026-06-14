@@ -782,4 +782,40 @@ development_status:
   story-20-4-season-accordion-e2e:  backlog         # Tier-2 follow-up to 20-2: a seed path that writes the seasons TABLE (test-only seed endpoint OR POST /series extension) so the season accordion + the `pending` parse-status fallback become E2E-testable. Accordion read-path is already guarded by bugfix-20-1's real-sqlite Go integration test; this adds browser-level coverage.
   wire-set-media-updaters-test-harness: backlog     # Follow-up to 20-2: cmd/api/main.go never calls metadataService.SetMediaUpdaters, so ApplyMetadata takes the no-op nil branch (returns success, no DB write). Wiring it makes the skipped /metadata/apply NOT_FOUND test + the real DB-mutation path testable.
 
-next_priority: epic-12  # Phase 2 — Rich Media Detail Page. Epic 11 CLOSED 2026-06-09 (retro done). Start with 12-1 dual-rating display (ready-for-dev; reads existing TMDB/Douban data, no blocking prereqs) → 12-2 season list. Epic-11 retro action items to fold in first: retro-11-AI1 (a11y enforcement mechanism — HIGH, do before more frontend stories) + retro-11-AI3 (external-API arch alignment — schedule before 12-3, NOT before 12-1). Backlog batch-subtitle items (disc-2026-06-batch-subtitle-pause, ...-library-subtitle-status-filter) remain P3.
+  # ==============================================================================
+  # UX Redesign — Phase 3 (per-flow strangler cascade, behind new_shell_enabled)
+  # Plan: _bmad-output/planning-artifacts/ux-redesign/03-phase3-destination-epic-map.md
+  #       + _bmad-output/planning-artifacts/epics.md (create-epics-and-stories, 2026-06-14)
+  # Decisions (Alexyu 2026-06-14): Activity hub = BUILD; cascade starts with Home (D3, highest-risk).
+  # 9 sequenced ux3-* epics; detailed stories authored just-in-time (Epic 0+1 now, 2-8 at their turn).
+  # Per-flow recipe: ux-designer .pen → sm create-story → dev dev-story → tea (visual+E2E, seed-helpers, no self-skip).
+  # ==============================================================================
+
+  # --- Epic 0: ux3-foundation — Truthful status everywhere (FIRST, blocking) ---
+  ux3-foundation: backlog
+  ux3-0-1-lifecycle-field-backend:         backlog  # ← NEXT-UP (cascade start, no design dep). PH3-F1 N1 item-level DURABLE lifecycle/subtitle field. PARTY-MODE GUIDANCE (Rule 24, not prose-only): Task 1 = capability audit w/ explicit decision gate — stored column vs service-computed; which states queryable. 簡轉繁/AI校正中 likely NOT queryable at list-load → relocate to Activity SSE; 下載中% deferred to Epic 13/14. Rule-15 SELECT/scan sync + real-sqlite integration test (bugfix-20-1 lesson).
+  ux3-0-2-poster-badge-frontend:           backlog  # PH3-F1 FE. PosterCardV2 badge derives from 0-1 field; badge = EXCEPTION signal (steady-state 已入庫+繁中 UNBADGED); legacy PosterCard (flag-OFF) unaffected.
+  ux3-0-3-status-summary-endpoint-backend: backlog  # PH3-F2. GET /api/v1/status/summary (disk/scan/queue/health), per-section fail-soft (B1/F3), reuse Rule-7 prefixes. Define which volume measured (Epic 7b multi-lib). Epic 18 (P4-020/021) MUST reuse not rebuild. PARTY: per-section fail-soft API tests.
+  ux3-0-4-status-strip-golive-frontend:    backlog  # PH3-F2 FE. SidebarFooter consumes /status/summary (replaces pilot-degraded health-only); collapses to dots on rail; reduced-motion. PARTY: non-ok-section "does not throw" render test.
+  ux3-0-5-clean-route-split-frontend:      backlog  # PH3-F3. /library/{movies,tv} split + beforeLoad redirects (never 404, Rule 26). Reuse ux2-2 v2 grid (no re-flow), redirect-loop guard, legacy untouched. RISK: library.tsx ~753-line monolith → shared filter/scroll state extraction (F5). seed-helpers E2E.
+
+  # --- Epic 1: ux3-home-v2 — Open the app to your own library first (HIGHEST RISK, D3) ---
+  ux3-home-v2: backlog
+  ux3-1-1-home-v2-design:                  backlog  # ← NEXT-UP (per-flow recipe step 1: ux-designer .pen flow-h → v2). Own-content above Hero/Explore (D3), reserved continue-watching slot (data=Epic 17), four states incl. own-content SPARSE/empty state, 390/768/1440. Commit only genuinely-changed PNGs.
+  ux3-1-2-home-shell-own-above-external:   backlog  # PH3-M1 FE. shell-version gated; own-content (recently-added+task-status) structurally ABOVE Hero+ExploreBlocks + ordering-law test. PARTY: split D3 ordering law (deterministic component test) from felt/perf MANUAL browser gate (390/768/1440); RecentMediaPanel is legacy dashboard → needs v2 restyle/replacement, NOT raw reuse.
+  ux3-1-3-continue-watching-slot:          backlog  # PH3-R1. Reserved slot; hidden/affordance until Plex/Jellyfin connected (data=Epic 17 P4-011; no playback path). Never a broken empty tile; fail-soft.
+  ux3-1-4-dashboard-remnants-off-home:     backlog  # D3 guardrail #3. Remove DownloadPanel/QBStatusIndicator/ConnectionHistoryPanel from home → QB/conn carried by Epic-0 status strip; downloads via existing /downloads. Rule-24: temporary at-a-glance-download regression EXPLICITLY acknowledged until Epic 2 (sequenced next).
+
+  # --- Epics 2–8: epic skeletons (stories authored at cascade turn via sm create-story) ---
+  ux3-activity-hub:    backlog  # PH3-F4. /activity hub (parse/subtitle-batch/scan/AI + downloads-summary). BUILD (net-new). Needs 0-1+0-3. Unblocks mobile bottom-4. Delivers Epic 18 P4-022 slice.
+  ux3-discover-v2:     backlog  # PH3-M2,R2. Discover chips/presets/instant-search → v2; reserves Epic 13 Requests entry.
+  ux3-downloads-v2:    backlog  # PH3-M3. Downloads deep page → v2 + card actions (Epic 14 v2); linked from Activity.
+  ux3-system-settings: backlog  # PH3-M4,F5,R3. /system vs /settings split (*arr); omnisearch retires /search; reserves Epic 16/18 landings.
+  ux3-subtitle-v2:     backlog  # PH3-M5. Epic 8 manual+batch subtitle UI → v2; detail 管理字幕 + Activity batch.
+  ux3-ai-subtitle:     backlog  # PH3-G1. Epic 9 AI correction + Whisper translation — P8 GREENFIELD FE (backend done, UI never built). Honor backend capability (no Pause unless supported, Rule 24).
+  ux3-detail-backfill: backlog  # PH3-M6. Epic 12 detail blocks (ratings/seasons/recs/streaming/trailer/douban) → v2 design coverage; recs → PosterCardV2.
+  ux3-phase3-retrospective: optional
+
+  # MILESTONE (post-cascade): new_shell_enabled default-ON → delete legacy shell (TabNavigation/AppShell/LegacyContentContainer) + remove tab-{label} testids in the same story (ADR D1-c).
+
+next_priority: ux3-foundation  # UX Redesign Phase 3 cascade (kicked off 2026-06-14). Two NEXT-UP in parallel: ux3-0-1-lifecycle-field-backend (BE, no design dep) + ux3-1-1-home-v2-design (ux-designer .pen flow-h). Plan: ux-redesign/03-phase3-destination-epic-map.md + epics.md. NOTE: prior next_priority epic-12 — its stories 12-1..12-6 are all DONE (retro optional); Epic-11 retro AI items already addressed.

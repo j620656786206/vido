@@ -1,329 +1,554 @@
 ---
-stepsCompleted: ["step-01-validate-prerequisites", "step-02-design-epics", "step-03-create-stories", "step-04-final-validation"]
+stepsCompleted: ["step-01-validate-prerequisites", "step-02-design-epics", "step-03-create-stories"]
 inputDocuments:
+  - "_bmad-output/planning-artifacts/ux-redesign/03-phase3-destination-epic-map.md"
+  - "_bmad-output/planning-artifacts/ux-redesign/01-nav-ia-decision-adr.md"
+  - "_bmad-output/planning-artifacts/ux-redesign/01-design-language-v2.md"
+  - "_bmad-output/planning-artifacts/ux-redesign/02-pilot-validation.md"
+  - "_bmad-output/planning-artifacts/ux-redesign/00-redesign-brief.md"
   - "_bmad-output/planning-artifacts/prd/functional-requirements.md"
   - "_bmad-output/planning-artifacts/prd/non-functional-requirements.md"
-  - "_bmad-output/planning-artifacts/architecture/adr-media-info-nfo-pipeline.md"
-  - "_bmad-output/planning-artifacts/architecture/core-architectural-decisions.md"
-  - "_bmad-output/planning-artifacts/ux-design-specification.md"
   - "_bmad-output/planning-artifacts/epics/epic-list.md"
+  - "_bmad-output/implementation-artifacts/sprint-status.yaml"
 ---
 
-# Vido - Epic Breakdown (Epic 9c)
+# vido — Epic Breakdown (UX Redesign Phase 3 — per-flow strangler cascade)
 
 ## Overview
 
-This document provides the epic and story breakdown for the Media Technical Info & NFO Integration epic, decomposing requirements P1-030 ~ P1-033 and P2-030 from the PRD, along with the accepted ADR for media info/NFO pipeline.
+This document is the requirements inventory for **UX Redesign Phase 3**: the
+flow-by-flow strangler migration of Vido's remaining navigation destinations to the
+v2 design language + 7-destination IA (ADR D1–D4), behind `new_shell_enabled`.
+
+**Scope framing (critical):** Phase 3 is a **re-skin + re-chassis of already-shipped
+features**, not new-product FR decomposition (`00-redesign-brief.md` §2). The
+requirement source is therefore the **ADR + Design-Language-v2 + the destination→epic
+map (`03-...`)** plus a curated set of **existing PRD FRs the redesign re-homes or
+completes**, plus a small set of **genuinely-new backend FRs** the pilot surfaced
+(`02-pilot-validation.md` §4). Media Library (Browse A + Detail B) is **already
+migrated** in the Phase-2 pilot and is out of scope except for cleanup.
 
 ## Requirements Inventory
 
 ### Functional Requirements
 
-- **P1-030**: Media Technical Info — Extract video codec, resolution, audio codec, audio channels, subtitle tracks during scan. Display as visual badges on detail page (e.g., H.265 · 4K · DTS). Data source priority: NFO streamdetails > FFprobe. Supported formats: MKV, MP4, AVI.
-- **P1-031**: NFO Sidecar Reading (Read-Only) — Detect same-name `.nfo` sidecar files during scan. Support Kodi-style XML and single-line TMDB URL formats. NFO metadata takes priority over AI parsing and TMDB enrichment. Use `uniqueid` fields (tmdb/imdb) for precise TMDB matching. Read-only — Vido never writes NFO files.
-- **P1-032**: Data Source Priority Chain — Establish explicit metadata priority: manual > nfo > tmdb > douban > wikipedia > ai. Each media record stores `metadata_source` field. Foundational infrastructure for all metadata resolution logic.
-- **P1-033**: Series File Size — Add `file_size` field to Series model. Calculate total file size per season and per series during scan.
-- **P2-030**: Unmatched Media Filter — Add "Unmatched" filter to library page; batch-review all media without TMDB metadata. Display unmatched count as badge on filter option.
+**A. New backend/shell FRs (redesign-surfaced — not in prior PRD):**
 
-### Non-Functional Requirements
+- **PH3-F1 — N1 item-level lifecycle field.** Movies/series expose an item-level
+  **durable** lifecycle/subtitle field so a poster badge can truthfully render the
+  **load-time-queryable** states (`整理中`/`已入庫`/`失敗` + `繁中`/`缺字幕`). **Transient
+  process states (`簡轉繁`/`AI 校正中`) relocate to the Activity hub's live SSE** (Epic 2+),
+  and `下載中·%` defers to Epic 13/14 — so N1's poster-badge promise converges to durable
+  state **by capability** (pilot §4.2: rich process states are not derivable on a steady
+  library grid). Backend field + migration + API exposure + poster-badge wiring.
+  *(Serves N1; gates Home + Activity.)*
+- **PH3-F2 — Status-summary aggregate.** `GET /api/v1/status/summary` returns disk
+  headroom + active-scan + queue-count + service-health as a **fail-soft per-section**
+  aggregate, feeding the sidebar-footer status strip (D4-2). *(pilot §4.3; partially
+  delivers Epic 18 P4-020/P4-021.)*
+- **PH3-F3 — Clean-route split.** `/library/movies` + `/library/tv` route-file views
+  with `beforeLoad` redirects from `/library?type=`; deep links preserved. *(D2; pilot
+  §4.4 — low-risk cleanup.)*
+- **PH3-F4 — Activity aggregate + hub.** `GET /api/v1/activity` composition over
+  parse / subtitle-batch / scan / AI-jobs + a downloads-summary row, explain-why rows;
+  the `/activity` destination renders it (D4-1). *(Delivers Epic 18 P4-022 activity-log
+  slice; surfaces P8 invisible journeys.)*
+- **PH3-F5 — Global omnisearch.** Header search becomes one box over local-library +
+  TMDB (+ future subtitles), sectioned results; `/search` retired with a `q`-preserving
+  redirect (D4-5). Extends `search_service`.
 
-- **NFR-P6**: Media library listing API must respond within <300ms (p95) for up to 1,000 items — new columns must not degrade performance.
-- **NFR-P13**: Standard regex-based filename parsing must complete within <100ms per file — NFO detection must not slow down scan.
-- **NFR-SC1**: SQLite database must support up to 10,000 media items with <500ms query latency — new fields need proper indexing.
-- **NFR-R2**: System must gracefully handle all external API failures without crashing — FFprobe must gracefully degrade.
-- **NFR-M1**: Backend test coverage must be >80%.
-- **NFR-M6**: Database migrations must be versioned and automated.
+**B. Migration FRs (re-skin/re-chassis of EXISTING shipped features → v2; behavior
+preserved, each adopts the N4 four-state standard + v2 tokens/type):**
+
+- **PH3-M1 — Home v2** (re-chassis Epic 10 Hero/ExploreBlocks, P2-001–006) with
+  **own-above-external ordering (D3)**; dashboard remnants relocated off home.
+- **PH3-M2 — Discover v2** (re-chassis Epic 11 chips/presets/instant-search,
+  P2-010–015) as the active power-filter tool; grows no dashboard (D3 boundary).
+- **PH3-M3 — Downloads v2** (Epic 14; P3-010 done, P3-012 SSE) — v2 deep page + card
+  actions; linked from Activity.
+- **PH3-M4 — System/Settings split** (Epic 6 settings children) → `/system` (ops:
+  status/logs/cache/performance/backup/export) vs `/settings` (prefs:
+  連線/掃描/首頁/qBT), \*arr model (D4-3); route-level redirects 1 release.
+- **PH3-M5 — Subtitle UI v2** (Epic 8 manual + batch, P1-016–019) — v2; detail
+  `管理字幕` entry + Activity batch surface.
+- **PH3-M6 — Detail Epic-12 design backfill** (P2-020–025: dual ratings / seasons /
+  recs / streaming / trailer / douban) — v2 design coverage (shipped in code, Tier-4
+  no-design); recs tile → `PosterCardV2`.
+
+**C. Greenfield FE for an existing backend FR (P8 — never built):**
+
+- **PH3-G1 — AI subtitle UI** (Epic 9: P1-020 terminology correction + P1-021
+  MKV/Whisper→翻譯). Backend DONE, **frontend UI never existed** — build it in Activity
+  (AI jobs) + detail. **Honor backend capability** (no Pause/Resume if backend lacks
+  it — Rule 24; `disc-2026-06-batch-subtitle-pause`).
+
+**D. Reserved / blocked (slot designed in Phase 3; data delivered by a backlog epic):**
+
+- **PH3-R1 — Continue-watching** (Epic 17 P4-011, Plex/Jellyfin watch progress). Home
+  v2 **reserves the slot**; live data **blocked on Epic 17 (backlog)** — Vido has no
+  playback path (§4.1). Renders fail-soft-empty/hidden until a media server connects.
+- **PH3-R2 — Requests landing** (Epic 13 P3-001–005). Discover reserves the request
+  entry point; the full request flow is Epic 13.
+- **PH3-R3 — Stats / Health landings** (Epic 16 P4-001–004 / Epic 18 P4-020–022).
+  System reserves the landing; the full dashboards are Epics 16/18.
+
+### NonFunctional Requirements
+
+**Redesign principles (enforced via gates — `00-redesign-brief.md` §5 / DL-v2):**
+
+- **N1** One truthful state machine (status-tint tokens + four-state standard +
+  status strip render one lifecycle everywhere).
+- **N2** zh-TW typography is a design material (Noto Sans TC for all CJK, JetBrains
+  Mono numeric, 2-line CJK title grid, AA baked into the scale).
+- **N3** Content first, tasks adjacent (sidebar groups 內容 above 任務).
+- **N4** Four states or it doesn't ship (empty/loading/error/no-result up front;
+  per-section fail-soft).
+- **N5** Density is the user's choice (grid/list + size + customizable rows; 44px floor
+  never traded away).
+- **N6** Enforced, not aspirational (token-lint, contrast/touch checks, visual-
+  regression CI, Rule 21 traceability).
+
+**v2 accessibility baseline (DL-v2 §8):** WCAG AA contrast (body ≥4.5:1); 44×44px
+touch targets all breakpoints; visible 2px focus-ring; Base UI keyboard/focus
+management; `prefers-reduced-motion`; color never the sole state carrier.
+
+**PRD performance carried (must hold under v2):** NFR-P1 FCP <1.5s · NFR-P2 LCP <2.5s
+· NFR-P3 TTI <3.5s · NFR-P4 CLS <0.1 (**Home v2 D3 must hold these under real
+content**); NFR-P6 library listing <300ms p95 (PH3-F1 field must not degrade);
+NFR-P11 route transitions <200ms; NFR-P12 image lazy-load <300ms; NFR-U4 user-action
+feedback <200ms.
+
+**PRD reliability:** NFR-R2 graceful external-API failure (no crash); NFR-R4 degrade +
+manual fallback — realized as the **bidirectional fail-soft (ADR F3)** for every new
+aggregate endpoint (PH3-F2/F4/F5).
 
 ### Additional Requirements
 
-- **Migration #021**: 7 new columns on `movies` table + 7 columns on `series` table (video_codec, video_resolution, audio_codec, audio_channels, subtitle_tracks, hdr_format, file_size for series).
-- **FFprobe Docker packaging**: Alpine `apk add ffmpeg` (~30MB). Startup check via `exec.LookPath("ffprobe")`. Graceful degradation if not found.
-- **NFO Parser**: `services/nfo_reader_service.go`. Go `encoding/xml`. Dual format detection (XML / URL).
-- **FFprobe Service**: `services/ffprobe_service.go`. Semaphore (maxConcurrent=3), timeout (10s).
-- **Data Source Priority**: `ShouldOverwrite()` function with priority map. Applied in EnrichmentService before metadata writes.
-- **Enrichment Pipeline Extension**: NFO Detection → AI Parse (if no NFO) → TMDB Enrichment → FFprobe (serial per file).
-- **subtitle_tracks JSON schema**: Array of `{language, format, external}` objects.
-- **Unmatched filter API**: `GET /api/v1/movies?unmatched=true` + `GET /api/v1/movies/stats` for count badge.
+**From Architecture (ADR `01-nav-ia-decision-adr.md`):**
+
+- D1–D4 contracts: 7-destination IA; collapsible sidebar (240↔64 rail) + mobile
+  bottom-4 (首頁·媒體庫·活動·下載·More) + status strip footer; Base UI primitives;
+  D2 sidebar group 媒體庫▸電影/影集 + pinnable saved views; D3 hot homepage + 3 binding
+  guardrails (own-above-external ordering law / home-discover boundary / dashboard-off-
+  home); D4 Activity hub + status strip + Settings|System split + omnisearch.
+- Routing (A1): nested routes; **route-level `beforeLoad` redirects, never 404 /
+  never component-level redirect**; deep-link preservation mandatory.
+- **Strangler/flag discipline:** `new_shell_enabled` single chokepoint (`__root.tsx`);
+  a shell-migration story **MUST NOT modify legacy content** (P3); `LegacyContent-
+  Container` pixel-fidelity (untouched routes' existing baselines must pass under v2
+  shell); flag retirement = delete one read site + legacy shell + `LegacyContent-
+  Container` + remove `tab-{label}` testids **in the same story** (not aliased).
+- **Base UI:** wrap-once in `components/ui/`; ESLint F2 `no-restricted-imports` ban
+  outside that dir; package is `@base-ui/react@1.5.0` (NOT the stale
+  `@base-ui-components/react` rc.0 the ADR text named — correct ADR/project-context
+  when next touched).
+- Saved-view pin (C3): reuse `filter_presets` backend + add `pinned BOOLEAN` (Rule 15
+  migration); general mechanism (anime = first instance, not a special case).
+- Aggregate-endpoint fail-soft (B1/F3): per-section status objects; **reuse existing
+  Rule 7 error prefixes — no new prefix**; frontend treats a non-`ok` section as data.
+- `ScanProgress` global-overlay ownership moves explicitly INTO the v2 shell.
+
+**From UX / Design Language v2 + pilot test-policy:**
+
+- Every flow's `.pen` redrawn to v2 (tokens §2, type §3, four-state §7, shell §6) →
+  `export-pen-screenshots.py`, update `SCREENS`, **commit only genuinely-changed PNGs**.
+- Test contracts: `nav-{key}` testids; TestSprite 50-case runs flag-ON; **E2E reuse
+  `tests/support/helpers/seed-helpers.ts` real seeding — NO data-dependent
+  `test.skip` self-skips** (Epic 20 lesson); visual baselines per Rule 22/23, `-linux`
+  via CI bootstrap PR (never generate locally — darwin machine).
+- Cross-stack story-splitting: >3 tasks per side → split (BE/FE).
 
 ### FR Coverage Map
 
-| FR | Epic | Story | Description |
-|----|------|-------|-------------|
-| P1-030 | 9c | Story 3 + Story 4 | FFprobe extracts tech info → badges display on UI |
-| P1-031 | 9c | Story 2 | NFO sidecar detection, XML/URL parsing, uniqueid matching |
-| P1-032 | 9c | Story 1 + Story 2 | metadata_source field + ShouldOverwrite() priority logic |
-| P1-033 | 9c | Story 1 | Series file_size field, scan-time calculation |
-| P2-030 | 9c | Story 4 | Unmatched filter UI + API endpoint |
+Every Phase-3 FR maps to exactly one epic (15/15, no gaps):
 
-**Coverage: 5/5 FRs mapped (100%)**
+```
+PH3-F1 N1 item-level lifecycle field   → Epic 0  ux3-foundation
+PH3-F2 GET /api/v1/status/summary       → Epic 0  ux3-foundation
+PH3-F3 /library/{movies,tv} clean-route → Epic 0  ux3-foundation
+PH3-F4 /activity aggregate + hub        → Epic 2  ux3-activity-hub   (+ Epic 18 P4-022 slice)
+PH3-F5 global omnisearch                → Epic 5  ux3-system-settings
+PH3-M1 Home re-chassis                  → Epic 1  ux3-home-v2        (Epic 10 P2-001..006)
+PH3-M2 Discover re-chassis              → Epic 3  ux3-discover-v2    (Epic 11 P2-010..015)
+PH3-M3 Downloads v2                     → Epic 4  ux3-downloads-v2   (Epic 14 P3-010/012)
+PH3-M4 System/Settings split            → Epic 5  ux3-system-settings(Epic 6 settings)
+PH3-M5 Subtitle UI v2                   → Epic 6  ux3-subtitle-v2    (Epic 8 P1-016..019)
+PH3-M6 Detail Epic-12 design backfill   → Epic 8  ux3-detail-backfill(Epic 12 P2-020..025)
+PH3-G1 AI subtitle UI (greenfield FE)   → Epic 7  ux3-ai-subtitle    (Epic 9 P1-020/021)
+PH3-R1 Continue-watching slot           → Epic 1  ux3-home-v2        (data=Epic 17 P4-011, blocked)
+PH3-R2 Requests landing                 → Epic 3  ux3-discover-v2    (flow=Epic 13 P3-001..005)
+PH3-R3 Stats/Health landing             → Epic 5  ux3-system-settings(dashboards=Epic 16/18)
+```
+
+NFRs (N1–N6 + v2 a11y baseline + carried PRD performance + bidirectional fail-soft F3)
+are cross-cutting and apply to every epic. **Home v2 (Epic 1) is the dual headline
+gate:** D3 own-above-external AND homepage performance (NFR-P1..P4) under real content.
 
 ## Epic List
 
-### Epic 9c: Media Technical Info & NFO Integration
+> Sequenced cascade (high-risk / high-value first, dependency-aware). Each epic is
+> **standalone**: it consumes only PAST epics (e.g. foundation), never requires a
+> FUTURE epic to function. Activity's links to not-yet-migrated subtitle/AI surfaces
+> are soft + fail-soft. Stories are authored just-in-time per the strangler model;
+> this run details Epic 0 + Epic 1 only (the rest are epic skeletons until their turn).
 
-Users can see technical information badges (codec, resolution, audio format) on media detail pages, leverage existing NFO sidecar files for precise TMDB matching when migrating from Kodi/Jellyfin, and filter unmatched media in the library view. Automated re-scans respect a clear data source priority chain, never overwriting user corrections.
+### Epic 0: ux3-foundation — Truthful status everywhere
+Every poster tells the truth (durable lifecycle badge: 整理中 / 已入庫 / 失敗 / 繁中 /
+缺字幕; transient 簡轉繁·AI校正中 live in Activity, 下載中% in Epic 13/14) and the NAS
+pulse is always visible (sidebar-footer status strip: disk / active-scan / queue /
+service-health), with clean library URLs. Delivers the N1 data layer the rest of the
+cascade renders against.
+**FRs covered:** PH3-F1, PH3-F2, PH3-F3
 
-**FRs covered:** P1-030, P1-031, P1-032, P1-033, P2-030
+### Epic 1: ux3-home-v2 — Open the app to your own library first (⚠ highest risk)
+The homepage leads with the user's OWN content (recently-added / task-status) ABOVE the
+Hero + explore blocks (D3 ordering law); the continue-watching slot is reserved (live
+data deferred to Epic 17); dashboard remnants move off home. The dual headline gate:
+D3 own-above-external + homepage performance under real content.
+**FRs covered:** PH3-M1, PH3-R1 · consumes Epic 0 (F1)
 
-**Stories:**
-1. DB Schema Migration — New tech info columns + metadata_source + series file_size
-2. NFO Sidecar Reader — Scan pipeline NFO detection, XML/URL parsing, TMDB precise match
-3. FFprobe Integration — Docker ffprobe, Go service, tech info extraction, API response
-4. Technical Info Badges UI + Unmatched Filter — Frontend badges, detail page integration, unmatched filter
+### Epic 2: ux3-activity-hub — One place for "what is Vido doing right now" (BUILD, net-new)
+A new `/activity` destination unifies parse / subtitle-batch / scan / AI jobs + a
+downloads-summary row with explain-why rows; unblocks the mobile bottom-4. Standalone on
+existing backend data; the v2 surfaces of subtitle/AI migrate later.
+**FRs covered:** PH3-F4 · consumes Epic 0 (F1+F2)
 
-**Dependencies:**
-- Story 1: Independent (no prerequisites)
-- Story 2: Depends on Story 1
-- Story 3: Depends on Story 1 (parallel with Story 2)
-- Story 4: Depends on Story 2 + Story 3
+### Epic 3: ux3-discover-v2 — The active power-filter tool
+Discover's chips / presets / instant-search migrate to v2 as the active discovery tool
+(grows no dashboard — D3 boundary); reserves the Requests entry point (full flow = Epic 13).
+**FRs covered:** PH3-M2, PH3-R2
 
----
+### Epic 4: ux3-downloads-v2 — The downloads deep page, seen and controlled
+The retained downloads deep page migrates to v2 with card actions; entered from Activity.
+**FRs covered:** PH3-M3
 
-## Epic 9c: Media Technical Info & NFO Integration
+### Epic 5: ux3-system-settings — Preferences vs operations, and one search box
+Split `/system` (ops: status/logs/cache/performance/backup/export) from `/settings`
+(preferences) on the \*arr model; global omnisearch replaces the three search surfaces and
+retires `/search`; reserves the Stats/Health landing (dashboards = Epics 16/18).
+**FRs covered:** PH3-M4, PH3-F5, PH3-R3
 
-Users can see technical information badges (codec, resolution, audio format) on media detail pages, leverage existing NFO sidecar files for precise TMDB matching when migrating from Kodi/Jellyfin, and filter unmatched media in the library view. Automated re-scans respect a clear data source priority chain, never overwriting user corrections.
+### Epic 6: ux3-subtitle-v2 — Subtitle management in v2
+Epic 8's manual + batch subtitle UI migrates to v2; the detail `管理字幕` entry + the
+Activity batch surface. Soft-depends on Activity (batch summary).
+**FRs covered:** PH3-M5
 
-### Story 9c-1: DB Schema Migration — Tech Info Fields & Data Source Priority
+### Epic 7: ux3-ai-subtitle — AI subtitles finally have a UI (P8 greenfield)
+Epic 9's terminology correction + Whisper translation (backend already shipped) get their
+first frontend: AI-jobs in Activity + a detail trigger. Honors backend capability (no
+Pause/Resume control unless the backend supports it — Rule 24).
+**FRs covered:** PH3-G1
 
-As a **developer**,
-I want **the database schema extended with technical info columns, series file_size, and metadata source priority constants**,
-So that **subsequent stories (NFO reader, FFprobe, badges UI) have the data foundation they need**.
+### Epic 8: ux3-detail-backfill — v2 design coverage for the detail blocks
+Epic 12's dual-ratings / seasons / recs / streaming / trailer / douban blocks (shipped in
+code, Tier-4 no-design) get v2 design coverage; recs tile → `PosterCardV2`.
+**FRs covered:** PH3-M6
 
-**Acceptance Criteria:**
-
-1. **Given** the application starts with an existing database
-   **When** migration #021 runs
-   **Then** `movies` table gains columns: `video_codec TEXT`, `video_resolution TEXT`, `audio_codec TEXT`, `audio_channels INTEGER`, `subtitle_tracks TEXT`, `hdr_format TEXT`
-   **And** `series` table gains the same 6 columns plus `file_size INTEGER`
-
-2. **Given** migration #021 completes
-   **When** querying existing movie/series records
-   **Then** all new columns default to NULL (no data loss, no breakage)
-
-3. **Given** the `MetadataSource` type in `models/movie.go`
-   **When** the new constants are added
-   **Then** `MetadataSourceNFO = "nfo"` and `MetadataSourceAI = "ai"` are available
-   **And** existing constants (tmdb, douban, wikipedia, manual) are unchanged
-
-4. **Given** the `ShouldOverwrite(current, incoming MetadataSource) bool` function
-   **When** called with various source combinations
-   **Then** it returns true when incoming priority >= current priority
-   **And** returns true when current is empty (first data)
-   **And** priority order is: manual(100) > nfo(80) > tmdb(60) > douban(50) > wikipedia(40) > ai(20)
-
-5. **Given** the Movie and Series Go models
-   **When** the new fields are added
-   **Then** JSON serialization uses snake_case (`video_codec`, `audio_channels`, etc.)
-   **And** repository INSERT/UPDATE SQL includes all new fields
-
-**Tasks:**
-- 1.1: Create migration `021_media_tech_info.go` — ALTER TABLE for movies (6 cols) and series (7 cols)
-- 1.2: Add `MetadataSourceNFO` and `MetadataSourceAI` constants + `metadataSourcePriority` map + `ShouldOverwrite()` function
-- 1.3: Update `Movie` struct — add VideoCodec, VideoResolution, AudioCodec, AudioChannels, SubtitleTracks, HDRFormat fields
-- 1.4: Update `Series` struct — add same 6 fields + FileSize
-- 1.5: Update movie repository INSERT/UPDATE SQL to include new columns
-- 1.6: Update series repository INSERT/UPDATE SQL to include new columns
-- 1.7: Write migration test (tables altered, NULLs, no data loss)
-- 1.8: Write `ShouldOverwrite()` unit tests (all priority combinations)
-- 1.9: Write model serialization tests (JSON field names)
+### Milestone (post-cascade): Flag retirement
+Core flows migrated → `new_shell_enabled` flips default-ON → batch-delete the legacy shell
+(`TabNavigation`, `AppShell`, `LegacyContentContainer`) + remove `tab-{label}` testids in
+the same story (ADR D1-c — not aliased).
 
 ---
 
-### Story 9c-2: NFO Sidecar Reader
+> **Story authoring scope (strangler discipline):** implementation-ready stories are
+> authored just-in-time. This run details **Epic 0 + Epic 1** (the next two in the
+> cascade). **Epics 2–8 carry their epic skeleton (goal + FRs + deps above) only** —
+> their stories are authored by `sm create-story` when each reaches its turn, so they
+> don't go stale. Each detailed story is single-dev-agent-sized and consumes only
+> PAST stories.
 
-As a **NAS user migrating from Kodi or Jellyfin**,
-I want **Vido to detect and read my existing .nfo sidecar files during scan**,
-So that **my media gets precise TMDB matching using NFO uniqueid and I don't need to re-tag everything**.
+## Epic 0: ux3-foundation — Truthful status everywhere
 
-**Acceptance Criteria:**
+Every poster tells the truth and the NAS pulse is always visible, with clean library
+URLs. Delivers the N1 data layer the cascade renders against. **FRs:** PH3-F1/F2/F3.
 
-1. **Given** a video file `/media/movies/Movie.2024.mkv` with a sidecar `/media/movies/Movie.2024.nfo`
-   **When** the enrichment pipeline processes this file
-   **Then** the NFO file is detected and parsed before AI parsing
-   **And** `metadata_source` is set to `"nfo"`
+### Story 0.1: Item-level media lifecycle/subtitle field (backend)
 
-2. **Given** an NFO file containing Kodi-style XML with `<uniqueid type="tmdb">12345</uniqueid>`
-   **When** the NFO parser processes it
-   **Then** the TMDB ID `12345` is extracted
-   **And** TMDB enrichment uses direct lookup (skip search) for this ID
-
-3. **Given** an NFO file containing Kodi-style XML with `<uniqueid type="imdb">tt1234567</uniqueid>`
-   **When** the NFO parser processes it
-   **Then** the IMDB ID is extracted and used for TMDB find-by-external-id
-
-4. **Given** an NFO file containing a single-line URL like `https://www.themoviedb.org/movie/12345`
-   **When** the NFO parser processes it
-   **Then** TMDB ID `12345` is extracted from the URL
-   **And** `source_format` is set to `"url"`
-
-5. **Given** an NFO file with XML containing `<fileinfo><streamdetails>` with video codec/resolution/audio
-   **When** the NFO parser processes it
-   **Then** technical info fields (video_codec, video_resolution, audio_codec, audio_channels) are populated from NFO
-   **And** FFprobe extraction is skipped for this file (NFO streamdetails takes priority)
-
-6. **Given** a malformed or unrecognizable NFO file
-   **When** the NFO parser processes it
-   **Then** a warning is logged with the file path and error
-   **And** the pipeline falls back to AI parsing (existing flow)
-   **And** no crash or scan interruption occurs
-
-7. **Given** a video file with no corresponding .nfo sidecar
-   **When** the enrichment pipeline processes this file
-   **Then** the existing AI parse → TMDB enrichment flow runs as before (no behavior change)
-
-8. **Given** a media record with `metadata_source = "nfo"` from a previous scan
-   **When** a re-scan occurs and the NFO file still exists
-   **Then** NFO data is re-read (idempotent)
-   **And** `ShouldOverwrite("nfo", "nfo")` returns true (same priority)
-
-9. **Given** a media record with `metadata_source = "manual"` (user corrected)
-   **When** a re-scan occurs with an NFO file present
-   **Then** NFO metadata is NOT applied (`ShouldOverwrite("manual", "nfo")` returns false)
-   **And** the user's manual correction is preserved
-
-**Tasks:**
-- 2.1: Create `services/nfo_reader_service.go` with `NFOReaderService`, `NFOData`, `NFOUniqueID`, `NFOStreamDetails` structs
-- 2.2: Implement `Parse(nfoPath string) (*NFOData, error)` — format detection (XML prefix check / URL extraction)
-- 2.3: Implement `parseXML(content []byte) (*NFOData, error)` — Go `encoding/xml` for `<movie>`, `<tvshow>`, `<episodedetails>` root elements
-- 2.4: Implement `findNFOSidecar(videoPath string) string` — same-name .nfo path check
-- 2.5: Implement URL extractors — `extractTMDbID(line)` and `extractIMDbID(line)` for single-line NFO format
-- 2.6: Integrate into `enrichment_service.go` `enrichSingleItem()` — NFO detection before AI parse, `ShouldOverwrite()` gate
-- 2.7: Modify TMDB enrichment to accept direct TMDB ID / IMDB find-by-external-id when NFO provides uniqueid
-- 2.8: Write NFO parser unit tests — XML format, URL format, malformed, missing fields, streamdetails
-- 2.9: Write enrichment integration tests — NFO priority over AI, manual priority over NFO, fallback on parse failure
-
----
-
-### Story 9c-3: FFprobe Integration
-
-As a **NAS user**,
-I want **Vido to extract technical details (codec, resolution, audio format, HDR) from my video files**,
-So that **I can see what quality my media files are in and make informed decisions about my collection**.
+As a NAS owner,
+I want each movie/series to carry one truthful item-level lifecycle+subtitle state,
+So that posters and detail pages can show the same lifecycle consistently (N1).
 
 **Acceptance Criteria:**
 
-1. **Given** the Docker image build
-   **When** the runtime stage is built
-   **Then** `ffprobe` binary is available at runtime (`apk add --no-cache ffmpeg`)
+**Given** a Rule-24 capability audit of what lifecycle states are derivable for a
+*library item* today,
+**When** the field is designed,
+**Then** it surfaces only **persisted, load-time-queryable** states — `整理中`/`已入庫`/`失敗`
+(from `parseStatus`) + `繁中`/`缺字幕` (from `subtitleTracks`),
+**And** the **transient processing states** `簡轉繁`/`AI 校正中` are NOT stored on this field —
+they live in the subtitle pipeline's ephemeral queue/SSE and are surfaced by the **Activity
+hub's live feed (Epic 2+)**, never the poster badge (a steady library grid cannot truthfully
+show a live process),
+**And** `下載中·%` is **NOT derivable** for a library item (a library row exists only
+post-download; download% belongs to requested/in-flight items → deferred to Epic 13/14),
+**So** N1's poster-badge promise converges to **durable lifecycle by capability, not
+omission** (pilot §4.2).
 
-2. **Given** the application starts on a system with `ffprobe` installed
-   **When** `FFprobeService` initializes
-   **Then** `exec.LookPath("ffprobe")` succeeds
-   **And** the service is marked as available
+**Given** the new field,
+**When** the API returns a movie/series,
+**Then** the field is exposed at the boundary in camelCase (Rule 18),
+**And** the repo's SELECT column list **AND** row scan are synced (Rule 15 — the exact
+gap that caused bugfix-20-1).
 
-3. **Given** the application starts on a system WITHOUT `ffprobe`
-   **When** `FFprobeService` initializes
-   **Then** a warning is logged: "ffprobe not found — technical info extraction disabled"
-   **And** `Probe()` calls return `nil, ErrFFprobeNotAvailable`
-   **And** the scan pipeline skips technical info extraction without error
+**Given** a migration is needed,
+**When** it lands,
+**Then** it follows the versioned-migration convention,
+**And** a repository/integration test against a **real sqlite DB** asserts the field for
+seeded rows (not a mocked-repo false-green — Epic 20 lesson).
 
-4. **Given** a video file `Movie.2024.mkv` (H.265, 3840x2160, DTS 5.1, HDR10)
-   **When** `FFprobeService.Probe(ctx, filePath)` is called
-   **Then** it returns `MediaTechInfo` with: VideoCodec="H.265", VideoResolution="3840x2160", AudioCodec="DTS", AudioChannels=6, HDRFormat="HDR10"
+**Given** an item with no subtitle/parse data,
+**When** the field is computed,
+**Then** it returns a well-defined default and never errors.
 
-5. **Given** 4 concurrent FFprobe requests with `maxConcurrent=3`
-   **When** all 4 are submitted
-   **Then** only 3 run simultaneously
-   **And** the 4th waits for a semaphore slot
+### Story 0.2: Poster badge renders the lifecycle field (frontend)
 
-6. **Given** a video file on a slow network mount
-   **When** FFprobe execution exceeds 10 seconds
-   **Then** the context is cancelled
-   **And** an error is returned (not a hang)
-
-7. **Given** the enrichment pipeline processes a file that already has `video_codec` set (from NFO streamdetails)
-   **When** the FFprobe stage runs
-   **Then** FFprobe extraction is skipped (NFO data preserved)
-
-8. **Given** a series with 3 video files (1.2GB, 800MB, 950MB)
-   **When** the scan processes these files
-   **Then** `series.file_size` is set to the sum: 2,950MB (in bytes)
-   **And** file_size is recalculated on each scan
-
-9. **Given** FFprobe extracts subtitle track information from an MKV file
-   **When** the results are stored
-   **Then** `subtitle_tracks` contains a JSON array with `{language, format, external: false}` for embedded tracks
-   **And** external sidecar subtitle files detected on filesystem are added with `{external: true}`
-
-10. **Given** the existing `GET /api/v1/movies/:id` endpoint
-    **When** a movie with tech info is requested
-    **Then** the response includes `video_codec`, `video_resolution`, `audio_codec`, `audio_channels`, `hdr_format`, `subtitle_tracks` fields
-
-**Tasks:**
-- 3.1: Update `Dockerfile` runtime stage — `apk add --no-cache ffmpeg`
-- 3.2: Create `services/ffprobe_service.go` — `FFprobeService` struct with semaphore, timeout, `Probe()` method
-- 3.3: Implement `parseFfprobeJSON(output []byte) (*MediaTechInfo, error)` — extract streams/format info
-- 3.4: Implement startup check — `exec.LookPath("ffprobe")` with graceful degradation
-- 3.5: Implement HDR detection — parse color_transfer/color_primaries for HDR10/DolbyVision
-- 3.6: Integrate into enrichment pipeline — FFprobe after TMDB enrichment, skip if NFO had streamdetails
-- 3.7: Implement series file_size aggregation in scanner service — sum file sizes per series
-- 3.8: Implement external subtitle track detection — scan filesystem for sidecar .srt/.ass files, merge with embedded tracks
-- 3.9: Wire `FFprobeService` in `main.go` dependency injection
-- 3.10: Write FFprobe service unit tests — JSON parsing, semaphore, timeout, graceful degradation
-- 3.11: Write enrichment integration tests — FFprobe stage, NFO skip logic
-- 3.12: Write series file_size calculation tests
-
----
-
-### Story 9c-4: Technical Info Badges UI + Unmatched Filter
-
-As a **NAS user**,
-I want **to see visual badges showing video quality (H.265, 4K, DTS) on media detail pages and filter unmatched media in my library**,
-So that **I can quickly assess media quality and identify items that need manual TMDB matching**.
+As a user browsing the library,
+I want the poster badge to reflect the real item lifecycle,
+So that I can see each title's state at a glance.
 
 **Acceptance Criteria:**
 
-1. **Given** a movie with `video_codec="H.265"`, `video_resolution="3840x2160"`, `audio_codec="DTS"`, `audio_channels=6`, `hdr_format="HDR10"`
-   **When** the user views the movie detail page
-   **Then** visual badges display: "H.265", "4K", "DTS 5.1", "HDR10"
-   **And** badges use appropriate color coding (e.g., 4K = distinct color, HDR = distinct color)
+**Given** Story 0.1's field is exposed,
+**When** `PosterCardV2` renders,
+**Then** the N1 status badge derives from the new field (superseding the pilot's
+`parseStatus`+`subtitleTracks` derivation) via the DL-v2 §2.5 status→token map.
 
-2. **Given** a movie with only `video_codec` and `video_resolution` (no audio info)
-   **When** the user views the detail page
-   **Then** only video badges are shown (no empty/null badges displayed)
+**Given** an item in the steady-state (`已入庫` + `繁中`),
+**When** the badge renders,
+**Then** it is **suppressed** (no badge) — the badge is an **exception signal** for
+attention states only (`整理中` / `失敗` / `缺字幕`), avoiding the always-on info-noise the
+PosterCard density lessons warned about (Epic 10/19).
 
-3. **Given** a movie with `subtitle_tracks` containing 3 tracks
-   **When** the user views the detail page
-   **Then** subtitle track information is displayed (language labels)
-   **And** external vs embedded subtitles are visually distinguishable
+**Given** an attention state,
+**When** it renders,
+**Then** it uses the correct `*-tint`/`*-text` token **and** pairs the hue with a zh-TW
+label (color never the sole carrier — a11y).
 
-4. **Given** a movie with no technical info (all fields NULL)
-   **When** the user views the detail page
-   **Then** no tech info section is rendered (graceful absence, not "No data" message)
+**Given** the strangler flag is OFF,
+**When** the legacy library renders,
+**Then** the legacy `PosterCard` is unaffected (the new field is additive; legacy ignores
+it; legacy specs/baselines unchanged).
 
-5. **Given** the library page with mixed matched/unmatched media
-   **When** the user selects the "Unmatched" filter
-   **Then** only media with `tmdb_id IS NULL OR tmdb_id = 0` are displayed
-   **And** the filter option shows a count badge (e.g., "Unmatched (3)")
+**Given** the PosterCardV2 unit specs,
+**When** updated,
+**Then** they cover each rendered state, including the suppressed steady-state.
 
-6. **Given** the `GET /api/v1/movies?unmatched=true` endpoint
-   **When** called
-   **Then** returns only movies where tmdb_id is NULL or 0
-   **And** response time is <300ms for 1,000 items (NFR-P6)
+### Story 0.3: `GET /api/v1/status/summary` aggregate endpoint (backend)
 
-7. **Given** the `GET /api/v1/movies/stats` endpoint
-   **When** called
-   **Then** response includes `unmatched_count` field
-   **And** the count is accurate (matches actual unmatched records)
+As a NAS owner,
+I want one endpoint summarizing disk/scan/queue/service-health,
+So that the status strip shows a real NAS pulse (D4-2; partially delivers Epic 18).
 
-8. **Given** the resolution value `"3840x2160"` from the API
-   **When** the badge component renders
-   **Then** it displays "4K" (human-friendly label)
-   **And** `"1920x1080"` → "1080p", `"1280x720"` → "720p"
+**Acceptance Criteria:**
 
-**Tasks:**
-- 4.1: Create `TechBadge` component — renders individual badge with color variant (codec, resolution, audio, HDR)
-- 4.2: Create `TechBadgeGroup` component — renders row of badges from media tech info, handles null/missing fields
-- 4.3: Create resolution label mapping utility — `3840x2160` → `4K`, `1920x1080` → `1080p` etc.
-- 4.4: Integrate `TechBadgeGroup` into movie detail page
-- 4.5: Integrate `TechBadgeGroup` into series detail page
-- 4.6: Add subtitle tracks display section to detail pages
-- 4.7: Add `?unmatched=true` query parameter support to movie repository + handler
-- 4.8: Add `GET /api/v1/movies/stats` endpoint with `unmatched_count`
-- 4.9: Add series equivalent: `GET /api/v1/series?unmatched=true` + `GET /api/v1/series/stats`
-- 4.10: Add "Unmatched" filter option to library page filter UI with count badge
-- 4.11: Wire stats API call for unmatched count badge (TanStack Query)
-- 4.12: Write TechBadge/TechBadgeGroup component tests
-- 4.13: Write resolution mapping utility tests
-- 4.14: Write unmatched filter API handler tests
-- 4.15: Write stats endpoint handler tests
+**Given** the four ambient concerns,
+**When** `GET /api/v1/status/summary` is called,
+**Then** it returns disk headroom (used/total) + active-scan state + download queue count
++ per-service health as **per-section status objects** (B1/F3).
+
+**Given** Epic 7b multi-library folders may span volumes,
+**When** disk headroom is computed,
+**Then** the endpoint defines exactly which volume(s) it measures (the media-library
+volume(s); multiple → aggregate or the primary) so the number is never misleading,
+**And** Epic 18 (P4-020/021) MUST reuse this endpoint — not build a parallel disk/health
+aggregate.
+
+**Given** a downstream source is unavailable,
+**When** the endpoint composes,
+**Then** that section returns `{status:"unavailable", error:{code,…}}` carrying the
+downstream's ORIGINAL Rule-7 prefix,
+**And** the endpoint still returns `success:true` (never fail-page; Epic 18 P4-020/021).
+
+**Given** Rule-4 boundaries,
+**When** implemented,
+**Then** the handler READS existing services (disk stat / `ScannerService` / download
+service / `ServiceStatusService`) and never reaches repositories directly or duplicates
+subsystem logic,
+**And** the response is camelCase at the boundary (Rule 18).
+
+### Story 0.4: Status strip goes live (frontend)
+
+As a user,
+I want the sidebar-footer status strip to show real data,
+So that disk/scan/queue/health are always visible.
+
+**Acceptance Criteria:**
+
+**Given** Story 0.3's endpoint,
+**When** `SidebarFooter` renders,
+**Then** it consumes `/status/summary` via TanStack Query (Rule 5), replacing the
+pilot-degraded health-only state.
+
+**Given** a non-`ok` section,
+**When** the strip renders,
+**Then** that section shows empty/stale (treated as data, never throws — F3 frontend
+half) and the rest still render.
+
+**Given** the collapsed 64px rail,
+**When** the strip renders,
+**Then** it collapses to dots only (DL-v2 §6.4); on mobile it sits at the top of the More
+sheet,
+**And** the active-scan pulse respects `prefers-reduced-motion`.
+
+### Story 0.5: `/library/{movies,tv}` clean-route split (frontend)
+
+As a user,
+I want clean type URLs,
+So that library links are clean and bookmarkable (D2).
+
+**Acceptance Criteria:**
+
+**Given** the library route,
+**When** split,
+**Then** `library.tsx` becomes a LAYOUT (shared toolbar/filter/sort + `<Outlet/>` + ONE
+shared grid + shared filter/scroll state F5) with `library/index` (merged),
+`library/movies`, `library/tv` children sharing ONE grid (no forked grid logic — P7).
+
+**Given** old deep links,
+**When** `/library?type=movie` (or `type=series`) loads,
+**Then** a route-level `beforeLoad` throws `redirect()` to `/library/movies` (`/library/tv`),
+`type` coerced per Rule 26, never a component redirect, never 404 (F1/P2).
+
+**Given** the strangler flag,
+**When** OFF,
+**Then** the legacy library renders byte-unchanged (the split lives on the v2 path only).
+
+**Given** the v2 grid shipped in ux2-2,
+**When** the three views render,
+**Then** they reuse that SAME v2 grid (no re-flow / regression),
+**And** the redirects cannot loop (loading `/library/movies` never re-triggers a redirect).
+
+**Given** E2E,
+**When** the routes are tested,
+**Then** they reuse `seed-helpers.ts` real seeding (no self-skip).
+
+## Epic 1: ux3-home-v2 — Open the app to your own library first
+
+The homepage leads with the user's own content ABOVE Hero+ExploreBlocks (D3); the
+dual headline gate. **FRs:** PH3-M1, PH3-R1 · consumes Epic 0 (F1).
+
+### Story 1.1: Home v2 design (`.pen` flow-h → v2)
+
+As the design system,
+I want the homepage redrawn to v2,
+So that dev builds against a spec, not an assumption (per-flow recipe step 1).
+
+**Acceptance Criteria:**
+
+**Given** DL-v2 (tokens/type/four-state/shell),
+**When** the home flow is redrawn in `ux-design.pen` (flow-h-homepage → v2),
+**Then** it specifies own-content (recently-added + task-status) structurally ABOVE
+Hero+ExploreBlocks (D3 ordering law), a reserved continue-watching slot with its
+hidden/empty state (data=Epic 17), all four states, and desktop+mobile (390/768/1440).
+
+**Given** a user whose library is stable (sparse recently-added / no active tasks),
+**When** the own-content section is designed,
+**Then** it specifies a graceful **sparse/empty treatment** — it collapses without leaving
+a top gap, external blocks rise but stay conceptually below the own-content zone, and the
+D3 ordering law still holds (own-content gets its OWN empty state, not just the page).
+
+**Given** the regen convention,
+**When** screenshots are exported,
+**Then** `export-pen-screenshots.py` runs, `SCREENS` is updated if new screens exist,
+and ONLY genuinely-changed PNGs are committed.
+
+**Given** a D3 ordering-rationale annotation is needed,
+**When** added,
+**Then** it stands alone as its own spec frame, not crammed into a mockup.
+
+### Story 1.2: Home v2 shell migration — own content above external
+
+As a user,
+I want to open Vido to my own library first,
+So that personal content is never below promotional/discovery content (D3).
+
+**Acceptance Criteria:**
+
+**Given** the home route,
+**When** migrated,
+**Then** it opts into the v2 layout (shell-version gated via `staticData.shell:'v2'`, no
+2nd flag read — F4), rendering Hero+ExploreBlocks in the v2 shell.
+
+**Given** the D3 ordering law,
+**When** home renders,
+**Then** own-content (recently-added + task-status, reusing `RecentMediaPanel`) is
+structurally ABOVE Hero+ExploreBlocks,
+**And** a test asserts this ordering holds under real content (the ADR's primary
+watch-item).
+
+**Given** F1's lifecycle field,
+**When** own-content tiles render,
+**Then** their badges use the new field via `PosterCardV2`.
+
+**Given** the project gates on browser-pixel review + visual-regression (not CI perf
+budgets — P10 / N6: enforce only what we can),
+**When** Home v2 is verified,
+**Then** the perf gate is a **manual 390/768/1440 walk with real content** (no visible
+layout-shift/jank; FCP/LCP/TTI/CLS NFR-P1..P4 as targets, not CI-enforced numeric ACs),
+**And** visual-regression covers pixel stability (skeleton loading, lazy images).
+
+**Given** flag OFF,
+**When** home loads,
+**Then** the legacy home is byte-unchanged.
+
+### Story 1.3: Continue-watching reserved slot
+
+As a user,
+I want a continue-watching slot ready on home,
+So that the layout is prepared for media-server sync without showing a broken block now.
+
+**Acceptance Criteria:**
+
+**Given** Vido has no playback path and continue-watching data = Epic 17 (P4-011),
+**When** home renders today,
+**Then** the slot is hidden (or shows a quiet "連接 Plex / Jellyfin 後顯示" affordance) —
+never a broken/empty tile.
+
+**Given** the slot is later populated (Epic 17),
+**When** data arrives,
+**Then** it sits within own-content, ABOVE external (D3 ordering preserved).
+
+**Given** no media server,
+**When** home loads,
+**Then** there is no error/console noise from the absent slot (fail-soft).
+
+### Story 1.4: Dashboard remnants leave home
+
+As a user,
+I want home to be curation-first, not a task dashboard,
+So that it follows the D3 home/discover boundary.
+
+**Acceptance Criteria:**
+
+**Given** D3 guardrail #3,
+**When** home is migrated,
+**Then** `DownloadPanel` / `QBStatusIndicator` / `ConnectionHistoryPanel` are REMOVED
+from home.
+
+**Given** their data must stay reachable (no future-epic dependency),
+**When** removed,
+**Then** the ambient QB/connection info is carried by the Epic-0 status strip (already
+live) **and** in-flight downloads remain reachable at the existing `/downloads` page
+(DownloadPanel's eventual Activity home is Epic 2 — not required for 1.4 to function).
+
+**Given** Activity (Epic 2) does not exist yet,
+**When** DownloadPanel is removed from home,
+**Then** the **temporary loss of the at-a-glance home download view is explicitly
+acknowledged** (not a silent gap — Rule 24) — mitigated by the status-strip queue count +
+`/downloads`, and closed when Epic 2 ships (sequenced immediately after Epic 1).
+
+**Given** the strangler discipline (P3),
+**When** 1.4 edits home,
+**Then** it does NOT modify legacy route content elsewhere ("while I'm here" edits banned).
+
+**Given** flag OFF,
+**When** home loads,
+**Then** the legacy home (with its dashboard elements) is unchanged.
+
+## Epics 2–8: skeletons (stories authored at cascade turn)
+
+Goal + FR coverage + dependencies are in the **Epic List** above. Detailed stories for
+`ux3-activity-hub`, `ux3-discover-v2`, `ux3-downloads-v2`, `ux3-system-settings`,
+`ux3-subtitle-v2`, `ux3-ai-subtitle`, `ux3-detail-backfill` are authored by
+`sm create-story` when each reaches its turn (strangler — avoids stale artifacts).
