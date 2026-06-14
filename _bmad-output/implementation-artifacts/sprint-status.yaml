@@ -769,4 +769,15 @@ development_status:
   ux2-3-detail-v2:          done            # 2026-06-14 — B′ Detail v2 behind flag (shell-version gated): DetailHeroV2 backdrop hero + N1 status, DetailTechInfoV2 (檔案資訊), DetailStatesV2 (skeleton/not-found); LocalDetailV2 reuses Epic-12 sections fail-soft + TMDbDetailV2 variant. Rule-24/P8: NO playback path → CTAs = 管理字幕(primary)/修改資訊/複製路徑, no 播放. 11 specs + 42-test route regression pass. Deferred: recs PosterCardV2, ⋯ overflow menu, visual fixtures.
   ux2-validation:           backlog         # 390/768/1440 browser-pixel verify + real-use → 02-pilot-validation.md (go/no-go for Phase 3)
 
+# ==============================================================================
+# Epic 20 — Test Quality Hardening (epic-20-test-quality-hardening.md)
+# Origin: 2026-06-14 Phase-2 first real-data test → TV season accordion empty.
+# Root cause = backend bug + systemic "empty-DB hides data-path bugs" blind spot
+# (data-dependent E2E self-skip; metadata/apply e2e permanently skipped).
+# ==============================================================================
+  bugfix-20-1-season-summary-read:  ready-for-dev   # GetSeasons reads the DEAD series.seasons JSON col (FindByID doesn't even SELECT it) → always []. Fix: read the canonical seasons TABLE (season_repository.FindBySeriesID) + wire repos.Seasons into SeriesService + real-sqlite integration test. SM Bob prepped; Dev Amelia to impl.
+  story-20-2-e2e-test-data-seeding: backlog         # E2E test-data seeding infra; un-skip metadata/apply (4 perma-skipped "until seeding") + media-detail self-skips; delete superseded api.spec.ts describe.skip blocks. Policy: a "needs real data" test must not silently self-skip in CI.
+  story-20-3-process-hardening:     backlog         # Rule 15 extend to SELECT/scan sync; reinforce Rule 24 (triage superseded mechanisms at migration time — Alexyu confirmed Rule 24 not 20); CR flag perma-skipped api specs. tech-writer updates project-context.md.
+  drop-dead-series-seasons-column:  backlog         # Rule-24 follow-up to 20-1: drop the dead `series.seasons` JSON column (mig) once GetSeasons reads the seasons table.
+
 next_priority: epic-12  # Phase 2 — Rich Media Detail Page. Epic 11 CLOSED 2026-06-09 (retro done). Start with 12-1 dual-rating display (ready-for-dev; reads existing TMDB/Douban data, no blocking prereqs) → 12-2 season list. Epic-11 retro action items to fold in first: retro-11-AI1 (a11y enforcement mechanism — HIGH, do before more frontend stories) + retro-11-AI3 (external-API arch alignment — schedule before 12-3, NOT before 12-1). Backlog batch-subtitle items (disc-2026-06-batch-subtitle-pause, ...-library-subtitle-status-filter) remain P3.
