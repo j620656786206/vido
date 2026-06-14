@@ -27,8 +27,11 @@ error states + Epic-12 detail features with no design coverage.
 - `00-redesign-brief.md` — **Phase 0 output (done 2026-06-12)**: evidence-backed pain-point
   inventory (6 systemic root causes + 10 recurring failure modes + hotspot ranking),
   2025–26 competitive scan, design principles N1–N6, open IA decisions D1–D4 for Phase 1.
-- `01-design-language-v2.md`, `01-nav-ia-decision-adr.md` — *Phase 1 output (TBD)*
-- `02-pilot-validation.md` — *Phase 2 output (TBD)*
+- `01-design-language-v2.md`, `01-nav-ia-decision-adr.md` — **Phase 1 output (done 2026-06-13, PR #64)**
+- `02-pilot-validation.md` — **Phase 2 output (done 2026-06-14) — ✅ GO to Phase 3 CONFIRMED**
+  after Alexyu's 390/768/1440 browser-pixel pass. Pilot = PRs #67/#68/#69; the
+  test-quality fallout (Epic 20: bugfix-20-1 #72, story-20-2 #75, story-20-3 #74)
+  is closed. **Next: open a fresh session (Fable 5) for Phase 3.**
 - See also `../../design-context-pack.md` — project primer (real design tokens from
   `apps/web/src/styles.css`, the `.pen` A–J canvas convention).
 
