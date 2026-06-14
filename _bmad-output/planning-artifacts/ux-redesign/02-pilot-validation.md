@@ -127,7 +127,16 @@ build against the actual system. Each becomes a concrete Phase-3 input.
 - **Recommendations tile** reuses the Epic-12 `RelatedContent` (not `PosterCardV2`)
   — a Phase-3 refinement.
 
-## 6. The remaining gate (Alexyu, on the NAS, flag ON)
+## 6. The remaining gate (Alexyu, flag ON)
+
+> **✅ PASSED — 2026-06-14 (Alexyu).** Walked the slice at **390 / 768 / 1440**
+> with the flag ON against seeded real-TMDB-metadata library data (localhost dev
+> server, not the NAS — functionally equivalent for the pixel/layout pass).
+> Verdict: *"畫面上沒有什麼太大的問題"* — no significant visual/layout issues at any
+> breakpoint. The TV season accordion (bugfix-20-1) shows seasons. The
+> **legacy-unchanged rollback proof** is carried by the CI flag-OFF E2E suite
+> (green on all four pilot PRs + #75) rather than a manual flag-flip. **This
+> satisfies §7's condition → the GO is now unconditional.**
 
 Turn the flag on (`POST /api/v1/settings {key:"new_shell_enabled", value:true,
 type:"bool"}` or set the DB row), then walk the slice at **390 / 768 / 1440** with
@@ -146,7 +155,12 @@ real library data:
 
 ## 7. Go / No-Go
 
-**Recommendation: GO to Phase 3 — conditional on Alexyu's §6 browser-pixel pass.**
+**✅ GO to Phase 3 — CONFIRMED (Alexyu, 2026-06-14).** The §6 browser-pixel pass
+at 390 / 768 / 1440 is done with no significant issues; the conditional GO below
+is now unconditional.
+
+_Original recommendation (pre-pass): GO to Phase 3 — conditional on Alexyu's §6
+browser-pixel pass._
 
 Rationale: the pilot **proved the thing Phase 2 existed to prove** — the
 flag-gated, shell-version, per-flow strangler migration is coherent, safe, and
