@@ -119,3 +119,8 @@ Other triage:
 - **Resolved CTA set recorded above** (Rule 24 mandate). No control is promised that
   the backend can't honor.
 - Browser-pixel verification at 390/768/1440 happens in the Phase-2 validation step.
+- **Follow-up (2026-06-14):** TV body order corrected — the season/episode accordion
+  was initially appended last (below 相關推薦); moved to **right after 簡介** to match
+  the `.pen` TV detail `N2fmG6` (`sec-ov → sec-eps`): for a series the seasons are the
+  core content, recommendations stay at the bottom. Code-only fix (design was already
+  correct, no `.pen` change). Depends on bugfix-20-1 (the seasons now actually load).
