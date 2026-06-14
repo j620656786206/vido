@@ -11,7 +11,7 @@
  * `LegacyContentContainer`, pixel-unchanged (strangler discipline P3 — this shell
  * never modifies legacy route content).
  */
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useRouterState } from '@tanstack/react-router';
 import { ArrowLeft, Search } from 'lucide-react';
 import { AppSidebar } from './AppSidebar';
@@ -58,6 +58,17 @@ export function AppShellV2({ children }: AppShellV2Props) {
       s.matches.some((m) => (m.staticData as { shell?: string } | undefined)?.shell === 'v2'),
   });
 
+  // The top header's bottom divider is chrome-only: hidden at rest so it never
+  // floats under a sparse bar, shown once content scrolls under the sticky header
+  // (applies to both the mobile and desktop header — it's one element).
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 4);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
   return (
     <ShellVersionProvider value="v2">
       <div className="flex min-h-screen bg-[var(--bg-primary)]" data-testid="app-shell-v2">
@@ -68,7 +79,12 @@ export function AppShellV2({ children }: AppShellV2Props) {
 
         {/* Content column */}
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-[var(--border-subtle)] bg-[var(--bg-primary)]/95 px-4 backdrop-blur-sm">
+          <header
+            data-scrolled={scrolled}
+            className={`sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-[var(--bg-primary)]/95 px-4 backdrop-blur-sm transition-colors ${
+              scrolled ? 'border-[var(--border-subtle)]' : 'border-transparent'
+            }`}
+          >
             {/* Mobile logo (the sidebar carries it on desktop) */}
             <Link
               to="/"
