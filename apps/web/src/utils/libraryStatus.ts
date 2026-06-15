@@ -1,15 +1,17 @@
 /**
- * Library item status derivation (UX Redesign Phase 2 — UX2-2, N1 / §2.5).
+ * Library item status derivation (UX Redesign — N1 / §2.5).
  *
- * Renders the one truthful lifecycle on poster/list/detail from the fields a
- * library item actually carries. NOTE (Rule 24 triage): movies/series expose
- * `parseStatus` ('success' | 'pending' | 'failed') + `subtitleTracks` (a JSON
- * string of tracks) — there is NO item-level `subtitleStatus`/`downloadProgress`
- * field, so the richer process states (下載中·% / 簡轉繁 / AI 校正中) are NOT
- * derivable at list scope and are a Phase-3 backend addition. We derive what's
- * truthful today: in-library lifecycle + subtitle availability. Tints/text use
- * the §2.5 token classes; an unknown/degraded state returns null (badge absent,
- * never an error — F3).
+ * Renders the one truthful lifecycle on poster/list from the fields a library item
+ * carries. As of ux3-0-1 the list exposes the AUTHORITATIVE subtitle-engine result
+ * (`subtitleStatus` + `subtitleLanguage`) alongside `parseStatus` and the embedded
+ * `subtitleTracks`. We derive the durable states truthfully: in-library lifecycle
+ * (整理中 / 已入庫 / 失敗) + subtitle availability (繁中 / 簡中 / 有字幕 / 缺字幕).
+ *
+ * The transient process states (簡轉繁 / AI 校正中) are ephemeral (subtitle-engine
+ * SSE, no persisted per-item field) → surfaced by the Activity hub, NOT this badge;
+ * 下載中·% is not derivable for a library item (Epic 13/14). Tints/text use the §2.5
+ * token classes; an unknown/degraded state returns null (badge absent, never an
+ * error — F3).
  */
 import type { LibraryMovie, LibrarySeries } from '../types/library';
 
@@ -17,6 +19,12 @@ export interface StatusDescriptor {
   label: string;
   /** Tailwind token classes: tint background + AA-safe text color (§2.5). */
   className: string;
+  /**
+   * True for the "happy" steady state (已入庫 / 繁中). The poster badge is an
+   * EXCEPTION signal (ux3-0-2): steady states are suppressed on the grid to avoid
+   * always-on info-noise. Other surfaces (detail) may still render them.
+   */
+  steadyState?: boolean;
 }
 
 const TINT = {
@@ -28,14 +36,17 @@ const TINT = {
   neutral: 'bg-[var(--bg-tertiary)] text-[var(--text-muted)]',
 } as const;
 
-type Media = Pick<LibraryMovie | LibrarySeries, 'parseStatus' | 'subtitleTracks'>;
+type Media = Pick<
+  LibraryMovie | LibrarySeries,
+  'parseStatus' | 'subtitleTracks' | 'subtitleStatus' | 'subtitleLanguage'
+>;
 
-/** Lifecycle badge from `parseStatus`. An in-library item with a clean parse is 已入庫. */
+/** Lifecycle badge from `parseStatus`. An in-library item with a clean parse is 已入庫 (steady). */
 export function deriveLifecycleStatus(media: Media | undefined): StatusDescriptor | null {
   if (!media) return null;
   switch (media.parseStatus) {
     case 'success':
-      return { label: '已入庫', className: TINT.success };
+      return { label: '已入庫', className: TINT.success, steadyState: true };
     case 'pending':
       return { label: '整理中', className: TINT.warning };
     case 'failed':
@@ -50,31 +61,70 @@ interface SubtitleTrack {
   lang?: string;
 }
 
-/**
- * Subtitle badge from `subtitleTracks` JSON. Distinguishes 繁中 (zh-Hant present)
- * / 簡中 (only zh-Hans) / 缺字幕 (no zh subtitle). Returns null if the field is
- * absent (status genuinely unknown) — distinct from 缺字幕 (known-missing).
- */
-export function deriveSubtitleStatus(media: Media | undefined): StatusDescriptor | null {
-  if (!media || media.subtitleTracks === undefined) return null;
+const HANT = new Set(['zh-hant', 'zh-tw', 'zh', 'zh-hk']);
+const HANS = new Set(['zh-hans', 'zh-cn']);
+
+/** Subtitle badge from embedded file tracks (`subtitleTracks` JSON). */
+function deriveFromTracks(media: Media): StatusDescriptor | null {
+  if (media.subtitleTracks === undefined) return null;
 
   let tracks: SubtitleTrack[] = [];
   try {
     const parsed = JSON.parse(media.subtitleTracks);
     if (Array.isArray(parsed)) tracks = parsed;
   } catch {
-    // Non-JSON legacy value → can't classify reliably; treat as unknown.
-    return null;
+    return null; // non-JSON legacy value → can't classify → unknown
   }
 
   const langs = tracks.map((t) => (t.language || t.lang || '').toLowerCase());
-  const hasHant = langs.some(
-    (l) => l === 'zh-hant' || l === 'zh-tw' || l === 'zh' || l === 'zh-hk'
-  );
-  const hasHans = langs.some((l) => l === 'zh-hans' || l === 'zh-cn');
-
-  if (hasHant) return { label: '繁中', className: TINT.success };
-  if (hasHans) return { label: '簡中', className: TINT.accent };
+  if (langs.some((l) => HANT.has(l)))
+    return { label: '繁中', className: TINT.success, steadyState: true };
+  if (langs.some((l) => HANS.has(l))) return { label: '簡中', className: TINT.accent };
   if (langs.length > 0) return { label: '有字幕', className: TINT.neutral };
   return { label: '缺字幕', className: TINT.neutral };
+}
+
+/**
+ * Subtitle badge. Prefers the AUTHORITATIVE subtitle-engine result
+ * (`subtitleStatus` + `subtitleLanguage`, exposed to the list by ux3-0-1): a
+ * downloaded zh-Hant subtitle is 繁中 (the happy steady state), a confirmed
+ * not_found is 缺字幕. Falls back to embedded-track inference when the engine has
+ * no terminal result (not_searched / searching / absent). Returns null when
+ * genuinely unknown (badge absent, never errors — F3).
+ */
+export function deriveSubtitleStatus(media: Media | undefined): StatusDescriptor | null {
+  if (!media) return null;
+
+  // 1. Authoritative downloaded-subtitle result.
+  if (media.subtitleStatus === 'found') {
+    const lang = (media.subtitleLanguage || '').toLowerCase();
+    if (HANT.has(lang)) return { label: '繁中', className: TINT.success, steadyState: true };
+    if (HANS.has(lang)) return { label: '簡中', className: TINT.accent };
+    // found but language unknown → defer to embedded tracks, else "有字幕".
+    return deriveFromTracks(media) ?? { label: '有字幕', className: TINT.neutral };
+  }
+
+  // 2. Embedded tracks (covers not_searched / searching / absent subtitleStatus).
+  const fromTracks = deriveFromTracks(media);
+  if (fromTracks) return fromTracks;
+
+  // 3. Engine searched and found nothing, no embedded tracks → known-missing.
+  if (media.subtitleStatus === 'not_found') return { label: '缺字幕', className: TINT.neutral };
+
+  // 4. Genuinely unknown.
+  return null;
+}
+
+/**
+ * The single poster badge (ux3-0-2, N1 §2.5). The badge is an EXCEPTION signal:
+ * a lifecycle exception (整理中 / 失敗) wins; otherwise a subtitle exception
+ * (缺字幕 / 簡中 / 有字幕). The happy steady state (已入庫 + 繁中) and unknown
+ * states render NO badge — avoiding always-on info-noise on the grid.
+ */
+export function pickPosterBadge(media: Media | undefined): StatusDescriptor | null {
+  const lifecycle = deriveLifecycleStatus(media);
+  if (lifecycle && !lifecycle.steadyState) return lifecycle;
+  const subtitle = deriveSubtitleStatus(media);
+  if (subtitle && !subtitle.steadyState) return subtitle;
+  return null;
 }
