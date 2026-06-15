@@ -9,8 +9,8 @@ import {
   RouterProvider,
 } from '@tanstack/react-router';
 
-vi.mock('../../hooks/useServiceStatus', () => ({
-  useServiceStatuses: () => ({ data: { services: [] }, isError: false }),
+vi.mock('../../hooks/useStatusSummary', () => ({
+  useStatusSummary: () => ({ data: undefined }),
 }));
 
 import { MobileTabBar } from './MobileTabBar';
