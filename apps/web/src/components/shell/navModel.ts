@@ -4,11 +4,9 @@
  * One source of truth so the desktop sidebar, the collapsed rail, the mobile tab
  * bar, and the More sheet agree on destinations, icons, labels, and testids.
  *
- * PILOT SCOPE (ADR D2 + story AC #4): only routes that exist today earn a slot.
- * `活動 /activity` and `系統 /system` are DEFERRED — their routes do not exist yet
- * (Phase 3). The `媒體庫` children point at the working `?type=` deep links
- * (`/library/movies`,`/library/tv` are created in UX2-2; until then these links
- * stay valid and never 404 — UX2-2 repoints them once the child routes land).
+ * SCOPE: only routes that exist today earn a slot. `活動 /activity` lands in Phase 3
+ * (ux3-2-3, this change); `系統 /system` is still DEFERRED (route not built yet). The
+ * `媒體庫` children point at the clean `/library/movies` · `/library/tv` routes.
  */
 import {
   House,
@@ -16,6 +14,7 @@ import {
   Film,
   Tv,
   Compass,
+  Activity,
   Download,
   Settings,
   type LucideIcon,
@@ -53,7 +52,13 @@ export const TV: NavDest = {
 };
 export const DISCOVER: NavDest = { key: 'discover', label: '探索', to: '/discover', icon: Compass };
 
-// 任務 (tasks) destinations — pilot subset (下載 + 設定; 活動/系統 deferred).
+// 任務 (tasks) destinations — 活動 + 下載 + 設定 (系統 still deferred, route not built).
+export const ACTIVITY: NavDest = {
+  key: 'activity',
+  label: '活動',
+  to: '/activity',
+  icon: Activity,
+};
 export const DOWNLOADS: NavDest = {
   key: 'downloads',
   label: '下載',
@@ -68,14 +73,14 @@ export const SETTINGS: NavDest = {
 };
 
 /** Top-level destinations shown on the collapsed 64px rail (§6.2 budget). */
-export const RAIL_DESTS: NavDest[] = [HOME, LIBRARY, DISCOVER, DOWNLOADS, SETTINGS];
+export const RAIL_DESTS: NavDest[] = [HOME, LIBRARY, DISCOVER, ACTIVITY, DOWNLOADS, SETTINGS];
 
 /**
- * Mobile bottom-4 (§6.3). The design's 4th slot is `活動`, but /activity does not
- * exist in the pilot — `探索` (a real content destination) fills the 4th slot
- * until Phase 3 ships /activity. 5th slot opens the More sheet.
+ * Mobile bottom-4 (§6.3). ux3-2-3 lands the design's 4th slot — `活動` now goes live
+ * (flow-k-activity-v2 A2-M-v2: 首頁 · 媒體庫 · 活動 · 下載). `探索` moves into the More
+ * sheet; the 5th slot opens it.
  */
-export const MOBILE_TABS: NavDest[] = [HOME, LIBRARY, DISCOVER, DOWNLOADS];
+export const MOBILE_TABS: NavDest[] = [HOME, LIBRARY, ACTIVITY, DOWNLOADS];
 
 /** Destinations that live in the mobile More sheet (everything off the bottom-4). */
-export const MORE_DESTS: NavDest[] = [SETTINGS];
+export const MORE_DESTS: NavDest[] = [DISCOVER, SETTINGS];
