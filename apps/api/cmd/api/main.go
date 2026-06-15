@@ -519,6 +519,8 @@ func main() {
 	cacheHandler := handlers.NewCacheHandler(cacheStatsService, cacheCleanupService)
 	serviceStatusService := services.NewServiceStatusService(healthMonitor, healthChecker)
 	statusHandler := handlers.NewStatusHandler(serviceStatusService)
+	statusSummaryService := services.NewStatusSummaryService(serviceStatusService, scannerService, downloadService, mediaLibraryService)
+	statusSummaryHandler := handlers.NewStatusSummaryHandler(statusSummaryService)
 	backupHandler := handlers.NewBackupHandler(backupService)
 	backupHandler.SetScheduler(backupScheduler)
 	exportHandler := handlers.NewExportHandler(exportService)
@@ -565,12 +567,13 @@ func main() {
 	{
 		movieHandler.RegisterRoutes(apiV1)
 		seriesHandler.RegisterRoutes(apiV1)
-		doubanRatingHandler.RegisterRoutes(apiV1) // /{movies,series}/:id/douban-rating (12-1) + /douban-review-summary (12-6)
-		logHandler.RegisterRoutes(apiV1)          // Must be before settingsHandler to avoid /settings/:key conflict
-		cacheHandler.RegisterRoutes(apiV1)        // Must be before settingsHandler to avoid /settings/:key conflict
-		statusHandler.RegisterRoutes(apiV1)       // Must be before settingsHandler to avoid /settings/:key conflict
-		backupHandler.RegisterRoutes(apiV1)       // Must be before settingsHandler to avoid /settings/:key conflict
-		exportHandler.RegisterRoutes(apiV1)       // Must be before settingsHandler to avoid /settings/:key conflict
+		doubanRatingHandler.RegisterRoutes(apiV1)  // /{movies,series}/:id/douban-rating (12-1) + /douban-review-summary (12-6)
+		logHandler.RegisterRoutes(apiV1)           // Must be before settingsHandler to avoid /settings/:key conflict
+		cacheHandler.RegisterRoutes(apiV1)         // Must be before settingsHandler to avoid /settings/:key conflict
+		statusHandler.RegisterRoutes(apiV1)        // Must be before settingsHandler to avoid /settings/:key conflict
+		statusSummaryHandler.RegisterRoutes(apiV1) // GET /api/v1/status/summary — ambient NAS status strip (ux3-0-3, D4-2)
+		backupHandler.RegisterRoutes(apiV1)        // Must be before settingsHandler to avoid /settings/:key conflict
+		exportHandler.RegisterRoutes(apiV1)        // Must be before settingsHandler to avoid /settings/:key conflict
 		settingsHandler.RegisterRoutes(apiV1)
 		setupHandler.RegisterRoutes(apiV1)
 		mediaHandler.RegisterRoutes(apiV1)
