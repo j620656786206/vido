@@ -129,6 +129,12 @@ SCREENS = {
     "Tqy3E": ("flow-b-detail-v2", "b7p-d"),
     "UH0sk": ("flow-b-detail-v2", "b8p-d"),
     "SzNRb": ("flow-b-detail-v2", "b3p-m"),
+    # flow-h-homepage-v2 — Phase-3 ux3-1-1 (Home v2 redesign: own-content above Hero+Explore, D3)
+    "yixu1": ("flow-h-homepage-v2", "h1-d"),
+    "uCfjb": ("flow-h-homepage-v2", "h2-m"),
+    "nnGs6": ("flow-h-homepage-v2", "h4-d"),
+    "Z7OJB": ("flow-h-homepage-v2", "h5-d"),
+    "xCQA7": ("flow-h-homepage-v2", "h6-d"),
 }
 
 
