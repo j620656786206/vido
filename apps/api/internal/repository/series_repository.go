@@ -335,6 +335,7 @@ func (r *SeriesRepository) List(ctx context.Context, params ListParams) ([]model
 			id, title, original_title, first_air_date, last_air_date, genres, rating,
 			overview, poster_path, backdrop_path, number_of_seasons, number_of_episodes,
 			status, original_language, imdb_id, tmdb_id, in_production,
+			parse_status, subtitle_status, subtitle_language,
 			video_codec, video_resolution, audio_codec, audio_channels, subtitle_tracks, hdr_format,
 			created_at, updated_at
 		FROM series
@@ -375,6 +376,9 @@ func (r *SeriesRepository) List(ctx context.Context, params ListParams) ([]model
 			&s.IMDbID,
 			&s.TMDbID,
 			&s.InProduction,
+			&s.ParseStatus,
+			&s.SubtitleStatus,
+			&s.SubtitleLanguage,
 			&s.VideoCodec,
 			&s.VideoResolution,
 			&s.AudioCodec,
@@ -600,7 +604,9 @@ const seriesSelectColumns = `
 `
 
 // scanSeries scans a row into a Series struct using the standard column order.
-func scanSeries(scanner interface{ Scan(dest ...interface{}) error }) (models.Series, error) {
+func scanSeries(scanner interface {
+	Scan(dest ...interface{}) error
+}) (models.Series, error) {
 	var s models.Series
 	var genresJSON string
 

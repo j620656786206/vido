@@ -505,6 +505,62 @@ func TestMovieList(t *testing.T) {
 	}
 }
 
+// TestMovieListReturnsLifecycleFields guards the Rule-15 List() SELECT/scan sync
+// (ux3-0-1): parse_status / subtitle_status / subtitle_language must reach the
+// library-list read path, not only single-row FindByID. Before the fix, List()
+// omitted these columns and returned zero values even when the DB row carried them
+// (the bugfix-20-1 SELECT/scan-desync class). The v2 poster badge (N1) derives from
+// these fields.
+func TestMovieListReturnsLifecycleFields(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	movie := &models.Movie{
+		ID:          "movie-lifecycle",
+		Title:       "Lifecycle Movie",
+		ReleaseDate: "2021-01-01",
+		Genres:      []string{"Drama"},
+	}
+	if err := repo.Create(ctx, movie); err != nil {
+		t.Fatalf("Failed to create movie: %v", err)
+	}
+
+	// Set known non-default lifecycle/subtitle state directly, independent of
+	// whether Create writes these columns.
+	if _, err := db.ExecContext(ctx,
+		`UPDATE movies SET parse_status = ?, subtitle_status = ?, subtitle_language = ? WHERE id = ?`,
+		string(models.ParseStatusFailed), string(models.SubtitleStatusFound), "zh-Hant", "movie-lifecycle",
+	); err != nil {
+		t.Fatalf("Failed to set lifecycle fields: %v", err)
+	}
+
+	params := NewListParams()
+	params.Page = 1
+	params.PageSize = 10
+
+	movies, _, err := repo.List(ctx, params)
+	if err != nil {
+		t.Fatalf("Failed to list movies: %v", err)
+	}
+	if len(movies) != 1 {
+		t.Fatalf("Expected 1 movie, got %d", len(movies))
+	}
+
+	got := movies[0]
+	if got.ParseStatus != models.ParseStatusFailed {
+		t.Errorf("List() ParseStatus = %q, want %q (Rule-15 List SELECT/scan desync)", got.ParseStatus, models.ParseStatusFailed)
+	}
+	if got.SubtitleStatus != models.SubtitleStatusFound {
+		t.Errorf("List() SubtitleStatus = %q, want %q", got.SubtitleStatus, models.SubtitleStatusFound)
+	}
+	if !got.SubtitleLanguage.Valid || got.SubtitleLanguage.String != "zh-Hant" {
+		t.Errorf("List() SubtitleLanguage = %v, want zh-Hant", got.SubtitleLanguage)
+	}
+}
+
 // TestMovieListEmpty verifies empty list handling
 func TestMovieListEmpty(t *testing.T) {
 	db := setupTestDB(t)
@@ -678,9 +734,9 @@ func TestMovieGenresSerialization(t *testing.T) {
 	}
 
 	expectedGenres := map[string]bool{
-		"Action":            true,
-		"Adventure":         true,
-		"Science Fiction":   true,
+		"Action":          true,
+		"Adventure":       true,
+		"Science Fiction": true,
 	}
 
 	for _, genre := range found.Genres {
