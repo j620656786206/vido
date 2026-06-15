@@ -135,6 +135,13 @@ SCREENS = {
     "nnGs6": ("flow-h-homepage-v2", "h4-d"),
     "Z7OJB": ("flow-h-homepage-v2", "h5-d"),
     "xCQA7": ("flow-h-homepage-v2", "h6-d"),
+    # flow-k-activity-v2 — Phase-3 ux3-2-1 (Activity hub v2: net-new D4-1 destination,
+    # explain-why rows aggregating scan/subtitle/AI/parse + downloads-summary; four states)
+    "kMeWS": ("flow-k-activity-v2", "a1-d"),
+    "QIwY1": ("flow-k-activity-v2", "a2-m"),
+    "suCiI": ("flow-k-activity-v2", "a4-d"),
+    "DZnSv": ("flow-k-activity-v2", "a5-d"),
+    "M6ra92": ("flow-k-activity-v2", "a6-d"),
 }
 
 
