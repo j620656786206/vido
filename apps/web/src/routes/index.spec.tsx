@@ -19,6 +19,11 @@ vi.mock('../components/homepage/HeroBanner', () => ({
 vi.mock('../components/homepage/ExploreBlocksList', () => ({
   ExploreBlocksList: () => React.createElement('div', { 'data-testid': 'stub-explore' }, 'explore'),
 }));
+// ux3-1-2: stub Home v2 so the gate test asserts which composition the route picks
+// without rendering the full v2 tree (covered by HomeBrowseV2.spec).
+vi.mock('../components/homepage/HomeBrowseV2', () => ({
+  HomeBrowseV2: () => React.createElement('div', { 'data-testid': 'stub-home-v2' }, 'home-v2'),
+}));
 vi.mock('../components/dashboard', () => ({
   RecentMediaPanel: ({ hideWhenEmpty }: { hideWhenEmpty?: boolean }) =>
     React.createElement(
@@ -65,8 +70,9 @@ vi.mock('../queryClient', () => ({
 
 import { Route as IndexRoute } from './index';
 import { queryClient as mockedQueryClient } from '../queryClient';
+import { ShellVersionProvider } from '../components/shell/shellVersion';
 
-function renderHome() {
+function renderHome(shell: 'legacy' | 'v2' = 'legacy') {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
   // Build a minimal route tree that includes the real index route so the
@@ -86,12 +92,17 @@ function renderHome() {
     history: createMemoryHistory({ initialEntries: ['/'] }),
   });
 
+  // The shell version is provided by AppShellV2 in production (read-once, F4); here we
+  // supply it directly so HomeRoute's useShellVersion() gate can be exercised. No
+  // provider → defaults to 'legacy' (so the existing legacy assertions are unaffected).
+  const tree = React.createElement(
+    QueryClientProvider,
+    { client: queryClient },
+    React.createElement(RouterProvider, { router } as any)
+  );
+
   return render(
-    React.createElement(
-      QueryClientProvider,
-      { client: queryClient },
-      React.createElement(RouterProvider, { router } as any)
-    )
+    shell === 'v2' ? React.createElement(ShellVersionProvider, { value: 'v2' }, tree) : tree
   );
 }
 
@@ -138,5 +149,26 @@ describe('routes/index (Homepage layout)', () => {
     expect(mockPrefetch).toHaveBeenCalled();
     const call = mockPrefetch.mock.calls[0]?.[0];
     expect(call?.queryKey).toEqual(['trending', 'hero', 'week']);
+  });
+});
+
+describe('routes/index (shell-version gate — ux3-1-2)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('[P1] legacy shell (default) renders the dashboard home, not Home v2', async () => {
+    renderHome('legacy');
+    expect(await screen.findByTestId('homepage-root')).toBeInTheDocument();
+    expect(screen.queryByTestId('stub-home-v2')).toBeNull();
+  });
+
+  it('[P1] v2 shell renders Home v2 and drops the legacy dashboard composition', async () => {
+    renderHome('v2');
+    expect(await screen.findByTestId('stub-home-v2')).toBeInTheDocument();
+    // Legacy dashboard root + its Epic-4 remnants are gone under the v2 shell (ux3-1-4).
+    expect(screen.queryByTestId('homepage-root')).toBeNull();
+    expect(screen.queryByTestId('stub-downloads')).toBeNull();
+    expect(screen.queryByTestId('stub-qb')).toBeNull();
   });
 });
