@@ -5,15 +5,17 @@
  * Tighter than the legacy card: a 2-line CJK title grid (reserves two full lines,
  * truncates with ellipsis, never clips mid-glyph — R2 fix), JetBrains Mono
  * year·meta in `text-secondary`, and ONE lifecycle/subtitle status badge on the
- * poster (§2.5). Badge priority surfaces a lifecycle exception (整理中/失敗) when
- * present, otherwise the subtitle differentiator (繁中/簡中/缺字幕) — the badge is
- * absent (never errors) when status is unknown (F3). Links to the detail route.
+ * poster (§2.5). The badge is an EXCEPTION signal (ux3-0-2): a lifecycle exception
+ * (整理中/失敗) wins, else a subtitle exception (缺字幕/簡中/有字幕); the happy steady
+ * state (已入庫 + 繁中) and unknown states show NO badge (never errors — F3). The
+ * subtitle source prefers the authoritative engine result (subtitleStatus/
+ * subtitleLanguage, ux3-0-1) over embedded tracks. Links to the detail route.
  */
 import { Link } from '@tanstack/react-router';
 import { Star } from 'lucide-react';
 import { getImageUrl } from '../../lib/image';
 import { filenameToGradient } from '../media/ColorPlaceholder';
-import { deriveLifecycleStatus, deriveSubtitleStatus } from '../../utils/libraryStatus';
+import { pickPosterBadge } from '../../utils/libraryStatus';
 import type { LibraryMovie, LibrarySeries } from '../../types/library';
 
 interface PosterCardV2Props {
@@ -27,7 +29,10 @@ interface PosterCardV2Props {
   /** Right-hand meta — runtime ("142 分") or season count ("3 季"). */
   meta?: string;
   voteAverage?: number;
-  media: Pick<LibraryMovie | LibrarySeries, 'parseStatus' | 'subtitleTracks'>;
+  media: Pick<
+    LibraryMovie | LibrarySeries,
+    'parseStatus' | 'subtitleTracks' | 'subtitleStatus' | 'subtitleLanguage'
+  >;
 }
 
 export function PosterCardV2({
@@ -40,9 +45,7 @@ export function PosterCardV2({
   voteAverage,
   media,
 }: PosterCardV2Props) {
-  const lifecycle = deriveLifecycleStatus(media);
-  const subtitle = deriveSubtitleStatus(media);
-  const badge = media.parseStatus !== 'success' ? lifecycle : subtitle;
+  const badge = pickPosterBadge(media);
   const img = getImageUrl(posterPath ?? null, 'w342');
   const [from, to] = filenameToGradient(title);
   const metaLine = [year, meta].filter(Boolean).join(' · ');

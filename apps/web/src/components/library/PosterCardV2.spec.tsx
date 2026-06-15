@@ -13,7 +13,10 @@ import type { LibraryMovie } from '../../types/library';
 
 const media = (
   over: Partial<LibraryMovie> = {}
-): Pick<LibraryMovie, 'parseStatus' | 'subtitleTracks'> => ({
+): Pick<
+  LibraryMovie,
+  'parseStatus' | 'subtitleTracks' | 'subtitleStatus' | 'subtitleLanguage'
+> => ({
   parseStatus: 'success',
   subtitleTracks: JSON.stringify([{ language: 'zh-Hant' }]),
   ...over,
@@ -55,10 +58,19 @@ describe('PosterCardV2', () => {
     expect(link).toHaveAttribute('href', '/media/movie/abc');
   });
 
-  it('shows the subtitle status badge (繁中) for an in-library item', async () => {
-    renderCard(base);
+  it('suppresses the badge for the happy steady state (已入庫 + 繁中)', async () => {
+    renderCard(base); // default media: parseStatus success + a zh-Hant track
     await screen.findByTestId('poster-v2-abc');
-    expect(screen.getByTestId('poster-status-badge')).toHaveTextContent('繁中');
+    expect(screen.queryByTestId('poster-status-badge')).not.toBeInTheDocument();
+  });
+
+  it('shows a subtitle exception (缺字幕) for an in-library item missing subtitles', async () => {
+    renderCard({
+      ...base,
+      media: media({ subtitleTracks: undefined, subtitleStatus: 'not_found' }),
+    });
+    await screen.findByTestId('poster-v2-abc');
+    expect(screen.getByTestId('poster-status-badge')).toHaveTextContent('缺字幕');
   });
 
   it('surfaces a lifecycle exception (失敗) over the subtitle badge', async () => {

@@ -35,6 +35,9 @@ export interface LibraryMovie {
   fileSize?: number;
   parseStatus: string;
   metadataSource?: string;
+  // Subtitle engine result — exposed to the library list by ux3-0-1 (N1 badge source).
+  subtitleStatus?: string;
+  subtitleLanguage?: string;
   videoCodec?: string;
   videoResolution?: string;
   audioCodec?: string;
@@ -88,6 +91,9 @@ export interface LibrarySeries {
   fileSize?: number;
   parseStatus: string;
   metadataSource?: string;
+  // Subtitle engine result — exposed to the library list by ux3-0-1 (N1 badge source).
+  subtitleStatus?: string;
+  subtitleLanguage?: string;
   videoCodec?: string;
   videoResolution?: string;
   audioCodec?: string;
