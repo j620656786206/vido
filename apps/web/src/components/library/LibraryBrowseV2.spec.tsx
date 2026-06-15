@@ -10,9 +10,17 @@ import {
 } from '@tanstack/react-router';
 import type { LibraryItem } from '../../types/library';
 
-const h = vi.hoisted(() => ({ infinite: {} as Record<string, unknown> }));
+const h = vi.hoisted(() => ({
+  infinite: {} as Record<string, unknown>,
+  lastArgs: undefined as Record<string, unknown> | undefined,
+}));
 
-vi.mock('../../hooks/useLibraryInfinite', () => ({ useLibraryInfinite: () => h.infinite }));
+vi.mock('../../hooks/useLibraryInfinite', () => ({
+  useLibraryInfinite: (args: Record<string, unknown>) => {
+    h.lastArgs = args;
+    return h.infinite;
+  },
+}));
 vi.mock('../../hooks/useQBittorrent', () => ({
   useQBittorrentConfig: () => ({ data: { configured: true }, isLoading: false }),
 }));
@@ -59,13 +67,13 @@ const movie = (id: string, title: string): LibraryItem => ({
   },
 });
 
-function renderBrowse(initial = '/library') {
+function renderBrowse(initial = '/library', type?: 'all' | 'movie' | 'tv') {
   const rootRoute = createRootRoute();
   const libraryRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/library',
     validateSearch: (s: Record<string, unknown>) => s,
-    component: LibraryBrowseV2,
+    component: type ? () => React.createElement(LibraryBrowseV2, { type }) : LibraryBrowseV2,
   });
   const detail = createRoute({
     getParentRoute: () => rootRoute,
@@ -115,5 +123,12 @@ describe('LibraryBrowseV2', () => {
     renderBrowse('/library?view=list');
     expect(await screen.findByTestId('library-list-v2')).toBeInTheDocument();
     expect(screen.getByTestId('list-row-v2-a')).toBeInTheDocument();
+  });
+
+  it('queries the type the layout passes (clean route /library/movies → ux3-0-5)', async () => {
+    h.infinite = infinite({ items: [movie('a', '電影甲')], totalItems: 1 });
+    renderBrowse('/library', 'movie');
+    await screen.findByTestId('library-grid-v2');
+    expect(h.lastArgs?.type).toBe('movie');
   });
 });
