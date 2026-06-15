@@ -104,11 +104,13 @@ function toDisplay(item: LibraryItem): DisplayFields | null {
   };
 }
 
-export function LibraryBrowseV2() {
+export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } = {}) {
   const search = routeApi.useSearch();
   const navigate = routeApi.useNavigate();
 
-  const currentType = (search.type as LibraryMediaType) || 'all';
+  // ux3-0-5: type comes from the clean route (/library/{movies,tv}) via the layout;
+  // falls back to the legacy ?type= for any non-migrated caller.
+  const currentType = typeProp ?? ((search.type as LibraryMediaType) || 'all');
   const stored = useMemo(() => getStoredSort(), []);
   const effectiveSortBy = (search.sortBy as SortField) || stored.sortBy;
   const effectiveSortOrder = (search.sortOrder as SortOrder) || stored.sortOrder;
@@ -356,7 +358,12 @@ export function LibraryBrowseV2() {
         unmatchedCount={unmatchedCount}
         onApply={applyFilters}
         onClear={clearFilters}
-        onTypeChange={(t) => patchSearch({ type: t === 'all' ? undefined : t })}
+        onTypeChange={(t) =>
+          navigate({
+            to: t === 'movie' ? '/library/movies' : t === 'tv' ? '/library/tv' : '/library',
+            search: (prev) => ({ ...prev, type: undefined }),
+          })
+        }
       />
     </div>
   );

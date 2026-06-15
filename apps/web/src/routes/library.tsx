@@ -1,5 +1,11 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import {
+  createFileRoute,
+  useNavigate,
+  useMatchRoute,
+  Outlet,
+  redirect,
+} from '@tanstack/react-router';
 import { Filter, CheckSquare } from 'lucide-react';
 import {
   useLibraryList,
@@ -126,6 +132,16 @@ export const Route = createFileRoute('/library')({
   // UX2-2: migrated route — full-bleed under the v2 shell (LegacyContentContainer
   // opt-out). Content is gated by the shell version (NOT a second flag read, F4).
   staticData: { shell: 'v2' },
+  // ux3-0-5: old ?type= deep links → clean type routes (D2). Route-level redirect
+  // (never a component redirect, F1); 'all'/absent stays at /library (merged view).
+  beforeLoad: ({ search }) => {
+    if (search.type === 'movie' || search.type === 'tv') {
+      throw redirect({
+        to: search.type === 'movie' ? '/library/movies' : '/library/tv',
+        search: { ...search, type: undefined },
+      });
+    }
+  },
   component: LibraryRoute,
 });
 
@@ -136,7 +152,21 @@ export const Route = createFileRoute('/library')({
  */
 function LibraryRoute() {
   const shell = useShellVersion();
-  return shell === 'v2' ? <LibraryBrowseV2 /> : <LibraryPage />;
+  const matchRoute = useMatchRoute();
+  // ux3-0-5 / F5: the Browse UI is mounted ONCE here in the layout, so movies↔tv
+  // preserves filter + scroll state. The active type is derived from the matched
+  // clean child; children are path markers (they render null via the Outlet).
+  const type: LibraryMediaType = matchRoute({ to: '/library/movies' })
+    ? 'movie'
+    : matchRoute({ to: '/library/tv' })
+      ? 'tv'
+      : 'all';
+  return (
+    <>
+      {shell === 'v2' ? <LibraryBrowseV2 type={type} /> : <LibraryPage />}
+      <Outlet />
+    </>
+  );
 }
 
 function LibraryPage() {

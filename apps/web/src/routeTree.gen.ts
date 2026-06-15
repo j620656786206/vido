@@ -18,6 +18,7 @@ import { Route as DownloadsRouteImport } from './routes/downloads'
 import { Route as DiscoverRouteImport } from './routes/discover'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
+import { Route as LibraryIndexRouteImport } from './routes/library/index'
 import { Route as TestManualSearchRouteImport } from './routes/test/manual-search'
 import { Route as TestGalleryRouteImport } from './routes/test/gallery'
 import { Route as SettingsStatusRouteImport } from './routes/settings/status'
@@ -30,6 +31,8 @@ import { Route as SettingsExportRouteImport } from './routes/settings/export'
 import { Route as SettingsConnectionRouteImport } from './routes/settings/connection'
 import { Route as SettingsCacheRouteImport } from './routes/settings/cache'
 import { Route as SettingsBackupRouteImport } from './routes/settings/backup'
+import { Route as LibraryTvRouteImport } from './routes/library/tv'
+import { Route as LibraryMoviesRouteImport } from './routes/library/movies'
 import { Route as MediaTypeIdRouteImport } from './routes/media/$type.$id'
 
 const SetupRoute = SetupRouteImport.update({
@@ -76,6 +79,11 @@ const SettingsIndexRoute = SettingsIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => SettingsRoute,
+} as any)
+const LibraryIndexRoute = LibraryIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => LibraryRoute,
 } as any)
 const TestManualSearchRoute = TestManualSearchRouteImport.update({
   id: '/test/manual-search',
@@ -137,6 +145,16 @@ const SettingsBackupRoute = SettingsBackupRouteImport.update({
   path: '/backup',
   getParentRoute: () => SettingsRoute,
 } as any)
+const LibraryTvRoute = LibraryTvRouteImport.update({
+  id: '/tv',
+  path: '/tv',
+  getParentRoute: () => LibraryRoute,
+} as any)
+const LibraryMoviesRoute = LibraryMoviesRouteImport.update({
+  id: '/movies',
+  path: '/movies',
+  getParentRoute: () => LibraryRoute,
+} as any)
 const MediaTypeIdRoute = MediaTypeIdRouteImport.update({
   id: '/media/$type/$id',
   path: '/media/$type/$id',
@@ -147,11 +165,13 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/discover': typeof DiscoverRoute
   '/downloads': typeof DownloadsRoute
-  '/library': typeof LibraryRoute
+  '/library': typeof LibraryRouteWithChildren
   '/pending': typeof PendingRoute
   '/search': typeof SearchRoute
   '/settings': typeof SettingsRouteWithChildren
   '/setup': typeof SetupRoute
+  '/library/movies': typeof LibraryMoviesRoute
+  '/library/tv': typeof LibraryTvRoute
   '/settings/backup': typeof SettingsBackupRoute
   '/settings/cache': typeof SettingsCacheRoute
   '/settings/connection': typeof SettingsConnectionRoute
@@ -164,6 +184,7 @@ export interface FileRoutesByFullPath {
   '/settings/status': typeof SettingsStatusRoute
   '/test/gallery': typeof TestGalleryRoute
   '/test/manual-search': typeof TestManualSearchRoute
+  '/library/': typeof LibraryIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/media/$type/$id': typeof MediaTypeIdRoute
 }
@@ -171,10 +192,11 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/discover': typeof DiscoverRoute
   '/downloads': typeof DownloadsRoute
-  '/library': typeof LibraryRoute
   '/pending': typeof PendingRoute
   '/search': typeof SearchRoute
   '/setup': typeof SetupRoute
+  '/library/movies': typeof LibraryMoviesRoute
+  '/library/tv': typeof LibraryTvRoute
   '/settings/backup': typeof SettingsBackupRoute
   '/settings/cache': typeof SettingsCacheRoute
   '/settings/connection': typeof SettingsConnectionRoute
@@ -187,6 +209,7 @@ export interface FileRoutesByTo {
   '/settings/status': typeof SettingsStatusRoute
   '/test/gallery': typeof TestGalleryRoute
   '/test/manual-search': typeof TestManualSearchRoute
+  '/library': typeof LibraryIndexRoute
   '/settings': typeof SettingsIndexRoute
   '/media/$type/$id': typeof MediaTypeIdRoute
 }
@@ -195,11 +218,13 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/discover': typeof DiscoverRoute
   '/downloads': typeof DownloadsRoute
-  '/library': typeof LibraryRoute
+  '/library': typeof LibraryRouteWithChildren
   '/pending': typeof PendingRoute
   '/search': typeof SearchRoute
   '/settings': typeof SettingsRouteWithChildren
   '/setup': typeof SetupRoute
+  '/library/movies': typeof LibraryMoviesRoute
+  '/library/tv': typeof LibraryTvRoute
   '/settings/backup': typeof SettingsBackupRoute
   '/settings/cache': typeof SettingsCacheRoute
   '/settings/connection': typeof SettingsConnectionRoute
@@ -212,6 +237,7 @@ export interface FileRoutesById {
   '/settings/status': typeof SettingsStatusRoute
   '/test/gallery': typeof TestGalleryRoute
   '/test/manual-search': typeof TestManualSearchRoute
+  '/library/': typeof LibraryIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/media/$type/$id': typeof MediaTypeIdRoute
 }
@@ -226,6 +252,8 @@ export interface FileRouteTypes {
     | '/search'
     | '/settings'
     | '/setup'
+    | '/library/movies'
+    | '/library/tv'
     | '/settings/backup'
     | '/settings/cache'
     | '/settings/connection'
@@ -238,6 +266,7 @@ export interface FileRouteTypes {
     | '/settings/status'
     | '/test/gallery'
     | '/test/manual-search'
+    | '/library/'
     | '/settings/'
     | '/media/$type/$id'
   fileRoutesByTo: FileRoutesByTo
@@ -245,10 +274,11 @@ export interface FileRouteTypes {
     | '/'
     | '/discover'
     | '/downloads'
-    | '/library'
     | '/pending'
     | '/search'
     | '/setup'
+    | '/library/movies'
+    | '/library/tv'
     | '/settings/backup'
     | '/settings/cache'
     | '/settings/connection'
@@ -261,6 +291,7 @@ export interface FileRouteTypes {
     | '/settings/status'
     | '/test/gallery'
     | '/test/manual-search'
+    | '/library'
     | '/settings'
     | '/media/$type/$id'
   id:
@@ -273,6 +304,8 @@ export interface FileRouteTypes {
     | '/search'
     | '/settings'
     | '/setup'
+    | '/library/movies'
+    | '/library/tv'
     | '/settings/backup'
     | '/settings/cache'
     | '/settings/connection'
@@ -285,6 +318,7 @@ export interface FileRouteTypes {
     | '/settings/status'
     | '/test/gallery'
     | '/test/manual-search'
+    | '/library/'
     | '/settings/'
     | '/media/$type/$id'
   fileRoutesById: FileRoutesById
@@ -293,7 +327,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DiscoverRoute: typeof DiscoverRoute
   DownloadsRoute: typeof DownloadsRoute
-  LibraryRoute: typeof LibraryRoute
+  LibraryRoute: typeof LibraryRouteWithChildren
   PendingRoute: typeof PendingRoute
   SearchRoute: typeof SearchRoute
   SettingsRoute: typeof SettingsRouteWithChildren
@@ -367,6 +401,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/settings/'
       preLoaderRoute: typeof SettingsIndexRouteImport
       parentRoute: typeof SettingsRoute
+    }
+    '/library/': {
+      id: '/library/'
+      path: '/'
+      fullPath: '/library/'
+      preLoaderRoute: typeof LibraryIndexRouteImport
+      parentRoute: typeof LibraryRoute
     }
     '/test/manual-search': {
       id: '/test/manual-search'
@@ -452,6 +493,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsBackupRouteImport
       parentRoute: typeof SettingsRoute
     }
+    '/library/tv': {
+      id: '/library/tv'
+      path: '/tv'
+      fullPath: '/library/tv'
+      preLoaderRoute: typeof LibraryTvRouteImport
+      parentRoute: typeof LibraryRoute
+    }
+    '/library/movies': {
+      id: '/library/movies'
+      path: '/movies'
+      fullPath: '/library/movies'
+      preLoaderRoute: typeof LibraryMoviesRouteImport
+      parentRoute: typeof LibraryRoute
+    }
     '/media/$type/$id': {
       id: '/media/$type/$id'
       path: '/media/$type/$id'
@@ -461,6 +516,21 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface LibraryRouteChildren {
+  LibraryMoviesRoute: typeof LibraryMoviesRoute
+  LibraryTvRoute: typeof LibraryTvRoute
+  LibraryIndexRoute: typeof LibraryIndexRoute
+}
+
+const LibraryRouteChildren: LibraryRouteChildren = {
+  LibraryMoviesRoute: LibraryMoviesRoute,
+  LibraryTvRoute: LibraryTvRoute,
+  LibraryIndexRoute: LibraryIndexRoute,
+}
+
+const LibraryRouteWithChildren =
+  LibraryRoute._addFileChildren(LibraryRouteChildren)
 
 interface SettingsRouteChildren {
   SettingsBackupRoute: typeof SettingsBackupRoute
@@ -498,7 +568,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DiscoverRoute: DiscoverRoute,
   DownloadsRoute: DownloadsRoute,
-  LibraryRoute: LibraryRoute,
+  LibraryRoute: LibraryRouteWithChildren,
   PendingRoute: PendingRoute,
   SearchRoute: SearchRoute,
   SettingsRoute: SettingsRouteWithChildren,
