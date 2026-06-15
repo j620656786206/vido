@@ -19,8 +19,8 @@ vi.mock('../scanner/ScanProgress', () => ({
 vi.mock('../../hooks/useLibrary', () => ({
   useLibraryStats: () => ({ data: { movieCount: 1, tvCount: 1 } }),
 }));
-vi.mock('../../hooks/useServiceStatus', () => ({
-  useServiceStatuses: () => ({ data: { services: [] }, isError: false }),
+vi.mock('../../hooks/useStatusSummary', () => ({
+  useStatusSummary: () => ({ data: undefined }),
 }));
 
 import { AppShellV2 } from './AppShellV2';

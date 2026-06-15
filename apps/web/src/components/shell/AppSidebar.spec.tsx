@@ -12,8 +12,8 @@ import {
 vi.mock('../../hooks/useLibrary', () => ({
   useLibraryStats: () => ({ data: { movieCount: 1284, tvCount: 86 } }),
 }));
-vi.mock('../../hooks/useServiceStatus', () => ({
-  useServiceStatuses: () => ({ data: { services: [] }, isError: false }),
+vi.mock('../../hooks/useStatusSummary', () => ({
+  useStatusSummary: () => ({ data: undefined }),
 }));
 
 import { AppSidebar } from './AppSidebar';
