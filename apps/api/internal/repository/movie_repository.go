@@ -364,6 +364,7 @@ func (r *MovieRepository) List(ctx context.Context, params ListParams) ([]models
 			id, title, original_title, release_date, genres, rating,
 			overview, poster_path, backdrop_path, runtime, original_language,
 			status, imdb_id, tmdb_id,
+			parse_status, subtitle_status, subtitle_language,
 			video_codec, video_resolution, audio_codec, audio_channels, subtitle_tracks, hdr_format,
 			created_at, updated_at
 		FROM movies
@@ -401,6 +402,9 @@ func (r *MovieRepository) List(ctx context.Context, params ListParams) ([]models
 			&movie.Status,
 			&movie.IMDbID,
 			&movie.TMDbID,
+			&movie.ParseStatus,
+			&movie.SubtitleStatus,
+			&movie.SubtitleLanguage,
 			&movie.VideoCodec,
 			&movie.VideoResolution,
 			&movie.AudioCodec,
@@ -622,7 +626,9 @@ const movieSelectColumns = `
 `
 
 // scanMovie scans a row into a Movie struct using the standard column order.
-func scanMovie(scanner interface{ Scan(dest ...interface{}) error }) (models.Movie, error) {
+func scanMovie(scanner interface {
+	Scan(dest ...interface{}) error
+}) (models.Movie, error) {
 	var movie models.Movie
 	var genresJSON string
 

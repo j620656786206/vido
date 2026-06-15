@@ -629,9 +629,9 @@ func TestSeriesGenresSerialization(t *testing.T) {
 	}
 
 	expectedGenres := map[string]bool{
-		"Drama":            true,
-		"Science Fiction":  true,
-		"Thriller":         true,
+		"Drama":           true,
+		"Science Fiction": true,
+		"Thriller":        true,
 	}
 
 	for _, genre := range found.Genres {
@@ -1282,5 +1282,57 @@ func TestSeriesFullTextSearchNoResults(t *testing.T) {
 	}
 	if pagination.TotalResults != 0 {
 		t.Errorf("Expected total results 0, got %d", pagination.TotalResults)
+	}
+}
+
+// TestSeriesListReturnsLifecycleFields guards the Rule-15 List() SELECT/scan sync
+// (ux3-0-1): parse_status / subtitle_status / subtitle_language must reach the
+// library-list read path, not only single-row FindByID. Mirrors the movie guard;
+// the v2 poster badge (N1) derives from these fields.
+func TestSeriesListReturnsLifecycleFields(t *testing.T) {
+	db := setupSeriesTestDB(t)
+	defer db.Close()
+
+	repo := NewSeriesRepository(db)
+	ctx := context.Background()
+
+	s := &models.Series{
+		ID:           "series-lifecycle",
+		Title:        "Lifecycle Series",
+		FirstAirDate: "2021-01-01",
+		Genres:       []string{"Drama"},
+	}
+	if err := repo.Create(ctx, s); err != nil {
+		t.Fatalf("Failed to create series: %v", err)
+	}
+
+	if _, err := db.ExecContext(ctx,
+		`UPDATE series SET parse_status = ?, subtitle_status = ?, subtitle_language = ? WHERE id = ?`,
+		string(models.ParseStatusSuccess), string(models.SubtitleStatusNotFound), "zh-Hant", "series-lifecycle",
+	); err != nil {
+		t.Fatalf("Failed to set lifecycle fields: %v", err)
+	}
+
+	params := NewListParams()
+	params.Page = 1
+	params.PageSize = 10
+
+	list, _, err := repo.List(ctx, params)
+	if err != nil {
+		t.Fatalf("Failed to list series: %v", err)
+	}
+	if len(list) != 1 {
+		t.Fatalf("Expected 1 series, got %d", len(list))
+	}
+
+	got := list[0]
+	if got.ParseStatus != models.ParseStatusSuccess {
+		t.Errorf("List() ParseStatus = %q, want %q (Rule-15 List SELECT/scan desync)", got.ParseStatus, models.ParseStatusSuccess)
+	}
+	if got.SubtitleStatus != models.SubtitleStatusNotFound {
+		t.Errorf("List() SubtitleStatus = %q, want %q", got.SubtitleStatus, models.SubtitleStatusNotFound)
+	}
+	if !got.SubtitleLanguage.Valid || got.SubtitleLanguage.String != "zh-Hant" {
+		t.Errorf("List() SubtitleLanguage = %v, want zh-Hant", got.SubtitleLanguage)
 	}
 }
