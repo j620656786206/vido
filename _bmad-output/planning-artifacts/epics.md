@@ -229,7 +229,7 @@ retires `/search`; reserves the Stats/Health landing (dashboards = Epics 16/18).
 **FRs covered:** PH3-M4, PH3-F5, PH3-R3
 
 ### Epic 6: ux3-subtitle-v2 — Subtitle management in v2
-> **🔶 2026-06-16 REVISION** (see `architecture/adr-subtitle-route-c-generation.md`): Route A *fetch* is de-scoped for 繁中 (POC-confirmed no viable source — Assrt token unobtainable, Zimuku WAF-dead). So this epic's v2 surface re-centres from **"manual + batch fetch UI"** to **Route C generation status + glossary management**: the detail `管理字幕` entry shows generate / 簡轉繁 / AI-校正 state; the Activity batch surface drives library-wide *generation*, not fetch. Fetch UI stays only as a dormant best-effort affordance.
+> **🔶 2026-06-16 REVISION** (see `architecture/adr-subtitle-route-c-generation.md`): Route A *fetch* is de-scoped for 繁中 (POC-confirmed no viable source — Assrt token unobtainable, Zimuku WAF-dead). So this epic's v2 surface re-centres from **"manual + batch fetch UI"** to **Route C generation status + glossary management**: the detail `管理字幕` entry shows generate / 簡轉繁 / AI-校正 state; the Activity batch surface drives library-wide *generation*, not fetch. Fetch UI stays only as a dormant best-effort affordance. **The existing `flow-f-subtitle` fetch design稿 (f1–f3: Assrt/Zimuku/OpenSub source chips, source-scored results, batch-fetch) is superseded — redrawn generation-centric by story 9R-UX before this epic's frontend.**
 >
 > Epic 8's manual + batch subtitle UI migrates to v2; the detail `管理字幕` entry + the
 Activity batch surface. Soft-depends on Activity (batch summary).

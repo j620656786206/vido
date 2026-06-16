@@ -375,6 +375,7 @@ development_status:
   #         + planning-artifacts/subtitle-v4-replan-and-feasibility-audit-2026-06.md
   # ==============================================================================
   epic-9R-subtitle-route-c: in-progress  # 2026-06-16 — story breakdown done (Bob), SPIKE-gated items = backlog
+  9R-UX-subtitle-v2-design:             ready-for-dev  # P0 UX (Sally) — redraw flow-f fetch UI → generation-centric + glossary; flow-f f1-f3 superseded; gates Epic 6 FE
   9R-S1-nfo-localization-spike:         ready-for-dev  # gates 9R-13
   9R-S2-nas-whisper-benchmark-spike:    ready-for-dev  # gates D2 default + 9R-9 local engine; OpenVINO-on-Intel-iGPU eval
   9R-S3-douban-fallback-spike:          ready-for-dev  # gates any 在地化 Douban path

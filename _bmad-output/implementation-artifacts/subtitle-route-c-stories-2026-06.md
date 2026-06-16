@@ -30,6 +30,21 @@
 
 ---
 
+## Track 0 — UX design (design稿 must catch up to Route C)
+
+### 9R-UX — v2 subtitle-management design (generation-centric) [Sally]
+- **Priority:** P0 (gates Epic 6 frontend) · **Effort:** M · **Type:** UX design story (delivers `.pen` + screenshots, not code) · **Feasibility:** PROVEN (POC validated the flow)
+- **Context:** The existing subtitle design (`flow-f-subtitle` f1–f3 in `ux-design.pen`) shows the now-DEAD multi-source **fetch** UI — `[✓ Assrt] [✓ Zimuku] [✓ OpenSub]` source chips, source-scored result rows (Assrt 92 / Zimuku 78), batch-fetch. Route A is de-scoped for 繁中, so these screens are stale and must be redrawn.
+- **AC:**
+  1. New v2 `.pen` frames for subtitle management: **`生成字幕` (Route C) is the primary action**; **no fetch-source chips**; show generation states (轉錄中/翻譯中/簡轉繁/AI校正中) + progress.
+  2. **Glossary-management surface** (per-show term ↔ zh-TW review/confirm) — visualizes 9R-6/7.
+  3. `flow-g` (AI subtitle) promoted to the primary path; the detail `管理字幕` entry + the Activity batch surface drive **generation**, not fetch.
+  4. Old `flow-f` fetch screens marked superseded (historical); screenshots regenerated + committed per the mandatory UX screenshots workflow.
+- **Depends:** informs/visualizes 9R-6, 9R-7; gates Epic 6 (ux3-subtitle-v2) frontend.
+- **Files:** `ux-design.pen`, `_bmad-output/screenshots/`
+
+---
+
 ## Track 1 — Production bug fixes (POC-PROVEN, immediately actionable)
 
 ### 9R-1 — Fix stale default Claude model
