@@ -43,6 +43,10 @@ type WhisperClient struct {
 	httpClient *http.Client
 	timeout    time.Duration
 	logger     *slog.Logger
+	// language is an optional ISO-639-1 hint (e.g. "en"). Empty = Whisper
+	// auto-detects, which is UNRELIABLE for media with background speech in
+	// other languages — pin it to the audio track's language when known.
+	language string
 }
 
 // WhisperOption is a functional option for configuring WhisperClient.
@@ -66,6 +70,14 @@ func WithWhisperHTTPClient(client *http.Client) WhisperOption {
 func WithWhisperTimeout(timeout time.Duration) WhisperOption {
 	return func(c *WhisperClient) {
 		c.timeout = timeout
+	}
+}
+
+// WithWhisperLanguage pins the source language (ISO-639-1, e.g. "en") so Whisper
+// does not mis-detect the language on media with mixed/background audio.
+func WithWhisperLanguage(lang string) WhisperOption {
+	return func(c *WhisperClient) {
+		c.language = lang
 	}
 }
 
@@ -127,6 +139,13 @@ func (c *WhisperClient) Transcribe(ctx context.Context, audioPath string) (strin
 	}
 	if err := writer.WriteField("response_format", "srt"); err != nil {
 		return "", fmt.Errorf("whisper: write format field: %w", err)
+	}
+	// Pin language when known — avoids unreliable auto-detection (e.g. an English
+	// episode mis-detected as Chinese due to a few seconds of background TV audio).
+	if c.language != "" {
+		if err := writer.WriteField("language", c.language); err != nil {
+			return "", fmt.Errorf("whisper: write language field: %w", err)
+		}
 	}
 
 	if err := writer.Close(); err != nil {
