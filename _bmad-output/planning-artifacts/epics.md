@@ -229,12 +229,16 @@ retires `/search`; reserves the Stats/Health landing (dashboards = Epics 16/18).
 **FRs covered:** PH3-M4, PH3-F5, PH3-R3
 
 ### Epic 6: ux3-subtitle-v2 — Subtitle management in v2
-Epic 8's manual + batch subtitle UI migrates to v2; the detail `管理字幕` entry + the
+> **🔶 2026-06-16 REVISION** (see `architecture/adr-subtitle-route-c-generation.md`): Route A *fetch* is de-scoped for 繁中 (POC-confirmed no viable source — Assrt token unobtainable, Zimuku WAF-dead). So this epic's v2 surface re-centres from **"manual + batch fetch UI"** to **Route C generation status + glossary management**: the detail `管理字幕` entry shows generate / 簡轉繁 / AI-校正 state; the Activity batch surface drives library-wide *generation*, not fetch. Fetch UI stays only as a dormant best-effort affordance.
+>
+> Epic 8's manual + batch subtitle UI migrates to v2; the detail `管理字幕` entry + the
 Activity batch surface. Soft-depends on Activity (batch summary).
 **FRs covered:** PH3-M5
 
 ### Epic 7: ux3-ai-subtitle — AI subtitles finally have a UI (P8 greenfield)
-Epic 9's terminology correction + Whisper translation (backend already shipped) get their
+> **🔶 2026-06-16 REVISION** (see `architecture/adr-subtitle-route-c-generation.md`): Promoted from optional greenfield to the **繁中 CORE path** — Route C generation is now the *sole* 繁中 source, so this is no longer a nice-to-have. Caveat: "backend already shipped" is qualified — a live POC found **4 production bugs** (Claude model 404, Whisper language pin, chunking 413, no retry) + **2 quality gaps** (VAD hallucination, proper-noun drift → glossary) that must be fixed first, plus new backend scope (glossary, `ASRProvider` pluggable engines, metadata-aware translation). FE design should assume the *generation* pipeline, not just terminology-correction.
+>
+> Epic 9's terminology correction + Whisper translation (backend already shipped) get their
 first frontend: AI-jobs in Activity + a detail trigger. Honors backend capability (no
 Pause/Resume control unless the backend supports it — Rule 24).
 **FRs covered:** PH3-G1

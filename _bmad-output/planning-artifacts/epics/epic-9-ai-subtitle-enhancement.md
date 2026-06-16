@@ -1,6 +1,10 @@
 # Epic 9: AI Subtitle Enhancement
 **Phase:** Phase 1 — Core Media Pipeline
 
+> **🔶 2026-06-16 REVISION — promoted from optional/P3 to the 繁中 CORE path.**
+> See `../architecture/adr-subtitle-route-c-generation.md` + `../subtitle-v4-replan-and-feasibility-audit-2026-06.md`.
+> With Route A fetch confirmed non-viable for 繁中 (Epic 8 revision), **Route C generation (transcribe → LLM-translate) is now the sole 繁中 path, not an optional enhancement.** A live POC validated the full pipeline end-to-end on a real 4K episode (ffmpeg → Whisper → Claude → OpenCC → write), producing natural 繁中. New scope added below: **(a)** per-show **glossary keystone** + `TranslationRequest{Fields,Glossary}` generalization + metadata-aware translation; **(b)** **`ASRProvider`** pluggable engines (cloud / self-hosted Speaches·WhisperLive-OpenVINO); **(c)** **VAD hallucination filter**; **(d)** 4 POC-surfaced production bug fixes (model 404, Whisper language pin, chunking 413, retry); **(e)** **metadata localization (Section E)** reusing the same infra. C-1 (terminology correction) stays. Success criteria below superseded by the re-plan's feasibility-gated backlog.
+
 Optional AI-powered subtitle enhancements for users who want higher quality Traditional Chinese subtitles. Terminology correction uses Claude API for word-level 簡→繁 fixes that OpenCC misses (e.g., proper nouns, technical terms, regional vocabulary). MKV English audio track translation uses Whisper for transcription followed by AI translation, enabling subtitle generation for content with no existing Chinese subtitles.
 
 **v4 Feature IDs covered:** P1-020, P1-021
