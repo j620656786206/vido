@@ -6,6 +6,8 @@
 **Reference:** Epic 8 Stories (8-1 through 8-10), UX Design Specification, Epic 5 Design Brief
 **Design File:** `ux-design.pen` (Pencil app — to be updated when screens are built)
 
+> **🔶 2026-06-16 SUPERSEDED for 繁中** (see `architecture/adr-subtitle-route-c-generation.md`): the multi-source **fetch** UI documented below — the manual-search dialog with `[✓ Assrt] [✓ Zimuku] [✓ OpenSub]` source chips, source-scored result rows, and batch-fetch (screens **flow-f-subtitle f1–f3**) — is **stale**. Route A fetch is non-viable for 繁中 (Assrt token unobtainable, Zimuku WAF-dead, OpenSubtitles 繁中-thin). The v2 redesign (Epic 6 / story **9R-UX**) re-centres this surface on **Route C generation**: `生成字幕` as the primary action, generation states (轉錄中/翻譯中/簡轉繁/AI校正中) + progress, glossary management — **no fetch-source chips**. flow-g (AI subtitle) is promoted from optional enhancement to the primary path. The Phase-1 fetch screens below are retained as historical record only.
+
 ---
 
 ## 1. Context
