@@ -368,6 +368,32 @@ development_status:
   epic-9-retrospective: done  # 2026-04-10 — 6 action items, 94% prev retro follow-through, zero blockers for Epic 10
 
   # ==============================================================================
+  # Epic 9R — Subtitle Route C (繁中 generation core) — 2026-06-16
+  # Route A fetch confirmed non-viable for 繁中 (Assrt token unobtainable, Zimuku WAF-dead,
+  # OpenSubtitles 繁中-thin). Route C generation is the sole 繁中 path — POC-validated end-to-end.
+  # Source: subtitle-route-c-stories-2026-06.md + architecture/adr-subtitle-route-c-generation.md
+  #         + planning-artifacts/subtitle-v4-replan-and-feasibility-audit-2026-06.md
+  # ==============================================================================
+  epic-9R-subtitle-route-c: in-progress  # 2026-06-16 — story breakdown done (Bob), SPIKE-gated items = backlog
+  9R-UX-subtitle-v2-design:             ready-for-dev  # P0 UX (Sally) — redraw flow-f fetch UI → generation-centric + glossary; flow-f f1-f3 superseded; gates Epic 6 FE
+  9R-S1-nfo-localization-spike:         ready-for-dev  # gates 9R-13
+  9R-S2-nas-whisper-benchmark-spike:    ready-for-dev  # gates D2 default + 9R-9 local engine; OpenVINO-on-Intel-iGPU eval
+  9R-S3-douban-fallback-spike:          ready-for-dev  # gates any 在地化 Douban path
+  9R-1-fix-stale-claude-model:          ready-for-dev  # P0 XS PROVEN — claude.go DefaultClaudeModel claude-3-5-haiku-latest -> 404
+  9R-2-pin-whisper-language:            ready-for-dev  # P0 S  PROVEN — WithWhisperLanguage from audio track (eng->en); option already added
+  9R-3-fix-whisper-chunking-413:        ready-for-dev  # P0 S  PROVEN — NeedsChunking(size) vs SplitAudioChunks/getWAVDuration(duration) inconsistency -> 413
+  9R-4-asr-llm-retry-backoff:           ready-for-dev  # P1 S  PROVEN — no retry today; one timeout killed a run; folds into 9R-11
+  9R-5-vad-hallucination-filter:        ready-for-dev  # P1 M  PROVEN — Whisper invented "like & subscribe" outro on silent credits
+  9R-6-show-glossary-schema:            ready-for-dev  # P0 keystone M PROVEN — proper-noun drift fix (隱形戰士/隱形特務)
+  9R-7-translationrequest-generalize:   ready-for-dev  # P0 keystone M PROVEN — TranslationRequest{Fields,Glossary}; depends 9R-6
+  9R-8-metadata-aware-translation:      ready-for-dev  # P1 S  PROVEN — feed title/plot/cast into prompt; depends 9R-7
+  9R-9-asrprovider-interface:           ready-for-dev  # P1 M  PROVEN — pluggable engine + base-URL config (Speaches/WhisperLive); anti-lock-in
+  9R-10-route-c-pipeline-orchestration: ready-for-dev  # P1 M  PROVEN — single flow extract->transcribe->translate->opencc->place; depends 9R-1..4,7,11
+  9R-11-ai-cost-quota-controls:         ready-for-dev  # P0 prereq M PROVEN — throttle/metering/budget before any batch run
+  9R-13-nfo-localization-writeback:     backlog        # P1 L  SPIKE-GATED(S1) — .nfo localize + additive zh-TW writeback; depends 9R-6,7,S1
+  9R-14-remove-zimuku-provider:         ready-for-dev  # P2 XS — D3, WAF-dead
+
+  # ==============================================================================
   # Epic 9 Retro Action Items (2026-04-10)
   # Source: epic-9-retro-2026-04-10.md
   # Rule: ALL retro action items become tracked entries — no exceptions

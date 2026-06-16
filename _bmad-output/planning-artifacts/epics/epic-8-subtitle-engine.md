@@ -1,6 +1,10 @@
 # Epic 8: Subtitle Engine
 **Phase:** Phase 1 — Core Media Pipeline
 
+> **🔶 2026-06-16 REVISION — fetch-first premise superseded for 繁中.**
+> See `../architecture/adr-subtitle-route-c-generation.md` + `../subtitle-v4-replan-and-feasibility-audit-2026-06.md`.
+> A live POC confirmed **all three fetch sources are non-viable for 繁中**: Zimuku WAF-dead, **Assrt token unobtainable (owner-verified)**, OpenSubtitles 繁中-thin. **Route A (fetch) is no longer the 繁中 strategy** — its code stays *dormant* (best-effort, never surfaced as reliable); **Zimuku provider is removed**. The 繁中 core moves to **Route C generation** (Epic 9, now promoted). Scoring / version-match / time-sync are **de-scoped for 繁中**. Historical content below retained for context; the engine itself (OpenCC, placer, 簡繁 detection, file management) is reused by Route C.
+
 Users can search for Traditional Chinese subtitles across multiple sources (Assrt, Zimuku, OpenSubtitles), with correct 簡繁 identification to prevent false-positive simplified Chinese subtitles. The engine integrates OpenCC for automatic simplified-to-traditional conversion, scores and ranks subtitle results by quality, supports auto-download for matched media, provides a manual search UI for unmatched content, and enables batch subtitle processing across the entire library. This is the core v4 MVP differentiator — solving the #1 pain point for Traditional Chinese NAS users.
 
 **v4 Feature IDs covered:** P1-010, P1-011, P1-012, P1-013, P1-014, P1-015, P1-016, P1-017, P1-018, P1-019
