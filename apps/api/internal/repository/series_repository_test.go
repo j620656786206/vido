@@ -456,6 +456,51 @@ func TestSeriesList(t *testing.T) {
 	}
 }
 
+// TestSeriesListReturnsVoteAverage guards the Rule-15 List SELECT/scan desync for
+// the rating column: the scanner stores the TMDb rating in vote_average, so a List
+// query that omits it silently drops the rating from every list view and breaks
+// sort_by=rating. List must surface vote_average the same way detail (FindByID) does.
+func TestSeriesListReturnsVoteAverage(t *testing.T) {
+	db := setupSeriesTestDB(t)
+	defer db.Close()
+
+	repo := NewSeriesRepository(db)
+	ctx := context.Background()
+
+	series := &models.Series{
+		ID:           "series-vote",
+		Title:        "Vote Series",
+		FirstAirDate: "2020-01-01",
+		Genres:       []string{"Drama"},
+	}
+	if err := repo.Create(ctx, series); err != nil {
+		t.Fatalf("Failed to create series: %v", err)
+	}
+
+	if _, err := db.ExecContext(ctx,
+		`UPDATE series SET vote_average = ? WHERE id = ?`, 8.9, "series-vote",
+	); err != nil {
+		t.Fatalf("Failed to set vote_average: %v", err)
+	}
+
+	params := NewListParams()
+	params.Page = 1
+	params.PageSize = 10
+
+	seriesList, _, err := repo.List(ctx, params)
+	if err != nil {
+		t.Fatalf("Failed to list series: %v", err)
+	}
+	if len(seriesList) != 1 {
+		t.Fatalf("Expected 1 series, got %d", len(seriesList))
+	}
+
+	got := seriesList[0]
+	if !got.VoteAverage.Valid || got.VoteAverage.Float64 != 8.9 {
+		t.Errorf("List() VoteAverage = %v, want 8.9 (Rule-15 List SELECT/scan desync — rating dropped from list views)", got.VoteAverage)
+	}
+}
+
 // TestSeriesListEmpty verifies empty list handling
 func TestSeriesListEmpty(t *testing.T) {
 	db := setupSeriesTestDB(t)

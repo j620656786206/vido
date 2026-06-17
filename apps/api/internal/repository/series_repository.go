@@ -332,7 +332,7 @@ func (r *SeriesRepository) List(ctx context.Context, params ListParams) ([]model
 	// Build and execute list query
 	query := fmt.Sprintf(`
 		SELECT
-			id, title, original_title, first_air_date, last_air_date, genres, rating,
+			id, title, original_title, first_air_date, last_air_date, genres, rating, vote_average,
 			overview, poster_path, backdrop_path, number_of_seasons, number_of_episodes,
 			status, original_language, imdb_id, tmdb_id, in_production,
 			parse_status, subtitle_status, subtitle_language,
@@ -366,6 +366,7 @@ func (r *SeriesRepository) List(ctx context.Context, params ListParams) ([]model
 			&s.LastAirDate,
 			&genresJSON,
 			&s.Rating,
+			&s.VoteAverage,
 			&s.Overview,
 			&s.PosterPath,
 			&s.BackdropPath,
