@@ -91,12 +91,14 @@ export function FilterPanel({
     refetch: refetchGenres,
   } = useLibraryGenres();
 
-  // Sync local state when external filters change
+  // Sync local state when external filters change. Instant mode (rail) reads `filters`
+  // directly and never touches local state, so skip the dead updates there.
   useEffect(() => {
+    if (instant) return;
     setLocalGenres(filters.genres);
     setLocalDecades(getSelectedDecades(filters.yearMin, filters.yearMax));
     setLocalUnmatched(filters.unmatched ?? false);
-  }, [filters.genres, filters.yearMin, filters.yearMax, filters.unmatched]);
+  }, [instant, filters.genres, filters.yearMin, filters.yearMax, filters.unmatched]);
 
   // Instant mode (desktop rail) is controlled off `filters`; batch mode off local state.
   const selectedGenres = instant ? filters.genres : localGenres;
@@ -182,7 +184,7 @@ export function FilterPanel({
               onClick={() => onTypeChange(t)}
               data-testid={`filter-type-${t}`}
               aria-pressed={mediaType === t}
-              className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm transition-colors ${
+              className={`inline-flex min-h-[44px] items-center gap-1 rounded-full px-3 py-1.5 text-sm transition-colors ${
                 mediaType === t
                   ? 'border border-[var(--accent-primary)] bg-[var(--accent-primary)]/15 text-blue-300'
                   : 'border border-transparent bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'
@@ -227,7 +229,7 @@ export function FilterPanel({
               type="button"
               onClick={() => refetchGenres()}
               data-testid="filter-genre-retry"
-              className="inline-flex items-center gap-1 text-sm font-medium text-[var(--accent-text)] hover:underline"
+              className="inline-flex min-h-[44px] items-center gap-1 text-sm font-medium text-[var(--accent-text)] hover:underline"
             >
               <RotateCcw className="h-3 w-3" aria-hidden="true" />
               重試

@@ -68,6 +68,21 @@ describe('FilterPanel', () => {
     expect(screen.getByText('影集')).toBeInTheDocument();
   });
 
+  it('type controls meet the ≥44px touch-target AC', () => {
+    renderWithProvider(
+      <FilterPanel
+        filters={emptyFilters}
+        mediaType="all"
+        onApply={onApply}
+        onClear={onClear}
+        onTypeChange={onTypeChange}
+      />
+    );
+    for (const t of ['all', 'movie', 'tv']) {
+      expect(screen.getByTestId(`filter-type-${t}`).className).toContain('min-h-[44px]');
+    }
+  });
+
   it('renders genre chip toggles from API data', () => {
     renderWithProvider(
       <FilterPanel

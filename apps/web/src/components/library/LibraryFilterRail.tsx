@@ -37,7 +37,7 @@ export function LibraryFilterRail({
   return (
     <aside
       data-testid="library-filter-rail"
-      className="sticky top-16 flex h-[calc(100vh-5rem)] w-[264px] flex-shrink-0 flex-col border-r border-[var(--border-subtle)]"
+      className="sticky top-16 flex h-[calc(100vh-4rem)] w-[264px] flex-shrink-0 flex-col border-r border-[var(--border-subtle)]"
     >
       {/* Rail header */}
       <div className="flex items-center justify-between px-5 pb-3 pt-5">

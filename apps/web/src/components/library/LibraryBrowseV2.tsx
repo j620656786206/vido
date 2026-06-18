@@ -342,6 +342,7 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
                   }
                   onRemoveYearMin={() => patchSearch({ yearMin: undefined })}
                   onRemoveYearMax={() => patchSearch({ yearMax: undefined })}
+                  onRemoveYears={() => patchSearch({ yearMin: undefined, yearMax: undefined })}
                   onRemoveUnmatched={() => patchSearch({ unmatched: undefined })}
                   onClearAll={clearFilters}
                 />

@@ -1,6 +1,6 @@
 # Story ux3-0-7 — Desktop library filter rail (frontend)
 
-**Epic:** ux3-foundation (UX Redesign Phase 3, reopened) · **Status:** review (impl done, 41 tests green, build+lint green)
+**Epic:** ux3-foundation (UX Redesign Phase 3, reopened) · **Status:** done (CR passed — M1/M2/M3 fixed; 53 tests green, build+lint green)
 **Owner:** Dev (Amelia) · **Type:** frontend · **FRs:** PH3-F3 (D2 — library filter)
 **Design ref:** ux3-0-6 (`.pen` flow-i `I5-D`/`I6-D`/`I7-D`, PR #89)
 
@@ -120,7 +120,36 @@ errors on changed files.
 `apps/web/src/components/library/LibraryFilterRail.tsx` (A),
 `apps/web/src/components/library/LibraryFilterRail.spec.tsx` (A),
 `apps/web/src/components/library/LibraryBrowseV2.tsx` (M),
-`apps/web/src/components/library/LibraryBrowseV2.spec.tsx` (M).
+`apps/web/src/components/library/LibraryBrowseV2.spec.tsx` (M),
+`apps/web/src/components/library/FilterChips.tsx` (M — CR M2),
+`apps/web/src/components/library/FilterChips.spec.tsx` (M — CR M2).
+
+## Change Log
+
+| Date       | Change                                                                                   |
+| ---------- | ---------------------------------------------------------------------------------------- |
+| 2026-06-18 | Story implemented (Tasks 1–6 [x], Task 7 [~] E2E deferred). 41/41 vitest, build+lint green. |
+| 2026-06-18 | Adversarial CR (Amelia): 0 High / 3 Medium / 4 Low. Fixed M1/M2/M3 + L1/L3 (option [1]).  |
+
+### CR fixes applied (2026-06-18)
+
+- **M1** — `類型` buttons (`FilterPanel.tsx`) + genre-error `重試` button gained `min-h-[44px]`;
+  the final AC (all rail controls ≥44px) was PARTIAL, now fully met. Regression test added
+  (`FilterPanel.spec` — type controls ≥44px).
+- **M2** — `FilterChips` now renders a full decade range (both bounds set) as ONE combined
+  chip (`YYYY–YYYY 年`, single ✕) so the chip row matches the rail's decade-as-one badge (AC
+  #4/#7). New optional `onRemoveYears` prop does an **atomic** clear (single navigate, no
+  two-step race); `LibraryBrowseV2` wires it; half-open ranges keep their single-bound chip.
+  `FilterChips.spec` updated + 1 new test.
+- **M3** — added this Change Log (was missing — story-hygiene gap).
+- **L1** — rail sticky height `calc(100vh-5rem)` → `calc(100vh-4rem)` to match `top-16` (no
+  16px bottom gap).
+- **L3** — `FilterPanel` instant mode now guards the local-state sync `useEffect` (instant
+  reads `filters` directly; the dead updates are skipped).
+- **Still open (accepted):** L2 — instant re-query debounce (UX watch-out #2, follow-up); L4
+  — `railCollapsed` persistence is desktop-only semantics but visually inert `<lg` (shared
+  `grid-cols-2 sm:grid-cols-3`). Post-fix: **vitest 53/53** (FilterChips 9→11, FilterPanel
+  28→29), `nx build web` ✓, `nx lint web` 0 errors.
 
 ## Dev notes
 
