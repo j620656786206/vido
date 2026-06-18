@@ -23,6 +23,7 @@ import { ViewToggle, type ViewMode } from './ViewToggle';
 import { PosterCardV2 } from './PosterCardV2';
 import { LibraryListRowV2 } from './LibraryListRowV2';
 import { LibraryFilterSheetV2 } from './LibraryFilterSheetV2';
+import { LibraryFilterRail } from './LibraryFilterRail';
 import { LibraryGridSkeletonV2, LibraryNoResultV2, LibraryErrorV2 } from './LibraryStatesV2';
 import { EmptyNoQBT } from './EmptyNoQBT';
 import { EmptyNoFolder } from './EmptyNoFolder';
@@ -41,6 +42,7 @@ import { VALID_SORT_FIELDS } from '../../types/library';
 const routeApi = getRouteApi('/library');
 const VIEW_STORAGE_KEY = 'vido:library:view';
 const SORT_STORAGE_KEY = 'vido:library:sort';
+const RAIL_STORAGE_KEY = 'vido:library:rail-collapsed';
 const DEFAULT_SORT = { sortBy: 'created_at' as SortField, sortOrder: 'desc' as SortOrder };
 
 function getStoredView(): ViewMode {
@@ -51,6 +53,13 @@ function getStoredView(): ViewMode {
     /* ignore */
   }
   return 'grid';
+}
+function getStoredRailCollapsed(): boolean {
+  try {
+    return localStorage.getItem(RAIL_STORAGE_KEY) === '1';
+  } catch {
+    return false;
+  }
 }
 function getStoredSort(): { sortBy: SortField; sortOrder: SortOrder } {
   try {
@@ -116,6 +125,16 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
   const effectiveSortOrder = (search.sortOrder as SortOrder) || stored.sortOrder;
   const [view, setView] = useState<ViewMode>(() => (search.view as ViewMode) || getStoredView());
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
+  // ux3-0-7: desktop rail collapse state (persisted); only meaningful at lg+.
+  const [railCollapsed, setRailCollapsedState] = useState<boolean>(() => getStoredRailCollapsed());
+  const setRailCollapsed = useCallback((next: boolean) => {
+    setRailCollapsedState(next);
+    try {
+      localStorage.setItem(RAIL_STORAGE_KEY, next ? '1' : '0');
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   const filters: FilterValues = useMemo(
     () => ({
@@ -131,6 +150,12 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
     filters.yearMin !== undefined ||
     filters.yearMax !== undefined ||
     filters.unmatched === true;
+  // Constraining-facet count for the rail badge / collapsed 篩選(n) button.
+  // Decade range (yearMin/yearMax) counts as ONE facet; type=全部 is not a constraint.
+  const activeFilterCount =
+    filters.genres.length +
+    (filters.yearMin !== undefined || filters.yearMax !== undefined ? 1 : 0) +
+    (filters.unmatched === true ? 1 : 0);
 
   const {
     items,
@@ -212,6 +237,14 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
       }),
     [patchSearch]
   );
+  const handleTypeChange = useCallback(
+    (t: LibraryMediaType) =>
+      navigate({
+        to: t === 'movie' ? '/library/movies' : t === 'tv' ? '/library/tv' : '/library',
+        search: (prev) => ({ ...prev, type: undefined }),
+      }),
+    [navigate]
+  );
 
   // Continuous scroll — observe a sentinel near the end of the grid.
   const sentinelRef = useRef<HTMLDivElement | null>(null);
@@ -230,122 +263,165 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
 
   const isEmpty = !isLoading && items.length === 0;
   const display = items.map(toDisplay).filter(Boolean) as DisplayFields[];
+  // ux3-0-7: grid reflows when the desktop rail takes the left column (lg+).
+  const gridColsClass = railCollapsed
+    ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6'
+    : 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5';
 
   return (
     <div className="px-4 py-6 sm:px-6">
-      {/* Integrated toolbar */}
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <SortSelector
-          sortBy={effectiveSortBy}
-          sortOrder={effectiveSortOrder}
-          onSortChange={handleSortChange}
-        />
-        <button
-          type="button"
-          onClick={() => setFilterSheetOpen(true)}
-          data-testid="library-filter-open"
-          className={`flex min-h-[44px] items-center gap-2 rounded-[var(--radius-md)] px-3 text-sm font-medium transition-colors ${
-            hasActiveFilters
-              ? 'bg-[var(--accent-subtle)] text-[var(--accent-text)]'
-              : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]'
-          }`}
-        >
-          <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
-          篩選
-        </button>
-
-        {hasActiveFilters && (
-          <div className="order-last w-full sm:order-none sm:w-auto">
-            <FilterChips
+      <div className="lg:flex lg:gap-6">
+        {/* Desktop filter rail (lg+ only); hidden when collapsed. <lg uses the sheet. */}
+        {!railCollapsed && (
+          <div className="hidden lg:block">
+            <LibraryFilterRail
               filters={filters}
-              onRemoveGenre={(g) =>
-                patchSearch({
-                  genres: filters.genres.filter((x) => x !== g).join(',') || undefined,
-                })
-              }
-              onRemoveYearMin={() => patchSearch({ yearMin: undefined })}
-              onRemoveYearMax={() => patchSearch({ yearMax: undefined })}
-              onRemoveUnmatched={() => patchSearch({ unmatched: undefined })}
-              onClearAll={clearFilters}
+              mediaType={currentType}
+              unmatchedCount={unmatchedCount}
+              activeCount={activeFilterCount}
+              onApply={applyFilters}
+              onClear={clearFilters}
+              onTypeChange={handleTypeChange}
+              onCollapse={() => setRailCollapsed(true)}
             />
           </div>
         )}
 
-        <span
-          data-testid="library-result-count"
-          className="ml-auto font-mono text-xs tabular-nums text-[var(--text-secondary)]"
-        >
-          {totalItems.toLocaleString()} 項
-        </span>
-        <ViewToggle view={view} onViewChange={handleViewChange} />
-      </div>
-
-      {/* States */}
-      {isError ? (
-        <LibraryErrorV2 code={(error as { code?: string })?.code} onRetry={() => refetch()} />
-      ) : isLoading ? (
-        <LibraryGridSkeletonV2 />
-      ) : isEmpty ? (
-        hasActiveFilters ? (
-          <LibraryNoResultV2 onClearFilters={clearFilters} />
-        ) : (
-          (() => {
-            const state = classifyEmptyState({
-              qbtConfigured: qbtConfig.data?.configured,
-              mediaLibrariesCount: mediaLibraries.data?.libraries?.length ?? 0,
-              itemsCount: 0,
-              isLoading: qbtConfig.isLoading || mediaLibraries.isLoading,
-            });
-            if (state === 'loading') return <LibraryGridSkeletonV2 />;
-            if (state === 'no-qbt') return <EmptyNoQBT />;
-            if (state === 'no-folder') return <EmptyNoFolder />;
-            return <EmptyReadyForScan />;
-          })()
-        )
-      ) : view === 'grid' ? (
-        <div
-          data-testid="library-grid-v2"
-          className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:gap-4 lg:grid-cols-4 xl:grid-cols-6"
-        >
-          {display.map((d) => (
-            <PosterCardV2
-              key={`${d.type}-${d.id}`}
-              id={d.id}
-              type={d.type}
-              title={d.title}
-              posterPath={d.posterPath}
-              year={d.year}
-              meta={d.meta}
-              voteAverage={d.voteAverage}
-              media={d.media}
+        <div className="min-w-0 lg:flex-1">
+          {/* Integrated toolbar */}
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <SortSelector
+              sortBy={effectiveSortBy}
+              sortOrder={effectiveSortOrder}
+              onSortChange={handleSortChange}
             />
-          ))}
-        </div>
-      ) : (
-        <div data-testid="library-list-v2" className="flex flex-col gap-0.5">
-          {display.map((d) => (
-            <LibraryListRowV2
-              key={`${d.type}-${d.id}`}
-              id={d.id}
-              type={d.type}
-              title={d.title}
-              posterPath={d.posterPath}
-              meta={d.listMeta}
-              voteAverage={d.voteAverage}
-              media={d.media}
-            />
-          ))}
-        </div>
-      )}
+            {/* Mobile (<lg): opens the bottom sheet */}
+            <button
+              type="button"
+              onClick={() => setFilterSheetOpen(true)}
+              data-testid="library-filter-open"
+              className={`flex min-h-[44px] items-center gap-2 rounded-[var(--radius-md)] px-3 text-sm font-medium transition-colors lg:hidden ${
+                hasActiveFilters
+                  ? 'bg-[var(--accent-subtle)] text-[var(--accent-text)]'
+                  : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]'
+              }`}
+            >
+              <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+              篩選
+            </button>
+            {/* Desktop (lg+): re-open the rail when collapsed */}
+            {railCollapsed && (
+              <button
+                type="button"
+                onClick={() => setRailCollapsed(false)}
+                data-testid="library-rail-expand"
+                className={`hidden min-h-[44px] items-center gap-2 rounded-[var(--radius-md)] px-3 text-sm font-medium transition-colors lg:flex ${
+                  activeFilterCount > 0
+                    ? 'bg-[var(--accent-subtle)] text-[var(--accent-text)]'
+                    : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]'
+                }`}
+              >
+                <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+                篩選
+                {activeFilterCount > 0 && (
+                  <span className="rounded-full bg-[var(--accent-primary)] px-1.5 font-mono text-[11px] tabular-nums text-[var(--text-on-accent)]">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </button>
+            )}
 
-      {/* Continuous-scroll sentinel */}
-      {!isEmpty && hasNextPage && (
-        <div ref={sentinelRef} className="h-10" aria-hidden="true">
-          {isFetchingNextPage && (
-            <p className="py-3 text-center text-xs text-[var(--text-muted)]">載入更多…</p>
+            {hasActiveFilters && (
+              <div className="order-last w-full sm:order-none sm:w-auto">
+                <FilterChips
+                  filters={filters}
+                  onRemoveGenre={(g) =>
+                    patchSearch({
+                      genres: filters.genres.filter((x) => x !== g).join(',') || undefined,
+                    })
+                  }
+                  onRemoveYearMin={() => patchSearch({ yearMin: undefined })}
+                  onRemoveYearMax={() => patchSearch({ yearMax: undefined })}
+                  onRemoveUnmatched={() => patchSearch({ unmatched: undefined })}
+                  onClearAll={clearFilters}
+                />
+              </div>
+            )}
+
+            <span
+              data-testid="library-result-count"
+              className="ml-auto font-mono text-xs tabular-nums text-[var(--text-secondary)]"
+            >
+              {totalItems.toLocaleString()} 項
+            </span>
+            <ViewToggle view={view} onViewChange={handleViewChange} />
+          </div>
+
+          {/* States */}
+          {isError ? (
+            <LibraryErrorV2 code={(error as { code?: string })?.code} onRetry={() => refetch()} />
+          ) : isLoading ? (
+            <LibraryGridSkeletonV2 />
+          ) : isEmpty ? (
+            hasActiveFilters ? (
+              <LibraryNoResultV2 onClearFilters={clearFilters} />
+            ) : (
+              (() => {
+                const state = classifyEmptyState({
+                  qbtConfigured: qbtConfig.data?.configured,
+                  mediaLibrariesCount: mediaLibraries.data?.libraries?.length ?? 0,
+                  itemsCount: 0,
+                  isLoading: qbtConfig.isLoading || mediaLibraries.isLoading,
+                });
+                if (state === 'loading') return <LibraryGridSkeletonV2 />;
+                if (state === 'no-qbt') return <EmptyNoQBT />;
+                if (state === 'no-folder') return <EmptyNoFolder />;
+                return <EmptyReadyForScan />;
+              })()
+            )
+          ) : view === 'grid' ? (
+            <div data-testid="library-grid-v2" className={`grid gap-3 md:gap-4 ${gridColsClass}`}>
+              {display.map((d) => (
+                <PosterCardV2
+                  key={`${d.type}-${d.id}`}
+                  id={d.id}
+                  type={d.type}
+                  title={d.title}
+                  posterPath={d.posterPath}
+                  year={d.year}
+                  meta={d.meta}
+                  voteAverage={d.voteAverage}
+                  media={d.media}
+                />
+              ))}
+            </div>
+          ) : (
+            <div data-testid="library-list-v2" className="flex flex-col gap-0.5">
+              {display.map((d) => (
+                <LibraryListRowV2
+                  key={`${d.type}-${d.id}`}
+                  id={d.id}
+                  type={d.type}
+                  title={d.title}
+                  posterPath={d.posterPath}
+                  meta={d.listMeta}
+                  voteAverage={d.voteAverage}
+                  media={d.media}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Continuous-scroll sentinel */}
+          {!isEmpty && hasNextPage && (
+            <div ref={sentinelRef} className="h-10" aria-hidden="true">
+              {isFetchingNextPage && (
+                <p className="py-3 text-center text-xs text-[var(--text-muted)]">載入更多…</p>
+              )}
+            </div>
           )}
         </div>
-      )}
+      </div>
 
       <LibraryFilterSheetV2
         open={filterSheetOpen}
@@ -358,12 +434,7 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
         unmatchedCount={unmatchedCount}
         onApply={applyFilters}
         onClear={clearFilters}
-        onTypeChange={(t) =>
-          navigate({
-            to: t === 'movie' ? '/library/movies' : t === 'tv' ? '/library/tv' : '/library',
-            search: (prev) => ({ ...prev, type: undefined }),
-          })
-        }
+        onTypeChange={handleTypeChange}
       />
     </div>
   );

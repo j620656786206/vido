@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   createRootRoute,
@@ -130,5 +131,45 @@ describe('LibraryBrowseV2', () => {
     renderBrowse('/library', 'movie');
     await screen.findByTestId('library-grid-v2');
     expect(h.lastArgs?.type).toBe('movie');
+  });
+});
+
+describe('LibraryBrowseV2 — desktop filter rail (ux3-0-7)', () => {
+  beforeEach(() => {
+    h.infinite = infinite({ items: [movie('a', '電影甲')], totalItems: 1 });
+    try {
+      localStorage.clear();
+    } catch {
+      /* ignore */
+    }
+  });
+
+  it('renders the persistent filter rail by default', async () => {
+    renderBrowse();
+    expect(await screen.findByTestId('library-filter-rail')).toBeInTheDocument();
+    // grid uses the rail-open column class (narrower lg columns)
+    expect(screen.getByTestId('library-grid-v2').className).toContain('lg:grid-cols-3');
+  });
+
+  it('collapse → rail hidden, 篩選 re-open button shown, grid reflows wider', async () => {
+    renderBrowse();
+    await screen.findByTestId('library-filter-rail');
+    await userEvent.click(screen.getByTestId('library-rail-collapse'));
+    expect(screen.queryByTestId('library-filter-rail')).not.toBeInTheDocument();
+    expect(screen.getByTestId('library-rail-expand')).toBeInTheDocument();
+    expect(screen.getByTestId('library-grid-v2').className).toContain('lg:grid-cols-4');
+  });
+
+  it('re-expand restores the rail', async () => {
+    renderBrowse();
+    await userEvent.click(await screen.findByTestId('library-rail-collapse'));
+    await userEvent.click(screen.getByTestId('library-rail-expand'));
+    expect(await screen.findByTestId('library-filter-rail')).toBeInTheDocument();
+  });
+
+  it('rail active-count counts genres + decade-range as one, not type', async () => {
+    renderBrowse('/library?genres=動作,科幻&yearMin=2020&yearMax=2029');
+    // 2 genres + 1 decade range = 3 (type=全部 not counted)
+    expect(await screen.findByTestId('library-rail-active-count')).toHaveTextContent('3');
   });
 });
