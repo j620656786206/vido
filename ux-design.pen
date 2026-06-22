@@ -84704,9 +84704,9 @@
     {
       "type": "frame",
       "id": "vpDLh",
-      "x": 31450,
-      "y": -5761,
-      "name": "I5-D",
+      "x": 17040,
+      "y": 34403,
+      "name": "I5-D · 篩選 Rail 常駐（桌面）",
       "clip": true,
       "width": 1440,
       "height": 900,
@@ -86387,9 +86387,9 @@
     {
       "type": "frame",
       "id": "VwTvy",
-      "x": 33050,
-      "y": -5761,
-      "name": "I6-D",
+      "x": 18600,
+      "y": 34403,
+      "name": "I6-D · 篩選 Rail 收合（桌面）",
       "clip": true,
       "width": 1440,
       "height": 900,
@@ -87302,9 +87302,9 @@
     {
       "type": "frame",
       "id": "SgncH",
-      "x": 31450,
-      "y": -4701,
-      "name": "I7-D",
+      "x": 17040,
+      "y": 35423,
+      "name": "I7-D · 篩選 Rail 狀態 spec（桌面）",
       "clip": true,
       "width": 1060,
       "height": 640,
@@ -88059,6 +88059,42 @@
           ]
         }
       ]
+    },
+    {
+      "type": "text",
+      "id": "UGcoG",
+      "x": 17040,
+      "y": 34363,
+      "name": "cap-I5-D",
+      "fill": "$text-secondary",
+      "content": "I5-D · 篩選 Rail 常駐（桌面）",
+      "fontFamily": "Noto Sans TC",
+      "fontSize": 20,
+      "fontWeight": "600"
+    },
+    {
+      "type": "text",
+      "id": "NY4yN",
+      "x": 18600,
+      "y": 34363,
+      "name": "cap-I6-D",
+      "fill": "$text-secondary",
+      "content": "I6-D · 篩選 Rail 收合（桌面）",
+      "fontFamily": "Noto Sans TC",
+      "fontSize": 20,
+      "fontWeight": "600"
+    },
+    {
+      "type": "text",
+      "id": "t1ZaY",
+      "x": 17040,
+      "y": 35383,
+      "name": "cap-I7-D",
+      "fill": "$text-secondary",
+      "content": "I7-D · 篩選 Rail 狀態 spec（桌面）",
+      "fontFamily": "Noto Sans TC",
+      "fontSize": 20,
+      "fontWeight": "600"
     }
   ],
   "variables": {
