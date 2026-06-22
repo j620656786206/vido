@@ -536,6 +536,11 @@ func main() {
 	batchCollector := subtitle.NewRepoCollector(repos.Movies, repos.Series, repos.Episodes)
 	batchProcessor := subtitle.NewBatchProcessor(subtitleEngine, sseHub, batchCollector, subtitle.DefaultBatchConfig())
 	subtitleHandler.SetBatchProcessor(batchProcessor)
+	// Activity hub aggregate (UX Redesign D4-1 / ux3-2-1) — composes live scan +
+	// batch-subtitle progress, pending-parse count, download counts, and recent parse
+	// events. Wired after batchProcessor since it reads it. Fail-soft per section (B1/F3).
+	activityService := services.NewActivityService(scannerService, batchProcessor, downloadService, repos.ParseJobs)
+	activityHandler := handlers.NewActivityHandler(activityService)
 	// parseProgressHandler already initialized above with defer Close()
 	slog.Info("Handlers initialized with service injection")
 
@@ -572,6 +577,7 @@ func main() {
 		cacheHandler.RegisterRoutes(apiV1)         // Must be before settingsHandler to avoid /settings/:key conflict
 		statusHandler.RegisterRoutes(apiV1)        // Must be before settingsHandler to avoid /settings/:key conflict
 		statusSummaryHandler.RegisterRoutes(apiV1) // GET /api/v1/status/summary — ambient NAS status strip (ux3-0-3, D4-2)
+		activityHandler.RegisterRoutes(apiV1)      // GET /api/v1/activity — Activity hub aggregate (ux3-2-1, D4-1)
 		backupHandler.RegisterRoutes(apiV1)        // Must be before settingsHandler to avoid /settings/:key conflict
 		exportHandler.RegisterRoutes(apiV1)        // Must be before settingsHandler to avoid /settings/:key conflict
 		settingsHandler.RegisterRoutes(apiV1)
