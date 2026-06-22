@@ -104,9 +104,9 @@ SCREENS = {
     "i74p2": ("flow-i-advanced-search", "i3"),
     "pjKVZ": ("flow-i-advanced-search", "i4-m"),
     # Desktop filter rail redesign (v2 Design System) — replaces mobile bottom-sheet misuse on lg+
-    "YEqii": ("flow-i-advanced-search", "i5-d"),  # rail persistent (hero)
-    "SPMwD": ("flow-i-advanced-search", "i6-d"),  # rail collapsed + filtered no-results
-    "m3yZy": ("flow-i-advanced-search", "i7-d"),  # rail states spec (genre loading / load-failed)
+    "vpDLh": ("flow-i-advanced-search", "i5-d"),  # rail persistent (hero) — re-merged onto feat/ux3-2-1 (#89 .pen frames reconstructed post main-merge)
+    "VwTvy": ("flow-i-advanced-search", "i6-d"),  # rail collapsed + filtered no-results — re-merged
+    "SgncH": ("flow-i-advanced-search", "i7-d"),  # rail states spec (genre loading / load-failed) — re-merged
     # Flow J — 設計決策 spec (PosterCard info-density & polish)
     "XlFIq": ("flow-j-specs", "j1-d"),
     # Design system reference docs (top of canvas, no flow code)
@@ -139,6 +139,13 @@ SCREENS = {
     "nnGs6": ("flow-h-homepage-v2", "h4-d"),
     "Z7OJB": ("flow-h-homepage-v2", "h5-d"),
     "xCQA7": ("flow-h-homepage-v2", "h6-d"),
+    # flow-k-activity-v2 — Phase-3 ux3-2-1 (Activity hub v2: net-new D4-1 destination,
+    # explain-why rows aggregating scan/subtitle/AI/parse + downloads-summary; four states)
+    "kMeWS": ("flow-k-activity-v2", "a1-d"),
+    "QIwY1": ("flow-k-activity-v2", "a2-m"),
+    "suCiI": ("flow-k-activity-v2", "a4-d"),
+    "DZnSv": ("flow-k-activity-v2", "a5-d"),
+    "M6ra92": ("flow-k-activity-v2", "a6-d"),
 }
 
 
