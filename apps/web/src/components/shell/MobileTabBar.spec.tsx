@@ -22,6 +22,7 @@ function renderBar(path = '/') {
   const routeTree = rootRoute.addChildren([
     mk('/'),
     mk('/library'),
+    mk('/activity'),
     mk('/discover'),
     mk('/downloads'),
     mk('/settings'),
@@ -34,19 +35,20 @@ function renderBar(path = '/') {
 }
 
 describe('MobileTabBar', () => {
-  it('renders the four pilot bottom-tabs plus a 更多 control', async () => {
+  it('renders the four bottom-tabs (首頁·媒體庫·活動·下載) plus a 更多 control', async () => {
     renderBar();
     expect(await screen.findByTestId('nav-home')).toBeInTheDocument();
     expect(screen.getByTestId('nav-library')).toBeInTheDocument();
-    expect(screen.getByTestId('nav-discover')).toBeInTheDocument();
+    // 活動 went live in ux3-2-3, taking the 3rd slot (探索 moved to the More sheet).
+    expect(screen.getByTestId('nav-activity')).toBeInTheDocument();
     expect(screen.getByTestId('nav-downloads')).toBeInTheDocument();
     expect(screen.getByTestId('nav-more')).toBeInTheDocument();
   });
 
   it('marks the active tab via router matching', async () => {
-    renderBar('/discover');
-    const discover = await screen.findByTestId('nav-discover');
-    expect(discover).toHaveAttribute('data-status', 'active');
+    renderBar('/activity');
+    const activity = await screen.findByTestId('nav-activity');
+    expect(activity).toHaveAttribute('data-status', 'active');
   });
 
   it('opens the More sheet (revealing 設定) when 更多 is tapped', async () => {
