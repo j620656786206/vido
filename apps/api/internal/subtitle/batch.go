@@ -56,12 +56,12 @@ type FailedItem struct {
 
 // BatchItem is a media item to process in a batch.
 type BatchItem struct {
-	MediaID            string
-	MediaType          string
-	MediaFilePath      string
-	Title              string
-	Resolution         string
-	ProductionCountry  string // comma-separated ISO codes
+	MediaID           string
+	MediaType         string
+	MediaFilePath     string
+	Title             string
+	Resolution        string
+	ProductionCountry string // comma-separated ISO codes
 }
 
 // BatchConfig holds configurable parameters for batch processing.
@@ -137,6 +137,21 @@ func (bp *BatchProcessor) GetProgress() *BatchProgress {
 	// Return a copy to avoid race
 	p := *bp.activeBatch
 	return &p
+}
+
+// ActivityProgress reports the active batch as primitives for the /activity aggregate
+// (ux3-2-1). Kept primitive on purpose: internal/services must NOT import this package
+// (subtitle already imports services — a shared type crossing here would import-cycle).
+// Returns active=false when no batch is running.
+func (bp *BatchProcessor) ActivityProgress() (active bool, percentDone, current, total int, currentItem string) {
+	p := bp.GetProgress()
+	if p == nil || p.Status != "running" {
+		return false, 0, 0, 0, ""
+	}
+	if p.TotalItems > 0 {
+		percentDone = p.CurrentIndex * 100 / p.TotalItems
+	}
+	return true, percentDone, p.CurrentIndex, p.TotalItems, p.CurrentItem
 }
 
 // Start begins batch processing in the background. Returns the batch ID and item count,
