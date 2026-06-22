@@ -361,7 +361,7 @@ func (r *MovieRepository) List(ctx context.Context, params ListParams) ([]models
 	// Build and execute list query
 	query := fmt.Sprintf(`
 		SELECT
-			id, title, original_title, release_date, genres, rating,
+			id, title, original_title, release_date, genres, rating, vote_average,
 			overview, poster_path, backdrop_path, runtime, original_language,
 			status, imdb_id, tmdb_id,
 			parse_status, subtitle_status, subtitle_language,
@@ -394,6 +394,7 @@ func (r *MovieRepository) List(ctx context.Context, params ListParams) ([]models
 			&movie.ReleaseDate,
 			&genresJSON,
 			&movie.Rating,
+			&movie.VoteAverage,
 			&movie.Overview,
 			&movie.PosterPath,
 			&movie.BackdropPath,

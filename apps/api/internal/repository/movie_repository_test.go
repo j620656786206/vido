@@ -561,6 +561,54 @@ func TestMovieListReturnsLifecycleFields(t *testing.T) {
 	}
 }
 
+// TestMovieListReturnsVoteAverage guards the Rule-15 List SELECT/scan desync for
+// the rating column: the scanner stores the TMDb rating in vote_average (not the
+// legacy rating column), so a List query that omits vote_average silently drops the
+// rating from every list view (home 最近新增 row, library grid) and breaks
+// sort_by=rating. List must surface vote_average the same way detail (FindByID) does.
+func TestMovieListReturnsVoteAverage(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	movie := &models.Movie{
+		ID:          "movie-vote",
+		Title:       "Vote Movie",
+		ReleaseDate: "2021-01-01",
+		Genres:      []string{"Drama"},
+	}
+	if err := repo.Create(ctx, movie); err != nil {
+		t.Fatalf("Failed to create movie: %v", err)
+	}
+
+	// Set the rating where the scanner actually writes it (vote_average), independent
+	// of whether Create persists it.
+	if _, err := db.ExecContext(ctx,
+		`UPDATE movies SET vote_average = ? WHERE id = ?`, 8.7, "movie-vote",
+	); err != nil {
+		t.Fatalf("Failed to set vote_average: %v", err)
+	}
+
+	params := NewListParams()
+	params.Page = 1
+	params.PageSize = 10
+
+	movies, _, err := repo.List(ctx, params)
+	if err != nil {
+		t.Fatalf("Failed to list movies: %v", err)
+	}
+	if len(movies) != 1 {
+		t.Fatalf("Expected 1 movie, got %d", len(movies))
+	}
+
+	got := movies[0]
+	if !got.VoteAverage.Valid || got.VoteAverage.Float64 != 8.7 {
+		t.Errorf("List() VoteAverage = %v, want 8.7 (Rule-15 List SELECT/scan desync — rating dropped from list views)", got.VoteAverage)
+	}
+}
+
 // TestMovieListEmpty verifies empty list handling
 func TestMovieListEmpty(t *testing.T) {
 	db := setupTestDB(t)
