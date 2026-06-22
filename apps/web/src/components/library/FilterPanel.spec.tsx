@@ -5,15 +5,20 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { FilterPanel } from './FilterPanel';
 import type { FilterValues } from './FilterPanel';
 
-// Mock the hooks
+// Mock the hooks — genres result is configurable so loading/error states are testable.
+const g = vi.hoisted(() => ({
+  genres: { data: ['Action', 'Drama', 'Comedy', '科幻'], refetch: () => {} } as Record<
+    string,
+    unknown
+  >,
+}));
 vi.mock('../../hooks/useLibrary', () => ({
-  useLibraryGenres: () => ({
-    data: ['Action', 'Drama', 'Comedy', '科幻'],
-  }),
+  useLibraryGenres: () => g.genres,
   useLibraryStats: () => ({
     data: { yearMin: 1990, yearMax: 2024, movieCount: 50, tvCount: 30, totalCount: 80 },
   }),
 }));
+const DEFAULT_GENRES = { data: ['Action', 'Drama', 'Comedy', '科幻'], refetch: () => {} };
 
 function renderWithProvider(ui: React.ReactElement) {
   const queryClient = new QueryClient({
@@ -32,6 +37,7 @@ describe('FilterPanel', () => {
     onApply = vi.fn();
     onClear = vi.fn();
     onTypeChange = vi.fn();
+    g.genres = { ...DEFAULT_GENRES };
   });
 
   it('renders panel heading', () => {
@@ -60,6 +66,21 @@ describe('FilterPanel', () => {
     expect(screen.getByText('全部')).toBeInTheDocument();
     expect(screen.getByText('電影')).toBeInTheDocument();
     expect(screen.getByText('影集')).toBeInTheDocument();
+  });
+
+  it('type controls meet the ≥44px touch-target AC', () => {
+    renderWithProvider(
+      <FilterPanel
+        filters={emptyFilters}
+        mediaType="all"
+        onApply={onApply}
+        onClear={onClear}
+        onTypeChange={onTypeChange}
+      />
+    );
+    for (const t of ['all', 'movie', 'tv']) {
+      expect(screen.getByTestId(`filter-type-${t}`).className).toContain('min-h-[44px]');
+    }
   });
 
   it('renders genre chip toggles from API data', () => {
@@ -434,5 +455,83 @@ describe('FilterPanel', () => {
     expect(onApply).toHaveBeenCalledWith(
       expect.objectContaining({ yearMin: undefined, yearMax: 1989 })
     );
+  });
+
+  // ux3-0-7: instant mode (desktop rail) + fail-soft genre states
+  describe('instant mode', () => {
+    function renderInstant(filters: FilterValues = emptyFilters) {
+      return renderWithProvider(
+        <FilterPanel
+          instant
+          filters={filters}
+          mediaType="all"
+          onApply={onApply}
+          onClear={onClear}
+          onTypeChange={onTypeChange}
+        />
+      );
+    }
+
+    it('hides 套用/重置 and the panel title', () => {
+      renderInstant();
+      expect(screen.queryByTestId('filter-apply')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('filter-reset')).not.toBeInTheDocument();
+      expect(screen.queryByText('篩選條件')).not.toBeInTheDocument();
+    });
+
+    it('applies a genre toggle immediately (no 套用 click)', async () => {
+      renderInstant();
+      await userEvent.click(screen.getByTestId('filter-genre-Drama'));
+      expect(onApply).toHaveBeenCalledWith(expect.objectContaining({ genres: ['Drama'] }));
+    });
+
+    it('applies a decade toggle immediately', async () => {
+      renderInstant();
+      await userEvent.click(screen.getByTestId('filter-decade-2020s'));
+      expect(onApply).toHaveBeenCalledWith(
+        expect.objectContaining({ yearMin: 2020, yearMax: 2029 })
+      );
+    });
+
+    it('de-selects a genre present in controlled filters', async () => {
+      renderInstant({ genres: ['Drama'], yearMin: undefined, yearMax: undefined });
+      await userEvent.click(screen.getByTestId('filter-genre-Drama'));
+      expect(onApply).toHaveBeenCalledWith(expect.objectContaining({ genres: [] }));
+    });
+  });
+
+  describe('genre fail-soft states', () => {
+    it('renders a skeleton while genres load', () => {
+      g.genres = { data: undefined, isLoading: true, refetch: () => {} };
+      renderWithProvider(
+        <FilterPanel
+          filters={emptyFilters}
+          mediaType="all"
+          onApply={onApply}
+          onClear={onClear}
+          onTypeChange={onTypeChange}
+        />
+      );
+      expect(screen.getByTestId('filter-genre-loading')).toBeInTheDocument();
+    });
+
+    it('renders an inline error + retry on genre load failure, rest still usable', async () => {
+      const refetch = vi.fn();
+      g.genres = { data: undefined, isError: true, refetch };
+      renderWithProvider(
+        <FilterPanel
+          filters={emptyFilters}
+          mediaType="all"
+          onApply={onApply}
+          onClear={onClear}
+          onTypeChange={onTypeChange}
+        />
+      );
+      expect(screen.getByTestId('filter-genre-error')).toHaveTextContent('類別載入失敗');
+      // other sections remain usable (fail-soft)
+      expect(screen.getByTestId('filter-decade-2020s')).toBeInTheDocument();
+      await userEvent.click(screen.getByTestId('filter-genre-retry'));
+      expect(refetch).toHaveBeenCalled();
+    });
   });
 });

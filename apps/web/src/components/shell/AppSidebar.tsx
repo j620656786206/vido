@@ -16,7 +16,17 @@ import { SidebarNavItem } from './SidebarNavItem';
 import { SidebarGroupLabel } from './SidebarGroupLabel';
 import { SidebarGroupParent } from './SidebarGroupParent';
 import { SidebarFooter } from './SidebarFooter';
-import { HOME, LIBRARY, MOVIES, TV, DISCOVER, DOWNLOADS, SETTINGS, RAIL_DESTS } from './navModel';
+import {
+  HOME,
+  LIBRARY,
+  MOVIES,
+  TV,
+  DISCOVER,
+  ACTIVITY,
+  DOWNLOADS,
+  SETTINGS,
+  RAIL_DESTS,
+} from './navModel';
 
 interface AppSidebarProps {
   collapsed: boolean;
@@ -140,6 +150,12 @@ export function AppSidebar({ collapsed, onToggleCollapse }: AppSidebarProps) {
               />
 
               <SidebarGroupLabel>任務</SidebarGroupLabel>
+              <SidebarNavItem
+                to={ACTIVITY.to}
+                label={ACTIVITY.label}
+                icon={ACTIVITY.icon}
+                navKey={ACTIVITY.key}
+              />
               <SidebarNavItem
                 to={DOWNLOADS.to}
                 label={DOWNLOADS.label}

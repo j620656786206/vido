@@ -47,7 +47,7 @@ describe('FilterChips', () => {
     expect(screen.getByText('科幻')).toBeInTheDocument();
   });
 
-  it('renders year range chips', () => {
+  it('renders a full decade range as ONE combined chip (matches rail badge decade-as-one)', () => {
     render(
       <FilterChips
         filters={{ genres: [], yearMin: 2000, yearMax: 2020 }}
@@ -58,8 +58,42 @@ describe('FilterChips', () => {
         onClearAll={onClearAll}
       />
     );
-    expect(screen.getByText('2000 年起')).toBeInTheDocument();
-    expect(screen.getByText('至 2020 年')).toBeInTheDocument();
+    expect(screen.getByText('2000–2020 年')).toBeInTheDocument();
+    expect(screen.queryByText('2000 年起')).not.toBeInTheDocument();
+    expect(screen.queryByText('至 2020 年')).not.toBeInTheDocument();
+  });
+
+  it('combined year chip prefers onRemoveYears (atomic), falls back to both bounds', async () => {
+    const onRemoveYears = vi.fn();
+    const { rerender } = render(
+      <FilterChips
+        filters={{ genres: [], yearMin: 2000, yearMax: 2020 }}
+        onRemoveGenre={onRemoveGenre}
+        onRemoveYearMin={onRemoveYearMin}
+        onRemoveYearMax={onRemoveYearMax}
+        onRemoveYears={onRemoveYears}
+        onRemoveUnmatched={onRemoveUnmatched}
+        onClearAll={onClearAll}
+      />
+    );
+    await userEvent.click(screen.getByLabelText('移除年份篩選'));
+    expect(onRemoveYears).toHaveBeenCalledTimes(1);
+    expect(onRemoveYearMin).not.toHaveBeenCalled();
+
+    // No onRemoveYears → fall back to clearing both bounds.
+    rerender(
+      <FilterChips
+        filters={{ genres: [], yearMin: 2000, yearMax: 2020 }}
+        onRemoveGenre={onRemoveGenre}
+        onRemoveYearMin={onRemoveYearMin}
+        onRemoveYearMax={onRemoveYearMax}
+        onRemoveUnmatched={onRemoveUnmatched}
+        onClearAll={onClearAll}
+      />
+    );
+    await userEvent.click(screen.getByLabelText('移除年份篩選'));
+    expect(onRemoveYearMin).toHaveBeenCalledTimes(1);
+    expect(onRemoveYearMax).toHaveBeenCalledTimes(1);
   });
 
   it('calls onRemoveGenre when clicking X on genre chip', async () => {
@@ -120,7 +154,7 @@ describe('FilterChips', () => {
     );
     // All chip spans should use blue styling (not green)
     const chipSpans = container.querySelectorAll('span.rounded-full');
-    expect(chipSpans.length).toBe(3); // 1 genre + yearMin + yearMax
+    expect(chipSpans.length).toBe(2); // 1 genre + 1 combined decade-range chip
     chipSpans.forEach((span) => {
       expect(span.className).toContain('bg-[var(--accent-primary)]/20');
       expect(span.className).toContain('text-blue-300');

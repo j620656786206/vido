@@ -103,6 +103,10 @@ SCREENS = {
     "TMaw5": ("flow-i-advanced-search", "i2"),
     "i74p2": ("flow-i-advanced-search", "i3"),
     "pjKVZ": ("flow-i-advanced-search", "i4-m"),
+    # Desktop filter rail redesign (v2 Design System) — replaces mobile bottom-sheet misuse on lg+
+    "YEqii": ("flow-i-advanced-search", "i5-d"),  # rail persistent (hero)
+    "SPMwD": ("flow-i-advanced-search", "i6-d"),  # rail collapsed + filtered no-results
+    "m3yZy": ("flow-i-advanced-search", "i7-d"),  # rail states spec (genre loading / load-failed)
     # Flow J — 設計決策 spec (PosterCard info-density & polish)
     "XlFIq": ("flow-j-specs", "j1-d"),
     # Design system reference docs (top of canvas, no flow code)

@@ -2227,11 +2227,13 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     width: 320,
     seedQueries: [
       {
-        queryKey: libraryKeys.all,
+        // ux3-0-7: must match useLibraryGenres()'s exact key (libraryKeys.genres() =
+        // ['library','genres']). The old libraryKeys.all (['library']) key did NOT seed
+        // the genre query, so the fixture hit the real backend → non-deterministic genre
+        // load → variable FilterPanel height → flaky focus baseline on the Linux bootstrap.
+        queryKey: libraryKeys.genres(),
         data: ['動作', '劇情', '喜劇', '科幻', '驚悚'],
       },
-      // FilterPanel uses useGenres() which keys on libraryKeys.genres()-style.
-      // Fall back to a broader key if the exact builder differs — string[] data shape.
     ],
   },
   {

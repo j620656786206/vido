@@ -40,17 +40,18 @@ function renderSidebar(opts: { collapsed?: boolean; onToggle?: () => void; path?
 }
 
 describe('AppSidebar', () => {
-  it('renders the pilot-scope destinations (內容 + 任務), not the deferred ones', async () => {
+  it('renders the live destinations (內容 + 任務), not the still-deferred 系統', async () => {
     renderSidebar();
     expect(await screen.findByTestId('nav-home')).toBeInTheDocument();
     expect(screen.getByTestId('nav-library')).toBeInTheDocument();
     expect(screen.getByTestId('nav-movies')).toBeInTheDocument();
     expect(screen.getByTestId('nav-tv')).toBeInTheDocument();
     expect(screen.getByTestId('nav-discover')).toBeInTheDocument();
+    // 活動 went live in ux3-2-3.
+    expect(screen.getByTestId('nav-activity')).toBeInTheDocument();
     expect(screen.getByTestId('nav-downloads')).toBeInTheDocument();
     expect(screen.getByTestId('nav-settings')).toBeInTheDocument();
-    // Deferred (routes do not exist in the pilot)
-    expect(screen.queryByTestId('nav-activity')).not.toBeInTheDocument();
+    // 系統 is still deferred (route not built yet).
     expect(screen.queryByTestId('nav-system')).not.toBeInTheDocument();
   });
 
