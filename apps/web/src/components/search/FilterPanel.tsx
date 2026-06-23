@@ -1,5 +1,6 @@
 // Design ref: ux-design.pen Screen AS-1 Advanced Filter Chips Desktop (rsAxf)
 // Source: ux-design.pen (Pencil app)
+import { useEffect, useRef, useState } from 'react';
 import { Check } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import {
@@ -17,6 +18,13 @@ interface FilterPanelProps {
   /** Controlled change handler. Desktop wires this to instant URL updates (AC #5). */
   onChange: (next: DiscoverFilters) => void;
   className?: string;
+  /**
+   * ux3-3-2 AC #4: debounce (ms) for the NUMERIC year inputs only — categorical
+   * chips (genre/region/rating/platform/sort) always stay instant. `0` (default)
+   * commits every keystroke, preserving the legacy/per-keystroke behavior; the v2
+   * rail passes a positive value so typing "1995" fires ONE query, not four.
+   */
+  debounceMs?: number;
 }
 
 const chipClass = (active: boolean) =>
@@ -36,7 +44,15 @@ const sectionLabelClass =
  * apply changes instantly to the URL and the mobile bottom sheet can drive a
  * local draft before committing.
  */
-export function FilterPanel({ filters, onChange, className }: FilterPanelProps) {
+export function FilterPanel({ filters, onChange, className, debounceMs = 0 }: FilterPanelProps) {
+  // Latest filters in a ref so a debounced year commit composes against fresh
+  // categorical state instead of a stale closure. Synced in an effect (never
+  // mutate a ref during render).
+  const filtersRef = useRef(filters);
+  useEffect(() => {
+    filtersRef.current = filters;
+  }, [filters]);
+
   const toggleGenre = (id: number) => {
     onChange({
       ...filters,
@@ -50,9 +66,63 @@ export function FilterPanel({ filters, onChange, className }: FilterPanelProps) 
     onChange({ ...filters, region: filters.region === code ? undefined : code });
   };
 
+  // ux3-3-2 AC #4: the year inputs render from local state (so typing is
+  // immediately responsive) but COMMIT to onChange on a debounce. Both year
+  // bounds are committed together from the latest input refs so editing one
+  // bound never drops a pending edit to the other.
+  const [yearGteInput, setYearGteInput] = useState<string>(filters.yearGte?.toString() ?? '');
+  const [yearLteInput, setYearLteInput] = useState<string>(filters.yearLte?.toString() ?? '');
+  const inputsRef = useRef({ gte: yearGteInput, lte: yearLteInput });
+  const yearTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Resync local inputs when the committed year bounds change externally (chip
+  // removed, 清除全部, preset applied) — keep state AND ref in lockstep.
+  useEffect(() => {
+    const s = filters.yearGte?.toString() ?? '';
+    setYearGteInput(s);
+    inputsRef.current.gte = s;
+  }, [filters.yearGte]);
+  useEffect(() => {
+    const s = filters.yearLte?.toString() ?? '';
+    setYearLteInput(s);
+    inputsRef.current.lte = s;
+  }, [filters.yearLte]);
+
+  // Cancel a pending debounce on unmount.
+  useEffect(
+    () => () => {
+      if (yearTimer.current) clearTimeout(yearTimer.current);
+    },
+    []
+  );
+
+  const commitYears = () => {
+    const parse = (raw: string): number | undefined => {
+      if (raw.trim() === '') return undefined;
+      const n = parseInt(raw, 10);
+      return Number.isFinite(n) ? n : undefined;
+    };
+    onChange({
+      ...filtersRef.current,
+      yearGte: parse(inputsRef.current.gte),
+      yearLte: parse(inputsRef.current.lte),
+    });
+  };
+
   const setYear = (key: 'yearGte' | 'yearLte', raw: string) => {
-    const value = raw.trim() === '' ? undefined : parseInt(raw, 10);
-    onChange({ ...filters, [key]: Number.isFinite(value) ? value : undefined });
+    if (key === 'yearGte') {
+      setYearGteInput(raw);
+      inputsRef.current.gte = raw;
+    } else {
+      setYearLteInput(raw);
+      inputsRef.current.lte = raw;
+    }
+    if (debounceMs > 0) {
+      if (yearTimer.current) clearTimeout(yearTimer.current);
+      yearTimer.current = setTimeout(commitYears, debounceMs);
+    } else {
+      commitYears();
+    }
   };
 
   const selectRating = (value: number) => {
@@ -121,7 +191,7 @@ export function FilterPanel({ filters, onChange, className }: FilterPanelProps) 
           <input
             type="number"
             inputMode="numeric"
-            value={filters.yearGte ?? ''}
+            value={yearGteInput}
             onChange={(e) => setYear('yearGte', e.target.value)}
             placeholder="不限"
             aria-label="最早年份"
@@ -132,7 +202,7 @@ export function FilterPanel({ filters, onChange, className }: FilterPanelProps) 
           <input
             type="number"
             inputMode="numeric"
-            value={filters.yearLte ?? ''}
+            value={yearLteInput}
             onChange={(e) => setYear('yearLte', e.target.value)}
             placeholder="不限"
             aria-label="最晚年份"

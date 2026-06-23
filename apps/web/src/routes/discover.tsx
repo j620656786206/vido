@@ -9,6 +9,8 @@ import { FilterBottomSheet } from '../components/search/FilterBottomSheet';
 import { PresetChips } from '../components/search/PresetChips';
 import { SavePresetDialog } from '../components/search/SavePresetDialog';
 import { SearchResults } from '../components/search/SearchResults';
+import { DiscoverBrowseV2 } from '../components/search/DiscoverBrowseV2';
+import { useShellVersion } from '../components/shell/shellVersion';
 import { useFilterState } from '../hooks/useFilterState';
 import { useDiscoverResults } from '../hooks/useDiscoverResults';
 import { hasActiveFilters, type DiscoverFilters, type SortKey } from '../lib/discoverFilters';
@@ -41,6 +43,11 @@ function toCsvString(value: unknown): string | undefined {
 }
 
 export const Route = createFileRoute('/discover')({
+  // ux3-3-2 AC #1: migrated route — AppShellV2 renders it full-bleed under the v2
+  // shell (LegacyContentContainer opt-out). The flag stays read-once in __root (F4);
+  // the component branches on useShellVersion() so the legacy render is byte-unchanged
+  // when the flag is OFF.
+  staticData: { shell: 'v2' },
   validateSearch: (search: Record<string, unknown>): DiscoverSearchParams => ({
     genre: toCsvString(search.genre),
     year_gte: toOptionalNumber(search.year_gte),
@@ -59,7 +66,14 @@ export const Route = createFileRoute('/discover')({
   component: DiscoverPage,
 });
 
+// ux3-3-2 AC #1: v2 shell → the new persistent-rail experience; legacy shell →
+// the current JSX byte-unchanged (mirrors the ux3-1-2 home / ux3-2-3 activity gate).
 function DiscoverPage() {
+  const shell = useShellVersion();
+  return shell === 'v2' ? <DiscoverBrowseV2 /> : <LegacyDiscover />;
+}
+
+function LegacyDiscover() {
   const { type, page } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
   const { filters, setFilters, clearAll } = useFilterState();

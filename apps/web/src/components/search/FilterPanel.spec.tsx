@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { FilterPanel } from './FilterPanel';
 import type { DiscoverFilters } from '../../lib/discoverFilters';
@@ -76,5 +76,33 @@ describe('FilterPanel', () => {
     render(<FilterPanel filters={baseFilters} onChange={onChange} />);
     fireEvent.change(screen.getByTestId('filter-sort'), { target: { value: 'rating' } });
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ sortBy: 'rating' }));
+  });
+
+  it('debounces the numeric year input so typing fires onChange once (AC #4)', () => {
+    vi.useFakeTimers();
+    try {
+      const onChange = vi.fn();
+      render(<FilterPanel filters={baseFilters} onChange={onChange} debounceMs={350} />);
+      const input = screen.getByTestId('filter-year-gte');
+      for (const value of ['1', '19', '199', '1995']) {
+        fireEvent.change(input, { target: { value } });
+      }
+      // Displayed value tracks typing immediately…
+      expect(input).toHaveValue(1995);
+      // …but the commit is debounced.
+      expect(onChange).not.toHaveBeenCalled();
+      act(() => vi.advanceTimersByTime(350));
+      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ yearGte: 1995 }));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('keeps categorical chips instant even when debounceMs is set (AC #4)', () => {
+    const onChange = vi.fn();
+    render(<FilterPanel filters={baseFilters} onChange={onChange} debounceMs={350} />);
+    fireEvent.click(screen.getByTestId('filter-genre-16'));
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ genre: [16] }));
   });
 });

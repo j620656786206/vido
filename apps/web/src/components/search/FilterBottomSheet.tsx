@@ -15,6 +15,12 @@ interface FilterBottomSheetProps {
   onApply: (next: DiscoverFilters) => void;
   /** Media type in scope — drives the live draft result count. */
   mediaType: DiscoverMediaType;
+  /**
+   * ux3-3-2 AC #9: `v2` restyles the sheet to the v2 design (radius-xl corner +
+   * overlay-scrim backdrop) and debounces the draft year inputs, while KEEPING the
+   * batch apply. `default` preserves the legacy styling byte-unchanged.
+   */
+  variant?: 'default' | 'v2';
 }
 
 /**
@@ -28,7 +34,9 @@ export function FilterBottomSheet({
   filters,
   onApply,
   mediaType,
+  variant = 'default',
 }: FilterBottomSheetProps) {
+  const isV2 = variant === 'v2';
   const [draft, setDraft] = useState<DiscoverFilters>(filters);
   const sheetRef = useRef<HTMLDivElement>(null);
 
@@ -80,7 +88,10 @@ export function FilterBottomSheet({
         type="button"
         aria-label="關閉篩選"
         onClick={onClose}
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className={cn(
+          'absolute inset-0 backdrop-blur-sm',
+          isV2 ? 'bg-[var(--overlay-scrim)]' : 'bg-black/50'
+        )}
         data-testid="filter-sheet-backdrop"
       />
 
@@ -89,7 +100,8 @@ export function FilterBottomSheet({
         ref={sheetRef}
         tabIndex={-1}
         className={cn(
-          'absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-2xl',
+          'absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto',
+          isV2 ? 'rounded-t-[var(--radius-xl)]' : 'rounded-t-2xl',
           'bg-[var(--bg-primary)] shadow-2xl outline-none'
         )}
         data-testid="filter-bottom-sheet"
@@ -113,7 +125,7 @@ export function FilterBottomSheet({
 
         {/* Controls */}
         <div className="px-4 pb-4">
-          <FilterPanel filters={draft} onChange={setDraft} />
+          <FilterPanel filters={draft} onChange={setDraft} debounceMs={isV2 ? 350 : 0} />
         </div>
 
         {/* Apply */}

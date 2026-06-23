@@ -1,6 +1,6 @@
 # Story ux3-3-2 — Discover v2 frontend (persistent instant filter rail)
 
-Status: ready-for-dev
+Status: review
 
 **Epic:** ux3-discover-v2 (UX Redesign Phase 3) · **Type:** frontend · **FRs:** PH3-M2, PH3-R2
 **Design:** ux3-3-1 (`.pen` `flow-i-discover-v2`, PR #94) · **Owner:** dev (`dev-story`) → tea (visual + E2E)
@@ -85,19 +85,19 @@ NOT a behavior change to batch (the ux3-3-1 adversarial UX panel + shipped-code 
 
 ## Tasks / Subtasks
 
-- [ ] (AC #1) Add `staticData: { shell: 'v2' }` to the `/discover` route + render under `HomeSidebar-v2`
+- [x] (AC #1) Add `staticData: { shell: 'v2' }` to the `/discover` route + render under `HomeSidebar-v2`
       (探索 active); shell-gate so flag-OFF legacy is byte-unchanged. Confirm 探索-via-More on mobile.
-- [ ] (AC #2, #7) Restyle the desktop `FilterPanel` sidebar to the v2 rail (264px, header+badge+collapse →
+- [x] (AC #2, #7) Restyle the desktop `FilterPanel` sidebar to the v2 rail (264px, header+badge+collapse →
       `篩選(n)`, grid reflow); demote `FilterChipBar` to a read/remove summary. Converge with `LibraryFilterRail`.
-- [ ] (AC #3) Wire per-facet counts via the enabled-gated draft-count infra; confirm `vote_gte`/`region`/
+- [x] (AC #3) Wire per-facet counts via the enabled-gated draft-count infra; confirm `vote_gte`/`region`/
       `with_watch_providers` params (demote only an unbacked one). Mono counts.
-- [ ] (AC #4) Debounce numeric year/score inputs in `FilterPanel`; keep categorical chips instant.
-- [ ] (AC #5) `useFilterState.setFilters` → `navigate({ ..., replace: true })` for intermediate toggles.
-- [ ] (AC #6) Coalesce the `type='all'` movies+tv pair into one logical loading state in `useDiscoverResults`.
-- [ ] (AC #8) Build the three v2 states (skeleton / no-result-distinct / per-section fail-soft).
-- [ ] (AC #9) Restyle `FilterBottomSheet` to v2 (keep batch + draft count).
-- [ ] (AC #10, #11) Confirm `vote_average` reaches the cards; verify no new BE needed (reuse Epic 11 engine).
-- [ ] (AC #12) Vitest + extend `discover-filters` E2E (seed-helpers, no self-skips); `nx build`/`nx lint` web green.
+- [x] (AC #4) Debounce numeric year/score inputs in `FilterPanel`; keep categorical chips instant.
+- [x] (AC #5) `useFilterState.setFilters` → `navigate({ ..., replace: true })` for intermediate toggles.
+- [x] (AC #6) Coalesce the `type='all'` movies+tv pair into one logical loading state in `useDiscoverResults`.
+- [x] (AC #8) Build the three v2 states (skeleton / no-result-distinct / per-section fail-soft).
+- [x] (AC #9) Restyle `FilterBottomSheet` to v2 (keep batch + draft count).
+- [x] (AC #10, #11) Confirm `vote_average` reaches the cards; verify no new BE needed (reuse Epic 11 engine).
+- [x] (AC #12) Vitest + extend `discover-filters` E2E (seed-helpers, no self-skips); `nx build`/`nx lint` web green.
 
 ## Dev Notes
 
@@ -165,6 +165,65 @@ coalesce, chip-bar summary, four states, mobile sheet, tests). Backend ≤ 3 →
 
 ### Agent Model Used
 
+Claude Opus 4.8 (1M context) — BMAD dev agent (Amelia), `dev-story` workflow. Party Mode (architect/ux/tea/sm/pm) facilitated the AC #3 decision.
+
 ### Completion Notes List
 
+**Decisions (Party Mode 2026-06-23, Alexyu):** `1A` single live total · `2改` update `.pen` · `3照辦` blueprint.
+
+- **🔗 AC Drift: FOUND** — Story 11-2 AC #4 (back/forward steps through each filter toggle — *push* history) → ux3-3-2 AC #5 (intermediate toggles use `replace:true`). **Contained to the v2 shell:** `useFilterState` gates `replace` on `useShellVersion()`, so the legacy shell keeps 11-2 push semantics **byte-unchanged** (legacy E2E `[P0] browser back restores previous filter state` still valid). Epic 11 is pre-Rule-20 (implicit v0), no contract ack required. (Reference: `_bmad-output/implementation-artifacts/11-2-persistent-filter-chip-ui.md` — AC drift reference.)
+- **📎 Contract Stamps: NONE** (no `[@contract-v*]` in this story or upstream Epic 11 refs — pre-Rule-20; this story defines/consumes no wire contracts).
+- **🎭 A11y Pre-Flight: PASS** (new components: rail collapse/expand buttons carry `aria-label` 收合篩選/開啟篩選; single-total has `aria-live=polite`; per-section error is `role=alert`; inert Requests entry is `disabled`+`aria-disabled`. jsx-a11y lint clean on touched files, 0 introduced; `nx lint web` green).
+- **🎨 UX Verification: PASS (aligned)** — see table below. The single intentional deviation (per-chip counts → single total, decision 1A) was resolved by updating `.pen` I1-D-v2 (decision 2改).
+- **AC #3 resolution:** TMDb `/discover` returns only `total_results` (NO facet aggregation — verified official docs + `apps/api/internal/tmdb/types.go` `SearchResultMovies`). True per-facet counts would cost ~N×2 uncoalesced queries (banned by AC #3 + Rule 27 rate limit). Shipped a SINGLE live total `符合 N 部` reusing `useDiscoverResults().totalResults` — **zero extra queries**.
+- **AC #3/#10 backend verification:** `vote_gte` / `region` / `watch_providers` / `watch_region` are all backend-backed (`apps/api/internal/handlers/tmdb_handler.go` + `internal/tmdb/movies.go`) → **NO dimension demoted to 即將推出**. `vote_average` reaches cards via `MediaGrid`→`PosterCard` (already shipped).
+- **Legacy byte-unchanged (AC #1):** all v2 refinements are opt-in so the legacy render is unchanged — `replace` gated on shell; `debounceMs` / `summary` / `variant='v2'` / `keepPrevious` are props the legacy path never passes.
+- **Discovery Triage (Rule 24):** ③ `ux3-discover-facet-aggregation-be` filed in `sprint-status.yaml` (true per-facet counts via a future BE aggregation endpoint). ① inert `想要清單 · 即將推出` Requests entry added to the v2 toolbar (PH3-R2 reserve; `disabled`).
+- **🕐 Time-dependent visual coverage:** N/A — no touched `apps/web/src/components/**` file reads wall-clock time (Discover is a filter/grid surface).
+- **.pen (decision 2改):** I1-D-v2 (`fxCVk`) — 25 per-facet `cnt` nodes removed + `符合 412 部` single-total added via Pencil MCP; `i1-d.png` regenerated (only the genuinely-changed PNG staged). ⚠️ **Pencil has not flushed `ux-design.pen` to disk** (no MCP save tool) — requires **Cmd+S in Pencil**, then commit `ux-design.pen` + `_bmad-output/screenshots/flow-i-discover-v2/i1-d.png` together.
+- **Tests:** web vitest **2235 pass**; `nx test api` green; `nx build web` green; `nx lint web` green; prettier clean. E2E: legacy `discover-filters.spec` preserved; new **v2-rail block** added (flag-ON via `localStorage` seed + flag-endpoint stub) — runs in CI / **P10 browser-verify** (no v2-shell-ON E2E harness yet, per the ux3-0-7 precedent).
+
+**🎨 UX Verification — implementation vs design (I1-D-v2 / I4-D-v2 / I6/I7/I8):**
+
+| Area | Design | Implementation | Match? |
+|------|--------|----------------|--------|
+| Rail chrome | 264px `$bg-primary`, right hairline, 篩選 + Mono badge + collapse chevron | `DiscoverFilterRail` (mirrors `LibraryFilterRail`) | ✅ |
+| 5 dimensions | 類型/年份/評分/地區/串流平台 chips | `search/FilterPanel` (same 5, all live) | ✅ |
+| Facet counts | per-chip (was `動作 340`) | single total `符合 N 部` (1A) → `.pen` updated to match | ✅ aligned |
+| Active chip | `$accent-subtle` + ✓ | `FilterPanel` active chipClass | ✅ |
+| Chip-bar summary | muted read/remove + 清除全部 | `FilterChipBar summary` variant | ✅ |
+| Rail footer | 清除全部篩選 + rotate-ccw | same | ✅ |
+| Collapsed (I4-D-v2) | 篩選(n) button, grid wider | `discover-rail-expand` + MediaGrid auto-fill reflow | ✅ |
+| States (I6/I7/I8) | skeleton / no-result-distinct / per-section fail-soft | `DiscoverStatesV2` | ✅ |
+| Cards | ★ + rating | `PosterCard` voteAverage | ✅ |
+| Mobile (I4-M-v2) | batch sheet, radius-xl, scrim | `FilterBottomSheet variant='v2'` | ✅ |
+
 ### File List
+
+- `apps/web/src/routes/discover.tsx` (M — `staticData: { shell: 'v2' }` + shell-gate split into `DiscoverPage`/`LegacyDiscover`)
+- `apps/web/src/routes/discover.spec.tsx` (A — shell-gating tests)
+- `apps/web/src/components/search/DiscoverBrowseV2.tsx` (A)
+- `apps/web/src/components/search/DiscoverBrowseV2.spec.tsx` (A)
+- `apps/web/src/components/search/DiscoverFilterRail.tsx` (A)
+- `apps/web/src/components/search/DiscoverFilterRail.spec.tsx` (A)
+- `apps/web/src/components/search/DiscoverStatesV2.tsx` (A)
+- `apps/web/src/components/search/DiscoverStatesV2.spec.tsx` (A)
+- `apps/web/src/components/search/FilterPanel.tsx` (M — `debounceMs` prop + year local-state debounce)
+- `apps/web/src/components/search/FilterPanel.spec.tsx` (M — debounce tests)
+- `apps/web/src/components/search/FilterChipBar.tsx` (M — `summary` variant)
+- `apps/web/src/components/search/FilterBottomSheet.tsx` (M — `variant='v2'`)
+- `apps/web/src/hooks/useFilterState.ts` (M — shell-gated `replace`)
+- `apps/web/src/hooks/useFilterState.spec.tsx` (M)
+- `apps/web/src/hooks/useDiscoverResults.ts` (M — `keepPrevious` + coalesced `isLoading`/`isFetching`)
+- `apps/web/src/hooks/useDiscoverResults.spec.tsx` (M)
+- `tests/e2e/discover-filters.spec.ts` (M — v2 rail block)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (M — status→review + Rule-24 ③ backlog entry)
+- `ux-design.pen` (M — I1-D-v2 single-total; ⚠️ PENDING Pencil Cmd+S to flush to disk)
+- `_bmad-output/screenshots/flow-i-discover-v2/i1-d.png` (M — regenerated)
+
+## Change Log
+
+| Date | Change |
+|------|--------|
+| 2026-06-23 | ux3-3-2 implemented: `/discover` v2 shell-gated persistent filter rail (`DiscoverBrowseV2` + `DiscoverFilterRail` + `DiscoverStatesV2`). AC #3 = single live total `符合 N 部` (per-facet counts deferred → backlog `ux3-discover-facet-aggregation-be`, TMDb has no facet aggregation). Debounce/replace/coalesce/summary/v2-sheet refinements shell-gated so legacy is byte-unchanged. `vote_average` confirmed on cards. `.pen` I1-D-v2 aligned to single-total. Tests green (web 2235 / api / build / lint / prettier). Status → review. |
+| 2026-06-23 | 🔗 AC Drift: Story 11-2 AC #4 (push history) → ux3-3-2 AC #5 (`replace:true`) — v2-only via `useShellVersion()` gate; legacy push semantics preserved. |

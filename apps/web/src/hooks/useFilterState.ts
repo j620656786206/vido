@@ -2,6 +2,7 @@
 // TanStack Router is the single source of truth (no Zustand/Redux — Rule 5),
 // so back/forward navigation preserves filter state for free (AC #4).
 import { useNavigate, useSearch } from '@tanstack/react-router';
+import { useShellVersion } from '../components/shell/shellVersion';
 import {
   parseFiltersFromSearch,
   serializeFilters,
@@ -25,12 +26,21 @@ export interface UseFilterStateResult {
 export function useFilterState(): UseFilterStateResult {
   const search = useSearch({ strict: false }) as DiscoverSearch;
   const navigate = useNavigate();
+  // ux3-3-2 AC #5 is a v2 refinement. Gate `replace` on the shell so the legacy
+  // shell keeps its Story 11-2 AC #4 push semantics byte-unchanged (Back steps
+  // through each toggle) while the v2 rail gets replace (Back leaves Discover, not
+  // your own toggles). This contains the AC drift to the v2 path.
+  const shell = useShellVersion();
 
   const filters = parseFiltersFromSearch(search);
 
   const setFilters = (next: DiscoverFilters) => {
     navigate({
       to: '/discover',
+      // v2: intermediate filter toggles REPLACE the history entry so a
+      // multi-dimension compose (genre → year → platform …) does not push every
+      // half-built combo onto the browser stack. Legacy: push (unchanged).
+      replace: shell === 'v2',
       search: (prev: Record<string, unknown>) => ({
         ...prev,
         ...serializeFilters(next),
