@@ -146,6 +146,18 @@ SCREENS = {
     "suCiI": ("flow-k-activity-v2", "a4-d"),
     "DZnSv": ("flow-k-activity-v2", "a5-d"),
     "M6ra92": ("flow-k-activity-v2", "a6-d"),
+    # flow-i-discover-v2 — Phase-3 ux3-3-1 (Discover v2: active power-filter tool; Epic 11
+    # chips/presets/instant-search → v2; D3 no-dashboard boundary; reserves Epic 13 Requests;
+    # 地區/串流平台 reserved-disabled per Rule-24; four states)
+    "fxCVk": ("flow-i-discover-v2", "i1-d"),
+    "hi6WD": ("flow-i-discover-v2", "i2-m"),
+    "m0Zew": ("flow-i-discover-v2", "i3-d"),
+    "m4fY7c": ("flow-i-discover-v2", "i4-d"),
+    "kzzjc": ("flow-i-discover-v2", "i4-m"),
+    "nLrzc": ("flow-i-discover-v2", "i5-d"),
+    "YYEBd": ("flow-i-discover-v2", "i6-d"),
+    "S3qke": ("flow-i-discover-v2", "i7-d"),
+    "KdnVw": ("flow-i-discover-v2", "i8-d"),
 }
 
 
