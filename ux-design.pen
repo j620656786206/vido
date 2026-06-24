@@ -89780,16 +89780,6 @@
                           "fontFamily": "Noto Sans TC",
                           "fontSize": 13,
                           "fontWeight": "500"
-                        },
-                        {
-                          "type": "text",
-                          "id": "wioXS",
-                          "name": "cnt",
-                          "fill": "$accent-text",
-                          "content": "340",
-                          "fontFamily": "JetBrains Mono",
-                          "fontSize": 12,
-                          "fontWeight": "normal"
                         }
                       ]
                     },
@@ -89814,16 +89804,6 @@
                           "content": "驚悚",
                           "fontFamily": "Noto Sans TC",
                           "fontSize": 13,
-                          "fontWeight": "normal"
-                        },
-                        {
-                          "type": "text",
-                          "id": "YWLMc",
-                          "name": "cnt",
-                          "fill": "$text-muted",
-                          "content": "215",
-                          "fontFamily": "JetBrains Mono",
-                          "fontSize": 12,
                           "fontWeight": "normal"
                         }
                       ]
@@ -89858,16 +89838,6 @@
                           "fontFamily": "Noto Sans TC",
                           "fontSize": 13,
                           "fontWeight": "normal"
-                        },
-                        {
-                          "type": "text",
-                          "id": "JSwxc",
-                          "name": "cnt",
-                          "fill": "$text-muted",
-                          "content": "412",
-                          "fontFamily": "JetBrains Mono",
-                          "fontSize": 12,
-                          "fontWeight": "normal"
                         }
                       ]
                     },
@@ -89892,16 +89862,6 @@
                           "content": "劇情",
                           "fontFamily": "Noto Sans TC",
                           "fontSize": 13,
-                          "fontWeight": "normal"
-                        },
-                        {
-                          "type": "text",
-                          "id": "kgAUX",
-                          "name": "cnt",
-                          "fill": "$text-muted",
-                          "content": "680",
-                          "fontFamily": "JetBrains Mono",
-                          "fontSize": 12,
                           "fontWeight": "normal"
                         }
                       ]
@@ -89936,16 +89896,6 @@
                           "fontFamily": "Noto Sans TC",
                           "fontSize": 13,
                           "fontWeight": "normal"
-                        },
-                        {
-                          "type": "text",
-                          "id": "WsFBf",
-                          "name": "cnt",
-                          "fill": "$text-muted",
-                          "content": "198",
-                          "fontFamily": "JetBrains Mono",
-                          "fontSize": 12,
-                          "fontWeight": "normal"
                         }
                       ]
                     },
@@ -89970,16 +89920,6 @@
                           "content": "恐怖",
                           "fontFamily": "Noto Sans TC",
                           "fontSize": 13,
-                          "fontWeight": "normal"
-                        },
-                        {
-                          "type": "text",
-                          "id": "AaLcK",
-                          "name": "cnt",
-                          "fill": "$text-muted",
-                          "content": "156",
-                          "fontFamily": "JetBrains Mono",
-                          "fontSize": 12,
                           "fontWeight": "normal"
                         }
                       ]
@@ -90014,16 +89954,6 @@
                           "fontFamily": "Noto Sans TC",
                           "fontSize": 13,
                           "fontWeight": "normal"
-                        },
-                        {
-                          "type": "text",
-                          "id": "iJwon",
-                          "name": "cnt",
-                          "fill": "$text-muted",
-                          "content": "240",
-                          "fontFamily": "JetBrains Mono",
-                          "fontSize": 12,
-                          "fontWeight": "normal"
                         }
                       ]
                     },
@@ -90048,16 +89978,6 @@
                           "content": "動畫",
                           "fontFamily": "Noto Sans TC",
                           "fontSize": 13,
-                          "fontWeight": "normal"
-                        },
-                        {
-                          "type": "text",
-                          "id": "E0tU4O",
-                          "name": "cnt",
-                          "fill": "$text-muted",
-                          "content": "320",
-                          "fontFamily": "JetBrains Mono",
-                          "fontSize": 12,
                           "fontWeight": "normal"
                         }
                       ]
@@ -90126,16 +90046,6 @@
                           "fontFamily": "Noto Sans TC",
                           "fontSize": 13,
                           "fontWeight": "500"
-                        },
-                        {
-                          "type": "text",
-                          "id": "A0oxOz",
-                          "name": "cnt",
-                          "fill": "$accent-text",
-                          "content": "128",
-                          "fontFamily": "JetBrains Mono",
-                          "fontSize": 12,
-                          "fontWeight": "normal"
                         }
                       ]
                     },
@@ -90160,16 +90070,6 @@
                           "content": "2010s",
                           "fontFamily": "Noto Sans TC",
                           "fontSize": 13,
-                          "fontWeight": "normal"
-                        },
-                        {
-                          "type": "text",
-                          "id": "lTK1s",
-                          "name": "cnt",
-                          "fill": "$text-muted",
-                          "content": "540",
-                          "fontFamily": "JetBrains Mono",
-                          "fontSize": 12,
                           "fontWeight": "normal"
                         }
                       ]
@@ -90204,16 +90104,6 @@
                           "fontFamily": "Noto Sans TC",
                           "fontSize": 13,
                           "fontWeight": "normal"
-                        },
-                        {
-                          "type": "text",
-                          "id": "R0Nex",
-                          "name": "cnt",
-                          "fill": "$text-muted",
-                          "content": "320",
-                          "fontFamily": "JetBrains Mono",
-                          "fontSize": 12,
-                          "fontWeight": "normal"
                         }
                       ]
                     },
@@ -90238,16 +90128,6 @@
                           "content": "90s",
                           "fontFamily": "Noto Sans TC",
                           "fontSize": 13,
-                          "fontWeight": "normal"
-                        },
-                        {
-                          "type": "text",
-                          "id": "p4MPy",
-                          "name": "cnt",
-                          "fill": "$text-muted",
-                          "content": "180",
-                          "fontFamily": "JetBrains Mono",
-                          "fontSize": 12,
                           "fontWeight": "normal"
                         }
                       ]
@@ -90316,16 +90196,6 @@
                           "fontFamily": "Noto Sans TC",
                           "fontSize": 13,
                           "fontWeight": "500"
-                        },
-                        {
-                          "type": "text",
-                          "id": "uon6W",
-                          "name": "cnt",
-                          "fill": "$accent-text",
-                          "content": "412",
-                          "fontFamily": "JetBrains Mono",
-                          "fontSize": 12,
-                          "fontWeight": "normal"
                         }
                       ]
                     },
@@ -90350,16 +90220,6 @@
                           "content": "8+",
                           "fontFamily": "Noto Sans TC",
                           "fontSize": 13,
-                          "fontWeight": "normal"
-                        },
-                        {
-                          "type": "text",
-                          "id": "caOaB",
-                          "name": "cnt",
-                          "fill": "$text-muted",
-                          "content": "230",
-                          "fontFamily": "JetBrains Mono",
-                          "fontSize": 12,
                           "fontWeight": "normal"
                         }
                       ]
@@ -90393,16 +90253,6 @@
                           "content": "9+",
                           "fontFamily": "Noto Sans TC",
                           "fontSize": 13,
-                          "fontWeight": "normal"
-                        },
-                        {
-                          "type": "text",
-                          "id": "rXTW2",
-                          "name": "cnt",
-                          "fill": "$text-muted",
-                          "content": "64",
-                          "fontFamily": "JetBrains Mono",
-                          "fontSize": 12,
                           "fontWeight": "normal"
                         }
                       ]
@@ -90458,16 +90308,6 @@
                           "fontFamily": "Noto Sans TC",
                           "fontSize": 13,
                           "fontWeight": "normal"
-                        },
-                        {
-                          "type": "text",
-                          "id": "JIdVB",
-                          "name": "cnt",
-                          "fill": "$text-muted",
-                          "content": "820",
-                          "fontFamily": "JetBrains Mono",
-                          "fontSize": 12,
-                          "fontWeight": "normal"
                         }
                       ]
                     },
@@ -90506,16 +90346,6 @@
                           "fontFamily": "Noto Sans TC",
                           "fontSize": 13,
                           "fontWeight": "500"
-                        },
-                        {
-                          "type": "text",
-                          "id": "g9dSYO",
-                          "name": "cnt",
-                          "fill": "$accent-text",
-                          "content": "410",
-                          "fontFamily": "JetBrains Mono",
-                          "fontSize": 12,
-                          "fontWeight": "normal"
                         }
                       ]
                     }
@@ -90549,16 +90379,6 @@
                           "fontFamily": "Noto Sans TC",
                           "fontSize": 13,
                           "fontWeight": "normal"
-                        },
-                        {
-                          "type": "text",
-                          "id": "R34KKv",
-                          "name": "cnt",
-                          "fill": "$text-muted",
-                          "content": "280",
-                          "fontFamily": "JetBrains Mono",
-                          "fontSize": 12,
-                          "fontWeight": "normal"
                         }
                       ]
                     },
@@ -90583,16 +90403,6 @@
                           "content": "台灣",
                           "fontFamily": "Noto Sans TC",
                           "fontSize": 13,
-                          "fontWeight": "normal"
-                        },
-                        {
-                          "type": "text",
-                          "id": "N6XJey",
-                          "name": "cnt",
-                          "fill": "$text-muted",
-                          "content": "95",
-                          "fontFamily": "JetBrains Mono",
-                          "fontSize": 12,
                           "fontWeight": "normal"
                         }
                       ]
@@ -90626,16 +90436,6 @@
                           "content": "香港",
                           "fontFamily": "Noto Sans TC",
                           "fontSize": 13,
-                          "fontWeight": "normal"
-                        },
-                        {
-                          "type": "text",
-                          "id": "QxLiK",
-                          "name": "cnt",
-                          "fill": "$text-muted",
-                          "content": "130",
-                          "fontFamily": "JetBrains Mono",
-                          "fontSize": 12,
                           "fontWeight": "normal"
                         }
                       ]
@@ -90704,16 +90504,6 @@
                           "fontFamily": "Noto Sans TC",
                           "fontSize": 13,
                           "fontWeight": "500"
-                        },
-                        {
-                          "type": "text",
-                          "id": "uW9iB",
-                          "name": "cnt",
-                          "fill": "$accent-text",
-                          "content": "540",
-                          "fontFamily": "JetBrains Mono",
-                          "fontSize": 12,
-                          "fontWeight": "normal"
                         }
                       ]
                     }
@@ -90747,16 +90537,6 @@
                           "fontFamily": "Noto Sans TC",
                           "fontSize": 13,
                           "fontWeight": "normal"
-                        },
-                        {
-                          "type": "text",
-                          "id": "ukqTz",
-                          "name": "cnt",
-                          "fill": "$text-muted",
-                          "content": "210",
-                          "fontFamily": "JetBrains Mono",
-                          "fontSize": 12,
-                          "fontWeight": "normal"
                         }
                       ]
                     },
@@ -90781,16 +90561,6 @@
                           "content": "Apple TV+",
                           "fontFamily": "Noto Sans TC",
                           "fontSize": 13,
-                          "fontWeight": "normal"
-                        },
-                        {
-                          "type": "text",
-                          "id": "M4wC6",
-                          "name": "cnt",
-                          "fill": "$text-muted",
-                          "content": "88",
-                          "fontFamily": "JetBrains Mono",
-                          "fontSize": 12,
                           "fontWeight": "normal"
                         }
                       ]
@@ -90825,16 +90595,6 @@
                           "fontFamily": "Noto Sans TC",
                           "fontSize": 13,
                           "fontWeight": "normal"
-                        },
-                        {
-                          "type": "text",
-                          "id": "oksdw",
-                          "name": "cnt",
-                          "fill": "$text-muted",
-                          "content": "175",
-                          "fontFamily": "JetBrains Mono",
-                          "fontSize": 12,
-                          "fontWeight": "normal"
                         }
                       ]
                     },
@@ -90860,16 +90620,6 @@
                           "fontFamily": "Noto Sans TC",
                           "fontSize": 13,
                           "fontWeight": "normal"
-                        },
-                        {
-                          "type": "text",
-                          "id": "G5ZEV",
-                          "name": "cnt",
-                          "fill": "$text-muted",
-                          "content": "320",
-                          "fontFamily": "JetBrains Mono",
-                          "fontSize": 12,
-                          "fontWeight": "normal"
                         }
                       ]
                     }
@@ -90883,6 +90633,46 @@
               "name": "spacer",
               "width": "fill_container",
               "height": "fill_container"
+            },
+            {
+              "type": "frame",
+              "id": "l4hQn",
+              "name": "railCount",
+              "width": "fill_container",
+              "gap": 4,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "ZQ6Uw",
+                  "name": "pre",
+                  "fill": "$text-secondary",
+                  "content": "符合",
+                  "fontFamily": "Noto Sans TC",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "GzQMv",
+                  "name": "num",
+                  "fill": "$text-primary",
+                  "content": "412",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": 12,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "F4qL9",
+                  "name": "suf",
+                  "fill": "$text-secondary",
+                  "content": "部",
+                  "fontFamily": "Noto Sans TC",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
             },
             {
               "type": "frame",

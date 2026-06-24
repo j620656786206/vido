@@ -76,4 +76,23 @@ describe('useDiscoverResults', () => {
   it('builds distinct query keys per media type', () => {
     expect(discoverKeys.movies(filters, 1)).not.toEqual(discoverKeys.tv(filters, 1));
   });
+
+  it('coalesces the movie+tv pair into one loading state, then settles (AC #6)', async () => {
+    const { result } = renderHook(() => useDiscoverResults(filters, 'all'), {
+      wrapper: createWrapper(),
+    });
+    // One logical refresh: loading until BOTH enabled queries resolve.
+    expect(result.current.isLoading).toBe(true);
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.isFetching).toBe(false);
+    expect(result.current.totalResults).toBe(8);
+  });
+
+  it('does not fetch when the hook is disabled (gated draft-count off)', () => {
+    renderHook(() => useDiscoverResults(filters, 'all', 1, { enabled: false }), {
+      wrapper: createWrapper(),
+    });
+    expect(tmdbModule.tmdbService.discoverMovies).not.toHaveBeenCalled();
+    expect(tmdbModule.tmdbService.discoverTVShows).not.toHaveBeenCalled();
+  });
 });
