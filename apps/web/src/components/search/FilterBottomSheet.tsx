@@ -42,7 +42,9 @@ export function FilterBottomSheet({
 
   // Live result count for the DRAFT (not the committed filters) — re-queries as
   // the user edits, gated to only run while the sheet is open (AC #6).
-  const { totalResults, isLoading: isCounting } = useDiscoverResults(draft, mediaType, 1, isOpen);
+  const { totalResults, isLoading: isCounting } = useDiscoverResults(draft, mediaType, 1, {
+    enabled: isOpen,
+  });
 
   // Reset the draft to the committed filters each time the sheet opens.
   useEffect(() => {

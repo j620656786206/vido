@@ -67,12 +67,11 @@ export function DiscoverBrowseV2() {
   // keepPrevious=true: a chip toggle keeps the prior grid visible (no skeleton
   // flash) and the rail's single total is the SAME query — zero extra count
   // queries (AC #3/#6).
-  const { moviesQuery, tvQuery, isLoading, totalResults } = useDiscoverResults(
+  const { moviesQuery, tvQuery, isLoading, isFetching, totalResults } = useDiscoverResults(
     filters,
     currentType,
     currentPage,
-    true,
-    true
+    { enabled: true, keepPrevious: true }
   );
 
   const activeCount = countActiveFilters(filters);
@@ -143,7 +142,10 @@ export function DiscoverBrowseV2() {
               filters={filters}
               activeCount={activeCount}
               totalResults={totalResults}
-              isCounting={isLoading}
+              // AC #3: with keepPreviousData the prior total stays on-screen during a
+              // refetch, so reflect isFetching (not isLoading, which only flips on a
+              // cold first load) to show 計算中… while the new total is computing.
+              isCounting={isFetching}
               onChange={setFilters}
               onClearAll={clearAll}
               onCollapse={() => setRailCollapsed(true)}

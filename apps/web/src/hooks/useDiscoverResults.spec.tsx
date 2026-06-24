@@ -89,7 +89,9 @@ describe('useDiscoverResults', () => {
   });
 
   it('does not fetch when the hook is disabled (gated draft-count off)', () => {
-    renderHook(() => useDiscoverResults(filters, 'all', 1, false), { wrapper: createWrapper() });
+    renderHook(() => useDiscoverResults(filters, 'all', 1, { enabled: false }), {
+      wrapper: createWrapper(),
+    });
     expect(tmdbModule.tmdbService.discoverMovies).not.toHaveBeenCalled();
     expect(tmdbModule.tmdbService.discoverTVShows).not.toHaveBeenCalled();
   });

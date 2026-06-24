@@ -7,8 +7,9 @@
  * stays pinned even with many genres (UX review watch-out #1). Mobile (<lg) keeps the
  * existing LibraryFilterSheetV2 bottom sheet — this rail is never rendered there.
  */
-import { PanelLeftClose, RotateCcw } from 'lucide-react';
+import { RotateCcw } from 'lucide-react';
 import { FilterPanel } from './FilterPanel';
+import { FilterRailShell } from '../ui/FilterRailShell';
 import type { FilterValues } from './FilterPanel';
 import type { LibraryMediaType } from '../../types/library';
 
@@ -35,50 +36,14 @@ export function LibraryFilterRail({
   onCollapse,
 }: LibraryFilterRailProps) {
   return (
-    <aside
-      data-testid="library-filter-rail"
-      className="sticky top-16 flex h-[calc(100vh-4rem)] w-[264px] flex-shrink-0 flex-col border-r border-[var(--border-subtle)]"
-    >
-      {/* Rail header */}
-      <div className="flex items-center justify-between px-5 pb-3 pt-5">
-        <div className="flex items-center gap-2">
-          <h3 className="text-[15px] font-bold text-[var(--text-primary)]">篩選</h3>
-          {activeCount > 0 && (
-            <span
-              data-testid="library-rail-active-count"
-              className="inline-flex items-center justify-center rounded-full bg-[var(--accent-primary)] px-1.5 py-0.5 font-mono text-[11px] font-medium tabular-nums text-[var(--text-on-accent)]"
-            >
-              {activeCount}
-            </span>
-          )}
-        </div>
-        <button
-          type="button"
-          onClick={onCollapse}
-          data-testid="library-rail-collapse"
-          aria-label="收合篩選"
-          className="flex h-11 w-11 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]"
-        >
-          <PanelLeftClose className="h-[18px] w-[18px]" aria-hidden="true" />
-        </button>
-      </div>
-
-      {/* Scrollable filter body — keeps the clear-all footer pinned for long genre lists */}
-      <div className="min-h-0 flex-1 overflow-y-auto px-5">
-        <FilterPanel
-          instant
-          filters={filters}
-          mediaType={mediaType}
-          unmatchedCount={unmatchedCount}
-          onApply={onApply}
-          onClear={onClear}
-          onTypeChange={onTypeChange}
-        />
-      </div>
-
-      {/* Pinned clear-all footer */}
-      {activeCount > 0 && (
-        <div className="border-t border-[var(--border-subtle)] px-5 py-3">
+    <FilterRailShell
+      testId="library-filter-rail"
+      activeCount={activeCount}
+      activeCountTestId="library-rail-active-count"
+      collapseTestId="library-rail-collapse"
+      onCollapse={onCollapse}
+      footer={
+        activeCount > 0 ? (
           <button
             type="button"
             onClick={onClear}
@@ -88,8 +53,20 @@ export function LibraryFilterRail({
             <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
             清除全部篩選
           </button>
-        </div>
-      )}
-    </aside>
+        ) : undefined
+      }
+    >
+      {/* Instant mode (apply-on-change + URL sync, no 套用/重置); the genre list
+          scrolls inside the rail so the clear-all footer stays pinned. */}
+      <FilterPanel
+        instant
+        filters={filters}
+        mediaType={mediaType}
+        unmatchedCount={unmatchedCount}
+        onApply={onApply}
+        onClear={onClear}
+        onTypeChange={onTypeChange}
+      />
+    </FilterRailShell>
   );
 }

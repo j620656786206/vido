@@ -71,21 +71,31 @@ export interface UseDiscoverResultsResult {
   totalResults: number;
 }
 
+export interface UseDiscoverResultsOptions {
+  /**
+   * Gate the whole hook off (no network). Default `true`. The mobile filter sheet
+   * passes `isOpen` so it live-counts a draft only while open and stays idle closed.
+   */
+  enabled?: boolean;
+  /**
+   * Keep the previous results visible across a filter/key change (no skeleton
+   * flash). Default `false`. The v2 rail opts in (AC #6).
+   */
+  keepPrevious?: boolean;
+}
+
 /**
  * Runs the movie and/or TV discover queries based on the selected media type.
  * Disabled queries report `isLoading === false` (fetchStatus idle), so the
  * combined `isLoading` only reflects the queries that are actually active.
- *
- * `enabled` gates the whole hook off (no network) — used by the mobile filter
- * sheet so it can live-count a draft only while open, and stays idle when closed.
  */
 export function useDiscoverResults(
   filters: DiscoverFilters,
   mediaType: DiscoverMediaType,
   page = 1,
-  enabled = true,
-  keepPrevious = false
+  options: UseDiscoverResultsOptions = {}
 ): UseDiscoverResultsResult {
+  const { enabled = true, keepPrevious = false } = options;
   const wantMovies = enabled && (mediaType === 'all' || mediaType === 'movie');
   const wantTV = enabled && (mediaType === 'all' || mediaType === 'tv');
 

@@ -151,4 +151,23 @@ describe('DiscoverBrowseV2', () => {
     // The rail still renders — the page is intact.
     expect(screen.getByTestId('discover-filter-rail')).toBeInTheDocument();
   });
+
+  it('rail shows 計算中… during a background refetch (isFetching) while prior results stay visible (AC #3)', async () => {
+    // keepPreviousData: a re-filter keeps isLoading=false (only cold loads flip it)
+    // but isFetching=true — the rail count must reflect isFetching, not isLoading,
+    // so the stale total does not silently linger without a counting indicator.
+    h.discover = discover({
+      isLoading: false,
+      isFetching: true,
+      moviesQuery: query({
+        data: { results: [{ id: 1, voteCount: 10 }], totalResults: 1, totalPages: 1 },
+      }),
+      totalResults: 1,
+    });
+    renderBrowse();
+    expect(await screen.findByTestId('discover-rail-count')).toHaveTextContent('計算中…');
+    // The prior grid stays visible — no skeleton flash on a re-filter.
+    expect(screen.getByTestId('media-grid')).toHaveTextContent('1 items');
+    expect(screen.queryByTestId('discover-grid-skeleton')).toBeNull();
+  });
 });

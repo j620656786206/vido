@@ -1,6 +1,6 @@
 # Story ux3-3-2 — Discover v2 frontend (persistent instant filter rail)
 
-Status: review
+Status: done
 
 **Epic:** ux3-discover-v2 (UX Redesign Phase 3) · **Type:** frontend · **FRs:** PH3-M2, PH3-R2
 **Design:** ux3-3-1 (`.pen` `flow-i-discover-v2`, PR #94) · **Owner:** dev (`dev-story`) → tea (visual + E2E)
@@ -35,13 +35,19 @@ NOT a behavior change to batch (the ux3-3-1 adversarial UX panel + shipped-code 
    **collapse chevron** → `篩選(n)` collapsed state that reflows the grid wider (mirror
    `LibraryFilterRail` chrome — converge, don't fork the look). Token-only, Noto Sans TC, 44px targets.
 
-3. **All 5 dimensions live + per-facet counts.** Genre / year / rating / region / streaming-platform stay
+3. **All 5 dimensions live + single live total.** Genre / year / rating / region / streaming-platform stay
    live (confirm the `/discover` params: `vote_gte` rating-min, `region`, `with_watch_providers` — all
    backend-backed per the ux3-3-1 capability audit; **if any is NOT actually queryable, demote only that
-   one** to a disabled「即將推出」, do not demote the rest). Each facet value shows a **result count** in
-   JetBrains Mono; reuse the **enabled-gated draft-count infrastructure** already built for the mobile sheet
-   (`FilterBottomSheet` `套用篩選（${totalResults} 部結果）` / `isCounting`) rather than firing N extra
+   one** to a disabled「即將推出」, do not demote the rest). The rail shows ONE **live total result count**
+   (`符合 N 部`, JetBrains Mono) reusing the **enabled-gated draft-count infrastructure** already built for
+   the mobile sheet (`FilterBottomSheet` `套用篩選（${totalResults} 部結果）` / `isCounting`) — zero extra
    uncoalesced count queries.
+   > **[amended — Party Mode 2026-06-23, Alexyu, decision 1A]** Originally specced as *per-facet* counts
+   > (a count next to every chip). TMDb `/discover` returns only `total_results` (no facet aggregation —
+   > verified vs `apps/api/internal/tmdb/types.go`), so true per-facet counts would cost ~N×2 uncoalesced
+   > queries (banned by Rule 27). Shipped a single live total instead; per-facet counts deferred to a future
+   > backend aggregation endpoint (`sprint-status.yaml` → `ux3-discover-facet-aggregation-be`). The `.pen`
+   > I1-D-v2 design was realigned to the single-total to keep design↔build in sync.
 
 4. **Debounce numeric inputs.** Year-range (and any score numeric) inputs debounce (~300–400ms) before
    committing — `FilterPanel` currently calls `onChange` per keystroke (typing `1995` = 4 queries).
@@ -89,8 +95,9 @@ NOT a behavior change to batch (the ux3-3-1 adversarial UX panel + shipped-code 
       (探索 active); shell-gate so flag-OFF legacy is byte-unchanged. Confirm 探索-via-More on mobile.
 - [x] (AC #2, #7) Restyle the desktop `FilterPanel` sidebar to the v2 rail (264px, header+badge+collapse →
       `篩選(n)`, grid reflow); demote `FilterChipBar` to a read/remove summary. Converge with `LibraryFilterRail`.
-- [x] (AC #3) Wire per-facet counts via the enabled-gated draft-count infra; confirm `vote_gte`/`region`/
-      `with_watch_providers` params (demote only an unbacked one). Mono counts.
+- [x] (AC #3) Wire a single live total (`符合 N 部`) via the enabled-gated draft-count infra; confirm
+      `vote_gte`/`region`/`with_watch_providers` params (demote only an unbacked one). Mono count.
+      *(Per-facet counts renegotiated → single total, decision 1A; per-facet deferred to backlog.)*
 - [x] (AC #4) Debounce numeric year/score inputs in `FilterPanel`; keep categorical chips instant.
 - [x] (AC #5) `useFilterState.setFilters` → `navigate({ ..., replace: true })` for intermediate toggles.
 - [x] (AC #6) Coalesce the `type='all'` movies+tv pair into one logical loading state in `useDiscoverResults`.
@@ -202,28 +209,69 @@ Claude Opus 4.8 (1M context) — BMAD dev agent (Amelia), `dev-story` workflow. 
 
 - `apps/web/src/routes/discover.tsx` (M — `staticData: { shell: 'v2' }` + shell-gate split into `DiscoverPage`/`LegacyDiscover`)
 - `apps/web/src/routes/discover.spec.tsx` (A — shell-gating tests)
-- `apps/web/src/components/search/DiscoverBrowseV2.tsx` (A)
-- `apps/web/src/components/search/DiscoverBrowseV2.spec.tsx` (A)
-- `apps/web/src/components/search/DiscoverFilterRail.tsx` (A)
+- `apps/web/src/components/search/DiscoverBrowseV2.tsx` (A — CR M2: rail count reflects `isFetching`; CR L1: options-object `useDiscoverResults` call)
+- `apps/web/src/components/search/DiscoverBrowseV2.spec.tsx` (A — CR M2: +1 test for 計算中… on background refetch)
+- `apps/web/src/components/search/DiscoverFilterRail.tsx` (A — CR M3: now composes the shared `FilterRailShell`)
 - `apps/web/src/components/search/DiscoverFilterRail.spec.tsx` (A)
+- `apps/web/src/components/ui/FilterRailShell.tsx` (A — CR M3: shared persistent-rail chrome — converges 探索 + 媒體庫 rails)
+- `apps/web/src/components/library/LibraryFilterRail.tsx` (M — CR M3: migrated to the shared `FilterRailShell`; pixel-identical DOM, ux3-0-7 chrome convergence per AC #11)
 - `apps/web/src/components/search/DiscoverStatesV2.tsx` (A)
 - `apps/web/src/components/search/DiscoverStatesV2.spec.tsx` (A)
 - `apps/web/src/components/search/FilterPanel.tsx` (M — `debounceMs` prop + year local-state debounce)
 - `apps/web/src/components/search/FilterPanel.spec.tsx` (M — debounce tests)
 - `apps/web/src/components/search/FilterChipBar.tsx` (M — `summary` variant)
-- `apps/web/src/components/search/FilterBottomSheet.tsx` (M — `variant='v2'`)
+- `apps/web/src/components/search/FilterBottomSheet.tsx` (M — `variant='v2'`; CR L1: options-object `useDiscoverResults` call)
 - `apps/web/src/hooks/useFilterState.ts` (M — shell-gated `replace`)
 - `apps/web/src/hooks/useFilterState.spec.tsx` (M)
-- `apps/web/src/hooks/useDiscoverResults.ts` (M — `keepPrevious` + coalesced `isLoading`/`isFetching`)
-- `apps/web/src/hooks/useDiscoverResults.spec.tsx` (M)
+- `apps/web/src/hooks/useDiscoverResults.ts` (M — `keepPrevious` + coalesced `isLoading`/`isFetching`; CR L1: options-object signature `{ enabled, keepPrevious }`)
+- `apps/web/src/hooks/useDiscoverResults.spec.tsx` (M — CR L1: options-object call)
 - `tests/e2e/discover-filters.spec.ts` (M — v2 rail block)
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` (M — status→review + Rule-24 ③ backlog entry)
 - `ux-design.pen` (M — I1-D-v2 single-total; ⚠️ PENDING Pencil Cmd+S to flush to disk)
 - `_bmad-output/screenshots/flow-i-discover-v2/i1-d.png` (M — regenerated)
 
+## Senior Developer Review (AI)
+
+**Reviewer:** Alexyu (BMAD `code-review` workflow, adversarial) · **Date:** 2026-06-24 · **Outcome:** Approve (fixes applied)
+
+**Scope gates:** Rule 7 Wire Format N/A (no Go error-code files) · Rule 20 Contract Bump N/A (no stamp bumps) ·
+Rule 25 Mega-line N/A (project-context.md untouched). Git File List vs git reality: **0 discrepancies**.
+`.pen` flush verified (committed diff `40+/250−` removes the per-facet nodes → Cmd+S did happen).
+
+Findings: **0 High · 3 Medium · 3 Low**. No "marked [x] but not done" criticals — `vote_average`→cards
+verified end-to-end (`MediaGrid`→`PosterCard voteAverage`), all refinements shell-gated.
+
+**Fixed (review choice [1] — auto-fix):**
+
+- **[M1] AC #3 wording vs reality** — AC #3 said *per-facet* counts; shipped a single live total. Amended the
+  AC text + Task to record the single-total decision (Party Mode 1A) so the story file is truthful; per-facet
+  stays deferred to backlog `ux3-discover-facet-aggregation-be`. (doc-only)
+- **[M2] Rail count wired to `isLoading`** — under `keepPreviousData`, `isLoading` only flips on a cold load,
+  so a re-filter showed the **stale** total and never `計算中…`; the hook's `isFetching` was dead code. Now
+  `DiscoverBrowseV2` passes `isCounting={isFetching}` (grid skeleton still on `isLoading`). +1 regression test.
+- **[M3] `DiscoverFilterRail` forked `LibraryFilterRail` chrome** (violates AC #11 "converge, don't fork") —
+  extracted `components/ui/FilterRailShell.tsx` (pixel-identical DOM/classes/testids) and migrated **both**
+  rails onto it. LibraryFilterRail (ux3-0-7) DOM is byte-identical → no visual-baseline churn; its 3 specs
+  still green.
+- **[L1] Positional boolean params** — `useDiscoverResults(…, true, true)` → options object
+  `{ enabled, keepPrevious }`; all 3 call sites + spec updated.
+
+**Noted, NOT fixed (out of scope / informational):**
+
+- **[L2]** `tsc --noEmit` repo-wide is not clean: 5 pre-existing `TS2352` errors in
+  `apps/web/src/routes/test/-gallery.fixtures.tsx` (a dev-only component-gallery fixtures file, **not** in this
+  story's diff). `nx build web` is green because Vite/esbuild transpiles without a full typecheck. Touched files
+  are type-clean. Recommend a separate tracking ticket for the gallery fixtures type debt.
+- **[L3]** type='all' grid interleaves by `voteCount` (≠ the `評分`/`vote_average` sort key) and only sorts the
+  current page — pre-existing behavior shared with legacy `SearchResults`, not introduced here.
+
+**Verification:** 57 web specs green (incl. LibraryFilterRail regression) · ESLint clean (Rule 21 header added
+to `FilterRailShell`) · touched files type-clean · prettier clean.
+
 ## Change Log
 
 | Date | Change |
 |------|--------|
+| 2026-06-24 | **Adversarial CR (auto-fix):** M1 AC #3 wording realigned to the shipped single-total (decision 1A); M2 rail count now reflects `isFetching` (was `isLoading` — stale under `keepPreviousData`) +regression test; M3 extracted shared `FilterRailShell` and converged 探索 + 媒體庫 rails (AC #11, pixel-identical); L1 `useDiscoverResults` → options object. 57 specs / lint / typecheck(touched) / prettier green. |
 | 2026-06-23 | ux3-3-2 implemented: `/discover` v2 shell-gated persistent filter rail (`DiscoverBrowseV2` + `DiscoverFilterRail` + `DiscoverStatesV2`). AC #3 = single live total `符合 N 部` (per-facet counts deferred → backlog `ux3-discover-facet-aggregation-be`, TMDb has no facet aggregation). Debounce/replace/coalesce/summary/v2-sheet refinements shell-gated so legacy is byte-unchanged. `vote_average` confirmed on cards. `.pen` I1-D-v2 aligned to single-total. Tests green (web 2235 / api / build / lint / prettier). Status → review. |
 | 2026-06-23 | 🔗 AC Drift: Story 11-2 AC #4 (push history) → ux3-3-2 AC #5 (`replace:true`) — v2-only via `useShellVersion()` gate; legacy push semantics preserved. |
