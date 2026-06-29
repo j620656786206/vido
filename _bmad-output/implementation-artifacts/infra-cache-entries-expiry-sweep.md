@@ -1,6 +1,6 @@
 # Story (Infra): `cache_entries` Scheduled Expiry Sweep
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 <!-- Story key: infra-cache-entries-expiry-sweep (non-epic infra story; whole-app benefit).
@@ -25,29 +25,29 @@ so that **the TMDb response cache does not grow unbounded — especially once th
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Create `CacheSweepScheduler` service (AC: #1, #2, #3, #4, #6, #7)**
-  - [ ] New file `apps/api/internal/services/cache_sweep_scheduler.go`.
-  - [ ] Define `CacheSweepSchedulerInterface { Start(ctx context.Context); Stop() }` (mirror `BackupSchedulerInterface` shape, minus the schedule getters/setters which this simpler sweep does not need).
-  - [ ] Struct `CacheSweepScheduler{ cacheRepo repository.CacheRepositoryInterface; settingsRepo repository.SettingsRepositoryInterface; mu sync.Mutex; stopCh chan struct{}; stopped bool }`.
-  - [ ] `NewCacheSweepScheduler(cacheRepo repository.CacheRepositoryInterface, settingsRepo repository.SettingsRepositoryInterface) *CacheSweepScheduler` — initialize `stopCh: make(chan struct{})`.
-  - [ ] Const `settingsKeyCacheSweepInterval = "cache_sweep_interval_minutes"`; const `defaultCacheSweepIntervalMinutes = 45`; const `minCacheSweepIntervalMinutes = 5`.
-  - [ ] Helper `resolveInterval(ctx) (time.Duration, bool)` — `settingsRepo.GetInt(ctx, settingsKeyCacheSweepInterval)`; on error use default 45; `<= 0` ⇒ return `(0, false)` (disabled); `> 0 && < 5` ⇒ clamp to 5; return `(time.Duration(mins) * time.Minute, true)`.
-  - [ ] `Start(ctx)`: resolve interval; if disabled → `slog.Info("Cache sweep scheduler disabled (interval <= 0)")` and `return`; else `slog.Info("Cache sweep scheduler started", "interval", interval)`, `ticker := time.NewTicker(interval)`, `defer ticker.Stop()`, then `for { select { case <-ctx.Done(): log+return; case <-s.stopCh: log+return; case <-ticker.C: s.sweep(ctx) } }`.
-  - [ ] `sweep(ctx)`: `defer func(){ if r := recover(); r != nil { slog.Error("Cache sweep panicked", "recover", r) } }()`; `if _, err := s.cacheRepo.ClearExpired(ctx); err != nil { slog.Error("Cache sweep failed", "error", err) }` — note **no `return` on success or error path that breaks the loop**; the loop owns control flow.
-  - [ ] `Stop()`: copy `BackupScheduler.Stop()` verbatim in shape — `s.mu.Lock(); defer s.mu.Unlock(); if !s.stopped { s.stopped = true; close(s.stopCh) }`.
-  - [ ] Do **NOT** add any `VACUUM` call anywhere (AC #6).
-- [ ] **Task 2 — Wire into `cmd/api/main.go` (AC: #5)**
-  - [ ] Construct after the scan scheduler (~`main.go:405`): `cacheSweepScheduler := services.NewCacheSweepScheduler(repos.Cache, repos.Settings)` + `slog.Info("Cache sweep scheduler initialized")`. (Confirm the repos field name for the cache repository — see Dev Notes "main.go wiring", verify `repos.Cache` exists; if the field is named differently, use the actual field.)
-  - [ ] Start in goroutine alongside the others (~`main.go:633`): `cacheSweepCtx, cacheSweepCancel := context.WithCancel(context.Background())` + `go cacheSweepScheduler.Start(cacheSweepCtx)` + `slog.Info("Cache sweep scheduler started")`.
-  - [ ] Shutdown (~`main.go:667-673`, beside `scanSchedulerCancel()` / `backupScheduler.Stop()`): `cacheSweepCancel()` + `cacheSweepScheduler.Stop()` with a `slog.Info("Stopping cache sweep scheduler...")`.
-- [ ] **Task 3 — Unit tests (AC: #8)**
-  - [ ] New file `apps/api/internal/services/cache_sweep_scheduler_test.go`.
-  - [ ] Add a `MockCacheRepo` implementing `repository.CacheRepositoryInterface` (or reuse an existing testutil mock if one exists — grep `MockCacheRepo` / `CacheRepository` mocks first) with a call-capturing `ClearExpired`; reuse the `MockSchedulerSettingsRepo` pattern from `backup_scheduler_test.go` for `SettingsRepositoryInterface`.
-  - [ ] Test `resolveInterval`: unset→45m; `GetInt` returns `120`→120m; returns `0`/`-1`→disabled; returns `2`→clamped 5m.
-  - [ ] Test `Stop()` idempotent: `NewCacheSweepScheduler(nil, nil)` then `Stop(); Stop()` does not panic (matches `TestBackupScheduler_Stop`).
-  - [ ] Test the sweep tick path WITHOUT real-time flakiness: prefer extracting `sweep(ctx)` and asserting it calls `ClearExpired` once and that a `ClearExpired` error does not propagate/panic. Optionally drive `Start` with a very short configured interval + a context cancelled after the first `ClearExpired` capture (channel signal), then assert `ClearExpired` was called ≥1 and the goroutine exits cleanly on cancel.
-  - [ ] Test error-swallow: `ClearExpired` returns an error → `sweep` returns normally (no panic), scheduler still responsive.
-  - [ ] Run `go test ./internal/services/ -run CacheSweep -v`, then `pnpm lint:all` (go vet + staticcheck + eslint + prettier) per project-context Rule 12.
+- [x] **Task 1 — Create `CacheSweepScheduler` service (AC: #1, #2, #3, #4, #6, #7)**
+  - [x] New file `apps/api/internal/services/cache_sweep_scheduler.go`.
+  - [x] Define `CacheSweepSchedulerInterface { Start(ctx context.Context); Stop() }` (mirror `BackupSchedulerInterface` shape, minus the schedule getters/setters which this simpler sweep does not need).
+  - [x] Struct `CacheSweepScheduler{ cacheRepo repository.CacheRepositoryInterface; settingsRepo repository.SettingsRepositoryInterface; mu sync.Mutex; stopCh chan struct{}; stopped bool }`.
+  - [x] `NewCacheSweepScheduler(cacheRepo repository.CacheRepositoryInterface, settingsRepo repository.SettingsRepositoryInterface) *CacheSweepScheduler` — initialize `stopCh: make(chan struct{})`.
+  - [x] Const `settingsKeyCacheSweepInterval = "cache_sweep_interval_minutes"`; const `defaultCacheSweepIntervalMinutes = 45`; const `minCacheSweepIntervalMinutes = 5`.
+  - [x] Helper `resolveInterval(ctx) (time.Duration, bool)` — `settingsRepo.GetInt(ctx, settingsKeyCacheSweepInterval)`; on error use default 45; `<= 0` ⇒ return `(0, false)` (disabled); `> 0 && < 5` ⇒ clamp to 5; return `(time.Duration(mins) * time.Minute, true)`.
+  - [x] `Start(ctx)`: resolve interval; if disabled → `slog.Info("Cache sweep scheduler disabled (interval <= 0)")` and `return`; else `slog.Info("Cache sweep scheduler started", "interval", interval)`, `ticker := time.NewTicker(interval)`, `defer ticker.Stop()`, then `for { select { case <-ctx.Done(): log+return; case <-s.stopCh: log+return; case <-ticker.C: s.sweep(ctx) } }`.
+  - [x] `sweep(ctx)`: `defer func(){ if r := recover(); r != nil { slog.Error("Cache sweep panicked", "recover", r) } }()`; `if _, err := s.cacheRepo.ClearExpired(ctx); err != nil { slog.Error("Cache sweep failed", "error", err) }` — note **no `return` on success or error path that breaks the loop**; the loop owns control flow.
+  - [x] `Stop()`: copy `BackupScheduler.Stop()` verbatim in shape — `s.mu.Lock(); defer s.mu.Unlock(); if !s.stopped { s.stopped = true; close(s.stopCh) }`.
+  - [x] Do **NOT** add any `VACUUM` call anywhere (AC #6).
+- [x] **Task 2 — Wire into `cmd/api/main.go` (AC: #5)**
+  - [x] Construct after the scan scheduler (~`main.go:405`): `cacheSweepScheduler := services.NewCacheSweepScheduler(repos.Cache, repos.Settings)` + `slog.Info("Cache sweep scheduler initialized")`. (Confirmed `repos.Cache` exists — `repository/registry.go:16` `Cache CacheRepositoryInterface`, already used as `repos.Cache` at `main.go:197,205`.)
+  - [x] Start in goroutine alongside the others (~`main.go:633`): `cacheSweepCtx, cacheSweepCancel := context.WithCancel(context.Background())` + `go cacheSweepScheduler.Start(cacheSweepCtx)` + `slog.Info("Cache sweep scheduler started")`.
+  - [x] Shutdown (~`main.go:667-673`, beside `scanSchedulerCancel()` / `backupScheduler.Stop()`): `cacheSweepCancel()` + `cacheSweepScheduler.Stop()` with a `slog.Info("Stopping cache sweep scheduler...")`.
+- [x] **Task 3 — Unit tests (AC: #8)**
+  - [x] New file `apps/api/internal/services/cache_sweep_scheduler_test.go`.
+  - [x] Added a local `mockCacheRepo` implementing `repository.CacheRepositoryInterface` with a call-capturing `ClearExpired` (existing `MockCacheRepo` mocks live in the `repository`/`tmdb` packages — not importable into the `services` test package); reused the `MockSchedulerSettingsRepo` already defined in `backup_scheduler_test.go` (same package) for `SettingsRepositoryInterface`.
+  - [x] Test `resolveInterval`: unset→45m; `GetInt` returns `120`→120m; returns `0`/`-1`→disabled; returns `2`→clamped 5m; returns `5`→honored (floor boundary).
+  - [x] Test `Stop()` idempotent: `NewCacheSweepScheduler(nil, nil)` then `Stop(); Stop()` does not panic (matches `TestBackupScheduler_Stop`).
+  - [x] Test the sweep tick path WITHOUT real-time flakiness: extracted `sweep(ctx)` and assert it calls `ClearExpired` exactly once; plus `Start` lifecycle tests (disabled→returns + never sweeps; ctx-cancel→returns; `Stop()`→returns) that exit on the cancel/stop signal so they never wait for a real tick. NO `time.Sleep`-driven assertions; `-race` clean.
+  - [x] Test error-swallow: `ClearExpired` returns an error → `sweep` returns normally (`assert.NotPanics`), scheduler still responsive.
+  - [x] Ran `go test ./internal/services/ -run CacheSweep -v` (+ `-race`) green, then `go vet ./...` + `staticcheck ./...` clean (Rule 12).
 
 ## Dev Notes
 
@@ -123,11 +123,35 @@ Existing schedulers (`BackupScheduler`, `ScanScheduler`) inject **repositories d
 
 ### Agent Model Used
 
-_(to be filled by dev agent)_
+Amelia (dev agent) — Claude Opus 4.8 (1M context) — `dev-story` workflow, 2026-06-29.
 
 ### Debug Log References
 
+- `go test ./internal/services/ -run CacheSweep -v` → 4 test funcs / 12 sub-tests PASS.
+- `go test ./internal/services/ -run CacheSweep -race` → PASS (no data races on the concurrent Start/Stop/ctx-cancel paths).
+- `go build ./...` + `go vet ./internal/services/ ./cmd/api/` → clean.
+- Full backend gate `pnpm nx test api` → the ONLY failure was the already-filed pre-existing flake `preexisting-fail-scanner-sse-scan-cancelled-flake` (sprint-status.yaml:363); proven not mine by removing both new files and re-running (still fails 1/5 runs).
+- Full frontend gate `pnpm nx test web` → green (this story touches zero `apps/web/` files).
+
 ### Completion Notes List
+
+- **What shipped:** `CacheSweepScheduler` — an infra driver that, on a settings-configurable ticker (default 45 min, aligned with the 1h cache TTL), calls the existing-but-previously-orphaned `CacheRepository.ClearExpired(ctx)` to delete expired `cache_entries` rows. Wired into `cmd/api/main.go` beside the backup/scan schedulers (construct → `go Start(ctx)` → shutdown `cancel()` + `Stop()`).
+- **AC coverage:** AC1 (ticker calls `ClearExpired`; the repo method already logs `"Expired cache entries cleared"` with `entries_deleted` when >0, no-op at 0 — not duplicated). AC2 (`resolveInterval`: default 45 / configured / `<=0` disables / clamp floor 5). AC3 (`Start` honors both `ctx.Done()` and `Stop()`; `defer ticker.Stop()`; `Stop()` idempotent via `mu`+`stopped`+`close(stopCh)`). AC4 (`ClearExpired` error logged + loop continues; `defer recover()` in `sweep`). AC5 (main.go construct/start/shutdown wiring). **AC6 — NO `VACUUM` anywhere** (grep-verified the new file). AC7 (targets `cache_entries` only via `CacheRepository.ClearExpired`; AI/offline/image caches untouched — those are tracked separately by `infra-ai-offline-cache-expiry-sweep`). AC8 (unit tests + `go vet`/`staticcheck` clean).
+- **Layering (Rule 4):** injected `repository.CacheRepositoryInterface` + `repository.SettingsRepositoryInterface` directly (a scheduler is an infra driver, not a handler — mirrors `BackupScheduler`/`ScanScheduler`). No new service-layer wrapper.
+- 🔗 **AC Drift:** N/A — net-new subsystem. `ClearExpired` existed (`cache_repository.go:123`) but had ZERO scheduled production caller, so no prior story's AC governs its scheduling/observable behavior (grep `ClearExpired|CacheSweep|cache_sweep` across `_bmad-output/implementation-artifacts/*.md` returned only the repo-definition story 1-1 + this story's own origin specs, none wiring a scheduled caller).
+- 📎 **Contract Stamps:** NONE — no `[@contract-v*]` stamps in this story and it consumes no upstream stamped AC (normal for a backend infra story that defines/consumes no wire contract).
+- 🎭 **A11y Pre-Flight:** N/A (100% backend — no `apps/web/` files touched).
+- 🎨 **UX Verification:** SKIPPED — no UI changes in this story.
+- **Pre-existing failure handling (Epic 9c Retro AI-2):** the full-suite gate surfaced `TestScannerService_SSEBroadcast_ScanCancelled` (a 1ms-cancel vs 20-file-walk timing race in `scanner_service_test.go:420`). Already tracked at `preexisting-fail-scanner-sse-scan-cancelled-flake` (backlog) — no new entry needed; confirmed pre-existing (fails with my files removed) and unrelated to this story. Option chosen: **already-filed, referenced** (not re-filed).
+- **Code review fixes (adversarial CR, 2026-06-29 — 1 High / 3 Med / 3 Low; 6 fixed, 1 deferred):**
+  - 🔧 **[High] H1 — overflow guard:** added `maxCacheSweepIntervalMinutes` (7 days) ceiling clamp in `resolveInterval`. Without it a value > ~153M minutes overflowed `time.Duration` int64 ns → negative → `time.NewTicker` panic in `Start` (outside `sweep`'s recover) → process crash. Now clamped; `assert.NotPanics` test on `math.MaxInt`.
+  - 🔧 **[Med] M2 — ticker path now tested:** split `Start` → unexported `run(ctx, interval)` so a tiny-interval, channel-signalled, tick-driven test exercises `case <-ticker.C: s.sweep(ctx)` (previously false-green — deleting that line passed all tests).
+  - 🔧 **[Med] M3 — cold-start sweep:** `run` now does one guarded immediate sweep before the ticker loop, so a bloated table is drained at boot instead of after a full 45-min interval (a process restarting faster than the interval would otherwise never sweep). Aligns with Dev Notes "FIRST sweep on a bloated table."
+  - 🔧 **[Med] M2′ — observability:** `GetInt` error path now logs at DEBUG before defaulting (the unset key is the common per-boot case, so DEBUG not WARN avoids boot spam; `Get` doesn't wrap `sql.ErrNoRows` so not-found vs DB-error isn't cheaply distinguishable).
+  - 🔧 **[Low] L1 — clamp visibility:** below-floor clamp now logs at WARN (operator's value isn't silently overridden).
+  - 🔧 **[Low] L2 — clean shutdown logs:** `sweep` treats `context.Canceled`/`DeadlineExceeded` as DEBUG, not a spurious ERROR, when a tick races `cacheSweepCancel()`.
+  - ⏭️ **[Low] L3 — deferred (precedent-aligned):** no double-`Start`/restart guard, matching the `BackupScheduler` the story told me to mirror; `main.go` calls `Start` exactly once. Documented in the `run` doc-comment.
+- **Environmental note (local staticcheck toolchain skew):** the pinned `staticcheck-2026.1` binary was built with go1.25 while this machine now runs go1.26.3, producing a spurious stdlib `(compile)` error (`fips140only_go1.26.go`) that in turn corrupted cross-package usage analysis into two false `U1000` reports. Rebuilding `staticcheck@2026.1` against the current toolchain made `staticcheck ./...` fully clean. Pre-existing/environmental, not caused by this story; CI is unaffected (it pins the Go version per Rule 12). `lint:all` only auto-reinstalls staticcheck when the binary is MISSING, not when it is version-skewed — minor process gap worth a future glance, not in scope here.
 
 ### Discovery Triage
 
@@ -146,8 +170,32 @@ _(to be filled by dev agent)_
 
 ### File List
 
-_(to be filled by dev agent)_
+- `apps/api/internal/services/cache_sweep_scheduler.go` (NEW — `CacheSweepScheduler` service)
+- `apps/api/internal/services/cache_sweep_scheduler_test.go` (NEW — `resolveInterval` / `Stop` / `sweep` / `Start`-lifecycle unit tests + local `mockCacheRepo`)
+- `apps/api/cmd/api/main.go` (MODIFIED — construct ~`:407`, start ~`:636`, shutdown ~`:670` wiring)
 
-- `apps/api/internal/services/cache_sweep_scheduler.go` (NEW)
-- `apps/api/internal/services/cache_sweep_scheduler_test.go` (NEW)
-- `apps/api/cmd/api/main.go` (MODIFIED — construct / start / shutdown wiring)
+_(Workflow tracking, not code: `_bmad-output/implementation-artifacts/infra-cache-entries-expiry-sweep.md` (this story) + `sprint-status.yaml` (status → in-progress → review).)_
+
+## Change Log
+
+| Date       | Change                                                                                                                                    |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-06-29 | Implemented `CacheSweepScheduler` (Task 1), wired it into `cmd/api/main.go` (Task 2), added unit tests (Task 3). All 8 ACs satisfied; `go vet`/`staticcheck`/`-race` clean; backend + frontend regression gates green. Status → review. |
+| 2026-06-29 | Adversarial code-review (fresh-context): 1 High / 3 Med / 3 Low. Fixed 6 (H1 overflow ceiling clamp; M2 `run()` split + tick-driven test; M3 immediate cold-start sweep; M2′ DEBUG log on GetInt error; L1 clamp WARN; L2 `context.Canceled`→DEBUG). Deferred L3 (no restart guard — matches `BackupScheduler` precedent, single-call usage). `go vet`/`staticcheck`/`-race ×3`/gofmt clean; new CR tests green. Status → done. |
+
+## Senior Developer Review (AI)
+
+- **Date:** 2026-06-29
+- **Reviewer:** independent fresh-context adversarial agent + dev (Amelia) validation
+- **Outcome:** **Approve** (all High + Medium resolved; 1 Low deferred with rationale)
+- **Gate checks:** Git vs File List = 0 discrepancies · 🔒 Rule 7 Wire Format = PASS (0 error codes in scope) · 🔒 Rule 20 Contract Bump = N/A · 🔒 Rule 25 Mega-line = N/A
+
+| ID  | Sev  | Finding                                                                    | Disposition                                            |
+| --- | ---- | ------------------------------------------------------------------------- | ------------------------------------------------------ |
+| H1  | High | `resolveInterval` had no upper bound → int64 overflow → `NewTicker` panic in `Start` (outside `sweep` recover) → process crash | ✅ Fixed — `maxCacheSweepIntervalMinutes` (7d) clamp + `NotPanics` test |
+| M2  | Med  | `case <-ticker.C` wiring untested (false-green vs AC8 "a tick invokes ClearExpired") | ✅ Fixed — `run(ctx, interval)` split + tick-driven channel test |
+| M3  | Med  | `NewTicker` delays first sweep a full interval; defeats the bloated-table cold-start goal | ✅ Fixed — guarded immediate cold-start sweep in `run` |
+| M2′ | Med  | `GetInt` error silently swallowed (no observability)                       | ✅ Fixed — DEBUG log before default (DEBUG, not WARN — unset is the common per-boot case) |
+| L1  | Low  | Below-floor clamp applied silently                                         | ✅ Fixed — WARN log on clamp                            |
+| L2  | Low  | Tick racing shutdown logs a spurious `ClearExpired` ERROR (`context.Canceled`) | ✅ Fixed — context-cancellation treated as DEBUG        |
+| L3  | Low  | No double-`Start`/restart guard                                            | ⏭️ Deferred — mirrors the sanctioned `BackupScheduler` precedent; `main.go` calls `Start` once. Documented in `run` doc-comment. |

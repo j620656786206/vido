@@ -405,6 +405,10 @@ func main() {
 	scanScheduler := services.NewScanScheduler(scannerService, repos.Settings, slog.Default())
 	slog.Info("Scan scheduler initialized")
 
+	// Initialize cache_entries expiry sweep scheduler (infra-cache-entries-expiry-sweep)
+	cacheSweepScheduler := services.NewCacheSweepScheduler(repos.Cache, repos.Settings)
+	slog.Info("Cache sweep scheduler initialized")
+
 	// Initialize subtitle engine components (Story 8.1-8.8)
 	subtitleConverter, _ := subtitle.NewConverter()
 	subtitleScorer := subtitle.NewScorer(subtitle.NewDefaultScorerConfig())
@@ -633,6 +637,11 @@ func main() {
 	go scanScheduler.Start(scanSchedulerCtx)
 	slog.Info("Scan scheduler started")
 
+	// Start cache sweep scheduler (infra-cache-entries-expiry-sweep)
+	cacheSweepCtx, cacheSweepCancel := context.WithCancel(context.Background())
+	go cacheSweepScheduler.Start(cacheSweepCtx)
+	slog.Info("Cache sweep scheduler started")
+
 	// Start qBittorrent health monitoring with 30s interval (Story 4.6 - NFR-R6)
 	monitorCtx, monitorCancel := context.WithCancel(context.Background())
 	go healthMonitor.StartQBMonitoring(monitorCtx)
@@ -666,6 +675,11 @@ func main() {
 	slog.Info("Stopping scan scheduler...")
 	scanSchedulerCancel()
 	scanScheduler.Stop()
+
+	// Stop cache sweep scheduler (infra-cache-entries-expiry-sweep)
+	slog.Info("Stopping cache sweep scheduler...")
+	cacheSweepCancel()
+	cacheSweepScheduler.Stop()
 
 	// Stop backup scheduler
 	slog.Info("Stopping backup scheduler...")
