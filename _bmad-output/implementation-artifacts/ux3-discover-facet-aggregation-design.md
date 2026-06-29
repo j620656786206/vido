@@ -1,6 +1,6 @@
 # Story ux3-discover-facet-aggregation-design — revive per-chip FacetCountChip on Discover v2 rail (`.pen` I1-D-v2)
 
-**Epic:** ux3-discover-v2 (UX Redesign Phase 3) · **Status:** ready-for-dev (design not started)
+**Epic:** ux3-discover-v2 (UX Redesign Phase 3) · **Status:** done (design complete, MCP review PASS 2026-06-30)
 **Owner:** ux-designer (Sally, Pencil MCP) · **Type:** design · **Initiative:** Discover Contextual Facet Counts
 **Critical path:** this is the LONG POLE of the facet-counts initiative — it **blocks** `ux3-discover-facet-aggregation-fe` **Task 5** (per-chip count UI). It has **no upstream prerequisite** (does not depend on the BE/FE being built) → **start now.**
 
@@ -88,8 +88,18 @@ After the `.pen` edits:
 
 ### Status update
 
-_(to be filled by ux-designer on completion — design state, MCP review result, `.pen` saved + i1-d.png staged, then sprint-status → done)_
+**Design complete — MCP review PASS (5/5 ACs), 2026-06-30.** Drawn via Pencil Inline AI (prompt authored from the live `.pen` node graph), reviewed via Pencil MCP read-back + rail screenshot.
+
+- **AC1 (Component Library, 4 states):** `filter-controls-v2` (`zV8fn`) / `facet count cell` (`rcMFg`) now documents four labelled `FacetCountChip` examples — Resting (`jFt6G` 動作 340), Active (`QP08v` ✓Netflix 540, accent + stroke + check), Computing/State A (`RuYmr` 喜劇 `–`, `$text-disabled`, **no spinner**, caption documents the reduced-motion fill behavior), Dead-end-0/State B (`KZw3r` 驚悚 0, dimmed + `$text-disabled`, caption "可點擊切換，非停用"). Each visually distinct, token-only, count in JetBrains Mono.
+- **AC2 (I1-D-v2 rail `fxCVk`/`E9h3z`):** 類型/評分/地區/串流平台 chips each carry a contextual Mono count; **State A ×2** (喜劇, Apple TV+), **State B ×2** (驚悚, 台灣); contextual annotation `P5u2ba` "計數為情境式（contextual）" sits under the rail header; single-total footer `l4hQn` "符合 412 部" retained.
+- **AC3 (mobile untouched):** I2-M-v2 (`hi6WD`) carries no per-chip counts — chip row `h6h2bA` (動作/2020+/科幻) and all other sections unchanged.
+- **AC4 (DL-v2 tokens):** colors all token-bound (`$bg-tertiary`/`$text-secondary`/`$text-muted`/`$text-disabled`/`$accent-*`), JetBrains Mono numerics, Noto Sans TC labels; dimmed-0 distinct from both active and a disabled control.
+- **AC5 (FE handoff):** count placed after the label (gap 6); dimmed-0 = `$text-disabled` + reduced opacity + `0`; computing = `–`; mapped to `[@contract-v1]` genre/rating/region/platform facets. 年份 (`YUsSf`) correctly carries no counts (numeric range, not a contract facet).
+- **Review refinement applied via MCP:** dead-end chips (`KZw3r`/`xERf9`/`sx5UE`) opacity 0.6 → 0.7 (kept `$text-disabled`) so the "dimmed-but-clickable" affordance stays legible rather than over-faint.
+- **Screenshots:** pending — Cmd+S the `.pen`, then `scripts/export-pen-screenshots.py`, stage **only** `flow-i-discover-v2/i1-d.png` (`i2-m.png` must not change), commit `.pen` + `i1-d.png` together.
 
 ### Discovery Triage
 
-- **Did this design discover any work outside its current scope?** _(to be filled — e.g. if the FacetCountChip anatomy needs a new variant beyond the four states, or if I1-D-v2 layout can't fit a count without crowding, triage per Rule 24.)_
+- **Did this design discover any work outside its current scope?** **No new out-of-scope work.** Two pre-existing nuances noted (NOT introduced by this story, no new tracked entry per Rule 24):
+  1. Rail chips are ~29px tall (`padding:[8,12]`, 13px label) — below the 44px touch floor. Inherited from ux3-3-1's rail; this is a desktop (pointer) rail and this story only added counts, did not resize chips. FE provides the touch hit-area.
+  2. Catalog `FacetCountChip` padding `[6,12]` vs in-rail chips `[8,12]` — a pre-existing 2px inconsistency, not caused by adding counts.
