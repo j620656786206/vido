@@ -3,6 +3,18 @@ import { describe, it, expect, vi } from 'vitest';
 import { DiscoverFilterRail } from './DiscoverFilterRail';
 import type { DiscoverFilters } from '../../lib/discoverFilters';
 
+// The rail fetches per-facet counts (ux3-discover-facet-aggregation-fe); mock it so
+// this spec stays focused on the rail chrome and needs no QueryClient/shell provider
+// (count behaviour is covered by useDiscoverFacetCounts.spec / FilterPanel.spec / E2E).
+vi.mock('../../hooks/useDiscoverFacetCounts', () => ({
+  useDiscoverFacetCounts: () => ({
+    counts: undefined,
+    partial: false,
+    isLoading: false,
+    isFetching: false,
+  }),
+}));
+
 const base: DiscoverFilters = { genre: [], platform: [], sortBy: 'popularity' };
 
 function renderRail(over: Partial<React.ComponentProps<typeof DiscoverFilterRail>> = {}) {

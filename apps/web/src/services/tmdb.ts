@@ -16,6 +16,26 @@ const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p';
 
 export type ImageSize = 'w92' | 'w154' | 'w185' | 'w342' | 'w500' | 'w780' | 'original';
 
+/**
+ * Contextual per-facet result counts (Story ux3-discover-facet-aggregation-fe,
+ * consumes ux3-discover-facet-aggregation-be [@contract-v1]). Outer key =
+ * dimension; inner key = the facet value exactly as the FE supplied it
+ * (`String(genre.id)` / `region.code` / `String(ratingValue)` /
+ * `String(platform.id)`) → the contextual movie+tv total for (base filter + that
+ * facet). `partial` is true when the BE could not resolve every requested facet
+ * within its time budget; unresolved keys are omitted (they render as the
+ * computing "–" placeholder and fill on a re-poll, AC5).
+ */
+export interface FacetCounts {
+  counts: {
+    genre?: Record<string, number>;
+    region?: Record<string, number>;
+    rating?: Record<string, number>;
+    platform?: Record<string, number>;
+  };
+  partial: boolean;
+}
+
 export function getImageUrl(path: string | null, size: ImageSize = 'w342'): string | null {
   if (!path) return null;
   return `${TMDB_IMAGE_BASE}/${size}${path}`;
@@ -105,6 +125,17 @@ export const tmdbService = {
 
   async discoverTVShows(params: URLSearchParams): Promise<TVShowSearchResponse> {
     return fetchApi<TVShowSearchResponse>(`/tmdb/discover/tv?${params.toString()}`);
+  },
+
+  // Story ux3-discover-facet-aggregation-fe — contextual per-facet result counts
+  // for the Discover rail (consumes ux3-discover-facet-aggregation-be
+  // [@contract-v1]). `params` carry the base discover filter PLUS the *_values
+  // candidate CSVs (built by buildFacetCountParams). The response counts are keyed
+  // by dimension → the facet value exactly as the FE supplied it, so they align
+  // 1:1 with the chip keys. `fetchApi` snakeToCamel-transforms the response; the
+  // `counts`/`partial` keys and the numeric/region-code inner keys survive as-is.
+  async discoverFacetCounts(params: URLSearchParams): Promise<FacetCounts> {
+    return fetchApi<FacetCounts>(`/tmdb/discover/facet-counts?${params.toString()}`);
   },
 
   // Story 11-3 — unified instant search: dual-language (zh-TW + en) movies, TV,
