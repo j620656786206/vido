@@ -39,6 +39,10 @@ type MockTMDbService struct {
 	DiscoverTVShowsResponse    *tmdb.SearchResultTVShows
 	DiscoverTVShowsError       error
 	DiscoverTVShowsCalls       []tmdb.DiscoverParams
+	// Story ux3-discover-facet-aggregation-be
+	DiscoverFacetCountsResponse *tmdb.FacetCounts
+	DiscoverFacetCountsError    error
+	DiscoverFacetCountsCalls    []FacetCountCall
 	// Story 10-2
 	GetMovieVideosResponse  *tmdb.VideosResponse
 	GetMovieVideosError     error
@@ -120,6 +124,22 @@ func (m *MockTMDbService) DiscoverTVShows(ctx context.Context, params tmdb.Disco
 		return nil, m.DiscoverTVShowsError
 	}
 	return m.DiscoverTVShowsResponse, nil
+}
+
+// FacetCountCall captures one DiscoverFacetCounts invocation (base filter + the
+// per-dimension candidate map the handler parsed) so handler tests can assert the
+// *_values CSV → candidates parsing (Story ux3-discover-facet-aggregation-be).
+type FacetCountCall struct {
+	Base       tmdb.DiscoverParams
+	Candidates map[string][]string
+}
+
+func (m *MockTMDbService) DiscoverFacetCounts(ctx context.Context, base tmdb.DiscoverParams, candidates map[string][]string) (*tmdb.FacetCounts, error) {
+	m.DiscoverFacetCountsCalls = append(m.DiscoverFacetCountsCalls, FacetCountCall{Base: base, Candidates: candidates})
+	if m.DiscoverFacetCountsError != nil {
+		return nil, m.DiscoverFacetCountsError
+	}
+	return m.DiscoverFacetCountsResponse, nil
 }
 
 // Story 10-2 additions
@@ -1293,4 +1313,144 @@ func TestTMDbHandler_GetMovieWatchProviders_ServiceErrorMapped(t *testing.T) {
 	router.ServeHTTP(rec, req)
 
 	assert.Equal(t, http.StatusTooManyRequests, rec.Code)
+}
+
+// ---------------------------------------------------------------------------
+// Story ux3-discover-facet-aggregation-be — DiscoverFacetCounts handler
+// ---------------------------------------------------------------------------
+
+// TestTMDbHandler_DiscoverFacetCounts_CandidateParsing covers AC1/AC8: the base
+// filter params and the per-dimension *_values candidate CSVs are parsed and handed
+// to the service; an unsupplied dimension is absent from the candidates map.
+func TestTMDbHandler_DiscoverFacetCounts_CandidateParsing(t *testing.T) {
+	mockSvc := &MockTMDbService{
+		DiscoverFacetCountsResponse: &tmdb.FacetCounts{Counts: map[string]map[string]int{}},
+	}
+	handler := NewTMDbHandler(mockSvc)
+	router := setupTMDbRouter(handler)
+
+	req := httptest.NewRequest(http.MethodGet,
+		"/api/v1/tmdb/discover/facet-counts?genre=28&region=TW&genre_values=18,12&region_values=KR,JP&rating_values=8&platform_values=8,337",
+		nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	require.Len(t, mockSvc.DiscoverFacetCountsCalls, 1)
+	call := mockSvc.DiscoverFacetCountsCalls[0]
+
+	// Base filter parsed via the SHARED parseDiscoverParams (same as /discover).
+	assert.Equal(t, []int{28}, call.Base.GenreIDs, "base selection")
+	assert.Equal(t, "TW", call.Base.Region)
+
+	// Candidate CSVs → candidates map keyed by dimension; values kept as strings.
+	assert.Equal(t, []string{"18", "12"}, call.Candidates[tmdb.DimGenre])
+	assert.Equal(t, []string{"KR", "JP"}, call.Candidates[tmdb.DimRegion])
+	assert.Equal(t, []string{"8"}, call.Candidates[tmdb.DimRating])
+	assert.Equal(t, []string{"8", "337"}, call.Candidates[tmdb.DimPlatform])
+	assert.Len(t, call.Candidates, 4)
+}
+
+// TestTMDbHandler_DiscoverFacetCounts_ResponseShape covers AC1: the response is the
+// ApiResponse<FacetCounts> envelope — counts[dim][value] ints + a partial flag.
+func TestTMDbHandler_DiscoverFacetCounts_ResponseShape(t *testing.T) {
+	mockSvc := &MockTMDbService{
+		DiscoverFacetCountsResponse: &tmdb.FacetCounts{
+			Counts: map[string]map[string]int{
+				tmdb.DimGenre:    {"28": 340},
+				tmdb.DimPlatform: {"8": 540},
+			},
+			Partial: true,
+		},
+	}
+	handler := NewTMDbHandler(mockSvc)
+	router := setupTMDbRouter(handler)
+
+	req := httptest.NewRequest(http.MethodGet,
+		"/api/v1/tmdb/discover/facet-counts?genre_values=28&platform_values=8", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var body struct {
+		Success bool             `json:"success"`
+		Data    tmdb.FacetCounts `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+	assert.True(t, body.Success)
+	assert.Equal(t, 340, body.Data.Counts[tmdb.DimGenre]["28"])
+	assert.Equal(t, 540, body.Data.Counts[tmdb.DimPlatform]["8"])
+	assert.True(t, body.Data.Partial)
+}
+
+// TestTMDbHandler_DiscoverFacetCounts_ValidationPassthrough covers AC7: facet-counts
+// reuses parseDiscoverParams, so a reversed year range is rejected with the EXISTING
+// 400 TMDB_INVALID_YEAR_RANGE (no new error code) and the service is never called.
+func TestTMDbHandler_DiscoverFacetCounts_ValidationPassthrough(t *testing.T) {
+	mockSvc := &MockTMDbService{
+		DiscoverFacetCountsResponse: &tmdb.FacetCounts{Counts: map[string]map[string]int{}},
+	}
+	handler := NewTMDbHandler(mockSvc)
+	router := setupTMDbRouter(handler)
+
+	req := httptest.NewRequest(http.MethodGet,
+		"/api/v1/tmdb/discover/facet-counts?year_gte=2030&year_lte=2020&genre_values=28", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+
+	var body APIResponse
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+	assert.False(t, body.Success)
+	require.NotNil(t, body.Error)
+	assert.Equal(t, tmdb.ErrCodeInvalidYearRange, body.Error.Code, "reuses existing code, no new one (Rule 7)")
+	assert.Empty(t, mockSvc.DiscoverFacetCountsCalls, "service must NOT be called when validation fails")
+}
+
+// TestTMDbHandler_DiscoverFacetCounts_EmptyCandidates covers the no-*_values case:
+// the candidates map is empty and the service returns empty counts (a 200, not an error).
+func TestTMDbHandler_DiscoverFacetCounts_EmptyCandidates(t *testing.T) {
+	mockSvc := &MockTMDbService{
+		DiscoverFacetCountsResponse: &tmdb.FacetCounts{Counts: map[string]map[string]int{}},
+	}
+	handler := NewTMDbHandler(mockSvc)
+	router := setupTMDbRouter(handler)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/tmdb/discover/facet-counts?genre=28", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	require.Len(t, mockSvc.DiscoverFacetCountsCalls, 1)
+	assert.Empty(t, mockSvc.DiscoverFacetCountsCalls[0].Candidates, "no *_values → empty candidates map")
+
+	var body struct {
+		Success bool             `json:"success"`
+		Data    tmdb.FacetCounts `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+	assert.True(t, body.Success)
+	assert.Empty(t, body.Data.Counts)
+}
+
+// TestTMDbHandler_DiscoverFacetCounts_ErrorPropagates verifies a service-layer error
+// is mapped to the correct HTTP status via handleTMDbError (envelope preserved).
+func TestTMDbHandler_DiscoverFacetCounts_ErrorPropagates(t *testing.T) {
+	mockSvc := &MockTMDbService{
+		DiscoverFacetCountsError: tmdb.NewServerError(errors.New("down")),
+	}
+	handler := NewTMDbHandler(mockSvc)
+	router := setupTMDbRouter(handler)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/tmdb/discover/facet-counts?genre_values=28", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadGateway, w.Code)
+	var body APIResponse
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &body))
+	assert.False(t, body.Success)
+	assert.NotNil(t, body.Error)
 }

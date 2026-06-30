@@ -265,6 +265,18 @@ type DiscoverParams struct {
 	Page           int
 }
 
+// FacetCounts is the response shape for GET /api/v1/tmdb/discover/facet-counts
+// (Story ux3-discover-facet-aggregation-be, AC1 [@contract-v1]). Counts is keyed
+// outer = dimension ("genre"|"region"|"rating"|"platform", see the Dim* consts in
+// cache.go) → inner = the facet value exactly as the caller supplied it (string) →
+// the summed movie+tv total_results for (base filter + that facet value added).
+// Partial is true when the fan-out could not resolve every requested facet within
+// the time budget (AC5) or a sub-query failed (AC6); unresolved keys are omitted.
+type FacetCounts struct {
+	Counts  map[string]map[string]int `json:"counts"`
+	Partial bool                      `json:"partial"`
+}
+
 // TrendingResult is a discriminated wrapper reserved for consumers that want
 // a single type regardless of media kind. The underlying TMDb trending
 // endpoints are already split (/trending/movie/{window} and /trending/tv/{window}),
