@@ -395,6 +395,16 @@ func (s *TMDbService) DiscoverTVShows(ctx context.Context, params tmdb.DiscoverP
 	return result, nil
 }
 
+// DiscoverFacetCounts returns contextual per-facet result counts for the given base
+// filter + candidate values (Story ux3-discover-facet-aggregation-be). Unlike
+// DiscoverMovies/DiscoverTVShows, the count path delegates straight to the cache
+// service WITHOUT applying ContentFilterService — counts are the raw TMDb-reported
+// total_results, so they may slightly exceed the content-filtered grid (tech-spec
+// Decision #7 — counts are approximate, which is acceptable for a dead-end hint).
+func (s *TMDbService) DiscoverFacetCounts(ctx context.Context, base tmdb.DiscoverParams, candidates map[string][]string) (*tmdb.FacetCounts, error) {
+	return s.cacheService.DiscoverFacetCounts(ctx, base, candidates)
+}
+
 // GetMovieVideos returns trailers/teasers for a movie. Bypasses the cache layer —
 // videos are a small payload and consumers (trailer modals) fetch on-demand only.
 // Returns tmdb.NewBadRequestError for non-positive IDs, and a generic

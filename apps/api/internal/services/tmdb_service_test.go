@@ -33,6 +33,9 @@ type MockCacheService struct {
 	DiscoverMoviesError        error
 	DiscoverTVShowsResponse    *tmdb.SearchResultTVShows
 	DiscoverTVShowsError       error
+	// Story ux3-discover-facet-aggregation-be
+	DiscoverFacetCountsResponse *tmdb.FacetCounts
+	DiscoverFacetCountsError    error
 	// Story 12-3
 	MovieRecommendationsResponse *tmdb.SearchResultMovies
 	MovieRecommendationsError    error
@@ -147,6 +150,13 @@ func (m *MockCacheService) DiscoverTVShows(ctx context.Context, params tmdb.Disc
 		return nil, m.DiscoverTVShowsError
 	}
 	return m.DiscoverTVShowsResponse, nil
+}
+
+func (m *MockCacheService) DiscoverFacetCounts(ctx context.Context, base tmdb.DiscoverParams, candidates map[string][]string) (*tmdb.FacetCounts, error) {
+	if m.DiscoverFacetCountsError != nil {
+		return nil, m.DiscoverFacetCountsError
+	}
+	return m.DiscoverFacetCountsResponse, nil
 }
 
 func TestTMDbService_SearchMovies(t *testing.T) {

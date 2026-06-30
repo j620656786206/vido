@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -12,8 +14,14 @@ import (
 	"github.com/vido/api/internal/repository"
 )
 
-// MockCacheRepository is a mock implementation of CacheRepositoryInterface
+// MockCacheRepository is a mock implementation of CacheRepositoryInterface.
+// mu guards all shared state so the mock is safe under the concurrent
+// DiscoverFacetCounts fan-out (Story ux3-discover-facet-aggregation-be) — the
+// real SQLite-backed CacheRepository is database/sql-pool-safe; this mock needs an
+// explicit lock to match. Sequential callers read the *Called / lastSetTTL fields
+// after the call returns, so those plain-field reads remain race-free.
 type MockCacheRepository struct {
+	mu        sync.Mutex
 	data      map[string]*repository.CacheEntry
 	setError  error
 	getError  error
@@ -31,6 +39,8 @@ func NewMockCacheRepository() *MockCacheRepository {
 }
 
 func (m *MockCacheRepository) Get(ctx context.Context, key string) (*repository.CacheEntry, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.getCalled++
 	if m.getError != nil {
 		return nil, m.getError
@@ -42,6 +52,8 @@ func (m *MockCacheRepository) Get(ctx context.Context, key string) (*repository.
 }
 
 func (m *MockCacheRepository) Set(ctx context.Context, key string, value string, cacheType string, ttl time.Duration) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.setCalled++
 	m.lastSetTTL = ttl
 	if m.setError != nil {
@@ -59,11 +71,15 @@ func (m *MockCacheRepository) Set(ctx context.Context, key string, value string,
 }
 
 func (m *MockCacheRepository) Delete(ctx context.Context, key string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	delete(m.data, key)
 	return nil
 }
 
 func (m *MockCacheRepository) Clear(ctx context.Context) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.data = make(map[string]*repository.CacheEntry)
 	return nil
 }
@@ -109,6 +125,15 @@ type MockFallbackClient struct {
 	DiscoverTVShowsResponse *SearchResultTVShows
 	DiscoverTVShowsError    error
 	DiscoverTVShowsCalled   int
+	// Story ux3-discover-facet-aggregation-be: optional per-call hooks for the
+	// facet-count fan-out tests. When set, they OVERRIDE the static
+	// Discover*Response/Error above so a test can return per-params counts, inject
+	// per-value errors/delays, capture the normalized params (AC9), and observe
+	// concurrency (AC4). discoverMu guards the *Called counters so the concurrent
+	// fan-out increments them without a data race / lost update.
+	DiscoverMoviesFunc  func(ctx context.Context, params DiscoverParams) (*SearchResultMovies, string, error)
+	DiscoverTVShowsFunc func(ctx context.Context, params DiscoverParams) (*SearchResultTVShows, string, error)
+	discoverMu          sync.Mutex
 	// Story 12-3 recommendations/similar
 	MovieRecommendationsResponse *SearchResultMovies
 	MovieRecommendationsError    error
@@ -236,7 +261,12 @@ func (m *MockFallbackClient) GetTrendingTVShowsWithFallback(ctx context.Context,
 }
 
 func (m *MockFallbackClient) DiscoverMoviesWithFallback(ctx context.Context, params DiscoverParams) (*SearchResultMovies, string, error) {
+	m.discoverMu.Lock()
 	m.DiscoverMoviesCalled++
+	m.discoverMu.Unlock()
+	if m.DiscoverMoviesFunc != nil {
+		return m.DiscoverMoviesFunc(ctx, params)
+	}
 	if m.DiscoverMoviesError != nil {
 		return nil, "", m.DiscoverMoviesError
 	}
@@ -247,7 +277,12 @@ func (m *MockFallbackClient) DiscoverMoviesWithFallback(ctx context.Context, par
 }
 
 func (m *MockFallbackClient) DiscoverTVShowsWithFallback(ctx context.Context, params DiscoverParams) (*SearchResultTVShows, string, error) {
+	m.discoverMu.Lock()
 	m.DiscoverTVShowsCalled++
+	m.discoverMu.Unlock()
+	if m.DiscoverTVShowsFunc != nil {
+		return m.DiscoverTVShowsFunc(ctx, params)
+	}
 	if m.DiscoverTVShowsError != nil {
 		return nil, "", m.DiscoverTVShowsError
 	}
@@ -962,4 +997,451 @@ func TestCacheService_TrendingDiscover_RateLimitNotCached(t *testing.T) {
 			assert.Equal(t, 0, repo.setCalled, "rate-limit / server error MUST NOT poison cache")
 		})
 	}
+}
+
+// ---------------------------------------------------------------------------
+// Story ux3-discover-facet-aggregation-be — DiscoverFacetCounts (AC1–AC10)
+// ---------------------------------------------------------------------------
+
+// paramCapture records the (normalized) DiscoverParams handed to the fan-out
+// sub-queries so tests can assert add-semantics (AC2) and normalization (AC9).
+type paramCapture struct {
+	mu     sync.Mutex
+	params []DiscoverParams
+}
+
+func (c *paramCapture) record(p DiscoverParams) {
+	c.mu.Lock()
+	c.params = append(c.params, p)
+	c.mu.Unlock()
+}
+
+func (c *paramCapture) snapshot() []DiscoverParams {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	out := make([]DiscoverParams, len(c.params))
+	copy(out, c.params)
+	return out
+}
+
+// TestCacheService_DiscoverFacetCounts_MovieTVSumPerValue covers AC1: the count
+// for each candidate value is the SUMMED movie + tv total_results, mapped under
+// counts[dim][value as supplied]. The hooks return per-genre totals so the test
+// proves the per-value mapping, not just a constant.
+func TestCacheService_DiscoverFacetCounts_MovieTVSumPerValue(t *testing.T) {
+	repo := NewMockCacheRepository()
+	fb := &MockFallbackClient{
+		DiscoverMoviesFunc: func(_ context.Context, p DiscoverParams) (*SearchResultMovies, string, error) {
+			id := p.GenreIDs[len(p.GenreIDs)-1]
+			return &SearchResultMovies{TotalResults: id * 10}, "zh-TW", nil
+		},
+		DiscoverTVShowsFunc: func(_ context.Context, p DiscoverParams) (*SearchResultTVShows, string, error) {
+			id := p.GenreIDs[len(p.GenreIDs)-1]
+			return &SearchResultTVShows{TotalResults: id}, "zh-TW", nil
+		},
+	}
+	svc := NewCacheService(fb, repo, CacheServiceConfig{})
+
+	res, err := svc.DiscoverFacetCounts(context.Background(), DiscoverParams{}, map[string][]string{
+		DimGenre: {"28", "12"},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, res)
+	assert.False(t, res.Partial, "all facets resolved → not partial")
+	assert.Equal(t, 28*10+28, res.Counts[DimGenre]["28"], "movie(280)+tv(28)")
+	assert.Equal(t, 12*10+12, res.Counts[DimGenre]["12"], "movie(120)+tv(12)")
+}
+
+// TestCacheService_DiscoverFacetCounts_AddSemantics covers AC2: multi-select
+// dims (genre, platform) APPEND the candidate onto the base selection;
+// single-select dims (region, rating) REPLACE/SET it. Each row supplies a single
+// candidate so the one captured param set is asserted directly.
+func TestCacheService_DiscoverFacetCounts_AddSemantics(t *testing.T) {
+	tests := []struct {
+		name   string
+		base   DiscoverParams
+		dim    string
+		value  string
+		assert func(t *testing.T, p DiscoverParams)
+	}{
+		{
+			name:  "genre appends onto existing genre selection",
+			base:  DiscoverParams{GenreIDs: []int{28}},
+			dim:   DimGenre,
+			value: "18",
+			assert: func(t *testing.T, p DiscoverParams) {
+				assert.Equal(t, []int{28, 18}, p.GenreIDs, "動作 ∩ candidate, not candidate-alone")
+			},
+		},
+		{
+			name:  "region replaces (single-select) while keeping base genre",
+			base:  DiscoverParams{GenreIDs: []int{28}, Region: "US"},
+			dim:   DimRegion,
+			value: "KR",
+			assert: func(t *testing.T, p DiscoverParams) {
+				assert.Equal(t, "KR", p.Region, "region SET to candidate")
+				assert.Equal(t, []int{28}, p.GenreIDs, "base genre preserved → 動作 ∩ 韓國")
+			},
+		},
+		{
+			name:  "platform appends + sets watch_region from base region",
+			base:  DiscoverParams{Region: "US", WatchProviders: []int{8}},
+			dim:   DimPlatform,
+			value: "337",
+			assert: func(t *testing.T, p DiscoverParams) {
+				assert.Equal(t, []int{8, 337}, p.WatchProviders, "platform appends")
+				assert.Equal(t, "US", p.WatchRegion, "watch_region defaults to base region")
+			},
+		},
+		{
+			name:  "platform watch_region falls back to TW when base region empty",
+			base:  DiscoverParams{},
+			dim:   DimPlatform,
+			value: "8",
+			assert: func(t *testing.T, p DiscoverParams) {
+				assert.Equal(t, []int{8}, p.WatchProviders)
+				assert.Equal(t, "TW", p.WatchRegion, "TMDb requires watch_region with with_watch_providers")
+			},
+		},
+		{
+			name:  "rating sets VoteAverageGte (single-select)",
+			base:  DiscoverParams{GenreIDs: []int{28}},
+			dim:   DimRating,
+			value: "8",
+			assert: func(t *testing.T, p DiscoverParams) {
+				assert.InEpsilon(t, 8.0, p.VoteAverageGte, 1e-9)
+				assert.Equal(t, []int{28}, p.GenreIDs, "base genre preserved")
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			capt := &paramCapture{}
+			fb := &MockFallbackClient{
+				DiscoverMoviesFunc: func(_ context.Context, p DiscoverParams) (*SearchResultMovies, string, error) {
+					capt.record(p)
+					return &SearchResultMovies{TotalResults: 1}, "zh-TW", nil
+				},
+				DiscoverTVShowsFunc: func(_ context.Context, _ DiscoverParams) (*SearchResultTVShows, string, error) {
+					return &SearchResultTVShows{TotalResults: 0}, "zh-TW", nil
+				},
+			}
+			svc := NewCacheService(fb, NewMockCacheRepository(), CacheServiceConfig{})
+
+			_, err := svc.DiscoverFacetCounts(context.Background(), tc.base, map[string][]string{tc.dim: {tc.value}})
+			require.NoError(t, err)
+
+			snap := capt.snapshot()
+			require.Len(t, snap, 1, "exactly one probe issued")
+			// Base slices must never be mutated by the fan-out.
+			tc.assert(t, snap[0])
+		})
+	}
+}
+
+// TestCacheService_DiscoverFacetCounts_Normalization covers AC9 (AR-F2/F3): every
+// sub-query is issued with SortBy="" and Page=1 (so sorts/pages share one cache
+// entry) and an explicit non-empty Language (so the fallback chain is bypassed).
+// The caller's pinned Language wins when set, else defaultFacetCountLanguage.
+func TestCacheService_DiscoverFacetCounts_Normalization(t *testing.T) {
+	tests := []struct {
+		name         string
+		baseLanguage string
+		wantLanguage string
+	}{
+		{name: "unset language pins default zh-TW", baseLanguage: "", wantLanguage: defaultFacetCountLanguage},
+		{name: "caller language is honored", baseLanguage: "en", wantLanguage: "en"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			capt := &paramCapture{}
+			fb := &MockFallbackClient{
+				DiscoverMoviesFunc: func(_ context.Context, p DiscoverParams) (*SearchResultMovies, string, error) {
+					capt.record(p)
+					return &SearchResultMovies{TotalResults: 1}, "zh-TW", nil
+				},
+				DiscoverTVShowsFunc: func(_ context.Context, _ DiscoverParams) (*SearchResultTVShows, string, error) {
+					return &SearchResultTVShows{TotalResults: 1}, "zh-TW", nil
+				},
+			}
+			svc := NewCacheService(fb, NewMockCacheRepository(), CacheServiceConfig{})
+
+			base := DiscoverParams{SortBy: "popularity.desc", Page: 5, Language: tc.baseLanguage}
+			_, err := svc.DiscoverFacetCounts(context.Background(), base, map[string][]string{DimGenre: {"28"}})
+			require.NoError(t, err)
+
+			snap := capt.snapshot()
+			require.Len(t, snap, 1)
+			assert.Equal(t, "", snap[0].SortBy, "sort cleared (AR-F2)")
+			assert.Equal(t, 1, snap[0].Page, "page pinned to 1 (AR-F2)")
+			assert.Equal(t, tc.wantLanguage, snap[0].Language, "language pinned non-empty (AR-F3)")
+		})
+	}
+}
+
+// TestCacheService_DiscoverFacetCounts_CacheReuse covers AC3: an identical
+// normalized facet sub-query within the TTL is served from cache — NO new upstream
+// (fallback-client) call — and it reuses the existing 1h discover cache path.
+func TestCacheService_DiscoverFacetCounts_CacheReuse(t *testing.T) {
+	repo := NewMockCacheRepository()
+	fb := &MockFallbackClient{
+		DiscoverMoviesResponse:  &SearchResultMovies{TotalResults: 340},
+		DiscoverTVShowsResponse: &SearchResultTVShows{TotalResults: 60},
+	}
+	svc := NewCacheService(fb, repo, CacheServiceConfig{})
+
+	candidates := map[string][]string{DimGenre: {"28"}}
+
+	// First call → cache miss → one movie + one tv upstream call.
+	r1, err := svc.DiscoverFacetCounts(context.Background(), DiscoverParams{}, candidates)
+	require.NoError(t, err)
+	assert.Equal(t, 400, r1.Counts[DimGenre]["28"])
+	assert.Equal(t, 1, fb.DiscoverMoviesCalled)
+	assert.Equal(t, 1, fb.DiscoverTVShowsCalled)
+	assert.Equal(t, TrendingDiscoverCacheTTL, repo.lastSetTTL, "counts ride the 1h discover cache path (Q2=A)")
+
+	// Second identical call → served from cache → upstream counters unchanged.
+	r2, err := svc.DiscoverFacetCounts(context.Background(), DiscoverParams{}, candidates)
+	require.NoError(t, err)
+	assert.Equal(t, 400, r2.Counts[DimGenre]["28"])
+	assert.Equal(t, 1, fb.DiscoverMoviesCalled, "warm facet must NOT re-call upstream (AC3)")
+	assert.Equal(t, 1, fb.DiscoverTVShowsCalled)
+}
+
+// TestCacheService_DiscoverFacetCounts_ConcurrencyBound covers AC4: the fan-out
+// never runs more than facetCountConcurrency sub-queries at once, so interactive
+// TMDb calls are not starved. The hooks track max observed in-flight.
+func TestCacheService_DiscoverFacetCounts_ConcurrencyBound(t *testing.T) {
+	var mu sync.Mutex
+	inFlight, maxInFlight := 0, 0
+	track := func() func() {
+		mu.Lock()
+		inFlight++
+		if inFlight > maxInFlight {
+			maxInFlight = inFlight
+		}
+		mu.Unlock()
+		return func() {
+			mu.Lock()
+			inFlight--
+			mu.Unlock()
+		}
+	}
+
+	fb := &MockFallbackClient{
+		DiscoverMoviesFunc: func(_ context.Context, _ DiscoverParams) (*SearchResultMovies, string, error) {
+			done := track()
+			time.Sleep(20 * time.Millisecond) // hold the slot so overlap is observable
+			done()
+			return &SearchResultMovies{TotalResults: 1}, "zh-TW", nil
+		},
+		DiscoverTVShowsFunc: func(_ context.Context, _ DiscoverParams) (*SearchResultTVShows, string, error) {
+			done := track()
+			time.Sleep(20 * time.Millisecond)
+			done()
+			return &SearchResultTVShows{TotalResults: 1}, "zh-TW", nil
+		},
+	}
+	svc := NewCacheService(fb, NewMockCacheRepository(), CacheServiceConfig{})
+
+	// 10 candidate genres → 20 sub-queries through a SetLimit(4) gate.
+	res, err := svc.DiscoverFacetCounts(context.Background(), DiscoverParams{}, map[string][]string{
+		DimGenre: {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10"},
+	})
+	require.NoError(t, err)
+	assert.Len(t, res.Counts[DimGenre], 10, "all 10 facets resolve within budget")
+
+	mu.Lock()
+	got := maxInFlight
+	mu.Unlock()
+	assert.LessOrEqual(t, got, facetCountConcurrency, "concurrent sub-queries must not exceed SetLimit(N)")
+	assert.Greater(t, got, 1, "sanity: the fan-out actually ran concurrently")
+}
+
+// TestCacheService_DiscoverFacetCounts_PartialOnTimeout covers AC5: facets not
+// resolved within the time budget are omitted and Partial is set; resolved facets
+// are still returned. A tight caller deadline shortens the budget for the test.
+func TestCacheService_DiscoverFacetCounts_PartialOnTimeout(t *testing.T) {
+	fb := &MockFallbackClient{
+		DiscoverMoviesFunc: func(ctx context.Context, p DiscoverParams) (*SearchResultMovies, string, error) {
+			if p.GenreIDs[len(p.GenreIDs)-1] == 99 { // the cold/slow facet
+				select {
+				case <-ctx.Done():
+					return nil, "", ctx.Err()
+				case <-time.After(2 * time.Second):
+					return &SearchResultMovies{TotalResults: 5}, "zh-TW", nil
+				}
+			}
+			return &SearchResultMovies{TotalResults: 100}, "zh-TW", nil
+		},
+		DiscoverTVShowsFunc: func(_ context.Context, _ DiscoverParams) (*SearchResultTVShows, string, error) {
+			return &SearchResultTVShows{TotalResults: 0}, "zh-TW", nil
+		},
+	}
+	svc := NewCacheService(fb, NewMockCacheRepository(), CacheServiceConfig{})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 40*time.Millisecond)
+	defer cancel()
+
+	res, err := svc.DiscoverFacetCounts(ctx, DiscoverParams{}, map[string][]string{
+		DimGenre: {"28", "12", "99"},
+	})
+	require.NoError(t, err, "budget exhaustion degrades, never errors")
+	assert.True(t, res.Partial, "the slow facet was omitted → partial")
+	assert.Equal(t, 100, res.Counts[DimGenre]["28"], "fast facet resolved")
+	assert.Equal(t, 100, res.Counts[DimGenre]["12"], "fast facet resolved")
+	_, ok := res.Counts[DimGenre]["99"]
+	assert.False(t, ok, "slow facet omitted, not zero-filled")
+}
+
+// TestCacheService_DiscoverFacetCounts_FailSoft covers AC6: a single sub-query
+// error omits ONLY that facet (logged at the boundary) — the rest still return and
+// the page never fails.
+func TestCacheService_DiscoverFacetCounts_FailSoft(t *testing.T) {
+	fb := &MockFallbackClient{
+		DiscoverMoviesFunc: func(_ context.Context, p DiscoverParams) (*SearchResultMovies, string, error) {
+			if p.GenreIDs[len(p.GenreIDs)-1] == 99 {
+				return nil, "", NewTimeoutError(errors.New("boom"))
+			}
+			return &SearchResultMovies{TotalResults: 50}, "zh-TW", nil
+		},
+		DiscoverTVShowsFunc: func(_ context.Context, _ DiscoverParams) (*SearchResultTVShows, string, error) {
+			return &SearchResultTVShows{TotalResults: 0}, "zh-TW", nil
+		},
+	}
+	svc := NewCacheService(fb, NewMockCacheRepository(), CacheServiceConfig{})
+
+	res, err := svc.DiscoverFacetCounts(context.Background(), DiscoverParams{}, map[string][]string{
+		DimGenre: {"28", "99", "12"},
+	})
+	require.NoError(t, err, "a per-facet error must never fail the endpoint (Rule 13)")
+	assert.True(t, res.Partial)
+	assert.Equal(t, 50, res.Counts[DimGenre]["28"])
+	assert.Equal(t, 50, res.Counts[DimGenre]["12"])
+	_, ok := res.Counts[DimGenre]["99"]
+	assert.False(t, ok, "the failed facet is omitted")
+}
+
+// TestCacheService_DiscoverFacetCounts_CandidateOnly covers AC8: only the supplied
+// dimensions appear in the response; the BE never enumerates a dimension the FE did
+// not ask about.
+func TestCacheService_DiscoverFacetCounts_CandidateOnly(t *testing.T) {
+	fb := &MockFallbackClient{
+		DiscoverMoviesResponse:  &SearchResultMovies{TotalResults: 10},
+		DiscoverTVShowsResponse: &SearchResultTVShows{TotalResults: 5},
+	}
+	svc := NewCacheService(fb, NewMockCacheRepository(), CacheServiceConfig{})
+
+	res, err := svc.DiscoverFacetCounts(context.Background(), DiscoverParams{}, map[string][]string{
+		DimGenre: {"28"},
+	})
+	require.NoError(t, err)
+	require.Len(t, res.Counts, 1, "only the genre dimension present")
+	_, hasGenre := res.Counts[DimGenre]
+	assert.True(t, hasGenre)
+	for _, dim := range []string{DimRegion, DimRating, DimPlatform} {
+		_, ok := res.Counts[dim]
+		assert.False(t, ok, "unsupplied dimension %q must be absent", dim)
+	}
+}
+
+// TestCacheService_DiscoverFacetCounts_ZeroKept verifies a resolved count of 0 is a
+// real dead-end and is KEPT (not treated as missing) — the FE dims-but-keeps it
+// selectable.
+func TestCacheService_DiscoverFacetCounts_ZeroKept(t *testing.T) {
+	fb := &MockFallbackClient{
+		DiscoverMoviesResponse:  &SearchResultMovies{TotalResults: 0},
+		DiscoverTVShowsResponse: &SearchResultTVShows{TotalResults: 0},
+	}
+	svc := NewCacheService(fb, NewMockCacheRepository(), CacheServiceConfig{})
+
+	res, err := svc.DiscoverFacetCounts(context.Background(), DiscoverParams{}, map[string][]string{
+		DimRegion: {"TW"},
+	})
+	require.NoError(t, err)
+	assert.False(t, res.Partial, "a resolved 0 is NOT a missing facet")
+	v, ok := res.Counts[DimRegion]["TW"]
+	require.True(t, ok, "dead-end 0 facet is present in the response")
+	assert.Equal(t, 0, v)
+}
+
+// TestCacheService_DiscoverFacetCounts_UnparseableSkipped verifies an unparseable
+// candidate (e.g. genre="abc") is silently dropped and does NOT inflate the partial
+// denominator (it can never resolve, so it must not read as "still computing").
+func TestCacheService_DiscoverFacetCounts_UnparseableSkipped(t *testing.T) {
+	fb := &MockFallbackClient{
+		DiscoverMoviesResponse:  &SearchResultMovies{TotalResults: 7},
+		DiscoverTVShowsResponse: &SearchResultTVShows{TotalResults: 3},
+	}
+	svc := NewCacheService(fb, NewMockCacheRepository(), CacheServiceConfig{})
+
+	res, err := svc.DiscoverFacetCounts(context.Background(), DiscoverParams{}, map[string][]string{
+		DimGenre: {"28", "abc"},
+	})
+	require.NoError(t, err)
+	assert.False(t, res.Partial, "the unparseable value is dropped, not pending")
+	assert.Equal(t, 10, res.Counts[DimGenre]["28"])
+	_, ok := res.Counts[DimGenre]["abc"]
+	assert.False(t, ok, "unparseable candidate omitted")
+}
+
+// TestCacheService_DiscoverFacetCounts_EmptyCandidates verifies an empty candidate
+// map yields an empty (non-nil) counts map and Partial=false — a no-op, no upstream
+// calls.
+func TestCacheService_DiscoverFacetCounts_EmptyCandidates(t *testing.T) {
+	fb := &MockFallbackClient{}
+	svc := NewCacheService(fb, NewMockCacheRepository(), CacheServiceConfig{})
+
+	res, err := svc.DiscoverFacetCounts(context.Background(), DiscoverParams{}, map[string][]string{})
+	require.NoError(t, err)
+	require.NotNil(t, res)
+	assert.NotNil(t, res.Counts, "counts is an empty object, not null (Rule 18 wire shape)")
+	assert.Empty(t, res.Counts)
+	assert.False(t, res.Partial)
+	assert.Equal(t, 0, fb.DiscoverMoviesCalled, "no candidates → no upstream calls")
+}
+
+// TestCacheService_DiscoverFacetCounts_DuplicateCandidateDeduped covers CR M1: a
+// repeated (dim,value) must be counted ONCE and must NOT inflate the partial
+// denominator (a fully-resolved response was wrongly marked Partial before the fix).
+func TestCacheService_DiscoverFacetCounts_DuplicateCandidateDeduped(t *testing.T) {
+	fb := &MockFallbackClient{
+		DiscoverMoviesResponse:  &SearchResultMovies{TotalResults: 10},
+		DiscoverTVShowsResponse: &SearchResultTVShows{TotalResults: 0},
+	}
+	svc := NewCacheService(fb, NewMockCacheRepository(), CacheServiceConfig{})
+
+	res, err := svc.DiscoverFacetCounts(context.Background(), DiscoverParams{}, map[string][]string{
+		DimGenre: {"28", "28", "28"}, // same value three times
+	})
+	require.NoError(t, err)
+	assert.False(t, res.Partial, "the single distinct facet resolved → NOT partial")
+	assert.Equal(t, 10, res.Counts[DimGenre]["28"])
+	assert.Len(t, res.Counts[DimGenre], 1)
+	assert.Equal(t, 1, fb.DiscoverMoviesCalled, "duplicates collapse to ONE probe (no wasted upstream calls)")
+}
+
+// TestCacheService_DiscoverFacetCounts_CapsExcessCandidates covers CR L2: a
+// candidate list beyond maxFacetProbes is bounded — at most maxFacetProbes
+// sub-queries run, the excess is dropped, and Partial is set.
+func TestCacheService_DiscoverFacetCounts_CapsExcessCandidates(t *testing.T) {
+	fb := &MockFallbackClient{
+		DiscoverMoviesResponse:  &SearchResultMovies{TotalResults: 1},
+		DiscoverTVShowsResponse: &SearchResultTVShows{TotalResults: 0},
+	}
+	svc := NewCacheService(fb, NewMockCacheRepository(), CacheServiceConfig{})
+
+	values := make([]string, 0, maxFacetProbes+10)
+	for i := 0; i < maxFacetProbes+10; i++ {
+		values = append(values, strconv.Itoa(1000+i)) // distinct genre IDs
+	}
+
+	res, err := svc.DiscoverFacetCounts(context.Background(), DiscoverParams{}, map[string][]string{
+		DimGenre: values,
+	})
+	require.NoError(t, err)
+	assert.True(t, res.Partial, "dropping excess candidates forces partial")
+	assert.Len(t, res.Counts[DimGenre], maxFacetProbes, "fan-out capped at maxFacetProbes")
+	assert.Equal(t, maxFacetProbes, fb.DiscoverMoviesCalled, "no more than maxFacetProbes upstream probes")
 }

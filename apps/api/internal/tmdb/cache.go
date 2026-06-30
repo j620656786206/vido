@@ -6,7 +6,10 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
+	"sync"
 	"time"
+
+	"golang.org/x/sync/errgroup"
 
 	"github.com/vido/api/internal/repository"
 )
@@ -23,6 +26,48 @@ const (
 	// lists change frequently and we want homepage content to stay fresh while
 	// still respecting TMDb's 40-req/10s rate limit.
 	TrendingDiscoverCacheTTL = 1 * time.Hour
+)
+
+// Facet-count dimension keys (Story ux3-discover-facet-aggregation-be).
+// Exported so the HTTP handler builds the candidates map with the SAME keys the
+// fan-out switches on — a single source of truth prevents BE-internal key drift
+// (the curated facet inventory itself stays FE-owned per Q1=A / AC8). These
+// strings are also the outer keys of the FacetCounts.Counts response (AC1).
+const (
+	DimGenre    = "genre"
+	DimRegion   = "region"
+	DimRating   = "rating"
+	DimPlatform = "platform"
+)
+
+const (
+	// facetCountBudget bounds the facet-count fan-out wall-clock (AC5). Cached
+	// facets (1h) resolve instantly; cold sub-queries that exceed this budget are
+	// omitted and Partial is set, so the endpoint never blocks the rail.
+	facetCountBudget = 800 * time.Millisecond
+
+	// facetCountConcurrency caps concurrent facet sub-queries (AC4) via errgroup
+	// SetLimit, so the count fan-out cannot starve interactive TMDb calls
+	// (detail / search / homepage) of the shared 40-req/10s rate budget.
+	facetCountConcurrency = 4
+
+	// maxFacetProbes defensively bounds the fan-out: at most this many distinct
+	// (dim,value) sub-queries are issued per request, regardless of how many
+	// candidates the caller supplies. The FE's curated inventory is ~30 values
+	// (18 genres + 5 regions + 4 ratings + 3 platforms), so 64 leaves generous
+	// headroom for growth while capping cache-entry write-amplification from a
+	// pathological *_values list. Excess candidates are dropped and Partial is set.
+	maxFacetProbes = 64
+
+	// defaultFacetCountLanguage pins the count-probe language when the caller did
+	// not supply one (AC9 / AR-F3). A non-empty Language makes the
+	// LanguageFallbackClient issue exactly ONE /discover call per probe instead of
+	// fanning the zh-TW→zh-CN→en chain, and collapses all locales onto one cache
+	// entry. Counts are therefore documented as per-locale.
+	// NOTE: this intentionally mirrors the TMDb Client's own default language
+	// (client.go NewClient — `language = "zh-TW"`); keep the two in sync so facet
+	// counts pin the SAME locale as the grid when neither side is given a language.
+	defaultFacetCountLanguage = "zh-TW"
 )
 
 // CacheServiceConfig holds configuration for the cache service
@@ -62,6 +107,10 @@ type CacheServiceInterface interface {
 	DiscoverMovies(ctx context.Context, params DiscoverParams) (*SearchResultMovies, error)
 	// DiscoverTVShows queries /discover/tv with caching at TrendingDiscoverCacheTTL
 	DiscoverTVShows(ctx context.Context, params DiscoverParams) (*SearchResultTVShows, error)
+	// DiscoverFacetCounts returns, for the given base filter, the contextual
+	// movie+tv result count for every supplied candidate facet value
+	// (Story ux3-discover-facet-aggregation-be, AC1 [@contract-v1]).
+	DiscoverFacetCounts(ctx context.Context, base DiscoverParams, candidates map[string][]string) (*FacetCounts, error)
 	// GetMovieRecommendations returns recommended movies with caching (24h TTL)
 	GetMovieRecommendations(ctx context.Context, movieID int) (*SearchResultMovies, error)
 	// GetMovieSimilar returns similar movies with caching (24h TTL)
@@ -450,6 +499,185 @@ func discoverCacheKey(kind string, p DiscoverParams) string {
 		strconv.FormatFloat(p.VoteAverageLte, 'f', -1, 64),
 		joinInts(p.WatchProviders, ","), p.WatchRegion,
 		p.Language, p.SortBy, page)
+}
+
+// facetProbe is one (dimension, value) we can actually count: the cloned+normalized
+// DiscoverParams for (base + that facet added). Built synchronously so unparseable
+// candidates are dropped BEFORE the fan-out and never inflate the partial denominator.
+type facetProbe struct {
+	dim   string
+	value string
+	param DiscoverParams
+}
+
+// DiscoverFacetCounts computes, for the given base filter, the contextual movie+tv
+// result count for every supplied candidate facet value (Story
+// ux3-discover-facet-aggregation-be). For each (dim, value) it clones base, ADDS the
+// facet per AC2 semantics (multi-select genre/platform append; single-select
+// region/rating replace), normalizes sort/page/language (AC9), and sums the
+// total_results of the cached /discover/movie + /discover/tv responses — reusing the
+// existing DiscoverMovies/DiscoverTVShows cache path (Q2=A), so a warm facet costs
+// ZERO TMDb calls (AC3).
+//
+// The fan-out is bounded two ways: errgroup SetLimit(facetCountConcurrency) caps
+// concurrent sub-queries so interactive TMDb calls are not starved (AC4), and a
+// facetCountBudget deadline caps wall-clock — facets unresolved within budget are
+// omitted with Partial=true (AC5). Per-facet errors are swallowed+logged at the
+// goroutine boundary (each g.Go always returns nil), so one bad sub-query omits only
+// that facet and never fails the page (AC6 / Rule 13). A resolved count of 0 is a
+// real dead-end and is KEPT in the response (the FE dims-but-keeps-selectable);
+// 0 is never treated as "missing".
+//
+// AC8: only the FE-supplied candidate values are counted — a dimension absent from
+// candidates is absent from the response; the BE holds no facet inventory of its own.
+func (s *CacheService) DiscoverFacetCounts(ctx context.Context, base DiscoverParams, candidates map[string][]string) (*FacetCounts, error) {
+	// Build the probe list synchronously. Unparseable values (e.g. genre="abc")
+	// can never resolve, so they are dropped here and excluded from the partial
+	// denominator rather than perpetually reported as "still computing".
+	// Duplicate (dim,value) pairs are de-duplicated so a repeated candidate does
+	// not inflate the denominator (which would wrongly mark a fully-resolved
+	// response Partial). The total is capped at maxFacetProbes; excess candidates
+	// are dropped and capped=true forces Partial.
+	var probes []facetProbe
+	seen := make(map[string]struct{})
+	capped := false
+	for dim, values := range candidates {
+		for _, value := range values {
+			dedupKey := dim + "\x00" + value
+			if _, dup := seen[dedupKey]; dup {
+				continue
+			}
+			seen[dedupKey] = struct{}{}
+			p, ok := applyFacet(base, dim, value)
+			if !ok {
+				slog.Warn("facet-count: skipping unknown/unparseable candidate",
+					"dim", dim, "value", value)
+				continue
+			}
+			if len(probes) >= maxFacetProbes {
+				capped = true
+				continue
+			}
+			normalizeFacetParams(&p)
+			probes = append(probes, facetProbe{dim: dim, value: value, param: p})
+		}
+	}
+	if capped {
+		slog.Warn("facet-count: candidate count exceeded cap; excess dropped",
+			"cap", maxFacetProbes)
+	}
+
+	counts := make(map[string]map[string]int)
+	var mu sync.Mutex
+
+	// The budget deadline is layered on the caller's context, so whichever fires
+	// first wins (a caller with a tighter deadline shortens the budget).
+	bctx, cancel := context.WithTimeout(ctx, facetCountBudget)
+	defer cancel()
+
+	g, gctx := errgroup.WithContext(bctx)
+	g.SetLimit(facetCountConcurrency)
+
+	for _, probe := range probes {
+		probe := probe
+		g.Go(func() error {
+			// Budget already spent before this slot opened → omit (→ Partial).
+			if gctx.Err() != nil {
+				return nil
+			}
+			movies, err := s.DiscoverMovies(gctx, probe.param)
+			if err != nil {
+				slog.Warn("facet-count movie sub-query failed (omitted, fail-soft)",
+					"dim", probe.dim, "value", probe.value, "error", err)
+				return nil // AC6 — swallow at the per-facet boundary, never fail the page
+			}
+			tv, err := s.DiscoverTVShows(gctx, probe.param)
+			if err != nil {
+				slog.Warn("facet-count tv sub-query failed (omitted, fail-soft)",
+					"dim", probe.dim, "value", probe.value, "error", err)
+				return nil
+			}
+			mu.Lock()
+			if counts[probe.dim] == nil {
+				counts[probe.dim] = make(map[string]int)
+			}
+			counts[probe.dim][probe.value] = movies.TotalResults + tv.TotalResults
+			mu.Unlock()
+			return nil
+		})
+	}
+	// Every g.Go returns nil (errors are swallowed per-facet), so Wait never
+	// reports a real error; the return is ignored deliberately.
+	_ = g.Wait()
+
+	resolved := 0
+	for _, m := range counts {
+		resolved += len(m)
+	}
+
+	return &FacetCounts{Counts: counts, Partial: capped || resolved < len(probes)}, nil
+}
+
+// applyFacet clones base and ADDS a single candidate facet value per AC2
+// add-semantics, returning false when the dimension is unknown or the value cannot
+// be parsed for that dimension (caller drops it). Multi-select dimensions
+// (genre→GenreIDs, platform→WatchProviders) APPEND the value; single-select
+// dimensions (region→Region, rating→VoteAverageGte) REPLACE/SET it. The genre and
+// watch-provider slices are copied before appending so the caller's base slices are
+// never mutated by the fan-out.
+func applyFacet(base DiscoverParams, dim, value string) (DiscoverParams, bool) {
+	p := base
+	p.GenreIDs = append([]int(nil), base.GenreIDs...)
+	p.WatchProviders = append([]int(nil), base.WatchProviders...)
+
+	switch dim {
+	case DimGenre:
+		id, err := strconv.Atoi(value)
+		if err != nil {
+			return p, false
+		}
+		p.GenreIDs = append(p.GenreIDs, id)
+	case DimPlatform:
+		id, err := strconv.Atoi(value)
+		if err != nil {
+			return p, false
+		}
+		p.WatchProviders = append(p.WatchProviders, id)
+		// TMDb requires watch_region whenever with_watch_providers is set; default
+		// to the base region, then TW, so a platform probe is never region-less.
+		if p.WatchRegion == "" {
+			if base.Region != "" {
+				p.WatchRegion = base.Region
+			} else {
+				p.WatchRegion = "TW"
+			}
+		}
+	case DimRegion:
+		p.Region = value
+	case DimRating:
+		f, err := strconv.ParseFloat(value, 64)
+		if err != nil {
+			return p, false
+		}
+		p.VoteAverageGte = f
+	default:
+		return p, false
+	}
+	return p, true
+}
+
+// normalizeFacetParams pins SortBy="" / Page=1 / Language before a count sub-query
+// is issued (AC9, AR-F2/F3): clearing sort+page collapses every sort order and page
+// onto ONE cache entry (so counts reuse each other across the grid's many sorts),
+// and a non-empty Language makes the LanguageFallbackClient short-circuit to a single
+// /discover call per probe instead of fanning the fallback chain. The caller's pinned
+// Language is honored if set, else defaultFacetCountLanguage.
+func normalizeFacetParams(p *DiscoverParams) {
+	p.SortBy = ""
+	p.Page = 1
+	if p.Language == "" {
+		p.Language = defaultFacetCountLanguage
+	}
 }
 
 // GetTVShowDetails gets TV show details with caching

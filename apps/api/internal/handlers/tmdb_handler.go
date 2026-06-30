@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/vido/api/internal/services"
@@ -22,6 +23,7 @@ type TMDbServiceInterface interface {
 	GetTrendingTVShows(ctx context.Context, timeWindow string, page int) (*tmdb.SearchResultTVShows, error)
 	DiscoverMovies(ctx context.Context, params tmdb.DiscoverParams) (*tmdb.SearchResultMovies, error)
 	DiscoverTVShows(ctx context.Context, params tmdb.DiscoverParams) (*tmdb.SearchResultTVShows, error)
+	DiscoverFacetCounts(ctx context.Context, base tmdb.DiscoverParams, candidates map[string][]string) (*tmdb.FacetCounts, error)
 	GetMovieVideos(ctx context.Context, movieID int) (*tmdb.VideosResponse, error)
 	GetTVShowVideos(ctx context.Context, tvID int) (*tmdb.VideosResponse, error)
 	GetWatchProviders(ctx context.Context, mediaType string, id int, region string) (*tmdb.WatchProvidersResponse, error)
@@ -313,6 +315,97 @@ func (h *TMDbHandler) DiscoverTVShows(c *gin.Context) {
 		return
 	}
 	SuccessResponse(c, result)
+}
+
+// DiscoverFacetCounts handles GET /api/v1/tmdb/discover/facet-counts.
+// Given the same filter params as /discover plus per-dimension candidate-value CSVs
+// (genre_values, region_values, rating_values, platform_values), it returns the
+// contextual movie+tv result count for every candidate value — how many results the
+// page would show if that facet were ADDED to the current selection — so the Discover
+// rail can render per-chip counts and dim dead-end (0-result) facets
+// (Story ux3-discover-facet-aggregation-be, AC1/AC8 [@contract-v1]). Validation is
+// shared verbatim with /discover via parseDiscoverParams, so year/vote-range and
+// unsupported-sort errors reuse the existing TMDB_INVALID_* / TMDB_UNSUPPORTED_SORT
+// codes — no new error code (AC7 / Rule 7).
+// @Summary Contextual facet result-counts for Discover
+// @Description For the current filter selection, return the movie+tv result count for each supplied candidate facet value (count if that facet is added). Candidate values are FE-owned and supplied per request; a dimension with no *_values is absent from the response.
+// @Tags tmdb
+// @Accept json
+// @Produce json
+// @Param genre query string false "Comma-separated genre IDs already selected (base filter)"
+// @Param year_gte query int false "Minimum year (0 = unlimited)"
+// @Param year_lte query int false "Maximum year (0 = unlimited)"
+// @Param region query string false "ISO 3166-1 region code (base filter)"
+// @Param vote_gte query number false "Minimum TMDb rating 0-10 (0 = unlimited)"
+// @Param vote_lte query number false "Maximum TMDb rating 0-10 (0 = unlimited)"
+// @Param watch_providers query string false "Comma-separated TMDb watch-provider IDs already selected (base filter)"
+// @Param watch_region query string false "ISO 3166-1 watch region (defaults to region, then TW)"
+// @Param language query string false "BCP 47 language code (pinned per-locale; defaults to zh-TW)"
+// @Param genre_values query string false "Comma-separated candidate genre IDs to count"
+// @Param region_values query string false "Comma-separated candidate region codes to count"
+// @Param rating_values query string false "Comma-separated candidate minimum-rating thresholds to count"
+// @Param platform_values query string false "Comma-separated candidate watch-provider IDs to count"
+// @Success 200 {object} APIResponse{data=tmdb.FacetCounts}
+// @Failure 400 {object} APIResponse{error=APIError} "TMDB_INVALID_YEAR_RANGE (year_gte > year_lte), TMDB_INVALID_VOTE_RANGE (vote_gte > vote_lte), or TMDB_UNSUPPORTED_SORT (local-only sort key) — reused, no new code"
+// @Failure 500 {object} APIResponse{error=APIError}
+// @Router /api/v1/tmdb/discover/facet-counts [get]
+func (h *TMDbHandler) DiscoverFacetCounts(c *gin.Context) {
+	base, err := parseDiscoverParams(c)
+	if err != nil {
+		handleValidationError(c, err, "discover facet-counts", slog.Any("params", base))
+		return
+	}
+	candidates := parseFacetCandidates(c)
+	result, err := h.service.DiscoverFacetCounts(c.Request.Context(), base, candidates)
+	if err != nil {
+		handleTMDbError(c, err, "discover facet-counts", slog.Any("params", base))
+		return
+	}
+	SuccessResponse(c, result)
+}
+
+// parseFacetCandidates reads the per-dimension candidate-value CSVs into the
+// candidates map keyed by tmdb.Dim* (the SAME keys the cache fan-out switches on).
+// Values are kept as raw strings — each dimension parses them itself inside
+// DiscoverFacetCounts (genre/platform → int, rating → float, region → string). An
+// empty/absent dimension is omitted, so the response never enumerates a dimension the
+// FE did not ask about (AC8). The base filter (genre/region/etc.) is parsed separately
+// by parseDiscoverParams; the *_values params are the candidates to count.
+func parseFacetCandidates(c *gin.Context) map[string][]string {
+	candidates := make(map[string][]string)
+	if v := parseStringCSV(c.Query("genre_values")); len(v) > 0 {
+		candidates[tmdb.DimGenre] = v
+	}
+	if v := parseStringCSV(c.Query("region_values")); len(v) > 0 {
+		candidates[tmdb.DimRegion] = v
+	}
+	if v := parseStringCSV(c.Query("rating_values")); len(v) > 0 {
+		candidates[tmdb.DimRating] = v
+	}
+	if v := parseStringCSV(c.Query("platform_values")); len(v) > 0 {
+		candidates[tmdb.DimPlatform] = v
+	}
+	return candidates
+}
+
+// parseStringCSV splits a comma-separated query value into trimmed, non-empty
+// tokens, returning nil for empty/all-blank input (mirrors tmdb.ParseIntCSV but keeps
+// the tokens as raw strings for per-dimension parsing).
+func parseStringCSV(csv string) []string {
+	if csv == "" {
+		return nil
+	}
+	parts := strings.Split(csv, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if p = strings.TrimSpace(p); p != "" {
+			out = append(out, p)
+		}
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
 }
 
 // GetMovieVideos handles GET /api/v1/tmdb/movies/:id/videos.
@@ -614,6 +707,8 @@ func (h *TMDbHandler) RegisterRoutes(rg *gin.RouterGroup) {
 		{
 			discover.GET("/movies", h.DiscoverMovies)
 			discover.GET("/tv", h.DiscoverTVShows)
+			// Contextual per-facet result counts (Story ux3-discover-facet-aggregation-be)
+			discover.GET("/facet-counts", h.DiscoverFacetCounts)
 		}
 
 		// Details endpoints
