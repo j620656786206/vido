@@ -43,7 +43,7 @@ A code audit (party-mode review, Winston) changed the sequencing. The "Vido buil
 
 > Each cross-stack story **splits into `a` (backend) / `b` (frontend)** at `create-story` time per the Cross-Stack Split rule. UI stories are **design-first** — a single design story (`13-0`) covers all request surfaces (mirrors the `ux3-4-1` downloads design precedent).
 
-### 13-0 — Requests design (`.pen` flow-g-requests) · design-first · Owner: ux-designer
+### 13-0 — Requests design (`.pen` flow-l-requests-v2) · design-first · Owner: ux-designer
 Covers ALL request UI in one flow: the **request entry** (explore/detail one-click button + lighting up the **Discover PH3-R2 reserved entry** from ux3-3-1), the **partial-request season/episode tree** (G-2, highest design risk per Winston — draw with G-1), and the **request status list page** (G-3). v2 Design Language, N4 four-states, token-only. **GATE A** for all `b` (frontend) stories below.
 
 ### 13-1 — One-click request (G-1 / P3-001) · artery #1
