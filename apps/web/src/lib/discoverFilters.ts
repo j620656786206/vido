@@ -237,3 +237,27 @@ export function buildDiscoverParams(
   params.set('page', String(page));
   return params;
 }
+
+/**
+ * Build the facet-counts request params (Story ux3-discover-facet-aggregation-fe,
+ * Task 3 — consumes ux3-discover-facet-aggregation-be [@contract-v1]). It is the
+ * base discover filter (media-type-agnostic) PLUS the four `*_values` candidate
+ * CSVs enumerated from the FE inventory consts (Q1=A: the FE is the single
+ * candidate source — the BE counts only what the FE sends and keys the response
+ * by these exact values, so they align 1:1 with the chip keys).
+ *
+ * `sort` and `page` are stripped: the BE normalizes them away (AR-F2), and
+ * dropping them keeps the resulting param string stable across a sort/page change
+ * — so only a base-filter change re-queries the counts (Task 2 query key).
+ */
+export function buildFacetCountParams(filters: DiscoverFilters): URLSearchParams {
+  // mediaType is irrelevant here (it only drives `sort`, which we strip).
+  const params = buildDiscoverParams(filters, 'movie');
+  params.delete('sort');
+  params.delete('page');
+  params.set('genre_values', GENRE_FILTER_OPTIONS.map((g) => g.id).join(','));
+  params.set('region_values', REGION_OPTIONS.map((r) => r.code).join(','));
+  params.set('rating_values', RATING_OPTIONS.join(','));
+  params.set('platform_values', PLATFORM_OPTIONS.map((p) => p.id).join(','));
+  return params;
+}

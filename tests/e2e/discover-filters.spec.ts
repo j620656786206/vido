@@ -110,6 +110,36 @@ async function stubDiscover(page: import('@playwright/test').Page): Promise<stri
   return requested;
 }
 
+/**
+ * Stub the facet-counts endpoint (Story ux3-discover-facet-aggregation-fe). Keeps
+ * the v2 rail hermetic now that it fires a per-facet counts query on load.
+ */
+async function stubFacetCounts(
+  page: import('@playwright/test').Page,
+  body: { counts: Record<string, Record<string, number>>; partial: boolean } = {
+    counts: {},
+    partial: false,
+  }
+): Promise<void> {
+  await page.route(`${ROUTE_API}/tmdb/discover/facet-counts*`, (route: Route) =>
+    route.fulfill(jsonOk(body))
+  );
+}
+
+/** Stub the facet-counts endpoint as unavailable (AC6 fallback path). */
+async function stubFacetCountsUnavailable(page: import('@playwright/test').Page): Promise<void> {
+  await page.route(`${ROUTE_API}/tmdb/discover/facet-counts*`, (route: Route) =>
+    route.fulfill({
+      status: 500,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        success: false,
+        error: { code: 'TMDB_TIMEOUT', message: '無法連線到 TMDb API' },
+      }),
+    })
+  );
+}
+
 // =============================================================================
 // Desktop — apply / persist / remove / clear (AC #1-5)
 // =============================================================================
@@ -240,6 +270,7 @@ test.describe('Discover v2 rail — Desktop @e2e @discover @ux3-3-2', () => {
     // GIVEN: the v2 shell is enabled and discover has loaded
     await enableV2Shell(page);
     const requested = await stubDiscover(page);
+    await stubFacetCounts(page);
     await page.goto('/discover');
     await expect(page.getByTestId('discover-filter-rail')).toBeVisible({ timeout: 15000 });
 
@@ -260,6 +291,7 @@ test.describe('Discover v2 rail — Desktop @e2e @discover @ux3-3-2', () => {
   }) => {
     await enableV2Shell(page);
     await stubDiscover(page);
+    await stubFacetCounts(page);
     await page.goto('/discover');
     await expect(page.getByTestId('discover-filter-rail')).toBeVisible({ timeout: 15000 });
 
@@ -269,6 +301,48 @@ test.describe('Discover v2 rail — Desktop @e2e @discover @ux3-3-2', () => {
     // THEN: the rail is gone (grid reclaims the width) and the 篩選 re-open button shows
     await expect(page.getByTestId('discover-filter-rail')).toHaveCount(0);
     await expect(page.getByTestId('discover-rail-expand')).toBeVisible();
+  });
+
+  test('[P1] the rail shows per-chip contextual counts; a 0-result chip is dimmed yet still navigates (AC1/AC2)', async ({
+    page,
+  }) => {
+    // GIVEN: the v2 rail with facet-counts where 動畫(16)=42 and 動作(28)=0 (dead-end)
+    await enableV2Shell(page);
+    await stubDiscover(page);
+    await stubFacetCounts(page, { counts: { genre: { '16': 42, '28': 0 } }, partial: false });
+    await page.goto('/discover');
+    const rail = page.getByTestId('discover-filter-rail');
+    await expect(rail).toBeVisible({ timeout: 15000 });
+
+    // THEN: the resolved facet shows its contextual count
+    await expect(rail.getByTestId('facet-count-genre-16')).toHaveText('42');
+
+    // AND: the 0-result chip is dimmed (opacity-70) but NOT disabled (AC2)
+    const deadEnd = rail.getByTestId('filter-genre-28');
+    await expect(deadEnd).toHaveClass(/opacity-70/);
+    await expect(deadEnd).toBeEnabled();
+
+    // AND: the user can still switch to the dead-end facet (it navigates on click)
+    await deadEnd.click();
+    await expect(page).toHaveURL(/genre=(?:28|%2228%22)/);
+  });
+
+  test('[P2] facet-counts unavailable → rail falls back to the single total, no per-chip counts (AC6)', async ({
+    page,
+  }) => {
+    // GIVEN: the counts endpoint errors
+    await enableV2Shell(page);
+    await stubDiscover(page);
+    await stubFacetCountsUnavailable(page);
+    await page.goto('/discover');
+    const rail = page.getByTestId('discover-filter-rail');
+    await expect(rail).toBeVisible({ timeout: 15000 });
+
+    // THEN: the single-total footer still renders (page never hard-fails)
+    await expect(page.getByTestId('discover-rail-count')).toHaveText(/符合 \d+ 部|計算中…/);
+
+    // AND: no per-chip counts are rendered (chips degrade to their count-less form)
+    await expect(rail.getByTestId('facet-count-genre-16')).toHaveCount(0);
   });
 });
 

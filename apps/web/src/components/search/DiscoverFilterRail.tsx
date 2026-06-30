@@ -14,6 +14,7 @@
 import { RotateCcw } from 'lucide-react';
 import { FilterPanel } from './FilterPanel';
 import { FilterRailShell } from '../ui/FilterRailShell';
+import { useDiscoverFacetCounts } from '../../hooks/useDiscoverFacetCounts';
 import type { DiscoverFilters } from '../../lib/discoverFilters';
 
 interface DiscoverFilterRailProps {
@@ -39,6 +40,12 @@ export function DiscoverFilterRail({
   onClearAll,
   onCollapse,
 }: DiscoverFilterRailProps) {
+  // Contextual per-facet counts (desktop-rail only, AC7). `counts` is undefined
+  // until the first response AND on hard failure — in both cases FilterPanel
+  // renders the chips count-less and this rail degrades to its single-total
+  // footer below (AC6). Once counts arrive, chips fill progressively; unresolved
+  // facets show the computing "–" placeholder (AC1/AC5).
+  const { counts } = useDiscoverFacetCounts(filters, { enabled: true });
   return (
     <FilterRailShell
       testId="discover-filter-rail"
@@ -70,8 +77,9 @@ export function DiscoverFilterRail({
         </>
       }
     >
-      {/* Instant-apply, numeric inputs debounced */}
-      <FilterPanel filters={filters} onChange={onChange} debounceMs={350} />
+      {/* Instant-apply, numeric inputs debounced; per-facet counts are additive
+          decoration (toggling a chip still applies instantly via onChange, AC8). */}
+      <FilterPanel filters={filters} onChange={onChange} debounceMs={350} facetCounts={counts} />
     </FilterRailShell>
   );
 }

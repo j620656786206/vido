@@ -18,6 +18,17 @@ const h = vi.hoisted(() => ({
 vi.mock('../../hooks/useDiscoverResults', () => ({
   useDiscoverResults: () => h.discover,
 }));
+// The rail fetches per-facet counts (ux3-discover-facet-aggregation-fe); mock it so
+// these tests stay focused on the browse layout (count behaviour is covered by
+// useDiscoverFacetCounts.spec / FilterPanel.spec / the discover-filters E2E).
+vi.mock('../../hooks/useDiscoverFacetCounts', () => ({
+  useDiscoverFacetCounts: () => ({
+    counts: undefined,
+    partial: false,
+    isLoading: false,
+    isFetching: false,
+  }),
+}));
 vi.mock('../../hooks/useFilterState', () => ({
   useFilterState: () => h.filterState,
 }));

@@ -12,6 +12,7 @@ import {
   type DiscoverFilters,
   type SortKey,
 } from '../../lib/discoverFilters';
+import type { FacetCounts } from '../../services/tmdb';
 
 interface FilterPanelProps {
   filters: DiscoverFilters;
@@ -25,14 +26,27 @@ interface FilterPanelProps {
    * rail passes a positive value so typing "1995" fires ONE query, not four.
    */
   debounceMs?: number;
+  /**
+   * Story ux3-discover-facet-aggregation-fe (AC1/#2/#7): contextual per-facet
+   * result counts, keyed by dimension → the chip's id/code/value. DESKTOP-rail
+   * only — the mobile bottom sheet omits this so it stays count-less (AC7).
+   * Undefined (omitted, or counts unavailable) → chips render exactly as before
+   * (additive decoration, AC8). A resolved key shows its count; an unresolved key
+   * (partial fill) shows the computing "–" placeholder; a `0` dims the chip but
+   * keeps it selectable (AC2). Matches the .pen `FacetCountChip` 4 states.
+   */
+  facetCounts?: FacetCounts['counts'];
 }
 
-const chipClass = (active: boolean) =>
+const chipClass = (active: boolean, deadEnd = false) =>
   cn(
     'inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm transition-colors',
     active
       ? 'border border-[var(--accent-primary)] bg-[var(--accent-primary)]/15 text-blue-300'
-      : 'border border-transparent bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-white'
+      : 'border border-transparent bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-white',
+    // Dead-end (0-result) facet: dimmed but still clickable (.pen FacetCountChip
+    // Dead-end = opacity 0.7); NOT disabled (AC2).
+    deadEnd && 'opacity-70'
   );
 
 const sectionLabelClass =
@@ -44,7 +58,47 @@ const sectionLabelClass =
  * apply changes instantly to the URL and the mobile bottom sheet can drive a
  * local draft before committing.
  */
-export function FilterPanel({ filters, onChange, className, debounceMs = 0 }: FilterPanelProps) {
+export function FilterPanel({
+  filters,
+  onChange,
+  className,
+  debounceMs = 0,
+  facetCounts,
+}: FilterPanelProps) {
+  // Render the contextual count after a chip's label (matches the .pen
+  // FacetCountChip: JetBrains Mono `font-mono`, 12px `text-xs`, tabular-nums).
+  // Returns null when counts are not supplied (mobile sheet / fallback / pre-load,
+  // AC6/AC7/AC8 — chip stays byte-unchanged). Otherwise (`count` computed once by
+  // the caller so the dead-end chip-dim and this badge share one lookup):
+  //   undefined key → "–" computing/progressive-fill placeholder ($text-disabled, no spinner — AC4/AC5)
+  //   0             → "0" dimmed ($text-disabled; the chip also dims via chipClass — AC2)
+  //   n > 0 active  → $accent-text   |   n > 0 resting → $text-muted (AC1)
+  // aria-hidden: the count is a sighted-only affordance — a dead-end stays selectable
+  // (AC2), so the bare "340"/"–" must not leak into the chip's accessible name.
+  const renderFacetCount = (
+    dim: keyof NonNullable<FacetCounts['counts']>,
+    key: string,
+    count: number | undefined,
+    active: boolean
+  ) => {
+    if (!facetCounts) return null;
+    return (
+      <span
+        aria-hidden="true"
+        data-testid={`facet-count-${dim}-${key}`}
+        className={cn(
+          'font-mono text-xs tabular-nums',
+          count === undefined || count === 0
+            ? 'text-[var(--text-disabled)]'
+            : active
+              ? 'text-[var(--accent-text)]'
+              : 'text-[var(--text-muted)]'
+        )}
+      >
+        {count === undefined ? '–' : count.toLocaleString()}
+      </span>
+    );
+  };
   // Latest filters in a ref so a debounced year commit composes against fresh
   // categorical state instead of a stale closure. Synced in an effect (never
   // mutate a ref during render).
@@ -146,16 +200,18 @@ export function FilterPanel({ filters, onChange, className, debounceMs = 0 }: Fi
         <div className="flex flex-wrap gap-1.5">
           {GENRE_FILTER_OPTIONS.map((genre) => {
             const active = filters.genre.includes(genre.id);
+            const count = facetCounts?.genre?.[String(genre.id)];
             return (
               <button
                 key={genre.id}
                 onClick={() => toggleGenre(genre.id)}
                 data-testid={`filter-genre-${genre.id}`}
                 aria-pressed={active}
-                className={chipClass(active)}
+                className={chipClass(active, count === 0)}
               >
                 {active && <Check className="h-3.5 w-3.5" />}
                 {genre.label}
+                {renderFacetCount('genre', String(genre.id), count, active)}
               </button>
             );
           })}
@@ -168,16 +224,18 @@ export function FilterPanel({ filters, onChange, className, debounceMs = 0 }: Fi
         <div className="flex flex-wrap gap-1.5">
           {REGION_OPTIONS.map((region) => {
             const active = filters.region === region.code;
+            const count = facetCounts?.region?.[region.code];
             return (
               <button
                 key={region.code}
                 onClick={() => selectRegion(region.code)}
                 data-testid={`filter-region-${region.code}`}
                 aria-pressed={active}
-                className={chipClass(active)}
+                className={chipClass(active, count === 0)}
               >
                 <span aria-hidden="true">{region.flag}</span>
                 {region.label}
+                {renderFacetCount('region', region.code, count, active)}
               </button>
             );
           })}
@@ -218,15 +276,16 @@ export function FilterPanel({ filters, onChange, className, debounceMs = 0 }: Fi
         <div className="flex flex-wrap gap-1.5">
           {RATING_OPTIONS.map((value) => {
             const active = filters.ratingGte === value;
+            const count = facetCounts?.rating?.[String(value)];
             return (
               <button
                 key={value}
                 onClick={() => selectRating(value)}
                 data-testid={`filter-rating-${value}`}
                 aria-pressed={active}
-                className={chipClass(active)}
+                className={chipClass(active, count === 0)}
               >
-                ★{value}+
+                ★{value}+{renderFacetCount('rating', String(value), count, active)}
               </button>
             );
           })}
@@ -239,16 +298,18 @@ export function FilterPanel({ filters, onChange, className, debounceMs = 0 }: Fi
         <div className="flex flex-wrap gap-1.5">
           {PLATFORM_OPTIONS.map((platform) => {
             const active = filters.platform.includes(platform.id);
+            const count = facetCounts?.platform?.[String(platform.id)];
             return (
               <button
                 key={platform.id}
                 onClick={() => togglePlatform(platform.id)}
                 data-testid={`filter-platform-${platform.id}`}
                 aria-pressed={active}
-                className={chipClass(active)}
+                className={chipClass(active, count === 0)}
               >
                 {active && <Check className="h-3.5 w-3.5" />}
                 {platform.label}
+                {renderFacetCount('platform', String(platform.id), count, active)}
               </button>
             );
           })}
