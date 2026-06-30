@@ -103,10 +103,13 @@ is rich and repeated; spec it once as a component with the action/select/state v
 2. **⚠️ Card actions — Rule 24 capability-honor + Rule 15 (THE critical flag #1).** **Verified
    2026-06-30:** `download_handler.go` `RegisterRoutes` registers **only three GET routes** —
    `GET /downloads`, `/downloads/counts`, `/downloads/:hash`. **There are NO action endpoints**
-   (no pause / resume / remove). The qBittorrent client/plugin almost certainly *has* `Pause` /
-   `Remove` methods, but **a method existing ≠ an HTTP route is wired** (Rule 15). So: **draw the
-   card actions as the target v2 state** (design-ahead is correct here), but the **FE story is
-   HARD-BLOCKED** on a **BE story** that adds `POST /api/v1/downloads/:hash/pause`,
+   (no pause / resume / remove). **Update 2026-06-30 (ux3-4-2 capability audit):** the deeper
+   check found the qBittorrent **client is fully read-only too** — pause/resume/delete exist at
+   **NO layer** (client / service / handler), so this is a **full vertical build**, not merely an
+   unwired route (a stronger form of the Rule 15 "method-exists ≠ wired" gap — here the method
+   doesn't exist at all). So: **draw the card actions as the target v2 state** (design-ahead is
+   correct here), but the **FE story is HARD-BLOCKED** on the **BE story `ux3-4-2-downloads-actions-be`**
+   that builds `POST /api/v1/downloads/:hash/pause`,
    `.../resume`, and `DELETE /api/v1/downloads/:hash` (with a `deleteFiles` option). Recorded in
    Discovery Triage as the cross-stack BE half. Do **not** draw any action as if it is already
    live — they are all net-new backend.
