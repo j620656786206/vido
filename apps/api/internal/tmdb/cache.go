@@ -18,6 +18,17 @@ const (
 	// CacheTypeTMDb is the cache type identifier for TMDb responses
 	CacheTypeTMDb = "tmdb"
 
+	// CacheTypeTMDbFacet tags facet-count cache entries (Story
+	// ux3-facet-count-cache-refinement, AR-F4), distinct from CacheTypeTMDb so the
+	// count workload can be evicted on its own via
+	// CacheRepository.ClearByType(ctx, "tmdb_facet") without touching the
+	// result-grid entries.
+	// NOTE (AR-F4 boundary / AC7): this gives TARGETED eviction only. The manual
+	// full purge still runs a wholesale clearTable("cache_entries"); true
+	// purge-isolation needs a SEPARATE table (Hard, deferred — see story AC7 /
+	// tech-spec AR-F4 note).
+	CacheTypeTMDbFacet = "tmdb_facet"
+
 	// DefaultCacheTTL is the default cache duration (24 hours as per NFR-I7)
 	DefaultCacheTTL = 24 * time.Hour
 
@@ -68,6 +79,23 @@ const (
 	// (client.go NewClient — `language = "zh-TW"`); keep the two in sync so facet
 	// counts pin the SAME locale as the grid when neither side is given a language.
 	defaultFacetCountLanguage = "zh-TW"
+
+	// FacetCountCacheTTL governs NON-ZERO facet-count cache entries (Story
+	// ux3-facet-count-cache-refinement, AR-F8). Kept SEPARATE from
+	// TrendingDiscoverCacheTTL (the result-grid TTL, above) so count
+	// freshness/eviction is tunable INDEPENDENTLY of the grid — "trending
+	// freshness" ≠ "count freshness". May start equal to 1h; either can change
+	// without affecting the other.
+	FacetCountCacheTTL = 1 * time.Hour
+
+	// FacetCountZeroTTL caches a total_results==0 count for a SHORT window
+	// (AR-F5 + CR M1). A 0 is NOT pinned for the full FacetCountCacheTTL — a
+	// transient/wrong-locale 0 must self-correct quickly (AR-F5) — but it IS cached
+	// briefly so a GENUINE dead-end facet is not re-fetched (2 TMDb calls) on every
+	// debounced facet-counts request, which would otherwise pressure both the
+	// 40-req/10s rate budget and the 800ms fan-out budget (and could force Partial).
+	// Tunable independently; kept well below FacetCountCacheTTL by construction.
+	FacetCountZeroTTL = 1 * time.Minute
 )
 
 // CacheServiceConfig holds configuration for the cache service
@@ -515,9 +543,11 @@ type facetProbe struct {
 // ux3-discover-facet-aggregation-be). For each (dim, value) it clones base, ADDS the
 // facet per AC2 semantics (multi-select genre/platform append; single-select
 // region/rating replace), normalizes sort/page/language (AC9), and sums the
-// total_results of the cached /discover/movie + /discover/tv responses — reusing the
-// existing DiscoverMovies/DiscoverTVShows cache path (Q2=A), so a warm facet costs
-// ZERO TMDb calls (AC3).
+// movie + tv total_results via the DEDICATED facet-count cache (discoverCountCached
+// — Story ux3-facet-count-cache-refinement), so a warm facet costs ZERO TMDb calls
+// (AC3). The dedicated path tags entries type="tmdb_facet", expires non-zero counts
+// on FacetCountCacheTTL and 0-counts on the short FacetCountZeroTTL, diverging from
+// the grid's DiscoverMovies/DiscoverTVShows.
 //
 // The fan-out is bounded two ways: errgroup SetLimit(facetCountConcurrency) caps
 // concurrent sub-queries so interactive TMDb calls are not starved (AC4), and a
@@ -585,13 +615,13 @@ func (s *CacheService) DiscoverFacetCounts(ctx context.Context, base DiscoverPar
 			if gctx.Err() != nil {
 				return nil
 			}
-			movies, err := s.DiscoverMovies(gctx, probe.param)
+			mc, err := s.discoverCountCached(gctx, "movie", probe.param)
 			if err != nil {
 				slog.Warn("facet-count movie sub-query failed (omitted, fail-soft)",
 					"dim", probe.dim, "value", probe.value, "error", err)
 				return nil // AC6 — swallow at the per-facet boundary, never fail the page
 			}
-			tv, err := s.DiscoverTVShows(gctx, probe.param)
+			tc, err := s.discoverCountCached(gctx, "tv", probe.param)
 			if err != nil {
 				slog.Warn("facet-count tv sub-query failed (omitted, fail-soft)",
 					"dim", probe.dim, "value", probe.value, "error", err)
@@ -601,7 +631,11 @@ func (s *CacheService) DiscoverFacetCounts(ctx context.Context, base DiscoverPar
 			if counts[probe.dim] == nil {
 				counts[probe.dim] = make(map[string]int)
 			}
-			counts[probe.dim][probe.value] = movies.TotalResults + tv.TotalResults
+			// A 0-side is cached only briefly (FacetCountZeroTTL) inside
+			// discoverCountCached; the SUMMED count is still KEPT in the response —
+			// e.g. movie=5 tv=0 → 5 returned. A resolved dead-end 0 stays
+			// selectable-but-dimmed on the FE (AC6 parity with the BE story).
+			counts[probe.dim][probe.value] = mc + tc
 			mu.Unlock()
 			return nil
 		})
@@ -678,6 +712,99 @@ func normalizeFacetParams(p *DiscoverParams) {
 	if p.Language == "" {
 		p.Language = defaultFacetCountLanguage
 	}
+}
+
+// facetCountCacheKey builds the dedicated cache key for a facet-count sub-query.
+// It mirrors discoverCacheKey's field order but uses a DISTINCT namespace
+// (tmdb:facetcount/… vs the grid's tmdb:discover/…) so count entries can never
+// collide with result-grid entries even though both derive from DiscoverParams
+// (Story ux3-facet-count-cache-refinement, AR-F4). Inputs are already normalized
+// upstream by normalizeFacetParams (sort=""/page=1/pinned Language), so sort+page
+// are constant here — the full serialization is kept for parity with the grid key.
+func facetCountCacheKey(kind string, p DiscoverParams) string {
+	page := p.Page
+	if page < 1 {
+		page = 1
+	}
+	return fmt.Sprintf("tmdb:facetcount/%s:g=%s:yg=%d:yl=%d:r=%s:vg=%s:vl=%s:wp=%s:wr=%s:lang=%s:sort=%s:p=%d",
+		kind, joinInts(p.GenreIDs, ","), p.YearGte, p.YearLte, p.Region,
+		strconv.FormatFloat(p.VoteAverageGte, 'f', -1, 64),
+		strconv.FormatFloat(p.VoteAverageLte, 'f', -1, 64),
+		joinInts(p.WatchProviders, ","), p.WatchRegion,
+		p.Language, p.SortBy, page)
+}
+
+// discoverCountCached returns the movie- OR tv-side total_results for one
+// already-normalized facet probe, backed by a DEDICATED count cache (Story
+// ux3-facet-count-cache-refinement). It diverges from the grid path
+// (DiscoverMovies/DiscoverTVShows) in three ways the grid MUST NOT adopt:
+//   - entries are tagged CacheTypeTMDbFacet ("tmdb_facet"), enabling targeted
+//     ClearByType eviction of counts alone (AR-F4 / AC2);
+//   - entries expire on FacetCountCacheTTL, tunable independently of the grid's
+//     TrendingDiscoverCacheTTL (AR-F8 / AC1);
+//   - a total_results==0 is cached only briefly on FacetCountZeroTTL, NOT the full
+//     FacetCountCacheTTL (AR-F5 / AC3 / CR M1), so a transient or wrong-locale 0
+//     self-corrects within ~1min instead of dimming a facet chip for an hour —
+//     while a GENUINE dead-end 0 is still spared a re-fetch on every debounced probe.
+//
+// Only the compact integer count is stored, not the full SearchResult* JSON blob
+// (AR-F6 / AC5). It calls the SAME fallback-client methods the grid path uses
+// (DiscoverMoviesWithFallback / DiscoverTVShowsWithFallback), so count-to-count
+// reuse and the pinned-Language single-call short-circuit are preserved (AC4).
+//
+// INTENTIONAL grid-cache bypass: going through s.client.*WithFallback rather than
+// s.DiscoverMovies/DiscoverTVShows is REQUIRED precisely because those grid methods
+// always Set at type="tmdb"/1h including zeros — the behavior AC2/AC3 must diverge
+// from. Consequence: a facet probe no longer warms the grid blob cache. The cost is
+// small and bounded: the key-spaces overlap ONLY at the default-sort landing (grid
+// SortBy=""/page=1, which facet probes also normalize to); any explicit sort or
+// page>1 never shared a key, and even the overlapping case loses just a one-time
+// grid cache warm.
+func (s *CacheService) discoverCountCached(ctx context.Context, kind string, p DiscoverParams) (int, error) {
+	cacheKey := facetCountCacheKey(kind, p)
+
+	if cached, err := s.cache.Get(ctx, cacheKey); err == nil && cached != nil {
+		// Stored as the integer count string; a parse failure (corrupt/legacy
+		// entry) falls through to a re-fetch rather than surfacing an error.
+		if n, convErr := strconv.Atoi(cached.Value); convErr == nil {
+			slog.Debug("Facet-count cache hit", "key", cacheKey, "type", CacheTypeTMDbFacet)
+			return n, nil
+		}
+	}
+
+	slog.Debug("Facet-count cache miss", "key", cacheKey, "type", CacheTypeTMDbFacet)
+
+	var count int
+	switch kind {
+	case "movie":
+		result, _, err := s.client.DiscoverMoviesWithFallback(ctx, p)
+		if err != nil {
+			return 0, err
+		}
+		count = result.TotalResults
+	case "tv":
+		result, _, err := s.client.DiscoverTVShowsWithFallback(ctx, p)
+		if err != nil {
+			return 0, err
+		}
+		count = result.TotalResults
+	default:
+		return 0, fmt.Errorf("discoverCountCached: unknown kind %q", kind)
+	}
+
+	// AR-F5 / AC3 / CR M1: a 0 is cached only briefly (FacetCountZeroTTL), NOT the
+	// full FacetCountCacheTTL — a transient/wrong-locale 0 self-corrects within ~1min
+	// while a genuine dead-end 0 is still spared a re-fetch on every debounced probe.
+	ttl := FacetCountCacheTTL
+	if count == 0 {
+		ttl = FacetCountZeroTTL
+	}
+
+	// AR-F6 / AC5: store the compact int string, not the SearchResult* blob.
+	if err := s.cache.Set(ctx, cacheKey, strconv.Itoa(count), CacheTypeTMDbFacet, ttl); err != nil {
+		slog.Warn("Failed to cache facet count", "key", cacheKey, "error", err)
+	}
+	return count, nil
 }
 
 // GetTVShowDetails gets TV show details with caching

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -30,6 +31,12 @@ type MockCacheRepository struct {
 	// lastSetTTL captures the TTL passed to the most recent Set() call,
 	// used by Story 10-1 tests to verify 1-hour trending/discover TTL.
 	lastSetTTL time.Duration
+	// lastSetType / lastSetValue capture the cacheType and value of the most
+	// recent Set() call, used by Story ux3-facet-count-cache-refinement to verify
+	// the dedicated facet-count path tags entries "tmdb_facet" (AC2) and stores the
+	// compact integer count string, not a SearchResult* JSON blob (AC5).
+	lastSetType  string
+	lastSetValue string
 }
 
 func NewMockCacheRepository() *MockCacheRepository {
@@ -56,6 +63,8 @@ func (m *MockCacheRepository) Set(ctx context.Context, key string, value string,
 	defer m.mu.Unlock()
 	m.setCalled++
 	m.lastSetTTL = ttl
+	m.lastSetType = cacheType
+	m.lastSetValue = value
 	if m.setError != nil {
 		return m.setError
 	}
@@ -1180,9 +1189,12 @@ func TestCacheService_DiscoverFacetCounts_Normalization(t *testing.T) {
 	}
 }
 
-// TestCacheService_DiscoverFacetCounts_CacheReuse covers AC3: an identical
-// normalized facet sub-query within the TTL is served from cache — NO new upstream
-// (fallback-client) call — and it reuses the existing 1h discover cache path.
+// TestCacheService_DiscoverFacetCounts_CacheReuse covers AC4 (count-to-count reuse):
+// an identical normalized, NON-ZERO facet sub-query within FacetCountCacheTTL is
+// served from the DEDICATED facet-count cache — NO new upstream (fallback-client)
+// call. It also proves the dedicated-path tagging: entries ride FacetCountCacheTTL
+// (AC1), are tagged type="tmdb_facet" (AC2), and store the compact integer count
+// string, not a SearchResult* JSON blob (AC5).
 func TestCacheService_DiscoverFacetCounts_CacheReuse(t *testing.T) {
 	repo := NewMockCacheRepository()
 	fb := &MockFallbackClient{
@@ -1199,13 +1211,22 @@ func TestCacheService_DiscoverFacetCounts_CacheReuse(t *testing.T) {
 	assert.Equal(t, 400, r1.Counts[DimGenre]["28"])
 	assert.Equal(t, 1, fb.DiscoverMoviesCalled)
 	assert.Equal(t, 1, fb.DiscoverTVShowsCalled)
-	assert.Equal(t, TrendingDiscoverCacheTTL, repo.lastSetTTL, "counts ride the 1h discover cache path (Q2=A)")
+	// AC1 (AR-F8): counts ride the DEDICATED facet-count TTL, not the trending path.
+	assert.Equal(t, FacetCountCacheTTL, repo.lastSetTTL, "counts ride the dedicated facet-count cache TTL (AR-F8)")
+	// AC2 (AR-F4): count entries are tagged the distinct "tmdb_facet" type.
+	assert.Equal(t, CacheTypeTMDbFacet, repo.lastSetType, "count entries must be tagged tmdb_facet, not the grid's tmdb (AR-F4)")
+	// AC5 (AR-F6): the cached value is the compact int string, not a JSON blob — and
+	// it is the exact count. Single-probe fan-out sets movie ("340") then tv ("60")
+	// sequentially, so the LAST Set captured is tv's 60.
+	n, convErr := strconv.Atoi(repo.lastSetValue)
+	require.NoError(t, convErr, "cached facet-count value must parse as an int, not a SearchResult JSON blob")
+	assert.Equal(t, 60, n, "stored value is the exact tv count (60), not a blob — movie-then-tv Set order")
 
-	// Second identical call → served from cache → upstream counters unchanged.
+	// Second identical call → served from the dedicated count cache → upstream unchanged.
 	r2, err := svc.DiscoverFacetCounts(context.Background(), DiscoverParams{}, candidates)
 	require.NoError(t, err)
 	assert.Equal(t, 400, r2.Counts[DimGenre]["28"])
-	assert.Equal(t, 1, fb.DiscoverMoviesCalled, "warm facet must NOT re-call upstream (AC3)")
+	assert.Equal(t, 1, fb.DiscoverMoviesCalled, "warm non-zero facet must NOT re-call upstream (AC4)")
 	assert.Equal(t, 1, fb.DiscoverTVShowsCalled)
 }
 
@@ -1364,6 +1385,73 @@ func TestCacheService_DiscoverFacetCounts_ZeroKept(t *testing.T) {
 	v, ok := res.Counts[DimRegion]["TW"]
 	require.True(t, ok, "dead-end 0 facet is present in the response")
 	assert.Equal(t, 0, v)
+}
+
+// TestCacheService_DiscoverFacetCounts_ZeroShortTTL covers AC3 (AR-F5) as refined by
+// CR M1: a total_results==0 sub-query IS cached, but only on the SHORT
+// FacetCountZeroTTL (not the full FacetCountCacheTTL) — so a transient/wrong-locale 0
+// self-corrects fast (AR-F5) while a genuine dead-end 0 is not re-fetched (2 TMDb
+// calls) on every debounced probe (CR M1). It proves, distinct from _ZeroKept (which
+// asserts only the response):
+//
+//	(a) the response KEEPS the 0 (parity — a resolved dead-end, not "missing");
+//	(b) the 0 is cached with the SHORT FacetCountZeroTTL, tagged "tmdb_facet",
+//	    stored as the compact "0" string (not a blob);
+//	(c) a SECOND identical probe WITHIN the TTL is served from cache (no re-fetch) —
+//	    genuine-0 facets stop hammering TMDb. (Expiry after FacetCountZeroTTL is
+//	    repository-enforced — covered by the CacheRepository TTL tests.)
+func TestCacheService_DiscoverFacetCounts_ZeroShortTTL(t *testing.T) {
+	repo := NewMockCacheRepository()
+	fb := &MockFallbackClient{
+		DiscoverMoviesResponse:  &SearchResultMovies{TotalResults: 0},
+		DiscoverTVShowsResponse: &SearchResultTVShows{TotalResults: 0},
+	}
+	svc := NewCacheService(fb, repo, CacheServiceConfig{})
+
+	candidates := map[string][]string{DimRegion: {"TW"}}
+
+	// First probe → both sides 0.
+	r1, err := svc.DiscoverFacetCounts(context.Background(), DiscoverParams{}, candidates)
+	require.NoError(t, err)
+	// (a) the 0 is kept in the response (parity with _ZeroKept).
+	v, ok := r1.Counts[DimRegion]["TW"]
+	require.True(t, ok, "dead-end 0 facet stays present in the response (AC6 parity)")
+	assert.Equal(t, 0, v)
+	// (b) the 0 IS cached, but on the SHORT TTL (CR M1) — tagged tmdb_facet, stored "0".
+	assert.Equal(t, 2, fb.DiscoverMoviesCalled+fb.DiscoverTVShowsCalled, "one movie + one tv fetch")
+	assert.Equal(t, FacetCountZeroTTL, repo.lastSetTTL, "a 0 must be cached on the SHORT FacetCountZeroTTL, not FacetCountCacheTTL (AR-F5/CR M1)")
+	assert.NotEqual(t, FacetCountCacheTTL, repo.lastSetTTL, "a 0 must NOT be pinned for the full non-zero TTL")
+	assert.Equal(t, CacheTypeTMDbFacet, repo.lastSetType, "0-count still tagged tmdb_facet (AC2)")
+	assert.Equal(t, "0", repo.lastSetValue, "the compact int string '0' is stored, not a blob (AC5)")
+
+	// (c) a second identical probe WITHIN the short TTL is served from cache — a
+	// genuine-0 facet no longer re-hits TMDb on every debounced request (CR M1).
+	r2, err := svc.DiscoverFacetCounts(context.Background(), DiscoverParams{}, candidates)
+	require.NoError(t, err)
+	assert.Equal(t, 0, r2.Counts[DimRegion]["TW"])
+	assert.Equal(t, 1, fb.DiscoverMoviesCalled, "within FacetCountZeroTTL the 0 is served from cache, NOT re-fetched (CR M1)")
+	assert.Equal(t, 1, fb.DiscoverTVShowsCalled)
+}
+
+// TestFacetCountCacheKey_DistinctNamespace guards the AR-F4 no-collision guarantee
+// (CR M2): the dedicated count key MUST live in a different namespace from the grid
+// key, so a count entry (int string) and a grid entry (SearchResult* JSON blob) can
+// never clobber each other on the same key even for identical params. AC2 asserts
+// the distinct cache TYPE; this asserts the distinct KEY — the actual collision
+// surface. Without it, a future "simplification" that reused discoverCacheKey would
+// silently degrade both caches (Atoi/Unmarshal cross-failures) with no test to catch it.
+func TestFacetCountCacheKey_DistinctNamespace(t *testing.T) {
+	p := DiscoverParams{GenreIDs: []int{28}, Region: "TW", Page: 1, Language: "zh-TW"}
+	for _, kind := range []string{"movie", "tv"} {
+		gridKey := discoverCacheKey(kind, p)
+		countKey := facetCountCacheKey(kind, p)
+		assert.NotEqual(t, gridKey, countKey,
+			"facet-count key must NOT collide with the grid key for identical params (AR-F4), kind=%s", kind)
+		assert.True(t, strings.HasPrefix(countKey, "tmdb:facetcount/"),
+			"count key uses the dedicated facetcount namespace, got %q", countKey)
+		assert.True(t, strings.HasPrefix(gridKey, "tmdb:discover/"),
+			"grid key uses the discover namespace, got %q", gridKey)
+	}
 }
 
 // TestCacheService_DiscoverFacetCounts_UnparseableSkipped verifies an unparseable
