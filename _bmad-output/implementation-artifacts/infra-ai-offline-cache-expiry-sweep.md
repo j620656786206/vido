@@ -1,6 +1,6 @@
 # Story (Infra): `ai_cache` + `offline_cache` Scheduled Expiry Sweep
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 <!-- Story key: infra-ai-offline-cache-expiry-sweep (non-epic infra story; whole-app benefit).
@@ -35,15 +35,15 @@ This story had a genuine architecture fork, decided by Alexyu on 2026-06-30:
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Generalize `CacheSweepScheduler` to N targets (AC: #1, #2, #3, #4, #6, #7)**
-  - [ ] File: `apps/api/internal/services/cache_sweep_scheduler.go`.
-  - [ ] Add a small exported abstraction (place near the top of the file):
+- [x] **Task 1 — Generalize `CacheSweepScheduler` to N targets (AC: #1, #2, #3, #4, #6, #7)**
+  - [x] File: `apps/api/internal/services/cache_sweep_scheduler.go`.
+  - [x] Add a small exported abstraction (place near the top of the file):
     - `type ExpirableCache interface { ClearExpired(ctx context.Context) (int64, error) }`
     - `type CacheSweepTarget struct { name string; sweep func(context.Context) (int64, error) }` (fields unexported — constructed only via the helpers below; exporting the **type** while keeping fields private avoids the "exported func returns unexported type" lint).
     - `func SweepTarget(name string, c ExpirableCache) CacheSweepTarget { return CacheSweepTarget{name: name, sweep: c.ClearExpired} }`
     - `func SweepFunc(name string, fn func(context.Context) (int64, error)) CacheSweepTarget { return CacheSweepTarget{name: name, sweep: fn} }` — needed for `AIService.ClearExpiredCache`, whose method **name differs** from `ClearExpired` so it does not satisfy `ExpirableCache` directly.
-  - [ ] Struct change: replace the `cacheRepo repository.CacheRepositoryInterface` field (`:40`) with `targets []CacheSweepTarget`. Keep `settingsRepo`, `mu`, `stopCh`, `stopped`.
-  - [ ] Constructor (`:51`) becomes variadic, source-compatible:
+  - [x] Struct change: replace the `cacheRepo repository.CacheRepositoryInterface` field (`:40`) with `targets []CacheSweepTarget`. Keep `settingsRepo`, `mu`, `stopCh`, `stopped`.
+  - [x] Constructor (`:51`) becomes variadic, source-compatible:
     ```go
     func NewCacheSweepScheduler(
         cacheRepo repository.CacheRepositoryInterface,
@@ -62,7 +62,7 @@ This story had a genuine architecture fork, decided by Alexyu on 2026-06-30:
         return &CacheSweepScheduler{targets: targets, settingsRepo: settingsRepo, stopCh: make(chan struct{})}
     }
     ```
-  - [ ] Refactor `sweep` (`:155`) into a loop with **per-target** isolation (move the recover + context-cancel handling into `sweepOne`):
+  - [x] Refactor `sweep` (`:155`) into a loop with **per-target** isolation (move the recover + context-cancel handling into `sweepOne`):
     ```go
     func (s *CacheSweepScheduler) sweep(ctx context.Context) {
         for _, t := range s.targets {
@@ -84,9 +84,9 @@ This story had a genuine architecture fork, decided by Alexyu on 2026-06-30:
         }
     }
     ```
-  - [ ] Update the struct doc-comment (`:35-38`, "targets cache_entries ONLY") to reflect N targets; add `"targets", len(s.targets)` to the `slog.Info("Cache sweep scheduler started", ...)` line (`:106`) for observability. Do **NOT** add any `VACUUM` (AC6). Keep `run()`/cold-start/`Start`/`Stop`/`resolveInterval` otherwise **byte-identical** — the cold-start `s.sweep(ctx)` now drains all targets at boot for free.
-- [ ] **Task 2 — Wire `ai_cache` + `offline_cache` targets into `main.go` (AC: #5, #3)**
-  - [ ] File: `apps/api/cmd/api/main.go`, at the scheduler construction site (`:409`). Replace the single-arg construct with:
+  - [x] Update the struct doc-comment (`:35-38`, "targets cache_entries ONLY") to reflect N targets; add `"targets", len(s.targets)` to the `slog.Info("Cache sweep scheduler started", ...)` line (`:106`) for observability. Do **NOT** add any `VACUUM` (AC6). Keep `run()`/cold-start/`Start`/`Stop`/`resolveInterval` otherwise **byte-identical** — the cold-start `s.sweep(ctx)` now drains all targets at boot for free.
+- [x] **Task 2 — Wire `ai_cache` + `offline_cache` targets into `main.go` (AC: #5, #3)**
+  - [x] File: `apps/api/cmd/api/main.go`, at the scheduler construction site (`:409`). Replace the single-arg construct with:
     ```go
     // Extra DB-cache sweep targets (infra-ai-offline-cache-expiry-sweep). offline_cache is always
     // constructed (:124); the AI cache only exists when an AI provider is configured (:214).
@@ -98,17 +98,17 @@ This story had a genuine architecture fork, decided by Alexyu on 2026-06-30:
     }
     cacheSweepScheduler := services.NewCacheSweepScheduler(repos.Cache, repos.Settings, cacheSweepExtra...)
     ```
-  - [ ] Confirm in-scope at `:409`: `offlineCache` (`cache.NewOfflineCache`, `:124`) and `aiService` (`services.NewAIService`, `:214`, **nilable**). No change to the start (`go cacheSweepScheduler.Start(cacheSweepCtx)`, `:642`) or stop (`cacheSweepScheduler.Stop()`, `:682`) lines.
-  - [ ] Update the adjacent `slog.Info("Cache sweep scheduler initialized")` comment (`:408`) from "cache_entries expiry sweep" to note the 3 targets.
-- [ ] **Task 3 — Unit tests (AC: #8, #2, #3, #4)**
-  - [ ] File: `apps/api/internal/services/cache_sweep_scheduler_test.go` (extend, do not rewrite — all existing tests MUST keep passing per AC4).
-  - [ ] Add a tiny local `fakeTarget` helper or reuse `mockCacheRepo`: e.g. a struct with a call counter + configurable error/panic, adapted via `SweepFunc("name", fake.clear)`.
-  - [ ] **Multi-target (AC1):** construct with `cacheRepo` + two extra `SweepFunc` targets; call `s.sweep(ctx)`; assert all three call-counters == 1.
-  - [ ] **Error isolation (AC2):** middle target returns `assert.AnError`; assert the other two still incremented (== 1) and `assert.NotPanics`.
-  - [ ] **Panic isolation (AC2):** one target's func `panic("boom")`; assert the others still swept and the scheduler does not crash (`assert.NotPanics`).
-  - [ ] **Nil-skip (AC3):** `NewCacheSweepScheduler(cacheRepo, nil, SweepFunc("x", nil))` (and/or `SweepTarget` with a nil interface) → constructing + `sweep` does not panic; only the real targets run.
-  - [ ] **Backward-compat (AC4):** keep `mockCacheRepo` + the existing `NewCacheSweepScheduler(cacheRepo, nil)` tests verbatim; confirm `s.sweep(ctx)` still yields `cacheRepo.callCount() == 1`.
-  - [ ] Run `go test ./internal/services/ -run CacheSweep -v` (+ `-race`); then `pnpm lint:all` (Rule 12).
+  - [x] Confirm in-scope at `:409`: `offlineCache` (`cache.NewOfflineCache`, `:124`) and `aiService` (`services.NewAIService`, `:214`, **nilable**). No change to the start (`go cacheSweepScheduler.Start(cacheSweepCtx)`, `:642`) or stop (`cacheSweepScheduler.Stop()`, `:682`) lines.
+  - [x] Update the adjacent `slog.Info("Cache sweep scheduler initialized")` comment (`:408`) from "cache_entries expiry sweep" to note the 3 targets.
+- [x] **Task 3 — Unit tests (AC: #8, #2, #3, #4)**
+  - [x] File: `apps/api/internal/services/cache_sweep_scheduler_test.go` (extend, do not rewrite — all existing tests MUST keep passing per AC4).
+  - [x] Add a tiny local `fakeTarget` helper or reuse `mockCacheRepo`: e.g. a struct with a call counter + configurable error/panic, adapted via `SweepFunc("name", fake.clear)`.
+  - [x] **Multi-target (AC1):** construct with `cacheRepo` + two extra `SweepFunc` targets; call `s.sweep(ctx)`; assert all three call-counters == 1.
+  - [x] **Error isolation (AC2):** middle target returns `assert.AnError`; assert the other two still incremented (== 1) and `assert.NotPanics`.
+  - [x] **Panic isolation (AC2):** one target's func `panic("boom")`; assert the others still swept and the scheduler does not crash (`assert.NotPanics`).
+  - [x] **Nil-skip (AC3):** `NewCacheSweepScheduler(cacheRepo, nil, SweepFunc("x", nil))` (and/or `SweepTarget` with a nil interface) → constructing + `sweep` does not panic; only the real targets run.
+  - [x] **Backward-compat (AC4):** keep `mockCacheRepo` + the existing `NewCacheSweepScheduler(cacheRepo, nil)` tests verbatim; confirm `s.sweep(ctx)` still yields `cacheRepo.callCount() == 1`.
+  - [x] Run `go test ./internal/services/ -run CacheSweep -v` (+ `-race`); then `pnpm lint:all` (Rule 12).
 
 ## Dev Notes
 
@@ -172,11 +172,26 @@ A scheduler is an infrastructure driver, not an HTTP handler, so it may take rep
 
 ### Agent Model Used
 
-_(to be filled by dev agent)_
+Opus 4.8 (1M context) — `claude-opus-4-8[1m]`, via BMAD dev-story workflow (agent "Amelia").
 
 ### Debug Log References
 
+- `go test ./internal/services/ -run CacheSweep -v -race` → PASS. New `TestCacheSweepScheduler_MultiTarget` cases (AC1/AC2/AC3/AC4) green; logs confirm per-target isolation with the target name (`ERROR Cache sweep failed target=mid …`, `ERROR Cache sweep panicked target=boom recover=boom`). All pre-existing #98 tests unchanged and green.
+- `go test ./...` (full api regression) → every package `ok`, incl. `github.com/vido/api/cmd/api` (proves the main.go wiring compiles).
+- `go vet ./...` exit 0; `pnpm nx lint api` → `go vet` + `staticcheck@2026.1` clean; `gofmt -l` empty on all 3 changed Go files.
+- `pnpm nx test web` → 202 files / 2251 tests passed; `test:cleanup` → "No test processes found" (no orphaned workers).
+
 ### Completion Notes List
+
+- 🔗 **AC Drift: NONE** — grep `CacheSweepScheduler|cache_sweep_interval|NewCacheSweepScheduler` across `_bmad-output/implementation-artifacts/*.md` → 3 hits: this story; #98 `infra-cache-entries-expiry-sweep` (parent — extended **additively**, AC4 preserves all #98 behavior and the constructor is kept source-compatible via a variadic tail → **REUSE not DRIFT**); `ux3-4-2b-downloads-sse-be.md` (cites the scheduler only as a lifecycle *precedent to copy*, sets no contract on it → REUSE). No prior AC contract is contradicted.
+- 📎 **Contract Stamps: NONE** — no `[@contract-v*]` stamps in this story; upstream #98 carries none either (pre-Rule-20, implicit v0), so no `confirmed against` ack line is required.
+- 🎭 **A11y Pre-Flight: N/A** (100% backend — no `apps/web/` files touched).
+- 🎨 **UX Verification: SKIPPED** — no UI changes in this story (backend-only Go scheduler).
+- **Per-target isolation** is the one deliberate upgrade over #98: `sweep` now loops all targets and delegates each to `sweepOne`, which owns its own `recover` + error log keyed by `target` name. One target erroring or panicking neither aborts the remaining targets on the tick nor kills the goroutine (AC2) — asserted by the error-isolation and panic-isolation tests.
+- **Defensive nil-guard** added to `SweepTarget` (`if c == nil`) alongside the constructor's `t.sweep != nil` filter, so AC3 holds for BOTH a nil `ExpirableCache` (via `SweepTarget`) and a nil func (via `SweepFunc`) — both dropped at construction (asserted via `len(s.targets)`).
+- **Backward-compat (AC4):** all pre-existing #98 tests kept verbatim and green; `NewCacheSweepScheduler(cacheRepo, nil)` still yields exactly the `cache_entries` target and one sweep call.
+- **AC6/AC7 preserved:** sweep is `DELETE`-only via each target's existing `ClearExpired`, sequential (no errgroup/concurrency), never `VACUUM`. No new SQL/migration; `offline_cache`'s conservative `expires_at < now AND is_stale = 1` predicate is used unchanged.
+- **Pre-existing failures: NONE** detected (full api + web suites green).
 
 ### Discovery Triage
 
@@ -188,8 +203,6 @@ _(to be filled by dev agent)_
 
 ### File List
 
-_(to be filled by dev agent)_
-
 - `apps/api/internal/services/cache_sweep_scheduler.go` (MODIFIED — `ExpirableCache`/`CacheSweepTarget`/`SweepTarget`/`SweepFunc`; struct `cacheRepo`→`targets`; variadic constructor; `sweep`→`sweep`+`sweepOne` per-target isolation)
 - `apps/api/internal/services/cache_sweep_scheduler_test.go` (MODIFIED — multi-target / error-isolation / panic-isolation / nil-skip tests; existing tests unchanged)
 - `apps/api/cmd/api/main.go` (MODIFIED — build `ai_cache` (nil-guarded) + `offline_cache` sweep targets, pass to `NewCacheSweepScheduler`)
@@ -199,3 +212,4 @@ _(to be filled by dev agent)_
 | Date       | Change                                                                                                                   |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------ |
 | 2026-06-30 | Story created (SM create-story). Pattern fork resolved by Alexyu → Option A (extend `CacheSweepScheduler`). Anchors verified against as-merged tree; #98 backward-compat preserved via variadic constructor. Status → ready-for-dev. |
+| 2026-07-01 | Implemented (dev-story). Generalized `CacheSweepScheduler` to N **sequential** targets (`ExpirableCache` + exported `CacheSweepTarget` + `SweepTarget`/`SweepFunc`; struct `cacheRepo`→`targets`; variadic source-compatible constructor; `sweep`→`sweep`+`sweepOne` per-target `recover`/error isolation keyed by target name; `Start` log gains `targets`). Wired `offline_cache` (always) + `ai_cache` (nil-guarded on `aiService`) targets at `main.go:409`. Added multi-target / error-isolation / panic-isolation / nil-skip tests; all #98 tests unchanged & green. `go vet` + `staticcheck@2026.1` + `gofmt` clean, `-race` clean, full api + web regression green (2251 web tests). Status → review. |

@@ -53,6 +53,32 @@ func (m *mockCacheRepo) callCount() int {
 // Compile-time check that the mock satisfies the interface the scheduler depends on.
 var _ repository.CacheRepositoryInterface = (*mockCacheRepo)(nil)
 
+// fakeTarget is a minimal ClearExpired-shaped sweep spy for the multi-target tests. It counts calls
+// and can be configured to return an error or panic, so the per-target isolation in sweepOne can be
+// asserted directly (adapted into a target via SweepFunc("name", f.clear)).
+type fakeTarget struct {
+	mu      sync.Mutex
+	calls   int
+	err     error
+	panicOn bool
+}
+
+func (f *fakeTarget) clear(_ context.Context) (int64, error) {
+	f.mu.Lock()
+	f.calls++
+	f.mu.Unlock()
+	if f.panicOn {
+		panic("boom")
+	}
+	return 0, f.err
+}
+
+func (f *fakeTarget) callCount() int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.calls
+}
+
 func TestCacheSweepScheduler_ResolveInterval(t *testing.T) {
 	ctx := context.Background()
 	key := settingsKeyCacheSweepInterval
@@ -298,5 +324,84 @@ func TestCacheSweepScheduler_Start(t *testing.T) {
 		case <-time.After(2 * time.Second):
 			t.Fatal("Start did not return after Stop")
 		}
+	})
+}
+
+func TestCacheSweepScheduler_MultiTarget(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("a tick sweeps all registered targets exactly once (AC1)", func(t *testing.T) {
+		cacheRepo := &mockCacheRepo{}
+		aiCache := &fakeTarget{}
+		offlineCache := &fakeTarget{}
+		s := NewCacheSweepScheduler(cacheRepo, nil,
+			SweepFunc("ai_cache", aiCache.clear),
+			SweepFunc("offline_cache", offlineCache.clear),
+		)
+		assert.Len(t, s.targets, 3) // cache_entries + ai_cache + offline_cache
+
+		s.sweep(ctx)
+
+		assert.Equal(t, 1, cacheRepo.callCount())
+		assert.Equal(t, 1, aiCache.callCount())
+		assert.Equal(t, 1, offlineCache.callCount())
+	})
+
+	t.Run("one target erroring still sweeps the others (error isolation, AC2)", func(t *testing.T) {
+		cacheRepo := &mockCacheRepo{}
+		mid := &fakeTarget{err: assert.AnError}
+		last := &fakeTarget{}
+		s := NewCacheSweepScheduler(cacheRepo, nil,
+			SweepFunc("mid", mid.clear),
+			SweepFunc("last", last.clear),
+		)
+
+		assert.NotPanics(t, func() { s.sweep(ctx) })
+		assert.Equal(t, 1, cacheRepo.callCount())
+		assert.Equal(t, 1, mid.callCount())
+		assert.Equal(t, 1, last.callCount()) // reached despite the mid target's error
+	})
+
+	t.Run("one target panicking still sweeps the others and does not crash (panic isolation, AC2)", func(t *testing.T) {
+		cacheRepo := &mockCacheRepo{}
+		boom := &fakeTarget{panicOn: true}
+		last := &fakeTarget{}
+		s := NewCacheSweepScheduler(cacheRepo, nil,
+			SweepFunc("boom", boom.clear),
+			SweepFunc("last", last.clear),
+		)
+
+		assert.NotPanics(t, func() { s.sweep(ctx) })
+		assert.Equal(t, 1, cacheRepo.callCount())
+		assert.Equal(t, 1, boom.callCount())
+		assert.Equal(t, 1, last.callCount()) // reached despite the boom target's panic
+	})
+
+	t.Run("nil sweep func/cache is skipped at construction (AC3)", func(t *testing.T) {
+		cacheRepo := &mockCacheRepo{}
+		real := &fakeTarget{}
+		// SweepFunc with a nil fn AND SweepTarget with a nil ExpirableCache both yield a nil sweep,
+		// which the constructor must drop so no nil-func call/panic ever happens on a tick.
+		var nilCache ExpirableCache
+		s := NewCacheSweepScheduler(cacheRepo, nil,
+			SweepFunc("nil-func", nil),
+			SweepTarget("nil-cache", nilCache),
+			SweepFunc("real", real.clear),
+		)
+		assert.Len(t, s.targets, 2) // only cache_entries + real survive construction
+
+		assert.NotPanics(t, func() { s.sweep(ctx) })
+		assert.Equal(t, 1, cacheRepo.callCount())
+		assert.Equal(t, 1, real.callCount())
+	})
+
+	t.Run("cache_entries alone is swept when zero extra targets supplied (AC4 backward-compat)", func(t *testing.T) {
+		cacheRepo := &mockCacheRepo{}
+		s := NewCacheSweepScheduler(cacheRepo, nil)
+		assert.Len(t, s.targets, 1)
+
+		s.sweep(ctx)
+
+		assert.Equal(t, 1, cacheRepo.callCount())
 	})
 }

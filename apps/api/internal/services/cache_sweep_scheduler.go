@@ -26,18 +26,59 @@ const (
 	maxCacheSweepIntervalMinutes = 7 * 24 * 60
 )
 
-// CacheSweepSchedulerInterface defines the contract for the cache_entries expiry sweep scheduler.
+// ExpirableCache is any DB-table cache that can delete its own expired rows. cache_entries
+// (repository.CacheRepositoryInterface) and offline_cache (*cache.OfflineCache) satisfy it directly
+// with the identical ClearExpired shape; ai_cache is adapted via SweepFunc (its wrapper method name
+// differs). The scheduler sweeps each registered target on the shared ticker.
+type ExpirableCache interface {
+	ClearExpired(ctx context.Context) (int64, error)
+}
+
+// CacheSweepTarget is one named sweep bound into the scheduler. Its fields are unexported so a
+// target can only be built via SweepTarget/SweepFunc; a nil cache/func yields a target whose sweep
+// is nil, which NewCacheSweepScheduler drops at construction (AC3). The type itself stays exported
+// so callers (main.go) can hold a []CacheSweepTarget without tripping the "exported func returns
+// unexported type" lint on the helpers.
+type CacheSweepTarget struct {
+	name  string
+	sweep func(context.Context) (int64, error)
+}
+
+// SweepTarget builds a target from anything satisfying ExpirableCache (e.g. cache_entries,
+// offline_cache). An untyped-nil cache yields a target with a nil sweep, which the constructor skips
+// (AC3) — the guard here also avoids panicking on the c.ClearExpired method-value expression for a
+// nil interface. A non-nil interface wrapping a typed-nil pointer is the caller's responsibility
+// (all call sites pass a live cache); were one ever passed, the eventual nil-receiver panic is
+// contained by sweepOne's per-target recover, so it degrades to a logged error rather than a crash.
+func SweepTarget(name string, c ExpirableCache) CacheSweepTarget {
+	if c == nil {
+		return CacheSweepTarget{name: name}
+	}
+	return CacheSweepTarget{name: name, sweep: c.ClearExpired}
+}
+
+// SweepFunc builds a target from a bare ClearExpired-shaped func. Required for
+// AIService.ClearExpiredCache, whose method name differs from ClearExpired and so does not satisfy
+// ExpirableCache directly (this avoids adding a rename/alias to the AIService API). A nil fn yields
+// a target the constructor skips (AC3).
+func SweepFunc(name string, fn func(context.Context) (int64, error)) CacheSweepTarget {
+	return CacheSweepTarget{name: name, sweep: fn}
+}
+
+// CacheSweepSchedulerInterface defines the contract for the cache expiry sweep scheduler.
 type CacheSweepSchedulerInterface interface {
 	Start(ctx context.Context)
 	Stop()
 }
 
-// CacheSweepScheduler periodically deletes expired rows from the cache_entries SQLite table
-// by calling CacheRepository.ClearExpired on a recurring ticker. It keeps the TMDb response
-// cache from growing unbounded (especially once the Discover facet-counts fan-out write-amplifies
-// it) without manual intervention. It targets cache_entries ONLY and never runs VACUUM.
+// CacheSweepScheduler periodically deletes expired rows from one or more DB-table caches
+// (cache_entries plus, when wired, ai_cache and offline_cache) by calling each target's ClearExpired
+// on a single recurring ticker. It keeps those SQLite caches from growing unbounded (especially once
+// the Discover facet-counts fan-out write-amplifies cache_entries) without manual intervention.
+// Targets are swept SEQUENTIALLY in one goroutine so they never contend the single SQLite writer
+// lock, and it never runs VACUUM.
 type CacheSweepScheduler struct {
-	cacheRepo    repository.CacheRepositoryInterface
+	targets      []CacheSweepTarget
 	settingsRepo repository.SettingsRepositoryInterface
 	mu           sync.Mutex
 	stopCh       chan struct{}
@@ -47,13 +88,26 @@ type CacheSweepScheduler struct {
 // Compile-time interface verification
 var _ CacheSweepSchedulerInterface = (*CacheSweepScheduler)(nil)
 
-// NewCacheSweepScheduler creates a new CacheSweepScheduler.
+// NewCacheSweepScheduler creates a new CacheSweepScheduler. cache_entries (from cacheRepo) is always
+// the first target when cacheRepo is non-nil; extraTargets (e.g. offline_cache, ai_cache) are
+// appended in order. Any target with a nil sweep (absent/nil cache) is skipped (AC3). The variadic
+// tail keeps the signature source-compatible with the single-target #98 form.
 func NewCacheSweepScheduler(
 	cacheRepo repository.CacheRepositoryInterface,
 	settingsRepo repository.SettingsRepositoryInterface,
+	extraTargets ...CacheSweepTarget,
 ) *CacheSweepScheduler {
+	var targets []CacheSweepTarget
+	if cacheRepo != nil { // keeps NewCacheSweepScheduler(nil, settingsRepo) tests valid
+		targets = append(targets, SweepTarget("cache_entries", cacheRepo))
+	}
+	for _, t := range extraTargets {
+		if t.sweep != nil { // skip a nil/absent cache (AC3)
+			targets = append(targets, t)
+		}
+	}
 	return &CacheSweepScheduler{
-		cacheRepo:    cacheRepo,
+		targets:      targets,
 		settingsRepo: settingsRepo,
 		stopCh:       make(chan struct{}),
 	}
@@ -103,7 +157,7 @@ func (s *CacheSweepScheduler) Start(ctx context.Context) {
 		return
 	}
 
-	slog.Info("Cache sweep scheduler started", "interval", interval)
+	slog.Info("Cache sweep scheduler started", "interval", interval, "targets", len(s.targets))
 	s.run(ctx, interval)
 }
 
@@ -147,27 +201,35 @@ func (s *CacheSweepScheduler) run(ctx context.Context, interval time.Duration) {
 	}
 }
 
-// sweep performs a single expiry sweep. It deletes only expired rows via the existing
-// CacheRepository.ClearExpired (which logs the deleted-row count when > 0) and NEVER runs
-// VACUUM (AC #6). A ClearExpired error is logged and swallowed so the loop continues to the
-// next tick (AC #4); a deferred recover guards against any unexpected panic so one bad tick
-// can never kill the scheduler goroutine.
+// sweep performs a single expiry sweep across ALL registered targets, SEQUENTIALLY (never
+// concurrently — so the targets never contend the single SQLite writer lock, AC #6). It deletes only
+// expired rows via each target's existing ClearExpired (which logs the deleted-row count when > 0)
+// and NEVER runs VACUUM. Per-target isolation lives in sweepOne so one bad target can neither abort
+// the others on this tick nor kill the scheduler goroutine (AC #2).
 func (s *CacheSweepScheduler) sweep(ctx context.Context) {
+	for _, t := range s.targets {
+		s.sweepOne(ctx, t)
+	}
+}
+
+// sweepOne sweeps a single target with its own recover + error handling so a panic or error in one
+// target is contained to that target (AC #2). A ClearExpired error is logged and swallowed so the
+// remaining targets — and the next tick — still run (AC #4); a cancelled/expired context during
+// shutdown is expected and logged quietly so a tick racing graceful shutdown does not emit a false
+// ERROR (CR L2).
+func (s *CacheSweepScheduler) sweepOne(ctx context.Context, t CacheSweepTarget) {
 	defer func() {
 		if r := recover(); r != nil {
-			slog.Error("Cache sweep panicked", "recover", r)
+			slog.Error("Cache sweep panicked", "target", t.name, "recover", r)
 		}
 	}()
 
-	if _, err := s.cacheRepo.ClearExpired(ctx); err != nil {
-		// A cancelled/expired context during shutdown is expected, not a failure — log it quietly
-		// so a tick that races graceful shutdown does not pollute the logs with a false ERROR.
-		// (CR L2.)
+	if _, err := t.sweep(ctx); err != nil {
 		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-			slog.Debug("Cache sweep interrupted by context", "error", err)
+			slog.Debug("Cache sweep interrupted by context", "target", t.name, "error", err)
 			return
 		}
-		slog.Error("Cache sweep failed", "error", err)
+		slog.Error("Cache sweep failed", "target", t.name, "error", err)
 	}
 }
 
