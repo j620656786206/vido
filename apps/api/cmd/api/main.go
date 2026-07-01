@@ -405,8 +405,17 @@ func main() {
 	scanScheduler := services.NewScanScheduler(scannerService, repos.Settings, slog.Default())
 	slog.Info("Scan scheduler initialized")
 
-	// Initialize cache_entries expiry sweep scheduler (infra-cache-entries-expiry-sweep)
-	cacheSweepScheduler := services.NewCacheSweepScheduler(repos.Cache, repos.Settings)
+	// Initialize cache expiry sweep scheduler — sweeps up to 3 DB-table caches (cache_entries +
+	// offline_cache + ai_cache) on one shared ticker (infra-cache-entries-expiry-sweep +
+	// infra-ai-offline-cache-expiry-sweep). offline_cache is always constructed (:124); the ai_cache
+	// target is added only when an AI provider is configured (aiService is nil otherwise, :214).
+	cacheSweepExtra := []services.CacheSweepTarget{
+		services.SweepTarget("offline_cache", offlineCache),
+	}
+	if aiService != nil {
+		cacheSweepExtra = append(cacheSweepExtra, services.SweepFunc("ai_cache", aiService.ClearExpiredCache))
+	}
+	cacheSweepScheduler := services.NewCacheSweepScheduler(repos.Cache, repos.Settings, cacheSweepExtra...)
 	slog.Info("Cache sweep scheduler initialized")
 
 	// Initialize subtitle engine components (Story 8.1-8.8)
