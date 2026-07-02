@@ -1,6 +1,6 @@
 # Story ux3-4-2 — Downloads card-action endpoints (backend)
 
-**Epic:** ux3-downloads-v2 (UX Redesign Phase 3, Epic 4) · **Status:** ready-for-dev
+**Epic:** ux3-downloads-v2 (UX Redesign Phase 3, Epic 4) · **Status:** done
 **Owner:** dev · **Type:** backend (cross-stack BE half) · **FRs:** PH3-M3 (Epic 14 v2)
 
 ## Story
@@ -41,19 +41,19 @@ So this story builds the action path **end-to-end**: qBittorrent client methods 
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — qBittorrent client action methods (AC: #4, #5, #6)**
-  - [ ] File: `apps/api/internal/qbittorrent/client.go`. Add `PauseTorrents` / `ResumeTorrents` / `DeleteTorrents` mirroring `GetTorrents` (`:228`) for auth/error wrapping, but `http.MethodPost` with a `application/x-www-form-urlencoded` body (`hashes=` pipe-joined; `delete` adds `deleteFiles`).
-  - [ ] **Version routing (AC4):** resolve qBT major version (reuse `getVersion`/`TestConnection`; cache on the `Client` like `lastLoginAt` if a per-call `getVersion` is too chatty) and select `/torrents/pause`|`/resume` (4.x) vs `/torrents/stop`|`/start` (5.0+). Cross-ref the `torrent.go` state-mapping version branch for the canonical version-detection idiom.
-  - [ ] **Fix `doWithAuth` body loss (AC6):** make the 401/403 retry (`:134`) preserve the request body for POSTs (e.g. set `req.GetBody` when building the action request, and have `doWithAuth` use it on retry) + a regression test.
-- [ ] **Task 2 — Service action methods (AC: #7)**
-  - [ ] File: `apps/api/internal/services/download_service.go`. Add `PauseDownload` / `ResumeDownload` / `RemoveDownload(…, deleteFiles bool)` to `DownloadServiceInterface` (`:14`) + impl; use the existing `getClient(config)` path (`:44`) the GET methods use.
-- [ ] **Task 3 — Handler endpoints + routes + Swagger (AC: #1, #2, #3, #8, #9, #10)**
-  - [ ] File: `apps/api/internal/handlers/download_handler.go`. Add `PauseDownload` / `ResumeDownload` / `RemoveDownload` handlers mirroring `GetDownloadDetails` (`:194`) for hash validation + the `errors.As(&connErr)` → `qbtErrorToHTTPStatus` mapping (reuse, AC8). `RemoveDownload` reads `deleteFiles` via `c.DefaultQuery("deleteFiles","false")` → `strconv.ParseBool`. Register in `RegisterRoutes` (`:266`): `downloads.POST("/:hash/pause", …)`, `.POST("/:hash/resume", …)`, `.DELETE("/:hash", …)`. Add Swaggo annotations.
-- [ ] **Task 4 — Verify wiring (AC: #9)**
-  - [ ] `main.go:515` already does `handlers.NewDownloadHandler(downloadService)` + `RegisterRoutes`. Confirm (grep) the 3 new routes appear; no new construction needed. (Rule 15: grep-verify, don't assume.)
-- [ ] **Task 5 — Tests (AC: #11) + gates**
-  - [ ] `client_test.go` (mock `httptest` qBT): method/path/body per action; version-routed pause/resume; **body-survives-reauth** (AC6). `download_service_test.go`: each action calls the right client method. `download_handler_test.go`: 200 success + mapped connection-error status + empty-hash 400.
-  - [ ] `cd apps/api && go test ./internal/qbittorrent/ ./internal/services/ ./internal/handlers/ -run 'Pause|Resume|Remove|Delete|Action' -v`; `pnpm lint:all` (Rule 12); `swag init` if annotations changed.
+- [x] **Task 1 — qBittorrent client action methods (AC: #4, #5, #6)**
+  - [x] File: `apps/api/internal/qbittorrent/client.go`. Add `PauseTorrents` / `ResumeTorrents` / `DeleteTorrents` mirroring `GetTorrents` (`:228`) for auth/error wrapping, but `http.MethodPost` with a `application/x-www-form-urlencoded` body (`hashes=` pipe-joined; `delete` adds `deleteFiles`).
+  - [x] **Version routing (AC4):** resolve qBT major version (reuse `getVersion`/`TestConnection`; cache on the `Client` like `lastLoginAt` if a per-call `getVersion` is too chatty) and select `/torrents/pause`|`/resume` (4.x) vs `/torrents/stop`|`/start` (5.0+). Cross-ref the `torrent.go` state-mapping version branch for the canonical version-detection idiom.
+  - [x] **Fix `doWithAuth` body loss (AC6):** make the 401/403 retry (`:134`) preserve the request body for POSTs (e.g. set `req.GetBody` when building the action request, and have `doWithAuth` use it on retry) + a regression test.
+- [x] **Task 2 — Service action methods (AC: #7)**
+  - [x] File: `apps/api/internal/services/download_service.go`. Add `PauseDownload` / `ResumeDownload` / `RemoveDownload(…, deleteFiles bool)` to `DownloadServiceInterface` (`:14`) + impl; use the existing `getClient(config)` path (`:44`) the GET methods use.
+- [x] **Task 3 — Handler endpoints + routes + Swagger (AC: #1, #2, #3, #8, #9, #10)**
+  - [x] File: `apps/api/internal/handlers/download_handler.go`. Add `PauseDownload` / `ResumeDownload` / `RemoveDownload` handlers mirroring `GetDownloadDetails` (`:194`) for hash validation + the `errors.As(&connErr)` → `qbtErrorToHTTPStatus` mapping (reuse, AC8). `RemoveDownload` reads `deleteFiles` via `c.DefaultQuery("deleteFiles","false")` → `strconv.ParseBool`. Register in `RegisterRoutes` (`:266`): `downloads.POST("/:hash/pause", …)`, `.POST("/:hash/resume", …)`, `.DELETE("/:hash", …)`. Add Swaggo annotations.
+- [x] **Task 4 — Verify wiring (AC: #9)**
+  - [x] `main.go:515` already does `handlers.NewDownloadHandler(downloadService)` + `RegisterRoutes`. Confirm (grep) the 3 new routes appear; no new construction needed. (Rule 15: grep-verify, don't assume.)
+- [x] **Task 5 — Tests (AC: #11) + gates**
+  - [x] `client_test.go` (mock `httptest` qBT): method/path/body per action; version-routed pause/resume; **body-survives-reauth** (AC6). `download_service_test.go`: each action calls the right client method. `download_handler_test.go`: 200 success + mapped connection-error status + empty-hash 400.
+  - [x] `cd apps/api && go test ./internal/qbittorrent/ ./internal/services/ ./internal/handlers/ -run 'Pause|Resume|Remove|Delete|Action' -v`; `pnpm lint:all` (Rule 12); `swag init` if annotations changed.
 
 ## Dev Notes
 
@@ -101,11 +101,29 @@ So this story builds the action path **end-to-end**: qBittorrent client methods 
 
 ### Agent Model Used
 
-_(to be filled by dev agent)_
+claude-opus-4-8[1m] (Amelia — Dev Agent, BMM dev-story workflow)
 
 ### Debug Log References
 
+- `go test ./internal/qbittorrent/ ./internal/services/ ./internal/handlers/ -run 'Pause|Resume|Remove|Delete|Action|ParseQBMajor'` — all green (incl. AC6 `TestClient_PauseTorrents_BodySurvivesReauth`).
+- `go test ./...` (full backend) — green except the pre-existing tracked flake `TestScannerService_SSEBroadcast_ScanCancelled` (see Completion Notes).
+- `go vet` + pinned `staticcheck-2026.1` on the 3 changed packages — clean. `pnpm lint:all` — 0 errors (123 pre-existing warnings in untouched web files), prettier clean.
+- AC9 grep: `downloads.POST("/:hash/pause"|"/:hash/resume")` + `downloads.DELETE("/:hash")` confirmed in `RegisterRoutes`; `main.go` already constructs+registers the handler (`cmd/api/main.go:524`,`:608`) — no new wiring.
+
 ### Completion Notes List
+
+- **Implementation (client→service→handler, all backend):**
+  - `client.go`: `PauseTorrents`/`ResumeTorrents`/`DeleteTorrents([]string, …)` (AC5) via a shared `doFormAction` (auth + form-POST + non-2xx→`*ConnectionError`); version-routed pause/resume — qBT 4.x `/torrents/pause`|`/resume` vs 5.0+ `/torrents/stop`|`/start` (AC4) via cached `majorVersion` + `parseQBMajorVersion` (fallback 4.x on unparseable, logged); `delete` unchanged both versions; hashes pipe-joined for batch reuse (D2-D).
+  - **AC6 (`doWithAuth` body loss) fixed:** the 401/403 retry now rewinds the body via `req.GetBody` and clones headers, so a mid-flight re-auth re-sends the form intact. GET callers have nil `GetBody` → nil body → byte-identical to before (existing `TestClient_DoWithAuth_RetriesOn401` still green). Regression test `TestClient_PauseTorrents_BodySurvivesReauth` asserts the retried POST still carries `hashes=abc123`.
+  - `download_service.go`: `PauseDownload`/`ResumeDownload`/`RemoveDownload(…, deleteFiles bool)` on the interface (AC7) + `clientForAction` reusing the GET methods' config-fetch + not-configured guard.
+  - `download_handler.go`: 3 handlers + `writeActionError` (reuses `qbtErrorToHTTPStatus` — bugfix-10-2 [@contract-v1] — with NO TorrentNotFound branch since qBT actions are idempotent-200; AC8, no new Rule-7 code); `deleteFiles` via `DefaultQuery("deleteFiles","false")`→`ParseBool` (default false = keep files, AC3); success is `SuccessResponse(c, nil)` → exactly `{"success":true}` (Data omitempty). Routes registered in `RegisterRoutes` (AC9).
+- **AC10 Swagger:** Swaggo annotations added to all 3 handler methods. No committed swagger artifact to regen — `apps/api/docs/` is not git-tracked, no `swag` binary present, and `cmd/api/main.go` does not import a generated docs package; annotations live as source comments exactly like the existing GET endpoints. `swag init` therefore N/A here.
+- **🔗 AC Drift: NONE** (checked: `downloads/:hash|deleteFiles|PauseTorrents|doWithAuth|/torrents/(pause|resume|stop|start|delete)` across `_bmad-output/implementation-artifacts/*.md` — hits are prior GET endpoints (Story 4-2, bugfix-10-2), the `doWithAuth` lazy-auth from bugfix-5, and the downstream ux3-4-3 pre-ack — all REUSE not DRIFT. The AC6 body-preservation fix keeps GET-caller behavior byte-identical, so bugfix-5 AC 2.3's retry contract is strengthened, not changed.)
+- **📎 Contract Stamps: FOUND** (3 stamped ACs in this story — AC1/AC2/AC3 `[@contract-v1]`, the new action-endpoint contract. Upstream: reuses bugfix-10-2 `[@contract-v1]` qBT-error envelope UNCHANGED — no bump. Downstream `ux3-4-3` already pre-acks `confirmed against [@contract-v1]`. All versions reconcile.)
+- **🎭 A11y Pre-Flight: N/A** (100% backend — no `apps/web/` files touched).
+- **Pre-existing failure (Epic 9c Retro AI-2 → option 2, already filed):** the full-suite gate surfaced `TestScannerService_SSEBroadcast_ScanCancelled` flaking (pass/fail/pass over 3 identical isolated runs). This is the **already-tracked** `preexisting-fail-scanner-sse-scan-cancelled-flake` (filed 2026-05-04, SSE-Hub↔assertion race); this story touched ZERO scanner code, so no new entry — cited here per the recording rule.
+- **Rule 15 self-check win:** extending `DownloadServiceInterface` broke a second mock (`mockDownloadService` in `internal/workers/parse_worker_test.go`, which receives the full interface) — caught by `go test ./...`; the 3 no-op methods were added there. `fakeDownloads`/activity mocks use narrower interfaces and were unaffected.
+- **Web vitest not run:** story touches 0 `apps/web/` files (backend-only); `pnpm lint:all` already exercised eslint over `apps/web` with 0 errors, and the a11y pre-flight is N/A — so the React suite carries no signal for this change (its own flakes are separately tracked). CI (/ship) runs the full web suite regardless.
 
 ### Discovery Triage
 
@@ -116,17 +134,40 @@ _(to be filled by dev agent)_
 
 ### File List
 
-_(to be filled by dev agent)_
+- `apps/api/internal/qbittorrent/client.go` (MODIFIED — Pause/Resume/DeleteTorrents + version routing + doFormAction + doWithAuth body/header preservation; **CR M1**: `verMu sync.Mutex` guarding version resolution)
+- `apps/api/internal/qbittorrent/client_test.go` (MODIFIED — action methods + version routing + delete form body + body-survives-reauth + parseQBMajorVersion; **CR**: +Content-Type-on-retry (L2), +version-fetch-fail (L3), +concurrent-no-race `-race` (M1))
+- `apps/api/internal/services/download_service.go` (MODIFIED — Pause/Resume/RemoveDownload + clientForAction + interface)
+- `apps/api/internal/services/download_service_test.go` (MODIFIED — action success/not-configured/config-error tests)
+- `apps/api/internal/handlers/download_handler.go` (MODIFIED — 3 handlers + writeActionError + routes + Swagger)
+- `apps/api/internal/handlers/download_handler_test.go` (MODIFIED — 3 mock methods + action success/delete-parse/error-mapping/empty-hash tests; **CR L3**: +Resume/Remove empty-hash)
+- `apps/api/internal/workers/parse_worker_test.go` (MODIFIED — `mockDownloadService` gains the 3 new interface methods; Rule 15 self-check surfaced it)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (MODIFIED — ux3-4-2-downloads-actions-be: ready-for-dev → in-progress → review)
 
-- `apps/api/internal/qbittorrent/client.go` (MODIFIED — Pause/Resume/DeleteTorrents + version routing + doWithAuth body fix)
-- `apps/api/internal/qbittorrent/client_test.go` (MODIFIED — action methods + version + body-retry tests)
-- `apps/api/internal/services/download_service.go` (MODIFIED — Pause/Resume/RemoveDownload + interface)
-- `apps/api/internal/services/download_service_test.go` (MODIFIED)
-- `apps/api/internal/handlers/download_handler.go` (MODIFIED — 3 handlers + routes + Swagger)
-- `apps/api/internal/handlers/download_handler_test.go` (MODIFIED)
+## Senior Developer Review (AI)
+
+**Reviewer:** Amelia (dev agent, adversarial code-review workflow) · **Date:** 2026-07-02 · **Outcome:** Approve (all High/Medium fixed)
+
+Adversarial CR of this story's own implementation (weak case — same model that wrote it; flagged for a fresh-context re-review if desired). Mandatory gates: 🔒 **Rule 7 Wire Format PASS** (0 new codes; `QBITTORRENT_*` reused unchanged), 🔒 **Rule 20 Contract Bump N/A** (creates `[@contract-v1]`, no `→` bump), 🔒 **Rule 25 Mega-line N/A** (`project-context.md` untouched), **Git ↔ File List: 0 discrepancies**. Findings: 0 High · 1 Medium · 4 Low · 1 Info.
+
+**Fixed (M1 + L2 + L3):**
+
+- ✅ **[MED] M1** — data race on the cached `qbtMajorVer` (one `*Client` is shared across concurrent actions via `DownloadService.getClient`): guarded version resolution with `verMu sync.Mutex` (`client.go`) + added `TestClient_MajorVersion_ConcurrentNoRace` (8 goroutines, passes under `-race`).
+- ✅ **[LOW] L2** — `TestClient_PauseTorrents_BodySurvivesReauth` now also asserts the form `Content-Type` survives the re-auth `Header.Clone()`.
+- ✅ **[LOW] L3** — added `TestDownloadHandler_ResumeAndRemove_EmptyHash` (Resume/Remove empty-hash → 400) + `TestClient_PauseTorrents_VersionFetchFails` (version-lookup failure → `ConnectionError`).
+
+**Noted, accepted (not fixed):**
+
+- **[LOW] L1** — `qbtMajorVer` has no TTL; a qBT 4→5 upgrade without a config change or app restart would keep routing to the 4.x `/pause` until the client is recreated. Rare edge case.
+- **[LOW] L4** — `majorVersion` + `doFormAction` both call `ensureAuth` (harmless no-op; `doFormAction`'s is required for the delete path, which skips version resolution).
+- **[INFO] I1** — pre-existing Rule-11 breadth: `parse_worker` consumes the wide `DownloadServiceInterface` though it only needs `GetAllDownloads`; extending the interface forced a mock stub. Out of scope.
+- Pre-existing flaky `TestScannerService_SSEBroadcast_ScanCancelled` — already tracked (`preexisting-fail-scanner-sse-scan-cancelled-flake`).
+
+Post-fix: `go vet` + `staticcheck-2026.1` clean; 3-package suite green (incl. `-race`); `pnpm lint:all` 0 errors + prettier clean.
 
 ## Change Log
 
 | Date       | Change                                                                                                                          |
 | ---------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | 2026-06-30 | Story created (SM create-story). Capability audit corrected the design's assumption — qBT client is read-only, so this is a full vertical build (client→service→handler). Flags: qBT 4.x/5.0 endpoint split (AC4), `doWithAuth` nil-body retry fix (AC6). `[@contract-v1]` on AC1-3 for FE ack. SSE = separate sibling. Status → ready-for-dev. |
+| 2026-07-02 | Adversarial code-review (Amelia, dev). Fixed **M1** (cached-version data race → `verMu` mutex + concurrent `-race` test), **L2** (Content-Type assertion on re-auth retry), **L3** (Resume/Remove empty-hash + version-fetch-fail tests). L1/L4/I1 accepted as notes. Gates: Rule 7 PASS, Rule 20/25 N/A, Git↔File-List clean. 3-pkg suite + `-race` green; lint:all 0 errors. Status → done. |
+| 2026-07-02 | Implemented (dev-story, Amelia). Client: version-routed Pause/Resume (4.x pause/resume vs 5.0+ stop/start) + Delete + `doFormAction`; `doWithAuth` now rewinds body + clones headers on re-auth (AC6, byte-identical for GET callers). Service: Pause/Resume/RemoveDownload + not-configured guard. Handler: 3 endpoints + `writeActionError` (reuses `qbtErrorToHTTPStatus`, no new Rule-7 code) + routes; `{success:true}` via `SuccessResponse(c,nil)`. Tests at all 3 layers incl. AC6 body-survives-reauth; extended-interface break in `workers/parse_worker_test.go` mock fixed (Rule 15). `go test ./...` green modulo tracked flake `preexisting-fail-scanner-sse-scan-cancelled-flake`; `pnpm lint:all` 0 errors + prettier clean. AC1-11 met. Status → review. |

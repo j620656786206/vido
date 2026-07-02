@@ -15,6 +15,9 @@ type DownloadServiceInterface interface {
 	GetAllDownloads(ctx context.Context, filter string, sortField string, order string) ([]qbittorrent.Torrent, error)
 	GetDownloadDetails(ctx context.Context, hash string) (*qbittorrent.TorrentDetails, error)
 	GetDownloadCounts(ctx context.Context) (*qbittorrent.DownloadCounts, error)
+	PauseDownload(ctx context.Context, hash string) error
+	ResumeDownload(ctx context.Context, hash string) error
+	RemoveDownload(ctx context.Context, hash string, deleteFiles bool) error
 }
 
 // DownloadService provides business logic for download monitoring.
@@ -195,6 +198,63 @@ func (s *DownloadService) GetDownloadCounts(ctx context.Context) (*qbittorrent.D
 	}
 
 	return counts, nil
+}
+
+// clientForAction resolves the qBittorrent config and returns a client, mirroring
+// the not-configured guard the GET methods use. Shared by the pause/resume/remove
+// action methods.
+func (s *DownloadService) clientForAction(ctx context.Context) (*qbittorrent.Client, error) {
+	config, err := s.qbService.GetConfig(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("get qBittorrent config: %w", err)
+	}
+	if config.Host == "" {
+		return nil, &qbittorrent.ConnectionError{
+			Code:    qbittorrent.ErrCodeNotConfigured,
+			Message: "qBittorrent not configured",
+		}
+	}
+	return s.getClient(config), nil
+}
+
+// PauseDownload pauses the torrent with the given hash.
+func (s *DownloadService) PauseDownload(ctx context.Context, hash string) error {
+	client, err := s.clientForAction(ctx)
+	if err != nil {
+		return err
+	}
+	if err := client.PauseTorrents(ctx, []string{hash}); err != nil {
+		s.logger.Error("Failed to pause download", "error", err, "hash", hash)
+		return err
+	}
+	return nil
+}
+
+// ResumeDownload resumes the torrent with the given hash.
+func (s *DownloadService) ResumeDownload(ctx context.Context, hash string) error {
+	client, err := s.clientForAction(ctx)
+	if err != nil {
+		return err
+	}
+	if err := client.ResumeTorrents(ctx, []string{hash}); err != nil {
+		s.logger.Error("Failed to resume download", "error", err, "hash", hash)
+		return err
+	}
+	return nil
+}
+
+// RemoveDownload removes the torrent with the given hash from qBittorrent.
+// When deleteFiles is true the downloaded data is also deleted from disk.
+func (s *DownloadService) RemoveDownload(ctx context.Context, hash string, deleteFiles bool) error {
+	client, err := s.clientForAction(ctx)
+	if err != nil {
+		return err
+	}
+	if err := client.DeleteTorrents(ctx, []string{hash}, deleteFiles); err != nil {
+		s.logger.Error("Failed to remove download", "error", err, "hash", hash, "delete_files", deleteFiles)
+		return err
+	}
+	return nil
 }
 
 // Compile-time interface verification
