@@ -158,6 +158,23 @@ SCREENS = {
     "YYEBd": ("flow-i-discover-v2", "i6-d"),
     "S3qke": ("flow-i-discover-v2", "i7-d"),
     "KdnVw": ("flow-i-discover-v2", "i8-d"),
+    # flow-d-downloads-v2 — Downloads deep-operation page (design-ahead spec: card actions,
+    # batch select, pagination; six backend filter values; qBittorrent fail-soft; NZBGet inert
+    # placeholder). Replaces the deprecated flow-d-downloads (d1-d/d1-m/d2-d/d3-m).
+    "cK1KF": ("flow-d-downloads-v2", "d1-d-v2"),
+    "tx6U1": ("flow-d-downloads-v2", "d2-d-v2"),
+    "lCFq2": ("flow-d-downloads-v2", "d3-d-v2"),
+    "T95wy": ("flow-d-downloads-v2", "d4-d-v2"),
+    "dVPuY": ("flow-d-downloads-v2", "d5-d-v2"),
+    "UNVRU": ("flow-d-downloads-v2", "d6-d-v2"),
+    "uMDjw": ("flow-d-downloads-v2", "d1-m-v2"),
+    # v2.1 rework (Sally review): desktop List default + Table view + list toolbar;
+    # mobile sheet-first actions + long-name split + detail sheet.
+    "w3ipb": ("flow-d-downloads-v2", "d7-d-v2"),
+    "jDgxJ": ("flow-d-downloads-v2", "d8-m-v2"),
+    "DrYXb": ("flow-d-downloads-v2", "d9-m-v2"),
+    # mobile sort sheet — the 排序 bottom-sheet the D1-M top-bar sort button opens
+    "JxMWL": ("flow-d-downloads-v2", "d10-m-v2"),
 }
 
 
