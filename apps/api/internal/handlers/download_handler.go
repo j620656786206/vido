@@ -262,6 +262,120 @@ func (h *DownloadHandler) GetDownloadCounts(c *gin.Context) {
 	SuccessResponse(c, counts)
 }
 
+// writeActionError maps an error from a download action (pause/resume/remove) to
+// the correct HTTP response, reusing the qbtErrorToHTTPStatus contract shared by
+// the GET endpoints (bugfix-10-2 [@contract-v1]). No TorrentNotFound branch —
+// qBittorrent's pause/resume/delete are idempotent and 200 even for unknown
+// hashes, so there is no not-found surface for these actions.
+func (h *DownloadHandler) writeActionError(c *gin.Context, err error, action string) {
+	slog.Error("download action failed", "action", action, "error", err)
+
+	var connErr *qbittorrent.ConnectionError
+	if errors.As(err, &connErr) {
+		status := qbtErrorToHTTPStatus(connErr.Code)
+		switch connErr.Code {
+		case qbittorrent.ErrCodeNotConfigured:
+			ErrorResponse(c, status, connErr.Code, "qBittorrent 尚未設定", "請先設定 qBittorrent 連線。"+SetupRequiredMarker)
+		case qbittorrent.ErrCodeAuthFailed:
+			ErrorResponse(c, status, connErr.Code, "qBittorrent 認證失敗", "請檢查帳號密碼是否正確。")
+		default:
+			ErrorResponse(c, status, connErr.Code, "無法連線到 qBittorrent", connErr.Error())
+		}
+		return
+	}
+
+	InternalServerError(c, "Failed to "+action+" download")
+}
+
+// PauseDownload handles POST /api/v1/downloads/:hash/pause
+// @Summary Pause a download
+// @Description Pauses the torrent with the given hash. [@contract-v1]
+// @Tags downloads
+// @Produce json
+// @Param hash path string true "Torrent info hash"
+// @Success 200 {object} APIResponse
+// @Failure 400 {object} APIResponse
+// @Failure 502 {object} APIResponse
+// @Failure 503 {object} APIResponse
+// @Failure 504 {object} APIResponse
+// @Failure 500 {object} APIResponse
+// @Router /api/v1/downloads/{hash}/pause [post]
+func (h *DownloadHandler) PauseDownload(c *gin.Context) {
+	hash := c.Param("hash")
+	if hash == "" {
+		ValidationError(c, "torrent hash is required")
+		return
+	}
+
+	if err := h.service.PauseDownload(c.Request.Context(), hash); err != nil {
+		h.writeActionError(c, err, "pause")
+		return
+	}
+
+	SuccessResponse(c, nil)
+}
+
+// ResumeDownload handles POST /api/v1/downloads/:hash/resume
+// @Summary Resume a download
+// @Description Resumes the torrent with the given hash. [@contract-v1]
+// @Tags downloads
+// @Produce json
+// @Param hash path string true "Torrent info hash"
+// @Success 200 {object} APIResponse
+// @Failure 400 {object} APIResponse
+// @Failure 502 {object} APIResponse
+// @Failure 503 {object} APIResponse
+// @Failure 504 {object} APIResponse
+// @Failure 500 {object} APIResponse
+// @Router /api/v1/downloads/{hash}/resume [post]
+func (h *DownloadHandler) ResumeDownload(c *gin.Context) {
+	hash := c.Param("hash")
+	if hash == "" {
+		ValidationError(c, "torrent hash is required")
+		return
+	}
+
+	if err := h.service.ResumeDownload(c.Request.Context(), hash); err != nil {
+		h.writeActionError(c, err, "resume")
+		return
+	}
+
+	SuccessResponse(c, nil)
+}
+
+// RemoveDownload handles DELETE /api/v1/downloads/:hash
+// @Summary Remove a download
+// @Description Removes the torrent with the given hash from qBittorrent. When
+// @Description deleteFiles=true the downloaded data is also deleted from disk;
+// @Description when false (default) the files are kept. [@contract-v1]
+// @Tags downloads
+// @Produce json
+// @Param hash path string true "Torrent info hash"
+// @Param deleteFiles query bool false "Also delete downloaded files from disk" default(false)
+// @Success 200 {object} APIResponse
+// @Failure 400 {object} APIResponse
+// @Failure 502 {object} APIResponse
+// @Failure 503 {object} APIResponse
+// @Failure 504 {object} APIResponse
+// @Failure 500 {object} APIResponse
+// @Router /api/v1/downloads/{hash} [delete]
+func (h *DownloadHandler) RemoveDownload(c *gin.Context) {
+	hash := c.Param("hash")
+	if hash == "" {
+		ValidationError(c, "torrent hash is required")
+		return
+	}
+
+	deleteFiles, _ := strconv.ParseBool(c.DefaultQuery("deleteFiles", "false"))
+
+	if err := h.service.RemoveDownload(c.Request.Context(), hash, deleteFiles); err != nil {
+		h.writeActionError(c, err, "remove")
+		return
+	}
+
+	SuccessResponse(c, nil)
+}
+
 // RegisterRoutes registers download monitoring routes.
 func (h *DownloadHandler) RegisterRoutes(rg *gin.RouterGroup) {
 	downloads := rg.Group("/downloads")
@@ -269,5 +383,8 @@ func (h *DownloadHandler) RegisterRoutes(rg *gin.RouterGroup) {
 		downloads.GET("", h.ListDownloads)
 		downloads.GET("/counts", h.GetDownloadCounts)
 		downloads.GET("/:hash", h.GetDownloadDetails)
+		downloads.POST("/:hash/pause", h.PauseDownload)
+		downloads.POST("/:hash/resume", h.ResumeDownload)
+		downloads.DELETE("/:hash", h.RemoveDownload)
 	}
 }

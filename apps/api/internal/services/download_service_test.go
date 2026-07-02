@@ -430,6 +430,126 @@ func TestDownloadService_GetDownloadDetails_ClientError(t *testing.T) {
 	mockQB.AssertExpectations(t)
 }
 
+// --- ux3-4-2: action methods (pause/resume/remove) ---
+
+type qbActionCapture struct {
+	pauseHashes  string
+	resumeHashes string
+	deleteHashes string
+	deleteFiles  string
+}
+
+// setupMockQBActionServer stands up a mock qBittorrent server that records the
+// pause/resume/delete form bodies, plus a mock QBService pointing at it.
+func setupMockQBActionServer(t *testing.T) (*MockQBServiceForDownload, *qbActionCapture) {
+	t.Helper()
+	cap := &qbActionCapture{}
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v2/auth/login", func(w http.ResponseWriter, r *http.Request) {
+		http.SetCookie(w, &http.Cookie{Name: "SID", Value: "s"})
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprint(w, "Ok.")
+	})
+	mux.HandleFunc("/api/v2/app/version", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, "v4.6.0")
+	})
+	mux.HandleFunc("/api/v2/torrents/pause", func(w http.ResponseWriter, r *http.Request) {
+		_ = r.ParseForm()
+		cap.pauseHashes = r.FormValue("hashes")
+		w.WriteHeader(http.StatusOK)
+	})
+	mux.HandleFunc("/api/v2/torrents/resume", func(w http.ResponseWriter, r *http.Request) {
+		_ = r.ParseForm()
+		cap.resumeHashes = r.FormValue("hashes")
+		w.WriteHeader(http.StatusOK)
+	})
+	mux.HandleFunc("/api/v2/torrents/delete", func(w http.ResponseWriter, r *http.Request) {
+		_ = r.ParseForm()
+		cap.deleteHashes = r.FormValue("hashes")
+		cap.deleteFiles = r.FormValue("deleteFiles")
+		w.WriteHeader(http.StatusOK)
+	})
+	server := httptest.NewServer(mux)
+	t.Cleanup(server.Close)
+
+	mockQB := new(MockQBServiceForDownload)
+	mockQB.On("GetConfig", mock.Anything).Return(&qbittorrent.Config{
+		Host:     server.URL,
+		Username: "admin",
+		Password: "password",
+	}, nil)
+	return mockQB, cap
+}
+
+func TestDownloadService_PauseDownload_Success(t *testing.T) {
+	mockQB, cap := setupMockQBActionServer(t)
+	service := newTestDownloadService(mockQB)
+
+	err := service.PauseDownload(context.Background(), "abc123")
+
+	require.NoError(t, err)
+	assert.Equal(t, "abc123", cap.pauseHashes)
+	mockQB.AssertExpectations(t)
+}
+
+func TestDownloadService_ResumeDownload_Success(t *testing.T) {
+	mockQB, cap := setupMockQBActionServer(t)
+	service := newTestDownloadService(mockQB)
+
+	err := service.ResumeDownload(context.Background(), "def456")
+
+	require.NoError(t, err)
+	assert.Equal(t, "def456", cap.resumeHashes)
+	mockQB.AssertExpectations(t)
+}
+
+func TestDownloadService_RemoveDownload_Success(t *testing.T) {
+	for _, deleteFiles := range []bool{true, false} {
+		t.Run(fmt.Sprintf("deleteFiles=%v", deleteFiles), func(t *testing.T) {
+			mockQB, cap := setupMockQBActionServer(t)
+			service := newTestDownloadService(mockQB)
+
+			err := service.RemoveDownload(context.Background(), "ghi789", deleteFiles)
+
+			require.NoError(t, err)
+			assert.Equal(t, "ghi789", cap.deleteHashes)
+			assert.Equal(t, fmt.Sprintf("%v", deleteFiles), cap.deleteFiles)
+			mockQB.AssertExpectations(t)
+		})
+	}
+}
+
+func TestDownloadService_ActionMethods_NotConfigured(t *testing.T) {
+	newService := func() *DownloadService {
+		mockQB := new(MockQBServiceForDownload)
+		mockQB.On("GetConfig", mock.Anything).Return(&qbittorrent.Config{Host: ""}, nil)
+		return newTestDownloadService(mockQB)
+	}
+
+	assertNotConfigured := func(t *testing.T, err error) {
+		t.Helper()
+		require.Error(t, err)
+		var connErr *qbittorrent.ConnectionError
+		require.ErrorAs(t, err, &connErr)
+		assert.Equal(t, qbittorrent.ErrCodeNotConfigured, connErr.Code)
+	}
+
+	assertNotConfigured(t, newService().PauseDownload(context.Background(), "h"))
+	assertNotConfigured(t, newService().ResumeDownload(context.Background(), "h"))
+	assertNotConfigured(t, newService().RemoveDownload(context.Background(), "h", false))
+}
+
+func TestDownloadService_ActionMethods_ConfigError(t *testing.T) {
+	mockQB := new(MockQBServiceForDownload)
+	mockQB.On("GetConfig", mock.Anything).Return(nil, errors.New("database error"))
+	service := newTestDownloadService(mockQB)
+
+	err := service.RemoveDownload(context.Background(), "h", true)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "get qBittorrent config")
+	mockQB.AssertExpectations(t)
+}
+
 func TestDownloadService_GetAllDownloads_StatusSortDesc(t *testing.T) {
 	// GIVEN: torrents with different statuses
 	torrentsJSON := `[

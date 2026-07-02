@@ -9,7 +9,9 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -21,6 +23,13 @@ type Client struct {
 	config      *Config
 	httpClient  *http.Client
 	lastLoginAt time.Time
+	// qbtMajorVer caches the qBittorrent server major version (0 = not yet
+	// resolved). Used to select the 4.x pause/resume vs 5.0+ stop/start endpoints.
+	// Guarded by verMu because a single *Client is cached and shared across
+	// concurrent requests (DownloadService.getClient), so concurrent actions
+	// would otherwise race the first-time resolution.
+	qbtMajorVer int
+	verMu       sync.Mutex
 }
 
 // NewClient creates a new qBittorrent API client.
@@ -130,11 +139,22 @@ func (c *Client) doWithAuth(ctx context.Context, req *http.Request) (*http.Respo
 		if authErr := c.Login(ctx); authErr != nil {
 			return nil, authErr
 		}
-		// Rebuild request (original body may be consumed)
-		retryReq, err := http.NewRequestWithContext(ctx, req.Method, req.URL.String(), nil)
+		// Rebuild the request, preserving the body (via GetBody) and headers so a
+		// POST-with-form-body action re-sends its payload intact after re-auth.
+		// GET callers have a nil GetBody, so body stays nil — identical behavior.
+		var body io.Reader
+		if req.GetBody != nil {
+			rewound, gerr := req.GetBody()
+			if gerr != nil {
+				return nil, fmt.Errorf("rewind retry request body: %w", gerr)
+			}
+			body = rewound
+		}
+		retryReq, err := http.NewRequestWithContext(ctx, req.Method, req.URL.String(), body)
 		if err != nil {
 			return nil, fmt.Errorf("create retry request: %w", err)
 		}
+		retryReq.Header = req.Header.Clone()
 		return c.httpClient.Do(retryReq)
 	}
 
@@ -382,4 +402,119 @@ func (c *Client) GetTorrentDetails(ctx context.Context, hash string) (*TorrentDe
 	}
 
 	return mapTorrentDetails(&torrent, props), nil
+}
+
+// parseQBMajorVersion extracts the major version number from a qBittorrent app
+// version string such as "v4.6.7" or "5.0.3". It falls back to 4 (the
+// long-established pause/resume API) when the value cannot be parsed, logging a
+// warning so an unexpected version string surfaces in observability.
+func parseQBMajorVersion(v string) int {
+	v = strings.TrimPrefix(strings.TrimSpace(v), "v")
+	if dot := strings.IndexByte(v, '.'); dot >= 0 {
+		v = v[:dot]
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil || n <= 0 {
+		slog.Warn("could not parse qBittorrent major version; defaulting to 4.x action endpoints", "version", v)
+		return 4
+	}
+	return n
+}
+
+// majorVersion returns the qBittorrent server's major version, caching it on the
+// client after the first lookup. Used to select the version-correct pause/resume
+// WebAPI endpoints (qBT 5.0 renamed pause/resume → stop/start).
+func (c *Client) majorVersion(ctx context.Context) (int, error) {
+	c.verMu.Lock()
+	defer c.verMu.Unlock()
+	if c.qbtMajorVer > 0 {
+		return c.qbtMajorVer, nil
+	}
+	if err := c.ensureAuth(ctx); err != nil {
+		return 0, err
+	}
+	verStr, err := c.getVersion(ctx, "/app/version")
+	if err != nil {
+		return 0, err
+	}
+	c.qbtMajorVer = parseQBMajorVersion(verStr)
+	return c.qbtMajorVer, nil
+}
+
+// doFormAction issues an authenticated POST with an x-www-form-urlencoded body
+// to the given API path. The request is built with a rewindable body so a
+// 401/403 re-auth retry (see doWithAuth) re-sends the form intact — without
+// this, a mid-flight re-auth would silently send an empty body and qBittorrent
+// would treat the action as a no-op while still returning 200.
+func (c *Client) doFormAction(ctx context.Context, path string, form url.Values) error {
+	if err := c.ensureAuth(ctx); err != nil {
+		return err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.buildURL(path), strings.NewReader(form.Encode()))
+	if err != nil {
+		return &ConnectionError{
+			Code:    ErrCodeConnectionFailed,
+			Message: "failed to create action request",
+			Cause:   err,
+		}
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := c.doWithAuth(ctx, req)
+	if err != nil {
+		return &ConnectionError{
+			Code:    ErrCodeConnectionFailed,
+			Message: "action request failed",
+			Cause:   err,
+		}
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return &ConnectionError{
+			Code:    ErrCodeConnectionFailed,
+			Message: fmt.Sprintf("action failed with status %d", resp.StatusCode),
+		}
+	}
+	return nil
+}
+
+// PauseTorrents pauses the given torrents. Accepts a slice so batch operations
+// reuse the same method (hashes are pipe-joined per the qBittorrent convention).
+// qBT 4.x uses POST /torrents/pause; qBT 5.0+ renamed it to /torrents/stop.
+func (c *Client) PauseTorrents(ctx context.Context, hashes []string) error {
+	major, err := c.majorVersion(ctx)
+	if err != nil {
+		return &ConnectionError{Code: ErrCodeConnectionFailed, Message: "failed to resolve qBittorrent version", Cause: err}
+	}
+	path := "/torrents/pause"
+	if major >= 5 {
+		path = "/torrents/stop"
+	}
+	return c.doFormAction(ctx, path, url.Values{"hashes": {strings.Join(hashes, "|")}})
+}
+
+// ResumeTorrents resumes the given torrents. qBT 4.x uses POST /torrents/resume;
+// qBT 5.0+ renamed it to /torrents/start.
+func (c *Client) ResumeTorrents(ctx context.Context, hashes []string) error {
+	major, err := c.majorVersion(ctx)
+	if err != nil {
+		return &ConnectionError{Code: ErrCodeConnectionFailed, Message: "failed to resolve qBittorrent version", Cause: err}
+	}
+	path := "/torrents/resume"
+	if major >= 5 {
+		path = "/torrents/start"
+	}
+	return c.doFormAction(ctx, path, url.Values{"hashes": {strings.Join(hashes, "|")}})
+}
+
+// DeleteTorrents removes the given torrents from qBittorrent. When deleteFiles
+// is true the downloaded data is also deleted from disk; when false the files
+// are kept on disk. POST /torrents/delete is unchanged across qBT 4.x and 5.0+.
+func (c *Client) DeleteTorrents(ctx context.Context, hashes []string, deleteFiles bool) error {
+	return c.doFormAction(ctx, "/torrents/delete", url.Values{
+		"hashes":      {strings.Join(hashes, "|")},
+		"deleteFiles": {strconv.FormatBool(deleteFiles)},
+	})
 }

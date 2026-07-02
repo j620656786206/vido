@@ -47,6 +47,18 @@ func (m *MockDownloadService) GetDownloadCounts(ctx context.Context) (*qbittorre
 	return args.Get(0).(*qbittorrent.DownloadCounts), args.Error(1)
 }
 
+func (m *MockDownloadService) PauseDownload(ctx context.Context, hash string) error {
+	return m.Called(ctx, hash).Error(0)
+}
+
+func (m *MockDownloadService) ResumeDownload(ctx context.Context, hash string) error {
+	return m.Called(ctx, hash).Error(0)
+}
+
+func (m *MockDownloadService) RemoveDownload(ctx context.Context, hash string, deleteFiles bool) error {
+	return m.Called(ctx, hash, deleteFiles).Error(0)
+}
+
 func setupDownloadRouter(handler *DownloadHandler) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
@@ -1246,4 +1258,161 @@ func TestDownloadHandler_GetDownloadDetails_TorrentNotFound_Unchanged(t *testing
 
 	assert.Equal(t, http.StatusNotFound, w.Code)
 	mockService.AssertExpectations(t)
+}
+
+// --- ux3-4-2 [@contract-v1]: card action endpoints (pause/resume/remove) ---
+
+func TestDownloadHandler_PauseDownload_Success(t *testing.T) {
+	mockService := new(MockDownloadService)
+	mockService.On("PauseDownload", mock.Anything, "abc123").Return(nil)
+	handler := NewDownloadHandler(mockService)
+	router := setupDownloadRouter(handler)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/api/v1/downloads/abc123/pause", nil)
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	var response APIResponse
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
+	assert.True(t, response.Success)
+	assert.Nil(t, response.Data, "[@contract-v1]: {success:true} carries no data body")
+	mockService.AssertExpectations(t)
+}
+
+func TestDownloadHandler_ResumeDownload_Success(t *testing.T) {
+	mockService := new(MockDownloadService)
+	mockService.On("ResumeDownload", mock.Anything, "abc123").Return(nil)
+	handler := NewDownloadHandler(mockService)
+	router := setupDownloadRouter(handler)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/api/v1/downloads/abc123/resume", nil)
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	var response APIResponse
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
+	assert.True(t, response.Success)
+	mockService.AssertExpectations(t)
+}
+
+// AC3 [@contract-v1]: deleteFiles defaults to false and parses true/false.
+func TestDownloadHandler_RemoveDownload_DeleteFilesParsing(t *testing.T) {
+	cases := []struct {
+		query string
+		want  bool
+	}{
+		{"", false}, // default = keep files (移除（保留檔案）)
+		{"?deleteFiles=true", true},
+		{"?deleteFiles=false", false},
+	}
+	for _, c := range cases {
+		t.Run("query="+c.query, func(t *testing.T) {
+			mockService := new(MockDownloadService)
+			mockService.On("RemoveDownload", mock.Anything, "abc123", c.want).Return(nil)
+			handler := NewDownloadHandler(mockService)
+			router := setupDownloadRouter(handler)
+
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequest("DELETE", "/api/v1/downloads/abc123"+c.query, nil)
+			router.ServeHTTP(w, req)
+
+			assert.Equal(t, http.StatusOK, w.Code)
+			var response APIResponse
+			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
+			assert.True(t, response.Success)
+			mockService.AssertExpectations(t)
+		})
+	}
+}
+
+// AC8: action endpoints reuse the qbtErrorToHTTPStatus mapping (no TorrentNotFound branch).
+func TestDownloadHandler_PauseDownload_ConnectionErrorMapping(t *testing.T) {
+	for _, tt := range qbtStatusMatrix {
+		t.Run(tt.name, func(t *testing.T) {
+			mockService := new(MockDownloadService)
+			mockService.On("PauseDownload", mock.Anything, "abc123").Return(
+				&qbittorrent.ConnectionError{Code: tt.qbtCode, Message: "x"})
+			handler := NewDownloadHandler(mockService)
+			router := setupDownloadRouter(handler)
+
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequest("POST", "/api/v1/downloads/abc123/pause", nil)
+			router.ServeHTTP(w, req)
+
+			assert.Equal(t, tt.expectedStatus, w.Code)
+			var response APIResponse
+			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
+			assert.False(t, response.Success)
+			assert.Equal(t, tt.qbtCode, response.Error.Code)
+			mockService.AssertExpectations(t)
+		})
+	}
+}
+
+func TestDownloadHandler_RemoveDownload_InternalServerError(t *testing.T) {
+	mockService := new(MockDownloadService)
+	mockService.On("RemoveDownload", mock.Anything, "abc123", false).Return(fmt.Errorf("boom"))
+	handler := NewDownloadHandler(mockService)
+	router := setupDownloadRouter(handler)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("DELETE", "/api/v1/downloads/abc123", nil)
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	mockService.AssertExpectations(t)
+}
+
+// AC1: an empty hash yields 400 VALIDATION_ERROR and never calls the service.
+func TestDownloadHandler_PauseDownload_EmptyHash(t *testing.T) {
+	mockService := new(MockDownloadService)
+	handler := NewDownloadHandler(mockService)
+	gin.SetMode(gin.TestMode)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request, _ = http.NewRequest("POST", "/api/v1/downloads//pause", nil)
+	c.Params = gin.Params{{Key: "hash", Value: ""}}
+
+	handler.PauseDownload(c)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	var response APIResponse
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
+	assert.Equal(t, "VALIDATION_ERROR", response.Error.Code)
+	mockService.AssertNotCalled(t, "PauseDownload")
+}
+
+// L3: Resume/Remove share the same empty-hash guard as Pause — cover them too.
+func TestDownloadHandler_ResumeAndRemove_EmptyHash(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	cases := []struct {
+		name   string
+		invoke func(*DownloadHandler, *gin.Context)
+		method string
+	}{
+		{"ResumeDownload", (*DownloadHandler).ResumeDownload, "POST"},
+		{"RemoveDownload", (*DownloadHandler).RemoveDownload, "DELETE"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockService := new(MockDownloadService)
+			handler := NewDownloadHandler(mockService)
+
+			w := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(w)
+			c.Request, _ = http.NewRequest(tc.method, "/api/v1/downloads/", nil)
+			c.Params = gin.Params{{Key: "hash", Value: ""}}
+
+			tc.invoke(handler, c)
+
+			assert.Equal(t, http.StatusBadRequest, w.Code)
+			var response APIResponse
+			require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
+			assert.Equal(t, "VALIDATION_ERROR", response.Error.Code)
+			mockService.AssertNotCalled(t, tc.name)
+		})
+	}
 }

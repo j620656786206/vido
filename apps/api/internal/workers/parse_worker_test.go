@@ -33,6 +33,12 @@ func (m *mockDownloadService) GetDownloadCounts(_ context.Context) (*qbittorrent
 	return nil, nil
 }
 
+func (m *mockDownloadService) PauseDownload(_ context.Context, _ string) error { return nil }
+
+func (m *mockDownloadService) ResumeDownload(_ context.Context, _ string) error { return nil }
+
+func (m *mockDownloadService) RemoveDownload(_ context.Context, _ string, _ bool) error { return nil }
+
 type mockCompletionDetector struct {
 	completions []qbittorrent.Torrent
 }
@@ -42,9 +48,9 @@ func (m *mockCompletionDetector) DetectNewCompletions(_ context.Context, torrent
 }
 
 type mockParseQueueService struct {
-	mu          sync.Mutex
-	queuedJobs  []*qbittorrent.Torrent
-	processErr  error
+	mu           sync.Mutex
+	queuedJobs   []*qbittorrent.Torrent
+	processErr   error
 	processCalls int
 }
 

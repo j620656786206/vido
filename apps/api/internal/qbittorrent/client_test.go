@@ -3,14 +3,23 @@ package qbittorrent
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// qbtLoginOK is a mock login handler that sets a session cookie and returns Ok.
+func qbtLoginOK(w http.ResponseWriter, r *http.Request) {
+	http.SetCookie(w, &http.Cookie{Name: "SID", Value: "test-session"})
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprint(w, "Ok.")
+}
 
 // newTestServer creates a mock qBittorrent API server for testing.
 func newTestServer(t *testing.T, handler http.Handler) *httptest.Server {
@@ -493,4 +502,248 @@ func TestClient_DoWithAuth_RetriesOn401(t *testing.T) {
 	// Should have: 1 initial login (from doWithAuth retry), 2 API calls (first 401, second ok)
 	assert.Equal(t, 1, loginCallCount, "should re-login once after 401")
 	assert.Equal(t, 2, apiCallCount, "should retry API call after re-auth")
+}
+
+func TestParseQBMajorVersion(t *testing.T) {
+	cases := []struct {
+		in   string
+		want int
+	}{
+		{"v4.6.7", 4},
+		{"4.5.2", 4},
+		{"v5.0.3", 5},
+		{"5.1.0", 5},
+		{"v10.2.0", 10},
+		{"", 4},        // fallback
+		{"garbage", 4}, // fallback
+		{"v0.0.0", 4},  // non-positive → fallback
+	}
+	for _, c := range cases {
+		assert.Equal(t, c.want, parseQBMajorVersion(c.in), "version %q", c.in)
+	}
+}
+
+// AC4/AC5: pause on qBT 4.x hits POST /torrents/pause with pipe-joined hashes.
+func TestClient_PauseTorrents_4xEndpoint(t *testing.T) {
+	var gotHashes string
+	pausePath := ""
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v2/auth/login", qbtLoginOK)
+	mux.HandleFunc("/api/v2/app/version", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, "v4.6.0")
+	})
+	mux.HandleFunc("/api/v2/torrents/pause", func(w http.ResponseWriter, r *http.Request) {
+		pausePath = r.URL.Path
+		assert.Equal(t, http.MethodPost, r.Method)
+		assert.Equal(t, "application/x-www-form-urlencoded", r.Header.Get("Content-Type"))
+		require.NoError(t, r.ParseForm())
+		gotHashes = r.FormValue("hashes")
+		w.WriteHeader(http.StatusOK)
+	})
+	server := newTestServer(t, mux)
+	defer server.Close()
+
+	client := NewClient(&Config{Host: server.URL, Username: "admin", Password: "password"})
+	err := client.PauseTorrents(context.Background(), []string{"h1", "h2"})
+	require.NoError(t, err)
+	assert.Equal(t, "/api/v2/torrents/pause", pausePath)
+	assert.Equal(t, "h1|h2", gotHashes, "hashes must be pipe-joined for batch ops")
+}
+
+// AC4: pause on qBT 5.0+ hits POST /torrents/stop (renamed endpoint), never /pause.
+func TestClient_PauseTorrents_5xUsesStop(t *testing.T) {
+	stopCalled, pauseCalled := false, false
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v2/auth/login", qbtLoginOK)
+	mux.HandleFunc("/api/v2/app/version", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, "v5.0.1")
+	})
+	mux.HandleFunc("/api/v2/torrents/stop", func(w http.ResponseWriter, r *http.Request) {
+		stopCalled = true
+		w.WriteHeader(http.StatusOK)
+	})
+	mux.HandleFunc("/api/v2/torrents/pause", func(w http.ResponseWriter, r *http.Request) {
+		pauseCalled = true
+		w.WriteHeader(http.StatusOK)
+	})
+	server := newTestServer(t, mux)
+	defer server.Close()
+
+	client := NewClient(&Config{Host: server.URL, Username: "admin", Password: "password"})
+	err := client.PauseTorrents(context.Background(), []string{"h1"})
+	require.NoError(t, err)
+	assert.True(t, stopCalled, "qBT 5.x must use /torrents/stop")
+	assert.False(t, pauseCalled, "qBT 5.x must NOT use the 4.x /torrents/pause name")
+}
+
+// AC4: resume routes to /torrents/resume (4.x) and /torrents/start (5.0+).
+func TestClient_ResumeTorrents_VersionRouting(t *testing.T) {
+	cases := []struct {
+		version   string
+		wantPath  string
+		otherPath string
+	}{
+		{"v4.6.0", "/api/v2/torrents/resume", "/api/v2/torrents/start"},
+		{"v5.0.1", "/api/v2/torrents/start", "/api/v2/torrents/resume"},
+	}
+	for _, c := range cases {
+		t.Run(c.version, func(t *testing.T) {
+			wantCalled, otherCalled := false, false
+			mux := http.NewServeMux()
+			mux.HandleFunc("/api/v2/auth/login", qbtLoginOK)
+			mux.HandleFunc("/api/v2/app/version", func(w http.ResponseWriter, r *http.Request) {
+				fmt.Fprint(w, c.version)
+			})
+			mux.HandleFunc(c.wantPath, func(w http.ResponseWriter, r *http.Request) {
+				wantCalled = true
+				w.WriteHeader(http.StatusOK)
+			})
+			mux.HandleFunc(c.otherPath, func(w http.ResponseWriter, r *http.Request) {
+				otherCalled = true
+				w.WriteHeader(http.StatusOK)
+			})
+			server := newTestServer(t, mux)
+			defer server.Close()
+
+			client := NewClient(&Config{Host: server.URL, Username: "admin", Password: "password"})
+			err := client.ResumeTorrents(context.Background(), []string{"h1"})
+			require.NoError(t, err)
+			assert.True(t, wantCalled, "expected %s to be hit", c.wantPath)
+			assert.False(t, otherCalled)
+		})
+	}
+}
+
+// AC5: delete posts hashes + deleteFiles form body to /torrents/delete (version-agnostic).
+func TestClient_DeleteTorrents_FormBody(t *testing.T) {
+	for _, deleteFiles := range []bool{true, false} {
+		t.Run(fmt.Sprintf("deleteFiles=%v", deleteFiles), func(t *testing.T) {
+			var gotHashes, gotDeleteFiles string
+			mux := http.NewServeMux()
+			mux.HandleFunc("/api/v2/auth/login", qbtLoginOK)
+			mux.HandleFunc("/api/v2/torrents/delete", func(w http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, http.MethodPost, r.Method)
+				require.NoError(t, r.ParseForm())
+				gotHashes = r.FormValue("hashes")
+				gotDeleteFiles = r.FormValue("deleteFiles")
+				w.WriteHeader(http.StatusOK)
+			})
+			server := newTestServer(t, mux)
+			defer server.Close()
+
+			client := NewClient(&Config{Host: server.URL, Username: "admin", Password: "password"})
+			err := client.DeleteTorrents(context.Background(), []string{"a", "b"}, deleteFiles)
+			require.NoError(t, err)
+			assert.Equal(t, "a|b", gotHashes)
+			assert.Equal(t, fmt.Sprintf("%v", deleteFiles), gotDeleteFiles)
+		})
+	}
+}
+
+// AC6 (correctness): a 401 mid-flight forces re-auth; the retried POST MUST still
+// carry the form body — otherwise the pause/delete silently no-ops while 200-ing.
+func TestClient_PauseTorrents_BodySurvivesReauth(t *testing.T) {
+	var bodies, contentTypes []string
+	pauseCalls := 0
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v2/auth/login", qbtLoginOK)
+	mux.HandleFunc("/api/v2/app/version", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, "v4.6.0")
+	})
+	mux.HandleFunc("/api/v2/torrents/pause", func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		bodies = append(bodies, string(b))
+		contentTypes = append(contentTypes, r.Header.Get("Content-Type"))
+		pauseCalls++
+		if pauseCalls == 1 {
+			w.WriteHeader(http.StatusForbidden) // force a re-auth retry
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	})
+	server := newTestServer(t, mux)
+	defer server.Close()
+
+	client := NewClient(&Config{Host: server.URL, Username: "admin", Password: "password"})
+	client.lastLoginAt = time.Now() // skip the initial login so the 403 drives re-auth
+
+	err := client.PauseTorrents(context.Background(), []string{"abc123"})
+	require.NoError(t, err)
+	require.Len(t, bodies, 2, "pause should be attempted twice (403 then retry)")
+	assert.Equal(t, "hashes=abc123", bodies[0])
+	assert.Equal(t, "hashes=abc123", bodies[1], "AC6: retried POST must still carry the form body")
+	// L2: the retried request must ALSO carry the form Content-Type (header clone),
+	// else real qBittorrent would fail to parse the re-sent body.
+	assert.Equal(t, "application/x-www-form-urlencoded", contentTypes[1],
+		"AC6: retried POST must preserve the form Content-Type header")
+}
+
+// L3: a failed version lookup surfaces as a *ConnectionError and never reaches
+// the action endpoint (pause is intentionally unregistered here).
+func TestClient_PauseTorrents_VersionFetchFails(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v2/auth/login", qbtLoginOK)
+	mux.HandleFunc("/api/v2/app/version", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	})
+	server := newTestServer(t, mux)
+	defer server.Close()
+
+	client := NewClient(&Config{Host: server.URL, Username: "admin", Password: "password"})
+	err := client.PauseTorrents(context.Background(), []string{"h1"})
+	require.Error(t, err)
+
+	var connErr *ConnectionError
+	assert.ErrorAs(t, err, &connErr)
+	assert.Equal(t, ErrCodeConnectionFailed, connErr.Code)
+}
+
+// M1: the shared client's first-time version resolution must be race-free under
+// concurrent actions. lastLoginAt is preset so ensureAuth never re-Logins —
+// isolating this test to the qbtMajorVer path (the field this story added).
+// Run under `-race`: fails without verMu, passes with it.
+func TestClient_MajorVersion_ConcurrentNoRace(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v2/auth/login", qbtLoginOK)
+	mux.HandleFunc("/api/v2/app/version", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, "v4.6.0")
+	})
+	mux.HandleFunc("/api/v2/torrents/pause", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	server := newTestServer(t, mux)
+	defer server.Close()
+
+	client := NewClient(&Config{Host: server.URL, Username: "admin", Password: "password"})
+	client.lastLoginAt = time.Now() // keep the session fresh → no Login → no lastLoginAt write
+
+	var wg sync.WaitGroup
+	for i := 0; i < 8; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			assert.NoError(t, client.PauseTorrents(context.Background(), []string{"h1"}))
+		}()
+	}
+	wg.Wait()
+	assert.Equal(t, 4, client.qbtMajorVer)
+}
+
+// AC5: a non-2xx action response surfaces as a *ConnectionError.
+func TestClient_DeleteTorrents_NonSuccessStatus(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v2/auth/login", qbtLoginOK)
+	mux.HandleFunc("/api/v2/torrents/delete", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	})
+	server := newTestServer(t, mux)
+	defer server.Close()
+
+	client := NewClient(&Config{Host: server.URL, Username: "admin", Password: "password"})
+	err := client.DeleteTorrents(context.Background(), []string{"a"}, false)
+	require.Error(t, err)
+
+	var connErr *ConnectionError
+	assert.ErrorAs(t, err, &connErr)
+	assert.Equal(t, ErrCodeConnectionFailed, connErr.Code)
 }
