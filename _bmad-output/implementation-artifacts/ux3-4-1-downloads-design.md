@@ -1,6 +1,6 @@
 # Story ux3-4-1 — Downloads v2 design (`.pen` flow-d-downloads-v2)
 
-**Epic:** ux3-downloads-v2 (UX Redesign Phase 3, Epic 4) · **Status:** ready-for-dev (design not started)
+**Epic:** ux3-downloads-v2 (UX Redesign Phase 3, Epic 4) · **Status:** done (design merged, PR #107)
 **Owner:** ux-designer (Pencil MCP) · **Type:** design · **FRs:** PH3-M3 · re-chassis of Epic 14 (P3-010 done, P3-012 SSE) — "the downloads deep page, seen and controlled"
 
 ## Story
@@ -258,3 +258,4 @@ is rich and repeated; spec it once as a component with the action/select/state v
 | Date       | Change                                                                                                                                          |
 | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | 2026-06-30 | Design story authored (SM create-story), design-ahead per per-flow recipe step 1. Capability audit baked in: card actions + download SSE are net-new BE (cross-stack BE half flagged in Discovery Triage). Status → ready-for-dev (design not started). |
+| 2026-07-02 | Design DONE, merged PR #107. Built by Pencil inline-agent, Sally adversarial review ×2, v2.1 rework ratified by Alexyu: desktop single-column List default + D7 sortable Table view + list toolbar (in-place batch-bar morph); mobile sheet-first actions (D8) + long-name split (2-line title + TechBadge row) + D9 detail sheet + D10 sort sheet; AA count/hint fixes; SSE + net-new-BE spec notes on canvas. 11 frames + Component/DownloadCard-v2; SCREENS +11; AC1-8 met; full CI green. Deferred: sort-sheet 狀態/名稱 options, Table-view skeleton. Status → done. |
