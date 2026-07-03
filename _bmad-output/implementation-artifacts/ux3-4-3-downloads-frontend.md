@@ -1,6 +1,6 @@
 # Story ux3-4-3 — Downloads v2 frontend (deep page: card actions + live SSE)
 
-Status: ready-for-dev
+Status: review
 
 **Epic:** ux3-downloads-v2 (UX Redesign Phase 3, Epic 4) · **Type:** frontend · **FRs:** PH3-M3 (Epic 14 v2)
 **Design:** ux3-4-1 (`.pen` `flow-d-downloads-v2`) · **Owner:** dev (`dev-story`) → tea (visual + E2E)
@@ -45,11 +45,11 @@ The shipped `/downloads` (`apps/web/src/routes/downloads.tsx`, 256 lines) alread
 
 - [x] (AC #1) Add `staticData: { shell: 'v2' }` to `/downloads`; split into `DownloadsPage` (v2 → `DownloadsBrowseV2`, 下載 active in bottom-4 — already wired in `navModel.ts`) / `LegacyDownloads` (byte-unchanged) via `useShellVersion()`. [GATE A-light] ✅ 4-3a
 - [x] (AC #2, #6) Build `DownloadsBrowseV2` + `DownloadCardV2` + `DownloadsStatesV2` to the ux3-4-1 frames (toolbar / cards / pagination / skeleton / empty / qBT-fail-soft). [GATE A] ✅ 4-3a
-- [ ] (AC #3) `downloadService`: add POST/DELETE-capable request helper + `pauseDownload`/`resumeDownload`/`removeDownload`; `useDownloadActions` mutation hook (optimistic + invalidate); card action cluster + destructive-remove confirm. `confirmed against [@contract-v1]` (ux3-4-2). [GATE B] → 4-3b
-- [ ] (AC #4) `useDownloadProgress` lazy-SSE hook (mirror `useScanProgress`); update query cache from `download_progress`; turn off `refetchInterval` on v2 (shell-gated; legacy keeps 5s). `confirmed against [@contract-v1]` (ux3-4-2b). [GATE B] → 4-3b
-- [ ] (AC #5) Batch select mode + batch action bar; one slice-call for many hashes. [GATE B] → 4-3b
-- [x] (AC #7, #8) Token-lint pass; reuse/converge (Pagination/Button atoms reused; status→token via libraryStatus TINT; no forked card chrome). ✅ 4-3a restyle scope — re-run for the 4-3b actions/batch surface (incl. the no-forked-EventSource check for the SSE hook).
-- [x] (AC #9) Vitest (13: shell-gate v2-vs-legacy, DownloadCardV2, 3 states, status util) + E2E downloads-v2 block (3: restyle render / empty / qBT-fail-soft — route-interception, no self-skips); `nx build`/`nx lint` web green. ✅ 4-3a scope — 4-3b adds action/SSE/batch tests.
+- [x] (AC #3) `downloadService`: added a POST/DELETE `mutateApi` helper + `pauseDownload`/`resumeDownload`/`removeDownload`; `useDownloadActions` mutation hook (optimistic patch + rollback + `invalidateQueries(downloadKeys)`); card action cluster (暫停/繼續) + destructive-remove Radix confirm dialog (保留檔案 / 連同檔案刪除). `confirmed against [@contract-v1]` (ux3-4-2). ✅ 4-3b
+- [x] (AC #4) `useDownloadProgress` lazy-SSE hook (mirrors `useScanProgress`); merges `download_progress` snapshots into the query cache (preserve `parse_status`, map bare array → envelope, drop removed); `refetchInterval` turned OFF on v2 via `useShellVersion()` gate in `useDownloads` (legacy keeps 5s). NEVER connects on mount — visibility-gated `startTracking()`. `confirmed against [@contract-v1]` (ux3-4-2b). ✅ 4-3b
+- [x] (AC #5) Batch select mode (per-card checkboxes) + batch action bar (全選 / 批次暫停 / 批次繼續 / 批次移除 / 已選 N 項). Batch = **N parallel single-hash requests** (`Promise.allSettled`) — the ux3-4-2 HTTP API is single-hash only (see Completion Notes deviation). ✅ 4-3b + sort control + select-mode.
+- [x] (AC #7, #8) Token-lint pass; reuse/converge — Pagination/Button/Dialog atoms reused; status→token via libraryStatus TINT; no forked card chrome; the SSE hook lazy-opens ONE `EventSource` (no shared manager exists — same as `useScanProgress`) and cleans it up. ✅ 4-3a + 4-3b.
+- [x] (AC #9) Vitest (28 total: 4-3a shell-gate/card/3-states/status-util + 4-3b useDownloadActions optimistic/rollback/batch, useDownloadProgress no-mount-connect/merge, card actions/confirm/select) + E2E downloads-v2 block (6: restyle / empty / qBT-fail-soft / card-pause / remove-confirm-DELETE / batch-pause — route-interception, no self-skips); `nx build`/`nx lint` web green. ✅ 4-3a + 4-3b.
 
 ## Dev Notes
 
@@ -125,24 +125,46 @@ claude-opus-4-8[1m] (Amelia, dev-story) — 2026-07-03
 - **📎 Contract Stamps: NONE** (4-3a defines/consumes no `[@contract-v*]`; the two `confirmed against [@contract-v1]` acks are 4-3b work — both upstream BE halves are merged and ready).
 - **Rule 23 (time-dependent visual): N/A** — `DownloadCardV2` reads no wall clock (`Date.now()`/`new Date()`): ETA is server-supplied seconds (clock-independent) and the card renders no relative "added Nh ago".
 
+**PR #2 — ux3-4-3b (GATE B: card actions + live SSE + batch). Consumes the two merged BE `[@contract-v1]` halves.**
+
+- **AC3 (card actions)** — `downloadService` gained a POST/DELETE `mutateApi` helper + `pauseDownload`/`resumeDownload`/`removeDownload`. `useDownloadActions` runs each as a `useMutation` with an **optimistic** cache patch (pause→paused, resume→downloading, remove→dropped + totalItems−) and **rollback on error** + `invalidateQueries(downloadKeys)` onSettled. `DownloadCardV2` renders a state-dependent 暫停/繼續 button + a 移除 button that opens a **Radix Dialog** (focus-trap + Escape + aria-modal for free) offering 保留檔案 / 連同檔案刪除. `confirmed against [@contract-v1]` (ux3-4-2: `POST /downloads/:hash/pause|resume`, `DELETE /downloads/:hash?deleteFiles=`).
+- **AC4 (live SSE, poll retired)** — `useDownloadProgress` mirrors `useScanProgress`: lazy `startTracking()`, one `EventSource(/api/v1/events)`, `addEventListener('download_progress')`, `mountedRef` guard, reconnect, unmount cleanup. `applyDownloadSnapshot` reconciles the ux3-4-2b `[@contract-v1]` three deltas into the cache — **preserve `parse_status`** (merge, never replace), map the bare `Torrent[]` into each page's `.items`, drop removed torrents. `useDownloads` gates `refetchInterval` OFF on v2 via `useShellVersion()` (legacy keeps 5000). **NEVER connects on mount** — `DownloadsBrowseV2` calls `startTracking()` from a **visibility-gated** effect (deps `[isVisible, …]`, not bare `[]`), which also disconnects on tab-hide → the BE broadcaster's `ClientCount()` gate drops the server poll to zero. `confirmed against [@contract-v1]` (ux3-4-2b).
+- **AC5 (batch)** — select mode (per-card checkboxes) + a batch action bar. **⚠️ Deviation (documented):** AC5 says "one request for many hashes", but ux3-4-2's slice-accepting methods live at the qBittorrent Go-client layer — the **HTTP API is single-hash only** (no batch route). So a batch op is **N parallel single-hash requests** via `Promise.allSettled` (correct for a single-user NAS). Filed as Discovery Triage below; a batch endpoint is a future BE story if request volume ever matters.
+- **AC7/8** — reused `Button`/`Dialog`/`Pagination` atoms; the SSE hook opens ONE `EventSource` (no shared manager exists — same as `useScanProgress`). Added a sort control (欄位 + 方向) + select-mode toggle to the toolbar. **D7 Table view deferred** as a follow-up enhancement (not an AC).
+- **🎭 A11y Pre-Flight: PASS** (jsx-a11y clean on all touched files). Modal focus — the remove/batch-remove confirms use Radix Dialog (focus-trapped, Escape-closes, aria-modal). Custom widgets — actions are real `<button>`s with descriptive aria-labels; the select checkbox is a native `<input type=checkbox>` with an aria-label; select-toggle carries `aria-pressed`. Progress stays `role=progressbar` + `aria-valuenow` (no noisy per-tick aria-live). The batch bar is keyboard-native.
+- **🔗 AC Drift: NONE** — this half CONSUMES ux3-4-2 + ux3-4-2b `[@contract-v1]` as-shipped (pause/resume/remove wire shape + `download_progress` payload); it changes no upstream contract. The AC5 single-vs-batch gap is an FE-side implementation choice, not a contract change.
+- **📎 Contract Stamps: FOUND** — `confirmed against [@contract-v1]` recorded for BOTH ux3-4-2 (actions) and ux3-4-2b (SSE `download_progress`), the two upstream stamps this story acks. Neither upstream bumped before this shipped (no Rule-20 stale-mark needed).
+- **Rule 23 (time-dependent visual): N/A** — no touched component reads `Date.now()`/`new Date()` (ETA is server-supplied seconds; the card shows no relative "added Nh ago").
+
+### Discovery Triage (4-3b)
+
+- **④ — batch download HTTP endpoint.** AC5's "one request for many hashes" isn't backed by the BE: ux3-4-2 exposes single-hash HTTP routes only (its `[]string` methods are qBT-Go-client-internal). Implemented client-side as N `Promise.allSettled` requests. **Deferred** — a `POST /downloads/batch/{pause,resume}` + `DELETE /downloads/batch` endpoint is only worth it if a user routinely batches dozens of torrents (unlikely on a single-user NAS). File a `backlog` entry if it surfaces. Reference: `project-context.md` Rule 24; origin: this story's AC5 vs the ux3-4-2 HTTP surface.
+
 ### File List
 
-- `apps/web/src/routes/downloads.tsx` (MODIFIED — staticData shell:v2 + useShellVersion gate; current page → LegacyDownloads byte-unchanged)
-- `apps/web/src/components/downloads/DownloadsBrowseV2.tsx` (NEW — v2 deep page: toolbar + 4-state switch + list + pagination)
-- `apps/web/src/components/downloads/DownloadCardV2.tsx` (NEW — v2 download card)
-- `apps/web/src/components/downloads/DownloadsStatesV2.tsx` (NEW — skeleton / empty / qBT-fail-soft)
-- `apps/web/src/components/downloads/downloadStatus.ts` (NEW — status→token util, mirrors libraryStatus TINT)
-- `apps/web/src/components/downloads/index.ts` (MODIFIED — barrel exports for the v2 components)
-- `apps/web/src/components/downloads/DownloadCardV2.spec.tsx` (NEW)
-- `apps/web/src/components/downloads/DownloadsStatesV2.spec.tsx` (NEW)
-- `apps/web/src/components/downloads/downloadStatus.spec.ts` (NEW)
-- `apps/web/src/routes/downloads.spec.tsx` (NEW — shell-gate v2-vs-legacy)
-- `tests/e2e/downloads-v2.spec.ts` (NEW — restyle render / empty / qBT-fail-soft)
-- `_bmad-output/implementation-artifacts/sprint-status.yaml` (MODIFIED — story → in-progress)
+- `apps/web/src/routes/downloads.tsx` (MODIFIED — 4-3a: staticData shell:v2 + useShellVersion gate; current page → LegacyDownloads byte-unchanged)
+- `apps/web/src/components/downloads/DownloadsBrowseV2.tsx` (NEW 4-3a; MODIFIED 4-3b — actions + lazy-SSE wiring + select mode + batch bar + sort)
+- `apps/web/src/components/downloads/DownloadCardV2.tsx` (NEW 4-3a; MODIFIED 4-3b — action cluster + selection checkbox + remove confirm dialog)
+- `apps/web/src/components/downloads/DownloadsStatesV2.tsx` (NEW 4-3a — skeleton / empty / qBT-fail-soft)
+- `apps/web/src/components/downloads/downloadStatus.ts` (NEW 4-3a — status→token util, mirrors libraryStatus TINT)
+- `apps/web/src/components/downloads/index.ts` (MODIFIED 4-3a — barrel exports for the v2 components)
+- `apps/web/src/services/downloadService.ts` (MODIFIED 4-3b — mutateApi POST/DELETE helper + pause/resume/remove + getSSEUrl)
+- `apps/web/src/hooks/useDownloads.ts` (MODIFIED 4-3b — refetchInterval gated OFF on v2 via useShellVersion; export usePageVisibility)
+- `apps/web/src/hooks/useDownloadActions.ts` (NEW 4-3b — optimistic pause/resume/remove mutations, single + batch)
+- `apps/web/src/hooks/useDownloadProgress.ts` (NEW 4-3b — lazy SSE + applyDownloadSnapshot cache merge)
+- `apps/web/src/components/downloads/DownloadCardV2.spec.tsx` (NEW 4-3a; MODIFIED 4-3b — action/selection/dialog tests)
+- `apps/web/src/components/downloads/DownloadsStatesV2.spec.tsx` (NEW 4-3a)
+- `apps/web/src/components/downloads/downloadStatus.spec.ts` (NEW 4-3a)
+- `apps/web/src/routes/downloads.spec.tsx` (NEW 4-3a — shell-gate v2-vs-legacy)
+- `apps/web/src/hooks/useDownloadActions.spec.ts` (NEW 4-3b)
+- `apps/web/src/hooks/useDownloadProgress.spec.ts` (NEW 4-3b)
+- `tests/e2e/downloads-v2.spec.ts` (NEW 4-3a; MODIFIED 4-3b — card-pause / remove-confirm-DELETE / batch-pause)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (MODIFIED — 4-3a/4-3b split entries + statuses)
 
 ## Change Log
 
 | Date       | Change                                                                                                                                       |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | 2026-06-30 | Story created (SM create-story). FE v2 downloads page consuming ux3-4-1 design + ux3-4-2 (actions) + ux3-4-2b (SSE) `[@contract-v1]` ×2. Two execution gates (design drawn / BE merged) partition the work; replaces the 5s poll with lazy SSE (shell-gated). FE-only, no split. Status → ready-for-dev (gated). |
+| 2026-07-03 | **PR #2 — ux3-4-3b (GATE B) implemented** (dev-story, Amelia). AC3 card actions (downloadService POST/DELETE + useDownloadActions optimistic+rollback+invalidate + Radix confirm dialog; acks ux3-4-2 [@contract-v1]). AC4 lazy useDownloadProgress SSE (applyDownloadSnapshot preserves parse_status / maps bare array→envelope / drops removed; v2 5s poll retired via useShellVersion gate; visibility-gated startTracking, never mount-connect; acks ux3-4-2b [@contract-v1]). AC5 batch select + bar (N Promise.allSettled requests — ux3-4-2 HTTP is single-hash only; deviation + Triage ④ filed) + sort control. +15 Vitest (28 total) + 3 E2E (6 total); build/lint/test/lint:all/prettier green; jsx-a11y clean. A11y PASS, AC-Drift NONE, Contract-Stamps FOUND (2 acks), Rule-23 N/A. D7 Table view deferred. Umbrella + both split halves → done on merge. |
 | 2026-07-03 | **PR #1 — ux3-4-3a (GATE A) implemented** (dev-story, Amelia). Both gates now open (ux3-4-1 #107, ux3-4-2 + ux3-4-2b merged). Delivered AC1 (shell-gate, legacy byte-unchanged) + AC2 (DownloadCardV2 + DownloadsBrowseV2 + status toolbar + reused Pagination) + AC6 (skeleton/empty/qBT-fail-soft) + the AC7/8/9 slice for the restyle (13 Vitest + 3 E2E, jsx-a11y clean, build/lint/test green). status→token via downloadStatus.ts mirroring libraryStatus TINT. A11y PASS; AC Drift NONE; Contract Stamps NONE (acks are 4-3b). Deferred to PR #2 (ux3-4-3b, GATE B): AC3 card actions / AC4 lazy-SSE (retire the 5s poll) / AC5 batch + D7 Table view + sort control + select-mode. Story stays in-progress. |

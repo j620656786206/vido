@@ -14,6 +14,7 @@ import {
   type SortOrder,
 } from '../services/downloadService';
 import { useQBittorrentConfig } from './useQBittorrent';
+import { useShellVersion } from '../components/shell/shellVersion';
 
 export const downloadKeys = {
   all: ['downloads'] as const,
@@ -34,7 +35,7 @@ const subscribeVisibility = (callback: () => void) => {
 const getVisibilitySnapshot = () => document.visibilityState === 'visible';
 const getServerSnapshot = () => true;
 
-function usePageVisibility() {
+export function usePageVisibility() {
   return useSyncExternalStore(subscribeVisibility, getVisibilitySnapshot, getServerSnapshot);
 }
 
@@ -60,13 +61,18 @@ export function useDownloads(
   const isVisible = usePageVisibility();
   const { data: qbtConfig } = useQBittorrentConfig();
   const isConfigured = qbtConfig?.configured === true;
+  // ux3-4-3b AC4: the v2 deep page retires the 5s list poll — the lazy useDownloadProgress SSE hook is
+  // the freshness source. Shell-gated so the legacy render keeps refetchInterval: 5000. useShellVersion
+  // reads the ShellVersionProvider context (defaults to 'legacy' with no provider, so legacy + tests
+  // are unaffected).
+  const pollEnabled = useShellVersion() !== 'v2';
 
   return useQuery<PaginatedDownloads, Error>({
     queryKey: downloadKeys.list(filter, sort, order, page, pageSize),
     queryFn: () => downloadService.getDownloads({ filter, sort, order, page, pageSize }),
     // bugfix-10-2: skip polling until qBT config check confirms configured; prevents init-race 503 burst
     enabled: isConfigured,
-    refetchInterval: isVisible && isConfigured ? 5000 : false,
+    refetchInterval: isVisible && isConfigured && pollEnabled ? 5000 : false,
     refetchOnWindowFocus: true,
   });
 }

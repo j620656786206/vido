@@ -1,11 +1,24 @@
 // Design ref: ux-design.pen Screen D1-D-v2 (cK1KF)
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { getRouteApi } from '@tanstack/react-router';
 import { cn } from '../../lib/utils';
-import { useDownloads, useDownloadCounts } from '../../hooks/useDownloads';
+import { useDownloads, useDownloadCounts, usePageVisibility } from '../../hooks/useDownloads';
+import { useDownloadActions } from '../../hooks/useDownloadActions';
+import { useDownloadProgress } from '../../hooks/useDownloadProgress';
 import { useQBittorrentConfig } from '../../hooks/useQBittorrent';
 import type { FilterStatus, SortField, SortOrder } from '../../services/downloadService';
+import { Button } from '../ui/Button';
 import { Pagination } from '../ui/Pagination';
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription,
+  DialogClose,
+} from '../ui/Dialog';
 import { DownloadCardV2 } from './DownloadCardV2';
 import { DownloadsSkeletonV2, DownloadsEmptyV2, DownloadsQbtErrorV2 } from './DownloadsStatesV2';
 
@@ -22,12 +35,20 @@ const FILTERS: { value: FilterStatus; label: string }[] = [
   { value: 'error', label: '錯誤' },
 ];
 
+const SORT_FIELDS: { value: SortField; label: string }[] = [
+  { value: 'added_on', label: '加入時間' },
+  { value: 'name', label: '名稱' },
+  { value: 'progress', label: '進度' },
+  { value: 'status', label: '狀態' },
+];
+
 /**
- * DownloadsBrowseV2 — the v2 deep page (ux3-4-3 AC2/AC6). Restyles the EXISTING read-only list:
- * reuses `useDownloads` / `useDownloadCounts` (the 5s poll stays for 4-3a; the lazy-SSE swap is
- * 4-3b) and the route's filter/page/pageSize search params. Renders the status-filter toolbar
- * (6 values, Mono counts), a single-column DownloadCard-v2 list, v2 pagination, and the four states.
- * Sort control, List|Table (D7) view toggle, and select/batch mode land in ux3-4-3b (GATE B).
+ * DownloadsBrowseV2 — the v2 deep page (ux3-4-3 AC2/AC6 + 4-3b AC3/AC4/AC5). Restyles the existing
+ * list and lights up: card actions (useDownloadActions, optimistic + invalidate), live SSE progress
+ * (useDownloadProgress — the v2 5s poll is retired, useDownloads gates it off by shell version), and
+ * batch select + ops. The SSE connects when the page is VISIBLE (§8 lazy-SSE — never a bare mount
+ * effect) and disconnects when hidden, which also drops the server's gated poll to zero.
+ * D7 Table view is a deferred follow-up (enhancement, not an AC).
  */
 export function DownloadsBrowseV2() {
   const { filter: urlFilter, page: urlPage, pageSize: urlPageSize } = routeApi.useSearch();
@@ -35,9 +56,12 @@ export function DownloadsBrowseV2() {
   const activeFilter: FilterStatus = urlFilter || 'all';
   const currentPageSize = urlPageSize || 100;
 
-  // Sort is fixed to the newest-first default for 4-3a (the sort control is a 4-3b addition).
-  const [sortField] = useState<SortField>('added_on');
-  const [sortOrder] = useState<SortOrder>('desc');
+  const [sortField, setSortField] = useState<SortField>('added_on');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+
+  // Select mode (AC5)
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const { data: qbtConfig } = useQBittorrentConfig();
   const configResolved = qbtConfig !== undefined;
@@ -51,9 +75,18 @@ export function DownloadsBrowseV2() {
     currentPageSize
   );
   const { data: counts } = useDownloadCounts();
+  const actions = useDownloadActions();
 
-  // Mirror the legacy search normalization (default filter/pageSize → undefined) so the URL and the
-  // route's validateSearch stay in sync and the legacy/v2 URLs are interchangeable.
+  // AC4: lazy SSE — connect only while the page is visible (never a bare mount effect, §8).
+  const { startTracking, stopTracking } = useDownloadProgress();
+  const isVisible = usePageVisibility();
+  useEffect(() => {
+    if (isVisible) startTracking();
+    else stopTracking();
+  }, [isVisible, startTracking, stopTracking]);
+
+  const items = useMemo(() => data?.items ?? [], [data]);
+
   const handleFilterChange = (f: FilterStatus) =>
     navigate({
       search: {
@@ -77,7 +110,34 @@ export function DownloadsBrowseV2() {
       replace: true,
     });
 
-  // qBT unreachable (poll errored) OR resolved-but-not-configured → the same fail-soft section (AC6).
+  // --- actions (AC3) ---
+  const onPause = (hash: string) => actions.pause.mutate([hash]);
+  const onResume = (hash: string) => actions.resume.mutate([hash]);
+  const onRemove = (hash: string, deleteFiles: boolean) =>
+    actions.remove.mutate({ hashes: [hash], deleteFiles });
+
+  // --- selection + batch (AC5) ---
+  const toggleSelect = (hash: string, next: boolean) =>
+    setSelected((prev) => {
+      const s = new Set(prev);
+      if (next) s.add(hash);
+      else s.delete(hash);
+      return s;
+    });
+  const selectAll = () => setSelected(new Set(items.map((d) => d.hash)));
+  const clearSelection = () => setSelected(new Set());
+  const exitSelectMode = () => {
+    setSelectMode(false);
+    clearSelection();
+  };
+  const selectedHashes = useMemo(() => [...selected], [selected]);
+  const batchPause = () => selectedHashes.length && actions.pause.mutate(selectedHashes);
+  const batchResume = () => selectedHashes.length && actions.resume.mutate(selectedHashes);
+  const batchRemove = (deleteFiles: boolean) => {
+    if (selectedHashes.length) actions.remove.mutate({ hashes: selectedHashes, deleteFiles });
+    clearSelection();
+  };
+
   const showQbtError = Boolean(error) || (configResolved && !isConfigured);
 
   return (
@@ -91,47 +151,143 @@ export function DownloadsBrowseV2() {
       </header>
 
       {/* Status-filter toolbar — 6 live values, counts in Mono */}
-      <div className="flex flex-wrap gap-2" role="tablist" aria-label="下載狀態篩選">
-        {FILTERS.map((f) => {
-          const count = counts?.[f.value] ?? 0;
-          const isActive = activeFilter === f.value;
-          // Hide the error pill when there are no errors and it isn't the active filter (legacy parity).
-          if (f.value === 'error' && count === 0 && !isActive) return null;
-          return (
-            <button
-              key={f.value}
-              type="button"
-              role="tab"
-              aria-selected={isActive}
-              aria-controls="downloads-list-v2"
-              onClick={() => handleFilterChange(f.value)}
-              className={cn(
-                'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors',
-                isActive
-                  ? 'border-[var(--accent-primary)] bg-[var(--accent-tint)] text-[var(--accent-text)]'
-                  : 'border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-              )}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap gap-2" role="tablist" aria-label="下載狀態篩選">
+          {FILTERS.map((f) => {
+            const count = counts?.[f.value] ?? 0;
+            const isActive = activeFilter === f.value;
+            if (f.value === 'error' && count === 0 && !isActive) return null;
+            return (
+              <button
+                key={f.value}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                aria-controls="downloads-list-v2"
+                onClick={() => handleFilterChange(f.value)}
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors',
+                  isActive
+                    ? 'border-[var(--accent-primary)] bg-[var(--accent-tint)] text-[var(--accent-text)]'
+                    : 'border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                )}
+              >
+                <span>{f.label}</span>
+                <span className="font-mono text-xs tabular-nums text-[var(--text-muted)]">
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* right-aligned list toolbar: sort + select toggle */}
+        <div className="ml-auto flex items-center gap-2">
+          <label className="flex items-center gap-1.5 text-sm text-[var(--text-secondary)]">
+            <span className="sr-only sm:not-sr-only">排序</span>
+            <select
+              value={sortField}
+              onChange={(e) => setSortField(e.target.value as SortField)}
+              aria-label="排序欄位"
+              className="rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--bg-tertiary)] px-2 py-1 text-sm text-[var(--text-primary)] focus:border-[var(--accent-primary)] focus:outline-none"
             >
-              <span>{f.label}</span>
-              <span className="font-mono text-xs tabular-nums text-[var(--text-muted)]">
-                {count}
-              </span>
-            </button>
-          );
-        })}
+              {SORT_FIELDS.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <Button
+            size="sm"
+            variant="outline"
+            aria-label={`排序方向：${sortOrder === 'desc' ? '遞減' : '遞增'}`}
+            onClick={() => setSortOrder((o) => (o === 'desc' ? 'asc' : 'desc'))}
+          >
+            {sortOrder === 'desc' ? '↓' : '↑'}
+          </Button>
+          <Button
+            size="sm"
+            variant={selectMode ? 'secondary' : 'outline'}
+            aria-pressed={selectMode}
+            onClick={() => (selectMode ? exitSelectMode() : setSelectMode(true))}
+          >
+            選取
+          </Button>
+        </div>
       </div>
+
+      {/* batch action bar (AC5) */}
+      {selectMode && (
+        <div
+          data-testid="downloads-batch-bar"
+          className="flex flex-wrap items-center gap-2 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-3"
+        >
+          <span className="text-sm text-[var(--text-secondary)]">
+            已選 <span className="font-mono tabular-nums">{selected.size}</span> 項
+          </span>
+          <Button size="sm" variant="outline" onClick={selectAll}>
+            全選
+          </Button>
+          <Button size="sm" variant="outline" disabled={!selected.size} onClick={batchPause}>
+            批次暫停
+          </Button>
+          <Button size="sm" variant="outline" disabled={!selected.size} onClick={batchResume}>
+            批次繼續
+          </Button>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button size="sm" variant="destructive" disabled={!selected.size}>
+                批次移除
+              </Button>
+            </DialogTrigger>
+            <DialogContent aria-describedby={undefined}>
+              <DialogHeader>
+                <DialogTitle>批次移除 {selected.size} 項下載</DialogTitle>
+                <DialogDescription>
+                  保留檔案只從 qBittorrent 移除任務；連同檔案刪除會一併刪除已下載的檔案，無法復原。
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button variant="outline" onClick={() => batchRemove(false)}>
+                    移除（保留檔案）
+                  </Button>
+                </DialogClose>
+                <DialogClose asChild>
+                  <Button variant="destructive" onClick={() => batchRemove(true)}>
+                    移除（連同檔案刪除）
+                  </Button>
+                </DialogClose>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          <Button size="sm" variant="ghost" className="ml-auto" onClick={exitSelectMode}>
+            取消
+          </Button>
+        </div>
+      )}
 
       <div id="downloads-list-v2" role="tabpanel">
         {showQbtError ? (
           <DownloadsQbtErrorV2 onRetry={() => void refetch()} message={error?.message} />
         ) : !data || isLoading ? (
           <DownloadsSkeletonV2 />
-        ) : data.items.length === 0 ? (
+        ) : items.length === 0 ? (
           <DownloadsEmptyV2 filter={activeFilter} />
         ) : (
           <div className="flex flex-col gap-3">
-            {data.items.map((d) => (
-              <DownloadCardV2 key={d.hash} download={d} />
+            {items.map((d) => (
+              <DownloadCardV2
+                key={d.hash}
+                download={d}
+                selectable={selectMode}
+                selected={selected.has(d.hash)}
+                onSelectChange={toggleSelect}
+                onPause={onPause}
+                onResume={onResume}
+                onRemove={onRemove}
+              />
             ))}
             {data.totalPages > 1 && (
               <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
