@@ -418,6 +418,12 @@ func main() {
 	cacheSweepScheduler := services.NewCacheSweepScheduler(repos.Cache, repos.Settings, cacheSweepExtra...)
 	slog.Info("Cache sweep scheduler initialized")
 
+	// Initialize download progress broadcaster (ux3-4-2b — Epic 14 H-1 / P3-012). One gated
+	// server-side qBittorrent poll → SSE fan-out replaces N-browser polling of GET /downloads. Gated on
+	// sseHub.ClientCount(): zero clients on the Downloads page → zero qBittorrent traffic.
+	downloadProgressBroadcaster := services.NewDownloadProgressBroadcaster(downloadService, sseHub)
+	slog.Info("Download progress broadcaster initialized")
+
 	// Initialize subtitle engine components (Story 8.1-8.8)
 	subtitleConverter, _ := subtitle.NewConverter()
 	subtitleScorer := subtitle.NewScorer(subtitle.NewDefaultScorerConfig())
@@ -651,6 +657,11 @@ func main() {
 	go cacheSweepScheduler.Start(cacheSweepCtx)
 	slog.Info("Cache sweep scheduler started")
 
+	// Start download progress broadcaster (ux3-4-2b — Epic 14 H-1 SSE fan-out)
+	downloadProgressCtx, downloadProgressCancel := context.WithCancel(context.Background())
+	go downloadProgressBroadcaster.Start(downloadProgressCtx)
+	slog.Info("Download progress broadcaster started")
+
 	// Start qBittorrent health monitoring with 30s interval (Story 4.6 - NFR-R6)
 	monitorCtx, monitorCancel := context.WithCancel(context.Background())
 	go healthMonitor.StartQBMonitoring(monitorCtx)
@@ -689,6 +700,11 @@ func main() {
 	slog.Info("Stopping cache sweep scheduler...")
 	cacheSweepCancel()
 	cacheSweepScheduler.Stop()
+
+	// Stop download progress broadcaster (ux3-4-2b)
+	slog.Info("Stopping download progress broadcaster...")
+	downloadProgressCancel()
+	downloadProgressBroadcaster.Stop()
 
 	// Stop backup scheduler
 	slog.Info("Stopping backup scheduler...")
