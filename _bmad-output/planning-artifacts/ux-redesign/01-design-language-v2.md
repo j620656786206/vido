@@ -141,7 +141,14 @@ Activity hub:
 | 整理中 / Organizing | `warning-tint` | `warning` | 整理中 |
 | 已入庫 / In library | `success-tint` | `success` | 已入庫 |
 | 失敗 / Failed | `error-tint` | `error-text` | 失敗 |
+| 搜尋中 / Searching *(added 13-0, Epic 13 requests)* | `warning-tint` | `warning` | 搜尋中 |
 | 字幕：有繁中 / 簡轉繁 / AI 校正中 / 缺字幕 | `success-tint` / `accent-tint` / `accent-tint` / `bg-tertiary` | matching | 繁中 / 簡轉繁 / AI 校正中 / 缺字幕 |
+
+> **Request pipeline mapping (13-0):** the `requests.status` enum renders through this
+> same table — `pending`→想要, `searching`→搜尋中 (13-0 addition: a transient
+> "system working" state, warning family like 整理中), `downloading`→下載中 · {pct}%,
+> `completed`→已入庫, `failed`→失敗. One state machine; no bespoke request palette.
+> FE consumption is GATE-B on the 13-3/13-4 backend.
 
 ---
 
@@ -168,6 +175,11 @@ glyphs**, producing uncontrolled OS fallback. v2 makes font choice mechanical:
 > Sans TC (the CJK side forces it). *(Canvas annotation titles on the Pencil light
 > canvas are a separate, non-product concern and keep their existing DM Sans per the
 > A–J layout convention.)*
+>
+> **Rule TY-3 (number + CJK unit, added 13-0):** a numeric value with a CJK unit —
+> `107 分`, `12 集`, `4 季 · 87 集`, `412 部` — is never one string in one font. The
+> number is its own JetBrains Mono node; the unit its own Noto Sans TC node (3–4px
+> gap). Established by the 13-0 season/episode tree and detail-meta fix.
 
 ### 3.2 Type scale
 
