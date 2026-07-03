@@ -175,6 +175,17 @@ SCREENS = {
     "DrYXb": ("flow-d-downloads-v2", "d9-m-v2"),
     # mobile sort sheet — the 排序 bottom-sheet the D1-M top-bar sort button opens
     "JxMWL": ("flow-d-downloads-v2", "d10-m-v2"),
+    # flow-l-requests-v2 — Epic 13 story 13-0 Request System (Overseerr/Jellyseerr replacement:
+    # one-click request from Discover/detail, season/episode granularity tree, status tracking
+    # hosted inside Discover 想要清單 — NOT a new sidebar destination; five statuses only)
+    "K7fiy": ("flow-l-requests-v2", "l1-d-v2"),
+    "VH3Tq": ("flow-l-requests-v2", "l2-d-v2"),
+    "He04g": ("flow-l-requests-v2", "l3-d-v2"),
+    "n7isVa": ("flow-l-requests-v2", "l4-m-v2"),
+    "ER39x": ("flow-l-requests-v2", "l5-d-v2"),
+    "x4CNb": ("flow-l-requests-v2", "l6-d-v2"),
+    "oopme": ("flow-l-requests-v2", "l7-d-v2"),
+    "G0xib": ("flow-l-requests-v2", "l8-d-v2"),
 }
 
 

@@ -1,6 +1,6 @@
 # Story 13-0 — Requests design (`.pen` flow-l-requests-v2)
 
-**Epic:** Epic 13 — Request System · **Status:** ready-for-dev (design not started)
+**Epic:** Epic 13 — Request System · **Status:** review (design complete — Sally review PASS 2026-07-04; PR pending merge)
 **Owner:** ux-designer (Pencil MCP) · **Type:** design · **FRs:** P3-001 / P3-002 / P3-003 (the UI-bearing FRs) · **GATE A** for all Epic-13 frontend stories (13-1b / 13-2b / 13-3b)
 
 > **⚠️ Flow-name correction:** the epic file said `flow-g-requests` — but **`flow-g` is already `flow-g-ai-subtitle`**. This design uses **`flow-l-requests-v2`** (next free letter L + v2-era suffix, matching `flow-k-activity-v2`). The `epic-13-request-system.md` reference is corrected to match.
@@ -63,13 +63,13 @@ A reusable `Component/RequestRow-v2` (title + status token + progress + action) 
 
 ## Tasks / Subtasks (designer)
 
-- [ ] (AC #1) Pencil MCP: `get_editor_state(include_schema:true)`; confirm v2 shell + atoms; create `flow-l-requests-v2` frames.
-- [ ] (AC #2, #4) Draw `L1-D-v2` (requests list, 5-status rows) + light up the ux3-3-1 reserved `想要清單` entry; `L2-D-v2` (想要 button, 3 states, card + detail); `L8-D-v2` (submitted feedback). Spec `Component/RequestRow-v2`.
-- [ ] (AC #2, #5) Draw `L3-D-v2` partial-request season/episode tree (granularity + already-owned/requested reflection — defines 13-2a API).
-- [ ] (AC #3) Draw `L5` skeleton, `L6` empty-no-requests, `L7` status-source fail-soft.
-- [ ] (AC #6) Draw `L4-M-v2` mobile (button + list, 44px).
-- [ ] (AC #7) Token-lint pass: no literals, Noto Sans TC CJK, Mono numerics, AA color rules.
-- [ ] (AC #8) Update `SCREENS` dict; `python3 scripts/export-pen-screenshots.py`; commit `.pen` + only-changed PNGs (`feat(13-0): Requests v2 design (.pen flow-l-requests-v2)`).
+- [x] (AC #1) Pencil MCP: `get_editor_state(include_schema:true)`; confirm v2 shell + atoms; create `flow-l-requests-v2` frames.
+- [x] (AC #2, #4) Draw `L1-D-v2` (requests list, 5-status rows) + light up the ux3-3-1 reserved `想要清單` entry; `L2-D-v2` (想要 button, 3 states, card + detail); `L8-D-v2` (submitted feedback). Spec `Component/RequestRow-v2`.
+- [x] (AC #2, #5) Draw `L3-D-v2` partial-request season/episode tree (granularity + already-owned/requested reflection — defines 13-2a API).
+- [x] (AC #3) Draw `L5` skeleton, `L6` empty-no-requests, `L7` status-source fail-soft.
+- [x] (AC #6) Draw `L4-M-v2` mobile (button + list, 44px).
+- [x] (AC #7) Token-lint pass: no literals, Noto Sans TC CJK, Mono numerics, AA color rules.
+- [x] (AC #8) Update `SCREENS` dict; `python3 scripts/export-pen-screenshots.py`; commit `.pen` + only-changed PNGs (`feat(13-0): Requests v2 design (.pen flow-l-requests-v2)`).
 
 ## Dev Notes
 
@@ -108,3 +108,4 @@ A reusable `Component/RequestRow-v2` (title + status token + progress + action) 
 | Date       | Change                                                                                                                              |
 | ---------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | 2026-07-01 | Story created (SM create-story). Design-only, GATE-A for Epic-13 FE. Corrected flow name `flow-g`→`flow-l-requests-v2` (g = ai-subtitle). Requests landing in Discover (ADR), lights up ux3-3-1 reserved entry. Capability-honor: draws the 5-status target; FE consumption GATE-B on 13-3/13-4 BE. Status → ready-for-dev (design not started). |
+| 2026-07-04 | Design drawn (Pencil Inline Agent, prompt by Sally) + Sally MCP review **PASS**. L1–L8 all land; `Component/RequestRow-v2` created + registered in Component Library. Review fixes: 44px 想要清單 entry ×4, `107 分` Mono/Noto split ×3 (→ new **Rule TY-3** in DL-v2 §3.1), GATE-B capability-honor note on canvas. **Decision: `searching`→`warning-tint`/「搜尋中」** (transient-work family) — added to DL-v2 §2.5 + new §8 pipeline section in the `.pen` DL-v2 reference frame. Checkbox `Indeterminate`/`DisabledChecked`/`DisabledEmpty` componentized (L3 swapped to instances). **Scope decision:** `flow-i`/`flow-b` deliberately NOT mutated — flow-b v2 frames depict in-library titles (想要 would contradict `已入庫`), flow-i has no hover frame; L2's context excerpts carry the affordance spec (AC #1 "touched only for" = upper bound). flow-i reserved entries verified untouched/inert. CLAUDE.md flow list A–L. Found (deferred to chore): `.pen` `text-muted` still `#808080` vs §2.2 `#A0AABE`; `DownloadCard-v2` unregistered in library. Status → review. |

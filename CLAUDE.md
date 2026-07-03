@@ -28,7 +28,7 @@ For non-trivial features, work **architecture-first**: outline the design and va
 
 1. Run `python3 scripts/export-pen-screenshots.py` (requires Pencil.app running)
    - The script spawns its own Pencil MCP server in **stdio** mode (Pencil 1.1.61 removed the old `--http`/`--http-port` transport) — safe to run even when Pencil MCP is already active
-2. Screenshots are saved to `_bmad-output/screenshots/`, one folder per **user flow** (A–J merged-block convention, 2026-06-05 rework). Each flow folder holds both desktop (`-d`) and mobile (`-m`) screens; filenames are the canvas frame codes (e.g. `b3-d.png`, `b3-m.png`):
+2. Screenshots are saved to `_bmad-output/screenshots/`, one folder per **user flow** (A–L merged-block convention, 2026-06-05 rework). Each flow folder holds both desktop (`-d`) and mobile (`-m`) screens; filenames are the canvas frame codes (e.g. `b3-d.png`, `b3-m.png`):
    - `flow-a-browse/` — Empty / Loading / Grid / List / Sort / Filter
    - `flow-b-detail-interaction/` — Hover / Context Menus / Detail (Movie/TV) / Fallbacks / Tech Badges / Image-load Fallback spec (B9)
    - `flow-c-search-settings/` — Search+Filter / Batch Ops / Settings / Backup
@@ -39,6 +39,9 @@ For non-trivial features, work **architecture-first**: outline the design and va
    - `flow-h-homepage/` — Homepage TV Wall / Loading skeleton / Block CRUD modal / ExploreBlock spec
    - `flow-i-advanced-search/` — Filter chips / Suggestions dropdown / Save preset / Filter sheet
    - `flow-j-specs/` — Design-decision spec screens (e.g. PosterCard info-density)
+   - `flow-*-v2/` — v2-redesign counterparts of the above (`flow-a-browse-v2`, `flow-b-detail-v2`, `flow-d-downloads-v2`, `flow-h-homepage-v2`, `flow-i-discover-v2`)
+   - `flow-k-activity-v2/` — Activity hub v2 (net-new D4-1 destination)
+   - `flow-l-requests-v2/` — Request System (Epic 13): 想要 button 3-state / season-episode tree / 5-status request list
    - `design-system/` — Design System Reference + Component Library docs
    - Canvas naming + block-layout convention: see `.claude/memory/project_pen_flow_layout_convention.md`
 3. If new screens are added to the .pen file, update the `SCREENS` dict in `scripts/export-pen-screenshots.py` (key = node ID, value = `(flow-folder, code)`)
