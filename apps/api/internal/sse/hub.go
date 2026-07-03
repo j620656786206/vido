@@ -21,6 +21,12 @@ const (
 	EventNotification          EventType = "notification"
 	EventEnrichProgress        EventType = "enrich_progress"
 	EventEnrichComplete        EventType = "enrich_complete"
+	// EventDownloadProgress carries the live downloads snapshot fanned out by the
+	// DownloadProgressBroadcaster (ux3-4-2b — Epic 14 H-1 / P3-012). One gated server-side qBittorrent
+	// poll replaces N-browser polling of GET /downloads. NOTE: there is deliberately NO
+	// download_complete event — the frontend derives completion from each item's `status` field in the
+	// download_progress payload. Payload shape is stamped [@contract-v1] (see broadcaster; FE ux3-4-3 acks).
+	EventDownloadProgress EventType = "download_progress"
 )
 
 // Event represents an SSE event to broadcast
