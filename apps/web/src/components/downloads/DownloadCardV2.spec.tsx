@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { DownloadCardV2 } from './DownloadCardV2';
 import type { Download } from '../../services/downloadService';
 
@@ -55,5 +56,62 @@ describe('DownloadCardV2 (ux3-4-3 AC2)', () => {
     expect(screen.getByTestId('download-status-abc123')).toHaveTextContent('已完成');
     expect(screen.queryByText(/↓/)).toBeNull();
     expect(screen.getByText('100.0%')).toBeInTheDocument();
+  });
+
+  it('renders no action cluster when no handlers are provided (4-3a display-only usage)', () => {
+    render(<DownloadCardV2 download={base} />);
+    expect(screen.queryByRole('button', { name: /暫停/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /移除/ })).toBeNull();
+  });
+});
+
+describe('DownloadCardV2 — actions + selection (ux3-4-3b AC3/AC5)', () => {
+  it('a downloading item shows 暫停 → calls onPause(hash)', async () => {
+    const onPause = vi.fn();
+    render(<DownloadCardV2 download={base} onPause={onPause} onResume={vi.fn()} />);
+    await userEvent.click(screen.getByRole('button', { name: /暫停/ }));
+    expect(onPause).toHaveBeenCalledWith('abc123');
+  });
+
+  it('a paused item shows 繼續 → calls onResume(hash)', async () => {
+    const onResume = vi.fn();
+    render(
+      <DownloadCardV2
+        download={{ ...base, status: 'paused' }}
+        onPause={vi.fn()}
+        onResume={onResume}
+      />
+    );
+    await userEvent.click(screen.getByRole('button', { name: /繼續/ }));
+    expect(onResume).toHaveBeenCalledWith('abc123');
+  });
+
+  it('the remove button opens a confirm dialog; 連同檔案刪除 calls onRemove(hash, true)', async () => {
+    const onRemove = vi.fn();
+    render(<DownloadCardV2 download={base} onRemove={onRemove} />);
+
+    await userEvent.click(screen.getByRole('button', { name: /移除/ }));
+    // dialog opened (Radix → aria-modal dialog, focus-trapped)
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: '移除（連同檔案刪除）' }));
+    expect(onRemove).toHaveBeenCalledWith('abc123', true);
+  });
+
+  it('保留檔案 calls onRemove(hash, false)', async () => {
+    const onRemove = vi.fn();
+    render(<DownloadCardV2 download={base} onRemove={onRemove} />);
+    await userEvent.click(screen.getByRole('button', { name: /移除/ }));
+    await userEvent.click(await screen.findByRole('button', { name: '移除（保留檔案）' }));
+    expect(onRemove).toHaveBeenCalledWith('abc123', false);
+  });
+
+  it('select mode renders a checkbox that toggles selection', async () => {
+    const onSelectChange = vi.fn();
+    render(
+      <DownloadCardV2 download={base} selectable selected={false} onSelectChange={onSelectChange} />
+    );
+    await userEvent.click(screen.getByRole('checkbox', { name: /選取/ }));
+    expect(onSelectChange).toHaveBeenCalledWith('abc123', true);
   });
 });

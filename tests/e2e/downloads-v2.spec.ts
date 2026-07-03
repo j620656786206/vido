@@ -172,3 +172,111 @@ test.describe('Downloads v2 deep page @downloads @ui @ux3-4-3', () => {
     await expect(page.getByTestId('downloads-browse-v2')).toBeVisible();
   });
 });
+
+test.describe('Downloads v2 actions + batch @downloads @ui @ux3-4-3', () => {
+  test('[P1] a card 暫停 action POSTs to /downloads/:hash/pause (AC3)', async ({ page }) => {
+    await enableV2Shell(page);
+    await stubQbtConfig(page, true);
+
+    const pauseHits: string[] = [];
+    await page.route(`${ROUTE_API}/downloads*`, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(paginated([presetDownloads.downloading])),
+      })
+    );
+    await stubCounts(page, 1);
+    await page.route(/\/api\/v1\/downloads\/[^/]+\/pause$/, (route) => {
+      pauseHits.push(route.request().url());
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, data: null }),
+      });
+    });
+
+    await page.goto('/downloads');
+    const card = page.locator('[data-testid^="download-card-v2-"]').first();
+    await expect(card).toBeVisible({ timeout: 15000 });
+
+    await card.getByRole('button', { name: /暫停/ }).click();
+    await expect.poll(() => pauseHits.length).toBeGreaterThan(0);
+  });
+
+  test('[P1] remove opens a confirm dialog; 連同檔案刪除 DELETEs with deleteFiles=true (AC3)', async ({
+    page,
+  }) => {
+    await enableV2Shell(page);
+    await stubQbtConfig(page, true);
+
+    const deleteHits: string[] = [];
+    await page.route(`${ROUTE_API}/downloads*`, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(paginated([presetDownloads.downloading])),
+      })
+    );
+    await stubCounts(page, 1);
+    await page.route(/\/api\/v1\/downloads\/[^/?]+(\?.*)?$/, (route) => {
+      if (route.request().method() === 'DELETE') {
+        deleteHits.push(route.request().url());
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ success: true, data: null }),
+        });
+      }
+      return route.fallback();
+    });
+
+    await page.goto('/downloads');
+    const card = page.locator('[data-testid^="download-card-v2-"]').first();
+    await expect(card).toBeVisible({ timeout: 15000 });
+
+    await card.getByRole('button', { name: /移除/ }).click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await page.getByRole('button', { name: '移除（連同檔案刪除）' }).click();
+
+    await expect.poll(() => deleteHits.length).toBeGreaterThan(0);
+    expect(deleteHits[0]).toContain('deleteFiles=true');
+  });
+
+  test('[P2] batch select → 批次暫停 fires one pause request per selected hash (AC5)', async ({
+    page,
+  }) => {
+    await enableV2Shell(page);
+    await stubQbtConfig(page, true);
+
+    const pauseHits: string[] = [];
+    const list = [presetDownloads.downloading, presetDownloads.seeding];
+    await page.route(`${ROUTE_API}/downloads*`, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(paginated(list)),
+      })
+    );
+    await stubCounts(page, list.length);
+    await page.route(/\/api\/v1\/downloads\/[^/]+\/pause$/, (route) => {
+      pauseHits.push(route.request().url());
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, data: null }),
+      });
+    });
+
+    await page.goto('/downloads');
+    const browse = page.getByTestId('downloads-browse-v2');
+    await expect(browse).toBeVisible({ timeout: 15000 });
+
+    // enter select mode → select all → batch pause
+    await browse.getByRole('button', { name: '選取' }).click();
+    await browse.getByRole('button', { name: '全選' }).click();
+    await browse.getByRole('button', { name: '批次暫停' }).click();
+
+    await expect.poll(() => pauseHits.length).toBe(list.length);
+  });
+});
