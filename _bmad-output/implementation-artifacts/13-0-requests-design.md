@@ -1,6 +1,6 @@
 # Story 13-0 — Requests design (`.pen` flow-l-requests-v2)
 
-**Epic:** Epic 13 — Request System · **Status:** review (design complete — Sally review PASS 2026-07-04; PR pending merge)
+**Epic:** Epic 13 — Request System · **Status:** done (PR #118 squash-merged 2026-07-04 — GATE-A open)
 **Owner:** ux-designer (Pencil MCP) · **Type:** design · **FRs:** P3-001 / P3-002 / P3-003 (the UI-bearing FRs) · **GATE A** for all Epic-13 frontend stories (13-1b / 13-2b / 13-3b)
 
 > **⚠️ Flow-name correction:** the epic file said `flow-g-requests` — but **`flow-g` is already `flow-g-ai-subtitle`**. This design uses **`flow-l-requests-v2`** (next free letter L + v2-era suffix, matching `flow-k-activity-v2`). The `epic-13-request-system.md` reference is corrected to match.
