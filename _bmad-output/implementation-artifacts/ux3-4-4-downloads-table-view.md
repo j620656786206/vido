@@ -1,6 +1,6 @@
 # Story ux3-4-4 — Downloads v2 desktop Table view (D7) + List|Table toggle
 
-Status: review
+Status: done
 
 **Epic:** ux3-downloads-v2 (UX Redesign Phase 3, Epic 4) · **Type:** frontend · **FRs:** PH3-M3 (Epic 14 v2)
 **Design:** ux3-4-1 (`.pen` `flow-d-downloads-v2` frame `D7-D-v2` = node `w3ipb`) · **Owner:** dev (`dev-story`) → tea (visual + E2E)
