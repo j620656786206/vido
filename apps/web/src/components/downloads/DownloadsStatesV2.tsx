@@ -29,6 +29,30 @@ export function DownloadsSkeletonV2() {
   );
 }
 
+/** ux3-4-4 — table-shaped loading skeleton (the variant ux3-4-1 deferred); a header row + a few rows. */
+export function DownloadsTableSkeletonV2() {
+  return (
+    <div
+      data-testid="downloads-table-skeleton-v2"
+      aria-busy="true"
+      className={cn(CARD, 'overflow-hidden')}
+    >
+      <div className="h-9 border-b border-[var(--border-subtle)] bg-[var(--bg-secondary)]" />
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div
+          key={i}
+          className="flex items-center gap-3 border-b border-[var(--border-subtle)] px-3 py-3"
+        >
+          <div className="h-4 w-4 shrink-0 animate-pulse rounded bg-[var(--bg-tertiary)]" />
+          <div className="h-3 flex-1 animate-pulse rounded bg-[var(--bg-tertiary)]" />
+          <div className="h-3 w-24 animate-pulse rounded bg-[var(--bg-tertiary)]" />
+          <div className="h-3 w-20 animate-pulse rounded bg-[var(--bg-tertiary)]" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 const EMPTY_MESSAGES: Record<FilterStatus, string> = {
   all: '目前沒有下載任務',
   downloading: '沒有正在下載的任務',
