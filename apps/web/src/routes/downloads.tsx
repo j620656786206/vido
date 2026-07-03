@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { useDownloads, useDownloadCounts } from '../hooks/useDownloads';
 import { DownloadList } from '../components/downloads/DownloadList';
 import { DownloadFilterTabs } from '../components/downloads/DownloadFilterTabs';
+import { DownloadsBrowseV2 } from '../components/downloads/DownloadsBrowseV2';
+import { useShellVersion } from '../components/shell/shellVersion';
 import type { FilterStatus, SortField, SortOrder } from '../services/downloadService';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
@@ -15,6 +17,10 @@ interface DownloadsSearch {
 const PAGE_SIZE_OPTIONS = [50, 100, 200, 500] as const;
 
 export const Route = createFileRoute('/downloads')({
+  // ux3-4-3 AC #1: migrated route — AppShellV2 renders it under the v2 shell (下載 is a bottom-4 tab).
+  // The flag stays read-once in __root; the component branches on useShellVersion() so the legacy
+  // render is byte-unchanged when the flag is OFF (mirrors discover.tsx / activity.tsx).
+  staticData: { shell: 'v2' },
   validateSearch: (search: Record<string, unknown>): DownloadsSearch => {
     const validFilters = ['all', 'downloading', 'paused', 'completed', 'seeding', 'error'];
     const filter = validFilters.includes(search.filter as string)
@@ -31,7 +37,14 @@ export const Route = createFileRoute('/downloads')({
   component: DownloadsPage,
 });
 
+// ux3-4-3 AC #1: v2 shell → the new deep page; legacy shell → the current JSX byte-unchanged
+// (mirrors the discover / activity gate). The 下載 bottom-4 tab is already wired in navModel.ts.
 function DownloadsPage() {
+  const shell = useShellVersion();
+  return shell === 'v2' ? <DownloadsBrowseV2 /> : <LegacyDownloads />;
+}
+
+function LegacyDownloads() {
   const { filter: urlFilter, page: urlPage, pageSize: urlPageSize } = Route.useSearch();
   const navigate = useNavigate();
   const activeFilter: FilterStatus = urlFilter || 'all';

@@ -39,13 +39,17 @@ The shipped `/downloads` (`apps/web/src/routes/downloads.tsx`, 256 lines) alread
 
 ## Tasks / Subtasks
 
-- [ ] (AC #1) Add `staticData: { shell: 'v2' }` to `/downloads`; split into `DownloadsPage` (v2 → `DownloadsBrowseV2` under `HomeSidebar-v2`, 下載 active in bottom-4) / `LegacyDownloads` (byte-unchanged) via `useShellVersion()`. [GATE A-light]
-- [ ] (AC #2, #6) Build `DownloadsBrowseV2` + `DownloadCard-v2` + `DownloadsStatesV2` to the ux3-4-1 frames (toolbar / cards / pagination / skeleton / empty / qBT-fail-soft). [GATE A]
-- [ ] (AC #3) `downloadService`: add POST/DELETE-capable request helper + `pauseDownload`/`resumeDownload`/`removeDownload`; `useDownloadActions` mutation hook (optimistic + invalidate); card action cluster + destructive-remove confirm. `confirmed against [@contract-v1]` (ux3-4-2). [GATE B]
-- [ ] (AC #4) `useDownloadProgress` lazy-SSE hook (mirror `useScanProgress`); update query cache from `download_progress`; turn off `refetchInterval` on v2 (shell-gated; legacy keeps 5s). `confirmed against [@contract-v1]` (ux3-4-2b). [GATE B]
-- [ ] (AC #5) Batch select mode + batch action bar; one slice-call for many hashes. [GATE B]
-- [ ] (AC #7, #8) Token-lint pass; reuse/converge (no forked EventSource, no forked card chrome).
-- [ ] (AC #9) Vitest + E2E downloads-v2 block (seed-helpers, no self-skips); `nx build`/`nx lint` web green.
+**⏸ Delivered in two PRs (dev's call — the story pre-partitioned this along the gates):**
+**4-3a (GATE A, PR #1 — this delivery): AC1/AC2/AC6 + the AC7/8/9 slice for the restyle.**
+**4-3b (GATE B, next PR): AC3 actions / AC4 SSE / AC5 batch + the AC7/8/9 slice for those.**
+
+- [x] (AC #1) Add `staticData: { shell: 'v2' }` to `/downloads`; split into `DownloadsPage` (v2 → `DownloadsBrowseV2`, 下載 active in bottom-4 — already wired in `navModel.ts`) / `LegacyDownloads` (byte-unchanged) via `useShellVersion()`. [GATE A-light] ✅ 4-3a
+- [x] (AC #2, #6) Build `DownloadsBrowseV2` + `DownloadCardV2` + `DownloadsStatesV2` to the ux3-4-1 frames (toolbar / cards / pagination / skeleton / empty / qBT-fail-soft). [GATE A] ✅ 4-3a
+- [ ] (AC #3) `downloadService`: add POST/DELETE-capable request helper + `pauseDownload`/`resumeDownload`/`removeDownload`; `useDownloadActions` mutation hook (optimistic + invalidate); card action cluster + destructive-remove confirm. `confirmed against [@contract-v1]` (ux3-4-2). [GATE B] → 4-3b
+- [ ] (AC #4) `useDownloadProgress` lazy-SSE hook (mirror `useScanProgress`); update query cache from `download_progress`; turn off `refetchInterval` on v2 (shell-gated; legacy keeps 5s). `confirmed against [@contract-v1]` (ux3-4-2b). [GATE B] → 4-3b
+- [ ] (AC #5) Batch select mode + batch action bar; one slice-call for many hashes. [GATE B] → 4-3b
+- [x] (AC #7, #8) Token-lint pass; reuse/converge (Pagination/Button atoms reused; status→token via libraryStatus TINT; no forked card chrome). ✅ 4-3a restyle scope — re-run for the 4-3b actions/batch surface (incl. the no-forked-EventSource check for the SSE hook).
+- [x] (AC #9) Vitest (13: shell-gate v2-vs-legacy, DownloadCardV2, 3 states, status util) + E2E downloads-v2 block (3: restyle render / empty / qBT-fail-soft — route-interception, no self-skips); `nx build`/`nx lint` web green. ✅ 4-3a scope — 4-3b adds action/SSE/batch tests.
 
 ## Dev Notes
 
@@ -100,18 +104,45 @@ Backend tasks: **0** — the two BE halves are separate, merged stories (`ux3-4-
 
 ### Agent Model Used
 
-_(to be filled by dev agent)_
+claude-opus-4-8[1m] (Amelia, dev-story) — 2026-07-03
 
 ### Debug Log References
 
+- `npx vitest run` (4 new specs) → 13 pass; full `pnpm nx test web` → 206 files / 2264 tests pass.
+- `pnpm nx build web` → EXIT 0; `pnpm nx lint web` → EXIT 0 (Rule 21 headers + jsx-a11y clean); `pnpm lint:all` + prettier clean.
+- `npx playwright test tests/e2e/downloads-v2.spec.ts --project=chromium` → 3 pass (15.1s).
+
 ### Completion Notes List
+
+**PR #1 — ux3-4-3a (GATE A: shell-gate + v2 restyle + states + pagination, on the existing read-only GET). GATE-B (AC3 actions / AC4 SSE / AC5 batch) deferred to PR #2 (ux3-4-3b).**
+
+- **AC1 (shell-gate)** — `/downloads` gets `staticData: { shell: 'v2' }`; the current `DownloadsPage` body is preserved byte-unchanged as `LegacyDownloads`, and a new `DownloadsPage` branches on `useShellVersion()` (`shell === 'v2' ? <DownloadsBrowseV2/> : <LegacyDownloads/>`) — mirrors discover/activity. 下載 is already a bottom-4 tab in `navModel.ts` (auto-active, no config change).
+- **AC2 (restyle)** — `DownloadCardV2` (2-line CJK title clamp, qBittorrent source pill, progress bar + `xx.x%`, ↓↑ speed / ETA / size — all Mono + `tabular-nums`, status token) + `DownloadsBrowseV2` (v2 container + status-filter toolbar: 6 values with Mono counts + v2 `Pagination` atom reused). Status→token via a new `downloadStatus.ts` that mirrors `libraryStatus.ts` TINT (ux3-4-1 decision #5 — one badge system). **Deferred to 4-3b (paired with batch/actions): the D7 List|Table view toggle, the 選取 select-mode, and a sort control** (4-3a uses the newest-first default).
+- **AC6 (4 states)** — `DownloadsStatesV2`: card-shaped skeleton (`aria-busy`), empty (all-filter → distinct `目前沒有下載任務` + quiet 前往探索; other filters → switch hint), and qBT-unreachable per-section fail-soft (`role=alert` + 重試 + 前往設定). Fail-soft covers BOTH the poll error AND resolved-but-not-configured (`useDownloads` fails closed on the qBT config gate with no error, so `DownloadsBrowseV2` also reads `useQBittorrentConfig`).
+- **AC7/8 (v2 enforcement + reuse)** — token-only color (no hex), CJK Noto Sans TC default, numerics `font-mono tabular-nums`, accent/error body text via `-text` AA variants (TC-2). Reused `ui/Pagination` + `ui/Button` atoms + `useDownloads`/`useDownloadCounts` (poll stays for 4-3a). `TechBadge` intentionally NOT used for the source indicator (its categories are video/audio/hdr and it uses non-token literals) — a token-styled source pill instead.
+- **🎭 A11y Pre-Flight: PASS** (5 components checked, 0 jsx-a11y warnings on touched files, 0 introduced). The 4 recurring classes: responsive `<img>` — **N/A** (no images); modal focus — **N/A** (the destructive-remove dialog is 4-3b); async-revealed status — the progress bar carries `role=progressbar` + `aria-valuenow` (SR-queryable) and the status pill is a static span **by deliberate choice** — `aria-live` on a value that updates every poll would spam the SR (anti-pattern); custom widgets — the filter toolbar uses `role=tablist`/`role=tab`/`aria-selected`/`aria-controls` on real `<button>`s (keyboard-native).
+- **🔗 AC Drift: NONE** (4-3a consumes NO wire contract — it restyles the EXISTING `GET /downloads` read path; the `[@contract-v1]` acks for ux3-4-2 actions + ux3-4-2b SSE happen in 4-3b when those endpoints are consumed).
+- **📎 Contract Stamps: NONE** (4-3a defines/consumes no `[@contract-v*]`; the two `confirmed against [@contract-v1]` acks are 4-3b work — both upstream BE halves are merged and ready).
+- **Rule 23 (time-dependent visual): N/A** — `DownloadCardV2` reads no wall clock (`Date.now()`/`new Date()`): ETA is server-supplied seconds (clock-independent) and the card renders no relative "added Nh ago".
 
 ### File List
 
-_(to be filled by dev agent)_
+- `apps/web/src/routes/downloads.tsx` (MODIFIED — staticData shell:v2 + useShellVersion gate; current page → LegacyDownloads byte-unchanged)
+- `apps/web/src/components/downloads/DownloadsBrowseV2.tsx` (NEW — v2 deep page: toolbar + 4-state switch + list + pagination)
+- `apps/web/src/components/downloads/DownloadCardV2.tsx` (NEW — v2 download card)
+- `apps/web/src/components/downloads/DownloadsStatesV2.tsx` (NEW — skeleton / empty / qBT-fail-soft)
+- `apps/web/src/components/downloads/downloadStatus.ts` (NEW — status→token util, mirrors libraryStatus TINT)
+- `apps/web/src/components/downloads/index.ts` (MODIFIED — barrel exports for the v2 components)
+- `apps/web/src/components/downloads/DownloadCardV2.spec.tsx` (NEW)
+- `apps/web/src/components/downloads/DownloadsStatesV2.spec.tsx` (NEW)
+- `apps/web/src/components/downloads/downloadStatus.spec.ts` (NEW)
+- `apps/web/src/routes/downloads.spec.tsx` (NEW — shell-gate v2-vs-legacy)
+- `tests/e2e/downloads-v2.spec.ts` (NEW — restyle render / empty / qBT-fail-soft)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (MODIFIED — story → in-progress)
 
 ## Change Log
 
 | Date       | Change                                                                                                                                       |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | 2026-06-30 | Story created (SM create-story). FE v2 downloads page consuming ux3-4-1 design + ux3-4-2 (actions) + ux3-4-2b (SSE) `[@contract-v1]` ×2. Two execution gates (design drawn / BE merged) partition the work; replaces the 5s poll with lazy SSE (shell-gated). FE-only, no split. Status → ready-for-dev (gated). |
+| 2026-07-03 | **PR #1 — ux3-4-3a (GATE A) implemented** (dev-story, Amelia). Both gates now open (ux3-4-1 #107, ux3-4-2 + ux3-4-2b merged). Delivered AC1 (shell-gate, legacy byte-unchanged) + AC2 (DownloadCardV2 + DownloadsBrowseV2 + status toolbar + reused Pagination) + AC6 (skeleton/empty/qBT-fail-soft) + the AC7/8/9 slice for the restyle (13 Vitest + 3 E2E, jsx-a11y clean, build/lint/test green). status→token via downloadStatus.ts mirroring libraryStatus TINT. A11y PASS; AC Drift NONE; Contract Stamps NONE (acks are 4-3b). Deferred to PR #2 (ux3-4-3b, GATE B): AC3 card actions / AC4 lazy-SSE (retire the 5s poll) / AC5 batch + D7 Table view + sort control + select-mode. Story stays in-progress. |
