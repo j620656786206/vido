@@ -1,6 +1,6 @@
 # Story ux3-4-4 — Downloads v2 desktop Table view (D7) + List|Table toggle
 
-Status: ready-for-dev
+Status: review
 
 **Epic:** ux3-downloads-v2 (UX Redesign Phase 3, Epic 4) · **Type:** frontend · **FRs:** PH3-M3 (Epic 14 v2)
 **Design:** ux3-4-1 (`.pen` `flow-d-downloads-v2` frame `D7-D-v2` = node `w3ipb`) · **Owner:** dev (`dev-story`) → tea (visual + E2E)
@@ -29,13 +29,13 @@ so that I can scan and act on many downloads at once in a compact tabular layout
 
 ## Tasks / Subtasks
 
-- [ ] (AC #1) Add the List|Table toggle to `DownloadsBrowseV2`'s toolbar + a `useDownloadsView()` (or local state) backed by localStorage (`vido:downloads:view`, default `list`); hide the toggle + force List below the desktop breakpoint.
-- [ ] (AC #2, #7) Build `DownloadsTableV2` (`components/downloads/`) — semantic `<table>` to the `D7-D-v2` columns; reuse `downloadStatus` + `formatters`; token-only, Mono numerics; overflow-x container.
-- [ ] (AC #3) Sortable `<th>` headers wired to the shared `sortField`/`sortOrder` (lift the state so both the List sort control and the Table headers drive it); `aria-sort` + ↑/↓ on the active header.
-- [ ] (AC #4) Persistent checkbox column + header 全選/clear, reusing the `ux3-4-3b` selection state + batch bar (the bar renders above the table too).
-- [ ] (AC #5) Row action cell (pause/resume + remove-with-confirm) reusing `useDownloadActions` + the Radix dialog.
-- [ ] (AC #6) Wire Table view to render inside `DownloadsBrowseV2` (same data, SSE, pagination); build the **table-shaped skeleton** variant; verify empty + qBT-fail-soft still render.
-- [ ] (AC #8) Vitest (toggle+persist, table render/sort/aria-sort, checkbox/全選, row actions) + E2E Table block (route-interception, no self-skips); `nx build`/`nx lint` web green.
+- [x] (AC #1) `useDownloadsView()` hook backed by localStorage (`vido:downloads:view`, default `list`, invalid→list); List|Table segmented toggle in `DownloadsBrowseV2`'s toolbar (`hidden lg:flex`); a guarded `useIsDesktop()` (matchMedia) forces List below `lg` even if the stored pref is `table`.
+- [x] (AC #2, #7) `DownloadsTableV2` — semantic `<table>` in an `overflow-x-auto` container to the `D7-D-v2` columns (☑·名稱·狀態·大小·進度·速度·ETA·操作); reuses `downloadStatus` + `formatters`; token-only, Mono `tabular-nums` numerics.
+- [x] (AC #3) Sortable `<th>` headers (名稱/狀態/進度 — the `SortField`s) wired to the SHARED `sortField`/`sortOrder` (lifted in `DownloadsBrowseV2` via `handleSort`); `aria-sort` (ascending/descending/none) + ↑/↓ arrow on the active header.
+- [x] (AC #4) Persistent checkbox column + header checkbox (全選/取消全選, indeterminate when partial), reusing the `ux3-4-3b` `selected` Set + batch bar (bar shows on selection in Table; on select-mode in List).
+- [x] (AC #5) Row action cell reusing **extracted** `DownloadRowActions` (pause/resume + remove Radix confirm) — shared by BOTH `DownloadCardV2` and the table row (no fork, AC7).
+- [x] (AC #6) Wired into `DownloadsBrowseV2` (same `useDownloads` data + `useDownloadProgress` SSE + pagination — no second EventSource); `DownloadsTableSkeletonV2` (the deferred variant); empty + qBT-fail-soft reuse the existing full-width states.
+- [x] (AC #8) Vitest (10: `useDownloadsView` persist/default/invalid; `DownloadsTableV2` render/aria-sort/header-click/checkbox/全選/row-actions) + E2E Table block (toggle→table + column-sort request + row action, route-interception, no self-skips); `nx build`/`nx lint` web green (Rule 21 + jsx-a11y).
 
 ## Dev Notes
 
@@ -81,18 +81,44 @@ Backend tasks: **0** — this is a pure alternate rendering over the existing `G
 
 ### Agent Model Used
 
-_(to be filled by dev agent)_
+claude-opus-4-8[1m] (Amelia, dev-story) — 2026-07-03
 
 ### Debug Log References
 
+- `npx vitest run` (2 new specs) → 10 pass; full `pnpm nx test web` → 210 files / 2289 tests pass.
+- `pnpm nx build web` EXIT 0; `pnpm nx lint web` EXIT 0 (Rule 21 header + jsx-a11y clean); `pnpm lint:all` + prettier clean.
+- `npx playwright test tests/e2e/downloads-v2.spec.ts --project=chromium` → 7 pass (incl. the new Table block), 15.4s.
+
 ### Completion Notes List
+
+- **AC1 (toggle + persist)** — `useDownloadsView()` (localStorage `vido:downloads:view`, default `list`, invalid→list). List|Table segmented toggle (`清單`/`表格`) in the toolbar, `hidden lg:flex` (desktop-only). A guarded `useIsDesktop()` (`useSyncExternalStore` + `matchMedia('(min-width:1024px)')`, falls back to desktop when matchMedia is absent) forces the card List below `lg` even if a stale desktop pref says `table` — exercised for real in the E2E's 1280px viewport (unit tests never render the real container: `downloads.spec.tsx` stubs `DownloadsBrowseV2`).
+- **AC2 (table)** — `DownloadsTableV2`: semantic `<table>` in `overflow-x-auto`, columns ☑·名稱·狀態·大小·進度·速度·ETA·操作; reuses `downloadStatus` + `formatters`; numerics `font-mono tabular-nums`; status pill token; inline progress bar with `role=progressbar` + `aria-valuenow`.
+- **AC3 (sort)** — sortable headers for the three `SortField`s that have columns (名稱/狀態/進度); wired to the SHARED `sortField`/`sortOrder` via `DownloadsBrowseV2.handleSort` (click same field → toggle order, else set field + desc). `aria-sort` = ascending/descending/none; ↑/↓ arrow on the active header. 加入時間 has no column but the toolbar sort control still offers it (one state, two controls).
+- **AC4 (selection)** — persistent checkbox column + a header checkbox (全選/取消全選, `indeterminate` when partial) reusing the ux3-4-3b `selected` Set. Batch bar shows on selection in Table (`selected.size>0`) vs on select-mode in List — the select-mode toggle is hidden in Table (checkboxes are always present).
+- **AC5/AC7 (no fork)** — extracted the pause/resume + remove-confirm cluster from `DownloadCardV2` into a shared `DownloadRowActions`, now used by BOTH the card and the table row (same Radix dialog, same aria-labels — the existing DownloadCardV2 action tests stayed green through the refactor).
+- **AC6 (reuse)** — Table renders inside `DownloadsBrowseV2` over the same `useDownloads` data; `useDownloadProgress` SSE updates both views (ONE EventSource, no second poll); pagination shared. `DownloadsTableSkeletonV2` added (the variant ux3-4-1 deferred); empty + qBT-fail-soft reuse the full-width `DownloadsStatesV2`.
+- **🎭 A11y Pre-Flight: PASS** (jsx-a11y clean). Table is semantic (`<table>`/`<thead>`/`<th scope=col>`); sortable headers carry `aria-sort`; checkboxes are native `<input type=checkbox>` with aria-labels; the header checkbox uses `indeterminate`; row actions reuse the Radix-dialog `DownloadRowActions` (focus-trap + Escape + aria-modal); progress cells keep `role=progressbar`. No `<img>` (no responsive-image class).
+- **🔗 AC Drift: NONE** — consumes NO new wire contract; an alternate rendering over the same `useDownloads` data + the ux3-4-2/ux3-4-2b `[@contract-v1]` already consumed by ux3-4-3.
+- **📎 Contract Stamps: NONE** — this story defines/consumes no `[@contract-v*]` of its own; the upstream acks live in ux3-4-3 (unchanged).
+- **Rule 23 (time-dependent visual): N/A** — no added column reads the wall clock (no relative-time 加入時間 column was added; ETA is server-supplied seconds).
 
 ### File List
 
-_(to be filled by dev agent)_
+- `apps/web/src/hooks/useDownloadsView.ts` (NEW — List|Table view preference, localStorage-persisted)
+- `apps/web/src/components/downloads/DownloadsTableV2.tsx` (NEW — dense sortable Table)
+- `apps/web/src/components/downloads/DownloadRowActions.tsx` (NEW — shared pause/resume + remove-confirm cluster)
+- `apps/web/src/components/downloads/DownloadCardV2.tsx` (MODIFIED — use the extracted DownloadRowActions)
+- `apps/web/src/components/downloads/DownloadsBrowseV2.tsx` (MODIFIED — view toggle + useIsDesktop + List/Table branch + shared sort/handleSort + table skeleton)
+- `apps/web/src/components/downloads/DownloadsStatesV2.tsx` (MODIFIED — add DownloadsTableSkeletonV2)
+- `apps/web/src/components/downloads/index.ts` (MODIFIED — barrel exports)
+- `apps/web/src/hooks/useDownloadsView.spec.ts` (NEW)
+- `apps/web/src/components/downloads/DownloadsTableV2.spec.tsx` (NEW)
+- `tests/e2e/downloads-v2.spec.ts` (MODIFIED — Table view E2E block)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (MODIFIED — story → in-progress)
 
 ## Change Log
 
 | Date       | Change                                                                                                                                                                          |
 | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 2026-07-03 | Story created (dev-authored follow-up, Amelia) to formalize the D7 Table view deferred by ux3-4-3b. FE-only, no split; reuses all ux3-4-3 plumbing (actions/SSE/status/sort/selection); adds `DownloadsTableV2` + List\|Table toggle + table skeleton. No new contract ack. Status → ready-for-dev. |
+| 2026-07-03 | Implemented (dev-story, Amelia). useDownloadsView (localStorage) + List\|Table toggle (desktop-only via useIsDesktop) + DownloadsTableV2 (semantic table, aria-sort headers wired to shared sortField/sortOrder, persistent checkbox col + header 全選, Mono numerics) + extracted shared DownloadRowActions (used by card + table, no fork) + DownloadsTableSkeletonV2. Reuses useDownloads/useDownloadProgress SSE (one EventSource) + pagination + batch bar. 10 Vitest + 1 E2E (7 total in downloads-v2 spec); build/lint/test/lint:all/prettier green; jsx-a11y clean. A11y PASS, AC-Drift NONE, Contract-Stamps NONE, Rule-23 N/A. Status → review. On merge → 4-4 done + close the ux3-downloads-v2 epic. |

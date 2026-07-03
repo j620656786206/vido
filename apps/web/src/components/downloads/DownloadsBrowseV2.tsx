@@ -1,10 +1,11 @@
 // Design ref: ux-design.pen Screen D1-D-v2 (cK1KF)
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { getRouteApi } from '@tanstack/react-router';
 import { cn } from '../../lib/utils';
 import { useDownloads, useDownloadCounts, usePageVisibility } from '../../hooks/useDownloads';
 import { useDownloadActions } from '../../hooks/useDownloadActions';
 import { useDownloadProgress } from '../../hooks/useDownloadProgress';
+import { useDownloadsView } from '../../hooks/useDownloadsView';
 import { useQBittorrentConfig } from '../../hooks/useQBittorrent';
 import type { FilterStatus, SortField, SortOrder } from '../../services/downloadService';
 import { Button } from '../ui/Button';
@@ -20,7 +21,13 @@ import {
   DialogClose,
 } from '../ui/Dialog';
 import { DownloadCardV2 } from './DownloadCardV2';
-import { DownloadsSkeletonV2, DownloadsEmptyV2, DownloadsQbtErrorV2 } from './DownloadsStatesV2';
+import { DownloadsTableV2 } from './DownloadsTableV2';
+import {
+  DownloadsSkeletonV2,
+  DownloadsTableSkeletonV2,
+  DownloadsEmptyV2,
+  DownloadsQbtErrorV2,
+} from './DownloadsStatesV2';
 
 const routeApi = getRouteApi('/downloads');
 
@@ -42,13 +49,30 @@ const SORT_FIELDS: { value: SortField; label: string }[] = [
   { value: 'status', label: '狀態' },
 ];
 
+// Desktop breakpoint (Tailwind lg = 1024px). Table view is desktop-only (AC1) — mobile always renders
+// the card List even if a stale desktop preference says 'table'. Guarded so a missing matchMedia
+// (non-browser test env) defaults to desktop; exercised for real in the E2E's 1280px viewport.
+const DESKTOP_MQ = '(min-width: 1024px)';
+function useIsDesktop(): boolean {
+  return useSyncExternalStore(
+    (cb) => {
+      if (typeof window.matchMedia !== 'function') return () => {};
+      const mql = window.matchMedia(DESKTOP_MQ);
+      mql.addEventListener('change', cb);
+      return () => mql.removeEventListener('change', cb);
+    },
+    () => (typeof window.matchMedia === 'function' ? window.matchMedia(DESKTOP_MQ).matches : true),
+    () => true
+  );
+}
+
 /**
- * DownloadsBrowseV2 — the v2 deep page (ux3-4-3 AC2/AC6 + 4-3b AC3/AC4/AC5). Restyles the existing
- * list and lights up: card actions (useDownloadActions, optimistic + invalidate), live SSE progress
- * (useDownloadProgress — the v2 5s poll is retired, useDownloads gates it off by shell version), and
- * batch select + ops. The SSE connects when the page is VISIBLE (§8 lazy-SSE — never a bare mount
- * effect) and disconnects when hidden, which also drops the server's gated poll to zero.
- * D7 Table view is a deferred follow-up (enhancement, not an AC).
+ * DownloadsBrowseV2 — the v2 deep page (ux3-4-3 List + ux3-4-4 Table). One toolbar/state drives two
+ * renderings of the SAME page data: the card List (default) and the D7 dense Table (desktop-only,
+ * localStorage-persisted view). The sort control and the Table's column headers are two controls over
+ * one sortField/sortOrder; card select-mode and the Table's persistent checkbox column share one
+ * selection Set + batch bar. Actions (useDownloadActions) + live SSE (useDownloadProgress) are reused
+ * by both — no second EventSource, no second poll.
  */
 export function DownloadsBrowseV2() {
   const { filter: urlFilter, page: urlPage, pageSize: urlPageSize } = routeApi.useSearch();
@@ -59,7 +83,11 @@ export function DownloadsBrowseV2() {
   const [sortField, setSortField] = useState<SortField>('added_on');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
 
-  // Select mode (AC5)
+  const [view, setView] = useDownloadsView();
+  const isDesktop = useIsDesktop();
+  const showTable = view === 'table' && isDesktop;
+
+  // Select mode (list only; the Table has a persistent checkbox column)
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
@@ -110,13 +138,22 @@ export function DownloadsBrowseV2() {
       replace: true,
     });
 
+  // Shared sort — the List sort control and the Table column headers both call this.
+  const handleSort = (field: SortField) => {
+    if (field === sortField) setSortOrder((o) => (o === 'desc' ? 'asc' : 'desc'));
+    else {
+      setSortField(field);
+      setSortOrder('desc');
+    }
+  };
+
   // --- actions (AC3) ---
   const onPause = (hash: string) => actions.pause.mutate([hash]);
   const onResume = (hash: string) => actions.resume.mutate([hash]);
   const onRemove = (hash: string, deleteFiles: boolean) =>
     actions.remove.mutate({ hashes: [hash], deleteFiles });
 
-  // --- selection + batch (AC5) ---
+  // --- selection + batch (AC5; shared by list select-mode + table persistent checkboxes) ---
   const toggleSelect = (hash: string, next: boolean) =>
     setSelected((prev) => {
       const s = new Set(prev);
@@ -126,7 +163,7 @@ export function DownloadsBrowseV2() {
     });
   const selectAll = () => setSelected(new Set(items.map((d) => d.hash)));
   const clearSelection = () => setSelected(new Set());
-  const exitSelectMode = () => {
+  const exitSelection = () => {
     setSelectMode(false);
     clearSelection();
   };
@@ -138,6 +175,8 @@ export function DownloadsBrowseV2() {
     clearSelection();
   };
 
+  // Table checkboxes are persistent → the batch bar follows the selection; List follows select-mode.
+  const showBatchBar = showTable ? selected.size > 0 : selectMode;
   const showQbtError = Boolean(error) || (configResolved && !isConfigured);
 
   return (
@@ -181,7 +220,7 @@ export function DownloadsBrowseV2() {
           })}
         </div>
 
-        {/* right-aligned list toolbar: sort + select toggle */}
+        {/* right-aligned list toolbar: sort + List|Table toggle + select toggle */}
         <div className="ml-auto flex items-center gap-2">
           <label className="flex items-center gap-1.5 text-sm text-[var(--text-secondary)]">
             <span className="sr-only sm:not-sr-only">排序</span>
@@ -206,19 +245,57 @@ export function DownloadsBrowseV2() {
           >
             {sortOrder === 'desc' ? '↓' : '↑'}
           </Button>
-          <Button
-            size="sm"
-            variant={selectMode ? 'secondary' : 'outline'}
-            aria-pressed={selectMode}
-            onClick={() => (selectMode ? exitSelectMode() : setSelectMode(true))}
+
+          {/* List | Table view toggle — desktop only (AC1) */}
+          <div
+            className="hidden items-center overflow-hidden rounded-[var(--radius-md)] border border-[var(--border-subtle)] lg:flex"
+            role="group"
+            aria-label="檢視方式"
           >
-            選取
-          </Button>
+            <button
+              type="button"
+              aria-pressed={view === 'list'}
+              onClick={() => setView('list')}
+              className={cn(
+                'px-3 py-1 text-sm',
+                view === 'list'
+                  ? 'bg-[var(--accent-tint)] text-[var(--accent-text)]'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+              )}
+            >
+              清單
+            </button>
+            <button
+              type="button"
+              aria-pressed={view === 'table'}
+              onClick={() => setView('table')}
+              className={cn(
+                'px-3 py-1 text-sm',
+                view === 'table'
+                  ? 'bg-[var(--accent-tint)] text-[var(--accent-text)]'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+              )}
+            >
+              表格
+            </button>
+          </div>
+
+          {/* select-mode toggle — List view only (Table has a persistent checkbox column) */}
+          {!showTable && (
+            <Button
+              size="sm"
+              variant={selectMode ? 'secondary' : 'outline'}
+              aria-pressed={selectMode}
+              onClick={() => (selectMode ? exitSelection() : setSelectMode(true))}
+            >
+              選取
+            </Button>
+          )}
         </div>
       </div>
 
       {/* batch action bar (AC5) */}
-      {selectMode && (
+      {showBatchBar && (
         <div
           data-testid="downloads-batch-bar"
           className="flex flex-wrap items-center gap-2 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-3"
@@ -262,7 +339,7 @@ export function DownloadsBrowseV2() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
-          <Button size="sm" variant="ghost" className="ml-auto" onClick={exitSelectMode}>
+          <Button size="sm" variant="ghost" className="ml-auto" onClick={exitSelection}>
             取消
           </Button>
         </div>
@@ -272,23 +349,43 @@ export function DownloadsBrowseV2() {
         {showQbtError ? (
           <DownloadsQbtErrorV2 onRetry={() => void refetch()} message={error?.message} />
         ) : !data || isLoading ? (
-          <DownloadsSkeletonV2 />
+          showTable ? (
+            <DownloadsTableSkeletonV2 />
+          ) : (
+            <DownloadsSkeletonV2 />
+          )
         ) : items.length === 0 ? (
           <DownloadsEmptyV2 filter={activeFilter} />
         ) : (
           <div className="flex flex-col gap-3">
-            {items.map((d) => (
-              <DownloadCardV2
-                key={d.hash}
-                download={d}
-                selectable={selectMode}
-                selected={selected.has(d.hash)}
+            {showTable ? (
+              <DownloadsTableV2
+                items={items}
+                sortField={sortField}
+                sortOrder={sortOrder}
+                onSort={handleSort}
+                selected={selected}
                 onSelectChange={toggleSelect}
+                onSelectAll={selectAll}
+                onClearAll={clearSelection}
                 onPause={onPause}
                 onResume={onResume}
                 onRemove={onRemove}
               />
-            ))}
+            ) : (
+              items.map((d) => (
+                <DownloadCardV2
+                  key={d.hash}
+                  download={d}
+                  selectable={selectMode}
+                  selected={selected.has(d.hash)}
+                  onSelectChange={toggleSelect}
+                  onPause={onPause}
+                  onResume={onResume}
+                  onRemove={onRemove}
+                />
+              ))
+            )}
             {data.totalPages > 1 && (
               <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                 <label className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">

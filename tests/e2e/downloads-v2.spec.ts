@@ -279,4 +279,54 @@ test.describe('Downloads v2 actions + batch @downloads @ui @ux3-4-3', () => {
 
     await expect.poll(() => pauseHits.length).toBe(list.length);
   });
+
+  test('[P2] Table view: 表格 toggle → dense sortable table + column sort + row action (ux3-4-4)', async ({
+    page,
+  }) => {
+    await enableV2Shell(page);
+    await stubQbtConfig(page, true);
+
+    const listRequests: string[] = [];
+    const pauseHits: string[] = [];
+    const list = [presetDownloads.downloading, presetDownloads.seeding];
+    await page.route(`${ROUTE_API}/downloads*`, (route) => {
+      listRequests.push(route.request().url());
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(paginated(list)),
+      });
+    });
+    await stubCounts(page, list.length);
+    await page.route(/\/api\/v1\/downloads\/[^/]+\/pause$/, (route) => {
+      pauseHits.push(route.request().url());
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, data: null }),
+      });
+    });
+
+    await page.goto('/downloads');
+    const browse = page.getByTestId('downloads-browse-v2');
+    await expect(browse).toBeVisible({ timeout: 15000 });
+
+    // switch to the desktop Table view (the toggle is lg-only; the E2E viewport is 1280px)
+    await browse.getByRole('button', { name: '表格' }).click();
+    const table = page.getByTestId('downloads-table-v2');
+    await expect(table).toBeVisible();
+    await expect(page.locator('[data-testid^="downloads-table-row-"]')).toHaveCount(list.length);
+
+    // click a sortable column header → useDownloads refetches with the new sort
+    await page.getByTestId('downloads-sort-progress').click();
+    await expect.poll(() => listRequests.some((u) => u.includes('sort=progress'))).toBe(true);
+
+    // a row action still works in Table view (shared DownloadRowActions)
+    await page
+      .locator('[data-testid^="downloads-table-row-"]')
+      .first()
+      .getByRole('button', { name: /暫停/ })
+      .click();
+    await expect.poll(() => pauseHits.length).toBeGreaterThan(0);
+  });
 });
