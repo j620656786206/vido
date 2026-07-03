@@ -1,6 +1,6 @@
 # Story ux3-4-3 — Downloads v2 frontend (deep page: card actions + live SSE)
 
-Status: review
+Status: done
 
 **Epic:** ux3-downloads-v2 (UX Redesign Phase 3, Epic 4) · **Type:** frontend · **FRs:** PH3-M3 (Epic 14 v2)
 **Design:** ux3-4-1 (`.pen` `flow-d-downloads-v2`) · **Owner:** dev (`dev-story`) → tea (visual + E2E)
