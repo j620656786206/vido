@@ -256,6 +256,42 @@ func TestClient_GetQueue_NormalizesSeriesRecords(t *testing.T) {
 	}, items[0])
 }
 
+func TestClient_GetQueue_Paginates(t *testing.T) {
+	// 13-4b CR L1 — radarr-test parity: the pagination loop is live logic.
+	pagesServed := 0
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/v3/queue", func(w http.ResponseWriter, r *http.Request) {
+		pagesServed++
+		page := r.URL.Query().Get("page")
+		w.Header().Set("Content-Type", "application/json")
+		if page == "" || page == "1" {
+			fmt.Fprint(w, `{"page": 1, "pageSize": 100, "totalRecords": 101, "records": [`+repeatQueueRecord(100)+`]}`)
+			return
+		}
+		fmt.Fprint(w, `{"page": 2, "pageSize": 100, "totalRecords": 101, "records": [{"seriesId": 999, "title": "Last", "status": "queued", "size": 1, "sizeleft": 1, "downloadId": "LAST"}]}`)
+	})
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	client := NewClient(testConfig(server.URL), staticResolver(0, nil))
+	items, err := client.GetQueue(context.Background())
+
+	require.NoError(t, err)
+	assert.Len(t, items, 101)
+	assert.Equal(t, 2, pagesServed)
+	assert.Equal(t, int64(999), items[100].ExternalID)
+}
+
+// repeatQueueRecord builds n identical queue-record JSON objects.
+func repeatQueueRecord(n int) string {
+	rec := `{"seriesId": 7, "title": "Bulk", "status": "downloading", "size": 10, "sizeleft": 5, "downloadId": "BULK"}`
+	out := rec
+	for i := 1; i < n; i++ {
+		out += "," + rec
+	}
+	return out
+}
+
 func TestClient_GetQualityProfilesAndRootFolders(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/v3/qualityprofile", requireAPIKey(t, func(w http.ResponseWriter, r *http.Request) {

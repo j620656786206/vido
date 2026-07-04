@@ -54,6 +54,7 @@ func (h *DVRSettingsHandler) RegisterRoutes(rg *gin.RouterGroup) {
 // @Success 200 {object} APIResponse{data=services.DVRConfigStatus}
 // @Failure 500 {object} APIResponse "INTERNAL_ERROR"
 // @Router /api/v1/settings/radarr [get]
+// @Router /api/v1/settings/sonarr [get]
 func (h *DVRSettingsHandler) getConfig(c *gin.Context, plugin string) {
 	status, err := h.service.GetConfig(c.Request.Context(), plugin)
 	if err != nil {
@@ -73,6 +74,7 @@ func (h *DVRSettingsHandler) getConfig(c *gin.Context, plugin string) {
 // @Failure 400 {object} APIResponse "VALIDATION_INVALID_FORMAT | DVR_NOT_CONFIGURED"
 // @Failure 409 {object} APIResponse "DVR_TEST_FAILED — connection test failed, config not saved"
 // @Router /api/v1/settings/radarr [put]
+// @Router /api/v1/settings/sonarr [put]
 func (h *DVRSettingsHandler) saveConfig(c *gin.Context, plugin string) {
 	var input services.DVRConfigInput
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -106,6 +108,7 @@ type dvrTestRequest struct {
 // @Success 200 {object} APIResponse
 // @Failure 400 {object} APIResponse "DVR_CONNECTION_FAILED | DVR_AUTH_FAILED | DVR_TIMEOUT | DVR_NOT_CONFIGURED"
 // @Router /api/v1/settings/radarr/test [post]
+// @Router /api/v1/settings/sonarr/test [post]
 func (h *DVRSettingsHandler) testConnection(c *gin.Context, plugin string) {
 	var input *services.DVRConfigInput
 	var req dvrTestRequest
@@ -127,6 +130,7 @@ func (h *DVRSettingsHandler) testConnection(c *gin.Context, plugin string) {
 // @Success 200 {object} APIResponse{data=object}
 // @Failure 400 {object} APIResponse "DVR_NOT_CONFIGURED | DVR_CONNECTION_FAILED"
 // @Router /api/v1/settings/radarr/quality-profiles [get]
+// @Router /api/v1/settings/sonarr/quality-profiles [get]
 func (h *DVRSettingsHandler) getQualityProfiles(c *gin.Context, plugin string) {
 	profiles, err := h.service.GetQualityProfiles(c.Request.Context(), plugin)
 	if err != nil {
@@ -146,6 +150,7 @@ func (h *DVRSettingsHandler) getQualityProfiles(c *gin.Context, plugin string) {
 // @Success 200 {object} APIResponse{data=object}
 // @Failure 400 {object} APIResponse "DVR_NOT_CONFIGURED | DVR_CONNECTION_FAILED"
 // @Router /api/v1/settings/radarr/root-folders [get]
+// @Router /api/v1/settings/sonarr/root-folders [get]
 func (h *DVRSettingsHandler) getRootFolders(c *gin.Context, plugin string) {
 	folders, err := h.service.GetRootFolders(c.Request.Context(), plugin)
 	if err != nil {

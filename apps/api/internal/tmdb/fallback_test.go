@@ -34,6 +34,11 @@ type MockClient struct {
 	WatchProvidersResponse *WatchProvidersResponse
 	WatchProvidersError    error
 	WatchProvidersCalled   int
+
+	// Story 13-4b — TV external ids (language-neutral).
+	TVExternalIDsResponse *TVExternalIDs
+	TVExternalIDsError    error
+	TVExternalIDsCalled   int
 }
 
 func (m *MockClient) SearchMovies(ctx context.Context, query string, page int) (*SearchResultMovies, error) {
@@ -109,6 +114,13 @@ func (m *MockClient) GetTVShowVideos(ctx context.Context, tvID int) (*VideosResp
 }
 
 func (m *MockClient) GetTVExternalIDs(ctx context.Context, tvID int) (*TVExternalIDs, error) {
+	m.TVExternalIDsCalled++
+	if m.TVExternalIDsError != nil {
+		return nil, m.TVExternalIDsError
+	}
+	if m.TVExternalIDsResponse != nil {
+		return m.TVExternalIDsResponse, nil
+	}
 	return &TVExternalIDs{ID: int64(tvID)}, nil
 }
 

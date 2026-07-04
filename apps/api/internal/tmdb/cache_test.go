@@ -1533,3 +1533,57 @@ func TestCacheService_DiscoverFacetCounts_CapsExcessCandidates(t *testing.T) {
 	assert.Len(t, res.Counts[DimGenre], maxFacetProbes, "fan-out capped at maxFacetProbes")
 	assert.Equal(t, maxFacetProbes, fb.DiscoverMoviesCalled, "no more than maxFacetProbes upstream probes")
 }
+
+// --- Story 13-4b TV external-ids cache tests (13-4b CR M1) ---
+
+func TestCacheService_GetTVExternalIDs_CacheMissThenHit_DefaultTTL(t *testing.T) {
+	repo := NewMockCacheRepository()
+	rawClient := &MockClient{
+		TVExternalIDsResponse: &TVExternalIDs{ID: 1399, IMDbID: "tt0944947", TVDbID: 121361},
+	}
+	svc := NewCacheService(&MockFallbackClient{}, repo, CacheServiceConfig{TTL: DefaultCacheTTL})
+	svc.SetProvidersClient(rawClient)
+
+	// Miss → fetch from the raw client + store under the id-keyed key at 24h TTL.
+	r1, err := svc.GetTVExternalIDs(context.Background(), 1399)
+	require.NoError(t, err)
+	assert.Equal(t, int64(121361), r1.TVDbID)
+	assert.Equal(t, 1, rawClient.TVExternalIDsCalled)
+	assert.Equal(t, DefaultCacheTTL, repo.lastSetTTL, "external ids must cache at the default 24h TTL (Rule 27 ②)")
+
+	cached, _ := repo.Get(context.Background(), "tmdb:tv/1399/external_ids")
+	require.NotNil(t, cached, "expected entry under tmdb:tv/1399/external_ids")
+
+	// Hit → no second upstream call.
+	r2, err := svc.GetTVExternalIDs(context.Background(), 1399)
+	require.NoError(t, err)
+	assert.Equal(t, int64(121361), r2.TVDbID)
+	assert.Equal(t, 1, rawClient.TVExternalIDsCalled, "cache hit must not call upstream again")
+}
+
+func TestCacheService_GetTVExternalIDs_IDInKey(t *testing.T) {
+	repo := NewMockCacheRepository()
+	rawClient := &MockClient{}
+	svc := NewCacheService(&MockFallbackClient{}, repo, CacheServiceConfig{})
+	svc.SetProvidersClient(rawClient)
+
+	_, err := svc.GetTVExternalIDs(context.Background(), 1399)
+	require.NoError(t, err)
+	_, err = svc.GetTVExternalIDs(context.Background(), 1396)
+	require.NoError(t, err)
+
+	// Distinct ids → distinct cache entries → two upstream calls.
+	assert.Equal(t, 2, rawClient.TVExternalIDsCalled)
+	a, _ := repo.Get(context.Background(), "tmdb:tv/1399/external_ids")
+	b, _ := repo.Get(context.Background(), "tmdb:tv/1396/external_ids")
+	require.NotNil(t, a)
+	require.NotNil(t, b)
+}
+
+func TestCacheService_GetTVExternalIDs_NilClient(t *testing.T) {
+	repo := NewMockCacheRepository()
+	svc := NewCacheService(&MockFallbackClient{}, repo, CacheServiceConfig{})
+	// SetProvidersClient deliberately NOT called.
+	_, err := svc.GetTVExternalIDs(context.Background(), 1399)
+	require.Error(t, err, "must error (not panic) when the providers client is unset")
+}

@@ -1,6 +1,6 @@
 # Story 13.4b: *arr DVR Plugin — Sonarr + Series Fulfilment
 
-Status: review
+Status: done
 
 **Epic:** Epic 13 — Request System · **FR:** P3-004 (G-4) · **Artery #2 (part 2)** · **BACKEND-ONLY**
 **Depends on: 13-4a merged** (plugin infra, `DVRPlugin`, manager, settings handler, fulfilment service) **and 13-1a** (transitively).
@@ -81,6 +81,23 @@ No new deps. Sonarr facts web-verified 2026-07-04: tvdbId required (Sonarr#7565)
 - [Source: https://github.com/Sonarr/Sonarr/issues/7565 (tvdbId required) + https://github.com/Sonarr/Sonarr/wiki/Series-Lookup (tvdb: term)]
 - [Source: project-context.md#§7 + Rule-7/20/27]
 
+## Senior Developer Review (AI)
+
+**Date:** 2026-07-04 · **Outcome:** Approve (all findings fixed in-session) · **Reviewer:** Amelia CR pass (Fable 5; ⚠️ same-context as DEV — compensated with live-boot probing + per-AC evidence checks, per 13-4a/bugfix-10-5 precedent)
+
+**Mandatory checks:** 🔒 Rule 7 Wire Format: PASS (10 codes — 8×DVR_* + 2×PLUGIN_*, all registered; DVR_TVDB_NOT_FOUND in the code list) · 🔒 Rule 20 Contract Bump: N/A (0 bump tokens outside mega-line history; fresh v1 stamps only) · 🔒 Rule 25 Mega-line: N/A (clean single-author prepend; base-entry survival dropped=0) · Git vs File List: 0 discrepancies (20/20).
+
+**Live verification:** booted from a scratch cwd (DB safely in scratchpad — 13-4a probe-pollution lesson applied): all 5 sonarr routes live with zh-TW DVR_NOT_CONFIGURED envelopes, PUT unreachable-Sonarr → 409, radarr routes regression intact, `/health/services/sonarr/history` 200, no gin panic.
+
+### Action Items
+
+- [x] [M1] `CacheService.GetTVExternalIDs` shipped with zero cache-layer coverage while its mirrored precedent (GetWatchProviders) has 3 dedicated tests — added `TestCacheService_GetTVExternalIDs_{CacheMissThenHit_DefaultTTL,IDInKey,NilClient}` + MockClient TVExternalIDs control fields. [tmdb/cache_test.go, tmdb/fallback_test.go]
+- [x] [L1] sonarr `GetQueue` pagination loop untested (radarr parity gap) — added `TestClient_GetQueue_Paginates` (101 records / 2 pages). [sonarr/client_test.go]
+- [x] [L2] Swagger `@Router` annotations only documented `/settings/radarr` — added sonarr `@Router` lines on all 5 endpoints (multi-@Router swaggo form; annotations-only repo). [handlers/dvr_settings_handler.go]
+- [x] [L3] radarr/sonarr doRequest/mapTransportError/truncate mirror-duplication — reviewed and KEPT per ADR Decision 3 (shared base only at the third client); no code change.
+
+**Post-fix gates:** tmdb/plugins/handlers/services targeted suites `-count=1` green · `pnpm lint:all` 0 errors · prettier + gofmt clean.
+
 ## Change Log
 
 | Date       | Change                                                                                                                                                     |
@@ -92,6 +109,7 @@ No new deps. Sonarr facts web-verified 2026-07-04: tvdbId required (Sonarr#7565)
 | 2026-07-04 | Task 4 (AC #4): FulfilmentService generalized — one shared `fulfil(pluginName, displayName, add)` gate→add→transition flow via method expressions (DVRPlugin.AddMovie/AddSeries); tv→sonarr replaces the 13-4a placeholder; `failTerminally` writes status='failed' + zh-TW reason with source/external NULL for DVR_TVDB_NOT_FOUND (the ONE terminal error). Movie flow byte-for-byte semantics preserved (all 13-4a movie tests green untouched). 5 new tv-branch tests + 1 request-service tv-path test. |
 | 2026-07-04 | Task 5 (AC #5): Rule 7 code-list +DVR_TVDB_NOT_FOUND (existing DVR_ prefix, count stays 15, no CR-workflow change) + mega-line 13-4b entry prepended (13-4a demoted to Prior; all underscore tokens backticked — prettier clean first try; Rule 25 verification: 3 entries survive). |
 | 2026-07-04 | Task 6 (AC #6): gates GREEN — `pnpm nx test api` PASS (uncached; known tracked scanner-SSE flake fired on 2 warm-up runs, 0 failures on the recorded run), `pnpm nx test web` 2322/2322, `pnpm lint:all` 0 errors, prettier clean, gofmt clean on touched files, test:cleanup no orphans. Rule 15 self-check PASS (manager registration + handler param + resolver closure in main.go DI; zero migrations; no new routes beyond parameterization). Status → review. |
+| 2026-07-04 | CR (same-session, live-boot probe from scratch cwd): 0H/1M/3L, all fixed in-session — M1 three cache-layer tests for GetTVExternalIDs (+MockClient controls); L1 sonarr queue pagination test; L2 sonarr @Router annotation lines ×5; L3 mirror-duplication reviewed+KEPT (ADR Decision 3). Rule 7 PASS (10 codes) / Rule 20 N/A / Rule 25 N/A. Live: 5 sonarr routes + 409 guard + radarr regression verified on a booted server (DB in scratchpad). Post-fix gates green. Status review → done. |
 
 ## Dev Agent Record
 
@@ -127,7 +145,8 @@ Everything structural rides 13-4a; this story = one TMDb wrapper + one client + 
 - apps/api/internal/tmdb/tv_test.go (modified — 3 external-ids cases)
 - apps/api/internal/tmdb/client.go (modified — ClientInterface method)
 - apps/api/internal/tmdb/cache.go (modified — CacheServiceInterface + CacheService.GetTVExternalIDs)
-- apps/api/internal/tmdb/fallback_test.go (modified — MockClient stub)
+- apps/api/internal/tmdb/fallback_test.go (modified — MockClient stub + TVExternalIDs control fields, CR M1)
+- apps/api/internal/tmdb/cache_test.go (modified — 3 GetTVExternalIDs cache-layer tests, CR M1)
 - apps/api/internal/services/tmdb_service.go (modified — interface + service method)
 - apps/api/internal/services/tmdb_service_test.go (modified — MockCacheService stub)
 - apps/api/internal/services/explore_block_service_test.go (modified — mock stub)
@@ -140,5 +159,6 @@ Everything structural rides 13-4a; this story = one TMDb wrapper + one client + 
 - apps/api/internal/services/dvr_settings_service_test.go (modified — fakeDVRPlugin AddSeries controls + sonarr parameterization test)
 - apps/api/internal/services/request_service_test.go (modified — tv-path fulfilment test)
 - apps/api/cmd/api/main.go (modified — sonarr registration w/ resolver closure + handler param)
+- apps/api/internal/handlers/dvr_settings_handler.go (modified — sonarr @Router annotation lines, CR L2)
 - project-context.md (modified — Rule 7 code list + mega-line 13-4b entry)
 - _bmad-output/implementation-artifacts/sprint-status.yaml (modified — status tracking)
