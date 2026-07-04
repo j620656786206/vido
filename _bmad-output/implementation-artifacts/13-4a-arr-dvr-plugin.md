@@ -1,6 +1,6 @@
 # Story 13.4a: *arr DVR Plugin — Infra + Radarr + Movie Fulfilment
 
-Status: ready-for-dev
+Status: done
 
 **Epic:** Epic 13 — Request System · **FR:** P3-004 (G-4) · **Artery #2 (part 1)** · **BACKEND-ONLY**
 **Depends on: 13-1a merged** (requests table + RequestService must exist — this story extends them).
@@ -72,14 +72,14 @@ so that a request actually gets fulfilled — the realistic path that makes Vido
 
 ## Tasks / Subtasks
 
-- [ ] Task 1 (AC #1, #7): `internal/plugins/` — `plugin.go` (DVRPlugin/PluginConfig/QueueItem/AddOptions), `errors.go` (PluginError + DVR_*/PLUGIN_* codes).
-- [ ] Task 2 (AC #2): `internal/plugins/radarr/client.go(+_test)` — reused http.Client + X-Api-Key + limiter (`tmdb/client.go:124-144` construction) + buildURL(`/api/v3`) + TestConnection/AddMovie/GetQueue/GetQualityProfiles/GetRootFolders.
-- [ ] Task 3 (AC #5): `internal/plugins/manager.go(+_test)` — registration, settings+secrets config load, fingerprint-cached clients, health state, 60s scheduler (`retry/scheduler.go` lifecycle), `connection_history` writes (+ `ValidServiceNames`/constants extension).
-- [ ] Task 4 (AC #3, #4): `services/dvr_settings_service.go(+_test)` + `handlers/dvr_settings_handler.go(+_test)` — GET/PUT/test + profiles/root-folders routes for `radarr` (parameterize by plugin name — 13-4b adds `sonarr` with zero handler duplication); PUT test-before-save guard; api_key → secretsService.
-- [ ] Task 5 (AC #6): `services/fulfilment_service.go(+_test)` + extend `services/request_service.go` (optional nil-safe dep; movie branch only) — status/external_id/fulfilment_source transition + graceful pending+error_message.
-- [ ] Task 6 (AC #7): Rule 7 sync — project-context.md (codes + prefix list + mega-line, Rule 25 discipline on conflict) + CR instructions.xml Step 3.
-- [ ] Task 7 (AC #5, #9): main.go — DI (manager, services, handler), `dvrSettingsHandler.RegisterRoutes(apiV1)`, scheduler start (goroutine zone ~:637-668) + stop (shutdown block ~:690-716).
-- [ ] Task 8 (AC #9): full gates — `pnpm nx test api`, `pnpm lint:all`, Rule 15 self-check.
+- [x] Task 1 (AC #1, #7): `internal/plugins/` — `plugin.go` (DVRPlugin/PluginConfig/QueueItem/AddOptions), `errors.go` (PluginError + DVR_*/PLUGIN_* codes).
+- [x] Task 2 (AC #2): `internal/plugins/radarr/client.go(+_test)` — reused http.Client + X-Api-Key + limiter (`tmdb/client.go:124-144` construction) + buildURL(`/api/v3`) + TestConnection/AddMovie/GetQueue/GetQualityProfiles/GetRootFolders.
+- [x] Task 3 (AC #5): `internal/plugins/manager.go(+_test)` — registration, settings+secrets config load, fingerprint-cached clients, health state, 60s scheduler (`retry/scheduler.go` lifecycle), `connection_history` writes (+ `ValidServiceNames`/constants extension).
+- [x] Task 4 (AC #3, #4): `services/dvr_settings_service.go(+_test)` + `handlers/dvr_settings_handler.go(+_test)` — GET/PUT/test + profiles/root-folders routes for `radarr` (parameterize by plugin name — 13-4b adds `sonarr` with zero handler duplication); PUT test-before-save guard; api_key → secretsService.
+- [x] Task 5 (AC #6): `services/fulfilment_service.go(+_test)` + extend `services/request_service.go` (optional nil-safe dep; movie branch only) — status/external_id/fulfilment_source transition + graceful pending+error_message.
+- [x] Task 6 (AC #7): Rule 7 sync — project-context.md (codes + prefix list + mega-line, Rule 25 discipline on conflict) + CR instructions.xml Step 3.
+- [x] Task 7 (AC #5, #9): main.go — DI (manager, services, handler), `dvrSettingsHandler.RegisterRoutes(apiV1)`, scheduler start (goroutine zone ~:637-668) + stop (shutdown block ~:690-716).
+- [x] Task 8 (AC #9): full gates — `pnpm nx test api`, `pnpm lint:all`, Rule 15 self-check.
 
 ## Dev Notes
 
@@ -130,25 +130,96 @@ New package deps: NONE (x/time, x/sync, testify, gin all present). Radarr API ve
 - [Source: apps/api/internal/qbittorrent/client.go + services/qbittorrent_service.go (precedent chain)]
 - [Source: https://github.com/Sonarr/Sonarr/wiki/Series-Lookup + https://arrapi.kometa.wiki/en/latest/radarr.html (API verification)]
 
+## Senior Developer Review (AI)
+
+**Date:** 2026-07-04 · **Outcome:** Approve (all findings fixed in-session) · **Reviewer:** Amelia CR pass (Fable 5; ⚠️ same-context as DEV — compensated with extra-adversarial scrutiny incl. live-boot probing, per bugfix-10-5 precedent)
+
+**Mandatory checks:** 🔒 Rule 7 Wire Format: PASS (9 codes checked — 7×DVR_* + 2×PLUGIN_*, all registered prefixes) · 🔒 Rule 20 Contract Bump: N/A (no stamp bumps — the 2 diff tokens are mega-line history text) · 🔒 Rule 25 Mega-line: N/A (single-author clean prepend, no rebase; base-entry survival verified dropped=0) · Git vs File List: 0 discrepancies (26/26).
+
+**Live verification (beyond DEV static gates):** booted the API on a scratch port and probed all 5 new routes + regressions — no gin route panic (static `/settings/radarr*` coexists with `/settings/:key`), GET health block live, POST test → DVR_NOT_CONFIGURED, PUT unreachable-Radarr → 409, PUT disabled → 200 no-probe, qBT + param settings routes intact, `/health/services/radarr/history` 200. ⚠️ Probe wrote 5 test rows to the local dev DB (`apps/api/data/vido.db` — DB path is cwd-relative, not env-overridable); all deleted + verified zero residue.
+
+### Action Items
+
+- [x] [M1] 201 response carried stale `updated_at` after fulfilment transition — `RequestRepository.UpdateFulfilment` now returns the written timestamp; `FulfilmentService` syncs it onto the in-memory row (both success + annotation paths). Tests: repo `WithinDuration` assert + fulfilment `fixedFulfilmentTime` assert. [fulfilment_service.go / request_repository.go]
+- [x] [M2] `Manager.CheckHealth` silently discarded config-load errors (`config, _, _ :=`, Rule 13) and triple-loaded config — refactored to a single err-handled LoadConfig; decrypt/load failure now reports unhealthy + `PLUGIN_INIT_FAILED` (init fault, not connectivity). Test: `TestManager_CheckHealth_ConfigLoadFailureIsInitFault`. [plugins/manager.go]
+- [x] [M3] `respondError` mapped `PLUGIN_INIT_FAILED` (server-side fault) to 400 — `PLUGIN_*` codes now map to 500 with Error-level logging. Test: `TestDVRSettingsHandler_PluginInitFailureIs500`. [handlers/dvr_settings_handler.go]
+- [x] [L1] `GetQueue` silent 20-page truncation — slog.Warn when the cap trims below totalRecords. [radarr/client.go]
+- [x] [L2] Missing handler test for PUT-without-url 400 guard — `TestDVRSettingsHandler_SaveConfig_MissingURL` added (asserts service never called). [dvr_settings_handler_test.go]
+- [x] [L3] `truncate()` could split a UTF-8 rune in upstream error bodies — rune-safe now. [radarr/client.go]
+- [x] [L4] `pluginDisplayName` naive byte arithmetic — `strings.ToUpper(plugin[:1])`. [dvr_settings_handler.go]
+- [x] [L5] Documented-deviation acknowledgment: PUT disabled-save skips the test-before-save probe (disabling must not require a reachable server) — reviewed and KEPT; no code change.
+
+**Post-fix gates:** `pnpm nx test api` PASS (uncached — nx had replayed a cached failure of the known pre-existing scanner-SSE flake; `--skip-nx-cache` run green) · touched packages `-count=1` green · `pnpm lint:all` 0 errors (one interim ST1012 fixed by switching to `assert.AnError`) · prettier clean · gofmt clean.
+
 ## Change Log
 
 | Date       | Change                                                                                                                                                                                                 |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | 2026-07-04 | Story created (SM create-story, yolo). Size-split 13-4 → 13-4a (infra+Radarr+movie fulfilment) / 13-4b (Sonarr+series). Rulings: settings-table config (NO migration); self-contained health scheduler (no ServicesHealth extension); fulfilment-on-create synchronous, stranded-pending retry → 13-3a. [@contract-v1] on AC #1/#4/#6. Discovery ③: 13-6-arr-settings-ui filed. Status → ready-for-dev. |
+| 2026-07-04 | Task 1 (AC #1/#7): greenfield `internal/plugins/` — DVRPlugin/PluginConfig/QueueItem/AddOptions per [@contract-v1] AC #1 shape + PluginError with 7 DVR_* codes + 2 reserved PLUGIN_* codes. TDD: errors_test.go (Error/Unwrap/errors.As, code values, api_key json:"-" guard, compile-time DVRPlugin fake). |
+| 2026-07-04 | Task 2 (AC #2): `radarr.Client` implements DVRPlugin vs API v3 — X-Api-Key, reused 10s http.Client, 10rps/burst-10 limiter (Wait first line, Rule 27 ①), TestConnection(version-parse gate, 401→DVR_AUTH_FAILED), AddMovie(tmdbId/monitored/searchForMovie body; 400→DVR_ADD_FAILED w/ upstream msg), GetQueue (paginated, movieId→ExternalID/downloadId→DownloadID, maxQueuePages=20 guard), GetQualityProfiles/GetRootFolders extras, AddSeries→DVR_NOT_SUPPORTED, timeout→DVR_TIMEOUT. 16 httptest cases. |
+| 2026-07-04 | Task 3 (AC #5): `plugins.Manager` — Register/GetClient (fingerprint `URL\|APIKey` cache, download_service pattern), settings+secrets LoadConfig (SettingKey* helpers shared with Task 4 service — defined in plugins to keep Rule 19 direction), health state (healthy/unhealthy/unconfigured + nil LastCheckedAt pre-check), CheckHealth transitions → connection_history (connected/disconnected/recovered, monitor.go mapping; first live PLUGIN_INIT_FAILED/PLUGIN_HEALTH_CHECK_FAILED use), 60s scheduler w/ immediate startup sweep (retry/scheduler.go stopCh+WaitGroup lifecycle). models.ServiceNameRadarr/Sonarr + ValidServiceNames extended (ServicesHealth untouched per ruling). 10 manager tests + extended TestIsValidServiceName. |
+| 2026-07-04 | Task 4 (AC #3/#4): `DVRSettingsService` + `DVRSettingsHandler` — GET (sans key, has_api_key + live health block) / PUT (server-side test-before-save INSIDE SaveConfig → 409 DVR_TEST_FAILED refusal; disabled-save skips probe — turning a plugin off must not need a reachable server) / POST test (body-or-saved) / quality-profiles + root-folders passthrough via plugins.ProfileLister (types hoisted to plugins pkg so 13-4b sonarr = one string, zero duplication) + Manager.TestConfig (throwaway-client probe). Empty body api_key keeps stored key. 10 service tests + 10 handler tests. |
+| 2026-07-04 | Task 5 (AC #6): `FulfilmentService.FulfilRequest` ([@contract-v1] semantics) — movie branch: IsConfigured + health gate (lazy one-shot CheckHealth kills the boot-edge race) + config-derived AddOptions guard → synchronous AddMovie(SearchNow) → repo.UpdateFulfilment(searching/external_id/fulfilment_source='arr') with in-memory mutation so the 201 carries the transition; ALL failure paths stay pending + zh-TW error_message (未設定/連線失敗/新增失敗/設定不完整) + slog (Rule 13); tv → 'Sonarr 尚未支援（13-4b）'. RequestService.SetFulfilmentService optional nil-safe dep (13-1a constructor untouched). NEW repo method RequestRepository.UpdateFulfilment (AC #6-implied write path; real-DB tests incl. rows-affected→ErrRequestNotFound). models.RequestFulfilmentSource* constants added. 8 fulfilment + 2 request-service + 3 repo test cases. |
+| 2026-07-04 | Task 6 (AC #7): Rule 7 sync — project-context.md code block +7 DVR_* codes, authoritative prefix list 14→15 (`DVR_`), mega-line 13-4a entry prepended (13-1a demoted to Prior, tail kept once, prettier-verified — bare underscores in the entry initially made prettier non-idempotent/mangled emphasis; fixed by backticking every `_`-bearing token, Rule 25 verification caught it); code-review/instructions.xml Step 3 prefix list + sync date → 2026-07-04 (15 sources). Reconciles 13-1a's "15th at 13-4a merge" note. |
+| 2026-07-04 | Task 7 (AC #5/#9): main.go wiring — pluginManager DI (settings+secrets+connection-history repos, 60s default) + radarr factory registration + fulfilmentService → requestService.SetFulfilmentService + dvrSettingsService/Handler("radarr") + RegisterRoutes(apiV1) + scheduler start (own ctx/cancel in goroutine zone, non-fatal on error) + stop in graceful-shutdown block. Swagger: annotations-only per 13-1a precedent (no docs/ pipeline exists in apps/api). |
+| 2026-07-04 | Task 8 (AC #9): full gates GREEN — `pnpm nx test api` PASS (full suite), `pnpm nx test web` 2322/2322 PASS, `pnpm lint:all` 0 errors / 123 warnings (all in untouched FE files — story is backend-only), prettier clean, `test:cleanup` no orphans. Rule 15 self-check PASS (DI/routes/scheduler-lifecycle verified; no migrations; UpdateFulfilment uses existing 027 columns w/ real-DB round-trip test). Known pre-existing flake TestScannerService_SSEBroadcast_ScanCancelled recurred intermittently mid-dev (stash-verified on clean main; existing entry preexisting-fail-scanner-sse-scan-cancelled-flake covers it — no new entry per bugfix-10-1/10-5/10-6 precedent); green on the gate run. Status → review. |
+| 2026-07-04 | CR (same-session, extra-adversarial + live-boot probe): 0H/3M/5L, all fixed in-session — M1 UpdateFulfilment returns written updated_at + in-memory sync; M2 CheckHealth single err-handled LoadConfig (decrypt failure → PLUGIN_INIT_FAILED unhealthy); M3 PLUGIN_* → 500; L1 queue-cap slog.Warn; L2 PUT missing-url handler test; L3 rune-safe truncate; L4 ToUpper display name; L5 disabled-save deviation acknowledged. Live probe verified all 5 routes + qBT/param regressions + 409 guard on a booted server (dev-DB pollution cleaned, 5 rows). Rule 7 PASS / Rule 20 N/A / Rule 25 N/A. Post-fix gates green. Status review → done. |
 
 ## Dev Agent Record
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+claude-fable-5 (Fable 5)
+
+### Implementation Plan
+
+Copy-map-driven, TDD red-green per task: (1) greenfield `internal/plugins` contract types + typed errors → (2) Radarr v3 client vs httptest (qbittorrent/client_test.go structure) → (3) Manager (fingerprint cache = download_service pattern; scheduler = retry/scheduler.go lifecycle; transitions → connection_history = health/monitor.go mapping) → (4) settings service/handler split (qbittorrent_service/handler precedent + NEW server-side PUT guard) → (5) FulfilmentService over the manager + optional nil-safe RequestService dep + repo UpdateFulfilment → (6) Rule 7 doc/CR sync → (7) main.go DI/routes/lifecycle → (8) full gates. Key layering call: `SettingKey*` helpers + `QualityProfile`/`RootFolder`/`ProfileLister` live in `plugins` so services→plugins stays one-directional (Rule 19) and 13-4b sonarr reuses everything with one registration string.
 
 ### Debug Log References
 
+- Step-7 full-suite: TestScannerService_SSEBroadcast_ScanCancelled intermittent failure — reproduced 3/3 on clean main via `git stash -u` (pre-existing; tracked entry preexisting-fail-scanner-sse-scan-cancelled-flake); passed on the final `pnpm nx test api` gate run.
+- project-context.md mega-line: first insertion left bare `_` tokens (`DVR_`, code-name list) → prettier emphasis-pairing became non-idempotent and mangled text; reverted via `git checkout`, re-inserted with every underscore-bearing token backticked → `prettier --check` clean (Rule 25 verification caught it).
+
 ### Completion Notes List
+
+- 🔗 AC Drift: NONE (checked 'pending|searching|status|fulfil' across `_bmad-output/implementation-artifacts/13-1a-one-click-request.md` — 8 hits, all REUSE not DRIFT: 13-1a AC #9 capability-honor explicitly delegates fulfilment to 13-4; the request resource shape (AC #2/#3) is untouched; create response may now carry `status:"searching"` — a value inside the stamped 5-value enum, no bump)
+- 📎 Contract Stamps: FOUND (3 stamped ACs in this story — AC #1 DVRPlugin interface / AC #4 settings endpoints / AC #6 fulfilment semantics, all [@contract-v1] producer-side; upstream 13-1a AC #2/#3 [@contract-v1] consumed with the ack line in Dev Notes; versions reconcile, zero bumps, no stale-marks needed)
+- 🎭 A11y Pre-Flight: N/A (100% backend — no apps/web/ files touched)
+- 🎨 UX Verification: SKIPPED — no UI changes in this story (backend-only; FE settings UI = 13-6 backlog)
+- Rule 27 posture (AC #8): ① 10 req/s burst-10 limiter, `Wait(ctx)` first line ✓ · ② cache N/A-justified (Radarr is LAN-local; every call is a command or live-state read — queue freshness is the point) ✓ · ③ degrade: health gate + EVERY fulfilment failure stays pending w/ zh-TW reason, POST always 201 ✓ · ④ `DVR_*` new prefix + first live `PLUGIN_*` use ✓ · ⑤ api_key via secretsService (AES-256-GCM), `json:"-"` guard, key never in any GET response or log ✓
+- Documented deviations (all within AC spirit): (a) PUT test-before-save probe runs only when `enabled=true` — disabling a plugin must not require a reachable server; (b) `QualityProfile`/`RootFolder` + optional `ProfileLister` interface hoisted to the `plugins` package (NOT on the stamped `DVRPlugin` — AC #1 shape stays exact) so 13-4b sonarr reuses the passthrough with zero duplication; (c) NEW repo method `RequestRepository.UpdateFulfilment` — the AC #6 row-write has no Rule-4-compliant path without it (scoped: existing 027 columns only, zero migrations); (d) FulfilmentService runs one lazy `CheckHealth` when a request arrives before the scheduler's first sweep (kills the boot-edge spurious-annotation race); (e) empty PUT/test body `api_key` falls back to the stored key (GET never echoes the key, so the UI cannot round-trip it).
+- Pre-existing failure handling (Epic 9c retro AI-2): TestScannerService_SSEBroadcast_ScanCancelled — option 2 already satisfied by existing backlog entry `preexisting-fail-scanner-sse-scan-cancelled-flake` (filed 2026-05-04); no new entry per bugfix-10-1/10-5/10-6 precedent.
 
 ### Discovery Triage
 
 - **Authoring-time (SM, 2026-07-04):** ③ `13-6-arr-settings-ui` — FE settings UI for *arr config is in NO epic story (BE endpoints are curl-usable; UI needed for non-technical config; likely needs a small flow-c design addendum). Filed in sprint-status.yaml with bidirectional link. Also: stranded-pending fulfilment retry absorbed into the 13-3 seed scope (sprint-status comment updated — ①-style into a planned story, not a new entry).
-- **Dev additions:** if this story discovers more out-of-scope work, classify per Rule 24 (①/②/③) with tracked entry IDs; prose-only mentions are banned.
+- **Dev additions (2026-07-04):** ZERO new out-of-scope discoveries during implementation. The authoring-time ③ (13-6-arr-settings-ui) and the stranded-pending-retry absorption into the 13-3 seed remain the only triaged items. The pre-existing scanner-SSE flake resurfaced but its tracked entry (`preexisting-fail-scanner-sse-scan-cancelled-flake`) predates this story — no new lane needed.
 
 ### File List
+
+- apps/api/internal/plugins/plugin.go (new)
+- apps/api/internal/plugins/errors.go (new)
+- apps/api/internal/plugins/errors_test.go (new)
+- apps/api/internal/plugins/radarr/client.go (new)
+- apps/api/internal/plugins/radarr/client_test.go (new)
+- apps/api/internal/plugins/manager.go (new)
+- apps/api/internal/plugins/manager_test.go (new)
+- apps/api/internal/models/degradation.go (modified — ServiceNameRadarr/Sonarr constants)
+- apps/api/internal/services/connection_history_service.go (modified — ValidServiceNames + radarr/sonarr)
+- apps/api/internal/services/connection_history_service_test.go (modified — validity cases)
+- apps/api/internal/services/dvr_settings_service.go (new)
+- apps/api/internal/services/dvr_settings_service_test.go (new)
+- apps/api/internal/handlers/dvr_settings_handler.go (new)
+- apps/api/internal/handlers/dvr_settings_handler_test.go (new)
+- apps/api/internal/services/fulfilment_service.go (new)
+- apps/api/internal/services/fulfilment_service_test.go (new)
+- apps/api/internal/services/request_service.go (modified — optional nil-safe fulfilment dep)
+- apps/api/internal/services/request_service_test.go (modified — fulfilment wiring + nil-safe tests, mock UpdateFulfilment)
+- apps/api/internal/repository/request_repository.go (modified — UpdateFulfilment)
+- apps/api/internal/repository/request_repository_test.go (modified — UpdateFulfilment real-DB tests)
+- apps/api/internal/models/request.go (modified — RequestFulfilmentSource* constants)
+- apps/api/cmd/api/main.go (modified — plugin manager DI, radarr registration, fulfilment/settings services + handler, routes, scheduler start/stop)
+- project-context.md (modified — Rule 7 DVR_* codes + prefix list 14→15 + mega-line 13-4a entry)
+- _bmad/bmm/workflows/4-implementation/code-review/instructions.xml (modified — Step 3 prefix list + sync date 2026-07-04)
+- _bmad-output/implementation-artifacts/sprint-status.yaml (modified — 13-4a status tracking)

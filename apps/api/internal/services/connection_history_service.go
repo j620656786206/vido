@@ -43,6 +43,8 @@ func ValidServiceNames() map[string]bool {
 		string(models.ServiceNameWikipedia):   true,
 		string(models.ServiceNameAI):          true,
 		string(models.ServiceNameQBittorrent): true,
+		string(models.ServiceNameRadarr):      true,
+		string(models.ServiceNameSonarr):      true,
 	}
 }
 

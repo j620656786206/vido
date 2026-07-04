@@ -26,6 +26,14 @@ type RequestRepositoryInterface interface {
 	Create(ctx context.Context, request *models.Request) error
 	List(ctx context.Context) ([]models.Request, error)
 	FindActiveByTMDbID(ctx context.Context, tmdbID int64, mediaType string) (*models.Request, error)
+	// UpdateFulfilment writes the fulfilment fields for one request row —
+	// both the success transition (status='searching' + external_id +
+	// fulfilment_source, error cleared) and the graceful-degradation
+	// annotation (status stays 'pending', error_message set). Bumps
+	// updated_at and returns the written timestamp so callers can keep the
+	// in-memory row in sync with the DB (13-4a CR M1). Story 13-4a AC #6
+	// ([@contract-v1]).
+	UpdateFulfilment(ctx context.Context, id string, status string, fulfilmentSource, externalID, errorMessage models.NullString) (time.Time, error)
 }
 
 // RequestRepository provides SQLite data access for media requests.
@@ -107,6 +115,23 @@ func (r *RequestRepository) List(ctx context.Context) ([]models.Request, error) 
 		return nil, fmt.Errorf("error iterating requests: %w", err)
 	}
 	return requests, nil
+}
+
+func (r *RequestRepository) UpdateFulfilment(ctx context.Context, id string, status string, fulfilmentSource, externalID, errorMessage models.NullString) (time.Time, error) {
+	now := time.Now()
+	query := `UPDATE requests SET status = ?, fulfilment_source = ?, external_id = ?, error_message = ?, updated_at = ? WHERE id = ?`
+	result, err := r.db.ExecContext(ctx, query, status, fulfilmentSource, externalID, errorMessage, now, id)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("failed to update request fulfilment: %w", err)
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return time.Time{}, fmt.Errorf("failed to read fulfilment update result: %w", err)
+	}
+	if affected == 0 {
+		return time.Time{}, fmt.Errorf("request %s: %w", id, ErrRequestNotFound)
+	}
+	return now, nil
 }
 
 func (r *RequestRepository) FindActiveByTMDbID(ctx context.Context, tmdbID int64, mediaType string) (*models.Request, error) {

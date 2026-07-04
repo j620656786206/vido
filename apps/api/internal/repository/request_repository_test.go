@@ -104,3 +104,51 @@ func TestRequestRepository_FindActiveByTMDbID(t *testing.T) {
 		assert.ErrorIs(t, err, ErrRequestNotFound, "failed rows must not count as active")
 	})
 }
+
+func TestRequestRepository_UpdateFulfilment(t *testing.T) {
+	repo := NewRequestRepository(setupRequestsDB(t))
+	ctx := context.Background()
+
+	req := &models.Request{TMDbID: 550, MediaType: models.RequestMediaTypeMovie, Title: "x"}
+	require.NoError(t, repo.Create(ctx, req))
+	createdAt := req.UpdatedAt
+
+	t.Run("success transition writes all fulfilment fields", func(t *testing.T) {
+		time.Sleep(5 * time.Millisecond) // ensure updated_at moves
+		writtenAt, err := repo.UpdateFulfilment(ctx, req.ID, models.RequestStatusSearching,
+			models.NewNullString(models.RequestFulfilmentSourceArr),
+			models.NewNullString("42"), models.NullString{})
+		require.NoError(t, err)
+
+		found, err := repo.FindActiveByTMDbID(ctx, 550, models.RequestMediaTypeMovie)
+		require.NoError(t, err)
+		assert.Equal(t, models.RequestStatusSearching, found.Status)
+		assert.Equal(t, "arr", found.FulfilmentSource.String)
+		assert.Equal(t, "42", found.ExternalID.String)
+		assert.False(t, found.ErrorMessage.Valid, "success transition clears error_message")
+		assert.True(t, found.UpdatedAt.After(createdAt), "updated_at must be bumped")
+		assert.WithinDuration(t, writtenAt, found.UpdatedAt, time.Second,
+			"returned timestamp must match the stored updated_at (CR M1)")
+	})
+
+	t.Run("failure annotation keeps status and sets zh-TW reason", func(t *testing.T) {
+		req2 := &models.Request{TMDbID: 551, MediaType: models.RequestMediaTypeMovie, Title: "y"}
+		require.NoError(t, repo.Create(ctx, req2))
+
+		_, err := repo.UpdateFulfilment(ctx, req2.ID, models.RequestStatusPending,
+			models.NullString{}, models.NullString{}, models.NewNullString("Radarr 未設定"))
+		require.NoError(t, err)
+
+		found, err := repo.FindActiveByTMDbID(ctx, 551, models.RequestMediaTypeMovie)
+		require.NoError(t, err)
+		assert.Equal(t, models.RequestStatusPending, found.Status)
+		assert.Equal(t, "Radarr 未設定", found.ErrorMessage.String)
+		assert.False(t, found.FulfilmentSource.Valid)
+	})
+
+	t.Run("unknown id returns ErrRequestNotFound", func(t *testing.T) {
+		_, err := repo.UpdateFulfilment(ctx, "no-such-id", models.RequestStatusSearching,
+			models.NullString{}, models.NullString{}, models.NullString{})
+		assert.ErrorIs(t, err, ErrRequestNotFound)
+	})
+}

@@ -23,6 +23,14 @@ const (
 	RequestMediaTypeTV    = "tv"
 )
 
+// Fulfilment sources (migration 027 CHECK enum). 'arr' rows are claimed by
+// the DVR plugin pipeline (Story 13-4a); 'builtin' is reserved for the
+// Epic-15-blocked built-in download path (13-X).
+const (
+	RequestFulfilmentSourceArr     = "arr"
+	RequestFulfilmentSourceBuiltin = "builtin"
+)
+
 // Request records a user's intent to acquire a title (Story 13-1a, G-1/P3-001).
 // Rows are born pending; fulfilment (13-4) and status transitions (13-3a)
 // happen downstream. The JSON shape carries [@contract-v1] (13-1a AC #2/#3).
