@@ -146,6 +146,10 @@ type fakeDVRPlugin struct {
 	lastAddTMDb  int64
 	lastAddOpts  plugins.AddOptions
 	addMovieHits int
+
+	addSeriesID   int64
+	addSeriesErr  error
+	addSeriesHits int
 }
 
 func (f *fakeDVRPlugin) Name() string { return "radarr" }
@@ -171,6 +175,17 @@ func (f *fakeDVRPlugin) AddMovie(ctx context.Context, tmdbID int64, opts plugins
 	return 1, nil
 }
 func (f *fakeDVRPlugin) AddSeries(ctx context.Context, tmdbID int64, opts plugins.AddOptions) (int64, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.lastAddTMDb = tmdbID
+	f.lastAddOpts = opts
+	f.addSeriesHits++
+	if f.addSeriesErr != nil {
+		return 0, f.addSeriesErr
+	}
+	if f.addSeriesID != 0 {
+		return f.addSeriesID, nil
+	}
 	return 0, &plugins.PluginError{Code: plugins.ErrCodeNotSupported, Message: "movie-only"}
 }
 func (f *fakeDVRPlugin) GetQueue(ctx context.Context) ([]plugins.QueueItem, error) { return nil, nil }
@@ -367,6 +382,44 @@ func TestDVRSettingsService_GetQualityProfilesAndRootFolders(t *testing.T) {
 	folders, err := env.service.GetRootFolders(ctx, "radarr")
 	require.NoError(t, err)
 	assert.Equal(t, []plugins.RootFolder{{ID: 1, Path: "/movies"}}, folders)
+}
+
+func TestDVRSettingsService_SonarrParameterization(t *testing.T) {
+	// 13-4b AC #3 — sonarr lights up purely by registration/config: the SAME
+	// service instance handles sonarr.* keys + secrets round-trip with zero
+	// plugin-specific code.
+	settings := newFakeDVRSettingsRepo()
+	secretsSvc := newFakeDVRSecrets()
+	plugin := &fakeDVRPlugin{}
+	manager := plugins.NewManager(settings, secretsSvc, &fakeDVRHistoryRepo{}, nil, 0)
+	manager.Register("sonarr", func(config plugins.PluginConfig) plugins.DVRPlugin { return plugin })
+	service := NewDVRSettingsService(manager, settings, secretsSvc)
+	ctx := context.Background()
+
+	err := service.SaveConfig(ctx, "sonarr", DVRConfigInput{
+		URL:              "http://sonarr:8989",
+		APIKey:           "sonarr-key",
+		Enabled:          true,
+		QualityProfileID: 6,
+		RootFolderPath:   "/tv",
+	})
+	require.NoError(t, err)
+
+	// sonarr.* keys — not radarr's.
+	url, err := settings.GetString(ctx, plugins.SettingKeyURL("sonarr"))
+	require.NoError(t, err)
+	assert.Equal(t, "http://sonarr:8989", url)
+	storedKey, err := secretsSvc.Retrieve(ctx, plugins.SettingKeyAPIKey("sonarr"))
+	require.NoError(t, err)
+	assert.Equal(t, "sonarr-key", storedKey)
+	_, radarrErr := settings.GetString(ctx, plugins.SettingKeyURL("radarr"))
+	assert.Error(t, radarrErr, "radarr keys must be untouched")
+
+	status, err := service.GetConfig(ctx, "sonarr")
+	require.NoError(t, err)
+	assert.Equal(t, "http://sonarr:8989", status.URL)
+	assert.Equal(t, int64(6), status.QualityProfileID)
+	assert.True(t, status.HasAPIKey)
 }
 
 func TestDVRSettingsService_GetQualityProfiles_NotConfigured(t *testing.T) {

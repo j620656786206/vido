@@ -1,6 +1,6 @@
 # Story 13.4b: *arr DVR Plugin — Sonarr + Series Fulfilment
 
-Status: ready-for-dev
+Status: review
 
 **Epic:** Epic 13 — Request System · **FR:** P3-004 (G-4) · **Artery #2 (part 2)** · **BACKEND-ONLY**
 **Depends on: 13-4a merged** (plugin infra, `DVRPlugin`, manager, settings handler, fulfilment service) **and 13-1a** (transitively).
@@ -36,12 +36,12 @@ so that series requests are fulfilled just like movies — completing the *arr f
 
 ## Tasks / Subtasks
 
-- [ ] Task 1 (AC #1): `internal/tmdb` — add `GetTVExternalIDs(ctx, tvID)` endpoint wrapper (+ service method on `TMDbServiceInterface`) + httptest tests (present + absent tvdb_id).
-- [ ] Task 2 (AC #1, #2): `internal/plugins/sonarr/client.go(+_test)` — TestConnection (v4 gate) / lookup `term=tvdb:` / AddSeries whole-series / GetQueue / profiles / root-folders; limiter + X-Api-Key + reused client per 13-4a patterns.
-- [ ] Task 3 (AC #3): register Sonarr in `plugins.Manager` + settings parameterization (`sonarr.*` keys, secrets, health scheduler) + main.go DI.
-- [ ] Task 4 (AC #4): `FulfilmentService` tv branch — searching/failed transitions + graceful pending; update `request_service` tests for the tv path.
-- [ ] Task 5 (AC #5): Rule 7 code-list update (`DVR_TVDB_NOT_FOUND`) in project-context.md (+ mega-line entry, Rule 25 discipline).
-- [ ] Task 6 (AC #6): full gates — `pnpm nx test api`, `pnpm lint:all`, Rule 15 self-check.
+- [x] Task 1 (AC #1): `internal/tmdb` — add `GetTVExternalIDs(ctx, tvID)` endpoint wrapper (+ service method on `TMDbServiceInterface`) + httptest tests (present + absent tvdb_id).
+- [x] Task 2 (AC #1, #2): `internal/plugins/sonarr/client.go(+_test)` — TestConnection (v4 gate) / lookup `term=tvdb:` / AddSeries whole-series / GetQueue / profiles / root-folders; limiter + X-Api-Key + reused client per 13-4a patterns.
+- [x] Task 3 (AC #3): register Sonarr in `plugins.Manager` + settings parameterization (`sonarr.*` keys, secrets, health scheduler) + main.go DI.
+- [x] Task 4 (AC #4): `FulfilmentService` tv branch — searching/failed transitions + graceful pending; update `request_service` tests for the tv path.
+- [x] Task 5 (AC #5): Rule 7 code-list update (`DVR_TVDB_NOT_FOUND`) in project-context.md (+ mega-line entry, Rule 25 discipline).
+- [x] Task 6 (AC #6): full gates — `pnpm nx test api`, `pnpm lint:all`, Rule 15 self-check.
 
 ## Dev Notes
 
@@ -86,21 +86,59 @@ No new deps. Sonarr facts web-verified 2026-07-04: tvdbId required (Sonarr#7565)
 | Date       | Change                                                                                                                                                     |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | 2026-07-04 | Story created (SM create-story, yolo). Second half of 13-4 size-split. TVDB-resolution ruling: TMDB external_ids → Sonarr lookup tvdb: term (tmdb: prefix undocumented, rejected); no-TVDB = terminal `failed`. Sonarr v4-only gate. [@contract-v1] on AC #2. Status → ready-for-dev. |
+| 2026-07-04 | Task 1 (AC #1): `tmdb.TVExternalIDs` + `Client.GetTVExternalIDs` (GET /tv/{id}/external_ids, language-neutral) + `CacheService.GetTVExternalIDs` (providersClient path per GetWatchProviders precedent — Rule 27 ② cache-before-limiter, default 24h TTL, key `tmdb:tv/{id}/external_ids`) + `TMDbService`/interface method. tvdb_id null → 0 (no error) = the AC #1.2 signal. 3 httptest cases; 4 mocks patched (MockClient/MockCacheService/mockTMDbServiceForExplore/mockTMDbServiceForNFO). |
+| 2026-07-04 | Task 2 (AC #1/#2): `sonarr.Client` implements DVRPlugin + ProfileLister — v4 gate in TestConnection (major<4 → DVR_TEST_FAILED「需要 Sonarr v4」), AddSeries = TVDBResolver (interface defined in sonarr pkg, Rule 19 services-free) → tvdb==0 → DVR_TVDB_NOT_FOUND → lookup `term=tvdb:{id}` → POST lookup-shaped object enriched (qualityProfileId/rootFolderPath/monitored/all-seasons-monitored/addOptions monitor:"all"+searchForMissingEpisodes), AddMovie → DVR_NOT_SUPPORTED, GetQueue seriesId→ExternalID (paginated + cap warn), profiles/rootfolders. doRequest mirrors radarr (shared-helper extraction deferred per ADR Decision 3). New code `DVR_TVDB_NOT_FOUND` in plugins/errors.go. 12 httptest cases incl. POST-body assertion. |
+| 2026-07-04 | Task 3 (AC #3): main.go registers sonarr factory (TVDBResolverFunc closure over shared tmdbService — Rule 27 reuse) + handler `NewDVRSettingsHandler(svc, "radarr", "sonarr")`. Settings/health/scheduler light up by registration alone. New test TestDVRSettingsService_SonarrParameterization (sonarr.* keys + secrets round-trip, radarr keys untouched). |
+| 2026-07-04 | Task 4 (AC #4): FulfilmentService generalized — one shared `fulfil(pluginName, displayName, add)` gate→add→transition flow via method expressions (DVRPlugin.AddMovie/AddSeries); tv→sonarr replaces the 13-4a placeholder; `failTerminally` writes status='failed' + zh-TW reason with source/external NULL for DVR_TVDB_NOT_FOUND (the ONE terminal error). Movie flow byte-for-byte semantics preserved (all 13-4a movie tests green untouched). 5 new tv-branch tests + 1 request-service tv-path test. |
+| 2026-07-04 | Task 5 (AC #5): Rule 7 code-list +DVR_TVDB_NOT_FOUND (existing DVR_ prefix, count stays 15, no CR-workflow change) + mega-line 13-4b entry prepended (13-4a demoted to Prior; all underscore tokens backticked — prettier clean first try; Rule 25 verification: 3 entries survive). |
+| 2026-07-04 | Task 6 (AC #6): gates GREEN — `pnpm nx test api` PASS (uncached; known tracked scanner-SSE flake fired on 2 warm-up runs, 0 failures on the recorded run), `pnpm nx test web` 2322/2322, `pnpm lint:all` 0 errors, prettier clean, gofmt clean on touched files, test:cleanup no orphans. Rule 15 self-check PASS (manager registration + handler param + resolver closure in main.go DI; zero migrations; no new routes beyond parameterization). Status → review. |
 
 ## Dev Agent Record
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+claude-fable-5 (Fable 5)
+
+### Implementation Plan
+
+Everything structural rides 13-4a; this story = one TMDb wrapper + one client + registration + one fulfilment branch. TDD red-green per task. Key layering calls: (a) `GetTVExternalIDs` plumbed through the CacheService providersClient path (the GetWatchProviders language-neutral precedent — Rule 27 ② cache-before-limiter); (b) `TVDBResolver` interface DEFINED in the sonarr package and implemented as a main.go closure over the shared TMDb service, so sonarr never imports services (Rule 19); (c) `FulfilmentService` refactored to one plugin-parameterized flow using Go method expressions (`plugins.DVRPlugin.AddMovie/AddSeries`) instead of a copied tv branch — the 13-4a movie tests pass untouched, proving the semantics held.
 
 ### Debug Log References
 
+- Interface extension fan-out: adding `GetTVExternalIDs` to `TMDbServiceInterface`/`ClientInterface`/`CacheServiceInterface` broke 4 test mocks (MockClient, MockCacheService, mockTMDbServiceForExplore, mockTMDbServiceForNFO) — all patched with trivial stubs.
+- Known tracked flake `TestScannerService_SSEBroadcast_ScanCancelled` fired on two warm-up `nx test api` runs, 0 failures on the third (recorded) run — same load-dependent intermittency as documented in 13-4a; no new entry (existing `preexisting-fail-scanner-sse-scan-cancelled-flake`).
+
 ### Completion Notes List
+
+- 🔗 AC Drift: NONE (checked 'tv requests|Sonarr 尚未支援|failed' across 13-4a/13-1a stories — all REUSE not DRIFT: 13-4a AC #6 explicitly delegates tv fulfilment to 13-4b and its placeholder reason was contractually temporary; movie flow untouched — 13-4a movie tests pass unmodified; the first `failed` writer stays inside the 13-1a stamped 5-value enum, no bump)
+- 📎 Contract Stamps: FOUND (this story stamps AC #2 [@contract-v1] — AddSeries whole-series semantics + seriesId→ExternalID queue mapping, consumers 13-2a/13-3a; acks upstream 13-4a AC #1/#4/#6 ×v1 + 13-1a AC #2/#3 ×v1 — all versions reconcile, zero bumps, no stale-marks)
+- 🎭 A11y Pre-Flight: N/A (100% backend — no apps/web/ files touched)
+- 🎨 UX Verification: SKIPPED — no UI changes (backend-only; FE settings UI = 13-6 backlog)
+- Rule 27 posture: ① sonarr client 10 req/s limiter Wait-first ✓ · ② external-ids cached 24h BEFORE the TMDb limiter (providersClient path) ✓ · ③ degrade: health gate + graceful pending + the one honest terminal failed ✓ · ④ `DVR_TVDB_NOT_FOUND` under the existing prefix ✓ · ⑤ `sonarr.api_key` via secretsService, `json:"-"` guard ✓
+- Documented deviations (within AC spirit): (a) doRequest/mapTransportError/truncate mirrored from the radarr client rather than extracted — ADR Decision 3 defers a shared base until a THIRD client hand-rolls the triplet; (b) lookup enrichment marks ALL season entries monitored=true (AC-literal "<all monitored>", including specials — Sonarr's addOptions.monitor:"all" governs the effective server-side state); (c) resolver errors (TMDb down) map to DVR_CONNECTION_FAILED → graceful pending, NOT terminal — only a confirmed tvdb_id==0 is terminal.
 
 ### Discovery Triage
 
-- **Did this story discover any work outside its current scope?**
-  - If **NO**: state `N/A — no out-of-scope work discovered`.
-  - If **YES**: classify each per Rule 24 (①/②/③) with tracked entry IDs; prose-only mentions are banned.
+- N/A — no out-of-scope work discovered. (The authoring-time handoffs stand: season/episode selection = 13-2a AC #2 bump; reconcile/retry = 13-3a; FE = 13-6.)
 
 ### File List
+
+- apps/api/internal/tmdb/tv.go (modified — TVExternalIDs + Client.GetTVExternalIDs)
+- apps/api/internal/tmdb/tv_test.go (modified — 3 external-ids cases)
+- apps/api/internal/tmdb/client.go (modified — ClientInterface method)
+- apps/api/internal/tmdb/cache.go (modified — CacheServiceInterface + CacheService.GetTVExternalIDs)
+- apps/api/internal/tmdb/fallback_test.go (modified — MockClient stub)
+- apps/api/internal/services/tmdb_service.go (modified — interface + service method)
+- apps/api/internal/services/tmdb_service_test.go (modified — MockCacheService stub)
+- apps/api/internal/services/explore_block_service_test.go (modified — mock stub)
+- apps/api/internal/services/enrichment_nfo_test.go (modified — mock stub)
+- apps/api/internal/plugins/errors.go (modified — DVR_TVDB_NOT_FOUND)
+- apps/api/internal/plugins/sonarr/client.go (new)
+- apps/api/internal/plugins/sonarr/client_test.go (new)
+- apps/api/internal/services/fulfilment_service.go (modified — generalized fulfil + failTerminally + tv routing)
+- apps/api/internal/services/fulfilment_service_test.go (modified — sonarr env + 5 tv-branch tests)
+- apps/api/internal/services/dvr_settings_service_test.go (modified — fakeDVRPlugin AddSeries controls + sonarr parameterization test)
+- apps/api/internal/services/request_service_test.go (modified — tv-path fulfilment test)
+- apps/api/cmd/api/main.go (modified — sonarr registration w/ resolver closure + handler param)
+- project-context.md (modified — Rule 7 code list + mega-line 13-4b entry)
+- _bmad-output/implementation-artifacts/sprint-status.yaml (modified — status tracking)

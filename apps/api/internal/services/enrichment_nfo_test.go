@@ -47,6 +47,9 @@ func (m *mockTMDbServiceForNFO) GetTVShowDetails(ctx context.Context, tvID int) 
 func (m *mockTMDbServiceForNFO) GetSeasonDetails(ctx context.Context, tvID int, seasonNumber int) (*tmdb.SeasonDetails, error) {
 	return &tmdb.SeasonDetails{}, nil
 }
+func (m *mockTMDbServiceForNFO) GetTVExternalIDs(ctx context.Context, tvID int) (*tmdb.TVExternalIDs, error) {
+	return &tmdb.TVExternalIDs{ID: int64(tvID)}, nil
+}
 
 func (m *mockTMDbServiceForNFO) FindByExternalID(ctx context.Context, externalID string, externalSource string) (*tmdb.FindByExternalIDResponse, error) {
 	if m.findByExtErr != nil {
@@ -306,7 +309,7 @@ func TestEnrichMovie_NFO_ManualBlocksOverwrite(t *testing.T) {
 	// NFO should not overwrite manual — ShouldOverwrite("manual", "nfo") returns false
 	enriched, err := svc.tryNFOEnrichment(context.Background(), movie)
 	assert.NoError(t, err)
-	assert.False(t, enriched) // NFO was rejected
+	assert.False(t, enriched)                              // NFO was rejected
 	assert.Equal(t, "manual", movie.MetadataSource.String) // Unchanged
 }
 

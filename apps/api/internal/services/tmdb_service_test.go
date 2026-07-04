@@ -122,6 +122,10 @@ func (m *MockCacheService) GetSeasonDetails(ctx context.Context, tvID int, seaso
 	return m.GetSeasonDetailsResponse, nil
 }
 
+func (m *MockCacheService) GetTVExternalIDs(ctx context.Context, tvID int) (*tmdb.TVExternalIDs, error) {
+	return &tmdb.TVExternalIDs{ID: int64(tvID)}, nil
+}
+
 // Story 10-1 additions
 
 func (m *MockCacheService) GetTrendingMovies(ctx context.Context, timeWindow string, page int) (*tmdb.SearchResultMovies, error) {

@@ -11,14 +11,14 @@ import (
 
 // MockClient is a mock implementation of ClientInterface for testing
 type MockClient struct {
-	SearchMoviesResponses      map[string]*SearchResultMovies
-	SearchMoviesErrors         map[string]error
-	SearchTVShowsResponses     map[string]*SearchResultTVShows
-	SearchTVShowsErrors        map[string]error
-	GetMovieDetailsResponses   map[string]*MovieDetails
-	GetMovieDetailsErrors      map[string]error
-	GetTVShowDetailsResponses  map[string]*TVShowDetails
-	GetTVShowDetailsErrors     map[string]error
+	SearchMoviesResponses     map[string]*SearchResultMovies
+	SearchMoviesErrors        map[string]error
+	SearchTVShowsResponses    map[string]*SearchResultTVShows
+	SearchTVShowsErrors       map[string]error
+	GetMovieDetailsResponses  map[string]*MovieDetails
+	GetMovieDetailsErrors     map[string]error
+	GetTVShowDetailsResponses map[string]*TVShowDetails
+	GetTVShowDetailsErrors    map[string]error
 
 	// Story 12-3 — recommendations/similar (keyed by language).
 	MovieRecommendationsResponses map[string]*SearchResultMovies
@@ -106,6 +106,10 @@ func (m *MockClient) GetMovieVideos(ctx context.Context, movieID int) (*VideosRe
 
 func (m *MockClient) GetTVShowVideos(ctx context.Context, tvID int) (*VideosResponse, error) {
 	return &VideosResponse{ID: tvID, Results: []Video{}}, nil
+}
+
+func (m *MockClient) GetTVExternalIDs(ctx context.Context, tvID int) (*TVExternalIDs, error) {
+	return &TVExternalIDs{ID: int64(tvID)}, nil
 }
 
 func (m *MockClient) GetWatchProviders(ctx context.Context, mediaType string, id int, region string) (*WatchProvidersResponse, error) {
@@ -245,12 +249,12 @@ func TestNewLanguageFallbackClient(t *testing.T) {
 
 func TestLanguageFallbackClient_SearchMoviesWithFallback(t *testing.T) {
 	tests := []struct {
-		name          string
-		responses     map[string]*SearchResultMovies
-		errors        map[string]error
-		wantLang      string
-		wantResults   int
-		wantErr       bool
+		name        string
+		responses   map[string]*SearchResultMovies
+		errors      map[string]error
+		wantLang    string
+		wantResults int
+		wantErr     bool
 	}{
 		{
 			name: "finds results in first language (zh-TW)",
@@ -370,12 +374,12 @@ func TestLanguageFallbackClient_SearchMoviesWithFallback(t *testing.T) {
 
 func TestLanguageFallbackClient_SearchTVShowsWithFallback(t *testing.T) {
 	tests := []struct {
-		name          string
-		responses     map[string]*SearchResultTVShows
-		errors        map[string]error
-		wantLang      string
-		wantResults   int
-		wantErr       bool
+		name        string
+		responses   map[string]*SearchResultTVShows
+		errors      map[string]error
+		wantLang    string
+		wantResults int
+		wantErr     bool
 	}{
 		{
 			name: "finds results in first language (zh-TW)",
@@ -504,12 +508,12 @@ func TestLanguageFallbackClient_GetMovieDetailsWithFallback(t *testing.T) {
 
 func TestLanguageFallbackClient_GetTVShowDetailsWithFallback(t *testing.T) {
 	tests := []struct {
-		name     string
+		name      string
 		responses map[string]*TVShowDetails
 		errors    map[string]error
-		wantLang string
-		wantName string
-		wantErr  bool
+		wantLang  string
+		wantName  string
+		wantErr   bool
 	}{
 		{
 			name: "finds details in first language",

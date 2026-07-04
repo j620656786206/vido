@@ -14,6 +14,11 @@ const (
 	ErrCodeAddFailed        = "DVR_ADD_FAILED"
 	ErrCodeTestFailed       = "DVR_TEST_FAILED"
 	ErrCodeNotSupported     = "DVR_NOT_SUPPORTED"
+	// ErrCodeTVDBNotFound — the requested series has no TVDB entry, which
+	// Sonarr fundamentally cannot search (Story 13-4b AC #1). The ONE
+	// fulfilment error that is terminal: the request row goes 'failed',
+	// never stranded 'pending' (retrying cannot fix TVDB absence).
+	ErrCodeTVDBNotFound = "DVR_TVDB_NOT_FOUND"
 
 	ErrCodePluginInitFailed        = "PLUGIN_INIT_FAILED"
 	ErrCodePluginHealthCheckFailed = "PLUGIN_HEALTH_CHECK_FAILED"

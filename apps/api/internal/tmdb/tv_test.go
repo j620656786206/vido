@@ -3,6 +3,7 @@ package tmdb
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -290,4 +291,44 @@ func TestClient_DiscoverTVShows(t *testing.T) {
 		SortBy:   "popularity.desc",
 	})
 	require.NoError(t, err)
+}
+
+func TestClient_GetTVExternalIDs(t *testing.T) {
+	t.Run("returns tvdb id when present", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, "/tv/1399/external_ids", r.URL.Path)
+			w.Header().Set("Content-Type", "application/json")
+			fmt.Fprint(w, `{"id": 1399, "imdb_id": "tt0944947", "tvdb_id": 121361}`)
+		}))
+		defer server.Close()
+
+		client := NewClient(ClientConfig{APIKey: "test-key", BaseURL: server.URL})
+		result, err := client.GetTVExternalIDs(context.Background(), 1399)
+
+		require.NoError(t, err)
+		assert.Equal(t, int64(121361), result.TVDbID)
+		assert.Equal(t, "tt0944947", result.IMDbID)
+	})
+
+	t.Run("missing tvdb id resolves to zero", func(t *testing.T) {
+		// The Sonarr fundamental limitation path (13-4b AC #1.2): a title with
+		// no TVDB entry returns tvdb_id null — callers see 0, never an error.
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			fmt.Fprint(w, `{"id": 250551, "imdb_id": "tt1234567", "tvdb_id": null}`)
+		}))
+		defer server.Close()
+
+		client := NewClient(ClientConfig{APIKey: "test-key", BaseURL: server.URL})
+		result, err := client.GetTVExternalIDs(context.Background(), 250551)
+
+		require.NoError(t, err)
+		assert.Equal(t, int64(0), result.TVDbID)
+	})
+
+	t.Run("invalid tv id", func(t *testing.T) {
+		client := NewClient(ClientConfig{APIKey: "test-key", BaseURL: "http://unused"})
+		_, err := client.GetTVExternalIDs(context.Background(), 0)
+		assert.Error(t, err)
+	})
 }

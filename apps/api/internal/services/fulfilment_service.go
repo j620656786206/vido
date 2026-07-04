@@ -18,9 +18,16 @@ import (
 	"github.com/vido/api/internal/repository"
 )
 
-// dvrMoviePlugin is the plugin that fulfils movie requests. Series routing
-// (sonarr) lands in 13-4b via the same manager.
-const dvrMoviePlugin = "radarr"
+// Plugin routing by media type: movies → Radarr (13-4a), series → Sonarr
+// (13-4b). Both ride the same manager/scheduler/settings.
+const (
+	dvrMoviePlugin  = "radarr"
+	dvrSeriesPlugin = "sonarr"
+)
+
+// tvdbNotFoundReason is the zh-TW terminal annotation for the ONE fulfilment
+// error retrying cannot fix (13-4b AC #1.2 — title absent from TVDB).
+const tvdbNotFoundReason = "此影集不在 TVDB 上，Sonarr 無法搜尋"
 
 // FulfilmentServiceInterface is the optional RequestService dependency
 // (nil-safe — 13-1a create behavior is preserved exactly when absent).
@@ -60,54 +67,69 @@ func (s *FulfilmentService) FulfilRequest(ctx context.Context, request *models.R
 		return
 	}
 
-	if request.MediaType != models.RequestMediaTypeMovie {
-		// TV fulfilment needs the Sonarr plugin (13-4b); the reason string
-		// keeps the row honest until 13-3a's reconcile retries it.
-		s.stayPending(ctx, request, "Sonarr 尚未支援（13-4b）", nil)
+	if request.MediaType == models.RequestMediaTypeTV {
+		// 13-4b AC #4 — whole-series adds via Sonarr.
+		s.fulfil(ctx, request, dvrSeriesPlugin, "Sonarr", plugins.DVRPlugin.AddSeries)
 		return
 	}
-	s.fulfilMovie(ctx, request)
+	s.fulfil(ctx, request, dvrMoviePlugin, "Radarr", plugins.DVRPlugin.AddMovie)
 }
 
-// fulfilMovie runs the AC #6 movie branch: gate on Radarr enabled+healthy,
-// then a synchronous AddMovie with config-derived options.
-func (s *FulfilmentService) fulfilMovie(ctx context.Context, request *models.Request) {
-	if !s.manager.IsConfigured(ctx, dvrMoviePlugin) {
-		s.stayPending(ctx, request, "Radarr 未設定", nil)
+// fulfil runs the shared gate → add → transition flow (13-4a AC #6 /
+// 13-4b AC #4): plugin enabled+healthy, config-derived options, synchronous
+// add, then the [@contract-v1] searching transition. add is the media-typed
+// plugin method (AddMovie / AddSeries).
+func (s *FulfilmentService) fulfil(
+	ctx context.Context,
+	request *models.Request,
+	pluginName string,
+	displayName string,
+	add func(plugins.DVRPlugin, context.Context, int64, plugins.AddOptions) (int64, error),
+) {
+	if !s.manager.IsConfigured(ctx, pluginName) {
+		s.stayPending(ctx, request, displayName+" 未設定", nil)
 		return
 	}
 
-	health := s.manager.Health(dvrMoviePlugin)
+	health := s.manager.Health(pluginName)
 	if health.LastCheckedAt == nil {
 		// Boot-edge race: a request can arrive before the scheduler's first
 		// sweep — run one lazy check instead of spuriously annotating.
-		health = s.manager.CheckHealth(ctx, dvrMoviePlugin)
+		health = s.manager.CheckHealth(ctx, pluginName)
 	}
 	if health.Status != plugins.HealthStatusHealthy {
-		s.stayPending(ctx, request, "Radarr 連線失敗", fmt.Errorf("radarr health: %s (%s)", health.Status, health.Message))
+		s.stayPending(ctx, request, displayName+" 連線失敗",
+			fmt.Errorf("%s health: %s (%s)", pluginName, health.Status, health.Message))
 		return
 	}
 
-	profileID, _ := s.settingsRepo.GetInt(ctx, plugins.SettingKeyQualityProfileID(dvrMoviePlugin))
-	rootFolder, _ := s.settingsRepo.GetString(ctx, plugins.SettingKeyRootFolderPath(dvrMoviePlugin))
+	profileID, _ := s.settingsRepo.GetInt(ctx, plugins.SettingKeyQualityProfileID(pluginName))
+	rootFolder, _ := s.settingsRepo.GetString(ctx, plugins.SettingKeyRootFolderPath(pluginName))
 	if profileID == 0 || rootFolder == "" {
-		s.stayPending(ctx, request, "Radarr 設定不完整（缺少品質設定檔或根資料夾）", nil)
+		s.stayPending(ctx, request, displayName+" 設定不完整（缺少品質設定檔或根資料夾）", nil)
 		return
 	}
 
-	client, err := s.manager.GetClient(ctx, dvrMoviePlugin)
+	client, err := s.manager.GetClient(ctx, pluginName)
 	if err != nil {
-		s.stayPending(ctx, request, "Radarr 連線失敗", err)
+		s.stayPending(ctx, request, displayName+" 連線失敗", err)
 		return
 	}
 
-	externalID, err := client.AddMovie(ctx, request.TMDbID, plugins.AddOptions{
+	externalID, err := add(client, ctx, request.TMDbID, plugins.AddOptions{
 		QualityProfileID: int64(profileID),
 		RootFolderPath:   rootFolder,
 		SearchNow:        true,
 	})
 	if err != nil {
-		s.stayPending(ctx, request, addMovieFailureReason(err), err)
+		var pluginErr *plugins.PluginError
+		if errors.As(err, &pluginErr) && pluginErr.Code == plugins.ErrCodeTVDBNotFound {
+			// The ONE terminal fulfilment error (13-4b AC #1.2) — an honest
+			// failed row, never a stranded pending.
+			s.failTerminally(ctx, request, tvdbNotFoundReason, err)
+			return
+		}
+		s.stayPending(ctx, request, addFailureReason(displayName, err), err)
 		return
 	}
 
@@ -132,8 +154,36 @@ func (s *FulfilmentService) fulfilMovie(ctx context.Context, request *models.Req
 	request.ErrorMessage = models.NullString{}
 	request.UpdatedAt = updatedAt
 
-	slog.Info("Movie request routed to Radarr",
-		"request_id", request.ID, "tmdb_id", request.TMDbID, "radarr_id", externalID)
+	slog.Info("Request routed to DVR plugin",
+		"request_id", request.ID, "tmdb_id", request.TMDbID,
+		"media_type", request.MediaType, "plugin", pluginName, "external_id", externalID)
+}
+
+// failTerminally writes the terminal failed transition (13-4b AC #1.2 —
+// currently only DVR_TVDB_NOT_FOUND). fulfilment_source and external_id stay
+// NULL: nothing claimed the row.
+func (s *FulfilmentService) failTerminally(ctx context.Context, request *models.Request, reason string, cause error) {
+	slog.Error("Request fulfilment failed terminally",
+		"request_id", request.ID, "tmdb_id", request.TMDbID,
+		"media_type", request.MediaType, "reason", reason, "error", cause)
+
+	status := models.RequestStatusFailed
+	errMsg := models.NewNullString(reason)
+	updatedAt, err := s.requestRepo.UpdateFulfilment(ctx, request.ID, status,
+		models.NullString{}, models.NullString{}, errMsg)
+	if err != nil {
+		slog.Error("Failed to persist terminal fulfilment failure",
+			"request_id", request.ID, "error", err)
+		// Keep the response consistent with the row (still pending in DB).
+		request.ErrorMessage = errMsg
+		return
+	}
+
+	request.Status = status
+	request.FulfilmentSource = models.NullString{}
+	request.ExternalID = models.NullString{}
+	request.ErrorMessage = errMsg
+	request.UpdatedAt = updatedAt
 }
 
 // stayPending annotates a request with a zh-TW degradation reason, keeping
@@ -162,11 +212,11 @@ func (s *FulfilmentService) stayPending(ctx context.Context, request *models.Req
 	request.UpdatedAt = updatedAt
 }
 
-// addMovieFailureReason maps an AddMovie error to its zh-TW row annotation.
-func addMovieFailureReason(err error) string {
+// addFailureReason maps an AddMovie/AddSeries error to its zh-TW row annotation.
+func addFailureReason(displayName string, err error) string {
 	var pluginErr *plugins.PluginError
 	if errors.As(err, &pluginErr) && pluginErr.Code == plugins.ErrCodeAddFailed {
-		return "Radarr 新增失敗"
+		return displayName + " 新增失敗"
 	}
-	return "Radarr 連線失敗"
+	return displayName + " 連線失敗"
 }
