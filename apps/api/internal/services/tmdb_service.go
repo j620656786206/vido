@@ -31,6 +31,9 @@ type TMDbServiceInterface interface {
 	GetTVShowDetails(ctx context.Context, tvID int) (*tmdb.TVShowDetails, error)
 	// GetSeasonDetails retrieves a season's full episode list (cached 24h)
 	GetSeasonDetails(ctx context.Context, tvID int, seasonNumber int) (*tmdb.SeasonDetails, error)
+	// GetTVExternalIDs retrieves a TV show's external-service ids (tvdb/imdb),
+	// cached at the default TTL — the Sonarr TVDB-resolution flow (Story 13-4b)
+	GetTVExternalIDs(ctx context.Context, tvID int) (*tmdb.TVExternalIDs, error)
 	// FindByExternalID finds movies/TV shows by an external ID (e.g., IMDB)
 	FindByExternalID(ctx context.Context, externalID string, externalSource string) (*tmdb.FindByExternalIDResponse, error)
 	// GetTrendingMovies returns trending movies (cached 1h, server-side filtered for zh-TW relevance).
@@ -299,6 +302,23 @@ func (s *TMDbService) GetSeasonDetails(ctx context.Context, tvID int, seasonNumb
 		"episodes", len(result.Episodes),
 	)
 
+	return result, nil
+}
+
+// GetTVExternalIDs retrieves a TV show's external-service ids (tvdb/imdb),
+// cached at the default TTL (Story 13-4b — the Sonarr TVDB-resolution flow).
+func (s *TMDbService) GetTVExternalIDs(ctx context.Context, tvID int) (*tmdb.TVExternalIDs, error) {
+	if tvID <= 0 {
+		return nil, tmdb.NewBadRequestError("TV show ID must be greater than 0")
+	}
+
+	result, err := s.cacheService.GetTVExternalIDs(ctx, tvID)
+	if err != nil {
+		slog.Error("Failed to get TV external ids", "tv_id", tvID, "error", err)
+		return nil, err
+	}
+
+	slog.Debug("TV external ids retrieved", "tv_id", tvID, "tvdb_id", result.TVDbID)
 	return result, nil
 }
 

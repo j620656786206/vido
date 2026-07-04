@@ -151,6 +151,10 @@ type CacheServiceInterface interface {
 	// to a single region and cached 24h (Story 12-4). Bypasses the language-fallback
 	// layer — watch-provider data is language-neutral.
 	GetWatchProviders(ctx context.Context, mediaType string, id int, region string) (*WatchProvidersResponse, error)
+	// GetTVExternalIDs returns a TV show's external ids cached at the default
+	// TTL (Story 13-4b — ids are immutable-ish). Language-neutral: rides the
+	// raw providersClient like GetWatchProviders.
+	GetTVExternalIDs(ctx context.Context, tvID int) (*TVExternalIDs, error)
 }
 
 // Compile-time interface verification
@@ -373,6 +377,39 @@ func (s *CacheService) GetSeasonDetails(ctx context.Context, tvID int, seasonNum
 		}
 	}
 
+	return result, nil
+}
+
+// GetTVExternalIDs returns a TV show's external-service ids with caching.
+// Cache key: tmdb:tv/{id}/external_ids — default TTL; external ids are
+// immutable-ish (Story 13-4b AC #1). Language-neutral → providersClient.
+func (s *CacheService) GetTVExternalIDs(ctx context.Context, tvID int) (*TVExternalIDs, error) {
+	cacheKey := fmt.Sprintf("tmdb:tv/%d/external_ids", tvID)
+
+	cached, err := s.cache.Get(ctx, cacheKey)
+	if err == nil && cached != nil {
+		var result TVExternalIDs
+		if err := json.Unmarshal([]byte(cached.Value), &result); err == nil {
+			slog.Debug("Cache hit", "key", cacheKey, "type", CacheTypeTMDb)
+			return &result, nil
+		}
+		slog.Warn("Failed to unmarshal cached data", "key", cacheKey, "error", err)
+	}
+
+	slog.Debug("Cache miss", "key", cacheKey, "type", CacheTypeTMDb)
+	if s.providersClient == nil {
+		return nil, fmt.Errorf("external-ids client not initialized")
+	}
+	result, err := s.providersClient.GetTVExternalIDs(ctx, tvID)
+	if err != nil {
+		return nil, err
+	}
+
+	if data, err := json.Marshal(result); err == nil {
+		if err := s.cache.Set(ctx, cacheKey, string(data), CacheTypeTMDb, s.ttl); err != nil {
+			slog.Warn("Failed to cache TMDb response", "key", cacheKey, "error", err)
+		}
+	}
 	return result, nil
 }
 

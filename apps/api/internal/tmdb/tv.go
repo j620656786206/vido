@@ -72,6 +72,33 @@ func (c *Client) GetTVShowDetailsWithLanguage(ctx context.Context, tvID int, lan
 	return &result, nil
 }
 
+// TVExternalIDs holds the external-service ids for a TV show
+// (GET /tv/{id}/external_ids). Only the ids the DVR pipeline consumes are
+// mapped; tvdb_id null resolves to 0 (title absent from TVDB — the Sonarr
+// fundamental limitation, Story 13-4b AC #1).
+type TVExternalIDs struct {
+	ID     int64  `json:"id"`
+	IMDbID string `json:"imdb_id"`
+	TVDbID int64  `json:"tvdb_id"`
+}
+
+// GetTVExternalIDs retrieves a TV show's external ids. Language-neutral —
+// no language parameter, no fallback chain (the watch-providers class).
+func (c *Client) GetTVExternalIDs(ctx context.Context, tvID int) (*TVExternalIDs, error) {
+	if tvID <= 0 {
+		return nil, NewBadRequestError("TV show ID must be greater than 0")
+	}
+
+	endpoint := fmt.Sprintf("/tv/%d/external_ids", tvID)
+
+	var result TVExternalIDs
+	if err := c.Get(ctx, endpoint, url.Values{}, &result); err != nil {
+		return nil, fmt.Errorf("failed to get TV external ids: %w", err)
+	}
+
+	return &result, nil
+}
+
 // GetSeasonDetails retrieves the full episode list for a specific season of a TV
 // show (GET /tv/{id}/season/{n}). Results are in the client's default language.
 func (c *Client) GetSeasonDetails(ctx context.Context, tvID int, seasonNumber int) (*SeasonDetails, error) {

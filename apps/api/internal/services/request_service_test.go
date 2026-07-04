@@ -127,6 +127,31 @@ func TestRequestService_CreateRequest_WithFulfilment(t *testing.T) {
 	assert.Equal(t, "42", created.ExternalID.String)
 }
 
+func TestRequestService_CreateRequest_TVWithFulfilment(t *testing.T) {
+	// 13-4b — tv requests flow through the same fulfilment seam; the create
+	// response carries whatever transition the tv branch produced.
+	ctx := context.Background()
+	tvDetails := &tmdb.TVShowDetails{}
+	tvDetails.Name = "冰與火之歌"
+
+	repo := &mockRequestRepo{}
+	svc := newRequestServiceForTest(repo, &mockTMDbForRequests{tvDetails: tvDetails}, nil, nil)
+	fulfilment := &stubFulfilment{simulate: func(request *models.Request) {
+		request.Status = models.RequestStatusSearching
+		request.FulfilmentSource = models.NewNullString(models.RequestFulfilmentSourceArr)
+		request.ExternalID = models.NewNullString("7")
+	}}
+	svc.SetFulfilmentService(fulfilment)
+
+	created, err := svc.CreateRequest(ctx, CreateMediaRequestRequest{TMDbID: 1399, MediaType: "tv"})
+	require.NoError(t, err)
+
+	assert.Equal(t, 1, fulfilment.calls)
+	assert.Equal(t, models.RequestMediaTypeTV, fulfilment.lastReq.MediaType)
+	assert.Equal(t, models.RequestStatusSearching, created.Status)
+	assert.Equal(t, "7", created.ExternalID.String)
+}
+
 func TestRequestService_CreateRequest_NilFulfilmentIsNoOp(t *testing.T) {
 	// 13-1a behavior preserved exactly when the optional dep is absent.
 	ctx := context.Background()

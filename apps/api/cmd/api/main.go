@@ -24,6 +24,7 @@ import (
 	"github.com/vido/api/internal/logger"
 	"github.com/vido/api/internal/plugins"
 	"github.com/vido/api/internal/plugins/radarr"
+	"github.com/vido/api/internal/plugins/sonarr"
 	"github.com/vido/api/internal/repository"
 	"github.com/vido/api/internal/retry"
 	"github.com/vido/api/internal/secrets"
@@ -224,6 +225,19 @@ func main() {
 	pluginManager := plugins.NewManager(repos.Settings, secretsService, repos.ConnectionHistory, slog.Default(), 0)
 	pluginManager.Register("radarr", func(config plugins.PluginConfig) plugins.DVRPlugin {
 		return radarr.NewClient(config)
+	})
+	// Story 13-4b — Sonarr rides the same manager/scheduler/settings. The
+	// TVDB resolver closes over the shared TMDb service (Rule 27 reuse:
+	// shared limiter/cache/key; the sonarr package stays services-free).
+	pluginManager.Register("sonarr", func(config plugins.PluginConfig) plugins.DVRPlugin {
+		return sonarr.NewClient(config, sonarr.TVDBResolverFunc(
+			func(ctx context.Context, tmdbID int64) (int64, error) {
+				ids, err := tmdbService.GetTVExternalIDs(ctx, int(tmdbID))
+				if err != nil {
+					return 0, err
+				}
+				return ids.TVDbID, nil
+			}))
 	})
 	fulfilmentService := services.NewFulfilmentService(pluginManager, repos.Settings, repos.Requests)
 	requestService.SetFulfilmentService(fulfilmentService)
@@ -550,10 +564,10 @@ func main() {
 	libraryService := services.NewLibraryService(repos.Movies, repos.Series, repos.Episodes, services.WithTMDbVideos(tmdbService.VideosProvider()))
 	libraryHandler := handlers.NewLibraryHandler(libraryService)
 	mediaLibrariesHandler := handlers.NewMediaLibrariesHandler(mediaLibraryService)
-	exploreBlocksHandler := handlers.NewExploreBlocksHandler(exploreBlockService)      // Story 10.3
-	filterPresetsHandler := handlers.NewFilterPresetsHandler(filterPresetService)      // Story 11.4
-	requestHandler := handlers.NewRequestHandler(requestService)                       // Story 13-1a
-	dvrSettingsHandler := handlers.NewDVRSettingsHandler(dvrSettingsService, "radarr") // Story 13-4a (13-4b appends "sonarr")
+	exploreBlocksHandler := handlers.NewExploreBlocksHandler(exploreBlockService)                // Story 10.3
+	filterPresetsHandler := handlers.NewFilterPresetsHandler(filterPresetService)                // Story 11.4
+	requestHandler := handlers.NewRequestHandler(requestService)                                 // Story 13-1a
+	dvrSettingsHandler := handlers.NewDVRSettingsHandler(dvrSettingsService, "radarr", "sonarr") // Story 13-4a + 13-4b
 	recentMediaHandler := handlers.NewRecentMediaHandler(movieService, seriesService)
 	logHandler := handlers.NewLogHandler(logService)
 	cacheHandler := handlers.NewCacheHandler(cacheStatsService, cacheCleanupService)

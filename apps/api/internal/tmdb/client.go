@@ -26,7 +26,7 @@ const (
 type ClientConfig struct {
 	APIKey   string
 	Language string
-	BaseURL  string // Optional, defaults to DefaultBaseURL
+	BaseURL  string        // Optional, defaults to DefaultBaseURL
 	Timeout  time.Duration // Optional, defaults to 30 seconds
 }
 
@@ -60,6 +60,9 @@ type ClientInterface interface {
 	// GetWatchProviders retrieves streaming/rent/buy providers for a movie or TV show,
 	// optionally filtered to a single region (Story 12-4)
 	GetWatchProviders(ctx context.Context, mediaType string, id int, region string) (*WatchProvidersResponse, error)
+	// GetTVExternalIDs retrieves a TV show's external-service ids (tvdb/imdb) —
+	// language-neutral (Story 13-4b, the Sonarr TVDB-resolution flow)
+	GetTVExternalIDs(ctx context.Context, tvID int) (*TVExternalIDs, error)
 	// GetMovieRecommendations retrieves recommended movies for a movie
 	GetMovieRecommendations(ctx context.Context, movieID int) (*SearchResultMovies, error)
 	// GetMovieRecommendationsWithLanguage retrieves recommended movies with a specific language
