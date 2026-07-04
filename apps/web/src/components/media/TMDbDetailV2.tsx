@@ -16,6 +16,8 @@ import {
   useWatchProviders,
 } from '../../hooks/useMediaDetails';
 import { useOwnedMedia } from '../../hooks/useOwnedMedia';
+import { useRequestedMedia } from '../../hooks/useRequestedMedia';
+import { RequestButton } from '../requests/RequestButton';
 import { CreditsSection } from './CreditsSection';
 import { RelatedContent } from './RelatedContent';
 import { StreamingAvailability } from './StreamingAvailability';
@@ -37,6 +39,8 @@ export function TMDbDetailV2({ type, tmdbId }: { type: 'movie' | 'tv'; tmdbId: n
   const recs = useRecommendations(tmdbId, isMovie ? 'movie' : 'tv', tmdbId > 0);
   const watch = useWatchProviders(tmdbId, isMovie ? 'movie' : 'tv', tmdbId > 0, WATCH_REGION);
   const ownership = useOwnedMedia([tmdbId]);
+  // Story 13-1b — exact (tmdbId, mediaType) requested check for the 想要 button.
+  const requestedState = useRequestedMedia(tmdbId > 0);
 
   const detailsQuery = isMovie ? movieDetails : tvDetails;
   const creditsQuery = isMovie ? movieCredits : tvCredits;
@@ -75,6 +79,17 @@ export function TMDbDetailV2({ type, tmdbId }: { type: 'movie' | 'tv'; tmdbId: n
             : []
         }
         meta={meta}
+        actions={
+          tmdbId > 0 ? (
+            <RequestButton
+              tmdbId={tmdbId}
+              mediaType={type}
+              title={title}
+              owned={owned}
+              requested={requestedState.isRequested(tmdbId, type)}
+            />
+          ) : undefined
+        }
         onBack={onBack}
       />
 

@@ -10,6 +10,16 @@ vi.mock('../services/availabilityService', () => ({
   },
 }));
 
+// Story 13-1b: isRequested delegates to the request system — mock the hook so
+// these tests stay ownership-focused (real behaviour in useRequestedMedia.spec).
+vi.mock('./useRequestedMedia', () => ({
+  useRequestedMedia: () => ({
+    requests: [],
+    isRequested: (tmdbId: number | null | undefined) => tmdbId === 603,
+    isLoading: false,
+  }),
+}));
+
 import { availabilityService } from '../services/availabilityService';
 
 const mockCheckOwned = vi.mocked(availabilityService.checkOwned);
@@ -66,12 +76,13 @@ describe('useOwnedMedia (Story 10-4)', () => {
     expect(mockCheckOwned).toHaveBeenCalledWith([603]);
   });
 
-  it('isRequested is stubbed to false until Phase 3 (AC #5)', async () => {
-    mockCheckOwned.mockResolvedValue([603]);
-    const { result } = renderHook(() => useOwnedMedia([603]), { wrapper: createWrapper() });
-
-    await waitFor(() => expect(result.current.isOwned(603)).toBe(true));
-    expect(result.current.isRequested(603)).toBe(false);
+  it('isRequested delegates to the request system — LIVE since Story 13-1b', async () => {
+    mockCheckOwned.mockResolvedValue([]);
+    const { result } = renderHook(() => useOwnedMedia([603, 9999]), {
+      wrapper: createWrapper(),
+    });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.isRequested(603)).toBe(true);
     expect(result.current.isRequested(9999)).toBe(false);
   });
 

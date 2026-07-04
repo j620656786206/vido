@@ -25,6 +25,8 @@ interface DiscoverSearchParams {
   sort_by?: SortKey;
   type?: MediaTypeFilter;
   page?: number;
+  /** Story 13-1b — the Discover-hosted 想要清單 (nav-ADR:630, PH3-R2 lit). */
+  view?: 'requests';
 }
 
 const SORT_KEYS: SortKey[] = ['popularity', 'date', 'rating'];
@@ -62,6 +64,9 @@ export const Route = createFileRoute('/discover')({
       ? (search.type as MediaTypeFilter)
       : undefined,
     page: toOptionalNumber(search.page),
+    // Rule 26: a string-enum guard is safe here — 'requests' can never arrive
+    // as a lone JSON-parsed number (never all-digits).
+    view: search.view === 'requests' ? 'requests' : undefined,
   }),
   component: DiscoverPage,
 });

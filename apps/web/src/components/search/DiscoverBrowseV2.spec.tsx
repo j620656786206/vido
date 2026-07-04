@@ -41,6 +41,25 @@ vi.mock('../media/MediaGrid', () => ({
     <div data-testid="media-grid">{items?.length ?? 0} items</div>
   ),
 }));
+// Story 13-1b: ownership drives the per-card 想要 affordance; stub it so these
+// tests stay layout-focused (real behaviour covered by useRequestedMedia.spec +
+// RequestButton.spec).
+vi.mock('../../hooks/useOwnedMedia', () => ({
+  useOwnedMedia: () => ({
+    owned: new Set<number>(),
+    isOwned: () => false,
+    isRequested: () => false,
+    isLoading: false,
+    error: null,
+  }),
+}));
+vi.mock('../requests/RequestsView', () => ({
+  RequestsView: ({ onExplore }: { onExplore: () => void }) => (
+    <div data-testid="requests-view-stub">
+      <button type="button" data-testid="requests-stub-explore" onClick={onExplore} />
+    </div>
+  ),
+}));
 
 import { DiscoverBrowseV2 } from './DiscoverBrowseV2';
 
@@ -84,7 +103,7 @@ describe('DiscoverBrowseV2', () => {
     h.filterState = filterState();
   });
 
-  it('renders the persistent rail, the inert Requests entry, and the grid with results', async () => {
+  it('renders the persistent rail, the LIVE Requests entry (13-1b), and the grid with results', async () => {
     h.discover = discover({
       moviesQuery: query({
         data: {
@@ -100,8 +119,20 @@ describe('DiscoverBrowseV2', () => {
     });
     renderBrowse();
     expect(await screen.findByTestId('discover-filter-rail')).toBeInTheDocument();
-    expect(screen.getByTestId('discover-requests-inert')).toBeDisabled();
+    // Story 13-1b lit the PH3-R2 reserved entry — enabled, no 即將推出.
+    const entry = screen.getByTestId('discover-requests-entry');
+    expect(entry).toBeEnabled();
+    expect(entry).toHaveTextContent('想要清單');
+    expect(entry).not.toHaveTextContent('即將推出');
     expect(screen.getByTestId('media-grid')).toHaveTextContent('2 items');
+  });
+
+  it('deep link ?view=requests renders the 想要清單 view in place of the results (13-1b AC #5)', async () => {
+    renderBrowse('/discover?view=requests');
+    expect(await screen.findByTestId('requests-view-stub')).toBeInTheDocument();
+    expect(screen.queryByTestId('media-grid')).not.toBeInTheDocument();
+    // The entry reflects the active view.
+    expect(screen.getByTestId('discover-requests-entry')).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('renders the chip bar as a lighter read/remove summary (AC #7)', async () => {

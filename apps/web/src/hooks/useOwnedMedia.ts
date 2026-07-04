@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { availabilityService } from '../services/availabilityService';
+import { useRequestedMedia } from './useRequestedMedia';
 
 /**
  * Query key factory for ownership queries. Keys include the sorted ID tuple
@@ -21,8 +22,11 @@ function normaliseIds(tmdbIds: readonly number[]): readonly number[] {
 
 /**
  * Lookup result for a set of TMDb IDs. `isOwned` is exposed as a set so the
- * rendering path stays O(1) per card; `isRequested` is stubbed to `false`
- * until the request system ships in Phase 3 (AC #5).
+ * rendering path stays O(1) per card; `isRequested` is LIVE since Story 13-1b
+ * (Epic 13) — backed by GET /api/v1/requests via useRequestedMedia. The
+ * Story-10-4 signature carries no media type, so it matches an active request
+ * of ANY type for that TMDb id (badge-level semantic; the 想要 button uses the
+ * exact (tmdbId, mediaType) check from useRequestedMedia directly).
  */
 export interface OwnedMediaState {
   owned: Set<number>;
@@ -72,8 +76,11 @@ export function useOwnedMedia(tmdbIds: readonly number[] = EMPTY): OwnedMediaSta
     [owned]
   );
 
-  // Stubbed per AC #5 — the request system (Epic 13) will flip this on.
-  const isRequested = useCallback((_tmdbId: number | null | undefined) => false, []);
+  // Story 13-1b: the Story-10-4 stub flips live — delegate to the request
+  // system. Query only fires when this hook has ids to check (same gating
+  // philosophy as the ownership POST above).
+  const requested = useRequestedMedia(enabled);
+  const isRequested = requested.isRequested;
 
   const error = (query.error as Error | null) ?? null;
 

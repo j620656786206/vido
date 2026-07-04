@@ -25,6 +25,12 @@ vi.mock('@tanstack/react-router', () => ({
 // lazy-on-hover metadata line (bugfix-10-7 AC #1). They are disabled (id=0) until hover-intent.
 // Default per-test: no data (year-only). Per-test overrides via mockReturnValue/mockImplementation.
 // Typed-mock via double-cast through Partial (bugfix-10-2 CR M3 pattern) — ZERO `as any`.
+// Story 13-1b: the hover 想要 scrim mounts RequestButton (which needs a
+// QueryClient); stub it so PosterCard tests stay presentation-focused.
+vi.mock('../requests/RequestButton', () => ({
+  RequestButton: () => <button type="button" data-testid="request-button-stub" />,
+}));
+
 vi.mock('../../hooks/useMediaDetails', () => ({
   useMovieDetails: vi.fn(),
   useTVShowDetails: vi.fn(),
@@ -273,6 +279,25 @@ describe('PosterCard', () => {
   });
 
   describe('Availability Badges (Story 10-4)', () => {
+    it('13-1b: 想要 scrim renders ONLY on request-wired surfaces (isRequested provided)', () => {
+      const { rerender } = render(<PosterCard {...defaultProps} id="550" isRequested={false} />);
+      expect(screen.getByTestId('poster-request-overlay')).toBeInTheDocument();
+
+      // Unwired surface (legacy Search/Library): no isRequested prop → no scrim (CR M1).
+      rerender(<PosterCard {...defaultProps} id="550" />);
+      expect(screen.queryByTestId('poster-request-overlay')).not.toBeInTheDocument();
+    });
+
+    it('13-1b: no 想要 scrim for owned or non-TMDb cards', () => {
+      const { rerender } = render(
+        <PosterCard {...defaultProps} id="550" isOwned={true} isRequested={false} />
+      );
+      expect(screen.queryByTestId('poster-request-overlay')).not.toBeInTheDocument();
+
+      rerender(<PosterCard {...defaultProps} id="uuid-abc" isRequested={false} />);
+      expect(screen.queryByTestId('poster-request-overlay')).not.toBeInTheDocument();
+    });
+
     it('renders 已有 badge when isOwned is true (AC #1)', () => {
       render(<PosterCard {...defaultProps} isOwned={true} />);
       expect(screen.getByTestId('availability-badge-owned')).toBeInTheDocument();
