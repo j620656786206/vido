@@ -34,6 +34,14 @@ type RequestRepositoryInterface interface {
 	// in-memory row in sync with the DB (13-4a CR M1). Story 13-4a AC #6
 	// ([@contract-v1]).
 	UpdateFulfilment(ctx context.Context, id string, status string, fulfilmentSource, externalID, errorMessage models.NullString) (time.Time, error)
+	// ListActive returns every request in an active status
+	// (pending/searching/downloading), oldest first — the reconciler's
+	// idle-gate + work list (Story 13-3a AC #1/#2; additive, no bump).
+	ListActive(ctx context.Context) ([]models.Request, error)
+	// UpdateStatus writes a status transition (+ optional zh-TW error
+	// message; "" clears it) and bumps updated_at, returning the written
+	// timestamp (ParseJobRepository.UpdateStatus template — Story 13-3a AC #2).
+	UpdateStatus(ctx context.Context, id string, status string, errMsg string) (time.Time, error)
 }
 
 // RequestRepository provides SQLite data access for media requests.
@@ -127,6 +135,53 @@ func (r *RequestRepository) UpdateFulfilment(ctx context.Context, id string, sta
 	affected, err := result.RowsAffected()
 	if err != nil {
 		return time.Time{}, fmt.Errorf("failed to read fulfilment update result: %w", err)
+	}
+	if affected == 0 {
+		return time.Time{}, fmt.Errorf("request %s: %w", id, ErrRequestNotFound)
+	}
+	return now, nil
+}
+
+func (r *RequestRepository) ListActive(ctx context.Context) ([]models.Request, error) {
+	query := `SELECT ` + requestColumns + ` FROM requests
+		WHERE status IN ('pending', 'searching', 'downloading')
+		ORDER BY requested_at ASC`
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list active requests: %w", err)
+	}
+	defer rows.Close()
+
+	var requests []models.Request
+	for rows.Next() {
+		req, err := scanRequest(rows)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan active request: %w", err)
+		}
+		requests = append(requests, req)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating active requests: %w", err)
+	}
+	return requests, nil
+}
+
+func (r *RequestRepository) UpdateStatus(ctx context.Context, id string, status string, errMsg string) (time.Time, error) {
+	now := time.Now()
+
+	var errorMessage models.NullString
+	if errMsg != "" {
+		errorMessage = models.NewNullString(errMsg)
+	}
+
+	query := `UPDATE requests SET status = ?, error_message = ?, updated_at = ? WHERE id = ?`
+	result, err := r.db.ExecContext(ctx, query, status, errorMessage, now, id)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("failed to update request status: %w", err)
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return time.Time{}, fmt.Errorf("failed to read status update result: %w", err)
 	}
 	if affected == 0 {
 		return time.Time{}, fmt.Errorf("request %s: %w", id, ErrRequestNotFound)

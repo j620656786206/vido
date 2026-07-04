@@ -27,6 +27,10 @@ const (
 	// download_complete event — the frontend derives completion from each item's `status` field in the
 	// download_progress payload. Payload shape is stamped [@contract-v1] (see broadcaster; FE ux3-4-3 acks).
 	EventDownloadProgress EventType = "download_progress"
+	// EventRequestProgress carries the live request-pipeline snapshot fanned out by the
+	// RequestStatusPoller (Story 13-3a — Epic 13 G-3/P3-003). Payload = bare array of the
+	// 13-1a request resource + ephemeral `progress`; stamped [@contract-v1] (FE 13-3b acks).
+	EventRequestProgress EventType = "request_progress"
 )
 
 // Event represents an SSE event to broadcast

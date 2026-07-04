@@ -37,6 +37,14 @@ func (f *fakeFulfilmentRequestRepo) List(ctx context.Context) ([]models.Request,
 func (f *fakeFulfilmentRequestRepo) FindActiveByTMDbID(ctx context.Context, tmdbID int64, mediaType string) (*models.Request, error) {
 	return nil, nil
 }
+func (f *fakeFulfilmentRequestRepo) ListActive(ctx context.Context) ([]models.Request, error) {
+	return nil, nil
+}
+
+func (f *fakeFulfilmentRequestRepo) UpdateStatus(ctx context.Context, id string, status string, errMsg string) (time.Time, error) {
+	return fixedFulfilmentTime, nil
+}
+
 func (f *fakeFulfilmentRequestRepo) UpdateFulfilment(ctx context.Context, id string, status string, fulfilmentSource, externalID, errorMessage models.NullString) (time.Time, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()

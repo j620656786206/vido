@@ -53,6 +53,14 @@ func (m *mockRequestRepo) UpdateFulfilment(ctx context.Context, id string, statu
 	return time.Now(), nil
 }
 
+func (m *mockRequestRepo) ListActive(ctx context.Context) ([]models.Request, error) {
+	return nil, nil
+}
+
+func (m *mockRequestRepo) UpdateStatus(ctx context.Context, id string, status string, errMsg string) (time.Time, error) {
+	return time.Now(), nil
+}
+
 // mockTMDbForRequests embeds the shared explore mock (same package) and
 // overrides only the two detail lookups the request service uses.
 type mockTMDbForRequests struct {

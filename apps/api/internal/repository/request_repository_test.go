@@ -152,3 +152,79 @@ func TestRequestRepository_UpdateFulfilment(t *testing.T) {
 		assert.ErrorIs(t, err, ErrRequestNotFound)
 	})
 }
+
+func TestRequestRepository_ListActive(t *testing.T) {
+	repo := NewRequestRepository(setupRequestsDB(t))
+	ctx := context.Background()
+
+	t.Run("empty table returns empty slice", func(t *testing.T) {
+		active, err := repo.ListActive(ctx)
+		require.NoError(t, err)
+		assert.Empty(t, active)
+	})
+
+	// Seed one row per status; only pending/searching/downloading are active.
+	statuses := []string{
+		models.RequestStatusPending, models.RequestStatusSearching, models.RequestStatusDownloading,
+		models.RequestStatusCompleted, models.RequestStatusFailed,
+	}
+	for i, status := range statuses {
+		req := &models.Request{TMDbID: int64(1000 + i), MediaType: models.RequestMediaTypeMovie, Title: status}
+		require.NoError(t, repo.Create(ctx, req))
+		if status != models.RequestStatusPending {
+			_, err := repo.UpdateFulfilment(ctx, req.ID, status, models.NullString{}, models.NullString{}, models.NullString{})
+			require.NoError(t, err)
+		}
+	}
+
+	active, err := repo.ListActive(ctx)
+	require.NoError(t, err)
+	require.Len(t, active, 3, "only pending/searching/downloading are active")
+	for _, r := range active {
+		assert.Contains(t, []string{
+			models.RequestStatusPending, models.RequestStatusSearching, models.RequestStatusDownloading,
+		}, r.Status)
+	}
+	// Oldest-first so the reconciler treats rows fairly across ticks.
+	assert.True(t, !active[0].RequestedAt.After(active[1].RequestedAt))
+}
+
+func TestRequestRepository_UpdateStatus(t *testing.T) {
+	repo := NewRequestRepository(setupRequestsDB(t))
+	ctx := context.Background()
+
+	req := &models.Request{TMDbID: 550, MediaType: models.RequestMediaTypeMovie, Title: "x"}
+	require.NoError(t, repo.Create(ctx, req))
+
+	t.Run("status transition with error cleared", func(t *testing.T) {
+		// Seed an error, then a clean transition must NULL it.
+		_, err := repo.UpdateFulfilment(ctx, req.ID, models.RequestStatusPending,
+			models.NullString{}, models.NullString{}, models.NewNullString("Radarr 連線失敗"))
+		require.NoError(t, err)
+
+		updatedAt, err := repo.UpdateStatus(ctx, req.ID, models.RequestStatusDownloading, "")
+		require.NoError(t, err)
+
+		found, err := repo.FindActiveByTMDbID(ctx, 550, models.RequestMediaTypeMovie)
+		require.NoError(t, err)
+		assert.Equal(t, models.RequestStatusDownloading, found.Status)
+		assert.False(t, found.ErrorMessage.Valid, "empty errMsg clears error_message")
+		assert.WithinDuration(t, updatedAt, found.UpdatedAt, time.Second)
+	})
+
+	t.Run("failed transition records zh-TW reason", func(t *testing.T) {
+		_, err := repo.UpdateStatus(ctx, req.ID, models.RequestStatusFailed, "下載發生錯誤")
+		require.NoError(t, err)
+
+		requests, err := repo.List(ctx)
+		require.NoError(t, err)
+		require.Len(t, requests, 1)
+		assert.Equal(t, models.RequestStatusFailed, requests[0].Status)
+		assert.Equal(t, "下載發生錯誤", requests[0].ErrorMessage.String)
+	})
+
+	t.Run("unknown id returns ErrRequestNotFound", func(t *testing.T) {
+		_, err := repo.UpdateStatus(ctx, "no-such-id", models.RequestStatusCompleted, "")
+		assert.ErrorIs(t, err, ErrRequestNotFound)
+	})
+}
