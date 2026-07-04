@@ -8,9 +8,9 @@ package handlers
 
 import (
 	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -160,17 +160,27 @@ func (h *DVRSettingsHandler) getRootFolders(c *gin.Context, plugin string) {
 
 // respondError lifts typed PluginError codes into the Rule 3 envelope
 // (errors.As — the qbittorrent_handler:120-138 pattern). DVR_TEST_FAILED maps
-// to 409 per AC #4 (save refused); other DVR_* failures are 400s. Expected
-// 4xx flows log at Debug (CR M2 precedent), unexpected failures at Error.
+// to 409 per AC #4 (save refused); PLUGIN_* codes are server-side faults
+// (decrypt/registration failures) and map to 500 (13-4a CR M3); other DVR_*
+// failures are 400s. Expected 4xx flows log at Debug (CR M2 precedent),
+// server faults at Error.
 func (h *DVRSettingsHandler) respondError(c *gin.Context, plugin string, err error, message string) {
 	var pluginErr *plugins.PluginError
 	if errors.As(err, &pluginErr) {
 		status := http.StatusBadRequest
-		if pluginErr.Code == plugins.ErrCodeTestFailed {
+		switch pluginErr.Code {
+		case plugins.ErrCodeTestFailed:
 			status = http.StatusConflict
+		case plugins.ErrCodePluginInitFailed, plugins.ErrCodePluginHealthCheckFailed:
+			status = http.StatusInternalServerError
 		}
-		slog.Debug("DVR settings operation rejected",
-			"plugin", plugin, "code", pluginErr.Code, "error", err)
+		if status == http.StatusInternalServerError {
+			slog.Error("DVR settings operation failed",
+				"plugin", plugin, "code", pluginErr.Code, "error", err)
+		} else {
+			slog.Debug("DVR settings operation rejected",
+				"plugin", plugin, "code", pluginErr.Code, "error", err)
+		}
 		ErrorResponse(c, status, pluginErr.Code, message, err.Error())
 		return
 	}
@@ -180,10 +190,10 @@ func (h *DVRSettingsHandler) respondError(c *gin.Context, plugin string, err err
 }
 
 // pluginDisplayName renders the zh-TW-facing plugin name (Radarr/Sonarr are
-// proper nouns — capitalize).
+// proper nouns — capitalize the first letter).
 func pluginDisplayName(plugin string) string {
 	if plugin == "" {
 		return plugin
 	}
-	return fmt.Sprintf("%s%s", string(plugin[0]-'a'+'A'), plugin[1:])
+	return strings.ToUpper(plugin[:1]) + plugin[1:]
 }

@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -173,6 +174,7 @@ type queueRecord struct {
 // following the pagination envelope until all records are collected.
 func (c *Client) GetQueue(ctx context.Context) ([]plugins.QueueItem, error) {
 	items := []plugins.QueueItem{}
+	totalRecords := 0
 	for page := 1; page <= maxQueuePages; page++ {
 		body, err := c.doRequest(ctx, http.MethodGet,
 			c.buildURL(fmt.Sprintf("/queue?page=%d&pageSize=100", page)), c.config.APIKey, nil)
@@ -200,10 +202,16 @@ func (c *Client) GetQueue(ctx context.Context) ([]plugins.QueueItem, error) {
 			})
 		}
 
-		if len(envelope.Records) == 0 || len(items) >= envelope.TotalRecords {
-			break
+		totalRecords = envelope.TotalRecords
+		if len(envelope.Records) == 0 || len(items) >= totalRecords {
+			return items, nil
 		}
 	}
+
+	// No silent caps (13-4a CR L1): a queue larger than maxQueuePages×100 is
+	// pathological, but the truncation must be visible, not implied complete.
+	slog.Warn("Radarr queue truncated at page cap",
+		"collected", len(items), "total_records", totalRecords, "max_pages", maxQueuePages)
 	return items, nil
 }
 
@@ -309,10 +317,15 @@ func mapTransportError(err error, message string) *plugins.PluginError {
 	return &plugins.PluginError{Code: code, Message: message, Cause: err}
 }
 
-// truncate bounds upstream error bodies so log lines and API messages stay sane.
+// truncate bounds upstream error bodies (rune-safe — Radarr messages can
+// carry multi-byte UTF-8) so log lines and API messages stay sane.
 func truncate(s string, n int) string {
 	if len(s) <= n {
 		return s
 	}
-	return s[:n] + "…"
+	runes := []rune(s)
+	if len(runes) <= n {
+		return s
+	}
+	return string(runes[:n]) + "…"
 }

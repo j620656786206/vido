@@ -1,6 +1,6 @@
 # Story 13.4a: *arr DVR Plugin — Infra + Radarr + Movie Fulfilment
 
-Status: review
+Status: done
 
 **Epic:** Epic 13 — Request System · **FR:** P3-004 (G-4) · **Artery #2 (part 1)** · **BACKEND-ONLY**
 **Depends on: 13-1a merged** (requests table + RequestService must exist — this story extends them).
@@ -130,6 +130,27 @@ New package deps: NONE (x/time, x/sync, testify, gin all present). Radarr API ve
 - [Source: apps/api/internal/qbittorrent/client.go + services/qbittorrent_service.go (precedent chain)]
 - [Source: https://github.com/Sonarr/Sonarr/wiki/Series-Lookup + https://arrapi.kometa.wiki/en/latest/radarr.html (API verification)]
 
+## Senior Developer Review (AI)
+
+**Date:** 2026-07-04 · **Outcome:** Approve (all findings fixed in-session) · **Reviewer:** Amelia CR pass (Fable 5; ⚠️ same-context as DEV — compensated with extra-adversarial scrutiny incl. live-boot probing, per bugfix-10-5 precedent)
+
+**Mandatory checks:** 🔒 Rule 7 Wire Format: PASS (9 codes checked — 7×DVR_* + 2×PLUGIN_*, all registered prefixes) · 🔒 Rule 20 Contract Bump: N/A (no stamp bumps — the 2 diff tokens are mega-line history text) · 🔒 Rule 25 Mega-line: N/A (single-author clean prepend, no rebase; base-entry survival verified dropped=0) · Git vs File List: 0 discrepancies (26/26).
+
+**Live verification (beyond DEV static gates):** booted the API on a scratch port and probed all 5 new routes + regressions — no gin route panic (static `/settings/radarr*` coexists with `/settings/:key`), GET health block live, POST test → DVR_NOT_CONFIGURED, PUT unreachable-Radarr → 409, PUT disabled → 200 no-probe, qBT + param settings routes intact, `/health/services/radarr/history` 200. ⚠️ Probe wrote 5 test rows to the local dev DB (`apps/api/data/vido.db` — DB path is cwd-relative, not env-overridable); all deleted + verified zero residue.
+
+### Action Items
+
+- [x] [M1] 201 response carried stale `updated_at` after fulfilment transition — `RequestRepository.UpdateFulfilment` now returns the written timestamp; `FulfilmentService` syncs it onto the in-memory row (both success + annotation paths). Tests: repo `WithinDuration` assert + fulfilment `fixedFulfilmentTime` assert. [fulfilment_service.go / request_repository.go]
+- [x] [M2] `Manager.CheckHealth` silently discarded config-load errors (`config, _, _ :=`, Rule 13) and triple-loaded config — refactored to a single err-handled LoadConfig; decrypt/load failure now reports unhealthy + `PLUGIN_INIT_FAILED` (init fault, not connectivity). Test: `TestManager_CheckHealth_ConfigLoadFailureIsInitFault`. [plugins/manager.go]
+- [x] [M3] `respondError` mapped `PLUGIN_INIT_FAILED` (server-side fault) to 400 — `PLUGIN_*` codes now map to 500 with Error-level logging. Test: `TestDVRSettingsHandler_PluginInitFailureIs500`. [handlers/dvr_settings_handler.go]
+- [x] [L1] `GetQueue` silent 20-page truncation — slog.Warn when the cap trims below totalRecords. [radarr/client.go]
+- [x] [L2] Missing handler test for PUT-without-url 400 guard — `TestDVRSettingsHandler_SaveConfig_MissingURL` added (asserts service never called). [dvr_settings_handler_test.go]
+- [x] [L3] `truncate()` could split a UTF-8 rune in upstream error bodies — rune-safe now. [radarr/client.go]
+- [x] [L4] `pluginDisplayName` naive byte arithmetic — `strings.ToUpper(plugin[:1])`. [dvr_settings_handler.go]
+- [x] [L5] Documented-deviation acknowledgment: PUT disabled-save skips the test-before-save probe (disabling must not require a reachable server) — reviewed and KEPT; no code change.
+
+**Post-fix gates:** `pnpm nx test api` PASS (uncached — nx had replayed a cached failure of the known pre-existing scanner-SSE flake; `--skip-nx-cache` run green) · touched packages `-count=1` green · `pnpm lint:all` 0 errors (one interim ST1012 fixed by switching to `assert.AnError`) · prettier clean · gofmt clean.
+
 ## Change Log
 
 | Date       | Change                                                                                                                                                                                                 |
@@ -143,6 +164,7 @@ New package deps: NONE (x/time, x/sync, testify, gin all present). Radarr API ve
 | 2026-07-04 | Task 6 (AC #7): Rule 7 sync — project-context.md code block +7 DVR_* codes, authoritative prefix list 14→15 (`DVR_`), mega-line 13-4a entry prepended (13-1a demoted to Prior, tail kept once, prettier-verified — bare underscores in the entry initially made prettier non-idempotent/mangled emphasis; fixed by backticking every `_`-bearing token, Rule 25 verification caught it); code-review/instructions.xml Step 3 prefix list + sync date → 2026-07-04 (15 sources). Reconciles 13-1a's "15th at 13-4a merge" note. |
 | 2026-07-04 | Task 7 (AC #5/#9): main.go wiring — pluginManager DI (settings+secrets+connection-history repos, 60s default) + radarr factory registration + fulfilmentService → requestService.SetFulfilmentService + dvrSettingsService/Handler("radarr") + RegisterRoutes(apiV1) + scheduler start (own ctx/cancel in goroutine zone, non-fatal on error) + stop in graceful-shutdown block. Swagger: annotations-only per 13-1a precedent (no docs/ pipeline exists in apps/api). |
 | 2026-07-04 | Task 8 (AC #9): full gates GREEN — `pnpm nx test api` PASS (full suite), `pnpm nx test web` 2322/2322 PASS, `pnpm lint:all` 0 errors / 123 warnings (all in untouched FE files — story is backend-only), prettier clean, `test:cleanup` no orphans. Rule 15 self-check PASS (DI/routes/scheduler-lifecycle verified; no migrations; UpdateFulfilment uses existing 027 columns w/ real-DB round-trip test). Known pre-existing flake TestScannerService_SSEBroadcast_ScanCancelled recurred intermittently mid-dev (stash-verified on clean main; existing entry preexisting-fail-scanner-sse-scan-cancelled-flake covers it — no new entry per bugfix-10-1/10-5/10-6 precedent); green on the gate run. Status → review. |
+| 2026-07-04 | CR (same-session, extra-adversarial + live-boot probe): 0H/3M/5L, all fixed in-session — M1 UpdateFulfilment returns written updated_at + in-memory sync; M2 CheckHealth single err-handled LoadConfig (decrypt failure → PLUGIN_INIT_FAILED unhealthy); M3 PLUGIN_* → 500; L1 queue-cap slog.Warn; L2 PUT missing-url handler test; L3 rune-safe truncate; L4 ToUpper display name; L5 disabled-save deviation acknowledged. Live probe verified all 5 routes + qBT/param regressions + 409 guard on a booted server (dev-DB pollution cleaned, 5 rows). Rule 7 PASS / Rule 20 N/A / Rule 25 N/A. Post-fix gates green. Status review → done. |
 
 ## Dev Agent Record
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -48,8 +49,8 @@ func (m *mockRequestRepo) FindActiveByTMDbID(ctx context.Context, tmdbID int64, 
 	return nil, repository.ErrRequestNotFound
 }
 
-func (m *mockRequestRepo) UpdateFulfilment(ctx context.Context, id string, status string, fulfilmentSource, externalID, errorMessage models.NullString) error {
-	return nil
+func (m *mockRequestRepo) UpdateFulfilment(ctx context.Context, id string, status string, fulfilmentSource, externalID, errorMessage models.NullString) (time.Time, error) {
+	return time.Now(), nil
 }
 
 // mockTMDbForRequests embeds the shared explore mock (same package) and

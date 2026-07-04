@@ -80,8 +80,9 @@ func (m *mockSettingsRepo) SetBool(ctx context.Context, key string, value bool) 
 }
 
 type mockSecretsService struct {
-	mu      sync.Mutex
-	secrets map[string]string
+	mu          sync.Mutex
+	secrets     map[string]string
+	retrieveErr error
 }
 
 func newMockSecretsService() *mockSecretsService {
@@ -97,6 +98,9 @@ func (m *mockSecretsService) Store(ctx context.Context, name string, value strin
 func (m *mockSecretsService) Retrieve(ctx context.Context, name string) (string, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if m.retrieveErr != nil {
+		return "", m.retrieveErr
+	}
 	v, ok := m.secrets[name]
 	if !ok {
 		return "", errors.New("secret not found")
@@ -282,6 +286,21 @@ func TestManager_CheckHealth_Unconfigured(t *testing.T) {
 
 	assert.Equal(t, HealthStatusUnconfigured, h.Status)
 	require.NotNil(t, h.LastCheckedAt)
+}
+
+func TestManager_CheckHealth_ConfigLoadFailureIsInitFault(t *testing.T) {
+	// CR M2 — a secrets decrypt failure is a server-side init fault, not a
+	// connectivity failure: unhealthy + PLUGIN_INIT_FAILED, no TestConnection.
+	mgr, _, secretsSvc, history, stub := configuredManager(t)
+	secretsSvc.retrieveErr = errors.New("cipher: message authentication failed")
+
+	h := mgr.CheckHealth(context.Background(), "radarr")
+
+	assert.Equal(t, HealthStatusUnhealthy, h.Status)
+	assert.Contains(t, h.Message, ErrCodePluginInitFailed)
+	assert.Equal(t, 0, stub.testedCount(), "no probe may run on a config-load failure")
+	events := history.recorded()
+	require.Len(t, events, 1, "initial→unhealthy transition writes one event")
 }
 
 func TestManager_CheckHealth_TransitionsWriteHistory(t *testing.T) {

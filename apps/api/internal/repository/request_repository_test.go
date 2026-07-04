@@ -115,7 +115,7 @@ func TestRequestRepository_UpdateFulfilment(t *testing.T) {
 
 	t.Run("success transition writes all fulfilment fields", func(t *testing.T) {
 		time.Sleep(5 * time.Millisecond) // ensure updated_at moves
-		err := repo.UpdateFulfilment(ctx, req.ID, models.RequestStatusSearching,
+		writtenAt, err := repo.UpdateFulfilment(ctx, req.ID, models.RequestStatusSearching,
 			models.NewNullString(models.RequestFulfilmentSourceArr),
 			models.NewNullString("42"), models.NullString{})
 		require.NoError(t, err)
@@ -127,13 +127,15 @@ func TestRequestRepository_UpdateFulfilment(t *testing.T) {
 		assert.Equal(t, "42", found.ExternalID.String)
 		assert.False(t, found.ErrorMessage.Valid, "success transition clears error_message")
 		assert.True(t, found.UpdatedAt.After(createdAt), "updated_at must be bumped")
+		assert.WithinDuration(t, writtenAt, found.UpdatedAt, time.Second,
+			"returned timestamp must match the stored updated_at (CR M1)")
 	})
 
 	t.Run("failure annotation keeps status and sets zh-TW reason", func(t *testing.T) {
 		req2 := &models.Request{TMDbID: 551, MediaType: models.RequestMediaTypeMovie, Title: "y"}
 		require.NoError(t, repo.Create(ctx, req2))
 
-		err := repo.UpdateFulfilment(ctx, req2.ID, models.RequestStatusPending,
+		_, err := repo.UpdateFulfilment(ctx, req2.ID, models.RequestStatusPending,
 			models.NullString{}, models.NullString{}, models.NewNullString("Radarr 未設定"))
 		require.NoError(t, err)
 
@@ -145,7 +147,7 @@ func TestRequestRepository_UpdateFulfilment(t *testing.T) {
 	})
 
 	t.Run("unknown id returns ErrRequestNotFound", func(t *testing.T) {
-		err := repo.UpdateFulfilment(ctx, "no-such-id", models.RequestStatusSearching,
+		_, err := repo.UpdateFulfilment(ctx, "no-such-id", models.RequestStatusSearching,
 			models.NullString{}, models.NullString{}, models.NullString{})
 		assert.ErrorIs(t, err, ErrRequestNotFound)
 	})

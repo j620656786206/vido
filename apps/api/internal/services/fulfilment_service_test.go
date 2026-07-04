@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -36,15 +37,19 @@ func (f *fakeFulfilmentRequestRepo) List(ctx context.Context) ([]models.Request,
 func (f *fakeFulfilmentRequestRepo) FindActiveByTMDbID(ctx context.Context, tmdbID int64, mediaType string) (*models.Request, error) {
 	return nil, nil
 }
-func (f *fakeFulfilmentRequestRepo) UpdateFulfilment(ctx context.Context, id string, status string, fulfilmentSource, externalID, errorMessage models.NullString) error {
+func (f *fakeFulfilmentRequestRepo) UpdateFulfilment(ctx context.Context, id string, status string, fulfilmentSource, externalID, errorMessage models.NullString) (time.Time, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if f.err != nil {
-		return f.err
+		return time.Time{}, f.err
 	}
 	f.updates = append(f.updates, fulfilmentUpdate{id, status, fulfilmentSource, externalID, errorMessage})
-	return nil
+	return fixedFulfilmentTime, nil
 }
+
+// fixedFulfilmentTime lets tests assert the in-memory row was synced with
+// the repo-written updated_at (13-4a CR M1).
+var fixedFulfilmentTime = time.Date(2026, 7, 4, 12, 0, 0, 0, time.UTC)
 
 func (f *fakeFulfilmentRequestRepo) lastUpdate(t *testing.T) fulfilmentUpdate {
 	t.Helper()
@@ -119,6 +124,10 @@ func TestFulfilmentService_MovieSuccessTransition(t *testing.T) {
 	assert.Equal(t, "arr", update.fulfilmentSource.String)
 	assert.Equal(t, "42", update.externalID.String)
 	assert.False(t, update.errorMessage.Valid)
+
+	// CR M1 — the in-memory row carries the repo-written updated_at, so the
+	// 201 response matches what a subsequent GET returns.
+	assert.Equal(t, fixedFulfilmentTime, req.UpdatedAt)
 }
 
 func TestFulfilmentService_RadarrUnconfigured_StaysPending(t *testing.T) {

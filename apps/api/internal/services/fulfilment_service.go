@@ -116,7 +116,8 @@ func (s *FulfilmentService) fulfilMovie(ctx context.Context, request *models.Req
 	status := models.RequestStatusSearching
 	source := models.NewNullString(models.RequestFulfilmentSourceArr)
 	external := models.NewNullString(strconv.FormatInt(externalID, 10))
-	if err := s.requestRepo.UpdateFulfilment(ctx, request.ID, status, source, external, models.NullString{}); err != nil {
+	updatedAt, err := s.requestRepo.UpdateFulfilment(ctx, request.ID, status, source, external, models.NullString{})
+	if err != nil {
 		// The DB row is still pending — keep the response consistent with
 		// the row rather than claiming a transition that was never stored.
 		slog.Error("Fulfilment transition write failed; row stays pending",
@@ -129,6 +130,7 @@ func (s *FulfilmentService) fulfilMovie(ctx context.Context, request *models.Req
 	request.FulfilmentSource = source
 	request.ExternalID = external
 	request.ErrorMessage = models.NullString{}
+	request.UpdatedAt = updatedAt
 
 	slog.Info("Movie request routed to Radarr",
 		"request_id", request.ID, "tmdb_id", request.TMDbID, "radarr_id", externalID)
@@ -150,11 +152,14 @@ func (s *FulfilmentService) stayPending(ctx context.Context, request *models.Req
 			"media_type", request.MediaType, "reason", reason)
 	}
 
-	if err := s.requestRepo.UpdateFulfilment(ctx, request.ID, request.Status,
-		request.FulfilmentSource, request.ExternalID, request.ErrorMessage); err != nil {
+	updatedAt, err := s.requestRepo.UpdateFulfilment(ctx, request.ID, request.Status,
+		request.FulfilmentSource, request.ExternalID, request.ErrorMessage)
+	if err != nil {
 		slog.Error("Failed to persist fulfilment annotation",
 			"request_id", request.ID, "error", err)
+		return
 	}
+	request.UpdatedAt = updatedAt
 }
 
 // addMovieFailureReason maps an AddMovie error to its zh-TW row annotation.

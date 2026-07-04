@@ -164,6 +164,49 @@ func TestDVRSettingsHandler_SaveConfig_InvalidBody(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
+func TestDVRSettingsHandler_SaveConfig_MissingURL(t *testing.T) {
+	// CR L2 — handler-side url guard: valid JSON without url is a 400 that
+	// never reaches the service.
+	svc := &mockDVRSettingsService{
+		saveConfig: func(ctx context.Context, plugin string, input services.DVRConfigInput) error {
+			t.Fatal("service must not be called when url is missing")
+			return nil
+		},
+	}
+	router := setupDVRRouter(svc)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/settings/radarr", bytes.NewBufferString(`{"api_key":"k","enabled":true}`))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestDVRSettingsHandler_PluginInitFailureIs500(t *testing.T) {
+	// CR M3 — PLUGIN_INIT_FAILED (decrypt/registration fault) is a server
+	// error, not a client error.
+	svc := &mockDVRSettingsService{
+		getQualityProfiles: func(ctx context.Context, plugin string) ([]plugins.QualityProfile, error) {
+			return nil, &plugins.PluginError{Code: plugins.ErrCodePluginInitFailed, Message: "load plugin config", Cause: assert.AnError}
+		},
+	}
+	router := setupDVRRouter(svc)
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/settings/radarr/quality-profiles", nil)
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusInternalServerError, w.Code)
+	var resp struct {
+		Error struct {
+			Code string `json:"code"`
+		} `json:"error"`
+	}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	assert.Equal(t, "PLUGIN_INIT_FAILED", resp.Error.Code)
+}
+
 func TestDVRSettingsHandler_TestConnection_NoBodyUsesSaved(t *testing.T) {
 	var receivedInput *services.DVRConfigInput = &services.DVRConfigInput{URL: "sentinel"}
 	svc := &mockDVRSettingsService{

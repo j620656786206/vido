@@ -222,13 +222,28 @@ func (m *Manager) CheckHealth(ctx context.Context, name string) PluginHealth {
 	now := time.Now()
 	next := PluginHealth{LastCheckedAt: &now}
 
-	if !m.IsConfigured(ctx, name) {
+	// Single config load for gate + probe (13-4a CR M2) — a decrypt/load
+	// failure is a server-side init fault, not a connectivity failure.
+	config, enabled, err := m.LoadConfig(ctx, name)
+	if err != nil {
+		next.Status = HealthStatusUnhealthy
+		next.Message = (&PluginError{
+			Code:    ErrCodePluginInitFailed,
+			Message: fmt.Sprintf("%s config load failed", name),
+			Cause:   err,
+		}).Error()
+		m.storeHealth(ctx, name, next)
+		return next
+	}
+	if !enabled || config.URL == "" || config.APIKey == "" {
 		next.Status = HealthStatusUnconfigured
 		next.Message = "plugin not configured"
 		m.storeHealth(ctx, name, next)
 		return next
 	}
 
+	// GetClient re-reads config internally on purpose — that is what keeps
+	// the fingerprint cache coherent when a save races this check.
 	client, err := m.GetClient(ctx, name)
 	if err != nil {
 		next.Status = HealthStatusUnhealthy
@@ -237,7 +252,6 @@ func (m *Manager) CheckHealth(ctx context.Context, name string) PluginHealth {
 		return next
 	}
 
-	config, _, _ := m.LoadConfig(ctx, name)
 	if err := client.TestConnection(ctx, config); err != nil {
 		next.Status = HealthStatusUnhealthy
 		next.Message = (&PluginError{
