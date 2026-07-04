@@ -26,6 +26,12 @@ type RequestRepositoryInterface interface {
 	Create(ctx context.Context, request *models.Request) error
 	List(ctx context.Context) ([]models.Request, error)
 	FindActiveByTMDbID(ctx context.Context, tmdbID int64, mediaType string) (*models.Request, error)
+	// UpdateFulfilment writes the fulfilment fields for one request row —
+	// both the success transition (status='searching' + external_id +
+	// fulfilment_source, error cleared) and the graceful-degradation
+	// annotation (status stays 'pending', error_message set). Bumps
+	// updated_at. Story 13-4a AC #6 ([@contract-v1]).
+	UpdateFulfilment(ctx context.Context, id string, status string, fulfilmentSource, externalID, errorMessage models.NullString) error
 }
 
 // RequestRepository provides SQLite data access for media requests.
@@ -107,6 +113,22 @@ func (r *RequestRepository) List(ctx context.Context) ([]models.Request, error) 
 		return nil, fmt.Errorf("error iterating requests: %w", err)
 	}
 	return requests, nil
+}
+
+func (r *RequestRepository) UpdateFulfilment(ctx context.Context, id string, status string, fulfilmentSource, externalID, errorMessage models.NullString) error {
+	query := `UPDATE requests SET status = ?, fulfilment_source = ?, external_id = ?, error_message = ?, updated_at = ? WHERE id = ?`
+	result, err := r.db.ExecContext(ctx, query, status, fulfilmentSource, externalID, errorMessage, time.Now(), id)
+	if err != nil {
+		return fmt.Errorf("failed to update request fulfilment: %w", err)
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to read fulfilment update result: %w", err)
+	}
+	if affected == 0 {
+		return fmt.Errorf("request %s: %w", id, ErrRequestNotFound)
+	}
+	return nil
 }
 
 func (r *RequestRepository) FindActiveByTMDbID(ctx context.Context, tmdbID int64, mediaType string) (*models.Request, error) {

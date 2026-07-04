@@ -48,6 +48,10 @@ func (m *mockRequestRepo) FindActiveByTMDbID(ctx context.Context, tmdbID int64, 
 	return nil, repository.ErrRequestNotFound
 }
 
+func (m *mockRequestRepo) UpdateFulfilment(ctx context.Context, id string, status string, fulfilmentSource, externalID, errorMessage models.NullString) error {
+	return nil
+}
+
 // mockTMDbForRequests embeds the shared explore mock (same package) and
 // overrides only the two detail lookups the request service uses.
 type mockTMDbForRequests struct {
@@ -80,6 +84,62 @@ func newRequestServiceForTest(repo *mockRequestRepo, tmdbMock *mockTMDbForReques
 	seriesRepo.On("FindOwnedTMDbIDs", context.Background(), []int64{550}).Return(ownedSeries, nil).Maybe()
 	seriesRepo.On("FindOwnedTMDbIDs", context.Background(), []int64{1399}).Return(ownedSeries, nil).Maybe()
 	return NewRequestService(repo, tmdbMock, movieRepo, seriesRepo)
+}
+
+// stubFulfilment records the FulfilRequest call and simulates the 13-4a
+// success transition in place.
+type stubFulfilment struct {
+	calls    int
+	lastReq  *models.Request
+	simulate func(request *models.Request)
+}
+
+func (s *stubFulfilment) FulfilRequest(ctx context.Context, request *models.Request) {
+	s.calls++
+	s.lastReq = request
+	if s.simulate != nil {
+		s.simulate(request)
+	}
+}
+
+func TestRequestService_CreateRequest_WithFulfilment(t *testing.T) {
+	ctx := context.Background()
+	movieDetails := &tmdb.MovieDetails{}
+	movieDetails.Title = "鬥陣俱樂部"
+
+	repo := &mockRequestRepo{}
+	svc := newRequestServiceForTest(repo, &mockTMDbForRequests{movieDetails: movieDetails}, nil, nil)
+	fulfilment := &stubFulfilment{simulate: func(request *models.Request) {
+		request.Status = models.RequestStatusSearching
+		request.FulfilmentSource = models.NewNullString(models.RequestFulfilmentSourceArr)
+		request.ExternalID = models.NewNullString("42")
+	}}
+	svc.SetFulfilmentService(fulfilment)
+
+	created, err := svc.CreateRequest(ctx, CreateMediaRequestRequest{TMDbID: 550, MediaType: "movie"})
+	require.NoError(t, err)
+
+	assert.Equal(t, 1, fulfilment.calls, "fulfilment must run synchronously on create (AC #6)")
+	assert.Same(t, created, fulfilment.lastReq, "fulfilment receives the created row")
+	assert.Equal(t, models.RequestStatusSearching, created.Status,
+		"the create response carries the transition (searching stays within the 13-1a enum — no bump)")
+	assert.Equal(t, "42", created.ExternalID.String)
+}
+
+func TestRequestService_CreateRequest_NilFulfilmentIsNoOp(t *testing.T) {
+	// 13-1a behavior preserved exactly when the optional dep is absent.
+	ctx := context.Background()
+	movieDetails := &tmdb.MovieDetails{}
+	movieDetails.Title = "x"
+
+	repo := &mockRequestRepo{}
+	svc := newRequestServiceForTest(repo, &mockTMDbForRequests{movieDetails: movieDetails}, nil, nil)
+
+	created, err := svc.CreateRequest(ctx, CreateMediaRequestRequest{TMDbID: 550, MediaType: "movie"})
+	require.NoError(t, err)
+	assert.Equal(t, models.RequestStatusPending, created.Status)
+	assert.False(t, created.FulfilmentSource.Valid)
+	assert.False(t, created.ErrorMessage.Valid)
 }
 
 func TestRequestService_CreateRequest_Movie(t *testing.T) {

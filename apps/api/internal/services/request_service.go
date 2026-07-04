@@ -42,6 +42,10 @@ type RequestService struct {
 	tmdb       TMDbServiceInterface
 	movieRepo  repository.MovieRepositoryInterface
 	seriesRepo repository.SeriesRepositoryInterface
+	// fulfilment is an OPTIONAL nil-safe dependency (Story 13-4a AC #6) —
+	// when absent/unconfigured the 13-1a create behavior is preserved
+	// exactly (rows born pending, no transition).
+	fulfilment FulfilmentServiceInterface
 }
 
 // Compile-time verification.
@@ -102,7 +106,19 @@ func (s *RequestService) CreateRequest(ctx context.Context, req CreateMediaReque
 
 	slog.Info("Media request created",
 		"id", request.ID, "tmdb_id", request.TMDbID, "media_type", request.MediaType, "title", request.Title)
+
+	// Story 13-4a AC #6 — synchronous best-effort fulfilment. Never fails
+	// the create (graceful degradation lives inside FulfilRequest); the
+	// mutated row state rides back on the 201 response.
+	if s.fulfilment != nil {
+		s.fulfilment.FulfilRequest(ctx, request)
+	}
 	return request, nil
+}
+
+// SetFulfilmentService wires the optional fulfilment dependency (13-4a).
+func (s *RequestService) SetFulfilmentService(fulfilment FulfilmentServiceInterface) {
+	s.fulfilment = fulfilment
 }
 
 func (s *RequestService) ListRequests(ctx context.Context) ([]models.Request, error) {

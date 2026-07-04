@@ -22,6 +22,8 @@ import (
 	"github.com/vido/api/internal/health"
 	"github.com/vido/api/internal/images"
 	"github.com/vido/api/internal/logger"
+	"github.com/vido/api/internal/plugins"
+	"github.com/vido/api/internal/plugins/radarr"
 	"github.com/vido/api/internal/repository"
 	"github.com/vido/api/internal/retry"
 	"github.com/vido/api/internal/secrets"
@@ -213,6 +215,19 @@ func main() {
 	// Initialize request service (Story 13-1a — Epic 13 one-click 想要 requests).
 	// Intent-only: fulfilment lands in 13-4, status transitions/SSE in 13-3a.
 	requestService := services.NewRequestService(repos.Requests, tmdbService, repos.Movies, repos.Series)
+
+	// Story 13-4a — *arr DVR plugin infrastructure (§7). The manager owns
+	// per-plugin config (settings + secrets), fingerprint-cached clients, and
+	// the 60s health scheduler (self-contained — the 5-service ServicesHealth
+	// model is deliberately not extended). Movie fulfilment rides the
+	// request-create path via the optional nil-safe dependency.
+	pluginManager := plugins.NewManager(repos.Settings, secretsService, repos.ConnectionHistory, slog.Default(), 0)
+	pluginManager.Register("radarr", func(config plugins.PluginConfig) plugins.DVRPlugin {
+		return radarr.NewClient(config)
+	})
+	fulfilmentService := services.NewFulfilmentService(pluginManager, repos.Settings, repos.Requests)
+	requestService.SetFulfilmentService(fulfilmentService)
+	dvrSettingsService := services.NewDVRSettingsService(pluginManager, repos.Settings, secretsService)
 
 	// Initialize AI service for AI-powered filename parsing (Story 3.1)
 	aiService, err := services.NewAIService(cfg, db.Conn())
@@ -535,9 +550,10 @@ func main() {
 	libraryService := services.NewLibraryService(repos.Movies, repos.Series, repos.Episodes, services.WithTMDbVideos(tmdbService.VideosProvider()))
 	libraryHandler := handlers.NewLibraryHandler(libraryService)
 	mediaLibrariesHandler := handlers.NewMediaLibrariesHandler(mediaLibraryService)
-	exploreBlocksHandler := handlers.NewExploreBlocksHandler(exploreBlockService) // Story 10.3
-	filterPresetsHandler := handlers.NewFilterPresetsHandler(filterPresetService) // Story 11.4
-	requestHandler := handlers.NewRequestHandler(requestService)                  // Story 13-1a
+	exploreBlocksHandler := handlers.NewExploreBlocksHandler(exploreBlockService)      // Story 10.3
+	filterPresetsHandler := handlers.NewFilterPresetsHandler(filterPresetService)      // Story 11.4
+	requestHandler := handlers.NewRequestHandler(requestService)                       // Story 13-1a
+	dvrSettingsHandler := handlers.NewDVRSettingsHandler(dvrSettingsService, "radarr") // Story 13-4a (13-4b appends "sonarr")
 	recentMediaHandler := handlers.NewRecentMediaHandler(movieService, seriesService)
 	logHandler := handlers.NewLogHandler(logService)
 	cacheHandler := handlers.NewCacheHandler(cacheStatsService, cacheCleanupService)
@@ -622,6 +638,7 @@ func main() {
 		exploreBlocksHandler.RegisterRoutes(apiV1)  // /api/v1/explore-blocks CRUD + content (Story 10.3)
 		filterPresetsHandler.RegisterRoutes(apiV1)  // /api/v1/filter-presets CRUD (Story 11.4)
 		requestHandler.RegisterRoutes(apiV1)        // /api/v1/requests create+list (Story 13-1a, Epic 13)
+		dvrSettingsHandler.RegisterRoutes(apiV1)    // /api/v1/settings/radarr triad + profiles/root-folders passthrough (Story 13-4a)
 		recentMediaHandler.RegisterRoutes(apiV1)
 		scannerHandler.RegisterRoutes(apiV1)
 		subtitleHandler.RegisterRoutes(apiV1)
@@ -673,6 +690,13 @@ func main() {
 	go healthMonitor.StartQBMonitoring(monitorCtx)
 	slog.Info("qBittorrent health monitoring started (30s interval)")
 
+	// Start DVR plugin health scheduler (Story 13-4a — immediate sweep + 60s interval, §7)
+	pluginManagerCtx, pluginManagerCancel := context.WithCancel(context.Background())
+	if err := pluginManager.Start(pluginManagerCtx); err != nil {
+		slog.Error("Failed to start plugin health scheduler", "error", err)
+		// Non-fatal — settings endpoints still work; health refreshes on save
+	}
+
 	// Start server in a goroutine for graceful shutdown
 	addr := cfg.GetAddress()
 	slog.Info("Starting Vido API server", "address", addr)
@@ -711,6 +735,11 @@ func main() {
 	slog.Info("Stopping download progress broadcaster...")
 	downloadProgressCancel()
 	downloadProgressBroadcaster.Stop()
+
+	// Stop DVR plugin health scheduler (Story 13-4a)
+	slog.Info("Stopping plugin health scheduler...")
+	pluginManagerCancel()
+	pluginManager.Stop()
 
 	// Stop backup scheduler
 	slog.Info("Stopping backup scheduler...")

@@ -105,9 +105,12 @@ func TestIsValidServiceName(t *testing.T) {
 		{"douban", true},
 		{"wikipedia", true},
 		{"ai", true},
+		{"radarr", true},
+		{"sonarr", true},
 		{"unknown", false},
 		{"", false},
 		{"QBITTORRENT", false},
+		{"RADARR", false},
 	}
 
 	for _, tt := range tests {

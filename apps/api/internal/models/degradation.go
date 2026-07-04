@@ -26,11 +26,16 @@ const (
 type ServiceName string
 
 const (
-	ServiceNameTMDb         ServiceName = "tmdb"
-	ServiceNameDouban       ServiceName = "douban"
-	ServiceNameWikipedia    ServiceName = "wikipedia"
-	ServiceNameAI           ServiceName = "ai"
-	ServiceNameQBittorrent  ServiceName = "qbittorrent"
+	ServiceNameTMDb        ServiceName = "tmdb"
+	ServiceNameDouban      ServiceName = "douban"
+	ServiceNameWikipedia   ServiceName = "wikipedia"
+	ServiceNameAI          ServiceName = "ai"
+	ServiceNameQBittorrent ServiceName = "qbittorrent"
+	// DVR plugin services (Story 13-4a). Constants + connection-history
+	// validation only — deliberately NOT part of the hardcoded 5-service
+	// ServicesHealth model below; plugin health lives in plugins.Manager.
+	ServiceNameRadarr ServiceName = "radarr"
+	ServiceNameSonarr ServiceName = "sonarr"
 )
 
 // Service status constants
