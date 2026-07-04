@@ -108,10 +108,10 @@
         "🔒 Rule 7 Wire Format: N/A (no Go error-code files in scope)"
       and skip to the next action (Code Quality Deep Dive).
 
-      Known source prefixes (last synced with project-context.md Rule 7 on 2026-04-24):
+      Known source prefixes (last synced with project-context.md Rule 7 on 2026-07-04):
         TMDB_, AI_, DB_, VALIDATION_, SUBTITLE_, PLUGIN_, SCANNER_, SSE_, LIBRARY_,
-        QBITTORRENT_, METADATA_, DOUBAN_, WIKIPEDIA_
-        (13 sources total — keep in sync with project-context.md Rule 7 list)
+        QBITTORRENT_, METADATA_, DOUBAN_, WIKIPEDIA_, REQUEST_
+        (14 sources total — keep in sync with project-context.md Rule 7 list)
 
       Grep procedure (scoped to in-review Go files under apps/api/internal/**):
         1. Run the regex below. Scope the command to the comprehensive review

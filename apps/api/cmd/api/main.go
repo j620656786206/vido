@@ -210,6 +210,10 @@ func main() {
 	// Initialize filter preset service (Story 11.4 — saved discover filter presets)
 	filterPresetService := services.NewFilterPresetService(repos.FilterPresets)
 
+	// Initialize request service (Story 13-1a — Epic 13 one-click 想要 requests).
+	// Intent-only: fulfilment lands in 13-4, status transitions/SSE in 13-3a.
+	requestService := services.NewRequestService(repos.Requests, tmdbService, repos.Movies, repos.Series)
+
 	// Initialize AI service for AI-powered filename parsing (Story 3.1)
 	aiService, err := services.NewAIService(cfg, db.Conn())
 	if err != nil {
@@ -533,6 +537,7 @@ func main() {
 	mediaLibrariesHandler := handlers.NewMediaLibrariesHandler(mediaLibraryService)
 	exploreBlocksHandler := handlers.NewExploreBlocksHandler(exploreBlockService) // Story 10.3
 	filterPresetsHandler := handlers.NewFilterPresetsHandler(filterPresetService) // Story 11.4
+	requestHandler := handlers.NewRequestHandler(requestService)                  // Story 13-1a
 	recentMediaHandler := handlers.NewRecentMediaHandler(movieService, seriesService)
 	logHandler := handlers.NewLogHandler(logService)
 	cacheHandler := handlers.NewCacheHandler(cacheStatsService, cacheCleanupService)
@@ -616,6 +621,7 @@ func main() {
 		mediaLibrariesHandler.RegisterRoutes(apiV1) // /api/v1/libraries CRUD (Story 7b-2)
 		exploreBlocksHandler.RegisterRoutes(apiV1)  // /api/v1/explore-blocks CRUD + content (Story 10.3)
 		filterPresetsHandler.RegisterRoutes(apiV1)  // /api/v1/filter-presets CRUD (Story 11.4)
+		requestHandler.RegisterRoutes(apiV1)        // /api/v1/requests create+list (Story 13-1a, Epic 13)
 		recentMediaHandler.RegisterRoutes(apiV1)
 		scannerHandler.RegisterRoutes(apiV1)
 		subtitleHandler.RegisterRoutes(apiV1)
