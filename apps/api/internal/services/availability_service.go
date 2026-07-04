@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/repository"
 )
 
@@ -19,6 +20,13 @@ type AvailabilityServiceInterface interface {
 	// CheckOwned returns the deduplicated union of TMDb IDs from the input that
 	// exist as non-removed records in either the movies or series table.
 	CheckOwned(ctx context.Context, tmdbIDs []int64) ([]int64, error)
+	// CheckOwnedByType returns owned TMDb IDs for ONE media type
+	// ('movie'|'tv'), routing to the matching table only — the type-aware
+	// sibling of CheckOwned. TMDb assigns ids independently per type, so the
+	// merged check can cross-match a movie request against an owned series
+	// sharing the same numeric id (Story 13-3a CR M1; mirrors the 13-1a
+	// type-aware create guard).
+	CheckOwnedByType(ctx context.Context, mediaType string, tmdbIDs []int64) ([]int64, error)
 }
 
 // AvailabilityService wraps movie + series repositories to answer "do I already
@@ -85,4 +93,27 @@ func (s *AvailabilityService) CheckOwned(ctx context.Context, tmdbIDs []int64) (
 	}
 
 	return merged, nil
+}
+
+// CheckOwnedByType answers ownership for a single media type: 'tv' consults
+// the series table, anything else the movies table (the request domain's
+// two-value vocabulary — validation upstream guarantees movie|tv).
+func (s *AvailabilityService) CheckOwnedByType(ctx context.Context, mediaType string, tmdbIDs []int64) ([]int64, error) {
+	if len(tmdbIDs) == 0 {
+		return []int64{}, nil
+	}
+	if mediaType == models.RequestMediaTypeTV {
+		owned, err := s.series.FindOwnedTMDbIDs(ctx, tmdbIDs)
+		if err != nil {
+			slog.Error("Failed to check owned series by type", "error", err, "id_count", len(tmdbIDs))
+			return nil, fmt.Errorf("check owned series: %w", err)
+		}
+		return owned, nil
+	}
+	owned, err := s.movies.FindOwnedTMDbIDs(ctx, tmdbIDs)
+	if err != nil {
+		slog.Error("Failed to check owned movies by type", "error", err, "id_count", len(tmdbIDs))
+		return nil, fmt.Errorf("check owned movies: %w", err)
+	}
+	return owned, nil
 }

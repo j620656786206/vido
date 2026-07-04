@@ -457,6 +457,18 @@ func main() {
 	downloadProgressBroadcaster := services.NewDownloadProgressBroadcaster(downloadService, sseHub)
 	slog.Info("Download progress broadcaster initialized")
 
+	// Story 13-3a — the always-on request reconciler (Epic 13 G-3/P3-003):
+	// derives each active request's status from library ownership + *arr
+	// queues + qBT every 15s, persists transitions, triggers the debounced
+	// import-window scan, retries stranded pending rows, and (client-gated)
+	// broadcasts the request_progress SSE snapshot. The 13-5 subtitle trigger
+	// plugs into its OnRequestCompleted seam later — nothing wired here.
+	requestStatusPoller := services.NewRequestStatusPoller(
+		repos.Requests, availabilityService, pluginManager, downloadService,
+		scannerService, fulfilmentService, sseHub,
+	)
+	slog.Info("Request status poller initialized")
+
 	// Initialize subtitle engine components (Story 8.1-8.8)
 	subtitleConverter, _ := subtitle.NewConverter()
 	subtitleScorer := subtitle.NewScorer(subtitle.NewDefaultScorerConfig())
@@ -711,6 +723,10 @@ func main() {
 		// Non-fatal — settings endpoints still work; health refreshes on save
 	}
 
+	// Start request status poller (Story 13-3a — 15s reconcile loop)
+	requestPollerCtx, requestPollerCancel := context.WithCancel(context.Background())
+	go requestStatusPoller.Start(requestPollerCtx)
+
 	// Start server in a goroutine for graceful shutdown
 	addr := cfg.GetAddress()
 	slog.Info("Starting Vido API server", "address", addr)
@@ -749,6 +765,11 @@ func main() {
 	slog.Info("Stopping download progress broadcaster...")
 	downloadProgressCancel()
 	downloadProgressBroadcaster.Stop()
+
+	// Stop request status poller (Story 13-3a)
+	slog.Info("Stopping request status poller...")
+	requestPollerCancel()
+	requestStatusPoller.Stop()
 
 	// Stop DVR plugin health scheduler (Story 13-4a)
 	slog.Info("Stopping plugin health scheduler...")

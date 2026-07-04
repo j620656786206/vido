@@ -29,6 +29,14 @@ func (m *MockAvailabilityService) CheckOwned(ctx context.Context, tmdbIDs []int6
 	return args.Get(0).([]int64), args.Error(1)
 }
 
+func (m *MockAvailabilityService) CheckOwnedByType(ctx context.Context, mediaType string, tmdbIDs []int64) ([]int64, error) {
+	args := m.Called(ctx, mediaType, tmdbIDs)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]int64), args.Error(1)
+}
+
 var _ services.AvailabilityServiceInterface = (*MockAvailabilityService)(nil)
 
 func setupAvailabilityRouter(handler *AvailabilityHandler) *gin.Engine {

@@ -200,3 +200,8 @@ func TestHub_Close(t *testing.T) {
 	// Double close should not panic
 	hub.Close()
 }
+
+func TestEventRequestProgress_Value(t *testing.T) {
+	// Story 13-3a AC #4 [@contract-v1] — the request pipeline event type.
+	assert.Equal(t, EventType("request_progress"), EventRequestProgress)
+}

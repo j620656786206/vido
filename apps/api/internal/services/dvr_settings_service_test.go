@@ -150,6 +150,9 @@ type fakeDVRPlugin struct {
 	addSeriesID   int64
 	addSeriesErr  error
 	addSeriesHits int
+
+	queue    []plugins.QueueItem
+	queueErr error
 }
 
 func (f *fakeDVRPlugin) Name() string { return "radarr" }
@@ -188,7 +191,14 @@ func (f *fakeDVRPlugin) AddSeries(ctx context.Context, tmdbID int64, opts plugin
 	}
 	return 0, &plugins.PluginError{Code: plugins.ErrCodeNotSupported, Message: "movie-only"}
 }
-func (f *fakeDVRPlugin) GetQueue(ctx context.Context) ([]plugins.QueueItem, error) { return nil, nil }
+func (f *fakeDVRPlugin) GetQueue(ctx context.Context) ([]plugins.QueueItem, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.queueErr != nil {
+		return nil, f.queueErr
+	}
+	return f.queue, nil
+}
 func (f *fakeDVRPlugin) GetQualityProfiles(ctx context.Context) ([]plugins.QualityProfile, error) {
 	return f.profiles, nil
 }
