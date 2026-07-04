@@ -222,7 +222,41 @@ func (p *RequestStatusPoller) tick(ctx context.Context) {
 		snapshot = append(snapshot, p.reconcile(ctx, &active[i], ownedSet, ownedOK, queues, torrents))
 	}
 
+	p.pruneWindow(active)
 	p.broadcast(snapshot)
+}
+
+// pruneWindow drops import-window entries for rows no longer active (e.g. a
+// row deleted or transitioned outside this loop) so the bookkeeping map never
+// outlives its rows (13-3a CR L3).
+func (p *RequestStatusPoller) pruneWindow(active []models.Request) {
+	if len(p.inImportWindow) == 0 {
+		return
+	}
+	activeIDs := make(map[string]struct{}, len(active))
+	for _, row := range active {
+		activeIDs[row.ID] = struct{}{}
+	}
+	for id := range p.inImportWindow {
+		if _, ok := activeIDs[id]; !ok {
+			delete(p.inImportWindow, id)
+		}
+	}
+}
+
+// ownedSets holds per-media-type ownership: TMDb ids collide across types,
+// so a movie request must never complete against an owned SERIES sharing the
+// same numeric id (13-3a CR M1 — mirrors the 13-1a type-aware create guard).
+type ownedSets struct {
+	movie map[int64]bool
+	tv    map[int64]bool
+}
+
+func (o ownedSets) has(mediaType string, tmdbID int64) bool {
+	if mediaType == models.RequestMediaTypeTV {
+		return o.tv[tmdbID]
+	}
+	return o.movie[tmdbID]
 }
 
 // reconcile applies the AC #2 derivation table to one row IN ORDER and
@@ -230,13 +264,13 @@ func (p *RequestStatusPoller) tick(ctx context.Context) {
 func (p *RequestStatusPoller) reconcile(
 	ctx context.Context,
 	row *models.Request,
-	ownedSet map[int64]bool,
+	ownedSet ownedSets,
 	ownedOK bool,
 	queues map[string]queueEvidence,
 	torrents map[string]qbittorrent.Torrent,
 ) requestProgressItem {
 	// Rule 1 — Vido's own library is the truth for 已入庫 (terminal).
-	if ownedOK && ownedSet[row.TMDbID] {
+	if ownedOK && ownedSet.has(row.MediaType, row.TMDbID) {
 		p.completeRequest(ctx, row)
 		return requestProgressItem{Request: *row}
 	}
@@ -276,8 +310,10 @@ func (p *RequestStatusPoller) reconcileExternal(
 	externalID, err := strconv.ParseInt(row.ExternalID.String, 10, 64)
 	if err != nil {
 		// A malformed external_id can only come from a bug upstream — log and
-		// hold rather than guessing (defensive; not a reachable state today).
-		p.logSourceErr("external_id:"+row.ID, "Request has malformed external_id", err)
+		// hold rather than guessing (defensive; not a reachable state today —
+		// plain Error, no per-row dedup key so the map stays row-free, CR L3).
+		slog.Error("Request has malformed external_id",
+			"request_id", row.ID, "external_id", row.ExternalID.String, "error", err)
 		return requestProgressItem{Request: *row}
 	}
 
@@ -318,14 +354,13 @@ func (p *RequestStatusPoller) reconcileQueued(
 		state = queueStateFailed
 	}
 
-	// qBT refinement by torrent hash (case-normalized).
+	// qBT refinement by torrent hash (case-normalized). The escalation is
+	// monotonic: downloading < import-window < failed (13-3a CR L1).
 	if torrents != nil && item.DownloadID != "" {
 		if torrent, ok := torrents[strings.ToLower(item.DownloadID)]; ok {
 			progress = torrent.Progress
 			if mapped := mapTorrentToQueueState(torrent.Status); mapped > state {
 				state = mapped
-			} else if mapped == queueStateFailed {
-				state = queueStateFailed
 			}
 		}
 	}
@@ -419,31 +454,38 @@ func (p *RequestStatusPoller) maybeTriggerScan(ctx context.Context) {
 	}()
 }
 
-// fetchOwned bulk-checks library ownership for every active row (one call per
-// tick — Story 10-4 service reuse). ok=false skips completion detection.
-func (p *RequestStatusPoller) fetchOwned(ctx context.Context, active []models.Request) (map[int64]bool, bool) {
-	ids := make([]int64, 0, len(active))
-	seen := make(map[int64]struct{}, len(active))
+// fetchOwned bulk-checks library ownership for every active row — TYPE-AWARE
+// (≤2 bulk calls per tick via the Story 10-4 service; 13-3a CR M1).
+// ok=false skips completion detection for the whole tick (AC #5 fail-soft).
+func (p *RequestStatusPoller) fetchOwned(ctx context.Context, active []models.Request) (ownedSets, bool) {
+	byType := map[string][]int64{}
+	seen := map[string]struct{}{}
 	for _, row := range active {
-		if _, dup := seen[row.TMDbID]; dup {
+		key := row.MediaType + ":" + strconv.FormatInt(row.TMDbID, 10)
+		if _, dup := seen[key]; dup {
 			continue
 		}
-		seen[row.TMDbID] = struct{}{}
-		ids = append(ids, row.TMDbID)
+		seen[key] = struct{}{}
+		byType[row.MediaType] = append(byType[row.MediaType], row.TMDbID)
 	}
 
-	owned, err := p.availability.CheckOwned(ctx, ids)
-	if err != nil {
-		p.logSourceErr("check_owned", "Request status poll failed ownership check", err)
-		return nil, false
+	out := ownedSets{movie: map[int64]bool{}, tv: map[int64]bool{}}
+	for mediaType, ids := range byType {
+		owned, err := p.availability.CheckOwnedByType(ctx, mediaType, ids)
+		if err != nil {
+			p.logSourceErr("check_owned", "Request status poll failed ownership check", err)
+			return ownedSets{}, false
+		}
+		set := out.movie
+		if mediaType == models.RequestMediaTypeTV {
+			set = out.tv
+		}
+		for _, id := range owned {
+			set[id] = true
+		}
 	}
 	p.clearSourceErr("check_owned")
-
-	set := make(map[int64]bool, len(owned))
-	for _, id := range owned {
-		set[id] = true
-	}
-	return set, true
+	return out, true
 }
 
 // fetchQueues collects each registered+healthy plugin's queue keyed by

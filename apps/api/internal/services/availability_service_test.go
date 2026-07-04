@@ -7,6 +7,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/testutil"
 )
 
@@ -88,5 +90,59 @@ func TestAvailabilityService_CheckOwned(t *testing.T) {
 
 		assert.Error(t, err)
 		assert.Nil(t, owned)
+	})
+}
+
+func TestAvailabilityService_CheckOwnedByType(t *testing.T) {
+	// Story 13-3a CR M1 — the type-aware sibling: a movie query must never
+	// match an owned SERIES sharing the same TMDb id (and vice versa).
+	ctx := context.Background()
+
+	t.Run("movie query consults only the movies table", func(t *testing.T) {
+		movieRepo := new(testutil.MockMovieRepository)
+		seriesRepo := new(testutil.MockSeriesRepository)
+		movieRepo.On("FindOwnedTMDbIDs", ctx, []int64{550}).Return([]int64{550}, nil)
+
+		svc := NewAvailabilityService(movieRepo, seriesRepo)
+		owned, err := svc.CheckOwnedByType(ctx, models.RequestMediaTypeMovie, []int64{550})
+
+		require.NoError(t, err)
+		assert.Equal(t, []int64{550}, owned)
+		seriesRepo.AssertNotCalled(t, "FindOwnedTMDbIDs", mock.Anything, mock.Anything)
+	})
+
+	t.Run("tv query consults only the series table", func(t *testing.T) {
+		movieRepo := new(testutil.MockMovieRepository)
+		seriesRepo := new(testutil.MockSeriesRepository)
+		seriesRepo.On("FindOwnedTMDbIDs", ctx, []int64{1399}).Return([]int64{1399}, nil)
+
+		svc := NewAvailabilityService(movieRepo, seriesRepo)
+		owned, err := svc.CheckOwnedByType(ctx, models.RequestMediaTypeTV, []int64{1399})
+
+		require.NoError(t, err)
+		assert.Equal(t, []int64{1399}, owned)
+		movieRepo.AssertNotCalled(t, "FindOwnedTMDbIDs", mock.Anything, mock.Anything)
+	})
+
+	t.Run("empty input returns empty without repo calls", func(t *testing.T) {
+		movieRepo := new(testutil.MockMovieRepository)
+		seriesRepo := new(testutil.MockSeriesRepository)
+
+		svc := NewAvailabilityService(movieRepo, seriesRepo)
+		owned, err := svc.CheckOwnedByType(ctx, models.RequestMediaTypeMovie, nil)
+
+		require.NoError(t, err)
+		assert.Empty(t, owned)
+		movieRepo.AssertNotCalled(t, "FindOwnedTMDbIDs", mock.Anything, mock.Anything)
+	})
+
+	t.Run("repo error propagates", func(t *testing.T) {
+		movieRepo := new(testutil.MockMovieRepository)
+		seriesRepo := new(testutil.MockSeriesRepository)
+		movieRepo.On("FindOwnedTMDbIDs", ctx, []int64{603}).Return(nil, errors.New("db down"))
+
+		svc := NewAvailabilityService(movieRepo, seriesRepo)
+		_, err := svc.CheckOwnedByType(ctx, models.RequestMediaTypeMovie, []int64{603})
+		assert.Error(t, err)
 	})
 }

@@ -86,15 +86,31 @@ func (f *fakePollerRepo) updates() []statusUpdate {
 	return out
 }
 
-// fakeOwnership implements AvailabilityServiceInterface.
+// fakeOwnership implements AvailabilityServiceInterface with per-type sets
+// (CR M1 — the poller must query type-aware ownership).
 type fakeOwnership struct {
-	mu    sync.Mutex
-	owned map[int64]bool
-	err   error
-	calls int
+	mu     sync.Mutex
+	byType map[string]map[int64]bool
+	err    error
+	calls  int
+}
+
+func newFakeOwnership() *fakeOwnership {
+	return &fakeOwnership{byType: map[string]map[int64]bool{}}
+}
+
+func (f *fakeOwnership) set(mediaType string, tmdbID int64) {
+	if f.byType[mediaType] == nil {
+		f.byType[mediaType] = map[int64]bool{}
+	}
+	f.byType[mediaType][tmdbID] = true
 }
 
 func (f *fakeOwnership) CheckOwned(ctx context.Context, tmdbIDs []int64) ([]int64, error) {
+	panic("poller must use the type-aware CheckOwnedByType (CR M1)")
+}
+
+func (f *fakeOwnership) CheckOwnedByType(ctx context.Context, mediaType string, tmdbIDs []int64) ([]int64, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.calls++
@@ -103,7 +119,7 @@ func (f *fakeOwnership) CheckOwned(ctx context.Context, tmdbIDs []int64) ([]int6
 	}
 	var out []int64
 	for _, id := range tmdbIDs {
-		if f.owned[id] {
+		if f.byType[mediaType][id] {
 			out = append(out, id)
 		}
 	}
@@ -222,7 +238,7 @@ type pollerTestEnv struct {
 func newPollerTestEnv(t *testing.T) *pollerTestEnv {
 	t.Helper()
 	repo := &fakePollerRepo{}
-	owned := &fakeOwnership{owned: map[int64]bool{}}
+	owned := newFakeOwnership()
 	queues := &fakeQueueSource{plugins: map[string]*fakeDVRPlugin{}, health: map[string]string{}}
 	torrents := &fakeTorrents{}
 	scanner := &fakeScanner{}
@@ -271,7 +287,7 @@ func TestPoller_IdleGate_NoActiveRowsMakesZeroSourceCalls(t *testing.T) {
 func TestPoller_Rule1_OwnedBecomesCompleted_HookFiresExactlyOnce(t *testing.T) {
 	env := newPollerTestEnv(t)
 	env.repo.rows = []models.Request{activeRow("r1", 550, models.RequestMediaTypeMovie, models.RequestStatusDownloading, "42")}
-	env.owned.owned[550] = true
+	env.owned.set(models.RequestMediaTypeMovie, 550)
 
 	var hookCalls []models.Request
 	env.poller.OnRequestCompleted = func(ctx context.Context, req models.Request) {
@@ -428,7 +444,7 @@ func TestPoller_BroadcastGate_ZeroClientsStillReconciles(t *testing.T) {
 	env := newPollerTestEnv(t)
 	env.sink.clients = 0
 	env.repo.rows = []models.Request{activeRow("r1", 550, models.RequestMediaTypeMovie, models.RequestStatusDownloading, "42")}
-	env.owned.owned[550] = true
+	env.owned.set(models.RequestMediaTypeMovie, 550)
 
 	env.poller.tick(context.Background())
 
@@ -444,7 +460,7 @@ func TestPoller_SnapshotIncludesTransitionedRows(t *testing.T) {
 		activeRow("r1", 550, models.RequestMediaTypeMovie, models.RequestStatusDownloading, "42"),
 		activeRow("r2", 551, models.RequestMediaTypeMovie, models.RequestStatusSearching, "43"),
 	}
-	env.owned.owned[550] = true // r1 completes this tick
+	env.owned.set(models.RequestMediaTypeMovie, 550) // r1 completes this tick
 	env.queues.plugins["radarr"] = queueItems(plugins.QueueItem{
 		ExternalID: 43, Status: "downloading", Size: 10, SizeLeft: 5, DownloadID: "H2",
 	})
@@ -496,7 +512,7 @@ func TestPoller_FailSoft_OwnershipErrorSkipsCompletion(t *testing.T) {
 	env := newPollerTestEnv(t)
 	env.repo.rows = []models.Request{activeRow("r1", 550, models.RequestMediaTypeMovie, models.RequestStatusDownloading, "42")}
 	env.owned.err = errors.New("db locked")
-	env.owned.owned[550] = true // would complete, but the source is down
+	env.owned.set(models.RequestMediaTypeMovie, 550) // would complete, but the source is down
 	env.queues.plugins["radarr"] = queueItems(plugins.QueueItem{
 		ExternalID: 42, Status: "downloading", Size: 100, SizeLeft: 50, DownloadID: "H",
 	})
@@ -613,3 +629,81 @@ var (
 	_ torrentSource      = (DownloadServiceInterface)(nil)
 	_ scanTrigger        = (*ScannerService)(nil)
 )
+
+func TestPoller_Rule1_CrossTypeIDCollisionDoesNotComplete(t *testing.T) {
+	// CR M1 — TMDb ids collide across types: an owned SERIES with the same
+	// numeric id must NOT complete a MOVIE request (mirrors the 13-1a
+	// type-aware create guard).
+	env := newPollerTestEnv(t)
+	env.repo.rows = []models.Request{activeRow("r1", 550, models.RequestMediaTypeMovie, models.RequestStatusSearching, "42")}
+	env.owned.set(models.RequestMediaTypeTV, 550) // series 550 owned — different entity
+	env.queues.plugins["radarr"] = queueItems()
+
+	hookFired := false
+	env.poller.OnRequestCompleted = func(ctx context.Context, req models.Request) { hookFired = true }
+
+	env.poller.tick(context.Background())
+
+	assert.False(t, hookFired, "cross-type ownership must not fire the 13-5 seam")
+	for _, u := range env.repo.updates() {
+		assert.NotEqual(t, models.RequestStatusCompleted, u.status,
+			"movie request must not complete against an owned series id")
+	}
+}
+
+func TestPoller_PersistFailureHoldsRowAndSkipsHook(t *testing.T) {
+	// CR L2 — a failed UpdateStatus write must not fire the seam and the
+	// snapshot must keep the row's persisted (old) status.
+	env := newPollerTestEnv(t)
+	env.repo.rows = []models.Request{activeRow("r1", 550, models.RequestMediaTypeMovie, models.RequestStatusDownloading, "42")}
+	env.owned.set(models.RequestMediaTypeMovie, 550)
+	env.repo.updateErr = errors.New("db locked")
+
+	hookFired := false
+	env.poller.OnRequestCompleted = func(ctx context.Context, req models.Request) { hookFired = true }
+
+	env.poller.tick(context.Background())
+
+	assert.False(t, hookFired, "hook fires only on a SUCCESSFUL transition write")
+	events := env.sink.all()
+	require.Len(t, events, 1)
+	items := events[0].Data.([]requestProgressItem)
+	assert.Equal(t, models.RequestStatusDownloading, items[0].Status,
+		"snapshot stays consistent with the DB row on write failure")
+}
+
+func TestPoller_ListActiveErrorAbortsTick(t *testing.T) {
+	// CR L2 — the idle-gate source failing aborts the tick before any
+	// external call and before any broadcast.
+	env := newPollerTestEnv(t)
+	env.repo.listErr = errors.New("db gone")
+
+	env.poller.tick(context.Background())
+
+	assert.Equal(t, 0, env.owned.calls)
+	assert.Equal(t, 0, env.queues.calls)
+	assert.Equal(t, 0, env.torrents.calls)
+	assert.Empty(t, env.sink.all())
+}
+
+func TestPoller_WindowPrunedWhenRowLeavesActiveSet(t *testing.T) {
+	// CR L3 — an import-window entry must not outlive its row (e.g. the row
+	// was deleted/cancelled outside the poller).
+	env := newPollerTestEnv(t)
+	env.repo.rows = []models.Request{
+		activeRow("r1", 550, models.RequestMediaTypeMovie, models.RequestStatusDownloading, "42"),
+		activeRow("r2", 551, models.RequestMediaTypeMovie, models.RequestStatusSearching, "43"),
+	}
+	env.queues.plugins["radarr"] = queueItems()
+
+	env.poller.tick(context.Background())
+	assert.True(t, env.poller.inImportWindow["r1"], "r1 entered the import window")
+
+	// r1 vanishes from the active set (deleted); r2 keeps the tick non-idle.
+	env.repo.mu.Lock()
+	env.repo.rows = env.repo.rows[1:]
+	env.repo.mu.Unlock()
+
+	env.poller.tick(context.Background())
+	assert.False(t, env.poller.inImportWindow["r1"], "stale window entry pruned")
+}
