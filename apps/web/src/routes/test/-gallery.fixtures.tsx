@@ -39,6 +39,8 @@ import {
 import { Skeleton } from '../../components/ui/Skeleton';
 import { Pagination } from '../../components/ui/Pagination';
 import { PosterCard } from '../../components/media/PosterCard';
+import { RequestButton } from '../../components/requests/RequestButton';
+import { RequestRow } from '../../components/requests/RequestRow';
 import { PosterCardSkeleton } from '../../components/media/PosterCardSkeleton';
 import { ColorPlaceholder } from '../../components/media/ColorPlaceholder';
 import { AvailabilityBadge } from '../../components/media/AvailabilityBadge';
@@ -3130,6 +3132,177 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     },
     penNode: 'screen-section',
     statesOnly: ['default'],
+  },
+
+  // ----- requests/ (Story 13-1b, Epic 13) -----
+  {
+    id: 'request-button/available',
+    label: 'requests/RequestButton (可請求)',
+    component: RequestButton as ComponentType<Record<string, unknown>>,
+    props: {
+      tmdbId: 550,
+      mediaType: 'movie',
+      title: '鬥陣俱樂部',
+      owned: false,
+      requested: false,
+    },
+    penNode: 'VH3Tq', // Screen L2-D-v2 states-strip (otvKh ref inside)
+    width: 200,
+  },
+  {
+    id: 'request-button/requested',
+    label: 'requests/RequestButton (已請求·處理中)',
+    component: RequestButton as ComponentType<Record<string, unknown>>,
+    props: {
+      tmdbId: 550,
+      mediaType: 'movie',
+      title: '鬥陣俱樂部',
+      owned: false,
+      requested: true,
+    },
+    penNode: 'VH3Tq',
+    statesOnly: ['default'],
+    width: 200,
+  },
+  {
+    id: 'request-button/owned',
+    label: 'requests/RequestButton (已入庫)',
+    component: RequestButton as ComponentType<Record<string, unknown>>,
+    props: {
+      tmdbId: 550,
+      mediaType: 'movie',
+      title: '鬥陣俱樂部',
+      owned: true,
+      requested: false,
+    },
+    penNode: 'VH3Tq',
+    statesOnly: ['default'],
+    width: 200,
+  },
+  {
+    id: 'request-row/pending',
+    label: 'requests/RequestRow (pending)',
+    component: RequestRow as ComponentType<Record<string, unknown>>,
+    props: {
+      request: {
+        id: 'fx-pending',
+        tmdbId: 550,
+        mediaType: 'movie',
+        title: '熊家餐館 S3',
+        status: 'pending',
+        fulfilmentSource: null,
+        externalId: null,
+        seasons: null,
+        episodes: null,
+        errorMessage: null,
+        requestedAt: '2026-06-28T10:00:00Z',
+        updatedAt: '2026-06-28T10:00:00Z',
+        ...{ status: 'pending' },
+      },
+    },
+    penNode: 'LkjRd', // Component/RequestRow-v2
+    statesOnly: ['default'],
+    width: 720,
+  },
+  {
+    id: 'request-row/searching',
+    label: 'requests/RequestRow (searching)',
+    component: RequestRow as ComponentType<Record<string, unknown>>,
+    props: {
+      request: {
+        id: 'fx-searching',
+        tmdbId: 550,
+        mediaType: 'movie',
+        title: '熊家餐館 S3',
+        status: 'searching',
+        fulfilmentSource: null,
+        externalId: null,
+        seasons: null,
+        episodes: null,
+        errorMessage: null,
+        requestedAt: '2026-06-28T10:00:00Z',
+        updatedAt: '2026-06-28T10:00:00Z',
+        ...{ status: 'searching', title: '沙丘：第二部' },
+      },
+    },
+    penNode: 'LkjRd', // Component/RequestRow-v2
+    statesOnly: ['default'],
+    width: 720,
+  },
+  {
+    id: 'request-row/downloading',
+    label: 'requests/RequestRow (downloading)',
+    component: RequestRow as ComponentType<Record<string, unknown>>,
+    props: {
+      request: {
+        id: 'fx-downloading',
+        tmdbId: 550,
+        mediaType: 'movie',
+        title: '熊家餐館 S3',
+        status: 'downloading',
+        fulfilmentSource: null,
+        externalId: null,
+        seasons: null,
+        episodes: null,
+        errorMessage: null,
+        requestedAt: '2026-06-28T10:00:00Z',
+        updatedAt: '2026-06-28T10:00:00Z',
+        ...{ status: 'downloading', title: '幕府將軍 S1', mediaType: 'tv', progress: 0.45 },
+      },
+    },
+    penNode: 'LkjRd', // Component/RequestRow-v2
+    statesOnly: ['default'],
+    width: 720,
+  },
+  {
+    id: 'request-row/failed',
+    label: 'requests/RequestRow (failed)',
+    component: RequestRow as ComponentType<Record<string, unknown>>,
+    props: {
+      request: {
+        id: 'fx-failed',
+        tmdbId: 550,
+        mediaType: 'movie',
+        title: '熊家餐館 S3',
+        status: 'failed',
+        fulfilmentSource: null,
+        externalId: null,
+        seasons: null,
+        episodes: null,
+        errorMessage: null,
+        requestedAt: '2026-06-28T10:00:00Z',
+        updatedAt: '2026-06-28T10:00:00Z',
+        ...{ status: 'failed', title: '奧本海默', errorMessage: '找不到符合的種子' },
+      },
+    },
+    penNode: 'LkjRd', // Component/RequestRow-v2
+    statesOnly: ['default'],
+    width: 720,
+  },
+  {
+    id: 'request-row/completed',
+    label: 'requests/RequestRow (completed)',
+    component: RequestRow as ComponentType<Record<string, unknown>>,
+    props: {
+      request: {
+        id: 'fx-completed',
+        tmdbId: 550,
+        mediaType: 'movie',
+        title: '熊家餐館 S3',
+        status: 'completed',
+        fulfilmentSource: null,
+        externalId: null,
+        seasons: null,
+        episodes: null,
+        errorMessage: null,
+        requestedAt: '2026-06-28T10:00:00Z',
+        updatedAt: '2026-06-28T10:00:00Z',
+        ...{ status: 'completed', title: '星際效應' },
+      },
+    },
+    penNode: 'LkjRd', // Component/RequestRow-v2
+    statesOnly: ['default'],
+    width: 720,
   },
   {
     id: 'subtitle-batch-subtitle-panel-complete',

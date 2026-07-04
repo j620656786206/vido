@@ -1,6 +1,6 @@
 # Story 13.1b: One-Click Request — Frontend (想要 button + lit 想要清單 entry)
 
-Status: ready-for-dev
+Status: done
 
 **Epic:** Epic 13 — Request System · **FR:** P3-001 (G-1) · **Artery #1 (FE half)**
 **Depends on: 13-1a (backend API must be ready)** — dev sequence a → b. GATE-A satisfied (13-0 design done, PR #118).
@@ -33,14 +33,14 @@ so that I can ask Vido to acquire a title without leaving the page and see what 
 
 ## Tasks / Subtasks
 
-- [ ] Task 1 (AC #7): `services/requestService.ts` — `fetchApi` clone (envelope + `snakeToCamel`), `createRequest({tmdbId, mediaType})` (POST, `camelToSnake` body), `listRequests()`; `MediaRequest`/`RequestStatus` types; co-located spec.
-- [ ] Task 2 (AC #3): `hooks/useRequestedMedia.ts` — mirror `useOwnedMedia.ts`; `requestKeys` factory (`{ all: ['requests'], list: … }`); `isRequested(tmdbId, mediaType)` = active statuses only (pending/searching/downloading); spec.
-- [ ] Task 3 (AC #4): `hooks/useRequestActions.ts` — clone `useDownloadActions.ts` optimistic template; 409 `REQUEST_DUPLICATE` settles to requested-state; spec.
-- [ ] Task 4 (AC #1, #2): `components/requests/RequestButton.tsx` — 3-state per L2; Rule 21 header (look up the L2 / RequestRow node IDs via Pencil MCP `get_editor_state` — use `// Implements: Component/…` if a reusable exists for the button, else `// Design ref: ux-design.pen Screen L2-D-v2 (…)`); wire into `PosterCard` hover overlay (preventDefault/stopPropagation) + `DetailHeroV2`/`TMDbDetailV2`; spec incl. Link-navigation NOT triggered on click.
-- [ ] Task 5 (AC #3): Flip the `isRequested` stub — `ExploreBlock.tsx:187` (+ `ExploreBlocksList`) and Discover cards consume `useRequestedMedia`; update affected specs.
-- [ ] Task 6 (AC #5): Requests view — `components/requests/RequestRow.tsx` (`// Implements: Component/RequestRow-v2 (…)`) + `RequestsView` container; `discover.tsx` `validateSearch` gains `view` (string-enum, Rule 26 note in code); `DiscoverBrowseV2` toolbar entry goes live (keep/replace testid deliberately, e.g. → `discover-requests-entry`); N4 states; specs for all branches.
-- [ ] Task 7 (AC #6): L8 inline `role="status"` submitted toast; spec.
-- [ ] Task 8 (AC #8, #9): Gallery fixtures (`-gallery.fixtures.tsx`) for RequestButton ×3 + RequestRow ×5; run visual baselines (darwin), let CI bootstrap `-linux`; screenshot-compare against `flow-l-requests-v2/`; `pnpm nx test web` + `pnpm lint:all`.
+- [x] Task 1 (AC #7): `services/requestService.ts` — `fetchApi` clone (envelope + `snakeToCamel`), `createRequest({tmdbId, mediaType})` (POST, `camelToSnake` body), `listRequests()`; `MediaRequest`/`RequestStatus` types; co-located spec.
+- [x] Task 2 (AC #3): `hooks/useRequestedMedia.ts` — mirror `useOwnedMedia.ts`; `requestKeys` factory (`{ all: ['requests'], list: … }`); `isRequested(tmdbId, mediaType)` = active statuses only (pending/searching/downloading); spec.
+- [x] Task 3 (AC #4): `hooks/useRequestActions.ts` — clone `useDownloadActions.ts` optimistic template; 409 `REQUEST_DUPLICATE` settles to requested-state; spec.
+- [x] Task 4 (AC #1, #2): `components/requests/RequestButton.tsx` — 3-state per L2; Rule 21 header (look up the L2 / RequestRow node IDs via Pencil MCP `get_editor_state` — use `// Implements: Component/…` if a reusable exists for the button, else `// Design ref: ux-design.pen Screen L2-D-v2 (…)`); wire into `PosterCard` hover overlay (preventDefault/stopPropagation) + `DetailHeroV2`/`TMDbDetailV2`; spec incl. Link-navigation NOT triggered on click.
+- [x] Task 5 (AC #3): Flip the `isRequested` stub — `ExploreBlock.tsx:187` (+ `ExploreBlocksList`) and Discover cards consume `useRequestedMedia`; update affected specs.
+- [x] Task 6 (AC #5): Requests view — `components/requests/RequestRow.tsx` (`// Implements: Component/RequestRow-v2 (…)`) + `RequestsView` container; `discover.tsx` `validateSearch` gains `view` (string-enum, Rule 26 note in code); `DiscoverBrowseV2` toolbar entry goes live (keep/replace testid deliberately, e.g. → `discover-requests-entry`); N4 states; specs for all branches.
+- [x] Task 7 (AC #6): L8 inline `role="status"` submitted toast; spec.
+- [x] Task 8 (AC #8, #9): Gallery fixtures (`-gallery.fixtures.tsx`) for RequestButton ×3 + RequestRow ×5; run visual baselines (darwin), let CI bootstrap `-linux`; screenshot-compare against `flow-l-requests-v2/`; `pnpm nx test web` + `pnpm lint:all`.
 
 ## Dev Notes
 
@@ -89,17 +89,55 @@ No new dependency (TanStack Query/Router, cva, lucide-react all repo-pinned). We
 
 | Date       | Change                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-07-04 | Adversarial code review (CR): 1H/2M/1L found, all fixed in-session (toast portal escape from clip-path containing block; wiring-presence gate on the card scrim; group-focus-within keyboard reveal; dedupe intent comment). Status → done. |
+| 2026-07-04 | Implemented (dev-story): service/hooks/RequestButton/RequestRow/RequestsView + PosterCard scrim + detail hero action + entry lit (?view=requests) + one-point useOwnedMedia flip; 8 gallery fixtures + 10 darwin baselines; UX verify PASS. Discoveries ③×2 filed (13-7, preexisting ui-dialog darwin). Status → review. |
 | 2026-07-04 | Story created (SM create-story, yolo). Cross-stack split 13-1 → 13-1a (BE) / 13-1b (FE, this). Depends on 13-1a; acks its [@contract-v1] AC #2/#3. Scoping ruling: 13-1b ships the static 想要清單 view (lit entry + L1 list + N4); 13-3b owns SSE/live status — recorded for 13-3 create-story. Status → ready-for-dev. |
+
+## Senior Developer Review (AI)
+
+**Date:** 2026-07-04 · **Outcome:** Approve (all findings fixed in-session) · **Reviewer:** adversarial CR workflow (claude-fable-5)
+
+- **Git vs File List:** 0 discrepancies. **🔒 Rule 7:** N/A (no Go files in scope). **🔒 Rule 20:** N/A (pure consumer, no bumps). **🔒 Rule 25:** N/A (mega-line untouched).
+- **Findings (1 High / 2 Medium / 1 Low) — ALL FIXED:**
+  - [x] H1 toast clipped in card contexts — `position: fixed` inside PosterCard's clip-path + transform-gpu container (both create a fixed-position containing block) → `createPortal(document.body)`.
+  - [x] M1 unwired MediaGrid surfaces (legacy Search/Library) showed a half-functional 想要 scrim whose state never reflects the created request → scrim now gates on `isRequested !== undefined` (wiring present); 2 new PosterCard gate tests.
+  - [x] M2 keyboard a11y — invisible-but-focusable scrim button → `lg:group-focus-within` reveal mirrors `group-hover`.
+  - [x] L1 duplicate queryKey config (RequestsView vs useRequestedMedia) — intent comment records the deliberate split (view needs error/refetch; TanStack dedupes the fetch).
+- **Post-fix gates:** `pnpm nx test web` 216 files / 2322 tests ALL green (incl. the tracked flake this run); `pnpm lint:all` exit 0.
 
 ## Dev Agent Record
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+claude-fable-5 (Claude Fable 5)
 
 ### Debug Log References
 
+- RequestsView L7 spec: the view's own `retry: 1` overrides the test QueryClient's `retry: false`, and the default exponential retryDelay outlasts waitFor — fixed with reject×2 + `retryDelay: 0` client default.
+- Visual baselines: the components.visual mega-test aborts at the PRE-EXISTING ui-dialog darwin drift (stash-verified on clean main; filed `preexisting-fail-ui-dialog-darwin-visual`) before reaching the new fixtures at the array tail. Workaround: a temporary local spec (never committed) generated + stability-verified the 8 request fixtures' baselines, PNGs moved into `components.visual.spec.ts-snapshots/`, temp spec deleted.
+- Four specs render the real PosterCard whose new hover scrim mounts RequestButton (needs a QueryClient): MediaGrid / PosterCard / RelatedContent / SearchResults specs stub `../requests/RequestButton` to stay presentation-focused.
+
 ### Completion Notes List
+
+- 🔗 AC Drift: NONE (checked 'Stubbed to false until Phase 3' + 'inert until that epic lands' across apps/web — 2 hits, both explicitly Epic-13-reserved seams whose prior ACs (Story 10-4 AC #5, ux3-3-2 PH3-R2) anticipate this flip = designed evolution, REUSE not DRIFT)
+- 📎 Contract Stamps: FOUND (consumer side — this story acks 13-1a [@contract-v1] AC #2/#3; upstream shipped #126 still at v1, versions reconcile; this story stamps nothing new)
+- 🎭 A11y Pre-Flight: PASS (7 components checked, 0 jsx-a11y warnings on story files, 0 introduced by this story — pills/toast/status regions carry role=status aria-live=polite per the 10-4 L1 precedent; entry button aria-pressed; RequestButton focus-visible ring; pre-existing repo-wide jsx-a11y batch = retro-11-AI1b scope, untouched)
+- 🎨 UX Verification: PASS — comparison table below; rendered baselines match L1/L2 (VH3Tq/K7fiy/LkjRd node specs read via Pencil MCP + PNG spot-checks)
+
+  | Area | Design Spec | Implementation | Match? | Fix Needed |
+  |------|------------|----------------|--------|------------|
+  | 可請求 button | otvKh ref, 44px, ＋想要, accent/text-on-accent | h-11 accent-primary + Plus icon | ✅ | — |
+  | 已請求 pill | $info-tint pill, 6px dot, 已請求 · 處理中 $info 13/600 | rounded-full info-tint + dot + 13px/600 | ✅ | — |
+  | 已入庫 pill | $success-tint pill, check 14, $success | success-tint + Check icon | ✅ | — |
+  | RequestRow | LkjRd: 40×60 film thumb / title 14·600 / 電影·Mono date / status pill [4,10] r100 / Mono % | 1:1 incl. TY-3 Mono date+% | ✅ | — |
+  | 5-status tokens | DL-v2 §2.5 (pending info / searching warning / downloading accent / completed success / failed error-text) | STATUS_TOKENS map exact | ✅ | — |
+  | L8 toast | bg-tertiary, check $success, 已加入想要清單 + 查看清單 accent-text | fixed toast, same copy + view deep-link | ✅ | — |
+  | Card hover scrim | bottom gradient scrim + full-width button | gradient scrim, rating recedes (badge-cluster collision strategy) | ✅ (deviation noted: rating fade is additive, mirrors existing pattern) | — |
+  | N4 (L5/L6/L7) | skeleton / 尚無請求+前往探索 / 無法載入請求狀態+重試 | exact copy incl. motion-reduce:animate-none | ✅ | — |
+
+- One-point stub flip: `useOwnedMedia.isRequested` now delegates to `useRequestedMedia` — ALL existing consumers (ExploreBlock/ExploreBlocksList/homepage) light up the 已請求 badge with ZERO prop changes; the button uses the exact (tmdbId, mediaType) check.
+- Capability-honor: RequestRow wires all 5 DL-v2 §2.5 statuses but the design's 取消/重試 action-area is NOT built (no backend endpoint — lane ③ below); NO SSE anywhere (13-3b SCOPE WALL).
+- Full gates: `pnpm nx test web` 2319/2320 (1 fail = tracked flake `preexisting-fail-instant-search-debounce-flake`, passes standalone 8/8), `pnpm nx test api` exit 0, `pnpm lint:all` exit 0, orphan-process cleanup verified. 43 new tests across 6 new spec files; 6 existing specs updated.
 
 ### Discovery Triage
 

@@ -11,6 +11,7 @@ import { useMovieDetails, useTVShowDetails } from '../../hooks/useMediaDetails';
 import { formatPosterMeta, formatRuntime, formatSeriesCount } from '../../lib/formatMedia';
 import { HighlightText } from '../ui/HighlightText';
 import { AvailabilityBadge } from './AvailabilityBadge';
+import { RequestButton } from '../requests/RequestButton';
 
 export interface PosterCardProps {
   id: string;
@@ -86,6 +87,14 @@ export function PosterCard({
 
   const showFallback = !posterUrl || imageError;
   const showSkeleton = !imageLoaded && !imageError && posterUrl;
+
+  // Story 13-1b — the hover 想要 affordance: TMDb-numeric cards only (owned-library
+  // UUID cards can't be requested), not in selection mode, not already owned
+  // (the 已有 badge covers owned; requested cards show the pill for honest feedback),
+  // AND only on surfaces that wire the requested state (isRequested !== undefined —
+  // CR M1: an unwired surface would show a button whose state never reflects the
+  // created request, inviting duplicate clicks; legacy Search/Library stay unchanged).
+  const showRequestOverlay = !selectable && tmdbId > 0 && !isOwned && isRequested !== undefined;
 
   const handleCardClick = (e: React.MouseEvent) => {
     if (selectable && onSelect) {
@@ -264,14 +273,44 @@ export function PosterCard({
             runtime/episode-count, lazy-fetched on hover) by bugfix-10-7 — see the mt-2 block. */}
 
         {/* Rating badge — MQbvp: bottom-RIGHT slot (was bottom-LEFT in pre-bugfix-10-4), always visible when voteAverage > 0.
-            bugfix-10-7 AC #3: lucide <Star> SVG (not the ⭐ emoji) for cross-OS rendering consistency. */}
+            bugfix-10-7 AC #3: lucide <Star> SVG (not the ⭐ emoji) for cross-OS rendering consistency.
+            Story 13-1b: recedes on hover when the 想要 scrim takes the bottom edge —
+            same collision strategy as the top-right badge cluster vs the kebab. */}
         {voteAverage !== undefined && voteAverage > 0 && (
-          <div className="absolute bottom-2 right-2 z-20">
+          <div
+            className={cn(
+              'absolute bottom-2 right-2 z-20',
+              showRequestOverlay && 'transition-opacity duration-300 lg:group-hover:opacity-0'
+            )}
+          >
             <span className="flex items-center gap-1 rounded bg-black/70 px-2 py-0.5 text-xs text-[var(--warning)]">
               {/* stroke inherits currentColor (var(--warning)) from the span — only `fill` needs setting */}
               <Star className="h-3 w-3 fill-[var(--warning)]" aria-hidden="true" />
               {voteAverage.toFixed(1)}
             </span>
+          </div>
+        )}
+
+        {/* 想要 hover scrim — Story 13-1b (design L2 card context): bottom gradient
+            scrim with the full-width request affordance. Desktop-hover only (mobile
+            requests via the detail page, L4); pointer-events gated so the invisible
+            overlay never blocks the card <Link> before hover. */}
+        {showRequestOverlay && (
+          <div
+            data-testid="poster-request-overlay"
+            // CR M2: group-focus-within mirrors group-hover so keyboard users who Tab
+            // onto the (otherwise invisible) button get the revealed scrim, not a
+            // focus ring floating on an invisible control.
+            className="pointer-events-none absolute inset-x-0 bottom-0 z-10 hidden bg-gradient-to-t from-black/80 to-transparent p-3 pt-8 opacity-0 transition-opacity duration-300 lg:block lg:group-hover:pointer-events-auto lg:group-hover:opacity-100 lg:group-focus-within:pointer-events-auto lg:group-focus-within:opacity-100"
+          >
+            <RequestButton
+              tmdbId={tmdbId}
+              mediaType={type}
+              title={title}
+              owned={false}
+              requested={!!isRequested}
+              fullWidth
+            />
           </div>
         )}
       </div>

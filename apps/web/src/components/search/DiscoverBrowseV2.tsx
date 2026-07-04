@@ -26,8 +26,10 @@ import {
 } from './DiscoverStatesV2';
 import { MediaGrid, type MediaItem } from '../media/MediaGrid';
 import { Pagination } from '../ui/Pagination';
+import { RequestsView } from '../requests/RequestsView';
 import { useFilterState } from '../../hooks/useFilterState';
 import { useDiscoverResults } from '../../hooks/useDiscoverResults';
+import { useOwnedMedia } from '../../hooks/useOwnedMedia';
 import { activeFilterChips, countActiveFilters, hasActiveFilters } from '../../lib/discoverFilters';
 
 const routeApi = getRouteApi('/discover');
@@ -95,6 +97,17 @@ export function DiscoverBrowseV2() {
     ...tvResults.map((item): MediaItem => ({ item, mediaType: 'tv' })),
   ].sort((a, b) => b.item.voteCount - a.item.voteCount);
   const hasResults = items.length > 0;
+
+  // Story 13-1b: ownership + requested state drive the per-card 想要 affordance
+  // (owned → 已入庫, active request → 已請求·處理中, else the ＋想要 button).
+  const ownership = useOwnedMedia(items.map((i) => i.item.id));
+
+  // Story 13-1b AC #5 — the lit PH3-R2 entry opens the Discover-hosted 想要清單.
+  const showRequests = search.view === 'requests';
+  const toggleRequests = () =>
+    navigate({
+      search: (prev) => ({ ...prev, view: showRequests ? undefined : 'requests' }),
+    });
 
   const totalPages =
     currentType === 'movie'
@@ -190,16 +203,20 @@ export function DiscoverBrowseV2() {
                 )}
               </button>
             )}
-            {/* Reserved Epic-13 Requests destination — inert until that epic lands (PH3-R2). */}
+            {/* Epic-13 Requests entry — the PH3-R2 reserved slot, LIVE since
+                Story 13-1b: toggles the Discover-hosted 想要清單 (?view=requests). */}
             <button
               type="button"
-              disabled
-              aria-disabled="true"
-              data-testid="discover-requests-inert"
-              title="即將推出"
-              className="ml-auto cursor-not-allowed rounded-[var(--radius-md)] border border-[var(--border-subtle)] px-3 py-1.5 text-xs text-[var(--text-disabled)]"
+              data-testid="discover-requests-entry"
+              aria-pressed={showRequests}
+              onClick={toggleRequests}
+              className={`ml-auto min-h-[44px] rounded-[var(--radius-md)] px-3 text-sm font-medium transition-colors ${
+                showRequests
+                  ? 'bg-[var(--accent-subtle)] text-[var(--accent-text)]'
+                  : 'border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:text-[var(--text-primary)]'
+              }`}
             >
-              想要清單 · 即將推出
+              想要清單
             </button>
           </div>
 
@@ -216,32 +233,40 @@ export function DiscoverBrowseV2() {
             className="mb-4"
           />
 
-          {/* Per-section fail-soft banner (AC #8) — page never hard-fails */}
-          {sectionError && (
-            <DiscoverSectionErrorV2
-              message={sectionError.message}
-              code={sectionError.code}
-              onRetry={sectionError.onRetry}
-            />
-          )}
-
-          {/* States */}
-          {isLoading ? (
-            <DiscoverGridSkeletonV2 />
-          ) : allErr ? null : hasResults ? (
+          {/* Story 13-1b: the 想要清單 view replaces the results area only —
+              rail/toolbar/chips keep rendering (design L1 keeps the chrome). */}
+          {showRequests ? (
+            <RequestsView onExplore={toggleRequests} />
+          ) : (
             <>
-              <MediaGrid items={items} />
-              {totalPages > 1 && (
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  onPageChange={handlePageChange}
-                  className="mt-8"
+              {/* Per-section fail-soft banner (AC #8) — page never hard-fails */}
+              {sectionError && (
+                <DiscoverSectionErrorV2
+                  message={sectionError.message}
+                  code={sectionError.code}
+                  onRetry={sectionError.onRetry}
                 />
               )}
+
+              {/* States */}
+              {isLoading ? (
+                <DiscoverGridSkeletonV2 />
+              ) : allErr ? null : hasResults ? (
+                <>
+                  <MediaGrid items={items} ownership={ownership} />
+                  {totalPages > 1 && (
+                    <Pagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      onPageChange={handlePageChange}
+                      className="mt-8"
+                    />
+                  )}
+                </>
+              ) : (
+                <DiscoverNoResultV2 activeLabels={activeLabels} onClearFilters={clearAll} />
+              )}
             </>
-          ) : (
-            <DiscoverNoResultV2 activeLabels={activeLabels} onClearFilters={clearAll} />
           )}
         </div>
       </div>

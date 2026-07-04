@@ -17,6 +17,14 @@ export interface MediaGridProps {
   tvShows?: TVShow[];
   isLoading?: boolean;
   emptyMessage?: string;
+  /**
+   * Story 13-1b — optional per-card availability wiring (Discover): drives the
+   * 已有/已請求 badges and the hover 想要 affordance. Omitted = prior behavior.
+   */
+  ownership?: {
+    isOwned(tmdbId: number | null | undefined): boolean;
+    isRequested(tmdbId: number | null | undefined): boolean;
+  };
 }
 
 export function MediaGrid({
@@ -25,6 +33,7 @@ export function MediaGrid({
   tvShows = [],
   isLoading,
   emptyMessage = '沒有找到結果',
+  ownership,
 }: MediaGridProps) {
   if (isLoading) {
     return (
@@ -70,6 +79,8 @@ export function MediaGrid({
           voteAverage={movie.voteAverage}
           overview={movie.overview}
           genreIds={movie.genreIds}
+          isOwned={ownership?.isOwned(movie.id)}
+          isRequested={ownership?.isRequested(movie.id)}
         />
       );
     } else {
@@ -86,6 +97,8 @@ export function MediaGrid({
           voteAverage={show.voteAverage}
           overview={show.overview}
           genreIds={show.genreIds}
+          isOwned={ownership?.isOwned(show.id)}
+          isRequested={ownership?.isRequested(show.id)}
         />
       );
     }

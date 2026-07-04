@@ -1,5 +1,11 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
+// Story 13-1b: PosterCard's hover 想要 scrim mounts RequestButton (needs a
+// QueryClient); stub it so grid tests stay layout-focused.
+vi.mock('../requests/RequestButton', () => ({
+  RequestButton: () => null,
+}));
+
 import { MediaGrid } from './MediaGrid';
 import type { Movie, TVShow } from '../../types/tmdb';
 
