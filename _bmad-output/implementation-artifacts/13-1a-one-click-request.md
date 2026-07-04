@@ -1,6 +1,6 @@
 # Story 13.1a: One-Click Request — Backend (requests model + endpoints)
 
-Status: ready-for-dev
+Status: done
 
 **Epic:** Epic 13 — Request System · **FR:** P3-001 (G-1) · **Artery #1 (BE half)**
 **Split:** 13-1 was cross-stack (7 BE + 7 FE tasks > 3/3 threshold) → split per Epic 8 Agreement 5. This is the **backend** half; `13-1b-one-click-request.md` (FE) depends on this story.
@@ -82,13 +82,13 @@ so that Vido can later acquire the title for me (fulfilment = 13-4) without me l
 
 ## Tasks / Subtasks
 
-- [ ] Task 1 (AC #1): Migration `027_create_requests_table.go` — copy `023_create_filter_presets.go` structure; self-register `init()`; Up/Down; co-located migration test incl. asserting the partial unique index blocks a second active `(tmdb_id, media_type)` but allows one after `status='failed'`.
-- [ ] Task 2 (AC #2): Model `internal/models/request.go` — struct with dual `db:`/`json:` tags (snake_case JSON per AC #2 shape), `models.NullString` for nullable columns, `Validate() error` returning `*models.ValidationError` (tmdb_id > 0; media_type ∈ movie|tv).
-- [ ] Task 3 (AC #3, #4, #7): Repository `internal/repository/request_repository.go` — interface + `*sql.DB` impl: `Create`, `List` (ordered `requested_at DESC`), `FindActiveByTMDbID(ctx, tmdbID, mediaType)`; sentinel `ErrRequestNotFound` + `ErrRequestDuplicate` (map unique-index violation); uuid PK + `time.Now()` per house pattern; register in `Repositories` struct + both factories; repo test on in-memory DB.
-- [ ] Task 4 (AC #2, #4, #5): Service `internal/services/request_service.go` — `RequestServiceInterface`; DTO `CreateMediaRequestRequest{TMDbID, MediaType}` (naming: NOT `CreateRequestRequest` — reads awkwardly against the house `CreateXRequest` convention); inject `RequestRepositoryInterface` + `TMDbServiceInterface` + movie/series repos; flow: validate → owned guard (`FindByTMDbID`) → active-dup guard → TMDb resolve (`GetMovieDetails`/`GetTVShowDetails`, title = `Title`/`Name` — zh-TW arrives free via the client's language-fallback chain) → create `pending` row; service test with mocks.
-- [ ] Task 5 (AC #2, #3, #7): Handler `internal/handlers/request_handler.go` — `RegisterRoutes(rg)` → `rg.Group("/requests")` `POST("")`/`GET("")`; `ShouldBindJSON` → service; `handleRequestError` mapping (errors.Is/As → `REQUEST_DUPLICATE` 409 / `REQUEST_ALREADY_IN_LIBRARY` 409 / `TMDB_NOT_FOUND` 404 / validation 400, Rule 3 envelope + zh-TW message + suggestion); Swaggo annotations; wire service + handler + `RegisterRoutes(apiV1)` in `cmd/api/main.go`; handler test via httptest.
-- [ ] Task 6 (AC #6): Rule 7 sync — add `REQUEST_DUPLICATE`, `REQUEST_ALREADY_IN_LIBRARY` + `REQUEST_` prefix to `project-context.md` (codes block + authoritative prefix list + mega-line entry) and `code-review/instructions.xml` Step 3 prefix list + sync date.
-- [ ] Task 7 (AC #8): Full verification — `pnpm nx test api` → `pnpm lint:all` (vet, staticcheck, eslint, prettier — prettier will touch the md edits) → Rule 15 self-check (main.go wiring grep; SELECT column list == scan list == INSERT list).
+- [x] Task 1 (AC #1): Migration `027_create_requests_table.go` — copy `023_create_filter_presets.go` structure; self-register `init()`; Up/Down; co-located migration test incl. asserting the partial unique index blocks a second active `(tmdb_id, media_type)` but allows one after `status='failed'`.
+- [x] Task 2 (AC #2): Model `internal/models/request.go` — struct with dual `db:`/`json:` tags (snake_case JSON per AC #2 shape), `models.NullString` for nullable columns, `Validate() error` returning `*models.ValidationError` (tmdb_id > 0; media_type ∈ movie|tv).
+- [x] Task 3 (AC #3, #4, #7): Repository `internal/repository/request_repository.go` — interface + `*sql.DB` impl: `Create`, `List` (ordered `requested_at DESC`), `FindActiveByTMDbID(ctx, tmdbID, mediaType)`; sentinel `ErrRequestNotFound` + `ErrRequestDuplicate` (map unique-index violation); uuid PK + `time.Now()` per house pattern; register in `Repositories` struct + both factories; repo test on in-memory DB.
+- [x] Task 4 (AC #2, #4, #5): Service `internal/services/request_service.go` — `RequestServiceInterface`; DTO `CreateMediaRequestRequest{TMDbID, MediaType}` (naming: NOT `CreateRequestRequest` — reads awkwardly against the house `CreateXRequest` convention); inject `RequestRepositoryInterface` + `TMDbServiceInterface` + movie/series repos; flow: validate → owned guard (`FindByTMDbID`) → active-dup guard → TMDb resolve (`GetMovieDetails`/`GetTVShowDetails`, title = `Title`/`Name` — zh-TW arrives free via the client's language-fallback chain) → create `pending` row; service test with mocks.
+- [x] Task 5 (AC #2, #3, #7): Handler `internal/handlers/request_handler.go` — `RegisterRoutes(rg)` → `rg.Group("/requests")` `POST("")`/`GET("")`; `ShouldBindJSON` → service; `handleRequestError` mapping (errors.Is/As → `REQUEST_DUPLICATE` 409 / `REQUEST_ALREADY_IN_LIBRARY` 409 / `TMDB_NOT_FOUND` 404 / validation 400, Rule 3 envelope + zh-TW message + suggestion); Swaggo annotations; wire service + handler + `RegisterRoutes(apiV1)` in `cmd/api/main.go`; handler test via httptest.
+- [x] Task 6 (AC #6): Rule 7 sync — add `REQUEST_DUPLICATE`, `REQUEST_ALREADY_IN_LIBRARY` + `REQUEST_` prefix to `project-context.md` (codes block + authoritative prefix list + mega-line entry) and `code-review/instructions.xml` Step 3 prefix list + sync date.
+- [x] Task 7 (AC #8): Full verification — `pnpm nx test api` → `pnpm lint:all` (vet, staticcheck, eslint, prettier — prettier will touch the md edits) → Rule 15 self-check (main.go wiring grep; SELECT column list == scan list == INSERT list).
 
 ## Dev Notes
 
@@ -139,21 +139,64 @@ No new third-party dependency is introduced (uuid, testify, gin, modernc/sqlite 
 | Date       | Change                                                                                                                                       |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | 2026-07-04 | Story created (SM create-story, yolo). Cross-stack split 13-1 → 13-1a (BE, this) / 13-1b (FE). [@contract-v1] stamped on AC #2/#3. New Rule-7 `REQUEST_*` prefix obligation (AC #6). Status → ready-for-dev. |
+| 2026-07-04 | Adversarial code review (CR): 0H/3M/2L found, all fixed in-session (real-migration test setup, 4xx log levels, @Failure annotations, TMDB-{id} title fallback, fulfilment_source CHECK test). Status → done. |
+| 2026-07-04 | Implemented (dev-story): mig 027 + model + repo (+registry) + service + handler + main.go wiring (Tasks 1–5); Rule 7 三處同步 REQUEST\_ = 14th prefix (Task 6); full gates green — `pnpm nx test api`, `pnpm nx test web`, `pnpm lint:all` (Task 7). 26 new test cases across 4 layers. Status → review. |
+
+## Senior Developer Review (AI)
+
+**Date:** 2026-07-04 · **Outcome:** Approve (all findings fixed in-session) · **Reviewer:** adversarial CR workflow (claude-fable-5)
+
+- **Git vs File List:** 0 discrepancies (10 new + 4 edits, exact match).
+- **🔒 Rule 7 Wire Format:** PASS (4 codes checked — REQUEST_DUPLICATE / REQUEST_ALREADY_IN_LIBRARY / VALIDATION_REQUIRED_FIELD / VALIDATION_INVALID_FORMAT, all under registered prefixes).
+- **🔒 Rule 20 Contract Bump:** N/A (no stamp bumps — new v1 stamps only).
+- **🔒 Rule 25 Mega-line:** N/A (clean single-author prepend, no rebase/merge).
+- **Findings (0 High / 3 Medium / 2 Low) — ALL FIXED:**
+  - [x] M1 repo test carried a hand-copied 027 schema literal (drift risk) → setup now applies the REAL migration chain via `migrations.NewRunner` + `GetAll()` + `Up()`.
+  - [x] M2 expected 4xx flows logged at Error (log noise) → `handleRequestError` logs Debug for duplicate/owned/tmdb-miss/validation, Error only for unexpected.
+  - [x] M3 Swagger lacked @Failure contract rows → 400/404/409 (+500 on GET) annotated with their Rule-7 codes.
+  - [x] L1 `resolveTitle` empty-title pathological edge → deterministic `TMDB-{id}` placeholder + service test.
+  - [x] L2 `fulfilment_source` CHECK untested → migration test case added.
+- **Post-fix gates:** request tests 4 layers green; `pnpm nx test api` exit 0 (verified standalone); `pnpm lint:all` green.
 
 ## Dev Agent Record
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+claude-fable-5 (Claude Fable 5)
 
 ### Debug Log References
 
+- Repo List test: SQLite `datetime()` can't parse the Go driver's time serialization → test fixed to pass a Go `time.Time` arg for the older-timestamp UPDATE (implementation unaffected).
+- prettier non-idempotent on project-context.md mega-line: bare underscore tokens (`tmdb_id`, `media_type`) parsed as markdown emphasis → oscillating reflow. Fixed by backtick-wrapping every underscore-bearing token in the new entry (Rule 25's CJK warning generalizes to bare `_`).
+
 ### Completion Notes List
+
+- 🔗 AC Drift: N/A (new requests subsystem — no prior story AC covers `/api/v1/requests` or the requests table; `main.go`/`registry.go` edits are additive registration only, no existing contract's observable behavior changed)
+- 📎 Contract Stamps: FOUND (2 stamped ACs in this story — AC #2/#3 [@contract-v1], producer side; no upstream stamped refs consumed: 13-0 is a design story with no stamps, implicit v0)
+- 🎭 A11y Pre-Flight: N/A (100% backend — no apps/web/ files touched)
+- 🎨 UX Verification: SKIPPED — no UI changes in this story
+- Implementation exactly per AC: rows born `pending` (AC #9 verified by service+repo tests); dup guard at BOTH levels (service pre-check + partial-unique index mapped to `ErrRequestDuplicate`, migration test proves failed-rows don't block re-request); owned guard via `FindOwnedTMDbIDs` bulk (typed, no error-string matching); zh-TW title server-side via existing TMDbService (movie→Title, tv→Name, Original* fallback); `TMDB_NOT_FOUND` passes through typed with its own status code.
+- Rule 7: `REQUEST_` registered as the 14th prefix in project-context.md (codes block + authoritative list + mega-line entry) and code-review instructions.xml Step 3 (list + sync date 2026-07-04). 13-4a adds `DVR_` as 15th and reconciles the count at its merge (noted in both).
+- Swagger: Swaggo annotations added on both endpoints (house pattern = annotations only; no swag-init target exists in project.json).
+- Full regression: `pnpm nx test api` ✅, `pnpm nx test web` ✅ (orphan-process cleanup verified: none), `pnpm lint:all` ✅ (vet/staticcheck/eslint 0 errors/prettier). Pre-existing failures encountered: NONE.
 
 ### Discovery Triage
 
-- **Did this story discover any work outside its current scope?**
-  - If **NO**: state `N/A — no out-of-scope work discovered`.
-  - If **YES**: classify each into exactly one lane per Rule 24 — ① absorbed (cite added AC/sub-task) / ② spawn-blocking story (cite sprint-status ID, mark this blocked) / ③ backlog with bidirectional carry-forward link (cite entry ID). Prose-only mentions are banned.
+- N/A — no out-of-scope work discovered. (The prettier mega-line gotcha was fixed in-place inside this story's own Task-6 edit — same surface, not out-of-scope; documented in Debug Log for the next mega-line editor.)
 
 ### File List
+
+- apps/api/internal/database/migrations/027_create_requests_table.go (new)
+- apps/api/internal/database/migrations/027_create_requests_table_test.go (new)
+- apps/api/internal/models/request.go (new)
+- apps/api/internal/repository/request_repository.go (new)
+- apps/api/internal/repository/request_repository_test.go (new)
+- apps/api/internal/repository/registry.go (modified — Requests field + both factories)
+- apps/api/internal/services/request_service.go (new)
+- apps/api/internal/services/request_service_test.go (new)
+- apps/api/internal/handlers/request_handler.go (new)
+- apps/api/internal/handlers/request_handler_test.go (new)
+- apps/api/cmd/api/main.go (modified — service :215, handler :540, route :624)
+- project-context.md (modified — Rule 7 codes + 14-prefix list + mega-line entry)
+- \_bmad/bmm/workflows/4-implementation/code-review/instructions.xml (modified — Step 3 prefix list + sync date)
+- \_bmad-output/implementation-artifacts/sprint-status.yaml (modified — status tracking)

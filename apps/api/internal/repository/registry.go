@@ -24,6 +24,7 @@ type Repositories struct {
 	MediaLibraries    MediaLibraryRepositoryInterface
 	ExploreBlocks     ExploreBlockRepositoryInterface
 	FilterPresets     FilterPresetRepositoryInterface
+	Requests          RequestRepositoryInterface
 }
 
 // NewRepositories creates all repository implementations for the given database connection.
@@ -53,6 +54,7 @@ func NewRepositories(db *sql.DB) *Repositories {
 		MediaLibraries:    NewMediaLibraryRepository(db),
 		ExploreBlocks:     NewExploreBlockRepository(db),
 		FilterPresets:     NewFilterPresetRepository(db),
+		Requests:          NewRequestRepository(db),
 	}
 }
 
@@ -82,5 +84,6 @@ func NewRepositoriesWithCache(db *sql.DB) *Repositories {
 		MediaLibraries:    NewMediaLibraryRepository(db),
 		ExploreBlocks:     NewExploreBlockRepository(db),
 		FilterPresets:     NewFilterPresetRepository(db),
+		Requests:          NewRequestRepository(db),
 	}
 }
