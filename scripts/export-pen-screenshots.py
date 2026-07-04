@@ -186,6 +186,24 @@ SCREENS = {
     "x4CNb": ("flow-l-requests-v2", "l6-d-v2"),
     "oopme": ("flow-l-requests-v2", "l7-d-v2"),
     "G0xib": ("flow-l-requests-v2", "l8-d-v2"),
+    # flow-f-subtitle-v2 — story 9R-UX (generation-centric subtitle management, ADR Route C:
+    # 生成字幕 primary, fetch dormant, glossary keystone; old flow-f f1-f3 + flow-g g1-g3
+    # superseded in place). F11 = exploratory full-page variant (not story spec — pending ruling).
+    "r1EY9": ("flow-f-subtitle-v2", "f1-d-v2"),
+    "JkdfH": ("flow-f-subtitle-v2", "f1-m-v2"),
+    "S9Rbrq": ("flow-f-subtitle-v2", "f2-d-v2"),
+    "JbXai": ("flow-f-subtitle-v2", "f3-d-v2"),
+    "k8sJl4": ("flow-f-subtitle-v2", "f3-m-v2"),
+    "U8rRtv": ("flow-f-subtitle-v2", "f4-d-v2"),
+    "f6ZxY": ("flow-f-subtitle-v2", "f5-d-v2"),
+    "dlfMR": ("flow-f-subtitle-v2", "f6-d-v2"),
+    "buepS": ("flow-f-subtitle-v2", "f6-m-v2"),
+    "A85GFD": ("flow-f-subtitle-v2", "f7-d-v2"),
+    "i9Nun1": ("flow-f-subtitle-v2", "f8-d-v2"),
+    "H717g": ("flow-f-subtitle-v2", "f8-m-v2"),
+    "JMqPg": ("flow-f-subtitle-v2", "f9-d-v2"),
+    "olDlj": ("flow-f-subtitle-v2", "f10-d-v2"),
+    "l8FsB": ("flow-f-subtitle-v2", "f11-d-v2"),
 }
 
 

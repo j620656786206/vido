@@ -375,7 +375,7 @@ development_status:
   #         + planning-artifacts/subtitle-v4-replan-and-feasibility-audit-2026-06.md
   # ==============================================================================
   epic-9R-subtitle-route-c: in-progress  # 2026-06-16 — story breakdown done (Bob), SPIKE-gated items = backlog
-  9R-UX-subtitle-v2-design:             ready-for-dev  # P0 UX (Sally) — redraw flow-f fetch UI → generation-centric + glossary; flow-f f1-f3 superseded; gates Epic 6 FE
+  9R-UX-subtitle-v2-design:             review  # story: 9R-UX-subtitle-v2-design.md. Design DONE 2026-07-05 (PR pending): Pencil inline-agent (yolo) + Sally MCP review PASS vs AC1-9. New flow-f-subtitle-v2 block: 15 frames (F1-F10 dialog flow + F11 exploratory full-page variant — UNPROMPTED extra, annotated non-spec, PENDING Alexyu ruling) + Component/GenerationProgress-v2 + GlossaryRow-v2 (both sJzat-registered: new progress-v2 row + content-cards-v2 cell); BE-gaps note (9R-10/15/10+11/series) + superseded notes on old flow-f/g (frames untouched); zero Zimuku/source-chips; 生成字幕 primary, fetch dormant. Review fixes: F8-M hidden duplicate sheet deleted, F11 exploration note. SCREENS +15. Originally: P0 UX (Sally) — redraw flow-f fetch UI → generation-centric + glossary; flow-f f1-f3 superseded; gates Epic 6 FE
   9R-S1-nfo-localization-spike:         ready-for-dev  # gates 9R-13
   9R-S2-nas-whisper-benchmark-spike:    ready-for-dev  # gates D2 default + 9R-9 local engine; OpenVINO-on-Intel-iGPU eval
   9R-S3-douban-fallback-spike:          ready-for-dev  # gates any 在地化 Douban path
@@ -388,10 +388,11 @@ development_status:
   9R-7-translationrequest-generalize:   ready-for-dev  # P0 keystone M PROVEN — TranslationRequest{Fields,Glossary}; depends 9R-6
   9R-8-metadata-aware-translation:      ready-for-dev  # P1 S  PROVEN — feed title/plot/cast into prompt; depends 9R-7
   9R-9-asrprovider-interface:           ready-for-dev  # P1 M  PROVEN — pluggable engine + base-URL config (Speaches/WhisperLive); anti-lock-in
-  9R-10-route-c-pipeline-orchestration: ready-for-dev  # P1 M  PROVEN — single flow extract->transcribe->translate->opencc->place; depends 9R-1..4,7,11
+  9R-10-route-c-pipeline-orchestration: ready-for-dev  # P1 M  PROVEN — single flow extract->transcribe->translate->opencc->place; depends 9R-1..4,7,11. Scope note (9R-UX discovery 2026-07-05, Rule 24 ①): trigger conditions (AC2) explicitly include the SERIES/episode generation trigger — today's POST /movies/:id/transcribe is movies-only
   9R-11-ai-cost-quota-controls:         ready-for-dev  # P0 prereq M PROVEN — throttle/metering/budget before any batch run
   9R-13-nfo-localization-writeback:     backlog        # P1 L  SPIKE-GATED(S1) — .nfo localize + additive zh-TW writeback; depends 9R-6,7,S1
   9R-14-remove-zimuku-provider:         ready-for-dev  # P2 XS — D3, WAF-dead
+  9R-15-glossary-http-api:              backlog        # Rule-24 ③ from 9R-UX create-story (2026-07-05): glossary-management UI (9R-UX AC4) has NO HTTP surface — 9R-6/7 spec migration+repo+service only. Add REST CRUD for per-media glossary terms (list/add/edit/confirm/delete); depends 9R-6,7. Gates Epic 6 (ux3-subtitle-v2) FE glossary section, NOT the design. Precedent: retro-ux3-4-ac-capability-check (verify HTTP surface, not Go client)
 
   # ==============================================================================
   # Epic 9 Retro Action Items (2026-04-10)
@@ -881,7 +882,7 @@ development_status:
   retro-ux3-4-rule21-ergonomics:        backlog  # [SM][LOW] DX: a Rule 21 .pen-header cheat-sheet (accepted forms + how to look up the node id) or an eslint auto-fix suggestion — two near-miss lint failures this epic (DownloadCardV2, DownloadRowActions). Route: SM/QD (docs or eslint rule tweak).
   retro-ux3-4-usescanprogress-ref:      backlog  # [DEV][LOW] Cleanup: fix useScanProgress.ts's pre-existing useRef<…>()-no-arg + self-reference anti-pattern (tolerated pre-existing lint), aligning it with the useDownloadProgress latest-ref-in-effect fix. Route: QD (lightweight, no story file needed).
   ux3-system-settings: backlog  # PH3-M4,F5,R3. /system vs /settings split (*arr); omnisearch retires /search; reserves Epic 16/18 landings.
-  ux3-subtitle-v2:     backlog  # PH3-M5. Epic 8 manual+batch subtitle UI → v2; detail 管理字幕 + Activity batch.
+  ux3-subtitle-v2:     backlog  # PH3-M5. Epic 8 manual+batch subtitle UI → v2 — 2026-06-16 REVISION: re-centred generation-centric (Route C) per adr-subtitle-route-c-generation.md; detail 管理字幕 + Activity batch drive GENERATION, fetch dormant. Design story = 9R-UX-subtitle-v2-design (authored 2026-07-05, ready-for-dev, epic-9R Track 0). FE gated on design + 9R-6/7/10/11/15 (+ 9R-1..4 fixes).
   ux3-ai-subtitle:     backlog  # PH3-G1. Epic 9 AI correction + Whisper translation — P8 GREENFIELD FE (backend done, UI never built). Honor backend capability (no Pause unless supported, Rule 24).
   ux3-detail-backfill: backlog  # PH3-M6. Epic 12 detail blocks (ratings/seasons/recs/streaming/trailer/douban) → v2 design coverage; recs → PosterCardV2.
   ux3-phase3-retrospective: optional
