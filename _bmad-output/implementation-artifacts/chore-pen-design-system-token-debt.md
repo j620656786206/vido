@@ -1,6 +1,6 @@
 # Story chore-pen-design-system-token-debt — `.pen` design-system debt sync (R5 `text-muted` + library registration)
 
-**Epic:** — (standalone design-system chore; spawned by 13-0 review) · **Status:** ready-for-dev
+**Epic:** — (standalone design-system chore; spawned by 13-0 review) · **Status:** review (executed 2026-07-04 — PR pending merge)
 **Owner:** ux-designer (Pencil MCP) · **Type:** design-only chore · **Source:** 13-0 requests-design review 2026-07-04 (PR #118)
 
 ## Story
@@ -45,11 +45,11 @@ Changing the variable is a **global, genuine visual change**: every frame using 
 
 ## Tasks / Subtasks (designer)
 
-- [ ] (AC #1) Pencil MCP: `get_variables` snapshot → `SetVariables({"text-muted": {type:"color", value:"#A0AABE"}})` (merge) → re-read to confirm; spot-check 2–3 muted-heavy frames visually.
-- [ ] (AC #2) `batch_design`: insert `DownloadCard-v2 cell` into `ISilG` (ref `Mz428`, narrowed width if needed, Noto 12 `$text-muted` caption); `snapshot_layout` problemsOnly clean; screenshot the row.
-- [ ] (AC #3) Audit: diff `get_editor_state` reusable-component list vs library cells; register or file any other unregistered `*-v2` component.
-- [ ] (AC #4) User Cmd+S → full regen → sample-verify → stage ALL changed PNGs + `.pen` → commit `chore(design-system): sync .pen text-muted to R5 #A0AABE + register DownloadCard-v2` → PR.
-- [ ] (AC #4) Retry/resolve `flow-a-browse/a1-d.png` export failure.
+- [x] (AC #1) Pencil MCP: `get_variables` snapshot → `SetVariables({"text-muted": {type:"color", value:"#A0AABE"}})` (merge) → re-read to confirm; spot-check 2–3 muted-heavy frames visually.
+- [x] (AC #2) `batch_design`: insert `DownloadCard-v2 cell` into `ISilG` (ref `Mz428`, narrowed width if needed, Noto 12 `$text-muted` caption); `snapshot_layout` problemsOnly clean; screenshot the row.
+- [x] (AC #3) Audit: diff `get_editor_state` reusable-component list vs library cells; register or file any other unregistered `*-v2` component.
+- [x] (AC #4) User Cmd+S → full regen → sample-verify → stage ALL changed PNGs + `.pen` → commit `chore(design-system): sync .pen text-muted to R5 #A0AABE + register DownloadCard-v2` → PR.
+- [x] (AC #4) Retry/resolve `flow-a-browse/a1-d.png` export failure.
 - [ ] Close-out: mark sprint-status entry done after merge.
 
 ## Dev Notes
@@ -64,3 +64,4 @@ Changing the variable is a **global, genuine visual change**: every frame using 
 | Date       | Change                                                                                                        |
 | ---------- | ------------------------------------------------------------------------------------------------------------- |
 | 2026-07-04 | Story created (Sally, from the 13-0 review's deferred findings; both debts verified against `.pen` + `styles.css`). Status → ready-for-dev. |
+| 2026-07-04 | Executed (Sally, same day). AC1: `text-muted` → `#A0AABE` via merge SetVariables; re-read confirmed all 35 other variables untouched. AC2: `DownloadCard-v2 cell` (ref `Mz428` @480) registered in `ISilG`; row renders clean. AC3 audit: ALL `Component/*-v2` now have library cells; only non-cell reusable is legacy `s11main` (a screen marked reusable, not a `Component/*` — out of scope, noted). AC4: full regen **128/128** (a1-d.png succeeded on retry — 2026-07-04 failure was transient); brightness sample-verified old-vs-new on `i1-d.png` (rail facet counts + card meta visibly brighter, AA-passing); ALL PNGs staged per the documented inversion. Pre-existing finding (not fixed, v1 scope): `EmptyLibrary-NoQBT` internal icon 54px in 40px box → partially clipped (`snapshot_layout`); untouched to avoid v1 re-render churn. Status → review. |
