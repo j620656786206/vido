@@ -1,6 +1,6 @@
 # Story chore-pen-design-system-token-debt — `.pen` design-system debt sync (R5 `text-muted` + library registration)
 
-**Epic:** — (standalone design-system chore; spawned by 13-0 review) · **Status:** review (executed 2026-07-04 — PR pending merge)
+**Epic:** — (standalone design-system chore; spawned by 13-0 review) · **Status:** done (PR #121 squash-merged 2026-07-04)
 **Owner:** ux-designer (Pencil MCP) · **Type:** design-only chore · **Source:** 13-0 requests-design review 2026-07-04 (PR #118)
 
 ## Story
@@ -50,7 +50,7 @@ Changing the variable is a **global, genuine visual change**: every frame using 
 - [x] (AC #3) Audit: diff `get_editor_state` reusable-component list vs library cells; register or file any other unregistered `*-v2` component.
 - [x] (AC #4) User Cmd+S → full regen → sample-verify → stage ALL changed PNGs + `.pen` → commit `chore(design-system): sync .pen text-muted to R5 #A0AABE + register DownloadCard-v2` → PR.
 - [x] (AC #4) Retry/resolve `flow-a-browse/a1-d.png` export failure.
-- [ ] Close-out: mark sprint-status entry done after merge.
+- [x] Close-out: mark sprint-status entry done after merge.
 
 ## Dev Notes
 
