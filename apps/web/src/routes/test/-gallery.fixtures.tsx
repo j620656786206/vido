@@ -168,6 +168,12 @@ import { RetryQueuePanel } from '../../components/retry/RetryQueuePanel';
 import { RetryQueueWithNotifications } from '../../components/retry/RetryQueueWithNotifications';
 import { SubtitleSearchDialog } from '../../components/subtitle/SubtitleSearchDialog';
 import { BatchSubtitlePanel } from '../../components/subtitle/BatchSubtitleDialog';
+import { GenerationProgressV2 } from '../../components/subtitle/GenerationProgressV2';
+import { GlossaryRowV2 } from '../../components/subtitle/GlossaryRowV2';
+import { GlossaryPanelV2 } from '../../components/subtitle/GlossaryPanelV2';
+import { ManageSubtitleDialogV2 } from '../../components/subtitle/ManageSubtitleDialogV2';
+import { glossaryKeys } from '../../hooks/useGlossary';
+import type { GlossaryTerm } from '../../services/glossaryService';
 import { BackupManagement } from '../../components/settings/BackupManagement';
 import { BackupScheduleConfig } from '../../components/settings/BackupScheduleConfig';
 import { CacheManagement } from '../../components/settings/CacheManagement';
@@ -3325,6 +3331,289 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       onClose: noop,
     },
     penNode: 'screen-section',
+    statesOnly: ['default'],
+  },
+
+  // ----- subtitle/ v2 generation (ux3-subtitle-v2) -----
+  // GenerationProgressV2 — fixture states named after the FROZEN stage vocabulary
+  // (提取音訊/轉錄中/翻譯中/簡轉繁/AI校正/完成 + 失敗; renaming breaks fixture↔baseline
+  // mapping — story ux3-subtitle-v2 AC 3 / Rule 23 note). Rule 23: the component
+  // reads NO wall clock — all timing text is the server-supplied `message` prop,
+  // so no clockTime pinning is needed.
+  {
+    id: 'generation-progress-v2/提取音訊',
+    label: 'subtitle/GenerationProgressV2 (提取音訊)',
+    component: GenerationProgressV2 as ComponentType<Record<string, unknown>>,
+    props: { phase: 'extracting', message: '正在提取音訊軌' },
+    penNode: 'XkGvG', // Component/GenerationProgress-v2
+    statesOnly: ['default'],
+    width: 720,
+  },
+  {
+    id: 'generation-progress-v2/轉錄中',
+    label: 'subtitle/GenerationProgressV2 (轉錄中)',
+    component: GenerationProgressV2 as ComponentType<Record<string, unknown>>,
+    props: { phase: 'transcribing', message: '正在轉錄音訊（Whisper large-v3）— 12:34 / 45:10' },
+    penNode: 'XkGvG',
+    statesOnly: ['default'],
+    width: 720,
+  },
+  {
+    id: 'generation-progress-v2/翻譯中',
+    label: 'subtitle/GenerationProgressV2 (翻譯中)',
+    component: GenerationProgressV2 as ComponentType<Record<string, unknown>>,
+    props: { phase: 'translating', percentage: 62.5, message: '翻譯中（glossary-aware）' },
+    penNode: 'XkGvG',
+    statesOnly: ['default'],
+    width: 720,
+  },
+  {
+    id: 'generation-progress-v2/完成',
+    label: 'subtitle/GenerationProgressV2 (完成 — 簡轉繁/AI校正 atomically done)',
+    component: GenerationProgressV2 as ComponentType<Record<string, unknown>>,
+    props: { phase: 'complete', message: '字幕已生成' },
+    penNode: 'XkGvG',
+    statesOnly: ['default'],
+    width: 720,
+  },
+  {
+    id: 'generation-progress-v2/失敗',
+    label: 'subtitle/GenerationProgressV2 (失敗於翻譯中 + 重試)',
+    component: GenerationProgressV2 as ComponentType<Record<string, unknown>>,
+    props: {
+      phase: 'failed',
+      failedPhase: 'translating',
+      error: 'AI 服務逾時，已保留轉錄結果',
+      onRetry: noop,
+    },
+    penNode: 'XkGvG',
+    statesOnly: ['default'],
+    width: 720,
+  },
+  {
+    id: 'generation-progress-v2/cost-slot',
+    label: 'subtitle/GenerationProgressV2 (dormant cost slot lit — 9R-17 preview)',
+    component: GenerationProgressV2 as ComponentType<Record<string, unknown>>,
+    props: {
+      phase: 'transcribing',
+      message: '正在轉錄音訊',
+      costUsedText: '$0.42',
+      costLimitText: '$5.00',
+    },
+    penNode: 'XkGvG',
+    statesOnly: ['default'],
+    width: 720,
+  },
+  {
+    id: 'glossary-row-v2/unconfirmed',
+    label: 'subtitle/GlossaryRowV2 (未確認 · 字幕來源)',
+    component: GlossaryRowV2 as ComponentType<Record<string, unknown>>,
+    props: {
+      term: {
+        id: 'fx-g1',
+        mediaId: '42',
+        termSrc: 'Demogorgon',
+        termZh: '魔王獸',
+        language: 'zh-Hant',
+        source: 'subtitle',
+        confirmed: false,
+        createdAt: '2026-07-01T00:00:00Z',
+        updatedAt: '2026-07-01T00:00:00Z',
+      },
+      onConfirm: noop,
+      onEdit: noop,
+      onDelete: noop,
+    },
+    penNode: 'nDSEd', // Component/GlossaryRow-v2
+    statesOnly: ['default'],
+    width: 720,
+  },
+  {
+    id: 'glossary-row-v2/confirmed-metadata',
+    label: 'subtitle/GlossaryRowV2 (已確認 · 中繼資料來源)',
+    component: GlossaryRowV2 as ComponentType<Record<string, unknown>>,
+    props: {
+      term: {
+        id: 'fx-g2',
+        mediaId: '42',
+        termSrc: 'Hawkins',
+        termZh: '霍金斯鎮',
+        language: 'zh-Hant',
+        source: 'metadata',
+        confirmed: true,
+        createdAt: '2026-07-01T00:00:00Z',
+        updatedAt: '2026-07-01T00:00:00Z',
+      },
+      onConfirm: noop,
+      onEdit: noop,
+      onDelete: noop,
+    },
+    penNode: 'nDSEd',
+    statesOnly: ['default'],
+    width: 720,
+  },
+  {
+    id: 'glossary-row-v2/manual',
+    label: 'subtitle/GlossaryRowV2 (未確認 · 手動來源)',
+    component: GlossaryRowV2 as ComponentType<Record<string, unknown>>,
+    props: {
+      term: {
+        id: 'fx-g3',
+        mediaId: '42',
+        termSrc: 'Vecna',
+        termZh: '維克那',
+        language: 'zh-Hant',
+        source: 'manual',
+        confirmed: false,
+        createdAt: '2026-07-01T00:00:00Z',
+        updatedAt: '2026-07-01T00:00:00Z',
+      },
+      onConfirm: noop,
+      onEdit: noop,
+      onDelete: noop,
+    },
+    penNode: 'nDSEd',
+    statesOnly: ['default'],
+    width: 720,
+  },
+
+  // ----- subtitle/ v2 dialogs (Sally UX gate 2026-07-05 — REQUIRED fixtures) -----
+  // Both are Radix `Dialog.Portal` renders (ui-dialog precedent): the state div is
+  // zero-size, so the visual spec captures the VIEWPORT (dialog + scrim) via the
+  // `?fixture=<id>` isolation page. `seedQueries` (19-4b Task 3) pre-loads the
+  // glossary list cache so `useGlossaryTerms` paints data with no loading flash
+  // and no network attempt.
+  {
+    id: 'subtitle-manage-subtitle-dialog-v2',
+    label: 'subtitle/ManageSubtitleDialogV2 (idle · with tracks)',
+    component: ManageSubtitleDialogV2 as ComponentType<Record<string, unknown>>,
+    props: {
+      mediaId: 'movie-1',
+      mediaType: 'movie',
+      mediaTitle: '怪奇物語',
+      mediaFilePath: '/media/movies/Stranger.Things.S04E07.mkv',
+      mediaResolution: '1080p',
+      subtitleTracks: JSON.stringify([{ language: 'zh-CN' }, { language: 'en' }]),
+      subtitleStatus: 'found',
+      subtitleLanguage: 'zh-Hant',
+      open: true,
+      onOpenChange: noop,
+      onGenerationComplete: noop,
+      onDownloadSuccess: noop,
+    },
+    seedQueries: [
+      {
+        queryKey: glossaryKeys.list('movie-1'),
+        data: [
+          {
+            id: 'fx-md-1',
+            mediaId: 'movie-1',
+            termSrc: 'Demogorgon',
+            termZh: '魔王獸',
+            language: 'zh-Hant',
+            source: 'subtitle',
+            confirmed: false,
+            createdAt: '2026-07-01T00:00:00Z',
+            updatedAt: '2026-07-01T00:00:00Z',
+          },
+          {
+            id: 'fx-md-2',
+            mediaId: 'movie-1',
+            termSrc: 'Hawkins',
+            termZh: '霍金斯鎮',
+            language: 'zh-Hant',
+            source: 'metadata',
+            confirmed: true,
+            createdAt: '2026-07-01T00:00:00Z',
+            updatedAt: '2026-07-01T00:00:00Z',
+          },
+          {
+            id: 'fx-md-3',
+            mediaId: 'movie-1',
+            termSrc: 'Vecna',
+            termZh: '維克那',
+            language: 'zh-Hant',
+            source: 'manual',
+            confirmed: false,
+            createdAt: '2026-07-01T00:00:00Z',
+            updatedAt: '2026-07-01T00:00:00Z',
+          },
+        ] satisfies GlossaryTerm[],
+      },
+    ],
+    penNode: 'screen-section', // Screen F1-D-v2 (r1EY9)
+    statesOnly: ['default'],
+  },
+  {
+    id: 'glossary-panel-v2/seeded',
+    label: 'subtitle/GlossaryPanelV2 (seeded list — F6)',
+    component: GlossaryPanelV2 as ComponentType<Record<string, unknown>>,
+    props: {
+      mediaId: 'movie-glossary',
+      mediaTitle: '怪奇物語',
+      open: true,
+      onOpenChange: noop,
+    },
+    seedQueries: [
+      {
+        queryKey: glossaryKeys.list('movie-glossary'),
+        data: [
+          {
+            id: 'fx-gp-1',
+            mediaId: 'movie-glossary',
+            termSrc: 'Demogorgon',
+            termZh: '魔王獸',
+            language: 'zh-Hant',
+            source: 'subtitle',
+            confirmed: false,
+            createdAt: '2026-07-01T00:00:00Z',
+            updatedAt: '2026-07-01T00:00:00Z',
+          },
+          {
+            id: 'fx-gp-2',
+            mediaId: 'movie-glossary',
+            termSrc: 'Hawkins',
+            termZh: '霍金斯鎮',
+            language: 'zh-Hant',
+            source: 'metadata',
+            confirmed: true,
+            createdAt: '2026-07-01T00:00:00Z',
+            updatedAt: '2026-07-01T00:00:00Z',
+          },
+          {
+            id: 'fx-gp-3',
+            mediaId: 'movie-glossary',
+            termSrc: 'Vecna',
+            termZh: '維克那',
+            language: 'zh-Hant',
+            source: 'manual',
+            confirmed: false,
+            createdAt: '2026-07-01T00:00:00Z',
+            updatedAt: '2026-07-01T00:00:00Z',
+          },
+        ] satisfies GlossaryTerm[],
+      },
+    ],
+    penNode: 'screen-section', // Screen F6-D-v2 (dlfMR)
+    statesOnly: ['default'],
+  },
+  {
+    id: 'glossary-panel-v2/empty',
+    label: 'subtitle/GlossaryPanelV2 (空狀態 尚無詞彙 — F7)',
+    component: GlossaryPanelV2 as ComponentType<Record<string, unknown>>,
+    props: {
+      mediaId: 'movie-glossary-empty',
+      mediaTitle: '怪奇物語',
+      open: true,
+      onOpenChange: noop,
+    },
+    seedQueries: [
+      {
+        queryKey: glossaryKeys.list('movie-glossary-empty'),
+        data: [] satisfies GlossaryTerm[],
+      },
+    ],
+    penNode: 'screen-section', // Screen F7-D-v2 (A85GFD)
     statesOnly: ['default'],
   },
 ];

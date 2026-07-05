@@ -1,6 +1,6 @@
 # Story ux3-subtitle-v2: Subtitle UI v2 — generation-centric per-item + glossary (PH3-M5 slice 1)
 
-Status: ready-for-dev
+Status: review
 
 > **Scope ruling at authoring (SM Bob, 2026-07-05):** the PH3-M5 umbrella ("detail 管理字幕 + Activity batch drive GENERATION") is delivered in TWO slices. THIS story = the per-item detail surface + glossary management/review + generation progress (all backend dependencies LIVE and code-verified). The batch-generation surfaces (F4/F8 + Activity launch CTA) are split to `ux3-subtitle-v2-batch` because **no Route C batch-generation endpoint exists** (code-verified 2026-07-05: `/api/v1/subtitles/batch` runs the Epic 8 provider-FETCH pipeline, not generation) — BE work filed as `9R-16-batch-generation-endpoint`. See Discovery Triage.
 
@@ -24,31 +24,38 @@ so that I get reliable 繁體中文 subtitles from the pipeline that actually wo
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Glossary API client (AC: 4)
-  - [ ] `apps/web/src/services/glossaryService.ts` — 6 routes (shapes in Dev Notes), Rule 18 `snakeToCamel`/`camelToSnake` at boundary, `mediaId` always **string**
-  - [ ] `glossaryService.spec.ts`
-- [ ] Task 2: `useGenerationProgress` hook (AC: 2, 8)
-  - [ ] Model `useDownloadProgress.ts`; lazy connect, 5 `transcription_*`/`translation_progress` events, envelope unwrap, media_id filter, phase→stage state machine, terminal close
-  - [ ] `useGenerationProgress.spec.ts` (mock EventSource; assert double-nested unwrap explicitly)
-- [ ] Task 3: `GenerationProgressV2` component (AC: 3, 5, 7)
-  - [ ] `apps/web/src/components/subtitle/GenerationProgressV2.tsx` — frozen stages, failed+重試, optional cost props (render-nothing default), Mono numerics, Rule 21 header `(XkGvG)`
-  - [ ] Spec + gallery fixture (fixture states named after frozen stage names)
-- [ ] Task 4: Glossary components (AC: 4, 5, 7)
-  - [ ] `GlossaryRowV2.tsx` (`nDSEd`) + `GlossaryPanelV2.tsx` (list/add/edit/confirm/delete/confirm-all + empty + error states)
-  - [ ] Specs + gallery fixtures
-- [ ] Task 5: `ManageSubtitleDialogV2` (AC: 1, 2, 5, 7)
-  - [ ] `apps/web/src/components/subtitle/ManageSubtitleDialogV2.tsx` — tracks section, 生成字幕 primary (movie wired / series disabled+hint), dormant fetch secondary reusing `useSubtitleSearch` + `subtitleService` (results WITHOUT source chips/score rows), glossary entry, CN-policy display, desktop/mobile per F1-D/F1-M
-  - [ ] 503→尚未設定+前往設定; 409→SSE attach; state frames F2 (缺字幕) / F4 (生成失敗) / F5 / F10 (載入骨架)
-  - [ ] Spec
-- [ ] Task 6: Wire v2 shell (AC: 1, 6)
-  - [ ] `LocalDetailV2.tsx`: swap `SubtitleSearchDialog` → `ManageSubtitleDialogV2` (v1 dialog file stays; legacy shell untouched)
-  - [ ] On `transcription_complete`: invalidate media-detail + library query keys (badge refresh)
-  - [ ] Spec update for `LocalDetailV2`
-- [ ] Task 7: Verification pass (AC: 9)
-  - [ ] Full `nx test web` affected suites green; `pnpm lint:all`; `pnpm exec prettier --check` on touched files
-  - [ ] Browser-verify dialog @390/768/1440 vs `flow-f-subtitle-v2/` PNGs; verify no `Date.now()` in new components (Rule 23 ESLint will also gate)
+- [x] Task 1: Glossary API client (AC: 4)
+  - [x] `apps/web/src/services/glossaryService.ts` — 6 routes (shapes in Dev Notes), Rule 18 `snakeToCamel`/`camelToSnake` at boundary, `mediaId` always **string**
+  - [x] `glossaryService.spec.ts`
+- [x] Task 2: `useGenerationProgress` hook (AC: 2, 8)
+  - [x] Model `useDownloadProgress.ts`; lazy connect, 5 `transcription_*`/`translation_progress` events, envelope unwrap, media_id filter, phase→stage state machine, terminal close
+  - [x] `useGenerationProgress.spec.ts` (mock EventSource; assert double-nested unwrap explicitly)
+- [x] Task 3: `GenerationProgressV2` component (AC: 3, 5, 7)
+  - [x] `apps/web/src/components/subtitle/GenerationProgressV2.tsx` — frozen stages, failed+重試, optional cost props (render-nothing default), Mono numerics, Rule 21 header `(XkGvG)`
+  - [x] Spec + gallery fixture (fixture states named after frozen stage names)
+- [x] Task 4: Glossary components (AC: 4, 5, 7)
+  - [x] `GlossaryRowV2.tsx` (`nDSEd`) + `GlossaryPanelV2.tsx` (list/add/edit/confirm/delete/confirm-all + empty + error states)
+  - [x] Specs + gallery fixtures
+- [x] Task 5: `ManageSubtitleDialogV2` (AC: 1, 2, 5, 7)
+  - [x] `apps/web/src/components/subtitle/ManageSubtitleDialogV2.tsx` — tracks section, 生成字幕 primary (movie wired / series disabled+hint), dormant fetch secondary reusing `useSubtitleSearch` + `subtitleService` (results WITHOUT source chips/score rows), glossary entry, CN-policy display, desktop/mobile per F1-D/F1-M
+  - [x] 503→尚未設定+前往設定; 409→SSE attach; state frames F2 (缺字幕) / F4 (生成失敗) / F5 / F10 (載入骨架)
+  - [x] Spec
+- [x] Task 6: Wire v2 shell (AC: 1, 6)
+  - [x] `LocalDetailV2.tsx`: swap `SubtitleSearchDialog` → `ManageSubtitleDialogV2` (v1 dialog file stays; legacy shell untouched)
+  - [x] On `transcription_complete`: invalidate media-detail + library query keys (badge refresh)
+  - [x] Spec update for `LocalDetailV2`
+- [x] Task 7: Verification pass (AC: 9)
+  - [x] Full `nx test web` affected suites green; `pnpm lint:all`; `pnpm exec prettier --check` on touched files
+  - [x] Browser-verify dialog @390/768/1440 vs `flow-f-subtitle-v2/` PNGs; verify no `Date.now()` in new components (Rule 23 ESLint will also gate) — component-level done via gallery baselines (frames read via Pencil MCP, structure/tokens matched exactly); FULL-APP dialog verify at the three breakpoints needs a seeded backend (none locally) → flagged for the review/Sally gate, see Completion Notes
 
 **Cross-stack split check:** backend tasks = 0, frontend tasks = 7 → single story, no a/b split required.
+
+### Review Follow-ups (AI)
+
+- [x] [AI-Review][MED] AC 7 says gallery fixtures "for each new component", but only the two Library-registered components (GenerationProgressV2 XkGvG, GlossaryRowV2 nDSEd) got fixtures — `ManageSubtitleDialogV2` and `GlossaryPanelV2` have none, while the v1 `SubtitleSearchDialog` DOES have one (precedent) [apps/web/src/routes/test/-gallery.fixtures.tsx:3074]. Deviation is defensible (both are data-coupled: `useGlossaryTerms` auto-fires on `open`, so a fixture would bake a loading/error race into the baseline; the pre-existing `ui-dialog/default` darwin mismatch also blocks `test:visual:update-missing`) but was UNRECORDED until this review. Decide at the Sally gate: add fixtures with a mocked-idle variant, or amend AC 7's scope note. **→ Sally gate 2026-07-05 REJECTED the deviation: fixtures REQUIRED. Added 3 fixtures via the `seedQueries` mechanism (19-4b precedent — pre-seeded glossary cache kills the loading/error race): `subtitle-manage-subtitle-dialog-v2` (idle-with-tracks), `glossary-panel-v2/{seeded,empty}` + `-darwin` baselines.**
+- [x] [AI-Review][LOW] 簡中 token divergence: the dialog's 簡中 track pill uses `--info-tint`/`--info` [apps/web/src/components/subtitle/ManageSubtitleDialogV2.tsx languageDescriptor], while the library badge (`deriveSubtitleStatus`) renders 簡中 with `--accent-tint`/`--accent-text` [apps/web/src/utils/libraryStatus.ts:102]. AC 6 wants states to "read as one system (§2.5 token map)" — exported screenshots are 400px and inconclusive; Sally to confirm which token the F1 frame specifies and align one side. **→ Sally ruling 2026-07-05 per `.pen` (F1-D-v2 pill C8lUe = `$info`/`$info-tint`; accent reserved for in-progress states, DL-v2 §2.5): library badge aligned to `TINT.info` — Sally's edit to `libraryStatus.ts`, committed with the gate fixes.**
+- [x] [AI-Review-2][MED] The Sally token ruling (簡中 `TINT.accent`→`TINT.info`) landed with ZERO regression coverage — `libraryStatus.spec.ts` asserted tint classNames for 已入庫/失敗/繁中 but only the LABEL for both 簡中 derivation paths, so a silent revert to accent would pass the whole suite. **→ Fixed in-review (adversarial CR of `d8569d63`, 2026-07-06): both 簡中 cases now assert `--info-tint` present + `--accent-tint` absent [apps/web/src/utils/libraryStatus.spec.ts]. Full web suite green.**
+- [ ] [AI-Review-2][LOW] The mobile vertical stepper (the Sally MUST-FIX) has NO pixel coverage: the `visual` Playwright project pins Desktop Chrome 1280×800 only [playwright.config.ts `visual` project], and the 4 new spec cases assert Tailwind class strings (change-detector tests that lock the implementation string, not rendered mobile layout). Acceptable proxy today; if mobile regressions matter, file a follow-up story for a mobile-viewport visual project (or a fixture-level viewport override) rather than widening this story.
 
 ## Dev Notes
 
@@ -141,11 +148,52 @@ so that I get reliable 繁體中文 subtitles from the pipeline that actually wo
 
 ### Agent Model Used
 
-(fill at dev time)
+Claude Fable 5 (claude-fable-5) — DEV Amelia, 2026-07-05
 
 ### Debug Log References
 
+- Full `nx test web` (uncached): 223 files / 2391 tests green (+44 new).
+- `pnpm lint:all`: 0 errors, 123 pre-existing warnings; `prettier --check .` clean.
+- `pnpm nx build web`: green.
+- Visual baselines: `pnpm run test:visual:update` then `git checkout` of all 26 re-render-noise diffs — only the 9 NEW `-darwin` baselines staged (`generation-progress-v2/{提取音訊,轉錄中,翻譯中,完成,失敗,cost-slot}`, `glossary-row-v2/{unconfirmed,confirmed-metadata,manual}`). NOTE: `test:visual:update-missing` could NOT be used — the KNOWN pre-existing `ui-dialog/default` darwin mismatch hard-fails the mega-test loop before later fixtures are reached (`preexisting-fail-ui-dialog-darwin-visual`), so a full update + selective revert was required.
+
 ### Completion Notes List
+
+- All Rule 21 headers verified against Pencil MCP live: `XkGvG` (GenerationProgress-v2), `nDSEd` (GlossaryRow-v2), Screen ids r1EY9/S9Rbrq/JbXai/U8rRtv/f6ZxY/dlfMR/A85GFD/olDlj all real; frames read at full depth and matched (structure, tokens, copy).
+- **Stepper stage-count note:** the `.pen` `Component/GenerationProgress-v2` (XkGvG) draws FIVE steps (提取音訊/轉錄中/翻譯中/簡轉繁/完成 — no AI校正 node), while AC 3's FROZEN list has SIX. Implemented the story's six-stage list (story = single source of truth; the fixture vocabulary is stamped on it). Design-side sync of XkGvG (+AI校正 step) is a Sally follow-up — this story does not modify `ux-design.pen` per Dev Notes.
+- Mobile sheet (F1-M) = the SAME Radix Dialog with bottom-sheet positioning at `<sm` (AC 7 mandates Radix for modals; matches the frame's bottom-sheet look without a second dialog system).
+- CN policy (§9b / v16pVI): implemented as an INFO line under 簡中 tracks when `productionCountry` contains CN. The design's 轉為繁中 / 仍要轉換 ACTION buttons are NOT rendered — capability honor: no backend endpoint converts an EXISTING local track (OpenCC runs only inside download/generation pipelines). Triaged ③ below. Also: the local-detail API does not expose production_countries (`json:"-"`), so the prop is dormant in the v2 shell (same as v1 `SubtitleSearchDialog.productionCountry`, which LocalDetailV2 never passed either). Triaged ③ below.
+- F3's footer 取消 button (design) is NOT rendered as a job-cancel: no cancel route exists for transcription. The footer shows 關閉 + 「關閉後生成會在背景繼續」 hint (closing stops watching, job continues). Covered by the batch-cancel design in 9R-16 for the batch slice; per-item cancel not tracked (job is short and idempotent-retryable).
+- Generation trigger lives in a small `transcriptionService.ts` (202/503/409 discriminated union, always `translate=true`); not folded into `subtitleService.ts` (reuse map says keep as-is).
+- Glossary server state via `useGlossary.ts` (Rule 5: query + 5 mutations with list invalidation).
+- AC 6 implemented as specced: `LocalDetailV2.onGenerationComplete` invalidates `detailKeys.localMovie/localSeries(id)` + `libraryKeys.all`; badge stays 缺字幕 until 9R-16 AC 12 writeback (annotated in code, no client-side hack).
+- Verification residue for the review gate: FULL-APP browser verify of the dialog @390/768/1440 against `flow-f-subtitle-v2/` PNGs was not possible locally (no seeded backend; dev API returned 500 behind the proxy). Component-level visual verification done via the 9 new gallery baselines, which match the Pencil frames. Sally's mandatory UX screenshot comparison at review covers the dialog-level check.
+- No new search params (Rule 26 clean); no `Date.now()`/`new Date()` in any new component (Rule 23 grep + ESLint clean).
+
+### Senior Dev Review — adversarial CR pass 1 (2026-07-05)
+
+Gates: 🔒 Rule 7 Wire Format: N/A (no Go error-code files in scope) · 🔒 Rule 20 Contract Bump: N/A (no stamp bumps in this review) · 🔒 Rule 25 Mega-line: N/A (project-context.md untouched). Visual hygiene verified: exactly 9 NEW `-darwin` PNGs, 0 modified baselines, 0 `-linux`.
+
+Fixes applied in-review (all suites re-run green, `lint:all` 0 errors, `prettier --check .` clean, build green):
+
+- **[MED fixed] `transcriptionService.ts`** — 503/409 were mapped to disabled/inProgress on bare HTTP status; a reverse-proxy 503 (backend down, HTML body) would render 尚未設定+前往設定 instead of fail-soft 重試. Now gated on `error.code === 'TRANSCRIPTION_DISABLED' / 'TRANSCRIPTION_IN_PROGRESS'`; +2 spec cases.
+- **[MED fixed] `useGenerationProgress.ts`** — a pending 10s backoff timer survived into a fresh `connect()` (error → user re-triggers within 10s): the stale timer bounced the healthy stream, and a terminal event landing in the bounce gap would be lost forever (stepper stuck). `connect()` now cancels the pending reconnect; +1 spec case.
+- **[MED fixed] zh-script set duplication** — `ManageSubtitleDialogV2` redeclared the HANT/HANS sets locally (drift risk vs `deriveSubtitleStatus`, AC 1a "reuse semantics"). Sets are now exported from `utils/libraryStatus.ts` (single source) and imported.
+- **[LOW fixed] `glossaryOpen` not reset on dialog close** (fetchOpen/genView were) — reopening 管理字幕 after closing with the glossary panel open resurrected the panel; +1 spec case.
+- **[LOW fixed] local `fetch` shadowed `window.fetch`** in `ManageSubtitleDialogV2` — renamed to `onlineSearch`.
+- **[LOW fixed] glossary add-form 原文 input ignored Enter** (譯名 input submitted) — keyboard flow now consistent.
+- **[LOW fixed] `GenerationProgressV2` prop-doc** said `'idle'` renders extracting-**pending**; implementation renders it active — doc corrected to match.
+
+Open items (Review Follow-ups below): AC 7 fixture-coverage deviation recorded; 簡中 pill token question for the Sally gate.
+
+### Sally UX Gate — PASS-WITH-NOTES (2026-07-05, fixes applied 2026-07-06)
+
+Verdict: **PASS-WITH-NOTES** with one MUST-FIX + two required items, all applied:
+
+- **MUST-FIX applied — GenerationProgressV2 mobile vertical stepper (F3-M-v2, node k8sJl4 `fS5is`):** at `<sm` each stage renders as a full-width ROW [22px status circle + 13px label + spacer + Mono pct], stacked vertically `gap-1.5`; connectors `hidden sm:block`. Desktop unchanged — every `sm:` class computes identically to the pre-fix DOM (verified: post-fix `test:visual:update` regen + `git status` byte-diff shows ZERO diff on all 6 `generation-progress-v2/*` desktop darwin baselines — a plain `test:visual` run cannot complete locally: it aborts at the pre-existing over-tolerance `ui-dialog/default` darwin mismatch before reaching these fixtures; adversarial CR 2026-07-06 re-ran the regen and reconfirmed the 6 existing + 3 new baselines byte-identical) + component spec asserts both the mobile-variant classes and the unchanged desktop structure.
+- **Required (follow-up #8 / CR MED) — dialog fixtures:** deviation REJECTED; `subtitle-manage-subtitle-dialog-v2` (idle-with-tracks, seeded glossary cache via `seedQueries`) + `glossary-panel-v2/{seeded,empty}` added with `-darwin` baselines (viewport captures — Radix portal, ui-dialog precedent).
+- **Ruling (follow-up #9 / CR LOW) — 簡中 badge token:** `.pen` F1-D-v2 pill C8lUe = `$info`/`$info-tint`; accent is reserved for in-progress states (DL-v2 §2.5). `deriveSubtitleStatus` 簡中 flipped `TINT.accent` → `TINT.info` (Sally's edit, included in the gate-fix commit). Dialog side was already info — system now reads as one.
+- **Newly recorded minor deviation (previously unrecorded — Rule 24 recording requirement):** F1's drawn track rows include a Mono filename (node VXof3 `Stranger.Things.S04E07…zh-TW.ai.srt`) and a per-track ellipsis (⋯) menu; the implementation renders neither — `subtitleTracks` wire data carries language only (no per-track filename), and no BE actions exist for a per-track menu (no delete/convert/reveal routes). Acceptable per Rule 24 capability honor; becomes actionable if/when a track-file API lands (related: `disc-2026-07-track-convert-endpoint`).
 
 ### Discovery Triage
 
@@ -158,4 +206,35 @@ Story-authoring-time discoveries (SM Bob, 2026-07-05 — all filed in sprint-sta
 
 (Dev: add any further in-flight discoveries here per Rule 24 before marking done.)
 
+Dev-time discoveries (DEV Amelia, 2026-07-05 — both filed in sprint-status.yaml the same day):
+
+- **③ backlog-with-carry-forward-link — `disc-2026-07-track-convert-endpoint`** (BE): the F1 design's 轉為繁中（簡轉繁） action on an existing local 簡中 track (and the CN-variant 仍要轉換 override, note v16pVI) has NO backend surface — OpenCC s2twp runs only inside the download post-process and the Route C pipeline; there is no standalone convert-an-existing-track route. Per Rule 24 capability honor the v2 dialog renders the CN policy INFO line only (no dead convert/override buttons). Needs e.g. `POST /api/v1/media/{id}/subtitles/convert`.
+- **③ backlog-with-carry-forward-link — `disc-2026-07-production-countries-detail-api`** (BE): `movies.production_countries` is stored but stamped `json:"-"` (models/movie.go:134) — the local-detail API never exposes it, so the FE cannot drive the §9b CN-policy display (this story's `productionCountry` prop ships dormant; the v1 dialog had the same dead prop). Needs the local movie/series detail payload to include production country codes.
+
 ### File List
+
+New:
+
+- `apps/web/src/services/glossaryService.ts` (+ `glossaryService.spec.ts`)
+- `apps/web/src/services/transcriptionService.ts` (+ `transcriptionService.spec.ts`)
+- `apps/web/src/hooks/useGenerationProgress.ts` (+ `useGenerationProgress.spec.ts`)
+- `apps/web/src/hooks/useGlossary.ts`
+- `apps/web/src/components/subtitle/GenerationProgressV2.tsx` (+ `.spec.tsx`)
+- `apps/web/src/components/subtitle/GlossaryRowV2.tsx` (+ `.spec.tsx`)
+- `apps/web/src/components/subtitle/GlossaryPanelV2.tsx` (+ `.spec.tsx`)
+- `apps/web/src/components/subtitle/ManageSubtitleDialogV2.tsx` (+ `.spec.tsx`)
+- `tests/visual/components.visual.spec.ts-snapshots/components/generation-progress-v2/{提取音訊,轉錄中,翻譯中,完成,失敗,cost-slot}/default-visual-darwin.png`
+- `tests/visual/components.visual.spec.ts-snapshots/components/glossary-row-v2/{unconfirmed,confirmed-metadata,manual}/default-visual-darwin.png`
+- `tests/visual/components.visual.spec.ts-snapshots/components/subtitle-manage-subtitle-dialog-v2/default-visual-darwin.png` (Sally gate)
+- `tests/visual/components.visual.spec.ts-snapshots/components/glossary-panel-v2/{seeded,empty}/default-visual-darwin.png` (Sally gate)
+
+Modified:
+
+- `apps/web/src/utils/libraryStatus.ts` (CR pass 1: export canonical HANT/HANS sets; Sally gate: 簡中 badge `TINT.accent` → `TINT.info` per F1-D-v2 pill C8lUe) + `libraryStatus.spec.ts` (adversarial CR 2: 簡中 tint-token regression assertions, both derivation paths)
+- `apps/web/src/components/subtitle/GenerationProgressV2.tsx` (Sally MUST-FIX: mobile vertical stepper `<sm` variant, F3-M-v2) + `.spec.tsx` (mobile-class + desktop-structure assertions)
+- `apps/web/src/components/media/LocalDetailV2.tsx` (dialog swap + AC 6 invalidation) + `LocalDetailV2.spec.tsx`
+- `apps/web/src/routes/test/-gallery.fixtures.tsx` (12 fixtures: 6× GenerationProgressV2 frozen-stage states, 3× GlossaryRowV2, 1× ManageSubtitleDialogV2 + 2× GlossaryPanelV2 with `seedQueries` — Sally gate)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (ux3-subtitle-v2 → review; +2 ③ discovery entries)
+- `_bmad-output/implementation-artifacts/ux3-subtitle-v2.md` (this file)
+
+Untouched by design (strangler / reuse rules): `SubtitleSearchDialog.tsx`, `BatchSubtitleDialog.tsx` + their specs, `MediaDetailPanel.tsx`, `subtitleService.ts`, `useSubtitleSearch.ts`, `ux-design.pen`.
