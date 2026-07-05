@@ -97,7 +97,8 @@ func TestScoreSourceTrust(t *testing.T) {
 
 	assert.InDelta(t, 0.8, s.scoreSourceTrust("assrt"), 0.001)
 	assert.InDelta(t, 0.7, s.scoreSourceTrust("opensubtitles"), 0.001)
-	assert.InDelta(t, 0.6, s.scoreSourceTrust("zimuku"), 0.001)
+	// 9R-14: zimuku removed from ProviderTrust — falls back to the unknown default
+	assert.InDelta(t, 0.5, s.scoreSourceTrust("zimuku"), 0.001)
 	assert.InDelta(t, 0.5, s.scoreSourceTrust("unknown_provider"), 0.001)
 }
 
@@ -357,5 +358,7 @@ func TestNewDefaultScorerConfig(t *testing.T) {
 	assert.InDelta(t, 0.2, config.WeightTrust, 0.001)
 	assert.InDelta(t, 0.1, config.WeightGroup, 0.001)
 	assert.InDelta(t, 0.1, config.WeightDownloads, 0.001)
-	assert.Len(t, config.ProviderTrust, 3)
+	// 9R-14: zimuku removed — only the two live sources remain
+	assert.Len(t, config.ProviderTrust, 2)
+	assert.NotContains(t, config.ProviderTrust, "zimuku")
 }

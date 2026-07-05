@@ -72,10 +72,10 @@ describe('SubtitleSearchDialog', () => {
     renderDialog();
     const assrt = screen.getByTestId('provider-assrt') as HTMLInputElement;
     const opensub = screen.getByTestId('provider-opensubtitles') as HTMLInputElement;
-    const zimuku = screen.getByTestId('provider-zimuku') as HTMLInputElement;
     expect(assrt.checked).toBe(true);
     expect(opensub.checked).toBe(true);
-    expect(zimuku.checked).toBe(true);
+    // 9R-14: Zimuku removed (WAF-dead) — must NOT be offered as a source
+    expect(screen.queryByTestId('provider-zimuku')).not.toBeInTheDocument();
   });
 
   it('toggles provider checkbox on click', () => {
@@ -165,7 +165,7 @@ describe('SubtitleSearchDialog — Results Table', () => {
     },
     {
       id: 'sub-2',
-      source: 'zimuku',
+      source: 'opensubtitles',
       filename: '星際效應.ass',
       language: 'zh-Hans',
       downloadUrl: 'https://example.com/sub2',
@@ -222,7 +222,7 @@ describe('SubtitleSearchDialog — Results Table', () => {
     expect(screen.getByTestId('subtitle-row-sub-2')).toBeInTheDocument();
     // Source names
     expect(screen.getByText('assrt')).toBeInTheDocument();
-    expect(screen.getByText('zimuku')).toBeInTheDocument();
+    expect(screen.getAllByText('opensubtitles').length).toBeGreaterThan(0);
   });
 
   it('displays score as percentage with color coding (AC #3)', () => {

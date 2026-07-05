@@ -432,3 +432,72 @@ func TestClaudeResponse_GetText(t *testing.T) {
 		})
 	}
 }
+
+// --- 9R-1: stale default model fix ---
+
+func TestDefaultClaudeModel_CurrentAndCarriedInRequestBody(t *testing.T) {
+	// AC1/AC3: default is non-empty and NOT the deprecated Haiku 3.5 alias
+	// (retired 2026-02-19 -> 404).
+	assert.NotEmpty(t, DefaultClaudeModel)
+	assert.NotEqual(t, "claude-3-5-haiku-latest", DefaultClaudeModel)
+
+	// AC3: the request body carries the default model.
+	var receivedReq map[string]interface{}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		json.NewDecoder(r.Body).Decode(&receivedReq)
+		resp := claudeResponse{
+			Content:    []claudeContentBlock{{Type: "text", Text: "ok"}},
+			StopReason: "end_turn",
+		}
+		json.NewEncoder(w).Encode(resp)
+	}))
+	defer server.Close()
+
+	p := NewClaudeProvider("test-key", WithClaudeBaseURL(server.URL))
+	_, err := p.CompleteText(context.Background(), "", "hello", 128)
+	require.NoError(t, err)
+	assert.Equal(t, DefaultClaudeModel, receivedReq["model"])
+}
+
+func TestClaudeProvider_NotFoundGuard_NamesBadModel(t *testing.T) {
+	// AC3: a 404 not_found_error must surface an error naming the bad model.
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte(`{"type":"error","error":{"type":"not_found_error","message":"model: bogus-model"}}`))
+	}))
+	defer server.Close()
+
+	p := NewClaudeProvider("test-key", WithClaudeBaseURL(server.URL), WithClaudeModel("bogus-model"))
+
+	_, err := p.CompleteText(context.Background(), "", "hello", 128)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrAIProviderError)
+	assert.Contains(t, err.Error(), "bogus-model")
+
+	_, err = p.Parse(context.Background(), &ParseRequest{Filename: "Some.Movie.2020.mkv"})
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrAIProviderError)
+	assert.Contains(t, err.Error(), "bogus-model")
+}
+
+func TestNewProvider_ClaudeModelOverride(t *testing.T) {
+	// AC2: model id is config-overridable, not only a constant.
+	provider, err := NewProvider(FactoryConfig{
+		ProviderName: "claude",
+		ClaudeAPIKey: "test-key",
+		ClaudeModel:  "claude-opus-4-8",
+	})
+	require.NoError(t, err)
+	cp, ok := provider.(*ClaudeProvider)
+	require.True(t, ok)
+	assert.Equal(t, "claude-opus-4-8", cp.model)
+
+	provider, err = NewProvider(FactoryConfig{
+		ProviderName: "claude",
+		ClaudeAPIKey: "test-key",
+	})
+	require.NoError(t, err)
+	cp, ok = provider.(*ClaudeProvider)
+	require.True(t, ok)
+	assert.Equal(t, DefaultClaudeModel, cp.model)
+}

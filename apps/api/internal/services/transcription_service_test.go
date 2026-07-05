@@ -94,3 +94,28 @@ func TestTranscriptionEventTypes(t *testing.T) {
 	assert.Equal(t, "transcription_complete", string(EventTranscriptionComplete))
 	assert.Equal(t, "transcription_failed", string(EventTranscriptionFailed))
 }
+
+// --- 9R-2: track-language -> ISO-639-1 mapping ---
+
+func TestWhisperLanguageFromTrack(t *testing.T) {
+	cases := map[string]string{
+		"eng":   "en",
+		"ENG":   "en",
+		"en":    "en",
+		"jpn":   "ja",
+		"chi":   "zh",
+		"zho":   "zh",
+		"kor":   "ko",
+		"fre":   "fr",
+		"ger":   "de",
+		"und":   "", // AC #2: auto-detect only when und
+		"":      "",
+		"xxx":   "", // unknown 3-letter: safer to auto-detect than mis-pin
+		" eng ": "en",
+	}
+	for in, want := range cases {
+		if got := WhisperLanguageFromTrack(in); got != want {
+			t.Errorf("WhisperLanguageFromTrack(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

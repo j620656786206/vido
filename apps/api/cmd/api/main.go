@@ -473,11 +473,12 @@ func main() {
 	subtitleConverter, _ := subtitle.NewConverter()
 	subtitleScorer := subtitle.NewScorer(subtitle.NewDefaultScorerConfig())
 	subtitlePlacer := subtitle.NewPlacer(subtitle.DefaultPlacerConfig())
-	// Initialize subtitle providers (Assrt, OpenSubtitles, Zimuku)
+	// Initialize subtitle providers (Assrt, OpenSubtitles).
+	// Zimuku removed 2026-07-05 (9R-14): zimuku.org sits behind a Yunsuo anti-bot
+	// WAF — every query returns ErrCaptchaDetected (ADR route-c Decision 1/D3).
 	assrtProvider := subtitleproviders.NewAssrtProvider(ctx, secretsService)
 	opensubProvider := subtitleproviders.NewOpenSubProvider(ctx, secretsService)
-	zimukuProvider := subtitleproviders.NewZimukuProvider()
-	subtitleProviders := []subtitleproviders.SubtitleProvider{assrtProvider, opensubProvider, zimukuProvider}
+	subtitleProviders := []subtitleproviders.SubtitleProvider{assrtProvider, opensubProvider}
 	subtitleEngine := subtitle.NewEngine(
 		subtitleProviders, subtitleScorer, subtitleConverter, subtitlePlacer,
 		sseHub, repos.Movies, repos.Series,
@@ -502,7 +503,11 @@ func main() {
 	var terminologyService *services.TerminologyCorrectionService
 	var translationService *services.TranslationService
 	if cfg.HasClaudeKey() {
-		claudeProvider := ai.NewClaudeProvider(cfg.GetClaudeAPIKey())
+		claudeOpts := []ai.ClaudeProviderOption{}
+		if m := cfg.GetClaudeModel(); m != "" {
+			claudeOpts = append(claudeOpts, ai.WithClaudeModel(m))
+		}
+		claudeProvider := ai.NewClaudeProvider(cfg.GetClaudeAPIKey(), claudeOpts...)
 		terminologyService = services.NewTerminologyCorrectionService(claudeProvider)
 		translationService = services.NewTranslationService(claudeProvider, sseHub)
 	}

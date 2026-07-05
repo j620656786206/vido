@@ -46,9 +46,9 @@ func main() {
 	clip := flag.Int("clip", 240, "transcribe only the first N seconds (0 = full episode)")
 	maxBlocks := flag.Int("maxblocks", 40, "translate only the first N subtitle blocks (0 = all)")
 	outDir := flag.String("out", "", "output directory for the .srt (default: temp dir)")
-	// NOTE: vido's hardcoded ai/claude.go DefaultClaudeModel "claude-3-5-haiku-latest"
-	// now 404s (deprecated). Override with a current model id here.
-	model := flag.String("model", "claude-haiku-4-5-20251001", "Claude model id for translation")
+	// 9R-1 fixed ai/claude.go DefaultClaudeModel to a current alias; keep this
+	// flag for ad-hoc model experiments.
+	model := flag.String("model", ai.DefaultClaudeModel, "Claude model id for translation")
 	lang := flag.String("lang", "", "Whisper source language ISO-639-1 (empty = derive from the audio track)")
 	flag.Parse()
 

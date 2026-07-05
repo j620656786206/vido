@@ -37,7 +37,6 @@ interface SubtitleSearchDialogProps {
 const PROVIDERS = [
   { id: 'assrt', label: 'Assrt (射手網)' },
   { id: 'opensubtitles', label: 'OpenSubtitles' },
-  { id: 'zimuku', label: 'Zimuku (字幕庫)' },
 ];
 
 export function SubtitleSearchDialog({

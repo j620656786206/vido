@@ -35,12 +35,12 @@ var (
 
 // TranscriptionResult holds the result of a transcription job.
 type TranscriptionResult struct {
-	JobID       string `json:"job_id"`
-	MediaID     int64  `json:"media_id"`
-	SRTPath     string `json:"srt_path"`
-	ZhSRTPath   string `json:"zh_srt_path,omitempty"`
-	Duration    string `json:"duration"`
-	Error       string `json:"error,omitempty"`
+	JobID     string `json:"job_id"`
+	MediaID   int64  `json:"media_id"`
+	SRTPath   string `json:"srt_path"`
+	ZhSRTPath string `json:"zh_srt_path,omitempty"`
+	Duration  string `json:"duration"`
+	Error     string `json:"error,omitempty"`
 }
 
 // TranscriptionService orchestrates the audio extraction → Whisper transcription pipeline.
@@ -196,7 +196,7 @@ func (s *TranscriptionService) runPipeline(ctx context.Context, jobID string, me
 		"message":  "Transcribing audio with Whisper API",
 	})
 
-	srtContent, err := s.transcribeAudio(ctx, audioPath)
+	srtContent, err := s.transcribeAudio(ctx, audioPath, WhisperLanguageFromTrack(selectedTrack.Language))
 	if err != nil {
 		s.failJob(jobID, mediaID, fmt.Sprintf("transcribe: %v", err))
 		return
@@ -260,20 +260,65 @@ func (s *TranscriptionService) runPipeline(ctx context.Context, jobID string, me
 	s.broadcastEvent(EventTranscriptionComplete, completeData)
 }
 
+// WhisperLanguageFromTrack maps an ffprobe audio-track language tag (ISO-639-2,
+// e.g. "eng") to the ISO-639-1 hint Whisper expects (9R-2). Returns "" (Whisper
+// auto-detect) ONLY when the tag is missing/und/unknown — pinning a wrong
+// language is worse than auto-detecting.
+func WhisperLanguageFromTrack(trackLang string) string {
+	lang := strings.ToLower(strings.TrimSpace(trackLang))
+	switch lang {
+	case "", "und":
+		return ""
+	}
+	if len(lang) == 2 {
+		return lang
+	}
+	iso3to1 := map[string]string{
+		"eng": "en",
+		"jpn": "ja",
+		"chi": "zh", "zho": "zh",
+		"kor": "ko",
+		"fra": "fr", "fre": "fr",
+		"deu": "de", "ger": "de",
+		"spa": "es",
+		"ita": "it",
+		"rus": "ru",
+		"por": "pt",
+		"tha": "th",
+		"vie": "vi",
+		"ara": "ar",
+		"hin": "hi",
+		"nld": "nl", "dut": "nl",
+		"pol": "pl",
+		"tur": "tr",
+		"swe": "sv",
+		"nor": "no",
+		"dan": "da",
+		"fin": "fi",
+		"ind": "id",
+		"msa": "ms", "may": "ms",
+	}
+	if iso1, ok := iso3to1[lang]; ok {
+		return iso1
+	}
+	return ""
+}
+
 // transcribeAudio handles chunking and multi-part transcription for large files (AC #7).
-func (s *TranscriptionService) transcribeAudio(ctx context.Context, audioPath string) (string, error) {
+// lang is the ISO-639-1 hint derived from the selected audio track ("" = auto-detect).
+func (s *TranscriptionService) transcribeAudio(ctx context.Context, audioPath, lang string) (string, error) {
 	needsChunk, err := ai.NeedsChunking(audioPath)
 	if err != nil {
 		return "", fmt.Errorf("check chunking: %w", err)
 	}
 
 	if !needsChunk {
-		return s.whisperClient.Transcribe(ctx, audioPath)
+		return s.whisperClient.TranscribeWithLanguage(ctx, audioPath, lang)
 	}
 
 	// Split and transcribe chunks
 	s.logger.Info("audio exceeds 25MB, splitting into chunks")
-	chunks, err := ai.SplitAudioChunks(ctx, audioPath)
+	chunks, chunkSeconds, err := ai.SplitAudioChunks(ctx, audioPath)
 	if err != nil {
 		return "", fmt.Errorf("split chunks: %w", err)
 	}
@@ -293,14 +338,14 @@ func (s *TranscriptionService) transcribeAudio(ctx context.Context, audioPath st
 			"chunk", i+1,
 			"total", len(chunks),
 		)
-		srt, err := s.whisperClient.Transcribe(ctx, chunkPath)
+		srt, err := s.whisperClient.TranscribeWithLanguage(ctx, chunkPath, lang)
 		if err != nil {
 			return "", fmt.Errorf("transcribe chunk %d/%d: %w", i+1, len(chunks), err)
 		}
 		srtChunks = append(srtChunks, srt)
 	}
 
-	return ai.MergeSRTChunks(srtChunks, ai.WhisperChunkDuration), nil
+	return ai.MergeSRTChunks(srtChunks, chunkSeconds), nil
 }
 
 // translateSRT translates English SRT content to Traditional Chinese and saves as .zh-Hant.srt.

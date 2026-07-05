@@ -43,7 +43,6 @@ func NewDefaultScorerConfig() ScorerConfig {
 		ProviderTrust: map[string]float64{
 			"assrt":          0.8,
 			"opensubtitles":  0.7,
-			"zimuku":         0.6,
 		},
 	}
 }

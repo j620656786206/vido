@@ -56,6 +56,9 @@ type Config struct {
 	// AI Provider configuration (Story 3.1)
 	AIProvider string // "gemini" or "claude"
 
+	// ClaudeModel overrides the Claude model id (9R-1). Empty = provider default.
+	ClaudeModel string
+
 	// TMDb configuration
 	TMDbDefaultLanguage   string
 	TMDbFallbackLanguages []string
@@ -104,6 +107,7 @@ func Load() (*Config, error) {
 	cfg.TMDbAPIKey = cfg.loadString("TMDB_API_KEY", "")
 	cfg.GeminiAPIKey = cfg.loadString("GEMINI_API_KEY", "")
 	cfg.ClaudeAPIKey = cfg.loadString("CLAUDE_API_KEY", "")
+	cfg.ClaudeModel = cfg.loadString("CLAUDE_MODEL", "")
 	cfg.OpenAIAPIKey = cfg.loadString("OPENAI_API_KEY", "")
 	cfg.EncryptionKey = cfg.loadString("ENCRYPTION_KEY", "")
 
