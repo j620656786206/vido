@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -552,4 +553,25 @@ func (c fakeChunkCmd) CombinedOutput() ([]byte, error) {
 	// Last arg is the chunk output path — write a small fake WAV there.
 	out := c.args[len(c.args)-1]
 	return nil, os.WriteFile(out, []byte("RIFFfake"), 0o644)
+}
+
+// --- 9R-11: Whisper honors governor + budget ---
+
+func TestWhisperClient_BudgetCutoffStopsTranscribe(t *testing.T) {
+	var hits atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits.Add(1)
+		w.Write([]byte("1\n00:00:00,000 --> 00:00:01,000\nx\n"))
+	}))
+	defer server.Close()
+
+	audio := writeTempAudio(t)
+	c := NewWhisperClient("test-key", WithWhisperBaseURL(server.URL))
+	b := NewBudget(0.001)
+	b.RecordASR(600) // 10 min * $0.006 = $0.06 → over ceiling
+	ctx := WithBudget(context.Background(), b)
+
+	_, err := c.Transcribe(ctx, audio)
+	require.ErrorIs(t, err, ErrBudgetExceeded)
+	assert.Equal(t, int32(0), hits.Load())
 }

@@ -483,6 +483,12 @@ func main() {
 		subtitleProviders, subtitleScorer, subtitleConverter, subtitlePlacer,
 		sseHub, repos.Movies, repos.Series,
 	)
+	// Shared AI throttle (Story 9R-11): one Governor caps concurrency + QPS
+	// across BOTH ASR (Whisper) and LLM (Claude) so a library-wide batch can't
+	// fan out unbounded requests. Injected into both clients below.
+	aiGovernor := ai.NewGovernor(cfg.AIMaxConcurrent, cfg.AIRatePerSec, cfg.AIMaxConcurrent)
+	slog.Info("AI governor initialized", "max_concurrent", cfg.AIMaxConcurrent, "rate_per_sec", cfg.AIRatePerSec, "run_budget_usd", cfg.AIRunBudgetUSD)
+
 	// Initialize audio extractor service (Story 9.2a)
 	audioExtractorService := services.NewAudioExtractorService(1, 5*time.Minute, slog.Default())
 	slog.Info("Audio extractor service initialized", "available", audioExtractorService.IsAvailable())
@@ -490,8 +496,9 @@ func main() {
 	// Initialize Whisper client and transcription service (Story 9.2a)
 	var transcriptionService *services.TranscriptionService
 	if cfg.HasOpenAIKey() && audioExtractorService.IsAvailable() {
-		whisperClient := ai.NewWhisperClient(cfg.GetOpenAIAPIKey())
+		whisperClient := ai.NewWhisperClient(cfg.GetOpenAIAPIKey(), ai.WithWhisperGovernor(aiGovernor))
 		transcriptionService = services.NewTranscriptionService(audioExtractorService, whisperClient, sseHub, slog.Default())
+		transcriptionService.SetRunBudgetUSD(cfg.AIRunBudgetUSD)
 		slog.Info("Transcription service initialized (Whisper API enabled)")
 	} else {
 		transcriptionService = services.NewTranscriptionService(audioExtractorService, nil, sseHub, slog.Default())
@@ -503,7 +510,7 @@ func main() {
 	var terminologyService *services.TerminologyCorrectionService
 	var translationService *services.TranslationService
 	if cfg.HasClaudeKey() {
-		claudeOpts := []ai.ClaudeProviderOption{}
+		claudeOpts := []ai.ClaudeProviderOption{ai.WithClaudeGovernor(aiGovernor)}
 		if m := cfg.GetClaudeModel(); m != "" {
 			claudeOpts = append(claudeOpts, ai.WithClaudeModel(m))
 		}

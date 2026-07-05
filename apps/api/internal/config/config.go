@@ -59,6 +59,13 @@ type Config struct {
 	// ClaudeModel overrides the Claude model id (9R-1). Empty = provider default.
 	ClaudeModel string
 
+	// AI throttle + budget (Story 9R-11). AIMaxConcurrent/AIRatePerSec govern
+	// the shared Governor; AIRunBudgetUSD is the per-run cost ceiling
+	// (0 = unlimited, metering still logged).
+	AIMaxConcurrent int
+	AIRatePerSec    float64
+	AIRunBudgetUSD  float64
+
 	// TMDb configuration
 	TMDbDefaultLanguage   string
 	TMDbFallbackLanguages []string
@@ -108,6 +115,10 @@ func Load() (*Config, error) {
 	cfg.GeminiAPIKey = cfg.loadString("GEMINI_API_KEY", "")
 	cfg.ClaudeAPIKey = cfg.loadString("CLAUDE_API_KEY", "")
 	cfg.ClaudeModel = cfg.loadString("CLAUDE_MODEL", "")
+	// AI throttle/budget (9R-11): conservative NAS-friendly defaults.
+	cfg.AIMaxConcurrent = cfg.loadInt("AI_MAX_CONCURRENT", 3)
+	cfg.AIRatePerSec = cfg.loadFloat("AI_RATE_PER_SEC", 2.0)
+	cfg.AIRunBudgetUSD = cfg.loadFloat("AI_RUN_BUDGET_USD", 5.0)
 	cfg.OpenAIAPIKey = cfg.loadString("OPENAI_API_KEY", "")
 	cfg.EncryptionKey = cfg.loadString("ENCRYPTION_KEY", "")
 
@@ -208,6 +219,23 @@ func (c *Config) loadInt(key string, defaultValue int) int {
 		}
 		c.Sources[key] = SourceEnvVar
 		return intVal
+	}
+	c.Sources[key] = SourceDefault
+	return defaultValue
+}
+
+func (c *Config) loadFloat(key string, defaultValue float64) float64 {
+	if value := os.Getenv(key); value != "" {
+		f, err := strconv.ParseFloat(value, 64)
+		if err != nil {
+			slog.Warn("Invalid float value for environment variable, using default",
+				"key", key, "value", value, "default", defaultValue, "error", err.Error(),
+			)
+			c.Sources[key] = SourceDefault
+			return defaultValue
+		}
+		c.Sources[key] = SourceEnvVar
+		return f
 	}
 	c.Sources[key] = SourceDefault
 	return defaultValue
