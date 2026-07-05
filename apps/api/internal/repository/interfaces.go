@@ -75,6 +75,14 @@ type MovieRepositoryInterface interface {
 	// Needed by: Epic 8 (batch subtitle search scheduler)
 	FindNeedingSubtitleSearch(ctx context.Context, olderThan time.Time) ([]models.Movie, error)
 
+	// FindMissingZhHantSubtitle retrieves movies with a media file but no zh-Hant subtitle
+	// Needed by: Story 9R-16 (generation-batch scope=missing enumeration)
+	FindMissingZhHantSubtitle(ctx context.Context) ([]models.Movie, error)
+
+	// CountMissingZhHantSubtitle counts movies FindMissingZhHantSubtitle would return
+	// Needed by: Story 9R-16 (generation-batch preview)
+	CountMissingZhHantSubtitle(ctx context.Context) (int, error)
+
 	// FindAllWithFilePath retrieves all movies that have a non-null file_path and are not removed
 	// Needed by: Story 7-2 (detect removed files during incremental scan)
 	FindAllWithFilePath(ctx context.Context) ([]models.Movie, error)

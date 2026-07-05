@@ -31,6 +31,14 @@ const (
 	// RequestStatusPoller (Story 13-3a — Epic 13 G-3/P3-003). Payload = bare array of the
 	// 13-1a request resource + ephemeral `progress`; stamped [@contract-v1] (FE 13-3b acks).
 	EventRequestProgress EventType = "request_progress"
+	// EventGenerationBatchProgress carries Route C generation-batch progress
+	// (Story 9R-16 AC 9, [@contract-v1] — FE ux3-subtitle-v2-batch acks). Payload keys:
+	// batch_id, total_items, current_index, current_media_id, current_item,
+	// success_count, fail_count, paused_count, status, spent_usd, budget_usd;
+	// status ∈ running|complete|cancelled|error|budget_ceiling. Per-item STAGE
+	// detail is NOT duplicated here — FE joins the transcription_* events by
+	// current_media_id.
+	EventGenerationBatchProgress EventType = "generation_batch_progress"
 )
 
 // Event represents an SSE event to broadcast
