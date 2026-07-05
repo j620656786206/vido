@@ -45,6 +45,9 @@ func (g *glossaryReturningStub) Update(ctx context.Context, id, termZh string, c
 func (g *glossaryReturningStub) Confirm(ctx context.Context, id string) (time.Time, error) {
 	return time.Time{}, nil
 }
+func (g *glossaryReturningStub) ConfirmAll(ctx context.Context, mediaID string) (int64, error) {
+	return 0, nil
+}
 func (g *glossaryReturningStub) Delete(ctx context.Context, id string) error { return nil }
 
 func newLocalizer(t *testing.T, completerResp string, terms map[string]string) *NFOLocalizerService {

@@ -112,3 +112,24 @@ func TestGlossaryRepository_UpsertValidation(t *testing.T) {
 	var ve *models.ValidationError
 	assert.True(t, errors.As(err, &ve))
 }
+
+func TestGlossaryRepository_ConfirmAll(t *testing.T) {
+	repo := NewGlossaryRepository(setupGlossaryDB(t))
+	ctx := context.Background()
+
+	require.NoError(t, repo.Upsert(ctx, &models.GlossaryTerm{MediaID: "m1", TermSrc: "A", TermZh: "甲", Confirmed: false}))
+	require.NoError(t, repo.Upsert(ctx, &models.GlossaryTerm{MediaID: "m1", TermSrc: "B", TermZh: "乙", Confirmed: false}))
+	require.NoError(t, repo.Upsert(ctx, &models.GlossaryTerm{MediaID: "m1", TermSrc: "C", TermZh: "丙", Confirmed: true}))
+	require.NoError(t, repo.Upsert(ctx, &models.GlossaryTerm{MediaID: "m2", TermSrc: "X", TermZh: "叉", Confirmed: false}))
+
+	n, err := repo.ConfirmAll(ctx, "m1")
+	require.NoError(t, err)
+	assert.Equal(t, int64(2), n, "only the 2 unconfirmed m1 terms flip")
+
+	confirmed, _ := repo.LookupByMedia(ctx, "m1", true)
+	assert.Len(t, confirmed, 3, "all m1 terms now confirmed")
+
+	// m2 untouched.
+	m2, _ := repo.LookupByMedia(ctx, "m2", true)
+	assert.Len(t, m2, 0)
+}
