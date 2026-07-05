@@ -49,11 +49,48 @@ type SubtitleTranslatorBlock struct {
 	Text  string
 }
 
+// GlossaryEntry is one proper-noun mapping injected into a translation prompt
+// so a term renders consistently across runs (Story 9R-7 keystone). Source is
+// the original-language term; Target is the fixed zh rendering.
+type GlossaryEntry struct {
+	Source string
+	Target string
+}
+
+// BuildGlossarySection renders the do-not-retranslate / use-this-rendering
+// instruction block for a glossary. Returns "" when the glossary is empty so
+// existing prompts are byte-identical (no-regression for the non-glossary path).
+func BuildGlossarySection(glossary []GlossaryEntry) string {
+	if len(glossary) == 0 {
+		return ""
+	}
+	var sb strings.Builder
+	sb.WriteString("## Glossary — MANDATORY fixed renderings:\n")
+	sb.WriteString("Whenever any of these source terms appears, render it EXACTLY as given.\n")
+	sb.WriteString("Do NOT re-translate, transliterate, or vary these — use the fixed target verbatim:\n")
+	for _, e := range glossary {
+		sb.WriteString(fmt.Sprintf("- %s → %s\n", e.Source, e.Target))
+	}
+	sb.WriteString("\n")
+	return sb.String()
+}
+
 // BuildSubtitleTranslatorPrompt generates the user prompt for a batch of subtitle blocks.
 // contextBlocks are previous blocks sent as read-only context (not re-translated).
 // blocks are the blocks to be translated.
 func BuildSubtitleTranslatorPrompt(blocks []SubtitleTranslatorBlock, contextBlocks []SubtitleTranslatorBlock) string {
+	return BuildSubtitleTranslatorPromptWithGlossary(blocks, contextBlocks, nil)
+}
+
+// BuildSubtitleTranslatorPromptWithGlossary is BuildSubtitleTranslatorPrompt plus
+// an optional glossary section prepended (Story 9R-7). A nil/empty glossary
+// yields the exact same prompt as BuildSubtitleTranslatorPrompt.
+func BuildSubtitleTranslatorPromptWithGlossary(blocks []SubtitleTranslatorBlock, contextBlocks []SubtitleTranslatorBlock, glossary []GlossaryEntry) string {
 	var sb strings.Builder
+
+	// Glossary first so the fixed renderings are established before the model
+	// reads any dialogue.
+	sb.WriteString(BuildGlossarySection(glossary))
 
 	// Add context section if there are previous blocks
 	if len(contextBlocks) > 0 {
