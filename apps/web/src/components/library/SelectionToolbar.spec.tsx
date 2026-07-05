@@ -80,4 +80,14 @@ describe('SelectionToolbar', () => {
     expect(screen.getByTestId('batch-export-btn')).toHaveAttribute('aria-label', '匯出中繼資料');
     expect(screen.getByTestId('batch-delete-btn')).toHaveAttribute('aria-label', '刪除選取項目');
   });
+
+  it('[P1] subtitle button is re-pointed to 批次生成字幕 with the testid kept (ux3-subtitle-v2-batch AC 5)', () => {
+    render(<SelectionToolbar {...defaultProps} />);
+    const btn = screen.getByTestId('batch-subtitle-btn');
+    expect(btn).toHaveTextContent('批次生成字幕');
+    expect(btn).toHaveAttribute('aria-label', '批次生成字幕');
+
+    fireEvent.click(btn);
+    expect(defaultProps.onBatchSubtitle).toHaveBeenCalledOnce();
+  });
 });

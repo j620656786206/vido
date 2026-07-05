@@ -51,15 +51,17 @@ export function SelectionToolbar({
           <Download size={14} />
           <span className="hidden sm:inline">匯出中繼資料</span>
         </button>
+        {/* Re-pointed to Route C batch generation (ux3-subtitle-v2-batch AC 5);
+            testid kept — specs and E2E flows key on it. */}
         <button
           onClick={onBatchSubtitle}
           disabled={isProcessing}
           data-testid="batch-subtitle-btn"
-          aria-label="批次字幕搜尋"
+          aria-label="批次生成字幕"
           className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-tertiary)] hover:text-white disabled:opacity-50"
         >
           <Captions size={14} />
-          <span className="hidden sm:inline">批次字幕搜尋</span>
+          <span className="hidden sm:inline">批次生成字幕</span>
         </button>
         <button
           onClick={onDelete}

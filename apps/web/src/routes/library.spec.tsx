@@ -1,4 +1,4 @@
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
@@ -11,6 +11,16 @@ import {
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { Route as LibraryRoute } from './library';
+
+// Capture the props flowing into the generation-batch dialog (ux3-subtitle-v2-batch
+// AC 5 — the selection must ACTUALLY flow; the old wiring discarded it).
+const generationDialogProps = vi.hoisted(() => vi.fn());
+vi.mock('../components/subtitle/GenerationBatchDialogV2', () => ({
+  GenerationBatchDialogV2: (props: { open: boolean }) => {
+    generationDialogProps(props);
+    return props.open ? <div data-testid="generation-batch-dialog-stub" /> : null;
+  },
+}));
 
 vi.mock('../services/libraryService', () => ({
   libraryService: {
@@ -530,6 +540,41 @@ describe('LibraryPage', () => {
         // List view should be active
         expect(screen.getByTestId('library-table')).toBeInTheDocument();
       });
+    });
+  });
+
+  describe('Batch generation re-point (ux3-subtitle-v2-batch AC 5)', () => {
+    it('[P1] selection ACTUALLY flows into the dialog — movie ids as numbers, series excluded with a count', async () => {
+      // Numeric string ids like the real API (int64 serialized) — Number() must succeed.
+      const { libraryService } = await import('../services/libraryService');
+      const response = getMockListResponse();
+      response.items[0].movie!.id = '101';
+      response.items[1].series!.id = '202';
+      vi.mocked(libraryService.listLibrary).mockResolvedValue(response);
+
+      renderLibrary();
+      await waitFor(() => expect(screen.getByTestId('library-grid')).toBeInTheDocument());
+
+      fireEvent.click(screen.getByTestId('enter-selection-btn'));
+
+      // Select BOTH the movie and the series card.
+      const cards = within(screen.getByTestId('library-grid')).getAllByTestId('poster-card');
+      fireEvent.click(cards[0]);
+      fireEvent.click(cards[1]);
+
+      generationDialogProps.mockClear();
+      fireEvent.click(screen.getByTestId('batch-subtitle-btn'));
+
+      await waitFor(() =>
+        expect(screen.getByTestId('generation-batch-dialog-stub')).toBeInTheDocument()
+      );
+      expect(generationDialogProps).toHaveBeenCalledWith(
+        expect.objectContaining({
+          open: true,
+          selectedMovieIds: [101],
+          excludedSeriesCount: 1,
+        })
+      );
     });
   });
 });

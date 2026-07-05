@@ -16,7 +16,7 @@ export type SectionStatus = 'ok' | 'unavailable';
 
 /** An in-flight background job. `kind` drives the row's icon + title on the client. */
 export interface ActiveJob {
-  kind: 'scan' | 'subtitle_batch' | string;
+  kind: 'scan' | 'subtitle_batch' | 'generation_batch' | string;
   percentDone: number;
   detail?: string;
   current?: number;

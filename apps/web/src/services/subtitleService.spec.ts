@@ -215,4 +215,207 @@ describe('subtitleService', () => {
       expect(result.cancelled).toBe(true);
     });
   });
+
+  // --- Generation batch (ux3-subtitle-v2-batch AC 3, 9R-16 [@contract-v1]) ---
+
+  describe('startGenerationBatch', () => {
+    it('sends snake_case media_ids for scope=selected and parses the 202 result', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 202,
+        json: () =>
+          Promise.resolve({
+            success: true,
+            data: {
+              batch_id: 'gb-1',
+              total_items: 2,
+              items: [
+                { media_id: 42, title: '沙丘：第二部' },
+                { media_id: 43, title: '奧本海默' },
+              ],
+            },
+          }),
+      });
+
+      const outcome = await subtitleService.startGenerationBatch({
+        scope: 'selected',
+        mediaIds: [42, 43],
+      });
+
+      const [url, options] = mockFetch.mock.calls[0];
+      expect(url).toContain('/subtitles/generation-batch');
+      expect(options.method).toBe('POST');
+      expect(JSON.parse(options.body)).toEqual({ scope: 'selected', media_ids: [42, 43] });
+      expect(outcome).toEqual({
+        conflict: false,
+        result: {
+          batchId: 'gb-1',
+          totalItems: 2,
+          items: [
+            { mediaId: 42, title: '沙丘：第二部' },
+            { mediaId: 43, title: '奧本海默' },
+          ],
+        },
+      });
+    });
+
+    it('omits media_ids for scope=missing', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 202,
+        json: () =>
+          Promise.resolve({
+            success: true,
+            data: { batch_id: 'gb-2', total_items: 1, items: [{ media_id: 7, title: 'A' }] },
+          }),
+      });
+
+      await subtitleService.startGenerationBatch({ scope: 'missing' });
+
+      const [, options] = mockFetch.mock.calls[0];
+      expect(JSON.parse(options.body)).toEqual({ scope: 'missing' });
+    });
+
+    it('maps the empty-missing 200 to batchId null (not an error)', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ success: true, data: { total_items: 0, items: [] } }),
+      });
+
+      const outcome = await subtitleService.startGenerationBatch({ scope: 'missing' });
+
+      expect(outcome).toEqual({
+        conflict: false,
+        result: { batchId: null, totalItems: 0, items: [] },
+      });
+    });
+
+    it('returns the in-progress snapshot on 409 instead of throwing', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 409,
+        json: () =>
+          Promise.resolve({
+            success: false,
+            error: { code: 'TRANSCRIPTION_BATCH_RUNNING', message: '已有一個字幕生成批次正在執行' },
+            data: {
+              batch_id: 'gb-run',
+              total_items: 38,
+              current_index: 12,
+              current_media_id: 99,
+              current_item: '怪奇物語',
+              success_count: 11,
+              fail_count: 0,
+              paused_count: 0,
+              status: 'running',
+              spent_usd: 0.42,
+              budget_usd: 5,
+            },
+          }),
+      });
+
+      const outcome = await subtitleService.startGenerationBatch({ scope: 'missing' });
+
+      expect(outcome).toEqual({
+        conflict: true,
+        progress: {
+          batchId: 'gb-run',
+          totalItems: 38,
+          currentIndex: 12,
+          currentMediaId: 99,
+          currentItem: '怪奇物語',
+          successCount: 11,
+          failCount: 0,
+          pausedCount: 0,
+          status: 'running',
+          spentUsd: 0.42,
+          budgetUsd: 5,
+        },
+      });
+    });
+
+    it('throws on a non-conflict error (400 selection reject)', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        json: () =>
+          Promise.resolve({
+            success: false,
+            error: {
+              code: 'VALIDATION_INVALID_FORMAT',
+              message: 'media_ids 含無法生成字幕的項目（非電影或沒有媒體檔案）',
+            },
+          }),
+      });
+
+      await expect(
+        subtitleService.startGenerationBatch({ scope: 'selected', mediaIds: [1] })
+      ).rejects.toThrow('media_ids 含無法生成字幕的項目');
+    });
+  });
+
+  describe('getGenerationBatchStatus', () => {
+    it('parses the { running, progress } wrapper', async () => {
+      mockFetch.mockResolvedValueOnce(
+        mockSuccessResponse({
+          running: true,
+          progress: {
+            batch_id: 'gb-1',
+            total_items: 10,
+            current_index: 3,
+            current_media_id: 5,
+            current_item: 'B',
+            success_count: 2,
+            fail_count: 0,
+            paused_count: 0,
+            status: 'running',
+            spent_usd: 0.1,
+            budget_usd: 5,
+          },
+        })
+      );
+
+      const result = await subtitleService.getGenerationBatchStatus();
+
+      expect(mockFetch.mock.calls[0][0]).toContain('/subtitles/generation-batch/status');
+      expect(result.running).toBe(true);
+      expect(result.progress?.currentMediaId).toBe(5);
+      expect(result.progress?.spentUsd).toBe(0.1);
+    });
+
+    it('handles the idle / post-terminal response (progress null)', async () => {
+      mockFetch.mockResolvedValueOnce(mockSuccessResponse({ running: false, progress: null }));
+
+      const result = await subtitleService.getGenerationBatchStatus();
+
+      expect(result).toEqual({ running: false, progress: null });
+    });
+  });
+
+  describe('cancelGenerationBatch', () => {
+    it('POSTs to the cancel endpoint and returns { cancelled, running }', async () => {
+      mockFetch.mockResolvedValueOnce(mockSuccessResponse({ cancelled: true, running: false }));
+
+      const result = await subtitleService.cancelGenerationBatch();
+
+      const [url, options] = mockFetch.mock.calls[0];
+      expect(url).toContain('/subtitles/generation-batch/cancel');
+      expect(options.method).toBe('POST');
+      expect(result).toEqual({ cancelled: true, running: false });
+    });
+  });
+
+  describe('previewGenerationBatch', () => {
+    it('GETs preview?scope=missing and returns totalItems', async () => {
+      mockFetch.mockResolvedValueOnce(mockSuccessResponse({ total_items: 38 }));
+
+      const result = await subtitleService.previewGenerationBatch();
+
+      expect(mockFetch.mock.calls[0][0]).toContain(
+        '/subtitles/generation-batch/preview?scope=missing'
+      );
+      expect(result).toEqual({ totalItems: 38 });
+    });
+  });
 });

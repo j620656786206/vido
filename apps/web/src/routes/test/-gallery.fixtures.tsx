@@ -172,6 +172,7 @@ import { GenerationProgressV2 } from '../../components/subtitle/GenerationProgre
 import { GlossaryRowV2 } from '../../components/subtitle/GlossaryRowV2';
 import { GlossaryPanelV2 } from '../../components/subtitle/GlossaryPanelV2';
 import { ManageSubtitleDialogV2 } from '../../components/subtitle/ManageSubtitleDialogV2';
+import { GenerationBatchPanelV2 } from '../../components/subtitle/GenerationBatchDialogV2';
 import { glossaryKeys } from '../../hooks/useGlossary';
 import type { GlossaryTerm } from '../../services/glossaryService';
 import { BackupManagement } from '../../components/settings/BackupManagement';
@@ -3614,6 +3615,130 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       },
     ],
     penNode: 'screen-section', // Screen F7-D-v2 (A85GFD)
+    statesOnly: ['default'],
+  },
+
+  // ----- subtitle/ v2 generation BATCH dialog (ux3-subtitle-v2-batch AC 8) -----
+  // Prop-driven presentational panel (Radix portal — viewport capture like the
+  // other v2 dialogs). Fixture states are named after the 9R-16 batch-status
+  // enum (frozen fixture vocabulary once baselined). Rule 23: the panel reads
+  // NO ambient clock — all progress/cost values are SSE-payload props.
+  {
+    id: 'generation-batch-dialog-v2/idle',
+    label: 'subtitle/GenerationBatchPanelV2 (idle — scope segments + counts)',
+    component: GenerationBatchPanelV2 as ComponentType<Record<string, unknown>>,
+    props: {
+      open: true,
+      status: 'idle',
+      progress: {
+        batchId: '',
+        totalItems: 0,
+        currentIndex: 0,
+        currentMediaId: null,
+        currentItem: '',
+        successCount: 0,
+        failCount: 0,
+        pausedCount: 0,
+        status: 'idle',
+        spentUsd: 0,
+        budgetUsd: 0,
+      },
+      items: [],
+      scope: 'selected',
+      onScopeChange: noop,
+      previewCount: 38,
+      selectedCount: 4,
+      excludedSeriesCount: 2,
+      onStart: noop,
+      onConfirmCancelAll: noop,
+      onResume: noop,
+      onClose: noop,
+    },
+    penNode: 'screen-section', // Screen F8-D-v2 (i9Nun1)
+    statesOnly: ['default'],
+  },
+  {
+    id: 'generation-batch-dialog-v2/running',
+    label: 'subtitle/GenerationBatchPanelV2 (running — F8 queue + cost + SSE chip)',
+    component: GenerationBatchPanelV2 as ComponentType<Record<string, unknown>>,
+    props: {
+      open: true,
+      status: 'running',
+      progress: {
+        batchId: 'gb-fx-1',
+        totalItems: 5,
+        currentIndex: 3,
+        currentMediaId: 3,
+        currentItem: '星際效應',
+        successCount: 2,
+        failCount: 0,
+        pausedCount: 0,
+        status: 'running',
+        spentUsd: 0.42,
+        budgetUsd: 5,
+      },
+      items: [
+        { mediaId: 1, title: '沙丘：第二部' },
+        { mediaId: 2, title: '奧本海默' },
+        { mediaId: 3, title: '星際效應' },
+        { mediaId: 4, title: '全面啟動' },
+        { mediaId: 5, title: '蜘蛛人：無家日' },
+      ],
+      activeItemProgress: {
+        phase: 'transcribing',
+        failedPhase: null,
+        percentage: null,
+        message: '正在轉錄音訊',
+        jobId: 'job-fx',
+        error: null,
+        srtPath: null,
+        zhSrtPath: null,
+      },
+      scope: 'missing',
+      onScopeChange: noop,
+      onStart: noop,
+      onConfirmCancelAll: noop,
+      onResume: noop,
+      onClose: noop,
+    },
+    penNode: 'screen-section', // Screen F8-D-v2 (i9Nun1)
+    statesOnly: ['default'],
+  },
+  {
+    id: 'generation-batch-dialog-v2/budget_ceiling',
+    label: 'subtitle/GenerationBatchPanelV2 (budget_ceiling — F9 banner + 下次繼續)',
+    component: GenerationBatchPanelV2 as ComponentType<Record<string, unknown>>,
+    props: {
+      open: true,
+      status: 'budget_ceiling',
+      progress: {
+        batchId: 'gb-fx-1',
+        totalItems: 5,
+        currentIndex: 3,
+        currentMediaId: 4,
+        currentItem: '全面啟動',
+        successCount: 3,
+        failCount: 0,
+        pausedCount: 2,
+        status: 'budget_ceiling',
+        spentUsd: 5,
+        budgetUsd: 5,
+      },
+      items: [
+        { mediaId: 1, title: '沙丘：第二部' },
+        { mediaId: 2, title: '奧本海默' },
+        { mediaId: 3, title: '星際效應' },
+        { mediaId: 4, title: '全面啟動' },
+        { mediaId: 5, title: '蜘蛛人：無家日' },
+      ],
+      scope: 'missing',
+      onScopeChange: noop,
+      onStart: noop,
+      onConfirmCancelAll: noop,
+      onResume: noop,
+      onClose: noop,
+    },
+    penNode: 'screen-section', // Screen F9-D-v2 (JMqPg)
     statesOnly: ['default'],
   },
 ];
