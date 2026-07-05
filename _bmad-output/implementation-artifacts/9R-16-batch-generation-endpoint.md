@@ -1,6 +1,6 @@
 # Story 9R-16: Route C batch-generation endpoint — orchestrator, shared budget, batch SSE
 
-Status: ready-for-dev
+Status: review
 
 > **Pair note (SM Bob, 2026-07-05):** authored as the BE half of the PH3-M5 batch slice, paired with `ux3-subtitle-v2-batch` (FE) which consumes this story's [@contract-v1] endpoint + SSE shapes (13-7a/b pairing precedent). Epic: 9R (Route C). Filed by ux3-subtitle-v2 create-story Discovery Triage (Rule 24 ③) — the design's BE-gaps note (c) assumed "batch generation = 9R-10 + 9R-11" but neither shipped a batch trigger; `/api/v1/subtitles/batch` is the Epic 8 provider-FETCH batch.
 
@@ -28,22 +28,22 @@ so that the library heals in bulk, spending stops at my budget, and the remainde
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Repo finder (AC: 4)
-  - [ ] NEW movie query "missing zh-Hant + has file" + count variant; real-sqlite tests
-- [ ] Task 2: TranscriptionService — sync entry + budget threading + writeback (AC: 6, 12)
-  - [ ] `RunTranscription` synchronous export sharing `inProgress` registration, error-returning, caller-ctx-derived timeout; `StartTranscription` delegates
-  - [ ] `runPipeline` reuses ctx Budget when present; `ErrBudgetExceeded` propagates out of translate phase (other translate errors stay non-fatal); tests for all paths
-  - [ ] `UpdateSubtitleStatus` writeback on zh-Hant place success (both paths, narrow updater iface); tests: success writes / en-only no-write / failure no-write
-- [ ] Task 3: `GenerationBatchProcessor` (AC: 5, 7)
-  - [ ] Single-flight state machine + sequential loop + cancel + budget-ceiling (pre-check + mid-item sentinel) + paused accounting
-  - [ ] SSE broadcasts (AC 9) with cost fields; orchestrator tests
-- [ ] Task 4: Handler + routes (AC: 1, 2, 3, 8, 11)
-  - [ ] `/subtitles/generation-batch` group: POST start / GET status / POST cancel / GET preview; validation; Swagger; main.go wiring (Rule 15 grep)
-  - [ ] httptest matrix
-- [ ] Task 5: Activity aggregation (AC: 10)
-  - [ ] `generation_batch` active-job source (narrow iface, fail-soft) + tests
-- [ ] Task 6: Gates (AC: 13)
-  - [ ] `go test ./...`, vet, staticcheck, `pnpm lint:all`, prettier on touched md/yaml
+- [x] Task 1: Repo finder (AC: 4)
+  - [x] NEW movie query "missing zh-Hant + has file" + count variant; real-sqlite tests
+- [x] Task 2: TranscriptionService — sync entry + budget threading + writeback (AC: 6, 12)
+  - [x] `RunTranscription` synchronous export sharing `inProgress` registration, error-returning, caller-ctx-derived timeout; `StartTranscription` delegates
+  - [x] `runPipeline` reuses ctx Budget when present; `ErrBudgetExceeded` propagates out of translate phase (other translate errors stay non-fatal); tests for all paths
+  - [x] `UpdateSubtitleStatus` writeback on zh-Hant place success (both paths, narrow updater iface); tests: success writes / en-only no-write / failure no-write
+- [x] Task 3: `GenerationBatchProcessor` (AC: 5, 7)
+  - [x] Single-flight state machine + sequential loop + cancel + budget-ceiling (pre-check + mid-item sentinel) + paused accounting
+  - [x] SSE broadcasts (AC 9) with cost fields; orchestrator tests
+- [x] Task 4: Handler + routes (AC: 1, 2, 3, 8, 11)
+  - [x] `/subtitles/generation-batch` group: POST start / GET status / POST cancel / GET preview; validation; Swagger; main.go wiring (Rule 15 grep)
+  - [x] httptest matrix
+- [x] Task 5: Activity aggregation (AC: 10)
+  - [x] `generation_batch` active-job source (narrow iface, fail-soft) + tests
+- [x] Task 6: Gates (AC: 13)
+  - [x] `go test ./...`, vet, staticcheck, `pnpm lint:all`, prettier on touched md/yaml
 
 **Cross-stack split check:** backend tasks = 6, frontend tasks = 0 → single story. ✓ (FE = `ux3-subtitle-v2-batch`.)
 
@@ -88,16 +88,74 @@ so that the library heals in bulk, spending stops at my budget, and the remainde
 
 ### Agent Model Used
 
-(fill at dev time)
+Claude Fable 5 (claude-fable-5) — BMAD DEV agent Amelia, 2026-07-06
 
 ### Debug Log References
 
+- `go test ./... -count=1` from apps/api: green (one hit of the tracked pre-existing `TestScannerService_SSEBroadcast_ScanCancelled` flake — passed on uncached retry).
+- `pnpm lint:all`: 0 errors (123 pre-existing web warnings). One staticcheck ST1012 (`assertAnError` → `errBoom`) fixed during the gate run.
+
 ### Completion Notes List
+
+- **Task 1 (AC 4):** `MovieRepository.FindMissingZhHantSubtitle` + `CountMissingZhHantSubtitle` share one `missingZhHantSubtitleWhere` predicate (`subtitle_language IS NULL OR != 'zh-Hant'` AND non-empty `file_path` AND not `is_removed`), ordered `title COLLATE NOCASE, id` for a stable queue. Added to `MovieRepositoryInterface` (the registry exposes the interface type) → extended `testutil.MockMovieRepository`, `mockMovieRepoForNFO`, `mockPQMovieRepo`. Real-sqlite matrix tests incl. a writeback-shrinks-enumeration test.
+- **Task 2 (AC 6/12):** `RunTranscription` sync entry shares `acquireJob` single-flight with `StartTranscription` and derives its timeout from the CALLER ctx (`context.WithTimeout(ctx, s.timeout)` — AC 6a trap avoided; async keeps the Background detach + fire-and-forget with a justifying comment per Rule 13). `runPipeline` now returns errors (failJob SSE unchanged) and resolves its Budget via `resolveBudget` (ctx-attached reused, else per-run — AC 6b). Translate phase + AC 12 writeback extracted to `translateAndPersist` (testable seam): ordinary translate errors stay non-fatal, `ai.ErrBudgetExceeded` propagates, zh-Hant success calls the narrow `SubtitleStatusWriter` (found / zh path / `zh-Hant`, score 0 → NULL); a writeback failure propagates (Rule 13 — success must not be reported while the row still says 缺字幕). **Deeper swallow found + fixed within AC 6c scope:** the anchor pointed at runPipeline `:308-319`, but `TranslateWithGlossary` ALSO swallowed per-batch errors (keep-English tolerance, translation_service.go) — the sentinel now escapes there too, with a seam-level regression test.
+- **Task 3 (AC 5/7/9):** `services.GenerationBatchProcessor` (`generation_batch.go`) mirrors subtitle/batch.go (quick-check → collect outside lock → double-check → detached `WithCancel(Background)` ctx), ONE shared `ai.Budget` on the batch ctx, sequential loop, per-item fail-continue (incl. per-media 409 `ErrTranscriptionInProgress` skip), pre-item `budget.Exceeded()` check AND mid-item `errors.Is(err, ai.ErrBudgetExceeded)` → paused (current + remaining) + terminal `budget_ceiling`; cancel mid-item detected via `ctx.Err()` (not counted as fail). SSE `generation_batch_progress` payload built as a hand-rolled map (Budget Snapshot has no json tags) with exactly the 11 contract keys.
+- **Task 4 (AC 1/2/3/8/11):** `GenerationBatchHandler` — POST start (202 items[] / 200 empty-missing / 400 validation / 409 `TRANSCRIPTION_BATCH_RUNNING` with progress in error-body data / 500 `TRANSCRIPTION_BATCH_START_FAILED` / 503 `TRANSCRIPTION_DISABLED`), GET status (`{running, progress|null}`), POST cancel (idempotent), GET preview (`scope=missing` only; 500 reuses existing `DB_QUERY_FAILED`). zh-TW messages. **AC 8 ruling: REJECT (400) chosen over filter** for non-movie/no-file selected ids — documented in the Swagger `@Description`. Wire `media_id` int64 ↔ string row id conversion both directions; non-numeric ids in missing scope skipped fail-soft with `slog.Warn`.
+- **Task 5 (AC 10):** `ActivityService` gained a `generation` source reusing the existing `batchJobSource` primitive interface — `active_jobs` kind `generation_batch`, nil-safe/fail-soft.
+- **Task 6 (AC 13):** full Go suite + vet + staticcheck + eslint + prettier green. Swagger: annotations added on all four routes; **no `swag init` run — apps/api has no generated docs/ (Swagger migration is consolidation Phase 1.2, still pending; annotation-only is the existing handler precedent).** Route registration verified in main.go (`generationBatchHandler.RegisterRoutes(apiV1)`).
+- **Rulings honored:** no persistence table/migration; fetch-batch untouched; orchestrator in services (no subtitle import — Rule 19 clean, verified by build); sequential only; cost fields ride the batch SSE without absorbing 9R-17.
+
+### AC 12 writeback test evidence
+
+- `TestTranslateAndPersist_SuccessWritesBack` — writer called once with id "42", `SubtitleStatusFound`, zh path, `"zh-Hant"`, score 0.
+- `TestTranslateAndPersist_EnOnlyNoWrite` — translate=false ⇒ zero writer calls.
+- `TestTranslateAndPersist_TranslateFailureNoWrite` — non-budget translate failure ⇒ no error, zero writer calls.
+- `TestTranslateAndPersist_BudgetExceededPropagates` / `TestTranslateAndPersist_WritebackFailurePropagates` / `TestTranslateAndPersist_NilWriterIsNoop`.
+- `TestFindMissingZhHantSubtitle_ShrinksAfterWriteback` — real-sqlite proof the enumeration converges.
 
 ### Discovery Triage
 
 - Authoring-time (SM Bob, 2026-07-05): no NEW entries filed by this story — the FE-side gaps found in the same research pass are filed on `ux3-subtitle-v2-batch` (v2 multi-select) and pre-existing entries (`disc-2026-06-library-subtitle-status-filter`, `9R-17-ai-usage-endpoint`, `9R-10a`).
 - **① expand-scope-in-place (validation pass, 2026-07-05): per-item generation DB-writeback gap** — the transcription path never updates `movies.subtitle_status/subtitle_path/subtitle_language` after a successful generation (badge stays 缺字幕 until rescan; missing-scope enumeration never shrinks). Absorbed as **AC 12** + Task 2 subtask (this AC is the tracked absorption). Cross-story note: ux3-subtitle-v2's AC-6 badge-refresh expectation depends on it — annotated on that story + its sprint entry.
-- (Dev: add in-flight discoveries per Rule 24 before marking done.)
+- Dev in-flight (Amelia, 2026-07-06): **no NEW sprint-status entries needed.** Findings triaged:
+  - `TranslateWithGlossary` internal keep-English tolerance also swallowed `ai.ErrBudgetExceeded` (one level deeper than the runPipeline anchor) — **lane ①, already covered by AC 6c's wording** ("MUST propagate out of the translate phase"); fixed in this story with a regression test, no new AC needed.
+  - apps/api has no `swag init`/generated-docs setup (annotations only) — NOT a new discovery: it is the already-tracked backend-consolidation Phase 1.2 (Swagger migration) in project-context.md; no entry filed.
 
 ### File List
+
+- `apps/api/internal/repository/movie_repository.go` — modified (new finder + count, shared WHERE const)
+- `apps/api/internal/repository/movie_repository_test.go` — modified (AC 4 matrix + writeback-shrinks tests)
+- `apps/api/internal/repository/interfaces.go` — modified (2 interface methods)
+- `apps/api/internal/testutil/mocks.go` — modified (MockMovieRepository + default expectations)
+- `apps/api/internal/services/transcription_service.go` — modified (SubtitleStatusWriter iface/setter, RunTranscription, acquireJob, resolveBudget, error-returning runPipeline, translateAndPersist)
+- `apps/api/internal/services/transcription_generation_test.go` — NEW (sync entry / budget / AC 12 writeback tests)
+- `apps/api/internal/services/translation_service.go` — modified (ErrBudgetExceeded escapes batch tolerance)
+- `apps/api/internal/services/generation_batch.go` — NEW (GenerationBatchProcessor)
+- `apps/api/internal/services/generation_batch_test.go` — NEW (orchestrator suite)
+- `apps/api/internal/services/activity_service.go` — modified (generation source, kind generation_batch)
+- `apps/api/internal/services/activity_service_test.go` — modified (constructor call sites + new-kind assertions)
+- `apps/api/internal/services/enrichment_nfo_test.go` — modified (full-interface fake: 2 no-op methods)
+- `apps/api/internal/services/parse_queue_service_test.go` — modified (full-interface fake: 2 no-op methods)
+- `apps/api/internal/sse/hub.go` — modified (EventGenerationBatchProgress const)
+- `apps/api/internal/handlers/generation_batch_handler.go` — NEW (4 routes + Swagger annotations)
+- `apps/api/internal/handlers/generation_batch_handler_test.go` — NEW (httptest matrix)
+- `apps/api/cmd/api/main.go` — modified (processor + handler wiring, writeback injection, activity arg, route registration)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — modified (9R-16 entry only)
+- `_bmad-output/implementation-artifacts/9R-16-batch-generation-endpoint.md` — modified (this record)
+
+Added at code review (2026-07-06):
+
+- `project-context.md` — modified (CR F1: Rule 7 registry — `TRANSCRIPTION_` prefix registered as 16th source + codes listed; mega-line entry prepended per Rule 25 convention)
+- `_bmad/bmm/workflows/4-implementation/code-review/instructions.xml` — modified (CR F1: Step 3 prefix list synced to 16 sources, sync dates updated)
+- `apps/api/internal/services/generation_batch.go` — modified (CR F3: dead-store removal in `finish()` + terminal-clear comment)
+- `_bmad-output/implementation-artifacts/ux3-subtitle-v2-batch.md` — modified (CR F2/F4 doc notes: BE REJECT-not-filter interplay made explicit; post-terminal status-probe returns null; `transcription_failed` join caveat on cancelled/budget_ceiling)
+
+## Senior Developer Review (AI) — 2026-07-06
+
+Reviewer: adversarial CR (Fable 5). Verdict: **APPROVED WITH FIXES APPLIED** (fix details in the File List addendum above; full findings table in the review report).
+
+- 🔒 Rule 7 Wire Format: **FIXED** — new codes `TRANSCRIPTION_BATCH_RUNNING`/`TRANSCRIPTION_BATCH_START_FAILED` follow `{SOURCE}_{ERROR_TYPE}`, but the `TRANSCRIPTION_` prefix (shipped in Epic 9 as `TRANSCRIPTION_DISABLED`/`TRANSCRIPTION_IN_PROGRESS`, live FE-consumed wire contracts — rename not viable) was never in the authoritative registry. AC 11's "existing prefix, no CR sync" held for the CODE but not the REGISTRY. Registered as 16th source + instructions.xml synced.
+- 🔒 Rule 20: PASS — all 6 stamps are NEW `[@contract-v1]` (no bump → no Change Log row / stale-mark grep obligation). Implemented shapes verified key-for-key against the FE consumer's authored contract section (11 SSE keys, 202 items[] shape, preview, status enum incl. `budget_ceiling`).
+- 🔒 Rule 25: N/A for the branch (project-context.md untouched by dev); the CR's own Rule 7 fix prepended the mega-line entry per convention (English-only, prior lead demoted, prettier-checked).
+- `go test -race`: new packages (services generation/transcription/activity, handlers, repository finder) **race-clean**. Package-wide `./internal/services/ -race` fails on a PRE-EXISTING unsynchronized test mock (`MockRetryRepository`, `retry_service_test.go:34/76` vs `retry/scheduler.go` goroutine) — untouched by this story, not blocking, flagged for triage.
+- Known interplay (AC 8): BE REJECT 400 / FE client-side exclude — coherent; FE story wording did not imply BE filtering, but the ruling is now explicit in the FE contract section (doc fix).

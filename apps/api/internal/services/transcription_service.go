@@ -15,9 +15,18 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/vido/api/internal/ai"
+	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/repository"
 	"github.com/vido/api/internal/sse"
 )
+
+// SubtitleStatusWriter persists generation success to the movie row (Story
+// 9R-16 AC 12). Narrow on purpose (Rule 11) — *repository.MovieRepository
+// satisfies it; main.go injects it. Without this writeback the missing-scope
+// batch enumeration never shrinks and poster badges stay 缺字幕 until a rescan.
+type SubtitleStatusWriter interface {
+	UpdateSubtitleStatus(ctx context.Context, id string, status models.SubtitleStatus, path, language string, score float64) error
+}
 
 // OpenCCConverter is the Simplified→Traditional safety net applied after LLM
 // translation (Story 9R-10). Defined here so the service does not import the
@@ -75,6 +84,9 @@ type TranscriptionService struct {
 	opencc       OpenCCConverter                        // s2twp safety net
 	placer       SubtitlePlacer                         // atomic place + backup
 
+	// 9R-16 AC 12: generation-success writeback (optional / nil-safe).
+	subtitleWriter SubtitleStatusWriter
+
 	mu         sync.Mutex
 	inProgress map[int64]string // mediaID → jobID
 }
@@ -125,6 +137,13 @@ func (s *TranscriptionService) SetOpenCCConverter(c OpenCCConverter) {
 // SetPlacer wires atomic subtitle placement + backup (Story 9R-10).
 func (s *TranscriptionService) SetPlacer(p SubtitlePlacer) {
 	s.placer = p
+}
+
+// SetSubtitleStatusWriter wires the generation-success DB writeback (Story
+// 9R-16 AC 12). Nil-safe: when unset, generation places files but persists
+// nothing (pre-9R-16 behavior).
+func (s *TranscriptionService) SetSubtitleStatusWriter(w SubtitleStatusWriter) {
+	s.subtitleWriter = w
 }
 
 // loadGlossary returns the per-show glossary as translation pairs, or nil when
@@ -178,22 +197,74 @@ func (s *TranscriptionService) StartTranscription(ctx context.Context, mediaID i
 		opt(cfg)
 	}
 
+	jobID, err := s.acquireJob(mediaID)
+	if err != nil {
+		return "", err
+	}
+
+	// Run transcription pipeline in background goroutine with timeout.
+	// Deliberately detached from the request ctx (context.Background()) so the
+	// job outlives the HTTP request. Fire-and-forget: the pipeline error is
+	// intentionally discarded here — every failure path already reports via
+	// failJob SSE (9R-16 AC 6a ruling; sync callers use RunTranscription).
+	go func() {
+		pipelineCtx, pipelineCancel := context.WithTimeout(context.Background(), s.timeout)
+		defer pipelineCancel()
+		_ = s.runPipeline(pipelineCtx, jobID, mediaID, filePath, mediaDir, cfg.translate)
+	}()
+
+	return jobID, nil
+}
+
+// RunTranscription is the SYNCHRONOUS pipeline entry (Story 9R-16 AC 6a): it
+// shares the same per-media single-flight map as StartTranscription, runs the
+// pipeline inline, and RETURNS the pipeline error (the async path reports via
+// failJob SSE only). ⚠️ The timeout derives from the CALLER's ctx — NOT the
+// async path's context.Background() detach — so a batch's shared ai.Budget
+// (a ctx value) and cancel propagation flow through.
+func (s *TranscriptionService) RunTranscription(ctx context.Context, mediaID int64, filePath string, mediaDir string, opts ...TranscriptionOption) error {
+	if !s.IsAvailable() {
+		return ErrTranscriptionDisabled
+	}
+
+	cfg := &transcriptionConfig{}
+	for _, opt := range opts {
+		opt(cfg)
+	}
+
+	jobID, err := s.acquireJob(mediaID)
+	if err != nil {
+		return err
+	}
+
+	pipelineCtx, pipelineCancel := context.WithTimeout(ctx, s.timeout)
+	defer pipelineCancel()
+	return s.runPipeline(pipelineCtx, jobID, mediaID, filePath, mediaDir, cfg.translate)
+}
+
+// resolveBudget returns the ctx-attached ai.Budget when one is present (9R-16
+// AC 6b — a generation batch attaches ONE shared Budget so the whole batch
+// spends from one envelope), else creates the per-run budget as before (9R-11)
+// and attaches it.
+func (s *TranscriptionService) resolveBudget(ctx context.Context) (*ai.Budget, context.Context) {
+	if b := ai.BudgetFromContext(ctx); b != nil {
+		return b, ctx
+	}
+	b := ai.NewBudget(s.runBudgetUSD)
+	return b, ai.WithBudget(ctx, b)
+}
+
+// acquireJob registers a media ID in the single-flight map shared by the async
+// and sync entries, returning the new job ID or ErrTranscriptionInProgress.
+// runPipeline's deferred cleanup releases the slot.
+func (s *TranscriptionService) acquireJob(mediaID int64) (string, error) {
 	s.mu.Lock()
+	defer s.mu.Unlock()
 	if _, exists := s.inProgress[mediaID]; exists {
-		s.mu.Unlock()
 		return "", ErrTranscriptionInProgress
 	}
 	jobID := uuid.New().String()
 	s.inProgress[mediaID] = jobID
-	s.mu.Unlock()
-
-	// Run transcription pipeline in background goroutine with timeout
-	go func() {
-		pipelineCtx, pipelineCancel := context.WithTimeout(context.Background(), s.timeout)
-		defer pipelineCancel()
-		s.runPipeline(pipelineCtx, jobID, mediaID, filePath, mediaDir, cfg.translate)
-	}()
-
 	return jobID, nil
 }
 
@@ -213,7 +284,9 @@ func WithTranslation() TranscriptionOption {
 
 // runPipeline executes the full transcription pipeline:
 // Extract audio → (optional chunk) → Whisper API → Merge SRT → Save → (optional) Translate
-func (s *TranscriptionService) runPipeline(ctx context.Context, jobID string, mediaID int64, filePath string, mediaDir string, translate bool) {
+// It reports failures via failJob SSE AND returns the error so the synchronous
+// entry (RunTranscription, 9R-16) can propagate it; the async entry discards it.
+func (s *TranscriptionService) runPipeline(ctx context.Context, jobID string, mediaID int64, filePath string, mediaDir string, translate bool) error {
 	defer func() {
 		s.mu.Lock()
 		delete(s.inProgress, mediaID)
@@ -224,8 +297,7 @@ func (s *TranscriptionService) runPipeline(ctx context.Context, jobID string, me
 
 	// 9R-11: one per-run budget spans BOTH transcription and translation of
 	// this media so ASR + LLM share the ceiling; logged at the end.
-	budget := ai.NewBudget(s.runBudgetUSD)
-	ctx = ai.WithBudget(ctx, budget)
+	budget, ctx := s.resolveBudget(ctx)
 	defer func() {
 		snap := budget.Snapshot()
 		s.logger.Info("transcription run AI usage",
@@ -248,13 +320,13 @@ func (s *TranscriptionService) runPipeline(ctx context.Context, jobID string, me
 	tracks, err := s.audioExtractor.ListAudioTracks(ctx, filePath)
 	if err != nil {
 		s.failJob(jobID, mediaID, fmt.Sprintf("list audio tracks: %v", err))
-		return
+		return fmt.Errorf("list audio tracks: %w", err)
 	}
 
 	selectedTrack, err := SelectEnglishTrack(tracks)
 	if err != nil {
 		s.failJob(jobID, mediaID, fmt.Sprintf("select audio track: %v", err))
-		return
+		return fmt.Errorf("select audio track: %w", err)
 	}
 
 	s.logger.Info("audio track selected",
@@ -267,7 +339,7 @@ func (s *TranscriptionService) runPipeline(ctx context.Context, jobID string, me
 	audioPath, err := s.audioExtractor.ExtractAudio(ctx, filePath, selectedTrack.Index)
 	if err != nil {
 		s.failJob(jobID, mediaID, fmt.Sprintf("extract audio: %v", err))
-		return
+		return fmt.Errorf("extract audio: %w", err)
 	}
 	defer os.Remove(audioPath)
 
@@ -282,7 +354,7 @@ func (s *TranscriptionService) runPipeline(ctx context.Context, jobID string, me
 	srtContent, err := s.transcribeAudio(ctx, audioPath, WhisperLanguageFromTrack(selectedTrack.Language))
 	if err != nil {
 		s.failJob(jobID, mediaID, fmt.Sprintf("transcribe: %v", err))
-		return
+		return fmt.Errorf("transcribe: %w", err)
 	}
 
 	// Phase 3: Save SRT
@@ -291,31 +363,15 @@ func (s *TranscriptionService) runPipeline(ctx context.Context, jobID string, me
 
 	if err := os.WriteFile(srtPath, []byte(srtContent), 0644); err != nil {
 		s.failJob(jobID, mediaID, fmt.Sprintf("save SRT: %v", err))
-		return
+		return fmt.Errorf("save SRT: %w", err)
 	}
 
-	// Phase 3.5: Translate to Traditional Chinese (Story 9-2b)
-	var zhSRTPath string
-	if translate && s.translationService != nil && s.translationService.IsConfigured() {
-		s.broadcastEvent(EventTranscriptionTranslating, map[string]interface{}{
-			"job_id":     jobID,
-			"media_id":   mediaID,
-			"phase":      "translating",
-			"percentage": 0,
-			"message":    "Translating subtitles to Traditional Chinese",
-		})
-
-		zhPath, err := s.translateSRT(ctx, jobID, mediaID, srtContent, filePath, mediaDir)
-		if err != nil {
-			// AC #5: Translation failure is non-fatal — English SRT is still saved
-			s.logger.Warn("translation failed — English SRT preserved",
-				"job_id", jobID,
-				"media_id", mediaID,
-				"error", err,
-			)
-		} else {
-			zhSRTPath = zhPath
-		}
+	// Phase 3.5: Translate to Traditional Chinese (Story 9-2b) + persist
+	// generation success (Story 9R-16 AC 12).
+	zhSRTPath, err := s.translateAndPersist(ctx, jobID, mediaID, srtContent, filePath, mediaDir, translate)
+	if err != nil {
+		s.failJob(jobID, mediaID, err.Error())
+		return err
 	}
 
 	duration := time.Since(startedAt).Round(time.Second).String()
@@ -341,6 +397,59 @@ func (s *TranscriptionService) runPipeline(ctx context.Context, jobID string, me
 		completeData["zh_srt_path"] = zhSRTPath
 	}
 	s.broadcastEvent(EventTranscriptionComplete, completeData)
+	return nil
+}
+
+// translateAndPersist runs the optional translate phase and the 9R-16 AC 12
+// generation-success writeback. Returns the zh-Hant path ("" for en-only runs).
+// Error semantics (ruled in 9R-16 AC 6c/12):
+//   - ordinary translate failures are NON-FATAL (English SRT preserved,
+//     deliberate swallow — logged, zh path stays empty, no writeback);
+//   - ai.ErrBudgetExceeded MUST propagate so a batch can pause mid-item;
+//   - a writeback failure propagates (Rule 13) — reporting success while the
+//     library row still says 缺字幕 would break the batch-enumeration guarantee.
+func (s *TranscriptionService) translateAndPersist(ctx context.Context, jobID string, mediaID int64, srtContent, filePath, mediaDir string, translate bool) (string, error) {
+	var zhSRTPath string
+	if translate && s.translationService != nil && s.translationService.IsConfigured() {
+		s.broadcastEvent(EventTranscriptionTranslating, map[string]interface{}{
+			"job_id":     jobID,
+			"media_id":   mediaID,
+			"phase":      "translating",
+			"percentage": 0,
+			"message":    "Translating subtitles to Traditional Chinese",
+		})
+
+		zhPath, err := s.translateSRT(ctx, jobID, mediaID, srtContent, filePath, mediaDir)
+		if err != nil {
+			// 9R-16 AC 6c: the budget sentinel MUST propagate — a mid-translate
+			// ceiling hit must pause the batch, not count the item as success
+			// (the English SRT stays on disk either way).
+			if errors.Is(err, ai.ErrBudgetExceeded) {
+				return "", fmt.Errorf("translate: %w", err)
+			}
+			// AC #5 (9-2b): other translation failures are non-fatal — English
+			// SRT is still saved. Deliberate swallow, ruled in 9R-16 AC 6c.
+			s.logger.Warn("translation failed — English SRT preserved",
+				"job_id", jobID,
+				"media_id", mediaID,
+				"error", err,
+			)
+		} else {
+			zhSRTPath = zhPath
+		}
+	}
+
+	// 9R-16 AC 12: persist generation success — the resume enabler + badge
+	// truth. Only after a successful zh-Hant place (en-only runs write
+	// nothing; failed runs never reach here).
+	if zhSRTPath != "" && s.subtitleWriter != nil {
+		if werr := s.subtitleWriter.UpdateSubtitleStatus(ctx, strconv.FormatInt(mediaID, 10),
+			models.SubtitleStatusFound, zhSRTPath, "zh-Hant", 0); werr != nil {
+			return "", fmt.Errorf("update subtitle status: %w", werr)
+		}
+	}
+
+	return zhSRTPath, nil
 }
 
 // WhisperLanguageFromTrack maps an ffprobe audio-track language tag (ISO-639-2,

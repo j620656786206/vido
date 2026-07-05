@@ -519,6 +519,9 @@ func main() {
 		transcriptionService = services.NewTranscriptionService(audioExtractorService, nil, sseHub, slog.Default())
 		slog.Info("Transcription service initialized (disabled — missing OPENAI_API_KEY or FFmpeg)")
 	}
+	// 9R-16 AC 12: persist generation success (subtitle_status/path/language)
+	// so the missing-scope batch enumeration shrinks and poster badges flip.
+	transcriptionService.SetSubtitleStatusWriter(repos.Movies)
 
 	// Initialize AI terminology correction (Story 9.1) + subtitle translation (Story 9.2b)
 	// Uses TextCompleter interface — provider created once here, not inside the service
@@ -635,10 +638,17 @@ func main() {
 	batchCollector := subtitle.NewRepoCollector(repos.Movies, repos.Series, repos.Episodes)
 	batchProcessor := subtitle.NewBatchProcessor(subtitleEngine, sseHub, batchCollector, subtitle.DefaultBatchConfig())
 	subtitleHandler.SetBatchProcessor(batchProcessor)
+	// Route C generation batch (Story 9R-16): sequential orchestrator over the
+	// transcription pipeline under ONE shared AI budget. Independent single-flight
+	// from the fetch batchProcessor above (they share no state).
+	generationBatchProcessor := services.NewGenerationBatchProcessor(
+		transcriptionService, repos.Movies, sseHub, cfg.AIRunBudgetUSD, slog.Default())
+	generationBatchHandler := handlers.NewGenerationBatchHandler(generationBatchProcessor)
 	// Activity hub aggregate (UX Redesign D4-1 / ux3-2-1) — composes live scan +
-	// batch-subtitle progress, pending-parse count, download counts, and recent parse
-	// events. Wired after batchProcessor since it reads it. Fail-soft per section (B1/F3).
-	activityService := services.NewActivityService(scannerService, batchProcessor, downloadService, repos.ParseJobs)
+	// batch-subtitle + generation-batch progress, pending-parse count, download counts,
+	// and recent parse events. Wired after the processors since it reads them.
+	// Fail-soft per section (B1/F3).
+	activityService := services.NewActivityService(scannerService, batchProcessor, generationBatchProcessor, downloadService, repos.ParseJobs)
 	activityHandler := handlers.NewActivityHandler(activityService)
 	// parseProgressHandler already initialized above with defer Close()
 	slog.Info("Handlers initialized with service injection")
@@ -702,6 +712,7 @@ func main() {
 		recentMediaHandler.RegisterRoutes(apiV1)
 		scannerHandler.RegisterRoutes(apiV1)
 		subtitleHandler.RegisterRoutes(apiV1)
+		generationBatchHandler.RegisterRoutes(apiV1) // /api/v1/subtitles/generation-batch group (Story 9R-16)
 		transcriptionHandler.RegisterRoutes(apiV1)
 		if nfoLocalizer != nil {
 			nfoLocalizerHandler.RegisterRoutes(apiV1) // POST /movies/:id/localize-nfo (9R-13)

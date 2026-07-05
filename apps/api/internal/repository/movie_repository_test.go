@@ -1493,3 +1493,112 @@ func TestMovieFullTextSearchNoResults(t *testing.T) {
 		t.Errorf("Expected total results 0, got %d", pagination.TotalResults)
 	}
 }
+
+// ─── Story 9R-16 AC 4: missing-zh-Hant enumeration (generation batch) ───────
+
+// seedGenerationCandidate inserts a movie row with the given subtitle_language /
+// file_path directly (SQL, not repo.Create) so NULL vs '' cases are explicit.
+func seedGenerationCandidate(t *testing.T, db *sql.DB, id, title string, subtitleLang, filePath *string, removed bool) {
+	t.Helper()
+	isRemoved := 0
+	if removed {
+		isRemoved = 1
+	}
+	_, err := db.Exec(
+		`INSERT INTO movies (id, title, release_date, genres, parse_status, subtitle_status, subtitle_language, file_path, is_removed)
+		 VALUES (?, ?, '2024-01-01', '[]', 'completed', 'not_searched', ?, ?, ?)`,
+		id, title, subtitleLang, filePath, isRemoved,
+	)
+	if err != nil {
+		t.Fatalf("Failed to seed movie %s: %v", id, err)
+	}
+}
+
+func strPtr(s string) *string { return &s }
+
+// TestFindMissingZhHantSubtitle_Matrix covers the AC 4 matrix:
+// NULL language / en / zh-Hant / no file (+ removed row excluded).
+func TestFindMissingZhHantSubtitle_Matrix(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	// In scope: no subtitle at all (language NULL) with a file
+	seedGenerationCandidate(t, db, "m-null", "Alpha", nil, strPtr("/media/alpha.mkv"), false)
+	// In scope: English subtitle found — still lacks zh-Hant (BROADER than fetch-batch)
+	seedGenerationCandidate(t, db, "m-en", "Bravo", strPtr("en"), strPtr("/media/bravo.mkv"), false)
+	// Out of scope: already has zh-Hant
+	seedGenerationCandidate(t, db, "m-zh", "Charlie", strPtr("zh-Hant"), strPtr("/media/charlie.mkv"), false)
+	// Out of scope: no file on record (NULL path)
+	seedGenerationCandidate(t, db, "m-nofile", "Delta", nil, nil, false)
+	// Out of scope: empty-string file path
+	seedGenerationCandidate(t, db, "m-emptyfile", "Echo", nil, strPtr(""), false)
+	// Out of scope: removed row
+	seedGenerationCandidate(t, db, "m-removed", "Foxtrot", nil, strPtr("/media/foxtrot.mkv"), true)
+
+	movies, err := repo.FindMissingZhHantSubtitle(ctx)
+	if err != nil {
+		t.Fatalf("FindMissingZhHantSubtitle failed: %v", err)
+	}
+
+	if len(movies) != 2 {
+		t.Fatalf("Expected 2 movies in scope, got %d", len(movies))
+	}
+	// Ordered by title (stable queue order): Alpha, Bravo
+	if movies[0].ID != "m-null" || movies[1].ID != "m-en" {
+		t.Errorf("Expected [m-null, m-en] in title order, got [%s, %s]", movies[0].ID, movies[1].ID)
+	}
+
+	count, err := repo.CountMissingZhHantSubtitle(ctx)
+	if err != nil {
+		t.Fatalf("CountMissingZhHantSubtitle failed: %v", err)
+	}
+	if count != 2 {
+		t.Errorf("Expected count 2, got %d", count)
+	}
+}
+
+// TestFindMissingZhHantSubtitle_ShrinksAfterWriteback proves the AC 12
+// resume-for-free corollary: a generation-success writeback makes the item
+// self-exclude from the next enumeration.
+func TestFindMissingZhHantSubtitle_ShrinksAfterWriteback(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	seedGenerationCandidate(t, db, "m-1", "Movie One", nil, strPtr("/media/one.mkv"), false)
+
+	count, err := repo.CountMissingZhHantSubtitle(ctx)
+	if err != nil {
+		t.Fatalf("CountMissingZhHantSubtitle failed: %v", err)
+	}
+	if count != 1 {
+		t.Fatalf("Expected count 1 before writeback, got %d", count)
+	}
+
+	// The AC 12 writeback path
+	err = repo.UpdateSubtitleStatus(ctx, "m-1", models.SubtitleStatusFound, "/media/one.zh-Hant.srt", "zh-Hant", 0)
+	if err != nil {
+		t.Fatalf("UpdateSubtitleStatus failed: %v", err)
+	}
+
+	count, err = repo.CountMissingZhHantSubtitle(ctx)
+	if err != nil {
+		t.Fatalf("CountMissingZhHantSubtitle failed: %v", err)
+	}
+	if count != 0 {
+		t.Errorf("Expected count 0 after zh-Hant writeback, got %d", count)
+	}
+
+	movies, err := repo.FindMissingZhHantSubtitle(ctx)
+	if err != nil {
+		t.Fatalf("FindMissingZhHantSubtitle failed: %v", err)
+	}
+	if len(movies) != 0 {
+		t.Errorf("Expected empty enumeration after writeback, got %d", len(movies))
+	}
+}

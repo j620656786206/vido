@@ -164,6 +164,12 @@ func (m *mockMovieRepoForNFO) FindBySubtitleStatus(ctx context.Context, status m
 func (m *mockMovieRepoForNFO) FindNeedingSubtitleSearch(ctx context.Context, olderThan time.Time) ([]models.Movie, error) {
 	return nil, nil
 }
+func (m *mockMovieRepoForNFO) FindMissingZhHantSubtitle(ctx context.Context) ([]models.Movie, error) {
+	return nil, nil
+}
+func (m *mockMovieRepoForNFO) CountMissingZhHantSubtitle(ctx context.Context) (int, error) {
+	return 0, nil
+}
 func (m *mockMovieRepoForNFO) FindAllWithFilePath(ctx context.Context) ([]models.Movie, error) {
 	return nil, nil
 }

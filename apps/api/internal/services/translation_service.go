@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"regexp"
@@ -182,6 +183,13 @@ func (s *TranslationService) TranslateWithGlossary(ctx context.Context, blocks [
 		batchCancel()
 
 		if err != nil {
+			// 9R-16 AC 6c: the per-run budget sentinel must escape the
+			// keep-English tolerance — remaining batches would all fail the
+			// same way, and the caller needs the sentinel to pause the batch.
+			if errors.Is(err, ai.ErrBudgetExceeded) {
+				return nil, fmt.Errorf("translation stopped at block %d: %w", batchStart, err)
+			}
+
 			// AC #5: on error, keep English text for failed blocks
 			slog.Warn("Translation batch failed — keeping English text for blocks",
 				"batch_start", batchStart,

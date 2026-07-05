@@ -47,6 +47,7 @@ func TestActivity_AllOK(t *testing.T) {
 	svc := NewActivityService(
 		fakeScan{active: true, progress: ScanProgress{PercentDone: 62, CurrentFile: "movie.mkv", FilesFound: 1234}},
 		fakeBatch{active: true, percentDone: 40, current: 12, total: 30, item: "ep.mkv"},
+		fakeBatch{active: true, percentDone: 25, current: 3, total: 12, item: "gen.mkv"},
 		fakeDownloads{counts: &qbittorrent.DownloadCounts{All: 8, Downloading: 3}},
 		fakeParse{
 			pending: []*models.ParseJob{pj(models.ParseJobPending, "a"), pj(models.ParseJobPending, "b")},
@@ -56,14 +57,19 @@ func TestActivity_AllOK(t *testing.T) {
 
 	a := svc.GetActivity(context.Background())
 
-	if a.ActiveJobs.Status != sectionOK || len(a.ActiveJobs.Jobs) != 2 {
-		t.Fatalf("active = %+v, want ok with 2 jobs", a.ActiveJobs)
+	if a.ActiveJobs.Status != sectionOK || len(a.ActiveJobs.Jobs) != 3 {
+		t.Fatalf("active = %+v, want ok with 3 jobs", a.ActiveJobs)
 	}
 	if a.ActiveJobs.Jobs[0].Kind != "scan" || a.ActiveJobs.Jobs[0].PercentDone != 62 || a.ActiveJobs.Jobs[0].Current != 1234 {
 		t.Errorf("scan job = %+v", a.ActiveJobs.Jobs[0])
 	}
 	if a.ActiveJobs.Jobs[1].Kind != "subtitle_batch" || a.ActiveJobs.Jobs[1].Total != 30 || a.ActiveJobs.Jobs[1].PercentDone != 40 {
 		t.Errorf("subtitle job = %+v", a.ActiveJobs.Jobs[1])
+	}
+	// 9R-16 AC 10: generation batch surfaces as its own active-job kind.
+	if a.ActiveJobs.Jobs[2].Kind != "generation_batch" || a.ActiveJobs.Jobs[2].Total != 12 ||
+		a.ActiveJobs.Jobs[2].PercentDone != 25 || a.ActiveJobs.Jobs[2].Detail != "gen.mkv" {
+		t.Errorf("generation job = %+v", a.ActiveJobs.Jobs[2])
 	}
 	if a.Pending.Status != sectionOK || a.Pending.ParseCount != 2 {
 		t.Errorf("pending = %+v, want ok/2", a.Pending)
@@ -84,6 +90,7 @@ func TestActivity_NoActiveJobsIsOKEmpty(t *testing.T) {
 	svc := NewActivityService(
 		fakeScan{active: false},
 		fakeBatch{active: false},
+		fakeBatch{active: false},
 		fakeDownloads{counts: &qbittorrent.DownloadCounts{}},
 		fakeParse{},
 	)
@@ -99,7 +106,7 @@ func TestActivity_NoActiveJobsIsOKEmpty(t *testing.T) {
 
 func TestActivity_PendingFailsSoft(t *testing.T) {
 	svc := NewActivityService(
-		fakeScan{}, fakeBatch{}, fakeDownloads{counts: &qbittorrent.DownloadCounts{}},
+		fakeScan{}, fakeBatch{}, fakeBatch{}, fakeDownloads{counts: &qbittorrent.DownloadCounts{}},
 		fakeParse{pendingErr: errors.New("db down"), all: []*models.ParseJob{}},
 	)
 	a := svc.GetActivity(context.Background())
@@ -115,7 +122,7 @@ func TestActivity_PendingFailsSoft(t *testing.T) {
 
 func TestActivity_DownloadsFailSoft(t *testing.T) {
 	svc := NewActivityService(
-		fakeScan{}, fakeBatch{}, fakeDownloads{err: errors.New("qb unreachable")},
+		fakeScan{}, fakeBatch{}, fakeBatch{}, fakeDownloads{err: errors.New("qb unreachable")},
 		fakeParse{},
 	)
 	a := svc.GetActivity(context.Background())
@@ -131,7 +138,7 @@ func TestActivity_RecentCapsAndFiltersTerminal(t *testing.T) {
 	}
 	// Non-terminal jobs must be filtered out of the recent feed.
 	jobs = append(jobs, pj(models.ParseJobPending, "skip"), pj(models.ParseJobProcessing, "skip"))
-	svc := NewActivityService(fakeScan{}, fakeBatch{}, fakeDownloads{counts: &qbittorrent.DownloadCounts{}}, fakeParse{all: jobs})
+	svc := NewActivityService(fakeScan{}, fakeBatch{}, fakeBatch{}, fakeDownloads{counts: &qbittorrent.DownloadCounts{}}, fakeParse{all: jobs})
 
 	a := svc.GetActivity(context.Background())
 	if len(a.Recent.Events) != recentEventsMax {
@@ -147,7 +154,7 @@ func TestActivity_RecentCapsAndFiltersTerminal(t *testing.T) {
 func TestActivity_RecentPrefersCompletedAt(t *testing.T) {
 	completed := time.Date(2026, 6, 15, 10, 0, 0, 0, time.UTC)
 	job := &models.ParseJob{Status: models.ParseJobCompleted, FileName: "x.mkv", UpdatedAt: time.Now(), CompletedAt: &completed}
-	svc := NewActivityService(fakeScan{}, fakeBatch{}, fakeDownloads{counts: &qbittorrent.DownloadCounts{}}, fakeParse{all: []*models.ParseJob{job}})
+	svc := NewActivityService(fakeScan{}, fakeBatch{}, fakeBatch{}, fakeDownloads{counts: &qbittorrent.DownloadCounts{}}, fakeParse{all: []*models.ParseJob{job}})
 
 	a := svc.GetActivity(context.Background())
 	if len(a.Recent.Events) != 1 || !a.Recent.Events[0].At.Equal(completed) {
@@ -156,7 +163,7 @@ func TestActivity_RecentPrefersCompletedAt(t *testing.T) {
 }
 
 func TestActivity_NilSourcesDegradeGracefully(t *testing.T) {
-	svc := NewActivityService(nil, nil, nil, nil)
+	svc := NewActivityService(nil, nil, nil, nil, nil)
 	a := svc.GetActivity(context.Background()) // must not panic
 	if a.Pending.Status != sectionUnavailable ||
 		a.Downloads.Status != sectionUnavailable ||

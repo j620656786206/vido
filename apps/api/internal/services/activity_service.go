@@ -21,10 +21,11 @@ import (
 // AI active-jobs are omitted until job-tracking exists, and the recent feed is parse
 // events only until an activity-log table lands. The web client renders what's present.
 type ActivityService struct {
-	scan      scanStateSource     // reused from status_summary_service.go
-	batch     batchJobSource      // subtitle.BatchProcessor (primitives only — no import)
-	downloads downloadCountSource // reused from status_summary_service.go
-	parse     parseJobSource      // repository.ParseJobRepository (existing interface)
+	scan       scanStateSource     // reused from status_summary_service.go
+	batch      batchJobSource      // subtitle.BatchProcessor (primitives only — no import)
+	generation batchJobSource      // GenerationBatchProcessor (Story 9R-16 AC 10)
+	downloads  downloadCountSource // reused from status_summary_service.go
+	parse      parseJobSource      // repository.ParseJobRepository (existing interface)
 }
 
 // batchJobSource is the active batch-subtitle job (subtitle.BatchProcessor). Primitive
@@ -42,9 +43,11 @@ type parseJobSource interface {
 	ListAll(ctx context.Context, limit int) ([]*models.ParseJob, error)
 }
 
-// NewActivityService wires the existing services/repos it composes.
-func NewActivityService(scan scanStateSource, batch batchJobSource, downloads downloadCountSource, parse parseJobSource) *ActivityService {
-	return &ActivityService{scan: scan, batch: batch, downloads: downloads, parse: parse}
+// NewActivityService wires the existing services/repos it composes. generation
+// is the Route C generation-batch source (9R-16 AC 10) — same primitive
+// interface as the fetch-batch source, nil-safe (fail-soft per section).
+func NewActivityService(scan scanStateSource, batch batchJobSource, generation batchJobSource, downloads downloadCountSource, parse parseJobSource) *ActivityService {
+	return &ActivityService{scan: scan, batch: batch, generation: generation, downloads: downloads, parse: parse}
 }
 
 const (
@@ -74,7 +77,7 @@ type ActiveJobsSection struct {
 // ActiveJob is one in-flight background job. Kind drives the web client's icon + label
 // (copy lives on the client for i18n) — the backend stays copy-free.
 type ActiveJob struct {
-	Kind        string `json:"kind"` // "scan" | "subtitle_batch"
+	Kind        string `json:"kind"` // "scan" | "subtitle_batch" | "generation_batch"
 	PercentDone int    `json:"percent_done"`
 	Detail      string `json:"detail,omitempty"` // current file / item (raw)
 	Current     int    `json:"current,omitempty"`
@@ -138,6 +141,17 @@ func (s *ActivityService) activeJobsSection() ActiveJobsSection {
 		if active, pct, cur, total, item := s.batch.ActivityProgress(); active {
 			jobs = append(jobs, ActiveJob{
 				Kind:        "subtitle_batch",
+				PercentDone: pct,
+				Detail:      item,
+				Current:     cur,
+				Total:       total,
+			})
+		}
+	}
+	if s.generation != nil {
+		if active, pct, cur, total, item := s.generation.ActivityProgress(); active {
+			jobs = append(jobs, ActiveJob{
+				Kind:        "generation_batch",
 				PercentDone: pct,
 				Detail:      item,
 				Current:     cur,

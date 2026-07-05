@@ -148,6 +148,19 @@ func (m *MockMovieRepository) FindNeedingSubtitleSearch(ctx context.Context, old
 	return args.Get(0).([]models.Movie), args.Error(1)
 }
 
+func (m *MockMovieRepository) FindMissingZhHantSubtitle(ctx context.Context) ([]models.Movie, error) {
+	args := m.Called(ctx)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).([]models.Movie), args.Error(1)
+}
+
+func (m *MockMovieRepository) CountMissingZhHantSubtitle(ctx context.Context) (int, error) {
+	args := m.Called(ctx)
+	return args.Int(0), args.Error(1)
+}
+
 func (m *MockMovieRepository) FindAllWithFilePath(ctx context.Context) ([]models.Movie, error) {
 	args := m.Called(ctx)
 	if args.Get(0) == nil {
@@ -347,6 +360,8 @@ func SetupDefaultMovieExpectations(m *MockMovieRepository) {
 	m.On("UpdateSubtitleStatus", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Maybe().Return(nil)
 	m.On("FindBySubtitleStatus", mock.Anything, mock.Anything).Maybe().Return([]models.Movie(nil), nil)
 	m.On("FindNeedingSubtitleSearch", mock.Anything, mock.Anything).Maybe().Return([]models.Movie(nil), nil)
+	m.On("FindMissingZhHantSubtitle", mock.Anything).Maybe().Return([]models.Movie(nil), nil)
+	m.On("CountMissingZhHantSubtitle", mock.Anything).Maybe().Return(0, nil)
 	m.On("FindAllWithFilePath", mock.Anything).Maybe().Return([]models.Movie(nil), nil)
 	m.On("GetStats", mock.Anything).Maybe().Return((*repository.MediaStats)(nil), nil)
 	m.On("FindOwnedTMDbIDs", mock.Anything, mock.Anything).Maybe().Return([]int64(nil), nil)

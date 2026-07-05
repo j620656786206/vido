@@ -224,6 +224,10 @@ func (m *mockPQMovieRepo) FindBySubtitleStatus(_ context.Context, _ models.Subti
 func (m *mockPQMovieRepo) FindNeedingSubtitleSearch(_ context.Context, _ time.Time) ([]models.Movie, error) {
 	return nil, nil
 }
+func (m *mockPQMovieRepo) FindMissingZhHantSubtitle(_ context.Context) ([]models.Movie, error) {
+	return nil, nil
+}
+func (m *mockPQMovieRepo) CountMissingZhHantSubtitle(_ context.Context) (int, error) { return 0, nil }
 func (m *mockPQMovieRepo) FindAllWithFilePath(_ context.Context) ([]models.Movie, error) {
 	return nil, nil
 }

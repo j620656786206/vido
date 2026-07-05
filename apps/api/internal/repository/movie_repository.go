@@ -881,6 +881,59 @@ func (r *MovieRepository) FindBySubtitleStatus(ctx context.Context, status model
 	return movies, nil
 }
 
+// missingZhHantSubtitleWhere is the shared predicate for "needs Route C
+// generation" (Story 9R-16 AC 4): no zh-Hant subtitle on record AND a media
+// file present. Deliberately BROADER than FindBySubtitleStatus(not_searched|
+// not_found) — a movie with a found ENGLISH subtitle still lacks zh-Hant and
+// is in scope. The 9R-16 AC 12 writeback sets subtitle_language='zh-Hant' on
+// generation success, so completed items self-exclude (resume-for-free).
+const missingZhHantSubtitleWhere = `
+	(subtitle_language IS NULL OR subtitle_language != 'zh-Hant')
+	AND file_path IS NOT NULL AND file_path != ''
+	AND (is_removed = 0 OR is_removed IS NULL)
+`
+
+// FindMissingZhHantSubtitle retrieves movies that need Route C subtitle
+// generation (Story 9R-16 AC 4). Ordered by title for a stable, user-legible
+// batch queue.
+func (r *MovieRepository) FindMissingZhHantSubtitle(ctx context.Context) ([]models.Movie, error) {
+	query := fmt.Sprintf(`SELECT %s FROM movies WHERE %s ORDER BY title COLLATE NOCASE ASC, id ASC`,
+		movieSelectColumns, missingZhHantSubtitleWhere)
+
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query movies missing zh-Hant subtitle: %w", err)
+	}
+	defer rows.Close()
+
+	var movies []models.Movie
+	for rows.Next() {
+		movie, err := scanMovie(rows)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan movie: %w", err)
+		}
+		movies = append(movies, movie)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating movies: %w", err)
+	}
+
+	return movies, nil
+}
+
+// CountMissingZhHantSubtitle returns the number of movies FindMissingZhHantSubtitle
+// would enumerate — the generation-batch preview count (Story 9R-16 AC 3).
+func (r *MovieRepository) CountMissingZhHantSubtitle(ctx context.Context) (int, error) {
+	query := fmt.Sprintf(`SELECT COUNT(*) FROM movies WHERE %s`, missingZhHantSubtitleWhere)
+
+	var count int
+	if err := r.db.QueryRowContext(ctx, query).Scan(&count); err != nil {
+		return 0, fmt.Errorf("failed to count movies missing zh-Hant subtitle: %w", err)
+	}
+	return count, nil
+}
+
 // FindNeedingSubtitleSearch retrieves movies not yet searched or last searched before threshold
 func (r *MovieRepository) FindNeedingSubtitleSearch(ctx context.Context, olderThan time.Time) ([]models.Movie, error) {
 	query := fmt.Sprintf(`
