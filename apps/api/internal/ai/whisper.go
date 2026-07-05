@@ -53,6 +53,10 @@ type WhisperClient struct {
 	language string
 	// governor is the shared AI throttle (Story 9R-11; nil = unthrottled).
 	governor *Governor
+	// model is the transcription model id (Story 9R-9). Defaults to WhisperModel;
+	// self-hosted OpenAI-compatible engines use their own id (e.g. Speaches
+	// "Systran/faster-whisper-small").
+	model string
 }
 
 // WhisperOption is a functional option for configuring WhisperClient.
@@ -94,6 +98,14 @@ func WithWhisperLanguage(lang string) WhisperOption {
 	}
 }
 
+// WithWhisperModel overrides the transcription model id (Story 9R-9) — set it to
+// a self-hosted engine's model id when swapping the base URL.
+func WithWhisperModel(model string) WhisperOption {
+	return func(c *WhisperClient) {
+		c.model = model
+	}
+}
+
 // NewWhisperClient creates a new Whisper API client.
 func NewWhisperClient(apiKey string, opts ...WhisperOption) *WhisperClient {
 	c := &WhisperClient{
@@ -101,6 +113,7 @@ func NewWhisperClient(apiKey string, opts ...WhisperOption) *WhisperClient {
 		baseURL: WhisperAPIURL,
 		timeout: 5 * time.Minute,
 		logger:  slog.Default().With("service", "whisper"),
+		model:   WhisperModel,
 	}
 
 	for _, opt := range opts {
@@ -159,7 +172,7 @@ func (c *WhisperClient) TranscribeWithLanguage(ctx context.Context, audioPath, l
 	}
 
 	// Add model and response format fields
-	if err := writer.WriteField("model", WhisperModel); err != nil {
+	if err := writer.WriteField("model", c.model); err != nil {
 		return "", fmt.Errorf("whisper: write model field: %w", err)
 	}
 	if err := writer.WriteField("response_format", "srt"); err != nil {
