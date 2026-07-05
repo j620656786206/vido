@@ -21,11 +21,13 @@ func NewGlossaryHandler(service services.GlossaryServiceInterface) *GlossaryHand
 	return &GlossaryHandler{service: service}
 }
 
-// RegisterRoutes mounts the glossary routes. mediaId is the local movie/series
+// RegisterRoutes mounts the glossary routes. :id is the local movie/series
 // id — the same key the generation pipeline (9R-10) and .nfo localizer (9R-13)
-// use, so the UI, the pipeline, and the REST surface share one glossary.
+// use, so the UI, the pipeline, and the REST surface share one glossary. The
+// wildcard must be named :id to match the existing /media/:id/* routes
+// (metadata_handler) — gin panics on differing wildcard names per segment.
 func (h *GlossaryHandler) RegisterRoutes(rg *gin.RouterGroup) {
-	g := rg.Group("/media/:mediaId/glossary")
+	g := rg.Group("/media/:id/glossary")
 	{
 		g.GET("", h.List)
 		g.POST("", h.Add)
@@ -36,9 +38,9 @@ func (h *GlossaryHandler) RegisterRoutes(rg *gin.RouterGroup) {
 	}
 }
 
-// List handles GET /api/v1/media/:mediaId/glossary
+// List handles GET /api/v1/media/:id/glossary
 func (h *GlossaryHandler) List(c *gin.Context) {
-	terms, err := h.service.List(c.Request.Context(), c.Param("mediaId"))
+	terms, err := h.service.List(c.Request.Context(), c.Param("id"))
 	if err != nil {
 		h.writeErr(c, err, "list glossary")
 		return
@@ -57,7 +59,7 @@ type glossaryAddRequest struct {
 	Confirmed bool   `json:"confirmed"`
 }
 
-// Add handles POST /api/v1/media/:mediaId/glossary
+// Add handles POST /api/v1/media/:id/glossary
 func (h *GlossaryHandler) Add(c *gin.Context) {
 	var req glossaryAddRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -65,7 +67,7 @@ func (h *GlossaryHandler) Add(c *gin.Context) {
 		return
 	}
 	term := &models.GlossaryTerm{
-		MediaID:   c.Param("mediaId"), // route wins — never trust a body media_id
+		MediaID:   c.Param("id"), // route wins — never trust a body media_id
 		TermSrc:   req.TermSrc,
 		TermZh:    req.TermZh,
 		Language:  req.Language,
@@ -84,32 +86,32 @@ type glossaryEditRequest struct {
 	Confirmed bool   `json:"confirmed"`
 }
 
-// Edit handles PUT /api/v1/media/:mediaId/glossary/:termId
+// Edit handles PUT /api/v1/media/:id/glossary/:termId
 func (h *GlossaryHandler) Edit(c *gin.Context) {
 	var req glossaryEditRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		BadRequestError(c, "VALIDATION_INVALID_FORMAT", "Invalid request body")
 		return
 	}
-	if err := h.service.Edit(c.Request.Context(), c.Param("mediaId"), c.Param("termId"), req.TermZh, req.Confirmed); err != nil {
+	if err := h.service.Edit(c.Request.Context(), c.Param("id"), c.Param("termId"), req.TermZh, req.Confirmed); err != nil {
 		h.writeErr(c, err, "edit glossary term")
 		return
 	}
 	NoContentResponse(c)
 }
 
-// Confirm handles POST /api/v1/media/:mediaId/glossary/:termId/confirm
+// Confirm handles POST /api/v1/media/:id/glossary/:termId/confirm
 func (h *GlossaryHandler) Confirm(c *gin.Context) {
-	if err := h.service.Confirm(c.Request.Context(), c.Param("mediaId"), c.Param("termId")); err != nil {
+	if err := h.service.Confirm(c.Request.Context(), c.Param("id"), c.Param("termId")); err != nil {
 		h.writeErr(c, err, "confirm glossary term")
 		return
 	}
 	NoContentResponse(c)
 }
 
-// ConfirmAll handles POST /api/v1/media/:mediaId/glossary/confirm-all
+// ConfirmAll handles POST /api/v1/media/:id/glossary/confirm-all
 func (h *GlossaryHandler) ConfirmAll(c *gin.Context) {
-	n, err := h.service.ConfirmAll(c.Request.Context(), c.Param("mediaId"))
+	n, err := h.service.ConfirmAll(c.Request.Context(), c.Param("id"))
 	if err != nil {
 		h.writeErr(c, err, "confirm all glossary terms")
 		return
@@ -117,9 +119,9 @@ func (h *GlossaryHandler) ConfirmAll(c *gin.Context) {
 	SuccessResponse(c, gin.H{"confirmed": n})
 }
 
-// Delete handles DELETE /api/v1/media/:mediaId/glossary/:termId
+// Delete handles DELETE /api/v1/media/:id/glossary/:termId
 func (h *GlossaryHandler) Delete(c *gin.Context) {
-	if err := h.service.Delete(c.Request.Context(), c.Param("mediaId"), c.Param("termId")); err != nil {
+	if err := h.service.Delete(c.Request.Context(), c.Param("id"), c.Param("termId")); err != nil {
 		h.writeErr(c, err, "delete glossary term")
 		return
 	}
