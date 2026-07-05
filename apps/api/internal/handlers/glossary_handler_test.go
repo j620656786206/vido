@@ -64,6 +64,19 @@ func setupGlossaryRouter(svc services.GlossaryServiceInterface) *gin.Engine {
 	return r
 }
 
+// Regression for the 9R-15 startup panic: glossary routes must share the :id
+// wildcard with the pre-existing /media/:id/* routes (metadata_handler) — gin
+// panics at registration when wildcard names differ on the same segment.
+func TestGlossaryHandler_RegisterRoutes_CoexistsWithMediaIDRoutes(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	apiV1 := r.Group("/api/v1")
+	apiV1.PUT("/media/:id/metadata", func(c *gin.Context) {}) // mirrors metadata_handler
+	require.NotPanics(t, func() {
+		NewGlossaryHandler(&mockGlossaryService{}).RegisterRoutes(apiV1)
+	})
+}
+
 func TestGlossaryHandler_List(t *testing.T) {
 	svc := &mockGlossaryService{listResp: []models.GlossaryTerm{{ID: "g1", TermSrc: "Vecna", TermZh: "維克那"}}}
 	r := setupGlossaryRouter(svc)

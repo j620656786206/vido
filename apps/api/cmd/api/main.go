@@ -697,7 +697,7 @@ func main() {
 		exploreBlocksHandler.RegisterRoutes(apiV1)  // /api/v1/explore-blocks CRUD + content (Story 10.3)
 		filterPresetsHandler.RegisterRoutes(apiV1)  // /api/v1/filter-presets CRUD (Story 11.4)
 		requestHandler.RegisterRoutes(apiV1)        // /api/v1/requests create+list (Story 13-1a, Epic 13)
-		glossaryHandler.RegisterRoutes(apiV1)       // /api/v1/media/:mediaId/glossary CRUD (Story 9R-15)
+		glossaryHandler.RegisterRoutes(apiV1)       // /api/v1/media/:id/glossary CRUD (Story 9R-15)
 		dvrSettingsHandler.RegisterRoutes(apiV1)    // /api/v1/settings/radarr triad + profiles/root-folders passthrough (Story 13-4a)
 		recentMediaHandler.RegisterRoutes(apiV1)
 		scannerHandler.RegisterRoutes(apiV1)
