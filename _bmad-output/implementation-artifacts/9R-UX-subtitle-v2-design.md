@@ -1,6 +1,6 @@
 # Story 9R-UX — Subtitle management v2 design (generation-centric, `.pen` flow-f-subtitle-v2)
 
-Status: review
+Status: done
 
 **Epic:** epic-9R-subtitle-route-c (Track 0 — UX design) · **doubles as** Epic 6 `ux3-subtitle-v2` per-flow-recipe step 1 (PH3-M5)
 **Owner:** ux-designer (Sally / Pencil MCP) · **Type:** design (delivers `.pen` + screenshots, not code) · **Priority:** P0 — **gates Epic 6 (ux3-subtitle-v2) frontend** · **Feasibility:** PROVEN (Route C POC validated the flow end-to-end)
