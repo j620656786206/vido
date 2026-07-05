@@ -66,6 +66,12 @@ type Config struct {
 	AIRatePerSec    float64
 	AIRunBudgetUSD  float64
 
+	// ASR engine (Story 9R-9). ASRBaseURL swaps the transcription endpoint to a
+	// self-hosted OpenAI-compatible server (Speaches/WhisperLive/Subgen); empty
+	// = OpenAI Whisper. ASRModel is that engine's model id.
+	ASRBaseURL string
+	ASRModel   string
+
 	// TMDb configuration
 	TMDbDefaultLanguage   string
 	TMDbFallbackLanguages []string
@@ -119,6 +125,9 @@ func Load() (*Config, error) {
 	cfg.AIMaxConcurrent = cfg.loadInt("AI_MAX_CONCURRENT", 3)
 	cfg.AIRatePerSec = cfg.loadFloat("AI_RATE_PER_SEC", 2.0)
 	cfg.AIRunBudgetUSD = cfg.loadFloat("AI_RUN_BUDGET_USD", 5.0)
+	// ASR engine (9R-9): empty base URL = OpenAI Whisper default.
+	cfg.ASRBaseURL = cfg.loadString("ASR_BASE_URL", "")
+	cfg.ASRModel = cfg.loadString("ASR_MODEL", "")
 	cfg.OpenAIAPIKey = cfg.loadString("OPENAI_API_KEY", "")
 	cfg.EncryptionKey = cfg.loadString("ENCRYPTION_KEY", "")
 

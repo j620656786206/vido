@@ -496,7 +496,15 @@ func main() {
 	// Initialize Whisper client and transcription service (Story 9.2a)
 	var transcriptionService *services.TranscriptionService
 	if cfg.HasOpenAIKey() && audioExtractorService.IsAvailable() {
-		whisperClient := ai.NewWhisperClient(cfg.GetOpenAIAPIKey(), ai.WithWhisperGovernor(aiGovernor))
+		whisperOpts := []ai.WhisperOption{ai.WithWhisperGovernor(aiGovernor)}
+		if cfg.ASRBaseURL != "" {
+			whisperOpts = append(whisperOpts, ai.WithWhisperBaseURL(cfg.ASRBaseURL))
+		}
+		if cfg.ASRModel != "" {
+			whisperOpts = append(whisperOpts, ai.WithWhisperModel(cfg.ASRModel))
+		}
+		whisperClient := ai.NewWhisperClient(cfg.GetOpenAIAPIKey(), whisperOpts...)
+		slog.Info("ASR provider (OpenAI-compatible)", "base_url_override", cfg.ASRBaseURL != "", "model_override", cfg.ASRModel)
 		transcriptionService = services.NewTranscriptionService(audioExtractorService, whisperClient, sseHub, slog.Default())
 		transcriptionService.SetRunBudgetUSD(cfg.AIRunBudgetUSD)
 		// 9R-10: wire the per-show glossary + OpenCC safety net + atomic placer
