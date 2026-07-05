@@ -67,6 +67,32 @@ describe('transcriptionService.startTranscription', () => {
     });
   });
 
+  it('a bare 503 WITHOUT the TRANSCRIPTION_DISABLED code (reverse-proxy outage) throws fail-soft, not 尚未設定', async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 503,
+      json: () => Promise.reject(new Error('not json')), // proxy HTML error page
+    });
+
+    await expect(transcriptionService.startTranscription(42)).rejects.toThrow(
+      'API request failed: 503'
+    );
+  });
+
+  it('a 409 WITHOUT the TRANSCRIPTION_IN_PROGRESS code throws instead of silently attaching', async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 409,
+      json: () =>
+        Promise.resolve({
+          success: false,
+          error: { code: 'SOMETHING_ELSE', message: '衝突' },
+        }),
+    });
+
+    await expect(transcriptionService.startTranscription(42)).rejects.toThrow('衝突');
+  });
+
   it('throws the envelope message for other errors (404 → fail-soft + 重試)', async () => {
     mockFetch.mockResolvedValue({
       ok: false,

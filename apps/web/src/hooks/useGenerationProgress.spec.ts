@@ -260,6 +260,23 @@ describe('useGenerationProgress (lazy SSE, double-nested envelope)', () => {
     expect(MockEventSource.instances.length).toBeGreaterThanOrEqual(2);
   });
 
+  it('[P1] startTracking after an SSE error cancels the stale backoff timer (no healthy-stream bounce)', async () => {
+    const { result } = renderHook(() => useGenerationProgress());
+    act(() => result.current.startTracking(42));
+    const es = MockEventSource.instances[0];
+
+    act(() => es.triggerError()); // schedules the 10s backoff
+    act(() => result.current.startTracking(42)); // user re-triggers immediately
+
+    expect(MockEventSource.instances).toHaveLength(2);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10000);
+    });
+    // The stale timer must NOT fire a third connect that bounces the healthy stream.
+    expect(MockEventSource.instances).toHaveLength(2);
+    expect(MockEventSource.instances[1].readyState).not.toBe(2);
+  });
+
   it('[P1] ignores malformed frames without crashing', () => {
     const { result } = renderHook(() => useGenerationProgress());
     act(() => result.current.startTracking(42));

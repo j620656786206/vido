@@ -50,6 +50,11 @@ so that I get reliable 繁體中文 subtitles from the pipeline that actually wo
 
 **Cross-stack split check:** backend tasks = 0, frontend tasks = 7 → single story, no a/b split required.
 
+### Review Follow-ups (AI)
+
+- [ ] [AI-Review][MED] AC 7 says gallery fixtures "for each new component", but only the two Library-registered components (GenerationProgressV2 XkGvG, GlossaryRowV2 nDSEd) got fixtures — `ManageSubtitleDialogV2` and `GlossaryPanelV2` have none, while the v1 `SubtitleSearchDialog` DOES have one (precedent) [apps/web/src/routes/test/-gallery.fixtures.tsx:3074]. Deviation is defensible (both are data-coupled: `useGlossaryTerms` auto-fires on `open`, so a fixture would bake a loading/error race into the baseline; the pre-existing `ui-dialog/default` darwin mismatch also blocks `test:visual:update-missing`) but was UNRECORDED until this review. Decide at the Sally gate: add fixtures with a mocked-idle variant, or amend AC 7's scope note.
+- [ ] [AI-Review][LOW] 簡中 token divergence: the dialog's 簡中 track pill uses `--info-tint`/`--info` [apps/web/src/components/subtitle/ManageSubtitleDialogV2.tsx languageDescriptor], while the library badge (`deriveSubtitleStatus`) renders 簡中 with `--accent-tint`/`--accent-text` [apps/web/src/utils/libraryStatus.ts:102]. AC 6 wants states to "read as one system (§2.5 token map)" — exported screenshots are 400px and inconclusive; Sally to confirm which token the F1 frame specifies and align one side.
+
 ## Dev Notes
 
 ### Backend surface (code-verified 2026-07-05 — do NOT re-derive from stories)
@@ -163,6 +168,22 @@ Claude Fable 5 (claude-fable-5) — DEV Amelia, 2026-07-05
 - Verification residue for the review gate: FULL-APP browser verify of the dialog @390/768/1440 against `flow-f-subtitle-v2/` PNGs was not possible locally (no seeded backend; dev API returned 500 behind the proxy). Component-level visual verification done via the 9 new gallery baselines, which match the Pencil frames. Sally's mandatory UX screenshot comparison at review covers the dialog-level check.
 - No new search params (Rule 26 clean); no `Date.now()`/`new Date()` in any new component (Rule 23 grep + ESLint clean).
 
+### Senior Dev Review — adversarial CR pass 1 (2026-07-05)
+
+Gates: 🔒 Rule 7 Wire Format: N/A (no Go error-code files in scope) · 🔒 Rule 20 Contract Bump: N/A (no stamp bumps in this review) · 🔒 Rule 25 Mega-line: N/A (project-context.md untouched). Visual hygiene verified: exactly 9 NEW `-darwin` PNGs, 0 modified baselines, 0 `-linux`.
+
+Fixes applied in-review (all suites re-run green, `lint:all` 0 errors, `prettier --check .` clean, build green):
+
+- **[MED fixed] `transcriptionService.ts`** — 503/409 were mapped to disabled/inProgress on bare HTTP status; a reverse-proxy 503 (backend down, HTML body) would render 尚未設定+前往設定 instead of fail-soft 重試. Now gated on `error.code === 'TRANSCRIPTION_DISABLED' / 'TRANSCRIPTION_IN_PROGRESS'`; +2 spec cases.
+- **[MED fixed] `useGenerationProgress.ts`** — a pending 10s backoff timer survived into a fresh `connect()` (error → user re-triggers within 10s): the stale timer bounced the healthy stream, and a terminal event landing in the bounce gap would be lost forever (stepper stuck). `connect()` now cancels the pending reconnect; +1 spec case.
+- **[MED fixed] zh-script set duplication** — `ManageSubtitleDialogV2` redeclared the HANT/HANS sets locally (drift risk vs `deriveSubtitleStatus`, AC 1a "reuse semantics"). Sets are now exported from `utils/libraryStatus.ts` (single source) and imported.
+- **[LOW fixed] `glossaryOpen` not reset on dialog close** (fetchOpen/genView were) — reopening 管理字幕 after closing with the glossary panel open resurrected the panel; +1 spec case.
+- **[LOW fixed] local `fetch` shadowed `window.fetch`** in `ManageSubtitleDialogV2` — renamed to `onlineSearch`.
+- **[LOW fixed] glossary add-form 原文 input ignored Enter** (譯名 input submitted) — keyboard flow now consistent.
+- **[LOW fixed] `GenerationProgressV2` prop-doc** said `'idle'` renders extracting-**pending**; implementation renders it active — doc corrected to match.
+
+Open items (Review Follow-ups below): AC 7 fixture-coverage deviation recorded; 簡中 pill token question for the Sally gate.
+
 ### Discovery Triage
 
 Story-authoring-time discoveries (SM Bob, 2026-07-05 — all filed in sprint-status.yaml the same day):
@@ -196,6 +217,7 @@ New:
 
 Modified:
 
+- `apps/web/src/utils/libraryStatus.ts` (CR pass 1: export canonical HANT/HANS sets — single source for zh-script classification)
 - `apps/web/src/components/media/LocalDetailV2.tsx` (dialog swap + AC 6 invalidation) + `LocalDetailV2.spec.tsx`
 - `apps/web/src/routes/test/-gallery.fixtures.tsx` (9 fixtures: 6× GenerationProgressV2 frozen-stage states, 3× GlossaryRowV2)
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` (ux3-subtitle-v2 → review; +2 ③ discovery entries)

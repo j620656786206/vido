@@ -61,8 +61,13 @@ interface SubtitleTrack {
   lang?: string;
 }
 
-const HANT = new Set(['zh-hant', 'zh-tw', 'zh', 'zh-hk']);
-const HANS = new Set(['zh-hans', 'zh-cn']);
+/**
+ * Canonical zh-script classification (lowercased BCP-47-ish tags). Exported so
+ * every subtitle surface (badges here, ManageSubtitleDialogV2 track pills, §9b
+ * CN-policy display) classifies 繁/簡 identically — do NOT redeclare locally.
+ */
+export const HANT = new Set(['zh-hant', 'zh-tw', 'zh', 'zh-hk']);
+export const HANS = new Set(['zh-hans', 'zh-cn']);
 
 /** Subtitle badge from embedded file tracks (`subtitleTracks` JSON). */
 function deriveFromTracks(media: Media): StatusDescriptor | null {

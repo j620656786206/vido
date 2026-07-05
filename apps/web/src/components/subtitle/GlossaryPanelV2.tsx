@@ -76,6 +76,7 @@ export function GlossaryPanelV2({ mediaId, mediaTitle, open, onOpenChange }: Glo
         type="text"
         value={draftSrc}
         onChange={(e) => setDraftSrc(e.target.value)}
+        onKeyDown={(e) => e.key === 'Enter' && submitAdd()}
         placeholder="原文（例：Demogorgon）"
         aria-label="原文詞彙"
         data-testid="glossary-add-src"

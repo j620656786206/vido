@@ -39,6 +39,8 @@ import {
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '../ui/Dialog';
 import { cn } from '../../lib/utils';
+// Canonical zh-script sets (deriveSubtitleStatus semantics, AC 1a) — single source.
+import { HANT, HANS } from '../../utils/libraryStatus';
 import { transcriptionService } from '../../services/transcriptionService';
 import type { SubtitleSearchResult } from '../../services/subtitleService';
 import { useGenerationProgress } from '../../hooks/useGenerationProgress';
@@ -46,9 +48,6 @@ import { useGlossaryTerms } from '../../hooks/useGlossary';
 import { useSubtitleSearch } from '../../hooks/useSubtitleSearch';
 import { GenerationProgressV2 } from './GenerationProgressV2';
 import { GlossaryPanelV2 } from './GlossaryPanelV2';
-
-const HANT = new Set(['zh-hant', 'zh-tw', 'zh', 'zh-hk']);
-const HANS = new Set(['zh-hans', 'zh-cn']);
 
 interface TrackRow {
   key: string;
@@ -170,7 +169,8 @@ export function ManageSubtitleDialogV2({
   const glossaryCount = glossary.data?.length ?? 0;
 
   // Dormant fetch section (reuses the Epic 8 hook; results WITHOUT chips/scores).
-  const fetch = useSubtitleSearch();
+  // Named onlineSearch — `fetch` would shadow window.fetch inside this component.
+  const onlineSearch = useSubtitleSearch();
 
   const trigger = useMutation({
     mutationFn: () => transcriptionService.startTranscription(Number(mediaId)),
@@ -202,6 +202,7 @@ export function ManageSubtitleDialogV2({
         setGenView('idle');
         setTriggerError(null);
         setFetchOpen(false);
+        setGlossaryOpen(false); // don't resurrect the glossary panel on reopen
       }
       onOpenChange(next);
     },
@@ -213,12 +214,12 @@ export function ManageSubtitleDialogV2({
   const dialogTitle = inProgressView ? `生成字幕 — ${mediaTitle}` : `管理字幕 — ${mediaTitle}`;
 
   const handleFetchSearch = useCallback(() => {
-    fetch.search({ mediaId, mediaType, query: mediaTitle });
-  }, [fetch, mediaId, mediaType, mediaTitle]);
+    onlineSearch.search({ mediaId, mediaType, query: mediaTitle });
+  }, [onlineSearch, mediaId, mediaType, mediaTitle]);
 
   const handleFetchDownload = useCallback(
     (result: SubtitleSearchResult) => {
-      fetch.download(
+      onlineSearch.download(
         {
           mediaId,
           mediaType,
@@ -232,7 +233,15 @@ export function ManageSubtitleDialogV2({
         { onSuccess: () => onDownloadSuccess?.() }
       );
     },
-    [fetch, mediaId, mediaType, mediaFilePath, mediaResolution, isCNContent, onDownloadSuccess]
+    [
+      onlineSearch,
+      mediaId,
+      mediaType,
+      mediaFilePath,
+      mediaResolution,
+      isCNContent,
+      onDownloadSuccess,
+    ]
   );
 
   return (
@@ -449,24 +458,26 @@ export function ManageSubtitleDialogV2({
                     <button
                       type="button"
                       onClick={handleFetchSearch}
-                      disabled={fetch.isSearching}
+                      disabled={onlineSearch.isSearching}
                       data-testid="fetch-search"
                       className="flex min-h-[44px] items-center rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-4 text-sm text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-primary)] disabled:opacity-50"
                     >
-                      {fetch.isSearching ? '搜尋中…' : '搜尋'}
+                      {onlineSearch.isSearching ? '搜尋中…' : '搜尋'}
                     </button>
                   </div>
-                  {fetch.searchError && (
+                  {onlineSearch.searchError && (
                     <p className="text-[13px] text-[var(--error-text)]">
-                      搜尋失敗：{fetch.searchError.message}
+                      搜尋失敗：{onlineSearch.searchError.message}
                     </p>
                   )}
-                  {!fetch.isSearching && fetch.results.length === 0 && !fetch.searchError && (
-                    <p className="text-xs text-[var(--text-muted)]">
-                      尚無結果 — 線上來源成功率低，建議改用生成字幕
-                    </p>
-                  )}
-                  {fetch.results.map((result) => (
+                  {!onlineSearch.isSearching &&
+                    onlineSearch.results.length === 0 &&
+                    !onlineSearch.searchError && (
+                      <p className="text-xs text-[var(--text-muted)]">
+                        尚無結果 — 線上來源成功率低，建議改用生成字幕
+                      </p>
+                    )}
+                  {onlineSearch.results.map((result) => (
                     <div
                       key={result.id}
                       data-testid={`fetch-result-${result.id}`}
@@ -478,7 +489,7 @@ export function ManageSubtitleDialogV2({
                       <span className="shrink-0 text-[11px] text-[var(--text-secondary)]">
                         {result.language}
                       </span>
-                      {fetch.downloadErrorMap[result.id] && (
+                      {onlineSearch.downloadErrorMap[result.id] && (
                         <span className="shrink-0 text-[11px] text-[var(--error-text)]">
                           下載失敗
                         </span>
@@ -487,13 +498,14 @@ export function ManageSubtitleDialogV2({
                         type="button"
                         onClick={() => handleFetchDownload(result)}
                         disabled={
-                          fetch.downloadingIds.has(result.id) || fetch.downloadedIds.has(result.id)
+                          onlineSearch.downloadingIds.has(result.id) ||
+                          onlineSearch.downloadedIds.has(result.id)
                         }
                         aria-label={`下載 ${result.filename}`}
                         data-testid={`fetch-download-${result.id}`}
                         className="flex min-h-[44px] w-10 shrink-0 items-center justify-center text-[var(--accent-text)] disabled:opacity-50"
                       >
-                        {fetch.downloadingIds.has(result.id) ? (
+                        {onlineSearch.downloadingIds.has(result.id) ? (
                           <Loader2
                             className="h-4 w-4 animate-spin motion-reduce:animate-none"
                             aria-hidden="true"

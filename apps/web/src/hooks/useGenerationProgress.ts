@@ -183,6 +183,13 @@ export function useGenerationProgress(options?: UseGenerationProgressOptions) {
   }, []);
 
   const connect = useCallback(() => {
+    // Cancel any pending backoff reconnect: a stale timer surviving into a fresh
+    // connection would bounce the healthy stream 10s later — a terminal event
+    // landing in that gap would be lost (no further events ever recover it).
+    if (reconnectRef.current) {
+      clearTimeout(reconnectRef.current);
+      reconnectRef.current = undefined;
+    }
     if (esRef.current) esRef.current.close();
     const es = new EventSource(`${API_BASE_URL}/events`);
     esRef.current = es;

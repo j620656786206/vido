@@ -325,4 +325,14 @@ describe('ManageSubtitleDialogV2 (F1 管理字幕)', () => {
     expect(h.reset).toHaveBeenCalled();
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
+
+  it('closing the dialog also closes the glossary panel (no resurrect on reopen)', async () => {
+    renderDialog(); // onOpenChange stub keeps `open` true, so internal state stays observable
+
+    fireEvent.click(await screen.findByTestId('open-glossary'));
+    expect(screen.getByTestId('glossary-panel-stub')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('dialog-close'));
+    expect(screen.queryByTestId('glossary-panel-stub')).not.toBeInTheDocument();
+  });
 });

@@ -40,8 +40,15 @@ export const transcriptionService = {
     const json = await response.json().catch(() => ({}) as Record<string, unknown>);
     const envelope = json as ApiResponse<unknown>;
 
-    if (response.status === 503) return { status: 'disabled' };
-    if (response.status === 409) return { status: 'inProgress' };
+    // Gate the two designed states on the WIRE ERROR CODE, not the bare HTTP
+    // status: a reverse-proxy 503 (backend down, HTML body → empty envelope)
+    // must fail-soft with 重試, NOT render the 尚未設定 settings CTA.
+    if (response.status === 503 && envelope.error?.code === 'TRANSCRIPTION_DISABLED') {
+      return { status: 'disabled' };
+    }
+    if (response.status === 409 && envelope.error?.code === 'TRANSCRIPTION_IN_PROGRESS') {
+      return { status: 'inProgress' };
+    }
 
     if (!response.ok || !envelope.success) {
       throw new Error(envelope.error?.message || `API request failed: ${response.status}`);

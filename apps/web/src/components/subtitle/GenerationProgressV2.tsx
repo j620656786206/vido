@@ -41,7 +41,7 @@ const PHASE_INDEX: Record<ActivePhase, number> = {
 };
 
 export interface GenerationProgressV2Props {
-  /** Current pipeline phase (from useGenerationProgress; 'idle' renders as extracting-pending). */
+  /** Current pipeline phase (from useGenerationProgress; 'idle' renders 提取音訊 as active-waiting). */
   phase: GenerationPhase;
   /** Stage that was live when the failure arrived — labels 失敗於{stage}. */
   failedPhase?: ActivePhase | null;
