@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   createRootRoute,
   createRoute,
@@ -11,7 +12,9 @@ import {
 
 const h = vi.hoisted(() => ({ local: {} as Record<string, unknown> }));
 
-vi.mock('../../hooks/useMediaDetails', () => ({
+vi.mock('../../hooks/useMediaDetails', async (importOriginal) => ({
+  // keep the REAL detailKeys (AC 6 invalidation asserts against them)
+  detailKeys: (await importOriginal<typeof import('../../hooks/useMediaDetails')>()).detailKeys,
   useLocalMovieDetails: () => h.local,
   useLocalSeriesDetails: () => ({
     data: undefined,
@@ -50,12 +53,30 @@ vi.mock('./DoubanSection', () => ({ DoubanSection: () => null }));
 vi.mock('./CreditsSection', () => ({ CreditsSection: () => null }));
 vi.mock('./DualRatingDisplay', () => ({ DualRatingDisplay: () => null }));
 vi.mock('../metadata-editor', () => ({ MetadataEditorDialog: () => null }));
-vi.mock('../subtitle/SubtitleSearchDialog', () => ({
-  SubtitleSearchDialog: ({ open }: { open: boolean }) =>
-    open ? <div data-testid="subtitle-dialog" /> : null,
+// v2 shell swap (ux3-subtitle-v2 Task 6): LocalDetailV2 renders the NEW
+// ManageSubtitleDialogV2 (the v1 SubtitleSearchDialog file stays for the legacy shell).
+vi.mock('../subtitle/ManageSubtitleDialogV2', () => ({
+  ManageSubtitleDialogV2: ({
+    open,
+    onGenerationComplete,
+  }: {
+    open: boolean;
+    onGenerationComplete?: () => void;
+  }) =>
+    open ? (
+      <div data-testid="subtitle-dialog">
+        <button
+          type="button"
+          data-testid="stub-generation-complete"
+          onClick={() => onGenerationComplete?.()}
+        />
+      </div>
+    ) : null,
 }));
 
 import { LocalDetailV2 } from './LocalDetailV2';
+import { detailKeys } from '../../hooks/useMediaDetails';
+import { libraryKeys } from '../../hooks/useLibrary';
 
 function movie(over: Record<string, unknown> = {}) {
   return {
@@ -89,9 +110,16 @@ function movie(over: Record<string, unknown> = {}) {
   };
 }
 
-function renderDetail() {
+function renderDetail(
+  queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+) {
   const rootRoute = createRootRoute({
-    component: () => React.createElement(LocalDetailV2, { type: 'movie', id: 'abc' }),
+    component: () =>
+      React.createElement(
+        QueryClientProvider,
+        { client: queryClient },
+        React.createElement(LocalDetailV2, { type: 'movie', id: 'abc' })
+      ),
   });
   const library = createRoute({
     getParentRoute: () => rootRoute,
@@ -127,10 +155,22 @@ describe('LocalDetailV2', () => {
     expect(screen.queryByText('播放')).not.toBeInTheDocument();
   });
 
-  it('opens the subtitle dialog from 管理字幕', async () => {
+  it('opens the v2 manage-subtitle dialog from 管理字幕', async () => {
     renderDetail();
     fireEvent.click(await screen.findByTestId('action-manage-subtitle'));
     expect(await screen.findByTestId('subtitle-dialog')).toBeInTheDocument();
+  });
+
+  it('invalidates media-detail + library caches on transcription_complete (AC 6)', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries');
+    renderDetail(queryClient);
+
+    fireEvent.click(await screen.findByTestId('action-manage-subtitle'));
+    fireEvent.click(await screen.findByTestId('stub-generation-complete'));
+
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: detailKeys.localMovie('abc') });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: libraryKeys.all });
   });
 
   it('hides 管理字幕 / 複製路徑 when the item has no local filePath', async () => {

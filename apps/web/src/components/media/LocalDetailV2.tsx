@@ -14,9 +14,11 @@
  * 修改資訊, and 複製檔案路徑.
  */
 import { useState, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { Pencil, Subtitles, Copy, Check } from 'lucide-react';
 import {
+  detailKeys,
   useLocalMovieDetails,
   useLocalSeriesDetails,
   useMovieCredits,
@@ -25,6 +27,7 @@ import {
   useRecommendations,
   useWatchProviders,
 } from '../../hooks/useMediaDetails';
+import { libraryKeys } from '../../hooks/useLibrary';
 import { useDoubanRating } from '../../hooks/useDoubanRating';
 import { useDoubanReviewSummary } from '../../hooks/useDoubanReviewSummary';
 import { CreditsSection } from './CreditsSection';
@@ -36,7 +39,7 @@ import { DoubanSection } from './DoubanSection';
 import { DualRatingDisplay } from './DualRatingDisplay';
 import { MetadataEditorDialog } from '../metadata-editor';
 import type { MediaMetadata } from '../metadata-editor';
-import { SubtitleSearchDialog } from '../subtitle/SubtitleSearchDialog';
+import { ManageSubtitleDialogV2 } from '../subtitle/ManageSubtitleDialogV2';
 import { DetailHeroV2 } from './DetailHeroV2';
 import { DetailTechInfoV2 } from './DetailTechInfoV2';
 import { DetailSkeletonV2, DetailNotFoundV2 } from './DetailStatesV2';
@@ -46,6 +49,7 @@ const WATCH_REGION = 'TW';
 
 export function LocalDetailV2({ type, id }: { type: 'movie' | 'tv'; id: string }) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const isMovie = type === 'movie';
   const [editorOpen, setEditorOpen] = useState(false);
   const [subtitleOpen, setSubtitleOpen] = useState(false);
@@ -72,6 +76,19 @@ export function LocalDetailV2({ type, id }: { type: 'movie' | 'tv'; id: string }
   const watch = useWatchProviders(tmdbId, isMovie ? 'movie' : 'tv', tmdbId > 0, WATCH_REGION);
 
   const onBack = useCallback(() => navigate({ to: '/library' }), [navigate]);
+
+  // AC 6 lifecycle consistency (N1): on transcription_complete, refetch the media
+  // detail + library lists so poster badges (deriveSubtitleStatus) refresh without
+  // reload. NOTE (annotated 2026-07-05): the transcription path does not yet write
+  // movies.subtitle_status/subtitle_language — until 9R-16 AC 12 lands this refetches
+  // unchanged data and the badge stays 缺字幕 (a rescan fixes it). Correct FE
+  // behavior as specced; NO client-side badge override.
+  const onGenerationComplete = useCallback(() => {
+    queryClient.invalidateQueries({
+      queryKey: isMovie ? detailKeys.localMovie(id) : detailKeys.localSeries(id),
+    });
+    queryClient.invalidateQueries({ queryKey: libraryKeys.all });
+  }, [queryClient, isMovie, id]);
 
   const buildEditorMetadata = useCallback((): MediaMetadata | null => {
     if (!data) return null;
@@ -259,14 +276,18 @@ export function LocalDetailV2({ type, id }: { type: 'movie' | 'tv'; id: string }
       )}
 
       {filePath && (
-        <SubtitleSearchDialog
+        <ManageSubtitleDialogV2
           mediaId={id}
           mediaType={isMovie ? 'movie' : 'series'}
           mediaTitle={data.title}
           mediaFilePath={filePath}
           mediaResolution={data.videoResolution}
+          subtitleTracks={data.subtitleTracks}
+          subtitleStatus={data.subtitleStatus}
+          subtitleLanguage={data.subtitleLanguage}
           open={subtitleOpen}
           onOpenChange={setSubtitleOpen}
+          onGenerationComplete={onGenerationComplete}
           onDownloadSuccess={() => (isMovie ? localMovie.refetch() : localSeries.refetch())}
         />
       )}

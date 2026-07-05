@@ -168,6 +168,8 @@ import { RetryQueuePanel } from '../../components/retry/RetryQueuePanel';
 import { RetryQueueWithNotifications } from '../../components/retry/RetryQueueWithNotifications';
 import { SubtitleSearchDialog } from '../../components/subtitle/SubtitleSearchDialog';
 import { BatchSubtitlePanel } from '../../components/subtitle/BatchSubtitleDialog';
+import { GenerationProgressV2 } from '../../components/subtitle/GenerationProgressV2';
+import { GlossaryRowV2 } from '../../components/subtitle/GlossaryRowV2';
 import { BackupManagement } from '../../components/settings/BackupManagement';
 import { BackupScheduleConfig } from '../../components/settings/BackupScheduleConfig';
 import { CacheManagement } from '../../components/settings/CacheManagement';
@@ -3326,5 +3328,148 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     },
     penNode: 'screen-section',
     statesOnly: ['default'],
+  },
+
+  // ----- subtitle/ v2 generation (ux3-subtitle-v2) -----
+  // GenerationProgressV2 — fixture states named after the FROZEN stage vocabulary
+  // (提取音訊/轉錄中/翻譯中/簡轉繁/AI校正/完成 + 失敗; renaming breaks fixture↔baseline
+  // mapping — story ux3-subtitle-v2 AC 3 / Rule 23 note). Rule 23: the component
+  // reads NO wall clock — all timing text is the server-supplied `message` prop,
+  // so no clockTime pinning is needed.
+  {
+    id: 'generation-progress-v2/提取音訊',
+    label: 'subtitle/GenerationProgressV2 (提取音訊)',
+    component: GenerationProgressV2 as ComponentType<Record<string, unknown>>,
+    props: { phase: 'extracting', message: '正在提取音訊軌' },
+    penNode: 'XkGvG', // Component/GenerationProgress-v2
+    statesOnly: ['default'],
+    width: 720,
+  },
+  {
+    id: 'generation-progress-v2/轉錄中',
+    label: 'subtitle/GenerationProgressV2 (轉錄中)',
+    component: GenerationProgressV2 as ComponentType<Record<string, unknown>>,
+    props: { phase: 'transcribing', message: '正在轉錄音訊（Whisper large-v3）— 12:34 / 45:10' },
+    penNode: 'XkGvG',
+    statesOnly: ['default'],
+    width: 720,
+  },
+  {
+    id: 'generation-progress-v2/翻譯中',
+    label: 'subtitle/GenerationProgressV2 (翻譯中)',
+    component: GenerationProgressV2 as ComponentType<Record<string, unknown>>,
+    props: { phase: 'translating', percentage: 62.5, message: '翻譯中（glossary-aware）' },
+    penNode: 'XkGvG',
+    statesOnly: ['default'],
+    width: 720,
+  },
+  {
+    id: 'generation-progress-v2/完成',
+    label: 'subtitle/GenerationProgressV2 (完成 — 簡轉繁/AI校正 atomically done)',
+    component: GenerationProgressV2 as ComponentType<Record<string, unknown>>,
+    props: { phase: 'complete', message: '字幕已生成' },
+    penNode: 'XkGvG',
+    statesOnly: ['default'],
+    width: 720,
+  },
+  {
+    id: 'generation-progress-v2/失敗',
+    label: 'subtitle/GenerationProgressV2 (失敗於翻譯中 + 重試)',
+    component: GenerationProgressV2 as ComponentType<Record<string, unknown>>,
+    props: {
+      phase: 'failed',
+      failedPhase: 'translating',
+      error: 'AI 服務逾時，已保留轉錄結果',
+      onRetry: noop,
+    },
+    penNode: 'XkGvG',
+    statesOnly: ['default'],
+    width: 720,
+  },
+  {
+    id: 'generation-progress-v2/cost-slot',
+    label: 'subtitle/GenerationProgressV2 (dormant cost slot lit — 9R-17 preview)',
+    component: GenerationProgressV2 as ComponentType<Record<string, unknown>>,
+    props: {
+      phase: 'transcribing',
+      message: '正在轉錄音訊',
+      costUsedText: '$0.42',
+      costLimitText: '$5.00',
+    },
+    penNode: 'XkGvG',
+    statesOnly: ['default'],
+    width: 720,
+  },
+  {
+    id: 'glossary-row-v2/unconfirmed',
+    label: 'subtitle/GlossaryRowV2 (未確認 · 字幕來源)',
+    component: GlossaryRowV2 as ComponentType<Record<string, unknown>>,
+    props: {
+      term: {
+        id: 'fx-g1',
+        mediaId: '42',
+        termSrc: 'Demogorgon',
+        termZh: '魔王獸',
+        language: 'zh-Hant',
+        source: 'subtitle',
+        confirmed: false,
+        createdAt: '2026-07-01T00:00:00Z',
+        updatedAt: '2026-07-01T00:00:00Z',
+      },
+      onConfirm: noop,
+      onEdit: noop,
+      onDelete: noop,
+    },
+    penNode: 'nDSEd', // Component/GlossaryRow-v2
+    statesOnly: ['default'],
+    width: 720,
+  },
+  {
+    id: 'glossary-row-v2/confirmed-metadata',
+    label: 'subtitle/GlossaryRowV2 (已確認 · 中繼資料來源)',
+    component: GlossaryRowV2 as ComponentType<Record<string, unknown>>,
+    props: {
+      term: {
+        id: 'fx-g2',
+        mediaId: '42',
+        termSrc: 'Hawkins',
+        termZh: '霍金斯鎮',
+        language: 'zh-Hant',
+        source: 'metadata',
+        confirmed: true,
+        createdAt: '2026-07-01T00:00:00Z',
+        updatedAt: '2026-07-01T00:00:00Z',
+      },
+      onConfirm: noop,
+      onEdit: noop,
+      onDelete: noop,
+    },
+    penNode: 'nDSEd',
+    statesOnly: ['default'],
+    width: 720,
+  },
+  {
+    id: 'glossary-row-v2/manual',
+    label: 'subtitle/GlossaryRowV2 (未確認 · 手動來源)',
+    component: GlossaryRowV2 as ComponentType<Record<string, unknown>>,
+    props: {
+      term: {
+        id: 'fx-g3',
+        mediaId: '42',
+        termSrc: 'Vecna',
+        termZh: '維克那',
+        language: 'zh-Hant',
+        source: 'manual',
+        confirmed: false,
+        createdAt: '2026-07-01T00:00:00Z',
+        updatedAt: '2026-07-01T00:00:00Z',
+      },
+      onConfirm: noop,
+      onEdit: noop,
+      onDelete: noop,
+    },
+    penNode: 'nDSEd',
+    statesOnly: ['default'],
+    width: 720,
   },
 ];

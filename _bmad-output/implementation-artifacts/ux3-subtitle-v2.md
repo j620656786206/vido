@@ -1,6 +1,6 @@
 # Story ux3-subtitle-v2: Subtitle UI v2 — generation-centric per-item + glossary (PH3-M5 slice 1)
 
-Status: ready-for-dev
+Status: review
 
 > **Scope ruling at authoring (SM Bob, 2026-07-05):** the PH3-M5 umbrella ("detail 管理字幕 + Activity batch drive GENERATION") is delivered in TWO slices. THIS story = the per-item detail surface + glossary management/review + generation progress (all backend dependencies LIVE and code-verified). The batch-generation surfaces (F4/F8 + Activity launch CTA) are split to `ux3-subtitle-v2-batch` because **no Route C batch-generation endpoint exists** (code-verified 2026-07-05: `/api/v1/subtitles/batch` runs the Epic 8 provider-FETCH pipeline, not generation) — BE work filed as `9R-16-batch-generation-endpoint`. See Discovery Triage.
 
@@ -24,29 +24,29 @@ so that I get reliable 繁體中文 subtitles from the pipeline that actually wo
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Glossary API client (AC: 4)
-  - [ ] `apps/web/src/services/glossaryService.ts` — 6 routes (shapes in Dev Notes), Rule 18 `snakeToCamel`/`camelToSnake` at boundary, `mediaId` always **string**
-  - [ ] `glossaryService.spec.ts`
-- [ ] Task 2: `useGenerationProgress` hook (AC: 2, 8)
-  - [ ] Model `useDownloadProgress.ts`; lazy connect, 5 `transcription_*`/`translation_progress` events, envelope unwrap, media_id filter, phase→stage state machine, terminal close
-  - [ ] `useGenerationProgress.spec.ts` (mock EventSource; assert double-nested unwrap explicitly)
-- [ ] Task 3: `GenerationProgressV2` component (AC: 3, 5, 7)
-  - [ ] `apps/web/src/components/subtitle/GenerationProgressV2.tsx` — frozen stages, failed+重試, optional cost props (render-nothing default), Mono numerics, Rule 21 header `(XkGvG)`
-  - [ ] Spec + gallery fixture (fixture states named after frozen stage names)
-- [ ] Task 4: Glossary components (AC: 4, 5, 7)
-  - [ ] `GlossaryRowV2.tsx` (`nDSEd`) + `GlossaryPanelV2.tsx` (list/add/edit/confirm/delete/confirm-all + empty + error states)
-  - [ ] Specs + gallery fixtures
-- [ ] Task 5: `ManageSubtitleDialogV2` (AC: 1, 2, 5, 7)
-  - [ ] `apps/web/src/components/subtitle/ManageSubtitleDialogV2.tsx` — tracks section, 生成字幕 primary (movie wired / series disabled+hint), dormant fetch secondary reusing `useSubtitleSearch` + `subtitleService` (results WITHOUT source chips/score rows), glossary entry, CN-policy display, desktop/mobile per F1-D/F1-M
-  - [ ] 503→尚未設定+前往設定; 409→SSE attach; state frames F2 (缺字幕) / F4 (生成失敗) / F5 / F10 (載入骨架)
-  - [ ] Spec
-- [ ] Task 6: Wire v2 shell (AC: 1, 6)
-  - [ ] `LocalDetailV2.tsx`: swap `SubtitleSearchDialog` → `ManageSubtitleDialogV2` (v1 dialog file stays; legacy shell untouched)
-  - [ ] On `transcription_complete`: invalidate media-detail + library query keys (badge refresh)
-  - [ ] Spec update for `LocalDetailV2`
-- [ ] Task 7: Verification pass (AC: 9)
-  - [ ] Full `nx test web` affected suites green; `pnpm lint:all`; `pnpm exec prettier --check` on touched files
-  - [ ] Browser-verify dialog @390/768/1440 vs `flow-f-subtitle-v2/` PNGs; verify no `Date.now()` in new components (Rule 23 ESLint will also gate)
+- [x] Task 1: Glossary API client (AC: 4)
+  - [x] `apps/web/src/services/glossaryService.ts` — 6 routes (shapes in Dev Notes), Rule 18 `snakeToCamel`/`camelToSnake` at boundary, `mediaId` always **string**
+  - [x] `glossaryService.spec.ts`
+- [x] Task 2: `useGenerationProgress` hook (AC: 2, 8)
+  - [x] Model `useDownloadProgress.ts`; lazy connect, 5 `transcription_*`/`translation_progress` events, envelope unwrap, media_id filter, phase→stage state machine, terminal close
+  - [x] `useGenerationProgress.spec.ts` (mock EventSource; assert double-nested unwrap explicitly)
+- [x] Task 3: `GenerationProgressV2` component (AC: 3, 5, 7)
+  - [x] `apps/web/src/components/subtitle/GenerationProgressV2.tsx` — frozen stages, failed+重試, optional cost props (render-nothing default), Mono numerics, Rule 21 header `(XkGvG)`
+  - [x] Spec + gallery fixture (fixture states named after frozen stage names)
+- [x] Task 4: Glossary components (AC: 4, 5, 7)
+  - [x] `GlossaryRowV2.tsx` (`nDSEd`) + `GlossaryPanelV2.tsx` (list/add/edit/confirm/delete/confirm-all + empty + error states)
+  - [x] Specs + gallery fixtures
+- [x] Task 5: `ManageSubtitleDialogV2` (AC: 1, 2, 5, 7)
+  - [x] `apps/web/src/components/subtitle/ManageSubtitleDialogV2.tsx` — tracks section, 生成字幕 primary (movie wired / series disabled+hint), dormant fetch secondary reusing `useSubtitleSearch` + `subtitleService` (results WITHOUT source chips/score rows), glossary entry, CN-policy display, desktop/mobile per F1-D/F1-M
+  - [x] 503→尚未設定+前往設定; 409→SSE attach; state frames F2 (缺字幕) / F4 (生成失敗) / F5 / F10 (載入骨架)
+  - [x] Spec
+- [x] Task 6: Wire v2 shell (AC: 1, 6)
+  - [x] `LocalDetailV2.tsx`: swap `SubtitleSearchDialog` → `ManageSubtitleDialogV2` (v1 dialog file stays; legacy shell untouched)
+  - [x] On `transcription_complete`: invalidate media-detail + library query keys (badge refresh)
+  - [x] Spec update for `LocalDetailV2`
+- [x] Task 7: Verification pass (AC: 9)
+  - [x] Full `nx test web` affected suites green; `pnpm lint:all`; `pnpm exec prettier --check` on touched files
+  - [x] Browser-verify dialog @390/768/1440 vs `flow-f-subtitle-v2/` PNGs; verify no `Date.now()` in new components (Rule 23 ESLint will also gate) — component-level done via gallery baselines (frames read via Pencil MCP, structure/tokens matched exactly); FULL-APP dialog verify at the three breakpoints needs a seeded backend (none locally) → flagged for the review/Sally gate, see Completion Notes
 
 **Cross-stack split check:** backend tasks = 0, frontend tasks = 7 → single story, no a/b split required.
 
@@ -141,11 +141,27 @@ so that I get reliable 繁體中文 subtitles from the pipeline that actually wo
 
 ### Agent Model Used
 
-(fill at dev time)
+Claude Fable 5 (claude-fable-5) — DEV Amelia, 2026-07-05
 
 ### Debug Log References
 
+- Full `nx test web` (uncached): 223 files / 2391 tests green (+44 new).
+- `pnpm lint:all`: 0 errors, 123 pre-existing warnings; `prettier --check .` clean.
+- `pnpm nx build web`: green.
+- Visual baselines: `pnpm run test:visual:update` then `git checkout` of all 26 re-render-noise diffs — only the 9 NEW `-darwin` baselines staged (`generation-progress-v2/{提取音訊,轉錄中,翻譯中,完成,失敗,cost-slot}`, `glossary-row-v2/{unconfirmed,confirmed-metadata,manual}`). NOTE: `test:visual:update-missing` could NOT be used — the KNOWN pre-existing `ui-dialog/default` darwin mismatch hard-fails the mega-test loop before later fixtures are reached (`preexisting-fail-ui-dialog-darwin-visual`), so a full update + selective revert was required.
+
 ### Completion Notes List
+
+- All Rule 21 headers verified against Pencil MCP live: `XkGvG` (GenerationProgress-v2), `nDSEd` (GlossaryRow-v2), Screen ids r1EY9/S9Rbrq/JbXai/U8rRtv/f6ZxY/dlfMR/A85GFD/olDlj all real; frames read at full depth and matched (structure, tokens, copy).
+- **Stepper stage-count note:** the `.pen` `Component/GenerationProgress-v2` (XkGvG) draws FIVE steps (提取音訊/轉錄中/翻譯中/簡轉繁/完成 — no AI校正 node), while AC 3's FROZEN list has SIX. Implemented the story's six-stage list (story = single source of truth; the fixture vocabulary is stamped on it). Design-side sync of XkGvG (+AI校正 step) is a Sally follow-up — this story does not modify `ux-design.pen` per Dev Notes.
+- Mobile sheet (F1-M) = the SAME Radix Dialog with bottom-sheet positioning at `<sm` (AC 7 mandates Radix for modals; matches the frame's bottom-sheet look without a second dialog system).
+- CN policy (§9b / v16pVI): implemented as an INFO line under 簡中 tracks when `productionCountry` contains CN. The design's 轉為繁中 / 仍要轉換 ACTION buttons are NOT rendered — capability honor: no backend endpoint converts an EXISTING local track (OpenCC runs only inside download/generation pipelines). Triaged ③ below. Also: the local-detail API does not expose production_countries (`json:"-"`), so the prop is dormant in the v2 shell (same as v1 `SubtitleSearchDialog.productionCountry`, which LocalDetailV2 never passed either). Triaged ③ below.
+- F3's footer 取消 button (design) is NOT rendered as a job-cancel: no cancel route exists for transcription. The footer shows 關閉 + 「關閉後生成會在背景繼續」 hint (closing stops watching, job continues). Covered by the batch-cancel design in 9R-16 for the batch slice; per-item cancel not tracked (job is short and idempotent-retryable).
+- Generation trigger lives in a small `transcriptionService.ts` (202/503/409 discriminated union, always `translate=true`); not folded into `subtitleService.ts` (reuse map says keep as-is).
+- Glossary server state via `useGlossary.ts` (Rule 5: query + 5 mutations with list invalidation).
+- AC 6 implemented as specced: `LocalDetailV2.onGenerationComplete` invalidates `detailKeys.localMovie/localSeries(id)` + `libraryKeys.all`; badge stays 缺字幕 until 9R-16 AC 12 writeback (annotated in code, no client-side hack).
+- Verification residue for the review gate: FULL-APP browser verify of the dialog @390/768/1440 against `flow-f-subtitle-v2/` PNGs was not possible locally (no seeded backend; dev API returned 500 behind the proxy). Component-level visual verification done via the 9 new gallery baselines, which match the Pencil frames. Sally's mandatory UX screenshot comparison at review covers the dialog-level check.
+- No new search params (Rule 26 clean); no `Date.now()`/`new Date()` in any new component (Rule 23 grep + ESLint clean).
 
 ### Discovery Triage
 
@@ -158,4 +174,31 @@ Story-authoring-time discoveries (SM Bob, 2026-07-05 — all filed in sprint-sta
 
 (Dev: add any further in-flight discoveries here per Rule 24 before marking done.)
 
+Dev-time discoveries (DEV Amelia, 2026-07-05 — both filed in sprint-status.yaml the same day):
+
+- **③ backlog-with-carry-forward-link — `disc-2026-07-track-convert-endpoint`** (BE): the F1 design's 轉為繁中（簡轉繁） action on an existing local 簡中 track (and the CN-variant 仍要轉換 override, note v16pVI) has NO backend surface — OpenCC s2twp runs only inside the download post-process and the Route C pipeline; there is no standalone convert-an-existing-track route. Per Rule 24 capability honor the v2 dialog renders the CN policy INFO line only (no dead convert/override buttons). Needs e.g. `POST /api/v1/media/{id}/subtitles/convert`.
+- **③ backlog-with-carry-forward-link — `disc-2026-07-production-countries-detail-api`** (BE): `movies.production_countries` is stored but stamped `json:"-"` (models/movie.go:134) — the local-detail API never exposes it, so the FE cannot drive the §9b CN-policy display (this story's `productionCountry` prop ships dormant; the v1 dialog had the same dead prop). Needs the local movie/series detail payload to include production country codes.
+
 ### File List
+
+New:
+
+- `apps/web/src/services/glossaryService.ts` (+ `glossaryService.spec.ts`)
+- `apps/web/src/services/transcriptionService.ts` (+ `transcriptionService.spec.ts`)
+- `apps/web/src/hooks/useGenerationProgress.ts` (+ `useGenerationProgress.spec.ts`)
+- `apps/web/src/hooks/useGlossary.ts`
+- `apps/web/src/components/subtitle/GenerationProgressV2.tsx` (+ `.spec.tsx`)
+- `apps/web/src/components/subtitle/GlossaryRowV2.tsx` (+ `.spec.tsx`)
+- `apps/web/src/components/subtitle/GlossaryPanelV2.tsx` (+ `.spec.tsx`)
+- `apps/web/src/components/subtitle/ManageSubtitleDialogV2.tsx` (+ `.spec.tsx`)
+- `tests/visual/components.visual.spec.ts-snapshots/components/generation-progress-v2/{提取音訊,轉錄中,翻譯中,完成,失敗,cost-slot}/default-visual-darwin.png`
+- `tests/visual/components.visual.spec.ts-snapshots/components/glossary-row-v2/{unconfirmed,confirmed-metadata,manual}/default-visual-darwin.png`
+
+Modified:
+
+- `apps/web/src/components/media/LocalDetailV2.tsx` (dialog swap + AC 6 invalidation) + `LocalDetailV2.spec.tsx`
+- `apps/web/src/routes/test/-gallery.fixtures.tsx` (9 fixtures: 6× GenerationProgressV2 frozen-stage states, 3× GlossaryRowV2)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (ux3-subtitle-v2 → review; +2 ③ discovery entries)
+- `_bmad-output/implementation-artifacts/ux3-subtitle-v2.md` (this file)
+
+Untouched by design (strangler / reuse rules): `SubtitleSearchDialog.tsx`, `BatchSubtitleDialog.tsx` + their specs, `MediaDetailPanel.tsx`, `subtitleService.ts`, `useSubtitleSearch.ts`, `ux-design.pen`.
