@@ -15,8 +15,25 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/vido/api/internal/ai"
+	"github.com/vido/api/internal/repository"
 	"github.com/vido/api/internal/sse"
 )
+
+// OpenCCConverter is the Simplified→Traditional safety net applied after LLM
+// translation (Story 9R-10). Defined here so the service does not import the
+// subtitle package (Rule 19); *subtitle.Converter satisfies it structurally.
+type OpenCCConverter interface {
+	ConvertS2TWP(content []byte) ([]byte, error)
+	IsAvailable() bool
+}
+
+// SubtitlePlacer writes the final subtitle atomically (backup + correct
+// filename) — the "place" stage of the Route C pipeline (Story 9R-10). Primitive
+// params keep the subtitle package out of services (Rule 19); main.go adapts
+// *subtitle.Placer. Returns the written path.
+type SubtitlePlacer interface {
+	PlaceSubtitle(mediaFilePath string, subtitleData []byte, language, format string) (string, error)
+}
 
 // SSE event types for transcription progress (AC #6)
 const (
@@ -53,6 +70,11 @@ type TranscriptionService struct {
 	timeout            time.Duration
 	runBudgetUSD       float64 // 9R-11: per-run AI cost ceiling (0 = unlimited)
 
+	// 9R-10 pipeline dependencies (all optional / nil-safe).
+	glossaryRepo repository.GlossaryRepositoryInterface // per-show glossary (9R-6/7)
+	opencc       OpenCCConverter                        // s2twp safety net
+	placer       SubtitlePlacer                         // atomic place + backup
+
 	mu         sync.Mutex
 	inProgress map[int64]string // mediaID → jobID
 }
@@ -87,6 +109,46 @@ func (s *TranscriptionService) SetTranslationService(ts *TranslationService) {
 // reaches it stops making further ASR/LLM calls. 0 = unlimited (metering only).
 func (s *TranscriptionService) SetRunBudgetUSD(usd float64) {
 	s.runBudgetUSD = usd
+}
+
+// SetGlossaryRepository wires the per-show glossary (Story 9R-10). When set,
+// translation is glossary-aware (proper nouns render consistently). Nil-safe.
+func (s *TranscriptionService) SetGlossaryRepository(repo repository.GlossaryRepositoryInterface) {
+	s.glossaryRepo = repo
+}
+
+// SetOpenCCConverter wires the Simplified→Traditional safety net (Story 9R-10).
+func (s *TranscriptionService) SetOpenCCConverter(c OpenCCConverter) {
+	s.opencc = c
+}
+
+// SetPlacer wires atomic subtitle placement + backup (Story 9R-10).
+func (s *TranscriptionService) SetPlacer(p SubtitlePlacer) {
+	s.placer = p
+}
+
+// loadGlossary returns the per-show glossary as translation pairs, or nil when
+// no repo is wired or the lookup fails (fail-soft — a glossary miss must never
+// block generation). Uses ALL terms (confirmed + auto-mined) for maximum
+// intra-run consistency; the F6 review UI lets users correct mistakes.
+func (s *TranscriptionService) loadGlossary(ctx context.Context, mediaID int64) []GlossaryPair {
+	if s.glossaryRepo == nil {
+		return nil
+	}
+	m, err := s.glossaryRepo.LookupByMedia(ctx, strconv.FormatInt(mediaID, 10), false)
+	if err != nil {
+		s.logger.Warn("glossary lookup failed — translating without glossary",
+			"media_id", mediaID, "error", err)
+		return nil
+	}
+	if len(m) == 0 {
+		return nil
+	}
+	pairs := make([]GlossaryPair, 0, len(m))
+	for src, zh := range m {
+		pairs = append(pairs, GlossaryPair{Source: src, Target: zh})
+	}
+	return pairs
 }
 
 // IsAvailable returns true if both FFmpeg and Whisper API are configured.
@@ -399,20 +461,47 @@ func (s *TranscriptionService) translateSRT(ctx context.Context, jobID string, m
 		})
 	}
 
-	translated, err := s.translationService.Translate(ctx, blocks, progressFn)
+	// 9R-10: glossary-aware translation — proper nouns render consistently
+	// across the whole subtitle and across runs (keystone payoff).
+	glossary := s.loadGlossary(ctx, mediaID)
+	if len(glossary) > 0 {
+		s.logger.Info("translating with per-show glossary", "media_id", mediaID, "term_count", len(glossary))
+	}
+	translated, err := s.translationService.TranslateWithGlossary(ctx, blocks, glossary, progressFn)
 	if err != nil {
 		return "", fmt.Errorf("translate: %w", err)
 	}
 
-	// Serialize back to SRT format
+	// Serialize back to SRT format.
 	zhSRT := serializeTranslationBlocksToSRT(translated)
 
-	// Save zh-Hant SRT file
-	baseName := strings.TrimSuffix(filepath.Base(filePath), filepath.Ext(filePath))
-	zhSRTPath := filepath.Join(mediaDir, baseName+".zh-Hant.srt")
+	// 9R-10: OpenCC s2twp safety net — guarantee Traditional output even if the
+	// LLM slips a Simplified character through. Fail-soft: on converter error,
+	// keep the LLM output rather than losing the subtitle.
+	if s.opencc != nil && s.opencc.IsAvailable() {
+		if converted, cerr := s.opencc.ConvertS2TWP([]byte(zhSRT)); cerr == nil {
+			zhSRT = string(converted)
+		} else {
+			s.logger.Warn("OpenCC safety-net conversion failed — keeping LLM output",
+				"media_id", mediaID, "error", cerr)
+		}
+	}
 
-	if err := os.WriteFile(zhSRTPath, []byte(zhSRT), 0644); err != nil {
-		return "", fmt.Errorf("save zh-Hant SRT: %w", err)
+	// 9R-10: place the subtitle. Prefer the injected Placer (atomic write +
+	// .bak backup + normalized filename); fall back to a direct write when no
+	// placer is wired so the pipeline still functions.
+	var zhSRTPath string
+	if s.placer != nil {
+		zhSRTPath, err = s.placer.PlaceSubtitle(filePath, []byte(zhSRT), "zh-Hant", "srt")
+		if err != nil {
+			return "", fmt.Errorf("place zh-Hant SRT: %w", err)
+		}
+	} else {
+		baseName := strings.TrimSuffix(filepath.Base(filePath), filepath.Ext(filePath))
+		zhSRTPath = filepath.Join(mediaDir, baseName+".zh-Hant.srt")
+		if err := os.WriteFile(zhSRTPath, []byte(zhSRT), 0644); err != nil {
+			return "", fmt.Errorf("save zh-Hant SRT: %w", err)
+		}
 	}
 
 	s.logger.Info("subtitle translation complete",
@@ -420,6 +509,7 @@ func (s *TranscriptionService) translateSRT(ctx context.Context, jobID string, m
 		"media_id", mediaID,
 		"zh_srt_path", zhSRTPath,
 		"block_count", len(translated),
+		"glossary_terms", len(glossary),
 	)
 
 	return zhSRTPath, nil
