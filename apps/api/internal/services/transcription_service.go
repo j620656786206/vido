@@ -63,7 +63,7 @@ type TranscriptionResult struct {
 // TranscriptionService orchestrates the audio extraction → Whisper transcription pipeline.
 type TranscriptionService struct {
 	audioExtractor     *AudioExtractorService
-	whisperClient      *ai.WhisperClient
+	asr                ai.ASRProvider
 	translationService *TranslationService
 	sseHub             *sse.Hub
 	logger             *slog.Logger
@@ -82,7 +82,7 @@ type TranscriptionService struct {
 // NewTranscriptionService creates a new TranscriptionService.
 func NewTranscriptionService(
 	audioExtractor *AudioExtractorService,
-	whisperClient *ai.WhisperClient,
+	asr ai.ASRProvider,
 	sseHub *sse.Hub,
 	logger *slog.Logger,
 ) *TranscriptionService {
@@ -91,7 +91,7 @@ func NewTranscriptionService(
 	}
 	return &TranscriptionService{
 		audioExtractor: audioExtractor,
-		whisperClient:  whisperClient,
+		asr:            asr,
 		sseHub:         sseHub,
 		logger:         logger.With("service", "transcription"),
 		timeout:        5 * time.Minute,
@@ -153,7 +153,7 @@ func (s *TranscriptionService) loadGlossary(ctx context.Context, mediaID int64) 
 
 // IsAvailable returns true if both FFmpeg and Whisper API are configured.
 func (s *TranscriptionService) IsAvailable() bool {
-	return s.audioExtractor != nil && s.audioExtractor.IsAvailable() && s.whisperClient != nil
+	return s.audioExtractor != nil && s.audioExtractor.IsAvailable() && s.asr != nil
 }
 
 // IsInProgress returns true if a transcription is already running for the given media ID.
@@ -396,7 +396,7 @@ func (s *TranscriptionService) transcribeAudio(ctx context.Context, audioPath, l
 	}
 
 	if !needsChunk {
-		return s.whisperClient.TranscribeWithLanguage(ctx, audioPath, lang)
+		return s.asr.TranscribeWithLanguage(ctx, audioPath, lang)
 	}
 
 	// Split and transcribe chunks
@@ -421,7 +421,7 @@ func (s *TranscriptionService) transcribeAudio(ctx context.Context, audioPath, l
 			"chunk", i+1,
 			"total", len(chunks),
 		)
-		srt, err := s.whisperClient.TranscribeWithLanguage(ctx, chunkPath, lang)
+		srt, err := s.asr.TranscribeWithLanguage(ctx, chunkPath, lang)
 		if err != nil {
 			return "", fmt.Errorf("transcribe chunk %d/%d: %w", i+1, len(chunks), err)
 		}

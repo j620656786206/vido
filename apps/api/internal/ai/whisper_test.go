@@ -575,3 +575,56 @@ func TestWhisperClient_BudgetCutoffStopsTranscribe(t *testing.T) {
 	require.ErrorIs(t, err, ErrBudgetExceeded)
 	assert.Equal(t, int32(0), hits.Load())
 }
+
+// --- 9R-9: ASRProvider + configurable engine/base-URL ---
+
+func TestWhisperClient_SatisfiesASRProvider(t *testing.T) {
+	var _ ASRProvider = NewWhisperClient("k")
+}
+
+func TestWhisperClient_ConfigurableBaseURLAndModel(t *testing.T) {
+	// Smoke test against a mock OpenAI-compatible /v1/audio/transcriptions
+	// server at a custom base URL with a self-hosted engine model id.
+	var gotModel string
+	var gotPath string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		_ = r.ParseMultipartForm(32 << 20)
+		if v := r.MultipartForm.Value["model"]; len(v) > 0 {
+			gotModel = v[0]
+		}
+		w.Write([]byte("1\n00:00:00,000 --> 00:00:01,000\nhello\n"))
+	}))
+	defer server.Close()
+
+	audio := writeTempAudio(t)
+	c := NewWhisperClient("test-key",
+		WithWhisperBaseURL(server.URL+"/v1/audio/transcriptions"),
+		WithWhisperModel("Systran/faster-whisper-small"),
+	)
+
+	// Use the interface, not the concrete type — proves decoupling.
+	var provider ASRProvider = c
+	srt, err := provider.Transcribe(context.Background(), audio)
+	require.NoError(t, err)
+	assert.Contains(t, srt, "hello")
+	assert.Equal(t, "Systran/faster-whisper-small", gotModel, "self-hosted engine model id must be sent")
+	assert.Equal(t, "/v1/audio/transcriptions", gotPath)
+}
+
+func TestWhisperClient_DefaultModelIsWhisper1(t *testing.T) {
+	var gotModel string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = r.ParseMultipartForm(32 << 20)
+		if v := r.MultipartForm.Value["model"]; len(v) > 0 {
+			gotModel = v[0]
+		}
+		w.Write([]byte("1\n00:00:00,000 --> 00:00:01,000\nx\n"))
+	}))
+	defer server.Close()
+
+	c := NewWhisperClient("k", WithWhisperBaseURL(server.URL))
+	_, err := c.Transcribe(context.Background(), writeTempAudio(t))
+	require.NoError(t, err)
+	assert.Equal(t, WhisperModel, gotModel, "default model stays whisper-1")
+}
