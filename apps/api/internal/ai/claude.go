@@ -14,8 +14,11 @@ import (
 const (
 	// DefaultClaudeBaseURL is the base URL for Claude API.
 	DefaultClaudeBaseURL = "https://api.anthropic.com/v1"
-	// DefaultClaudeModel is the default model to use.
-	DefaultClaudeModel = "claude-3-5-haiku-latest"
+	// DefaultClaudeModel is the default model to use. Must be a current,
+	// non-deprecated alias: the previous default "claude-3-5-haiku-latest"
+	// (Haiku 3.5) was retired 2026-02-19 and returns 404 (9R-1).
+	// Override per-deployment via CLAUDE_MODEL.
+	DefaultClaudeModel = "claude-haiku-4-5"
 	// ClaudeAPIVersion is the required API version header.
 	ClaudeAPIVersion = "2023-06-01"
 	// ClaudeMaxTokens is the max tokens for response.
@@ -92,15 +95,66 @@ func (p *ClaudeProvider) Name() ProviderName {
 	return ProviderClaude
 }
 
+// doRequest POSTs a marshaled Messages API body with bounded retry on
+// transient failures (9R-4): network errors, per-attempt timeouts, 429 and
+// 5xx retry with exponential backoff; other 4xx (including the 9R-1 404
+// model guard) fail immediately.
+func (p *ClaudeProvider) doRequest(ctx context.Context, body []byte) ([]byte, error) {
+	url := fmt.Sprintf("%s/messages", p.baseURL)
+
+	return retryTransient(ctx, "claude.messages", func() ([]byte, bool, error) {
+		attemptCtx, cancel := context.WithTimeout(ctx, p.timeout)
+		defer cancel()
+
+		httpReq, err := http.NewRequestWithContext(attemptCtx, http.MethodPost, url, bytes.NewReader(body))
+		if err != nil {
+			return nil, false, fmt.Errorf("failed to create request: %w", err)
+		}
+		httpReq.Header.Set("Content-Type", "application/json")
+		httpReq.Header.Set("x-api-key", p.apiKey)
+		httpReq.Header.Set("anthropic-version", ClaudeAPIVersion)
+
+		resp, err := p.httpClient.Do(httpReq)
+		if err != nil {
+			if attemptCtx.Err() == context.DeadlineExceeded {
+				slog.Warn("Claude API timeout", "timeout_seconds", p.timeout.Seconds())
+				return nil, true, ErrAITimeout
+			}
+			return nil, true, fmt.Errorf("%w: %v", ErrAIProviderError, err)
+		}
+		defer resp.Body.Close()
+
+		respBody, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, true, fmt.Errorf("failed to read response: %w", err)
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			slog.Warn("Claude API error response",
+				"status_code", resp.StatusCode,
+				"body", string(respBody),
+			)
+			if resp.StatusCode == http.StatusTooManyRequests {
+				return nil, true, ErrAIQuotaExceeded
+			}
+			if resp.StatusCode == http.StatusNotFound {
+				slog.Error("Claude model not found — the configured model id is deprecated or invalid",
+					"model", p.model,
+				)
+				return nil, false, fmt.Errorf("%w: status 404: model %q not found (deprecated or invalid model id — set CLAUDE_MODEL to a current model)", ErrAIProviderError, p.model)
+			}
+			return nil, isTransientStatus(resp.StatusCode), fmt.Errorf("%w: status %d", ErrAIProviderError, resp.StatusCode)
+		}
+
+		return respBody, false, nil
+	})
+}
+
 // Parse sends a filename to Claude for parsing.
 func (p *ClaudeProvider) Parse(ctx context.Context, req *ParseRequest) (*ParseResponse, error) {
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-
-	// Create context with timeout per NFR-I12
-	ctx, cancel := context.WithTimeout(ctx, p.timeout)
-	defer cancel()
 
 	// Build prompt
 	prompt := req.Prompt
@@ -125,59 +179,15 @@ func (p *ClaudeProvider) Parse(ctx context.Context, req *ParseRequest) (*ParseRe
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	// Build URL
-	url := fmt.Sprintf("%s/messages", p.baseURL)
-
-	// Create HTTP request
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	// Set headers per Claude API spec
-	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("x-api-key", p.apiKey)
-	httpReq.Header.Set("anthropic-version", ClaudeAPIVersion)
-
 	slog.Debug("Claude API request",
 		"model", p.model,
 		"filename", req.Filename,
 	)
 
-	// Execute request
-	resp, err := p.httpClient.Do(httpReq)
+	// Execute with bounded transient retry (9R-4)
+	respBody, err := p.doRequest(ctx, body)
 	if err != nil {
-		if ctx.Err() == context.DeadlineExceeded {
-			slog.Warn("Claude API timeout",
-				"filename", req.Filename,
-				"timeout_seconds", p.timeout.Seconds(),
-			)
-			return nil, ErrAITimeout
-		}
-		slog.Error("Claude API request failed",
-			"error", err,
-			"filename", req.Filename,
-		)
-		return nil, fmt.Errorf("%w: %v", ErrAIProviderError, err)
-	}
-	defer resp.Body.Close()
-
-	// Read response body
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response: %w", err)
-	}
-
-	// Check for HTTP errors
-	if resp.StatusCode != http.StatusOK {
-		slog.Warn("Claude API error response",
-			"status_code", resp.StatusCode,
-			"body", string(respBody),
-		)
-		if resp.StatusCode == http.StatusTooManyRequests {
-			return nil, ErrAIQuotaExceeded
-		}
-		return nil, fmt.Errorf("%w: status %d", ErrAIProviderError, resp.StatusCode)
+		return nil, err
 	}
 
 	// Parse Claude response
@@ -246,40 +256,12 @@ func (p *ClaudeProvider) CompleteText(ctx context.Context, systemPrompt, userPro
 		return "", fmt.Errorf("failed to marshal request: %w", err)
 	}
 
-	url := fmt.Sprintf("%s/messages", p.baseURL)
-
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
-	if err != nil {
-		return "", fmt.Errorf("failed to create request: %w", err)
-	}
-
-	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("x-api-key", p.apiKey)
-	httpReq.Header.Set("anthropic-version", ClaudeAPIVersion)
-
 	slog.Debug("Claude CompleteText request", "model", p.model)
 
-	resp, err := p.httpClient.Do(httpReq)
+	// Execute with bounded transient retry (9R-4)
+	respBody, err := p.doRequest(ctx, body)
 	if err != nil {
-		if ctx.Err() == context.DeadlineExceeded {
-			slog.Warn("Claude CompleteText timeout")
-			return "", ErrAITimeout
-		}
-		return "", fmt.Errorf("%w: %v", ErrAIProviderError, err)
-	}
-	defer resp.Body.Close()
-
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("failed to read response: %w", err)
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		slog.Warn("Claude CompleteText error", "status_code", resp.StatusCode, "body", string(respBody))
-		if resp.StatusCode == http.StatusTooManyRequests {
-			return "", ErrAIQuotaExceeded
-		}
-		return "", fmt.Errorf("%w: status %d", ErrAIProviderError, resp.StatusCode)
+		return "", err
 	}
 
 	var claudeResp claudeResponse
@@ -310,8 +292,8 @@ type claudeMessage struct {
 }
 
 type claudeResponse struct {
-	Content []claudeContentBlock `json:"content"`
-	StopReason string           `json:"stop_reason"`
+	Content    []claudeContentBlock `json:"content"`
+	StopReason string               `json:"stop_reason"`
 }
 
 type claudeContentBlock struct {

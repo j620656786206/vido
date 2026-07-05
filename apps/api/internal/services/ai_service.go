@@ -74,6 +74,7 @@ func NewAIService(cfg *config.Config, db *sql.DB) (*AIService, error) {
 		ProviderName: cfg.GetAIProvider(),
 		GeminiAPIKey: cfg.GetGeminiAPIKey(),
 		ClaudeAPIKey: cfg.GetClaudeAPIKey(),
+		ClaudeModel:  cfg.GetClaudeModel(),
 	}
 
 	provider, err := ai.NewProvider(factoryCfg)

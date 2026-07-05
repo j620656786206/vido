@@ -23,6 +23,10 @@ const (
 	WhisperModel = "whisper-1"
 	// WhisperMaxFileSize is the maximum file size the Whisper API accepts (25MB).
 	WhisperMaxFileSize = 25 * 1024 * 1024
+	// WhisperChunkTargetBytes is the per-chunk size budget (9R-3): 1MiB of
+	// headroom under the API limit so file bytes + multipart overhead never
+	// push the POST body past 25MiB (the POC's 413).
+	WhisperChunkTargetBytes = 24 * 1024 * 1024
 	// WhisperChunkDuration is the duration of each audio chunk in seconds (10 minutes).
 	WhisperChunkDuration = 600
 	// WhisperMaxResponseSize is the maximum Whisper API response body we'll read (10MB).
@@ -104,15 +108,22 @@ func NewWhisperClient(apiKey string, opts ...WhisperOption) *WhisperClient {
 }
 
 // Transcribe sends an audio file to the Whisper API and returns the SRT transcription.
+// It uses the client-level language hint (WithWhisperLanguage) when set.
 func (c *WhisperClient) Transcribe(ctx context.Context, audioPath string) (string, error) {
+	return c.TranscribeWithLanguage(ctx, audioPath, c.language)
+}
+
+// TranscribeWithLanguage sends an audio file to the Whisper API with an explicit
+// per-call ISO-639-1 language hint (9R-2: pinned from the selected audio track).
+// An empty lang means Whisper auto-detects (only correct when the track language
+// is unknown/und — auto-detection mis-fires on mixed/background audio).
+func (c *WhisperClient) TranscribeWithLanguage(ctx context.Context, audioPath, lang string) (string, error) {
 	if c.apiKey == "" {
 		return "", ErrWhisperNotConfigured
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, c.timeout)
-	defer cancel()
-
-	// Build multipart form body
+	// Build multipart form body once; per-attempt timeouts are applied inside
+	// the retry loop below.
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 
@@ -123,13 +134,18 @@ func (c *WhisperClient) Transcribe(ctx context.Context, audioPath string) (strin
 	}
 	defer file.Close()
 
+	// Fail loudly instead of silently truncating (9R-3): oversized input here
+	// means the chunking layer misbehaved — truncated audio would silently
+	// lose dialogue.
+	if info, err := file.Stat(); err == nil && info.Size() > WhisperMaxFileSize {
+		return "", fmt.Errorf("whisper: audio file %q is %d bytes, exceeds the %d-byte API limit — chunking failed upstream", filepath.Base(audioPath), info.Size(), int64(WhisperMaxFileSize))
+	}
+
 	part, err := writer.CreateFormFile("file", filepath.Base(audioPath))
 	if err != nil {
 		return "", fmt.Errorf("whisper: create form file: %w", err)
 	}
-	// Bounded read: enforce WhisperMaxFileSize limit per chunk.
-	// Files >25MB are pre-split by SplitAudioChunks before reaching here.
-	if _, err := io.Copy(part, io.LimitReader(file, WhisperMaxFileSize)); err != nil {
+	if _, err := io.Copy(part, file); err != nil {
 		return "", fmt.Errorf("whisper: copy audio data: %w", err)
 	}
 
@@ -142,8 +158,8 @@ func (c *WhisperClient) Transcribe(ctx context.Context, audioPath string) (strin
 	}
 	// Pin language when known — avoids unreliable auto-detection (e.g. an English
 	// episode mis-detected as Chinese due to a few seconds of background TV audio).
-	if c.language != "" {
-		if err := writer.WriteField("language", c.language); err != nil {
+	if lang != "" {
+		if err := writer.WriteField("language", lang); err != nil {
 			return "", fmt.Errorf("whisper: write language field: %w", err)
 		}
 	}
@@ -152,76 +168,115 @@ func (c *WhisperClient) Transcribe(ctx context.Context, audioPath string) (strin
 		return "", fmt.Errorf("whisper: close writer: %w", err)
 	}
 
-	// Create request
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL, body)
-	if err != nil {
-		return "", fmt.Errorf("whisper: create request: %w", err)
-	}
-
-	req.Header.Set("Authorization", "Bearer "+c.apiKey)
-	req.Header.Set("Content-Type", writer.FormDataContentType())
+	bodyBytes := body.Bytes()
+	contentType := writer.FormDataContentType()
 
 	c.logger.Debug("Whisper API request", "file", filepath.Base(audioPath))
 
-	// Execute request
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		if ctx.Err() == context.DeadlineExceeded {
-			return "", ErrWhisperTimeout
+	// Execute with bounded transient retry (9R-4): a single transient timeout
+	// previously killed a full multi-chunk transcription run.
+	srt, err := retryTransient(ctx, "whisper.transcribe", func() (string, bool, error) {
+		attemptCtx, cancel := context.WithTimeout(ctx, c.timeout)
+		defer cancel()
+
+		req, err := http.NewRequestWithContext(attemptCtx, http.MethodPost, c.baseURL, bytes.NewReader(bodyBytes))
+		if err != nil {
+			return "", false, fmt.Errorf("whisper: create request: %w", err)
 		}
-		return "", fmt.Errorf("%w: %v", ErrWhisperAPIError, err)
-	}
-	defer resp.Body.Close()
+		req.Header.Set("Authorization", "Bearer "+c.apiKey)
+		req.Header.Set("Content-Type", contentType)
 
-	respBody, err := io.ReadAll(io.LimitReader(resp.Body, WhisperMaxResponseSize))
+		resp, err := c.httpClient.Do(req)
+		if err != nil {
+			if attemptCtx.Err() == context.DeadlineExceeded {
+				return "", true, ErrWhisperTimeout
+			}
+			return "", true, fmt.Errorf("%w: %v", ErrWhisperAPIError, err)
+		}
+		defer resp.Body.Close()
+
+		respBody, err := io.ReadAll(io.LimitReader(resp.Body, WhisperMaxResponseSize))
+		if err != nil {
+			return "", true, fmt.Errorf("whisper: read response: %w", err)
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			c.logger.Warn("Whisper API error",
+				"status_code", resp.StatusCode,
+				"body", string(respBody),
+			)
+			return "", isTransientStatus(resp.StatusCode), fmt.Errorf("%w: status %d — %s", ErrWhisperAPIError, resp.StatusCode, string(respBody))
+		}
+
+		return string(respBody), false, nil
+	})
 	if err != nil {
-		return "", fmt.Errorf("whisper: read response: %w", err)
+		return "", err
 	}
 
-	if resp.StatusCode != http.StatusOK {
-		c.logger.Warn("Whisper API error",
-			"status_code", resp.StatusCode,
-			"body", string(respBody),
-		)
-		return "", fmt.Errorf("%w: status %d — %s", ErrWhisperAPIError, resp.StatusCode, string(respBody))
-	}
+	c.logger.Info("Whisper transcription complete", "file", filepath.Base(audioPath), "srt_bytes", len(srt))
 
-	c.logger.Info("Whisper transcription complete", "file", filepath.Base(audioPath), "srt_bytes", len(respBody))
-
-	return string(respBody), nil
+	return srt, nil
 }
 
-// NeedsChunking returns true if the audio file exceeds the Whisper API size limit.
+// NeedsChunking returns true if the audio file exceeds the per-chunk size
+// budget (9R-3: budget = API limit minus multipart headroom, so the decision
+// agrees with what SplitAudioChunks produces and what Transcribe can send).
 func NeedsChunking(audioPath string) (bool, error) {
 	info, err := os.Stat(audioPath)
 	if err != nil {
 		return false, fmt.Errorf("stat audio file: %w", err)
 	}
-	return info.Size() > WhisperMaxFileSize, nil
+	return info.Size() > WhisperChunkTargetBytes, nil
 }
 
-// SplitAudioChunks splits a WAV file into chunks of WhisperChunkDuration seconds.
-// Returns paths to the chunk files. Caller is responsible for cleanup.
-func SplitAudioChunks(ctx context.Context, audioPath string) ([]string, error) {
-	// Get duration from WAV header (16kHz, mono, 16-bit PCM)
-	duration, err := getWAVDuration(audioPath)
+// SplitAudioChunks splits a WAV file into chunks that each fit the per-chunk
+// size budget. It returns the chunk paths AND the chunk duration in seconds
+// actually used (callers MUST pass that value to MergeSRTChunks so merged
+// timestamps stay contiguous — 9R-3). Caller is responsible for cleanup.
+//
+// 9R-3: the split decision is SIZE-consistent with NeedsChunking — the chunk
+// duration is derived from the WAV byte rate so that duration*byteRate stays
+// under WhisperChunkTargetBytes, and the duration itself comes from a
+// chunk-walking WAV parser that tolerates ffmpeg's extra header chunks (the
+// old fixed-offset read misparsed those headers, skipped splitting, and sent
+// the whole oversized file -> HTTP 413).
+func SplitAudioChunks(ctx context.Context, audioPath string) ([]string, int, error) {
+	info, err := os.Stat(audioPath)
 	if err != nil {
-		return nil, fmt.Errorf("get audio duration: %w", err)
+		return nil, 0, fmt.Errorf("stat audio file: %w", err)
 	}
 
-	if duration <= WhisperChunkDuration {
-		return []string{audioPath}, nil
+	duration, byteRate, err := parseWAVInfo(audioPath)
+	if err != nil {
+		return nil, 0, fmt.Errorf("get audio duration: %w", err)
+	}
+
+	// Chunk seconds bounded by BOTH the nominal duration cap and the size
+	// budget (guards against byte rates higher than the expected 16kHz mono).
+	chunkSeconds := WhisperChunkDuration
+	if byteRate > 0 {
+		if maxSec := int(uint32(WhisperChunkTargetBytes) / byteRate); maxSec < chunkSeconds {
+			chunkSeconds = maxSec
+		}
+	}
+	if chunkSeconds < 1 {
+		chunkSeconds = 1
+	}
+
+	if info.Size() <= WhisperChunkTargetBytes && duration <= float64(chunkSeconds) {
+		return []string{audioPath}, chunkSeconds, nil
 	}
 
 	var chunks []string
-	for start := 0; start < int(duration); start += WhisperChunkDuration {
+	for start := 0; start < int(duration); start += chunkSeconds {
 		chunkFile, err := os.CreateTemp("", fmt.Sprintf("vido-chunk-%d-*.wav", start))
 		if err != nil {
 			// Cleanup already created chunks
 			for _, c := range chunks {
 				os.Remove(c)
 			}
-			return nil, fmt.Errorf("create chunk temp file: %w", err)
+			return nil, 0, fmt.Errorf("create chunk temp file: %w", err)
 		}
 		chunkPath := chunkFile.Name()
 		chunkFile.Close()
@@ -230,7 +285,7 @@ func SplitAudioChunks(ctx context.Context, audioPath string) ([]string, error) {
 		cmd := execCommandContext(ctx, "ffmpeg",
 			"-i", audioPath,
 			"-ss", fmt.Sprintf("%d", start),
-			"-t", fmt.Sprintf("%d", WhisperChunkDuration),
+			"-t", fmt.Sprintf("%d", chunkSeconds),
 			"-acodec", "pcm_s16le",
 			"-ar", "16000",
 			"-ac", "1",
@@ -243,13 +298,22 @@ func SplitAudioChunks(ctx context.Context, audioPath string) ([]string, error) {
 				os.Remove(c)
 			}
 			os.Remove(chunkPath)
-			return nil, fmt.Errorf("ffmpeg chunk split at %ds: %w — %s", start, err, string(output))
+			return nil, 0, fmt.Errorf("ffmpeg chunk split at %ds: %w — %s", start, err, string(output))
+		}
+
+		// Defensive: never hand an oversized chunk to the API (the 413 class).
+		if ci, err := os.Stat(chunkPath); err == nil && ci.Size() > WhisperMaxFileSize {
+			for _, c := range chunks {
+				os.Remove(c)
+			}
+			os.Remove(chunkPath)
+			return nil, 0, fmt.Errorf("chunk at %ds is %d bytes, exceeds Whisper %d-byte limit", start, ci.Size(), int64(WhisperMaxFileSize))
 		}
 
 		chunks = append(chunks, chunkPath)
 	}
 
-	return chunks, nil
+	return chunks, chunkSeconds, nil
 }
 
 // execCommandContext wraps exec.CommandContext to allow testing
@@ -289,34 +353,76 @@ func MergeSRTChunks(chunks []string, chunkDuration int) string {
 	return merged.String()
 }
 
-// getWAVDuration calculates duration from WAV file header (PCM 16kHz mono 16-bit).
+// getWAVDuration calculates the audio duration of a WAV file.
 func getWAVDuration(path string) (float64, error) {
+	duration, _, err := parseWAVInfo(path)
+	return duration, err
+}
+
+// parseWAVInfo walks the RIFF chunk list to find the fmt and data chunks
+// (9R-3: header-robust — ffmpeg and other muxers may emit extra chunks such
+// as LIST/INFO between fmt and data, which breaks fixed-offset header reads
+// and silently yields a garbage duration).
+func parseWAVInfo(path string) (duration float64, byteRate uint32, err error) {
 	f, err := os.Open(path)
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 	defer f.Close()
 
-	// Read RIFF header
-	header := make([]byte, 44)
-	if _, err := io.ReadFull(f, header); err != nil {
-		return 0, fmt.Errorf("read WAV header: %w", err)
+	riff := make([]byte, 12)
+	if _, err := io.ReadFull(f, riff); err != nil {
+		return 0, 0, fmt.Errorf("read WAV header: %w", err)
+	}
+	if string(riff[0:4]) != "RIFF" || string(riff[8:12]) != "WAVE" {
+		return 0, 0, fmt.Errorf("not a WAV file")
 	}
 
-	// Validate RIFF/WAVE
-	if string(header[0:4]) != "RIFF" || string(header[8:12]) != "WAVE" {
-		return 0, fmt.Errorf("not a WAV file")
-	}
+	var dataSize uint32
+	chunkHdr := make([]byte, 8)
+	for {
+		if _, err := io.ReadFull(f, chunkHdr); err != nil {
+			break // end of file — evaluate what we found below
+		}
+		id := string(chunkHdr[0:4])
+		size := binary.LittleEndian.Uint32(chunkHdr[4:8])
 
-	// Get data chunk size (bytes 40-43) and byte rate (bytes 28-31)
-	byteRate := binary.LittleEndian.Uint32(header[28:32])
-	dataSize := binary.LittleEndian.Uint32(header[40:44])
+		switch id {
+		case "fmt ":
+			fmtChunk := make([]byte, size)
+			if _, err := io.ReadFull(f, fmtChunk); err != nil {
+				return 0, 0, fmt.Errorf("read fmt chunk: %w", err)
+			}
+			if size >= 12 {
+				byteRate = binary.LittleEndian.Uint32(fmtChunk[8:12])
+			}
+		case "data":
+			dataSize = size
+			// data payload does not need to be read for duration math.
+			if _, err := f.Seek(int64(size), io.SeekCurrent); err != nil {
+				return 0, 0, fmt.Errorf("seek past data chunk: %w", err)
+			}
+		default:
+			if _, err := f.Seek(int64(size), io.SeekCurrent); err != nil {
+				return 0, 0, fmt.Errorf("seek past %q chunk: %w", id, err)
+			}
+		}
+		// RIFF chunks are word-aligned: odd sizes are padded with one byte.
+		if size%2 == 1 {
+			if _, err := f.Seek(1, io.SeekCurrent); err != nil {
+				break
+			}
+		}
+	}
 
 	if byteRate == 0 {
-		return 0, fmt.Errorf("invalid WAV byte rate")
+		return 0, 0, fmt.Errorf("invalid WAV byte rate")
+	}
+	if dataSize == 0 {
+		return 0, 0, fmt.Errorf("WAV data chunk not found")
 	}
 
-	return float64(dataSize) / float64(byteRate), nil
+	return float64(dataSize) / float64(byteRate), byteRate, nil
 }
 
 // adjustSRTTimestamps adjusts SRT timestamp lines by an offset and renumbers sequences.

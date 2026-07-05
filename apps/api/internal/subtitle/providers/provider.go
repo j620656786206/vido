@@ -1,5 +1,5 @@
 // Package providers defines the SubtitleProvider interface and shared types
-// for subtitle source implementations (Assrt, Zimuku, OpenSubtitles).
+// for subtitle source implementations (Assrt, OpenSubtitles).
 package providers
 
 import (
@@ -10,7 +10,7 @@ import (
 // SubtitleProvider is the contract all subtitle sources must implement.
 // Each provider searches a specific subtitle database and downloads subtitle files.
 type SubtitleProvider interface {
-	// Name returns the provider identifier (e.g., "assrt", "zimuku", "opensubtitles").
+	// Name returns the provider identifier (e.g., "assrt", "opensubtitles").
 	Name() string
 
 	// Search queries the subtitle source for results matching the given query.
@@ -50,7 +50,7 @@ type SubtitleResult struct {
 	// ID is the provider-specific identifier used for downloading.
 	ID string
 
-	// Source is the provider name (e.g., "assrt", "zimuku", "opensubtitles").
+	// Source is the provider name (e.g., "assrt", "opensubtitles").
 	Source string
 
 	// Filename is the original subtitle filename.

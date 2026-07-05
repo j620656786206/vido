@@ -14,6 +14,9 @@ type FactoryConfig struct {
 	GeminiAPIKey string
 	// ClaudeAPIKey is the API key for Claude.
 	ClaudeAPIKey string
+	// ClaudeModel optionally overrides the Claude model id (9R-1).
+	// Empty uses DefaultClaudeModel.
+	ClaudeModel string
 }
 
 // NewProvider creates an AI provider based on the configuration.
@@ -44,7 +47,10 @@ func NewProvider(cfg FactoryConfig) (Provider, error) {
 			slog.Error("Claude provider selected but CLAUDE_API_KEY not set")
 			return nil, fmt.Errorf("%w: CLAUDE_API_KEY not configured", ErrAINotConfigured)
 		}
-		slog.Info("Creating Claude AI provider")
+		slog.Info("Creating Claude AI provider", "model_override", cfg.ClaudeModel)
+		if cfg.ClaudeModel != "" {
+			return NewClaudeProvider(cfg.ClaudeAPIKey, WithClaudeModel(cfg.ClaudeModel)), nil
+		}
 		return NewClaudeProvider(cfg.ClaudeAPIKey), nil
 
 	default:

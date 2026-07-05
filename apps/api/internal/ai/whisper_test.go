@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"bytes"
 	"context"
 	"encoding/binary"
 	"fmt"
@@ -249,10 +250,11 @@ func TestSplitAudioChunks_SmallFile(t *testing.T) {
 	dataSize := uint32(320000) // 10 seconds at 16kHz mono 16-bit
 	writeTestWAV(t, tmpFile, dataSize)
 
-	chunks, err := SplitAudioChunks(context.Background(), tmpFile.Name())
+	chunks, chunkSeconds, err := SplitAudioChunks(context.Background(), tmpFile.Name())
 	require.NoError(t, err)
 	require.Len(t, chunks, 1)
 	assert.Equal(t, tmpFile.Name(), chunks[0])
+	assert.Equal(t, WhisperChunkDuration, chunkSeconds)
 }
 
 func writeTestWAV(t *testing.T, f *os.File, dataSize uint32) {
@@ -348,6 +350,206 @@ func TestSplitAudioChunks_InvalidWAV(t *testing.T) {
 	fmt.Fprint(tmpFile, "not a wav")
 	tmpFile.Close()
 
-	_, err = SplitAudioChunks(context.Background(), tmpFile.Name())
+	_, _, err = SplitAudioChunks(context.Background(), tmpFile.Name())
 	assert.Error(t, err)
+}
+
+// --- 9R-2: language pinned from the audio track ---
+
+func TestWhisperClient_TranscribeWithLanguage_MultipartCarriesLanguage(t *testing.T) {
+	var gotLang string
+	var hadLangField bool
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if err := r.ParseMultipartForm(32 << 20); err != nil {
+			t.Fatalf("parse multipart: %v", err)
+		}
+		vals := r.MultipartForm.Value["language"]
+		hadLangField = len(vals) > 0
+		if hadLangField {
+			gotLang = vals[0]
+		}
+		w.Write([]byte("1\n00:00:00,000 --> 00:00:01,000\nhello\n"))
+	}))
+	defer server.Close()
+
+	audio := writeTempAudio(t)
+
+	c := NewWhisperClient("test-key", WithWhisperBaseURL(server.URL))
+
+	// AC #3: given a track lang, the multipart body includes language=<iso2>.
+	_, err := c.TranscribeWithLanguage(context.Background(), audio, "en")
+	if err != nil {
+		t.Fatalf("transcribe: %v", err)
+	}
+	if !hadLangField || gotLang != "en" {
+		t.Fatalf("expected language=en in multipart body, got present=%v value=%q", hadLangField, gotLang)
+	}
+
+	// AC #2: empty lang (und track) => auto-detect, NO language field.
+	hadLangField = false
+	gotLang = ""
+	_, err = c.TranscribeWithLanguage(context.Background(), audio, "")
+	if err != nil {
+		t.Fatalf("transcribe (auto): %v", err)
+	}
+	if hadLangField {
+		t.Fatalf("expected NO language field for auto-detect, got %q", gotLang)
+	}
+}
+
+func writeTempAudio(t *testing.T) string {
+	t.Helper()
+	f, err := os.CreateTemp(t.TempDir(), "audio-*.wav")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.WriteString("RIFFfakewavdata"); err != nil {
+		t.Fatal(err)
+	}
+	f.Close()
+	return f.Name()
+}
+
+// --- 9R-3: chunking 413 fix ---
+
+// writeWAVWithChunks writes a WAV whose header contains extra RIFF chunks
+// (as ffmpeg emits) between fmt and data — the shape the old fixed-offset
+// parser misread (the 413 root cause).
+func writeWAVWithChunks(t *testing.T, f *os.File, byteRate uint32, dataSize uint32, extraChunk bool) {
+	t.Helper()
+	var buf bytes.Buffer
+	buf.WriteString("RIFF")
+	binary.Write(&buf, binary.LittleEndian, uint32(0)) // riff size (unused by parser)
+	buf.WriteString("WAVE")
+	// fmt chunk (16 bytes, PCM)
+	buf.WriteString("fmt ")
+	binary.Write(&buf, binary.LittleEndian, uint32(16))
+	binary.Write(&buf, binary.LittleEndian, uint16(1)) // PCM
+	binary.Write(&buf, binary.LittleEndian, uint16(1)) // mono
+	binary.Write(&buf, binary.LittleEndian, uint32(16000))
+	binary.Write(&buf, binary.LittleEndian, byteRate)
+	binary.Write(&buf, binary.LittleEndian, uint16(2))
+	binary.Write(&buf, binary.LittleEndian, uint16(16))
+	if extraChunk {
+		// LIST/INFO chunk between fmt and data — fixed-offset readers now see
+		// garbage at bytes 40:44.
+		info := []byte("INFOISFT\x0e\x00\x00\x00Lavf61.1.100\x00\x00")
+		buf.WriteString("LIST")
+		binary.Write(&buf, binary.LittleEndian, uint32(len(info)))
+		buf.Write(info)
+	}
+	buf.WriteString("data")
+	binary.Write(&buf, binary.LittleEndian, dataSize)
+	if _, err := f.Write(buf.Bytes()); err != nil {
+		t.Fatal(err)
+	}
+	// Write (sparse-ish) data payload.
+	if _, err := f.Write(make([]byte, dataSize)); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestParseWAVInfo_HeaderRobust_ExtraChunks(t *testing.T) {
+	f, err := os.CreateTemp(t.TempDir(), "list-*.wav")
+	require.NoError(t, err)
+	byteRate := uint32(32000)      // 16kHz mono 16-bit
+	dataSize := uint32(32000 * 30) // 30 seconds
+	writeWAVWithChunks(t, f, byteRate, dataSize, true)
+
+	duration, br, err := parseWAVInfo(f.Name())
+	require.NoError(t, err)
+	assert.Equal(t, byteRate, br)
+	assert.InDelta(t, 30.0, duration, 0.01,
+		"duration must be parsed correctly even with a LIST chunk before data (old fixed-offset read returned garbage)")
+}
+
+func TestNeedsChunking_UsesHeadroomBudget(t *testing.T) {
+	// A file between the 24MiB budget and the 25MiB API limit MUST chunk —
+	// file bytes + multipart overhead would otherwise 413.
+	f, err := os.CreateTemp(t.TempDir(), "mid-*.wav")
+	require.NoError(t, err)
+	require.NoError(t, f.Truncate(WhisperChunkTargetBytes+1024))
+	f.Close()
+
+	needs, err := NeedsChunking(f.Name())
+	require.NoError(t, err)
+	assert.True(t, needs)
+}
+
+func TestSplitAudioChunks_LargeFile_ChunksUnderLimit(t *testing.T) {
+	// >25MiB WAV (AC #3): expect N chunks, each under the limit, and the
+	// returned chunkSeconds driving contiguous merged timestamps.
+	f, err := os.CreateTemp(t.TempDir(), "big-*.wav")
+	require.NoError(t, err)
+	byteRate := uint32(32000)
+	dataSize := uint32(26 * 1024 * 1024) // ~852s at 32KB/s → 2 chunks of 600s
+	writeWAVWithChunks(t, f, byteRate, dataSize, true)
+
+	// Stub ffmpeg: write a small fake chunk file per call.
+	origExec := execCommandContext
+	var ffmpegCalls [][]string
+	execCommandContext = func(ctx context.Context, name string, args ...string) command {
+		ffmpegCalls = append(ffmpegCalls, append([]string{name}, args...))
+		return fakeChunkCmd{args: args}
+	}
+	defer func() { execCommandContext = origExec }()
+
+	chunks, chunkSeconds, err := SplitAudioChunks(context.Background(), f.Name())
+	require.NoError(t, err)
+	defer func() {
+		for _, c := range chunks {
+			os.Remove(c)
+		}
+	}()
+
+	assert.Equal(t, WhisperChunkDuration, chunkSeconds)
+	require.Len(t, chunks, 2, "852s at 600s chunks → 2 chunks")
+	for _, c := range chunks {
+		info, err := os.Stat(c)
+		require.NoError(t, err)
+		assert.Less(t, info.Size(), int64(WhisperMaxFileSize))
+	}
+	// ffmpeg must be invoked with -t <chunkSeconds> and contiguous -ss offsets.
+	require.Len(t, ffmpegCalls, 2)
+	assert.Contains(t, ffmpegCalls[0], "-ss")
+	assert.Contains(t, ffmpegCalls[0], "0")
+	assert.Contains(t, ffmpegCalls[1], "600")
+
+	// Contiguous timestamps on merge, driven by the RETURNED chunkSeconds.
+	merged := MergeSRTChunks([]string{
+		"1\n00:00:00,000 --> 00:00:01,000\nfirst\n\n",
+		"1\n00:00:00,000 --> 00:00:01,000\nsecond\n\n",
+	}, chunkSeconds)
+	assert.Contains(t, merged, "00:00:00,000 --> 00:00:01,000")
+	assert.Contains(t, merged, "00:10:00,000 --> 00:10:01,000",
+		"second chunk must be offset by exactly chunkSeconds")
+}
+
+func TestSplitAudioChunks_HighByteRate_ShrinksChunkSeconds(t *testing.T) {
+	// 48kHz stereo (192KB/s): 600s would be ~115MiB per chunk → chunkSeconds
+	// must shrink so duration*byteRate stays under the 24MiB budget.
+	f, err := os.CreateTemp(t.TempDir(), "hbr-*.wav")
+	require.NoError(t, err)
+	byteRate := uint32(192000)
+	dataSize := uint32(192000 * 10) // 10s — small file, no split needed
+	writeWAVWithChunks(t, f, byteRate, dataSize, false)
+
+	chunks, chunkSeconds, err := SplitAudioChunks(context.Background(), f.Name())
+	require.NoError(t, err)
+	require.Len(t, chunks, 1)
+	assert.LessOrEqual(t, chunkSeconds, int(uint32(WhisperChunkTargetBytes)/byteRate))
+	assert.Less(t, chunkSeconds, WhisperChunkDuration)
+}
+
+type fakeChunkCmd struct {
+	args []string
+}
+
+func (c fakeChunkCmd) CombinedOutput() ([]byte, error) {
+	// Last arg is the chunk output path — write a small fake WAV there.
+	out := c.args[len(c.args)-1]
+	return nil, os.WriteFile(out, []byte("RIFFfake"), 0o644)
 }
