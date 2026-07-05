@@ -3,6 +3,8 @@ package prompts
 import (
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestBuildSubtitleTranslatorPrompt(t *testing.T) {
@@ -123,4 +125,34 @@ func TestSubtitleTranslatorSystemPrompt_MultiLineInstructions(t *testing.T) {
 	if !strings.Contains(SubtitleTranslatorSystemPrompt, "multi-line") {
 		t.Error("system prompt must mention multi-line block handling")
 	}
+}
+
+// --- 9R-7: glossary section ---
+
+func TestBuildGlossarySection(t *testing.T) {
+	assert.Equal(t, "", BuildGlossarySection(nil), "empty glossary yields no section (no-regression)")
+
+	section := BuildGlossarySection([]GlossaryEntry{
+		{Source: "Demogorgon", Target: "魔王獸"},
+		{Source: "Vecna", Target: "維克那"},
+	})
+	assert.Contains(t, section, "Glossary")
+	assert.Contains(t, section, "Demogorgon → 魔王獸")
+	assert.Contains(t, section, "Vecna → 維克那")
+}
+
+func TestBuildSubtitleTranslatorPrompt_NoGlossaryUnchanged(t *testing.T) {
+	blocks := []SubtitleTranslatorBlock{{Index: 1, Text: "Hello"}}
+	base := BuildSubtitleTranslatorPrompt(blocks, nil)
+	withNil := BuildSubtitleTranslatorPromptWithGlossary(blocks, nil, nil)
+	assert.Equal(t, base, withNil, "nil glossary must produce byte-identical prompt")
+	assert.NotContains(t, base, "Glossary")
+}
+
+func TestBuildSubtitleTranslatorPromptWithGlossary(t *testing.T) {
+	blocks := []SubtitleTranslatorBlock{{Index: 1, Text: "The Demogorgon"}}
+	p := BuildSubtitleTranslatorPromptWithGlossary(blocks, nil, []GlossaryEntry{{Source: "Demogorgon", Target: "魔王獸"}})
+	assert.Contains(t, p, "Demogorgon → 魔王獸")
+	// Glossary must come before the translate section.
+	assert.Less(t, strings.Index(p, "Glossary"), strings.Index(p, "Translate the following"))
 }

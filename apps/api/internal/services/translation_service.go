@@ -35,6 +35,46 @@ type TranslationBlock struct {
 	Text  string
 }
 
+// GlossaryPair is one proper-noun mapping (source term → fixed zh rendering)
+// carried into a translation so it renders consistently (Story 9R-7 keystone).
+type GlossaryPair struct {
+	Source string
+	Target string
+}
+
+// TranslationField is one arbitrary keyed piece of text to translate. Key is a
+// stable identifier the caller uses to match the result back (a subtitle block
+// index as a string, or a metadata field name like "plot"/"title"). This is the
+// generic unit the same engine translates for BOTH subtitles (9R-7) and .nfo
+// metadata localization (9R-13).
+type TranslationField struct {
+	Key  string
+	Text string
+}
+
+// TranslationRequest is the generalized translation input (Story 9R-7): a set
+// of fields to translate plus a glossary of fixed proper-noun renderings. The
+// subtitle path builds one internally per batch; 9R-13 metadata localization
+// reuses TranslateRequest directly.
+type TranslationRequest struct {
+	Fields   []TranslationField
+	Glossary []GlossaryPair
+}
+
+func toPromptGlossary(pairs []GlossaryPair) []prompts.GlossaryEntry {
+	if len(pairs) == 0 {
+		return nil
+	}
+	out := make([]prompts.GlossaryEntry, 0, len(pairs))
+	for _, p := range pairs {
+		if strings.TrimSpace(p.Source) == "" || strings.TrimSpace(p.Target) == "" {
+			continue
+		}
+		out = append(out, prompts.GlossaryEntry{Source: p.Source, Target: p.Target})
+	}
+	return out
+}
+
 // TranslationService uses Claude API to translate English subtitles to Traditional Chinese.
 type TranslationService struct {
 	provider ai.TextCompleter
@@ -65,10 +105,21 @@ func (s *TranslationService) IsConfigured() bool {
 // progressFn (optional) receives percentage updates per batch.
 // On partial failure, translated blocks are returned with untranslated blocks
 // retaining their original English text (AC #5).
+// Translate translates English subtitle blocks to Traditional Chinese with no
+// glossary (back-compat entry point; existing callers unchanged).
 func (s *TranslationService) Translate(ctx context.Context, blocks []TranslationBlock, progressFn func(float64)) ([]TranslationBlock, error) {
+	return s.TranslateWithGlossary(ctx, blocks, nil, progressFn)
+}
+
+// TranslateWithGlossary is Translate plus a per-show glossary (Story 9R-7): the
+// fixed renderings are injected into every batch prompt so proper nouns stay
+// consistent across the whole subtitle and across runs. A nil glossary makes
+// this byte-identical to the pre-9R-7 behavior.
+func (s *TranslationService) TranslateWithGlossary(ctx context.Context, blocks []TranslationBlock, glossary []GlossaryPair, progressFn func(float64)) ([]TranslationBlock, error) {
 	if len(blocks) == 0 {
 		return nil, nil
 	}
+	promptGlossary := toPromptGlossary(glossary)
 
 	batchSize := prompts.SubtitleTranslatorBatchSize
 	contextWindow := prompts.SubtitleTranslatorContextWindow
@@ -119,7 +170,7 @@ func (s *TranslationService) Translate(ctx context.Context, blocks []Translation
 		}
 
 		// Call Claude API
-		userPrompt := prompts.BuildSubtitleTranslatorPrompt(promptBlocks, contextBlocks)
+		userPrompt := prompts.BuildSubtitleTranslatorPromptWithGlossary(promptBlocks, contextBlocks, promptGlossary)
 
 		batchCtx, batchCancel := context.WithTimeout(ctx, TranslationTimeout)
 		translated, err := s.provider.CompleteText(
@@ -186,6 +237,51 @@ func (s *TranslationService) Translate(ctx context.Context, blocks []Translation
 	}
 
 	return result, nil
+}
+
+// TranslateRequest translates a set of arbitrary keyed fields in a single
+// glossary-aware batch (Story 9R-7). It is the generic entry point the .nfo
+// metadata localizer (9R-13) uses — no batching/context-window (a handful of
+// named fields, not thousands of subtitle blocks). Returns fields with Text
+// replaced by the translation; a field with no returned translation keeps its
+// original Text (fail-soft, mirrors the subtitle path).
+//
+// Fields are addressed by 1-based ordinal in the prompt/response; Key is
+// preserved verbatim so callers match results back by name.
+func (s *TranslationService) TranslateRequest(ctx context.Context, req TranslationRequest) ([]TranslationField, error) {
+	if len(req.Fields) == 0 {
+		return nil, nil
+	}
+
+	promptBlocks := make([]prompts.SubtitleTranslatorBlock, len(req.Fields))
+	indices := make([]int, len(req.Fields))
+	for i, f := range req.Fields {
+		promptBlocks[i] = prompts.SubtitleTranslatorBlock{Index: i + 1, Text: f.Text}
+		indices[i] = i + 1
+	}
+
+	userPrompt := prompts.BuildSubtitleTranslatorPromptWithGlossary(promptBlocks, nil, toPromptGlossary(req.Glossary))
+
+	batchCtx, cancel := context.WithTimeout(ctx, TranslationTimeout)
+	defer cancel()
+	translated, err := s.provider.CompleteText(batchCtx, prompts.SubtitleTranslatorSystemPrompt, userPrompt, TranslationMaxTokens)
+	if err != nil {
+		if ctx.Err() != nil {
+			return nil, fmt.Errorf("translation cancelled: %w", ctx.Err())
+		}
+		return nil, fmt.Errorf("translate fields: %w", err)
+	}
+
+	translations := parseTranslationResponse(translated, indices)
+
+	out := make([]TranslationField, len(req.Fields))
+	for i, f := range req.Fields {
+		out[i] = f // keep Key; default to original Text (fail-soft)
+		if text, ok := translations[i+1]; ok {
+			out[i].Text = text
+		}
+	}
+	return out, nil
 }
 
 // responseLinePattern matches "[N] text" format from Claude's response.
