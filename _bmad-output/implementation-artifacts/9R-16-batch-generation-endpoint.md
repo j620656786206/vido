@@ -142,3 +142,20 @@ Claude Fable 5 (claude-fable-5) — BMAD DEV agent Amelia, 2026-07-06
 - `apps/api/cmd/api/main.go` — modified (processor + handler wiring, writeback injection, activity arg, route registration)
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` — modified (9R-16 entry only)
 - `_bmad-output/implementation-artifacts/9R-16-batch-generation-endpoint.md` — modified (this record)
+
+Added at code review (2026-07-06):
+
+- `project-context.md` — modified (CR F1: Rule 7 registry — `TRANSCRIPTION_` prefix registered as 16th source + codes listed; mega-line entry prepended per Rule 25 convention)
+- `_bmad/bmm/workflows/4-implementation/code-review/instructions.xml` — modified (CR F1: Step 3 prefix list synced to 16 sources, sync dates updated)
+- `apps/api/internal/services/generation_batch.go` — modified (CR F3: dead-store removal in `finish()` + terminal-clear comment)
+- `_bmad-output/implementation-artifacts/ux3-subtitle-v2-batch.md` — modified (CR F2/F4 doc notes: BE REJECT-not-filter interplay made explicit; post-terminal status-probe returns null; `transcription_failed` join caveat on cancelled/budget_ceiling)
+
+## Senior Developer Review (AI) — 2026-07-06
+
+Reviewer: adversarial CR (Fable 5). Verdict: **APPROVED WITH FIXES APPLIED** (fix details in the File List addendum above; full findings table in the review report).
+
+- 🔒 Rule 7 Wire Format: **FIXED** — new codes `TRANSCRIPTION_BATCH_RUNNING`/`TRANSCRIPTION_BATCH_START_FAILED` follow `{SOURCE}_{ERROR_TYPE}`, but the `TRANSCRIPTION_` prefix (shipped in Epic 9 as `TRANSCRIPTION_DISABLED`/`TRANSCRIPTION_IN_PROGRESS`, live FE-consumed wire contracts — rename not viable) was never in the authoritative registry. AC 11's "existing prefix, no CR sync" held for the CODE but not the REGISTRY. Registered as 16th source + instructions.xml synced.
+- 🔒 Rule 20: PASS — all 6 stamps are NEW `[@contract-v1]` (no bump → no Change Log row / stale-mark grep obligation). Implemented shapes verified key-for-key against the FE consumer's authored contract section (11 SSE keys, 202 items[] shape, preview, status enum incl. `budget_ceiling`).
+- 🔒 Rule 25: N/A for the branch (project-context.md untouched by dev); the CR's own Rule 7 fix prepended the mega-line entry per convention (English-only, prior lead demoted, prettier-checked).
+- `go test -race`: new packages (services generation/transcription/activity, handlers, repository finder) **race-clean**. Package-wide `./internal/services/ -race` fails on a PRE-EXISTING unsynchronized test mock (`MockRetryRepository`, `retry_service_test.go:34/76` vs `retry/scheduler.go` goroutine) — untouched by this story, not blocking, flagged for triage.
+- Known interplay (AC 8): BE REJECT 400 / FE client-side exclude — coherent; FE story wording did not imply BE filtering, but the ruling is now explicit in the FE contract section (doc fix).

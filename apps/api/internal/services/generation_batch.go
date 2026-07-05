@@ -379,14 +379,14 @@ func (p *GenerationBatchProcessor) process(ctx context.Context, batchID string, 
 // batch (cancels the process ctx to release any derived resources).
 func (p *GenerationBatchProcessor) finish(batchID, status string, total, currentIndex int, current GenerationBatchItem, success, fail, paused int, budget *ai.Budget) {
 	p.mu.Lock()
-	if p.activeBatch != nil {
-		p.activeBatch.Status = status
-		p.activeBatch.PausedCount = paused
-	}
 	if p.activeCancel != nil {
 		p.activeCancel()
 		p.activeCancel = nil
 	}
+	// activeBatch is cleared (not status-stamped) at terminal — the fetch-batch
+	// precedent: GET .../status reports {running:false, progress:null} after a
+	// terminal state; the terminal snapshot reaches clients via the broadcast
+	// below (dead-store on the cleared struct removed in 9R-16 CR).
 	p.activeBatch = nil
 	p.activeBudget = nil
 	p.mu.Unlock()
