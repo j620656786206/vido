@@ -15,6 +15,10 @@ var (
 	ErrAIInvalidResponse = errors.New("AI_INVALID_RESPONSE: Cannot parse AI response")
 	ErrAIProviderError   = errors.New("AI_PROVIDER_ERROR: Provider returned an error")
 	ErrAINotConfigured   = errors.New("AI_NOT_CONFIGURED: No AI provider configured")
+	// ErrBudgetExceeded is returned when a per-run AI cost/token budget ceiling
+	// is reached — the run stops spending rather than running away over a whole
+	// library (Story 9R-11). Uses the existing AI_ prefix (Rule 7, no new code).
+	ErrBudgetExceeded = errors.New("AI_BUDGET_EXCEEDED: per-run AI budget ceiling reached")
 
 	// Keyword generation error codes (Story 3.6)
 	ErrKeywordGenerationFailed = errors.New("KEYWORD_GENERATION_FAILED: AI failed to generate keywords")

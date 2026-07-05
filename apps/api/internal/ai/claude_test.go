@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -500,4 +501,45 @@ func TestNewProvider_ClaudeModelOverride(t *testing.T) {
 	cp, ok = provider.(*ClaudeProvider)
 	require.True(t, ok)
 	assert.Equal(t, DefaultClaudeModel, cp.model)
+}
+
+// --- 9R-11: metering + budget cutoff through the client ---
+
+func TestClaudeProvider_MetersUsageToBudget(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`{"content":[{"type":"text","text":"ok"}],"stop_reason":"end_turn","usage":{"input_tokens":1000,"output_tokens":500}}`))
+	}))
+	defer server.Close()
+
+	p := NewClaudeProvider("test-key", WithClaudeBaseURL(server.URL), WithClaudeModel("claude-haiku-4-5"))
+	b := NewBudget(0)
+	ctx := WithBudget(context.Background(), b)
+
+	_, err := p.CompleteText(ctx, "", "hi", 64)
+	require.NoError(t, err)
+
+	snap := b.Snapshot()
+	assert.Equal(t, int64(1000), snap.InputTokens)
+	assert.Equal(t, int64(500), snap.OutputTokens)
+	assert.Equal(t, 1, snap.LLMCalls)
+	// Haiku: 1000/1M*$1 + 500/1M*$5 = 0.001 + 0.0025 = 0.0035
+	assert.InDelta(t, 0.0035, snap.SpentUSD, 1e-9)
+}
+
+func TestClaudeProvider_BudgetCutoffStopsCall(t *testing.T) {
+	var hits atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits.Add(1)
+		w.Write([]byte(`{"content":[{"type":"text","text":"ok"}],"stop_reason":"end_turn"}`))
+	}))
+	defer server.Close()
+
+	p := NewClaudeProvider("test-key", WithClaudeBaseURL(server.URL), WithClaudeModel("claude-haiku-4-5"))
+	b := NewBudget(1.0)
+	b.RecordLLM("claude-haiku-4-5", 2_000_000, 0) // $2 → over ceiling
+	ctx := WithBudget(context.Background(), b)
+
+	_, err := p.CompleteText(ctx, "", "hi", 64)
+	require.ErrorIs(t, err, ErrBudgetExceeded)
+	assert.Equal(t, int32(0), hits.Load(), "no HTTP call once the budget is blown")
 }

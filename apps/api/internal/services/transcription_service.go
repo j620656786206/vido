@@ -51,6 +51,7 @@ type TranscriptionService struct {
 	sseHub             *sse.Hub
 	logger             *slog.Logger
 	timeout            time.Duration
+	runBudgetUSD       float64 // 9R-11: per-run AI cost ceiling (0 = unlimited)
 
 	mu         sync.Mutex
 	inProgress map[int64]string // mediaID → jobID
@@ -80,6 +81,12 @@ func NewTranscriptionService(
 // Kept as a setter to avoid changing the constructor signature (backward compatible).
 func (s *TranscriptionService) SetTranslationService(ts *TranslationService) {
 	s.translationService = ts
+}
+
+// SetRunBudgetUSD sets the per-run AI cost ceiling (Story 9R-11). A run that
+// reaches it stops making further ASR/LLM calls. 0 = unlimited (metering only).
+func (s *TranscriptionService) SetRunBudgetUSD(usd float64) {
+	s.runBudgetUSD = usd
 }
 
 // IsAvailable returns true if both FFmpeg and Whisper API are configured.
@@ -152,6 +159,20 @@ func (s *TranscriptionService) runPipeline(ctx context.Context, jobID string, me
 	}()
 
 	startedAt := time.Now()
+
+	// 9R-11: one per-run budget spans BOTH transcription and translation of
+	// this media so ASR + LLM share the ceiling; logged at the end.
+	budget := ai.NewBudget(s.runBudgetUSD)
+	ctx = ai.WithBudget(ctx, budget)
+	defer func() {
+		snap := budget.Snapshot()
+		s.logger.Info("transcription run AI usage",
+			"job_id", jobID, "media_id", mediaID,
+			"spent_usd", snap.SpentUSD, "budget_usd", snap.BudgetUSD,
+			"llm_input_tokens", snap.InputTokens, "llm_output_tokens", snap.OutputTokens,
+			"llm_calls", snap.LLMCalls, "asr_seconds", snap.ASRSeconds, "asr_calls", snap.ASRCalls,
+		)
+	}()
 
 	// Phase 1: Extract audio
 	s.broadcastEvent(EventTranscriptionExtracting, map[string]interface{}{

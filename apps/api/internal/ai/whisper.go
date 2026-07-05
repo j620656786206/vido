@@ -51,6 +51,8 @@ type WhisperClient struct {
 	// auto-detects, which is UNRELIABLE for media with background speech in
 	// other languages — pin it to the audio track's language when known.
 	language string
+	// governor is the shared AI throttle (Story 9R-11; nil = unthrottled).
+	governor *Governor
 }
 
 // WhisperOption is a functional option for configuring WhisperClient.
@@ -60,6 +62,13 @@ type WhisperOption func(*WhisperClient)
 func WithWhisperBaseURL(url string) WhisperOption {
 	return func(c *WhisperClient) {
 		c.baseURL = url
+	}
+}
+
+// WithWhisperGovernor injects the shared throttle (Story 9R-11).
+func WithWhisperGovernor(g *Governor) WhisperOption {
+	return func(c *WhisperClient) {
+		c.governor = g
 	}
 }
 
@@ -173,45 +182,55 @@ func (c *WhisperClient) TranscribeWithLanguage(ctx context.Context, audioPath, l
 
 	c.logger.Debug("Whisper API request", "file", filepath.Base(audioPath))
 
-	// Execute with bounded transient retry (9R-4): a single transient timeout
-	// previously killed a full multi-chunk transcription run.
-	srt, err := retryTransient(ctx, "whisper.transcribe", func() (string, bool, error) {
-		attemptCtx, cancel := context.WithTimeout(ctx, c.timeout)
-		defer cancel()
+	// Execute under the shared throttle + per-run budget (9R-11), with bounded
+	// transient retry (9R-4): a single transient timeout previously killed a
+	// full multi-chunk transcription run.
+	srt, err := governed(ctx, c.governor, "whisper.transcribe", func() (string, error) {
+		return retryTransient(ctx, "whisper.transcribe", func() (string, bool, error) {
+			attemptCtx, cancel := context.WithTimeout(ctx, c.timeout)
+			defer cancel()
 
-		req, err := http.NewRequestWithContext(attemptCtx, http.MethodPost, c.baseURL, bytes.NewReader(bodyBytes))
-		if err != nil {
-			return "", false, fmt.Errorf("whisper: create request: %w", err)
-		}
-		req.Header.Set("Authorization", "Bearer "+c.apiKey)
-		req.Header.Set("Content-Type", contentType)
-
-		resp, err := c.httpClient.Do(req)
-		if err != nil {
-			if attemptCtx.Err() == context.DeadlineExceeded {
-				return "", true, ErrWhisperTimeout
+			req, err := http.NewRequestWithContext(attemptCtx, http.MethodPost, c.baseURL, bytes.NewReader(bodyBytes))
+			if err != nil {
+				return "", false, fmt.Errorf("whisper: create request: %w", err)
 			}
-			return "", true, fmt.Errorf("%w: %v", ErrWhisperAPIError, err)
-		}
-		defer resp.Body.Close()
+			req.Header.Set("Authorization", "Bearer "+c.apiKey)
+			req.Header.Set("Content-Type", contentType)
 
-		respBody, err := io.ReadAll(io.LimitReader(resp.Body, WhisperMaxResponseSize))
-		if err != nil {
-			return "", true, fmt.Errorf("whisper: read response: %w", err)
-		}
+			resp, err := c.httpClient.Do(req)
+			if err != nil {
+				if attemptCtx.Err() == context.DeadlineExceeded {
+					return "", true, ErrWhisperTimeout
+				}
+				return "", true, fmt.Errorf("%w: %v", ErrWhisperAPIError, err)
+			}
+			defer resp.Body.Close()
 
-		if resp.StatusCode != http.StatusOK {
-			c.logger.Warn("Whisper API error",
-				"status_code", resp.StatusCode,
-				"body", string(respBody),
-			)
-			return "", isTransientStatus(resp.StatusCode), fmt.Errorf("%w: status %d — %s", ErrWhisperAPIError, resp.StatusCode, string(respBody))
-		}
+			respBody, err := io.ReadAll(io.LimitReader(resp.Body, WhisperMaxResponseSize))
+			if err != nil {
+				return "", true, fmt.Errorf("whisper: read response: %w", err)
+			}
 
-		return string(respBody), false, nil
+			if resp.StatusCode != http.StatusOK {
+				c.logger.Warn("Whisper API error",
+					"status_code", resp.StatusCode,
+					"body", string(respBody),
+				)
+				return "", isTransientStatus(resp.StatusCode), fmt.Errorf("%w: status %d — %s", ErrWhisperAPIError, resp.StatusCode, string(respBody))
+			}
+
+			return string(respBody), false, nil
+		})
 	})
 	if err != nil {
 		return "", err
+	}
+
+	// 9R-11: meter ASR cost by audio minutes against the per-run budget.
+	if b := BudgetFromContext(ctx); b != nil {
+		if dur, _, derr := parseWAVInfo(audioPath); derr == nil {
+			b.RecordASR(dur)
+		}
 	}
 
 	c.logger.Info("Whisper transcription complete", "file", filepath.Base(audioPath), "srt_bytes", len(srt))

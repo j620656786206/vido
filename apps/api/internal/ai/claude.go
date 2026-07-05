@@ -32,6 +32,7 @@ type ClaudeProvider struct {
 	model      string
 	httpClient *http.Client
 	timeout    time.Duration
+	governor   *Governor // 9R-11: shared throttle (nil = unthrottled)
 }
 
 // Compile-time interface verification.
@@ -65,6 +66,13 @@ func WithClaudeHTTPClient(client *http.Client) ClaudeProviderOption {
 func WithClaudeTimeout(timeout time.Duration) ClaudeProviderOption {
 	return func(p *ClaudeProvider) {
 		p.timeout = timeout
+	}
+}
+
+// WithClaudeGovernor injects the shared throttle (Story 9R-11).
+func WithClaudeGovernor(g *Governor) ClaudeProviderOption {
+	return func(p *ClaudeProvider) {
+		p.governor = g
 	}
 }
 
@@ -102,52 +110,70 @@ func (p *ClaudeProvider) Name() ProviderName {
 func (p *ClaudeProvider) doRequest(ctx context.Context, body []byte) ([]byte, error) {
 	url := fmt.Sprintf("%s/messages", p.baseURL)
 
-	return retryTransient(ctx, "claude.messages", func() ([]byte, bool, error) {
-		attemptCtx, cancel := context.WithTimeout(ctx, p.timeout)
-		defer cancel()
+	// 9R-11: budget pre-check + shared throttle around the retrying request.
+	respBody, err := governed(ctx, p.governor, "claude.messages", func() ([]byte, error) {
+		return retryTransient(ctx, "claude.messages", func() ([]byte, bool, error) {
+			attemptCtx, cancel := context.WithTimeout(ctx, p.timeout)
+			defer cancel()
 
-		httpReq, err := http.NewRequestWithContext(attemptCtx, http.MethodPost, url, bytes.NewReader(body))
-		if err != nil {
-			return nil, false, fmt.Errorf("failed to create request: %w", err)
-		}
-		httpReq.Header.Set("Content-Type", "application/json")
-		httpReq.Header.Set("x-api-key", p.apiKey)
-		httpReq.Header.Set("anthropic-version", ClaudeAPIVersion)
-
-		resp, err := p.httpClient.Do(httpReq)
-		if err != nil {
-			if attemptCtx.Err() == context.DeadlineExceeded {
-				slog.Warn("Claude API timeout", "timeout_seconds", p.timeout.Seconds())
-				return nil, true, ErrAITimeout
+			httpReq, err := http.NewRequestWithContext(attemptCtx, http.MethodPost, url, bytes.NewReader(body))
+			if err != nil {
+				return nil, false, fmt.Errorf("failed to create request: %w", err)
 			}
-			return nil, true, fmt.Errorf("%w: %v", ErrAIProviderError, err)
-		}
-		defer resp.Body.Close()
+			httpReq.Header.Set("Content-Type", "application/json")
+			httpReq.Header.Set("x-api-key", p.apiKey)
+			httpReq.Header.Set("anthropic-version", ClaudeAPIVersion)
 
-		respBody, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return nil, true, fmt.Errorf("failed to read response: %w", err)
-		}
-
-		if resp.StatusCode != http.StatusOK {
-			slog.Warn("Claude API error response",
-				"status_code", resp.StatusCode,
-				"body", string(respBody),
-			)
-			if resp.StatusCode == http.StatusTooManyRequests {
-				return nil, true, ErrAIQuotaExceeded
+			resp, err := p.httpClient.Do(httpReq)
+			if err != nil {
+				if attemptCtx.Err() == context.DeadlineExceeded {
+					slog.Warn("Claude API timeout", "timeout_seconds", p.timeout.Seconds())
+					return nil, true, ErrAITimeout
+				}
+				return nil, true, fmt.Errorf("%w: %v", ErrAIProviderError, err)
 			}
-			if resp.StatusCode == http.StatusNotFound {
-				slog.Error("Claude model not found — the configured model id is deprecated or invalid",
-					"model", p.model,
+			defer resp.Body.Close()
+
+			respBody, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, true, fmt.Errorf("failed to read response: %w", err)
+			}
+
+			if resp.StatusCode != http.StatusOK {
+				slog.Warn("Claude API error response",
+					"status_code", resp.StatusCode,
+					"body", string(respBody),
 				)
-				return nil, false, fmt.Errorf("%w: status 404: model %q not found (deprecated or invalid model id — set CLAUDE_MODEL to a current model)", ErrAIProviderError, p.model)
+				if resp.StatusCode == http.StatusTooManyRequests {
+					return nil, true, ErrAIQuotaExceeded
+				}
+				if resp.StatusCode == http.StatusNotFound {
+					slog.Error("Claude model not found — the configured model id is deprecated or invalid",
+						"model", p.model,
+					)
+					return nil, false, fmt.Errorf("%w: status 404: model %q not found (deprecated or invalid model id — set CLAUDE_MODEL to a current model)", ErrAIProviderError, p.model)
+				}
+				return nil, isTransientStatus(resp.StatusCode), fmt.Errorf("%w: status %d", ErrAIProviderError, resp.StatusCode)
 			}
-			return nil, isTransientStatus(resp.StatusCode), fmt.Errorf("%w: status %d", ErrAIProviderError, resp.StatusCode)
-		}
 
-		return respBody, false, nil
+			return respBody, false, nil
+		})
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	// 9R-11: meter token usage against the per-run budget (best-effort — a
+	// usage-less response just records zero).
+	if b := BudgetFromContext(ctx); b != nil {
+		var u struct {
+			Usage claudeUsage `json:"usage"`
+		}
+		if json.Unmarshal(respBody, &u) == nil {
+			b.RecordLLM(p.model, u.Usage.InputTokens, u.Usage.OutputTokens)
+		}
+	}
+	return respBody, nil
 }
 
 // Parse sends a filename to Claude for parsing.
@@ -294,6 +320,13 @@ type claudeMessage struct {
 type claudeResponse struct {
 	Content    []claudeContentBlock `json:"content"`
 	StopReason string               `json:"stop_reason"`
+	Usage      claudeUsage          `json:"usage"`
+}
+
+// claudeUsage carries the token counts the Messages API returns (9R-11 metering).
+type claudeUsage struct {
+	InputTokens  int64 `json:"input_tokens"`
+	OutputTokens int64 `json:"output_tokens"`
 }
 
 type claudeContentBlock struct {
