@@ -31,6 +31,9 @@ type GlossaryRepositoryInterface interface {
 	Update(ctx context.Context, id, termZh string, confirmed bool) (time.Time, error)
 	// Confirm marks a term confirmed by id (F6 review action).
 	Confirm(ctx context.Context, id string) (time.Time, error)
+	// ConfirmAll marks every unconfirmed term for a media confirmed in one
+	// statement (F6 「全部確認」); returns the number of rows changed.
+	ConfirmAll(ctx context.Context, mediaID string) (int64, error)
 	// Delete removes a term by id.
 	Delete(ctx context.Context, id string) error
 }
@@ -169,6 +172,21 @@ func (r *GlossaryRepository) Confirm(ctx context.Context, id string) (time.Time,
 		return time.Time{}, fmt.Errorf("failed to confirm glossary term: %w", err)
 	}
 	return now, affectedOrNotFound(res, id)
+}
+
+func (r *GlossaryRepository) ConfirmAll(ctx context.Context, mediaID string) (int64, error) {
+	now := time.Now()
+	res, err := r.db.ExecContext(ctx,
+		`UPDATE show_glossary SET confirmed = 1, updated_at = ? WHERE media_id = ? AND confirmed = 0`,
+		now, mediaID)
+	if err != nil {
+		return 0, fmt.Errorf("failed to confirm all glossary terms: %w", err)
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("failed to read confirm-all result: %w", err)
+	}
+	return affected, nil
 }
 
 func (r *GlossaryRepository) Delete(ctx context.Context, id string) error {

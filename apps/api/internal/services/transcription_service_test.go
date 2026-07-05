@@ -171,6 +171,9 @@ func (s *stubGlossaryRepo) Update(ctx context.Context, id, termZh string, confir
 func (s *stubGlossaryRepo) Confirm(ctx context.Context, id string) (time.Time, error) {
 	return time.Time{}, nil
 }
+func (s *stubGlossaryRepo) ConfirmAll(ctx context.Context, mediaID string) (int64, error) {
+	return 0, nil
+}
 func (s *stubGlossaryRepo) Delete(ctx context.Context, id string) error { return nil }
 
 func TestTranscriptionService_TranslateSRT_GlossaryOpenCCPlace(t *testing.T) {
