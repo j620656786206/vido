@@ -157,7 +157,9 @@ subtitle states join the same system, no bespoke palette); v2 shell (detail surf
    `term_src ↔ term_zh` rows with source badge (字幕/中繼資料/手動), unconfirmed-vs-confirmed
    states, confirm/edit/add/delete, and an empty state — spec'd as `Component/GlossaryRow-v2`.
 5. **Given** the Epic 6 revision, **then** the **Activity batch surface drives library-wide
-   generation** (scope, per-item stage progress, budget-ceiling partial-completion state,
+   generation** (scope **selectable between 缺字幕的項目 and 已選項目 — preserving today's
+   library multi-select batch entry** (`SelectionToolbar` → `BatchSubtitleDialog`, party-mode
+   P3 2026-07-05), per-item stage progress, budget-ceiling partial-completion state,
    cancel), consistent with shipped `ActivityRow-v2`, entered via the Activity hub row with no
    second competing entry.
 6. **Given** N4, **then** all four states are drawn per surface — default / loading / empty
@@ -264,6 +266,13 @@ subtitle states join the same system, no bespoke palette); v2 shell (detail surf
 - N/A — design-only story; adds/modifies no `apps/web/src/components/**/*.{ts,tsx}`. (Rule 23
   re-evaluates at the Epic 6 FE story — generation timestamps/ETAs there are server-supplied,
   but the FE story must re-check any wall-clock reads it introduces.)
+- **Handoff warnings for the Epic 6/7 FE stories (party-mode P5, Murat 2026-07-05):**
+  - F3's elapsed/total time (`12:34 / 45:00`) MUST come from the server/SSE payload — the FE
+    component must NOT derive it from `Date.now()`/`new Date()` (Rule 23 time-bomb; visual
+    fixtures go unstable otherwise).
+  - `Component/GenerationProgress-v2`'s five stage names (提取音訊/轉錄中/翻譯中/簡轉繁/完成
+    + failed-at-stage) are FROZEN as of this design — future gallery fixtures will be named
+    after these states; renaming a stage later breaks fixture ↔ baseline mapping.
 
 ### References
 
@@ -313,6 +322,15 @@ claude-fable-5 (SM Bob, create-story yolo)
 - Screenshots: 15 new PNGs in `flow-f-subtitle-v2/` + genuinely-changed
   `design-system/component-library.png` (sJzat gained the two registration cells); all other
   regenerated PNGs reverted as non-deterministic regen noise.
+- **Party-mode spec review 2026-07-05 (Alexyu: 全收, 6 proposals applied):**
+  P1 F6/F6-M gained 全部確認 batch-confirm (design owed it — Dev Notes said confirm must be
+  batchable); P2 F1 sample-data contradiction fixed (was 慶餘年 CN-show with a generated zh-TW
+  track + policy line — now 怪奇物語 non-CN sample with 轉為繁中 action; CN policy-line moved
+  to standalone variant note v16pVI); P3 F8/F8-M scope segmented 缺字幕的項目|已選項目
+  (preserves the library multi-select entry; AC #5 amended); P4 F11 ruled KEPT + archived as
+  Epic 7 design reference (canvas note updated; ux3-ai-subtitle epic annotated); P5 Rule-23
+  handoff warnings added (server-supplied time, stage-name freeze); P6 9R-15 annotated with
+  expected glossary route shape.
 
 ### Discovery Triage
 
@@ -348,3 +366,4 @@ claude-fable-5 (SM Bob, create-story yolo)
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | 2026-07-05 | Story authored (SM create-story, yolo) — expands the 9R breakdown Track-0 mini-spec into the full design story; doubles as Epic 6 (ux3-subtitle-v2) per-flow-recipe step 1. Capability audit baked in (fetch-only subtitle routes; movies-only transcribe; no glossary HTTP surface → filed 9R-15; no generation SSE). Status: ready-for-dev (design not started). |
 | 2026-07-05 | Design DONE — Pencil inline-agent (yolo) + Sally MCP review. 15 frames + 2 components (both sJzat-registered) + BE-gaps/superseded annotations; review fixes: F8-M duplicate-sheet deletion, F11 exploration note. F11 variant B = unprompted extra, kept + flagged, pending Alexyu ruling. SCREENS +15; screenshots regenerated (new folder + component-library.png only). Status → review. |
+| 2026-07-05 | Party-mode spec review (Sally/Amelia/John/Winston/Murat/Bob), Alexyu ruled 全收: P1 F6 batch-confirm; P2 F1 non-CN sample + CN-policy standalone variant; P3 F8 scope segments incl. 已選項目 (AC #5 amended); P4 F11 kept → archived as Epic 7 reference; P5 Rule-23 handoff warnings; P6 9R-15 route-shape note. Canvas + docs updated; PR #132 refreshed. |
