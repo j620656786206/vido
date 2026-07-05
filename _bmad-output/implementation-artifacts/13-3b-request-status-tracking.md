@@ -37,6 +37,8 @@ so that the request pipeline feels alive and trustworthy.
 
 ## Dev Notes
 
+> ⚠️ **STALE-MARK (filed by 13-7a create-story, SM Bob, 2026-07-05 — re-confirm before dev):** AC #2's merge rule "cached rows ABSENT from the snapshot are STALE-TERMINAL → keep as-is" predates 13-7a's hard-DELETE cancel (`DELETE /api/v1/requests/{id}` removes pending rows outright). An absent row is therefore NOT necessarily terminal history — it may have been deleted-while-active in another tab, and keep-as-is would preserve a phantom pending row until refetch. Required adjustment: preserve absent rows ONLY when the CACHED row's status is terminal (`completed`/`failed`); DROP absent rows whose cached status is active (`pending`/`searching`/`downloading`). Also note: the AC-#3 prose "error_message on failed rows" is partially stale — the caption RENDERING already ships on main (13-1b, `RequestRow.tsx:72-74`) and 13-7b relocates it into the action cluster; this story owns its LIVE refresh only. See 13-7a Discovery Triage.
+
 ### Developer context — copy-map (scouted 2026-07-04)
 
 - **THE template:** `hooks/useDownloadProgress.ts` — connect/reconnect/latest-ref excerpt scouted verbatim (lines 61-105); `applyDownloadSnapshot` :30-50; `SSE_RECONNECT_MS=10000` :27. Spec harness: `useDownloadProgress.spec.ts` (MockEventSource :10-31, stubGlobal :84).
