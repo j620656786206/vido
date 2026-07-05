@@ -613,6 +613,11 @@ func main() {
 	scannerHandler.SetScheduler(scanScheduler)
 	scannerHandler.SetEnrichmentService(enrichmentService)
 	transcriptionHandler := handlers.NewTranscriptionHandler(movieService, transcriptionService)
+
+	// 9R-13: .nfo metadata localizer (movies) — additive zh-TW .nfo via the
+	// shared translation + glossary infra. nil when no translation provider.
+	nfoLocalizer := services.NewNFOLocalizerService(translationService, repos.Glossary, slog.Default())
+	nfoLocalizerHandler := handlers.NewNFOLocalizerHandler(movieService, nfoLocalizer)
 	subtitleHandler := handlers.NewSubtitleHandler(
 		subtitleProviders, subtitleScorer, subtitleConverter, subtitlePlacer,
 		sseHub, repos.Movies, repos.Series,
@@ -688,6 +693,9 @@ func main() {
 		scannerHandler.RegisterRoutes(apiV1)
 		subtitleHandler.RegisterRoutes(apiV1)
 		transcriptionHandler.RegisterRoutes(apiV1)
+		if nfoLocalizer != nil {
+			nfoLocalizerHandler.RegisterRoutes(apiV1) // POST /movies/:id/localize-nfo (9R-13)
+		}
 		// SSE event stream endpoint
 		apiV1.GET("/events", sse.Handler(sseHub))
 		// Health services endpoint (Story 3.12 - Graceful Degradation)
