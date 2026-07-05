@@ -25,6 +25,7 @@ type Repositories struct {
 	ExploreBlocks     ExploreBlockRepositoryInterface
 	FilterPresets     FilterPresetRepositoryInterface
 	Requests          RequestRepositoryInterface
+	Glossary          GlossaryRepositoryInterface
 }
 
 // NewRepositories creates all repository implementations for the given database connection.
@@ -55,6 +56,7 @@ func NewRepositories(db *sql.DB) *Repositories {
 		ExploreBlocks:     NewExploreBlockRepository(db),
 		FilterPresets:     NewFilterPresetRepository(db),
 		Requests:          NewRequestRepository(db),
+		Glossary:          NewGlossaryRepository(db),
 	}
 }
 
@@ -85,5 +87,6 @@ func NewRepositoriesWithCache(db *sql.DB) *Repositories {
 		ExploreBlocks:     NewExploreBlockRepository(db),
 		FilterPresets:     NewFilterPresetRepository(db),
 		Requests:          NewRequestRepository(db),
+		Glossary:          NewGlossaryRepository(db),
 	}
 }

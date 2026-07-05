@@ -315,3 +315,80 @@ func TestTranslationService_Translate_CancelledContext(t *testing.T) {
 	assert.True(t, errors.Is(err, context.Canceled) || strings.Contains(err.Error(), "cancel"),
 		"should return context cancelled error, got: %v", err)
 }
+
+// --- 9R-7: glossary-aware translation ---
+
+func TestTranslationService_TranslateWithGlossary_InjectsGlossary(t *testing.T) {
+	mock := &mockTranslationCompleter{response: "[1] 魔王獸來了"}
+	svc := NewTranslationService(mock, nil)
+
+	glossary := []GlossaryPair{
+		{Source: "Demogorgon", Target: "魔王獸"},
+		{Source: "", Target: "skip-me"}, // blank source must be filtered
+	}
+	out, err := svc.TranslateWithGlossary(
+		context.Background(),
+		[]TranslationBlock{{Index: 1, Text: "The Demogorgon is coming"}},
+		glossary, nil,
+	)
+	require.NoError(t, err)
+	require.Len(t, out, 1)
+	assert.Equal(t, "魔王獸來了", out[0].Text)
+
+	require.Len(t, mock.calls, 1)
+	prompt := mock.calls[0].UserPrompt
+	assert.Contains(t, prompt, "Glossary")
+	assert.Contains(t, prompt, "Demogorgon → 魔王獸", "the fixed rendering must be injected")
+	assert.NotContains(t, prompt, "skip-me", "blank-source entries are filtered")
+}
+
+func TestTranslationService_Translate_NoGlossary_PromptUnchanged(t *testing.T) {
+	// No-regression: Translate with no glossary must NOT add a Glossary section.
+	mock := &mockTranslationCompleter{response: "[1] 你好"}
+	svc := NewTranslationService(mock, nil)
+
+	_, err := svc.Translate(context.Background(), []TranslationBlock{{Index: 1, Text: "Hi"}}, nil)
+	require.NoError(t, err)
+	require.Len(t, mock.calls, 1)
+	assert.NotContains(t, mock.calls[0].UserPrompt, "Glossary")
+}
+
+func TestTranslationService_TranslateRequest_FieldsAndGlossary(t *testing.T) {
+	// Generic entry point (9R-13 metadata path): arbitrary keyed fields + glossary.
+	mock := &mockTranslationCompleter{response: "[1] 一名竊賊潛入夢境\n[2] 唐姆·柯布"}
+	svc := NewTranslationService(mock, nil)
+
+	req := TranslationRequest{
+		Fields: []TranslationField{
+			{Key: "plot", Text: "A thief who enters dreams"},
+			{Key: "character", Text: "Dom Cobb"},
+		},
+		Glossary: []GlossaryPair{{Source: "Dom Cobb", Target: "唐姆·柯布"}},
+	}
+	out, err := svc.TranslateRequest(context.Background(), req)
+	require.NoError(t, err)
+	require.Len(t, out, 2)
+	assert.Equal(t, "plot", out[0].Key)
+	assert.Equal(t, "一名竊賊潛入夢境", out[0].Text)
+	assert.Equal(t, "character", out[1].Key)
+	assert.Equal(t, "唐姆·柯布", out[1].Text)
+
+	assert.Contains(t, mock.calls[0].UserPrompt, "Dom Cobb → 唐姆·柯布")
+}
+
+func TestTranslationService_TranslateRequest_FailSoftKeepsOriginal(t *testing.T) {
+	// A field with no returned translation keeps its original text.
+	mock := &mockTranslationCompleter{response: "[1] 已翻譯"}
+	svc := NewTranslationService(mock, nil)
+
+	out, err := svc.TranslateRequest(context.Background(), TranslationRequest{
+		Fields: []TranslationField{
+			{Key: "a", Text: "translated"},
+			{Key: "b", Text: "untouched"},
+		},
+	})
+	require.NoError(t, err)
+	require.Len(t, out, 2)
+	assert.Equal(t, "已翻譯", out[0].Text)
+	assert.Equal(t, "untouched", out[1].Text, "missing translation → original preserved")
+}
