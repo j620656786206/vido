@@ -37,11 +37,13 @@ describe('deriveSubtitleStatus — embedded tracks (fallback)', () => {
     expect(s?.className).toContain('--success-tint');
     expect(s?.steadyState).toBe(true);
   });
-  it('flags 簡中 when only zh-Hans is present', () => {
-    expect(
-      deriveSubtitleStatus(m('success', { subtitleTracks: JSON.stringify([{ lang: 'zh-Hans' }]) }))
-        ?.label
-    ).toBe('簡中');
+  it('flags 簡中 (info tint — Sally gate 2026-07-05, accent reserved for in-progress) when only zh-Hans is present', () => {
+    const s = deriveSubtitleStatus(
+      m('success', { subtitleTracks: JSON.stringify([{ lang: 'zh-Hans' }]) })
+    );
+    expect(s?.label).toBe('簡中');
+    expect(s?.className).toContain('--info-tint');
+    expect(s?.className).not.toContain('--accent-tint');
   });
   it('flags 缺字幕 for an empty track list', () => {
     expect(deriveSubtitleStatus(m('success', { subtitleTracks: JSON.stringify([]) }))?.label).toBe(
@@ -70,11 +72,13 @@ describe('deriveSubtitleStatus — authoritative engine result (ux3-0-1)', () =>
     expect(s?.label).toBe('繁中');
     expect(s?.steadyState).toBe(true);
   });
-  it('subtitleStatus=found + zh-Hans → 簡中', () => {
-    expect(
-      deriveSubtitleStatus(m('success', { subtitleStatus: 'found', subtitleLanguage: 'zh-Hans' }))
-        ?.label
-    ).toBe('簡中');
+  it('subtitleStatus=found + zh-Hans → 簡中 (info tint per F1-D-v2 pill C8lUe)', () => {
+    const s = deriveSubtitleStatus(
+      m('success', { subtitleStatus: 'found', subtitleLanguage: 'zh-Hans' })
+    );
+    expect(s?.label).toBe('簡中');
+    expect(s?.className).toContain('--info-tint');
+    expect(s?.className).not.toContain('--accent-tint');
   });
   it('subtitleStatus=not_found (no tracks) → 缺字幕', () => {
     expect(deriveSubtitleStatus(m('success', { subtitleStatus: 'not_found' }))?.label).toBe(
