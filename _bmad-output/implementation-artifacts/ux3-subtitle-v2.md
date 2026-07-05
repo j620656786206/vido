@@ -52,8 +52,8 @@ so that I get reliable 繁體中文 subtitles from the pipeline that actually wo
 
 ### Review Follow-ups (AI)
 
-- [ ] [AI-Review][MED] AC 7 says gallery fixtures "for each new component", but only the two Library-registered components (GenerationProgressV2 XkGvG, GlossaryRowV2 nDSEd) got fixtures — `ManageSubtitleDialogV2` and `GlossaryPanelV2` have none, while the v1 `SubtitleSearchDialog` DOES have one (precedent) [apps/web/src/routes/test/-gallery.fixtures.tsx:3074]. Deviation is defensible (both are data-coupled: `useGlossaryTerms` auto-fires on `open`, so a fixture would bake a loading/error race into the baseline; the pre-existing `ui-dialog/default` darwin mismatch also blocks `test:visual:update-missing`) but was UNRECORDED until this review. Decide at the Sally gate: add fixtures with a mocked-idle variant, or amend AC 7's scope note.
-- [ ] [AI-Review][LOW] 簡中 token divergence: the dialog's 簡中 track pill uses `--info-tint`/`--info` [apps/web/src/components/subtitle/ManageSubtitleDialogV2.tsx languageDescriptor], while the library badge (`deriveSubtitleStatus`) renders 簡中 with `--accent-tint`/`--accent-text` [apps/web/src/utils/libraryStatus.ts:102]. AC 6 wants states to "read as one system (§2.5 token map)" — exported screenshots are 400px and inconclusive; Sally to confirm which token the F1 frame specifies and align one side.
+- [x] [AI-Review][MED] AC 7 says gallery fixtures "for each new component", but only the two Library-registered components (GenerationProgressV2 XkGvG, GlossaryRowV2 nDSEd) got fixtures — `ManageSubtitleDialogV2` and `GlossaryPanelV2` have none, while the v1 `SubtitleSearchDialog` DOES have one (precedent) [apps/web/src/routes/test/-gallery.fixtures.tsx:3074]. Deviation is defensible (both are data-coupled: `useGlossaryTerms` auto-fires on `open`, so a fixture would bake a loading/error race into the baseline; the pre-existing `ui-dialog/default` darwin mismatch also blocks `test:visual:update-missing`) but was UNRECORDED until this review. Decide at the Sally gate: add fixtures with a mocked-idle variant, or amend AC 7's scope note. **→ Sally gate 2026-07-05 REJECTED the deviation: fixtures REQUIRED. Added 3 fixtures via the `seedQueries` mechanism (19-4b precedent — pre-seeded glossary cache kills the loading/error race): `subtitle-manage-subtitle-dialog-v2` (idle-with-tracks), `glossary-panel-v2/{seeded,empty}` + `-darwin` baselines.**
+- [x] [AI-Review][LOW] 簡中 token divergence: the dialog's 簡中 track pill uses `--info-tint`/`--info` [apps/web/src/components/subtitle/ManageSubtitleDialogV2.tsx languageDescriptor], while the library badge (`deriveSubtitleStatus`) renders 簡中 with `--accent-tint`/`--accent-text` [apps/web/src/utils/libraryStatus.ts:102]. AC 6 wants states to "read as one system (§2.5 token map)" — exported screenshots are 400px and inconclusive; Sally to confirm which token the F1 frame specifies and align one side. **→ Sally ruling 2026-07-05 per `.pen` (F1-D-v2 pill C8lUe = `$info`/`$info-tint`; accent reserved for in-progress states, DL-v2 §2.5): library badge aligned to `TINT.info` — Sally's edit to `libraryStatus.ts`, committed with the gate fixes.**
 
 ## Dev Notes
 
@@ -184,6 +184,15 @@ Fixes applied in-review (all suites re-run green, `lint:all` 0 errors, `prettier
 
 Open items (Review Follow-ups below): AC 7 fixture-coverage deviation recorded; 簡中 pill token question for the Sally gate.
 
+### Sally UX Gate — PASS-WITH-NOTES (2026-07-05, fixes applied 2026-07-06)
+
+Verdict: **PASS-WITH-NOTES** with one MUST-FIX + two required items, all applied:
+
+- **MUST-FIX applied — GenerationProgressV2 mobile vertical stepper (F3-M-v2, node k8sJl4 `fS5is`):** at `<sm` each stage renders as a full-width ROW [22px status circle + 13px label + spacer + Mono pct], stacked vertically `gap-1.5`; connectors `hidden sm:block`. Desktop unchanged — every `sm:` class computes identically to the pre-fix DOM (verified: post-fix `test:visual` run shows ZERO diff on all 6 `generation-progress-v2/*` desktop darwin baselines) + component spec asserts both the mobile-variant classes and the unchanged desktop structure.
+- **Required (follow-up #8 / CR MED) — dialog fixtures:** deviation REJECTED; `subtitle-manage-subtitle-dialog-v2` (idle-with-tracks, seeded glossary cache via `seedQueries`) + `glossary-panel-v2/{seeded,empty}` added with `-darwin` baselines (viewport captures — Radix portal, ui-dialog precedent).
+- **Ruling (follow-up #9 / CR LOW) — 簡中 badge token:** `.pen` F1-D-v2 pill C8lUe = `$info`/`$info-tint`; accent is reserved for in-progress states (DL-v2 §2.5). `deriveSubtitleStatus` 簡中 flipped `TINT.accent` → `TINT.info` (Sally's edit, included in the gate-fix commit). Dialog side was already info — system now reads as one.
+- **Newly recorded minor deviation (previously unrecorded — Rule 24 recording requirement):** F1's drawn track rows include a Mono filename (node VXof3 `Stranger.Things.S04E07…zh-TW.ai.srt`) and a per-track ellipsis (⋯) menu; the implementation renders neither — `subtitleTracks` wire data carries language only (no per-track filename), and no BE actions exist for a per-track menu (no delete/convert/reveal routes). Acceptable per Rule 24 capability honor; becomes actionable if/when a track-file API lands (related: `disc-2026-07-track-convert-endpoint`).
+
 ### Discovery Triage
 
 Story-authoring-time discoveries (SM Bob, 2026-07-05 — all filed in sprint-status.yaml the same day):
@@ -214,12 +223,15 @@ New:
 - `apps/web/src/components/subtitle/ManageSubtitleDialogV2.tsx` (+ `.spec.tsx`)
 - `tests/visual/components.visual.spec.ts-snapshots/components/generation-progress-v2/{提取音訊,轉錄中,翻譯中,完成,失敗,cost-slot}/default-visual-darwin.png`
 - `tests/visual/components.visual.spec.ts-snapshots/components/glossary-row-v2/{unconfirmed,confirmed-metadata,manual}/default-visual-darwin.png`
+- `tests/visual/components.visual.spec.ts-snapshots/components/subtitle-manage-subtitle-dialog-v2/default-visual-darwin.png` (Sally gate)
+- `tests/visual/components.visual.spec.ts-snapshots/components/glossary-panel-v2/{seeded,empty}/default-visual-darwin.png` (Sally gate)
 
 Modified:
 
-- `apps/web/src/utils/libraryStatus.ts` (CR pass 1: export canonical HANT/HANS sets — single source for zh-script classification)
+- `apps/web/src/utils/libraryStatus.ts` (CR pass 1: export canonical HANT/HANS sets; Sally gate: 簡中 badge `TINT.accent` → `TINT.info` per F1-D-v2 pill C8lUe)
+- `apps/web/src/components/subtitle/GenerationProgressV2.tsx` (Sally MUST-FIX: mobile vertical stepper `<sm` variant, F3-M-v2) + `.spec.tsx` (mobile-class + desktop-structure assertions)
 - `apps/web/src/components/media/LocalDetailV2.tsx` (dialog swap + AC 6 invalidation) + `LocalDetailV2.spec.tsx`
-- `apps/web/src/routes/test/-gallery.fixtures.tsx` (9 fixtures: 6× GenerationProgressV2 frozen-stage states, 3× GlossaryRowV2)
+- `apps/web/src/routes/test/-gallery.fixtures.tsx` (12 fixtures: 6× GenerationProgressV2 frozen-stage states, 3× GlossaryRowV2, 1× ManageSubtitleDialogV2 + 2× GlossaryPanelV2 with `seedQueries` — Sally gate)
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` (ux3-subtitle-v2 → review; +2 ③ discovery entries)
 - `_bmad-output/implementation-artifacts/ux3-subtitle-v2.md` (this file)
 

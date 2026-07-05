@@ -170,6 +170,10 @@ import { SubtitleSearchDialog } from '../../components/subtitle/SubtitleSearchDi
 import { BatchSubtitlePanel } from '../../components/subtitle/BatchSubtitleDialog';
 import { GenerationProgressV2 } from '../../components/subtitle/GenerationProgressV2';
 import { GlossaryRowV2 } from '../../components/subtitle/GlossaryRowV2';
+import { GlossaryPanelV2 } from '../../components/subtitle/GlossaryPanelV2';
+import { ManageSubtitleDialogV2 } from '../../components/subtitle/ManageSubtitleDialogV2';
+import { glossaryKeys } from '../../hooks/useGlossary';
+import type { GlossaryTerm } from '../../services/glossaryService';
 import { BackupManagement } from '../../components/settings/BackupManagement';
 import { BackupScheduleConfig } from '../../components/settings/BackupScheduleConfig';
 import { CacheManagement } from '../../components/settings/CacheManagement';
@@ -3471,5 +3475,145 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     penNode: 'nDSEd',
     statesOnly: ['default'],
     width: 720,
+  },
+
+  // ----- subtitle/ v2 dialogs (Sally UX gate 2026-07-05 — REQUIRED fixtures) -----
+  // Both are Radix `Dialog.Portal` renders (ui-dialog precedent): the state div is
+  // zero-size, so the visual spec captures the VIEWPORT (dialog + scrim) via the
+  // `?fixture=<id>` isolation page. `seedQueries` (19-4b Task 3) pre-loads the
+  // glossary list cache so `useGlossaryTerms` paints data with no loading flash
+  // and no network attempt.
+  {
+    id: 'subtitle-manage-subtitle-dialog-v2',
+    label: 'subtitle/ManageSubtitleDialogV2 (idle · with tracks)',
+    component: ManageSubtitleDialogV2 as ComponentType<Record<string, unknown>>,
+    props: {
+      mediaId: 'movie-1',
+      mediaType: 'movie',
+      mediaTitle: '怪奇物語',
+      mediaFilePath: '/media/movies/Stranger.Things.S04E07.mkv',
+      mediaResolution: '1080p',
+      subtitleTracks: JSON.stringify([{ language: 'zh-CN' }, { language: 'en' }]),
+      subtitleStatus: 'found',
+      subtitleLanguage: 'zh-Hant',
+      open: true,
+      onOpenChange: noop,
+      onGenerationComplete: noop,
+      onDownloadSuccess: noop,
+    },
+    seedQueries: [
+      {
+        queryKey: glossaryKeys.list('movie-1'),
+        data: [
+          {
+            id: 'fx-md-1',
+            mediaId: 'movie-1',
+            termSrc: 'Demogorgon',
+            termZh: '魔王獸',
+            language: 'zh-Hant',
+            source: 'subtitle',
+            confirmed: false,
+            createdAt: '2026-07-01T00:00:00Z',
+            updatedAt: '2026-07-01T00:00:00Z',
+          },
+          {
+            id: 'fx-md-2',
+            mediaId: 'movie-1',
+            termSrc: 'Hawkins',
+            termZh: '霍金斯鎮',
+            language: 'zh-Hant',
+            source: 'metadata',
+            confirmed: true,
+            createdAt: '2026-07-01T00:00:00Z',
+            updatedAt: '2026-07-01T00:00:00Z',
+          },
+          {
+            id: 'fx-md-3',
+            mediaId: 'movie-1',
+            termSrc: 'Vecna',
+            termZh: '維克那',
+            language: 'zh-Hant',
+            source: 'manual',
+            confirmed: false,
+            createdAt: '2026-07-01T00:00:00Z',
+            updatedAt: '2026-07-01T00:00:00Z',
+          },
+        ] satisfies GlossaryTerm[],
+      },
+    ],
+    penNode: 'screen-section', // Screen F1-D-v2 (r1EY9)
+    statesOnly: ['default'],
+  },
+  {
+    id: 'glossary-panel-v2/seeded',
+    label: 'subtitle/GlossaryPanelV2 (seeded list — F6)',
+    component: GlossaryPanelV2 as ComponentType<Record<string, unknown>>,
+    props: {
+      mediaId: 'movie-glossary',
+      mediaTitle: '怪奇物語',
+      open: true,
+      onOpenChange: noop,
+    },
+    seedQueries: [
+      {
+        queryKey: glossaryKeys.list('movie-glossary'),
+        data: [
+          {
+            id: 'fx-gp-1',
+            mediaId: 'movie-glossary',
+            termSrc: 'Demogorgon',
+            termZh: '魔王獸',
+            language: 'zh-Hant',
+            source: 'subtitle',
+            confirmed: false,
+            createdAt: '2026-07-01T00:00:00Z',
+            updatedAt: '2026-07-01T00:00:00Z',
+          },
+          {
+            id: 'fx-gp-2',
+            mediaId: 'movie-glossary',
+            termSrc: 'Hawkins',
+            termZh: '霍金斯鎮',
+            language: 'zh-Hant',
+            source: 'metadata',
+            confirmed: true,
+            createdAt: '2026-07-01T00:00:00Z',
+            updatedAt: '2026-07-01T00:00:00Z',
+          },
+          {
+            id: 'fx-gp-3',
+            mediaId: 'movie-glossary',
+            termSrc: 'Vecna',
+            termZh: '維克那',
+            language: 'zh-Hant',
+            source: 'manual',
+            confirmed: false,
+            createdAt: '2026-07-01T00:00:00Z',
+            updatedAt: '2026-07-01T00:00:00Z',
+          },
+        ] satisfies GlossaryTerm[],
+      },
+    ],
+    penNode: 'screen-section', // Screen F6-D-v2 (dlfMR)
+    statesOnly: ['default'],
+  },
+  {
+    id: 'glossary-panel-v2/empty',
+    label: 'subtitle/GlossaryPanelV2 (空狀態 尚無詞彙 — F7)',
+    component: GlossaryPanelV2 as ComponentType<Record<string, unknown>>,
+    props: {
+      mediaId: 'movie-glossary-empty',
+      mediaTitle: '怪奇物語',
+      open: true,
+      onOpenChange: noop,
+    },
+    seedQueries: [
+      {
+        queryKey: glossaryKeys.list('movie-glossary-empty'),
+        data: [] satisfies GlossaryTerm[],
+      },
+    ],
+    penNode: 'screen-section', // Screen F7-D-v2 (A85GFD)
+    statesOnly: ['default'],
   },
 ];

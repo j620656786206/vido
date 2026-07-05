@@ -84,7 +84,9 @@ function deriveFromTracks(media: Media): StatusDescriptor | null {
   const langs = tracks.map((t) => (t.language || t.lang || '').toLowerCase());
   if (langs.some((l) => HANT.has(l)))
     return { label: '繁中', className: TINT.success, steadyState: true };
-  if (langs.some((l) => HANS.has(l))) return { label: '簡中', className: TINT.accent };
+  // 簡中 = static informational state → info tint (F1-D-v2 pill C8lUe + DL-v2 §2.5:
+  // accent is reserved for in-progress states — Sally gate ruling 2026-07-05).
+  if (langs.some((l) => HANS.has(l))) return { label: '簡中', className: TINT.info };
   if (langs.length > 0) return { label: '有字幕', className: TINT.neutral };
   return { label: '缺字幕', className: TINT.neutral };
 }
@@ -104,7 +106,7 @@ export function deriveSubtitleStatus(media: Media | undefined): StatusDescriptor
   if (media.subtitleStatus === 'found') {
     const lang = (media.subtitleLanguage || '').toLowerCase();
     if (HANT.has(lang)) return { label: '繁中', className: TINT.success, steadyState: true };
-    if (HANS.has(lang)) return { label: '簡中', className: TINT.accent };
+    if (HANS.has(lang)) return { label: '簡中', className: TINT.info };
     // found but language unknown → defer to embedded tracks, else "有字幕".
     return deriveFromTracks(media) ?? { label: '有字幕', className: TINT.neutral };
   }

@@ -123,16 +123,23 @@ export function GenerationProgressV2({
 
   return (
     <div data-testid="generation-progress-v2" className="flex flex-col gap-4">
-      {/* Stepper */}
-      <ol className="flex items-start justify-center" aria-label="字幕生成進度">
+      {/* Stepper — mobile (<sm) = vertical full-width rows per F3-M-v2 (k8sJl4 `fS5is`,
+          Sally gate MUST-FIX 2026-07-05): [22px circle + 13px label + spacer + Mono pct].
+          Desktop (sm+) keeps the original horizontal stepper — every sm: class computes
+          IDENTICALLY to the pre-fix desktop DOM (zero darwin-baseline diff). */}
+      <ol
+        className="flex flex-col gap-1.5 sm:flex-row sm:items-start sm:justify-center sm:gap-0"
+        aria-label="字幕生成進度"
+      >
         {GENERATION_STAGES.map((stage, i) => {
           const state = states[i];
           return (
-            <li key={stage} className="flex items-start">
+            <li key={stage} className="flex w-full items-start sm:w-auto">
               {i > 0 && (
                 <span
                   aria-hidden="true"
                   className={cn(
+                    'hidden sm:block',
                     'mt-[10px] h-0.5 w-5 sm:w-7',
                     states[i - 1] === 'done' ? 'bg-[var(--success)]' : 'bg-[var(--border-subtle)]'
                   )}
@@ -141,12 +148,12 @@ export function GenerationProgressV2({
               <span
                 data-testid={`gen-stage-${stage}`}
                 data-state={state}
-                className="flex w-14 flex-col items-center gap-1 sm:w-[72px]"
+                className="flex w-full flex-row items-center gap-2.5 sm:w-[72px] sm:flex-col sm:gap-1"
               >
                 <StepMark state={state} />
                 <span
                   className={cn(
-                    'text-xs',
+                    'text-[13px] sm:text-xs',
                     state === 'active' && 'font-semibold text-[var(--accent-text)]',
                     state === 'failed' && 'font-semibold text-[var(--error-text)]',
                     state === 'done' && 'text-[var(--text-secondary)]',
@@ -156,7 +163,7 @@ export function GenerationProgressV2({
                   {stage}
                 </span>
                 {state === 'active' && pctText && (
-                  <span className="font-mono text-[11px] tabular-nums text-[var(--accent-text)]">
+                  <span className="ml-auto font-mono text-[11px] tabular-nums text-[var(--accent-text)] sm:ml-0">
                     {pctText}
                   </span>
                 )}
