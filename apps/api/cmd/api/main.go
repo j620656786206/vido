@@ -499,6 +499,13 @@ func main() {
 		whisperClient := ai.NewWhisperClient(cfg.GetOpenAIAPIKey(), ai.WithWhisperGovernor(aiGovernor))
 		transcriptionService = services.NewTranscriptionService(audioExtractorService, whisperClient, sseHub, slog.Default())
 		transcriptionService.SetRunBudgetUSD(cfg.AIRunBudgetUSD)
+		// 9R-10: wire the per-show glossary + OpenCC safety net + atomic placer
+		// into the Route C generation pipeline.
+		transcriptionService.SetGlossaryRepository(repos.Glossary)
+		if subtitleConverter != nil {
+			transcriptionService.SetOpenCCConverter(subtitleConverter)
+		}
+		transcriptionService.SetPlacer(subtitlePlacerAdapter{subtitlePlacer})
 		slog.Info("Transcription service initialized (Whisper API enabled)")
 	} else {
 		transcriptionService = services.NewTranscriptionService(audioExtractorService, nil, sseHub, slog.Default())
