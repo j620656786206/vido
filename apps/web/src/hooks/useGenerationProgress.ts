@@ -11,8 +11,9 @@
  *
  * ⚠️ Double-nested envelope: the SSE `data:` line carries the FULL `Event`
  * struct `{"id","type","data":{…payload…}}` — the payload is `parsed.data`,
- * then snakeToCamel at ingest (Rule 18). Payload `media_id` is the INT64 movie
- * id; events are filtered by it (one shared stream, many producers).
+ * then snakeToCamel at ingest (Rule 18). Payload `media_id` is the movie row
+ * id — a UUID STRING (9R-18 [@contract-v1]); events are filtered by strict
+ * string equality (one shared stream, many producers).
  *
  * §8 lazy-SSE rules: NO connect on mount — `startTracking(mediaId)` opens the
  * stream (also the 409-attach path: attach to a job already running server-side).
@@ -37,7 +38,8 @@ export type GenerationPhase =
 /** Camelized SSE payload (after envelope unwrap + snakeToCamel). */
 interface GenerationEventPayload {
   jobId?: string;
-  mediaId?: number;
+  /** Movie row id — a UUID string (9R-18). */
+  mediaId?: string;
   phase?: string;
   percentage?: number;
   message?: string;
@@ -150,8 +152,8 @@ export function useGenerationProgress(options?: UseGenerationProgressOptions) {
   const reconnectRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const mountedRef = useRef(true);
   const connectRef = useRef<() => void>(() => {});
-  /** int64 movie id currently tracked; null = drop everything. */
-  const mediaIdRef = useRef<number | null>(null);
+  /** UUID-string movie id currently tracked; null = drop everything. */
+  const mediaIdRef = useRef<string | null>(null);
   const onCompleteRef = useRef(options?.onComplete);
 
   useEffect(() => {
@@ -251,7 +253,7 @@ export function useGenerationProgress(options?: UseGenerationProgressOptions) {
    * path — safe to call when the job was already running server-side.
    */
   const startTracking = useCallback(
-    (mediaId: number) => {
+    (mediaId: string) => {
       mediaIdRef.current = mediaId;
       dispatch({ type: 'START' });
       if (!esRef.current || esRef.current.readyState === 2) connect();

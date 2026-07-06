@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"path/filepath"
-	"strconv"
 	"sync"
 
 	"github.com/google/uuid"
@@ -33,7 +32,8 @@ var ErrGenerationBatchRunning = errors.New("generation batch already running")
 // its selection and excludes series ids client-side).
 var ErrGenerationSelectionInvalid = errors.New("selected media cannot run generation")
 
-// Generation-batch terminal/live statuses (AC 9 vocabulary, [@contract-v1]).
+// Generation-batch terminal/live statuses (AC 9 vocabulary, [@contract-v2] —
+// media ids are UUID STRINGS since 9R-18).
 const (
 	GenerationBatchStatusRunning       = "running"
 	GenerationBatchStatusComplete      = "complete"
@@ -48,7 +48,7 @@ type GenerationBatchProgress struct {
 	BatchID        string  `json:"batch_id"`
 	TotalItems     int     `json:"total_items"`
 	CurrentIndex   int     `json:"current_index"`
-	CurrentMediaID int64   `json:"current_media_id"`
+	CurrentMediaID string  `json:"current_media_id"`
 	CurrentItem    string  `json:"current_item"`
 	SuccessCount   int     `json:"success_count"`
 	FailCount      int     `json:"fail_count"`
@@ -61,7 +61,7 @@ type GenerationBatchProgress struct {
 // GenerationBatchItem is one enumerated queue entry. The exported fields are
 // the 202-response items[] shape (AC 1); file locations stay internal.
 type GenerationBatchItem struct {
-	MediaID int64  `json:"media_id"`
+	MediaID string `json:"media_id"`
 	Title   string `json:"title"`
 
 	filePath string
@@ -72,7 +72,7 @@ type GenerationBatchItem struct {
 // needs (Rule 11 — enables test fakes without the full pipeline).
 type generationRunner interface {
 	IsAvailable() bool
-	RunTranscription(ctx context.Context, mediaID int64, filePath string, mediaDir string, opts ...TranscriptionOption) error
+	RunTranscription(ctx context.Context, mediaID string, filePath string, mediaDir string, opts ...TranscriptionOption) error
 }
 
 // generationCandidateFinder is the narrow movie-repo surface for enumeration
@@ -182,7 +182,7 @@ func (p *GenerationBatchProcessor) PreviewMissing(ctx context.Context) (int, err
 // A scope=missing resolving to 0 items returns ("", empty, nil) WITHOUT
 // starting a batch — nothing to do is not an error (AC 1).
 // Errors: ErrGenerationBatchRunning (409), ErrGenerationSelectionInvalid (400).
-func (p *GenerationBatchProcessor) Start(ctx context.Context, scope string, mediaIDs []int64) (string, []GenerationBatchItem, error) {
+func (p *GenerationBatchProcessor) Start(ctx context.Context, scope string, mediaIDs []string) (string, []GenerationBatchItem, error) {
 	// Quick check — release the lock before DB queries (fetch-batch H1 fix).
 	p.mu.Lock()
 	if p.activeBatch != nil {
@@ -230,7 +230,7 @@ func (p *GenerationBatchProcessor) Start(ctx context.Context, scope string, medi
 }
 
 // collectItems resolves the scope into the run-order queue (movies only, AC 8).
-func (p *GenerationBatchProcessor) collectItems(ctx context.Context, scope string, mediaIDs []int64) ([]GenerationBatchItem, error) {
+func (p *GenerationBatchProcessor) collectItems(ctx context.Context, scope string, mediaIDs []string) ([]GenerationBatchItem, error) {
 	switch scope {
 	case "missing":
 		movies, err := p.finder.FindMissingZhHantSubtitle(ctx)
@@ -249,17 +249,17 @@ func (p *GenerationBatchProcessor) collectItems(ctx context.Context, scope strin
 	case "selected":
 		items := make([]GenerationBatchItem, 0, len(mediaIDs))
 		for _, id := range mediaIDs {
-			movie, err := p.finder.FindByID(ctx, strconv.FormatInt(id, 10))
+			movie, err := p.finder.FindByID(ctx, id)
 			if err != nil || movie == nil {
 				// Unknown id — likely a series id or a stale selection (AC 8: reject).
-				return nil, fmt.Errorf("media_id %d 不是可生成字幕的電影: %w", id, ErrGenerationSelectionInvalid)
+				return nil, fmt.Errorf("media_id %s 不是可生成字幕的電影: %w", id, ErrGenerationSelectionInvalid)
 			}
 			if !movie.FilePath.Valid || movie.FilePath.String == "" {
-				return nil, fmt.Errorf("media_id %d 沒有媒體檔案: %w", id, ErrGenerationSelectionInvalid)
+				return nil, fmt.Errorf("media_id %s 沒有媒體檔案: %w", id, ErrGenerationSelectionInvalid)
 			}
 			item, ok := p.toItem(*movie)
 			if !ok {
-				return nil, fmt.Errorf("media_id %d 不是可生成字幕的電影: %w", id, ErrGenerationSelectionInvalid)
+				return nil, fmt.Errorf("media_id %s 不是可生成字幕的電影: %w", id, ErrGenerationSelectionInvalid)
 			}
 			items = append(items, item)
 		}
@@ -269,22 +269,17 @@ func (p *GenerationBatchProcessor) collectItems(ctx context.Context, scope strin
 	}
 }
 
-// toItem converts a movie row into a queue item, converting the string row id
-// to the wire's int64 media_id (9R-16 ruling — /movies/:id/transcribe parity).
+// toItem converts a movie row into a queue item. The row id (a UUID string)
+// IS the wire media_id — no conversion (9R-18: the previous ParseInt here
+// silently dropped every UUID-keyed movie from the batch).
 func (p *GenerationBatchProcessor) toItem(m models.Movie) (GenerationBatchItem, bool) {
-	id, err := strconv.ParseInt(m.ID, 10, 64)
-	if err != nil {
-		p.logger.Warn("skipping movie with non-numeric id in generation batch",
-			"movie_id", m.ID, "title", m.Title, "error", err)
-		return GenerationBatchItem{}, false
-	}
 	if !m.FilePath.Valid || m.FilePath.String == "" {
 		p.logger.Warn("skipping movie without file path in generation batch",
 			"movie_id", m.ID, "title", m.Title)
 		return GenerationBatchItem{}, false
 	}
 	return GenerationBatchItem{
-		MediaID:  id,
+		MediaID:  m.ID,
 		Title:    m.Title,
 		filePath: m.FilePath.String,
 		mediaDir: filepath.Dir(m.FilePath.String),
@@ -395,8 +390,8 @@ func (p *GenerationBatchProcessor) finish(batchID, status string, total, current
 }
 
 // broadcast emits the generation_batch_progress SSE event (AC 9,
-// [@contract-v1]). The payload map is built by hand — ai.BudgetSnapshot has no
-// json tags on purpose.
+// [@contract-v2] — current_media_id is a UUID STRING since 9R-18). The payload
+// map is built by hand — ai.BudgetSnapshot has no json tags on purpose.
 func (p *GenerationBatchProcessor) broadcast(batchID string, total, currentIndex int, current GenerationBatchItem, success, fail, paused int, status string, budget *ai.Budget) {
 	if p.sseHub == nil {
 		return

@@ -1,9 +1,9 @@
 /**
  * Route C generation trigger (ux3-subtitle-v2 AC 2, consumes 9R-9/9R-10 backend).
  *
- * `POST /api/v1/movies/{id}/transcribe?translate=true` — `:id` is the INT64 movie
- * id (⚠️ glossary routes key the same movie by STRING — callers convert), no body,
- * 202 → `{job_id, message}`. `translate=true` is ALWAYS sent: it runs the full
+ * `POST /api/v1/movies/{id}/transcribe?translate=true` — `:id` is the movie row
+ * id, a UUID STRING (9R-18 — same key the glossary routes use; no conversion),
+ * no body, 202 → `{job_id, message}`. `translate=true` is ALWAYS sent: it runs the full
  * Route C pipeline (glossary-aware translate → OpenCC s2twp → atomic place);
  * omitting it would produce an EN-only SRT.
  *
@@ -32,7 +32,7 @@ export type TranscribeOutcome =
   | { status: 'inProgress' };
 
 export const transcriptionService = {
-  async startTranscription(movieId: number): Promise<TranscribeOutcome> {
+  async startTranscription(movieId: string): Promise<TranscribeOutcome> {
     const response = await fetch(`${API_BASE_URL}/movies/${movieId}/transcribe?translate=true`, {
       method: 'POST',
     });

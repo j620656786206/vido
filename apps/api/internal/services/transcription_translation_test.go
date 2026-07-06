@@ -12,6 +12,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// Media-id fixture convention (9R-18 AC 7): media ids are UUID STRINGS —
+// mirror the prod creation path (uuid.New().String()); do NOT invent numeric
+// ids (fixtures reuse the uuid* consts from generation_batch_test.go).
+
 // ─── ParseSRTToTranslationBlocks Tests (P0) ─────────────────────────────────
 
 func TestParseSRTToTranslationBlocks_Basic(t *testing.T) {
@@ -185,7 +189,7 @@ func TestTranslateSRT_Success(t *testing.T) {
 	tmpDir := t.TempDir()
 	filePath := filepath.Join(tmpDir, "Movie.2024.1080p.mkv")
 
-	zhPath, err := svc.translateSRT(context.Background(), "job-1", 1, srtContent, filePath, tmpDir)
+	zhPath, err := svc.translateSRT(context.Background(), "job-1", uuidA, srtContent, filePath, tmpDir)
 	require.NoError(t, err)
 
 	// Verify file was created
@@ -215,7 +219,7 @@ func TestTranslateSRT_FilenameConvention(t *testing.T) {
 	tmpDir := t.TempDir()
 	filePath := filepath.Join(tmpDir, "The.Movie.2024.1080p.BluRay.mkv")
 
-	zhPath, err := svc.translateSRT(context.Background(), "job-1", 1, srtContent, filePath, tmpDir)
+	zhPath, err := svc.translateSRT(context.Background(), "job-1", uuidA, srtContent, filePath, tmpDir)
 	require.NoError(t, err)
 
 	// Should follow naming convention: {basename}.zh-Hant.srt
@@ -230,7 +234,7 @@ func TestTranslateSRT_EmptySRT(t *testing.T) {
 	svc := NewTranscriptionService(nil, nil, nil, nil)
 	svc.SetTranslationService(translationSvc)
 
-	_, err := svc.translateSRT(context.Background(), "job-1", 1, "", "test.mkv", t.TempDir())
+	_, err := svc.translateSRT(context.Background(), "job-1", uuidA, "", "test.mkv", t.TempDir())
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "no subtitle blocks")
 }
@@ -256,7 +260,7 @@ func TestTranslateSRT_PartialFailurePreservesEnglish(t *testing.T) {
 	tmpDir := t.TempDir()
 	filePath := filepath.Join(tmpDir, "test.mkv")
 
-	zhPath, err := svc.translateSRT(context.Background(), "job-1", 1, srtContent.String(), filePath, tmpDir)
+	zhPath, err := svc.translateSRT(context.Background(), "job-1", uuidA, srtContent.String(), filePath, tmpDir)
 	require.NoError(t, err)
 
 	content, err := os.ReadFile(zhPath)
@@ -284,7 +288,7 @@ func TestTranslateSRT_ProgressCallback(t *testing.T) {
 	filePath := filepath.Join(tmpDir, "test.mkv")
 
 	// translateSRT should complete without panic even with nil sseHub
-	zhPath, err := svc.translateSRT(context.Background(), "job-1", 1, srtContent, filePath, tmpDir)
+	zhPath, err := svc.translateSRT(context.Background(), "job-1", uuidA, srtContent, filePath, tmpDir)
 	require.NoError(t, err)
 	assert.FileExists(t, zhPath)
 }

@@ -18,6 +18,10 @@ import (
 
 // ─── Mock implementations ─────────────────────────────────────────────────
 
+// Media-id fixture convention (9R-18 AC 7): media ids are UUID STRINGS —
+// mirror the prod creation path (uuid.New().String()); do NOT invent numeric ids.
+const testMovieUUID = "4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e5f"
+
 type mockTranscriptionMovieGetter struct {
 	movie *models.Movie
 	err   error
@@ -28,22 +32,24 @@ func (m *mockTranscriptionMovieGetter) GetByID(_ context.Context, _ string) (*mo
 }
 
 type mockTranscriptionService struct {
-	available    bool
-	inProgress   bool
-	jobID        string
-	startErr     error
-	receivedOpts []services.TranscriptionOption
+	available       bool
+	inProgress      bool
+	jobID           string
+	startErr        error
+	receivedOpts    []services.TranscriptionOption
+	receivedMediaID string
 }
 
 func (m *mockTranscriptionService) IsAvailable() bool {
 	return m.available
 }
 
-func (m *mockTranscriptionService) IsInProgress(_ int64) bool {
+func (m *mockTranscriptionService) IsInProgress(_ string) bool {
 	return m.inProgress
 }
 
-func (m *mockTranscriptionService) StartTranscription(_ context.Context, _ int64, _ string, _ string, opts ...services.TranscriptionOption) (string, error) {
+func (m *mockTranscriptionService) StartTranscription(_ context.Context, mediaID string, _ string, _ string, opts ...services.TranscriptionOption) (string, error) {
+	m.receivedMediaID = mediaID
 	m.receivedOpts = opts
 	return m.jobID, m.startErr
 }
@@ -74,16 +80,17 @@ func TestTranscribeMovie_Success(t *testing.T) {
 	movie := &models.Movie{
 		FilePath: models.NewNullString(tmpPath),
 	}
-	movie.ID = "42"
+	movie.ID = testMovieUUID
 
+	mockSvc := &mockTranscriptionService{available: true, jobID: "job-123"}
 	h := NewTranscriptionHandler(
 		&mockTranscriptionMovieGetter{movie: movie},
-		&mockTranscriptionService{available: true, jobID: "job-123"},
+		mockSvc,
 	)
 
 	r := setupTranscriptionRouter(h)
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodPost, "/api/v1/movies/42/transcribe", nil)
+	req, _ := http.NewRequest(http.MethodPost, "/api/v1/movies/"+testMovieUUID+"/transcribe", nil)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusAccepted, w.Code)
@@ -95,6 +102,9 @@ func TestTranscribeMovie_Success(t *testing.T) {
 
 	data := resp.Data.(map[string]interface{})
 	assert.Equal(t, "job-123", data["job_id"])
+
+	// AC 1 (9R-18): the UUID id reaches the service untouched — no ParseInt.
+	assert.Equal(t, testMovieUUID, mockSvc.receivedMediaID)
 }
 
 func TestTranscribeMovie_WithTranslateParam(t *testing.T) {
@@ -103,7 +113,7 @@ func TestTranscribeMovie_WithTranslateParam(t *testing.T) {
 	movie := &models.Movie{
 		FilePath: models.NewNullString(tmpPath),
 	}
-	movie.ID = "42"
+	movie.ID = testMovieUUID
 
 	mockSvc := &mockTranscriptionService{available: true, jobID: "job-456"}
 	h := NewTranscriptionHandler(
@@ -113,7 +123,7 @@ func TestTranscribeMovie_WithTranslateParam(t *testing.T) {
 
 	r := setupTranscriptionRouter(h)
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodPost, "/api/v1/movies/42/transcribe?translate=true", nil)
+	req, _ := http.NewRequest(http.MethodPost, "/api/v1/movies/"+testMovieUUID+"/transcribe?translate=true", nil)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusAccepted, w.Code)
@@ -127,7 +137,7 @@ func TestTranscribeMovie_WithoutTranslateParam(t *testing.T) {
 	movie := &models.Movie{
 		FilePath: models.NewNullString(tmpPath),
 	}
-	movie.ID = "42"
+	movie.ID = testMovieUUID
 
 	mockSvc := &mockTranscriptionService{available: true, jobID: "job-789"}
 	h := NewTranscriptionHandler(
@@ -137,7 +147,7 @@ func TestTranscribeMovie_WithoutTranslateParam(t *testing.T) {
 
 	r := setupTranscriptionRouter(h)
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodPost, "/api/v1/movies/42/transcribe", nil)
+	req, _ := http.NewRequest(http.MethodPost, "/api/v1/movies/"+testMovieUUID+"/transcribe", nil)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusAccepted, w.Code)
@@ -159,17 +169,22 @@ func TestTranscribeMovie_ServiceUnavailable(t *testing.T) {
 	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
 }
 
-func TestTranscribeMovie_InvalidID(t *testing.T) {
+// 9R-18 AC 1: `:id` is an opaque STRING — the only 400-able format problem is
+// an EMPTY id (unreachable via normal routing, so the branch is exercised by
+// invoking the handler with a hand-built gin context).
+func TestTranscribeMovie_EmptyID(t *testing.T) {
 	h := NewTranscriptionHandler(
 		&mockTranscriptionMovieGetter{},
 		&mockTranscriptionService{available: true},
 	)
 
-	r := setupTranscriptionRouter(h)
+	gin.SetMode(gin.TestMode)
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodPost, "/api/v1/movies/abc/transcribe", nil)
-	r.ServeHTTP(w, req)
+	c, _ := gin.CreateTestContext(w)
+	c.Request, _ = http.NewRequest(http.MethodPost, "/api/v1/movies//transcribe", nil)
+	c.Params = gin.Params{{Key: "id", Value: ""}}
 
+	h.TranscribeMovie(c)
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 

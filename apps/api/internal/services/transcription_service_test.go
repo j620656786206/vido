@@ -29,24 +29,28 @@ func TestTranscriptionService_IsAvailable_NoWhisper(t *testing.T) {
 	assert.False(t, svc.IsAvailable())
 }
 
+// Media-id fixture convention (9R-18 AC 7): media ids are UUID STRINGS —
+// mirror the prod creation path (uuid.New().String()); do NOT invent numeric
+// ids (fixtures reuse the uuid* consts from generation_batch_test.go).
+
 func TestTranscriptionService_IsInProgress_Empty(t *testing.T) {
 	svc := NewTranscriptionService(nil, nil, nil, nil)
-	assert.False(t, svc.IsInProgress(1))
+	assert.False(t, svc.IsInProgress(uuidA))
 }
 
 func TestTranscriptionService_IsInProgress_Set(t *testing.T) {
 	svc := NewTranscriptionService(nil, nil, nil, nil)
 	svc.mu.Lock()
-	svc.inProgress[42] = "job-123"
+	svc.inProgress[uuidB] = "job-123"
 	svc.mu.Unlock()
 
-	assert.True(t, svc.IsInProgress(42))
-	assert.False(t, svc.IsInProgress(99))
+	assert.True(t, svc.IsInProgress(uuidB))
+	assert.False(t, svc.IsInProgress(uuidC))
 }
 
 func TestTranscriptionService_StartTranscription_Disabled(t *testing.T) {
 	svc := NewTranscriptionService(nil, nil, nil, nil)
-	_, err := svc.StartTranscription(context.Background(), 1, "/test.mkv", "/media")
+	_, err := svc.StartTranscription(context.Background(), uuidA, "/test.mkv", "/media")
 	assert.ErrorIs(t, err, ErrTranscriptionDisabled)
 }
 
@@ -61,10 +65,10 @@ func TestTranscriptionService_StartTranscription_AlreadyInProgress(t *testing.T)
 
 	// Manually set in-progress
 	svc.mu.Lock()
-	svc.inProgress[42] = "existing-job"
+	svc.inProgress[uuidB] = "existing-job"
 	svc.mu.Unlock()
 
-	_, err := svc.StartTranscription(context.Background(), 42, "/test.mkv", "/media")
+	_, err := svc.StartTranscription(context.Background(), uuidB, "/test.mkv", "/media")
 	assert.ErrorIs(t, err, ErrTranscriptionInProgress)
 }
 
@@ -87,7 +91,7 @@ func TestTranscriptionService_FailJob_NilHub(t *testing.T) {
 	// failJob with nil sseHub should not panic
 	svc := NewTranscriptionService(nil, nil, nil, nil)
 	assert.NotPanics(t, func() {
-		svc.failJob("job-1", 1, "test error")
+		svc.failJob("job-1", uuidA, "test error")
 	})
 }
 
@@ -192,7 +196,7 @@ func TestTranscriptionService_TranslateSRT_GlossaryOpenCCPlace(t *testing.T) {
 	svc.SetGlossaryRepository(&stubGlossaryRepo{terms: map[string]string{"Demogorgon": "魔王獸"}})
 
 	srt := "1\n00:00:01,000 --> 00:00:03,000\nThe Demogorgon is coming\n"
-	path, err := svc.translateSRT(context.Background(), "job1", 42, srt, "/media/Show.mkv", "/media")
+	path, err := svc.translateSRT(context.Background(), "job1", uuidB, srt, "/media/Show.mkv", "/media")
 	require.NoError(t, err)
 
 	// Glossary-aware: the fixed rendering reached the LLM prompt.
@@ -219,7 +223,7 @@ func TestTranscriptionService_TranslateSRT_FailSoftNoDeps(t *testing.T) {
 
 	dir := t.TempDir()
 	srt := "1\n00:00:01,000 --> 00:00:02,000\nHi\n"
-	path, err := svc.translateSRT(context.Background(), "job1", 1, srt, dir+"/Movie.mkv", dir)
+	path, err := svc.translateSRT(context.Background(), "job1", uuidA, srt, dir+"/Movie.mkv", dir)
 	require.NoError(t, err)
 	assert.FileExists(t, path)
 	// No glossary → prompt has no Glossary section (unchanged behavior).

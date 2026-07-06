@@ -8,7 +8,8 @@
  * F5-D-v2 f6ZxY 尚未設定 fail-soft, F10-D-v2 olDlj 載入骨架.
  *
  * - 生成字幕 is the ONLY primary action; movies call
- *   POST /movies/{id}/transcribe?translate=true (int64 id — `Number(mediaId)`);
+ *   POST /movies/{id}/transcribe?translate=true (UUID-string id passed through
+ *   as-is, 9R-18 — the old `Number(uuid)` produced NaN);
  *   series render the CTA DISABLED with 影集字幕生成即將推出 (9R-10a pending —
  *   Rule 24 capability honor: never draw a dead control as live).
  * - 503 TRANSCRIPTION_DISABLED → 字幕生成尚未設定 warning panel + 前往設定
@@ -173,7 +174,7 @@ export function ManageSubtitleDialogV2({
   const onlineSearch = useSubtitleSearch();
 
   const trigger = useMutation({
-    mutationFn: () => transcriptionService.startTranscription(Number(mediaId)),
+    mutationFn: () => transcriptionService.startTranscription(mediaId),
     onSuccess: (outcome) => {
       if (outcome.status === 'disabled') {
         setGenView('notConfigured');
@@ -181,7 +182,7 @@ export function ManageSubtitleDialogV2({
       }
       // started AND inProgress (409) both attach to the job's SSE stream.
       setGenView('progress');
-      generation.startTracking(Number(mediaId));
+      generation.startTracking(mediaId);
     },
     onError: (error) => {
       setTriggerError(error instanceof Error ? error.message : '生成字幕失敗');

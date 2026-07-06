@@ -18,6 +18,15 @@ import (
 
 // ─── Mock processor ─────────────────────────────────────────────────────────
 
+// Media-id fixture convention (9R-18 AC 7): media ids are UUID STRINGS —
+// mirror the prod creation path (uuid.New().String()); do NOT invent numeric ids.
+const (
+	genUUIDAlpha = "0a54a9e2-3a67-4f3e-9f8e-a1c2d3e4f501"
+	genUUIDBravo = "1b65baf3-4b78-4a4f-8a9f-b2d3e4f5a602"
+	genUUIDNine  = "9ab0afe8-9acd-4f9e-9fed-a7c8d9e0f107"
+	genUUIDSeven = "7e98edc6-7eab-4d7c-9dcb-e5a6b7c8d905"
+)
+
 var errBoom = errors.New("boom")
 
 type mockGenerationProcessor struct {
@@ -31,13 +40,13 @@ type mockGenerationProcessor struct {
 	prevErr   error
 
 	startedScope string
-	startedIDs   []int64
+	startedIDs   []string
 	cancelCalled bool
 }
 
 func (m *mockGenerationProcessor) IsAvailable() bool { return m.available }
 func (m *mockGenerationProcessor) IsRunning() bool   { return m.running }
-func (m *mockGenerationProcessor) Start(_ context.Context, scope string, mediaIDs []int64) (string, []services.GenerationBatchItem, error) {
+func (m *mockGenerationProcessor) Start(_ context.Context, scope string, mediaIDs []string) (string, []services.GenerationBatchItem, error) {
 	m.startedScope = scope
 	m.startedIDs = mediaIDs
 	if m.startErr != nil {
@@ -107,7 +116,7 @@ func TestStartGenerationBatch_SelectedWithoutIDs400(t *testing.T) {
 
 func TestStartGenerationBatch_MissingWithIDs400(t *testing.T) {
 	r := setupGenerationBatchRouter(&mockGenerationProcessor{available: true})
-	w, resp := doGenBatchJSON(t, r, "POST", "/api/v1/subtitles/generation-batch", `{"scope":"missing","media_ids":[1]}`)
+	w, resp := doGenBatchJSON(t, r, "POST", "/api/v1/subtitles/generation-batch", `{"scope":"missing","media_ids":["`+genUUIDAlpha+`"]}`)
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 	assert.Equal(t, "VALIDATION_INVALID_FORMAT", errCode(t, resp))
 }
@@ -136,7 +145,7 @@ func TestStartGenerationBatch_Running409WithProgress(t *testing.T) {
 func TestStartGenerationBatch_InvalidSelection400(t *testing.T) {
 	p := &mockGenerationProcessor{available: true, startErr: services.ErrGenerationSelectionInvalid}
 	r := setupGenerationBatchRouter(p)
-	w, resp := doGenBatchJSON(t, r, "POST", "/api/v1/subtitles/generation-batch", `{"scope":"selected","media_ids":[999]}`)
+	w, resp := doGenBatchJSON(t, r, "POST", "/api/v1/subtitles/generation-batch", `{"scope":"selected","media_ids":["9ff0c000-dead-4bee-8f00-000000000999"]}`)
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 	assert.Equal(t, "VALIDATION_INVALID_FORMAT", errCode(t, resp))
 }
@@ -154,8 +163,8 @@ func TestStartGenerationBatch_Accepted202(t *testing.T) {
 		available: true,
 		batchID:   "batch-abc",
 		items: []services.GenerationBatchItem{
-			{MediaID: 1, Title: "Alpha"},
-			{MediaID: 2, Title: "Bravo"},
+			{MediaID: genUUIDAlpha, Title: "Alpha"},
+			{MediaID: genUUIDBravo, Title: "Bravo"},
 		},
 	}
 	r := setupGenerationBatchRouter(p)
@@ -169,7 +178,7 @@ func TestStartGenerationBatch_Accepted202(t *testing.T) {
 	items := data["items"].([]interface{})
 	require.Len(t, items, 2)
 	first := items[0].(map[string]interface{})
-	assert.Equal(t, float64(1), first["media_id"])
+	assert.Equal(t, genUUIDAlpha, first["media_id"], "items[].media_id is the UUID string (9R-18)")
 	assert.Equal(t, "Alpha", first["title"])
 	assert.Equal(t, "missing", p.startedScope)
 }
@@ -178,13 +187,14 @@ func TestStartGenerationBatch_SelectedForwardsIDs(t *testing.T) {
 	p := &mockGenerationProcessor{
 		available: true,
 		batchID:   "batch-sel",
-		items:     []services.GenerationBatchItem{{MediaID: 9, Title: "Nine"}},
+		items:     []services.GenerationBatchItem{{MediaID: genUUIDNine, Title: "Nine"}},
 	}
 	r := setupGenerationBatchRouter(p)
-	w, _ := doGenBatchJSON(t, r, "POST", "/api/v1/subtitles/generation-batch", `{"scope":"selected","media_ids":[9,7]}`)
+	w, _ := doGenBatchJSON(t, r, "POST", "/api/v1/subtitles/generation-batch",
+		`{"scope":"selected","media_ids":["`+genUUIDNine+`","`+genUUIDSeven+`"]}`)
 	assert.Equal(t, http.StatusAccepted, w.Code)
 	assert.Equal(t, "selected", p.startedScope)
-	assert.Equal(t, []int64{9, 7}, p.startedIDs)
+	assert.Equal(t, []string{genUUIDNine, genUUIDSeven}, p.startedIDs)
 }
 
 // AC 1: empty missing scope → 200, not an error.
@@ -217,7 +227,7 @@ func TestGetGenerationBatchStatus_Running(t *testing.T) {
 	p := &mockGenerationProcessor{
 		available: true, running: true,
 		progress: &services.GenerationBatchProgress{
-			BatchID: "b-2", TotalItems: 10, CurrentIndex: 3, CurrentMediaID: 55,
+			BatchID: "b-2", TotalItems: 10, CurrentIndex: 3, CurrentMediaID: genUUIDAlpha,
 			SuccessCount: 2, Status: services.GenerationBatchStatusRunning,
 			SpentUSD: 0.42, BudgetUSD: 5.0,
 		},
@@ -229,7 +239,7 @@ func TestGetGenerationBatchStatus_Running(t *testing.T) {
 	assert.Equal(t, true, data["running"])
 	prog := data["progress"].(map[string]interface{})
 	assert.Equal(t, "b-2", prog["batch_id"])
-	assert.Equal(t, float64(55), prog["current_media_id"])
+	assert.Equal(t, genUUIDAlpha, prog["current_media_id"], "current_media_id is the UUID string (9R-18)")
 	assert.Equal(t, 0.42, prog["spent_usd"])
 	assert.Equal(t, 5.0, prog["budget_usd"])
 }

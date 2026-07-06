@@ -44,6 +44,8 @@ so that bulk healing is one action — and running out of budget reads as "done 
 
 ## Dev Notes
 
+> ⚠️ **STALE [@contract-v1→v2]** (2026-07-06, by 9R-18-media-id-string-contract): upstream 9R-16 ACs #1/#2/#3/#7/#9 were bumped — media ids are UUID **STRINGS** end-to-end (start body `media_ids: [<string>...]`, 202 `items[].media_id` string, SSE `current_media_id` string; `transcription_*` payloads' `media_id` also string, stamped [@contract-v1] first formalization). The "9R-16 contract (authored shapes)" section below still shows v1 int64 shapes. Re-confirm against v2 before dev proceeds: at the rebase on 9R-18, drop the `Number()`/`String()` conversions and re-ack v2. See 9R-16's Change Log for the per-AC break list.
+
 ### 9R-16 contract (authored shapes — re-verify at dev time)
 
 - `POST /api/v1/subtitles/generation-batch` `{scope:"missing"|"selected", media_ids?:[int64]}` → 202 `{batch_id, total_items, items:[{media_id,title}]}`; 409 `TRANSCRIPTION_BATCH_RUNNING` (+progress in error body); 503 `TRANSCRIPTION_DISABLED`; 400 `VALIDATION_*`; empty missing-scope → 200 `{total_items:0, items:[]}`.

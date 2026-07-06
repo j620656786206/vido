@@ -15,6 +15,10 @@ import (
 )
 
 // ─── Story 9R-16 additions: sync entry, budget threading, AC 12 writeback ───
+//
+// Media-id fixture convention (9R-18 AC 7): media ids are UUID STRINGS —
+// mirror the prod creation path (uuid.New().String()); do NOT invent numeric
+// ids (fixtures reuse the uuid* consts from generation_batch_test.go).
 
 type subtitleWriteCall struct {
 	ID       string
@@ -45,7 +49,7 @@ func (b *budgetExceededCompleter) CompleteText(_ context.Context, _, _ string, _
 
 func TestRunTranscription_Disabled(t *testing.T) {
 	svc := NewTranscriptionService(nil, nil, nil, nil)
-	err := svc.RunTranscription(context.Background(), 1, "/test.mkv", "/media")
+	err := svc.RunTranscription(context.Background(), uuidA, "/test.mkv", "/media")
 	assert.ErrorIs(t, err, ErrTranscriptionDisabled)
 }
 
@@ -56,14 +60,14 @@ func TestRunTranscription_SharesSingleFlightMapWithAsyncPath(t *testing.T) {
 
 	// Simulate an async-path registration (same map, single-flight consistency).
 	svc.mu.Lock()
-	svc.inProgress[42] = "async-job"
+	svc.inProgress[uuidB] = "async-job"
 	svc.mu.Unlock()
 
-	err := svc.RunTranscription(context.Background(), 42, "/test.mkv", "/media")
+	err := svc.RunTranscription(context.Background(), uuidB, "/test.mkv", "/media")
 	assert.ErrorIs(t, err, ErrTranscriptionInProgress)
 
 	// And the reverse: a sync registration blocks StartTranscription too.
-	_, err = svc.StartTranscription(context.Background(), 42, "/test.mkv", "/media")
+	_, err = svc.StartTranscription(context.Background(), uuidB, "/test.mkv", "/media")
 	assert.ErrorIs(t, err, ErrTranscriptionInProgress)
 }
 
@@ -74,9 +78,9 @@ func TestRunTranscription_ReturnsPipelineErrorAndReleasesSlot(t *testing.T) {
 
 	// Nonexistent media file — the pipeline fails at the extract phase and the
 	// sync entry must RETURN the error (the async path only broadcasts SSE).
-	err := svc.RunTranscription(context.Background(), 7, filepath.Join(t.TempDir(), "missing.mkv"), t.TempDir())
+	err := svc.RunTranscription(context.Background(), uuidSeven, filepath.Join(t.TempDir(), "missing.mkv"), t.TempDir())
 	require.Error(t, err)
-	assert.False(t, svc.IsInProgress(7), "single-flight slot must be released after failure")
+	assert.False(t, svc.IsInProgress(uuidSeven), "single-flight slot must be released after failure")
 }
 
 func TestRunTranscription_DerivesTimeoutFromCallerCtx(t *testing.T) {
@@ -90,10 +94,10 @@ func TestRunTranscription_DerivesTimeoutFromCallerCtx(t *testing.T) {
 	cancel()
 
 	start := time.Now()
-	err := svc.RunTranscription(ctx, 8, filepath.Join(t.TempDir(), "missing.mkv"), t.TempDir())
+	err := svc.RunTranscription(ctx, uuidEight, filepath.Join(t.TempDir(), "missing.mkv"), t.TempDir())
 	require.Error(t, err)
 	assert.Less(t, time.Since(start), 2*time.Second, "cancelled caller ctx must fail fast")
-	assert.False(t, svc.IsInProgress(8))
+	assert.False(t, svc.IsInProgress(uuidEight))
 }
 
 // ─── resolveBudget (AC 6b) ───────────────────────────────────────────────────
@@ -144,13 +148,13 @@ func TestTranslateAndPersist_SuccessWritesBack(t *testing.T) {
 	tmpDir := t.TempDir()
 	filePath := filepath.Join(tmpDir, "Movie.2024.mkv")
 
-	zhPath, err := svc.translateAndPersist(context.Background(), "job-1", 42, genTestSRT, filePath, tmpDir, true)
+	zhPath, err := svc.translateAndPersist(context.Background(), "job-1", uuidB, genTestSRT, filePath, tmpDir, true)
 	require.NoError(t, err)
 	require.NotEmpty(t, zhPath)
 
 	require.Len(t, writer.calls, 1)
 	call := writer.calls[0]
-	assert.Equal(t, "42", call.ID, "int64 media id converts to the string row id")
+	assert.Equal(t, uuidB, call.ID, "the string media id IS the row id — no conversion (9R-18)")
 	assert.Equal(t, models.SubtitleStatusFound, call.Status)
 	assert.Equal(t, zhPath, call.Path)
 	assert.Equal(t, "zh-Hant", call.Language)
@@ -162,7 +166,7 @@ func TestTranslateAndPersist_EnOnlyNoWrite(t *testing.T) {
 	writer := &fakeSubtitleWriter{}
 	svc := newWriterWiredService(t, &translationIntegrationMock{response: "[1] 你好"}, writer)
 
-	zhPath, err := svc.translateAndPersist(context.Background(), "job-1", 42, genTestSRT,
+	zhPath, err := svc.translateAndPersist(context.Background(), "job-1", uuidB, genTestSRT,
 		filepath.Join(t.TempDir(), "m.mkv"), t.TempDir(), false /* en-only */)
 	require.NoError(t, err)
 	assert.Empty(t, zhPath)
@@ -175,7 +179,7 @@ func TestTranslateAndPersist_TranslateFailureNoWrite(t *testing.T) {
 	// Empty SRT → translateSRT errors with "no subtitle blocks" (a non-budget failure).
 	svc := newWriterWiredService(t, &translationIntegrationMock{response: "[1] 你好"}, writer)
 
-	zhPath, err := svc.translateAndPersist(context.Background(), "job-1", 42, "",
+	zhPath, err := svc.translateAndPersist(context.Background(), "job-1", uuidB, "",
 		filepath.Join(t.TempDir(), "m.mkv"), t.TempDir(), true)
 	require.NoError(t, err, "ordinary translate failures stay non-fatal (AC 6c)")
 	assert.Empty(t, zhPath)
@@ -187,7 +191,7 @@ func TestTranslateAndPersist_BudgetExceededPropagates(t *testing.T) {
 	writer := &fakeSubtitleWriter{}
 	svc := newWriterWiredService(t, &budgetExceededCompleter{}, writer)
 
-	_, err := svc.translateAndPersist(context.Background(), "job-1", 42, genTestSRT,
+	_, err := svc.translateAndPersist(context.Background(), "job-1", uuidB, genTestSRT,
 		filepath.Join(t.TempDir(), "m.mkv"), t.TempDir(), true)
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ai.ErrBudgetExceeded,
@@ -201,7 +205,7 @@ func TestTranslateAndPersist_WritebackFailurePropagates(t *testing.T) {
 	writer := &fakeSubtitleWriter{err: errors.New("db locked")}
 	svc := newWriterWiredService(t, &translationIntegrationMock{response: "[1] 你好"}, writer)
 
-	_, err := svc.translateAndPersist(context.Background(), "job-1", 42, genTestSRT,
+	_, err := svc.translateAndPersist(context.Background(), "job-1", uuidB, genTestSRT,
 		filepath.Join(t.TempDir(), "m.mkv"), t.TempDir(), true)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "update subtitle status")
@@ -211,7 +215,7 @@ func TestTranslateAndPersist_WritebackFailurePropagates(t *testing.T) {
 func TestTranslateAndPersist_NilWriterIsNoop(t *testing.T) {
 	svc := newWriterWiredService(t, &translationIntegrationMock{response: "[1] 你好"}, nil)
 
-	zhPath, err := svc.translateAndPersist(context.Background(), "job-1", 42, genTestSRT,
+	zhPath, err := svc.translateAndPersist(context.Background(), "job-1", uuidB, genTestSRT,
 		filepath.Join(t.TempDir(), "m.mkv"), t.TempDir(), true)
 	require.NoError(t, err)
 	assert.NotEmpty(t, zhPath)

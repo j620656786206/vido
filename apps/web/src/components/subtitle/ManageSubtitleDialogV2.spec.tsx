@@ -77,12 +77,16 @@ const mockedTrigger = vi.mocked(transcriptionService.startTranscription);
 
 type DialogProps = Partial<React.ComponentProps<typeof ManageSubtitleDialogV2>>;
 
+// Media-id fixture convention (9R-18 AC 7): media ids are UUID STRINGS —
+// mirror the prod creation path (uuid.New().String()); do NOT invent numeric ids.
+const MOVIE_UUID = '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e5f';
+
 function renderDialog(props: DialogProps = {}) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   const merged: React.ComponentProps<typeof ManageSubtitleDialogV2> = {
-    mediaId: '42',
+    mediaId: MOVIE_UUID,
     mediaType: 'movie',
     mediaTitle: '怪奇物語',
     mediaFilePath: '/media/movies/st.mkv',
@@ -189,8 +193,8 @@ describe('ManageSubtitleDialogV2 (F1 管理字幕)', () => {
 
     fireEvent.click(await screen.findByTestId('action-generate-subtitle'));
 
-    await waitFor(() => expect(mockedTrigger).toHaveBeenCalledWith(42));
-    await waitFor(() => expect(h.startTracking).toHaveBeenCalledWith(42));
+    await waitFor(() => expect(mockedTrigger).toHaveBeenCalledWith(MOVIE_UUID));
+    await waitFor(() => expect(h.startTracking).toHaveBeenCalledWith(MOVIE_UUID));
     expect(screen.getByText('生成字幕 — 怪奇物語')).toBeInTheDocument();
     expect(screen.getByTestId('generation-progress-v2')).toBeInTheDocument();
     expect(screen.getByText('即時更新（SSE）')).toBeInTheDocument();
@@ -216,7 +220,7 @@ describe('ManageSubtitleDialogV2 (F1 管理字幕)', () => {
 
     fireEvent.click(await screen.findByTestId('action-generate-subtitle'));
 
-    await waitFor(() => expect(h.startTracking).toHaveBeenCalledWith(42));
+    await waitFor(() => expect(h.startTracking).toHaveBeenCalledWith(MOVIE_UUID));
     expect(screen.getByTestId('generation-progress-v2')).toBeInTheDocument();
     expect(screen.queryByTestId('generation-trigger-error')).not.toBeInTheDocument();
   });
@@ -293,7 +297,7 @@ describe('ManageSubtitleDialogV2 (F1 管理字幕)', () => {
 
     fireEvent.click(screen.getByTestId('fetch-search'));
     expect(h.fetchHook.search).toHaveBeenCalledWith({
-      mediaId: '42',
+      mediaId: MOVIE_UUID,
       mediaType: 'movie',
       query: '怪奇物語',
     });

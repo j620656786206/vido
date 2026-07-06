@@ -39,17 +39,22 @@ class MockEventSource {
   }
 }
 
+// Media-id fixture convention (9R-18 AC 7): media ids are UUID STRINGS —
+// mirror the prod creation path (uuid.New().String()); do NOT invent numeric ids.
+const MOVIE_UUID = '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e5f';
+const OTHER_UUID = '9ab0afe8-9acd-4f9e-9fed-a7c8d9e0f107';
+
 /**
  * Build the FULL SSE Event struct exactly as the backend writes the `data:` line
  * (sse/handler.go `sendSSEEvent(w, type, event)`): the payload is DOUBLE-nested
- * under `.data`, snake_case, with `media_id` as the int64 movie id.
+ * under `.data`, snake_case, with `media_id` as the UUID-string movie id (9R-18).
  */
 const wireEvent = (type: string, payload: Record<string, unknown>) => ({
   id: 'uuid-1',
   type,
   data: {
     job_id: 'job-9',
-    media_id: 42,
+    media_id: MOVIE_UUID,
     ...payload,
   },
 });
@@ -76,7 +81,7 @@ describe('useGenerationProgress (lazy SSE, double-nested envelope)', () => {
   it('[P0] opens EventSource only after startTracking and enters extracting', () => {
     const { result } = renderHook(() => useGenerationProgress());
 
-    act(() => result.current.startTracking(42));
+    act(() => result.current.startTracking(MOVIE_UUID));
 
     expect(MockEventSource.instances).toHaveLength(1);
     expect(MockEventSource.instances[0].url).toBe('/api/v1/events');
@@ -85,7 +90,7 @@ describe('useGenerationProgress (lazy SSE, double-nested envelope)', () => {
 
   it('[P0] unwraps the DOUBLE-nested Event envelope — payload is parsed.data, snakeToCamel applied', () => {
     const { result } = renderHook(() => useGenerationProgress());
-    act(() => result.current.startTracking(42));
+    act(() => result.current.startTracking(MOVIE_UUID));
     const es = MockEventSource.instances[0];
 
     // The data: line is the full Event struct {id,type,data} — NOT the bare payload.
@@ -103,13 +108,13 @@ describe('useGenerationProgress (lazy SSE, double-nested envelope)', () => {
 
   it('[P0] filters events by media_id — other movies do not touch state', () => {
     const { result } = renderHook(() => useGenerationProgress());
-    act(() => result.current.startTracking(42));
+    act(() => result.current.startTracking(MOVIE_UUID));
     const es = MockEventSource.instances[0];
 
     act(() =>
       es.emit(
         'transcription_progress',
-        wireEvent('transcription_progress', { media_id: 777, phase: 'transcribing' })
+        wireEvent('transcription_progress', { media_id: OTHER_UUID, phase: 'transcribing' })
       )
     );
 
@@ -118,7 +123,7 @@ describe('useGenerationProgress (lazy SSE, double-nested envelope)', () => {
 
   it('[P1] maps each wire phase event to its stage', () => {
     const { result } = renderHook(() => useGenerationProgress());
-    act(() => result.current.startTracking(42));
+    act(() => result.current.startTracking(MOVIE_UUID));
     const es = MockEventSource.instances[0];
 
     act(() =>
@@ -150,7 +155,7 @@ describe('useGenerationProgress (lazy SSE, double-nested envelope)', () => {
   it('[P0] transcription_complete is terminal: state, onComplete callback, stream closed', () => {
     const onComplete = vi.fn();
     const { result } = renderHook(() => useGenerationProgress({ onComplete }));
-    act(() => result.current.startTracking(42));
+    act(() => result.current.startTracking(MOVIE_UUID));
     const es = MockEventSource.instances[0];
 
     act(() =>
@@ -179,7 +184,7 @@ describe('useGenerationProgress (lazy SSE, double-nested envelope)', () => {
 
   it('[P0] transcription_failed records the failed-at stage from the last live phase', () => {
     const { result } = renderHook(() => useGenerationProgress());
-    act(() => result.current.startTracking(42));
+    act(() => result.current.startTracking(MOVIE_UUID));
     const es = MockEventSource.instances[0];
 
     act(() =>
@@ -205,7 +210,7 @@ describe('useGenerationProgress (lazy SSE, double-nested envelope)', () => {
     const { result } = renderHook(() => useGenerationProgress());
 
     // No POST happened locally; we attach to a job already running server-side.
-    act(() => result.current.startTracking(42));
+    act(() => result.current.startTracking(MOVIE_UUID));
     const es = MockEventSource.instances[0];
 
     act(() =>
@@ -221,7 +226,7 @@ describe('useGenerationProgress (lazy SSE, double-nested envelope)', () => {
 
   it('[P0] does NOT dispatch after unmount and closes the stream', () => {
     const { result, unmount } = renderHook(() => useGenerationProgress());
-    act(() => result.current.startTracking(42));
+    act(() => result.current.startTracking(MOVIE_UUID));
     const es = MockEventSource.instances[0];
 
     unmount();
@@ -238,7 +243,7 @@ describe('useGenerationProgress (lazy SSE, double-nested envelope)', () => {
 
   it('[P1] reset returns to idle and closes the stream', () => {
     const { result } = renderHook(() => useGenerationProgress());
-    act(() => result.current.startTracking(42));
+    act(() => result.current.startTracking(MOVIE_UUID));
     const es = MockEventSource.instances[0];
 
     act(() => result.current.reset());
@@ -249,7 +254,7 @@ describe('useGenerationProgress (lazy SSE, double-nested envelope)', () => {
 
   it('[P1] schedules a 10s backoff reconnect on SSE error (no polling fallback)', async () => {
     const { result } = renderHook(() => useGenerationProgress());
-    act(() => result.current.startTracking(42));
+    act(() => result.current.startTracking(MOVIE_UUID));
     const es = MockEventSource.instances[0];
 
     act(() => es.triggerError());
@@ -262,11 +267,11 @@ describe('useGenerationProgress (lazy SSE, double-nested envelope)', () => {
 
   it('[P1] startTracking after an SSE error cancels the stale backoff timer (no healthy-stream bounce)', async () => {
     const { result } = renderHook(() => useGenerationProgress());
-    act(() => result.current.startTracking(42));
+    act(() => result.current.startTracking(MOVIE_UUID));
     const es = MockEventSource.instances[0];
 
     act(() => es.triggerError()); // schedules the 10s backoff
-    act(() => result.current.startTracking(42)); // user re-triggers immediately
+    act(() => result.current.startTracking(MOVIE_UUID)); // user re-triggers immediately
 
     expect(MockEventSource.instances).toHaveLength(2);
     await act(async () => {
@@ -279,7 +284,7 @@ describe('useGenerationProgress (lazy SSE, double-nested envelope)', () => {
 
   it('[P1] ignores malformed frames without crashing', () => {
     const { result } = renderHook(() => useGenerationProgress());
-    act(() => result.current.startTracking(42));
+    act(() => result.current.startTracking(MOVIE_UUID));
     const es = MockEventSource.instances[0];
 
     act(() => {

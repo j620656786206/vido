@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/vido/api/internal/models"
@@ -22,8 +21,8 @@ type TranscriptionMovieGetter interface {
 // TranscriptionServiceInterface defines the contract for transcription operations.
 type TranscriptionServiceInterface interface {
 	IsAvailable() bool
-	IsInProgress(mediaID int64) bool
-	StartTranscription(ctx context.Context, mediaID int64, filePath string, mediaDir string, opts ...services.TranscriptionOption) (string, error)
+	IsInProgress(mediaID string) bool
+	StartTranscription(ctx context.Context, mediaID string, filePath string, mediaDir string, opts ...services.TranscriptionOption) (string, error)
 }
 
 // TranscriptionHandler handles transcription API requests.
@@ -57,16 +56,16 @@ func (h *TranscriptionHandler) TranscribeMovie(c *gin.Context) {
 		return
 	}
 
-	// Validate movie ID
-	idStr := c.Param("id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
+	// Validate movie ID — an opaque STRING (movie PKs are UUIDs, 9R-18);
+	// non-empty is the only format constraint.
+	id := c.Param("id")
+	if id == "" {
 		BadRequestError(c, "VALIDATION_INVALID_FORMAT", "Invalid movie ID")
 		return
 	}
 
 	// Fetch movie
-	movie, err := h.movieService.GetByID(c.Request.Context(), idStr)
+	movie, err := h.movieService.GetByID(c.Request.Context(), id)
 	if err != nil {
 		slog.Error("Failed to get movie for transcription", "id", id, "error", err)
 		NotFoundError(c, "Movie")

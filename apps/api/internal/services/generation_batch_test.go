@@ -16,21 +16,34 @@ import (
 	"github.com/vido/api/internal/sse"
 )
 
+// Media-id fixture convention (9R-18 AC 7): media ids are UUID STRINGS —
+// mirror the prod creation path (uuid.New().String()); do NOT invent numeric
+// ids (numeric fixtures hid the int64 contract bug through three gate layers).
+const (
+	uuidA     = "0a54a9e2-3a67-4f3e-9f8e-a1c2d3e4f501"
+	uuidB     = "1b65baf3-4b78-4a4f-8a9f-b2d3e4f5a602"
+	uuidC     = "2c76cba4-5c89-4b5a-9baf-c3e4f5a6b703"
+	uuidD     = "3d87dcb5-6d9a-4c6b-8cba-d4f5a6b7c804"
+	uuidSeven = "7e98edc6-7eab-4d7c-9dcb-e5a6b7c8d905"
+	uuidEight = "8fa9fed7-8fbc-4e8d-8edc-f6b7c8d9e006"
+	uuidNine  = "9ab0afe8-9acd-4f9e-9fed-a7c8d9e0f107"
+)
+
 // ─── Fakes ──────────────────────────────────────────────────────────────────
 
 // fakeGenerationRunner is a narrow generationRunner fake (Rule 11).
 type fakeGenerationRunner struct {
 	mu        sync.Mutex
-	calls     []int64
-	errs      map[int64]error
+	calls     []string
+	errs      map[string]error
 	available bool
 	// onCall lets a test spend from the ctx budget / observe ctx mid-item.
-	onCall func(ctx context.Context, mediaID int64) error
+	onCall func(ctx context.Context, mediaID string) error
 }
 
 func (f *fakeGenerationRunner) IsAvailable() bool { return f.available }
 
-func (f *fakeGenerationRunner) RunTranscription(ctx context.Context, mediaID int64, _ string, _ string, _ ...TranscriptionOption) error {
+func (f *fakeGenerationRunner) RunTranscription(ctx context.Context, mediaID string, _ string, _ string, _ ...TranscriptionOption) error {
 	f.mu.Lock()
 	f.calls = append(f.calls, mediaID)
 	f.mu.Unlock()
@@ -45,10 +58,10 @@ func (f *fakeGenerationRunner) RunTranscription(ctx context.Context, mediaID int
 	return nil
 }
 
-func (f *fakeGenerationRunner) callIDs() []int64 {
+func (f *fakeGenerationRunner) callIDs() []string {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	out := make([]int64, len(f.calls))
+	out := make([]string, len(f.calls))
 	copy(out, f.calls)
 	return out
 }
@@ -139,9 +152,9 @@ func TestGenerationBatch_IsAvailable(t *testing.T) {
 func TestGenerationBatch_MissingScope_SequentialComplete(t *testing.T) {
 	runner := &fakeGenerationRunner{available: true}
 	finder := &fakeCandidateFinder{movies: []models.Movie{
-		genMovie("1", "Alpha", "/media/a.mkv"),
-		genMovie("2", "Bravo", "/media/b.mkv"),
-		genMovie("3", "Charlie", "/media/c.mkv"),
+		genMovie(uuidA, "Alpha", "/media/a.mkv"),
+		genMovie(uuidB, "Bravo", "/media/b.mkv"),
+		genMovie(uuidC, "Charlie", "/media/c.mkv"),
 	}}
 	p, client := newTestGenerationProcessor(t, runner, finder, 5)
 
@@ -149,11 +162,11 @@ func TestGenerationBatch_MissingScope_SequentialComplete(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEmpty(t, batchID)
 	require.Len(t, items, 3)
-	assert.Equal(t, int64(1), items[0].MediaID)
+	assert.Equal(t, uuidA, items[0].MediaID)
 	assert.Equal(t, "Alpha", items[0].Title)
 
 	waitUntilIdle(t, p)
-	assert.Equal(t, []int64{1, 2, 3}, runner.callIDs(), "items must run sequentially in queue order")
+	assert.Equal(t, []string{uuidA, uuidB, uuidC}, runner.callIDs(), "items must run sequentially in queue order")
 
 	time.Sleep(50 * time.Millisecond) // let SSE fan-out drain
 	events := drainEvents(client)
@@ -165,10 +178,10 @@ func TestGenerationBatch_MissingScope_SequentialComplete(t *testing.T) {
 	assert.Equal(t, 0, last["paused_count"])
 }
 
-// AC 9 [@contract-v1]: exact SSE payload keys.
+// AC 9 [@contract-v2]: exact SSE payload keys; current_media_id is a UUID STRING.
 func TestGenerationBatch_SSEPayloadFields(t *testing.T) {
 	runner := &fakeGenerationRunner{available: true}
-	finder := &fakeCandidateFinder{movies: []models.Movie{genMovie("7", "Alpha", "/m/a.mkv")}}
+	finder := &fakeCandidateFinder{movies: []models.Movie{genMovie(uuidSeven, "Alpha", "/m/a.mkv")}}
 	p, client := newTestGenerationProcessor(t, runner, finder, 5)
 
 	_, _, err := p.Start(context.Background(), "missing", nil)
@@ -190,7 +203,7 @@ func TestGenerationBatch_SSEPayloadFields(t *testing.T) {
 		}
 	}
 	last := events[len(events)-1]
-	assert.Equal(t, int64(7), last["current_media_id"])
+	assert.Equal(t, uuidSeven, last["current_media_id"], "media ids are UUID strings on the wire (9R-18)")
 	assert.Equal(t, 5.0, last["budget_usd"], "cost line rides the batch SSE (no 9R-17 needed)")
 }
 
@@ -199,16 +212,16 @@ func TestGenerationBatch_SSEPayloadFields(t *testing.T) {
 func TestGenerationBatch_PerItemFailContinue(t *testing.T) {
 	runner := &fakeGenerationRunner{
 		available: true,
-		errs: map[int64]error{
-			2: errors.New("ffmpeg exploded"),
-			3: ErrTranscriptionInProgress, // user ran it from the detail dialog mid-batch
+		errs: map[string]error{
+			uuidB: errors.New("ffmpeg exploded"),
+			uuidC: ErrTranscriptionInProgress, // user ran it from the detail dialog mid-batch
 		},
 	}
 	finder := &fakeCandidateFinder{movies: []models.Movie{
-		genMovie("1", "A", "/m/a.mkv"),
-		genMovie("2", "B", "/m/b.mkv"),
-		genMovie("3", "C", "/m/c.mkv"),
-		genMovie("4", "D", "/m/d.mkv"),
+		genMovie(uuidA, "A", "/m/a.mkv"),
+		genMovie(uuidB, "B", "/m/b.mkv"),
+		genMovie(uuidC, "C", "/m/c.mkv"),
+		genMovie(uuidD, "D", "/m/d.mkv"),
 	}}
 	p, client := newTestGenerationProcessor(t, runner, finder, 5)
 
@@ -216,7 +229,7 @@ func TestGenerationBatch_PerItemFailContinue(t *testing.T) {
 	require.NoError(t, err)
 	waitUntilIdle(t, p)
 
-	assert.Equal(t, []int64{1, 2, 3, 4}, runner.callIDs(), "loop must continue past failures")
+	assert.Equal(t, []string{uuidA, uuidB, uuidC, uuidD}, runner.callIDs(), "loop must continue past failures")
 
 	time.Sleep(50 * time.Millisecond)
 	events := drainEvents(client)
@@ -232,8 +245,8 @@ func TestGenerationBatch_CancelMidItem(t *testing.T) {
 	started := make(chan struct{})
 	runner := &fakeGenerationRunner{
 		available: true,
-		onCall: func(ctx context.Context, mediaID int64) error {
-			if mediaID == 1 {
+		onCall: func(ctx context.Context, mediaID string) error {
+			if mediaID == uuidA {
 				close(started)
 				<-ctx.Done() // block until the batch is cancelled
 				return ctx.Err()
@@ -242,9 +255,9 @@ func TestGenerationBatch_CancelMidItem(t *testing.T) {
 		},
 	}
 	finder := &fakeCandidateFinder{movies: []models.Movie{
-		genMovie("1", "A", "/m/a.mkv"),
-		genMovie("2", "B", "/m/b.mkv"),
-		genMovie("3", "C", "/m/c.mkv"),
+		genMovie(uuidA, "A", "/m/a.mkv"),
+		genMovie(uuidB, "B", "/m/b.mkv"),
+		genMovie(uuidC, "C", "/m/c.mkv"),
 	}}
 	p, client := newTestGenerationProcessor(t, runner, finder, 5)
 
@@ -254,7 +267,7 @@ func TestGenerationBatch_CancelMidItem(t *testing.T) {
 	p.Cancel()
 	waitUntilIdle(t, p)
 
-	assert.Equal(t, []int64{1}, runner.callIDs(), "queued items must never start after cancel")
+	assert.Equal(t, []string{uuidA}, runner.callIDs(), "queued items must never start after cancel")
 
 	time.Sleep(50 * time.Millisecond)
 	events := drainEvents(client)
@@ -274,8 +287,8 @@ func TestGenerationBatch_CancelIdle(t *testing.T) {
 func TestGenerationBatch_BudgetCeiling_PreCheck(t *testing.T) {
 	runner := &fakeGenerationRunner{
 		available: true,
-		onCall: func(ctx context.Context, mediaID int64) error {
-			if mediaID == 1 {
+		onCall: func(ctx context.Context, mediaID string) error {
+			if mediaID == uuidA {
 				// Spend $3 (> $1 ceiling) from the SHARED batch budget.
 				ai.BudgetFromContext(ctx).RecordLLM("claude-sonnet-5", 1_000_000, 0)
 			}
@@ -283,9 +296,9 @@ func TestGenerationBatch_BudgetCeiling_PreCheck(t *testing.T) {
 		},
 	}
 	finder := &fakeCandidateFinder{movies: []models.Movie{
-		genMovie("1", "A", "/m/a.mkv"),
-		genMovie("2", "B", "/m/b.mkv"),
-		genMovie("3", "C", "/m/c.mkv"),
+		genMovie(uuidA, "A", "/m/a.mkv"),
+		genMovie(uuidB, "B", "/m/b.mkv"),
+		genMovie(uuidC, "C", "/m/c.mkv"),
 	}}
 	p, client := newTestGenerationProcessor(t, runner, finder, 1.0)
 
@@ -293,7 +306,7 @@ func TestGenerationBatch_BudgetCeiling_PreCheck(t *testing.T) {
 	require.NoError(t, err)
 	waitUntilIdle(t, p)
 
-	assert.Equal(t, []int64{1}, runner.callIDs(), "items after the ceiling hit must not start")
+	assert.Equal(t, []string{uuidA}, runner.callIDs(), "items after the ceiling hit must not start")
 
 	time.Sleep(50 * time.Millisecond)
 	events := drainEvents(client)
@@ -312,14 +325,14 @@ func TestGenerationBatch_BudgetCeiling_PreCheck(t *testing.T) {
 func TestGenerationBatch_BudgetCeiling_MidItem(t *testing.T) {
 	runner := &fakeGenerationRunner{
 		available: true,
-		errs: map[int64]error{
-			2: fmt.Errorf("translate: %w", ai.ErrBudgetExceeded),
+		errs: map[string]error{
+			uuidB: fmt.Errorf("translate: %w", ai.ErrBudgetExceeded),
 		},
 	}
 	finder := &fakeCandidateFinder{movies: []models.Movie{
-		genMovie("1", "A", "/m/a.mkv"),
-		genMovie("2", "B", "/m/b.mkv"),
-		genMovie("3", "C", "/m/c.mkv"),
+		genMovie(uuidA, "A", "/m/a.mkv"),
+		genMovie(uuidB, "B", "/m/b.mkv"),
+		genMovie(uuidC, "C", "/m/c.mkv"),
 	}}
 	p, client := newTestGenerationProcessor(t, runner, finder, 5)
 
@@ -327,7 +340,7 @@ func TestGenerationBatch_BudgetCeiling_MidItem(t *testing.T) {
 	require.NoError(t, err)
 	waitUntilIdle(t, p)
 
-	assert.Equal(t, []int64{1, 2}, runner.callIDs())
+	assert.Equal(t, []string{uuidA, uuidB}, runner.callIDs())
 
 	time.Sleep(50 * time.Millisecond)
 	events := drainEvents(client)
@@ -344,13 +357,13 @@ func TestGenerationBatch_SingleFlight(t *testing.T) {
 	started := make(chan struct{})
 	runner := &fakeGenerationRunner{
 		available: true,
-		onCall: func(ctx context.Context, mediaID int64) error {
+		onCall: func(ctx context.Context, mediaID string) error {
 			close(started)
 			<-ctx.Done()
 			return ctx.Err()
 		},
 	}
-	finder := &fakeCandidateFinder{movies: []models.Movie{genMovie("1", "A", "/m/a.mkv")}}
+	finder := &fakeCandidateFinder{movies: []models.Movie{genMovie(uuidA, "A", "/m/a.mkv")}}
 	p, _ := newTestGenerationProcessor(t, runner, finder, 5)
 
 	_, _, err := p.Start(context.Background(), "missing", nil)
@@ -388,40 +401,40 @@ func TestGenerationBatch_EmptyMissingScope(t *testing.T) {
 	assert.False(t, p.IsRunning())
 }
 
-// AC 8 + ID-type ruling: selected scope resolves int64 wire ids against the
-// string-keyed movie repo; queue preserves the caller's order.
+// AC 8 + ID-type ruling (9R-18): selected scope passes the string UUID wire ids
+// straight to the string-keyed movie repo; queue preserves the caller's order.
 func TestGenerationBatch_SelectedScope(t *testing.T) {
-	m7 := genMovie("7", "Seven", "/m/7.mkv")
-	m9 := genMovie("9", "Nine", "/m/9.mkv")
+	m7 := genMovie(uuidSeven, "Seven", "/m/7.mkv")
+	m9 := genMovie(uuidNine, "Nine", "/m/9.mkv")
 	runner := &fakeGenerationRunner{available: true}
-	finder := &fakeCandidateFinder{byID: map[string]*models.Movie{"7": &m7, "9": &m9}}
+	finder := &fakeCandidateFinder{byID: map[string]*models.Movie{uuidSeven: &m7, uuidNine: &m9}}
 	p, _ := newTestGenerationProcessor(t, runner, finder, 5)
 
-	_, items, err := p.Start(context.Background(), "selected", []int64{9, 7})
+	_, items, err := p.Start(context.Background(), "selected", []string{uuidNine, uuidSeven})
 	require.NoError(t, err)
 	require.Len(t, items, 2)
-	assert.Equal(t, int64(9), items[0].MediaID)
+	assert.Equal(t, uuidNine, items[0].MediaID)
 	assert.Equal(t, "Nine", items[0].Title)
 
 	waitUntilIdle(t, p)
-	assert.Equal(t, []int64{9, 7}, runner.callIDs())
+	assert.Equal(t, []string{uuidNine, uuidSeven}, runner.callIDs())
 }
 
 // AC 8 ruling: a selected id that is not a movie (or has no file) REJECTS the
 // request — documented in Swagger, no silent filtering.
 func TestGenerationBatch_SelectedScope_InvalidIDRejected(t *testing.T) {
-	m7 := genMovie("7", "Seven", "/m/7.mkv")
-	noFile := models.Movie{ID: "8", Title: "NoFile"}
-	finder := &fakeCandidateFinder{byID: map[string]*models.Movie{"7": &m7, "8": &noFile}}
+	m7 := genMovie(uuidSeven, "Seven", "/m/7.mkv")
+	noFile := models.Movie{ID: uuidEight, Title: "NoFile"}
+	finder := &fakeCandidateFinder{byID: map[string]*models.Movie{uuidSeven: &m7, uuidEight: &noFile}}
 	p, _ := newTestGenerationProcessor(t, &fakeGenerationRunner{available: true}, finder, 5)
 
 	// Unknown id (e.g. a series id)
-	_, _, err := p.Start(context.Background(), "selected", []int64{7, 999})
+	_, _, err := p.Start(context.Background(), "selected", []string{uuidSeven, "9ff0c000-dead-4bee-8f00-000000000999"})
 	assert.ErrorIs(t, err, ErrGenerationSelectionInvalid)
 	assert.False(t, p.IsRunning())
 
 	// Movie without a media file
-	_, _, err = p.Start(context.Background(), "selected", []int64{8})
+	_, _, err = p.Start(context.Background(), "selected", []string{uuidEight})
 	assert.ErrorIs(t, err, ErrGenerationSelectionInvalid)
 	assert.False(t, p.IsRunning())
 }
@@ -448,19 +461,21 @@ func TestGenerationBatch_EnumerationError(t *testing.T) {
 	assert.False(t, p.IsRunning())
 }
 
-// Rows with non-numeric ids or no file are skipped fail-soft in missing scope.
-func TestGenerationBatch_MissingScope_SkipsMalformedRows(t *testing.T) {
+// 9R-18: UUID row ids are enumerated as-is (the old ParseInt silently dropped
+// them); only rows without a media file are skipped fail-soft in missing scope.
+func TestGenerationBatch_MissingScope_UUIDIDsEnumerated(t *testing.T) {
 	runner := &fakeGenerationRunner{available: true}
 	finder := &fakeCandidateFinder{movies: []models.Movie{
-		genMovie("1", "A", "/m/a.mkv"),
-		genMovie("not-a-number", "Weird", "/m/w.mkv"),
-		{ID: "3", Title: "NoFile"},
+		genMovie(uuidA, "A", "/m/a.mkv"),
+		genMovie(uuidB, "B", "/m/w.mkv"),
+		{ID: uuidC, Title: "NoFile"},
 	}}
 	p, _ := newTestGenerationProcessor(t, runner, finder, 5)
 
 	_, items, err := p.Start(context.Background(), "missing", nil)
 	require.NoError(t, err)
-	require.Len(t, items, 1)
-	assert.Equal(t, int64(1), items[0].MediaID)
+	require.Len(t, items, 2, "every UUID-keyed movie with a file enumerates; only the file-less row is skipped")
+	assert.Equal(t, uuidA, items[0].MediaID)
+	assert.Equal(t, uuidB, items[1].MediaID)
 	waitUntilIdle(t, p)
 }

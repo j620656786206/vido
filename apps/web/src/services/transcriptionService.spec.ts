@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { transcriptionService } from './transcriptionService';
 
+// Media-id fixture convention (9R-18 AC 7): media ids are UUID STRINGS —
+// mirror the prod creation path (uuid.New().String()); do NOT invent numeric ids.
+const MOVIE_UUID = '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e5f';
+const UNKNOWN_UUID = '9ff0c000-dead-4bee-8f00-000000000999';
+
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
@@ -24,14 +29,14 @@ describe('transcriptionService.startTranscription', () => {
         }),
     });
 
-    const outcome = await transcriptionService.startTranscription(42);
+    const outcome = await transcriptionService.startTranscription(MOVIE_UUID);
 
     expect(outcome).toEqual({
       status: 'started',
       result: { jobId: 'job-9', message: '已開始轉錄' },
     });
     const [url, options] = mockFetch.mock.calls[0];
-    expect(url).toContain('/movies/42/transcribe?translate=true');
+    expect(url).toContain(`/movies/${MOVIE_UUID}/transcribe?translate=true`);
     expect(options).toEqual({ method: 'POST' });
   });
 
@@ -46,7 +51,7 @@ describe('transcriptionService.startTranscription', () => {
         }),
     });
 
-    await expect(transcriptionService.startTranscription(42)).resolves.toEqual({
+    await expect(transcriptionService.startTranscription(MOVIE_UUID)).resolves.toEqual({
       status: 'disabled',
     });
   });
@@ -62,7 +67,7 @@ describe('transcriptionService.startTranscription', () => {
         }),
     });
 
-    await expect(transcriptionService.startTranscription(42)).resolves.toEqual({
+    await expect(transcriptionService.startTranscription(MOVIE_UUID)).resolves.toEqual({
       status: 'inProgress',
     });
   });
@@ -74,7 +79,7 @@ describe('transcriptionService.startTranscription', () => {
       json: () => Promise.reject(new Error('not json')), // proxy HTML error page
     });
 
-    await expect(transcriptionService.startTranscription(42)).rejects.toThrow(
+    await expect(transcriptionService.startTranscription(MOVIE_UUID)).rejects.toThrow(
       'API request failed: 503'
     );
   });
@@ -90,7 +95,7 @@ describe('transcriptionService.startTranscription', () => {
         }),
     });
 
-    await expect(transcriptionService.startTranscription(42)).rejects.toThrow('衝突');
+    await expect(transcriptionService.startTranscription(MOVIE_UUID)).rejects.toThrow('衝突');
   });
 
   it('throws the envelope message for other errors (404 → fail-soft + 重試)', async () => {
@@ -104,6 +109,8 @@ describe('transcriptionService.startTranscription', () => {
         }),
     });
 
-    await expect(transcriptionService.startTranscription(999)).rejects.toThrow('找不到電影');
+    await expect(transcriptionService.startTranscription(UNKNOWN_UUID)).rejects.toThrow(
+      '找不到電影'
+    );
   });
 });
