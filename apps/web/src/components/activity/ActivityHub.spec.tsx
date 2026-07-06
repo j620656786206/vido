@@ -11,6 +11,13 @@ import {
 
 vi.mock('../../hooks/useActivity', () => ({ useActivity: vi.fn() }));
 
+// Stub the batch dialog (ux3-subtitle-v2-batch AC 4a) — its own spec covers the
+// internals; here we only assert the CTA ↔ open wiring.
+vi.mock('../subtitle/GenerationBatchDialogV2', () => ({
+  GenerationBatchDialogV2: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="generation-batch-dialog-stub" /> : null,
+}));
+
 import { useActivity } from '../../hooks/useActivity';
 import { ActivityHub } from './ActivityHub';
 import type { ActivitySummary } from '../../services/activityService';
@@ -117,6 +124,41 @@ describe('ActivityHub (v2 Activity hub — four states + fail-soft)', () => {
     expect(recent).toHaveLength(2);
     expect(recent[0]).toHaveTextContent('解析完成');
     expect(recent[1]).toHaveTextContent('解析失敗');
+  });
+
+  it('[P1] generation_batch job row renders 批次生成 with current / total (ux3-subtitle-v2-batch AC 4b)', async () => {
+    mockUseActivity.mockReturnValue(
+      result({
+        data: summary({
+          activeJobs: {
+            status: 'ok',
+            jobs: [
+              {
+                kind: 'generation_batch',
+                percentDone: 31,
+                detail: '怪奇物語',
+                current: 12,
+                total: 38,
+              },
+            ],
+          },
+        }),
+      })
+    );
+    renderHub();
+
+    const row = await screen.findByTestId('activity-job-generation_batch');
+    expect(row).toHaveTextContent('批次生成');
+    expect(row).toHaveTextContent('12 / 38');
+  });
+
+  it('[P1] 批次生成字幕 CTA opens the batch dialog (ux3-subtitle-v2-batch AC 4a)', async () => {
+    mockUseActivity.mockReturnValue(result({ data: summary() }));
+    renderHub();
+
+    expect(screen.queryByTestId('generation-batch-dialog-stub')).not.toBeInTheDocument();
+    fireEvent.click(await screen.findByTestId('activity-generation-batch-cta'));
+    expect(screen.getByTestId('generation-batch-dialog-stub')).toBeInTheDocument();
   });
 
   it('[P1] Per-section fail-soft — an unavailable section degrades alone; the page renders', async () => {

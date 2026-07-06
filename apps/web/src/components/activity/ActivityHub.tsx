@@ -9,6 +9,7 @@
  * error when the request itself fails. Four states (N4): loading / empty / per-section
  * fail-soft / data. Copy + icons live here — the backend sends copy-free enums.
  */
+import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import {
   Radar,
@@ -22,6 +23,7 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useActivity } from '../../hooks/useActivity';
+import { GenerationBatchDialogV2 } from '../subtitle/GenerationBatchDialogV2';
 import type {
   ActivitySummary,
   ActiveJobsSection,
@@ -36,7 +38,12 @@ import { ActivitySkeleton, ActivityEmpty, ActivitySectionError } from './Activit
 const ACTIVE_META: Record<string, { icon: LucideIcon; title: string }> = {
   scan: { icon: Radar, title: '媒體庫掃描' },
   subtitle_batch: { icon: Captions, title: '批次字幕' },
+  // Story ux3-subtitle-v2-batch AC 4 — the 9R-16 generation-batch job row.
+  generation_batch: { icon: Captions, title: '批次生成' },
 };
+
+/** Jobs whose right-hand slot renders `current / total` instead of a percent. */
+const COUNTED_KINDS = new Set(['subtitle_batch', 'generation_batch']);
 
 function isEmpty(d: ActivitySummary): boolean {
   return (
@@ -89,7 +96,7 @@ function ActiveSection({ section, onRetry }: { section: ActiveJobsSection; onRet
       {section.jobs.map((j, i) => {
         const meta = ACTIVE_META[j.kind] ?? { icon: Activity, title: j.kind };
         const right =
-          j.kind === 'subtitle_batch' && j.total ? (
+          COUNTED_KINDS.has(j.kind) && j.total ? (
             <span className="font-mono text-[13px] text-[var(--text-secondary)]">
               {j.current ?? 0} / {j.total}
             </span>
@@ -224,6 +231,9 @@ function RecentSectionView({ section, onRetry }: { section: RecentSection; onRet
 
 export function ActivityHub() {
   const { data, isLoading, isError, refetch } = useActivity();
+  // Story ux3-subtitle-v2-batch AC 4a — the hub's launch CTA opens the batch
+  // dialog with scope=missing (the ONLY Activity-side entry; D4-1 boundary).
+  const [generationBatchOpen, setGenerationBatchOpen] = useState(false);
   const retry = () => {
     void refetch();
   };
@@ -233,11 +243,22 @@ export function ActivityHub() {
       data-testid="activity-root"
       className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-8 sm:px-6"
     >
-      <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold text-[var(--text-primary)]">活動</h1>
-        <p className="text-sm text-[var(--text-secondary)]">
-          媒體庫的所有背景工作 — 掃描、字幕、解析與下載
-        </p>
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-2xl font-bold text-[var(--text-primary)]">活動</h1>
+          <p className="text-sm text-[var(--text-secondary)]">
+            媒體庫的所有背景工作 — 掃描、字幕、解析與下載
+          </p>
+        </div>
+        <button
+          type="button"
+          data-testid="activity-generation-batch-cta"
+          onClick={() => setGenerationBatchOpen(true)}
+          className="flex min-h-[44px] items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--accent-primary)] px-4 text-sm font-medium text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-pressed)]"
+        >
+          <Captions className="h-4 w-4" aria-hidden="true" />
+          批次生成字幕
+        </button>
       </header>
 
       {isLoading ? (
@@ -254,6 +275,9 @@ export function ActivityHub() {
           <RecentSectionView section={data.recent} onRetry={retry} />
         </>
       )}
+
+      {/* Batch dialog opens OVER the hub (F8/F9 backdrops render A1-D-v2). */}
+      <GenerationBatchDialogV2 open={generationBatchOpen} onOpenChange={setGenerationBatchOpen} />
     </div>
   );
 }

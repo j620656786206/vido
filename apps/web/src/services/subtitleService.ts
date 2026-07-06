@@ -126,6 +126,93 @@ export interface BatchCancelResult {
   cancelled: boolean;
 }
 
+// --- Generation-batch types (Story ux3-subtitle-v2-batch, consumes 9R-16) ---
+// Contract: 9R-16 [@contract-v2] AC #1/#2/#3/#7/#9 — re-verified post-9R-18
+// against the MERGED Go code (generation_batch_handler.go MediaIDs []string /
+// generation_batch.go MediaID+CurrentMediaID string) 2026-07-06: media ids are
+// UUID STRINGS end-to-end (movie PKs are uuid.New().String(); 9R-18 ruling).
+
+export type GenerationBatchScope = 'missing' | 'selected';
+
+/** One enumerated queue item from the 202 start response (`items[]`). */
+export interface GenerationBatchItem {
+  /** UUID string movie media id on the wire ([@contract-v2]). */
+  mediaId: string;
+  title: string;
+}
+
+export interface GenerationBatchStartParams {
+  scope: GenerationBatchScope;
+  /**
+   * Required iff scope === 'selected'. UUID string MOVIE ids only — the
+   * backend REJECTS the whole request with 400 if ANY id is not a movie with a
+   * media file (9R-16 AC 8 ruling); callers MUST filter series ids client-side.
+   */
+  mediaIds?: string[];
+}
+
+/**
+ * 202 start response — `batchId` is null on the empty-missing-scope 200
+ * (`{total_items: 0, items: []}` — nothing to do is not an error).
+ */
+export interface GenerationBatchStartResult {
+  batchId: string | null;
+  totalItems: number;
+  items: GenerationBatchItem[];
+}
+
+export type GenerationBatchStatus =
+  | 'running'
+  | 'complete'
+  | 'cancelled'
+  | 'error'
+  | 'budget_ceiling';
+
+/** Progress snapshot — mirrors the `generation_batch_progress` SSE payload (11 keys). */
+export interface GenerationBatchProgress {
+  batchId: string;
+  totalItems: number;
+  currentIndex: number;
+  /** UUID string movie id of the in-flight item — joins UI rows directly ([@contract-v2]). */
+  currentMediaId: string;
+  currentItem: string;
+  successCount: number;
+  failCount: number;
+  pausedCount: number;
+  status: GenerationBatchStatus;
+  spentUsd: number;
+  budgetUsd: number;
+}
+
+/**
+ * GET /subtitles/generation-batch/status response. NOTE (fetch-batch parity):
+ * after ANY terminal state this probe returns `{running: false, progress: null}`
+ * — terminal snapshots (incl. budget_ceiling counts) arrive only via SSE.
+ */
+export interface GenerationBatchStatusResponse {
+  running: boolean;
+  progress?: GenerationBatchProgress | null;
+}
+
+export interface GenerationBatchCancelResult {
+  cancelled: boolean;
+  running: boolean;
+}
+
+/** GET /subtitles/generation-batch/preview?scope=missing — the F8 缺字幕 count. */
+export interface GenerationBatchPreviewResult {
+  totalItems: number;
+}
+
+/**
+ * Outcome of startGenerationBatch: started (202 / empty 200), or a batch was
+ * already running (409 TRANSCRIPTION_BATCH_RUNNING → progress rides the error
+ * body, recover-and-attach instead of throwing).
+ */
+export type StartGenerationBatchOutcome =
+  | { conflict: false; result: GenerationBatchStartResult }
+  | { conflict: true; progress: GenerationBatchProgress };
+
 // --- Service ---
 
 export const subtitleService = {
@@ -196,5 +283,70 @@ export const subtitleService = {
     return fetchApi<BatchCancelResult>('/subtitles/batch/cancel', {
       method: 'POST',
     });
+  },
+
+  // --- Generation batch (Story ux3-subtitle-v2-batch, consumes 9R-16) ---
+
+  /**
+   * POST /subtitles/generation-batch. 202 → started ({batch_id, total_items,
+   * items[]}); empty missing scope → 200 {total_items: 0, items: []} (batchId
+   * null); 409 TRANSCRIPTION_BATCH_RUNNING → in-progress snapshot from the
+   * error body (never throws on conflict). Other non-2xx throw.
+   */
+  async startGenerationBatch(
+    params: GenerationBatchStartParams
+  ): Promise<StartGenerationBatchOutcome> {
+    const response = await fetch(`${API_BASE_URL}/subtitles/generation-batch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(camelToSnake(params)),
+    });
+
+    const json = await response.json().catch(() => ({}) as Record<string, unknown>);
+
+    if (response.status === 409) {
+      return {
+        conflict: true,
+        progress: snakeToCamel<GenerationBatchProgress>((json as ApiResponse<unknown>).data),
+      };
+    }
+
+    if (!response.ok || !(json as ApiResponse<unknown>).success) {
+      const err = (json as ApiResponse<unknown>).error;
+      throw new Error(err?.message || `API request failed: ${response.status}`);
+    }
+
+    const data = snakeToCamel<{
+      batchId?: string;
+      totalItems: number;
+      items: GenerationBatchItem[];
+    }>((json as ApiResponse<unknown>).data);
+    return {
+      conflict: false,
+      result: {
+        batchId: data.batchId ?? null,
+        totalItems: data.totalItems,
+        items: data.items ?? [],
+      },
+    };
+  },
+
+  /** GET /subtitles/generation-batch/status — on-open recovery probe. */
+  async getGenerationBatchStatus(): Promise<GenerationBatchStatusResponse> {
+    return fetchApi<GenerationBatchStatusResponse>('/subtitles/generation-batch/status');
+  },
+
+  /** POST /subtitles/generation-batch/cancel — idempotent; queued items never start. */
+  async cancelGenerationBatch(): Promise<GenerationBatchCancelResult> {
+    return fetchApi<GenerationBatchCancelResult>('/subtitles/generation-batch/cancel', {
+      method: 'POST',
+    });
+  },
+
+  /** GET /subtitles/generation-batch/preview?scope=missing — the F8 idle count. */
+  async previewGenerationBatch(): Promise<GenerationBatchPreviewResult> {
+    return fetchApi<GenerationBatchPreviewResult>(
+      '/subtitles/generation-batch/preview?scope=missing'
+    );
   },
 };

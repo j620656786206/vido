@@ -37,7 +37,7 @@ import type { ViewMode } from '../components/library/ViewToggle';
 import { SelectionToolbar } from '../components/library/SelectionToolbar';
 import { BatchConfirmDialog } from '../components/library/BatchConfirmDialog';
 import { BatchProgress } from '../components/library/BatchProgress';
-import { BatchSubtitleDialog } from '../components/subtitle/BatchSubtitleDialog';
+import { GenerationBatchDialogV2 } from '../components/subtitle/GenerationBatchDialogV2';
 import { Pagination } from '../components/ui/Pagination';
 import type { LibraryMediaType, LibraryItem, SortField, SortOrder } from '../types/library';
 import { VALID_SORT_FIELDS } from '../types/library';
@@ -204,10 +204,18 @@ function LibraryPage() {
     isComplete: boolean;
     errors?: { id: string; message: string }[];
   }>({ isOpen: false, current: 0, total: 0, action: '', isComplete: false });
-  // Batch subtitle search dialog (Story 8-11)
+  // Batch subtitle GENERATION dialog (ux3-subtitle-v2-batch AC 5 — re-pointed
+  // from the Story 8-11 fetch dialog; the selection now actually flows in).
   const [isBatchSubtitleOpen, setIsBatchSubtitleOpen] = useState(false);
+  const [generationBatchSelection, setGenerationBatchSelection] = useState<{
+    movieIds: string[];
+    excludedCount: number;
+  }>({ movieIds: [], excludedCount: 0 });
 
   const lastSelectedIndexRef = useRef<number>(-1);
+  // id → type map accumulated as items are selected — selections can span
+  // pages, so the current `items` page alone cannot classify every id.
+  const selectionTypesRef = useRef(new Map<string, 'movie' | 'series'>());
 
   const batchDeleteMutation = useBatchDelete();
   const batchReparseMutation = useBatchReparse();
@@ -411,12 +419,14 @@ function LibraryPage() {
   const enterSelectionMode = useCallback(() => {
     setIsSelectionMode(true);
     setSelectedIds(new Set());
+    selectionTypesRef.current.clear();
   }, []);
 
   const exitSelectionMode = useCallback(() => {
     setIsSelectionMode(false);
     setSelectedIds(new Set());
     setSelectedType('movie');
+    selectionTypesRef.current.clear();
   }, []);
 
   const executeBatchAction = useCallback(
@@ -519,8 +529,18 @@ function LibraryPage() {
     [items]
   );
 
+  // Record the current page's id → type mapping so a cross-page selection can
+  // still be classified when the generation-batch dialog opens (AC 5).
+  const recordSelectionTypes = useCallback(() => {
+    for (const item of items) {
+      const id = item.movie?.id || item.series?.id;
+      if (id) selectionTypesRef.current.set(id, item.movie ? 'movie' : 'series');
+    }
+  }, [items]);
+
   const handleSelect = useCallback(
     (id: string, e: React.MouseEvent) => {
+      recordSelectionTypes();
       const allIds = getAllItemIds();
       const currentIndex = allIds.indexOf(id);
 
@@ -556,15 +576,35 @@ function LibraryPage() {
         setSelectedType(found.type === 'movie' ? 'movie' : 'series');
       }
     },
-    [items, getAllItemIds]
+    [items, getAllItemIds, recordSelectionTypes]
   );
 
   const handleSelectAll = useCallback(() => {
+    recordSelectionTypes();
     const allIds = items
       .map((item) => item.movie?.id || item.series?.id)
       .filter((id): id is string => !!id);
     setSelectedIds(new Set(allIds));
-  }, [items]);
+  }, [items, recordSelectionTypes]);
+
+  // Open the generation-batch dialog with the selection ACTUALLY flowing in
+  // (AC 5): movie ids are UUID STRINGS ([@contract-v2], 9R-18) and pass through
+  // unconverted; series (or unclassifiable) ids are excluded client-side — the
+  // backend REJECTS the whole request with 400 if ANY id is not a movie with a
+  // file (9R-16 AC 8); the dialog shows the note.
+  const handleOpenGenerationBatch = useCallback(() => {
+    const movieIds: string[] = [];
+    let excludedCount = 0;
+    for (const id of selectedIds) {
+      if (selectionTypesRef.current.get(id) === 'movie') {
+        movieIds.push(id);
+      } else {
+        excludedCount++;
+      }
+    }
+    setGenerationBatchSelection({ movieIds, excludedCount });
+    setIsBatchSubtitleOpen(true);
+  }, [selectedIds]);
 
   // Keyboard shortcuts for selection mode (Escape, Ctrl+A)
   useEffect(() => {
@@ -594,7 +634,7 @@ function LibraryPage() {
               onDelete={() => setConfirmAction('delete')}
               onReparse={() => setConfirmAction('reparse')}
               onExport={() => setConfirmAction('export')}
-              onBatchSubtitle={() => setIsBatchSubtitleOpen(true)}
+              onBatchSubtitle={handleOpenGenerationBatch}
               onCancel={exitSelectionMode}
               isProcessing={
                 batchDeleteMutation.isPending ||
@@ -791,8 +831,14 @@ function LibraryPage() {
         onClose={closeBatchProgress}
       />
 
-      {/* Batch subtitle search (Story 8-11) */}
-      <BatchSubtitleDialog open={isBatchSubtitleOpen} onOpenChange={setIsBatchSubtitleOpen} />
+      {/* Batch subtitle GENERATION (ux3-subtitle-v2-batch AC 5 — supersedes the
+          Story 8-11 fetch dialog here; selection flows in, series pre-excluded) */}
+      <GenerationBatchDialogV2
+        open={isBatchSubtitleOpen}
+        onOpenChange={setIsBatchSubtitleOpen}
+        selectedMovieIds={generationBatchSelection.movieIds}
+        excludedSeriesCount={generationBatchSelection.excludedCount}
+      />
     </div>
   );
 }
