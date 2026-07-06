@@ -64,4 +64,24 @@ describe('RequestRow', () => {
     rerender(<RequestRow request={row({ status: 'pending', progress: 0.45 })} />);
     expect(screen.queryByText('45%')).not.toBeInTheDocument();
   });
+
+  it('exposes the live % as a Mono progressbar (13-3b AC #4 a11y)', () => {
+    render(<RequestRow request={row({ status: 'downloading', progress: 0.45 })} />);
+    const bar = screen.getByRole('progressbar');
+    expect(bar).toHaveTextContent('45%');
+    expect(bar).toHaveAttribute('aria-valuenow', '45');
+    expect(bar).toHaveAttribute('aria-valuemin', '0');
+    expect(bar).toHaveAttribute('aria-valuemax', '100');
+    // Mono, tabular, text-xs per AC #4 (DownloadCardV2 progressbar convention).
+    expect(bar.className).toContain('font-mono');
+    expect(bar.className).toContain('tabular-nums');
+    expect(bar.className).toContain('text-xs');
+  });
+
+  it('the status pill announces politely on async transitions (aria-live)', () => {
+    render(<RequestRow request={row({ status: 'searching' })} />);
+    const pill = screen.getByTestId('request-status-searching');
+    expect(pill).toHaveAttribute('role', 'status');
+    expect(pill).toHaveAttribute('aria-live', 'polite');
+  });
 });

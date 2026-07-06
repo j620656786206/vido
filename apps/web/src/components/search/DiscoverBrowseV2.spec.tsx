@@ -15,6 +15,21 @@ const h = vi.hoisted(() => ({
   filterState: {} as Record<string, unknown>,
 }));
 
+// Story 13-3b: spy the lazy request_progress SSE + control page visibility so the
+// view+visibility gate can be asserted (start/stop calls) without a real EventSource.
+const rp = vi.hoisted(() => ({
+  start: vi.fn(),
+  stop: vi.fn(),
+  visible: true,
+}));
+vi.mock('../../hooks/useRequestProgress', () => ({
+  useRequestProgress: () => ({ startTracking: rp.start, stopTracking: rp.stop }),
+}));
+vi.mock('../../hooks/useDownloads', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../hooks/useDownloads')>();
+  return { ...actual, usePageVisibility: () => rp.visible };
+});
+
 vi.mock('../../hooks/useDiscoverResults', () => ({
   useDiscoverResults: () => h.discover,
 }));
@@ -101,6 +116,9 @@ describe('DiscoverBrowseV2', () => {
   beforeEach(() => {
     h.discover = discover();
     h.filterState = filterState();
+    rp.start.mockClear();
+    rp.stop.mockClear();
+    rp.visible = true;
   });
 
   it('renders the persistent rail, the LIVE Requests entry (13-1b), and the grid with results', async () => {
@@ -133,6 +151,28 @@ describe('DiscoverBrowseV2', () => {
     expect(screen.queryByTestId('media-grid')).not.toBeInTheDocument();
     // The entry reflects the active view.
     expect(screen.getByTestId('discover-requests-entry')).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('13-3b: starts request_progress SSE while the 想要清單 view is active AND visible', async () => {
+    renderBrowse('/discover?view=requests');
+    await screen.findByTestId('requests-view-stub');
+    expect(rp.start).toHaveBeenCalled();
+    expect(rp.stop).not.toHaveBeenCalled();
+  });
+
+  it('13-3b: does NOT start SSE on the grid view — stops it instead (view gate)', async () => {
+    renderBrowse('/discover');
+    await screen.findByTestId('discover-filter-rail');
+    expect(rp.start).not.toHaveBeenCalled();
+    expect(rp.stop).toHaveBeenCalled();
+  });
+
+  it('13-3b: stops SSE when the tab is hidden even on the requests view (visibility gate)', async () => {
+    rp.visible = false;
+    renderBrowse('/discover?view=requests');
+    await screen.findByTestId('requests-view-stub');
+    expect(rp.start).not.toHaveBeenCalled();
+    expect(rp.stop).toHaveBeenCalled();
   });
 
   it('renders the chip bar as a lighter read/remove summary (AC #7)', async () => {
