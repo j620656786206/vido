@@ -144,6 +144,20 @@ func TestRouteC_UUIDMovie_FlowsThroughWholeChain(t *testing.T) {
 			"a 503 here must be the availability gate, not an id problem")
 	}
 
+	// Hermeticity drain (CR 9R-18): a 202 spawns the DETACHED async pipeline
+	// goroutine (context.Background + service timeout) which runs ffmpeg on the
+	// fake mkv and fails within ms — but nothing else bounds it. Wait for the
+	// single-flight slot to clear so the goroutine (and its ffmpeg child) cannot
+	// outlive the test, race t.TempDir()/db cleanup, or pollute the package run.
+	if w.Code == http.StatusAccepted {
+		drainDeadline := time.Now().Add(15 * time.Second)
+		for time.Now().Before(drainDeadline) && transcriptionSvc.IsInProgress(movieUUID) {
+			time.Sleep(10 * time.Millisecond)
+		}
+		require.False(t, transcriptionSvc.IsInProgress(movieUUID),
+			"async transcription goroutine must finish (extract fails fast on the fake mkv) before the test proceeds")
+	}
+
 	// ── Leg 2: preview counts the UUID movie ──────────────────────────────────
 	w = httptest.NewRecorder()
 	req = httptest.NewRequest(http.MethodGet, "/api/v1/subtitles/generation-batch/preview?scope=missing", nil)

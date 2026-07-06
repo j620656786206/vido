@@ -1,6 +1,6 @@
 # Story 9R-18: media_id string contract — align Route C chain with UUID movie PKs
 
-Status: review
+Status: done
 
 > **Origin (party-mode ruling, 2026-07-06, Winston+Amelia+Murat 3-0, Alexyu ratified):** movie/series PKs are UUID STRINGS (`library_service.go:161`, `parse_queue_service.go:81/216/273/312` — `uuid.New().String()`; prod data confirmed via retro-8-TD4), but the entire Route C chain assumed int64 numeric ids — `POST /movies/:id/transcribe` ParseInts the id (400 on every real movie), the 9R-16 batch orchestrator ParseInt-SKIPS every UUID movie (preview counts 38, start enumerates 0), and the FE `Number(uuid)` = NaN. The int64 assumption came from a TMDB-id reflex in 9R-10, not any ADR — **it is a bug, not a design**. Fix: string media ids end-to-end, consistent with the glossary API (already string `:mediaId`) and `models.Movie.ID`. Filed as 🔴 `disc-2026-07-movie-id-int64-contract-mismatch` by the ux3-subtitle-v2-batch adversarial CR.
 >
@@ -103,6 +103,20 @@ Claude Fable 5 (claude-fable-5) — Amelia (BMAD DEV), 2026-07-06.
 ### Discovery Triage
 
 - No new discoveries. Pre-existing `disc-2026-07-retry-mock-race` reconfirmed under `-race` (exempt, already filed by the 9R-16 CR — no action). No new error codes (Rule 7: none expected, none added).
+
+### Code Review Record (AI) — 2026-07-06, adversarial CR (same session)
+
+**Verdict: APPROVED-WITH-FIXES-APPLIED** (1M/1L fixed, 1L accepted-open, 2 INFO). Rule 7 PASS (only pre-existing `VALIDATION_INVALID_FORMAT`/`TRANSCRIPTION_DISABLED` in diff — no new codes). Rule 20 PASS (5 v2 stamps verified; Change Log rows two-stage-verified; AC-12-not-bumped note present; CR re-ran the consumer grep — exactly ONE not-done consumer `ux3-subtitle-v2-batch`, stale-marked in BOTH its Dev Notes and sprint-status; `9-2a`/`ux3-subtitle-v2` are done → frozen, no retro-mark). Rule 25 N/A-PASS (project-context.md untouched, correctly). File List = exact match vs `git diff --name-only` (21/21).
+
+- **[M1, FIXED]** `route_c_uuid_integration_test.go` — the 202 transcribe leg spawned the DETACHED async pipeline goroutine (context.Background + 5-min service timeout, ffmpeg child on the fake mkv) with NO drain; it could outlive the test, race `t.TempDir()`/db cleanup, and pollute the package run. Fix: bounded single-flight-slot drain after leg 1 (202-gated; `require.False` on timeout). Verified 3× with ffmpeg present (drain ~ms — extract fails fast) — hermeticity: WhisperClient("test-key") is unreachable (extraction always fails on the 8-byte fake), sseHub nil-guarded, subtitleWriter unwired.
+- **[L2, FIXED]** 9R-16.md Change Log rows lacked the canonical greppable `[@contract-v1→v2] AC #N:` per-row token (Rule 20's two-stage verify keys on `AC #N:`; the token lived only in the preamble). Fix: date + bump token prepended to each of the 5 rows; header cell renamed. Substance (both sub-tokens per row) was already compliant.
+- **[L3, ACCEPTED-OPEN]** `transcription_handler.go` empty-id 400 branch is unreachable through gin routing (a `:id` segment cannot match empty; `/movies//transcribe` never reaches the handler) — defensive keep is justified, and both the handler comment and the hand-built-context test document exactly this. No action.
+- **[INFO]** Full `go test ./...` flaked on runs 1–2 on `TestScannerService_SSEBroadcast_ScanCancelled` — the already-filed `preexisting-fail-scanner-sse-scan-cancelled-flake` (passes 5/5 isolated; full-suite run 3 green). Not chased. The Dev log's "no flake" was that run's luck, not a contradiction.
+- **[INFO]** `pnpm lint:all` 0 errors / 123 warnings (Dev logged 122) — both sampled warnings are in files this story never touched; count drift is pre-existing.
+
+**CR-verified adversarial sweeps:** residual-numeric grep clean (only comments + `ConfirmAll` int64 row-COUNT returns + PosterCard's correct tmdb-axis `Number`); all 6 SSE emission sites broadcast the string `mediaID` param by construction; FE filter is strict string `!==` (`useGenerationProgress.ts:180`), no `==` coercion anywhere on the media axis; collateral byte-check clean (zero `tmdb_id`/`owned_ids`/`external_id` code lines in diff; glossary files untouched); transcribe guard is non-tautological (`NotEqual 400` + `Contains {202,503}` + 503-body must be `TRANSCRIPTION_DISABLED` — a 400 regression fails it); single-flight semantics type-only (same-media 409 both directions tested; leading-zero int collision class actually REMOVED by stringification); batch: missing-scope enumerates only repo movie rows, selected-scope rejects unknown/file-less ids before any `RunTranscription`.
+
+**Post-fix gates:** integration guard 3×/3 green (202 path, ffmpeg present); `go test ./internal/{handlers,services}` green; `-race` handlers full + services touched-scope clean (retry-mock race exempt, not hit in scope); full `go test ./...` green (run 3; known scanner flake noted); `pnpm nx test web` 2399/2399; `pnpm lint:all` 0 errors; prettier clean; gofmt clean.
 
 ### File List
 

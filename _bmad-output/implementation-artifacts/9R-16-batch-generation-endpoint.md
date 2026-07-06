@@ -88,13 +88,13 @@ so that the library heals in bulk, spending stops at my budget, and the remainde
 
 > **[@contract-v1→v2] bump (2026-07-06, by 9R-18-media-id-string-contract, Rule 20 producer-side):** movie PKs are UUID STRINGS (`uuid.New().String()`), not int64 — the v1 numeric `media_id` contract was a TMDB-id reflex (party-mode ruling Winston+Amelia+Murat 3-0, Alexyu ratified). Consumer grep run 2026-07-06: ONE not-done consumer — `ux3-subtitle-v2-batch` (stale-marked in sprint-status + its Dev Notes; re-acks v2 at its rebase on 9R-18).
 
-| AC | What changed (v1 → v2) | What breaks downstream |
+| Bump (date + AC) | What changed (v1 → v2) | What breaks downstream |
 | --- | --- | --- |
-| 1 (start) | Request `media_ids: [<int64>...]` → `[<string UUID>...]`; 202 `items[].media_id` int64 → string UUID. | Any consumer sending numeric ids gets 400 (bind failure) / unknown-id rejection; any consumer parsing `items[].media_id` as a number gets NaN. |
-| 2 (status/cancel) | `progress.current_media_id` int64 → string UUID. | Consumers doing numeric compare/coercion on `current_media_id` mis-join per-item events. |
-| 3 (preview) | No wire change (count only) — bumped because it enumerates the same string-id scope; v2 documents that the counted rows are UUID-keyed. | None directly; consumers must not assume the previewed items will carry numeric ids. |
-| 7 (budget_ceiling) | No key/status change — payload rides the AC 9 shape whose `current_media_id` is now a string UUID. | Same as AC 9: numeric joins break. |
-| 9 (SSE `generation_batch_progress`) | `current_media_id` int64 → string UUID (all 11 keys/casing unchanged). | FE `media_id` joins against `transcription_*` events must be STRING equality (those payloads' `media_id` is also string per 9R-18 [@contract-v1] first formalization). |
+| 2026-07-06 [@contract-v1→v2] AC #1: (start) | Request `media_ids: [<int64>...]` → `[<string UUID>...]`; 202 `items[].media_id` int64 → string UUID. | Any consumer sending numeric ids gets 400 (bind failure) / unknown-id rejection; any consumer parsing `items[].media_id` as a number gets NaN. |
+| 2026-07-06 [@contract-v1→v2] AC #2: (status/cancel) | `progress.current_media_id` int64 → string UUID. | Consumers doing numeric compare/coercion on `current_media_id` mis-join per-item events. |
+| 2026-07-06 [@contract-v1→v2] AC #3: (preview) | No wire change (count only) — bumped because it enumerates the same string-id scope; v2 documents that the counted rows are UUID-keyed. | None directly; consumers must not assume the previewed items will carry numeric ids. |
+| 2026-07-06 [@contract-v1→v2] AC #7: (budget_ceiling) | No key/status change — payload rides the AC 9 shape whose `current_media_id` is now a string UUID. | Same as AC 9: numeric joins break. |
+| 2026-07-06 [@contract-v1→v2] AC #9: (SSE `generation_batch_progress`) | `current_media_id` int64 → string UUID (all 11 keys/casing unchanged). | FE `media_id` joins against `transcription_*` events must be STRING equality (those payloads' `media_id` is also string per 9R-18 [@contract-v1] first formalization). |
 
 **AC 12 deliberately NOT bumped** (stays `[@contract-v1]`): its `UpdateSubtitleStatus(ctx, id string, …)` parameter was ALREADY a string row id — 9R-18 only deleted the caller-side `strconv.FormatInt` shim; the AC 12 contract surface is unchanged. Recorded here so the stamp-grep does not stall on a five-of-six bump.
 
