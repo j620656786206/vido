@@ -208,7 +208,7 @@ function LibraryPage() {
   // from the Story 8-11 fetch dialog; the selection now actually flows in).
   const [isBatchSubtitleOpen, setIsBatchSubtitleOpen] = useState(false);
   const [generationBatchSelection, setGenerationBatchSelection] = useState<{
-    movieIds: number[];
+    movieIds: string[];
     excludedCount: number;
   }>({ movieIds: [], excludedCount: 0 });
 
@@ -588,16 +588,16 @@ function LibraryPage() {
   }, [items, recordSelectionTypes]);
 
   // Open the generation-batch dialog with the selection ACTUALLY flowing in
-  // (AC 5): movie ids → int64 numbers; series (or unclassifiable) ids are
-  // excluded client-side — the backend REJECTS the whole request with 400 if
-  // ANY id is not a movie with a file (9R-16 AC 8); the dialog shows the note.
+  // (AC 5): movie ids are UUID STRINGS ([@contract-v2], 9R-18) and pass through
+  // unconverted; series (or unclassifiable) ids are excluded client-side — the
+  // backend REJECTS the whole request with 400 if ANY id is not a movie with a
+  // file (9R-16 AC 8); the dialog shows the note.
   const handleOpenGenerationBatch = useCallback(() => {
-    const movieIds: number[] = [];
+    const movieIds: string[] = [];
     let excludedCount = 0;
     for (const id of selectedIds) {
-      const numericId = Number(id);
-      if (selectionTypesRef.current.get(id) === 'movie' && Number.isFinite(numericId)) {
-        movieIds.push(numericId);
+      if (selectionTypesRef.current.get(id) === 'movie') {
+        movieIds.push(id);
       } else {
         excludedCount++;
       }

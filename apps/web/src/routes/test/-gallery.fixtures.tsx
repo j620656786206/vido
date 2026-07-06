@@ -3623,6 +3623,8 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   // other v2 dialogs). Fixture states are named after the 9R-16 batch-status
   // enum (frozen fixture vocabulary once baselined). Rule 23: the panel reads
   // NO ambient clock — all progress/cost values are SSE-payload props.
+  // Media-id fixture convention (9R-18 AC 7): media ids are UUID STRINGS —
+  // mirror the prod creation path (uuid.New().String()); do NOT invent numeric ids.
   {
     id: 'generation-batch-dialog-v2/idle',
     label: 'subtitle/GenerationBatchPanelV2 (idle — scope segments + counts)',
@@ -3668,7 +3670,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
         batchId: 'gb-fx-1',
         totalItems: 5,
         currentIndex: 3,
-        currentMediaId: 3,
+        currentMediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e53',
         currentItem: '星際效應',
         successCount: 2,
         failCount: 0,
@@ -3678,11 +3680,11 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
         budgetUsd: 5,
       },
       items: [
-        { mediaId: 1, title: '沙丘：第二部' },
-        { mediaId: 2, title: '奧本海默' },
-        { mediaId: 3, title: '星際效應' },
-        { mediaId: 4, title: '全面啟動' },
-        { mediaId: 5, title: '蜘蛛人：無家日' },
+        { mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e51', title: '沙丘：第二部' },
+        { mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e52', title: '奧本海默' },
+        { mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e53', title: '星際效應' },
+        { mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e54', title: '全面啟動' },
+        { mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e55', title: '蜘蛛人：無家日' },
       ],
       activeItemProgress: {
         phase: 'transcribing',
@@ -3715,7 +3717,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
         batchId: 'gb-fx-1',
         totalItems: 5,
         currentIndex: 3,
-        currentMediaId: 4,
+        currentMediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e54',
         currentItem: '全面啟動',
         successCount: 3,
         failCount: 0,
@@ -3725,11 +3727,11 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
         budgetUsd: 5,
       },
       items: [
-        { mediaId: 1, title: '沙丘：第二部' },
-        { mediaId: 2, title: '奧本海默' },
-        { mediaId: 3, title: '星際效應' },
-        { mediaId: 4, title: '全面啟動' },
-        { mediaId: 5, title: '蜘蛛人：無家日' },
+        { mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e51', title: '沙丘：第二部' },
+        { mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e52', title: '奧本海默' },
+        { mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e53', title: '星際效應' },
+        { mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e54', title: '全面啟動' },
+        { mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e55', title: '蜘蛛人：無家日' },
       ],
       scope: 'missing',
       onScopeChange: noop,

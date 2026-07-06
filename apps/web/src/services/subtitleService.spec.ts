@@ -216,7 +216,9 @@ describe('subtitleService', () => {
     });
   });
 
-  // --- Generation batch (ux3-subtitle-v2-batch AC 3, 9R-16 [@contract-v1]) ---
+  // --- Generation batch (ux3-subtitle-v2-batch AC 3, 9R-16 [@contract-v2]) ---
+  // Media-id fixture convention (9R-18 AC 7): media ids are UUID STRINGS —
+  // mirror the prod creation path (uuid.New().String()); do NOT invent numeric ids.
 
   describe('startGenerationBatch', () => {
     it('sends snake_case media_ids for scope=selected and parses the 202 result', async () => {
@@ -230,8 +232,8 @@ describe('subtitleService', () => {
               batch_id: 'gb-1',
               total_items: 2,
               items: [
-                { media_id: 42, title: '沙丘：第二部' },
-                { media_id: 43, title: '奧本海默' },
+                { media_id: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e51', title: '沙丘：第二部' },
+                { media_id: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e52', title: '奧本海默' },
               ],
             },
           }),
@@ -239,21 +241,24 @@ describe('subtitleService', () => {
 
       const outcome = await subtitleService.startGenerationBatch({
         scope: 'selected',
-        mediaIds: [42, 43],
+        mediaIds: ['4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e51', '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e52'],
       });
 
       const [url, options] = mockFetch.mock.calls[0];
       expect(url).toContain('/subtitles/generation-batch');
       expect(options.method).toBe('POST');
-      expect(JSON.parse(options.body)).toEqual({ scope: 'selected', media_ids: [42, 43] });
+      expect(JSON.parse(options.body)).toEqual({
+        scope: 'selected',
+        media_ids: ['4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e51', '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e52'],
+      });
       expect(outcome).toEqual({
         conflict: false,
         result: {
           batchId: 'gb-1',
           totalItems: 2,
           items: [
-            { mediaId: 42, title: '沙丘：第二部' },
-            { mediaId: 43, title: '奧本海默' },
+            { mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e51', title: '沙丘：第二部' },
+            { mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e52', title: '奧本海默' },
           ],
         },
       });
@@ -266,7 +271,11 @@ describe('subtitleService', () => {
         json: () =>
           Promise.resolve({
             success: true,
-            data: { batch_id: 'gb-2', total_items: 1, items: [{ media_id: 7, title: 'A' }] },
+            data: {
+              batch_id: 'gb-2',
+              total_items: 1,
+              items: [{ media_id: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e57', title: 'A' }],
+            },
           }),
       });
 
@@ -303,7 +312,7 @@ describe('subtitleService', () => {
               batch_id: 'gb-run',
               total_items: 38,
               current_index: 12,
-              current_media_id: 99,
+              current_media_id: '9ff0c000-dead-4bee-8f00-000000000999',
               current_item: '怪奇物語',
               success_count: 11,
               fail_count: 0,
@@ -323,7 +332,7 @@ describe('subtitleService', () => {
           batchId: 'gb-run',
           totalItems: 38,
           currentIndex: 12,
-          currentMediaId: 99,
+          currentMediaId: '9ff0c000-dead-4bee-8f00-000000000999',
           currentItem: '怪奇物語',
           successCount: 11,
           failCount: 0,
@@ -350,7 +359,10 @@ describe('subtitleService', () => {
       });
 
       await expect(
-        subtitleService.startGenerationBatch({ scope: 'selected', mediaIds: [1] })
+        subtitleService.startGenerationBatch({
+          scope: 'selected',
+          mediaIds: ['4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e51'],
+        })
       ).rejects.toThrow('media_ids 含無法生成字幕的項目');
     });
   });
@@ -364,7 +376,7 @@ describe('subtitleService', () => {
             batch_id: 'gb-1',
             total_items: 10,
             current_index: 3,
-            current_media_id: 5,
+            current_media_id: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e55',
             current_item: 'B',
             success_count: 2,
             fail_count: 0,
@@ -380,7 +392,7 @@ describe('subtitleService', () => {
 
       expect(mockFetch.mock.calls[0][0]).toContain('/subtitles/generation-batch/status');
       expect(result.running).toBe(true);
-      expect(result.progress?.currentMediaId).toBe(5);
+      expect(result.progress?.currentMediaId).toBe('4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e55');
       expect(result.progress?.spentUsd).toBe(0.1);
     });
 

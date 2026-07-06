@@ -39,11 +39,15 @@ class MockEventSource {
   }
 }
 
+// Media-id fixture convention (9R-18 AC 7): media ids are UUID STRINGS —
+// mirror the prod creation path (uuid.New().String()); do NOT invent numeric ids.
+const MOVIE_UUID = '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e5f';
+
 /**
  * Build the FULL SSE Event struct exactly as the backend writes the `data:`
  * line (sse/handler.go `sendSSEEvent(w, type, event)`): the payload is
  * DOUBLE-nested under `.data`, snake_case, all 11 contract keys
- * (9R-16 [@contract-v1] AC #9).
+ * (9R-16 [@contract-v2] AC #9 — `current_media_id` is a UUID STRING).
  */
 const wireEvent = (payload: Record<string, unknown>) => ({
   id: 'uuid-1',
@@ -52,7 +56,7 @@ const wireEvent = (payload: Record<string, unknown>) => ({
     batch_id: 'gb-1',
     total_items: 38,
     current_index: 12,
-    current_media_id: 42,
+    current_media_id: MOVIE_UUID,
     current_item: '怪奇物語',
     success_count: 11,
     fail_count: 0,
@@ -107,7 +111,7 @@ describe('useGenerationBatchProgress (lazy SSE, double-nested envelope)', () => 
       batchId: 'gb-1',
       totalItems: 38,
       currentIndex: 12,
-      currentMediaId: 42,
+      currentMediaId: MOVIE_UUID,
       currentItem: '怪奇物語',
       successCount: 11,
       failCount: 0,

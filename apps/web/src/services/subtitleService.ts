@@ -127,26 +127,28 @@ export interface BatchCancelResult {
 }
 
 // --- Generation-batch types (Story ux3-subtitle-v2-batch, consumes 9R-16) ---
-// Contract: 9R-16 [@contract-v1] AC #1/#2/#3/#7/#9 — re-verified against the
-// MERGED Go code (generation_batch_handler.go / generation_batch.go) 2026-07-06.
+// Contract: 9R-16 [@contract-v2] AC #1/#2/#3/#7/#9 — re-verified post-9R-18
+// against the MERGED Go code (generation_batch_handler.go MediaIDs []string /
+// generation_batch.go MediaID+CurrentMediaID string) 2026-07-06: media ids are
+// UUID STRINGS end-to-end (movie PKs are uuid.New().String(); 9R-18 ruling).
 
 export type GenerationBatchScope = 'missing' | 'selected';
 
 /** One enumerated queue item from the 202 start response (`items[]`). */
 export interface GenerationBatchItem {
-  /** int64 movie media id on the wire. */
-  mediaId: number;
+  /** UUID string movie media id on the wire ([@contract-v2]). */
+  mediaId: string;
   title: string;
 }
 
 export interface GenerationBatchStartParams {
   scope: GenerationBatchScope;
   /**
-   * Required iff scope === 'selected'. int64 MOVIE ids only — the backend
-   * REJECTS the whole request with 400 if ANY id is not a movie with a media
-   * file (9R-16 AC 8 ruling); callers MUST filter series ids client-side.
+   * Required iff scope === 'selected'. UUID string MOVIE ids only — the
+   * backend REJECTS the whole request with 400 if ANY id is not a movie with a
+   * media file (9R-16 AC 8 ruling); callers MUST filter series ids client-side.
    */
-  mediaIds?: number[];
+  mediaIds?: string[];
 }
 
 /**
@@ -171,8 +173,8 @@ export interface GenerationBatchProgress {
   batchId: string;
   totalItems: number;
   currentIndex: number;
-  /** int64 movie id of the in-flight item — `String()` it when joining to UI rows. */
-  currentMediaId: number;
+  /** UUID string movie id of the in-flight item — joins UI rows directly ([@contract-v2]). */
+  currentMediaId: string;
   currentItem: string;
   successCount: number;
   failCount: number;

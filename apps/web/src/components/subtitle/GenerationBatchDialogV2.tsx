@@ -29,6 +29,8 @@
  *   stops WATCHING — the batch continues server-side (recover-on-open re-attaches).
  *
  * Rule 23: zero wall-clock reads — progress/cost/counts are all SSE-supplied.
+ * [@contract-v2] (9R-18): media ids are UUID STRINGS end-to-end — selection ids
+ * pass through unconverted and SSE `current_media_id` joins rows directly.
  */
 import { useCallback, useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -62,7 +64,7 @@ type RowState = 'done' | 'failed' | 'active' | 'queued' | 'paused' | 'stopped';
 export function deriveRowStates(
   items: GenerationBatchItem[],
   progress: GenerationBatchProgressState,
-  failedIds: ReadonlySet<number>
+  failedIds: ReadonlySet<string>
 ): RowState[] {
   const { status, currentMediaId, totalItems, pausedCount } = progress;
   const idxOfCurrent = items.findIndex((it) => it.mediaId === currentMediaId);
@@ -186,8 +188,8 @@ export interface GenerationBatchPanelV2Props {
   progress: GenerationBatchProgressState;
   /** Queue rows from the start-202 `items[]` (empty on 409/recover-attach). */
   items: GenerationBatchItem[];
-  /** Media ids whose per-item pipeline failed while the batch ran. */
-  failedIds?: ReadonlySet<number>;
+  /** Media ids (UUID strings) whose per-item pipeline failed while the batch ran. */
+  failedIds?: ReadonlySet<string>;
   /** Per-item stage detail for the active row (joined on current_media_id). */
   activeItemProgress?: GenerationProgressState | null;
   scope: GenerationBatchScope;
@@ -209,7 +211,7 @@ export interface GenerationBatchPanelV2Props {
   onClose: () => void;
 }
 
-const EMPTY_FAILED: ReadonlySet<number> = new Set();
+const EMPTY_FAILED: ReadonlySet<string> = new Set();
 
 export function GenerationBatchPanelV2({
   open,
@@ -473,7 +475,7 @@ export function GenerationBatchPanelV2({
                 <ul className="flex flex-col gap-2" data-testid="gen-batch-item-list">
                   <QueueRow
                     item={{
-                      mediaId: progress.currentMediaId ?? 0,
+                      mediaId: progress.currentMediaId ?? '',
                       title: progress.currentItem,
                     }}
                     // Terminal semantics must hold here too (AC 2): the batch
@@ -615,10 +617,11 @@ export interface GenerationBatchDialogV2Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /**
-   * Pre-filtered MOVIE media ids (int64 as numbers) when opened from a library
-   * selection. Empty/absent → the 已選項目 segment is not rendered (AC 1).
+   * Pre-filtered MOVIE media ids (UUID strings, [@contract-v2] — the selection
+   * Set's ids pass through unconverted) when opened from a library selection.
+   * Empty/absent → the 已選項目 segment is not rendered (AC 1).
    */
-  selectedMovieIds?: number[];
+  selectedMovieIds?: string[];
   /** Series ids the caller excluded from the selection (AC 5 visible note). */
   excludedSeriesCount?: number;
 }
@@ -634,7 +637,7 @@ export function GenerationBatchDialogV2({
 
   const [scope, setScope] = useState<GenerationBatchScope>(hasSelection ? 'selected' : 'missing');
   const [items, setItems] = useState<GenerationBatchItem[]>([]);
-  const [failedIds, setFailedIds] = useState<Set<number>>(new Set());
+  const [failedIds, setFailedIds] = useState<Set<string>>(new Set());
   const [emptyScope, setEmptyScope] = useState(false);
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);

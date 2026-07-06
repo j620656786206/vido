@@ -35,9 +35,10 @@
  *   - Route interception installed BEFORE page.goto (network-first).
  *   - Mock payloads are snake_case at the wire (fetchApi runs snakeToCamel).
  *   - POST bodies captured via postDataJSON() to verify Rule 18 at the network layer.
- *   - Movie ids are NUMERIC strings per the 9R-16 int64 media_id contract
- *     (production UUID row ids are a known cross-story gap — see
- *     disc-2026-07-movie-id-int64-contract-mismatch).
+ *   - Media-id fixture convention (9R-18 AC 7): media ids are UUID STRINGS —
+ *     mirror the prod creation path (uuid.New().String()); do NOT invent
+ *     numeric ids. media_ids ride the wire UNCONVERTED ([@contract-v2];
+ *     disc-2026-07-movie-id-int64-contract-mismatch CLOSED by 9R-18).
  *
  * @tags @ui @batch-subtitle @ux3-subtitle-v2-batch
  */
@@ -64,13 +65,13 @@ const jsonStatus = <T>(status: number, body: T, success = true) => ({
 });
 
 // A populated two-movie library so the grid renders and `enter-selection-btn`
-// shows. Numeric ids — the 9R-16 media_id contract is int64.
+// shows. UUID string ids — the [@contract-v2] media_id contract (9R-18).
 const populatedLibrary = {
   items: [
     {
       type: 'movie',
       movie: {
-        id: '603',
+        id: '5c2a9d3e-1f4b-4a8c-9d2e-3f5a7b9c1d63',
         title: '駭客任務',
         release_date: '1999-03-31',
         genres: ['動作', '科幻'],
@@ -83,7 +84,7 @@ const populatedLibrary = {
     {
       type: 'movie',
       movie: {
-        id: '157336',
+        id: '8e4b2c6a-7d1f-4e3a-b5c9-2a6d8f0e4b57',
         title: '星際效應',
         release_date: '2014-11-07',
         genres: ['劇情', '科幻'],
@@ -113,8 +114,8 @@ const startedBatch = {
   batch_id: 'gb-e2e-1',
   total_items: 2,
   items: [
-    { media_id: 603, title: '駭客任務' },
-    { media_id: 157336, title: '星際效應' },
+    { media_id: '5c2a9d3e-1f4b-4a8c-9d2e-3f5a7b9c1d63', title: '駭客任務' },
+    { media_id: '8e4b2c6a-7d1f-4e3a-b5c9-2a6d8f0e4b57', title: '星際效應' },
   ],
 };
 
@@ -237,8 +238,12 @@ test.describe('Batch Subtitle Generation UI @ui @batch-subtitle @ux3-subtitle-v2
 
     // THEN: the panel enters the running state — counter + queue rows from items[]
     await expect(page.getByTestId('gen-batch-counter')).toHaveText('0 / 2');
-    await expect(page.getByTestId('gen-batch-row-603')).toBeVisible();
-    await expect(page.getByTestId('gen-batch-row-157336')).toBeVisible();
+    await expect(
+      page.getByTestId('gen-batch-row-5c2a9d3e-1f4b-4a8c-9d2e-3f5a7b9c1d63')
+    ).toBeVisible();
+    await expect(
+      page.getByTestId('gen-batch-row-8e4b2c6a-7d1f-4e3a-b5c9-2a6d8f0e4b57')
+    ).toBeVisible();
 
     // AND: the wire body is snake_case {scope:"missing"} with no media_ids (Rule 18)
     expect(captured).not.toBeNull();
@@ -267,13 +272,14 @@ test.describe('Batch Subtitle Generation UI @ui @batch-subtitle @ux3-subtitle-v2
     await expect(selected).toHaveAttribute('aria-pressed', 'true');
     await expect(selected).toContainText('2');
 
-    // AND: starting sends the selected MOVIE ids as int64 media_ids (Rule 18)
+    // AND: starting sends the selected MOVIE ids as UUID string media_ids
+    // (Rule 18 + [@contract-v2])
     await page.getByTestId('gen-batch-start-btn').click();
     await expect(page.getByTestId('gen-batch-counter')).toHaveText('0 / 2');
     expect(captured).not.toBeNull();
     expect(captured!.postDataJSON()).toEqual({
       scope: 'selected',
-      media_ids: [603, 157336],
+      media_ids: ['5c2a9d3e-1f4b-4a8c-9d2e-3f5a7b9c1d63', '8e4b2c6a-7d1f-4e3a-b5c9-2a6d8f0e4b57'],
     });
   });
 
@@ -295,7 +301,7 @@ test.describe('Batch Subtitle Generation UI @ui @batch-subtitle @ux3-subtitle-v2
             batch_id: 'gb-existing',
             total_items: 38,
             current_index: 12,
-            current_media_id: 42,
+            current_media_id: '9ff0c000-dead-4bee-8f00-000000000999',
             current_item: '正在處理的電影',
             success_count: 11,
             fail_count: 1,
@@ -315,8 +321,12 @@ test.describe('Batch Subtitle Generation UI @ui @batch-subtitle @ux3-subtitle-v2
     // THEN: the panel attaches to the running batch (processed = success + fail)
     await expect(page.getByTestId('gen-batch-counter')).toHaveText('12 / 38');
     // The status probe has no items[] — the in-flight fallback card renders.
-    await expect(page.getByTestId('gen-batch-row-42')).toBeVisible();
-    await expect(page.getByTestId('gen-batch-row-42')).toContainText('正在處理的電影');
+    await expect(
+      page.getByTestId('gen-batch-row-9ff0c000-dead-4bee-8f00-000000000999')
+    ).toBeVisible();
+    await expect(
+      page.getByTestId('gen-batch-row-9ff0c000-dead-4bee-8f00-000000000999')
+    ).toContainText('正在處理的電影');
     await expect(page.getByTestId('gen-batch-start-error')).toHaveCount(0);
   });
 

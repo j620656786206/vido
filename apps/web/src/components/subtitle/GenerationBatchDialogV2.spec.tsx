@@ -8,7 +8,7 @@ const h = vi.hoisted(() => ({
     batchId: '',
     totalItems: 0,
     currentIndex: 0,
-    currentMediaId: null as number | null,
+    currentMediaId: null as string | null,
     currentItem: '',
     successCount: 0,
     failCount: 0,
@@ -70,12 +70,21 @@ import type { GenerationBatchProgressState } from '../../hooks/useGenerationBatc
 
 const mocked = vi.mocked(subtitleService);
 
+// Media-id fixture convention (9R-18 AC 7): media ids are UUID STRINGS —
+// mirror the prod creation path (uuid.New().String()); do NOT invent numeric ids.
+const M1 = '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e51';
+const M2 = '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e52';
+const M3 = '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e53';
+const M4 = '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e54';
+const M5 = '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e55';
+const M9 = '9ff0c000-dead-4bee-8f00-000000000999';
+
 const ITEMS: GenerationBatchItem[] = [
-  { mediaId: 1, title: '沙丘：第二部' },
-  { mediaId: 2, title: '奧本海默' },
-  { mediaId: 3, title: '怪奇物語' },
-  { mediaId: 4, title: '星際效應' },
-  { mediaId: 5, title: '全面啟動' },
+  { mediaId: M1, title: '沙丘：第二部' },
+  { mediaId: M2, title: '奧本海默' },
+  { mediaId: M3, title: '怪奇物語' },
+  { mediaId: M4, title: '星際效應' },
+  { mediaId: M5, title: '全面啟動' },
 ];
 
 function progressOf(p: Partial<GenerationBatchProgressState>): GenerationBatchProgressState {
@@ -83,7 +92,7 @@ function progressOf(p: Partial<GenerationBatchProgressState>): GenerationBatchPr
     batchId: 'gb-1',
     totalItems: 5,
     currentIndex: 3,
-    currentMediaId: 3,
+    currentMediaId: M3,
     currentItem: '怪奇物語',
     successCount: 2,
     failCount: 0,
@@ -111,7 +120,7 @@ describe('deriveRowStates', () => {
   });
 
   it('running: per-item failures mark resolved rows 失敗', () => {
-    expect(deriveRowStates(ITEMS, progressOf({ failCount: 1 }), new Set([2]))).toEqual([
+    expect(deriveRowStates(ITEMS, progressOf({ failCount: 1 }), new Set([M2]))).toEqual([
       'done',
       'failed',
       'active',
@@ -124,7 +133,7 @@ describe('deriveRowStates', () => {
     // Mid-item ceiling at item 3 (index 2): paused_count = 3 → rows 2..4 paused.
     const progress = progressOf({ status: 'budget_ceiling', pausedCount: 3, spentUsd: 5 });
     // The racing per-item failed event recorded media id 3 — must NOT paint 失敗.
-    expect(deriveRowStates(ITEMS, progress, new Set([3]))).toEqual([
+    expect(deriveRowStates(ITEMS, progress, new Set([M3]))).toEqual([
       'done',
       'done',
       'paused',
@@ -135,7 +144,7 @@ describe('deriveRowStates', () => {
 
   it('cancelled: rows from the in-flight item on render 已取消, earlier failures stay 失敗', () => {
     const progress = progressOf({ status: 'cancelled', failCount: 1 });
-    expect(deriveRowStates(ITEMS, progress, new Set([1, 3]))).toEqual([
+    expect(deriveRowStates(ITEMS, progress, new Set([M1, M3]))).toEqual([
       'failed',
       'done',
       'stopped',
@@ -146,7 +155,7 @@ describe('deriveRowStates', () => {
 
   it('complete: all rows resolved via the failure set', () => {
     const progress = progressOf({ status: 'complete', successCount: 4, failCount: 1 });
-    expect(deriveRowStates(ITEMS, progress, new Set([4]))).toEqual([
+    expect(deriveRowStates(ITEMS, progress, new Set([M4]))).toEqual([
       'done',
       'done',
       'done',
@@ -220,10 +229,10 @@ describe('GenerationBatchPanelV2', () => {
 
     expect(screen.getByTestId('gen-batch-counter')).toHaveTextContent('2 / 5');
     expect(screen.getByTestId('gen-batch-item-list').children).toHaveLength(5);
-    expect(screen.getByTestId('gen-batch-row-3')).toHaveAttribute('data-state', 'active');
-    expect(screen.getByTestId('gen-batch-row-3')).toHaveTextContent('轉錄中');
-    expect(screen.getByTestId('gen-batch-row-1')).toHaveTextContent('完成');
-    expect(screen.getByTestId('gen-batch-row-5')).toHaveTextContent('排隊中');
+    expect(screen.getByTestId(`gen-batch-row-${M3}`)).toHaveAttribute('data-state', 'active');
+    expect(screen.getByTestId(`gen-batch-row-${M3}`)).toHaveTextContent('轉錄中');
+    expect(screen.getByTestId(`gen-batch-row-${M1}`)).toHaveTextContent('完成');
+    expect(screen.getByTestId(`gen-batch-row-${M5}`)).toHaveTextContent('排隊中');
     // Active row shows the frozen per-item stepper (slice-1 reuse).
     expect(screen.getByTestId('generation-progress-v2')).toBeInTheDocument();
     // Cost line: Mono numerals fed by SSE spent_usd/budget_usd.
@@ -266,7 +275,7 @@ describe('GenerationBatchPanelV2', () => {
 
     const banner = screen.getByTestId('gen-batch-budget-banner');
     expect(banner).toHaveTextContent('已達本次預算上限（$5.00）— 已完成2部，剩餘3部下次繼續');
-    expect(screen.getByTestId('gen-batch-row-4')).toHaveTextContent('已暫停 — 下次繼續');
+    expect(screen.getByTestId(`gen-batch-row-${M4}`)).toHaveTextContent('已暫停 — 下次繼續');
     expect(screen.getByTestId('gen-batch-close-btn')).toHaveTextContent('關閉');
 
     fireEvent.click(screen.getByTestId('gen-batch-resume-btn'));
@@ -292,7 +301,7 @@ describe('GenerationBatchPanelV2', () => {
       status: 'budget_ceiling',
       progress: progressOf({
         status: 'budget_ceiling',
-        currentMediaId: 3,
+        currentMediaId: M3,
         currentItem: '怪奇物語',
         pausedCount: 3,
         spentUsd: 5,
@@ -300,7 +309,7 @@ describe('GenerationBatchPanelV2', () => {
       items: [], // 409/recover-attach: the status probe carries no items[]
     });
 
-    const card = screen.getByTestId('gen-batch-row-3');
+    const card = screen.getByTestId(`gen-batch-row-${M3}`);
     expect(card).toHaveAttribute('data-state', 'paused');
     expect(card).toHaveTextContent('已暫停 — 下次繼續');
     expect(card).not.toHaveTextContent('已取消');
@@ -309,23 +318,23 @@ describe('GenerationBatchPanelV2', () => {
   it('recover-attach fallback card resolves 完成 on complete (not 已取消)', () => {
     renderPanel({
       status: 'complete',
-      progress: progressOf({ status: 'complete', currentMediaId: 5, currentItem: '全面啟動' }),
+      progress: progressOf({ status: 'complete', currentMediaId: M5, currentItem: '全面啟動' }),
       items: [],
     });
 
-    expect(screen.getByTestId('gen-batch-row-5')).toHaveAttribute('data-state', 'done');
-    expect(screen.getByTestId('gen-batch-row-5')).toHaveTextContent('完成');
+    expect(screen.getByTestId(`gen-batch-row-${M5}`)).toHaveAttribute('data-state', 'done');
+    expect(screen.getByTestId(`gen-batch-row-${M5}`)).toHaveTextContent('完成');
   });
 
   it('running without items[] (409/recover-attach) falls back to the in-flight item card', () => {
     renderPanel({
       status: 'running',
-      progress: progressOf({ currentMediaId: 3, currentItem: '怪奇物語' }),
+      progress: progressOf({ currentMediaId: M3, currentItem: '怪奇物語' }),
       items: [],
     });
 
-    expect(screen.getByTestId('gen-batch-row-3')).toHaveAttribute('data-state', 'active');
-    expect(screen.getByTestId('gen-batch-row-3')).toHaveTextContent('怪奇物語');
+    expect(screen.getByTestId(`gen-batch-row-${M3}`)).toHaveAttribute('data-state', 'active');
+    expect(screen.getByTestId(`gen-batch-row-${M3}`)).toHaveTextContent('怪奇物語');
   });
 
   it('static scope line replaces the segments outside idle', () => {
@@ -432,7 +441,7 @@ describe('GenerationBatchDialogV2 (container)', () => {
       result: { batchId: 'gb-9', totalItems: 2, items: ITEMS.slice(0, 2) },
     });
 
-    renderDialog({ selectedMovieIds: [1, 2], excludedSeriesCount: 1 });
+    renderDialog({ selectedMovieIds: [M1, M2], excludedSeriesCount: 1 });
 
     // Opened with a selection → 已選項目 preselected.
     const selected = await screen.findByTestId('gen-batch-scope-selected');
@@ -444,7 +453,7 @@ describe('GenerationBatchDialogV2 (container)', () => {
     await waitFor(() =>
       expect(mocked.startGenerationBatch).toHaveBeenCalledWith({
         scope: 'selected',
-        mediaIds: [1, 2],
+        mediaIds: [M1, M2],
       })
     );
   });
@@ -506,16 +515,16 @@ describe('GenerationBatchDialogV2 (container)', () => {
 
   it('joins the per-item stream on current_media_id while running (AC 1)', async () => {
     h.batchState.status = 'running';
-    h.batchState.currentMediaId = 42;
+    h.batchState.currentMediaId = M9;
 
     renderDialog();
 
-    await waitFor(() => expect(h.itemStartTracking).toHaveBeenCalledWith(42));
+    await waitFor(() => expect(h.itemStartTracking).toHaveBeenCalledWith(M9));
   });
 
   it('cancel calls the cancel endpoint (terminal arrives via SSE)', async () => {
     h.batchState.status = 'running';
-    h.batchState.currentMediaId = 3;
+    h.batchState.currentMediaId = M3;
     h.batchState.currentItem = '怪奇物語';
     mocked.cancelGenerationBatch.mockResolvedValue({ cancelled: true, running: false });
 
@@ -565,7 +574,7 @@ describe('GenerationBatchDialogV2 (container)', () => {
     // The batch SSE stream reports item 3 in flight.
     h.batchState.status = 'running';
     h.batchState.totalItems = 5;
-    h.batchState.currentMediaId = 3;
+    h.batchState.currentMediaId = M3;
     h.batchState.currentItem = '怪奇物語';
     rerender();
   }
@@ -579,7 +588,7 @@ describe('GenerationBatchDialogV2 (container)', () => {
     h.itemState.phase = 'failed';
     rerender();
     await waitFor(() =>
-      expect(screen.getByTestId('gen-batch-row-3')).toHaveAttribute('data-state', 'failed')
+      expect(screen.getByTestId(`gen-batch-row-${M3}`)).toHaveAttribute('data-state', 'failed')
     );
 
     // THEN the terminal budget_ceiling batch event arrives — paused_count is
@@ -589,10 +598,10 @@ describe('GenerationBatchDialogV2 (container)', () => {
     h.batchState.spentUsd = 5;
     rerender();
     await waitFor(() =>
-      expect(screen.getByTestId('gen-batch-row-3')).toHaveAttribute('data-state', 'paused')
+      expect(screen.getByTestId(`gen-batch-row-${M3}`)).toHaveAttribute('data-state', 'paused')
     );
-    expect(screen.getByTestId('gen-batch-row-3')).toHaveTextContent('已暫停 — 下次繼續');
-    expect(screen.getByTestId('gen-batch-row-3')).not.toHaveTextContent('失敗');
+    expect(screen.getByTestId(`gen-batch-row-${M3}`)).toHaveTextContent('已暫停 — 下次繼續');
+    expect(screen.getByTestId(`gen-batch-row-${M3}`)).not.toHaveTextContent('失敗');
   });
 
   it('race order B — per-item failed arrives AFTER the terminal batch event: never recorded, row stays paused', async () => {
@@ -605,7 +614,7 @@ describe('GenerationBatchDialogV2 (container)', () => {
     h.batchState.spentUsd = 5;
     rerender();
     await waitFor(() =>
-      expect(screen.getByTestId('gen-batch-row-3')).toHaveAttribute('data-state', 'paused')
+      expect(screen.getByTestId(`gen-batch-row-${M3}`)).toHaveAttribute('data-state', 'paused')
     );
 
     // …then the straggling per-item failed for the interrupted item: the
@@ -613,9 +622,9 @@ describe('GenerationBatchDialogV2 (container)', () => {
     h.itemState.phase = 'failed';
     rerender();
     await waitFor(() =>
-      expect(screen.getByTestId('gen-batch-row-3')).toHaveAttribute('data-state', 'paused')
+      expect(screen.getByTestId(`gen-batch-row-${M3}`)).toHaveAttribute('data-state', 'paused')
     );
-    expect(screen.getByTestId('gen-batch-row-3')).not.toHaveTextContent('失敗');
+    expect(screen.getByTestId(`gen-batch-row-${M3}`)).not.toHaveTextContent('失敗');
   });
 
   it('下次繼續 starts a NEW scope=missing batch (resume-for-free, AC 2)', async () => {

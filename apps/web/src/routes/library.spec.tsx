@@ -544,12 +544,16 @@ describe('LibraryPage', () => {
   });
 
   describe('Batch generation re-point (ux3-subtitle-v2-batch AC 5)', () => {
-    it('[P1] selection ACTUALLY flows into the dialog — movie ids as numbers, series excluded with a count', async () => {
-      // Numeric string ids like the real API (int64 serialized) — Number() must succeed.
+    it('[P1] selection ACTUALLY flows into the dialog — movie ids pass through as UUID strings, series excluded with a count', async () => {
+      // Media-id fixture convention (9R-18 AC 7): media ids are UUID STRINGS —
+      // mirror the prod creation path (uuid.New().String()); do NOT invent
+      // numeric ids. Ids flow UNCONVERTED into media_ids ([@contract-v2]).
+      const MOVIE_UUID = '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e5f';
+      const SERIES_UUID = '7a1b3c5d-2e4f-4a6b-9c8d-1e2f3a4b5c6d';
       const { libraryService } = await import('../services/libraryService');
       const response = getMockListResponse();
-      response.items[0].movie!.id = '101';
-      response.items[1].series!.id = '202';
+      response.items[0].movie!.id = MOVIE_UUID;
+      response.items[1].series!.id = SERIES_UUID;
       vi.mocked(libraryService.listLibrary).mockResolvedValue(response);
 
       renderLibrary();
@@ -571,7 +575,7 @@ describe('LibraryPage', () => {
       expect(generationDialogProps).toHaveBeenCalledWith(
         expect.objectContaining({
           open: true,
-          selectedMovieIds: [101],
+          selectedMovieIds: ['4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e5f'],
           excludedSeriesCount: 1,
         })
       );

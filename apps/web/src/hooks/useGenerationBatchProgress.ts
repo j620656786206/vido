@@ -30,8 +30,8 @@ export interface GenerationBatchProgressState {
   batchId: string;
   totalItems: number;
   currentIndex: number;
-  /** int64 movie id of the in-flight item; null before the first event. */
-  currentMediaId: number | null;
+  /** UUID string movie id of the in-flight item ([@contract-v2]); null before the first event. */
+  currentMediaId: string | null;
   currentItem: string;
   successCount: number;
   failCount: number;
