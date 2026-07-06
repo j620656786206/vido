@@ -182,3 +182,40 @@ All 5 `confirmed against [@contract-v1]` lines in Dev Notes re-verified against 
 
 - `GenerationBatchDialogV2.spec.tsx` 31/31; full `pnpm nx test web` 2455 green (+5 review specs); `pnpm lint:all` 0 errors; prettier clean on touched files.
 - e2e: not runnable in this local env (pre-existing detach-loop, affects old suite equally) — rides the CI `test-e2e-sharded` gate.
+
+## UX Verification Gate (Sally) — 2026-07-06
+
+Reviewer: Sally (UX). Diffed `GenerationBatchDialogV2.tsx` + committed `-darwin` baselines (idle/running/budget_ceiling) against the drawn `ux-design.pen` frames F8-D-v2 (`i9Nun1`), F8-M-v2 (`H717g`), F9-D-v2 (`JMqPg`) via Pencil MCP. **Verdict: PASS (F8-D, F9-D, Activity) / PASS-WITH-NOTES (F8-M mobile).** One fidelity fix applied with coverage; the L2 arithmetic accepted; the rest are `.pen`-follow-up candidates.
+
+### Per-surface verdicts
+
+- **F8-D-v2 (desktop, idle + running) — PASS.** Title 批次生成字幕, scope segments (缺字幕的項目 + Mono count / 已選項目), 已完成 N/M (Mono 20px 600) + progressbar, queue rows (完成/轉錄中+stepper/排隊中), cost line 本次用量 Mono `$X.XX` / 上限 Mono `$5.00` (number+unit Mono/Noto split), 即時更新（SSE）chip, 全部取消 (inline confirm) — all match the drawn structure + tokens. Pre-cleared deltas (series active row → movie rows; 5→6-segment stepper) NOT re-flagged per Dev Notes.
+- **F9-D-v2 (budget_ceiling) — PASS.** Banner 已達本次預算上限（Mono $5.00）— 已完成 N 部，剩餘 M 部下次繼續 renders on the DRAWN `$warning-tint` bg + `$warning` `circle-alert` (SUCCESS-not-error semantics via non-error tokens — the .pen literally draws warning-tint; impl matches exactly). Paused rows 已暫停 — 下次繼續, footer 關閉 (secondary) + 下次繼續 (primary). Match.
+- **F8-M-v2 (mobile sheet) — PASS-WITH-NOTES.** Bottom-sheet presentation (rounded-t, bottom-pinned, `sm:` breakpoint flips to centered dialog) matches the drawn sheet. **Drag handle was missing → applied (see below).** Active-row stepper is responsive (slice-1 `GenerationProgressV2` `flex-col` at `<sm`, `sm:flex-row` desktop) → no 390px overflow; the scrollable `overflow-y-auto` body handles list overflow. NOTE: the mobile presentation has NO visual baseline — the `visual` Playwright project is pinned to a single 1280×800 desktop viewport, so the entire `<sm` sheet (and the new handle) is exercised only by jsdom unit specs + first NAS deploy, never by CI visual.
+- **Activity CTA + `generation_batch` row — PASS.** Header CTA 批次生成字幕 (`activity-generation-batch-cta`, Captions icon, hub `$accent-primary`/`$text-on-accent` tokens) is the hub's first action-button, opens the dialog scope=missing. `ACTIVE_META.generation_batch` → 批次生成 (Captions) via the shared `ActivityRow` (= ActivityRow-v2 `fF8nX` shape), `current / total` Mono like `subtitle_batch` (`COUNTED_KINDS`). D4-1 boundary honored — dialog opens OVER the hub, no second Activity entry.
+
+### Token fidelity (prior-run hypothesis (a) — independently re-confirmed)
+
+Every drawn token maps 1:1 to `styles.css` with IDENTICAL hex: `$accent-subtle`=#3b82f626, `$accent-text`=#60a5fa, `$warning-tint`=#f59e0b1f, `$warning`=#f59e0b, `$info-tint`=#06b6d41f, `$info`=#06b6d4, `$success`=#22c55e, `$error-tint`=#ef44441f, `$accent-primary`=#3b82f6, `$text-on-accent`=#fff, `$radius-xl`=16. The `.pen` nodes reference named variables (not raw hexes) and the impl uses the matching `var(--*)`; the component carries zero hardcoded colors. CONFIRMED.
+
+### Drag-handle ruling (hypothesis (b)) — APPLIED WITH COVERAGE
+
+Genuine fidelity gap: F8-M sheet draws a 36×4 fully-rounded `$bg-tertiary` handle (node `k46gFw`, wrap `zkKkC` padding [8,0,4,0]) centered at the top of the sheet; the impl bottom sheet had none. Applied to `GenerationBatchDialogV2.tsx`: a `data-testid="gen-batch-drag-handle"` wrapper (`flex justify-center pt-2 pb-1 sm:hidden`) holding a `h-1 w-9 rounded-full bg-[var(--bg-tertiary)]` span, inserted above the title bar. `sm:hidden` → **zero desktop-baseline impact** (verified: viewport is 1280px, handle never paints there). Coverage = new jsdom panel spec asserting the handle renders and carries `sm:hidden`. **Baseline recapture is N/A — no mobile viewport exists in the `visual` project**, so there is no mobile baseline to regenerate; the handle rides the unit spec + first NAS deploy (honest limitation, not a dangling edit). Targeted run: full `pnpm nx test web` 225 files / **2456** green (+1 this spec); prettier clean.
+
+### L2 arithmetic ruling (carried from 9R-16 CR) — ACCEPT (no change)
+
+F9 banner `已完成 N 部` uses `processed = successCount + failCount`. The drawn `.pen` banner (`sAhQs`: 已完成 12 部，剩餘 26 部 = 38 total) encodes the invariant **已完成 + 剩餘 = total**, and the overall counter directly above uses the SAME `processed` number. Retargeting 已完成 to `successCount` is NOT a clean one-liner: to preserve the visible sum it would also have to fold `failCount` into 剩餘, AND it would make the banner's 已完成 diverge from the counter's 已完成 in the same dialog — trading a rare-case overstatement (failCount>0) for a guaranteed intra-dialog inconsistency. This is a product-semantics decision ("is a failed title 完成 for today, or does it retry next 下次繼續?"), not a gate fix. Accepted as-is; logged as a product/.pen follow-up below.
+
+### Sally-side `.pen` follow-ups (candidates for `chore-pen-subtitle-v2-design-sync`)
+
+1. **F8 seg-selected count** — `.pen` `fxkko`/`C2mqH` draw 已選項目 WITHOUT a Mono count, but the impl (and idle baseline) render 已選項目 + selectedCount ("已選項目 4"). Add a Mono count child to the seg-selected frames for parity (impl is the better UX; sync the `.pen`).
+2. **F9 已完成 semantics** — if product rules 已完成 should mean "successfully done" (not "processed"), the F9 banner 已完成/剩餘 arithmetic AND the shared overall counter need a coordinated redesign; annotate the intended semantic on the `.pen` banner.
+3. **F8-D cost-used weight** — `.pen` draws `cost-used` (`ICPL8`) at normal weight in F8-D but 600 in F9 (`MPxUh`); impl uses semibold everywhere. Pick one and sync (trivial).
+4. **F8-M sheet-header divider** — the drawn mobile `sheet-header` (`H1CYPa`) has no bottom border; the impl reuses the desktop title bar's `border-b` on mobile. Decide whether the sheet keeps the divider and sync the `.pen`.
+5. (Optional) **F8-D running composite** — the `i9Nun1` frame draws the idle scope SEGMENTS above a running body; the impl correctly shows segments only when idle. Consider splitting the drawn frame into distinct idle/running states to avoid a mixed reference.
+
+### Working-tree state left by this gate
+
+- `apps/web/src/components/subtitle/GenerationBatchDialogV2.tsx` (M) — mobile drag handle. Evidence: full `nx test web` 2456 green.
+- `apps/web/src/components/subtitle/GenerationBatchDialogV2.spec.tsx` (M) — +1 drag-handle spec. Evidence: same run; prettier clean on both.
+- No baselines changed (handle is `sm:hidden`, desktop viewport). No commit/push performed.

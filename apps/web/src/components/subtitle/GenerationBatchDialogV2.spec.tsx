@@ -197,6 +197,16 @@ describe('GenerationBatchPanelV2', () => {
     expect(missing).toHaveAttribute('aria-pressed', 'true');
   });
 
+  it('renders the mobile bottom-sheet drag handle, hidden on the desktop dialog (F8-M-v2 H717g)', () => {
+    // Fidelity gap closed at the Sally gate: the drawn mobile sheet has a
+    // 36×4 rounded drag handle (node k46gFw). It is `sm:hidden` so it only
+    // paints on the <sm bottom sheet and leaves every desktop baseline byte-stable.
+    renderPanel({ previewCount: 38 });
+    const handle = screen.getByTestId('gen-batch-drag-handle');
+    expect(handle).toBeInTheDocument();
+    expect(handle.className).toContain('sm:hidden');
+  });
+
   it('已選項目 segment renders ONLY when opened with a non-empty selection (AC 1)', () => {
     renderPanel({ previewCount: 38 });
     expect(screen.queryByTestId('gen-batch-scope-selected')).not.toBeInTheDocument();

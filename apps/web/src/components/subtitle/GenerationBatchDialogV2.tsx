@@ -304,6 +304,16 @@ export function GenerationBatchPanelV2({
           'sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:w-[calc(100vw-4rem)] sm:max-w-3xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[var(--radius-lg)]'
         )}
       >
+        {/* Mobile bottom-sheet drag handle (F8-M-v2 H717g handle `k46gFw`:
+            36×4, fully-rounded, bg-tertiary). Hidden on the desktop dialog
+            (sm+), so it changes no desktop baseline. */}
+        <div
+          data-testid="gen-batch-drag-handle"
+          className="flex shrink-0 justify-center pb-1 pt-2 sm:hidden"
+        >
+          <span aria-hidden="true" className="h-1 w-9 rounded-full bg-[var(--bg-tertiary)]" />
+        </div>
+
         {/* Title bar */}
         <div className="flex h-14 shrink-0 items-center justify-between border-b border-[var(--border-subtle)] pl-6 pr-12">
           <DialogTitle className="truncate text-base font-semibold">批次生成字幕</DialogTitle>
