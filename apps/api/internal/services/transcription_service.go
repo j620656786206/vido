@@ -44,7 +44,10 @@ type SubtitlePlacer interface {
 	PlaceSubtitle(mediaFilePath string, subtitleData []byte, language, format string) (string, error)
 }
 
-// SSE event types for transcription progress (AC #6)
+// SSE event types for transcription progress (AC #6).
+// [@contract-v1] (stamped by 9R-18, first formalization): every payload's
+// `media_id` is the movie row id — a UUID STRING, never numeric. Consumers:
+// slice-1 useGenerationProgress + the ux3-subtitle-v2-batch branch.
 const (
 	EventTranscriptionExtracting  sse.EventType = "transcription_extracting"
 	EventTranscriptionProgress    sse.EventType = "transcription_progress"
@@ -62,7 +65,7 @@ var (
 // TranscriptionResult holds the result of a transcription job.
 type TranscriptionResult struct {
 	JobID     string `json:"job_id"`
-	MediaID   int64  `json:"media_id"`
+	MediaID   string `json:"media_id"`
 	SRTPath   string `json:"srt_path"`
 	ZhSRTPath string `json:"zh_srt_path,omitempty"`
 	Duration  string `json:"duration"`
@@ -88,7 +91,7 @@ type TranscriptionService struct {
 	subtitleWriter SubtitleStatusWriter
 
 	mu         sync.Mutex
-	inProgress map[int64]string // mediaID → jobID
+	inProgress map[string]string // mediaID (UUID string, 9R-18) → jobID
 }
 
 // NewTranscriptionService creates a new TranscriptionService.
@@ -107,7 +110,7 @@ func NewTranscriptionService(
 		sseHub:         sseHub,
 		logger:         logger.With("service", "transcription"),
 		timeout:        5 * time.Minute,
-		inProgress:     make(map[int64]string),
+		inProgress:     make(map[string]string),
 	}
 }
 
@@ -150,11 +153,11 @@ func (s *TranscriptionService) SetSubtitleStatusWriter(w SubtitleStatusWriter) {
 // no repo is wired or the lookup fails (fail-soft — a glossary miss must never
 // block generation). Uses ALL terms (confirmed + auto-mined) for maximum
 // intra-run consistency; the F6 review UI lets users correct mistakes.
-func (s *TranscriptionService) loadGlossary(ctx context.Context, mediaID int64) []GlossaryPair {
+func (s *TranscriptionService) loadGlossary(ctx context.Context, mediaID string) []GlossaryPair {
 	if s.glossaryRepo == nil {
 		return nil
 	}
-	m, err := s.glossaryRepo.LookupByMedia(ctx, strconv.FormatInt(mediaID, 10), false)
+	m, err := s.glossaryRepo.LookupByMedia(ctx, mediaID, false)
 	if err != nil {
 		s.logger.Warn("glossary lookup failed — translating without glossary",
 			"media_id", mediaID, "error", err)
@@ -176,7 +179,7 @@ func (s *TranscriptionService) IsAvailable() bool {
 }
 
 // IsInProgress returns true if a transcription is already running for the given media ID.
-func (s *TranscriptionService) IsInProgress(mediaID int64) bool {
+func (s *TranscriptionService) IsInProgress(mediaID string) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	_, ok := s.inProgress[mediaID]
@@ -187,7 +190,7 @@ func (s *TranscriptionService) IsInProgress(mediaID int64) bool {
 // Returns a job ID immediately. Progress is reported via SSE events.
 // If translate is true and a translation service is configured, the English SRT
 // will be translated to Traditional Chinese after transcription (Story 9-2b).
-func (s *TranscriptionService) StartTranscription(ctx context.Context, mediaID int64, filePath string, mediaDir string, opts ...TranscriptionOption) (string, error) {
+func (s *TranscriptionService) StartTranscription(ctx context.Context, mediaID string, filePath string, mediaDir string, opts ...TranscriptionOption) (string, error) {
 	if !s.IsAvailable() {
 		return "", ErrTranscriptionDisabled
 	}
@@ -222,7 +225,7 @@ func (s *TranscriptionService) StartTranscription(ctx context.Context, mediaID i
 // failJob SSE only). ⚠️ The timeout derives from the CALLER's ctx — NOT the
 // async path's context.Background() detach — so a batch's shared ai.Budget
 // (a ctx value) and cancel propagation flow through.
-func (s *TranscriptionService) RunTranscription(ctx context.Context, mediaID int64, filePath string, mediaDir string, opts ...TranscriptionOption) error {
+func (s *TranscriptionService) RunTranscription(ctx context.Context, mediaID string, filePath string, mediaDir string, opts ...TranscriptionOption) error {
 	if !s.IsAvailable() {
 		return ErrTranscriptionDisabled
 	}
@@ -257,7 +260,7 @@ func (s *TranscriptionService) resolveBudget(ctx context.Context) (*ai.Budget, c
 // acquireJob registers a media ID in the single-flight map shared by the async
 // and sync entries, returning the new job ID or ErrTranscriptionInProgress.
 // runPipeline's deferred cleanup releases the slot.
-func (s *TranscriptionService) acquireJob(mediaID int64) (string, error) {
+func (s *TranscriptionService) acquireJob(mediaID string) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if _, exists := s.inProgress[mediaID]; exists {
@@ -286,7 +289,7 @@ func WithTranslation() TranscriptionOption {
 // Extract audio → (optional chunk) → Whisper API → Merge SRT → Save → (optional) Translate
 // It reports failures via failJob SSE AND returns the error so the synchronous
 // entry (RunTranscription, 9R-16) can propagate it; the async entry discards it.
-func (s *TranscriptionService) runPipeline(ctx context.Context, jobID string, mediaID int64, filePath string, mediaDir string, translate bool) error {
+func (s *TranscriptionService) runPipeline(ctx context.Context, jobID string, mediaID string, filePath string, mediaDir string, translate bool) error {
 	defer func() {
 		s.mu.Lock()
 		delete(s.inProgress, mediaID)
@@ -408,7 +411,7 @@ func (s *TranscriptionService) runPipeline(ctx context.Context, jobID string, me
 //   - ai.ErrBudgetExceeded MUST propagate so a batch can pause mid-item;
 //   - a writeback failure propagates (Rule 13) — reporting success while the
 //     library row still says 缺字幕 would break the batch-enumeration guarantee.
-func (s *TranscriptionService) translateAndPersist(ctx context.Context, jobID string, mediaID int64, srtContent, filePath, mediaDir string, translate bool) (string, error) {
+func (s *TranscriptionService) translateAndPersist(ctx context.Context, jobID string, mediaID string, srtContent, filePath, mediaDir string, translate bool) (string, error) {
 	var zhSRTPath string
 	if translate && s.translationService != nil && s.translationService.IsConfigured() {
 		s.broadcastEvent(EventTranscriptionTranslating, map[string]interface{}{
@@ -443,7 +446,7 @@ func (s *TranscriptionService) translateAndPersist(ctx context.Context, jobID st
 	// truth. Only after a successful zh-Hant place (en-only runs write
 	// nothing; failed runs never reach here).
 	if zhSRTPath != "" && s.subtitleWriter != nil {
-		if werr := s.subtitleWriter.UpdateSubtitleStatus(ctx, strconv.FormatInt(mediaID, 10),
+		if werr := s.subtitleWriter.UpdateSubtitleStatus(ctx, mediaID,
 			models.SubtitleStatusFound, zhSRTPath, "zh-Hant", 0); werr != nil {
 			return "", fmt.Errorf("update subtitle status: %w", werr)
 		}
@@ -542,7 +545,7 @@ func (s *TranscriptionService) transcribeAudio(ctx context.Context, audioPath, l
 
 // translateSRT translates English SRT content to Traditional Chinese and saves as .zh-Hant.srt.
 // Returns the path to the translated SRT file.
-func (s *TranscriptionService) translateSRT(ctx context.Context, jobID string, mediaID int64, srtContent string, filePath string, mediaDir string) (string, error) {
+func (s *TranscriptionService) translateSRT(ctx context.Context, jobID string, mediaID string, srtContent string, filePath string, mediaDir string) (string, error) {
 	// Parse SRT into translation blocks (inline to avoid circular import with subtitle pkg)
 	blocks, err := ParseSRTToTranslationBlocks(srtContent)
 	if err != nil {
@@ -716,7 +719,7 @@ func serializeTranslationBlocksToSRT(blocks []TranslationBlock) string {
 	return sb.String()
 }
 
-func (s *TranscriptionService) failJob(jobID string, mediaID int64, errMsg string) {
+func (s *TranscriptionService) failJob(jobID string, mediaID string, errMsg string) {
 	s.logger.Error("transcription failed",
 		"job_id", jobID,
 		"media_id", mediaID,

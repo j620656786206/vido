@@ -15,14 +15,15 @@ import (
 type GenerationBatchProcessorInterface interface {
 	IsAvailable() bool
 	IsRunning() bool
-	Start(ctx context.Context, scope string, mediaIDs []int64) (string, []services.GenerationBatchItem, error)
+	Start(ctx context.Context, scope string, mediaIDs []string) (string, []services.GenerationBatchItem, error)
 	GetProgress() *services.GenerationBatchProgress
 	Cancel()
 	PreviewMissing(ctx context.Context) (int, error)
 }
 
 // GenerationBatchHandler handles the Route C generation-batch API
-// (Story 9R-16, [@contract-v1] — FE consumer ux3-subtitle-v2-batch).
+// (Story 9R-16, [@contract-v2] since 9R-18: media ids are UUID STRINGS —
+// FE consumer ux3-subtitle-v2-batch).
 type GenerationBatchHandler struct {
 	processor GenerationBatchProcessorInterface
 }
@@ -44,10 +45,11 @@ func (h *GenerationBatchHandler) RegisterRoutes(rg *gin.RouterGroup) {
 }
 
 // GenerationBatchStartRequest is the request body for starting a generation
-// batch (snake_case per Rule 6). media_ids is required iff scope=selected.
+// batch (snake_case per Rule 6). media_ids is required iff scope=selected;
+// entries are movie row ids — UUID STRINGS (9R-18).
 type GenerationBatchStartRequest struct {
-	Scope    string  `json:"scope" binding:"required,oneof=missing selected"`
-	MediaIDs []int64 `json:"media_ids"`
+	Scope    string   `json:"scope" binding:"required,oneof=missing selected"`
+	MediaIDs []string `json:"media_ids"`
 }
 
 // StartGenerationBatch handles POST /api/v1/subtitles/generation-batch.
