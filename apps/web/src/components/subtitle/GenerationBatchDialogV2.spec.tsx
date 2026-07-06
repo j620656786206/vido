@@ -276,6 +276,47 @@ describe('GenerationBatchPanelV2', () => {
     expect(banner.className).not.toContain('error-tint');
   });
 
+  it('exclusion note stays visible when EVERY selected item was excluded (scope falls back to missing, AC 5)', () => {
+    // All-series selection (or ids the id→type map cannot classify): zero movie
+    // ids → no 已選項目 segment, scope=missing — the note must STILL render,
+    // otherwise the user's selection silently vanishes.
+    renderPanel({ previewCount: 38, scope: 'missing', selectedCount: 0, excludedSeriesCount: 3 });
+    expect(screen.queryByTestId('gen-batch-scope-selected')).not.toBeInTheDocument();
+    const note = screen.getByTestId('gen-batch-excluded-note');
+    expect(note).toHaveTextContent('已排除');
+    expect(note).toHaveTextContent('3');
+  });
+
+  it('recover-attach fallback card honors terminal semantics — budget_ceiling renders 已暫停, not 已取消 (AC 2)', () => {
+    renderPanel({
+      status: 'budget_ceiling',
+      progress: progressOf({
+        status: 'budget_ceiling',
+        currentMediaId: 3,
+        currentItem: '怪奇物語',
+        pausedCount: 3,
+        spentUsd: 5,
+      }),
+      items: [], // 409/recover-attach: the status probe carries no items[]
+    });
+
+    const card = screen.getByTestId('gen-batch-row-3');
+    expect(card).toHaveAttribute('data-state', 'paused');
+    expect(card).toHaveTextContent('已暫停 — 下次繼續');
+    expect(card).not.toHaveTextContent('已取消');
+  });
+
+  it('recover-attach fallback card resolves 完成 on complete (not 已取消)', () => {
+    renderPanel({
+      status: 'complete',
+      progress: progressOf({ status: 'complete', currentMediaId: 5, currentItem: '全面啟動' }),
+      items: [],
+    });
+
+    expect(screen.getByTestId('gen-batch-row-5')).toHaveAttribute('data-state', 'done');
+    expect(screen.getByTestId('gen-batch-row-5')).toHaveTextContent('完成');
+  });
+
   it('running without items[] (409/recover-attach) falls back to the in-flight item card', () => {
     renderPanel({
       status: 'running',
@@ -484,6 +525,97 @@ describe('GenerationBatchDialogV2 (container)', () => {
     fireEvent.click(screen.getByTestId('gen-batch-cancel-confirm-btn'));
 
     await waitFor(() => expect(mocked.cancelGenerationBatch).toHaveBeenCalledOnce());
+  });
+
+  // -------------------------------------------------------------------------
+  // The 9R-16 CR race, exercised through the REAL component (container +
+  // recording effect + deriveRowStates), not the helper in isolation: on
+  // cancelled/budget_ceiling the interrupted in-flight item ALSO emits
+  // transcription_failed — whichever order the two events arrive, the row must
+  // end up 已暫停, never 失敗.
+  // -------------------------------------------------------------------------
+
+  function renderDialogRaw() {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    const onOpenChange = vi.fn();
+    // Fresh element per (re)render — reusing one element reference lets React
+    // bail out on the referentially-equal props and skip re-reading the
+    // (mutated) mock hook state.
+    const makeUi = () => (
+      <QueryClientProvider client={queryClient}>
+        <GenerationBatchDialogV2 open onOpenChange={onOpenChange} />
+      </QueryClientProvider>
+    );
+    const view = render(makeUi());
+    return { rerender: () => view.rerender(makeUi()) };
+  }
+
+  async function startBatchWithItems(rerender: () => void) {
+    mocked.startGenerationBatch.mockResolvedValue({
+      conflict: false,
+      result: { batchId: 'gb-race', totalItems: 5, items: ITEMS },
+    });
+    await waitFor(() =>
+      expect(screen.getByTestId('gen-batch-scope-missing')).toHaveTextContent('38')
+    );
+    fireEvent.click(screen.getByTestId('gen-batch-start-btn'));
+    await waitFor(() => expect(h.batchStartTracking).toHaveBeenCalled());
+    // The batch SSE stream reports item 3 in flight.
+    h.batchState.status = 'running';
+    h.batchState.totalItems = 5;
+    h.batchState.currentMediaId = 3;
+    h.batchState.currentItem = '怪奇物語';
+    rerender();
+  }
+
+  it('race order A — per-item failed arrives BEFORE the terminal batch event: paused wins at render', async () => {
+    const { rerender } = renderDialogRaw();
+    await startBatchWithItems(rerender);
+
+    // transcription_failed for the in-flight item lands while status is still
+    // running → the container records it (legitimately renders 失敗 for a beat).
+    h.itemState.phase = 'failed';
+    rerender();
+    await waitFor(() =>
+      expect(screen.getByTestId('gen-batch-row-3')).toHaveAttribute('data-state', 'failed')
+    );
+
+    // THEN the terminal budget_ceiling batch event arrives — paused_count is
+    // authoritative; the recorded failure must NOT paint the row 失敗.
+    h.batchState.status = 'budget_ceiling';
+    h.batchState.pausedCount = 3;
+    h.batchState.spentUsd = 5;
+    rerender();
+    await waitFor(() =>
+      expect(screen.getByTestId('gen-batch-row-3')).toHaveAttribute('data-state', 'paused')
+    );
+    expect(screen.getByTestId('gen-batch-row-3')).toHaveTextContent('已暫停 — 下次繼續');
+    expect(screen.getByTestId('gen-batch-row-3')).not.toHaveTextContent('失敗');
+  });
+
+  it('race order B — per-item failed arrives AFTER the terminal batch event: never recorded, row stays paused', async () => {
+    const { rerender } = renderDialogRaw();
+    await startBatchWithItems(rerender);
+
+    // Terminal batch event first…
+    h.batchState.status = 'budget_ceiling';
+    h.batchState.pausedCount = 3;
+    h.batchState.spentUsd = 5;
+    rerender();
+    await waitFor(() =>
+      expect(screen.getByTestId('gen-batch-row-3')).toHaveAttribute('data-state', 'paused')
+    );
+
+    // …then the straggling per-item failed for the interrupted item: the
+    // recording effect must ignore it (batch no longer running).
+    h.itemState.phase = 'failed';
+    rerender();
+    await waitFor(() =>
+      expect(screen.getByTestId('gen-batch-row-3')).toHaveAttribute('data-state', 'paused')
+    );
+    expect(screen.getByTestId('gen-batch-row-3')).not.toHaveTextContent('失敗');
   });
 
   it('下次繼續 starts a NEW scope=missing batch (resume-for-free, AC 2)', async () => {

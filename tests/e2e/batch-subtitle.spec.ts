@@ -1,44 +1,45 @@
 /**
- * Batch Subtitle Search UI E2E Tests (Story 8-11)
+ * Batch Subtitle GENERATION UI E2E Tests (Story ux3-subtitle-v2-batch)
  *
- * Browser-based tests for the library batch-subtitle trigger + dialog. DEV's
- * unit/component tests (subtitleService.spec, useSubtitleBatchProgress.spec,
- * BatchSubtitleDialog.spec, SelectionToolbar.spec — 42 specs) mocked every
- * boundary. This suite exercises the wire-level integration those mocks hide:
+ * Re-pointed from the Story 8-11 fetch-batch suite: /library's selection
+ * toolbar now opens `GenerationBatchDialogV2` (Route C generation, 9R-16
+ * endpoints) — `BatchSubtitleDialog` is superseded and no longer mounted, so
+ * the old journeys are unreachable. Unit/component specs
+ * (subtitleService.spec, useGenerationBatchProgress.spec,
+ * GenerationBatchDialogV2.spec — mocked at every boundary) are complemented
+ * here by the wire-level integration those mocks hide:
  *
- *   /library → SelectionToolbar → BatchSubtitleDialog → subtitleService
- *                                                       ↓
- *                          POST /api/v1/subtitles/batch  (202 / 409 / cancel)
+ *   /library → SelectionToolbar → GenerationBatchDialogV2 → subtitleService
+ *                                                           ↓
+ *              POST /api/v1/subtitles/generation-batch  (202 / 409 / cancel)
  *
- * Coverage gaps this suite closes (vs. DEV's unit tests):
- *   - [P0] Real selection-toolbar wiring: 批次字幕搜尋 button reachable on /library  (AC#1)
- *   - [P0] Dialog opens with library scope default; season scope absent on /library  (AC#2)
- *   - [P0] Real POST body {scope:"library"} (Rule 18 camelToSnake) + 202 → processing (AC#3)
- *   - [P1] 409 conflict recovers to the in-progress snapshot, no error surfaced     (AC#7)
- *   - [P1] Lazy SSE: idle dialog opens NO EventSource on mount; page hits networkidle (AC#8)
- *   - [P2] Cancel confirm fires the real POST /api/v1/subtitles/batch/cancel         (AC#5)
+ * Coverage (vs the unit specs):
+ *   - [P0] Real selection-toolbar wiring: 批次生成字幕 reachable on /library   (AC#5)
+ *   - [P0] Dialog opens idle: scope=missing preselected + real preview count  (AC#1)
+ *   - [P0] Real POST body {scope:"missing"} (Rule 18) + 202 items[] → running (AC#1/3)
+ *   - [P0] Selection ACTUALLY flows: media_ids on the wire, movies only       (AC#5)
+ *   - [P1] 409 TRANSCRIPTION_BATCH_RUNNING recovers to the snapshot           (AC#1)
+ *   - [P1] Lazy SSE: idle dialog opens NO EventSource; page hits networkidle  (§8)
+ *   - [P2] 全部取消 confirm fires POST /subtitles/generation-batch/cancel     (AC#1)
  *
- * DELIBERATELY OUT OF SCOPE — the live SSE event stream (AC#4 progress increments,
- * AC#6 complete-summary + 「查看未找到項目」 deep-link, AC#5 terminal `cancelled`
- * reflection). This repo never mocks the /api/v1/events stream in E2E (the lazy-SSE
- * pattern exists precisely so `networkidle` works), and `startTracking()` flips to
- * the processing state OPTIMISTICALLY — so a 202 alone is enough to assert the
- * processing UI without any SSE events. The live journey is covered at the hook +
- * component level (useSubtitleBatchProgress.spec drives SSE_UPDATE; BatchSubtitleDialog.spec
- * drives the full terminal state machine) and is the proper home for a future
- * TestSprite journey case (real backend) — see story 8-11 Dev Notes + the
- * disc-2026-06-batch-subtitle-frontend-ui triage. AC#6's deep-link target is also
- * blocked by the deferred backend subtitle_status filter (backlog
- * disc-2026-06-library-subtitle-status-filter).
+ * DELIBERATELY OUT OF SCOPE — the live `generation_batch_progress` SSE stream
+ * (running increments, budget_ceiling F9, terminal close). This repo never
+ * mocks /api/v1/events in E2E (the lazy-SSE pattern exists precisely so
+ * `networkidle` works) and `startTracking()` enters the running state
+ * OPTIMISTICALLY from the 202 — the SSE state machine is covered at the hook
+ * (useGenerationBatchProgress.spec terminal-close matrix) and component
+ * (GenerationBatchDialogV2.spec state matrix incl. the batch-status-
+ * authoritative race) levels.
  *
  * Design notes:
- *   - Route interception is installed BEFORE page.goto (network-first, knowledge/network-first.md).
+ *   - Route interception installed BEFORE page.goto (network-first).
  *   - Mock payloads are snake_case at the wire (fetchApi runs snakeToCamel).
- *   - POST bodies are captured via postDataJSON() to verify Rule 18 at the real network layer.
- *   - /api/v1/events is aborted so EventSource never depends on a live backend; the
- *     optimistic 'running' state is already dispatched before the stream matters.
+ *   - POST bodies captured via postDataJSON() to verify Rule 18 at the network layer.
+ *   - Movie ids are NUMERIC strings per the 9R-16 int64 media_id contract
+ *     (production UUID row ids are a known cross-story gap — see
+ *     disc-2026-07-movie-id-int64-contract-mismatch).
  *
- * @tags @ui @batch-subtitle @story-8-11
+ * @tags @ui @batch-subtitle @ux3-subtitle-v2-batch
  */
 
 import { test, expect, type Route } from '../support/fixtures';
@@ -62,13 +63,14 @@ const jsonStatus = <T>(status: number, body: T, success = true) => ({
   body: JSON.stringify({ success, data: body }),
 });
 
-// A populated two-item library so the grid renders and `enter-selection-btn` shows.
+// A populated two-movie library so the grid renders and `enter-selection-btn`
+// shows. Numeric ids — the 9R-16 media_id contract is int64.
 const populatedLibrary = {
   items: [
     {
       type: 'movie',
       movie: {
-        id: 'm-603',
+        id: '603',
         title: '駭客任務',
         release_date: '1999-03-31',
         genres: ['動作', '科幻'],
@@ -81,7 +83,7 @@ const populatedLibrary = {
     {
       type: 'movie',
       movie: {
-        id: 'm-157336',
+        id: '157336',
         title: '星際效應',
         release_date: '2014-11-07',
         genres: ['劇情', '科幻'],
@@ -105,6 +107,15 @@ const qbtConnected = {
   username: 'admin',
   base_path: '',
   configured: true,
+};
+
+const startedBatch = {
+  batch_id: 'gb-e2e-1',
+  total_items: 2,
+  items: [
+    { media_id: 603, title: '駭客任務' },
+    { media_id: 157336, title: '星際效應' },
+  ],
 };
 
 // =============================================================================
@@ -150,27 +161,36 @@ async function stubPopulatedLibrary(page: Page) {
   await page.route(`${ROUTE_API}/library*`, (route: Route) =>
     route.fulfill(jsonOk(populatedLibrary))
   );
+
+  // Generation-batch dialog on-open calls (9R-16): the recovery status probe
+  // (nothing running) + the 缺字幕 preview count.
+  await page.route(`${ROUTE_API}/subtitles/generation-batch/status`, (route: Route) =>
+    route.fulfill(jsonOk({ running: false, progress: null }))
+  );
+  await page.route(`${ROUTE_API}/subtitles/generation-batch/preview*`, (route: Route) =>
+    route.fulfill(jsonOk({ total_items: 2 }))
+  );
 }
 
-/** Enter selection mode and open the batch-subtitle dialog from /library. */
-async function openBatchDialog(page: Page) {
+/** Enter selection mode and open the generation-batch dialog from /library. */
+async function openGenerationDialog(page: Page) {
   await page.goto('/library');
   await page.getByTestId('enter-selection-btn').click();
   await expect(page.getByTestId('selection-toolbar')).toBeVisible();
   await page.getByTestId('batch-subtitle-btn').click();
-  await expect(page.getByTestId('batch-subtitle-dialog')).toBeVisible();
+  await expect(page.getByTestId('generation-batch-dialog-v2')).toBeVisible();
 }
 
 // =============================================================================
 // Tests
 // =============================================================================
 
-test.describe('Batch Subtitle Search UI @ui @batch-subtitle @story-8-11', () => {
+test.describe('Batch Subtitle Generation UI @ui @batch-subtitle @ux3-subtitle-v2-batch', () => {
   test.beforeEach(async ({ page }) => {
     await stubPopulatedLibrary(page);
   });
 
-  test('[P0] 批次字幕搜尋 trigger is reachable in the selection toolbar (AC#1)', async ({
+  test('[P0] 批次生成字幕 trigger is reachable in the selection toolbar (AC#5)', async ({
     page,
   }) => {
     // GIVEN: a populated library
@@ -179,84 +199,128 @@ test.describe('Batch Subtitle Search UI @ui @batch-subtitle @story-8-11', () => 
     // WHEN: the user enters selection mode
     await page.getByTestId('enter-selection-btn').click();
 
-    // THEN: the batch-subtitle action is visible alongside the other batch actions
+    // THEN: the re-pointed batch action is visible with the new label
     await expect(page.getByTestId('selection-toolbar')).toBeVisible();
-    await expect(page.getByTestId('batch-subtitle-btn')).toBeVisible();
+    const btn = page.getByTestId('batch-subtitle-btn');
+    await expect(btn).toBeVisible();
+    await expect(btn).toHaveAttribute('aria-label', '批次生成字幕');
   });
 
-  test('[P0] dialog opens with library scope default; season scope absent on /library (AC#2)', async ({
+  test('[P0] dialog opens idle with scope=missing preselected and the real preview count (AC#1)', async ({
     page,
   }) => {
-    // GIVEN/WHEN: the user opens the batch-subtitle dialog
-    await openBatchDialog(page);
+    // GIVEN/WHEN: the user opens the dialog without any selection
+    await openGenerationDialog(page);
 
-    // THEN: the start button + library scope (pre-selected) render
-    await expect(page.getByTestId('batch-subtitle-start-btn')).toBeVisible();
-    await expect(page.getByTestId('batch-subtitle-scope-library')).toBeChecked();
+    // THEN: the 缺字幕的項目 segment is preselected and carries the preview count
+    const missing = page.getByTestId('gen-batch-scope-missing');
+    await expect(missing).toHaveAttribute('aria-pressed', 'true');
+    await expect(missing).toContainText('2');
 
-    // AND: the season scope is not offered without a seasonId context
-    await expect(page.getByTestId('batch-subtitle-scope-season')).toHaveCount(0);
+    // AND: no selection → the 已選項目 segment is absent (AC#1 presence rule)
+    await expect(page.getByTestId('gen-batch-scope-selected')).toHaveCount(0);
   });
 
-  test('[P0] start sends POST {scope:"library"} and 202 transitions to processing (AC#3)', async ({
+  test('[P0] start sends POST {scope:"missing"} and 202 items[] transitions to running (AC#1/3)', async ({
     page,
   }) => {
-    // GIVEN: the batch endpoint accepts the request (202 Accepted, 42 items)
+    // GIVEN: the start endpoint accepts the request (202, 2 items)
     let captured: Request | null = null;
-    await page.route(`${ROUTE_API}/subtitles/batch`, (route: Route) => {
+    await page.route(`${ROUTE_API}/subtitles/generation-batch`, (route: Route) => {
       captured = route.request();
-      return route.fulfill(jsonStatus(202, { batch_id: 'batch-abc', total_items: 42 }));
+      return route.fulfill(jsonStatus(202, startedBatch));
     });
-    await openBatchDialog(page);
+    await openGenerationDialog(page);
 
-    // WHEN: the user starts the batch with the default library scope
-    await page.getByTestId('batch-subtitle-start-btn').click();
+    // WHEN: the user starts the batch with the default missing scope
+    await page.getByTestId('gen-batch-start-btn').click();
 
-    // THEN: the panel transitions to the processing state. The counter is the
-    // visible signal; the progress bar at 0/42 has width:0% (zero-width → not
-    // "visible") so it is asserted with toBeAttached (Rule 16).
-    await expect(page.getByTestId('batch-subtitle-counter')).toHaveText('0 / 42');
-    await expect(page.getByTestId('batch-subtitle-progress-bar')).toBeAttached();
+    // THEN: the panel enters the running state — counter + queue rows from items[]
+    await expect(page.getByTestId('gen-batch-counter')).toHaveText('0 / 2');
+    await expect(page.getByTestId('gen-batch-row-603')).toBeVisible();
+    await expect(page.getByTestId('gen-batch-row-157336')).toBeVisible();
 
-    // AND: the wire body is snake_case {scope:"library"} with no season_id (Rule 18)
+    // AND: the wire body is snake_case {scope:"missing"} with no media_ids (Rule 18)
     expect(captured).not.toBeNull();
-    expect(captured!.postDataJSON()).toEqual({ scope: 'library' });
+    expect(captured!.postDataJSON()).toEqual({ scope: 'missing' });
   });
 
-  test('[P1] 409 conflict recovers to the in-progress batch without erroring (AC#7)', async ({
+  test('[P0] library selection ACTUALLY flows — media_ids on the wire (AC#5)', async ({ page }) => {
+    // GIVEN: the start endpoint accepts the request
+    let captured: Request | null = null;
+    await page.route(`${ROUTE_API}/subtitles/generation-batch`, (route: Route) => {
+      captured = route.request();
+      return route.fulfill(jsonStatus(202, startedBatch));
+    });
+
+    // WHEN: the user selects both movies and opens the dialog
+    await page.goto('/library');
+    await page.getByTestId('enter-selection-btn').click();
+    const cards = page.getByTestId('poster-card');
+    await cards.nth(0).click();
+    await cards.nth(1).click();
+    await page.getByTestId('batch-subtitle-btn').click();
+    await expect(page.getByTestId('generation-batch-dialog-v2')).toBeVisible();
+
+    // THEN: the 已選項目 segment renders preselected with the selection count
+    const selected = page.getByTestId('gen-batch-scope-selected');
+    await expect(selected).toHaveAttribute('aria-pressed', 'true');
+    await expect(selected).toContainText('2');
+
+    // AND: starting sends the selected MOVIE ids as int64 media_ids (Rule 18)
+    await page.getByTestId('gen-batch-start-btn').click();
+    await expect(page.getByTestId('gen-batch-counter')).toHaveText('0 / 2');
+    expect(captured).not.toBeNull();
+    expect(captured!.postDataJSON()).toEqual({
+      scope: 'selected',
+      media_ids: [603, 157336],
+    });
+  });
+
+  test('[P1] 409 TRANSCRIPTION_BATCH_RUNNING recovers to the in-progress snapshot without erroring (AC#1)', async ({
     page,
   }) => {
-    // GIVEN: a batch is already running — the server answers 409 with its snapshot
-    await page.route(`${ROUTE_API}/subtitles/batch`, (route: Route) =>
-      route.fulfill(
-        jsonStatus(
-          409,
-          {
-            batch_id: 'batch-existing',
-            total_items: 42,
-            current_index: 10,
-            current_item: '正在處理的電影',
-            success_count: 7,
-            fail_count: 3,
-            status: 'running',
+    // GIVEN: a batch is already running — 409 with the snapshot riding the error body
+    await page.route(`${ROUTE_API}/subtitles/generation-batch`, (route: Route) =>
+      route.fulfill({
+        status: 409,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: false,
+          error: {
+            code: 'TRANSCRIPTION_BATCH_RUNNING',
+            message: '已有一個字幕生成批次正在執行',
           },
-          false
-        )
-      )
+          data: {
+            batch_id: 'gb-existing',
+            total_items: 38,
+            current_index: 12,
+            current_media_id: 42,
+            current_item: '正在處理的電影',
+            success_count: 11,
+            fail_count: 1,
+            paused_count: 0,
+            status: 'running',
+            spent_usd: 0.42,
+            budget_usd: 5,
+          },
+        }),
+      })
     );
-    await openBatchDialog(page);
+    await openGenerationDialog(page);
 
     // WHEN: the user attempts to start another batch
-    await page.getByTestId('batch-subtitle-start-btn').click();
+    await page.getByTestId('gen-batch-start-btn').click();
 
-    // THEN: the panel shows the in-progress snapshot instead of an error
-    await expect(page.getByTestId('batch-subtitle-counter')).toHaveText('10 / 42');
-    await expect(page.getByTestId('batch-subtitle-found')).toHaveText('找到 7');
-    await expect(page.getByTestId('batch-subtitle-notfound')).toHaveText('未找到 3');
-    await expect(page.getByTestId('batch-subtitle-error')).toHaveCount(0);
+    // THEN: the panel attaches to the running batch (processed = success + fail)
+    await expect(page.getByTestId('gen-batch-counter')).toHaveText('12 / 38');
+    // The status probe has no items[] — the in-flight fallback card renders.
+    await expect(page.getByTestId('gen-batch-row-42')).toBeVisible();
+    await expect(page.getByTestId('gen-batch-row-42')).toContainText('正在處理的電影');
+    await expect(page.getByTestId('gen-batch-start-error')).toHaveCount(0);
   });
 
-  test('[P1] lazy SSE — idle dialog opens no EventSource and the page reaches networkidle (AC#8)', async ({
+  test('[P1] lazy SSE — idle dialog opens no EventSource and the page reaches networkidle (§8)', async ({
     page,
   }) => {
     // GIVEN: every request is observed
@@ -266,10 +330,10 @@ test.describe('Batch Subtitle Search UI @ui @batch-subtitle @story-8-11', () => 
     });
 
     // WHEN: the dialog is opened and left in the idle state
-    await openBatchDialog(page);
-    await expect(page.getByTestId('batch-subtitle-start-btn')).toBeVisible();
+    await openGenerationDialog(page);
+    await expect(page.getByTestId('gen-batch-start-btn')).toBeVisible();
 
-    // THEN: no EventSource connection was attempted on mount (lazy pattern, project-context §8)
+    // THEN: no EventSource connection was attempted on mount (lazy pattern, §8)
     expect(sseRequests).toHaveLength(0);
 
     // AND: with no open SSE stream, the page settles to networkidle (the exact
@@ -277,29 +341,29 @@ test.describe('Batch Subtitle Search UI @ui @batch-subtitle @story-8-11', () => 
     await page.waitForLoadState('networkidle');
   });
 
-  test('[P2] cancel confirmation fires the real POST /subtitles/batch/cancel (AC#5)', async ({
+  test('[P2] 全部取消 confirmation fires the real POST /subtitles/generation-batch/cancel (AC#1)', async ({
     page,
   }) => {
-    // GIVEN: a batch is started (202 → processing)
-    await page.route(`${ROUTE_API}/subtitles/batch`, (route: Route) =>
-      route.fulfill(jsonStatus(202, { batch_id: 'batch-abc', total_items: 42 }))
+    // GIVEN: a batch is started (202 → running)
+    await page.route(`${ROUTE_API}/subtitles/generation-batch`, (route: Route) =>
+      route.fulfill(jsonStatus(202, startedBatch))
     );
     let cancelHit = false;
-    await page.route(`${ROUTE_API}/subtitles/batch/cancel`, (route: Route) => {
+    await page.route(`${ROUTE_API}/subtitles/generation-batch/cancel`, (route: Route) => {
       cancelHit = true;
-      return route.fulfill(jsonOk({ cancelled: true }));
+      return route.fulfill(jsonOk({ cancelled: true, running: false }));
     });
-    await openBatchDialog(page);
-    await page.getByTestId('batch-subtitle-start-btn').click();
-    await expect(page.getByTestId('batch-subtitle-cancel-btn')).toBeVisible();
+    await openGenerationDialog(page);
+    await page.getByTestId('gen-batch-start-btn').click();
+    await expect(page.getByTestId('gen-batch-cancel-all')).toBeVisible();
 
-    // WHEN: the user cancels and confirms
-    await page.getByTestId('batch-subtitle-cancel-btn').click();
-    await expect(page.getByTestId('batch-subtitle-cancel-confirm')).toBeVisible();
-    await page.getByTestId('batch-subtitle-cancel-confirm-btn').click();
+    // WHEN: the user cancels and confirms inline
+    await page.getByTestId('gen-batch-cancel-all').click();
+    await expect(page.getByTestId('gen-batch-cancel-confirm')).toBeVisible();
+    await page.getByTestId('gen-batch-cancel-confirm-btn').click();
 
-    // THEN: the cancel endpoint was called (the terminal `cancelled` status arrives
-    // via SSE — covered at the hook level, not here).
+    // THEN: the cancel endpoint was called (the terminal `cancelled` status
+    // arrives via SSE — covered at the hook level, not here).
     await expect.poll(() => cancelHit).toBe(true);
   });
 });

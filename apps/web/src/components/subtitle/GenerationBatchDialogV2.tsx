@@ -362,8 +362,11 @@ export function GenerationBatchPanelV2({
             scopeStatic
           )}
 
-          {/* AC 5 capability-honor note: series excluded from the selection. */}
-          {isIdle && scope === 'selected' && excludedSeriesCount > 0 && (
+          {/* AC 5 capability-honor note: series excluded from the selection.
+              NOT gated on scope==='selected' — when EVERY selected item was
+              excluded the 已選項目 segment never renders (scope stays missing),
+              and that is precisely when the exclusion must be visible. */}
+          {isIdle && excludedSeriesCount > 0 && (
             <p
               data-testid="gen-batch-excluded-note"
               className="flex items-center gap-[3px] text-xs text-[var(--text-muted)]"
@@ -473,7 +476,22 @@ export function GenerationBatchPanelV2({
                       mediaId: progress.currentMediaId ?? 0,
                       title: progress.currentItem,
                     }}
-                    state={isRunning ? 'active' : 'stopped'}
+                    // Terminal semantics must hold here too (AC 2): the batch
+                    // status is authoritative — budget_ceiling pauses the
+                    // in-flight item (已暫停, never 已取消/失敗), complete
+                    // resolves it via the failure record.
+                    state={
+                      isRunning
+                        ? 'active'
+                        : isBudgetCeiling
+                          ? 'paused'
+                          : status === 'complete'
+                            ? progress.currentMediaId != null &&
+                              failedIds.has(progress.currentMediaId)
+                              ? 'failed'
+                              : 'done'
+                            : 'stopped'
+                    }
                     activeItemProgress={activeItemProgress}
                   />
                 </ul>

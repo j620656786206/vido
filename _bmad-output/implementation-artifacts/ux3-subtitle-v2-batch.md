@@ -156,3 +156,29 @@ Dev-time discoveries (Amelia, 2026-07-06):
 - `tests/visual/components.visual.spec.ts-snapshots/components/generation-batch-dialog-v2/*-visual-darwin.png` — 3 NEW baselines
 - `_bmad-output/implementation-artifacts/sprint-status.yaml` — status transitions + Task 6 carry-forward on 9R-10a + new ③ entry (M)
 - `_bmad-output/implementation-artifacts/ux3-subtitle-v2-batch.md` — this record (M)
+- `tests/e2e/batch-subtitle.spec.ts` — CR H1 fix: suite re-pointed from the unmounted fetch dialog to GenerationBatchDialogV2 (M, review commit)
+
+## Senior Developer Review (AI) — 2026-07-06
+
+Reviewer: adversarial CR vs e99c2761 (`git diff main...HEAD`). **Verdict: APPROVED-WITH-FIXES-APPLIED** (fixes uncommitted in working tree; H2/L1 remain open as filed discoveries).
+
+### Findings
+
+| # | Sev | Where | Issue | Status |
+|---|-----|-------|-------|--------|
+| H1 | HIGH | `tests/e2e/batch-subtitle.spec.ts` | CI-gated e2e suite (test.yml `test-e2e-sharded`, chromium) still drove `BatchSubtitleDialog` via `/library` — this branch unmounted it, so 5/6 tests fail in the PR gate. Dev gates (unit/lint/build) never ran Playwright. | FIXED — suite rewritten against `GenerationBatchDialogV2` (7 wire-level journeys incl. a NEW `media_ids`-on-the-wire selection test). Local run blocked by a PRE-EXISTING env issue (the OLD suite fails identically at the first `enter-selection-btn` click — local Go backend has real data; CI runs clean). CI must confirm. |
+| H2 | HIGH | cross-story (BE+FE) | Movie PKs are UUIDs (`uuid.New().String()`), but the whole Route C chain requires numeric ids: BE `toItem()` ParseInt-skips UUID movies while `PreviewMissing` SQL-counts them (preview N>0 → start 0 items → empty-scope), and `library.tsx` `Number(uuid)`=NaN excludes every movie. Feature inoperative on real data. Faithful to 9R-16 [@contract-v1] + slice-1 precedent — not this story's regression. | OPEN — filed `disc-2026-07-movie-id-int64-contract-mismatch` (needs contract ruling). |
+| M1 | MED | `GenerationBatchDialogV2.tsx` (panel) | AC 5's "visible note" was gated on `scope==='selected'`, which requires ≥1 movie id — so when EVERY selected item was excluded (all-series selection; and the H2 UUID case) the selection silently vanished with no note. | FIXED — note renders whenever `isIdle && excludedSeriesCount > 0`; + spec. |
+| M2 | MED | `GenerationBatchDialogV2.tsx` (fallback card) | 409/recover-attach fallback card used `isRunning ? 'active' : 'stopped'` — a budget-paused in-flight item rendered 已取消 (violates AC 2 paused semantics), complete rendered 已取消 too. | FIXED — status-mapped (running→active / budget_ceiling→paused / complete→done|failed / else stopped); + 2 specs. |
+| M3 | MED | `GenerationBatchDialogV2.spec.tsx` | The CR-annotated batch-status-authoritative race was unit-tested ONLY on the `deriveRowStates` helper; the container's failedIds recording gate (records per-item failures only while `running`) had no test — no proof the real component never paints a paused row 失敗. | FIXED — 2 container-level race specs (per-item failed BEFORE and AFTER the terminal batch event; real container + effects + panel). |
+| L1 | LOW | `useGenerationBatchProgress.ts` + BE | If the terminal SSE event is lost (`sse/hub.go:151-154` drops on full broadcast channel; 10s reconnect gap) the dialog stays running forever — no re-probe on reconnect, and the post-terminal status probe (`{running:false, progress:null}`) cannot rebuild F9. §8 forbids polling fallback; FE-only fix would misreport the terminal kind. | OPEN — addendum recorded on `disc-2026-07-generation-batch-status-items` (BE: expose last terminal snapshot). |
+| L2 | LOW | F9 banner copy | `已完成N部` renders `success+fail` — contract-consistent (N+M=total per 9R-16 paused_count arithmetic) but overstates when failCount>0. | NOTE for Sally/product; no change. |
+
+### Rule 20 ack verification (result: PASS)
+
+All 5 `confirmed against [@contract-v1]` lines in Dev Notes re-verified against shipped Go: AC#1 handler responses/codes incl. the two `VALIDATION_*` splits ✓; AC#2 preview missing-only ✓; AC#3 status/cancel + post-terminal `{running:false, progress:null}` (`finish()` clears `activeBatch`) ✓; AC#7 `budget_ceiling` + `paused_count=len(items)-i` in BOTH pre-check and mid-item finishes — `totalItems-pausedCount === idxOfCurrent` holds, so `deriveRowStates` arithmetic is sound and `current_media_id` always points at a real queue item on every terminal broadcast ✓; AC#9 11-key hand-built payload + full-Event envelope (`sendSSEEvent(w, type, event)`) → `parsed.data` unwrap ✓. Slice-1 reuse + activity `generation_batch` kind ✓. Rule 25: `project-context.md` untouched ✓. Baselines: exactly 3 new + 3 relabel recaptures, 0 `-linux`, label-only delta pixel-verified ✓. Sprint-status dev edits surgical ✓.
+
+### Gate re-runs (post-fix)
+
+- `GenerationBatchDialogV2.spec.tsx` 31/31; full `pnpm nx test web` 2455 green (+5 review specs); `pnpm lint:all` 0 errors; prettier clean on touched files.
+- e2e: not runnable in this local env (pre-existing detach-loop, affects old suite equally) — rides the CI `test-e2e-sharded` gate.
