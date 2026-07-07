@@ -204,6 +204,10 @@ SCREENS = {
     "JMqPg": ("flow-f-subtitle-v2", "f9-d-v2"),
     "olDlj": ("flow-f-subtitle-v2", "f10-d-v2"),
     "l8FsB": ("flow-f-subtitle-v2", "f11-d-v2"),
+    # ux3-ai-1 — generation workspace (F11 validated spec: running / mobile / budget-ceiling / states)
+    "PXB0z": ("flow-f-subtitle-v2", "f11-m-v2"),
+    "iH98f": ("flow-f-subtitle-v2", "f12-d-v2"),
+    "F7ohe": ("flow-f-subtitle-v2", "f13-d-v2"),
 }
 
 
