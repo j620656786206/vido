@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -1055,4 +1056,264 @@ func TestSubtitleHandler_CancelBatch_NoBatchProcessor(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}
+
+// --- Convert Existing Track Tests (disc-2026-07-track-convert-endpoint) ---
+
+// SRT fixtures for the convert endpoint. Language is decided by CONTENT (§9b detector),
+// not the filename tag — the tests deliberately exploit that.
+const (
+	convSimplifiedSRT  = "1\n00:00:01,000 --> 00:00:03,000\n这是简体中文测试内容\n"
+	convTraditionalSRT = "1\n00:00:01,000 --> 00:00:03,000\n這是繁體中文測試內容\n"
+	convEnglishSRT     = "1\n00:00:01,000 --> 00:00:03,000\nHello world subtitle\n"
+	convAmbiguousSRT   = "1\n00:00:01,000 --> 00:00:03,000\n这這\n" // 1 simp-unique + 1 trad-unique → zh
+)
+
+// setupConvertHandler builds a SubtitleHandler wired with a real OpenCC converter, a
+// real placer, and a mock status updater, plus a temp media file. withConverter=false
+// injects a nil converter to exercise the unavailable path.
+func setupConvertHandler(t *testing.T, withConverter bool) (*gin.Engine, *mockStatusUpdater, string) {
+	t.Helper()
+	gin.SetMode(gin.TestMode)
+
+	tmpDir := t.TempDir()
+	mediaPath := filepath.Join(tmpDir, "movie.mkv")
+	require.NoError(t, os.WriteFile(mediaPath, []byte("fake"), 0644))
+
+	var conv *subtitle.Converter
+	if withConverter {
+		c, err := subtitle.NewConverter()
+		require.NoError(t, err)
+		conv = c
+	}
+
+	scorer := subtitle.NewScorer(subtitle.NewDefaultScorerConfig())
+	placer := subtitle.NewPlacer(subtitle.DefaultPlacerConfig())
+	mockRepo := &mockStatusUpdater{}
+	handler := NewSubtitleHandler(nil, scorer, conv, placer, nil, mockRepo, nil)
+
+	router := gin.New()
+	api := router.Group("/api/v1")
+	handler.RegisterRoutes(api)
+
+	return router, mockRepo, mediaPath
+}
+
+// writeSidecar writes a subtitle file next to mediaPath with the given lang tag + ext.
+func writeSidecar(t *testing.T, mediaPath, lang, ext, content string) string {
+	t.Helper()
+	dir := filepath.Dir(mediaPath)
+	base := filepath.Base(mediaPath)
+	name := base[:len(base)-len(filepath.Ext(base))]
+	p := filepath.Join(dir, name+"."+lang+"."+ext)
+	require.NoError(t, os.WriteFile(p, []byte(content), 0644))
+	return p
+}
+
+func doConvert(t *testing.T, router *gin.Engine, req SubtitleConvertRequest) *httptest.ResponseRecorder {
+	t.Helper()
+	body, _ := json.Marshal(req)
+	w := httptest.NewRecorder()
+	httpReq := httptest.NewRequest(http.MethodPost, "/api/v1/subtitles/convert", bytes.NewReader(body))
+	httpReq.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, httpReq)
+	return w
+}
+
+// (a) Happy path: an existing zh-Hans sidecar is converted to a new zh-Hant sidecar,
+// the source is preserved, and the DB pointer flips to found/zh-Hant.
+func TestSubtitleHandler_Convert_Success(t *testing.T) {
+	router, mockRepo, mediaPath := setupConvertHandler(t, true)
+	sourcePath := writeSidecar(t, mediaPath, "zh-Hans", "srt", convSimplifiedSRT)
+
+	w := doConvert(t, router, SubtitleConvertRequest{
+		MediaID: "movie-1", MediaType: "movie", MediaFilePath: mediaPath,
+	})
+
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var resp map[string]interface{}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	data := resp["data"].(map[string]interface{})
+	assert.Equal(t, "zh-Hant", data["language"])
+	assert.Equal(t, sourcePath, data["source_path"])
+
+	// New zh-Hant sidecar written next to the media file, with converted content.
+	outPath := filepath.Join(filepath.Dir(mediaPath), "movie.zh-Hant.srt")
+	assert.Equal(t, outPath, data["subtitle_path"])
+	placed, err := os.ReadFile(outPath)
+	require.NoError(t, err)
+	assert.Contains(t, string(placed), "這", "output must be Traditional (OpenCC-converted)")
+	assert.NotContains(t, string(placed), "这", "no simplified-unique chars should remain")
+
+	// Non-destructive: the source zh-Hans file is left in place.
+	_, err = os.Stat(sourcePath)
+	assert.NoError(t, err)
+
+	// DB pointer flipped.
+	assert.Equal(t, "movie-1", mockRepo.lastID)
+	assert.Equal(t, models.SubtitleStatusFound, mockRepo.lastStatus)
+	assert.Equal(t, "zh-Hant", mockRepo.lastLanguage)
+	assert.Equal(t, outPath, mockRepo.lastPath)
+}
+
+// (b) Ambiguous (zh) content also converts.
+func TestSubtitleHandler_Convert_Ambiguous(t *testing.T) {
+	router, _, mediaPath := setupConvertHandler(t, true)
+	writeSidecar(t, mediaPath, "zh-Hans", "srt", convAmbiguousSRT)
+
+	w := doConvert(t, router, SubtitleConvertRequest{
+		MediaID: "movie-1", MediaType: "movie", MediaFilePath: mediaPath,
+	})
+
+	require.Equal(t, http.StatusOK, w.Code)
+	placed, err := os.ReadFile(filepath.Join(filepath.Dir(mediaPath), "movie.zh-Hant.srt"))
+	require.NoError(t, err)
+	assert.NotContains(t, string(placed), "这", "simplified 这 should be converted to 這")
+}
+
+// (c) No source sidecar → 404 SUBTITLE_NOT_FOUND.
+func TestSubtitleHandler_Convert_SourceNotFound(t *testing.T) {
+	router, _, mediaPath := setupConvertHandler(t, true)
+	// No sidecar written.
+
+	w := doConvert(t, router, SubtitleConvertRequest{
+		MediaID: "movie-1", MediaType: "movie", MediaFilePath: mediaPath,
+	})
+
+	require.Equal(t, http.StatusNotFound, w.Code)
+	assert.Equal(t, "SUBTITLE_NOT_FOUND", convErrCode(t, w))
+}
+
+// (d) Source content is already Traditional (despite the zh-Hans filename) → 409.
+func TestSubtitleHandler_Convert_AlreadyTraditional(t *testing.T) {
+	router, mockRepo, mediaPath := setupConvertHandler(t, true)
+	writeSidecar(t, mediaPath, "zh-Hans", "srt", convTraditionalSRT)
+
+	w := doConvert(t, router, SubtitleConvertRequest{
+		MediaID: "movie-1", MediaType: "movie", MediaFilePath: mediaPath,
+	})
+
+	require.Equal(t, http.StatusConflict, w.Code)
+	assert.Equal(t, "SUBTITLE_ALREADY_TRADITIONAL", convErrCode(t, w))
+	assert.Empty(t, mockRepo.lastID, "no DB write on a no-op convert")
+}
+
+// (e) Non-Chinese content → 400 SUBTITLE_NOT_SIMPLIFIED.
+func TestSubtitleHandler_Convert_NotSimplified(t *testing.T) {
+	router, _, mediaPath := setupConvertHandler(t, true)
+	writeSidecar(t, mediaPath, "zh-Hans", "srt", convEnglishSRT)
+
+	w := doConvert(t, router, SubtitleConvertRequest{
+		MediaID: "movie-1", MediaType: "movie", MediaFilePath: mediaPath,
+	})
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Equal(t, "SUBTITLE_NOT_SIMPLIFIED", convErrCode(t, w))
+}
+
+// (f) Converter unavailable (nil / degraded OpenCC) → 503 SUBTITLE_CONVERT_UNAVAILABLE.
+func TestSubtitleHandler_Convert_ConverterUnavailable(t *testing.T) {
+	router, _, mediaPath := setupConvertHandler(t, false) // nil converter
+	writeSidecar(t, mediaPath, "zh-Hans", "srt", convSimplifiedSRT)
+
+	w := doConvert(t, router, SubtitleConvertRequest{
+		MediaID: "movie-1", MediaType: "movie", MediaFilePath: mediaPath,
+	})
+
+	require.Equal(t, http.StatusServiceUnavailable, w.Code)
+	assert.Equal(t, "SUBTITLE_CONVERT_UNAVAILABLE", convErrCode(t, w))
+}
+
+// (g) Placer fails (backup target is a directory) → 500 SUBTITLE_PLACE_FAILED.
+func TestSubtitleHandler_Convert_PlaceFailed(t *testing.T) {
+	router, _, mediaPath := setupConvertHandler(t, true)
+	writeSidecar(t, mediaPath, "zh-Hans", "srt", convSimplifiedSRT)
+
+	// Force a placer backup failure: an existing zh-Hant target whose .bak path is a directory.
+	dir := filepath.Dir(mediaPath)
+	target := filepath.Join(dir, "movie.zh-Hant.srt")
+	require.NoError(t, os.WriteFile(target, []byte("old"), 0644))
+	require.NoError(t, os.Mkdir(target+".bak", 0755))
+
+	w := doConvert(t, router, SubtitleConvertRequest{
+		MediaID: "movie-1", MediaType: "movie", MediaFilePath: mediaPath,
+	})
+
+	require.Equal(t, http.StatusInternalServerError, w.Code)
+	assert.Equal(t, "SUBTITLE_PLACE_FAILED", convErrCode(t, w))
+}
+
+// (h) Bad media_type / missing fields → 400 (binding validation).
+func TestSubtitleHandler_Convert_BadRequest(t *testing.T) {
+	router, _, mediaPath := setupConvertHandler(t, true)
+
+	// Invalid media_type (fails oneof).
+	w := doConvert(t, router, SubtitleConvertRequest{
+		MediaID: "movie-1", MediaType: "film", MediaFilePath: mediaPath,
+	})
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	// Missing media_file_path (fails required).
+	w = doConvert(t, router, SubtitleConvertRequest{
+		MediaID: "movie-1", MediaType: "movie",
+	})
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+// (i) Non-absolute path → 400; path-traversal source_language is neutralized (→ 404, no escape).
+func TestSubtitleHandler_Convert_PathGuards(t *testing.T) {
+	router, _, mediaPath := setupConvertHandler(t, true)
+
+	// Non-absolute media_file_path → 400 VALIDATION_INVALID_FORMAT.
+	w := doConvert(t, router, SubtitleConvertRequest{
+		MediaID: "movie-1", MediaType: "movie", MediaFilePath: "relative/movie.mkv",
+	})
+	require.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Equal(t, "VALIDATION_INVALID_FORMAT", convErrCode(t, w))
+
+	// Traversal source_language collapses to "und" → sidecar not found (no escape read).
+	writeSidecar(t, mediaPath, "zh-Hans", "srt", convSimplifiedSRT)
+	w = doConvert(t, router, SubtitleConvertRequest{
+		MediaID: "movie-1", MediaType: "movie", MediaFilePath: mediaPath,
+		SourceLanguage: "../../../etc/passwd",
+	})
+	require.Equal(t, http.StatusNotFound, w.Code)
+	assert.Equal(t, "SUBTITLE_NOT_FOUND", convErrCode(t, w))
+}
+
+// Series media_type routes the DB pointer flip through seriesRepo (CR: series branch coverage).
+func TestSubtitleHandler_Convert_Series(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	tmpDir := t.TempDir()
+	mediaPath := filepath.Join(tmpDir, "episode.mkv")
+	require.NoError(t, os.WriteFile(mediaPath, []byte("fake"), 0644))
+	writeSidecar(t, mediaPath, "zh-Hans", "srt", convSimplifiedSRT)
+
+	conv, err := subtitle.NewConverter()
+	require.NoError(t, err)
+	seriesRepo := &mockStatusUpdater{}
+	handler := NewSubtitleHandler(nil, subtitle.NewScorer(subtitle.NewDefaultScorerConfig()),
+		conv, subtitle.NewPlacer(subtitle.DefaultPlacerConfig()), nil, nil, seriesRepo)
+	router := gin.New()
+	handler.RegisterRoutes(router.Group("/api/v1"))
+
+	w := doConvert(t, router, SubtitleConvertRequest{
+		MediaID: "series-1", MediaType: "series", MediaFilePath: mediaPath,
+	})
+
+	require.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "series-1", seriesRepo.lastID)
+	assert.Equal(t, models.SubtitleStatusFound, seriesRepo.lastStatus)
+	assert.Equal(t, "zh-Hant", seriesRepo.lastLanguage)
+}
+
+// convErrCode extracts error.code from a JSON error envelope on the recorder.
+func convErrCode(t *testing.T, w *httptest.ResponseRecorder) string {
+	t.Helper()
+	var resp APIResponse
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	require.NotNil(t, resp.Error)
+	return resp.Error.Code
 }

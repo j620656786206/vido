@@ -158,6 +158,22 @@ func normalizeLanguageTag(lang string) string {
 // safeTagPattern matches valid BCP 47-like language tags (alphanumeric + hyphens).
 var safeTagPattern = regexp.MustCompile(`^[a-zA-Z0-9\-]+$`)
 
+// NormalizeLanguageTag is the exported form of normalizeLanguageTag. It canonicalizes
+// a language tag to IETF BCP 47 (e.g. "zh-cn"/"chs"/"简体" → "zh-Hans") and collapses
+// unsafe input to "und", so callers building sidecar filenames from a tag get a
+// path-traversal-safe segment for free.
+func NormalizeLanguageTag(lang string) string {
+	return normalizeLanguageTag(lang)
+}
+
+// BuildSubtitleFilename is the exported form of buildSubtitleFilename. It resolves the
+// sidecar path a subtitle would occupy next to its media file, e.g.
+// (/media/Movie.mkv, "zh-Hans", "srt") → /media/Movie.zh-Hans.srt. Callers should pass
+// a canonical, sanitized langTag (see NormalizeLanguageTag).
+func BuildSubtitleFilename(mediaPath, langTag, subtitleExt string) string {
+	return buildSubtitleFilename(mediaPath, langTag, subtitleExt)
+}
+
 // buildSubtitleFilename creates the subtitle path from media path, language, and format.
 // Example: /media/Movie.2024.1080p.mkv → /media/Movie.2024.1080p.zh-Hant.srt
 func buildSubtitleFilename(mediaPath, langTag, subtitleExt string) string {
