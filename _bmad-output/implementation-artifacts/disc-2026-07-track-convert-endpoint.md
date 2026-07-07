@@ -1,6 +1,6 @@
 # Story disc-2026-07-track-convert-endpoint: Convert an existing local 簡中 subtitle track to 繁中 (standalone OpenCC endpoint)
 
-Status: ready-for-dev
+Status: done
 
 <!-- Rule-24 ③ discovery from ux3-subtitle-v2 (DEV Amelia, 2026-07-05). BACKEND-ONLY. -->
 
@@ -33,7 +33,7 @@ so that I get a proper zh-Hant sidecar without re-downloading or re-generating a
    - If detected `LangTraditional` (`zh-Hant`) → 409 `SUBTITLE_ALREADY_TRADITIONAL` (`字幕已是繁體中文，無需轉換`). No-op guard (idempotent; the user asked to convert a 簡中 track — if it's already 繁中 there is nothing to do).
    - If `LangSimplified` (`zh-Hans`) or `LangAmbiguous` (`zh`) → convert via the EXISTING `h.converter.ConvertS2TWP(data)`. Guard `h.converter != nil && h.converter.IsAvailable()` first; if OpenCC is in degraded mode → 503 `SUBTITLE_CONVERT_UNAVAILABLE` (`繁簡轉換服務目前無法使用`). On `ConvertS2TWP` error → 500 `SUBTITLE_CONVERT_FAILED`.
    - Otherwise (`und` / non-Chinese) → 400 `SUBTITLE_NOT_SIMPLIFIED` (`該字幕不是簡體中文，無法轉換`).
-   Then place via the EXISTING `h.placer.Place(subtitle.PlaceRequest{MediaFilePath, SubtitleData: converted, Language: subtitle.LangTraditional, Format: <source ext w/o dot>})` → writes `{name}.zh-Hant.srt` next to the media file (the placer backs up any pre-existing `zh-Hant` sidecar to `.bak` automatically). On placer error → 500 `SUBTITLE_PLACE_FAILED`.
+   Then place via the EXISTING `h.placer.Place(subtitle.PlaceRequest{MediaFilePath, SubtitleData: converted, Language: subtitle.LangTraditional, Format: <source ext w/o dot>})` → writes `{name}.zh-Hant.srt` next to the media file (the placer backs up any pre-existing `zh-Hant` sidecar to `.bak` automatically). On placer error → 500 `SUBTITLE_PLACE_FAILED`. **[@contract-v1]** (the error-code set 503/404/409/400/500 is part of the wire contract the FE consumer acks).
 
 5. **Non-destructive.** The output filename (`.zh-Hant.srt`) differs from the source (`.zh-Hans.srt`), so the source 簡中 file is LEFT IN PLACE — the item ends with both tracks. Do NOT delete the source. (A future "replace/cleanup" behaviour is explicitly out of scope.)
 
@@ -41,27 +41,27 @@ so that I get a proper zh-Hant sidecar without re-downloading or re-generating a
 
 7. **CN policy is NOT enforced server-side (explicit-action = intent).** An explicit convert click IS the `仍要轉換` override — the endpoint converts unconditionally and does NOT read `production_countries` / apply the §9b `ConvertNever` skip (that policy governs AUTOMATIC conversion during download/generation, not a user's explicit request). Therefore this endpoint has NO dependency on `disc-2026-07-production-countries-detail-api`; the CN warning stays a FE display concern.
 
-8. **Synchronous, no SSE, no job.** Single-file OpenCC on one SRT is a sub-second in-memory transform → respond `200` synchronously with `{"subtitle_path": "<abs>", "language": "zh-Hant", "source_path": "<abs>"}` (snake_case, wrapped in the standard `{success, data}` envelope via `SuccessResponse`). Do NOT spawn a background job or emit `subtitle_progress` SSE — the FE flips the badge by refetching after the 200 (same as the download flow's DB-write → invalidate pattern).
+8. **Synchronous, no SSE, no job.** Single-file OpenCC on one SRT is a sub-second in-memory transform → respond `200` synchronously with `{"subtitle_path": "<abs>", "language": "zh-Hant", "source_path": "<abs>"}` (snake_case, wrapped in the standard `{success, data}` envelope via `SuccessResponse`). Do NOT spawn a background job or emit `subtitle_progress` SSE — the FE flips the badge by refetching after the 200 (same as the download flow's DB-write → invalidate pattern). **[@contract-v1]** (this 200 response shape is part of the wire contract the FE consumer acks).
 
 9. **Tests + gates.** Colocated `subtitle_handler_test.go` cases covering: (a) happy path zh-Hans→zh-Hant (file written with correct name + content converted + DB updated); (b) ambiguous `zh` also converts; (c) source not found → 404 `SUBTITLE_NOT_FOUND`; (d) already-traditional → 409 `SUBTITLE_ALREADY_TRADITIONAL`; (e) non-Chinese → 400 `SUBTITLE_NOT_SIMPLIFIED`; (f) converter unavailable → 503 `SUBTITLE_CONVERT_UNAVAILABLE`; (g) placer error → 500 `SUBTITLE_PLACE_FAILED`; (h) bad body / bad `media_type` → 400; (i) path-traversal `source_language` / non-absolute `media_file_path` rejected. Use a real `subtitle.Converter` (OpenCC is pure-Go, no external binary) and a temp dir for placement (mirror `placer_test.go`). `go test ./...`, `go vet ./...`, `staticcheck ./...` (via `pnpm lint:all`) all green.
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: Convert handler method + route + DTO** (AC: 1, 2, 8)
-  - [ ] Add `SubtitleConvertRequest` DTO (snake_case, `binding` tags mirroring `SubtitleDownloadRequest`) in `subtitle_handler.go`.
-  - [ ] Add `ConvertSubtitle(c *gin.Context)` method; register `subtitles.POST("/convert", h.ConvertSubtitle)` in `RegisterRoutes`.
-  - [ ] Return `200` `{subtitle_path, language, source_path}` via `SuccessResponse`.
-- [ ] **Task 2: Source-track resolution** (AC: 3)
-  - [ ] Helper to build `{name}.{source_language}.{srt|ass}` from `media_file_path` (strip media ext; reuse the `buildSubtitleFilename` naming convention — if `buildSubtitleFilename`/`safeTagPattern` need to be reachable from `handlers`, export minimal helpers from the `subtitle` package rather than duplicating the logic; prefer reuse over a private copy).
-  - [ ] Absolute-path + `filepath.Clean` guard on `media_file_path`; validate `source_language` as a safe tag; ensure resolved path stays within the media dir.
-  - [ ] Probe `.srt` then `.ass`; 404 `SUBTITLE_NOT_FOUND` if neither.
-- [ ] **Task 3: Convert + place + persist** (AC: 4, 5, 6, 7)
-  - [ ] `subtitle.Detect` guard branches (already-traditional 409 / not-simplified 400 / converter-unavailable 503).
-  - [ ] `h.converter.ConvertS2TWP` → `h.placer.Place` (Language `zh-Hant`, Format from source ext) → `updateSubtitleDB` (non-fatal on error).
-  - [ ] New error codes `SUBTITLE_CONVERT_UNAVAILABLE`, `SUBTITLE_ALREADY_TRADITIONAL`, `SUBTITLE_NOT_SIMPLIFIED` under the EXISTING `SUBTITLE_` prefix (see Dev Notes — no Rule 7 prefix-set change / no CR-workflow sync).
-- [ ] **Task 4: Tests** (AC: 9)
-  - [ ] `subtitle_handler_test.go` cases (a)–(i) above; real converter + temp dir.
-  - [ ] `go test ./... && go vet ./... && staticcheck ./...` (i.e. `pnpm lint:all`) green.
+- [x] **Task 1: Convert handler method + route + DTO** (AC: 1, 2, 8)
+  - [x] Add `SubtitleConvertRequest` DTO (snake_case, `binding` tags mirroring `SubtitleDownloadRequest`) in `subtitle_handler.go`.
+  - [x] Add `ConvertSubtitle(c *gin.Context)` method; register `subtitles.POST("/convert", h.ConvertSubtitle)` in `RegisterRoutes`.
+  - [x] Return `200` `{subtitle_path, language, source_path}` via `SuccessResponse`.
+- [x] **Task 2: Source-track resolution** (AC: 3)
+  - [x] Helper to build `{name}.{source_language}.{srt|ass}` from `media_file_path` — reused via NEW exported `subtitle.BuildSubtitleFilename` + `subtitle.NormalizeLanguageTag` (thin wrappers over the private placer helpers; no logic duplicated).
+  - [x] Absolute-path + `filepath.Clean` guard on `media_file_path`; `NormalizeLanguageTag` canonicalizes + collapses unsafe tags to `und` (path-traversal guard); resolved path stays within the media dir.
+  - [x] Probe `.srt` then `.ass`; 404 `SUBTITLE_NOT_FOUND` if neither.
+- [x] **Task 3: Convert + place + persist** (AC: 4, 5, 6, 7)
+  - [x] `subtitle.Detect` guard branches (already-traditional 409 / not-simplified 400 / converter-unavailable 503).
+  - [x] `h.converter.ConvertS2TWP` → `h.placer.Place` (Language `zh-Hant`, Format from source ext) → `updateSubtitleDB` (non-fatal on error).
+  - [x] New error codes `SUBTITLE_CONVERT_UNAVAILABLE`, `SUBTITLE_ALREADY_TRADITIONAL`, `SUBTITLE_NOT_SIMPLIFIED` under the EXISTING `SUBTITLE_` prefix (no Rule 7 prefix-set change / no CR-workflow sync).
+- [x] **Task 4: Tests** (AC: 9)
+  - [x] `subtitle_handler_test.go` cases (a)–(i) above; real converter + temp dir (9 new tests, all green).
+  - [x] `nx test api` full backend suite green; `pnpm lint:all` (go vet + staticcheck + eslint + prettier) → 0 errors.
 
 **Cross-stack split check:** backend tasks = 4, frontend tasks = 0 → single story, no a/b split.
 
@@ -131,9 +131,55 @@ N/A — backend-only story; no `apps/web/src/components/**` files touched, no wa
 
 ### Agent Model Used
 
+Claude Opus 4.8 (claude-opus-4-8[1m]) — DEV Amelia, 2026-07-07
+
 ### Debug Log References
 
+- New convert tests (targeted): `go test ./internal/handlers/ -run TestSubtitleHandler_Convert -v` → 10/10 PASS (cases a–i + series).
+- Full backend suite: `pnpm nx test api` → **PASS**; post-CR `go test ./...` (apps/api) → 34 pkgs ok / 0 FAIL.
+- `pnpm lint:all` → **0 errors** (125 pre-existing `apps/web` warnings, none introduced — this story adds 0 TS); go vet + staticcheck clean; `prettier --check .` clean.
+- `go vet ./internal/handlers/ ./internal/subtitle/` → exit 0.
+
 ### Completion Notes List
+
+- Implemented ratified **contract A**: `POST /api/v1/subtitles/convert` on the EXISTING `SubtitleHandler` — new `SubtitleConvertRequest` DTO + `ConvertSubtitle` method + one route line in `RegisterRoutes`. **Zero `main.go` change, zero new constructor dependency** (handler already holds `converter`/`placer`/`movieRepo`/`seriesRepo`).
+- Reuse over reinvention: converts via `h.converter.ConvertS2TWP`, places via `h.placer.Place`, persists via the existing `h.updateSubtitleDB` — same flow as `DownloadSubtitle`. Source-track path resolved through NEW exported `subtitle.BuildSubtitleFilename` + `subtitle.NormalizeLanguageTag` (thin wrappers over the private placer helpers — no logic duplicated, per Task 2's reuse mandate).
+- **Content-based decision, not filename:** the convert/guard branch keys on `subtitle.Detect(data).Language` (zh-Hant→409, zh-Hans/zh→convert, else→400) — a `.zh-Hans.srt` file that actually contains Traditional text correctly yields 409 (test `_AlreadyTraditional`).
+- **Non-destructive** (AC #5): output is `{name}.zh-Hant.{ext}`, a different filename from the `.zh-Hans` source, so the source is preserved (verified in `_Success`). Placer backs up any pre-existing zh-Hant to `.bak`.
+- **Pointer-flip only** (AC #6): `updateSubtitleDB` flips `subtitle_status=found`/`subtitle_language=zh-Hant`/`subtitle_path`; the `subtitle_tracks` JSON blob is deliberately untouched (rescan reconciles). DB write is non-fatal (logged, still 200).
+- **CN policy not enforced server-side** (AC #7): explicit click = intent; no `production_countries` read → no dependency on `disc-2026-07-production-countries-detail-api`.
+- **Rule 7:** 3 new codes (`SUBTITLE_CONVERT_UNAVAILABLE` 503, `SUBTITLE_ALREADY_TRADITIONAL` 409, `SUBTITLE_NOT_SIMPLIFIED` 400) + reused `SUBTITLE_NOT_FOUND`/`SUBTITLE_CONVERT_FAILED`/`SUBTITLE_PLACE_FAILED` — all under the ALREADY-REGISTERED `SUBTITLE_` prefix → prefix count stays 16, NO `project-context.md` prefix-set edit, NO `code-review/instructions.xml` sync, NO mega-line (Rule 25) edit.
+- **Source-tag strategy chosen (a) — minimal:** builds the sidecar path from the (normalized) `source_language`, default `zh-Hans`; no dir-scan fallback (b) added (YAGNI — our pipeline writes canonical `.zh-Hans.srt`). Non-canonical user tags are handled by `NormalizeLanguageTag` mapping (zh-cn/chs/简体 → zh-Hans).
+- Status codes use raw ints (503/404/409/400/500) to match the file's existing `ErrorResponse(c, 500, …)` style; no `net/http` import needed (added only `os` + `path/filepath`).
+- 🔗 **AC Drift:** NONE (checked `grep -rn "subtitles/convert\|ConvertS2TWP\|convert.*existing.*track" _bmad-output/implementation-artifacts/*.md` — the only prior hits are this story + the `ux3-subtitle-v2` origin note; no prior AC ships a convert-existing-track contract — this is a new subsystem surface, all REUSE of the subtitle pipeline, no behavior change to a prior AC).
+- 📎 **Contract Stamps:** FOUND (1 stamp: this story's `[@contract-v1]` on AC #1/#2 for the future FE consumer; no upstream stamped AC consumed — the reused subtitle/placer helpers are pre-Rule-20 internal code, not contract-stamped).
+- 🎭 **A11y Pre-Flight:** N/A (100% backend — no `apps/web/` files touched).
+- 🎨 **UX Verification:** SKIPPED — no UI changes in this story (backend-only; the FE `轉為繁中` button is a deferred downstream consumer, see Discovery Triage).
+- **Full-regression note:** `pnpm nx test web` NOT run — this story touches zero `apps/web/` files (backend-only), so the web suite cannot be affected by the change (same rationale as the a11y-preflight 100%-backend carve-out). `nx test api` is the meaningful gate and is green.
+- **Test-process cleanup:** N/A — no vitest/JS test workers spawned (Go `go test` only); no orphaned processes possible.
+
+### Change Log
+
+| Date | Change |
+|------|--------|
+| 2026-07-07 | Implemented `POST /api/v1/subtitles/convert` (contract A) — `SubtitleConvertRequest` DTO + `ConvertSubtitle` handler + route on existing `SubtitleHandler`; converts an existing local 簡中 sidecar → 繁中 via OpenCC s2twp, non-destructive, sync 200. |
+| 2026-07-07 | Exported `subtitle.BuildSubtitleFilename` + `subtitle.NormalizeLanguageTag` (thin wrappers over private placer helpers) for cross-package sidecar-path resolution. |
+| 2026-07-07 | Added 10 handler tests (cases a–i + series); `nx test api` green, `lint:all` 0 errors. Story → review. |
+| 2026-07-07 | Adversarial CR: +`[@contract-v1]` on AC #4/#8 (full wire contract), +series-path test. `go test ./...` 34 pkgs ok. Story → done. |
+
+### Senior Developer Review (AI) — adversarial CR (2026-07-07)
+
+Reviewer: DEV Amelia (same-session adversarial pass, per user option 1). Outcome: **APPROVED-WITH-FIXES** — all fixes applied and re-verified green.
+
+Gates: 🔒 Rule 7 Wire Format: **PASS** (all `SUBTITLE_*` / `VALIDATION_*` inline codes use registered prefixes; no constants, prefix count stays 16) · 🔒 Rule 20 Contract Bump: **N/A** (fresh `[@contract-v1]`, no bump) · 🔒 Rule 25 Mega-line: **N/A** (`project-context.md` untouched). No HIGH/CRITICAL. Task-vs-code audit: all `[x]` genuinely done. ACs #1–#9: all IMPLEMENTED.
+
+Findings + resolution:
+
+- **[MED fixed] Contract incompleteness (Rule 20).** The wire contract the future FE consumer acks spans the request (AC #2), the 200 response shape (AC #8), AND the error-code set (AC #4), but only AC #1/#2 were stamped. → Added `[@contract-v1]` to AC #4 (503/404/409/400/500 codes) and AC #8 (response shape).
+- **[LOW fixed] `series` path untested.** `updateSubtitleDB`'s `series` branch had zero coverage (only `movie`). → Added `TestSubtitleHandler_Convert_Series` (asserts the `seriesRepo` pointer flip); green.
+- **[LOW acknowledged — no code change] `media_id` ↔ `media_file_path` not cross-validated.** A bogus `media_id` silently no-ops the DB write (non-fatal) yet still returns 200; the endpoint trusts the body-supplied path + id and does no `GetByID` existence check. This EXACTLY mirrors the sibling `DownloadSubtitle` trust model (single-user app; both take `media_file_path` from the body without validating it against `media_id`). Left as-is for consistency; a future hardening story could add `GetByID`-based path resolution to BOTH endpoints together rather than diverging one.
+
+Post-fix gates: `go test ./...` (apps/api) → 34 pkgs ok / 0 FAIL; 10/10 convert tests green; `go vet` clean; `pnpm lint:all` 0 errors; `prettier --check` clean.
 
 ### Discovery Triage
 
@@ -141,6 +187,14 @@ N/A — backend-only story; no `apps/web/src/components/**` files touched, no wa
 - (Dev: add any further in-flight discoveries here per Rule 24 before marking done.)
 
 ### File List
+
+Modified:
+
+- `apps/api/internal/handlers/subtitle_handler.go` — `SubtitleConvertRequest` DTO, `ConvertSubtitle` handler, `POST /subtitles/convert` route; imports `os` + `path/filepath`.
+- `apps/api/internal/handlers/subtitle_handler_test.go` — 10 convert tests (cases a–i + series) + `setupConvertHandler`/`writeSidecar`/`doConvert`/`convErrCode` helpers; imports `path/filepath`.
+- `apps/api/internal/subtitle/placer.go` — exported `NormalizeLanguageTag` + `BuildSubtitleFilename` wrappers.
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — `disc-2026-07-track-convert-endpoint` → `review`.
+- `_bmad-output/implementation-artifacts/disc-2026-07-track-convert-endpoint.md` — this file (checkboxes, Dev Agent Record, Change Log, File List, Status).
 
 ## Story Author Decisions (ratified by Alexyu 2026-07-07)
 

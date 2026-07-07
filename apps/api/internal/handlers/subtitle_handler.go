@@ -6,6 +6,8 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -64,6 +66,7 @@ func (h *SubtitleHandler) RegisterRoutes(rg *gin.RouterGroup) {
 		subtitles.POST("/search", h.SearchSubtitles)
 		subtitles.POST("/download", h.DownloadSubtitle)
 		subtitles.POST("/preview", h.PreviewSubtitle)
+		subtitles.POST("/convert", h.ConvertSubtitle)
 		subtitles.POST("/batch", h.StartBatch)
 		subtitles.GET("/batch/status", h.GetBatchStatus)
 		subtitles.POST("/batch/cancel", h.CancelBatch)
@@ -120,6 +123,16 @@ type SubtitleDownloadRequest struct {
 type SubtitlePreviewRequest struct {
 	SubtitleID string `json:"subtitle_id" binding:"required"`
 	Provider   string `json:"provider" binding:"required"`
+}
+
+// SubtitleConvertRequest is the request body for converting an EXISTING local
+// simplified-Chinese subtitle sidecar to Traditional Chinese (OpenCC s2twp).
+// SourceLanguage is optional and defaults to zh-Hans.
+type SubtitleConvertRequest struct {
+	MediaID        string `json:"media_id" binding:"required"`
+	MediaType      string `json:"media_type" binding:"required,oneof=movie series"`
+	MediaFilePath  string `json:"media_file_path" binding:"required"`
+	SourceLanguage string `json:"source_language"`
 }
 
 // --- Handlers ---
@@ -327,6 +340,124 @@ func (h *SubtitleHandler) PreviewSubtitle(c *gin.Context) {
 	SuccessResponse(c, map[string]interface{}{
 		"lines":    lines,
 		"language": subtitle.Detect(data).Language,
+	})
+}
+
+// ConvertSubtitle handles POST /api/v1/subtitles/convert.
+//
+// It converts an EXISTING local simplified-Chinese subtitle sidecar (e.g.
+// Movie.zh-Hans.srt) to Traditional Chinese via OpenCC s2twp, writing a new
+// Movie.zh-Hant.srt next to the media file. Synchronous; the source file is left
+// in place (non-destructive). An explicit convert request IS the user's intent,
+// so the §9b CN skip policy is deliberately NOT applied here.
+func (h *SubtitleHandler) ConvertSubtitle(c *gin.Context) {
+	var req SubtitleConvertRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		ValidationError(c, "Invalid request: "+err.Error())
+		return
+	}
+
+	// OpenCC must be available to convert.
+	if h.converter == nil || !h.converter.IsAvailable() {
+		ErrorResponse(c, 503, "SUBTITLE_CONVERT_UNAVAILABLE",
+			"繁簡轉換服務目前無法使用",
+			"請確認伺服器已正確初始化 OpenCC 轉換器。")
+		return
+	}
+
+	// Resolve + guard the media file path (must be absolute; mirrors placer).
+	cleanMediaPath := filepath.Clean(req.MediaFilePath)
+	if !filepath.IsAbs(cleanMediaPath) {
+		BadRequestError(c, "VALIDATION_INVALID_FORMAT", "media_file_path must be an absolute path")
+		return
+	}
+
+	// Default to simplified; NormalizeLanguageTag canonicalizes AND collapses unsafe
+	// input to "und", so it doubles as a path-traversal guard for the filename segment.
+	sourceLang := req.SourceLanguage
+	if sourceLang == "" {
+		sourceLang = subtitle.LangSimplified
+	}
+	sourceLang = subtitle.NormalizeLanguageTag(sourceLang)
+
+	// Locate the source sidecar next to the media file: {name}.{lang}.srt then .ass.
+	var sourcePath, sourceExt string
+	for _, ext := range []string{"srt", "ass"} {
+		candidate := subtitle.BuildSubtitleFilename(cleanMediaPath, sourceLang, ext)
+		if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
+			sourcePath = candidate
+			sourceExt = ext
+			break
+		}
+	}
+	if sourcePath == "" {
+		ErrorResponse(c, 404, "SUBTITLE_NOT_FOUND",
+			"找不到該語言的字幕檔",
+			"請確認該媒體旁存在對應語言的字幕檔（例如 movie.zh-Hans.srt）。")
+		return
+	}
+
+	// Read the source content.
+	data, err := os.ReadFile(sourcePath)
+	if err != nil {
+		slog.Error("Failed to read source subtitle for convert", "path", sourcePath, "error", err)
+		ErrorResponse(c, 500, "SUBTITLE_CONVERT_FAILED",
+			"無法讀取來源字幕檔",
+			"請確認檔案權限與磁碟狀態。")
+		return
+	}
+
+	// Content-based language decision — never trust the filename tag (§9b detector).
+	switch subtitle.Detect(data).Language {
+	case subtitle.LangTraditional:
+		ErrorResponse(c, 409, "SUBTITLE_ALREADY_TRADITIONAL",
+			"字幕已是繁體中文，無需轉換", "")
+		return
+	case subtitle.LangSimplified, subtitle.LangAmbiguous:
+		// proceed with conversion
+	default:
+		ErrorResponse(c, 400, "SUBTITLE_NOT_SIMPLIFIED",
+			"該字幕不是簡體中文，無法轉換",
+			"僅支援將簡體中文字幕轉為繁體中文。")
+		return
+	}
+
+	// Convert simplified → traditional (OpenCC s2twp).
+	converted, err := h.converter.ConvertS2TWP(data)
+	if err != nil {
+		slog.Error("OpenCC conversion failed", "path", sourcePath, "error", err)
+		ErrorResponse(c, 500, "SUBTITLE_CONVERT_FAILED",
+			"字幕轉換失敗", "請稍後再試。")
+		return
+	}
+
+	// Place the converted track as {name}.zh-Hant.{ext} (non-destructive: the source
+	// zh-Hans file stays; the placer backs up any pre-existing zh-Hant sidecar).
+	placeResult, err := h.placer.Place(subtitle.PlaceRequest{
+		MediaFilePath: cleanMediaPath,
+		SubtitleData:  converted,
+		Language:      subtitle.LangTraditional,
+		Format:        sourceExt,
+	})
+	if err != nil {
+		slog.Error("Failed to place converted subtitle", "media_file_path", cleanMediaPath, "error", err)
+		ErrorResponse(c, 500, "SUBTITLE_PLACE_FAILED",
+			"無法寫入轉換後的字幕檔："+err.Error(),
+			"請確認檔案權限與磁碟空間。")
+		return
+	}
+
+	// Persist status (pointer flip only; non-fatal on failure — the file is placed).
+	if err := h.updateSubtitleDB(c.Request.Context(), req.MediaID, req.MediaType,
+		placeResult.SubtitlePath, placeResult.Language, 1.0); err != nil {
+		slog.Error("Failed to update subtitle DB after convert",
+			"media_id", req.MediaID, "error", err)
+	}
+
+	SuccessResponse(c, map[string]interface{}{
+		"subtitle_path": placeResult.SubtitlePath,
+		"language":      placeResult.Language,
+		"source_path":   sourcePath,
 	})
 }
 
