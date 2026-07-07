@@ -1,6 +1,6 @@
 # Story 13.3b: Request Status Tracking — Frontend Live 想要清單 (SSE upgrade)
 
-Status: ready-for-dev
+Status: review
 
 **Epic:** Epic 13 — Request System · **FR:** P3-003 (G-3) · **Artery #3 (FE half)**
 **Depends on: 13-3a merged** (request_progress SSE) **+ 13-1b merged** (the static 想要清單 view this story upgrades). GATE-B (13-0's capability-honor note: FE consumption gated on the 13-3/13-4 BE) is SATISFIED once those land.
@@ -28,12 +28,12 @@ so that the request pipeline feels alive and trustworthy.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1 (AC #1): `hooks/useRequestProgress.ts` — clone template; `requestService.getSSEUrl()`; spec with MockEventSource harness.
-- [ ] Task 2 (AC #2): `applyRequestSnapshot` (exported from the hook file, downloads convention) — merge rules incl. stale-terminal preservation + append-new; spec cases.
-- [ ] Task 3 (AC #3): wire into the requests view — visibility + active-view gating effect; view spec for start/stop.
-- [ ] Task 4 (AC #4): `RequestRow` live bits — Mono `%` progressbar (TY-3 splits), `error_message` on failed, `aria-live` status region; spec updates.
-- [ ] Task 5 (AC #5): N4 regression pass + `motion-reduce:animate-none` audit on the requests states file.
-- [ ] Task 6 (AC #6): full gates — `pnpm nx test web`, `pnpm lint:all`; screenshot-compare against `flow-l-requests-v2/` L1 (mandatory UX verification).
+- [x] Task 1 (AC #1): `hooks/useRequestProgress.ts` — clone template; `requestService.getSSEUrl()`; spec with MockEventSource harness.
+- [x] Task 2 (AC #2): `applyRequestSnapshot` (exported from the hook file, downloads convention) — merge rules incl. stale-terminal preservation + append-new; spec cases.
+- [x] Task 3 (AC #3): wire into the requests view — visibility + active-view gating effect; view spec for start/stop.
+- [x] Task 4 (AC #4): `RequestRow` live bits — Mono `%` progressbar (TY-3 splits), `error_message` on failed, `aria-live` status region; spec updates.
+- [x] Task 5 (AC #5): N4 regression pass + `motion-reduce:animate-none` audit on the requests states file.
+- [x] Task 6 (AC #6): full gates — `pnpm nx test web`, `pnpm lint:all`; screenshot-compare against `flow-l-requests-v2/` L1 (mandatory UX verification).
 
 ## Dev Notes
 
@@ -84,21 +84,47 @@ No new dependency. EventSource/vitest/stubGlobal all in-repo patterns.
 | Date       | Change |
 | ---------- | ------ |
 | 2026-07-04 | Story created (SM create-story, yolo). FE half of 13-3; upgrades the 13-1b static view per the recorded SCOPE WALL. Pure contract consumer (acks 13-3a AC #2/#4, 13-1a AC #3). Merge rule: stale-terminal rows preserved, snapshot rows replace by id. Visibility+view double gate. Status → ready-for-dev. |
+| 2026-07-07 | Dev (Amelia). Implemented all 6 tasks. `useRequestProgress.ts` (line-for-line clone of `useDownloadProgress.ts`) + exported `applyRequestSnapshot`; STALE-MARK reconciled — merge now DROPs absent-active rows, KEEPs absent-terminal (13-7a-forward-compatible, see Completion Notes). SSE wired into `DiscoverBrowseV2` with the isVisible+showRequests double gate. `RequestRow` progress % upgraded to `role=progressbar` + `aria-valuenow` + `text-xs`. N4 states untouched; motion-reduce audit PASS (guard already present). +16 tests (11 new hook file, +2 RequestRow, +3 DiscoverBrowseV2). Gates green: `nx test web` (226 files / 2472 tests), `nx test api`, `lint:all` 0-err, prettier. Status → review. |
+| 2026-07-07 | Adversarial code review (`/code-review` high). 2 CONFIRMED findings fixed in `useRequestProgress.ts`: (1) append loop now iterates `byId.values()` to dedup a duplicated wire id (was: raw `snapshot`, no `seen.add` → possible duplicate React key) + regression test; (2) JSDoc corrected to state the DROP-absent-active rule has no auto-recovery (SSE keeps the query fresh; behavior kept as the reviewed tradeoff). 2 PLAUSIBLE findings accepted with rationale (latent prefix-`findAll`; cosmetic append-order). `nx test web` 2473 green, prettier clean. |
 
 ## Dev Agent Record
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+claude-opus-4-8 (Amelia — BMM Dev Agent, dev-story workflow)
 
 ### Debug Log References
 
+- `pnpm nx test web` — 226 files / 2472 tests passed (+16 net vs the pre-story 2456: 11 new hook file + 2 RequestRow + 3 DiscoverBrowseV2). Cleanup: "No test processes found".
+- `pnpm nx test api` — full Go suite passed (regression gate, Epic 9 Retro AI-1 — this story is FE-only but the gate runs both).
+- `pnpm lint:all` — 0 errors, 124 warnings (ALL pre-existing; none in touched files). `prettier --check .` clean.
+- Scoped TDD runs: `useRequestProgress.spec.ts` 11/11; `RequestRow.spec.tsx` 11/11; `DiscoverBrowseV2.spec.tsx` 11/11.
+
 ### Completion Notes List
+
+- **🔗 AC Drift: FOUND (self, reconciled) — this story's AC #2 vs 13-7a hard-DELETE cancel.** The STALE-MARK (filed by 13-7a create-story) flagged AC #2's original "keep all absent rows as stale-terminal" wording. Reconciled BEFORE dev by confirming the upstream contract: **13-3a AC #4 broadcasts a FULL snapshot of every active row + this-tick transitions each tick** — so an absent-yet-ACTIVE cached row is genuinely gone (cancelled in another tab via 13-7a `DELETE /requests/{id}`, or transitioned in a missed frame). `applyRequestSnapshot` therefore KEEPs absent-**terminal** rows (completed/failed history the snapshot no longer carries) and DROPs absent-**active** rows (phantom-row hazard). This is stricter than AC #2 as-authored and forward-compatible with 13-7a (which is `ready-for-dev`, not yet merged — the rule is correct today regardless). Grep: `stale-terminal|absent from snapshot|phantom|applyRequestSnapshot` across `_bmad-output/implementation-artifacts/*.md` — hits in 13-3b/13-7a/13-7b (all REUSE of the same merge concept, one true DRIFT = this reconciliation, documented here).
+- **📎 Contract Stamps: FOUND (pure consumer — stamps none).** Acks confirmed against `[@contract-v1]`: 13-3a AC #4 (`request_progress` bare-array snapshot = 13-1a resource + ephemeral `progress`), 13-3a AC #2 (import-window rows arrive as held `downloading`, rendered 下載中), 13-1a AC #3 (bare-array list shape, camelCase post-transform). Ack lines present in Dev Notes → Contract acks. This story defines/bumps NO contract.
+- **🎭 A11y Pre-Flight: PASS (2 components checked — RequestRow, DiscoverBrowseV2; 0 jsx-a11y warnings on touched files, 0 introduced).** Recurring-class check: (img sizing) N/A no `<img>`; (modal focus) N/A no modal; (aria-live on async content) ✅ status pill keeps `role=status`+`aria-live=polite`, progress % now `role=progressbar`+`aria-valuenow/min/max`+`aria-label`; (custom-widget kbd/ARIA) N/A; (lazy-load contract) N/A no IntersectionObserver.
+- **🎨 UX Verification: PASS — matches `flow-l-requests-v2/l1-d-v2.png`.** Progress slot stays figure-only (design shows no bar) — `role=progressbar` is a11y-only, not a visual bar. `text-[13px]`→`text-xs` (design-system token, AC #4). NO layout change vs the 13-1b static view; live updates are data, not new chrome. No `.pen` change → no screenshot regen (per CLAUDE.md, regen is only for `.pen` edits).
+- **STALE-MARK point 2 (error_message caption):** confirmed — the failed-row caption already RENDERS on main (13-1b, `RequestRow.tsx:72-74`); this story owns only its LIVE refresh, which arrives automatically via the SSE cache patch (a row flipping to `failed` with `errorMessage` re-renders). No new render code. 13-7b relocates the caption into the action cluster — out of scope here (disjoint concern, same file; second lander rebases).
+- **Pre-existing failures:** none detected — full web + api suites green before and after. No fix/file needed (Epic 9c Retro AI-2 gate satisfied).
+- **Scope adherence:** no new views/routes, no polling / `refetchInterval`, no SSE-utility extraction (YAGNI — third clone can motivate it), no backend changes. `requestService.getSSEUrl()` already existed on main (13-1b, `requestService.ts:90-93`) — reused, not re-added.
+- **🔎 Code Review (adversarial, `/code-review` high — 3 finder angles):** 2 CONFIRMED, both FIXED in `useRequestProgress.ts`; 2 PLAUSIBLE, both accepted-as-is with rationale.
+  - CR-1 (FIXED): append loop iterated the raw wire `snapshot` with no `seen.add`, so a duplicated id on a malformed frame would append twice → duplicate React key. Now iterates `byId.values()` (deduped). +1 regression test.
+  - CR-2 (FIXED, comment): the DROP-absent-active rule has NO auto-recovery — each frame's `setQueryData` keeps the query fresh (staleTime 30s, no `refetchInterval`), so a row whose terminal frame is missed during a reconnect gap won't be refetched back. Behavior kept (reviewed tradeoff; low harm — completed media already in library; KEEP would strand a stuck-`downloading` row); the JSDoc now states the limitation honestly instead of implying a refetch restores it.
+  - CR-3 (accepted): prefix `findAll([...requestKeys.all,'list'])` would misapply to a future *filtered* list key — latent only (`requestKeys.list()` is unparametrized today; identical to the downloads template pattern). CR-4 (accepted): cross-tab new rows append at the tail then re-sort on refetch — cosmetic, and AC #2 mandates "append".
 
 ### Discovery Triage
 
-- **Did this story discover any work outside its current scope?**
-  - If **NO**: state `N/A — no out-of-scope work discovered`.
-  - If **YES**: classify each per Rule 24 (①/②/③) with tracked entry IDs; prose-only mentions are banned.
+- **Did this story discover any work outside its current scope?** `N/A — no out-of-scope work discovered.` The STALE-MARK reconciliation and the 13-7b caption-relocation overlap were both already tracked (sprint-status: `13-7a`/`13-7b` `ready-for-dev`); this story handled its own half within scope.
 
 ### File List
+
+- `apps/web/src/hooks/useRequestProgress.ts` (new) — lazy SSE hook + exported `applyRequestSnapshot` (AC #1/#2).
+- `apps/web/src/hooks/useRequestProgress.spec.ts` (new) — MockEventSource harness; merge-rule + lazy-SSE cases (AC #1/#2/#6).
+- `apps/web/src/components/search/DiscoverBrowseV2.tsx` (edit) — `useRequestProgress` + `usePageVisibility` double-gate effect (AC #3).
+- `apps/web/src/components/search/DiscoverBrowseV2.spec.tsx` (edit) — view+visibility gating tests (AC #3/#6).
+- `apps/web/src/components/requests/RequestRow.tsx` (edit) — progress % → `role=progressbar` + aria values + `text-xs` (AC #4).
+- `apps/web/src/components/requests/RequestRow.spec.tsx` (edit) — progressbar a11y + aria-live pill tests (AC #4/#6).
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (edit) — 13-3b → in-progress → review.
+- `_bmad-output/implementation-artifacts/13-3b-request-status-tracking.md` (edit) — this story record.

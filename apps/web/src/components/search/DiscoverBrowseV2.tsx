@@ -10,7 +10,7 @@
  * FilterChipBar / FilterBottomSheet / SavePresetDialog / useFilterState /
  * useDiscoverResults — no new filter engine, no new backend.
  */
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { getRouteApi } from '@tanstack/react-router';
 import { SlidersHorizontal } from 'lucide-react';
 import { MediaTypeTabs, type MediaTypeFilter } from './MediaTypeTabs';
@@ -30,6 +30,8 @@ import { RequestsView } from '../requests/RequestsView';
 import { useFilterState } from '../../hooks/useFilterState';
 import { useDiscoverResults } from '../../hooks/useDiscoverResults';
 import { useOwnedMedia } from '../../hooks/useOwnedMedia';
+import { useRequestProgress } from '../../hooks/useRequestProgress';
+import { usePageVisibility } from '../../hooks/useDownloads';
 import { activeFilterChips, countActiveFilters, hasActiveFilters } from '../../lib/discoverFilters';
 
 const routeApi = getRouteApi('/discover');
@@ -108,6 +110,17 @@ export function DiscoverBrowseV2() {
     navigate({
       search: (prev) => ({ ...prev, view: showRequests ? undefined : 'requests' }),
     });
+
+  // Story 13-3b AC #3 — lazy request_progress SSE. Mirrors DownloadsBrowseV2:109-114
+  // (never a bare mount effect, §8) with an ADDED view gate: connect only while the
+  // 想要清單 view is active AND the page is visible; leaving the view or hiding the
+  // tab closes the EventSource (no idle connection — Playwright networkidle stays safe).
+  const { startTracking, stopTracking } = useRequestProgress();
+  const isVisible = usePageVisibility();
+  useEffect(() => {
+    if (showRequests && isVisible) startTracking();
+    else stopTracking();
+  }, [showRequests, isVisible, startTracking, stopTracking]);
 
   const totalPages =
     currentType === 'movie'

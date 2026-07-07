@@ -41,9 +41,9 @@ export interface RequestRowProps {
 export function RequestRow({ request }: RequestRowProps) {
   const token = STATUS_TOKENS[request.status] ?? STATUS_TOKENS.pending;
   const date = request.requestedAt?.slice(0, 10) ?? '';
-  const pct =
+  const pctNum =
     request.status === 'downloading' && typeof request.progress === 'number'
-      ? `${Math.round(request.progress * 100)}%`
+      ? Math.round(request.progress * 100)
       : null;
 
   return (
@@ -88,10 +88,20 @@ export function RequestRow({ request }: RequestRowProps) {
         {token.label}
       </span>
 
-      {/* Mono progress slot — populated by 13-3b's request_progress SSE */}
-      {pct && (
-        <span className="shrink-0 font-mono text-[13px] tabular-nums text-[var(--accent-text)]">
-          {pct}
+      {/* Mono progress slot — populated live by 13-3b's request_progress SSE.
+          Figure-only per design L1 (no bar); exposed as a progressbar for a11y
+          (DownloadCardV2 pattern). "%" is not a CJK unit, so TY-3 keeps it in the
+          number's Mono node — no split. */}
+      {pctNum !== null && (
+        <span
+          role="progressbar"
+          aria-valuenow={pctNum}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label={`${request.title} 下載進度`}
+          className="shrink-0 font-mono text-xs tabular-nums text-[var(--accent-text)]"
+        >
+          {pctNum}%
         </span>
       )}
     </div>
