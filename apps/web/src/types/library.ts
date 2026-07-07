@@ -1,3 +1,5 @@
+import type { ProductionCountry } from './tmdb';
+
 export type SortField = 'title' | 'release_date' | 'rating' | 'created_at';
 export type SortOrder = 'asc' | 'desc';
 
@@ -44,6 +46,9 @@ export interface LibraryMovie {
   audioChannels?: number;
   subtitleTracks?: string;
   hdrFormat?: string;
+  // Production countries (§9b CN-subtitle policy source) — exposed by
+  // disc-2026-07-production-countries-detail-api. NULL until re-scanned.
+  productionCountries?: ProductionCountry[];
   createdAt: string;
   updatedAt: string;
 }

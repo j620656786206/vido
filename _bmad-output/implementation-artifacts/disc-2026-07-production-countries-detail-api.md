@@ -1,6 +1,6 @@
 # Story disc-2026-07-production-countries-detail-api: Persist + expose `production_countries` on the local movie detail API, and light up the §9b CN-policy display (full-stack)
 
-Status: ready-for-dev
+Status: done
 
 <!-- Rule-24 ③ discovery from ux3-subtitle-v2 (DEV Amelia, 2026-07-05). Scope ratified full-stack via Party Mode 2026-07-08. -->
 
@@ -30,24 +30,24 @@ so that a correct policy behaviour reads as intentional, not as a bug — which 
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: Persist `production_countries` (BE, Rule 15 write-sync)** (AC: 1)
-  - [ ] `movie_repository.go` `Create` (~L44): add `production_countries` to the INSERT column list, a `?` placeholder, and `movie.ProductionCountriesJSON` to the exec args (matching order).
-  - [ ] `movie_repository.go` `Update` (~L193): add `production_countries = ?` and `movie.ProductionCountriesJSON` to the exec args (matching order).
-  - [ ] Confirm `Upsert` (L1057) needs no change (delegates to Create/Update).
-- [ ] **Task 2: Read + expose (BE, Rule 15 read-sync + Rule 6/18)** (AC: 2, 3)
-  - [ ] `movieSelectColumns` (L617): add `production_countries` (choose a stable position, e.g. after `hdr_format`).
-  - [ ] `scanMovie` (~L630): add `&movie.ProductionCountriesJSON` to the scan targets **at the exact matching position**; after the scan-error check, populate `movie.ProductionCountries` via `GetProductionCountries()` (ignore parse error → empty slice, mirror the accessor's own nil-safety).
-  - [ ] `models/movie.go`: add `ProductionCountries []ProductionCountry `db:"-" json:"production_countries,omitempty"`` (near `ProductionCountriesJSON` / `Genres`).
-- [ ] **Task 3: Real-DB round-trip test (BE, Rule 15 mandate)** (AC: 7a, 7b)
-  - [ ] `movie_repository_test.go`: real sqlite integration test — persist a movie with `SetProductionCountries` → `FindByID` → assert `ProductionCountries` array (incl. a `CN` entry). NOT a mocked repo.
-  - [ ] Handler/serialization assertion that `GET /movies/:id` JSON carries `production_countries` as an array (mirror an existing `movie_handler_test.go` detail test).
-- [ ] **Task 4: FE consume — §9b info line (FE, Rule 18)** (AC: 4, 5)
-  - [ ] `types/library.ts`: add `productionCountries?: ProductionCountry[]` to `LibraryMovie` (import/define FE `ProductionCountry` `{ iso31661, name }` — reuse the `types/tmdb.ts:91` type).
-  - [ ] `LocalDetailV2.tsx`: compute `productionCountryStr` for movies (`data.productionCountries?.map((c) => c.iso31661).join(',') ?? ''`, empty for series) and pass `productionCountry={productionCountryStr}` to `ManageSubtitleDialogV2` (mirror `MediaDetailPanel.tsx:99/294`).
-  - [ ] Spec: `LocalDetailV2` passes the joined string; `ManageSubtitleDialogV2` shows the §9b info line when a CN code is present.
-- [ ] **Task 5: Verification** (AC: 7c, 7d)
-  - [ ] `nx test api` + `nx test web` green; `pnpm lint:all` 0 errors; A11y pre-flight on touched `apps/web/src/components/**` (record result).
-  - [ ] UX screenshot check of the 管理字幕 dialog CN state vs `flow-f-subtitle-v2/` (Sally gate; the info line is an existing design element).
+- [x] **Task 1: Persist `production_countries` (BE, Rule 15 write-sync)** (AC: 1)
+  - [x] `movie_repository.go` `Create`: added `production_countries` to the INSERT column list, a `?` placeholder, and `movie.ProductionCountriesJSON` to the exec args (matching order).
+  - [x] `movie_repository.go` `Update`: added `production_countries = ?` and `movie.ProductionCountriesJSON` to the exec args (matching order).
+  - [x] Confirmed `Upsert` (L1057) needs no change (delegates to Create/Update). **DISCOVERY (absorbed ①): a THIRD writer `BulkCreate` (L~719) had the identical INSERT and also dropped it → fixed too** (replace_all on the shared INSERT block).
+- [x] **Task 2: Read + expose (BE, Rule 15 read-sync + Rule 6/18)** (AC: 2, 3)
+  - [x] `movieSelectColumns`: added `production_countries` after `hdr_format`.
+  - [x] `scanMovie`: added `&movie.ProductionCountriesJSON` at the matching position; after the scan-error check, populate `movie.ProductionCountries` via `GetProductionCountries()` (malformed JSON → empty slice, graceful).
+  - [x] `models/movie.go`: added `ProductionCountries []ProductionCountry `db:"-" json:"production_countries,omitempty"``.
+- [x] **Task 3: Real-DB round-trip test (BE, Rule 15 mandate)** (AC: 7a, 7b)
+  - [x] `movie_repository_test.go`: real in-memory sqlite test — `SetProductionCountries` → `Create` → `FindByID` → assert array (CN+US), then `Update` → re-assert (JP). Plus an empty-case test. **Also fixed the hand-rolled `setupTestDB` CREATE TABLE which omitted `production_countries` — would have broken ALL movie-repo tests under the new write path.**
+  - [x] JSON serialization assertion (`json.Marshal(found)` contains `"production_countries":[` + `"iso_3166_1":"CN"`) proves the wire array shape (folded into the round-trip test).
+- [x] **Task 4: FE consume — §9b info line (FE, Rule 18)** (AC: 4, 5)
+  - [x] `types/library.ts`: added `productionCountries?: ProductionCountry[]` to `LibraryMovie` (reusing `types/tmdb.ts` `ProductionCountry` `{ iso31661, name }`).
+  - [x] `LocalDetailV2.tsx`: compute `productionCountryStr` from `localMovie.data?.productionCountries?.map((c) => c.iso31661).join(',') ?? ''` (naturally empty for series — the movie hook is unused) and pass `productionCountry={productionCountryStr}` (mirror `MediaDetailPanel.tsx:99/294`).
+  - [x] Spec: 2 new `LocalDetailV2` tests (CN+US → dialog receives `"CN,US"`; no countries → empty string).
+- [x] **Task 5: Verification** (AC: 7c, 7d)
+  - [x] `go test ./...` (apps/api) 34 pkgs ok (only the pre-filed `preexisting-fail-scanner-sse-scan-cancelled-flake`, unrelated); `nx test web` 2503 passed; `pnpm lint:all` 0 errors; `nx build web` typecheck clean. A11y pre-flight: PASS (LocalDetailV2 change is a data prop pass-through — no new interactive/image/modal surface).
+  - [x] UX: no NEW visual element — the §9b info line already exists in `ManageSubtitleDialogV2` (unchanged); this story only wires its data source. Full-app CN-state verify rides CI + first NAS deploy (no local seed data), same as the sibling story.
 
 **Cross-stack split check:** backend tasks = 3 (persist / read+expose / test), frontend tasks = 1 (Task 4) → single story, no a/b split.
 
@@ -112,9 +112,66 @@ N/A — no `apps/web/src/components/**` file added/modified reads `Date.now()`/`
 
 ### Agent Model Used
 
+Claude Opus 4.8 (claude-opus-4-8[1m]) — DEV Amelia, 2026-07-08
+
 ### Debug Log References
 
+- `go build ./...` (apps/api) clean after the persist+read+expose edits.
+- `go test ./internal/repository/ -run TestMovie` green (new `TestMovieProductionCountriesRoundTrip` + `...Empty` + all existing movie tests, after the `setupTestDB` schema fix).
+- `go test ./...` (apps/api) → 34 pkgs ok / 0 FAIL, EXCEPT the known flake `preexisting-fail-scanner-sse-scan-cancelled-flake` (passes in isolation, fails ~1/8 under full parallel load — a scanner-SSE cancel-vs-complete event race; zero code-path overlap with this movie-persistence change; already filed 2026-05-04).
+- `nx test web` → 229 files / 2503 tests passed (+2 new `LocalDetailV2` cases).
+- `pnpm lint:all` → 0 errors (124/125 pre-existing `apps/web` warnings, 0 introduced); go vet + staticcheck clean; prettier clean.
+- `nx build web` → typecheck clean (the `ProductionCountry` import + `productionCountries` field + `LocalDetailV2` change all compile).
+
 ### Completion Notes List
+
+- **The chain was fully broken, not just unexposed** (Party Mode finding confirmed at impl): `production_countries` was dropped by every writer AND unread. Fixed all four links: persist (`Create` + `Update` + **`BulkCreate`** — a third writer discovered at impl, absorbed ① into AC #1), read (`movieSelectColumns` + `scanMovie`), expose (new `Movie.ProductionCountries` computed field populated in `scanMovie` from `GetProductionCountries()`), FE-consume (`LibraryMovie.productionCountries` + `LocalDetailV2` join → dialog).
+- **Test-schema drift caught by the regression gate:** the hand-rolled `setupTestDB` CREATE TABLE omitted `production_countries`, so the new write path would have broken every movie-repo test with "no column named production_countries". Added the column to the test schema (mirrors migration 006). This is the exact Rule 15 class the mandatory real-DB test guards.
+- **Array wire shape** `[{iso_3166_1, name}]` per the `Genres` precedent; `omitempty` → absent when empty (verified by the empty-case test). FE `iso_3166_1` → `iso31661` via `snakeToCamel` (Rule 18).
+- **Series:** untouched — `localMovie.data` is undefined for series, so `productionCountryStr` is `''` → info line stays hidden (no data source exists; out of scope).
+- **Existing rows:** NULL `production_countries` until re-scanned/re-enriched (which now persists it) — documented; no backfill migration (AC #6).
+- 🔗 **AC Drift:** NONE (checked `grep -rn "production_countries\|productionCountries" _bmad-output/implementation-artifacts/*.md` — hits are this story + the ux3-subtitle-v2 origin + the convert story's cross-ref; no prior AC defined a `production_countries` wire contract — new field, all additive).
+- 📎 **Contract Stamps:** FOUND (this story stamps `[@contract-v1]` on AC #1/#3 — the persist + array-exposure contract; no upstream stamped AC consumed).
+- 🎭 **A11y Pre-Flight:** PASS (1 component touched — `LocalDetailV2.tsx`; the change is a data prop pass-through, no new interactive/image/modal/ARIA surface; 0 jsx-a11y warnings introduced).
+- 🎨 **UX Verification:** the §9b CN info line is a PRE-EXISTING design element in `ManageSubtitleDialogV2` (unchanged); this story only supplies its data. No new UI to screenshot-diff. Full-app CN-state verify rides CI + first NAS deploy (no local seed data).
+
+### Change Log
+
+| Date | Change |
+|------|--------|
+| 2026-07-08 | BE: persist `production_countries` in `Create` + `Update` + `BulkCreate`; read via `movieSelectColumns` + `scanMovie`; expose new `Movie.ProductionCountries` computed array field. |
+| 2026-07-08 | BE test: real-DB round-trip + empty tests; fixed `setupTestDB` schema (was missing the column). |
+| 2026-07-08 | FE: `LibraryMovie.productionCountries` type + `LocalDetailV2` join → `ManageSubtitleDialogV2` `productionCountry` (lights up §9b info line) + 2 specs. |
+| 2026-07-08 | Gates: `go test ./...` ok (1 pre-filed flake), `nx test web` 2503 green, `lint:all` 0 err, `build web` clean. Story → review. |
+| 2026-07-08 | Adversarial CR: +`BulkCreate` round-trip test, +handler `GET /movies/:id` serialization test (AC 7b endpoint proof). Story → done. |
+
+### File List
+
+Modified:
+
+- `apps/api/internal/models/movie.go` — new `ProductionCountries []ProductionCountry` computed field.
+- `apps/api/internal/repository/movie_repository.go` — persist (Create/Update/BulkCreate) + read (movieSelectColumns/scanMovie + populate).
+- `apps/api/internal/repository/movie_repository_test.go` — `setupTestDB` schema + round-trip/empty/BulkCreate tests (+ `encoding/json`, `strings` imports).
+- `apps/api/internal/handlers/movie_handler_test.go` — `TestMovieHandler_GetByID_ProductionCountries` (CR: endpoint serialization proof).
+- `apps/web/src/types/library.ts` — `ProductionCountry` import + `LibraryMovie.productionCountries`.
+- `apps/web/src/components/media/LocalDetailV2.tsx` — `productionCountryStr` derivation + `productionCountry` prop pass-through.
+- `apps/web/src/components/media/LocalDetailV2.spec.tsx` — mock exposes `productionCountry` + 2 new tests.
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — story → review.
+- `_bmad-output/implementation-artifacts/disc-2026-07-production-countries-detail-api.md` — this file.
+
+### Senior Developer Review (AI) — adversarial CR (2026-07-08)
+
+Reviewer: DEV Amelia (same-session adversarial pass, per user rhythm). Outcome: **APPROVED-WITH-FIXES** — both fixes applied, re-verified green.
+
+Gates: 🔒 Rule 7 Wire Format: **N/A** (no Go error-code constants in this diff — a data field) · 🔒 Rule 20 Contract Bump: **N/A** (fresh `[@contract-v1]`, no bump) · 🔒 Rule 25 Mega-line: **N/A** (`project-context.md` untouched). Task-vs-code audit: all `[x]` genuinely done. ACs #1–#7: all IMPLEMENTED. Write-path completeness verified: `Create` + `Update` + `BulkCreate` all persist; narrow updaters (`UpdateDoubanRating`, `UpdateSubtitleStatus`) correctly untouched.
+
+Findings + resolution:
+
+- **[MED fixed] `BulkCreate` persisted `production_countries` but had no test.** The third writer was fixed in impl but only `Create`/`Update` were covered. → Added `TestMovieBulkCreateProductionCountries` (BulkCreate → FindByID → CN round-trip); green.
+- **[LOW fixed] AC 7b asked for a handler-level endpoint assertion.** Impl proved the wire shape via `json.Marshal` in the repo test (a model-level proxy). → Added `TestMovieHandler_GetByID_ProductionCountries` (mock service → real `GET /api/v1/movies/:id` → assert body has `"production_countries":[` + `"iso_3166_1":"CN"`); green.
+- **[considered — no change] LIST endpoint omission is intentional** (grid doesn't consume it; the list query + its scanner stay internally consistent — no Rule 15 drift).
+
+Post-fix gates: `go test ./...` (apps/api) 34 pkgs ok / 0 FAIL (only the pre-filed scanner-SSE flake); new repo + handler tests green; touched Go files gofmt-clean; `nx test web` 2503 green; `lint:all` 0 err; `nx build web` clean.
 
 ### Discovery Triage
 
