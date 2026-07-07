@@ -184,6 +184,7 @@ Post-fix gates: `go test ./...` (apps/api) → 34 pkgs ok / 0 FAIL; 10/10 conver
 ### Discovery Triage
 
 - **Downstream FE consumer — the `轉為繁中` button that calls this endpoint (out of scope, non-blocking).** This story ships the BE endpoint only. Wiring the F1 `ManageSubtitleDialogV2` convert action is a SEPARATE FE story because it is coupled to (a) the `.pen` convert affordance, currently "aspirational" / dropped per the `chore-pen-subtitle-v2-design-sync` party-mode ruling (2026-07-06), and (b) `disc-2026-07-production-countries-detail-api` for the CN `仍要轉換` warning display. Not filed as a new entry yet — the FE surface is design-blocked; file it when the `.pen` convert affordance is ratified. **[@contract-v1]** is stamped on AC #1/#2 so that future FE consumer acks the endpoint contract (Rule 20).
+- **Cross-story relationship (Party Mode 2026-07-08) — shares the dialog surface with `disc-2026-07-production-countries-detail-api`.** This endpoint's future FE convert BUTTON and that story's §9b CN INFO LINE live in the SAME `ManageSubtitleDialogV2` surface but are INDEPENDENTLY shippable: the info line is un-design-blocked (wired by the production-countries story), the button stays design-blocked pending the `.pen` affordance. **No change to this (merged) endpoint** — its server-side independence from `production_countries` (explicit click = `仍要轉換` override) was re-affirmed correct by the team.
 - (Dev: add any further in-flight discoveries here per Rule 24 before marking done.)
 
 ### File List
