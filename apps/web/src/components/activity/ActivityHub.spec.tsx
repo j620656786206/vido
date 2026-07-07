@@ -16,6 +16,18 @@ vi.mock('../../hooks/useActivity', () => ({ useActivity: vi.fn() }));
 vi.mock('../subtitle/GenerationBatchDialogV2', () => ({
   GenerationBatchDialogV2: ({ open }: { open: boolean }) =>
     open ? <div data-testid="generation-batch-dialog-stub" /> : null,
+  // keys imported by the workspace — harmless literals for the stub graph.
+  generationBatchPreviewKey: ['subtitles', 'generation-batch', 'preview'],
+  generationBatchItemsKey: ['subtitles', 'generation-batch', 'items'],
+  deriveRowStates: () => [],
+}));
+
+// Stub the workspace (ux3-ai-2) — its own spec covers the container/state matrix;
+// here we only assert the `?view=generation` gating renders it in place of the hub.
+vi.mock('../subtitle/GenerationWorkspaceV2', () => ({
+  GenerationWorkspace: ({ active }: { active: boolean }) => (
+    <div data-testid="generation-workspace-stub" data-active={String(active)} />
+  ),
 }));
 
 import { useActivity } from '../../hooks/useActivity';
@@ -44,16 +56,24 @@ function result(over: Record<string, unknown> = {}) {
   } as unknown as ReturnType<typeof useActivity>;
 }
 
-// ActivityHub renders Links to /library and /downloads — mount it in a router whose tree
-// has those routes so href generation resolves.
-function renderHub() {
-  const rootRoute = createRootRoute({ component: () => React.createElement(ActivityHub) });
+// ActivityHub reads `?view=generation` via getRouteApi('/activity') and renders Links to
+// /library and /downloads — mount it AS the /activity route so the search resolves.
+function renderHub(initialPath = '/activity') {
+  const rootRoute = createRootRoute();
+  const activityRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/activity',
+    validateSearch: (s: Record<string, unknown>) => ({
+      view: s.view === 'generation' ? 'generation' : undefined,
+    }),
+    component: ActivityHub,
+  });
   const mk = (p: string) =>
     createRoute({ getParentRoute: () => rootRoute, path: p, component: () => null });
-  const routeTree = rootRoute.addChildren([mk('/library'), mk('/downloads'), mk('/activity')]);
+  const routeTree = rootRoute.addChildren([mk('/library'), mk('/downloads'), activityRoute]);
   const router = createRouter({
     routeTree,
-    history: createMemoryHistory({ initialEntries: ['/'] }),
+    history: createMemoryHistory({ initialEntries: [initialPath] }),
   });
   return render(React.createElement(RouterProvider, { router } as never));
 }
@@ -196,5 +216,30 @@ describe('ActivityHub (v2 Activity hub — four states + fail-soft)', () => {
     expect(await screen.findByTestId('activity-recent-row')).toBeInTheDocument();
     expect(screen.queryByTestId('activity-pending-row')).toBeNull();
     expect(screen.queryByTestId('activity-downloads-row')).toBeNull();
+  });
+
+  it('[ux3-ai-2] ?view=generation hosts the workspace (active) in place of the hub body', async () => {
+    mockUseActivity.mockReturnValue(result({ data: summary() }));
+    renderHub('/activity?view=generation');
+    const ws = await screen.findByTestId('generation-workspace-stub');
+    expect(ws).toHaveAttribute('data-active', 'true');
+    // hub sections are gone; the workspace owns the surface
+    expect(screen.queryByTestId('activity-empty')).toBeNull();
+  });
+
+  it('[ux3-ai-2] the generation_batch active row LINKS to the workspace (?view=generation)', async () => {
+    mockUseActivity.mockReturnValue(
+      result({
+        data: summary({
+          activeJobs: {
+            status: 'ok',
+            jobs: [{ kind: 'generation_batch', percentDone: 30, current: 12, total: 38 }],
+          },
+        }),
+      })
+    );
+    renderHub();
+    const link = await screen.findByTestId('activity-generation-batch-link');
+    expect(link).toHaveAttribute('href', expect.stringContaining('view=generation'));
   });
 });
