@@ -55,6 +55,14 @@ import { libraryKeys } from '../../hooks/useLibrary';
 
 export const generationBatchPreviewKey = ['subtitles', 'generation-batch', 'preview'] as const;
 
+/**
+ * Query key the launcher caches its start-202 `items[]` under, so the ux3-ai-2
+ * WORKSPACE can render the full queue for a batch started this session (the status
+ * probe carries no items[] — disc-2026-07-generation-batch-status-items). Cleared
+ * on terminal; absent → the workspace falls back to attach-degraded.
+ */
+export const generationBatchItemsKey = ['subtitles', 'generation-batch', 'items'] as const;
+
 // ---------------------------------------------------------------------------
 // Row-state derivation (batch event is AUTHORITATIVE — 9R-16 CR caveat)
 // ---------------------------------------------------------------------------
@@ -738,15 +746,22 @@ export function GenerationBatchDialogV2({
             : { scope: 'missing' }
         );
         if (outcome.conflict) {
-          // A generation batch was already running (409) — attach to it.
+          // A generation batch was already running (409) — attach to it. We did NOT
+          // enumerate its items[], so clear any stale cache from a prior batch this
+          // session — the ux3-ai-2 workspace then shows attach-degraded (honest),
+          // never a previous batch's rows joined against this batch's progress.
           setItems([]);
           setFailedIds(new Set());
+          queryClient.removeQueries({ queryKey: generationBatchItemsKey });
           startBatchTracking(outcome.progress);
         } else if (outcome.result.totalItems === 0) {
           setEmptyScope(true);
         } else {
           setItems(outcome.result.items);
           setFailedIds(new Set());
+          // Cache items[] so the ux3-ai-2 workspace can render the full queue for
+          // this session's batch (the status probe carries none).
+          queryClient.setQueryData(generationBatchItemsKey, outcome.result.items);
           startBatchTracking({
             batchId: outcome.result.batchId ?? '',
             totalItems: outcome.result.totalItems,

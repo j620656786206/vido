@@ -10,7 +10,7 @@
  * fail-soft / data. Copy + icons live here — the backend sends copy-free enums.
  */
 import { useState } from 'react';
-import { Link } from '@tanstack/react-router';
+import { Link, getRouteApi } from '@tanstack/react-router';
 import {
   Radar,
   Captions,
@@ -24,6 +24,7 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { useActivity } from '../../hooks/useActivity';
 import { GenerationBatchDialogV2 } from '../subtitle/GenerationBatchDialogV2';
+import { GenerationWorkspace } from '../subtitle/GenerationWorkspaceV2';
 import type {
   ActivitySummary,
   ActiveJobsSection,
@@ -105,9 +106,8 @@ function ActiveSection({ section, onRetry }: { section: ActiveJobsSection; onRet
               {j.percentDone}%
             </span>
           );
-        return (
+        const row = (
           <ActivityRow
-            key={`${j.kind}-${i}`}
             icon={meta.icon}
             title={meta.title}
             detail={j.detail}
@@ -116,6 +116,22 @@ function ActiveSection({ section, onRetry }: { section: ActiveJobsSection; onRet
             testId={`activity-job-${j.kind}`}
           />
         );
+        // Story ux3-ai-2 — the generation-batch row LINKS to the immersive workspace
+        // (the WATCHER); the header CTA stays the LAUNCHER (dialog). D4-1: one row, one link.
+        if (j.kind === 'generation_batch') {
+          return (
+            <Link
+              key={`${j.kind}-${i}`}
+              to="/activity"
+              search={{ view: 'generation' }}
+              data-testid="activity-generation-batch-link"
+              className="block rounded-[var(--radius-lg)] transition-colors hover:bg-[var(--bg-tertiary)]/40"
+            >
+              {row}
+            </Link>
+          );
+        }
+        return <div key={`${j.kind}-${i}`}>{row}</div>;
       })}
     </SectionShell>
   );
@@ -229,14 +245,31 @@ function RecentSectionView({ section, onRetry }: { section: RecentSection; onRet
   );
 }
 
+const routeApi = getRouteApi('/activity');
+
 export function ActivityHub() {
   const { data, isLoading, isError, refetch } = useActivity();
+  const search = routeApi.useSearch();
   // Story ux3-subtitle-v2-batch AC 4a — the hub's launch CTA opens the batch
   // dialog with scope=missing (the ONLY Activity-side entry; D4-1 boundary).
   const [generationBatchOpen, setGenerationBatchOpen] = useState(false);
   const retry = () => {
     void refetch();
   };
+
+  // Story ux3-ai-2 — `?view=generation` hosts the F11 generation workspace in place
+  // of the hub body (the immersive WATCHER; the dialog stays the LAUNCHER). The
+  // workspace's own SSE is visibility-gated; leaving the view unmounts it → streams close.
+  if (search.view === 'generation') {
+    return (
+      <>
+        <div data-testid="activity-root" className="h-full">
+          <GenerationWorkspace active onLaunch={() => setGenerationBatchOpen(true)} />
+        </div>
+        <GenerationBatchDialogV2 open={generationBatchOpen} onOpenChange={setGenerationBatchOpen} />
+      </>
+    );
+  }
 
   return (
     <div

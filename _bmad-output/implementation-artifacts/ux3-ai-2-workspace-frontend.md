@@ -1,6 +1,6 @@
 # Story ux3-ai-2: AI generation workspace — frontend (F11 spec → build, PH3-G1 close-out)
 
-Status: ready-for-dev
+Status: review
 
 > ## 🛑 STOP GATE (read before ANY implementation)
 >
@@ -48,14 +48,14 @@ so that a long-running AI batch has a home I can leave and return to, instead of
 
 ## Tasks / Subtasks
 
-- [ ] Task 0 (STOP GATE): verify `ux3-ai-1-workspace-design` = done; extract node ids + IA/timestamp rulings from its Dev Agent Record; re-check the two conditional disc entries + 9R-17/9R-10a status in sprint-status.
-- [ ] Task 1 (AC 5): `hooks/useGenerationJobsFeed.ts` — unfiltered `transcription_*` listener, per-media map + feed accumulator + cap; spec (MockEventSource harness, slice-1 pattern).
-- [ ] Task 2 (AC 2, 3): workspace state composition — batch probe/seed/attach (`useGenerationBatchProgress` + `getGenerationBatchStatus`), `deriveRowStates` join, conditional items[] upgrade; spec.
-- [ ] Task 3 (AC 2, 3, 4, 6, 7): `components/subtitle/GenerationWorkspaceV2.tsx` (+ any design-record net-new row/feed components) — full state matrix, F9-verbatim terminal, feed pane, idle+preview+launcher, a11y; specs.
-- [ ] Task 4 (AC 1): hosting mechanic per ruling (activity route `validateSearch` + hub conditional render, or child route); SSE view+visibility double gate; route/view specs.
-- [ ] Task 5 (AC 6): Activity hub links — `generation_batch` row → workspace, CTA behavior per ruling, (conditional) detail cross-link; `ActivityHub` spec updates.
-- [ ] Task 6 (AC 8): Rule 21 headers (Pencil MCP verify), gallery fixtures + `-darwin` baselines (selective staging).
-- [ ] Task 7 (AC 9, 10): full gates + UX screenshot verify @390/768/1440 vs `f11-*.png`; Rule 20 ack lines; Discovery Triage updates.
+- [x] Task 0 (STOP GATE): ux3-ai-1 = done (merged #152) ✓; node ids + IA/timestamp rulings inherited from its Dev Agent Record; conditionals ALL backlog → baseline (attach-degraded, SSE-opportunistic single-job, cost SSE-only; 9R-10a no effect).
+- [x] Task 1 (AC 5): `hooks/useGenerationJobsFeed.ts` — unfiltered `transcription_*` + `generation_batch_progress`, per-media `singleJobs` (retire-on-terminal) + `feed` (cap 200, monotonic seq, NO timestamps); +8 spec cases (MockEventSource).
+- [x] Task 2 (AC 2, 3): `components/subtitle/generationWorkspace.ts` — pure `deriveWorkspaceMode` (loading/idle/single/running/attach/terminals) + `modeShowsFeed`; +11 spec cases.
+- [x] Task 3 (AC 2, 3, 4, 6, 7): `GenerationWorkspaceV2.tsx` — prop-driven presentational (full state matrix, F9-verbatim banner, event-log pane, idle+preview+launcher, a11y) + `GenerationWorkspace` container (probe→attach effect, hooks compose); +7 spec cases.
+- [x] Task 4 (AC 1): `routes/activity.tsx` `validateSearch` `view?:'generation'` (Rule 26 literal) + `ActivityHub` conditional workspace render; SSE gated on active+visible (container). +1 view-gating spec.
+- [x] Task 5 (AC 6): `generation_batch` active row → `?view=generation` Link (watcher); header CTA stays launcher; dialog caches start `items[]` (`generationBatchItemsKey`) so the workspace shows the full queue. Detail cross-link DEFERRED (ux3-ai-1 ruling). +1 link spec.
+- [x] Task 6 (AC 8): Rule 21 `// Design ref: … F11-D-v2 (l8FsB)` header; `generationWorkspace.ts` utility-exempt header; 3 gallery fixtures (running/budget_ceiling/idle) + 3 NEW `-darwin` baselines (selective-staged, 0 regen noise). `-linux` via CI.
+- [x] Task 7 (AC 9, 10): gates green — `nx test web` 229/2501, `nx test api` full, `lint:all` 0-err, build, prettier. UX verify: running baseline ≡ F11-D (l8FsB), budget_ceiling ≡ F12 F9-verbatim. Rule 20 acks + Discovery Triage below.
 
 **Cross-stack split check:** backend tasks = 0 (③-filed, none absorbed), frontend tasks = 8 → single story. ✓
 
@@ -124,19 +124,58 @@ so that a long-running AI batch has a home I can leave and return to, instead of
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+claude-opus-4-8 (Amelia — BMM Dev Agent, dev-story workflow, 2026-07-07)
 
 ### Debug Log References
 
+- `pnpm nx test web` — 229 files / 2501 tests green (+26 net new across the 4 new spec files + hub/dialog spec extensions). Cleanup: "No test processes found".
+- `pnpm nx test api` — full Go suite green (Epic 9 Retro AI-1 regression gate; FE-only story, gate runs both).
+- `pnpm lint:all` 0 errors (124 pre-existing warnings, none in touched files); `pnpm nx build web` green; `prettier --check` clean on all touched files.
+- Visual: `playwright --project=visual --update-snapshots` → 3 NEW `generation-workspace-v2/{running,budget_ceiling,idle}` `-darwin` baselines staged; 26 re-render-noise diffs `git checkout`-reverted (non-deterministic regen). `-linux` via CI bootstrap.
+
+### A11y Pre-Flight
+
+🎭 A11y Pre-Flight: PASS (2 new components — GenerationWorkspaceV2, ActivityHub edit; 0 jsx-a11y warnings introduced). Recurring classes: overall progress = `role="progressbar"` + `aria-valuenow/min/max` + `aria-label` (DownloadCardV2 precedent); status transitions = `aria-live="polite"` on the event-log `<ol>` + `role="status"` on the budget banner; skeletons `motion-reduce:animate-none`; 44px touch floor on all buttons. No modal/img/combobox in scope.
+
 ### Completion Notes List
+
+- **🎨 Reshape inherited from ux3-ai-1 (capability-honest):** the right pane is a session-scoped EVENT LOG (`useGenerationJobsFeed.feed`), not a transcript — `transcription_*` SSE carries only `{phase, message, percentage}`. NO timestamps rendered (SSE has none; feed keys use a monotonic `seq`) → the workspace reads no wall-clock (Rule 23-clean). Footer states 「僅狀態事件，不含逐字內容」.
+- **Capability walls honored:** no pause/resume/per-item-retry/per-item-cancel anywhere; `全部取消` is batch-wide only; movies-only; cost from SSE `spentUsd`/`budgetUsd` only (no HTTP cost surface — 9R-17 backlog); budget non-editable; no history. `deriveRowStates` (reused from the dialog) is the batch-status-authoritative row join.
+- **Baseline (no conditional upgrades — all disc entries backlog):** attach-degraded drawn honestly (status probe has no `items[]` → in-flight card + skeleton + honest note, `disc-2026-07-generation-batch-status-items`); single-job rows are SSE-opportunistic only (no load-time active_jobs join — `disc-2026-07-transcription-active-jobs`); cost SSE-only (9R-17); series unaffected (batch movies-only, 9R-10a).
+- **Architecture — launcher/watcher (ux3-ai-1 IA ruling):** the F8 dialog stays the LAUNCHER; the workspace is the immersive WATCHER hosted at `/activity?view=generation`. The dialog now caches its start-202 `items[]` under `generationBatchItemsKey` so the workspace renders the full queue for a batch started this session (a cold attach falls back to degraded — the honest baseline). The hub's `generation_batch` active row LINKS to the workspace; the header CTA still opens the dialog. D4-1: one row, one link, no second competing surface.
+- **Deviation — detail cross-link DEFERRED (AC 6c):** per ux3-ai-1's ruling, the `前往生成工作區` link inside the F3 dialog was NOT added (would edit a shipped Epic-6 frame's behavior; deferred to a future increment). Recorded, not silently dropped.
+- **🔗 AC Drift: N/A** — pure consumer of shipped 9R-16 v2 + 9R-18 contracts; no prior AC's observable behavior changed. (Dialog `items[]` cache is additive — the launcher persisting its own result, no contract change.)
+- **📎 Contract Stamps: FOUND** — see Rule 20 acks below (consumer; stamps nothing).
+- **Pre-existing failures:** none; full web+api suites green before and after (Epic 9c Retro AI-2 gate satisfied).
+- **🔎 Code Review (adversarial, `/code-review high`):** 2 CONFIRMED fixed, rest accepted.
+  - CR-1 (FIXED): the container read cached `items[]` via `queryClient.getQueryData` — a NON-reactive read. If the dialog caches `items[]` while the workspace is already mounted (idle → launch-CTA opens the dialog over the workspace → start), the workspace would stay in attach-degraded and never show the full queue. Switched to a `useQuery({ enabled:false })` subscription so a `setQueryData` write re-renders the workspace. `GenerationWorkspaceV2.tsx`.
+  - CR-2 (FIXED): the dialog's 409-attach path cleared local `items` but not the query cache — the workspace could join a PRIOR batch's stale `items[]` against the newly-attached batch's progress (wrong row states). Added `removeQueries(generationBatchItemsKey)` on 409-attach → attach-degraded (honest). `GenerationBatchDialogV2.tsx`.
+  - Accepted (non-issues): 3 concurrent `EventSource` to `/events` (established per-hook clone convention, §8 no shared utility — each filters its events; under the browser cap); `BudgetBanner` `pausedCount || …` fallback (in `budget_ceiling`, `pausedCount > 0` always — defensive only). Full web suite 2501 green post-fix.
+
+### Rule 20 contract acks (consumer — stamps nothing)
+
+- confirmed against `[@contract-v2]` (Story 9R-16 AC #1/#2/#3/#7/#9) — generation-batch endpoints/status/cancel/preview + 11-key `generation_batch_progress` SSE + `budget_ceiling` semantics; consumed via `subtitleService` + `useGenerationBatchProgress` as shipped (re-verified against the merged shapes this session, unchanged since ux3-subtitle-v2-batch).
+- confirmed against `[@contract-v1]` (Story 9R-18) — media ids are UUID strings end-to-end incl. `transcription_*` `media_id`; the feed hook + workspace join on string ids, zero Number()/String() coercion.
+- confirmed against `[@contract-v1]` (Story 13-3a §8 shape) — the visibility+view SSE double-gate pattern reused from 13-3b (DiscoverBrowseV2) for lazy §8 compliance.
 
 ### Discovery Triage
 
-- **Did this story discover any work outside its current scope?**
-  - If **NO**: state `N/A — no out-of-scope work discovered`.
-  - If **YES**: classify each per Rule 24 (①/②/③) with tracked entry IDs; prose-only mentions are banned.
-- Authoring-time note: no NEW discoveries this run — the epic's gaps were filed by ux3-ai-1 (`disc-2026-07-transcription-active-jobs`) and earlier stories (`disc-2026-07-generation-batch-status-items`, `9R-17`, `9R-10a`, `disc-2026-07-v2-library-multiselect`); this story consumes them as conditionals, re-verify at Task 0.
+- **Did this story discover any work outside its current scope?** `N/A — no NEW out-of-scope work discovered.` The epic's gaps were filed by ux3-ai-1 (`disc-2026-07-transcription-active-jobs`) and earlier stories (`disc-2026-07-generation-batch-status-items` — priority raised by ux3-ai-1's addendum; `9R-17`, `9R-10a`, `disc-2026-07-v2-library-multiselect`). This story consumed them as conditionals (all still `backlog` at Task 0 → baseline built); each is bidirectionally linked in sprint-status. No new entry needed.
 
 ### File List
 
-(Expected: `hooks/useGenerationJobsFeed.ts` (+spec), `components/subtitle/GenerationWorkspaceV2.tsx` (+spec, + any design-record net-new components), `routes/activity.tsx` OR `routes/activity.generation.tsx`, `components/activity/ActivityHub.tsx` (+spec), gallery fixtures + `-darwin` baselines, sprint-status.yaml, this file.)
+New:
+- `apps/web/src/hooks/useGenerationJobsFeed.ts` (+ `.spec.ts`) — unfiltered SSE feed + single-jobs hook (AC 4/5).
+- `apps/web/src/components/subtitle/generationWorkspace.ts` (+ `.spec.ts`) — pure `deriveWorkspaceMode`/`modeShowsFeed` (AC 2/3).
+- `apps/web/src/components/subtitle/GenerationWorkspaceV2.tsx` (+ `.spec.tsx`) — presentational workspace + container (AC 2/3/4/6/7).
+- `tests/visual/…/components/generation-workspace-v2/{running,budget_ceiling,idle}/default-visual-darwin.png` — 3 baselines (AC 8; `-linux` via CI).
+
+Modified:
+- `apps/web/src/routes/activity.tsx` — `validateSearch` `view?:'generation'` (Rule 26) (AC 1).
+- `apps/web/src/components/activity/ActivityHub.tsx` (+ `.spec.tsx`) — `?view=generation` hosts the workspace; `generation_batch` row → workspace Link (AC 1/6).
+- `apps/web/src/components/subtitle/GenerationBatchDialogV2.tsx` — `generationBatchItemsKey` export + start-`items[]` cache writeback (AC 5).
+- `apps/web/src/routes/test/-gallery.fixtures.tsx` — 3 workspace fixtures (AC 8).
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — ux3-ai-2 → in-progress → review.
+- `_bmad-output/implementation-artifacts/ux3-ai-2-workspace-frontend.md` — this record.
+
+Untouched by design (scope walls): the F8/F9 dialog launch flow (only additive items[] cache), `navModel.ts` (no nav slot), `useGenerationBatchProgress`/`useGenerationProgress`/`deriveRowStates` (reused as-is), all backend.

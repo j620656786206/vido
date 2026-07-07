@@ -173,6 +173,7 @@ import { GlossaryRowV2 } from '../../components/subtitle/GlossaryRowV2';
 import { GlossaryPanelV2 } from '../../components/subtitle/GlossaryPanelV2';
 import { ManageSubtitleDialogV2 } from '../../components/subtitle/ManageSubtitleDialogV2';
 import { GenerationBatchPanelV2 } from '../../components/subtitle/GenerationBatchDialogV2';
+import { GenerationWorkspaceV2 } from '../../components/subtitle/GenerationWorkspaceV2';
 import { glossaryKeys } from '../../hooks/useGlossary';
 import type { GlossaryTerm } from '../../services/glossaryService';
 import { BackupManagement } from '../../components/settings/BackupManagement';
@@ -3741,6 +3742,120 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
       onClose: noop,
     },
     penNode: 'screen-section', // Screen F9-D-v2 (JMqPg)
+    statesOnly: ['default'],
+  },
+  // --- ux3-ai-2 generation workspace (Screen F11-D-v2 l8FsB / F12-D-v2 iH98f) ---
+  {
+    id: 'generation-workspace-v2/running',
+    label: 'subtitle/GenerationWorkspaceV2 (running — queue + live event log)',
+    component: GenerationWorkspaceV2 as ComponentType<Record<string, unknown>>,
+    props: {
+      mode: 'running',
+      progress: {
+        batchId: 'b1',
+        totalItems: 38,
+        currentIndex: 12,
+        currentMediaId: 'm12',
+        currentItem: '奧本海默',
+        successCount: 12,
+        failCount: 0,
+        pausedCount: 0,
+        status: 'running',
+        spentUsd: 0.42,
+        budgetUsd: 5,
+      },
+      items: [
+        { mediaId: 'm0', title: '沙丘：第二部' },
+        { mediaId: 'm12', title: '奧本海默' },
+        { mediaId: 'm20', title: '花月殺手' },
+      ],
+      activeItemProgress: {
+        phase: 'transcribing',
+        failedPhase: null,
+        percentage: null,
+        message: '轉錄音訊中…',
+        jobId: null,
+        error: null,
+        srtPath: null,
+        zhSrtPath: null,
+      },
+      feed: [
+        { seq: 1, tone: 'done', stage: '完成', mediaId: 'm0', message: '沙丘：第二部' },
+        { seq: 2, tone: 'active', stage: '轉錄中', mediaId: 'm12', trail: '45%' },
+        { seq: 3, tone: 'info', stage: '本次用量', message: '本批次', trail: '$0.42' },
+      ],
+      onLaunch: noop,
+      onConfirmCancelAll: noop,
+      onResume: noop,
+      onRetryData: noop,
+    },
+    penNode: 'screen-section', // Screen F11-D-v2 (l8FsB)
+    width: 1200,
+    statesOnly: ['default'],
+  },
+  {
+    id: 'generation-workspace-v2/budget_ceiling',
+    label: 'subtitle/GenerationWorkspaceV2 (budget_ceiling — F9-verbatim banner + 下次繼續)',
+    component: GenerationWorkspaceV2 as ComponentType<Record<string, unknown>>,
+    props: {
+      mode: 'budget_ceiling',
+      progress: {
+        batchId: 'b1',
+        totalItems: 38,
+        currentIndex: 12,
+        currentMediaId: 'm12',
+        currentItem: '奧本海默',
+        successCount: 12,
+        failCount: 0,
+        pausedCount: 26,
+        status: 'budget_ceiling',
+        spentUsd: 5,
+        budgetUsd: 5,
+      },
+      items: [
+        { mediaId: 'm0', title: '沙丘：第二部' },
+        { mediaId: 'm12', title: '奧本海默' },
+        { mediaId: 'm20', title: '花月殺手' },
+      ],
+      feed: [{ seq: 1, tone: 'info', stage: '已達本次預算上限', message: '本批次' }],
+      onLaunch: noop,
+      onConfirmCancelAll: noop,
+      onResume: noop,
+      onRetryData: noop,
+    },
+    penNode: 'screen-section', // Screen F12-D-v2 (iH98f)
+    width: 1200,
+    statesOnly: ['default'],
+  },
+  {
+    id: 'generation-workspace-v2/idle',
+    label: 'subtitle/GenerationWorkspaceV2 (idle — preview count + launcher)',
+    component: GenerationWorkspaceV2 as ComponentType<Record<string, unknown>>,
+    props: {
+      mode: 'idle',
+      progress: {
+        batchId: '',
+        totalItems: 0,
+        currentIndex: 0,
+        currentMediaId: null,
+        currentItem: '',
+        successCount: 0,
+        failCount: 0,
+        pausedCount: 0,
+        status: 'idle',
+        spentUsd: 0,
+        budgetUsd: 0,
+      },
+      items: [],
+      feed: [],
+      previewCount: 38,
+      onLaunch: noop,
+      onConfirmCancelAll: noop,
+      onResume: noop,
+      onRetryData: noop,
+    },
+    penNode: 'screen-section', // Screen F13-D-v2 (F7ohe) idle panel
+    width: 1200,
     statesOnly: ['default'],
   },
 ];
