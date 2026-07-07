@@ -103,11 +103,11 @@ type SpokenLanguage struct {
 // Movie represents a movie entity in the database
 type Movie struct {
 	// Core fields
-	ID            string         `db:"id" json:"id"`
-	Title         string         `db:"title" json:"title"`
+	ID            string     `db:"id" json:"id"`
+	Title         string     `db:"title" json:"title"`
 	OriginalTitle NullString `db:"original_title" json:"original_title,omitempty"`
-	ReleaseDate   string         `db:"release_date" json:"release_date"`
-	Genres        []string       `db:"genres" json:"genres"` // Simple string array for backward compatibility
+	ReleaseDate   string     `db:"release_date" json:"release_date"`
+	Genres        []string   `db:"genres" json:"genres"` // Simple string array for backward compatibility
 
 	// Rating fields (kept for backward compatibility)
 	Rating NullFloat64 `db:"rating" json:"rating,omitempty"`
@@ -130,24 +130,29 @@ type Movie struct {
 	TMDbID           NullInt64  `db:"tmdb_id" json:"tmdb_id,omitempty"`
 
 	// New fields for enhanced TMDb data (Story 2-6)
-	CreditsJSON            NullString `db:"credits" json:"-"`              // JSON stored in DB
+	CreditsJSON             NullString `db:"credits" json:"-"`              // JSON stored in DB
 	ProductionCountriesJSON NullString `db:"production_countries" json:"-"` // JSON stored in DB
-	SpokenLanguagesJSON    NullString `db:"spoken_languages" json:"-"`     // JSON stored in DB
+	SpokenLanguagesJSON     NullString `db:"spoken_languages" json:"-"`     // JSON stored in DB
+
+	// ProductionCountries is the parsed, wire-exposed form of ProductionCountriesJSON,
+	// populated on read (scanMovie) via GetProductionCountries(). It drives the FE §9b
+	// CN-subtitle-policy display. db:"-" — computed, never a scan/write target.
+	ProductionCountries []ProductionCountry `db:"-" json:"production_countries,omitempty"`
 
 	// File tracking fields
 	FilePath NullString `db:"file_path" json:"file_path,omitempty"`
 	FileSize NullInt64  `db:"file_size" json:"file_size,omitempty"`
 
 	// Parse tracking fields
-	ParseStatus    ParseStatus    `db:"parse_status" json:"parse_status"`
-	MetadataSource NullString `db:"metadata_source" json:"metadata_source,omitempty"`
+	ParseStatus    ParseStatus `db:"parse_status" json:"parse_status"`
+	MetadataSource NullString  `db:"metadata_source" json:"metadata_source,omitempty"`
 
 	// Subtitle tracking fields
-	SubtitleStatus       SubtitleStatus  `db:"subtitle_status" json:"subtitle_status"`
-	SubtitlePath         NullString  `db:"subtitle_path" json:"subtitle_path,omitempty"`
-	SubtitleLanguage     NullString  `db:"subtitle_language" json:"subtitle_language,omitempty"`
-	SubtitleLastSearched NullTime    `db:"subtitle_last_searched" json:"subtitle_last_searched,omitempty"`
-	SubtitleSearchScore  NullFloat64 `db:"subtitle_search_score" json:"subtitle_search_score,omitempty"`
+	SubtitleStatus       SubtitleStatus `db:"subtitle_status" json:"subtitle_status"`
+	SubtitlePath         NullString     `db:"subtitle_path" json:"subtitle_path,omitempty"`
+	SubtitleLanguage     NullString     `db:"subtitle_language" json:"subtitle_language,omitempty"`
+	SubtitleLastSearched NullTime       `db:"subtitle_last_searched" json:"subtitle_last_searched,omitempty"`
+	SubtitleSearchScore  NullFloat64    `db:"subtitle_search_score" json:"subtitle_search_score,omitempty"`
 
 	// Technical info fields (Story 9c-1)
 	VideoCodec      NullString `db:"video_codec" json:"video_codec,omitempty"`

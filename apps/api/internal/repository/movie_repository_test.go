@@ -3,6 +3,8 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 
@@ -54,6 +56,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 			audio_channels INTEGER,
 			subtitle_tracks TEXT,
 			hdr_format TEXT,
+			production_countries TEXT,
 			douban_id TEXT,
 			douban_rating REAL,
 			douban_vote_count INTEGER,
@@ -794,6 +797,126 @@ func TestMovieGenresSerialization(t *testing.T) {
 	}
 }
 
+// TestMovieProductionCountriesRoundTrip verifies production_countries persists
+// through Create AND Update, is read back via movieSelectColumns/scanMovie, and
+// serializes as a JSON array. Rule 15 / bugfix-20-1 class: the column, the write
+// paths, and the read path must stay in sync — a mocked-repo test would hide a drift.
+func TestMovieProductionCountriesRoundTrip(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	movie := &models.Movie{ID: "movie-pc", Title: "大陸片", ReleaseDate: "2020-01-01"}
+	if err := movie.SetProductionCountries([]models.ProductionCountry{
+		{ISO3166_1: "CN", Name: "China"},
+		{ISO3166_1: "US", Name: "United States of America"},
+	}); err != nil {
+		t.Fatalf("SetProductionCountries: %v", err)
+	}
+
+	if err := repo.Create(ctx, movie); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	found, err := repo.FindByID(ctx, "movie-pc")
+	if err != nil {
+		t.Fatalf("FindByID: %v", err)
+	}
+	if len(found.ProductionCountries) != 2 {
+		t.Fatalf("expected 2 production countries, got %d (%+v)", len(found.ProductionCountries), found.ProductionCountries)
+	}
+	codes := map[string]string{}
+	for _, c := range found.ProductionCountries {
+		codes[c.ISO3166_1] = c.Name
+	}
+	if codes["CN"] != "China" {
+		t.Errorf("expected CN=China, got %q", codes["CN"])
+	}
+	if _, ok := codes["US"]; !ok {
+		t.Errorf("expected US present, got %+v", codes)
+	}
+
+	// AC 7b: serializes as a JSON array with snake_case wire keys (the [@contract-v1] shape).
+	jsonBytes, err := json.Marshal(found)
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	js := string(jsonBytes)
+	if !strings.Contains(js, `"production_countries":[`) {
+		t.Errorf("expected production_countries JSON array, got: %s", js)
+	}
+	if !strings.Contains(js, `"iso_3166_1":"CN"`) {
+		t.Errorf("expected iso_3166_1 CN in JSON, got: %s", js)
+	}
+
+	// Update path must also persist production_countries.
+	if err := found.SetProductionCountries([]models.ProductionCountry{{ISO3166_1: "JP", Name: "Japan"}}); err != nil {
+		t.Fatalf("SetProductionCountries (update): %v", err)
+	}
+	if err := repo.Update(ctx, found); err != nil {
+		t.Fatalf("Update: %v", err)
+	}
+	refound, err := repo.FindByID(ctx, "movie-pc")
+	if err != nil {
+		t.Fatalf("FindByID after update: %v", err)
+	}
+	if len(refound.ProductionCountries) != 1 || refound.ProductionCountries[0].ISO3166_1 != "JP" {
+		t.Errorf("expected [JP] after update, got %+v", refound.ProductionCountries)
+	}
+}
+
+// TestMovieProductionCountriesEmpty verifies a movie with no production_countries
+// reads back as an empty slice (omitempty → absent on the wire), not an error.
+func TestMovieProductionCountriesEmpty(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	movie := &models.Movie{ID: "movie-empty-pc", Title: "No PC", ReleaseDate: "2020-01-01"}
+	if err := repo.Create(ctx, movie); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	found, err := repo.FindByID(ctx, "movie-empty-pc")
+	if err != nil {
+		t.Fatalf("FindByID: %v", err)
+	}
+	if len(found.ProductionCountries) != 0 {
+		t.Errorf("expected no production countries, got %+v", found.ProductionCountries)
+	}
+	if js, _ := json.Marshal(found); strings.Contains(string(js), "production_countries") {
+		t.Errorf("empty production_countries must be omitted from JSON, got: %s", js)
+	}
+}
+
+// TestMovieBulkCreateProductionCountries verifies the BulkCreate write path also
+// persists production_countries (third writer — Rule 15 write-path completeness).
+func TestMovieBulkCreateProductionCountries(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	m := &models.Movie{ID: "bulk-pc", Title: "Bulk", ReleaseDate: "2021-01-01"}
+	if err := m.SetProductionCountries([]models.ProductionCountry{{ISO3166_1: "CN", Name: "China"}}); err != nil {
+		t.Fatalf("SetProductionCountries: %v", err)
+	}
+	if err := repo.BulkCreate(ctx, []*models.Movie{m}); err != nil {
+		t.Fatalf("BulkCreate: %v", err)
+	}
+	found, err := repo.FindByID(ctx, "bulk-pc")
+	if err != nil {
+		t.Fatalf("FindByID: %v", err)
+	}
+	if len(found.ProductionCountries) != 1 || found.ProductionCountries[0].ISO3166_1 != "CN" {
+		t.Errorf("expected [CN] via BulkCreate, got %+v", found.ProductionCountries)
+	}
+}
+
 // TestMovieEmptyGenres verifies empty genres handling
 func TestMovieEmptyGenres(t *testing.T) {
 	db := setupTestDB(t)
@@ -1497,7 +1620,7 @@ func TestMovieFullTextSearchNoResults(t *testing.T) {
 // ─── Story 9R-16 AC 4: missing-zh-Hant enumeration (generation batch) ───────
 
 // seedGenerationCandidate inserts a movie row with the given subtitle_language /
-// file_path directly (SQL, not repo.Create) so NULL vs '' cases are explicit.
+// file_path directly (SQL, not repo.Create) so NULL vs ” cases are explicit.
 func seedGenerationCandidate(t *testing.T, db *sql.DB, id, title string, subtitleLang, filePath *string, removed bool) {
 	t.Helper()
 	isRemoved := 0

@@ -343,6 +343,37 @@ func TestMovieHandler_GetByID(t *testing.T) {
 	}
 }
 
+// TestMovieHandler_GetByID_ProductionCountries verifies GET /movies/:id emits
+// production_countries as a JSON array (disc-2026-07-production-countries-detail-api,
+// [@contract-v1] wire shape) — the actual endpoint, not just model marshaling.
+func TestMovieHandler_GetByID_ProductionCountries(t *testing.T) {
+	movie := &models.Movie{ID: "movie-pc", Title: "大陸片", ReleaseDate: "2020-01-01"}
+	if err := movie.SetProductionCountries([]models.ProductionCountry{
+		{ISO3166_1: "CN", Name: "China"},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	// The handler serializes the model directly; the scan-populated computed field
+	// must be set (mirrors what scanMovie does on the real read path).
+	movie.ProductionCountries = []models.ProductionCountry{{ISO3166_1: "CN", Name: "China"}}
+
+	mockService := new(MockMovieService)
+	mockService.On("GetByID", mock.Anything, "movie-pc").Return(movie, nil)
+
+	handler := NewMovieHandler(mockService)
+	router := setupTestRouter(handler)
+
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/movies/movie-pc", nil)
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+	body := resp.Body.String()
+	assert.Contains(t, body, `"production_countries":[`)
+	assert.Contains(t, body, `"iso_3166_1":"CN"`)
+	mockService.AssertExpectations(t)
+}
+
 func TestMovieHandler_Create(t *testing.T) {
 	tests := []struct {
 		name           string

@@ -48,9 +48,9 @@ func (r *MovieRepository) Create(ctx context.Context, movie *models.Movie) error
 			file_path, file_size, parse_status, metadata_source, vote_average,
 			is_removed,
 			video_codec, video_resolution, audio_codec, audio_channels,
-			subtitle_tracks, hdr_format,
+			subtitle_tracks, hdr_format, production_countries,
 			created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
 	_, err = r.db.ExecContext(ctx, query,
@@ -80,6 +80,7 @@ func (r *MovieRepository) Create(ctx context.Context, movie *models.Movie) error
 		movie.AudioChannels,
 		movie.SubtitleTracks,
 		movie.HDRFormat,
+		movie.ProductionCountriesJSON,
 		movie.CreatedAt,
 		movie.UpdatedAt,
 	)
@@ -209,6 +210,7 @@ func (r *MovieRepository) Update(ctx context.Context, movie *models.Movie) error
 			audio_channels = ?,
 			subtitle_tracks = ?,
 			hdr_format = ?,
+			production_countries = ?,
 			library_id = ?,
 			updated_at = ?
 		WHERE id = ?
@@ -247,6 +249,7 @@ func (r *MovieRepository) Update(ctx context.Context, movie *models.Movie) error
 		movie.AudioChannels,
 		movie.SubtitleTracks,
 		movie.HDRFormat,
+		movie.ProductionCountriesJSON,
 		movie.LibraryID,
 		movie.UpdatedAt,
 		movie.ID,
@@ -622,6 +625,7 @@ const movieSelectColumns = `
 	subtitle_status, subtitle_path, subtitle_language, subtitle_last_searched, subtitle_search_score,
 	vote_average, vote_count, is_removed,
 	video_codec, video_resolution, audio_codec, audio_channels, subtitle_tracks, hdr_format,
+	production_countries,
 	douban_id, douban_rating, douban_vote_count,
 	created_at, updated_at
 `
@@ -665,6 +669,7 @@ func scanMovie(scanner interface {
 		&movie.AudioChannels,
 		&movie.SubtitleTracks,
 		&movie.HDRFormat,
+		&movie.ProductionCountriesJSON,
 		&movie.DoubanID,
 		&movie.DoubanRating,
 		&movie.DoubanVoteCount,
@@ -677,6 +682,13 @@ func scanMovie(scanner interface {
 
 	if err := movie.ScanGenres(genresJSON); err != nil {
 		return movie, fmt.Errorf("failed to parse genres: %w", err)
+	}
+
+	// Populate the wire-exposed ProductionCountries from the raw JSON blob.
+	// Malformed stored JSON degrades gracefully to an empty slice (display-only
+	// enrichment must never fail a movie read).
+	if pcs, err := movie.GetProductionCountries(); err == nil {
+		movie.ProductionCountries = pcs
 	}
 
 	return movie, nil
@@ -726,9 +738,9 @@ func (r *MovieRepository) BulkCreate(ctx context.Context, movies []*models.Movie
 			file_path, file_size, parse_status, metadata_source, vote_average,
 			is_removed,
 			video_codec, video_resolution, audio_codec, audio_channels,
-			subtitle_tracks, hdr_format,
+			subtitle_tracks, hdr_format, production_countries,
 			created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
 	stmt, err := tx.PrepareContext(ctx, query)
@@ -778,6 +790,7 @@ func (r *MovieRepository) BulkCreate(ctx context.Context, movies []*models.Movie
 			movie.AudioChannels,
 			movie.SubtitleTracks,
 			movie.HDRFormat,
+			movie.ProductionCountriesJSON,
 			movie.CreatedAt,
 			movie.UpdatedAt,
 		)

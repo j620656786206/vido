@@ -58,13 +58,16 @@ vi.mock('../metadata-editor', () => ({ MetadataEditorDialog: () => null }));
 vi.mock('../subtitle/ManageSubtitleDialogV2', () => ({
   ManageSubtitleDialogV2: ({
     open,
+    productionCountry,
     onGenerationComplete,
   }: {
     open: boolean;
+    productionCountry?: string;
     onGenerationComplete?: () => void;
   }) =>
     open ? (
       <div data-testid="subtitle-dialog">
+        <span data-testid="stub-production-country">{productionCountry}</span>
         <button
           type="button"
           data-testid="stub-generation-complete"
@@ -159,6 +162,27 @@ describe('LocalDetailV2', () => {
     renderDetail();
     fireEvent.click(await screen.findByTestId('action-manage-subtitle'));
     expect(await screen.findByTestId('subtitle-dialog')).toBeInTheDocument();
+  });
+
+  it('passes production countries to the dialog as a comma-joined ISO string (§9b source)', async () => {
+    h.local = movie({
+      data: {
+        ...movie().data,
+        productionCountries: [
+          { iso31661: 'CN', name: 'China' },
+          { iso31661: 'US', name: 'United States of America' },
+        ],
+      },
+    });
+    renderDetail();
+    fireEvent.click(await screen.findByTestId('action-manage-subtitle'));
+    expect(await screen.findByTestId('stub-production-country')).toHaveTextContent('CN,US');
+  });
+
+  it('passes an empty production-country string when the movie has none', async () => {
+    renderDetail();
+    fireEvent.click(await screen.findByTestId('action-manage-subtitle'));
+    expect(await screen.findByTestId('stub-production-country')).toHaveTextContent('');
   });
 
   it('invalidates media-detail + library caches on transcription_complete (AC 6)', async () => {

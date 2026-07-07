@@ -61,6 +61,12 @@ export function LocalDetailV2({ type, id }: { type: 'movie' | 'tv'; id: string }
   const isLoading = isMovie ? localMovie.isLoading : localSeries.isLoading;
   const isError = isMovie ? localMovie.isError : localSeries.isError;
 
+  // §9b CN-subtitle policy source (movies only; series has no production_countries).
+  // Flatten to the comma-joined ISO string ManageSubtitleDialogV2 expects, mirroring
+  // MediaDetailPanel's TMDb path. disc-2026-07-production-countries-detail-api.
+  const productionCountryStr =
+    localMovie.data?.productionCountries?.map((c) => c.iso31661).join(',') ?? '';
+
   const tmdbId = data?.tmdbId ?? 0;
   const movieCredits = useMovieCredits(isMovie && tmdbId > 0 ? tmdbId : 0);
   const tvCredits = useTVShowCredits(!isMovie && tmdbId > 0 ? tmdbId : 0);
@@ -282,6 +288,7 @@ export function LocalDetailV2({ type, id }: { type: 'movie' | 'tv'; id: string }
           mediaTitle={data.title}
           mediaFilePath={filePath}
           mediaResolution={data.videoResolution}
+          productionCountry={productionCountryStr}
           subtitleTracks={data.subtitleTracks}
           subtitleStatus={data.subtitleStatus}
           subtitleLanguage={data.subtitleLanguage}
