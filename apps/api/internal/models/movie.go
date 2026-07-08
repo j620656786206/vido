@@ -139,6 +139,17 @@ type Movie struct {
 	// CN-subtitle-policy display. db:"-" — computed, never a scan/write target.
 	ProductionCountries []ProductionCountry `db:"-" json:"production_countries,omitempty"`
 
+	// Credits is the parsed, wire-exposed form of CreditsJSON, populated on read
+	// (scanMovie) via GetCredits() only when cast/crew is non-empty. Manual Metadata-Editor
+	// edits are the only writer today; the FE prefers this over live TMDb when the movie's
+	// metadata_source is "manual". db:"-" — computed, never a scan/write target.
+	Credits *Credits `db:"-" json:"credits,omitempty"`
+
+	// SpokenLanguages is the parsed, wire-exposed form of SpokenLanguagesJSON, populated on
+	// read (scanMovie) via GetSpokenLanguages(). Persist-only: exposed on the payload but no
+	// UI consumer today (story disc-2026-07-credits-spoken-languages-persist AC #7).
+	SpokenLanguages []SpokenLanguage `db:"-" json:"spoken_languages,omitempty"`
+
 	// File tracking fields
 	FilePath NullString `db:"file_path" json:"file_path,omitempty"`
 	FileSize NullInt64  `db:"file_size" json:"file_size,omitempty"`

@@ -47,9 +47,9 @@ func (r *SeriesRepository) Create(ctx context.Context, series *models.Series) er
 			status, original_language, imdb_id, tmdb_id, in_production,
 			file_size,
 			video_codec, video_resolution, audio_codec, audio_channels,
-			subtitle_tracks, hdr_format,
+			subtitle_tracks, hdr_format, credits,
 			created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
 	_, err = r.db.ExecContext(ctx, query,
@@ -77,6 +77,7 @@ func (r *SeriesRepository) Create(ctx context.Context, series *models.Series) er
 		series.AudioChannels,
 		series.SubtitleTracks,
 		series.HDRFormat,
+		series.CreditsJSON,
 		series.CreatedAt,
 		series.UpdatedAt,
 	)
@@ -185,6 +186,7 @@ func (r *SeriesRepository) Update(ctx context.Context, series *models.Series) er
 			audio_channels = ?,
 			subtitle_tracks = ?,
 			hdr_format = ?,
+			credits = ?,
 			updated_at = ?
 		WHERE id = ?
 	`
@@ -218,6 +220,7 @@ func (r *SeriesRepository) Update(ctx context.Context, series *models.Series) er
 		series.AudioChannels,
 		series.SubtitleTracks,
 		series.HDRFormat,
+		series.CreditsJSON,
 		series.UpdatedAt,
 		series.ID,
 	)
@@ -599,7 +602,7 @@ const seriesSelectColumns = `
 	subtitle_status, subtitle_path, subtitle_language, subtitle_last_searched, subtitle_search_score,
 	vote_average, vote_count,
 	video_codec, video_resolution, audio_codec, audio_channels,
-	subtitle_tracks, hdr_format,
+	subtitle_tracks, hdr_format, credits,
 	douban_id, douban_rating, douban_vote_count,
 	created_at, updated_at
 `
@@ -646,6 +649,7 @@ func scanSeries(scanner interface {
 		&s.AudioChannels,
 		&s.SubtitleTracks,
 		&s.HDRFormat,
+		&s.CreditsJSON,
 		&s.DoubanID,
 		&s.DoubanRating,
 		&s.DoubanVoteCount,
@@ -658,6 +662,12 @@ func scanSeries(scanner interface {
 
 	if err := s.ScanGenres(genresJSON); err != nil {
 		return s, fmt.Errorf("failed to parse genres: %w", err)
+	}
+
+	// Populate the wire-exposed Credits only when cast/crew is non-empty, so omitempty
+	// drops it for never-edited series (manual Metadata-Editor edits are the only writer).
+	if credits, err := s.GetCredits(); err == nil && (len(credits.Cast) > 0 || len(credits.Crew) > 0) {
+		s.Credits = credits
 	}
 
 	return s, nil
@@ -706,9 +716,9 @@ func (r *SeriesRepository) BulkCreate(ctx context.Context, seriesList []*models.
 			status, original_language, imdb_id, tmdb_id, in_production,
 			file_size,
 			video_codec, video_resolution, audio_codec, audio_channels,
-			subtitle_tracks, hdr_format,
+			subtitle_tracks, hdr_format, credits,
 			created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
 	stmt, err := tx.PrepareContext(ctx, query)
@@ -756,6 +766,7 @@ func (r *SeriesRepository) BulkCreate(ctx context.Context, seriesList []*models.
 			series.AudioChannels,
 			series.SubtitleTracks,
 			series.HDRFormat,
+			series.CreditsJSON,
 			series.CreatedAt,
 			series.UpdatedAt,
 		)
@@ -976,5 +987,12 @@ func (r *SeriesRepository) Upsert(ctx context.Context, series *models.Series) er
 	// Series exists - update with existing ID
 	series.ID = existing.ID
 	series.CreatedAt = existing.CreatedAt
+	// Preserve manually-edited credits across a re-scan/re-match — the scan ingestion path
+	// (SaveSeriesFromTMDb → ConvertTMDbSeriesToModel) never sets credits (manual-only via the
+	// Metadata Editor), so a fresh model carries an empty CreditsJSON. Without this, Upsert
+	// would overwrite the persisted manual cast with NULL.
+	if !series.CreditsJSON.Valid {
+		series.CreditsJSON = existing.CreditsJSON
+	}
 	return r.Update(ctx, series)
 }

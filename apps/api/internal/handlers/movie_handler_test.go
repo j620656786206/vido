@@ -374,6 +374,38 @@ func TestMovieHandler_GetByID_ProductionCountries(t *testing.T) {
 	mockService.AssertExpectations(t)
 }
 
+// TestMovieHandler_GetByID_CreditsSpokenLanguages verifies GET /movies/:id emits credits
+// (object) + spoken_languages (array) — the [@contract-v1] wire shapes for
+// disc-2026-07-credits-spoken-languages-persist, over the actual endpoint.
+func TestMovieHandler_GetByID_CreditsSpokenLanguages(t *testing.T) {
+	movie := &models.Movie{ID: "movie-credits", Title: "Edited", ReleaseDate: "2020-01-01"}
+	// The handler serializes the model directly; set the scan-populated computed fields
+	// (mirrors what scanMovie does on the real read path).
+	movie.Credits = &models.Credits{
+		Cast: []models.CastMember{{Name: "Alice", Order: 0}},
+		Crew: []models.CrewMember{{Name: "Dana", Job: "Director"}},
+	}
+	movie.SpokenLanguages = []models.SpokenLanguage{{ISO639_1: "en", Name: "English"}}
+
+	mockService := new(MockMovieService)
+	mockService.On("GetByID", mock.Anything, "movie-credits").Return(movie, nil)
+
+	handler := NewMovieHandler(mockService)
+	router := setupTestRouter(handler)
+
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/movies/movie-credits", nil)
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+	body := resp.Body.String()
+	assert.Contains(t, body, `"credits":{`)
+	assert.Contains(t, body, `"cast":[`)
+	assert.Contains(t, body, `"spoken_languages":[`)
+	assert.Contains(t, body, `"iso_639_1":"en"`)
+	mockService.AssertExpectations(t)
+}
+
 func TestMovieHandler_Create(t *testing.T) {
 	tests := []struct {
 		name           string

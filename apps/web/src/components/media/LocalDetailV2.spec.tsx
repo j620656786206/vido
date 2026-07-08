@@ -10,20 +10,21 @@ import {
   RouterProvider,
 } from '@tanstack/react-router';
 
-const h = vi.hoisted(() => ({ local: {} as Record<string, unknown> }));
+const h = vi.hoisted(() => ({
+  local: {} as Record<string, unknown>,
+  localSeries: undefined as Record<string, unknown> | undefined,
+  movieCredits: { data: undefined } as { data: unknown },
+  tvCredits: { data: undefined } as { data: unknown },
+}));
 
 vi.mock('../../hooks/useMediaDetails', async (importOriginal) => ({
   // keep the REAL detailKeys (AC 6 invalidation asserts against them)
   detailKeys: (await importOriginal<typeof import('../../hooks/useMediaDetails')>()).detailKeys,
   useLocalMovieDetails: () => h.local,
-  useLocalSeriesDetails: () => ({
-    data: undefined,
-    isLoading: false,
-    isError: false,
-    refetch: vi.fn(),
-  }),
-  useMovieCredits: () => ({ data: undefined }),
-  useTVShowCredits: () => ({ data: undefined }),
+  useLocalSeriesDetails: () =>
+    h.localSeries ?? { data: undefined, isLoading: false, isError: false, refetch: vi.fn() },
+  useMovieCredits: () => h.movieCredits,
+  useTVShowCredits: () => h.tvCredits,
   useSeriesSeasons: () => ({ data: [], isLoading: false, isError: false, refetch: vi.fn() }),
   useRecommendations: () => ({
     data: { results: [] },
@@ -50,7 +51,11 @@ vi.mock('./StreamingAvailability', () => ({ StreamingAvailability: () => null })
 vi.mock('./RelatedContent', () => ({ RelatedContent: () => null }));
 vi.mock('./SeasonAccordion', () => ({ SeasonAccordion: () => null }));
 vi.mock('./DoubanSection', () => ({ DoubanSection: () => null }));
-vi.mock('./CreditsSection', () => ({ CreditsSection: () => null }));
+vi.mock('./CreditsSection', () => ({
+  CreditsSection: ({ cast }: { cast?: Array<{ name: string }> }) => (
+    <div data-testid="stub-credits-cast">{(cast ?? []).map((c) => c.name).join(',')}</div>
+  ),
+}));
 vi.mock('./DualRatingDisplay', () => ({ DualRatingDisplay: () => null }));
 vi.mock('../metadata-editor', () => ({ MetadataEditorDialog: () => null }));
 // v2 shell swap (ux3-subtitle-v2 Task 6): LocalDetailV2 renders the NEW
@@ -136,9 +141,58 @@ function renderDetail(
   return render(React.createElement(RouterProvider, { router }));
 }
 
+function series(over: Record<string, unknown> = {}) {
+  return {
+    data: {
+      id: 'sid',
+      title: '進擊的巨人',
+      originalTitle: '進撃の巨人',
+      firstAirDate: '2013-04-07',
+      genres: ['動畫'],
+      numberOfSeasons: 4,
+      numberOfEpisodes: 87,
+      tmdbId: 0,
+      parseStatus: 'success',
+      filePath: '/media/series/aot',
+      createdAt: '',
+      updatedAt: '',
+    },
+    isLoading: false,
+    isError: false,
+    refetch: vi.fn(),
+    ...over,
+  };
+}
+
+function renderSeriesDetail(
+  queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+) {
+  const rootRoute = createRootRoute({
+    component: () =>
+      React.createElement(
+        QueryClientProvider,
+        { client: queryClient },
+        React.createElement(LocalDetailV2, { type: 'series', id: 'sid' })
+      ),
+  });
+  const library = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/library',
+    component: () => null,
+  });
+  const router = createRouter({
+    routeTree: rootRoute.addChildren([library]),
+    history: createMemoryHistory({ initialEntries: ['/'] }),
+  });
+  return render(React.createElement(RouterProvider, { router }));
+}
+
 describe('LocalDetailV2', () => {
   beforeEach(() => {
     h.local = movie();
+    h.localSeries = undefined;
+    h.movieCredits = { data: undefined };
+    h.tvCredits = { data: undefined };
   });
 
   it('renders the hero, overview and tech-info for a library item', async () => {
@@ -215,5 +269,51 @@ describe('LocalDetailV2', () => {
     h.local = movie({ data: undefined, isLoading: false, isError: true });
     renderDetail();
     expect(await screen.findByTestId('detail-not-found')).toBeInTheDocument();
+  });
+
+  // disc-2026-07-credits-spoken-languages-persist: the cast display prefers the persisted
+  // local credits when the item was manually edited, else falls back to live TMDb.
+  it('prefers manually-edited local credits over live TMDb (movie, metadataSource=manual)', async () => {
+    h.local = movie({
+      data: {
+        ...movie().data,
+        metadataSource: 'manual',
+        credits: { cast: [{ name: 'ManualActor' }] },
+      },
+    });
+    h.movieCredits = { data: { cast: [{ name: 'TMDbActor' }] } };
+    renderDetail();
+    const el = await screen.findByTestId('stub-credits-cast');
+    expect(el).toHaveTextContent('ManualActor');
+    expect(el).not.toHaveTextContent('TMDbActor');
+  });
+
+  it('falls back to live TMDb credits when the movie is not manually edited', async () => {
+    h.local = movie({ data: { ...movie().data, metadataSource: 'tmdb' } });
+    h.movieCredits = { data: { cast: [{ name: 'TMDbActor' }] } };
+    renderDetail();
+    expect(await screen.findByTestId('stub-credits-cast')).toHaveTextContent('TMDbActor');
+  });
+
+  it('prefers manually-edited local credits over live TMDb (series, metadataSource=manual)', async () => {
+    h.localSeries = series({
+      data: {
+        ...series().data,
+        metadataSource: 'manual',
+        credits: { cast: [{ name: 'ManualSeriesActor' }] },
+      },
+    });
+    h.tvCredits = { data: { cast: [{ name: 'TMDbSeriesActor' }] } };
+    renderSeriesDetail();
+    const el = await screen.findByTestId('stub-credits-cast');
+    expect(el).toHaveTextContent('ManualSeriesActor');
+    expect(el).not.toHaveTextContent('TMDbSeriesActor');
+  });
+
+  it('falls back to live TMDb credits for a non-manual series', async () => {
+    h.localSeries = series({ data: { ...series().data, metadataSource: 'tmdb' } });
+    h.tvCredits = { data: { cast: [{ name: 'TMDbSeriesActor' }] } };
+    renderSeriesDetail();
+    expect(await screen.findByTestId('stub-credits-cast')).toHaveTextContent('TMDbSeriesActor');
   });
 });

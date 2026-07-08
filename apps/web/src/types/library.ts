@@ -1,4 +1,4 @@
-import type { ProductionCountry } from './tmdb';
+import type { ProductionCountry, Credits, SpokenLanguage } from './tmdb';
 
 export type SortField = 'title' | 'release_date' | 'rating' | 'created_at';
 export type SortOrder = 'asc' | 'desc';
@@ -49,6 +49,12 @@ export interface LibraryMovie {
   // Production countries (§9b CN-subtitle policy source) — exposed by
   // disc-2026-07-production-countries-detail-api. NULL until re-scanned.
   productionCountries?: ProductionCountry[];
+  // Persisted credits + spoken languages (disc-2026-07-credits-spoken-languages-persist).
+  // `credits` is present only for manually-edited movies (Metadata Editor); the detail
+  // page prefers it over live TMDb when metadataSource === 'manual'. `spokenLanguages`
+  // is persist-only (no UI consumer yet). Both NULL until re-edited/re-scanned.
+  credits?: Credits;
+  spokenLanguages?: SpokenLanguage[];
   createdAt: string;
   updatedAt: string;
 }
@@ -105,6 +111,10 @@ export interface LibrarySeries {
   audioChannels?: number;
   subtitleTracks?: string;
   hdrFormat?: string;
+  // Persisted credits (disc-2026-07-credits-spoken-languages-persist). Present only for
+  // manually-edited series; the detail page prefers it over live TMDb when
+  // metadataSource === 'manual'. NULL until re-edited. Series has no spoken_languages.
+  credits?: Credits;
   createdAt: string;
   updatedAt: string;
 }

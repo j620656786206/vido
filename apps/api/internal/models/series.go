@@ -61,6 +61,12 @@ type Series struct {
 	SeasonsJSON  NullString `db:"seasons" json:"-"`  // JSON stored in DB
 	NetworksJSON NullString `db:"networks" json:"-"` // JSON stored in DB
 
+	// Credits is the parsed, wire-exposed form of CreditsJSON, populated on read
+	// (scanSeries) via GetCredits() only when cast/crew is non-empty. Manual Metadata-Editor
+	// edits are the only writer today; the FE prefers this over live TMDb when the series'
+	// metadata_source is "manual". db:"-" — computed, never a scan/write target.
+	Credits *Credits `db:"-" json:"credits,omitempty"`
+
 	// File tracking fields
 	FilePath NullString `db:"file_path" json:"file_path,omitempty"`
 	FileSize NullInt64  `db:"file_size" json:"file_size,omitempty"`
