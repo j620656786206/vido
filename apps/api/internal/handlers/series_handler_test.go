@@ -234,6 +234,34 @@ func TestSeriesHandler_GetByID(t *testing.T) {
 	}
 }
 
+// TestSeriesHandler_GetByID_Credits verifies GET /series/:id emits credits (object) — the
+// [@contract-v1] wire shape for disc-2026-07-credits-spoken-languages-persist (series half).
+func TestSeriesHandler_GetByID_Credits(t *testing.T) {
+	series := &models.Series{ID: "series-credits", Title: "Edited Series", FirstAirDate: "2020-01-01"}
+	// The handler serializes the model directly; set the scan-populated computed field.
+	series.Credits = &models.Credits{
+		Cast: []models.CastMember{{Name: "Actor One", Order: 0}},
+		Crew: []models.CrewMember{{Name: "Showrunner", Job: "Executive Producer"}},
+	}
+
+	mockService := new(MockSeriesService)
+	mockService.On("GetByID", mock.Anything, "series-credits").Return(series, nil)
+
+	handler := NewSeriesHandler(mockService)
+	router := setupSeriesTestRouter(handler)
+
+	req, _ := http.NewRequest(http.MethodGet, "/api/v1/series/series-credits", nil)
+	resp := httptest.NewRecorder()
+	router.ServeHTTP(resp, req)
+
+	assert.Equal(t, http.StatusOK, resp.Code)
+	body := resp.Body.String()
+	assert.Contains(t, body, `"credits":{`)
+	assert.Contains(t, body, `"cast":[`)
+	assert.Contains(t, body, `"name":"Actor One"`)
+	mockService.AssertExpectations(t)
+}
+
 func TestSeriesHandler_Create(t *testing.T) {
 	tests := []struct {
 		name           string

@@ -55,6 +55,7 @@ func setupSeriesTestDB(t *testing.T) *sql.DB {
 			audio_channels INTEGER,
 			subtitle_tracks TEXT,
 			hdr_format TEXT,
+			credits TEXT,
 			douban_id TEXT,
 			douban_rating REAL,
 			douban_vote_count INTEGER,
@@ -1045,6 +1046,124 @@ func setupSeriesTestDBWithFTS(t *testing.T) *sql.DB {
 	}
 
 	return db
+}
+
+// TestSeriesCreditsRoundTrip verifies credits persist through Create AND Update, are read
+// back via seriesSelectColumns/scanSeries, and populate the wire-exposed Credits field.
+// Same data-loss class as movies — the series Metadata Editor's SetCredits was silently
+// dropped by Update before this story (Rule 15 real-DB test, not a mocked repo).
+func TestSeriesCreditsRoundTrip(t *testing.T) {
+	db := setupSeriesTestDB(t)
+	defer db.Close()
+
+	repo := NewSeriesRepository(db)
+	ctx := context.Background()
+
+	s := &models.Series{ID: "series-credits", Title: "Edited Series"}
+	if err := s.SetCredits(&models.Credits{
+		Cast: []models.CastMember{{Name: "Actor One", Order: 0}},
+		Crew: []models.CrewMember{{Name: "Showrunner", Job: "Executive Producer", Department: "Production"}},
+	}); err != nil {
+		t.Fatalf("SetCredits: %v", err)
+	}
+
+	if err := repo.Create(ctx, s); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	found, err := repo.FindByID(ctx, "series-credits")
+	if err != nil {
+		t.Fatalf("FindByID: %v", err)
+	}
+	if found.Credits == nil || len(found.Credits.Cast) != 1 || found.Credits.Cast[0].Name != "Actor One" {
+		t.Fatalf("expected [Actor One] cast, got %+v", found.Credits)
+	}
+	if len(found.Credits.Crew) != 1 || found.Credits.Crew[0].Job != "Executive Producer" {
+		t.Errorf("expected crew round-trip, got %+v", found.Credits)
+	}
+
+	// Update path must also persist credits (the data-loss origin — SetCredits + Update).
+	if err := found.SetCredits(&models.Credits{Cast: []models.CastMember{{Name: "Replaced", Order: 0}}}); err != nil {
+		t.Fatalf("SetCredits (update): %v", err)
+	}
+	if err := repo.Update(ctx, found); err != nil {
+		t.Fatalf("Update: %v", err)
+	}
+	refound, err := repo.FindByID(ctx, "series-credits")
+	if err != nil {
+		t.Fatalf("FindByID after update: %v", err)
+	}
+	if refound.Credits == nil || refound.Credits.Cast[0].Name != "Replaced" {
+		t.Errorf("expected [Replaced] after update, got %+v", refound.Credits)
+	}
+}
+
+// TestSeriesBulkCreateCredits verifies BulkCreate also persists credits, and that a series
+// with no credits reads back nil Credits (omitempty → absent on the wire).
+func TestSeriesBulkCreateCredits(t *testing.T) {
+	db := setupSeriesTestDB(t)
+	defer db.Close()
+
+	repo := NewSeriesRepository(db)
+	ctx := context.Background()
+
+	s := &models.Series{ID: "bulk-series-credits", Title: "Bulk Series"}
+	if err := s.SetCredits(&models.Credits{Cast: []models.CastMember{{Name: "BulkActor", Order: 0}}}); err != nil {
+		t.Fatalf("SetCredits: %v", err)
+	}
+	if err := repo.BulkCreate(ctx, []*models.Series{s}); err != nil {
+		t.Fatalf("BulkCreate: %v", err)
+	}
+	found, err := repo.FindByID(ctx, "bulk-series-credits")
+	if err != nil {
+		t.Fatalf("FindByID: %v", err)
+	}
+	if found.Credits == nil || found.Credits.Cast[0].Name != "BulkActor" {
+		t.Errorf("expected [BulkActor] via BulkCreate, got %+v", found.Credits)
+	}
+
+	plain := &models.Series{ID: "plain-series", Title: "Plain"}
+	if err := repo.Create(ctx, plain); err != nil {
+		t.Fatalf("Create plain: %v", err)
+	}
+	pf, err := repo.FindByID(ctx, "plain-series")
+	if err != nil {
+		t.Fatalf("FindByID plain: %v", err)
+	}
+	if pf.Credits != nil {
+		t.Errorf("expected nil Credits for series without credits, got %+v", pf.Credits)
+	}
+}
+
+// TestSeriesUpsertPreservesManualCredits guards the same credits data-loss regression for
+// series: a re-match (SaveSeriesFromTMDb → Upsert, fresh model with no credits) must NOT
+// overwrite a manually-edited cast.
+func TestSeriesUpsertPreservesManualCredits(t *testing.T) {
+	db := setupSeriesTestDB(t)
+	defer db.Close()
+
+	repo := NewSeriesRepository(db)
+	ctx := context.Background()
+
+	s := &models.Series{ID: "sup-1", Title: "Manual Series", TMDbID: models.NewNullInt64(777)}
+	if err := s.SetCredits(&models.Credits{Cast: []models.CastMember{{Name: "ManualSeriesCast", Order: 0}}}); err != nil {
+		t.Fatalf("SetCredits: %v", err)
+	}
+	if err := repo.Create(ctx, s); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	fresh := &models.Series{Title: "Manual Series (re-scan)", TMDbID: models.NewNullInt64(777)}
+	if err := repo.Upsert(ctx, fresh); err != nil {
+		t.Fatalf("Upsert: %v", err)
+	}
+
+	found, err := repo.FindByID(ctx, "sup-1")
+	if err != nil {
+		t.Fatalf("FindByID: %v", err)
+	}
+	if found.Credits == nil || len(found.Credits.Cast) != 1 || found.Credits.Cast[0].Name != "ManualSeriesCast" {
+		t.Errorf("manual series credits must survive re-scan, got %+v", found.Credits)
+	}
 }
 
 // TestSeriesGetStats verifies GetStats returns correct total and unmatched counts

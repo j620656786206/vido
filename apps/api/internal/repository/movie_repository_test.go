@@ -57,6 +57,8 @@ func setupTestDB(t *testing.T) *sql.DB {
 			subtitle_tracks TEXT,
 			hdr_format TEXT,
 			production_countries TEXT,
+			credits TEXT,
+			spoken_languages TEXT,
 			douban_id TEXT,
 			douban_rating REAL,
 			douban_vote_count INTEGER,
@@ -914,6 +916,182 @@ func TestMovieBulkCreateProductionCountries(t *testing.T) {
 	}
 	if len(found.ProductionCountries) != 1 || found.ProductionCountries[0].ISO3166_1 != "CN" {
 		t.Errorf("expected [CN] via BulkCreate, got %+v", found.ProductionCountries)
+	}
+}
+
+// TestMovieCreditsSpokenLanguagesRoundTrip verifies credits + spoken_languages persist
+// through Create AND Update, are read back via movieSelectColumns/scanMovie, and serialize
+// as the [@contract-v1] wire shapes. This is the data-loss fix: the Metadata Editor's
+// SetCredits was silently dropped by Update before this story. Rule 15 / bugfix-20-1 class —
+// a real DB, not a mocked repo, is what proves the write/read paths stay in sync.
+func TestMovieCreditsSpokenLanguagesRoundTrip(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	movie := &models.Movie{ID: "movie-credits", Title: "Edited Movie", ReleaseDate: "2020-01-01"}
+	if err := movie.SetCredits(&models.Credits{
+		Cast: []models.CastMember{{Name: "Alice", Order: 0}, {Name: "Bob", Order: 1}},
+		Crew: []models.CrewMember{{Name: "Dana", Job: "Director", Department: "Directing"}},
+	}); err != nil {
+		t.Fatalf("SetCredits: %v", err)
+	}
+	if err := movie.SetSpokenLanguages([]models.SpokenLanguage{
+		{ISO639_1: "en", Name: "English"},
+		{ISO639_1: "ja", Name: "日本語"},
+	}); err != nil {
+		t.Fatalf("SetSpokenLanguages: %v", err)
+	}
+
+	if err := repo.Create(ctx, movie); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	found, err := repo.FindByID(ctx, "movie-credits")
+	if err != nil {
+		t.Fatalf("FindByID: %v", err)
+	}
+	if found.Credits == nil || len(found.Credits.Cast) != 2 || len(found.Credits.Crew) != 1 {
+		t.Fatalf("expected 2 cast + 1 crew, got %+v", found.Credits)
+	}
+	if found.Credits.Crew[0].Job != "Director" || found.Credits.Cast[0].Name != "Alice" {
+		t.Errorf("credits round-trip mismatch: %+v", found.Credits)
+	}
+	if len(found.SpokenLanguages) != 2 || found.SpokenLanguages[0].ISO639_1 != "en" {
+		t.Fatalf("expected 2 spoken languages [en,ja], got %+v", found.SpokenLanguages)
+	}
+
+	// Wire shapes ([@contract-v1]): credits object + spoken_languages array, snake_case keys.
+	js := mustMarshal(t, found)
+	for _, want := range []string{`"credits":{`, `"cast":[`, `"crew":[`, `"spoken_languages":[`, `"iso_639_1":"en"`} {
+		if !strings.Contains(js, want) {
+			t.Errorf("expected %s in JSON, got: %s", want, js)
+		}
+	}
+
+	// Update path must also persist credits (the data-loss origin — SetCredits + Update).
+	if err := found.SetCredits(&models.Credits{Cast: []models.CastMember{{Name: "Only", Order: 0}}}); err != nil {
+		t.Fatalf("SetCredits (update): %v", err)
+	}
+	if err := repo.Update(ctx, found); err != nil {
+		t.Fatalf("Update: %v", err)
+	}
+	refound, err := repo.FindByID(ctx, "movie-credits")
+	if err != nil {
+		t.Fatalf("FindByID after update: %v", err)
+	}
+	if refound.Credits == nil || len(refound.Credits.Cast) != 1 || refound.Credits.Cast[0].Name != "Only" {
+		t.Errorf("expected [Only] cast after update, got %+v", refound.Credits)
+	}
+}
+
+// TestMovieCreditsSpokenLanguagesEmpty verifies a movie with neither field reads back
+// with nil Credits / empty SpokenLanguages (omitempty → both absent on the wire).
+func TestMovieCreditsSpokenLanguagesEmpty(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	movie := &models.Movie{ID: "movie-empty-credits", Title: "Plain", ReleaseDate: "2020-01-01"}
+	if err := repo.Create(ctx, movie); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	found, err := repo.FindByID(ctx, "movie-empty-credits")
+	if err != nil {
+		t.Fatalf("FindByID: %v", err)
+	}
+	if found.Credits != nil {
+		t.Errorf("expected nil Credits, got %+v", found.Credits)
+	}
+	if len(found.SpokenLanguages) != 0 {
+		t.Errorf("expected no spoken languages, got %+v", found.SpokenLanguages)
+	}
+	js := mustMarshal(t, found)
+	if strings.Contains(js, `"credits"`) || strings.Contains(js, `"spoken_languages"`) {
+		t.Errorf("empty credits/spoken_languages must be omitted from JSON, got: %s", js)
+	}
+}
+
+// TestMovieBulkCreateCredits verifies the BulkCreate write path also persists credits
+// (third writer — Rule 15 write-path completeness).
+func TestMovieBulkCreateCredits(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	m := &models.Movie{ID: "bulk-credits", Title: "Bulk", ReleaseDate: "2021-01-01"}
+	if err := m.SetCredits(&models.Credits{Cast: []models.CastMember{{Name: "BulkCast", Order: 0}}}); err != nil {
+		t.Fatalf("SetCredits: %v", err)
+	}
+	if err := repo.BulkCreate(ctx, []*models.Movie{m}); err != nil {
+		t.Fatalf("BulkCreate: %v", err)
+	}
+	found, err := repo.FindByID(ctx, "bulk-credits")
+	if err != nil {
+		t.Fatalf("FindByID: %v", err)
+	}
+	if found.Credits == nil || len(found.Credits.Cast) != 1 || found.Credits.Cast[0].Name != "BulkCast" {
+		t.Errorf("expected [BulkCast] via BulkCreate, got %+v", found.Credits)
+	}
+}
+
+// mustMarshal JSON-encodes v or fails the test.
+func mustMarshal(t *testing.T, v interface{}) string {
+	t.Helper()
+	b, err := json.Marshal(v)
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	return string(b)
+}
+
+// TestMovieUpsertPreservesManualCredits guards a data-loss regression: the scan ingestion
+// path (SaveMovieFromTMDb → ConvertTMDbMovieToModel → Upsert) builds a fresh model with NO
+// credits, so a re-match must NOT overwrite a manually-edited cast. spoken_languages, being
+// TMDb-sourced, DOES refresh on re-scan.
+func TestMovieUpsertPreservesManualCredits(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	m := &models.Movie{ID: "up-1", Title: "Manual", ReleaseDate: "2020-01-01", TMDbID: models.NewNullInt64(555)}
+	if err := m.SetCredits(&models.Credits{Cast: []models.CastMember{{Name: "ManualCast", Order: 0}}}); err != nil {
+		t.Fatalf("SetCredits: %v", err)
+	}
+	if err := m.SetSpokenLanguages([]models.SpokenLanguage{{ISO639_1: "en", Name: "English"}}); err != nil {
+		t.Fatalf("SetSpokenLanguages: %v", err)
+	}
+	if err := repo.Create(ctx, m); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+
+	// Re-scan: fresh converters-style model (same TMDb ID, NO credits, refreshed languages).
+	fresh := &models.Movie{Title: "Manual (re-scan)", ReleaseDate: "2020-01-01", TMDbID: models.NewNullInt64(555)}
+	if err := fresh.SetSpokenLanguages([]models.SpokenLanguage{{ISO639_1: "ja", Name: "日本語"}}); err != nil {
+		t.Fatalf("SetSpokenLanguages fresh: %v", err)
+	}
+	if err := repo.Upsert(ctx, fresh); err != nil {
+		t.Fatalf("Upsert: %v", err)
+	}
+
+	found, err := repo.FindByID(ctx, "up-1")
+	if err != nil {
+		t.Fatalf("FindByID: %v", err)
+	}
+	if found.Credits == nil || len(found.Credits.Cast) != 1 || found.Credits.Cast[0].Name != "ManualCast" {
+		t.Errorf("manual credits must survive re-scan, got %+v", found.Credits)
+	}
+	// spoken_languages is TMDb-sourced → refreshed to the re-scan value.
+	if len(found.SpokenLanguages) != 1 || found.SpokenLanguages[0].ISO639_1 != "ja" {
+		t.Errorf("spoken_languages should refresh on re-scan, got %+v", found.SpokenLanguages)
 	}
 }
 

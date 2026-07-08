@@ -71,6 +71,12 @@ export function LocalDetailV2({ type, id }: { type: 'movie' | 'tv'; id: string }
   const movieCredits = useMovieCredits(isMovie && tmdbId > 0 ? tmdbId : 0);
   const tvCredits = useTVShowCredits(!isMovie && tmdbId > 0 ? tmdbId : 0);
   const credits = isMovie ? movieCredits : tvCredits;
+  // disc-2026-07-credits-spoken-languages-persist: a manual metadata edit is an intentional
+  // override, so prefer the persisted local credits when metadataSource === 'manual';
+  // otherwise fall back to the live TMDb credits (credits.data). data?.credits is the local
+  // movie/series payload — absent for never-edited items, so TMDb wins by default.
+  const effectiveCredits =
+    data?.metadataSource === 'manual' && data.credits ? data.credits : credits.data;
   const douban = useDoubanRating(id, isMovie ? 'movie' : 'series', tmdbId > 0);
   const doubanReview = useDoubanReviewSummary(
     id,
@@ -106,11 +112,13 @@ export function LocalDetailV2({ type, id }: { type: 'movie' | 'tv'; id: string }
       titleEnglish: data.originalTitle,
       year: parseInt(date?.slice(0, 4) || '0', 10),
       genres: data.genres || [],
-      director: isMovie ? credits.data?.crew?.find((c) => c.job === 'Director')?.name : undefined,
-      cast: credits.data?.cast?.slice(0, 10).map((c) => c.name) || [],
+      director: isMovie
+        ? effectiveCredits?.crew?.find((c) => c.job === 'Director')?.name
+        : undefined,
+      cast: effectiveCredits?.cast?.slice(0, 10).map((c) => c.name) || [],
       overview: data.overview,
     };
-  }, [data, isMovie, id, credits.data, localMovie.data, localSeries.data]);
+  }, [data, isMovie, id, effectiveCredits, localMovie.data, localSeries.data]);
 
   if (isLoading) return <DetailSkeletonV2 />;
   if (isError || !data) return <DetailNotFoundV2 onBack={onBack} />;
@@ -124,7 +132,7 @@ export function LocalDetailV2({ type, id }: { type: 'movie' | 'tv'; id: string }
     : localSeries.data?.numberOfSeasons
       ? `${localSeries.data.numberOfSeasons} 季 · ${localSeries.data.numberOfEpisodes ?? '?'} 集`
       : null;
-  const director = isMovie ? credits.data?.crew?.find((c) => c.job === 'Director') : undefined;
+  const director = isMovie ? effectiveCredits?.crew?.find((c) => c.job === 'Director') : undefined;
   const filePath = data.filePath;
   const editorMetadata = buildEditorMetadata();
 
@@ -236,8 +244,8 @@ export function LocalDetailV2({ type, id }: { type: 'movie' | 'tv'; id: string }
           filePath={filePath}
         />
 
-        {credits.data && (
-          <CreditsSection director={director} cast={credits.data.cast?.slice(0, 8)} />
+        {effectiveCredits && (
+          <CreditsSection director={director} cast={effectiveCredits.cast?.slice(0, 8)} />
         )}
 
         {tmdbId > 0 && <TrailerSection tmdbId={tmdbId} type={type} title={data.title} />}

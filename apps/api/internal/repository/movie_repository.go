@@ -48,9 +48,9 @@ func (r *MovieRepository) Create(ctx context.Context, movie *models.Movie) error
 			file_path, file_size, parse_status, metadata_source, vote_average,
 			is_removed,
 			video_codec, video_resolution, audio_codec, audio_channels,
-			subtitle_tracks, hdr_format, production_countries,
+			subtitle_tracks, hdr_format, production_countries, credits, spoken_languages,
 			created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
 	_, err = r.db.ExecContext(ctx, query,
@@ -81,6 +81,8 @@ func (r *MovieRepository) Create(ctx context.Context, movie *models.Movie) error
 		movie.SubtitleTracks,
 		movie.HDRFormat,
 		movie.ProductionCountriesJSON,
+		movie.CreditsJSON,
+		movie.SpokenLanguagesJSON,
 		movie.CreatedAt,
 		movie.UpdatedAt,
 	)
@@ -211,6 +213,8 @@ func (r *MovieRepository) Update(ctx context.Context, movie *models.Movie) error
 			subtitle_tracks = ?,
 			hdr_format = ?,
 			production_countries = ?,
+			credits = ?,
+			spoken_languages = ?,
 			library_id = ?,
 			updated_at = ?
 		WHERE id = ?
@@ -250,6 +254,8 @@ func (r *MovieRepository) Update(ctx context.Context, movie *models.Movie) error
 		movie.SubtitleTracks,
 		movie.HDRFormat,
 		movie.ProductionCountriesJSON,
+		movie.CreditsJSON,
+		movie.SpokenLanguagesJSON,
 		movie.LibraryID,
 		movie.UpdatedAt,
 		movie.ID,
@@ -625,7 +631,7 @@ const movieSelectColumns = `
 	subtitle_status, subtitle_path, subtitle_language, subtitle_last_searched, subtitle_search_score,
 	vote_average, vote_count, is_removed,
 	video_codec, video_resolution, audio_codec, audio_channels, subtitle_tracks, hdr_format,
-	production_countries,
+	production_countries, credits, spoken_languages,
 	douban_id, douban_rating, douban_vote_count,
 	created_at, updated_at
 `
@@ -670,6 +676,8 @@ func scanMovie(scanner interface {
 		&movie.SubtitleTracks,
 		&movie.HDRFormat,
 		&movie.ProductionCountriesJSON,
+		&movie.CreditsJSON,
+		&movie.SpokenLanguagesJSON,
 		&movie.DoubanID,
 		&movie.DoubanRating,
 		&movie.DoubanVoteCount,
@@ -689,6 +697,17 @@ func scanMovie(scanner interface {
 	// enrichment must never fail a movie read).
 	if pcs, err := movie.GetProductionCountries(); err == nil {
 		movie.ProductionCountries = pcs
+	}
+
+	// Populate the wire-exposed Credits only when cast/crew is non-empty, so omitempty
+	// drops it for never-edited movies (manual Metadata-Editor edits are the only writer).
+	if credits, err := movie.GetCredits(); err == nil && (len(credits.Cast) > 0 || len(credits.Crew) > 0) {
+		movie.Credits = credits
+	}
+
+	// Populate the wire-exposed SpokenLanguages (persist-only; malformed JSON → empty slice).
+	if langs, err := movie.GetSpokenLanguages(); err == nil {
+		movie.SpokenLanguages = langs
 	}
 
 	return movie, nil
@@ -738,9 +757,9 @@ func (r *MovieRepository) BulkCreate(ctx context.Context, movies []*models.Movie
 			file_path, file_size, parse_status, metadata_source, vote_average,
 			is_removed,
 			video_codec, video_resolution, audio_codec, audio_channels,
-			subtitle_tracks, hdr_format, production_countries,
+			subtitle_tracks, hdr_format, production_countries, credits, spoken_languages,
 			created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
 	stmt, err := tx.PrepareContext(ctx, query)
@@ -791,6 +810,8 @@ func (r *MovieRepository) BulkCreate(ctx context.Context, movies []*models.Movie
 			movie.SubtitleTracks,
 			movie.HDRFormat,
 			movie.ProductionCountriesJSON,
+			movie.CreditsJSON,
+			movie.SpokenLanguagesJSON,
 			movie.CreatedAt,
 			movie.UpdatedAt,
 		)
@@ -1090,5 +1111,13 @@ func (r *MovieRepository) Upsert(ctx context.Context, movie *models.Movie) error
 	// Movie exists - update with existing ID
 	movie.ID = existing.ID
 	movie.CreatedAt = existing.CreatedAt
+	// Preserve manually-edited credits across a re-scan/re-match. The scan ingestion path
+	// (SaveMovieFromTMDb → ConvertTMDbMovieToModel) never sets credits — they are manual-only
+	// via the Metadata Editor — so a fresh model carries an empty CreditsJSON. Without this,
+	// Upsert would overwrite the persisted manual cast with NULL. spoken_languages IS
+	// TMDb-sourced, so it is intentionally NOT preserved (it refreshes on re-scan).
+	if !movie.CreditsJSON.Valid {
+		movie.CreditsJSON = existing.CreditsJSON
+	}
 	return r.Update(ctx, movie)
 }
