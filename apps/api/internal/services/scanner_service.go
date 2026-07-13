@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/vido/api/internal/models"
+	"github.com/vido/api/internal/parser"
 	"github.com/vido/api/internal/repository"
 	"github.com/vido/api/internal/sse"
 )
@@ -60,13 +61,15 @@ type ScanResult struct {
 
 // ScannerService handles recursive folder scanning and video file discovery
 type ScannerService struct {
-	movieRepo   repository.MovieRepositoryInterface
-	seriesRepo  repository.SeriesRepositoryInterface
-	episodeRepo repository.EpisodeRepositoryInterface
-	libraryRepo repository.MediaLibraryRepositoryInterface
-	mediaDirs   []string // Fallback dirs from VIDO_MEDIA_DIRS env var
-	sseHub      *sse.Hub
-	logger      *slog.Logger
+	movieRepo     repository.MovieRepositoryInterface
+	seriesRepo    repository.SeriesRepositoryInterface
+	episodeRepo   repository.EpisodeRepositoryInterface
+	libraryRepo   repository.MediaLibraryRepositoryInterface
+	ingestService *MediaIngestService
+	parserService ParserServiceInterface
+	mediaDirs     []string // Fallback dirs from VIDO_MEDIA_DIRS env var
+	sseHub        *sse.Hub
+	logger        *slog.Logger
 
 	mu              sync.Mutex
 	isScanning      bool
@@ -109,6 +112,42 @@ func (s *ScannerService) SetLibraryRepo(repo repository.MediaLibraryRepositoryIn
 // SetEpisodeRepo sets the episode repository for series file_size aggregation (Story 9c-3)
 func (s *ScannerService) SetEpisodeRepo(repo repository.EpisodeRepositoryInterface) {
 	s.episodeRepo = repo
+}
+
+// SetTVIngest enables TV routing. Without it the scanner keeps its historical behaviour
+// of writing every file to `movies`, which is what left series/seasons/episodes empty.
+func (s *ScannerService) SetTVIngest(ingest *MediaIngestService, parserService ParserServiceInterface) {
+	s.ingestService = ingest
+	s.parserService = parserService
+}
+
+// resolveMediaType decides whether a scanned file is a movie or a TV episode.
+//
+// The library's content_type wins when the user has declared one — that is the whole point
+// of the manual per-folder type designation. It is empty when the scan is running off the
+// VIDO_MEDIA_DIRS fallback (which carries no type), and then the filename decides:
+// tv_parser recognises SxxExx / 1x05 / 第N集 / anime episode forms.
+func (s *ScannerService) resolveMediaType(contentType, filePath string) (isTV bool, parseResult *parser.ParseResult) {
+	switch models.MediaLibraryContentType(contentType) {
+	case models.ContentTypeSeries:
+		return true, s.parseFilename(filePath)
+	case models.ContentTypeMovie:
+		return false, nil
+	}
+
+	// No declared type → let the filename decide.
+	result := s.parseFilename(filePath)
+	if result != nil && result.MediaType == parser.MediaTypeTVShow {
+		return true, result
+	}
+	return false, nil
+}
+
+func (s *ScannerService) parseFilename(filePath string) *parser.ParseResult {
+	if s.parserService == nil {
+		return nil
+	}
+	return s.parserService.ParseFilename(filepath.Base(filePath))
 }
 
 // StartScan initiates a recursive scan of all configured media directories.
@@ -223,7 +262,7 @@ func (s *ScannerService) StartScan(ctx context.Context) (*ScanResult, error) {
 			continue
 		}
 
-		err = s.walkDirectory(ctx, dir, sd.libraryID, seenPaths, &pendingMovies)
+		err = s.walkDirectory(ctx, dir, sd.libraryID, sd.contentType, seenPaths, &pendingMovies)
 		if err != nil {
 			s.logger.Error("SCANNER_PARSE_FAILED: error walking directory", "path", dir, "error", err)
 			s.mu.Lock()
@@ -316,7 +355,7 @@ func (s *ScannerService) GetProgress() ScanProgress {
 }
 
 // walkDirectory recursively walks a directory and discovers video files
-func (s *ScannerService) walkDirectory(ctx context.Context, root string, libraryID string, seenPaths map[string]bool, pendingMovies *[]*models.Movie) error {
+func (s *ScannerService) walkDirectory(ctx context.Context, root string, libraryID string, contentType string, seenPaths map[string]bool, pendingMovies *[]*models.Movie) error {
 	return filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		// Check cancellation
 		select {
@@ -391,7 +430,7 @@ func (s *ScannerService) walkDirectory(ctx context.Context, root string, library
 		}
 
 		// Process the video file
-		err = s.processVideoFile(ctx, resolvedPath, libraryID, pendingMovies)
+		err = s.processVideoFile(ctx, resolvedPath, root, libraryID, contentType, pendingMovies)
 		if err != nil {
 			s.logger.Error("failed to process video file", "path", resolvedPath, "error", err)
 			s.mu.Lock()
@@ -409,15 +448,22 @@ func isVideoFile(path string) bool {
 	return videoExtensions[ext]
 }
 
-// processVideoFile checks for duplicates and either creates or updates a movie record.
-// Note: All scanned files are initially created as Movie records regardless of whether
-// they are movies or TV series. The parser service (Stories 2-3, 3-1) is responsible
-// for determining the media type and converting to Series records if needed.
-func (s *ScannerService) processVideoFile(ctx context.Context, resolvedPath string, libraryID string, pendingMovies *[]*models.Movie) error {
+// processVideoFile routes one scanned file to the table it belongs in: movies, or
+// series/seasons/episodes. Historically it wrote every file as a Movie and left the
+// media-type decision to a "parser service ... converting to Series records if needed"
+// that was never written — which is why a TV library came out as one movies row per
+// episode, each stamped with the whole series' TMDb metadata.
+func (s *ScannerService) processVideoFile(ctx context.Context, resolvedPath, scanRoot, libraryID, contentType string, pendingMovies *[]*models.Movie) error {
 	// Get file info for size
 	info, err := os.Stat(resolvedPath)
 	if err != nil {
 		return fmt.Errorf("failed to stat file: %w", err)
+	}
+
+	if s.ingestService != nil {
+		if isTV, parseResult := s.resolveMediaType(contentType, resolvedPath); isTV {
+			return s.processTVFile(ctx, resolvedPath, scanRoot, libraryID, parseResult)
+		}
 	}
 
 	// Check for existing record (duplicate detection)
@@ -474,6 +520,36 @@ func (s *ScannerService) processVideoFile(ctx context.Context, resolvedPath stri
 		if err := s.flushBatch(ctx, pendingMovies); err != nil {
 			return err
 		}
+	}
+
+	s.mu.Lock()
+	s.progress.FilesCreated++
+	s.mu.Unlock()
+
+	return nil
+}
+
+// processTVFile ingests one episode file into series/seasons/episodes.
+//
+// It also repairs history: if a `movies` row still claims this file_path, it was written
+// by the pre-fix scanner, which mis-filed every episode as a movie. That row is deleted —
+// the file is provably in the wrong table, the episode row now owns it, and leaving it
+// would show the same episode twice (once in the movie grid, once under its series).
+// A soft-delete would not do: FindByFilePath does not filter is_removed, so the next scan
+// would resurrect it.
+func (s *ScannerService) processTVFile(ctx context.Context, resolvedPath, scanRoot, libraryID string, parseResult *parser.ParseResult) error {
+	if stale, err := s.movieRepo.FindByFilePath(ctx, resolvedPath); err != nil {
+		return fmt.Errorf("failed to check for a mis-filed movie row: %w", err)
+	} else if stale != nil {
+		if err := s.movieRepo.Delete(ctx, stale.ID); err != nil {
+			return fmt.Errorf("failed to delete mis-filed movie row %s: %w", stale.ID, err)
+		}
+		s.logger.Info("removed mis-filed movie row for a TV episode",
+			"movie_id", stale.ID, "file_path", resolvedPath)
+	}
+
+	if _, err := s.ingestService.IngestEpisodeFile(ctx, resolvedPath, scanRoot, libraryID, parseResult); err != nil {
+		return fmt.Errorf("failed to ingest episode: %w", err)
 	}
 
 	s.mu.Lock()

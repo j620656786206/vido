@@ -44,6 +44,7 @@ type EnrichmentResult struct {
 // and searching TMDB for metadata.
 type EnrichmentService struct {
 	movieRepo       repository.MovieRepositoryInterface
+	seriesRepo      repository.SeriesRepositoryInterface
 	parserService   ParserServiceInterface
 	metadataService MetadataServiceInterface
 	nfoReader       *NFOReaderService
@@ -184,6 +185,58 @@ func (s *EnrichmentService) StartEnrichment(ctx context.Context) (*EnrichmentRes
 		}
 	}
 
+	// Series pass. The scanner creates a series row per TV folder with the folder name as
+	// its title and parse_status=pending; without this it would sit unmatched forever —
+	// no poster, no overview, a filename for a title. Skipped when seriesRepo is not wired
+	// (older call sites), which keeps the movie-only behaviour intact.
+	if s.seriesRepo != nil {
+		seriesList, err := s.findUnenrichedSeries(ctx)
+		if err != nil {
+			s.logger.Warn("failed to find unenriched series", "error", err)
+		} else if len(seriesList) > 0 {
+			s.mu.Lock()
+			s.progress.Total += len(seriesList)
+			s.mu.Unlock()
+
+			s.logger.Info("enriching series", "total_series", len(seriesList))
+
+			for i := range seriesList {
+				select {
+				case <-s.cancelChan:
+					s.logger.Info("enrichment cancelled during series pass", "processed", i)
+					return s.buildResult(startedAt), nil
+				case <-ctx.Done():
+					return s.buildResult(startedAt), nil
+				default:
+				}
+
+				series := &seriesList[i]
+
+				s.mu.Lock()
+				s.progress.CurrentTitle = series.Title
+				s.mu.Unlock()
+
+				if err := s.enrichSeries(ctx, series); err != nil {
+					s.logger.Warn("enrichment failed for series",
+						"id", series.ID, "title", series.Title, "error", err)
+					s.mu.Lock()
+					s.progress.Failed++
+					s.progress.Processed++
+					s.mu.Unlock()
+				} else {
+					s.mu.Lock()
+					s.progress.Succeeded++
+					s.progress.Processed++
+					s.mu.Unlock()
+				}
+
+				if (i+1)%5 == 0 || i == len(seriesList)-1 {
+					s.broadcastProgress()
+				}
+			}
+		}
+	}
+
 	result := s.buildResult(startedAt)
 	s.broadcastComplete(result)
 
@@ -195,6 +248,98 @@ func (s *EnrichmentService) StartEnrichment(ctx context.Context) (*EnrichmentRes
 	)
 
 	return result, nil
+}
+
+// findUnenrichedSeries queries for series with empty or pending parse_status.
+func (s *EnrichmentService) findUnenrichedSeries(ctx context.Context) ([]models.Series, error) {
+	pending, err := s.seriesRepo.FindByParseStatus(ctx, models.ParseStatusPending)
+	if err != nil {
+		return nil, err
+	}
+	empty, err := s.seriesRepo.FindByParseStatus(ctx, models.ParseStatus(""))
+	if err != nil {
+		return nil, err
+	}
+	return append(pending, empty...), nil
+}
+
+// enrichSeries resolves TMDb metadata for a scanner-created series and writes it to the
+// series row. Note the contrast with the pre-fix behaviour: enrichMovie ALSO detected TV
+// correctly and searched TMDb as TV — and then wrote the series' metadata onto a movie
+// row, because EnrichmentService had no seriesRepo. That is why every episode looked like
+// a movie wearing its show's poster.
+func (s *EnrichmentService) enrichSeries(ctx context.Context, series *models.Series) error {
+	title := series.Title
+	if parseResult := s.parserService.ParseFilename(title); parseResult != nil && parseResult.CleanedTitle != "" {
+		title = parseResult.CleanedTitle
+	}
+
+	searchResult, _, err := s.metadataService.SearchMetadata(ctx, &SearchMetadataRequest{
+		Query:     title,
+		MediaType: "tv",
+	})
+	if err != nil {
+		series.ParseStatus = models.ParseStatusFailed
+		series.UpdatedAt = time.Now()
+		_ = s.seriesRepo.Update(ctx, series)
+		return fmt.Errorf("metadata search failed: %w", err)
+	}
+
+	if searchResult == nil || !searchResult.HasResults() {
+		series.ParseStatus = models.ParseStatusFailed
+		series.UpdatedAt = time.Now()
+		if updateErr := s.seriesRepo.Update(ctx, series); updateErr != nil {
+			return fmt.Errorf("update series after no match: %w", updateErr)
+		}
+		return nil
+	}
+
+	s.applyMetadataToSeries(series, searchResult.Items[0], searchResult.Source)
+	series.ParseStatus = models.ParseStatusSuccess
+	series.UpdatedAt = time.Now()
+
+	if err := s.seriesRepo.Update(ctx, series); err != nil {
+		return fmt.Errorf("update series: %w", err)
+	}
+	return nil
+}
+
+// applyMetadataToSeries copies a metadata match onto the series row.
+func (s *EnrichmentService) applyMetadataToSeries(series *models.Series, item metadata.MetadataItem, source models.MetadataSource) {
+	if item.Title != "" {
+		series.Title = item.Title
+	}
+	if item.OriginalTitle != "" {
+		series.OriginalTitle = models.NewNullString(item.OriginalTitle)
+	}
+	if id := parseProviderID(item.ID); id > 0 {
+		series.TMDbID = models.NewNullInt64(id)
+	}
+	if item.PosterURL != "" {
+		series.PosterPath = models.NewNullString(item.PosterURL)
+	}
+	if item.BackdropURL != "" {
+		series.BackdropPath = models.NewNullString(item.BackdropURL)
+	}
+	if item.Overview != "" {
+		series.Overview = models.NewNullString(item.Overview)
+	}
+	if item.ReleaseDate != "" {
+		series.FirstAirDate = item.ReleaseDate
+	}
+	if item.Rating > 0 {
+		series.VoteAverage = models.NewNullFloat64(item.Rating)
+	}
+	if len(item.Genres) > 0 {
+		series.Genres = item.Genres
+	}
+	series.MetadataSource = models.NewNullString(string(source))
+}
+
+// SetSeriesRepo enables the series enrichment pass (bugfix-b). Without it the service
+// keeps its historical movie-only behaviour.
+func (s *EnrichmentService) SetSeriesRepo(repo repository.SeriesRepositoryInterface) {
+	s.seriesRepo = repo
 }
 
 // findUnenrichedMovies queries for movies with empty or pending parse_status.

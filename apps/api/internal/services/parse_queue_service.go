@@ -45,6 +45,7 @@ type ParseQueueService struct {
 	seriesRepo      repository.SeriesRepositoryInterface
 	seasonRepo      repository.SeasonRepositoryInterface
 	episodeRepo     repository.EpisodeRepositoryInterface
+	ingest          *MediaIngestService
 	logger          *slog.Logger
 }
 
@@ -67,6 +68,7 @@ func NewParseQueueService(
 		seriesRepo:      seriesRepo,
 		seasonRepo:      seasonRepo,
 		episodeRepo:     episodeRepo,
+		ingest:          NewMediaIngestService(seriesRepo, seasonRepo, episodeRepo, logger),
 		logger:          logger,
 	}
 }
@@ -252,34 +254,34 @@ func (s *ParseQueueService) createTVEntryFromMatch(
 	job *models.ParseJob,
 	parseResult *parser.ParseResult,
 ) (string, error) {
-	tmdbID := parseProviderID(bestMatch.ID)
-
-	// 1. Upsert Series
-	seriesID, err := s.upsertSeries(ctx, bestMatch, searchResult, tmdbID)
+	// Series/season/episode creation lives in MediaIngestService so this path and the
+	// scanner cannot drift apart — the drift between two hand-rolled implementations is
+	// exactly what buried the TV pipeline in the first place.
+	seriesID, err := s.ingest.UpsertSeries(ctx, SeriesInput{
+		TMDbID:   parseProviderID(bestMatch.ID),
+		Title:    bestMatch.Title,
+		Metadata: &bestMatch,
+		Source:   models.MetadataSource(searchResult.Source),
+	})
 	if err != nil {
 		return "", fmt.Errorf("upsert series: %w", err)
 	}
 
-	// 2. Upsert Season
 	seasonNumber := parseResult.Season
-	seasonID, err := s.upsertSeason(ctx, seriesID, seasonNumber)
+	seasonID, err := s.ingest.UpsertSeason(ctx, seriesID, seasonNumber)
 	if err != nil {
 		return "", fmt.Errorf("upsert season: %w", err)
 	}
 
-	// 3. Upsert Episode
 	episodeNumber := parseResult.Episode
-	episode := &models.Episode{
-		ID:            uuid.New().String(),
+	if err := s.ingest.UpsertEpisode(ctx, EpisodeInput{
 		SeriesID:      seriesID,
-		SeasonID:      models.NewNullString(seasonID),
+		SeasonID:      seasonID,
 		SeasonNumber:  seasonNumber,
 		EpisodeNumber: episodeNumber,
-		Title:         models.NullString{NullString: sql.NullString{String: bestMatch.Title, Valid: bestMatch.Title != ""}},
-		FilePath:      models.NewNullString(job.FilePath),
-	}
-
-	if err := s.episodeRepo.Upsert(ctx, episode); err != nil {
+		Title:         bestMatch.Title,
+		FilePath:      job.FilePath,
+	}); err != nil {
 		return "", fmt.Errorf("upsert episode: %w", err)
 	}
 
@@ -291,102 +293,6 @@ func (s *ParseQueueService) createTVEntryFromMatch(
 	)
 
 	return seriesID, nil
-}
-
-// upsertSeries finds an existing series by TMDb ID or creates a new one.
-func (s *ParseQueueService) upsertSeries(
-	ctx context.Context,
-	bestMatch metadata.MetadataItem,
-	searchResult *metadata.SearchResult,
-	tmdbID int64,
-) (string, error) {
-	// Check if series already exists by TMDb ID
-	if tmdbID > 0 {
-		existing, err := s.seriesRepo.FindByTMDbID(ctx, tmdbID)
-		if err == nil && existing != nil {
-			return existing.ID, nil
-		}
-	}
-
-	// Create new series
-	seriesID := uuid.New().String()
-	series := &models.Series{
-		ID:         seriesID,
-		Title:      bestMatch.Title,
-		TMDbID:     models.NullInt64{NullInt64: sql.NullInt64{Int64: tmdbID, Valid: tmdbID > 0}},
-		PosterPath: models.NullString{NullString: sql.NullString{String: bestMatch.PosterURL, Valid: bestMatch.PosterURL != ""}},
-		Overview:   models.NullString{NullString: sql.NullString{String: bestMatch.Overview, Valid: bestMatch.Overview != ""}},
-		Genres:     bestMatch.Genres,
-		ParseStatus:    models.ParseStatusSuccess,
-		MetadataSource: models.NewNullString(string(searchResult.Source)),
-	}
-
-	if bestMatch.ReleaseDate != "" {
-		series.FirstAirDate = bestMatch.ReleaseDate
-	}
-	if bestMatch.Rating > 0 {
-		series.VoteAverage = models.NewNullFloat64(bestMatch.Rating)
-	}
-	if bestMatch.OriginalTitle != "" {
-		series.OriginalTitle = models.NewNullString(bestMatch.OriginalTitle)
-	}
-
-	if err := s.seriesRepo.Create(ctx, series); err != nil {
-		return "", fmt.Errorf("create series: %w", err)
-	}
-
-	return seriesID, nil
-}
-
-// upsertSeason finds an existing season or creates a new one.
-// Season data is sourced from the Series' SeasonsJSON (TMDb summary) when available.
-func (s *ParseQueueService) upsertSeason(
-	ctx context.Context,
-	seriesID string,
-	seasonNumber int,
-) (string, error) {
-	// Check if season already exists
-	existing, err := s.seasonRepo.FindBySeriesAndNumber(ctx, seriesID, seasonNumber)
-	if err == nil && existing != nil {
-		return existing.ID, nil
-	}
-
-	// Try to get season data from the Series' SeasonsJSON
-	var seasonSummary *models.SeasonSummary
-	series, seriesErr := s.seriesRepo.FindByID(ctx, seriesID)
-	if seriesErr == nil && series != nil {
-		seasons, parseErr := series.GetSeasons()
-		if parseErr == nil {
-			for i := range seasons {
-				if seasons[i].SeasonNumber == seasonNumber {
-					seasonSummary = &seasons[i]
-					break
-				}
-			}
-		}
-	}
-
-	// Create season
-	season := &models.Season{
-		ID:           uuid.New().String(),
-		SeriesID:     seriesID,
-		SeasonNumber: seasonNumber,
-	}
-
-	if seasonSummary != nil {
-		season.TMDbID = models.NullInt64{NullInt64: sql.NullInt64{Int64: int64(seasonSummary.ID), Valid: seasonSummary.ID > 0}}
-		season.Name = models.NullString{NullString: sql.NullString{String: seasonSummary.Name, Valid: seasonSummary.Name != ""}}
-		season.Overview = models.NullString{NullString: sql.NullString{String: seasonSummary.Overview, Valid: seasonSummary.Overview != ""}}
-		season.PosterPath = models.NullString{NullString: sql.NullString{String: seasonSummary.PosterPath, Valid: seasonSummary.PosterPath != ""}}
-		season.AirDate = models.NullString{NullString: sql.NullString{String: seasonSummary.AirDate, Valid: seasonSummary.AirDate != ""}}
-		season.EpisodeCount = models.NullInt64{NullInt64: sql.NullInt64{Int64: int64(seasonSummary.EpisodeCount), Valid: seasonSummary.EpisodeCount > 0}}
-	}
-
-	if err := s.seasonRepo.Create(ctx, season); err != nil {
-		return "", fmt.Errorf("create season: %w", err)
-	}
-
-	return season.ID, nil
 }
 
 // GetJobStatus retrieves the current status of a parse job by torrent hash.

@@ -116,6 +116,9 @@ type SeriesRepositoryInterface interface {
 	// FindByIMDbID retrieves a series by its IMDb ID
 	FindByIMDbID(ctx context.Context, imdbID string) (*models.Series, error)
 
+	// FindByFilePath retrieves a series by its folder path. Returns (nil, nil) when absent.
+	FindByFilePath(ctx context.Context, filePath string) (*models.Series, error)
+
 	// Update modifies an existing series in the database
 	Update(ctx context.Context, series *models.Series) error
 

@@ -395,7 +395,13 @@ func main() {
 	)
 	scannerService.SetLibraryRepo(repos.MediaLibraries) // Story 7b-5: DB-based library scanning
 	scannerService.SetEpisodeRepo(repos.Episodes)       // Story 9c-3: series file_size aggregation
-	slog.Info("Scanner service initialized")
+
+	// TV routing (bugfix-b): without this the scanner writes every scanned file to `movies`,
+	// which is what left series/seasons/episodes empty while the movie table filled up with
+	// one row per episode.
+	mediaIngestService := services.NewMediaIngestService(repos.Series, repos.Seasons, repos.Episodes, slog.Default())
+	scannerService.SetTVIngest(mediaIngestService, parserService)
+	slog.Info("Scanner service initialized (TV routing enabled)")
 
 	// Initialize NFO reader service for .nfo sidecar parsing (Story 9c-2)
 	nfoReaderService := services.NewNFOReaderService(slog.Default())
@@ -416,6 +422,11 @@ func main() {
 		sseHub,
 		slog.Default(),
 	)
+	// bugfix-b: the scanner now creates series rows with a folder-name title and
+	// parse_status=pending. Without a series repo the enrichment pass would leave them
+	// unmatched forever.
+	enrichmentService.SetSeriesRepo(repos.Series)
+
 	// Wire post-scan auto-enrichment: after scan completes with new/updated files,
 	// automatically trigger metadata enrichment in background
 	scannerService.SetOnScanComplete(func() {

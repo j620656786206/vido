@@ -279,6 +279,14 @@ func (m *mockPQSeriesRepo) FindByTMDbID(_ context.Context, tmdbID int64) (*model
 func (m *mockPQSeriesRepo) FindByIMDbID(_ context.Context, _ string) (*models.Series, error) {
 	return nil, nil
 }
+func (m *mockPQSeriesRepo) FindByFilePath(_ context.Context, filePath string) (*models.Series, error) {
+	for _, s := range m.series {
+		if s.FilePath.Valid && s.FilePath.String == filePath {
+			return s, nil
+		}
+	}
+	return nil, nil // (nil, nil) on miss, matching the real repository
+}
 func (m *mockPQSeriesRepo) Update(_ context.Context, _ *models.Series) error { return nil }
 func (m *mockPQSeriesRepo) Delete(_ context.Context, _ string) error         { return nil }
 func (m *mockPQSeriesRepo) List(_ context.Context, _ repository.ListParams) ([]models.Series, *repository.PaginationResult, error) {
