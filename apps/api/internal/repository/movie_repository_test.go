@@ -2117,6 +2117,51 @@ func TestListExcludesRemovedMovies(t *testing.T) {
 		t.Errorf("GetStats.Total (%d) != List.TotalResults (%d) — the two endpoints disagree",
 			stats.Total, pagination.TotalResults)
 	}
+
+	// Count feeds /api/v1/library/stats. It kept reporting the unfiltered total after
+	// List was fixed, so the library header said 5922 while the grid below it showed
+	// 5163 — the same disagreement, one endpoint further along.
+	count, err := repo.Count(ctx)
+	if err != nil {
+		t.Fatalf("Count failed: %v", err)
+	}
+	if count != pagination.TotalResults {
+		t.Errorf("Count (%d) != List.TotalResults (%d) — Count does not exclude soft-deleted movies",
+			count, pagination.TotalResults)
+	}
+}
+
+// TestGetYearRangeExcludesRemovedMovies — the year range feeds the library filter's
+// min/max sliders. A soft-deleted movie must not be able to widen it.
+func TestGetYearRangeExcludesRemovedMovies(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	live := fullyPopulatedMovie("movie-live", 1, "/media/live.mkv")
+	live.ReleaseDate = "2010-01-01"
+	if err := repo.Create(ctx, live); err != nil {
+		t.Fatalf("Create live failed: %v", err)
+	}
+
+	// A deleted movie from far outside the live range.
+	removed := fullyPopulatedMovie("movie-removed", 2, "/media/removed.mkv")
+	removed.ReleaseDate = "1951-01-01"
+	removed.IsRemoved = true
+	if err := repo.Create(ctx, removed); err != nil {
+		t.Fatalf("Create removed failed: %v", err)
+	}
+
+	minYear, maxYear, err := repo.GetYearRange(ctx)
+	if err != nil {
+		t.Fatalf("GetYearRange failed: %v", err)
+	}
+	if minYear != 2010 || maxYear != 2010 {
+		t.Errorf("GetYearRange = (%d, %d), want (2010, 2010) — a soft-deleted movie widened the range",
+			minYear, maxYear)
+	}
 }
 
 // TestFullTextSearchExcludesRemovedMovies — same soft-delete leak, via /api/v1/search.

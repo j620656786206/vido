@@ -510,10 +510,10 @@ func (r *MovieRepository) GetDistinctGenres(ctx context.Context) ([]string, erro
 
 // GetYearRange returns the min and max release years from movies
 func (r *MovieRepository) GetYearRange(ctx context.Context) (minYear, maxYear int, err error) {
-	query := `SELECT
+	query := fmt.Sprintf(`SELECT
 		COALESCE(MIN(CAST(substr(release_date, 1, 4) AS INTEGER)), 0),
 		COALESCE(MAX(CAST(substr(release_date, 1, 4) AS INTEGER)), 0)
-		FROM movies WHERE release_date != '' AND release_date IS NOT NULL`
+		FROM movies WHERE release_date != '' AND release_date IS NOT NULL AND %s`, notRemoved)
 
 	err = r.db.QueryRowContext(ctx, query).Scan(&minYear, &maxYear)
 	if err != nil {
@@ -526,7 +526,8 @@ func (r *MovieRepository) GetYearRange(ctx context.Context) (minYear, maxYear in
 // Count returns the total number of movies
 func (r *MovieRepository) Count(ctx context.Context) (int, error) {
 	var count int
-	err := r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM movies").Scan(&count)
+	query := fmt.Sprintf("SELECT COUNT(*) FROM movies WHERE %s", notRemoved)
+	err := r.db.QueryRowContext(ctx, query).Scan(&count)
 	if err != nil {
 		return 0, fmt.Errorf("failed to count movies: %w", err)
 	}
