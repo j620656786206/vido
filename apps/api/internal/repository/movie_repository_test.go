@@ -1903,3 +1903,298 @@ func TestFindMissingZhHantSubtitle_ShrinksAfterWriteback(t *testing.T) {
 		t.Errorf("Expected empty enumeration after writeback, got %d", len(movies))
 	}
 }
+
+// fullyPopulatedMovie returns a movie with every persisted column set to a
+// non-zero value, so a read path that forgets a column fails loudly.
+func fullyPopulatedMovie(id string, tmdbID int64, filePath string) *models.Movie {
+	return &models.Movie{
+		ID:                      id,
+		Title:                   "Blades of the Guardians",
+		OriginalTitle:           models.NewNullString("鏢人"),
+		ReleaseDate:             "2026-02-17",
+		Genres:                  []string{"Action", "Adventure"},
+		Rating:                  models.NewNullFloat64(7.5),
+		Overview:                models.NewNullString("An overview."),
+		PosterPath:              models.NewNullString("/poster.jpg"),
+		BackdropPath:            models.NewNullString("/backdrop.jpg"),
+		Runtime:                 models.NewNullInt64(118),
+		OriginalLanguage:        models.NewNullString("zh"),
+		Status:                  models.NewNullString("Released"),
+		IMDbID:                  models.NewNullString("tt1234567"),
+		TMDbID:                  models.NewNullInt64(tmdbID),
+		FilePath:                models.NewNullString(filePath),
+		FileSize:                models.NewNullInt64(8_589_934_592),
+		ParseStatus:             models.ParseStatusSuccess,
+		MetadataSource:          models.NewNullString("tmdb"),
+		LibraryID:               models.NewNullString("lib-movies"),
+		SubtitleStatus:          models.SubtitleStatusFound,
+		SubtitlePath:            models.NewNullString("/media/sub.srt"),
+		SubtitleLanguage:        models.NewNullString("zh-TW"),
+		SubtitleSearchScore:     models.NewNullFloat64(0.91),
+		VoteAverage:             models.NewNullFloat64(7.8),
+		VoteCount:               models.NewNullInt64(4200),
+		VideoCodec:              models.NewNullString("x265"),
+		VideoResolution:         models.NewNullString("2160p"),
+		AudioCodec:              models.NewNullString("TrueHD"),
+		AudioChannels:           models.NewNullInt64(8),
+		SubtitleTracks:          models.NewNullString(`["zh-TW"]`),
+		HDRFormat:               models.NewNullString("Dolby Vision"),
+		ProductionCountriesJSON: models.NewNullString(`[{"iso_3166_1":"CN","name":"China"}]`),
+		CreditsJSON:             models.NewNullString(`{"cast":[{"name":"Somebody"}],"crew":[]}`),
+		SpokenLanguagesJSON:     models.NewNullString(`[{"iso_639_1":"zh","name":"普通话"}]`),
+		DoubanID:                models.NewNullString("douban-1"),
+		DoubanRating:            models.NewNullFloat64(8.1),
+		DoubanVoteCount:         models.NewNullInt64(1234),
+	}
+}
+
+// seedFullyPopulatedMovie writes a movie whose row has every column set on disk, so a
+// read path that drops a column is the only thing that can make one come back empty.
+// It walks the real write lifecycle rather than a single INSERT: Create persists the
+// columns known at scan time, Update fills the ones the scanner learns later
+// (vote_count, subtitle_*), and UpdateDoubanRating owns the douban_* columns.
+func seedFullyPopulatedMovie(t *testing.T, repo *MovieRepository, ctx context.Context, id string, tmdbID int64, filePath string) {
+	t.Helper()
+
+	movie := fullyPopulatedMovie(id, tmdbID, filePath)
+	if err := repo.Create(ctx, movie); err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+	if err := repo.Update(ctx, movie); err != nil {
+		t.Fatalf("Update failed: %v", err)
+	}
+	if err := repo.UpdateDoubanRating(ctx, id, "douban-1", 8.1, 1234); err != nil {
+		t.Fatalf("UpdateDoubanRating failed: %v", err)
+	}
+}
+
+// assertFullyPopulated checks the columns that read paths have historically
+// dropped by hand-rolling their own SELECT list.
+func assertFullyPopulated(t *testing.T, readPath string, m *models.Movie) {
+	t.Helper()
+
+	if !m.FilePath.Valid || m.FilePath.String == "" {
+		t.Errorf("%s: file_path is empty — the read path dropped the column", readPath)
+	}
+	if !m.FileSize.Valid || m.FileSize.Int64 == 0 {
+		t.Errorf("%s: file_size is empty — the read path dropped the column", readPath)
+	}
+	if !m.LibraryID.Valid || m.LibraryID.String == "" {
+		t.Errorf("%s: library_id is empty — the read path dropped the column", readPath)
+	}
+	if !m.MetadataSource.Valid || m.MetadataSource.String == "" {
+		t.Errorf("%s: metadata_source is empty — the read path dropped the column", readPath)
+	}
+	if !m.SubtitlePath.Valid || m.SubtitlePath.String == "" {
+		t.Errorf("%s: subtitle_path is empty — the read path dropped the column", readPath)
+	}
+	if !m.VoteCount.Valid || m.VoteCount.Int64 == 0 {
+		t.Errorf("%s: vote_count is empty — the read path dropped the column", readPath)
+	}
+	if !m.DoubanRating.Valid || m.DoubanRating.Float64 == 0 {
+		t.Errorf("%s: douban_rating is empty — the read path dropped the column", readPath)
+	}
+	// The three columns added by the disc-* stories (#158/#159/#160): persisted by the
+	// writers but invisible to any read path that spells its own columns.
+	if len(m.ProductionCountries) == 0 {
+		t.Errorf("%s: production_countries is empty — the read path dropped the column", readPath)
+	}
+	if m.Credits == nil || len(m.Credits.Cast) == 0 {
+		t.Errorf("%s: credits is empty — the read path dropped the column", readPath)
+	}
+	if len(m.SpokenLanguages) == 0 {
+		t.Errorf("%s: spoken_languages is empty — the read path dropped the column", readPath)
+	}
+}
+
+// TestEveryReadPathReturnsEveryColumn is the guard for the defect class that made the
+// library look broken in production: List() and FullTextSearch() each hand-rolled a
+// SELECT column list instead of using movieSelectColumns, so every column they forgot
+// (file_path, library_id, credits, ...) came back as a zero value even though the row
+// on disk had it. Any new read path that spells its own columns fails here.
+func TestEveryReadPathReturnsEveryColumn(t *testing.T) {
+	db := setupTestDBWithFTS(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	seedFullyPopulatedMovie(t, repo, ctx, "movie-full", 603, "/media/movies/blades.mkv")
+
+	t.Run("FindByID", func(t *testing.T) {
+		got, err := repo.FindByID(ctx, "movie-full")
+		if err != nil {
+			t.Fatalf("FindByID failed: %v", err)
+		}
+		assertFullyPopulated(t, "FindByID", got)
+	})
+
+	t.Run("FindByTMDbID", func(t *testing.T) {
+		got, err := repo.FindByTMDbID(ctx, 603)
+		if err != nil {
+			t.Fatalf("FindByTMDbID failed: %v", err)
+		}
+		assertFullyPopulated(t, "FindByTMDbID", got)
+	})
+
+	t.Run("List", func(t *testing.T) {
+		movies, _, err := repo.List(ctx, ListParams{Page: 1, PageSize: 10})
+		if err != nil {
+			t.Fatalf("List failed: %v", err)
+		}
+		if len(movies) != 1 {
+			t.Fatalf("Expected 1 movie, got %d", len(movies))
+		}
+		assertFullyPopulated(t, "List", &movies[0])
+	})
+
+	t.Run("FullTextSearch", func(t *testing.T) {
+		movies, _, err := repo.FullTextSearch(ctx, "Blades", ListParams{Page: 1, PageSize: 10})
+		if err != nil {
+			t.Fatalf("FullTextSearch failed: %v", err)
+		}
+		if len(movies) != 1 {
+			t.Fatalf("Expected 1 FTS hit, got %d", len(movies))
+		}
+		assertFullyPopulated(t, "FullTextSearch", &movies[0])
+	})
+
+	t.Run("FindByParseStatus", func(t *testing.T) {
+		movies, err := repo.FindByParseStatus(ctx, models.ParseStatusSuccess)
+		if err != nil {
+			t.Fatalf("FindByParseStatus failed: %v", err)
+		}
+		if len(movies) != 1 {
+			t.Fatalf("Expected 1 movie, got %d", len(movies))
+		}
+		assertFullyPopulated(t, "FindByParseStatus", &movies[0])
+	})
+}
+
+// TestListExcludesRemovedMovies guards the split that made /movies (5922) and
+// /movies/stats (5163) disagree in production: List did not filter is_removed
+// while GetStats did, so 759 soft-deleted movies stayed visible in the library.
+func TestListExcludesRemovedMovies(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	live := fullyPopulatedMovie("movie-live", 1, "/media/live.mkv")
+	if err := repo.Create(ctx, live); err != nil {
+		t.Fatalf("Failed to create live movie: %v", err)
+	}
+	removed := fullyPopulatedMovie("movie-removed", 2, "/media/removed.mkv")
+	removed.IsRemoved = true
+	if err := repo.Create(ctx, removed); err != nil {
+		t.Fatalf("Failed to create removed movie: %v", err)
+	}
+
+	movies, pagination, err := repo.List(ctx, ListParams{Page: 1, PageSize: 10})
+	if err != nil {
+		t.Fatalf("List failed: %v", err)
+	}
+
+	if len(movies) != 1 {
+		t.Fatalf("Expected 1 movie (soft-deleted excluded), got %d", len(movies))
+	}
+	if movies[0].ID != "movie-live" {
+		t.Errorf("Expected movie-live, got %s", movies[0].ID)
+	}
+
+	// The count must agree with the page, or the UI paginates over ghosts.
+	if pagination.TotalResults != 1 {
+		t.Errorf("Expected TotalResults 1, got %d — count query and list query disagree", pagination.TotalResults)
+	}
+
+	// And it must agree with GetStats, which has always filtered.
+	stats, err := repo.GetStats(ctx)
+	if err != nil {
+		t.Fatalf("GetStats failed: %v", err)
+	}
+	if stats.Total != pagination.TotalResults {
+		t.Errorf("GetStats.Total (%d) != List.TotalResults (%d) — the two endpoints disagree",
+			stats.Total, pagination.TotalResults)
+	}
+}
+
+// TestFullTextSearchExcludesRemovedMovies — same soft-delete leak, via /api/v1/search.
+func TestFullTextSearchExcludesRemovedMovies(t *testing.T) {
+	db := setupTestDBWithFTS(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	live := fullyPopulatedMovie("movie-live", 1, "/media/live.mkv")
+	if err := repo.Create(ctx, live); err != nil {
+		t.Fatalf("Failed to create live movie: %v", err)
+	}
+	removed := fullyPopulatedMovie("movie-removed", 2, "/media/removed.mkv")
+	removed.IsRemoved = true
+	if err := repo.Create(ctx, removed); err != nil {
+		t.Fatalf("Failed to create removed movie: %v", err)
+	}
+
+	movies, pagination, err := repo.FullTextSearch(ctx, "Blades", ListParams{Page: 1, PageSize: 10})
+	if err != nil {
+		t.Fatalf("FullTextSearch failed: %v", err)
+	}
+
+	if len(movies) != 1 {
+		t.Fatalf("Expected 1 FTS hit (soft-deleted excluded), got %d", len(movies))
+	}
+	if movies[0].ID != "movie-live" {
+		t.Errorf("Expected movie-live, got %s", movies[0].ID)
+	}
+	if pagination.TotalResults != 1 {
+		t.Errorf("Expected TotalResults 1, got %d", pagination.TotalResults)
+	}
+}
+
+// TestCreatePersistsLibraryID guards the write-side half of the defect: neither INSERT
+// listed library_id, so every scanned movie landed with a NULL library association and
+// the multi-library feature (Epic 7b) reported media_count 0 for every library.
+func TestCreatePersistsLibraryID(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := NewMovieRepository(db)
+	ctx := context.Background()
+
+	t.Run("Create", func(t *testing.T) {
+		movie := fullyPopulatedMovie("movie-create", 1, "/media/create.mkv")
+		if err := repo.Create(ctx, movie); err != nil {
+			t.Fatalf("Create failed: %v", err)
+		}
+
+		var libraryID sql.NullString
+		if err := db.QueryRow("SELECT library_id FROM movies WHERE id = ?", "movie-create").Scan(&libraryID); err != nil {
+			t.Fatalf("Failed to read library_id: %v", err)
+		}
+		if !libraryID.Valid || libraryID.String != "lib-movies" {
+			t.Errorf("Expected library_id 'lib-movies', got %v — INSERT dropped the column", libraryID)
+		}
+	})
+
+	t.Run("BulkCreate", func(t *testing.T) {
+		movies := []*models.Movie{
+			fullyPopulatedMovie("movie-bulk-1", 11, "/media/bulk1.mkv"),
+			fullyPopulatedMovie("movie-bulk-2", 12, "/media/bulk2.mkv"),
+		}
+		if err := repo.BulkCreate(ctx, movies); err != nil {
+			t.Fatalf("BulkCreate failed: %v", err)
+		}
+
+		var count int
+		if err := db.QueryRow(
+			`SELECT COUNT(*) FROM movies WHERE id LIKE 'movie-bulk-%' AND library_id = ?`, "lib-movies",
+		).Scan(&count); err != nil {
+			t.Fatalf("Failed to count: %v", err)
+		}
+		if count != 2 {
+			t.Errorf("Expected 2 bulk-created movies with library_id, got %d — BulkCreate dropped the column", count)
+		}
+	})
+}

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/vido/api/internal/models"
@@ -45,12 +46,12 @@ func (r *MovieRepository) Create(ctx context.Context, movie *models.Movie) error
 			id, title, original_title, release_date, genres, rating,
 			overview, poster_path, backdrop_path, runtime, original_language,
 			status, imdb_id, tmdb_id,
-			file_path, file_size, parse_status, metadata_source, vote_average,
+			file_path, file_size, parse_status, metadata_source, library_id, vote_average,
 			is_removed,
 			video_codec, video_resolution, audio_codec, audio_channels,
 			subtitle_tracks, hdr_format, production_countries, credits, spoken_languages,
 			created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
 	_, err = r.db.ExecContext(ctx, query,
@@ -72,6 +73,7 @@ func (r *MovieRepository) Create(ctx context.Context, movie *models.Movie) error
 		movie.FileSize,
 		movie.ParseStatus,
 		movie.MetadataSource,
+		movie.LibraryID,
 		movie.VoteAverage,
 		movie.IsRemoved,
 		movie.VideoCodec,
@@ -321,8 +323,8 @@ func (r *MovieRepository) List(ctx context.Context, params ListParams) ([]models
 		}
 	}
 
-	// Build WHERE clause from filters
-	conditions := []string{}
+	// Build WHERE clause from filters. Soft-deleted movies are never listed.
+	conditions := []string{notRemoved}
 	args := []interface{}{}
 
 	if searchTerm, ok := params.Filters["search"].(string); ok && searchTerm != "" {
@@ -348,15 +350,12 @@ func (r *MovieRepository) List(ctx context.Context, params ListParams) ([]models
 	}
 
 	if unmatched, ok := params.Filters["unmatched"].(bool); ok && unmatched {
-		conditions = append(conditions, "(tmdb_id IS NULL OR tmdb_id = 0) AND (is_removed = 0 OR is_removed IS NULL)")
+		conditions = append(conditions, "(tmdb_id IS NULL OR tmdb_id = 0)")
 	}
 
-	whereClause := ""
-	if len(conditions) > 0 {
-		whereClause = "WHERE " + conditions[0]
-		for _, c := range conditions[1:] {
-			whereClause += " AND " + c
-		}
+	whereClause := "WHERE " + conditions[0]
+	for _, c := range conditions[1:] {
+		whereClause += " AND " + c
 	}
 
 	// Get total count
@@ -369,18 +368,12 @@ func (r *MovieRepository) List(ctx context.Context, params ListParams) ([]models
 
 	// Build and execute list query
 	query := fmt.Sprintf(`
-		SELECT
-			id, title, original_title, release_date, genres, rating, vote_average,
-			overview, poster_path, backdrop_path, runtime, original_language,
-			status, imdb_id, tmdb_id,
-			parse_status, subtitle_status, subtitle_language,
-			video_codec, video_resolution, audio_codec, audio_channels, subtitle_tracks, hdr_format,
-			created_at, updated_at
+		SELECT %s
 		FROM movies
 		%s
 		ORDER BY %s %s
 		LIMIT ? OFFSET ?
-	`, whereClause, sortBy, params.SortOrder)
+	`, movieSelectColumns, whereClause, sortBy, params.SortOrder)
 
 	// Add limit and offset to args
 	args = append(args, params.Limit(), params.Offset())
@@ -393,47 +386,10 @@ func (r *MovieRepository) List(ctx context.Context, params ListParams) ([]models
 
 	movies := []models.Movie{}
 	for rows.Next() {
-		movie := models.Movie{}
-		var genresJSON string
-
-		err := rows.Scan(
-			&movie.ID,
-			&movie.Title,
-			&movie.OriginalTitle,
-			&movie.ReleaseDate,
-			&genresJSON,
-			&movie.Rating,
-			&movie.VoteAverage,
-			&movie.Overview,
-			&movie.PosterPath,
-			&movie.BackdropPath,
-			&movie.Runtime,
-			&movie.OriginalLanguage,
-			&movie.Status,
-			&movie.IMDbID,
-			&movie.TMDbID,
-			&movie.ParseStatus,
-			&movie.SubtitleStatus,
-			&movie.SubtitleLanguage,
-			&movie.VideoCodec,
-			&movie.VideoResolution,
-			&movie.AudioCodec,
-			&movie.AudioChannels,
-			&movie.SubtitleTracks,
-			&movie.HDRFormat,
-			&movie.CreatedAt,
-			&movie.UpdatedAt,
-		)
-
+		movie, err := scanMovie(rows)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to scan movie: %w", err)
 		}
-
-		// Parse genres from JSON
-		if err := movie.ScanGenres(genresJSON); err != nil {
-			return nil, nil, fmt.Errorf("failed to parse genres: %w", err)
-		}
-
 		movies = append(movies, movie)
 	}
 
@@ -467,12 +423,12 @@ func (r *MovieRepository) FullTextSearch(ctx context.Context, query string, para
 	}
 
 	// Get total count for FTS results
-	countQuery := `
+	countQuery := fmt.Sprintf(`
 		SELECT COUNT(*)
 		FROM movies m
 		JOIN movies_fts ON movies_fts.rowid = m.rowid
-		WHERE movies_fts MATCH ?
-	`
+		WHERE movies_fts MATCH ? AND %s
+	`, notRemovedQualified("m"))
 	var totalResults int
 	err := r.db.QueryRowContext(ctx, countQuery, query).Scan(&totalResults)
 	if err != nil {
@@ -480,17 +436,14 @@ func (r *MovieRepository) FullTextSearch(ctx context.Context, query string, para
 	}
 
 	// FTS5 search query - join with movies table to get full data
-	ftsQuery := `
-		SELECT
-			m.id, m.title, m.original_title, m.release_date, m.genres, m.rating,
-			m.overview, m.poster_path, m.backdrop_path, m.runtime, m.original_language,
-			m.status, m.imdb_id, m.tmdb_id, m.created_at, m.updated_at
+	ftsQuery := fmt.Sprintf(`
+		SELECT %s
 		FROM movies m
 		JOIN movies_fts ON movies_fts.rowid = m.rowid
-		WHERE movies_fts MATCH ?
+		WHERE movies_fts MATCH ? AND %s
 		ORDER BY rank
 		LIMIT ? OFFSET ?
-	`
+	`, movieSelectColumnsQualified("m"), notRemovedQualified("m"))
 
 	rows, err := r.db.QueryContext(ctx, ftsQuery, query, params.Limit(), params.Offset())
 	if err != nil {
@@ -500,36 +453,10 @@ func (r *MovieRepository) FullTextSearch(ctx context.Context, query string, para
 
 	movies := []models.Movie{}
 	for rows.Next() {
-		movie := models.Movie{}
-		var genresJSON string
-
-		err := rows.Scan(
-			&movie.ID,
-			&movie.Title,
-			&movie.OriginalTitle,
-			&movie.ReleaseDate,
-			&genresJSON,
-			&movie.Rating,
-			&movie.Overview,
-			&movie.PosterPath,
-			&movie.BackdropPath,
-			&movie.Runtime,
-			&movie.OriginalLanguage,
-			&movie.Status,
-			&movie.IMDbID,
-			&movie.TMDbID,
-			&movie.CreatedAt,
-			&movie.UpdatedAt,
-		)
-
+		movie, err := scanMovie(rows)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to scan FTS movie: %w", err)
 		}
-
-		if err := movie.ScanGenres(genresJSON); err != nil {
-			return nil, nil, fmt.Errorf("failed to parse genres: %w", err)
-		}
-
 		movies = append(movies, movie)
 	}
 
@@ -621,13 +548,18 @@ func (r *MovieRepository) GetStats(ctx context.Context) (*MediaStats, error) {
 	return &stats, nil
 }
 
-// movieSelectColumns defines the column list used by multi-row scan queries.
+// movieSelectColumns defines the column list used by EVERY movie read query.
 // This must match the order in scanMovie.
+//
+// Do not hand-roll a SELECT column list anywhere in this file: a read path that
+// spells its own columns silently returns zero values for whatever it forgets,
+// and drifts further from the writers every time a column is added.
+// TestEveryReadPathReturnsEveryColumn guards this.
 const movieSelectColumns = `
 	id, title, original_title, release_date, genres, rating,
 	overview, poster_path, backdrop_path, runtime, original_language,
 	status, imdb_id, tmdb_id,
-	file_path, parse_status, metadata_source,
+	file_path, file_size, parse_status, metadata_source, library_id,
 	subtitle_status, subtitle_path, subtitle_language, subtitle_last_searched, subtitle_search_score,
 	vote_average, vote_count, is_removed,
 	video_codec, video_resolution, audio_codec, audio_channels, subtitle_tracks, hdr_format,
@@ -635,6 +567,27 @@ const movieSelectColumns = `
 	douban_id, douban_rating, douban_vote_count,
 	created_at, updated_at
 `
+
+// movieSelectColumnsQualified returns movieSelectColumns with every column
+// qualified by the given table alias, for queries that join movies against
+// movies_fts (where bare `title` / `overview` would be ambiguous).
+func movieSelectColumnsQualified(alias string) string {
+	cols := strings.Split(movieSelectColumns, ",")
+	for i, c := range cols {
+		cols[i] = alias + "." + strings.TrimSpace(c)
+	}
+	return strings.Join(cols, ", ")
+}
+
+// notRemoved excludes soft-deleted movies. Every list/search read path must apply
+// it, or deleted movies keep showing up in the library while the stats endpoints
+// (which do filter) report a different total.
+const notRemoved = "(is_removed = 0 OR is_removed IS NULL)"
+
+// notRemovedQualified is notRemoved for queries that need a table alias.
+func notRemovedQualified(alias string) string {
+	return fmt.Sprintf("(%s.is_removed = 0 OR %s.is_removed IS NULL)", alias, alias)
+}
 
 // scanMovie scans a row into a Movie struct using the standard column order.
 func scanMovie(scanner interface {
@@ -659,8 +612,10 @@ func scanMovie(scanner interface {
 		&movie.IMDbID,
 		&movie.TMDbID,
 		&movie.FilePath,
+		&movie.FileSize,
 		&movie.ParseStatus,
 		&movie.MetadataSource,
+		&movie.LibraryID,
 		&movie.SubtitleStatus,
 		&movie.SubtitlePath,
 		&movie.SubtitleLanguage,
@@ -754,12 +709,12 @@ func (r *MovieRepository) BulkCreate(ctx context.Context, movies []*models.Movie
 			id, title, original_title, release_date, genres, rating,
 			overview, poster_path, backdrop_path, runtime, original_language,
 			status, imdb_id, tmdb_id,
-			file_path, file_size, parse_status, metadata_source, vote_average,
+			file_path, file_size, parse_status, metadata_source, library_id, vote_average,
 			is_removed,
 			video_codec, video_resolution, audio_codec, audio_channels,
 			subtitle_tracks, hdr_format, production_countries, credits, spoken_languages,
 			created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
 	stmt, err := tx.PrepareContext(ctx, query)
@@ -801,6 +756,7 @@ func (r *MovieRepository) BulkCreate(ctx context.Context, movies []*models.Movie
 			movie.FileSize,
 			movie.ParseStatus,
 			movie.MetadataSource,
+			movie.LibraryID,
 			movie.VoteAverage,
 			movie.IsRemoved,
 			movie.VideoCodec,
