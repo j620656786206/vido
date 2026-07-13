@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/vido/api/internal/models"
@@ -45,11 +46,12 @@ func (r *SeriesRepository) Create(ctx context.Context, series *models.Series) er
 			id, title, original_title, first_air_date, last_air_date, genres, rating,
 			overview, poster_path, backdrop_path, number_of_seasons, number_of_episodes,
 			status, original_language, imdb_id, tmdb_id, in_production,
-			file_size,
+			file_path, file_size, parse_status, metadata_source, library_id, vote_average, vote_count,
+			is_removed,
 			video_codec, video_resolution, audio_codec, audio_channels,
 			subtitle_tracks, hdr_format, credits,
 			created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
 	_, err = r.db.ExecContext(ctx, query,
@@ -70,7 +72,14 @@ func (r *SeriesRepository) Create(ctx context.Context, series *models.Series) er
 		series.IMDbID,
 		series.TMDbID,
 		series.InProduction,
+		series.FilePath,
 		series.FileSize,
+		series.ParseStatus,
+		series.MetadataSource,
+		series.LibraryID,
+		series.VoteAverage,
+		series.VoteCount,
+		series.IsRemoved,
 		series.VideoCodec,
 		series.VideoResolution,
 		series.AudioCodec,
@@ -179,6 +188,7 @@ func (r *SeriesRepository) Update(ctx context.Context, series *models.Series) er
 			parse_status = ?,
 			metadata_source = ?,
 			vote_average = ?,
+			vote_count = ?,
 			is_removed = ?,
 			video_codec = ?,
 			video_resolution = ?,
@@ -187,6 +197,7 @@ func (r *SeriesRepository) Update(ctx context.Context, series *models.Series) er
 			subtitle_tracks = ?,
 			hdr_format = ?,
 			credits = ?,
+			library_id = ?,
 			updated_at = ?
 		WHERE id = ?
 	`
@@ -213,6 +224,7 @@ func (r *SeriesRepository) Update(ctx context.Context, series *models.Series) er
 		series.ParseStatus,
 		series.MetadataSource,
 		series.VoteAverage,
+		series.VoteCount,
 		series.IsRemoved,
 		series.VideoCodec,
 		series.VideoResolution,
@@ -221,6 +233,7 @@ func (r *SeriesRepository) Update(ctx context.Context, series *models.Series) er
 		series.SubtitleTracks,
 		series.HDRFormat,
 		series.CreditsJSON,
+		series.LibraryID,
 		series.UpdatedAt,
 		series.ID,
 	)
@@ -286,8 +299,8 @@ func (r *SeriesRepository) List(ctx context.Context, params ListParams) ([]model
 		}
 	}
 
-	// Build WHERE clause from filters
-	conditions := []string{}
+	// Build WHERE clause from filters. Soft-deleted series are never listed.
+	conditions := []string{notRemovedSeries}
 	args := []interface{}{}
 
 	if searchTerm, ok := params.Filters["search"].(string); ok && searchTerm != "" {
@@ -313,15 +326,12 @@ func (r *SeriesRepository) List(ctx context.Context, params ListParams) ([]model
 	}
 
 	if unmatched, ok := params.Filters["unmatched"].(bool); ok && unmatched {
-		conditions = append(conditions, "(tmdb_id IS NULL OR tmdb_id = 0) AND (is_removed = 0 OR is_removed IS NULL)")
+		conditions = append(conditions, "(tmdb_id IS NULL OR tmdb_id = 0)")
 	}
 
-	whereClause := ""
-	if len(conditions) > 0 {
-		whereClause = "WHERE " + conditions[0]
-		for _, c := range conditions[1:] {
-			whereClause += " AND " + c
-		}
+	whereClause := "WHERE " + conditions[0]
+	for _, c := range conditions[1:] {
+		whereClause += " AND " + c
 	}
 
 	// Get total count
@@ -334,18 +344,12 @@ func (r *SeriesRepository) List(ctx context.Context, params ListParams) ([]model
 
 	// Build and execute list query
 	query := fmt.Sprintf(`
-		SELECT
-			id, title, original_title, first_air_date, last_air_date, genres, rating, vote_average,
-			overview, poster_path, backdrop_path, number_of_seasons, number_of_episodes,
-			status, original_language, imdb_id, tmdb_id, in_production,
-			parse_status, subtitle_status, subtitle_language,
-			video_codec, video_resolution, audio_codec, audio_channels, subtitle_tracks, hdr_format,
-			created_at, updated_at
+		SELECT %s
 		FROM series
 		%s
 		ORDER BY %s %s
 		LIMIT ? OFFSET ?
-	`, whereClause, sortBy, params.SortOrder)
+	`, seriesSelectColumns, whereClause, sortBy, params.SortOrder)
 
 	// Add limit and offset to args
 	args = append(args, params.Limit(), params.Offset())
@@ -358,50 +362,10 @@ func (r *SeriesRepository) List(ctx context.Context, params ListParams) ([]model
 
 	series := []models.Series{}
 	for rows.Next() {
-		s := models.Series{}
-		var genresJSON string
-
-		err := rows.Scan(
-			&s.ID,
-			&s.Title,
-			&s.OriginalTitle,
-			&s.FirstAirDate,
-			&s.LastAirDate,
-			&genresJSON,
-			&s.Rating,
-			&s.VoteAverage,
-			&s.Overview,
-			&s.PosterPath,
-			&s.BackdropPath,
-			&s.NumberOfSeasons,
-			&s.NumberOfEpisodes,
-			&s.Status,
-			&s.OriginalLanguage,
-			&s.IMDbID,
-			&s.TMDbID,
-			&s.InProduction,
-			&s.ParseStatus,
-			&s.SubtitleStatus,
-			&s.SubtitleLanguage,
-			&s.VideoCodec,
-			&s.VideoResolution,
-			&s.AudioCodec,
-			&s.AudioChannels,
-			&s.SubtitleTracks,
-			&s.HDRFormat,
-			&s.CreatedAt,
-			&s.UpdatedAt,
-		)
-
+		s, err := scanSeries(rows)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to scan series: %w", err)
 		}
-
-		// Parse genres from JSON
-		if err := s.ScanGenres(genresJSON); err != nil {
-			return nil, nil, fmt.Errorf("failed to parse genres: %w", err)
-		}
-
 		series = append(series, s)
 	}
 
@@ -435,12 +399,12 @@ func (r *SeriesRepository) FullTextSearch(ctx context.Context, query string, par
 	}
 
 	// Get total count for FTS results
-	countQuery := `
+	countQuery := fmt.Sprintf(`
 		SELECT COUNT(*)
 		FROM series s
 		JOIN series_fts ON series_fts.rowid = s.rowid
-		WHERE series_fts MATCH ?
-	`
+		WHERE series_fts MATCH ? AND %s
+	`, notRemovedSeriesQualified("s"))
 	var totalResults int
 	err := r.db.QueryRowContext(ctx, countQuery, query).Scan(&totalResults)
 	if err != nil {
@@ -448,17 +412,14 @@ func (r *SeriesRepository) FullTextSearch(ctx context.Context, query string, par
 	}
 
 	// FTS5 search query - join with series table to get full data
-	ftsQuery := `
-		SELECT
-			s.id, s.title, s.original_title, s.first_air_date, s.last_air_date, s.genres, s.rating,
-			s.overview, s.poster_path, s.backdrop_path, s.number_of_seasons, s.number_of_episodes,
-			s.status, s.original_language, s.imdb_id, s.tmdb_id, s.in_production, s.created_at, s.updated_at
+	ftsQuery := fmt.Sprintf(`
+		SELECT %s
 		FROM series s
 		JOIN series_fts ON series_fts.rowid = s.rowid
-		WHERE series_fts MATCH ?
+		WHERE series_fts MATCH ? AND %s
 		ORDER BY rank
 		LIMIT ? OFFSET ?
-	`
+	`, seriesSelectColumnsQualified("s"), notRemovedSeriesQualified("s"))
 
 	rows, err := r.db.QueryContext(ctx, ftsQuery, query, params.Limit(), params.Offset())
 	if err != nil {
@@ -468,39 +429,10 @@ func (r *SeriesRepository) FullTextSearch(ctx context.Context, query string, par
 
 	seriesList := []models.Series{}
 	for rows.Next() {
-		s := models.Series{}
-		var genresJSON string
-
-		err := rows.Scan(
-			&s.ID,
-			&s.Title,
-			&s.OriginalTitle,
-			&s.FirstAirDate,
-			&s.LastAirDate,
-			&genresJSON,
-			&s.Rating,
-			&s.Overview,
-			&s.PosterPath,
-			&s.BackdropPath,
-			&s.NumberOfSeasons,
-			&s.NumberOfEpisodes,
-			&s.Status,
-			&s.OriginalLanguage,
-			&s.IMDbID,
-			&s.TMDbID,
-			&s.InProduction,
-			&s.CreatedAt,
-			&s.UpdatedAt,
-		)
-
+		s, err := scanSeries(rows)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to scan FTS series: %w", err)
 		}
-
-		if err := s.ScanGenres(genresJSON); err != nil {
-			return nil, nil, fmt.Errorf("failed to parse genres: %w", err)
-		}
-
 		seriesList = append(seriesList, s)
 	}
 
@@ -554,10 +486,10 @@ func (r *SeriesRepository) GetDistinctGenres(ctx context.Context) ([]string, err
 
 // GetYearRange returns the min and max first_air_date years from series
 func (r *SeriesRepository) GetYearRange(ctx context.Context) (minYear, maxYear int, err error) {
-	query := `SELECT
+	query := fmt.Sprintf(`SELECT
 		COALESCE(MIN(CAST(substr(first_air_date, 1, 4) AS INTEGER)), 0),
 		COALESCE(MAX(CAST(substr(first_air_date, 1, 4) AS INTEGER)), 0)
-		FROM series WHERE first_air_date != '' AND first_air_date IS NOT NULL`
+		FROM series WHERE first_air_date != '' AND first_air_date IS NOT NULL AND %s`, notRemovedSeries)
 
 	err = r.db.QueryRowContext(ctx, query).Scan(&minYear, &maxYear)
 	if err != nil {
@@ -570,7 +502,8 @@ func (r *SeriesRepository) GetYearRange(ctx context.Context) (minYear, maxYear i
 // Count returns the total number of series
 func (r *SeriesRepository) Count(ctx context.Context) (int, error) {
 	var count int
-	err := r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM series").Scan(&count)
+	query := fmt.Sprintf("SELECT COUNT(*) FROM series WHERE %s", notRemovedSeries)
+	err := r.db.QueryRowContext(ctx, query).Scan(&count)
 	if err != nil {
 		return 0, fmt.Errorf("failed to count series: %w", err)
 	}
@@ -592,20 +525,42 @@ func (r *SeriesRepository) GetStats(ctx context.Context) (*MediaStats, error) {
 	return &stats, nil
 }
 
-// seriesSelectColumns defines the column list used by multi-row scan queries.
+// seriesSelectColumns defines the column list used by EVERY series read query.
 // This must match the order in scanSeries.
+//
+// Do not hand-roll a SELECT column list anywhere in this file — see the movie-side
+// note on movieSelectColumns; the same drift shipped here.
+// TestEverySeriesReadPathReturnsEveryColumn guards this.
 const seriesSelectColumns = `
 	id, title, original_title, first_air_date, last_air_date, genres, rating,
 	overview, poster_path, backdrop_path, number_of_seasons, number_of_episodes,
 	status, original_language, imdb_id, tmdb_id, in_production,
-	file_path, file_size, parse_status, metadata_source,
+	file_path, file_size, parse_status, metadata_source, library_id,
 	subtitle_status, subtitle_path, subtitle_language, subtitle_last_searched, subtitle_search_score,
-	vote_average, vote_count,
+	vote_average, vote_count, is_removed,
 	video_codec, video_resolution, audio_codec, audio_channels,
 	subtitle_tracks, hdr_format, credits,
 	douban_id, douban_rating, douban_vote_count,
 	created_at, updated_at
 `
+
+// notRemovedSeries excludes soft-deleted series. Mirrors notRemoved on the movie side.
+const notRemovedSeries = "(is_removed = 0 OR is_removed IS NULL)"
+
+// notRemovedSeriesQualified is notRemovedSeries for queries that need a table alias.
+func notRemovedSeriesQualified(alias string) string {
+	return fmt.Sprintf("(%s.is_removed = 0 OR %s.is_removed IS NULL)", alias, alias)
+}
+
+// seriesSelectColumnsQualified returns seriesSelectColumns with every column qualified
+// by the given table alias, for queries that join series against series_fts.
+func seriesSelectColumnsQualified(alias string) string {
+	cols := strings.Split(seriesSelectColumns, ",")
+	for i, c := range cols {
+		cols[i] = alias + "." + strings.TrimSpace(c)
+	}
+	return strings.Join(cols, ", ")
+}
 
 // scanSeries scans a row into a Series struct using the standard column order.
 func scanSeries(scanner interface {
@@ -636,6 +591,7 @@ func scanSeries(scanner interface {
 		&s.FileSize,
 		&s.ParseStatus,
 		&s.MetadataSource,
+		&s.LibraryID,
 		&s.SubtitleStatus,
 		&s.SubtitlePath,
 		&s.SubtitleLanguage,
@@ -643,6 +599,7 @@ func scanSeries(scanner interface {
 		&s.SubtitleSearchScore,
 		&s.VoteAverage,
 		&s.VoteCount,
+		&s.IsRemoved,
 		&s.VideoCodec,
 		&s.VideoResolution,
 		&s.AudioCodec,
@@ -714,11 +671,12 @@ func (r *SeriesRepository) BulkCreate(ctx context.Context, seriesList []*models.
 			id, title, original_title, first_air_date, last_air_date, genres, rating,
 			overview, poster_path, backdrop_path, number_of_seasons, number_of_episodes,
 			status, original_language, imdb_id, tmdb_id, in_production,
-			file_size,
+			file_path, file_size, parse_status, metadata_source, library_id, vote_average, vote_count,
+			is_removed,
 			video_codec, video_resolution, audio_codec, audio_channels,
 			subtitle_tracks, hdr_format, credits,
 			created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
 	stmt, err := tx.PrepareContext(ctx, query)
@@ -759,7 +717,14 @@ func (r *SeriesRepository) BulkCreate(ctx context.Context, seriesList []*models.
 			series.IMDbID,
 			series.TMDbID,
 			series.InProduction,
+			series.FilePath,
 			series.FileSize,
+			series.ParseStatus,
+			series.MetadataSource,
+			series.LibraryID,
+			series.VoteAverage,
+			series.VoteCount,
+			series.IsRemoved,
 			series.VideoCodec,
 			series.VideoResolution,
 			series.AudioCodec,

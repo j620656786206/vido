@@ -49,6 +49,7 @@ func setupSeriesTestDB(t *testing.T) *sql.DB {
 			vote_average REAL,
 			vote_count INTEGER,
 			is_removed INTEGER NOT NULL DEFAULT 0,
+			library_id TEXT,
 			video_codec TEXT,
 			video_resolution TEXT,
 			audio_codec TEXT,
@@ -1499,4 +1500,233 @@ func TestSeriesListReturnsLifecycleFields(t *testing.T) {
 	if !got.SubtitleLanguage.Valid || got.SubtitleLanguage.String != "zh-Hant" {
 		t.Errorf("List() SubtitleLanguage = %v, want zh-Hant", got.SubtitleLanguage)
 	}
+}
+
+// fullyPopulatedSeries returns a series with every persisted column set to a non-zero
+// value, so a read path that forgets a column fails loudly. Mirrors the movie-side helper.
+func fullyPopulatedSeries(id string, tmdbID int64, filePath string) *models.Series {
+	return &models.Series{
+		ID:               id,
+		Title:            "Blades of the Guardians",
+		OriginalTitle:    models.NewNullString("鏢人"),
+		FirstAirDate:     "2026-02-17",
+		LastAirDate:      models.NewNullString("2026-05-17"),
+		Genres:           []string{"Action", "Animation"},
+		Rating:           models.NewNullFloat64(8.2),
+		Overview:         models.NewNullString("An overview."),
+		PosterPath:       models.NewNullString("/poster.jpg"),
+		BackdropPath:     models.NewNullString("/backdrop.jpg"),
+		NumberOfSeasons:  models.NewNullInt64(2),
+		NumberOfEpisodes: models.NewNullInt64(24),
+		Status:           models.NewNullString("Returning Series"),
+		OriginalLanguage: models.NewNullString("zh"),
+		IMDbID:           models.NewNullString("tt7654321"),
+		TMDbID:           models.NewNullInt64(tmdbID),
+		InProduction:     models.NewNullBool(true),
+		FilePath:         models.NewNullString(filePath),
+		FileSize:         models.NewNullInt64(4_294_967_296),
+		ParseStatus:      models.ParseStatusSuccess,
+		MetadataSource:   models.NewNullString("tmdb"),
+		LibraryID:        models.NewNullString("lib-tv"),
+		SubtitleStatus:   models.SubtitleStatusFound,
+		SubtitlePath:     models.NewNullString("/media/sub.srt"),
+		SubtitleLanguage: models.NewNullString("zh-TW"),
+		VoteAverage:      models.NewNullFloat64(8.4),
+		VoteCount:        models.NewNullInt64(3100),
+		VideoCodec:       models.NewNullString("x265"),
+		VideoResolution:  models.NewNullString("1080p"),
+		AudioCodec:       models.NewNullString("AAC"),
+		AudioChannels:    models.NewNullInt64(6),
+		SubtitleTracks:   models.NewNullString(`["zh-TW"]`),
+		HDRFormat:        models.NewNullString("HDR10"),
+		CreditsJSON:      models.NewNullString(`{"cast":[{"name":"Somebody"}],"crew":[]}`),
+	}
+}
+
+func assertSeriesFullyPopulated(t *testing.T, readPath string, s *models.Series) {
+	t.Helper()
+
+	if !s.FilePath.Valid || s.FilePath.String == "" {
+		t.Errorf("%s: file_path is empty — the read path dropped the column", readPath)
+	}
+	if !s.FileSize.Valid || s.FileSize.Int64 == 0 {
+		t.Errorf("%s: file_size is empty — the read path dropped the column", readPath)
+	}
+	if !s.LibraryID.Valid || s.LibraryID.String == "" {
+		t.Errorf("%s: library_id is empty — the read path dropped the column", readPath)
+	}
+	if !s.MetadataSource.Valid || s.MetadataSource.String == "" {
+		t.Errorf("%s: metadata_source is empty — the read path dropped the column", readPath)
+	}
+	if !s.SubtitlePath.Valid || s.SubtitlePath.String == "" {
+		t.Errorf("%s: subtitle_path is empty — the read path dropped the column", readPath)
+	}
+	if !s.VoteCount.Valid || s.VoteCount.Int64 == 0 {
+		t.Errorf("%s: vote_count is empty — the read path dropped the column", readPath)
+	}
+	if s.Credits == nil || len(s.Credits.Cast) == 0 {
+		t.Errorf("%s: credits is empty — the read path dropped the column", readPath)
+	}
+}
+
+// TestEverySeriesReadPathReturnsEveryColumn is the series twin of the movie guard.
+// series_repository shipped the identical defect (List and FullTextSearch each spelled
+// their own SELECT list); it was invisible only because the series table is empty in
+// production — every TV episode is currently ingested into the movies table instead.
+func TestEverySeriesReadPathReturnsEveryColumn(t *testing.T) {
+	db := setupSeriesTestDBWithFTS(t)
+	defer db.Close()
+
+	repo := NewSeriesRepository(db)
+	ctx := context.Background()
+
+	// Walk the real write lifecycle: Create persists what the scanner knows, and the
+	// subtitle columns have a dedicated writer (UpdateSubtitleStatus), so a row is only
+	// fully populated on disk after both. Anything still empty on read is a read-path bug.
+	s := fullyPopulatedSeries("series-full", 1399, "/media/tv/blades")
+	if err := repo.Create(ctx, s); err != nil {
+		t.Fatalf("Create failed: %v", err)
+	}
+	if err := repo.UpdateSubtitleStatus(ctx, s.ID, models.SubtitleStatusFound, "/media/sub.srt", "zh-TW", 0.91); err != nil {
+		t.Fatalf("UpdateSubtitleStatus failed: %v", err)
+	}
+
+	t.Run("FindByID", func(t *testing.T) {
+		got, err := repo.FindByID(ctx, "series-full")
+		if err != nil {
+			t.Fatalf("FindByID failed: %v", err)
+		}
+		assertSeriesFullyPopulated(t, "FindByID", got)
+	})
+
+	t.Run("List", func(t *testing.T) {
+		list, _, err := repo.List(ctx, ListParams{Page: 1, PageSize: 10})
+		if err != nil {
+			t.Fatalf("List failed: %v", err)
+		}
+		if len(list) != 1 {
+			t.Fatalf("Expected 1 series, got %d", len(list))
+		}
+		assertSeriesFullyPopulated(t, "List", &list[0])
+	})
+
+	t.Run("FullTextSearch", func(t *testing.T) {
+		list, _, err := repo.FullTextSearch(ctx, "Blades", ListParams{Page: 1, PageSize: 10})
+		if err != nil {
+			t.Fatalf("FullTextSearch failed: %v", err)
+		}
+		if len(list) != 1 {
+			t.Fatalf("Expected 1 FTS hit, got %d", len(list))
+		}
+		assertSeriesFullyPopulated(t, "FullTextSearch", &list[0])
+	})
+}
+
+// TestSeriesListAndCountExcludeRemoved — the series twin of the soft-delete leak that
+// made /api/v1/movies (5922) and /api/v1/movies/stats (5163) disagree in production.
+func TestSeriesListAndCountExcludeRemoved(t *testing.T) {
+	db := setupSeriesTestDBWithFTS(t)
+	defer db.Close()
+
+	repo := NewSeriesRepository(db)
+	ctx := context.Background()
+
+	live := fullyPopulatedSeries("series-live", 1, "/media/tv/live")
+	if err := repo.Create(ctx, live); err != nil {
+		t.Fatalf("Create live failed: %v", err)
+	}
+	removed := fullyPopulatedSeries("series-removed", 2, "/media/tv/removed")
+	removed.IsRemoved = true
+	if err := repo.Create(ctx, removed); err != nil {
+		t.Fatalf("Create removed failed: %v", err)
+	}
+
+	list, pagination, err := repo.List(ctx, ListParams{Page: 1, PageSize: 10})
+	if err != nil {
+		t.Fatalf("List failed: %v", err)
+	}
+	if len(list) != 1 || list[0].ID != "series-live" {
+		t.Fatalf("Expected only series-live, got %d rows", len(list))
+	}
+	if pagination.TotalResults != 1 {
+		t.Errorf("Expected TotalResults 1, got %d", pagination.TotalResults)
+	}
+
+	fts, _, err := repo.FullTextSearch(ctx, "Blades", ListParams{Page: 1, PageSize: 10})
+	if err != nil {
+		t.Fatalf("FullTextSearch failed: %v", err)
+	}
+	if len(fts) != 1 || fts[0].ID != "series-live" {
+		t.Errorf("Expected only series-live from FTS, got %d rows", len(fts))
+	}
+
+	// Count feeds /api/v1/library/stats. It must agree with List and GetStats, or the
+	// library header reports a different total than the grid below it.
+	count, err := repo.Count(ctx)
+	if err != nil {
+		t.Fatalf("Count failed: %v", err)
+	}
+	if count != 1 {
+		t.Errorf("Count = %d, want 1 — Count does not exclude soft-deleted series", count)
+	}
+
+	stats, err := repo.GetStats(ctx)
+	if err != nil {
+		t.Fatalf("GetStats failed: %v", err)
+	}
+	if stats.Total != count {
+		t.Errorf("GetStats.Total (%d) != Count (%d) — the two count paths disagree", stats.Total, count)
+	}
+}
+
+// TestSeriesCreatePersistsLibraryID — the series table has had library_id since migration
+// 020, but models.Series never carried the field, so no write path could populate it.
+func TestSeriesCreatePersistsLibraryID(t *testing.T) {
+	db := setupSeriesTestDB(t)
+	defer db.Close()
+
+	repo := NewSeriesRepository(db)
+	ctx := context.Background()
+
+	t.Run("Create", func(t *testing.T) {
+		s := fullyPopulatedSeries("series-create", 1, "/media/tv/create")
+		if err := repo.Create(ctx, s); err != nil {
+			t.Fatalf("Create failed: %v", err)
+		}
+
+		var libraryID, filePath sql.NullString
+		if err := db.QueryRow(
+			"SELECT library_id, file_path FROM series WHERE id = ?", "series-create",
+		).Scan(&libraryID, &filePath); err != nil {
+			t.Fatalf("Failed to read row: %v", err)
+		}
+		if !libraryID.Valid || libraryID.String != "lib-tv" {
+			t.Errorf("library_id = %v, want 'lib-tv' — INSERT dropped the column", libraryID)
+		}
+		// file_path was missing from the INSERT too, even though Update always wrote it.
+		if !filePath.Valid || filePath.String != "/media/tv/create" {
+			t.Errorf("file_path = %v, want '/media/tv/create' — INSERT dropped the column", filePath)
+		}
+	})
+
+	t.Run("BulkCreate", func(t *testing.T) {
+		list := []*models.Series{
+			fullyPopulatedSeries("series-bulk-1", 11, "/media/tv/bulk1"),
+			fullyPopulatedSeries("series-bulk-2", 12, "/media/tv/bulk2"),
+		}
+		if err := repo.BulkCreate(ctx, list); err != nil {
+			t.Fatalf("BulkCreate failed: %v", err)
+		}
+
+		var count int
+		if err := db.QueryRow(
+			`SELECT COUNT(*) FROM series WHERE id LIKE 'series-bulk-%' AND library_id = ? AND file_path IS NOT NULL`,
+			"lib-tv",
+		).Scan(&count); err != nil {
+			t.Fatalf("Failed to count: %v", err)
+		}
+		if count != 2 {
+			t.Errorf("Expected 2 bulk-created series with library_id + file_path, got %d", count)
+		}
+	})
 }
