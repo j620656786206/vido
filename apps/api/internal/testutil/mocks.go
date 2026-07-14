@@ -228,6 +228,14 @@ func (m *MockSeriesRepository) FindByIMDbID(ctx context.Context, imdbID string) 
 	return args.Get(0).(*models.Series), args.Error(1)
 }
 
+func (m *MockSeriesRepository) FindByFilePath(ctx context.Context, filePath string) (*models.Series, error) {
+	args := m.Called(ctx, filePath)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.Series), args.Error(1)
+}
+
 func (m *MockSeriesRepository) Update(ctx context.Context, series *models.Series) error {
 	return m.Called(ctx, series).Error(0)
 }

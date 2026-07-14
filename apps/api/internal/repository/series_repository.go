@@ -149,6 +149,26 @@ func (r *SeriesRepository) FindByIMDbID(ctx context.Context, imdbID string) (*mo
 	return &series, nil
 }
 
+// FindByFilePath retrieves a series by its file path (the series folder). This is the
+// scanner's identity for a series: it runs before any TMDb lookup, so tmdb_id is not yet
+// known, and the folder is stable across a rename of any single episode file.
+// Returns (nil, nil) when there is no match, mirroring MovieRepository.FindByFilePath.
+func (r *SeriesRepository) FindByFilePath(ctx context.Context, filePath string) (*models.Series, error) {
+	query := fmt.Sprintf(`SELECT %s FROM series WHERE file_path = ?`, seriesSelectColumns)
+
+	row := r.db.QueryRowContext(ctx, query, filePath)
+	series, err := scanSeries(row)
+
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to find series by file_path: %w", err)
+	}
+
+	return &series, nil
+}
+
 // Update modifies an existing series in the database
 func (r *SeriesRepository) Update(ctx context.Context, series *models.Series) error {
 	if series == nil {

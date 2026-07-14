@@ -668,3 +668,160 @@ func filterCalls(calls []*mock.Call, method string) []*mock.Call {
 	}
 	return filtered
 }
+
+// --- bugfix-b: TV routing -----------------------------------------------------------
+//
+// Before this, the scanner wrote EVERY scanned file into `movies` — the media-type
+// decision was computed (scanDir.contentType) and never threaded past StartScan — while
+// the enrichment pass correctly recognised each file as TV and then stamped the whole
+// series' TMDb metadata onto the movie row. A real TV library came out as one `movies`
+// row per episode, all wearing the same poster, with series/seasons/episodes empty.
+
+// setupTVScanner builds a scanner with TV routing enabled over the given dirs.
+func setupTVScanner(t *testing.T, mediaDirs []string) (*ScannerService, *testutil.MockMovieRepository, *mockPQSeriesRepo, *mockPQSeasonRepo, *mockPQEpisodeRepo) {
+	t.Helper()
+
+	movieRepo := new(testutil.MockMovieRepository)
+	seriesRepo := newMockPQSeriesRepo()
+	seasonRepo := newMockPQSeasonRepo()
+	episodeRepo := newMockPQEpisodeRepo()
+
+	hub := sse.NewHub()
+	t.Cleanup(func() { hub.Close() })
+
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelWarn}))
+	svc := NewScannerService(movieRepo, seriesRepo, mediaDirs, hub, logger)
+
+	ingest := NewMediaIngestService(seriesRepo, seasonRepo, episodeRepo, logger)
+	svc.SetTVIngest(ingest, NewParserService())
+
+	movieRepo.On("FindAllWithFilePath", mock.Anything).Maybe().Return([]models.Movie{}, nil)
+
+	return svc, movieRepo, seriesRepo, seasonRepo, episodeRepo
+}
+
+func TestScannerService_TVEpisodesRouteToSeriesNotMovies(t *testing.T) {
+	dir := t.TempDir()
+	seasonDir := filepath.Join(dir, "鵲刀門傳奇", "Season02")
+	if err := os.MkdirAll(seasonDir, 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	createVideoFiles(t, seasonDir, []string{
+		"Legend.of.the.Undercover.Chef.2025.S02E05.2160p.WEB-DL.mkv",
+		"Legend.of.the.Undercover.Chef.2025.S02E06.2160p.WEB-DL.mkv",
+	})
+
+	svc, movieRepo, seriesRepo, seasonRepo, episodeRepo := setupTVScanner(t, []string{dir})
+
+	// The scanner checks for a mis-filed movie row per TV file; there is none here.
+	movieRepo.On("FindByFilePath", mock.Anything, mock.AnythingOfType("string")).Return(nil, nil)
+
+	result, err := svc.StartScan(context.Background())
+	if err != nil {
+		t.Fatalf("StartScan: %v", err)
+	}
+	if result.FilesFound != 2 {
+		t.Fatalf("FilesFound = %d, want 2", result.FilesFound)
+	}
+
+	// The whole point: nothing lands in `movies`.
+	movieRepo.AssertNotCalled(t, "BulkCreate", mock.Anything, mock.Anything)
+	movieRepo.AssertNotCalled(t, "Update", mock.Anything, mock.Anything)
+
+	if len(seriesRepo.series) != 1 {
+		t.Fatalf("series count = %d, want 1 (both episodes belong to one show)", len(seriesRepo.series))
+	}
+	if len(seasonRepo.seasons) != 1 {
+		t.Errorf("season count = %d, want 1", len(seasonRepo.seasons))
+	}
+	if len(episodeRepo.episodes) != 2 {
+		t.Errorf("episode count = %d, want 2", len(episodeRepo.episodes))
+	}
+
+	// The scanner resolves symlinks, and on macOS t.TempDir() lives under /var → /private/var.
+	resolvedDir, err := filepath.EvalSymlinks(dir)
+	if err != nil {
+		t.Fatalf("EvalSymlinks: %v", err)
+	}
+
+	for _, s := range seriesRepo.series {
+		// Identity is the series folder — climbing past Season02 — so a second season
+		// would attach to this same series rather than creating another one.
+		wantDir := filepath.Join(resolvedDir, "鵲刀門傳奇")
+		if !s.FilePath.Valid || s.FilePath.String != wantDir {
+			t.Errorf("series file_path = %q, want %q", s.FilePath.String, wantDir)
+		}
+		if s.ParseStatus != models.ParseStatusPending {
+			t.Errorf("series parse_status = %q, want pending (enrichment fills it in)", s.ParseStatus)
+		}
+	}
+
+	seasons := map[int]bool{}
+	for _, ep := range episodeRepo.episodes {
+		seasons[ep.SeasonNumber] = true
+		if ep.SeasonNumber != 2 {
+			t.Errorf("episode season = %d, want 2", ep.SeasonNumber)
+		}
+		if ep.EpisodeNumber != 5 && ep.EpisodeNumber != 6 {
+			t.Errorf("episode number = %d, want 5 or 6", ep.EpisodeNumber)
+		}
+		if !ep.FilePath.Valid || !strings.HasSuffix(ep.FilePath.String, ".mkv") {
+			t.Errorf("episode file_path = %q, want the .mkv path", ep.FilePath.String)
+		}
+	}
+	if len(seasons) != 1 {
+		t.Errorf("distinct seasons = %d, want 1", len(seasons))
+	}
+}
+
+// TestScannerService_DeletesMisFiledMovieRowForTVEpisode covers the repair path: the
+// 5000-odd episode-as-movie rows a real deployment already accumulated must disappear on
+// the next scan, or the same episode shows up twice — once in the movie grid, once under
+// its series. A soft-delete would not do: FindByFilePath does not filter is_removed, so
+// the next scan would resurrect it.
+func TestScannerService_DeletesMisFiledMovieRowForTVEpisode(t *testing.T) {
+	dir := t.TempDir()
+	seasonDir := filepath.Join(dir, "Show", "Season01")
+	if err := os.MkdirAll(seasonDir, 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	paths := createVideoFiles(t, seasonDir, []string{"Show.S01E01.1080p.mkv"})
+
+	svc, movieRepo, _, _, episodeRepo := setupTVScanner(t, []string{dir})
+
+	stale := &models.Movie{ID: "stale-movie-row", Title: "Show", FilePath: models.NewNullString(paths[0])}
+	movieRepo.On("FindByFilePath", mock.Anything, mock.AnythingOfType("string")).Return(stale, nil)
+	movieRepo.On("Delete", mock.Anything, "stale-movie-row").Return(nil)
+
+	if _, err := svc.StartScan(context.Background()); err != nil {
+		t.Fatalf("StartScan: %v", err)
+	}
+
+	movieRepo.AssertCalled(t, "Delete", mock.Anything, "stale-movie-row")
+	if len(episodeRepo.episodes) != 1 {
+		t.Errorf("episode count = %d, want 1", len(episodeRepo.episodes))
+	}
+}
+
+// TestScannerService_MoviesStillRouteToMovies pins the other half: a film is still a film.
+func TestScannerService_MoviesStillRouteToMovies(t *testing.T) {
+	dir := t.TempDir()
+	createVideoFiles(t, dir, []string{"The.Matrix.1999.1080p.BluRay.x264.mkv"})
+
+	svc, movieRepo, seriesRepo, _, episodeRepo := setupTVScanner(t, []string{dir})
+
+	movieRepo.On("FindByFilePath", mock.Anything, mock.AnythingOfType("string")).Return(nil, nil)
+	movieRepo.On("BulkCreate", mock.Anything, mock.AnythingOfType("[]*models.Movie")).Return(nil)
+
+	if _, err := svc.StartScan(context.Background()); err != nil {
+		t.Fatalf("StartScan: %v", err)
+	}
+
+	movieRepo.AssertCalled(t, "BulkCreate", mock.Anything, mock.Anything)
+	if len(seriesRepo.series) != 0 {
+		t.Errorf("series count = %d, want 0 — a movie must not create a series", len(seriesRepo.series))
+	}
+	if len(episodeRepo.episodes) != 0 {
+		t.Errorf("episode count = %d, want 0", len(episodeRepo.episodes))
+	}
+}
