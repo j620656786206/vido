@@ -14,6 +14,9 @@ import type { LibraryItem } from '../../types/library';
 const h = vi.hoisted(() => ({
   infinite: {} as Record<string, unknown>,
   lastArgs: undefined as Record<string, unknown> | undefined,
+  batchDelete: undefined as unknown as ReturnType<typeof vi.fn>,
+  batchReparse: undefined as unknown as ReturnType<typeof vi.fn>,
+  batchExport: undefined as unknown as ReturnType<typeof vi.fn>,
 }));
 
 vi.mock('../../hooks/useLibraryInfinite', () => ({
@@ -32,6 +35,16 @@ vi.mock('../../hooks/useLibrary', () => ({
   useMovieStats: () => ({ data: { unmatchedCount: 0 } }),
   useSeriesStats: () => ({ data: { unmatchedCount: 0 } }),
   useLibraryGenres: () => ({ data: [] }),
+  // ux3-cutover-2: selection-mode batch mutations (spies live in `h` so tests
+  // can assert the ids/type each batch call receives)
+  useBatchDelete: () => ({ mutateAsync: h.batchDelete, isPending: false }),
+  useBatchReparse: () => ({ mutateAsync: h.batchReparse, isPending: false }),
+  useBatchExport: () => ({ mutateAsync: h.batchExport, isPending: false }),
+}));
+// ux3-cutover-2: the generation-batch dialog pulls SSE plumbing — stub it out.
+vi.mock('../subtitle/GenerationBatchDialogV2', () => ({
+  GenerationBatchDialogV2: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="generation-batch-dialog-stub" /> : null,
 }));
 
 import { LibraryBrowseV2 } from './LibraryBrowseV2';
@@ -91,6 +104,9 @@ function renderBrowse(initial = '/library', type?: 'all' | 'movie' | 'tv') {
 describe('LibraryBrowseV2', () => {
   beforeEach(() => {
     h.infinite = infinite();
+    h.batchDelete = vi.fn().mockResolvedValue({ successCount: 0, errors: [] });
+    h.batchReparse = vi.fn().mockResolvedValue({ successCount: 0, errors: [] });
+    h.batchExport = vi.fn().mockResolvedValue({ items: [] });
   });
 
   it('renders the grid + result count for a populated library', async () => {
@@ -171,5 +187,80 @@ describe('LibraryBrowseV2 — desktop filter rail (ux3-0-7)', () => {
     renderBrowse('/library?genres=動作,科幻&yearMin=2020&yearMax=2029');
     // 2 genres + 1 decade range = 3 (type=全部 not counted)
     expect(await screen.findByTestId('library-rail-active-count')).toHaveTextContent('3');
+  });
+});
+
+// ux3-cutover-2: v2 selection mode + batch ops (legacy-shell deletion gate)
+describe('LibraryBrowseV2 — selection mode (ux3-cutover-2)', () => {
+  beforeEach(() => {
+    h.infinite = infinite({
+      items: [movie('a', '電影甲'), movie('b', '電影乙'), movie('c', '電影丙')],
+      totalItems: 3,
+    });
+    h.batchDelete = vi.fn().mockResolvedValue({ successCount: 2, errors: [] });
+    h.batchReparse = vi.fn().mockResolvedValue({ successCount: 1, errors: [] });
+    h.batchExport = vi.fn().mockResolvedValue({ items: [] });
+  });
+
+  it('選取 enters selection mode: toolbar swaps in, cards stop navigating and toggle', async () => {
+    renderBrowse();
+    await userEvent.click(await screen.findByTestId('enter-selection-btn'));
+    expect(screen.getByTestId('selection-toolbar')).toBeInTheDocument();
+    expect(screen.queryByTestId('library-result-count')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByTestId('poster-v2-a'));
+    expect(screen.getByTestId('selected-count')).toHaveTextContent('已選取 1 項');
+    expect(screen.getByTestId('poster-v2-a')).toHaveAttribute('aria-pressed', 'true');
+    // still on /library — the card click did NOT navigate to the detail route
+    expect(screen.getByTestId('library-grid-v2')).toBeInTheDocument();
+
+    // toggle off
+    await userEvent.click(screen.getByTestId('poster-v2-a'));
+    expect(screen.getByTestId('selected-count')).toHaveTextContent('已選取 0 項');
+  });
+
+  it('全選 selects all loaded items; 取消 exits and clears', async () => {
+    renderBrowse();
+    await userEvent.click(await screen.findByTestId('enter-selection-btn'));
+    await userEvent.click(screen.getByTestId('select-all-btn'));
+    expect(screen.getByTestId('selected-count')).toHaveTextContent('已選取 3 項');
+
+    await userEvent.click(screen.getByTestId('batch-cancel-btn'));
+    expect(screen.queryByTestId('selection-toolbar')).not.toBeInTheDocument();
+    expect(screen.getByTestId('enter-selection-btn')).toBeInTheDocument();
+  });
+
+  it('Escape exits selection mode', async () => {
+    renderBrowse();
+    await userEvent.click(await screen.findByTestId('enter-selection-btn'));
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByTestId('selection-toolbar')).not.toBeInTheDocument();
+  });
+
+  it('batch delete: confirm dialog → mutation receives the selected ids + type', async () => {
+    renderBrowse();
+    await userEvent.click(await screen.findByTestId('enter-selection-btn'));
+    await userEvent.click(screen.getByTestId('poster-v2-a'));
+    await userEvent.click(screen.getByTestId('poster-v2-b'));
+    await userEvent.click(screen.getByTestId('batch-delete-btn'));
+    expect(screen.getByTestId('batch-confirm-dialog')).toBeInTheDocument();
+    await userEvent.click(screen.getByTestId('confirm-action-btn'));
+    expect(h.batchDelete).toHaveBeenCalledWith({ ids: ['a', 'b'], type: 'movie' });
+  });
+
+  it('批次生成字幕 opens the generation-batch dialog with the movie selection', async () => {
+    renderBrowse();
+    await userEvent.click(await screen.findByTestId('enter-selection-btn'));
+    await userEvent.click(screen.getByTestId('poster-v2-c'));
+    await userEvent.click(screen.getByTestId('batch-subtitle-btn'));
+    expect(await screen.findByTestId('generation-batch-dialog-stub')).toBeInTheDocument();
+  });
+
+  it('list view rows toggle selection too', async () => {
+    renderBrowse('/library?view=list');
+    await userEvent.click(await screen.findByTestId('enter-selection-btn'));
+    await userEvent.click(screen.getByTestId('list-row-v2-b'));
+    expect(screen.getByTestId('selected-count')).toHaveTextContent('已選取 1 項');
+    expect(screen.getByTestId('list-row-v2-b')).toHaveAttribute('aria-pressed', 'true');
   });
 });

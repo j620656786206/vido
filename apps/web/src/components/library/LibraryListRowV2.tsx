@@ -5,7 +5,7 @@
  * (accent-tint Mono) + subtitle-status pill + a row affordance. Links to detail.
  */
 import { Link } from '@tanstack/react-router';
-import { Star, ChevronRight } from 'lucide-react';
+import { Check, Star, ChevronRight } from 'lucide-react';
 import { getImageUrl } from '../../lib/image';
 import { deriveSubtitleStatus, deriveLifecycleStatus } from '../../utils/libraryStatus';
 import type { LibraryMovie, LibrarySeries } from '../../types/library';
@@ -18,6 +18,10 @@ interface LibraryListRowV2Props {
   meta: string;
   voteAverage?: number;
   media: LibraryMovie | LibrarySeries;
+  /** ux3-cutover-2: selection mode — row toggles instead of navigating. */
+  selectable?: boolean;
+  selected?: boolean;
+  onSelect?: (e: React.MouseEvent) => void;
 }
 
 function TechPill({ children }: { children: React.ReactNode }) {
@@ -36,6 +40,9 @@ export function LibraryListRowV2({
   meta,
   voteAverage,
   media,
+  selectable,
+  selected,
+  onSelect,
 }: LibraryListRowV2Props) {
   const img = getImageUrl(posterPath ?? null, 'w185');
   const subtitle = deriveSubtitleStatus(media);
@@ -49,8 +56,32 @@ export function LibraryListRowV2({
       to="/media/$type/$id"
       params={{ type, id }}
       data-testid={`list-row-v2-${id}`}
-      className="flex min-h-[44px] items-center gap-3 rounded-[var(--radius-md)] px-2 py-2 transition-colors hover:bg-[var(--bg-secondary)]"
+      aria-pressed={selectable ? selected : undefined}
+      onClick={
+        selectable
+          ? (e) => {
+              e.preventDefault();
+              onSelect?.(e);
+            }
+          : undefined
+      }
+      className={`flex min-h-[44px] items-center gap-3 rounded-[var(--radius-md)] px-2 py-2 transition-colors hover:bg-[var(--bg-secondary)] ${
+        selected ? 'bg-[var(--accent-subtle)]' : ''
+      }`}
     >
+      {selectable && (
+        <span
+          data-testid={`row-select-indicator-${id}`}
+          aria-hidden="true"
+          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
+            selected
+              ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)] text-[var(--text-on-accent)]'
+              : 'border-[var(--border-subtle)] text-transparent'
+          }`}
+        >
+          <Check className="h-3.5 w-3.5" />
+        </span>
+      )}
       <div className="h-[60px] w-10 shrink-0 overflow-hidden rounded-[var(--radius-sm)] bg-[var(--bg-tertiary)]">
         {img && <img src={img} alt="" loading="lazy" className="h-full w-full object-cover" />}
       </div>
