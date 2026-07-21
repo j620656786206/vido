@@ -98,3 +98,5 @@ blob-report/
 
 # Pencil auto-backups of the design file (e.g. ux-design.pen.bak-imports-YYYYMMDD-HHMMSS)
 ux-design.pen.bak-*
+# Local test environment (scripts/serve-test-env.sh — testenv-local-seed)
+.vido-test-env/
