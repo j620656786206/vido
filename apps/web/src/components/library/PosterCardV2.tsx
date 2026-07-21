@@ -12,7 +12,7 @@
  * subtitleLanguage, ux3-0-1) over embedded tracks. Links to the detail route.
  */
 import { Link } from '@tanstack/react-router';
-import { Star } from 'lucide-react';
+import { Check, Star } from 'lucide-react';
 import { getImageUrl } from '../../lib/image';
 import { filenameToGradient } from '../media/ColorPlaceholder';
 import { pickPosterBadge } from '../../utils/libraryStatus';
@@ -33,6 +33,10 @@ interface PosterCardV2Props {
     LibraryMovie | LibrarySeries,
     'parseStatus' | 'subtitleTracks' | 'subtitleStatus' | 'subtitleLanguage'
   >;
+  /** ux3-cutover-2: selection mode — card toggles instead of navigating. */
+  selectable?: boolean;
+  selected?: boolean;
+  onSelect?: (e: React.MouseEvent) => void;
 }
 
 export function PosterCardV2({
@@ -44,6 +48,9 @@ export function PosterCardV2({
   meta,
   voteAverage,
   media,
+  selectable,
+  selected,
+  onSelect,
 }: PosterCardV2Props) {
   const badge = pickPosterBadge(media);
   const img = getImageUrl(posterPath ?? null, 'w342');
@@ -55,9 +62,22 @@ export function PosterCardV2({
       to="/media/$type/$id"
       params={{ type, id }}
       data-testid={`poster-v2-${id}`}
+      aria-pressed={selectable ? selected : undefined}
+      onClick={
+        selectable
+          ? (e) => {
+              e.preventDefault();
+              onSelect?.(e);
+            }
+          : undefined
+      }
       className="group/card flex flex-col gap-2"
     >
-      <div className="relative aspect-[2/3] overflow-hidden rounded-[var(--radius-lg)] bg-[var(--bg-secondary)] shadow-[var(--shadow-md)] transition-transform duration-200 group-hover/card:scale-[1.02] group-focus-visible/card:scale-[1.02]">
+      <div
+        className={`relative aspect-[2/3] overflow-hidden rounded-[var(--radius-lg)] bg-[var(--bg-secondary)] shadow-[var(--shadow-md)] transition-transform duration-200 group-hover/card:scale-[1.02] group-focus-visible/card:scale-[1.02] ${
+          selected ? 'ring-2 ring-[var(--accent-primary)]' : ''
+        }`}
+      >
         {img ? (
           <img src={img} alt={title} loading="lazy" className="h-full w-full object-cover" />
         ) : (
@@ -68,6 +88,20 @@ export function PosterCardV2({
           >
             {title.slice(0, 1)}
           </div>
+        )}
+
+        {selectable && (
+          <span
+            data-testid={`poster-select-indicator-${id}`}
+            aria-hidden="true"
+            className={`absolute left-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full border-2 transition-colors ${
+              selected
+                ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)] text-[var(--text-on-accent)]'
+                : 'border-[var(--text-on-accent)] bg-[var(--overlay-scrim)] text-transparent'
+            }`}
+          >
+            <Check className="h-4 w-4" />
+          </span>
         )}
 
         {badge && (
