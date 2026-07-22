@@ -59,14 +59,14 @@
 - **All 3 failures were real product defects (2 app bug chains + 1 test-data targeting), all fixed with unit regression locks** (Go: search local-leg ×5, FTS ×3, migration-era suites all green 34 pkg; web: +3 search dropdown specs, 2455/2455)
 - **Rerun queue:** TC010, TC084, TC088, TC092 (20 credits; done-gate = all green, no skips/waivers)
 
-| Requirement | Total | ✅ Passed | ❌ Failed | ⚠️ Blocked |
-|---|---|---|---|---|
-| 媒體庫瀏覽互動 | 3 | 2 | 0 | 1 |
-| URL↔UI Consistency | 3 | 3 | 0 | 0 |
-| 搜尋→瀏覽→詳情 | 1 | 0 | 1 | 0 |
-| 詳情 | 2 | 1 | 1 | 0 |
-| 下載監控 | 2 | 2 | 0 | 0 |
-| 降級狀態 | 1 | 0 | 1 | 0 |
+| Requirement        | Total | ✅ Passed | ❌ Failed | ⚠️ Blocked |
+| ------------------ | ----- | --------- | --------- | ---------- |
+| 媒體庫瀏覽互動     | 3     | 2         | 0         | 1          |
+| URL↔UI Consistency | 3     | 3         | 0         | 0          |
+| 搜尋→瀏覽→詳情     | 1     | 0         | 1         | 0          |
+| 詳情               | 2     | 1         | 1         | 0          |
+| 下載監控           | 2     | 2         | 0         | 0          |
+| 降級狀態           | 1     | 0         | 1         | 0          |
 
 ---
 
