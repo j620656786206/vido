@@ -1,7 +1,7 @@
 // Design ref: ux-design.pen Screen AS-2 - Search Suggestions Dropdown (TMaw5)
 // Source: ux-design.pen (Pencil app)
 import { User } from 'lucide-react';
-import type { LocalSearchHit, Movie, Person, TVShow, UnifiedSearchResult } from '../../types/tmdb';
+import type { Movie, Person, TVShow, UnifiedSearchResult } from '../../types/tmdb';
 import { getImageUrl } from '../../lib/image';
 import { cn } from '../../lib/utils';
 
