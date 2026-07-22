@@ -11,21 +11,15 @@ import {
 } from '@tanstack/react-router';
 import React from 'react';
 
-// Stub the v2 experience so the gate test asserts which composition the route picks
-// without rendering the full v2 tree (covered by the DownloadsBrowseV2 children specs).
+// Stub the v2 experience so the route test asserts composition without rendering
+// the full v2 tree (covered by the DownloadsBrowseV2 children specs).
 vi.mock('../components/downloads/DownloadsBrowseV2', () => ({
   DownloadsBrowseV2: () => React.createElement('div', { 'data-testid': 'stub-downloads-v2' }),
 }));
-// Keep the legacy branch network-free.
-vi.mock('../hooks/useDownloads', () => ({
-  useDownloads: () => ({ data: undefined, isLoading: false, error: null }),
-  useDownloadCounts: () => ({ data: undefined }),
-}));
 
 import { Route as DownloadsRoute } from './downloads';
-import { ShellVersionProvider } from '../components/shell/shellVersion';
 
-function renderDownloads(shell: 'legacy' | 'v2' = 'legacy') {
+function renderDownloads() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const rootRoute = createRootRoute({ component: () => React.createElement(Outlet) });
   const downloadsRoute = createRoute({
@@ -43,24 +37,16 @@ function renderDownloads(shell: 'legacy' | 'v2' = 'legacy') {
     { client: queryClient },
     React.createElement(RouterProvider, { router } as never)
   );
-  return render(
-    shell === 'v2' ? React.createElement(ShellVersionProvider, { value: 'v2' }, tree) : tree
-  );
+  return render(tree);
 }
 
-describe('routes/downloads (shell-version gate — ux3-4-3 AC #1)', () => {
+// ux3-cutover-3: the shell gate is gone — DownloadsBrowseV2 is the route's only render.
+describe('routes/downloads (ux3-cutover-3)', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('v2 shell renders the v2 deep page (DownloadsBrowseV2)', async () => {
-    renderDownloads('v2');
+  it('renders the v2 deep page unconditionally', async () => {
+    renderDownloads();
     expect(await screen.findByTestId('stub-downloads-v2')).toBeInTheDocument();
-    // The legacy header is gone under the v2 shell.
     expect(screen.queryByText('下載管理')).toBeNull();
-  });
-
-  it('legacy shell (default) renders the byte-unchanged legacy page, not v2', async () => {
-    renderDownloads('legacy');
-    expect(await screen.findByText('下載管理')).toBeInTheDocument();
-    expect(screen.queryByTestId('stub-downloads-v2')).toBeNull();
   });
 });

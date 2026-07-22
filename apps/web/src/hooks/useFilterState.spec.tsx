@@ -2,19 +2,14 @@ import { renderHook } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useFilterState } from './useFilterState';
 import { useNavigate, useSearch } from '@tanstack/react-router';
-import { useShellVersion } from '../components/shell/shellVersion';
 
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: vi.fn(),
   useSearch: vi.fn(),
 }));
-vi.mock('../components/shell/shellVersion', () => ({
-  useShellVersion: vi.fn(),
-}));
 
 const mockedUseSearch = vi.mocked(useSearch);
 const mockedUseNavigate = vi.mocked(useNavigate);
-const mockedUseShellVersion = vi.mocked(useShellVersion);
 
 describe('useFilterState', () => {
   const navigate = vi.fn();
@@ -22,9 +17,6 @@ describe('useFilterState', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockedUseNavigate.mockReturnValue(navigate);
-    // Default to the v2 shell for the AC #5 (replace) assertions; the legacy
-    // push-semantics case is asserted explicitly below.
-    mockedUseShellVersion.mockReturnValue('v2');
   });
 
   it('parses filters from the URL search params (AC #4)', () => {
@@ -77,13 +69,10 @@ describe('useFilterState', () => {
     expect(nextSearch.page).toBe(1);
   });
 
-  it('legacy shell keeps push history (no replace) — byte-unchanged (AC #1/#5)', () => {
-    mockedUseShellVersion.mockReturnValue('legacy');
+  it('replace is unconditional after ux3-cutover-3 (legacy push consumer deleted)', () => {
     mockedUseSearch.mockReturnValue({});
     const { result } = renderHook(() => useFilterState());
-
     result.current.setFilters({ genre: [28], platform: [], sortBy: 'popularity' });
-
-    expect(navigate.mock.calls[0][0].replace).toBe(false);
+    expect(navigate.mock.calls[0][0].replace).toBe(true);
   });
 });

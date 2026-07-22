@@ -11,12 +11,6 @@ vi.mock('../services/tmdb', () => ({
   tmdbService: { discoverFacetCounts: vi.fn() },
 }));
 
-// Mock the shell version so we control the v2 gate (AC7) without a provider.
-const mockShellVersion = vi.fn(() => 'v2');
-vi.mock('../components/shell/shellVersion', () => ({
-  useShellVersion: () => mockShellVersion(),
-}));
-
 function createWrapper() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -37,7 +31,6 @@ const mockFn = vi.mocked(tmdbModule.tmdbService.discoverFacetCounts);
 describe('useDiscoverFacetCounts', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockShellVersion.mockReturnValue('v2');
     mockFn.mockResolvedValue(okResponse);
   });
 
@@ -64,16 +57,6 @@ describe('useDiscoverFacetCounts', () => {
     // sort/page are stripped so the key is stable across sort/page changes (AR-F2).
     expect(params.get('sort')).toBeNull();
     expect(params.get('page')).toBeNull();
-  });
-
-  it('does not fetch when the shell is not v2 (AC7 gate)', async () => {
-    mockShellVersion.mockReturnValue('legacy');
-    const { result } = renderHook(() => useDiscoverFacetCounts(filtersA, { enabled: true }), {
-      wrapper: createWrapper(),
-    });
-    await Promise.resolve();
-    expect(mockFn).not.toHaveBeenCalled();
-    expect(result.current.counts).toBeUndefined();
   });
 
   it('does not fetch unless the caller opts in (desktop-only, AC7)', async () => {

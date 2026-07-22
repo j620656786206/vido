@@ -1,6 +1,16 @@
-import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+/**
+ * Route-level spec for /library (ux3-cutover-3).
+ *
+ * Test-gap root cause paid down here: the old spec HAND-COPIED the route tree
+ * (validateSearch + component only), so `beforeLoad` — the ?type= → clean-route
+ * redirect — never existed in tests and the 2026-07-22 type-filter bug (URL
+ * moves, UI + query stay 全部) was structurally invisible. This spec mounts the
+ * REAL route options (validateSearch + beforeLoad + component) plus the real
+ * child path markers, and asserts URL ↔ UI ↔ query agreement end to end.
+ */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import {
   createMemoryHistory,
   RouterProvider,
@@ -8,577 +18,191 @@ import {
   createRoute,
   createRouter,
 } from '@tanstack/react-router';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import React from 'react';
+import type { LibraryItem } from '../types/library';
 
-import { Route as LibraryRoute } from './library';
-
-// Capture the props flowing into the generation-batch dialog (ux3-subtitle-v2-batch
-// AC 5 — the selection must ACTUALLY flow; the old wiring discarded it).
-const generationDialogProps = vi.hoisted(() => vi.fn());
-vi.mock('../components/subtitle/GenerationBatchDialogV2', () => ({
-  GenerationBatchDialogV2: (props: { open: boolean }) => {
-    generationDialogProps(props);
-    return props.open ? <div data-testid="generation-batch-dialog-stub" /> : null;
-  },
+const h = vi.hoisted(() => ({
+  infinite: {} as Record<string, unknown>,
+  lastArgs: undefined as Record<string, unknown> | undefined,
 }));
 
-vi.mock('../services/libraryService', () => ({
-  libraryService: {
-    listLibrary: vi.fn(),
-    getRecentlyAdded: vi.fn(),
-    searchLibrary: vi.fn(),
-    deleteMovie: vi.fn(),
-    deleteSeries: vi.fn(),
-    reparseMovie: vi.fn(),
-    reparseSeries: vi.fn(),
-    exportMovie: vi.fn(),
-    exportSeries: vi.fn(),
+vi.mock('../hooks/useLibraryInfinite', () => ({
+  useLibraryInfinite: (args: Record<string, unknown>) => {
+    h.lastArgs = args;
+    return h.infinite;
   },
-}));
-
-// bugfix-10-5: stub the 3-state classifier inputs so the empty-state branch
-// is deterministic. Default = Case C (qBT OK + 1 library + 0 items).
-const mockQBTConfig = vi.fn(() => ({
-  data: { configured: true } as { configured: boolean } | undefined,
-  isLoading: false,
-}));
-const mockMediaLibraries = vi.fn(() => ({
-  data: { libraries: [{ id: 'lib-1', name: 'Test Library', contentType: 'movie' }] } as {
-    libraries: unknown[];
-  },
-  isLoading: false,
 }));
 vi.mock('../hooks/useQBittorrent', () => ({
-  useQBittorrentConfig: () => mockQBTConfig(),
+  useQBittorrentConfig: () => ({ data: { configured: true }, isLoading: false }),
 }));
 vi.mock('../hooks/useMediaLibrary', () => ({
-  useMediaLibraries: () => mockMediaLibraries(),
+  useMediaLibraries: () => ({ data: { libraries: [{ id: '1' }] }, isLoading: false }),
+}));
+vi.mock('../hooks/useLibrary', () => ({
+  useMovieStats: () => ({ data: { unmatchedCount: 0 } }),
+  useSeriesStats: () => ({ data: { unmatchedCount: 0 } }),
+  useLibraryGenres: () => ({ data: [] }),
+  useBatchDelete: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useBatchReparse: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useBatchExport: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
+vi.mock('../components/subtitle/GenerationBatchDialogV2', () => ({
+  GenerationBatchDialogV2: () => null,
 }));
 
-function getMockListResponse() {
-  return {
-    items: [
-      {
-        type: 'movie' as const,
-        movie: {
-          id: 'movie-1',
-          title: '測試電影',
-          originalTitle: 'Test Movie',
-          releaseDate: '2023-06-15',
-          genres: ['動作'],
-          voteAverage: 8.5,
-          posterPath: '/poster.jpg',
-          tmdbId: 123,
-          parseStatus: 'success',
-          createdAt: '2024-01-15T00:00:00Z',
-          updatedAt: '2024-01-15T00:00:00Z',
-        },
-      },
-      {
-        type: 'series' as const,
-        series: {
-          id: 'series-1',
-          title: '測試影集',
-          originalTitle: 'Test Series',
-          firstAirDate: '2022-03-10',
-          genres: ['劇情'],
-          voteAverage: 9.1,
-          posterPath: '/poster2.jpg',
-          tmdbId: 456,
-          parseStatus: 'success',
-          createdAt: '2024-02-01T00:00:00Z',
-          updatedAt: '2024-02-01T00:00:00Z',
-        },
-      },
-    ],
-    page: 1,
-    pageSize: 20,
-    totalItems: 2,
-    totalPages: 1,
-  };
-}
+import { Route as LibraryRoute } from './library';
+import { Route as LibraryIndexRoute } from './library/index';
+import { Route as LibraryMoviesRoute } from './library/movies';
+import { Route as LibraryTvRoute } from './library/tv';
 
-function getEmptyResponse() {
+function infinite(over: Record<string, unknown> = {}) {
   return {
-    items: [],
-    page: 1,
-    pageSize: 20,
+    items: [] as LibraryItem[],
     totalItems: 0,
-    totalPages: 0,
+    isLoading: false,
+    isError: false,
+    error: null,
+    fetchNextPage: vi.fn(),
+    hasNextPage: false,
+    isFetchingNextPage: false,
+    refetch: vi.fn(),
+    ...over,
   };
 }
 
-function createTestRouter(initialSearch: Record<string, string> = {}) {
-  const rootRoute = createRootRoute();
+const movie = (id: string, title: string): LibraryItem => ({
+  type: 'movie',
+  movie: {
+    id,
+    title,
+    releaseDate: '2020-01-01',
+    runtime: 120,
+    genres: ['動作'],
+    parseStatus: 'success',
+    subtitleTracks: JSON.stringify([{ language: 'zh-Hant' }]),
+    voteAverage: 7.5,
+    posterPath: null,
+    createdAt: '',
+    updatedAt: '',
+  },
+});
 
+/**
+ * Mount the REAL /library layout (validateSearch + beforeLoad + component) with
+ * the real child path-marker components — the closest test double to the
+ * production tree that doesn't drag in __root's shell chassis.
+ */
+function renderLibrary(initial: string) {
+  const rootRoute = createRootRoute();
   const libraryRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: '/library',
     validateSearch: LibraryRoute.options.validateSearch,
+    beforeLoad: LibraryRoute.options.beforeLoad,
     component: LibraryRoute.options.component,
   });
-
-  const routeTree = rootRoute.addChildren([libraryRoute]);
-
-  const searchStr = Object.keys(initialSearch).length
-    ? `?${new URLSearchParams(initialSearch).toString()}`
-    : '';
-
+  const libraryIndex = createRoute({
+    getParentRoute: () => libraryRoute,
+    path: '/',
+    component: LibraryIndexRoute.options.component,
+  });
+  const libraryMovies = createRoute({
+    getParentRoute: () => libraryRoute,
+    path: '/movies',
+    component: LibraryMoviesRoute.options.component,
+  });
+  const libraryTv = createRoute({
+    getParentRoute: () => libraryRoute,
+    path: '/tv',
+    component: LibraryTvRoute.options.component,
+  });
+  const detail = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/media/$type/$id',
+    component: () => null,
+  });
   const router = createRouter({
-    routeTree,
-    history: createMemoryHistory({
-      initialEntries: [`/library${searchStr}`],
-    }),
+    routeTree: rootRoute.addChildren([
+      libraryRoute.addChildren([libraryIndex, libraryMovies, libraryTv]),
+      detail,
+    ]),
+    history: createMemoryHistory({ initialEntries: [initial] }),
   });
-
-  return router;
+  const utils = render(React.createElement(RouterProvider, { router } as never));
+  return { router, ...utils };
 }
 
-function getMockSearchResponse(empty = false) {
-  if (empty) {
-    return { results: [], totalCount: 0 };
-  }
-  return {
-    results: [
-      {
-        type: 'movie' as const,
-        movie: {
-          id: 'movie-1',
-          title: '駭客任務',
-          originalTitle: 'The Matrix',
-          releaseDate: '1999-03-31',
-          genres: ['動作', '科幻'],
-          voteAverage: 8.7,
-          posterPath: '/matrix.jpg',
-          tmdbId: 603,
-          parseStatus: 'success',
-          createdAt: '2024-01-15T00:00:00Z',
-          updatedAt: '2024-01-15T00:00:00Z',
-        },
-      },
-    ],
-    totalCount: 1,
-  };
-}
-
-async function setupMocks(overrides?: { listEmpty?: boolean; searchEmpty?: boolean }) {
-  const { libraryService } = await import('../services/libraryService');
-  const listResponse = overrides?.listEmpty ? getEmptyResponse() : getMockListResponse();
-  vi.mocked(libraryService.listLibrary).mockResolvedValue(listResponse);
-  // getRecentlyAdded returns LibraryItem[] (not full response)
-  vi.mocked(libraryService.getRecentlyAdded).mockResolvedValue(
-    overrides?.listEmpty ? [] : [getMockListResponse().items[0]]
-  );
-  vi.mocked(libraryService.searchLibrary).mockResolvedValue(
-    getMockSearchResponse(overrides?.searchEmpty)
-  );
-}
-
-function renderLibrary(initialSearch: Record<string, string> = {}) {
-  const queryClient = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-    },
+describe('routes/library — clean-route redirect (real beforeLoad)', () => {
+  beforeEach(() => {
+    h.infinite = infinite({ items: [movie('a', '電影甲')], totalItems: 1 });
+    h.lastArgs = undefined;
   });
 
-  const router = createTestRouter(initialSearch);
-
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>
-  );
-}
-
-describe('LibraryPage', () => {
-  beforeEach(async () => {
-    vi.clearAllMocks();
-    localStorage.clear();
-    // bugfix-10-5: reset hook mocks to Case C defaults each test (qBT OK + 1 library)
-    mockQBTConfig.mockReturnValue({
-      data: { configured: true },
-      isLoading: false,
-    });
-    mockMediaLibraries.mockReturnValue({
-      data: { libraries: [{ id: 'lib-1', name: 'Test Library', contentType: 'movie' }] },
-      isLoading: false,
-    });
-    await setupMocks();
+  it('?type=movie deep link redirects to /library/movies with type stripped', async () => {
+    const { router } = renderLibrary('/library?type=movie');
+    await screen.findByTestId('library-grid-v2');
+    await waitFor(() => expect(router.state.location.pathname).toBe('/library/movies'));
+    // the query the UI issues agrees with the URL — the 2026-07-22 bug assertion
+    expect(h.lastArgs?.type).toBe('movie');
   });
 
-  describe('AC1: View Toggle Control', () => {
-    it('[P1] renders ViewToggle component when library has items', async () => {
-      renderLibrary();
-
-      await waitFor(() => {
-        expect(screen.getByTestId('view-toggle')).toBeInTheDocument();
-      });
-    });
-
-    it('[P1] defaults to grid view', async () => {
-      renderLibrary();
-
-      await waitFor(() => {
-        expect(screen.getByLabelText('格狀檢視')).toHaveAttribute('aria-checked', 'true');
-      });
-    });
-
-    it('[P1] switches to list view when list button clicked', async () => {
-      renderLibrary();
-
-      await waitFor(() => {
-        expect(screen.getByTestId('view-toggle')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByLabelText('列表檢視'));
-
-      await waitFor(() => {
-        expect(screen.getByTestId('library-table')).toBeInTheDocument();
-      });
-    });
-
-    it('[P1] switches back to grid view when grid button clicked', async () => {
-      renderLibrary({ view: 'list' });
-
-      await waitFor(() => {
-        expect(screen.getByTestId('library-table')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByLabelText('格狀檢視'));
-
-      await waitFor(() => {
-        expect(screen.queryByTestId('library-table')).not.toBeInTheDocument();
-      });
-    });
-
-    it('[P2] does not render ViewToggle when library is empty', async () => {
-      await setupMocks({ listEmpty: true });
-
-      renderLibrary();
-
-      await waitFor(() => {
-        expect(screen.queryByTestId('view-toggle')).not.toBeInTheDocument();
-      });
-    });
+  it('?type=tv deep link redirects to /library/tv', async () => {
+    const { router } = renderLibrary('/library?type=tv');
+    await waitFor(() => expect(router.state.location.pathname).toBe('/library/tv'));
+    await waitFor(() => expect(h.lastArgs?.type).toBe('tv'));
   });
 
-  describe('AC3: Column Sorting', () => {
-    it('[P1] renders sortable column headers in list view', async () => {
-      renderLibrary({ view: 'list' });
+  it('?type=all (and absent) stays on the merged /library view', async () => {
+    const { router } = renderLibrary('/library?type=all');
+    await screen.findByTestId('library-grid-v2');
+    expect(router.state.location.pathname).toBe('/library');
+    expect(h.lastArgs?.type).toBe('all');
+  });
+});
 
-      await waitFor(() => {
-        expect(screen.getByTestId('sort-title')).toBeInTheDocument();
-        expect(screen.getByTestId('sort-release_date')).toBeInTheDocument();
-        expect(screen.getByTestId('sort-rating')).toBeInTheDocument();
-        expect(screen.getByTestId('sort-created_at')).toBeInTheDocument();
-      });
-    });
-
-    it('[P1] shows sort indicator when sortBy is set via URL', async () => {
-      renderLibrary({ view: 'list', sortBy: 'title', sortOrder: 'asc' });
-
-      await waitFor(() => {
-        expect(screen.getByTestId('sort-indicator-title')).toBeInTheDocument();
-      });
-    });
+describe('routes/library — URL ↔ UI consistency (ux3-cutover-3)', () => {
+  beforeEach(() => {
+    h.infinite = infinite({ items: [movie('a', '電影甲')], totalItems: 1 });
+    h.lastArgs = undefined;
   });
 
-  describe('AC4: View Preference Persistence', () => {
-    it('[P1] persists view preference to localStorage when toggled', async () => {
-      renderLibrary();
-
-      await waitFor(() => {
-        expect(screen.getByTestId('view-toggle')).toBeInTheDocument();
-      });
-
-      fireEvent.click(screen.getByLabelText('列表檢視'));
-
-      expect(localStorage.getItem('vido:library:view')).toBe('list');
-    });
-
-    it('[P1] reads view preference from localStorage on load', async () => {
-      localStorage.setItem('vido:library:view', 'list');
-
-      renderLibrary();
-
-      await waitFor(() => {
-        expect(screen.getByTestId('library-table')).toBeInTheDocument();
-      });
-    });
-
-    it('[P2] defaults to grid when localStorage is empty', async () => {
-      renderLibrary();
-
-      await waitFor(() => {
-        expect(screen.getByLabelText('格狀檢視')).toHaveAttribute('aria-checked', 'true');
-      });
-    });
-
-    it('[P2] defaults to grid when localStorage has invalid value', async () => {
-      localStorage.setItem('vido:library:view', 'invalid');
-
-      renderLibrary();
-
-      await waitFor(() => {
-        expect(screen.getByLabelText('格狀檢視')).toHaveAttribute('aria-checked', 'true');
-      });
-    });
-
-    it('[P2] URL view param overrides localStorage preference', async () => {
-      localStorage.setItem('vido:library:view', 'list');
-
-      renderLibrary({ view: 'grid' });
-
-      await waitFor(() => {
-        expect(screen.getByLabelText('格狀檢視')).toHaveAttribute('aria-checked', 'true');
-      });
-    });
+  it('deep link /library/movies: rail 電影 is pressed AND the query asks for movies', async () => {
+    renderLibrary('/library/movies');
+    await screen.findByTestId('library-filter-rail');
+    expect(screen.getByTestId('filter-type-movie')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByTestId('filter-type-all')).toHaveAttribute('aria-pressed', 'false');
+    expect(h.lastArgs?.type).toBe('movie');
   });
 
-  describe('Type filter tabs (inside filter sidebar)', () => {
-    it('[P1] renders type filter chips inside filter sidebar when opened', async () => {
-      renderLibrary();
+  it('clicking 電影 navigates to /library/movies and URL, button, query all agree', async () => {
+    const { router } = renderLibrary('/library');
+    await screen.findByTestId('library-filter-rail');
+    expect(screen.getByTestId('filter-type-all')).toHaveAttribute('aria-pressed', 'true');
 
-      await waitFor(() => {
-        expect(screen.getByTestId('filter-toggle')).toBeInTheDocument();
-      });
+    await userEvent.click(screen.getByTestId('filter-type-movie'));
 
-      // Open filter sidebar
-      await userEvent.click(screen.getByTestId('filter-toggle'));
-
-      await waitFor(() => {
-        expect(screen.getByTestId('filter-type-all')).toBeInTheDocument();
-        expect(screen.getByTestId('filter-type-movie')).toBeInTheDocument();
-        expect(screen.getByTestId('filter-type-tv')).toBeInTheDocument();
-      });
-    });
-
-    it('[P2] does not render filter toggle when library is empty', async () => {
-      await setupMocks({ listEmpty: true });
-
-      renderLibrary();
-
-      await waitFor(() => {
-        expect(screen.queryByTestId('filter-toggle')).not.toBeInTheDocument();
-      });
-    });
+    await waitFor(() => expect(router.state.location.pathname).toBe('/library/movies'));
+    await waitFor(() =>
+      expect(screen.getByTestId('filter-type-movie')).toHaveAttribute('aria-pressed', 'true')
+    );
+    expect(h.lastArgs?.type).toBe('movie');
   });
 
-  describe('Empty state (bugfix-10-5 — 3-state classifier branch)', () => {
-    it('[P1] renders an empty-state component when no items (default = Case C)', async () => {
-      await setupMocks({ listEmpty: true });
+  it('clicking 全部 from /library/tv returns to the merged /library view', async () => {
+    const { router } = renderLibrary('/library/tv');
+    await screen.findByTestId('library-filter-rail');
+    expect(screen.getByTestId('filter-type-tv')).toHaveAttribute('aria-pressed', 'true');
 
-      renderLibrary();
+    await userEvent.click(screen.getByTestId('filter-type-all'));
 
-      await waitFor(() => {
-        // Default mocks: qBT OK + 1 library + 0 items → Case C ready-for-scan
-        expect(screen.getByTestId('empty-ready-for-scan')).toBeInTheDocument();
-      });
-    });
-
-    it('[P1] AC #1 Case A — renders EmptyNoQBT when qBT disconnected', async () => {
-      mockQBTConfig.mockReturnValue({
-        data: { configured: false },
-        isLoading: false,
-      });
-      await setupMocks({ listEmpty: true });
-
-      renderLibrary();
-
-      await waitFor(() => {
-        expect(screen.getByTestId('empty-no-qbt')).toBeInTheDocument();
-      });
-      expect(screen.queryByTestId('empty-no-folder')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('empty-ready-for-scan')).not.toBeInTheDocument();
-    });
-
-    it('[P1] AC #1 Case B — renders EmptyNoFolder when qBT OK but zero libraries', async () => {
-      mockQBTConfig.mockReturnValue({
-        data: { configured: true },
-        isLoading: false,
-      });
-      mockMediaLibraries.mockReturnValue({ data: { libraries: [] }, isLoading: false });
-      await setupMocks({ listEmpty: true });
-
-      renderLibrary();
-
-      await waitFor(() => {
-        expect(screen.getByTestId('empty-no-folder')).toBeInTheDocument();
-      });
-      expect(screen.queryByTestId('empty-no-qbt')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('empty-ready-for-scan')).not.toBeInTheDocument();
-    });
-
-    it('[P1] AC #1 Case C — renders EmptyReadyForScan when all OK + items empty', async () => {
-      mockQBTConfig.mockReturnValue({
-        data: { configured: true },
-        isLoading: false,
-      });
-      mockMediaLibraries.mockReturnValue({
-        data: { libraries: [{ id: 'lib-1', name: 'L', contentType: 'movie' }] },
-        isLoading: false,
-      });
-      await setupMocks({ listEmpty: true });
-
-      renderLibrary();
-
-      await waitFor(() => {
-        expect(screen.getByTestId('empty-ready-for-scan')).toBeInTheDocument();
-      });
-      expect(screen.queryByTestId('empty-no-qbt')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('empty-no-folder')).not.toBeInTheDocument();
-    });
+    await waitFor(() => expect(router.state.location.pathname).toBe('/library'));
+    await waitFor(() => expect(h.lastArgs?.type).toBe('all'));
   });
 
-  describe('Section heading display', () => {
-    it('[P2] shows 全部媒體 section heading', async () => {
-      renderLibrary();
-
-      await waitFor(() => {
-        expect(screen.getByText('全部媒體')).toBeInTheDocument();
-      });
-    });
-  });
-
-  describe('AC6: Filter toggle visible during search', () => {
-    it('[P1] shows filter toggle button during active search', async () => {
-      renderLibrary({ q: '駭客' });
-
-      await waitFor(() => {
-        expect(screen.getByTestId('filter-toggle')).toBeInTheDocument();
-      });
-    });
-
-    it('[P1] can open filter sidebar during active search', async () => {
-      renderLibrary({ q: '駭客' });
-
-      await waitFor(() => {
-        expect(screen.getByTestId('filter-toggle')).toBeInTheDocument();
-      });
-
-      await userEvent.click(screen.getByTestId('filter-toggle'));
-
-      await waitFor(() => {
-        expect(screen.getByTestId('filter-sidebar')).toBeInTheDocument();
-      });
-    });
-
-    it('[P2] hides SortSelector during active search but keeps filter toggle', async () => {
-      renderLibrary({ q: '駭客' });
-
-      await waitFor(() => {
-        expect(screen.getByTestId('filter-toggle')).toBeInTheDocument();
-      });
-
-      expect(screen.queryByTestId('sort-selector-button')).not.toBeInTheDocument();
-    });
-  });
-
-  describe('Search integration (Story 5-3)', () => {
-    it('[P1] renders search bar when library has items', async () => {
-      renderLibrary();
-
-      await waitFor(() => {
-        expect(screen.getByPlaceholderText('搜尋媒體標題...')).toBeInTheDocument();
-      });
-    });
-
-    it('[P1] does not render search bar when library is empty', async () => {
-      await setupMocks({ listEmpty: true });
-      renderLibrary();
-
-      await waitFor(() => {
-        // bugfix-10-5: default-mock state classifies to Case C
-        expect(screen.getByTestId('empty-ready-for-scan')).toBeInTheDocument();
-      });
-
-      expect(screen.queryByPlaceholderText('搜尋媒體標題...')).not.toBeInTheDocument();
-    });
-
-    it('[P1] initializes search bar with q param from URL', async () => {
-      renderLibrary({ q: '駭客' });
-
-      await waitFor(() => {
-        const input = screen.getByPlaceholderText('搜尋媒體標題...') as HTMLInputElement;
-        expect(input.value).toBe('駭客');
-      });
-    });
-
-    it('[P1] shows search results when q param ≥ 2 chars', async () => {
-      renderLibrary({ q: '駭客' });
-
-      await waitFor(() => {
-        expect(screen.getByTestId('search-result-count')).toBeInTheDocument();
-      });
-    });
-
-    it('[P1] shows EmptySearchResults for no-match query', async () => {
-      await setupMocks({ searchEmpty: true });
-      renderLibrary({ q: 'zzzzz' });
-
-      await waitFor(() => {
-        expect(screen.getByTestId('empty-search-results')).toBeInTheDocument();
-        expect(screen.getByText('找不到相關結果')).toBeInTheDocument();
-      });
-    });
-
-    it('[P2] hides RecentlyAdded section during active search', async () => {
-      renderLibrary({ q: '駭客' });
-
-      await waitFor(() => {
-        expect(screen.getByTestId('search-result-count')).toBeInTheDocument();
-      });
-
-      // RecentlyAdded should not be visible during search
-      expect(screen.queryByText('最近新增')).not.toBeInTheDocument();
-    });
-
-    it('[P2] preserves sort and view params alongside search', async () => {
-      renderLibrary({ q: '駭客', view: 'list', sortBy: 'title', sortOrder: 'asc' });
-
-      await waitFor(() => {
-        // List view should be active
-        expect(screen.getByTestId('library-table')).toBeInTheDocument();
-      });
-    });
-  });
-
-  describe('Batch generation re-point (ux3-subtitle-v2-batch AC 5)', () => {
-    it('[P1] selection ACTUALLY flows into the dialog — movie ids pass through as UUID strings, series excluded with a count', async () => {
-      // Media-id fixture convention (9R-18 AC 7): media ids are UUID STRINGS —
-      // mirror the prod creation path (uuid.New().String()); do NOT invent
-      // numeric ids. Ids flow UNCONVERTED into media_ids ([@contract-v2]).
-      const MOVIE_UUID = '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e5f';
-      const SERIES_UUID = '7a1b3c5d-2e4f-4a6b-9c8d-1e2f3a4b5c6d';
-      const { libraryService } = await import('../services/libraryService');
-      const response = getMockListResponse();
-      response.items[0].movie!.id = MOVIE_UUID;
-      response.items[1].series!.id = SERIES_UUID;
-      vi.mocked(libraryService.listLibrary).mockResolvedValue(response);
-
-      renderLibrary();
-      await waitFor(() => expect(screen.getByTestId('library-grid')).toBeInTheDocument());
-
-      fireEvent.click(screen.getByTestId('enter-selection-btn'));
-
-      // Select BOTH the movie and the series card.
-      const cards = within(screen.getByTestId('library-grid')).getAllByTestId('poster-card');
-      fireEvent.click(cards[0]);
-      fireEvent.click(cards[1]);
-
-      generationDialogProps.mockClear();
-      fireEvent.click(screen.getByTestId('batch-subtitle-btn'));
-
-      await waitFor(() =>
-        expect(screen.getByTestId('generation-batch-dialog-stub')).toBeInTheDocument()
-      );
-      expect(generationDialogProps).toHaveBeenCalledWith(
-        expect.objectContaining({
-          open: true,
-          selectedMovieIds: ['4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e5f'],
-          excludedSeriesCount: 1,
-        })
-      );
-    });
+  it('?genres= deep link flows into the query and the rail active-count', async () => {
+    renderLibrary('/library?genres=動作,科幻');
+    await screen.findByTestId('library-filter-rail');
+    expect(h.lastArgs?.genres).toBe('動作,科幻');
+    expect(screen.getByTestId('library-rail-active-count')).toHaveTextContent('2');
   });
 });
