@@ -261,7 +261,8 @@ test.describe('Batch Subtitle Generation UI @ui @batch-subtitle @ux3-subtitle-v2
     // WHEN: the user selects both movies and opens the dialog
     await page.goto('/library');
     await page.getByTestId('enter-selection-btn').click();
-    const cards = page.getByTestId('poster-card');
+    // ux3-cutover-3: v2 poster cards (selection mode shipped in ux3-cutover-2)
+    const cards = page.locator('[data-testid^="poster-v2-"]');
     await cards.nth(0).click();
     await cards.nth(1).click();
     await page.getByTestId('batch-subtitle-btn').click();

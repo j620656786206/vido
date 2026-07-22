@@ -257,38 +257,40 @@ async function stubHomepageBaseline(page: import('@playwright/test').Page) {
 // =============================================================================
 
 test.describe('Homepage section order @ui @homepage @story-10-5', () => {
-  test('[P0] AC #1 — Hero → Explore → Recent → Downloads render in that order', async ({
+  // ux3-cutover-3: the legacy Hero→Explore→Recent→Downloads order is gone with
+  // the legacy home. v2 = D3 ordering law — OWN-CONTENT (繼續觀看 slot + 最近新增)
+  // structurally ABOVE the external curation (Hero + Explore); dashboard
+  // remnants absent by design (ux3-1-4).
+  test('[P0] D3 — own-content renders ABOVE Hero and Explore; dashboard remnants absent', async ({
     page,
   }) => {
     await stubHomepageBaseline(page);
+    await page.route(`${ROUTE_API}/library/recent*`, (route: Route) =>
+      route.fulfill(jsonOk({ items: [], page: 1, pageSize: 12, totalItems: 0, totalPages: 0 }))
+    );
 
     await page.goto('/');
-    await expect(page.getByTestId('homepage-root')).toBeVisible();
-    // Wait for at least one section each so the DOM is fully composed.
+    await expect(page.getByTestId('home-v2-root')).toBeVisible();
+    await expect(page.getByTestId('home-own-content')).toBeVisible();
     await expect(page.getByTestId('hero-banner')).toBeVisible();
     await expect(page.getByTestId('explore-blocks-list')).toBeVisible();
-    await expect(page.getByTestId('recent-media-panel')).toBeVisible();
-    await expect(page.getByTestId('download-panel')).toBeVisible();
 
-    const root = page.getByTestId('homepage-root');
-    const order = await root.evaluate((el) => {
+    const order = await page.getByTestId('home-v2-root').evaluate((el) => {
       const selectors = [
+        '[data-testid="home-own-content"]',
         '[data-testid="hero-banner"]',
         '[data-testid="explore-blocks-list"]',
-        '[data-testid="recent-media-panel"]',
-        '[data-testid="download-panel"]',
       ];
       return selectors
         .map((sel) => el.querySelector(sel))
         .filter((n): n is Element => Boolean(n))
         .map((n) => n.getAttribute('data-testid'));
     });
-    expect(order).toEqual([
-      'hero-banner',
-      'explore-blocks-list',
-      'recent-media-panel',
-      'download-panel',
-    ]);
+    expect(order).toEqual(['home-own-content', 'hero-banner', 'explore-blocks-list']);
+
+    // D3 guardrail #3 (ux3-1-4): Epic-4 dashboard remnants stay off the home.
+    await expect(page.getByTestId('download-panel')).toHaveCount(0);
+    await expect(page.getByTestId('recent-media-panel')).toHaveCount(0);
   });
 });
 
@@ -424,7 +426,9 @@ test.describe('Homepage lazy-load @ui @homepage @story-10-5', () => {
     // the router's intent-preload, which runs the index route loader
     // (prefetchQuery for trending hero). The request should appear before
     // we navigate.
-    const homeLink = page.getByRole('link', { name: /^vido$/ }).first();
+    // v2 shell: the sidebar logo Link to "/" (accessible name may include the
+    // wordmark styling) — match any link pointing home.
+    const homeLink = page.locator('a[href="/"]').first();
     await expect(homeLink).toBeVisible();
     await homeLink.hover();
 
@@ -476,11 +480,14 @@ test.describe('Homepage per-block skeleton @ui @homepage @story-10-5', () => {
 // =============================================================================
 
 test.describe('Homepage empty-section hide @ui @homepage @story-10-5', () => {
-  test('[P0] AC #5 — when trending/blocks/recent/downloads all return empty, only HeroBanner-less homepage-root survives', async ({
+  // ux3-cutover-3: v2 semantics — Hero/Explore still hide when empty, but the
+  // own-content zone stays (最近新增 shows its quiet 尚無最近新增 note instead of
+  // vanishing, ux3-1-2 H5 sparse state) and the dashboard panels are always
+  // absent (D3 guardrail, ux3-1-4).
+  test('[P0] all-empty: Hero/Explore hide, own-content shows the sparse note, no panels', async ({
     page,
   }) => {
     await stubHomepageBaseline(page);
-    // Override everything to empty (baseline uses populated trending).
     await page.route(`${ROUTE_API}/tmdb/trending/movies*`, (route: Route) =>
       route.fulfill(jsonOk({ page: 1, results: [], total_pages: 0, total_results: 0 }))
     );
@@ -490,34 +497,29 @@ test.describe('Homepage empty-section hide @ui @homepage @story-10-5', () => {
     await page.route(`${ROUTE_API}/explore-blocks`, (route: Route) =>
       route.fulfill(jsonOk({ blocks: [] }))
     );
-    await page.route(`${ROUTE_API}/media/recent*`, (route: Route) => route.fulfill(jsonOk([])));
-    await page.route(`${ROUTE_API}/downloads*`, (route: Route) =>
-      route.fulfill(jsonOk({ items: [], page: 1, pageSize: 100, totalItems: 0, totalPages: 0 }))
+    await page.route(`${ROUTE_API}/library/recent*`, (route: Route) =>
+      route.fulfill(jsonOk({ items: [], page: 1, pageSize: 12, totalItems: 0, totalPages: 0 }))
     );
 
     await page.goto('/');
-    await expect(page.getByTestId('homepage-root')).toBeVisible();
+    await expect(page.getByTestId('home-v2-root')).toBeVisible();
 
     await expect(page.getByTestId('hero-banner')).toHaveCount(0);
     await expect(page.getByTestId('explore-blocks-list')).toHaveCount(0);
-    await expect(page.getByTestId('recent-media-panel')).toHaveCount(0);
+    await expect(page.getByTestId('home-recent-empty')).toBeVisible();
     await expect(page.getByTestId('download-panel')).toHaveCount(0);
-    // The two inline zh-TW default placeholders must NOT leak onto the
-    // homepage (they still exist on /downloads and /library).
+    await expect(page.getByTestId('recent-media-panel')).toHaveCount(0);
     await expect(page.getByText('目前沒有下載任務')).toHaveCount(0);
-    await expect(page.getByText('媒體庫中還沒有內容')).toHaveCount(0);
   });
 
-  test('[P1] AC #5 — populated Downloads + empty Recent renders only DownloadPanel', async ({
-    page,
-  }) => {
+  test('[P1] populated downloads still render NO download panel on home (D3)', async ({ page }) => {
     await stubHomepageBaseline(page);
-    await page.route(`${ROUTE_API}/media/recent*`, (route: Route) => route.fulfill(jsonOk([])));
+    await page.route(`${ROUTE_API}/library/recent*`, (route: Route) =>
+      route.fulfill(jsonOk({ items: [], page: 1, pageSize: 12, totalItems: 0, totalPages: 0 }))
+    );
 
     await page.goto('/');
-    await expect(page.getByTestId('homepage-root')).toBeVisible();
-
-    await expect(page.getByTestId('download-panel')).toBeVisible();
-    await expect(page.getByTestId('recent-media-panel')).toHaveCount(0);
+    await expect(page.getByTestId('home-v2-root')).toBeVisible();
+    await expect(page.getByTestId('download-panel')).toHaveCount(0);
   });
 });
