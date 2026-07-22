@@ -106,6 +106,14 @@ func run(dataDir, mediaRoot string, reset bool) error {
 		return fmt.Errorf("seed series: %w", err)
 	}
 
+	// The seeded env must land on the app, not the first-run wizard: __root.tsx
+	// redirects to /setup while `setup_completed` is unset, and the wizard can't
+	// complete against fixture paths anyway (they're dummy files, not real
+	// media mounts).
+	if err := repos.Settings.SetBool(ctx, "setup_completed", true); err != nil {
+		return fmt.Errorf("mark setup completed: %w", err)
+	}
+
 	slog.Info("seed complete",
 		"db", dbPath,
 		"libraries", 2,
