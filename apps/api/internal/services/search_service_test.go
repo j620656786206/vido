@@ -5,6 +5,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/vido/api/internal/models"
+	"github.com/vido/api/internal/repository"
 	"github.com/vido/api/internal/tmdb"
 )
 
@@ -46,7 +48,7 @@ func emptyStub() *stubSearchClient {
 }
 
 func TestSearch_EmptyQuery_ReturnsBadRequest(t *testing.T) {
-	svc := NewSearchService(emptyStub())
+	svc := NewSearchService(emptyStub(), nil)
 
 	_, err := svc.Search(context.Background(), "   ", 1)
 	if err == nil {
@@ -72,7 +74,7 @@ func TestSearch_DualLanguageMergeDedup(t *testing.T) {
 		), nil
 	}
 
-	got, err := NewSearchService(stub).Search(context.Background(), "iron", 1)
+	got, err := NewSearchService(stub, nil).Search(context.Background(), "iron", 1)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -105,7 +107,7 @@ func TestSearch_ZhTitleMatchBoostedAboveOriginalOnly(t *testing.T) {
 		return movieRes(), nil
 	}
 
-	got, err := NewSearchService(stub).Search(context.Background(), "你的名字", 1)
+	got, err := NewSearchService(stub, nil).Search(context.Background(), "你的名字", 1)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -130,7 +132,7 @@ func TestSearch_TVDualLanguageBoost(t *testing.T) {
 		return tvRes(tmdb.TVShow{ID: 22, Name: "Attack on Titan"}), nil
 	}
 
-	got, err := NewSearchService(stub).Search(context.Background(), "進擊的巨人", 1)
+	got, err := NewSearchService(stub, nil).Search(context.Background(), "進擊的巨人", 1)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -150,7 +152,7 @@ func TestSearch_PeopleCategoryIncluded(t *testing.T) {
 		}, nil
 	}
 
-	got, err := NewSearchService(stub).Search(context.Background(), "shinkai", 1)
+	got, err := NewSearchService(stub, nil).Search(context.Background(), "shinkai", 1)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -168,7 +170,7 @@ func TestSearch_PartialFailureDegradesCategory(t *testing.T) {
 		return tvRes(tmdb.TVShow{ID: 30, Name: "Some Show"}), nil
 	}
 
-	got, err := NewSearchService(stub).Search(context.Background(), "show", 1)
+	got, err := NewSearchService(stub, nil).Search(context.Background(), "show", 1)
 	if err != nil {
 		t.Fatalf("expected graceful degradation (nil error), got %v", err)
 	}
@@ -191,14 +193,14 @@ func TestSearch_AllCategoriesFail_ReturnsError(t *testing.T) {
 		people: func() (*tmdb.SearchResultPeople, error) { return nil, boom },
 	}
 
-	_, err := NewSearchService(stub).Search(context.Background(), "anything", 1)
+	_, err := NewSearchService(stub, nil).Search(context.Background(), "anything", 1)
 	if err == nil {
 		t.Fatal("expected error when all categories fail, got nil")
 	}
 }
 
 func TestSearch_EmptyResults_NonNilSlices(t *testing.T) {
-	got, err := NewSearchService(emptyStub()).Search(context.Background(), "zzz", 0)
+	got, err := NewSearchService(emptyStub(), nil).Search(context.Background(), "zzz", 0)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -207,5 +209,106 @@ func TestSearch_EmptyResults_NonNilSlices(t *testing.T) {
 	}
 	if got.Movies == nil || got.TVShows == nil || got.People == nil {
 		t.Fatal("expected non-nil empty slices so JSON renders [] not null")
+	}
+}
+
+// stubLocalSearcher is a configurable LocalLibrarySearcher for the owned-library
+// leg (testsprite-round1 TC092 regression lock).
+type stubLocalSearcher struct {
+	res *LibrarySearchResults
+	err error
+}
+
+func (s *stubLocalSearcher) SearchLibrary(_ context.Context, _ string, _ repository.ListParams, _ string) (*LibrarySearchResults, error) {
+	return s.res, s.err
+}
+
+func localFixture() *LibrarySearchResults {
+	return &LibrarySearchResults{
+		Results: []SearchResult{
+			{Type: "movie", Movie: &models.Movie{
+				ID: "seed-mv-003", Title: "駭客任務",
+				OriginalTitle: models.NewNullString("The Matrix"),
+				ReleaseDate:   "1999-03-31",
+				PosterPath:    models.NewNullString("/matrix.jpg"),
+			}},
+			{Type: "series", Series: &models.Series{
+				ID: "seed-sr-002", Title: "怪奇物語",
+				FirstAirDate: "2016-07-15",
+			}},
+		},
+		TotalCount: 2,
+	}
+}
+
+// The TC092 shape: TMDb entirely unreachable (no API key) must NOT kill the
+// dropdown — owned-library results still come back with a 200.
+func TestSearch_TMDbDown_LocalResultsSurvive(t *testing.T) {
+	boom := errors.New("TMDB_UNAUTHORIZED")
+	stub := &stubSearchClient{
+		movies: func(string) (*tmdb.SearchResultMovies, error) { return nil, boom },
+		tv:     func(string) (*tmdb.SearchResultTVShows, error) { return nil, boom },
+		people: func() (*tmdb.SearchResultPeople, error) { return nil, boom },
+	}
+	local := &stubLocalSearcher{res: localFixture()}
+
+	got, err := NewSearchService(stub, local).Search(context.Background(), "駭客", 1)
+	if err != nil {
+		t.Fatalf("expected local-only degradation, got error: %v", err)
+	}
+	if len(got.LocalMovies) != 1 || got.LocalMovies[0].ID != "seed-mv-003" {
+		t.Fatalf("expected the owned movie hit with its LOCAL id, got %+v", got.LocalMovies)
+	}
+	if got.LocalMovies[0].MediaType != "movie" || got.LocalMovies[0].ReleaseDate != "1999-03-31" {
+		t.Fatalf("bad local movie mapping: %+v", got.LocalMovies[0])
+	}
+	if len(got.LocalTV) != 1 || got.LocalTV[0].ID != "seed-sr-002" || got.LocalTV[0].MediaType != "tv" {
+		t.Fatalf("expected the owned series hit, got %+v", got.LocalTV)
+	}
+	if got.LocalTV[0].ReleaseDate != "2016-07-15" {
+		t.Fatalf("series first_air_date must map to release_date, got %+v", got.LocalTV[0])
+	}
+	if len(got.Movies) != 0 || len(got.TVShows) != 0 {
+		t.Fatalf("TMDb categories should degrade to empty, got %d/%d", len(got.Movies), len(got.TVShows))
+	}
+}
+
+func TestSearch_EveryLegFails_IncludingLocal_ReturnsError(t *testing.T) {
+	boom := errors.New("network down")
+	stub := &stubSearchClient{
+		movies: func(string) (*tmdb.SearchResultMovies, error) { return nil, boom },
+		tv:     func(string) (*tmdb.SearchResultTVShows, error) { return nil, boom },
+		people: func() (*tmdb.SearchResultPeople, error) { return nil, boom },
+	}
+	local := &stubLocalSearcher{err: errors.New("db locked")}
+
+	if _, err := NewSearchService(stub, local).Search(context.Background(), "anything", 1); err == nil {
+		t.Fatal("expected error when every leg including local fails")
+	}
+}
+
+func TestSearch_LocalAndTMDbBothSucceed_BothSectionsPresent(t *testing.T) {
+	stub := emptyStub()
+	stub.movies = func(string) (*tmdb.SearchResultMovies, error) {
+		return movieRes(tmdb.Movie{ID: 603, Title: "The Matrix"}), nil
+	}
+	local := &stubLocalSearcher{res: localFixture()}
+
+	got, err := NewSearchService(stub, local).Search(context.Background(), "matrix", 1)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(got.LocalMovies) != 1 || len(got.Movies) != 1 {
+		t.Fatalf("expected both owned and TMDb sections, got local=%d tmdb=%d", len(got.LocalMovies), len(got.Movies))
+	}
+}
+
+func TestSearch_NilLocalSearcher_LocalSectionsEmptyNotNil(t *testing.T) {
+	got, err := NewSearchService(emptyStub(), nil).Search(context.Background(), "zzz", 1)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got.LocalMovies == nil || got.LocalTV == nil {
+		t.Fatal("local sections must be [] not null when the local leg is disabled")
 	}
 }

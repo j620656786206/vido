@@ -45,12 +45,27 @@ export interface Person {
   gender: number;
 }
 
-// Story 11-3 — the unified instant-search payload: three categories rendered as
-// separate sections (電影 / 影集 / 人物). Backend keys are snake_case and
-// transformed to camelCase at the API boundary (Rule 18), so `tv_shows` → `tvShows`.
+// testsprite-round1 TC092 — an OWNED library item in the unified instant-search
+// dropdown (媒體庫 section). `id` is the LOCAL id, so selecting it routes to the
+// local detail view and the journey works even when TMDb is unreachable.
+export interface LocalSearchHit {
+  id: string;
+  mediaType: MediaType;
+  title: string;
+  originalTitle?: string;
+  releaseDate?: string;
+  posterPath?: string;
+}
+
+// Story 11-3 — the unified instant-search payload: the owned-library section
+// plus three TMDb categories rendered as separate sections (媒體庫 / 電影 /
+// 影集 / 人物). Backend keys are snake_case and transformed to camelCase at the
+// API boundary (Rule 18), so `tv_shows` → `tvShows`, `local_movies` → `localMovies`.
 export interface UnifiedSearchResult {
   query: string;
   page: number;
+  localMovies: LocalSearchHit[];
+  localTv: LocalSearchHit[];
   movies: Movie[];
   tvShows: TVShow[];
   people: Person[];

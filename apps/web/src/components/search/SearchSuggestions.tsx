@@ -1,15 +1,18 @@
 // Design ref: ux-design.pen Screen AS-2 - Search Suggestions Dropdown (TMaw5)
 // Source: ux-design.pen (Pencil app)
 import { User } from 'lucide-react';
-import type { Movie, Person, TVShow, UnifiedSearchResult } from '../../types/tmdb';
+import type { LocalSearchHit, Movie, Person, TVShow, UnifiedSearchResult } from '../../types/tmdb';
 import { getImageUrl } from '../../lib/image';
 import { cn } from '../../lib/utils';
 
-// A keyboard-navigable suggestion (movies + TV only; people have no media
-// detail page so they are displayed but not part of arrow-key navigation — AC #4).
+// A keyboard-navigable suggestion (owned library items + movies + TV; people
+// have no media detail page so they are displayed but not part of arrow-key
+// navigation — AC #4). `id` is a TMDb numeric id for TMDb rows and the LOCAL
+// string id for owned rows — `/media/$type/$id` branches on that shape
+// (classifyId), so owned rows open the TMDb-independent local detail.
 export interface NavigableItem {
   type: 'movie' | 'tv';
-  id: number;
+  id: number | string;
 }
 
 // searchOptionId returns the DOM id for the navigable option at a flat index
@@ -20,12 +23,14 @@ export function searchOptionId(index: number): string {
   return `search-option-${index}`;
 }
 
-// buildNavigableItems flattens the movie + TV results into the order they are
-// rendered (movies first, then TV). Shared by the parent (for arrow-key state)
-// and exercised directly in tests.
+// buildNavigableItems flattens the results into the order they are rendered
+// (owned 媒體庫 items first, then TMDb movies, then TV). Shared by the parent
+// (for arrow-key state) and exercised directly in tests.
 export function buildNavigableItems(result?: UnifiedSearchResult): NavigableItem[] {
   if (!result) return [];
+  const locals = [...(result.localMovies ?? []), ...(result.localTv ?? [])];
   return [
+    ...locals.map((l): NavigableItem => ({ type: l.mediaType, id: l.id })),
     ...result.movies.map((m): NavigableItem => ({ type: 'movie', id: m.id })),
     ...result.tvShows.map((t): NavigableItem => ({ type: 'tv', id: t.id })),
   ];
@@ -76,10 +81,12 @@ export function SearchSuggestions({
   listboxId = 'search-suggestions',
   floating = true,
 }: SearchSuggestionsProps) {
+  const locals = [...(result?.localMovies ?? []), ...(result?.localTv ?? [])];
   const movies = result?.movies ?? [];
   const tvShows = result?.tvShows ?? [];
   const people = result?.people ?? [];
-  const hasResults = movies.length > 0 || tvShows.length > 0 || people.length > 0;
+  const hasResults =
+    locals.length > 0 || movies.length > 0 || tvShows.length > 0 || people.length > 0;
 
   return (
     <div
@@ -114,22 +121,42 @@ export function SearchSuggestions({
           {/* Only the keyboard-navigable options (movies + TV) live inside the
               listbox so its descendants are valid `option`/`group` nodes that
               `aria-activedescendant` can reference. */}
-          {(movies.length > 0 || tvShows.length > 0) && (
+          {(locals.length > 0 || movies.length > 0 || tvShows.length > 0) && (
             <div role="listbox" id={listboxId} aria-label="搜尋建議">
+              {locals.length > 0 && (
+                <Section label="媒體庫">
+                  {locals.map((hit, i) => (
+                    <MediaRow
+                      key={`local-${hit.id}`}
+                      id={searchOptionId(i)}
+                      title={hit.title}
+                      originalTitle={hit.originalTitle ?? ''}
+                      year={yearOf(hit.releaseDate)}
+                      rating={0}
+                      posterPath={hit.posterPath ?? null}
+                      owned
+                      active={activeIndex === i}
+                      onSelect={() => onSelect({ type: hit.mediaType, id: hit.id })}
+                      onHover={() => onActiveIndexChange(i)}
+                    />
+                  ))}
+                </Section>
+              )}
+
               {movies.length > 0 && (
                 <Section label="電影">
                   {movies.map((movie, i) => (
                     <MediaRow
                       key={`movie-${movie.id}`}
-                      id={searchOptionId(i)}
+                      id={searchOptionId(locals.length + i)}
                       title={movie.title}
                       originalTitle={movie.originalTitle}
                       year={yearOf(movie.releaseDate)}
                       rating={movie.voteAverage}
                       posterPath={movie.posterPath}
-                      active={activeIndex === i}
+                      active={activeIndex === locals.length + i}
                       onSelect={() => onSelect({ type: 'movie', id: movie.id })}
-                      onHover={() => onActiveIndexChange(i)}
+                      onHover={() => onActiveIndexChange(locals.length + i)}
                     />
                   ))}
                 </Section>
@@ -140,15 +167,15 @@ export function SearchSuggestions({
                   {tvShows.map((show, i) => (
                     <MediaRow
                       key={`tv-${show.id}`}
-                      id={searchOptionId(movies.length + i)}
+                      id={searchOptionId(locals.length + movies.length + i)}
                       title={show.name}
                       originalTitle={show.originalName}
                       year={yearOf(show.firstAirDate)}
                       rating={show.voteAverage}
                       posterPath={show.posterPath}
-                      active={activeIndex === movies.length + i}
+                      active={activeIndex === locals.length + movies.length + i}
                       onSelect={() => onSelect({ type: 'tv', id: show.id })}
-                      onHover={() => onActiveIndexChange(movies.length + i)}
+                      onHover={() => onActiveIndexChange(locals.length + movies.length + i)}
                     />
                   ))}
                 </Section>
@@ -204,6 +231,8 @@ interface MediaRowProps {
   year: string | null;
   rating: number;
   posterPath: string | null;
+  /** Owned 媒體庫 row — shows the 已擁有 badge instead of a TMDb rating. */
+  owned?: boolean;
   active: boolean;
   onSelect: () => void;
   onHover: () => void;
@@ -216,6 +245,7 @@ function MediaRow({
   year,
   rating,
   posterPath,
+  owned = false,
   active,
   onSelect,
   onHover,
@@ -258,6 +288,14 @@ function MediaRow({
           )}
         </div>
       </div>
+      {owned && (
+        <span
+          className="shrink-0 rounded-full bg-[var(--accent-primary)]/15 px-2 py-0.5 text-xs text-[var(--accent-primary)]"
+          data-testid="search-suggestion-owned-badge"
+        >
+          已擁有
+        </span>
+      )}
     </button>
   );
 }

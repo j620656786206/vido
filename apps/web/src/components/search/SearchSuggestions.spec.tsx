@@ -6,6 +6,8 @@ import type { UnifiedSearchResult } from '../../types/tmdb';
 const sample: UnifiedSearchResult = {
   query: 'name',
   page: 1,
+  localMovies: [],
+  localTv: [],
   movies: [
     {
       id: 1,
@@ -143,9 +145,64 @@ describe('SearchSuggestions', () => {
 
   it('shows the empty state when there are no results', () => {
     renderSuggestions({
-      result: { query: 'zzz', page: 1, movies: [], tvShows: [], people: [] },
+      result: {
+        query: 'zzz',
+        page: 1,
+        localMovies: [],
+        localTv: [],
+        movies: [],
+        tvShows: [],
+        people: [],
+      },
       query: 'zzz',
     });
     expect(screen.getByTestId('search-suggestions-empty')).toHaveTextContent('找不到「zzz」的結果');
+  });
+});
+
+// testsprite-round1 TC092 — the owned 媒體庫 section: local hits must render
+// (with their LOCAL string id) even when every TMDb category is empty, so the
+// search journey survives a dead/unconfigured TMDb.
+describe('SearchSuggestions — owned 媒體庫 section', () => {
+  const localOnly: UnifiedSearchResult = {
+    query: '駭客',
+    page: 1,
+    localMovies: [
+      {
+        id: 'seed-mv-003',
+        mediaType: 'movie',
+        title: '駭客任務',
+        originalTitle: 'The Matrix',
+        releaseDate: '1999-03-31',
+        posterPath: '/matrix.jpg',
+      },
+    ],
+    localTv: [{ id: 'seed-sr-002', mediaType: 'tv', title: '怪奇物語' }],
+    movies: [],
+    tvShows: [],
+    people: [],
+  };
+
+  it('renders the 媒體庫 section with the 已擁有 badge instead of the empty state', () => {
+    renderSuggestions({ result: localOnly, query: '駭客' });
+    expect(screen.getByText('媒體庫')).toBeInTheDocument();
+    expect(screen.getByText('駭客任務')).toBeInTheDocument();
+    expect(screen.getAllByTestId('search-suggestion-owned-badge')).toHaveLength(2);
+    expect(screen.queryByTestId('search-suggestions-empty')).not.toBeInTheDocument();
+  });
+
+  it('selecting an owned row emits its LOCAL id (routes to the local detail view)', () => {
+    const { onSelect } = renderSuggestions({ result: localOnly, query: '駭客' });
+    fireEvent.click(screen.getByText('駭客任務'));
+    expect(onSelect).toHaveBeenCalledWith({ type: 'movie', id: 'seed-mv-003' });
+  });
+
+  it('buildNavigableItems puts owned items first, before TMDb rows', () => {
+    const mixed: UnifiedSearchResult = { ...sample, localMovies: localOnly.localMovies };
+    expect(buildNavigableItems(mixed)).toEqual([
+      { type: 'movie', id: 'seed-mv-003' },
+      { type: 'movie', id: 1 },
+      { type: 'tv', id: 2 },
+    ]);
   });
 });

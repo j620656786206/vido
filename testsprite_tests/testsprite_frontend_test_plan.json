@@ -2062,37 +2062,33 @@
   {
     "id": "TC084",
     "title": "Click a poster opens the media detail panel with core metadata",
-    "description": "Verifies clicking a poster card in the library opens the media detail side panel showing title, year, and rating.",
+    "description": "Verifies clicking a poster card in the library opens the media detail side panel showing title, year, and rating. (v2 note: target a matched seeded title explicitly — unmatched items legitimately lack year/rating and are covered by disc-2026-07-v2-detail-fallback-states.)",
     "category": "Media Detail Panel",
     "priority": "High",
     "steps": [
       {
-        "type": "action",
-        "description": "Navigate to /library"
+        "description": "Navigate to /library",
+        "type": "action"
       },
       {
-        "type": "assertion",
-        "description": "Verify a grid of media poster cards is visible"
+        "description": "Locate the poster card titled 駭客任務 (a MATCHED item with full metadata — do NOT use unmatched items like Unknown.Show.S01)",
+        "type": "action"
       },
       {
-        "type": "action",
-        "description": "Click the first element with data-testid \"poster-card\""
+        "description": "Click the 駭客任務 poster card",
+        "type": "action"
       },
       {
-        "type": "assertion",
-        "description": "Verify element with data-testid \"media-detail-panel\" is visible"
+        "description": "Verify the media detail view shows the title 駭客任務",
+        "type": "assertion"
       },
       {
-        "type": "assertion",
-        "description": "Verify element with data-testid \"detail-title\" is visible"
+        "description": "Verify the year 1999 is visible in the detail metadata",
+        "type": "assertion"
       },
       {
-        "type": "assertion",
-        "description": "Verify element with data-testid \"detail-year\" is visible"
-      },
-      {
-        "type": "assertion",
-        "description": "Verify element with data-testid \"detail-rating\" is visible"
+        "description": "Verify a rating value (e.g. 8.7 or a star score) is visible",
+        "type": "assertion"
       }
     ],
     "v4_status": "NEW",
@@ -2194,5 +2190,133 @@
     "v4_status": "NEW",
     "v4_reason": "TC047 asserts the degraded state renders; this adds the graceful-degradation slice of P0 journey #4. The degrade→recover TRANSITION is routed to Playwright (mock health API), out of TestSprite scope.",
     "v4_action": "ADD — Tier 1 P0 gap (needs health API in degraded state)"
+  },
+  {
+    "id": "TC089",
+    "category": "URL-UI Consistency",
+    "priority": "High",
+    "title": "Deep-link /library/movies shows movie-only list with movie type tab active",
+    "description": "ux3-cutover regression lock: a direct deep-link to the /library/movies clean type route must render ONLY movies and mark the 電影 type control active — URL and UI must agree on first paint.",
+    "steps": [
+      {
+        "description": "Navigate directly to /library/movies (deep link, not via clicks)",
+        "type": "action"
+      },
+      {
+        "description": "Verify the media grid shows items and every visible item is a movie (no TV series titles like 怪奇物語)",
+        "type": "assertion"
+      },
+      {
+        "description": "Verify the 電影 type control is visually active/selected",
+        "type": "assertion"
+      },
+      {
+        "description": "Verify the browser URL is still /library/movies",
+        "type": "assertion"
+      }
+    ],
+    "v4_action": "NEW",
+    "v4_reason": "testsprite-v2-round1 URL↔UI consistency class (2026-07-22 type-filter bug family)."
+  },
+  {
+    "id": "TC090",
+    "category": "URL-UI Consistency",
+    "priority": "High",
+    "title": "Deep-link /library with genres query pre-applies the genre filter",
+    "description": "A deep link carrying a genres query param must arrive with the corresponding genre filter chip/control already applied and the list filtered accordingly.",
+    "steps": [
+      {
+        "description": "Navigate directly to /library?genres=科幻",
+        "type": "action"
+      },
+      {
+        "description": "Verify the genre filter UI shows 科幻 as applied/selected",
+        "type": "assertion"
+      },
+      {
+        "description": "Verify the visible results are science-fiction titles (e.g. 駭客任務 or 全面啟動 present; 教父 absent)",
+        "type": "assertion"
+      }
+    ],
+    "v4_action": "NEW",
+    "v4_reason": "testsprite-v2-round1 URL↔UI consistency class."
+  },
+  {
+    "id": "TC091",
+    "category": "URL-UI Consistency",
+    "priority": "High",
+    "title": "Type switch then browser back/refresh keeps URL, active tab, and list in agreement",
+    "description": "Switching media type via the UI must update the URL; browser Back and a hard refresh must each land with URL, active type control, and the listed content all agreeing.",
+    "steps": [
+      {
+        "description": "Navigate to /library",
+        "type": "action"
+      },
+      {
+        "description": "Click the 電影 type control",
+        "type": "action"
+      },
+      {
+        "description": "Verify the URL changed to /library/movies and only movies are listed",
+        "type": "assertion"
+      },
+      {
+        "description": "Click the 影集 type control",
+        "type": "action"
+      },
+      {
+        "description": "Verify the URL changed to /library/tv and only TV series are listed",
+        "type": "assertion"
+      },
+      {
+        "description": "Press the browser Back button",
+        "type": "action"
+      },
+      {
+        "description": "Verify URL is /library/movies AND the 電影 control is active AND only movies are listed",
+        "type": "assertion"
+      },
+      {
+        "description": "Reload the page (hard refresh)",
+        "type": "action"
+      },
+      {
+        "description": "Verify URL, active type control, and listed content still all agree (movies)",
+        "type": "assertion"
+      }
+    ],
+    "v4_action": "NEW",
+    "v4_reason": "testsprite-v2-round1 URL↔UI consistency class — the exact 2026-07-22 bug shape."
+  },
+  {
+    "id": "TC092",
+    "category": "Search Journey",
+    "priority": "High",
+    "title": "Header instant search finds a seeded title and opens its detail page",
+    "description": "P0 搜尋→瀏覽→詳情 journey on the v2 shell: type into the header search, see instant results, click one, land on its media detail page with core metadata.",
+    "steps": [
+      {
+        "description": "Navigate to /",
+        "type": "action"
+      },
+      {
+        "description": "Click the search input in the top header and type 駭客",
+        "type": "action"
+      },
+      {
+        "description": "Verify an instant results dropdown appears containing 駭客任務",
+        "type": "assertion"
+      },
+      {
+        "description": "Click the 駭客任務 result",
+        "type": "action"
+      },
+      {
+        "description": "Verify the media detail page shows the title 駭客任務 and core metadata (year 1999 or genres)",
+        "type": "assertion"
+      }
+    ],
+    "v4_action": "NEW",
+    "v4_reason": "testsprite-v2-round1 P0 search journey — catalog had no v2 search case."
   }
 ]

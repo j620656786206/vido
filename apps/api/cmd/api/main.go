@@ -593,8 +593,6 @@ func main() {
 		slog.Error("Unified search client unavailable — TMDb client does not satisfy SearchTMDbClient")
 		os.Exit(1)
 	}
-	searchService := services.NewSearchService(searchClient)
-	searchHandler := handlers.NewSearchHandler(searchService)
 	parserHandler := handlers.NewParserHandler(parserService)
 	metadataHandler := handlers.NewMetadataHandler(metadataService)
 	learningHandler := handlers.NewLearningHandler(learningService)
@@ -605,6 +603,10 @@ func main() {
 	qbittorrentHandler := handlers.NewQBittorrentHandler(qbittorrentService)
 	downloadHandler := handlers.NewDownloadHandler(downloadService)
 	libraryService := services.NewLibraryService(repos.Movies, repos.Series, repos.Episodes, services.WithTMDbVideos(tmdbService.VideosProvider()))
+	// Unified search takes the library service as its local leg — owned items
+	// stay searchable when TMDb is unreachable (testsprite-round1 TC092).
+	searchService := services.NewSearchService(searchClient, libraryService)
+	searchHandler := handlers.NewSearchHandler(searchService)
 	libraryHandler := handlers.NewLibraryHandler(libraryService)
 	mediaLibrariesHandler := handlers.NewMediaLibrariesHandler(mediaLibraryService)
 	exploreBlocksHandler := handlers.NewExploreBlocksHandler(exploreBlockService)                // Story 10.3
@@ -764,6 +766,14 @@ func main() {
 	monitorCtx, monitorCancel := context.WithCancel(context.Background())
 	go healthMonitor.StartQBMonitoring(monitorCtx)
 	slog.Info("qBittorrent health monitoring started (30s interval)")
+
+	// Start the general service health monitor (Story 3.12). This was never
+	// wired, so /health/services reported every never-checked service as its
+	// factory-default "healthy" — a TMDb with no API key still showed 正常
+	// (testsprite-round1 TC088). 5min keeps external pings well under rate
+	// limits; the initial sweep runs immediately at startup.
+	go healthMonitor.StartMonitoring(monitorCtx, 5*time.Minute)
+	slog.Info("Service health monitoring started (5m interval)")
 
 	// Start DVR plugin health scheduler (Story 13-4a — immediate sweep + 60s interval, §7)
 	pluginManagerCtx, pluginManagerCancel := context.WithCancel(context.Background())

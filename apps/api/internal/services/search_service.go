@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/vido/api/internal/repository"
 	"github.com/vido/api/internal/tmdb"
 )
 
@@ -22,15 +23,37 @@ type SearchTMDbClient interface {
 	SearchPeopleWithLanguage(ctx context.Context, query string, language string, page int) (*tmdb.SearchResultPeople, error)
 }
 
+// LocalLibrarySearcher is the narrow slice of *LibraryService the unified
+// search needs to surface OWNED items in the dropdown. Owned results survive
+// TMDb outages (missing API key, network) — the data is local.
+type LocalLibrarySearcher interface {
+	SearchLibrary(ctx context.Context, query string, params repository.ListParams, mediaType string) (*LibrarySearchResults, error)
+}
+
+// LocalSearchHit is an owned library item surfaced by unified search. ID is the
+// LOCAL id (UUID-style), so the frontend routes it to the local detail view —
+// which renders without any TMDb dependency.
+type LocalSearchHit struct {
+	ID            string `json:"id"`
+	MediaType     string `json:"media_type"` // "movie" | "tv"
+	Title         string `json:"title"`
+	OriginalTitle string `json:"original_title,omitempty"`
+	ReleaseDate   string `json:"release_date,omitempty"`
+	PosterPath    string `json:"poster_path,omitempty"`
+}
+
 // UnifiedSearchResult is the response payload of the unified instant-search
-// endpoint (GET /api/v1/search). It carries the three categories rendered as
-// separate sections in the suggestions dropdown: 電影 / 影集 / 人物.
+// endpoint (GET /api/v1/search). It carries the owned-library section plus the
+// three TMDb categories rendered as separate sections in the suggestions
+// dropdown: 媒體庫 / 電影 / 影集 / 人物.
 type UnifiedSearchResult struct {
-	Query   string        `json:"query"`
-	Page    int           `json:"page"`
-	Movies  []tmdb.Movie  `json:"movies"`
-	TVShows []tmdb.TVShow `json:"tv_shows"`
-	People  []tmdb.Person `json:"people"`
+	Query       string           `json:"query"`
+	Page        int              `json:"page"`
+	LocalMovies []LocalSearchHit `json:"local_movies"`
+	LocalTV     []LocalSearchHit `json:"local_tv"`
+	Movies      []tmdb.Movie     `json:"movies"`
+	TVShows     []tmdb.TVShow    `json:"tv_shows"`
+	People      []tmdb.Person    `json:"people"`
 }
 
 // SearchServiceInterface defines the contract for unified multi-category search.
@@ -56,21 +79,29 @@ const (
 // the first language that yields localized content (single-language semantics).
 type SearchService struct {
 	client SearchTMDbClient
+	local  LocalLibrarySearcher
 }
 
 // Compile-time interface verification.
 var _ SearchServiceInterface = (*SearchService)(nil)
 
-// NewSearchService creates a SearchService backed by the given TMDb client.
-func NewSearchService(client SearchTMDbClient) *SearchService {
-	return &SearchService{client: client}
+// localSearchLimit caps how many owned items each media type contributes to the
+// dropdown — it is a suggestions panel, not a browse surface.
+const localSearchLimit = 5
+
+// NewSearchService creates a SearchService backed by the given TMDb client and
+// local library searcher (nil disables the owned-library section).
+func NewSearchService(client SearchTMDbClient, local LocalLibrarySearcher) *SearchService {
+	return &SearchService{client: client, local: local}
 }
 
 // Search performs the unified dual-language search. The five underlying TMDb
-// calls (zh-TW + en for movies and TV, plus people) run concurrently; the TMDb
-// client's own rate limiter serializes them safely. A failure in one category
-// degrades that category to empty rather than failing the whole request —
-// unless EVERY call errors, in which case the first error is returned.
+// calls (zh-TW + en for movies and TV, plus people) and the local-library call
+// run concurrently; the TMDb client's own rate limiter serializes its calls
+// safely. A failure in one category degrades that category to empty rather than
+// failing the whole request — the call errors only when EVERY leg (TMDb AND
+// local) failed. In particular, a dead/unconfigured TMDb degrades the dropdown
+// to owned-library results instead of an error (testsprite-round1 TC092).
 func (s *SearchService) Search(ctx context.Context, query string, page int) (*UnifiedSearchResult, error) {
 	query = strings.TrimSpace(query)
 	if query == "" {
@@ -85,8 +116,10 @@ func (s *SearchService) Search(ctx context.Context, query string, page int) (*Un
 		zhMovies, enMovies          *tmdb.SearchResultMovies
 		zhTV, enTV                  *tmdb.SearchResultTVShows
 		people                      *tmdb.SearchResultPeople
+		localRes                    *LibrarySearchResults
 		zhMovieErr, enMovieErr      error
 		zhTVErr, enTVErr, peopleErr error
+		localErr                    error
 	)
 
 	run := func(fn func()) {
@@ -108,11 +141,20 @@ func (s *SearchService) Search(ctx context.Context, query string, page int) (*Un
 	run(func() {
 		people, peopleErr = s.client.SearchPeopleWithLanguage(ctx, query, searchPrimaryLanguage, page)
 	})
+	if s.local != nil {
+		run(func() {
+			localRes, localErr = s.local.SearchLibrary(ctx, query,
+				repository.ListParams{Page: 1, PageSize: localSearchLimit}, "all")
+		})
+	}
 	wg.Wait()
 
 	// Per-category degradation: log a warning for any failed call but keep going
 	// with whatever succeeded. Only bail out if literally everything failed.
 	errs := []error{zhMovieErr, enMovieErr, zhTVErr, enTVErr, peopleErr}
+	if s.local != nil {
+		errs = append(errs, localErr)
+	}
 	var firstErr error
 	failed := 0
 	for _, err := range errs {
@@ -135,22 +177,61 @@ func (s *SearchService) Search(ctx context.Context, query string, page int) (*Un
 		)
 	}
 
+	localMovies, localTV := collectLocalHits(localRes)
 	result := &UnifiedSearchResult{
-		Query:   query,
-		Page:    page,
-		Movies:  mergeMovies(zhMovies, enMovies, query),
-		TVShows: mergeTVShows(zhTV, enTV, query),
-		People:  collectPeople(people),
+		Query:       query,
+		Page:        page,
+		LocalMovies: localMovies,
+		LocalTV:     localTV,
+		Movies:      mergeMovies(zhMovies, enMovies, query),
+		TVShows:     mergeTVShows(zhTV, enTV, query),
+		People:      collectPeople(people),
 	}
 
 	slog.Debug("Unified search completed",
 		"query", query,
+		"local_movies", len(result.LocalMovies),
+		"local_tv", len(result.LocalTV),
 		"movies", len(result.Movies),
 		"tv_shows", len(result.TVShows),
 		"people", len(result.People),
 	)
 
 	return result, nil
+}
+
+// collectLocalHits maps the library search results onto dropdown hits, keyed by
+// LOCAL ids so the detail navigation stays TMDb-independent. A nil result (local
+// search disabled or failed) yields empty non-nil slices, keeping the JSON
+// arrays stable for the frontend.
+func collectLocalHits(res *LibrarySearchResults) (movies, tv []LocalSearchHit) {
+	movies, tv = []LocalSearchHit{}, []LocalSearchHit{}
+	if res == nil {
+		return movies, tv
+	}
+	for _, r := range res.Results {
+		switch {
+		case r.Movie != nil:
+			movies = append(movies, LocalSearchHit{
+				ID:            r.Movie.ID,
+				MediaType:     "movie",
+				Title:         r.Movie.Title,
+				OriginalTitle: r.Movie.OriginalTitle.String,
+				ReleaseDate:   r.Movie.ReleaseDate,
+				PosterPath:    r.Movie.PosterPath.String,
+			})
+		case r.Series != nil:
+			tv = append(tv, LocalSearchHit{
+				ID:            r.Series.ID,
+				MediaType:     "tv",
+				Title:         r.Series.Title,
+				OriginalTitle: r.Series.OriginalTitle.String,
+				ReleaseDate:   r.Series.FirstAirDate,
+				PosterPath:    r.Series.PosterPath.String,
+			})
+		}
+	}
+	return movies, tv
 }
 
 // mergeMovies merges the zh-TW and en movie result sets, deduplicating by TMDb

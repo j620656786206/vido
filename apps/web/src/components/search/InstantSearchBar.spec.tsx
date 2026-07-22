@@ -19,6 +19,8 @@ vi.mock('../../services/tmdb', () => ({
 const sample: UnifiedSearchResult = {
   query: '你的名字',
   page: 1,
+  localMovies: [],
+  localTv: [],
   movies: [
     {
       id: 1,
