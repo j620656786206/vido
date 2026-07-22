@@ -1334,37 +1334,40 @@
 
                 <ol>
                   <li>
-                    <strong>The URL↔UI class is locked green</strong> — the exact 2026-07-22
-                    type-filter bug shape (TC091 back/refresh agreement) passes against the real v2
-                    stack; cheap, high-hit insurance the unit layer structurally cannot see.
+                    <strong>URL↔UI class locked green first try</strong> — the type-filter bug shape
+                    is now regression-locked at three layers (unit routeTree specs, Playwright,
+                    TestSprite vs the real stack).
                   </li>
                   <li>
-                    <strong>Unified search had no owned-content story</strong> — the header search
-                    silently depended on TMDb for titles the user already owns. Fixed; consider a
-                    follow-up UX polish pass on the 媒體庫 section design (currently reuses the
-                    standard row + 已擁有 badge, no .pen counterpart yet).
+                    <strong>The round paid for itself</strong>: two shipped-code defect chains
+                    (owned-search degradation; dark health monitor) were invisible to every unit/E2E
+                    layer because they only manifest against a REAL backend in a degraded
+                    configuration — exactly the seeded env's design point.
                   </li>
                   <li>
-                    <strong>CJK partial search was broken library-wide</strong> (FTS5 tokenizer) —
-                    fixed at the repository layer for both movies and series; any future FTS surface
-                    must reuse <code>ftsPrefixQuery</code>.
+                    <strong>媒體庫 dropdown section has no .pen design counterpart</strong> (reuses
+                    standard row + 已擁有 badge) — UX follow-up candidate for Sally.
                   </li>
                   <li>
-                    <strong>Health monitoring was dark since Story 3.12</strong> — /health/services
-                    reported factory defaults. Now live at a 5-minute cadence; NAS deploy will begin
-                    showing true service states (expect tmdb/douban/wiki/ai 正常 there since keys
-                    are configured).
+                    <strong>Deferred (deliberate):</strong> TC081/TC083 need real qBT rows (round-2
+                    stub/config decision); TC086 blocked on
+                    <code>disc-2026-07-v2-detail-fallback-states</code>; TC009's steps are legacy
+                    (pagination/header-sort) — retire or rewrite against v2 in the round-2 selection
+                    pass.
                   </li>
                   <li>
-                    <strong>Downloads deep interactions (TC081/TC083) remain untestable</strong> in
-                    the seeded env (no qBittorrent by design) — deferred to round 2 with a qBT
-                    stub/config decision.
-                  </li>
-                  <li>
-                    <strong>TC086 (detail fallback states)</strong> stays deliberately excluded —
-                    blocked on <code>disc-2026-07-v2-detail-fallback-states</code>.
+                    <strong>Round 2</strong> (full P0, ~20 cases ≈ 100 credits) fires when the
+                    <code>ux3-v2-cutover</code> epic close is on the table — budget note:
+                    round1+round2 ≈ the whole Free-150.
                   </li>
                 </ol>
+                <hr />
+                <p>
+                  <em
+                    >Run artifacts: <code>testsprite_tests/tmp/test_results.json</code> + dashboard
+                    links in <code>tmp/raw_report.md</code>.</em
+                  >
+                </p>
               </li>
             </ul>
           </div>
@@ -1400,7 +1403,7 @@
               <div class="table-row">
                 <div class="table-cell">
                   <span class="text-body"
-                    >Requirement: URL↔UI Consistency (2026-07-22 type-filter bug class, new
+                    >Requirement: URL↔UI Consistency (the 2026-07-22 type-filter bug class — new
                     TC089–TC091)</span
                   >
                 </div>
@@ -1430,7 +1433,7 @@
               <div class="table-row">
                 <div class="table-cell">
                   <span class="text-body"
-                    >Requirement: 下載監控 (Downloads, empty/degraded half)</span
+                    >Requirement: 下載監控 (Downloads — empty/degraded half)</span
                   >
                 </div>
                 <div class="table-cell"><span class="text-body">0</span></div>
@@ -1525,7 +1528,7 @@
                 <div class="requirement-content">
                   <div class="requirement-title-row">
                     <h3 class="title-requirement">
-                      Requirement: URL↔UI Consistency (2026-07-22 type-filter bug class, new
+                      Requirement: URL↔UI Consistency (the 2026-07-22 type-filter bug class — new
                       TC089–TC091)
                     </h3>
                     <div class="requirement-status-tag status-success">
@@ -1698,7 +1701,7 @@
                 <div class="requirement-content">
                   <div class="requirement-title-row">
                     <h3 class="title-requirement">
-                      Requirement: 下載監控 (Downloads, empty/degraded half)
+                      Requirement: 下載監控 (Downloads — empty/degraded half)
                     </h3>
                     <div class="requirement-status-tag status-success">
                       <svg
