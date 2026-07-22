@@ -129,14 +129,15 @@ test.describe('Downloads qBittorrent config gate (bugfix-10-2) @downloads @ui', 
     await page.goto('/downloads');
     await configResponse;
 
-    // WHEN: page rendering settles (no in-flight requests for 500ms)
-    await page.waitForLoadState('networkidle');
-
-    // THEN: the v2 page rendered (proves React processed the closed-gate state)
+    // WHEN: the v2 page rendered (proves React processed the closed-gate state).
+    // NOTE (ux3-cutover-3): no `networkidle` here — the v2 downloads page holds
+    // an SSE EventSource open (useDownloadProgress), so the network never idles.
     await expect(page.getByTestId('downloads-browse-v2')).toBeVisible();
 
-    // THEN: zero /api/v1/downloads* requests were issued — gate held closed
-    //       across mount + render + TanStack Query reactive cycle
+    // THEN: zero /api/v1/downloads* requests. Deliberate 1.5s settle window —
+    // a gate leak would fire within TanStack Query's first reactive cycle after
+    // the config response, so waiting it out makes the empty assertion real.
+    await page.waitForTimeout(1500);
     expect(downloadRequests).toEqual([]);
   });
 
