@@ -126,6 +126,12 @@ test.describe('@visual @story-19-4 component visual baselines', () => {
         timeout: 60_000,
         waitUntil: 'domcontentloaded',
       });
+      // Park the pointer at the viewport origin: the mouse position persists across
+      // gotos, so the previous fixture's `hover` action leaves a stale pointer that
+      // can land on THIS fixture's content and contaminate its `default` shot with
+      // hover styling (bit media-media-grid after ux3-cutover-4 shifted the content
+      // column right by the sidebar width).
+      await page.mouse.move(0, 0);
       await page.waitForSelector('[data-testid="component-gallery-page"]', {
         state: 'visible',
         timeout: 30_000,
