@@ -20,6 +20,14 @@ function RootComponent() {
     if (setupStatus?.needsSetup && !isSetupRoute) {
       navigate({ to: '/setup' });
     }
+    // Reverse guard: landing on /setup with setup already completed (stale tab,
+    // bookmark, seeded test env) must bounce to the app — the wizard can't even
+    // complete against an already-configured backend. Mid-wizard this never
+    // fires: needsSetup stays true until the final step's completeSetup, and
+    // that handler navigates home itself.
+    if (setupStatus && !setupStatus.needsSetup && isSetupRoute) {
+      navigate({ to: '/' });
+    }
   }, [setupStatus, isLoading, location.pathname, navigate]);
 
   const isSetupPage = location.pathname === '/setup';
