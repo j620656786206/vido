@@ -228,15 +228,20 @@ test.describe('@visual @story-19-4 component visual baselines', () => {
           }
         }
 
+        // `expect.soft`: a failing comparison no longer aborts the fixture loop, so a
+        // single CI run reports EVERY diffing/missing baseline at once instead of
+        // hiding everything after the first hard failure (ux3-cutover-4 self-heal:
+        // 24 retired baselines were dripping out one abort at a time). The test
+        // still fails at the end if any soft expectation failed.
         if (isZeroSize) {
           // 19-4b Task 4: overlay/portal fixtures — capture viewport instead so the
           // dialog/sidepanel paint is recorded. Page screenshot includes the app
           // shell, but the overlay is the visually-dominant content (centered
           // dialog box + dark backdrop). This is the documented capture strategy
           // for the 12 `fixed inset-0` / Radix-portal fixtures (see story 19-4b).
-          await expect(page).toHaveScreenshot(['components', id, `${state}.png`]);
+          await expect.soft(page).toHaveScreenshot(['components', id, `${state}.png`]);
         } else {
-          await expect(stateDiv).toHaveScreenshot(['components', id, `${state}.png`]);
+          await expect.soft(stateDiv).toHaveScreenshot(['components', id, `${state}.png`]);
         }
       }
     }
