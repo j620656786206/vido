@@ -1305,7 +1305,7 @@
             </div>
             <div class="metadata-row">
               <div class="metadata-label text-body-medium">Date</div>
-              <div class="metadata-value text-body">6/1/2026</div>
+              <div class="metadata-value text-body">7/22/2026</div>
             </div>
             <div class="metadata-row">
               <div class="metadata-label text-body-medium">Prepared by</div>
@@ -1334,44 +1334,37 @@
 
                 <ol>
                   <li>
-                    <strong>The CI signal was 100% environment noise.</strong> Every fail/error
-                    flagged by the runner-local CI passes against the real NAS. This empirically
-                    justifies the 2026-06-01 decision to defer the monthly cron and develop locally.
+                    <strong>The URL↔UI class is locked green</strong> — the exact 2026-07-22
+                    type-filter bug shape (TC091 back/refresh agreement) passes against the real v2
+                    stack; cheap, high-hit insurance the unit layer structurally cannot see.
                   </li>
                   <li>
-                    <strong>Backend concurrency weakness (NEW, found during this session).</strong>
-                    Running 18 concurrent TestSprite browser cases against the production NAS
-                    degraded the API — <code>/library</code>, <code>/downloads</code>,
-                    <code>/settings/qbittorrent</code> all hung &gt;12s, even pure-DB reads
-                    (GetConfig). UI was stuck flashing skeletons until a container restart. Likely
-                    cause: SQLite PRAGMAs (<code>busy_timeout</code>, WAL) applied via
-                    <code>db.conn.Exec()</code> on the connection <strong>pool</strong> only take
-                    effect on one pooled connection, leaving others without
-                    <code>busy_timeout</code> under lock contention.
-                    <strong>Recommend a follow-up story:</strong> apply pragmas per-connection (DSN
-                    params or a connector hook) and review MaxOpenConns. Also: do not load-test
-                    against production — use an isolated environment.
+                    <strong>Unified search had no owned-content story</strong> — the header search
+                    silently depended on TMDb for titles the user already owns. Fixed; consider a
+                    follow-up UX polish pass on the 媒體庫 section design (currently reuses the
+                    standard row + 已擁有 badge, no .pen counterpart yet).
                   </li>
                   <li>
-                    <strong>Local-run requires a localhost→NAS proxy.</strong> The CLI pre-checks
-                    <code>localhost:&lt;port&gt;</code>; a TCP proxy (<code
-                      >localhost:8088 → 192.168.50.52:8088</code
-                    >) is needed. Capture this in <code>docs/testsprite-local-dev.md</code>.
+                    <strong>CJK partial search was broken library-wide</strong> (FTS5 tokenizer) —
+                    fixed at the repository layer for both movies and series; any future FTS surface
+                    must reuse <code>ftsPrefixQuery</code>.
                   </li>
                   <li>
-                    <strong>Plan ID drift.</strong> The committed <code>.py</code> filenames
-                    (TC001–TC031, old plan) do not match the active v4 plan IDs (TC009–TC052).
-                    Always pick testIds from <code>testsprite_frontend_test_plan.json</code>, not
-                    from the local filenames.
+                    <strong>Health monitoring was dark since Story 3.12</strong> — /health/services
+                    reported factory defaults. Now live at a 5-minute cadence; NAS deploy will begin
+                    showing true service states (expect tmdb/douban/wiki/ai 正常 there since keys
+                    are configured).
+                  </li>
+                  <li>
+                    <strong>Downloads deep interactions (TC081/TC083) remain untestable</strong> in
+                    the seeded env (no qBittorrent by design) — deferred to round 2 with a qBT
+                    stub/config decision.
+                  </li>
+                  <li>
+                    <strong>TC086 (detail fallback states)</strong> stays deliberately excluded —
+                    blocked on <code>disc-2026-07-v2-detail-fallback-states</code>.
                   </li>
                 </ol>
-                <hr />
-                <p>
-                  <em
-                    >Run artifacts: <code>testsprite_tests/tmp/test_results.json</code> (latest raw
-                    verdicts), 15-case backup at <code>/tmp/results15.json</code>.</em
-                  >
-                </p>
               </li>
             </ul>
           </div>
@@ -1396,8 +1389,7 @@
               <div class="table-row">
                 <div class="table-cell">
                   <span class="text-body"
-                    >Requirement: Media Library — browse, list/grid, sort, filter, paginate, item
-                    actions</span
+                    >Requirement: 媒體庫瀏覽互動 (Library browse & item actions)</span
                   >
                 </div>
                 <div class="table-cell"><span class="text-body">0</span></div>
@@ -1408,8 +1400,27 @@
               <div class="table-row">
                 <div class="table-cell">
                   <span class="text-body"
-                    >Requirement: qBittorrent Settings — load, test, save, validation</span
+                    >Requirement: URL↔UI Consistency (2026-07-22 type-filter bug class, new
+                    TC089–TC091)</span
                   >
+                </div>
+                <div class="table-cell"><span class="text-body">0</span></div>
+                <div class="table-cell"><span class="text-body">0</span></div>
+                <div class="table-cell"><span class="text-body">0</span></div>
+              </div>
+
+              <div class="table-row">
+                <div class="table-cell">
+                  <span class="text-body">Requirement: 搜尋→瀏覽→詳情 P0 journey (new TC092)</span>
+                </div>
+                <div class="table-cell"><span class="text-body">0</span></div>
+                <div class="table-cell"><span class="text-body">0</span></div>
+                <div class="table-cell"><span class="text-body">0</span></div>
+              </div>
+
+              <div class="table-row">
+                <div class="table-cell">
+                  <span class="text-body">Requirement: 詳情 (Media detail)</span>
                 </div>
                 <div class="table-cell"><span class="text-body">0</span></div>
                 <div class="table-cell"><span class="text-body">0</span></div>
@@ -1419,7 +1430,7 @@
               <div class="table-row">
                 <div class="table-cell">
                   <span class="text-body"
-                    >Requirement: Dashboard — qBittorrent health indicator</span
+                    >Requirement: 下載監控 (Downloads, empty/degraded half)</span
                   >
                 </div>
                 <div class="table-cell"><span class="text-body">0</span></div>
@@ -1429,7 +1440,7 @@
 
               <div class="table-row">
                 <div class="table-cell">
-                  <span class="text-body">Requirement: Subtitle / Manual Search</span>
+                  <span class="text-body">Requirement: 降級狀態 (Degraded services)</span>
                 </div>
                 <div class="table-cell"><span class="text-body">0</span></div>
                 <div class="table-cell"><span class="text-body">0</span></div>
@@ -1456,8 +1467,7 @@
                 <div class="requirement-content">
                   <div class="requirement-title-row">
                     <h3 class="title-requirement">
-                      Requirement: Media Library — browse, list/grid, sort, filter, paginate, item
-                      actions
+                      Requirement: 媒體庫瀏覽互動 (Library browse & item actions)
                     </h3>
                     <div class="requirement-status-tag status-success">
                       <svg
@@ -1515,7 +1525,8 @@
                 <div class="requirement-content">
                   <div class="requirement-title-row">
                     <h3 class="title-requirement">
-                      Requirement: qBittorrent Settings — load, test, save, validation
+                      Requirement: URL↔UI Consistency (2026-07-22 type-filter bug class, new
+                      TC089–TC091)
                     </h3>
                     <div class="requirement-status-tag status-success">
                       <svg
@@ -1573,7 +1584,7 @@
                 <div class="requirement-content">
                   <div class="requirement-title-row">
                     <h3 class="title-requirement">
-                      Requirement: Dashboard — qBittorrent health indicator
+                      Requirement: 搜尋→瀏覽→詳情 P0 journey (new TC092)
                     </h3>
                     <div class="requirement-status-tag status-success">
                       <svg
@@ -1630,7 +1641,121 @@
               <div class="accordion-header" onclick="toggleAccordion(this)">
                 <div class="requirement-content">
                   <div class="requirement-title-row">
-                    <h3 class="title-requirement">Requirement: Subtitle / Manual Search</h3>
+                    <h3 class="title-requirement">Requirement: 詳情 (Media detail)</h3>
+                    <div class="requirement-status-tag status-success">
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 16 16"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <circle
+                          cx="7.99961"
+                          cy="7.99998"
+                          r="6.4"
+                          fill="#10A363"
+                          fill-opacity="0.2"
+                        />
+                        <path
+                          d="M5.59961 8.00002L7.19961 9.60002L10.3996 6.40002"
+                          stroke="#19C379"
+                          stroke-width="1.28"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      </svg>
+                      <span>0/0</span>
+                    </div>
+                  </div>
+                  <p class="text-body-medium requirement-description">
+                    Proper error handling for API calls and invalid data scenarios.
+                  </p>
+                </div>
+                <div class="accordion-icon">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 16 16"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M11.4276 6C11.9145 6 12.1687 6.61626 11.875 7.01439L11.8316 7.06689L8.40295 10.817C8.30455 10.9246 8.17364 10.9892 8.03476 10.9988C7.89589 11.0083 7.7586 10.9621 7.64865 10.8688L7.59493 10.817L4.16629 7.06689L4.11886 7.00814L4.088 6.96002L4.05714 6.90002L4.04743 6.87752L4.032 6.83564L4.01371 6.76814L4.008 6.73501L4.00229 6.69751L4 6.66189V6.58814L4.00286 6.55188L4.008 6.51438L4.01371 6.48188L4.032 6.41438L4.04743 6.37251L4.08743 6.29L4.12457 6.23375L4.16629 6.18313L4.22 6.13125L4.26401 6.0975L4.31886 6.06375L4.33944 6.05313L4.37772 6.03625L4.43944 6.01625L4.46972 6.01L4.50401 6.00375L4.53658 6.00125L11.4276 6Z"
+                      fill="var(--fg-secondary)"
+                    />
+                  </svg>
+                </div>
+              </div>
+
+              <div class="accordion-content">
+                <div class="test-wrapper"></div>
+              </div>
+            </div>
+
+            <div class="requirement-wrapper accordion-item active">
+              <div class="accordion-header" onclick="toggleAccordion(this)">
+                <div class="requirement-content">
+                  <div class="requirement-title-row">
+                    <h3 class="title-requirement">
+                      Requirement: 下載監控 (Downloads, empty/degraded half)
+                    </h3>
+                    <div class="requirement-status-tag status-success">
+                      <svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 16 16"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <circle
+                          cx="7.99961"
+                          cy="7.99998"
+                          r="6.4"
+                          fill="#10A363"
+                          fill-opacity="0.2"
+                        />
+                        <path
+                          d="M5.59961 8.00002L7.19961 9.60002L10.3996 6.40002"
+                          stroke="#19C379"
+                          stroke-width="1.28"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      </svg>
+                      <span>0/0</span>
+                    </div>
+                  </div>
+                  <p class="text-body-medium requirement-description">
+                    Proper error handling for API calls and invalid data scenarios.
+                  </p>
+                </div>
+                <div class="accordion-icon">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 16 16"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M11.4276 6C11.9145 6 12.1687 6.61626 11.875 7.01439L11.8316 7.06689L8.40295 10.817C8.30455 10.9246 8.17364 10.9892 8.03476 10.9988C7.89589 11.0083 7.7586 10.9621 7.64865 10.8688L7.59493 10.817L4.16629 7.06689L4.11886 7.00814L4.088 6.96002L4.05714 6.90002L4.04743 6.87752L4.032 6.83564L4.01371 6.76814L4.008 6.73501L4.00229 6.69751L4 6.66189V6.58814L4.00286 6.55188L4.008 6.51438L4.01371 6.48188L4.032 6.41438L4.04743 6.37251L4.08743 6.29L4.12457 6.23375L4.16629 6.18313L4.22 6.13125L4.26401 6.0975L4.31886 6.06375L4.33944 6.05313L4.37772 6.03625L4.43944 6.01625L4.46972 6.01L4.50401 6.00375L4.53658 6.00125L11.4276 6Z"
+                      fill="var(--fg-secondary)"
+                    />
+                  </svg>
+                </div>
+              </div>
+
+              <div class="accordion-content">
+                <div class="test-wrapper"></div>
+              </div>
+            </div>
+
+            <div class="requirement-wrapper accordion-item active">
+              <div class="accordion-header" onclick="toggleAccordion(this)">
+                <div class="requirement-content">
+                  <div class="requirement-title-row">
+                    <h3 class="title-requirement">Requirement: 降級狀態 (Degraded services)</h3>
                     <div class="requirement-status-tag status-success">
                       <svg
                         width="18"

@@ -147,6 +147,8 @@ describe('tmdbService', () => {
         data: {
           query: '你的名字',
           page: 1,
+          local_movies: [{ id: 'seed-mv-001', media_type: 'movie', title: '你的名字' }],
+          local_tv: [],
           movies: [{ id: 1, title: '你的名字', original_title: 'Your Name', vote_average: 8.4 }],
           tv_shows: [{ id: 2, name: '影集', original_name: 'Show' }],
           people: [
@@ -170,6 +172,11 @@ describe('tmdbService', () => {
       expect(result.tvShows).toHaveLength(1);
       expect(result.movies[0].originalTitle).toBe('Your Name');
       expect(result.people[0].knownForDepartment).toBe('Directing');
+      // owned 媒體庫 section (testsprite-round1 TC092): local_movies → localMovies,
+      // keeping the LOCAL string id intact for local-detail navigation.
+      expect(result.localMovies).toHaveLength(1);
+      expect(result.localMovies[0].id).toBe('seed-mv-001');
+      expect(result.localMovies[0].mediaType).toBe('movie');
     });
 
     it('does not touch the legacy per-type search endpoints (backward compatibility — AC #6)', async () => {

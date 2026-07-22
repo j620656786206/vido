@@ -100,3 +100,5 @@ blob-report/
 ux-design.pen.bak-*
 # Local test environment (scripts/serve-test-env.sh — testenv-local-seed)
 .vido-test-env/
+
+testsprite_tests/tmp/config.json

@@ -417,6 +417,8 @@ func (r *SeriesRepository) FullTextSearch(ctx context.Context, query string, par
 	if query == "" {
 		return r.List(ctx, params)
 	}
+	// Prefix-ized + operator-quoted (CJK partial queries; FTS syntax safety).
+	query = ftsPrefixQuery(query)
 
 	// Get total count for FTS results
 	countQuery := fmt.Sprintf(`
