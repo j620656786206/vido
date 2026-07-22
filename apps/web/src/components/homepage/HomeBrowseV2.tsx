@@ -2,8 +2,7 @@
 /**
  * Home v2 composition (UX Redesign Phase 3 — ux3-1-2 / epic ux3-home-v2).
  *
- * Rendered by the `/` route ONLY under the v2 shell (the route branches on
- * `useShellVersion()`; the flag stays read-once in __root, F4). This is the D3
+ * Rendered by the `/` route (sole render since ux3-cutover-3). This is the D3
  * ordering law made structural: the OWN-CONTENT zone (繼續觀看 reserved slot +
  * 最近新增 row) is ALWAYS above the EXTERNAL curation (Hero + Explore). The
  * deterministic DOM-order assertion lives in HomeBrowseV2.spec; the *felt*

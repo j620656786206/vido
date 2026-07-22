@@ -238,39 +238,11 @@ test.describe('Discover Filters — Desktop @e2e @discover', () => {
 // v2 shell — persistent instant filter rail (ux3-3-2 AC #1/#2/#3/#4/#7)
 // =============================================================================
 
-/**
- * Enable the v2 shell for these tests: seed the flag's localStorage mirror (the
- * useNewShellEnabled hook reads it as `initialData`, so the rail renders on first
- * paint with no flag→shell flash) AND stub the flag endpoint so the confirming
- * query agrees. No data-dependent self-skip — the discover endpoints are stubbed
- * (the TMDb upstream is external, so mocking is the hermetic equivalent of seeding).
- */
-async function enableV2Shell(page: import('@playwright/test').Page): Promise<void> {
-  await page.addInitScript(() => {
-    try {
-      localStorage.setItem('vido:flag:new_shell_enabled', 'true');
-    } catch {
-      /* ignore */
-    }
-  });
-  await page.route('**/api/v1/settings/new_shell_enabled', (route: Route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        success: true,
-        data: { key: 'new_shell_enabled', value: 'true' },
-      }),
-    })
-  );
-}
-
 test.describe('Discover v2 rail — Desktop @e2e @discover @ux3-3-2', () => {
   test('[P1] renders the persistent rail with a single live total + instant categorical apply (AC #2/#3/#4/#7)', async ({
     page,
   }) => {
     // GIVEN: the v2 shell is enabled and discover has loaded
-    await enableV2Shell(page);
     const requested = await stubDiscover(page);
     await stubFacetCounts(page);
     await page.goto('/discover');
@@ -291,7 +263,6 @@ test.describe('Discover v2 rail — Desktop @e2e @discover @ux3-3-2', () => {
   test('[P2] collapsing the rail hides it and surfaces the re-open control (AC #2)', async ({
     page,
   }) => {
-    await enableV2Shell(page);
     await stubDiscover(page);
     await stubFacetCounts(page);
     await page.goto('/discover');
@@ -309,7 +280,6 @@ test.describe('Discover v2 rail — Desktop @e2e @discover @ux3-3-2', () => {
     page,
   }) => {
     // GIVEN: the v2 rail with facet-counts where 動畫(16)=42 and 動作(28)=0 (dead-end)
-    await enableV2Shell(page);
     await stubDiscover(page);
     await stubFacetCounts(page, { counts: { genre: { '16': 42, '28': 0 } }, partial: false });
     await page.goto('/discover');
@@ -333,7 +303,6 @@ test.describe('Discover v2 rail — Desktop @e2e @discover @ux3-3-2', () => {
     page,
   }) => {
     // GIVEN: the counts endpoint errors
-    await enableV2Shell(page);
     await stubDiscover(page);
     await stubFacetCountsUnavailable(page);
     await page.goto('/discover');

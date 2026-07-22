@@ -5,8 +5,7 @@
 // Implements: Component/Browse-Grid-v2 (LcHBs) + Component/Browse-List-v2 (b1H71g)
 /**
  * v2 Browse experience (UX Redesign Phase 2 — UX2-2). Rendered by the /library
- * route ONLY under the v2 shell (the route branches on `useShellVersion()`; the
- * flag stays read-once in __root, F4). One component serves all three type views
+ * route (sole render since ux3-cutover-3). One component serves all three type views
  * (all / movie / tv) off the `?type=` param — a shared grid + shared filter/sort/
  * scroll state that survives movies↔tv switches (AC #1 intent + F5). Integrated
  * toolbar, four states (empty/loading/no-result/error), grid (PosterCardV2) and

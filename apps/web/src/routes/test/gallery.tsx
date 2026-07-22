@@ -24,7 +24,7 @@
  *   - **Fix B (router-dependent fixtures):** fixtures declaring `routePath` are wrapped
  *     in a nested memory `RouterProvider` whose history is pinned to that path. The
  *     fixture's `useRouterState()` resolves through the nearest provider → reports the
- *     stub path → router-state-driven UI (e.g. TabNavigation's active tab) paints.
+ *     stub path → router-state-driven UI (active states, `<Link>` matching) paints.
  *   - **Fix C (interactive `open` state):** fixtures setting `openTrigger?: string` get
  *     an extra `<div data-gallery-state="open" data-gallery-open-trigger="…">` block;
  *     the spec clicks that selector before screenshotting (captures e.g. the open
@@ -113,8 +113,8 @@ const isTestEnvironment =
 const ALL_STATES: GalleryState[] = ['default', 'hover', 'focus'];
 
 // 19-4b Task 0 Fix B: nested memory `RouterProvider` for fixtures whose components
-// read router state. We register stub routes for every TabNavigation `matchPaths`
-// entry (`/library`, `/downloads`, `/pending`, `/settings`) so `<Link>` resolution
+// read router state. We register a stub route per supported `routePath` value
+// (`/library`, `/downloads`, `/pending`, `/settings`) so `<Link>` resolution
 // inside the wrapped component stays happy regardless of which path the fixture pins.
 const STUB_TAB_PATHS = ['/library', '/downloads', '/pending', '/settings'] as const;
 export type StubRoutePath = (typeof STUB_TAB_PATHS)[number];
@@ -122,8 +122,8 @@ export type StubRoutePath = (typeof STUB_TAB_PATHS)[number];
 /**
  * Wraps `children` inside a nested TanStack Router `RouterProvider` whose memory
  * history is pinned to `pathname`. `useRouterState()` inside `children` resolves
- * via the nearest provider → reports our stub path. Used by Fix B for the
- * `shell/TabNavigation` fixture and any future router-state-dependent fixture.
+ * via the nearest provider → reports our stub path. Used by Fix B for
+ * router-state-dependent fixtures (e.g. the dashboard panels).
  *
  * `children` is captured into the `useMemo` closure at first render. Each fixture
  * mounts once for the visual snapshot and does not update its rendered props, so

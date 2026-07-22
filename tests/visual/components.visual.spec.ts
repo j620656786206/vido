@@ -23,9 +23,9 @@
  *     flags input modality as keyboard so the subsequent focus inside the state div
  *     triggers `:focus-visible` rules. Programmatic `locator.focus()` did not.
  *   - **Fix B (router-state-dependent fixtures):** the gallery route wraps fixtures
- *     declaring `routePath` (e.g. `shell-tab-navigation` → `/library`) in a nested
- *     memory `RouterProvider`. `useRouterState()` inside the component reports the
- *     stub path. No spec change needed — this is gallery-side.
+ *     declaring `routePath` (e.g. `dashboard-recent-media-panel` → `/library`) in a
+ *     nested memory `RouterProvider`. `useRouterState()` inside the component reports
+ *     the stub path. No spec change needed — this is gallery-side.
  *   - **Fix C (interactive `open` state):** fixtures setting `openTrigger` get an
  *     extra `<div data-gallery-state="open" data-gallery-open-trigger="<selector>">`
  *     block; the spec clicks that selector inside the state div before screenshotting,
@@ -126,6 +126,12 @@ test.describe('@visual @story-19-4 component visual baselines', () => {
         timeout: 60_000,
         waitUntil: 'domcontentloaded',
       });
+      // Park the pointer at the viewport origin: the mouse position persists across
+      // gotos, so the previous fixture's `hover` action leaves a stale pointer that
+      // can land on THIS fixture's content and contaminate its `default` shot with
+      // hover styling (bit media-media-grid after ux3-cutover-4 shifted the content
+      // column right by the sidebar width).
+      await page.mouse.move(0, 0);
       await page.waitForSelector('[data-testid="component-gallery-page"]', {
         state: 'visible',
         timeout: 30_000,
@@ -222,15 +228,20 @@ test.describe('@visual @story-19-4 component visual baselines', () => {
           }
         }
 
+        // `expect.soft`: a failing comparison no longer aborts the fixture loop, so a
+        // single CI run reports EVERY diffing/missing baseline at once instead of
+        // hiding everything after the first hard failure (ux3-cutover-4 self-heal:
+        // 24 retired baselines were dripping out one abort at a time). The test
+        // still fails at the end if any soft expectation failed.
         if (isZeroSize) {
           // 19-4b Task 4: overlay/portal fixtures — capture viewport instead so the
           // dialog/sidepanel paint is recorded. Page screenshot includes the app
           // shell, but the overlay is the visually-dominant content (centered
           // dialog box + dark backdrop). This is the documented capture strategy
           // for the 12 `fixed inset-0` / Radix-portal fixtures (see story 19-4b).
-          await expect(page).toHaveScreenshot(['components', id, `${state}.png`]);
+          await expect.soft(page).toHaveScreenshot(['components', id, `${state}.png`]);
         } else {
-          await expect(stateDiv).toHaveScreenshot(['components', id, `${state}.png`]);
+          await expect.soft(stateDiv).toHaveScreenshot(['components', id, `${state}.png`]);
         }
       }
     }

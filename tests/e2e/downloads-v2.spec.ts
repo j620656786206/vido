@@ -10,32 +10,9 @@
  */
 
 import { test, expect } from '../support/fixtures';
-import type { Route } from '@playwright/test';
 import { presetDownloads } from '../support/fixtures/factories/download-factory';
 
 const ROUTE_API = '**/api/v1';
-
-/**
- * Enable the v2 shell: seed the flag's localStorage mirror (read as initialData so the
- * shell renders on first paint with no flag→shell flash) AND stub the confirming flag
- * endpoint (mirrors discover-filters.spec.ts enableV2Shell).
- */
-async function enableV2Shell(page: import('@playwright/test').Page): Promise<void> {
-  await page.addInitScript(() => {
-    try {
-      localStorage.setItem('vido:flag:new_shell_enabled', 'true');
-    } catch {
-      /* ignore */
-    }
-  });
-  await page.route('**/api/v1/settings/new_shell_enabled', (route: Route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ success: true, data: { key: 'new_shell_enabled', value: 'true' } }),
-    })
-  );
-}
 
 async function stubQbtConfig(
   page: import('@playwright/test').Page,
@@ -92,7 +69,6 @@ test.describe('Downloads v2 deep page @downloads @ui @ux3-4-3', () => {
   test('[P1] v2 shell renders the DownloadsBrowseV2 deep page with restyled cards + status toolbar (AC1/AC2)', async ({
     page,
   }) => {
-    await enableV2Shell(page);
     await stubQbtConfig(page, true);
     await page.route(`${ROUTE_API}/downloads*`, (route) =>
       route.fulfill({
@@ -122,7 +98,6 @@ test.describe('Downloads v2 deep page @downloads @ui @ux3-4-3', () => {
   test('[P2] empty list renders the distinct no-downloads state + 前往探索 (AC6/D5)', async ({
     page,
   }) => {
-    await enableV2Shell(page);
     await stubQbtConfig(page, true);
     await page.route(`${ROUTE_API}/downloads*`, (route) =>
       route.fulfill({
@@ -143,7 +118,6 @@ test.describe('Downloads v2 deep page @downloads @ui @ux3-4-3', () => {
   test('[P2] qBittorrent 503 renders the per-section fail-soft with 重試 + 前往設定 (AC6/D6)', async ({
     page,
   }) => {
-    await enableV2Shell(page);
     await stubQbtConfig(page, true);
     await page.route(`${ROUTE_API}/downloads*`, (route) =>
       route.fulfill({
@@ -175,7 +149,6 @@ test.describe('Downloads v2 deep page @downloads @ui @ux3-4-3', () => {
 
 test.describe('Downloads v2 actions + batch @downloads @ui @ux3-4-3', () => {
   test('[P1] a card 暫停 action POSTs to /downloads/:hash/pause (AC3)', async ({ page }) => {
-    await enableV2Shell(page);
     await stubQbtConfig(page, true);
 
     const pauseHits: string[] = [];
@@ -207,7 +180,6 @@ test.describe('Downloads v2 actions + batch @downloads @ui @ux3-4-3', () => {
   test('[P1] remove opens a confirm dialog; 連同檔案刪除 DELETEs with deleteFiles=true (AC3)', async ({
     page,
   }) => {
-    await enableV2Shell(page);
     await stubQbtConfig(page, true);
 
     const deleteHits: string[] = [];
@@ -246,7 +218,6 @@ test.describe('Downloads v2 actions + batch @downloads @ui @ux3-4-3', () => {
   test('[P2] batch select → 批次暫停 fires one pause request per selected hash (AC5)', async ({
     page,
   }) => {
-    await enableV2Shell(page);
     await stubQbtConfig(page, true);
 
     const pauseHits: string[] = [];
@@ -283,7 +254,6 @@ test.describe('Downloads v2 actions + batch @downloads @ui @ux3-4-3', () => {
   test('[P2] Table view: 表格 toggle → dense sortable table + column sort + row action (ux3-4-4)', async ({
     page,
   }) => {
-    await enableV2Shell(page);
     await stubQbtConfig(page, true);
 
     const listRequests: string[] = [];

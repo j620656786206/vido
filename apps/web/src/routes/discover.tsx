@@ -35,7 +35,6 @@ function toCsvString(value: unknown): string | undefined {
 
 export const Route = createFileRoute('/discover')({
   // ux3-cutover-3: legacy branch removed — DiscoverBrowseV2 is the only render.
-  staticData: { shell: 'v2' },
   validateSearch: (search: Record<string, unknown>): DiscoverSearchParams => ({
     genre: toCsvString(search.genre),
     year_gte: toOptionalNumber(search.year_gte),

@@ -1,8 +1,7 @@
 // Design ref: ux-design.pen Screen I1-D-v2 (fxCVk)
 /**
- * ux3-3-2: the v2 Discover experience — rendered by the /discover route ONLY under
- * the v2 shell (the route branches on `useShellVersion()`; the flag stays read-once
- * in __root, F4). Restyle + refine of the already-instant discover: a persistent
+ * ux3-3-2: the v2 Discover experience — rendered by the /discover route (sole
+ * render since ux3-cutover-3). Restyle + refine of the already-instant discover: a persistent
  * 264px filter rail (DiscoverFilterRail, converges with the 媒體庫 LibraryFilterRail),
  * collapsible (grid reclaims width via MediaGrid auto-fill), a single live total
  * (AC #3), a demoted read/remove chip-bar summary (AC #7), four v2 states (AC #8),
