@@ -17,7 +17,6 @@ import { keepPreviousData, useQuery, type Query } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { tmdbService, type FacetCounts } from '../services/tmdb';
 import { buildFacetCountParams, type DiscoverFilters } from '../lib/discoverFilters';
-import { useShellVersion } from '../components/shell/shellVersion';
 
 const STALE_TIME = 5 * 60 * 1000; // 5 minutes
 const GC_TIME = 30 * 60 * 1000; // 30 minutes
@@ -70,8 +69,8 @@ export function useDiscoverFacetCounts(
   filters: DiscoverFilters,
   options: UseDiscoverFacetCountsOptions = {}
 ): UseDiscoverFacetCountsResult {
-  const { enabled: callerEnabled = false } = options;
-  const enabled = useShellVersion() === 'v2' && callerEnabled;
+  // ux3-cutover-3: shell gate removed — the caller opt-in is the only gate.
+  const { enabled = false } = options;
 
   // Debounce the committed-filter → query-key transition. The string is stable
   // across sort/page changes (buildFacetCountParams strips them), so those never

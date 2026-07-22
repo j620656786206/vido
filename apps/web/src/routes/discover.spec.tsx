@@ -11,29 +11,15 @@ import {
 } from '@tanstack/react-router';
 import React from 'react';
 
-// Stub the v2 experience so the gate test asserts which composition the route
-// picks without rendering the full v2 tree (covered by DiscoverBrowseV2.spec).
+// Stub the v2 experience so the route test asserts composition without
+// rendering the full v2 tree (covered by DiscoverBrowseV2.spec).
 vi.mock('../components/search/DiscoverBrowseV2', () => ({
   DiscoverBrowseV2: () => React.createElement('div', { 'data-testid': 'stub-discover-v2' }),
 }));
-// Keep the legacy branch render network-free.
-vi.mock('../hooks/useDiscoverResults', () => ({
-  useDiscoverResults: () => ({
-    moviesQuery: { data: undefined },
-    tvQuery: { data: undefined },
-    isLoading: false,
-    totalResults: 0,
-  }),
-}));
-vi.mock('../hooks/useFilterPresets', () => ({
-  useFilterPresets: () => ({ data: [] }),
-  useDeleteFilterPreset: () => ({ mutateAsync: vi.fn(), isPending: false }),
-}));
 
 import { Route as DiscoverRoute } from './discover';
-import { ShellVersionProvider } from '../components/shell/shellVersion';
 
-function renderDiscover(shell: 'legacy' | 'v2' = 'legacy') {
+function renderDiscover() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const rootRoute = createRootRoute({
     component: () => React.createElement(Outlet),
@@ -53,24 +39,16 @@ function renderDiscover(shell: 'legacy' | 'v2' = 'legacy') {
     { client: queryClient },
     React.createElement(RouterProvider, { router } as never)
   );
-  return render(
-    shell === 'v2' ? React.createElement(ShellVersionProvider, { value: 'v2' }, tree) : tree
-  );
+  return render(tree);
 }
 
-describe('routes/discover (shell-version gate — ux3-3-2 AC #1)', () => {
+// ux3-cutover-3: the shell gate is gone — DiscoverBrowseV2 is the route's only render.
+describe('routes/discover (ux3-cutover-3)', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('v2 shell renders the persistent-rail Discover v2', async () => {
-    renderDiscover('v2');
+  it('renders Discover v2 unconditionally', async () => {
+    renderDiscover();
     expect(await screen.findByTestId('stub-discover-v2')).toBeInTheDocument();
-    // The legacy sidebar layout is gone under the v2 shell.
     expect(screen.queryByTestId('filter-sidebar')).toBeNull();
-  });
-
-  it('legacy shell (default) renders the byte-unchanged legacy discover, not v2', async () => {
-    renderDiscover('legacy');
-    expect(await screen.findByTestId('filter-sidebar')).toBeInTheDocument();
-    expect(screen.queryByTestId('stub-discover-v2')).toBeNull();
   });
 });

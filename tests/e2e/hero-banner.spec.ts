@@ -219,10 +219,9 @@ test.describe('HeroBanner Display @ui @hero-banner @story-10-2', () => {
 
     await page.goto('/');
 
-    // Homepage root still mounts; banner section and skeleton are both absent.
-    // Story 10-5 replaced the dashboard-layout grid with the homepage-root
-    // vertical flex stack.
-    await expect(page.getByTestId('homepage-root')).toBeVisible();
+    // ux3-cutover-3: home root is the v2 composition now; the banner section
+    // and skeleton are both absent when trending is empty.
+    await expect(page.getByTestId('home-v2-root')).toBeVisible();
     await expect(page.getByTestId('hero-banner')).toHaveCount(0);
     await expect(page.getByTestId('hero-banner-skeleton')).toHaveCount(0);
   });
@@ -238,9 +237,9 @@ test.describe('HeroBanner Display @ui @hero-banner @story-10-2', () => {
 
     await page.goto('/');
 
-    // Homepage still renders independently (AC5 graceful degradation); Story
-    // 10-5 swapped `dashboard-layout` for `homepage-root`.
-    await expect(page.getByTestId('homepage-root')).toBeVisible();
+    // Homepage still renders independently (AC5 graceful degradation) under
+    // the v2 composition (ux3-cutover-3).
+    await expect(page.getByTestId('home-v2-root')).toBeVisible();
     await expect(page.getByTestId('hero-banner')).toHaveCount(0);
   });
 

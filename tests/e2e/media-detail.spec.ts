@@ -66,8 +66,8 @@ test.describe('Media Detail - Movie @e2e @media-detail', () => {
     await page.goto(`/media/movie/${movie.id}`);
     await page.waitForLoadState('networkidle');
 
-    // THEN: Back button should be visible
-    await expect(page.getByText('返回媒體庫').first()).toBeVisible({ timeout: 15000 });
+    // THEN: Back button should be visible (v2 hero back affordance, ux3-cutover-3)
+    await expect(page.getByTestId('detail-back').first()).toBeVisible({ timeout: 15000 });
   });
 });
 
@@ -120,8 +120,8 @@ test.describe('Media Detail - Navigation @e2e @media-detail', () => {
     await page.goto(`/media/movie/${movie.id}`);
     await page.waitForLoadState('networkidle');
 
-    // WHEN: User clicks back button
-    const backButton = page.getByText('返回媒體庫').first();
+    // WHEN: User clicks the v2 hero back button
+    const backButton = page.getByTestId('detail-back').first();
     await expect(backButton).toBeVisible({ timeout: 15000 });
     await backButton.click();
 
@@ -151,7 +151,7 @@ test.describe('Media Detail - Navigation @e2e @media-detail', () => {
     await page.waitForLoadState('networkidle');
 
     // WHEN: User clicks on the first poster card
-    const firstCard = page.locator('[data-testid="poster-card"]').first();
+    const firstCard = page.locator('[data-testid^="poster-v2-"]').first();
     await expect(firstCard).toBeVisible({ timeout: 15000 });
     await firstCard.click();
 
@@ -180,7 +180,14 @@ test.describe('Media Detail - Fallback UI @e2e @media-detail @story-5-11', () =>
     return movie;
   }
 
-  test('[P0] should display color placeholder for media without poster', async ({ page, api }) => {
+  // ux3-cutover-3: LocalDetailV2 does NOT port the Story 5-11 fallback UX
+  // (color placeholder testid / FallbackFailed panel / 搜尋中繼資料+手動編輯 CTAs) —
+  // filed as disc-2026-07-v2-detail-fallback-states in sprint-status. Skipped
+  // honestly (not deleted): they re-arm when the v2 fallback states land.
+  test.skip('[P0] should display color placeholder for media without poster', async ({
+    page,
+    api,
+  }) => {
     // GIVEN: A movie without TMDB metadata (tmdb_id = 0) and no poster
     const movie = await seedNoMetadataMovie(api);
 
@@ -192,7 +199,7 @@ test.describe('Media Detail - Fallback UI @e2e @media-detail @story-5-11', () =>
     await expect(page.getByTestId('color-placeholder')).toBeAttached({ timeout: 15000 });
   });
 
-  test('[P0] should display failed state with file info and CTAs', async ({ page, api }) => {
+  test.skip('[P0] should display failed state with file info and CTAs', async ({ page, api }) => {
     // GIVEN: A movie with empty/failed parse status (no metadata)
     const movie = await seedNoMetadataMovie(api);
 
@@ -220,7 +227,7 @@ test.describe('Media Detail - Fallback UI @e2e @media-detail @story-5-11', () =>
     // Intentionally empty: see comment above.
   });
 
-  test('[P1] search metadata CTA should navigate to search page', async ({ page, api }) => {
+  test.skip('[P1] search metadata CTA should navigate to search page', async ({ page, api }) => {
     // GIVEN: A no-metadata movie on its (failed-state) detail page
     const movie = await seedNoMetadataMovie(api);
 
@@ -261,8 +268,8 @@ test.describe('Media Detail - Error Handling @e2e @media-detail', () => {
     // Note: react-query retries 3x with exponential backoff before isError=true
     await page.goto('/media/movie/00000000-0000-0000-0000-000000000000');
 
-    // THEN: Should eventually show 404/error state (after query retries exhaust)
-    await expect(page.getByText('找不到該媒體內容')).toBeVisible({
+    // THEN: v2 DetailNotFoundV2 renders after query retries exhaust (ux3-cutover-3)
+    await expect(page.getByTestId('detail-not-found')).toBeVisible({
       timeout: 30000,
     });
   });

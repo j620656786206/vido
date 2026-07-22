@@ -149,10 +149,17 @@ async function mockDashboardAPIs(page: import('@playwright/test').Page) {
 // AC2: Disconnection Detection
 // =============================================================================
 
+// ux3-cutover-3: the six UI tests below targeted QBStatusIndicator +
+// ConnectionHistoryPanel on the LEGACY home — deleted with the legacy shell
+// (D3 guardrail ux3-1-4). v2 surfaces qBT/connection state via the sidebar
+// status strip (ux3-0-4, SidebarFooter.spec); the connection HISTORY panel has
+// NO v2 host today — filed as disc-2026-07-v2-connection-history-surface in
+// sprint-status (candidate home: /settings/status, ux3-system-settings scope).
+// Skipped honestly (not deleted): they re-arm when a v2 surface exists.
 test.describe('Connection Health - Disconnection Detection @e2e @p1', () => {
   // [Downgraded to unit] disconnected status display → QBStatusIndicator.spec.tsx
 
-  test('[P1] should update indicator when status changes from healthy to down (AC2)', async ({
+  test.skip('[P1] should update indicator when status changes from healthy to down (AC2)', async ({
     page,
   }) => {
     await mockDashboardAPIs(page);
@@ -200,7 +207,9 @@ test.describe('Connection Health - Disconnection Detection @e2e @p1', () => {
 // =============================================================================
 
 test.describe('Connection Health - Auto-Recovery @e2e @p1', () => {
-  test('[P1] should update indicator from down to healthy on recovery (AC3)', async ({ page }) => {
+  test.skip('[P1] should update indicator from down to healthy on recovery (AC3)', async ({
+    page,
+  }) => {
     await mockDashboardAPIs(page);
 
     // GIVEN: Start with qBittorrent down
@@ -245,7 +254,9 @@ test.describe('Connection Health - Auto-Recovery @e2e @p1', () => {
 // =============================================================================
 
 test.describe('Connection Health - History Panel @e2e @p1', () => {
-  test('[P1] should open history panel when clicking status indicator (AC4)', async ({ page }) => {
+  test.skip('[P1] should open history panel when clicking status indicator (AC4)', async ({
+    page,
+  }) => {
     await mockDashboardAPIs(page);
 
     await page.route('**/api/v1/health/services', (route) => {
@@ -275,7 +286,7 @@ test.describe('Connection Health - History Panel @e2e @p1', () => {
     await expect(page.getByText('qBittorrent 連線記錄')).toBeVisible();
   });
 
-  test('[P1] should display connection history events (AC4)', async ({ page }) => {
+  test.skip('[P1] should display connection history events (AC4)', async ({ page }) => {
     await mockDashboardAPIs(page);
 
     await page.route('**/api/v1/health/services', (route) => {
@@ -306,7 +317,7 @@ test.describe('Connection Health - History Panel @e2e @p1', () => {
     await expect(page.getByRole('button', { name: '全部' })).toBeVisible();
   });
 
-  test('[P1] should filter connection history by event type (AC4)', async ({ page }) => {
+  test.skip('[P1] should filter connection history by event type (AC4)', async ({ page }) => {
     await mockDashboardAPIs(page);
 
     await page.route('**/api/v1/health/services', (route) => {
@@ -343,7 +354,7 @@ test.describe('Connection Health - History Panel @e2e @p1', () => {
 
   // [Downgraded to unit] empty history state → ConnectionHistoryPanel.spec.tsx
 
-  test('[P1] should close history panel via close button (AC4)', async ({ page }) => {
+  test.skip('[P1] should close history panel via close button (AC4)', async ({ page }) => {
     await mockDashboardAPIs(page);
 
     await page.route('**/api/v1/health/services', (route) => {

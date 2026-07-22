@@ -166,10 +166,12 @@ test.describe('Discover Filters — Desktop @e2e @discover', () => {
     await expect.poll(() => requested.some((u) => /[?&]genre=16(&|$)/.test(u))).toBe(true);
   });
 
-  test('[P0] browser back restores the previous filter state from the URL (AC #4)', async ({
+  test('[P0] browser back skips intermediate filter toggles (replace semantics, ux3-3-2 AC #5)', async ({
     page,
   }) => {
-    // GIVEN: a genre filter then a rating filter are applied in sequence
+    // ux3-cutover-3: filter toggles REPLACE the history entry unconditionally —
+    // composing genre → rating must not push half-built combos onto the stack,
+    // so Back leaves the pre-filter entry instead of stepping through toggles.
     await stubDiscover(page);
     await page.goto('/discover');
     await page.getByTestId('filter-genre-16').click();
@@ -182,10 +184,10 @@ test.describe('Discover Filters — Desktop @e2e @discover', () => {
     // WHEN: the user presses the browser back button
     await page.goBack();
 
-    // THEN: the URL + chips return to the genre-only state (rating dropped)
-    await expect(page).toHaveURL(GENRE_16);
+    // THEN: back does NOT land on the intermediate genre-only state — it
+    // returns to the pre-filter /discover entry.
     await expect(page).not.toHaveURL(/rating_gte/);
-    await expect(page.getByTestId('filter-chip-genre-16')).toBeVisible();
+    await expect(page).not.toHaveURL(/genre=16/);
     await expect(page.getByTestId('filter-chip-rating')).toHaveCount(0);
   });
 

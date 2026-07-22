@@ -364,13 +364,13 @@ test.describe('Empty Library 3-State Classifier @ui @library @bugfix-10-5', () =
     await expect(page.getByTestId('empty-ready-for-scan')).toHaveCount(0);
   });
 
-  test('[P1] Search-active scope — typing a query renders EmptySearchResults, not the 3-state classifier', async ({
+  test('[P1] ?q= deep link — v2 library ignores the legacy in-page query; the classifier still owns the empty state', async ({
     page,
   }) => {
-    // GIVEN: all 3 classifier conditions would resolve to Case A (qBT off
-    // + no libs + no items) — but search is active. The classifier branch
-    // must NOT fire; EmptySearchResults owns the search-empty UX.
-    // (/library/search* → empty results is provided by the baseline helper.)
+    // ux3-cutover-3: the legacy in-library search bar (isSearchActive +
+    // EmptySearchResults) was deleted with LibraryPage — search now lives on
+    // the /search surface. ?q= stays URL-valid for old deep links but must not
+    // break the 3-state classifier.
     await page.route(`${ROUTE_API}/settings/qbittorrent`, (route: Route) =>
       route.fulfill(jsonOk(qbtDisconnected))
     );
@@ -379,13 +379,9 @@ test.describe('Empty Library 3-State Classifier @ui @library @bugfix-10-5', () =
     );
     await stubLibraryRouteBaseline(page);
 
-    // WHEN: navigate with ?q=xyz (>= 2 chars triggers isSearchActive)
     await page.goto('/library?q=xyz');
 
-    // THEN: search-empty UX wins; classifier branch is bypassed
-    await expect(page.getByTestId('empty-search-results')).toBeVisible();
-    await expect(page.getByTestId('empty-no-qbt')).toHaveCount(0);
-    await expect(page.getByTestId('empty-no-folder')).toHaveCount(0);
-    await expect(page.getByTestId('empty-ready-for-scan')).toHaveCount(0);
+    await expect(page.getByTestId('empty-no-qbt')).toBeVisible();
+    await expect(page.getByTestId('empty-search-results')).toHaveCount(0);
   });
 });

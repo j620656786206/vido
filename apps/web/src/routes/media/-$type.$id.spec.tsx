@@ -16,6 +16,14 @@ vi.mock('@tanstack/react-router', () => ({
 vi.mock('../../hooks/useOwnedMedia', () => ({
   useOwnedMedia: vi.fn(),
 }));
+// ux3-cutover-3: TMDbDetailV2 pulls the Epic-13 request affordance — isolate it
+// (RequestButton has its own spec).
+vi.mock('../../hooks/useRequestedMedia', () => ({
+  useRequestedMedia: () => ({ isRequested: () => false, isLoading: false }),
+}));
+vi.mock('../../components/requests/RequestButton', () => ({
+  RequestButton: () => null,
+}));
 // CR M3 — mock libraryService so AC #1 negative assertion ("the route MUST
 // NOT call /api/v1/movies/:id or /api/v1/series/:id") can be enforced at the
 // unit-test level instead of relying on a structural import argument.
@@ -44,7 +52,8 @@ import {
 } from '../../hooks/useMediaDetails';
 import { tmdbService } from '../../services/tmdb';
 import type { MovieDetails, TVShowDetails, Credits } from '../../types/tmdb';
-import { classifyId, TMDbDetailView } from './$type.$id';
+import { classifyId } from './$type.$id';
+import { TMDbDetailV2 } from '../../components/media/TMDbDetailV2';
 import { useOwnedMedia, type OwnedMediaState } from '../../hooks/useOwnedMedia';
 import { libraryService } from '../../services/libraryService';
 
@@ -60,6 +69,9 @@ vi.mock('../../services/tmdb', () => ({
     // nothing) for these fixtures rather than throwing on an undefined method.
     getMovieVideos: vi.fn().mockResolvedValue({ id: 0, results: [] }),
     getTVShowVideos: vi.fn().mockResolvedValue({ id: 0, results: [] }),
+    // ux3-cutover-3 — TMDbDetailV2 renders recommendations + watch providers.
+    getRecommendations: vi.fn().mockResolvedValue({ results: [] }),
+    getWatchProviders: vi.fn().mockResolvedValue({ results: {} }),
   },
 }));
 
@@ -230,7 +242,7 @@ function renderTMDbView(
   const queryClient = createQueryClient();
   return render(
     <QueryClientProvider client={queryClient}>
-      <TMDbDetailView type={type} tmdbId={tmdbId} />
+      <TMDbDetailV2 type={type} tmdbId={tmdbId} />
     </QueryClientProvider>
   );
 }
@@ -452,7 +464,7 @@ describe('Media Detail Route', () => {
 // Verifies that a poster click from the homepage (TMDb numeric ID) renders a
 // TMDb-backed detail view, NOT a 404.
 // =============================================================================
-describe('TMDbDetailView (bugfix-10-1 AC #1, #3, #4, #5, #6)', () => {
+describe('TMDbDetailV2 (bugfix-10-1 ACs ported from the deleted TMDbDetailView — ux3-cutover-3)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(tmdbService.getMovieDetails).mockResolvedValue(mockMovieDetails);
@@ -469,7 +481,7 @@ describe('TMDbDetailView (bugfix-10-1 AC #1, #3, #4, #5, #6)', () => {
     it('does NOT call libraryService.getMovieById for movie type', async () => {
       renderTMDbView('movie', 123);
       await waitFor(() => {
-        expect(screen.getByTestId('tmdb-detail-view')).toBeInTheDocument();
+        expect(screen.getByTestId('tmdb-detail-v2')).toBeInTheDocument();
       });
       expect(libraryService.getMovieById).not.toHaveBeenCalled();
       expect(libraryService.getSeriesById).not.toHaveBeenCalled();
@@ -478,7 +490,7 @@ describe('TMDbDetailView (bugfix-10-1 AC #1, #3, #4, #5, #6)', () => {
     it('does NOT call libraryService.getSeriesById for tv type', async () => {
       renderTMDbView('tv', 456);
       await waitFor(() => {
-        expect(screen.getByTestId('tmdb-detail-view')).toBeInTheDocument();
+        expect(screen.getByTestId('tmdb-detail-v2')).toBeInTheDocument();
       });
       expect(libraryService.getSeriesById).not.toHaveBeenCalled();
       expect(libraryService.getMovieById).not.toHaveBeenCalled();
@@ -491,7 +503,7 @@ describe('TMDbDetailView (bugfix-10-1 AC #1, #3, #4, #5, #6)', () => {
     it('invokes navigate({ to: "/library" }) on click', async () => {
       renderTMDbView('movie', 123);
       await waitFor(() => {
-        expect(screen.getByTestId('tmdb-detail-view')).toBeInTheDocument();
+        expect(screen.getByTestId('tmdb-detail-v2')).toBeInTheDocument();
       });
       fireEvent.click(screen.getByRole('button', { name: /返回媒體庫/ }));
       expect(mockNavigate).toHaveBeenCalledWith({ to: '/library' });
@@ -503,7 +515,7 @@ describe('TMDbDetailView (bugfix-10-1 AC #1, #3, #4, #5, #6)', () => {
       renderTMDbView('movie', 123);
 
       await waitFor(() => {
-        expect(screen.getByTestId('tmdb-detail-view')).toBeInTheDocument();
+        expect(screen.getByTestId('tmdb-detail-v2')).toBeInTheDocument();
       });
       expect(screen.getByRole('heading', { name: '測試電影' })).toBeInTheDocument();
       expect(tmdbService.getMovieDetails).toHaveBeenCalledWith(123);
@@ -513,7 +525,7 @@ describe('TMDbDetailView (bugfix-10-1 AC #1, #3, #4, #5, #6)', () => {
       renderTMDbView('tv', 456);
 
       await waitFor(() => {
-        expect(screen.getByTestId('tmdb-detail-view')).toBeInTheDocument();
+        expect(screen.getByTestId('tmdb-detail-v2')).toBeInTheDocument();
       });
       expect(screen.getByRole('heading', { name: '測試影集' })).toBeInTheDocument();
       expect(tmdbService.getTVShowDetails).toHaveBeenCalledWith(456);
@@ -534,7 +546,7 @@ describe('TMDbDetailView (bugfix-10-1 AC #1, #3, #4, #5, #6)', () => {
       renderTMDbView('movie', 123);
 
       await waitFor(() => {
-        expect(screen.getByTestId('tmdb-detail-view')).toBeInTheDocument();
+        expect(screen.getByTestId('tmdb-detail-v2')).toBeInTheDocument();
       });
       expect(screen.getByText('2024')).toBeInTheDocument();
       expect(screen.getByText(/8\.5/)).toBeInTheDocument();
@@ -550,54 +562,54 @@ describe('TMDbDetailView (bugfix-10-1 AC #1, #3, #4, #5, #6)', () => {
     });
   });
 
-  describe('AC #5 — error path falls through to NotFoundComponent', () => {
-    it('renders 404 NotFound when TMDb fetch errors (movie)', async () => {
+  describe('AC #5 — error path renders the v2 not-found state', () => {
+    it('renders DetailNotFoundV2 when TMDb fetch errors (movie)', async () => {
       vi.mocked(tmdbService.getMovieDetails).mockRejectedValueOnce(new Error('TMDB_TIMEOUT'));
       renderTMDbView('movie', 999);
 
       await waitFor(() => {
-        expect(screen.getByText('404')).toBeInTheDocument();
+        expect(screen.getByTestId('detail-not-found')).toBeInTheDocument();
       });
-      expect(screen.getByText('找不到該媒體內容')).toBeInTheDocument();
-      expect(screen.queryByTestId('tmdb-detail-view')).not.toBeInTheDocument();
+      expect(screen.getByText('找不到這部影片')).toBeInTheDocument();
+      expect(screen.queryByTestId('tmdb-detail-v2')).not.toBeInTheDocument();
     });
 
-    it('renders 404 NotFound when TMDb fetch errors (tv)', async () => {
+    it('renders DetailNotFoundV2 when TMDb fetch errors (tv)', async () => {
       vi.mocked(tmdbService.getTVShowDetails).mockRejectedValueOnce(new Error('TMDB_TIMEOUT'));
       renderTMDbView('tv', 999);
 
       await waitFor(() => {
-        expect(screen.getByText('404')).toBeInTheDocument();
+        expect(screen.getByTestId('detail-not-found')).toBeInTheDocument();
       });
     });
   });
 
   describe('AC #6 — owned indicator (Story 10-4 read-through)', () => {
-    it('renders the 已在媒體庫 badge when isOwned returns true', async () => {
+    it('renders the 已入庫 badge when isOwned returns true', async () => {
       renderTMDbView('movie', 12345, ownedTrue);
 
       await waitFor(() => {
-        expect(screen.getByTestId('tmdb-detail-owned-badge')).toBeInTheDocument();
+        expect(screen.getByTestId('detail-status-badge')).toBeInTheDocument();
       });
-      expect(screen.getByTestId('tmdb-detail-owned-badge')).toHaveTextContent('已在媒體庫');
+      expect(screen.getByTestId('detail-status-badge')).toHaveTextContent('已入庫');
     });
 
     it('hides the owned badge when isOwned returns false', async () => {
       renderTMDbView('movie', 123, ownedFalse);
 
       await waitFor(() => {
-        expect(screen.getByTestId('tmdb-detail-view')).toBeInTheDocument();
+        expect(screen.getByTestId('tmdb-detail-v2')).toBeInTheDocument();
       });
-      expect(screen.queryByTestId('tmdb-detail-owned-badge')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('detail-status-badge')).not.toBeInTheDocument();
     });
 
     it('hides the owned badge while ownership query is loading', async () => {
       renderTMDbView('movie', 12345, ownedLoading);
 
       await waitFor(() => {
-        expect(screen.getByTestId('tmdb-detail-view')).toBeInTheDocument();
+        expect(screen.getByTestId('tmdb-detail-v2')).toBeInTheDocument();
       });
-      expect(screen.queryByTestId('tmdb-detail-owned-badge')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('detail-status-badge')).not.toBeInTheDocument();
     });
   });
 
@@ -606,7 +618,7 @@ describe('TMDbDetailView (bugfix-10-1 AC #1, #3, #4, #5, #6)', () => {
       renderTMDbView('movie', 123);
 
       await waitFor(() => {
-        expect(screen.getByTestId('tmdb-detail-view')).toBeInTheDocument();
+        expect(screen.getByTestId('tmdb-detail-v2')).toBeInTheDocument();
       });
       expect(screen.queryByRole('button', { name: /編輯|edit/i })).not.toBeInTheDocument();
       expect(screen.queryByTestId('edit-metadata-button')).not.toBeInTheDocument();

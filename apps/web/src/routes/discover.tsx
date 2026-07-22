@@ -1,19 +1,8 @@
 // Design ref: ux-design.pen Screen AS-1 Advanced Filter Chips Desktop (rsAxf)
-import { useState } from 'react';
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { SlidersHorizontal } from 'lucide-react';
-import { MediaTypeTabs, type MediaTypeFilter } from '../components/search/MediaTypeTabs';
-import { FilterChipBar } from '../components/search/FilterChipBar';
-import { FilterPanel } from '../components/search/FilterPanel';
-import { FilterBottomSheet } from '../components/search/FilterBottomSheet';
-import { PresetChips } from '../components/search/PresetChips';
-import { SavePresetDialog } from '../components/search/SavePresetDialog';
-import { SearchResults } from '../components/search/SearchResults';
+import { createFileRoute } from '@tanstack/react-router';
+import type { MediaTypeFilter } from '../components/search/MediaTypeTabs';
 import { DiscoverBrowseV2 } from '../components/search/DiscoverBrowseV2';
-import { useShellVersion } from '../components/shell/shellVersion';
-import { useFilterState } from '../hooks/useFilterState';
-import { useDiscoverResults } from '../hooks/useDiscoverResults';
-import { hasActiveFilters, type DiscoverFilters, type SortKey } from '../lib/discoverFilters';
+import type { SortKey } from '../lib/discoverFilters';
 
 interface DiscoverSearchParams {
   genre?: string;
@@ -45,10 +34,7 @@ function toCsvString(value: unknown): string | undefined {
 }
 
 export const Route = createFileRoute('/discover')({
-  // ux3-3-2 AC #1: migrated route — AppShellV2 renders it full-bleed under the v2
-  // shell (LegacyContentContainer opt-out). The flag stays read-once in __root (F4);
-  // the component branches on useShellVersion() so the legacy render is byte-unchanged
-  // when the flag is OFF.
+  // ux3-cutover-3: legacy branch removed — DiscoverBrowseV2 is the only render.
   staticData: { shell: 'v2' },
   validateSearch: (search: Record<string, unknown>): DiscoverSearchParams => ({
     genre: toCsvString(search.genre),
@@ -68,107 +54,5 @@ export const Route = createFileRoute('/discover')({
     // as a lone JSON-parsed number (never all-digits).
     view: search.view === 'requests' ? 'requests' : undefined,
   }),
-  component: DiscoverPage,
+  component: DiscoverBrowseV2,
 });
-
-// ux3-3-2 AC #1: v2 shell → the new persistent-rail experience; legacy shell →
-// the current JSX byte-unchanged (mirrors the ux3-1-2 home / ux3-2-3 activity gate).
-function DiscoverPage() {
-  const shell = useShellVersion();
-  return shell === 'v2' ? <DiscoverBrowseV2 /> : <LegacyDiscover />;
-}
-
-function LegacyDiscover() {
-  const { type, page } = Route.useSearch();
-  const navigate = useNavigate({ from: Route.fullPath });
-  const { filters, setFilters, clearAll } = useFilterState();
-
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
-
-  const currentType: MediaTypeFilter = type ?? 'all';
-  const currentPage = page ?? 1;
-
-  const { moviesQuery, tvQuery, isLoading } = useDiscoverResults(filters, currentType, currentPage);
-
-  const handleTypeChange = (newType: MediaTypeFilter) => {
-    navigate({ search: (prev) => ({ ...prev, type: newType, page: 1 }) });
-  };
-
-  const handlePageChange = (newPage: number) => {
-    navigate({ search: (prev) => ({ ...prev, page: newPage }) });
-  };
-
-  const handleFilterChange = (next: DiscoverFilters) => setFilters(next);
-
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="mb-4 text-2xl font-bold text-white">探索</h1>
-
-      {/* Tabs + mobile filter trigger */}
-      <div className="mb-6 flex items-center justify-between gap-3">
-        <MediaTypeTabs
-          activeType={currentType}
-          onTypeChange={handleTypeChange}
-          movieCount={moviesQuery.data?.totalResults}
-          tvCount={tvQuery.data?.totalResults}
-        />
-        <button
-          onClick={() => setSheetOpen(true)}
-          data-testid="open-filter-sheet"
-          aria-label="開啟篩選"
-          className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-tertiary)] px-3 py-1.5 text-sm text-[var(--text-secondary)] hover:text-white lg:hidden"
-        >
-          <SlidersHorizontal className="h-4 w-4" />
-          篩選
-        </button>
-      </div>
-
-      <div className="flex gap-6">
-        {/* Desktop sidebar — instant-apply filters (AC #5) */}
-        <aside className="hidden w-64 shrink-0 lg:block" data-testid="filter-sidebar">
-          <h2 className="mb-4 text-sm font-semibold text-white">進階篩選</h2>
-          <FilterPanel filters={filters} onChange={handleFilterChange} />
-        </aside>
-
-        {/* Results */}
-        <div className="min-w-0 flex-1">
-          {/* Saved filter presets — quick-access row (Story 11-4 AC #2, #3) */}
-          <PresetChips onApplyPreset={setFilters} className="mb-3" />
-
-          {/* Persistent chip bar (AC #1-3) + save-preset trigger (11-4 AC #1) */}
-          <FilterChipBar
-            filters={filters}
-            onChange={handleFilterChange}
-            onClearAll={clearAll}
-            onSavePreset={hasActiveFilters(filters) ? () => setSaveDialogOpen(true) : undefined}
-            className="mb-4"
-          />
-
-          <SearchResults
-            movies={moviesQuery.data}
-            tvShows={tvQuery.data}
-            isLoading={isLoading}
-            type={currentType}
-            currentPage={currentPage}
-            onPageChange={handlePageChange}
-          />
-        </div>
-      </div>
-
-      {/* Mobile bottom sheet (AC #6) */}
-      <FilterBottomSheet
-        isOpen={sheetOpen}
-        onClose={() => setSheetOpen(false)}
-        filters={filters}
-        onApply={handleFilterChange}
-        mediaType={currentType}
-      />
-
-      {/* Save current filters as a preset (Story 11-4 AC #1) */}
-      {saveDialogOpen && (
-        <SavePresetDialog filters={filters} onClose={() => setSaveDialogOpen(false)} />
-      )}
-    </div>
-  );
-}
