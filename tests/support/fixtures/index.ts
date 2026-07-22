@@ -37,9 +37,8 @@ type TestFixtures = {
  * - request: Playwright APIRequestContext
  * - api: Custom API helpers for Vido backend
  */
-// ux3-cutover-3: the cutover-1 legacy-pin page fixture is deleted — the suite
-// now runs against the real v2 shell (new_shell_enabled is forced ON by the
-// backend, and the migrated routes no longer carry a legacy branch).
+// ux3-cutover-4: the legacy shell and the `new_shell_enabled` flag are gone —
+// the suite runs against the sole (v2) shell unconditionally.
 export const test = base.extend<TestFixtures>({
   api: async ({ request }, use) => {
     const helpers = apiHelpers(request);

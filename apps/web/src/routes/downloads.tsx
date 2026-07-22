@@ -13,7 +13,6 @@ const PAGE_SIZE_OPTIONS = [50, 100, 200, 500] as const;
 export const Route = createFileRoute('/downloads')({
   // ux3-cutover-3: legacy branch removed — DownloadsBrowseV2 is the only render
   // (the 下載 bottom-4 tab is wired in navModel.ts).
-  staticData: { shell: 'v2' },
   validateSearch: (search: Record<string, unknown>): DownloadsSearch => {
     const validFilters = ['all', 'downloading', 'paused', 'completed', 'seeding', 'error'];
     const filter = validFilters.includes(search.filter as string)

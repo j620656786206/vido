@@ -23,9 +23,9 @@
  *     flags input modality as keyboard so the subsequent focus inside the state div
  *     triggers `:focus-visible` rules. Programmatic `locator.focus()` did not.
  *   - **Fix B (router-state-dependent fixtures):** the gallery route wraps fixtures
- *     declaring `routePath` (e.g. `shell-tab-navigation` → `/library`) in a nested
- *     memory `RouterProvider`. `useRouterState()` inside the component reports the
- *     stub path. No spec change needed — this is gallery-side.
+ *     declaring `routePath` (e.g. `dashboard-recent-media-panel` → `/library`) in a
+ *     nested memory `RouterProvider`. `useRouterState()` inside the component reports
+ *     the stub path. No spec change needed — this is gallery-side.
  *   - **Fix C (interactive `open` state):** fixtures setting `openTrigger` get an
  *     extra `<div data-gallery-state="open" data-gallery-open-trigger="<selector>">`
  *     block; the spec clicks that selector inside the state div before screenshotting,

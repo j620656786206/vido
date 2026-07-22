@@ -58,7 +58,6 @@ import { EmptySearchResults } from '../../components/library/EmptySearchResults'
 import { GenreSelector } from '../../components/metadata-editor/GenreSelector';
 import { SearchBar } from '../../components/search/SearchBar';
 import { MediaTypeTabs } from '../../components/search/MediaTypeTabs';
-import { TabNavigation } from '../../components/shell/TabNavigation';
 import { ExploreBlockSkeleton } from '../../components/homepage/ExploreBlockSkeleton';
 
 // ===== 19-4b Task 2 P-bucket additions (63 components, 17 subfolders) =====
@@ -274,7 +273,6 @@ export type GalleryState = 'default' | 'hover' | 'focus' | 'open';
 
 /**
  * Memory-router pathnames a fixture can pin via `routePath` (19-4b Task 0 Fix B).
- * Mirrors `apps/web/src/components/shell/TabNavigation.tsx` `TABS.matchPaths`.
  */
 export type StubRoutePath = '/library' | '/downloads' | '/pending' | '/settings';
 
@@ -302,10 +300,9 @@ export interface GalleryFixture {
   openTrigger?: string;
   /**
    * If set, the fixture renders inside a nested memory `RouterProvider` pinned to this path
-   * (`/library` etc.). Used by components whose render depends on `useRouterState()` —
-   * notably `shell/TabNavigation` for its active-tab state. The gallery route `/test/gallery`
-   * matches none of `TabNavigation`'s `TABS.matchPaths`, so without this stub the
-   * active-tab state never paints. Added 19-4b Task 0 Fix B.
+   * (`/library` etc.). Used by components whose render depends on router state — e.g. the
+   * dashboard fixtures rendering TanStack `<Link>`s that must match a route. Added 19-4b
+   * Task 0 Fix B.
    */
   routePath?: StubRoutePath;
   /**
@@ -587,19 +584,7 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     width: 400,
   },
 
-  // ----- shell/ -----
-  {
-    id: 'shell-tab-navigation',
-    label: 'shell/TabNavigation',
-    component: TabNavigation as ComponentType<Record<string, unknown>>,
-    // 19-4b Task 0 Fix B: TabNavigation reads `useRouterState()` to decide the active tab.
-    // The gallery route `/test/gallery` matches none of `TABS.matchPaths`, so without a
-    // stub the active-tab state never paints. `routePath` wraps this fixture in a nested
-    // memory `RouterProvider` pinned to `/library` → the `TabActive (TboA7)` state paints.
-    penNode: 'TboA7', // + j98G4 (TabActive / TabInactive)
-    width: 480,
-    routePath: '/library',
-  },
+  // ----- shell/ ----- (shell-tab-navigation deleted with the legacy chassis, ux3-cutover-4)
 
   // ----- homepage/ -----
   {

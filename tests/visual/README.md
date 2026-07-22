@@ -178,9 +178,8 @@ and JSDoc is the `GalleryFixture` interface in `-gallery.fixtures.tsx` (search f
 
 - **`routePath?: '/library' | '/downloads' | '/pending' | '/settings'`** (Task 0b). Renders the
   fixture inside a nested memory `RouterProvider` (`createMemoryHistory({ initialEntries: [routePath] })`)
-  so `useRouterState()` consumers (e.g. `shell/TabNavigation` highlighting the active tab) paint
-  the right state. The four allowed pathnames match `TabNavigation`'s `TABS.matchPaths`. Reference
-  fixture: `shell-tab-navigation` (`routePath: '/library'` → `媒體庫` tab styled active).
+  so router-state consumers (`useRouterState()`, TanStack `<Link>` matching) paint the right
+  state. Reference fixture: `dashboard-recent-media-panel` (`routePath: '/library'`).
 
 - **`seedQueries?: ReadonlyArray<{ queryKey: readonly unknown[]; data: unknown }>`** (Task 3 Step A).
   Pre-populates the React-Query cache before the component mounts, so `useQuery()`-driven

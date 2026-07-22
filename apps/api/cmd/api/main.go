@@ -151,20 +151,6 @@ func main() {
 	availabilityService := services.NewAvailabilityService(repos.Movies, repos.Series) // Story 10-4
 	settingsService := services.NewSettingsServiceWithSecrets(repos.Settings, secretsService)
 
-	// ux3-cutover-1 — v2 shell cutover: `new_shell_enabled` is forced ON at startup.
-	// Seed-if-absent could never flip environments that already hold the old `false`
-	// seed (NAS + local DBs), so this seeds AND migrates in one idempotent pass.
-	// POST /settings can still turn it off as an in-session emergency fallback, but
-	// the next restart re-asserts ON. The key and this block are removed together
-	// with the legacy shell in ux3-cutover-4.
-	if on, err := settingsService.GetBool(context.Background(), "new_shell_enabled"); err != nil || !on {
-		if err := settingsService.SetBool(context.Background(), "new_shell_enabled", true); err != nil {
-			slog.Warn("Failed to enable new_shell_enabled flag", "error", err)
-		} else {
-			slog.Info("v2 shell cutover: new_shell_enabled set ON")
-		}
-	}
-
 	setupService := services.NewSetupService(repos.Settings, secretsService)
 	qbittorrentService := services.NewQBittorrentService(repos.Settings, secretsService)
 	downloadService := services.NewDownloadService(qbittorrentService, slog.Default())

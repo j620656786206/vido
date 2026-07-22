@@ -41,7 +41,6 @@ export const Route = createFileRoute('/library')({
     unmatched: search.unmatched === true ? true : undefined,
     subtitleStatus: typeof search.subtitleStatus === 'string' ? search.subtitleStatus : undefined,
   }),
-  staticData: { shell: 'v2' },
   // ux3-0-5: old ?type= deep links → clean type routes (D2). Route-level redirect
   // (never a component redirect, F1); 'all'/absent stays at /library (merged view).
   beforeLoad: ({ search }) => {

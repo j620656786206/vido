@@ -12,7 +12,6 @@ import { fetchTrendingHero, trendingKeys, HERO_BANNER_STALE_TIME_MS } from '../h
 export const Route = createFileRoute('/')({
   // ux3-cutover-3: legacy branch removed — HomeBrowseV2 is the only render.
   component: HomeBrowseV2,
-  staticData: { shell: 'v2' },
   loader: () => {
     void queryClient.prefetchQuery({
       queryKey: trendingKeys.hero('week'),

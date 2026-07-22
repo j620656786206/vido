@@ -39,7 +39,6 @@ export const Route = createFileRoute('/media/$type/$id')({
     };
   },
   notFoundComponent: NotFoundComponent,
-  staticData: { shell: 'v2' },
   component: MediaDetailRoute,
 });
 
