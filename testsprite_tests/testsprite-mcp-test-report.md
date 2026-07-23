@@ -3,6 +3,7 @@
 ---
 
 ## 1️⃣ Document Metadata
+
 - **Project:** vido
 - **Round:** testsprite-v2-round2 — scanner + subtitle + qBittorrent-settings journeys
 - **Dates:** run 2026-07-23; closeout 2026-07-23
@@ -15,12 +16,14 @@
 ## 2️⃣ Requirement Validation Summary
 
 ### qBittorrent Settings Form
+
 - **TC035** Load settings page — ✅ Passed
 - **TC038** Connection test failure shows inline error — ✅ Passed
 - **TC039** Save blocked until successful test — ✅ Passed
 - **TC040** Empty-host validation — ⛔ raw BLOCKED → **re-authored → ✅ Passed (rerun)**. The test mistook the Host **placeholder** (`http://192.168.1.100:8080`) for a value. v2 validation = the 測試連線 button is **disabled** while fields are empty (already covered by TC039). Re-authored to assert the disabled state.
 
 ### Scanner Settings & Manual Scan
+
 - **TC063** Settings page loads — ✅ Passed
 - **TC065** Minimize to pill / expand — ✅ Passed
 - **TC066** Cancel active scan w/ confirm — ✅ Passed
@@ -29,6 +32,7 @@
 - **TC064 / TC067 / TC070** Scan progress card appear / cancel-dismiss / completion — ❌ raw FAILED → **surfaced a REAL product defect** (`bugfix-scan-progress-sse-unwired`): the scan-progress SSE was never opened from the UI trigger, so the card was unreachable in v2. **Fixed this round.** These transient SSE cases are the wrong tool for TestSprite (the seeded scan finishes <100 ms), so they are **migrated to `tests/e2e/scan-progress.spec.ts`** (mocked SSE, deterministic, runs in CI).
 
 ### Subtitle Search Dialog
+
 - **TC071** Open from context menu — ✅ Passed
 - **TC076** Close with Escape — ✅ Passed
 - **TC077** Open from detail panel — ✅ Passed
@@ -42,12 +46,12 @@
 - **Raw first-pass:** 12 / 17 (70.59%).
 - **After closeout:** **14 / 14 in-scope GREEN** (12 first-pass + TC040/TC073 re-authored→rerun) **+ 1 real defect found & FIXED + 3 migrated to Playwright.**
 
-| Requirement | Total | Raw ✅ | Post-closeout | Real defects |
-|---|---|---|---|---|
-| qBittorrent Settings Form | 4 | 3 | 4 ✅ | 0 |
-| Scanner Settings & Manual Scan | 8 | 5 | 5 ✅ + 3 → Playwright | **1 (fixed)** |
-| Subtitle Search Dialog | 5 | 4 | 5 ✅ | 0 |
-| **Total** | **17** | **12** | **14 green + 3 migrated** | **1 fixed** |
+| Requirement                    | Total  | Raw ✅ | Post-closeout             | Real defects  |
+| ------------------------------ | ------ | ------ | ------------------------- | ------------- |
+| qBittorrent Settings Form      | 4      | 3      | 4 ✅                      | 0             |
+| Scanner Settings & Manual Scan | 8      | 5      | 5 ✅ + 3 → Playwright     | **1 (fixed)** |
+| Subtitle Search Dialog         | 5      | 4      | 5 ✅                      | 0             |
+| **Total**                      | **17** | **12** | **14 green + 3 migrated** | **1 fixed**   |
 
 ---
 
