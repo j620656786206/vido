@@ -2318,5 +2318,349 @@
     ],
     "v4_action": "NEW",
     "v4_reason": "testsprite-v2-round1 P0 search journey — catalog had no v2 search case."
+  },
+  {
+    "id": "TC093",
+    "title": "Home loads with own-content row above Explore blocks (D3 ordering)",
+    "category": "Homepage",
+    "priority": "High",
+    "description": "On the Home page the user's own content (最近新增 / 繼續觀看) renders structurally ABOVE the Hero + Explore blocks (D3 ordering law).",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the 最近新增 (Recently Added) own-content row is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the Explore blocks appear BELOW the own-content row"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify poster cards render in the 最近新增 row from the seeded library"
+      }
+    ],
+    "v4_status": "NEW",
+    "v4_reason": "round3 candidate (2026-07-23) — high-priority coverage gap, env-safe (no TMDb/qBT/AI key)",
+    "v4_action": "generate+run in testsprite-v2-round3"
+  },
+  {
+    "id": "TC094",
+    "title": "Clicking a Home poster opens its media detail",
+    "category": "Homepage",
+    "priority": "High",
+    "description": "Verifies navigation from a Home own-content poster to the media detail page.",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Click the first poster card in the 最近新增 row"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the media detail page opens with the title and core metadata"
+      }
+    ],
+    "v4_status": "NEW",
+    "v4_reason": "round3 candidate (2026-07-23) — high-priority coverage gap, env-safe (no TMDb/qBT/AI key)",
+    "v4_action": "generate+run in testsprite-v2-round3"
+  },
+  {
+    "id": "TC095",
+    "title": "Home 繼續觀看 slot is present",
+    "category": "Homepage",
+    "priority": "Medium",
+    "description": "Verifies the reserved 繼續觀看 (Continue Watching) slot renders on Home.",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the 繼續觀看 section/slot is present on the page"
+      }
+    ],
+    "v4_status": "NEW",
+    "v4_reason": "round3 candidate (2026-07-23) — high-priority coverage gap, env-safe (no TMDb/qBT/AI key)",
+    "v4_action": "generate+run in testsprite-v2-round3"
+  },
+  {
+    "id": "TC096",
+    "title": "Home renders Explore blocks below own-content",
+    "category": "Homepage",
+    "priority": "Medium",
+    "description": "Verifies the seeded Explore blocks render on Home beneath the own-content rows.",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify at least one Explore block section is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify Explore blocks are positioned after the own-content rows"
+      }
+    ],
+    "v4_status": "NEW",
+    "v4_reason": "round3 candidate (2026-07-23) — high-priority coverage gap, env-safe (no TMDb/qBT/AI key)",
+    "v4_action": "generate+run in testsprite-v2-round3"
+  },
+  {
+    "id": "TC097",
+    "title": "Enter selection mode and select multiple library items",
+    "category": "Media Library",
+    "priority": "High",
+    "description": "Verifies entering selection mode on /library, selecting multiple items, and the selection toolbar showing the count.",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /library"
+      },
+      {
+        "type": "action",
+        "description": "Click the enter-selection control"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the selection toolbar is visible"
+      },
+      {
+        "type": "action",
+        "description": "Select two poster cards"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the selection count reflects 2 selected items"
+      }
+    ],
+    "v4_status": "NEW",
+    "v4_reason": "round3 candidate (2026-07-23) — high-priority coverage gap, env-safe (no TMDb/qBT/AI key)",
+    "v4_action": "generate+run in testsprite-v2-round3"
+  },
+  {
+    "id": "TC098",
+    "title": "Batch delete selected items with confirmation removes them",
+    "category": "Media Library",
+    "priority": "High",
+    "description": "Verifies batch delete of selected library items via the confirmation dialog updates the list.",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /library"
+      },
+      {
+        "type": "action",
+        "description": "Enter selection mode and select two items"
+      },
+      {
+        "type": "action",
+        "description": "Click the batch 刪除 (delete) action"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a confirmation dialog appears"
+      },
+      {
+        "type": "action",
+        "description": "Confirm the deletion"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the selected items are removed and the count updates"
+      }
+    ],
+    "v4_status": "NEW",
+    "v4_reason": "round3 candidate (2026-07-23) — high-priority coverage gap, env-safe (no TMDb/qBT/AI key)",
+    "v4_action": "generate+run in testsprite-v2-round3"
+  },
+  {
+    "id": "TC099",
+    "title": "Batch reparse selected items triggers reparse",
+    "category": "Media Library",
+    "priority": "High",
+    "description": "Verifies triggering a batch reparse on selected items shows progress/confirmation feedback.",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /library"
+      },
+      {
+        "type": "action",
+        "description": "Enter selection mode and select two items"
+      },
+      {
+        "type": "action",
+        "description": "Click the batch 重新解析 (reparse) action"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a reparse confirmation or in-progress feedback is shown"
+      }
+    ],
+    "v4_status": "NEW",
+    "v4_reason": "round3 candidate (2026-07-23) — high-priority coverage gap, env-safe (no TMDb/qBT/AI key)",
+    "v4_action": "generate+run in testsprite-v2-round3"
+  },
+  {
+    "id": "TC100",
+    "title": "Exit selection mode clears the selection",
+    "category": "Media Library",
+    "priority": "Medium",
+    "description": "Verifies leaving selection mode clears any selected items and hides the selection toolbar.",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /library"
+      },
+      {
+        "type": "action",
+        "description": "Enter selection mode and select one item"
+      },
+      {
+        "type": "action",
+        "description": "Exit selection mode"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the selection toolbar is hidden and no items remain selected"
+      }
+    ],
+    "v4_status": "NEW",
+    "v4_reason": "round3 candidate (2026-07-23) — high-priority coverage gap, env-safe (no TMDb/qBT/AI key)",
+    "v4_action": "generate+run in testsprite-v2-round3"
+  },
+  {
+    "id": "TC101",
+    "title": "Activity hub loads at /activity",
+    "category": "Activity",
+    "priority": "High",
+    "description": "Verifies the Activity hub renders its events surface (feed or state) at /activity.",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /activity"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the Activity page renders its main content region (events feed or a defined state)"
+      }
+    ],
+    "v4_status": "NEW",
+    "v4_reason": "round3 candidate (2026-07-23) — high-priority coverage gap, env-safe (no TMDb/qBT/AI key)",
+    "v4_action": "generate+run in testsprite-v2-round3"
+  },
+  {
+    "id": "TC102",
+    "title": "Activity is reachable from the primary navigation",
+    "category": "Activity",
+    "priority": "Medium",
+    "description": "Verifies the 活動 (Activity) destination is reachable from the sidebar / bottom navigation.",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Open the app on any page"
+      },
+      {
+        "type": "action",
+        "description": "Click the 活動 (Activity) navigation destination"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the URL is /activity and the Activity page is shown"
+      }
+    ],
+    "v4_status": "NEW",
+    "v4_reason": "round3 candidate (2026-07-23) — high-priority coverage gap, env-safe (no TMDb/qBT/AI key)",
+    "v4_action": "generate+run in testsprite-v2-round3"
+  },
+  {
+    "id": "TC103",
+    "title": "Activity renders cleanly when there are no recent events",
+    "category": "Activity",
+    "priority": "Medium",
+    "description": "Verifies the Activity empty/sparse state renders without error when the feed has no recent events.",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /activity"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the page renders without an error state — either events or a defined empty state is shown"
+      }
+    ],
+    "v4_status": "NEW",
+    "v4_reason": "round3 candidate (2026-07-23) — high-priority coverage gap, env-safe (no TMDb/qBT/AI key)",
+    "v4_action": "generate+run in testsprite-v2-round3"
+  },
+  {
+    "id": "TC104",
+    "title": "Toggle between grid and list view preserves the item set",
+    "category": "Media Library",
+    "priority": "High",
+    "description": "Verifies switching between grid and list view keeps the same set of library items (v2, infinite scroll — replaces legacy TC009).",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /library"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a grid of poster cards is visible"
+      },
+      {
+        "type": "action",
+        "description": "Toggle to list view"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the same items are shown in a list layout"
+      },
+      {
+        "type": "action",
+        "description": "Toggle back to grid view"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the grid is restored with the same items"
+      }
+    ],
+    "v4_status": "NEW",
+    "v4_reason": "round3 candidate (2026-07-23) — high-priority coverage gap, env-safe (no TMDb/qBT/AI key)",
+    "v4_action": "generate+run in testsprite-v2-round3"
+  },
+  {
+    "id": "TC105",
+    "title": "Changing the library sort reorders the grid",
+    "category": "Media Library",
+    "priority": "High",
+    "description": "Verifies changing the sort option (v2) deterministically reorders the library grid.",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /library"
+      },
+      {
+        "type": "action",
+        "description": "Open the sort control and choose a different sort order"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the first item in the grid changes to reflect the new sort order"
+      }
+    ],
+    "v4_status": "NEW",
+    "v4_reason": "round3 candidate (2026-07-23) — high-priority coverage gap, env-safe (no TMDb/qBT/AI key)",
+    "v4_action": "generate+run in testsprite-v2-round3"
   }
 ]

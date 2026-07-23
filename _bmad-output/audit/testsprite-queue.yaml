@@ -412,3 +412,29 @@ parked:
     reason: "Low — pattern delete cancel-if-confirmation (conditional)"
   - id: TC062
     reason: "Low — pattern stats refresh"
+
+# round3_candidates: HIGH-PRIORITY coverage-gap set authored 2026-07-23 (Alexyu approved
+# "high-priority all first"). Plan entries added to testsprite_frontend_test_plan.json
+# (TC093-105, v4_status=NEW). All env-safe (no TMDb / qBittorrent / AI key needed) — runnable
+# vs the local seeded env (scripts/serve-test-env.sh :8090). ~13 cases ≈ 55-70 credits (92
+# remain — one round fits). Sibling key, NOT consumed by the monthly cron / 19-7. Promote into
+# `queue:` (or run by testId) when testsprite-v2-round3 fires. Coverage rationale:
+# vido-subtitle-pipeline is unrelated — these fill the biggest UI journeys with ZERO prior
+# TestSprite coverage (homepage, batch ops, activity hub) + replace deprecated legacy TC009.
+round3_candidates:
+  - journey: "Homepage / (net-new primary destination — 0 prior coverage)"
+    ids: [TC093, TC094, TC095, TC096]
+    notes: "D3 own-content-above-Explore ordering, poster→detail nav, 繼續觀看 slot, Explore blocks"
+  - journey: "Batch operations /library selection (0 prior coverage, structural)"
+    ids: [TC097, TC098, TC099, TC100]
+    notes: "enter-selection+count, batch delete w/ confirm, batch reparse, exit clears selection. Batch subtitle GENERATION excluded (needs AI key)."
+  - journey: "Activity hub /activity (D4-1 net-new destination — 0 prior coverage)"
+    ids: [TC101, TC102, TC103]
+    notes: "load, reachable-from-nav, empty/sparse state"
+  - journey: "Grid↔List toggle + v2 sort /library (replaces deprecated legacy TC009)"
+    ids: [TC104, TC105]
+    notes: "view toggle preserves item set; sort reorders grid"
+# Mid-priority round3 stretch (env-safe, NOT authored yet — add if budget allows): settings
+# backup/cache/logs; homepage explore-block CRUD (/settings/homepage). Env-BLOCKED (defer to a
+# keyed/mock env): request system 想要+list (TMDb), discover filters (TMDb), subtitle generation
+# /AI correction (AI key), qBT connection-success + history modal (live qBT), setup wizard (fresh env).
