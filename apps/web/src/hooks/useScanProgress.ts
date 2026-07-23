@@ -146,6 +146,27 @@ function scanProgressReducer(
 
 const SSE_RECONNECT_MS = 10000;
 
+// Module-level signal bridging the scan TRIGGER (ScannerSettings — a separate
+// hook instance) to the shell-mounted ScanProgress card. The card cannot be
+// reached directly across instances, so the trigger broadcasts here and the
+// card's instance opens its SSE in response. Kept lazy on purpose: the
+// EventSource is never opened until a scan is actually requested, which
+// preserves the app's networkidle-based E2E stability.
+const scanTrackingListeners = new Set<() => void>();
+
+/** Ask any mounted ScanProgress to begin tracking. Call on scan trigger success. */
+export function requestScanTracking(): void {
+  scanTrackingListeners.forEach((fn) => fn());
+}
+
+/** Subscribe a startTracking callback to the signal; returns an unsubscribe fn. */
+export function subscribeScanTracking(onRequest: () => void): () => void {
+  scanTrackingListeners.add(onRequest);
+  return () => {
+    scanTrackingListeners.delete(onRequest);
+  };
+}
+
 export function useScanProgress() {
   const [state, dispatch] = useReducer(scanProgressReducer, initialState);
   const eventSourceRef = useRef<EventSource | null>(null);

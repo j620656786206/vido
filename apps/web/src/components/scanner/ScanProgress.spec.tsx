@@ -8,6 +8,8 @@ const mockUseCancelScan = vi.fn();
 
 vi.mock('../../hooks/useScanProgress', () => ({
   useScanProgress: () => mockUseScanProgress(),
+  subscribeScanTracking: () => () => {},
+  requestScanTracking: vi.fn(),
 }));
 
 vi.mock('../../hooks/useScanner', () => ({
@@ -37,6 +39,7 @@ const scanningState = {
   isDismissed: false,
   connectionStatus: 'sse' as const,
   isVisible: true,
+  startTracking: vi.fn(),
   toggleMinimize: vi.fn(),
   dismiss: vi.fn(),
 };

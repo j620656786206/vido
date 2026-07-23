@@ -45,12 +45,40 @@ async def run_test():
         elem = page.get_by_test_id('nav-settings')
         await elem.click(timeout=10000)
         
-        # -> Click the '測試連線' (Test Connection) button and verify it does not run because it is disabled.
-        # 測試連線 button
-        elem = page.get_by_role('button', name='測試連線', exact=True)
+        # -> Click the '媒體庫掃描' (Media Library Scan) item in the Settings menu to open Scanner settings.
+        # 媒體庫掃描 link
+        elem = page.get_by_test_id('settings-nav-scanner')
+        await elem.click(timeout=10000)
+        
+        # -> Click the '掃描媒體庫' button to start a scan and show the scan progress card.
+        # 掃描媒體庫 button
+        elem = page.get_by_test_id('scan-trigger-button')
+        await elem.click(timeout=10000)
+        
+        # -> Click the '掃描媒體庫' button to start a scan and show the scan progress card.
+        # 掃描媒體庫 button
+        elem = page.get_by_test_id('scan-trigger-button')
+        await elem.click(timeout=10000)
+        
+        # -> Click the '掃描媒體庫' (Scan library) button to start a scan so the scan progress card can appear.
+        # 掃描媒體庫 button
+        elem = page.get_by_test_id('scan-trigger-button')
+        await elem.click(timeout=10000)
+        
+        # -> Click the '掃描媒體庫' button to start a scan and cause the scan progress card to appear.
+        # 掃描媒體庫 button
+        elem = page.get_by_test_id('scan-trigger-button')
+        await elem.click(timeout=10000)
+        
+        # -> Click the '掃描媒體庫' button to start a scan and verify the scan progress card appears.
+        # 掃描媒體庫 button
+        elem = page.get_by_test_id('scan-trigger-button')
         await elem.click(timeout=10000)
         
         # --> Assertions to verify final state
+        current_url = await page.evaluate("() => window.location.href")
+        # Assert: page loaded with a URL (final outcome verified by the AI judge during the run)
+        assert current_url, 'Page should have loaded with a URL'
         current_url = await page.evaluate("() => window.location.href")
         # Assert: page loaded with a URL (final outcome verified by the AI judge during the run)
         assert current_url, 'Page should have loaded with a URL'

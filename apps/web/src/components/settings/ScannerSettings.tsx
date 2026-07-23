@@ -14,6 +14,7 @@ import {
   useScanSchedule,
   useUpdateScanSchedule,
 } from '../../hooks/useScanner';
+import { requestScanTracking } from '../../hooks/useScanProgress';
 import type { ScannerApiError } from '../../services/scannerService';
 import type { ScheduleFrequency } from '../../services/scannerService';
 
@@ -66,6 +67,9 @@ export function ScannerSettings() {
     setNotification(null);
     try {
       await triggerScan.mutateAsync();
+      // Tell the shell-mounted ScanProgress to open the scan SSE so the
+      // progress card appears (the card lives in a separate hook instance).
+      requestScanTracking();
     } catch (err) {
       const apiErr = err as ScannerApiError;
       if (apiErr.code === 'SCANNER_ALREADY_RUNNING') {
