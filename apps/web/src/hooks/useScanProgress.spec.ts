@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useScanProgress } from './useScanProgress';
+import { useScanProgress, requestScanTracking, subscribeScanTracking } from './useScanProgress';
 
 // Mock scannerService
 const mockGetSSEUrl = vi.fn(() => '/api/v1/events');
@@ -212,5 +212,29 @@ describe('useScanProgress (SSE-only, no polling)', () => {
     unmount();
 
     expect(es.readyState).toBe(2); // CLOSED
+  });
+
+  // bugfix-scan-progress-sse-unwired: the scan trigger (ScannerSettings) and the
+  // shell card (ScanProgress) are separate hook instances; the trigger bridges to
+  // the card via this module-level signal. Without it the card never connects.
+  it('[P0] requestScanTracking opens the SSE on a subscribed instance', async () => {
+    const { result } = renderHook(() => useScanProgress());
+    const unsubscribe = subscribeScanTracking(result.current.startTracking);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(MockEventSource.instances).toHaveLength(0); // lazy — nothing yet
+
+    act(() => requestScanTracking()); // the trigger fires the signal
+    expect(MockEventSource.instances).toHaveLength(1); // SSE now open
+
+    unsubscribe();
+  });
+
+  it('[P1] unsubscribe stops an instance from reacting to the signal', async () => {
+    const { result } = renderHook(() => useScanProgress());
+    const unsubscribe = subscribeScanTracking(result.current.startTracking);
+    unsubscribe();
+
+    act(() => requestScanTracking());
+    expect(MockEventSource.instances).toHaveLength(0);
   });
 });

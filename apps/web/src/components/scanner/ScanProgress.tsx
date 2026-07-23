@@ -7,7 +7,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { useScanProgress } from '../../hooks/useScanProgress';
+import { useScanProgress, subscribeScanTracking } from '../../hooks/useScanProgress';
 import { useCancelScan } from '../../hooks/useScanner';
 import { ScanProgressCard } from './ScanProgressCard';
 import { ScanProgressSheet } from './ScanProgressSheet';
@@ -33,6 +33,15 @@ export function ScanProgress() {
   const scanProgress = useScanProgress();
   const cancelScan = useCancelScan();
   const isDesktop = useIsDesktop();
+
+  // Lazily open the scan-progress SSE only when a scan is actually triggered.
+  // The trigger (掃描媒體庫) lives in a SEPARATE hook instance (ScannerSettings)
+  // and cannot reach this shell-level instance directly, so it broadcasts a
+  // module-level signal that this effect listens for. Staying lazy (no
+  // connect-on-mount) preserves the app's networkidle-based e2e stability —
+  // the EventSource is never opened until a scan begins.
+  const { startTracking } = scanProgress;
+  useEffect(() => subscribeScanTracking(startTracking), [startTracking]);
 
   if (!scanProgress.isVisible) return null;
 

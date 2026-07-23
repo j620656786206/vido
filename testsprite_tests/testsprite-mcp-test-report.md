@@ -1,100 +1,63 @@
-# TestSprite AI Testing Report (MCP) — v2 Smoke Round 1 ✅ CLOSED
+# TestSprite AI Testing Report (MCP) — round2 (CLOSED)
 
 ---
 
 ## 1️⃣ Document Metadata
 
-- **Project Name:** vido
-- **Date:** 2026-07-22 (run 1 + same-day fix PR #171 + rerun)
-- **Prepared by:** TestSprite AI + Claude (party-mode session)
-- **Round:** testsprite-v2-round1 — smoke vs the v2 shell (post-cutover-4) on the local seeded env (`scripts/serve-test-env.sh`, production Go serve on :8090)
-- **Credits:** run 1 = 12 cases (60) + rerun = 4 cases (20) → **~70 remain** of Free-150
-
-> **Headline: 12/12 PASS.** Run 1 went 8/12; the 3 failures were **real product
-> defects** (not flakes, not env noise), all fixed and merged the same day
-> (PR #171), and the rerun closed every red. Done-gate met — no skips, no waivers.
+- **Project:** vido
+- **Round:** testsprite-v2-round2 — scanner + subtitle + qBittorrent-settings journeys
+- **Dates:** run 2026-07-23; closeout 2026-07-23
+- **Env:** local production build at `:8090` via `scripts/serve-test-env.sh` (seeded sqlite: 2 libraries / 17 movies / 3 series; no TMDb key, no subtitle-provider keys, no qBittorrent — all by design)
+- **Selection:** 17 cases (env-safe subset — no live qBittorrent / TMDb / subtitle-provider key required), `serverMode: production`
+- **Credits:** 28 spent (120 → 92)
 
 ---
 
 ## 2️⃣ Requirement Validation Summary
 
-### Requirement: 媒體庫瀏覽互動 (Library browse & item actions)
+### qBittorrent Settings Form
 
-| Test  | Title                                       | Run 1       | Final     |
-| ----- | ------------------------------------------- | ----------- | --------- |
-| TC010 | Delete an item via the per-item action menu | ⚠️ BLOCKED¹ | ✅ PASSED |
-| TC011 | Cancel delete leaves item intact            | ✅          | ✅ PASSED |
-| TC012 | Filter by TV type then clear                | ✅          | ✅ PASSED |
+- **TC035** Load settings page — ✅ Passed
+- **TC038** Connection test failure shows inline error — ✅ Passed
+- **TC039** Save blocked until successful test — ✅ Passed
+- **TC040** Empty-host validation — ⛔ raw BLOCKED → **re-authored → ✅ Passed (rerun)**. The test mistook the Host **placeholder** (`http://192.168.1.100:8080`) for a value. v2 validation = the 測試連線 button is **disabled** while fields are empty (already covered by TC039). Re-authored to assert the disabled state.
 
-¹ Run-1 block was test-orchestration (the generated flow batch-deleted 教父 before exercising the per-item path); reseeded + rerun with an explicit per-item instruction.
+### Scanner Settings & Manual Scan
 
-### Requirement: URL↔UI Consistency (the 2026-07-22 type-filter bug class — new TC089–TC091)
+- **TC063** Settings page loads — ✅ Passed
+- **TC065** Minimize to pill / expand — ✅ Passed
+- **TC066** Cancel active scan w/ confirm — ✅ Passed
+- **TC068** Schedule persists — ✅ Passed
+- **TC069** Global progress card off-settings — ✅ Passed
+- **TC064 / TC067 / TC070** Scan progress card appear / cancel-dismiss / completion — ❌ raw FAILED → **surfaced a REAL product defect** (`bugfix-scan-progress-sse-unwired`): the scan-progress SSE was never opened from the UI trigger, so the card was unreachable in v2. **Fixed this round.** These transient SSE cases are the wrong tool for TestSprite (the seeded scan finishes <100 ms), so they are **migrated to `tests/e2e/scan-progress.spec.ts`** (mocked SSE, deterministic, runs in CI).
 
-| Test  | Title                                                       | Final     |
-| ----- | ----------------------------------------------------------- | --------- |
-| TC089 | Deep-link `/library/movies` → movie-only list + 電影 active | ✅ PASSED |
-| TC090 | Deep-link `?genres=科幻` pre-applies the filter             | ✅ PASSED |
-| TC091 | Type switch → Back → hard refresh: URL/control/list agree   | ✅ PASSED |
+### Subtitle Search Dialog
 
-### Requirement: 搜尋→瀏覽→詳情 P0 journey (new TC092)
-
-| Test  | Title                                             | Run 1 | Final     |
-| ----- | ------------------------------------------------- | ----- | --------- |
-| TC092 | Header search finds an owned title → local detail | ❌    | ✅ PASSED |
-
-**Defects found & fixed (PR #171):** unified `/api/v1/search` had no local-library leg (keyless TMDb = all legs fail = 500 = 找不到 for OWNED titles) → added `local_movies`/`local_tv` with LOCAL ids + per-leg degradation + a 媒體庫 dropdown section (已擁有 badge) navigating TMDb-independently. Chain #2: FTS5 unicode61 keeps CJK runs as one token — partial zh queries (駭客) never matched 駭客任務 library-wide, and raw FTS operators could 500 → `ftsPrefixQuery` (quoted-prefix, operator-inert) guards both repos.
-
-### Requirement: 詳情 (Media detail)
-
-| Test  | Title                                          | Run 1 | Final     |
-| ----- | ---------------------------------------------- | ----- | --------- |
-| TC084 | Matched poster → detail with title/year/rating | ❌²   | ✅ PASSED |
-| TC085 | Tech badges + 檔案資訊 for an owned item       | ✅    | ✅ PASSED |
-
-² Run-1 fail was test-data targeting: it clicked the UNMATCHED first card (`Unknown.Show.S01`, legitimately metadata-less — that UX gap is tracked separately in `disc-2026-07-v2-detail-fallback-states`). Plan retargeted to 駭客任務.
-
-### Requirement: 下載監控 (Downloads — empty/degraded half)
-
-| Test  | Title                                  | Final     |
-| ----- | -------------------------------------- | --------- |
-| TC079 | Page renders filter tabs + empty state | ✅ PASSED |
-| TC080 | Tab switching stable on empty state    | ✅ PASSED |
-
-### Requirement: 降級狀態 (Degraded services)
-
-| Test  | Title                                      | Run 1 | Final     |
-| ----- | ------------------------------------------ | ----- | --------- |
-| TC088 | Degraded state visible + navigation usable | ❌    | ✅ PASSED |
-
-**Defect found & fixed (PR #171):** `healthMonitor.StartMonitoring` had never been wired since Story 3.12 — only the qBT monitor ran, so `/health/services` served factory-default "healthy" (`last_check: 0001-01-01`) forever; a keyless TMDb displayed 正常. Wired at 5m + immediate startup sweep; the env now truthfully reports `degradation_level: partial`.
+- **TC071** Open from context menu — ✅ Passed
+- **TC076** Close with Escape — ✅ Passed
+- **TC077** Open from detail panel — ✅ Passed
+- **TC078** Context-menu option present — ✅ Passed
+- **TC073** Empty-state on no results — ⛔ raw BLOCKED → **re-authored → ✅ Passed (rerun)**. The empty state renders correctly (`尚無結果 — 線上來源成功率低，建議改用生成字幕`); the test wrongly assumed a manual query input (v2 auto-searches). Re-authored to click 搜尋 + assert the empty-state text.
 
 ---
 
 ## 3️⃣ Coverage & Matching Metrics
 
-- **Final: 12/12 PASS (100%)** — run 1: 8 ✅ / 3 ❌ / 1 ⚠️; rerun: 4/4 ✅
-- All 3 run-1 failures were genuine product defects with unit regression locks landed alongside the fixes (Go: +5 unified-search legs, +3 FTS; web: +3 dropdown specs)
+- **Raw first-pass:** 12 / 17 (70.59%).
+- **After closeout:** **14 / 14 in-scope GREEN** (12 first-pass + TC040/TC073 re-authored→rerun) **+ 1 real defect found & FIXED + 3 migrated to Playwright.**
 
-| Requirement        | Tests  | ✅ Passed |
-| ------------------ | ------ | --------- |
-| 媒體庫瀏覽互動     | 3      | 3         |
-| URL↔UI Consistency | 3      | 3         |
-| 搜尋→瀏覽→詳情     | 1      | 1         |
-| 詳情               | 2      | 2         |
-| 下載監控           | 2      | 2         |
-| 降級狀態           | 1      | 1         |
-| **Total**          | **12** | **12**    |
+| Requirement                    | Total  | Raw ✅ | Post-closeout             | Real defects  |
+| ------------------------------ | ------ | ------ | ------------------------- | ------------- |
+| qBittorrent Settings Form      | 4      | 3      | 4 ✅                      | 0             |
+| Scanner Settings & Manual Scan | 8      | 5      | 5 ✅ + 3 → Playwright     | **1 (fixed)** |
+| Subtitle Search Dialog         | 5      | 4      | 5 ✅                      | 0             |
+| **Total**                      | **17** | **12** | **14 green + 3 migrated** | **1 fixed**   |
 
 ---
 
 ## 4️⃣ Key Gaps / Risks
 
-1. **URL↔UI class locked green first try** — the type-filter bug shape is now regression-locked at three layers (unit routeTree specs, Playwright, TestSprite vs the real stack).
-2. **The round paid for itself**: two shipped-code defect chains (owned-search degradation; dark health monitor) were invisible to every unit/E2E layer because they only manifest against a REAL backend in a degraded configuration — exactly the seeded env's design point.
-3. **媒體庫 dropdown section has no .pen design counterpart** (reuses standard row + 已擁有 badge) — UX follow-up candidate for Sally.
-4. **Deferred (deliberate):** TC081/TC083 need real qBT rows (round-2 stub/config decision); TC086 blocked on `disc-2026-07-v2-detail-fallback-states`; TC009's steps are legacy (pagination/header-sort) — retire or rewrite against v2 in the round-2 selection pass.
-5. **Round 2** (full P0, ~20 cases ≈ 100 credits) fires when the `ux3-v2-cutover` epic close is on the table — budget note: round1+round2 ≈ the whole Free-150.
-
----
-
-_Run artifacts: `testsprite_tests/tmp/test_results.json` + dashboard links in `tmp/raw_report.md`._
+1. **Real defect FIXED — scan-progress card was dead in v2** (`bugfix-scan-progress-sse-unwired`). The shell `<ScanProgress>` mounts `useScanProgress()` but the SSE opens only via `startTracking()`, which nothing called; the 掃描媒體庫 trigger is a separate hook instance. Fix: a lazy module-level signal (`requestScanTracking`/`subscribeScanTracking`) — the trigger signals the shell instance to connect (kept lazy so the 7 networkidle-based e2e specs are unaffected). **Note:** my first-pass triage wrongly called this a "too-fast-scan artifact" — the adversarial verification pass caught the real cause. Gates: web vitest 2457/2457, prettier clean, e2e spec added.
+2. **Scheduled(background)-scan card visibility** not covered by the trigger signal (button-trigger only) — acceptable follow-up.
+3. **Provider-key-dependent surfaces** remain deliberately out of scope (subtitle scored-results/preview/download, qBittorrent success path, TMDb metadata search) — need a keyed/mocked env.
+4. **Positive:** scanner (settings/schedule/global-card/cancel), qBittorrent settings form (load/failure/save-gating), and the subtitle dialog (all entry points + close + empty state) all behave correctly in v2.

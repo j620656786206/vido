@@ -34,16 +34,47 @@ async def run_test():
 
         # Interact with the page elements to simulate user flow
         # -> navigate
-        await page.goto("http://192.168.50.52:8088")
+        await page.goto("http://localhost:8090")
         try:
             await page.wait_for_load_state("domcontentloaded", timeout=5000)
         except Exception:
             pass
         
-        # --> Test passed — verified by AI agent
-        frame = context.pages[-1]
-        current_url = await frame.evaluate("() => window.location.href")
-        assert current_url is not None, "Test completed successfully"
+        # -> Open the qBittorrent settings page by navigating to /settings/qbittorrent, then verify the page shows the title 'qBittorrent' and the fields Host, Username, Password plus the '測試連線' (Test Connection) and '儲存' (Save) buttons.
+        await page.goto("http://localhost:8090/settings/qbittorrent")
+        try:
+            await page.wait_for_load_state("domcontentloaded", timeout=5000)
+        except Exception:
+            pass
+        
+        # --> Assertions to verify final state
+        
+        # --> Verify page title contains "qBittorrent"
+        # Assert: Page title contains 'qBittorrent'.
+        await expect(page.locator("xpath=/html/body/div").nth(0)).to_contain_text("qBittorrent", timeout=15000), "Page title contains 'qBittorrent'."
+        
+        # --> Verify element "Host" is visible
+        await page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div/div/div/form/div[1]/div[1]/input").nth(0).scroll_into_view_if_needed()
+        # Assert: The Host (主機位址) input field is visible.
+        await expect(page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div/div/div/form/div[1]/div[1]/input").nth(0)).to_be_visible(timeout=15000), "The Host (\u4e3b\u6a5f\u4f4d\u5740) input field is visible."
+        
+        # --> Verify element "Username" is visible
+        await page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div/div/div/form/div[1]/div[2]/input").nth(0).scroll_into_view_if_needed()
+        # Assert: The Username (使用者名稱) input is visible.
+        await expect(page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div/div/div/form/div[1]/div[2]/input").nth(0)).to_be_visible(timeout=15000), "The Username (\u4f7f\u7528\u8005\u540d\u7a31) input is visible."
+        
+        # --> Verify element "Password" is visible
+        await page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div/div/div/form/div[1]/div[3]/input").nth(0).scroll_into_view_if_needed()
+        # Assert: The Password input field is visible.
+        await expect(page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div/div/div/form/div[1]/div[3]/input").nth(0)).to_be_visible(timeout=15000), "The Password input field is visible."
+        
+        # --> Verify element "Test Connection" is visible
+        await page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div/div/div/form/div[2]/button[1]").nth(0).scroll_into_view_if_needed()
+        # Assert: The '測試連線' (Test Connection) button is visible.
+        await expect(page.locator("xpath=/html/body/div/div/div/div[2]/main/div/div/div/div/form/div[2]/button[1]").nth(0)).to_be_visible(timeout=15000), "The '\u6e2c\u8a66\u9023\u7dda' (Test Connection) button is visible."
+        current_url = await page.evaluate("() => window.location.href")
+        # Assert: page loaded with a URL (final outcome verified by the AI judge during the run)
+        assert current_url, 'Page should have loaded with a URL'
         await asyncio.sleep(5)
 
     finally:
