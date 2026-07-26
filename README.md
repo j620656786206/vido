@@ -1,9 +1,9 @@
 # Vido
 
 **自架的家庭劇院媒體管理工具，把繁體中文字幕這件事做到底。**
-從影片裡抽字幕、線上找字幕、到用語音辨識生字幕——最後都變成繁中。
+線上找字幕、找不到就用語音辨識生字幕——最後都轉成繁中。（直接抽出影片內嵌字幕來翻譯，開發中）
 
-> **English**: Vido is a self-hosted media manager for your NAS home theater, built around one problem: getting Traditional Chinese subtitles for content that doesn't have them. It extracts embedded subtitles, searches online sources, and falls back to speech recognition — then translates and converts everything to zh-TW.
+> **English**: Vido is a self-hosted media manager for your NAS home theater, built around one problem: getting Traditional Chinese subtitles for content that doesn't have them. It searches online subtitle sources and falls back to speech recognition when none are available, then translates and converts the result to zh-TW. (Extracting embedded subtitles for translation is still in development.)
 
 ---
 
@@ -22,8 +22,10 @@
 
 ```
 影片內嵌字幕  →  線上字幕來源  →  ASR 語音辨識
-（有就直接翻）   （射手網 / OpenSubtitles）  （前兩者都沒有時，聽聲音生字幕再翻）
+（開發中）       （射手網 / OpenSubtitles）  （前兩者都沒有時，聽聲音生字幕再翻）
 ```
+
+目前線上搜尋與 ASR 已經可用，第一段「抽出內嵌字幕直接翻譯」還在做——現在只做到偵測影片裡有哪些字幕軌。
 
 字幕解決了，接著才是把媒體庫整理好的那些事——繁中 metadata、字幕組檔名解析、下載監控，那些是為了讓這個家庭劇院真的能用而長出來的。
 
@@ -33,13 +35,13 @@
 
 - **線上字幕搜尋與下載** — 串接射手網（ASSRT）與 OpenSubtitles，自動評分挑最合適的版本
 - **簡轉繁** — opencc 轉換，並可批次處理整個媒體庫
-- **AI 字幕增強** — 用詞表（glossary）維持同一部劇的譯名一致
-- **語音辨識生字幕** — 沒有現成字幕時，抽出音軌用 Whisper 轉錄
+- **AI 字幕增強** — 用詞表（glossary）維持同一部劇的譯名一致（需自備 AI API key，見下方環境變數）
+- **語音辨識生字幕** — 沒有現成字幕時，抽出音軌用 Whisper 轉錄。**目前僅支援電影**，影集入口開發中；靜音片段（如片尾）偶爾會產生幻覺字幕，VAD 過濾開發中
 - **字幕軌偵測** — 掃描影片內嵌與外掛字幕，標示語言與狀態
 
 **媒體庫**
 
-- **繁中優先的 metadata** — TMDB (zh-TW) → 豆瓣 → Wikipedia 多來源 fallback
+- **繁中優先的 metadata** — TMDB (zh-TW) → 豆瓣 → Wikipedia 多來源 fallback（豆瓣與 Wikipedia 預設關閉，需自行開啟）
 - **AI 字幕組檔名解析** — 解析 `[字幕組][作品名][01][1080p][BIG5]` 這種命名，內建學習機制與自動重試
 - **下載監控** — 串接 qBittorrent，即時進度
 - **媒體庫管理** — 遞迴掃描、多磁碟區支援
@@ -62,24 +64,45 @@
 git clone https://github.com/j620656786206/vido.git
 cd vido
 
-# 設定媒體庫路徑與 TMDB API key
+# 設定媒體庫路徑與 API key
 cp .env.example .env
 #   MEDIA_PATH=/path/to/your/media
 #   TMDB_API_KEY=your_key        # 選填，但強烈建議
+#   OPENAI_API_KEY=your_key      # 選填，啟用語音辨識生字幕（雲端 API，會計費）
 
 docker compose up -d
 ```
 
 開啟 `http://localhost:8080`，依照 setup wizard 完成初始設定。
 
-**主要環境變數**
+**基本環境變數**
 
-| 變數                    | 預設      | 說明                            |
-| ----------------------- | --------- | ------------------------------- |
-| `MEDIA_PATH`            | `./media` | 媒體庫路徑（以唯讀方式掛載）    |
-| `TMDB_API_KEY`          | —         | TMDB API key，用於抓取 metadata |
-| `TMDB_DEFAULT_LANGUAGE` | `zh-TW`   | metadata 語言偏好               |
-| `VIDO_PORT`             | `8080`    | 對外埠號                        |
+| 變數                    | 預設      | 說明                             |
+| ----------------------- | --------- | -------------------------------- |
+| `MEDIA_PATH`            | `./media` | 媒體庫路徑（以唯讀方式掛載）     |
+| `TMDB_API_KEY`          | —         | TMDB API key，用於抓取 metadata  |
+| `TMDB_DEFAULT_LANGUAGE` | `zh-TW`   | metadata 語言偏好                |
+| `VIDO_PORT`             | `8080`    | 對外埠號                         |
+| `ENABLE_DOUBAN`         | `false`   | 開啟豆瓣 metadata fallback       |
+| `ENABLE_WIKIPEDIA`      | `false`   | 開啟 Wikipedia metadata fallback |
+
+**字幕 AI 功能（需自備 API key）**
+
+字幕翻譯與語音辨識走的是雲端 API，**會依用量計費**。不設定這些變數時，其餘功能照常運作，只有 AI 相關的字幕功能會停用。
+
+| 變數                | 預設     | 說明                                                      |
+| ------------------- | -------- | --------------------------------------------------------- |
+| `AI_PROVIDER`       | `gemini` | 文字 AI 供應商，`gemini` 或 `claude`                      |
+| `GEMINI_API_KEY`    | —        | Gemini key（`AI_PROVIDER=gemini` 時使用）                 |
+| `CLAUDE_API_KEY`    | —        | Claude key（`AI_PROVIDER=claude` 時使用；字幕翻譯亦使用） |
+| `OPENAI_API_KEY`    | —        | Whisper 語音辨識用                                        |
+| `ASR_BASE_URL`      | —        | 指向自架的 OpenAI 相容 ASR 服務即可省下雲端費用           |
+| `ASR_MODEL`         | —        | 自架引擎的 model id                                       |
+| `AI_RUN_BUDGET_USD` | `5.0`    | 單次執行的費用上限，超過就中止並標記為暫停                |
+
+> 💡 想完全避開雲端費用，可以把 `ASR_BASE_URL` 指到自架的 OpenAI 相容引擎（例如 Speaches、WhisperLive），語音辨識就會走本機。
+
+完整的變數清單見 [`.env.example`](.env.example)。
 
 正式環境可套用資源限制設定：
 

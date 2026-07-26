@@ -3,518 +3,204 @@
 > 本專案的開發者文件（Nx monorepo 架構、本地開發、建置、測試）。
 > 產品說明見專案根目錄的 [README.md](../README.md)。
 
-A full-stack media management application built with Nx monorepo architecture, featuring a React frontend and a high-performance Go backend with structured logging, error handling, OpenAPI/Swagger documentation, and shared TypeScript types.
+Vido is an Nx monorepo with a React frontend and a Go backend, shipped as a single Docker container.
 
-## Project Overview
-
-Vido is organized as an Nx monorepo that includes:
-
-- **Frontend**: React application with Vite, TanStack Router, TanStack Query, and Tailwind CSS
-- **Backend**: Go REST API with Gin framework, structured logging, error handling, CORS middleware, and automatic OpenAPI/Swagger documentation
-- **Shared Libraries**: TypeScript type definitions shared between frontend and backend
-
-## Backend Features
-
-- **Gin Framework**: Fast HTTP framework with routing, middleware support, and JSON handling
-- **Structured Logging**: JSON-formatted logs using zerolog with request ID tracking
-- **Error Handling**: Consistent error response format with panic recovery
-- **CORS Middleware**: Configurable cross-origin resource sharing
-- **OpenAPI Documentation**: Auto-generated from code annotations with Swagger UI
-- **Configuration Management**: Environment-based configuration with sensible defaults
-- **Graceful Shutdown**: Proper signal handling and graceful server shutdown
-- **Hot Reload**: Automatic recompilation on file changes using Air
+| Project        | Path                | Stack                                               |
+| -------------- | ------------------- | --------------------------------------------------- |
+| `web`          | `apps/web`          | React 19, Vite 7, TanStack Router/Query, Tailwind 4 |
+| `api`          | `apps/api`          | Go 1.25, Gin, SQLite (WAL + FTS5)                   |
+| `shared-types` | `libs/shared-types` | TypeScript types shared across the workspace        |
 
 ## Prerequisites
 
-Before getting started, ensure you have the following installed:
+- **Node.js** — `lts/iron` (>= 20). The repo has an `.nvmrc`, so `nvm use` picks the right one.
+- **pnpm** — v9. This is the workspace package manager; CI runs `pnpm install --frozen-lockfile` and `pnpm-lock.yaml` is the authoritative lockfile.
+- **Go** — >= 1.25 (`apps/api/go.mod` targets 1.25.0; CI pins 1.25).
+- **ffmpeg / ffprobe** — required for the audio-extraction and subtitle-track features. The Docker image installs them; for local development install them yourself (`brew install ffmpeg`).
 
-- **Node.js**: >= 20.x (LTS Iron)
-  - Download: https://nodejs.org/
-  - Or use nvm: `nvm install lts/iron`
-- **Go**: >= 1.23
-  - Download: https://golang.org/doc/install
-- **npm**: Comes bundled with Node.js
-- **Make**: (optional, for convenient backend commands)
-
-## Quick Start
-
-### Automated Setup
-
-Run the initialization script to check prerequisites and install all dependencies:
+## Setup
 
 ```bash
-./init.sh
+nvm use
+pnpm install
+
+cp .env.example .env   # configure media paths and API keys
 ```
 
-This script will:
-
-- Verify Node.js and Go versions
-- Install npm dependencies
-- Download Go module dependencies
-- Install Go tools (swag for OpenAPI, air for hot reload)
-- Create `.env` file from `.env.example` if it doesn't exist
-
-### Manual Setup
-
-If you prefer to set up manually:
-
-```bash
-# Install npm dependencies
-npm install
-
-# Install Go dependencies and tools
-cd apps/api
-go mod download
-./scripts/install-swag.sh  # Install swag CLI
-./scripts/install-air.sh   # Install Air for hot reload
-cd ../..
-```
+> `init.sh` at the repo root predates the pnpm migration and still runs `npm install`. Use `pnpm install` instead until that script is updated.
 
 ## Project Structure
 
 ```
 vido/
 ├── apps/
-│   ├── web/              # React frontend application
+│   ├── web/                    # React frontend
 │   │   ├── src/
-│   │   ├── project.json  # Nx project configuration
-│   │   ├── vite.config.mts
-│   │   └── tailwind.config.js
+│   │   │   ├── routes/         # TanStack Router file-based routes
+│   │   │   ├── components/
+│   │   │   └── lib/
+│   │   ├── project.json
+│   │   └── vite.config.mts
 │   │
-│   └── api/              # Go backend application
-│       ├── cmd/
-│       │   └── api/      # Application entry point
+│   └── api/                    # Go backend
+│       ├── cmd/api/            # Entry point (main.go — wiring + route registration)
 │       ├── internal/
-│       │   ├── config/   # Configuration management
-│       │   ├── middleware/  # HTTP middleware
-│       │   └── server/   # HTTP server and routes
-│       ├── scripts/      # Utility scripts
-│       │   ├── install-swag.sh     # Install swag CLI tool
-│       │   ├── install-air.sh      # Install Air hot reload tool
-│       │   └── generate-openapi.sh # Regenerate OpenAPI spec
-│       ├── docs/         # Generated OpenAPI documentation
-│       ├── api/          # OpenAPI spec
-│       ├── .env.example  # Example environment configuration
-│       ├── .air.toml     # Air hot reload configuration
-│       ├── Makefile      # Development commands
+│       │   ├── handlers/       # HTTP handlers, each with RegisterRoutes()
+│       │   ├── services/       # Business logic
+│       │   ├── repository/     # DB access
+│       │   ├── database/       # Schema + migrations
+│       │   ├── models/
+│       │   ├── ai/             # LLM + Whisper clients, throttle, budget
+│       │   ├── subtitle/       # Providers (ASSRT/OpenSubtitles), scorer, converter
+│       │   ├── tmdb/ douban/ wikipedia/   # Metadata sources
+│       │   ├── qbittorrent/    # Download client integration
+│       │   └── sse/ events/    # Server-sent events
 │       ├── go.mod
 │       └── project.json
 │
-├── libs/
-│   └── shared-types/     # Shared TypeScript types
-│       ├── src/
-│       └── project.json
-│
-├── dist/                 # Build outputs
-├── node_modules/
-├── nx.json              # Nx workspace configuration
-├── package.json         # Workspace dependencies
-├── tsconfig.base.json   # Base TypeScript configuration
-└── init.sh              # Environment setup script
+├── libs/shared-types/          # Shared TypeScript types (@vido/shared-types)
+├── tests/e2e/                  # Playwright specs
+├── .env.example                # All supported environment variables
+├── docker-compose.yml
+├── nx.json
+└── project-context.md          # Conventions AI agents and contributors follow
 ```
 
-## Available Commands
+## Commands
+
+Run everything through Nx so caching and task dependencies apply.
 
 ### Development
 
-Start development servers:
-
 ```bash
-# Start React frontend (http://localhost:4200)
-nx serve web
-
-# Start Go API server with hot reload (http://localhost:8080)
-cd apps/api && make dev
-
-# Run both concurrently (in separate terminals)
-nx serve web & (cd apps/api && make dev)
+pnpm nx serve api      # Go API on http://localhost:8080 (GIN_MODE=debug)
+pnpm nx serve web      # React app on http://localhost:4200
 ```
+
+The Vite dev server proxies `/api` to `http://localhost:8080`, so run both when working on the frontend.
 
 ### Building
 
-Build projects for production:
-
 ```bash
-# Build web app
-nx build web
-
-# Build API server
-cd apps/api && make build
-
-# Build shared types library
-nx build shared-types
-
-# Build all projects in parallel
-nx run-many -t build
-```
-
-### Backend-Specific Commands
-
-Navigate to `apps/api` and use these Makefile commands:
-
-```bash
-# Display available commands
-make help
-
-# Build the API binary (automatically runs go mod tidy)
-make build
-
-# Run the API server
-make run
-
-# Start hot reload development server (recommended for development)
-make dev
-
-# Run all tests
-make test
-
-# Regenerate OpenAPI specification
-make swagger
-
-# Update go.mod and go.sum
-make tidy
-
-# Clean build artifacts
-make clean
+pnpm nx build api      # -> dist/apps/api/main
+pnpm nx build web
+pnpm nx run-many -t build
 ```
 
 ### Testing
 
-Run tests for projects:
+```bash
+pnpm nx test api       # go test ./... -v
+pnpm nx test web       # Vitest
+pnpm nx run-many -t test
+
+pnpm test:e2e          # Playwright, all browser projects
+pnpm test:ci           # Playwright, @ci-tagged subset only
+```
+
+Run test suites in the foreground — backgrounding them leaves orphaned Vitest workers.
+
+Visual-regression baselines are platform-specific. `-linux` baselines cannot be generated on macOS; when CI reports missing ones it opens a bootstrap PR with the correct baselines, which is the intended way to fix that failure.
+
+### Linting and formatting
 
 ```bash
-# Test web app
-nx test web
-
-# Test API server
-cd apps/api && make test
-
-# Run tests with coverage
-cd apps/api && go test -cover ./...
-
-# Run tests for a specific package
-cd apps/api && go test -v ./internal/config
-
-# Run all tests
-nx run-many -t test
+pnpm run lint          # eslint
+pnpm run lint:fix
+pnpm run format        # prettier --write .
+pnpm run format:check  # what CI runs — a formatting miss fails the build
+pnpm run lint:all      # nx lint (incl. go vet + staticcheck) + eslint + format:check
 ```
 
-### Linting and Formatting
+`pnpm nx lint api` runs `go vet` plus `staticcheck`, installing the pinned staticcheck version on first use.
 
-```bash
-# Lint all code
-npm run lint
+## Backend Conventions
 
-# Fix linting issues
-npm run lint:fix
+### Adding an endpoint
 
-# Format code with Prettier
-npm run format
+Handlers live in `apps/api/internal/handlers/`, each exposing a `RegisterRoutes(group *gin.RouterGroup)`. Register the handler in `apps/api/cmd/api/main.go`, where the `/api/v1` group is assembled. Route order matters in a few places — literal paths must be registered before conflicting `:param` routes, and the existing call sites carry comments where that applies.
 
-# Check formatting
-npm run format:check
-```
+### Response envelope
 
-## Development Workflow
-
-### Working on the Frontend
-
-1. Start the development server:
-
-   ```bash
-   nx serve web
-   ```
-
-2. The app will be available at http://localhost:4200 with hot module replacement enabled
-
-3. Import shared types from `@vido/shared-types`:
-   ```typescript
-   import { Movie, ApiResponse } from '@vido/shared-types';
-   ```
-
-### Working on the Backend
-
-1. Start the API server with hot reload:
-
-   ```bash
-   cd apps/api && make dev
-   ```
-
-2. The server will run at http://localhost:8080 with automatic recompilation on file changes
-
-3. Health check endpoint: http://localhost:8080/health
-
-4. View API documentation at: http://localhost:8080/swagger/index.html
-
-### Hot Reload with Air
-
-For the best development experience, use Air for automatic recompilation:
-
-```bash
-cd apps/api && make dev
-```
-
-Air will:
-
-- Automatically rebuild your application when `.go` files change
-- Restart the server with the new binary
-- Display color-coded build and runtime logs
-- Make changes visible in 1-2 seconds
-
-Configuration is in `apps/api/.air.toml`. See `apps/api/docs/AIR_SETUP.md` for detailed documentation.
-
-**Quick workflow:**
-
-1. Run `make dev` in `apps/api` once
-2. Edit any `.go` file and save
-3. Air automatically rebuilds and restarts
-4. Test your changes immediately!
-
-### Adding Shared Types
-
-1. Edit types in `libs/shared-types/src/lib/`
-
-2. Export from `libs/shared-types/src/index.ts`
-
-3. Build the library:
-
-   ```bash
-   nx build shared-types
-   ```
-
-4. Types are automatically available via `@vido/shared-types` path alias
-
-### Adding New Backend Endpoints
-
-1. Add your handler function in `apps/api/internal/server/router.go`
-
-2. Document it with swaggo annotations:
-
-```go
-// GetUser retrieves a user by ID
-// @Summary      Get user by ID
-// @Description  Retrieve detailed information about a specific user
-// @Tags         users
-// @Accept       json
-// @Produce      json
-// @Param        id   path      string  true  "User ID"
-// @Success      200  {object}  User
-// @Failure      404  {object}  middleware.ErrorResponse
-// @Failure      500  {object}  middleware.ErrorResponse
-// @Router       /api/v1/users/{id} [get]
-func (s *Server) getUser(c *gin.Context) {
-    // Handler implementation
-}
-```
-
-3. Regenerate the OpenAPI spec:
-
-```bash
-cd apps/api && make swagger
-```
-
-## Technology Stack
-
-### Frontend (apps/web)
-
-- **Framework**: React 19
-- **Build Tool**: Vite 7
-- **Routing**: TanStack Router 1.x
-- **Data Fetching**: TanStack Query 5.x
-- **Styling**: Tailwind CSS 4.x
-- **Testing**: Vitest
-
-### Backend (apps/api)
-
-- **Language**: Go 1.23
-- **Framework**: Gin
-- **Structured Logging**: zerolog with request ID tracking
-- **Error Handling**: Consistent error response format with panic recovery
-- **CORS**: gin-cors middleware
-- **OpenAPI/Swagger**: Auto-generated documentation with swaggo
-- **Hot Reload**: Air for automatic recompilation
-- **Configuration**: Environment-based with sensible defaults
-
-### Shared Libraries
-
-- **shared-types**: TypeScript type definitions shared across the monorepo
-
-### Build System
-
-- **Monorepo Tool**: Nx 22.x
-- **Package Manager**: npm with workspaces
-
-## Port Configuration
-
-- **Frontend (web)**: http://localhost:4200
-- **Backend (api)**: http://localhost:8080
-
-To change ports:
-
-- **Web**: Set `VITE_PORT` environment variable or modify `apps/web/vite.config.mts`
-- **API**: Set `PORT` environment variable in `apps/api/.env` before running `make dev` or `make run`
-
-## Backend Configuration
-
-Configuration is managed through environment variables in `apps/api/.env`. See `apps/api/.env.example` for available options:
-
-| Variable       | Default       | Description                            |
-| -------------- | ------------- | -------------------------------------- |
-| `PORT`         | `8080`        | Server port                            |
-| `ENV`          | `development` | Environment (development, production)  |
-| `LOG_LEVEL`    | `info`        | Log level (debug, info, warn, error)   |
-| `CORS_ORIGINS` | `*`           | Allowed CORS origins (comma-separated) |
-| `API_VERSION`  | `v1`          | API version                            |
-
-## Error Handling
-
-The server includes custom error types with consistent JSON responses:
-
-```go
-// Validation error (400)
-c.Error(middleware.NewValidationError("Invalid email format"))
-
-// Not found error (404)
-c.Error(middleware.NewNotFoundError("User not found"))
-
-// Internal error (500)
-c.Error(middleware.NewInternalError("Database connection failed", err))
-
-// Unauthorized error (401)
-c.Error(middleware.NewUnauthorizedError("Authentication required"))
-
-// Forbidden error (403)
-c.Error(middleware.NewForbiddenError("Access denied"))
-```
-
-All errors return a consistent format:
+All handlers use the shared helpers in `apps/api/internal/handlers/response.go`:
 
 ```json
+// Success
+{ "success": true, "data": {} }
+
+// Error
 {
+  "success": false,
   "error": {
     "code": "VALIDATION_ERROR",
-    "message": "Invalid email format"
+    "message": "Invalid request",
+    "suggestion": "optional hint for the UI"
   }
 }
 ```
 
-## OpenAPI/Swagger Documentation
+Error codes are namespaced by source (e.g. `TMDB_`, `TRANSCRIPTION_`, `AI_`). `project-context.md` holds the registry — add new codes there when you introduce them.
 
-The API documentation is automatically generated from code annotations using [swaggo](https://github.com/swaggo/swag).
+There is no swaggo/OpenAPI generation in `apps/api`; the `api/openapi.json` at the repo root is a leftover from the original scaffold and is not regenerated.
 
-### Regenerating the Spec
+## Configuration
 
-After modifying endpoint annotations:
+All environment variables are documented in [`.env.example`](../.env.example) at the repo root. The ones you are most likely to need locally:
 
-```bash
-cd apps/api && make swagger
-```
+| Variable                                            | Default      | Purpose                                             |
+| --------------------------------------------------- | ------------ | --------------------------------------------------- |
+| `VIDO_PORT`                                         | `8080`       | API port                                            |
+| `VIDO_MEDIA_DIRS`                                   | `/media`     | Comma-separated media library paths                 |
+| `VIDO_DATA_DIR`                                     | `/vido-data` | Database and cache location                         |
+| `TMDB_API_KEY`                                      | —            | Metadata lookups                                    |
+| `AI_PROVIDER` + `GEMINI_API_KEY` / `CLAUDE_API_KEY` | `gemini`     | Filename parsing, subtitle translation              |
+| `OPENAI_API_KEY`                                    | —            | Whisper transcription                               |
+| `ASR_BASE_URL` / `ASR_MODEL`                        | —            | Point at a self-hosted OpenAI-compatible ASR engine |
+| `AI_RUN_BUDGET_USD`                                 | `5`          | Spend ceiling per run                               |
+| `ENABLE_DOUBAN` / `ENABLE_WIKIPEDIA`                | `false`      | Metadata fallback providers (opt-in)                |
 
-This will:
+AI features degrade gracefully: without keys the rest of the app works and the AI paths report as disabled.
 
-1. Run `swag init` to regenerate the spec from code annotations
-2. Generate `docs/swagger.json` and `docs/swagger.yaml`
-3. Copy the spec to `api/openapi.json` for SDK generation
-
-### Viewing Documentation
-
-With the server running, visit:
-
-- Swagger UI: `http://localhost:8080/swagger/index.html`
-- Raw JSON spec: `http://localhost:8080/swagger/doc.json`
-
-## API Endpoints
-
-### Health Check
+## Docker
 
 ```bash
-GET /health
+docker compose up -d --build
 ```
 
-Returns the health status of the API server.
-
-**Response:**
-
-```json
-{
-  "status": "ok",
-  "timestamp": "2024-01-07T10:30:00Z"
-}
-```
-
-### API Documentation
-
-```bash
-GET /swagger/index.html
-```
-
-Interactive Swagger UI for exploring and testing the API.
-
-## Additional Resources
-
-### Nx Documentation
-
-- Nx Official Docs: https://nx.dev
-- Nx Commands: https://nx.dev/nx-api/nx/documents/run
-- Nx Plugins: https://nx.dev/plugin-features
-
-### Framework Documentation
-
-- React: https://react.dev
-- Vite: https://vite.dev
-- TanStack Router: https://tanstack.com/router
-- TanStack Query: https://tanstack.com/query
-- Tailwind CSS: https://tailwindcss.com
-- Gin Framework: https://gin-gonic.com
-- Go: https://golang.org
-- swaggo: https://github.com/swaggo/swag
+The image is a multi-stage build (pnpm build for the web bundle, `go build ./cmd/api` for the API) producing one container that serves both. `docker-compose.prod.yml` layers on resource limits.
 
 ## Troubleshooting
 
-### Node.js version issues
+**Node version mismatch** — `nvm use` (reads `.nvmrc`).
+
+**Go dependency issues** — `cd apps/api && go clean -modcache && go mod download`.
+
+**Nx cache issues** — `pnpm nx reset`.
+
+**Port already in use**
 
 ```bash
-# Check your Node.js version
-node --version
-
-# Use nvm to switch to correct version
-nvm use
+lsof -ti:4200 | xargs kill -9   # web
+lsof -ti:8080 | xargs kill -9   # api
 ```
 
-### Go dependency issues
+**Formatting failures in CI** — run `pnpm run format` before committing; `format:check` is a hard gate.
 
-```bash
-# Clean and reinstall Go dependencies
-cd apps/api
-go clean -modcache
-go mod download
-```
+## Scaffold Leftovers
 
-### Nx cache issues
+A few paths date from the project's initial scaffold and are not part of the build. Don't edit them expecting an effect:
 
-```bash
-# Clear Nx cache
-nx reset
-```
-
-### Port already in use
-
-```bash
-# Kill process using port 4200 (web)
-lsof -ti:4200 | xargs kill -9
-
-# Kill process using port 8080 (api)
-lsof -ti:8080 | xargs kill -9
-```
+- `cmd/api/main.go` at the repo root — the real entry point is `apps/api/cmd/api/main.go`
+- `api/openapi.json` — no longer generated
+- `.air.toml` at the repo root — targets the legacy root entry point; `pnpm nx serve api` is the supported way to run the API
 
 ## Contributing
 
-1. Create a new branch for your feature
-2. Make your changes following existing code patterns
-3. Run linting and tests before committing
-4. Build all projects to ensure nothing is broken
-5. Submit a pull request
+1. Branch off `main` — never commit to `main` directly.
+2. Conventional commits with a scope: `feat(subtitle): ...`, `fix(media-detail): ...`.
+3. Run `pnpm run lint:all` and the relevant tests before pushing.
+4. Open a PR; CI runs lint, unit tests, E2E shards, and a Docker build.
 
 ## 授權
 
-見專案根目錄的 [LICENSE](../LICENSE)（Apache 2.0）。
+授權條款尚未確定，原因見 [README](../README.md#授權)。
