@@ -73,8 +73,7 @@ jobs:
             org.opencontainers.image.title=Vido
             org.opencontainers.image.description=NAS Media Management Platform with Traditional Chinese metadata support
             org.opencontainers.image.vendor=vido
-            # 授權待定（GPL-2.0 傳遞相依待處理），暫不宣告 licenses label——
-            # 標錯比不標更糟。確定後補上。
+            org.opencontainers.image.licenses=MIT
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v7
