@@ -241,7 +241,7 @@ _The capability contract. Phase tags: unmarked = M1 (MVP); [M1.5], [P2] = Growth
 
 ### B. Language Routing & Conversion
 
-- FR6: The system can determine a subtitle's language from its content (not its filename).
+- FR6: The system can determine whether a Chinese subtitle is Traditional or Simplified **from its content** (not its filename or track tag) — this content-based variant detection is what fixes Bazarr's core zh-TW mislabeling. **Source language** (e.g. English vs Japanese) is identified from the subtitle track's language tag (per FR1), not from content.
 - FR7: The system can pass an already-Traditional-Chinese subtitle through unchanged.
 - FR8: The system can convert a Simplified-Chinese subtitle to Traditional (Taiwan) without AI translation.
 - FR9: The system can route a subtitle by detected language (Traditional → done, Simplified → convert, English → translate, other → skip).
@@ -278,7 +278,7 @@ _The capability contract. Phase tags: unmarked = M1 (MVP); [M1.5], [P2] = Growth
 
 - FR26: The system can supply media metadata (title, genre, overview, cast, country) as context to the translation provider.
 - FR27: The user can correct an incorrect TMDb match by searching for and selecting the correct entry.
-- FR28: The system can re-translate a subtitle using the corrected metadata after a match is fixed.
+- FR28: The system can re-translate a subtitle using the corrected metadata after a match is fixed. [P2]
 
 ### H. Source Fallback [P2]
 
