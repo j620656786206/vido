@@ -1,517 +1,85 @@
-# Vido - Nx Monorepo
+# Vido
 
-A full-stack media management application built with Nx monorepo architecture, featuring a React frontend and a high-performance Go backend with structured logging, error handling, OpenAPI/Swagger documentation, and shared TypeScript types.
+**專為繁體中文使用者打造的自架媒體管理工具。**
+整合 metadata 管理、下載監控與字幕處理——繁中優先，並用 AI 解析字幕組的複雜檔名。
 
-## Project Overview
+> **English**: Vido is a self-hosted media management tool built for Traditional Chinese users. It unifies metadata management, download monitoring, and subtitle handling, with zh-TW as a first-class citizen and AI-powered parsing of fansub filenames. Runs on your own NAS via Docker.
 
-Vido is organized as an Nx monorepo that includes:
+---
 
-- **Frontend**: React application with Vite, TanStack Router, TanStack Query, and Tailwind CSS
-- **Backend**: Go REST API with Gin framework, structured logging, error handling, CORS middleware, and automatic OpenAPI/Swagger documentation
-- **Shared Libraries**: TypeScript type definitions shared between frontend and backend
+## 為什麼做這個
 
-## Backend Features
+現有的自架工具在繁體中文情境下都有各自的缺口：
 
-- **Gin Framework**: Fast HTTP framework with routing, middleware support, and JSON handling
-- **Structured Logging**: JSON-formatted logs using zerolog with request ID tracking
-- **Error Handling**: Consistent error response format with panic recovery
-- **CORS Middleware**: Configurable cross-origin resource sharing
-- **OpenAPI Documentation**: Auto-generated from code annotations with Swagger UI
-- **Configuration Management**: Environment-based configuration with sensible defaults
-- **Graceful Shutdown**: Proper signal handling and graceful server shutdown
-- **Hot Reload**: Automatic recompilation on file changes using Air
+- **TMDB 的繁中 metadata 不完整** — 很多影劇只有英文或簡中資料
+- **Bazarr 的 zh-TW 字幕處理不夠好** — 簡繁不分、抓到簡中字幕就當成中文字幕
+- **字幕組的檔名解析不了** — `[字幕組][作品名][01][1080p][BIG5][MP4]` 這種命名，一般的 regex parser 直接放棄
 
-## Prerequisites
+Vido 把這幾件事整合成一套：**繁中 metadata 多來源 fallback、AI 解析檔名、簡轉繁字幕引擎**，跑在自己的 NAS 上。
 
-Before getting started, ensure you have the following installed:
+## 目前能做什麼
 
-- **Node.js**: >= 20.x (LTS Iron)
-  - Download: https://nodejs.org/
-  - Or use nvm: `nvm install lts/iron`
-- **Go**: >= 1.23
-  - Download: https://golang.org/doc/install
-- **npm**: Comes bundled with Node.js
-- **Make**: (optional, for convenient backend commands)
+- **繁中優先的 metadata** — TMDB (zh-TW) → 豆瓣 → Wikipedia 多來源 fallback，補齊繁中資料
+- **AI 字幕組檔名解析** — 解析複雜命名，內建學習機制與自動重試，失敗時優雅降級
+- **字幕引擎** — opencc 簡轉繁、批次處理、AI 字幕增強
+- **下載監控** — 串接 qBittorrent，即時進度
+- **媒體庫管理** — 遞迴掃描、多磁碟區支援
+- **瀏覽與探索** — 首頁媒體牆、進階搜尋、詳情頁（雙評分、季集列表、推薦、觀看平台、預告）
+- **活動中心** — 集中檢視解析／下載／字幕處理的進行狀況
+- **設定引導** — 首次啟動的 setup wizard
 
-## Quick Start
+**開發中**：Request 系統（一鍵「想要」＋ Radarr/Sonarr 串接）、字幕 pipeline 改版。
 
-### Automated Setup
+> ⚠️ **專案狀態**：積極開發中，設計為**單人使用**（無登入機制），目前主要在作者自己的 NAS 上運行。歡迎試用與回報問題，但還不建議用於關鍵用途。
 
-Run the initialization script to check prerequisites and install all dependencies:
+## 快速開始
+
+需要 Docker 與 Docker Compose。
 
 ```bash
-./init.sh
+git clone https://github.com/j620656786206/vido.git
+cd vido
+
+# 設定媒體庫路徑與 TMDB API key
+cp .env.example .env   # 若無此檔，直接建立 .env
+#   MEDIA_PATH=/path/to/your/media
+#   TMDB_API_KEY=your_key        # 選填，但強烈建議
+
+docker compose up -d
 ```
 
-This script will:
+開啟 `http://localhost:8080`，依照 setup wizard 完成初始設定。
 
-- Verify Node.js and Go versions
-- Install npm dependencies
-- Download Go module dependencies
-- Install Go tools (swag for OpenAPI, air for hot reload)
-- Create `.env` file from `.env.example` if it doesn't exist
+**主要環境變數**
 
-### Manual Setup
+| 變數 | 預設 | 說明 |
+|---|---|---|
+| `MEDIA_PATH` | `./media` | 媒體庫路徑（以唯讀方式掛載） |
+| `TMDB_API_KEY` | — | TMDB API key，用於抓取 metadata |
+| `TMDB_DEFAULT_LANGUAGE` | `zh-TW` | metadata 語言偏好 |
+| `VIDO_PORT` | `8080` | 對外埠號 |
 
-If you prefer to set up manually:
+正式環境可套用資源限制設定：
 
 ```bash
-# Install npm dependencies
-npm install
-
-# Install Go dependencies and tools
-cd apps/api
-go mod download
-./scripts/install-swag.sh  # Install swag CLI
-./scripts/install-air.sh   # Install Air for hot reload
-cd ../..
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ```
 
-## Project Structure
+## 技術架構
 
-```
-vido/
-├── apps/
-│   ├── web/              # React frontend application
-│   │   ├── src/
-│   │   ├── project.json  # Nx project configuration
-│   │   ├── vite.config.mts
-│   │   └── tailwind.config.js
-│   │
-│   └── api/              # Go backend application
-│       ├── cmd/
-│       │   └── api/      # Application entry point
-│       ├── internal/
-│       │   ├── config/   # Configuration management
-│       │   ├── middleware/  # HTTP middleware
-│       │   └── server/   # HTTP server and routes
-│       ├── scripts/      # Utility scripts
-│       │   ├── install-swag.sh     # Install swag CLI tool
-│       │   ├── install-air.sh      # Install Air hot reload tool
-│       │   └── generate-openapi.sh # Regenerate OpenAPI spec
-│       ├── docs/         # Generated OpenAPI documentation
-│       ├── api/          # OpenAPI spec
-│       ├── .env.example  # Example environment configuration
-│       ├── .air.toml     # Air hot reload configuration
-│       ├── Makefile      # Development commands
-│       ├── go.mod
-│       └── project.json
-│
-├── libs/
-│   └── shared-types/     # Shared TypeScript types
-│       ├── src/
-│       └── project.json
-│
-├── dist/                 # Build outputs
-├── node_modules/
-├── nx.json              # Nx workspace configuration
-├── package.json         # Workspace dependencies
-├── tsconfig.base.json   # Base TypeScript configuration
-└── init.sh              # Environment setup script
-```
+| 層 | 技術 |
+|---|---|
+| 前端 | React 19、TanStack Router/Query、Tailwind CSS v4 |
+| 後端 | Go 1.25、Gin、SQLite (WAL + FTS5) |
+| 中文處理 | opencc（簡→繁） |
+| 部署 | Docker、單一容器 |
 
-## Available Commands
+## 開發
 
-### Development
+開發環境設定、建置與測試指令請見 [docs/development.md](docs/development.md)。
 
-Start development servers:
+## 授權
 
-```bash
-# Start React frontend (http://localhost:4200)
-nx serve web
+[Apache License 2.0](LICENSE)。
 
-# Start Go API server with hot reload (http://localhost:8080)
-cd apps/api && make dev
-
-# Run both concurrently (in separate terminals)
-nx serve web & (cd apps/api && make dev)
-```
-
-### Building
-
-Build projects for production:
-
-```bash
-# Build web app
-nx build web
-
-# Build API server
-cd apps/api && make build
-
-# Build shared types library
-nx build shared-types
-
-# Build all projects in parallel
-nx run-many -t build
-```
-
-### Backend-Specific Commands
-
-Navigate to `apps/api` and use these Makefile commands:
-
-```bash
-# Display available commands
-make help
-
-# Build the API binary (automatically runs go mod tidy)
-make build
-
-# Run the API server
-make run
-
-# Start hot reload development server (recommended for development)
-make dev
-
-# Run all tests
-make test
-
-# Regenerate OpenAPI specification
-make swagger
-
-# Update go.mod and go.sum
-make tidy
-
-# Clean build artifacts
-make clean
-```
-
-### Testing
-
-Run tests for projects:
-
-```bash
-# Test web app
-nx test web
-
-# Test API server
-cd apps/api && make test
-
-# Run tests with coverage
-cd apps/api && go test -cover ./...
-
-# Run tests for a specific package
-cd apps/api && go test -v ./internal/config
-
-# Run all tests
-nx run-many -t test
-```
-
-### Linting and Formatting
-
-```bash
-# Lint all code
-npm run lint
-
-# Fix linting issues
-npm run lint:fix
-
-# Format code with Prettier
-npm run format
-
-# Check formatting
-npm run format:check
-```
-
-## Development Workflow
-
-### Working on the Frontend
-
-1. Start the development server:
-
-   ```bash
-   nx serve web
-   ```
-
-2. The app will be available at http://localhost:4200 with hot module replacement enabled
-
-3. Import shared types from `@vido/shared-types`:
-   ```typescript
-   import { Movie, ApiResponse } from '@vido/shared-types';
-   ```
-
-### Working on the Backend
-
-1. Start the API server with hot reload:
-
-   ```bash
-   cd apps/api && make dev
-   ```
-
-2. The server will run at http://localhost:8080 with automatic recompilation on file changes
-
-3. Health check endpoint: http://localhost:8080/health
-
-4. View API documentation at: http://localhost:8080/swagger/index.html
-
-### Hot Reload with Air
-
-For the best development experience, use Air for automatic recompilation:
-
-```bash
-cd apps/api && make dev
-```
-
-Air will:
-
-- Automatically rebuild your application when `.go` files change
-- Restart the server with the new binary
-- Display color-coded build and runtime logs
-- Make changes visible in 1-2 seconds
-
-Configuration is in `apps/api/.air.toml`. See `apps/api/docs/AIR_SETUP.md` for detailed documentation.
-
-**Quick workflow:**
-
-1. Run `make dev` in `apps/api` once
-2. Edit any `.go` file and save
-3. Air automatically rebuilds and restarts
-4. Test your changes immediately!
-
-### Adding Shared Types
-
-1. Edit types in `libs/shared-types/src/lib/`
-
-2. Export from `libs/shared-types/src/index.ts`
-
-3. Build the library:
-
-   ```bash
-   nx build shared-types
-   ```
-
-4. Types are automatically available via `@vido/shared-types` path alias
-
-### Adding New Backend Endpoints
-
-1. Add your handler function in `apps/api/internal/server/router.go`
-
-2. Document it with swaggo annotations:
-
-```go
-// GetUser retrieves a user by ID
-// @Summary      Get user by ID
-// @Description  Retrieve detailed information about a specific user
-// @Tags         users
-// @Accept       json
-// @Produce      json
-// @Param        id   path      string  true  "User ID"
-// @Success      200  {object}  User
-// @Failure      404  {object}  middleware.ErrorResponse
-// @Failure      500  {object}  middleware.ErrorResponse
-// @Router       /api/v1/users/{id} [get]
-func (s *Server) getUser(c *gin.Context) {
-    // Handler implementation
-}
-```
-
-3. Regenerate the OpenAPI spec:
-
-```bash
-cd apps/api && make swagger
-```
-
-## Technology Stack
-
-### Frontend (apps/web)
-
-- **Framework**: React 19
-- **Build Tool**: Vite 7
-- **Routing**: TanStack Router 1.x
-- **Data Fetching**: TanStack Query 5.x
-- **Styling**: Tailwind CSS 4.x
-- **Testing**: Vitest
-
-### Backend (apps/api)
-
-- **Language**: Go 1.23
-- **Framework**: Gin
-- **Structured Logging**: zerolog with request ID tracking
-- **Error Handling**: Consistent error response format with panic recovery
-- **CORS**: gin-cors middleware
-- **OpenAPI/Swagger**: Auto-generated documentation with swaggo
-- **Hot Reload**: Air for automatic recompilation
-- **Configuration**: Environment-based with sensible defaults
-
-### Shared Libraries
-
-- **shared-types**: TypeScript type definitions shared across the monorepo
-
-### Build System
-
-- **Monorepo Tool**: Nx 22.x
-- **Package Manager**: npm with workspaces
-
-## Port Configuration
-
-- **Frontend (web)**: http://localhost:4200
-- **Backend (api)**: http://localhost:8080
-
-To change ports:
-
-- **Web**: Set `VITE_PORT` environment variable or modify `apps/web/vite.config.mts`
-- **API**: Set `PORT` environment variable in `apps/api/.env` before running `make dev` or `make run`
-
-## Backend Configuration
-
-Configuration is managed through environment variables in `apps/api/.env`. See `apps/api/.env.example` for available options:
-
-| Variable       | Default       | Description                            |
-| -------------- | ------------- | -------------------------------------- |
-| `PORT`         | `8080`        | Server port                            |
-| `ENV`          | `development` | Environment (development, production)  |
-| `LOG_LEVEL`    | `info`        | Log level (debug, info, warn, error)   |
-| `CORS_ORIGINS` | `*`           | Allowed CORS origins (comma-separated) |
-| `API_VERSION`  | `v1`          | API version                            |
-
-## Error Handling
-
-The server includes custom error types with consistent JSON responses:
-
-```go
-// Validation error (400)
-c.Error(middleware.NewValidationError("Invalid email format"))
-
-// Not found error (404)
-c.Error(middleware.NewNotFoundError("User not found"))
-
-// Internal error (500)
-c.Error(middleware.NewInternalError("Database connection failed", err))
-
-// Unauthorized error (401)
-c.Error(middleware.NewUnauthorizedError("Authentication required"))
-
-// Forbidden error (403)
-c.Error(middleware.NewForbiddenError("Access denied"))
-```
-
-All errors return a consistent format:
-
-```json
-{
-  "error": {
-    "code": "VALIDATION_ERROR",
-    "message": "Invalid email format"
-  }
-}
-```
-
-## OpenAPI/Swagger Documentation
-
-The API documentation is automatically generated from code annotations using [swaggo](https://github.com/swaggo/swag).
-
-### Regenerating the Spec
-
-After modifying endpoint annotations:
-
-```bash
-cd apps/api && make swagger
-```
-
-This will:
-
-1. Run `swag init` to regenerate the spec from code annotations
-2. Generate `docs/swagger.json` and `docs/swagger.yaml`
-3. Copy the spec to `api/openapi.json` for SDK generation
-
-### Viewing Documentation
-
-With the server running, visit:
-
-- Swagger UI: `http://localhost:8080/swagger/index.html`
-- Raw JSON spec: `http://localhost:8080/swagger/doc.json`
-
-## API Endpoints
-
-### Health Check
-
-```bash
-GET /health
-```
-
-Returns the health status of the API server.
-
-**Response:**
-
-```json
-{
-  "status": "ok",
-  "timestamp": "2024-01-07T10:30:00Z"
-}
-```
-
-### API Documentation
-
-```bash
-GET /swagger/index.html
-```
-
-Interactive Swagger UI for exploring and testing the API.
-
-## Additional Resources
-
-### Nx Documentation
-
-- Nx Official Docs: https://nx.dev
-- Nx Commands: https://nx.dev/nx-api/nx/documents/run
-- Nx Plugins: https://nx.dev/plugin-features
-
-### Framework Documentation
-
-- React: https://react.dev
-- Vite: https://vite.dev
-- TanStack Router: https://tanstack.com/router
-- TanStack Query: https://tanstack.com/query
-- Tailwind CSS: https://tailwindcss.com
-- Gin Framework: https://gin-gonic.com
-- Go: https://golang.org
-- swaggo: https://github.com/swaggo/swag
-
-## Troubleshooting
-
-### Node.js version issues
-
-```bash
-# Check your Node.js version
-node --version
-
-# Use nvm to switch to correct version
-nvm use
-```
-
-### Go dependency issues
-
-```bash
-# Clean and reinstall Go dependencies
-cd apps/api
-go clean -modcache
-go mod download
-```
-
-### Nx cache issues
-
-```bash
-# Clear Nx cache
-nx reset
-```
-
-### Port already in use
-
-```bash
-# Kill process using port 4200 (web)
-lsof -ti:4200 | xargs kill -9
-
-# Kill process using port 8080 (api)
-lsof -ti:8080 | xargs kill -9
-```
-
-## Contributing
-
-1. Create a new branch for your feature
-2. Make your changes following existing code patterns
-3. Run linting and tests before committing
-4. Build all projects to ensure nothing is broken
-5. Submit a pull request
-
-## License
-
-MIT (Frontend and shared libraries) / Apache 2.0 (Backend)
+可自由使用、修改與散布（含商業用途），惟需保留著作權與授權聲明。依 Apache 2.0 §6，本授權**不包含**「Vido」名稱與商標的使用權。
