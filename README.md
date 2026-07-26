@@ -41,7 +41,7 @@ git clone https://github.com/j620656786206/vido.git
 cd vido
 
 # 設定媒體庫路徑與 TMDB API key
-cp .env.example .env   # 若無此檔，直接建立 .env
+cp .env.example .env
 #   MEDIA_PATH=/path/to/your/media
 #   TMDB_API_KEY=your_key        # 選填，但強烈建議
 
@@ -52,12 +52,12 @@ docker compose up -d
 
 **主要環境變數**
 
-| 變數 | 預設 | 說明 |
-|---|---|---|
-| `MEDIA_PATH` | `./media` | 媒體庫路徑（以唯讀方式掛載） |
-| `TMDB_API_KEY` | — | TMDB API key，用於抓取 metadata |
-| `TMDB_DEFAULT_LANGUAGE` | `zh-TW` | metadata 語言偏好 |
-| `VIDO_PORT` | `8080` | 對外埠號 |
+| 變數                    | 預設      | 說明                            |
+| ----------------------- | --------- | ------------------------------- |
+| `MEDIA_PATH`            | `./media` | 媒體庫路徑（以唯讀方式掛載）    |
+| `TMDB_API_KEY`          | —         | TMDB API key，用於抓取 metadata |
+| `TMDB_DEFAULT_LANGUAGE` | `zh-TW`   | metadata 語言偏好               |
+| `VIDO_PORT`             | `8080`    | 對外埠號                        |
 
 正式環境可套用資源限制設定：
 
@@ -67,12 +67,12 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
 ## 技術架構
 
-| 層 | 技術 |
-|---|---|
-| 前端 | React 19、TanStack Router/Query、Tailwind CSS v4 |
-| 後端 | Go 1.25、Gin、SQLite (WAL + FTS5) |
-| 中文處理 | opencc（簡→繁） |
-| 部署 | Docker、單一容器 |
+| 層       | 技術                                             |
+| -------- | ------------------------------------------------ |
+| 前端     | React 19、TanStack Router/Query、Tailwind CSS v4 |
+| 後端     | Go 1.25、Gin、SQLite (WAL + FTS5)                |
+| 中文處理 | opencc（簡→繁）                                  |
+| 部署     | Docker、單一容器                                 |
 
 ## 開發
 
@@ -80,6 +80,14 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
 ## 授權
 
-[Apache License 2.0](LICENSE)。
+**授權條款尚未確定**，目前保留所有權利。
 
-可自由使用、修改與散布（含商業用途），惟需保留著作權與授權聲明。依 Apache 2.0 §6，本授權**不包含**「Vido」名稱與商標的使用權。
+原因是相依鏈中有一個 GPL-2.0 的傳遞相依（簡繁轉換用的 `opencc` → `liuzl/da` → `liuzl/cedar-go`），已確認會被靜態連結進 binary。在替換掉該相依之前，宣告任何寬鬆授權都與散布的實際內容不符，因此暫不宣告。
+
+處理完之後會補上正式的 LICENSE。
+
+## 第三方服務與資料來源
+
+- **TMDB** — This product uses the TMDB API but is not endorsed or certified by TMDB.
+- **豆瓣** — 繁中 metadata 的補充來源之一，透過解析公開網頁取得（HTML scraping，非官方 API）。網站改版時可能失效，屬 best-effort 的 fallback。
+- **Wikipedia** — metadata fallback 來源。
