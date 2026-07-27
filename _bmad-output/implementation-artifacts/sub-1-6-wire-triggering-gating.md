@@ -65,15 +65,19 @@ so that subtitles appear without manual steps and failures are always visible.
 
 **Given** 1.5b's nil-safe progress hook, **then** main.go connects it to the existing SSE hub: `subtitle_progress` events (**event type unchanged** — `sse/hub.go` stays 🔒) carrying `{media_id, media_type, stage, message}` with 1-3's stage values (`probing`/`extracting`/`translating`/`skipped` now reach the wire for the first time). Cadence is already P8-correct (once per chunk + stage transitions — the hook's call sites, 1.5b). Messages are zh-TW user-facing strings composed at the wiring layer (e.g. `抽取內嵌字幕中…`, `翻譯中（第 N/M 段）`). Frontend consumes fail-soft today (`useSubtitleSearch.ts:21` — verified in 1-3); richer stage UI is F3-D-v2's existing surface reading `message`.
 
-### AC #7 — [F4 ruling] The G2/G4 measurable bars — **PROPOSED numbers, confirm before dev starts**
+### AC #7 — [F4 ruling] The G2/G4 measurable bars — **✅ ALL THREE CONFIRMED (Alexyu, 2026-07-27)**
 
 **Given** M1's purpose is validating trust on real hardware, **then** these bars are citable ACs of M1 (measured at the pilot on the DS920+; per-item timing comes free from `subtitle_runs.started_at/completed_at`):
 
-| # | Bar | Proposed threshold |
+| # | Bar | Confirmed threshold |
 |---|---|---|
 | (a) | **NFR-P1 resource bound** during one item | pipeline-attributable sustained CPU ≤ **1 core** (≈25% of J4125) and incremental RSS ≤ **256 MB**; concurrent playback (Video Station/Plex) stays functional — verified via `docker stats` per the pilot procedure noted in the run log |
-| (b) | **time-to-`.zh-Hant.srt`** | translate path: ~600-cue episode ≤ **5 min**, ~1,200-cue movie ≤ **10 min** · direct/convert path (no LLM) ≤ **60 s** |
+| (b) | **time-to-`.zh-Hant.srt`** | translate path: ~600-cue episode ≤ **3 min** · ~1,200-cue movie ≤ **6 min** (2× scale, same per-cue rate) · direct/convert path (no LLM) ≤ **60 s** |
 | (c) | **trust bar** | ≥ **90%** of a **20-item** pilot sample accepted **without hand-editing** (protocol: skim + spot-play 3 random cues per item; recorded in pilot notes) |
+
+**✅ Confirmed (Alexyu, 2026-07-27):** (b) episode 5 → **3 min** (「太慢，我覺得3分鐘可以接受」), movie scaled to **6 min**; **(a) and (c) confirmed as proposed** (「a跟c可以」). These are now citable M1 acceptance bars, not proposals.
+
+**Engineering implication of the 3-min bar (for the pilot's eyes):** ~600 cues ÷ 10-cue chunks ≈ 60 sequential requests ⇒ **average ≤ 3 s per chunk including quality-gate retries**. Feasible on `claude-haiku-4-5` but tight. If the pilot misses it, the two levers — in order — are ① a larger chunk size (transport unit only; the retry unit stays the cue per P3, and `TranslationMaxTokens=4096` has headroom) and ② post-D10-warm chunk parallelism. Both are pilot-informed follow-ups, **not** current scope — do not pre-optimize.
 
 **⚠️ Discovery under (b):** the PRD's *"tens of seconds … one translation call"* assumed a single call; 1.5a ships sequential chunk=10 → a 600-cue episode is ~60 chunks = **minutes, not tens of seconds**. The bar above is the honest number; the PRD's prose estimate is flagged (F2-class, optional edit — Open Questions).
 
@@ -148,6 +152,6 @@ Delta tree: `scanner_service.go ✏️` → `🔒 (hook existed; composed in mai
 
 ## Open Questions for Alexyu (AC #7 numbers need your confirmation — the rest proceed on stated rulings)
 
-1. **G2/G4 bars (AC #7):** (a) ≤1 core / ≤256 MB · (b) episode ≤5 min, movie ≤10 min, direct ≤60 s · (c) trust ≥ **90%** over 20 items. Confirm or adjust — **(c) especially: X=90 is my proposal, the AC says X is yours.**
+1. ~~**G2/G4 bars (AC #7).**~~ ✅ **RESOLVED 2026-07-27 (Alexyu): all three confirmed** — (b) episode ≤ **3 min** (5 was 太慢) / movie ≤ **6 min** / direct ≤ **60 s**; (a) ≤ 1 core / ≤ 256 MB and (c) **90%** over 20 items confirmed verbatim (「a跟c可以」).
 2. **PRD prose:** "time-to-`.zh-Hant.srt` on the order of tens of seconds (… one translation call)" is inconsistent with chunk=10 sequential reality. Edit the PRD line, or leave it and let the pilot report supersede?
 3. **Deployment zh-TW twin:** filed as backlog (lane ③). If you'd rather 1.6 create the full translation now, say so and Task 5 expands.
