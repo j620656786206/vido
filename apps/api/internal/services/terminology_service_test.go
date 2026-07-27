@@ -14,8 +14,19 @@ import (
 )
 
 // newTestClaudeProvider creates a ClaudeProvider backed by a test HTTP server.
+//
+// The wrapper sets Content-Type: application/json on every fake response. The
+// real Messages API always sends it and the official SDK refuses to decode a
+// body that claims any other type; the previous hand-rolled client never
+// checked, so the fakes had drifted from reality without anyone noticing
+// (story sub-1-1). Handlers that need a different content type can override the
+// header themselves — this only sets the default.
 func newTestClaudeProvider(handler http.HandlerFunc) (*ai.ClaudeProvider, *httptest.Server) {
-	server := httptest.NewServer(handler)
+	jsonHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		handler(w, r)
+	})
+	server := httptest.NewServer(jsonHandler)
 	provider := ai.NewClaudeProvider("test-key",
 		ai.WithClaudeBaseURL(server.URL),
 		ai.WithClaudeHTTPClient(server.Client()),
@@ -171,9 +182,14 @@ func TestTerminologyCorrectionService_Correct_SendsSystemPrompt(t *testing.T) {
 	_, err := svc.Correct(context.Background(), "test content")
 	require.NoError(t, err)
 
-	// Verify system prompt was sent
-	system, ok := receivedBody["system"].(string)
-	assert.True(t, ok, "request should include system prompt")
+	// Verify system prompt was sent. It serializes as an ARRAY of content blocks
+	// (the Messages API's canonical shape, and what makes cache_control possible
+	// at all — story sub-1-1); the previous hand-rolled client sent a bare string.
+	blocks, ok := receivedBody["system"].([]interface{})
+	require.True(t, ok, "request should include system prompt as an array of content blocks")
+	require.Len(t, blocks, 1)
+	system, ok := blocks[0].(map[string]interface{})["text"].(string)
+	require.True(t, ok, "system block should carry text")
 	assert.Contains(t, system, "Taiwan", "system prompt should mention Taiwan")
 	assert.Contains(t, system, "cross-strait", "system prompt should mention cross-strait")
 }

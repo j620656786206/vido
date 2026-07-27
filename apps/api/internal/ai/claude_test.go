@@ -9,9 +9,33 @@ import (
 	"testing"
 	"time"
 
+	"github.com/anthropics/anthropic-sdk-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// --- test-only wire fixtures (story sub-1-1) ---
+//
+// These mirror the Messages API response shape purely so the httptest servers
+// below can build canned bodies. They used to be production types in claude.go;
+// the SDK now owns the wire protocol, so they survive here as FIXTURE BUILDERS
+// only. Nothing in production code refers to them.
+
+type claudeResponse struct {
+	Content    []claudeContentBlock `json:"content"`
+	StopReason string               `json:"stop_reason"`
+	Usage      claudeUsage          `json:"usage"`
+}
+
+type claudeContentBlock struct {
+	Type string `json:"type"`
+	Text string `json:"text"`
+}
+
+type claudeUsage struct {
+	InputTokens  int64 `json:"input_tokens"`
+	OutputTokens int64 `json:"output_tokens"`
+}
 
 func TestNewClaudeProvider(t *testing.T) {
 	t.Run("default configuration", func(t *testing.T) {
@@ -237,6 +261,7 @@ func TestClaudeProvider_CompleteText_Success(t *testing.T) {
 			Content:    []claudeContentBlock{{Type: "text", Text: "這個軟體很好用"}},
 			StopReason: "end_turn",
 		}
+		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(resp)
 	}))
 	defer server.Close()
@@ -247,8 +272,14 @@ func TestClaudeProvider_CompleteText_Success(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "這個軟體很好用", result)
 
-	// Verify system prompt is in the request
-	assert.Equal(t, "system prompt", receivedReq["system"])
+	// Verify system prompt is in the request. It now serializes as an ARRAY of
+	// content blocks rather than a bare string — that shape is what makes
+	// cache_control possible at all (story sub-1-1 AC #5); the hand-rolled
+	// client's plain-string `system` structurally could not express it.
+	systemBlocks, ok := receivedReq["system"].([]interface{})
+	require.True(t, ok, "system must serialize as an array of content blocks")
+	require.Len(t, systemBlocks, 1)
+	assert.Equal(t, "system prompt", systemBlocks[0].(map[string]interface{})["text"])
 	// Verify max_tokens
 	assert.Equal(t, float64(2048), receivedReq["max_tokens"])
 	// Verify messages
@@ -256,32 +287,64 @@ func TestClaudeProvider_CompleteText_Success(t *testing.T) {
 	assert.Len(t, messages, 1)
 	msg := messages[0].(map[string]interface{})
 	assert.Equal(t, "user", msg["role"])
-	assert.Equal(t, "user prompt", msg["content"])
+	// content is the Messages API's canonical content-block array (the SDK always
+	// emits the structured form; the hand-rolled client sent a bare string).
+	content, ok := msg["content"].([]interface{})
+	require.True(t, ok, "message content must serialize as an array of content blocks")
+	require.Len(t, content, 1)
+	block := content[0].(map[string]interface{})
+	assert.Equal(t, "text", block["type"])
+	assert.Equal(t, "user prompt", block["text"])
 }
 
+// TestClaudeProvider_CompleteText_SystemFieldSerialization asserts the WIRE BODY
+// the SDK actually sends (story sub-1-1 AC #2). It previously marshalled the
+// hand-rolled claudeRequest struct; that struct no longer exists in production,
+// so the assertion moved to where it always belonged — the real request body,
+// captured by an httptest server.
 func TestClaudeProvider_CompleteText_SystemFieldSerialization(t *testing.T) {
+	newCapturingProvider := func(t *testing.T, captured *map[string]interface{}) *ClaudeProvider {
+		t.Helper()
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			var body map[string]interface{}
+			require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+			*captured = body
+			resp := claudeResponse{
+				Content:    []claudeContentBlock{{Type: "text", Text: "ok"}},
+				StopReason: "end_turn",
+			}
+			require.NoError(t, json.NewEncoder(w).Encode(resp))
+		}))
+		t.Cleanup(server.Close)
+		return NewClaudeProvider("test-key", WithClaudeBaseURL(server.URL))
+	}
+
 	t.Run("system field included when non-empty", func(t *testing.T) {
-		req := claudeRequest{
-			Model:     "test-model",
-			MaxTokens: 1024,
-			System:    "You are a helpful assistant",
-			Messages:  []claudeMessage{{Role: "user", Content: "hello"}},
-		}
-		data, err := json.Marshal(req)
+		var body map[string]interface{}
+		p := newCapturingProvider(t, &body)
+
+		_, err := p.CompleteText(context.Background(), "You are a helpful assistant", "hello", 1024)
 		require.NoError(t, err)
-		assert.Contains(t, string(data), `"system":"You are a helpful assistant"`)
+
+		system, ok := body["system"]
+		require.True(t, ok, "system must be present in the request body when the system prompt is non-empty")
+		blocks, ok := system.([]interface{})
+		require.True(t, ok, "system must serialize as an array of content blocks (required for cache_control support)")
+		require.Len(t, blocks, 1)
+		block := blocks[0].(map[string]interface{})
+		assert.Equal(t, "You are a helpful assistant", block["text"])
 	})
 
 	t.Run("system field omitted when empty", func(t *testing.T) {
-		req := claudeRequest{
-			Model:     "test-model",
-			MaxTokens: 1024,
-			System:    "",
-			Messages:  []claudeMessage{{Role: "user", Content: "hello"}},
-		}
-		data, err := json.Marshal(req)
+		var body map[string]interface{}
+		p := newCapturingProvider(t, &body)
+
+		_, err := p.CompleteText(context.Background(), "", "hello", 1024)
 		require.NoError(t, err)
-		assert.NotContains(t, string(data), `"system"`)
+
+		_, ok := body["system"]
+		assert.False(t, ok, "system must be absent from the request body when the system prompt is empty")
 	})
 }
 
@@ -289,6 +352,7 @@ func TestClaudeProvider_CompleteText_MaxTokensDefaulting(t *testing.T) {
 	var receivedReq map[string]interface{}
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		json.NewDecoder(r.Body).Decode(&receivedReq)
 		resp := claudeResponse{
 			Content:    []claudeContentBlock{{Type: "text", Text: "ok"}},
@@ -336,6 +400,7 @@ func TestClaudeProvider_CompleteText_Timeout(t *testing.T) {
 
 func TestClaudeProvider_CompleteText_QuotaExceeded(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusTooManyRequests)
 		w.Write([]byte(`{"error":"rate_limited"}`))
 	}))
@@ -349,6 +414,7 @@ func TestClaudeProvider_CompleteText_QuotaExceeded(t *testing.T) {
 
 func TestClaudeProvider_CompleteText_ServerError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(`{"error":"internal"}`))
 	}))
@@ -362,6 +428,7 @@ func TestClaudeProvider_CompleteText_ServerError(t *testing.T) {
 
 func TestClaudeProvider_CompleteText_EmptyResponse(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		resp := claudeResponse{Content: []claudeContentBlock{}, StopReason: "end_turn"}
 		json.NewEncoder(w).Encode(resp)
 	}))
@@ -375,6 +442,7 @@ func TestClaudeProvider_CompleteText_EmptyResponse(t *testing.T) {
 
 func TestClaudeProvider_CompleteText_MalformedJSON(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`not json at all`))
 	}))
@@ -386,52 +454,53 @@ func TestClaudeProvider_CompleteText_MalformedJSON(t *testing.T) {
 	assert.ErrorIs(t, err, ErrAIInvalidResponse)
 }
 
+// TestClaudeResponse_GetText retargets the old claudeResponse.GetText() table at
+// textFromMessage, which extracts the first text block from an SDK
+// *anthropic.Message (story sub-1-1 AC #2/#4). All four original cases survive.
+//
+// The message is built by decoding a canned wire body rather than by
+// constructing anthropic.Message literals, so the union discriminator
+// (ContentBlockUnion.Type) is populated the same way a real response would
+// populate it — a hand-built literal would silently skip AsAny()'s switch.
 func TestClaudeResponse_GetText(t *testing.T) {
 	tests := []struct {
-		name     string
-		response claudeResponse
-		want     string
+		name string
+		body string
+		want string
 	}{
 		{
 			name: "text content",
-			response: claudeResponse{
-				Content: []claudeContentBlock{
-					{Type: "text", Text: "hello"},
-				},
-			},
+			body: `{"content":[{"type":"text","text":"hello"}]}`,
 			want: "hello",
 		},
 		{
-			name:     "empty content",
-			response: claudeResponse{Content: []claudeContentBlock{}},
-			want:     "",
+			name: "empty content",
+			body: `{"content":[]}`,
+			want: "",
 		},
 		{
 			name: "non-text content",
-			response: claudeResponse{
-				Content: []claudeContentBlock{
-					{Type: "image", Text: "data"},
-				},
-			},
+			body: `{"content":[{"type":"thinking","thinking":"data"}]}`,
 			want: "",
 		},
 		{
 			name: "multiple blocks returns first text",
-			response: claudeResponse{
-				Content: []claudeContentBlock{
-					{Type: "image", Text: "image_data"},
-					{Type: "text", Text: "actual text"},
-				},
-			},
+			body: `{"content":[{"type":"thinking","thinking":"image_data"},{"type":"text","text":"actual text"}]}`,
 			want: "actual text",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.want, tt.response.GetText())
+			var msg anthropic.Message
+			require.NoError(t, json.Unmarshal([]byte(tt.body), &msg))
+			assert.Equal(t, tt.want, textFromMessage(&msg))
 		})
 	}
+
+	t.Run("nil message", func(t *testing.T) {
+		assert.Equal(t, "", textFromMessage(nil))
+	})
 }
 
 // --- 9R-1: stale default model fix ---
@@ -445,6 +514,7 @@ func TestDefaultClaudeModel_CurrentAndCarriedInRequestBody(t *testing.T) {
 	// AC3: the request body carries the default model.
 	var receivedReq map[string]interface{}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		json.NewDecoder(r.Body).Decode(&receivedReq)
 		resp := claudeResponse{
 			Content:    []claudeContentBlock{{Type: "text", Text: "ok"}},
@@ -463,6 +533,7 @@ func TestDefaultClaudeModel_CurrentAndCarriedInRequestBody(t *testing.T) {
 func TestClaudeProvider_NotFoundGuard_NamesBadModel(t *testing.T) {
 	// AC3: a 404 not_found_error must surface an error naming the bad model.
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte(`{"type":"error","error":{"type":"not_found_error","message":"model: bogus-model"}}`))
 	}))
@@ -507,6 +578,7 @@ func TestNewProvider_ClaudeModelOverride(t *testing.T) {
 
 func TestClaudeProvider_MetersUsageToBudget(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{"content":[{"type":"text","text":"ok"}],"stop_reason":"end_turn","usage":{"input_tokens":1000,"output_tokens":500}}`))
 	}))
 	defer server.Close()
@@ -529,6 +601,7 @@ func TestClaudeProvider_MetersUsageToBudget(t *testing.T) {
 func TestClaudeProvider_BudgetCutoffStopsCall(t *testing.T) {
 	var hits atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		hits.Add(1)
 		w.Write([]byte(`{"content":[{"type":"text","text":"ok"}],"stop_reason":"end_turn"}`))
 	}))
@@ -542,4 +615,191 @@ func TestClaudeProvider_BudgetCutoffStopsCall(t *testing.T) {
 	_, err := p.CompleteText(ctx, "", "hi", 64)
 	require.ErrorIs(t, err, ErrBudgetExceeded)
 	assert.Equal(t, int32(0), hits.Load(), "no HTTP call once the budget is blown")
+}
+
+// --- story sub-1-1 AC #7: guards the pre-existing suite structurally cannot provide ---
+
+// TestClaudeProvider_SDKRetriesDisabled is the NAIL 2 proof (AC #3). The SDK
+// retries twice by default and retryTransient retries three times; if the SDK's
+// retries were left on, one logical call would make up to 2x3 = 6 real requests
+// while the Governor's budget pre-check ran ONCE — silently bypassing cost
+// control. No other test in the suite can observe that.
+func TestClaudeProvider_SDKRetriesDisabled(t *testing.T) {
+	var hits atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits.Add(1)
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	defer server.Close()
+
+	p := NewClaudeProvider("test-key", WithClaudeBaseURL(server.URL))
+	_, err := p.CompleteText(context.Background(), "", "hello", 64)
+
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrAIProviderError)
+	assert.Equal(t, int32(retryMaxAttempts), hits.Load(),
+		"exactly retryMaxAttempts real requests — retryTransient is the ONLY retry layer (D8)")
+}
+
+// TestClaudeProvider_RequestPathIsV1Messages locks AC #6. Every pre-existing test
+// asserts Contains(path, "/messages"), which passes for "/v1/messages",
+// "/v1/v1/messages" AND "/messages" alike — so a base URL that kept its "/v1"
+// suffix would pass the entire suite and 404 in production.
+func TestClaudeProvider_RequestPathIsV1Messages(t *testing.T) {
+	var gotPath string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		w.Header().Set("Content-Type", "application/json")
+		resp := claudeResponse{Content: []claudeContentBlock{{Type: "text", Text: "ok"}}, StopReason: "end_turn"}
+		require.NoError(t, json.NewEncoder(w).Encode(resp))
+	}))
+	defer server.Close()
+
+	p := NewClaudeProvider("test-key", WithClaudeBaseURL(server.URL))
+	_, err := p.CompleteText(context.Background(), "", "hello", 64)
+	require.NoError(t, err)
+
+	assert.Equal(t, "/v1/messages", gotPath,
+		"the SDK appends v1/messages itself — DefaultClaudeBaseURL must NOT carry a /v1 suffix")
+}
+
+// TestClaudeProvider_MalformedJSONNotRetried locks the AC #4 trap. The hand-rolled
+// client decoded OUTSIDE retryTransient, so a garbage 200 body cost exactly one
+// request. The SDK decodes INSIDE Messages.New — i.e. inside the retry loop — so
+// classifying a decode failure as retryable would silently triple the cost of
+// every malformed response.
+func TestClaudeProvider_MalformedJSONNotRetried(t *testing.T) {
+	var hits atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits.Add(1)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`not json at all`))
+	}))
+	defer server.Close()
+
+	p := NewClaudeProvider("test-key", WithClaudeBaseURL(server.URL))
+	_, err := p.CompleteText(context.Background(), "", "hello", 64)
+
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrAIInvalidResponse)
+	assert.Equal(t, int32(1), hits.Load(), "a malformed body is permanent — it must NOT be retried")
+}
+
+// TestClaudeProvider_CompleteTextWithUsage_CacheControlAndUsage covers AC #5:
+// ordered system blocks, per-block cache_control, and both cache-token
+// dimensions reaching the caller.
+func TestClaudeProvider_CompleteTextWithUsage_CacheControlAndUsage(t *testing.T) {
+	newProvider := func(t *testing.T, captured *map[string]interface{}, respBody string) *ClaudeProvider {
+		t.Helper()
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var body map[string]interface{}
+			require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+			if captured != nil {
+				*captured = body
+			}
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(respBody))
+		}))
+		t.Cleanup(server.Close)
+		return NewClaudeProvider("test-key", WithClaudeBaseURL(server.URL))
+	}
+
+	const okBody = `{"content":[{"type":"text","text":"ok"}],"stop_reason":"end_turn"}`
+
+	t.Run("blocks keep order and only the marked block carries cache_control", func(t *testing.T) {
+		var body map[string]interface{}
+		p := newProvider(t, &body, okBody)
+
+		_, err := p.CompleteTextWithUsage(context.Background(), CompletionRequest{
+			System: []SystemBlock{
+				{Text: "stable rules"},
+				{Text: "per-show metadata", CacheTTL: CacheTTL1h},
+			},
+			UserPrompt: "translate",
+			MaxTokens:  256,
+		})
+		require.NoError(t, err)
+
+		blocks, ok := body["system"].([]interface{})
+		require.True(t, ok, "system must be an array of content blocks")
+		require.Len(t, blocks, 2)
+
+		first := blocks[0].(map[string]interface{})
+		second := blocks[1].(map[string]interface{})
+		assert.Equal(t, "stable rules", first["text"], "prefix order is semantic and must be preserved")
+		assert.Equal(t, "per-show metadata", second["text"])
+
+		_, firstHasCC := first["cache_control"]
+		assert.False(t, firstHasCC, "an unmarked block must not become a cache breakpoint")
+
+		cc, ok := second["cache_control"].(map[string]interface{})
+		require.True(t, ok, "the marked block must carry cache_control")
+		assert.Equal(t, "ephemeral", cc["type"])
+		assert.Equal(t, "1h", cc["ttl"])
+	})
+
+	t.Run("CacheTTL5m emits the default ephemeral breakpoint", func(t *testing.T) {
+		var body map[string]interface{}
+		p := newProvider(t, &body, okBody)
+
+		_, err := p.CompleteTextWithUsage(context.Background(), CompletionRequest{
+			System:     []SystemBlock{{Text: "stable rules", CacheTTL: CacheTTL5m}},
+			UserPrompt: "translate",
+		})
+		require.NoError(t, err)
+
+		blocks := body["system"].([]interface{})
+		cc, ok := blocks[0].(map[string]interface{})["cache_control"].(map[string]interface{})
+		require.True(t, ok)
+		assert.Equal(t, "ephemeral", cc["type"])
+		assert.Empty(t, cc["ttl"], "the 5m default is implicit — no explicit ttl is sent")
+	})
+
+	t.Run("CacheTTLNone everywhere emits no cache_control at all", func(t *testing.T) {
+		var body map[string]interface{}
+		p := newProvider(t, &body, okBody)
+
+		_, err := p.CompleteTextWithUsage(context.Background(), CompletionRequest{
+			System:     []SystemBlock{{Text: "a"}, {Text: "b"}},
+			UserPrompt: "translate",
+		})
+		require.NoError(t, err)
+
+		for i, raw := range body["system"].([]interface{}) {
+			_, has := raw.(map[string]interface{})["cache_control"]
+			assert.Falsef(t, has, "block %d must not carry cache_control", i)
+		}
+	})
+
+	t.Run("cache token dimensions reach the caller", func(t *testing.T) {
+		p := newProvider(t, nil, `{"content":[{"type":"text","text":"translated"}],"stop_reason":"end_turn",
+			"usage":{"input_tokens":120,"output_tokens":34,"cache_creation_input_tokens":4096,"cache_read_input_tokens":2048}}`)
+
+		res, err := p.CompleteTextWithUsage(context.Background(), CompletionRequest{
+			System:     []SystemBlock{{Text: "stable", CacheTTL: CacheTTL1h}},
+			UserPrompt: "translate",
+		})
+		require.NoError(t, err)
+
+		assert.Equal(t, "translated", res.Text)
+		assert.Equal(t, int64(120), res.Usage.InputTokens)
+		assert.Equal(t, int64(34), res.Usage.OutputTokens)
+		assert.Equal(t, int64(4096), res.Usage.CacheCreationInputTokens)
+		assert.Equal(t, int64(2048), res.Usage.CacheReadInputTokens)
+	})
+
+	t.Run("zero cache tokens are surfaced, not hidden", func(t *testing.T) {
+		// The exact signal sub-1-5b reads to detect a silently-inert prefix cache.
+		p := newProvider(t, nil, okBody)
+
+		res, err := p.CompleteTextWithUsage(context.Background(), CompletionRequest{
+			System:     []SystemBlock{{Text: "too short to cache", CacheTTL: CacheTTL1h}},
+			UserPrompt: "translate",
+		})
+		require.NoError(t, err)
+		assert.Zero(t, res.Usage.CacheCreationInputTokens)
+		assert.Zero(t, res.Usage.CacheReadInputTokens)
+	})
 }

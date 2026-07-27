@@ -1,25 +1,36 @@
 package ai
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"time"
+
+	"github.com/anthropics/anthropic-sdk-go"
+	"github.com/anthropics/anthropic-sdk-go/option"
 )
 
 const (
-	// DefaultClaudeBaseURL is the base URL for Claude API.
-	DefaultClaudeBaseURL = "https://api.anthropic.com/v1"
+	// DefaultClaudeBaseURL is the ORIGIN of the Claude API — deliberately WITHOUT
+	// the "/v1" suffix. The official SDK appends its own version path segment
+	// ("v1/messages"), so a base URL ending in "/v1" would produce
+	// ".../v1/v1/messages" and 404 in production (story sub-1-1 AC #6).
+	// Every existing test asserts only Contains(path, "/messages"), which passes
+	// for the broken form too — TestClaudeProvider_RequestPathIsV1Messages is the
+	// guard. Do NOT "restore" the /v1 suffix.
+	DefaultClaudeBaseURL = "https://api.anthropic.com"
 	// DefaultClaudeModel is the default model to use. Must be a current,
 	// non-deprecated alias: the previous default "claude-3-5-haiku-latest"
 	// (Haiku 3.5) was retired 2026-02-19 and returns 404 (9R-1).
 	// Override per-deployment via CLAUDE_MODEL.
 	DefaultClaudeModel = "claude-haiku-4-5"
-	// ClaudeAPIVersion is the required API version header.
+	// ClaudeAPIVersion is the required API version header. The SDK now sets this
+	// header itself (it pins the same value); the constant is retained because it
+	// is the documented expected value and the test suite asserts against it.
 	ClaudeAPIVersion = "2023-06-01"
 	// ClaudeMaxTokens is the max tokens for response.
 	ClaudeMaxTokens = 1024
@@ -33,10 +44,19 @@ type ClaudeProvider struct {
 	httpClient *http.Client
 	timeout    time.Duration
 	governor   *Governor // 9R-11: shared throttle (nil = unthrottled)
+
+	// client is the official anthropic-sdk-go client, built ONCE in
+	// NewClaudeProvider after all options are applied (Rule 14 — never per
+	// request). anthropic.NewClient returns a value, not a pointer.
+	client anthropic.Client
 }
 
 // Compile-time interface verification.
-var _ Provider = (*ClaudeProvider)(nil)
+var (
+	_ Provider         = (*ClaudeProvider)(nil)
+	_ TextCompleter    = (*ClaudeProvider)(nil)
+	_ CachingCompleter = (*ClaudeProvider)(nil)
+)
 
 // ClaudeProviderOption is a functional option for configuring ClaudeProvider.
 type ClaudeProviderOption func(*ClaudeProvider)
@@ -95,6 +115,23 @@ func NewClaudeProvider(apiKey string, opts ...ClaudeProviderOption) *ClaudeProvi
 		}
 	}
 
+	// Built AFTER options are applied — otherwise WithClaudeBaseURL is silently
+	// ignored and every test would hit the real API.
+	p.client = anthropic.NewClient(
+		option.WithAPIKey(p.apiKey),
+		option.WithBaseURL(p.baseURL),
+		// D8 / NAIL 2: the SDK retries by default (max 2). retryTransient already
+		// wraps every call INSIDE the Governor's budget pre-check, so SDK retries
+		// would sit BELOW the budget gate and a retry storm would bypass cost
+		// control entirely. Exactly one retry layer, and it is ours.
+		option.WithMaxRetries(0),
+		// The http.Client already carries Timeout: p.timeout when we built it, so
+		// the deadline is enforced there. We deliberately do NOT stack
+		// option.WithRequestTimeout on top — two competing deadlines is a bug
+		// waiting to happen.
+		option.WithHTTPClient(p.httpClient),
+	)
+
 	return p
 }
 
@@ -103,77 +140,108 @@ func (p *ClaudeProvider) Name() ProviderName {
 	return ProviderClaude
 }
 
-// doRequest POSTs a marshaled Messages API body with bounded retry on
-// transient failures (9R-4): network errors, per-attempt timeouts, 429 and
-// 5xx retry with exponential backoff; other 4xx (including the 9R-1 404
-// model guard) fail immediately.
-func (p *ClaudeProvider) doRequest(ctx context.Context, body []byte) ([]byte, error) {
-	url := fmt.Sprintf("%s/messages", p.baseURL)
+// isTimeoutErr reports whether err represents a request timeout, covering both
+// http.Client.Timeout (a net.Error with Timeout() == true) and a caller-supplied
+// context deadline.
+func isTimeoutErr(err error) bool {
+	if errors.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+	var netErr net.Error
+	return errors.As(err, &netErr) && netErr.Timeout()
+}
 
-	// 9R-11: budget pre-check + shared throttle around the retrying request.
-	respBody, err := governed(ctx, p.governor, "claude.messages", func() ([]byte, error) {
-		return retryTransient(ctx, "claude.messages", func() ([]byte, bool, error) {
-			attemptCtx, cancel := context.WithTimeout(ctx, p.timeout)
-			defer cancel()
+// isDecodeErr reports whether err came from decoding a malformed response body.
+// The SDK decodes with encoding/json (requestconfig.go: json.NewDecoder(...).Decode),
+// so a garbage 200 body surfaces as *json.SyntaxError / *json.UnmarshalTypeError.
+func isDecodeErr(err error) bool {
+	var syntaxErr *json.SyntaxError
+	var typeErr *json.UnmarshalTypeError
+	return errors.As(err, &syntaxErr) || errors.As(err, &typeErr)
+}
 
-			httpReq, err := http.NewRequestWithContext(attemptCtx, http.MethodPost, url, bytes.NewReader(body))
+// classifyErr maps an SDK error onto this package's sentinels and reports
+// whether the failure is worth retrying. SDK error types must never leak past
+// this function.
+func (p *ClaudeProvider) classifyErr(err error) (retryable bool, mapped error) {
+	// A malformed 200 body. NOTE: with the SDK the decode happens INSIDE
+	// Messages.New, i.e. inside the retry loop — the hand-rolled client decoded
+	// outside it. Classifying this as retryable would turn one garbage response
+	// into three real requests, so it is deliberately permanent.
+	if isDecodeErr(err) {
+		return false, fmt.Errorf("%w: %v", ErrAIInvalidResponse, err)
+	}
+
+	var apiErr *anthropic.Error
+	if errors.As(err, &apiErr) {
+		slog.Warn("Claude API error response",
+			"status_code", apiErr.StatusCode,
+			"body", apiErr.Error(),
+		)
+		switch apiErr.StatusCode {
+		case http.StatusTooManyRequests:
+			return true, ErrAIQuotaExceeded
+		case http.StatusNotFound:
+			// 9R-1: a deprecated/invalid model id returns 404. This diagnostic was
+			// hard-won during that incident — keep it verbatim.
+			slog.Error("Claude model not found — the configured model id is deprecated or invalid",
+				"model", p.model,
+			)
+			return false, fmt.Errorf("%w: status 404: model %q not found (deprecated or invalid model id — set CLAUDE_MODEL to a current model)", ErrAIProviderError, p.model)
+		}
+		return isTransientStatus(apiErr.StatusCode), fmt.Errorf("%w: status %d", ErrAIProviderError, apiErr.StatusCode)
+	}
+
+	if isTimeoutErr(err) {
+		slog.Warn("Claude API timeout", "timeout_seconds", p.timeout.Seconds())
+		return true, ErrAITimeout
+	}
+
+	// Connection-level failure.
+	return true, fmt.Errorf("%w: %v", ErrAIProviderError, err)
+}
+
+// send issues one logical Messages request with bounded retry on transient
+// failures (9R-4) under the shared budget/throttle gate (9R-11).
+//
+// The nesting is load-bearing (D8):
+//
+//	governed(...)              budget pre-check + rate token + concurrency slot, ONCE
+//	  └── retryTransient(...)  3 attempts, exponential backoff
+//	        └── Messages.New   SDK, retries DISABLED
+func (p *ClaudeProvider) send(ctx context.Context, params anthropic.MessageNewParams) (*anthropic.Message, error) {
+	msg, err := governed(ctx, p.governor, "claude.messages", func() (*anthropic.Message, error) {
+		return retryTransient(ctx, "claude.messages", func() (*anthropic.Message, bool, error) {
+			m, err := p.client.Messages.New(ctx, params)
 			if err != nil {
-				return nil, false, fmt.Errorf("failed to create request: %w", err)
+				retryable, mapped := p.classifyErr(err)
+				return nil, retryable, mapped
 			}
-			httpReq.Header.Set("Content-Type", "application/json")
-			httpReq.Header.Set("x-api-key", p.apiKey)
-			httpReq.Header.Set("anthropic-version", ClaudeAPIVersion)
-
-			resp, err := p.httpClient.Do(httpReq)
-			if err != nil {
-				if attemptCtx.Err() == context.DeadlineExceeded {
-					slog.Warn("Claude API timeout", "timeout_seconds", p.timeout.Seconds())
-					return nil, true, ErrAITimeout
-				}
-				return nil, true, fmt.Errorf("%w: %v", ErrAIProviderError, err)
-			}
-			defer resp.Body.Close()
-
-			respBody, err := io.ReadAll(resp.Body)
-			if err != nil {
-				return nil, true, fmt.Errorf("failed to read response: %w", err)
-			}
-
-			if resp.StatusCode != http.StatusOK {
-				slog.Warn("Claude API error response",
-					"status_code", resp.StatusCode,
-					"body", string(respBody),
-				)
-				if resp.StatusCode == http.StatusTooManyRequests {
-					return nil, true, ErrAIQuotaExceeded
-				}
-				if resp.StatusCode == http.StatusNotFound {
-					slog.Error("Claude model not found — the configured model id is deprecated or invalid",
-						"model", p.model,
-					)
-					return nil, false, fmt.Errorf("%w: status 404: model %q not found (deprecated or invalid model id — set CLAUDE_MODEL to a current model)", ErrAIProviderError, p.model)
-				}
-				return nil, isTransientStatus(resp.StatusCode), fmt.Errorf("%w: status %d", ErrAIProviderError, resp.StatusCode)
-			}
-
-			return respBody, false, nil
+			return m, false, nil
 		})
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	// 9R-11: meter token usage against the per-run budget (best-effort — a
-	// usage-less response just records zero).
+	// 9R-11: meter token usage against the per-run budget.
 	if b := BudgetFromContext(ctx); b != nil {
-		var u struct {
-			Usage claudeUsage `json:"usage"`
-		}
-		if json.Unmarshal(respBody, &u) == nil {
-			b.RecordLLM(p.model, u.Usage.InputTokens, u.Usage.OutputTokens)
+		b.RecordLLM(p.model, msg.Usage.InputTokens, msg.Usage.OutputTokens)
+	}
+	return msg, nil
+}
+
+// textFromMessage returns the text of the first text content block, or "".
+func textFromMessage(msg *anthropic.Message) string {
+	if msg == nil {
+		return ""
+	}
+	for _, block := range msg.Content {
+		if t, ok := block.AsAny().(anthropic.TextBlock); ok {
+			return t.Text
 		}
 	}
-	return respBody, nil
+	return ""
 }
 
 // Parse sends a filename to Claude for parsing.
@@ -188,46 +256,23 @@ func (p *ClaudeProvider) Parse(ctx context.Context, req *ParseRequest) (*ParseRe
 		prompt = fmt.Sprintf(DefaultPrompt, req.Filename)
 	}
 
-	// Build request body
-	claudeReq := claudeRequest{
-		Model:     p.model,
-		MaxTokens: ClaudeMaxTokens,
-		Messages: []claudeMessage{
-			{
-				Role:    "user",
-				Content: prompt,
-			},
-		},
-	}
-
-	body, err := json.Marshal(claudeReq)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal request: %w", err)
-	}
-
 	slog.Debug("Claude API request",
 		"model", p.model,
 		"filename", req.Filename,
 	)
 
-	// Execute with bounded transient retry (9R-4)
-	respBody, err := p.doRequest(ctx, body)
+	msg, err := p.send(ctx, anthropic.MessageNewParams{
+		Model:     anthropic.Model(p.model),
+		MaxTokens: int64(ClaudeMaxTokens),
+		Messages: []anthropic.MessageParam{
+			anthropic.NewUserMessage(anthropic.NewTextBlock(prompt)),
+		},
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	// Parse Claude response
-	var claudeResp claudeResponse
-	if err := json.Unmarshal(respBody, &claudeResp); err != nil {
-		slog.Error("Failed to parse Claude response",
-			"error", err,
-			"body", string(respBody),
-		)
-		return nil, fmt.Errorf("%w: %v", ErrAIInvalidResponse, err)
-	}
-
-	// Extract text from response
-	text := claudeResp.GetText()
+	text := textFromMessage(msg)
 	if text == "" {
 		slog.Warn("Empty response from Claude",
 			"filename", req.Filename,
@@ -261,85 +306,75 @@ func (p *ClaudeProvider) Parse(ctx context.Context, req *ParseRequest) (*ParseRe
 // Unlike Parse, this does not expect JSON output — it returns the text as-is.
 // The caller controls the timeout via the provided context.
 func (p *ClaudeProvider) CompleteText(ctx context.Context, systemPrompt, userPrompt string, maxTokens int) (string, error) {
-	if maxTokens <= 0 {
-		maxTokens = ClaudeMaxTokens
-	}
-
-	claudeReq := claudeRequest{
-		Model:     p.model,
-		MaxTokens: maxTokens,
-		System:    systemPrompt,
-		Messages: []claudeMessage{
-			{
-				Role:    "user",
-				Content: userPrompt,
-			},
-		},
-	}
-
-	body, err := json.Marshal(claudeReq)
-	if err != nil {
-		return "", fmt.Errorf("failed to marshal request: %w", err)
+	req := CompletionRequest{UserPrompt: userPrompt, MaxTokens: maxTokens}
+	if systemPrompt != "" {
+		req.System = []SystemBlock{{Text: systemPrompt}}
 	}
 
 	slog.Debug("Claude CompleteText request", "model", p.model)
 
-	// Execute with bounded transient retry (9R-4)
-	respBody, err := p.doRequest(ctx, body)
+	res, err := p.CompleteTextWithUsage(ctx, req)
 	if err != nil {
 		return "", err
 	}
+	return res.Text, nil
+}
 
-	var claudeResp claudeResponse
-	if err := json.Unmarshal(respBody, &claudeResp); err != nil {
-		return "", fmt.Errorf("%w: %v", ErrAIInvalidResponse, err)
+// CompleteTextWithUsage is the caching-aware completion entry point: it accepts
+// ordered system blocks (each optionally a cache_control breakpoint) and returns
+// token usage alongside the text.
+//
+// [@contract-v1] — see CachingCompleter in provider.go. Consumer: sub-1-5a.
+func (p *ClaudeProvider) CompleteTextWithUsage(ctx context.Context, req CompletionRequest) (CompletionResult, error) {
+	maxTokens := req.MaxTokens
+	if maxTokens <= 0 {
+		maxTokens = ClaudeMaxTokens
 	}
 
-	text := claudeResp.GetText()
-	if text == "" {
-		return "", ErrAIInvalidResponse
+	params := anthropic.MessageNewParams{
+		Model:     anthropic.Model(p.model),
+		MaxTokens: int64(maxTokens),
+		Messages: []anthropic.MessageParam{
+			anthropic.NewUserMessage(anthropic.NewTextBlock(req.UserPrompt)),
+		},
 	}
-
-	return text, nil
-}
-
-// Claude API types
-
-type claudeRequest struct {
-	Model     string          `json:"model"`
-	MaxTokens int             `json:"max_tokens"`
-	System    string          `json:"system,omitempty"`
-	Messages  []claudeMessage `json:"messages"`
-}
-
-type claudeMessage struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
-}
-
-type claudeResponse struct {
-	Content    []claudeContentBlock `json:"content"`
-	StopReason string               `json:"stop_reason"`
-	Usage      claudeUsage          `json:"usage"`
-}
-
-// claudeUsage carries the token counts the Messages API returns (9R-11 metering).
-type claudeUsage struct {
-	InputTokens  int64 `json:"input_tokens"`
-	OutputTokens int64 `json:"output_tokens"`
-}
-
-type claudeContentBlock struct {
-	Type string `json:"type"`
-	Text string `json:"text"`
-}
-
-// GetText extracts the text from the first content block.
-func (r *claudeResponse) GetText() string {
-	for _, block := range r.Content {
-		if block.Type == "text" {
-			return block.Text
+	// Order is semantic, not cosmetic: prompt caching is a prefix match, so the
+	// caller's slice order is preserved exactly. An empty System slice leaves the
+	// field unset, so no "system" key is emitted at all.
+	if len(req.System) > 0 {
+		blocks := make([]anthropic.TextBlockParam, 0, len(req.System))
+		for _, b := range req.System {
+			block := anthropic.TextBlockParam{Text: b.Text}
+			switch b.CacheTTL {
+			case CacheTTL5m:
+				block.CacheControl = anthropic.NewCacheControlEphemeralParam()
+			case CacheTTL1h:
+				block.CacheControl = anthropic.CacheControlEphemeralParam{
+					TTL: anthropic.CacheControlEphemeralTTLTTL1h,
+				}
+			}
+			blocks = append(blocks, block)
 		}
+		params.System = blocks
 	}
-	return ""
+
+	msg, err := p.send(ctx, params)
+	if err != nil {
+		return CompletionResult{}, err
+	}
+
+	text := textFromMessage(msg)
+	if text == "" {
+		return CompletionResult{}, ErrAIInvalidResponse
+	}
+
+	return CompletionResult{
+		Text: text,
+		Usage: CompletionUsage{
+			InputTokens:              msg.Usage.InputTokens,
+			OutputTokens:             msg.Usage.OutputTokens,
+			CacheCreationInputTokens: msg.Usage.CacheCreationInputTokens,
+			CacheReadInputTokens:     msg.Usage.CacheReadInputTokens,
+		},
+	}, nil
 }

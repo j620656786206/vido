@@ -62,6 +62,7 @@ func TestClaudeProvider_RetriesTransientThenSucceeds(t *testing.T) {
 	// AC #3: simulate a transient failure then success (5xx -> 200).
 	var hits atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		if hits.Add(1) == 1 {
 			w.WriteHeader(http.StatusServiceUnavailable)
 			return
@@ -95,6 +96,7 @@ func TestClaudeProvider_NoRetryOnPermanent4xx(t *testing.T) {
 func TestWhisperClient_RetriesTransientThenSucceeds(t *testing.T) {
 	var hits atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		if hits.Add(1) == 1 {
 			w.WriteHeader(http.StatusTooManyRequests)
 			return

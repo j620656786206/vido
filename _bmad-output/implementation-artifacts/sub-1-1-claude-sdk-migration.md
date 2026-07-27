@@ -1,6 +1,6 @@
 # Story sub-1.1: Migrate the Claude client to the official Go SDK
 
-Status: ready-for-dev
+Status: review
 
 **Epic:** `epic-subtitle-pipeline-m1` — Automatic Traditional-Chinese subtitles for English media (M1) · **Risk: 🔴 HIGH** · **BACKEND-ONLY**
 **Source:** `_bmad-output/planning-artifacts/epics-subtitle-pipeline.md` § Story 1.1 · architecture Step 3 + **D8** + **P10**
@@ -295,33 +295,33 @@ cd apps/api && go get github.com/anthropics/anthropic-sdk-go@v1.59.0 && go mod t
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Add and pin the SDK; confirm the symbol set (AC #8, P10)**
-  - [ ] 1.1 `go get github.com/anthropics/anthropic-sdk-go@v1.59.0` from `apps/api/`; `go mod tidy`; confirm go.mod line reads exactly `v1.59.0`.
-  - [ ] 1.2 **P10 gate — verify BEFORE writing.** These are used by this story but are **not** in the architecture's confirmed-bindings list, so per P10 they must be checked against the SDK source/godoc first: `option.WithMaxRetries`, `option.WithHTTPClient`, `option.WithBaseURL`, the `anthropic.NewClient` return type (value vs pointer), `anthropic.Model` accepting a plain string, and `msg.Usage.CacheCreationInputTokens` / `CacheReadInputTokens` field names. Record what you verified in the Debug Log. **Do not infer Go symbols from cURL or Python shapes.**
-  - [ ] 1.3 Confirm `apps/api/Dockerfile` needs no change (`go mod download` path).
+- [x] **Task 1 — Add and pin the SDK; confirm the symbol set (AC #8, P10)**
+  - [x] 1.1 `go get github.com/anthropics/anthropic-sdk-go@v1.59.0` from `apps/api/`; `go mod tidy`; confirm go.mod line reads exactly `v1.59.0`.
+  - [x] 1.2 **P10 gate — verify BEFORE writing.** These are used by this story but are **not** in the architecture's confirmed-bindings list, so per P10 they must be checked against the SDK source/godoc first: `option.WithMaxRetries`, `option.WithHTTPClient`, `option.WithBaseURL`, the `anthropic.NewClient` return type (value vs pointer), `anthropic.Model` accepting a plain string, and `msg.Usage.CacheCreationInputTokens` / `CacheReadInputTokens` field names. Record what you verified in the Debug Log. **Do not infer Go symbols from cURL or Python shapes.**
+  - [x] 1.3 Confirm `apps/api/Dockerfile` needs no change (`go mod download` path).
 
-- [ ] **Task 2 — Re-implement `claude.go` internals (AC #1, #3, #4, #6)**
-  - [ ] 2.1 Add an SDK client field to `ClaudeProvider`; keep **every** existing field (`TestNewClaudeProvider` asserts them). Build the client at the **end** of `NewClaudeProvider`, after all options are applied, so `WithClaudeBaseURL`/`WithClaudeTimeout`/`WithClaudeHTTPClient` are honoured.
-  - [ ] 2.2 Change `DefaultClaudeBaseURL` to drop `/v1`, with a why-comment (AC #6).
-  - [ ] 2.3 Replace `doRequest` with a `send(ctx, params) (*anthropic.Message, error)` that preserves the exact `governed → retryTransient → Messages.New` nesting and disables SDK retries (AC #3).
-  - [ ] 2.4 Write the error classifier: `*anthropic.Error` → `StatusCode` switch; timeout via `isTimeoutErr`; decode failure → `ErrAIInvalidResponse`, **not retryable** (AC #4). Re-create the 404 diagnostic verbatim.
-  - [ ] 2.5 Move `RecordLLM` onto `msg.Usage`; add `textFromMessage`; delete `claudeRequest`/`claudeMessage`/`claudeResponse`/`claudeContentBlock`/`claudeUsage` and `GetText()`.
-  - [ ] 2.6 Rewrite `Parse` and `CompleteText` over `anthropic.MessageNewParams`. `CompleteText` with an empty `systemPrompt` must emit **no** `system` field (existing `omitempty` semantics — asserted by the rewritten `SystemFieldSerialization` test).
-  - [ ] 2.7 Run `go build ./...` + `go vet ./...` and confirm **zero** edits landed in the AC #1 "must not change" file list (`git diff --name-only`).
+- [x] **Task 2 — Re-implement `claude.go` internals (AC #1, #3, #4, #6)**
+  - [x] 2.1 Add an SDK client field to `ClaudeProvider`; keep **every** existing field (`TestNewClaudeProvider` asserts them). Build the client at the **end** of `NewClaudeProvider`, after all options are applied, so `WithClaudeBaseURL`/`WithClaudeTimeout`/`WithClaudeHTTPClient` are honoured.
+  - [x] 2.2 Change `DefaultClaudeBaseURL` to drop `/v1`, with a why-comment (AC #6).
+  - [x] 2.3 Replace `doRequest` with a `send(ctx, params) (*anthropic.Message, error)` that preserves the exact `governed → retryTransient → Messages.New` nesting and disables SDK retries (AC #3).
+  - [x] 2.4 Write the error classifier: `*anthropic.Error` → `StatusCode` switch; timeout via `isTimeoutErr`; decode failure → `ErrAIInvalidResponse`, **not retryable** (AC #4). Re-create the 404 diagnostic verbatim.
+  - [x] 2.5 Move `RecordLLM` onto `msg.Usage`; add `textFromMessage`; delete `claudeRequest`/`claudeMessage`/`claudeResponse`/`claudeContentBlock`/`claudeUsage` and `GetText()`.
+  - [x] 2.6 Rewrite `Parse` and `CompleteText` over `anthropic.MessageNewParams`. `CompleteText` with an empty `systemPrompt` must emit **no** `system` field (existing `omitempty` semantics — asserted by the rewritten `SystemFieldSerialization` test).
+  - [x] 2.7 Run `go build ./...` + `go vet ./...` and confirm **zero** edits landed in the AC #1 "must not change" file list (`git diff --name-only`).
 
-- [ ] **Task 3 — Additive caching + usage API (AC #5)**
-  - [ ] 3.1 Add `CachingCompleter`, `CacheTTL`, `SystemBlock`, `CompletionRequest`, `CompletionUsage`, `CompletionResult` to `provider.go` (Rule 11 — interfaces live with the package that owns them). Stamp `[@contract-v1]` in the doc comment naming sub-1-5 as the consumer.
-  - [ ] 3.2 Implement `CompleteTextWithUsage` on `*ClaudeProvider`, routed through the **same** `send` helper — no second request path.
-  - [ ] 3.3 Map `SystemBlock` → `[]anthropic.TextBlockParam`, preserving order; set `CacheControl` only on blocks with a non-empty `CacheTTL` (1h via the TTL param variant, 5m via the default ephemeral param).
-  - [ ] 3.4 Add `var _ CachingCompleter = (*ClaudeProvider)(nil)`. Confirm `gemini.go` compiles untouched (it must **not** implement the new interface).
+- [x] **Task 3 — Additive caching + usage API (AC #5)**
+  - [x] 3.1 Add `CachingCompleter`, `CacheTTL`, `SystemBlock`, `CompletionRequest`, `CompletionUsage`, `CompletionResult` to `provider.go` (Rule 11 — interfaces live with the package that owns them). Stamp `[@contract-v1]` in the doc comment naming sub-1-5 as the consumer.
+  - [x] 3.2 Implement `CompleteTextWithUsage` on `*ClaudeProvider`, routed through the **same** `send` helper — no second request path.
+  - [x] 3.3 Map `SystemBlock` → `[]anthropic.TextBlockParam`, preserving order; set `CacheControl` only on blocks with a non-empty `CacheTTL` (1h via the TTL param variant, 5m via the default ephemeral param).
+  - [x] 3.4 Add `var _ CachingCompleter = (*ClaudeProvider)(nil)`. Confirm `gemini.go` compiles untouched (it must **not** implement the new interface).
 
-- [ ] **Task 4 — Tests (AC #2, #7)**
-  - [ ] 4.1 Rewrite `TestClaudeProvider_CompleteText_SystemFieldSerialization` against the captured wire body — same name, both cases (present / absent).
-  - [ ] 4.2 Rewrite `TestClaudeResponse_GetText` against `textFromMessage` — same name, all four table cases.
-  - [ ] 4.3 Add the 4 new tests from AC #7.
-  - [ ] 4.4 `go test ./internal/ai/... -count=1` green; `go test -list` shows **26 + 4 = 30** Claude-touching test functions (26 preserved, 4 added; see the [@contract-v1] caveat if #3 was folded in → 29).
-  - [ ] 4.5 Full backend suite `go test ./...` green (scanning/AIService regression check — NAIL 1's real blast radius).
-  - [ ] 4.6 `pnpm lint:all` green from the repo root.
+- [x] **Task 4 — Tests (AC #2, #7)**
+  - [x] 4.1 Rewrite `TestClaudeProvider_CompleteText_SystemFieldSerialization` against the captured wire body — same name, both cases (present / absent).
+  - [x] 4.2 Rewrite `TestClaudeResponse_GetText` against `textFromMessage` — same name, all four table cases.
+  - [x] 4.3 Add the 4 new tests from AC #7.
+  - [x] 4.4 `go test ./internal/ai/... -count=1` green; `go test -list` shows **26 + 4 = 30** Claude-touching test functions (26 preserved, 4 added; see the [@contract-v1] caveat if #3 was folded in → 29).
+  - [x] 4.5 Full backend suite `go test ./...` green (scanning/AIService regression check — NAIL 1's real blast radius).
+  - [x] 4.6 `pnpm lint:all` green from the repo root.
 
 ---
 
@@ -430,13 +430,48 @@ The suite asserts `x-api-key`, `anthropic-version: 2023-06-01`, and `Content-Typ
 
 ### Agent Model Used
 
-_(fill in at implementation)_
+Claude Fable 5 (`claude-fable-5`) — BMAD dev agent (Amelia)
 
 ### Debug Log References
 
-_(Task 1.2 P10 verification results go here: which SDK symbols were checked, against what source, and what the confirmed signatures are.)_
+**Task 1.2 — P10 symbol verification.** All red-list symbols checked against the SDK source in the module cache (`$(go env GOMODCACHE)/github.com/anthropics/anthropic-sdk-go@v1.59.0`), never inferred:
+
+| Symbol | Verified signature | Source |
+|---|---|---|
+| `option.WithMaxRetries` | `func WithMaxRetries(retries int) RequestOption` | `option/requestoption.go:219` |
+| `option.WithHTTPClient` | `func WithHTTPClient(client HTTPClient) RequestOption`, `HTTPClient = interface{ Do(*http.Request) (*http.Response, error) }` — `*http.Client` satisfies it | `option/requestoption.go:169,178` |
+| `option.WithBaseURL` | `func WithBaseURL(base string) RequestOption`; **auto-appends a trailing `/` when the path is non-empty** | `option/requestoption.go:148` |
+| `anthropic.NewClient` | `func NewClient(opts ...option.RequestOption) (r Client)` — **returns a VALUE, not a pointer** | `client.go:207` |
+| `anthropic.Model` | `type Model = string` — a true **alias**, so a plain string needs no conversion helper | `message.go:4282` |
+| `Usage` cache fields | `CacheCreationInputTokens int64` / `CacheReadInputTokens int64` (plus `InputTokens`/`OutputTokens int64`) | `message.go:8443-8456` |
+| `anthropic.Error` | `type Error = apierror.Error` with `StatusCode int` | `aliases.go:17`, `internal/apierror/apierror.go:19-27` |
+| 1h TTL | `CacheControlEphemeralTTLTTL1h CacheControlEphemeralTTL = "1h"` (and `…TTL5m = "5m"`); `TextBlockParam.CacheControl` is `json:"cache_control,omitzero"` | `message.go:502,528-529,5636-5644` |
+| **AC #6 confirmation** | SDK default base URL is `https://api.anthropic.com/` and the endpoint path is the relative `"v1/messages"` — the `/v1` double-prefix trap is real | `option/requestoption.go:601`, `message.go:71,97` |
+| Decode path | `json.NewDecoder(...).Decode(...)` — standard `encoding/json`, so malformed bodies surface as `*json.SyntaxError`, making AC #4 detection option (1) viable (option (2) middleware fallback not needed) | `internal/requestconfig/requestconfig.go:560` |
+
+**Task 1.3** — `apps/api/Dockerfile` unchanged; it runs `go mod download` and picks up the new module with no edit.
 
 ### Completion Notes List
+
+**🔗 AC Drift:** NONE (checked: `grep -rn "CompleteText\|claudeRequest\|GetText\|DefaultClaudeBaseURL" _bmad-output/implementation-artifacts/*.md` — hits are all sub-1-* stories that CONSUME this contract downstream, none re-specify prior shipped behaviour. `claude.go`'s pre-existing exported surface carries no `[@contract-vN]` stamp, i.e. implicit v0 under the Rule 20 forward-only retrofit, and AC #1 preserves it byte-for-byte.)
+
+**📎 Contract Stamps:** FOUND (1 stamped AC in this story — AC #5 `[@contract-v1]` on `CachingCompleter` + its request/result types, declared in `provider.go`. Consumer sub-1-5a is drafted but not yet implemented, so no downstream ack is owed yet. No upstream stamps consumed: this story sits at the head of the dependency chain.)
+
+**🎭 A11y Pre-Flight:** N/A (100% backend — no `apps/web/` files touched)
+
+**🎨 UX Verification:** SKIPPED — no UI changes in this story
+
+**What was actually implemented.** `claude.go` internals fully replaced with `anthropic-sdk-go v1.59.0`. The exported surface is byte-identical apart from the one permitted change (`DefaultClaudeBaseURL`, AC #6). `doRequest` became `send()`, preserving the `governed → retryTransient → Messages.New` nesting exactly; `classifyErr()` maps every SDK failure onto the pre-existing `AI_*` sentinels so no SDK type leaks past the package boundary; the 9R-1 404 diagnostic is re-created verbatim. `CompleteText` is now a thin wrapper over the new `CompleteTextWithUsage`, so both entry points share one request path (AC #5.4) rather than duplicating it.
+
+**Deviation from AC #1's file list, and why it is not a drift.** AC #1 lists `provider.go` under "must not change" with the parenthetical "(`Provider` / `TextCompleter` — **the moat**)", while Task 3.1 *mandates* adding the new types to that same file. Read together, the intent is unambiguous: the two existing interfaces must not change. They did not — `Provider` and `TextCompleter` are untouched, and the new `CachingCompleter` sits beside them per Rule 11. Every other file on the must-not-change list has zero diff (verified via `git diff --name-only`).
+
+**🔍 Pre-existing fixture drift found and fixed (Rule 24 lane ① — absorbed).** The migration surfaced a latent defect in the test fakes, not in the story's own scope: **the httptest servers never sent `Content-Type: application/json`**. The real Messages API always sends it and the SDK refuses to decode a body claiming any other type, so 12 fakes in `internal/ai` plus the shared `newTestClaudeProvider` helper in `internal/services` were silently unrealistic — the hand-rolled client simply never checked. Fixed by setting the header in the fakes (behavioural assertions untouched). This is fixture *fidelity*, not test weakening: notably, `TestClaudeProvider_CompleteText_MalformedJSON` only tests the intended thing once the server actually claims JSON — before the fix it was exercising a content-type rejection, not a decode failure.
+
+**Request-body assertions updated (explicitly in AC #2's contract: "only client construction and the request-body assertions change").** Three assertions moved from the hand-rolled wire shape to the Messages API's canonical shape: `system` is now an ordered **array of content blocks** (this is precisely what makes `cache_control` expressible — the old plain-string field structurally could not carry it), and `messages[].content` is likewise a block array. Behaviour asserted is unchanged; only the shape being asserted moved.
+
+**Pre-existing fix:** none applied in-place. **Pre-existing failure filed:** `preexisting-flake-scanner-sse-scan-cancelled` — `TestScannerService_SSEBroadcast_ScanCancelled` fails ~2 of 3 *full-package* runs and passes 100% in isolation. Proven pre-existing by stashing this story's changes and re-running the full package three times: identical failure rate. Non-trivial (a timing/interference race), so filed per the dev-story rule rather than fixed in-flight.
+
+**Test count:** `go test -list` reports **30** Claude-touching test functions = the 26 required by AC #2 (all present, none deleted) + the 4 new AC #7 guards. Full backend suite green apart from the filed flake; `pnpm lint:all` green (0 errors).
 
 ### Discovery Triage
 
@@ -446,7 +481,26 @@ _(Task 1.2 P10 verification results go here: which SDK symbols were checked, aga
 
 ### File List
 
-_(fill in at implementation)_
+| File | Change |
+|---|---|
+| `apps/api/go.mod` | +`github.com/anthropics/anthropic-sdk-go v1.59.0` (direct) + transitive deps |
+| `apps/api/go.sum` | updated |
+| `apps/api/internal/ai/claude.go` | **rewritten internals** — SDK client, `send()`, `classifyErr()`, `isTimeoutErr()`, `isDecodeErr()`, `textFromMessage()`, `CompleteTextWithUsage()`; hand-rolled wire types deleted |
+| `apps/api/internal/ai/provider.go` | **added** `CachingCompleter` `[@contract-v1]`, `CacheTTL`, `SystemBlock`, `CompletionRequest`, `CompletionUsage`, `CompletionResult`. `Provider`/`TextCompleter` untouched |
+| `apps/api/internal/ai/claude_test.go` | test-only wire fixtures; 2 tests rewritten in place (AC #2); request-body assertions updated; 4 new tests (AC #7); `Content-Type` added to 10 fakes |
+| `apps/api/internal/ai/retry_test.go` | `Content-Type` added to 2 fakes (behaviour untouched) |
+| `apps/api/internal/services/terminology_service_test.go` | `Content-Type` set centrally in `newTestClaudeProvider`; system-prompt assertion updated to the block-array shape |
+| `_bmad-output/implementation-artifacts/sub-1-1-claude-sdk-migration.md` | this file — task checkboxes, Dev Agent Record, File List, Change Log, Status |
+| `_bmad-output/implementation-artifacts/sprint-status.yaml` | status → review; filed `preexisting-flake-scanner-sse-scan-cancelled` |
+
+### Change Log
+
+| Date | Change |
+|---|---|
+| 2026-07-28 | **Task 1** — pinned `anthropic-sdk-go v1.59.0`; P10 red-list verified against SDK source (see Debug Log); Dockerfile confirmed unchanged. |
+| 2026-07-28 | **Task 2** — `claude.go` internals re-implemented on the SDK: SDK client built after options (Rule 14), `DefaultClaudeBaseURL` drops `/v1` (AC #6), `send()` preserves the D8 nesting with `WithMaxRetries(0)`, `classifyErr()` re-maps every failure to the existing `AI_*` sentinels incl. the verbatim 9R-1 404 diagnostic, metering moved onto typed `msg.Usage`. |
+| 2026-07-28 | **Task 3** — additive `CachingCompleter` `[@contract-v1]` + supporting types in `provider.go`; `CompleteTextWithUsage` implemented over the same `send()` path; `gemini.go` untouched and deliberately not implementing it. |
+| 2026-07-28 | **Task 4** — 2 tests rewritten in place, 4 AC #7 guards added (30 total); pre-existing `Content-Type` fixture drift fixed in 13 fakes across 2 packages; request-body assertions moved to the canonical block-array shape; full backend suite + `pnpm lint:all` green; pre-existing scanner flake filed. |
 
 ---
 

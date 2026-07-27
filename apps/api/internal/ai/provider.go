@@ -46,6 +46,73 @@ type TextCompleter interface {
 	CompleteText(ctx context.Context, systemPrompt, userPrompt string, maxTokens int) (string, error)
 }
 
+// CachingCompleter is the OPTIONAL, additive counterpart to TextCompleter for
+// providers that support prompt caching and can report token usage to the
+// caller. It sits beside TextCompleter rather than extending it so the
+// multi-provider moat is preserved: only ClaudeProvider implements it, Gemini
+// deliberately does not, and consumers type-assert and degrade.
+//
+// [@contract-v1] (story sub-1-1 AC #5) — consumer: sub-1-5a (translate core),
+// which composes the cue-grain cache key and reads the cache-token fields to
+// detect a silently-inert prefix cache. Changing this shape is a Rule 20 bump
+// plus a downstream stale-mark.
+//
+// This interface ships the CAPABILITY only. Caching POLICY — the ≥4096-token
+// prefix minimum, the "disable and record" ruling, the versioned cache key, the
+// per-show first-request gate — belongs to sub-1-5a/1-5b.
+type CachingCompleter interface {
+	CompleteTextWithUsage(ctx context.Context, req CompletionRequest) (CompletionResult, error)
+}
+
+// CacheTTL selects the cache_control lifetime for a system block.
+type CacheTTL string
+
+const (
+	// CacheTTLNone marks a block as NOT a cache breakpoint (no cache_control).
+	CacheTTLNone CacheTTL = ""
+	// CacheTTL5m is the default ephemeral lifetime.
+	CacheTTL5m CacheTTL = "5m"
+	// CacheTTL1h is the season-batch lifetime: a batch spans tens of minutes, so
+	// the 5-minute entry would expire mid-run.
+	CacheTTL1h CacheTTL = "1h"
+)
+
+// SystemBlock is one ordered system content block. Prompt caching is a PREFIX
+// match, so stable content must come first in the slice — order is semantic.
+type SystemBlock struct {
+	Text string
+	// CacheTTL non-empty emits a cache_control breakpoint on THIS block.
+	CacheTTL CacheTTL
+}
+
+// CompletionRequest is the input to CompleteTextWithUsage.
+type CompletionRequest struct {
+	// System blocks in prefix order (stable content first). Empty emits no
+	// system field at all.
+	System []SystemBlock
+	// UserPrompt is the volatile per-request content.
+	UserPrompt string
+	// MaxTokens <= 0 falls back to ClaudeMaxTokens.
+	MaxTokens int
+}
+
+// CompletionUsage carries the token counts the Messages API returns, including
+// the two cache dimensions. Both cache fields reading zero across repeated
+// calls means the prefix silently failed to cache (e.g. below the model's
+// minimum cacheable length) — surfacing them is what lets a caller detect that.
+type CompletionUsage struct {
+	InputTokens              int64
+	OutputTokens             int64
+	CacheCreationInputTokens int64
+	CacheReadInputTokens     int64
+}
+
+// CompletionResult is the output of CompleteTextWithUsage.
+type CompletionResult struct {
+	Text  string
+	Usage CompletionUsage
+}
+
 // ProviderConfig contains common configuration for AI providers.
 type ProviderConfig struct {
 	// APIKey is the authentication key for the provider.
