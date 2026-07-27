@@ -6,7 +6,7 @@ Status: ready-for-dev
 **Origin:** Alexyu ruling 2026-07-27 — *"前端 badge 讓 M1 出貨時就帶 badge"*. Promotes the lane-③ entry `backlog-subtitle-status-fe-rendering` (filed by sub-1-2) into M1 scope.
 **Scope expanded 2026-07-27 (Alexyu, party-mode):** the **three open `.pen` copy revisions that block Epic 2** are batched into this same Pencil session — see **AC #7**. Rationale: one `.pen` edit, one screenshot regeneration, one commit. Splitting them means paying the non-deterministic re-render risk twice for changes to the same file.
 **Depends on:** sub-1-2's `[@contract-v1]` `SubtitleStatus` 9-value set (the *contract*, not its merge — design can start immediately).
-**Blocks:** sub-1-7b (frontend implementation verifies against this spec's screenshot) **and — via AC #7 — `sub-2-1-key-config-page` / `epic-subtitle-pipeline-m1-5` (Epic 2), which are blocked on exactly those three revisions.**
+**Blocks:** sub-1-7b (frontend implementation verifies against this spec's screenshot) **and — via AC #7 — `sub-2-1b-key-config-page` / `epic-subtitle-pipeline-m1-5` (Epic 2), which are blocked on exactly those three revisions.** (2-1 was split into 2-1a backend / 2-1b frontend on 2026-07-27; the `.pen` dependency sits on the frontend half.)
 **Requires:** **Pencil.app running** (`ux-design.pen` is read/written via Pencil MCP only — never `Read`/`Grep`).
 
 ---
@@ -92,7 +92,7 @@ Constraints the proposal is already built to respect — **carry them into whate
 
 **These are copy/framing changes only** — no layout rework, no new screens, no component changes. Revisions 2 and 3 land on the same screen (`f6ZxY`), so that screen is touched once.
 
-**Closing these unblocks `sub-2-1-key-config-page`.** Record in Completion Notes that the Epic 2 blocker is cleared, so `sprint-status.yaml`'s `epic-subtitle-pipeline-m1-5` blocked-by note and `implementation-readiness-report-subtitle-pipeline.md` § 5's open cross-document action can both be closed.
+**Closing these unblocks `sub-2-1b-key-config-page`** (the frontend half of the 2026-07-27 split; 2-1a is backend and never depended on the `.pen` work). Record in Completion Notes that the Epic 2 blocker is cleared, so `sprint-status.yaml`'s `epic-subtitle-pipeline-m1-5` blocked-by note and `implementation-readiness-report-subtitle-pipeline.md` § 5's open cross-document action can both be closed.
 
 ### AC #6 — Screenshots regenerated and *selectively* staged
 
@@ -163,7 +163,7 @@ Line ~733 (`9. 狀態指示與回饋 / Status Indicators & Feedback`) is pattern
 - [ ] **Task 5 — Hand off**
   - [ ] 5.1 Record the ratified table (labels, tints, icons) in Completion Notes so sub-1-7b can implement without re-opening Pencil.
   - [ ] 5.2 If any proposal in AC #3/#4/#5 was overruled, say so explicitly — 7b's ACs quote the proposal and must be corrected if it changed.
-  - [ ] 5.3 Record that the **Epic 2 blocker is cleared** (AC #7), naming all three revisions, so `sprint-status.yaml`'s `epic-subtitle-pipeline-m1-5` / `sub-2-1-key-config-page` blocked-by notes and the IR report § 5 open action can be closed.
+  - [ ] 5.3 Record that the **Epic 2 blocker is cleared** (AC #7), naming all three revisions, so `sprint-status.yaml`'s `epic-subtitle-pipeline-m1-5` / `sub-2-1b-key-config-page` blocked-by notes and the IR report § 5 open action can be closed.
 
 ---
 
