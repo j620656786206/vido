@@ -16,7 +16,10 @@
 # ------------------------------------------------------------------------------
 FROM node:20-alpine AS web-builder
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# Pin pnpm — do NOT use @latest: pnpm 11.x requires Node >=22.13 and breaks on
+# node:20-alpine (ERR_UNKNOWN_BUILTIN_MODULE). 10.34.5 supports Node >=18.12 and
+# reads lockfileVersion 9.0. Bump deliberately alongside the base image.
+RUN corepack enable && corepack prepare pnpm@10.34.5 --activate
 
 WORKDIR /app
 
