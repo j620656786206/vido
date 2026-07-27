@@ -48,6 +48,25 @@ services:
       # TMDb configuration (optional)
       - TMDB_API_KEY=${TMDB_API_KEY:-}
       - TMDB_DEFAULT_LANGUAGE=${TMDB_DEFAULT_LANGUAGE:-zh-TW}
+      # Metadata fallback providers (opt-in, see .env.example)
+      - ENABLE_DOUBAN=${ENABLE_DOUBAN:-false}
+      - ENABLE_WIKIPEDIA=${ENABLE_WIKIPEDIA:-false}
+      # AI providers (optional) — without these the AI subtitle features stay disabled
+      - AI_PROVIDER=${AI_PROVIDER:-gemini}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - CLAUDE_API_KEY=${CLAUDE_API_KEY:-}
+      - CLAUDE_MODEL=${CLAUDE_MODEL:-}
+      # ASR / speech recognition (optional). Empty ASR_BASE_URL = OpenAI Whisper;
+      # point it at a self-hosted OpenAI-compatible engine to avoid cloud cost.
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ASR_BASE_URL=${ASR_BASE_URL:-}
+      - ASR_MODEL=${ASR_MODEL:-}
+      # AI throttle / spend ceiling
+      - AI_MAX_CONCURRENT=${AI_MAX_CONCURRENT:-3}
+      - AI_RATE_PER_SEC=${AI_RATE_PER_SEC:-2}
+      - AI_RUN_BUDGET_USD=${AI_RUN_BUDGET_USD:-5}
+      # Encryption key for stored credentials (qBittorrent, DVR). Auto-derived if empty.
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-}
     healthcheck:
       test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:8080/health']
       interval: 30s
