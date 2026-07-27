@@ -6,7 +6,7 @@ inputDocuments:
   - _bmad-output/planning-artifacts/prd.md
   - _bmad-output/planning-artifacts/subtitle-pipeline-architecture.md
   - ux-design.pen (flow F v2, generation-centric)
-scope: 'M1 subtitle pipeline (extraction + LLM translation to Traditional Chinese). M1.5/P2/Tier-2 requirements are inventoried for traceability but epics are M1-only.'
+scope: 'M1 subtitle pipeline (extraction + LLM translation to Traditional Chinese). Stories are drafted M1-first; Epic 2 (M1.5) is defined here and unblocks via Story 1.7a. P2/Tier-2 requirements are inventoried for traceability only. (Reworded 2026-07-27, IR-r2 F10.)'
 ceremony: 'Risk-tiered (party-mode consensus 2026-07-26): high-risk stories get full ACs; low-risk mechanical stories get lean quick-spec ACs; the three "nails" below are citable ACs regardless of format.'
 ---
 
@@ -18,7 +18,7 @@ This document decomposes the **M1 subtitle pipeline** (embedded-subtitle extract
 
 **Ceremony model (risk-tiered):** high-risk stories (`claude.go` SDK migration; orchestrator + quality gate) carry full acceptance criteria; low-risk mechanical stories (error codes, SSE stage, docs) carry lean ACs. Three hazards MUST appear as citable ACs regardless of format:
 
-1. All 20 existing Claude tests stay green (media-scanning regression guard).
+1. All **26** existing Claude-touching tests stay green — 24 in `claude_test.go` + 2 in `retry_test.go` (the D8 retry guards; count verified via `go test -list` 2026-07-27) — the media-scanning regression guard.
 2. SDK retries disabled — `retryTransient` + Governor budget gate preserved (D8).
 3. Quality gate runs **before** OpenCC (P4) — verified by a test-first Simplified-leak-triggers-retry unit test.
 
@@ -102,9 +102,9 @@ _Phase tags from the PRD: unmarked = M1; [M1.5], [P2] = Growth; [Tier-2] = Expan
 **From Architecture (technical constraints that shape stories):**
 - **No scaffolding story** — brownfield. First story is the `claude.go` SDK migration, not project init.
 - **`anthropic-sdk-go` pinned at v1.59.0**; SDK retries **disabled** (D8) — Governor budget + `retryTransient` preserved.
-- **Regression guard:** all 20 existing Claude tests green — `claude.go` also backs AI filename parsing used by **media scanning**, so the blast radius exceeds subtitles.
+- **Regression guard:** all **26** existing Claude-touching tests green (24 `claude_test.go` + 2 `retry_test.go`) — `claude.go` also backs AI filename parsing used by **media scanning**, so the blast radius exceeds subtitles.
 - **Rule 19:** orchestrator lives in `internal/subtitle/pipeline.go` (never `services/`; compile-time enforced by `boundaries_test.go`).
-- **Migration 030:** provenance table + `subtitle_status` enum extension (`extracting`/`translating`/`no_text_source`/`skipped`). The enum is a **wire contract** → Rule 20 `[@contract-vN]` stamp.
+- **Migration 030:** provenance table + `subtitle_status` enum extension (`probing`/`extracting`/`translating`/`no_text_source`/`skipped`). The enum is a **wire contract** → Rule 20 `[@contract-vN]` stamp.
 - **Error codes:** extend `SUBTITLE_` (no new Rule 7 prefix); sync `code-review/instructions.xml` Step 3.
 - **SSE stages:** add `probing`/`extracting`/`translating`/`skipped`; wire contract → stamp + update `docs/sse-event-types.md` (+ zh-TW, Rule 17).
 - **`placer.go` is the sole writer**; overwrite guard = existing acceptable `.zh-Hant.srt` (parses, cue count > 0); single `force` exception.
@@ -130,11 +130,11 @@ _Phase tags from the PRD: unmarked = M1; [M1.5], [P2] = Growth; [Tier-2] = Expan
 | FR2 | Epic 1 | Extract embedded text track, no re-encode |
 | FR3 | Epic 1 | Multi-track single-pass extraction |
 | FR4 | Epic 1 | SDH filtering (pre-translation) |
-| FR5 | Epic 1 | No-text-source state (new enum value) |
+| FR5 | Epic 1 | No-text-source state — enum (1.2) · written by the router (1.4) · **user-visible mark: badge/icon (1.7a spec → 1.7b)** |
 | FR6 | Epic 1 | Content-based CJK-variant detection |
 | FR7 | Epic 1 | Traditional pass-through |
 | FR8 | Epic 1 | Simplified → OpenCC s2twp |
-| FR9 | Epic 1 | Language routing |
+| FR9 | Epic 1 | Language routing (1.4) · **`skipped` user-visible mark (1.7a spec → 1.7b)** |
 | FR10 | Epic 1 | English → Traditional via provider |
 | FR11 | Epic 1 | Preserve cue numbering + timestamps |
 | FR12 | Epic 1 | Manual trigger (`POST /subtitles/pipeline/run`) |
@@ -142,10 +142,10 @@ _Phase tags from the PRD: unmarked = M1; [M1.5], [P2] = Growth; [Tier-2] = Expan
 | FR15 | Epic 1 | Deterministic Traditional guarantee (OpenCC final pass) |
 | FR16 | Epic 1 | Per-cue retry |
 | FR17 | Epic 1 | Timestamp-equality assertion |
-| FR21 | Epic 1 | BYO key (env-var in M1) |
+| FR21 | Epic 1 | BYO key (env-var in M1) — **already shipped**: `CLAUDE_API_KEY` at `apps/api/internal/config/config.go:122`; zero new M1 work |
 | FR23 | Epic 1 | Capability gate, no silent failure |
 | FR26 | Epic 1 | Metadata context to provider |
-| FR27 | Epic 1 | TMDb match correction (existing flow) |
+| FR27 | Epic 1 | TMDb match correction — **already shipped**: Story 3.7 `ManualSearchDialog` + `POST /api/v1/metadata/manual-search`; zero new M1 work |
 | FR32 | Epic 1 | Place sidecar beside media |
 | FR33 | Epic 1 | Real-time progress (SSE) |
 | FR25 | Epic 2 | In-app key config (+ NFR-S3) |
@@ -171,7 +171,7 @@ A NAS owner drops English-content media into their library and a correctly-timed
 The owner configures and edits TMDB / Claude / (optional) ASR keys from a settings page instead of env-vars, and the `ManageSubtitleDialogV2` "前往設定" dead loop is fixed. Builds on Epic 1 (replaces the env-var key with a UI); Epic 1 does not depend on it.
 
 **FRs covered:** FR25 (+ NFR-S3)
-**Blocked-by:** three `.pen` copy revisions (F2 轉錄→抽取, F5 前往設定 M1 behaviour, F5 FFmpeg framing) — not addressed by PR #177.
+**Blocked-by:** three `.pen` copy revisions (F2 轉錄→抽取, F5 前往設定 M1 behaviour, F5 FFmpeg framing) — not addressed by PR #177. **Resolved by Story 1.7a** (2026-07-27 ruling — batched into its Pencil session).
 
 <!-- Detailed per-epic stories are appended in Step 3. -->
 
@@ -189,7 +189,7 @@ So that the translation path gains prompt caching and caller-visible usage witho
 
 **Acceptance Criteria:**
 
-**Given** the re-implemented client, **When** any existing consumer (`Provider.Parse`, `TextCompleter.CompleteText`) calls it, **Then** behavior is unchanged **And** all 20 existing `claude_test.go` tests pass — the media-scanning regression guard (NAIL 1).
+**Given** the re-implemented client, **When** any existing consumer (`Provider.Parse`, `TextCompleter.CompleteText`) calls it, **Then** behavior is unchanged **And** all **26** existing Claude-touching tests pass (24 in `claude_test.go` + 2 in `retry_test.go` — the D8 retry guards) — the media-scanning regression guard (NAIL 1).
 
 **Given** the SDK's built-in retries, **When** the client is constructed, **Then** SDK retries are disabled **And** the existing `retryTransient` + Governor budget gate (`governed(...)`, 9R-11) remain the sole retry/throttle path (NAIL 2).
 
@@ -205,7 +205,7 @@ So that runs are tracked, resumable, and a no-text-source item is representable.
 
 **Acceptance Criteria:**
 
-**Given** migration **030** (Go migration, after 029), **When** it runs, **Then** a `subtitle_run` provenance table exists (tmdb_id, metadata-snapshot hash, glossary version, prompt version, model id, per-run status) **And** `subtitle_status` accepts `probing` / `extracting` / `translating` / `no_text_source` / `skipped`.
+**Given** migration **030** (Go migration, after 029), **When** it runs, **Then** a `subtitle_runs` provenance table exists (plural per Rule 6 — sub-1-2 AC #1) (tmdb_id, metadata-snapshot hash, glossary version, prompt version, model id, per-run status) **And** `subtitle_status` accepts `probing` / `extracting` / `translating` / `no_text_source` / `skipped`.
 
 **Given** `subtitle_status` is frontend-consumed (`json:"subtitle_status"`, a URL search param), **When** the enum is extended, **Then** it carries a `[@contract-vN]` stamp (Rule 20).
 
@@ -239,11 +239,13 @@ So that Traditional/Simplified embedded subs are delivered directly and English 
 
 **Given** CJK-variant determination, **When** deciding Traditional vs Simplified, **Then** it is decided from **content** via `detector.go`, not the track tag (FR6).
 
-### Story 1.5: Translate with quality guarantee 🔴 (test-first)
+### Story 1.5a: Translate core + quality gate 🔴 (test-first)
+
+_Size-split 2026-07-27 (IR-r2 finding M1, Alexyu ruling) per the 13-4a/13-4b precedent — 1.5 was BACKEND-ONLY but LARGE (five concerns in one 🔴 story). 1.5a = the translate stage itself; 1.5b = cache/serialization/delivery. **NAIL 3 lives here.**_
 
 As a NAS owner,
 I want English subtitles translated to Traditional Chinese with guaranteed script and preserved timing,
-So that the `.zh-Hant.srt` is trustworthy without hand-editing.
+So that the translated cues are trustworthy without hand-editing.
 
 **Acceptance Criteria:**
 
@@ -251,11 +253,23 @@ So that the `.zh-Hant.srt` is trustworthy without hand-editing.
 
 **Given** a translation request, **When** cues are sent, **Then** the LLM receives numbered text only; timestamps stay in Go and are re-stitched; output timestamps assert-equal the source cue-by-cue (FR11/17, P2).
 
-**Given** the final pass, **When** translation completes, **Then** OpenCC s2twp guarantees Traditional script (FR15) **And** the sidecar is written by `placer.go` only, not overwriting an acceptable existing `.zh-Hant.srt` (parses + cue count > 0) except with `force` (D3/P5, FR32).
+**Given** the final pass, **When** translation completes, **Then** OpenCC s2twp guarantees Traditional script (FR15) **And** metadata (FR26) is injected as prompt context **And** the prompt text + its version constant live together in `internal/ai/prompts/` (P11). Consumes sub-1-1 `[@contract-v1]` `CachingCompleter`.
 
-**Given** caching, **When** translating, **Then** the cache key = `hash(cue) + metadata + glossary + prompt + model` versions **And** if the stable prefix < 4096 tokens, caching is disabled and recorded. Metadata (FR26) is injected as context.
+### Story 1.5b: Cache, per-show serialization, and delivery 🔴
 
-**Given** per-show concurrency, **When** several cues of one show translate, **Then** the first request runs alone before the rest are released (D10).
+_Second half of the 1.5 split. Depends on: 1.5a (gate-passed translated cues) + 1.2 (`RunVersion` + provenance repo)._
+
+As a NAS owner,
+I want translations cached, serialized per show, and delivered atomically with provenance,
+So that re-runs are cheap, cache writes are not duplicated, and the `.zh-Hant.srt` appears beside the file exactly once.
+
+**Acceptance Criteria:**
+
+**Given** caching, **When** translating, **Then** the cache key = `hash(cue) + RunVersion` (metadata + glossary + prompt + model versions — 1.2's `[@contract-v1]`) **And** if the stable prefix < 4096 tokens, caching is disabled **and recorded** (`subtitle_runs.cache_enabled`, D4).
+
+**Given** per-show concurrency, **When** several items of one show translate, **Then** the first request runs alone before the rest are released (D10).
+
+**Given** delivery, **When** an item completes, **Then** the sidecar is written by `placer.go` only, not overwriting an acceptable existing `.zh-Hant.srt` (parses + cue count > 0) except with `force` (D3/P5, FR32) **And** provenance is written AFTER the successful place (P9) **And** a completed run with a matching `RunVersion` is skipped on re-run (NFR-R3 resume via `FindCompletedRun`).
 
 ### Story 1.6: Wire triggering, gating, and progress 🟡
 
@@ -275,13 +289,56 @@ So that subtitles appear without manual steps and failures are always visible.
 
 **Given** a run, **When** stages progress, **Then** SSE broadcasts once per chunk (FR33/P8) **And** each item degrades fail-soft, never fail-page (NFR-R1).
 
+**Given** the M1 pilot's deferred G2/G4 thresholds (IR 2026-07-27 F4 — Alexyu ruling: they live HERE), **When** this story is drafted, **Then** it fixes the measurable bars as citable ACs: (a) an NFR-P1 resource bound while one item processes on DS920+, (b) a concrete time-to-`.zh-Hant.srt` number for an embedded-English-sub item (the PRD's "tens of seconds", made testable), (c) the "usable without hand-editing ≥ X %" trust bar — X set with Alexyu at drafting time and recorded in the story.
+
+**Given** Rule 17 (IR-r2 F9), **Then** `docs/deployment.md` + `docs/deployment.zh-TW.md` document the bundled ffmpeg/ffprobe requirement and the multi-arch image (infrastructure already shipped — `Dockerfile:47`, `docker.yml:80`; only the docs half was unowned). The NFR-S3 half belongs to Story 2.1.
+
+### Story 1.7a: Subtitle-status badge — design spec + Epic 2 `.pen` copy unblock 🟢 (UX)
+
+_Added 2026-07-27 by Alexyu ruling ("前端 badge 讓 M1 出貨時就帶 badge") — promotes the lane-③ entry `backlog-subtitle-status-fe-rendering` into M1 scope. Discovered during sub-1-2: extending `subtitle_status` 4→9 values leaves the frontend rendering none of them (fail-soft — the badge is simply absent — but a UX gap once the pipeline is live). **Not** covered by Story 1.6, which owns the SSE *progress* surface (F3), not library/detail badge rendering._
+
+As Sally (UX),
+I want a standalone spec screen defining the badge label, tint, and icon for the 5 new `subtitle_status` values,
+So that the implementation has something concrete to verify against instead of a developer guessing zh-TW copy and colour tokens.
+
+**Acceptance Criteria:**
+
+**Given** the Pencil spec-screen convention (design decisions get their **own** standalone screen), **When** the design lands, **Then** `ux-design.pen` carries a new desktop screen exported to `flow-j-specs/j2-d.png` (sibling to the PosterCard info-density spec `j1-d.png`) **And** `scripts/export-pen-screenshots.py`'s `SCREENS` dict is extended **And** only that one PNG is staged (a full regen is non-deterministic).
+
+**Given** the governing principle in `libraryStatus.ts` — transient process states belong to the Activity hub, **not** the badge, because they have "no persisted per-item field" — **When** Story 1.2 makes `probing`/`extracting`/`translating` persisted column values, **Then** the spec explicitly rules whether the poster/list badge now shows in-flight states or stays terminal-only, with rationale.
+
+**Given** two rendering surfaces, **When** the spec is authored, **Then** it specifies per new value both the poster/list badge (label + tint from the existing six tokens — **no new colour token**) and the `EpisodeList` row icon (icon + colour + spin), respecting the standing ruling that **accent is reserved for in-progress states**.
+
+**Given** the existing badge vocabulary, **Then** the spec resolves two copy collisions: `no_text_source` vs the existing `缺字幕` (different recoveries — P2 ASR vs re-search), and making `skipped` read as *deliberate* rather than broken (it is the correct P0 outcome for an `und` or non-English track tag).
+
+**Given** this story already opens `ux-design.pen`, **When** the same Pencil session runs, **Then** the **three copy revisions that block Epic 2** are closed here too (Alexyu ruling 2026-07-27, party-mode — one `.pen` edit, one screenshot regeneration, one commit; splitting them pays the non-deterministic re-render risk twice on the same file): F2-D-v2 轉錄 → 抽取內嵌字幕 (M1 extracts an existing track; ASR is P2) · F5-D-v2 前往設定 must state M1 behaviour (no settings page exists until FR25 — the link is a dead loop today) · F5-D-v2 FFmpeg reframed as a **deployment** concern, not a user setting. Copy/framing only — no layout rework, no new screens. **This makes Story 1.7a the resolver of Epic 2's blocked-by.**
+
+### Story 1.7b: Subtitle-status badge — frontend 🟡
+
+As a NAS owner,
+I want the library, list, and episode rows to show what the pipeline actually did to each file,
+So that an item the pipeline permanently declined is visibly distinguishable from one it simply hasn't reached yet.
+
+**Blocked-by:** 1.7a (the spec screen is the verification target) and 1.2 (the `[@contract-v1]` 9-value enum).
+
+**Acceptance Criteria:**
+
+**Given** `deriveSubtitleStatus`, **When** it receives a terminal pipeline value (`no_text_source` / `skipped`), **Then** it returns the spec'd badge **And** that branch is evaluated **before** embedded-track inference — otherwise a file carrying image-only or `und` tracks infers 有字幕 and the pipeline's authoritative verdict is silently overridden. The three transient values return `null` without reaching track inference either.
+
+**Given** `EpisodeList`'s status-icon map, **When** it is extended, **Then** all 9 values have an entry with a long-form `aria-label` (the icon carries no visible text, so the accessible name is where the full explanation lives).
+
+**Given** Rule 16, **Then** tests cover all 9 values on both surfaces **And** include the two ordering-regression cases (`no_text_source` / `skipped` **with** non-empty `subtitleTracks`) that fail against a naive append-at-the-bottom implementation.
+
+**Given** the mandatory UX gate, **Then** each new state is rendered and compared side by side with `flow-j-specs/j2-d.png` before completion.
+
 ## Epic 2: In-app provider-key configuration (M1.5)
 
 The owner configures keys from a settings page instead of env-vars, and the `ManageSubtitleDialogV2` "前往設定" dead loop is fixed.
 
 > ⚠️ **Blocked-by:** three `.pen` copy revisions (F2 轉錄→抽取, F5 前往設定 M1 behaviour, F5 FFmpeg framing) — not addressed by PR #177.
+> ✅ **Resolution path (2026-07-27):** all three are carried by **Story 1.7a**, batched into the same Pencil session as the subtitle-status badge spec. Epic 2 unblocks when 1.7a lands; no separate design story is needed.
 
-### Story 2.1: Provider-key settings page + dead-loop fix 🟡
+### Story 2.1a: Key resolution + provider hot-reload + settings API 🔴 (backend)
 
 As a NAS owner,
 I want to configure and edit TMDB / Claude / (optional) ASR keys in a settings page,
@@ -289,8 +346,26 @@ So that I don't need env-vars and the "前往設定" link actually goes somewher
 
 **Acceptance Criteria:**
 
-**Given** the key-configuration page, **When** I enter or edit a key, **Then** it persists to the existing encrypted secrets service and is never logged (NFR-S1) **And** `ManageSubtitleDialogV2`'s "前往設定" routes here, fixing the dead loop (FR25).
+_Size-split 2026-07-27 (sm create-story): 2.1 measured backend 5 / frontend 4 tasks — **both > 3**, so the Epic 8 retro cross-stack splitting rule fires (13-1a/13-1b precedent). 2.1a = backend, 2.1b = frontend._
 
-**Given** a non-HTTPS connection, **When** the page loads, **Then** it requires HTTPS, or warns and requires explicit confirmation before accepting a key (NFR-S3).
+**Acceptance Criteria (2.1a):**
+
+**Given** that `Config.ClaudeAPIKey` is **env-only** (`config.go:122`) and nothing reads the secrets service for an AI key, **When** a key is stored from the settings API, **Then** a `KeyResolver` (**secret > env**, `source` surfaced) is the single reader every runtime consumer uses — otherwise the page saves successfully and the pipeline stays gated, a silent no-op.
+
+**Given** that the Claude provider is constructed **once at startup** (`main.go:531-538`) inside an `if cfg.HasClaudeKey()` guard, **When** a key changes at runtime, **Then** a fingerprint-cached `ClaudeProviderHolder` (Rule 14) rebuilds it and the dependent services are constructed **unconditionally** behind it — no restart, no nil services.
+
+**Given** the qBittorrent settings precedent, **Then** `GET/PUT/POST-test /api/v1/settings/keys` persist to the existing encrypted secrets service, never log or re-expose values (NFR-S1), and degrade honestly to read-only when `VIDO_ENCRYPTION_KEY` is absent.
+
+### Story 2.1b: Key-configuration page + dead-end fix 🟡 (frontend)
+
+**Blocked-by:** 2.1a (the API) and 1.7a (the F5 copy revision).
+
+**Acceptance Criteria (2.1b):**
+
+**Given** the settings API, **When** I enter or edit a key, **Then** `/settings/keys` (a 12th sibling of the existing `settings/*` routes, mirroring `qbittorrent.tsx`) shows per-key state by `source` and never renders a value into an editable field **And** `ManageSubtitleDialogV2:373`'s 「前往設定」 re-points from `/settings` to `/settings/keys` — the break is a dead **end** (that route renders but has no key surface), not a dead loop (FR25).
+
+**Given** a non-HTTPS connection, **When** the page loads, **Then** it warns and requires explicit per-visit confirmation before saving (NFR-S3) — judged in the browser via `window.isSecureContext` (localhost stays warning-free; a backend check would have to trust `X-Forwarded-Proto`). Advisory, never a hard block: Vido ships over HTTP by default.
 
 **Given** the F2/F5 UI, **When** this story starts, **Then** the three `.pen` copy revisions are already merged (this story is blocked until then).
+
+**Given** Rule 17 (IR-r2 F9), **Then** the NFR-S3 HTTPS-warning behaviour is documented in `docs/deployment.md` + `docs/deployment.zh-TW.md` (the ffmpeg/multi-arch half landed with Story 1.6).
