@@ -4,6 +4,8 @@
 **整合:** 本地生成 + 模型管理已折入本文件 §6 Tier-2(初版 local-ai-subtitle-generation-spec 草稿已併入本檔,不另存)
 **驗證環境:** DS920+(J4125 / 4→20GB)標準目標機;Unraid 自組 + M5 MacBook worker 為高階/外部層
 
+> **⚠️ 權威層級(2026-07-27,IR 裁定 F7-a):** 本文件是統一「概覽」;凡與 `prd.md` 或 `subtitle-pipeline-architecture.md` 衝突之處,**一律以 PRD + 架構文件為準**。本次已同步四處:副檔名 `.zh-TW.srt`→`.zh-Hant.srt`(×3,project-context §9b)、§4/§5/§8 金鑰設定 UI → **M1.5**(FR25)、§7 斷句行長規則**僅限 ASR 路徑(M2)**。
+
 ---
 
 ## 1. 核心價值鏈(依 Alexyu 2026-07-23 定案)
@@ -13,7 +15,7 @@
   ①「抽取內嵌字幕」(優先,I/O bound、零 CPU、最準)
   ② ASR 辨識(fallback,重運算 → 一律外包)
   ③ 線上搜尋(最後,OpenSubtitles 成功率低)
-→ 語言判斷 → (需要時)LLM 翻譯成繁中 → 軟字幕 .zh-TW.srt → 播放器直接載入
+→ 語言判斷 → (需要時)LLM 翻譯成繁中 → 軟字幕 .zh-Hant.srt → 播放器直接載入
 ```
 
 **優先序 = 抽內嵌 > ASR > 線上搜尋**(Alexyu 定案)。理由:抽取免運算又自帶正確斷句/時間軸;ASR 品質雖不如人工字幕但可控;線上搜尋命中率低,列為最後備援。
@@ -58,7 +60,7 @@
                                                                         │
                           Translate Provider:claude(預設,雲端) | ollama(選配,本地)
                                         │
-                          軟字幕 .zh-TW.srt(placer.go ✅ 已有)
+                          軟字幕 .zh-Hant.srt(placer.go ✅ 已有)
 ```
 
 **Provider 抽象(兩 spec 共識,ASR 走 OpenAI 相容 `/v1/audio/transcriptions`):**
@@ -80,11 +82,11 @@
 | **抽取內嵌字幕** | ❌ 只偵測不抽 | **🆕 新增** `ffmpeg -map 0:s -c copy`(SDH 過濾、多軌一次抽) |
 | **外語→繁中 LLM 翻譯(非 ASR 路徑)** | ❌ 只有 OpenCC 轉換 | **🆕 新增** Translate Provider |
 | 算力感知自動預設 | ❌ | 🆕 新增 |
-| **金鑰設定 UI** | ❌(連 TMDB key 都只在 setup 精靈、事後不可改) | **🆕 必做**(§5) |
+| **金鑰設定 UI** | ❌(連 TMDB key 都只在 setup 精靈、事後不可改) | **🆕 M1.5**(§5,FR25) |
 
 ---
 
-## 5. 金鑰設定 UI(必做,Alexyu 定案第 4 點)
+## 5. 金鑰設定 UI(**M1.5 交付** — FR25;Alexyu 定案第 4 點)
 
 不論走哪條路都需要 key:抽內嵌+雲端翻譯 → Claude key;雲端 ASR → OpenAI/Groq key;連 TMDB 都沒地方填。新設定頁 **`/settings/keys`**(或併入 `/settings/models`):
 - 可**事後編輯**(非只在 setup 精靈):TMDB · Claude(翻譯)· 雲端 ASR(OpenAI/Groq)· (選配)本地 worker URL。
@@ -135,7 +137,7 @@
 - **簡體中文內容** → **不 LLM 翻譯**,只走 OpenCC s2twp 轉繁(既有,便宜)。
 - **英文內容** → 翻譯成繁中(**M1 首要範圍**)。
 - **日文及其他語言發音/字幕** → **先跳過翻譯**(未來再擴)。M1 只處理英文 → 繁中(影集與電影皆同)。
-- 斷句:每行 ≤ N 字、雙行規則、SDH 過濾;ASR 產出的長句交翻譯階段 LLM 一併重斷。
+- 斷句:**抽取路徑(M1)保留原字幕的專業斷句與時間軸 — 就地翻譯、不重斷**;「每行 ≤ N 字、雙行」規則**僅適用 ASR 路徑(M2)**,ASR 產出的長句交翻譯階段 LLM 重斷。SDH 過濾兩路皆適用。(2026-07-27 依 PRD 修正 — 先前把可讀性慣例過度套用到 M1 抽取路徑。)
 
 ---
 
@@ -145,9 +147,12 @@
 - [ ] `ffmpeg -map 0:s -c copy` 抽內嵌文字型字幕(多軌一次抽、SDH 過濾)
 - [ ] 語言偵測分流:繁中→完成 / 簡中→OpenCC / 英文→翻譯 / 其他→跳過
 - [ ] Claude 翻譯 Provider(斷句 prompt、保留時間軸)
-- [ ] deliver `.zh-TW.srt`;既有 UI + SSE 任務狀態
-- [ ] **金鑰設定 UI**(§5)+ 修死迴圈
+- [ ] deliver `.zh-Hant.srt`;既有 UI + SSE 任務狀態
 - [ ] Docker multi-arch + Container Manager 部署文件
+
+**M1.5 — 金鑰設定 UI(fast-follow,FR25)**
+
+- [ ] **金鑰設定 UI**(§5)+ 修 `ManageSubtitleDialogV2` 死迴圈(NFR-S3)
 
 **M2 — ASR fallback + Provider 完備 + 重排優先序**
 - [ ] OpenAI 相容 ASR client(雲端 OpenAI/Groq + 外部 worker via Tailscale)

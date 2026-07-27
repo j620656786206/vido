@@ -165,11 +165,11 @@ Subtitle translation is high-volume, cost-sensitive, short-per-cue, and the repo
 | Item | Detail |
 |---|---|
 | `internal/ai/claude.go` | 345 lines — internals replaced, exported surface preserved |
-| `internal/ai/claude_test.go` | 545 lines, ~20 tests, **all** built on `httptest.NewServer`. The fake servers can be **kept** (the SDK accepts a base-URL override); only client construction and the request-body assertions change |
+| `internal/ai/claude_test.go` | 545 lines, 24 tests (+2 Claude-provider tests in `retry_test.go` → a 26-test guard), **all** built on `httptest.NewServer`. The fake servers can be **kept** (the SDK accepts a base-URL override); only client construction and the request-body assertions change |
 | `go.mod` | one new dependency |
 | Untouched | interfaces, `gemini.go`, `factory.go`, all services, all handlers |
 
-**Regression surface is wider than the subtitle pipeline.** `claude.go` also backs `Provider.Parse` — the **AI filename-parsing path** used by media scanning (`AIService`). A regression here breaks scanning, not just subtitles. The existing 20 tests are the guardrail: **all must stay green**, and that is the completion bar for this work.
+**Regression surface is wider than the subtitle pipeline.** `claude.go` also backs `Provider.Parse` — the **AI filename-parsing path** used by media scanning (`AIService`). A regression here breaks scanning, not just subtitles. The existing 26 Claude-touching tests (24 in `claude_test.go` + 2 in `retry_test.go`) are the guardrail: **all must stay green**, and that is the completion bar for this work.
 
 ### Migration hazards (must be handled explicitly)
 
@@ -445,6 +445,7 @@ apps/api/
 │   ├── services/
 │   │   ├── ffprobe_service.go               🔒 FR1 reused (subtitle_tracks already persisted)
 │   │   ├── translation_service.go           ✏️ must return usage (FR14 prerequisite)
+│   │   ├── scanner_service.go               ✏️ V3 — enqueue scanned items → worker pool (FR13)
 │   │   └── terminology_service.go           🔒
 │   ├── repository/
 │   │   ├── subtitle_run_repository.go       🆕 provenance (D2)
@@ -455,8 +456,8 @@ apps/api/
 │   │   ├── series.go / episode.go           🔒 share the same enum
 │   │   └── subtitle_run.go                  🆕
 │   ├── database/migrations/
-│   │   ├── 030_subtitle_pipeline_state.go   🆕 provenance table + new status values
-│   │   └── 030_subtitle_pipeline_state_test.go   🆕
+│   │   ├── 030_create_subtitle_runs_table.go   🆕 provenance table + new status values
+│   │   └── 030_create_subtitle_runs_table_test.go   🆕
 │   ├── handlers/subtitle_handler.go         🔒 manual path unchanged in M1 (D3)
 │   └── sse/hub.go                           🔒 event types unchanged; only stage values extend
 docs/
@@ -465,9 +466,19 @@ docs/
 └── deployment.md (+ .zh-TW.md)              ✏️ ffmpeg requirement, multi-arch, NFR-S3
 project-context.md                           ✏️ Rule 7 new codes + §9b update
 _bmad/bmm/workflows/4-implementation/code-review/instructions.xml   ✏️ Rule 7 prefix-list sync date
+apps/web/                                    (frontend delta — stories 1.7a/1.7b, added 2026-07-27 per IR-r2 F6)
+├── src/utils/libraryStatus.ts               ✏️ badge derivation for the 5 new statuses (1.7b)
+├── src/utils/libraryStatus.spec.ts          ✏️
+├── src/components/media/EpisodeList.tsx     ✏️ status-icon map — 9 values (1.7b)
+└── src/components/media/EpisodeList.spec.tsx ✏️
+ux-design.pen                                ✏️ j2 badge spec screen + F2/F5 copy revisions (1.7a)
+scripts/export-pen-screenshots.py            ✏️ SCREENS + ("flow-j-specs","j2-d") (1.7a)
+_bmad-output/planning-artifacts/ux-design-specification.md   ✏️ StatusBadge enumeration + pointer (1.7a AC #9)
 ```
 
-**~16 new · ~12 modified · ~14 explicitly untouched.**
+> Badge labels / tints / icons are authoritative in `ux-design.pen` `flow-j-specs` screen j2 (story 1.7a) — deliberately **not** restated here (single source of truth; see § Scope of this section).
+
+**~16 new · ~20 modified · ~14 explicitly untouched** _(recounted 2026-07-27, IR-r2 F6 — +`scanner_service.go` (the V3 amendment, previously claimed but never applied) and +7 frontend/design files for 1.7a/1.7b)_.
 
 ### Requirements-to-structure mapping
 
@@ -529,7 +540,7 @@ scan → ffprobe (subtitle_tracks) → find text track
 
 ## Architecture Validation Results
 
-Adversarial pass over the 23 M1 FRs and 11 NFRs — not a rubber stamp. Six gaps found; all resolved below. Two required checking the `.pen` design directly.
+Adversarial pass over the 22 M1 FRs and 11 NFRs (count corrected 2026-07-27) — not a rubber stamp. Six gaps found; all resolved below. Two required checking the `.pen` design directly.
 
 ### Coherence validation ✅
 
@@ -562,9 +573,9 @@ NFR-P1/P2 (I/O-bound extraction, no local heavy compute in M1) ✅ · NFR-S1 (en
 
 ### Cross-document actions (not resolvable inside this document)
 
-1. **PRD amendment for FR6** (V1(a)) — scope "content-based" to CJK-variant detection; add track-tag source-language identification. Owner: PM/analyst.
-2. **PRD tag fix for FR28** — add the missing `[P2]` tag (Step 2 ruling).
-3. **`.pen` copy revisions** (V2 ①②③) — F2 subtitle wording, F5 button behaviour, F5 FFmpeg framing. Owner: UX (Sally), before M1 UI ships. Per CLAUDE.md, any `.pen` edit requires regenerating and committing screenshots.
+1. **PRD amendment for FR6** (V1(a)) — scope "content-based" to CJK-variant detection; add track-tag source-language identification. Owner: PM/analyst. **✅ Done 2026-07-26** (PRD amended; verified IR 2026-07-27).
+2. **PRD tag fix for FR28** — add the missing `[P2]` tag (Step 2 ruling). **✅ Done 2026-07-26.**
+3. **`.pen` copy revisions** (V2 ①②③) — F2 subtitle wording, F5 button behaviour, F5 FFmpeg framing. Owner: UX (Sally), before M1 UI ships. Per CLAUDE.md, any `.pen` edit requires regenerating and committing screenshots. **→ Carried by story `sub-1-7a` AC #7 (2026-07-27).**
 
 ### Architecture readiness assessment
 
@@ -604,9 +615,9 @@ NFR-P1/P2 (I/O-bound extraction, no local heavy compute in M1) ✅ · NFR-S1 (en
 
 ### Open cross-document actions (must be handled outside this document)
 
-1. **PRD amendment — FR6 scope** (V1(a)): content-based detection governs CJK variant; source language uses the track tag.
-2. **PRD tag fix — FR28** gets its missing `[P2]` tag.
-3. **`.pen` copy revisions** (V2 ①②③): F2 "轉錄"→"抽取" wording, F5 "前往設定" M1 behaviour, F5 FFmpeg framing. Owner UX; regenerate + commit screenshots per CLAUDE.md.
+1. **PRD amendment — FR6 scope** (V1(a)): content-based detection governs CJK variant; source language uses the track tag. **✅ Done 2026-07-26.**
+2. **PRD tag fix — FR28** gets its missing `[P2]` tag. **✅ Done 2026-07-26.**
+3. **`.pen` copy revisions** (V2 ①②③): F2 "轉錄"→"抽取" wording, F5 "前往設定" M1 behaviour, F5 FFmpeg framing. Owner UX; regenerate + commit screenshots per CLAUDE.md. **→ Carried by story `sub-1-7a` AC #7 (2026-07-27).**
 
 ### Handoff
 
