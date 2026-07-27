@@ -338,7 +338,7 @@ The owner configures keys from a settings page instead of env-vars, and the `Man
 > ⚠️ **Blocked-by:** three `.pen` copy revisions (F2 轉錄→抽取, F5 前往設定 M1 behaviour, F5 FFmpeg framing) — not addressed by PR #177.
 > ✅ **Resolution path (2026-07-27):** all three are carried by **Story 1.7a**, batched into the same Pencil session as the subtitle-status badge spec. Epic 2 unblocks when 1.7a lands; no separate design story is needed.
 
-### Story 2.1: Provider-key settings page + dead-loop fix 🟡
+### Story 2.1a: Key resolution + provider hot-reload + settings API 🔴 (backend)
 
 As a NAS owner,
 I want to configure and edit TMDB / Claude / (optional) ASR keys in a settings page,
@@ -346,9 +346,25 @@ So that I don't need env-vars and the "前往設定" link actually goes somewher
 
 **Acceptance Criteria:**
 
-**Given** the key-configuration page, **When** I enter or edit a key, **Then** it persists to the existing encrypted secrets service and is never logged (NFR-S1) **And** `ManageSubtitleDialogV2`'s "前往設定" routes here, fixing the dead loop (FR25).
+_Size-split 2026-07-27 (sm create-story): 2.1 measured backend 5 / frontend 4 tasks — **both > 3**, so the Epic 8 retro cross-stack splitting rule fires (13-1a/13-1b precedent). 2.1a = backend, 2.1b = frontend._
 
-**Given** a non-HTTPS connection, **When** the page loads, **Then** it requires HTTPS, or warns and requires explicit confirmation before accepting a key (NFR-S3).
+**Acceptance Criteria (2.1a):**
+
+**Given** that `Config.ClaudeAPIKey` is **env-only** (`config.go:122`) and nothing reads the secrets service for an AI key, **When** a key is stored from the settings API, **Then** a `KeyResolver` (**secret > env**, `source` surfaced) is the single reader every runtime consumer uses — otherwise the page saves successfully and the pipeline stays gated, a silent no-op.
+
+**Given** that the Claude provider is constructed **once at startup** (`main.go:531-538`) inside an `if cfg.HasClaudeKey()` guard, **When** a key changes at runtime, **Then** a fingerprint-cached `ClaudeProviderHolder` (Rule 14) rebuilds it and the dependent services are constructed **unconditionally** behind it — no restart, no nil services.
+
+**Given** the qBittorrent settings precedent, **Then** `GET/PUT/POST-test /api/v1/settings/keys` persist to the existing encrypted secrets service, never log or re-expose values (NFR-S1), and degrade honestly to read-only when `VIDO_ENCRYPTION_KEY` is absent.
+
+### Story 2.1b: Key-configuration page + dead-end fix 🟡 (frontend)
+
+**Blocked-by:** 2.1a (the API) and 1.7a (the F5 copy revision).
+
+**Acceptance Criteria (2.1b):**
+
+**Given** the settings API, **When** I enter or edit a key, **Then** `/settings/keys` (a 12th sibling of the existing `settings/*` routes, mirroring `qbittorrent.tsx`) shows per-key state by `source` and never renders a value into an editable field **And** `ManageSubtitleDialogV2:373`'s 「前往設定」 re-points from `/settings` to `/settings/keys` — the break is a dead **end** (that route renders but has no key surface), not a dead loop (FR25).
+
+**Given** a non-HTTPS connection, **When** the page loads, **Then** it warns and requires explicit per-visit confirmation before saving (NFR-S3) — judged in the browser via `window.isSecureContext` (localhost stays warning-free; a backend check would have to trust `X-Forwarded-Proto`). Advisory, never a hard block: Vido ships over HTTP by default.
 
 **Given** the F2/F5 UI, **When** this story starts, **Then** the three `.pen` copy revisions are already merged (this story is blocked until then).
 
