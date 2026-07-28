@@ -26,6 +26,7 @@ type Repositories struct {
 	FilterPresets     FilterPresetRepositoryInterface
 	Requests          RequestRepositoryInterface
 	Glossary          GlossaryRepositoryInterface
+	SubtitleRuns      SubtitleRunRepositoryInterface
 }
 
 // NewRepositories creates all repository implementations for the given database connection.
@@ -57,6 +58,7 @@ func NewRepositories(db *sql.DB) *Repositories {
 		FilterPresets:     NewFilterPresetRepository(db),
 		Requests:          NewRequestRepository(db),
 		Glossary:          NewGlossaryRepository(db),
+		SubtitleRuns:      NewSubtitleRunRepository(db),
 	}
 }
 
@@ -88,5 +90,6 @@ func NewRepositoriesWithCache(db *sql.DB) *Repositories {
 		FilterPresets:     NewFilterPresetRepository(db),
 		Requests:          NewRequestRepository(db),
 		Glossary:          NewGlossaryRepository(db),
+		SubtitleRuns:      NewSubtitleRunRepository(db),
 	}
 }

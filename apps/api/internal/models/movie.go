@@ -48,15 +48,92 @@ func ShouldOverwrite(current, incoming MetadataSource) bool {
 	return metadataSourcePriority[incoming] >= metadataSourcePriority[current]
 }
 
-// SubtitleStatus represents the subtitle search status of a media file
+// SubtitleStatus represents the subtitle lifecycle state of a media file.
+//
+// [@contract-v1] (story sub-1-2 AC #2) — frontend-consumed wire contract:
+// serialized as json:"subtitle_status" on Movie/Series/Episode and used as a
+// URL search param on /library. Consumers: sub-1-4 (routing verdicts),
+// sub-1-5 (pipeline writes), sub-1-6 (enumeration), sub-1-7b (badge
+// rendering). Adding or renaming a value is a Rule 20 bump plus a downstream
+// stale-mark.
+//
+// The four search-flavoured values predate the pipeline (migrations 018/025);
+// the five pipeline-flavoured values were added by sub-1-2 because FR5 ("mark
+// an item as having no usable text source") could not be expressed at all in
+// the search vocabulary.
 type SubtitleStatus string
 
 const (
+	// --- search-flavoured, pre-existing (migrations 018/025). UNCHANGED. ---
+
 	SubtitleStatusNotSearched SubtitleStatus = "not_searched"
 	SubtitleStatusSearching   SubtitleStatus = "searching"
 	SubtitleStatusFound       SubtitleStatus = "found"
 	SubtitleStatusNotFound    SubtitleStatus = "not_found"
+
+	// --- pipeline-flavoured, added by story sub-1-2. ---
+
+	// SubtitleStatusProbing — ffprobe is enumerating subtitle tracks (FR1).
+	SubtitleStatusProbing SubtitleStatus = "probing"
+	// SubtitleStatusExtracting — an embedded track is being extracted (FR2/FR3).
+	SubtitleStatusExtracting SubtitleStatus = "extracting"
+	// SubtitleStatusTranslating — LLM translation is in flight (FR10).
+	SubtitleStatusTranslating SubtitleStatus = "translating"
+	// SubtitleStatusNoTextSource — TERMINAL. The file has no usable text
+	// subtitle track at all (image-only tracks, or none) — FR5. Recoverable by
+	// P2 ASR (FR29), unlike SubtitleStatusSkipped.
+	SubtitleStatusNoTextSource SubtitleStatus = "no_text_source"
+	// SubtitleStatusSkipped — TERMINAL. A text track exists but the pipeline
+	// deliberately declined it: an `und` or non-English tag (FR9 + P0, where
+	// `und` is NEVER treated as English). Recoverable by a corrected track tag
+	// or the manual flow, unlike SubtitleStatusNoTextSource.
+	SubtitleStatusSkipped SubtitleStatus = "skipped"
 )
+
+// AllSubtitleStatuses is the authoritative ordered value set behind the
+// [@contract-v1] stamp. Extend it here and nowhere else — every consumer that
+// needs to enumerate statuses reads this, so a constant added without a matching
+// entry here is a contract bug (guarded by a test).
+func AllSubtitleStatuses() []SubtitleStatus {
+	return []SubtitleStatus{
+		SubtitleStatusNotSearched,
+		SubtitleStatusSearching,
+		SubtitleStatusFound,
+		SubtitleStatusNotFound,
+		SubtitleStatusProbing,
+		SubtitleStatusExtracting,
+		SubtitleStatusTranslating,
+		SubtitleStatusNoTextSource,
+		SubtitleStatusSkipped,
+	}
+}
+
+// IsValid reports whether s is a known subtitle status.
+//
+// Additive only: no existing call site validates SubtitleStatus, so this cannot
+// reject data that used to be written. It is deliberately NOT wired into the
+// shipped UpdateSubtitleStatus search path — sub-1-4 onwards use it on the write
+// paths they own.
+func (s SubtitleStatus) IsValid() bool {
+	for _, known := range AllSubtitleStatuses() {
+		if s == known {
+			return true
+		}
+	}
+	return false
+}
+
+// IsTerminal reports whether s is an end state that no further pipeline stage
+// will advance.
+func (s SubtitleStatus) IsTerminal() bool {
+	switch s {
+	case SubtitleStatusFound, SubtitleStatusNotFound,
+		SubtitleStatusNoTextSource, SubtitleStatusSkipped:
+		return true
+	default:
+		return false
+	}
+}
 
 // Genre represents a genre with ID and name
 type Genre struct {
