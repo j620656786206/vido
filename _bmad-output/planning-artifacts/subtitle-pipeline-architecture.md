@@ -420,7 +420,7 @@ apps/api/
 │   ├── subtitle/
 │   │   ├── pipeline.go                      🆕 orchestrator (D1)
 │   │   ├── pipeline_test.go                 🆕
-│   │   ├── extractor.go                     🆕 ffmpeg -map 0:s -c copy (FR2/FR3)
+│   │   ├── extractor.go                     🆕 ffmpeg -map 0:{index} -c:s srt (FR2/FR3 — 1.4 Finding 2)
 │   │   ├── extractor_test.go                🆕
 │   │   ├── sdh_filter.go                    🆕 FR4 — runs pre-translation (P6)
 │   │   ├── sdh_filter_test.go               🆕
@@ -443,7 +443,7 @@ apps/api/
 │   │   ├── governor.go / budget.go / retry.go     🔒 D8 keeps retryTransient
 │   │   └── asr.go                           🔒 P2 only
 │   ├── services/
-│   │   ├── ffprobe_service.go               🔒 FR1 reused (subtitle_tracks already persisted)
+│   │   ├── ffprobe_service.go               ✏️ +stream_index (additive, 1.4) — FR1 reuse holds for enumeration; extraction needs the index
 │   │   ├── translation_service.go           ✏️ must return usage (FR14 prerequisite)
 │   │   ├── scanner_service.go               ✏️ V3 — enqueue scanned items → worker pool (FR13)
 │   │   └── terminology_service.go           🔒
@@ -478,13 +478,13 @@ _bmad-output/planning-artifacts/ux-design-specification.md   ✏️ StatusBadge 
 
 > Badge labels / tints / icons are authoritative in `ux-design.pen` `flow-j-specs` screen j2 (story 1.7a) — deliberately **not** restated here (single source of truth; see § Scope of this section).
 
-**~16 new · ~20 modified · ~14 explicitly untouched** _(recounted 2026-07-27, IR-r2 F6 — +`scanner_service.go` (the V3 amendment, previously claimed but never applied) and +7 frontend/design files for 1.7a/1.7b)_.
+**~16 new · ~21 modified · ~13 explicitly untouched** _(recounted 2026-07-27, IR-r2 F6 — +`scanner_service.go` (the V3 amendment, previously claimed but never applied) and +7 frontend/design files for 1.7a/1.7b; re-tallied 2026-07-28 by story 1.4 when `ffprobe_service.go` moved 🔒 → ✏️)_.
 
 ### Requirements-to-structure mapping
 
 | FR group | Location |
 |---|---|
-| **A. Detection & extraction** (FR1–5) | FR1 `ffprobe_service.go` 🔒 + existing `subtitle_tracks` column · FR2/3 `extractor.go` 🆕 · FR4 `sdh_filter.go` 🆕 · FR5 new status value in `models/movie.go` ✏️ |
+| **A. Detection & extraction** (FR1–5) | FR1 `ffprobe_service.go` ✏️ (+`stream_index`, 1.4) + existing `subtitle_tracks` column · FR2/3 `extractor.go` 🆕 · FR4 `sdh_filter.go` 🆕 · FR5 new status value in `models/movie.go` ✏️ |
 | **B. Language routing** (FR6–9) | `router.go` 🆕 + `detector.go` 🔒 (CJK only) + `converter.go` 🔒 (s2twp) |
 | **C. AI translation** (FR10–13) | `pipeline.go` 🆕 → `translation_service.go` ✏️ → `ai/claude.go` ✏️ + `prompts/subtitle_translator.go` ✏️ |
 | **D. Quality assurance** (FR15–17) | `quality_gate.go` 🆕 (gate) → `converter.go` 🔒 (OpenCC final pass) |
@@ -517,7 +517,7 @@ Repository      placer / converter   Claude SDK
 ```
 scan → ffprobe (subtitle_tracks) → find text track
   → track tag eng/en?  no → status = skipped ──┐
-  → extractor (ffmpeg -c copy)                 │
+  → extractor (ffmpeg -c:s srt, one pass)      │
   → sdh_filter (before translation)            │
   → detector (CJK variant)                     │
       Traditional → done                       │

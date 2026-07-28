@@ -1,6 +1,7 @@
 package services
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -209,6 +210,61 @@ func TestParseFfprobeJSON_SubtitleNoLanguage(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, info.SubtitleTracks, 1)
 	assert.Equal(t, "und", info.SubtitleTracks[0].Language)
+}
+
+// ─── Subtitle stream index (story sub-1-4 AC #2) ───────────────────────────
+
+func TestParseFfprobeJSON_SubtitleStreamIndex(t *testing.T) {
+	// Absolute ffmpeg stream indexes — the value `-map 0:{idx}` needs. Note the
+	// subtitle tracks are NOT at positions 0/1 of SubtitleTracks in the container,
+	// so a slice position can never substitute for the real index.
+	input := []byte(`{
+		"streams": [
+			{"index":0,"codec_type":"video","codec_name":"h264","width":1920,"height":1080},
+			{"index":1,"codec_type":"audio","codec_name":"aac","channels":2},
+			{"index":2,"codec_type":"subtitle","codec_name":"subrip","tags":{"language":"eng"}},
+			{"index":5,"codec_type":"subtitle","codec_name":"hdmv_pgs_subtitle","tags":{"language":"chi"}}
+		],
+		"format": {}
+	}`)
+
+	info, err := parseFfprobeJSON(input)
+	require.NoError(t, err)
+	require.Len(t, info.SubtitleTracks, 2)
+
+	assert.Equal(t, 2, info.SubtitleTracks[0].StreamIndex)
+	assert.Equal(t, "eng", info.SubtitleTracks[0].Language)
+	assert.Equal(t, 5, info.SubtitleTracks[1].StreamIndex)
+	assert.Equal(t, "chi", info.SubtitleTracks[1].Language)
+}
+
+func TestParseFfprobeJSON_SubtitleStreamIndexZero(t *testing.T) {
+	// Index 0 is legal (subtitle-only container) — it must survive as 0, which is
+	// why the json tag carries no omitempty.
+	input := []byte(`{
+		"streams": [
+			{"index":0,"codec_type":"subtitle","codec_name":"subrip","tags":{"language":"eng"}}
+		],
+		"format": {}
+	}`)
+
+	info, err := parseFfprobeJSON(input)
+	require.NoError(t, err)
+	require.Len(t, info.SubtitleTracks, 1)
+	assert.Equal(t, 0, info.SubtitleTracks[0].StreamIndex)
+}
+
+func TestSubtitleTrack_StreamIndexJSONRoundTrip(t *testing.T) {
+	// The persisted subtitle_tracks column is this struct marshalled. stream_index
+	// must be emitted even when 0 (no omitempty) so a re-read is lossless, and the
+	// three pre-existing keys stay byte-identical (9c-3 AC #2 additive extension).
+	raw, err := json.Marshal(SubtitleTrack{Language: "eng", Format: "subrip", External: false, StreamIndex: 0})
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"language":"eng","format":"subrip","external":false,"stream_index":0}`, string(raw))
+
+	var back SubtitleTrack
+	require.NoError(t, json.Unmarshal(raw, &back))
+	assert.Equal(t, SubtitleTrack{Language: "eng", Format: "subrip", StreamIndex: 0}, back)
 }
 
 // ─── Unknown codec normalization ───────────────────────────────────────────
