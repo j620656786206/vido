@@ -163,17 +163,34 @@ Subtitle pipeline progress for individual media items. Broadcast at each pipelin
 | `stage`      | `string` | Current pipeline stage (see below) |
 | `message`    | `string` | Human-readable status message      |
 
-**Pipeline stages (in order):**
+**Pipeline stages** — one wire enum, two emitting paths:
 
-| Stage         | Description                                                |
-| ------------- | ---------------------------------------------------------- |
-| `searching`   | Querying subtitle providers (Assrt, Zimuku, OpenSubtitles) |
-| `scoring`     | Ranking results by language, resolution, source trust      |
-| `downloading` | Fetching the subtitle file                                 |
-| `converting`  | OpenCC language conversion (Simplified → Traditional)      |
-| `placing`     | Writing subtitle file to disk alongside media              |
-| `complete`    | Subtitle successfully placed                               |
-| `failed`      | Error occurred at any stage                                |
+_Search path (`Engine`, in order):_
+
+| Stage         | Description                                                  |
+| ------------- | ------------------------------------------------------------ |
+| `searching`   | Querying subtitle providers (Assrt, Zimuku, OpenSubtitles)   |
+| `scoring`     | Ranking results by language, resolution, source trust        |
+| `downloading` | Fetching the subtitle file                                   |
+| `converting`  | OpenCC language conversion (Simplified → Traditional)        |
+| `correcting`  | AI terminology correction (Stage 4.5, post-OpenCC, optional) |
+| `placing`     | Writing subtitle file to disk alongside media                |
+
+_Generation pipeline (M1 orchestrator, in order):_
+
+| Stage         | Description                                                   |
+| ------------- | ------------------------------------------------------------- |
+| `probing`     | Enumerating subtitle tracks via ffprobe                       |
+| `extracting`  | Extracting an embedded text track (`ffmpeg -c copy`)          |
+| `translating` | LLM translation to Traditional Chinese                        |
+| `skipped`     | Terminal — pipeline deliberately declined (`und`/non-English) |
+
+_Shared terminal stages:_
+
+| Stage      | Description                  |
+| ---------- | ---------------------------- |
+| `complete` | Subtitle successfully placed |
+| `failed`   | Error occurred at any stage  |
 
 **Example payload:**
 
