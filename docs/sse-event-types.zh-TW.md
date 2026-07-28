@@ -163,7 +163,9 @@ es.addEventListener('scan_progress', (e: MessageEvent) => {
 | `stage`      | `string` | 目前管線階段（見下表）  |
 | `message`    | `string` | 人類可讀的狀態訊息      |
 
-**管線階段（依序）：**
+**管線階段** — 同一組 wire enum，兩條發送路徑：
+
+_搜尋路徑（`Engine`，依序）：_
 
 | 階段          | 說明                                         |
 | ------------- | -------------------------------------------- |
@@ -171,9 +173,24 @@ es.addEventListener('scan_progress', (e: MessageEvent) => {
 | `scoring`     | 依語言、解析度、來源信任度排名結果           |
 | `downloading` | 下載字幕檔案                                 |
 | `converting`  | OpenCC 語言轉換（簡體 → 繁體）               |
+| `correcting`  | AI 術語校正（Stage 4.5，OpenCC 之後，選用）  |
 | `placing`     | 將字幕檔案寫入媒體旁的磁碟位置               |
-| `complete`    | 字幕已成功放置                               |
-| `failed`      | 任何階段發生錯誤                             |
+
+_生成管線（M1 orchestrator，依序）：_
+
+| 階段          | 說明                                   |
+| ------------- | -------------------------------------- |
+| `probing`     | 以 ffprobe 列舉字幕軌                  |
+| `extracting`  | 抽取內嵌文字字幕軌（`ffmpeg -c copy`） |
+| `translating` | LLM 翻譯成繁體中文                     |
+| `skipped`     | 終態 — 管線刻意跳過（`und`／非英文軌） |
+
+_共用終態階段：_
+
+| 階段       | 說明             |
+| ---------- | ---------------- |
+| `complete` | 字幕已成功放置   |
+| `failed`   | 任何階段發生錯誤 |
 
 **範例 payload：**
 

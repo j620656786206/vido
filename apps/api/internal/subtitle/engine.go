@@ -32,8 +32,26 @@ const (
 	StageConverting  PipelineStage = "converting"
 	StageCorrecting  PipelineStage = "correcting"
 	StagePlacing     PipelineStage = "placing"
-	StageComplete    PipelineStage = "complete"
-	StageFailed      PipelineStage = "failed"
+
+	// --- generation-pipeline stages (M1, story sub-1-3). [@contract-v1] —
+	// subtitle_progress.stage is a frontend-consumed wire contract (typed in
+	// useSubtitleSearch.ts; documented in docs/sse-event-types{,.zh-TW}.md).
+	// The full 12-value set = the 6 search-path values above + these 4 + the 2
+	// shared terminal values below. Consumers: sub-1-5a/1-5b, sub-1-6
+	// (broadcast), and the frontend progress surfaces. Extending the set again
+	// is a Rule 20 bump plus a downstream stale-mark.
+	//
+	// These four deliberately mirror models.SubtitleStatus values of the same
+	// name: D2 (media-row state) and D6 (SSE progress) are two DISTINCT wire
+	// contracts that share vocabulary, stamped in adjacent stories so the
+	// frontend absorbs one coordinated change. Do not "deduplicate" them.
+	StageProbing     PipelineStage = "probing"     // ffprobe: enumerating tracks (FR1)
+	StageExtracting  PipelineStage = "extracting"  // ffmpeg extraction in flight (FR2/FR3)
+	StageTranslating PipelineStage = "translating" // LLM translation in flight (FR10)
+	StageSkipped     PipelineStage = "skipped"     // TERMINAL — deliberately routed out (FR9/P0)
+
+	StageComplete PipelineStage = "complete"
+	StageFailed   PipelineStage = "failed"
 )
 
 // ErrAllDownloadsFailed indicates all subtitle download attempts were exhausted.

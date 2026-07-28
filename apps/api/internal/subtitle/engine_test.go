@@ -501,3 +501,41 @@ func TestEngine_SetTerminologyService(t *testing.T) {
 	engine.SetTerminologyService(svc)
 	assert.Equal(t, svc, engine.terminologyService)
 }
+
+// --- Story sub-1-3 AC #6.1: the [@contract-v1] PipelineStage wire value set ---
+
+// TestPipelineStageValues asserts the exact string literal of every stage
+// constant. `stage` is a frontend-consumed wire value, so a typo like
+// "extacting" would ship silently — the compiler cannot catch it and no
+// behavioural test would either, because the broadcaster just forwards it.
+func TestPipelineStageValues(t *testing.T) {
+	tests := []struct {
+		name  string
+		stage PipelineStage
+		want  string
+	}{
+		// Search path (Engine) — pre-existing, MUST stay byte-identical.
+		{"searching", StageSearching, "searching"},
+		{"scoring", StageScoring, "scoring"},
+		{"downloading", StageDownloading, "downloading"},
+		{"converting", StageConverting, "converting"},
+		{"correcting", StageCorrecting, "correcting"},
+		{"placing", StagePlacing, "placing"},
+		// Generation pipeline (M1) — added by sub-1-3.
+		{"probing", StageProbing, "probing"},
+		{"extracting", StageExtracting, "extracting"},
+		{"translating", StageTranslating, "translating"},
+		{"skipped", StageSkipped, "skipped"},
+		// Shared terminal.
+		{"complete", StageComplete, "complete"},
+		{"failed", StageFailed, "failed"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, string(tt.stage))
+		})
+	}
+
+	assert.Len(t, tests, 12, "the [@contract-v1] stage set is 12 values: 6 search-path + 4 generation + 2 shared terminal")
+}

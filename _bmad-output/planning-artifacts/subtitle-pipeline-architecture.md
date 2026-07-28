@@ -258,7 +258,7 @@ The `legacy | pipeline` switch gates exactly **`internal/subtitle/batch.go:244`*
 
 ### D6 — SSE stage enum · extended, stamped, documented
 
-Current stages: `searching | scoring | downloading | converting | placing | complete | failed`.
+Current stages: `searching | scoring | downloading | converting | correcting | placing | complete | failed` _(corrected 2026-07-28 — Stage 4.5 `correcting` was missing; it has been live on the wire since story 9-1 and is broadcast at `engine.go:194`, :176 before sub-1-3's const-block insert shifted it)_.
 Added: `probing | extracting | translating | skipped`.
 
 `subtitle_progress.stage` is a **frontend-consumed wire contract** (`useSubtitleSearch.ts`; documented in `docs/sse-event-types.md`). The extension therefore carries a `[@contract-vN]` stamp per Rule 20, and **both** `docs/sse-event-types.md` and `docs/sse-event-types.zh-TW.md` must be updated in the same change (Rule 17).
@@ -428,7 +428,7 @@ apps/api/
 │   │   ├── router_test.go                   🆕
 │   │   ├── quality_gate.go                  🆕 FR16/FR17 — runs BEFORE OpenCC (P4)
 │   │   ├── quality_gate_test.go             🆕 MUST include a Simplified-leak-triggers-retry test
-│   │   ├── engine.go                        🔒 untouched — becomes the search fallback
+│   │   ├── engine.go                        ✏️ +4 PipelineStage consts ONLY (1.3 [@contract-v1]); search flow untouched
 │   │   ├── batch.go                         ✏️ one line at :244 + flag (D5)
 │   │   ├── detector.go                      🔒 scope narrowed to CJK-variant only (P0)
 │   │   ├── converter.go / placer.go         🔒 reused; placer is the sole writer (D3)
