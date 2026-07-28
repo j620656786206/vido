@@ -31,6 +31,11 @@ type SubtitleTrack struct {
 	Language string `json:"language"`
 	Format   string `json:"format"`
 	External bool   `json:"external"`
+	// StreamIndex is the absolute ffmpeg stream index of the track, i.e. the {n}
+	// in `-map 0:{n}`. Meaningful ONLY when External == false; external sidecar
+	// tracks are separate files and leave it at 0. No omitempty — index 0 is a
+	// legal embedded index, so it must survive a JSON round-trip (story sub-1-4).
+	StreamIndex int `json:"stream_index"`
 }
 
 // FFprobeService extracts technical metadata from video files using ffprobe
@@ -140,6 +145,7 @@ type ffprobeOutput struct {
 
 // ffprobeStream represents a single stream in ffprobe output
 type ffprobeStream struct {
+	Index         int            `json:"index"`
 	CodecType     string         `json:"codec_type"`
 	CodecName     string         `json:"codec_name"`
 	Width         int            `json:"width,omitempty"`
@@ -191,9 +197,10 @@ func parseFfprobeJSON(output []byte) (*MediaTechInfo, error) {
 				lang = "und"
 			}
 			info.SubtitleTracks = append(info.SubtitleTracks, SubtitleTrack{
-				Language: lang,
-				Format:   stream.CodecName,
-				External: false,
+				Language:    lang,
+				Format:      stream.CodecName,
+				External:    false,
+				StreamIndex: stream.Index,
 			})
 		}
 	}
