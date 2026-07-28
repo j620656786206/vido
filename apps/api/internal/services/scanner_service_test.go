@@ -7,11 +7,13 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/sse"
 	"github.com/vido/api/internal/testutil"
@@ -426,21 +428,29 @@ func TestScannerService_SSEBroadcast_ScanCancelled(t *testing.T) {
 	}
 
 	svc, movieRepo, hub := setupScannerService(t, []string{dir})
-	movieRepo.On("FindByFilePath", mock.Anything, mock.AnythingOfType("string")).Return(nil, nil)
+
+	// Cancel from INSIDE the walk, on the first repo lookup, instead of racing
+	// a 1ms sleep-goroutine against a real filesystem walk — under load the
+	// walk used to finish first and broadcast scan_complete before the cancel
+	// landed (the long-tracked flake). Here the scan is guaranteed active and
+	// mid-walk when CancelScan fires, so the cancelled broadcast is
+	// deterministic at any load. Safe: the FindByFilePath call site holds no
+	// s.mu, so CancelScan's own lock cannot deadlock.
+	var cancelOnce sync.Once
+	movieRepo.On("FindByFilePath", mock.Anything, mock.AnythingOfType("string")).
+		Run(func(mock.Arguments) {
+			cancelOnce.Do(func() {
+				require.NoError(t, svc.CancelScan())
+			})
+		}).
+		Return(nil, nil)
 	movieRepo.On("BulkCreate", mock.Anything, mock.AnythingOfType("[]*models.Movie")).Return(nil)
 	movieRepo.On("FindAllWithFilePath", mock.Anything).Return(nil, nil)
 
 	client := hub.Register()
 	time.Sleep(10 * time.Millisecond)
 
-	// Start scan and cancel quickly — use 1ms to catch the early cancel check
-	// added in Story 7b-5 (before directory walk)
 	ctx := context.Background()
-	go func() {
-		time.Sleep(1 * time.Millisecond)
-		svc.CancelScan()
-	}()
-
 	result, err := svc.StartScan(ctx)
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
