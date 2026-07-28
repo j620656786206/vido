@@ -2,6 +2,8 @@ package models
 
 import (
 	"encoding/json"
+	"os"
+	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -333,8 +335,8 @@ func TestShouldOverwrite(t *testing.T) {
 
 func TestMovie_TechInfoJSON_SnakeCase(t *testing.T) {
 	movie := Movie{
-		ID:    "test-1",
-		Title: "Test Movie",
+		ID:              "test-1",
+		Title:           "Test Movie",
 		VideoCodec:      NewNullString("H.265"),
 		VideoResolution: NewNullString("3840x2160"),
 		AudioCodec:      NewNullString("DTS"),
@@ -378,4 +380,78 @@ func TestMovie_TechInfoJSON_NullWhenEmpty(t *testing.T) {
 	assert.Contains(t, jsonStr, `"audio_channels":null`)
 	assert.Contains(t, jsonStr, `"subtitle_tracks":null`)
 	assert.Contains(t, jsonStr, `"hdr_format":null`)
+}
+
+// --- story sub-1-2 AC #2: the [@contract-v1] SubtitleStatus value set ---
+
+func TestSubtitleStatus_AllSubtitleStatuses_IsTheCompleteSet(t *testing.T) {
+	all := AllSubtitleStatuses()
+
+	t.Run("holds exactly the 9 stamped values, in contract order", func(t *testing.T) {
+		assert.Equal(t, []SubtitleStatus{
+			SubtitleStatusNotSearched,
+			SubtitleStatusSearching,
+			SubtitleStatusFound,
+			SubtitleStatusNotFound,
+			SubtitleStatusProbing,
+			SubtitleStatusExtracting,
+			SubtitleStatusTranslating,
+			SubtitleStatusNoTextSource,
+			SubtitleStatusSkipped,
+		}, all)
+	})
+
+	t.Run("has no duplicates", func(t *testing.T) {
+		seen := map[SubtitleStatus]bool{}
+		for _, s := range all {
+			assert.Falsef(t, seen[s], "duplicate value %q in AllSubtitleStatuses", s)
+			seen[s] = true
+		}
+	})
+
+	// The guard that actually catches "added a const, forgot the slice": read the
+	// declarations straight out of the source and cross-check. A hand-written
+	// expectation list alone cannot catch it, because the author who forgets the
+	// slice forgets the list too.
+	t.Run("every declared SubtitleStatus constant appears in the slice", func(t *testing.T) {
+		src, err := os.ReadFile("movie.go")
+		require.NoError(t, err)
+
+		declared := regexp.MustCompile(`SubtitleStatus\s*=\s*"([a-z_]+)"`).FindAllStringSubmatch(string(src), -1)
+		require.NotEmpty(t, declared, "regex must find the const declarations — update it if the declaration style changed")
+
+		inSlice := map[SubtitleStatus]bool{}
+		for _, s := range all {
+			inSlice[s] = true
+		}
+		for _, m := range declared {
+			assert.Truef(t, inSlice[SubtitleStatus(m[1])],
+				"constant %q is declared but missing from AllSubtitleStatuses — the [@contract-v1] value set must stay complete", m[1])
+		}
+		assert.Len(t, all, len(declared), "AllSubtitleStatuses must have one entry per declared constant")
+	})
+}
+
+func TestSubtitleStatus_IsValid(t *testing.T) {
+	for _, s := range AllSubtitleStatuses() {
+		assert.Truef(t, s.IsValid(), "%q is a declared status and must be valid", s)
+	}
+
+	for _, junk := range []SubtitleStatus{"", "unknown", "NOT_SEARCHED", "tv", "completed", "no-text-source"} {
+		assert.Falsef(t, junk.IsValid(), "%q must not be accepted as a subtitle status", junk)
+	}
+}
+
+func TestSubtitleStatus_IsTerminal(t *testing.T) {
+	terminal := map[SubtitleStatus]bool{
+		SubtitleStatusFound:        true,
+		SubtitleStatusNotFound:     true,
+		SubtitleStatusNoTextSource: true,
+		SubtitleStatusSkipped:      true,
+	}
+
+	for _, s := range AllSubtitleStatuses() {
+		assert.Equalf(t, terminal[s], s.IsTerminal(),
+			"IsTerminal(%q) must be %v — in-flight states are advanced by a later stage, terminal ones are not", s, terminal[s])
+	}
 }

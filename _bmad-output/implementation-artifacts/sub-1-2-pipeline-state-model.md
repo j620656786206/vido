@@ -1,6 +1,6 @@
 # Story sub-1.2: Pipeline state model — provenance table + status enum
 
-Status: ready-for-dev
+Status: done
 
 **Epic:** `epic-subtitle-pipeline-m1` — Automatic Traditional-Chinese subtitles for English media (M1) · **Risk: 🟡 MEDIUM** · **BACKEND-ONLY**
 **Source:** `_bmad-output/planning-artifacts/epics-subtitle-pipeline.md` § Story 1.2 · architecture **D2** + § Schema finding + § M1 Pilot Instrumentation + **P9**
@@ -283,30 +283,30 @@ The gap that remains: an item parked in `extracting`/`translating`/`no_text_sour
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Migration 030 (AC #1)**
-  - [ ] 1.1 Confirm no migration claims version 30: `grep -rn "NewMigrationBase(30" apps/api/internal/database/migrations/`.
-  - [ ] 1.2 Write `030_create_subtitle_runs_table.go` with its own `init()` + `Register(...)`; `Up` creates the table + both indexes, `Down` drops the table. Head comment cites Story sub-1-2, D2, and P9 (mirror 027/028's comment density).
-  - [ ] 1.3 Write `030_create_subtitle_runs_table_test.go` mirroring `027_create_requests_table_test.go`: `:memory:` DB + `migration.Up(tx)`, then subtests for — minimal insert applies defaults (`status='pending'`, `cache_enabled=0`); `media_type` CHECK rejects `'tv'` (the TMDB-vocabulary trap); `status` CHECK rejects an out-of-set value; both indexes exist (`SELECT name FROM sqlite_master WHERE type='index'`).
-  - [ ] 1.4 **Do not** touch `movies`/`series`/`episodes` DDL (Finding 1).
+- [x] **Task 1 — Migration 030 (AC #1)**
+  - [x] 1.1 Confirm no migration claims version 30: `grep -rn "NewMigrationBase(30" apps/api/internal/database/migrations/`.
+  - [x] 1.2 Write `030_create_subtitle_runs_table.go` with its own `init()` + `Register(...)`; `Up` creates the table + both indexes, `Down` drops the table. Head comment cites Story sub-1-2, D2, and P9 (mirror 027/028's comment density).
+  - [x] 1.3 Write `030_create_subtitle_runs_table_test.go` mirroring `027_create_requests_table_test.go`: `:memory:` DB + `migration.Up(tx)`, then subtests for — minimal insert applies defaults (`status='pending'`, `cache_enabled=0`); `media_type` CHECK rejects `'tv'` (the TMDB-vocabulary trap); `status` CHECK rejects an out-of-set value; both indexes exist (`SELECT name FROM sqlite_master WHERE type='index'`).
+  - [x] 1.4 **Do not** touch `movies`/`series`/`episodes` DDL (Finding 1).
 
-- [ ] **Task 2 — Enum + models (AC #2, #3, #4)**
-  - [ ] 2.1 Extend `models/movie.go:54-59` with the 5 new constants + the `[@contract-v1]` doc comment; add `AllSubtitleStatuses()`, `IsValid()`, `IsTerminal()`. Existing 4 constants untouched.
-  - [ ] 2.2 New `models/subtitle_run.go`: `SubtitleRunStatus` + media-grain constants + `SubtitleRun` + `Validate()` (`ValidationError`, `glossary.go` pattern) + `Version()`.
-  - [ ] 2.3 Add `RunVersion` + `Equal()` with the `[@contract-v1]` doc comment naming sub-1-5 / sub-1-6 as consumers.
-  - [ ] 2.4 `models/subtitle_run_test.go` + extend `models/movie_test.go`: `IsValid` accepts all 9 / rejects junk; `AllSubtitleStatuses()` has exactly 9 entries and contains every declared constant (a table-driven guard that catches "added a const, forgot the slice"); `IsTerminal` true for exactly `found`/`not_found`/`no_text_source`/`skipped`; `RunVersion.Equal` differs when **any single** field differs — assert all four independently, since a 3-field comparison would pass a naive test.
+- [x] **Task 2 — Enum + models (AC #2, #3, #4)**
+  - [x] 2.1 Extend `models/movie.go:54-59` with the 5 new constants + the `[@contract-v1]` doc comment; add `AllSubtitleStatuses()`, `IsValid()`, `IsTerminal()`. Existing 4 constants untouched.
+  - [x] 2.2 New `models/subtitle_run.go`: `SubtitleRunStatus` + media-grain constants + `SubtitleRun` + `Validate()` (`ValidationError`, `glossary.go` pattern) + `Version()`.
+  - [x] 2.3 Add `RunVersion` + `Equal()` with the `[@contract-v1]` doc comment naming sub-1-5 / sub-1-6 as consumers.
+  - [x] 2.4 `models/subtitle_run_test.go` + extend `models/movie_test.go`: `IsValid` accepts all 9 / rejects junk; `AllSubtitleStatuses()` has exactly 9 entries and contains every declared constant (a table-driven guard that catches "added a const, forgot the slice"); `IsTerminal` true for exactly `found`/`not_found`/`no_text_source`/`skipped`; `RunVersion.Equal` differs when **any single** field differs — assert all four independently, since a 3-field comparison would pass a naive test.
 
-- [ ] **Task 3 — Repository + registration (AC #5)**
-  - [ ] 3.1 `repository/subtitle_run_repository.go` mirroring `glossary_repository.go`; define `SubtitleRunRepositoryInterface` alongside the impl (the glossary precedent — `interfaces.go` is not the only legal home; Rule 11 only requires it live in the repository package).
-  - [ ] 3.2 One `subtitleRunColumns` const reused by every SELECT; INSERT / UPDATE / SELECT / `Scan` all cover the **same 16 columns** (Rule 15).
-  - [ ] 3.3 Implement `FindCompletedRun` — `status='completed'` **AND** all four tuple columns equal **AND** `(media_id, media_type)` match, `ORDER BY started_at DESC LIMIT 1`; `sql.ErrNoRows` → `(nil, nil)`.
-  - [ ] 3.4 Register `SubtitleRuns` on the `Repositories` struct (`registry.go:10`) and in **both** `NewRepositories` (:39) and `NewRepositoriesWithCache` (:71). Verify with `grep -n "Glossary:" registry.go` → add a sibling at each hit.
-  - [ ] 3.5 Confirm **no** `cmd/api/main.go` change is needed — this story adds no service or handler, so nothing beyond `repository.NewRepositories(db)` consumes it (Rule 15 wiring check).
+- [x] **Task 3 — Repository + registration (AC #5)**
+  - [x] 3.1 `repository/subtitle_run_repository.go` mirroring `glossary_repository.go`; define `SubtitleRunRepositoryInterface` alongside the impl (the glossary precedent — `interfaces.go` is not the only legal home; Rule 11 only requires it live in the repository package).
+  - [x] 3.2 One `subtitleRunColumns` const reused by every SELECT; INSERT / UPDATE / SELECT / `Scan` all cover the **same 16 columns** (Rule 15).
+  - [x] 3.3 Implement `FindCompletedRun` — `status='completed'` **AND** all four tuple columns equal **AND** `(media_id, media_type)` match, `ORDER BY started_at DESC LIMIT 1`; `sql.ErrNoRows` → `(nil, nil)`.
+  - [x] 3.4 Register `SubtitleRuns` on the `Repositories` struct (`registry.go:10`) and in **both** `NewRepositories` (:39) and `NewRepositoriesWithCache` (:71). Verify with `grep -n "Glossary:" registry.go` → add a sibling at each hit.
+  - [x] 3.5 Confirm **no** `cmd/api/main.go` change is needed — this story adds no service or handler, so nothing beyond `repository.NewRepositories(db)` consumes it (Rule 15 wiring check).
 
-- [ ] **Task 4 — Tests, lint, contract hygiene (AC #5, #7)**
-  - [ ] 4.1 `repository/subtitle_run_repository_test.go` — **integration, real `:memory:` SQLite, not a mock** (Rule 15 / bugfix-20-1). Round-trip a fully-populated run and assert **field-by-field on all 16 columns**; explicitly cover `cache_enabled`, `tmdb_id` (both NULL and set), and `completed_at` (both NULL and set).
-  - [ ] 4.2 `FindCompletedRun` tests: exact-tuple match returns the row; **one** test per tuple field mutated → returns `(nil, nil)`; a `failed`/`running` run with a matching tuple returns `(nil, nil)`; no rows → `(nil, nil)` with **no** error.
-  - [ ] 4.3 File the lane-③ entry `backlog-subtitle-status-fe-rendering` in `sprint-status.yaml` if it is not already present, bidirectionally linked to this story (AC #7). *(Pre-filed at story creation — verify, don't duplicate.)*
-  - [ ] 4.4 `go test ./...` green from `apps/api/`; `pnpm lint:all` green from the repo root.
+- [x] **Task 4 — Tests, lint, contract hygiene (AC #5, #7)**
+  - [x] 4.1 `repository/subtitle_run_repository_test.go` — **integration, real `:memory:` SQLite, not a mock** (Rule 15 / bugfix-20-1). Round-trip a fully-populated run and assert **field-by-field on all 16 columns**; explicitly cover `cache_enabled`, `tmdb_id` (both NULL and set), and `completed_at` (both NULL and set).
+  - [x] 4.2 `FindCompletedRun` tests: exact-tuple match returns the row; **one** test per tuple field mutated → returns `(nil, nil)`; a `failed`/`running` run with a matching tuple returns `(nil, nil)`; no rows → `(nil, nil)` with **no** error.
+  - [x] 4.3 File the lane-③ entry `backlog-subtitle-status-fe-rendering` in `sprint-status.yaml` if it is not already present, bidirectionally linked to this story (AC #7). *(Pre-filed at story creation — verify, don't duplicate.)*
+  - [x] 4.4 `go test ./...` green from `apps/api/`; `pnpm lint:all` green from the repo root.
 
 ---
 
@@ -382,11 +382,50 @@ Both can be developed and merged in either order. **sub-1-5 is the first story t
 
 ### Agent Model Used
 
-_(fill in at implementation)_
+Claude Fable 5 (`claude-fable-5`) — BMAD dev agent (Amelia)
 
 ### Debug Log References
 
+**Task 1.1 — version 30 availability.** `grep -rn "NewMigrationBase(30" internal/database/migrations/` → 0 hits before this story; latest claimed version was **29** (`029_drop_new_shell_enabled_setting.go`), matching the AC. No duplicate-`Register` startup error possible.
+
+**Task 3.5 — Rule 15 wiring check.** `main.go:135` calls `repository.NewRepositoriesWithCache(db.Conn())`, which now constructs `SubtitleRuns`. No further wiring exists to do: this story adds no service and no handler, so nothing beyond the aggregate consumes the repo until sub-1-5b. Confirmed by grep — the only `repos.*` references in `main.go` are for repositories with live service consumers.
+
+**Test-guard verification (both guards proven non-vacuous before being accepted).** A passing test proves nothing until it has been observed failing for the right reason:
+
+| Guard | How it was falsified | Observed failure |
+|---|---|---|
+| `AllSubtitleStatuses` completeness (Task 2.4) | removed `SubtitleStatusSkipped` from the returned slice, leaving the constant declared | `constant "skipped" is declared but missing from AllSubtitleStatuses` — the source-scanning subtest caught it, not just the hand-written expectation list |
+| 16-column round trip (Task 4.1) | replaced `run.CacheEnabled` with a literal `false` in the INSERT values | `cache_enabled must survive as true` — proving the assertion reads the DB value, not the in-memory struct |
+
 ### Completion Notes List
+
+**🔗 AC Drift:** NONE (checked: `grep -rln "SubtitleStatus\|subtitle_status" _bmad-output/implementation-artifacts/*.md` — 20 hits across prior stories 0-1/0-2/7-1/8-7…8-11/9R-16/9R-18/12-2, all REUSE not DRIFT. The four search-flavoured values are byte-identical and no shipped code path changes: `UpdateSubtitleStatus` / `FindBySubtitleStatus` / `UpdateEpisodeSubtitleStatus` take `models.SubtitleStatus` but **no call site validates it**, so five added constants cannot reject data that used to be written. `IsValid()` is deliberately NOT retro-wired into those writers, per AC #2.)
+
+**📎 Contract Stamps:** FOUND (2 stamped ACs, both PRODUCED by this story, none consumed: AC #2 `SubtitleStatus` 9-value set in `models/movie.go`, AC #4 `RunVersion` in `models/subtitle_run.go`. Upstream ack owed: **none** — sub-1-1's `[@contract-v1]` `CachingCompleter` is acked by sub-1-5a, not here, and 0-1/0-2 (the `subtitle_status` origin) carry no stamps at all, i.e. implicit v0 under the Rule 20 forward-only retrofit. Producer-side stale-mark grep is nil: no downstream consumer of either new stamp is drafted with an ack line yet.)
+
+**🎭 A11y Pre-Flight:** N/A (100% backend — no `apps/web/` files touched)
+
+**🎨 UX Verification:** SKIPPED — no UI changes in this story
+
+**What was actually implemented.** Migration 030 creates `subtitle_runs` (16 columns, 2 indexes, 2 CHECK enums) and nothing else — `movies`/`series`/`episodes` are untouched, as Finding 1 requires. The `SubtitleStatus` enum went 4 → 9 values with `AllSubtitleStatuses()` / `IsValid()` / `IsTerminal()` helpers. `models/subtitle_run.go` adds `SubtitleRun`, `SubtitleRunStatus` (+ `AllSubtitleRunStatuses`/`IsValid` mirroring the migration CHECK), the media-grain constants, and the `RunVersion` tuple with `Equal`. `SubtitleRunRepository` implements all five interface methods over one `subtitleRunColumns` const, registered on `Repositories` in **both** constructors.
+
+**Rule 15 treatment, since it is this story's headline risk.** The column list exists once (`subtitleRunColumns`) and is consumed by INSERT, SELECT, and — via a sibling `subtitleRunUpdateAssignments` + a shared `subtitleRunValues(run)` helper — by UPDATE, so no statement can drift from another by hand-editing one list. `Update` covers **all 15 non-id columns**, which is what lets it *clear* a previously-set nullable rather than only set one (covered by its own subtest). Tests run against the real migration chain on `:memory:` SQLite, never a mock — the bugfix-20-1 failure (`series.seasons` missing from the select list, invisible behind a repo mock) is exactly what a mocked test cannot see.
+
+**Nullable-column convention, stated because AC #3 left it to the implementer.** The two columns the AC models as pointers (`tmdb_id *int64`, `completed_at *time.Time`) stay pointers so "unset" survives the round trip; the four modelled as plain values (`source_language`, `output_path`, `cue_count`, `error_message`) are written as-is and **scanned through `sql.Null*`**. That asymmetry is deliberate and load-bearing: rows written outside the repository — a bare `INSERT` applying column defaults, as sub-1-4's migration-level fixtures or any future manual repair would produce — carry genuine NULLs there, and a plain-`string` scan destination would error. `TestSubtitleRunRepository_ScanToleratesRawNulls` locks it.
+
+**`FindCompletedRun` — all four tuple columns participate.** A three-column predicate would pass a test that mutates the tuple wholesale, then silently reuse a stale translation after a prompt bump, invalidating the M1 pilot's comparison data with no error surfacing. Each field is therefore mutated **independently** in both the model test and the repository test. `sql.ErrNoRows` → `(nil, nil)` is the one intentional swallow (Rule 13) and carries a comment saying why: the first run of any item hits that path, so absence is the normal case, not an error.
+
+**Scope fence held (AC #6).** Zero `SUBTITLE_` error codes, zero `code-review/instructions.xml` edits (prefix count stays 16), zero SSE stages, zero services/handlers/routes/Swagger, zero frontend. `ErrSubtitleRunNotFound` is a Go sentinel mirroring `ErrGlossaryTermNotFound`, **not** a Rule 7 wire code — it never reaches `ApiResponse.error.code`.
+
+**Alignment note (not a gap).** `media_id TEXT` matches both the cited precedent (`show_glossary.media_id`, migration 028) and 9R-18's `[@contract-v1]` string-media-id contract. 9R-18 is not cited by AC number in this story's Dev Notes, so no Rule 20 ack line is owed; recorded here so a later auditor sees the consistency was checked rather than coincidental.
+
+**Pre-existing fix:** `models/movie_test.go` carried gofmt drift on `main` (struct-literal alignment in `TestMovie_TechInfoJSON_SnakeCase`, a function this story does not touch). Not a failure — `pnpm lint:all` is go vet → staticcheck → eslint → prettier and does not run gofmt — but leaving a file this story *does* modify in a non-gofmt state is worse than a two-line whitespace fix, so `gofmt -w` was applied. Whitespace only; tests unaffected. Six other files under `internal/models` / `internal/repository` carry the same drift and were deliberately **left alone** (untouched by this story — expanding to them would be unrequested scope).
+
+**🔥 Code review (2026-07-28, adversarial CR) — APPROVED after fixes.** Rule 7 Wire Format: PASS (0 error-code string constants in scope; `ErrSubtitleRunNotFound` is a lowercase Go sentinel mirroring `ErrGlossaryTermNotFound`, not a wire code). Rule 20 Contract Bump: N/A (both stamps are NEW v1; 0 bump tokens in the diff). Rule 25 Mega-line: N/A (`project-context.md` untouched). Git vs File List discrepancies: 0 in scope. All 7 ACs verified IMPLEMENTED; every `[x]` task evidenced (migration 30 uniqueness grep, dual-constructor registration + lock-in test, `backlog-subtitle-status-fe-rendering` superseded entry with bidirectional links). Findings: 2 Medium + 3 Low, all fixed in-review — see Change Log 2026-07-28 CR row for the full list; both Mediums were reproduced with probe tests before fixing, and the M2 fix's regression test was falsification-verified. Files touched by fixes: `subtitle_run_repository.go` (Update guards for empty status / zero started_at; UTC normalization in `subtitleRunValues` + `Create`), `subtitle_run_repository_test.go` (+`TestSubtitleRunRepository_TimesStoredAsUTC`, +2 Update guard subtests, ordering assertions in ListByStatus), `subtitle_run_test.go` (source-scanning completeness guard for `AllSubtitleRunStatuses`). No File List additions — all fixes land in files already listed.
+
+**Pre-existing failure — reproduced, already filed, confirmed unrelated.** `TestScannerService_SSEBroadcast_ScanCancelled` failed in **1 of 4** full-suite runs during this story (green in the other three, and 3/3 green both in isolation and as a full `internal/services` package run afterwards). This is the entry `preexisting-flake-scanner-sse-scan-cancelled`, filed during sub-1-1 and already proven pre-existing there by stashing. Independence from *this* story is structural rather than statistical: the test drives a temp dir and **mocked** repositories through an SSE hub (`scanner_service_test.go:420-432`) and references neither `migrations.`, `NewRepositories`, nor anything named `SubtitleRun` — it cannot observe a new table, a new model, or a new repository. No new entry filed; the existing one stays open (a flake that happens to pass is not a fixed flake), and its recorded reproduction rate is now better characterised: intermittent in full-suite runs, **not** reliably isolation-clean as first described.
+
+**Gates:** `go test ./...` — 34 packages, green (the one run that flagged `internal/services` is the unrelated flake above; `internal/services` verified green 3/3 immediately after). `pnpm nx test web` — 225 files / **2457** tests green (run despite this being backend-only, per the Step 7 full-regression gate). `go vet` clean. `gofmt` clean on every file this story touches. `pnpm lint:all` — 0 errors, prettier clean. `pnpm test:cleanup` — no orphaned workers.
 
 ### Discovery Triage
 
@@ -397,7 +436,29 @@ _(fill in at implementation)_
 
 ### File List
 
-_(fill in at implementation)_
+| File | Change |
+|---|---|
+| `apps/api/internal/database/migrations/030_create_subtitle_runs_table.go` | **new** — `subtitle_runs` table (16 cols, 2 CHECK enums) + 2 indexes; `Down` drops it. `movies`/`series`/`episodes` deliberately untouched |
+| `apps/api/internal/database/migrations/030_create_subtitle_runs_table_test.go` | **new** — defaults, both CHECKs reject, all 3 internal grains accepted, NOT NULL guard, both indexes present, media-tables-untouched guard, `Down`, version |
+| `apps/api/internal/models/movie.go` | `SubtitleStatus` 4→9 values `[@contract-v1]` + `AllSubtitleStatuses()` / `IsValid()` / `IsTerminal()`. Existing 4 constants byte-identical |
+| `apps/api/internal/models/movie_test.go` | **added** 3 test funcs — complete-set guard (incl. the source-scanning subtest), `IsValid`, `IsTerminal` |
+| `apps/api/internal/models/subtitle_run.go` | **new** — `SubtitleRun`, `SubtitleRunStatus` + `AllSubtitleRunStatuses`/`IsValid`, media-grain constants, `RunVersion` `[@contract-v1]` + `Equal`, `Validate`, `Version` |
+| `apps/api/internal/models/subtitle_run_test.go` | **new** — run-status set mirrors the migration CHECK, `RunVersion.Equal` per-field independence, `Validate` field-level errors, pointer-field semantics |
+| `apps/api/internal/repository/subtitle_run_repository.go` | **new** — interface + impl, one `subtitleRunColumns` const across INSERT/UPDATE/SELECT/Scan, `FindCompletedRun` resume predicate, `ErrSubtitleRunNotFound` sentinel |
+| `apps/api/internal/repository/subtitle_run_repository_test.go` | **new** — integration over the real migration chain on `:memory:` SQLite; 16-column round trip, raw-NULL tolerance, Update incl. clearing a nullable, resume predicate per-field, both-constructors registration |
+| `apps/api/internal/repository/registry.go` | `SubtitleRuns` added to the `Repositories` struct and to **both** `NewRepositories` and `NewRepositoriesWithCache` |
+| `_bmad-output/implementation-artifacts/sub-1-2-pipeline-state-model.md` | this file — task checkboxes, Dev Agent Record, File List, Change Log, Status |
+| `_bmad-output/implementation-artifacts/sprint-status.yaml` | status ready-for-dev → in-progress → review |
+
+### Change Log
+
+| Date | Change |
+|---|---|
+| 2026-07-28 | **Task 1** — migration **030** creates `subtitle_runs` (16 columns, `media_type` CHECK on the INTERNAL `movie\|series\|episode` vocabulary, 5-value `status` CHECK, 2 indexes); `movies`/`series`/`episodes` DDL untouched per Finding 1, guarded by a test that asserts the migration creates nothing else. |
+| 2026-07-28 | **Task 2** — `SubtitleStatus` extended 4→9 `[@contract-v1]` with `AllSubtitleStatuses`/`IsValid`/`IsTerminal`; new `models/subtitle_run.go` with `SubtitleRun`, `SubtitleRunStatus`, media-grain constants and the `RunVersion` `[@contract-v1]` tuple + `Equal`. Completeness guard verified by falsification. |
+| 2026-07-28 | **Task 3** — `SubtitleRunRepository` (5 methods) over a single `subtitleRunColumns` const; registered on `Repositories` in **both** constructors; `main.go` confirmed to need no change (no service/handler in this story). |
+| 2026-07-28 | **Task 4** — integration tests on the real migration chain: 16-column round trip, raw-NULL tolerance, Update-clears-a-nullable, resume predicate with each tuple field mutated independently, non-completed statuses excluded, grain scoping. Backend 34 packages + web 2457 tests + `pnpm lint:all` green. |
+| 2026-07-28 | **Code review (adversarial CR)** — 2 Medium + 3 Low, all fixed in-review. M1: `Update` with empty `Status` passed `Validate()` (glossary's empty-permitted shape) and surfaced as a raw DB CHECK driver error — the exact class `Validate` promises to replace; `Update` now rejects `""` with a typed `ValidationError` (Create is unaffected — it backfills the default). M2: `started_at` was stored as Go `time.Time.String()` **local-time** text (probe: `"2026-07-28 18:00:00 +0800 CST"`) while `FindCompletedRun`/`ListByStatus` ORDER BY compare that text — mixed offsets (repo local vs `CURRENT_TIMESTAMP` UTC) mis-ordered "most recent", corrupting the resume predicate; `Create` now stamps `time.Now().UTC()` and `subtitleRunValues` normalizes both time columns to UTC (falsification-verified: without `.UTC()` the new test fails with the `+0800 CST` text and the wrong run winning ORDER BY). L1: ListByStatus "newest first" + LIMIT-keeps-the-head now asserted. L2: `AllSubtitleRunStatuses` gained the same source-scanning completeness guard as `AllSubtitleStatuses`. L3: `Update` rejects a zero `started_at` (it overwrites all 15 columns — a sparse struct would silently zero the ORDER BY column). Gates re-run post-fix: full backend suite, `pnpm lint:all`, gofmt — green. |
 
 ---
 
