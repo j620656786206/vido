@@ -803,3 +803,58 @@ func TestClaudeProvider_CompleteTextWithUsage_CacheControlAndUsage(t *testing.T)
 		assert.Zero(t, res.Usage.CacheReadInputTokens)
 	})
 }
+
+// --- code-review follow-ups (story sub-1-1, adversarial CR 2026-07-28) ---
+
+// TestClaudeProvider_TimeoutEnforcedWithCustomHTTPClient locks review finding M1.
+// The hand-rolled doRequest wrapped EVERY attempt in
+// context.WithTimeout(ctx, p.timeout) regardless of which http.Client was in
+// use; the SDK build only carried the timeout on the default-built client, so
+// WithClaudeHTTPClient + WithClaudeTimeout silently lost the deadline. Guarded
+// via option.WithRequestTimeout on the custom-client branch.
+func TestClaudeProvider_TimeoutEnforcedWithCustomHTTPClient(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(200 * time.Millisecond)
+		w.Header().Set("Content-Type", "application/json")
+		resp := claudeResponse{Content: []claudeContentBlock{{Type: "text", Text: "late"}}, StopReason: "end_turn"}
+		_ = json.NewEncoder(w).Encode(resp)
+	}))
+	defer server.Close()
+
+	p := NewClaudeProvider("test-key",
+		WithClaudeBaseURL(server.URL),
+		WithClaudeHTTPClient(&http.Client{}), // deliberately carries NO Timeout of its own
+		WithClaudeTimeout(50*time.Millisecond),
+	)
+
+	_, err := p.CompleteText(context.Background(), "", "hello", 64)
+
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrAITimeout,
+		"WithClaudeTimeout must be enforced per attempt even with a caller-supplied client")
+}
+
+// TestClaudeProvider_NonJSONSuccessNotRetried locks review finding M2. A 2xx
+// whose Content-Type is not JSON (e.g. a broken proxy serving an HTML page with
+// status 200) is permanent, exactly like a malformed JSON body — without the
+// rejectNonJSONSuccess middleware the SDK's content-type rejection error is
+// neither an *anthropic.Error nor a *json.SyntaxError, so it fell into the
+// connection-error fallback and was retried 3x.
+func TestClaudeProvider_NonJSONSuccessNotRetried(t *testing.T) {
+	var hits atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits.Add(1)
+		w.Header().Set("Content-Type", "text/html")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`<html><body>totally not the Messages API</body></html>`))
+	}))
+	defer server.Close()
+
+	p := NewClaudeProvider("test-key", WithClaudeBaseURL(server.URL))
+	_, err := p.CompleteText(context.Background(), "", "hello", 64)
+
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrAIInvalidResponse,
+		"a non-JSON 2xx is an invalid response, not a provider/connection error")
+	assert.Equal(t, int32(1), hits.Load(), "a non-JSON 2xx is permanent — it must NOT be retried")
+}

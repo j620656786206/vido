@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"mime"
 	"net"
 	"net/http"
 	"time"
@@ -109,6 +110,13 @@ func NewClaudeProvider(apiKey string, opts ...ClaudeProviderOption) *ClaudeProvi
 		opt(p)
 	}
 
+	// A caller-supplied client (WithClaudeHTTPClient) may carry no Timeout of
+	// its own, so p.timeout must then be enforced per attempt via
+	// option.WithRequestTimeout — the hand-rolled client wrapped EVERY attempt
+	// in context.WithTimeout(ctx, p.timeout) regardless of which client was in
+	// use, and that semantic must survive the SDK migration.
+	customHTTPClient := p.httpClient != nil
+
 	if p.httpClient == nil {
 		p.httpClient = &http.Client{
 			Timeout: p.timeout,
@@ -117,7 +125,7 @@ func NewClaudeProvider(apiKey string, opts ...ClaudeProviderOption) *ClaudeProvi
 
 	// Built AFTER options are applied — otherwise WithClaudeBaseURL is silently
 	// ignored and every test would hit the real API.
-	p.client = anthropic.NewClient(
+	clientOpts := []option.RequestOption{
 		option.WithAPIKey(p.apiKey),
 		option.WithBaseURL(p.baseURL),
 		// D8 / NAIL 2: the SDK retries by default (max 2). retryTransient already
@@ -125,14 +133,46 @@ func NewClaudeProvider(apiKey string, opts ...ClaudeProviderOption) *ClaudeProvi
 		// would sit BELOW the budget gate and a retry storm would bypass cost
 		// control entirely. Exactly one retry layer, and it is ours.
 		option.WithMaxRetries(0),
-		// The http.Client already carries Timeout: p.timeout when we built it, so
-		// the deadline is enforced there. We deliberately do NOT stack
-		// option.WithRequestTimeout on top — two competing deadlines is a bug
-		// waiting to happen.
+		// The default http.Client above already carries Timeout: p.timeout, so
+		// the deadline is enforced there and WithRequestTimeout is NOT stacked
+		// on top — two competing deadlines is a bug waiting to happen. The
+		// custom-client branch below is the one place the request-timeout option
+		// is needed.
 		option.WithHTTPClient(p.httpClient),
-	)
+		// A 2xx body that is not JSON is permanent, exactly like a malformed
+		// JSON body (AC #4 trap) — without this guard the SDK's content-type
+		// rejection falls into the connection-error fallback and gets retried.
+		option.WithMiddleware(rejectNonJSONSuccess),
+	}
+	if customHTTPClient {
+		clientOpts = append(clientOpts, option.WithRequestTimeout(p.timeout))
+	}
+	p.client = anthropic.NewClient(clientOpts...)
 
 	return p
+}
+
+// errNonJSONResponse marks a 2xx response whose Content-Type is not JSON.
+// Permanent for the same reason a malformed JSON body is: retrying a broken
+// upstream that "succeeds" with garbage would silently multiply cost.
+var errNonJSONResponse = errors.New("non-JSON content-type on a success response")
+
+// rejectNonJSONSuccess is client middleware that fails fast on 2xx responses
+// not declaring application/json. Error responses (non-2xx) pass through
+// untouched so the *anthropic.Error path keeps its status-based classification.
+func rejectNonJSONSuccess(req *http.Request, next option.MiddlewareNext) (*http.Response, error) {
+	resp, err := next(req)
+	if err != nil || resp == nil {
+		return resp, err
+	}
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		ct := resp.Header.Get("Content-Type")
+		if mediaType, _, parseErr := mime.ParseMediaType(ct); parseErr != nil || mediaType != "application/json" {
+			resp.Body.Close()
+			return nil, fmt.Errorf("%w: %q", errNonJSONResponse, ct)
+		}
+	}
+	return resp, nil
 }
 
 // Name returns the provider name.
@@ -168,7 +208,7 @@ func (p *ClaudeProvider) classifyErr(err error) (retryable bool, mapped error) {
 	// Messages.New, i.e. inside the retry loop — the hand-rolled client decoded
 	// outside it. Classifying this as retryable would turn one garbage response
 	// into three real requests, so it is deliberately permanent.
-	if isDecodeErr(err) {
+	if isDecodeErr(err) || errors.Is(err, errNonJSONResponse) {
 		return false, fmt.Errorf("%w: %v", ErrAIInvalidResponse, err)
 	}
 
@@ -177,6 +217,9 @@ func (p *ClaudeProvider) classifyErr(err error) (retryable bool, mapped error) {
 		slog.Warn("Claude API error response",
 			"status_code", apiErr.StatusCode,
 			"body", apiErr.Error(),
+			// The unmodified API error body — Error() is the SDK's formatted
+			// summary; the raw JSON is what the hand-rolled client used to log.
+			"raw_json", apiErr.RawJSON(),
 		)
 		switch apiErr.StatusCode {
 		case http.StatusTooManyRequests:
@@ -311,8 +354,6 @@ func (p *ClaudeProvider) CompleteText(ctx context.Context, systemPrompt, userPro
 		req.System = []SystemBlock{{Text: systemPrompt}}
 	}
 
-	slog.Debug("Claude CompleteText request", "model", p.model)
-
 	res, err := p.CompleteTextWithUsage(ctx, req)
 	if err != nil {
 		return "", err
@@ -331,6 +372,14 @@ func (p *ClaudeProvider) CompleteTextWithUsage(ctx context.Context, req Completi
 		maxTokens = ClaudeMaxTokens
 	}
 
+	// Logged here, not in CompleteText — both entry points funnel through this
+	// method, so this is the one place that observes every completion request.
+	slog.Debug("Claude completion request",
+		"model", p.model,
+		"system_blocks", len(req.System),
+		"max_tokens", maxTokens,
+	)
+
 	params := anthropic.MessageNewParams{
 		Model:     anthropic.Model(p.model),
 		MaxTokens: int64(maxTokens),
@@ -346,12 +395,21 @@ func (p *ClaudeProvider) CompleteTextWithUsage(ctx context.Context, req Completi
 		for _, b := range req.System {
 			block := anthropic.TextBlockParam{Text: b.Text}
 			switch b.CacheTTL {
+			case CacheTTLNone:
+				// not a cache breakpoint
 			case CacheTTL5m:
 				block.CacheControl = anthropic.NewCacheControlEphemeralParam()
 			case CacheTTL1h:
 				block.CacheControl = anthropic.CacheControlEphemeralParam{
 					TTL: anthropic.CacheControlEphemeralTTLTTL1h,
 				}
+			default:
+				// An unrecognized TTL silently emitting no cache_control is the
+				// exact "silently-inert cache" failure mode this API exists to
+				// surface (AC #5) — be loud about it.
+				slog.Warn("unknown CacheTTL — no cache_control emitted",
+					"cache_ttl", string(b.CacheTTL),
+				)
 			}
 			blocks = append(blocks, block)
 		}

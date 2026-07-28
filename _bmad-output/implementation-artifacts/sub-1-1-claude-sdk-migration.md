@@ -1,6 +1,6 @@
 # Story sub-1.1: Migrate the Claude client to the official Go SDK
 
-Status: review
+Status: done
 
 **Epic:** `epic-subtitle-pipeline-m1` — Automatic Traditional-Chinese subtitles for English media (M1) · **Risk: 🔴 HIGH** · **BACKEND-ONLY**
 **Source:** `_bmad-output/planning-artifacts/epics-subtitle-pipeline.md` § Story 1.1 · architecture Step 3 + **D8** + **P10**
@@ -493,6 +493,24 @@ Claude Fable 5 (`claude-fable-5`) — BMAD dev agent (Amelia)
 | `_bmad-output/implementation-artifacts/sub-1-1-claude-sdk-migration.md` | this file — task checkboxes, Dev Agent Record, File List, Change Log, Status |
 | `_bmad-output/implementation-artifacts/sprint-status.yaml` | status → review; filed `preexisting-flake-scanner-sse-scan-cancelled` |
 
+### Senior Developer Review (AI) — 2026-07-28, adversarial CR
+
+**Verdict: APPROVED after fixes.** All 9 ACs verified as implemented (mechanically, not by sampling): 30 Claude tests green pre-review, full backend suite green, `go vet` + `pnpm lint:all` green, AC #1 must-not-change list zero-diff (`provider.go` purely additive), D8 nesting / 404 diagnostic / `/v1` guard / malformed-JSON-not-retried all locked by tests. Rule 7: PASS (0 new codes). Rule 20: N/A (new stamp, no bump). Rule 25: N/A. Git-vs-story discrepancies: 0.
+
+**Findings (2 Medium, 3 Low) — all FIXED in-review:**
+
+| # | Sev | Finding | Fix |
+|---|---|---|---|
+| M1 | MEDIUM | `WithClaudeTimeout` silently ignored when combined with `WithClaudeHTTPClient` — old `doRequest` wrapped **every** attempt in `context.WithTimeout(ctx, p.timeout)` regardless of client; the SDK build only carried the timeout on the default-built client. Proven by probe: 50 ms timeout + custom client + 300 ms server → request ran to completion. AC #1 semantic drift (latent — production passes no custom client). | `option.WithRequestTimeout(p.timeout)` added on the custom-client branch of `NewClaudeProvider`; locked by new test `TestClaudeProvider_TimeoutEnforcedWithCustomHTTPClient`. |
+| M2 | MEDIUM | 2xx + non-JSON `Content-Type` (broken-proxy HTML page with status 200) was **retried 3×** — the SDK's content-type rejection error is neither `*anthropic.Error` nor `*json.SyntaxError`, so it fell into the connection-error retryable fallback. Same permanent class as the AC #4 malformed-JSON trap, different shape. (Probe also confirmed HTML-body **5xx** classifies correctly — retried as provider error, no bug there.) | `rejectNonJSONSuccess` middleware (AC #4's documented option (2)) + `errNonJSONResponse` sentinel → `ErrAIInvalidResponse`, non-retryable; locked by new test `TestClaudeProvider_NonJSONSuccessNotRetried`. |
+| L1 | LOW | Unknown `CacheTTL` values silently emitted no `cache_control` — the exact "silently-inert cache" failure mode AC #5 exists to surface. | Explicit `CacheTTLNone` case + `default:` branch with `slog.Warn`. |
+| L2 | LOW | Error-log fidelity regression: old client logged the raw response body; new logged only `apiErr.Error()` (SDK-formatted). | `"raw_json", apiErr.RawJSON()` added to the `slog.Warn` (symbol P10-verified: `apierror.go:39`). |
+| L3 | LOW | `CompleteTextWithUsage` (the sub-1-5a entry point) emitted no request-level debug log — only the `CompleteText` wrapper did. | Debug log moved into `CompleteTextWithUsage` (the shared funnel), now with `system_blocks` + `max_tokens`. |
+
+**Review-verified P10 additions:** `option.WithMiddleware` / `Middleware` / `MiddlewareNext` (`option/requestoption.go:198-207`), `apierror.Error.RawJSON()` (`internal/apierror/apierror.go:39`) — checked against the module-cache source before use.
+
+**Test count after review: 32** Claude-touching test functions (30 from dev + 2 review guards). Gates re-run post-fix: `go test ./internal/ai/... ./internal/services/` green · `go vet` clean · touched files `gofmt` clean · `pnpm lint:all` 0 errors.
+
 ### Change Log
 
 | Date | Change |
@@ -501,6 +519,7 @@ Claude Fable 5 (`claude-fable-5`) — BMAD dev agent (Amelia)
 | 2026-07-28 | **Task 2** — `claude.go` internals re-implemented on the SDK: SDK client built after options (Rule 14), `DefaultClaudeBaseURL` drops `/v1` (AC #6), `send()` preserves the D8 nesting with `WithMaxRetries(0)`, `classifyErr()` re-maps every failure to the existing `AI_*` sentinels incl. the verbatim 9R-1 404 diagnostic, metering moved onto typed `msg.Usage`. |
 | 2026-07-28 | **Task 3** — additive `CachingCompleter` `[@contract-v1]` + supporting types in `provider.go`; `CompleteTextWithUsage` implemented over the same `send()` path; `gemini.go` untouched and deliberately not implementing it. |
 | 2026-07-28 | **Task 4** — 2 tests rewritten in place, 4 AC #7 guards added (30 total); pre-existing `Content-Type` fixture drift fixed in 13 fakes across 2 packages; request-body assertions moved to the canonical block-array shape; full backend suite + `pnpm lint:all` green; pre-existing scanner flake filed. |
+| 2026-07-28 | **Code review (adversarial CR)** — 2 Medium + 3 Low findings, all fixed: custom-client timeout enforcement restored (`WithRequestTimeout`), non-JSON 2xx made permanent via `rejectNonJSONSuccess` middleware, unknown-`CacheTTL` warn, `raw_json` error logging, debug log moved to the shared funnel; +2 lock-in tests (32 total). Story → done. |
 
 ---
 
