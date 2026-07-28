@@ -9,6 +9,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/vido/api/internal/ai"
+	"github.com/vido/api/internal/ai/prompts"
 )
 
 // mockTextCompleter implements ai.TextCompleter for testing.
@@ -391,4 +393,113 @@ func TestTranslationService_TranslateRequest_FailSoftKeepsOriginal(t *testing.T)
 	require.Len(t, out, 2)
 	assert.Equal(t, "已翻譯", out[0].Text)
 	assert.Equal(t, "untouched", out[1].Text, "missing translation → original preserved")
+}
+
+// --- sub-1-5a: TranslateChunk (single-chunk, usage-returning) ---
+
+// cachingTranslationMock implements BOTH ai.TextCompleter and
+// ai.CachingCompleter — the Claude shape.
+type cachingTranslationMock struct {
+	result     ai.CompletionResult
+	err        error
+	reqs       []ai.CompletionRequest
+	plainCalls int
+}
+
+func (m *cachingTranslationMock) CompleteText(_ context.Context, systemPrompt, userPrompt string, maxTokens int) (string, error) {
+	m.plainCalls++
+	return "", errors.New("CompleteText must not be used when CachingCompleter is available")
+}
+
+func (m *cachingTranslationMock) CompleteTextWithUsage(_ context.Context, req ai.CompletionRequest) (ai.CompletionResult, error) {
+	m.reqs = append(m.reqs, req)
+	if m.err != nil {
+		return ai.CompletionResult{}, m.err
+	}
+	return m.result, nil
+}
+
+func chunkSystemBlocks() []ai.SystemBlock {
+	return []ai.SystemBlock{
+		{Text: prompts.SubtitleTranslatorSystemPrompt, CacheTTL: ai.CacheTTLNone},
+		{Text: "## Media context\n", CacheTTL: ai.CacheTTLNone},
+	}
+}
+
+func TestTranslationService_TranslateChunk_HappyPath(t *testing.T) {
+	mock := &cachingTranslationMock{result: ai.CompletionResult{
+		Text: "[4] 早安\n[9] 待會見\n[42] 這個索引沒人要",
+		Usage: ai.CompletionUsage{
+			InputTokens: 1200, OutputTokens: 80,
+			CacheCreationInputTokens: 900, CacheReadInputTokens: 300,
+		},
+	}}
+	svc := NewTranslationService(mock, nil)
+
+	got, usage, err := svc.TranslateChunk(context.Background(), chunkSystemBlocks(),
+		[]prompts.SubtitleTranslatorBlock{{Index: 1, Text: "早安"}},
+		[]prompts.SubtitleTranslatorBlock{{Index: 4, Text: "Good morning."}, {Index: 9, Text: "See you later."}},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t, map[int]string{4: "早安", 9: "待會見"}, got,
+		"only the requested indexes survive parseTranslationResponse")
+	assert.Equal(t, ai.CompletionUsage{
+		InputTokens: 1200, OutputTokens: 80,
+		CacheCreationInputTokens: 900, CacheReadInputTokens: 300,
+	}, usage)
+
+	require.Len(t, mock.reqs, 1)
+	req := mock.reqs[0]
+	assert.Equal(t, chunkSystemBlocks(), req.System, "system blocks pass through in caller order")
+	assert.Equal(t, TranslationMaxTokens, req.MaxTokens)
+	assert.Contains(t, req.UserPrompt, "Previous context")
+	assert.Contains(t, req.UserPrompt, "[4] Good morning.")
+	assert.Contains(t, req.UserPrompt, "[9] See you later.")
+	assert.NotContains(t, req.UserPrompt, "-->", "timestamps never leave Go (P2/FR11)")
+	assert.Zero(t, mock.plainCalls)
+}
+
+func TestTranslationService_TranslateChunk_NonCachingProviderDegrades(t *testing.T) {
+	// Gemini shape: ai.TextCompleter only, no usage reporting.
+	mock := &mockTranslationCompleter{response: "[1] 早安"}
+	svc := NewTranslationService(mock, nil)
+
+	got, usage, err := svc.TranslateChunk(context.Background(), chunkSystemBlocks(), nil,
+		[]prompts.SubtitleTranslatorBlock{{Index: 1, Text: "Good morning."}})
+	require.NoError(t, err, "a non-caching provider degrades, it does not fail")
+
+	assert.Equal(t, map[int]string{1: "早安"}, got)
+	assert.Equal(t, ai.CompletionUsage{}, usage, "usage is unavailable, not invented")
+
+	require.Len(t, mock.calls, 1)
+	assert.Contains(t, mock.calls[0].SystemPrompt, prompts.SubtitleTranslatorSystemPrompt,
+		"system blocks are flattened for the single-string API")
+	assert.Contains(t, mock.calls[0].SystemPrompt, "## Media context")
+	assert.Equal(t, TranslationMaxTokens, mock.calls[0].MaxTokens)
+}
+
+func TestTranslationService_TranslateChunk_PropagatesProviderError(t *testing.T) {
+	sentinel := errors.New("upstream exploded")
+	svc := NewTranslationService(&cachingTranslationMock{err: sentinel}, nil)
+
+	got, usage, err := svc.TranslateChunk(context.Background(), chunkSystemBlocks(), nil,
+		[]prompts.SubtitleTranslatorBlock{{Index: 1, Text: "Good morning."}})
+
+	require.Error(t, err)
+	assert.ErrorIs(t, err, sentinel, "the cause is chained, not flattened (Rule 13)")
+	assert.Nil(t, got)
+	assert.Equal(t, ai.CompletionUsage{}, usage)
+}
+
+func TestTranslationService_TranslateChunk_EmptyBlocksIsANoOp(t *testing.T) {
+	mock := &cachingTranslationMock{}
+	svc := NewTranslationService(mock, nil)
+
+	got, usage, err := svc.TranslateChunk(context.Background(), chunkSystemBlocks(), nil, nil)
+
+	require.NoError(t, err)
+	assert.Empty(t, got)
+	assert.Equal(t, ai.CompletionUsage{}, usage)
+	assert.Empty(t, mock.reqs, "no cues means no request")
 }

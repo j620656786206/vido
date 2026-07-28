@@ -292,6 +292,69 @@ func (s *TranslationService) TranslateRequest(ctx context.Context, req Translati
 	return out, nil
 }
 
+// TranslateChunk sends ONE chunk (numbered cues plus its read-only context
+// window) and returns the parsed per-index map plus token usage. No internal
+// batching, no retry — the subtitle-side pipeline owns both, because retry
+// granularity is the cue while transport granularity is the chunk (P3). If this
+// method batched, the pipeline could not resend only the cues its quality gate
+// rejected without re-sending the clean ones.
+//
+// The prompt carries numbered text only: Start/End never cross this boundary
+// (P2/FR11). Prompt building and response parsing reuse the Route C machinery
+// verbatim — no second prompt or parser path exists.
+func (s *TranslationService) TranslateChunk(ctx context.Context, sys []ai.SystemBlock, contextBlocks, blocks []prompts.SubtitleTranslatorBlock) (map[int]string, ai.CompletionUsage, error) {
+	if len(blocks) == 0 {
+		return nil, ai.CompletionUsage{}, nil
+	}
+
+	indices := make([]int, len(blocks))
+	for i, b := range blocks {
+		indices[i] = b.Index
+	}
+	userPrompt := prompts.BuildSubtitleTranslatorPrompt(blocks, contextBlocks)
+
+	chunkCtx, cancel := context.WithTimeout(ctx, TranslationTimeout)
+	defer cancel()
+
+	// Claude implements CachingCompleter, so usage — including both cache
+	// dimensions — flows back to the caller. Gemini deliberately does not:
+	// it degrades to the plain text API with zero usage rather than blocking
+	// the multi-provider moat (the established degradation shape).
+	if caching, ok := s.provider.(ai.CachingCompleter); ok {
+		res, err := caching.CompleteTextWithUsage(chunkCtx, ai.CompletionRequest{
+			System:     sys,
+			UserPrompt: userPrompt,
+			MaxTokens:  TranslationMaxTokens,
+		})
+		if err != nil {
+			return nil, ai.CompletionUsage{}, fmt.Errorf("translate chunk [%d-%d]: %w", indices[0], indices[len(indices)-1], err)
+		}
+		return parseTranslationResponse(res.Text, indices), res.Usage, nil
+	}
+
+	slog.Info("AI provider does not implement ai.CachingCompleter — translating without prompt caching or token usage",
+		"chunk_size", len(blocks),
+	)
+	text, err := s.provider.CompleteText(chunkCtx, flattenSystemBlocks(sys), userPrompt, TranslationMaxTokens)
+	if err != nil {
+		return nil, ai.CompletionUsage{}, fmt.Errorf("translate chunk [%d-%d]: %w", indices[0], indices[len(indices)-1], err)
+	}
+	return parseTranslationResponse(text, indices), ai.CompletionUsage{}, nil
+}
+
+// flattenSystemBlocks collapses ordered system blocks into the single string
+// the non-caching TextCompleter API accepts. Block order is preserved, so the
+// flattened prompt reads exactly like the block sequence it stands in for.
+func flattenSystemBlocks(sys []ai.SystemBlock) string {
+	parts := make([]string, 0, len(sys))
+	for _, b := range sys {
+		if strings.TrimSpace(b.Text) != "" {
+			parts = append(parts, b.Text)
+		}
+	}
+	return strings.Join(parts, "\n\n")
+}
+
 // responseLinePattern matches "[N] text" format from Claude's response.
 var responseLinePattern = regexp.MustCompile(`^\[(\d+)\]\s*(.+)$`)
 

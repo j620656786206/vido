@@ -3,8 +3,19 @@ package prompts
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 )
+
+// SubtitleTranslatorPromptVersion identifies the prompt revision for cache-key
+// and provenance purposes (P11). ANY text change to the prompts or section
+// builders in this file REQUIRES bumping this constant IN THE SAME EDIT —
+// otherwise a re-run silently returns the previous translation and the pilot's
+// A/B comparison is invalid (the architecture's named silent-failure trap).
+//
+// TestSubtitleTranslatorPromptVersion_PinsPromptText enforces this: it hashes
+// every prompt surface in this file, so an edit that forgets the bump fails.
+const SubtitleTranslatorPromptVersion = "m1-v1"
 
 // SubtitleTranslatorContextWindow is the number of previous blocks sent as
 // read-only context for each translation batch to maintain consistency (AC #2).
@@ -73,6 +84,83 @@ func BuildGlossarySection(glossary []GlossaryEntry) string {
 	}
 	sb.WriteString("\n")
 	return sb.String()
+}
+
+// MetadataCastLimit caps how many cast names are rendered into the media
+// context section — enough to anchor character names, short enough not to crowd
+// the cached prefix.
+const MetadataCastLimit = 10
+
+// MediaMetadata is the FR26 show context injected into a translation prompt so
+// the model renders character names, genre register and setting consistently.
+//
+// It mirrors the metadata half of subtitle.TranslateContext: prompts cannot
+// import subtitle (that would cycle), so the pipeline maps across at the call
+// site. Every field is optional.
+type MediaMetadata struct {
+	Title         string
+	OriginalTitle string
+	Year          int
+	Genres        []string
+	Overview      string
+	Cast          []string
+	Countries     []string
+}
+
+// BuildMetadataSection renders the FR26 media-context block. Returns "" when
+// the metadata carries nothing renderable, so the no-metadata path produces a
+// byte-identical prompt (the BuildGlossarySection precedent).
+func BuildMetadataSection(md MediaMetadata) string {
+	var rows []string
+	addRow := func(label, value string) {
+		if v := strings.TrimSpace(value); v != "" {
+			rows = append(rows, fmt.Sprintf("- %s: %s\n", label, v))
+		}
+	}
+
+	addRow("Title", md.Title)
+	addRow("Original title", md.OriginalTitle)
+	if md.Year > 0 {
+		addRow("Year", strconv.Itoa(md.Year))
+	}
+	addRow("Genres", joinNonEmpty(md.Genres, 0))
+	addRow("Production countries", joinNonEmpty(md.Countries, 0))
+	addRow("Cast", joinNonEmpty(md.Cast, MetadataCastLimit))
+	addRow("Overview", collapseLines(md.Overview))
+
+	if len(rows) == 0 {
+		return ""
+	}
+
+	var sb strings.Builder
+	sb.WriteString("## Media context — background only, do NOT translate or output this section:\n")
+	sb.WriteString("Use it to keep character names, register and setting consistent across the whole subtitle.\n")
+	for _, row := range rows {
+		sb.WriteString(row)
+	}
+	sb.WriteString("\n")
+	return sb.String()
+}
+
+// joinNonEmpty renders a comma-separated list, dropping blank entries and
+// keeping at most limit of them (limit <= 0 means no cap).
+func joinNonEmpty(values []string, limit int) string {
+	kept := make([]string, 0, len(values))
+	for _, v := range values {
+		if v = strings.TrimSpace(v); v != "" {
+			kept = append(kept, v)
+		}
+		if limit > 0 && len(kept) == limit {
+			break
+		}
+	}
+	return strings.Join(kept, ", ")
+}
+
+// collapseLines folds a multi-line overview onto one line so the section stays
+// a flat key/value list the model cannot mistake for dialogue.
+func collapseLines(s string) string {
+	return strings.Join(strings.Fields(s), " ")
 }
 
 // BuildSubtitleTranslatorPrompt generates the user prompt for a batch of subtitle blocks.

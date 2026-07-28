@@ -1,6 +1,9 @@
 package prompts
 
 import (
+	"crypto/sha256"
+	"fmt"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -155,4 +158,102 @@ func TestBuildSubtitleTranslatorPromptWithGlossary(t *testing.T) {
 	assert.Contains(t, p, "Demogorgon → 魔王獸")
 	// Glossary must come before the translate section.
 	assert.Less(t, strings.Index(p, "Glossary"), strings.Index(p, "Translate the following"))
+}
+
+// --- sub-1-5a: FR26 metadata section + P11 prompt version ---
+
+func sampleMetadata() MediaMetadata {
+	return MediaMetadata{
+		Title:         "怪奇物語",
+		OriginalTitle: "Stranger Things",
+		Year:          2016,
+		Genres:        []string{"Drama", "Fantasy", "Mystery"},
+		Overview:      "A group of kids\nuncover a secret lab.",
+		Cast:          []string{"Winona Ryder", "David Harbour", "Millie Bobby Brown"},
+		Countries:     []string{"US"},
+	}
+}
+
+func TestBuildMetadataSection_ZeroValueYieldsNoSection(t *testing.T) {
+	assert.Equal(t, "", BuildMetadataSection(MediaMetadata{}),
+		"a zero-value context must render nothing (byte-identical no-metadata path)")
+
+	// Whitespace-only / zero fields are the same as absent.
+	assert.Equal(t, "", BuildMetadataSection(MediaMetadata{
+		Title:     "   ",
+		Overview:  "\n\t",
+		Genres:    []string{"", "  "},
+		Cast:      []string{" "},
+		Countries: []string{""},
+	}))
+}
+
+func TestBuildMetadataSection_RendersEveryField(t *testing.T) {
+	section := BuildMetadataSection(sampleMetadata())
+
+	assert.Contains(t, section, "Media context")
+	assert.Contains(t, section, "do NOT translate")
+	assert.Contains(t, section, "- Title: 怪奇物語\n")
+	assert.Contains(t, section, "- Original title: Stranger Things\n")
+	assert.Contains(t, section, "- Year: 2016\n")
+	assert.Contains(t, section, "- Genres: Drama, Fantasy, Mystery\n")
+	assert.Contains(t, section, "- Production countries: US\n")
+	assert.Contains(t, section, "- Cast: Winona Ryder, David Harbour, Millie Bobby Brown\n")
+	assert.Contains(t, section, "- Overview: A group of kids uncover a secret lab.\n",
+		"a multi-line overview is collapsed so it cannot read as dialogue")
+	assert.True(t, strings.HasSuffix(section, "\n\n"), "section ends with a blank separator line")
+}
+
+func TestBuildMetadataSection_PartialMetadataOmitsAbsentRows(t *testing.T) {
+	section := BuildMetadataSection(MediaMetadata{Title: "Dune", Year: 0})
+
+	assert.Contains(t, section, "- Title: Dune\n")
+	assert.NotContains(t, section, "Year:", "a zero year is absent, not 0")
+	assert.NotContains(t, section, "Genres:")
+	assert.NotContains(t, section, "Cast:")
+	assert.NotContains(t, section, "Overview:")
+}
+
+func TestBuildMetadataSection_CapsCastAtTen(t *testing.T) {
+	cast := make([]string, 0, 15)
+	for i := 1; i <= 15; i++ {
+		cast = append(cast, "Actor "+strconv.Itoa(i))
+	}
+
+	section := BuildMetadataSection(MediaMetadata{Cast: cast})
+
+	assert.Contains(t, section, "Actor 10")
+	assert.NotContains(t, section, "Actor 11")
+	assert.Equal(t, MetadataCastLimit, strings.Count(section, "Actor "))
+}
+
+// TestSubtitleTranslatorPromptVersion_PinsPromptText is the P11 guard: it
+// fingerprints every prompt surface in subtitle_translator.go. Editing any of
+// them changes the digest, which fails this test and forces the author to bump
+// SubtitleTranslatorPromptVersion in the same edit — the alternative is a
+// re-run silently serving the previous translation from cache.
+func TestSubtitleTranslatorPromptVersion_PinsPromptText(t *testing.T) {
+	// The pinned metadata deliberately carries MORE cast entries than
+	// MetadataCastLimit, so the cap itself is inside the fingerprint: raising
+	// the limit changes real prompts for any show with a large cast, and must
+	// fail this pin like any other prompt-surface edit (sub-1-5a CR M1).
+	pinned := sampleMetadata()
+	pinned.Cast = nil
+	for i := 1; i <= MetadataCastLimit+2; i++ {
+		pinned.Cast = append(pinned.Cast, "Pin Actor "+strconv.Itoa(i))
+	}
+
+	var sb strings.Builder
+	sb.WriteString(SubtitleTranslatorSystemPrompt)
+	sb.WriteString(BuildGlossarySection([]GlossaryEntry{{Source: "Vecna", Target: "維克那"}}))
+	sb.WriteString(BuildMetadataSection(pinned))
+	sb.WriteString(BuildSubtitleTranslatorPrompt(
+		[]SubtitleTranslatorBlock{{Index: 2, Text: "Hello"}},
+		[]SubtitleTranslatorBlock{{Index: 1, Text: "Hi"}},
+	))
+	digest := fmt.Sprintf("%x", sha256.Sum256([]byte(sb.String())))
+
+	assert.Equal(t, "m1-v1", SubtitleTranslatorPromptVersion)
+	assert.Equal(t, "4ca01f9266ee94b058437fdef34b363d36100f9fa0e568a6702d30ecdc7e51e1", digest,
+		"prompt text changed — bump SubtitleTranslatorPromptVersion and update this digest in the SAME edit (P11)")
 }
