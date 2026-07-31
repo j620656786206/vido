@@ -33,8 +33,21 @@ if [[ -f "$PROJECT_ROOT/.agentvibes/bmad/bmad-party-mode-disabled.flag" ]]; then
   exit 0
 fi
 
+# Locate the agent manifest. BMAD v6 moved it from .bmad/_cfg to _bmad/_config;
+# probing both keeps this hook working across either install layout.
+AGENT_MANIFEST=""
+for candidate in \
+  "$PROJECT_ROOT/_bmad/_config/agent-manifest.csv" \
+  "$PROJECT_ROOT/.bmad/_cfg/agent-manifest.csv" \
+  "$PROJECT_ROOT/bmad/_cfg/agent-manifest.csv"; do
+  if [[ -f "$candidate" ]]; then
+    AGENT_MANIFEST="$candidate"
+    break
+  fi
+done
+
 # Check if BMAD is installed
-if [[ ! -f "$PROJECT_ROOT/.bmad/_cfg/agent-manifest.csv" ]]; then
+if [[ -z "$AGENT_MANIFEST" ]]; then
   exit 0
 fi
 
@@ -51,7 +64,7 @@ map_to_agent_id() {
 
   # First check if it's already an agent ID (column 1 of manifest)
   # CSV format: name,displayName,title,icon,role,...
-  local direct_match=$(grep -i "^\"*${name_or_id}\"*," "$PROJECT_ROOT/.bmad/_cfg/agent-manifest.csv" | head -1)
+  local direct_match=$(grep -i "^\"*${name_or_id}\"*," "$AGENT_MANIFEST" | head -1)
   if [[ -n "$direct_match" ]]; then
     # Already an agent ID, pass through
     echo "$name_or_id"
@@ -78,7 +91,7 @@ map_to_agent_id() {
         exit
       }
     }
-  ' "$PROJECT_ROOT/.bmad/_cfg/agent-manifest.csv")
+  ' "$AGENT_MANIFEST")
 
   echo "$agent_id"
 }

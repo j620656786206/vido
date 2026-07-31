@@ -57,14 +57,22 @@ EOF
 # @function start_worker_if_needed
 # @intent Start the queue worker process if it's not already running
 start_worker_if_needed() {
-  # Security: Use file locking to prevent race condition
-  # Open file descriptor 200 for locking
-  exec 200>"$QUEUE_LOCK"
+  # macOS ships no flock(1). The lock only guards the worker-start race, and the
+  # PID check below already makes a double start harmless, so degrade to
+  # lock-free startup rather than dropping the request on the floor.
+  local have_flock=0
+  command -v flock >/dev/null 2>&1 && have_flock=1
 
-  # Acquire exclusive lock (flock -x) with timeout
-  if ! flock -x -w 5 200; then
-    echo "Warning: Could not acquire queue lock" >&2
-    return 1
+  if [[ $have_flock -eq 1 ]]; then
+    # Security: Use file locking to prevent race condition
+    # Open file descriptor 200 for locking
+    exec 200>"$QUEUE_LOCK"
+
+    # Acquire exclusive lock (flock -x) with timeout
+    if ! flock -x -w 5 200; then
+      echo "Warning: Could not acquire queue lock" >&2
+      return 1
+    fi
   fi
 
   # Check if worker is already running (within lock)
@@ -72,8 +80,10 @@ start_worker_if_needed() {
     local pid=$(cat "$WORKER_PID_FILE")
     if kill -0 "$pid" 2>/dev/null; then
       # Worker is running, release lock and return
-      flock -u 200
-      exec 200>&-
+      if [[ $have_flock -eq 1 ]]; then
+        flock -u 200
+        exec 200>&-
+      fi
       return 0
     fi
   fi
@@ -84,8 +94,10 @@ start_worker_if_needed() {
   echo $worker_pid > "$WORKER_PID_FILE"
 
   # Release lock
-  flock -u 200
-  exec 200>&-
+  if [[ $have_flock -eq 1 ]]; then
+    flock -u 200
+    exec 200>&-
+  fi
 }
 
 # @function clear_queue
