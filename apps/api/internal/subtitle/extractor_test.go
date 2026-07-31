@@ -81,11 +81,11 @@ func TestSelectCandidates(t *testing.T) {
 			wantIdx: nil,
 		},
 		{
-			name: "non-English tags are excluded",
+			name: "tags that are neither Chinese nor English are excluded",
 			tracks: []services.SubtitleTrack{
 				{Language: "jpn", Format: "subrip", StreamIndex: 1},
-				{Language: "zh", Format: "ass", StreamIndex: 2},
-				{Language: "chi", Format: "subrip", StreamIndex: 3},
+				{Language: "kor", Format: "ass", StreamIndex: 2},
+				{Language: "fre", Format: "subrip", StreamIndex: 3},
 			},
 			wantIdx: nil,
 		},
@@ -96,14 +96,78 @@ func TestSelectCandidates(t *testing.T) {
 			},
 			wantIdx: nil,
 		},
+		// ─── Chinese-first tier (2026-07-31) ───────────────────────────────
 		{
-			name: "mixed container keeps only the eng text tracks, in probe order",
+			name: "a Chinese track BEATS English outright — English is not even extracted",
+			tracks: []services.SubtitleTrack{
+				{Language: "eng", Format: "subrip", StreamIndex: 2},
+				{Language: "chi", Format: "subrip", StreamIndex: 6},
+			},
+			wantIdx: []int{6},
+		},
+		{
+			name: "every Chinese tag spelling is admitted",
+			tracks: []services.SubtitleTrack{
+				{Language: "chi", Format: "subrip", StreamIndex: 1},
+				{Language: "zho", Format: "subrip", StreamIndex: 2},
+				{Language: "zh", Format: "ass", StreamIndex: 3},
+				{Language: "zh-Hans", Format: "subrip", StreamIndex: 4},
+				{Language: "zh-Hant", Format: "subrip", StreamIndex: 5},
+				{Language: "zh-TW", Format: "subrip", StreamIndex: 6},
+				{Language: "CHT", Format: "subrip", StreamIndex: 7},
+			},
+			wantIdx: []int{1, 2, 3, 4, 5, 6, 7},
+		},
+		{
+			name: "all Chinese tracks are kept in probe order (the router picks between them)",
+			tracks: []services.SubtitleTrack{
+				{Language: "chi", Format: "subrip", StreamIndex: 6},
+				{Language: "chi", Format: "subrip", StreamIndex: 7},
+				{Language: "chi", Format: "subrip", StreamIndex: 43},
+			},
+			wantIdx: []int{6, 7, 43},
+		},
+		{
+			name: "yue (Cantonese) is NOT a Chinese candidate — falls back to English",
+			tracks: []services.SubtitleTrack{
+				{Language: "yue", Format: "subrip", StreamIndex: 5},
+				{Language: "eng", Format: "subrip", StreamIndex: 2},
+			},
+			wantIdx: []int{2},
+		},
+		{
+			name: "an image-codec Chinese track does not suppress the English tier",
+			tracks: []services.SubtitleTrack{
+				{Language: "chi", Format: "hdmv_pgs_subtitle", StreamIndex: 5},
+				{Language: "eng", Format: "subrip", StreamIndex: 2},
+			},
+			wantIdx: []int{2},
+		},
+		{
+			name: "an external Chinese sidecar does not suppress the embedded English tier",
+			tracks: []services.SubtitleTrack{
+				{Language: "chi", Format: "srt", External: true},
+				{Language: "eng", Format: "subrip", StreamIndex: 2},
+			},
+			wantIdx: []int{2},
+		},
+		{
+			name: "mixed container: Chinese text tracks win, in probe order",
 			tracks: []services.SubtitleTrack{
 				{Language: "chi", Format: "subrip", StreamIndex: 2},
 				{Language: "eng", Format: "hdmv_pgs_subtitle", StreamIndex: 3},
 				{Language: "eng", Format: "subrip", StreamIndex: 4},
 				{Language: "en", Format: "mov_text", StreamIndex: 6},
 				{Language: "eng", Format: "srt", External: true},
+			},
+			wantIdx: []int{2},
+		},
+		{
+			name: "no Chinese present — English tier still applies, in probe order",
+			tracks: []services.SubtitleTrack{
+				{Language: "eng", Format: "hdmv_pgs_subtitle", StreamIndex: 3},
+				{Language: "eng", Format: "subrip", StreamIndex: 4},
+				{Language: "en", Format: "mov_text", StreamIndex: 6},
 			},
 			wantIdx: []int{4, 6},
 		},

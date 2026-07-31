@@ -25,7 +25,7 @@ const (
 	RouteDeliverDirect      RouteKind = "deliver_direct"       // FR7 — content is already zh-Hant
 	RouteConvertThenDeliver RouteKind = "convert_then_deliver" // FR8 — content is zh-Hans → OpenCC (caller runs it)
 	RouteTranslate          RouteKind = "translate"            // FR10 — English → LLM
-	RouteSkip               RouteKind = "skip"                 // FR9/P0 — no eng/en-tagged text track
+	RouteSkip               RouteKind = "skip"                 // FR9/P0 — no Chinese- or eng/en-tagged text track
 	RouteNoTextSource       RouteKind = "no_text_source"       // FR5 — no usable text source at all
 )
 
@@ -40,7 +40,7 @@ type RouteDecision struct {
 // ExtractedTrack is the chosen embedded track after extraction and filtering.
 type ExtractedTrack struct {
 	StreamIndex int             // absolute ffmpeg stream index
-	Language    string          // the ffprobe tag that admitted it ("eng"/"en")
+	Language    string          // the ffprobe tag that admitted it ("chi"/"zho"/…/"eng"/"en")
 	Codec       string          // source codec (subrip/ass/mov_text/…)
 	Path        string          // extracted .srt in the caller-owned temp dir
 	Blocks      []SubtitleBlock // parsed + SDH-filtered cues (original numbering — P7)
@@ -113,7 +113,7 @@ func (r *Router) SelectAndRoute(ctx context.Context, mediaPath, tmpDir string) (
 		return RouteDecision{}, fmt.Errorf("subtitle route: extract %s: %w", mediaPath, err)
 	}
 
-	best, ok := r.pickBestCandidate(candidates, outputs)
+	best, variant, ok := r.pickBestCandidate(candidates, outputs)
 	if !ok {
 		return RouteDecision{}, fmt.Errorf(
 			"%w: no candidate track of %s could be parsed (%d attempted)",
@@ -129,7 +129,6 @@ func (r *Router) SelectAndRoute(ctx context.Context, mediaPath, tmpDir string) (
 		}, nil
 	}
 
-	variant := Detect([]byte(cueText(best.Blocks))).Language
 	kind, reason := routeForVariant(variant, best.StreamIndex, best.Language)
 
 	r.logger.Debug("subtitle route decided",
@@ -171,7 +170,7 @@ func (r *Router) verdictWithoutTrack(tracks []services.SubtitleTrack) RouteDecis
 		return RouteDecision{
 			Kind: RouteSkip,
 			Reason: fmt.Sprintf(
-				"%d embedded text track(s) present but none tagged eng/en — M1 never treats und as English",
+				"%d embedded text track(s) present but none tagged Chinese or eng/en — M1 never treats und as English",
 				textTracks),
 		}
 	}
@@ -185,14 +184,18 @@ func (r *Router) verdictWithoutTrack(tracks []services.SubtitleTrack) RouteDecis
 
 // pickBestCandidate parses and SDH-filters every extracted candidate, then picks
 // the one with the highest surviving cue count — forced-narrative tracks have
-// few cues, and SDH variants converge with full tracks once filtered. Ties break
-// on the lowest stream index so the choice is deterministic.
+// few cues, and SDH variants converge with full tracks once filtered. Equal cue
+// counts break on the content variant (an already-Traditional track beats one
+// that would need converting), and finally on the lowest stream index so the
+// choice is deterministic. It returns the winner's detected variant so
+// SelectAndRoute does not re-run detection.
 //
 // A candidate that produced no file, cannot be read, or does not parse is logged
 // and skipped (Rule 13 — the error informs the fallback, it is never swallowed
 // silently). ok is false only when EVERY candidate failed.
-func (r *Router) pickBestCandidate(candidates []services.SubtitleTrack, outputs map[int]string) (ExtractedTrack, bool) {
+func (r *Router) pickBestCandidate(candidates []services.SubtitleTrack, outputs map[int]string) (ExtractedTrack, string, bool) {
 	var best ExtractedTrack
+	bestVariant := ""
 	found := false
 
 	for _, c := range candidates {
@@ -233,21 +236,49 @@ func (r *Router) pickBestCandidate(candidates []services.SubtitleTrack, outputs 
 			Path:        path,
 			Blocks:      kept,
 		}
+		variant := Detect([]byte(cueText(kept))).Language
 
-		if !found || betterCandidate(candidate, best) {
+		if !found || betterCandidate(candidate, variant, best, bestVariant) {
 			best = candidate
+			bestVariant = variant
 			found = true
 		}
 	}
 
-	return best, found
+	return best, bestVariant, found
+}
+
+// variantRank orders content variants by how much work (and how much loss) the
+// delivery still costs: already-Traditional is free, Simplified/mixed pays an
+// OpenCC round-trip, and no-CJK pays a whole LLM translation.
+func variantRank(variant string) int {
+	switch variant {
+	case LangTraditional:
+		return 0
+	case LangSimplified, LangAmbiguous:
+		return 1
+	default: // LangUndetermined — English (or an unusable track)
+		return 2
+	}
 }
 
 // betterCandidate implements the selection heuristic: more surviving cues wins;
-// on a tie the lower stream index wins.
-func betterCandidate(candidate, current ExtractedTrack) bool {
+// on a tie the cheaper/lossless variant wins; on a further tie the lower stream
+// index wins.
+//
+// Cue count stays the PRIMARY key on purpose — a forced-narrative track can be
+// genuinely Traditional yet carry 20 cues, and it must never beat a full 400-cue
+// track. The variant tie-break exists for the case live-observed on the owner's
+// NAS (2026-07-31): Apple TV+ files ship Simplified, Traditional and Cantonese
+// tracks with IDENTICAL cue counts, so the old cue-count/stream-index pair
+// always landed on the lowest index — Simplified — and paid a needless s2twp
+// conversion while the official Traditional track sat one stream away.
+func betterCandidate(candidate ExtractedTrack, candidateVariant string, current ExtractedTrack, currentVariant string) bool {
 	if len(candidate.Blocks) != len(current.Blocks) {
 		return len(candidate.Blocks) > len(current.Blocks)
+	}
+	if r1, r2 := variantRank(candidateVariant), variantRank(currentVariant); r1 != r2 {
+		return r1 < r2
 	}
 	return candidate.StreamIndex < current.StreamIndex
 }
