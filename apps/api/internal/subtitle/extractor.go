@@ -71,11 +71,44 @@ func isEnglishTag(lang string) bool {
 	}
 }
 
+// isChineseTag recognises the tags that may carry Chinese cue text.
+//
+// ffprobe emits ISO 639-2/B for Matroska, so a Chinese track is almost always
+// the bare `chi` — the 繁/簡 distinction lives in the track TITLE ("Chinese
+// (Traditional)"), which vido does not persist. That is fine: the tag only has
+// to get the track EXTRACTED; `Detect` then classifies the variant from content
+// (FR6), which is the same mislabel-proof rule the English path relies on.
+//
+// `yue` (Cantonese) is deliberately EXCLUDED. Cantonese subtitles are written in
+// Traditional script, so the detector would happily label them zh-Hant and we
+// would ship colloquial Cantonese as a Mandarin 繁中 track. When a file offers
+// nothing but Cantonese, falling through to English-translate is the better
+// answer. A Cantonese track tagged plainly `chi` (as Apple TV+ does) is still
+// admitted — it is indistinguishable without the title tag — but it loses the
+// tie-break to any track that is genuinely Traditional.
+func isChineseTag(lang string) bool {
+	switch strings.ToLower(strings.TrimSpace(lang)) {
+	case "chi", "zho", "zh", "zh-hans", "zh-hant", "zh-cn", "zh-tw", "zh-hk", "chs", "cht":
+		return true
+	default:
+		return false
+	}
+}
+
 // SelectCandidates filters probed tracks down to the ones M1 may extract:
-// embedded (not a sidecar), a text codec, and tagged eng/en. Probe order is
-// preserved so downstream tie-breaks stay deterministic.
+// embedded (not a sidecar) and a text codec, tagged either Chinese or eng/en.
+// Probe order is preserved so downstream tie-breaks stay deterministic.
+//
+// Chinese tracks WIN OUTRIGHT when present: a track that is already Chinese
+// needs at most an OpenCC conversion, while the English path pays an LLM per
+// item to produce a worse result than the human subtitle sitting in the same
+// file. Live evidence (2026-07-31, owner's NAS): 135 of 157 ffprobe-scanned
+// items carry BOTH an official Chinese track and an English one, i.e. the
+// English-only gate sent 86% of the library down the expensive, lower-quality
+// branch. The tiers are exclusive — when Chinese is present the English tracks
+// are not even extracted, so this also removes ffmpeg work.
 func SelectCandidates(tracks []services.SubtitleTrack) []services.SubtitleTrack {
-	var candidates []services.SubtitleTrack
+	var chinese, english []services.SubtitleTrack
 	for _, t := range tracks {
 		if t.External {
 			continue
@@ -83,12 +116,17 @@ func SelectCandidates(tracks []services.SubtitleTrack) []services.SubtitleTrack 
 		if !IsTextSubtitleCodec(t.Format) {
 			continue
 		}
-		if !isEnglishTag(t.Language) {
-			continue
+		switch {
+		case isChineseTag(t.Language):
+			chinese = append(chinese, t)
+		case isEnglishTag(t.Language):
+			english = append(english, t)
 		}
-		candidates = append(candidates, t)
 	}
-	return candidates
+	if len(chinese) > 0 {
+		return chinese
+	}
+	return english
 }
 
 // Extractor demuxes embedded text subtitle tracks into .srt files with ffmpeg.

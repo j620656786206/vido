@@ -110,10 +110,11 @@ func TestSelectAndRoute_OnlyImageCodecTracks(t *testing.T) {
 	assert.Zero(t, ex.callCount)
 }
 
-func TestSelectAndRoute_TextTracksButNoneEnglish(t *testing.T) {
-	// P0 — `und` is NEVER English; zh-tagged embedded tracks skip in M1
-	// (Finding 3: M1 is eng/en-gated FIRST, content-routed SECOND).
-	for _, lang := range []string{"und", "jpn", "zh", "chi"} {
+func TestSelectAndRoute_TextTracksButNoneUsable(t *testing.T) {
+	// P0 — `und` is NEVER English, and a non-Chinese foreign tag is not a
+	// candidate either. (zh/chi moved OUT of this list on 2026-07-31: Chinese
+	// tracks are now the PREFERRED candidate — see the Chinese-first tests.)
+	for _, lang := range []string{"und", "jpn", "kor", "fre"} {
 		t.Run(lang, func(t *testing.T) {
 			prober := &fakeProber{info: &services.MediaTechInfo{SubtitleTracks: []services.SubtitleTrack{
 				embedded(2, lang, "subrip"),
@@ -129,6 +130,118 @@ func TestSelectAndRoute_TextTracksButNoneEnglish(t *testing.T) {
 			assert.Zero(t, ex.callCount)
 		})
 	}
+}
+
+// ─── Chinese-first routing (2026-07-31) ────────────────────────────────────
+
+func TestSelectAndRoute_ChineseTrackWinsOverEnglish(t *testing.T) {
+	// The 135/157 case measured on the owner's NAS: an official zh track and an
+	// eng track in the same file. The zh track must be used — and the eng track
+	// must not even be extracted, so no LLM translation is ever queued.
+	prober := &fakeProber{info: &services.MediaTechInfo{SubtitleTracks: []services.SubtitleTrack{
+		embedded(2, "eng", "subrip"),
+		embedded(7, "chi", "subrip"),
+	}}}
+	ex := &fakeExtractor{contents: map[int]string{
+		2: srtOf("We're being lied to.", "Everyone has to see this."),
+		7: srtOf("我們一直以來都被騙", "所有人都必須看看這個"),
+	}}
+	r, tmp := newTestRouter(t, prober, ex)
+
+	got, err := r.SelectAndRoute(context.Background(), "/media/m.mkv", tmp)
+
+	require.NoError(t, err)
+	assert.Equal(t, RouteDeliverDirect, got.Kind, "an official zh-Hant track ships as-is — no LLM")
+	assert.Equal(t, LangTraditional, got.DetectedVariant)
+	require.NotNil(t, got.Track)
+	assert.Equal(t, 7, got.Track.StreamIndex)
+	assert.Equal(t, []int{7}, ex.gotIdx, "the eng track must not be extracted at all")
+}
+
+func TestSelectAndRoute_SimplifiedOnlyChineseTrackIsConverted(t *testing.T) {
+	// Owner's rule: a Simplified track is still the right source — extract it
+	// and convert, rather than paying to translate the English one.
+	prober := &fakeProber{info: &services.MediaTechInfo{SubtitleTracks: []services.SubtitleTrack{
+		embedded(2, "eng", "subrip"),
+		embedded(6, "chi", "subrip"),
+	}}}
+	ex := &fakeExtractor{contents: map[int]string{
+		2: srtOf("We're being lied to."),
+		6: srtOf("我们被骗了", "所有人都必须看看这个"),
+	}}
+	r, tmp := newTestRouter(t, prober, ex)
+
+	got, err := r.SelectAndRoute(context.Background(), "/media/m.mkv", tmp)
+
+	require.NoError(t, err)
+	assert.Equal(t, RouteConvertThenDeliver, got.Kind)
+	assert.Equal(t, LangSimplified, got.DetectedVariant)
+	require.NotNil(t, got.Track)
+	assert.Equal(t, 6, got.Track.StreamIndex)
+}
+
+func TestSelectAndRoute_TraditionalWinsTheTieAgainstSimplified(t *testing.T) {
+	// Live shape (Apple TV+ / Silo S01E10): Simplified, Traditional and
+	// Cantonese-Traditional tracks with IDENTICAL cue counts. The old
+	// cue-count→stream-index pair always took the LOWEST index (Simplified) and
+	// paid a needless s2twp round-trip. Traditional must win the tie.
+	prober := &fakeProber{info: &services.MediaTechInfo{SubtitleTracks: []services.SubtitleTrack{
+		embedded(6, "chi", "subrip"),  // Chinese (Simplified)
+		embedded(7, "chi", "subrip"),  // Chinese (Traditional)
+		embedded(43, "chi", "subrip"), // Cantonese (Traditional)
+	}}}
+	ex := &fakeExtractor{contents: map[int]string{
+		6:  srtOf("我们被骗了", "所有人都必须看看这个"),
+		7:  srtOf("我們一直以來都被騙", "所有人都必須看看這個"),
+		43: srtOf("我們被騙了", "所有人都必須睇睇呢個"),
+	}}
+	r, tmp := newTestRouter(t, prober, ex)
+
+	got, err := r.SelectAndRoute(context.Background(), "/media/m.mkv", tmp)
+
+	require.NoError(t, err)
+	assert.Equal(t, RouteDeliverDirect, got.Kind)
+	require.NotNil(t, got.Track)
+	assert.Equal(t, 7, got.Track.StreamIndex,
+		"stream 7 is Traditional; 6 is Simplified and 43 is Cantonese — lowest index must NOT win")
+}
+
+func TestSelectAndRoute_CueCountStillBeatsVariant(t *testing.T) {
+	// Guard on the tie-break's ordering: a forced-narrative track can be
+	// genuinely Traditional yet carry a handful of cues. It must never beat a
+	// full Simplified track that we can simply convert.
+	prober := &fakeProber{info: &services.MediaTechInfo{SubtitleTracks: []services.SubtitleTrack{
+		embedded(6, "chi", "subrip"), // full Simplified
+		embedded(7, "chi", "subrip"), // forced-narrative Traditional
+	}}}
+	ex := &fakeExtractor{contents: map[int]string{
+		6: srtOf("我们被骗了", "所有人都必须看看这个", "哪些人", "所有人"),
+		7: srtOf("羊毛戰記"),
+	}}
+	r, tmp := newTestRouter(t, prober, ex)
+
+	got, err := r.SelectAndRoute(context.Background(), "/media/m.mkv", tmp)
+
+	require.NoError(t, err)
+	require.NotNil(t, got.Track)
+	assert.Equal(t, 6, got.Track.StreamIndex, "cue count is the primary key")
+	assert.Equal(t, RouteConvertThenDeliver, got.Kind)
+}
+
+func TestSelectAndRoute_ChineseTaggedTrackThatIsActuallyEnglish(t *testing.T) {
+	// The mislabel case in the other direction: tagged chi, content has no CJK.
+	// Content routing (FR6) still decides — it queues for translation.
+	prober := &fakeProber{info: &services.MediaTechInfo{SubtitleTracks: []services.SubtitleTrack{
+		embedded(6, "chi", "subrip"),
+	}}}
+	ex := &fakeExtractor{contents: map[int]string{6: srtOf("Hello there", "General Kenobi")}}
+	r, tmp := newTestRouter(t, prober, ex)
+
+	got, err := r.SelectAndRoute(context.Background(), "/media/m.mkv", tmp)
+
+	require.NoError(t, err)
+	assert.Equal(t, RouteTranslate, got.Kind)
+	assert.Equal(t, LangUndetermined, got.DetectedVariant)
 }
 
 func TestSelectAndRoute_EngTaggedContentIsTraditional(t *testing.T) {

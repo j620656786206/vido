@@ -17,10 +17,14 @@ import (
 )
 
 const (
-	assrtBaseURL          = "https://api.assrt.net/v1"
-	assrtSecretKey        = "assrt_api_key"
-	assrtRateLimit        = 2 // requests per second
-	assrtRateBurst        = 2 // token bucket burst size
+	assrtBaseURL   = "https://api.assrt.net/v1"
+	assrtSecretKey = "assrt_api_key"
+	// Assrt's real quota is 5 requests/minute PER TOKEN (live-verified 2026-07-31
+	// via /v1/user/quota; the official docs' 20/min is wrong — trust the panel).
+	// 13s spacing with burst 1 caps any 60s window at 5 calls (t=0,13,26,39,52)
+	// with headroom. Do NOT raise burst: burst 2 allows 6 calls in a window.
+	assrtRateInterval     = 13 * time.Second
+	assrtRateBurst        = 1 // token bucket burst size
 	assrtHTTPTimeout      = 30 * time.Second
 	assrtMaxResponseBytes = 1 << 20  // 1 MB max for API JSON responses
 	assrtMaxDownloadBytes = 50 << 20 // 50 MB max for subtitle file downloads
@@ -44,7 +48,7 @@ func NewAssrtProvider(ctx context.Context, secretsSvc secrets.SecretsServiceInte
 		httpClient: &http.Client{
 			Timeout: assrtHTTPTimeout,
 		},
-		rateLimiter: rate.NewLimiter(rate.Limit(assrtRateLimit), assrtRateBurst),
+		rateLimiter: rate.NewLimiter(rate.Every(assrtRateInterval), assrtRateBurst),
 	}
 
 	apiKey, err := secretsSvc.Retrieve(ctx, assrtSecretKey)
