@@ -323,19 +323,37 @@ func TestAssrtProvider_RateLimiter(t *testing.T) {
 	}))
 	defer server.Close()
 
+	// A scaled-down limiter proves every Search consults the limiter without
+	// paying the production 13s spacing in the test suite.
 	p := newTestAssrtProvider("test-key", server.URL)
+	p.rateLimiter = rate.NewLimiter(rate.Every(300*time.Millisecond), 1)
 
-	// Make 4 rapid requests — should be throttled
-	// With burst=2, first 2 go immediately, then ~500ms each for 3rd and 4th
+	// 4 sequential requests: 1st from burst, then 3 × 300ms waits ≈ 900ms.
 	start := time.Now()
 	for i := 0; i < 4; i++ {
 		_, _ = p.Search(context.Background(), SubtitleQuery{Title: "test"})
 	}
 	elapsed := time.Since(start)
 
-	// With 2 req/s limit and burst=2, 4 requests should take at least ~1 second
 	assert.GreaterOrEqual(t, elapsed, 800*time.Millisecond, "rate limiter should throttle requests")
 	assert.Equal(t, int32(4), atomic.LoadInt32(&requestCount))
+}
+
+// TestAssrtProvider_ProductionRateLimitMatchesQuota pins the production limiter
+// to Assrt's REAL quota: 5 req/min per token (live-verified 2026-07-31; the
+// official docs' 20/min is wrong). A regression here (e.g. restoring the old
+// 2 req/s) would burn the whole quota on the first search and fail every
+// subsequent call for the rest of the minute.
+func TestAssrtProvider_ProductionRateLimitMatchesQuota(t *testing.T) {
+	p := NewAssrtProvider(context.Background(), newMockSecrets(map[string]string{
+		assrtSecretKey: "test-key",
+	}))
+
+	assert.Equal(t, rate.Every(assrtRateInterval), p.rateLimiter.Limit())
+	assert.Equal(t, 1, p.rateLimiter.Burst())
+	// Worst-case calls in any 60s window: burst + floor(60s/interval) must stay ≤ 5.
+	worstCase := 1 + int((60*time.Second)/assrtRateInterval)
+	assert.LessOrEqual(t, worstCase, 5, "limiter config must fit the 5 req/min quota")
 }
 
 func TestAssrtProvider_ContextCancellation(t *testing.T) {
@@ -361,12 +379,16 @@ func TestAssrtProvider_ContextCancellation(t *testing.T) {
 // --- Helper ---
 
 // newTestAssrtProvider creates an AssrtProvider pointing at a test server.
+// It uses an effectively-unlimited rate limiter: the production limiter is
+// 5 req/min (13s spacing), which would stall every multi-call test; limiter
+// behaviour is covered by TestAssrtProvider_RateLimiter and the production
+// config by TestAssrtProvider_ProductionRateLimitMatchesQuota.
 func newTestAssrtProvider(apiKey, baseURL string) *AssrtProvider {
 	p := &AssrtProvider{
 		apiKey:      apiKey,
 		disabled:    false,
 		httpClient:  &http.Client{Timeout: 10 * time.Second},
-		rateLimiter: rate.NewLimiter(rate.Limit(assrtRateLimit), assrtRateBurst),
+		rateLimiter: rate.NewLimiter(rate.Inf, 1),
 	}
 	p.testBaseURL = baseURL + "/v1"
 	return p
