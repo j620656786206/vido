@@ -15,6 +15,10 @@
 // soft-deleted movies, a CN-production movie (字幕政策), and 2 series with
 // seasons/episodes. Downloads are NOT seedable here (they live in qBittorrent,
 // not the DB) — the downloads page shows its empty/fail-soft state.
+//
+// tmdbID/posterPath are LIVE references — TMDb retires ids and re-cuts artwork,
+// so they rot silently and the grid renders broken images. If a seeded poster is
+// blank, re-verify against the API rather than assuming a frontend bug.
 package main
 
 import (
@@ -179,10 +183,10 @@ func seedMovies(ctx context.Context, repos *repository.Repositories, libraryID, 
 		{id: "seed-mv-001", title: "教父", originalTitle: "The Godfather", releaseDate: "1972-03-14", genres: []string{"犯罪", "劇情"}, tmdbID: 238, posterPath: "/3bhkrj58Vtu7enYsRolD1fZdja1.jpg", voteAverage: 8.7, parseStatus: models.ParseStatusSuccess, fileName: "The.Godfather.1972.1080p.mkv", fileSizeMB: 4200},
 		{id: "seed-mv-002", title: "侏羅紀公園", originalTitle: "Jurassic Park", releaseDate: "1993-06-11", genres: []string{"冒險", "科幻"}, tmdbID: 329, posterPath: "/oU7Oq2kFAAlGqbU4VoAE36g4hoI.jpg", voteAverage: 8.2, parseStatus: models.ParseStatusSuccess, fileName: "Jurassic.Park.1993.1080p.mkv", fileSizeMB: 3800},
 		{id: "seed-mv-003", title: "駭客任務", originalTitle: "The Matrix", releaseDate: "1999-03-31", genres: []string{"動作", "科幻"}, tmdbID: 603, posterPath: "/f89U3ADr1oiB1s9GkdPOEpXUk5H.jpg", voteAverage: 8.7, parseStatus: models.ParseStatusSuccess, fileName: "The.Matrix.1999.1080p.mkv", fileSizeMB: 4100},
-		{id: "seed-mv-004", title: "臥虎藏龍", originalTitle: "Crouching Tiger, Hidden Dragon", releaseDate: "2000-07-06", genres: []string{"動作", "劇情"}, tmdbID: 146, posterPath: "/pDJc7pHIfHXLCFPMbjBIzWyKrmt.jpg", voteAverage: 8.0, parseStatus: models.ParseStatusSuccess, fileName: "Crouching.Tiger.2000.1080p.mkv", fileSizeMB: 3500},
+		{id: "seed-mv-004", title: "臥虎藏龍", originalTitle: "Crouching Tiger, Hidden Dragon", releaseDate: "2000-07-06", genres: []string{"動作", "劇情"}, tmdbID: 146, posterPath: "/28FX5rCNo6p602DzgPOTNZjyMPh.jpg", voteAverage: 8.0, parseStatus: models.ParseStatusSuccess, fileName: "Crouching.Tiger.2000.1080p.mkv", fileSizeMB: 3500},
 		{id: "seed-mv-005", title: "神隱少女", originalTitle: "千と千尋の神隠し", releaseDate: "2001-07-20", genres: []string{"動畫", "奇幻"}, tmdbID: 129, posterPath: "/39wmItIWsg5sZMyRUHLkWBcuVCM.jpg", voteAverage: 8.5, parseStatus: models.ParseStatusSuccess, fileName: "Spirited.Away.2001.1080p.mkv", fileSizeMB: 3200},
 		{id: "seed-mv-006", title: "全面啟動", originalTitle: "Inception", releaseDate: "2010-07-16", genres: []string{"動作", "科幻", "懸疑"}, tmdbID: 27205, posterPath: "/oYuLEt3zVCKq57qu2F8dT7NIa6f.jpg", voteAverage: 8.4, parseStatus: models.ParseStatusSuccess, fileName: "Inception.2010.2160p.mkv", fileSizeMB: 8200},
-		{id: "seed-mv-007", title: "讓子彈飛", originalTitle: "让子弹飞", releaseDate: "2010-12-16", genres: []string{"動作", "喜劇"}, tmdbID: 48317, posterPath: "/vFIHbiy55smzi50KmwlV0uhLZYm.jpg", voteAverage: 8.0, parseStatus: models.ParseStatusSuccess, countriesJSON: `[{"iso_3166_1":"CN","name":"China"}]`, fileName: "Let.The.Bullets.Fly.2010.1080p.mkv", fileSizeMB: 3900},
+		{id: "seed-mv-007", title: "讓子彈飛", originalTitle: "让子弹飞", releaseDate: "2010-12-16", genres: []string{"動作", "喜劇"}, tmdbID: 51533, posterPath: "/vUvrjRRmC1BeI8QyMaRBdtIqHHn.jpg", voteAverage: 8.0, parseStatus: models.ParseStatusSuccess, countriesJSON: `[{"iso_3166_1":"CN","name":"China"}]`, fileName: "Let.The.Bullets.Fly.2010.1080p.mkv", fileSizeMB: 3900},
 		{id: "seed-mv-008", title: "星際效應", originalTitle: "Interstellar", releaseDate: "2014-11-07", genres: []string{"科幻", "劇情"}, tmdbID: 157336, posterPath: "/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg", voteAverage: 8.4, parseStatus: models.ParseStatusSuccess, fileName: "Interstellar.2014.2160p.mkv", fileSizeMB: 9100},
 		{id: "seed-mv-009", title: "寄生上流", originalTitle: "기생충", releaseDate: "2019-05-30", genres: []string{"劇情", "驚悚"}, tmdbID: 496243, posterPath: "/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg", voteAverage: 8.5, parseStatus: models.ParseStatusSuccess, fileName: "Parasite.2019.1080p.mkv", fileSizeMB: 4000},
 		{id: "seed-mv-010", title: "媽的多重宇宙", originalTitle: "Everything Everywhere All at Once", releaseDate: "2022-03-24", genres: []string{"動作", "科幻", "喜劇"}, tmdbID: 545611, posterPath: "/w3LxiVYdWWRvEVdn5RYq6jIqkb1.jpg", voteAverage: 7.8, parseStatus: models.ParseStatusSuccess, fileName: "EEAAO.2022.1080p.mkv", fileSizeMB: 4300},
