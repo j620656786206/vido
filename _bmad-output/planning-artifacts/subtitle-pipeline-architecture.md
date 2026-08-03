@@ -420,6 +420,13 @@ apps/api/
 │   ├── subtitle/
 │   │   ├── pipeline.go                      🆕 orchestrator (D1)
 │   │   ├── pipeline_test.go                 🆕
+│   │   ├── process_item.go (+_test)         🆕 the per-item flow (1.5b)
+│   │   ├── worker_pool.go (+_test)          🆕 fixed concurrency 2 + dedup + overflow drop (1.6, AD #5)
+│   │   ├── media_store.go (+_test)          🆕 MediaRef → media row / status writer port (1.6)
+│   │   ├── scan_callback.go (+_test)        🆕 composes the single-slot scan-complete hook (1.6, FR13)
+│   │   ├── progress_sse.go (+_test)         🆕 progress hook → subtitle_progress, zh-TW at the edge (1.6, FR33)
+│   │   ├── segment_cache.go (+_test)        🆕 cue-grain translation cache (1.5b, AD #4)
+│   │   ├── show_gate.go (+_test)            🆕 D10 per-show first-request latch (1.5b)
 │   │   ├── extractor.go                     🆕 ffmpeg -map 0:{index} -c:s srt (FR2/FR3 — 1.4 Finding 2)
 │   │   ├── extractor_test.go                🆕
 │   │   ├── sdh_filter.go                    🆕 FR4 — runs pre-translation (P6)
@@ -445,7 +452,7 @@ apps/api/
 │   ├── services/
 │   │   ├── ffprobe_service.go               ✏️ +stream_index (additive, 1.4) — FR1 reuse holds for enumeration; extraction needs the index
 │   │   ├── translation_service.go           ✏️ must return usage (FR14 prerequisite)
-│   │   ├── scanner_service.go               ✏️ V3 — enqueue scanned items → worker pool (FR13)
+│   │   ├── scanner_service.go               🔒 CORRECTED at 1.6 — the `SetOnScanComplete` hook already existed and was already occupied; FR13 composes it in main.go, so this file changes by ZERO lines (V3's amendment is void)
 │   │   └── terminology_service.go           🔒
 │   ├── repository/
 │   │   ├── subtitle_run_repository.go       🆕 provenance (D2)
@@ -458,7 +465,9 @@ apps/api/
 │   ├── database/migrations/
 │   │   ├── 030_create_subtitle_runs_table.go   🆕 provenance table + new status values
 │   │   └── 030_create_subtitle_runs_table_test.go   🆕
-│   ├── handlers/subtitle_handler.go         🔒 manual path unchanged in M1 (D3)
+│   ├── handlers/
+│   │   ├── subtitle_pipeline_handler.go     🆕 POST /subtitles/pipeline/run (1.6, FR12) + _test
+│   │   └── subtitle_handler.go              🔒 manual path unchanged in M1 (D3)
 │   └── sse/hub.go                           🔒 event types unchanged; only stage values extend
 docs/
 ├── sse-event-types.md                       ✏️ new stages (D6)
@@ -478,7 +487,7 @@ _bmad-output/planning-artifacts/ux-design-specification.md   ✏️ StatusBadge 
 
 > Badge labels / tints / icons are authoritative in `ux-design.pen` `flow-j-specs` screen j2 (story 1.7a) — deliberately **not** restated here (single source of truth; see § Scope of this section).
 
-**~16 new · ~21 modified · ~13 explicitly untouched** _(recounted 2026-07-27, IR-r2 F6 — +`scanner_service.go` (the V3 amendment, previously claimed but never applied) and +7 frontend/design files for 1.7a/1.7b; re-tallied 2026-07-28 by story 1.4 when `ffprobe_service.go` moved 🔒 → ✏️)_.
+**~23 new · ~20 modified · ~14 explicitly untouched** _(recounted 2026-07-27, IR-r2 F6 — +7 frontend/design files for 1.7a/1.7b; re-tallied 2026-07-28 by story 1.4 when `ffprobe_service.go` moved 🔒 → ✏️; re-tallied 2026-08-03 by story 1.6 — `scanner_service.go` moved ✏️ → 🔒 (the V3 amendment is void: the hook already existed and FR13 composes it in main.go), `handlers/subtitle_pipeline_handler.go` added 🆕, and the 1.5b/1.6 files that shipped without a tree row — `process_item.go`, `worker_pool.go`, `media_store.go`, `scan_callback.go`, `progress_sse.go`, `segment_cache.go`, `show_gate.go` — listed)_.
 
 ### Requirements-to-structure mapping
 
@@ -559,13 +568,13 @@ Adversarial pass over the 22 M1 FRs and 11 NFRs (count corrected 2026-07-27) —
 - F5's "前往設定" button is a **known-broken dead loop in M1** (PRD J3; fixed in M1.5). A visible button that does nothing is worse than none. In M1 either hide it (show env-var guidance only) or route it to documentation.
 - F5's warning panel frames **FFmpeg as a user-configurable setting**. Step 6 rules FFmpeg is **bundled in the Docker image** — its absence is a deployment error, not a user setting. Reword to mention only the API key.
 
-**V3 (Critical) — FR13 (auto-translate on media add) had no trigger hook.** The feature flag lives on the **batch** path (`batch.go:244`); nothing routes newly-scanned items into the pipeline. **Resolution:** `ScannerService` enqueues completed items into the existing worker pool (AD #5), which calls the orchestrator. Adds `scanner_service.go` ✏️ to the delta tree.
+**V3 (Critical) — FR13 (auto-translate on media add) had no trigger hook.** The feature flag lives on the **batch** path (`batch.go:244`); nothing routes newly-scanned items into the pipeline. **Resolution:** `ScannerService` enqueues completed items into the existing worker pool (AD #5), which calls the orchestrator. ~~Adds `scanner_service.go` ✏️ to the delta tree.~~ **Corrected at story 1.6 implementation (2026-08-03):** the hook already existed (`SetOnScanComplete`, fired on created/updated files) and was already occupied by post-scan enrichment, so FR13 needs **zero** `scanner_service.go` edits — main.go *composes* the existing callback via `subtitle.ComposeScanCallback`. Calling the single-slot setter a second time would have compiled, passed, and silently stopped enriching newly-scanned media.
 
 **V4 (Important) — NFR-P3 (per-hardware-tier concurrency) unaddressed in M1.** Compute detection is P2 (FR31). **Resolution:** M1 uses a **fixed concurrency of 2** on the DS920+ target; "bounded per hardware tier" is explicitly labeled P2 groundwork so the NFR is not falsely shown as met.
 
 **V5 (Important) — NFR-R3 resumability had no mechanism.** Per-cue retry exists; resume did not. **Resolution:** the D2 provenance table **explicitly** carries resume responsibility — completed items/cues are recorded and skipped on re-run — rather than leaving it an implicit side effect.
 
-**V6 (Important) — FR23 capability gate had no home.** Cross-cutting concern #3 names one gate for three entry points, but no file owned it. **Resolution:** a single check at the top of `pipeline.go`, shared by the new endpoint (V2), the batch entry, and the scanner enqueue path (V3).
+**V6 (Important) — FR23 capability gate had no home.** Cross-cutting concern #3 names one gate for three entry points, but no file owned it. **Resolution:** a single check ~~at the top of `pipeline.go`~~, shared by the new endpoint (V2), the batch entry, and the scanner enqueue path (V3). **Corrected at story 1.6 implementation (2026-08-03):** the predicate cannot live *inside* `pipeline.go` — `NewPipeline` panics on a nil translator, so an unconfigured install has no Pipeline to hang a gate on, and a gate that only exists when the thing it gates exists is not a gate. It is therefore ONE `func() bool` declared once in main.go (`cfg.HasClaudeKey`) and injected into all three entry points: the handler, `WithCapabilityGate` on the worker pool, and `WithPipelineGate` on the batch seam.
 
 ### NFRs otherwise covered
 

@@ -114,6 +114,11 @@ type BatchProcessor struct {
 	// mode. It is the ONE conditional the flag produces.
 	item ItemProcessor
 
+	// configured is the FR23 capability gate (sub-1-6 AC #5) — the same
+	// predicate the endpoint and the enqueue sweep read. nil = allowed.
+	configured   func() bool
+	gateWarnOnce sync.Once
+
 	mu           sync.Mutex
 	activeBatch  *BatchProgress
 	activeCancel context.CancelFunc
@@ -127,6 +132,32 @@ type BatchProcessorOption func(*BatchProcessor)
 // VIDO_SUBTITLE_PIPELINE_MODE=pipeline.
 func WithItemProcessor(item ItemProcessor) BatchProcessorOption {
 	return func(bp *BatchProcessor) { bp.item = item }
+}
+
+// WithPipelineGate installs the FR23 capability predicate on the batch seam
+// (sub-1-6 AC #5's third entry point). main.go already refuses to wire an
+// ItemProcessor without a translation key, so this is the belt to that braces:
+// a future wiring change that hands the seam a pipeline it cannot feed makes
+// the batch fall back to the provider search that still works, instead of
+// failing every item on a missing key.
+func WithPipelineGate(configured func() bool) BatchProcessorOption {
+	return func(bp *BatchProcessor) { bp.configured = configured }
+}
+
+// pipelineAllowed reports whether the seam may enter the generation pipeline.
+// The denial is logged ONCE for the process, not once per item — a batch of 400
+// episodes must not write 400 identical lines (AC #5).
+func (bp *BatchProcessor) pipelineAllowed() bool {
+	if bp.item == nil {
+		return false
+	}
+	if bp.configured == nil || bp.configured() {
+		return true
+	}
+	bp.gateWarnOnce.Do(func() {
+		slog.Info("subtitle generation pipeline gated — no translation key configured; batch falls back to provider search")
+	})
+	return false
 }
 
 // NewBatchProcessor creates a new BatchProcessor.
@@ -282,7 +313,7 @@ func (bp *BatchProcessor) process(ctx context.Context, batchID string, items []B
 		// below is shared bookkeeping, so a batch reports identically whichever
 		// backend ran it.
 		var result EngineResult
-		if bp.item != nil {
+		if bp.pipelineAllowed() {
 			result = bp.processViaPipeline(ctx, item)
 		} else {
 			query := providers.SubtitleQuery{Title: item.Title}

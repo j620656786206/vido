@@ -2,12 +2,21 @@ package subtitle
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/vido/api/internal/models"
 )
+
+// ErrMediaNotFound is returned by Load when the referenced row does not exist.
+//
+// It is a SENTINEL rather than a formatted string because sub-1-6's endpoint
+// has to tell "no such media id" (404) apart from "the database is locked"
+// (500) — collapsing the two would send an operator hunting for a missing row
+// that is actually there.
+var ErrMediaNotFound = errors.New("media row not found")
 
 // ─── Repository ports ──────────────────────────────────────────────────────
 //
@@ -77,7 +86,7 @@ func (s *repoMediaStore) loadMovie(ctx context.Context, id string) (*MediaItem, 
 		return nil, fmt.Errorf("load movie %s: %w", id, err)
 	}
 	if movie == nil {
-		return nil, fmt.Errorf("movie %s not found", id)
+		return nil, fmt.Errorf("movie %s: %w", id, ErrMediaNotFound)
 	}
 
 	return &MediaItem{
@@ -124,7 +133,7 @@ func (s *repoMediaStore) loadEpisode(ctx context.Context, id string) (*MediaItem
 		return nil, fmt.Errorf("load episode %s: %w", id, err)
 	}
 	if episode == nil {
-		return nil, fmt.Errorf("episode %s not found", id)
+		return nil, fmt.Errorf("episode %s: %w", id, ErrMediaNotFound)
 	}
 
 	item := &MediaItem{
@@ -154,7 +163,7 @@ func (s *repoMediaStore) loadSeriesRow(ctx context.Context, id string) (*models.
 		return nil, fmt.Errorf("load series %s: %w", id, err)
 	}
 	if series == nil {
-		return nil, fmt.Errorf("series %s not found", id)
+		return nil, fmt.Errorf("series %s: %w", id, ErrMediaNotFound)
 	}
 	return series, nil
 }

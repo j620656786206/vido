@@ -418,8 +418,13 @@ func main() {
 	enrichmentService.SetSeriesRepo(repos.Series)
 
 	// Wire post-scan auto-enrichment: after scan completes with new/updated files,
-	// automatically trigger metadata enrichment in background
-	scannerService.SetOnScanComplete(func() {
+	// automatically trigger metadata enrichment in background.
+	//
+	// sub-1-6 AC #2: SetOnScanComplete holds exactly ONE callback, so the FR13
+	// subtitle-pipeline enqueue must WRAP this body, never call the setter a
+	// second time. The body is hoisted into a variable so the composition below
+	// (subtitle.ComposeScanCallback) can preserve it byte-for-byte.
+	postScanEnrichment := func() {
 		go func() {
 			result, err := enrichmentService.StartEnrichment(context.Background())
 			if err != nil {
@@ -432,7 +437,8 @@ func main() {
 				"duration", result.Duration,
 			)
 		}()
-	})
+	}
+	scannerService.SetOnScanComplete(postScanEnrichment)
 	slog.Info("Enrichment service initialized with post-scan auto-trigger")
 
 	// Initialize scan scheduler (Story 7.2)
@@ -547,6 +553,66 @@ func main() {
 	}
 	slog.Info("Subtitle engine initialized", "providers", len(subtitleProviders))
 
+	// ── Subtitle generation pipeline (sub-1-6: D5 flag seam + FR13 + FR23) ──
+	//
+	// The whole M1 generation path hangs off ONE env var. `legacy` (the default)
+	// leaves every variable below nil, which is exactly what the batch seam,
+	// the scan callback and the endpoint each read as "stay on the shipped
+	// path" — the flag is never re-read anywhere downstream (D5's ban).
+	var (
+		subtitlePipeline     *subtitle.Pipeline
+		subtitlePipelinePool *subtitle.WorkerPool
+	)
+	// Built unconditionally: the FR12 endpoint uses it to answer 404 for an
+	// unknown media id, and it is three struct fields — nothing is started.
+	subtitlePipelineMedia := subtitle.NewMediaStore(repos.Movies, repos.Series, repos.Episodes)
+	// AC #5: ONE capability predicate, read by all THREE entry points — the
+	// endpoint (409), the scanner enqueue sweep, and the batch seam. Declared
+	// here so there is exactly one definition of "the pipeline can run".
+	subtitleCapabilityGate := cfg.HasClaudeKey
+	if cfg.SubtitlePipelineEnabled() && subtitleCapabilityGate() && translationService != nil {
+		subtitleRouter := subtitle.NewRouter(
+			ffprobeService,
+			subtitle.NewExtractor(0, slog.Default()),
+			slog.Default(),
+		)
+		modelID := cfg.GetClaudeModel()
+		subtitlePipeline = subtitle.NewPipeline(
+			translationService, subtitleConverter, slog.Default(),
+			subtitle.WithRouter(subtitleRouter),
+			subtitle.WithPlacer(subtitlePlacer),
+			subtitle.WithMediaStore(subtitlePipelineMedia),
+			subtitle.WithRunStore(repos.SubtitleRuns),
+			subtitle.WithSegmentCache(subtitle.NewSegmentCacheRepository(repos.Cache)),
+			subtitle.WithModelID(modelID),
+			// AC #6: FR33/P8 progress. Same event type and payload shape the
+			// search path already broadcasts — sse/hub.go stays untouched.
+			subtitle.WithProgress(subtitle.NewSSEProgressHook(sseHub)),
+		)
+		subtitlePipelinePool = subtitle.NewWorkerPool(subtitlePipeline, slog.Default(),
+			subtitle.WithCandidateFinders(repos.Movies, repos.Episodes),
+			subtitle.WithCapabilityGate(subtitleCapabilityGate),
+		)
+		// AC #2: WRAP the scan-complete callback — the setter holds one function
+		// and post-scan enrichment already owns it.
+		scannerService.SetOnScanComplete(subtitle.ComposeScanCallback(
+			postScanEnrichment, subtitlePipelinePool,
+			func(queued int, err error) {
+				if err != nil {
+					slog.Error("post-scan subtitle enqueue partially failed", "queued", queued, "error", err)
+					return
+				}
+				slog.Info("post-scan subtitle enqueue complete", "queued", queued)
+			},
+		))
+		slog.Info("Subtitle generation pipeline enabled",
+			"mode", cfg.SubtitlePipelineMode, "workers", subtitle.PipelineConcurrencyM1, "model", modelID)
+	} else {
+		// ONE line, at wiring time — not one per scanned item (AC #5).
+		slog.Info("Subtitle generation pipeline disabled — staying on the legacy search path",
+			"mode", cfg.SubtitlePipelineMode, "translation_configured", subtitleCapabilityGate())
+	}
+
 	// Initialize event emitter for real-time parse progress (Story 3.10)
 	parseEventEmitter := events.NewChannelEmitter()
 	defer parseEventEmitter.Close()
@@ -639,7 +705,16 @@ func main() {
 	)
 	// Wire batch processor (Story 8-9)
 	batchCollector := subtitle.NewRepoCollector(repos.Movies, repos.Series, repos.Episodes)
-	batchProcessor := subtitle.NewBatchProcessor(subtitleEngine, sseHub, batchCollector, subtitle.DefaultBatchConfig())
+	// sub-1-6 AC #1: the D5 seam. A nil ItemProcessor IS legacy mode, so in
+	// `legacy` this NewBatchProcessor call is byte-identical to the shipped one.
+	batchOpts := []subtitle.BatchProcessorOption{}
+	if subtitlePipeline != nil {
+		batchOpts = append(batchOpts,
+			subtitle.WithItemProcessor(subtitlePipeline),
+			// AC #5's third entry point — the same predicate, re-read per batch.
+			subtitle.WithPipelineGate(subtitleCapabilityGate))
+	}
+	batchProcessor := subtitle.NewBatchProcessor(subtitleEngine, sseHub, batchCollector, subtitle.DefaultBatchConfig(), batchOpts...)
 	subtitleHandler.SetBatchProcessor(batchProcessor)
 	// Route C generation batch (Story 9R-16): sequential orchestrator over the
 	// transcription pipeline under ONE shared AI budget. Independent single-flight
@@ -647,6 +722,15 @@ func main() {
 	generationBatchProcessor := services.NewGenerationBatchProcessor(
 		transcriptionService, repos.Movies, sseHub, cfg.AIRunBudgetUSD, slog.Default())
 	generationBatchHandler := handlers.NewGenerationBatchHandler(generationBatchProcessor)
+	// FR12 manual trigger (sub-1-6 AC #4). The route is registered in EVERY
+	// mode so the API surface does not change shape with an env var; a nil
+	// queue (legacy) answers 409 rather than 404.
+	var subtitlePipelineQueue handlers.SubtitlePipelineQueue
+	if subtitlePipelinePool != nil {
+		subtitlePipelineQueue = subtitlePipelinePool
+	}
+	subtitlePipelineHandler := handlers.NewSubtitlePipelineHandler(
+		subtitlePipelineQueue, subtitlePipelineMedia, subtitleCapabilityGate)
 	// Activity hub aggregate (UX Redesign D4-1 / ux3-2-1) — composes live scan +
 	// batch-subtitle + generation-batch progress, pending-parse count, download counts,
 	// and recent parse events. Wired after the processors since it reads them.
@@ -715,7 +799,8 @@ func main() {
 		recentMediaHandler.RegisterRoutes(apiV1)
 		scannerHandler.RegisterRoutes(apiV1)
 		subtitleHandler.RegisterRoutes(apiV1)
-		generationBatchHandler.RegisterRoutes(apiV1) // /api/v1/subtitles/generation-batch group (Story 9R-16)
+		generationBatchHandler.RegisterRoutes(apiV1)  // /api/v1/subtitles/generation-batch group (Story 9R-16)
+		subtitlePipelineHandler.RegisterRoutes(apiV1) // POST /api/v1/subtitles/pipeline/run (Story sub-1-6, FR12)
 		transcriptionHandler.RegisterRoutes(apiV1)
 		if nfoLocalizer != nil {
 			nfoLocalizerHandler.RegisterRoutes(apiV1) // POST /movies/:id/localize-nfo (9R-13)
@@ -786,6 +871,16 @@ func main() {
 	requestPollerCtx, requestPollerCancel := context.WithCancel(context.Background())
 	go requestStatusPoller.Start(requestPollerCtx)
 
+	// Start the subtitle generation worker pool (sub-1-6 AC #3 — fixed
+	// concurrency 2 per AD #5/NFR-P3). nil in legacy mode.
+	subtitlePipelineCtx, subtitlePipelineCancel := context.WithCancel(context.Background())
+	if subtitlePipelinePool != nil {
+		if err := subtitlePipelinePool.Start(subtitlePipelineCtx); err != nil {
+			slog.Error("Failed to start subtitle pipeline worker pool", "error", err)
+			// Non-fatal: the search path and every other feature still work.
+		}
+	}
+
 	// Start server in a goroutine for graceful shutdown
 	addr := cfg.GetAddress()
 	slog.Info("Starting Vido API server", "address", addr)
@@ -829,6 +924,13 @@ func main() {
 	slog.Info("Stopping request status poller...")
 	requestPollerCancel()
 	requestStatusPoller.Stop()
+
+	// Stop subtitle generation worker pool (sub-1-6 AC #3)
+	subtitlePipelineCancel()
+	if subtitlePipelinePool != nil {
+		slog.Info("Stopping subtitle pipeline worker pool...")
+		subtitlePipelinePool.Stop()
+	}
 
 	// Stop DVR plugin health scheduler (Story 13-4a)
 	slog.Info("Stopping plugin health scheduler...")

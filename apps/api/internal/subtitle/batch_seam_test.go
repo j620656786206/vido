@@ -212,3 +212,43 @@ func TestBatchSeam_PreflightSkipIsNotAFailure(t *testing.T) {
 	assert.Equal(t, 2, success, "an item that already has its sidecar is a success, not a failure")
 	assert.Zero(t, fail)
 }
+
+// ─── AC #5: the capability gate, batch-seam entry point ────────────────────
+
+// TestBatchSeam_UnconfiguredGateFallsBackToLegacy — FR23's third entry point.
+// main.go already refuses to wire an ItemProcessor without a translation key,
+// so this gate is the belt to that braces: if a future wiring change hands the
+// seam a pipeline it cannot feed, the batch must run the provider search that
+// still works rather than fail every item on a missing key.
+func TestBatchSeam_UnconfiguredGateFallsBackToLegacy(t *testing.T) {
+	engine := &spyEngine{result: EngineResult{Success: true}}
+	pipeline := &spyItemProcessor{}
+
+	bp := newSeamProcessor(t, engine, seamItems(),
+		WithItemProcessor(pipeline),
+		WithPipelineGate(func() bool { return false }))
+	success, fail := runSeamBatch(t, bp)
+
+	assert.Equal(t, 2, success)
+	assert.Zero(t, fail)
+
+	refs, _ := pipeline.snapshot()
+	assert.Empty(t, refs, "the gate short-circuits BEFORE the pipeline is entered")
+	assert.Len(t, engine.snapshot(), 2, "and the shipped search path still serves the batch")
+}
+
+// TestBatchSeam_ConfiguredGateStillRoutesToThePipeline — the gate must be a
+// gate, not an off switch.
+func TestBatchSeam_ConfiguredGateStillRoutesToThePipeline(t *testing.T) {
+	engine := &spyEngine{result: EngineResult{Success: true}}
+	pipeline := &spyItemProcessor{}
+
+	bp := newSeamProcessor(t, engine, seamItems(),
+		WithItemProcessor(pipeline),
+		WithPipelineGate(func() bool { return true }))
+	runSeamBatch(t, bp)
+
+	refs, _ := pipeline.snapshot()
+	assert.Len(t, refs, 2)
+	assert.Empty(t, engine.snapshot())
+}

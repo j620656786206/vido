@@ -29,6 +29,10 @@ type blockingProcessor struct {
 	releaseOn sync.Once
 	err       error
 	blocking  bool
+	// ignoreCtxCancel keeps a parked call parked THROUGH a ctx cancellation —
+	// it simulates the failItem cleanup writes that run on WithoutCancel and
+	// must complete even when the pool ctx is torn down (CR M2's test needs it).
+	ignoreCtxCancel bool
 }
 
 func newBlockingProcessor(capacity int) *blockingProcessor {
@@ -55,10 +59,14 @@ func (p *blockingProcessor) ProcessItem(ctx context.Context, ref MediaRef, _ Pro
 	}
 
 	if p.blocking {
-		select {
-		case <-p.release:
-		case <-ctx.Done():
-			return nil, ctx.Err()
+		if p.ignoreCtxCancel {
+			<-p.release
+		} else {
+			select {
+			case <-p.release:
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			}
 		}
 	}
 	if p.err != nil {
@@ -256,6 +264,88 @@ func TestWorkerPool_ContextCancellationStopsWorkers(t *testing.T) {
 	pool.Stop() // idempotent
 }
 
+// TestWorkerPool_StopAfterContextCancelStillWaitsForInFlightWork — CR M2.
+// main.go's shutdown cancels the pool ctx and THEN calls Stop; the cancel can
+// flip `running` via an idle worker's stopFromWorker before Stop runs. Stop
+// must still wait for the busy worker — returning early would race that item's
+// failItem cleanup writes against the rest of the shutdown sequence.
+func TestWorkerPool_StopAfterContextCancelStillWaitsForInFlightWork(t *testing.T) {
+	proc := newBlockingProcessor(8) // blocking: the worker parks inside ProcessItem
+	proc.ignoreCtxCancel = true     // ...and stays parked through the cancel, like a WithoutCancel cleanup write
+	pool := NewWorkerPool(proc, nil)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	require.NoError(t, pool.Start(ctx))
+
+	require.True(t, pool.Enqueue(MediaRef{ID: "m1", MediaType: "movie"}))
+	select {
+	case <-proc.entered:
+	case <-time.After(2 * time.Second):
+		t.Fatal("the item never started")
+	}
+
+	// The IDLE worker observes ctx.Done and flips `running`; the busy worker
+	// stays parked inside ProcessItem (ignoreCtxCancel — a cleanup write that
+	// must complete).
+	cancel()
+	require.Eventually(t, func() bool { return !pool.IsRunning() }, 2*time.Second, 5*time.Millisecond)
+
+	stopReturned := make(chan struct{})
+	go func() { pool.Stop(); close(stopReturned) }()
+
+	select {
+	case <-stopReturned:
+		t.Fatal("Stop returned while a worker was still inside ProcessItem — the wg.Wait was skipped")
+	case <-time.After(150 * time.Millisecond):
+	}
+
+	proc.releaseAll()
+	select {
+	case <-stopReturned:
+	case <-time.After(3 * time.Second):
+		t.Fatal("Stop never returned after the in-flight item finished")
+	}
+}
+
+// TestWorkerPool_StopDoesNotDrainBufferedItems — CR M3. A Go select picks
+// randomly among ready cases, so without loop-head stop priority a worker could
+// keep pulling buffered items after Stop was signalled — one multi-minute
+// translate per pull, with Stop's wg.Wait held open the whole time.
+func TestWorkerPool_StopDoesNotDrainBufferedItems(t *testing.T) {
+	proc := newBlockingProcessor(8)
+	pool := NewWorkerPool(proc, nil, WithQueueCapacity(4))
+	require.NoError(t, pool.Start(context.Background()))
+
+	// Park both workers, then buffer two more items nobody has picked up.
+	for i := 0; i < PipelineConcurrencyM1; i++ {
+		require.True(t, pool.Enqueue(MediaRef{ID: fmt.Sprintf("busy%d", i), MediaType: "movie"}))
+		select {
+		case <-proc.entered:
+		case <-time.After(2 * time.Second):
+			t.Fatal("worker never picked up its item")
+		}
+	}
+	require.True(t, pool.Enqueue(MediaRef{ID: "buffered1", MediaType: "movie"}))
+	require.True(t, pool.Enqueue(MediaRef{ID: "buffered2", MediaType: "movie"}))
+
+	stopReturned := make(chan struct{})
+	go func() { pool.Stop(); close(stopReturned) }()
+	// Give Stop time to close stopCh so the workers' loop-head check sees it.
+	time.Sleep(50 * time.Millisecond)
+
+	proc.releaseAll()
+	select {
+	case <-stopReturned:
+	case <-time.After(3 * time.Second):
+		t.Fatal("Stop never returned")
+	}
+
+	assert.Len(t, proc.snapshot(), PipelineConcurrencyM1,
+		"only the in-flight items ran — a stopping worker must not take new work from the buffer")
+	assert.Equal(t, 2, pool.QueueDepth(),
+		"the buffered items stay queued for a later Start, not silently consumed mid-shutdown")
+}
+
 // ─── AC #2: EnqueueMissing ─────────────────────────────────────────────────
 
 func TestWorkerPool_EnqueueMissingEnumeratesMoviesAndEpisodes(t *testing.T) {
@@ -284,6 +374,50 @@ func TestWorkerPool_EnqueueMissingEnumeratesMoviesAndEpisodes(t *testing.T) {
 		"an episode is enqueued under the EPISODE vocabulary, not `series` (sub-1-2 AC #1)")
 }
 
+// TestWorkerPool_EnqueueMissingSkipsTerminalVerdicts — CR H1. `no_text_source`
+// and `skipped` rows keep subtitle_language NULL forever, so the broad
+// enumeration re-returns them on every scan; the P5 pre-flight cannot gate them
+// (no sidecar exists), so without this filter every sweep would re-probe the
+// file and append a fresh run row per permanently-declined item, without bound.
+func TestWorkerPool_EnqueueMissingSkipsTerminalVerdicts(t *testing.T) {
+	proc := newBlockingProcessor(8)
+	proc.blocking = false
+
+	movies := &fakeMovieFinder{movies: []models.Movie{
+		{ID: "m-eligible"},
+		{ID: "m-not-found", SubtitleStatus: models.SubtitleStatusNotFound},
+		{ID: "m-no-text", SubtitleStatus: models.SubtitleStatusNoTextSource},
+		{ID: "m-skipped", SubtitleStatus: models.SubtitleStatusSkipped},
+	}}
+	episodes := &fakeEpisodeFinder{episodes: []models.Episode{
+		{ID: "ep-eligible", SubtitleStatus: models.SubtitleStatusNotSearched},
+		{ID: "ep-no-text", SubtitleStatus: models.SubtitleStatusNoTextSource},
+		{ID: "ep-skipped", SubtitleStatus: models.SubtitleStatusSkipped},
+	}}
+
+	pool := NewWorkerPool(proc, nil, WithCandidateFinders(movies, episodes))
+	require.NoError(t, pool.Start(context.Background()))
+	t.Cleanup(pool.Stop)
+
+	queued, err := pool.EnqueueMissing(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, 3, queued, "terminal pipeline verdicts are filtered; everything else stays in scope")
+
+	require.Eventually(t, func() bool { return len(proc.snapshot()) == 3 }, 2*time.Second, 5*time.Millisecond)
+	seen := map[string]bool{}
+	for _, ref := range proc.snapshot() {
+		seen[ref.ID] = true
+	}
+	assert.True(t, seen["m-eligible"])
+	assert.True(t, seen["m-not-found"],
+		"`not_found` is a SEARCH verdict — the item still lacks zh-Hant and stays in generation scope")
+	assert.True(t, seen["ep-eligible"])
+	assert.False(t, seen["m-no-text"], "a permanently-declined movie must not re-run every scan")
+	assert.False(t, seen["m-skipped"])
+	assert.False(t, seen["ep-no-text"])
+	assert.False(t, seen["ep-skipped"])
+}
+
 // TestWorkerPool_EnqueueMissingSurvivesOneFinderFailing — a broken episode query
 // must not cost the movies their run (Rule 13 case 2: logged and reported, work
 // continues).
@@ -308,4 +442,155 @@ func TestWorkerPool_EnqueueMissingWithNoFindersIsANoOp(t *testing.T) {
 	queued, err := pool.EnqueueMissing(context.Background())
 	require.NoError(t, err)
 	assert.Zero(t, queued)
+}
+
+// ─── AC #4: the endpoint's `force` has to survive the queue ────────────────
+
+// optionsRecorder captures the ProcessItemOptions each item was run with.
+type optionsRecorder struct {
+	mu   sync.Mutex
+	seen map[MediaRef]ProcessItemOptions
+	done chan struct{}
+}
+
+func newOptionsRecorder() *optionsRecorder {
+	return &optionsRecorder{seen: map[MediaRef]ProcessItemOptions{}, done: make(chan struct{}, 8)}
+}
+
+func (r *optionsRecorder) ProcessItem(_ context.Context, ref MediaRef, opts ProcessItemOptions) (*ProcessOutcome, error) {
+	r.mu.Lock()
+	r.seen[ref] = opts
+	r.mu.Unlock()
+	r.done <- struct{}{}
+	return &ProcessOutcome{Kind: RouteTranslate}, nil
+}
+
+func (r *optionsRecorder) optionsFor(ref MediaRef) ProcessItemOptions {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.seen[ref]
+}
+
+// TestWorkerPool_EnqueueItemCarriesOptionsToProcessItem — FR32's re-run switch
+// is a request field, so it has to ride the queue. A pool that only carried
+// MediaRef would accept `force: true` and silently run the cached path.
+func TestWorkerPool_EnqueueItemCarriesOptionsToProcessItem(t *testing.T) {
+	rec := newOptionsRecorder()
+	pool := NewWorkerPool(rec, nil)
+	require.NoError(t, pool.Start(context.Background()))
+	t.Cleanup(pool.Stop)
+
+	forced := MediaRef{ID: "m-forced", MediaType: models.SubtitleRunMediaMovie}
+	plain := MediaRef{ID: "m-plain", MediaType: models.SubtitleRunMediaMovie}
+
+	require.Equal(t, EnqueueAccepted, pool.EnqueueItem(forced, ProcessItemOptions{Force: true}))
+	require.True(t, pool.Enqueue(plain))
+
+	for i := 0; i < 2; i++ {
+		select {
+		case <-rec.done:
+		case <-time.After(2 * time.Second):
+			t.Fatal("timed out waiting for both items")
+		}
+	}
+
+	assert.True(t, rec.optionsFor(forced).Force, "force must reach ProcessItem unchanged")
+	assert.False(t, rec.optionsFor(plain).Force, "the scanner path must never force")
+}
+
+// TestWorkerPool_EnqueueItemDedupsOnRefNotOptions — two requests for the same
+// item are the SAME work regardless of `force`; deduping on the pair would let
+// a double-click queue the item twice and translate it twice.
+func TestWorkerPool_EnqueueItemDedupsOnRefNotOptions(t *testing.T) {
+	proc := newBlockingProcessor(4)
+	pool := NewWorkerPool(proc, nil, WithQueueCapacity(4))
+	require.NoError(t, pool.Start(context.Background()))
+	t.Cleanup(func() { proc.releaseAll(); pool.Stop() })
+
+	ref := MediaRef{ID: "m1", MediaType: models.SubtitleRunMediaMovie}
+	require.Equal(t, EnqueueAccepted, pool.EnqueueItem(ref, ProcessItemOptions{Force: true}))
+	assert.Equal(t, EnqueueDuplicate, pool.EnqueueItem(ref, ProcessItemOptions{}),
+		"already queued — the second offer is rejected on the ref alone")
+}
+
+// TestWorkerPool_EnqueueItemReportsDistinctOutcomes — CR M1. The three
+// rejection reasons are different truths: only a genuine duplicate may be
+// answered "already_queued" upstream; a drop and a stopped pool must be
+// distinguishable so the endpoint never promises work that was discarded.
+func TestWorkerPool_EnqueueItemReportsDistinctOutcomes(t *testing.T) {
+	proc := newBlockingProcessor(4)
+	pool := NewWorkerPool(proc, nil, WithQueueCapacity(1))
+
+	ref := MediaRef{ID: "m1", MediaType: models.SubtitleRunMediaMovie}
+	assert.Equal(t, EnqueueStopped, pool.EnqueueItem(ref, ProcessItemOptions{}),
+		"a pool that was never started accepts nothing")
+
+	require.NoError(t, pool.Start(context.Background()))
+	t.Cleanup(func() { proc.releaseAll(); pool.Stop() })
+
+	// Park both workers so the 1-slot buffer is the only capacity left.
+	for i := 0; i < PipelineConcurrencyM1; i++ {
+		require.True(t, pool.Enqueue(MediaRef{ID: fmt.Sprintf("busy%d", i), MediaType: "movie"}))
+		select {
+		case <-proc.entered:
+		case <-time.After(2 * time.Second):
+			t.Fatal("worker never picked up its item")
+		}
+	}
+
+	require.Equal(t, EnqueueAccepted, pool.EnqueueItem(ref, ProcessItemOptions{}))
+	assert.Equal(t, EnqueueDuplicate, pool.EnqueueItem(ref, ProcessItemOptions{}))
+	assert.Equal(t, EnqueueQueueFull, pool.EnqueueItem(MediaRef{ID: "m2", MediaType: "movie"}, ProcessItemOptions{}),
+		"the buffer is full and both workers are busy — this item was dropped, not queued")
+}
+
+// ─── AC #5: the capability gate, scanner-enqueue entry point ───────────────
+
+// spyFinder records whether it was consulted at all — the assertion that the
+// gate short-circuits BEFORE enumeration, not after.
+type spyFinder struct {
+	called bool
+	movies []models.Movie
+}
+
+func (s *spyFinder) FindMissingZhHantSubtitle(context.Context) ([]models.Movie, error) {
+	s.called = true
+	return s.movies, nil
+}
+
+func TestWorkerPool_EnqueueMissingShortCircuitsWhenUnconfigured(t *testing.T) {
+	proc := newBlockingProcessor(8)
+	proc.blocking = false
+	finder := &spyFinder{movies: []models.Movie{{ID: "m1"}, {ID: "m2"}}}
+
+	pool := NewWorkerPool(proc, nil,
+		WithCandidateFinders(finder, nil),
+		WithCapabilityGate(func() bool { return false }))
+	require.NoError(t, pool.Start(context.Background()))
+	t.Cleanup(pool.Stop)
+
+	queued, err := pool.EnqueueMissing(context.Background())
+
+	require.NoError(t, err, "an unconfigured install is not an error state — it is a gated one")
+	assert.Zero(t, queued, "no queued work that can only fail")
+	assert.False(t, finder.called,
+		"the gate runs BEFORE enumeration: an unconfigured install pays no query per scan")
+	assert.Zero(t, pool.InFlightCount())
+}
+
+func TestWorkerPool_EnqueueMissingRunsWhenConfigured(t *testing.T) {
+	proc := newBlockingProcessor(8)
+	proc.blocking = false
+	finder := &spyFinder{movies: []models.Movie{{ID: "m1"}}}
+
+	pool := NewWorkerPool(proc, nil,
+		WithCandidateFinders(finder, nil),
+		WithCapabilityGate(func() bool { return true }))
+	require.NoError(t, pool.Start(context.Background()))
+	t.Cleanup(pool.Stop)
+
+	queued, err := pool.EnqueueMissing(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, 1, queued, "the gate is a gate, not an off switch")
+	assert.True(t, finder.called)
 }

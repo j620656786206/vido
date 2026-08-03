@@ -62,7 +62,7 @@ type WorkerPool struct {
 	movies   MovieGenerationFinder
 	episodes EpisodeGenerationFinder
 
-	queue chan MediaRef
+	queue chan queuedItem
 
 	mu sync.Mutex
 	// inFlight is the dedup set: an item queued OR running is not re-queued.
@@ -73,6 +73,36 @@ type WorkerPool struct {
 	running  bool
 	stopCh   chan struct{}
 	wg       sync.WaitGroup
+}
+
+// EnqueueOutcome says what happened to an offered item. The three rejection
+// reasons are DISTINCT on purpose (CR M1): the manual endpoint must answer
+// "already_queued" only for a genuine duplicate — reporting an overflow drop as
+// "already_queued" would promise the caller work that was in fact discarded.
+type EnqueueOutcome int
+
+const (
+	// EnqueueAccepted — the item is in the queue.
+	EnqueueAccepted EnqueueOutcome = iota
+	// EnqueueDuplicate — the same MediaRef is already queued or running.
+	EnqueueDuplicate
+	// EnqueueQueueFull — dropped on overflow; the next scan re-enqueues.
+	EnqueueQueueFull
+	// EnqueueStopped — the pool is not running; nothing would drain the queue.
+	EnqueueStopped
+)
+
+// queuedItem is one unit of queued work: the item plus the per-request levers
+// it must be run with. `force` is a request field (AC #4 / FR32), so it has to
+// ride the queue — a pool that carried only the MediaRef would accept
+// `force: true` and then silently run the cached path.
+//
+// Dedup still keys on the MediaRef ALONE: two requests for the same item are
+// the same work whatever their options, and keying on the pair would let a
+// double-click translate one episode twice.
+type queuedItem struct {
+	ref  MediaRef
+	opts ProcessItemOptions
 }
 
 // WorkerPoolOption configures optional pool dependencies.
@@ -98,7 +128,7 @@ func WithCapabilityGate(configured func() bool) WorkerPoolOption {
 func WithQueueCapacity(capacity int) WorkerPoolOption {
 	return func(p *WorkerPool) {
 		if capacity > 0 {
-			p.queue = make(chan MediaRef, capacity)
+			p.queue = make(chan queuedItem, capacity)
 		}
 	}
 }
@@ -111,7 +141,7 @@ func NewWorkerPool(item ItemProcessor, logger *slog.Logger, opts ...WorkerPoolOp
 	p := &WorkerPool{
 		item:     item,
 		logger:   logger.With("component", "subtitle_pipeline_pool"),
-		queue:    make(chan MediaRef, defaultQueueCapacity),
+		queue:    make(chan queuedItem, defaultQueueCapacity),
 		inFlight: make(map[MediaRef]struct{}),
 	}
 	for _, opt := range opts {
@@ -151,18 +181,26 @@ func (p *WorkerPool) Start(ctx context.Context) error {
 
 // Stop drains the workers and blocks until they have returned. Idempotent —
 // main.go's graceful-shutdown block and a ctx cancellation can both reach it.
+//
+// The wg.Wait sits OUTSIDE the running check (CR M2): main.go cancels the pool
+// ctx immediately before calling Stop, so a worker's stopFromWorker may have
+// already flipped `running` — an early return on that flag would let Stop
+// return while another worker is still mid-item, racing its failItem cleanup
+// writes against the rest of the shutdown sequence.
 func (p *WorkerPool) Stop() {
 	p.mu.Lock()
-	if !p.running {
-		p.mu.Unlock()
-		return
+	stopped := false
+	if p.running {
+		p.running = false
+		close(p.stopCh)
+		stopped = true
 	}
-	p.running = false
-	close(p.stopCh)
 	p.mu.Unlock()
 
 	p.wg.Wait()
-	p.logger.Info("subtitle pipeline pool stopped")
+	if stopped {
+		p.logger.Info("subtitle pipeline pool stopped")
+	}
 }
 
 // IsRunning reports whether the workers are live.
@@ -182,22 +220,29 @@ func (p *WorkerPool) InFlightCount() int {
 	return len(p.inFlight)
 }
 
-// Enqueue offers one item to the pool. It returns false when the item was NOT
-// accepted, which happens for three distinct reasons, all fail-soft:
-//
-//   - the pool is stopped (nothing would ever drain the queue),
-//   - the item is already queued or running (dedup, Rule 14),
-//   - the queue is full (drop-and-warn — blocking here would stall the scanner
-//     callback that called us, and the next scan re-enqueues).
+// Enqueue offers one item to the pool and reports whether it was accepted.
+// Convenience over EnqueueItem for callers that only need the boolean — the
+// sweep's accepted-count and the tests.
 func (p *WorkerPool) Enqueue(ref MediaRef) bool {
+	return p.EnqueueItem(ref, ProcessItemOptions{}) == EnqueueAccepted
+}
+
+// EnqueueItem offers one item with per-request options (AC #4's `force`) and
+// reports the distinct outcome. Every non-accepted outcome is fail-soft:
+//
+//   - EnqueueStopped: the pool is not running (nothing would drain the queue),
+//   - EnqueueDuplicate: the item is already queued or running (dedup, Rule 14),
+//   - EnqueueQueueFull: drop-and-warn — blocking here would stall the scanner
+//     callback that called us, and the next scan re-enqueues.
+func (p *WorkerPool) EnqueueItem(ref MediaRef, opts ProcessItemOptions) EnqueueOutcome {
 	p.mu.Lock()
 	if !p.running {
 		p.mu.Unlock()
-		return false
+		return EnqueueStopped
 	}
 	if _, dup := p.inFlight[ref]; dup {
 		p.mu.Unlock()
-		return false
+		return EnqueueDuplicate
 	}
 	// Reserve BEFORE the send so two concurrent enqueues of the same ref cannot
 	// both win the dedup check.
@@ -205,8 +250,8 @@ func (p *WorkerPool) Enqueue(ref MediaRef) bool {
 	p.mu.Unlock()
 
 	select {
-	case p.queue <- ref:
-		return true
+	case p.queue <- queuedItem{ref: ref, opts: opts}:
+		return EnqueueAccepted
 	default:
 		// Release the reservation: an item that never made it into the queue
 		// must stay re-enqueueable, or a single overflow would lose it
@@ -217,18 +262,40 @@ func (p *WorkerPool) Enqueue(ref MediaRef) bool {
 
 		p.logger.Warn("subtitle pipeline queue full — dropping item, the next scan will re-enqueue it",
 			"media_id", ref.ID, "media_type", ref.MediaType, "queue_capacity", cap(p.queue))
-		return false
+		return EnqueueQueueFull
 	}
+}
+
+// terminalPipelineVerdict reports whether the pipeline has already issued a
+// PERMANENT verdict for this item (CR H1). `no_text_source` and `skipped` rows
+// keep subtitle_language NULL forever, so the broad "no zh-Hant on record"
+// predicate re-enumerates them on EVERY scan — and the P5 pre-flight cannot
+// gate them (there is no sidecar to find), so each sweep would re-probe the
+// file, append a fresh `skipped` run row, and re-broadcast 已略過, without
+// bound.
+//
+// The filter lives HERE, not in the SQL, because the movie query is shared
+// with 9R-16's Route C generation batch — where `no_text_source` items are
+// exactly the ASR recovery scope and must stay enumerable. Deliberately NOT
+// models.SubtitleStatus.IsTerminal: `found`/`not_found` items still lack
+// zh-Hant and remain in generation scope.
+//
+// A verdict is not forever-final for the OPERATOR: the manual endpoint (AC #4)
+// enqueues directly and never passes through this sweep, so a re-mux that adds
+// an English track is re-processable via 生成字幕 (with or without force).
+func terminalPipelineVerdict(s models.SubtitleStatus) bool {
+	return s == models.SubtitleStatusNoTextSource || s == models.SubtitleStatusSkipped
 }
 
 // EnqueueMissing enumerates every item eligible for generation and offers it to
 // the pool (AC #2). Returns how many were accepted.
 //
-// Over-enumeration is SAFE and deliberate: ProcessItem's P5 pre-flight is the
-// authoritative gate (sub-1-5b AC #2), so an item that already has an
-// acceptable sidecar costs one stat + parse and writes no provenance row. That
-// is why this uses the broad "no zh-Hant on record" predicate rather than
-// trying to be clever about status values.
+// Over-enumeration is SAFE for every NON-verdict state: ProcessItem's P5
+// pre-flight is the authoritative gate (sub-1-5b AC #2), so an item that
+// already has an acceptable sidecar costs one stat + parse and writes no
+// provenance row. Items the pipeline has permanently declined are the one
+// class the pre-flight cannot gate — terminalPipelineVerdict above filters
+// them before the queue.
 func (p *WorkerPool) EnqueueMissing(ctx context.Context) (int, error) {
 	// FR23 gate BEFORE enumeration (AC #5): one log line for the whole scan,
 	// not one per item, and no queued work that could only ever fail.
@@ -248,6 +315,9 @@ func (p *WorkerPool) EnqueueMissing(ctx context.Context) (int, error) {
 			errs = append(errs, fmt.Errorf("enumerate movies missing zh-Hant subtitle: %w", err))
 		}
 		for _, m := range movies {
+			if terminalPipelineVerdict(m.SubtitleStatus) {
+				continue
+			}
 			if p.Enqueue(MediaRef{ID: m.ID, MediaType: models.SubtitleRunMediaMovie}) {
 				queued++
 			}
@@ -262,6 +332,9 @@ func (p *WorkerPool) EnqueueMissing(ctx context.Context) (int, error) {
 			errs = append(errs, fmt.Errorf("enumerate episodes missing zh-Hant subtitle: %w", err))
 		}
 		for _, e := range episodes {
+			if terminalPipelineVerdict(e.SubtitleStatus) {
+				continue
+			}
 			if p.Enqueue(MediaRef{ID: e.ID, MediaType: models.SubtitleRunMediaEpisode}) {
 				queued++
 			}
@@ -273,6 +346,13 @@ func (p *WorkerPool) EnqueueMissing(ctx context.Context) (int, error) {
 }
 
 // run is one worker's loop.
+//
+// The loop head re-checks the stop signals with priority (CR M3): a Go select
+// picks RANDOMLY among ready cases, so without this a worker whose stopCh had
+// already closed could keep pulling buffered items — and one multi-minute
+// translate per pull would hold Stop's wg.Wait open arbitrarily long. Checked
+// once per iteration, so after finishing its current item a worker always
+// observes a pending stop before taking new work.
 func (p *WorkerPool) run(ctx context.Context, worker int, stopCh <-chan struct{}) {
 	for {
 		select {
@@ -281,21 +361,31 @@ func (p *WorkerPool) run(ctx context.Context, worker int, stopCh <-chan struct{}
 			return
 		case <-stopCh:
 			return
-		case ref := <-p.queue:
-			p.process(ctx, worker, ref)
+		default:
+		}
+
+		select {
+		case <-ctx.Done():
+			p.stopFromWorker()
+			return
+		case <-stopCh:
+			return
+		case queued := <-p.queue:
+			p.process(ctx, worker, queued)
 		}
 	}
 }
 
 // process runs one item and always releases its dedup reservation.
-func (p *WorkerPool) process(ctx context.Context, worker int, ref MediaRef) {
+func (p *WorkerPool) process(ctx context.Context, worker int, queued queuedItem) {
+	ref := queued.ref
 	defer func() {
 		p.mu.Lock()
 		delete(p.inFlight, ref)
 		p.mu.Unlock()
 	}()
 
-	outcome, err := p.item.ProcessItem(ctx, ref, ProcessItemOptions{})
+	outcome, err := p.item.ProcessItem(ctx, ref, queued.opts)
 	if err != nil {
 		// Rule 13 case 2: logged and halted FOR THIS ITEM. ProcessItem has
 		// already recorded the failed run row and reverted the media row, so
