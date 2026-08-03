@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"sort"
 	"strconv"
 	"strings"
@@ -230,7 +231,15 @@ func (p *Pipeline) storeCachedCues(ctx context.Context, translated []SubtitleBlo
 // Index/Start/End come from source by construction, which is what keeps the
 // FR17 invariant true across a partial-cache run: the merge cannot reorder,
 // drop, or renumber anything.
-func mergeCues(source []SubtitleBlock, hits map[int]string, translated []SubtitleBlock) []SubtitleBlock {
+//
+// A cue covered by NEITHER side is a hard error rather than a fallback. It is
+// impossible today (every cue is a hit or a miss, and TranslateTrack returns
+// the whole subset it was given), but leaving the source text in place would
+// ship an ENGLISH cue inside a .zh-Hant.srt — and checkTimestampInvariant could
+// never catch it, because that guard only compares Index/Start/End. This is the
+// one place where "impossible by construction" has to be enforced rather than
+// asserted in a comment.
+func mergeCues(source []SubtitleBlock, hits map[int]string, translated []SubtitleBlock) ([]SubtitleBlock, error) {
 	byIndex := make(map[int]string, len(translated))
 	for _, b := range translated {
 		byIndex[b.Index] = b.Text
@@ -238,6 +247,8 @@ func mergeCues(source []SubtitleBlock, hits map[int]string, translated []Subtitl
 
 	out := make([]SubtitleBlock, len(source))
 	copy(out, source)
+
+	var uncovered []int
 	for i := range out {
 		if text, ok := byIndex[out[i].Index]; ok {
 			out[i].Text = text
@@ -245,12 +256,16 @@ func mergeCues(source []SubtitleBlock, hits map[int]string, translated []Subtitl
 		}
 		if text, ok := hits[out[i].Index]; ok {
 			out[i].Text = text
+			continue
 		}
-		// No branch for "neither": a cue absent from both is impossible by
-		// construction (every cue is a hit or a miss), and leaving the source
-		// text in place is the safe reading if that ever changes.
+		uncovered = append(uncovered, out[i].Index)
 	}
-	return out
+
+	if len(uncovered) > 0 {
+		return nil, fmt.Errorf("%w: %d cue(s) came back from neither the segment cache nor the translator (first: %d)",
+			ErrSubtitleTranslateFailed, len(uncovered), uncovered[0])
+	}
+	return out, nil
 }
 
 // compile-time proof that the shipped repository satisfies the narrow port.

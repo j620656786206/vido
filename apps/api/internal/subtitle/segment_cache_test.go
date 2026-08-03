@@ -306,10 +306,11 @@ func TestStoreCachedCues_WriteFailureIsNonFatal(t *testing.T) {
 func TestMergeCues_RestoresFullTrackOrderAndIdentity(t *testing.T) {
 	source := cues("Good morning.", "This software is great.", "See you later.")
 	// Cue 2 came from the cache, 1 and 3 from this run's translation.
-	merged := mergeCues(source, map[int]string{2: "這個軟體很好用"}, []SubtitleBlock{
+	merged, err := mergeCues(source, map[int]string{2: "這個軟體很好用"}, []SubtitleBlock{
 		{Index: 1, Start: source[0].Start, End: source[0].End, Text: "早安"},
 		{Index: 3, Start: source[2].Start, End: source[2].End, Text: "待會見"},
 	})
+	require.NoError(t, err)
 
 	require.Len(t, merged, 3)
 	assert.Equal(t, []string{"早安", "這個軟體很好用", "待會見"},
@@ -364,9 +365,10 @@ func TestSegmentCacheRepository_RoundTripsThroughCacheEntries(t *testing.T) {
 // future refactor fails loudly instead of shipping subtitles that drift.
 func TestMergeCues_DesyncIsCaughtByTheInvariant(t *testing.T) {
 	source := cues("Good morning.", "See you later.")
-	merged := mergeCues(source, map[int]string{2: "待會見"}, []SubtitleBlock{
+	merged, err := mergeCues(source, map[int]string{2: "待會見"}, []SubtitleBlock{
 		{Index: 1, Start: source[0].Start, End: source[0].End, Text: "早安"},
 	})
+	require.NoError(t, err)
 	require.NoError(t, checkTimestampInvariant(source, merged))
 
 	// Simulate the class of bug the guard is there for.
@@ -374,4 +376,31 @@ func TestMergeCues_DesyncIsCaughtByTheInvariant(t *testing.T) {
 	assert.ErrorIs(t, checkTimestampInvariant(source, merged), ErrSubtitleTimestampMismatch)
 
 	assert.Error(t, checkTimestampInvariant(source, merged[:1]), "a dropped cue must not pass either")
+}
+
+// TestMergeCues_AnUncoveredCueIsAHardError is the gap checkTimestampInvariant
+// structurally CANNOT close: that guard compares Index/Start/End only, so a cue
+// covered by neither the cache nor the translator would keep its ENGLISH source
+// text and sail straight through into a .zh-Hant.srt. The merge has to catch it
+// itself.
+func TestMergeCues_AnUncoveredCueIsAHardError(t *testing.T) {
+	source := cues("Good morning.", "This software is great.", "See you later.")
+
+	// Cue 2 is in neither bucket — the shape a future refactor of the split
+	// would produce.
+	merged, err := mergeCues(source, map[int]string{1: "早安"}, []SubtitleBlock{
+		{Index: 3, Start: source[2].Start, End: source[2].End, Text: "待會見"},
+	})
+
+	require.Error(t, err, "shipping the English source under a zh-Hant name must never be the fallback")
+	assert.ErrorIs(t, err, ErrSubtitleTranslateFailed)
+	assert.Contains(t, err.Error(), "first: 2")
+	assert.Nil(t, merged)
+
+	// Proof that the invariant alone would NOT have caught it.
+	silent := make([]SubtitleBlock, len(source))
+	copy(silent, source)
+	silent[0].Text, silent[2].Text = "早安", "待會見"
+	require.NoError(t, checkTimestampInvariant(source, silent),
+		"the timestamp guard passes an untranslated cue — which is exactly why mergeCues must not")
 }

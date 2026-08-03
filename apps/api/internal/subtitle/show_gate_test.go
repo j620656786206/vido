@@ -49,7 +49,7 @@ func TestShowGate_FirstRequestRunsAloneThenReleasesWaiters(t *testing.T) {
 	go func() {
 		release, err := gate.enter(context.Background(), "show-1")
 		assert.NoError(t, err)
-		release()
+		release(true)
 		close(waiterEntered)
 	}()
 
@@ -60,7 +60,7 @@ func TestShowGate_FirstRequestRunsAloneThenReleasesWaiters(t *testing.T) {
 	case <-time.After(50 * time.Millisecond):
 	}
 
-	leaderRelease()
+	leaderRelease(true)
 
 	select {
 	case <-waiterEntered:
@@ -75,7 +75,7 @@ func TestShowGate_WarmWindowSkipsTheGateEntirely(t *testing.T) {
 
 	release, err := gate.enter(context.Background(), "show-1")
 	require.NoError(t, err)
-	release()
+	release(true)
 
 	// Inside the warm window the prefix is live provider-side, so nothing needs
 	// to be serialized: enter must return without any leader in flight.
@@ -84,7 +84,7 @@ func TestShowGate_WarmWindowSkipsTheGateEntirely(t *testing.T) {
 	go func() {
 		r, err := gate.enter(context.Background(), "show-1")
 		assert.NoError(t, err)
-		r()
+		r(true)
 		close(done)
 	}()
 
@@ -101,7 +101,7 @@ func TestShowGate_StaleEntryMakesTheNextRequesterFirstAgain(t *testing.T) {
 
 	release, err := gate.enter(context.Background(), "show-1")
 	require.NoError(t, err)
-	release()
+	release(true)
 
 	// Past the warm window the provider-side entry may have expired (the window
 	// is deliberately shorter than the 1h TTL), so someone must re-warm it.
@@ -114,7 +114,7 @@ func TestShowGate_StaleEntryMakesTheNextRequesterFirstAgain(t *testing.T) {
 	go func() {
 		r, err := gate.enter(context.Background(), "show-1")
 		assert.NoError(t, err)
-		r()
+		r(true)
 		close(blocked)
 	}()
 
@@ -123,7 +123,7 @@ func TestShowGate_StaleEntryMakesTheNextRequesterFirstAgain(t *testing.T) {
 		t.Fatal("a stale entry must re-serialize: the next requester becomes 'first' again")
 	case <-time.After(50 * time.Millisecond):
 	}
-	leaderRelease()
+	leaderRelease(true)
 	<-blocked
 }
 
@@ -139,7 +139,7 @@ func TestShowGate_MoviesBypass(t *testing.T) {
 	go func() {
 		r, err := gate.enter(context.Background(), "")
 		assert.NoError(t, err)
-		r()
+		r(true)
 		close(done)
 	}()
 
@@ -148,7 +148,7 @@ func TestShowGate_MoviesBypass(t *testing.T) {
 	case <-time.After(2 * time.Second):
 		t.Fatal("movies must never queue behind each other")
 	}
-	first()
+	first(true)
 }
 
 func TestShowGate_CancellationWhileWaitingReturnsContextError(t *testing.T) {
@@ -156,7 +156,7 @@ func TestShowGate_CancellationWhileWaitingReturnsContextError(t *testing.T) {
 
 	leaderRelease, err := gate.enter(context.Background(), "show-1")
 	require.NoError(t, err)
-	defer leaderRelease()
+	defer leaderRelease(true)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	result := make(chan error, 1)
@@ -187,14 +187,14 @@ func TestShowGate_PrunesStaleEntries(t *testing.T) {
 	for i := 0; i < 50; i++ {
 		release, err := gate.enter(context.Background(), fmt.Sprintf("show-%d", i))
 		require.NoError(t, err)
-		release()
+		release(true)
 	}
 	assert.Equal(t, 50, gate.size())
 
 	clock.advance(showEntryTTL + time.Minute)
 	release, err := gate.enter(context.Background(), "show-fresh")
 	require.NoError(t, err)
-	release()
+	release(true)
 
 	assert.Equal(t, 1, gate.size(), "stale entries are pruned on access — only the live one survives")
 }
@@ -207,9 +207,74 @@ func TestShowGate_ReleaseIsIdempotent(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.NotPanics(t, func() {
-		release()
-		release()
+		release(true)
+		release(true)
 	})
+}
+
+// TestShowGate_AFailedFirstRequestDoesNotWarmTheShow — the whole point of the
+// latch is that ONE request pays the 2x prefix write. A request that errored
+// wrote no provider-side prefix, so warming on it would open the full 50-minute
+// window with nothing cached and hand every remaining episode the premium
+// individually — the exact cost D10 exists to avoid.
+func TestShowGate_AFailedFirstRequestDoesNotWarmTheShow(t *testing.T) {
+	clock := newFixedClock()
+	gate := newShowGate(clock.Now)
+
+	leaderRelease, err := gate.enter(context.Background(), "show-1")
+	require.NoError(t, err)
+	leaderRelease(false) // the guarded request failed
+
+	gate.mu.Lock()
+	warmedAt := gate.entries["show-1"].warmedAt
+	gate.mu.Unlock()
+	assert.True(t, warmedAt.IsZero(), "a failed request must leave the show cold")
+
+	// …and the next requester therefore leads a fresh attempt rather than
+	// racing in behind a prefix that was never written.
+	nextRelease, err := gate.enter(context.Background(), "show-1")
+	require.NoError(t, err)
+
+	blocked := make(chan struct{})
+	go func() {
+		r, err := gate.enter(context.Background(), "show-1")
+		assert.NoError(t, err)
+		r(true)
+		close(blocked)
+	}()
+
+	select {
+	case <-blocked:
+		t.Fatal("after a failed warm-up the next request must still be serialized, not let through cold")
+	case <-time.After(50 * time.Millisecond):
+	}
+	nextRelease(true)
+	<-blocked
+}
+
+// TestShowGate_AFailedLeaderStillUnparksItsWaiters — failing must never strand
+// a worker on the latch; only the WARM mark is withheld.
+func TestShowGate_AFailedLeaderStillUnparksItsWaiters(t *testing.T) {
+	gate := newShowGate(newFixedClock().Now)
+
+	leaderRelease, err := gate.enter(context.Background(), "show-1")
+	require.NoError(t, err)
+
+	waiterDone := make(chan struct{})
+	go func() {
+		r, err := gate.enter(context.Background(), "show-1")
+		assert.NoError(t, err)
+		r(true)
+		close(waiterDone)
+	}()
+
+	leaderRelease(false)
+
+	select {
+	case <-waiterDone:
+	case <-time.After(2 * time.Second):
+		t.Fatal("a failed leader must still close the latch — otherwise a provider blip deadlocks the pool")
+	}
 }
 
 // TestShowGate_ConcurrentShowsDoNotBlockEachOther — the gate is per show, not
@@ -219,13 +284,13 @@ func TestShowGate_ConcurrentShowsDoNotBlockEachOther(t *testing.T) {
 
 	releaseA, err := gate.enter(context.Background(), "show-a")
 	require.NoError(t, err)
-	defer releaseA()
+	defer releaseA(true)
 
 	done := make(chan struct{})
 	go func() {
 		r, err := gate.enter(context.Background(), "show-b")
 		assert.NoError(t, err)
-		r()
+		r(true)
 		close(done)
 	}()
 

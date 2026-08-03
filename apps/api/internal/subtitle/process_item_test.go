@@ -3,6 +3,7 @@ package subtitle
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -424,6 +425,153 @@ func TestProcessItem_FullCacheHitSkipsTheLLMEntirely(t *testing.T) {
 	assert.Equal(t, models.SubtitleRunCompleted, final.Status)
 	assert.False(t, final.CacheEnabled,
 		"no request was sent, so no prompt prefix was cached — the column describes the PROMPT cache, not this one")
+}
+
+// echoingTranslator answers every cue with a Traditional line except the given
+// source texts, which it echoes back — an echo fails the quality gate on every
+// retry and ends up stubborn (NFR-R1 fail-soft: it ships its English original).
+func echoingTranslator(stubborn ...string) func(int, []prompts.SubtitleTranslatorBlock) (map[int]string, ai.CompletionUsage, error) {
+	echo := make(map[string]struct{}, len(stubborn))
+	for _, text := range stubborn {
+		echo[text] = struct{}{}
+	}
+	return func(_ int, blocks []prompts.SubtitleTranslatorBlock) (map[int]string, ai.CompletionUsage, error) {
+		out := make(map[int]string, len(blocks))
+		for _, b := range blocks {
+			if _, bad := echo[b.Text]; bad {
+				out[b.Index] = b.Text
+				continue
+			}
+			out[b.Index] = "早安"
+		}
+		return out, ai.CompletionUsage{CacheCreationInputTokens: 5000}, nil
+	}
+}
+
+func longTrack(n int) []string {
+	texts := make([]string, n)
+	for i := range texts {
+		texts[i] = fmt.Sprintf("Dialogue line %d here.", i)
+	}
+	return texts
+}
+
+// TestProcessItem_StubbornCeilingIsMeasuredAgainstTheDeliveredTrack — FR16's 5%
+// ceiling is a property of what SHIPS, not of whatever subset reached the LLM.
+// Cache hits are already-accepted translations, so they belong in the
+// denominator: without this, the ceiling silently tightens as the cache warms
+// and one flaky cue kills a 95%-cached, fully-deliverable episode.
+func TestProcessItem_StubbornCeilingIsMeasuredAgainstTheDeliveredTrack(t *testing.T) {
+	texts := longTrack(20)
+	source := cues(texts...)
+	h := newItemHarness(t, RouteDecision{
+		Kind:            RouteTranslate,
+		Track:           &ExtractedTrack{StreamIndex: 2, Language: "eng", Blocks: source},
+		DetectedVariant: LangUndetermined,
+	})
+
+	// 18 of 20 cues are warm; 2 reach the LLM and one of those is stubborn.
+	version := h.pipeline.runVersion(richContext())
+	for i := 0; i < 18; i++ {
+		h.cache.entries[segmentKey(source[i].Text, version)] = "快取譯文"
+	}
+	h.trans.fn = echoingTranslator(texts[19])
+
+	_, err := h.pipeline.ProcessItem(context.Background(), h.ref, ProcessItemOptions{})
+
+	require.NoError(t, err,
+		"1 stubborn cue in a 20-cue track is exactly the 5%% ceiling — a warm cache must not turn it into 1-of-2")
+	require.Len(t, h.placer.requests, 1)
+	blocks, err := ParseSRT(string(h.placer.requests[0].SubtitleData))
+	require.NoError(t, err)
+	assert.Len(t, blocks, 20, "the whole episode still ships")
+}
+
+// TestProcessItem_TheCeilingStillFiresOnAGenuinelyBrokenTrack — the fix must
+// widen the denominator, not disable the guard.
+func TestProcessItem_TheCeilingStillFiresOnAGenuinelyBrokenTrack(t *testing.T) {
+	texts := longTrack(20)
+	h := newItemHarness(t, translateDecision(texts...))
+	h.trans.fn = echoingTranslator(texts[0], texts[1], texts[2]) // 3 of 20 = 15%
+
+	_, err := h.pipeline.ProcessItem(context.Background(), h.ref, ProcessItemOptions{})
+
+	require.Error(t, err, "a track shipping 15%% English must still fail the item")
+	assert.Contains(t, err.Error(), "ceiling")
+	assert.Empty(t, h.placer.requests, "nothing half-English may reach the media folder")
+}
+
+// TestProcessItem_StubbornCuesAreNeverCached — a stubborn cue ships its ENGLISH
+// original. Caching that would freeze a transient failure for the full 30-day
+// TTL, and because the key is cue content + show metadata, the same English
+// line would then be served to every other episode of the show with no retry
+// ever firing again short of --force or a version bump.
+func TestProcessItem_StubbornCuesAreNeverCached(t *testing.T) {
+	texts := longTrack(40)
+	source := cues(texts...)
+	h := newItemHarness(t, RouteDecision{
+		Kind:            RouteTranslate,
+		Track:           &ExtractedTrack{StreamIndex: 2, Language: "eng", Blocks: source},
+		DetectedVariant: LangUndetermined,
+	})
+	h.trans.fn = echoingTranslator(texts[1]) // 1 of 40 — under the ceiling, so the item ships
+
+	_, err := h.pipeline.ProcessItem(context.Background(), h.ref, ProcessItemOptions{})
+	require.NoError(t, err)
+
+	version := h.pipeline.runVersion(richContext())
+	_, cached := h.cache.writes[segmentKey(source[1].Text, version)]
+	assert.False(t, cached, "the English fail-soft fallback must not be persisted as if it were a translation")
+
+	// Its neighbours, which really were translated, ARE cached.
+	assert.Equal(t, "早安", h.cache.writes[segmentKey(source[0].Text, version)])
+	assert.Equal(t, "早安", h.cache.writes[segmentKey(source[2].Text, version)])
+
+	// And the cue still SHIPS with its English original — fail-soft is intact,
+	// it is only the persistence that was wrong.
+	assert.Contains(t, string(h.placer.requests[0].SubtitleData), texts[1])
+}
+
+// TestProcessItem_RequestsSentDisambiguatesTheCacheVerdict — cache_enabled is a
+// non-nullable bool, so a fully segment-cached item (which sends nothing) and an
+// item whose prompt prefix silently failed to cache both land on `false`. The
+// scope's request counter is what lets the M1 pilot tell them apart.
+func TestProcessItem_RequestsSentDisambiguatesTheCacheVerdict(t *testing.T) {
+	source := cues("Good morning.", "See you later.")
+	decision := RouteDecision{
+		Kind:            RouteTranslate,
+		Track:           &ExtractedTrack{StreamIndex: 2, Language: "eng", Blocks: source},
+		DetectedVariant: LangUndetermined,
+	}
+
+	t.Run("inert prefix — sent, but nothing cached", func(t *testing.T) {
+		h := newItemHarness(t, decision)
+		h.trans.fn = func(_ int, blocks []prompts.SubtitleTranslatorBlock) (map[int]string, ai.CompletionUsage, error) {
+			out := make(map[int]string, len(blocks))
+			for _, b := range blocks {
+				out[b.Index] = "早安"
+			}
+			return out, ai.CompletionUsage{InputTokens: 900}, nil // both cache fields zero
+		}
+
+		_, err := h.pipeline.ProcessItem(context.Background(), h.ref, ProcessItemOptions{})
+		require.NoError(t, err)
+		assert.False(t, h.runs.lastUpdate(t).CacheEnabled)
+		assert.Len(t, h.trans.calls, 1, "a request WAS issued — cache_enabled=false is the AC #4.2 verdict")
+	})
+
+	t.Run("fully cached — nothing sent at all", func(t *testing.T) {
+		h := newItemHarness(t, decision)
+		version := h.pipeline.runVersion(richContext())
+		for _, b := range source {
+			h.cache.entries[segmentKey(b.Text, version)] = "快取譯文"
+		}
+
+		_, err := h.pipeline.ProcessItem(context.Background(), h.ref, ProcessItemOptions{})
+		require.NoError(t, err)
+		assert.False(t, h.runs.lastUpdate(t).CacheEnabled)
+		assert.Empty(t, h.trans.calls, "no request was issued — the SAME column value, a different cause")
+	})
 }
 
 // ─── AC #1.5: failure policy ───────────────────────────────────────────────

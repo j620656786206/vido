@@ -54,15 +54,20 @@ func newShowGate(now func() time.Time) *showGate {
 	return &showGate{entries: map[string]*showGateEntry{}, now: now}
 }
 
-// enter returns once this caller may issue the show's next LLM request. The
-// returned release marks the show warm and unparks any waiters; it is
-// idempotent and MUST be called on every path.
+// enter returns once this caller may issue the show's next LLM request.
+//
+// The returned release ALWAYS unparks the waiters, and marks the show warm only
+// when called with warmed=true — i.e. when the request it guarded actually
+// returned. A failed request wrote no provider-side prefix, so warming on it
+// would open the full window with nothing cached and every remaining episode
+// would pay the 2x write premium individually: the exact cost D10 exists to
+// avoid. Release is idempotent and MUST be called on every path.
 //
 // An empty key bypasses the gate entirely — that is a movie, and nothing shares
 // its prompt prefix.
-func (g *showGate) enter(ctx context.Context, key string) (func(), error) {
+func (g *showGate) enter(ctx context.Context, key string) (func(warmed bool), error) {
 	if key == "" {
-		return func() {}, nil
+		return func(bool) {}, nil
 	}
 
 	for {
@@ -93,7 +98,7 @@ func (g *showGate) enter(ctx context.Context, key string) (func(), error) {
 			// The prefix is live: no serialization needed.
 			entry.touchedAt = now
 			g.mu.Unlock()
-			return func() {}, nil
+			return func(bool) {}, nil
 		}
 
 		// Become the leader.
@@ -103,11 +108,17 @@ func (g *showGate) enter(ctx context.Context, key string) (func(), error) {
 		g.mu.Unlock()
 
 		var once sync.Once
-		return func() {
+		return func(warmed bool) {
 			once.Do(func() {
 				g.mu.Lock()
-				entry.warmedAt = g.now()
-				entry.touchedAt = entry.warmedAt
+				released := g.now()
+				if warmed {
+					entry.warmedAt = released
+				}
+				// touchedAt advances either way: a failing leader must not leave
+				// the entry looking prunable while its waiters still hold the
+				// channel, and the next leader re-attempts the warm-up.
+				entry.touchedAt = released
 				entry.inFlight = nil
 				g.mu.Unlock()
 				close(inFlight)
@@ -139,13 +150,13 @@ func (g *showGate) size() int {
 
 // enterShowGate wraps the gate for the translate loop: only the item's FIRST
 // LLM request is serialized, and only when the item belongs to a show.
-func (p *Pipeline) enterShowGate(ctx context.Context, firstRequest bool) (func(), error) {
+func (p *Pipeline) enterShowGate(ctx context.Context, firstRequest bool) (func(warmed bool), error) {
 	if !firstRequest || p.gate == nil {
-		return func() {}, nil
+		return func(bool) {}, nil
 	}
 	scope := processScopeFrom(ctx)
 	if scope == nil {
-		return func() {}, nil
+		return func(bool) {}, nil
 	}
 	return p.gate.enter(ctx, scope.showKey)
 }

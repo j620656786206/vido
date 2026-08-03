@@ -166,12 +166,20 @@ func (p *Pipeline) ProcessItem(ctx context.Context, ref MediaRef, opts ProcessIt
 	}
 
 	p.emitProgress(ref, StageComplete, "subtitle generated")
+	// requests_sent disambiguates the two ways cache_enabled lands on false:
+	// requests_sent > 0 means the prompt prefix was sent and silently failed to
+	// cache (the AC #4.2 verdict), requests_sent == 0 means nothing was ever
+	// sent — a fully segment-cached item, or a route with no LLM leg at all.
+	// The column itself is a non-nullable bool and cannot hold that third state
+	// (backlog-subtitle-run-cache-enabled-tristate), so the M1 pilot separates
+	// the populations from this line.
 	p.logger.Info("subtitle pipeline completed",
 		"media_id", ref.ID,
 		"media_type", ref.MediaType,
 		"route", string(decision.Kind),
 		"cue_count", cueCount,
 		"cache_enabled", run.CacheEnabled,
+		"requests_sent", scope.requestsSent,
 		"output_path", placed.SubtitlePath,
 	)
 
@@ -240,6 +248,14 @@ func (p *Pipeline) translateWithCache(
 	p.logger.Info("segment cache split",
 		"media_id", ref.ID, "cache_hits", len(hits), "cache_misses", len(misses), "force", opts.Force)
 
+	// FR16's stubborn ceiling is a property of the DELIVERED track. TranslateTrack
+	// only ever sees the miss subset, so without this the ceiling would tighten as
+	// the cache warms and one flaky cue would fail an otherwise-complete episode.
+	scope := processScopeFrom(ctx)
+	if scope != nil {
+		scope.fullTrackCues = len(source)
+	}
+
 	var translated []SubtitleBlock
 	if len(misses) > 0 {
 		// A REDUCED copy of the routed track. The stamped TranslateTrack
@@ -260,17 +276,33 @@ func (p *Pipeline) translateWithCache(
 		for _, b := range res.Blocks {
 			final[b.Index] = b.Text
 		}
+
+		// A stubborn cue ships its ENGLISH original (NFR-R1 fail-soft). Caching
+		// that would freeze a transient failure for the full 30-day TTL — and
+		// because the key is cue content + show metadata, the same English line
+		// would then be served to every other episode of the show, with no
+		// retry ever firing again short of --force or a version bump. Drop them
+		// from the write set; they simply cost tokens next run.
+		if scope != nil {
+			for index := range scope.stubbornIndexes {
+				delete(final, index)
+			}
+		}
+
 		// Keyed on the SOURCE cue text, storing the FINAL post-OpenCC text — a
 		// later hit must be byte-identical to a fresh translation.
 		p.storeCachedCues(ctx, misses, final, version)
 
 		if res.StubbornCues > 0 {
-			p.logger.Warn("subtitle cues kept their English original",
+			p.logger.Warn("subtitle cues kept their English original — excluded from the segment cache",
 				"media_id", ref.ID, "stubborn_cues", res.StubbornCues, "total_cues", len(source))
 		}
 	}
 
-	merged := mergeCues(source, hits, translated)
+	merged, err := mergeCues(source, hits, translated)
+	if err != nil {
+		return nil, err
+	}
 
 	// The FR17 invariant over the FULL set, not just the translated subset: a
 	// partial-cache run is exactly where a merge bug would desync timestamps.

@@ -308,6 +308,32 @@ type processScope struct {
 	// FIRST chunk's usage and never overwritten by later chunks.
 	cacheProbed  bool
 	cacheEnabled bool
+
+	// requestsSent counts the chunk requests this item actually issued.
+	// cache_enabled is a NON-NULLABLE bool, so a fully segment-cached item —
+	// which sends nothing — records `false` and is indistinguishable in the
+	// column from an item whose prompt prefix genuinely failed to cache. Until
+	// the column can go nullable (tracked as
+	// backlog-subtitle-run-cache-enabled-tristate), this counter is what lets
+	// the M1 pilot separate the two populations from the completion log.
+	requestsSent int
+
+	// fullTrackCues is the FULL routed track's cue count. The segment cache
+	// hands TranslateTrack only the miss subset, so FR16's stubborn ceiling must
+	// still be measured against the whole DELIVERED track: cache hits are
+	// already-accepted translations and belong in the denominator. Without this,
+	// a warm cache silently tightens "5% of the episode" into "5% of whatever is
+	// left", and one flaky cue kills a 99%-deliverable episode.
+	// Zero = no cache split in play; the subset IS the track.
+	fullTrackCues int
+
+	// stubbornIndexes are the cues TranslateTrack delivered with their ENGLISH
+	// original (NFR-R1 fail-soft). translateWithCache excludes them from the
+	// segment-cache write: caching a fail-soft fallback would freeze the failure
+	// for the whole 30-day TTL, and because the key is cue content + show
+	// metadata it would serve that English line to every other episode of the
+	// show. The fail-soft is meant to be transient.
+	stubbornIndexes map[int]struct{}
 }
 
 type processScopeKey struct{}
@@ -319,6 +345,40 @@ func withProcessScope(ctx context.Context, scope *processScope) context.Context 
 func processScopeFrom(ctx context.Context) *processScope {
 	scope, _ := ctx.Value(processScopeKey{}).(*processScope)
 	return scope
+}
+
+// ceilingTotal answers "how many cues does the caller actually deliver?" for
+// FR16's stubborn ceiling. It is the full routed track when a segment-cache
+// split is in play and `subset` otherwise — sub-1-5a's direct callers carry no
+// scope, so for them the subset IS the track and the policy is byte-identical
+// to how it shipped.
+func ceilingTotal(ctx context.Context, subset int) int {
+	if scope := processScopeFrom(ctx); scope != nil && scope.fullTrackCues > subset {
+		return scope.fullTrackCues
+	}
+	return subset
+}
+
+// noteStubbornCue records a cue that shipped its English original, so the item
+// flow can keep it OUT of the segment cache. No-op without a scope.
+func noteStubbornCue(ctx context.Context, index int) {
+	scope := processScopeFrom(ctx)
+	if scope == nil {
+		return
+	}
+	if scope.stubbornIndexes == nil {
+		scope.stubbornIndexes = make(map[int]struct{})
+	}
+	scope.stubbornIndexes[index] = struct{}{}
+}
+
+// countRequest tallies one issued chunk request (retries included), which is
+// what disambiguates a `cache_enabled=false` caused by an inert prompt prefix
+// from one caused by never sending a request at all.
+func countRequest(ctx context.Context) {
+	if scope := processScopeFrom(ctx); scope != nil {
+		scope.requestsSent++
+	}
 }
 
 // emitProgress invokes the stage hook when one is wired. Nil-safe by design:
@@ -526,7 +586,16 @@ func (p *Pipeline) TranslateTrack(ctx context.Context, track *ExtractedTrack, tc
 			}
 
 			got, chunkUsage, err := p.translator.TranslateChunk(ctx, sys, contextBlocks, promptBlocksOf(pending))
-			release()
+			// The gate is released as WARM only when the request actually
+			// returned. A failed first request never wrote the provider-side
+			// prefix, so marking the show warm would open the whole 50-minute
+			// window with nothing cached — every remaining episode would then
+			// skip the gate and pay the 2x prefix write premium individually,
+			// which is precisely the cost D10 exists to avoid. On failure the
+			// next waiter legitimately becomes the leader and re-attempts the
+			// warm-up, still serialized.
+			release(err == nil)
+			countRequest(ctx)
 			usage = addUsage(usage, chunkUsage)
 			if err != nil {
 				return nil, fmt.Errorf("%w: cues %d-%d: %w",
@@ -556,6 +625,7 @@ func (p *Pipeline) TranslateTrack(ctx context.Context, track *ExtractedTrack, tc
 
 		for _, index := range verdict.FailedIndexes {
 			stubborn++
+			noteStubbornCue(ctx, index)
 			p.logger.Warn("subtitle cue kept its English original after quality retries",
 				"cue_index", index,
 				"reason", verdict.Reasons[index],
@@ -568,9 +638,17 @@ func (p *Pipeline) TranslateTrack(ctx context.Context, track *ExtractedTrack, tc
 	// Stubborn-cue policy (NFR-R1 fail-soft, bounded): one flaky cue must not
 	// kill a 1000-cue episode, but a broken track must not ship half-English.
 	// stubborn*20 > total is the integer form of stubborn/total > 5%.
-	if stubborn*stubbornCeilingDenominator > len(source) {
+	//
+	// The denominator is the DELIVERED track, which is not always `source`: with
+	// a warm segment cache, sub-1-5b hands this stage only the miss subset while
+	// the cache hits are already-accepted translations that still ship. Counting
+	// only the subset would make the ceiling tighten as the cache warms — a
+	// 20-cue episode with one flaky cue passes cold (1/20 = 5%) and fails at 18
+	// hits (1/2 = 50%). See ceilingTotal's derivation on processScope.
+	delivered := ceilingTotal(ctx, len(source))
+	if stubborn*stubbornCeilingDenominator > delivered {
 		return nil, fmt.Errorf("%w: %d of %d cues still failed the quality gate after %d retries — over the %d%% ceiling",
-			ErrSubtitleTranslateFailed, stubborn, len(source), maxQualityRetries, 100/stubbornCeilingDenominator)
+			ErrSubtitleTranslateFailed, stubborn, delivered, maxQualityRetries, 100/stubbornCeilingDenominator)
 	}
 
 	blocks := p.convertAndStitch(source, final)
