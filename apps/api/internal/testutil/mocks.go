@@ -128,6 +128,10 @@ func (m *MockMovieRepository) FindByParseStatus(ctx context.Context, status mode
 	return args.Get(0).([]models.Movie), args.Error(1)
 }
 
+func (m *MockMovieRepository) UpdateSubtitleGenerationStatus(ctx context.Context, id string, status models.SubtitleStatus, path, language string) error {
+	return m.Called(ctx, id, status, path, language).Error(0)
+}
+
 func (m *MockMovieRepository) UpdateSubtitleStatus(ctx context.Context, id string, status models.SubtitleStatus, path, language string, score float64) error {
 	return m.Called(ctx, id, status, path, language, score).Error(0)
 }
@@ -300,6 +304,10 @@ func (m *MockSeriesRepository) FindByParseStatus(ctx context.Context, status mod
 		return nil, args.Error(1)
 	}
 	return args.Get(0).([]models.Series), args.Error(1)
+}
+
+func (m *MockSeriesRepository) UpdateSubtitleGenerationStatus(ctx context.Context, id string, status models.SubtitleStatus, path, language string) error {
+	return m.Called(ctx, id, status, path, language).Error(0)
 }
 
 func (m *MockSeriesRepository) UpdateSubtitleStatus(ctx context.Context, id string, status models.SubtitleStatus, path, language string, score float64) error {

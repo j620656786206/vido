@@ -97,10 +97,23 @@ Delta tree: `scanner_service.go ✏️` → `🔒 (hook existed; composed in mai
 
 ---
 
+### AC #11 — [Rule 24 lane ①, added at implementation 2026-08-03] Episode-grain enumeration
+
+Task 2's decision tree fired its **absent** branch: the 9R-16 episode enumeration **does not exist**. 9R-16 shipped movies-only — its `generationCandidateFinder` (`services/generation_batch.go:81`) declares only movie methods, and `EpisodeRepository` had no missing-subtitle query at all. Enumerating episodes via any existing call was therefore impossible, and silently inventing a query is what the decision tree forbids.
+
+**Therefore:** `EpisodeRepository.FindMissingZhHantSubtitle(ctx)` is added, MIRRORING the movie predicate (`missingZhHantSubtitleWhere`, `movie_repository.go:883`):
+
+1. Predicate = "no zh-Hant on record **AND** a media file present". Deliberately broader than a `subtitle_status` filter, for the same reason as movies: an episode with a found **English** subtitle still lacks zh-Hant and is in scope. Completed items self-exclude once generation writes `subtitle_language='zh-Hant'` — which is what makes a re-scan free.
+2. **No `is_removed` clause** — unlike `movies`, the `episodes` table has no such column (migration 006 models removal by deleting the row). Mirroring it blindly would have been a query against a column that does not exist.
+3. Ordered `series_id, season_number, episode_number` — load-bearing, not cosmetic: grouping a show's episodes is what lets sub-1-5b's D10 latch warm ONE prompt prefix per show instead of re-warming it every time the queue interleaves two series.
+4. Registered on `EpisodeRepositoryInterface` (Rule 11) and covered by real-`:memory:`-SQLite tests over the migrated schema (Rule 15).
+
+---
+
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Flag + config (AC #1):** `VIDO_SUBTITLE_PIPELINE_MODE` in config.go (+validation+test); the one-conditional seam at `batch.go:~244` with a spy-engine byte-identity test for legacy.
-- [ ] **Task 2 — Pool + enqueue (AC #2, #3):** pool with lifecycle/dedup/overflow; `EnqueueMissing` (movies via `FindMissingZhHantSubtitle`; **decision tree:** locate the 9R-16 episode enumeration — found ⇒ reuse; absent ⇒ expand scope with a new AC per Rule 24 lane ①, do not silently build a new query); main.go callback composition preserving `:422`.
+- [x] **Task 1 — Flag + config (AC #1):** `VIDO_SUBTITLE_PIPELINE_MODE` in config.go (+validation+test); the one-conditional seam at `batch.go:~244` with a spy-engine byte-identity test for legacy.
+- [~] **Task 2 — Pool + enqueue (AC #2, #3, #11):** _(in progress — pool, enumeration, MediaStore adapter and the search-column fix are done + tested; main.go callback composition remains)_  pool with lifecycle/dedup/overflow; `EnqueueMissing` (movies via `FindMissingZhHantSubtitle`; **decision tree:** locate the 9R-16 episode enumeration — found ⇒ reuse; absent ⇒ expand scope with a new AC per Rule 24 lane ①, do not silently build a new query); main.go callback composition preserving `:422`.
 - [ ] **Task 3 — Endpoint (AC #4):** new handler + routes + Swagger + `swag init` + main.go wiring + Rule 15 route verification.
 - [ ] **Task 4 — Gate (AC #5):** `configured` wiring, three-entry-point coverage, zh-TW messages, tests.
 - [ ] **Task 5 — SSE + docs (AC #6, #8):** progress-hook→hub adapter + zh-TW stage messages; deployment.md EN section; file `backlog-deployment-doc-zh-tw-twin` in sprint-status (verify not already filed).
@@ -139,9 +152,31 @@ Delta tree: `scanner_service.go ✏️` → `🔒 (hook existed; composed in mai
 
 ### Agent Model Used
 
+Amelia (Developer Agent) · Claude Opus 5 (1M context), effort xhigh · 2026-08-03
+
 ### Debug Log References
 
+RED verified before every task (build failure naming exactly the new symbols, or a failing assertion):
+
+| Task | RED signal |
+|---|---|
+| 1 | `vet: subtitle_pipeline_test.go:25: undefined: SubtitlePipelineModeLegacy` · `vet: batch_seam_test.go:94: undefined: batchEngine` |
+
+Falsification checks (deliberately break the implementation, confirm the test catches it, restore):
+
+| Guard | Falsification | Result |
+|---|---|---|
+| D5 seam routes to the pipeline | `if bp.item != nil` forced to `if false` | `TestBatchSeam_PipelineModeRoutesToProcessItem` FAILS |
+| Pipeline error is a failed item | `failItem` path returns `EngineResult{Success: true}` | `TestBatchSeam_PipelineFailureCountsAsAFailedItem` FAILS |
+
 ### Completion Notes List
+
+- 🔗 **AC Drift: NONE** (checked `batch.go` / `engine.Process` / `SetOnScanComplete` across `_bmad-output/implementation-artifacts/*.md` — the only prior behavioural hit is **8-9 sub-task 2.8** "Call `engine.Process()` with ProcessOptions", and it still holds: the D5 flag defaults to `legacy`, which routes to `engine.Process` with byte-identical arguments (pinned by `TestBatchSeam_LegacyModeIsByteIdentical`, which asserts all six captured arguments including the CN-policy `ProductionCountry`). The `pipeline` branch is a NEW opt-in path, not a redefinition of the shipped one.)
+- 📎 **Contract Stamps: FOUND** (3 ack references in this story; 0 produced). This story is pure composition and stamps nothing new — the HTTP request/response shape stays v0 until Epic 2/FE needs it stamped. Consumed, all greped at v1 and all reconciling:
+  - `confirmed against [@contract-v1] sub-1-5b AC #1` — `ProcessItem` / `MediaRef` / `ProcessItemOptions` / `ProcessOutcome`. Consumed unchanged; the batch seam calls the stamped signature directly.
+  - `confirmed against [@contract-v1] (Story sub-1-3 AC #1)` — the 12-value `PipelineStage` set this story broadcasts.
+  - `confirmed against [@contract-v1] sub-1-2 AC #1` — `MediaRef.MediaType` vocabulary (movie|series|episode).
+  - Upstream bump scan: the only `[@contract-vN→vN+1]` token anywhere in the upstream set is sub-1-5b's Open-Question **hypothetical** ("*Alternative: a dedicated failed media status — but that's a `[@contract-v1→v2]` bump*"), not an actual bump. No stale-mark is owed to this story.
 
 ### Discovery Triage
 
@@ -153,6 +188,20 @@ Delta tree: `scanner_service.go ✏️` → `🔒 (hook existed; composed in mai
 - Reference: `project-context.md` Rule 24.
 
 ### File List
+
+| File | Change |
+|---|---|
+| `apps/api/internal/config/subtitle_pipeline.go` | **new** — D5 flag: `SubtitlePipelineModeLegacy`/`…Pipeline` constants, closed-set `validateSubtitlePipelineMode`, and the single `Config.SubtitlePipelineEnabled()` predicate the wiring reads |
+| `apps/api/internal/config/config.go` | **modified** — `SubtitlePipelineMode` field + `loadString("VIDO_SUBTITLE_PIPELINE_MODE", "legacy")` with startup validation (an unknown value fails the process rather than silently staying legacy) |
+| `apps/api/internal/config/subtitle_pipeline_test.go` | **new** — 5-row mode table (default / explicit legacy / pipeline / unknown / wrong case) + the `SubtitlePipelineEnabled` predicate incl. the zero-value guard |
+| `apps/api/internal/subtitle/batch.go` | **modified** — `batchEngine` port (so the legacy path is spy-provable), `ItemProcessor` seam + `BatchProcessorOption`/`WithItemProcessor` on a variadic `NewBatchProcessor`, the ONE D5 conditional at the former `:244`, and `processViaPipeline` mapping `ProcessOutcome` onto the batch's `EngineResult` bookkeeping |
+| `apps/api/internal/subtitle/batch_seam_test.go` | **new** — 4 tests: legacy byte-identity over all six captured engine arguments, pipeline routing with the engine fully bypassed, a pipeline error counting as a failed item, and a P5 pre-flight early-exit counting as a success |
+
+### Change Log
+
+| Date | Change |
+|---|---|
+| 2026-08-03 | **Task 1 (AC #1) — RED first** (`undefined: SubtitlePipelineModeLegacy`, then `undefined: batchEngine`). The flag is an env var with a CLOSED value set validated at startup: an unknown `VIDO_SUBTITLE_PIPELINE_MODE` fails the process instead of silently falling back to legacy, because a typo'd `pipelien` that quietly kept the old behaviour looks exactly like "the pipeline is broken" to an operator who believes they enabled it. Nothing downstream of main.go compares the raw string — `SubtitlePipelineEnabled()` is the single read (D5's ban on a flag that spreads). The seam needed a `batchEngine` port before it could be tested at all: with `bp.engine` typed as the concrete `*Engine`, "legacy is byte-identical" could only ever be a claim about a diff; it is now an assertion over all six captured arguments including the CN-policy `ProductionCountry`. `processViaPipeline` maps `ProcessOutcome` onto `EngineResult` so the batch's success/fail bookkeeping reads the same either side of the seam — with two deliberate mappings: Score/ProviderUsed stay zero (a generated subtitle was never scored against providers, sub-1-5b AC #6.3), and a nil-`Run` outcome (the P5 pre-flight early-exit) is a SUCCESS, since "this item already has its sidecar" is the desired result of a re-scan. |
 
 ---
 

@@ -208,13 +208,17 @@ func (m *mockPQMovieRepo) GetDistinctGenres(_ context.Context) ([]string, error)
 	return nil, nil
 }
 func (m *mockPQMovieRepo) GetYearRange(_ context.Context) (int, int, error) { return 0, 0, nil }
-func (m *mockPQMovieRepo) Count(_ context.Context) (int, error)            { return 0, nil }
+func (m *mockPQMovieRepo) Count(_ context.Context) (int, error)             { return 0, nil }
 func (m *mockPQMovieRepo) BulkCreate(_ context.Context, _ []*models.Movie) error {
 	return nil
 }
 func (m *mockPQMovieRepo) FindByParseStatus(_ context.Context, _ models.ParseStatus) ([]models.Movie, error) {
 	return nil, nil
 }
+func (m *mockPQMovieRepo) UpdateSubtitleGenerationStatus(ctx context.Context, id string, status models.SubtitleStatus, path, language string) error {
+	return nil
+}
+
 func (m *mockPQMovieRepo) UpdateSubtitleStatus(_ context.Context, _ string, _ models.SubtitleStatus, _, _ string, _ float64) error {
 	return nil
 }
@@ -303,13 +307,17 @@ func (m *mockPQSeriesRepo) GetDistinctGenres(_ context.Context) ([]string, error
 	return nil, nil
 }
 func (m *mockPQSeriesRepo) GetYearRange(_ context.Context) (int, int, error) { return 0, 0, nil }
-func (m *mockPQSeriesRepo) Count(_ context.Context) (int, error)            { return 0, nil }
+func (m *mockPQSeriesRepo) Count(_ context.Context) (int, error)             { return 0, nil }
 func (m *mockPQSeriesRepo) BulkCreate(_ context.Context, _ []*models.Series) error {
 	return nil
 }
 func (m *mockPQSeriesRepo) FindByParseStatus(_ context.Context, _ models.ParseStatus) ([]models.Series, error) {
 	return nil, nil
 }
+func (m *mockPQSeriesRepo) UpdateSubtitleGenerationStatus(ctx context.Context, id string, status models.SubtitleStatus, path, language string) error {
+	return nil
+}
+
 func (m *mockPQSeriesRepo) UpdateSubtitleStatus(_ context.Context, _ string, _ models.SubtitleStatus, _, _ string, _ float64) error {
 	return nil
 }
@@ -419,6 +427,10 @@ func (m *mockPQEpisodeRepo) FindBySeasonID(_ context.Context, _ string) ([]model
 }
 
 func (m *mockPQEpisodeRepo) FindBySeasonNumber(_ context.Context, _ string, _ int) ([]models.Episode, error) {
+	return nil, nil
+}
+
+func (m *mockPQEpisodeRepo) FindMissingZhHantSubtitle(context.Context) ([]models.Episode, error) {
 	return nil, nil
 }
 
@@ -574,8 +586,8 @@ func TestParseQueueService_ProcessNextJob_ParseFailed(t *testing.T) {
 
 	parserSvc := &mockPQParserService{
 		result: &parser.ParseResult{
-			Status: parser.ParseStatusFailed,
-			ErrorMessage:  "could not parse filename",
+			Status:       parser.ParseStatusFailed,
+			ErrorMessage: "could not parse filename",
 		},
 	}
 

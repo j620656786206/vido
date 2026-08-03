@@ -59,6 +59,12 @@ type Config struct {
 	// ClaudeModel overrides the Claude model id (9R-1). Empty = provider default.
 	ClaudeModel string
 
+	// SubtitlePipelineMode selects the subtitle backend behind the D5 flag
+	// (sub-1-6 AC #1): "legacy" (default, the Epic-8 search engine) or
+	// "pipeline" (the M1 extract-and-translate generation pipeline). Read it
+	// through SubtitlePipelineEnabled(), never by comparing the string.
+	SubtitlePipelineMode string
+
 	// AI throttle + budget (Story 9R-11). AIMaxConcurrent/AIRatePerSec govern
 	// the shared Governor; AIRunBudgetUSD is the per-run cost ceiling
 	// (0 = unlimited, metering still logged).
@@ -147,6 +153,14 @@ func Load() (*Config, error) {
 	cfg.FallbackDelayMs = cfg.loadInt("FALLBACK_DELAY_MS", 100)
 	cfg.CircuitBreakerFailureThreshold = cfg.loadInt("CIRCUIT_BREAKER_FAILURE_THRESHOLD", 5)
 	cfg.CircuitBreakerTimeoutSeconds = cfg.loadInt("CIRCUIT_BREAKER_TIMEOUT_SECONDS", 30)
+
+	// Subtitle generation pipeline flag (D5, sub-1-6). Validated here so an
+	// unknown value fails the process at startup rather than silently keeping
+	// legacy behaviour on an install whose operator believes it is enabled.
+	cfg.SubtitlePipelineMode = cfg.loadString("VIDO_SUBTITLE_PIPELINE_MODE", SubtitlePipelineModeLegacy)
+	if err := validateSubtitlePipelineMode(cfg.SubtitlePipelineMode); err != nil {
+		return nil, err
+	}
 
 	// Load database configuration
 	dbCfg, err := LoadDatabaseConfig()

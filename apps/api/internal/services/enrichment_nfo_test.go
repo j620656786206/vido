@@ -155,6 +155,10 @@ func (m *mockMovieRepoForNFO) Count(ctx context.Context) (int, error)           
 func (m *mockMovieRepoForNFO) BulkCreate(ctx context.Context, movies []*models.Movie) error {
 	return nil
 }
+func (m *mockMovieRepoForNFO) UpdateSubtitleGenerationStatus(ctx context.Context, id string, status models.SubtitleStatus, path, language string) error {
+	return nil
+}
+
 func (m *mockMovieRepoForNFO) UpdateSubtitleStatus(ctx context.Context, id string, status models.SubtitleStatus, path, language string, score float64) error {
 	return nil
 }
