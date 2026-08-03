@@ -136,6 +136,42 @@ func (r *EpisodeRepository) FindBySeriesID(ctx context.Context, seriesID string)
 	return scanEpisodeRows(rows)
 }
 
+// missingZhHantSubtitleEpisodeWhere is the episode-grain twin of
+// missingZhHantSubtitleWhere (movie_repository.go): "needs generation" means no
+// zh-Hant subtitle on record AND a media file to extract from.
+//
+// Deliberately BROADER than a subtitle_status filter, for the same reason as
+// the movie predicate: an episode with a found ENGLISH subtitle still lacks
+// zh-Hant and is in scope. Completed items self-exclude once generation writes
+// subtitle_language='zh-Hant', which is what makes a re-scan free.
+//
+// Unlike movies, the episodes table has no is_removed column — removal is
+// modelled by deleting the row (migration 006), so there is no soft-delete
+// clause to mirror.
+const missingZhHantSubtitleEpisodeWhere = `
+	(subtitle_language IS NULL OR subtitle_language != 'zh-Hant')
+	AND file_path IS NOT NULL AND file_path != ''
+`
+
+// FindMissingZhHantSubtitle retrieves episodes that need generation
+// (story sub-1-6 AC #11). Ordered by series then season/episode so a batch
+// queue reads in broadcast order — which also groups a show's episodes
+// together, giving the D10 per-show gate its warm prompt prefix.
+func (r *EpisodeRepository) FindMissingZhHantSubtitle(ctx context.Context) ([]models.Episode, error) {
+	query := `SELECT ` + episodeSelectColumns + `
+		FROM episodes
+		WHERE ` + missingZhHantSubtitleEpisodeWhere + `
+		ORDER BY series_id, season_number, episode_number, id`
+
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query episodes missing zh-Hant subtitle: %w", err)
+	}
+	defer rows.Close()
+
+	return scanEpisodeRows(rows)
+}
+
 // FindBySeasonNumber retrieves all episodes for a specific season of a series
 func (r *EpisodeRepository) FindBySeasonNumber(ctx context.Context, seriesID string, seasonNumber int) ([]models.Episode, error) {
 	query := `SELECT ` + episodeSelectColumns + `

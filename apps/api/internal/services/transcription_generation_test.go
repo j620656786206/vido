@@ -33,6 +33,10 @@ type fakeSubtitleWriter struct {
 	err   error
 }
 
+func (f *fakeSubtitleWriter) UpdateSubtitleGenerationStatus(ctx context.Context, id string, status models.SubtitleStatus, path, language string) error {
+	return nil
+}
+
 func (f *fakeSubtitleWriter) UpdateSubtitleStatus(_ context.Context, id string, status models.SubtitleStatus, path, language string, score float64) error {
 	f.calls = append(f.calls, subtitleWriteCall{ID: id, Status: status, Path: path, Language: language, Score: score})
 	return f.err

@@ -84,31 +84,100 @@ type BatchItemCollector interface {
 	CollectEpisodesBySeasonID(ctx context.Context, seasonID string) ([]BatchItem, error)
 }
 
+// batchEngine is the narrow port over *Engine that the batch loop calls. It
+// exists so the D5 flag seam can be proven with a spy: "legacy is byte-identical"
+// has to be an assertion over captured arguments, not a claim about a diff.
+type batchEngine interface {
+	Process(ctx context.Context, mediaID, mediaType, mediaFilePath string,
+		query providers.SubtitleQuery, mediaResolution string, opts ...ProcessOptions) EngineResult
+}
+
+// ItemProcessor is the D5 seam (sub-1-6 AC #1): the generation pipeline's
+// per-item entry point. *Pipeline satisfies it.
+//
+// A nil ItemProcessor IS legacy mode. The flag itself never reaches this
+// package — main.go reads it once at startup and either wires this option or
+// does not, which is what keeps the flag out of the stages, the handlers and
+// the scanner path (D5's ban on a flag that spreads).
+type ItemProcessor interface {
+	ProcessItem(ctx context.Context, ref MediaRef, opts ProcessItemOptions) (*ProcessOutcome, error)
+}
+
 // BatchProcessor manages batch subtitle processing with concurrency control.
 type BatchProcessor struct {
-	engine  *Engine
+	engine  batchEngine
 	sseHub  *sse.Hub
 	config  BatchConfig
 	collect BatchItemCollector
+
+	// item is the generation pipeline when the D5 flag is on, nil in legacy
+	// mode. It is the ONE conditional the flag produces.
+	item ItemProcessor
+
+	// configured is the FR23 capability gate (sub-1-6 AC #5) — the same
+	// predicate the endpoint and the enqueue sweep read. nil = allowed.
+	configured   func() bool
+	gateWarnOnce sync.Once
 
 	mu           sync.Mutex
 	activeBatch  *BatchProgress
 	activeCancel context.CancelFunc
 }
 
+// BatchProcessorOption configures optional batch dependencies. Variadic so the
+// existing four-argument construction keeps working unchanged.
+type BatchProcessorOption func(*BatchProcessor)
+
+// WithItemProcessor turns on the D5 pipeline seam. Wired by main.go only when
+// VIDO_SUBTITLE_PIPELINE_MODE=pipeline.
+func WithItemProcessor(item ItemProcessor) BatchProcessorOption {
+	return func(bp *BatchProcessor) { bp.item = item }
+}
+
+// WithPipelineGate installs the FR23 capability predicate on the batch seam
+// (sub-1-6 AC #5's third entry point). main.go already refuses to wire an
+// ItemProcessor without a translation key, so this is the belt to that braces:
+// a future wiring change that hands the seam a pipeline it cannot feed makes
+// the batch fall back to the provider search that still works, instead of
+// failing every item on a missing key.
+func WithPipelineGate(configured func() bool) BatchProcessorOption {
+	return func(bp *BatchProcessor) { bp.configured = configured }
+}
+
+// pipelineAllowed reports whether the seam may enter the generation pipeline.
+// The denial is logged ONCE for the process, not once per item — a batch of 400
+// episodes must not write 400 identical lines (AC #5).
+func (bp *BatchProcessor) pipelineAllowed() bool {
+	if bp.item == nil {
+		return false
+	}
+	if bp.configured == nil || bp.configured() {
+		return true
+	}
+	bp.gateWarnOnce.Do(func() {
+		slog.Info("subtitle generation pipeline gated — no translation key configured; batch falls back to provider search")
+	})
+	return false
+}
+
 // NewBatchProcessor creates a new BatchProcessor.
 func NewBatchProcessor(
-	engine *Engine,
+	engine batchEngine,
 	sseHub *sse.Hub,
 	collector BatchItemCollector,
 	config BatchConfig,
+	opts ...BatchProcessorOption,
 ) *BatchProcessor {
-	return &BatchProcessor{
+	bp := &BatchProcessor{
 		engine:  engine,
 		sseHub:  sseHub,
 		config:  config,
 		collect: collector,
 	}
+	for _, opt := range opts {
+		opt(bp)
+	}
+	return bp
 }
 
 // Cancel stops the active batch processing, if any.
@@ -239,10 +308,18 @@ func (bp *BatchProcessor) process(ctx context.Context, batchID string, items []B
 			ProductionCountry: item.ProductionCountry,
 		}
 
-		// Process the item
-		query := providers.SubtitleQuery{Title: item.Title}
-		result := bp.engine.Process(ctx, item.MediaID, item.MediaType, item.MediaFilePath,
-			query, item.Resolution, opts)
+		// ── D5 flag seam (sub-1-6 AC #1) ────────────────────────────────────
+		// THE one conditional the feature flag produces. Everything above and
+		// below is shared bookkeeping, so a batch reports identically whichever
+		// backend ran it.
+		var result EngineResult
+		if bp.pipelineAllowed() {
+			result = bp.processViaPipeline(ctx, item)
+		} else {
+			query := providers.SubtitleQuery{Title: item.Title}
+			result = bp.engine.Process(ctx, item.MediaID, item.MediaType, item.MediaFilePath,
+				query, item.Resolution, opts)
+		}
 
 		if result.Success {
 			successCount++
@@ -392,6 +469,37 @@ func (bp *BatchProcessor) broadcastComplete(batchID string, total, success, fail
 			"status":        "complete",
 		},
 	})
+}
+
+// processViaPipeline adapts one ProcessItem call onto the batch loop's
+// EngineResult bookkeeping (sub-1-6 AC #1).
+//
+// Mapping notes:
+//   - Score / ProviderUsed stay zero: a GENERATED subtitle was never scored
+//     against provider results, and claiming a provider would make it
+//     indistinguishable from a search hit (sub-1-5b AC #6.3).
+//   - A nil-Run outcome is the P5 pre-flight early-exit — the item already had
+//     an acceptable sidecar. That is the desired result of a re-scan, so it
+//     counts as a SUCCESS, not a failure.
+func (bp *BatchProcessor) processViaPipeline(ctx context.Context, item BatchItem) EngineResult {
+	outcome, err := bp.item.ProcessItem(ctx,
+		MediaRef{ID: item.MediaID, MediaType: item.MediaType},
+		// The batch never forces: force is the operator's lever on the manual
+		// endpoint (AC #4). An auto-run that re-translated everything on every
+		// scan would burn the budget the P5 pre-flight exists to protect.
+		ProcessItemOptions{})
+	if err != nil {
+		return EngineResult{Error: err}
+	}
+	if outcome == nil {
+		return EngineResult{Error: fmt.Errorf("subtitle pipeline returned no outcome for %s %s",
+			item.MediaType, item.MediaID)}
+	}
+	return EngineResult{
+		Success:      true,
+		SubtitlePath: outcome.SubtitlePath,
+		Language:     deliveredLanguage,
+	}
 }
 
 // --- Default Collector Implementation ---

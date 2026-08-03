@@ -419,7 +419,9 @@ func (p *Pipeline) observeChunk(ctx context.Context, chunk, total int, usage ai.
 		}
 	}
 
-	p.emitProgress(scope.ref, StageTranslating, fmt.Sprintf("translating chunk %d/%d", chunk, total))
+	// The format is a shared const so the SSE bridge can parse the counters back
+	// out (progress_sse.go) without the two literals silently drifting apart.
+	p.emitProgress(scope.ref, StageTranslating, fmt.Sprintf(translateChunkProgressFormat, chunk, total))
 }
 
 // deliveredLanguage / deliveredFormat are what M1 always writes. They are

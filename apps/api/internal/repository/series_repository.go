@@ -795,6 +795,13 @@ func (r *SeriesRepository) FindByParseStatus(ctx context.Context, status models.
 	return seriesList, nil
 }
 
+// UpdateSubtitleGenerationStatus is the series-row twin of the movie method —
+// see MovieRepository.UpdateSubtitleGenerationStatus for why the search columns
+// must stay untouched.
+func (r *SeriesRepository) UpdateSubtitleGenerationStatus(ctx context.Context, id string, status models.SubtitleStatus, path, language string) error {
+	return updateSubtitleGenerationStatus(ctx, r.db, "series", id, status, path, language)
+}
+
 // UpdateSubtitleStatus updates subtitle-related fields for a series
 func (r *SeriesRepository) UpdateSubtitleStatus(ctx context.Context, id string, status models.SubtitleStatus, path, language string, score float64) error {
 	now := time.Now()

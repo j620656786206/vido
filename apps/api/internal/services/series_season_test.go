@@ -26,6 +26,9 @@ type stubEpisodeRepo struct {
 func (s *stubEpisodeRepo) FindBySeasonNumber(_ context.Context, _ string, _ int) ([]models.Episode, error) {
 	return s.episodes, s.err
 }
+func (s *stubEpisodeRepo) FindMissingZhHantSubtitle(context.Context) ([]models.Episode, error) {
+	return nil, nil
+}
 func (s *stubEpisodeRepo) Create(context.Context, *models.Episode) error             { return nil }
 func (s *stubEpisodeRepo) FindByID(context.Context, string) (*models.Episode, error) { return nil, nil }
 func (s *stubEpisodeRepo) FindBySeriesID(context.Context, string) ([]models.Episode, error) {

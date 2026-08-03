@@ -44,6 +44,10 @@ type mockStatusUpdater struct {
 	callCount  int
 }
 
+func (r *mockStatusUpdater) UpdateSubtitleGenerationStatus(ctx context.Context, id string, status models.SubtitleStatus, path, language string) error {
+	return nil
+}
+
 func (r *mockStatusUpdater) UpdateSubtitleStatus(_ context.Context, _ string, status models.SubtitleStatus, path, lang string, score float64) error {
 	r.lastStatus = status
 	r.lastPath = path

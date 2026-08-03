@@ -9,6 +9,20 @@ This guide covers deploying Vido using Docker and Docker Compose.
 - **Memory**: Minimum 512MB RAM available
 - **Storage**: At least 1GB for application + space for your media library
 
+### What the image already includes
+
+You do **not** need to install anything on the host beyond Docker:
+
+- **ffmpeg / ffprobe are bundled in the image.** The subtitle pipeline uses
+  `ffprobe` to enumerate embedded subtitle tracks and `ffmpeg` to extract them.
+  Because they ship inside the container, a host without ffmpeg is fine — but
+  note the inverse: if you build a custom image and drop them, subtitle
+  extraction degrades **silently** (every item routes to "no text source"
+  instead of failing loudly).
+- **The image is multi-architecture** (`linux/amd64` + `linux/arm64`), so the
+  same `docker compose pull` works on an x86 NAS (Synology DS920+, QNAP,
+  Unraid) and on ARM boards without picking a different tag.
+
 ## Quick Start
 
 Deploy Vido in under 5 minutes:
@@ -54,6 +68,31 @@ cp .env.example .env
 | ---------------- | -------------------- | ------------------------------------- |
 | `DB_PATH`        | `/vido-data/vido.db` | Database file path (inside container) |
 | `DB_WAL_ENABLED` | `true`               | Enable WAL mode                       |
+
+#### Subtitle Generation Variables
+
+Vido can generate a Traditional-Chinese (`zh-Hant`) subtitle for media that has
+no matching subtitle online, by extracting the embedded track and translating
+it. This is **off by default**:
+
+| Variable                      | Default  | Description                                                                                  |
+| ----------------------------- | -------- | -------------------------------------------------------------------------------------------- |
+| `VIDO_SUBTITLE_PIPELINE_MODE` | `legacy` | `legacy` = subtitle search only (unchanged behaviour). `pipeline` = also generate subtitles. |
+| `CLAUDE_API_KEY`              | (none)   | Translation provider key. Required when the mode is `pipeline`.                              |
+
+Notes:
+
+- **Unknown values fail startup on purpose.** A typo such as `pipelien` stops
+  the server rather than quietly staying on `legacy` — otherwise "I enabled it
+  and nothing happens" is indistinguishable from a broken pipeline.
+- **Both are needed together.** `pipeline` without `CLAUDE_API_KEY` logs one
+  line at startup and keeps the search-only behaviour; the manual trigger
+  endpoint answers `409 AI_NOT_CONFIGURED`.
+- Once enabled, generation runs automatically after each library scan for items
+  with no `zh-Hant` subtitle, at a fixed concurrency of 2 so the NAS stays
+  responsive. Progress arrives on the existing `subtitle_progress` SSE stream.
+- There is no settings-page toggle yet; these are environment variables and a
+  restart is required to change them.
 
 ### Media Library Setup
 
