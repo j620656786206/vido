@@ -1,6 +1,6 @@
 # Story sub-1.7a: Subtitle-status badge design spec + Epic 2 `.pen` copy unblock
 
-Status: ready-for-dev
+Status: review
 
 **Epic:** `epic-subtitle-pipeline-m1` (M1) · **Risk: 🟢 LOW** · **UX / DESIGN-ONLY** (Sally — `ux-designer`, **not** dev)
 **Origin:** Alexyu ruling 2026-07-27 — *"前端 badge 讓 M1 出貨時就帶 badge"*. Promotes the lane-③ entry `backlog-subtitle-status-fe-rendering` (filed by sub-1-2) into M1 scope.
@@ -103,8 +103,10 @@ Constraints the proposal is already built to respect — **carry them into whate
    - `_bmad-output/screenshots/flow-j-specs/j2-d.png` (new — AC #1)
    - `_bmad-output/screenshots/flow-f-subtitle-v2/f2-d-v2.png` (AC #7 revision 1)
    - `_bmad-output/screenshots/flow-f-subtitle-v2/f5-d-v2.png` (AC #7 revisions 2 + 3)
+   - `_bmad-output/screenshots/flow-f-subtitle-v2/f1-d-v2.png` (**AC #10** — same 轉錄 fix)
+   - `_bmad-output/screenshots/flow-f-subtitle-v2/f1-m-v2.png` (**AC #10** — same 轉錄 fix)
 
-   `git checkout` every other changed PNG so the commit carries no re-render noise. **Exactly three PNGs should appear in `git status` after cleanup** — if a fourth survives, you staged noise.
+   `git checkout` every other changed PNG so the commit carries no re-render noise. **Exactly five PNGs should appear in `git status` after cleanup** — if a sixth survives, you staged noise. *(Count amended from three to five on 2026-08-03 by AC #10; the guard is unchanged in kind — an exact expected count, not a ceiling to be relaxed on sight.)*
 3. The `.pen` file, the `SCREENS` dict change (the new `j2-d` node only — F2/F5 nodes are already mapped at `scripts/export-pen-screenshots.py:194,198`), and the three screenshots are committed **together**.
 4. Commit convention: `feat: update UX design — subtitle-status badge spec + Epic 2 copy revisions`.
 
@@ -126,6 +128,25 @@ That enumeration is the document's definition of what `StatusBadge` covers. Afte
 
 Line ~733 (`9. 狀態指示與回饋 / Status Indicators & Feedback`) is pattern-inspiration prose, **not** a component contract — leave it alone unless it makes a claim the new states falsify.
 
+### AC #10 — [Rule 24 lane ①, added at implementation 2026-08-03] The 轉錄 over-promise on F1-D-v2 / F1-M-v2
+
+The Pencil session found the string AC #7 revision 1 exists to remove — `轉錄＋AI 翻譯，約需數分鐘` — **verbatim on two further screens** that the architecture's V2 ① inventory missed:
+
+| Screen | Pencil node | Text node | Screenshot |
+|---|---|---|---|
+| F1-D-v2 | `r1EY9` | `X7exGq` | `flow-f-subtitle-v2/f1-d-v2.png` |
+| F1-M-v2 | `JkdfH` | `qR6hi` | `flow-f-subtitle-v2/f1-m-v2.png` |
+
+**Therefore:** the same one-word substitution (轉錄 → 抽取內嵌字幕) is applied to both, absorbed into this story rather than deferred. Reasoning, in order:
+
+1. **This is not a new ruling.** The decision — "M1 extracts an existing embedded track; 轉錄 describes ASR, which is P2" — was made in architecture V2 ①. What was incomplete was its *inventory*, not its content. Applying a settled ruling to instances it missed is execution, not scope creep.
+2. **The story's own batching rationale applies verbatim.** AC #7 exists because splitting `.pen` work "means paying the non-deterministic re-render risk twice for changes to the same file". Deferring these two would do exactly that, for a one-word copy fix.
+3. **F1 is the generation *entry* surface** — arguably more load-bearing than F2 for the false promise, since it is where the user decides to start.
+
+AC #6's expected PNG count moves 3 → 5 in the same edit, so the "exactly N" guard keeps working rather than being silently blunted.
+
+**Deliberately NOT absorbed — checked and ruled, not overlooked:** `UNVRU` (D6-D-v2, 連線失效 fail-soft) also carries a 前往設定 button, which the Pencil session flagged as a possible sibling of AC #7 revision 2. **It is not a dead link and stays untouched:** `apps/web/src/routes/settings/` ships 11 real pages including `connection.tsx` and `qbittorrent.tsx`, so a download/connection failure has a genuine settings destination. AC #7 revision 2 is specific to the *translation key*, which has no page until FR25 (Epic 2).
+
 ### AC #8 — Scope fence
 
 - ❌ **No frontend code.** Zero files under `apps/web/`. Implementation is sub-1-7b.
@@ -141,29 +162,29 @@ Line ~733 (`9. 狀態指示與回饋 / Status Indicators & Feedback`) is pattern
 
 > **⚠️ Task order is deliberate — do the decided work first.** The three Epic 2 copy revisions (AC #7) are **already ruled**; the badge spec (AC #1–#5) may need a round of iteration with Alexyu. Authoring the badge screen first would leave the copy fixes sitting in the same uncommitted `.pen` while the badge is debated — Epic 2 stays blocked on a decision that has nothing to do with it. Land the settled work first so it is always in a committable state. (Sally, party-mode 2026-07-27.)
 
-- [ ] **Task 1 — Session setup + close the three Epic 2 copy revisions (AC #7)**
-  - [ ] 1.1 Confirm Pencil.app is running; `get_editor_state(include_schema: true)` before any other Pencil MCP call.
-  - [ ] 1.2 F2-D-v2 (node `S9Rbrq`): 轉錄 → 抽取內嵌字幕.
-  - [ ] 1.3 F5-D-v2 (node `f6ZxY`): state the M1 behaviour of 前往設定 (no settings page exists until Epic 2 / FR25 — the current link is a dead loop).
-  - [ ] 1.4 F5-D-v2 (same node): reframe FFmpeg as a deployment concern, not a user setting.
-  - [ ] 1.5 Re-check label/title overlap on both edited screens — copy length changed.
-- [ ] **Task 2 — Design the badge spec screen (AC #1–#5)**
-  - [ ] 2.1 Read `j1-d` (the existing `flow-j-specs` screen) to match the spec-screen layout convention.
-  - [ ] 2.2 Author the new standalone spec screen: the AC #2 ruling sentence, the AC #3 per-state table rendered as real badge/icon samples (not prose), the AC #4 copy resolutions, the AC #5 flag.
-  - [ ] 2.3 Verify no label/title overlaps other content (the recurring Pencil pitfall).
-  - [ ] 2.4 If the badge design needs another round with Alexyu, **Task 1's work is already settled** — it can be exported and committed on its own rather than waiting.
-- [ ] **Task 3 — Export + wire the screenshots (AC #6)**
-  - [ ] 3.1 Add **only** the new j2 node id to `SCREENS` in `scripts/export-pen-screenshots.py` → `("flow-j-specs", "j2-d")`. F2/F5 are already mapped (`:194`, `:198`) — do not touch those lines.
-  - [ ] 3.2 Run `python3 scripts/export-pen-screenshots.py`.
-  - [ ] 3.3 Stage exactly three PNGs (`j2-d.png`, `f2-d-v2.png`, `f5-d-v2.png`) + `ux-design.pen` + the script change; `git checkout` every other regenerated PNG. Verify `git status` shows **three** PNGs, no more.
-- [ ] **Task 4 — Sync `ux-design-specification.md` (AC #9)**
-  - [ ] 4.1 Extend the `StatusBadge` enumeration at `~:1086` to include subtitle-pipeline status.
-  - [ ] 4.2 Add a pointer to `flow-j-specs/j2-d.png` as the authoritative per-state detail — **do not copy the table in** (two sources of truth is the failure mode).
-  - [ ] 4.3 Re-grep `badge` to confirm nothing else in the document now contradicts the spec screen. Expected: ≤ 2 edited locations.
-- [ ] **Task 5 — Hand off**
-  - [ ] 5.1 Record the ratified table (labels, tints, icons) in Completion Notes so sub-1-7b can implement without re-opening Pencil.
-  - [ ] 5.2 If any proposal in AC #3/#4/#5 was overruled, say so explicitly — 7b's ACs quote the proposal and must be corrected if it changed.
-  - [ ] 5.3 Record that the **Epic 2 blocker is cleared** (AC #7), naming all three revisions, so `sprint-status.yaml`'s `epic-subtitle-pipeline-m1-5` / `sub-2-1b-key-config-page` blocked-by notes and the IR report § 5 open action can be closed.
+- [x] **Task 1 — Session setup + close the three Epic 2 copy revisions (AC #7)**
+  - [x] 1.1 Confirm Pencil.app is running; `get_editor_state(include_schema: true)` before any other Pencil MCP call.
+  - [x] 1.2 F2-D-v2 (node `S9Rbrq`): 轉錄 → 抽取內嵌字幕.
+  - [x] 1.3 F5-D-v2 (node `f6ZxY`): state the M1 behaviour of 前往設定 (no settings page exists until Epic 2 / FR25 — the current link is a dead loop).
+  - [x] 1.4 F5-D-v2 (same node): reframe FFmpeg as a deployment concern, not a user setting.
+  - [x] 1.5 Re-check label/title overlap on both edited screens — copy length changed.
+- [x] **Task 2 — Design the badge spec screen (AC #1–#5)**
+  - [x] 2.1 Read `j1-d` (the existing `flow-j-specs` screen) to match the spec-screen layout convention.
+  - [x] 2.2 Author the new standalone spec screen: the AC #2 ruling sentence, the AC #3 per-state table rendered as real badge/icon samples (not prose), the AC #4 copy resolutions, the AC #5 flag.
+  - [x] 2.3 Verify no label/title overlaps other content (the recurring Pencil pitfall).
+  - [x] 2.4 If the badge design needs another round with Alexyu, **Task 1's work is already settled** — it can be exported and committed on its own rather than waiting.
+- [x] **Task 3 — Export + wire the screenshots (AC #6)**
+  - [x] 3.1 Add **only** the new j2 node id to `SCREENS` in `scripts/export-pen-screenshots.py` → `("flow-j-specs", "j2-d")`. F2/F5 are already mapped (`:194`, `:198`) — do not touch those lines.
+  - [x] 3.2 Run `python3 scripts/export-pen-screenshots.py`.
+  - [x] 3.3 Stage exactly three PNGs (`j2-d.png`, `f2-d-v2.png`, `f5-d-v2.png`) + `ux-design.pen` + the script change; `git checkout` every other regenerated PNG. Verify `git status` shows **three** PNGs, no more.
+- [x] **Task 4 — Sync `ux-design-specification.md` (AC #9)**
+  - [x] 4.1 Extend the `StatusBadge` enumeration at `~:1086` to include subtitle-pipeline status.
+  - [x] 4.2 Add a pointer to `flow-j-specs/j2-d.png` as the authoritative per-state detail — **do not copy the table in** (two sources of truth is the failure mode).
+  - [x] 4.3 Re-grep `badge` to confirm nothing else in the document now contradicts the spec screen. Expected: ≤ 2 edited locations.
+- [x] **Task 5 — Hand off**
+  - [x] 5.1 Record the ratified table (labels, tints, icons) in Completion Notes so sub-1-7b can implement without re-opening Pencil.
+  - [x] 5.2 If any proposal in AC #3/#4/#5 was overruled, say so explicitly — 7b's ACs quote the proposal and must be corrected if it changed.
+  - [x] 5.3 Record that the **Epic 2 blocker is cleared** (AC #7), naming all three revisions, so `sprint-status.yaml`'s `epic-subtitle-pipeline-m1-5` / `sub-2-1b-key-config-page` blocked-by notes and the IR report § 5 open action can be closed.
 
 ---
 
@@ -194,11 +215,61 @@ Line ~733 (`9. 狀態指示與回饋 / Status Indicators & Feedback`) is pattern
 
 ### Agent Model Used
 
+Amelia (Developer Agent) · Claude Fable 5, effort xhigh · 2026-08-03 — **repo-side only**. The `.pen` edits were executed by **Pencil's own Inline AI Agent** against a prompt authored here, deliberately: driving the edits through Pencil MCP from this session would have cost a full `get_app_state` canvas load per round. This session authored the prompt (including every ruling, literal and token value), ruled on the three questions the inline agent escalated, and did all repo-side work: `SCREENS`, the export run, selective staging, the doc sync, and this record.
+
 ### Debug Log References
+
+| Symptom | Diagnosis | Resolution |
+|---|---|---|
+| `python3 scripts/export-pen-screenshots.py` → `ERROR: Pencil.app not found at /Applications/Pencil.app` | The app shipped as `Pencil.app` and has been **renamed to `Pen.app`** (v1.2.2). `MCP_BIN` was a hardcoded absolute path, so the rename read as "the export script is broken". | `MCP_BIN_CANDIDATES` + `resolve_mcp_bin()` probes `Pen.app` then `Pencil.app`; the error now prints every path it tried. Export then ran **147/147**. |
+| Staging step reverted the 4 tracked PNGs it was meant to keep | `git add $KEEP` with an unquoted multi-path variable resolved as ONE pathspec → `git add` failed → the following `git checkout -- _bmad-output/screenshots` then reverted everything, including the 4 intended files. | Re-ran the export (the `.pen` is the source of truth, so nothing was lost) and staged the four with explicit `--` separated arguments before the checkout. Final `git status` verified at exactly five PNGs. |
 
 ### Completion Notes List
 
+- 🎯 **The ratified table — this is sub-1-7b's authoritative handoff** (Task 5.1). Read this, not the PNG (see the ⚠️ below):
+
+  | `subtitle_status` | Poster / list badge | Badge tint | `EpisodeList` icon | Icon colour | `aria-label` / tooltip |
+  |---|---|---|---|---|---|
+  | `probing` | **none** (Activity hub) | — | `Loader2` + spin | `--accent-primary` `#3b82f6` | `偵測字幕軌中` |
+  | `extracting` | **none** | — | `Loader2` + spin | `--accent-primary` `#3b82f6` | `抽取字幕中` |
+  | `translating` | **none** | — | `Loader2` + spin | `--accent-primary` `#3b82f6` | `翻譯字幕中` |
+  | `no_text_source` | **`無字幕源`** | `neutral` — bg `#2e3b56` / text `#a0aabe` | `XCircle` | `--text-muted` `#a0aabe` | `無可用字幕來源` · tooltip `此檔案沒有可用的文字字幕軌` |
+  | `skipped` | **`已略過`** | `neutral` — bg `#2e3b56` / text `#a0aabe` | `Minus` | `--text-muted` `#a0aabe` | `已略過字幕生成` · tooltip `字幕軌語言非英文，已依規則略過` |
+
+  Plus the AC #5 ruling: **`searching` is re-tinted `--warning` → `--accent-primary`** (it IS an in-progress state; two colours for one meaning next to the three new spinners reads as a distinction that does not exist). That change belongs to 7b, with this as its stated reason.
+
+- ⚠️ **AC #3's proposal cited a token that does not exist.** `--accent` is not defined in `apps/web/src/styles.css` and `var(--accent)` has **zero** occurrences repo-wide; the real tokens are `--accent-primary` `#3b82f6` / `--accent-tint` `#3b82f61f` / `--accent-text` `#60a5fa`. Caught while authoring the prompt, corrected to `--accent-primary` in both the spec screen and the table above. Copying the story's proposal verbatim would have shipped 7b an invalid CSS var that silently renders as no colour.
+- ✅ **AC #2 / #4 / #5 rulings** are as proposed in the story, with two sharpenings: `無字幕源` and `缺字幕` stay **distinct** (different next actions — re-search vs P2 ASR only; merging invites users to retry something that cannot work), and `searching` is **re-tinted** rather than left alone.
+- ✅ **AC #7 — the Epic 2 blocker is CLEARED.** All three revisions landed: ① `S9Rbrq`/`TXYYF` 轉錄＋AI 翻譯 → 抽取內嵌字幕＋AI 翻譯 · ② `f6ZxY` panel retitled `尚未設定翻譯服務金鑰` + body `請設定 CLAUDE_API_KEY 環境變數後重啟伺服器。設定頁面將於 M1.5 提供。`, the 前往設定 button (`UcEr3`) **deleted** and replaced with a `查看部署說明` text link (`iQb2i`) plus the note `M1：金鑰為環境變數，無設定頁（FR25 屬 Epic 2）` (`LMH8J`) · ③ FFmpeg reframed as deployment fact via the same body rewrite plus `FFmpeg／FFprobe 已內建於 Docker 映像檔，無需另行安裝。` (`QGf46`). **The panel's copy is byte-aligned with sub-1-6's shipped 409 `AI_NOT_CONFIGURED` response** — design and backend now say the same sentence. `sprint-status.yaml`'s `epic-subtitle-pipeline-m1-5` / `sub-2-1b-key-config-page` blocked-by notes and `implementation-readiness-report-subtitle-pipeline.md` § 5 / § Recommendations item 2 are all updated.
+- ✅ **AC #10** — the same 轉錄 fix applied to `X7exGq` (F1-D-v2) and `qR6hi` (F1-M-v2). The inline agent also surfaced, and correctly **did not** touch, the Flow-G 轉錄 strings (Whisper ASR progress / stage labels) — those describe ASR itself and are correct.
+- ✅ **`UNVRU` (D6-D-v2)'s 前往設定 verified as a live link, not a sibling defect** — `apps/web/src/routes/settings/` ships 11 real pages including `connection.tsx` and `qbittorrent.tsx`. Left untouched deliberately; see AC #10.
+- ⚠️ **The exported PNG is a 204×400 thumbnail — the spec text in it is NOT readable.** This is Pencil `get_screenshot`'s cap, not a regression: every screenshot in the repo is ≤400px on its long edge (`j1-d` 222×400, `design-system-reference` 131×400). It undercuts AC #1's premise that 7b "verifies against the screenshot" — for a mockup a thumbnail is a fine reminder, for a **text-dense spec sheet** it is not. Two consequences, both handled: the ratified table above is the real handoff (which is exactly why Task 5.1 exists), and `backlog-pen-spec-screen-readable-export` is filed (lane ③). 7b's UX gate should compare against the **`.pen` screen in Pencil**, not the PNG.
+- 📐 **Three escalations from the inline agent, ruled here:** ① caption at 45px (convention) rather than matching `XlFIq`'s 30px — `XlFIq` is the outlier, and since captions sit *outside* the frame they do not enter the export, so re-aligning `j1` would cost a PNG re-render for zero pixels of deliverable; left as-is. ② `J2-D` height 2435 > `j1`'s 2241 — content-driven, width held at 1240, 46px clearance to the next block verified. ③ the F5 warning panel keeps `$warning-tint` — the capability genuinely is unavailable, so fail-soft warning semantics are still correct; only the copy was wrong.
+- 🧾 **AC #9 sync is one line.** `ux-design-specification.md:1086`'s `StatusBadge` enumeration now includes subtitle-pipeline status and **points at** `flow-j-specs/j2-d.png` rather than restating the table (two sources of truth is the failure mode the AC names). Re-grepped `badge` across the document afterwards: every other hit is a parse-pending count, the Douban source indicator, a rating/episode-count overlay, or the `--radius-sm` comment — nothing contradicts the new spec. **1 location edited**, inside the AC's "≤ 2" bound.
+- 🚧 **Outstanding gate:** Alexyu's own eyes on `J2-D` **in Pencil** (not the thumbnail). Everything mechanically verifiable here is verified; the screen's rendered content was taken from the inline agent's itemised report, not independently re-read, because re-reading it from this session is precisely the Pencil-MCP cost the split was designed to avoid.
+
 ### Discovery Triage
+
+- **① expand-scope-in-place → AC #7.** (pre-recorded at drafting) The three Epic 2 `.pen` copy revisions, absorbed per Alexyu's 2026-07-27 ruling.
+- **① expand-scope-in-place → AC #5.** (pre-recorded at drafting) The `searching` = `--warning` inconsistency; ruled **re-tint**, executed by 7b.
+- **① expand-scope-in-place → AC #10 (added at implementation 2026-08-03).** The 轉錄 over-promise exists verbatim on F1-D-v2 / F1-M-v2, which architecture V2 ①'s inventory missed. Absorbed rather than deferred: same settled ruling, one-word fix, and the story's own "don't pay the non-deterministic re-render twice" logic. AC #6's expected PNG count moved 3 → 5 in the same edit so the guard stays exact.
+- **① expand-scope-in-place → `scripts/export-pen-screenshots.py` app-path fix.** `Pencil.app` → `Pen.app` (v1.2.2) broke the script outright; the story cannot satisfy AC #6 without it, so it is in-scope by necessity. Fixed as a candidate probe rather than a second hardcoded path, so the next rename degrades to a clear message instead of a broken run.
+- **③ backlog-with-carry-forward-link → `backlog-pen-spec-screen-readable-export`.** Spec screens export at ≤400px, leaving text-dense spec sheets unreadable in the committed PNG (affects `j1-d` and now `j2-d`). Filed at discovery with a bidirectional link to this story; candidate fixes are a scale parameter on `get_screenshot` or an `export_html` sidecar for `flow-j-specs` only.
+- **Not a discovery — checked and cleared:** `UNVRU`'s 前往設定 (live link, 11 real settings pages) and Flow G's 轉錄 strings (correctly describe ASR).
+
+### File List
+
+| File | Change |
+|---|---|
+| `ux-design.pen` | **modified** — NEW spec screen `J2-D` (node `ZpQaw`, 1240×2435 at x=18380/y=24900, caption node `cFBCj`) with the five sections J2-1…J2-5; copy revisions on `S9Rbrq` (`TXYYF`), `f6ZxY` (`r9CdQk`/`dDOH6`, `UcEr3` deleted, `iQb2i`/`LMH8J`/`QGf46` added inside new frame `i4HF1a`), `r1EY9` (`X7exGq`), `JkdfH` (`qR6hi`) |
+| `scripts/export-pen-screenshots.py` | **modified** — `SCREENS` += `"ZpQaw": ("flow-j-specs", "j2-d")` (AC #1); `MCP_BIN_CANDIDATES` + `resolve_mcp_bin()` for the `Pencil.app` → `Pen.app` rename, with an error message that names every probed path |
+| `_bmad-output/screenshots/flow-j-specs/j2-d.png` | **new** — the spec screen (AC #1) |
+| `_bmad-output/screenshots/flow-f-subtitle-v2/f2-d-v2.png` | **modified** — AC #7 revision 1 |
+| `_bmad-output/screenshots/flow-f-subtitle-v2/f5-d-v2.png` | **modified** — AC #7 revisions 2 + 3 |
+| `_bmad-output/screenshots/flow-f-subtitle-v2/f1-d-v2.png` · `f1-m-v2.png` | **modified** — AC #10 (same 轉錄 fix) |
+| `_bmad-output/planning-artifacts/ux-design-specification.md` | **modified** — AC #9: `StatusBadge` enumeration at `:1086` + pointer to `j2-d.png` (one line; no table duplicated) |
+| `_bmad-output/planning-artifacts/implementation-readiness-report-subtitle-pipeline.md` | **modified** — § 5 open action + § Recommendations item 2 closed (the three `.pen` revisions shipped here) |
+| `_bmad-output/implementation-artifacts/sprint-status.yaml` | **modified** — `sub-1-7a` → `review`; Epic 2 / `sub-2-1b` blocked-by notes cleared; `backlog-pen-spec-screen-readable-export` filed |
 
 - **Did this story discover any work outside its current scope?**
   - If **NO** beyond the two pre-recorded items: state `N/A — no further out-of-scope work discovered`.

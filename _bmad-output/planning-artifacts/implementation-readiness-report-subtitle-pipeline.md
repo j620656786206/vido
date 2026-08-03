@@ -71,7 +71,7 @@ Every M1 FR (~22 unmarked) maps to a named architecture component or decision:
 |---|---|
 | FR6 PRD scope (V1a) | ✅ **Done today** |
 | FR28 `[P2]` tag | ✅ **Done today** |
-| `.pen` copy revisions (F2 "轉錄"→"抽取", F5 "前往設定" M1 behaviour, F5 FFmpeg framing) | ⚠️ **Open** — UX (Sally); affects M1.5 UI copy, not M1 backend. Non-blocking for backend story creation, but must close before the M1.5 UI stories. |
+| `.pen` copy revisions (F2 "轉錄"→"抽取", F5 "前往設定" M1 behaviour, F5 FFmpeg framing) | ✅ **Closed 2026-08-03 by story `sub-1-7a` (AC #7)** — all three shipped in one Pencil session alongside the badge spec screen. The 轉錄 fix also covered F1-D-v2 / F1-M-v2, which this inventory missed (`sub-1-7a` AC #10). F5's panel copy is now byte-aligned with sub-1-6's shipped `AI_NOT_CONFIGURED` 409 response. **Epic 2 / `sub-2-1b` are unblocked.** |
 
 ## 6. Blocking gap for Phase 4
 
@@ -82,7 +82,7 @@ Every M1 FR (~22 unmarked) maps to a named architecture component or decision:
 ## Recommendation
 
 1. **Run `[ES]` (Create Epics and Stories)** for the subtitle pipeline, using the architecture's 7-step implementation sequence as the epic spine and the ~22 M1 FRs as the story source. Fold the G2/G4 measurable thresholds into story acceptance criteria.
-2. **Close the `.pen` copy revisions** (UX) before the M1.5 UI stories — not required for the M1 backend stories.
+2. ~~**Close the `.pen` copy revisions** (UX) before the M1.5 UI stories — not required for the M1 backend stories.~~ ✅ **Done 2026-08-03** — story `sub-1-7a` AC #7 (+ AC #10 for the two screens this inventory missed).
 3. **Re-run the full IR** once stories exist, so epic-coverage and story-quality (the currently-N/A steps) can be validated.
 
 **Bottom line:** planning is coherent and traceable; the gate to dev is `[ES]`, not another planning fix.

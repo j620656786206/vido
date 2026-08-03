@@ -4,9 +4,14 @@
 Usage:
     python3 scripts/export-pen-screenshots.py
 
-Requires Pencil.app to be running. Spawns the Pencil MCP server in stdio mode
-(Pencil 1.1.61 removed the old `--http` transport), captures each design screen,
-and saves PNGs to _bmad-output/screenshots/.
+Requires the Pencil app to be running — installed as `Pen.app` since 1.2.2, and as
+`Pencil.app` before that; both paths are probed (see MCP_BIN_CANDIDATES). Spawns its
+MCP server in stdio mode (1.1.61 removed the old `--http` transport), captures each
+design screen, and saves PNGs to _bmad-output/screenshots/.
+
+Note: `get_screenshot` caps output at 400px on the long edge, so every PNG here is a
+thumbnail. Fine for mockups; a text-dense spec screen (flow-j-specs) is unreadable at
+that size — see backlog-pen-spec-screen-readable-export.
 
 Layout convention (2026-06-05 A–J merged-block rework):
   Screens are named with flow codes `{Flow}{seq}-{D|M}` (desktop/mobile) on the
@@ -23,7 +28,24 @@ import sys
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PEN_FILE = os.path.join(PROJECT_ROOT, "ux-design.pen")
 OUT_DIR = os.path.join(PROJECT_ROOT, "_bmad-output", "screenshots")
-MCP_BIN = "/Applications/Pencil.app/Contents/Resources/app.asar.unpacked/out/mcp-server-darwin-arm64"
+# The app shipped as Pencil.app and was renamed to Pen.app (1.2.2, found at story
+# sub-1-7a). Probe both rather than hardcoding either — a hardcoded path turns the
+# next rename into "the export script is broken" instead of "the app moved".
+MCP_BIN_CANDIDATES = (
+    "/Applications/Pen.app/Contents/Resources/app.asar.unpacked/out/mcp-server-darwin-arm64",
+    "/Applications/Pencil.app/Contents/Resources/app.asar.unpacked/out/mcp-server-darwin-arm64",
+)
+
+
+def resolve_mcp_bin():
+    """First existing candidate, or None."""
+    for candidate in MCP_BIN_CANDIDATES:
+        if os.path.exists(candidate):
+            return candidate
+    return None
+
+
+MCP_BIN = resolve_mcp_bin()
 
 # Screen node ID -> (flow_folder, filename). Filename == canvas frame code (lowercased).
 SCREENS = {
@@ -109,6 +131,9 @@ SCREENS = {
     "SgncH": ("flow-i-advanced-search", "i7-d"),  # rail states spec (genre loading / load-failed) — re-merged
     # Flow J — 設計決策 spec (PosterCard info-density & polish)
     "XlFIq": ("flow-j-specs", "j1-d"),
+    # Subtitle-status badge spec (story sub-1-7a) — the 5 new subtitle_status values'
+    # badge/icon treatment, the transient-vs-terminal ruling, and the copy resolutions.
+    "ZpQaw": ("flow-j-specs", "j2-d"),
     # Design system reference docs (top of canvas, no flow code)
     "8SSzc": ("design-system", "design-system-reference"),
     "sJzat": ("design-system", "component-library"),
@@ -255,8 +280,10 @@ def mcp_call(proc, req_id, method, params, max_lines=500):
 
 
 def main():
-    if not os.path.exists(MCP_BIN):
-        print("ERROR: Pencil.app not found at /Applications/Pencil.app")
+    if MCP_BIN is None:
+        print("ERROR: Pen.app / Pencil.app MCP server not found. Looked in:")
+        for candidate in MCP_BIN_CANDIDATES:
+            print(f"  - {candidate}")
         sys.exit(1)
 
     print("Starting Pencil MCP server (stdio)...")

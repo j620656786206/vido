@@ -1083,7 +1083,7 @@ const posterCardVariants = cva(
 - **DownloadStatusBar:** Real-time download progress with speed/ETA
 - **SidePanel:** Right-side detail panel (Spotify-style)
 - **HoverPreviewCard:** Tooltip-style preview on poster hover
-- **StatusBadge:** Parse status, download status, metadata source indicators
+- **StatusBadge:** Parse status, download status, subtitle-pipeline status, metadata source indicators — per-state labels, tints and `EpisodeList` row icons are specified in `_bmad-output/screenshots/flow-j-specs/j2-d.png` (`ux-design.pen` → `J2-D`), which is authoritative; do not duplicate that table here
 - **SearchBar:** TMDb search with Traditional Chinese autocomplete
 
 ### Design Token Documentation
