@@ -24,6 +24,14 @@ func (m *MockCacheRepository) Get(ctx context.Context, key string) (*CacheEntry,
 	return args.Get(0).(*CacheEntry), args.Error(1)
 }
 
+func (m *MockCacheRepository) GetMany(ctx context.Context, keys []string) (map[string]*CacheEntry, error) {
+	args := m.Called(ctx, keys)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(map[string]*CacheEntry), args.Error(1)
+}
+
 func (m *MockCacheRepository) Set(ctx context.Context, key string, value string, cacheType string, ttl time.Duration) error {
 	args := m.Called(ctx, key, value, cacheType, ttl)
 	return args.Error(0)

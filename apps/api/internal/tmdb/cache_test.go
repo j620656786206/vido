@@ -58,6 +58,21 @@ func (m *MockCacheRepository) Get(ctx context.Context, key string) (*repository.
 	return nil, nil
 }
 
+func (m *MockCacheRepository) GetMany(ctx context.Context, keys []string) (map[string]*repository.CacheEntry, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.getError != nil {
+		return nil, m.getError
+	}
+	out := make(map[string]*repository.CacheEntry, len(keys))
+	for _, key := range keys {
+		if entry, ok := m.data[key]; ok {
+			out[key] = entry
+		}
+	}
+	return out, nil
+}
+
 func (m *MockCacheRepository) Set(ctx context.Context, key string, value string, cacheType string, ttl time.Duration) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()

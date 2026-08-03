@@ -1,6 +1,6 @@
 # Story sub-1.5b: Cache, per-show serialization, and delivery
 
-Status: ready-for-dev
+Status: done
 
 **Epic:** `epic-subtitle-pipeline-m1` (M1) · **Risk: 🔴 HIGH** · **BACKEND-ONLY**
 **Source:** `epics-subtitle-pipeline.md` § Story 1.5b (size-split 2026-07-27, IR-r2 M1) · architecture **D2/D3/D4/D10** + **P1/P5/P9** + § M1 Pilot Instrumentation
@@ -118,11 +118,12 @@ Flow (each numbered step is a required test seam):
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Pre-flight + P5 (AC #2):** predicate helper (reusing `ParseSRT` + placer naming), force/resume semantics + tests (incl. the truncated-file case).
-- [ ] **Task 2 — Segment cache + RunVersion assembly (AC #3):** canonical `MetadataHash`, key builder, `SegmentCache` iface, hit/miss split + merge; tests.
-- [ ] **Task 3 — Prompt-cache policy (AC #4):** TTL flip on block `[1]`, first-chunk detection, `cache_enabled` recording; tests.
-- [ ] **Task 4 — D10 gate (AC #5):** keyed latch + warm window + pruning + cancellation; concurrency tests.
-- [ ] **Task 5 — ProcessItem + delivery (AC #1, #6):** verdict handling, status/run lifecycle, P9-ordered delivery, progress hook, failure policy; the AC #7 seam tests + integration test; record the four Rule 20 acks in Dev Notes; full gates.
+- [x] **Task 1 — Pre-flight + P5 (AC #2):** predicate helper (reusing `ParseSRT` + placer naming), force/resume semantics + tests (incl. the truncated-file case).
+- [x] **Task 2 — Segment cache + RunVersion assembly (AC #3):** canonical `MetadataHash`, key builder, `SegmentCache` iface, hit/miss split + merge; tests.
+- [x] **Task 3 — Prompt-cache policy (AC #4):** TTL flip on block `[1]`, first-chunk detection, `cache_enabled` recording; tests.
+- [x] **Task 4 — D10 gate (AC #5):** keyed latch + warm window + pruning + cancellation; concurrency tests.
+- [x] **Task 5 — ProcessItem + delivery (AC #1, #6):** verdict handling, status/run lifecycle, P9-ordered delivery, progress hook, failure policy; the AC #7 seam tests + integration test; record the four Rule 20 acks in Dev Notes; full gates.
+  - [x] 5.1 (absorbed, Rule 24 lane ① — see Discovery Triage ②) progress hook carries `MediaRef`; sub-1-6's ack line + sprint-status entry corrected in the same change.
 
 ---
 
@@ -149,22 +150,147 @@ Flow (each numbered step is a required test seam):
 
 ### Agent Model Used
 
+Amelia (Developer Agent) · Claude Opus 5 (1M context), effort xhigh · 2026-07-28
+
 ### Debug Log References
+
+RED verified before every task (build failure naming exactly the new symbols, or a failing assertion):
+
+| Task | RED signal |
+|---|---|
+| 1 | `vet: pipeline_test.go:688: undefined: ExpectedSidecarPath` |
+| 2 | `vet: segment_cache_test.go:88: undefined: MetadataHash` |
+| 3 | `vet: pipeline_test.go:860: undefined: processScope` |
+| 4 | `vet: show_gate_test.go:40: undefined: newShowGate` |
+| 5 | build failure on the five item-flow ports |
+
+Falsification checks (deliberately break the implementation, confirm the test catches it, restore):
+
+| Guard | Falsification | Result |
+|---|---|---|
+| D10 wiring | `enterShowGate` forced to always no-op | `TestTranslateTrack_SerializesTheShowsFirstRequest` FAILS — "the second episode's first request must wait" |
+| Failure policy | media revert changed `not_searched` → `not_found` | 8 FAIL lines across `TestProcessItem_FailurePolicy` |
+| Merged-track FR17 guard | `checkTimestampInvariant` removed from `translateWithCache` | **still green** — recorded honestly below, the guard is a construction guard (same class as sub-1-5a's), covered directly by `TestMergeCues_DesyncIsCaughtByTheInvariant` |
+
+Code-review round (2026-08-03) — falsification of the four guards added in review:
+
+| Guard | Falsification | Result |
+|---|---|---|
+| H1 ceiling denominator | `delivered := ceilingTotal(ctx, len(source))` → `len(source)` | `TestProcessItem_StubbornCeilingIsMeasuredAgainstTheDeliveredTrack` FAILS — `1 of 2 cues … over the 5% ceiling` |
+| H2 stubborn not cached | the `delete(final, index)` loop removed | `TestProcessItem_StubbornCuesAreNeverCached` FAILS — "the English fail-soft fallback must not be persisted" |
+| M1 warm-on-success | `entry.warmedAt = released` made unconditional | `TestShowGate_AFailedFirstRequestDoesNotWarmTheShow` FAILS — "a failed request must leave the show cold" |
+| M2 merge completeness | uncovered cue falls back to source text instead of erroring | `TestMergeCues_AnUncoveredCueIsAHardError` FAILS |
 
 ### Completion Notes List
 
+- 🔗 **AC Drift: NONE** (checked `CacheTTLNone|TTL flip`, `NewPipeline`, `ProcessItem` across `_bmad-output/implementation-artifacts/*.md` — 12 hits, all REUSE not DRIFT). The two candidates and why they are REUSE:
+  - The **CacheTTL flip on `buildSystemBlocks`** touches a file in sub-1-5a's File List, but sub-1-5a's own story text states it twice (`:112`, `:220`) as a deliberate deferral — *"Both `CacheTTLNone` in this story — cache policy … is deliberately 1.5b's"*. It is a planned handoff, not drift. Its lock-in test moved WITH the policy rather than being deleted: `TestTranslateTrack_SystemBlocksAreStableFirstAndUncached` → `…AndCacheBreakpointed`, now asserting `[0]=None, [1]=1h`.
+  - **`NewPipeline` gained a variadic `...PipelineOption`.** Backward-compatible: sub-1-5a's three-argument call sites and its CR-M2 `TestNewPipeline_NilPortsPanic` are untouched and green. `NewPipeline` carries no `[@contract-vN]` stamp (sub-1-5a stamped `TranslateTrack`/`TranslateResult`/`TranslateContext` only).
+- 📎 **Contract Stamps: FOUND** (5 stamped ACs across 5 files). Produced: **AC #1 `[@contract-v1]`** (`MediaRef` / `ProcessItemOptions` / `ProcessOutcome` / `ProcessItem`, stamped in `pipeline.go` + `process_item.go`; consumer sub-1-6) — a NEW v1, so **no bump and no stale-mark obligation**. Consumed, all greped at v1 and all reconciling:
+  - `confirmed against [@contract-v1] sub-1-5a AC #2` — `TranslateTrack` / `TranslateResult` / `TranslateContext` consumed **unchanged**; the miss-subset is passed as a reduced `ExtractedTrack`, which the stamped signature already accepts.
+  - `confirmed against [@contract-v1] sub-1-2 AC #2` — every media status written here (`extracting`, `translating`, `found`, `no_text_source`, `skipped`, `not_searched`) is a member of the 9-value set; `IsValid()` guards every write.
+  - `confirmed against [@contract-v1] sub-1-2 AC #4` — `RunVersion`; this story is its cache-key consumer and defines the deferred `MetadataHash` half.
+  - `confirmed against [@contract-v1] sub-1-4 AC #1` — `RouteDecision` / `RouteKind` / `ExtractedTrack`; all five verdicts handled, `default:` fails closed. **`RouteKind` was deliberately NOT extended** with an "already done" member for the pre-flight early-exit (that would be a bump on a shipped contract) — `ProcessOutcome.Run == nil` is the discriminator instead.
+  - `confirmed against [@contract-v1] sub-1-1 AC #5` — `CachingCompleter` / `SystemBlock.CacheTTL` / `CompletionUsage`; this story performs the `CacheTTL1h` flip and reads the two cache-token fields the interface exists to surface.
+- 🎭 **A11y Pre-Flight: N/A** (100% backend — no `apps/web/` files touched).
+- 🎨 **UX Verification: SKIPPED** — no UI changes in this story.
+- **Two caches stayed separate throughout** (the story's headline risk): `subtitle_runs.cache_enabled` is written ONLY from `observeChunk`'s reading of `CompletionUsage` (prompt cache); segment hit/miss counts go to `slog` only. `TestProcessItem_FullCacheHitSkipsTheLLMEntirely` pins the distinction — a 100%-segment-hit item records `cache_enabled=false` because no request was ever sent, and the assertion says so in words.
+- **`observeChunk` fires on `attempt == 0` only.** A semantic retry re-sends the same prefix, so observing it again would double-count progress and could flip the verdict on the second read of an entry the first read created.
+- **Cleanup writes use `context.WithoutCancel`.** Without it, a shutdown-cancelled item would fail its own `failed`-run and `not_searched` writes and strand the row at `translating` forever — the exact phantom in-flight state the failure policy exists to avoid. Covered by `TestProcessItem_CancellationStillRecordsTheFailure`.
+- **`error_message` is bounded to 1000 bytes on a rune boundary.** A wrapped ffmpeg stderr tail (sub-1-4 keeps one) can run long, and provenance is for diagnosis, not archival.
+- **Open Questions answered as ruled** (both were "dev proceeds with the stated ruling"): (1) failure → run `failed` + media `not_searched` — **implemented as ruled**, with the reasoning in `failItem`'s doc comment; (2) segment-cache TTL **30d** — implemented, pinned by `TestStoreCachedCues_WritesFinalTextAtTheThirtyDayTTL` so a change is a deliberate edit.
+- **Gates:** `go test ./...` exit 0 (3 consecutive runs) · `go test ./internal/subtitle/ -race` clean · `pnpm nx test web` 2457 tests / 225 files · `pnpm nx run api:lint` (vet + staticcheck) clean · `pnpm lint:all` 0 errors (120 pre-existing warnings) · `gofmt` clean on all touched files · `prettier --check` clean · no orphaned test workers.
+- **Test count:** +46 new test functions (18 `process_item_test.go`, 12 `segment_cache_test.go`, 9 `show_gate_test.go`, 7 appended to `pipeline_test.go`); package total 242, 0 FAIL.
+
+### Senior Developer Review (AI) — 2026-08-03
+
+Adversarial `/code-review` (Opus 5). **10 findings: 2 HIGH, 4 MEDIUM, 4 LOW.** Every headline claim was proven with a throwaway probe test against the real harness before being written up — the probes were deleted afterwards and the tree verified clean. Rule 7 **PASS** (0 error-code string constants in scope) · Rule 20 **N/A** (no `[@contract-vN→vN+1]`; AC #1 is a new v1) · Rule 25 **N/A** (`project-context.md` untouched) · git-vs-File-List discrepancies: **0**.
+
+**H1 — FR16's 5% stubborn ceiling was measured against the MISS SUBSET, not the delivered track.** `translateWithCache` passes a reduced `ExtractedTrack` (AC #3.5, correctly), but `TranslateTrack`'s ceiling is `stubborn*20 > len(source)` — and `source` had silently become the subset. The ceiling therefore *tightened as the cache warmed*. Proven: 20 cues, 18 hits, 1 stubborn ⇒ `1 of 2 cues … over the 5% ceiling` ⇒ the item **failed**, media reverted to `not_searched`, nothing shipped — while the identical track passes cold at 1/20 = exactly 5%. Fixed with `processScope.fullTrackCues` + `ceilingTotal(ctx, subset)`: the denominator is the DELIVERED track, because cache hits are already-accepted translations that ship. Scope-absent callers (sub-1-5a's own) are byte-identical to how the stage shipped, so **no Rule 20 bump**.
+
+**H2 — stubborn (fail-soft ENGLISH) cues were persisted into the 30-day segment cache.** By NFR-R1 design `TranslateResult.Blocks` carries the English original for a stubborn cue; `storeCachedCues` wrote it as if it were a translation. Proven: the cached value came back as the literal English source line. Blast radius is worse than one cue — the key is cue content + show `MetadataHash`, which is show-level, so one stubborn line is served as a HIT to **every other episode of the show**, and being a hit it never reaches the LLM again short of `--force` or a version bump. Fixed by having `TranslateTrack` record failed indexes onto the per-item scope (`noteStubbornCue`) and having `translateWithCache` delete them from the write set. This shape was chosen deliberately over adding `StubbornIndexes` to `TranslateResult`, which would have been a Rule 20 bump on sub-1-5a's shipped `[@contract-v1]` — the context-scope mechanism this story already established for `cache_enabled` and the D10 key achieves it with zero contract impact. Fail-soft **delivery** is untouched: the cue still ships its English original; only the persistence was wrong.
+
+**M1 — the D10 gate marked a show WARM after a FAILED first request.** `release()` ran before the error check, so a provider 500 on the leader still stamped `warmedAt`. Every subsequent episode then skipped the gate for the full 50-minute window with no provider-side prefix written, each paying the 2× write premium — precisely the cost D10 exists to prevent. Fixed: `release(warmed bool)`. A failed leader still closes the latch (a provider blip must never deadlock the pool — pinned by its own test) but leaves the show cold, so the next waiter legitimately leads a fresh, still-serialized attempt.
+
+**M2 — `mergeCues` had no completeness guard.** Its comment asserted "a cue absent from both is impossible by construction"; the failure mode if that ever stopped holding is an **English cue inside a `.zh-Hant.srt`**, and `checkTimestampInvariant` structurally cannot catch it because it compares Index/Start/End only. Now returns an error naming the first uncovered index. The new test also demonstrates the timestamp guard passing the bad track — which is the argument for why the merge must own the check.
+
+**M3 — per-cue SELECT in `splitCachedCues` (N+1): measured, initially filed — then FIXED by Alexyu's ruling (2026-08-03).** Measured rather than assumed: reads 7.0 µs each on `:memory:`, 8 µs on a file-backed DB with the production pragmas (WAL + NORMAL), and the write path 34 µs each — ~0.02% of an item, so the review initially downgraded this to LOW and filed it. **Alexyu overruled: fix now while it is cheap** — timings describe today's architecture, and an N+1 shape re-emerges silently when the surroundings change (different storage, higher concurrency, a new caller), at which point it costs a second discovery plus a second fix. Shipped: `GetMany` on `CacheRepositoryInterface`/`CacheRepository` (chunked `IN (...)` at 500 placeholders, under SQLite's historical 999-variable floor — a 1000-cue episode crosses that boundary, so the seam has its own falsification-verified test), all three mocks updated (a third mock in `cache_sweep_scheduler_test.go` surfaced beyond the estimated two), the `SegmentCache` port re-shaped `Get`→`GetMany` (still 2 methods), and `splitCachedCues` reads once per track. Trade-off accepted knowingly: a batch read failure now degrades the **whole track** to misses rather than one cue — same Rule 13 case-3 stance at a coarser grain, pinned by the updated test which proves a cached entry also degrades.
+
+**M4 — `cache_enabled` conflates two causes.** A 100%-segment-cached item sends nothing and records `false`, indistinguishable in the column from an item whose prompt prefix genuinely failed to cache — and the M1 pilot's prompt-cache A/B reads exactly this column. The real fix (nullable column) is a migration, which AC #8 fences out, so this story ships the mitigation: `processScope.requestsSent` + `requests_sent` on the completion log line, pinned by a test that asserts both causes land on the same column value with different request counts. Migration plan filed as `backlog-subtitle-run-cache-enabled-tristate`, bidirectionally linked from two code comments.
+
+**LOW (recorded, deliberately not fixed):** (1) `enterShowGate`'s `p.gate == nil` and `preflightSkip`'s `p.runs == nil` are dead branches — `NewPipeline` always builds the gate and `requireItemPorts` guarantees the store — so they read as supported configurations that cannot occur; (2) the pre-flight early-exit emits no progress event, so sub-1-6's SSE stream cannot distinguish "already done, skipped" from "never started"; (3) `acceptableSidecar` fully reads and parses every sidecar on every scan pass (inherent to AC #2.1's three-clause predicate, but worth an `os.Stat` short-circuit when sub-1-6 wires the scanner enumeration); (4) the early-exit `reason` is computed and then discarded rather than surfaced on `ProcessOutcome`, so sub-1-6 has to re-derive it for the UI.
+
+Gates re-run after the fixes: `go test ./...` exit 0 · `go test ./internal/subtitle/ -race` clean · `nx run api:lint` (vet + staticcheck) clean · `gofmt` clean on all touched files · 7 files modified, nothing outside the story's own package.
+
 ### Discovery Triage
 
-- **Did this story discover any work outside its current scope?**
-  - If **NO** beyond the pre-recorded item: state `N/A — no further out-of-scope work discovered`.
+- **Did this story discover any work outside its current scope?** Yes — one pre-recorded item plus four found at implementation. Each is triaged below (Rule 24: exactly one of ①/②/③, no prose-only findings).
   - **① expand-scope-in-place → the two-caches clarification.** D4's single section carries both the segment cache and the prompt cache; the epic AC inherited the ambiguity. Absorbed as this story's header table + the AC #3/#4 split (segment = content-keyed storage; prompt = provider prefix + `cache_enabled` recording).
+  - **① expand-scope-in-place → `ProcessOptions` name collision.** AC #1 names the options type `ProcessOptions`, but that identifier is **already taken in this package** by the search engine's per-item options (`engine.go:125`, constructed at `batch.go:238` — the very call site sub-1-6's flag seam wraps, and `engine_test.go:402`). Renaming the incumbent would rewrite a shipped Epic-8 surface for cosmetic reasons, so the NEW type is **`ProcessItemOptions`** (shape identical: one `Force bool`). Absorbed here; `sub-1-6:113`'s Rule 20 ack line and its sprint-status entry were corrected in the same change so its author does not ack a type that never existed.
+  - **① expand-scope-in-place → the progress hook needs a `MediaRef` (sub-task 5.1).** AC #1.6 specifies `progress func(stage PipelineStage, msg string)`, but sub-1-6 AC #6 must broadcast `{media_id, media_type, stage, message}` from **one** Pipeline shared by a 2-worker pool (its Dev Notes: *"one `Pipeline` … constructed once"*). With the literal signature, a concurrent season batch could not attribute an event to an item, making sub-1-6 AC #6 unimplementable without per-item Pipelines. Shipped as `func(ref MediaRef, stage PipelineStage, message string)`. Still a NEW `[@contract-v1]`, so **no Rule 20 bump is owed**; sub-1-6's story + sprint-status entry updated in the same change.
+  - **① expand-scope-in-place → `MediaItem.ShowKey` for the D10 key.** AC #5.1 says the gate key is "the series' `MediaRef.ID`", but for an **episode** the ref carries the EPISODE id — keying on it would gate nothing while defeating the exact season-batch case D10 exists for. The `MediaStore` port therefore supplies `ShowKey` (series id for series/episode rows, empty for movies, empty ⇒ bypass). Covered by `TestProcessItem_MoviesBypassTheShowGate` + `TestTranslateTrack_SerializesTheShowsFirstRequest`.
+  - **③ backlog-with-carry-forward-link → `backlog-subtitle-status-writer-search-columns`.** AC #6.3 requires `subtitle_search_score` **and** `subtitle_last_searched` to stay unset. Score is satisfied for free (`Score: 0` → `sql.NullFloat64{Valid: score > 0}` → NULL), but **`MovieRepository.UpdateSubtitleStatus:817` and `SeriesRepository.UpdateSubtitleStatus:800` unconditionally stamp `subtitle_last_searched = now`** — so wiring `MediaStore` to them as-is would violate AC #6.3. `EpisodeRepository.UpdateEpisodeSubtitleStatus:273` is already clean (it writes only status/path/language). The adapter is explicitly sub-1-6's scope ("wired by 1.6, faked here"), so the constraint is recorded in the `MediaStore` port's doc comment AND filed as a tracked entry, bidirectionally linked to sub-1-6.
 - Reference: `project-context.md` Rule 24.
 
 ### File List
+
+| File | Change |
+|---|---|
+| `apps/api/internal/subtitle/pipeline.go` | **modified** — `[@contract-v1]` `MediaRef` / `ProcessItemOptions` / `ProcessOutcome`; the five narrow ports (`RunStore`, `MediaStore`+`MediaItem`, `SubtitlePlacer`, `TrackRouter`, and `SegmentCache` from `segment_cache.go`); `PipelineOption` + 8 `With*` options on a variadic `NewPipeline`; `processScope` (context-carried) + `observeChunk` + `emitProgress`; `ExpectedSidecarPath` / `acceptableSidecar` / `preflightSkip` / `resumeReason`; `buildSystemBlocks` TTL flip; chunk loop now numbers chunks, enters the D10 gate on its first request, and observes once per chunk |
+| `apps/api/internal/subtitle/process_item.go` | **new** — `[@contract-v1]` `ProcessItem` (pre-flight → run row → route → deliverable → P9-ordered place/provenance/status), `deliverable`, `translateWithCache`, `recordSkip`, `failItem`, `truncateErrorMessage`, `setMediaStatus`, `sourceLanguageOf`, `requireItemPorts` |
+| `apps/api/internal/subtitle/segment_cache.go` | **new** — `SegmentCache` port + `segmentCacheRepository` adapter over `CacheRepositoryInterface`; `MetadataHash` (canonical `\x1f`-joined, set fields sorted on a copy), `segmentKey` (`subseg:v1:` + sha256(cue + version tuple)), `Pipeline.runVersion`, `splitCachedCues` / `storeCachedCues` / `mergeCues`; `segmentCacheType` / `segmentCacheTTL` (30d) |
+| `apps/api/internal/subtitle/show_gate.go` | **new** — D10 `showGate` keyed latch (leader/waiter/warm states, 50-min warm window, `showEntryTTL` pruning per Rule 14, ctx-cancellable, idempotent release) + `Pipeline.enterShowGate` |
+| `apps/api/internal/subtitle/pipeline_test.go` | **modified** — +7 tests (pre-flight P5 table + resume refinement, system-block TTL policy, first-chunk cache verdict table, no-scope compatibility); `fakeRunStore` / `testVersion` / `newMediaFile` / `oneCueSRT` helpers; `…AndUncached` renamed to `…AndCacheBreakpointed` and re-pointed at the new policy |
+| `apps/api/internal/subtitle/process_item_test.go` | **new** — 18 tests: 5-row verdict matrix, version-tuple provenance, P9 order proof, pre-flight-spends-nothing, force semantics, cache split/full-hit, 3-row failure policy, bounded error message, cancellation, progress cadence, wiring guards, and the real-`:memory:`-SQLite integration test |
+| `apps/api/internal/subtitle/segment_cache_test.go` | **new** — 12 tests: `MetadataHash` canonicalization (8 sub-cases incl. non-mutation + boundary forging), segment key versioning (4 RunVersion sub-cases + boundary forging), split/merge/store behaviour, repository adapter round-trip, merge-desync guard; `newMigratedTestDB` helper |
+| `apps/api/internal/subtitle/show_gate_test.go` | **new** — 9 tests: first-runs-alone, warm-window skip, stale re-warm, movie bypass, cancellation, Rule 14 pruning, idempotent release, cross-show independence, and the TranslateTrack wiring proof |
+| `_bmad-output/implementation-artifacts/sub-1-6-wire-triggering-gating.md` | **modified** — Rule 24 lane ① carry-forward: Dev Notes ack line corrected to `ProcessItemOptions`, progress-hook signature and the `MediaStore` search-column constraint recorded |
+| `_bmad-output/implementation-artifacts/sprint-status.yaml` | **modified** — this story → `review`, then → `done` at CR; `backlog-subtitle-status-writer-search-columns` filed; sub-1-6 entry annotated; **CR round:** `backlog-subtitle-run-cache-enabled-tristate` + `backlog-segment-cache-batch-read` filed |
+
+**Code-review round (2026-08-03) — files touched by the fixes:**
+
+| File | Change |
+|---|---|
+| `apps/api/internal/subtitle/pipeline.go` | **modified** — `processScope` gains `requestsSent` / `fullTrackCues` / `stubbornIndexes`; new `ceilingTotal` / `noteStubbornCue` / `countRequest` scope helpers; the stubborn ceiling now divides by the DELIVERED track (H1); the gate is released as warm only when the guarded request returned (M1) |
+| `apps/api/internal/subtitle/process_item.go` | **modified** — `translateWithCache` publishes `fullTrackCues` (H1), drops stubborn indexes from the cache write set (H2) and propagates `mergeCues`'s error (M2); completion log carries `requests_sent` (M4) |
+| `apps/api/internal/subtitle/segment_cache.go` | **modified** — `mergeCues` returns `([]SubtitleBlock, error)` and hard-fails on a cue covered by neither the cache nor the translator (M2) |
+| `apps/api/internal/subtitle/show_gate.go` | **modified** — `enter` returns `func(warmed bool)`; a failed leader unparks its waiters but leaves the show cold (M1) |
+| `apps/api/internal/subtitle/process_item_test.go` | **modified** — +3 tests (+2 sub-tests): delivered-track ceiling, ceiling still fires on a genuinely broken track, stubborn cues never cached, `requests_sent` disambiguation; `echoingTranslator` / `longTrack` helpers |
+| `apps/api/internal/subtitle/segment_cache_test.go` | **modified** — `mergeCues` call sites take the error; +`TestMergeCues_AnUncoveredCueIsAHardError`, which also proves `checkTimestampInvariant` would NOT have caught it |
+| `apps/api/internal/subtitle/show_gate_test.go` | **modified** — release call sites take `warmed`; +2 tests (a failed request leaves the show cold and re-serializes; a failed leader still unparks its waiters) |
+
+**M3 fix round (2026-08-03, Alexyu ruling) — additional files:**
+
+| File | Change |
+|---|---|
+| `apps/api/internal/repository/interfaces.go` | **modified** — `GetMany(ctx, keys) (map[string]*CacheEntry, error)` added to `CacheRepositoryInterface` |
+| `apps/api/internal/repository/cache_repository.go` | **modified** — `GetMany` implementation: chunked `IN (...)` at 500 placeholders (`getManyChunkSize`), expiry-filtered, absence-is-not-an-error |
+| `apps/api/internal/repository/cache_repository_test.go` | **modified** — `MockCacheRepository.GetMany` (testify-mock shape) |
+| `apps/api/internal/tmdb/cache_test.go` | **modified** — `MockCacheRepository.GetMany` (map-backed, lock-guarded shape) |
+| `apps/api/internal/services/cache_sweep_scheduler_test.go` | **modified** — `mockCacheRepo.GetMany` no-op (interface compliance; the sweep never reads) |
+| `apps/api/internal/subtitle/segment_cache.go` | **modified** — `SegmentCache` port `Get`→`GetMany`; adapter maps entries to values; `splitCachedCues` = one batched read per track, read failure degrades the whole track to misses |
+| `apps/api/internal/subtitle/segment_cache_test.go` | **modified** — `memorySegmentCache` fake batch-shaped; round-trip test covers hit+miss in one read; read-failure test proves a cached entry also degrades; +`TestSegmentCacheRepository_GetManySpansTheChunkBoundary` (1201 keys / 3 chunks) |
+| `apps/api/internal/subtitle/process_item_test.go` | **modified** — integration test asserts the stored cue via `GetMany` |
+
+### Change Log
+
+| Date | Change |
+|---|---|
+| 2026-07-28 | **Task 1 (AC #2) — RED first** (`undefined: ExpectedSidecarPath`). P5 spelled out as a three-clause predicate — exists AND `ParseSRT` succeeds AND cue count > 0 — behind `ExpectedSidecarPath`, which runs the SAME `NormalizeLanguageTag` + `BuildSubtitleFilename` pair `placer.Place` uses, so the pre-flight can never check a different path from the one delivery writes. `preflightSkip` treats the sidecar as the GATE and `FindCompletedRun` as a LOG refinement only, which is what makes "delete the sidecar and re-trigger" an inherently valid re-run and what keeps a repository hiccup from forcing a full re-translation (Rule 13 case-3, justified in place). 6-row predicate table incl. the zero-byte and unparseable rows the existence-only anti-pattern would have accepted. |
+| 2026-07-28 | **Task 2 (AC #3) — RED first** (`undefined: MetadataHash`). `MetadataHash` = sha256 over a fixed 7-field `\x1f`-joined serialization; genres and countries sorted on a COPY (TMDb ordering jitter must not split the cache; mutating the caller's slice would silently reorder what the prompt renders), cast left in billing order, glossary excluded because it owns its own `RunVersion` field. `segmentKey` = `subseg:v1:` + sha256(cue text + `\x00` + the four version fields) — content-hashed, never index-keyed (P1: SDH filtering leaves gaps, so the same line can carry different indexes across runs). `SegmentCache` is a 2-method port; `segmentCacheRepository` adapts `CacheRepositoryInterface` with `cacheType="subtitle_segment"` and a 30d TTL. Read failures degrade to a miss, write failures are logged and swallowed — a cache costs tokens, never correctness. |
+| 2026-07-28 | **Task 3 (AC #4) — RED first** (`undefined: processScope`). The TTL flip sub-1-5a deferred: the LAST stable system block now carries `CacheTTL1h` (one breakpoint caches `[0]+[1]` together — prefix semantics; 1h because a season batch outlives the 5m entry). `cache_enabled` is recorded by DETECTION from the FIRST chunk's `CompletionUsage` — both cache fields zero ⇒ the prefix silently failed to cache ⇒ `false`; no tokenizer heuristics, no prefix padding (D4's ban). The per-item state rides the **context** (`processScope`) rather than a parameter, because `TranslateTrack`'s signature is sub-1-5a's stamped surface and one Pipeline serves the whole worker pool; absent scope = no-op, so sub-1-5a's direct callers are unchanged. sub-1-5a's `…AndUncached` lock-in test moved with the policy instead of being deleted. |
+| 2026-07-28 | **Task 4 (AC #5) — RED first** (`undefined: newShowGate`). `showGate`: mutex + `map[showKey]{inFlight, warmedAt, touchedAt}`. First requester for a show leads and holds the latch across its first LLM request; waiters park on the channel and **re-evaluate** on release (so a window that went stale mid-wait promotes the next waiter to leader rather than letting everyone through cold). Warm window 50 min < the 1h TTL; stale entries pruned on access at `2×` the window (Rule 14); `ctx` cancellation unparks a waiter with `ctx.Err()`; release is `sync.Once`-idempotent. Empty key = movie = full bypass. Wired at `start == 0 && attempt == 0` only. Falsification-verified: forcing `enterShowGate` to no-op fails the wiring test. |
+| 2026-07-28 | **Task 5 (AC #1, #6)** — `ProcessItem` `[@contract-v1]`: pre-flight (before any row is written, so a re-scan appends no provenance) → `pending`→`running` as two writes (a killed process leaves an honest `running`) → media `extracting` → `SelectAndRoute` → per-verdict deliverable → **place → provenance → media terminal, in that order (P9)**, proven by a shared order log rather than by inspection. Translate path splits against the segment cache, sends only the misses as a reduced `ExtractedTrack`, writes back the FINAL post-OpenCC text, merges by cue `Index`, and re-checks the FR17 invariant over the FULL set (`TranslateTrack` only ever sees the subset). `RouteConvertThenDeliver` fails the item on a converter error — unlike the translate path, conversion IS the deliverable there and shipping Simplified text under a `.zh-Hant.srt` name would be a lie. `failItem` writes the run `failed` + media `not_searched` through a `context.WithoutCancel` so a shutdown still records why. |
+| 2026-07-28 | **Rule 24 carry-forward** — `sub-1-6-wire-triggering-gating.md` Dev Notes corrected in place (`ProcessOptions` → `ProcessItemOptions`, progress-hook signature, `MediaStore` search-column constraint); `backlog-subtitle-status-writer-search-columns` filed in `sprint-status.yaml` with bidirectional links. |
+| 2026-08-03 | **M3 fixed after all (Alexyu ruling).** The review had downgraded the `splitCachedCues` per-cue SELECT to LOW on measurement (8 µs/read, ~0.02% of an item) and filed it. Alexyu overruled with a maintenance argument the measurement cannot answer: timings describe TODAY's architecture, and an N+1 shape re-emerges silently when the surroundings change — at which point it costs a second discovery on top of the same fix. Shipped `GetMany` end to end: `CacheRepositoryInterface` + `CacheRepository` (chunked `IN (...)` at 500, under SQLite's 999-variable floor; the chunk seam has its own falsification-verified test at 1201 keys), three mocks (one more than estimated — `cache_sweep_scheduler_test.go`), `SegmentCache` port re-shaped `Get`→`GetMany` (still 2 methods; pre-1-6, so no consumer churn), one batched read per track. Known trade-off: a read failure now degrades the whole track to misses instead of one cue — same Rule 13 case-3 stance, coarser grain, test updated to prove it. `backlog-segment-cache-batch-read` → done same day. |
+| 2026-08-03 | **Code review (adversarial) — 2 HIGH + 4 MEDIUM resolved.** The two HIGHs are both consequences of the same seam this story introduced, the cache split feeding a REDUCED track into sub-1-5a's stamped stage: (H1) FR16's 5% stubborn ceiling was dividing by the miss subset, so it tightened as the cache warmed and a 20-cue track with one flaky cue failed outright at 18 hits while passing cold — the denominator is now the DELIVERED track via `processScope.fullTrackCues`; (H2) stubborn cues ship their ENGLISH original by design, and that text was being persisted into the 30-day cache under a show-level key, so one bad line would be served as a hit to every episode of the show and never retried — the stage now records failed indexes onto the scope and the item flow excludes them from the write set. Both fixes ride the existing context-scope mechanism precisely so sub-1-5a's `[@contract-v1]` stays untouched: **no Rule 20 bump, no stale-mark owed.** (M1) the D10 gate warmed a show even when the guarded request FAILED, opening a 50-minute window with no prefix written — release now takes `warmed bool`, and a failed leader still unparks its waiters so a provider blip cannot deadlock the pool. (M2) `mergeCues` now hard-fails on a cue covered by neither side instead of silently shipping English under a `.zh-Hant.srt` name; the new test proves `checkTimestampInvariant` would have passed it. (M4) `cache_enabled` cannot express "no request was sent", so `requests_sent` was added to the completion log and the nullable-column migration filed as a backlog entry. (M3) measured at 7.0 µs/cue and filed rather than fixed. All four new guards falsification-verified (see Debug Log). |
 
 ---
 
 ## Open Questions for Alexyu (non-blocking — dev proceeds with the stated rulings)
 
 1. **Failure policy (AC #1.5):** run `failed` + media row back to **`not_searched`** (retryable; run row is the audit trail). Alternative: a dedicated `failed` media status — but that's a `[@contract-v1→v2]` bump on sub-1-2's enum plus FE badge work. Confirm the revert-to-`not_searched` reading.
+   - **IMPLEMENTED AS RULED (2026-07-28).** Still cheap to reverse before sub-1-6 ships; after that the FE badge work makes it a real change.
 2. **Segment-cache TTL 30d** (AI-parsing precedent). Cheap to change; say now if you want permanent.
+   - **IMPLEMENTED AS RULED (2026-07-28)** — one constant (`segmentCacheTTL`), pinned by a test so a change is deliberate.
+3. **NEW — raised at implementation:** `MovieRepository`/`SeriesRepository.UpdateSubtitleStatus` unconditionally stamp `subtitle_last_searched`, which AC #6.3 says must stay unset for a generated subtitle. Filed as `backlog-subtitle-status-writer-search-columns` for sub-1-6 (which owns the adapter). The cheap fix is a narrow `UpdateSubtitleGenerationStatus` repo method that writes only status/path/language — the shape `EpisodeRepository` already has.

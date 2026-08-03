@@ -4,13 +4,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/vido/api/internal/ai"
 	"github.com/vido/api/internal/ai/prompts"
+	"github.com/vido/api/internal/models"
 	"github.com/vido/api/internal/services"
 )
 
@@ -481,7 +485,13 @@ func TestTranslateTrack_PreservesCueIdentity(t *testing.T) {
 
 // ─── System blocks (AC #4) ─────────────────────────────────────────────────
 
-func TestTranslateTrack_SystemBlocksAreStableFirstAndUncached(t *testing.T) {
+// TestTranslateTrack_SystemBlocksAreStableFirstAndCacheBreakpointed — the
+// blocks that actually reach the translator carry sub-1-5b's cache policy.
+// sub-1-5a shipped this assertion as "…AndUncached" on purpose: it pinned
+// CacheTTLNone until the story that owns the policy (the versioned key, the
+// detection-based cache_enabled recording) could turn caching on. This is that
+// story, so the assertion moves with it rather than being deleted.
+func TestTranslateTrack_SystemBlocksAreStableFirstAndCacheBreakpointed(t *testing.T) {
 	tctx := TranslateContext{
 		Title:     "怪奇物語",
 		Year:      2016,
@@ -508,10 +518,8 @@ func TestTranslateTrack_SystemBlocksAreStableFirstAndUncached(t *testing.T) {
 	assert.Contains(t, sys[1].Text, "Demogorgon → 魔王獸")
 	assert.Less(t, strings.Index(sys[1].Text, "Media context"), strings.Index(sys[1].Text, "Glossary"))
 
-	for i, b := range sys {
-		assert.Equal(t, ai.CacheTTLNone, b.CacheTTL,
-			"block %d must not be a cache breakpoint — cache policy is sub-1-5b's", i)
-	}
+	assert.Equal(t, ai.CacheTTLNone, sys[0].CacheTTL, "an inner breakpoint would split the prefix for no gain")
+	assert.Equal(t, ai.CacheTTL1h, sys[1].CacheTTL, "one breakpoint on the last stable block caches [0]+[1] together")
 }
 
 func TestTranslateTrack_ZeroContextEmitsOnlyTheStablePrompt(t *testing.T) {
@@ -595,4 +603,290 @@ func TestTranslateTrack_HonoursContextCancellation(t *testing.T) {
 	assert.ErrorIs(t, err, context.Canceled, "a shutdown stays distinguishable from a real failure")
 	assert.Nil(t, res)
 	assert.Empty(t, tr.calls)
+}
+
+// ─── Pre-flight / P5 (AC #2) ───────────────────────────────────────────────
+
+// oneCueSRT is the minimal sidecar that satisfies P5: it parses AND carries a cue.
+const oneCueSRT = "1\n00:00:01,000 --> 00:00:02,000\n早安\n"
+
+// fakeRunStore records provenance writes and answers the resume lookup from a
+// pre-seeded row. lookups counts FindCompletedRun calls so a test can prove the
+// sidecar predicate — not the run row — is the gate.
+type fakeRunStore struct {
+	created   []models.SubtitleRun
+	updated   []models.SubtitleRun
+	completed *models.SubtitleRun
+	lookups   int
+	findErr   error
+	createErr error
+	updateErr error
+	order     *[]string
+}
+
+func (s *fakeRunStore) Create(_ context.Context, run *models.SubtitleRun) error {
+	if s.createErr != nil {
+		return s.createErr
+	}
+	if run.ID == "" {
+		run.ID = fmt.Sprintf("run-%d", len(s.created)+1)
+	}
+	if run.StartedAt.IsZero() {
+		run.StartedAt = time.Date(2026, 7, 28, 0, 0, 0, 0, time.UTC)
+	}
+	s.created = append(s.created, *run)
+	if s.order != nil {
+		*s.order = append(*s.order, "run:create")
+	}
+	return nil
+}
+
+func (s *fakeRunStore) Update(_ context.Context, run *models.SubtitleRun) error {
+	if s.updateErr != nil {
+		return s.updateErr
+	}
+	s.updated = append(s.updated, *run)
+	if s.order != nil {
+		*s.order = append(*s.order, "run:"+string(run.Status))
+	}
+	return nil
+}
+
+func (s *fakeRunStore) FindCompletedRun(_ context.Context, _, _ string, v models.RunVersion) (*models.SubtitleRun, error) {
+	s.lookups++
+	if s.findErr != nil {
+		return nil, s.findErr
+	}
+	if s.completed != nil && s.completed.Version().Equal(v) {
+		return s.completed, nil
+	}
+	return nil, nil
+}
+
+// lastUpdate returns the most recent run row handed to Update.
+func (s *fakeRunStore) lastUpdate(t *testing.T) models.SubtitleRun {
+	t.Helper()
+	require.NotEmpty(t, s.updated, "expected at least one provenance update")
+	return s.updated[len(s.updated)-1]
+}
+
+func testVersion() models.RunVersion {
+	return models.RunVersion{
+		MetadataHash:    "meta-hash",
+		GlossaryVersion: "",
+		PromptVersion:   prompts.SubtitleTranslatorPromptVersion,
+		ModelID:         "claude-haiku-4-5",
+	}
+}
+
+// newMediaFile creates an empty media file in a temp dir and returns its path.
+func newMediaFile(t *testing.T) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "Show.S01E01.1080p.mkv")
+	require.NoError(t, os.WriteFile(path, []byte("not really a video"), 0o600))
+	return path
+}
+
+func TestExpectedSidecarPath(t *testing.T) {
+	assert.Equal(t, "/media/Movie.2024.1080p.zh-Hant.srt",
+		ExpectedSidecarPath("/media/Movie.2024.1080p.mkv"),
+		"the pre-flight predicate must resolve the SAME path placer.Place will write")
+}
+
+// TestPreflight_P5Predicate covers P5 exactly: exists AND parses AND cue count
+// > 0. The truncated/garbage rows are the named anti-pattern — an
+// existence-only check would let a zero-byte artifact block regeneration
+// forever.
+func TestPreflight_P5Predicate(t *testing.T) {
+	tests := []struct {
+		name     string
+		sidecar  *string // nil → no file on disk
+		force    bool
+		wantSkip bool
+	}{
+		{"acceptable sidecar early-exits", &[]string{oneCueSRT}[0], false, true},
+		{"missing sidecar proceeds", nil, false, false},
+		{"zero-byte sidecar proceeds", &[]string{""}[0], false, false},
+		{"unparseable sidecar proceeds", &[]string{"not an srt at all"}[0], false, false},
+		{"sidecar with zero cues proceeds", &[]string{"\n\n\n"}[0], false, false},
+		{"force bypasses an acceptable sidecar", &[]string{oneCueSRT}[0], true, false},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			mediaPath := newMediaFile(t)
+			if tc.sidecar != nil {
+				require.NoError(t, os.WriteFile(ExpectedSidecarPath(mediaPath), []byte(*tc.sidecar), 0o600))
+			}
+
+			p := NewPipeline(&fakeTranslator{}, &recordingConverter{}, nil, WithRunStore(&fakeRunStore{}))
+			skip, reason := p.preflightSkip(context.Background(),
+				MediaRef{ID: "m1", MediaType: models.SubtitleRunMediaMovie},
+				mediaPath, testVersion(), ProcessItemOptions{Force: tc.force})
+
+			assert.Equal(t, tc.wantSkip, skip)
+			assert.NotEmpty(t, reason, "every pre-flight decision must carry a loggable reason")
+		})
+	}
+}
+
+// TestPreflight_ResumeRefinesTheReasonOnly is AC #2.2 + #2.3: the run lookup
+// only refines the LOG. The sidecar is the gate, so deleting it re-runs the
+// item even when a version-matched completed run still exists.
+func TestPreflight_ResumeRefinesTheReasonOnly(t *testing.T) {
+	version := testVersion()
+
+	t.Run("version-matched completed run names the resume", func(t *testing.T) {
+		mediaPath := newMediaFile(t)
+		require.NoError(t, os.WriteFile(ExpectedSidecarPath(mediaPath), []byte(oneCueSRT), 0o600))
+
+		runs := &fakeRunStore{completed: &models.SubtitleRun{
+			ID: "run-1", MediaID: "m1", MediaType: models.SubtitleRunMediaMovie,
+			Status:       models.SubtitleRunCompleted,
+			MetadataHash: version.MetadataHash, PromptVersion: version.PromptVersion, ModelID: version.ModelID,
+		}}
+
+		skip, reason := NewPipeline(&fakeTranslator{}, &recordingConverter{}, nil, WithRunStore(runs)).
+			preflightSkip(context.Background(), MediaRef{ID: "m1", MediaType: models.SubtitleRunMediaMovie},
+				mediaPath, version, ProcessItemOptions{})
+
+		assert.True(t, skip)
+		assert.Equal(t, 1, runs.lookups)
+		assert.Contains(t, reason, "run-1", "the matched run id is what makes this a resume-skip in the log")
+	})
+
+	t.Run("no matching run reads as a foreign sidecar", func(t *testing.T) {
+		mediaPath := newMediaFile(t)
+		require.NoError(t, os.WriteFile(ExpectedSidecarPath(mediaPath), []byte(oneCueSRT), 0o600))
+
+		runs := &fakeRunStore{}
+		skip, reason := NewPipeline(&fakeTranslator{}, &recordingConverter{}, nil, WithRunStore(runs)).
+			preflightSkip(context.Background(), MediaRef{ID: "m1", MediaType: models.SubtitleRunMediaMovie},
+				mediaPath, version, ProcessItemOptions{})
+
+		assert.True(t, skip)
+		assert.Contains(t, reason, "foreign")
+	})
+
+	t.Run("the escape hatch: deleting the sidecar re-runs despite a completed run", func(t *testing.T) {
+		mediaPath := newMediaFile(t) // deliberately no sidecar written
+		runs := &fakeRunStore{completed: &models.SubtitleRun{
+			ID: "run-1", MediaID: "m1", MediaType: models.SubtitleRunMediaMovie,
+			Status:       models.SubtitleRunCompleted,
+			MetadataHash: version.MetadataHash, PromptVersion: version.PromptVersion, ModelID: version.ModelID,
+		}}
+
+		skip, _ := NewPipeline(&fakeTranslator{}, &recordingConverter{}, nil, WithRunStore(runs)).
+			preflightSkip(context.Background(), MediaRef{ID: "m1", MediaType: models.SubtitleRunMediaMovie},
+				mediaPath, version, ProcessItemOptions{})
+
+		assert.False(t, skip, "the sidecar predicate is the gate — a completed run must not block a re-run")
+		assert.Zero(t, runs.lookups, "the run lookup only refines an early-exit reason; it must not run otherwise")
+	})
+
+	t.Run("a lookup failure cannot flip the gate", func(t *testing.T) {
+		mediaPath := newMediaFile(t)
+		require.NoError(t, os.WriteFile(ExpectedSidecarPath(mediaPath), []byte(oneCueSRT), 0o600))
+
+		runs := &fakeRunStore{findErr: errors.New("db is down")}
+		skip, reason := NewPipeline(&fakeTranslator{}, &recordingConverter{}, nil, WithRunStore(runs)).
+			preflightSkip(context.Background(), MediaRef{ID: "m1", MediaType: models.SubtitleRunMediaMovie},
+				mediaPath, version, ProcessItemOptions{})
+
+		assert.True(t, skip, "the sidecar still satisfies P5 — a refinement failure must not force a re-run")
+		assert.NotEmpty(t, reason)
+	})
+}
+
+// ─── Prompt-cache policy (AC #4) ───────────────────────────────────────────
+
+// TestBuildSystemBlocks_LastStableBlockCarriesTheHourTTL is the TTL flip
+// sub-1-5a deliberately deferred. Prompt caching is a PREFIX match, so ONE
+// breakpoint on the last stable block caches [0]+[1] together; 1h because a
+// season batch spans tens of minutes and a 5-minute entry would expire mid-run.
+func TestBuildSystemBlocks_LastStableBlockCarriesTheHourTTL(t *testing.T) {
+	t.Run("with per-show metadata the breakpoint sits on block 1", func(t *testing.T) {
+		blocks := buildSystemBlocks(richContext())
+		require.Len(t, blocks, 2)
+		assert.Equal(t, ai.CacheTTLNone, blocks[0].CacheTTL, "an inner breakpoint would split the prefix for no gain")
+		assert.Equal(t, ai.CacheTTL1h, blocks[1].CacheTTL)
+	})
+
+	t.Run("without metadata the only block is the breakpoint", func(t *testing.T) {
+		blocks := buildSystemBlocks(TranslateContext{})
+		require.Len(t, blocks, 1)
+		assert.Equal(t, ai.CacheTTL1h, blocks[0].CacheTTL,
+			"the breakpoint follows the LAST stable block; whether it actually fires is measured, never assumed")
+	})
+}
+
+// TestTranslateTrack_RecordsPromptCacheVerdictFromTheFirstChunk is AC #4.2:
+// cache_enabled is DETECTED from the API's own usage, never estimated. The
+// <4096-token minimum makes cache_control silently inert with no error, so the
+// two usage fields are the only honest signal — and D4 bans padding the prefix
+// to reach the threshold.
+func TestTranslateTrack_RecordsPromptCacheVerdictFromTheFirstChunk(t *testing.T) {
+	tests := []struct {
+		name        string
+		firstUsage  ai.CompletionUsage
+		laterUsage  ai.CompletionUsage
+		wantEnabled bool
+	}{
+		{"prefix cached on the first chunk", ai.CompletionUsage{CacheCreationInputTokens: 5000}, ai.CompletionUsage{CacheReadInputTokens: 5000}, true},
+		{"prefix read from an already-warm entry", ai.CompletionUsage{CacheReadInputTokens: 5000}, ai.CompletionUsage{CacheReadInputTokens: 5000}, true},
+		{"silently inert prefix (below the model minimum)", ai.CompletionUsage{InputTokens: 900}, ai.CompletionUsage{InputTokens: 900}, false},
+		{"Gemini-shaped zero usage degrades to false", ai.CompletionUsage{}, ai.CompletionUsage{}, false},
+		{"a later chunk cannot overturn the first chunk's verdict", ai.CompletionUsage{InputTokens: 900}, ai.CompletionUsage{CacheCreationInputTokens: 5000}, false},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// 15 cues = 2 chunks, so "first chunk" is a real distinction.
+			texts := make([]string, 15)
+			for i := range texts {
+				texts[i] = fmt.Sprintf("Line %d.", i+1)
+			}
+			source := cues(texts...)
+
+			tr := &fakeTranslator{
+				fn: func(call int, blocks []prompts.SubtitleTranslatorBlock) (map[int]string, ai.CompletionUsage, error) {
+					out := make(map[int]string, len(blocks))
+					for _, b := range blocks {
+						out[b.Index] = "早安"
+					}
+					if call == 1 {
+						return out, tc.firstUsage, nil
+					}
+					return out, tc.laterUsage, nil
+				},
+			}
+
+			scope := &processScope{ref: MediaRef{ID: "m1", MediaType: models.SubtitleRunMediaMovie}}
+			ctx := withProcessScope(context.Background(), scope)
+
+			_, err := NewPipeline(tr, &recordingConverter{}, nil).TranslateTrack(ctx, trackOf(source), TranslateContext{})
+			require.NoError(t, err)
+			require.Len(t, tr.calls, 2, "the fixture must span two chunks for this assertion to mean anything")
+
+			assert.True(t, scope.cacheProbed, "the verdict must be recorded, not left at its zero value")
+			assert.Equal(t, tc.wantEnabled, scope.cacheEnabled)
+		})
+	}
+}
+
+// TestTranslateTrack_WithoutAScopeIsUnchanged guards sub-1-5a's direct callers:
+// TranslateTrack is still usable with a bare context, and the per-item
+// observation is a no-op when no item flow is driving it.
+func TestTranslateTrack_WithoutAScopeIsUnchanged(t *testing.T) {
+	tr := &fakeTranslator{
+		fn: func(_ int, blocks []prompts.SubtitleTranslatorBlock) (map[int]string, ai.CompletionUsage, error) {
+			return map[int]string{blocks[0].Index: "早安"}, ai.CompletionUsage{CacheCreationInputTokens: 5000}, nil
+		},
+	}
+
+	res, err := NewPipeline(tr, &recordingConverter{}, nil).
+		TranslateTrack(context.Background(), trackOf(cues("Good morning.")), TranslateContext{})
+
+	require.NoError(t, err)
+	assert.Equal(t, "早安", res.Blocks[0].Text)
 }

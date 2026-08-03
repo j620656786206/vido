@@ -289,6 +289,13 @@ type CacheRepositoryInterface interface {
 	// Get retrieves a cache entry by key, returns nil if not found or expired
 	Get(ctx context.Context, key string) (*CacheEntry, error)
 
+	// GetMany retrieves multiple cache entries in one round trip, returning
+	// only the found-and-unexpired ones keyed by cache key. A key with no
+	// entry is simply absent from the result — absence is not an error.
+	// Added for the subtitle segment cache (sub-1-5b CR M3): per-cue Get
+	// calls are an N+1 that re-emerges whenever a caller reads at scale.
+	GetMany(ctx context.Context, keys []string) (map[string]*CacheEntry, error)
+
 	// Set creates or updates a cache entry with the specified TTL
 	Set(ctx context.Context, key string, value string, cacheType string, ttl time.Duration) error
 
