@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -48,13 +49,18 @@ func newMemorySegmentCache() *memorySegmentCache {
 	return &memorySegmentCache{entries: map[string]string{}, writes: map[string]string{}}
 }
 
-func (c *memorySegmentCache) Get(_ context.Context, key string) (string, bool, error) {
-	c.reads = append(c.reads, key)
+func (c *memorySegmentCache) GetMany(_ context.Context, keys []string) (map[string]string, error) {
+	c.reads = append(c.reads, keys...)
 	if c.getErr != nil {
-		return "", false, c.getErr
+		return nil, c.getErr
 	}
-	v, ok := c.entries[key]
-	return v, ok, nil
+	out := make(map[string]string, len(keys))
+	for _, key := range keys {
+		if v, ok := c.entries[key]; ok {
+			out[key] = v
+		}
+	}
+	return out, nil
 }
 
 func (c *memorySegmentCache) Set(_ context.Context, key, value string, ttl time.Duration) error {
@@ -256,15 +262,18 @@ func TestSplitCachedCues_ForceBypassesReadsButNotWrites(t *testing.T) {
 }
 
 func TestSplitCachedCues_ReadFailureDegradesToAMiss(t *testing.T) {
-	source := cues("Good morning.")
+	source := cues("Good morning.", "See you later.")
 	cache := newMemorySegmentCache()
+	// One cue IS cached — but the read is one batched query per track now, so a
+	// failure degrades the WHOLE track to misses, cached entry included.
+	cache.entries[segmentKey(source[0].Text, testVersion())] = "早安"
 	cache.getErr = errors.New("sqlite is busy")
 
 	p := NewPipeline(&fakeTranslator{}, &recordingConverter{}, nil, WithSegmentCache(cache))
 	hits, misses := p.splitCachedCues(context.Background(), source, testVersion(), false)
 
 	assert.Empty(t, hits)
-	assert.Len(t, misses, 1, "a cache read failure costs tokens, never correctness")
+	assert.Len(t, misses, 2, "a cache read failure costs tokens, never correctness")
 }
 
 func TestSplitCachedCues_NilCacheTreatsEveryCueAsAMiss(t *testing.T) {
@@ -342,19 +351,51 @@ func TestSegmentCacheRepository_RoundTripsThroughCacheEntries(t *testing.T) {
 	adapter := NewSegmentCacheRepository(repository.NewCacheRepository(db))
 	ctx := context.Background()
 
-	_, ok, err := adapter.Get(ctx, "subseg:v1:absent")
-	require.NoError(t, err)
-	assert.False(t, ok, "a miss is (\"\", false, nil) — absence is not an error")
-
 	require.NoError(t, adapter.Set(ctx, "subseg:v1:present", "早安", segmentCacheTTL))
-	value, ok, err := adapter.Get(ctx, "subseg:v1:present")
+
+	// One batched read covering a hit and a miss: absence is not an error, the
+	// missing key is simply not in the map.
+	values, err := adapter.GetMany(ctx, []string{"subseg:v1:present", "subseg:v1:absent"})
 	require.NoError(t, err)
-	require.True(t, ok)
-	assert.Equal(t, "早安", value)
+	assert.Equal(t, map[string]string{"subseg:v1:present": "早安"}, values)
 
 	var cacheType string
 	require.NoError(t, db.QueryRow(`SELECT type FROM cache_entries WHERE key = ?`, "subseg:v1:present").Scan(&cacheType))
 	assert.Equal(t, segmentCacheType, cacheType, "the tier must be identifiable for ClearByType")
+}
+
+// TestSegmentCacheRepository_GetManySpansTheChunkBoundary — the repository
+// chunks its IN (...) at 500 placeholders to stay under SQLite's historical
+// 999-variable floor. A 1000-cue episode is exactly the real workload that
+// crosses that boundary, so the seam gets its own test: every key on both
+// sides of the chunk edge must come back.
+func TestSegmentCacheRepository_GetManySpansTheChunkBoundary(t *testing.T) {
+	db := newMigratedTestDB(t)
+	adapter := NewSegmentCacheRepository(repository.NewCacheRepository(db))
+	ctx := context.Background()
+
+	const n = 1201 // 3 chunks: 500 + 500 + 201
+	keys := make([]string, n)
+	for i := range keys {
+		keys[i] = fmt.Sprintf("subseg:v1:chunk-%04d", i)
+		if i%3 != 0 { // two thirds present, one third missing
+			require.NoError(t, adapter.Set(ctx, keys[i], fmt.Sprintf("譯文-%d", i), segmentCacheTTL))
+		}
+	}
+
+	values, err := adapter.GetMany(ctx, keys)
+	require.NoError(t, err)
+
+	want := 0
+	for i, key := range keys {
+		if i%3 == 0 {
+			assert.NotContains(t, values, key)
+			continue
+		}
+		want++
+		assert.Equal(t, fmt.Sprintf("譯文-%d", i), values[key])
+	}
+	assert.Len(t, values, want, "every present key across all three chunks must come back")
 }
 
 // TestMergeCues_DesyncIsCaughtByTheInvariant documents why ProcessItem re-runs

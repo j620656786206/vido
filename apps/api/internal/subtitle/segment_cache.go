@@ -19,15 +19,22 @@ import (
 
 // SegmentCache is the narrow port over the AD #4 tier-2 cache. It is
 // deliberately NOT repository.CacheRepositoryInterface: the item flow needs two
-// of its six methods and wants a miss expressed as a boolean rather than a nil
-// *CacheEntry, so tests fake two methods instead of six.
+// of its seven methods and wants misses expressed by ABSENCE from a map rather
+// than a nil *CacheEntry, so tests fake two methods instead of seven.
+//
+// The read side is batch-shaped on purpose (sub-1-5b CR M3, Alexyu ruling
+// 2026-08-03): the item flow reads one key per cue, and a per-key Get here is
+// an N+1 against SQLite that silently re-emerges whenever the surrounding
+// architecture changes — one query per track keeps the shape safe by
+// construction rather than by the current timings.
 //
 // This is the SEGMENT cache — post-OpenCC translated text per cue, keyed by
 // content + RunVersion. It has nothing to do with the PROMPT cache, which lives
 // provider-side and is recorded in subtitle_runs.cache_enabled (AC #4).
 type SegmentCache interface {
-	// Get returns (value, true, nil) on a hit and ("", false, nil) on a miss.
-	Get(ctx context.Context, key string) (string, bool, error)
+	// GetMany returns the found values keyed by cache key; a missing key is
+	// simply absent. Absence is not an error.
+	GetMany(ctx context.Context, keys []string) (map[string]string, error)
 	// Set writes value under key with the given TTL.
 	Set(ctx context.Context, key, value string, ttl time.Duration) error
 }
@@ -69,15 +76,16 @@ func NewSegmentCacheRepository(cache repository.CacheRepositoryInterface) Segmen
 	return &segmentCacheRepository{cache: cache}
 }
 
-func (r *segmentCacheRepository) Get(ctx context.Context, key string) (string, bool, error) {
-	entry, err := r.cache.Get(ctx, key)
+func (r *segmentCacheRepository) GetMany(ctx context.Context, keys []string) (map[string]string, error) {
+	entries, err := r.cache.GetMany(ctx, keys)
 	if err != nil {
-		return "", false, err
+		return nil, err
 	}
-	if entry == nil {
-		return "", false, nil
+	out := make(map[string]string, len(entries))
+	for key, entry := range entries {
+		out[key] = entry.Value
 	}
-	return entry.Value, true, nil
+	return out, nil
 }
 
 func (r *segmentCacheRepository) Set(ctx context.Context, key, value string, ttl time.Duration) error {
@@ -160,7 +168,8 @@ func (p *Pipeline) runVersion(tctx TranslateContext) models.RunVersion {
 
 // splitCachedCues partitions a routed track into cues already translated under
 // this exact RunVersion (hits, keyed by cue Index) and the cues that still need
-// the LLM (misses, in source order).
+// the LLM (misses, in source order). ONE batched read for the whole track —
+// per-cue Gets are an N+1 (CR M3).
 //
 // force bypasses READS only: the operator asked for a fresh translation, but
 // the write-back below still refreshes the entry rather than orphaning it.
@@ -172,19 +181,24 @@ func (p *Pipeline) splitCachedCues(ctx context.Context, source []SubtitleBlock, 
 		return hits, append(misses, source...)
 	}
 
-	for _, b := range source {
-		value, ok, err := p.cache.Get(ctx, segmentKey(b.Text, v))
-		if err != nil {
-			// Deliberate Rule 13 case-3 discard: a cache read failure costs
-			// tokens, never correctness — the cue simply becomes a miss and is
-			// translated. Failing the item here would turn a transient SQLite
-			// hiccup into a lost episode.
-			p.logger.Warn("segment cache read failed — treating the cue as a miss",
-				"cue_index", b.Index, "error", err)
-			misses = append(misses, b)
-			continue
-		}
-		if ok {
+	keys := make([]string, len(source))
+	for i, b := range source {
+		keys[i] = segmentKey(b.Text, v)
+	}
+
+	values, err := p.cache.GetMany(ctx, keys)
+	if err != nil {
+		// Deliberate Rule 13 case-3 discard: a cache read failure costs tokens,
+		// never correctness — the whole track simply becomes misses and is
+		// translated. Failing the item here would turn a transient SQLite
+		// hiccup into a lost episode.
+		p.logger.Warn("segment cache read failed — treating the whole track as misses",
+			"cue_count", len(source), "error", err)
+		return hits, append(misses, source...)
+	}
+
+	for i, b := range source {
+		if value, ok := values[keys[i]]; ok {
 			hits[b.Index] = value
 			continue
 		}

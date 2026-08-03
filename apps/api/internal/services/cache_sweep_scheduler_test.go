@@ -24,6 +24,9 @@ type mockCacheRepo struct {
 func (m *mockCacheRepo) Get(ctx context.Context, key string) (*repository.CacheEntry, error) {
 	return nil, nil
 }
+func (m *mockCacheRepo) GetMany(ctx context.Context, keys []string) (map[string]*repository.CacheEntry, error) {
+	return map[string]*repository.CacheEntry{}, nil
+}
 func (m *mockCacheRepo) Set(ctx context.Context, key, value, cacheType string, ttl time.Duration) error {
 	return nil
 }

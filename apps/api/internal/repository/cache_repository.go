@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 )
 
@@ -51,6 +52,63 @@ func (r *CacheRepository) Get(ctx context.Context, key string) (*CacheEntry, err
 	}
 
 	return entry, nil
+}
+
+// getManyChunkSize bounds the number of placeholders per IN (...) query.
+// SQLite's historical SQLITE_MAX_VARIABLE_NUMBER floor is 999; staying under it
+// keeps the query valid on every build rather than depending on the compiled
+// limit of the bundled driver.
+const getManyChunkSize = 500
+
+// GetMany retrieves multiple cache entries in one query per chunk of
+// getManyChunkSize keys, returning only the found-and-unexpired ones keyed by
+// cache key. Absence is not an error: a missing key is simply not in the map.
+func (r *CacheRepository) GetMany(ctx context.Context, keys []string) (map[string]*CacheEntry, error) {
+	out := make(map[string]*CacheEntry, len(keys))
+
+	for start := 0; start < len(keys); start += getManyChunkSize {
+		end := min(start+getManyChunkSize, len(keys))
+		batch := keys[start:end]
+
+		placeholders := strings.TrimSuffix(strings.Repeat("?,", len(batch)), ",")
+		query := fmt.Sprintf(`
+			SELECT key, value, type, expires_at, created_at, updated_at
+			FROM cache_entries
+			WHERE key IN (%s) AND expires_at > datetime('now')
+		`, placeholders)
+
+		args := make([]any, len(batch))
+		for i, key := range batch {
+			args[i] = key
+		}
+
+		rows, err := r.db.QueryContext(ctx, query, args...)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get cache entries: %w", err)
+		}
+		for rows.Next() {
+			entry := &CacheEntry{}
+			if err := rows.Scan(
+				&entry.Key,
+				&entry.Value,
+				&entry.Type,
+				&entry.ExpiresAt,
+				&entry.CreatedAt,
+				&entry.UpdatedAt,
+			); err != nil {
+				rows.Close()
+				return nil, fmt.Errorf("failed to scan cache entry: %w", err)
+			}
+			out[entry.Key] = entry
+		}
+		if err := rows.Err(); err != nil {
+			rows.Close()
+			return nil, fmt.Errorf("failed to iterate cache entries: %w", err)
+		}
+		rows.Close()
+	}
+
+	return out, nil
 }
 
 // Set creates or updates a cache entry with the specified TTL.

@@ -825,10 +825,11 @@ func TestProcessItem_IntegrationWritesAllSixteenRunColumns(t *testing.T) {
 
 	// And the translated cues really are in cache_entries under the versioned key.
 	version := p.runVersion(richContext())
-	value, ok, err := cache.Get(context.Background(), segmentKey(source[0].Text, version))
+	key := segmentKey(source[0].Text, version)
+	values, err := cache.GetMany(context.Background(), []string{key})
 	require.NoError(t, err)
-	require.True(t, ok, "the segment cache must be populated for the next run")
-	assert.Equal(t, "早安", value)
+	require.Contains(t, values, key, "the segment cache must be populated for the next run")
+	assert.Equal(t, "早安", values[key])
 
 	// Second pass: the P5 pre-flight sees the sidecar it just wrote and exits
 	// before spending anything.
