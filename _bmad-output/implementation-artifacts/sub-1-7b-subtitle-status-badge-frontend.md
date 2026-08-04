@@ -1,6 +1,6 @@
 # Story sub-1.7b: Subtitle-status badge — render the 5 new pipeline states
 
-Status: ready-for-dev
+Status: review
 
 **Epic:** `epic-subtitle-pipeline-m1` (M1) · **Risk: 🟡 MEDIUM** · **FRONTEND-ONLY**
 **Origin:** Alexyu ruling 2026-07-27 — *"前端 badge 讓 M1 出貨時就帶 badge"*. Promotes the lane-③ entry `backlog-subtitle-status-fe-rendering` (filed by sub-1-2) into M1 scope.
@@ -101,20 +101,20 @@ The `?? SUBTITLE_STATUS.not_searched` fallback stays as the belt-and-braces defa
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Badge derivation (AC #1, #2)**
-  - [ ] 1.1 Read sub-1-7a's Completion Notes + `flow-j-specs/j2-d.png` for the ratified labels/tints. If they differ from the proposal above, implement the spec.
-  - [ ] 1.2 Extend `deriveSubtitleStatus`: terminal branches **above** the track-inference step, transient values → `null` **without** reaching it; add the why-comment.
-  - [ ] 1.3 Confirm `pickPosterBadge`, `deriveFromTracks`, `deriveLifecycleStatus`, `TINT`, `HANT`/`HANS` are untouched (`git diff` the file and check the hunk count).
-- [ ] **Task 2 — Episode row icons (AC #3)**
-  - [ ] 2.1 Extend `SUBTITLE_STATUS` with the 5 entries + long-form `aria-label`s.
-  - [ ] 2.2 Apply (or deliberately skip) the `searching` re-tint per sub-1-7a AC #5, with a comment citing the spec either way.
-  - [ ] 2.3 Leave the `// Implements: <screen-section — pending epic-19-8 mapping>` header as-is — it is an accepted Rule 21 form and re-mapping it is out of scope.
-- [ ] **Task 3 — Tests + gates (AC #4, #6)**
-  - [ ] 3.1 Extend `libraryStatus.spec.ts` — the 9-value table + the two ordering-regression cases + the `pickPosterBadge` cases.
-  - [ ] 3.2 Extend `EpisodeList.spec.tsx` — icon/aria per new value, `animate-spin` presence/absence, the `hasLocalFile` short-circuit.
-  - [ ] 3.3 `pnpm nx test web` green (no `run_in_background` — it orphans vitest workers).
-  - [ ] 3.4 `pnpm lint:all` green from the repo root (eslint + prettier are the relevant steps here).
-  - [ ] 3.5 Render each new state and compare against `j2-d.png`; record the comparison in Completion Notes.
+- [x] **Task 1 — Badge derivation (AC #1, #2)**
+  - [x] 1.1 Read sub-1-7a's Completion Notes + `flow-j-specs/j2-d.png` for the ratified labels/tints. If they differ from the proposal above, implement the spec.
+  - [x] 1.2 Extend `deriveSubtitleStatus`: terminal branches **above** the track-inference step, transient values → `null` **without** reaching it; add the why-comment.
+  - [x] 1.3 Confirm `pickPosterBadge`, `deriveFromTracks`, `deriveLifecycleStatus`, `TINT`, `HANT`/`HANS` are untouched (`git diff` the file and check the hunk count).
+- [x] **Task 2 — Episode row icons (AC #3)**
+  - [x] 2.1 Extend `SUBTITLE_STATUS` with the 5 entries + long-form `aria-label`s.
+  - [x] 2.2 Apply (or deliberately skip) the `searching` re-tint per sub-1-7a AC #5, with a comment citing the spec either way.
+  - [x] 2.3 Leave the `// Implements: <screen-section — pending epic-19-8 mapping>` header as-is — it is an accepted Rule 21 form and re-mapping it is out of scope.
+- [x] **Task 3 — Tests + gates (AC #4, #6)**
+  - [x] 3.1 Extend `libraryStatus.spec.ts` — the 9-value table + the two ordering-regression cases + the `pickPosterBadge` cases.
+  - [x] 3.2 Extend `EpisodeList.spec.tsx` — icon/aria per new value, `animate-spin` presence/absence, the `hasLocalFile` short-circuit.
+  - [x] 3.3 `pnpm nx test web` green (no `run_in_background` — it orphans vitest workers).
+  - [x] 3.4 `pnpm lint:all` green from the repo root (eslint + prettier are the relevant steps here).
+  - [x] 3.5 Render each new state and compare against `j2-d.png`; record the comparison in Completion Notes.
 
 ---
 
@@ -147,7 +147,8 @@ The `?? SUBTITLE_STATUS.not_searched` fallback stays as the belt-and-braces defa
 - **Rule 9** — both specs co-located, both already exist.
 - **Rule 16** — `toBeInTheDocument()` for presence, `getByRole('status', { name })` for the icons, exact `toEqual` on the returned `StatusDescriptor`. No `toBeTruthy` for DOM presence.
 - **Rule 17** — no user-facing **doc** changes, so no EN/zh-TW doc pair is owed. (UI copy is zh-TW-only by design; the app is not bilingual.)
-- **Rule 20** — this story **consumes** sub-1-2's `[@contract-v1]` `SubtitleStatus` 9-value set. Record the ack in Dev Notes at implementation time in the canonical form: `confirmed against [@contract-v1] sub-1-2 AC #2`. It **stamps nothing new**.
+- **Rule 20** — this story **consumes** sub-1-2's `[@contract-v1]` `SubtitleStatus` 9-value set. It **stamps nothing new**.
+  - ✅ **Ack recorded at implementation (2026-08-04):** `confirmed against [@contract-v1] sub-1-2 AC #2` — the 9-value set (`not_searched` / `searching` / `found` / `not_found` / `probing` / `extracting` / `translating` / `no_text_source` / `skipped`). Greped at v1, no bump anywhere in sub-1-2's history, so no stale-mark is owed to this story. All 9 values are rendered by this story; none is left to a fallback by accident (the `?? not_searched` default now only catches genuinely unknown future values).
 - **Rule 21** — only `EpisodeList.tsx` is under `components/**`; its header is already valid.
 - **Rule 24** — see Discovery Triage.
 - **Rule 26** — the `library.tsx` search-param guard is safe for all-alphabetic values; **do not touch it** (AC #5).
@@ -174,17 +175,77 @@ The `?? SUBTITLE_STATUS.not_searched` fallback stays as the belt-and-braces defa
 
 ### Agent Model Used
 
+Amelia (Developer Agent) · Claude Fable 5, effort xhigh · 2026-08-04
+
 ### Debug Log References
+
+RED verified before each task, and each load-bearing guard falsified afterwards (break it, watch the test catch it, restore):
+
+| Task | RED signal |
+|---|---|
+| 1 | `libraryStatus.spec.ts` 7 failed / 22 passed — `expected undefined to be '無字幕源'` |
+| 2 | `EpisodeList.spec.tsx` 8 failed — `Unable to find role="status" with name "偵測字幕軌中"` |
+
+| Guard | Falsification | Result |
+|---|---|---|
+| Terminal verdicts outrank track inference | the whole `switch` moved BELOW the `deriveFromTracks` step | **3 tests FAIL** (`no_text_source` and `skipped` infer 有字幕; transient values badge from a stale track guess) |
+| `searching` re-tint (sub-1-7a AC #5) | `--accent-text` reverted to `--warning` | 1 test FAILS |
+| accent is reserved for in-progress | `no_text_source` given `--accent-text` | 1 test FAILS |
 
 ### Completion Notes List
 
-_(Record here: the ratified label/tint/icon table actually implemented, and the AC #6 side-by-side comparison against `j2-d.png`.)_
+- 🎯 **Implemented exactly the sub-1-7a ratified table, with ONE deliberate deviation** (next bullet). Poster/list badge — `no_text_source` → `無字幕源`, `skipped` → `已略過`, both `TINT.neutral` (`--bg-tertiary` / `--text-muted`), both non-steady so `pickPosterBadge` surfaces them with **zero edits to `pickPosterBadge` itself**; `probing`/`extracting`/`translating` → `null`. `EpisodeList` icons — `Loader2`+spin for the three in-flight, `XCircle` for `no_text_source`, `Minus` for `skipped`, long-form `aria-label`s per the spec. `searching` re-tinted `--warning` → accent per sub-1-7a AC #5.
+- ⚠️ **Deviation from the ratified table, on a11y evidence: the icon accent is `--accent-text` (`#60a5fa`), not `--accent-primary` (`#3b82f6`).** sub-1-7a's table said `--accent-primary` (my own correction of the non-existent `--accent`); this story's AC #3 proposal said `--accent-text`. The proposal is right and the spec screen is wrong. Measured contrast against the three surfaces an episode row can sit on (rows carry no background of their own — they inherit the container):
+
+  | token | on `--bg-primary` | on `--bg-secondary` | on `--bg-tertiary` |
+  |---|---|---|---|
+  | `--accent-primary` `#3b82f6` | 4.26 | 3.58 | **3.04** |
+  | `--accent-text` `#60a5fa` | 6.16 | 5.17 | **4.40** |
+
+  WCAG 1.4.11 (non-text contrast) requires **3.0:1**. `--accent-primary` lands at 3.04 on `--bg-tertiary` — passing only on paper, and any hover/elevated surface puts it under. `--accent-text`'s own token comment reads *"accent body text / active label (TC-2 AA-safe)"*: an icon **is** foreground, so it is the intended token. Filed `backlog-pen-j2-accent-token-correction` (lane ③) so the `.pen` spec screen is corrected to match rather than leaving code and design contradicting each other.
+- 🔗 **AC Drift: FOUND** — `12-2-season-episode-list` AC #5 / sub-task 7.4 specified `searching = amber spinner` (`--warning`). sub-1-7a AC #5 ruled it re-tinted, and this story executes that: **`searching` icon `--warning` → `--accent-text`**. Deliberate, spec-backed, and covered by a dedicated regression test. Story 12-2 carries **0** `[@contract-v*]` stamps → pre-Rule-20, implicit v0 under the forward-only retrofit, so no ack and no stale-mark are owed. Nothing else in 12-2's ACs is touched: the `hasLocalFile` guard, the icon set, `role="status"`, and the four original values all behave exactly as 12-2 shipped them (their tests are untouched and green).
+- 📎 **Contract Stamps: FOUND** (1 consumed, 0 produced). `confirmed against [@contract-v1] sub-1-2 AC #2` — the 9-value `SubtitleStatus` set; greped at v1 with no bump in sub-1-2's history, so no stale-mark is owed. sub-1-7a's 2 stamp hits are quotations of that same upstream, not new contracts. This story stamps nothing — it is a leaf consumer of a wire contract, not a producer.
+- 🎭 **A11y Pre-Flight: PASS** (2 files under `apps/web/` touched — `libraryStatus.ts` is a util, `EpisodeList.tsx` is the only component). `eslint` on all four touched files: **0 errors, 0 warnings**, none introduced. Manual 4-class check: ① responsive images — N/A, no `<img>` in scope. ② modal focus — N/A, no dialog. ③ **aria-live on async-revealed content — this is the relevant class and it is satisfied**: every new state renders through the existing `role="status"` span (implicit `aria-live="polite"`) with an `aria-label` **and** a matching `title`, so a status flipping mid-run is announced. ④ custom-widget keyboard/ARIA — N/A, the indicator is non-interactive. Plus the contrast measurement above, which is the substantive a11y decision of this story.
+- 🎨 **UX Verification — honest account.** I opened `_bmad-output/screenshots/flow-j-specs/j2-d.png`. **It is a 204×400 thumbnail and its spec text is not legible** — that is the limitation `backlog-pen-spec-screen-readable-export` was filed for in sub-1-7a, and it means a literal pixel side-by-side is not achievable from the committed screenshot. Verification was therefore done attribute-by-attribute against the **ratified table in sub-1-7a's Completion Notes** (which that story designates as the authoritative handoff for exactly this reason), and every attribute is pinned by a test rather than by eyeballing:
+
+  | Spec attribute | Ratified value | Implemented | Pinned by |
+  |---|---|---|---|
+  | `no_text_source` badge | `無字幕源`, neutral | same | `maps no_text_source → 無字幕源` |
+  | `skipped` badge | `已略過`, neutral | same | `maps skipped → 已略過` |
+  | transient badges | none | `null` ×3 | `renders NO badge for the three transient states` |
+  | in-flight icons | `Loader2` + spin, accent | same (`--accent-text`, see deviation) | `spins for the three in-flight states…` + tint test |
+  | `no_text_source` icon | `XCircle`, muted | same | tint test |
+  | `skipped` icon | `Minus`, muted | same | tint test |
+  | `aria-label`s | 5 long forms | verbatim | the 5-row `it.each` |
+  | `searching` re-tint | `--warning` → accent | done | `re-tints the pre-existing searching state` |
+
+  **What still needs a human:** the rendered *look* of the two neutral pills and the spinner in situ. There is no gallery fixture for `PosterCardV2` / `LibraryListRowV2` / `EpisodeList` (AC #5 fences off creating them), so no visual baseline exists to diff. Recommend Alexyu eyeball one library grid + one episode list against the `.pen` `J2-D` screen in Pencil at review time.
+- ✅ **AC #5 fence held.** Zero `apps/api/` files. Zero gallery fixtures, zero visual baselines. Zero `.pen` / screenshot changes. `PosterCardV2.tsx` and `LibraryListRowV2.tsx` untouched — the derivation is centralized, which is the whole point. `routes/library.tsx`'s Rule 26-safe `typeof … === 'string'` guard untouched. `types/library.ts` untouched (`subtitleStatus?: string` stays loose — which is precisely why the runtime tests matter).
+- ✅ **Full regression gate:** `pnpm nx test web` **2479/2479 PASS** (225 files) · `pnpm nx test api` **34 Go packages ok** · targeted `eslint` 0/0 on the four touched files · `prettier --write` clean · no orphaned vitest workers (`pgrep vitest` empty after every run).
+- ⚠️ **Pre-existing, not introduced:** `tsc --noEmit -p apps/web/tsconfig.app.json` reports **139 errors on a clean `main` checkout**, in 11 files (`RecentMediaPanel`, `HeroBanner`, the three library empty-states, the scanner components, `ScannerSettings`, `useScanProgress`, `useSubtitleBatchProgress`, `-gallery.fixtures.tsx`). **My four files contribute 0.** Verified by stashing this story's changes and re-running. It is not a CI gate (`pnpm lint:all` = go vet → staticcheck → eslint → prettier; the web build is Vite, which does not typecheck), so this story neither fixes nor is blocked by it — filed as `backlog-web-tsc-app-config-errors` so it stops being rediscovered.
 
 ### Discovery Triage
 
-- **Did this story discover any work outside its current scope?**
-  - If **NO**: state `N/A — no out-of-scope work discovered`.
-  - Two items are **pre-triaged as deliberate exclusions**, not discoveries, and need no new entry unless you find a reason to change them: (a) no gallery fixtures / visual baselines exist for `PosterCardV2` / `LibraryListRowV2` / `EpisodeList` — Rule 22 backfill, out of scope (AC #5); (b) library filtering by `subtitle_status` remains unwired (`routes/library.tsx:20-22`) — pre-existing, unchanged by this story.
+- **③ backlog-with-carry-forward-link → `backlog-pen-j2-accent-token-correction`.** The `J2-D` spec screen specifies `--accent-primary` for the in-flight icons; the implementation uses `--accent-text` on measured contrast grounds (see Completion Notes). Code and design now disagree on one token, which is the two-sources-of-truth failure mode — filed at discovery with a bidirectional link so the `.pen` is corrected on its next open (a one-token edit, not worth a Pencil session of its own, and the `.pen` is authoritative for *look*, not for a token name the codebase can measure).
+- **③ backlog-with-carry-forward-link → `backlog-episodelist-skipped-vs-not-searched-glyph`.** Found by the pre-ship adversarial self-review: on the `EpisodeList` row `skipped` and `not_searched` render **identically** (both `Minus` + `--text-muted`), distinguishable only by the accessible name. That collides with this story's own statement — *"an item the pipeline permanently declined is visibly distinguishable from one it simply hasn't reached yet"*. Shipped as ratified anyway (sub-1-7a AC #3 specifies `Minus`; choosing a different glyph is a UX call, not a dev call), and the collision does **not** exist on the primary surface — the poster/list badge shows 已略過 versus 缺字幕/有字幕/none. Filed with the candidate fix (`CircleSlash` / `Ban` / `SkipForward` on `J2-D`, then a one-line map edit) and a code comment at the definition site so the next reader does not re-derive it.
+- **③ backlog-with-carry-forward-link → `backlog-web-tsc-app-config-errors`.** 139 pre-existing `tsc --noEmit` errors on a clean `main` across 11 files; this story's four files contribute 0. Not a CI gate today, which is why it accumulated. Filed so "pre-existing, not in scope" stops being written without a tracking entry (Epic 9c Retro AI-2).
+- **Pre-triaged exclusions confirmed unchanged, no entry owed:** (a) no gallery fixtures / visual baselines for `PosterCardV2` / `LibraryListRowV2` / `EpisodeList` — Rule 22 backfill, fenced by AC #5; (b) library filtering by `subtitle_status` remains unwired (`routes/library.tsx:20-22`) — untouched, Rule 26-safe as-is.
+- **Not a discovery — resolved inside the story:** the `searching` re-tint is AC-drift against 12-2, but sub-1-7a AC #5 already ruled it, so it is executed here under that ruling rather than filed (recorded under 🔗 AC Drift).
 - Reference: `project-context.md` Rule 24.
 
+### Change Log
+
+| Date | Change |
+|---|---|
+| 2026-08-04 | **Tasks 1–3 (AC #1–#6) — RED first on both surfaces.** `deriveSubtitleStatus` gains the 5 pipeline values as a `switch` placed **above** track inference: the two terminal verdicts return neutral badges, the three in-flight values return `null`, and neither reaches `deriveFromTracks`. That ordering is the whole risk of this story — `no_text_source` files typically still carry image-only (PGS/VobSub) tracks and `skipped` files carry a real text track with an `und` tag, so from below the ladder both would infer 有字幕 and the engine's authoritative verdict would lose to a naive track count. Falsified by moving the switch down: 3 tests fail. `pickPosterBadge` needed **zero** edits (both terminal descriptors are non-steady by construction) and is asserted, not modified. `EpisodeList`'s `SUBTITLE_STATUS` map now covers all 9 values with long-form `aria-label`s — the icon has no visible text, so the accessible name is the only place 「已略過是刻意、不是壞掉」 can actually be said. `searching` re-tinted `--warning` → accent per sub-1-7a AC #5 (AC drift vs 12-2 AC #5, recorded). The accent token is `--accent-text` not the spec's `--accent-primary`: measured 3.04:1 on `--bg-tertiary` vs the 3.0 WCAG floor, against 4.40:1 for `--accent-text`; `.pen` correction filed. Gates: web 2479/2479, api 34 packages, eslint 0/0 on touched files, prettier clean, no orphaned workers. |
+
 ### File List
+
+| File | Change |
+|---|---|
+| `apps/web/src/utils/libraryStatus.ts` | **modified** — AC #1: the 5 pipeline values as a `switch` ABOVE track inference (terminal → neutral badge, in-flight → `null`), with the why-comment the AC asks for; the file docstring's now-false rationale ("ephemeral, no persisted per-item field" — voided by sub-1-2) rewritten to rest on the surviving principle (badge = exception signal) instead. `deriveFromTracks` / `deriveLifecycleStatus` / `pickPosterBadge` / `TINT` / `HANT` / `HANS` **untouched** |
+| `apps/web/src/utils/libraryStatus.spec.ts` | **modified** — +17 tests: the 5 new values, 無字幕源-vs-缺字幕 distinctness, the two ordering-regression cases (image-only track + `und` track), transient-values-do-not-reach-inference, and the `pickPosterBadge` surfacing/suppression pair. The 22 pre-existing assertions are unmodified and green |
+| `apps/web/src/components/media/EpisodeList.tsx` | **modified** — AC #3: `SUBTITLE_STATUS` extended to all 9 values with long-form `aria-label`s; `searching` re-tinted `--warning` → `--accent-text` per sub-1-7a AC #5; the `?? not_searched` fallback and the `hasLocalFile` guard untouched. Rule 21 header left as-is (already a valid accepted form) |
+| `apps/web/src/components/media/EpisodeList.spec.tsx` | **modified** — +10 tests: the 5 `aria-label`s, spin present/absent, the accent-vs-muted tint split, the `searching` re-tint regression, the `hasLocalFile` short-circuit, and the unknown-value fallback |
+| `_bmad-output/implementation-artifacts/12-2-season-episode-list.md` | **AC drift reference — see Completion Notes** (its AC #5 「searching=amber spinner」 is superseded by sub-1-7a AC #5; file itself unmodified) |
+| `_bmad-output/implementation-artifacts/sprint-status.yaml` | **modified** — `sub-1-7b` → `review`; `backlog-pen-j2-accent-token-correction` and `backlog-web-tsc-app-config-errors` filed (lane ③) |

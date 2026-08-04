@@ -30,14 +30,58 @@ function episodeCode(seasonNumber: number, episodeNumber: number): string {
   return `S${s}E${e}`;
 }
 
+// The 9 `subtitle_status` values (sub-1-2 [@contract-v1]); treatment ratified by
+// sub-1-7a, spec screen `flow-j-specs/j2-d`.
+//
+// `label` is the LONG form on purpose: the icon carries no visible text, so the
+// accessible name is the only place the full explanation can live. That is where
+// "已略過 must read as deliberate, not broken" is actually solved — the poster
+// badge's 3–4-char label (libraryStatus.ts) cannot carry it.
+//
+// accent = in-progress, muted = terminal verdict. `--accent-text` rather than
+// `--accent-primary`: an icon is foreground, and #3b82f6 measures 3.04:1 on
+// `--bg-tertiary` — at the WCAG 1.4.11 non-text threshold, so any hover surface
+// puts it under. `--accent-text` (#60a5fa) holds 4.40:1 worst case.
 const SUBTITLE_STATUS: Record<
   string,
   { Icon: typeof CheckCircle2; color: string; label: string; spin?: boolean }
 > = {
   found: { Icon: CheckCircle2, color: 'text-[var(--success)]', label: '已找到字幕' },
   not_found: { Icon: XCircle, color: 'text-[var(--error)]', label: '找不到字幕' },
-  searching: { Icon: Loader2, color: 'text-[var(--warning)]', label: '字幕搜尋中', spin: true },
+  // Re-tinted --warning → --accent-text per sub-1-7a AC #5: `searching` IS an
+  // in-progress state, and two colours for one meaning next to the three spinners
+  // below would read as a distinction that does not exist.
+  searching: { Icon: Loader2, color: 'text-[var(--accent-text)]', label: '字幕搜尋中', spin: true },
   not_searched: { Icon: Minus, color: 'text-[var(--text-muted)]', label: '尚未搜尋字幕' },
+  probing: { Icon: Loader2, color: 'text-[var(--accent-text)]', label: '偵測字幕軌中', spin: true },
+  extracting: {
+    Icon: Loader2,
+    color: 'text-[var(--accent-text)]',
+    label: '抽取內嵌字幕中',
+    spin: true,
+  },
+  translating: {
+    Icon: Loader2,
+    color: 'text-[var(--accent-text)]',
+    label: '翻譯字幕中',
+    spin: true,
+  },
+  // Terminal: the pipeline will not produce a subtitle for this file automatically.
+  // Distinct from not_found (缺字幕) by recovery — only P2 ASR can change this one.
+  no_text_source: {
+    Icon: XCircle,
+    color: 'text-[var(--text-muted)]',
+    label: '無可用的文字字幕軌',
+  },
+  // Terminal and DELIBERATE: the track's language tag did not qualify (P0 — `und`
+  // is never treated as English). Muted, not error-red: nothing went wrong.
+  //
+  // NOTE this renders identically to `not_searched` (same glyph, same tint) — the
+  // two are told apart only by the accessible name / tooltip. Ratified that way by
+  // sub-1-7a; tracked as `backlog-episodelist-skipped-vs-not-searched-glyph`
+  // because the story's own goal is that a declined item be VISIBLY distinct from
+  // one not yet reached, and on this surface it currently is not.
+  skipped: { Icon: Minus, color: 'text-[var(--text-muted)]', label: '已略過（字幕軌語言不符）' },
 };
 
 /** Subtitle status indicator — hidden entirely when no local file exists (AC #6). */

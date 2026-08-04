@@ -7,11 +7,15 @@
  * `subtitleTracks`. We derive the durable states truthfully: in-library lifecycle
  * (整理中 / 已入庫 / 失敗) + subtitle availability (繁中 / 簡中 / 有字幕 / 缺字幕).
  *
- * The transient process states (簡轉繁 / AI 校正中) are ephemeral (subtitle-engine
- * SSE, no persisted per-item field) → surfaced by the Activity hub, NOT this badge;
- * 下載中·% is not derivable for a library item (Epic 13/14). Tints/text use the §2.5
- * token classes; an unknown/degraded state returns null (badge absent, never an
- * error — F3).
+ * The transient process states (簡轉繁 / AI 校正中 / probing / extracting /
+ * translating) are surfaced by the Activity hub, NOT this badge. NOTE the reason
+ * changed: it used to be "ephemeral, no persisted per-item field", but sub-1-2 made
+ * probing/extracting/translating real `subtitle_status` column values. The rule
+ * survives on the ORIGINAL principle instead — the poster badge is an EXCEPTION
+ * signal (ux3-0-2) and normal progress is not an exception (ruled in sub-1-7a,
+ * spec screen `flow-j-specs/j2-d`). 下載中·% is not derivable for a library item
+ * (Epic 13/14). Tints/text use the §2.5 token classes; an unknown/degraded state
+ * returns null (badge absent, never an error — F3).
  */
 import type { LibraryMovie, LibrarySeries } from '../types/library';
 
@@ -111,14 +115,43 @@ export function deriveSubtitleStatus(media: Media | undefined): StatusDescriptor
     return deriveFromTracks(media) ?? { label: '有字幕', className: TINT.neutral };
   }
 
-  // 2. Embedded tracks (covers not_searched / searching / absent subtitleStatus).
+  // 2. Subtitle-pipeline verdicts (sub-1-2's 9-value enum; spec: flow-j-specs/j2-d).
+  //
+  // These sit ABOVE track inference ON PURPOSE — do not "simplify" them to the
+  // bottom of the ladder. Both terminal values describe a file that HAS tracks
+  // the pipeline cannot use: `no_text_source` typically carries image-only
+  // (PGS/VobSub) tracks, and `skipped` carries a real text track with an `und` or
+  // non-English tag. Step 3 returns on ANY track, so from below it these items
+  // would infer 有字幕 and the engine's authoritative verdict would lose to a
+  // naive track count — the user would see "has subtitles" on a file that will
+  // never get one.
+  //
+  // The three in-flight values return null for the same reason: falling through
+  // to track inference would badge a mid-run item with a stale track guess. They
+  // are normal progress, not an exception, so the grid stays quiet and the
+  // Activity hub + `subtitle_progress` SSE (sub-1-6) own them.
+  switch (media.subtitleStatus) {
+    case 'no_text_source':
+      // Distinct from 缺字幕 by recovery, not by meaning: 缺字幕 was searched for
+      // online and may be found later; this file has no text to extract at all,
+      // so only P2 ASR can change it (sub-1-7a AC #4).
+      return { label: '無字幕源', className: TINT.neutral };
+    case 'skipped':
+      return { label: '已略過', className: TINT.neutral };
+    case 'probing':
+    case 'extracting':
+    case 'translating':
+      return null;
+  }
+
+  // 3. Embedded tracks (covers not_searched / searching / absent subtitleStatus).
   const fromTracks = deriveFromTracks(media);
   if (fromTracks) return fromTracks;
 
-  // 3. Engine searched and found nothing, no embedded tracks → known-missing.
+  // 4. Engine searched and found nothing, no embedded tracks → known-missing.
   if (media.subtitleStatus === 'not_found') return { label: '缺字幕', className: TINT.neutral };
 
-  // 4. Genuinely unknown.
+  // 5. Genuinely unknown.
   return null;
 }
 

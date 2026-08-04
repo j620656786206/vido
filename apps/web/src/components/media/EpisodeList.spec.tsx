@@ -73,3 +73,81 @@ describe('EpisodeList', () => {
     expect(screen.getByText('此季沒有劇集資料。')).toBeInTheDocument();
   });
 });
+
+// ─── Story sub-1-7b — the 5 pipeline states (spec: flow-j-specs/j2-d) ───
+
+const ep = (subtitleStatus: string, episodeNumber = 1): MergedEpisode => ({
+  episodeNumber,
+  name: `第 ${episodeNumber} 集`,
+  hasLocalFile: true,
+  subtitleStatus,
+  filePath: `/m/S01E0${episodeNumber}.mkv`,
+});
+
+describe('EpisodeList — subtitle-pipeline status icons (sub-1-7b AC #3)', () => {
+  it.each([
+    ['probing', '偵測字幕軌中'],
+    ['extracting', '抽取內嵌字幕中'],
+    ['translating', '翻譯字幕中'],
+    ['no_text_source', '無可用的文字字幕軌'],
+    ['skipped', '已略過（字幕軌語言不符）'],
+  ])('renders %s with the long-form accessible name "%s"', (subtitleStatus, label) => {
+    render(<EpisodeList episodes={[ep(subtitleStatus)]} seasonNumber={1} />);
+    // The icon carries no visible text, so the accessible name is where the full
+    // explanation lives — this is where "已略過 must not read as broken" is solved.
+    expect(screen.getByRole('status', { name: label })).toBeInTheDocument();
+  });
+
+  it('spins for the three in-flight states and NOT for the terminal ones', () => {
+    const inFlight = ['probing', 'extracting', 'translating'];
+    const terminal = ['no_text_source', 'skipped'];
+
+    for (const status of inFlight) {
+      const { unmount } = render(<EpisodeList episodes={[ep(status)]} seasonNumber={1} />);
+      expect(screen.getByRole('status').querySelector('svg')).toHaveClass('animate-spin');
+      unmount();
+    }
+    for (const status of terminal) {
+      const { unmount } = render(<EpisodeList episodes={[ep(status)]} seasonNumber={1} />);
+      expect(screen.getByRole('status').querySelector('svg')).not.toHaveClass('animate-spin');
+      unmount();
+    }
+  });
+
+  it('tints in-flight states with accent, terminal verdicts with muted (sub-1-7a AC #3)', () => {
+    const { unmount } = render(<EpisodeList episodes={[ep('translating')]} seasonNumber={1} />);
+    // accent is RESERVED for in-progress (Sally 2026-07-05).
+    expect(screen.getByRole('status')).toHaveClass('text-[var(--accent-text)]');
+    unmount();
+
+    render(<EpisodeList episodes={[ep('no_text_source')]} seasonNumber={1} />);
+    expect(screen.getByRole('status')).toHaveClass('text-[var(--text-muted)]');
+  });
+
+  it('re-tints the pre-existing searching state to accent (sub-1-7a AC #5 ruling)', () => {
+    render(<EpisodeList episodes={[ep('searching')]} seasonNumber={1} />);
+    const icon = screen.getByRole('status');
+    // Was --warning; two colours for one meaning next to the three new spinners
+    // read as a distinction that does not exist.
+    expect(icon).toHaveClass('text-[var(--accent-text)]');
+    expect(icon).not.toHaveClass('text-[var(--warning)]');
+    expect(icon.querySelector('svg')).toHaveClass('animate-spin');
+  });
+
+  it('still short-circuits on !hasLocalFile before any status lookup', () => {
+    render(
+      <EpisodeList
+        episodes={[
+          { episodeNumber: 1, name: '第 1 集', hasLocalFile: false, subtitleStatus: 'skipped' },
+        ]}
+        seasonNumber={1}
+      />
+    );
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
+  it('falls back to not_searched for an unrecognised value (belt and braces)', () => {
+    render(<EpisodeList episodes={[ep('some_future_state')]} seasonNumber={1} />);
+    expect(screen.getByRole('status', { name: '尚未搜尋字幕' })).toBeInTheDocument();
+  });
+});
