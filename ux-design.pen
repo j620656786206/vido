@@ -1,5 +1,5 @@
 {
-  "version": "2.14",
+  "version": "2.15",
   "children": [
     {
       "type": "frame",
@@ -143,6 +143,7 @@
             "bottom": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "padding": [
             0,
             32
@@ -1152,6 +1153,7 @@
                 "bottom": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 0,
                 32
@@ -2176,6 +2178,7 @@
             "bottom": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "padding": [
             0,
             32
@@ -2602,6 +2605,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "gap": 16,
                   "padding": [
                     10,
@@ -2745,6 +2749,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "gap": 16,
                   "padding": [
                     10,
@@ -2888,6 +2893,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "gap": 16,
                   "padding": [
                     10,
@@ -3032,6 +3038,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "gap": 16,
                   "padding": [
                     10,
@@ -3175,6 +3182,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "gap": 16,
                   "padding": [
                     10,
@@ -3319,6 +3327,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "gap": 16,
                   "padding": [
                     10,
@@ -3462,6 +3471,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "gap": 16,
                   "padding": [
                     10,
@@ -3606,6 +3616,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "gap": 16,
                   "padding": [
                     10,
@@ -3749,6 +3760,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "gap": 16,
                   "padding": [
                     10,
@@ -3968,6 +3980,7 @@
             "bottom": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "padding": [
             0,
             32
@@ -5692,6 +5705,7 @@
             "bottom": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "padding": [
             0,
             32
@@ -6608,6 +6622,7 @@
             "bottom": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "padding": [
             0,
             32
@@ -6879,6 +6894,7 @@
             "bottom": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "padding": [
             0,
             32
@@ -7493,6 +7509,7 @@
             "bottom": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "padding": [
             0,
             16
@@ -9962,6 +9979,7 @@
                 "bottom": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 0,
                 32
@@ -10733,6 +10751,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "gap": 12,
                       "padding": [
                         10,
@@ -10802,6 +10821,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "gap": 12,
                       "padding": [
                         10,
@@ -10871,6 +10891,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "gap": 12,
                       "padding": [
                         10,
@@ -10940,6 +10961,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "gap": 12,
                       "padding": [
                         10,
@@ -11367,6 +11389,7 @@
                 "bottom": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 0,
                 32
@@ -12771,6 +12794,7 @@
                 "bottom": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 0,
                 32
@@ -14003,6 +14027,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "padding": [
                     0,
                     32
@@ -15097,6 +15122,7 @@
             "bottom": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "padding": [
             0,
             32
@@ -16176,6 +16202,7 @@
             "bottom": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "padding": [
             0,
             16
@@ -16466,6 +16493,7 @@
             "bottom": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "padding": [
             0,
             16
@@ -17008,6 +17036,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "padding": [
                     14,
                     0
@@ -17047,6 +17076,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "padding": [
                     14,
                     0
@@ -17076,6 +17106,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "padding": [
                     14,
                     0
@@ -17867,6 +17898,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "gap": 14,
                   "padding": [
                     16,
@@ -18003,6 +18035,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "gap": 14,
                   "padding": [
                     16,
@@ -18244,6 +18277,7 @@
             "bottom": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "padding": [
             0,
             16
@@ -18880,6 +18914,7 @@
             "bottom": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "padding": [
             0,
             32
@@ -18980,6 +19015,7 @@
                 "right": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "layout": "vertical",
               "padding": [
                 16,
@@ -19012,6 +19048,7 @@
                         "left": 2
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "gap": 10,
                       "padding": [
                         12,
@@ -19603,6 +19640,7 @@
             "bottom": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "padding": [
             0,
             16
@@ -20347,6 +20385,7 @@
             "bottom": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "padding": [
             0,
             32
@@ -20447,6 +20486,7 @@
                 "right": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "layout": "vertical",
               "padding": [
                 16,
@@ -20620,6 +20660,7 @@
                         "left": 2
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "gap": 10,
                       "padding": [
                         12,
@@ -20939,6 +20980,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "padding": [
                         10,
                         16
@@ -21058,6 +21100,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "padding": [
                         10,
                         16
@@ -21177,6 +21220,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "padding": [
                         10,
                         16
@@ -21296,6 +21340,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "padding": [
                         10,
                         16
@@ -21415,6 +21460,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "padding": [
                         10,
                         16
@@ -21534,6 +21580,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "padding": [
                         10,
                         16
@@ -22189,6 +22236,7 @@
             "bottom": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "padding": [
             0,
             32
@@ -22289,6 +22337,7 @@
                 "right": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "layout": "vertical",
               "padding": [
                 16,
@@ -22391,6 +22440,7 @@
                         "left": 2
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "gap": 10,
                       "padding": [
                         12,
@@ -23079,6 +23129,7 @@
                 "bottom": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 0,
                 32
@@ -24484,6 +24535,7 @@
                 "bottom": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 0,
                 32
@@ -25595,6 +25647,7 @@
             "bottom": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "padding": [
             0,
             16
@@ -26273,6 +26326,7 @@
                 "bottom": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 0,
                 16
@@ -27209,6 +27263,7 @@
                 "bottom": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 0,
                 16
@@ -28032,6 +28087,7 @@
             "bottom": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "padding": [
             0,
             32
@@ -28762,6 +28818,7 @@
             "bottom": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "padding": [
             0,
             16
@@ -29261,6 +29318,7 @@
                 "bottom": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 0,
                 24
@@ -29595,6 +29653,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "gap": 24,
                   "padding": [
                     0,
@@ -29717,6 +29776,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "gap": 24,
                   "padding": [
                     0,
@@ -29949,6 +30009,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "gap": 24,
                   "padding": [
                     0,
@@ -30143,6 +30204,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "gap": 24,
                   "padding": [
                     0,
@@ -30375,6 +30437,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "gap": 24,
                   "padding": [
                     0,
@@ -30569,6 +30632,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "gap": 24,
                   "padding": [
                     0,
@@ -30913,6 +30977,7 @@
                 "bottom": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 0,
                 24
@@ -31247,6 +31312,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "gap": 24,
                   "padding": [
                     0,
@@ -31370,6 +31436,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "gap": 24,
                   "padding": [
                     0,
@@ -31564,6 +31631,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "gap": 24,
                   "padding": [
                     0,
@@ -31758,6 +31826,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "gap": 24,
                   "padding": [
                     0,
@@ -31918,6 +31987,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "gap": 24,
                   "padding": [
                     0,
@@ -32373,6 +32443,7 @@
                 "bottom": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 0,
                 16
@@ -33414,6 +33485,7 @@
                 "bottom": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 0,
                 32
@@ -33999,6 +34071,7 @@
                 "bottom": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 0,
                 16
@@ -34528,6 +34601,7 @@
                 "bottom": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 0,
                 16
@@ -34580,6 +34654,7 @@
                 "bottom": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "layout": "vertical",
               "gap": 8,
               "padding": [
@@ -34896,6 +34971,7 @@
                 "top": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "gap": 12,
               "padding": [
                 12,
@@ -35084,6 +35160,7 @@
             "bottom": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "padding": [
             0,
             32
@@ -36211,6 +36288,7 @@
             "bottom": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "padding": [
             0,
             32
@@ -37709,6 +37787,7 @@
             "bottom": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "padding": [
             0,
             16
@@ -38696,6 +38775,7 @@
             "bottom": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "padding": [
             0,
             16
@@ -39092,6 +39172,7 @@
                 "bottom": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 0,
                 32
@@ -39966,6 +40047,7 @@
                 "bottom": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 0,
                 32
@@ -41398,6 +41480,7 @@
                 "bottom": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "alignItems": "end",
               "children": [
                 {
@@ -45342,6 +45425,7 @@
             "bottom": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "padding": [
             0,
             32
@@ -46393,6 +46477,7 @@
             "bottom": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "gap": 16,
           "padding": [
             0,
@@ -47442,6 +47527,7 @@
             "bottom": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "gap": 24,
           "padding": [
             0,
@@ -47835,6 +47921,7 @@
             "bottom": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "padding": [
             0,
             32
@@ -49128,6 +49215,7 @@
             "bottom": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "gap": 8,
           "padding": [
             0,
@@ -49490,6 +49578,7 @@
             "top": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "padding": [
             8,
             16
@@ -50402,6 +50491,7 @@
                 "bottom": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 0,
                 24
@@ -50520,6 +50610,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "gap": 16,
                   "padding": [
                     12,
@@ -50620,6 +50711,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "gap": 16,
                   "padding": [
                     12,
@@ -50720,6 +50812,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "gap": 16,
                   "padding": [
                     12,
@@ -50820,6 +50913,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "gap": 16,
                   "padding": [
                     12,
@@ -51017,6 +51111,7 @@
                 "top": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "gap": 12,
               "padding": [
                 0,
@@ -51987,6 +52082,7 @@
                 "bottom": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 0,
                 16
@@ -52094,6 +52190,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "layout": "vertical",
                   "gap": 6,
                   "padding": [
@@ -52163,6 +52260,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "layout": "vertical",
                   "gap": 6,
                   "padding": [
@@ -52232,6 +52330,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "layout": "vertical",
                   "gap": 6,
                   "padding": [
@@ -52301,6 +52400,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "layout": "vertical",
                   "gap": 6,
                   "padding": [
@@ -52437,6 +52537,7 @@
                 "top": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "gap": 8,
               "padding": [
                 12,
@@ -52576,6 +52677,7 @@
                 "bottom": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 0,
                 16
@@ -52935,6 +53037,7 @@
                 "top": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "justifyContent": "center",
               "alignItems": "center",
               "children": [
@@ -54280,7 +54383,7 @@
       "type": "frame",
       "id": "XlFIq",
       "x": 17040,
-      "y": 24900,
+      "y": 24300,
       "name": "J1-D",
       "clip": true,
       "width": 1240,
@@ -59908,7 +60011,7 @@
       "type": "text",
       "id": "CzjQz",
       "x": 17040,
-      "y": 24780,
+      "y": 24180,
       "name": "J Flow Title",
       "fill": "#222222",
       "content": "PosterCard 優化 — PosterCard Polish",
@@ -59920,7 +60023,7 @@
       "type": "text",
       "id": "IE54D",
       "x": 17040,
-      "y": 24814,
+      "y": 24214,
       "name": "J Flow Desc",
       "fill": "#666666",
       "content": "PosterCard 資訊密度與視覺優化（bugfix-10-7）",
@@ -59932,7 +60035,7 @@
       "type": "text",
       "id": "OamWB",
       "x": 17040,
-      "y": 24870,
+      "y": 24270,
       "name": "J1 · PosterCard 資訊密度與優化",
       "fill": "#888888",
       "content": "J1 · PosterCard 資訊密度與優化",
@@ -60333,6 +60436,7 @@
                     "right": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "layout": "vertical",
                   "gap": 2,
                   "padding": [
@@ -60663,6 +60767,7 @@
                     "right": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "layout": "vertical",
                   "gap": 6,
                   "padding": [
@@ -60958,6 +61063,7 @@
                     "top": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "padding": [
                     10,
                     8,
@@ -64355,6 +64461,7 @@
                     "right": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "layout": "vertical",
                   "gap": 16,
                   "padding": 20,
@@ -65427,6 +65534,7 @@
             "right": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "layout": "vertical",
           "gap": 2,
           "padding": [
@@ -65746,6 +65854,7 @@
                 "bottom": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 0,
                 28
@@ -66552,6 +66661,7 @@
             "right": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "layout": "vertical",
           "gap": 2,
           "padding": [
@@ -66871,6 +66981,7 @@
                 "bottom": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 0,
                 28
@@ -67350,6 +67461,7 @@
             "right": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "layout": "vertical",
           "gap": 2,
           "padding": [
@@ -67669,6 +67781,7 @@
                 "bottom": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 0,
                 28
@@ -68491,6 +68604,7 @@
             "right": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "layout": "vertical",
           "gap": 2,
           "padding": [
@@ -68810,6 +68924,7 @@
                 "bottom": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 0,
                 28
@@ -70391,6 +70506,7 @@
             "right": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "layout": "vertical",
           "gap": 2,
           "padding": [
@@ -70710,6 +70826,7 @@
                 "bottom": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 0,
                 28
@@ -71187,6 +71304,7 @@
             "right": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "layout": "vertical",
           "gap": 2,
           "padding": [
@@ -71506,6 +71624,7 @@
                 "bottom": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 0,
                 28
@@ -72013,6 +72132,7 @@
             "bottom": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "padding": [
             0,
             16
@@ -72430,6 +72550,7 @@
             "top": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "padding": [
             10,
             8,
@@ -72620,6 +72741,7 @@
             "bottom": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "padding": [
             0,
             16
@@ -72944,6 +73066,7 @@
             "top": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "padding": [
             10,
             8,
@@ -73134,6 +73257,7 @@
             "bottom": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "padding": [
             0,
             16
@@ -73623,6 +73747,7 @@
             "top": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "padding": [
             10,
             8,
@@ -74483,6 +74608,7 @@
                 "top": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "layout": "vertical",
               "padding": [
                 12,
@@ -74580,6 +74706,7 @@
             "right": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "layout": "vertical",
           "gap": 2,
           "padding": [
@@ -75857,6 +75984,7 @@
             "right": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "layout": "vertical",
           "gap": 2,
           "padding": [
@@ -76177,6 +76305,7 @@
                 "bottom": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "gap": 12,
               "padding": [
                 0,
@@ -76761,6 +76890,7 @@
             "right": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "layout": "vertical",
           "gap": 2,
           "padding": [
@@ -77265,6 +77395,7 @@
             "right": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "layout": "vertical",
           "gap": 2,
           "padding": [
@@ -77584,6 +77715,7 @@
                 "bottom": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "gap": 12,
               "padding": [
                 0,
@@ -77757,6 +77889,7 @@
             "right": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "layout": "vertical",
           "gap": 2,
           "padding": [
@@ -84324,6 +84457,7 @@
             "top": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "padding": [
             4,
             8
@@ -86777,6 +86911,7 @@
             "top": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "padding": [
             4,
             8
@@ -86957,6 +87092,7 @@
             "right": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "layout": "vertical",
           "gap": 2,
           "padding": [
@@ -87276,6 +87412,7 @@
                 "bottom": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 0,
                 28
@@ -87379,6 +87516,7 @@
                     "right": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "layout": "vertical",
                   "gap": 24,
                   "padding": 20,
@@ -88640,6 +88778,7 @@
             "right": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "layout": "vertical",
           "gap": 2,
           "padding": [
@@ -88959,6 +89098,7 @@
                 "bottom": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 0,
                 28
@@ -90381,6 +90521,7 @@
             "right": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "layout": "vertical",
           "gap": 12,
           "padding": 20,
@@ -93198,6 +93339,7 @@
           "strokeWidth": {
             "top": 1
           },
+          "strokeLinejoin": "round",
           "padding": [
             0,
             0,
@@ -93339,6 +93481,7 @@
             "right": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "layout": "vertical",
           "gap": 24,
           "padding": 20,
@@ -97583,6 +97726,7 @@
             "right": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "layout": "vertical",
           "gap": 16,
           "padding": 20,
@@ -98427,6 +98571,7 @@
             "right": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "layout": "vertical",
           "gap": 16,
           "padding": 20,
@@ -100144,6 +100289,7 @@
             "right": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "layout": "vertical",
           "gap": 16,
           "padding": 20,
@@ -106179,6 +106325,7 @@
             "bottom": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "padding": [
             12,
             16
@@ -106758,6 +106905,7 @@
             "top": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "padding": [
             0,
             8
@@ -107508,6 +107656,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "gap": "$gap-md",
                   "padding": [
                     0,
@@ -107745,6 +107894,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "gap": "$gap-md",
                   "padding": [
                     4,
@@ -108033,6 +108183,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "gap": "$gap-md",
                   "padding": [
                     4,
@@ -108322,6 +108473,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "gap": "$gap-md",
                   "padding": [
                     4,
@@ -108610,6 +108762,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "gap": "$gap-md",
                   "padding": [
                     4,
@@ -108898,6 +109051,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "gap": "$gap-md",
                   "padding": [
                     4,
@@ -109186,6 +109340,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "gap": "$gap-md",
                   "padding": [
                     4,
@@ -109474,6 +109629,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "gap": "$gap-md",
                   "padding": [
                     4,
@@ -109739,6 +109895,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "gap": "$gap-md",
                   "padding": [
                     4,
@@ -110004,6 +110161,7 @@
                     "bottom": 1
                   },
                   "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
                   "gap": "$gap-md",
                   "padding": [
                     4,
@@ -110520,6 +110678,7 @@
             "bottom": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "padding": [
             12,
             16
@@ -110914,6 +111073,7 @@
             "top": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "layout": "vertical",
           "padding": [
             8,
@@ -111207,6 +111367,7 @@
             "bottom": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "padding": [
             12,
             16
@@ -111512,6 +111673,7 @@
             "top": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "layout": "vertical",
           "padding": [
             8,
@@ -112069,6 +112231,7 @@
                 "top": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 12,
                 20,
@@ -112187,6 +112350,7 @@
             "bottom": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "padding": [
             12,
             16
@@ -112581,6 +112745,7 @@
             "top": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "layout": "vertical",
           "padding": [
             8,
@@ -113212,6 +113377,7 @@
             "right": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "layout": "vertical",
           "gap": 12,
           "padding": 20,
@@ -116015,6 +116181,7 @@
             "right": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "layout": "vertical",
           "gap": 2,
           "padding": [
@@ -118255,6 +118422,7 @@
             "right": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "layout": "vertical",
           "gap": 2,
           "padding": [
@@ -119639,6 +119807,7 @@
             "right": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "layout": "vertical",
           "gap": 12,
           "padding": 20,
@@ -121610,6 +121779,7 @@
             "right": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "layout": "vertical",
           "gap": 12,
           "padding": 20,
@@ -123269,6 +123439,7 @@
             "right": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "layout": "vertical",
           "gap": 12,
           "padding": 20,
@@ -125201,6 +125372,7 @@
           "strokeWidth": {
             "top": 1
           },
+          "strokeLinejoin": "round",
           "padding": [
             0,
             0,
@@ -125986,6 +126158,7 @@
                 "right": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "layout": "vertical",
               "gap": 2,
               "padding": [
@@ -127272,6 +127445,7 @@
                 "bottom": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 0,
                 12,
@@ -127773,6 +127947,7 @@
                 "top": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 12,
                 24
@@ -127873,6 +128048,7 @@
                 "right": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "layout": "vertical",
               "gap": 2,
               "padding": [
@@ -129159,6 +129335,7 @@
                 "bottom": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 0,
                 12,
@@ -129421,6 +129598,7 @@
                 "top": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 12,
                 24
@@ -129521,6 +129699,7 @@
                 "right": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "layout": "vertical",
               "gap": 2,
               "padding": [
@@ -130807,6 +130986,7 @@
                 "bottom": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 0,
                 12,
@@ -131069,6 +131249,7 @@
                 "top": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "gap": 12,
               "padding": [
                 12,
@@ -131157,6 +131338,7 @@
                 "right": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "layout": "vertical",
               "gap": 2,
               "padding": [
@@ -132443,6 +132625,7 @@
                 "bottom": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 0,
                 12,
@@ -132710,6 +132893,7 @@
                 "top": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "gap": 12,
               "padding": [
                 12,
@@ -132804,6 +132988,7 @@
                 "right": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "layout": "vertical",
               "gap": 2,
               "padding": [
@@ -134090,6 +134275,7 @@
                 "bottom": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 0,
                 12,
@@ -134442,6 +134628,7 @@
                 "top": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "gap": 12,
               "padding": [
                 12,
@@ -134543,6 +134730,7 @@
                 "right": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "layout": "vertical",
               "gap": 2,
               "padding": [
@@ -135829,6 +136017,7 @@
                 "bottom": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 0,
                 12,
@@ -136125,6 +136314,7 @@
                 "top": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "gap": 3,
               "padding": [
                 14,
@@ -136236,6 +136426,7 @@
                 "right": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "layout": "vertical",
               "gap": 2,
               "padding": [
@@ -137522,6 +137713,7 @@
                 "bottom": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 0,
                 12,
@@ -138188,6 +138380,7 @@
                 "bottom": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 0,
                 12,
@@ -138889,6 +139082,7 @@
                 "top": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 14,
                 24
@@ -139440,6 +139634,7 @@
                 "bottom": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 0,
                 12,
@@ -140157,6 +140352,7 @@
                 "top": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "gap": 12,
               "padding": [
                 14,
@@ -140245,6 +140441,7 @@
                 "right": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "layout": "vertical",
               "gap": 2,
               "padding": [
@@ -141531,6 +141728,7 @@
                 "bottom": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 0,
                 12,
@@ -141777,6 +141975,7 @@
                 "top": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "gap": 12,
               "padding": [
                 12,
@@ -143460,6 +143659,7 @@
                 "bottom": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 0,
                 4,
@@ -144813,6 +145013,7 @@
                 "top": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 6,
                 8
@@ -144966,6 +145167,7 @@
                 "bottom": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "padding": [
                 0,
                 4,
@@ -145604,6 +145806,7 @@
                 "top": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "layout": "vertical",
               "gap": 10,
               "padding": [
@@ -146506,6 +146709,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "gap": 10,
                       "padding": [
                         0,
@@ -146962,6 +147166,7 @@
                         "top": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "gap": 8,
                       "padding": [
                         10,
@@ -148204,6 +148409,7 @@
                         "bottom": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "gap": 10,
                       "padding": [
                         0,
@@ -148731,6 +148937,7 @@
                         "top": 1
                       },
                       "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
                       "layout": "vertical",
                       "gap": 8,
                       "padding": [
@@ -148855,6 +149062,7 @@
                 "top": 1
               },
               "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
               "gap": 12,
               "padding": [
                 14,
@@ -150324,6 +150532,7 @@
             "top": 1
           },
           "strokeAlignment": "inner",
+          "strokeLinejoin": "round",
           "padding": [
             8,
             8,
@@ -150541,7 +150750,7 @@
       "type": "text",
       "id": "cFBCj",
       "x": 18380,
-      "y": 24855,
+      "y": 24255,
       "name": "J2 · 字幕狀態徽章規格（桌面）",
       "fill": "#888888",
       "content": "J2 · 字幕狀態徽章規格（桌面）",
@@ -150553,7 +150762,7 @@
       "type": "frame",
       "id": "ZpQaw",
       "x": 18380,
-      "y": 24900,
+      "y": 24300,
       "name": "J2-D",
       "clip": true,
       "width": 1240,
@@ -150745,6 +150954,474 @@
               "fontFamily": "DM Sans",
               "fontSize": 18,
               "fontWeight": "600"
+            },
+            {
+              "type": "frame",
+              "id": "N0Fxe",
+              "name": "s2GrammarBox",
+              "width": "fill_container",
+              "fill": "$bg-primary",
+              "cornerRadius": 8,
+              "stroke": "$border-subtle",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "gap": 10,
+              "padding": [
+                16,
+                20
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "YOEPI",
+                  "name": "gTitle",
+                  "fill": "$text-primary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "圖示語法 — 新增狀態前先讀這個",
+                  "fontFamily": "DM Sans",
+                  "fontSize": 14,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "PLxFC",
+                  "name": "gLead",
+                  "fill": "$accent-text",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "圓框＝定局；裸字形＝尚未有結論。",
+                  "fontFamily": "DM Sans",
+                  "fontSize": 13,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "KGtqa",
+                  "name": "gB1",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "• 有圓框：CheckCircle2（found）、XCircle（not_found／no_text_source）、CircleSlash（skipped）—— 管線對這個檔案已經有答案。",
+                  "fontFamily": "DM Sans",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "ZJGcE",
+                  "name": "gB2",
+                  "fill": "$text-secondary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "• 無圓框：Minus（not_searched）、Loader2（進行中四態）—— 還沒有答案（還沒輪到／正在做）。",
+                  "fontFamily": "DM Sans",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "keZg6",
+                  "name": "gDiagram",
+                  "gap": 28,
+                  "padding": [
+                    6,
+                    0
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "IzIza",
+                      "name": "grp-定局",
+                      "layout": "vertical",
+                      "gap": 10,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "TfcGt",
+                          "name": "lbl",
+                          "fill": "$text-primary",
+                          "content": "定局",
+                          "fontFamily": "DM Sans",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "ABXvD",
+                          "name": "row",
+                          "gap": 22,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "XSjI2",
+                              "name": "s-CheckCircle2",
+                              "layout": "vertical",
+                              "gap": 6,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "U7Rqmz",
+                                  "name": "ic",
+                                  "width": 22,
+                                  "height": 22,
+                                  "icon": "circle-check",
+                                  "library": "lucide",
+                                  "fill": "$success"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "EJjMp",
+                                  "name": "nm",
+                                  "fill": "$text-muted",
+                                  "content": "CheckCircle2",
+                                  "fontFamily": "DM Sans",
+                                  "fontSize": 11,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "w33nJE",
+                              "name": "s-XCircle",
+                              "layout": "vertical",
+                              "gap": 6,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "W6nYgC",
+                                  "name": "ic",
+                                  "width": 22,
+                                  "height": 22,
+                                  "icon": "circle-x",
+                                  "library": "lucide",
+                                  "fill": "$error"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "u3qdMj",
+                                  "name": "nm",
+                                  "fill": "$text-muted",
+                                  "content": "XCircle",
+                                  "fontFamily": "DM Sans",
+                                  "fontSize": 11,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "jOSWb",
+                              "name": "s-CircleSlash",
+                              "layout": "vertical",
+                              "gap": 6,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "dZAhe",
+                                  "name": "ic",
+                                  "width": 22,
+                                  "height": 22,
+                                  "icon": "circle-slash",
+                                  "library": "lucide",
+                                  "fill": "$text-muted"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "jWFv3",
+                                  "name": "nm",
+                                  "fill": "$text-muted",
+                                  "content": "CircleSlash",
+                                  "fontFamily": "DM Sans",
+                                  "fontSize": 11,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "rectangle",
+                      "id": "qsI28",
+                      "name": "gSep",
+                      "fill": "$border-subtle",
+                      "width": 1,
+                      "height": 58
+                    },
+                    {
+                      "type": "frame",
+                      "id": "JI6ZZ",
+                      "name": "grp-尚未有結論",
+                      "layout": "vertical",
+                      "gap": 10,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "ZtgLV",
+                          "name": "lbl",
+                          "fill": "$text-primary",
+                          "content": "尚未有結論",
+                          "fontFamily": "DM Sans",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "M1Wwr",
+                          "name": "row",
+                          "gap": 22,
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "oALh7",
+                              "name": "s-Minus",
+                              "layout": "vertical",
+                              "gap": 6,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "yrbyb",
+                                  "name": "ic",
+                                  "width": 22,
+                                  "height": 22,
+                                  "icon": "minus",
+                                  "library": "lucide",
+                                  "fill": "$text-muted"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "fdqgX",
+                                  "name": "nm",
+                                  "fill": "$text-muted",
+                                  "content": "Minus",
+                                  "fontFamily": "DM Sans",
+                                  "fontSize": 11,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "ERxqV",
+                              "name": "s-Loader2",
+                              "layout": "vertical",
+                              "gap": 6,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "vSKJj",
+                                  "name": "ic",
+                                  "width": 22,
+                                  "height": 22,
+                                  "icon": "loader-circle",
+                                  "library": "lucide",
+                                  "fill": "$accent-text"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "r39ACb",
+                                  "name": "nm",
+                                  "fill": "$text-muted",
+                                  "content": "Loader2",
+                                  "fontFamily": "DM Sans",
+                                  "fontSize": 11,
+                                  "fontWeight": "normal"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "OxTvR",
+                  "name": "gColorLead",
+                  "fill": "$text-primary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "顏色是急迫度，不是結果：",
+                  "fontFamily": "DM Sans",
+                  "fontSize": 13,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "frame",
+                  "id": "n1L3n",
+                  "name": "gLegendRow1",
+                  "width": "fill_container",
+                  "gap": 24,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "w8MfB",
+                      "name": "cell",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "rVTFX",
+                          "name": "sw",
+                          "width": 10,
+                          "height": 10,
+                          "icon": "circle",
+                          "library": "lucide",
+                          "fill": "$error"
+                        },
+                        {
+                          "type": "text",
+                          "id": "A0E0hq",
+                          "name": "t",
+                          "fill": "$text-secondary",
+                          "content": "--error ＝ 使用者可以做點什麼（例如重新搜尋）",
+                          "fontFamily": "DM Sans",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "sdHpJ",
+                      "name": "cell",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "vn7vn",
+                          "name": "sw",
+                          "width": 10,
+                          "height": 10,
+                          "icon": "circle",
+                          "library": "lucide",
+                          "fill": "$text-muted"
+                        },
+                        {
+                          "type": "text",
+                          "id": "A392vr",
+                          "name": "t",
+                          "fill": "$text-secondary",
+                          "content": "--text-muted ＝ 沒有可做的事",
+                          "fontFamily": "DM Sans",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "gKyiQ",
+                  "name": "gLegendRow2",
+                  "width": "fill_container",
+                  "gap": 24,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "TOuKF",
+                      "name": "cell",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "QUOSp",
+                          "name": "sw",
+                          "width": 10,
+                          "height": 10,
+                          "icon": "circle",
+                          "library": "lucide",
+                          "fill": "$success"
+                        },
+                        {
+                          "type": "text",
+                          "id": "xRN5K",
+                          "name": "t",
+                          "fill": "$text-secondary",
+                          "content": "--success ＝ 成功",
+                          "fontFamily": "DM Sans",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Vv45y",
+                      "name": "cell",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "o9IWqp",
+                          "name": "sw",
+                          "width": 10,
+                          "height": 10,
+                          "icon": "circle",
+                          "library": "lucide",
+                          "fill": "$accent-text"
+                        },
+                        {
+                          "type": "text",
+                          "id": "dvqdE",
+                          "name": "t",
+                          "fill": "$text-secondary",
+                          "content": "--accent-text ＝ 進行中（accent 保留給進行中 — Sally 2026-07-05 裁決）",
+                          "fontFamily": "DM Sans",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "v1GUM",
+                  "name": "gAsk",
+                  "fill": "$text-primary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "新增任何狀態前，先回答兩個問題：① 它是定局嗎？ ② 使用者能做什麼嗎？ 答案就決定了字形與顏色。",
+                  "fontFamily": "DM Sans",
+                  "fontSize": 13,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "P9RV5",
+                  "name": "gHist",
+                  "fill": "$text-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "這條規則從 story 12-2 起就在運作，只是從未被寫下來 —— skipped 正是因此被歸錯家族（2026-08-04 裁定）。",
+                  "fontFamily": "DM Sans",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
             },
             {
               "type": "text",
@@ -151018,7 +151695,7 @@
                           "height": 18,
                           "icon": "loader-circle",
                           "library": "lucide",
-                          "fill": "$accent-primary"
+                          "fill": "$accent-text"
                         },
                         {
                           "type": "text",
@@ -151053,14 +151730,14 @@
                           "height": 10,
                           "icon": "circle",
                           "library": "lucide",
-                          "fill": "$accent-primary"
+                          "fill": "$accent-text"
                         },
                         {
                           "type": "text",
                           "id": "nnrJr",
                           "name": "cl",
                           "fill": "$text-secondary",
-                          "content": "--accent-primary  #3b82f6",
+                          "content": "--accent-text  #60a5fa",
                           "fontFamily": "DM Sans",
                           "fontSize": 12,
                           "fontWeight": "normal"
@@ -151181,7 +151858,7 @@
                           "height": 18,
                           "icon": "loader-circle",
                           "library": "lucide",
-                          "fill": "$accent-primary"
+                          "fill": "$accent-text"
                         },
                         {
                           "type": "text",
@@ -151216,14 +151893,14 @@
                           "height": 10,
                           "icon": "circle",
                           "library": "lucide",
-                          "fill": "$accent-primary"
+                          "fill": "$accent-text"
                         },
                         {
                           "type": "text",
                           "id": "q28Ma1",
                           "name": "cl",
                           "fill": "$text-secondary",
-                          "content": "--accent-primary  #3b82f6",
+                          "content": "--accent-text  #60a5fa",
                           "fontFamily": "DM Sans",
                           "fontSize": 12,
                           "fontWeight": "normal"
@@ -151344,7 +152021,7 @@
                           "height": 18,
                           "icon": "loader-circle",
                           "library": "lucide",
-                          "fill": "$accent-primary"
+                          "fill": "$accent-text"
                         },
                         {
                           "type": "text",
@@ -151379,14 +152056,14 @@
                           "height": 10,
                           "icon": "circle",
                           "library": "lucide",
-                          "fill": "$accent-primary"
+                          "fill": "$accent-text"
                         },
                         {
                           "type": "text",
                           "id": "iZ5iS",
                           "name": "cl",
                           "fill": "$text-secondary",
-                          "content": "--accent-primary  #3b82f6",
+                          "content": "--accent-text  #60a5fa",
                           "fontFamily": "DM Sans",
                           "fontSize": 12,
                           "fontWeight": "normal"
@@ -151696,7 +152373,7 @@
                           "name": "ic",
                           "width": 18,
                           "height": 18,
-                          "icon": "minus",
+                          "icon": "circle-slash",
                           "library": "lucide",
                           "fill": "$text-muted"
                         },
@@ -151705,7 +152382,7 @@
                           "id": "D7FMaK",
                           "name": "icn",
                           "fill": "$text-secondary",
-                          "content": "Minus",
+                          "content": "CircleSlash",
                           "fontFamily": "DM Sans",
                           "fontSize": 12,
                           "fontWeight": "normal"
@@ -151787,7 +152464,31 @@
                   "fill": "$warning",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "更正：原提案寫的 --accent 不存在於 styles.css，正確 token 為 --accent-primary。",
+                  "content": "原提案的 --accent 不存在於 styles.css。正確 token 是 --accent-text #60a5fa，不是 --accent-primary #3b82f6：圖示是前景，而 #3b82f6 在 --bg-tertiary 上只有 3.04:1，WCAG 1.4.11 非文字門檻是 3.0 —— 劇集列不帶自身背景，任何 hover／抬升表面就會讓它掉下去。--accent-text 最差 4.40:1，其 token 註解本就寫明是 AA-safe 前景色。",
+                  "fontFamily": "DM Sans",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "A5nyHR",
+                  "name": "s2k3",
+                  "fill": "$text-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "skipped 由 Minus 改為 CircleSlash（2026-08-04 裁定）：skipped 是定局，原本的裸字形把它歸進了「還沒到結論」家族，因而與 not_searched 渲染完全相同。",
+                  "fontFamily": "DM Sans",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "BCBO4",
+                  "name": "s2k4",
+                  "fill": "$text-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "no_text_source 與 skipped 的家族相似是刻意的：兩者都代表「這個檔案不會自動有字幕了」，使用者的下一步相同。必須一眼分開的是「定局 vs 還沒輪到」，理由細節由 tooltip 承擔 —— 不要把它們改成差異更大的字形。",
                   "fontFamily": "DM Sans",
                   "fontSize": 12,
                   "fontWeight": "normal"
@@ -152543,7 +153244,7 @@
                   "fill": "$accent-text",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "裁決：searching 重新著色為 --accent-primary #3b82f6。",
+                  "content": "裁決：searching 重新著色為 --accent-text #60a5fa。",
                   "fontFamily": "DM Sans",
                   "fontSize": 15,
                   "fontWeight": "600"
@@ -152679,7 +153380,7 @@
                           "height": 18,
                           "icon": "loader-circle",
                           "library": "lucide",
-                          "fill": "$accent-primary"
+                          "fill": "$accent-text"
                         },
                         {
                           "type": "text",
@@ -152697,8 +153398,8 @@
                       "type": "text",
                       "id": "cl0x5",
                       "name": "n",
-                      "fill": "$accent-primary",
-                      "content": "--accent-primary  #3b82f6",
+                      "fill": "$accent-text",
+                      "content": "--accent-text  #60a5fa",
                       "fontFamily": "DM Sans",
                       "fontSize": 12,
                       "fontWeight": "normal"
