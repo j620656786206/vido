@@ -151,3 +151,50 @@ describe('EpisodeList — subtitle-pipeline status icons (sub-1-7b AC #3)', () =
     expect(screen.getByRole('status', { name: '尚未搜尋字幕' })).toBeInTheDocument();
   });
 });
+
+/**
+ * The guard that was missing when sub-1-7b first shipped: `skipped` and
+ * `not_searched` rendered pixel-identically (both `Minus` + `--text-muted`) and
+ * nothing failed, because every test asserted each state in isolation. A human
+ * had to notice. These assert the states AGAINST EACH OTHER instead.
+ *
+ * Icon grammar (J2-D, Sally 2026-08-04): a CIRCLED glyph means the pipeline has
+ * a settled answer for this file; a BARE glyph means it does not yet.
+ */
+describe('EpisodeList — icon grammar: settled verdicts vs not-yet (J2-D)', () => {
+  const glyphOf = (subtitleStatus: string): string => {
+    const { unmount } = render(<EpisodeList episodes={[ep(subtitleStatus)]} seasonNumber={1} />);
+    const svg = screen.getByRole('status').querySelector('svg');
+    // lucide stamps `lucide-<kebab-icon-name>` alongside the base `lucide` class.
+    const glyph = [...(svg?.classList ?? [])].find((c) => c.startsWith('lucide-')) ?? '';
+    unmount();
+    return glyph;
+  };
+
+  it('skipped and not_searched do NOT share a glyph', () => {
+    // The exact regression that shipped: same glyph, same tint, told apart only
+    // by the accessible name — invisible to anyone scanning the list.
+    expect(glyphOf('skipped')).not.toBe(glyphOf('not_searched'));
+  });
+
+  it('settled verdicts use a circled glyph; not-yet states use a bare one', () => {
+    expect(glyphOf('found')).toBe('lucide-circle-check');
+    expect(glyphOf('not_found')).toBe('lucide-circle-x');
+    expect(glyphOf('no_text_source')).toBe('lucide-circle-x');
+    expect(glyphOf('skipped')).toBe('lucide-circle-slash');
+
+    expect(glyphOf('not_searched')).toBe('lucide-minus');
+    expect(glyphOf('probing')).toBe('lucide-loader-circle');
+  });
+
+  it('no_text_source and skipped share the muted tint — a deliberate family, not a bug', () => {
+    // Both mean "no subtitle is coming"; the user's next step is the same. What
+    // must be instant is settled-vs-pending, not which settled reason. Sally
+    // ratified the resemblance, so a future reader must not "fix" it apart.
+    for (const status of ['no_text_source', 'skipped']) {
+      const { unmount } = render(<EpisodeList episodes={[ep(status)]} seasonNumber={1} />);
+      expect(screen.getByRole('status')).toHaveClass('text-[var(--text-muted)]');
+      unmount();
+    }
+  });
+});

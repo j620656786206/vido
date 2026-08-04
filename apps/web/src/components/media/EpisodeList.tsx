@@ -11,7 +11,7 @@
  * On mobile, rows stack (title/date line, metadata below) for readability (AC #8).
  */
 
-import { CheckCircle2, XCircle, Loader2, Minus } from 'lucide-react';
+import { CheckCircle2, XCircle, Loader2, Minus, CircleSlash } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import type { MergedEpisode } from '../../types/library';
 
@@ -38,10 +38,18 @@ function episodeCode(seasonNumber: number, episodeNumber: number): string {
 // "已略過 must read as deliberate, not broken" is actually solved — the poster
 // badge's 3–4-char label (libraryStatus.ts) cannot carry it.
 //
-// accent = in-progress, muted = terminal verdict. `--accent-text` rather than
-// `--accent-primary`: an icon is foreground, and #3b82f6 measures 3.04:1 on
-// `--bg-tertiary` — at the WCAG 1.4.11 non-text threshold, so any hover surface
-// puts it under. `--accent-text` (#60a5fa) holds 4.40:1 worst case.
+// ICON GRAMMAR (J2-D, Sally 2026-08-04) — read this before adding a state:
+//   CIRCLED glyph = a settled outcome. The pipeline has an answer for this file.
+//     CheckCircle2 (found) · XCircle (not_found / no_text_source) · CircleSlash (skipped)
+//   BARE glyph = not an outcome yet.
+//     Minus (not_searched) · Loader2 (the four in-flight states)
+// Colour is URGENCY, not outcome: --error = the user can do something about it,
+// --text-muted = nothing to do, --success = done, --accent-text = in progress
+// (accent stays reserved for in-progress — Sally 2026-07-05).
+//
+// `--accent-text` rather than `--accent-primary`: an icon is foreground, and
+// #3b82f6 measures 3.04:1 on `--bg-tertiary` — at the WCAG 1.4.11 non-text
+// threshold, so any hover surface puts it under. #60a5fa holds 4.40:1 worst case.
 const SUBTITLE_STATUS: Record<
   string,
   { Icon: typeof CheckCircle2; color: string; label: string; spin?: boolean }
@@ -76,12 +84,15 @@ const SUBTITLE_STATUS: Record<
   // Terminal and DELIBERATE: the track's language tag did not qualify (P0 — `und`
   // is never treated as English). Muted, not error-red: nothing went wrong.
   //
-  // NOTE this renders identically to `not_searched` (same glyph, same tint) — the
-  // two are told apart only by the accessible name / tooltip. Ratified that way by
-  // sub-1-7a; tracked as `backlog-episodelist-skipped-vs-not-searched-glyph`
-  // because the story's own goal is that a declined item be VISIBLY distinct from
-  // one not yet reached, and on this surface it currently is not.
-  skipped: { Icon: Minus, color: 'text-[var(--text-muted)]', label: '已略過（字幕軌語言不符）' },
+  // `CircleSlash`, not `Minus` (Sally's ruling 2026-08-04). A bare `Minus` put a
+  // SETTLED verdict into the not-settled-yet family, which is why it rendered
+  // identically to `not_searched`. The slash reads "excluded by rule", which is
+  // exactly what happened here.
+  skipped: {
+    Icon: CircleSlash,
+    color: 'text-[var(--text-muted)]',
+    label: '已略過（字幕軌語言不符）',
+  },
 };
 
 /** Subtitle status indicator — hidden entirely when no local file exists (AC #6). */
