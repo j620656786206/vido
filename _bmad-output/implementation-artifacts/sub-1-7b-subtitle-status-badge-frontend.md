@@ -1,6 +1,6 @@
 # Story sub-1.7b: Subtitle-status badge — render the 5 new pipeline states
 
-Status: review
+Status: done
 
 **Epic:** `epic-subtitle-pipeline-m1` (M1) · **Risk: 🟡 MEDIUM** · **FRONTEND-ONLY**
 **Origin:** Alexyu ruling 2026-07-27 — *"前端 badge 讓 M1 出貨時就帶 badge"*. Promotes the lane-③ entry `backlog-subtitle-status-fe-rendering` (filed by sub-1-2) into M1 scope.
@@ -59,7 +59,7 @@ Both `PosterCardV2.tsx` and `LibraryListRowV2.tsx` consume `deriveSubtitleStatus
 | `extracting` | `Loader2` | `text-[var(--accent-text)]` | ✅ | `抽取內嵌字幕中` |
 | `translating` | `Loader2` | `text-[var(--accent-text)]` | ✅ | `翻譯字幕中` |
 | `no_text_source` | `XCircle` | `text-[var(--text-muted)]` | — | `無可用的文字字幕軌` |
-| `skipped` | `Minus` | `text-[var(--text-muted)]` | — | `已略過（字幕軌語言不符）` |
+| `skipped` | ~~`Minus`~~ → **`CircleSlash`** *(Sally 2026-08-04)* | `text-[var(--text-muted)]` | — | `已略過（字幕軌語言不符）` |
 
 The `?? SUBTITLE_STATUS.not_searched` fallback stays as the belt-and-braces default for an unknown value.
 
@@ -194,7 +194,7 @@ RED verified before each task, and each load-bearing guard falsified afterwards 
 
 ### Completion Notes List
 
-- 🎯 **Implemented exactly the sub-1-7a ratified table, with ONE deliberate deviation** (next bullet). Poster/list badge — `no_text_source` → `無字幕源`, `skipped` → `已略過`, both `TINT.neutral` (`--bg-tertiary` / `--text-muted`), both non-steady so `pickPosterBadge` surfaces them with **zero edits to `pickPosterBadge` itself**; `probing`/`extracting`/`translating` → `null`. `EpisodeList` icons — `Loader2`+spin for the three in-flight, `XCircle` for `no_text_source`, `Minus` for `skipped`, long-form `aria-label`s per the spec. `searching` re-tinted `--warning` → accent per sub-1-7a AC #5.
+- 🎯 **Implemented exactly the sub-1-7a ratified table, with ONE deliberate deviation** (next bullet). Poster/list badge — `no_text_source` → `無字幕源`, `skipped` → `已略過`, both `TINT.neutral` (`--bg-tertiary` / `--text-muted`), both non-steady so `pickPosterBadge` surfaces them with **zero edits to `pickPosterBadge` itself**; `probing`/`extracting`/`translating` → `null`. `EpisodeList` icons — `Loader2`+spin for the three in-flight, `XCircle` for `no_text_source`, **`CircleSlash`** for `skipped` — *amended by Sally 2026-08-04; see the icon-grammar entry in the Change Log* — long-form `aria-label`s per the spec. `searching` re-tinted `--warning` → accent per sub-1-7a AC #5.
 - ⚠️ **Deviation from the ratified table, on a11y evidence: the icon accent is `--accent-text` (`#60a5fa`), not `--accent-primary` (`#3b82f6`).** sub-1-7a's table said `--accent-primary` (my own correction of the non-existent `--accent`); this story's AC #3 proposal said `--accent-text`. The proposal is right and the spec screen is wrong. Measured contrast against the three surfaces an episode row can sit on (rows carry no background of their own — they inherit the container):
 
   | token | on `--bg-primary` | on `--bg-secondary` | on `--bg-tertiary` |
@@ -215,7 +215,7 @@ RED verified before each task, and each load-bearing guard falsified afterwards 
   | transient badges | none | `null` ×3 | `renders NO badge for the three transient states` |
   | in-flight icons | `Loader2` + spin, accent | same (`--accent-text`, see deviation) | `spins for the three in-flight states…` + tint test |
   | `no_text_source` icon | `XCircle`, muted | same | tint test |
-  | `skipped` icon | `Minus`, muted | same | tint test |
+  | `skipped` icon | **`CircleSlash`**, muted *(amended 2026-08-04)* | same | tint test + `settled verdicts use a circled glyph` |
   | `aria-label`s | 5 long forms | verbatim | the 5-row `it.each` |
   | `searching` re-tint | `--warning` → accent | done | `re-tints the pre-existing searching state` |
 
@@ -223,6 +223,16 @@ RED verified before each task, and each load-bearing guard falsified afterwards 
 - ✅ **AC #5 fence held.** Zero `apps/api/` files. Zero gallery fixtures, zero visual baselines. Zero `.pen` / screenshot changes. `PosterCardV2.tsx` and `LibraryListRowV2.tsx` untouched — the derivation is centralized, which is the whole point. `routes/library.tsx`'s Rule 26-safe `typeof … === 'string'` guard untouched. `types/library.ts` untouched (`subtitleStatus?: string` stays loose — which is precisely why the runtime tests matter).
 - ✅ **Full regression gate:** `pnpm nx test web` **2479/2479 PASS** (225 files) · `pnpm nx test api` **34 Go packages ok** · targeted `eslint` 0/0 on the four touched files · `prettier --write` clean · no orphaned vitest workers (`pgrep vitest` empty after every run).
 - ⚠️ **Pre-existing, not introduced:** `tsc --noEmit -p apps/web/tsconfig.app.json` reports **139 errors on a clean `main` checkout**, in 11 files (`RecentMediaPanel`, `HeroBanner`, the three library empty-states, the scanner components, `ScannerSettings`, `useScanProgress`, `useSubtitleBatchProgress`, `-gallery.fixtures.tsx`). **My four files contribute 0.** Verified by stashing this story's changes and re-running. It is not a CI gate (`pnpm lint:all` = go vet → staticcheck → eslint → prettier; the web build is Vite, which does not typecheck), so this story neither fixes nor is blocked by it — filed as `backlog-web-tsc-app-config-errors` so it stops being rediscovered.
+
+- ✅ **CLOSE-OUT 2026-08-04 — definition-of-done audit, all 6 ACs.** Re-verified against the code as it stands *after* Sally's ruling, not against what was written before it:
+  - **AC #1** — all 9 values handled; the terminal/transient `switch` sits above track inference, with the why-comment. Falsified (switch moved below → 3 tests fail). `deriveFromTracks` / `deriveLifecycleStatus` / `HANT` / `HANS` / `TINT` untouched. ✅
+  - **AC #2** — `pickPosterBadge` **not edited**; both terminal descriptors are non-steady by construction and that is asserted, not assumed. `PosterCardV2` / `LibraryListRowV2` zero edits. ✅
+  - **AC #3** — all 9 values in `SUBTITLE_STATUS` with long-form `aria-label`s; `?? not_searched` fallback intact; `searching` re-tinted per sub-1-7a AC #5; `skipped` on `CircleSlash` per Sally. ✅
+  - **AC #4** — 30 tests across the two specs, including both ordering-regression cases and (added after the ruling) three guards that compare states **against each other**. ✅
+  - **AC #5** — fence held: zero `apps/api/`, zero gallery fixtures, zero visual baselines, no `.pen` edit from this story, no Activity-hub/SSE work, `library.tsx`'s Rule 26 guard and `types/library.ts` untouched. ✅
+  - **AC #6** — see the next bullet. ✅ *with a stated residual*
+- 🎨 **AC #6 closure — what was verified, and the one thing that was not.** Every spec attribute (label, tint token, glyph, spin, accessible name) is verified and **pinned by a test**, and the design authority herself ruled on the final glyph after seeing the actual collision — that is stronger sign-off than the AC originally asked for, which was a developer comparing against a screenshot. **What was NOT done is a pixel-level look at the rendered component in situ.** Two reasons, both pre-existing and tracked, neither introduced here: the committed spec screenshot is a **171×400 thumbnail** whose text is illegible (`backlog-pen-spec-screen-readable-export` — and it got *worse* as the spec got more valuable, since a taller frame compresses harder under the 400px long-edge cap), and `PosterCardV2` / `LibraryListRowV2` / `EpisodeList` have **no gallery fixtures**, so there is no visual baseline to diff and creating three is Rule 22 backfill that AC #5 explicitly fences off. Recorded as a residual rather than papered over: **the honest close-out is that the contract is verified and the pixels are not.** Anyone wanting the pixel check should open the running app beside `J2-D` **in Pencil**, not beside the PNG.
+- 📌 **Story closed `done` by Alexyu's instruction (2026-08-04) rather than by the `code-review` workflow.** Recorded because it is a deviation from the normal `review → CR → done` path. What stood in for it: a pre-ship adversarial self-review that **found the defect this story is now known for** (the glyph collision), a design review by Sally that reframed and ruled on it, CI green on three separate PRs (#194, #195), and this DoD audit. A fresh-context CR by a different model would still add value on the parts none of those covered — but nothing is left knowingly unexamined.
 
 ### Discovery Triage
 
