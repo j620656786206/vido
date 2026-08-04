@@ -1,6 +1,6 @@
 # Story sub-2.1a: Key resolution + provider hot-reload + settings API
 
-Status: ready-for-dev
+Status: review
 
 **Epic:** `epic-subtitle-pipeline-m1-5` (M1.5) · **Risk: 🔴 HIGH (a silent-no-op trap + live client re-wiring)** · **BACKEND-ONLY**
 **Source:** `epics-subtitle-pipeline.md` § Story 2.1 · PRD **FR25** · architecture **D9 / NFR-S3** · spec §5
@@ -131,11 +131,11 @@ Without this the page would accept input and fail at the storage layer with an o
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Resolver (AC #1):** `KeyResolver` + names/sources + fail-soft fallthrough + tests.
-- [ ] **Task 2 — Holder (AC #2):** fingerprint cache, `holderCompleter` delegation, shared Governor; remove main.go's `if cfg.HasClaudeKey()` guard so services always construct.
-- [ ] **Task 3 — Handler triad (AC #3):** GET/PUT/POST-test + masking + Swagger + routes + main.go wiring + Rule 15 verification.
-- [ ] **Task 4 — Encryption pre-flight (AC #4):** `writable`/`reason` + 409 path.
-- [ ] **Task 5 — Re-point + gates (AC #5, #6):** pipeline `configured` (coordinate with 1-6's merge state), file `backlog-tmdb-runtime-key-resolution`, integration test, full gates.
+- [x] **Task 1 — Resolver (AC #1):** `KeyResolver` + names/sources + fail-soft fallthrough + tests.
+- [x] **Task 2 — Holder (AC #2):** fingerprint cache, `holderCompleter` delegation, shared Governor; remove main.go's `if cfg.HasClaudeKey()` guard so services always construct.
+- [x] **Task 3 — Handler triad (AC #3):** GET/PUT/POST-test + masking + Swagger + routes + main.go wiring + Rule 15 verification.
+- [x] **Task 4 — Encryption pre-flight (AC #4):** `writable`/`reason` + 409 path.
+- [x] **Task 5 — Re-point + gates (AC #5, #6):** pipeline `configured` (coordinate with 1-6's merge state), file `backlog-tmdb-runtime-key-resolution`, integration test, full gates.
 
 ---
 
@@ -164,18 +164,75 @@ Without this the page would accept input and fail at the storage layer with an o
 
 ### Agent Model Used
 
+Amelia (Developer Agent) · Claude Fable 5, effort xhigh · 2026-08-05
+
 ### Debug Log References
 
+RED verified before each task; each load-bearing guarantee falsified afterwards.
+
+| Task | RED signal |
+|---|---|
+| 1 | `vet: undefined: NewKeyResolver / EnvKeys / KeyClaude / SecretNameClaude` |
+| 2 | `vet: undefined: ClaudeProviderHolder / NewClaudeProviderHolder` |
+| 3–4 | service + handler written test-first against the fakes |
+| 5 | `go vet ./internal/repository/` → **import cycle not allowed in test** (see below) |
+
+| Guarantee | Falsification | Result |
+|---|---|---|
+| secret > env (the whole contract) | resolution order inverted so env returns first | `TestKeyResolver_SecretWinsOverEnv` **FAILS** |
+| the holder delegates `CachingCompleter` | `CompleteTextWithUsage` renamed + the `var _` assertion removed | **BUILD FAILS** — a compile-time guard, stronger than a runtime test |
+| the shared Governor survives a rebuild | `opts` replaced with `nil` on rebuild | `TestClaudeProviderHolder_GovernorSurvivesRebuild` **FAILS** |
+
+**Import cycle (Task 5).** AC #6.4 asked for the integration test on a real DB, and the natural home looked like `internal/repository` (that is where `setupTestDB` lives). `go vet` rejected it: `repository` importing `services` is the exact edge Rule 19 forbids, and a test file counts. Moved to `internal/services` with the migration-005 schema inlined verbatim — `services → repository` is the legal direction. The `srt_parity_test.go` external-test-package precedent is the same lesson.
+
 ### Completion Notes List
+
+- 🎯 **Both Breaks are closed, and the integration test proves it against real encryption.** `TestKeyResolution_StoredKeyReachesTheResolver` runs store → resolve → gate-flip through a real `:memory:` DB and the real AES-256-GCM secrets service; `TestKeyResolution_HolderRebuildsAfterAStore` boots keyless, saves a key, and gets a working provider with no restart. Those two are the story's reason for existing — a settings page over an env-only reader would have saved successfully and changed nothing.
+- ⚠️ **The single most dangerous thing I found: `TranslationService` type-asserts `ai.CachingCompleter` and degrades SILENTLY.** At `translation_service.go:323` it checks the assertion and, on failure, logs one line (`:335`) and translates on **without prompt caching or usage reporting** — which would have voided sub-1-5b's entire caching design and paid full token price on every cue, with nothing failing anywhere. A holder implementing only `TextCompleter` (which is all AC #2 literally requires to satisfy the constructors) would have compiled and passed every other test. The holder therefore implements **both**, with a `var _ ai.CachingCompleter` compile-time assertion and a test whose comment explains the trap.
+- 🧩 **AC #5 re-point landed on sub-1-6's actual shipped line.** The story anticipated this ("if 1-6 has already merged, this story edits that one wiring line") — it had, so `subtitleCapabilityGate := cfg.HasClaudeKey` became a closure over `keyResolver.Has(...)`. Still a plain `func() bool`, so **no Rule 20 bump** is owed, as the story predicted. The story's cited line numbers (`main.go:531-538`) had drifted to `537-544` because sub-1-6 rewrote that region; the facts held, the coordinates did not.
+- ➕ **One additive change beyond the story text, with a reason: `ai.ErrAIUnauthorized`.** AC #3 wants the key-test endpoint to say 「金鑰無效或已撤銷」 on 401/403, but `claude.go` collapsed every non-429/404 status into a generic `ErrAIProviderError` whose only distinguishing feature was the substring `status 401`. String-matching an error message to decide what to tell a user is the kind of thing that breaks silently on an SDK bump. The new sentinel is wrapped **alongside** `ErrAIProviderError` (`fmt.Errorf("%w: %w: …")`), so every existing `errors.Is(err, ErrAIProviderError)` check is unaffected — verified by `go test ./internal/ai/` and a dedicated ordering test (`TestTestKey_UnauthorizedBeatsGenericProviderError`) that pins *why* the unauthorized branch must be checked first.
+- 🔍 **429 deliberately does NOT report an invalid key.** A rate-limited account has a *working* key; saying 「金鑰無效」 there would send the user to regenerate a key that is fine. It answers 「金鑰有效，但目前已達用量上限」.
+- 🔒 **Masking rule is stricter than "mask it".** Secret-sourced keys show `head6…tail4`; **env-sourced keys carry no mask at all** — an env value is a deploy secret the operator put in the environment precisely to keep out of the app, so re-exposing even a slice of it through an API would be a leak. Short values are fully bulleted rather than mostly revealed. Pinned by tests on both the fake and the real encrypted round trip.
+- ✅ **Zero new Rule 7 codes** — `AI_NOT_CONFIGURED` / `AI_PROVIDER_ERROR` / `AI_QUOTA_EXCEEDED` / `AI_TIMEOUT` / `VALIDATION_*` / `DB_QUERY_FAILED` all reused. Prefix count stays 16; `project-context.md` and `code-review/instructions.xml` need **zero** edits — verified, not assumed. (`ai.ErrAIUnauthorized` is a Go sentinel for internal classification, not a wire code; nothing emits `AI_UNAUTHORIZED`.)
+- 🎭 **A11y Pre-Flight: N/A** (100% backend — zero `apps/web/` files; the page is 2-1b).
+- 🎨 **UX Verification: SKIPPED** — no UI in this story.
+- 📘 **`swag init` NOT run — still a no-op in this repo.** `apps/api` has no swaggo dependency and no `docs` package (backend-consolidation Phase 1 Step 1.2 remains open). Full annotations are written and will be picked up when Swagger lands. Same finding sub-1-6 recorded; no new entry filed.
+- ✅ **Gates:** `go build ./...` · `go vet ./...` · `go test ./...` **all packages green** · `nx run api:lint` (staticcheck) green · `gofmt -l` clean on every touched file.
 
 ### Discovery Triage
 
 - **Pre-recorded at authoring:**
   - **① expand-scope-in-place → AC #1/#2.** The epic AC ("persists to the encrypted secrets service") is necessary but insufficient — env-only resolution (Break 1) and startup-only provider construction (Break 2) would make the page inert. Absorbed as the resolver + holder ACs.
-  - **③ TMDb runtime resolution** → `backlog-tmdb-runtime-key-resolution` (filed with this story; AC #5 states the boundary).
+  - **③ TMDb runtime resolution** → `backlog-tmdb-runtime-key-resolution` (filed with this story; AC #5 states the boundary). ✅ **Confirmed at implementation:** the resolver *exposes* `KeyTMDb` (so 2-1b can display and store it) but `GetTMDbAPIKey`'s runtime consumers are untouched — a TMDb swap has its own blast radius across many startup-wired services.
+- **Triaged AT implementation (2026-08-05):**
+  - **① expand-scope-in-place → `ai.ErrAIUnauthorized`.** AC #3's 「金鑰無效或已撤銷」 was not implementable without string-matching an error message: `claude.go` mapped every non-429/404 status to a generic `ErrAIProviderError`. Absorbed as an additive sentinel wrapped *alongside* the existing one, so no consumer changes behaviour. Not deferred, because the alternative shipping today would have been the fragile string match.
+  - **① Rule 19 forced the integration test to move.** `internal/repository` cannot import `services`; the test lives in `internal/services` with the migration-005 schema inlined. Recorded because the next person will have the same instinct.
+  - **Not a discovery — anticipated by the story and confirmed:** sub-1-6 had merged, so AC #5's re-point edited the shipped `subtitleCapabilityGate` line (`main.go:572`) rather than being wired by 1-6.
 - Reference: `project-context.md` Rule 24.
 
+### Change Log
+
+| Date | Change |
+|---|---|
+| 2026-08-05 | **Tasks 1–5 — RED first on every task.** `KeyResolver` (secret > env, fail-soft through a secrets failure, blank-secret-never-shadows-env) · `ClaudeProviderHolder` (fingerprint-cached rebuild, shared Governor preserved, `ErrAINotConfigured` when unconfigured, **implements `CachingCompleter` as well as `TextCompleter`** — the assertion `TranslationService` makes at `:323`, whose silent failure mode would have voided sub-1-5b's prompt caching) · `KeySettingsService` (masking that never echoes env values, explicit-`""` delete reverting to env) · the GET/PUT/POST-test triad with the AC #4 encryption pre-flight · main.go rewiring: services now construct **unconditionally** behind the holder (the old `if cfg.HasClaudeKey()` guard left them nil forever on a keyless boot) and the pipeline capability gate reads the resolver instead of the boot-time env snapshot. Added `ai.ErrAIUnauthorized` (wrapped alongside `ErrAIProviderError`) so a 401 is distinguishable from a transient fault without string-matching. AC #6.4's integration test runs the whole chain on a real `:memory:` DB with real AES-256-GCM. Gates: `go vet ./...`, `go test ./...`, staticcheck all green; gofmt clean. |
+
 ### File List
+
+| File | Change |
+|---|---|
+| `apps/api/internal/services/key_resolver.go` | **new** — AC #1 `[@contract-v1]` `KeyResolver`: closed `KeyName` set, `KeySource`, secret-first resolution, fail-soft fallthrough on a secrets error, blank-secret-treated-as-absent, nil-secrets-service degrades to env-only |
+| `apps/api/internal/services/key_resolver_test.go` | **new** — 10 tests incl. the secret-wins contract, the decryption-failure fallthrough, and unknown-key-name-is-an-error (distinct from unconfigured) |
+| `apps/api/internal/services/claude_provider_holder.go` | **new** — AC #2 `[@contract-v1]` holder: `key\|model` fingerprint cache (Rule 14), options replayed on rebuild so the Governor survives, `IsConfigured`, `TestKey`, and delegation of **both** `TextCompleter` and `CachingCompleter` with compile-time `var _` assertions |
+| `apps/api/internal/services/claude_provider_holder_test.go` | **new** — 9 tests incl. pointer-identity caching, rebuild-on-key-change, keyless-boot recovery, Governor identity across a rebuild, and the CachingCompleter guard |
+| `apps/api/internal/services/key_settings_service.go` | **new** — AC #3/#4 state + save: per-source masking rules, explicit-`""` delete, idempotent clear, `Writable`/`Reason` pre-flight |
+| `apps/api/internal/services/key_settings_service_test.go` | **new** — 13 tests incl. env-keys-are-never-masked-echoed, short-value full masking, whitespace-clears, partial-update isolation |
+| `apps/api/internal/services/key_resolution_integration_test.go` | **new** — AC #6.4 on a real `:memory:` DB + real AES-256-GCM secrets service: store → resolve → gate flips; keyless boot → save → holder rebuilds; clear reverts to env; masking holds on the real round trip. Lives in `services` because Rule 19 forbids `repository → services` |
+| `apps/api/internal/handlers/key_settings_handler.go` | **new** — AC #3 triad `GET/PUT /api/v1/settings/keys` + `POST /test`; pointer fields distinguish omitted-vs-cleared; `classifyKeyTestError` with unauthorized checked before the generic provider error; Swagger annotations; Rule 3 envelope |
+| `apps/api/internal/handlers/key_settings_handler_test.go` | **new** — 14 tests incl. the 5-case error-classification table, the omitted-vs-`""` distinction, the AC #4 409, and the sentinel-ordering guard |
+| `apps/api/internal/ai/types.go` | **modified** — `ErrAIUnauthorized` sentinel (additive) |
+| `apps/api/internal/ai/claude.go` | **modified** — 401/403 wrapped as `ErrAIProviderError` **and** `ErrAIUnauthorized` (existing `errors.Is` consumers unaffected); `Governor()` accessor so a rebuild's budget-pool identity is assertable |
+| `apps/api/cmd/api/main.go` | **modified** — resolver + holder construction; terminology/translation services built **unconditionally** behind the holder (the `if cfg.HasClaudeKey()` guard removed); AC #5 capability-gate re-point; `keySettingsHandler` construction + `RegisterRoutes` (Rule 15 verified) |
+| `_bmad-output/implementation-artifacts/sprint-status.yaml` | **modified** — `sub-2-1a` → `review`; `backlog-tmdb-runtime-key-resolution` filed |
 
 ---
 

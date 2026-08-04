@@ -530,27 +530,31 @@ func main() {
 	// so the missing-scope batch enumeration shrinks and poster badges flip.
 	transcriptionService.SetSubtitleStatusWriter(repos.Movies)
 
-	// Initialize AI terminology correction (Story 9.1) + subtitle translation (Story 9.2b)
-	// Uses TextCompleter interface — provider created once here, not inside the service
-	var terminologyService *services.TerminologyCorrectionService
-	var translationService *services.TranslationService
-	if cfg.HasClaudeKey() {
-		claudeOpts := []ai.ClaudeProviderOption{ai.WithClaudeGovernor(aiGovernor)}
-		if m := cfg.GetClaudeModel(); m != "" {
-			claudeOpts = append(claudeOpts, ai.WithClaudeModel(m))
-		}
-		claudeProvider := ai.NewClaudeProvider(cfg.GetClaudeAPIKey(), claudeOpts...)
-		terminologyService = services.NewTerminologyCorrectionService(claudeProvider)
-		translationService = services.NewTranslationService(claudeProvider, sseHub)
-	}
-	if terminologyService != nil {
-		subtitleEngine.SetTerminologyService(terminologyService)
-		slog.Info("AI terminology correction enabled")
-	}
-	if translationService != nil {
-		transcriptionService.SetTranslationService(translationService)
-		slog.Info("AI subtitle translation enabled (Story 9.2b)")
-	}
+	// ── Provider keys: resolver + hot-reloadable holder (sub-2-1a AC #1/#2) ──
+	//
+	// The key is resolved secret-first so a key typed into the settings page
+	// actually reaches the pipeline; it used to be env-only, which made the page
+	// a silent no-op (Break 1). The holder rebuilds the client when the resolved
+	// key changes, so a runtime edit takes effect without a restart (Break 2).
+	keyResolver := services.NewKeyResolver(secretsService, services.EnvKeys{
+		Claude: cfg.GetClaudeAPIKey(),
+		TMDb:   cfg.GetTMDbAPIKey(),
+		OpenAI: cfg.GetOpenAIAPIKey(),
+	}, slog.Default())
+	claudeHolder := services.NewClaudeProviderHolder(
+		keyResolver, cfg.GetClaudeModel(), slog.Default(), ai.WithClaudeGovernor(aiGovernor))
+
+	// Initialize AI terminology correction (Story 9.1) + subtitle translation (Story 9.2b).
+	// Constructed UNCONDITIONALLY (sub-2-1a AC #2): they take the holder, which
+	// declines with ErrAINotConfigured while no key resolves and starts working
+	// the moment one is saved. The old `if cfg.HasClaudeKey()` guard left these
+	// nil forever on a keyless boot, so a key added later reached nothing.
+	terminologyService := services.NewTerminologyCorrectionService(claudeHolder)
+	translationService := services.NewTranslationService(claudeHolder, sseHub)
+	subtitleEngine.SetTerminologyService(terminologyService)
+	transcriptionService.SetTranslationService(translationService)
+	slog.Info("AI services wired through the key holder",
+		"claude_configured", claudeHolder.IsConfigured(ctx))
 	slog.Info("Subtitle engine initialized", "providers", len(subtitleProviders))
 
 	// ── Subtitle generation pipeline (sub-1-6: D5 flag seam + FR13 + FR23) ──
@@ -569,8 +573,11 @@ func main() {
 	// AC #5: ONE capability predicate, read by all THREE entry points — the
 	// endpoint (409), the scanner enqueue sweep, and the batch seam. Declared
 	// here so there is exactly one definition of "the pipeline can run".
-	subtitleCapabilityGate := cfg.HasClaudeKey
-	if cfg.SubtitlePipelineEnabled() && subtitleCapabilityGate() && translationService != nil {
+	// sub-2-1a AC #5 re-point: the gate now asks the RESOLVER, not the boot-time
+	// env snapshot, so saving a key in the settings page un-gates the pipeline
+	// without a restart. Still a plain func() bool — no Rule 20 bump owed.
+	subtitleCapabilityGate := func() bool { return keyResolver.Has(context.Background(), services.KeyClaude) }
+	if cfg.SubtitlePipelineEnabled() && subtitleCapabilityGate() {
 		subtitleRouter := subtitle.NewRouter(
 			ffprobeService,
 			subtitle.NewExtractor(0, slog.Default()),
@@ -729,6 +736,11 @@ func main() {
 	if subtitlePipelinePool != nil {
 		subtitlePipelineQueue = subtitlePipelinePool
 	}
+	// FR25 provider-key settings (sub-2-1a AC #3). Writable requires an
+	// encryption key — without it the page renders read-only rather than
+	// accepting input that would fail at the storage layer (AC #4).
+	keySettingsService := services.NewKeySettingsService(keyResolver, secretsService, cfg.HasEncryptionKey())
+	keySettingsHandler := handlers.NewKeySettingsHandler(keySettingsService, claudeHolder)
 	subtitlePipelineHandler := handlers.NewSubtitlePipelineHandler(
 		subtitlePipelineQueue, subtitlePipelineMedia, subtitleCapabilityGate)
 	// Activity hub aggregate (UX Redesign D4-1 / ux3-2-1) — composes live scan +
@@ -801,6 +813,7 @@ func main() {
 		subtitleHandler.RegisterRoutes(apiV1)
 		generationBatchHandler.RegisterRoutes(apiV1)  // /api/v1/subtitles/generation-batch group (Story 9R-16)
 		subtitlePipelineHandler.RegisterRoutes(apiV1) // POST /api/v1/subtitles/pipeline/run (Story sub-1-6, FR12)
+		keySettingsHandler.RegisterRoutes(apiV1)      // GET/PUT /api/v1/settings/keys + POST /test (Story sub-2-1a, FR25)
 		transcriptionHandler.RegisterRoutes(apiV1)
 		if nfoLocalizer != nil {
 			nfoLocalizerHandler.RegisterRoutes(apiV1) // POST /movies/:id/localize-nfo (9R-13)
