@@ -123,3 +123,92 @@ describe('pickPosterBadge — exception signal (ux3-0-2)', () => {
     expect(pickPosterBadge(undefined)).toBeNull();
   });
 });
+
+// ─── Story sub-1-7b — the 5 pipeline states (sub-1-2 [@contract-v1] 9-value set) ───
+
+describe('deriveSubtitleStatus — subtitle-pipeline states (sub-1-7b)', () => {
+  it.each([
+    ['probing', 'transient — the Activity hub + SSE own in-flight progress'],
+    ['extracting', 'transient'],
+    ['translating', 'transient'],
+  ])('returns null for the transient state %s (%s)', (subtitleStatus) => {
+    expect(deriveSubtitleStatus(m('success', { subtitleStatus }))).toBeNull();
+  });
+
+  it('maps no_text_source → 無字幕源 (neutral, non-steady)', () => {
+    const s = deriveSubtitleStatus(m('success', { subtitleStatus: 'no_text_source' }));
+    expect(s).toEqual({ label: '無字幕源', className: expect.stringContaining('--bg-tertiary') });
+    expect(s?.steadyState).toBeFalsy();
+  });
+
+  it('maps skipped → 已略過 (neutral, non-steady)', () => {
+    const s = deriveSubtitleStatus(m('success', { subtitleStatus: 'skipped' }));
+    expect(s).toEqual({ label: '已略過', className: expect.stringContaining('--bg-tertiary') });
+    expect(s?.steadyState).toBeFalsy();
+  });
+
+  it('keeps 無字幕源 distinct from 缺字幕 — different recoveries (sub-1-7a AC #4)', () => {
+    // 缺字幕 = searched online, found nothing → re-search may help.
+    // 無字幕源 = no text track to extract → only P2 ASR can help.
+    expect(deriveSubtitleStatus(m('success', { subtitleStatus: 'not_found' }))?.label).toBe(
+      '缺字幕'
+    );
+    expect(deriveSubtitleStatus(m('success', { subtitleStatus: 'no_text_source' }))?.label).toBe(
+      '無字幕源'
+    );
+  });
+});
+
+// THE ordering regression tests. These fail against the natural "append the new
+// cases at the bottom" implementation: step 2 infers a badge from subtitleTracks
+// and returns on ANY track, so a terminal engine verdict placed below it loses to
+// a naive track count and the user sees 有字幕 on a file that will never get one.
+describe('deriveSubtitleStatus — terminal verdicts outrank track inference (sub-1-7b)', () => {
+  // PGS is an IMAGE track: the pipeline cannot extract text from it, which is
+  // exactly why the item is no_text_source — yet it IS a track in subtitleTracks.
+  const imageOnlyTracks = JSON.stringify([{ language: 'eng', codec: 'hdmv_pgs_subtitle' }]);
+  // An `und`-tagged text track is what P0 refuses to treat as English → skipped.
+  const undTracks = JSON.stringify([{ language: 'und' }]);
+
+  it('no_text_source wins over an image-only embedded track', () => {
+    expect(
+      deriveSubtitleStatus(
+        m('success', { subtitleStatus: 'no_text_source', subtitleTracks: imageOnlyTracks })
+      )?.label
+    ).toBe('無字幕源');
+  });
+
+  it('skipped wins over an und-tagged embedded track', () => {
+    expect(
+      deriveSubtitleStatus(m('success', { subtitleStatus: 'skipped', subtitleTracks: undTracks }))
+        ?.label
+    ).toBe('已略過');
+  });
+
+  it('the transient states reach null without falling into track inference', () => {
+    for (const subtitleStatus of ['probing', 'extracting', 'translating']) {
+      expect(
+        deriveSubtitleStatus(m('success', { subtitleStatus, subtitleTracks: undTracks }))
+      ).toBeNull();
+    }
+  });
+});
+
+describe('pickPosterBadge — the new pipeline states (sub-1-7b AC #2)', () => {
+  it('surfaces the terminal verdicts on the grid (they are exceptions)', () => {
+    expect(pickPosterBadge(m('success', { subtitleStatus: 'no_text_source' }))?.label).toBe(
+      '無字幕源'
+    );
+    expect(pickPosterBadge(m('success', { subtitleStatus: 'skipped' }))?.label).toBe('已略過');
+  });
+
+  it('renders NO badge for the three transient states (normal progress is not an exception)', () => {
+    for (const subtitleStatus of ['probing', 'extracting', 'translating']) {
+      expect(pickPosterBadge(m('success', { subtitleStatus }))).toBeNull();
+    }
+  });
+
+  it('a lifecycle exception still wins over a terminal subtitle verdict', () => {
+    expect(pickPosterBadge(m('pending', { subtitleStatus: 'skipped' }))?.label).toBe('整理中');
+  });
+});
