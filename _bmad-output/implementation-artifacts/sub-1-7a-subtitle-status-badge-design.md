@@ -1,6 +1,6 @@
 # Story sub-1.7a: Subtitle-status badge design spec + Epic 2 `.pen` copy unblock
 
-Status: review
+Status: done
 
 **Epic:** `epic-subtitle-pipeline-m1` (M1) · **Risk: 🟢 LOW** · **UX / DESIGN-ONLY** (Sally — `ux-designer`, **not** dev)
 **Origin:** Alexyu ruling 2026-07-27 — *"前端 badge 讓 M1 出貨時就帶 badge"*. Promotes the lane-③ entry `backlog-subtitle-status-fe-rendering` (filed by sub-1-2) into M1 scope.
@@ -246,7 +246,7 @@ Amelia (Developer Agent) · Claude Fable 5, effort xhigh · 2026-08-03 — **rep
 - ⚠️ **The exported PNG is a 204×400 thumbnail — the spec text in it is NOT readable.** This is Pencil `get_screenshot`'s cap, not a regression: every screenshot in the repo is ≤400px on its long edge (`j1-d` 222×400, `design-system-reference` 131×400). It undercuts AC #1's premise that 7b "verifies against the screenshot" — for a mockup a thumbnail is a fine reminder, for a **text-dense spec sheet** it is not. Two consequences, both handled: the ratified table above is the real handoff (which is exactly why Task 5.1 exists), and `backlog-pen-spec-screen-readable-export` is filed (lane ③). 7b's UX gate should compare against the **`.pen` screen in Pencil**, not the PNG.
 - 📐 **Three escalations from the inline agent, ruled here:** ① caption at 45px (convention) rather than matching `XlFIq`'s 30px — `XlFIq` is the outlier, and since captions sit *outside* the frame they do not enter the export, so re-aligning `j1` would cost a PNG re-render for zero pixels of deliverable; left as-is. ② `J2-D` height 2435 > `j1`'s 2241 — content-driven, width held at 1240, 46px clearance to the next block verified. ③ the F5 warning panel keeps `$warning-tint` — the capability genuinely is unavailable, so fail-soft warning semantics are still correct; only the copy was wrong.
 - 🧾 **AC #9 sync is one line.** `ux-design-specification.md:1086`'s `StatusBadge` enumeration now includes subtitle-pipeline status and **points at** `flow-j-specs/j2-d.png` rather than restating the table (two sources of truth is the failure mode the AC names). Re-grepped `badge` across the document afterwards: every other hit is a parse-pending count, the Douban source indicator, a rating/episode-count overlay, or the `--radius-sm` comment — nothing contradicts the new spec. **1 location edited**, inside the AC's "≤ 2" bound.
-- 🚧 **Outstanding gate:** Alexyu's own eyes on `J2-D` **in Pencil** (not the thumbnail). Everything mechanically verifiable here is verified; the screen's rendered content was taken from the inline agent's itemised report, not independently re-read, because re-reading it from this session is precisely the Pencil-MCP cost the split was designed to avoid.
+- ✅ **Gate closed 2026-08-03 — Alexyu confirmed `J2-D` in Pencil** (「J2-D 我看過了」), raising no changes. That was the one thing this session could not verify for itself: the screen's rendered content came from the inline agent's itemised report, not an independent re-read, because re-reading it here is precisely the Pencil-MCP cost the split existed to avoid. With the design confirmed at the source, the story is `done` and sub-1-7b may implement against the ratified table above.
 
 ### Discovery Triage
 
