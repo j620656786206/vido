@@ -370,7 +370,11 @@ export function ManageSubtitleDialogV2({
                   </div>
                   <button
                     type="button"
-                    onClick={() => navigate({ to: '/settings' })}
+                    // sub-2-1b AC #4: /settings renders but has no key surface —
+                    // a dead END, not a dead loop. /settings/keys is where the
+                    // AI key this panel is asking for actually lives. The
+                    // data-testid is kept: TestSprite/e2e selectors depend on it.
+                    onClick={() => navigate({ to: '/settings/keys' })}
                     data-testid="go-to-settings"
                     className="flex min-h-[44px] shrink-0 items-center rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-4 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-primary)]"
                   >

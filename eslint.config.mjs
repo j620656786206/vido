@@ -45,6 +45,10 @@ export default [
       'test-results/**',
       'playwright-report/**',
       '.worktrees/**',
+      // Git-ignored local scratch dir (.gitignore `tmp/`). Nothing here can ever
+      // reach CI, so a stray scratch script must not turn `pnpm lint:all` red on
+      // a developer's machine while it stays green in the pipeline.
+      'tmp/**',
     ],
   },
 

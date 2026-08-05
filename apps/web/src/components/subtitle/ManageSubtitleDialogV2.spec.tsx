@@ -107,11 +107,18 @@ function renderDialog(props: DialogProps = {}) {
     path: '/settings',
     component: () => null,
   });
+  // sub-2-1b AC #4 — the F5 前往設定 target. Registered so the navigation the
+  // dialog performs resolves to a real route rather than silently 404-ing.
+  const settingsKeys = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/settings/keys',
+    component: () => null,
+  });
   const router = createRouter({
-    routeTree: rootRoute.addChildren([settings]),
+    routeTree: rootRoute.addChildren([settings, settingsKeys]),
     history: createMemoryHistory({ initialEntries: ['/'] }),
   });
-  return render(<RouterProvider router={router} />);
+  return { ...render(<RouterProvider router={router} />), router };
 }
 
 beforeEach(() => {
@@ -212,6 +219,19 @@ describe('ManageSubtitleDialogV2 (F1 管理字幕)', () => {
     // The rest of the dialog survives (fail-soft): tracks + glossary still visible.
     expect(screen.getByTestId('subtitle-tracks-section')).toBeInTheDocument();
     expect(screen.getByTestId('open-glossary')).toBeInTheDocument();
+  });
+
+  // sub-2-1b AC #4 — the dead END. /settings renders but carries no key surface,
+  // so the button has to land on the page that actually holds the key.
+  it('前往設定 navigates to /settings/keys, keeping the go-to-settings testid', async () => {
+    mockedTrigger.mockResolvedValue({ status: 'disabled' });
+    const { router } = renderDialog();
+
+    fireEvent.click(await screen.findByTestId('action-generate-subtitle'));
+    const goToSettings = await screen.findByTestId('go-to-settings');
+    fireEvent.click(goToSettings);
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/settings/keys'));
   });
 
   it('409 TRANSCRIPTION_IN_PROGRESS → attaches to the running job SSE stream instead of erroring', async () => {
