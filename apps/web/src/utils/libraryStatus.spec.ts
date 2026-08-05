@@ -212,3 +212,89 @@ describe('pickPosterBadge — the new pipeline states (sub-1-7b AC #2)', () => {
     expect(pickPosterBadge(m('pending', { subtitleStatus: 'skipped' }))?.label).toBe('整理中');
   });
 });
+
+// sub-2-2b: the untranslated badge + the found-fallback ladder hole.
+// Murat's mandate — the "authoritative verdict vs EMPTY track list" class had
+// ZERO coverage; step 1's `deriveFromTracks(media) ?? 有字幕` fallback let
+// deriveFromTracks' 缺字幕-on-empty-array override an engine verdict.
+describe('deriveSubtitleStatus — authoritative verdicts vs an EMPTY track list (sub-2-2b)', () => {
+  const emptyTracks = JSON.stringify([]);
+
+  it('found + en + empty tracks → 有字幕, never 缺字幕 (the ladder hole)', () => {
+    const s = deriveSubtitleStatus(
+      m('success', { subtitleStatus: 'found', subtitleLanguage: 'en', subtitleTracks: emptyTracks })
+    );
+    expect(s?.label).toBe('有字幕');
+  });
+
+  it('untranslated + empty tracks → 未翻譯', () => {
+    expect(
+      deriveSubtitleStatus(
+        m('success', { subtitleStatus: 'untranslated', subtitleTracks: emptyTracks })
+      )?.label
+    ).toBe('未翻譯');
+  });
+
+  it('no_text_source + empty tracks → 無字幕源', () => {
+    expect(
+      deriveSubtitleStatus(
+        m('success', { subtitleStatus: 'no_text_source', subtitleTracks: emptyTracks })
+      )?.label
+    ).toBe('無字幕源');
+  });
+
+  it('skipped + empty tracks → 已略過', () => {
+    expect(
+      deriveSubtitleStatus(m('success', { subtitleStatus: 'skipped', subtitleTracks: emptyTracks }))
+        ?.label
+    ).toBe('已略過');
+  });
+
+  it('found + zh track present still refines to 繁中 (track refinement survives the fix)', () => {
+    const s = deriveSubtitleStatus(
+      m('success', {
+        subtitleStatus: 'found',
+        subtitleLanguage: 'en',
+        subtitleTracks: JSON.stringify([{ language: 'zh-Hant' }]),
+      })
+    );
+    expect(s?.label).toBe('繁中');
+  });
+});
+
+describe('deriveSubtitleStatus — 未翻譯 (sub-2-2b AC #2)', () => {
+  it('renders neutral tint — not an error, and accent stays reserved for in-progress', () => {
+    const s = deriveSubtitleStatus(m('success', { subtitleStatus: 'untranslated' }));
+    expect(s?.label).toBe('未翻譯');
+    expect(s?.className).toContain('--bg-tertiary');
+    expect(s?.className).not.toContain('--error');
+    expect(s?.className).not.toContain('--accent');
+  });
+
+  it('wins over an embedded English track (the verdict already accounts for it)', () => {
+    expect(
+      deriveSubtitleStatus(
+        m('success', {
+          subtitleStatus: 'untranslated',
+          subtitleTracks: JSON.stringify([{ language: 'en' }]),
+        })
+      )?.label
+    ).toBe('未翻譯');
+  });
+
+  it('SCOPE FENCE: an embedded English track WITHOUT the pipeline verdict never badges 未翻譯', () => {
+    // A foreign film with an embedded en track was never owed a translation —
+    // untranslated derives from subtitleStatus exclusively (Sally fence).
+    for (const subtitleStatus of [undefined, 'not_searched']) {
+      const s = deriveSubtitleStatus(
+        m('success', { subtitleStatus, subtitleTracks: JSON.stringify([{ language: 'en' }]) })
+      );
+      expect(s?.label).toBe('有字幕');
+    }
+  });
+
+  it('is an exception (non-steady): pickPosterBadge surfaces it on the grid', () => {
+    const badge = pickPosterBadge(m('success', { subtitleStatus: 'untranslated' }));
+    expect(badge?.label).toBe('未翻譯');
+  });
+});

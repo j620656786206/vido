@@ -1,6 +1,6 @@
 # Story sub-2.2b: 「未翻譯」 badge + derivation-ladder fix + honest completion message
 
-Status: ready-for-dev
+Status: done
 
 **Epic:** `epic-subtitle-pipeline-m1-5` (M1.5 follow-up) · **Risk: 🟡 MEDIUM** · **FRONTEND-ONLY**
 **Source:** party-mode ruling 2026-08-05 (Sally 主裁) · promotes `backlog-subtitle-untranslated-badge-frontend`
@@ -71,11 +71,11 @@ so that I know exactly what I have and what step (setting the translation key) g
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Ladder fix (AC #1):** `deriveSubtitleStatus` step-1 fallback no longer inherits 缺字幕 from empty tracks.
-- [ ] **Task 2 — Badge (AC #2):** `untranslated` case in the step-2 switch + doc comment; scope-fence comment.
-- [ ] **Task 3 — Completion message (AC #3):** conditional on `zhSrtPath`.
-- [ ] **Task 4 — CTA helper (AC #4, trails γ):** conditional helper text + `/settings/keys` affordance via `useKeySettings`.
-- [ ] **Task 5 — Tests + gates (AC #5):** Murat's four + fence + dialog + CTA groups; foreground vitest; `pnpm lint:all`.
+- [x] **Task 1 — Ladder fix (AC #1):** `deriveSubtitleStatus` step-1 fallback no longer inherits 缺字幕 from empty tracks.
+- [x] **Task 2 — Badge (AC #2):** `untranslated` case in the step-2 switch + doc comment; scope-fence comment.
+- [x] **Task 3 — Completion message (AC #3):** conditional on `zhSrtPath`.
+- [x] **Task 4 — CTA helper (AC #4, trails γ):** executed via AC #4's explicit DEFERRAL branch — γ (sub-2-2c) has not ratified the copy, so Tasks 1–3 ship and this task's outcome is the recorded deferral (no code, nothing new filed — γ already tracks the CTA copy + affordance). See Completion Notes.
+- [x] **Task 5 — Tests + gates (AC #5):** Murat's four + fence + dialog + CTA groups; foreground vitest; `pnpm lint:all`.
 
 ---
 
@@ -105,14 +105,79 @@ so that I know exactly what I have and what step (setting the translation key) g
 
 ### Agent Model Used
 
+Amelia (Developer Agent) — Claude Opus 5 (1M context), effort high. Implemented 2026-08-05.
+
 ### Debug Log References
+
+- Red-green honoured: the 11 new spec cases were written first and failed 5 (the ladder hole + all `untranslated` renderings) before the implementation landed.
+- UX verification screenshots (git-ignored `tmp/badge-untranslated.png`, not committed): live `/library` grid against `nx serve web` with the list API stubbed via Playwright `route.fulfill` — five cards covering 未翻譯 / 有字幕(ladder-hole item) / 無字幕源 / 已略過 / 缺字幕. Dev server stopped afterwards.
 
 ### Completion Notes List
 
+**🔗 AC Drift: NONE** (checked: `grep -n "found|有字幕|缺字幕" apps/web/src/utils/libraryStatus.spec.ts` + sub-1-7b story ACs — no prior test or AC pins the `found`+non-zh+empty-tracks path (that zero coverage IS the finding this story fixes); sub-1-7b's pinned behaviours — terminal verdicts above track inference, transients → null, ordering-regression pair — are all preserved and still green. The dialog completion note had no prior text assertion.)
+
+**📎 Contract Stamps: FOUND (1 upstream ack, no bumps by this story):** confirmed against [@contract-v2] sub-1-2 AC #2 (as bumped by sub-2-2a — the 10-value `SubtitleStatus` enum; this story renders the 10th value). The `useKeySettings`/sub-2-1a AC #3 consumption did NOT materialize (Task 4 deferred), so no new ack surface. This story stamps nothing.
+
+**🎭 A11y Pre-Flight: PASS** (2 components/files checked — `ManageSubtitleDialogV2.tsx`, `libraryStatus.ts`; 0 jsx-a11y warnings on touched files, 0 introduced. The change is a text-conditional and a pure derivation function — no new interactive surface, no modal/image/live-region changes. Lazy-load contract N/A.)
+
+**⏸ Task 4 (AC #4 CTA helper): DEFERRED-TO-γ — the AC's explicit branch, not a silent skip.** γ (sub-2-2c, ready-for-dev) has not run, so no ratified copy exists. Per AC #4: Tasks 1–3 ship, the deferral is recorded here, and NOTHING new is filed — sub-2-2c already tracks the CTA copy + affordance, and its implementation lands with/after γ (a one-conditional change against `useKeySettings().data.keys` claude row).
+
+**What shipped**
+
+- **AC #1 (the ladder hole)** — `deriveSubtitleStatus` step 1: embedded tracks may REFINE a `found` verdict (zh upgrade preserved, asserted) but may never CONTRADICT it — the `deriveFromTracks ?? 有字幕` fallback no longer lets 缺字幕-on-empty-array override the authoritative engine result. Critical since sub-2-2a: external SRTs are never in `subtitleTracks`, so every generation-found row with no embedded tracks hit this hole.
+- **AC #2** — `untranslated` → 「未翻譯」 `TINT.neutral`, placed in the step-2 pipeline-verdict switch (above track inference, same reasoning as its siblings), non-steady so `pickPosterBadge` surfaces it on the grid; doc comment carries the distinct-by-recovery semantics + the generation-only fence.
+- **AC #3** — completion note conditional on `zhSrtPath`: 「已生成英文字幕；尚未翻譯」 when null, 「字幕已生成完成」 otherwise.
+- **AC #5** — 13 new tests: Murat's four empty-tracks×authoritative-verdict cases (`found`+en / `untranslated` / `no_text_source` / `skipped`), zh-refinement survival, neutral-tint + accent-reserved assertions, untranslated-beats-en-track, the SCOPE FENCE (embedded en track without the verdict → 有字幕, never 未翻譯), `pickPosterBadge` surfacing, and the two dialog completion variants. Type-safety fix en route: the dialog spec's hoisted `srtPath`/`zhSrtPath` were inferred as `null` — annotated `string | null`.
+- **AC #6 fence honoured** — 0 `apps/api/**` files, no `.pen` edits, no screenshot regen, no library filter, no visual baselines.
+
+**Gates** — `pnpm nx test web` **228 files / 2539 tests green** (+11), `pnpm nx test api` 34 packages green (regression gate), `pnpm lint:all` 0 errors, `format:check` green, a11y pre-flight PASS, no orphaned workers.
+
+### 🎨 UX Verification: PASS (live-render check; j2-d spec row pending γ by design)
+
+Verified against the party-mode ruled badge table (Sally 主裁 2026-08-05 — label 未翻譯 / neutral tint / generation-only / recovery=set-key-then-rerun) plus a live `/library` render with five mocked cards:
+
+| Area | Ruled spec | Implementation | Match? |
+|---|---|---|---|
+| Label | 未翻譯 (3 CJK, names the missing step) | 未翻譯 | ✅ |
+| Tint | neutral (`--bg-tertiary`/`--text-muted`), NOT error, accent reserved | `TINT.neutral`, asserted in tests + visually identical pill to 無字幕源/已略過 | ✅ |
+| Grid visibility | exception → shows on poster | non-steady, `pickPosterBadge` surfaces it (screenshot) | ✅ |
+| Scope | generation artifacts only | fence test: embedded en track alone → 有字幕 | ✅ |
+| Ladder | authoritative verdict never loses to empty tracks | screenshot card 2: `found`+en+`[]` → 有字幕 | ✅ |
+| j2-d spec table row | 10th row | **pending γ (sub-2-2c AC #3)** — by the split's design, not a drift | ⏸ γ |
+
+### Senior Developer Review (AI) — 2026-08-05
+
+**Outcome: Approve (all findings fixed same session).** Adversarial CR (Amelia-as-reviewer, Fable 5): **0 High / 1 Medium / 2 Low — all addressed.** Git-vs-File-List: 0 discrepancies. Rule 7: N/A (pure frontend). Rule 20: N/A (acks only, verified verbatim). Rule 25: N/A. All ACs re-verified, incl. AC #4's deferral branch executed as written.
+
+- ✅ **[M1] `EpisodeList` lacked the 10th value** — `untranslated` fell back to `not_searched` (`Minus`/「尚未搜尋字幕」): a SETTLED verdict wearing a not-started accessible name, the exact skipped-vs-not_searched class Sally ruled on 2026-08-04. Unreachable today (α is movies-only) but 9R-10a (ready-for-dev) makes it live, and that story would not know to add it — α's own bump note mandates renderers handle the value. Fix: map entry per the ratified J2-D icon grammar (CIRCLED settled + muted — nothing broke; poster ruling says neutral-not-error) with label 「已生成英文字幕，尚未翻譯」; **`CircleDashed` glyph marked PROVISIONAL pending γ** and flagged in sub-2-2c's story file. +2 tests (long-form name; glyph ≠ not_searched).
+- ✅ **[L1] Ladder guard filtered by label string** — `fromTracks.label !== '缺字幕'` coupled the story's core fix to display copy. Refactored to positive intent: `trackLangs()` extracted (single parse), the `found` branch refines via HANT/HANS classification directly; `deriveFromTracks` rebuilt on the same helper. All 38 ladder tests green unchanged.
+- ✅ **[L2] `untranslated` + embedded 繁中 track renders 未翻譯** — verdict-outranks-tracks is consistent with its siblings, but the recovery hint is moot when a 繁中 track exists. No code change (consistency stands); recorded as a Sally decision input in sub-2-2c's "Dev-flagged inputs" block alongside the M1 glyph ratification.
+
+Gates re-run post-fix: `pnpm nx test web` **228 files / 2541 tests green** (+2), `pnpm lint:all` 0 errors, `format:check` green.
+
 ### Discovery Triage
 
-- **Did this story discover any work outside its current scope?**
-  - If **NO**: state `N/A — no out-of-scope work discovered`.
+- **Did this story discover any work outside its current scope?** `N/A — no out-of-scope work discovered` (the Task 4 deferral is AC #4's own branch and is tracked by sub-2-2c; nothing new filed).
 - Reference: `project-context.md` Rule 24.
 
 ### File List
+
+**Modified**
+
+- `apps/web/src/utils/libraryStatus.ts` (ladder fix + `untranslated` case + header doc)
+- `apps/web/src/utils/libraryStatus.spec.ts` (+11 tests)
+- `apps/web/src/components/subtitle/ManageSubtitleDialogV2.tsx` (AC #3 conditional completion note)
+- `apps/web/src/components/subtitle/ManageSubtitleDialogV2.spec.tsx` (+2 completion tests; hoisted-state type annotations)
+- `apps/web/src/components/media/EpisodeList.tsx` (CR M1 — 10th-value entry, provisional CircleDashed)
+- `apps/web/src/components/media/EpisodeList.spec.tsx` (CR M1 — +2 tests)
+- `_bmad-output/implementation-artifacts/sub-2-2c-f5-asr-copy-design.md` (CR M1/L2 — Sally decision inputs for the j2-d row)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (status transitions)
+- `_bmad-output/implementation-artifacts/sub-2-2b-untranslated-badge-frontend.md` (this file)
+
+## Change Log
+
+| Date | Change |
+|---|---|
+| 2026-08-05 | Task 1 — ladder fix: embedded tracks refine but never contradict an authoritative `found` (缺字幕-on-empty no longer overrides). Task 2 — `untranslated` → 未翻譯 neutral badge in the step-2 switch, non-steady, generation-only fence. Task 3 — completion note conditional on `zhSrtPath`. RED-first (5 failures before implementation). |
+| 2026-08-05 | Adversarial CR: 1M/2L, all addressed — EpisodeList 10th-value entry ahead of 9R-10a (M1, CircleDashed provisional pending γ), trackLangs()-based positive refinement replacing the label-string guard (L1), untranslated+embedded-繁中 semantics routed to γ as a Sally input (L2). Web 228/2541 green. Story → done. |
+| 2026-08-05 | Task 4 — executed as AC #4's deferral branch (γ unratified; sub-2-2c tracks the CTA copy). Task 5 — 13 new tests incl. Murat's four zero-coverage cases + scope fence + dialog variants. Gates: web 228/2539 green, api 34 green, lint 0 errors. Rule 20: acks sub-1-2 [@contract-v2]. UX verification via live /library render (five-card screenshot). Story → review. |

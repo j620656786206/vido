@@ -11,7 +11,7 @@
  * On mobile, rows stack (title/date line, metadata below) for readability (AC #8).
  */
 
-import { CheckCircle2, XCircle, Loader2, Minus, CircleSlash } from 'lucide-react';
+import { CheckCircle2, XCircle, Loader2, Minus, CircleSlash, CircleDashed } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import type { MergedEpisode } from '../../types/library';
 
@@ -30,8 +30,8 @@ function episodeCode(seasonNumber: number, episodeNumber: number): string {
   return `S${s}E${e}`;
 }
 
-// The 9 `subtitle_status` values (sub-1-2 [@contract-v1]); treatment ratified by
-// sub-1-7a, spec screen `flow-j-specs/j2-d`.
+// The 10 `subtitle_status` values (sub-1-2 [@contract-v2]); treatment ratified by
+// sub-1-7a, spec screen `flow-j-specs/j2-d` (the untranslated row lands with γ).
 //
 // `label` is the LONG form on purpose: the icon carries no visible text, so the
 // accessible name is the only place the full explanation can live. That is where
@@ -92,6 +92,21 @@ const SUBTITLE_STATUS: Record<
     Icon: CircleSlash,
     color: 'text-[var(--text-muted)]',
     label: '已略過（字幕軌語言不符）',
+  },
+  // Terminal (10th value, sub-1-2 [@contract-v2] via sub-2-2a): a generated
+  // ENGLISH subtitle exists but the expected translation step did not run.
+  // Unreachable for episodes until series generation (9R-10a) lands — added
+  // NOW (sub-2-2b CR M1) so that story does not inherit a silent fallback to
+  // `not_searched`'s 「尚未搜尋字幕」, which mislabels a settled verdict as
+  // not-started (the exact skipped-vs-not_searched class Sally ruled on
+  // 2026-08-04). Grammar: CIRCLED (settled outcome) + muted (nothing broke —
+  // the recovery is setting the translation key, said by the label, and the
+  // poster badge ruling made 未翻譯 neutral-not-error). CircleDashed glyph is
+  // PROVISIONAL pending γ (sub-2-2c) ratification — the label is the contract.
+  untranslated: {
+    Icon: CircleDashed,
+    color: 'text-[var(--text-muted)]',
+    label: '已生成英文字幕，尚未翻譯',
   },
 };
 

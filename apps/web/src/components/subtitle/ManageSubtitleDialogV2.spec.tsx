@@ -18,8 +18,8 @@ const h = vi.hoisted(() => ({
     message: '',
     jobId: null,
     error: null as string | null,
-    srtPath: null,
-    zhSrtPath: null,
+    srtPath: null as string | null,
+    zhSrtPath: null as string | null,
   },
   startTracking: vi.fn(),
   reset: vi.fn(),
@@ -338,6 +338,33 @@ describe('ManageSubtitleDialogV2 (F1 管理字幕)', () => {
     h.genOptions?.onComplete?.({ srtPath: '/a.srt', zhSrtPath: '/a.zh.srt' });
 
     expect(onGenerationComplete).toHaveBeenCalledTimes(1);
+  });
+
+  // sub-2-2b AC #3: the completion note must not claim 完成 when translation
+  // did not run — an en-only result (zhSrtPath null) says exactly what it is.
+  it('complete WITH a zh path → 字幕已生成完成', async () => {
+    mockedTrigger.mockResolvedValue({ status: 'started', result: { jobId: 'j', message: 'ok' } });
+    h.genState.phase = 'complete';
+    h.genState.zhSrtPath = '/media/m.zh-Hant.srt';
+    renderDialog();
+
+    fireEvent.click(await screen.findByTestId('action-generate-subtitle'));
+
+    const note = await screen.findByTestId('generation-complete-note');
+    expect(note).toHaveTextContent('字幕已生成完成');
+  });
+
+  it('complete WITHOUT a zh path (en-only, key unconfigured) → 已生成英文字幕；尚未翻譯', async () => {
+    mockedTrigger.mockResolvedValue({ status: 'started', result: { jobId: 'j', message: 'ok' } });
+    h.genState.phase = 'complete';
+    h.genState.zhSrtPath = null;
+    renderDialog();
+
+    fireEvent.click(await screen.findByTestId('action-generate-subtitle'));
+
+    const note = await screen.findByTestId('generation-complete-note');
+    expect(note).toHaveTextContent('已生成英文字幕；尚未翻譯');
+    expect(note).not.toHaveTextContent('字幕已生成完成');
   });
 
   it('closing the dialog resets generation tracking (job continues server-side)', async () => {

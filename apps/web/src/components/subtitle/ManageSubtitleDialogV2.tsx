@@ -300,7 +300,11 @@ export function ManageSubtitleDialogV2({
                   data-testid="generation-complete-note"
                   className="text-center text-[13px] text-[var(--text-secondary)]"
                 >
-                  字幕已生成完成
+                  {/* sub-2-2b AC #3: an en-only completion (no zh path — key
+                      unconfigured or translate failed non-fatally) must not
+                      claim 完成. The row is `untranslated`; setting the key and
+                      re-running resumes translate-only (sub-2-2a). */}
+                  {generation.progress.zhSrtPath ? '字幕已生成完成' : '已生成英文字幕；尚未翻譯'}
                 </p>
               )}
             </>
