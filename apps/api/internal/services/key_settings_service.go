@@ -24,7 +24,7 @@ type KeyState struct {
 // KeySettings is the full GET payload.
 type KeySettings struct {
 	Keys []KeyState `json:"keys"`
-	// Writable is false when VIDO_ENCRYPTION_KEY is absent — the secrets store
+	// Writable is false when ENCRYPTION_KEY is absent — the secrets store
 	// cannot safely hold anything, so the page must render read-only rather
 	// than accepting input that will fail at the storage layer (AC #4).
 	Writable bool `json:"writable"`

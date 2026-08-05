@@ -1,63 +1,59 @@
-# TestSprite AI Testing Report (MCP) — round2 (CLOSED)
+# TestSprite AI Testing Report (MCP)
 
 ---
 
 ## 1️⃣ Document Metadata
 
-- **Project:** vido
-- **Round:** testsprite-v2-round2 — scanner + subtitle + qBittorrent-settings journeys
-- **Dates:** run 2026-07-23; closeout 2026-07-23
-- **Env:** local production build at `:8090` via `scripts/serve-test-env.sh` (seeded sqlite: 2 libraries / 17 movies / 3 series; no TMDb key, no subtitle-provider keys, no qBittorrent — all by design)
-- **Selection:** 17 cases (env-safe subset — no live qBittorrent / TMDb / subtitle-provider key required), `serverMode: production`
-- **Credits:** 28 spent (120 → 92)
+- **Project Name:** vido
+- **Date:** 2026-08-05
+- **Prepared by:** TestSprite AI Team + Claude (verification loop for story sub-2-1a, PR #197/#198)
+- **Environment:** seeded local test env (`scripts/serve-test-env.sh`, :8090, `ENCRYPTION_KEY` set → writable=true, no provider keys, pipeline mode legacy)
 
 ---
 
 ## 2️⃣ Requirement Validation Summary
 
-### qBittorrent Settings Form
+### Requirement R1 — Provider API-key settings (FR25, story sub-2-1a AC #3)
 
-- **TC035** Load settings page — ✅ Passed
-- **TC038** Connection test failure shows inline error — ✅ Passed
-- **TC039** Save blocked until successful test — ✅ Passed
-- **TC040** Empty-host validation — ⛔ raw BLOCKED → **re-authored → ✅ Passed (rerun)**. The test mistook the Host **placeholder** (`http://192.168.1.100:8080`) for a value. v2 validation = the 測試連線 button is **disabled** while fields are empty (already covered by TC039). Re-authored to assert the disabled state.
+#### Test TC001 provider_key_save_resolves_secret_and_never_echoes_value
 
-### Scanner Settings & Manual Scan
+- **Test Code:** [TC001_provider_key_save_resolves_secret_and_never_echoes_value.py](./TC001_provider_key_save_resolves_secret_and_never_echoes_value.py)
+- **Test Visualization and Result:** https://www.testsprite.com/dashboard/mcp/tests/f66a6cc8-69ae-41eb-be8a-4b9157d163bd/7f040e30-a8c5-4be3-bad7-766933fe0a4d
+- **Status:** ⚠️ Inconclusive (infrastructure) — **product behavior verified correct by direct HTTP cross-check**
+- **Analysis / Findings:** Two runs, both failed **before reaching a product verdict**: run 1 died on a codegen `SyntaxError` (invalid `\u00` escape while building the expected mask — the `…` ellipsis tripped the generator); run 2 died on `ReadTimeout` against `proxy.tun.testsprite.com` (the tunnel had dropped: `Control websocket closed`, `ENOTFOUND control.tun.testsprite.com`). Neither failure implicates the API. A direct curl run of the exact 4-step plan against :8090 confirmed every assertion: baseline `{configured:false, source:"none"}` ×3 keys with `writable:true`; PUT store flips claude to `{configured:true, source:"secret", masked:"sk-ant…7f3a"}` (exact first6+…+last4); the full key string never appears in any response; state persists across GET; explicit `""` delete reverts to `{configured:false, source:"none"}` with no mask.
 
-- **TC063** Settings page loads — ✅ Passed
-- **TC065** Minimize to pill / expand — ✅ Passed
-- **TC066** Cancel active scan w/ confirm — ✅ Passed
-- **TC068** Schedule persists — ✅ Passed
-- **TC069** Global progress card off-settings — ✅ Passed
-- **TC064 / TC067 / TC070** Scan progress card appear / cancel-dismiss / completion — ❌ raw FAILED → **surfaced a REAL product defect** (`bugfix-scan-progress-sse-unwired`): the scan-progress SSE was never opened from the UI trigger, so the card was unreachable in v2. **Fixed this round.** These transient SSE cases are the wrong tool for TestSprite (the seeded scan finishes <100 ms), so they are **migrated to `tests/e2e/scan-progress.spec.ts`** (mocked SSE, deterministic, runs in CI).
+#### Test TC002 provider_key_put_validation_and_keytest_unconfigured_409
 
-### Subtitle Search Dialog
+- **Test Code:** [TC002_provider_key_put_validation_and_keytest_unconfigured_409.py](./TC002_provider_key_put_validation_and_keytest_unconfigured_409.py)
+- **Test Visualization and Result:** https://www.testsprite.com/dashboard/mcp/tests/f66a6cc8-69ae-41eb-be8a-4b9157d163bd/4766e967-99df-4359-9fd7-d088ce8090a2
+- **Status:** ✅ Passed
+- **Analysis / Findings:** Empty-object PUT `{}` → 400 `VALIDATION_REQUIRED_FIELD`; malformed body → 400 `VALIDATION_INVALID_FORMAT`; POST `/settings/keys/test` with nothing configured → 409 `AI_NOT_CONFIGURED` with the zh-TW 尚未設定 message. All error envelopes match Rule 3.
 
-- **TC071** Open from context menu — ✅ Passed
-- **TC076** Close with Escape — ✅ Passed
-- **TC077** Open from detail panel — ✅ Passed
-- **TC078** Context-menu option present — ✅ Passed
-- **TC073** Empty-state on no results — ⛔ raw BLOCKED → **re-authored → ✅ Passed (rerun)**. The empty state renders correctly (`尚無結果 — 線上來源成功率低，建議改用生成字幕`); the test wrongly assumed a manual query input (v2 auto-searches). Re-authored to click 搜尋 + assert the empty-state text.
+### Requirement R2 — Subtitle pipeline capability gate (FR12/FR23, sub-1-6 + sub-2-1a AC #5)
+
+#### Test TC003 subtitle_pipeline_run_gated_409_when_unconfigured
+
+- **Test Code:** [TC003_subtitle_pipeline_run_gated_409_when_unconfigured.py](./TC003_subtitle_pipeline_run_gated_409_when_unconfigured.py)
+- **Test Visualization and Result:** https://www.testsprite.com/dashboard/mcp/tests/f66a6cc8-69ae-41eb-be8a-4b9157d163bd/741cd965-f91f-4b5b-9c6c-da2918be3f53
+- **Status:** ✅ Passed
+- **Analysis / Findings:** POST `/subtitles/pipeline/run` in the unconfigured/legacy env → 409 `AI_NOT_CONFIGURED` with non-empty zh-TW message + suggestion, answered before any media lookup; missing `media_type` → 400 `VALIDATION_INVALID_FORMAT`.
 
 ---
 
 ## 3️⃣ Coverage & Matching Metrics
 
-- **Raw first-pass:** 12 / 17 (70.59%).
-- **After closeout:** **14 / 14 in-scope GREEN** (12 first-pass + TC040/TC073 re-authored→rerun) **+ 1 real defect found & FIXED + 3 migrated to Playwright.**
+- **2 / 3 terminal TestSprite verdicts passed; 1 inconclusive on infrastructure with product behavior independently confirmed. 0 product failures.**
 
-| Requirement                    | Total  | Raw ✅ | Post-closeout             | Real defects  |
-| ------------------------------ | ------ | ------ | ------------------------- | ------------- |
-| qBittorrent Settings Form      | 4      | 3      | 4 ✅                      | 0             |
-| Scanner Settings & Manual Scan | 8      | 5      | 5 ✅ + 3 → Playwright     | **1 (fixed)** |
-| Subtitle Search Dialog         | 5      | 4      | 5 ✅                      | 0             |
-| **Total**                      | **17** | **12** | **14 green + 3 migrated** | **1 fixed**   |
+| Requirement                             | Total Tests | ✅ Passed | ⚠️ Inconclusive (infra) | ❌ Failed |
+| --------------------------------------- | ----------- | --------- | ----------------------- | --------- |
+| R1 Provider key settings API (FR25)     | 2           | 1         | 1                       | 0         |
+| R2 Pipeline capability gate (FR12/FR23) | 1           | 1         | 0                       | 0         |
 
 ---
 
 ## 4️⃣ Key Gaps / Risks
 
-1. **Real defect FIXED — scan-progress card was dead in v2** (`bugfix-scan-progress-sse-unwired`). The shell `<ScanProgress>` mounts `useScanProgress()` but the SSE opens only via `startTracking()`, which nothing called; the 掃描媒體庫 trigger is a separate hook instance. Fix: a lazy module-level signal (`requestScanTracking`/`subscribeScanTracking`) — the trigger signals the shell instance to connect (kept lazy so the 7 networkidle-based e2e specs are unaffected). **Note:** my first-pass triage wrongly called this a "too-fast-scan artifact" — the adversarial verification pass caught the real cause. Gates: web vitest 2457/2457, prettier clean, e2e spec added.
-2. **Scheduled(background)-scan card visibility** not covered by the trigger signal (button-trigger only) — acceptable follow-up.
-3. **Provider-key-dependent surfaces** remain deliberately out of scope (subtitle scored-results/preview/download, qBittorrent success path, TMDb metadata search) — need a keyed/mocked env.
-4. **Positive:** scanner (settings/schedule/global-card/cancel), qBittorrent settings form (load/failure/save-gating), and the subtitle dialog (all entry points + close + empty state) all behave correctly in v2.
+1. **(Real bug, found during this verification, fix in flight)** The 409 `AI_NOT_CONFIGURED` suggestion for a missing encryption key tells the operator to set `VIDO_ENCRYPTION_KEY`, but the server reads `ENCRYPTION_KEY` (`config.go:138`, `docker-compose.yml:69`). Following the suggestion verbatim silently does nothing — the exact silent-no-op class story sub-2-1a exists to remove. Same wrong name appears in Swagger comments, the epic AC, and the 2-1b draft.
+2. The AC #4 read-only path (`writable:false` + PUT 409) is not runtime-covered here because this env boots **with** `ENCRYPTION_KEY`; it is pinned by handler/service unit tests. A follow-up run against a keyless boot would close that gap.
+3. Positive key-test verdicts (`{valid:true}`) are unreachable without a real Anthropic key — deliberately out of scope for automated runs.
+4. TestSprite tunnel stability: the tunnel dropped after the first execution batch (`code=1006`, DNS `ENOTFOUND control.tun.testsprite.com`), which consumed one TC001 rerun. Re-bootstrap before any future batch in this session.

@@ -1,0 +1,17 @@
+[
+  {
+    "id": "TC001",
+    "title": "provider_key_save_resolves_secret_and_never_echoes_value",
+    "description": "Round-trip the FR25 key settings API. Step 1: GET /api/v1/settings/keys and assert the envelope {success:true, data:{keys, writable:true}} where keys contains exactly the names claude/tmdb/openai, each initially {configured:false, source:'none'} with no 'masked' field. Step 2: PUT /api/v1/settings/keys with body {\"claude\": \"sk-ant-api03-testsprite-verify-key-7f3a\"} and assert 200 whose data shows the claude entry flipped to {configured:true, source:'secret'} and a masked hint of exactly the first 6 characters + one ellipsis + last 4 characters ('sk-ant…7f3a'); assert the FULL key string never appears anywhere in the response body. Step 3: GET again and assert the same secret-sourced state persists. Step 4 (cleanup): PUT {\"claude\": \"\"} and assert 200 with claude reverted to {configured:false, source:'none'} and no masked field — the explicit-empty-string delete path."
+  },
+  {
+    "id": "TC002",
+    "title": "provider_key_put_validation_and_keytest_unconfigured_409",
+    "description": "Error paths of the FR25 key settings API. Step 1: PUT /api/v1/settings/keys with an empty JSON object {} and assert HTTP 400 with envelope {success:false, error:{code:'VALIDATION_REQUIRED_FIELD'}}. Step 2: PUT with malformed body (e.g. a bare string or invalid JSON) and assert HTTP 400 with error code 'VALIDATION_INVALID_FORMAT'. Step 3: with no key configured (default seeded state), POST /api/v1/settings/keys/test with no body and assert HTTP 409 with error code 'AI_NOT_CONFIGURED' and a Chinese message mentioning 尚未設定 — the nothing-to-test path. Do NOT test a real-looking candidate key (that would make an outbound Anthropic call)."
+  },
+  {
+    "id": "TC003",
+    "title": "subtitle_pipeline_run_gated_409_when_unconfigured",
+    "description": "The FR12/FR23 capability gate. POST /api/v1/subtitles/pipeline/run with a valid-shaped body {\"media_id\": \"1\", \"media_type\": \"movie\"} against the seeded environment (no translation key configured at this point, pipeline mode legacy) and assert HTTP 409 with envelope {success:false, error:{code:'AI_NOT_CONFIGURED'}} and a non-empty Chinese message + suggestion. Also POST with a missing media_type and assert HTTP 400 'VALIDATION_INVALID_FORMAT'. The gate must answer BEFORE any media lookup, so no fixture media is required."
+  }
+]

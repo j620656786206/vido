@@ -178,7 +178,7 @@ func TestKeyResolver_BlankSecretIsTreatedAsAbsent(t *testing.T) {
 
 func TestKeyResolver_NilSecretsServiceIsEnvOnly(t *testing.T) {
 	// main.go can construct the resolver before/without a secrets service
-	// (no VIDO_ENCRYPTION_KEY). It must degrade to env, not panic.
+	// (no ENCRYPTION_KEY). It must degrade to env, not panic.
 	r := NewKeyResolver(nil, EnvKeys{Claude: "sk-from-env"}, nil)
 
 	value, source, err := r.Get(context.Background(), KeyClaude)
