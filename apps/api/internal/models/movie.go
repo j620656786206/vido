@@ -50,12 +50,13 @@ func ShouldOverwrite(current, incoming MetadataSource) bool {
 
 // SubtitleStatus represents the subtitle lifecycle state of a media file.
 //
-// [@contract-v1] (story sub-1-2 AC #2) — frontend-consumed wire contract:
-// serialized as json:"subtitle_status" on Movie/Series/Episode and used as a
-// URL search param on /library. Consumers: sub-1-4 (routing verdicts),
-// sub-1-5 (pipeline writes), sub-1-6 (enumeration), sub-1-7b (badge
-// rendering). Adding or renaming a value is a Rule 20 bump plus a downstream
-// stale-mark.
+// [@contract-v2] (story sub-1-2 AC #2; bumped v1→v2 by sub-2-2a: 9→10 values,
+// +untranslated) — frontend-consumed wire contract: serialized as
+// json:"subtitle_status" on Movie/Series/Episode and used as a URL search
+// param on /library. Consumers: sub-1-4 (routing verdicts), sub-1-5 (pipeline
+// writes), sub-1-6 (enumeration), sub-1-7b (badge rendering), sub-2-2b
+// (untranslated badge). Adding or renaming a value is a Rule 20 bump plus a
+// downstream stale-mark.
 //
 // The four search-flavoured values predate the pipeline (migrations 018/025);
 // the five pipeline-flavoured values were added by sub-1-2 because FR5 ("mark
@@ -88,6 +89,18 @@ const (
 	// `und` is NEVER treated as English). Recoverable by a corrected track tag
 	// or the manual flow, unlike SubtitleStatusNoTextSource.
 	SubtitleStatusSkipped SubtitleStatus = "skipped"
+
+	// --- added by story sub-2-2a ([@contract-v1→v2]). ---
+
+	// SubtitleStatusUntranslated — TERMINAL. A generated subtitle exists on
+	// disk but the EXPECTED translation step did not run (translation key
+	// unconfigured, or a non-fatal translate failure). Written ONLY by the
+	// generation pipeline — never inferred from embedded tracks: an embedded
+	// English track on a foreign film was never owed a translation, and this
+	// value names the missing step, not the artifact. Recoverable by
+	// configuring a key and re-running 生成字幕, which resumes translate-only
+	// (the English SRT on disk is reused; extract+ASR are skipped).
+	SubtitleStatusUntranslated SubtitleStatus = "untranslated"
 )
 
 // AllSubtitleStatuses is the authoritative ordered value set behind the
@@ -105,6 +118,7 @@ func AllSubtitleStatuses() []SubtitleStatus {
 		SubtitleStatusTranslating,
 		SubtitleStatusNoTextSource,
 		SubtitleStatusSkipped,
+		SubtitleStatusUntranslated,
 	}
 }
 
@@ -128,7 +142,8 @@ func (s SubtitleStatus) IsValid() bool {
 func (s SubtitleStatus) IsTerminal() bool {
 	switch s {
 	case SubtitleStatusFound, SubtitleStatusNotFound,
-		SubtitleStatusNoTextSource, SubtitleStatusSkipped:
+		SubtitleStatusNoTextSource, SubtitleStatusSkipped,
+		SubtitleStatusUntranslated:
 		return true
 	default:
 		return false

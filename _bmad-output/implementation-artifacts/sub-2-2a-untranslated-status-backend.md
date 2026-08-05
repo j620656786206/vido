@@ -1,6 +1,6 @@
 # Story sub-2.2a: `untranslated` terminal status + en-only writeback + translate-only resume
 
-Status: ready-for-dev
+Status: done
 
 **Epic:** `epic-subtitle-pipeline-m1-5` (M1.5 follow-up) · **Risk: 🔴 HIGH-VALUE/LOW-RISK** · **BACKEND-ONLY**
 **Source:** party-mode ruling 2026-08-05 (Sally 主裁, Alexyu confirmed ×2 — recorded in sprint-status `backlog-f5-not-configured-panel-copy-ruling`) · promotes `backlog-subtitle-untranslated-status-backend`
@@ -50,7 +50,7 @@ UpdateSubtitleStatus(ctx, mediaID, models.SubtitleStatusUntranslated, srtPath /*
 - The zh-Hant success path (`found`/`zh-Hant`) is **untouched**.
 - A writeback failure propagates (Rule 13), exactly like the existing `found` writeback — reporting success while the row still lies would recreate the bug one layer up.
 - `translate == false` runs keep today's behaviour (no writeback): no translation was **expected**, so `untranslated` would be a lie. (Today the dialog always sends `translate=true`; this branch is theoretical but must not regress.)
-- `ai.ErrBudgetExceeded` mid-translate still propagates BEFORE any writeback (9R-16 AC 6c — a paused batch item is not terminal).
+- `ai.ErrBudgetExceeded` mid-translate still propagates (9R-16 AC 6c). **Amended by CR M1 (2026-08-05):** `untranslated` IS recorded (best-effort, log-only on failure) before the sentinel propagates — the en SRT exists and translation is missing, which is factually true mid-pause, and it makes the post-pause resume translate-only instead of re-paying the whole ASR (the story's headline concern). The original "not even untranslated" derivation was dev-authored, not party-ruled.
 
 ### AC #3 — A+續跑: resume skips ASR when the English SRT survives
 
@@ -69,7 +69,7 @@ UpdateSubtitleStatus(ctx, mediaID, models.SubtitleStatusUntranslated, srtPath /*
 3. **Idempotency (Murat, MANDATORY):** second `StartTranscription` on an `untranslated` row with the SRT present ⇒ ASR/extract are NOT invoked (assert via the audio-extractor/ASR mocks), translate IS ⇒ `found`. **The money-burning path must never regress.**
 4. Resume fail-soft: `untranslated` row + SRT deleted from disk ⇒ full pipeline runs.
 5. Resume guard: `not_searched` row + a stray on-disk `.srt` ⇒ NO resume (full run) — the Winston-guard test.
-6. Budget sentinel: `ErrBudgetExceeded` from the resume-path translate propagates; row does NOT flip to `found`.
+6. Budget sentinel: `ErrBudgetExceeded` from the resume-path translate propagates; row does NOT flip to `found` (per CR M1 it re-records `untranslated`, idempotently).
 7. `pnpm nx test api` green (full regression gate) + `go vet` + `staticcheck` + `gofmt` clean on touched files.
 
 ### AC #5 — Scope fence
@@ -84,10 +84,10 @@ UpdateSubtitleStatus(ctx, mediaID, models.SubtitleStatusUntranslated, srtPath /*
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Enum + bump (AC #1):** constant, `AllSubtitleStatuses()`, `IsTerminal()`, doc comment, `[@contract-v1→v2]` stamp + Change Log row + downstream grep record.
-- [ ] **Task 2 — en-only writeback (AC #2):** `translateAndPersist` writes `untranslated`+en-path+`"en"` when translate expected but zh empty; error propagation; translate=false untouched.
-- [ ] **Task 3 — Resume (AC #3):** `SubtitleStatusReader` narrow interface + main.go wiring; status-bound skip of extract+ASR; fail-soft on missing file; SSE from `translating`.
-- [ ] **Task 4 — Tests + gates (AC #4):** the seven test groups; foreground; full `go test ./...`.
+- [x] **Task 1 — Enum + bump (AC #1):** constant, `AllSubtitleStatuses()`, `IsTerminal()`, doc comment, `[@contract-v1→v2]` stamp + Change Log row + downstream grep record.
+- [x] **Task 2 — en-only writeback (AC #2):** `translateAndPersist` writes `untranslated`+en-path+`"en"` when translate expected but zh empty; error propagation; translate=false untouched.
+- [x] **Task 3 — Resume (AC #3):** `SubtitleStatusReader` narrow interface + main.go wiring; status-bound skip of extract+ASR; fail-soft on missing file; SSE from `translating`.
+- [x] **Task 4 — Tests + gates (AC #4):** the seven test groups; foreground; full `go test ./...`.
 
 ---
 
@@ -117,14 +117,78 @@ UpdateSubtitleStatus(ctx, mediaID, models.SubtitleStatusUntranslated, srtPath /*
 
 ### Agent Model Used
 
+Amelia (Developer Agent) — Claude Opus 5 (1M context), effort high. Implemented 2026-08-05.
+
 ### Debug Log References
+
+- Red-green honoured per task: Task 1's guard-test expectation (10 values) failed compilation before the constant existed; Task 2/3's new tests failed `go vet` on the old `translateAndPersist` arity before the implementation landed.
+- `staticcheck` invoked via `go run honnef.co/go/tools/cmd/staticcheck@2025.1` (not installed locally).
 
 ### Completion Notes List
 
+**🔗 AC Drift: FOUND — see below** (checked: `grep -n "en-only|write nothing|zh-Hant place|AC 12" _bmad-output/implementation-artifacts/9R-16*.md` + the stamped enum grep — one genuine DRIFT beyond the one this story planned):
+
+1. **sub-1-2 AC #2 `[@contract-v1→v2]`** (planned, AC #1): the `SubtitleStatus` enum 9→10. Stamp bumped at its declaration (`models/movie.go` doc comment). Downstream grep (`confirmed against \`?\[@contract-v1\]` × sub-1-2): sub-1-5b / sub-1-6 / sub-1-7b — **all done → frozen, no stale-marks owed**; sub-2-2b was drafted acking v2 by construction.
+2. **9R-16 AC #12 `[@contract-v1→v2]`** (DISCOVERED at Step 2): AC 12's v1 text pins "en-only runs … do NOT write; failures write nothing" and had a test enforcing it (`TestTranslateAndPersist_EnOnlyNoWrite` / `_TranslateFailureNoWrite`). AC #2 of this story changes exactly that observable contract → bump recorded here and at the drifted test (`_TranslateFailureWritesUntranslated` carries the `[@contract-v2]` comment). The `translate` ABSENT no-write clause is **kept** (no expectation → no lie). Downstream grep for 9R-16 AC 12 ackers: 9R-18 / ux3-subtitle-v2(+batch) / ux3-ai-1 / ux3-ai-2 — **all done → frozen**.
+
+**📎 Contract Stamps: FOUND (2 stamped upstream ACs, both BUMPED v1→v2 by this story — see AC Drift; this story stamps nothing new).** Change Log rows carry the mandatory {what changed, what breaks downstream} bodies.
+
+**🎭 A11y Pre-Flight: N/A (100% backend — no apps/web/ files touched).**
+
+**🎨 UX Verification: SKIPPED — no UI changes in this story.**
+
+**Pre-existing fix (Epic 9c Retro AI-2 option 1):** `cmd/api/main.go` carried a duplicate `internal/database/migrations` import (named at :19 + blank at :40) — pre-existing **ST1019**, verified present on clean main via `git stash`. Blank import removed (the named import already triggers `init()` registration); gofmt applied. staticcheck now clean on all touched packages.
+
+**What shipped**
+
+- **AC #1** — `SubtitleStatusUntranslated = "untranslated"`: 10th value, TERMINAL, doc comment carries Sally's semantics fence (names the missing step; written only by the generation pipeline; never inferred from embedded tracks). `AllSubtitleStatuses()` + `IsTerminal()` extended; the source-regex guard test enforces sync. Zero migration (018 has no CHECK).
+- **AC #2** — `translateAndPersist` gained `srtPath` and writes the VERDICT: zh success → `found`/`zh-Hant` (untouched); translate expected + zh empty (key unconfigured OR non-fatal translate failure) → `untranslated`/en-path/`"en"`; `translate=false` → nothing. Writeback failures propagate (Rule 13); `ErrBudgetExceeded` propagates BEFORE any writeback — a paused batch item is not terminal.
+- **AC #3** — `tryTranslateOnlyResume` at the top of `runPipeline`: bound to `subtitle_status == untranslated` + recorded `SubtitlePath` readable on disk + translate requested → skip extract+ASR, reuse the on-disk EN SRT, SSE starts at `translating` (the broadcast already inside `translateAndPersist`). Any failure mode degrades to a full run (logged, never an error). New narrow `SubtitleStateReader` (Rule 11, mirrors `SubtitleStatusWriter`; `*MovieRepository.FindByID` satisfies it); wired in `main.go` beside the writer. Movies-only, matching the transcription surface.
+- **AC #4** — 10 new/updated tests: enum sync/valid/terminal; key-unconfigured writes untranslated; translate-failure writes untranslated (the drifted test, re-commented); en-only still writes nothing; budget-exceeded writes nothing (not even untranslated); untranslated-writeback failure propagates; **idempotency** (resume completes → extract/ASR provably never invoked — they would error on the nonexistent media file — and the row flips `found`); Winston guard (stray on-disk `.srt` + `not_searched` row → full run attempted, never laundered to `found`); fail-soft (SRT deleted → full run attempted); resume-path budget sentinel; nil-reader safety.
+- **Gates** — `go build` ✓, `go vet` ✓, `staticcheck` clean on touched packages, `gofmt` clean on touched files, **full `go test ./...` 34 packages green**, `pnpm nx test web` 228 files / 2528 tests green (regression gate), no orphaned test processes.
+
+**Test-evidence note (the idempotency proxy):** the resume test constructs a service whose extractor probes a NONEXISTENT media file and whose Whisper key is bogus — any invocation of extract/ASR fails the pipeline, so a successful completion PROVES non-invocation. Recorded because the extractor is a concrete `*AudioExtractorService` (not an interface), making call-count mocks unavailable without a refactor this story does not own.
+
+### Senior Developer Review (AI) — 2026-08-05
+
+**Outcome: Approve (all findings fixed same session).** Adversarial CR (Amelia-as-reviewer, Fable 5): **0 High / 2 Medium / 2 Low — all 4 fixed.** Git-vs-File-List: 0 discrepancies. Rule 7: PASS (touched Go files carry no error-code constants; zero new codes). Rule 20: PASS (both v1→v2 bumps re-verified — every downstream acker `done`/frozen; sub-2-2b acks v2). Rule 25: N/A. Enumeration interplay adversarially checked and CLEAN: batch missing-scope (`subtitle_language != 'zh-Hant'`) keeps `untranslated` rows in scope so batch re-runs become translate-only; the online-search batch (`not_searched|not_found`) correctly excludes them; the D2 pipeline enqueues only via explicit FR12 requests.
+
+- ✅ **[M1] Budget pause still burned the paid ASR** — full run places the en SRT, translate hits the budget, sentinel propagated BEFORE any writeback → row stayed `not_searched` → post-pause resume re-ran the whole ASR: the story's headline bug with a different trigger. The AC's "not even untranslated" clause was a dev derivation, not a party ruling. Fix: record `untranslated` (best-effort, log-only on failure — the sentinel must survive) before propagating. AC #2/#4 amended with the CR annotation; 2 tests updated + 1 resume-path variant added.
+- ✅ **[M2] Resume over-gated by `IsAvailable()`** — handler + both service entries required FFmpeg+ASR even for a translate-only resume that needs neither (operator removed the ASR key after generating → 503 despite zero ASR work). Fix: `resumeSource` split out (stat-only eligibility), new `CanResumeTranslateOnly(ctx, id)` on the service + handler interface, all three gates relaxed to `IsAvailable() || resume-eligible`, and a defensive `IsAvailable` guard added at the top of the full-run branch so a gate-passed run whose SRT vanishes mid-flight refuses cleanly instead of dereferencing a nil extractor. +2 tests (ASR-less resume succeeds; ASR-less non-resumable still 503s at entry).
+- ✅ **[L1] Resume completion SSE claimed "Transcription complete"** — a resumed run transcribed nothing; message now "Translation complete (resumed from existing English subtitle)".
+- ✅ **[L2] Async entry resume had no direct coverage** — `TestStartTranscription_ResumeSmoke` added (goroutine completes translate-only, row flips `found`); `fakeSubtitleWriter` gained a mutex + `snapshot()` for cross-goroutine assertions.
+
+Gates re-run post-fix: `go build` ✓, `go vet` ✓, staticcheck clean (services+handlers), gofmt clean on touched files (`transcription_translation_test.go` drift verified PRE-existing via git stash — left per the in-scope-only rule), **full `go test ./...` 34 packages green**.
+
 ### Discovery Triage
 
-- **Did this story discover any work outside its current scope?**
-  - If **NO**: state `N/A — no out-of-scope work discovered`.
+- **Did this story discover any work outside its current scope?** One item, plus a quick fix absorbed:
+  - **① absorbed in place:** the ST1019 duplicate-import quick fix (recorded above under Pre-existing fix; behaviour-neutral).
+  - **① clarified in place:** the 9R-16 AC #12 bump was not pre-planned by this story's AC #1 but is the same change viewed from the consumer side — absorbed into the existing Rule 20 task rather than spawning an entry (both bumps verified frozen-downstream).
+  - Otherwise: `N/A — no further out-of-scope work discovered`.
 - Reference: `project-context.md` Rule 24.
 
 ### File List
+
+**Modified**
+
+- `apps/api/internal/models/movie.go` (10th enum value + `[@contract-v2]` stamp + `AllSubtitleStatuses` + `IsTerminal`)
+- `apps/api/internal/models/movie_test.go` (guard/valid/terminal tests → 10 values)
+- `apps/api/internal/services/transcription_service.go` (`SubtitleStateReader` + setter; `tryTranslateOnlyResume`; `translateAndPersist` srtPath + verdict writeback; runPipeline resume branch)
+- `apps/api/internal/services/transcription_generation_test.go` (10 new/updated tests + `fakeStateReader`/`resumeService` harness)
+- `apps/api/cmd/api/main.go` (reader wiring + pre-existing ST1019 duplicate-import fix)
+- `apps/api/internal/handlers/transcription_handler.go` (CR M2 — resume-aware availability gate + interface method)
+- `apps/api/internal/handlers/transcription_handler_test.go` (CR M2 — mock method)
+- `_bmad-output/implementation-artifacts/9R-16-batch-generation-endpoint.md` (AC #12 stamp bump annotation — AC drift reference, see Completion Notes)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (status transitions)
+- `_bmad-output/implementation-artifacts/sub-2-2a-untranslated-status-backend.md` (this file)
+
+## Change Log
+
+| Date | Change |
+|---|---|
+| 2026-08-05 | Task 1 — `untranslated` 10th `SubtitleStatus` value (TERMINAL) + guard/valid/terminal tests. `[@contract-v1→v2]` sub-1-2 AC #2: 9→10 values, +untranslated; downstream badge renderers must handle the new value or items park badge-less. Downstream grep: sub-1-5b/sub-1-6/sub-1-7b all done (frozen); no not-done v1 consumers. |
+| 2026-08-05 | Task 2 — en-only writeback: translate-expected + zh empty ⇒ `untranslated`/en-path/`"en"`; zh path untouched; `translate=false` writes nothing; budget sentinel propagates pre-writeback. `[@contract-v1→v2]` 9R-16 AC #12: "en-only/failed runs write nothing" → "translation-expected runs always record a verdict (found or untranslated)"; downstream consumers relying on no-write-on-failure would now see `untranslated` rows — grep: 9R-18/ux3-subtitle-v2(+batch)/ux3-ai-1/ux3-ai-2 all done (frozen); no not-done v1 consumers. |
+| 2026-08-05 | Task 3 — `tryTranslateOnlyResume`: status-bound (Winston guard) translate-only resume skipping extract+ASR, fail-soft to full run; `SubtitleStateReader` narrow interface wired in main.go. |
+| 2026-08-05 | Adversarial CR: 2M/2L found, all fixed — untranslated recorded before the budget sentinel propagates (M1, AC #2/#4 amended with annotation), resume-aware availability gates via CanResumeTranslateOnly on service + handler (M2, +nil-extractor fallback guard), resume-aware completion message (L1), async resume smoke test + mutexed fake writer (L2). Full go test ./... 34 pkgs green. Story → done. |
+| 2026-08-05 | Task 4 — 10 tests incl. idempotency (non-invocation proxy), stray-`.srt` guard, resume-path budget sentinel, nil-reader. Full `go test ./...` 34 pkgs green; web 228/2528 green; staticcheck/gofmt/vet clean. Pre-existing ST1019 (duplicate migrations import in main.go) fixed in place. |

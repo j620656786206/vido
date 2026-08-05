@@ -387,7 +387,8 @@ func TestMovie_TechInfoJSON_NullWhenEmpty(t *testing.T) {
 func TestSubtitleStatus_AllSubtitleStatuses_IsTheCompleteSet(t *testing.T) {
 	all := AllSubtitleStatuses()
 
-	t.Run("holds exactly the 9 stamped values, in contract order", func(t *testing.T) {
+	t.Run("holds exactly the 10 stamped values, in contract order", func(t *testing.T) {
+		// v2 (story sub-2-2a): +untranslated — the en-only generation verdict.
 		assert.Equal(t, []SubtitleStatus{
 			SubtitleStatusNotSearched,
 			SubtitleStatusSearching,
@@ -398,6 +399,7 @@ func TestSubtitleStatus_AllSubtitleStatuses_IsTheCompleteSet(t *testing.T) {
 			SubtitleStatusTranslating,
 			SubtitleStatusNoTextSource,
 			SubtitleStatusSkipped,
+			SubtitleStatusUntranslated,
 		}, all)
 	})
 
@@ -448,6 +450,9 @@ func TestSubtitleStatus_IsTerminal(t *testing.T) {
 		SubtitleStatusNotFound:     true,
 		SubtitleStatusNoTextSource: true,
 		SubtitleStatusSkipped:      true,
+		// sub-2-2a: terminal — the pipeline will not advance it on its own; only
+		// a user-triggered re-run (which resumes translate-only) moves it.
+		SubtitleStatusUntranslated: true,
 	}
 
 	for _, s := range AllSubtitleStatuses() {

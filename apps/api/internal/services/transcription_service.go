@@ -28,6 +28,14 @@ type SubtitleStatusWriter interface {
 	UpdateSubtitleStatus(ctx context.Context, id string, status models.SubtitleStatus, path, language string, score float64) error
 }
 
+// SubtitleStateReader loads the row state the translate-only resume check
+// needs (story sub-2-2a AC #3). Narrow on purpose (Rule 11), mirroring
+// SubtitleStatusWriter — *repository.MovieRepository satisfies it via FindByID;
+// main.go injects it.
+type SubtitleStateReader interface {
+	FindByID(ctx context.Context, id string) (*models.Movie, error)
+}
+
 // OpenCCConverter is the Simplified→Traditional safety net applied after LLM
 // translation (Story 9R-10). Defined here so the service does not import the
 // subtitle package (Rule 19); *subtitle.Converter satisfies it structurally.
@@ -90,6 +98,10 @@ type TranscriptionService struct {
 	// 9R-16 AC 12: generation-success writeback (optional / nil-safe).
 	subtitleWriter SubtitleStatusWriter
 
+	// sub-2-2a AC #3: row-state read for the translate-only resume (optional /
+	// nil-safe — without it every run is a full run, the pre-2-2a behaviour).
+	stateReader SubtitleStateReader
+
 	mu         sync.Mutex
 	inProgress map[string]string // mediaID (UUID string, 9R-18) → jobID
 }
@@ -149,6 +161,12 @@ func (s *TranscriptionService) SetSubtitleStatusWriter(w SubtitleStatusWriter) {
 	s.subtitleWriter = w
 }
 
+// SetSubtitleStateReader wires the row-state read behind the translate-only
+// resume (story sub-2-2a AC #3). Nil-safe: when unset, every run is a full run.
+func (s *TranscriptionService) SetSubtitleStateReader(r SubtitleStateReader) {
+	s.stateReader = r
+}
+
 // loadGlossary returns the per-show glossary as translation pairs, or nil when
 // no repo is wired or the lookup fails (fail-soft — a glossary miss must never
 // block generation). Uses ALL terms (confirmed + auto-mined) for maximum
@@ -191,13 +209,16 @@ func (s *TranscriptionService) IsInProgress(mediaID string) bool {
 // If translate is true and a translation service is configured, the English SRT
 // will be translated to Traditional Chinese after transcription (Story 9-2b).
 func (s *TranscriptionService) StartTranscription(ctx context.Context, mediaID string, filePath string, mediaDir string, opts ...TranscriptionOption) (string, error) {
-	if !s.IsAvailable() {
-		return "", ErrTranscriptionDisabled
-	}
-
 	cfg := &transcriptionConfig{}
 	for _, opt := range opts {
 		opt(cfg)
+	}
+
+	// CR sub-2-2a M2: a translate-only resume needs NO ASR, so the ASR
+	// availability gate must not block it — an operator who removed the ASR
+	// key AFTER generating can still finish the translation.
+	if !s.IsAvailable() && !(cfg.translate && s.CanResumeTranslateOnly(ctx, mediaID)) {
+		return "", ErrTranscriptionDisabled
 	}
 
 	jobID, err := s.acquireJob(mediaID)
@@ -226,13 +247,15 @@ func (s *TranscriptionService) StartTranscription(ctx context.Context, mediaID s
 // async path's context.Background() detach — so a batch's shared ai.Budget
 // (a ctx value) and cancel propagation flow through.
 func (s *TranscriptionService) RunTranscription(ctx context.Context, mediaID string, filePath string, mediaDir string, opts ...TranscriptionOption) error {
-	if !s.IsAvailable() {
-		return ErrTranscriptionDisabled
-	}
-
 	cfg := &transcriptionConfig{}
 	for _, opt := range opts {
 		opt(cfg)
+	}
+
+	// CR sub-2-2a M2: same gate relaxation as StartTranscription — a
+	// translate-only resume needs no ASR.
+	if !s.IsAvailable() && !(cfg.translate && s.CanResumeTranslateOnly(ctx, mediaID)) {
+		return ErrTranscriptionDisabled
 	}
 
 	jobID, err := s.acquireJob(mediaID)
@@ -311,67 +334,85 @@ func (s *TranscriptionService) runPipeline(ctx context.Context, jobID string, me
 		)
 	}()
 
-	// Phase 1: Extract audio
-	s.broadcastEvent(EventTranscriptionExtracting, map[string]interface{}{
-		"job_id":   jobID,
-		"media_id": mediaID,
-		"phase":    "extracting",
-		"message":  "Extracting audio track from media file",
-	})
+	// sub-2-2a AC #3 (A+續跑): a previous run already produced the English SRT
+	// and only translation is missing → skip extract+ASR, run translate-only.
+	// The check is BOUND to subtitle_status == untranslated; bare on-disk .srt
+	// presence must never trigger a resume (a user-placed subtitle is not a
+	// resume point). Failure to resume degrades to a full run, never errors.
+	srtContent, srtPath, resumed := s.tryTranslateOnlyResume(ctx, jobID, mediaID, translate)
 
-	// List audio tracks and select English track
-	tracks, err := s.audioExtractor.ListAudioTracks(ctx, filePath)
-	if err != nil {
-		s.failJob(jobID, mediaID, fmt.Sprintf("list audio tracks: %v", err))
-		return fmt.Errorf("list audio tracks: %w", err)
+	if !resumed {
+		// CR sub-2-2a M2 fallback guard: the entry gate admits ASR-less runs
+		// that are resume-eligible; if the resume then degrades to a full run
+		// (e.g. the SRT vanished between gate and here), the full path must
+		// refuse cleanly rather than dereference a missing extractor/ASR.
+		if !s.IsAvailable() {
+			s.failJob(jobID, mediaID, "transcription unavailable and resume not possible")
+			return ErrTranscriptionDisabled
+		}
+
+		// Phase 1: Extract audio
+		s.broadcastEvent(EventTranscriptionExtracting, map[string]interface{}{
+			"job_id":   jobID,
+			"media_id": mediaID,
+			"phase":    "extracting",
+			"message":  "Extracting audio track from media file",
+		})
+
+		// List audio tracks and select English track
+		tracks, err := s.audioExtractor.ListAudioTracks(ctx, filePath)
+		if err != nil {
+			s.failJob(jobID, mediaID, fmt.Sprintf("list audio tracks: %v", err))
+			return fmt.Errorf("list audio tracks: %w", err)
+		}
+
+		selectedTrack, err := SelectEnglishTrack(tracks)
+		if err != nil {
+			s.failJob(jobID, mediaID, fmt.Sprintf("select audio track: %v", err))
+			return fmt.Errorf("select audio track: %w", err)
+		}
+
+		s.logger.Info("audio track selected",
+			"job_id", jobID,
+			"track_index", selectedTrack.Index,
+			"language", selectedTrack.Language,
+		)
+
+		// Extract audio to temp WAV
+		audioPath, err := s.audioExtractor.ExtractAudio(ctx, filePath, selectedTrack.Index)
+		if err != nil {
+			s.failJob(jobID, mediaID, fmt.Sprintf("extract audio: %v", err))
+			return fmt.Errorf("extract audio: %w", err)
+		}
+		defer os.Remove(audioPath)
+
+		// Phase 2: Transcribe
+		s.broadcastEvent(EventTranscriptionProgress, map[string]interface{}{
+			"job_id":   jobID,
+			"media_id": mediaID,
+			"phase":    "transcribing",
+			"message":  "Transcribing audio with Whisper API",
+		})
+
+		srtContent, err = s.transcribeAudio(ctx, audioPath, WhisperLanguageFromTrack(selectedTrack.Language))
+		if err != nil {
+			s.failJob(jobID, mediaID, fmt.Sprintf("transcribe: %v", err))
+			return fmt.Errorf("transcribe: %w", err)
+		}
+
+		// Phase 3: Save SRT
+		baseName := strings.TrimSuffix(filepath.Base(filePath), filepath.Ext(filePath))
+		srtPath = filepath.Join(mediaDir, baseName+".en.srt")
+
+		if err := os.WriteFile(srtPath, []byte(srtContent), 0644); err != nil {
+			s.failJob(jobID, mediaID, fmt.Sprintf("save SRT: %v", err))
+			return fmt.Errorf("save SRT: %w", err)
+		}
 	}
 
-	selectedTrack, err := SelectEnglishTrack(tracks)
-	if err != nil {
-		s.failJob(jobID, mediaID, fmt.Sprintf("select audio track: %v", err))
-		return fmt.Errorf("select audio track: %w", err)
-	}
-
-	s.logger.Info("audio track selected",
-		"job_id", jobID,
-		"track_index", selectedTrack.Index,
-		"language", selectedTrack.Language,
-	)
-
-	// Extract audio to temp WAV
-	audioPath, err := s.audioExtractor.ExtractAudio(ctx, filePath, selectedTrack.Index)
-	if err != nil {
-		s.failJob(jobID, mediaID, fmt.Sprintf("extract audio: %v", err))
-		return fmt.Errorf("extract audio: %w", err)
-	}
-	defer os.Remove(audioPath)
-
-	// Phase 2: Transcribe
-	s.broadcastEvent(EventTranscriptionProgress, map[string]interface{}{
-		"job_id":   jobID,
-		"media_id": mediaID,
-		"phase":    "transcribing",
-		"message":  "Transcribing audio with Whisper API",
-	})
-
-	srtContent, err := s.transcribeAudio(ctx, audioPath, WhisperLanguageFromTrack(selectedTrack.Language))
-	if err != nil {
-		s.failJob(jobID, mediaID, fmt.Sprintf("transcribe: %v", err))
-		return fmt.Errorf("transcribe: %w", err)
-	}
-
-	// Phase 3: Save SRT
-	baseName := strings.TrimSuffix(filepath.Base(filePath), filepath.Ext(filePath))
-	srtPath := filepath.Join(mediaDir, baseName+".en.srt")
-
-	if err := os.WriteFile(srtPath, []byte(srtContent), 0644); err != nil {
-		s.failJob(jobID, mediaID, fmt.Sprintf("save SRT: %v", err))
-		return fmt.Errorf("save SRT: %w", err)
-	}
-
-	// Phase 3.5: Translate to Traditional Chinese (Story 9-2b) + persist
-	// generation success (Story 9R-16 AC 12).
-	zhSRTPath, err := s.translateAndPersist(ctx, jobID, mediaID, srtContent, filePath, mediaDir, translate)
+	// Phase 3.5: Translate to Traditional Chinese (Story 9-2b) + persist the
+	// generation verdict (9R-16 AC 12; en-only → untranslated per sub-2-2a).
+	zhSRTPath, err := s.translateAndPersist(ctx, jobID, mediaID, srtContent, srtPath, filePath, mediaDir, translate)
 	if err != nil {
 		s.failJob(jobID, mediaID, err.Error())
 		return err
@@ -387,14 +428,19 @@ func (s *TranscriptionService) runPipeline(ctx context.Context, jobID string, me
 		"duration", duration,
 	)
 
-	// Phase 4: Complete
+	// Phase 4: Complete. CR sub-2-2a L1: a resumed run transcribed nothing —
+	// its completion message must not claim it did.
+	completeMsg := "Transcription complete"
+	if resumed {
+		completeMsg = "Translation complete (resumed from existing English subtitle)"
+	}
 	completeData := map[string]interface{}{
 		"job_id":   jobID,
 		"media_id": mediaID,
 		"phase":    "complete",
 		"srt_path": srtPath,
 		"duration": duration,
-		"message":  "Transcription complete",
+		"message":  completeMsg,
 	}
 	if zhSRTPath != "" {
 		completeData["zh_srt_path"] = zhSRTPath
@@ -403,15 +449,79 @@ func (s *TranscriptionService) runPipeline(ctx context.Context, jobID string, me
 	return nil
 }
 
-// translateAndPersist runs the optional translate phase and the 9R-16 AC 12
-// generation-success writeback. Returns the zh-Hant path ("" for en-only runs).
-// Error semantics (ruled in 9R-16 AC 6c/12):
+// resumeSource returns the recorded English SRT path when the row is
+// resume-eligible: status `untranslated` + a recorded path + the file present
+// on disk. Shared by the entry-gate check (CanResumeTranslateOnly) and the
+// pipeline resume itself. BOUND to the status (Winston guard): a user-placed
+// .srt on a row in any other state must never be laundered into a resume point.
+func (s *TranscriptionService) resumeSource(ctx context.Context, mediaID string) (string, bool) {
+	if s.stateReader == nil {
+		return "", false
+	}
+	movie, err := s.stateReader.FindByID(ctx, mediaID)
+	if err != nil || movie == nil {
+		return "", false
+	}
+	if movie.SubtitleStatus != models.SubtitleStatusUntranslated ||
+		!movie.SubtitlePath.Valid || movie.SubtitlePath.String == "" {
+		return "", false
+	}
+	if _, err := os.Stat(movie.SubtitlePath.String); err != nil {
+		return "", false
+	}
+	return movie.SubtitlePath.String, true
+}
+
+// CanResumeTranslateOnly reports whether a run for mediaID would resume
+// translate-only (CR sub-2-2a M2). Used by the entry gates — and exposed to
+// the handler — so ASR availability does not block a run that needs no ASR.
+func (s *TranscriptionService) CanResumeTranslateOnly(ctx context.Context, mediaID string) bool {
+	_, ok := s.resumeSource(ctx, mediaID)
+	return ok
+}
+
+// tryTranslateOnlyResume implements sub-2-2a AC #3: when the row says
+// `untranslated` and its recorded English SRT is still on disk, return its
+// content so the pipeline can skip extract+ASR. All failure modes degrade to
+// (_, _, false) — a full run — never an error (Rule 13 logged degrade).
+func (s *TranscriptionService) tryTranslateOnlyResume(ctx context.Context, jobID, mediaID string, translate bool) (srtContent, srtPath string, ok bool) {
+	if !translate {
+		return "", "", false
+	}
+	path, eligible := s.resumeSource(ctx, mediaID)
+	if !eligible {
+		return "", "", false
+	}
+
+	content, err := os.ReadFile(path)
+	if err != nil {
+		s.logger.Info("resume SRT unavailable — falling back to a full run",
+			"job_id", jobID, "media_id", mediaID, "srt_path", path, "error", err)
+		return "", "", false
+	}
+
+	s.logger.Info("resuming translate-only from existing English SRT",
+		"job_id", jobID, "media_id", mediaID, "srt_path", path)
+	return string(content), path, true
+}
+
+// translateAndPersist runs the optional translate phase and the generation
+// writeback. Returns the zh-Hant path ("" when no translation happened).
+// Error semantics (ruled in 9R-16 AC 6c/12, extended by sub-2-2a AC #2):
 //   - ordinary translate failures are NON-FATAL (English SRT preserved,
-//     deliberate swallow — logged, zh path stays empty, no writeback);
-//   - ai.ErrBudgetExceeded MUST propagate so a batch can pause mid-item;
+//     deliberate swallow — logged, zh path stays empty);
+//   - ai.ErrBudgetExceeded MUST propagate so a batch can pause mid-item
+//     (BEFORE any writeback — a paused item is not terminal);
+//   - zh-Hant success writes found/zh-path/"zh-Hant";
+//   - translate EXPECTED but zh empty (key unconfigured, or a non-fatal
+//     translate failure) writes untranslated/en-path/"en" — 9R-16 AC 12
+//     [@contract-v2]: without this the badge lies 缺字幕 over a paid-for SRT
+//     and a re-click re-runs the whole ASR (sub-2-2a's headline bug);
+//   - translate NOT requested writes nothing (no translation was expected,
+//     so `untranslated` would be a lie);
 //   - a writeback failure propagates (Rule 13) — reporting success while the
-//     library row still says 缺字幕 would break the batch-enumeration guarantee.
-func (s *TranscriptionService) translateAndPersist(ctx context.Context, jobID string, mediaID string, srtContent, filePath, mediaDir string, translate bool) (string, error) {
+//     library row still lies would break the batch-enumeration guarantee.
+func (s *TranscriptionService) translateAndPersist(ctx context.Context, jobID string, mediaID string, srtContent, srtPath, filePath, mediaDir string, translate bool) (string, error) {
 	var zhSRTPath string
 	if translate && s.translationService != nil && s.translationService.IsConfigured() {
 		s.broadcastEvent(EventTranscriptionTranslating, map[string]interface{}{
@@ -428,6 +538,21 @@ func (s *TranscriptionService) translateAndPersist(ctx context.Context, jobID st
 			// ceiling hit must pause the batch, not count the item as success
 			// (the English SRT stays on disk either way).
 			if errors.Is(err, ai.ErrBudgetExceeded) {
+				// CR sub-2-2a M1: record the on-disk truth BEFORE pausing — the
+				// English SRT exists and translation is missing, which is
+				// exactly what `untranslated` states. Without this, the paused
+				// item resumes as a FULL run and re-pays the whole ASR — the
+				// story's headline bug with a different trigger. Best-effort
+				// (log-only on failure): the sentinel must survive so the
+				// batch pauses; the writeback here is the optimization, not
+				// the contract.
+				if s.subtitleWriter != nil {
+					if werr := s.subtitleWriter.UpdateSubtitleStatus(ctx, mediaID,
+						models.SubtitleStatusUntranslated, srtPath, "en", 0); werr != nil {
+						s.logger.Warn("untranslated writeback before budget pause failed",
+							"job_id", jobID, "media_id", mediaID, "error", werr)
+					}
+				}
 				return "", fmt.Errorf("translate: %w", err)
 			}
 			// AC #5 (9-2b): other translation failures are non-fatal — English
@@ -442,13 +567,22 @@ func (s *TranscriptionService) translateAndPersist(ctx context.Context, jobID st
 		}
 	}
 
-	// 9R-16 AC 12: persist generation success — the resume enabler + badge
-	// truth. Only after a successful zh-Hant place (en-only runs write
-	// nothing; failed runs never reach here).
-	if zhSRTPath != "" && s.subtitleWriter != nil {
-		if werr := s.subtitleWriter.UpdateSubtitleStatus(ctx, mediaID,
-			models.SubtitleStatusFound, zhSRTPath, "zh-Hant", 0); werr != nil {
-			return "", fmt.Errorf("update subtitle status: %w", werr)
+	// 9R-16 AC 12 [@contract-v2] (sub-2-2a): persist the generation VERDICT —
+	// the resume enabler + badge truth. zh-Hant success → found; translation
+	// expected but absent → untranslated + the EN path (so resume can find it).
+	// A translate=false run writes nothing: no translation was expected.
+	if s.subtitleWriter != nil {
+		switch {
+		case zhSRTPath != "":
+			if werr := s.subtitleWriter.UpdateSubtitleStatus(ctx, mediaID,
+				models.SubtitleStatusFound, zhSRTPath, "zh-Hant", 0); werr != nil {
+				return "", fmt.Errorf("update subtitle status: %w", werr)
+			}
+		case translate:
+			if werr := s.subtitleWriter.UpdateSubtitleStatus(ctx, mediaID,
+				models.SubtitleStatusUntranslated, srtPath, "en", 0); werr != nil {
+				return "", fmt.Errorf("update subtitle status: %w", werr)
+			}
 		}
 	}
 

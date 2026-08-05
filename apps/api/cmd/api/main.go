@@ -32,12 +32,12 @@ import (
 	"github.com/vido/api/internal/sse"
 	"github.com/vido/api/internal/subtitle"
 	subtitleproviders "github.com/vido/api/internal/subtitle/providers"
-
 	// Media config is loaded during service initialization
 	// and validates directories from VIDO_MEDIA_DIRS env var
-
-	// Import migrations to register them via init()
-	_ "github.com/vido/api/internal/database/migrations"
+	//
+	// NOTE: migrations register via init() through the NAMED import above —
+	// the former duplicate blank import was pre-existing ST1019 (staticcheck),
+	// removed by sub-2-2a as a quick in-place fix.
 )
 
 func main() {
@@ -529,6 +529,9 @@ func main() {
 	// 9R-16 AC 12: persist generation success (subtitle_status/path/language)
 	// so the missing-scope batch enumeration shrinks and poster badges flip.
 	transcriptionService.SetSubtitleStatusWriter(repos.Movies)
+	// sub-2-2a AC #3: row-state read behind the translate-only resume — an
+	// `untranslated` row with its EN SRT still on disk skips extract+ASR.
+	transcriptionService.SetSubtitleStateReader(repos.Movies)
 
 	// ── Provider keys: resolver + hot-reloadable holder (sub-2-1a AC #1/#2) ──
 	//
