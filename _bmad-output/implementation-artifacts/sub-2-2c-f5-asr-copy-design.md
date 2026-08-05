@@ -82,6 +82,11 @@ so that an FFmpeg/ASR gap, a translation-key gap, and a finished-but-untranslate
 - **Copy constraints inherited:** labels 3–4 CJK chars for badges; F5 warning semantics; byte-alignment with backend strings is a NON-goal here (the backend 503 message is English today — flagging THAT is allowed as a lane ③ discovery, not fixed here).
 - **Feedback rules:** verify `.pen` saved before commit (`feedback_verify_pen_saved_before_commit`); label overlap check (`feedback_pencil_label_overlap`); spec annotations get their own screen only if genuinely new (none expected).
 
+### Dev-flagged inputs for AC #3's j2-d row (from sub-2-2b CR, 2026-08-05)
+
+1. **Semantics note (CR L2):** `untranslated` + an embedded 繁中 track renders 未翻譯 — the verdict outranks track inference, consistent with `no_text_source`/`skipped`. But in this (rare, force-regenerated) case the recovery hint is moot: a 繁中 track already exists and the user needs to do nothing. Sally decides whether the j2-d row's recovery wording acknowledges it or the consistency stance stands as-is. No code shipped either way by β.
+2. **EpisodeList glyph ratification (CR M1):** β added the `untranslated` EpisodeList entry ahead of 9R-10a (so a settled verdict never falls back to 尚未搜尋字幕's bare `Minus`). Per the J2-D icon grammar it uses CIRCLED + muted with label 「已生成英文字幕，尚未翻譯」; the **`CircleDashed` glyph is PROVISIONAL** — Sally ratifies or replaces it in the j2-d row (a one-line map edit either way; the label is the contract).
+
 ### Time-dependent visual coverage
 
 **N/A — design-only.** Rule 23 does not apply.

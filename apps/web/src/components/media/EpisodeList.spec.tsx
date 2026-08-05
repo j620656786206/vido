@@ -91,6 +91,9 @@ describe('EpisodeList — subtitle-pipeline status icons (sub-1-7b AC #3)', () =
     ['translating', '翻譯字幕中'],
     ['no_text_source', '無可用的文字字幕軌'],
     ['skipped', '已略過（字幕軌語言不符）'],
+    // 10th value (sub-2-2b CR M1): unreachable for episodes until 9R-10a, added
+    // ahead so a settled verdict never falls back to 尚未搜尋字幕's bare Minus.
+    ['untranslated', '已生成英文字幕，尚未翻譯'],
   ])('renders %s with the long-form accessible name "%s"', (subtitleStatus, label) => {
     render(<EpisodeList episodes={[ep(subtitleStatus)]} seasonNumber={1} />);
     // The icon carries no visible text, so the accessible name is where the full
@@ -182,9 +185,15 @@ describe('EpisodeList — icon grammar: settled verdicts vs not-yet (J2-D)', () 
     expect(glyphOf('not_found')).toBe('lucide-circle-x');
     expect(glyphOf('no_text_source')).toBe('lucide-circle-x');
     expect(glyphOf('skipped')).toBe('lucide-circle-slash');
+    // Settled-but-incomplete (glyph provisional pending γ ratification).
+    expect(glyphOf('untranslated')).toBe('lucide-circle-dashed');
 
     expect(glyphOf('not_searched')).toBe('lucide-minus');
     expect(glyphOf('probing')).toBe('lucide-loader-circle');
+  });
+
+  it('untranslated and not_searched do NOT share a glyph (the skipped-precedent class)', () => {
+    expect(glyphOf('untranslated')).not.toBe(glyphOf('not_searched'));
   });
 
   it('no_text_source and skipped share the muted tint — a deliberate family, not a bug', () => {

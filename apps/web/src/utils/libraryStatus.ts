@@ -5,7 +5,8 @@
  * carries. As of ux3-0-1 the list exposes the AUTHORITATIVE subtitle-engine result
  * (`subtitleStatus` + `subtitleLanguage`) alongside `parseStatus` and the embedded
  * `subtitleTracks`. We derive the durable states truthfully: in-library lifecycle
- * (整理中 / 已入庫 / 失敗) + subtitle availability (繁中 / 簡中 / 有字幕 / 缺字幕).
+ * (整理中 / 已入庫 / 失敗) + subtitle availability (繁中 / 簡中 / 有字幕 / 缺字幕 /
+ * 無字幕源 / 已略過 / 未翻譯).
  *
  * The transient process states (簡轉繁 / AI 校正中 / probing / extracting /
  * translating) are surfaced by the Activity hub, NOT this badge. NOTE the reason
@@ -73,8 +74,12 @@ interface SubtitleTrack {
 export const HANT = new Set(['zh-hant', 'zh-tw', 'zh', 'zh-hk']);
 export const HANS = new Set(['zh-hans', 'zh-cn']);
 
-/** Subtitle badge from embedded file tracks (`subtitleTracks` JSON). */
-function deriveFromTracks(media: Media): StatusDescriptor | null {
+/**
+ * Lowercased embedded-track language tags. `null` when `subtitleTracks` is
+ * absent or a non-JSON legacy value (can't classify → unknown); an empty array
+ * when the field parses but lists no tracks.
+ */
+function trackLangs(media: Media): string[] | null {
   if (media.subtitleTracks === undefined) return null;
 
   let tracks: SubtitleTrack[] = [];
@@ -85,7 +90,14 @@ function deriveFromTracks(media: Media): StatusDescriptor | null {
     return null; // non-JSON legacy value → can't classify → unknown
   }
 
-  const langs = tracks.map((t) => (t.language || t.lang || '').toLowerCase());
+  return tracks.map((t) => (t.language || t.lang || '').toLowerCase());
+}
+
+/** Subtitle badge from embedded file tracks (`subtitleTracks` JSON). */
+function deriveFromTracks(media: Media): StatusDescriptor | null {
+  const langs = trackLangs(media);
+  if (langs === null) return null;
+
   if (langs.some((l) => HANT.has(l)))
     return { label: '繁中', className: TINT.success, steadyState: true };
   // 簡中 = static informational state → info tint (F1-D-v2 pill C8lUe + DL-v2 §2.5:
@@ -111,8 +123,17 @@ export function deriveSubtitleStatus(media: Media | undefined): StatusDescriptor
     const lang = (media.subtitleLanguage || '').toLowerCase();
     if (HANT.has(lang)) return { label: '繁中', className: TINT.success, steadyState: true };
     if (HANS.has(lang)) return { label: '簡中', className: TINT.info };
-    // found but language unknown → defer to embedded tracks, else "有字幕".
-    return deriveFromTracks(media) ?? { label: '有字幕', className: TINT.neutral };
+    // found but language unknown/non-zh → embedded tracks may REFINE the
+    // verdict (a zh track upgrades the label), but may never CONTRADICT it: an
+    // empty/absent track list must not read 缺字幕 over an authoritative
+    // `found` — external SRTs are never in `subtitleTracks` (the sub-2-2b
+    // ladder hole). Refinement is expressed positively (zh classification
+    // only), not by filtering deriveFromTracks' output by label (CR L1).
+    const langs = trackLangs(media) ?? [];
+    if (langs.some((l) => HANT.has(l)))
+      return { label: '繁中', className: TINT.success, steadyState: true };
+    if (langs.some((l) => HANS.has(l))) return { label: '簡中', className: TINT.info };
+    return { label: '有字幕', className: TINT.neutral };
   }
 
   // 2. Subtitle-pipeline verdicts (sub-1-2's 9-value enum; spec: flow-j-specs/j2-d).
@@ -138,6 +159,16 @@ export function deriveSubtitleStatus(media: Media | undefined): StatusDescriptor
       return { label: '無字幕源', className: TINT.neutral };
     case 'skipped':
       return { label: '已略過', className: TINT.neutral };
+    case 'untranslated':
+      // sub-2-2b AC #2 (10th value, sub-1-2 [@contract-v2]): a generated
+      // subtitle exists but the EXPECTED translation step did not run. Names
+      // the MISSING STEP — the user's next action (set the key, re-run; the
+      // sub-2-2a resume makes that translate-only) — mirroring the
+      // distinct-by-recovery ruling above. Written ONLY by the generation
+      // pipeline; an embedded English track alone must never derive it (the
+      // fence test). Neutral: not an error, and accent stays reserved for
+      // in-progress (Sally gate 2026-07-05).
+      return { label: '未翻譯', className: TINT.neutral };
     case 'probing':
     case 'extracting':
     case 'translating':
