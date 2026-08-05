@@ -1,6 +1,6 @@
 # Story sub-2.1a: Key resolution + provider hot-reload + settings API
 
-Status: review
+Status: done
 
 **Epic:** `epic-subtitle-pipeline-m1-5` (M1.5) · **Risk: 🔴 HIGH (a silent-no-op trap + live client re-wiring)** · **BACKEND-ONLY**
 **Source:** `epics-subtitle-pipeline.md` § Story 2.1 · PRD **FR25** · architecture **D9 / NFR-S3** · spec §5
@@ -212,10 +212,24 @@ RED verified before each task; each load-bearing guarantee falsified afterwards.
   - **Not a discovery — anticipated by the story and confirmed:** sub-1-6 had merged, so AC #5's re-point edited the shipped `subtitleCapabilityGate` line (`main.go:572`) rather than being wired by 1-6.
 - Reference: `project-context.md` Rule 24.
 
+### Code Review Record (adversarial CR, 2026-08-05)
+
+**2 High / 3 Medium / 3 Low — all High+Medium auto-fixed same day; story → done.** Rule 7 wire format PASS (7 codes, all reused) · Rule 20 bump N/A · Rule 25 N/A · git↔File List 0 discrepancies · all 5 `[x]` tasks verified genuinely done.
+
+- **H1 (fixed)** — `main.go` still constructed the M1 pipeline inside `if SubtitlePipelineEnabled() && subtitleCapabilityGate()`: the gate's *data source* was re-pointed but its **boot-time evaluation still gated existence**. Keyless boot → pool nil forever → after a runtime key save, FR12 answered 409 with a nil queue, the scan-complete enqueue was never wired, and the batch seam stayed legacy **until restart** — the story's headline scenario failing for the generation pipeline itself. Fix: construction now gated on the mode flag only; the capability gate keeps governing every runtime entry point (endpoint 409, `EnqueueMissing` sweep, per-batch seam — all already re-read it per call). The pipeline handler's 409 suggestion no longer tells the user to restart.
+- **H2 (fixed)** — AC #3's "404 → the sub-1-1 model diagnostic" was unimplemented: `classifyKeyTestError` collapsed a 404 into generic 「無法驗證金鑰」. Fix mirrors the `ErrAIUnauthorized` pattern: additive `ai.ErrAIModelNotFound` sentinel wrapped **alongside** `ErrAIProviderError` in `claude.go`'s 404 branch (existing `errors.Is` consumers unaffected), classify branch answering 「金鑰可用，但設定的模型識別碼無效或已棄用」, pinned by a handler table case and `errors.Is` assertions in the 9R-1 guard test. Not a wire code — nothing emits `AI_MODEL_NOT_FOUND`.
+- **M1 (fixed)** — `NewNFOLocalizerService` returned nil on `!IsConfigured()` — a **boot-time snapshot** of the exact thing this story made dynamic: keyless boot → 9R-13 route permanently 404 even after a key save. Constructor now requires only the service; availability stays per-call via `IsAvailable()` (which already re-probes). Pinned by a keyless-boot-recovery test.
+- **M2 (fixed)** — `backlog-tmdb-runtime-key-resolution` was filed a **second time** at implementation although sm create-story pre-filed it 2026-07-27 — a duplicate YAML mapping key silently shadows the earlier entry. Merged into the original.
+- **M3 (fixed)** — `Save()` iterated the updates map (random order) and wrote as it went: a mixed-validity request could half-commit non-deterministically. Now validates every name **before** touching storage and applies in `orderedIDs` order; pinned by a no-partial-write test.
+- **L1 (recorded)** — the AC #4 409 and the no-key 409 share `AI_NOT_CONFIGURED` (zero-new-codes ruling): **2-1b must distinguish them via GET's `reason: encryption_key_missing`, not the error code.**
+- **L2 (fixed)** — File List test counts drifted from reality; corrected below.
+- **L3 (recorded)** — `IsConfigured()` probes and `subtitleCapabilityGate` use `context.Background()` (no caller-ctx propagation; one SQLite read + AES decrypt per call). Measured negligible (Completion Notes ⏱️); plumbing ctx would change shipped interfaces — deliberately left.
+
 ### Change Log
 
 | Date | Change |
 |---|---|
+| 2026-08-05 | **Adversarial CR — 2H/3M/3L, all H+M fixed (see Code Review Record).** H1 pipeline construction un-gated from the boot-time capability check (mode flag only; runtime gates unchanged) + stale restart suggestion rewritten. H2 `ai.ErrAIModelNotFound` additive sentinel + key-test 404 classification (AC #3 completed). M1 NFO localizer constructor no longer freezes boot-time configuredness. M2 duplicate sprint-status key merged. M3 `Save()` validate-first + deterministic order. Gates re-run: `go build/vet/test ./...` all green, staticcheck green, gofmt clean on touched files. |
 | 2026-08-05 | **Tasks 1–5 — RED first on every task.** `KeyResolver` (secret > env, fail-soft through a secrets failure, blank-secret-never-shadows-env) · `ClaudeProviderHolder` (fingerprint-cached rebuild, shared Governor preserved, `ErrAINotConfigured` when unconfigured, **implements `CachingCompleter` as well as `TextCompleter`** — the assertion `TranslationService` makes at `:323`, whose silent failure mode would have voided sub-1-5b's prompt caching) · `KeySettingsService` (masking that never echoes env values, explicit-`""` delete reverting to env) · the GET/PUT/POST-test triad with the AC #4 encryption pre-flight · main.go rewiring: services now construct **unconditionally** behind the holder (the old `if cfg.HasClaudeKey()` guard left them nil forever on a keyless boot) and the pipeline capability gate reads the resolver instead of the boot-time env snapshot. Added `ai.ErrAIUnauthorized` (wrapped alongside `ErrAIProviderError`) so a 401 is distinguishable from a transient fault without string-matching. AC #6.4's integration test runs the whole chain on a real `:memory:` DB with real AES-256-GCM. Gates: `go vet ./...`, `go test ./...`, staticcheck all green; gofmt clean. |
 
 ### File List
@@ -225,17 +239,21 @@ RED verified before each task; each load-bearing guarantee falsified afterwards.
 | `apps/api/internal/services/key_resolver.go` | **new** — AC #1 `[@contract-v1]` `KeyResolver`: closed `KeyName` set, `KeySource`, secret-first resolution, fail-soft fallthrough on a secrets error, blank-secret-treated-as-absent, nil-secrets-service degrades to env-only |
 | `apps/api/internal/services/key_resolver_test.go` | **new** — 10 tests incl. the secret-wins contract, the decryption-failure fallthrough, and unknown-key-name-is-an-error (distinct from unconfigured) |
 | `apps/api/internal/services/claude_provider_holder.go` | **new** — AC #2 `[@contract-v1]` holder: `key\|model` fingerprint cache (Rule 14), options replayed on rebuild so the Governor survives, `IsConfigured`, `TestKey`, and delegation of **both** `TextCompleter` and `CachingCompleter` with compile-time `var _` assertions |
-| `apps/api/internal/services/claude_provider_holder_test.go` | **new** — 9 tests incl. pointer-identity caching, rebuild-on-key-change, keyless-boot recovery, Governor identity across a rebuild, and the CachingCompleter guard |
-| `apps/api/internal/services/key_settings_service.go` | **new** — AC #3/#4 state + save: per-source masking rules, explicit-`""` delete, idempotent clear, `Writable`/`Reason` pre-flight |
-| `apps/api/internal/services/key_settings_service_test.go` | **new** — 13 tests incl. env-keys-are-never-masked-echoed, short-value full masking, whitespace-clears, partial-update isolation |
+| `apps/api/internal/services/claude_provider_holder_test.go` | **new** — 12 tests incl. pointer-identity caching, rebuild-on-key-change, keyless-boot recovery, Governor identity across a rebuild, and the CachingCompleter guard |
+| `apps/api/internal/services/key_settings_service.go` | **new** — AC #3/#4 state + save: per-source masking rules, explicit-`""` delete, idempotent clear, `Writable`/`Reason` pre-flight; CR M3: validate-all-names-first + deterministic `orderedIDs` apply order |
+| `apps/api/internal/services/key_settings_service_test.go` | **new** — 15 tests incl. env-keys-are-never-masked-echoed, short-value full masking, whitespace-clears, partial-update isolation, no-partial-write-on-unknown-name (CR M3) |
 | `apps/api/internal/services/key_resolution_integration_test.go` | **new** — AC #6.4 on a real `:memory:` DB + real AES-256-GCM secrets service: store → resolve → gate flips; keyless boot → save → holder rebuilds; clear reverts to env; masking holds on the real round trip. Lives in `services` because Rule 19 forbids `repository → services` |
-| `apps/api/internal/handlers/key_settings_handler.go` | **new** — AC #3 triad `GET/PUT /api/v1/settings/keys` + `POST /test`; pointer fields distinguish omitted-vs-cleared; `classifyKeyTestError` with unauthorized checked before the generic provider error; Swagger annotations; Rule 3 envelope |
-| `apps/api/internal/handlers/key_settings_handler_test.go` | **new** — 14 tests incl. the 5-case error-classification table, the omitted-vs-`""` distinction, the AC #4 409, and the sentinel-ordering guard |
+| `apps/api/internal/handlers/key_settings_handler.go` | **new** — AC #3 triad `GET/PUT /api/v1/settings/keys` + `POST /test`; pointer fields distinguish omitted-vs-cleared; `classifyKeyTestError` with unauthorized checked before the generic provider error; CR H2: 404 model-diagnostic branch; Swagger annotations; Rule 3 envelope |
+| `apps/api/internal/handlers/key_settings_handler_test.go` | **new** — 13 tests incl. the 6-case error-classification table (404 model case per CR H2), the omitted-vs-`""` distinction, the AC #4 409, and the sentinel-ordering guard |
 | `apps/api/internal/services/terminology_service.go` · `translation_service.go` | **modified** — `IsConfigured()` now probes a key-aware provider instead of testing `provider != nil`; without this, unconditional construction silently re-enables AI paths on a keyless install |
-| `apps/api/internal/ai/types.go` | **modified** — `ErrAIUnauthorized` sentinel (additive) |
-| `apps/api/internal/ai/claude.go` | **modified** — 401/403 wrapped as `ErrAIProviderError` **and** `ErrAIUnauthorized` (existing `errors.Is` consumers unaffected); `Governor()` accessor so a rebuild's budget-pool identity is assertable |
-| `apps/api/cmd/api/main.go` | **modified** — resolver + holder construction; terminology/translation services built **unconditionally** behind the holder (the `if cfg.HasClaudeKey()` guard removed); AC #5 capability-gate re-point; `keySettingsHandler` construction + `RegisterRoutes` (Rule 15 verified) |
-| `_bmad-output/implementation-artifacts/sprint-status.yaml` | **modified** — `sub-2-1a` → `review`; `backlog-tmdb-runtime-key-resolution` filed |
+| `apps/api/internal/ai/types.go` | **modified** — `ErrAIUnauthorized` sentinel (additive); CR H2: `ErrAIModelNotFound` sentinel (additive, same pattern) |
+| `apps/api/internal/ai/claude.go` | **modified** — 401/403 wrapped as `ErrAIProviderError` **and** `ErrAIUnauthorized` (existing `errors.Is` consumers unaffected); CR H2: 404 additionally wraps `ErrAIModelNotFound`; `Governor()` accessor so a rebuild's budget-pool identity is assertable |
+| `apps/api/internal/ai/claude_test.go` | **modified (CR H2)** — the 9R-1 404 guard test also asserts `errors.Is(err, ErrAIModelNotFound)` |
+| `apps/api/cmd/api/main.go` | **modified** — resolver + holder construction; terminology/translation services built **unconditionally** behind the holder (the `if cfg.HasClaudeKey()` guard removed); AC #5 capability-gate re-point; `keySettingsHandler` construction + `RegisterRoutes` (Rule 15 verified); CR H1: pipeline construction gated on the mode flag only, no longer on the boot-time capability value |
+| `apps/api/internal/handlers/subtitle_pipeline_handler.go` | **modified (CR H1)** — the no-key 409 suggestion no longer instructs a restart (keys hot-reload; points at the settings API or the env-var) |
+| `apps/api/internal/services/nfo_localizer_service.go` | **modified (CR M1)** — constructor no longer freezes boot-time `IsConfigured()` into a nil service; availability stays per-call |
+| `apps/api/internal/services/nfo_localizer_service_test.go` | **modified (CR M1)** — keyless-boot-constructs-and-recovers test |
+| `_bmad-output/implementation-artifacts/sprint-status.yaml` | **modified** — `sub-2-1a` → `review` → `done` (CR); `backlog-tmdb-runtime-key-resolution` re-confirmed on the existing 2026-07-27 entry (CR M2 merged the duplicate) |
 
 ---
 

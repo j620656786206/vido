@@ -153,3 +153,22 @@ func TestNFOLocalizer_GlossaryInjectedIntoPrompt(t *testing.T) {
 func TestNFOLocalizer_NilWhenTranslationUnavailable(t *testing.T) {
 	assert.Nil(t, NewNFOLocalizerService(nil, nil, nil))
 }
+
+// TestNFOLocalizer_KeylessBootConstructsAndRecoversWhenAKeyArrives pins the CR
+// sub-2-1a M1 fix: since keys hot-reload, the constructor must NOT freeze a
+// boot-time IsConfigured() snapshot into a nil service (a permanently-404 route
+// no later key save could revive). Availability is a per-call question.
+func TestNFOLocalizer_KeylessBootConstructsAndRecoversWhenAKeyArrives(t *testing.T) {
+	secrets := &fakeSecrets{}
+	holder := NewClaudeProviderHolder(NewKeyResolver(secrets, EnvKeys{}, nil), "", nil)
+
+	svc := NewNFOLocalizerService(NewTranslationService(holder, nil), nil, nil)
+
+	require.NotNil(t, svc, "a keyless boot must still construct the localizer")
+	assert.False(t, svc.IsAvailable(), "…but it declines while no key resolves")
+
+	// The settings page stores a key at runtime — no restart.
+	require.NoError(t, secrets.Store(context.Background(), SecretNameClaude, "sk-late-arrival"))
+
+	assert.True(t, svc.IsAvailable(), "a saved key must revive the feature without a restart")
+}

@@ -577,7 +577,14 @@ func main() {
 	// env snapshot, so saving a key in the settings page un-gates the pipeline
 	// without a restart. Still a plain func() bool — no Rule 20 bump owed.
 	subtitleCapabilityGate := func() bool { return keyResolver.Has(context.Background(), services.KeyClaude) }
-	if cfg.SubtitlePipelineEnabled() && subtitleCapabilityGate() {
+	// CR sub-2-1a H1: construction is gated ONLY by the mode flag. Keeping
+	// `&& subtitleCapabilityGate()` here froze the gate's boot-time value into
+	// EXISTENCE — a keyless boot never built the pool, so a key saved later from
+	// the settings page un-gated an endpoint whose queue was still nil (409 until
+	// restart, the exact class this story removes). The gate still governs every
+	// RUNTIME entry point: the endpoint's 409, the EnqueueMissing scan sweep, and
+	// the per-batch seam below.
+	if cfg.SubtitlePipelineEnabled() {
 		subtitleRouter := subtitle.NewRouter(
 			ffprobeService,
 			subtitle.NewExtractor(0, slog.Default()),
@@ -613,7 +620,10 @@ func main() {
 			},
 		))
 		slog.Info("Subtitle generation pipeline enabled",
-			"mode", cfg.SubtitlePipelineMode, "workers", subtitle.PipelineConcurrencyM1, "model", modelID)
+			"mode", cfg.SubtitlePipelineMode, "workers", subtitle.PipelineConcurrencyM1, "model", modelID,
+			// May be false on a keyless boot: the pool exists and idles behind the
+			// gate, and starts accepting work the moment a key is saved (sub-2-1a).
+			"translation_configured", subtitleCapabilityGate())
 	} else {
 		// ONE line, at wiring time — not one per scanned item (AC #5).
 		slog.Info("Subtitle generation pipeline disabled — staying on the legacy search path",

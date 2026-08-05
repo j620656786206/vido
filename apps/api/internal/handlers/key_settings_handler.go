@@ -182,6 +182,13 @@ func classifyKeyTestError(err error) (code string, status int, message, suggesti
 	case errors.Is(err, ai.ErrAIUnauthorized):
 		return "AI_PROVIDER_ERROR", http.StatusBadGateway,
 			"金鑰無效或已撤銷", "請確認金鑰是否正確，或至 Anthropic Console 重新產生。"
+	case errors.Is(err, ai.ErrAIModelNotFound):
+		// AC #3 — the sub-1-1/9R-1 model diagnostic: a 404 means the key was
+		// ACCEPTED but the configured model id is deprecated or invalid. Saying
+		// "invalid key" or a generic failure here sends the user to the wrong knob.
+		return "AI_PROVIDER_ERROR", http.StatusBadGateway,
+			"金鑰可用，但設定的模型識別碼無效或已棄用",
+			"請將 CLAUDE_MODEL 設為現行模型後重啟，或移除該環境變數改用預設模型。"
 	case errors.Is(err, ai.ErrAIQuotaExceeded):
 		// The key is VALID — it is the account that is rate-limited. Saying
 		// "invalid key" here would send the user to regenerate a working key.

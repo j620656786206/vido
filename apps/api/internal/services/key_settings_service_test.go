@@ -170,6 +170,23 @@ func TestKeySettings_UnknownKeyNameIsRejected(t *testing.T) {
 	require.Error(t, err)
 }
 
+// TestKeySettings_UnknownNameRejectsBeforeAnyWrite pins the CR sub-2-1a M3 fix:
+// names are validated BEFORE storage is touched, so a request mixing a valid
+// key with an unknown one must not half-apply (map iteration order is random —
+// without the pre-pass the valid key would be committed on some runs only).
+func TestKeySettings_UnknownNameRejectsBeforeAnyWrite(t *testing.T) {
+	secrets := &fakeSecrets{}
+	svc := settingsWith(t, secrets, EnvKeys{}, true)
+
+	err := svc.Save(context.Background(), map[KeyName]string{
+		KeyClaude:         "sk-valid",
+		KeyName("gemini"): "x",
+	})
+
+	require.Error(t, err)
+	assert.Empty(t, secrets.values, "a rejected request must commit NOTHING")
+}
+
 // TestKeySettings_WhitespaceOnlyValueClearsRatherThanStores — a form submitting
 // "   " means the user cleared the field, not that they want a blank key stored
 // (which would shadow env — see KeyResolver's blank-secret test).
