@@ -15,6 +15,12 @@ var (
 	ErrAIInvalidResponse = errors.New("AI_INVALID_RESPONSE: Cannot parse AI response")
 	ErrAIProviderError   = errors.New("AI_PROVIDER_ERROR: Provider returned an error")
 	ErrAINotConfigured   = errors.New("AI_NOT_CONFIGURED: No AI provider configured")
+	// ErrAIUnauthorized marks a 401/403 — the key itself is rejected, as opposed
+	// to a transient provider fault. Added by sub-2-1a so the key-test endpoint
+	// can say 「金鑰無效或已撤銷」 instead of a generic provider error. It is
+	// wrapped ALONGSIDE ErrAIProviderError, never instead of it, so every
+	// existing errors.Is(err, ErrAIProviderError) check keeps working.
+	ErrAIUnauthorized = errors.New("AI_UNAUTHORIZED: Provider rejected the API key")
 	// ErrBudgetExceeded is returned when a per-run AI cost/token budget ceiling
 	// is reached — the run stops spending rather than running away over a whole
 	// library (Story 9R-11). Uses the existing AI_ prefix (Rule 7, no new code).

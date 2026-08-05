@@ -98,6 +98,13 @@ func WithClaudeGovernor(g *Governor) ClaudeProviderOption {
 }
 
 // NewClaudeProvider creates a new Claude AI provider.
+// Governor returns the shared AI throttle this provider was built with (nil when
+// unthrottled). Exposed so a caller that REBUILDS the provider — the M1.5
+// key-hot-reload holder (sub-2-1a AC #2) — can assert the same Governor instance
+// carried over: a new client must never mean a new budget pool, or editing a key
+// would silently reset the 9R-11 run-budget ceiling.
+func (c *ClaudeProvider) Governor() *Governor { return c.governor }
+
 func NewClaudeProvider(apiKey string, opts ...ClaudeProviderOption) *ClaudeProvider {
 	p := &ClaudeProvider{
 		apiKey:  apiKey,
@@ -224,6 +231,11 @@ func (p *ClaudeProvider) classifyErr(err error) (retryable bool, mapped error) {
 		switch apiErr.StatusCode {
 		case http.StatusTooManyRequests:
 			return true, ErrAIQuotaExceeded
+		case http.StatusUnauthorized, http.StatusForbidden:
+			// Not transient: a rejected key will be rejected again. Wrapping both
+			// sentinels keeps existing ErrAIProviderError consumers unchanged
+			// while letting the key-test endpoint identify a bad key exactly.
+			return false, fmt.Errorf("%w: %w: status %d", ErrAIProviderError, ErrAIUnauthorized, apiErr.StatusCode)
 		case http.StatusNotFound:
 			// 9R-1: a deprecated/invalid model id returns 404. This diagnostic was
 			// hard-won during that incident — keep it verbatim.
