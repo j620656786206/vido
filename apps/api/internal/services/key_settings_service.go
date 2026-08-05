@@ -86,11 +86,23 @@ func (s *KeySettingsService) Save(ctx context.Context, updates map[KeyName]strin
 		return ErrKeysNotWritable
 	}
 
-	for name, value := range updates {
-		secretName, known := secretNameFor(name)
-		if !known {
+	// Validate EVERY name before touching storage, then apply in orderedIDs
+	// order: map iteration is random, so failing mid-loop would otherwise
+	// commit an unpredictable subset of the request (CR sub-2-1a M3). A write
+	// failure can still leave earlier keys committed — the wrapped error names
+	// the failing key so the caller knows where it stopped.
+	for name := range updates {
+		if _, known := secretNameFor(name); !known {
 			return fmt.Errorf("unknown key name %q", name)
 		}
+	}
+
+	for _, name := range s.orderedIDs {
+		value, present := updates[name]
+		if !present {
+			continue
+		}
+		secretName, _ := secretNameFor(name)
 
 		trimmed := strings.TrimSpace(value)
 		if trimmed == "" {

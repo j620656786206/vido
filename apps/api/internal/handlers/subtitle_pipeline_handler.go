@@ -100,7 +100,9 @@ func (h *SubtitlePipelineHandler) RunPipeline(c *gin.Context) {
 	if h.configured != nil && !h.configured() {
 		ErrorResponse(c, http.StatusConflict, "AI_NOT_CONFIGURED",
 			"尚未設定翻譯服務金鑰",
-			"請設定 CLAUDE_API_KEY 環境變數後重啟（設定頁面將於 M1.5 提供）。")
+			// sub-2-1a: keys hot-reload now — saving one takes effect immediately,
+			// so this suggestion must NOT tell the user to restart.
+			"請於金鑰設定儲存 Claude API 金鑰（PUT /api/v1/settings/keys），或設定 CLAUDE_API_KEY 環境變數。")
 		return
 	}
 	if h.queue == nil || !h.queue.IsRunning() {

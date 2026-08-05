@@ -27,10 +27,14 @@ type NFOLocalizerService struct {
 	logger       *slog.Logger
 }
 
-// NewNFOLocalizerService creates the localizer. Returns nil when translation is
-// unavailable (graceful degradation — the feature is simply disabled).
+// NewNFOLocalizerService creates the localizer. Returns nil only when no
+// translation service exists at all. It deliberately does NOT check
+// IsConfigured() here: since sub-2-1a keys hot-reload, configuration is a
+// per-call question (IsAvailable answers it) — a boot-time check would freeze
+// a keyless boot into a permanently-404 route that a later key save could
+// never revive (CR sub-2-1a M1).
 func NewNFOLocalizerService(translation *TranslationService, glossaryRepo repository.GlossaryRepositoryInterface, logger *slog.Logger) *NFOLocalizerService {
-	if translation == nil || !translation.IsConfigured() {
+	if translation == nil {
 		return nil
 	}
 	if logger == nil {

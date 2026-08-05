@@ -544,11 +544,13 @@ func TestClaudeProvider_NotFoundGuard_NamesBadModel(t *testing.T) {
 	_, err := p.CompleteText(context.Background(), "", "hello", 128)
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrAIProviderError)
+	assert.ErrorIs(t, err, ErrAIModelNotFound, "sub-2-1a CR H2: the key-test endpoint classifies on this sentinel")
 	assert.Contains(t, err.Error(), "bogus-model")
 
 	_, err = p.Parse(context.Background(), &ParseRequest{Filename: "Some.Movie.2020.mkv"})
 	require.Error(t, err)
 	assert.ErrorIs(t, err, ErrAIProviderError)
+	assert.ErrorIs(t, err, ErrAIModelNotFound)
 	assert.Contains(t, err.Error(), "bogus-model")
 }
 

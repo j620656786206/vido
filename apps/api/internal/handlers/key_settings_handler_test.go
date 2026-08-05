@@ -245,6 +245,13 @@ func TestTestKey_ErrorClassification(t *testing.T) {
 			wantCode: "AI_NOT_CONFIGURED", wantHTTP: http.StatusConflict, wantMsg: "尚未設定翻譯服務金鑰",
 		},
 		{
+			name: "404 means the MODEL is wrong, not the key",
+			// Wrapped exactly as claude.go wraps it: BOTH sentinels (AC #3's
+			// sub-1-1 model diagnostic).
+			err:      fmt.Errorf("%w: %w: status 404: model %q not found", ai.ErrAIProviderError, ai.ErrAIModelNotFound, "bogus-model"),
+			wantCode: "AI_PROVIDER_ERROR", wantHTTP: http.StatusBadGateway, wantMsg: "金鑰可用，但設定的模型識別碼無效或已棄用",
+		},
+		{
 			name:     "anything else stays generic",
 			err:      fmt.Errorf("%w: status 500", ai.ErrAIProviderError),
 			wantCode: "AI_PROVIDER_ERROR", wantHTTP: http.StatusBadGateway, wantMsg: "無法驗證金鑰",

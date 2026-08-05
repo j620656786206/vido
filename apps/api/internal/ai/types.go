@@ -21,6 +21,12 @@ var (
 	// wrapped ALONGSIDE ErrAIProviderError, never instead of it, so every
 	// existing errors.Is(err, ErrAIProviderError) check keeps working.
 	ErrAIUnauthorized = errors.New("AI_UNAUTHORIZED: Provider rejected the API key")
+	// ErrAIModelNotFound marks a 404 — the configured model id is deprecated or
+	// invalid (the 9R-1 incident class). Added by the sub-2-1a code review so the
+	// key-test endpoint can surface the sub-1-1 model diagnostic instead of a
+	// generic provider error. Wrapped ALONGSIDE ErrAIProviderError, same pattern
+	// as ErrAIUnauthorized, so existing errors.Is checks keep working.
+	ErrAIModelNotFound = errors.New("AI_MODEL_NOT_FOUND: Configured model id rejected by provider")
 	// ErrBudgetExceeded is returned when a per-run AI cost/token budget ceiling
 	// is reached — the run stops spending rather than running away over a whole
 	// library (Story 9R-11). Uses the existing AI_ prefix (Rule 7, no new code).

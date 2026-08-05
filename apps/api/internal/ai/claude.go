@@ -242,7 +242,7 @@ func (p *ClaudeProvider) classifyErr(err error) (retryable bool, mapped error) {
 			slog.Error("Claude model not found — the configured model id is deprecated or invalid",
 				"model", p.model,
 			)
-			return false, fmt.Errorf("%w: status 404: model %q not found (deprecated or invalid model id — set CLAUDE_MODEL to a current model)", ErrAIProviderError, p.model)
+			return false, fmt.Errorf("%w: %w: status 404: model %q not found (deprecated or invalid model id — set CLAUDE_MODEL to a current model)", ErrAIProviderError, ErrAIModelNotFound, p.model)
 		}
 		return isTransientStatus(apiErr.StatusCode), fmt.Errorf("%w: status %d", ErrAIProviderError, apiErr.StatusCode)
 	}
