@@ -10,6 +10,7 @@ import {
   Gauge,
   ScanLine,
   LayoutGrid,
+  KeyRound,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '../../lib/utils';
@@ -30,6 +31,17 @@ const SETTINGS_CATEGORIES: SettingsCategory[] = [
     shortLabel: '連線',
     icon: Plug,
     to: '/settings/connection',
+  },
+  {
+    // Story sub-2-1b (FR25) — sits next to 連線設定 because both configure how
+    // Vido reaches an external service. Without this entry the route would be
+    // orphaned: /settings/ redirects to /settings/connection, so the sidebar IS
+    // the settings index.
+    key: 'keys',
+    label: '金鑰設定',
+    shortLabel: '金鑰',
+    icon: KeyRound,
+    to: '/settings/keys',
   },
   {
     key: 'scanner',

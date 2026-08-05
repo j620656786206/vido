@@ -102,10 +102,11 @@ describe('SettingsLayout', () => {
     expect(await screen.findByTestId('settings-tabs')).toBeInTheDocument();
   });
 
-  it('renders all 7 sidebar navigation items', async () => {
+  it('renders the sidebar navigation items', async () => {
     renderWithRouter();
     await screen.findByTestId('settings-sidebar');
     expect(screen.getByTestId('settings-nav-connection')).toBeInTheDocument();
+    expect(screen.getByTestId('settings-nav-keys')).toBeInTheDocument();
     expect(screen.getByTestId('settings-nav-cache')).toBeInTheDocument();
     expect(screen.getByTestId('settings-nav-logs')).toBeInTheDocument();
     expect(screen.getByTestId('settings-nav-status')).toBeInTheDocument();
@@ -114,10 +115,11 @@ describe('SettingsLayout', () => {
     expect(screen.getByTestId('settings-nav-performance')).toBeInTheDocument();
   });
 
-  it('renders all 7 mobile tab items', async () => {
+  it('renders the mobile tab items', async () => {
     renderWithRouter();
     await screen.findByTestId('settings-tabs');
     expect(screen.getByTestId('settings-tab-connection')).toBeInTheDocument();
+    expect(screen.getByTestId('settings-tab-keys')).toBeInTheDocument();
     expect(screen.getByTestId('settings-tab-cache')).toBeInTheDocument();
     expect(screen.getByTestId('settings-tab-logs')).toBeInTheDocument();
     expect(screen.getByTestId('settings-tab-status')).toBeInTheDocument();
@@ -130,6 +132,7 @@ describe('SettingsLayout', () => {
     renderWithRouter();
     await screen.findByTestId('settings-sidebar');
     expect(screen.getByTestId('settings-nav-connection')).toHaveTextContent('連線設定');
+    expect(screen.getByTestId('settings-nav-keys')).toHaveTextContent('金鑰設定');
     expect(screen.getByTestId('settings-nav-cache')).toHaveTextContent('快取管理');
     expect(screen.getByTestId('settings-nav-logs')).toHaveTextContent('系統日誌');
     expect(screen.getByTestId('settings-nav-status')).toHaveTextContent('服務狀態');
@@ -368,10 +371,10 @@ describe('SettingsLayout', () => {
 
   // --- SETTINGS_CATEGORIES export ---
 
-  it('exports SETTINGS_CATEGORIES with exactly 9 entries', () => {
-    // 9 entries: connection, scanner, homepage (Story 10.3), cache, logs,
-    // status, backup, export, performance.
-    expect(SETTINGS_CATEGORIES).toHaveLength(9);
+  it('exports SETTINGS_CATEGORIES with exactly 10 entries', () => {
+    // 10 entries: connection, keys (Story sub-2-1b), scanner, homepage
+    // (Story 10.3), cache, logs, status, backup, export, performance.
+    expect(SETTINGS_CATEGORIES).toHaveLength(10);
   });
 
   it('SETTINGS_CATEGORIES entries have required fields', () => {

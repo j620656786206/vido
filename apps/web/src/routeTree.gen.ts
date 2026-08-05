@@ -27,6 +27,7 @@ import { Route as SettingsScannerRouteImport } from './routes/settings/scanner'
 import { Route as SettingsQbittorrentRouteImport } from './routes/settings/qbittorrent'
 import { Route as SettingsPerformanceRouteImport } from './routes/settings/performance'
 import { Route as SettingsLogsRouteImport } from './routes/settings/logs'
+import { Route as SettingsKeysRouteImport } from './routes/settings/keys'
 import { Route as SettingsHomepageRouteImport } from './routes/settings/homepage'
 import { Route as SettingsExportRouteImport } from './routes/settings/export'
 import { Route as SettingsConnectionRouteImport } from './routes/settings/connection'
@@ -126,6 +127,11 @@ const SettingsLogsRoute = SettingsLogsRouteImport.update({
   path: '/logs',
   getParentRoute: () => SettingsRoute,
 } as any)
+const SettingsKeysRoute = SettingsKeysRouteImport.update({
+  id: '/keys',
+  path: '/keys',
+  getParentRoute: () => SettingsRoute,
+} as any)
 const SettingsHomepageRoute = SettingsHomepageRouteImport.update({
   id: '/homepage',
   path: '/homepage',
@@ -184,6 +190,7 @@ export interface FileRoutesByFullPath {
   '/settings/connection': typeof SettingsConnectionRoute
   '/settings/export': typeof SettingsExportRoute
   '/settings/homepage': typeof SettingsHomepageRoute
+  '/settings/keys': typeof SettingsKeysRoute
   '/settings/logs': typeof SettingsLogsRoute
   '/settings/performance': typeof SettingsPerformanceRoute
   '/settings/qbittorrent': typeof SettingsQbittorrentRoute
@@ -210,6 +217,7 @@ export interface FileRoutesByTo {
   '/settings/connection': typeof SettingsConnectionRoute
   '/settings/export': typeof SettingsExportRoute
   '/settings/homepage': typeof SettingsHomepageRoute
+  '/settings/keys': typeof SettingsKeysRoute
   '/settings/logs': typeof SettingsLogsRoute
   '/settings/performance': typeof SettingsPerformanceRoute
   '/settings/qbittorrent': typeof SettingsQbittorrentRoute
@@ -239,6 +247,7 @@ export interface FileRoutesById {
   '/settings/connection': typeof SettingsConnectionRoute
   '/settings/export': typeof SettingsExportRoute
   '/settings/homepage': typeof SettingsHomepageRoute
+  '/settings/keys': typeof SettingsKeysRoute
   '/settings/logs': typeof SettingsLogsRoute
   '/settings/performance': typeof SettingsPerformanceRoute
   '/settings/qbittorrent': typeof SettingsQbittorrentRoute
@@ -269,6 +278,7 @@ export interface FileRouteTypes {
     | '/settings/connection'
     | '/settings/export'
     | '/settings/homepage'
+    | '/settings/keys'
     | '/settings/logs'
     | '/settings/performance'
     | '/settings/qbittorrent'
@@ -295,6 +305,7 @@ export interface FileRouteTypes {
     | '/settings/connection'
     | '/settings/export'
     | '/settings/homepage'
+    | '/settings/keys'
     | '/settings/logs'
     | '/settings/performance'
     | '/settings/qbittorrent'
@@ -323,6 +334,7 @@ export interface FileRouteTypes {
     | '/settings/connection'
     | '/settings/export'
     | '/settings/homepage'
+    | '/settings/keys'
     | '/settings/logs'
     | '/settings/performance'
     | '/settings/qbittorrent'
@@ -478,6 +490,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsLogsRouteImport
       parentRoute: typeof SettingsRoute
     }
+    '/settings/keys': {
+      id: '/settings/keys'
+      path: '/keys'
+      fullPath: '/settings/keys'
+      preLoaderRoute: typeof SettingsKeysRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/settings/homepage': {
       id: '/settings/homepage'
       path: '/homepage'
@@ -558,6 +577,7 @@ interface SettingsRouteChildren {
   SettingsConnectionRoute: typeof SettingsConnectionRoute
   SettingsExportRoute: typeof SettingsExportRoute
   SettingsHomepageRoute: typeof SettingsHomepageRoute
+  SettingsKeysRoute: typeof SettingsKeysRoute
   SettingsLogsRoute: typeof SettingsLogsRoute
   SettingsPerformanceRoute: typeof SettingsPerformanceRoute
   SettingsQbittorrentRoute: typeof SettingsQbittorrentRoute
@@ -572,6 +592,7 @@ const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsConnectionRoute: SettingsConnectionRoute,
   SettingsExportRoute: SettingsExportRoute,
   SettingsHomepageRoute: SettingsHomepageRoute,
+  SettingsKeysRoute: SettingsKeysRoute,
   SettingsLogsRoute: SettingsLogsRoute,
   SettingsPerformanceRoute: SettingsPerformanceRoute,
   SettingsQbittorrentRoute: SettingsQbittorrentRoute,
