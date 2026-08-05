@@ -33,6 +33,7 @@ func (m *mockTranscriptionMovieGetter) GetByID(_ context.Context, _ string) (*mo
 
 type mockTranscriptionService struct {
 	available       bool
+	canResume       bool
 	inProgress      bool
 	jobID           string
 	startErr        error
@@ -42,6 +43,10 @@ type mockTranscriptionService struct {
 
 func (m *mockTranscriptionService) IsAvailable() bool {
 	return m.available
+}
+
+func (m *mockTranscriptionService) CanResumeTranslateOnly(_ context.Context, _ string) bool {
+	return m.canResume
 }
 
 func (m *mockTranscriptionService) IsInProgress(_ string) bool {

@@ -21,20 +21,24 @@ type TranscriptionMovieGetter interface {
 // TranscriptionServiceInterface defines the contract for transcription operations.
 type TranscriptionServiceInterface interface {
 	IsAvailable() bool
+	// CanResumeTranslateOnly reports whether this media would resume
+	// translate-only (CR sub-2-2a M2) — such a run needs no ASR, so the
+	// availability gate must not 503 it.
+	CanResumeTranslateOnly(ctx context.Context, mediaID string) bool
 	IsInProgress(mediaID string) bool
 	StartTranscription(ctx context.Context, mediaID string, filePath string, mediaDir string, opts ...services.TranscriptionOption) (string, error)
 }
 
 // TranscriptionHandler handles transcription API requests.
 type TranscriptionHandler struct {
-	movieService        TranscriptionMovieGetter
+	movieService         TranscriptionMovieGetter
 	transcriptionService TranscriptionServiceInterface
 }
 
 // NewTranscriptionHandler creates a new TranscriptionHandler.
 func NewTranscriptionHandler(movieService TranscriptionMovieGetter, transcriptionService TranscriptionServiceInterface) *TranscriptionHandler {
 	return &TranscriptionHandler{
-		movieService:        movieService,
+		movieService:         movieService,
 		transcriptionService: transcriptionService,
 	}
 }
@@ -48,19 +52,23 @@ func (h *TranscriptionHandler) RegisterRoutes(rg *gin.RouterGroup) {
 // POST /api/v1/movies/:id/transcribe
 // Returns 202 Accepted with job ID.
 func (h *TranscriptionHandler) TranscribeMovie(c *gin.Context) {
-	// Check if transcription feature is available
-	if !h.transcriptionService.IsAvailable() {
-		ErrorResponse(c, http.StatusServiceUnavailable, "TRANSCRIPTION_DISABLED",
-			"Transcription is not available",
-			"Ensure FFmpeg is installed and OPENAI_API_KEY is configured.")
-		return
-	}
-
 	// Validate movie ID — an opaque STRING (movie PKs are UUIDs, 9R-18);
-	// non-empty is the only format constraint.
+	// non-empty is the only format constraint. Parsed BEFORE the availability
+	// gate so the gate can consult the per-media resume eligibility.
 	id := c.Param("id")
 	if id == "" {
 		BadRequestError(c, "VALIDATION_INVALID_FORMAT", "Invalid movie ID")
+		return
+	}
+
+	// Availability gate, resume-aware (CR sub-2-2a M2): a translate-only
+	// resume needs no ASR, so an `untranslated` row with its English SRT on
+	// disk proceeds even when FFmpeg/ASR are gone.
+	if !h.transcriptionService.IsAvailable() &&
+		!h.transcriptionService.CanResumeTranslateOnly(c.Request.Context(), id) {
+		ErrorResponse(c, http.StatusServiceUnavailable, "TRANSCRIPTION_DISABLED",
+			"Transcription is not available",
+			"Ensure FFmpeg is installed and OPENAI_API_KEY is configured.")
 		return
 	}
 
