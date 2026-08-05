@@ -369,3 +369,33 @@ _Size-split 2026-07-27 (sm create-story): 2.1 measured backend 5 / frontend 4 ta
 **Given** the F2/F5 UI, **When** this story starts, **Then** the three `.pen` copy revisions are already merged (this story is blocked until then).
 
 **Given** Rule 17 (IR-r2 F9), **Then** the NFR-S3 HTTPS-warning behaviour is documented in `docs/deployment.md` + `docs/deployment.zh-TW.md` (the ffmpeg/multi-arch half landed with Story 1.6).
+
+### Story 2.2a: `untranslated` terminal status + en-only writeback + translate-only resume 🔴 (backend)
+
+> Added 2026-08-05 by party-mode ruling (Sally 主裁, Alexyu confirmed; full record: sprint-status `backlog-f5-not-configured-panel-copy-ruling`). Epic 2's "closes with 2.1" note is superseded — the ruling surfaced a money-burning silent-degradation loop in the key-missing journey, which is Epic 2's subject matter.
+
+**Acceptance Criteria (2.2a):**
+
+**Given** a generation run where translation was requested but the key is unconfigured (or translate fails non-fatally), **When** the English SRT is placed, **Then** the row is written back as the NEW terminal `subtitle_status` value `untranslated` (`[@contract-v1→v2]` bump on Story 1.2's enum; zero migration — no CHECK constraint) with the en path + `"en"` — today en-only completion writes nothing (`transcription_service.go:448`) and the badge lies 缺字幕 over a paid-for subtitle.
+
+**Given** an `untranslated` row whose recorded SRT survives on disk, **When** 生成字幕 runs again, **Then** the pipeline skips extract+ASR and runs translate-only (A+續跑, Alexyu ruling) — the resume condition is bound to the STATUS, never bare on-disk `.srt` presence; a missing file falls back to a full run.
+
+### Story 2.2b: 「未翻譯」 badge + derivation-ladder fix + honest completion message 🟡 (frontend)
+
+**Blocked-by:** 2.2a (the enum value). Soft-trails 2.2c for the ratified CTA copy.
+
+**Acceptance Criteria (2.2b):**
+
+**Given** an authoritative engine verdict (`found`+non-zh, `untranslated`, `no_text_source`, `skipped`) on a file with NO embedded tracks, **Then** the badge honours the verdict — the pre-existing ladder hole where empty-track inference (缺字幕) overrides step-1 verdicts is fixed, and `untranslated` renders 「未翻譯」 (neutral tint, generation-artifacts-only — never inferred from embedded tracks).
+
+**Given** an en-only completion (`zhSrtPath === null`), **Then** the dialog says 「已生成英文字幕；尚未翻譯」, never 「字幕已生成完成」; **and** with the translation key unconfigured the 生成字幕 helper line states the degradation up front (copy ratified by 2.2c) while the CTA stays enabled — degraded ≠ blocked.
+
+### Story 2.2c: F5 panel ASR purify + CTA degraded-state copy + j2 badge-table row 🟢 (UX design — Sally)
+
+**Parallel with 2.2a**; blocks only 2.2b's CTA task.
+
+**Acceptance Criteria (2.2c):**
+
+**Given** that the F5 panel fires on 503 `TRANSCRIPTION_DISABLED` (FFmpeg+ASR — `transcription_service.go:177`), NOT the 409 translation-key gate, **Then** `f6ZxY`'s copy is purified to ASR semantics (Story 1.7a's ratified translation-key copy targeted the wrong capability and is NOT pasted into code), FFmpeg stays framed as a deployment fact, no 「重啟」 phrasing for hot-reloading keys, and the M1.5 affordance decision (前往設定 → `/settings/keys`, now a real page) is ruled and recorded.
+
+**Given** the degraded pre-flight, **Then** F1-D-v2 gains the conditional CTA helper state + the en-only completion line (strings ratified for 2.2b), and `flow-j-specs/j2-d`'s badge table gains the 未翻譯 row. Export stages ONLY the changed PNGs.
