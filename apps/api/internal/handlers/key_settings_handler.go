@@ -67,7 +67,7 @@ type TestKeyRequest struct {
 
 // GetKeys handles GET /api/v1/settings/keys.
 // @Summary Read provider key configuration state
-// @Description Per key: whether it is configured, WHERE it resolves from (secret > env), and a masked hint for secret-sourced keys only. The value is never returned, and an env-sourced key is never masked-echoed. `writable: false` with `reason: encryption_key_missing` means VIDO_ENCRYPTION_KEY is unset, so the page must render read-only.
+// @Description Per key: whether it is configured, WHERE it resolves from (secret > env), and a masked hint for secret-sourced keys only. The value is never returned, and an env-sourced key is never masked-echoed. `writable: false` with `reason: encryption_key_missing` means ENCRYPTION_KEY is unset, so the page must render read-only.
 // @Tags settings
 // @Produce json
 // @Success 200 {object} APIResponse "keys + writable/reason"
@@ -78,7 +78,7 @@ func (h *KeySettingsHandler) GetKeys(c *gin.Context) {
 
 // SaveKeys handles PUT /api/v1/settings/keys.
 // @Summary Store or clear provider keys
-// @Description Omitted fields are untouched; an explicit empty string DELETES the stored secret and reverts resolution to the environment variable (the mistyped-key recovery path). Requires VIDO_ENCRYPTION_KEY.
+// @Description Omitted fields are untouched; an explicit empty string DELETES the stored secret and reverts resolution to the environment variable (the mistyped-key recovery path). Requires ENCRYPTION_KEY.
 // @Tags settings
 // @Accept json
 // @Produce json
@@ -116,7 +116,7 @@ func (h *KeySettingsHandler) SaveKeys(c *gin.Context) {
 			// opaquely at the storage layer.
 			ErrorResponse(c, http.StatusConflict, "AI_NOT_CONFIGURED",
 				"未設定加密金鑰，無法安全儲存 API 金鑰",
-				"請設定 VIDO_ENCRYPTION_KEY 環境變數後重啟伺服器。")
+				"請設定 ENCRYPTION_KEY 環境變數後重啟伺服器。")
 			return
 		}
 		slog.Error("Failed to save provider keys", "error", err)

@@ -354,7 +354,7 @@ _Size-split 2026-07-27 (sm create-story): 2.1 measured backend 5 / frontend 4 ta
 
 **Given** that the Claude provider is constructed **once at startup** (`main.go:531-538`) inside an `if cfg.HasClaudeKey()` guard, **When** a key changes at runtime, **Then** a fingerprint-cached `ClaudeProviderHolder` (Rule 14) rebuilds it and the dependent services are constructed **unconditionally** behind it — no restart, no nil services.
 
-**Given** the qBittorrent settings precedent, **Then** `GET/PUT/POST-test /api/v1/settings/keys` persist to the existing encrypted secrets service, never log or re-expose values (NFR-S1), and degrade honestly to read-only when `VIDO_ENCRYPTION_KEY` is absent.
+**Given** the qBittorrent settings precedent, **Then** `GET/PUT/POST-test /api/v1/settings/keys` persist to the existing encrypted secrets service, never log or re-expose values (NFR-S1), and degrade honestly to read-only when `ENCRYPTION_KEY` is absent.
 
 ### Story 2.1b: Key-configuration page + dead-end fix 🟡 (frontend)
 

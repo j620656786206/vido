@@ -178,7 +178,12 @@ func TestSaveKeys_409WhenStorageIsNotWritable(t *testing.T) {
 	body := envelopeOf(t, w)
 	assert.Equal(t, "AI_NOT_CONFIGURED", body.Error.Code, "reuse — this story adds ZERO Rule 7 codes")
 	assert.Equal(t, "未設定加密金鑰，無法安全儲存 API 金鑰", body.Error.Message)
-	assert.Contains(t, body.Error.Suggestion, "VIDO_ENCRYPTION_KEY")
+	assert.Contains(t, body.Error.Suggestion, "ENCRYPTION_KEY")
+	// The server reads ENCRYPTION_KEY (config.go:138, docker-compose.yml) — the
+	// suggestion once said VIDO_ENCRYPTION_KEY, which does not exist, so an
+	// operator following it verbatim changed nothing (the silent-no-op class
+	// this story removes). Pin the exact var name.
+	assert.NotContains(t, body.Error.Suggestion, "VIDO_ENCRYPTION_KEY")
 }
 
 func TestSaveKeys_500OnStorageFailure(t *testing.T) {

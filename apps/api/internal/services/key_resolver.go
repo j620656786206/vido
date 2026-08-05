@@ -77,7 +77,7 @@ type keyResolver struct {
 }
 
 // NewKeyResolver builds the resolver. `secretsService` may be nil (no
-// VIDO_ENCRYPTION_KEY) — the resolver then degrades to env-only rather than
+// ENCRYPTION_KEY) — the resolver then degrades to env-only rather than
 // panicking, which keeps an env-configured deployment working. logger may be nil.
 func NewKeyResolver(secretsService secrets.SecretsServiceInterface, env EnvKeys, logger *slog.Logger) KeyResolver {
 	if logger == nil {

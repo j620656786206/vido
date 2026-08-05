@@ -47,7 +47,7 @@ so that I don't need env-vars and the 「前往設定」 link actually goes some
 
 ### AC #2 — `writable: false` degrades honestly
 
-**Given** 2-1a AC #4 (`VIDO_ENCRYPTION_KEY` absent → `writable: false`, `reason: "encryption_key_missing"`), **then** the page renders **read-only**: current state still visible, inputs and 儲存 **disabled** (not hidden), with 「未設定加密金鑰，無法安全儲存 API 金鑰 —— 請設定 `VIDO_ENCRYPTION_KEY` 後重啟」.
+**Given** 2-1a AC #4 (`ENCRYPTION_KEY` absent → `writable: false`, `reason: "encryption_key_missing"`), **then** the page renders **read-only**: current state still visible, inputs and 儲存 **disabled** (not hidden), with 「未設定加密金鑰，無法安全儲存 API 金鑰 —— 請設定 `ENCRYPTION_KEY` 後重啟」.
 
 Rule 24 capability-honor, and the repo's own precedent in this very dialog family (`ManageSubtitleDialogV2`'s header comment: *"never draw a dead control as live"* — series CTA disabled with 影集字幕生成即將推出). A hidden control leaves the user hunting; a disabled one with a reason tells them what to do.
 
