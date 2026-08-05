@@ -145,3 +145,37 @@ func TestClaudeProviderHolder_IsConfiguredMirrorsResolver(t *testing.T) {
 	assert.True(t, holderWithKey(t, "sk").IsConfigured(context.Background()))
 	assert.False(t, holderWithKey(t, "").IsConfigured(context.Background()))
 }
+
+// ─── The regression the pre-ship self-review caught ────────────────────────
+
+// Removing main.go's `if cfg.HasClaudeKey()` guard (AC #2) means these services
+// now ALWAYS exist. Both of their consumers gate on `!= nil && IsConfigured()`
+// (subtitle/engine.go:191, transcription_service.go:416), and IsConfigured used
+// to be `provider != nil` — which is now always true. Without a key-aware probe
+// a keyless install would report configured, attempt AI terminology correction
+// and ASR translation, and fail with ErrAINotConfigured where it previously
+// skipped cleanly. These pin the probe.
+func TestServices_ReportUnconfiguredWhenTheHolderHasNoKey(t *testing.T) {
+	holder := holderWithKey(t, "")
+
+	assert.False(t, NewTranslationService(holder, nil).IsConfigured(),
+		"a keyless holder must not report the translation service as configured")
+	assert.False(t, NewTerminologyCorrectionService(holder).IsConfigured(),
+		"…nor the terminology service")
+}
+
+func TestServices_ReportConfiguredOnceAKeyResolves(t *testing.T) {
+	holder := holderWithKey(t, "sk-present")
+
+	assert.True(t, NewTranslationService(holder, nil).IsConfigured())
+	assert.True(t, NewTerminologyCorrectionService(holder).IsConfigured())
+}
+
+// A provider WITHOUT the probe (Gemini, or a directly-constructed Claude client)
+// must keep the old behaviour: present means configured.
+func TestServices_PlainProviderWithoutProbeStaysConfigured(t *testing.T) {
+	plain := ai.NewClaudeProvider("sk-direct")
+
+	assert.True(t, NewTranslationService(plain, nil).IsConfigured())
+	assert.True(t, NewTerminologyCorrectionService(plain).IsConfigured())
+}

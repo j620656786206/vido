@@ -98,5 +98,20 @@ func (s *TerminologyCorrectionService) Correct(ctx context.Context, subtitleCont
 
 // IsConfigured returns true if a Claude API key is available for terminology correction.
 func (s *TerminologyCorrectionService) IsConfigured() bool {
-	return s != nil && s.provider != nil
+	if s == nil || s.provider == nil {
+		return false
+	}
+	// A provider may be a LAZY holder whose key is resolved per call (sub-2-1a
+	// AC #2). Since sub-2-1a these services are constructed UNCONDITIONALLY, so
+	// "the provider object exists" no longer implies "a key is configured" —
+	// without this probe a keyless install would report configured, attempt the
+	// work, and fail with ErrAINotConfigured where it used to skip cleanly.
+	// A plain provider (Gemini, a direct Claude client) has no probe and stays
+	// configured, exactly as before.
+	if probe, ok := s.provider.(interface {
+		IsConfigured(ctx context.Context) bool
+	}); ok {
+		return probe.IsConfigured(context.Background())
+	}
+	return true
 }
