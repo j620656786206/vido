@@ -66,9 +66,12 @@ func (h *TranscriptionHandler) TranscribeMovie(c *gin.Context) {
 	// disk proceeds even when FFmpeg/ASR are gone.
 	if !h.transcriptionService.IsAvailable() &&
 		!h.transcriptionService.CanResumeTranslateOnly(c.Request.Context(), id) {
+		// sub-2-2d AC #3: the γ-ratified zh-TW envelope (this body was English —
+		// a Rule 3 gap). The restart clause is the truth: the WhisperClient is
+		// boot-built (cmd/api/main.go), so a UI-saved ASR key needs a restart.
 		ErrorResponse(c, http.StatusServiceUnavailable, "TRANSCRIPTION_DISABLED",
-			"Transcription is not available",
-			"Ensure FFmpeg is installed and OPENAI_API_KEY is configured.")
+			"語音辨識尚未設定",
+			"生成字幕需要雲端語音辨識（ASR）金鑰。請至金鑰設定（/settings/keys）儲存雲端 ASR 金鑰，並重啟伺服器。")
 		return
 	}
 

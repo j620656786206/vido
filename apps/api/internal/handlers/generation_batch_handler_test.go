@@ -98,6 +98,12 @@ func TestStartGenerationBatch_Disabled503(t *testing.T) {
 	w, resp := doGenBatchJSON(t, r, "POST", "/api/v1/subtitles/generation-batch", `{"scope":"missing"}`)
 	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
 	assert.Equal(t, "TRANSCRIPTION_DISABLED", errCode(t, resp))
+	// sub-2-2d AC #3: settings-page-first framing + restart truth (was a bare
+	// env-var instruction).
+	body := w.Body.String()
+	assert.Contains(t, body, "金鑰設定")
+	assert.Contains(t, body, "重啟伺服器")
+	assert.NotContains(t, body, "OPENAI_API_KEY", "the bare env-var instruction is superseded by the settings-page framing")
 }
 
 func TestStartGenerationBatch_BadScope400(t *testing.T) {

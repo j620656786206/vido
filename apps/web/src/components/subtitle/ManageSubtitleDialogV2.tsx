@@ -12,9 +12,14 @@
  *   as-is, 9R-18 — the old `Number(uuid)` produced NaN);
  *   series render the CTA DISABLED with 影集字幕生成即將推出 (9R-10a pending —
  *   Rule 24 capability honor: never draw a dead control as live).
- * - 503 TRANSCRIPTION_DISABLED → 字幕生成尚未設定 warning panel + 前往設定
- *   (dialog never hard-fails); 409 → attach to the running job's SSE stream;
- *   404/400/500 → fail-soft error + 重試.
+ * - 503 TRANSCRIPTION_DISABLED → 語音辨識尚未設定 warning panel + 前往設定
+ *   (γ-ratified ASR copy, sub-2-2d — the 503 gate is FFmpeg+ASR, never the
+ *   translation key; dialog never hard-fails); 409 → attach to the running
+ *   job's SSE stream; 404/400/500 → fail-soft error + 重試.
+ * - Translation key missing is a DEGRADATION, not a block (party-mode ruling
+ *   2026-08-05): the helper line states the en-only truth + 前往設定 while the
+ *   CTA stays enabled; the row lands `untranslated` and a re-run resumes
+ *   translate-only (sub-2-2a).
  * - Fetch is demoted to a dormant secondary 搜尋線上字幕（成功率低） — NO source
  *   chips, NO score-breakdown rows, NO Zimuku (9R-14 removed it).
  * - CN policy (§9b, note v16pVI): a 簡中 track on CN content shows the policy
@@ -46,6 +51,7 @@ import { transcriptionService } from '../../services/transcriptionService';
 import type { SubtitleSearchResult } from '../../services/subtitleService';
 import { useGenerationProgress } from '../../hooks/useGenerationProgress';
 import { useGlossaryTerms } from '../../hooks/useGlossary';
+import { useKeySettings } from '../../hooks/useKeySettings';
 import { useSubtitleSearch } from '../../hooks/useSubtitleSearch';
 import { GenerationProgressV2 } from './GenerationProgressV2';
 import { GlossaryPanelV2 } from './GlossaryPanelV2';
@@ -168,6 +174,15 @@ export function ManageSubtitleDialogV2({
 
   const glossary = useGlossaryTerms(mediaId, open);
   const glossaryCount = glossary.data?.length ?? 0;
+
+  // sub-2-2d AC #2 — the degraded-CTA pre-flight (β Task 4's deferral, γ's
+  // ratified copy). Open-gated so a closed dialog costs no request. The signal
+  // is GET /settings/keys' claude.configured (2-1a CR L1: never branch on an
+  // error code). Loading/error keep the DEFAULT line — fail-soft, never flash
+  // the degraded warning on an unresolved query.
+  const keySettings = useKeySettings({ enabled: open });
+  const translationDegraded =
+    keySettings.data?.keys.find((k) => k.name === 'claude')?.configured === false;
 
   // Dormant fetch section (reuses the Epic 8 hook; results WITHOUT chips/scores).
   // Named onlineSearch — `fetch` would shadow window.fetch inside this component.
@@ -365,11 +380,15 @@ export function ManageSubtitleDialogV2({
                 >
                   <Settings className="h-5 w-5 shrink-0 text-[var(--warning)]" aria-hidden="true" />
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
+                    {/* sub-2-2d AC #1 — γ's ratified ASR copy: the 503 gate is
+                        FFmpeg+ASR (transcription_service.go:177), so the panel
+                        names 語音辨識; the WhisperClient is boot-built
+                        (main.go:505) so the restart clause is the truth. */}
                     <p className="text-sm font-semibold text-[var(--text-primary)]">
-                      字幕生成尚未設定
+                      語音辨識尚未設定
                     </p>
                     <p className="text-xs text-[var(--text-secondary)]">
-                      需要 FFmpeg 與 AI API Key，設定完成後即可轉錄＋翻譯生成字幕
+                      生成字幕需要雲端語音辨識（ASR）金鑰。請至金鑰設定儲存，並重啟伺服器後再試。
                     </p>
                   </div>
                   <button
@@ -429,8 +448,31 @@ export function ManageSubtitleDialogV2({
                     )}
                     生成字幕
                   </button>
-                  <p className="text-xs text-[var(--text-muted)]">
-                    {isMovie ? '轉錄＋AI 翻譯，約需數分鐘' : '影集字幕生成即將推出'}
+                  <p data-testid="generation-helper" className="text-xs text-[var(--text-muted)]">
+                    {!isMovie ? (
+                      '影集字幕生成即將推出'
+                    ) : translationDegraded ? (
+                      /* Degraded ≠ blocked: the truth up front, the CTA stays
+                         live — an English subtitle beats no subtitle, and the
+                         row will land `untranslated` for a translate-only
+                         resume once the key exists (sub-2-2a). */
+                      <>
+                        僅能產生英文字幕——尚未設定翻譯金鑰{' '}
+                        <button
+                          type="button"
+                          onClick={() => navigate({ to: '/settings/keys' })}
+                          data-testid="helper-goto-settings"
+                          className="underline transition-colors hover:text-[var(--text-primary)]"
+                        >
+                          前往設定
+                        </button>
+                      </>
+                    ) : (
+                      /* Verb ruled 2026-08-06 (party mode): this button calls the
+                         transcribe (ASR) endpoint — 語音辨識, matching F5's
+                         vocabulary; 抽取 belongs to the D2 pipeline's screens. */
+                      '語音辨識＋AI 翻譯，約需數分鐘'
+                    )}
                   </p>
                 </section>
               )}

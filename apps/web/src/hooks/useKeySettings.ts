@@ -18,11 +18,17 @@ export const keySettingsQueryKeys = {
   list: () => [...keySettingsQueryKeys.all, 'list'] as const,
 };
 
-/** GET the current key state (source / configured / masked hint + writability). */
-export function useKeySettings() {
+/**
+ * GET the current key state (source / configured / masked hint + writability).
+ * `enabled` (default true) lets always-mounted consumers gate the fetch on
+ * actual need — e.g. ManageSubtitleDialogV2 passes its `open` flag (sub-2-2d
+ * AC #2) so a closed dialog costs no request, mirroring useGlossaryTerms.
+ */
+export function useKeySettings(options?: { enabled?: boolean }) {
   return useQuery<KeySettings, Error>({
     queryKey: keySettingsQueryKeys.list(),
     queryFn: () => keySettingsService.getKeys(),
+    enabled: options?.enabled ?? true,
     // Secrets change only when this page writes them, and the PUT response
     // seeds the cache directly — so a short poll would buy nothing.
     staleTime: 5 * 60 * 1000,

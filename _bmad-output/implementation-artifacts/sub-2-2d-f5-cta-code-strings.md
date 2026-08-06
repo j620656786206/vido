@@ -1,6 +1,6 @@
 # Story sub-2.2d: F5 code strings + degraded CTA helper + 503 zh-TW envelope
 
-Status: ready-for-dev
+Status: done
 
 **Epic:** `epic-subtitle-pipeline-m1-5` (M1.5 follow-up) · **Risk: 🟠 CROSS-STACK-SMALL (frontend 2 / backend 1 — under the >3-per-side split threshold)**
 **Source:** promotes `backlog-f5-cta-code-strings` (filed by sub-2-2c Discovery Triage, 2026-08-06) · implements γ's **ratified string table** (`sub-2-2c-f5-asr-copy-design.md` → Completion Notes — the authoritative handoff; spec PNGs export ≤400px)
@@ -70,10 +70,10 @@ so that the design and the running product say the same sentences.
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — F5 strings (AC #1):** title/body/header-comment; dialog spec drift-test updates.
-- [ ] **Task 2 — Degraded CTA helper (AC #2):** conditional helper + link via `useKeySettings`; open-gated fetch if needed; the three-state tests.
-- [ ] **Task 3 — 503 envelopes (AC #3):** both handlers' copy + handler tests.
-- [ ] **Task 4 — Gates (AC #4):** full web+api regression, lint, a11y pre-flight.
+- [x] **Task 1 — F5 strings (AC #1):** title/body/header-comment; dialog spec drift-test updates.
+- [x] **Task 2 — Degraded CTA helper (AC #2):** conditional helper + link via `useKeySettings`; open-gated fetch if needed; the three-state tests.
+- [x] **Task 3 — 503 envelopes (AC #3):** both handlers' copy + handler tests.
+- [x] **Task 4 — Gates (AC #4):** full web+api regression, lint, a11y pre-flight.
 
 ---
 
@@ -102,9 +102,65 @@ so that the design and the running product say the same sentences.
 
 ### Agent Model Used
 
+Amelia (Developer Agent) — Claude Opus 5 (1M context). Implemented 2026-08-06.
+
 ### Debug Log References
 
+- Red-green honoured: 5 FE spec failures + 2 BE handler-test failures confirmed before any implementation (the F5 drift assertions, the three helper states, the two 503 bodies).
+
 ### Completion Notes List
+
+**🔗 AC Drift: FOUND — sanctioned.** (checked: `grep -rn "字幕生成尚未設定" _bmad-output/implementation-artifacts/*.md` → ux3-subtitle-v2 / 9R-UX design docs pinned the OLD F5 copy, and the dialog spec asserted it. No `[@contract-v*]` stamp exists on any of those copy surfaces (stamp-grep empty). The change is the explicit purpose of this story, sanctioned by γ's ratified table + the two party-mode rulings — recorded as sanctioned drift, not silent.)
+
+**📎 Contract Stamps: NONE bumped; 1 reuse ack.** confirmed against [@contract-v1] sub-2-1a AC #3 (reuse — the GET `/settings/keys` shape via `useKeySettings`; originally acked by sub-2-1b, this story adds the dialog as a consumer, no bump). This story stamps nothing.
+
+**🎭 A11y Pre-Flight: PASS** (2 components/hooks checked — dialog + hook; 0 jsx-a11y warnings on touched files, 0 introduced. The helper link is a native `<button>` with visible text inside the existing `<p>`; no new modal/image/live-region surface.)
+
+**🎨 UX Verification: PASS — byte-compare against the ratified table** (per Dev Notes: no screenshots owed, the design shipped in #204/#205). All five strings byte-match: F5 title/body, degraded helper, default helper (the ruled verb), both 503 envelopes follow the ratified framing.
+
+**What shipped**
+
+- **AC #1** — F5 panel: 「語音辨識尚未設定」 + ASR body with the restart truth; header comment synced and extended with the degradation-vs-block distinction.
+- **AC #2** — degraded CTA helper: `useKeySettings({ enabled: open })` (hook gained the optional `enabled` param — backward compatible, gating test added), `claude.configured === false` ⇒ 「僅能產生英文字幕——尚未設定翻譯金鑰」 + 前往設定 (`helper-goto-settings` → `/settings/keys`), CTA stays enabled; loading/error ⇒ default line (strict `=== false` makes the no-flash fence structural); default line carries the ruled verb 「語音辨識＋AI 翻譯，約需數分鐘」; series branch untouched; completion pair untouched.
+- **AC #3** — `transcription_handler` 503 now zh-TW (was English); `generation_batch_handler` suggestion re-framed settings-page-first + restart truth + FFmpeg-as-deployment-fact (the bare env-var instruction asserted ABSENT in its test).
+- **AC #4** — +7 tests (4 helper states incl. link navigation, 1 hook gating, 2 handler-body): web **228 files / 2546 tests green** (+5 net), api 34 packages green, `lint:all` 0 errors, `format:check` green, gofmt clean, a11y PASS, no orphaned workers.
+
+### Senior Developer Review (AI) — 2026-08-06
+
+**Outcome: Approve (all findings fixed same session).** Adversarial CR: **0 High / 1 Medium / 2 Low — all fixed.** Git-vs-File-List: 0 discrepancies. Rule 7 PASS (zero new codes), Rule 20 N/A (reuse ack only), Rule 25 N/A. Global greps clean: no English 503 remnants anywhere; the batch FE dialog carries no hardcoded copy (surfaces server messages — auto-benefits).
+
+- ✅ **[M1] Open-gating untested at the dialog seam** — the spec's `useKeySettings` mock swallowed its argument, so dropping `{ enabled: open }` would stay green while every mounted-closed dialog fired a fetch. Fix: mock captures options + a two-phase test (closed ⇒ `{enabled:false}`, open ⇒ `{enabled:true}`). The first version of that test itself had a leftover-capture bug (async router render + no beforeEach reset) — fixed with per-phase reset + waitFor.
+- ✅ **[L1] `/settings/keys` path unpinned in the per-item 503 test** — the ratified framing's core; Contains added.
+- ✅ **[L2] No symmetric English-remnant guard on the per-item test** — `NotContains` for both old English strings added (mirrors the batch test's env-var absence pin).
+
+Gates re-run: web **228 files / 2547 tests green** (+1), api 34 packages green (incl. the tightened handler assertions), lint 0 errors, format green.
+
+### Discovery Triage
+
+- **Did this story discover any work outside its current scope?** `N/A — no further out-of-scope work discovered` (the verb-drift entry was filed at authoring and ruled before implementation; nothing new surfaced).
+- Reference: `project-context.md` Rule 24.
+
+### File List
+
+**Modified**
+
+- `apps/web/src/components/subtitle/ManageSubtitleDialogV2.tsx` (F5 strings + header comment + degraded/default helper)
+- `apps/web/src/components/subtitle/ManageSubtitleDialogV2.spec.tsx` (drift assertions + 4 helper tests + useKeySettings mock)
+- `apps/web/src/hooks/useKeySettings.ts` (optional `enabled`)
+- `apps/web/src/hooks/useKeySettings.spec.tsx` (gating test)
+- `apps/api/internal/handlers/transcription_handler.go` (zh-TW 503)
+- `apps/api/internal/handlers/transcription_handler_test.go` (body assertions)
+- `apps/api/internal/handlers/generation_batch_handler.go` (re-framed 503 suggestion)
+- `apps/api/internal/handlers/generation_batch_handler_test.go` (body assertions)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` (status transitions)
+- `_bmad-output/implementation-artifacts/sub-2-2d-f5-cta-code-strings.md` (this file)
+
+## Change Log
+
+| Date | Change |
+|---|---|
+| 2026-08-06 | Adversarial CR: 1M/2L, all fixed — dialog-seam open-gating test (M1, incl. fixing the test's own async-capture bug), /settings/keys path pin (L1), symmetric English-remnant guards (L2). Web 228/2547, api 34. Story → done. |
+| 2026-08-06 | Tasks 1–4, RED-first (5 FE + 2 BE failures pre-impl). F5 speaks γ's ratified ASR copy; degraded CTA helper lands (β Task 4 closed) with the ruled verb on the default line and a structural no-flash fence; both 503s carry the ratified zh-TW framing. +7 tests; web 228/2546, api 34, lint 0 errors, a11y PASS. The α/β/γ/2.2d chain is code-complete. Story → review. |
 
 ### Discovery Triage
 
