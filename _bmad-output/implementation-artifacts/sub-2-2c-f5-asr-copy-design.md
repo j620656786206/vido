@@ -1,6 +1,6 @@
 # Story sub-2.2c: F5 panel purified to ASR semantics + CTA degraded-state copy + j2 badge-table 10th row (design)
 
-Status: ready-for-dev
+Status: done
 
 **Epic:** `epic-subtitle-pipeline-m1-5` (M1.5 follow-up) · **Risk: 🟢 UX/DESIGN-ONLY (Sally ux-designer, NOT dev)** · zero code
 **Source:** party-mode ruling 2026-08-05 (Sally 主裁) · promotes `backlog-f5-asr-panel-copy-design` · the 1-7a model: design story first, implementation trails
@@ -68,10 +68,10 @@ so that an FFmpeg/ASR gap, a translation-key gap, and a finished-but-untranslate
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — F5 purify (AC #1):** author strings, decide affordance, edit `f6ZxY`, record ratified table + rationale in Completion Notes.
-- [ ] **Task 2 — F1 CTA state (AC #2):** degraded helper + completion line, edit `r1EY9` (+ mobile if applicable), ratify strings.
-- [ ] **Task 3 — j2 10th row (AC #3):** extend the badge table.
-- [ ] **Task 4 — Export + commit (AC #4):** save-check, export, stage exactly the changed PNGs, commit.
+- [x] **Task 1 — F5 purify (AC #1):** author strings, decide affordance, edit `f6ZxY`, record ratified table + rationale in Completion Notes.
+- [x] **Task 2 — F1 CTA state (AC #2):** degraded helper + completion line, edit `r1EY9` (+ mobile if applicable), ratify strings.
+- [x] **Task 3 — j2 10th row (AC #3):** extend the badge table.
+- [x] **Task 4 — Export + commit (AC #4):** save-check, export, stage exactly the changed PNGs, commit.
 
 ---
 
@@ -104,9 +104,58 @@ so that an FFmpeg/ASR gap, a translation-key gap, and a finished-but-untranslate
 
 ### Agent Model Used
 
+Sally (UX Designer) — Claude Opus 5 (1M context). Executed 2026-08-06 via the **inline-agent collaboration model** (Alexyu ruling this session): Sally authored the ratified strings + three node-anchored prompts → Alexyu ran them through Pencil's Inline AI Agent → Sally reviewed via Pencil MCP (structure + verbatim copy + bounds), Alexyu handled save-verify (AppleScript ⌘S after catching the disk file stale at 8/4 — the `feedback_verify_pen_saved_before_commit` trap), export (147/147), exact-PNG staging (3 only, noise reverted), and the signed commit `8207310`.
+
 ### Debug Log References
 
+- Copy premise verified in code BEFORE authoring: `TranscribeMovie` gates on 503 `TRANSCRIPTION_DISABLED` = `IsAvailable()` = FFmpeg + ASR key (`transcription_service.go:177`) — NOT the translation-key 409. AND the **WhisperClient is boot-built** (`main.go:505` `if cfg.HasOpenAIKey()`), so a UI-saved ASR key needs a RESTART — the F5 body says so; 「立即生效」 would have been a lie (→ Discovery Triage #2).
+- MCP review evidence: F5 panel text verbatim + `btn-goto-settings` present + design-notes order M1.5→FFmpeg→查看部署說明 + zero `ctx.problems`; F1 `design-notes-conditional` block sits between `sec-generate` and `row-glossary` with all 6 lines verbatim; J2 `row-untranslated` five columns x/w EXACTLY match `row-skipped` (0/200/410/660/850), pill 未翻譯, `circle-dashed` icon, constraint-box +2 lines verbatim.
+
 ### Completion Notes List
+
+**🎨 THE RATIFIED STRING TABLE (the dev handoff — spec PNGs export ≤400px, this table is authoritative):**
+
+| Surface | Ratified |
+|---|---|
+| F5 title | 「語音辨識尚未設定」 |
+| F5 body | 「生成字幕需要雲端語音辨識（ASR）金鑰。請至金鑰設定儲存，並重啟伺服器後再試。」 |
+| F5 primary | 前往設定 button → `/settings/keys` (RESTORED — 2-1b shipped the page incl. the 雲端 ASR row; 1-7a's deletion rationale is void) |
+| F5 secondary | 查看部署說明 → moved beside the FFmpeg deployment-fact line |
+| F1 helper (default) | 「抽取內嵌字幕＋AI 翻譯，約需數分鐘」 (unchanged) |
+| F1 helper (degraded) | 「僅能產生英文字幕——尚未設定翻譯金鑰」 + 前往設定 text link → `/settings/keys`; **CTA stays enabled** (degraded ≠ blocked); signal = GET `/settings/keys` `claude.configured` |
+| Completion ×2 | 「字幕已生成完成」 / 「已生成英文字幕；尚未翻譯」 (β's shipped copy ratified as-is) |
+| j2-d 10th row | 未翻譯 · 底 `#2e3b56`/字 `#a0aabe` · EpisodeList **CircleDashed** `--text-muted` |
+
+**Rulings on the three dev-flagged inputs (all closed):**
+
+1. **CircleDashed glyph: RATIFIED.** Fits the J2-2 icon grammar exactly — circled = settled, dashed = incomplete (英文字幕已生成、翻譯未執行). β's provisional pick stands; the KGtqa grammar line now names it.
+2. **untranslated + embedded-繁中 semantics: consistency stands.** Verdict-outranks-tracks is the family rule; the rare case is ACKNOWLEDGED in the constraint box as a deliberate tradeoff, not a defect.
+3. **F5 trigger purity: the panel now names ASR**, never the translation key — the 1-7a copy (wrong capability, wrong endpoint) is fully superseded.
+
+**Inline-agent deviation, reviewed and APPROVED:** the KGtqa addendum was inserted mid-sentence (after CircleSlash, before the closing 「—— 管線對這個檔案已經有答案。」) rather than literally at the end — Alexyu's grammar call, and better than my instruction: the closing clause now covers all four circled glyphs.
+
+**AC #4 export discipline (executed by Alexyu):** disk-stale trap caught (⌘S via AppleScript, verified `M ux-design.pen` + grep before export); 147/147 export; EXACTLY three PNGs staged (`f5-d-v2.png`, `f1-d-v2.png`, `j2-d.png` — F1-M carries no helper-line annotation, desktop annotation notes mobile parity), re-render noise reverted; `SCREENS` dict untouched.
+
+### Discovery Triage
+
+- **Did this story discover any work outside its current scope?** Two lane-③ items, both filed at discovery time (bidirectional):
+  - **③ `backlog-f5-cta-code-strings`** — the CODE half this design story deliberately does not ship: F5 panel strings in `ManageSubtitleDialogV2.tsx` still carry the pre-γ copy; the AC #2 degraded CTA helper (β Task 4's explicit deferral) and the F5 前往設定-button copy alignment now have ratified strings and nothing tracking implementation. One small frontend story/entry.
+  - **③ `backlog-asr-runtime-key-resolution`** — WhisperClient is boot-built from env (`main.go:505`), the exact class 2-1a fixed for Claude and `backlog-tmdb-runtime-key-resolution` tracks for TMDb; OpenAI/ASR had NO tracking entry. A UI-saved ASR key silently does nothing until restart (F5/keys-page copy now says so honestly, but the fix-when-picked-up is a holder or resolver re-point).
+  - Pre-flagged candidate CONFIRMED still open: backend 503 message is English (Rule 3 gap) — folded into `backlog-f5-cta-code-strings` (same handler surface).
+- Reference: `project-context.md` Rule 24.
+
+### File List
+
+- `ux-design.pen` (F5-D-v2 `f6ZxY` · F1-D-v2 `r1EY9` design-notes block · J2-D `FdlJ2` row + grammar + constraints)
+- `_bmad-output/screenshots/flow-f-subtitle-v2/f5-d-v2.png` · `f1-d-v2.png` · `flow-j-specs/j2-d.png`
+- `_bmad-output/implementation-artifacts/sub-2-2c-f5-asr-copy-design.md` (this file)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+
+## Change Log
+
+| Date | Change |
+|---|---|
+| 2026-08-06 | Tasks 1–4 via the inline-agent model (Sally prompts → Alexyu executes → Sally MCP-reviews). F5 purified to ASR semantics with the verified restart truth + 前往設定 restored; F1 conditional-copy spec block (helper ×2, completion ×2, mobile parity note); J2-D 10th row + CircleDashed ratified + 2 constraint notes. KGtqa mid-sentence placement deviation approved. 3 PNGs staged exactly; commit `8207310`. Two lane-③ discoveries filed: `backlog-f5-cta-code-strings`, `backlog-asr-runtime-key-resolution`. Story → done. |
 
 ### Discovery Triage
 
