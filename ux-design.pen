@@ -127837,7 +127837,7 @@
                       "id": "X7exGq",
                       "name": "gen-sub",
                       "fill": "$text-muted",
-                      "content": "抽取內嵌字幕＋AI 翻譯，約需數分鐘",
+                      "content": "語音辨識＋AI 翻譯，約需數分鐘",
                       "fontFamily": "Noto Sans TC",
                       "fontSize": 12,
                       "fontWeight": "normal"
@@ -127874,7 +127874,7 @@
                       "fill": "#cdd5e4",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "助語・預設：抽取內嵌字幕＋AI 翻譯，約需數分鐘",
+                      "content": "助語・預設：語音辨識＋AI 翻譯，約需數分鐘",
                       "fontFamily": "Noto Sans TC",
                       "fontSize": 12,
                       "fontWeight": "normal"
