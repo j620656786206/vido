@@ -25,6 +25,15 @@ const h = vi.hoisted(() => ({
   reset: vi.fn(),
   genOptions: undefined as { onComplete?: (p: unknown) => void } | undefined,
   glossaryTerms: [{ id: 't1' }, { id: 't2' }, { id: 't3' }] as unknown[],
+  keySettings: {
+    data: undefined as
+      | { keys: { name: string; configured: boolean }[]; writable: boolean }
+      | undefined,
+    isLoading: false,
+    isError: false,
+    error: null as Error | null,
+  },
+  keySettingsLastOptions: undefined as { enabled?: boolean } | undefined,
   fetchHook: {
     search: vi.fn(),
     isSearching: false,
@@ -63,6 +72,15 @@ vi.mock('../../hooks/useSubtitleSearch', () => ({
 
 vi.mock('../../services/transcriptionService', () => ({
   transcriptionService: { startTranscription: vi.fn() },
+}));
+
+vi.mock('../../hooks/useKeySettings', () => ({
+  // CR sub-2-2d M1: capture the options so the open-gating contract
+  // ({ enabled: open }) is assertable at the DIALOG seam, not just hook-level.
+  useKeySettings: (options?: { enabled?: boolean }) => {
+    h.keySettingsLastOptions = options;
+    return h.keySettings;
+  },
 }));
 
 vi.mock('./GlossaryPanelV2', () => ({
@@ -137,6 +155,17 @@ beforeEach(() => {
   h.fetchHook.results = [];
   h.fetchHook.searchError = null;
   h.fetchHook.isSearching = false;
+  h.keySettingsLastOptions = undefined;
+  // Default: translation key configured → the normal helper line.
+  h.keySettings = {
+    data: {
+      writable: true,
+      keys: [{ name: 'claude', configured: true }],
+    },
+    isLoading: false,
+    isError: false,
+    error: null,
+  };
 });
 
 describe('ManageSubtitleDialogV2 (F1 管理字幕)', () => {
@@ -180,6 +209,56 @@ describe('ManageSubtitleDialogV2 (F1 管理字幕)', () => {
     expect(screen.queryByTestId('generation-trigger-error')).not.toBeInTheDocument();
   });
 
+  // sub-2-2d AC #2 — the degraded CTA helper (β Task 4's deferred implementation).
+  it('helper・default (key configured): 語音辨識＋AI 翻譯，約需數分鐘 — the ruled verb', async () => {
+    renderDialog();
+    const helper = await screen.findByTestId('generation-helper');
+    expect(helper).toHaveTextContent('語音辨識＋AI 翻譯，約需數分鐘');
+    expect(screen.queryByTestId('helper-goto-settings')).toBeNull();
+  });
+
+  it('helper・degraded (key unconfigured): states the en-only truth + 前往設定, CTA stays ENABLED', async () => {
+    h.keySettings.data = { writable: true, keys: [{ name: 'claude', configured: false }] };
+    renderDialog();
+
+    const helper = await screen.findByTestId('generation-helper');
+    expect(helper).toHaveTextContent('僅能產生英文字幕——尚未設定翻譯金鑰');
+    expect(screen.getByTestId('helper-goto-settings')).toBeInTheDocument();
+    // Degraded ≠ blocked (the party-mode asymmetry): the CTA must stay live.
+    expect(screen.getByTestId('action-generate-subtitle')).toBeEnabled();
+  });
+
+  it('helper・loading/error: the default line — never flash the degraded warning on an unresolved query', async () => {
+    h.keySettings = { data: undefined, isLoading: true, isError: false, error: null };
+    renderDialog();
+
+    const helper = await screen.findByTestId('generation-helper');
+    expect(helper).toHaveTextContent('語音辨識＋AI 翻譯，約需數分鐘');
+    expect(screen.queryByTestId('helper-goto-settings')).toBeNull();
+  });
+
+  // CR sub-2-2d M1: the open-gating contract at the dialog seam — a closed
+  // dialog must not fetch the key state. (RouterProvider renders async, so
+  // each phase waits for the captured options rather than asserting sync.)
+  it('passes { enabled: open } to useKeySettings — closed dialog costs no request', async () => {
+    h.keySettingsLastOptions = undefined;
+    const first = renderDialog({ open: false });
+    await waitFor(() => expect(h.keySettingsLastOptions).toEqual({ enabled: false }));
+    first.unmount();
+
+    h.keySettingsLastOptions = undefined;
+    renderDialog({ open: true });
+    await waitFor(() => expect(h.keySettingsLastOptions).toEqual({ enabled: true }));
+  });
+
+  it('helper link navigates to /settings/keys', async () => {
+    h.keySettings.data = { writable: true, keys: [{ name: 'claude', configured: false }] };
+    const { router } = renderDialog();
+
+    fireEvent.click(await screen.findByTestId('helper-goto-settings'));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/settings/keys'));
+  });
+
   it('series: 生成字幕 renders DISABLED with hint 影集字幕生成即將推出 (capability honor)', async () => {
     renderDialog({ mediaType: 'series' });
 
@@ -214,7 +293,14 @@ describe('ManageSubtitleDialogV2 (F1 管理字幕)', () => {
     fireEvent.click(await screen.findByTestId('action-generate-subtitle'));
 
     expect(await screen.findByTestId('generation-not-configured')).toBeInTheDocument();
-    expect(screen.getByText('字幕生成尚未設定')).toBeInTheDocument();
+    // sub-2-2d AC #1 — γ's ratified copy: the panel names ASR, not a vague
+    // "generation" and never the translation key (the 503's real trigger).
+    expect(screen.getByText('語音辨識尚未設定')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        '生成字幕需要雲端語音辨識（ASR）金鑰。請至金鑰設定儲存，並重啟伺服器後再試。'
+      )
+    ).toBeInTheDocument();
     expect(screen.getByTestId('go-to-settings')).toHaveTextContent('前往設定');
     // The rest of the dialog survives (fail-soft): tracks + glossary still visible.
     expect(screen.getByTestId('subtitle-tracks-section')).toBeInTheDocument();

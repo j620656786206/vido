@@ -68,9 +68,13 @@ type GenerationBatchStartRequest struct {
 // @Router /api/v1/subtitles/generation-batch [post]
 func (h *GenerationBatchHandler) StartGenerationBatch(c *gin.Context) {
 	if !h.processor.IsAvailable() {
+		// sub-2-2d AC #3: settings-page-first framing + the restart truth,
+		// aligned with the γ-ratified per-item 503 (the bare env-var
+		// instruction is superseded — FFmpeg is a deployment fact, bundled
+		// in the image).
 		ErrorResponse(c, http.StatusServiceUnavailable, "TRANSCRIPTION_DISABLED",
 			"字幕生成功能未啟用",
-			"請確認伺服器已安裝 FFmpeg 並設定 OPENAI_API_KEY。")
+			"請至金鑰設定（/settings/keys）儲存雲端 ASR 金鑰，並重啟伺服器；FFmpeg 已內建於 Docker 映像檔。")
 		return
 	}
 

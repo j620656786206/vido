@@ -172,6 +172,18 @@ func TestTranscribeMovie_ServiceUnavailable(t *testing.T) {
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
+	// sub-2-2d AC #3: the 503 envelope speaks the γ-ratified zh-TW copy (this
+	// body was English — a Rule 3 gap).
+	body := w.Body.String()
+	assert.Contains(t, body, "語音辨識尚未設定")
+	assert.Contains(t, body, "生成字幕需要雲端語音辨識（ASR）金鑰")
+	// CR L1: the settings-page path is the ratified framing's core — pin it.
+	assert.Contains(t, body, "/settings/keys")
+	assert.Contains(t, body, "重啟伺服器")
+	// CR L2: symmetric English-remnant guard (the batch test pins the env-var
+	// absence; this pins the old English suggestion's absence).
+	assert.NotContains(t, body, "FFmpeg is installed")
+	assert.NotContains(t, body, "Transcription is not available")
 }
 
 // 9R-18 AC 1: `:id` is an opaque STRING — the only 400-able format problem is

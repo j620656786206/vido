@@ -53,6 +53,24 @@ describe('useKeySettings', () => {
     await waitFor(() => expect(result.current.data).toEqual(INITIAL));
     expect(mockedGet).toHaveBeenCalledTimes(1);
   });
+
+  // sub-2-2d AC #2: always-mounted consumers gate the fetch on actual need —
+  // a closed dialog must cost no request.
+  it('enabled:false suppresses the fetch until the consumer opens', async () => {
+    const { wrapper } = createHarness();
+    const { result, rerender } = renderHook(({ enabled }) => useKeySettings({ enabled }), {
+      wrapper,
+      initialProps: { enabled: false },
+    });
+
+    await act(() => Promise.resolve());
+    expect(mockedGet).not.toHaveBeenCalled();
+    expect(result.current.data).toBeUndefined();
+
+    rerender({ enabled: true });
+    await waitFor(() => expect(result.current.data).toEqual(INITIAL));
+    expect(mockedGet).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('useSaveKeys', () => {
