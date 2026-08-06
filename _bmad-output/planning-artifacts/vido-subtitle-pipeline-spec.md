@@ -157,6 +157,7 @@
 **M2 — ASR fallback + Provider 完備 + 重排優先序**
 - [ ] OpenAI 相容 ASR client(雲端 OpenAI/Groq + 外部 worker via Tailscale)
 - [ ] 把管線串成 **抽 > ASR > 搜尋**(既有 search 引擎重排到最後)
+- [ ] `ManageSubtitleDialogV2` 生成字幕 按鈕 rewire 到統一管線入口(2026-08-06 party-mode 裁定:M2 前按鈕維持 Route C ASR——管線真正入口是掃描後自動 enqueue,FR12 零 FE 消費者;rewire 後助語不再指名機制)
 - [ ] 算力偵測與自動預設;翻譯模型階梯 + 成本估算顯示
 
 **M3 — 產品化 + Tier-2 本地**

@@ -399,3 +399,13 @@ _Size-split 2026-07-27 (sm create-story): 2.1 measured backend 5 / frontend 4 ta
 **Given** that the F5 panel fires on 503 `TRANSCRIPTION_DISABLED` (FFmpeg+ASR — `transcription_service.go:177`), NOT the 409 translation-key gate, **Then** `f6ZxY`'s copy is purified to ASR semantics (Story 1.7a's ratified translation-key copy targeted the wrong capability and is NOT pasted into code), FFmpeg stays framed as a deployment fact, no 「重啟」 phrasing for hot-reloading keys, and the M1.5 affordance decision (前往設定 → `/settings/keys`, now a real page) is ruled and recorded.
 
 **Given** the degraded pre-flight, **Then** F1-D-v2 gains the conditional CTA helper state + the en-only completion line (strings ratified for 2.2b), and `flow-j-specs/j2-d`'s badge table gains the 未翻譯 row. Export stages ONLY the changed PNGs.
+
+### Story 2.2d: F5 code strings + degraded CTA helper + 503 zh-TW envelope 🟠 (cross-stack small)
+
+**Blocked-by:** 2.2c (the ratified string table — merged #204).
+
+**Acceptance Criteria (2.2d):**
+
+**Given** γ's ratified table, **Then** the LIVE F5 panel speaks it (「語音辨識尚未設定」 + ASR body with the restart truth — the code was two revisions behind), the degraded CTA helper lands (β Task 4's explicit deferral: 「僅能產生英文字幕——尚未設定翻譯金鑰」 + settings link, CTA stays enabled, signal = `claude.configured`, loading never flashes the warning), and both `TRANSCRIPTION_DISABLED` 503s carry the ratified zh-TW framing (the transcription handler's was English — a Rule 3 gap; the batch handler's was env-framed).
+
+**Given** the default-helper verb collision (code 轉錄 = transcribe-endpoint-accurate vs F1 design 抽取 = pipeline framing), **Then** it is explicitly OUT of scope — `backlog-dialog-helper-verb-drift` tracks the product ruling it needs.

@@ -121,7 +121,7 @@ Sally (UX Designer) — Claude Opus 5 (1M context). Executed 2026-08-06 via the 
 | F5 body | 「生成字幕需要雲端語音辨識（ASR）金鑰。請至金鑰設定儲存，並重啟伺服器後再試。」 |
 | F5 primary | 前往設定 button → `/settings/keys` (RESTORED — 2-1b shipped the page incl. the 雲端 ASR row; 1-7a's deletion rationale is void) |
 | F5 secondary | 查看部署說明 → moved beside the FFmpeg deployment-fact line |
-| F1 helper (default) | 「抽取內嵌字幕＋AI 翻譯，約需數分鐘」 (unchanged) |
+| F1 helper (default) | ~~「抽取內嵌字幕＋AI 翻譯，約需數分鐘」~~ **AMENDED 2026-08-06 (party-mode ruling, Alexyu approved): 「語音辨識＋AI 翻譯，約需數分鐘」** — the 1-7a AC #10 抽取 framing was Sally's over-extension of F2's correct fix; the button calls the transcribe (ASR) endpoint, and 語音辨識 matches F5's ratified vocabulary. Implemented by sub-2-2d AC #2; design reverted via inline-agent. |
 | F1 helper (degraded) | 「僅能產生英文字幕——尚未設定翻譯金鑰」 + 前往設定 text link → `/settings/keys`; **CTA stays enabled** (degraded ≠ blocked); signal = GET `/settings/keys` `claude.configured` |
 | Completion ×2 | 「字幕已生成完成」 / 「已生成英文字幕；尚未翻譯」 (β's shipped copy ratified as-is) |
 | j2-d 10th row | 未翻譯 · 底 `#2e3b56`/字 `#a0aabe` · EpisodeList **CircleDashed** `--text-muted` |
