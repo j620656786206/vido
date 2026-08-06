@@ -127846,6 +127846,91 @@
                 },
                 {
                   "type": "frame",
+                  "id": "x1OAW",
+                  "name": "design-notes-conditional",
+                  "width": "fill_container",
+                  "fill": "#24304a55",
+                  "cornerRadius": 8,
+                  "layout": "vertical",
+                  "gap": 6,
+                  "padding": 12,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "lLRJV",
+                      "name": "dn-head",
+                      "fill": "#a0aabe",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "⚙ 條件文案規格（sub-2-2c 定稿）——助語與完成句依狀態切換，CTA 永遠可按",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 12,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "text",
+                      "id": "q8kia8",
+                      "name": "dn-line-1",
+                      "fill": "#cdd5e4",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "助語・預設：抽取內嵌字幕＋AI 翻譯，約需數分鐘",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "k4bp6",
+                      "name": "dn-line-2",
+                      "fill": "#cdd5e4",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "助語・翻譯金鑰未設定：僅能產生英文字幕——尚未設定翻譯金鑰　＋〔前往設定〕文字連結 → /settings/keys（訊號＝GET /settings/keys 的 claude.configured）",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "DsXjR",
+                      "name": "dn-line-3",
+                      "fill": "#cdd5e4",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "完成句・有 zh 路徑：字幕已生成完成",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "bMf5K",
+                      "name": "dn-line-4",
+                      "fill": "#cdd5e4",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "完成句・僅英文（zhSrtPath 為空）：已生成英文字幕；尚未翻譯",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "W3o1f9",
+                      "name": "dn-line-5",
+                      "fill": "#cdd5e4",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "手機版（F1-M-v2）行為相同，不另出圖",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
                   "id": "a9cR2",
                   "name": "row-glossary",
                   "width": "fill_container",
@@ -134462,7 +134547,7 @@
                           "id": "r9CdQk",
                           "name": "wp-title",
                           "fill": "$text-primary",
-                          "content": "尚未設定翻譯服務金鑰",
+                          "content": "語音辨識尚未設定",
                           "fontFamily": "Noto Sans TC",
                           "fontSize": 14,
                           "fontWeight": "600"
@@ -134472,7 +134557,7 @@
                           "id": "dDOH6",
                           "name": "wp-sub",
                           "fill": "$text-secondary",
-                          "content": "請設定 CLAUDE_API_KEY 環境變數後重啟伺服器。設定頁面將於 M1.5 提供。",
+                          "content": "生成字幕需要雲端語音辨識（ASR）金鑰。請至金鑰設定儲存，並重啟伺服器後再試。",
                           "fontFamily": "Noto Sans TC",
                           "fontSize": 12,
                           "fontWeight": "normal"
@@ -134480,14 +134565,29 @@
                       ]
                     },
                     {
-                      "type": "text",
-                      "id": "iQb2i",
-                      "name": "link-deploy-docs",
-                      "fill": "$accent-text",
-                      "content": "查看部署說明",
-                      "fontFamily": "Noto Sans TC",
-                      "fontSize": 13,
-                      "fontWeight": "500"
+                      "type": "frame",
+                      "id": "eWDCJ",
+                      "name": "btn-goto-settings",
+                      "fill": "#2e3b56",
+                      "cornerRadius": 8,
+                      "padding": [
+                        10,
+                        16
+                      ],
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "N0rPIC",
+                          "name": "btn-label",
+                          "fill": "#e8ecf4",
+                          "content": "前往設定",
+                          "fontFamily": "Noto Sans TC",
+                          "fontSize": 14,
+                          "fontWeight": "500"
+                        }
+                      ]
                     }
                   ]
                 },
@@ -134508,7 +134608,7 @@
                       "id": "LMH8J",
                       "name": "note-m1-env",
                       "fill": "$text-muted",
-                      "content": "M1：金鑰為環境變數，無設定頁（FR25 屬 Epic 2）",
+                      "content": "M1.5：ASR 金鑰可於 /settings/keys 儲存（雲端 ASR 列）；WhisperClient 於開機建構，儲存後需重啟（main.go:505）——與 Claude 金鑰的熱重載不同",
                       "fontFamily": "Noto Sans TC",
                       "fontSize": 12,
                       "fontWeight": "normal"
@@ -134522,6 +134622,16 @@
                       "fontFamily": "Noto Sans TC",
                       "fontSize": 12,
                       "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "iQb2i",
+                      "name": "link-deploy-docs",
+                      "fill": "$accent-text",
+                      "content": "查看部署說明",
+                      "fontFamily": "Noto Sans TC",
+                      "fontSize": 13,
+                      "fontWeight": "500"
                     }
                   ]
                 },
@@ -151003,7 +151113,7 @@
                   "fill": "$text-secondary",
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
-                  "content": "• 有圓框：CheckCircle2（found）、XCircle（not_found／no_text_source）、CircleSlash（skipped）—— 管線對這個檔案已經有答案。",
+                  "content": "• 有圓框：CheckCircle2（found）、XCircle（not_found／no_text_source）、CircleSlash（skipped）、CircleDashed（untranslated —— 定局但不完整：英文字幕已生成、翻譯未執行）—— 管線對這個檔案已經有答案。",
                   "fontFamily": "DM Sans",
                   "fontSize": 13,
                   "fontWeight": "normal"
@@ -152425,6 +152535,183 @@
                       ]
                     }
                   ]
+                },
+                {
+                  "type": "rectangle",
+                  "id": "B2jrdm",
+                  "name": "rdiv5",
+                  "fill": "$border-subtle",
+                  "width": "fill_container",
+                  "height": 1
+                },
+                {
+                  "type": "frame",
+                  "id": "CmhfV",
+                  "name": "row-untranslated",
+                  "width": "fill_container",
+                  "height": 48,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "rDX24",
+                      "name": "c0",
+                      "width": 200,
+                      "height": "fill_container",
+                      "gap": 8,
+                      "padding": [
+                        12,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "bIR7p",
+                          "name": "st",
+                          "fill": "$text-primary",
+                          "content": "untranslated",
+                          "fontFamily": "DM Sans",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "bGuv2",
+                      "name": "c1",
+                      "width": 210,
+                      "height": "fill_container",
+                      "gap": 8,
+                      "padding": [
+                        12,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "iQHnF",
+                          "name": "pill",
+                          "fill": "#2E3B56",
+                          "cornerRadius": 100,
+                          "padding": [
+                            3,
+                            10
+                          ],
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "j83aC",
+                              "name": "x",
+                              "fill": "#A0AABE",
+                              "content": "未翻譯",
+                              "fontFamily": "Noto Sans TC",
+                              "fontSize": 12,
+                              "fontWeight": "600"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "riH0z",
+                      "name": "c2",
+                      "width": 250,
+                      "height": "fill_container",
+                      "gap": 8,
+                      "padding": [
+                        12,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "ImLN7",
+                          "name": "bc",
+                          "fill": "$text-secondary",
+                          "content": "底 #2e3b56 ／ 字 #a0aabe",
+                          "fontFamily": "DM Sans",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "jkqGD",
+                      "name": "c3",
+                      "width": 190,
+                      "height": "fill_container",
+                      "gap": 8,
+                      "padding": [
+                        12,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "fdDXh",
+                          "name": "ic",
+                          "width": 18,
+                          "height": 18,
+                          "icon": "circle-dashed",
+                          "library": "lucide",
+                          "fill": "$text-muted"
+                        },
+                        {
+                          "type": "text",
+                          "id": "kZ4RQ",
+                          "name": "icn",
+                          "fill": "$text-secondary",
+                          "content": "CircleDashed",
+                          "fontFamily": "DM Sans",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "WeQ15",
+                      "name": "c4",
+                      "width": 294,
+                      "height": "fill_container",
+                      "gap": 8,
+                      "padding": [
+                        12,
+                        14
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "gETBw",
+                          "name": "sw",
+                          "width": 10,
+                          "height": 10,
+                          "icon": "circle",
+                          "library": "lucide",
+                          "fill": "$text-muted"
+                        },
+                        {
+                          "type": "text",
+                          "id": "x2XOq",
+                          "name": "cl",
+                          "fill": "$text-secondary",
+                          "content": "--text-muted  #a0aabe",
+                          "fontFamily": "DM Sans",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
                 }
               ]
             },
@@ -152489,6 +152776,30 @@
                   "textGrowth": "fixed-width",
                   "width": "fill_container",
                   "content": "no_text_source 與 skipped 的家族相似是刻意的：兩者都代表「這個檔案不會自動有字幕了」，使用者的下一步相同。必須一眼分開的是「定局 vs 還沒輪到」，理由細節由 tooltip 承擔 —— 不要把它們改成差異更大的字形。",
+                  "fontFamily": "DM Sans",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "l0qvbf",
+                  "name": "s2k5",
+                  "fill": "$text-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "untranslated 僅由生成管線寫入——內嵌英文軌單獨存在永不推導出它（外語片不欠翻譯）。復原＝設定翻譯金鑰後重跑：sub-2-2a 的續跑只執行翻譯段，不重付 ASR。",
+                  "fontFamily": "DM Sans",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "M2q4vj",
+                  "name": "s2k6",
+                  "fill": "$text-muted",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "罕見情境：檔案已有繁中內嵌軌時仍顯示未翻譯（判定優先於軌道推導）——與 no_text_source／skipped 的一致性取捨，不視為缺陷。",
                   "fontFamily": "DM Sans",
                   "fontSize": 12,
                   "fontWeight": "normal"
