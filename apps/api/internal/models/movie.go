@@ -50,13 +50,16 @@ func ShouldOverwrite(current, incoming MetadataSource) bool {
 
 // SubtitleStatus represents the subtitle lifecycle state of a media file.
 //
-// [@contract-v2] (story sub-1-2 AC #2; bumped v1→v2 by sub-2-2a: 9→10 values,
-// +untranslated) — frontend-consumed wire contract: serialized as
+// [@contract-v3] (story sub-1-2 AC #2; bumped v1→v2 by sub-2-2a: 9→10 values,
+// +untranslated; bumped v2→v3 by sub-3-1: the VALUE SET is UNCHANGED at 10 —
+// only `no_text_source`'s TERMINALITY changes, from a permanent verdict to an
+// INTERMEDIATE one the ASR fallback leg can recover; `skipped` remains
+// terminal) — frontend-consumed wire contract: serialized as
 // json:"subtitle_status" on Movie/Series/Episode and used as a URL search
 // param on /library. Consumers: sub-1-4 (routing verdicts), sub-1-5 (pipeline
 // writes), sub-1-6 (enumeration), sub-1-7b (badge rendering), sub-2-2b
-// (untranslated badge). Adding or renaming a value is a Rule 20 bump plus a
-// downstream stale-mark.
+// (untranslated badge), sub-3-1 (ASR leg + sweep terminality). Adding or
+// renaming a value is a Rule 20 bump plus a downstream stale-mark.
 //
 // The four search-flavoured values predate the pipeline (migrations 018/025);
 // the five pipeline-flavoured values were added by sub-1-2 because FR5 ("mark
@@ -80,14 +83,18 @@ const (
 	SubtitleStatusExtracting SubtitleStatus = "extracting"
 	// SubtitleStatusTranslating — LLM translation is in flight (FR10).
 	SubtitleStatusTranslating SubtitleStatus = "translating"
-	// SubtitleStatusNoTextSource — TERMINAL. The file has no usable text
-	// subtitle track at all (image-only tracks, or none) — FR5. Recoverable by
-	// P2 ASR (FR29), unlike SubtitleStatusSkipped.
+	// SubtitleStatusNoTextSource — INTERMEDIATE since sub-3-1 ([@contract-v2→v3];
+	// TERMINAL through v2). The file has no usable text subtitle track at all
+	// (image-only tracks, or none) — FR5. The ASR fallback leg recovers it
+	// when the transcription service is available; on an ASR-less deployment
+	// the sweep-side availability gate keeps it out of re-enumeration, so the
+	// pre-M2 once-only behavior is preserved.
 	SubtitleStatusNoTextSource SubtitleStatus = "no_text_source"
 	// SubtitleStatusSkipped — TERMINAL. A text track exists but the pipeline
 	// deliberately declined it: an `und` or non-English tag (FR9 + P0, where
-	// `und` is NEVER treated as English). Recoverable by a corrected track tag
-	// or the manual flow, unlike SubtitleStatusNoTextSource.
+	// `und` is NEVER treated as English). A deliberate routing decision, not a
+	// recoverable gap — ASR must not second-guess it (sub-3-1 AC #1).
+	// Recoverable by a corrected track tag or the manual flow.
 	SubtitleStatusSkipped SubtitleStatus = "skipped"
 
 	// --- added by story sub-2-2a ([@contract-v1→v2]). ---
@@ -104,7 +111,8 @@ const (
 )
 
 // AllSubtitleStatuses is the authoritative ordered value set behind the
-// [@contract-v1] stamp. Extend it here and nowhere else — every consumer that
+// contract stamp above (version-neutral on purpose — the stamp bumps, this
+// sentence should not re-stale). Extend it here and nowhere else — every consumer that
 // needs to enumerate statuses reads this, so a constant added without a matching
 // entry here is a contract bug (guarded by a test).
 func AllSubtitleStatuses() []SubtitleStatus {
@@ -141,9 +149,11 @@ func (s SubtitleStatus) IsValid() bool {
 // will advance.
 func (s SubtitleStatus) IsTerminal() bool {
 	switch s {
+	// no_text_source left this set at [@contract-v3] (sub-3-1): the ASR
+	// fallback leg advances it, so calling it terminal would be a lie the
+	// moment an ASR key is configured.
 	case SubtitleStatusFound, SubtitleStatusNotFound,
-		SubtitleStatusNoTextSource, SubtitleStatusSkipped,
-		SubtitleStatusUntranslated:
+		SubtitleStatusSkipped, SubtitleStatusUntranslated:
 		return true
 	default:
 		return false

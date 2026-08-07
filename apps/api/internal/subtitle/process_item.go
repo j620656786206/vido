@@ -2,11 +2,15 @@ package subtitle
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
+	"github.com/vido/api/internal/ai"
 	"github.com/vido/api/internal/models"
+	"github.com/vido/api/internal/services"
 )
 
 // ProcessItem runs one media item end to end: pre-flight, route, translate (or
@@ -104,7 +108,10 @@ func (p *Pipeline) ProcessItem(ctx context.Context, ref MediaRef, opts ProcessIt
 
 	switch decision.Kind {
 	case RouteNoTextSource:
-		return p.recordSkip(ctx, ref, run, decision, models.SubtitleStatusNoTextSource)
+		// sub-3-1: no longer an unconditional recordSkip — the ASR fallback
+		// leg runs when the optional port can serve this item, and degrades to
+		// today's `no_text_source` record when it cannot (AC #4).
+		return p.transcribeFallback(ctx, ref, run, decision, item)
 	case RouteSkip:
 		return p.recordSkip(ctx, ref, run, decision, models.SubtitleStatusSkipped)
 	case RouteDeliverDirect, RouteConvertThenDeliver, RouteTranslate:
@@ -312,6 +319,162 @@ func (p *Pipeline) translateWithCache(
 	return merged, nil
 }
 
+// transcribeFallback is the sub-3-1 ASR leg: a RouteNoTextSource verdict falls
+// through to speech recognition instead of dead-ending, finally delivering
+// what verdictWithoutTrack's "what P2's ASR can later recover" comment always
+// intended.
+//
+// Degradations (AC #4) — each records `no_text_source` exactly as the pre-M2
+// pipeline did, via the same recordSkip path (`RouteSkip` handling is a
+// different call site and stays byte-unchanged):
+//
+//   - port not wired: translate-only construction (sub-1-5a) or an ASR-less
+//     deployment — main.go only wires the port in `pipeline` mode, so the
+//     legacy flag mode never grows this leg (AC #5);
+//   - the service declines (ErrTranscriptionDisabled): no ASR key / no FFmpeg
+//     and no translate-only resume. The leg deliberately does NOT pre-probe
+//     Available() per item — the service's own entry gate is RICHER (it admits
+//     ASR-less translate-only resumes, CR sub-2-2a M2) and must stay
+//     authoritative;
+//   - a non-movie ref: TranscriptionService's status writer and resume reader
+//     are movie-repository-bound today, so an episode run would pay full ASR
+//     and then fail at the writeback (backlog-episode-asr-fallback).
+//
+// On success the SERVICE is the sole writer of the media-row outcome (found +
+// zh sidecar, or untranslated + the EN SRT — 9R-16 AC 12 / sub-2-2a); the leg
+// only records its own provenance row, so the two writers can never disagree.
+//
+// ai.ErrBudgetExceeded is a PAUSE, not a failure (AC #6): the sentinel
+// propagates for the caller to classify (the generation-batch precedent), the
+// run row closes with the budget reason, and the media row is left exactly as
+// the service's last write — reverting it to `not_searched` would destroy the
+// `untranslated` resume marker and re-pay the whole ASR on resume (sub-2-2a's
+// headline bug class). The ctx-attached ai.Budget threads straight through:
+// RunTranscription's resolveBudget reuses a ctx budget when one is present and
+// creates the per-run envelope otherwise, so ASR and LLM always share one
+// ceiling.
+func (p *Pipeline) transcribeFallback(
+	ctx context.Context,
+	ref MediaRef,
+	run *models.SubtitleRun,
+	decision RouteDecision,
+	item *MediaItem,
+) (*ProcessOutcome, error) {
+	if p.asr == nil || ref.MediaType != models.SubtitleRunMediaMovie {
+		return p.recordSkip(ctx, ref, run, decision, models.SubtitleStatusNoTextSource)
+	}
+
+	// The D6 stage stays inside the existing 12-value set: the media row
+	// already reads `extracting`, ASR's first phase IS an ffmpeg audio
+	// extraction, and a dedicated stage would bump the stamped D6 contract
+	// this story deliberately leaves untouched. The service's job-keyed
+	// `transcription_*` events fire during the same window — a DISTINCT
+	// contract for the manual Route-C dialog (do NOT deduplicate,
+	// project-context.md sub-1-3); automatic-pipeline observers stay on
+	// `subtitle_progress`.
+	p.emitProgress(ref, StageExtracting, "no embedded text source — transcribing audio (ASR fallback)")
+
+	// Snapshot BEFORE the run (CR sub-3-1 M2): under Force a pre-existing
+	// acceptable sidecar survives to this leg (the P5 pre-flight is bypassed),
+	// and an `untranslated` outcome leaves it untouched — attributing it to
+	// THIS run would record provenance for a file the run never produced,
+	// while the media row simultaneously says `untranslated`.
+	zhPath := ExpectedSidecarPath(item.FilePath)
+	preStat, preErr := os.Stat(zhPath)
+
+	err := p.asr.Transcribe(ctx, ref.ID, item.FilePath, filepath.Dir(item.FilePath))
+	switch {
+	case err == nil:
+		// fall through to the provenance record below
+	case errors.Is(err, services.ErrTranscriptionDisabled):
+		return p.recordSkip(ctx, ref, run, decision, models.SubtitleStatusNoTextSource)
+	case errors.Is(err, ai.ErrBudgetExceeded):
+		return p.pauseASRItem(ctx, ref, run, err)
+	default:
+		return p.failItem(ctx, ref, run, "asr fallback", err)
+	}
+
+	completedAt := p.now().UTC()
+	run.Status = models.SubtitleRunCompleted
+	run.CompletedAt = &completedAt
+	outcome := &ProcessOutcome{Run: run, Kind: decision.Kind}
+	// The sync seam returns only an error, so the run row records what is
+	// verifiable on disk: a parseable zh-Hant sidecar at the exact path this
+	// pipeline would have written — and only when this run actually wrote it
+	// (new file, or overwritten vs the pre-run snapshot). Its absence is the
+	// legitimate untranslated outcome (translation key unconfigured), where
+	// the EN path lives on the media row and the run claims no sidecar.
+	if cueCount, ok := sidecarCueCount(zhPath); ok && sidecarWrittenSince(zhPath, preStat, preErr) {
+		run.OutputPath = zhPath
+		run.CueCount = cueCount
+		outcome.SubtitlePath = zhPath
+	}
+	if err := p.runs.Update(ctx, run); err != nil {
+		return p.failItem(ctx, ref, run, "record asr provenance", err)
+	}
+
+	p.emitProgress(ref, StageComplete, "subtitle generated via ASR fallback")
+	p.logger.Info("subtitle pipeline ASR fallback completed",
+		"media_id", ref.ID, "media_type", ref.MediaType,
+		"output_path", run.OutputPath, "cue_count", run.CueCount)
+	return outcome, nil
+}
+
+// pauseASRItem closes the provenance row for a budget-ceiling hit WITHOUT
+// touching the media row (see transcribeFallback's pause rationale) and
+// propagates the sentinel so callers can classify the pause with errors.Is.
+func (p *Pipeline) pauseASRItem(ctx context.Context, ref MediaRef, run *models.SubtitleRun, cause error) (*ProcessOutcome, error) {
+	err := fmt.Errorf("subtitle pipeline: %s %s: asr fallback: %w", ref.MediaType, ref.ID, cause)
+
+	// Same WithoutCancel rationale as failItem: the row must close even when
+	// the ceiling hit rode in on a cancellation.
+	cleanupCtx := context.WithoutCancel(ctx)
+	completedAt := p.now().UTC()
+	run.Status = models.SubtitleRunFailed
+	run.ErrorMessage = truncateErrorMessage(err.Error())
+	run.CompletedAt = &completedAt
+	if uerr := p.runs.Update(cleanupCtx, run); uerr != nil {
+		p.logger.Error("failed to record the budget-paused subtitle run",
+			"media_id", ref.ID, "run_id", run.ID, "error", uerr)
+	}
+
+	p.emitProgress(ref, StageFailed, err.Error())
+	p.logger.Info("subtitle pipeline ASR fallback paused on the budget ceiling",
+		"media_id", ref.ID, "media_type", ref.MediaType)
+	return nil, err
+}
+
+// sidecarWrittenSince reports whether the sidecar at path was (re)written
+// after the pre-run snapshot: it did not exist before, or its mtime/size
+// moved. The placer's atomic replace always advances mtime, so a stale
+// pre-Force sidecar left untouched by an `untranslated` outcome is the only
+// case that reads false.
+func sidecarWrittenSince(path string, pre os.FileInfo, preErr error) bool {
+	if preErr != nil {
+		return true // did not exist before the run — the run made it
+	}
+	post, err := os.Stat(path)
+	if err != nil {
+		return false
+	}
+	return !post.ModTime().Equal(pre.ModTime()) || post.Size() != pre.Size()
+}
+
+// sidecarCueCount reports how many cues a parseable sidecar at path carries.
+// (0, false) for a missing, unreadable, unparseable or empty file — the same
+// clauses as acceptableSidecar, reduced to the count the run row records.
+func sidecarCueCount(path string) (int, bool) {
+	raw, err := os.ReadFile(path) //nolint:gosec // path is derived from the media file we were handed
+	if err != nil {
+		return 0, false
+	}
+	blocks, err := ParseSRT(string(raw))
+	if err != nil || len(blocks) == 0 {
+		return 0, false
+	}
+	return len(blocks), true
+}
+
 // recordSkip writes the two terminal rows for a routed-out item: the run is
 // `skipped` with the router's reason, and the media row takes the status that
 // distinguishes "nothing to work with" (recoverable by P2 ASR) from "we
@@ -438,6 +601,12 @@ func sourceLanguageOf(decision RouteDecision) string {
 // requireItemPorts fails fast and by NAME when sub-1-6's wiring is incomplete.
 // A nil port discovered mid-run would panic a worker after the item had already
 // been marked `extracting`.
+//
+// The ASR port (p.asr) is DELIBERATELY absent from this list: unlike the five
+// required ports, nil is a legal, supported state (translate-only
+// construction, ASR-less deployment — sub-3-1 AC #4) that degrades to the
+// pre-M2 `no_text_source` record. Do not "fix" it into the missing-ports
+// error.
 func (p *Pipeline) requireItemPorts() error {
 	var missing []string
 	if p.media == nil {

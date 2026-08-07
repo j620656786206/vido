@@ -35,6 +35,7 @@ _This document builds collaboratively through step-by-step discovery. Sections a
 Decided by Alexyu on 2026-07-23, ahead of the workflow:
 
 - **Option B — Strangler wrapper.** A new `SubtitlePipeline` orchestrator becomes the single entry point for the **automatic** path. It runs extract-first and calls the existing `Engine.Process` as the final search fallback. The single non-test call site (`internal/subtitle/batch.go:244`) is rewired to the new orchestrator.
+  - **⚠️ Amended 2026-08-06 (spike ruling, PR #207):** the automatic path **no longer includes** the `Engine.Process` search fallback. Measured against the real fall-through population, end-to-end usable rate was 1/14 (7%) with the sole "hit" being the wrong episode, and alass cannot serve as an automatic acceptance gate (20% failure, cross-show negatives overlap the correct-but-offset range). The automatic chain is **extract → ASR** (sub-3-1); search remains a manual-dialog capability only. Evidence: `_bmad-output/implementation-artifacts/spike-2026-08-06-pipeline-ordering-evidence.md`.
 - **Option D — Feature flag as safety valve.** A config switch (`legacy | pipeline`) allows instant rollback to the current search-first behavior. Orthogonal to B; layered on top of it.
 - **Boundaries agreed with the premise:**
   - The manual UI path (`POST /api/v1/subtitles/search` + `/download` + `/preview` + `/convert`) is **untouched in M1** — it is an explicit user action with different semantics from the automatic pipeline.

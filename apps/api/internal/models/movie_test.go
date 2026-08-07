@@ -446,10 +446,12 @@ func TestSubtitleStatus_IsValid(t *testing.T) {
 
 func TestSubtitleStatus_IsTerminal(t *testing.T) {
 	terminal := map[SubtitleStatus]bool{
-		SubtitleStatusFound:        true,
-		SubtitleStatusNotFound:     true,
-		SubtitleStatusNoTextSource: true,
-		SubtitleStatusSkipped:      true,
+		SubtitleStatusFound:    true,
+		SubtitleStatusNotFound: true,
+		// sub-3-1 ([@contract-v2→v3]): no_text_source is now an INTERMEDIATE
+		// verdict — the ASR fallback leg can advance it. `skipped` stays
+		// terminal: it records a deliberate routing decision, not a gap.
+		SubtitleStatusSkipped: true,
 		// sub-2-2a: terminal — the pipeline will not advance it on its own; only
 		// a user-triggered re-run (which resumes translate-only) moves it.
 		SubtitleStatusUntranslated: true,
