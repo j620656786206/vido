@@ -1,6 +1,6 @@
 # Story 3.1: Wire the ASR fallback leg into the automatic pipeline
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -26,6 +26,7 @@ So M2 = **one leg**: `no_text_source → ASR`. There is no M2b.
 1. **[@contract-v2→v3] `no_text_source` becomes an INTERMEDIATE verdict.** `models/movie.go`'s stamped D2 media-row status contract is bumped v2→v3 with the semantic change recorded inline (the value set is UNCHANGED at 10 — only `no_text_source`'s terminality changes). `worker_pool.go`'s `terminalPipelineVerdict()` no longer treats `no_text_source` as terminal; `skipped` is untouched and REMAINS terminal (it is a deliberate routing decision, not a recoverable gap).
 
 2. **`ProcessItem` continues into ASR on `RouteNoTextSource`.** The `case RouteNoTextSource:` arm (`process_item.go:106`) no longer calls `recordSkip` unconditionally. When the ASR port is present and available it runs transcription for that media, and the run row + media status reflect the ASR outcome rather than `no_text_source`. `RouteSkip` behaviour is byte-unchanged.
+   **⚠️ Scope narrowed at implementation (CR 2026-08-07, M1):** the leg is **MOVIE-only** — `TranscriptionService`'s status writer and resume reader are movie-repository-bound, so non-movie refs degrade via the AC #4 path and the episode sweep loop keeps filtering `no_text_source`. Tracked: `backlog-episode-asr-fallback`.
 
 3. **ASR is a narrow injected port, not a concrete dependency.** A new interface on the `subtitle` package side (Rule 11) exposes only what the leg needs — the existing synchronous `TranscriptionService.RunTranscription(ctx, mediaID, filePath, mediaDir, opts...) error` seam (added by 9R-16) plus an availability probe. It is wired via a functional option like every other item-flow port and validated in `requireItemPorts()`. Rule 19: `subtitle → services` is a legal direction (engine.go precedent).
 
@@ -39,7 +40,7 @@ So M2 = **one leg**: `no_text_source → ASR`. There is no M2b.
 
 8. **Downstream stale-mark completed (Rule 20).** Every consumer of the D2 status contract is audited against the terminality change and the result recorded: `apps/web/src/utils/libraryStatus.ts`, `apps/web/src/components/media/EpisodeList.tsx`, the library status filter, and `apps/api/internal/subtitle/worker_pool.go`'s enqueue sweep. Consumers that need no change are listed as verified-no-change, not silently skipped.
 
-9. **Regression + new coverage.** Tests pin: (a) `RouteNoTextSource` + available ASR → transcription invoked, media status is the ASR outcome; (b) `RouteNoTextSource` + nil port → `no_text_source` recorded, ASR never called; (c) `RouteNoTextSource` + unavailable service → same as (b); (d) `RouteSkip` unchanged; (e) legacy flag mode unchanged; (f) budget-exceeded propagates as pause; (g) `terminalPipelineVerdict` no longer terminal for `no_text_source` but still terminal for `skipped`.
+9. **Regression + new coverage.** Tests pin: (a) `RouteNoTextSource` + available ASR → transcription invoked, media status is the ASR outcome (movie-scoped per the AC #2 narrowing; episode-degrade pinned separately); (b) `RouteNoTextSource` + nil port → `no_text_source` recorded, ASR never called; (c) `RouteNoTextSource` + unavailable service → same as (b); (d) `RouteSkip` unchanged; (e) legacy flag mode unchanged; (f) budget-exceeded propagates as pause; (g) `terminalPipelineVerdict` no longer terminal for `no_text_source` but still terminal for `skipped`.
 
 ## Tasks / Subtasks
 
@@ -121,6 +122,28 @@ Backend-only story. Touched packages:
 - [Source: `_bmad-output/planning-artifacts/subtitle-pipeline-architecture.md:37`] — Option B strangler-wrapper premise (needs the annotation in Task 5)
 - [Source: `project-context.md`] — Rule 11 (narrow interfaces), Rule 19 (package direction), Rule 20 (contract bump + stale-mark), Rule 24 (Discovery Triage)
 
+## Senior Developer Review (AI)
+
+**Date:** 2026-08-07 · **Outcome:** Approve (after same-session fixes) · **Findings:** 0 High / 2 Medium / 3 Low
+
+**Mandatory checks:**
+
+- 🔒 Rule 7 Wire Format: **PASS** (0 new error-code constants in scope; grep over all in-review Go files returned none — existing `SUBTITLE_`/`TRANSCRIPTION_` sentinels reused, untouched)
+- 🔒 Rule 20 Contract Bump: **PASS** (1 bump `[@contract-v2→v3]`; backtick-tolerant downstream-ack grep → consumers sub-1-5b / sub-1-7b / sub-2-2a / sub-2-2b all `done` = frozen; 0 not-done consumers, scan recorded in Change Log row)
+- 🔒 Rule 25 Mega-line: **N/A** (project-context.md untouched)
+- Git vs Story File List: **0 discrepancies** (13 = 13)
+- AC validation: all 9 IMPLEMENTED (AC #2/#9a as movie-scoped, annotated under M1 below); Task audit: all [x] verified with file:line evidence
+
+**Action Items:**
+
+- [x] **[M1]** AC #2 / #9(a) were implemented MOVIE-only but the AC text read as all-media — contract-taxonomy mismatch (19-8 CR re-stamp precedent). **Fixed:** movie-scope narrowing annotated inline on AC #2 + AC #9(a) with the `backlog-episode-asr-fallback` pointer.
+- [x] **[M2]** `transcribeFallback` provenance mis-attribution: under `Force`, a pre-existing acceptable zh sidecar surviving an `untranslated` outcome was claimed as this run's `OutputPath`/`CueCount` (run says `completed`+sidecar while the media row says `untranslated`). **Fixed:** pre-run `os.Stat` snapshot + `sidecarWrittenSince` guard (`process_item.go`) — attribute only a new or rewritten file; two regression subtests added (stale-not-attributed / overwritten-attributed).
+- [x] **[L1]** `models/movie.go` `AllSubtitleStatuses` doc comment still cited "[@contract-v1] stamp" (stale since v2, doubly stale at v3). **Fixed:** reworded version-neutral so it cannot re-stale.
+- [x] **[L2]** `SpeechTranscriber.Available()` has no interface-typed consumer (the pool takes a plain `func() bool` via `WithASRAvailability`; main.go passes the adapter's bound method). **No change:** the probe is AC #3-mandated, the port doc already declares it sweep-side, and collapsing it would couple the pool to the port for zero gain. Recorded as accepted.
+- [x] **[L3]** A mid-ASR budget ceiling leaves the media row at `extracting` until the next sweep (transient phantom in-flight state). **No change:** deliberate, documented trade-off in `transcribeFallback`/`pauseASRItem` — the alternative (`not_searched` revert) destroys the `untranslated` resume marker (sub-2-2a headline-bug class); self-heals on the next sweep.
+
+**Post-fix verification:** `go build` ✅ · subtitle + models suites ✅ (incl. 2 new CR subtests) · full `nx test api` + `nx test web` ✅ · gofmt/vet/prettier clean.
+
 ## Dev Agent Record
 
 ### Agent Model Used
@@ -161,6 +184,7 @@ Claude Fable 5 (claude-fable-5) — dev-story workflow, 2026-08-07
 | 2026-08-07 | Task 1–4 implementation: `subtitle.SpeechTranscriber` optional port + `WithSpeechTranscriber`; `transcribeFallback`/`pauseASRItem`/`sidecarCueCount` in process_item.go; `WithASRAvailability` sweep gate + movie/episode loop split in worker_pool.go; `pipelineASRAdapter` (cmd/api/asr_adapter.go) wired in main.go pipeline-mode block; 9 new tests + 2 amended (RED→GREEN), full api+web regression green. |
 | 2026-08-07 | Task 5 planning-doc reconciliation: spec §1 ordering rationale replaced with spike measurements + link; spec §8 M2 checklist rewritten (ASR client done, wiring = this story, search-reorder CANCELLED); architecture Pre-agreed Premise Option B amended (automatic path no longer includes `Engine.Process`); sprint-status Epic-9R Assrt tombstone corrected (token obtainable 2026-08-06); backlog-dialog-helper-verb-drift annotated (unified three-layer entry no longer exists). |
 | 2026-08-07 | Rule 24 lane ③ filed at implementation: `backlog-episode-asr-fallback` (episodes out of ASR reach — movie-bound TranscriptionService writer/reader). |
+| 2026-08-07 | Senior Developer Review (AI): 0H/2M/3L — M1 AC #2/#9(a) movie-scope annotation; M2 `sidecarWrittenSince` provenance guard + 2 regression subtests; L1 version-neutral comment fix; L2/L3 accepted with rationale. Status review → done. |
 
 ### Discovery Triage
 

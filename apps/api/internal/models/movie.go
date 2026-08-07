@@ -111,7 +111,8 @@ const (
 )
 
 // AllSubtitleStatuses is the authoritative ordered value set behind the
-// [@contract-v1] stamp. Extend it here and nowhere else — every consumer that
+// contract stamp above (version-neutral on purpose — the stamp bumps, this
+// sentence should not re-stale). Extend it here and nowhere else — every consumer that
 // needs to enumerate statuses reads this, so a constant added without a matching
 // entry here is a contract bug (guarded by a test).
 func AllSubtitleStatuses() []SubtitleStatus {

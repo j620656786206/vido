@@ -374,6 +374,14 @@ func (p *Pipeline) transcribeFallback(
 	// `subtitle_progress`.
 	p.emitProgress(ref, StageExtracting, "no embedded text source — transcribing audio (ASR fallback)")
 
+	// Snapshot BEFORE the run (CR sub-3-1 M2): under Force a pre-existing
+	// acceptable sidecar survives to this leg (the P5 pre-flight is bypassed),
+	// and an `untranslated` outcome leaves it untouched — attributing it to
+	// THIS run would record provenance for a file the run never produced,
+	// while the media row simultaneously says `untranslated`.
+	zhPath := ExpectedSidecarPath(item.FilePath)
+	preStat, preErr := os.Stat(zhPath)
+
 	err := p.asr.Transcribe(ctx, ref.ID, item.FilePath, filepath.Dir(item.FilePath))
 	switch {
 	case err == nil:
@@ -392,11 +400,11 @@ func (p *Pipeline) transcribeFallback(
 	outcome := &ProcessOutcome{Run: run, Kind: decision.Kind}
 	// The sync seam returns only an error, so the run row records what is
 	// verifiable on disk: a parseable zh-Hant sidecar at the exact path this
-	// pipeline would have written. Its absence is the legitimate untranslated
-	// outcome (translation key unconfigured), where the EN path lives on the
-	// media row and the run claims no sidecar.
-	zhPath := ExpectedSidecarPath(item.FilePath)
-	if cueCount, ok := sidecarCueCount(zhPath); ok {
+	// pipeline would have written — and only when this run actually wrote it
+	// (new file, or overwritten vs the pre-run snapshot). Its absence is the
+	// legitimate untranslated outcome (translation key unconfigured), where
+	// the EN path lives on the media row and the run claims no sidecar.
+	if cueCount, ok := sidecarCueCount(zhPath); ok && sidecarWrittenSince(zhPath, preStat, preErr) {
 		run.OutputPath = zhPath
 		run.CueCount = cueCount
 		outcome.SubtitlePath = zhPath
@@ -434,6 +442,22 @@ func (p *Pipeline) pauseASRItem(ctx context.Context, ref MediaRef, run *models.S
 	p.logger.Info("subtitle pipeline ASR fallback paused on the budget ceiling",
 		"media_id", ref.ID, "media_type", ref.MediaType)
 	return nil, err
+}
+
+// sidecarWrittenSince reports whether the sidecar at path was (re)written
+// after the pre-run snapshot: it did not exist before, or its mtime/size
+// moved. The placer's atomic replace always advances mtime, so a stale
+// pre-Force sidecar left untouched by an `untranslated` outcome is the only
+// case that reads false.
+func sidecarWrittenSince(path string, pre os.FileInfo, preErr error) bool {
+	if preErr != nil {
+		return true // did not exist before the run — the run made it
+	}
+	post, err := os.Stat(path)
+	if err != nil {
+		return false
+	}
+	return !post.ModTime().Equal(pre.ModTime()) || post.Size() != pre.Size()
 }
 
 // sidecarCueCount reports how many cues a parseable sidecar at path carries.

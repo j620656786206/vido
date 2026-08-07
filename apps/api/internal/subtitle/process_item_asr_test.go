@@ -115,6 +115,58 @@ func TestProcessItem_ASRFallback_RunsTranscription(t *testing.T) {
 		assert.Contains(t, h.progress, string(StageComplete))
 	})
 
+	t.Run("Force + stale pre-existing sidecar — untranslated outcome claims no output (CR M2)", func(t *testing.T) {
+		asr := &fakeSpeechTranscriber{available: true}
+		h := asrHarness(t, noTextDecision(), asr)
+
+		// A pre-existing acceptable sidecar only survives to the leg under
+		// Force (the P5 pre-flight early-exits otherwise). The ASR outcome is
+		// untranslated — the run must NOT claim the stale file as its output.
+		zhPath := ExpectedSidecarPath(h.mediaPath)
+		require.NoError(t, os.WriteFile(zhPath,
+			[]byte("1\n00:00:01,000 --> 00:00:02,000\n舊字幕\n\n"), 0o644))
+		asr.onRun = func() {
+			require.NoError(t, h.media.SetSubtitleStatus(context.Background(), h.ref,
+				models.SubtitleStatusUntranslated, h.mediaPath+".en.srt", "en"))
+		}
+
+		outcome, err := h.pipeline.ProcessItem(context.Background(), h.ref, ProcessItemOptions{Force: true})
+		require.NoError(t, err)
+		require.NotNil(t, outcome)
+
+		final := h.runs.lastUpdate(t)
+		assert.Equal(t, models.SubtitleRunCompleted, final.Status)
+		assert.Empty(t, final.OutputPath, "the stale sidecar was not produced by this run")
+		assert.Zero(t, final.CueCount)
+		assert.Empty(t, outcome.SubtitlePath)
+	})
+
+	t.Run("Force + pre-existing sidecar overwritten by the run — attributed (CR M2)", func(t *testing.T) {
+		asr := &fakeSpeechTranscriber{available: true}
+		h := asrHarness(t, noTextDecision(), asr)
+
+		zhPath := ExpectedSidecarPath(h.mediaPath)
+		require.NoError(t, os.WriteFile(zhPath,
+			[]byte("1\n00:00:01,000 --> 00:00:02,000\n舊字幕\n\n"), 0o644))
+		asr.onRun = func() {
+			// The service re-generated and re-placed the sidecar (different
+			// size, so the change is visible even at coarse mtime granularity).
+			require.NoError(t, os.WriteFile(zhPath,
+				[]byte("1\n00:00:01,000 --> 00:00:02,000\n新的早安字幕\n\n"), 0o644))
+			require.NoError(t, h.media.SetSubtitleStatus(context.Background(), h.ref,
+				models.SubtitleStatusFound, zhPath, "zh-Hant"))
+		}
+
+		outcome, err := h.pipeline.ProcessItem(context.Background(), h.ref, ProcessItemOptions{Force: true})
+		require.NoError(t, err)
+		require.NotNil(t, outcome)
+
+		final := h.runs.lastUpdate(t)
+		assert.Equal(t, zhPath, final.OutputPath)
+		assert.Equal(t, 1, final.CueCount)
+		assert.Equal(t, zhPath, outcome.SubtitlePath)
+	})
+
 	t.Run("en-only outcome — the service's untranslated verdict stands", func(t *testing.T) {
 		asr := &fakeSpeechTranscriber{available: true}
 		h := asrHarness(t, noTextDecision(), asr)
