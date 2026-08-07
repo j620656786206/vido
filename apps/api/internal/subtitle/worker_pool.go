@@ -59,6 +59,13 @@ type WorkerPool struct {
 	// unconfigured install logs once per scan instead of once per movie.
 	configured func() bool
 
+	// asrAvailable gates `no_text_source` re-enumeration (sub-3-1). nil or
+	// false = the pre-M2 behavior: those rows stay out of the sweep, because
+	// without a live ASR service re-enumerating them would just re-probe the
+	// file and re-record the same verdict on every scan, without bound — the
+	// exact churn terminalPipelineVerdict (CR H1) exists to prevent.
+	asrAvailable func() bool
+
 	movies   MovieGenerationFinder
 	episodes EpisodeGenerationFinder
 
@@ -121,6 +128,14 @@ func WithCandidateFinders(movies MovieGenerationFinder, episodes EpisodeGenerati
 // the work before it is queued.
 func WithCapabilityGate(configured func() bool) WorkerPoolOption {
 	return func(p *WorkerPool) { p.configured = configured }
+}
+
+// WithASRAvailability installs the sub-3-1 sweep gate: `no_text_source` movies
+// re-enter enumeration only while the predicate reports the ASR service can
+// actually serve them. Checked per sweep, not per item — availability is a
+// process-wide fact (key + FFmpeg), not a row property.
+func WithASRAvailability(available func() bool) WorkerPoolOption {
+	return func(p *WorkerPool) { p.asrAvailable = available }
 }
 
 // WithQueueCapacity overrides the buffer size. Test-only in practice — the
@@ -267,12 +282,13 @@ func (p *WorkerPool) EnqueueItem(ref MediaRef, opts ProcessItemOptions) EnqueueO
 }
 
 // terminalPipelineVerdict reports whether the pipeline has already issued a
-// PERMANENT verdict for this item (CR H1). `no_text_source` and `skipped` rows
-// keep subtitle_language NULL forever, so the broad "no zh-Hant on record"
-// predicate re-enumerates them on EVERY scan — and the P5 pre-flight cannot
-// gate them (there is no sidecar to find), so each sweep would re-probe the
-// file, append a fresh `skipped` run row, and re-broadcast 已略過, without
-// bound.
+// PERMANENT verdict for this item (CR H1, amended by sub-3-1 [@contract-v2→v3]).
+// Since sub-3-1 only `skipped` qualifies: it records a DELIBERATE routing
+// decision (a text track existed and was declined), which ASR must not
+// second-guess. `no_text_source` left this set when the ASR fallback leg made
+// it recoverable — but see asrRecoverable below: without a live ASR service it
+// is still filtered at the sweep, or every scan would re-probe the file,
+// append a fresh `skipped` run row, and re-broadcast 已略過, without bound.
 //
 // The filter lives HERE, not in the SQL, because the movie query is shared
 // with 9R-16's Route C generation batch — where `no_text_source` items are
@@ -284,7 +300,15 @@ func (p *WorkerPool) EnqueueItem(ref MediaRef, opts ProcessItemOptions) EnqueueO
 // enqueues directly and never passes through this sweep, so a re-mux that adds
 // an English track is re-processable via 生成字幕 (with or without force).
 func terminalPipelineVerdict(s models.SubtitleStatus) bool {
-	return s == models.SubtitleStatusNoTextSource || s == models.SubtitleStatusSkipped
+	return s == models.SubtitleStatusSkipped
+}
+
+// asrRecoverable reports whether a `no_text_source` row is worth re-enumerating
+// right now (sub-3-1 AC #1/#4): only while the ASR service is live. An ASR-less
+// deployment must behave identically to pre-M2 — zero re-probes, zero appended
+// run rows.
+func (p *WorkerPool) asrRecoverable() bool {
+	return p.asrAvailable != nil && p.asrAvailable()
 }
 
 // EnqueueMissing enumerates every item eligible for generation and offers it to
@@ -318,6 +342,11 @@ func (p *WorkerPool) EnqueueMissing(ctx context.Context) (int, error) {
 			if terminalPipelineVerdict(m.SubtitleStatus) {
 				continue
 			}
+			// sub-3-1: a no_text_source MOVIE re-enters the sweep only while
+			// the ASR leg can actually recover it.
+			if m.SubtitleStatus == models.SubtitleStatusNoTextSource && !p.asrRecoverable() {
+				continue
+			}
 			if p.Enqueue(MediaRef{ID: m.ID, MediaType: models.SubtitleRunMediaMovie}) {
 				queued++
 			}
@@ -333,6 +362,14 @@ func (p *WorkerPool) EnqueueMissing(ctx context.Context) (int, error) {
 		}
 		for _, e := range episodes {
 			if terminalPipelineVerdict(e.SubtitleStatus) {
+				continue
+			}
+			// Episodes stay OUT of ASR recovery for now: TranscriptionService's
+			// status writer and resume reader are movie-repository-bound
+			// (SetSubtitleStatusWriter/SetSubtitleStateReader take repos.Movies),
+			// so an episode run would pay full ASR and then fail at the
+			// writeback. Tracked: backlog-episode-asr-fallback.
+			if e.SubtitleStatus == models.SubtitleStatusNoTextSource {
 				continue
 			}
 			if p.Enqueue(MediaRef{ID: e.ID, MediaType: models.SubtitleRunMediaEpisode}) {

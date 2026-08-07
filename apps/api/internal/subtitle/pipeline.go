@@ -161,6 +161,28 @@ type TrackRouter interface {
 	SelectAndRoute(ctx context.Context, mediaPath, tmpDir string) (RouteDecision, error)
 }
 
+// SpeechTranscriber is the narrow ASR port behind the sub-3-1 fallback leg —
+// named for what the pipeline needs (turn audio into a placed subtitle), not
+// after the concrete service. main.go adapts it over
+// services.TranscriptionService.RunTranscription, the SYNCHRONOUS seam 9R-16
+// added precisely for callers that own the loop (never StartTranscription —
+// that path detaches from the caller ctx and reports via SSE only).
+//
+// Error contract: Transcribe returns an error satisfying
+// errors.Is(err, services.ErrTranscriptionDisabled) when the service cannot
+// run at all (no ASR key / no FFmpeg and no translate-only resume), and one
+// satisfying errors.Is(err, ai.ErrBudgetExceeded) when the shared run budget
+// ceiling was hit mid-run. The leg maps the former to today's `no_text_source`
+// degrade and the latter to a pause.
+//
+// Available is the SWEEP-side probe (worker_pool re-enumeration gate). The
+// leg itself deliberately does not call it per item: the service's own entry
+// gate is richer (resume-aware — CR sub-2-2a M2) and must stay authoritative.
+type SpeechTranscriber interface {
+	Available() bool
+	Transcribe(ctx context.Context, mediaID, filePath, mediaDir string) error
+}
+
 // Pipeline owns the generation-side stages that must not live in services:
 // the quality gate needs detector.Detect, and Rule 19 forbids services →
 // subtitle. The thin LLM call stays on the services side behind ChunkTranslator.
@@ -182,6 +204,12 @@ type Pipeline struct {
 	router TrackRouter
 	placer SubtitlePlacer
 	media  MediaStore
+
+	// asr is the OPTIONAL sub-3-1 fallback port — nil is a legal, supported
+	// state (translate-only construction, ASR-less deployment) and means
+	// RouteNoTextSource records `no_text_source` exactly as it did pre-M2.
+	// Deliberately NOT validated by requireItemPorts (see the note there).
+	asr SpeechTranscriber
 
 	// modelID is the model that produces the translations — a RunVersion field,
 	// so it is wiring-supplied (sub-1-6 reads it from config) rather than
@@ -234,6 +262,13 @@ func WithPlacer(placer SubtitlePlacer) PipelineOption {
 // WithMediaStore injects the media-row resolver and status writer.
 func WithMediaStore(media MediaStore) PipelineOption {
 	return func(p *Pipeline) { p.media = media }
+}
+
+// WithSpeechTranscriber injects the OPTIONAL ASR fallback port (sub-3-1).
+// Unlike the five required item-flow ports, absence is not a wiring bug — it
+// is the documented ASR-less degradation (AC #4).
+func WithSpeechTranscriber(asr SpeechTranscriber) PipelineOption {
+	return func(p *Pipeline) { p.asr = asr }
 }
 
 // WithModelID records which model produces the translations. It is part of the

@@ -374,11 +374,36 @@ func TestWorkerPool_EnqueueMissingEnumeratesMoviesAndEpisodes(t *testing.T) {
 		"an episode is enqueued under the EPISODE vocabulary, not `series` (sub-1-2 AC #1)")
 }
 
-// TestWorkerPool_EnqueueMissingSkipsTerminalVerdicts — CR H1. `no_text_source`
-// and `skipped` rows keep subtitle_language NULL forever, so the broad
-// enumeration re-returns them on every scan; the P5 pre-flight cannot gate them
-// (no sidecar exists), so without this filter every sweep would re-probe the
-// file and append a fresh run row per permanently-declined item, without bound.
+// TestTerminalPipelineVerdict_NoTextSourceIsNoLongerTerminal — sub-3-1 AC #1
+// (test g). The D2 contract's v3 semantic: `no_text_source` is an INTERMEDIATE
+// verdict the ASR leg can recover; `skipped` records a deliberate routing
+// decision and REMAINS terminal.
+func TestTerminalPipelineVerdict_NoTextSourceIsNoLongerTerminal(t *testing.T) {
+	assert.False(t, terminalPipelineVerdict(models.SubtitleStatusNoTextSource),
+		"no_text_source is recoverable by the ASR fallback leg — no longer a permanent verdict")
+	assert.True(t, terminalPipelineVerdict(models.SubtitleStatusSkipped),
+		"skipped is a deliberate routing decision and stays terminal")
+	for _, s := range []models.SubtitleStatus{
+		models.SubtitleStatusNotSearched, models.SubtitleStatusSearching,
+		models.SubtitleStatusFound, models.SubtitleStatusNotFound,
+		models.SubtitleStatusProbing, models.SubtitleStatusExtracting,
+		models.SubtitleStatusTranslating, models.SubtitleStatusUntranslated,
+	} {
+		assert.Falsef(t, terminalPipelineVerdict(s), "%q must not be a pipeline verdict filter", s)
+	}
+}
+
+// TestWorkerPool_EnqueueMissingSkipsTerminalVerdicts — CR H1, amended by
+// sub-3-1. `no_text_source` and `skipped` rows keep subtitle_language NULL
+// forever, so the broad enumeration re-returns them on every scan; the P5
+// pre-flight cannot gate them (no sidecar exists), so without this filter
+// every sweep would re-probe the file and append a fresh run row per
+// permanently-declined item, without bound.
+//
+// sub-3-1 (AC #4): WITHOUT an ASR-availability predicate (or with one that
+// reports false), the sweep behaves byte-identically to the pre-M2 pipeline —
+// `no_text_source` stays filtered, because re-enumerating it would just re-probe
+// and re-record the same verdict without bound on an ASR-less deployment.
 func TestWorkerPool_EnqueueMissingSkipsTerminalVerdicts(t *testing.T) {
 	proc := newBlockingProcessor(8)
 	proc.blocking = false
@@ -416,6 +441,63 @@ func TestWorkerPool_EnqueueMissingSkipsTerminalVerdicts(t *testing.T) {
 	assert.False(t, seen["m-skipped"])
 	assert.False(t, seen["ep-no-text"])
 	assert.False(t, seen["ep-skipped"])
+}
+
+// TestWorkerPool_EnqueueMissingReEnumeratesNoTextSourceWhenASRAvailable —
+// sub-3-1 AC #1/#2: with a live ASR-availability predicate, `no_text_source`
+// MOVIES re-enter the sweep (they are exactly the ASR recovery scope).
+// Episodes stay filtered — TranscriptionService's status writer and resume
+// reader are movie-repository-bound today, so an episode run would pay full
+// ASR and then fail at the writeback (backlog-episode-asr-fallback).
+// `skipped` stays filtered unconditionally.
+func TestWorkerPool_EnqueueMissingReEnumeratesNoTextSourceWhenASRAvailable(t *testing.T) {
+	proc := newBlockingProcessor(8)
+	proc.blocking = false
+
+	movies := &fakeMovieFinder{movies: []models.Movie{
+		{ID: "m-no-text", SubtitleStatus: models.SubtitleStatusNoTextSource},
+		{ID: "m-skipped", SubtitleStatus: models.SubtitleStatusSkipped},
+	}}
+	episodes := &fakeEpisodeFinder{episodes: []models.Episode{
+		{ID: "ep-no-text", SubtitleStatus: models.SubtitleStatusNoTextSource},
+	}}
+
+	pool := NewWorkerPool(proc, nil,
+		WithCandidateFinders(movies, episodes),
+		WithASRAvailability(func() bool { return true }),
+	)
+	require.NoError(t, pool.Start(context.Background()))
+	t.Cleanup(pool.Stop)
+
+	queued, err := pool.EnqueueMissing(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, 1, queued, "only the no_text_source MOVIE re-enters the sweep")
+
+	require.Eventually(t, func() bool { return len(proc.snapshot()) == 1 }, 2*time.Second, 5*time.Millisecond)
+	assert.Equal(t, "m-no-text", proc.snapshot()[0].ID)
+}
+
+// TestWorkerPool_EnqueueMissingKeepsNoTextSourceFilteredWhenASRUnavailable —
+// sub-3-1 AC #4: an ASR-less deployment must behave identically to before the
+// story — zero re-probes, zero new run rows, zero 已略過 re-broadcasts.
+func TestWorkerPool_EnqueueMissingKeepsNoTextSourceFilteredWhenASRUnavailable(t *testing.T) {
+	proc := newBlockingProcessor(8)
+	proc.blocking = false
+
+	movies := &fakeMovieFinder{movies: []models.Movie{
+		{ID: "m-no-text", SubtitleStatus: models.SubtitleStatusNoTextSource},
+	}}
+
+	pool := NewWorkerPool(proc, nil,
+		WithCandidateFinders(movies, nil),
+		WithASRAvailability(func() bool { return false }),
+	)
+	require.NoError(t, pool.Start(context.Background()))
+	t.Cleanup(pool.Stop)
+
+	queued, err := pool.EnqueueMissing(context.Background())
+	require.NoError(t, err)
+	assert.Zero(t, queued, "an unavailable ASR service keeps no_text_source out of the sweep")
 }
 
 // TestWorkerPool_EnqueueMissingSurvivesOneFinderFailing — a broken episode query

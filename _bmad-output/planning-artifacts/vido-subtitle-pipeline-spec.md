@@ -18,7 +18,7 @@
 → 語言判斷 → (需要時)LLM 翻譯成繁中 → 軟字幕 .zh-Hant.srt → 播放器直接載入
 ```
 
-**優先序 = 抽內嵌 > ASR > 線上搜尋**(Alexyu 定案)。理由:抽取免運算又自帶正確斷句/時間軸;ASR 品質雖不如人工字幕但可控;線上搜尋命中率低,列為最後備援。
+**優先序 = 抽內嵌 > ASR**(Alexyu 定案;2026-08-06 spike 量測後修訂)。理由:抽取免運算又自帶正確斷句/時間軸;ASR 品質雖不如人工字幕但可控且已實測(i5-12400 上 faster-whisper small int8 **22.2× 實時**,transcribe→translate→place 全鏈 2026-08-06 實跑通過:50 cues / 24s / $0.029)。**線上搜尋層對自動管線「取消」,非「排最後」**:對真實 fall-through 母體(68.3% 無可用文字軌,其中 77% 為華語內容)端到端可用率僅 **1/14(7%)**,且唯一「命中」還是錯集(S15E01 對到 S15E04);alass 無法當自動採用閘門(跨劇負控 2.81s/5.21s 與正控 ≤9.08s 重疊,20% 失效率)。量測全文:`_bmad-output/implementation-artifacts/spike-2026-08-06-pipeline-ordering-evidence.md`(PR #207)。搜尋能力保留給**手動搜尋對話框**(人在迴圈,見 backlog-assrt-search-response-parsing)。
 
 ---
 
@@ -154,11 +154,12 @@
 
 - [ ] **金鑰設定 UI**(§5)+ 修 `ManageSubtitleDialogV2` 死迴圈(NFR-S3)
 
-**M2 — ASR fallback + Provider 完備 + 重排優先序**
-- [ ] OpenAI 相容 ASR client(雲端 OpenAI/Groq + 外部 worker via Tailscale)
-- [ ] 把管線串成 **抽 > ASR > 搜尋**(既有 search 引擎重排到最後)
-- [ ] `ManageSubtitleDialogV2` 生成字幕 按鈕 rewire 到統一管線入口(2026-08-06 party-mode 裁定:M2 前按鈕維持 Route C ASR——管線真正入口是掃描後自動 enqueue,FR12 零 FE 消費者;rewire 後助語不再指名機制)
-- [ ] 算力偵測與自動預設;翻譯模型階梯 + 成本估算顯示
+**M2 — ASR fallback**(2026-08-06 spike 裁定後收斂為單一 story:sub-3-1)
+- [x] OpenAI 相容 ASR client(`ai.ASRProvider` + `ASR_BASE_URL`/`ASR_MODEL`,9R-9 已出貨,2026-08-06 於 NAS 實測再驗證)
+- [x] 把 ASR fallback 腿接進自動管線:`no_text_source → ASR`(story sub-3-1;movie 範圍,episode 見 backlog-episode-asr-fallback)
+- ~~[ ] 把管線串成 抽 > ASR > 搜尋~~ **CANCELLED 2026-08-06**:搜尋層對自動管線取消(§1 修訂理由 + spike 量測);search 引擎保留給手動對話框
+- [ ] `ManageSubtitleDialogV2` 生成字幕 按鈕 rewire(2026-08-06 party-mode 裁定:按鈕維持 Route C ASR——「統一三層入口」隨搜尋層取消而不存在,rewire 語意待重新裁定)
+- [ ] 算力偵測與自動預設(見 backlog-compute-aware-asr-default);翻譯模型階梯 + 成本估算顯示
 
 **M3 — 產品化 + Tier-2 本地**
 - [ ] 批次整季、失敗重試、增量掃描

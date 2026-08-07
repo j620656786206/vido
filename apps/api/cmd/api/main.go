@@ -594,6 +594,12 @@ func main() {
 			slog.Default(),
 		)
 		modelID := cfg.GetClaudeModel()
+		// sub-3-1: the ASR fallback port + the sweep's availability gate share
+		// one adapter over the SAME transcription service the manual Route-C
+		// dialog uses, so a no_text_source movie is recovered by exactly the
+		// pipeline 生成字幕 would run. Wired unconditionally in pipeline mode —
+		// an ASR-less boot degrades per item via the service's own entry gate.
+		pipelineASR := pipelineASRAdapter{ts: transcriptionService}
 		subtitlePipeline = subtitle.NewPipeline(
 			translationService, subtitleConverter, slog.Default(),
 			subtitle.WithRouter(subtitleRouter),
@@ -602,6 +608,7 @@ func main() {
 			subtitle.WithRunStore(repos.SubtitleRuns),
 			subtitle.WithSegmentCache(subtitle.NewSegmentCacheRepository(repos.Cache)),
 			subtitle.WithModelID(modelID),
+			subtitle.WithSpeechTranscriber(pipelineASR),
 			// AC #6: FR33/P8 progress. Same event type and payload shape the
 			// search path already broadcasts — sse/hub.go stays untouched.
 			subtitle.WithProgress(subtitle.NewSSEProgressHook(sseHub)),
@@ -609,6 +616,7 @@ func main() {
 		subtitlePipelinePool = subtitle.NewWorkerPool(subtitlePipeline, slog.Default(),
 			subtitle.WithCandidateFinders(repos.Movies, repos.Episodes),
 			subtitle.WithCapabilityGate(subtitleCapabilityGate),
+			subtitle.WithASRAvailability(pipelineASR.Available),
 		)
 		// AC #2: WRAP the scan-complete callback — the setter holds one function
 		// and post-scan enrichment already owns it.
