@@ -336,9 +336,9 @@ func (p *Pipeline) translateWithCache(
 //     Available() per item — the service's own entry gate is RICHER (it admits
 //     ASR-less translate-only resumes, CR sub-2-2a M2) and must stay
 //     authoritative;
-//   - a non-movie ref: TranscriptionService's status writer and resume reader
-//     are movie-repository-bound today, so an episode run would pay full ASR
-//     and then fail at the writeback (backlog-episode-asr-fallback).
+//   - a series (or unknown) ref: a series row is a container, not a media
+//     file — only movie and episode refs carry transcribable audio. Episodes
+//     joined the leg in sub-3-2 (media-type-aware TranscriptionService).
 //
 // On success the SERVICE is the sole writer of the media-row outcome (found +
 // zh sidecar, or untranslated + the EN SRT — 9R-16 AC 12 / sub-2-2a); the leg
@@ -360,7 +360,8 @@ func (p *Pipeline) transcribeFallback(
 	decision RouteDecision,
 	item *MediaItem,
 ) (*ProcessOutcome, error) {
-	if p.asr == nil || ref.MediaType != models.SubtitleRunMediaMovie {
+	transcribable := ref.MediaType == models.SubtitleRunMediaMovie || ref.MediaType == models.SubtitleRunMediaEpisode
+	if p.asr == nil || !transcribable {
 		return p.recordSkip(ctx, ref, run, decision, models.SubtitleStatusNoTextSource)
 	}
 
@@ -382,7 +383,7 @@ func (p *Pipeline) transcribeFallback(
 	zhPath := ExpectedSidecarPath(item.FilePath)
 	preStat, preErr := os.Stat(zhPath)
 
-	err := p.asr.Transcribe(ctx, ref.ID, item.FilePath, filepath.Dir(item.FilePath))
+	err := p.asr.Transcribe(ctx, ref, item.FilePath, filepath.Dir(item.FilePath))
 	switch {
 	case err == nil:
 		// fall through to the provenance record below

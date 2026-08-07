@@ -444,12 +444,10 @@ func TestWorkerPool_EnqueueMissingSkipsTerminalVerdicts(t *testing.T) {
 }
 
 // TestWorkerPool_EnqueueMissingReEnumeratesNoTextSourceWhenASRAvailable —
-// sub-3-1 AC #1/#2: with a live ASR-availability predicate, `no_text_source`
-// MOVIES re-enter the sweep (they are exactly the ASR recovery scope).
-// Episodes stay filtered — TranscriptionService's status writer and resume
-// reader are movie-repository-bound today, so an episode run would pay full
-// ASR and then fail at the writeback (backlog-episode-asr-fallback).
-// `skipped` stays filtered unconditionally.
+// sub-3-1 AC #1/#2, extended by sub-3-2 AC #6: with a live ASR-availability
+// predicate, `no_text_source` movies AND episodes re-enter the sweep (both are
+// the ASR recovery scope now that the TranscriptionService dispatches on media
+// type). `skipped` stays filtered unconditionally.
 func TestWorkerPool_EnqueueMissingReEnumeratesNoTextSourceWhenASRAvailable(t *testing.T) {
 	proc := newBlockingProcessor(8)
 	proc.blocking = false
@@ -460,6 +458,7 @@ func TestWorkerPool_EnqueueMissingReEnumeratesNoTextSourceWhenASRAvailable(t *te
 	}}
 	episodes := &fakeEpisodeFinder{episodes: []models.Episode{
 		{ID: "ep-no-text", SubtitleStatus: models.SubtitleStatusNoTextSource},
+		{ID: "ep-skipped", SubtitleStatus: models.SubtitleStatusSkipped},
 	}}
 
 	pool := NewWorkerPool(proc, nil,
@@ -471,15 +470,21 @@ func TestWorkerPool_EnqueueMissingReEnumeratesNoTextSourceWhenASRAvailable(t *te
 
 	queued, err := pool.EnqueueMissing(context.Background())
 	require.NoError(t, err)
-	assert.Equal(t, 1, queued, "only the no_text_source MOVIE re-enters the sweep")
+	assert.Equal(t, 2, queued, "no_text_source movies AND episodes re-enter the sweep; skipped never does")
 
-	require.Eventually(t, func() bool { return len(proc.snapshot()) == 1 }, 2*time.Second, 5*time.Millisecond)
-	assert.Equal(t, "m-no-text", proc.snapshot()[0].ID)
+	require.Eventually(t, func() bool { return len(proc.snapshot()) == 2 }, 2*time.Second, 5*time.Millisecond)
+	seen := map[string]bool{}
+	for _, ref := range proc.snapshot() {
+		seen[ref.ID] = true
+	}
+	assert.True(t, seen["m-no-text"])
+	assert.True(t, seen["ep-no-text"], "sub-3-2: episodes are in ASR recovery scope")
 }
 
 // TestWorkerPool_EnqueueMissingKeepsNoTextSourceFilteredWhenASRUnavailable —
-// sub-3-1 AC #4: an ASR-less deployment must behave identically to before the
-// story — zero re-probes, zero new run rows, zero 已略過 re-broadcasts.
+// sub-3-1 AC #4 / sub-3-2 AC #6: an ASR-less deployment must behave
+// identically to before — zero re-probes, zero new run rows, zero 已略過
+// re-broadcasts, for BOTH media loops.
 func TestWorkerPool_EnqueueMissingKeepsNoTextSourceFilteredWhenASRUnavailable(t *testing.T) {
 	proc := newBlockingProcessor(8)
 	proc.blocking = false
@@ -487,9 +492,12 @@ func TestWorkerPool_EnqueueMissingKeepsNoTextSourceFilteredWhenASRUnavailable(t 
 	movies := &fakeMovieFinder{movies: []models.Movie{
 		{ID: "m-no-text", SubtitleStatus: models.SubtitleStatusNoTextSource},
 	}}
+	episodes := &fakeEpisodeFinder{episodes: []models.Episode{
+		{ID: "ep-no-text", SubtitleStatus: models.SubtitleStatusNoTextSource},
+	}}
 
 	pool := NewWorkerPool(proc, nil,
-		WithCandidateFinders(movies, nil),
+		WithCandidateFinders(movies, episodes),
 		WithASRAvailability(func() bool { return false }),
 	)
 	require.NoError(t, pool.Start(context.Background()))
@@ -497,7 +505,7 @@ func TestWorkerPool_EnqueueMissingKeepsNoTextSourceFilteredWhenASRUnavailable(t 
 
 	queued, err := pool.EnqueueMissing(context.Background())
 	require.NoError(t, err)
-	assert.Zero(t, queued, "an unavailable ASR service keeps no_text_source out of the sweep")
+	assert.Zero(t, queued, "an unavailable ASR service keeps no_text_source out of both sweep loops")
 }
 
 // TestWorkerPool_EnqueueMissingSurvivesOneFinderFailing — a broken episode query

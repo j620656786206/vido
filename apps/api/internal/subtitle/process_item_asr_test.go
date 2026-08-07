@@ -26,7 +26,11 @@ import (
 // TranscriptionServiceInterface in transcription_handler.go). onRun simulates
 // the SERVICE's own writeback — the transcription service, not the pipeline,
 // is the sole writer of the ASR outcome on the media row (9R-16 AC 12).
-type asrCall struct{ mediaID, filePath, mediaDir string }
+type asrCall struct {
+	ref      MediaRef
+	filePath string
+	mediaDir string
+}
 
 type fakeSpeechTranscriber struct {
 	available bool
@@ -37,8 +41,8 @@ type fakeSpeechTranscriber struct {
 
 func (f *fakeSpeechTranscriber) Available() bool { return f.available }
 
-func (f *fakeSpeechTranscriber) Transcribe(_ context.Context, mediaID, filePath, mediaDir string) error {
-	f.calls = append(f.calls, asrCall{mediaID: mediaID, filePath: filePath, mediaDir: mediaDir})
+func (f *fakeSpeechTranscriber) Transcribe(_ context.Context, ref MediaRef, filePath, mediaDir string) error {
+	f.calls = append(f.calls, asrCall{ref: ref, filePath: filePath, mediaDir: mediaDir})
 	if f.err != nil {
 		return f.err
 	}
@@ -92,7 +96,7 @@ func TestProcessItem_ASRFallback_RunsTranscription(t *testing.T) {
 
 		require.Len(t, asr.calls, 1, "the ASR leg runs exactly one transcription")
 		assert.Equal(t, asrCall{
-			mediaID:  "mv-1",
+			ref:      MediaRef{ID: "mv-1", MediaType: models.SubtitleRunMediaMovie},
 			filePath: h.mediaPath,
 			mediaDir: filepath.Dir(h.mediaPath),
 		}, asr.calls[0])
@@ -309,21 +313,51 @@ func TestProcessItem_ASRFallback_OrdinaryFailureFollowsFailurePolicy(t *testing.
 		"an ordinary ASR failure reverts to not_searched — retryable, like every other stage failure")
 }
 
-// ─── Movie-only scope: episodes degrade exactly like a nil port ────────────
+// ─── sub-3-2: episodes run the leg; series still degrades ──────────────────
 
-// TranscriptionService's status writer and resume reader are movie-repository-
-// bound (SetSubtitleStatusWriter/SetSubtitleStateReader take repos.Movies), so
-// an episode run would pay full ASR and then fail at the writeback. Episodes
-// therefore keep today's behavior until backlog-episode-asr-fallback lands.
-func TestProcessItem_ASRFallback_EpisodesDegradeToNoTextSource(t *testing.T) {
+// AC #9 (a) of sub-3-2: the media-type-aware TranscriptionService (episode
+// writer/reader dispatch) makes episode refs first-class in the leg — the port
+// receives the EPISODE media type so the adapter can route the writeback.
+func TestProcessItem_ASRFallback_EpisodesRunTheLeg(t *testing.T) {
 	asr := &fakeSpeechTranscriber{available: true}
 	h := newItemHarness(t, noTextDecision(), WithSpeechTranscriber(asr)) // default ref is an episode
+
+	zhPath := ExpectedSidecarPath(h.mediaPath)
+	asr.onRun = func() {
+		require.NoError(t, os.WriteFile(zhPath,
+			[]byte("1\n00:00:01,000 --> 00:00:02,000\n早安\n\n"), 0o644))
+		require.NoError(t, h.media.SetSubtitleStatus(context.Background(), h.ref,
+			models.SubtitleStatusFound, zhPath, "zh-Hant"))
+	}
 
 	outcome, err := h.pipeline.ProcessItem(context.Background(), h.ref, ProcessItemOptions{})
 	require.NoError(t, err)
 	require.NotNil(t, outcome)
 
-	assert.Empty(t, asr.calls, "no episode may reach the movie-bound transcription service")
+	require.Len(t, asr.calls, 1, "an episode now reaches the transcription service")
+	assert.Equal(t, MediaRef{ID: "ep-1", MediaType: models.SubtitleRunMediaEpisode}, asr.calls[0].ref,
+		"the port must carry the EPISODE media type for the adapter's writeback dispatch")
+
+	final := h.runs.lastUpdate(t)
+	assert.Equal(t, models.SubtitleRunCompleted, final.Status)
+	assert.Equal(t, zhPath, final.OutputPath)
+	assert.Equal(t,
+		[]models.SubtitleStatus{models.SubtitleStatusExtracting, models.SubtitleStatusFound},
+		h.media.statuses())
+}
+
+// AC #9 (g): a series row is a container, not a media file — series refs (and
+// any unknown media type) keep the nil-port degrade.
+func TestProcessItem_ASRFallback_SeriesStillDegradesToNoTextSource(t *testing.T) {
+	asr := &fakeSpeechTranscriber{available: true}
+	h := newItemHarness(t, noTextDecision(), WithSpeechTranscriber(asr))
+	h.ref = MediaRef{ID: "sr-1", MediaType: models.SubtitleRunMediaSeries}
+
+	outcome, err := h.pipeline.ProcessItem(context.Background(), h.ref, ProcessItemOptions{})
+	require.NoError(t, err)
+	require.NotNil(t, outcome)
+
+	assert.Empty(t, asr.calls, "a series ref must not reach the transcription service")
 	final := h.runs.lastUpdate(t)
 	assert.Equal(t, models.SubtitleRunSkipped, final.Status)
 	assert.Equal(t,

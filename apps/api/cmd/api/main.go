@@ -532,6 +532,10 @@ func main() {
 	// sub-2-2a AC #3: row-state read behind the translate-only resume — an
 	// `untranslated` row with its EN SRT still on disk skips extract+ASR.
 	transcriptionService.SetSubtitleStateReader(repos.Movies)
+	// sub-3-2: the EPISODE writer/reader pair behind WithMediaType dispatch —
+	// the pipeline's ASR fallback leg serves episodes through the same run.
+	transcriptionService.SetEpisodeSubtitleStatusWriter(repos.Episodes)
+	transcriptionService.SetEpisodeSubtitleStateReader(repos.Episodes)
 
 	// ── Provider keys: resolver + hot-reloadable holder (sub-2-1a AC #1/#2) ──
 	//
