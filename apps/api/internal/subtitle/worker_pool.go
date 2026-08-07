@@ -311,6 +311,20 @@ func (p *WorkerPool) asrRecoverable() bool {
 	return p.asrAvailable != nil && p.asrAvailable()
 }
 
+// sweepEligible is the single enqueue filter shared by BOTH enumeration loops
+// (sub-3-2 — extracted so the movie and episode conditions cannot drift):
+// permanent verdicts never re-enter; `no_text_source` re-enters only while the
+// ASR leg can actually recover it.
+func (p *WorkerPool) sweepEligible(s models.SubtitleStatus) bool {
+	if terminalPipelineVerdict(s) {
+		return false
+	}
+	if s == models.SubtitleStatusNoTextSource && !p.asrRecoverable() {
+		return false
+	}
+	return true
+}
+
 // EnqueueMissing enumerates every item eligible for generation and offers it to
 // the pool (AC #2). Returns how many were accepted.
 //
@@ -339,12 +353,7 @@ func (p *WorkerPool) EnqueueMissing(ctx context.Context) (int, error) {
 			errs = append(errs, fmt.Errorf("enumerate movies missing zh-Hant subtitle: %w", err))
 		}
 		for _, m := range movies {
-			if terminalPipelineVerdict(m.SubtitleStatus) {
-				continue
-			}
-			// sub-3-1: a no_text_source MOVIE re-enters the sweep only while
-			// the ASR leg can actually recover it.
-			if m.SubtitleStatus == models.SubtitleStatusNoTextSource && !p.asrRecoverable() {
+			if !p.sweepEligible(m.SubtitleStatus) {
 				continue
 			}
 			if p.Enqueue(MediaRef{ID: m.ID, MediaType: models.SubtitleRunMediaMovie}) {
@@ -361,15 +370,7 @@ func (p *WorkerPool) EnqueueMissing(ctx context.Context) (int, error) {
 			errs = append(errs, fmt.Errorf("enumerate episodes missing zh-Hant subtitle: %w", err))
 		}
 		for _, e := range episodes {
-			if terminalPipelineVerdict(e.SubtitleStatus) {
-				continue
-			}
-			// Episodes stay OUT of ASR recovery for now: TranscriptionService's
-			// status writer and resume reader are movie-repository-bound
-			// (SetSubtitleStatusWriter/SetSubtitleStateReader take repos.Movies),
-			// so an episode run would pay full ASR and then fail at the
-			// writeback. Tracked: backlog-episode-asr-fallback.
-			if e.SubtitleStatus == models.SubtitleStatusNoTextSource {
+			if !p.sweepEligible(e.SubtitleStatus) {
 				continue
 			}
 			if p.Enqueue(MediaRef{ID: e.ID, MediaType: models.SubtitleRunMediaEpisode}) {

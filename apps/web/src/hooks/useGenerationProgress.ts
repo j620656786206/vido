@@ -11,9 +11,12 @@
  *
  * ⚠️ Double-nested envelope: the SSE `data:` line carries the FULL `Event`
  * struct `{"id","type","data":{…payload…}}` — the payload is `parsed.data`,
- * then snakeToCamel at ingest (Rule 18). Payload `media_id` is the movie row
- * id — a UUID STRING (9R-18 [@contract-v1]); events are filtered by strict
- * string equality (one shared stream, many producers).
+ * then snakeToCamel at ingest (Rule 18). Payload `media_id` is the MEDIA row
+ * id — a UUID STRING (9R-18 [@contract-v1]; movie OR episode since the
+ * sub-3-2 [@contract-v1→v2] bump: the pipeline's ASR leg also transcribes
+ * episodes). Events are filtered by strict string equality against the
+ * tracked id (one shared stream, many producers), so foreign-media events —
+ * including every episode event, which no dialog tracks today — are ignored.
  *
  * §8 lazy-SSE rules: NO connect on mount — `startTracking(mediaId)` opens the
  * stream (also the 409-attach path: attach to a job already running server-side).

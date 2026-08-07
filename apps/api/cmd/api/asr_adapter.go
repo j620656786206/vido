@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/vido/api/internal/services"
+	"github.com/vido/api/internal/subtitle"
 )
 
 // pipelineASRAdapter bridges *services.TranscriptionService to the pipeline's
@@ -26,6 +27,9 @@ type pipelineASRAdapter struct {
 // service's own richer, resume-aware check inside RunTranscription.
 func (a pipelineASRAdapter) Available() bool { return a.ts.IsAvailable() }
 
-func (a pipelineASRAdapter) Transcribe(ctx context.Context, mediaID, filePath, mediaDir string) error {
-	return a.ts.RunTranscription(ctx, mediaID, filePath, mediaDir, services.WithTranslation())
+func (a pipelineASRAdapter) Transcribe(ctx context.Context, ref subtitle.MediaRef, filePath, mediaDir string) error {
+	// WithMediaType routes the service's writeback + resume-read to the right
+	// media table (sub-3-2) — movie stays the default for every other caller.
+	return a.ts.RunTranscription(ctx, ref.ID, filePath, mediaDir,
+		services.WithTranslation(), services.WithMediaType(ref.MediaType))
 }

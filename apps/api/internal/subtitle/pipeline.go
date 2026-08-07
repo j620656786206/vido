@@ -178,9 +178,13 @@ type TrackRouter interface {
 // Available is the SWEEP-side probe (worker_pool re-enumeration gate). The
 // leg itself deliberately does not call it per item: the service's own entry
 // gate is richer (resume-aware — CR sub-2-2a M2) and must stay authoritative.
+//
+// Transcribe takes the full MediaRef (sub-3-2): the adapter needs the media
+// TYPE to route the service's writeback and resume-read to the right table
+// (WithMediaType dispatch).
 type SpeechTranscriber interface {
 	Available() bool
-	Transcribe(ctx context.Context, mediaID, filePath, mediaDir string) error
+	Transcribe(ctx context.Context, ref MediaRef, filePath, mediaDir string) error
 }
 
 // Pipeline owns the generation-side stages that must not live in services:

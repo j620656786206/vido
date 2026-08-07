@@ -156,7 +156,7 @@
 
 **M2 — ASR fallback**(2026-08-06 spike 裁定後收斂為單一 story:sub-3-1)
 - [x] OpenAI 相容 ASR client(`ai.ASRProvider` + `ASR_BASE_URL`/`ASR_MODEL`,9R-9 已出貨,2026-08-06 於 NAS 實測再驗證)
-- [x] 把 ASR fallback 腿接進自動管線:`no_text_source → ASR`(story sub-3-1;movie 範圍,episode 見 backlog-episode-asr-fallback)
+- [x] 把 ASR fallback 腿接進自動管線:`no_text_source → ASR`(story sub-3-1 movie 範圍;story sub-3-2 補上 episode —— TranscriptionService 媒體型別感知,`WithMediaType` dispatch)
 - ~~[ ] 把管線串成 抽 > ASR > 搜尋~~ **CANCELLED 2026-08-06**:搜尋層對自動管線取消(§1 修訂理由 + spike 量測);search 引擎保留給手動對話框
 - [ ] `ManageSubtitleDialogV2` 生成字幕 按鈕 rewire(2026-08-06 party-mode 裁定:按鈕維持 Route C ASR——「統一三層入口」隨搜尋層取消而不存在,rewire 語意待重新裁定)
 - [ ] 算力偵測與自動預設(見 backlog-compute-aware-asr-default);翻譯模型階梯 + 成本估算顯示
