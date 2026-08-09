@@ -233,6 +233,17 @@ SCREENS = {
     "PXB0z": ("flow-f-subtitle-v2", "f11-m-v2"),
     "iH98f": ("flow-f-subtitle-v2", "f12-d-v2"),
     "F7ohe": ("flow-f-subtitle-v2", "f13-d-v2"),
+    # prompt-cost-consent — 產生字幕 cost-consent flow (F14 analyze / F15 candidate list
+    # desktop+mobile / F16 cost confirm / F17 scan-complete toast with subtitle entry)
+    "nBT3M": ("flow-f-subtitle-v2", "f14-d-v2"),
+    "pwMzT": ("flow-f-subtitle-v2", "f15-d-v2"),
+    "fdu4y": ("flow-f-subtitle-v2", "f15-m-v2"),
+    "gmOt6": ("flow-f-subtitle-v2", "f16-d-v2"),
+    "I3Wb0p": ("flow-f-subtitle-v2", "f17-d-v2"),
+    # prompt-cost-consent round 2 — over-budget states + empty state
+    "zBik1": ("flow-f-subtitle-v2", "f18-d-v2"),
+    "KThbY": ("flow-f-subtitle-v2", "f19-d-v2"),
+    "D7MOm": ("flow-f-subtitle-v2", "f20-d-v2"),
 }
 
 
