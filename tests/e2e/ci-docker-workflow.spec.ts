@@ -156,15 +156,33 @@ test.describe('GHCR Authentication @ci @validation', () => {
     expect(ghcrLoginStep?.with?.password).toContain('GITHUB_TOKEN');
   });
 
-  test('[P1] login is skipped for pull requests', () => {
+  // retro-m2-AI1 (2026-08-07) REPLACES the former '[P1] login is skipped for
+  // pull requests'. That test pinned the MECHANISM (no login on PRs) rather
+  // than the intent (PRs must not publish images), and the mechanism turned
+  // out to be actively harmful: the GHCR package is private (issue #178 GPL
+  // constraint — it cannot be made public), so skipping login left
+  // `cache-from` unauthenticated and EVERY PR build ran fully cold on both
+  // arches, repeatedly blowing the 30-min job cap. Login now runs always; the
+  // publish invariant is pinned directly by the sibling test below.
+  test('[P1] login runs unconditionally so cache-from can authenticate', () => {
     // GIVEN: The docker job GHCR login step
     const dockerJob = dockerWorkflow.jobs.docker;
     const ghcrLoginStep = dockerJob.steps.find(
       (s: WorkflowStep) =>
         s.uses?.startsWith('docker/login-action') && s.with?.registry === 'ghcr.io'
     );
-    // THEN: Login should be conditional (skip on PR)
-    expect(ghcrLoginStep?.if).toContain('pull_request');
+    // THEN: No event gate — a private registry cache needs auth on PRs too
+    expect(ghcrLoginStep?.if).toBeUndefined();
+  });
+
+  test('[P1] pull requests never publish images to GHCR', () => {
+    // GIVEN: The build-push step
+    // (the real safety invariant the removed login gate stood in for — and
+    // one this suite never asserted directly until retro-m2-AI1)
+    const dockerJob = dockerWorkflow.jobs.docker;
+    const buildStep = findStepByAction(dockerJob.steps, 'docker/build-push-action');
+    // THEN: push must be gated on the event being anything but a PR
+    expect(String(buildStep?.with?.push)).toContain('pull_request');
   });
 });
 

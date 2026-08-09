@@ -48,8 +48,13 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
+      # Runs on PRs too (retro-m2-AI1): the GHCR package is PRIVATE (issue #178
+      # GPL constraint — do NOT solve by making it public), so `cache-from`
+      # needs an authenticated pull. Without this login every PR build ran
+      # fully cold on both arches (`#18 ERROR: failed to fetch anonymous
+      # token`) and slow-runner draws blew the 30-min cap. Image PUSH is still
+      # gated off for PRs by the build step's `push:` parameter below.
       - name: Login to GHCR
-        if: github.event_name != 'pull_request'
         uses: docker/login-action@v4
         with:
           registry: ghcr.io

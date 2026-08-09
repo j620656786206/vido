@@ -31,25 +31,25 @@
   <Config
     Name="App Data"
     Target="/vido-data"
-    Default="/mnt/user/appdata/vido"
+    Default="/mnt/cache/appdata/vido"
     Mode="rw"
-    Description="Persistent storage for SQLite database, cache, and application data."
+    Description="Persistent storage for SQLite database, cache, and application data. IMPORTANT: use a direct disk path like /mnt/cache/appdata/vido, NOT /mnt/user/... — the /mnt/user FUSE layer can deadlock SQLite under load (observed in production 2026-08-01)."
     Type="Path"
     Display="always"
     Required="true"
     Mask="false"
-  >/mnt/user/appdata/vido</Config>
+  >/mnt/cache/appdata/vido</Config>
   <Config
     Name="Backups"
     Target="/vido-backups"
-    Default="/mnt/user/appdata/vido/backups"
+    Default="/mnt/cache/appdata/vido/backups"
     Mode="rw"
-    Description="Directory for database backups and metadata exports."
+    Description="Directory for database backups and metadata exports. Same /mnt/cache guidance as App Data."
     Type="Path"
     Display="always"
     Required="true"
     Mask="false"
-  >/mnt/user/appdata/vido/backups</Config>
+  >/mnt/cache/appdata/vido/backups</Config>
   <Config
     Name="Media Library"
     Target="/media"
@@ -121,9 +121,64 @@
     Target="CLAUDE_API_KEY"
     Default=""
     Mode=""
-    Description="Anthropic Claude API key (alternative to Gemini). Get yours at https://console.anthropic.com/"
+    Description="Anthropic Claude API key (alternative to Gemini). Also used by the subtitle pipeline's translation leg. Get yours at https://console.anthropic.com/"
     Type="Variable"
     Display="advanced"
+    Required="false"
+    Mask="true"
+  />
+  <Config
+    Name="Subtitle Pipeline Mode"
+    Target="VIDO_SUBTITLE_PIPELINE_MODE"
+    Default="legacy"
+    Mode=""
+    Description="Subtitle backend: 'legacy' = search only (default). 'pipeline' = automatic generation — extract embedded subtitles, fall back to ASR speech recognition, translate to Traditional Chinese."
+    Type="Variable"
+    Display="always"
+    Required="false"
+    Mask="false"
+  >legacy</Config>
+  <Config
+    Name="ASR API Key (OpenAI-compatible)"
+    Target="OPENAI_API_KEY"
+    Default=""
+    Mode=""
+    Description="API key for speech recognition (Whisper-compatible). Works with OpenAI (platform.openai.com), Groq (console.groq.com, free tier), or any OpenAI-compatible ASR server — set ASR Base URL below for non-OpenAI providers. Required for the pipeline's ASR fallback leg. NOTE: read at container start only — changing it requires a container restart."
+    Type="Variable"
+    Display="always"
+    Required="false"
+    Mask="true"
+  />
+  <Config
+    Name="ASR Base URL"
+    Target="ASR_BASE_URL"
+    Default=""
+    Mode=""
+    Description="Override the ASR endpoint for OpenAI-compatible providers. Groq: https://api.groq.com/openai/v1 — local faster-whisper server: http://[NAS-IP]:[port]/v1 — leave empty for OpenAI."
+    Type="Variable"
+    Display="advanced"
+    Required="false"
+    Mask="false"
+  />
+  <Config
+    Name="ASR Model"
+    Target="ASR_MODEL"
+    Default=""
+    Mode=""
+    Description="ASR model override. Groq: whisper-large-v3 — leave empty for the provider default (OpenAI: whisper-1)."
+    Type="Variable"
+    Display="advanced"
+    Required="false"
+    Mask="false"
+  />
+  <Config
+    Name="Encryption Key"
+    Target="ENCRYPTION_KEY"
+    Default=""
+    Mode=""
+    Description="Exactly 32 characters (AES-256) for the in-app secrets store — required for the settings page to SAVE API keys (without it the page is read-only: writable=false / encryption_key_missing). Generate with: openssl rand -base64 24. KEEP IT STABLE — changing it makes previously saved keys undecryptable."
+    Type="Variable"
+    Display="always"
     Required="false"
     Mask="true"
   />
