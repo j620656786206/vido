@@ -243,16 +243,18 @@
 
 ---
 
-## 5-quinquies. ⚠️ D1 仍未裁定 — 開 story 前必須解決
+## 5-quinquies. ⚖️ D1 已裁定（Alexyu，2026-08-10）：**批次支援影集**
 
-第一輪提出、第二輪**尚未回覆**：清單畫面持續納入影集（f15 的 S4E7、f18 再加 S4E8），但 **generation batch 後端目前僅支援電影**。設計已事實上假設「後端擴充」。
+**裁定：採 (a) 後端擴充批次支援 episode。** 設計稿維持原樣（f15 的 S4E7、f18 的 S4E8 皆為有效需求，不需回修）。
 
-這不是設計問題，是**產品範圍決定**，且直接決定 BE story 的大小：
+實作範圍（BE story 的核心 AC 之一）：
 
-- **(a) 後端擴充批次支援 episode（Sally 建議）** —— sub-3-2 已完成 `TranscriptionService` 的媒體型別感知，批次端主要是放寬 movies-only 的驗證與列舉；影集是缺字幕大宗，排除它會讓這個功能只解決一半問題。
-- (b) 畫面標示影集不可選 —— 需回頭修改 f15/f18 兩張已定稿的圖。
+- `generation_batch.go:78-81` 的 `generationCandidateFinder` 目前是 movie-repo 專用介面（回傳 `[]models.Movie`），`collectItems`（:232，註解「movies only, AC 8」）與 `FindByID`（:252）同樣是 movie-only → 放寬為雙來源列舉並讓佇列項目攜帶媒體型別
+- **已存在、可直接接線的零件**（不需新建）：`EpisodeRepository.FindMissingZhHantSubtitle`（缺字幕影集查詢）、`subtitle` 套件的 `EpisodeGenerationFinder` 介面、sub-3-2 的 `WithMediaType`（寫回與 resume 已會依媒體型別分派）
+- 前端 `LibraryBrowseV2` 目前的影集過濾與 `excludedSeriesCount` 提示可隨之移除
+- 驗收：混合電影＋影集的批次可成功送出並各自寫回正確資料表；不再出現「任一 id 非電影就整批 400」
 
-**在裁定前不要開 BE story**，否則 AC 會建立在未確認的前提上（正是 retro-m2-AI3 剛立下的「seam 資料層觸及」教訓的同一類錯誤）。
+**理由**：影集是缺字幕大宗（spike 的 68.3% fall-through 母體含大量影集）；且 sub-3-2 已把媒體型別感知做完，排除影集等於把剛做好的能力關在這個入口之外。
 
 ---
 
