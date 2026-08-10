@@ -1,6 +1,6 @@
 # Story 4.1: 掃描解耦 + 字幕生成候選清單與成本估算（後端讀側）
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -70,10 +70,11 @@ UX 設計已定稿（PR #211，8 個畫面）：`_bmad-output/planning-artifacts
   - [x] 逐項估價 + 彙總；`RouteSkipped` 計數但不報價
   - [x] Rule 19 鏡像對照測試 `route_prediction_parity_test.go`（比照 `srt_parity_test.go`）
 
-- [~] **Task 5 — API 與進度（AC: #7, #8）** — 端點完成，進度串流未完成
-  - [x] `GET /api/v1/subtitles/generation-candidates`（清單 + 彙總）；既有 `preview` 端點**原樣未動**
-  - [ ] **分析進度事件（AC #8）尚未接線** —— 服務層已用 `AnalysisProgress` callback 逐項回報並有測試，但沒有任何東西把它廣播出去；handler 目前傳 nil。F14 畫面需要的是非同步作業 + SSE，這是實質工作量，見下方 Completion Notes 的誠實評估
-  - [x] Swagger 註解 + Rule 3 信封 + 既有 `DB_QUERY_FAILED` 錯誤碼（零新 Rule 7 前綴）
+- [x] **Task 5 — API 與進度（AC: #7, #8）**
+  - [x] 三個端點：`GET /subtitles/generation-candidates`（狀態信封：status / analyzed / total / result / analyzed_at）、`POST .../analyze`（202，衝突回 409）、`POST .../analyze/cancel`；既有 `generation-batch/preview` 端點**原樣未動**
+  - [x] **分析進度事件**：新增 SSE `generation_candidates_progress`（非同步單飛作業 + detached ctx，比照 generation-batch 先例）；**時間節流 250ms**，讓 12 部與 12,000 部的媒體庫都產生可讀的事件流、且 hub 的有界頻道不會把最後一個事件擠掉
+  - [x] Rule 17 雙語文件對照：`docs/sse-event-types.md` + `.zh-TW.md` 同步新增該事件（欄位表、狀態值、範例 payload）
+  - [x] Swagger 註解 + Rule 3 信封 + 沿用既有錯誤碼（零新 Rule 7 前綴）
 
 - [x] **Task 6 — 測試與文件（AC: #9）**
   - [x] AC #9 的 8 類案例全數覆蓋（見 File List 的測試檔）
@@ -168,7 +169,7 @@ Claude Opus 5 (1M context) — dev-story workflow, 2026-08-10
 
 ### Completion Notes List
 
-- **⚠️ 本 story 尚未完成，狀態刻意保持 `in-progress`。** AC #8（分析進度可觀測）只做了一半：服務層已用 `AnalysisProgress` callback 逐項回報且有測試（`TestAnalyze_ReportsProgressForEveryItem`），但沒有任何東西把它廣播出去，handler 傳 nil。F14 畫面需要的是「非同步作業 + SSE 進度」，那是實質工作量而非收尾。**不把 Task 5 標完成、不把 story 標 review**，因為那會是對完成度說謊。
+- **AC #8 補完（第二回合）**：分析改為非同步單飛作業（detached ctx，比照 generation-batch），新增 SSE 事件 `generation_candidates_progress` 與三個端點的狀態機（idle / analyzing / ready / cancelled / error）。三個刻意的設計選擇：(1) **進度用時間節流 250ms 而非每 N 筆** —— 媒體庫大小差三個數量級時，事件量仍有界，且 hub 的 drop-on-full 不會吃掉最後一個事件；(2) **取消一律捨棄部分結果** —— 把一小部分片庫的金額當成全庫報價，正是這個功能要消滅的誤導；(3) **GET 回狀態信封而非 404/425** —— F14（分析中）與 F15（清單）由同一份 payload 驅動，客戶端要的就是一個 status 欄位。
 - **🔗 AC Drift: FOUND — sub-1-6 AC #2（FR13 掃描後自動派工）→ 本 story AC #1 移除該行為。** 這是本 story 存在的目的，不是意外。sub-1-6 狀態為 `done` 且該 AC **未 stamp**（隱含 v0），依 Rule 20 forward-only 屬凍結，**不欠 stale-mark**；漂移依規定記錄於此並在 File List 註記來源 story。
 - **📎 Contract Stamps: NONE（本 story 未 stamp、未 bump 任何契約）。** 消費面：`PipelineStage`（sub-1-3 AC #1 `[@contract-v1]`）僅「不新增值」地被遵守，未消費其形狀；既有 `generation-batch/preview` 與 202 回應**完全未動**（AC #7），故對現有 FE 零破壞。新端點的回應形狀是本 story 新產出，是否要 stamp 待 sub-4-3（FE）確定跨 story 消費時再決定。
 - **🎭 A11y Pre-Flight: N/A（100% backend — 未觸及任何 apps/web/ 檔案）。**
@@ -188,6 +189,7 @@ Claude Opus 5 (1M context) — dev-story workflow, 2026-08-10
 | 2026-08-10 | Task 4：`GenerationCandidateService` —— 電影+影集雙來源枚舉、persisted-tracks 快取優先 / 缺者探測、逐項與彙總估價、declined 項目計數不報價；含 Rule 19 鏡像對照測試。 |
 | 2026-08-10 | Task 5（部分）：`GET /api/v1/subtitles/generation-candidates` 上線，既有 preview 端點未動。**AC #8 分析進度串流未完成**，story 保持 in-progress。 |
 | 2026-08-10 | Task 6：AC #9 八類測試案例、全回歸綠、`docs/deployment.md` 補行為變更說明。 |
+| 2026-08-10 | Task 5 補完（AC #8）：分析改非同步單飛作業 + SSE `generation_candidates_progress`(250ms 時間節流) + 狀態機(idle/analyzing/ready/cancelled/error) + GET 改狀態信封 + analyze/cancel 端點;Rule 17 雙語文件同步;新增 7 個生命週期測試(單飛、就緒快照、取消捨棄部分結果、列舉失敗不靜默空清單、nil hub 安全)。story → review。 |
 
 ## File List
 
@@ -204,7 +206,9 @@ Claude Opus 5 (1M context) — dev-story workflow, 2026-08-10
 - `apps/api/internal/services/ffprobe_service_test.go` — duration 解析與未知降級測試
 - `apps/api/internal/ai/budget.go` — 匯出定價存取器（read-through 到既有常數）
 - `apps/api/internal/ai/pricing_test.go` — NEW：估價費率與計費費率同源
-- `apps/api/internal/handlers/generation_candidates_handler.go` — NEW：候選端點
+- `apps/api/internal/handlers/generation_candidates_handler.go` — NEW：三端點(GET 狀態信封 / POST analyze / POST analyze/cancel)
+- `apps/api/internal/sse/hub.go` — NEW 事件型別 `generation_candidates_progress`
+- `docs/sse-event-types.md` + `docs/sse-event-types.zh-TW.md` — Rule 17 雙語對照新增該事件
 - `apps/api/internal/cost_consent_test.go` — NEW：repo 級成本同意守衛
 - `docs/deployment.md` — 「掃描永不產生字幕」行為變更說明
 - `_bmad-output/implementation-artifacts/sub-1-6-wire-triggering-gating.md` — （AC drift 來源參照，見 Completion Notes；未修改）

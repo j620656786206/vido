@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -273,4 +274,114 @@ func TestAnalyze_CancellationStopsTheSweep(t *testing.T) {
 	svc := NewGenerationCandidateService(movies, nil, &stubPredictor{probeRoute: RouteASR}, false, nil)
 	_, err := svc.Analyze(ctx, nil)
 	require.ErrorIs(t, err, context.Canceled)
+}
+
+// ─── AC #8: the sweep is observable and interruptible ─────────────────────
+
+// blockingPredictor parks inside Probe so a test can observe the RUNNING state
+// rather than infer it from a race.
+type blockingPredictor struct {
+	entered chan struct{}
+	release chan struct{}
+}
+
+func (p *blockingPredictor) FromTracks([]SubtitleTrack) RoutePrediction { return RouteExtract }
+
+func (p *blockingPredictor) Probe(ctx context.Context, _ string) (RoutePrediction, error) {
+	select {
+	case p.entered <- struct{}{}:
+	default:
+	}
+	select {
+	case <-p.release:
+		return RouteASR, nil
+	case <-ctx.Done():
+		return "", ctx.Err()
+	}
+}
+
+func analysisService(t *testing.T, pred RoutePredictor, n int) *GenerationCandidateService {
+	t.Helper()
+	movies := make([]models.Movie, 0, n)
+	for i := 0; i < n; i++ {
+		id := string(rune('a' + i))
+		movies = append(movies, movieRow(id, "T"+id, "/m/"+id+".mkv", 100, ""))
+	}
+	return NewGenerationCandidateService(&stubMovieFinder{movies: movies}, nil, pred, false, nil)
+}
+
+func TestStartAnalysis_IsSingleFlight(t *testing.T) {
+	pred := &blockingPredictor{entered: make(chan struct{}, 1), release: make(chan struct{})}
+	svc := analysisService(t, pred, 2)
+
+	require.NoError(t, svc.StartAnalysis())
+	<-pred.entered // the sweep is genuinely in flight, not merely scheduled
+
+	assert.ErrorIs(t, svc.StartAnalysis(), ErrAnalysisRunning,
+		"a second sweep would double the ffprobe load for an answer the first one is already producing")
+	assert.Equal(t, AnalysisRunning, svc.Snapshot().Status)
+
+	close(pred.release)
+	require.Eventually(t, func() bool { return svc.Snapshot().Status == AnalysisReady },
+		2*time.Second, 5*time.Millisecond)
+}
+
+func TestStartAnalysis_ReadySnapshotCarriesTheResultAndATimestamp(t *testing.T) {
+	svc := analysisService(t, &stubPredictor{probeRoute: RouteASR}, 2)
+	require.NoError(t, svc.StartAnalysis())
+
+	require.Eventually(t, func() bool { return svc.Snapshot().Status == AnalysisReady },
+		2*time.Second, 5*time.Millisecond)
+
+	snap := svc.Snapshot()
+	require.NotNil(t, snap.Result)
+	assert.Len(t, snap.Result.Candidates, 2)
+	assert.Equal(t, 2, snap.Analyzed)
+	assert.Equal(t, 2, snap.Total)
+	require.NotNil(t, snap.AnalyzedAt, "the client has to be able to say how stale the numbers are")
+}
+
+// A partial classification is not a quote: pricing a fraction of the library as
+// if it were all of it is exactly the misleading number this feature exists to
+// remove.
+func TestCancelAnalysis_DiscardsThePartialResult(t *testing.T) {
+	pred := &blockingPredictor{entered: make(chan struct{}, 1), release: make(chan struct{})}
+	svc := analysisService(t, pred, 3)
+
+	require.NoError(t, svc.StartAnalysis())
+	<-pred.entered
+	svc.CancelAnalysis()
+
+	require.Eventually(t, func() bool { return svc.Snapshot().Status == AnalysisCancelled },
+		2*time.Second, 5*time.Millisecond)
+	assert.Nil(t, svc.Snapshot().Result)
+}
+
+func TestStartAnalysis_EnumerationFailureIsReportedNotSilentlyEmpty(t *testing.T) {
+	svc := NewGenerationCandidateService(
+		&stubMovieFinder{err: errors.New("no such column")}, nil, &stubPredictor{}, false, nil)
+	require.NoError(t, svc.StartAnalysis())
+
+	require.Eventually(t, func() bool { return svc.Snapshot().Status == AnalysisFailed },
+		2*time.Second, 5*time.Millisecond)
+
+	snap := svc.Snapshot()
+	assert.Nil(t, snap.Result, "an empty list would read as 'nothing to generate', which is the opposite of the truth")
+	assert.Contains(t, snap.Error, "no such column")
+}
+
+func TestSnapshot_StartsIdle(t *testing.T) {
+	svc := analysisService(t, &stubPredictor{probeRoute: RouteASR}, 1)
+	snap := svc.Snapshot()
+	assert.Equal(t, AnalysisIdle, snap.Status)
+	assert.Nil(t, snap.Result)
+}
+
+// A nil hub must not panic — the service is constructed before the hub is wired
+// in main.go, and tests never wire one.
+func TestBroadcast_IsNilHubSafe(t *testing.T) {
+	svc := analysisService(t, &stubPredictor{probeRoute: RouteASR}, 1)
+	require.NoError(t, svc.StartAnalysis())
+	require.Eventually(t, func() bool { return svc.Snapshot().Status == AnalysisReady },
+		2*time.Second, 5*time.Millisecond)
 }

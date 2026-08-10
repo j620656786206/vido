@@ -3,13 +3,18 @@ package services
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"math"
 	"sort"
+	"sync"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/vido/api/internal/ai"
 	"github.com/vido/api/internal/models"
+	"github.com/vido/api/internal/sse"
 )
 
 // ─── Route prediction (Rule 19 mirror) ─────────────────────────────────────
@@ -109,21 +114,70 @@ type GenerationCandidateResult struct {
 	Summary    GenerationCandidateSummary `json:"summary"`
 }
 
+// Analysis lifecycle states (story sub-4-1 AC #8).
+const (
+	// AnalysisIdle — never run in this process.
+	AnalysisIdle = "idle"
+	// AnalysisRunning — the probe sweep is in flight.
+	AnalysisRunning = "analyzing"
+	// AnalysisReady — a result is available.
+	AnalysisReady = "ready"
+	// AnalysisCancelled — the user stopped it; any partial result is discarded.
+	AnalysisCancelled = "cancelled"
+	// AnalysisFailed — enumeration failed; there is nothing trustworthy to show.
+	AnalysisFailed = "error"
+)
+
+// ErrAnalysisRunning is returned when a second sweep is requested while one is
+// already in flight.
+var ErrAnalysisRunning = errors.New("generation candidate analysis already running")
+
+// AnalysisSnapshot is the whole observable state of the preview: where the
+// sweep is, and the result if there is one.
+type AnalysisSnapshot struct {
+	Status   string `json:"status"`
+	Analyzed int    `json:"analyzed"`
+	Total    int    `json:"total"`
+	// Result is non-nil only in the ready state.
+	Result *GenerationCandidateResult `json:"result,omitempty"`
+	// AnalyzedAt lets the client say how stale the numbers are — the library
+	// changes underneath them.
+	AnalyzedAt *time.Time `json:"analyzed_at,omitempty"`
+	Error      string     `json:"error,omitempty"`
+}
+
 // GenerationCandidateService answers "what would generating subtitles cost?"
 // for the whole library, WITHOUT spending anything: it probes (cheap, local)
 // but never extracts and never transcribes.
 //
 // Story sub-4-1. It exists because scanning no longer enqueues generation —
 // the user picks from this list instead.
+//
+// The sweep runs as a single-flight background job (the generation-batch
+// precedent) because it is real work: one ffprobe per file that carries no
+// scan-time track data, and a TV library is mostly such files. A synchronous
+// request would hold an HTTP connection open for minutes and tell the user
+// nothing while it did.
 type GenerationCandidateService struct {
 	movies    CandidateMovieFinder
 	episodes  CandidateEpisodeFinder
 	predictor RoutePredictor
+	sseHub    *sse.Hub
 	logger    *slog.Logger
+	now       func() time.Time
 
 	// selfHostedASR mirrors "ASR_BASE_URL points somewhere other than the paid
 	// API". Wired from config; see ai.EstimatedASRPerMinuteUSD.
 	selfHostedASR bool
+
+	mu         sync.Mutex
+	status     string
+	analyzed   int
+	total      int
+	result     *GenerationCandidateResult
+	analyzedAt *time.Time
+	lastErr    string
+	cancel     context.CancelFunc
 }
 
 func NewGenerationCandidateService(
@@ -142,7 +196,122 @@ func NewGenerationCandidateService(
 		predictor:     predictor,
 		logger:        logger.With("service", "generation_candidates"),
 		selfHostedASR: selfHostedASR,
+		now:           time.Now,
+		status:        AnalysisIdle,
 	}
+}
+
+// SetSSEHub wires live progress. Nil-safe: without a hub the sweep still runs
+// and the snapshot still updates, callers just have to poll for it.
+func (s *GenerationCandidateService) SetSSEHub(hub *sse.Hub) { s.sseHub = hub }
+
+// StartAnalysis kicks off the sweep and returns immediately.
+//
+// The job ctx is detached from the request (the generation-batch precedent):
+// a preview that dies because the user navigated away would have to re-probe
+// the whole library on the next visit.
+func (s *GenerationCandidateService) StartAnalysis() error {
+	s.mu.Lock()
+	if s.status == AnalysisRunning {
+		s.mu.Unlock()
+		return ErrAnalysisRunning
+	}
+	jobCtx, cancel := context.WithCancel(context.Background())
+	s.status = AnalysisRunning
+	s.analyzed, s.total = 0, 0
+	s.result, s.analyzedAt = nil, nil
+	s.lastErr = ""
+	s.cancel = cancel
+	s.mu.Unlock()
+
+	s.broadcast()
+	go s.runAnalysis(jobCtx)
+	return nil
+}
+
+// CancelAnalysis stops an in-flight sweep. No-op when nothing is running.
+func (s *GenerationCandidateService) CancelAnalysis() {
+	s.mu.Lock()
+	cancel := s.cancel
+	s.mu.Unlock()
+	if cancel != nil {
+		cancel()
+	}
+}
+
+// Snapshot returns the current state — safe to call at any time.
+func (s *GenerationCandidateService) Snapshot() AnalysisSnapshot {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return AnalysisSnapshot{
+		Status:     s.status,
+		Analyzed:   s.analyzed,
+		Total:      s.total,
+		Result:     s.result,
+		AnalyzedAt: s.analyzedAt,
+		Error:      s.lastErr,
+	}
+}
+
+// runAnalysis is the background half of StartAnalysis.
+func (s *GenerationCandidateService) runAnalysis(ctx context.Context) {
+	// Progress is throttled by TIME, not by item count: a library of 12 and a
+	// library of 12,000 both produce a readable stream, and the hub's bounded
+	// broadcast channel never becomes the thing that drops the final event.
+	var lastEmit time.Time
+	result, err := s.Analyze(ctx, func(done, total int) {
+		s.mu.Lock()
+		s.analyzed, s.total = done, total
+		s.mu.Unlock()
+
+		now := s.now()
+		if done == total || now.Sub(lastEmit) >= progressEmitInterval {
+			lastEmit = now
+			s.broadcast()
+		}
+	})
+
+	s.mu.Lock()
+	s.cancel = nil
+	switch {
+	case errors.Is(err, context.Canceled):
+		// A partial classification is not a quote — discard it rather than let
+		// the UI price a fraction of the library as if it were all of it.
+		s.status = AnalysisCancelled
+		s.result = nil
+	case err != nil:
+		s.status = AnalysisFailed
+		s.lastErr = err.Error()
+		s.result = nil
+	default:
+		at := s.now()
+		s.status = AnalysisReady
+		s.result = result
+		s.analyzedAt = &at
+	}
+	s.mu.Unlock()
+
+	s.broadcast()
+}
+
+// progressEmitInterval throttles the SSE counter.
+const progressEmitInterval = 250 * time.Millisecond
+
+func (s *GenerationCandidateService) broadcast() {
+	if s.sseHub == nil {
+		return
+	}
+	snap := s.Snapshot()
+	s.sseHub.Broadcast(sse.Event{
+		ID:   uuid.New().String(),
+		Type: sse.EventGenerationCandidatesProgress,
+		Data: map[string]interface{}{
+			"status":   snap.Status,
+			"analyzed": snap.Analyzed,
+			"total":    snap.Total,
+			"error":    snap.Error,
+		},
+	})
 }
 
 // AnalysisProgress reports how far the probe sweep has got. Emitted per item so

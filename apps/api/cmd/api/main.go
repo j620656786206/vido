@@ -775,6 +775,7 @@ func main() {
 		cfg.ASRBaseURL != "",
 		slog.Default(),
 	)
+	generationCandidateService.SetSSEHub(sseHub)
 	generationCandidatesHandler := handlers.NewGenerationCandidatesHandler(generationCandidateService)
 	// FR12 manual trigger (sub-1-6 AC #4). The route is registered in EVERY
 	// mode so the API surface does not change shape with an env var; a nil

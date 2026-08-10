@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"context"
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -11,7 +11,9 @@ import (
 // GenerationCandidateAnalyzerInterface is the narrow surface this handler
 // drives (Rule 11, mirroring GenerationBatchProcessorInterface).
 type GenerationCandidateAnalyzerInterface interface {
-	Analyze(ctx context.Context, progress services.AnalysisProgress) (*services.GenerationCandidateResult, error)
+	StartAnalysis() error
+	CancelAnalysis()
+	Snapshot() services.AnalysisSnapshot
 }
 
 // GenerationCandidatesHandler serves the cost-preview list (story sub-4-1):
@@ -29,31 +31,60 @@ func NewGenerationCandidatesHandler(analyzer GenerationCandidateAnalyzerInterfac
 	return &GenerationCandidatesHandler{analyzer: analyzer}
 }
 
-// RegisterRoutes mounts the candidates route.
+// RegisterRoutes mounts the candidates routes.
 func (h *GenerationCandidatesHandler) RegisterRoutes(rg *gin.RouterGroup) {
-	rg.GET("/subtitles/generation-candidates", h.ListCandidates)
+	gc := rg.Group("/subtitles/generation-candidates")
+	{
+		gc.GET("", h.ListCandidates)
+		gc.POST("/analyze", h.StartAnalysis)
+		gc.POST("/analyze/cancel", h.CancelAnalysis)
+	}
+}
+
+// StartAnalysis godoc
+// @Summary      Start the subtitle-generation cost analysis
+// @Description  Kicks off the probe sweep that classifies every candidate as extract or paid speech recognition. Returns immediately; progress arrives on the generation_candidates_progress SSE event and the result via GET. Probing is local and free — this endpoint spends nothing.
+// @Tags         subtitles
+// @Produce      json
+// @Success      202  {object}  APIResponse  "{started:true}"
+// @Failure      409  {object}  APIResponse  "TRANSCRIPTION_BATCH_RUNNING — an analysis is already in flight"
+// @Router       /api/v1/subtitles/generation-candidates/analyze [post]
+func (h *GenerationCandidatesHandler) StartAnalysis(c *gin.Context) {
+	if err := h.analyzer.StartAnalysis(); err != nil {
+		if errors.Is(err, services.ErrAnalysisRunning) {
+			ErrorResponse(c, http.StatusConflict, "TRANSCRIPTION_BATCH_RUNNING",
+				"分析正在進行中。", "等待目前的分析結束，或先取消它。")
+			return
+		}
+		ErrorResponse(c, http.StatusInternalServerError, "DB_QUERY_FAILED",
+			"無法開始分析："+err.Error(), "請稍後再試。")
+		return
+	}
+	c.JSON(http.StatusAccepted, APIResponse{Success: true, Data: map[string]interface{}{"started": true}})
+}
+
+// CancelAnalysis godoc
+// @Summary      Cancel the running cost analysis
+// @Description  Stops an in-flight probe sweep. Any partial classification is discarded — a fraction of the library priced as if it were all of it would be a misleading quote.
+// @Tags         subtitles
+// @Produce      json
+// @Success      200  {object}  APIResponse  "{cancelled:true}"
+// @Router       /api/v1/subtitles/generation-candidates/analyze/cancel [post]
+func (h *GenerationCandidatesHandler) CancelAnalysis(c *gin.Context) {
+	h.analyzer.CancelAnalysis()
+	SuccessResponse(c, map[string]interface{}{"cancelled": true})
 }
 
 // ListCandidates godoc
-// @Summary      List subtitle-generation candidates with cost estimates
-// @Description  Enumerates every movie and episode missing a zh-Hant subtitle, classifies each one as extract (a usable embedded text track exists) or asr (paid speech recognition), and returns a per-item plus aggregate USD ESTIMATE. Probes files that carry no scan-time track data; never extracts or transcribes, so calling this costs nothing.
+// @Summary      Get subtitle-generation candidates and their cost estimates
+// @Description  Returns the current state of the cost analysis: its status, how far it has got, and — once ready — every candidate with its route (extract vs paid speech recognition) and USD estimate, plus the aggregate. Reading this never triggers work; POST /analyze does.
 // @Tags         subtitles
 // @Produce      json
-// @Success      200  {object}  APIResponse  "candidates + summary"
-// @Failure      500  {object}  APIResponse  "DB_QUERY_FAILED"
+// @Success      200  {object}  APIResponse  "{status, analyzed, total, result?, analyzed_at?, error?}"
 // @Router       /api/v1/subtitles/generation-candidates [get]
 func (h *GenerationCandidatesHandler) ListCandidates(c *gin.Context) {
-	// Progress is nil here: this is the plain request/response shape. The
-	// analysis pass can be long on a library full of episodes (one ffprobe per
-	// un-enriched file), and surfacing that as SSE progress for the F14 screen
-	// is wired separately — the service already emits per-item progress.
-	result, err := h.analyzer.Analyze(c.Request.Context(), nil)
-	if err != nil {
-		ErrorResponse(c, http.StatusInternalServerError, "DB_QUERY_FAILED",
-			"無法列出可產生字幕的項目："+err.Error(),
-			"檢查媒體庫是否可存取，或稍後再試。")
-		return
-	}
-
-	SuccessResponse(c, result)
+	// Always 200 with a state envelope rather than 404/425 for "not analyzed
+	// yet": the client renders the analysis screen (F14) and the list (F15)
+	// from the same payload, so a status field is what it actually needs.
+	SuccessResponse(c, h.analyzer.Snapshot())
 }
