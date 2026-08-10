@@ -252,6 +252,46 @@ _共用終態階段：_
 
 ---
 
+### generation_candidates_progress
+
+成本預覽的分析進度（story sub-4-1）。掃描開始時、進行中最多每 250 毫秒、以及結束時各廣播一次。
+
+這是字幕生成「免費的那一半」：判斷哪些檔案有可抽取的文字字幕軌、哪些必須走付費語音辨識。過程只探測、不抽取也不轉錄，因此不會產生任何費用。結果本身透過 HTTP 取得（`GET /api/v1/subtitles/generation-candidates`），本事件只負責推進計數。
+
+**發布者：** `GenerationCandidateService.broadcast()`
+
+| 欄位       | 型別     | 說明                                 |
+| ---------- | -------- | ------------------------------------ |
+| `status`   | `string` | 分析狀態（見下表）                   |
+| `analyzed` | `int`    | 已分類的項目數                       |
+| `total`    | `int`    | 待分類的項目總數                     |
+| `error`    | `string` | 失敗原因；`status` 非 `error` 時為空 |
+
+**狀態值：**
+
+| 狀態        | 說明                             |
+| ----------- | -------------------------------- |
+| `analyzing` | 探測掃描進行中                   |
+| `ready`     | 結果已可透過 HTTP 取得           |
+| `cancelled` | 使用者中止；部分分類結果一律捨棄 |
+| `error`     | 列舉失敗，沒有可信的結果可顯示   |
+
+**範例 payload：**
+
+```json
+{
+  "type": "generation_candidates_progress",
+  "data": {
+    "status": "analyzing",
+    "analyzed": 234,
+    "total": 1247,
+    "error": ""
+  }
+}
+```
+
+---
+
 ### notification
 
 通用通知事件。已定義但目前尚未使用。

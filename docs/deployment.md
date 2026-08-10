@@ -82,6 +82,13 @@ it. This is **off by default**:
 
 Notes:
 
+- **Scanning never generates subtitles.** Completing a library scan updates
+  files and metadata and nothing else — it does not queue any paid work. This
+  changed in story sub-4-1: the first production run of `pipeline` mode wired a
+  library-wide sweep into the scan-complete callback, so one press of "掃描媒體庫"
+  queued ~1000 items, most of them onto paid speech recognition, with no cost
+  shown. Generation is now chosen explicitly, from a screen that shows the
+  estimate first. Per-item manual generation is unaffected.
 - **Unknown values fail startup on purpose.** A typo such as `pipelien` stops
   the server rather than quietly staying on `legacy` — otherwise "I enabled it
   and nothing happens" is indistinguishable from a broken pipeline.

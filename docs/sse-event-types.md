@@ -252,6 +252,46 @@ Batch subtitle processing progress. Broadcast after each item completes and when
 
 ---
 
+### generation_candidates_progress
+
+Cost-preview analysis progress (story sub-4-1). Broadcast when the sweep starts, at most every 250 ms while it runs, and once when it settles.
+
+This is the FREE half of subtitle generation: classifying which files carry an extractable text track and which would need paid speech recognition. Nothing is extracted or transcribed, so the sweep spends nothing. The result itself is fetched over HTTP (`GET /api/v1/subtitles/generation-candidates`); this event only moves the counter.
+
+**Publisher:** `GenerationCandidateService.broadcast()`
+
+| Field      | Type     | Description                                      |
+| ---------- | -------- | ------------------------------------------------ |
+| `status`   | `string` | Analysis status (see below)                      |
+| `analyzed` | `int`    | Items classified so far                          |
+| `total`    | `int`    | Items to classify                                |
+| `error`    | `string` | Failure reason; empty unless `status` is `error` |
+
+**Status values:**
+
+| Status      | Description                                              |
+| ----------- | -------------------------------------------------------- |
+| `analyzing` | The probe sweep is in flight                             |
+| `ready`     | A result is available over HTTP                          |
+| `cancelled` | User stopped it; the partial classification is discarded |
+| `error`     | Enumeration failed; there is nothing trustworthy to show |
+
+**Example payload:**
+
+```json
+{
+  "type": "generation_candidates_progress",
+  "data": {
+    "status": "analyzing",
+    "analyzed": 234,
+    "total": 1247,
+    "error": ""
+  }
+}
+```
+
+---
+
 ### notification
 
 General-purpose notifications. Defined but not actively used in current implementation.

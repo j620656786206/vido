@@ -39,6 +39,18 @@ const (
 	// detail is NOT duplicated here — FE joins the transcription_* events by
 	// current_media_id.
 	EventGenerationBatchProgress EventType = "generation_batch_progress"
+
+	// EventGenerationCandidatesProgress carries the cost-preview ANALYSIS
+	// sweep's progress (story sub-4-1 AC #8). Payload keys: status, analyzed,
+	// total, error; status ∈ analyzing|ready|cancelled|error.
+	//
+	// This is the FREE half of the flow — classifying which files would need
+	// paid speech recognition. It is deliberately its own event rather than a
+	// reuse of subtitle_progress: that stream's stage vocabulary is a stamped
+	// contract (D6, story sub-1-3) about an item being PROCESSED, and analysis
+	// processes nothing. The result payload is fetched over HTTP; this event
+	// only moves the counter.
+	EventGenerationCandidatesProgress EventType = "generation_candidates_progress"
 )
 
 // Event represents an SSE event to broadcast
