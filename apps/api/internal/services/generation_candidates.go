@@ -178,6 +178,13 @@ type GenerationCandidateService struct {
 	analyzedAt *time.Time
 	lastErr    string
 	cancel     context.CancelFunc
+	// job is a generation token (CR sub-4-1 H1). Cancel-then-restart is a
+	// normal user gesture, and without the token the OLD goroutine's
+	// wind-down could run AFTER the new sweep started — marking the fresh
+	// run cancelled, nil-ing its cancel func (making it unstoppable), and
+	// letting stale progress callbacks fight the live ones. Every deferred
+	// write is guarded by "is my token still current?".
+	job uint64
 }
 
 func NewGenerationCandidateService(
@@ -217,6 +224,8 @@ func (s *GenerationCandidateService) StartAnalysis() error {
 		return ErrAnalysisRunning
 	}
 	jobCtx, cancel := context.WithCancel(context.Background())
+	s.job++
+	job := s.job
 	s.status = AnalysisRunning
 	s.analyzed, s.total = 0, 0
 	s.result, s.analyzedAt = nil, nil
@@ -225,18 +234,34 @@ func (s *GenerationCandidateService) StartAnalysis() error {
 	s.mu.Unlock()
 
 	s.broadcast()
-	go s.runAnalysis(jobCtx)
+	go s.runAnalysis(jobCtx, job)
 	return nil
 }
 
 // CancelAnalysis stops an in-flight sweep. No-op when nothing is running.
+//
+// The state flips to cancelled SYNCHRONOUSLY (CR sub-4-1 H1): the old
+// goroutine may sit inside an ffprobe for up to its 10s timeout, and making
+// the user stare at "analyzing" for that long after pressing 取消 reads as a
+// broken button. Bumping the job token turns the still-running goroutine into
+// a zombie whose every write is dropped — it exits quietly on its own.
 func (s *GenerationCandidateService) CancelAnalysis() {
 	s.mu.Lock()
 	cancel := s.cancel
-	s.mu.Unlock()
-	if cancel != nil {
-		cancel()
+	if cancel == nil {
+		s.mu.Unlock()
+		return
 	}
+	s.cancel = nil
+	s.job++ // supersede the running goroutine — its wind-down becomes a no-op
+	s.status = AnalysisCancelled
+	// A partial classification is not a quote.
+	s.result = nil
+	s.analyzedAt = nil
+	s.mu.Unlock()
+
+	cancel()
+	s.broadcast()
 }
 
 // Snapshot returns the current state — safe to call at any time.
@@ -253,14 +278,20 @@ func (s *GenerationCandidateService) Snapshot() AnalysisSnapshot {
 	}
 }
 
-// runAnalysis is the background half of StartAnalysis.
-func (s *GenerationCandidateService) runAnalysis(ctx context.Context) {
+// runAnalysis is the background half of StartAnalysis. job is its generation
+// token — every write back into shared state is dropped once a newer
+// StartAnalysis has superseded this run (CR sub-4-1 H1).
+func (s *GenerationCandidateService) runAnalysis(ctx context.Context, job uint64) {
 	// Progress is throttled by TIME, not by item count: a library of 12 and a
 	// library of 12,000 both produce a readable stream, and the hub's bounded
 	// broadcast channel never becomes the thing that drops the final event.
 	var lastEmit time.Time
 	result, err := s.Analyze(ctx, func(done, total int) {
 		s.mu.Lock()
+		if s.job != job {
+			s.mu.Unlock()
+			return // a newer sweep owns the counters now
+		}
 		s.analyzed, s.total = done, total
 		s.mu.Unlock()
 
@@ -272,6 +303,13 @@ func (s *GenerationCandidateService) runAnalysis(ctx context.Context) {
 	})
 
 	s.mu.Lock()
+	if s.job != job {
+		// Superseded: a newer StartAnalysis reset the state after our cancel.
+		// Touching anything here would mislabel the LIVE run — the exact
+		// cancel-then-restart clobber this token exists to prevent.
+		s.mu.Unlock()
+		return
+	}
 	s.cancel = nil
 	switch {
 	case errors.Is(err, context.Canceled):

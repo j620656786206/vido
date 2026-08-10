@@ -385,3 +385,69 @@ func TestBroadcast_IsNilHubSafe(t *testing.T) {
 	require.Eventually(t, func() bool { return svc.Snapshot().Status == AnalysisReady },
 		2*time.Second, 5*time.Millisecond)
 }
+
+// ─── CR sub-4-1 H1: cancel is immediate and stale runs cannot clobber ──────
+
+// Pressing 取消 must flip the state NOW, not after the in-flight ffprobe's
+// timeout — a cancel button with up-to-10s latency reads as broken.
+func TestCancelAnalysis_IsImmediate(t *testing.T) {
+	pred := &blockingPredictor{entered: make(chan struct{}, 1), release: make(chan struct{})}
+	svc := analysisService(t, pred, 3)
+
+	require.NoError(t, svc.StartAnalysis())
+	<-pred.entered // the probe is genuinely parked
+	svc.CancelAnalysis()
+
+	// No Eventually: the flip is synchronous even though the goroutine is
+	// still parked inside Probe.
+	snap := svc.Snapshot()
+	assert.Equal(t, AnalysisCancelled, snap.Status)
+	assert.Nil(t, snap.Result)
+
+	close(pred.release) // let the zombie exit; it must not resurrect anything
+	assert.Never(t, func() bool { return svc.Snapshot().Status != AnalysisCancelled },
+		300*time.Millisecond, 20*time.Millisecond,
+		"the superseded goroutine's wind-down must be a no-op")
+}
+
+// Cancel-then-restart: the superseded goroutine's wind-down must not mislabel
+// the NEW run as cancelled, nil its cancel func, or fight its counters.
+func TestCancelThenRestart_StaleRunCannotClobberTheNewOne(t *testing.T) {
+	pred := &blockingPredictor{entered: make(chan struct{}, 2), release: make(chan struct{})}
+	svc := analysisService(t, pred, 2)
+
+	require.NoError(t, svc.StartAnalysis())
+	<-pred.entered
+	svc.CancelAnalysis()
+
+	// Restart while job 1's goroutine is still parked.
+	require.NoError(t, svc.StartAnalysis())
+	<-pred.entered
+	assert.Equal(t, AnalysisRunning, svc.Snapshot().Status)
+
+	// Job 1's zombie wakes up and winds down; job 2 completes normally.
+	close(pred.release)
+	require.Eventually(t, func() bool { return svc.Snapshot().Status == AnalysisReady },
+		2*time.Second, 5*time.Millisecond,
+		"the new run must reach ready — a stale wind-down marking it cancelled is the CR H1 clobber")
+	require.NotNil(t, svc.Snapshot().Result)
+}
+
+// And the new run must remain CANCELLABLE after a stale run existed — the old
+// wind-down used to nil the shared cancel func.
+func TestCancelThenRestart_TheNewRunIsStillCancellable(t *testing.T) {
+	pred := &blockingPredictor{entered: make(chan struct{}, 2), release: make(chan struct{})}
+	svc := analysisService(t, pred, 2)
+
+	require.NoError(t, svc.StartAnalysis())
+	<-pred.entered
+	svc.CancelAnalysis()
+
+	require.NoError(t, svc.StartAnalysis())
+	<-pred.entered
+	svc.CancelAnalysis()
+	assert.Equal(t, AnalysisCancelled, svc.Snapshot().Status,
+		"the second cancel must work — a nil-ed cancel func would make the new run unstoppable")
+
+	close(pred.release)
+}

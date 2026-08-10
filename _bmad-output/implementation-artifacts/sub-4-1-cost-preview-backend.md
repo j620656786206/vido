@@ -1,6 +1,6 @@
 # Story 4.1: 掃描解耦 + 字幕生成候選清單與成本估算（後端讀側）
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -156,6 +156,21 @@ Agent 盤點確認以下**全都要新建**，不要假設現成：前瞻成本�
 - [Source: `apps/api/internal/database/migrations/006_media_entities_enhancement.go`] — `episodes` 表無 tech-info 欄位
 - [Source: `project-context.md`] — Rule 3（回應信封）、Rule 7（錯誤碼）、Rule 11（窄介面）、Rule 19（`services ↛ subtitle`）、Rule 20、Rule 24
 
+## Senior Developer Review (AI)
+
+**Date:** 2026-08-10 · **Reviewer model:** Claude Fable 5（實作為 Opus 5 —— 依「換一顆 LLM」慣例） · **Outcome:** Approve (after same-session fixes) · **Findings:** 1 High / 1 Medium / 2 Low
+
+**強制檢查：** 🔒 Rule 7 Wire Format **PASS**（0 個新 coded 常數；M1 修復新增的 `TRANSCRIPTION_ANALYSIS_RUNNING` 走 code-list update only 先例，前綴數維持 16、CR workflow 零修改）· 🔒 Rule 20 Contract Bump **N/A**（無 bump token）· 🔒 Rule 25 Mega-line **N/A**（project-context.md 僅 Rule 7 清單 body 編輯，未觸 mega-line）· Git vs File List **0 落差** · 9 條 AC 全數有實作證據、checkbox 稽核 0 未勾。
+
+**Action Items：**
+
+- [x] **[H1]** 取消→重啟的狀態機競態 + 取消延遲：舊 goroutine 的收尾寫入沒有世代守衛（理論上可誤標新 run、清掉新 run 的 cancel func），且 `CancelAnalysis` 只發 ctx cancel、狀態要等舊 goroutine 跑完當前 ffprobe（最長 10s timeout）才翻轉——「按取消要等 10 秒」讀起來就是壞掉的按鈕。**修復：** 世代 token（`job uint64`）——每個延後寫入先驗 token；`CancelAnalysis` 改為**同步**轉態並 bump token，殭屍 goroutine 所有寫入被丟棄、安靜退場。+3 個回歸測試（取消立即生效、stale run 不可 clobber、新 run 仍可取消），`-race` 下全綠。
+- [x] **[M1]** 409 重用 `TRANSCRIPTION_BATCH_RUNNING`——該碼語意是「Route C 生成批次執行中」（付費工作），本 409 是「免費分析執行中」；客戶端若依碼決定文案會警告一筆不存在的花費。sub-4-3 尚未消費，趁沒有下游前修正。**修復：** 新碼 `TRANSCRIPTION_ANALYSIS_RUNNING`（既有前綴）+ project-context.md Rule 7 清單同步 + 手寫註解記錄不重用的理由。
+- [x] **[L1]** `Snapshot().Result` 回傳共享指標——接受：唯一消費者是 handler 立即序列化，result 產生後無任何變異點；防禦性深拷貝是無收益的複雜度。記錄於此。
+- [x] **[L2]** SSE ready 事件不含 `analyzed_at`（客戶端需 GET 取得）——接受：事件契約明文「result 走 HTTP、事件只推計數」，文件已載明。
+
+**修復後驗證：** api 全綠 · web 228 檔/2547 測試 · 新測試含 `-race` · gofmt/vet/prettier 乾淨。
+
 ## Dev Agent Record
 
 ### Agent Model Used
@@ -189,6 +204,7 @@ Claude Opus 5 (1M context) — dev-story workflow, 2026-08-10
 | 2026-08-10 | Task 4：`GenerationCandidateService` —— 電影+影集雙來源枚舉、persisted-tracks 快取優先 / 缺者探測、逐項與彙總估價、declined 項目計數不報價；含 Rule 19 鏡像對照測試。 |
 | 2026-08-10 | Task 5（部分）：`GET /api/v1/subtitles/generation-candidates` 上線，既有 preview 端點未動。**AC #8 分析進度串流未完成**，story 保持 in-progress。 |
 | 2026-08-10 | Task 6：AC #9 八類測試案例、全回歸綠、`docs/deployment.md` 補行為變更說明。 |
+| 2026-08-10 | Senior Developer Review（Fable 5 審 Opus 5）：1H/1M/2L —— H1 世代 token + 同步取消（+3 個 -race 回歸測試）；M1 專屬錯誤碼 `TRANSCRIPTION_ANALYSIS_RUNNING` + Rule 7 清單同步；L1/L2 accepted with rationale。Status review → done。 |
 | 2026-08-10 | Task 5 補完（AC #8）：分析改非同步單飛作業 + SSE `generation_candidates_progress`(250ms 時間節流) + 狀態機(idle/analyzing/ready/cancelled/error) + GET 改狀態信封 + analyze/cancel 端點;Rule 17 雙語文件同步;新增 7 個生命週期測試(單飛、就緒快照、取消捨棄部分結果、列舉失敗不靜默空清單、nil hub 安全)。story → review。 |
 
 ## File List
@@ -208,6 +224,7 @@ Claude Opus 5 (1M context) — dev-story workflow, 2026-08-10
 - `apps/api/internal/ai/pricing_test.go` — NEW：估價費率與計費費率同源
 - `apps/api/internal/handlers/generation_candidates_handler.go` — NEW：三端點(GET 狀態信封 / POST analyze / POST analyze/cancel)
 - `apps/api/internal/sse/hub.go` — NEW 事件型別 `generation_candidates_progress`
+- `project-context.md` — Rule 7 code list +`TRANSCRIPTION_ANALYSIS_RUNNING`（CR M1；code-list update only）
 - `docs/sse-event-types.md` + `docs/sse-event-types.zh-TW.md` — Rule 17 雙語對照新增該事件
 - `apps/api/internal/cost_consent_test.go` — NEW：repo 級成本同意守衛
 - `docs/deployment.md` — 「掃描永不產生字幕」行為變更說明

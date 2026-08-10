@@ -47,12 +47,17 @@ func (h *GenerationCandidatesHandler) RegisterRoutes(rg *gin.RouterGroup) {
 // @Tags         subtitles
 // @Produce      json
 // @Success      202  {object}  APIResponse  "{started:true}"
-// @Failure      409  {object}  APIResponse  "TRANSCRIPTION_BATCH_RUNNING — an analysis is already in flight"
+// @Failure      409  {object}  APIResponse  "TRANSCRIPTION_ANALYSIS_RUNNING — an analysis is already in flight"
 // @Router       /api/v1/subtitles/generation-candidates/analyze [post]
 func (h *GenerationCandidatesHandler) StartAnalysis(c *gin.Context) {
 	if err := h.analyzer.StartAnalysis(); err != nil {
 		if errors.Is(err, services.ErrAnalysisRunning) {
-			ErrorResponse(c, http.StatusConflict, "TRANSCRIPTION_BATCH_RUNNING",
+			// Its own code, not a reuse of TRANSCRIPTION_BATCH_RUNNING (CR
+			// sub-4-1 M1): that code means "a Route C generation batch is
+			// running" — paid work in flight. This 409 means the FREE analysis
+			// sweep is running. A client keying UI copy off the code would
+			// warn about spending that is not happening.
+			ErrorResponse(c, http.StatusConflict, "TRANSCRIPTION_ANALYSIS_RUNNING",
 				"分析正在進行中。", "等待目前的分析結束，或先取消它。")
 			return
 		}
