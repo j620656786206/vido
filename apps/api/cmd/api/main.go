@@ -622,23 +622,24 @@ func main() {
 			subtitle.WithCapabilityGate(subtitleCapabilityGate),
 			subtitle.WithASRAvailability(pipelineASR.Available),
 		)
-		// AC #2: WRAP the scan-complete callback — the setter holds one function
-		// and post-scan enrichment already owns it.
-		scannerService.SetOnScanComplete(subtitle.ComposeScanCallback(
-			postScanEnrichment, subtitlePipelinePool,
-			func(queued int, err error) {
-				if err != nil {
-					slog.Error("post-scan subtitle enqueue partially failed", "queued", queued, "error", err)
-					return
-				}
-				slog.Info("post-scan subtitle enqueue complete", "queued", queued)
-			},
-		))
+		// sub-4-1 AC #1: a completed scan does NOT enqueue subtitle generation.
+		// sub-1-6 AC #2 (FR13) wired the library-wide sweep here; the first
+		// production run showed why that is wrong — one press of 掃描媒體庫
+		// enqueued 1026 items, ~2/3 of them onto PAID speech recognition, with
+		// no number ever shown to the user. Generation is now chosen explicitly
+		// on a screen that shows the estimate first (sub-4-3).
+		//
+		// The pool below is deliberately KEPT: the manual per-item endpoint
+		// (FR12) still drives it, and sub-4-2's consented batch will too.
+		// `internal/cost_consent_test.go` fails if a sweep caller reappears.
+		scannerService.SetOnScanComplete(postScanEnrichment)
 		slog.Info("Subtitle generation pipeline enabled",
 			"mode", cfg.SubtitlePipelineMode, "workers", subtitle.PipelineConcurrencyM1, "model", modelID,
 			// May be false on a keyless boot: the pool exists and idles behind the
 			// gate, and starts accepting work the moment a key is saved (sub-2-1a).
-			"translation_configured", subtitleCapabilityGate())
+			"translation_configured", subtitleCapabilityGate(),
+			// Loud on purpose: the behaviour change is the whole point of sub-4-1.
+			"scan_auto_enqueue", false)
 	} else {
 		// ONE line, at wiring time — not one per scanned item (AC #5).
 		slog.Info("Subtitle generation pipeline disabled — staying on the legacy search path",
@@ -754,6 +755,27 @@ func main() {
 	generationBatchProcessor := services.NewGenerationBatchProcessor(
 		transcriptionService, repos.Movies, sseHub, cfg.AIRunBudgetUSD, slog.Default())
 	generationBatchHandler := handlers.NewGenerationBatchHandler(generationBatchProcessor)
+
+	// Cost preview (story sub-4-1): what would generating subtitles cost, per
+	// item and in total, WITHOUT spending anything. Registered in every mode —
+	// it only reads and probes, so it is safe on a legacy install and lets the
+	// UI answer "why is this costly?" before the pipeline is ever enabled.
+	//
+	// A prediction-only Router is built here rather than reusing the one inside
+	// the pipeline-mode block above: NewRouter is stateless and cheap, and
+	// PredictRoute never touches the extractor, so sharing scope would buy
+	// nothing and couple this endpoint to the feature flag.
+	// The self-hosted flag comes from ASR_BASE_URL — a self-hosted endpoint has
+	// no per-minute price, and quoting the hosted rate for it would invent a
+	// bill the user never receives.
+	generationCandidateService := services.NewGenerationCandidateService(
+		repos.Movies, repos.Episodes,
+		routePredictorAdapter{router: subtitle.NewRouter(
+			ffprobeService, subtitle.NewExtractor(0, slog.Default()), slog.Default())},
+		cfg.ASRBaseURL != "",
+		slog.Default(),
+	)
+	generationCandidatesHandler := handlers.NewGenerationCandidatesHandler(generationCandidateService)
 	// FR12 manual trigger (sub-1-6 AC #4). The route is registered in EVERY
 	// mode so the API surface does not change shape with an env var; a nil
 	// queue (legacy) answers 409 rather than 404.
@@ -836,9 +858,10 @@ func main() {
 		recentMediaHandler.RegisterRoutes(apiV1)
 		scannerHandler.RegisterRoutes(apiV1)
 		subtitleHandler.RegisterRoutes(apiV1)
-		generationBatchHandler.RegisterRoutes(apiV1)  // /api/v1/subtitles/generation-batch group (Story 9R-16)
-		subtitlePipelineHandler.RegisterRoutes(apiV1) // POST /api/v1/subtitles/pipeline/run (Story sub-1-6, FR12)
-		keySettingsHandler.RegisterRoutes(apiV1)      // GET/PUT /api/v1/settings/keys + POST /test (Story sub-2-1a, FR25)
+		generationBatchHandler.RegisterRoutes(apiV1)      // /api/v1/subtitles/generation-batch group (Story 9R-16)
+		generationCandidatesHandler.RegisterRoutes(apiV1) // /api/v1/subtitles/generation-candidates (story sub-4-1)
+		subtitlePipelineHandler.RegisterRoutes(apiV1)     // POST /api/v1/subtitles/pipeline/run (Story sub-1-6, FR12)
+		keySettingsHandler.RegisterRoutes(apiV1)          // GET/PUT /api/v1/settings/keys + POST /test (Story sub-2-1a, FR25)
 		transcriptionHandler.RegisterRoutes(apiV1)
 		if nfoLocalizer != nil {
 			nfoLocalizerHandler.RegisterRoutes(apiV1) // POST /movies/:id/localize-nfo (9R-13)

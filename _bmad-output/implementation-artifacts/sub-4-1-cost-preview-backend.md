@@ -49,35 +49,36 @@ UX 設計已定稿（PR #211，8 個畫面）：`_bmad-output/planning-artifacts
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — 掃描解耦（AC: #1）**
-  - [ ] `main.go:627` 的 `ComposeScanCallback` 不再傳 pool（保留 `postScanEnrichment`）
-  - [ ] 更新 `scan_callback_test.go` 的 4 個測試以反映新語意（其中 `TestComposeScanCallback_NilPreviousCallbackStillEnqueues` 需重新定位）
-  - [ ] 確認手動端點與 worker pool 生命週期不受影響（`main.go:761`、`:915`）
+- [x] **Task 1 — 掃描解耦（AC: #1）**
+  - [x] `main.go` 改為 `scannerService.SetOnScanComplete(postScanEnrichment)` —— **超出原計畫**：整個移除 `scan_callback.go`（+ 其 4 個測試），因為該檔存在的唯一目的就是掃描後自動派工，留著等於留一個「再接回去」的陷阱。解耦因此是結構性的，不是傳 nil 參數
+  - [x] 新增守衛測試 `internal/cost_consent_test.go`：任何生產檔案呼叫 `.EnqueueMissing(` 即紅燈（RED→GREEN 已驗證），註解記錄 2026-08-07 的實際事故
+  - [x] 手動 FR12 端點與 pool 生命週期不受影響（`subtitlePipelineQueue`、`Start`/`Stop` 皆保留驗證）
 
-- [ ] **Task 2 — 路線預測入口 + Rule 19 接線（AC: #3）**
-  - [ ] `subtitle` 套件新增 probe-only 預測入口，重用 `Probe` + `SelectCandidates` + `verdictWithoutTrack`（後者需匯出或包一層）
-  - [ ] `services` 側定義窄 port；`cmd/api` 加 adapter（比照 `asr_adapter.go`）
-  - [ ] 明確測試「預測不觸發 ffmpeg 抽取」
+- [x] **Task 2 — 路線預測入口 + Rule 19 接線（AC: #3）**
+  - [x] `subtitle/predict_route.go`：`RoutePrediction` 三值 + `Router.PredictRoute`（probe-only）+ 純函式 `PredictFromTracks`
+  - [x] `services.RoutePredictor` 窄 port + `cmd/api/route_predictor_adapter.go`（比照 `asr_adapter.go`）
+  - [x] 測試明確斷言 `extractor.callCount == 0`（預測絕不觸發 ffmpeg）+ 探測失敗不得被歸類為 ASR
 
-- [ ] **Task 3 — 片長與定價的資料來源（AC: #5, #6）**
-  - [ ] `MediaTechInfo` 加 `Duration`；`ffprobeFormat` 解析 `-show_format` 已回傳的 duration
-  - [ ] `ai` 套件加匯出定價存取器（ASR 每分鐘費率 + LLM 費率），既有未匯出常數維持唯一真實來源
-  - [ ] 自架 ASR 的零費率/未知處理
+- [x] **Task 3 — 片長與定價的資料來源（AC: #5, #6）**
+  - [x] `MediaTechInfo.DurationSeconds` + `ffprobeFormat.Duration` 解析（0 = 未知，非零長度）
+  - [x] `ai.PricingFor` / `ai.HostedASRPerMinuteUSD` / `ai.EstimatedASRPerMinuteUSD`，read-through 到既有未匯出常數（不建第二份費率表）
+  - [x] 自架 ASR 費率為 0；測試斷言估價與 `RecordASR` 的計費率是同一個數字
 
-- [ ] **Task 4 — 候選枚舉 + 估價服務（AC: #2, #4, #6）**
-  - [ ] 窄介面同時枚舉電影與影集（沿用既有述詞，不自寫 SQL）
-  - [ ] 已存 `subtitle_tracks` 快取優先、缺者現場探測的分析流程
-  - [ ] 逐項估價 + 彙總
+- [x] **Task 4 — 候選枚舉 + 估價服務（AC: #2, #4, #6）**
+  - [x] `GenerationCandidateService` 雙來源枚舉（電影 + 影集，沿用既有述詞，零新 SQL）
+  - [x] 已存 `subtitle_tracks` 快取優先、缺者現場探測；空/壞 JSON 一律回退探測（不可誤判為「無軌 ⇒ ASR」）
+  - [x] 逐項估價 + 彙總；`RouteSkipped` 計數但不報價
+  - [x] Rule 19 鏡像對照測試 `route_prediction_parity_test.go`（比照 `srt_parity_test.go`）
 
-- [ ] **Task 5 — API 與進度（AC: #7, #8）**
-  - [ ] 新端點（清單 + 彙總）；既有 preview 端點原樣保留
-  - [ ] 分析進度事件（沿用既有 SSE 事件詞彙，不動 D6 stamped 契約）
-  - [ ] Swagger 註解與 Rule 3 信封
+- [~] **Task 5 — API 與進度（AC: #7, #8）** — 端點完成，進度串流未完成
+  - [x] `GET /api/v1/subtitles/generation-candidates`（清單 + 彙總）；既有 `preview` 端點**原樣未動**
+  - [ ] **分析進度事件（AC #8）尚未接線** —— 服務層已用 `AnalysisProgress` callback 逐項回報並有測試，但沒有任何東西把它廣播出去；handler 目前傳 nil。F14 畫面需要的是非同步作業 + SSE，這是實質工作量，見下方 Completion Notes 的誠實評估
+  - [x] Swagger 註解 + Rule 3 信封 + 既有 `DB_QUERY_FAILED` 錯誤碼（零新 Rule 7 前綴）
 
-- [ ] **Task 6 — 測試與文件（AC: #9）**
-  - [ ] AC #9 的 8 類案例
-  - [ ] 全回歸閘門：`pnpm nx test api` + `pnpm nx test web`
-  - [ ] `docs/deployment.md` 補「掃描不再自動產生字幕」的行為變更說明（Rule 17 的 zh-TW 對照仍缺，見既有 `backlog-deployment-doc-zh-tw-twin`，本 story 不擴大範圍）
+- [x] **Task 6 — 測試與文件（AC: #9）**
+  - [x] AC #9 的 8 類案例全數覆蓋（見 File List 的測試檔）
+  - [x] 全回歸閘門：`pnpm nx test api` ✅ + `pnpm nx test web` ✅（228 檔 / 2547 測試）+ `lint:all` 0 errors
+  - [x] `docs/deployment.md` 補上「掃描永不產生字幕」的行為變更說明（Rule 17 的 zh-TW 對照仍缺，屬既有 `backlog-deployment-doc-zh-tw-twin`，未擴大範圍）
 
 ## Dev Notes
 
@@ -158,9 +159,56 @@ Agent 盤點確認以下**全都要新建**，不要假設現成：前瞻成本�
 
 ### Agent Model Used
 
+Claude Opus 5 (1M context) — dev-story workflow, 2026-08-10
+
 ### Debug Log References
 
+- RED→GREEN 逐項驗證：`cost_consent_test.go`（先紅於 `scan_callback.go` 的呼叫）→ 移除後綠；`predict_route_test.go`（先紅於未定義的 `PredictRoute`/`PredictExtract`）→ 實作後綠。
+- 全回歸：`pnpm nx test api` ✅ · `pnpm nx test web` ✅（228 檔 / 2547 測試）· `pnpm run lint:all` 0 errors · `go vet` 乾淨 · `gofmt` 乾淨 · prettier 乾淨。
+
 ### Completion Notes List
+
+- **⚠️ 本 story 尚未完成，狀態刻意保持 `in-progress`。** AC #8（分析進度可觀測）只做了一半：服務層已用 `AnalysisProgress` callback 逐項回報且有測試（`TestAnalyze_ReportsProgressForEveryItem`），但沒有任何東西把它廣播出去，handler 傳 nil。F14 畫面需要的是「非同步作業 + SSE 進度」，那是實質工作量而非收尾。**不把 Task 5 標完成、不把 story 標 review**，因為那會是對完成度說謊。
+- **🔗 AC Drift: FOUND — sub-1-6 AC #2（FR13 掃描後自動派工）→ 本 story AC #1 移除該行為。** 這是本 story 存在的目的，不是意外。sub-1-6 狀態為 `done` 且該 AC **未 stamp**（隱含 v0），依 Rule 20 forward-only 屬凍結，**不欠 stale-mark**；漂移依規定記錄於此並在 File List 註記來源 story。
+- **📎 Contract Stamps: NONE（本 story 未 stamp、未 bump 任何契約）。** 消費面：`PipelineStage`（sub-1-3 AC #1 `[@contract-v1]`）僅「不新增值」地被遵守，未消費其形狀；既有 `generation-batch/preview` 與 202 回應**完全未動**（AC #7），故對現有 FE 零破壞。新端點的回應形狀是本 story 新產出，是否要 stamp 待 sub-4-3（FE）確定跨 story 消費時再決定。
+- **🎭 A11y Pre-Flight: N/A（100% backend — 未觸及任何 apps/web/ 檔案）。**
+- **🎨 UX Verification: SKIPPED — 本 story 無 UI 變更**（前端為 sub-4-3）。
+- **超出計畫的決定：刪除 `scan_callback.go` 而非傳 nil。** 該檔存在的唯一目的就是掃描後自動派工；留著它等於留一個可被重新接線的陷阱。刪除後 `EnqueueMissing` 在生產環境呼叫者為零（仍有 21 個測試引用，方法保留給 sub-4-2 的知情批次），並由 `cost_consent_test.go` 守住。
+- **🔍 設計與實作的落差（需回饋 Sally / sub-4-3）：F15 把「抽取」標為「免費」，但抽取路線仍要付 LLM 翻譯費。** 後端據實回報：`estimateUSD` 對 extract 路線回傳 `分鐘 × translationUSDPerMinute`（>0），並有測試 `TestAnalyze_ASRCostsMoreThanExtractForTheSameRuntime` 斷言它嚴格大於 0 且小於 ASR。前端可自行決定低於某門檻時顯示「免費」，但那是四捨五入的呈現決定，不是後端的宣稱。**建議 sub-4-3 或設計回合處理標籤文案。**
+- **`translationUSDPerMinute = 0.0004` 是校準常數不是實測值**：翻譯成本抽取前不可精算（取決於 cue 數），此值以 M1 pilot 觀察到的「長片約 $0.03」回推，已命名為常數並註明未來可從 `subtitle_runs` 用量資料重新校準。
+- **已知限制（依 story Dev Notes 記錄，非本 story 解決）**：抽取路線估價是下界（SDH 過濾歸零仍會落 ASR）；預算為軟上限（`Exceeded()` 用 `>=` 且在呼叫前檢查）；自架 ASR 的**事後記帳**仍高估（`backlog-selfhosted-asr-actual-cost`）。
+- **Rule 19 守得住**：`services` 未新增對 `subtitle` 的 import（`TestServicesMustNotImportSubtitle` 通過），跨界一律走 `cmd/api` 的 adapter，且鏡像型別有對照測試防漂移。
+
+### Change Log
+
+| Date | Change |
+| ---- | ------ |
+| 2026-08-10 | Task 1：掃描與字幕生成解耦 —— main.go 直接掛 `postScanEnrichment`，移除 `scan_callback.go` 及其測試，新增 `internal/cost_consent_test.go` 守衛（生產環境呼叫 `.EnqueueMissing(` 即紅燈）。sub-1-6 AC #2（FR13）行為移除，該 story 已 done 且 AC 未 stamp，不欠 stale-mark。 |
+| 2026-08-10 | Task 2–3：`subtitle.PredictRoute`/`PredictFromTracks`（probe-only，絕不抽取）+ `services.RoutePredictor` 窄 port + `cmd/api` adapter；`MediaTechInfo.DurationSeconds` 與 ffprobe duration 解析；`ai` 匯出定價存取器（read-through，含自架 ASR 零費率）。 |
+| 2026-08-10 | Task 4：`GenerationCandidateService` —— 電影+影集雙來源枚舉、persisted-tracks 快取優先 / 缺者探測、逐項與彙總估價、declined 項目計數不報價；含 Rule 19 鏡像對照測試。 |
+| 2026-08-10 | Task 5（部分）：`GET /api/v1/subtitles/generation-candidates` 上線，既有 preview 端點未動。**AC #8 分析進度串流未完成**，story 保持 in-progress。 |
+| 2026-08-10 | Task 6：AC #9 八類測試案例、全回歸綠、`docs/deployment.md` 補行為變更說明。 |
+
+## File List
+
+- `apps/api/cmd/api/main.go` — 掃描回呼解耦（不再接 pool）+ 候選服務與 handler 接線
+- `apps/api/cmd/api/route_predictor_adapter.go` — NEW：Rule 19 跨界 adapter
+- `apps/api/internal/subtitle/scan_callback.go` — **DELETED**（存在目的即自動派工）
+- `apps/api/internal/subtitle/scan_callback_test.go` — **DELETED**（斷言被移除的行為）
+- `apps/api/internal/subtitle/predict_route.go` — NEW：`RoutePrediction` + `PredictRoute` + `PredictFromTracks`
+- `apps/api/internal/subtitle/predict_route_test.go` — NEW：分類正確性 + 絕不抽取 + 探測失敗不誤判
+- `apps/api/internal/services/generation_candidates.go` — NEW：枚舉 + 分類 + 估價服務與其窄 port
+- `apps/api/internal/services/generation_candidates_test.go` — NEW：AC #9 八類案例
+- `apps/api/internal/services/route_prediction_parity_test.go` — NEW：Rule 19 鏡像漂移偵測
+- `apps/api/internal/services/ffprobe_service.go` — `DurationSeconds` 欄位 + duration 解析
+- `apps/api/internal/services/ffprobe_service_test.go` — duration 解析與未知降級測試
+- `apps/api/internal/ai/budget.go` — 匯出定價存取器（read-through 到既有常數）
+- `apps/api/internal/ai/pricing_test.go` — NEW：估價費率與計費費率同源
+- `apps/api/internal/handlers/generation_candidates_handler.go` — NEW：候選端點
+- `apps/api/internal/cost_consent_test.go` — NEW：repo 級成本同意守衛
+- `docs/deployment.md` — 「掃描永不產生字幕」行為變更說明
+- `_bmad-output/implementation-artifacts/sub-1-6-wire-triggering-gating.md` — （AC drift 來源參照，見 Completion Notes；未修改）
+- `_bmad-output/implementation-artifacts/sub-4-1-cost-preview-backend.md` — 本 story 檔
 
 ### Discovery Triage
 

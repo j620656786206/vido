@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -24,6 +25,12 @@ type MediaTechInfo struct {
 	AudioChannels   int             `json:"audio_channels,omitempty"`
 	HDRFormat       string          `json:"hdr_format,omitempty"`
 	SubtitleTracks  []SubtitleTrack `json:"subtitle_tracks,omitempty"`
+	// DurationSeconds is the container duration ffprobe reports. 0 means
+	// UNKNOWN, not empty — the field was added by story sub-4-1 so speech
+	// recognition can be priced ($/audio-minute) off the real file rather than
+	// TMDb's `runtime`, which is nullable and disagrees with extended cuts.
+	// The `-show_format` flag that carries it was already in the command.
+	DurationSeconds float64 `json:"duration_seconds,omitempty"`
 }
 
 // SubtitleTrack represents a subtitle track (embedded or external)
@@ -165,6 +172,11 @@ type ffprobeSideData struct {
 type ffprobeFormat struct {
 	Filename string `json:"filename"`
 	Size     string `json:"size"`
+	// Duration is seconds as a decimal STRING ("7241.234000") — ffprobe emits
+	// it that way. Parsed into MediaTechInfo.DurationSeconds; absent or
+	// unparseable for some containers/streams, which is why the estimator
+	// treats 0 as "unknown" rather than "zero-length".
+	Duration string `json:"duration"`
 }
 
 // parseFfprobeJSON parses ffprobe JSON output into MediaTechInfo
@@ -203,6 +215,14 @@ func parseFfprobeJSON(output []byte) (*MediaTechInfo, error) {
 				StreamIndex: stream.Index,
 			})
 		}
+	}
+
+	// Duration is best-effort (story sub-4-1): a container that omits it, or
+	// reports something unparseable, leaves the field at 0 = unknown. Callers
+	// must treat 0 as "fall back to metadata runtime", never as a zero-length
+	// file — quoting $0.00 for an unreadable duration would understate cost.
+	if d, err := strconv.ParseFloat(data.Format.Duration, 64); err == nil && d > 0 {
+		info.DurationSeconds = d
 	}
 
 	return info, nil

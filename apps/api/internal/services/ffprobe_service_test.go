@@ -466,3 +466,35 @@ func TestNewFFprobeService_Defaults(t *testing.T) {
 	assert.Equal(t, 3, cap(svc.semaphore))
 	// available depends on whether ffprobe is installed on this machine
 }
+
+// ─── Story sub-4-1 AC #5: duration for cost estimation ─────────────────────
+
+// Speech recognition is billed per audio minute, so the estimate needs a real
+// duration. `-show_format` already carried it; the parser used to drop it.
+func TestParseFfprobeJSON_ParsesDurationForCostEstimation(t *testing.T) {
+	input := []byte(`{
+		"streams": [{"codec_type":"video","codec_name":"h264","width":1920,"height":1080}],
+		"format": {"filename":"movie.mkv","size":"12345678","duration":"7241.234000"}
+	}`)
+
+	info, err := parseFfprobeJSON(input)
+	require.NoError(t, err)
+	assert.InDelta(t, 7241.234, info.DurationSeconds, 1e-6)
+}
+
+// 0 means UNKNOWN, never zero-length: a container without a duration must fall
+// back to metadata runtime rather than quote $0.00 for a file we cannot measure.
+func TestParseFfprobeJSON_UnknownDurationStaysZero(t *testing.T) {
+	for name, format := range map[string]string{
+		"absent":       `{"filename":"m.mkv","size":"1"}`,
+		"empty string": `{"filename":"m.mkv","size":"1","duration":""}`,
+		"not a number": `{"filename":"m.mkv","size":"1","duration":"N/A"}`,
+		"negative":     `{"filename":"m.mkv","size":"1","duration":"-1"}`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			info, err := parseFfprobeJSON([]byte(`{"streams":[],"format":` + format + `}`))
+			require.NoError(t, err)
+			assert.Zero(t, info.DurationSeconds)
+		})
+	}
+}

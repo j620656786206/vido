@@ -36,6 +36,42 @@ func llmPricing(model string) ModelPricing {
 	return fallbackLLMPricing
 }
 
+// PricingFor exposes the same table the retrospective metering uses, so a
+// FORWARD cost estimate (story sub-4-1) quotes exactly what the run will later
+// be billed at. Deliberately a read-through to llmPricing rather than a second
+// table: two copies of a price list drift, and the drift shows up as a quote
+// the invoice disagrees with.
+func PricingFor(model string) ModelPricing { return llmPricing(model) }
+
+// HostedASRPerMinuteUSD is the per-audio-minute price of the hosted Whisper
+// API — the rate RecordASR bills at.
+//
+// ⚠️ It applies to the HOSTED endpoint only. A deployment pointing ASR_BASE_URL
+// at a self-hosted server (Speaches, faster-whisper, …) pays nothing per
+// minute, so an estimator must not apply this rate blindly — see
+// EstimatedASRPerMinuteUSD.
+func HostedASRPerMinuteUSD() float64 { return whisperPerMinuteUSD }
+
+// EstimatedASRPerMinuteUSD returns the rate a cost ESTIMATE should use for the
+// currently-wired ASR endpoint: 0 when the endpoint is self-hosted, the hosted
+// price otherwise.
+//
+// selfHosted is the caller's answer to "is ASR_BASE_URL pointed somewhere other
+// than the paid API?" — config lives above this package, so the decision is
+// passed in rather than read here.
+//
+// Known asymmetry (tracked as backlog-selfhosted-asr-actual-cost): RecordASR
+// still meters self-hosted runs at the hosted rate, so a self-hosted
+// deployment's ESTIMATE is now honest while its retrospective spend figure
+// still over-reports. Fixing the metering side needs the same rate resolution
+// threaded into RecordASR and is out of scope here.
+func EstimatedASRPerMinuteUSD(selfHosted bool) float64 {
+	if selfHosted {
+		return 0
+	}
+	return whisperPerMinuteUSD
+}
+
 // Budget meters token usage and cost for one batch run and enforces an optional
 // USD ceiling (Story 9R-11 AC #2). It is created per run (per transcription /
 // translation job) and carried through the call chain via context, so a batch
