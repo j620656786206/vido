@@ -334,7 +334,9 @@ describe('useGenerationProgress D6 subtitle_progress family (sub-4-3 AC #8)', ()
     act(() => rendered.result.current.startTracking(MOVIE_UUID));
     const es = MockEventSource.instances[0];
 
-    act(() => es.emit('subtitle_progress', wireEvent('subtitle_progress', { stage: 'extracting' })));
+    act(() =>
+      es.emit('subtitle_progress', wireEvent('subtitle_progress', { stage: 'extracting' }))
+    );
     act(() => es.emit('subtitle_progress', wireEvent('subtitle_progress', { stage: 'complete' })));
 
     expect(rendered.result.current.progress.phase).toBe('complete');
@@ -358,7 +360,9 @@ describe('useGenerationProgress D6 subtitle_progress family (sub-4-3 AC #8)', ()
     expect(es.readyState).not.toBe(2);
 
     // The generation pipeline then really starts — its terminal IS honored.
-    act(() => es.emit('subtitle_progress', wireEvent('subtitle_progress', { stage: 'translating' })));
+    act(() =>
+      es.emit('subtitle_progress', wireEvent('subtitle_progress', { stage: 'translating' }))
+    );
     act(() => es.emit('subtitle_progress', wireEvent('subtitle_progress', { stage: 'complete' })));
     expect(rendered.result.current.progress.phase).toBe('complete');
     expect(onComplete).toHaveBeenCalledOnce();
