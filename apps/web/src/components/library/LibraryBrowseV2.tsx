@@ -276,10 +276,11 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
     errors?: { id: string; message: string }[];
   }>({ isOpen: false, current: 0, total: 0, action: '', isComplete: false });
   const [isBatchSubtitleOpen, setIsBatchSubtitleOpen] = useState(false);
-  const [generationBatchSelection, setGenerationBatchSelection] = useState<{
-    movieIds: string[];
-    excludedCount: number;
-  }>({ movieIds: [], excludedCount: 0 });
+  // Mixed movie+episode selection since sub-4-2 D1 — no client-side filtering.
+  const [generationBatchSelection, setGenerationBatchSelection] = useState<string[]>([]);
+  // F17 deep-link opens force a fresh analysis (CR H2) — the scan just changed
+  // the library, a ready snapshot would show a pre-scan list.
+  const [generationForceAnalyze, setGenerationForceAnalyze] = useState(false);
   const lastSelectedIndexRef = useRef<number>(-1);
   const selectionTypesRef = useRef(new Map<string, 'movie' | 'series'>());
 
@@ -425,18 +426,27 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
     exitSelectionMode();
   }, [exitSelectionMode]);
 
-  // Generation-batch dialog: movie UUIDs pass through, series ids are excluded
-  // client-side (the backend 400s the whole request otherwise — 9R-16 AC 8).
+  // Generation consent flow: ALL selected ids pass through (mixed movie/episode
+  // UUIDs are valid since sub-4-2 D1 — the old series filter + excluded note is
+  // history). Series ROW ids match no candidate and simply don't preselect —
+  // their episodes still appear in the F15 list for manual selection.
   const handleOpenGenerationBatch = useCallback(() => {
-    const movieIds: string[] = [];
-    let excludedCount = 0;
-    for (const id of selectedIds) {
-      if (selectionTypesRef.current.get(id) === 'movie') movieIds.push(id);
-      else excludedCount++;
-    }
-    setGenerationBatchSelection({ movieIds, excludedCount });
+    setGenerationBatchSelection([...selectedIds]);
+    setGenerationForceAnalyze(false);
     setIsBatchSubtitleOpen(true);
   }, [selectedIds]);
+
+  // sub-4-3 F17 deep link: ?generate=1 (scan-complete toast) opens the consent
+  // flow with no preselection, then strips the one-shot param (8-11
+  // subtitleStatus deep-link precedent).
+  const generateParam = search.generate === true;
+  useEffect(() => {
+    if (!generateParam) return;
+    setGenerationBatchSelection([]);
+    setGenerationForceAnalyze(true);
+    setIsBatchSubtitleOpen(true);
+    navigate({ search: (prev) => ({ ...prev, generate: undefined }), replace: true });
+  }, [generateParam, navigate]);
 
   // Keyboard shortcuts while selecting (Escape exits, Ctrl/Cmd+A selects loaded).
   useEffect(() => {
@@ -700,8 +710,8 @@ export function LibraryBrowseV2({ type: typeProp }: { type?: LibraryMediaType } 
       <GenerationBatchDialogV2
         open={isBatchSubtitleOpen}
         onOpenChange={setIsBatchSubtitleOpen}
-        selectedMovieIds={generationBatchSelection.movieIds}
-        excludedSeriesCount={generationBatchSelection.excludedCount}
+        selectedMediaIds={generationBatchSelection}
+        forceAnalyze={generationForceAnalyze}
       />
     </div>
   );

@@ -56,7 +56,54 @@ vi.mock('../../services/subtitleService', () => ({
     getGenerationBatchStatus: vi.fn(),
     cancelGenerationBatch: vi.fn(),
     previewGenerationBatch: vi.fn(),
+    getGenerationCandidates: vi.fn(),
+    startCandidateAnalysis: vi.fn(),
+    cancelCandidateAnalysis: vi.fn(),
   },
+}));
+
+// The consent flow has its own spec suite (consent/*.spec.tsx) — the container
+// tests drive it through a shallow stub that exposes onStartBatch/onClose and
+// surfaces the startError prop.
+vi.mock('./consent/GenerationConsentView', () => ({
+  GenerationConsentView: ({
+    preselectedIds,
+    forceAnalyze,
+    startError,
+    onStartBatch,
+    onClose,
+  }: {
+    preselectedIds?: string[];
+    forceAnalyze?: boolean;
+    startError?: string | null;
+    onStartBatch: (ids: string[], budgetUsd: number) => void;
+    onClose: () => void;
+  }) => (
+    <div
+      data-testid="consent-view-stub"
+      data-preselected={(preselectedIds ?? []).join(',')}
+      data-force-analyze={forceAnalyze ? 'true' : 'false'}
+    >
+      {startError && <p data-testid="consent-stub-error">{startError}</p>}
+      <button
+        type="button"
+        data-testid="consent-stub-start"
+        onClick={() =>
+          onStartBatch(
+            preselectedIds && preselectedIds.length > 0
+              ? preselectedIds
+              : ['4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e51'],
+            5
+          )
+        }
+      >
+        stub-start
+      </button>
+      <button type="button" data-testid="consent-stub-close" onClick={onClose}>
+        stub-close
+      </button>
+    </div>
+  ),
 }));
 
 import {
@@ -77,14 +124,14 @@ const M2 = '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e52';
 const M3 = '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e53';
 const M4 = '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e54';
 const M5 = '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e55';
-const M9 = '9ff0c000-dead-4bee-8f00-000000000999';
+const E9 = '8fa9fed7-8fbc-4e8d-8edc-f6b7c8d9e006';
 
 const ITEMS: GenerationBatchItem[] = [
-  { mediaId: M1, title: '沙丘：第二部' },
-  { mediaId: M2, title: '奧本海默' },
-  { mediaId: M3, title: '怪奇物語' },
-  { mediaId: M4, title: '星際效應' },
-  { mediaId: M5, title: '全面啟動' },
+  { mediaId: M1, title: '沙丘：第二部', mediaType: 'movie' },
+  { mediaId: M2, title: '奧本海默', mediaType: 'movie' },
+  { mediaId: M3, title: '怪奇物語 S04E07', mediaType: 'episode' },
+  { mediaId: M4, title: '星際效應', mediaType: 'movie' },
+  { mediaId: M5, title: '全面啟動', mediaType: 'movie' },
 ];
 
 function progressOf(p: Partial<GenerationBatchProgressState>): GenerationBatchProgressState {
@@ -93,7 +140,7 @@ function progressOf(p: Partial<GenerationBatchProgressState>): GenerationBatchPr
     totalItems: 5,
     currentIndex: 3,
     currentMediaId: M3,
-    currentItem: '怪奇物語',
+    currentItem: '怪奇物語 S04E07',
     successCount: 2,
     failCount: 0,
     pausedCount: 0,
@@ -129,10 +176,8 @@ describe('deriveRowStates', () => {
     ]);
   });
 
-  it('budget_ceiling: paused_count is AUTHORITATIVE — the interrupted in-flight item renders paused even when its per-item pipeline emitted transcription_failed', () => {
-    // Mid-item ceiling at item 3 (index 2): paused_count = 3 → rows 2..4 paused.
+  it('budget_ceiling: paused_count is AUTHORITATIVE — the interrupted in-flight item renders paused even when its per-item pipeline emitted a terminal failure', () => {
     const progress = progressOf({ status: 'budget_ceiling', pausedCount: 3, spentUsd: 5 });
-    // The racing per-item failed event recorded media id 3 — must NOT paint 失敗.
     expect(deriveRowStates(ITEMS, progress, new Set([M3]))).toEqual([
       'done',
       'done',
@@ -166,18 +211,16 @@ describe('deriveRowStates', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Panel — prop-driven state matrix (AC 1/2/7)
+// Panel — prop-driven state matrix (execution states only; idle belongs to the
+// sub-4-3 consent flow and never reaches this panel)
 // ---------------------------------------------------------------------------
 
 function renderPanel(props: Partial<GenerationBatchPanelV2Props> = {}) {
   const merged: GenerationBatchPanelV2Props = {
     open: true,
-    status: 'idle',
+    status: 'running',
     progress: progressOf({ status: 'running' }),
     items: [],
-    scope: 'missing',
-    onScopeChange: vi.fn(),
-    onStart: vi.fn(),
     onConfirmCancelAll: vi.fn(),
     onResume: vi.fn(),
     onClose: vi.fn(),
@@ -188,64 +231,27 @@ function renderPanel(props: Partial<GenerationBatchPanelV2Props> = {}) {
 }
 
 describe('GenerationBatchPanelV2', () => {
-  it('idle renders the 缺字幕的項目 segment with the Mono preview count', () => {
-    renderPanel({ previewCount: 38 });
-    expect(screen.getByText('批次生成字幕')).toBeInTheDocument();
-    const missing = screen.getByTestId('gen-batch-scope-missing');
-    expect(missing).toHaveTextContent('缺字幕的項目');
-    expect(missing).toHaveTextContent('38');
-    expect(missing).toHaveAttribute('aria-pressed', 'true');
-  });
-
   it('renders the mobile bottom-sheet drag handle, hidden on the desktop dialog (F8-M-v2 H717g)', () => {
-    // Fidelity gap closed at the Sally gate: the drawn mobile sheet has a
-    // 36×4 rounded drag handle (node k46gFw). It is `sm:hidden` so it only
-    // paints on the <sm bottom sheet and leaves every desktop baseline byte-stable.
-    renderPanel({ previewCount: 38 });
+    renderPanel({ items: ITEMS });
     const handle = screen.getByTestId('gen-batch-drag-handle');
     expect(handle).toBeInTheDocument();
     expect(handle.className).toContain('sm:hidden');
   });
 
-  it('已選項目 segment renders ONLY when opened with a non-empty selection (AC 1)', () => {
-    renderPanel({ previewCount: 38 });
-    expect(screen.queryByTestId('gen-batch-scope-selected')).not.toBeInTheDocument();
-  });
-
-  it('已選項目 segment renders with the selection count and the excluded-series note', () => {
-    renderPanel({ previewCount: 38, scope: 'selected', selectedCount: 4, excludedSeriesCount: 2 });
-    const selected = screen.getByTestId('gen-batch-scope-selected');
-    expect(selected).toHaveTextContent('已選項目');
-    expect(selected).toHaveTextContent('4');
-    expect(selected).toHaveAttribute('aria-pressed', 'true');
-    const note = screen.getByTestId('gen-batch-excluded-note');
-    expect(note).toHaveTextContent('已排除');
-    expect(note).toHaveTextContent('2');
-    expect(note).toHaveTextContent('部影集（影集字幕生成即將推出）');
-  });
-
-  it('empty scope renders the friendly state, not an error (AC 7)', () => {
-    renderPanel({ previewCount: 0 });
-    expect(screen.getByTestId('gen-batch-empty-scope')).toHaveTextContent('目前沒有缺字幕的項目');
-    expect(screen.getByTestId('gen-batch-start-btn')).toBeDisabled();
-  });
-
-  it('running renders queue rows from items[], the counter, cost line and SSE chip (AC 1)', () => {
+  it('running renders queue rows from items[], the counter, cost line and SSE chip', () => {
     renderPanel({
       status: 'running',
       progress: progressOf({ successCount: 2, failCount: 0 }),
       items: ITEMS,
     });
 
+    expect(screen.getByText('產生字幕')).toBeInTheDocument();
     expect(screen.getByTestId('gen-batch-counter')).toHaveTextContent('2 / 5');
     expect(screen.getByTestId('gen-batch-item-list').children).toHaveLength(5);
     expect(screen.getByTestId(`gen-batch-row-${M3}`)).toHaveAttribute('data-state', 'active');
-    expect(screen.getByTestId(`gen-batch-row-${M3}`)).toHaveTextContent('轉錄中');
     expect(screen.getByTestId(`gen-batch-row-${M1}`)).toHaveTextContent('完成');
     expect(screen.getByTestId(`gen-batch-row-${M5}`)).toHaveTextContent('排隊中');
-    // Active row shows the frozen per-item stepper (slice-1 reuse).
     expect(screen.getByTestId('generation-progress-v2')).toBeInTheDocument();
-    // Cost line: Mono numerals fed by SSE spent_usd/budget_usd.
     expect(screen.getByTestId('gen-batch-cost-line')).toHaveTextContent(
       '本次用量：$0.42 / 上限 $5.00'
     );
@@ -254,14 +260,12 @@ describe('GenerationBatchPanelV2', () => {
       'aria-valuenow',
       '2'
     );
+    // The consented batch is always scope=selected (sub-4-3).
+    expect(screen.getByText(/範圍：已選項目（/)).toBeInTheDocument();
   });
 
-  it('全部取消 uses an inline confirm before cancelling (AC 1)', () => {
-    const props = renderPanel({
-      status: 'running',
-      progress: progressOf({}),
-      items: ITEMS,
-    });
+  it('全部取消 uses an inline confirm before cancelling', () => {
+    const props = renderPanel({ status: 'running', progress: progressOf({}), items: ITEMS });
 
     fireEvent.click(screen.getByTestId('gen-batch-cancel-all'));
     expect(screen.getByTestId('gen-batch-cancel-confirm')).toBeInTheDocument();
@@ -271,7 +275,7 @@ describe('GenerationBatchPanelV2', () => {
     expect(props.onConfirmCancelAll).toHaveBeenCalledOnce();
   });
 
-  it('budget_ceiling renders the F9 banner, paused rows, 關閉 + 下次繼續 (AC 2)', () => {
+  it('budget_ceiling renders the F9 banner, paused rows, 關閉 + 下次繼續', () => {
     const props = renderPanel({
       status: 'budget_ceiling',
       progress: progressOf({
@@ -290,29 +294,17 @@ describe('GenerationBatchPanelV2', () => {
 
     fireEvent.click(screen.getByTestId('gen-batch-resume-btn'));
     expect(props.onResume).toHaveBeenCalledOnce();
-    // NOT error tokens — the banner uses the drawn warning-tint, not error-tint.
     expect(banner.className).toContain('warning-tint');
     expect(banner.className).not.toContain('error-tint');
   });
 
-  it('exclusion note stays visible when EVERY selected item was excluded (scope falls back to missing, AC 5)', () => {
-    // All-series selection (or ids the id→type map cannot classify): zero movie
-    // ids → no 已選項目 segment, scope=missing — the note must STILL render,
-    // otherwise the user's selection silently vanishes.
-    renderPanel({ previewCount: 38, scope: 'missing', selectedCount: 0, excludedSeriesCount: 3 });
-    expect(screen.queryByTestId('gen-batch-scope-selected')).not.toBeInTheDocument();
-    const note = screen.getByTestId('gen-batch-excluded-note');
-    expect(note).toHaveTextContent('已排除');
-    expect(note).toHaveTextContent('3');
-  });
-
-  it('recover-attach fallback card honors terminal semantics — budget_ceiling renders 已暫停, not 已取消 (AC 2)', () => {
+  it('recover-attach fallback card honors terminal semantics — budget_ceiling renders 已暫停, not 已取消', () => {
     renderPanel({
       status: 'budget_ceiling',
       progress: progressOf({
         status: 'budget_ceiling',
         currentMediaId: M3,
-        currentItem: '怪奇物語',
+        currentItem: '怪奇物語 S04E07',
         pausedCount: 3,
         spentUsd: 5,
       }),
@@ -339,38 +331,27 @@ describe('GenerationBatchPanelV2', () => {
   it('running without items[] (409/recover-attach) falls back to the in-flight item card', () => {
     renderPanel({
       status: 'running',
-      progress: progressOf({ currentMediaId: M3, currentItem: '怪奇物語' }),
+      progress: progressOf({ currentMediaId: M3, currentItem: '怪奇物語 S04E07' }),
       items: [],
     });
 
     expect(screen.getByTestId(`gen-batch-row-${M3}`)).toHaveAttribute('data-state', 'active');
-    expect(screen.getByTestId(`gen-batch-row-${M3}`)).toHaveTextContent('怪奇物語');
+    expect(screen.getByTestId(`gen-batch-row-${M3}`)).toHaveTextContent('怪奇物語 S04E07');
   });
 
-  it('static scope line replaces the segments outside idle', () => {
-    renderPanel({
-      status: 'running',
-      progress: progressOf({ totalItems: 5 }),
-      items: ITEMS,
-    });
-
-    expect(screen.queryByTestId('gen-batch-scope-missing')).not.toBeInTheDocument();
-    expect(screen.getByText(/範圍：缺字幕的項目（/)).toBeInTheDocument();
-  });
-
-  it('Escape is gated while running (AC 7)', () => {
-    const props = renderPanel({
-      status: 'running',
-      progress: progressOf({}),
-      items: ITEMS,
-    });
+  it('Escape is gated while running', () => {
+    const props = renderPanel({ status: 'running', progress: progressOf({}), items: ITEMS });
 
     fireEvent.keyDown(screen.getByTestId('generation-batch-dialog-v2'), { key: 'Escape' });
     expect(props.onClose).not.toHaveBeenCalled();
   });
 
-  it('Escape closes when idle', () => {
-    const props = renderPanel({ previewCount: 3 });
+  it('Escape closes on a terminal state', () => {
+    const props = renderPanel({
+      status: 'complete',
+      progress: progressOf({ status: 'complete' }),
+      items: ITEMS,
+    });
 
     fireEvent.keyDown(screen.getByTestId('generation-batch-dialog-v2'), { key: 'Escape' });
     expect(props.onClose).toHaveBeenCalledOnce();
@@ -378,7 +359,7 @@ describe('GenerationBatchPanelV2', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Container — service wiring (AC 1/3/5)
+// Container — consent flow (idle) ⇄ execution panel (running+) wiring
 // ---------------------------------------------------------------------------
 
 function renderDialog(props: Partial<React.ComponentProps<typeof GenerationBatchDialogV2>> = {}) {
@@ -403,21 +384,38 @@ describe('GenerationBatchDialogV2 (container)', () => {
     vi.clearAllMocks();
     h.batchState.status = 'idle';
     h.batchState.currentMediaId = null;
+    h.batchState.pausedCount = 0;
     h.itemState.phase = 'idle';
-    mocked.previewGenerationBatch.mockResolvedValue({ totalItems: 38 });
     mocked.getGenerationBatchStatus.mockResolvedValue({ running: false, progress: null });
   });
 
-  it('fetches the 缺字幕 count from the preview endpoint on open (AC 1)', async () => {
-    renderDialog();
-
-    await waitFor(() =>
-      expect(screen.getByTestId('gen-batch-scope-missing')).toHaveTextContent('38')
+  it('idle renders the consent flow AFTER the recovery probe settles, not the execution panel (AC #9 + CR M4)', async () => {
+    let resolveProbe: (v: { running: boolean; progress: null }) => void = () => {};
+    mocked.getGenerationBatchStatus.mockReturnValue(
+      new Promise((res) => {
+        resolveProbe = res;
+      })
     );
-    expect(mocked.previewGenerationBatch).toHaveBeenCalled();
+    renderDialog({ selectedMediaIds: [M1, E9] });
+
+    // CR M4: before the probe settles NOTHING renders — the consent bootstrap
+    // must not kick a library probe sweep while a batch might be running.
+    expect(screen.queryByTestId('consent-view-stub')).not.toBeInTheDocument();
+
+    resolveProbe({ running: false, progress: null });
+    const stub = await screen.findByTestId('consent-view-stub');
+    expect(stub).toHaveAttribute('data-preselected', `${M1},${E9}`);
+    expect(stub).toHaveAttribute('data-force-analyze', 'false');
+    expect(screen.queryByTestId('generation-batch-dialog-v2')).not.toBeInTheDocument();
   });
 
-  it('recovers an already-running batch on open via the status probe (AC 1 409-recover)', async () => {
+  it('[CR H2] forceAnalyze prop (F17 deep link) reaches the consent view', async () => {
+    renderDialog({ forceAnalyze: true });
+    const stub = await screen.findByTestId('consent-view-stub');
+    expect(stub).toHaveAttribute('data-force-analyze', 'true');
+  });
+
+  it('recovers an already-running batch on open via the status probe (409-recover)', async () => {
     const snapshot = progressOf({ status: 'running' });
     mocked.getGenerationBatchStatus.mockResolvedValue({ running: true, progress: snapshot });
 
@@ -426,116 +424,67 @@ describe('GenerationBatchDialogV2 (container)', () => {
     await waitFor(() => expect(h.batchStartTracking).toHaveBeenCalledWith(snapshot));
   });
 
-  it('start sends scope=missing without media_ids and seeds tracking from the 202 (AC 1/3)', async () => {
+  it('[P0 AC #4] consented start sends scope=selected + mixed media_ids + budget_usd and seeds tracking', async () => {
     mocked.startGenerationBatch.mockResolvedValue({
       conflict: false,
       result: { batchId: 'gb-9', totalItems: 2, items: ITEMS.slice(0, 2) },
     });
 
-    renderDialog();
-    await waitFor(() =>
-      expect(screen.getByTestId('gen-batch-scope-missing')).toHaveTextContent('38')
-    );
+    renderDialog({ selectedMediaIds: [M1, E9] });
 
-    fireEvent.click(screen.getByTestId('gen-batch-start-btn'));
-
-    await waitFor(() =>
-      expect(mocked.startGenerationBatch).toHaveBeenCalledWith({ scope: 'missing' })
-    );
-    expect(h.batchStartTracking).toHaveBeenCalledWith({ batchId: 'gb-9', totalItems: 2 });
-  });
-
-  it('start passes the pre-filtered selected MOVIE ids (AC 5 — BE rejects any non-movie id)', async () => {
-    mocked.startGenerationBatch.mockResolvedValue({
-      conflict: false,
-      result: { batchId: 'gb-9', totalItems: 2, items: ITEMS.slice(0, 2) },
-    });
-
-    renderDialog({ selectedMovieIds: [M1, M2], excludedSeriesCount: 1 });
-
-    // Opened with a selection → 已選項目 preselected.
-    const selected = await screen.findByTestId('gen-batch-scope-selected');
-    expect(selected).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByTestId('gen-batch-excluded-note')).toHaveTextContent('已排除');
-
-    fireEvent.click(screen.getByTestId('gen-batch-start-btn'));
+    fireEvent.click(await screen.findByTestId('consent-stub-start'));
 
     await waitFor(() =>
       expect(mocked.startGenerationBatch).toHaveBeenCalledWith({
         scope: 'selected',
-        mediaIds: [M1, M2],
+        mediaIds: [M1, E9],
+        budgetUsd: 5,
       })
     );
+    expect(h.batchStartTracking).toHaveBeenCalledWith({ batchId: 'gb-9', totalItems: 2 });
   });
 
-  it('attaches to the 409 in-progress snapshot instead of erroring (AC 1)', async () => {
+  it('attaches to the 409 in-progress snapshot instead of erroring', async () => {
     const snapshot = progressOf({ status: 'running' });
     mocked.startGenerationBatch.mockResolvedValue({ conflict: true, progress: snapshot });
 
     renderDialog();
-    await waitFor(() =>
-      expect(screen.getByTestId('gen-batch-scope-missing')).toHaveTextContent('38')
-    );
 
-    fireEvent.click(screen.getByTestId('gen-batch-start-btn'));
+    fireEvent.click(await screen.findByTestId('consent-stub-start'));
 
     await waitFor(() => expect(h.batchStartTracking).toHaveBeenCalledWith(snapshot));
-    expect(screen.queryByTestId('gen-batch-start-error')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('consent-stub-error')).not.toBeInTheDocument();
   });
 
-  it('total_items:0 start renders the friendly empty state (AC 7)', async () => {
-    mocked.startGenerationBatch.mockResolvedValue({
-      conflict: false,
-      result: { batchId: null, totalItems: 0, items: [] },
-    });
-    // Preview said 3 so start is clickable; the START response is the truth.
-    mocked.previewGenerationBatch.mockResolvedValue({ totalItems: 3 });
-
-    renderDialog();
-    await waitFor(() =>
-      expect(screen.getByTestId('gen-batch-scope-missing')).toHaveTextContent('3')
-    );
-
-    fireEvent.click(screen.getByTestId('gen-batch-start-btn'));
-
-    await waitFor(() =>
-      expect(screen.getByTestId('gen-batch-empty-scope')).toHaveTextContent('目前沒有缺字幕的項目')
-    );
-    expect(h.batchStartTracking).not.toHaveBeenCalled();
-  });
-
-  it('start failure surfaces the error inline (400 selection reject path)', async () => {
+  it('start failure surfaces the error to the consent view (400 selection reject path)', async () => {
     mocked.startGenerationBatch.mockRejectedValue(
-      new Error('media_ids 含無法生成字幕的項目（非電影或沒有媒體檔案）')
+      new Error('media_ids 含無法生成字幕的項目（查無此電影或影集，或沒有媒體檔案）')
     );
 
     renderDialog();
-    await waitFor(() =>
-      expect(screen.getByTestId('gen-batch-scope-missing')).toHaveTextContent('38')
-    );
 
-    fireEvent.click(screen.getByTestId('gen-batch-start-btn'));
+    fireEvent.click(await screen.findByTestId('consent-stub-start'));
 
     await waitFor(() =>
-      expect(screen.getByTestId('gen-batch-start-error')).toHaveTextContent(
+      expect(screen.getByTestId('consent-stub-error')).toHaveTextContent(
         'media_ids 含無法生成字幕的項目'
       )
     );
   });
 
-  it('joins the per-item stream on current_media_id while running (AC 1)', async () => {
+  it('joins the per-item stream on current_media_id while running — episode UUIDs included (AC #8)', async () => {
     h.batchState.status = 'running';
-    h.batchState.currentMediaId = M9;
+    h.batchState.currentMediaId = E9;
 
     renderDialog();
 
-    await waitFor(() => expect(h.itemStartTracking).toHaveBeenCalledWith(M9));
+    await waitFor(() => expect(h.itemStartTracking).toHaveBeenCalledWith(E9));
   });
 
   it('cancel calls the cancel endpoint (terminal arrives via SSE)', async () => {
     h.batchState.status = 'running';
     h.batchState.currentMediaId = M3;
-    h.batchState.currentItem = '怪奇物語';
+    h.batchState.currentItem = '怪奇物語 S04E07';
     mocked.cancelGenerationBatch.mockResolvedValue({ cancelled: true, running: false });
 
     renderDialog();
@@ -547,11 +496,9 @@ describe('GenerationBatchDialogV2 (container)', () => {
   });
 
   // -------------------------------------------------------------------------
-  // The 9R-16 CR race, exercised through the REAL component (container +
-  // recording effect + deriveRowStates), not the helper in isolation: on
-  // cancelled/budget_ceiling the interrupted in-flight item ALSO emits
-  // transcription_failed — whichever order the two events arrive, the row must
-  // end up 已暫停, never 失敗.
+  // The 9R-16 CR race through the REAL component: on cancelled/budget_ceiling
+  // the interrupted in-flight item ALSO emits a terminal per-item event —
+  // whichever order the two events arrive, the row must end up 已暫停.
   // -------------------------------------------------------------------------
 
   function renderDialogRaw() {
@@ -559,9 +506,6 @@ describe('GenerationBatchDialogV2 (container)', () => {
       defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
     });
     const onOpenChange = vi.fn();
-    // Fresh element per (re)render — reusing one element reference lets React
-    // bail out on the referentially-equal props and skip re-reading the
-    // (mutated) mock hook state.
     const makeUi = () => (
       <QueryClientProvider client={queryClient}>
         <GenerationBatchDialogV2 open onOpenChange={onOpenChange} />
@@ -576,16 +520,13 @@ describe('GenerationBatchDialogV2 (container)', () => {
       conflict: false,
       result: { batchId: 'gb-race', totalItems: 5, items: ITEMS },
     });
-    await waitFor(() =>
-      expect(screen.getByTestId('gen-batch-scope-missing')).toHaveTextContent('38')
-    );
-    fireEvent.click(screen.getByTestId('gen-batch-start-btn'));
+    fireEvent.click(await screen.findByTestId('consent-stub-start'));
     await waitFor(() => expect(h.batchStartTracking).toHaveBeenCalled());
     // The batch SSE stream reports item 3 in flight.
     h.batchState.status = 'running';
     h.batchState.totalItems = 5;
     h.batchState.currentMediaId = M3;
-    h.batchState.currentItem = '怪奇物語';
+    h.batchState.currentItem = '怪奇物語 S04E07';
     rerender();
   }
 
@@ -593,16 +534,12 @@ describe('GenerationBatchDialogV2 (container)', () => {
     const { rerender } = renderDialogRaw();
     await startBatchWithItems(rerender);
 
-    // transcription_failed for the in-flight item lands while status is still
-    // running → the container records it (legitimately renders 失敗 for a beat).
     h.itemState.phase = 'failed';
     rerender();
     await waitFor(() =>
       expect(screen.getByTestId(`gen-batch-row-${M3}`)).toHaveAttribute('data-state', 'failed')
     );
 
-    // THEN the terminal budget_ceiling batch event arrives — paused_count is
-    // authoritative; the recorded failure must NOT paint the row 失敗.
     h.batchState.status = 'budget_ceiling';
     h.batchState.pausedCount = 3;
     h.batchState.spentUsd = 5;
@@ -618,7 +555,6 @@ describe('GenerationBatchDialogV2 (container)', () => {
     const { rerender } = renderDialogRaw();
     await startBatchWithItems(rerender);
 
-    // Terminal batch event first…
     h.batchState.status = 'budget_ceiling';
     h.batchState.pausedCount = 3;
     h.batchState.spentUsd = 5;
@@ -627,8 +563,6 @@ describe('GenerationBatchDialogV2 (container)', () => {
       expect(screen.getByTestId(`gen-batch-row-${M3}`)).toHaveAttribute('data-state', 'paused')
     );
 
-    // …then the straggling per-item failed for the interrupted item: the
-    // recording effect must ignore it (batch no longer running).
     h.itemState.phase = 'failed';
     rerender();
     await waitFor(() =>
@@ -637,21 +571,29 @@ describe('GenerationBatchDialogV2 (container)', () => {
     expect(screen.getByTestId(`gen-batch-row-${M3}`)).not.toHaveTextContent('失敗');
   });
 
-  it('下次繼續 starts a NEW scope=missing batch (resume-for-free, AC 2)', async () => {
+  it('下次繼續 returns to the consent flow — a resume is a NEW consent, never an auto-restart (sub-4-3)', async () => {
     h.batchState.status = 'budget_ceiling';
     h.batchState.pausedCount = 3;
-    mocked.startGenerationBatch.mockResolvedValue({
-      conflict: false,
-      result: { batchId: 'gb-next', totalItems: 3, items: ITEMS.slice(2) },
-    });
 
     renderDialog();
 
     fireEvent.click(screen.getByTestId('gen-batch-resume-btn'));
 
-    await waitFor(() =>
-      expect(mocked.startGenerationBatch).toHaveBeenCalledWith({ scope: 'missing' })
-    );
     expect(h.batchReset).toHaveBeenCalled();
+    expect(mocked.startGenerationBatch).not.toHaveBeenCalled();
+  });
+
+  it('[CR H2] after a batch terminal the next consent render forces a re-analysis (stale snapshot ban)', async () => {
+    // Reach a terminal state → the container marks the snapshot stale.
+    h.batchState.status = 'complete';
+    const { rerender } = renderDialogRaw();
+    await waitFor(() => expect(screen.getByTestId('gen-batch-close-btn')).toBeInTheDocument());
+
+    // The batch hook resets to idle (e.g. 下次繼續) — consent view re-mounts
+    // with forceAnalyze so the completed items cannot be re-quoted.
+    h.batchState.status = 'idle';
+    rerender();
+    const stub = await screen.findByTestId('consent-view-stub');
+    expect(stub).toHaveAttribute('data-force-analyze', 'true');
   });
 });

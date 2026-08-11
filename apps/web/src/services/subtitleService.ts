@@ -127,29 +127,98 @@ export interface BatchCancelResult {
 }
 
 // --- Generation-batch types (Story ux3-subtitle-v2-batch, consumes 9R-16) ---
-// Contract: 9R-16 [@contract-v2] AC #1/#2/#3/#7/#9 — re-verified post-9R-18
-// against the MERGED Go code (generation_batch_handler.go MediaIDs []string /
-// generation_batch.go MediaID+CurrentMediaID string) 2026-07-06: media ids are
-// UUID STRINGS end-to-end (movie PKs are uuid.New().String(); 9R-18 ruling).
+// Contract: 9R-16 AC #1 [@contract-v3] (bumped by sub-4-2: additive budget_usd
+// + items[].media_type, scope=selected accepts mixed movie/episode UUIDs);
+// AC #2/#3/#7/#9 stay [@contract-v2]. Media ids are UUID STRINGS end-to-end
+// (movie/episode PKs are uuid.New().String(); 9R-18 ruling).
 
 export type GenerationBatchScope = 'missing' | 'selected';
 
+/** Internal media-type vocabulary (movie|episode — NOT the TMDB movie|tv pair). */
+export type GenerationMediaType = 'movie' | 'episode';
+
 /** One enumerated queue item from the 202 start response (`items[]`). */
 export interface GenerationBatchItem {
-  /** UUID string movie media id on the wire ([@contract-v2]). */
+  /** UUID string media row id on the wire ([@contract-v3]). */
   mediaId: string;
   title: string;
+  /** movie|episode — additive since sub-4-2 ([@contract-v3]). */
+  mediaType: GenerationMediaType;
 }
 
 export interface GenerationBatchStartParams {
   scope: GenerationBatchScope;
   /**
-   * Required iff scope === 'selected'. UUID string MOVIE ids only — the
-   * backend REJECTS the whole request with 400 if ANY id is not a movie with a
-   * media file (9R-16 AC 8 ruling); callers MUST filter series ids client-side.
+   * Required iff scope === 'selected'. UUID string ids — movies AND episodes
+   * may be mixed since sub-4-2 (D1 ruling, [@contract-v3]). The backend still
+   * REJECTS the whole request with 400 if ANY id resolves against neither
+   * table or has no media file (reject-not-filter: the consented list IS the
+   * confirmed amount).
    */
   mediaIds?: string[];
+  /**
+   * User-approved batch ceiling in USD (sub-4-2 AC #1). Must be > 0 when
+   * present; absent falls back to the server-side AI_RUN_BUDGET_USD default.
+   * The consent flow ALWAYS sends the on-screen value (WYSIWYG consent — the
+   * number the user confirmed is the ceiling that gets enforced).
+   */
+  budgetUsd?: number;
 }
+
+// --- Generation-candidates types (sub-4-3, consumes sub-4-1 read side) ---
+// GET /subtitles/generation-candidates is ALWAYS 200 with a state envelope —
+// F14 (analyzing) and F15 (list) render from the same payload; `result` is
+// present only when status === 'ready'. The SSE stream carries counts only,
+// never the result (fetch it via GET on the `ready` transition).
+
+export type GenerationCandidateRoute = 'extract' | 'asr' | 'skip';
+
+export type CandidateAnalysisStatus = 'idle' | 'analyzing' | 'ready' | 'cancelled' | 'error';
+
+/** One analyzed candidate. `estimatedUsd` renders VERBATIM — the 2026-08-11
+ * §5-sexies ruling bans a "免費" rounding presentation on the extract route. */
+export interface GenerationCandidate {
+  mediaId: string;
+  mediaType: GenerationMediaType;
+  /** Display title; episodes already carry the SxxEyy form from the backend. */
+  title: string;
+  route: GenerationCandidateRoute;
+  runtimeMinutes: number;
+  /** false → the estimate used the 45-minute fallback; UI prefixes ≈. */
+  runtimeKnown: boolean;
+  estimatedUsd: number;
+}
+
+export interface GenerationCandidateSummary {
+  extractCount: number;
+  asrCount: number;
+  skippedCount: number;
+  estimatedTotalUsd: number;
+  selfHostedAsr: boolean;
+}
+
+export interface GenerationCandidateResult {
+  candidates: GenerationCandidate[];
+  summary: GenerationCandidateSummary;
+}
+
+/** The GET state envelope. */
+export interface CandidateAnalysisSnapshot {
+  status: CandidateAnalysisStatus;
+  analyzed: number;
+  total: number;
+  result?: GenerationCandidateResult;
+  analyzedAt?: string;
+  error?: string;
+}
+
+/**
+ * Outcome of startCandidateAnalysis: 202 started, or 409
+ * TRANSCRIPTION_ANALYSIS_RUNNING — an analysis already running is a JOIN, not
+ * an error (discriminated union instead of throwing; transcriptionService
+ * precedent). Other non-2xx throw.
+ */
+export type StartCandidateAnalysisOutcome = { started: true } | { alreadyRunning: true };
 
 /**
  * 202 start response — `batchId` is null on the empty-missing-scope 200
@@ -348,5 +417,40 @@ export const subtitleService = {
     return fetchApi<GenerationBatchPreviewResult>(
       '/subtitles/generation-batch/preview?scope=missing'
     );
+  },
+
+  // --- Generation candidates (sub-4-3, consumes sub-4-1) ---
+
+  /** GET /subtitles/generation-candidates — always 200 with the state envelope. */
+  async getGenerationCandidates(): Promise<CandidateAnalysisSnapshot> {
+    return fetchApi<CandidateAnalysisSnapshot>('/subtitles/generation-candidates');
+  },
+
+  /**
+   * POST /subtitles/generation-candidates/analyze. 202 → started; 409
+   * TRANSCRIPTION_ANALYSIS_RUNNING → join the running analysis (not an
+   * error, never throws on that pair). Other non-2xx throw.
+   */
+  async startCandidateAnalysis(): Promise<StartCandidateAnalysisOutcome> {
+    const response = await fetch(`${API_BASE_URL}/subtitles/generation-candidates/analyze`, {
+      method: 'POST',
+    });
+    const json = await response.json().catch(() => ({}) as Record<string, unknown>);
+    const envelope = json as ApiResponse<unknown>;
+
+    if (response.status === 409 && envelope.error?.code === 'TRANSCRIPTION_ANALYSIS_RUNNING') {
+      return { alreadyRunning: true };
+    }
+    if (!response.ok || !envelope.success) {
+      throw new Error(envelope.error?.message || `API request failed: ${response.status}`);
+    }
+    return { started: true };
+  },
+
+  /** POST /subtitles/generation-candidates/analyze/cancel — idempotent. */
+  async cancelCandidateAnalysis(): Promise<{ cancelled: boolean }> {
+    return fetchApi<{ cancelled: boolean }>('/subtitles/generation-candidates/analyze/cancel', {
+      method: 'POST',
+    });
   },
 };

@@ -171,6 +171,12 @@ import { GenerationProgressV2 } from '../../components/subtitle/GenerationProgre
 import { GlossaryRowV2 } from '../../components/subtitle/GlossaryRowV2';
 import { GlossaryPanelV2 } from '../../components/subtitle/GlossaryPanelV2';
 import { ManageSubtitleDialogV2 } from '../../components/subtitle/ManageSubtitleDialogV2';
+import { AnalysisProgressPanel } from '../../components/subtitle/consent/AnalysisProgressPanel';
+import { CandidateListPanel } from '../../components/subtitle/consent/CandidateListPanel';
+import { ConsentEmptyState } from '../../components/subtitle/consent/ConsentEmptyState';
+import { ConfirmGenerationDialog } from '../../components/subtitle/consent/ConfirmGenerationDialog';
+import { computeTotals } from '../../components/subtitle/consent/consentSelection';
+import type { GenerationCandidate } from '../../services/subtitleService';
 import { GenerationBatchPanelV2 } from '../../components/subtitle/GenerationBatchDialogV2';
 import { GenerationWorkspaceV2 } from '../../components/subtitle/GenerationWorkspaceV2';
 import { glossaryKeys } from '../../hooks/useGlossary';
@@ -338,6 +344,56 @@ export interface GalleryFixture {
    */
   seedStore?: () => void;
 }
+
+// sub-4-3 consent-screen fixture data (F15/F18). UUID-string ids (9R-18);
+// amounts mirror the drawn third-round values (§5-sexies honest small fees).
+const CONSENT_FIXTURE_CANDIDATES: GenerationCandidate[] = [
+  {
+    mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e51',
+    mediaType: 'movie',
+    title: '沙丘：第二部',
+    route: 'extract',
+    runtimeMinutes: 166,
+    runtimeKnown: true,
+    estimatedUsd: 0.05,
+  },
+  {
+    mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e52',
+    mediaType: 'movie',
+    title: '奧本海默',
+    route: 'extract',
+    runtimeMinutes: 180,
+    runtimeKnown: true,
+    estimatedUsd: 0.04,
+  },
+  {
+    mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e53',
+    mediaType: 'movie',
+    title: '星際效應',
+    route: 'asr',
+    runtimeMinutes: 169,
+    runtimeKnown: true,
+    estimatedUsd: 0.26,
+  },
+  {
+    mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e54',
+    mediaType: 'episode',
+    title: '怪奇物語 S04E07',
+    route: 'asr',
+    runtimeMinutes: 52,
+    runtimeKnown: true,
+    estimatedUsd: 0.31,
+  },
+  {
+    mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e55',
+    mediaType: 'movie',
+    title: '未知片長的電影',
+    route: 'asr',
+    runtimeMinutes: 45,
+    runtimeKnown: false,
+    estimatedUsd: 0.24,
+  },
+];
 
 export const GALLERY_FIXTURES: GalleryFixture[] = [
   // ----- ui/ -----
@@ -1521,6 +1577,31 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
     penNode: 'screen-section',
     statesOnly: ['default'],
     width: 400,
+  },
+  {
+    id: 'scanner-scan-complete-toast',
+    label: 'scanner/ScanProgressCard (F17 掃描完成 — 缺字幕入口)',
+    // sub-4-3 F17: completion toast with the missing-subtitle line + 產生字幕 →
+    // link (prop-driven count from the frozen preview endpoint).
+    component: ScanProgressCard as ComponentType<Record<string, unknown>>,
+    props: {
+      state: {
+        ...SCAN_STATE_ACTIVE,
+        isScanning: false,
+        isComplete: true,
+        percentDone: 100,
+        filesProcessed: 847,
+        errorCount: 0,
+      },
+      onCancel: noop,
+      onToggleMinimize: noop,
+      onDismiss: noop,
+      isCancelling: false,
+      missingSubtitleCount: 142,
+    },
+    penNode: 'screen-section', // Screen F17-D-v2 (I3Wb0p)
+    statesOnly: ['default'],
+    width: 500,
   },
   {
     id: 'scanner-scan-progress-sheet',
@@ -3611,38 +3692,130 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
   // NO ambient clock — all progress/cost values are SSE-payload props.
   // Media-id fixture convention (9R-18 AC 7): media ids are UUID STRINGS —
   // mirror the prod creation path (uuid.New().String()); do NOT invent numeric ids.
+  // ----- subtitle/consent — sub-4-3 cost-consent screens (F14–F20) -----
+  // Prop-driven panels; amounts render backend estimated_usd VERBATIM
+  // (§5-sexies 2026-08-11: no 免費 rounding). Media ids: UUID strings (9R-18).
   {
-    id: 'generation-batch-dialog-v2/idle',
-    label: 'subtitle/GenerationBatchPanelV2 (idle — scope segments + counts)',
-    component: GenerationBatchPanelV2 as ComponentType<Record<string, unknown>>,
+    id: 'generation-consent/analyzing',
+    label: 'subtitle/consent/AnalysisProgressPanel (F14 分析中)',
+    component: AnalysisProgressPanel as ComponentType<Record<string, unknown>>,
+    props: { analyzed: 234, total: 1247, onCancel: noop },
+    width: 720,
+    penNode: 'screen-section', // Screen F14-D-v2 (nBT3M)
+    statesOnly: ['default'],
+  },
+  {
+    id: 'generation-consent/list',
+    label: 'subtitle/consent/CandidateListPanel (F15 候選清單 — default extract selection)',
+    component: CandidateListPanel as ComponentType<Record<string, unknown>>,
+    props: {
+      candidates: CONSENT_FIXTURE_CANDIDATES,
+      selectedIds: new Set([
+        '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e51',
+        '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e52',
+      ]),
+      filter: 'all',
+      totals: computeTotals(
+        CONSENT_FIXTURE_CANDIDATES,
+        new Set(['4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e51', '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e52']),
+        5
+      ),
+      budgetText: '5.00',
+      budgetUsd: 5,
+      onToggle: noop,
+      onToggleAll: noop,
+      onSelectAllExtract: noop,
+      onClearSelection: noop,
+      onFilterChange: noop,
+      onBudgetTextChange: noop,
+      onStartClick: noop,
+    },
+    width: 900,
+    penNode: 'screen-section', // Screen F15-D-v2 (pwMzT) · F15-M-v2 (fdu4y)
+    statesOnly: ['default'],
+  },
+  {
+    id: 'generation-consent/over-budget',
+    label: 'subtitle/consent/CandidateListPanel (F18 超出上限 — warning banner)',
+    component: CandidateListPanel as ComponentType<Record<string, unknown>>,
+    props: {
+      candidates: CONSENT_FIXTURE_CANDIDATES,
+      selectedIds: new Set(CONSENT_FIXTURE_CANDIDATES.map((c) => c.mediaId)),
+      filter: 'all',
+      totals: computeTotals(
+        CONSENT_FIXTURE_CANDIDATES,
+        new Set(CONSENT_FIXTURE_CANDIDATES.map((c) => c.mediaId)),
+        0.3
+      ),
+      budgetText: '0.30',
+      budgetUsd: 0.3,
+      onToggle: noop,
+      onToggleAll: noop,
+      onSelectAllExtract: noop,
+      onClearSelection: noop,
+      onFilterChange: noop,
+      onBudgetTextChange: noop,
+      onStartClick: noop,
+    },
+    width: 900,
+    penNode: 'screen-section', // Screen F18-D-v2 (zBik1)
+    statesOnly: ['default'],
+  },
+  {
+    id: 'generation-consent/empty',
+    label: 'subtitle/consent/ConsentEmptyState (F20 空狀態)',
+    component: ConsentEmptyState as ComponentType<Record<string, unknown>>,
+    props: {},
+    width: 720,
+    penNode: 'screen-section', // Screen F20-D-v2 (D7MOm)
+    statesOnly: ['default'],
+  },
+  {
+    id: 'generation-consent/confirm',
+    label: 'subtitle/consent/ConfirmGenerationDialog (F16 金額確認)',
+    component: ConfirmGenerationDialog as ComponentType<Record<string, unknown>>,
     props: {
       open: true,
-      status: 'idle',
-      progress: {
-        batchId: '',
-        totalItems: 0,
-        currentIndex: 0,
-        currentMediaId: null,
-        currentItem: '',
-        successCount: 0,
-        failCount: 0,
-        pausedCount: 0,
-        status: 'idle',
-        spentUsd: 0,
-        budgetUsd: 0,
+      totals: {
+        candidateCount: 142,
+        selectedCount: 18,
+        selectedExtractCount: 6,
+        selectedAsrCount: 12,
+        selectedExtractUsd: 0.18,
+        selectedAsrUsd: 4.32,
+        selectedTotalUsd: 4.5,
+        overBudget: false,
+        feasibleCount: 18,
       },
-      items: [],
-      scope: 'selected',
-      onScopeChange: noop,
-      previewCount: 38,
-      selectedCount: 4,
-      excludedSeriesCount: 2,
-      onStart: noop,
-      onConfirmCancelAll: noop,
-      onResume: noop,
-      onClose: noop,
+      budgetUsd: 5,
+      onConfirm: noop,
+      onCancel: noop,
     },
-    penNode: 'screen-section', // Screen F8-D-v2 (i9Nun1)
+    penNode: 'screen-section', // Screen F16-D-v2 (gmOt6)
+    statesOnly: ['default'],
+  },
+  {
+    id: 'generation-consent/confirm-over-budget',
+    label: 'subtitle/consent/ConfirmGenerationDialog (F19 超出上限確認)',
+    component: ConfirmGenerationDialog as ComponentType<Record<string, unknown>>,
+    props: {
+      open: true,
+      totals: {
+        candidateCount: 142,
+        selectedCount: 96,
+        selectedExtractCount: 0,
+        selectedAsrCount: 96,
+        selectedExtractUsd: 0,
+        selectedAsrUsd: 25.8,
+        selectedTotalUsd: 25.8,
+        overBudget: true,
+        feasibleCount: 18,
+      },
+      budgetUsd: 5,
+      onConfirm: noop,
+      onCancel: noop,
+    },
+    penNode: 'screen-section', // Screen F19-D-v2 (KThbY)
     statesOnly: ['default'],
   },
   {
@@ -3666,11 +3839,23 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
         budgetUsd: 5,
       },
       items: [
-        { mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e51', title: '沙丘：第二部' },
-        { mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e52', title: '奧本海默' },
-        { mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e53', title: '星際效應' },
-        { mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e54', title: '全面啟動' },
-        { mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e55', title: '蜘蛛人：無家日' },
+        {
+          mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e51',
+          title: '沙丘：第二部',
+          mediaType: 'movie',
+        },
+        { mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e52', title: '奧本海默', mediaType: 'movie' },
+        { mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e53', title: '星際效應', mediaType: 'movie' },
+        {
+          mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e54',
+          title: '怪奇物語 S04E07',
+          mediaType: 'episode',
+        },
+        {
+          mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e55',
+          title: '蜘蛛人：無家日',
+          mediaType: 'movie',
+        },
       ],
       activeItemProgress: {
         phase: 'transcribing',
@@ -3682,9 +3867,6 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
         srtPath: null,
         zhSrtPath: null,
       },
-      scope: 'missing',
-      onScopeChange: noop,
-      onStart: noop,
       onConfirmCancelAll: noop,
       onResume: noop,
       onClose: noop,
@@ -3713,15 +3895,24 @@ export const GALLERY_FIXTURES: GalleryFixture[] = [
         budgetUsd: 5,
       },
       items: [
-        { mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e51', title: '沙丘：第二部' },
-        { mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e52', title: '奧本海默' },
-        { mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e53', title: '星際效應' },
-        { mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e54', title: '全面啟動' },
-        { mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e55', title: '蜘蛛人：無家日' },
+        {
+          mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e51',
+          title: '沙丘：第二部',
+          mediaType: 'movie',
+        },
+        { mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e52', title: '奧本海默', mediaType: 'movie' },
+        { mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e53', title: '星際效應', mediaType: 'movie' },
+        {
+          mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e54',
+          title: '怪奇物語 S04E07',
+          mediaType: 'episode',
+        },
+        {
+          mediaId: '4f8c2d1a-5b6e-4c7d-8e9f-0a1b2c3d4e55',
+          title: '蜘蛛人：無家日',
+          mediaType: 'movie',
+        },
       ],
-      scope: 'missing',
-      onScopeChange: noop,
-      onStart: noop,
       onConfirmCancelAll: noop,
       onResume: noop,
       onClose: noop,

@@ -431,3 +431,141 @@ describe('subtitleService', () => {
     });
   });
 });
+
+// ─── sub-4-3: candidates API + budget_usd ───────────────────────────────────
+// (outside the root describe — needs its own reset)
+
+beforeEach(() => {
+  mockFetch.mockReset();
+});
+
+describe('getGenerationCandidates', () => {
+  it('unwraps the state envelope and camelizes candidate fields', async () => {
+    mockFetch.mockResolvedValueOnce(
+      mockSuccessResponse({
+        status: 'ready',
+        analyzed: 142,
+        total: 142,
+        analyzed_at: '2026-08-11T08:00:00Z',
+        result: {
+          candidates: [
+            {
+              media_id: '0a54a9e2-3a67-4f3e-9f8e-a1c2d3e4f501',
+              media_type: 'episode',
+              title: '怪奇物語 S04E07',
+              route: 'asr',
+              runtime_minutes: 52,
+              runtime_known: true,
+              estimated_usd: 0.33,
+            },
+          ],
+          summary: {
+            extract_count: 46,
+            asr_count: 96,
+            skipped_count: 3,
+            estimated_total_usd: 27.64,
+            self_hosted_asr: false,
+          },
+        },
+      })
+    );
+
+    const snap = await subtitleService.getGenerationCandidates();
+    expect(mockFetch.mock.calls[0][0]).toContain('/subtitles/generation-candidates');
+    expect(snap.status).toBe('ready');
+    expect(snap.result?.candidates[0]).toEqual({
+      mediaId: '0a54a9e2-3a67-4f3e-9f8e-a1c2d3e4f501',
+      mediaType: 'episode',
+      title: '怪奇物語 S04E07',
+      route: 'asr',
+      runtimeMinutes: 52,
+      runtimeKnown: true,
+      estimatedUsd: 0.33,
+    });
+    expect(snap.result?.summary.estimatedTotalUsd).toBe(27.64);
+  });
+});
+
+describe('startCandidateAnalysis', () => {
+  it('returns started on 202', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 202,
+      json: () => Promise.resolve({ success: true, data: { started: true } }),
+    });
+    await expect(subtitleService.startCandidateAnalysis()).resolves.toEqual({ started: true });
+  });
+
+  it('treats 409 TRANSCRIPTION_ANALYSIS_RUNNING as a join, not an error', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 409,
+      json: () =>
+        Promise.resolve({
+          success: false,
+          error: { code: 'TRANSCRIPTION_ANALYSIS_RUNNING', message: '分析執行中' },
+        }),
+    });
+    await expect(subtitleService.startCandidateAnalysis()).resolves.toEqual({
+      alreadyRunning: true,
+    });
+  });
+
+  it('throws on other errors (code-gated: a foreign 409 still throws)', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 409,
+      json: () =>
+        Promise.resolve({ success: false, error: { code: 'SOMETHING_ELSE', message: 'boom' } }),
+    });
+    await expect(subtitleService.startCandidateAnalysis()).rejects.toThrow('boom');
+  });
+});
+
+describe('cancelCandidateAnalysis', () => {
+  it('POSTs the cancel endpoint', async () => {
+    mockFetch.mockResolvedValueOnce(mockSuccessResponse({ cancelled: true }));
+    await expect(subtitleService.cancelCandidateAnalysis()).resolves.toEqual({ cancelled: true });
+    const [url, options] = mockFetch.mock.calls[0];
+    expect(url).toContain('/generation-candidates/analyze/cancel');
+    expect(options.method).toBe('POST');
+  });
+});
+
+describe('startGenerationBatch budget_usd (sub-4-2 [@contract-v3])', () => {
+  it('sends budget_usd snake-cased on the wire', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 202,
+      json: () =>
+        Promise.resolve({
+          success: true,
+          data: {
+            batch_id: 'b1',
+            total_items: 2,
+            items: [
+              { media_id: 'm-1', title: 'A', media_type: 'movie' },
+              { media_id: 'e-1', title: 'S04E07', media_type: 'episode' },
+            ],
+          },
+        }),
+    });
+
+    const outcome = await subtitleService.startGenerationBatch({
+      scope: 'selected',
+      mediaIds: ['m-1', 'e-1'],
+      budgetUsd: 5,
+    });
+
+    const [, options] = mockFetch.mock.calls[0];
+    expect(JSON.parse(options.body)).toEqual({
+      scope: 'selected',
+      media_ids: ['m-1', 'e-1'],
+      budget_usd: 5,
+    });
+    expect(outcome.conflict).toBe(false);
+    if (!outcome.conflict) {
+      expect(outcome.result.items[1].mediaType).toBe('episode');
+    }
+  });
+});

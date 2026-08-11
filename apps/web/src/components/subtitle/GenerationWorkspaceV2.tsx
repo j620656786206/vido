@@ -15,7 +15,7 @@
  * (disc-2026-07-generation-batch-status-items) → counters + in-flight card only.
  */
 import { useEffect } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import {
   Check,
   CircleAlert,
@@ -49,10 +49,7 @@ import {
 } from '../../hooks/useGenerationJobsFeed';
 import { usePageVisibility } from '../../hooks/useDownloads';
 import { deriveWorkspaceMode, modeShowsFeed, type WorkspaceMode } from './generationWorkspace';
-
-function usd(v: number): string {
-  return `$${v.toFixed(2)}`;
-}
+import { usd } from '../../lib/currency';
 
 const FEED_TONE_CLASS: Record<FeedTone, string> = {
   active: 'text-[var(--accent-text)]',
@@ -540,7 +537,6 @@ export interface GenerationWorkspaceProps {
 }
 
 export function GenerationWorkspace({ active, onLaunch }: GenerationWorkspaceProps) {
-  const queryClient = useQueryClient();
   const isVisible = usePageVisibility();
   const live = active && isVisible;
 
@@ -617,11 +613,11 @@ export function GenerationWorkspace({ active, onLaunch }: GenerationWorkspacePro
       onConfirmCancelAll={() => {
         void subtitleService.cancelGenerationBatch();
       }}
-      onResume={() => {
-        void subtitleService
-          .startGenerationBatch({ scope: 'missing' })
-          .then(() => queryClient.invalidateQueries({ queryKey: generationBatchPreviewKey }));
-      }}
+      // sub-4-3 CR H1: 下次繼續 must NEVER start an un-consented scope=missing
+      // batch (the exact class the 2026-08-07 三件一體 ruling bans). A resume
+      // is a NEW consent — route through the launch path, which opens the
+      // dialog in its consent phase (F15 re-select → F16 confirm).
+      onResume={onLaunch}
       onRetryData={() => {
         void statusQuery.refetch();
         void previewQuery.refetch();

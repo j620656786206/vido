@@ -5,9 +5,18 @@
  * Listens for the Route C transcription events on the shared GET /api/v1/events
  * stream: `transcription_extracting` / `transcription_progress` /
  * `translation_progress` / `transcription_complete` / `transcription_failed`
- * (declared in services/transcription_service.go — NOT the sse package; do not
- * confuse with the Epic 8 fetch-era `subtitle_progress`, whose payload has
- * `stage` not `phase`).
+ * (declared in services/transcription_service.go — NOT the sse package).
+ *
+ * sub-4-3 AC #8 (dual-family join): ALSO listens to the D6 `subtitle_progress`
+ * family (payload has `stage`, not `phase`) for the SAME tracked media_id — in
+ * pipeline mode the consented batch drives Pipeline.ProcessItem directly, so
+ * extract-route items emit ONLY D6 stages (probing/extracting/translating +
+ * shared terminals complete/failed/skipped) while ASR-route items keep the
+ * transcription_* family (the ASR leg still rides TranscriptionService).
+ * D6 stage vocabulary is READ-ONLY here (PipelineStage is a stamped contract);
+ * search-path stages (searching/scoring/…) are unmapped and ignored, but the
+ * SHARED terminal stages do close tracking — that is D6's declared semantics,
+ * not a bug to fix here.
  *
  * ⚠️ Double-nested envelope: the SSE `data:` line carries the FULL `Event`
  * struct `{"id","type","data":{…payload…}}` — the payload is `parsed.data`,
@@ -41,9 +50,12 @@ export type GenerationPhase =
 /** Camelized SSE payload (after envelope unwrap + snakeToCamel). */
 interface GenerationEventPayload {
   jobId?: string;
-  /** Movie row id — a UUID string (9R-18). */
+  /** Media row id (movie or episode) — a UUID string (9R-18 / sub-3-2 v2). */
   mediaId?: string;
   phase?: string;
+  /** D6 `subtitle_progress` family only (sub-4-3 AC #8) — `stage`, not `phase`. */
+  stage?: string;
+  mediaType?: string;
   percentage?: number;
   message?: string;
   error?: string;
@@ -144,6 +156,18 @@ const PHASE_EVENTS: ReadonlyArray<{ event: string; phase: ActivePhase }> = [
   { event: 'translation_progress', phase: 'translating' },
 ];
 
+/**
+ * D6 generation-pipeline stages → hook phases (sub-4-3 AC #8). Vocabulary is
+ * consumed READ-ONLY from the stamped PipelineStage contract; `probing` maps
+ * onto the extracting phase (pre-extract probe, same user-facing stage).
+ * Search-path stages are deliberately absent — unmapped stages are ignored.
+ */
+const D6_STAGE_TO_PHASE: Readonly<Record<string, ActivePhase>> = {
+  probing: 'extracting',
+  extracting: 'extracting',
+  translating: 'translating',
+};
+
 export interface UseGenerationProgressOptions {
   /** Fired once per `transcription_complete` for the tracked media (AC 6 invalidation hook). */
   onComplete?: (payload: { srtPath: string | null; zhSrtPath: string | null }) => void;
@@ -157,6 +181,12 @@ export function useGenerationProgress(options?: UseGenerationProgressOptions) {
   const connectRef = useRef<() => void>(() => {});
   /** UUID-string movie id currently tracked; null = drop everything. */
   const mediaIdRef = useRef<string | null>(null);
+  // CR sub-4-3 M7: the SEARCH engine is a second producer of `subtitle_progress`
+  // for the same media_id, sharing the D6 terminal stages. A search completing
+  // mid-generation must not terminalize generation tracking — D6 terminals are
+  // honored only after a PIPELINE stage (probing/extracting/translating) was
+  // observed on this tracking session.
+  const d6PipelineSeenRef = useRef(false);
   const onCompleteRef = useRef(options?.onComplete);
 
   useEffect(() => {
@@ -227,6 +257,39 @@ export function useGenerationProgress(options?: UseGenerationProgressOptions) {
       closeSSE(); // terminal
     });
 
+    // sub-4-3 AC #8: D6 family for extract-route items (pipeline-mode batch).
+    es.addEventListener('subtitle_progress', (e: MessageEvent) => {
+      if (!mountedRef.current) return;
+      const payload = parsePayload(e);
+      if (!payload || !payload.stage) return;
+      const mapped = D6_STAGE_TO_PHASE[payload.stage];
+      if (mapped) {
+        d6PipelineSeenRef.current = true;
+        dispatch({ type: 'PHASE', phase: mapped, payload });
+        return;
+      }
+      // Shared D6 terminals: only trust them for a run WE watched enter the
+      // generation pipeline (CR M7 — search-flow completions are ignored; an
+      // attach-degraded join that missed the stages defers to the batch event).
+      if (!d6PipelineSeenRef.current) return;
+      if (payload.stage === 'complete') {
+        dispatch({ type: 'COMPLETE', payload });
+        onCompleteRef.current?.({
+          srtPath: payload.srtPath ?? null,
+          zhSrtPath: payload.zhSrtPath ?? null,
+        });
+        closeSSE(); // shared terminal
+        return;
+      }
+      if (payload.stage === 'failed' || payload.stage === 'skipped') {
+        // A skipped run produced no subtitle — terminal, surfaced as failed
+        // (matches the batch orchestrator counting skips as failures, sub-4-2 H1).
+        dispatch({ type: 'FAILED', payload });
+        closeSSE();
+      }
+      // Unmapped (search-path) stages: ignore.
+    });
+
     es.onerror = () => {
       if (!mountedRef.current) return;
       es.close();
@@ -258,6 +321,7 @@ export function useGenerationProgress(options?: UseGenerationProgressOptions) {
   const startTracking = useCallback(
     (mediaId: string) => {
       mediaIdRef.current = mediaId;
+      d6PipelineSeenRef.current = false;
       dispatch({ type: 'START' });
       if (!esRef.current || esRef.current.readyState === 2) connect();
     },
@@ -267,6 +331,7 @@ export function useGenerationProgress(options?: UseGenerationProgressOptions) {
   /** Tear down the stream and return to idle (e.g. when the dialog closes). */
   const reset = useCallback(() => {
     mediaIdRef.current = null;
+    d6PipelineSeenRef.current = false;
     closeSSE();
     dispatch({ type: 'RESET' });
   }, [closeSSE]);

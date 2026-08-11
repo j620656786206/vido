@@ -30,6 +30,13 @@ export interface ScanProgressCardProps {
   onToggleMinimize: () => void;
   onDismiss: () => void;
   isCancelling?: boolean;
+  /**
+   * sub-4-3 F17: 缺繁中字幕 count for the completion toast (prop-driven — the
+   * container fetches it from the frozen preview endpoint). undefined/0 → the
+   * line AND the 產生字幕 link stay hidden. The copy never implies the scan
+   * itself generates anything.
+   */
+  missingSubtitleCount?: number;
 }
 
 export function ScanProgressCard({
@@ -37,6 +44,7 @@ export function ScanProgressCard({
   onCancel,
   onToggleMinimize,
   onDismiss,
+  missingSubtitleCount,
   isCancelling = false,
 }: ScanProgressCardProps) {
   const navigate = useNavigate();
@@ -161,6 +169,17 @@ export function ScanProgressCard({
           </span>
         </p>
 
+        {/* sub-4-3 F17: missing-subtitle line (only when a count is known and > 0). */}
+        {!state.isCancelled && missingSubtitleCount !== undefined && missingSubtitleCount > 0 && (
+          <p
+            data-testid="scan-missing-subtitle-line"
+            className="mb-2 flex items-center gap-[3px] text-sm text-[var(--text-secondary)]"
+          >
+            <span className="font-mono tabular-nums">{missingSubtitleCount.toLocaleString()}</span>
+            部影片缺繁中字幕
+          </p>
+        )}
+
         {/* Action links */}
         <div className="flex gap-4">
           <button
@@ -185,6 +204,20 @@ export function ScanProgressCard({
               data-testid="view-errors-link"
             >
               查看錯誤
+            </button>
+          )}
+          {!state.isCancelled && missingSubtitleCount !== undefined && missingSubtitleCount > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                onDismiss();
+                // F17 deep link → the consent flow (library route, Rule 26-safe param).
+                navigate({ to: '/library', search: { generate: true } });
+              }}
+              className="text-sm text-[var(--accent-primary)] underline-offset-2 hover:underline"
+              data-testid="generate-subtitles-link"
+            >
+              產生字幕 →
             </button>
           )}
         </div>

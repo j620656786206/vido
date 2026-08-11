@@ -1,47 +1,41 @@
 // Design ref: ux-design.pen Screen F8-D-v2 (i9Nun1)
 /**
- * 批次生成字幕 dialog (Story ux3-subtitle-v2-batch, PH3-M5 slice 2 — FE half of
- * the 9R-16 pair). Screens: F8-D-v2 i9Nun1 / F8-M-v2 H717g (mobile bottom
- * sheet, same Radix Dialog) / F9-D-v2 JMqPg 預算上限.
+ * 產生字幕 dialog (Story ux3-subtitle-v2-batch F8 execution shell; idle branch
+ * REPLACED by the sub-4-3 consent flow). Screens: F8-D-v2 i9Nun1 / F8-M-v2
+ * H717g (mobile bottom sheet, same Radix Dialog) / F9-D-v2 JMqPg 預算上限.
  *
- * - Scope segments 範圍：缺字幕的項目 (count from GET
- *   /subtitles/generation-batch/preview?scope=missing — the ONLY 缺字幕 count
- *   source) + 已選項目 (rendered ONLY when opened with a non-empty selection).
+ * - IDLE = the consent flow (GenerationConsentView: F14 analyze → F15 list →
+ *   F16/F19 confirm → F20 empty). The old scope-chips + aggregate-count idle
+ *   state is history (2026-08-07 三件一體 ruling): nothing starts without an
+ *   explicit, priced, consented selection. The batch always starts as
+ *   `{scope:'selected', media_ids, budget_usd}` (9R-16 AC #1 [@contract-v3] —
+ *   mixed movie/episode UUIDs, WYSIWYG user-approved ceiling).
  * - Queue rows come from the start-202 `items[]`; the active row joins the
- *   per-item `transcription_*` SSE stream on `current_media_id` (slice-1
- *   GenerationProgressV2 / useGenerationProgress reuse). ⚠️ 9R-16 CR caveat:
- *   on cancelled/budget_ceiling the interrupted in-flight item ALSO emits
- *   `transcription_failed` — the batch event's `status`/`paused_count` is
- *   AUTHORITATIVE for row rendering (paused/cancelled branches win over the
- *   recorded per-item failure).
- * - budget_ceiling (F9) is a NORMAL terminal state: warning-tint banner (per
- *   the drawn tokens), paused rows 已暫停 — 下次繼續, actions 關閉 + 下次繼續
- *   (= start a NEW scope=missing batch — 9R-16 resume-for-free; completed
- *   items self-exclude via re-enumeration).
- * - scope=selected sends MOVIE ids only — the backend REJECTS the whole
- *   request with 400 if ANY id is not a movie with a file (9R-16 AC 8); the
- *   caller pre-filters series ids and this dialog shows the visible note.
+ *   per-item streams on `current_media_id` — BOTH families since sub-4-3 AC #8:
+ *   `transcription_*` (ASR route) and D6 `subtitle_progress` (extract route;
+ *   pipeline mode drives ProcessItem directly). ⚠️ 9R-16 CR caveat: on
+ *   cancelled/budget_ceiling the interrupted in-flight item ALSO emits a
+ *   terminal per-item event — the batch event's `status`/`paused_count` is
+ *   AUTHORITATIVE for row rendering.
+ * - budget_ceiling (F9) is a NORMAL terminal state: warning-tint banner,
+ *   paused rows 已暫停 — 下次繼續, actions 關閉 + 下次繼續 (= back to the
+ *   consent list to re-select/confirm — the paused items are still candidates,
+ *   and a resume is a NEW consent, not an un-consented restart).
  * - 409 TRANSCRIPTION_BATCH_RUNNING on open/start → recover-and-attach
- *   (on-open GET .../status probe; BatchSubtitleDialog precedent). NOTE: a
- *   recovered batch has no `items[]` (the status probe carries only the
- *   progress snapshot) — the dialog falls back to the active-item card + counts.
- * - Escape is gated while running (fetch-dialog precedent); closing via ✕ only
- *   stops WATCHING — the batch continues server-side (recover-on-open re-attaches).
+ *   (on-open GET .../status probe). A recovered batch has no `items[]` — the
+ *   dialog falls back to the active-item card + counts.
+ * - Escape is gated while running; closing via ✕ only stops WATCHING — the
+ *   batch continues server-side (recover-on-open re-attaches).
  *
  * Rule 23: zero wall-clock reads — progress/cost/counts are all SSE-supplied.
- * [@contract-v2] (9R-18): media ids are UUID STRINGS end-to-end — selection ids
- * pass through unconverted and SSE `current_media_id` joins rows directly.
+ * Media ids are UUID STRINGS end-to-end (9R-18; movie OR episode row ids).
  */
 import { useCallback, useEffect, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, CircleAlert, CirclePause, Loader2, Radio } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { Check, CircleAlert, CirclePause, Radio } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '../ui/Dialog';
 import { cn } from '../../lib/utils';
-import {
-  subtitleService,
-  type GenerationBatchItem,
-  type GenerationBatchScope,
-} from '../../services/subtitleService';
+import { subtitleService, type GenerationBatchItem } from '../../services/subtitleService';
 import {
   useGenerationBatchProgress,
   type GenerationBatchProgressState,
@@ -51,7 +45,9 @@ import {
   type GenerationProgressState,
 } from '../../hooks/useGenerationProgress';
 import { GenerationProgressV2 } from './GenerationProgressV2';
+import { GenerationConsentView } from './consent/GenerationConsentView';
 import { libraryKeys } from '../../hooks/useLibrary';
+import { usd } from '../../lib/currency';
 
 export const generationBatchPreviewKey = ['subtitles', 'generation-batch', 'preview'] as const;
 
@@ -101,10 +97,6 @@ export function deriveRowStates(
 // ---------------------------------------------------------------------------
 // Presentational bits
 // ---------------------------------------------------------------------------
-
-function usd(v: number): string {
-  return `$${v.toFixed(2)}`;
-}
 
 function RowStageLabel({ state }: { state: RowState }) {
   switch (state) {
@@ -191,7 +183,11 @@ function QueueRow({
 
 export interface GenerationBatchPanelV2Props {
   open: boolean;
-  /** Hook status ('idle' before a batch starts) — batch statuses are the wire enum. */
+  /**
+   * Batch statuses (the wire enum). 'idle' is type-compatible but the
+   * container never renders this panel when idle — the sub-4-3 consent flow
+   * (GenerationConsentView) owns that phase.
+   */
   status: GenerationBatchProgressState['status'];
   progress: GenerationBatchProgressState;
   /** Queue rows from the start-202 `items[]` (empty on 409/recover-attach). */
@@ -200,21 +196,8 @@ export interface GenerationBatchPanelV2Props {
   failedIds?: ReadonlySet<string>;
   /** Per-item stage detail for the active row (joined on current_media_id). */
   activeItemProgress?: GenerationProgressState | null;
-  scope: GenerationBatchScope;
-  onScopeChange: (scope: GenerationBatchScope) => void;
-  /** 缺字幕 preview count — undefined while loading. */
-  previewCount?: number;
-  /** >0 → the 已選項目 segment renders (AC 1/5). */
-  selectedCount?: number;
-  /** Series excluded from the selection client-side (AC 5 visible note). */
-  excludedSeriesCount?: number;
-  /** Start resolved to total_items:0 → friendly empty state, not an error. */
-  emptyScope?: boolean;
-  starting?: boolean;
-  startError?: string | null;
-  onStart: () => void;
   onConfirmCancelAll: () => void;
-  /** 下次繼續 — starts a NEW scope=missing batch (resume-for-free). */
+  /** 下次繼續 — back to the consent list to re-select/confirm (sub-4-3). */
   onResume: () => void;
   onClose: () => void;
 }
@@ -228,15 +211,6 @@ export function GenerationBatchPanelV2({
   items,
   failedIds = EMPTY_FAILED,
   activeItemProgress = null,
-  scope,
-  onScopeChange,
-  previewCount,
-  selectedCount = 0,
-  excludedSeriesCount = 0,
-  emptyScope = false,
-  starting = false,
-  startError = null,
-  onStart,
   onConfirmCancelAll,
   onResume,
   onClose,
@@ -244,7 +218,6 @@ export function GenerationBatchPanelV2({
   const [confirmingCancel, setConfirmingCancel] = useState(false);
 
   const isRunning = status === 'running';
-  const isIdle = status === 'idle';
   const isBudgetCeiling = status === 'budget_ceiling';
   const isTerminal = status === 'complete' || status === 'cancelled' || status === 'error';
 
@@ -256,12 +229,6 @@ export function GenerationBatchPanelV2({
   const pct = progress.totalItems > 0 ? (processed / progress.totalItems) * 100 : 0;
   const rowStates = deriveRowStates(items, progress, failedIds);
 
-  const showIdleEmpty = isIdle && scope === 'missing' && (emptyScope || previewCount === 0);
-  const startDisabled =
-    starting ||
-    (scope === 'missing' && (previewCount === undefined || previewCount === 0)) ||
-    (scope === 'selected' && selectedCount === 0);
-
   const statusAnnouncement = isBudgetCeiling
     ? `已達本次預算上限（${usd(progress.budgetUsd)}）— 已完成${processed}部，剩餘${progress.pausedCount}部下次繼續`
     : status === 'complete'
@@ -271,19 +238,6 @@ export function GenerationBatchPanelV2({
         : status === 'error'
           ? '批次發生錯誤'
           : '';
-
-  const scopeStatic =
-    scope === 'missing' ? (
-      <p className="flex items-center gap-[3px] text-[13px] text-[var(--text-secondary)]">
-        範圍：缺字幕的項目（
-        <span className="font-mono tabular-nums">{progress.totalItems}</span> 部）
-      </p>
-    ) : (
-      <p className="flex items-center gap-[3px] text-[13px] text-[var(--text-secondary)]">
-        範圍：已選項目（
-        <span className="font-mono tabular-nums">{progress.totalItems}</span> 部）
-      </p>
-    );
 
   return (
     <Dialog
@@ -324,7 +278,7 @@ export function GenerationBatchPanelV2({
 
         {/* Title bar */}
         <div className="flex h-14 shrink-0 items-center justify-between border-b border-[var(--border-subtle)] pl-6 pr-12">
-          <DialogTitle className="truncate text-base font-semibold">批次生成字幕</DialogTitle>
+          <DialogTitle className="truncate text-base font-semibold">產生字幕</DialogTitle>
         </div>
 
         {/* Body */}
@@ -334,67 +288,12 @@ export function GenerationBatchPanelV2({
             {statusAnnouncement}
           </p>
 
-          {/* ---------- Scope line ---------- */}
-          {isIdle ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[13px] text-[var(--text-secondary)]">範圍：</span>
-              <button
-                type="button"
-                data-testid="gen-batch-scope-missing"
-                aria-pressed={scope === 'missing'}
-                onClick={() => onScopeChange('missing')}
-                className={cn(
-                  'flex h-11 items-center gap-1 rounded-[var(--radius-sm)] px-3 text-[13px] transition-colors',
-                  scope === 'missing'
-                    ? 'bg-[var(--accent-subtle)] font-semibold text-[var(--accent-text)]'
-                    : 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                )}
-              >
-                缺字幕的項目
-                {previewCount === undefined ? (
-                  <span
-                    aria-hidden="true"
-                    className="h-3.5 w-6 animate-pulse rounded-[var(--radius-sm)] bg-[var(--bg-tertiary)] motion-reduce:animate-none"
-                  />
-                ) : (
-                  <span className="font-mono font-semibold tabular-nums">{previewCount}</span>
-                )}
-              </button>
-              {selectedCount > 0 && (
-                <button
-                  type="button"
-                  data-testid="gen-batch-scope-selected"
-                  aria-pressed={scope === 'selected'}
-                  onClick={() => onScopeChange('selected')}
-                  className={cn(
-                    'flex h-11 items-center gap-1 rounded-[var(--radius-sm)] px-3 text-[13px] transition-colors',
-                    scope === 'selected'
-                      ? 'bg-[var(--accent-subtle)] font-semibold text-[var(--accent-text)]'
-                      : 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                  )}
-                >
-                  已選項目
-                  <span className="font-mono font-semibold tabular-nums">{selectedCount}</span>
-                </button>
-              )}
-            </div>
-          ) : (
-            scopeStatic
-          )}
-
-          {/* AC 5 capability-honor note: series excluded from the selection.
-              NOT gated on scope==='selected' — when EVERY selected item was
-              excluded the 已選項目 segment never renders (scope stays missing),
-              and that is precisely when the exclusion must be visible. */}
-          {isIdle && excludedSeriesCount > 0 && (
-            <p
-              data-testid="gen-batch-excluded-note"
-              className="flex items-center gap-[3px] text-xs text-[var(--text-muted)]"
-            >
-              已排除 <span className="font-mono tabular-nums">{excludedSeriesCount}</span>
-              部影集（影集字幕生成即將推出）
-            </p>
-          )}
+          {/* ---------- Scope line (batch always starts from a consented
+              explicit selection since sub-4-3) ---------- */}
+          <p className="flex items-center gap-[3px] text-[13px] text-[var(--text-secondary)]">
+            範圍：已選項目（
+            <span className="font-mono tabular-nums">{progress.totalItems}</span> 部）
+          </p>
 
           {/* ---------- F9 budget banner ---------- */}
           {isBudgetCeiling && (
@@ -429,23 +328,8 @@ export function GenerationBatchPanelV2({
             </div>
           )}
 
-          {/* ---------- Idle: empty-scope friendly state / start hint ---------- */}
-          {isIdle && showIdleEmpty && (
-            <p
-              data-testid="gen-batch-empty-scope"
-              className="rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] p-4 text-center text-sm text-[var(--text-secondary)]"
-            >
-              目前沒有缺字幕的項目
-            </p>
-          )}
-          {isIdle && startError && (
-            <p data-testid="gen-batch-start-error" className="text-sm text-[var(--error)]">
-              {startError}
-            </p>
-          )}
-
           {/* ---------- Overall progress (running + terminal) ---------- */}
-          {!isIdle && (
+          {
             <div className="flex flex-col gap-2">
               <div className="flex items-baseline gap-2.5">
                 <span className="text-[13px] text-[var(--text-secondary)]">已完成</span>
@@ -471,55 +355,57 @@ export function GenerationBatchPanelV2({
                 />
               </div>
             </div>
-          )}
+          }
 
           {/* ---------- Queue rows ---------- */}
-          {!isIdle &&
-            (items.length > 0 ? (
+          {items.length > 0 ? (
+            <ul className="flex flex-col gap-2" data-testid="gen-batch-item-list">
+              {items.map((item, i) => (
+                <QueueRow
+                  key={item.mediaId}
+                  item={item}
+                  state={rowStates[i]}
+                  activeItemProgress={activeItemProgress}
+                />
+              ))}
+            </ul>
+          ) : (
+            // 409/recover-attach fallback: the status probe has no items[] —
+            // render the in-flight item card from the progress snapshot.
+            progress.currentItem && (
               <ul className="flex flex-col gap-2" data-testid="gen-batch-item-list">
-                {items.map((item, i) => (
-                  <QueueRow
-                    key={item.mediaId}
-                    item={item}
-                    state={rowStates[i]}
-                    activeItemProgress={activeItemProgress}
-                  />
-                ))}
+                <QueueRow
+                  item={{
+                    mediaId: progress.currentMediaId ?? '',
+                    title: progress.currentItem,
+                    // Attach-degraded card: the status probe carries no
+                    // media_type — cosmetic placeholder only.
+                    mediaType: 'movie',
+                  }}
+                  // Terminal semantics must hold here too (AC 2): the batch
+                  // status is authoritative — budget_ceiling pauses the
+                  // in-flight item (已暫停, never 已取消/失敗), complete
+                  // resolves it via the failure record.
+                  state={
+                    isRunning
+                      ? 'active'
+                      : isBudgetCeiling
+                        ? 'paused'
+                        : status === 'complete'
+                          ? progress.currentMediaId != null &&
+                            failedIds.has(progress.currentMediaId)
+                            ? 'failed'
+                            : 'done'
+                          : 'stopped'
+                  }
+                  activeItemProgress={activeItemProgress}
+                />
               </ul>
-            ) : (
-              // 409/recover-attach fallback: the status probe has no items[] —
-              // render the in-flight item card from the progress snapshot.
-              progress.currentItem && (
-                <ul className="flex flex-col gap-2" data-testid="gen-batch-item-list">
-                  <QueueRow
-                    item={{
-                      mediaId: progress.currentMediaId ?? '',
-                      title: progress.currentItem,
-                    }}
-                    // Terminal semantics must hold here too (AC 2): the batch
-                    // status is authoritative — budget_ceiling pauses the
-                    // in-flight item (已暫停, never 已取消/失敗), complete
-                    // resolves it via the failure record.
-                    state={
-                      isRunning
-                        ? 'active'
-                        : isBudgetCeiling
-                          ? 'paused'
-                          : status === 'complete'
-                            ? progress.currentMediaId != null &&
-                              failedIds.has(progress.currentMediaId)
-                              ? 'failed'
-                              : 'done'
-                            : 'stopped'
-                    }
-                    activeItemProgress={activeItemProgress}
-                  />
-                </ul>
-              )
-            ))}
+            )
+          )}
 
           {/* ---------- Cost row ---------- */}
-          {!isIdle && (
+          {
             <div className="flex items-center gap-2">
               <p
                 data-testid="gen-batch-cost-line"
@@ -543,24 +429,11 @@ export function GenerationBatchPanelV2({
                 </span>
               )}
             </div>
-          )}
+          }
         </div>
 
         {/* Footer */}
         <div className="flex shrink-0 items-center justify-end gap-3 border-t border-[var(--border-subtle)] px-6 py-3.5">
-          {isIdle && (
-            <button
-              type="button"
-              onClick={onStart}
-              disabled={startDisabled}
-              data-testid="gen-batch-start-btn"
-              className="flex min-h-[44px] items-center gap-2 rounded-[var(--radius-md)] bg-[var(--accent-primary)] px-6 text-sm font-medium text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-pressed)] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {starting && <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" />}
-              開始生成
-            </button>
-          )}
-
           {isRunning &&
             (!confirmingCancel ? (
               <button
@@ -600,7 +473,7 @@ export function GenerationBatchPanelV2({
               </div>
             ))}
 
-          {(isTerminal || isBudgetCeiling || (isIdle && emptyScope)) && (
+          {(isTerminal || isBudgetCeiling) && (
             <button
               type="button"
               onClick={onClose}
@@ -628,37 +501,45 @@ export function GenerationBatchPanelV2({
 }
 
 // ---------------------------------------------------------------------------
-// Container — owns the queries, lazy-SSE hooks and the per-item join
+// Container — consent flow (idle) ⇄ execution panel (running+), lazy-SSE hooks
+// and the dual-family per-item join
 // ---------------------------------------------------------------------------
 
 export interface GenerationBatchDialogV2Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /**
-   * Pre-filtered MOVIE media ids (UUID strings, [@contract-v2] — the selection
-   * Set's ids pass through unconverted) when opened from a library selection.
-   * Empty/absent → the 已選項目 segment is not rendered (AC 1).
+   * Media ids (movie AND episode UUIDs — mixed since sub-4-2 D1) pre-checked
+   * in the consent list when opened from a library selection. Intersected with
+   * the candidate list once analysis is ready; empty/absent → the default
+   * (extract-only) selection applies.
    */
-  selectedMovieIds?: string[];
-  /** Series ids the caller excluded from the selection (AC 5 visible note). */
-  excludedSeriesCount?: number;
+  selectedMediaIds?: string[];
+  /**
+   * CR sub-4-3 H2: force a fresh candidate analysis on open (F17 post-scan
+   * deep link — the library just changed, a ready snapshot is stale).
+   */
+  forceAnalyze?: boolean;
 }
 
 export function GenerationBatchDialogV2({
   open,
   onOpenChange,
-  selectedMovieIds,
-  excludedSeriesCount = 0,
+  selectedMediaIds,
+  forceAnalyze = false,
 }: GenerationBatchDialogV2Props) {
   const queryClient = useQueryClient();
-  const hasSelection = (selectedMovieIds?.length ?? 0) > 0;
 
-  const [scope, setScope] = useState<GenerationBatchScope>(hasSelection ? 'selected' : 'missing');
   const [items, setItems] = useState<GenerationBatchItem[]>([]);
   const [failedIds, setFailedIds] = useState<Set<string>>(new Set());
-  const [emptyScope, setEmptyScope] = useState(false);
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
+  // CR M4: the consent flow must not bootstrap (and possibly kick a full
+  // library probe sweep) before we know whether a batch is already running.
+  const [probed, setProbed] = useState(false);
+  // CR H2: after a batch terminal the candidate snapshot is stale (completed
+  // items still listed, quotes wrong) — the next consent render re-analyzes.
+  const [postTerminal, setPostTerminal] = useState(false);
 
   const batch = useGenerationBatchProgress();
   const perItem = useGenerationProgress();
@@ -667,22 +548,14 @@ export function GenerationBatchDialogV2({
 
   const isIdle = batch.status === 'idle';
 
-  // 缺字幕 count comes ONLY from the 9R-16 preview endpoint (Rule 5 query).
-  const previewQuery = useQuery({
-    queryKey: generationBatchPreviewKey,
-    queryFn: () => subtitleService.previewGenerationBatch(),
-    enabled: open && isIdle,
-  });
-
-  // Reset the scope preselection whenever the dialog (re)opens (AC 1/5).
-  useEffect(() => {
-    if (open) setScope(hasSelection ? 'selected' : 'missing');
-  }, [open, hasSelection]);
-
   // On open, recover an already-running batch (409-recover precedent): the
-  // status probe lets us jump straight into the running view and attach SSE.
+  // status probe lets us jump straight into the running view and attach SSE —
+  // skipping the consent flow, because THAT batch was already consented.
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setProbed(false);
+      return;
+    }
     let cancelled = false;
     subtitleService
       .getGenerationBatchStatus()
@@ -691,15 +564,18 @@ export function GenerationBatchDialogV2({
         if (s.running && s.progress) startBatchTracking(s.progress);
       })
       .catch(() => {
-        // Best-effort recovery — a failed probe just leaves the panel idle.
+        // Best-effort recovery — a failed probe just leaves the consent flow up.
+      })
+      .finally(() => {
+        if (!cancelled) setProbed(true);
       });
     return () => {
       cancelled = true;
     };
   }, [open, startBatchTracking]);
 
-  // Per-item join: track the in-flight item's transcription_* stream on
-  // current_media_id (slice-1 hook reuse; reconnects per item).
+  // Per-item join: track the in-flight item's per-item streams (BOTH families
+  // since sub-4-3 AC #8) on current_media_id; reconnects per item.
   const currentMediaId = batch.progress.currentMediaId;
   useEffect(() => {
     if (batch.status === 'running' && currentMediaId != null) {
@@ -708,9 +584,9 @@ export function GenerationBatchDialogV2({
   }, [batch.status, currentMediaId, startItemTracking]);
 
   // Record per-item failures ONLY while the batch is still running — a
-  // transcription_failed that coincides with a non-error terminal batch status
-  // is the interrupted in-flight item (9R-16 CR caveat), and the paused/
-  // cancelled row branches override it at render time regardless.
+  // terminal per-item event that coincides with a non-error terminal batch
+  // status is the interrupted in-flight item (9R-16 CR caveat), and the
+  // paused/cancelled row branches override it at render time regardless.
   const perItemPhase = perItem.progress.phase;
   useEffect(() => {
     if (perItemPhase === 'failed' && batch.status === 'running' && currentMediaId != null) {
@@ -724,43 +600,45 @@ export function GenerationBatchDialogV2({
   }, [perItemPhase, batch.status, currentMediaId]);
 
   // Terminal: stop watching the per-item stream; completed items wrote back
-  // subtitle_status (9R-16 AC 12) → refresh library badges/counts + the
-  // preview count for the next 下次繼續 round.
+  // subtitle_status → refresh library badges/counts, the F17 toast count and
+  // the (now stale) candidate snapshot for the next consent round.
   const batchStatus = batch.status;
   useEffect(() => {
     if (batchStatus === 'idle' || batchStatus === 'running') return;
     resetItem();
+    setPostTerminal(true); // CR H2: next consent render must re-analyze
     void queryClient.invalidateQueries({ queryKey: libraryKeys.all });
     void queryClient.invalidateQueries({ queryKey: generationBatchPreviewKey });
   }, [batchStatus, resetItem, queryClient]);
 
-  const handleStart = useCallback(
-    async (startScope: GenerationBatchScope) => {
+  /**
+   * The consent flow's confirmed start (sub-4-3 AC #4): explicit ids in list
+   * order + the user-approved on-screen ceiling — ALWAYS scope=selected,
+   * ALWAYS budget_usd (WYSIWYG consent; 9R-16 AC #1 [@contract-v3]).
+   */
+  const handleStartConsented = useCallback(
+    async (mediaIds: string[], budgetUsd: number) => {
       setStarting(true);
       setStartError(null);
-      setEmptyScope(false);
       try {
-        const outcome = await subtitleService.startGenerationBatch(
-          startScope === 'selected'
-            ? { scope: 'selected', mediaIds: selectedMovieIds ?? [] }
-            : { scope: 'missing' }
-        );
+        const outcome = await subtitleService.startGenerationBatch({
+          scope: 'selected',
+          mediaIds,
+          budgetUsd,
+        });
         if (outcome.conflict) {
-          // A generation batch was already running (409) — attach to it. We did NOT
-          // enumerate its items[], so clear any stale cache from a prior batch this
-          // session — the ux3-ai-2 workspace then shows attach-degraded (honest),
-          // never a previous batch's rows joined against this batch's progress.
+          // A batch was already running (409) — attach to it. We did NOT
+          // enumerate its items[], so clear any stale cache from a prior batch
+          // this session — the workspace then shows attach-degraded (honest).
           setItems([]);
           setFailedIds(new Set());
           queryClient.removeQueries({ queryKey: generationBatchItemsKey });
           startBatchTracking(outcome.progress);
-        } else if (outcome.result.totalItems === 0) {
-          setEmptyScope(true);
         } else {
           setItems(outcome.result.items);
           setFailedIds(new Set());
-          // Cache items[] so the ux3-ai-2 workspace can render the full queue for
-          // this session's batch (the status probe carries none).
+          // Cache items[] so the ux3-ai-2 workspace can render the full queue
+          // for this session's batch (the status probe carries none).
           queryClient.setQueryData(generationBatchItemsKey, outcome.result.items);
           startBatchTracking({
             batchId: outcome.result.batchId ?? '',
@@ -773,18 +651,17 @@ export function GenerationBatchDialogV2({
         setStarting(false);
       }
     },
-    [selectedMovieIds, startBatchTracking]
+    [queryClient, startBatchTracking]
   );
 
-  // 下次繼續 = a NEW scope=missing batch (9R-16 resume-for-free ruling —
-  // completed items self-exclude because the missing enumeration re-runs).
+  // 下次繼續 (budget_ceiling) — back to the consent list: the paused items are
+  // still candidates, and a resume is a NEW consent (re-select, re-price,
+  // re-confirm), never an un-consented auto-restart.
   const handleResume = useCallback(() => {
-    setScope('missing');
     resetBatch();
     setItems([]);
     setFailedIds(new Set());
-    void handleStart('missing');
-  }, [handleStart, resetBatch]);
+  }, [resetBatch]);
 
   const handleConfirmCancelAll = useCallback(async () => {
     try {
@@ -801,13 +678,31 @@ export function GenerationBatchDialogV2({
     resetItem();
     setItems([]);
     setFailedIds(new Set());
-    setEmptyScope(false);
     setStarting(false);
     setStartError(null);
+    setPostTerminal(false);
     onOpenChange(false);
   }, [resetBatch, resetItem, onOpenChange]);
 
   if (!open) return null;
+
+  if (isIdle) {
+    // CR M4: hold the consent flow until the recovery probe settles — its
+    // bootstrap could otherwise kick a full-library probe sweep (with no
+    // visible F14/取消) while a batch is mid-execution.
+    if (!probed) return null;
+    return (
+      <GenerationConsentView
+        open={open}
+        preselectedIds={selectedMediaIds}
+        forceAnalyze={forceAnalyze || postTerminal}
+        starting={starting}
+        startError={startError}
+        onStartBatch={(mediaIds, budgetUsd) => void handleStartConsented(mediaIds, budgetUsd)}
+        onClose={handleClose}
+      />
+    );
+  }
 
   return (
     <GenerationBatchPanelV2
@@ -817,15 +712,6 @@ export function GenerationBatchDialogV2({
       items={items}
       failedIds={failedIds}
       activeItemProgress={perItem.progress}
-      scope={scope}
-      onScopeChange={setScope}
-      previewCount={previewQuery.data?.totalItems}
-      selectedCount={selectedMovieIds?.length ?? 0}
-      excludedSeriesCount={excludedSeriesCount}
-      emptyScope={emptyScope}
-      starting={starting}
-      startError={startError}
-      onStart={() => void handleStart(scope)}
       onConfirmCancelAll={() => void handleConfirmCancelAll()}
       onResume={handleResume}
       onClose={handleClose}
