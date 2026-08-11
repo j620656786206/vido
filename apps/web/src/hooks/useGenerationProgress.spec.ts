@@ -295,3 +295,125 @@ describe('useGenerationProgress (lazy SSE, double-nested envelope)', () => {
     expect(result.current.progress.phase).toBe('extracting');
   });
 });
+
+// ─── sub-4-3 AC #8: D6 subtitle_progress dual-family join ───────────────────
+
+describe('useGenerationProgress D6 subtitle_progress family (sub-4-3 AC #8)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    MockEventSource.instances = [];
+    (global as Record<string, unknown>).EventSource = MockEventSource;
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  function tracked() {
+    const rendered = renderHook(() => useGenerationProgress());
+    act(() => rendered.result.current.startTracking(MOVIE_UUID));
+    return { rendered, es: MockEventSource.instances[0] };
+  }
+
+  it.each([
+    ['probing', 'extracting'],
+    ['extracting', 'extracting'],
+    ['translating', 'translating'],
+  ] as const)('[P0] D6 stage %s maps to phase %s', (stage, phase) => {
+    const { rendered, es } = tracked();
+    act(() =>
+      es.emit('subtitle_progress', wireEvent('subtitle_progress', { stage, message: 'm' }))
+    );
+    expect(rendered.result.current.progress.phase).toBe(phase);
+  });
+
+  it('[P0] D6 complete is terminal and fires onComplete — after an observed pipeline stage', () => {
+    const onComplete = vi.fn();
+    const rendered = renderHook(() => useGenerationProgress({ onComplete }));
+    act(() => rendered.result.current.startTracking(MOVIE_UUID));
+    const es = MockEventSource.instances[0];
+
+    act(() => es.emit('subtitle_progress', wireEvent('subtitle_progress', { stage: 'extracting' })));
+    act(() => es.emit('subtitle_progress', wireEvent('subtitle_progress', { stage: 'complete' })));
+
+    expect(rendered.result.current.progress.phase).toBe('complete');
+    expect(onComplete).toHaveBeenCalledOnce();
+    expect(es.readyState).toBe(2);
+  });
+
+  it('[P0 CR M7] a SEARCH-flow D6 complete (no pipeline stage observed) must NOT terminalize generation tracking', () => {
+    const onComplete = vi.fn();
+    const rendered = renderHook(() => useGenerationProgress({ onComplete }));
+    act(() => rendered.result.current.startTracking(MOVIE_UUID));
+    const es = MockEventSource.instances[0];
+
+    // The search engine emits searching → … → complete on the SAME event type
+    // and media_id. Without a prior pipeline stage the terminal is ignored.
+    act(() => es.emit('subtitle_progress', wireEvent('subtitle_progress', { stage: 'searching' })));
+    act(() => es.emit('subtitle_progress', wireEvent('subtitle_progress', { stage: 'complete' })));
+
+    expect(rendered.result.current.progress.phase).toBe('extracting'); // START state, untouched
+    expect(onComplete).not.toHaveBeenCalled();
+    expect(es.readyState).not.toBe(2);
+
+    // The generation pipeline then really starts — its terminal IS honored.
+    act(() => es.emit('subtitle_progress', wireEvent('subtitle_progress', { stage: 'translating' })));
+    act(() => es.emit('subtitle_progress', wireEvent('subtitle_progress', { stage: 'complete' })));
+    expect(rendered.result.current.progress.phase).toBe('complete');
+    expect(onComplete).toHaveBeenCalledOnce();
+  });
+
+  it.each(['failed', 'skipped'] as const)('[P0] D6 %s is terminal failed', (stage) => {
+    const { rendered, es } = tracked();
+    act(() => es.emit('subtitle_progress', wireEvent('subtitle_progress', { stage: 'probing' })));
+    act(() =>
+      es.emit(
+        'subtitle_progress',
+        wireEvent('subtitle_progress', { stage, message: '無文字字幕軌' })
+      )
+    );
+    expect(rendered.result.current.progress.phase).toBe('failed');
+    expect(es.readyState).toBe(2);
+  });
+
+  it('drops D6 events for a foreign media_id — including episode UUIDs it does not track', () => {
+    const { rendered, es } = tracked();
+    act(() =>
+      es.emit(
+        'subtitle_progress',
+        wireEvent('subtitle_progress', { media_id: OTHER_UUID, stage: 'extracting' })
+      )
+    );
+    expect(rendered.result.current.progress.phase).toBe('extracting'); // START state, not from the event
+    act(() =>
+      es.emit(
+        'subtitle_progress',
+        wireEvent('subtitle_progress', { media_id: OTHER_UUID, stage: 'complete' })
+      )
+    );
+    expect(rendered.result.current.progress.phase).toBe('extracting');
+    expect(es.readyState).not.toBe(2);
+  });
+
+  it('ignores unmapped search-path stages (searching etc.) without state change', () => {
+    const { rendered, es } = tracked();
+    act(() => es.emit('subtitle_progress', wireEvent('subtitle_progress', { stage: 'searching' })));
+    expect(rendered.result.current.progress.phase).toBe('extracting'); // unchanged START state
+  });
+
+  it('tracks an EPISODE media id — sub-3-2 v2 semantics (media row id, movie or episode)', () => {
+    const EPISODE_UUID = '8fa9fed7-8fbc-4e8d-8edc-f6b7c8d9e006';
+    const rendered = renderHook(() => useGenerationProgress());
+    act(() => rendered.result.current.startTracking(EPISODE_UUID));
+    const es = MockEventSource.instances[0];
+
+    act(() =>
+      es.emit(
+        'subtitle_progress',
+        wireEvent('subtitle_progress', { media_id: EPISODE_UUID, stage: 'translating' })
+      )
+    );
+    expect(rendered.result.current.progress.phase).toBe('translating');
+  });
+});

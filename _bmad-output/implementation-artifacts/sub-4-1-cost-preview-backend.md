@@ -41,9 +41,9 @@ UX 設計已定稿（PR #211，8 個畫面）：`_bmad-output/planning-artifacts
    - 翻譯成本抽取前不可精算（取決於字幕行數），以每分鐘均價概算並標示為預估
    - **抽取路線的估價是下界**：`router.go:123-130` 顯示「有文字軌」的項目若 SDH 過濾後零剩餘 cue 仍會落到 ASR。此不確定性必須在回應中可表達（或於 Dev Notes 明確記錄為已知限制）。
 
-7. **候選 API（新端點，不破壞既有）。** 新增回傳「清單 + 彙總」的端點；**既有 `GET /subtitles/generation-batch/preview` 維持原樣**（回 `{total_items}`、僅支援 `scope=missing`），因為現有 FE 仍在消費它。回應需含：每筆 `media_id` / `media_type` / 顯示標題 / 路線 / 片長與是否已知 / 預估金額，以及彙總 `extract_count` / `asr_count` / `estimated_total_usd`。Rule 3 信封與 Rule 7 錯誤碼沿用既有 `SUBTITLE_` / `TRANSCRIPTION_` 前綴，**不新增前綴**。
+7. **[@contract-v1] 候選 API（新端點，不破壞既有）。**<!-- stamped 2026-08-11 by sub-4-3 per this story's Dev Notes deferral ("是否要 stamp 待 sub-4-3（FE）確定跨 story 消費時再決定") — sub-4-3 now consumes the endpoint trio + state envelope + candidate/summary shapes cross-story. Rule 20 forward-only retrofit: stamp on first cross-story reference, no bump, no ack owed upstream. --> 新增回傳「清單 + 彙總」的端點；**既有 `GET /subtitles/generation-batch/preview` 維持原樣**（回 `{total_items}`、僅支援 `scope=missing`），因為現有 FE 仍在消費它。回應需含：每筆 `media_id` / `media_type` / 顯示標題 / 路線 / 片長與是否已知 / 預估金額，以及彙總 `extract_count` / `asr_count` / `estimated_total_usd`。Rule 3 信封與 Rule 7 錯誤碼沿用既有 `SUBTITLE_` / `TRANSCRIPTION_` 前綴，**不新增前綴**。
 
-8. **分析進度可觀測（F14）。** 分析涉及 N × ffprobe，受既有 3 格 semaphore + 10s timeout 限制（`main.go:401`），對含大量影集的媒體庫是實際耗時操作，不可假裝瞬時。需提供進度（沿用既有 SSE hub 與現有事件詞彙；**不得**新增 D6 `PipelineStage` 值，該契約已 stamped）。設計 F14 顯示「分析字幕軌 234 / 1,247」+「本機執行，不會產生費用」。
+8. **[@contract-v1] 分析進度可觀測（F14）。**<!-- stamped 2026-08-11 by sub-4-3 (same retrofit) — consumer: useGenerationCandidatesProgress joins `generation_candidates_progress` {status, analyzed, total, error}; result NEVER rides the stream (CR L2 clause). --> 分析涉及 N × ffprobe，受既有 3 格 semaphore + 10s timeout 限制（`main.go:401`），對含大量影集的媒體庫是實際耗時操作，不可假裝瞬時。需提供進度（沿用既有 SSE hub 與現有事件詞彙；**不得**新增 D6 `PipelineStage` 值，該契約已 stamped）。設計 F14 顯示「分析字幕軌 234 / 1,247」+「本機執行，不會產生費用」。
 
 9. **測試。** 至少涵蓋：(a) 掃描回呼不再派工、手動端點仍可用；(b) legacy mode 行為不變；(c) 枚舉同時涵蓋電影與影集；(d) 路線預測二分（有文字軌/只有圖片軌/無軌）且**不觸發抽取**；(e) 已存 `subtitle_tracks` 走快取路徑、缺者才探測；(f) 片長三段降級（probe → runtime → 未知）；(g) 自架 ASR 估價為 0/未知；(h) 彙總金額 = 各項加總。
 

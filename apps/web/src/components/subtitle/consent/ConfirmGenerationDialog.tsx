@@ -1,0 +1,145 @@
+// Design ref: ux-design.pen Screen F16-D-v2 (gmOt6) · F19-D-v2 (KThbY)
+/**
+ * F16 金額確認 / F19 超出上限確認 (sub-4-3 AC #4) — the LAST gate before money
+ * is spent. Breakdown figures come from the SAME ConsentTotals the list panel
+ * renders (三處金額同源). Over-budget flips the tint to warning (one shade
+ * deeper than F16's neutral — the third design round widened the contrast),
+ * the total to warning orange and the primary button to 仍要開始.
+ *
+ * Soft-ceiling honesty: the copy says 自動暫停/預計/約 — never "絕不超過".
+ */
+import { Loader2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogTitle } from '../../ui/Dialog';
+import { cn } from '../../../lib/utils';
+import { usd } from '../../../lib/currency';
+import type { ConsentTotals } from './consentSelection';
+
+export interface ConfirmGenerationDialogProps {
+  open: boolean;
+  totals: ConsentTotals;
+  budgetUsd: number;
+  confirming?: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+export function ConfirmGenerationDialog({
+  open,
+  totals,
+  budgetUsd,
+  confirming = false,
+  onConfirm,
+  onCancel,
+}: ConfirmGenerationDialogProps) {
+  const overBudget = totals.overBudget;
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) onCancel();
+      }}
+    >
+      <DialogContent
+        data-testid="consent-confirm-dialog"
+        aria-describedby={undefined}
+        className="flex max-w-md flex-col gap-0 p-0"
+      >
+        <div className="flex h-14 shrink-0 items-center border-b border-[var(--border-subtle)] pl-6 pr-12">
+          <DialogTitle className="text-base font-semibold">確認產生字幕</DialogTitle>
+        </div>
+
+        <div className="flex flex-col gap-4 p-6">
+          <p className="flex items-center gap-[3px] text-sm text-[var(--text-primary)]">
+            即將為 <span className="font-mono tabular-nums">{totals.selectedCount}</span>
+            部影片產生字幕
+          </p>
+
+          <div className="flex flex-col gap-2 text-[13px] text-[var(--text-secondary)]">
+            <p className="flex items-center justify-between">
+              <span className="flex items-center gap-[3px]">
+                語音辨識 <span className="font-mono tabular-nums">{totals.selectedAsrCount}</span>{' '}
+                部
+              </span>
+              <span data-testid="consent-confirm-asr-usd" className="font-mono tabular-nums">
+                預估 {usd(totals.selectedAsrUsd)}
+              </span>
+            </p>
+            <p className="flex items-center justify-between">
+              <span className="flex items-center gap-[3px]">
+                抽取 + 翻譯
+                <span className="font-mono tabular-nums">{totals.selectedExtractCount}</span> 部
+              </span>
+              <span data-testid="consent-confirm-extract-usd" className="font-mono tabular-nums">
+                預估 {usd(totals.selectedExtractUsd)}
+              </span>
+            </p>
+            <p className="flex items-center justify-between border-t border-[var(--border-subtle)] pt-2 text-[var(--text-primary)]">
+              <span>合計預估</span>
+              <span
+                data-testid="consent-confirm-total-usd"
+                className={cn(
+                  'font-mono font-semibold tabular-nums',
+                  overBudget ? 'text-[var(--warning)]' : 'text-[var(--text-primary)]'
+                )}
+              >
+                {usd(totals.selectedTotalUsd)}
+              </span>
+            </p>
+          </div>
+
+          <div
+            data-testid="consent-confirm-hint"
+            className={cn(
+              'rounded-[var(--radius-md)] p-3 text-[13px]',
+              overBudget
+                ? 'bg-[var(--warning-tint)] text-[var(--text-primary)]'
+                : 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)]'
+            )}
+          >
+            {overBudget ? (
+              <>
+                預估金額已超過上限
+                <span className="font-mono tabular-nums"> {usd(budgetUsd)}</span>
+                。系統會依序處理，累計達到上限時自動暫停，預計可完成約
+                <span className="font-mono tabular-nums"> {totals.feasibleCount} </span>
+                部；未完成的項目會保留，可提高上限後續跑。
+              </>
+            ) : (
+              <>
+                預估金額僅供參考，實際費用依內容長度而定。累計達到上限
+                <span className="font-mono tabular-nums"> {usd(budgetUsd)} </span>
+                時會自動暫停，已完成的部分會保留。
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className="flex shrink-0 items-center justify-end gap-3 border-t border-[var(--border-subtle)] px-6 py-3.5">
+          <button
+            type="button"
+            onClick={onCancel}
+            data-testid="consent-confirm-cancel"
+            className="flex min-h-[44px] items-center rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] px-5 text-sm font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--bg-primary)]"
+          >
+            取消
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={confirming}
+            data-testid="consent-confirm-start"
+            className="flex min-h-[44px] items-center gap-2 rounded-[var(--radius-md)] bg-[var(--accent-primary)] px-6 text-sm font-medium text-[var(--text-on-accent)] transition-colors hover:bg-[var(--accent-pressed)] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {confirming && (
+              <Loader2
+                className="h-4 w-4 animate-spin motion-reduce:animate-none"
+                aria-hidden="true"
+              />
+            )}
+            {overBudget ? '仍要開始' : '確認並開始'}
+          </button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}

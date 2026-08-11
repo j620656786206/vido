@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from '@tanstack/react-router';
 import {
   Loader,
   File,
@@ -25,6 +26,8 @@ export interface ScanProgressSheetProps {
   onCancel: () => void;
   onDismiss: () => void;
   isCancelling?: boolean;
+  /** sub-4-3 F17 mobile twin — see ScanProgressCard. */
+  missingSubtitleCount?: number;
 }
 
 export function ScanProgressSheet({
@@ -32,7 +35,9 @@ export function ScanProgressSheet({
   onCancel,
   onDismiss,
   isCancelling = false,
+  missingSubtitleCount,
 }: ScanProgressSheetProps) {
+  const navigate = useNavigate();
   const [expanded, setExpanded] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const autoDismissTimerRef = useRef<ReturnType<typeof setTimeout>>();
@@ -109,6 +114,30 @@ export function ScanProgressSheet({
         <p className="mt-2 text-xs text-[var(--text-secondary)]">
           {state.filesFound.toLocaleString()} 檔案 · 錯誤 {state.errorCount}
         </p>
+        {!state.isCancelled && missingSubtitleCount !== undefined && missingSubtitleCount > 0 && (
+          <div className="mt-2 flex items-center justify-between">
+            <p
+              data-testid="scan-missing-subtitle-line"
+              className="flex items-center gap-[3px] text-xs text-[var(--text-secondary)]"
+            >
+              <span className="font-mono tabular-nums">
+                {missingSubtitleCount.toLocaleString()}
+              </span>
+              部影片缺繁中字幕
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                onDismiss();
+                navigate({ to: '/library', search: { generate: true } });
+              }}
+              className="text-xs text-[var(--accent-primary)] underline-offset-2 hover:underline"
+              data-testid="generate-subtitles-link"
+            >
+              產生字幕 →
+            </button>
+          </div>
+        )}
       </div>
     );
   }

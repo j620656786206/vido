@@ -20,6 +20,13 @@ interface LibrarySearchParams {
    * filtering by subtitle_status is a tracked follow-up (not yet wired).
    */
   subtitleStatus?: string;
+  /**
+   * sub-4-3 F17 deep link: the scan-complete toast's 產生字幕 → link opens the
+   * consent flow. Rule 26: the search parser JSON-parses values, so accept the
+   * boolean permissively (true / 1 / '1' / 'true') instead of a strict typeof
+   * guard — the gallery-route coercion precedent.
+   */
+  generate?: boolean;
 }
 
 export const Route = createFileRoute('/library')({
@@ -40,6 +47,13 @@ export const Route = createFileRoute('/library')({
     yearMax: typeof search.yearMax === 'number' ? search.yearMax : undefined,
     unmatched: search.unmatched === true ? true : undefined,
     subtitleStatus: typeof search.subtitleStatus === 'string' ? search.subtitleStatus : undefined,
+    generate:
+      search.generate === true ||
+      search.generate === 1 ||
+      search.generate === '1' ||
+      search.generate === 'true'
+        ? true
+        : undefined,
   }),
   // ux3-0-5: old ?type= deep links → clean type routes (D2). Route-level redirect
   // (never a component redirect, F1); 'all'/absent stays at /library (merged view).
