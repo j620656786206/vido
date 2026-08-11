@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/vido/api/internal/ai"
 	"github.com/vido/api/internal/models"
+	"github.com/vido/api/internal/repository"
 	"github.com/vido/api/internal/sse"
 )
 
@@ -27,10 +29,24 @@ import (
 var ErrGenerationBatchRunning = errors.New("generation batch already running")
 
 // ErrGenerationSelectionInvalid marks a scope=selected media id that cannot run
-// Route C generation (unknown / non-movie id, or a movie without a media file).
-// The handler maps it to 400 (AC 8 ruling: REJECT, not filter — the FE knows
-// its selection and excludes series ids client-side).
+// generation (unknown id, or a row without a media file). The handler maps it
+// to 400 (AC 8 ruling: REJECT, not filter — sub-4-2: the consented list IS the
+// amount the user confirmed on F16; silently dropping items would execute a
+// batch nobody consented to). Since sub-4-2 ids may be movies OR episodes.
+// A REAL lookup failure (DB error, cancelled ctx) is deliberately NOT this
+// sentinel — it propagates unwrapped so the handler answers 500, not "your
+// selection is invalid" (CR sub-4-2 M2).
 var ErrGenerationSelectionInvalid = errors.New("selected media cannot run generation")
+
+// ErrGenerationItemSkipped marks an item the pipeline deliberately routed out
+// (skipped run — e.g. only non-target text tracks, or no text source with no
+// live ASR). The batch counts it as a FAILURE, not a success: on a consented
+// batch, success_count must mean "a subtitle now exists" — crediting skips
+// would let a keyless deployment report N successes, $0 spent, and zero
+// subtitles (CR sub-4-2 H1). Legacy mode already fails these items via
+// ErrTranscriptionDisabled; this sentinel restores the same honesty for the
+// pipeline engine.
+var ErrGenerationItemSkipped = errors.New("generation item skipped by pipeline")
 
 // Generation-batch terminal/live statuses (AC 9 vocabulary, [@contract-v2] —
 // media ids are UUID STRINGS since 9R-18).
@@ -59,20 +75,30 @@ type GenerationBatchProgress struct {
 }
 
 // GenerationBatchItem is one enumerated queue entry. The exported fields are
-// the 202-response items[] shape (AC 1); file locations stay internal.
+// the 202-response items[] shape (AC 1; media_type additive since sub-4-2);
+// file locations stay internal. MediaType uses the internal vocabulary
+// (models.SubtitleRunMediaMovie|Episode — movie|episode, NOT TMDB movie|tv).
 type GenerationBatchItem struct {
-	MediaID string `json:"media_id"`
-	Title   string `json:"title"`
+	MediaID   string `json:"media_id"`
+	Title     string `json:"title"`
+	MediaType string `json:"media_type"`
 
 	filePath string
 	mediaDir string
 }
 
-// generationRunner is the narrow TranscriptionService surface the orchestrator
-// needs (Rule 11 — enables test fakes without the full pipeline).
-type generationRunner interface {
+// GenerationRunner executes one consented batch item. Implementations are
+// selected by cmd/api per pipeline mode (sub-4-2): legacy mode keeps the Route
+// C transcription engine (RouteCGenerationRunner below); pipeline mode injects
+// a cmd/api adapter over subtitle.Pipeline.ProcessItem so an item with an
+// extractable embedded subtitle takes the free extract→translate route instead
+// of unconditionally paying for ASR — the F15 quote must match what actually
+// runs. mediaType carries the internal movie|episode vocabulary; the mirror of
+// subtitle.MediaRef's two fields (services ↛ subtitle — see project-context.md
+// Rule 19).
+type GenerationRunner interface {
 	IsAvailable() bool
-	RunTranscription(ctx context.Context, mediaID string, filePath string, mediaDir string, opts ...TranscriptionOption) error
+	ExecuteGeneration(ctx context.Context, mediaID, mediaType, filePath, mediaDir string) error
 }
 
 // generationCandidateFinder is the narrow movie-repo surface for enumeration
@@ -83,15 +109,26 @@ type generationCandidateFinder interface {
 	FindByID(ctx context.Context, id string) (*models.Movie, error)
 }
 
+// generationEpisodeFinder is the narrow episode-repo surface for scope=selected
+// id resolution (sub-4-2 D1 ruling: mixed movie+episode batches).
+// *repository.EpisodeRepository satisfies it. A nil finder degrades to the
+// pre-sub-4-2 movies-only behavior.
+type generationEpisodeFinder interface {
+	FindByID(ctx context.Context, id string) (*models.Episode, error)
+}
+
 // GenerationBatchProcessor runs the Route C generation pipeline sequentially
 // over an enumerated queue under ONE shared ai.Budget (AC 5/6/7). Global
 // single-flight: at most one generation batch at a time (independent from the
 // Epic 8 fetch-batch — they share no state).
 type GenerationBatchProcessor struct {
-	runner    generationRunner
-	finder    generationCandidateFinder
-	sseHub    *sse.Hub
-	budgetUSD float64 // shared batch ceiling (AI_RUN_BUDGET_USD; 0 = unlimited)
+	runner   GenerationRunner
+	finder   generationCandidateFinder
+	episodes generationEpisodeFinder
+	sseHub   *sse.Hub
+	// budgetUSD is the DEFAULT ceiling (AI_RUN_BUDGET_USD; <=0 = unlimited),
+	// used only when Start receives no user-approved ceiling (sub-4-2 AC #1).
+	budgetUSD float64
 	logger    *slog.Logger
 
 	mu           sync.Mutex
@@ -100,11 +137,13 @@ type GenerationBatchProcessor struct {
 	activeBudget *ai.Budget
 }
 
-// NewGenerationBatchProcessor wires the orchestrator. budgetUSD is the shared
-// batch cost ceiling (cfg.AIRunBudgetUSD).
+// NewGenerationBatchProcessor wires the orchestrator. budgetUSD is the default
+// batch cost ceiling (cfg.AIRunBudgetUSD) applied when a Start call carries no
+// user-approved ceiling. episodes may be nil in movie-only tests.
 func NewGenerationBatchProcessor(
-	runner generationRunner,
+	runner GenerationRunner,
 	finder generationCandidateFinder,
+	episodes generationEpisodeFinder,
 	sseHub *sse.Hub,
 	budgetUSD float64,
 	logger *slog.Logger,
@@ -115,6 +154,7 @@ func NewGenerationBatchProcessor(
 	return &GenerationBatchProcessor{
 		runner:    runner,
 		finder:    finder,
+		episodes:  episodes,
 		sseHub:    sseHub,
 		budgetUSD: budgetUSD,
 		logger:    logger.With("service", "generation_batch"),
@@ -181,8 +221,13 @@ func (p *GenerationBatchProcessor) PreviewMissing(ctx context.Context) (int, err
 // batch ID and the enumerated items (the 202 items[] list, in run order).
 // A scope=missing resolving to 0 items returns ("", empty, nil) WITHOUT
 // starting a batch — nothing to do is not an error (AC 1).
+//
+// budgetUSD is the user-approved ceiling from the request (sub-4-2 AC #1);
+// 0 means "not provided → use the configured default". The handler validates
+// user input to be strictly > 0, so 0 can only mean absent — user input is
+// NEVER mapped onto ai.NewBudget's <=0 = unlimited semantic.
 // Errors: ErrGenerationBatchRunning (409), ErrGenerationSelectionInvalid (400).
-func (p *GenerationBatchProcessor) Start(ctx context.Context, scope string, mediaIDs []string) (string, []GenerationBatchItem, error) {
+func (p *GenerationBatchProcessor) Start(ctx context.Context, scope string, mediaIDs []string, budgetUSD float64) (string, []GenerationBatchItem, error) {
 	// Quick check — release the lock before DB queries (fetch-batch H1 fix).
 	p.mu.Lock()
 	if p.activeBatch != nil {
@@ -210,7 +255,11 @@ func (p *GenerationBatchProcessor) Start(ctx context.Context, scope string, medi
 	batchID := uuid.New().String()
 	// Detached from the HTTP request so the batch outlives it; ONE shared
 	// Budget rides the batch ctx into every item's pipeline (AC 6b).
-	budget := ai.NewBudget(p.budgetUSD)
+	ceiling := p.budgetUSD
+	if budgetUSD > 0 {
+		ceiling = budgetUSD
+	}
+	budget := ai.NewBudget(ceiling)
 	processCtx, processCancel := context.WithCancel(context.Background())
 	processCtx = ai.WithBudget(processCtx, budget)
 
@@ -218,7 +267,7 @@ func (p *GenerationBatchProcessor) Start(ctx context.Context, scope string, medi
 		BatchID:    batchID,
 		TotalItems: len(items),
 		Status:     GenerationBatchStatusRunning,
-		BudgetUSD:  p.budgetUSD,
+		BudgetUSD:  ceiling,
 	}
 	p.activeCancel = processCancel
 	p.activeBudget = budget
@@ -229,7 +278,17 @@ func (p *GenerationBatchProcessor) Start(ctx context.Context, scope string, medi
 	return batchID, items, nil
 }
 
-// collectItems resolves the scope into the run-order queue (movies only, AC 8).
+// collectItems resolves the scope into the run-order queue.
+//
+// scope=missing stays DELIBERATELY movies-only (sub-4-2 AC #3): the frozen
+// preview endpoint counts missing movies, and widening the batch without
+// widening the count would make the legacy F8 dialog contradict itself.
+// Episodes enter a batch exclusively via an explicit scope=selected id list
+// (the F15 consent screen submits per-item selections).
+//
+// scope=selected resolves each id against BOTH sources (sub-4-2 AC #2, D1
+// ruling): movies first, then episodes. Any id that resolves against neither
+// rejects the WHOLE batch — the consented list is the amount confirmed on F16.
 func (p *GenerationBatchProcessor) collectItems(ctx context.Context, scope string, mediaIDs []string) ([]GenerationBatchItem, error) {
 	switch scope {
 	case "missing":
@@ -250,16 +309,29 @@ func (p *GenerationBatchProcessor) collectItems(ctx context.Context, scope strin
 		items := make([]GenerationBatchItem, 0, len(mediaIDs))
 		for _, id := range mediaIDs {
 			movie, err := p.finder.FindByID(ctx, id)
-			if err != nil || movie == nil {
-				// Unknown id — likely a series id or a stale selection (AC 8: reject).
-				return nil, fmt.Errorf("media_id %s 不是可生成字幕的電影: %w", id, ErrGenerationSelectionInvalid)
+			if err != nil && !errors.Is(err, sql.ErrNoRows) {
+				// A real lookup failure (locked DB, cancelled ctx) is NOT "your
+				// selection is invalid" — propagate for the handler's 500 (CR M2).
+				return nil, fmt.Errorf("resolve media_id %s: %w", id, err)
 			}
-			if !movie.FilePath.Valid || movie.FilePath.String == "" {
-				return nil, fmt.Errorf("media_id %s 沒有媒體檔案: %w", id, ErrGenerationSelectionInvalid)
+			if err == nil && movie != nil {
+				if !movie.FilePath.Valid || movie.FilePath.String == "" {
+					return nil, fmt.Errorf("media_id %s 沒有媒體檔案: %w", id, ErrGenerationSelectionInvalid)
+				}
+				item, ok := p.toItem(*movie)
+				if !ok {
+					return nil, fmt.Errorf("media_id %s 不是可生成字幕的項目: %w", id, ErrGenerationSelectionInvalid)
+				}
+				items = append(items, item)
+				continue
 			}
-			item, ok := p.toItem(*movie)
+			item, ok, err := p.toEpisodeItem(ctx, id)
+			if err != nil {
+				return nil, err
+			}
 			if !ok {
-				return nil, fmt.Errorf("media_id %s 不是可生成字幕的電影: %w", id, ErrGenerationSelectionInvalid)
+				// Unknown in both tables — a series id or a stale selection (reject).
+				return nil, fmt.Errorf("media_id %s 不是可生成字幕的項目: %w", id, ErrGenerationSelectionInvalid)
 			}
 			items = append(items, item)
 		}
@@ -279,11 +351,48 @@ func (p *GenerationBatchProcessor) toItem(m models.Movie) (GenerationBatchItem, 
 		return GenerationBatchItem{}, false
 	}
 	return GenerationBatchItem{
-		MediaID:  m.ID,
-		Title:    m.Title,
-		filePath: m.FilePath.String,
-		mediaDir: filepath.Dir(m.FilePath.String),
+		MediaID:   m.ID,
+		Title:     m.Title,
+		MediaType: models.SubtitleRunMediaMovie,
+		filePath:  m.FilePath.String,
+		mediaDir:  filepath.Dir(m.FilePath.String),
 	}, true
+}
+
+// toEpisodeItem resolves a scope=selected id against the episodes table
+// (sub-4-2 AC #2). ok=false means "not an episode either"; a found episode
+// without a media file is a hard selection error (same rule as movies); a real
+// lookup failure propagates (→ handler 500, CR M2).
+// The title is cosmetic (SSE current_item) — built from the episode row alone,
+// no series join: the F15 list renders full titles from its own candidate data.
+func (p *GenerationBatchProcessor) toEpisodeItem(ctx context.Context, id string) (GenerationBatchItem, bool, error) {
+	if p.episodes == nil {
+		return GenerationBatchItem{}, false, nil
+	}
+	episode, err := p.episodes.FindByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, repository.ErrEpisodeNotFound) {
+			return GenerationBatchItem{}, false, nil
+		}
+		return GenerationBatchItem{}, false, fmt.Errorf("resolve media_id %s: %w", id, err)
+	}
+	if episode == nil {
+		return GenerationBatchItem{}, false, nil
+	}
+	if !episode.FilePath.Valid || episode.FilePath.String == "" {
+		return GenerationBatchItem{}, false, fmt.Errorf("media_id %s 沒有媒體檔案: %w", id, ErrGenerationSelectionInvalid)
+	}
+	title := fmt.Sprintf("S%02dE%02d", episode.SeasonNumber, episode.EpisodeNumber)
+	if episode.Title.Valid && episode.Title.String != "" {
+		title = fmt.Sprintf("%s %s", title, episode.Title.String)
+	}
+	return GenerationBatchItem{
+		MediaID:   episode.ID,
+		Title:     title,
+		MediaType: models.SubtitleRunMediaEpisode,
+		filePath:  episode.FilePath.String,
+		mediaDir:  filepath.Dir(episode.FilePath.String),
+	}, true, nil
 }
 
 // process runs the queue sequentially (one 轉錄中, rest 排隊中 — the shared
@@ -320,7 +429,7 @@ func (p *GenerationBatchProcessor) process(ctx context.Context, batchID string, 
 		p.mu.Unlock()
 		p.broadcast(batchID, len(items), i+1, item, successCount, failCount, 0, GenerationBatchStatusRunning, budget)
 
-		err := p.runner.RunTranscription(ctx, item.MediaID, item.filePath, item.mediaDir, WithTranslation())
+		err := p.runner.ExecuteGeneration(ctx, item.MediaID, item.MediaType, item.filePath, item.mediaDir)
 		switch {
 		case err == nil:
 			successCount++
@@ -340,6 +449,16 @@ func (p *GenerationBatchProcessor) process(ctx context.Context, batchID string, 
 				"media_id", item.MediaID, "spent_usd", budget.SpentUSD())
 			p.finish(batchID, GenerationBatchStatusBudgetCeiling, len(items), i+1, item, successCount, failCount, paused, budget)
 			return
+		case errors.Is(err, ErrGenerationItemSkipped):
+			// CR H1: the pipeline routed the item out without producing a
+			// subtitle — an honest batch counts that as a failure, never a
+			// success (a keyless deployment must not report N successes and
+			// zero subtitles). Distinct log so the operator sees the reason
+			// class immediately.
+			failCount++
+			p.logger.Warn("generation batch item skipped by pipeline — counted as failed",
+				"batch_id", batchID, "index", i+1, "total", len(items),
+				"media_id", item.MediaID, "title", item.Title, "reason", err)
 		default:
 			// Per-item tolerance (AC 5) — includes ErrTranscriptionInProgress
 			// (user ran that item from the detail dialog mid-batch): count the
@@ -362,7 +481,7 @@ func (p *GenerationBatchProcessor) process(ctx context.Context, batchID string, 
 	p.logger.Info("generation batch complete",
 		"batch_id", batchID, "total", len(items),
 		"success", successCount, "fail", failCount,
-		"spent_usd", budget.SpentUSD(), "budget_usd", p.budgetUSD)
+		"spent_usd", budget.SpentUSD(), "budget_usd", budget.Snapshot().BudgetUSD)
 	last := GenerationBatchItem{}
 	if len(items) > 0 {
 		last = items[len(items)-1]

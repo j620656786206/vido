@@ -281,6 +281,32 @@ func (p *WorkerPool) EnqueueItem(ref MediaRef, opts ProcessItemOptions) EnqueueO
 	}
 }
 
+// TryReserve claims ref in the pool's in-flight set on behalf of an EXTERNAL
+// sequential caller — the sub-4-2 consented batch drives Pipeline.ProcessItem
+// directly (not through the queue), and without sharing this set the batch and
+// a pool worker could process the SAME media concurrently: two subtitle_runs
+// rows, and the loser's terminal write clobbering the winner's media-row
+// status (CR sub-4-2 M4). false = the pool already owns the item (queued or a
+// worker is on it) — the caller must skip it. Pair every successful
+// TryReserve with Release. Deliberately independent of p.running: dedup is
+// about ProcessItem ownership, not queue lifecycle.
+func (p *WorkerPool) TryReserve(ref MediaRef) bool {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if _, dup := p.inFlight[ref]; dup {
+		return false
+	}
+	p.inFlight[ref] = struct{}{}
+	return true
+}
+
+// Release frees a TryReserve claim. Releasing an unclaimed ref is a no-op.
+func (p *WorkerPool) Release(ref MediaRef) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	delete(p.inFlight, ref)
+}
+
 // terminalPipelineVerdict reports whether the pipeline has already issued a
 // PERMANENT verdict for this item (CR H1, amended by sub-3-1 [@contract-v2→v3]).
 // Since sub-3-1 only `skipped` qualifies: it records a DELIBERATE routing

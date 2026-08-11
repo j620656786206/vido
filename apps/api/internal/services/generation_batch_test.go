@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"sync"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/vido/api/internal/ai"
 	"github.com/vido/api/internal/models"
+	"github.com/vido/api/internal/repository"
 	"github.com/vido/api/internal/sse"
 )
 
@@ -31,21 +33,23 @@ const (
 
 // ─── Fakes ──────────────────────────────────────────────────────────────────
 
-// fakeGenerationRunner is a narrow generationRunner fake (Rule 11).
+// fakeGenerationRunner is a narrow GenerationRunner fake (Rule 11).
 type fakeGenerationRunner struct {
-	mu        sync.Mutex
-	calls     []string
-	errs      map[string]error
-	available bool
+	mu         sync.Mutex
+	calls      []string
+	mediaTypes []string
+	errs       map[string]error
+	available  bool
 	// onCall lets a test spend from the ctx budget / observe ctx mid-item.
 	onCall func(ctx context.Context, mediaID string) error
 }
 
 func (f *fakeGenerationRunner) IsAvailable() bool { return f.available }
 
-func (f *fakeGenerationRunner) RunTranscription(ctx context.Context, mediaID string, _ string, _ string, _ ...TranscriptionOption) error {
+func (f *fakeGenerationRunner) ExecuteGeneration(ctx context.Context, mediaID, mediaType, _, _ string) error {
 	f.mu.Lock()
 	f.calls = append(f.calls, mediaID)
+	f.mediaTypes = append(f.mediaTypes, mediaType)
 	f.mu.Unlock()
 	if f.onCall != nil {
 		if err := f.onCall(ctx, mediaID); err != nil {
@@ -66,12 +70,21 @@ func (f *fakeGenerationRunner) callIDs() []string {
 	return out
 }
 
+func (f *fakeGenerationRunner) callMediaTypes() []string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	out := make([]string, len(f.mediaTypes))
+	copy(out, f.mediaTypes)
+	return out
+}
+
 // fakeCandidateFinder is a narrow generationCandidateFinder fake.
 type fakeCandidateFinder struct {
 	movies  []models.Movie
 	count   int
 	findErr error
 	byID    map[string]*models.Movie
+	byIDErr error // non-nil = simulate a REAL lookup failure (not not-found)
 }
 
 func (f *fakeCandidateFinder) FindMissingZhHantSubtitle(_ context.Context) ([]models.Movie, error) {
@@ -81,14 +94,48 @@ func (f *fakeCandidateFinder) CountMissingZhHantSubtitle(_ context.Context) (int
 	return f.count, f.findErr
 }
 func (f *fakeCandidateFinder) FindByID(_ context.Context, id string) (*models.Movie, error) {
+	if f.byIDErr != nil {
+		return nil, f.byIDErr
+	}
 	if m, ok := f.byID[id]; ok {
 		return m, nil
 	}
-	return nil, fmt.Errorf("movie with id %s not found", id)
+	// Mirror the real repo's not-found shape (movie_repository.go wraps
+	// sql.ErrNoRows) — collectItems classifies on it (CR M2).
+	return nil, fmt.Errorf("movie with id %s not found: %w", id, sql.ErrNoRows)
+}
+
+// fakeEpisodeFinder is a narrow generationEpisodeFinder fake (sub-4-2).
+type fakeEpisodeFinder struct {
+	byID    map[string]*models.Episode
+	byIDErr error // non-nil = simulate a REAL lookup failure (not not-found)
+}
+
+func (f *fakeEpisodeFinder) FindByID(_ context.Context, id string) (*models.Episode, error) {
+	if f.byIDErr != nil {
+		return nil, f.byIDErr
+	}
+	if e, ok := f.byID[id]; ok {
+		return e, nil
+	}
+	// Mirror the real repo's not-found shape (episode_repository.go wraps
+	// repository.ErrEpisodeNotFound) — toEpisodeItem classifies on it (CR M2).
+	return nil, fmt.Errorf("episode with id %s: %w", id, repository.ErrEpisodeNotFound)
 }
 
 func genMovie(id, title, filePath string) models.Movie {
 	return models.Movie{ID: id, Title: title, FilePath: models.NewNullString(filePath)}
+}
+
+func genEpisode(id string, season, episode int, title, filePath string) models.Episode {
+	return models.Episode{
+		ID:            id,
+		SeriesID:      "series-1",
+		SeasonNumber:  season,
+		EpisodeNumber: episode,
+		Title:         models.NewNullString(title),
+		FilePath:      models.NewNullString(filePath),
+	}
 }
 
 // waitUntilIdle polls until no batch is running (terminal state reached).
@@ -124,10 +171,19 @@ func drainEvents(client *sse.Client) []map[string]interface{} {
 
 func newTestGenerationProcessor(t *testing.T, runner *fakeGenerationRunner, finder *fakeCandidateFinder, budgetUSD float64) (*GenerationBatchProcessor, *sse.Client) {
 	t.Helper()
+	return newTestGenerationProcessorWithEpisodes(t, runner, finder, nil, budgetUSD)
+}
+
+func newTestGenerationProcessorWithEpisodes(t *testing.T, runner *fakeGenerationRunner, finder *fakeCandidateFinder, episodes *fakeEpisodeFinder, budgetUSD float64) (*GenerationBatchProcessor, *sse.Client) {
+	t.Helper()
 	hub := sse.NewHub()
 	t.Cleanup(func() { hub.Close() })
 	client := hub.Register()
-	p := NewGenerationBatchProcessor(runner, finder, hub, budgetUSD, nil)
+	var epFinder generationEpisodeFinder
+	if episodes != nil {
+		epFinder = episodes
+	}
+	p := NewGenerationBatchProcessor(runner, finder, epFinder, hub, budgetUSD, nil)
 	return p, client
 }
 
@@ -158,7 +214,7 @@ func TestGenerationBatch_MissingScope_SequentialComplete(t *testing.T) {
 	}}
 	p, client := newTestGenerationProcessor(t, runner, finder, 5)
 
-	batchID, items, err := p.Start(context.Background(), "missing", nil)
+	batchID, items, err := p.Start(context.Background(), "missing", nil, 0)
 	require.NoError(t, err)
 	assert.NotEmpty(t, batchID)
 	require.Len(t, items, 3)
@@ -184,7 +240,7 @@ func TestGenerationBatch_SSEPayloadFields(t *testing.T) {
 	finder := &fakeCandidateFinder{movies: []models.Movie{genMovie(uuidSeven, "Alpha", "/m/a.mkv")}}
 	p, client := newTestGenerationProcessor(t, runner, finder, 5)
 
-	_, _, err := p.Start(context.Background(), "missing", nil)
+	_, _, err := p.Start(context.Background(), "missing", nil, 0)
 	require.NoError(t, err)
 	waitUntilIdle(t, p)
 	time.Sleep(50 * time.Millisecond)
@@ -225,7 +281,7 @@ func TestGenerationBatch_PerItemFailContinue(t *testing.T) {
 	}}
 	p, client := newTestGenerationProcessor(t, runner, finder, 5)
 
-	_, _, err := p.Start(context.Background(), "missing", nil)
+	_, _, err := p.Start(context.Background(), "missing", nil, 0)
 	require.NoError(t, err)
 	waitUntilIdle(t, p)
 
@@ -261,7 +317,7 @@ func TestGenerationBatch_CancelMidItem(t *testing.T) {
 	}}
 	p, client := newTestGenerationProcessor(t, runner, finder, 5)
 
-	_, _, err := p.Start(context.Background(), "missing", nil)
+	_, _, err := p.Start(context.Background(), "missing", nil, 0)
 	require.NoError(t, err)
 	<-started
 	p.Cancel()
@@ -302,7 +358,7 @@ func TestGenerationBatch_BudgetCeiling_PreCheck(t *testing.T) {
 	}}
 	p, client := newTestGenerationProcessor(t, runner, finder, 1.0)
 
-	_, _, err := p.Start(context.Background(), "missing", nil)
+	_, _, err := p.Start(context.Background(), "missing", nil, 0)
 	require.NoError(t, err)
 	waitUntilIdle(t, p)
 
@@ -336,7 +392,7 @@ func TestGenerationBatch_BudgetCeiling_MidItem(t *testing.T) {
 	}}
 	p, client := newTestGenerationProcessor(t, runner, finder, 5)
 
-	_, _, err := p.Start(context.Background(), "missing", nil)
+	_, _, err := p.Start(context.Background(), "missing", nil, 0)
 	require.NoError(t, err)
 	waitUntilIdle(t, p)
 
@@ -366,11 +422,11 @@ func TestGenerationBatch_SingleFlight(t *testing.T) {
 	finder := &fakeCandidateFinder{movies: []models.Movie{genMovie(uuidA, "A", "/m/a.mkv")}}
 	p, _ := newTestGenerationProcessor(t, runner, finder, 5)
 
-	_, _, err := p.Start(context.Background(), "missing", nil)
+	_, _, err := p.Start(context.Background(), "missing", nil, 0)
 	require.NoError(t, err)
 	<-started
 
-	_, _, err = p.Start(context.Background(), "missing", nil)
+	_, _, err = p.Start(context.Background(), "missing", nil, 0)
 	assert.ErrorIs(t, err, ErrGenerationBatchRunning)
 
 	prog := p.GetProgress()
@@ -393,7 +449,7 @@ func TestGenerationBatch_SingleFlight(t *testing.T) {
 func TestGenerationBatch_EmptyMissingScope(t *testing.T) {
 	p, _ := newTestGenerationProcessor(t, &fakeGenerationRunner{available: true}, &fakeCandidateFinder{}, 5)
 
-	batchID, items, err := p.Start(context.Background(), "missing", nil)
+	batchID, items, err := p.Start(context.Background(), "missing", nil, 0)
 	require.NoError(t, err)
 	assert.Empty(t, batchID)
 	assert.NotNil(t, items)
@@ -410,7 +466,7 @@ func TestGenerationBatch_SelectedScope(t *testing.T) {
 	finder := &fakeCandidateFinder{byID: map[string]*models.Movie{uuidSeven: &m7, uuidNine: &m9}}
 	p, _ := newTestGenerationProcessor(t, runner, finder, 5)
 
-	_, items, err := p.Start(context.Background(), "selected", []string{uuidNine, uuidSeven})
+	_, items, err := p.Start(context.Background(), "selected", []string{uuidNine, uuidSeven}, 0)
 	require.NoError(t, err)
 	require.Len(t, items, 2)
 	assert.Equal(t, uuidNine, items[0].MediaID)
@@ -429,12 +485,12 @@ func TestGenerationBatch_SelectedScope_InvalidIDRejected(t *testing.T) {
 	p, _ := newTestGenerationProcessor(t, &fakeGenerationRunner{available: true}, finder, 5)
 
 	// Unknown id (e.g. a series id)
-	_, _, err := p.Start(context.Background(), "selected", []string{uuidSeven, "9ff0c000-dead-4bee-8f00-000000000999"})
+	_, _, err := p.Start(context.Background(), "selected", []string{uuidSeven, "9ff0c000-dead-4bee-8f00-000000000999"}, 0)
 	assert.ErrorIs(t, err, ErrGenerationSelectionInvalid)
 	assert.False(t, p.IsRunning())
 
 	// Movie without a media file
-	_, _, err = p.Start(context.Background(), "selected", []string{uuidEight})
+	_, _, err = p.Start(context.Background(), "selected", []string{uuidEight}, 0)
 	assert.ErrorIs(t, err, ErrGenerationSelectionInvalid)
 	assert.False(t, p.IsRunning())
 }
@@ -455,7 +511,7 @@ func TestGenerationBatch_EnumerationError(t *testing.T) {
 	finder := &fakeCandidateFinder{findErr: errors.New("db locked")}
 	p, _ := newTestGenerationProcessor(t, &fakeGenerationRunner{available: true}, finder, 5)
 
-	_, _, err := p.Start(context.Background(), "missing", nil)
+	_, _, err := p.Start(context.Background(), "missing", nil, 0)
 	require.Error(t, err)
 	assert.NotErrorIs(t, err, ErrGenerationBatchRunning)
 	assert.False(t, p.IsRunning())
@@ -472,10 +528,211 @@ func TestGenerationBatch_MissingScope_UUIDIDsEnumerated(t *testing.T) {
 	}}
 	p, _ := newTestGenerationProcessor(t, runner, finder, 5)
 
-	_, items, err := p.Start(context.Background(), "missing", nil)
+	_, items, err := p.Start(context.Background(), "missing", nil, 0)
 	require.NoError(t, err)
 	require.Len(t, items, 2, "every UUID-keyed movie with a file enumerates; only the file-less row is skipped")
 	assert.Equal(t, uuidA, items[0].MediaID)
 	assert.Equal(t, uuidB, items[1].MediaID)
 	waitUntilIdle(t, p)
+}
+
+// ─── sub-4-2: mixed movie+episode selection (AC #2, D1 ruling) ──────────────
+
+// D1 acceptance: a mixed movie+episode batch enumerates both, preserves the
+// caller's order, carries media_type per item, and hands each item's type to
+// the runner (which routes the writeback to the correct table).
+func TestGenerationBatch_SelectedScope_MixedMovieEpisode(t *testing.T) {
+	m7 := genMovie(uuidSeven, "Seven", "/m/7.mkv")
+	ep := genEpisode(uuidEight, 4, 7, "The Massacre", "/tv/s04e07.mkv")
+	runner := &fakeGenerationRunner{available: true}
+	finder := &fakeCandidateFinder{byID: map[string]*models.Movie{uuidSeven: &m7}}
+	episodes := &fakeEpisodeFinder{byID: map[string]*models.Episode{uuidEight: &ep}}
+	p, _ := newTestGenerationProcessorWithEpisodes(t, runner, finder, episodes, 5)
+
+	_, items, err := p.Start(context.Background(), "selected", []string{uuidEight, uuidSeven}, 0)
+	require.NoError(t, err)
+	require.Len(t, items, 2)
+	assert.Equal(t, uuidEight, items[0].MediaID)
+	assert.Equal(t, models.SubtitleRunMediaEpisode, items[0].MediaType)
+	assert.Equal(t, "S04E07 The Massacre", items[0].Title)
+	assert.Equal(t, uuidSeven, items[1].MediaID)
+	assert.Equal(t, models.SubtitleRunMediaMovie, items[1].MediaType)
+
+	waitUntilIdle(t, p)
+	assert.Equal(t, []string{uuidEight, uuidSeven}, runner.callIDs())
+	assert.Equal(t, []string{models.SubtitleRunMediaEpisode, models.SubtitleRunMediaMovie}, runner.callMediaTypes(),
+		"the runner must receive each item's media type — a movie default would write episodes onto the movies table")
+}
+
+// AC #2: an id unknown in BOTH tables still rejects the whole batch — the
+// consented list is the amount confirmed on F16; no silent filtering.
+func TestGenerationBatch_SelectedScope_UnknownInBothTablesRejected(t *testing.T) {
+	m7 := genMovie(uuidSeven, "Seven", "/m/7.mkv")
+	ep := genEpisode(uuidEight, 1, 1, "Pilot", "/tv/s01e01.mkv")
+	finder := &fakeCandidateFinder{byID: map[string]*models.Movie{uuidSeven: &m7}}
+	episodes := &fakeEpisodeFinder{byID: map[string]*models.Episode{uuidEight: &ep}}
+	p, _ := newTestGenerationProcessorWithEpisodes(t, &fakeGenerationRunner{available: true}, finder, episodes, 5)
+
+	_, _, err := p.Start(context.Background(), "selected",
+		[]string{uuidSeven, "9ff0c000-dead-4bee-8f00-000000000999", uuidEight}, 0)
+	assert.ErrorIs(t, err, ErrGenerationSelectionInvalid)
+	assert.False(t, p.IsRunning(), "a rejected selection must not start a batch")
+}
+
+// AC #2: a found episode without a media file is a hard selection error,
+// same rule as movies.
+func TestGenerationBatch_SelectedScope_EpisodeWithoutFileRejected(t *testing.T) {
+	noFile := models.Episode{ID: uuidNine, SeriesID: "series-1", SeasonNumber: 2, EpisodeNumber: 3}
+	episodes := &fakeEpisodeFinder{byID: map[string]*models.Episode{uuidNine: &noFile}}
+	p, _ := newTestGenerationProcessorWithEpisodes(t, &fakeGenerationRunner{available: true}, &fakeCandidateFinder{}, episodes, 5)
+
+	_, _, err := p.Start(context.Background(), "selected", []string{uuidNine}, 0)
+	assert.ErrorIs(t, err, ErrGenerationSelectionInvalid)
+	assert.False(t, p.IsRunning())
+}
+
+// A nil episode finder degrades to the pre-sub-4-2 movies-only behavior:
+// an episode id rejects like any unknown id (defensive wiring, movie-only tests).
+func TestGenerationBatch_NilEpisodeFinder_MoviesOnly(t *testing.T) {
+	p, _ := newTestGenerationProcessor(t, &fakeGenerationRunner{available: true}, &fakeCandidateFinder{}, 5)
+
+	_, _, err := p.Start(context.Background(), "selected", []string{uuidEight}, 0)
+	assert.ErrorIs(t, err, ErrGenerationSelectionInvalid)
+}
+
+// Missing scope stays movies-only and stamps media_type=movie on every item
+// (AC #3 — the frozen preview count must keep matching the batch size).
+func TestGenerationBatch_MissingScope_MovieMediaType(t *testing.T) {
+	runner := &fakeGenerationRunner{available: true}
+	finder := &fakeCandidateFinder{movies: []models.Movie{genMovie(uuidA, "A", "/m/a.mkv")}}
+	episodes := &fakeEpisodeFinder{byID: map[string]*models.Episode{}}
+	p, _ := newTestGenerationProcessorWithEpisodes(t, runner, finder, episodes, 5)
+
+	_, items, err := p.Start(context.Background(), "missing", nil, 0)
+	require.NoError(t, err)
+	require.Len(t, items, 1)
+	assert.Equal(t, models.SubtitleRunMediaMovie, items[0].MediaType)
+	waitUntilIdle(t, p)
+	assert.Equal(t, []string{models.SubtitleRunMediaMovie}, runner.callMediaTypes())
+}
+
+// ─── sub-4-2: user-approved budget ceiling (AC #1, #6) ──────────────────────
+
+// AC #1: a provided ceiling overrides the configured default for THIS batch —
+// observable on GetProgress().BudgetUSD (fed to the F8 cost line) and on the
+// SSE budget_usd key (both read budget.Snapshot(), so the override reaching
+// them proves ai.NewBudget was built with the request value).
+func TestGenerationBatch_RequestedBudgetOverridesDefault(t *testing.T) {
+	started := make(chan struct{})
+	runner := &fakeGenerationRunner{
+		available: true,
+		onCall: func(ctx context.Context, _ string) error {
+			close(started)
+			<-ctx.Done()
+			return ctx.Err()
+		},
+	}
+	finder := &fakeCandidateFinder{movies: []models.Movie{genMovie(uuidA, "A", "/m/a.mkv")}}
+	p, client := newTestGenerationProcessor(t, runner, finder, 5)
+
+	_, _, err := p.Start(context.Background(), "missing", nil, 2.5)
+	require.NoError(t, err)
+	<-started
+
+	prog := p.GetProgress()
+	require.NotNil(t, prog)
+	assert.Equal(t, 2.5, prog.BudgetUSD, "the user-approved ceiling, not AI_RUN_BUDGET_USD, governs this batch")
+
+	p.Cancel()
+	waitUntilIdle(t, p)
+	time.Sleep(50 * time.Millisecond)
+	events := drainEvents(client)
+	require.NotEmpty(t, events)
+	assert.Equal(t, 2.5, events[len(events)-1]["budget_usd"])
+}
+
+// AC #1: the user-approved ceiling is ENFORCED, not just displayed — spend
+// beyond it pauses the remainder even though the default would have allowed it.
+func TestGenerationBatch_RequestedBudgetEnforced(t *testing.T) {
+	runner := &fakeGenerationRunner{
+		available: true,
+		onCall: func(ctx context.Context, mediaID string) error {
+			if mediaID == uuidA {
+				// Spend ~$3: over the $1 request ceiling, under the $5 default.
+				ai.BudgetFromContext(ctx).RecordLLM("claude-sonnet-5", 1_000_000, 0)
+			}
+			return nil
+		},
+	}
+	finder := &fakeCandidateFinder{movies: []models.Movie{
+		genMovie(uuidA, "A", "/m/a.mkv"),
+		genMovie(uuidB, "B", "/m/b.mkv"),
+	}}
+	p, client := newTestGenerationProcessor(t, runner, finder, 5)
+
+	_, _, err := p.Start(context.Background(), "missing", nil, 1.0)
+	require.NoError(t, err)
+	waitUntilIdle(t, p)
+
+	assert.Equal(t, []string{uuidA}, runner.callIDs(), "the request ceiling must gate the queue")
+	time.Sleep(50 * time.Millisecond)
+	events := drainEvents(client)
+	require.NotEmpty(t, events)
+	last := events[len(events)-1]
+	assert.Equal(t, GenerationBatchStatusBudgetCeiling, last["status"])
+	assert.Equal(t, 1, last["paused_count"])
+}
+
+// ─── sub-4-2 CR fixes ───────────────────────────────────────────────────────
+
+// CR M2: a REAL lookup failure (locked DB, cancelled ctx) must NOT be
+// classified as "your selection is invalid" — it propagates so the handler
+// answers 500, and the FE knows to retry instead of blaming the selection.
+func TestGenerationBatch_SelectedScope_DBErrorIsNotSelectionInvalid(t *testing.T) {
+	finder := &fakeCandidateFinder{byIDErr: errors.New("database is locked")}
+	p, _ := newTestGenerationProcessor(t, &fakeGenerationRunner{available: true}, finder, 5)
+
+	_, _, err := p.Start(context.Background(), "selected", []string{uuidSeven}, 0)
+	require.Error(t, err)
+	assert.NotErrorIs(t, err, ErrGenerationSelectionInvalid,
+		"a transient DB error must not read as an invalid selection (400)")
+	assert.False(t, p.IsRunning())
+
+	// Same classification on the episode leg.
+	episodes := &fakeEpisodeFinder{byIDErr: errors.New("database is locked")}
+	p2, _ := newTestGenerationProcessorWithEpisodes(t, &fakeGenerationRunner{available: true}, &fakeCandidateFinder{}, episodes, 5)
+	_, _, err = p2.Start(context.Background(), "selected", []string{uuidEight}, 0)
+	require.Error(t, err)
+	assert.NotErrorIs(t, err, ErrGenerationSelectionInvalid)
+}
+
+// CR H1: an item the pipeline routed out (skipped run — e.g. no_text_source
+// with no live ASR) counts as a FAILURE, never a success; the loop continues.
+func TestGenerationBatch_SkippedItemCountsAsFail(t *testing.T) {
+	runner := &fakeGenerationRunner{
+		available: true,
+		errs: map[string]error{
+			uuidB: fmt.Errorf("media %s: no text source: %w", uuidB, ErrGenerationItemSkipped),
+		},
+	}
+	finder := &fakeCandidateFinder{movies: []models.Movie{
+		genMovie(uuidA, "A", "/m/a.mkv"),
+		genMovie(uuidB, "B", "/m/b.mkv"),
+		genMovie(uuidC, "C", "/m/c.mkv"),
+	}}
+	p, client := newTestGenerationProcessor(t, runner, finder, 5)
+
+	_, _, err := p.Start(context.Background(), "missing", nil, 0)
+	require.NoError(t, err)
+	waitUntilIdle(t, p)
+
+	assert.Equal(t, []string{uuidA, uuidB, uuidC}, runner.callIDs(), "a skipped item must not stop the batch")
+
+	time.Sleep(50 * time.Millisecond)
+	events := drainEvents(client)
+	require.NotEmpty(t, events)
+	last := events[len(events)-1]
+	assert.Equal(t, GenerationBatchStatusComplete, last["status"])
+	assert.Equal(t, 2, last["success_count"], "success means a subtitle exists — skips are not successes")
+	assert.Equal(t, 1, last["fail_count"])
 }

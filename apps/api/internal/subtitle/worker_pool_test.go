@@ -684,3 +684,31 @@ func TestWorkerPool_EnqueueMissingRunsWhenConfigured(t *testing.T) {
 	assert.Equal(t, 1, queued, "the gate is a gate, not an off switch")
 	assert.True(t, finder.called)
 }
+
+// sub-4-2 CR M4: TryReserve/Release share the in-flight set with an EXTERNAL
+// sequential caller (the consented batch drives ProcessItem directly), so the
+// batch and a pool worker can never process the same media concurrently.
+func TestWorkerPool_TryReserveSharesDedupWithQueue(t *testing.T) {
+	proc := newBlockingProcessor(8)
+	pool := NewWorkerPool(proc, nil)
+	require.NoError(t, pool.Start(context.Background()))
+	t.Cleanup(func() { proc.releaseAll(); pool.Stop() })
+
+	ref := MediaRef{ID: "movie-9", MediaType: "movie"}
+
+	// Batch reserves first → the queue must refuse the same ref (FR12 answers
+	// already_queued instead of racing the batch).
+	assert.True(t, pool.TryReserve(ref), "free ref must be reservable")
+	assert.False(t, pool.TryReserve(ref), "double reserve must fail")
+	assert.False(t, pool.Enqueue(ref), "queue must dedup against a batch reservation")
+
+	// Release frees it for the queue again.
+	pool.Release(ref)
+	assert.True(t, pool.Enqueue(ref), "released ref must be enqueueable")
+
+	// And the mirror: a queued/running ref must refuse a batch reservation.
+	assert.False(t, pool.TryReserve(ref), "queued ref must not be reservable by the batch")
+
+	// Releasing an unclaimed ref is a harmless no-op.
+	assert.NotPanics(t, func() { pool.Release(MediaRef{ID: "never-reserved", MediaType: "movie"}) })
+}

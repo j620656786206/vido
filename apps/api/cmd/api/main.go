@@ -630,7 +630,10 @@ func main() {
 		// on a screen that shows the estimate first (sub-4-3).
 		//
 		// The pool below is deliberately KEPT: the manual per-item endpoint
-		// (FR12) still drives it, and sub-4-2's consented batch will too.
+		// (FR12) still drives it. The sub-4-2 consented batch does NOT go
+		// through the pool — it calls Pipeline.ProcessItem directly (the pool's
+		// process-wide queue has no batch identity, no removal for cancel, and
+		// no per-batch budget ctx); see pipelineGenerationRunner.
 		// `internal/cost_consent_test.go` fails if a sweep caller reappears.
 		scannerService.SetOnScanComplete(postScanEnrichment)
 		slog.Info("Subtitle generation pipeline enabled",
@@ -749,11 +752,25 @@ func main() {
 	}
 	batchProcessor := subtitle.NewBatchProcessor(subtitleEngine, sseHub, batchCollector, subtitle.DefaultBatchConfig(), batchOpts...)
 	subtitleHandler.SetBatchProcessor(batchProcessor)
-	// Route C generation batch (Story 9R-16): sequential orchestrator over the
-	// transcription pipeline under ONE shared AI budget. Independent single-flight
-	// from the fetch batchProcessor above (they share no state).
+	// Consented generation batch (9R-16 orchestrator, sub-4-2 engine selection):
+	// sequential single-flight over ONE shared AI budget, independent from the
+	// fetch batchProcessor above (they share no state). Engine per mode:
+	// pipeline mode drives the D2 pipeline directly (extract→translate free
+	// route first, ASR only on no_text_source — the F15 quote must match what
+	// runs); legacy mode keeps the Route C transcription engine, now with the
+	// item's media type forwarded so episodes write back to the episodes table.
+	var generationRunner services.GenerationRunner = services.NewRouteCGenerationRunner(transcriptionService)
+	if subtitlePipeline != nil {
+		generationRunner = pipelineGenerationRunner{
+			pipeline: subtitlePipeline,
+			// Share the pool's in-flight set so the batch and the FR12-driven
+			// workers never process the same media concurrently (CR M4).
+			guard:     subtitlePipelinePool,
+			available: subtitleCapabilityGate,
+		}
+	}
 	generationBatchProcessor := services.NewGenerationBatchProcessor(
-		transcriptionService, repos.Movies, sseHub, cfg.AIRunBudgetUSD, slog.Default())
+		generationRunner, repos.Movies, repos.Episodes, sseHub, cfg.AIRunBudgetUSD, slog.Default())
 	generationBatchHandler := handlers.NewGenerationBatchHandler(generationBatchProcessor)
 
 	// Cost preview (story sub-4-1): what would generating subtitles cost, per
