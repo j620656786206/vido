@@ -155136,7 +155136,7 @@
                       "id": "FDay3",
                       "name": "summary-amount",
                       "fill": "$text-primary",
-                      "content": "$0.00",
+                      "content": "$1.84",
                       "fontFamily": "JetBrains Mono",
                       "fontSize": 13,
                       "fontWeight": "600"
@@ -155193,7 +155193,7 @@
                               "id": "p0hBTX",
                               "name": "lbl",
                               "fill": "$success",
-                              "content": "免費",
+                              "content": "僅翻譯費",
                               "fontFamily": "Noto Sans TC",
                               "fontSize": 10,
                               "fontWeight": "600"
@@ -155284,7 +155284,7 @@
                           "id": "M2xP4",
                           "name": "tb-select-free",
                           "fill": "$accent-text",
-                          "content": "選取全部可抽取（免費）",
+                          "content": "選取全部可抽取（僅翻譯費）",
                           "fontFamily": "Noto Sans TC",
                           "fontSize": 13,
                           "fontWeight": "500"
@@ -155411,8 +155411,8 @@
                               "id": "X7T8UI",
                               "name": "amount",
                               "fill": "$success",
-                              "content": "免費",
-                              "fontFamily": "Noto Sans TC",
+                              "content": "$0.05",
+                              "fontFamily": "JetBrains Mono",
                               "fontSize": 13,
                               "fontWeight": "600"
                             }
@@ -155520,8 +155520,8 @@
                               "id": "V0NutT",
                               "name": "amount",
                               "fill": "$success",
-                              "content": "免費",
-                              "fontFamily": "Noto Sans TC",
+                              "content": "$0.04",
+                              "fontFamily": "JetBrains Mono",
                               "fontSize": 13,
                               "fontWeight": "600"
                             }
@@ -155918,7 +155918,7 @@
                           "id": "XyNOv",
                           "name": "ft-sel-amount",
                           "fill": "$text-primary",
-                          "content": "$0.00",
+                          "content": "$1.84",
                           "fontFamily": "JetBrains Mono",
                           "fontSize": 14,
                           "fontWeight": "600"
@@ -155930,7 +155930,7 @@
                       "id": "cMziP",
                       "name": "ft-breakdown",
                       "fill": "$text-muted",
-                      "content": "抽取 46 部 免費 · 語音辨識 0 部 $0.00",
+                      "content": "抽取 46 部 $1.84 · 語音辨識 0 部 $0.00",
                       "fontFamily": "Noto Sans TC",
                       "fontSize": 12,
                       "fontWeight": "normal"
@@ -157115,7 +157115,7 @@
                       "id": "HCEWp",
                       "name": "summary-amount",
                       "fill": "$text-primary",
-                      "content": "$0.00",
+                      "content": "$1.84",
                       "fontFamily": "JetBrains Mono",
                       "fontSize": 12,
                       "fontWeight": "600"
@@ -157179,7 +157179,7 @@
                                   "id": "s2yz6N",
                                   "name": "lbl",
                                   "fill": "$success",
-                                  "content": "免費",
+                                  "content": "僅翻譯費",
                                   "fontFamily": "Noto Sans TC",
                                   "fontSize": 10,
                                   "fontWeight": "600"
@@ -157384,8 +157384,8 @@
                           "id": "sTw2z",
                           "name": "amount",
                           "fill": "$success",
-                          "content": "免費",
-                          "fontFamily": "Noto Sans TC",
+                          "content": "$0.05",
+                          "fontFamily": "JetBrains Mono",
                           "fontSize": 12,
                           "fontWeight": "600"
                         }
@@ -157468,8 +157468,8 @@
                           "id": "yqV9J",
                           "name": "amount",
                           "fill": "$success",
-                          "content": "免費",
-                          "fontFamily": "Noto Sans TC",
+                          "content": "$0.04",
+                          "fontFamily": "JetBrains Mono",
                           "fontSize": 12,
                           "fontWeight": "600"
                         }
@@ -157779,7 +157779,7 @@
                           "id": "QAI2L",
                           "name": "ft-sel-amount",
                           "fill": "$text-primary",
-                          "content": "$0.00",
+                          "content": "$1.84",
                           "fontFamily": "JetBrains Mono",
                           "fontSize": 13,
                           "fontWeight": "600"
@@ -157791,7 +157791,7 @@
                       "id": "sJ4VX",
                       "name": "ft-breakdown",
                       "fill": "$text-muted",
-                      "content": "抽取 46 部 免費 · 語音辨識 0 部 $0.00",
+                      "content": "抽取 46 部 $1.84 · 語音辨識 0 部 $0.00",
                       "fontFamily": "Noto Sans TC",
                       "fontSize": 11,
                       "fontWeight": "normal"
@@ -159837,7 +159837,7 @@
                           "id": "f0Kd7",
                           "name": "tb-select-free",
                           "fill": "$accent-text",
-                          "content": "選取全部可抽取（免費）",
+                          "content": "選取全部可抽取（僅翻譯費）",
                           "fontFamily": "Noto Sans TC",
                           "fontSize": 13,
                           "fontWeight": "500"
@@ -160521,7 +160521,7 @@
                       "id": "dhm9h",
                       "name": "ft-breakdown",
                       "fill": "$text-muted",
-                      "content": "抽取 0 部 免費 · 語音辨識 96 部 $25.80",
+                      "content": "抽取 0 部 $0.00 · 語音辨識 96 部 $25.80",
                       "fontFamily": "Noto Sans TC",
                       "fontSize": 12,
                       "fontWeight": "normal"
@@ -160582,16 +160582,6 @@
                           ]
                         }
                       ]
-                    },
-                    {
-                      "type": "text",
-                      "id": "CMnRy",
-                      "name": "budget-hint",
-                      "fill": "$text-muted",
-                      "content": "達到上限會自動暫停，可稍後續跑",
-                      "fontFamily": "Noto Sans TC",
-                      "fontSize": 11,
-                      "fontWeight": "normal"
                     }
                   ]
                 },
@@ -161355,7 +161345,7 @@
                   "id": "yBbu5",
                   "name": "hint-block",
                   "width": "fill_container",
-                  "fill": "$warning-tint",
+                  "fill": "#F59E0B33",
                   "cornerRadius": "$radius-md",
                   "padding": 12,
                   "children": [
