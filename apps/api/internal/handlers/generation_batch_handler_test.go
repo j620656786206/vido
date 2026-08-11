@@ -39,16 +39,18 @@ type mockGenerationProcessor struct {
 	preview   int
 	prevErr   error
 
-	startedScope string
-	startedIDs   []string
-	cancelCalled bool
+	startedScope  string
+	startedIDs    []string
+	startedBudget float64
+	cancelCalled  bool
 }
 
 func (m *mockGenerationProcessor) IsAvailable() bool { return m.available }
 func (m *mockGenerationProcessor) IsRunning() bool   { return m.running }
-func (m *mockGenerationProcessor) Start(_ context.Context, scope string, mediaIDs []string) (string, []services.GenerationBatchItem, error) {
+func (m *mockGenerationProcessor) Start(_ context.Context, scope string, mediaIDs []string, budgetUSD float64) (string, []services.GenerationBatchItem, error) {
 	m.startedScope = scope
 	m.startedIDs = mediaIDs
+	m.startedBudget = budgetUSD
 	if m.startErr != nil {
 		return "", nil, m.startErr
 	}
@@ -299,4 +301,73 @@ func TestPreviewGenerationBatch_QueryFailed500(t *testing.T) {
 	w, resp := doGenBatchJSON(t, r, "GET", "/api/v1/subtitles/generation-batch/preview?scope=missing", "")
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 	assert.Equal(t, "DB_QUERY_FAILED", errCode(t, resp))
+}
+
+// ─── sub-4-2 AC #1: budget_usd validation and forwarding ────────────────────
+
+// A provided ceiling must be strictly positive — 0 must NEVER reach the
+// processor, where ai.NewBudget(<=0) means UNLIMITED.
+func TestStartGenerationBatch_BudgetZeroRejected400(t *testing.T) {
+	mock := &mockGenerationProcessor{available: true}
+	r := setupGenerationBatchRouter(mock)
+	w, resp := doGenBatchJSON(t, r, "POST", "/api/v1/subtitles/generation-batch",
+		`{"scope":"missing","budget_usd":0}`)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Equal(t, "VALIDATION_INVALID_FORMAT", errCode(t, resp))
+	assert.Empty(t, mock.startedScope, "Start must not be called on a rejected budget")
+}
+
+func TestStartGenerationBatch_BudgetNegativeRejected400(t *testing.T) {
+	mock := &mockGenerationProcessor{available: true}
+	r := setupGenerationBatchRouter(mock)
+	w, resp := doGenBatchJSON(t, r, "POST", "/api/v1/subtitles/generation-batch",
+		`{"scope":"missing","budget_usd":-3}`)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Equal(t, "VALIDATION_INVALID_FORMAT", errCode(t, resp))
+	assert.Empty(t, mock.startedScope)
+}
+
+// A valid user-approved ceiling is forwarded verbatim.
+func TestStartGenerationBatch_BudgetForwarded(t *testing.T) {
+	mock := &mockGenerationProcessor{available: true, batchID: "b1",
+		items: []services.GenerationBatchItem{{MediaID: genUUIDAlpha, Title: "A", MediaType: "movie"}}}
+	r := setupGenerationBatchRouter(mock)
+	w, _ := doGenBatchJSON(t, r, "POST", "/api/v1/subtitles/generation-batch",
+		`{"scope":"missing","budget_usd":12.5}`)
+	assert.Equal(t, http.StatusAccepted, w.Code)
+	assert.Equal(t, 12.5, mock.startedBudget)
+}
+
+// An absent budget_usd forwards 0 = "use the configured default" — the
+// pre-sub-4-2 behavior for the existing FE dialog.
+func TestStartGenerationBatch_BudgetAbsentForwardsZero(t *testing.T) {
+	mock := &mockGenerationProcessor{available: true, batchID: "b1",
+		items: []services.GenerationBatchItem{{MediaID: genUUIDAlpha, Title: "A", MediaType: "movie"}}}
+	r := setupGenerationBatchRouter(mock)
+	w, _ := doGenBatchJSON(t, r, "POST", "/api/v1/subtitles/generation-batch",
+		`{"scope":"missing"}`)
+	assert.Equal(t, http.StatusAccepted, w.Code)
+	assert.Equal(t, 0.0, mock.startedBudget)
+}
+
+// sub-4-2 AC #2: the 202 items[] carry media_type (additive to the 9R-16
+// [@contract-v2] shape — existing keys unchanged).
+func TestStartGenerationBatch_ItemsCarryMediaType(t *testing.T) {
+	mock := &mockGenerationProcessor{available: true, batchID: "b1",
+		items: []services.GenerationBatchItem{
+			{MediaID: genUUIDAlpha, Title: "A", MediaType: "movie"},
+			{MediaID: genUUIDBravo, Title: "S04E07", MediaType: "episode"},
+		}}
+	r := setupGenerationBatchRouter(mock)
+	w, resp := doGenBatchJSON(t, r, "POST", "/api/v1/subtitles/generation-batch",
+		`{"scope":"selected","media_ids":["`+genUUIDAlpha+`","`+genUUIDBravo+`"]}`)
+	require.Equal(t, http.StatusAccepted, w.Code)
+	data := resp["data"].(map[string]interface{})
+	items := data["items"].([]interface{})
+	require.Len(t, items, 2)
+	first := items[0].(map[string]interface{})
+	second := items[1].(map[string]interface{})
+	assert.Equal(t, "movie", first["media_type"])
+	assert.Equal(t, genUUIDAlpha, first["media_id"])
+	assert.Equal(t, "episode", second["media_type"])
 }

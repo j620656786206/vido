@@ -95,9 +95,19 @@ Notes:
 - **Both are needed together.** `pipeline` without `CLAUDE_API_KEY` logs one
   line at startup and keeps the search-only behaviour; the manual trigger
   endpoint answers `409 AI_NOT_CONFIGURED`.
-- Once enabled, generation runs automatically after each library scan for items
-  with no `zh-Hant` subtitle, at a fixed concurrency of 2 so the NAS stays
-  responsive. Progress arrives on the existing `subtitle_progress` SSE stream.
+- **The generation batch follows the cheap route first (sub-4-2).** In
+  `pipeline` mode, a batch started from the generation screen runs each item
+  through extract→translate first and only falls back to paid speech
+  recognition when no text source exists — so the per-route estimate shown
+  before starting matches what actually runs. In `legacy` mode the batch keeps
+  the previous transcription engine. Batches accept mixed movie and episode
+  selections, and an optional user-approved budget ceiling (`budget_usd`) that
+  overrides `AI_RUN_BUDGET_USD` for that batch; the ceiling is a soft cap —
+  checked before each paid call, reaching it pauses the remaining items and
+  keeps completed ones.
+- Manual generation (per item, or an explicitly confirmed batch) runs at low
+  concurrency so the NAS stays responsive. Progress arrives on the existing
+  SSE streams.
 - There is no settings-page toggle yet; these are environment variables and a
   restart is required to change them.
 

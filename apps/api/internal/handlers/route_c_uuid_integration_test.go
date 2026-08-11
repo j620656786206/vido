@@ -75,7 +75,7 @@ func newIntegrationGenerationRunner() *integrationGenerationRunner {
 }
 
 func (r *integrationGenerationRunner) IsAvailable() bool { return true }
-func (r *integrationGenerationRunner) RunTranscription(_ context.Context, mediaID string, _ string, _ string, _ ...services.TranscriptionOption) error {
+func (r *integrationGenerationRunner) ExecuteGeneration(_ context.Context, mediaID, _, _, _ string) error {
 	r.mu <- struct{}{}
 	r.calls = append(r.calls, mediaID)
 	<-r.mu
@@ -125,9 +125,10 @@ func TestRouteC_UUIDMovie_FlowsThroughWholeChain(t *testing.T) {
 		ai.NewWhisperClient("test-key"), nil, nil)
 	NewTranscriptionHandler(services.NewMovieService(movieRepo), transcriptionSvc).RegisterRoutes(api)
 
-	// Batch legs: real processor + real repo finder; deterministic stub runner.
+	// Batch legs: real processor + real repo finders (movie + episode,
+	// sub-4-2); deterministic stub runner.
 	runner := newIntegrationGenerationRunner()
-	processor := services.NewGenerationBatchProcessor(runner, movieRepo, nil, 5, nil)
+	processor := services.NewGenerationBatchProcessor(runner, movieRepo, episodeRepo, nil, 5, nil)
 	NewGenerationBatchHandler(processor).RegisterRoutes(api)
 
 	// ── Leg 1: POST /movies/{uuid}/transcribe must NOT 400 ────────────────────

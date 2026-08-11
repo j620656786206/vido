@@ -1,6 +1,6 @@
 # Story 4.2: 同意後批次執行 —— 混合 id 清單、影集、使用者核准預算上限（後端寫側）
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -50,34 +50,34 @@ sub-4-1（done）交付了 BE「讀側」：候選清單、路線預測、成本
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — 預算參數進線（AC: #1）**
-  - [ ] `GenerationBatchStartRequest` 加 `budget_usd`（選填、>0 驗證、400 路徑）；handler → `Start` 傳遞
-  - [ ] `Start` 簽名改造；`ai.NewBudget` 改吃每批次值；`p.budgetUSD` 明確註解為 default-only
-  - [ ] Swagger 註解同步（含軟上限措辭）
+- [x] **Task 1 — 預算參數進線（AC: #1）**
+  - [x] `GenerationBatchStartRequest` 加 `budget_usd`（選填、>0 驗證、400 路徑）；handler → `Start` 傳遞
+  - [x] `Start` 簽名改造；`ai.NewBudget` 改吃每批次值；`p.budgetUSD` 明確註解為 default-only
+  - [x] Swagger 註解同步（含軟上限措辭）
 
-- [ ] **Task 2 — 混合 id 解析＋MediaType（AC: #2, #3）**
-  - [ ] finder port 擴為雙來源（movie `FindByID` ＋ episode `FindByID`；`main.go` 注入 `repos.Movies`＋`repos.Episodes`）
-  - [ ] `GenerationBatchItem.MediaType`＋episode 的 `toItem` 對應（title 用 episode 自身欄位組 `SxxEyy`／fallback，**不加 series join**——SSE `current_item` 是輔助顯示，sub-4-3 的清單自帶完整標題）
-  - [ ] reject-not-filter 保留；scope=missing movies-only 註記（handler 註解＋Swagger）
+- [x] **Task 2 — 混合 id 解析＋MediaType（AC: #2, #3）**
+  - [x] finder port 擴為雙來源（movie `FindByID` ＋ episode `FindByID`；`main.go` 注入 `repos.Movies`＋`repos.Episodes`）
+  - [x] `GenerationBatchItem.MediaType`＋episode 的 `toItem` 對應（title 用 episode 自身欄位組 `SxxEyy`／fallback，**不加 series join**——SSE `current_item` 是輔助顯示，sub-4-3 的清單自帶完整標題）
+  - [x] reject-not-filter 保留；scope=missing movies-only 註記（handler 註解＋Swagger）
 
-- [ ] **Task 3 — 引擎接線：D2 adapter＋mode 選擇（AC: #4, #5）**
-  - [ ] runner port 改帶 media type；`cmd/api/generation_batch_runner_adapter.go`（新檔）包 `subtitlePipeline.ProcessItem`
-  - [ ] legacy 分支：`transcriptionService` runner 補 `WithMediaType`
-  - [ ] `main.go` 依 `cfg.SubtitlePipelineEnabled()` 注入對應 runner；`:631-633` 註解修正（comment-only）
-  - [ ] 確認 pool／FR12／`cost_consent_test.go` 零觸動
+- [x] **Task 3 — 引擎接線：D2 adapter＋mode 選擇（AC: #4, #5）**
+  - [x] runner port 改帶 media type；`cmd/api/generation_batch_runner_adapter.go`（新檔）包 `subtitlePipeline.ProcessItem`
+  - [x] legacy 分支：`transcriptionService` runner 補 `WithMediaType`
+  - [x] `main.go` 依 `cfg.SubtitlePipelineEnabled()` 注入對應 runner；`:631-633` 註解修正（comment-only）
+  - [x] 確認 pool／FR12／`cost_consent_test.go` 零觸動
 
-- [ ] **Task 4 — 預算共享與暫停分類驗證（AC: #6）**
-  - [ ] 測試：批次 budget 經 ctx 傳入後，翻譯與 ASR 的花費記到同一顆 budget（`RecordLLM`/`RecordASR` 同源斷言）
-  - [ ] 測試：adapter 保留 `ai.ErrBudgetExceeded` 的 `errors.Is` 鏈；觸頂 → `budget_ceiling` 暫停語意
+- [x] **Task 4 — 預算共享與暫停分類驗證（AC: #6）**
+  - [x] 測試：批次 budget 經 ctx 傳入後，翻譯與 ASR 的花費記到同一顆 budget（`RecordLLM`/`RecordASR` 同源斷言）
+  - [x] 測試：adapter 保留 `ai.ErrBudgetExceeded` 的 `errors.Is` 鏈；觸頂 → `budget_ceiling` 暫停語意
 
-- [ ] **Task 5 — 契約清點與文件（AC: #7）**
-  - [ ] AC Drift Check＋Contract Stamp Check（dev-story Step 2 強制項）：additive 欄位的 bump 裁定＋Change Log
-  - [ ] 若 SSE payload 有新欄位：`docs/sse-event-types.md`＋`.zh-TW.md` 同步（Rule 17）
-  - [ ] `docs/deployment.md` 補「pipeline mode 下批次走抽取優先路線」行為變更說明
+- [x] **Task 5 — 契約清點與文件（AC: #7）**
+  - [x] AC Drift Check＋Contract Stamp Check（dev-story Step 2 強制項）：additive 欄位的 bump 裁定＋Change Log
+  - [x] 若 SSE payload 有新欄位：`docs/sse-event-types.md`＋`.zh-TW.md` 同步（Rule 17）
+  - [x] `docs/deployment.md` 補「pipeline mode 下批次走抽取優先路線」行為變更說明
 
-- [ ] **Task 6 — 測試與回歸（AC: #8）**
-  - [ ] AC #8 的 8 類案例全數落地（RED→GREEN 逐項）
-  - [ ] 全回歸閘門：`pnpm nx test api`＋`pnpm nx test web`＋`pnpm run lint:all`＋gofmt/vet
+- [x] **Task 6 — 測試與回歸（AC: #8）**
+  - [x] AC #8 的 8 類案例全數落地（RED→GREEN 逐項）
+  - [x] 全回歸閘門：`pnpm nx test api`＋`pnpm nx test web`＋`pnpm run lint:all`＋gofmt/vet
 
 （後端 task 6 個、前端 0 個 —— 未觸發跨端拆分門檻。）
 
@@ -152,20 +152,86 @@ sub-4-1（done）交付了 BE「讀側」：候選清單、路線預測、成本
 - [Source: `apps/api/cmd/api/main.go:573-640,755-757`] — mode 分支、pool 保留註解、batch 建構注入點
 - [Source: `project-context.md`] — Rule 3／7／11／17／19／20／24
 
+## Senior Developer Review (AI)
+
+**Date:** 2026-08-10 · **Reviewer model:** Claude Opus 5（實作為 Fable 5 —— 依「換一顆 LLM」慣例，對抗式審查由 Opus 5 subagent 執行、Fable 5 逐項驗證後裁定與修復） · **Outcome:** Approve (after same-session fixes) · **Findings:** 1 High / 3 Medium / 2 Low
+
+**強制檢查：** 🔒 Rule 7 Wire Format **PASS**（regex 掃描全部 in-scope Go 檔 0 hits；新 sentinel `ErrGenerationItemSkipped` 為小寫非 wire 碼，400/503 沿用既有碼）· 🔒 Rule 20 Contract Bump **PASS**（1 bump：9R-16 AC #1 v2→v3；下游 ack grep 命中 ux3-subtitle-v2-batch + ux3-ai-2-workspace-frontend 皆 done=FROZEN，bump row 記錄掃描結果，零 stale-mark 義務）· 🔒 Rule 25 Mega-line **N/A**（project-context.md 未觸及）· Git vs File List **0 落差**（14/14）· 8 條 AC 全數有實作證據、checkbox 稽核 0 未勾。
+
+**Action Items：**
+
+- [x] **[H1] Pipeline mode 把「什麼都沒產生」計成 success。** `ProcessItem` 對 skipped run（僅非目標文字軌、或 no_text_source 且無 ASR）回 `(outcome, nil)`，adapter 丟棄 outcome ⇒ 無 ASR 金鑰的部署會報 N successes、$0、零字幕——正好違反本 story 的誠實論旨（legacy 對同類項目經 `ErrTranscriptionDisabled` 計 fail，pipeline 反而更不誠實）。**修復：** 新 sentinel `services.ErrGenerationItemSkipped`；adapter 檢查 `outcome.Run.Status == SubtitleRunSkipped` 即回傳包裝 sentinel；orchestrator 專屬分支計 `fail_count`＋distinct log（SSE 11-key 契約零變更）。+3 測試（adapter skip→sentinel、completed→success、orchestrator skip→fail 且 loop 續跑）。
+- [x] **[M2] 暫時性 DB 錯誤被報成 400「你的選擇無效」。** movie/episode 查詢的**任何**錯誤都被當 not-found 落入 `ErrGenerationSelectionInvalid`（DB locked——本部署的 FUSE 現實——會讓整批有效清單被 400 且 FE 無從重試）。**修復：** movie 徑以 `errors.Is(err, sql.ErrNoRows)`、episode 徑以 `repository.ErrEpisodeNotFound` 分類，真錯誤 unwrapped 上拋 → 既有 500 `TRANSCRIPTION_BATCH_START_FAILED` 分支；test fakes 改為鏡射真 repo 的 not-found 包裝；+1 測試（雙徑 DB error ≠ SelectionInvalid）。
+- [x] **[M3] 503 文案指向錯誤的金鑰。** pipeline mode 的可用性 = Claude 翻譯金鑰（熱載 resolver），但沿用的 Route C 文案叫使用者「儲存雲端 ASR 金鑰並重啟」——有 ASR 金鑰沒 Claude 金鑰的使用者會被指去存已存在的金鑰。**修復：** mode-neutral 文案（翻譯需 Claude、語音辨識需 ASR；「若儲存後仍無法使用再重啟」——對 legacy 的 boot-time 事實仍為真）。sub-2-2d AC #3 的 settings-page-first 框架保留，修正記錄於 handler 註解。
+- [x] **[M4] batch↔pool 重疊比 backlog 條目寫的「浪費一次處理」更糟。** 實際後果：兩份 `subtitle_runs` row，且輸家的終態寫入可 clobber 贏家的 media row（例：pool 已寫 `found`+sidecar，batch 的 ASR leg 撞 `acquireJob` → `failItem` → `not_searched`——有效 sidecar 在磁碟上而 row 說沒字幕，下一批**重付**同一筆 ASR）。**修復：** `WorkerPool.TryReserve/Release`（共享既有 `inFlight` set，~20 行）；adapter 經 `batchPoolGuard` 先佔後放，佔不到 → `ErrTranscriptionInProgress`（既有「使用者中途手動跑了該項」分類：計 fail、批次續跑）；main.go 把 pool 接進 adapter。雙向去重：batch 佔用中 → FR12 回 `already_queued`。+2 adapter 測試 +1 pool 測試；backlog 條目同步更正並標 RESOLVED。
+- [x] **[L5] AC #8(d) 勾了但無直接測試。** 「可抽取項目不觸發 ASR」在本 story 的測試面只有 adapter 對映釘子。**裁定：** 以組合證據記錄——route 行為由 sub-3-1 的 pipeline 測試釘住（`predict_route_test.go` 斷言 `extractor.callCount==0`、`process_item_asr_test.go` 七例），本 story 釘 adapter 直通 `ProcessItem`；Completion Notes 的 AC #8(d) 對映已明載此組合而非宣稱新測試。H1 修復後 adapter 另新增 outcome 誠實檢查，強化此鏈。
+- [x] **[L6] 格式錯誤的 `budget_usd` 回「scope 必須是 missing 或 selected」。** bind 失敗可能來自任一欄位。**修復：** 訊息一般化（scope／media_ids／budget_usd 型別提示）。Reviewer 已驗證 NaN/±Inf 不可達（`encoding/json` 拒收，`<=0` 守門不可繞過）、`null` 正確走 absent 徑。
+
+**Reviewer 驗證後排除（不列 findings）**：`RouteCGenerationRunner` typed-nil 不可達（main.go 兩分支 `transcriptionService` 皆非 nil）；budget 雙腿同源成立（`governed()`＋`claude.go:283`/`whisper.go:243` 皆讀 ctx budget）；`GetProgress` 的 `activeBudget` 解參照安全（與 `activeBatch` 同鎖同生滅）；cancel 分類正確；legacy byte-compatibility 成立。
+
+**修復後驗證：** api 全綠 · web 228 檔/2547 測試 · lint 0 errors · gofmt/vet 乾淨（觸及檔 0 flagged）· `cost_consent_test.go` 綠 · 無殘留 worker。
+
 ## Dev Agent Record
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude Fable 5 — dev-story workflow, 2026-08-10
 
 ### Debug Log References
 
+- RED→GREEN：新測試先對舊簽名/舊行為紅燈（`NewGenerationBatchProcessor`/`Start` 簽名、mixed-selection 400、`ExecuteGeneration` 未定義），實作後全綠。
+- 全回歸：`pnpm nx test api` ✅ · `pnpm nx test web` ✅（228 檔 / 2547 測試；一次本機 flake 重跑即綠）· `pnpm run lint:all` 0 errors（120 個 pre-existing jsx-a11y warnings，屬 retro-11-AI1b 既有批次，本 story 零新增）· `go vet` 乾淨 · gofmt：本 story 觸及檔案 0 flagged（機器上另有 75 個 pre-existing flagged 檔，stash 對照證實與本變更無關——工具版本噪音，不在範圍）。
+- 無殘留測試 worker（pgrep vitest 空）。
+
 ### Completion Notes List
+
+- **🔗 AC Drift: FOUND** — (1) **9R-16 AC #8（movies-only capability honor，未 stamp＝隱含凍結）**：scope=selected 從「非電影 id 一律 400」放寬為雙來源解析（D1 裁定，本 story 存在目的）；該 story done，依 Rule 20 forward-only 不欠 stale-mark，漂移記錄於此並列入 File List。(2) **9R-16 AC #5 的引擎子句**（「per item 呼叫 NEW synchronous TranscriptionService entry」）：pipeline mode 下引擎換為 D2 `Pipeline.ProcessItem`，該子句現為 legacy-only 事實——隨 AC #1 的 v3 bump Change Log row 一併記錄。(3) `docs/deployment.md` 既有「generation runs automatically after each library scan」bullet 與 sub-4-1 的掃描解耦自相矛盾（sub-4-1 加了新 bullet 但漏刪舊句）——Rule 24 lane ① 就地吸收修正（本 story 本就要編輯同一節）。grep 範圍：`generation-batch|GenerationBatch|movies only` across `_bmad-output/implementation-artifacts/*.md`。
+- **📎 Contract Stamps: FOUND（1 bump produced, 1 ack recorded）** — 本 story bump **9R-16 AC #1 `[@contract-v2→v3]`**（additive `budget_usd` + `items[].media_type`、selected 接受 episode UUID、pipeline mode 引擎為 D2）：Change Log row 已寫入 9R-16 story 檔（what changed / what breaks downstream 雙欄齊備）；bump-side 下游 grep（`confirmed against` × 9R-16 AC #1）命中 ux3-subtitle-v2-batch 與 ux3-ai-2-workspace-frontend，**皆 done＝FROZEN，零 stale-mark 義務**（sub-4-3 尚未 authored，出生即消費 v3）。Ack as consumer：confirmed against `[@contract-v1]`（`subtitle.MediaRef`，`pipeline.go:75`）— services 側 `GenerationRunner` port 以 mirror 語彙攜帶相同兩欄位（Rule 19），cmd/api adapter 測試 `TestPipelineGenerationRunner_MapsMediaRef` 釘住對映。**AC #9 SSE 刻意不 bump**：`broadcast()` 的 11-key map 一個 byte 都沒動。
+- **🎭 A11y Pre-Flight: N/A（100% backend — 未觸及任何 apps/web/ 檔案）。**
+- **🎨 UX Verification: SKIPPED — 本 story 無 UI 變更**（FE 是 sub-4-3）。
+- **架構落地與 story 規劃一致**：預算進線（handler 驗證 >0、`Start` 收 ceiling、0=default sentinel 不可能來自使用者輸入）；雙來源解析（movie 先、episode 後，reject-not-filter，nil episode finder 降級 movies-only）；`GenerationRunner` port 取代舊 `generationRunner`（`ExecuteGeneration(ctx, mediaID, mediaType, filePath, mediaDir)`），main.go 依 `cfg.SubtitlePipelineEnabled()` 注入 `pipelineGenerationRunner`（cmd/api，直呼 `ProcessItem`，不走 pool）或 `services.RouteCGenerationRunner`（legacy，補 `WithMediaType`）。
+- **AC #8(a)「各寫正確資料表」的驗證組合**（不重複 sub-3-2 測試套件）：批次把正確 media type 交給 runner（`TestGenerationBatch_SelectedScope_MixedMovieEpisode` 斷言 `callMediaTypes()`）→ Route C runner 把 `WithMediaType` 真的送進 config（`TestRouteCGenerationRunner_ForwardsMediaTypeAndTranslation` 用 `newTranscriptionConfig` 斷言效果而非比較 opaque function）／pipeline runner 把 type 對映進 `MediaRef`（cmd/api 測試）→ 表層 dispatch 由 sub-3-2 既有測試釘住（`transcription_episode_test.go`、pipeline episode writeback pins）。
+- **AC #6 預算共享的機制證據**：`governed()`（`governor.go:68-73`）對**每一個** AI 呼叫（翻譯 LLM、ASR）都讀 ctx-attached budget 並以 `ErrBudgetExceeded` 前置短路；批次把單顆 budget 掛上 processCtx（既有 `:214-215`），該 ctx 原封不動流進 `ExecuteGeneration` → `ProcessItem`/`RunTranscription`，故兩條腿同源。批次層測試以 `ai.BudgetFromContext(ctx).RecordLLM` 實花證明 ctx 掛載鏈（`TestGenerationBatch_RequestedBudgetEnforced`），adapter 層測試釘住 sentinel 鏈不被吞（兩個 `PreservesBudgetExceededChain`）。
+- **行為變更（pipeline mode）需 sub-4-3 知悉**：extract-route 項目的逐項 stage 細節走 D6 `subtitle_progress` 而非 `transcription_*`（ASR-route 項目兩者皆有——ASR 腿仍經 `pipelineASRAdapter`）。既有 FE dialog 的批次層進度（`generation_batch_progress`）不受影響；已寫進 9R-16 v3 bump row 的 what-breaks 欄。
+- **Swagger**：僅註解更新（annotation-only）。repo 的 `docs/swagger.json` 是 root-backend 時代遺物（連 generation-batch 都沒有、最後更新於 flat-config 遷移前），9R-16/sub-4-1 先例皆未 regen——維持慣例，不擴大範圍。
+- **Rule 7：零新前綴、零新碼**（400 沿用 `VALIDATION_INVALID_FORMAT`）。**Rule 17**：SSE payload 零變更 → `docs/sse-event-types*.md` 不需動。
+- **`cost_consent_test.go` 守衛全程綠燈**：批次直呼 `ProcessItem`，無任何 `.EnqueueMissing(` 生產呼叫點出現。
 
 ### Discovery Triage
 
 - **Did this story discover any work outside its current scope?**
   - **YES** — filed at authoring time：
     - **③ backlog-with-carry-forward-link** — `backlog-batch-pool-dedup-overlap`：批次直呼 `ProcessItem` 的項目不在 WorkerPool `inFlight` 去重範圍內，與 FR12 對同一 media 的並發請求可能重複處理（今日 Route C batch 與 FR12 之間已存在同類競態，非本 story 引入；管線冪等性讓後果限於浪費一次處理）。非阻塞。
+  - 實作期新增：
+    - **① expand-scope-in-place** — `docs/deployment.md` 的 stale「自動掃描後生成」bullet 與 sub-4-1 解耦矛盾 → 就地修正（見 Completion Notes AC Drift (3)；本 story Task 5 本就編輯同一節，吸收為文件修正，無新 AC 需求——屬既有 bullet 的真相修復而非新功能）。
+
+### Change Log
+
+| Date | Change |
+| ---- | ------ |
+| 2026-08-10 | Task 1：`budget_usd` request 欄位（pointer 區分 absent/0，<=0 → 400 `VALIDATION_INVALID_FORMAT`）＋ `Start` 簽名收 ceiling（0=default sentinel）＋ `ai.NewBudget` 改吃每批次值、progress/SSE `budget_usd` 跟著 ceiling；Swagger 註解含軟上限措辭。 |
+| 2026-08-10 | Task 2：`generationEpisodeFinder` 窄 port ＋ scope=selected 雙來源解析（movie 先 episode 後，reject-not-filter）＋ `GenerationBatchItem.MediaType`（additive）＋ episode title `SxxEyy` 無 join；scope=missing 維持 movies-only 並註記。 |
+| 2026-08-10 | Task 3：`GenerationRunner` port（`ExecuteGeneration` 攜帶 media type）取代舊 RunTranscription port；NEW `services.RouteCGenerationRunner`（legacy，`WithTranslation`+`WithMediaType`）＋ NEW `cmd/api/generation_batch_runner_adapter.go`（pipeline mode 直呼 `Pipeline.ProcessItem`，Force=false）；main.go 依 `SubtitlePipelineEnabled()` 注入、`:631` pool 註解修正、finder 注入 `repos.Episodes`。 |
+| 2026-08-10 | Task 4：預算共享與暫停分類測試 —— request ceiling 蓋過 default 且被 enforce（`RecordLLM` 實花 → `budget_ceiling`+paused）、兩個 runner adapter 的 `ErrBudgetExceeded` errors.Is 鏈保留測試。 |
+| 2026-08-10 | Task 5：**9R-16 AC #1 `[@contract-v2→v3]` bump**（additive 欄位＋episode ids＋pipeline-mode 引擎；Change Log row ＋ 下游 grep：ackers 全 done=frozen，零 stale-mark）；AC #9 SSE 不 bump（11-key map 零變更）；`docs/deployment.md` 批次行為說明＋stale bullet 修正；`docs/sse-event-types*.md` 不需動（payload 零變更）。 |
+| 2026-08-10 | Task 6：AC #8 八類測試落地（services 7 新測試、handler 5 新測試、cmd/api 3 新測試、RouteC runner 4 新測試；既有 16 個 generation_batch 測試機械更新後全數保留）；全回歸 api ✅ / web 228 檔 2547 測試 ✅ / lint 0 errors。story → review。 |
+| 2026-08-10 | Senior Developer Review（Opus 5 審 Fable 5）：1H/3M/2L 全處理 —— H1 skip≠success（`ErrGenerationItemSkipped` sentinel + adapter outcome 檢查 + fail 分類）；M2 DB error≠400（`sql.ErrNoRows`/`ErrEpisodeNotFound` 分類，真錯誤→500）；M3 503 文案 mode-neutral；M4 `WorkerPool.TryReserve/Release` 共享 in-flight set 堵 batch↔pool clobber（backlog 條目更正+RESOLVED）；L5 AC #8(d) 組合證據記錄；L6 bind 錯誤訊息一般化。+7 測試。修後全綠 api+web+lint。Status review → done。 |
 
 ### File List
+
+- `apps/api/internal/services/generation_batch.go` — 預算參數、`GenerationRunner` port、雙來源 `collectItems`、`toEpisodeItem`、`MediaType`
+- `apps/api/internal/services/generation_batch_runner.go` — NEW：`RouteCGenerationRunner`（legacy 引擎 adapter，Rule 11 seam）
+- `apps/api/internal/services/generation_batch_test.go` — 簽名機械更新＋7 個 sub-4-2 新測試（mixed/reject/nil-finder/missing-movie-type/budget override+enforce）
+- `apps/api/internal/services/generation_batch_runner_test.go` — NEW：4 個 RouteC runner 測試（option 效果斷言、sentinel 鏈、availability）
+- `apps/api/internal/handlers/generation_batch_handler.go` — `budget_usd` 驗證與轉發、interface 簽名、Swagger/錯誤訊息更新、v3 stamp 註解
+- `apps/api/internal/handlers/generation_batch_handler_test.go` — mock 簽名更新＋5 個新測試（budget 400×2/轉發/absent、items media_type）
+- `apps/api/internal/handlers/route_c_uuid_integration_test.go` — runner fake 改 `ExecuteGeneration`、constructor 接真 `episodeRepo`
+- `apps/api/cmd/api/generation_batch_runner_adapter.go` — NEW：`pipelineGenerationRunner`（Rule 19 跨界 adapter，直呼 ProcessItem）
+- `apps/api/cmd/api/generation_batch_runner_adapter_test.go` — NEW：3 個測試＋compile-time 介面斷言（`*subtitle.Pipeline` 滿足 port）
+- `apps/api/cmd/api/main.go` — mode-dependent runner 注入、episodes finder 注入、pool 註解修正、CR M4 guard 接線
+- `apps/api/internal/subtitle/worker_pool.go` — CR M4：`TryReserve`/`Release`（共享 in-flight set 給批次）
+- `apps/api/internal/subtitle/worker_pool_test.go` — CR M4：批次↔佇列雙向去重測試
+- `docs/deployment.md` — 批次行為說明（extract-first/混合/軟上限）＋ stale bullet 修正
+- `_bmad-output/implementation-artifacts/9R-16-batch-generation-endpoint.md` — AC #1 `[@contract-v2→v3]` bump ＋ Change Log row（AC drift reference — see Completion Notes）
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — sub-4-2 in-progress → review
+- `_bmad-output/implementation-artifacts/sub-4-2-consent-batch-backend.md` — 本 story 檔
